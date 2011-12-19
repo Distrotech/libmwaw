@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@
+Description: A library for reading MacWrite/Writerperfect word processor documents
+Version: @VERSION@
+Requires: libwpd-0.9 libwpd-stream-0.9
+Libs: -L${libdir} -lmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@
+Cflags: -I${includedir}/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@
+

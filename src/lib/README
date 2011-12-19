@@ -1,0 +1,121 @@
+------------------------------------------------------------
+--------------            Structure           --------------
+------------------------------------------------------------
+- DMWAW* and libmwaw_libwpd* : files which come directly of libwpD/src/lib
+- TMWAW* and libmwaw_tools* : some basic Tools ( mostly generic )
+- IMWAW* and libmwaw_internal* : internal core part of libmwaw (ie. classes used by many parser )
+- MWAW* : specific classes ( MWAW document )
+- WDB* : specific classes ( WPD document )
+- WKS* : specific classes ( WKS document )
+ 
+------------------------------------------------------------
+--------------            Exported           --------------
+------------------------------------------------------------
+
+## new interface	
+- libmwaw.hxx
+- IMWAWDocument.hxx
+
+## wrapper to the old interface
+- libmwaw.h
+- IMWAWDocument.h
+
+------------------------------------------------------------
+--------------   files DMWAW and libmwaw_libwpd  --------------
+------------------------------------------------------------
+These files are the files which come directly of libwpd/src/lib
+
+In order to avoid conflict problems, all WPX classes are renamed DMWAW while other classes, ..  are defined in namespace libmwaw_libwpd.
+
+## libs_libwpd (from libwpd_internal) : 
+   - introduction of new attributes DMWAW_ALL_CAPS_BIT/DMWAW_EMBOSS_BIT/DMWAW_ENGRAVE_BIT bits
+   - comments some WP5/WP6 fonts
+
+## DMWAWContentListener by
+   - introduction of a new field m_paragraphLineSpacingUnit
+   - gestion of  DMWAW_ALL_CAPS_BIT/DMWAW_EMBOSS_BIT/DMWAW_ENGRAVE_BIT bits
+   - virtualize _appendParagraphProperties in order to add border flags
+   - change in WPXContentListener::justificationChange
+
+## WPXListener :
+   - m_pageList is no longer a reference on a std::list<WPXPageSpan>
+
+## WPXOLEStream :
+   - correct the function fullName
+   - add a function allEntries to retrieve all the leaves names
+
+   - add a function to retrieve dir and file name from olename
+   - add a function to flatten a name
+
+------------------------------------------------------------
+--------------   files TMWAW and libmwaw_tools  --------------
+------------------------------------------------------------
+
+These files defined basic tools which must be used by the parsers :
+## libmwaw_tools.hxx
+	define MWAW_DEBUG_MSG, shared_ptr, Vec2, Vec3 and Box2
+
+## TMWAWInputStream.hxx
+	internal wrapper of WPXInputStream (with function to read Ole, ...)
+
+## generic tools
+
+- TMWAWDebug.hxx : class to store parsed data in an intermediate file
+- TMWAWFont.hxx : read and convert in unicode Apple© char fonts
+- TMWAWPrint.hxx : read the mac printer information
+- TMWAWOleParser.hxx : read some classic ole structure
+- TMWAWPropertyHandler.hxx : some classes which keep a list of tag and WPXPropertyList,
+	store/unstore then in order to be reread by writerperfect 
+- TMWAWWin.hxx : read and convert in unicode dos|win3 char fonts
+
+## tool for graphics:
+- TMWAWPict.hxx : generic pict
+- TMWAWPictBasic.hxx : simple pict (line, rectangle, oval, ..)
+- TMWAWPictBitmap.hxx : a class to keep basic bitmap(ie. a 2D array of some type) and transforms them in PBM, PPM
+- TMWAWPictData.hxx : basic class to manage a pict form by a chunck of classic data ( included MWAWPicMac)
+- TMWAWPictMac.hxx : check macintosh Pict1.0, Pict2.0, 2.1 and convert Pict1.0 in Pict2
+
+------------------------------------------------------------
+-------------- files IMWAW and libmwaw_internal --------------
+------------------------------------------------------------
+
+Internal classes which can depend on WPX internal and tools
+
+These files defined basic structures which must be used by the parsers :
+
+## libmwaw_internal.hxx
+	define a small function used to print tabulation and
+	include libmwaw_tools.hxx
+
+## IMWAWContentListener.hxx
+## IMWAWHeader.hxx
+## IMWAWSubDocument.hxx
+	Files to parse document inspired of libwpd/WP*
+
+## IMWAWEntry.hxx
+	store an file entry as begin/end offset with the name of the entry
+	such an entry is used by all msworks file (excepted Mac v1, v2, v3)
+
+## IMWAWParser.hxx
+	a basic parser
+## IMWAWTextParser.hxx
+	a basic parser which can help to store the text data
+	and read a FDPP or FDPC entry, such entry exists in all files
+	(excepted Mac v1, v2, v3)
+
+------------------------------------------------------------
+--------------------   MW/WP -------------------
+------------------------------------------------------------
+Generic classes : 
+
+MWAWContentListener.cxx 
+MWAWStruct.cxx 
+MWAWTools.cxx
+
+Specific files which depends on the type of file which is converted
+
+
+############# Mac
+
+MWParser : parser of MacWrite document : v2.2 v4.5
+WPParser : parser of WriterPlus document

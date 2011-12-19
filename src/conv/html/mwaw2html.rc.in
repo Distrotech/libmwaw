@@ -1,0 +1,31 @@
+#include <winver.h>
+
+VS_VERSION_INFO VERSIONINFO
+  FILEVERSION @MWAW_MAJOR_VERSION@,@MWAW_MINOR_VERSION@,@MWAW_MICRO_VERSION@,BUILDNUMBER
+  PRODUCTVERSION @MWAW_MAJOR_VERSION@,@MWAW_MINOR_VERSION@,@MWAW_MICRO_VERSION@,0
+  FILEFLAGSMASK 0
+  FILEFLAGS 0
+  FILEOS VOS__WINDOWS32
+  FILETYPE VFT_APP
+  FILESUBTYPE VFT2_UNKNOWN
+  BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+      BLOCK "040904B0"
+      BEGIN
+	VALUE "CompanyName", "The libmwaw developer community"
+	VALUE "FileDescription", "mwaw2html"
+	VALUE "FileVersion", "@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.@MWAW_MICRO_VERSION@.BUILDNUMBER"
+	VALUE "InternalName", "mwaw2html"
+	VALUE "LegalCopyright", "Copyright (C) 2002-2006 William Lachance, Marc Maurer, Fridrich Strba, other contributers"
+	VALUE "OriginalFilename", "mwaw2html.exe"
+	VALUE "ProductName", "libmwaw"
+	VALUE "ProductVersion", "@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.@MWAW_MICRO_VERSION@"
+      END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+      VALUE "Translation", 0x409, 1200
+    END
+  END
+

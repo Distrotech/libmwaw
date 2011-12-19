@@ -1,0 +1,31 @@
+#include <winver.h>
+
+VS_VERSION_INFO VERSIONINFO
+  FILEVERSION 0,2,1,BUILDNUMBER
+  PRODUCTVERSION 0,2,1,0
+  FILEFLAGSMASK 0
+  FILEFLAGS 0
+  FILEOS VOS__WINDOWS32
+  FILETYPE VFT_DLL
+  FILESUBTYPE VFT2_UNKNOWN
+  BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+      BLOCK "040904B0"
+      BEGIN
+	VALUE "CompanyName", "The libmwaw developer community"
+	VALUE "FileDescription", "libmwaw"
+	VALUE "FileVersion", "0.2.1.BUILDNUMBER"
+	VALUE "InternalName", "libmwaw-0.2"
+	VALUE "LegalCopyright", "Copyright (C) 2006, 2007 Andrew Ziem, Fridrich Strba, other contributers"
+	VALUE "OriginalFilename", "libmwaw-0.2.dll"
+	VALUE "ProductName", "libmwaw"
+	VALUE "ProductVersion", "0.2.1"
+      END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+      VALUE "Translation", 0x409, 1200
+    END
+  END
+

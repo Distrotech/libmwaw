@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# Build runtime and developer zipfiles for libmwaw on Win32.
+
+ZIP=libmwaw-@MWAW_VERSION@-MinGW.zip
+DEVZIP=libmwaw-devel-@MWAW_VERSION@-MinGW.zip
+TOOLSZIP=libmwaw-tools-@MWAW_VERSION@.zip
+
+cd $DESTDIR@prefix@
+
+DLLDIR=lib
+[ -f bin/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.dll ] && \
+DLLDIR=bin
+
+@STRIP@ --strip-all \
+$DLLDIR/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.dll \
+bin/mwaw2html.exe \
+bin/mwaw2raw.exe \
+bin/mwaw2text.exe
+
+upx -qqq --best \
+$DLLDIR/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.dll \
+bin/mwaw2html.exe \
+bin/mwaw2raw.exe \
+bin/mwaw2text.exe
+
+rm $ZIP
+zip -q $ZIP -@ <<EOF
+$DLLDIR/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.dll
+EOF
+
+rm $DEVZIP
+zip -q -r $DEVZIP -@ <<EOF
+include/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@
+lib/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.dll.a
+lib/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.a
+lib/pkgconfig/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.pc
+EOF
+
+rm $TOOLSZIP
+zip -q -j $TOOLSZIP -@ <<EOF
+bin/mwaw2html.exe
+bin/mwaw2raw.exe
+bin/mwaw2text.exe
+EOF

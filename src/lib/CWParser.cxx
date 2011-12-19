@@ -1,0 +1,1423 @@
+/* -*- Mode: C++; c-default-style: "k&r"; indent-tabs-mode: nil; tab-width: 2; c-basic-offset: 2 -*- */
+/* libmwaw
+ * Copyright (C) 2009, 2011 Alonso Laurent (alonso@loria.fr)
+ * Copyright (C) 2006, 2007 Andrew Ziem
+ * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
+ * Copyright (C) 2004 Marc Maurer (uwog@uwog.net)
+ * Copyright (C) 2003-2005 William Lachance (william.lachance@sympatico.ca)
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ *
+ * For further information visit http://libmwaw.sourceforge.net
+ */
+
+/* "This product is not manufactured, approved, or supported by
+ * Corel Corporation or Corel Corporation Limited."
+ */
+
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <map>
+#include <sstream>
+
+#include <libwpd/WPXString.h>
+
+#include "TMWAWPosition.hxx"
+#include "TMWAWPictMac.hxx"
+#include "TMWAWPrint.hxx"
+
+#include "IMWAWHeader.hxx"
+#include "IMWAWCell.hxx"
+
+#include "MWAWStruct.hxx"
+#include "MWAWTools.hxx"
+#include "MWAWContentListener.hxx"
+
+#include "CWParser.hxx"
+
+#include "CWDatabase.hxx"
+#include "CWGraph.hxx"
+#include "CWStruct.hxx"
+#include "CWTable.hxx"
+#include "CWText.hxx"
+
+/** Internal: the structures of a CWParser */
+namespace CWParserInternal
+{
+
+////////////////////////////////////////
+//! Internal: the state of a CWParser
+struct State {
+  //! constructor
+  State() : m_version(-1), m_EOF(-1L), m_actPage(0), m_numPages(0),
+    m_headerId(0), m_footerId(0), m_headerHeight(0), m_footerHeight(0),
+    m_zonesMap() {
+  }
+
+  //! the file version
+  int m_version;
+
+  //! the last position
+  long m_EOF;
+
+  int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
+
+  int m_headerId /** the header zone if known */,
+      m_footerId /** the footer zone if known */;
+
+  int m_headerHeight /** the header height if known */,
+      m_footerHeight /** the footer height if known */;
+  std::map<int, shared_ptr<CWStruct::DSET> > m_zonesMap /* the map of zone*/;
+};
+
+////////////////////////////////////////
+//! Internal: the subdocument of a MWParser
+class SubDocument : public IMWAWSubDocument
+{
+public:
+  SubDocument(CWParser &pars, TMWAWInputStreamPtr input, int zoneId) :
+    IMWAWSubDocument(&pars, input, IMWAWEntry()), m_id(zoneId) {}
+
+  //! destructor
+  virtual ~SubDocument() {}
+
+  //! operator!=
+  virtual bool operator!=(IMWAWSubDocument const &doc) const {
+    if (IMWAWSubDocument::operator!=(doc)) return true;
+    SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
+    if (!sDoc) return true;
+    if (m_id != sDoc->m_id) return true;
+    return false;
+  }
+
+  //! operator!==
+  virtual bool operator==(IMWAWSubDocument const &doc) const {
+    return !operator!=(doc);
+  }
+
+  //! returns the subdocument \a id
+  int getId() const {
+    return m_id;
+  }
+  //! sets the subdocument \a id
+  void setId(int vid) {
+    m_id = vid;
+  }
+
+  //! the parser function
+  void parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType type);
+
+protected:
+  //! the subdocument id
+  int m_id;
+};
+
+void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType type)
+{
+  if (!listener.get()) {
+    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    return;
+  }
+  CWContentListener *listen = dynamic_cast<CWContentListener *>(listener.get());
+  if (!listen) {
+    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
+    return;
+  }
+  if (m_id == 0) {
+    MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
+    return;
+  }
+
+  assert(m_parser);
+
+  long pos = m_input->tell();
+  reinterpret_cast<CWParser *>(m_parser)->sendTextZone(m_id);
+  m_input->seek(pos, WPX_SEEK_SET);
+}
+}
+
+////////////////////////////////////////////////////////////
+// constructor/destructor, ...
+////////////////////////////////////////////////////////////
+CWParser::CWParser(TMWAWInputStreamPtr input, IMWAWHeader * header) :
+  IMWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
+  m_pageSpan(), m_databaseParser(), m_graphParser(), m_tableParser(),
+  m_textParser(), m_listSubDocuments(), m_asciiFile(), m_asciiName("")
+{
+  init();
+}
+
+CWParser::~CWParser()
+{
+}
+
+void CWParser::init()
+{
+  m_convertissor.reset(new MWAWTools::Convertissor);
+  m_listener.reset();
+  m_asciiName = "main-1";
+
+  m_state.reset(new CWParserInternal::State);
+
+  // reduce the margin (in case, the page is not defined)
+  m_pageSpan.setMarginTop(0.1);
+  m_pageSpan.setMarginBottom(0.1);
+  m_pageSpan.setMarginLeft(0.1);
+  m_pageSpan.setMarginRight(0.1);
+
+  m_databaseParser.reset(new CWDatabase(getInput(), *this, m_convertissor));
+  m_graphParser.reset(new CWGraph(getInput(), *this, m_convertissor));
+  m_tableParser.reset(new CWTable(getInput(), *this, m_convertissor));
+  m_textParser.reset(new CWText(getInput(), *this, m_convertissor));
+}
+
+void CWParser::setListener(CWContentListenerPtr listen)
+{
+  m_listener = listen;
+  m_databaseParser->setListener(listen);
+  m_graphParser->setListener(listen);
+  m_tableParser->setListener(listen);
+  m_textParser->setListener(listen);
+}
+
+int CWParser::version() const
+{
+  return m_state->m_version;
+}
+
+////////////////////////////////////////////////////////////
+// position and height
+////////////////////////////////////////////////////////////
+float CWParser::pageHeight() const
+{
+  return m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
+}
+
+float CWParser::pageWidth() const
+{
+  return m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight();
+}
+
+
+////////////////////////////////////////////////////////////
+// new page
+////////////////////////////////////////////////////////////
+void CWParser::newPage(int number)
+{
+  if (number <= m_state->m_actPage || number > m_state->m_numPages)
+    return;
+
+  while (m_state->m_actPage < number) {
+    m_state->m_actPage++;
+    if (!m_listener || m_state->m_actPage == 1)
+      continue;
+    m_listener->insertBreak(DMWAW_PAGE_BREAK);
+  }
+}
+
+////////////////////////////////////////////////////////////
+// interface with the text parser
+////////////////////////////////////////////////////////////
+bool CWParser::sendTextZone(int zoneId)
+{
+  return m_textParser->sendZone(zoneId);
+}
+
+void CWParser::sendFootnote(int zoneId)
+{
+  if (!m_listener) return;
+
+  IMWAWSubDocumentPtr subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
+  m_listener->insertNote(FOOTNOTE, subdoc);
+}
+
+////////////////////////////////////////////////////////////
+// the parser
+////////////////////////////////////////////////////////////
+void CWParser::parse(WPXDocumentInterface *docInterface)
+{
+  assert(getInput().get() != 0);
+
+  if (!checkHeader(0L))  throw(libmwaw_libwpd::ParseException());
+  bool ok = true;
+  try {
+    // create the asciiFile
+    ascii().setStream(getInput());
+    ascii().open(asciiName());
+
+    checkHeader(0L);
+    ok = createZones();
+    if (ok) {
+      createDocument(docInterface);
+      m_textParser->sendZone(1);
+      m_textParser->flushExtra();
+      if (m_listener) m_listener->endDocument();
+      m_listener.reset();
+    }
+    ascii().reset();
+  } catch (...) {
+    MWAW_DEBUG_MSG(("CWParser::parse: exception catched when parsing\n"));
+    ok = false;
+  }
+
+  if (!ok) throw(libmwaw_libwpd::ParseException());
+}
+
+////////////////////////////////////////////////////////////
+// create the document
+////////////////////////////////////////////////////////////
+void CWParser::createDocument(WPXDocumentInterface *documentInterface)
+{
+  if (!documentInterface) return;
+  if (m_listener) {
+    MWAW_DEBUG_MSG(("CWParser::createDocument: listener already exist\n"));
+    return;
+  }
+
+  // update the page
+  m_state->m_actPage = 0;
+
+  // create the page list
+  std::list<DMWAWPageSpan> pageList;
+  DMWAWPageSpan ps(m_pageSpan);
+  int numPage = m_textParser->numPages();
+  if (m_databaseParser->numPages() > numPage)
+    numPage = m_databaseParser->numPages();
+  if (m_graphParser->numPages() > numPage)
+    numPage = m_graphParser->numPages();
+  if (m_tableParser->numPages() > numPage)
+    numPage = m_tableParser->numPages();
+  m_state->m_numPages = numPage;
+
+  for (int i = 0; i < 2; i++) {
+    int zoneId = i == 0 ? m_state->m_headerId : m_state->m_footerId;
+    if (zoneId == 0)
+      continue;
+
+    DMWAWTableList tableList;
+    shared_ptr<CWParserInternal::SubDocument> subdoc
+    (new CWParserInternal::SubDocument(*this, getInput(), zoneId));
+    m_listSubDocuments.push_back(subdoc);
+    ps.setHeaderFooter((i==0) ? HEADER : FOOTER, 0, ALL, subdoc.get(), tableList);
+  }
+
+  for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
+
+  //
+  CWContentListenerPtr listen =
+    CWContentListener::create(pageList, documentInterface, m_convertissor);
+  setListener(listen);
+  listen->startDocument();
+}
+
+
+////////////////////////////////////////////////////////////
+//
+// Intermediate level
+//
+////////////////////////////////////////////////////////////
+bool CWParser::createZones()
+{
+  TMWAWInputStreamPtr input = getInput();
+  libmwaw_tools::DebugStream f;
+
+  long pos = input->tell();
+  if (version() > 1)
+    readEndTable();
+  if (m_state->m_EOF > 0)
+    input->pushLimit(m_state->m_EOF);
+
+  input->seek(pos, WPX_SEEK_SET);
+
+  if (readDocHeader()) {
+    pos = input->tell();
+    while(!input->atEOS()) {
+      if (!readZone()) {
+        input->seek(pos, WPX_SEEK_SET);
+        break;
+      }
+      pos = input->tell();
+    }
+  }
+  if (!input->atEOS()) {
+    ascii().addPos(input->tell());
+    f.str("");
+    f << "Entries(Loose): vers=" << version();
+    ascii().addNote(f.str().c_str());
+  }
+  // look for graphic
+  while (!input->atEOS()) {
+    pos = input->tell();
+    int val = input->readULong(2);
+    if (input->atEOS()) break;
+    bool ok = false;
+    if (val == 0x4453) {
+      if (input->readULong(2) == 0x4554) {
+        ok = true;
+        input->seek(-4, WPX_SEEK_CUR);
+      }
+    }
+    if (!ok && (val == 0x1101 || val == 0x1102)) {
+      long debPos = (val == 0x1102) ? pos-15 : pos-14;
+      input->seek(debPos, WPX_SEEK_SET);
+      if (input->readULong(2) == 0) {
+        int sz = input->readULong(2);
+        int fSz  = input->readULong(2);
+        if (sz >= 0x10 && (val == 0x1102 || sz == fSz)) {
+          ok = true;
+          input->seek(-6, WPX_SEEK_CUR);
+        }
+      }
+    }
+    if (!ok) {
+      input->seek(pos+1, WPX_SEEK_SET);
+      continue;
+    }
+
+    if (input->atEOS()) break;
+
+    long prevPos = pos;
+    ok = false;
+    while(!input->atEOS()) {
+      if (!readZone()) {
+        input->seek(pos+1, WPX_SEEK_SET);
+        break;
+      }
+      pos = input->tell();
+      if (pos <= prevPos)
+        break;
+      ok = true;
+    }
+    if (!ok || pos <= prevPos) {
+      input->seek(prevPos+1, WPX_SEEK_SET);
+      continue;
+    }
+    if (input->atEOS()) break;
+
+    ascii().addPos(pos);
+    ascii().addNote("Entries(End)");
+  }
+  if (m_state->m_EOF > 0)
+    input->popLimit();
+  findZonesGraph();
+  return m_state->m_zonesMap.size() != 0;
+}
+
+////////////////////////////////////////////////////////////
+// try to order the zones
+////////////////////////////////////////////////////////////
+int CWParser::findZonesGraph()
+{
+  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter =
+    m_state->m_zonesMap.begin();
+  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter2;
+  for ( ; iter != m_state->m_zonesMap.end(); iter++) {
+    shared_ptr<CWStruct::DSET> zone = iter->second;
+    int numChilds = zone->m_childs.size();
+    int id = zone->m_id;
+    for (int step = 0; step < 2; step++) {
+      for (int c = 0; c < numChilds; c++) {
+        int cId = step == 0 ? zone->m_childs[c].m_id : zone->m_otherChilds[c];
+        if (cId < 0) continue;
+        if (cId == 0) {
+          MWAW_DEBUG_MSG(("CWParser::findZonesGraph: find a zone with id=0\n"));
+          continue;
+        }
+        iter2 = m_state->m_zonesMap.find(cId);
+        if (iter2 == m_state->m_zonesMap.end()) {
+          MWAW_DEBUG_MSG(("CWParser::findZonesGraph: can not find zone %d\n", cId));
+          continue;
+        }
+        shared_ptr<CWStruct::DSET> cZone = iter2->second;
+        if (cZone->m_fatherId == id)
+          continue;
+        if (cZone->m_fatherId) {
+          MWAW_DEBUG_MSG(("CWParser::findZonesGraph: zone %d already has a father\n", cId));
+          // we do not want any looping
+          if (step == 0)
+            zone->m_childs[c].m_id = 0;
+          else
+            zone->m_otherChilds[c] = 0;
+          continue;
+        }
+        cZone->m_fatherId = id;
+      }
+      if (step == 1) break;
+      numChilds = zone->m_otherChilds.size();
+      if (!numChilds)
+        break;
+    }
+
+  }
+
+  iter = m_state->m_zonesMap.begin();
+  std::vector<int> mainList;
+  for ( ; iter != m_state->m_zonesMap.end(); iter++) {
+    shared_ptr<CWStruct::DSET> zone = iter->second;
+    if (zone->m_fatherId) continue;
+    mainList.push_back(zone->m_id);
+  }
+
+  int numMain = mainList.size();
+  if (numMain == 1)
+    return mainList[0];
+#ifdef DEBUG
+  // we have a problem : probably a database...
+  iter = m_state->m_zonesMap.begin();
+  std::cout << "--------------------------------------------------------\n";
+  std::cout << "List of potential main zones : ";
+  for (int i = 0; i < numMain; i++)
+    std::cout << mainList[i] << ",";
+  std::cout << "\n";
+  for ( ; iter != m_state->m_zonesMap.end(); iter++) {
+    shared_ptr<CWStruct::DSET> zone = iter->second;
+    std::cout << *zone << "\n";
+  }
+  std::cout << "--------------------------------------------------------\n";
+#endif
+  if (numMain == 0) {
+    // we have a big cycle, no way to continue
+    MWAW_DEBUG_MSG(("CWParser::findZonesGraph: the graph contains no tree...\n"));
+    return -1;
+  }
+
+  iter = m_state->m_zonesMap.begin();
+  for ( ; iter != m_state->m_zonesMap.end(); iter++)
+    iter->second->m_internal = 0;
+
+  int totalZones = 0;
+  int bestMain = -1, nodesInBest = -1;
+  for (int i = 0; i < numMain; i++) {
+    int numNodes = 1+computeNumChildren(mainList[i]);
+    totalZones += numNodes;
+    if (numNodes > nodesInBest) {
+      nodesInBest = numNodes;
+      bestMain = mainList[i];
+    }
+  }
+  if (totalZones != int(m_state->m_zonesMap.size())) {
+    // we have tree and also some cycle. No good
+    MWAW_DEBUG_MSG(("CWParser::findZonesGraph: the graph contains some cycle...\n"));
+    return -1;
+  }
+
+  return bestMain;
+}
+
+int CWParser::computeNumChildren(int zoneId) const
+{
+  if (zoneId <= 0)
+    return -1;
+  std::map<int, shared_ptr<CWStruct::DSET> >::const_iterator iter =
+    m_state->m_zonesMap.find(zoneId);
+  if (iter == m_state->m_zonesMap.end())
+    return -1;
+  shared_ptr<CWStruct::DSET> zone = iter->second;
+  if (zone->m_internal)
+    return -1;
+  int res = 0;
+  zone->m_internal = 1;
+  for (int step=0; step < 2; step++) {
+    int numChilds = step==0 ? zone->m_childs.size() : zone->m_otherChilds.size();
+    for (int c = 0; c < numChilds; c++) {
+      int cId = step == 0 ? zone->m_childs[c].m_id : zone->m_otherChilds[c];
+      res += 1+computeNumChildren(cId);
+    }
+  }
+
+  return res;
+}
+
+////////////////////////////////////////////////////////////
+// the end zone (in some v2 file and after )
+////////////////////////////////////////////////////////////
+bool CWParser::readEndTable()
+{
+  if (version() <= 1) return false;
+
+  TMWAWInputStreamPtr input = getInput();
+
+  // try to go to the end of file
+  while (!input->atEOS())
+    input->seek(10000, WPX_SEEK_CUR);
+
+  m_state->m_EOF = input->tell();
+  if (m_state->m_EOF < 20) // this is too short
+    return false;
+  input->seek(-20, WPX_SEEK_CUR);
+
+  long entryPos=input->readULong(4);
+  if (entryPos >= m_state->m_EOF-20)
+    return false;
+
+  input->seek(entryPos, WPX_SEEK_SET);
+  if (input->readULong(4) != 0x4554424c)
+    return false;
+
+  long sz = input->readULong(4);
+  if (sz <= 16 || (sz%8) != 0 || sz+entryPos+8 != m_state->m_EOF) {
+    MWAW_DEBUG_MSG(("CWParser::readEndTable: bad size\n"));
+    return false;
+  }
+
+  int numEntries = (sz-16)/8;
+  libmwaw_tools::DebugStream f;
+  f << "Entries(ETBL):";
+  long prevPos = 0;
+  std::vector<IMWAWEntry> listEntries;
+  IMWAWEntry lastEntry;
+  for (int i = 0; i < numEntries; i++) {
+    std::string name("");
+    for (int j = 0; j < 4; j++)
+      name+=char(input->readULong(1));
+    long pos = input->readULong(4);
+    if (pos < prevPos+4 || (i!=numEntries-1 && pos+4 > entryPos)) {
+      MWAW_DEBUG_MSG(("CWParser::readEndTable: bad pos\n"));
+      return false;
+    }
+
+    lastEntry.setEnd(pos);
+    if (i)
+      listEntries.push_back(lastEntry);
+    lastEntry.setType(name);
+    lastEntry.setBegin(pos);
+
+    f << "[" << name << ":" << std::hex << pos << std::dec << "],";
+    prevPos = pos;
+  }
+  lastEntry.setEnd(m_state->m_EOF);
+  listEntries.push_back(lastEntry);
+
+  ascii().addPos(entryPos);
+  ascii().addNote(f.str().c_str());
+
+  for (int i = 0; i < numEntries-1; i++) {
+    IMWAWEntry const &entry = listEntries[i];
+    long debPos = entry.begin();
+    bool parsed = false;
+    if (entry.type() == "CPRT") {
+      readCPRT(entry);
+      parsed = true;
+    } else if (entry.type() == "SNAP") {
+      readSNAP(entry);
+      parsed = true;
+    } else if (entry.type() == "STYL") {
+      m_textParser->readSTYLs(entry);
+      parsed = true;
+    } else if (entry.type() == "DSUM") {
+      readDSUM(entry, false);
+      parsed = true;
+    }
+    if (parsed) {
+      debPos = input->tell();
+      if (debPos == entry.end()) continue;
+    }
+    f.str("");
+    f << "Entries(" << entry.type() << ")";
+    if (parsed) f << "*";
+    ascii().addPos(entry.begin());
+    ascii().addNote(f.str().c_str());
+  }
+
+  if (numEntries)
+    m_state->m_EOF = listEntries[0].begin();
+  return true;
+}
+
+bool CWParser::readZone()
+{
+  TMWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  libmwaw_tools::DebugStream f;
+
+  std::string name("");
+  char c = input->readULong(1);
+  if (!c)
+    input->seek(-1, WPX_SEEK_CUR);
+  else {
+    if (c >= ' ' && c <= 'z')
+      name += c;
+    else
+      return false;
+    for (int i = 0; i < 3; i++) {
+      c= input->readULong(1);
+      if (c >= ' ' && c <= 'z')
+        name += c;
+      else
+        return false;
+    }
+  }
+  long sz = 0;
+  if (name == "QTIM")
+    sz = 4;
+  else {
+    long debPos = input->tell();
+    sz = input->readULong(4);
+    if (long(input->tell()) != debPos+4) return false;
+  }
+
+  if (sz == 0) {
+    f << "Entries(Nop):" << name;
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return true;
+  }
+  IMWAWEntry entry;
+  entry.setBegin(pos);
+  entry.setLength(4+sz);
+
+  long actPos = input->tell();
+  input->seek(sz, WPX_SEEK_CUR);
+  if (long(input->tell()) != actPos+sz) return false;
+  bool parsed = false, complete;
+  if (name.length()) {
+    if (name == "DSET") {
+      input->seek(pos, WPX_SEEK_SET);
+      if (readDSET(complete))
+        return true;
+    }
+    if (name == "HDNI" && version() <= 4)
+      sz = 2;
+    f << "Entries(" << name << ")";
+  } else {
+    //
+    input->seek(actPos, WPX_SEEK_SET);
+    int firstOffset = input->readULong(2);
+    if (sz >= 16) {
+      input->seek(8, WPX_SEEK_CUR);
+      int val = input->readULong(2);
+      if (val == 0x1101  && firstOffset == sz)
+        parsed = true;
+      else if (val == 0x11 && input->readULong(1)==0x2)
+        parsed = true;
+
+      if (parsed) {
+        f << "Entries(PICT)";
+        ascii().skipZone(actPos, actPos+sz-1);
+      }
+    }
+    if (!parsed)
+      f << "Entries(UnknownA" << sz << "A)";
+  }
+
+  if (!parsed)
+    ascii().addDelimiter(actPos, '|');
+
+  input->seek(actPos+sz, WPX_SEEK_SET);
+
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  ascii().addPos(input->tell());
+  ascii().addNote("_");
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+//
+// Low level
+//
+////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////
+// read the header
+////////////////////////////////////////////////////////////
+bool CWParser::checkHeader(IMWAWHeader *header, bool strict)
+{
+  *m_state = CWParserInternal::State();
+
+  TMWAWInputStreamPtr input = getInput();
+
+  libmwaw_tools::DebugStream f;
+  int const headerSize=8;
+  input->seek(headerSize,WPX_SEEK_SET);
+  if (int(input->tell()) != headerSize) {
+    MWAW_DEBUG_MSG(("CWParser::checkHeader: file is too short\n"));
+    return false;
+  }
+  input->seek(0,WPX_SEEK_SET);
+  f << "FileHeader:";
+  int vers = input->readLong(1);
+  m_state->m_version = vers;
+  if (vers <=0 || vers > 6) {
+    MWAW_DEBUG_MSG(("CWParser::checkHeader: unknown version: %d\n", vers));
+    return false;
+  }
+  f << "vers=" << vers << ",";
+  f << "unk=" << std::hex << input->readULong(2) << ",";
+  int val = input->readLong(1);
+  if (val)
+    f << "unkn1=" << val << ",";
+  if (input->readULong(2) != 0x424f && input->readULong(2) != 0x424f)
+    return false;
+
+  ascii().addPos(0);
+  ascii().addNote(f.str().c_str());
+
+  int typePos = 0;
+  switch(vers) {
+  case 1:
+    typePos = 243;
+    break;
+  case 2:
+  case 3:
+    typePos = 249;
+    break;
+  case 4:
+    typePos = 257;
+    break;
+  case 5:
+    typePos = 268;
+    break;
+  case 6:
+    typePos = 278;
+    break;
+  }
+  input->seek(typePos, WPX_SEEK_SET);
+  if (long(input->tell()) != typePos)
+    return false;
+  int type = input->readULong(1);
+  if (header) {
+    switch (type) {
+    case 0:
+      header->setKind(IMWAWDocument::K_DRAW);
+      break;
+    case 1:
+      header->setKind(IMWAWDocument::K_TEXT);
+      break;
+    case 2:
+      header->setKind(IMWAWDocument::K_SPREADSHEET);
+      break;
+    case 3:
+      header->setKind(IMWAWDocument::K_DATABASE);
+      break;
+    case 4:
+      header->setKind(IMWAWDocument::K_PAINT);
+      break;
+    case 5:
+      header->setKind(IMWAWDocument::K_PRESENTATION);
+      break;
+    default:
+      MWAW_DEBUG_MSG(("CWParser::checkHeader: unknown type=%d\n", type));
+      header->setKind(IMWAWDocument::K_UNKNOWN);
+      break;
+    }
+  }
+
+  if (strict && type > 5) return false;
+#ifndef DEBUG
+  if (type > 8) return false;
+#endif
+  input->seek(headerSize,WPX_SEEK_SET);
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// a document part
+////////////////////////////////////////////////////////////
+shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
+{
+  complete = false;
+  TMWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  libmwaw_tools::DebugStream f;
+  if (input->readULong(4) != 0x44534554L)
+    return shared_ptr<CWStruct::DSET>();
+  long sz = input->readULong(4);
+  IMWAWEntry entry;
+  entry.setBegin(pos);
+  entry.setLength(sz+8);
+
+  if (sz < 16) return shared_ptr<CWStruct::DSET>();
+  long endPos = entry.end();
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos) {
+    MWAW_DEBUG_MSG(("CWParser::readDSET: file is too short\n"));
+    return shared_ptr<CWStruct::DSET>();
+  }
+
+  CWStruct::DSET dset;
+  input->seek(pos+8, WPX_SEEK_SET);
+  dset.m_size = sz;
+  dset.m_numData = input->readULong(2);
+
+  input->seek(10, WPX_SEEK_CUR);
+  dset.m_type = input->readULong(1);
+  input->seek(-11, WPX_SEEK_CUR);
+  int nFlags = 0;
+  switch (dset.m_type) {
+  case 1: // text
+    dset.m_beginSelection = input->readLong(4);
+    dset.m_endSelection = input->readLong(4);
+    break;
+  default:
+    dset.m_flags[nFlags++] = input->readLong(2); // normally -1
+    dset.m_flags[nFlags++] = input->readLong(2);
+    dset.m_dataSz = input->readULong(2);
+    dset.m_headerSz = input->readULong(2);
+    break;
+  }
+  dset.m_flags[nFlags++] = input->readLong(2);
+  input->seek(1, WPX_SEEK_CUR);
+  dset.m_flags[nFlags++] = input->readLong(1);
+  dset.m_id = input->readULong(2) ;
+
+  bool parsed = true;
+  shared_ptr<CWStruct::DSET> res;
+  switch (dset.m_type) {
+  case 0:
+    res = m_graphParser->readGroupZone(dset, entry, complete);
+    break;
+  case 1:
+    res = m_textParser->readDSETZone(dset, entry, complete);
+    break;
+  case 3:
+    res = m_databaseParser->readDatabaseZone(dset, entry, complete);
+    break;
+  case 4:
+    res = m_graphParser->readBitmapZone(dset, entry, complete);
+    break;
+  case 6:
+    res = m_tableParser->readTableZone(dset, entry, complete);
+    break;
+  default:
+    parsed = false;
+    break;
+  }
+
+  if (parsed) {
+    if (!res)
+      return shared_ptr<CWStruct::DSET>();
+    if (m_state->m_zonesMap.find(res->m_id) != m_state->m_zonesMap.end()) {
+      MWAW_DEBUG_MSG(("CWParser::readDSET: zone %d already exists!!!!\n",
+                      res->m_id));
+    } else
+      m_state->m_zonesMap[res->m_id] = res;
+    return res;
+  }
+
+  shared_ptr<CWStruct::DSET> zone(new CWStruct::DSET(dset));
+  f << "Entries(DSETU): " << *zone;
+
+  int data0Length = zone->m_dataSz;
+  int N = zone->m_numData;
+
+  ascii().addDelimiter(input->tell(), '|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  if (sz-12 != data0Length*N + zone->m_headerSz) {
+    MWAW_DEBUG_MSG(("CWParser::readDSET: unexpected size for zone definition, try to continue\n"));
+    input->seek(endPos, WPX_SEEK_SET);
+    return zone;
+  }
+
+  long debPos = endPos-N*data0Length;
+  for (int i = 0; i < zone->m_numData; i++) {
+    input->seek(debPos, WPX_SEEK_SET);
+    f.str("");
+    f << "DSETU-" << i << ":";
+
+    long actPos = input->tell();
+    if (actPos != debPos && actPos != debPos+data0Length)
+      ascii().addDelimiter(input->tell(),'|');
+    ascii().addPos(debPos);
+    ascii().addNote(f.str().c_str());
+    debPos += data0Length;
+  }
+
+  // in general, such a zone is followed by a small zone ( caption zone?)
+  zone->m_otherChilds.push_back(zone->m_id+1);
+  if (m_state->m_zonesMap.find(zone->m_id) != m_state->m_zonesMap.end()) {
+    MWAW_DEBUG_MSG(("CWParser::readDSET: zone %d already exists!!!!\n",
+                    zone->m_id));
+  } else
+    m_state->m_zonesMap[zone->m_id] = zone;
+
+  input->seek(endPos, WPX_SEEK_SET);
+  return zone;
+}
+
+////////////////////////////////////////////////////////////
+// a list of snapshot
+////////////////////////////////////////////////////////////
+bool CWParser::readSNAP(IMWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.type() != "SNAP")
+    return false;
+  TMWAWInputStreamPtr input = getInput();
+  long pos = entry.begin();
+  input->seek(pos+4, WPX_SEEK_SET); // skip header
+  long sz = input->readULong(4);
+  if (sz > entry.length()) {
+    MWAW_DEBUG_MSG(("CWParser::readSNAP: pb with entry length"));
+    input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+
+  libmwaw_tools::DebugStream f;
+  f << "Entries(SNAP)";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  int id = 0;
+  while (long(input->tell()) < entry.end()) {
+    pos = input->tell();
+    int type=input->readLong(1);
+    sz = input->readULong(4);
+    if (pos+sz > entry.end()) {
+      MWAW_DEBUG_MSG(("CWParser::readSNAP: pb with sub zone: %d", id));
+      input->seek(pos, WPX_SEEK_SET);
+      return false;
+    }
+    f.str("");
+    f << "SNAP-" << id++ << ":";
+    if (type) f << "type=" << type;
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+
+#ifdef DEBUG_WITH_FILES
+    WPXBinaryData file;
+    input->readDataBlock(sz, file);
+
+    static int volatile snapName = 0;
+    f.str("");
+    f << "SNAP" << ++snapName << ".pct";
+    libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+
+    if (type == 0)
+      ascii().skipZone(pos+5,pos+5+sz-1);
+#endif
+    input->seek(pos+5+sz, WPX_SEEK_SET);
+  }
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// a list the document property
+////////////////////////////////////////////////////////////
+bool CWParser::readDSUM(IMWAWEntry const &entry, bool inHeader)
+{
+  if (!entry.valid() || (!inHeader && entry.type() != "DSUM"))
+    return false;
+  TMWAWInputStreamPtr input = getInput();
+  long pos = entry.begin();
+  long debStrings = inHeader ? pos : pos+8;
+  input->seek(debStrings, WPX_SEEK_SET);
+
+  libmwaw_tools::DebugStream f;
+  f << "Entries(DSUM):";
+  for (int entete = 0; entete < 6; entete++) {
+    char const *(entryNames[]) = { "Title",  "Category", "Description", "Author", "Version", "Keywords"};
+    pos = input->tell();
+    int sz = input->readULong(4);
+    if (!sz) continue;
+    int strSize = input->readULong(1);
+    if (strSize != sz-1 || pos+4+sz > entry.end()) {
+      MWAW_DEBUG_MSG(("CWParser::readDSUM: unexpected string size\n"));
+      input->seek(pos, WPX_SEEK_SET);
+      return false;
+    }
+    std::string name("");
+    for (int i = 0; i < strSize; i++) {
+      char c = input->readULong(1);
+      if (c) {
+        name += c;
+        continue;
+      }
+      MWAW_DEBUG_MSG(("CWParser::readDSUM: unexpected string char\n"));
+      input->seek(pos, WPX_SEEK_SET);
+      return false;
+    }
+    if (name.length())
+      f << entryNames[entete] << "=" << name << ",";
+  }
+
+  ascii().addPos(entry.begin());
+  ascii().addNote(f.str().c_str());
+  return true;
+
+}
+
+////////////////////////////////////////////////////////////
+// a list of print info plist
+////////////////////////////////////////////////////////////
+bool CWParser::readCPRT(IMWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.type() != "CPRT")
+    return false;
+  TMWAWInputStreamPtr input = getInput();
+  long pos = entry.begin();
+  input->seek(pos+4, WPX_SEEK_SET); // skip header
+  long sz = input->readULong(4);
+  if (sz > entry.length()) {
+    MWAW_DEBUG_MSG(("CWParser::readCPRT: pb with entry length"));
+    input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+
+  libmwaw_tools::DebugStream f;
+  f << "Entries(CPRT)";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  int id = 0;
+  while (long(input->tell()) < entry.end()) {
+    pos = input->tell();
+    sz = input->readULong(4);
+    if (pos+sz > entry.end()) {
+      MWAW_DEBUG_MSG(("CWParser::readCPRT: pb with sub zone: %d", id));
+      input->seek(pos, WPX_SEEK_SET);
+      return false;
+    }
+    f.str("");
+    f << "CPRT-" << id++ << ":";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+
+#ifdef DEBUG_WITH_FILES
+    WPXBinaryData file;
+    input->readDataBlock(sz, file);
+
+    static int volatile cprtName = 0;
+    f.str("");
+    f << "CPRT" << ++cprtName << ".plist";
+    libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+
+    ascii().skipZone(pos+4,pos+4+sz-1);
+#endif
+    input->seek(pos+4+sz, WPX_SEEK_SET);
+  }
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// read the print info
+////////////////////////////////////////////////////////////
+bool CWParser::readDocHeader()
+{
+  TMWAWInputStreamPtr input = getInput();
+  long debPos = input->tell();
+  libmwaw_tools::DebugStream f;
+  f << "Entries(DocHeader):";
+
+  int val;
+  if (version() >= 6) {
+    f << "unkn=[";
+    for (int i = 0; i < 4; i++) {
+      val = input->readLong(1);
+      if (val) f << val << ", ";
+      else f << "_, ";
+    }
+    f << "],";
+    for (int i = 0; i < 4; i++) {
+      val = input->readLong(2);
+      if (val) f << "e" << i << "=" << val << ",";
+    }
+  }
+  long pos = input->tell();
+  int zone0Length = 52, zone1Length=0, zoneFinalLength = 0;
+  switch(version()) {
+  case 1:
+    zone0Length = 114;
+    zone1Length=54;
+    zoneFinalLength = 352;
+    break;
+  case 2:
+    zone0Length = 116;
+    zone1Length=116;
+    zoneFinalLength = 428;
+    break;
+  case 3:
+    zone0Length = 116;
+    zone1Length=116; // check me
+    break;
+  case 4:
+    zone0Length = 120;
+    zone1Length=94;
+    zoneFinalLength = 416;
+    break;
+  case 5:
+    zone0Length = 132;
+    zone1Length = 94;
+    break;
+  case 6:
+    zone0Length = 124;
+    zone1Length = 1128;
+    break;
+  default:
+    break;
+  }
+  int totalLength = zone0Length+zone1Length+zoneFinalLength;
+
+  input->seek(totalLength, WPX_SEEK_CUR);
+  if (input->tell() != pos+totalLength) {
+    MWAW_DEBUG_MSG(("CWParser::readDocHeader: file is too short\n"));
+    return false;
+  }
+  input->seek(pos, WPX_SEEK_SET);
+  val = input->readLong(2); // always find 1
+  if (val != 1)
+    f << "#unkn=" << std::hex << val << std::dec << ",";
+  for (int i = 0; i < 4; i++) {
+    val = input->readULong(2);
+    if (val)
+      f << std::hex << "f" << i << "="  << std::hex << val << std::dec << ",";
+  }
+  int dim[2];
+  for (int i = 0; i < 2; i++)
+    dim[i] = input->readLong(2);
+  f << "dim?=" << dim[1] << "x" << dim[0] << ",";
+  int margin[6];
+  f << "margin?=[";
+  for (int i = 0; i < 6; i++) {
+    margin[i] = input->readLong(2);
+    f << margin[i] << ",";
+  }
+  f << "],";
+  int dim2[2];
+  for (int i = 0; i < 2; i++)
+    dim2[i] = input->readLong(2);
+  f << "dim2?=" << dim2[1] << "x" << dim2[0] << ",";
+  int fl[4];
+  f << "fl?=[";
+  for (int i = 0; i < 4; i++) {
+    fl[i] = input->readULong(1);
+    if (fl[i])
+      f << fl[i] << ",";
+    else
+      f << "_,";
+  }
+  f << "],";
+  for (int i = 0; i < 9; i++) {
+    val = input->readLong(2);
+    if (val)
+      f << "g" << i << "="  << val << ",";
+  }
+
+  if (long(input->tell()) != pos+zone0Length)
+    ascii().addDelimiter(input->tell(), '|');
+  input->seek(pos+zone0Length, WPX_SEEK_SET);
+  ascii().addPos(debPos);
+  ascii().addNote(f.str().c_str());
+
+  /* zone 1 actual font, actul pos, .. */
+  if (!m_textParser->readRuler())
+    return false;
+  pos = input->tell();
+  f.str("");
+  f << "DocHeader:zone?=" << input->readULong(2) << ",";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  MWAWStruct::Font font;
+  int posChar;
+  if (!m_textParser->readFont(-1, posChar, font))
+    return false;
+
+  /* zone 2, type, unknown */
+  pos = input->tell();
+  f.str("");
+  f << "DocHeader-1:";
+  int numData = version()>=4 ? 7 : 6;
+  for (int i = 0; i < numData; i++) {
+    val = input->readULong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  input->seek(4, WPX_SEEK_CUR);
+  int type = input->readULong(1);
+  f << "type=" << type << ",";
+  val = input->readULong(1);
+  if (type != val) f << "#unkn=" << val << ",";
+
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  if (long(input->tell()) != pos+zone1Length)
+    ascii().addDelimiter(input->tell(), '|');
+  input->seek(pos+zone1Length, WPX_SEEK_SET);
+  if (input->atEOS()) {
+    MWAW_DEBUG_MSG(("CWParser::readDocHeader: file is too short\n"));
+    return false;
+  }
+  switch (version()) {
+  case 1:
+  case 2: {
+    pos = input->tell();
+    int N = input->readULong(2);
+    f.str("");
+    f << "Entries(RULR):N=" << N << ",";
+    for (int i = 0; i < 5; i++) {
+      val = input->readLong(2);
+      if (val) f << "f" << i << "=" << val << ",";
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+
+    for (int i = 0; i < N; i++) {
+      pos = input->tell();
+      if (!m_textParser->readRuler(i)) {
+        input->seek(pos, WPX_SEEK_SET);
+        return false;
+      }
+    }
+
+    pos = input->tell();
+    if (!readPrintInfo()) {
+      MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not find print info\n"));
+      input->seek(pos, WPX_SEEK_SET);
+      return false;
+    }
+    break;
+  }
+  case 4:
+  case 5:
+  case 6: {
+    pos = input->tell();
+    IMWAWEntry entry;
+    entry.setBegin(pos);
+    entry.setLength(6*260);
+    if (!readDSUM(entry, true))
+      return false;
+    pos = input->tell();
+    int expectedSize = 0;
+    switch (version()) {
+    case 4:
+      expectedSize=4;
+      break;
+    case 5:
+      expectedSize=148;
+      break;
+    case 6:
+      expectedSize=150;
+      break;
+    default:
+      break;
+    }
+    if (expectedSize) {
+      f.str("");
+      f << "DocHeader-2:";
+      input->seek(expectedSize, WPX_SEEK_CUR);
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+    }
+    if (!readPrintInfo()) {
+      MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not find print info\n"));
+      input->seek(pos, WPX_SEEK_SET);
+      return false;
+    }
+
+    break;
+  }
+  default:
+    break;
+  }
+
+  if (zoneFinalLength) {
+    pos = input->tell();
+    f.str("");
+    f << "Entries(HeaderEnd):";
+    if (version()<=2) {
+      if (version()==2) {
+        input->seek(56, WPX_SEEK_CUR);
+        ascii().addDelimiter(input->tell(), '|');
+      }
+      f << "ptr=" << std::hex << input->readULong(4) << std::dec << ",";
+      for (int i = 0; i < 6; i++) {
+        val = input->readULong(2);
+        if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
+      }
+      m_state->m_headerId = input->readLong(2);
+      if (m_state->m_headerId) f << "headerId=" << m_state->m_headerId << ",";
+      val = input->readLong(2);
+      if (val) f << "unkn=" << val << ",";
+      m_state->m_footerId = input->readLong(2);
+      if (m_state->m_footerId) f << "footerId=" << m_state->m_footerId << ",";
+    }
+    if (int(input->tell()) != pos)
+      ascii().addDelimiter(input->tell(), '|');
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+zoneFinalLength, WPX_SEEK_SET);
+  }
+  return zoneFinalLength != 0;
+}
+
+////////////////////////////////////////////////////////////
+// read the print info
+////////////////////////////////////////////////////////////
+bool CWParser::readPrintInfo()
+{
+  TMWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  if (input->readULong(2) != 0) return false;
+  long sz = input->readULong(2);
+  if (sz < 0x78)
+    return false;
+  long endPos = pos+4+sz;
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos) {
+    MWAW_DEBUG_MSG(("CWParser::readPrintInfo: file is too short\n"));
+    return false;
+  }
+  input->seek(pos+4, WPX_SEEK_SET);
+
+  libmwaw_tools::DebugStream f;
+  // print info
+  libmwaw_tools_mac::PrintInfo info;
+  if (!info.read(input)) return false;
+  f << "Entries(PrintInfo):"<< info;
+
+  Vec2i paperSize = info.paper().size();
+  Vec2i pageSize = info.page().size();
+  if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
+      paperSize.x() <= 0 || paperSize.y() <= 0) return false;
+
+  // define margin from print info
+  Vec2i lTopMargin= -1 * info.paper().pos(0);
+  Vec2i rBotMargin=info.paper().size() - info.page().size();
+
+  // move margin left | top
+  int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
+  int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
+  lTopMargin -= Vec2i(decalX, decalY);
+  rBotMargin += Vec2i(decalX, decalY);
+
+  // decrease right | bottom
+  int rightMarg = rBotMargin.x() -50;
+  if (rightMarg < 0) rightMarg=0;
+  int botMarg = rBotMargin.y() -50;
+  if (botMarg < 0) botMarg=0;
+
+  m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
+  m_pageSpan.setMarginBottom(botMarg/72.0);
+  m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
+  m_pageSpan.setMarginRight(rightMarg/72.0);
+  m_pageSpan.setFormLength(paperSize.y()/72.);
+  m_pageSpan.setFormWidth(paperSize.x()/72.);
+  if (long(input->tell()) !=endPos) {
+    input->seek(endPos, WPX_SEEK_SET);
+    f << ", #endPos";
+    ascii().addDelimiter(input->tell(), '|');
+  }
+
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  return true;
+}
+
+// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
