@@ -112,7 +112,7 @@ struct Zone {
     if (zone.m_page >= 0) o << "pg=" << zone.m_page << ",";
     o << "box=" << zone.m_box << ",";
     zone.print(o);
-    o << zone.m_style;
+    o << "style=[" << zone.m_style << "],";
     return o;
   }
 
@@ -477,7 +477,9 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
 
   m_input->seek(entry.end(), WPX_SEEK_SET);
 
-  if (readGroupData(graphicZone));
+  if (readGroupData(graphicZone)) {
+    // fixme: do something here
+  }
 
   if (m_state->m_zoneMap.find(graphicZone->m_id) != m_state->m_zoneMap.end()) {
     MWAW_DEBUG_MSG(("CWGraph::readGroupZone: zone %d already exists!!!\n", graphicZone->m_id));

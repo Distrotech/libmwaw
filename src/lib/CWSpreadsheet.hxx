@@ -28,11 +28,11 @@
  */
 
 /*
- * Parser to Claris Works text document ( table part )
+ * Parser to Claris Works text document ( spreadsheet part )
  *
  */
-#ifndef CW_MWAW_TABLE
-#  define CW_MWAW_TABLE
+#ifndef CW_MWAW_SPREADSHEET
+#  define CW_MWAW_SPREADSHEET
 
 #include <list>
 #include <string>
@@ -67,9 +67,10 @@ class Convertissor;
 typedef shared_ptr<Convertissor> ConvertissorPtr;
 }
 
-namespace CWTableInternal
+namespace CWSpreadsheetInternal
 {
-struct Table;
+struct Spreadsheet;
+struct Field;
 struct State;
 }
 
@@ -80,15 +81,15 @@ class CWParser;
  *
  *
  */
-class CWTable
+class CWSpreadsheet
 {
   friend class CWParser;
 
 public:
   //! constructor
-  CWTable(TMWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  CWSpreadsheet(TMWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
   //! destructor
-  virtual ~CWTable();
+  virtual ~CWSpreadsheet();
 
   /** returns the file version */
   int version() const;
@@ -97,7 +98,7 @@ public:
   int numPages() const;
 
   //! reads the zone Text DSET
-  shared_ptr<CWStruct::DSET> readTableZone
+  shared_ptr<CWStruct::DSET> readSpreadsheetZone
   (CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete);
 
 protected:
@@ -107,27 +108,18 @@ protected:
     m_listener = listen;
   }
 
-  //! sends the zone data to the listener (if it exists )
-  bool sendZone(int number);
-
-  //! sends the data which have not yet been sent to the listener
-  void flushExtra();
-
   //
   // Intermediate level
   //
 
-  //! try to read the table border
-  bool readTableBorders(CWTableInternal::Table &table);
+  /** try to read the first spreadsheet zone */
+  bool readZone1(CWSpreadsheetInternal::Spreadsheet &sheet);
 
-  //! try to read the table cells
-  bool readTableCells(CWTableInternal::Table &table);
+  /** try to read the second spreadsheet zone */
+  bool readZone2(CWSpreadsheetInternal::Spreadsheet &sheet);
 
-  //! try to read the three unknown fields which follows table cells
-  bool readTableUnknown(int id);
-
-  //! try to read the table border
-  bool readTableBordersId(CWTableInternal::Table &table);
+  //! try to read the record structure
+  bool readContent(CWSpreadsheetInternal::Spreadsheet &sheet);
 
   //
   // low level
@@ -139,8 +131,8 @@ protected:
   }
 
 private:
-  CWTable(CWTable const &orig);
-  CWTable &operator=(CWTable const &orig);
+  CWSpreadsheet(CWSpreadsheet const &orig);
+  CWSpreadsheet &operator=(CWSpreadsheet const &orig);
 
 protected:
   //
@@ -156,7 +148,7 @@ protected:
   MWAWTools::ConvertissorPtr m_convertissor;
 
   //! the state
-  shared_ptr<CWTableInternal::State> m_state;
+  shared_ptr<CWSpreadsheetInternal::State> m_state;
 
   //! the main parser;
   CWParser *m_mainParser;

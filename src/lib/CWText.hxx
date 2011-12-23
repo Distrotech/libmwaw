@@ -150,6 +150,9 @@ protected:
   //! try to read a named font
   bool readChar(int id, int fontSize, MWAWStruct::Font &font);
 
+  /** read the rulers block which is present at the beginning of the text in the first version of Claris Works : v1-2 */
+  bool readRulers();
+
   /** the definition of ruler :
       present at the beginning of the text in the first version of Claris Works : v1-2,
       present in the STYL entries in v4-v6 files */

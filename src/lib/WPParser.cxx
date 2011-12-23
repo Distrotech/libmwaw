@@ -567,7 +567,7 @@ protected:
   int m_id;
 };
 
-void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType type)
+void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -775,7 +775,7 @@ bool WPParser::createZones()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool WPParser::checkHeader(IMWAWHeader *header, bool strict)
+bool WPParser::checkHeader(IMWAWHeader */*header*/, bool strict)
 {
   *m_state = WPParserInternal::State();
 

@@ -582,7 +582,7 @@ bool CWDatabase::readDatabaseDefaults(CWDatabaseInternal::Database &dBase)
   return true;
 }
 
-bool CWDatabase::readDatabaseListUnkn(CWDatabaseInternal::Database &dBase)
+bool CWDatabase::readDatabaseListUnkn(CWDatabaseInternal::Database &/*dBase*/)
 {
   long pos = m_input->tell();
   long sz = m_input->readULong(4);
@@ -628,7 +628,7 @@ bool CWDatabase::readDatabaseListUnkn(CWDatabaseInternal::Database &dBase)
   return true;
 }
 
-bool CWDatabase::readDatabaseSortFunction(CWDatabaseInternal::Database &dBase)
+bool CWDatabase::readDatabaseSortFunction(CWDatabaseInternal::Database &/*dBase*/)
 {
   long pos = m_input->tell();
   long sz = m_input->readULong(4);
@@ -675,7 +675,7 @@ bool CWDatabase::readDatabaseSortFunction(CWDatabaseInternal::Database &dBase)
   return true;
 }
 
-bool CWDatabase::readDatabaseContent(CWDatabaseInternal::Database &dBase)
+bool CWDatabase::readDatabaseContent(CWDatabaseInternal::Database &/*dBase*/)
 {
   long pos = m_input->tell();
   long sz = m_input->readULong(4);

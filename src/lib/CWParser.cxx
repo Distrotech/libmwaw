@@ -51,6 +51,7 @@
 #include "CWDatabase.hxx"
 #include "CWGraph.hxx"
 #include "CWStruct.hxx"
+#include "CWSpreadsheet.hxx"
 #include "CWTable.hxx"
 #include "CWText.hxx"
 
@@ -125,7 +126,7 @@ protected:
   int m_id;
 };
 
-void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType type)
+void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -154,8 +155,9 @@ void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType 
 ////////////////////////////////////////////////////////////
 CWParser::CWParser(TMWAWInputStreamPtr input, IMWAWHeader * header) :
   IMWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_databaseParser(), m_graphParser(), m_tableParser(),
-  m_textParser(), m_listSubDocuments(), m_asciiFile(), m_asciiName("")
+  m_pageSpan(), m_databaseParser(), m_graphParser(), m_spreadsheetParser(),
+  m_tableParser(), m_textParser(), m_listSubDocuments(),
+  m_asciiFile(), m_asciiName("")
 {
   init();
 }
@@ -180,6 +182,7 @@ void CWParser::init()
 
   m_databaseParser.reset(new CWDatabase(getInput(), *this, m_convertissor));
   m_graphParser.reset(new CWGraph(getInput(), *this, m_convertissor));
+  m_spreadsheetParser.reset(new CWSpreadsheet(getInput(), *this, m_convertissor));
   m_tableParser.reset(new CWTable(getInput(), *this, m_convertissor));
   m_textParser.reset(new CWText(getInput(), *this, m_convertissor));
 }
@@ -189,6 +192,7 @@ void CWParser::setListener(CWContentListenerPtr listen)
   m_listener = listen;
   m_databaseParser->setListener(listen);
   m_graphParser->setListener(listen);
+  m_spreadsheetParser->setListener(listen);
   m_tableParser->setListener(listen);
   m_textParser->setListener(listen);
 }
@@ -263,6 +267,7 @@ void CWParser::parse(WPXDocumentInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       m_textParser->sendZone(1);
+      m_tableParser->flushExtra();
       m_textParser->flushExtra();
       if (m_listener) m_listener->endDocument();
       m_listener.reset();
@@ -298,6 +303,8 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
     numPage = m_databaseParser->numPages();
   if (m_graphParser->numPages() > numPage)
     numPage = m_graphParser->numPages();
+  if (m_spreadsheetParser->numPages() > numPage)
+    numPage = m_spreadsheetParser->numPages();
   if (m_tableParser->numPages() > numPage)
     numPage = m_tableParser->numPages();
   m_state->m_numPages = numPage;
@@ -886,6 +893,9 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
   case 1:
     res = m_textParser->readDSETZone(dset, entry, complete);
     break;
+  case 2:
+    res = m_spreadsheetParser->readSpreadsheetZone(dset, entry, complete);
+    break;
   case 3:
     res = m_databaseParser->readDatabaseZone(dset, entry, complete);
     break;
@@ -1135,30 +1145,30 @@ bool CWParser::readDocHeader()
   switch(version()) {
   case 1:
     zone0Length = 114;
-    zone1Length=54;
+    zone1Length=50;
     zoneFinalLength = 352;
     break;
   case 2:
     zone0Length = 116;
-    zone1Length=116;
+    zone1Length=112;
     zoneFinalLength = 428;
     break;
   case 3:
     zone0Length = 116;
-    zone1Length=116; // check me
+    zone1Length=112; // check me
     break;
   case 4:
     zone0Length = 120;
-    zone1Length=94;
+    zone1Length=92;
     zoneFinalLength = 416;
     break;
   case 5:
     zone0Length = 132;
-    zone1Length = 94;
+    zone1Length = 92;
     break;
   case 6:
     zone0Length = 124;
-    zone1Length = 1128;
+    zone1Length = 1126;
     break;
   default:
     break;
@@ -1222,6 +1232,7 @@ bool CWParser::readDocHeader()
   pos = input->tell();
   f.str("");
   f << "DocHeader:zone?=" << input->readULong(2) << ",";
+  if (version() >= 4) f << "unkn=" << input->readULong(2) << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   MWAWStruct::Font font;
@@ -1233,8 +1244,7 @@ bool CWParser::readDocHeader()
   pos = input->tell();
   f.str("");
   f << "DocHeader-1:";
-  int numData = version()>=4 ? 7 : 6;
-  for (int i = 0; i < numData; i++) {
+  for (int i = 0; i < 6; i++) {
     val = input->readULong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
@@ -1243,10 +1253,15 @@ bool CWParser::readDocHeader()
   f << "type=" << type << ",";
   val = input->readULong(1);
   if (type != val) f << "#unkn=" << val << ",";
-
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  if (long(input->tell()) != pos+zone1Length)
+  if (version() <= 2) {
+    // the document font ?
+    if (!m_textParser->readFont(-1, posChar, font))
+      return false;
+    ascii().addPos(input->tell());
+    ascii().addNote("DocHeader-2");
+  } else if (long(input->tell()) != pos+zone1Length)
     ascii().addDelimiter(input->tell(), '|');
   input->seek(pos+zone1Length, WPX_SEEK_SET);
   if (input->atEOS()) {
@@ -1257,24 +1272,8 @@ bool CWParser::readDocHeader()
   case 1:
   case 2: {
     pos = input->tell();
-    int N = input->readULong(2);
-    f.str("");
-    f << "Entries(RULR):N=" << N << ",";
-    for (int i = 0; i < 5; i++) {
-      val = input->readLong(2);
-      if (val) f << "f" << i << "=" << val << ",";
-    }
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-
-    for (int i = 0; i < N; i++) {
-      pos = input->tell();
-      if (!m_textParser->readRuler(i)) {
-        input->seek(pos, WPX_SEEK_SET);
-        return false;
-      }
-    }
-
+    if (!m_textParser->readRulers())
+      return false;
     pos = input->tell();
     if (!readPrintInfo()) {
       MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not find print info\n"));
@@ -1378,7 +1377,17 @@ bool CWParser::readPrintInfo()
   libmwaw_tools::DebugStream f;
   // print info
   libmwaw_tools_mac::PrintInfo info;
-  if (!info.read(input)) return false;
+  if (!info.read(input)) {
+    if (sz == 0x78) {
+      // the size is ok, so let try to continue
+      ascii().addPos(pos);
+      ascii().addNote("Entries(PrintInfo):##");
+      input->seek(endPos, WPX_SEEK_SET);
+      MWAW_DEBUG_MSG(("CWParser::readPrintInfo: can not read print info, continue\n"));
+      return true;
+    }
+    return false;
+  }
   f << "Entries(PrintInfo):"<< info;
 
   Vec2i paperSize = info.paper().size();

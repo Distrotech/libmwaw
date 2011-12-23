@@ -78,6 +78,7 @@ struct DSET;
 
 class CWDatabase;
 class CWGraph;
+class CWSpreadsheet;
 class CWTable;
 class CWText;
 
@@ -91,6 +92,7 @@ class CWParser : public IMWAWParser
   friend class CWParserInternal::SubDocument;
   friend class CWDatabase;
   friend class CWGraph;
+  friend class CWSpreadsheet;
   friend class CWTable;
   friend class CWText;
 
@@ -222,6 +224,9 @@ protected:
 
   //! the graph parser
   shared_ptr<CWGraph> m_graphParser;
+
+  //! the spreadsheet parser
+  shared_ptr<CWSpreadsheet> m_spreadsheetParser;
 
   //! the table parser
   shared_ptr<CWTable> m_tableParser;

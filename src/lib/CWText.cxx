@@ -573,9 +573,12 @@ bool CWText::readFont(int id, int &posC, MWAWStruct::Font &font)
       if (colId < int(palette.size())) {
         for (int c=0; c < 3; c++)
           color[c] = palette[colId][c];
-      } else
+      }
+      else {
         MWAW_DEBUG_MSG(("CWText::readFont: unknown color"));
-    } else if (version()==2 && false) {
+      }
+    }
+    else if (version()==2 && false) {
       /*
         V2:
         color  = 1 black, 4 : yellow, 7: magenta 7 red a cyan
@@ -585,8 +588,10 @@ bool CWText::readFont(int id, int &posC, MWAWStruct::Font &font)
       if (colId < int(palette.size())) {
         for (int c=0; c < 3; c++)
           color[c] = palette[colId][c];
-      } else
+      }
+      else {
         MWAW_DEBUG_MSG(("CWText::readFont: unknown color"));
+      }
     } else
       f << "#col=" << std::hex << colId << std::dec << ",";
   }
@@ -655,7 +660,7 @@ bool CWText::readChar(int id, int fontSize, MWAWStruct::Font &font)
     f << "#col=" << std::hex << colId << std::dec << ",";
   }
   font.setColor(color);
-  if (fontSize >= 12) {
+  if (fontSize >= 12 && version()==6) {
     flag = m_input->readULong(2);
     if (flag & 0x2)
       flags |= DMWAW_DOUBLE_UNDERLINE_BIT;
@@ -1415,6 +1420,56 @@ bool CWText::readSTYLs(IMWAWEntry const &entry)
 }
 
 ////////////////////////////////////////////////////////////
+// read a list of rulers
+////////////////////////////////////////////////////////////
+bool CWText::readRulers()
+{
+  long pos = m_input->tell();
+  long sz = m_input->readULong(4);
+  long endPos = pos+4+sz;
+
+  m_input->seek(endPos, WPX_SEEK_SET);
+  if (m_input->atEOS()) {
+    MWAW_DEBUG_MSG(("CWText::readRulers: ruler zone is too short\n"));
+    return false;
+  }
+  m_input->seek(pos+4, WPX_SEEK_SET);
+
+  int N = m_input->readULong(2);
+  int type = m_input->readLong(2);
+  int val =  m_input->readLong(2);
+  int fSz =  m_input->readLong(2);
+
+  if (sz != 12+fSz*N) {
+    m_input->seek(pos, WPX_SEEK_SET);
+    MWAW_DEBUG_MSG(("CWText::readRulers: find odd ruler size\n"));
+    return false;
+  }
+
+  libmwaw_tools::DebugStream f;
+  f << "Entries(RULR):";
+  f << "N=" << N << ", type?=" << type <<", fSz=" << fSz << ",";
+  if (val) f << "unkn=" << val << ",";
+
+  for (int i = 0; i < 2; i++) {
+    int val = m_input->readLong(2);
+    if (val)  f << "f" << i << "=" << val << ",";
+  }
+
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  for (int i = 0; i < N; i++) {
+    pos = m_input->tell();
+    if (!readRuler(i)) {
+      m_input->seek(pos, WPX_SEEK_SET);
+      return false;
+    }
+  }
+  return true;
+}
+
+////////////////////////////////////////////////////////////
 // read a ruler zone
 ////////////////////////////////////////////////////////////
 bool CWText::readRuler(int id)
@@ -1630,7 +1685,7 @@ bool CWText::readRuler(int id)
   if (id == 0)
     f << "Entries(RULR)-0";
   else if (id < 0)
-    f << "RULR";
+    f << "RULR-_";
   else
     f << "RULR-" << id;
   f << ":" << ruler;

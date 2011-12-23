@@ -87,6 +87,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWDatabase.cxx			\
 	CWGraph.cxx			\
 	CWParser.cxx			\
+	CWSpreadsheet.cxx		\
 	CWTable.cxx			\
 	CWText.cxx			\
 	MWParser.cxx			\
@@ -99,6 +100,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWDatabase.hxx			\
 	CWGraph.hxx			\
 	CWParser.hxx			\
+	CWSpreadsheet.hxx		\
 	CWStruct.hxx			\
 	CWTable.hxx			\
 	CWText.hxx			\

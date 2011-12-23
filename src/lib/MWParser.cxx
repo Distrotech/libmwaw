@@ -356,7 +356,7 @@ protected:
   int m_id;
 };
 
-void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType type)
+void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -812,8 +812,9 @@ bool MWParser::checkHeader(IMWAWHeader *header, bool strict)
   }
   if (!vName.length()) {
     MWAW_DEBUG_MSG(("Maybe a MacWrite file unknown version(%d)\n", vers));
-  } else
+  } else {
     MWAW_DEBUG_MSG(("MacWrite file %s\n", vName.c_str()));
+  }
 
   f << "FileHeader: vers=" << vers << ",";
 
@@ -1510,8 +1511,9 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
     numTabs = 0;
   }
   int highspacing = input->readLong(1);
-  if (highspacing)
+  if (highspacing) {
     MWAW_DEBUG_MSG(("MWParser::readParagraph: high spacing bit set=%d\n", highspacing));
+  }
   int spacing = input->readLong(1);
   parag.m_spacing = 1.+spacing/2.0;
   parag.m_margins[0] = input->readLong(2)/80.;
