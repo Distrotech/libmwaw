@@ -471,7 +471,6 @@ void CWTable::flushExtra()
 #ifdef DEBUG
     sendZone(iter->first);
 #endif
-    table->m_parsed = true;
   }
 }
 

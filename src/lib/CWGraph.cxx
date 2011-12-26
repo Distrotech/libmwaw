@@ -27,6 +27,7 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
+#include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -36,6 +37,7 @@
 #include <libwpd/WPXString.h>
 
 #include "TMWAWPictBasic.hxx"
+#include "TMWAWPictBitmap.hxx"
 #include "TMWAWPictMac.hxx"
 #include "TMWAWPosition.hxx"
 
@@ -1077,8 +1079,8 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
     float position[2];
     for (int j = 0; j < 2; j++)
       position[j] = m_input->readLong(4)/256.;
-    bZone->m_vertices.push_back(Vec2f(position[0], position[1]));
-    f << position[0] << "x" << position[1] << ",";
+    bZone->m_vertices.push_back(Vec2f(position[1], position[0]));
+    f << position[1] << "x" << position[0] << ",";
     if (fSz >= 26) {
       for (int cPt = 0; cPt < 2; cPt++) {
         float ctrlPos[2];
@@ -1180,20 +1182,6 @@ bool CWGraph::readPICT(CWGraphInternal::ZonePict &zone)
 
   zone.m_entries[0].setBegin(pos+4);
   zone.m_entries[0].setEnd(endPos);
-#ifdef DEBUG_WITH_FILES
-  if (1) {
-    WPXBinaryData file;
-    m_input->seek(pos+4, WPX_SEEK_SET);
-    m_input->readDataBlock(sz, file);
-    static int volatile pictName = 0;
-    libmwaw_tools::DebugStream f;
-    f << "PICT-" << ++pictName << ".pct";
-    libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
-  }
-#endif
-
-  // get the picture
-  ascii().skipZone(pos+4, endPos-1);
   m_input->seek(endPos, WPX_SEEK_SET);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1388,4 +1376,268 @@ bool CWGraph::readBitmapData(CWGraphInternal::ZoneBitmap &zone)
   return true;
 }
 
+////////////////////////////////////////////////////////////
+// send data to the listener
+////////////////////////////////////////////////////////////
+bool CWGraph::sendZone(int number)
+{
+  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
+    = m_state->m_zoneMap.find(number);
+  if (iter == m_state->m_zoneMap.end())
+    return false;
+  shared_ptr<CWGraphInternal::Group> group = iter->second;
+  for (int g = 0; g < int(group->m_zones.size()); g++) {
+    switch (group->m_zones[g]->getType()) {
+    case CWGraphInternal::Zone::T_Zone:
+      // fixme
+      break;
+    case CWGraphInternal::Zone::T_Picture:
+      sendPicture
+      (reinterpret_cast<CWGraphInternal::ZonePict &>(*group->m_zones[g]));
+      break;
+    case CWGraphInternal::Zone::T_Basic:
+#ifdef DEBUG
+      sendBasicPicture
+      (reinterpret_cast<CWGraphInternal::ZoneBasic &>(*group->m_zones[g]));
+#endif
+      break;
+    case CWGraphInternal::Zone::T_Bitmap:
+      sendBitmap
+      (reinterpret_cast<CWGraphInternal::ZoneBitmap &>(*group->m_zones[g]));
+      break;
+    case CWGraphInternal::Zone::T_DataBox:
+    case CWGraphInternal::Zone::T_Chart:
+    case CWGraphInternal::Zone::T_Unknown:
+      break;
+    default:
+      MWAW_DEBUG_MSG(("CWGraph::sendZone: find unknown zone\n"));
+      break;
+    }
+  }
+  group->m_parsed = true;
+  return true;
+}
+
+bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
+{
+  if (!m_listener) return true;
+
+  Vec2i pictSz = pict.m_box.size();
+  if (pictSz[0] < 0) pictSz.setX(-pictSz[0]);
+  if (pictSz[1] < 0) pictSz.setY(-pictSz[1]);
+  Box2i box(Vec2i(0,0), pictSz);
+
+  shared_ptr<libmwaw_tools::PictBasic> pictPtr;
+  switch(pict.getSubType()) {
+  case CWGraphInternal::Zone::T_Line: {
+    libmwaw_tools::PictLine *res=new libmwaw_tools::PictLine(Vec2i(0,0), pict.m_box.size());
+    pictPtr.reset(res);
+    if (pict.m_style.m_lineFlags & 0x40) res->setArrow(0, true);
+    if (pict.m_style.m_lineFlags & 0x80) res->setArrow(1, true);
+    break;
+  }
+  case CWGraphInternal::Zone::T_Rect: {
+    libmwaw_tools::PictRectangle *res=new libmwaw_tools::PictRectangle(box);
+    pictPtr.reset(res);
+    break;
+  }
+  case CWGraphInternal::Zone::T_RectOval: {
+    libmwaw_tools::PictRectangle *res=new libmwaw_tools::PictRectangle(box);
+    int roundValues[2];
+    for (int i = 0; i < 2; i++) {
+      if (2*pict.m_values[i] <= pictSz[i])
+        roundValues[i] = pict.m_values[i];
+      else
+        roundValues[i]= pictSz[i]/2-1;
+    }
+    res->setRoundCornerWidth(roundValues[0], roundValues[1]);
+    pictPtr.reset(res);
+    break;
+  }
+  case CWGraphInternal::Zone::T_Oval: {
+    libmwaw_tools::PictCircle *res=new libmwaw_tools::PictCircle(box);
+    pictPtr.reset(res);
+    break;
+  }
+  case CWGraphInternal::Zone::T_Arc: {
+    int angle[2] = { 90-pict.m_values[0]-pict.m_values[1], 90-pict.m_values[0]};
+    while (angle[1] > 360) {
+      angle[0]-=360;
+      angle[1]-=360;
+    }
+    while (angle[0] < -360) {
+      angle[0]+=360;
+      angle[1]+=360;
+    }
+    Vec2f center = box.center();
+    Vec2f axis = 0.5*Vec2f(box.size());
+    // we must compute the real bd box
+    float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
+    int limitAngle[2];
+    for (int i = 0; i < 2; i++)
+      limitAngle[i] = (angle[i] < 0) ? int(angle[i]/90)-1 : int(angle[i]/90);
+    for (int bord = limitAngle[0]; bord <= limitAngle[1]+1; bord++) {
+      float ang = (bord == limitAngle[0]) ? angle[0] :
+                  (bord == limitAngle[1]+1) ? angle[1] : 90 * bord;
+      ang *= M_PI/180.;
+      float actVal[2] = { axis[0]*std::cos(ang), -axis[1]*std::sin(ang)};
+      if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
+      else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
+      if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
+      else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
+    }
+    Box2i realBox(Vec2i(center[0]+minVal[0],center[1]+minVal[1]), Vec2i(center[0]+maxVal[0],center[1]+maxVal[1]));
+    libmwaw_tools::PictArc *res=new libmwaw_tools::PictArc(realBox,box, angle[0], angle[1]);
+    pictPtr.reset(res);
+    break;
+  }
+  case CWGraphInternal::Zone::T_Poly: {
+    if (!pict.m_vertices.size()) break;
+    // if (pict.m_style.m_lineFlags & 1) : we must close the polygon ?
+    libmwaw_tools::PictPolygon *res=new libmwaw_tools::PictPolygon(box, pict.m_vertices);
+    pictPtr.reset(res);
+    break;
+  }
+  default:
+    break;
+  }
+
+  if (!pictPtr)
+    return false;
+  pictPtr->setLineWidth(pict.m_style.m_lineWidth);
+
+  WPXBinaryData data;
+  std::string type;
+  if (!pictPtr->getBinary(data,type)) return false;
+  Box2f pictBox= pictPtr->getBdBox();
+  pictBox.extend(4.0);
+  TMWAWPosition pictPos=TMWAWPosition(pictBox[0],pictBox.size(), WPX_POINT);
+  pictPos.setRelativePosition(TMWAWPosition::Char);
+
+
+  m_listener->insertPicture(pictPos,data, type);
+  return true;
+}
+
+bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap)
+{
+  if (!bitmap.m_entry.valid() || !bitmap.m_bitmapType)
+    return false;
+
+  if (!m_listener)
+    return true;
+  int numColors = bitmap.m_colorMap.size();
+  shared_ptr<libmwaw_tools::PictBitmap> bmap;
+
+  libmwaw_tools::PictBitmapIndexed *bmapIndexed;
+  libmwaw_tools::PictBitmapColor *bmapColor;
+  bool indexed = false;
+  if (numColors > 2) {
+    bmapIndexed =  new libmwaw_tools::PictBitmapIndexed(bitmap.m_size);
+    bmapIndexed->setColors(bitmap.m_colorMap);
+    bmap.reset(bmapIndexed);
+    indexed = true;
+  } else
+    bmap.reset((bmapColor=new libmwaw_tools::PictBitmapColor(bitmap.m_size)));
+
+  //! let go
+  int fSz = bitmap.m_bitmapType;
+  m_input->seek(bitmap.m_entry.begin(), WPX_SEEK_SET);
+  for (int r = 0; r < bitmap.m_size[1]; r++) {
+    for (int c = 0; c < bitmap.m_size[0]; c++) {
+      long val = m_input->readULong(fSz);
+      if (indexed) {
+        bmapIndexed->set(c,r, val);
+        continue;
+      }
+      switch(fSz) {
+      case 1:
+        bmapColor->set(c,r, Vec3uc(val,val,val));
+        break;
+      case 2: // rgb compressed ?
+        bmapColor->set(c,r, Vec3uc(((val>>10)&0x1F) << 3,((val>>5)&0x1F) << 3,((val>>0)&0x1F) << 3));
+        break;
+      case 4:
+        bmapColor->set(c,r, Vec3uc((val>>24)&0xff,(val>>16)&0xff,(val>>8)&0xff));
+        break;
+      }
+    }
+  }
+
+  TMWAWPosition pictPos=TMWAWPosition(Vec2f(0,0),bitmap.m_box.size(), WPX_POINT);
+  pictPos.setRelativePosition(TMWAWPosition::Char);
+  WPXBinaryData data;
+  std::string type;
+  if (!bmap->getBinary(data,type)) return false;
+
+  m_listener->insertPicture(pictPos, data);
+
+  return true;
+}
+
+bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict)
+{
+  bool send = false;
+  for (int z = 0; z < 2; z++) {
+    IMWAWEntry entry = pict.m_entries[z];
+    if (!entry.valid())
+      continue;
+
+    Box2f box;
+    m_input->seek(entry.begin(), WPX_SEEK_SET);
+
+    TMWAWPosition pictPos=TMWAWPosition(Vec2f(0,0),pict.m_box.size(), WPX_POINT);
+    pictPos.setRelativePosition(TMWAWPosition::Char);
+    switch(pict.getSubType()) {
+    case CWGraphInternal::Zone::T_Pict: {
+      shared_ptr<libmwaw_tools::Pict> pict
+      (libmwaw_tools::PictData::get(m_input, entry.length()));
+      if (pict) {
+        if (!send && m_listener) {
+          WPXBinaryData data;
+          std::string type;
+          if (pict->getBinary(data,type))
+            m_listener->insertPicture(pictPos, data, type);
+        }
+        send = true;
+      }
+      break;
+    }
+    default:
+      if (!send && m_listener) {
+        WPXBinaryData data;
+        m_input->seek(entry.begin(), WPX_SEEK_SET);
+        m_input->readDataBlock(entry.length(), data);
+        m_listener->insertPicture(pictPos, data);
+      }
+      send = true;
+      break;
+    }
+
+#ifdef DEBUG_WITH_FILES
+    ascii().skipZone(entry.begin(), entry.end()-1);
+    WPXBinaryData file;
+    m_input->seek(entry.begin(), WPX_SEEK_SET);
+    m_input->readDataBlock(entry.length(), file);
+    static int volatile pictName = 0;
+    libmwaw_tools::DebugStream f;
+    f << "PICT-" << ++pictName;
+    libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+#endif
+  }
+  return send;
+}
+
+void CWGraph::flushExtra()
+{
+  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
+    = m_state->m_zoneMap.begin();
+  for ( ; iter !=  m_state->m_zoneMap.end(); iter++) {
+    shared_ptr<CWGraphInternal::Group> zone = iter->second;
+    if (zone->m_parsed)
+      continue;
+    if (m_listener) m_listener->insertEOL();
+    sendZone(iter->first);
+  }
+}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

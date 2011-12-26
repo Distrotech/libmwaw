@@ -160,9 +160,9 @@ bool PictRectangle::getODGBinary(WPXBinaryData &res) const
   pt=m_rectBox[1]-m_rectBox[0];
   list.insert("w",getStringPt(pt.x()).c_str());
   list.insert("h",getStringPt(pt.y()).c_str());
-  if (m_cornerWidth > 0) {
-    list.insert("rw",getStringPt(m_cornerWidth).c_str());
-    list.insert("rh",getStringPt(m_cornerWidth).c_str());
+  if (m_cornerWidth[0] > 0 && m_cornerWidth[1] > 0) {
+    list.insert("rw",getStringPt(m_cornerWidth[0]).c_str());
+    list.insert("rh",getStringPt(m_cornerWidth[1]).c_str());
   }
   doc.startElement("libmwaw:drawRectangle", list);
   doc.endElement("libmwaw:drawRectangle");

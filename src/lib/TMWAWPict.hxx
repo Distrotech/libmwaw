@@ -90,7 +90,7 @@ public:
 
   /** tries to convert the picture in a binary data :
    * - either a basic image/pict
-   * - or an encrypted pict in ODG : "image/mac-odg"
+   * - or an encrypted pict in ODG : "image/mwaw-odg"
    */
   virtual bool getBinary(WPXBinaryData &, std::string &) const {
     return false;

@@ -97,7 +97,7 @@ public:
   /** returns the final representation in encoded odg (if possible) */
   virtual bool getBinary(WPXBinaryData &data, std::string &s) const {
     if (!getODGBinary(data)) return false;
-    s = "image/mac-odg";
+    s = "image/mwaw-odg";
     return true;
   }
   /** virtual function which tries to convert the picture in ODG and put the result in a WPXBinaryData */
@@ -240,15 +240,22 @@ class PictRectangle : public PictBasic
 {
 public:
   //! constructor
-  PictRectangle(Box2f box) : PictBasic(), m_cornerWidth(0), m_rectBox(box) {
+  PictRectangle(Box2f box) : PictBasic(), m_rectBox(box) {
     setBdBox(box);
+    for (int i = 0; i < 2; i++) m_cornerWidth[i] = 0;
   }
   //! virtual destructor
   virtual ~PictRectangle() {}
 
   //! sets the corner width
   void setRoundCornerWidth(int w) {
-    m_cornerWidth = w;
+    m_cornerWidth[0] = m_cornerWidth[1] = w;
+  }
+
+  //! sets the corner width
+  void setRoundCornerWidth(int xw, int yw) {
+    m_cornerWidth[0] = xw;
+    m_cornerWidth[1] = yw;
   }
 
   //! returns a ODG (encoded)
@@ -266,13 +273,15 @@ protected:
     int diff = PictBasic::cmp(a);
     if (diff) return diff;
     PictRectangle const &aRect = static_cast<PictRectangle const &>(a);
-    diff = m_cornerWidth - aRect.m_cornerWidth;
-    if (diff) return (diff < 0) ? -1 : 1;
+    for (int i = 0; i < 2; i++) {
+      diff = m_cornerWidth[i] - aRect.m_cornerWidth[i];
+      if (diff) return (diff < 0) ? -1 : 1;
+    }
     return 0;
   }
 
   //! an int used to define round corner
-  int m_cornerWidth;
+  int m_cornerWidth[2];
   //! corner point
   Box2f m_rectBox;
 };

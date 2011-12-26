@@ -573,12 +573,10 @@ bool CWText::readFont(int id, int &posC, MWAWStruct::Font &font)
       if (colId < int(palette.size())) {
         for (int c=0; c < 3; c++)
           color[c] = palette[colId][c];
-      }
-      else {
+      } else {
         MWAW_DEBUG_MSG(("CWText::readFont: unknown color"));
       }
-    }
-    else if (version()==2 && false) {
+    } else if (version()==2 && false) {
       /*
         V2:
         color  = 1 black, 4 : yellow, 7: magenta 7 red a cyan
@@ -588,8 +586,7 @@ bool CWText::readFont(int id, int &posC, MWAWStruct::Font &font)
       if (colId < int(palette.size())) {
         for (int c=0; c < 3; c++)
           color[c] = palette[colId][c];
-      }
-      else {
+      } else {
         MWAW_DEBUG_MSG(("CWText::readFont: unknown color"));
       }
     } else

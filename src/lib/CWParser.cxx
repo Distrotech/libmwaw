@@ -267,8 +267,9 @@ void CWParser::parse(WPXDocumentInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       m_textParser->sendZone(1);
-      m_tableParser->flushExtra();
       m_textParser->flushExtra();
+      m_tableParser->flushExtra();
+      m_graphParser->flushExtra();
       if (m_listener) m_listener->endDocument();
       m_listener.reset();
     }

@@ -61,7 +61,7 @@ internal encoded format used to export odg's data.
   these properties can be ignored or used:
   - Properties "fo:border", "fo:border-left", "fo:border-right", "fo:border-top", "fo:border-bottom"
     can appear in the property list of OpenParagraph.
-  - Encoded object with "libwpd:mimetype"="image/mac-odg" can be given to insertBinaryObject.
+  - Encoded object with "libwpd:mimetype"="image/mwaw-odg" can be given to insertBinaryObject.
   In this case, TMWAWPropertyHandler can be used to decode the data which is an encoded odg picture.
 
 \section lib_docs libmwaw documentation

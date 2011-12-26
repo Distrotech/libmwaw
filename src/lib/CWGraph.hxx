@@ -121,6 +121,12 @@ protected:
     m_listener = listen;
   }
 
+  //! sends the zone data to the listener (if it exists )
+  bool sendZone(int number);
+
+  //! sends the data which have not yet been sent to the listener
+  void flushExtra();
+
   //
   // Intermediate level
   //
@@ -167,6 +173,15 @@ protected:
 
   /* read the first zone of a group type */
   bool readGroupHeader();
+
+  //! sends a picture zone
+  bool sendPicture(CWGraphInternal::ZonePict &pict);
+
+  //! sends a basic graphic zone
+  bool sendBasicPicture(CWGraphInternal::ZoneBasic &pict);
+
+  //! sends a bitmap graphic zone
+  bool sendBitmap(CWGraphInternal::ZoneBitmap &pict);
 
   //! returns the debug file
   libmwaw_tools::DebugFile &ascii() {
