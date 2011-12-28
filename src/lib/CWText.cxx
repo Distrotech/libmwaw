@@ -564,33 +564,16 @@ bool CWText::readFont(int id, int &posC, MWAWStruct::Font &font)
   int colId = m_input->readULong(1);
   int color[3] = { 0, 0, 0};
   if (colId!=1) {
-    if (version()==1 && false) {
-      /*V1:
-        color  = 1 black, 26 : yellow, 2c: magenta 24 red 29 cyan
-        27 green 2a blue 0 white
-      */
-      std::vector<Vec3uc> const &palette= m_convertissor->getColor3Palette();
-      if (colId < int(palette.size())) {
-        for (int c=0; c < 3; c++)
-          color[c] = palette[colId][c];
-      } else {
-        MWAW_DEBUG_MSG(("CWText::readFont: unknown color"));
-      }
-    } else if (version()==2 && false) {
-      /*
-        V2:
-        color  = 1 black, 4 : yellow, 7: magenta 7 red a cyan
-        ea green 9 blue 0 white
-      */
-      std::vector<Vec3uc> const &palette= m_convertissor->getColor4Palette();
-      if (colId < int(palette.size())) {
-        for (int c=0; c < 3; c++)
-          color[c] = palette[colId][c];
-      } else {
-        MWAW_DEBUG_MSG(("CWText::readFont: unknown color"));
-      }
-    } else
-      f << "#col=" << std::hex << colId << std::dec << ",";
+    Vec3uc col;
+    if (m_mainParser->getColor(colId, col)) {
+      for (int i = 0; i < 3; i++) color[i] = col[i];
+    } else if (version() != 1) {
+      MWAW_DEBUG_MSG(("CWText::readFont: unknown color %d\n", colId));
+    }
+    /*V1:
+      color  = 1 black, 26 : yellow, 2c: magenta 24 red 29 cyan
+      27 green 2a blue 0 white
+    */
   }
   if (fontSize >= 12)
     f << "lookupId=" << m_input->readLong(2) << ",";

@@ -215,6 +215,10 @@ float CWParser::pageWidth() const
   return m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight();
 }
 
+bool CWParser::getColor(int colId, Vec3uc &col) const
+{
+  return m_graphParser->getColor(colId, col);
+}
 
 ////////////////////////////////////////////////////////////
 // new page
@@ -1161,7 +1165,7 @@ bool CWParser::readDocHeader()
   case 4:
     zone0Length = 120;
     zone1Length=92;
-    zoneFinalLength = 416;
+    zoneFinalLength = 376;//408;
     break;
   case 5:
     zone0Length = 132;
@@ -1325,7 +1329,68 @@ bool CWParser::readDocHeader()
   default:
     break;
   }
+  if (version() >= 4) {
+    for (int z = 0; z < 3; z++) { // zone0, zone1 : color palette, zone2 (val:2, id:2)
+      pos = input->tell();
+      long sz = input->readULong(4);
+      if (!sz) {
+        ascii().addPos(pos);
+        ascii().addNote("Nop");
+        continue;
+      }
+      IMWAWEntry entry;
+      entry.setBegin(pos);
+      entry.setLength(4+sz);
+      input->seek(entry.end(), WPX_SEEK_SET);
+      if (long(input->tell()) != entry.end()) {
+        MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not read final zones\n"));
+        input->seek(pos, WPX_SEEK_SET);
+        return false;
+      }
+      if (z == 1) {
+        if (!m_graphParser->readColorMap(entry)) {
+          input->seek(pos, WPX_SEEK_SET);
+          return false;
+        }
+        continue;
+      }
+      f.str("");
+      f << "Entries(HeaderZone" << z << "):";
+      if (z == 2) {
+        input->seek(pos+4, WPX_SEEK_SET);
+        int N = input->readULong(2);
+        f << "N=" << N << ",";
+        int val = input->readLong(2);
+        if (val != -1) f << "f0=" << val << ",";
+        val = input->readLong(2);
+        if (val) f << "f1=" << val << ",";
+        int fSz = input->readLong(2);
+        f << "fS=" << fSz << ",";
 
+        if ((N && !fSz) || N*fSz+8 > sz) {
+          MWAW_DEBUG_MSG(("CWPars er::readDocHeader: can not read final zones\n"));
+          input->seek(pos, WPX_SEEK_SET);
+          return false;
+        }
+        input->seek(entry.end()-N*fSz, WPX_SEEK_SET);
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+
+        for (int i = 0; i < N; i++) {
+          pos = input->tell();
+          f.str("");
+          f << "Entries(HeaderZone" << z << ")-" << i << ":";
+          ascii().addPos(pos);
+          ascii().addNote(f.str().c_str());
+          input->seek(pos+fSz, WPX_SEEK_SET);
+        }
+      } else {
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+      }
+      input->seek(entry.end(), WPX_SEEK_SET);
+    }
+  }
   if (zoneFinalLength) {
     pos = input->tell();
     f.str("");

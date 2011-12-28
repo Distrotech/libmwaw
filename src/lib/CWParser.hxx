@@ -163,6 +163,13 @@ protected:
   void sendFootnote(int zoneId);
 
   //
+  // interface with the graph parser
+  //
+
+  //! returns the color corresponding to colId (if possible)
+  bool getColor(int colId, Vec3uc &col) const;
+
+  //
   // low level
   //
 

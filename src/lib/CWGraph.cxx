@@ -379,11 +379,55 @@ struct Group : public CWStruct::DSET {
 //! Internal: the state of a CWGraph
 struct State {
   //! constructor
-  State() : m_zoneMap() {
-  }
+  State() : m_zoneMap(), m_colorMap() { }
+  // set the default color map
+  void setDefaultColorMap(int version);
 
   std::map<int, shared_ptr<Group> > m_zoneMap;
+  std::vector<Vec3uc> m_colorMap;
 };
+
+void State::setDefaultColorMap(int version)
+{
+  if (version == 1 || m_colorMap.size()) return;
+  int const defCol[256] = {
+    0xffffff,0x0,0x777777,0x555555,0xffff00,0xff6600,0xdd0000,0xff0099,
+    0x660099,0xdd,0x99ff,0xee00,0x6600,0x663300,0x996633,0xbbbbbb,
+    0xffffcc,0xffff99,0xffff66,0xffff33,0xffccff,0xffcccc,0xffcc99,0xffcc66,
+    0xffcc33,0xffcc00,0xff99ff,0xff99cc,0xff9999,0xff9966,0xff9933,0xff9900,
+    0xff66ff,0xff66cc,0xff6699,0xff6666,0xff6633,0xff33ff,0xff33cc,0xff3399,
+    0xff3366,0xff3333,0xff3300,0xff00ff,0xff00cc,0xff0066,0xff0033,0xff0000,
+    0xccffff,0xccffcc,0xccff99,0xccff66,0xccff33,0xccff00,0xccccff,0xcccccc,
+    0xcccc99,0xcccc66,0xcccc33,0xcccc00,0xcc99ff,0xcc99cc,0xcc9999,0xcc9966,
+    0xcc9933,0xcc9900,0xcc66ff,0xcc66cc,0xcc6699,0xcc6666,0xcc6633,0xcc6600,
+    0xcc33ff,0xcc33cc,0xcc3399,0xcc3366,0xcc3333,0xcc3300,0xcc00ff,0xcc00cc,
+    0xcc0099,0xcc0066,0xcc0033,0xcc0000,0x99ffff,0x99ffcc,0x99ff99,0x99ff66,
+    0x99ff33,0x99ff00,0x99ccff,0x99cccc,0x99cc99,0x99cc66,0x99cc33,0x99cc00,
+    0x9999ff,0x9999cc,0x999999,0x999966,0x999933,0x999900,0x9966ff,0x9966cc,
+    0x996699,0x996666,0x996600,0x9933ff,0x9933cc,0x993399,0x993366,0x993333,
+    0x993300,0x9900ff,0x9900cc,0x990099,0x990066,0x990033,0x990000,0x66ffff,
+    0x66ffcc,0x66ff99,0x66ff66,0x66ff33,0x66ff00,0x66ccff,0x66cccc,0x66cc99,
+    0x66cc66,0x66cc33,0x66cc00,0x6699ff,0x6699cc,0x669999,0x669966,0x669933,
+    0x669900,0x6666ff,0x6666cc,0x666699,0x666666,0x666633,0x666600,0x6633ff,
+    0x6633cc,0x663399,0x663366,0x663333,0x6600ff,0x6600cc,0x660066,0x660033,
+    0x660000,0x33ffff,0x33ffcc,0x33ff99,0x33ff66,0x33ff33,0x33ff00,0x33ccff,
+    0x33cccc,0x33cc99,0x33cc66,0x33cc33,0x33cc00,0x3399ff,0x3399cc,0x339999,
+    0x339966,0x339933,0x339900,0x3366ff,0x3366cc,0x336699,0x336666,0x336633,
+    0x336600,0x3333ff,0x3333cc,0x333399,0x333366,0x333333,0x333300,0x3300ff,
+    0x3300cc,0x330099,0x330066,0x330033,0x330000,0xffff,0xffcc,0xff99,
+    0xff66,0xff33,0xff00,0xccff,0xcccc,0xcc99,0xcc66,0xcc33,
+    0xcc00,0x99cc,0x9999,0x9966,0x9933,0x9900,0x66ff,0x66cc,
+    0x6699,0x6666,0x6633,0x33ff,0x33cc,0x3399,0x3366,0x3333,
+    0x3300,0xff,0xcc,0x99,0x66,0x33,0xdd0000,0xbb0000,
+    0xaa0000,0x880000,0x770000,0x550000,0x440000,0x220000,0x110000,0xdd00,
+    0xbb00,0xaa00,0x8800,0x7700,0x5500,0x4400,0x2200,0x1100,
+    0xee,0xbb,0xaa,0x88,0x77,0x55,0x44,0x22,
+    0x11,0xeeeeee,0xdddddd,0xaaaaaa,0x888888,0x444444,0x222222,0x111111,
+  };
+  m_colorMap.resize(256);
+  for (int i = 0; i < 256; i++)
+    m_colorMap[i] = Vec3uc((defCol[i]>>16)&0xff, (defCol[i]>>8)&0xff,defCol[i]&0xff);
+}
 
 }
 
@@ -413,6 +457,18 @@ int CWGraph::numPages() const
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
+bool CWGraph::getColor(int id, Vec3uc &col) const
+{
+  int numColor = m_state->m_colorMap.size();
+  if (!numColor) {
+    m_state->setDefaultColorMap(version());
+    numColor = m_state->m_colorMap.size();
+  }
+  if (id < 0 || id >= numColor)
+    return false;
+  col = m_state->m_colorMap[id];
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
 // a group of data mainly graphic
@@ -494,6 +550,54 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
 ////////////////////////////////////////////////////////////
 // a group of data mainly graphic
 ////////////////////////////////////////////////////////////
+bool CWGraph::readColorMap(IMWAWEntry const &entry)
+{
+  if (!entry.valid()) return false;
+  long pos = entry.begin();
+  m_input->seek(pos+4, WPX_SEEK_SET); // avoid header
+  if (entry.length() == 4) return true;
+
+  libmwaw_tools::DebugStream f;
+  f << "Entries(ColorMap):";
+  int N = m_input->readULong(2);
+  f << "N=" << N << ",";
+  int val;
+  for(int i = 0; i < 2; i++) {
+    val = m_input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+
+  int const fSz = 16;
+  if (pos+10+N*fSz > entry.end()) {
+    MWAW_DEBUG_MSG(("CWGraph::readColorMap: can not read data\n"));
+    m_input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+
+  ascii().addDelimiter(m_input->tell(),'|');
+  m_input->seek(entry.end()-N*fSz, WPX_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  m_state->m_colorMap.resize(N);
+  for (int i = 0; i < N; i++) {
+    pos = m_input->tell();
+    int color[3];
+    for (int c=0; c < 3; c++) color[c] = m_input->readULong(2);
+    m_state->m_colorMap[i]= Vec3uc(color[0]/256, color[1]/256,color[2]/256);
+
+    f.str("");
+    f << "ColorMap[" << i << "]:";
+    ascii().addDelimiter(m_input->tell(),'|');
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    m_input->seek(pos+fSz, WPX_SEEK_SET);
+  }
+
+  m_input->seek(entry.end(), WPX_SEEK_SET);
+  return true;
+}
+
 shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
 (CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete)
 {
@@ -1087,7 +1191,7 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
         for (int j = 0; j < 2; j++)
           ctrlPos[j] = m_input->readLong(4)/256.;
         if (position[0] != ctrlPos[0] || position[1] != ctrlPos[1])
-          f << "ctrPt" << cPt << "=" << ctrlPos[0] << "x" << ctrlPos[1] << ",";
+          f << "ctrPt" << cPt << "=" << ctrlPos[1] << "x" << ctrlPos[0] << ",";
       }
       int fl = m_input->readULong(2);
       switch (fl>>14) {
@@ -1505,7 +1609,9 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
   if (!pictPtr)
     return false;
   pictPtr->setLineWidth(pict.m_style.m_lineWidth);
-
+  Vec3uc color;
+  if (getColor(pict.m_style.m_color[0], color)) pictPtr->setLineColor(color[0], color[1], color[2]);
+  if (getColor(pict.m_style.m_color[1], color)) pictPtr->setSurfaceColor(color[0], color[1], color[2]);
   WPXBinaryData data;
   std::string type;
   if (!pictPtr->getBinary(data,type)) return false;
@@ -1558,8 +1664,16 @@ bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap)
         bmapColor->set(c,r, Vec3uc(((val>>10)&0x1F) << 3,((val>>5)&0x1F) << 3,((val>>0)&0x1F) << 3));
         break;
       case 4:
-        bmapColor->set(c,r, Vec3uc((val>>24)&0xff,(val>>16)&0xff,(val>>8)&0xff));
+        bmapColor->set(c,r, Vec3uc((val>>16)&0xff,(val>>8)&0xff,(val>>0)&0xff));
         break;
+      default: {
+        static bool first = true;
+        if (first) {
+          MWAW_DEBUG_MSG(("CWGraph::sendBitmap: unknown data size\n"));
+          first = false;
+        }
+        break;
+      }
       }
     }
   }

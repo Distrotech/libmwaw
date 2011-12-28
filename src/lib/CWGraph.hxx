@@ -114,6 +114,11 @@ public:
   shared_ptr<CWStruct::DSET> readBitmapZone
   (CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete);
 
+  //! reads a color map zone ( v4-v6)
+  bool readColorMap(IMWAWEntry const &entry);
+
+  //! return the color which corresponds to an id (if possible)
+  bool getColor(int id, Vec3uc &col) const;
 protected:
 
   //! sets the listener in this class and in the helper classes

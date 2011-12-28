@@ -94,6 +94,15 @@ public:
     m_lineColor[2] = b;
   }
 
+  /** sets the surface color (color must be integer between 0 and 255)
+   * default values : 0xFF,0xFF,0xFF, which corresponds to white
+   */
+  void setSurfaceColor(int r, int g, int b) {
+    m_surfaceColor[0] = r;
+    m_surfaceColor[1] = g;
+    m_surfaceColor[2] = b;
+  }
+
   /** returns the final representation in encoded odg (if possible) */
   virtual bool getBinary(WPXBinaryData &data, std::string &s) const {
     if (!getODGBinary(data)) return false;
@@ -122,6 +131,10 @@ public:
 
     for (int c=0; c < 3; c++) {
       diff = m_lineColor[c]-aPict.m_lineColor[c];
+      if (diff) return (diff < 0) ? -1 : 1;
+    }
+    for (int c=0; c < 3; c++) {
+      diff = m_surfaceColor[c]-aPict.m_surfaceColor[c];
       if (diff) return (diff < 0) ? -1 : 1;
     }
     for (int c = 0; c < 2; c++) {
@@ -157,6 +170,7 @@ protected:
   PictBasic() : m_lineWidth(1.0) {
     for (int c = 0; c < 2; c++) m_extend[c]=0;
     for (int c = 0; c < 3; c++) m_lineColor[c]=0;
+    for (int c = 0; c < 3; c++) m_surfaceColor[c]=255;
     setLineWidth(1.0);
   }
   //! protected constructor must not be called directly
@@ -169,6 +183,7 @@ protected:
     Pict::operator=(p);
     m_lineWidth = p.m_lineWidth;
     for (int c=0; c < 3; c++) m_lineColor[c] = p.m_lineColor[c];
+    for (int c=0; c < 3; c++) m_surfaceColor[c] = p.m_surfaceColor[c];
     for (int c=0; c < 2; c++) m_extend[c] = p.m_extend[c];
     return *this;
   }
@@ -178,6 +193,8 @@ private:
   float m_lineWidth;
   //! the line color (in rgb)
   int m_lineColor[3];
+  //! the line color (in rgb)
+  int m_surfaceColor[3];
   //! m_extend[0]: from lineWidth, m_extend[1]: came from extra data
   float m_extend[2];
 };

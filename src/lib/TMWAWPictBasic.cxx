@@ -94,7 +94,12 @@ void PictBasic::getStyle2DProperty(WPXPropertyList &list) const
 {
   PictBasic::getStyle1DProperty(list);
   list.insert("surfaceFill", "none");
-  list.insert("surfaceColor", "#ffffff");
+  std::stringstream s;
+  s << std::hex << std::setfill('0') << "#"
+    << std::setw(2) << m_surfaceColor[0]
+    << std::setw(2) << m_surfaceColor[1]
+    << std::setw(2) << m_surfaceColor[2];
+  list.insert("surfaceColor", s.str().c_str());
 }
 
 
