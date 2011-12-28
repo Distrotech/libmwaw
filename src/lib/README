@@ -5,9 +5,9 @@
 - TMWAW* and libmwaw_tools* : some basic Tools ( mostly generic )
 - IMWAW* and libmwaw_internal* : internal core part of libmwaw (ie. classes used by many parser )
 - MWAW* : specific classes ( MWAW document )
-- WDB* : specific classes ( WPD document )
-- WKS* : specific classes ( WKS document )
- 
+- CW* : parser of ClarisWorks and AppleWorks documents
+- MW* : parser of MacWrite documents
+- WP* : parser of WriterPlus documents
 ------------------------------------------------------------
 --------------            Exported           --------------
 ------------------------------------------------------------
@@ -66,7 +66,6 @@ These files defined basic tools which must be used by the parsers :
 - TMWAWOleParser.hxx : read some classic ole structure
 - TMWAWPropertyHandler.hxx : some classes which keep a list of tag and WPXPropertyList,
 	store/unstore then in order to be reread by writerperfect 
-- TMWAWWin.hxx : read and convert in unicode dos|win3 char fonts
 
 ## tool for graphics:
 - TMWAWPict.hxx : generic pict
@@ -104,7 +103,7 @@ These files defined basic structures which must be used by the parsers :
 	(excepted Mac v1, v2, v3)
 
 ------------------------------------------------------------
---------------------   MW/WP -------------------
+--------------------   CW/MW/WP -------------------
 ------------------------------------------------------------
 Generic classes : 
 
@@ -116,6 +115,12 @@ Specific files which depends on the type of file which is converted
 
 
 ############# Mac
+
+CWParser : parser of ClarisWorks/AppleWorks document
+-   CWGraph : class which reads the graphics and zone dispositions ...
+-   CWDatabase/CWSpreadSheet : class which reads the database/spreadsheet structure ( uncomplete)
+-   CWTable : class which reads the table structures
+-   CWText : class which reads the text and its structures
 
 MWParser : parser of MacWrite document : v2.2 v4.5
 WPParser : parser of WriterPlus document
