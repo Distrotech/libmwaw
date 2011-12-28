@@ -20,7 +20,7 @@ aclocal ; autoconf; automake
 
 Extensive installation instructions can be found in the INSTALL file.
 
-Windows
+Windows ( NOT WORKING : help needed... )
 =========================================
 Beta tester needed to test the compilation and report problems
 
@@ -29,7 +29,7 @@ Windows - Microsoft(tm) Visual Studio/C++
 
 A workspace for MSVC6 can be found in the ./build/win32/ directory.
 This workspace contains a projects file to compile a release version or 
-a debug version of libwps. 
+a debug version of libmwaw. 
 
 NOTE: Using the MSVC build system will result in a static library only. 
 No dll can be created yet using this build system. If you want to create 
@@ -48,11 +48,11 @@ libwpd using MinGW, read following instructions.
 * Build environment and dependencies
 
 In order to build libwpd, you have to have installed MinGW distribution from
-http://www.mingw.org. Because the build system of libwps uses autotools, you
+http://www.mingw.org. Because the build system of libmwaw uses autotools, you
 must install also the MSys packages. It is advisable to install all recent
 packages into a path that does not contain spaces. Besides the MinGW
 distribution, you have to install the _runtime_ and _development_ packages of
-libwps dependency libwpd from libwpd.sourceforge.net/download.html. The packages
+libmwaw dependency libwpd from libwpd.sourceforge.net/download.html. The packages
 you need are libwpd-{version}-MinGW.zip and libwpd-devel-{version}-MinGW.zip
 
 
@@ -60,7 +60,7 @@ you need are libwpd-{version}-MinGW.zip and libwpd-devel-{version}-MinGW.zip
 
 1. Unpack the source code by running:
 
-  gunzip -dc libwps-{version}.tar.gz | tar xpf
+  gunzip -dc libmwaw-{version}.tar.gz | tar xpf
 
 You can also use WinZip or any other GUI compression tool.
 
@@ -77,13 +77,13 @@ The ACLOCAL_FLAGS variable is there in order to allow the auto* scripts to find
 the pkg.m4 macro that is part of the pkg-config distribution. If this macro is
 not found, the generated configure script will be ending with an error.
 
-3. Time to configure libwps; run:
+3. Time to configure libmwaw; run:
 
-  ./configure [--prefix=<target>] [--enable-static] [--disable-shared]
+  ./configure [--prefix=<target>] [--enable-static] [--disable-shared] [--with-sharedptr=boost|c++11|tr1]
 
 By default, the configure script uses as prefix "/usr/local" and configures to
 create only shared libraries. Myself, I build using following options:
-"./configure --prefix=/target --enable-static --enable-shared"
+"./configure --with-sharedptr=tr1"
 
 4. Nearly done. Make sure you have a clean build by running:
  
@@ -98,7 +98,7 @@ creation), the libtool import libraries are not created. Make will try to instal
 them and will stop with error. The "-i" option makes it to report the error, but
 not to stop. Like that the installation will succeed.
 
-That's all folks! For more information, ask questions at the mailing list
-libwps-devel@list.sourceforge.net. Remember that Uncle Google can also be of big
-help especially when the problem is not with libwps, but with one of its 
+That's all folks! While no mailing exists, for more information, ask
+questions directly to osnola@users.sourceforge.net. Remember that Uncle Google can
+also be of big help especially when the problem is not with libmwaw, but with one of its 
 dependencies.
