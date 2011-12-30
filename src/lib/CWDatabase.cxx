@@ -307,11 +307,12 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
   }
   if (ok) {
     pos = m_input->tell();
-    ok = readDatabaseListUnkn(*databaseZone);
+    ok = m_mainParser->readStructZone("DatabaseListUnkn", false);
   }
   if (ok) {
     pos = m_input->tell();
-    ok = readDatabaseSortFunction(*databaseZone);
+    // probably: field number followed by 1 : increasing, 2 : decreasing
+    ok = m_mainParser->readStructZone("DatabaseSortFunction", false);
   }
   if (ok) {
     pos = m_input->tell();
@@ -578,99 +579,6 @@ bool CWDatabase::readDatabaseDefaults(CWDatabaseInternal::Database &dBase)
       ascii().addNote(f.str().c_str());
       m_input->seek(endPos, WPX_SEEK_SET);
     }
-  }
-  return true;
-}
-
-bool CWDatabase::readDatabaseListUnkn(CWDatabaseInternal::Database &/*dBase*/)
-{
-  long pos = m_input->tell();
-  long sz = m_input->readULong(4);
-  long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
-    m_input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWDatabase::readDatabaseListUnkn: file is too short\n"));
-    return false;
-  }
-
-  m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
-  f << "Entries(DatabaseListUnkn):";
-  int N = m_input->readULong(2);
-  f << "N=" << N << ",";
-  int val = m_input->readLong(2);
-  if (val != -1) f << "f0=" << val << ",";
-  val = m_input->readLong(2);
-  if (val) f << "f1=" << val << ",";
-  int fSz = m_input->readLong(2);
-  if (sz != 12+fSz*N || fSz != 2) {
-    m_input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWDatabase::readDatabaseListUnkn: find odd data size\n"));
-    return false;
-  }
-  for (int i = 2; i < 4; i++) {
-    val = m_input->readLong(2);
-    if (val) f << "f" << i << "=" << val << ",";
-
-  }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
-    f.str("");
-    f << "DatabaseListUnkn-" << i << ":";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(pos+fSz, WPX_SEEK_SET);
-  }
-  return true;
-}
-
-bool CWDatabase::readDatabaseSortFunction(CWDatabaseInternal::Database &/*dBase*/)
-{
-  long pos = m_input->tell();
-  long sz = m_input->readULong(4);
-  long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
-    m_input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWDatabase::readDatabaseSortFunction: file is too short\n"));
-    return false;
-  }
-
-  m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
-  f << "Entries(DatabaseSortFunction):";
-  int N = m_input->readULong(2);
-  f << "N=" << N << ",";
-  int val = m_input->readLong(2);
-  if (val != -1) f << "f0=" << val << ",";
-  val = m_input->readLong(2);
-  if (val) f << "f1=" << val << ",";
-  int fSz = m_input->readLong(2);
-  if (sz != 12+fSz*N || fSz != 2) {
-    m_input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWDatabase::readDatabaseSortFunction: find odd data size\n"));
-    return false;
-  }
-  for (int i = 2; i < 4; i++) {
-    val = m_input->readLong(2);
-    if (val) f << "f" << i << "=" << val << ",";
-
-  }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
-    f.str("");
-    f << "DatabaseSortFunction-" << i << ":";
-    // probably: field number followed by 1 : increasing, 2 : decreasing
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(pos+fSz, WPX_SEEK_SET);
   }
   return true;
 }

@@ -6,7 +6,7 @@ endif
 
 lib_LTLIBRARIES = libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.la $(target_libmwaw_stream)
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_includedir = $(includedir)/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@/libmwaw
-libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_include_HEADERS = libmwaw.hxx IMWAWDocument.hxx libmwaw.h MWAWDocument.h 
+libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_include_HEADERS = libmwaw.hxx IMWAWDocument.hxx 
 ##TMWAWPropertyHandler.hxx 
 
 INCLUDES = -I$(srcdir) -I..
@@ -96,7 +96,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWContentListener.hxx		\
 	MWAWStruct.hxx			\
 	MWAWTools.hxx			\
-	MWAWDocument.h			\
 	CWDatabase.hxx			\
 	CWGraph.hxx			\
 	CWParser.hxx			\
@@ -105,8 +104,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWTable.hxx			\
 	CWText.hxx			\
 	MWParser.hxx			\
-	WPParser.hxx			\
-	libmwaw.h
+	WPParser.hxx
 
 if OS_WIN32
 

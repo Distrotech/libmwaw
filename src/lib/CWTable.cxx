@@ -367,8 +367,10 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
       zone 2 : looks like a list of 4 pointers
    */
   for (int i = 0; ok && i < 3; i++) {
+    std::stringstream s;
+    s << "TableUnknown-" << i;
     pos = m_input->tell();
-    ok = readTableUnknown(i);
+    ok = m_mainParser->readStructZone(s.str().c_str(), false);
   }
   if (ok) {
     pos = m_input->tell();
@@ -592,53 +594,6 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
   }
 
   m_input->seek(endPos, WPX_SEEK_SET);
-  return true;
-}
-
-bool CWTable::readTableUnknown(int id)
-{
-  long pos = m_input->tell();
-  long sz = m_input->readULong(4);
-  long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
-    m_input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWTable::readTableUnknown: file is too short\n"));
-    return false;
-  }
-
-  m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
-  f << "Entries(TableUnknown-" << id << "):";
-  int N = m_input->readULong(2);
-  f << "N=" << N << ",";
-  int val = m_input->readLong(2);
-  if (val != -1) f << "f0=" << val << ",";
-  val = m_input->readLong(2);
-  if (val) f << "f1=" << val << ",";
-  int fSz = m_input->readLong(2);
-  if (sz != 12+fSz*N) {
-    m_input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWTable::readTableUnknown: find odd data size\n"));
-    return false;
-  }
-  for (int i = 2; i < 4; i++) {
-    val = m_input->readLong(2);
-    if (val) f << "f" << i << "=" << val << ",";
-
-  }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
-    f.str("");
-    f << "TableUnknown-" << id << "[" << i << "]:";
-
-    m_input->seek(pos+fSz, WPX_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
   return true;
 }
 

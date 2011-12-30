@@ -210,7 +210,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   bool ok = readZone1(*spreadsheetZone);
   if (ok) {
     pos = m_input->tell();
-    ok = readZone2(*spreadsheetZone);
+    ok = m_mainParser->readStructZone("SpreadsheetZone2", false);
   }
   if (ok) {
     pos = m_input->tell();
@@ -290,60 +290,6 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
     ascii().addNote(f.str().c_str());
     m_input->seek(pos+fSize, WPX_SEEK_SET);
   }
-  return true;
-}
-
-bool CWSpreadsheet::readZone2(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
-{
-  long pos = m_input->tell();
-  long sz = m_input->readULong(4);
-  long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
-    m_input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWSpreadsheet::readZone2: spreadsheet\n"));
-    return false;
-  }
-  if (sz == 0) {
-    ascii().addPos(pos);
-    ascii().addNote("Nop");
-    return true;
-  }
-
-  m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
-  f << "Entries(SpreadsheetZone2):";
-  int N = m_input->readULong(2);
-  f << "N=" << N << ",";
-  int val = m_input->readLong(2);
-  if (val != -1) f << "f0=" << val << ",";
-  val = m_input->readLong(2);
-  if (val) f << "f1=" << val << ",";
-  int fSz = m_input->readLong(2);
-  if (sz != 12+fSz*N) {
-    m_input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWSpreadsheet::readZone2: find odd data size\n"));
-    return false;
-  }
-  for (int i = 2; i < 4; i++) {
-    val = m_input->readLong(2);
-    if (val) f << "f" << i << "=" << val << ",";
-
-  }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
-    f.str("");
-    f << "SpreadsheetZone2-" << i << ":";
-
-    m_input->seek(pos+fSz, WPX_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-
-  m_input->seek(endPos, WPX_SEEK_SET);
   return true;
 }
 

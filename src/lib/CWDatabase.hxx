@@ -117,12 +117,6 @@ protected:
   //! try to read the default structure
   bool readDatabaseDefaults(CWDatabaseInternal::Database &dBase);
 
-  //! try to read an unknown zone which seems to contain a list of numbers
-  bool readDatabaseListUnkn(CWDatabaseInternal::Database &dBase);
-
-  //! try to read the sort zone
-  bool readDatabaseSortFunction(CWDatabaseInternal::Database &dBase);
-
   //! try to read the record structure
   bool readDatabaseContent(CWDatabaseInternal::Database &dBase);
 

@@ -123,9 +123,6 @@ protected:
   //! try to read the table cells
   bool readTableCells(CWTableInternal::Table &table);
 
-  //! try to read the three unknown fields which follows table cells
-  bool readTableUnknown(int id);
-
   //! try to read the table border
   bool readTableBordersId(CWTableInternal::Table &table);
 

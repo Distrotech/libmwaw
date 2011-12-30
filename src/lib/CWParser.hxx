@@ -144,6 +144,9 @@ protected:
   //! read the print info zone
   bool readPrintInfo();
 
+  //! try to read a structured zone
+  bool readStructZone(char const *zoneName, bool hasEntete);
+
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
   //! returns the page width, ie. paper size less margin (in inches)
@@ -156,8 +159,8 @@ protected:
   // interface with the text parser
   //
 
-  //! send a text zone
-  bool sendTextZone(int zoneId);
+  //! send a zone
+  bool sendZone(int zoneId);
 
   /** creates a document to send a footnote */
   void sendFootnote(int zoneId);
@@ -186,8 +189,11 @@ protected:
 
   // THE NAMED ENTRY
 
-  /* read the document properties */
+  /* read the document summary */
   bool readDSUM(IMWAWEntry const &entry, bool inHeader);
+
+  /* read the temporary file name ? */
+  bool readTNAM(IMWAWEntry const &entry);
 
   /* SNAP (in v6) : size[4]/size[2] picture... */
   bool readSNAP(IMWAWEntry const &entry);
@@ -225,6 +231,9 @@ protected:
 
   //! the actual document size
   DMWAWPageSpan m_pageSpan;
+
+  //! a flag to know if pageSpan is filled
+  bool m_pageSpanSet;
 
   //! the database parser
   shared_ptr<CWDatabase> m_databaseParser;

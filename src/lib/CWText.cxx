@@ -1591,9 +1591,12 @@ bool CWText::readRuler(int id)
       m_input->seek(1, WPX_SEEK_CUR); // flags to define the printing unit
     }
   }
-  int numTabs = m_input->readLong(2);
+  val = m_input->readLong(1);
+  if (val) f << "unkn1=" << val << ",";
+  int numTabs = m_input->readULong(1);
   if (long(m_input->tell())+numTabs*4 > endPos) {
-    MWAW_DEBUG_MSG(("CWText::readRuler: numTabs is too big\n"));
+    if (numTabs != 255) // 0xFF seems to be used in v1, v2
+      MWAW_DEBUG_MSG(("CWText::readRuler: numTabs is too big\n"));
     f << "numTabs*=" << numTabs << ",";
     numTabs = 0;
   }

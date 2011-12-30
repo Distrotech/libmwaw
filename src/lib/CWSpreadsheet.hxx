@@ -115,9 +115,6 @@ protected:
   /** try to read the first spreadsheet zone */
   bool readZone1(CWSpreadsheetInternal::Spreadsheet &sheet);
 
-  /** try to read the second spreadsheet zone */
-  bool readZone2(CWSpreadsheetInternal::Spreadsheet &sheet);
-
   //! try to read the record structure
   bool readContent(CWSpreadsheetInternal::Spreadsheet &sheet);
 

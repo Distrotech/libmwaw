@@ -103,7 +103,7 @@ struct Zone {
               /* basic subtype */
               T_Line, T_Rect, T_RectOval, T_Oval, T_Arc, T_Poly,
               /* picture subtype */
-              T_Pict, T_QTim,
+              T_Pict, T_QTim, T_Movie,
               /* bitmap type */
               T_Bitmap
             };
@@ -221,6 +221,9 @@ struct ZonePict : public Zone {
       break;
     case T_QTim:
       o << "QTIME,";
+      break;
+    case T_Movie:
+      o << "MOVIE,";
       break;
     default:
       o << "##type = " << m_type << ",";
@@ -613,14 +616,15 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
   f << "Entries(BitmapDef):" << *graphicZone << ",";
 
   ascii().addDelimiter(m_input->tell(), '|');
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
 
   // read the last part
   int data0Length = zone.m_dataSz;
   int N = zone.m_numData;
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+
       MWAW_DEBUG_MSG(("CWGraph::readBitmapZone: can not find definition size\n"));
       m_input->seek(entry.end(), WPX_SEEK_SET);
       return shared_ptr<CWStruct::DSET>();
@@ -629,6 +633,26 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
     MWAW_DEBUG_MSG(("CWGraph::readBitmapZone: unexpected size for zone definition, try to continue\n"));
   }
 
+  shared_ptr<CWGraphInternal::ZoneBitmap> bitmap(new CWGraphInternal::ZoneBitmap());
+
+  bool sizeSet=false;
+  int sizePos = (version() == 1) ? 0: 88;
+  if (sizePos && pos+sizePos+4+N*data0Length < entry.end()) {
+    m_input->seek(pos+sizePos, WPX_SEEK_SET);
+    ascii().addDelimiter(pos+sizePos,'[');
+    int dim[2]; // ( we must add 2 to add the border )
+    for (int j = 0; j < 2; j++)
+      dim[j] = m_input->readLong(2);
+    f << "sz=" << dim[1] << "x" << dim[0] << ",";
+    if (dim[0] > 0 && dim[1] > 0) {
+      bitmap->m_size = Vec2i(dim[1]+2, dim[0]+2);
+      sizeSet = true;
+    }
+    ascii().addDelimiter(m_input->tell(),']');
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
   /** the end of this block is very simillar to a bitmapdef, excepted
       maybe the first integer  .... */
   if (long(m_input->tell())+(N+1)*data0Length <= entry.end())
@@ -636,8 +660,6 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
 
   m_input->seek(entry.end()-N*data0Length, WPX_SEEK_SET);
 
-  shared_ptr<CWGraphInternal::ZoneBitmap> bitmap
-  (new CWGraphInternal::ZoneBitmap());
   for (int i = 0; i < N; i++) {
     pos = m_input->tell();
     IMWAWEntry gEntry;
@@ -660,7 +682,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
     int dim[2]; // ( we must add 2 to add the border )
     for (int j = 0; j < 2; j++)
       dim[j] = m_input->readLong(2);
-    if (i == N-1)
+    if (i == N-1 && !sizeSet)
       bitmap->m_size = Vec2i(dim[0]+2, dim[1]+2);
 
     f << "dim?=" << dim[0] << "x" << dim[1] << ",";
@@ -786,6 +808,9 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(IMWAWEntry const &entry)
     case 10:
       type = CWGraphInternal::Zone::T_DataBox;
       break;
+    case 14:
+      type = CWGraphInternal::Zone::T_Movie;
+      break;
     case 18:
       type = CWGraphInternal::Zone::T_QTim;
       break;
@@ -834,6 +859,7 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(IMWAWEntry const &entry)
   }
   case CWGraphInternal::Zone::T_Pict:
   case CWGraphInternal::Zone::T_QTim:
+  case CWGraphInternal::Zone::T_Movie:
     res.reset(new CWGraphInternal::ZonePict(zone, type));
     break;
   case CWGraphInternal::Zone::T_Line:
@@ -916,6 +942,8 @@ bool CWGraph::readGroupData(shared_ptr<CWGraphInternal::Group> zone)
         if (!readQTimeData(z))
           return false;
         break;
+      case CWGraphInternal::Zone::T_Movie:
+        // FIXME: pict ( containing movie ) + ??? +
       case CWGraphInternal::Zone::T_Pict:
         if (!readPictData(z))
           return false;
@@ -968,9 +996,7 @@ bool CWGraph::readGroupData(shared_ptr<CWGraphInternal::Group> zone)
         continue;
       }
       MWAW_DEBUG_MSG(("CWGraph::readGroupData: find not null entry for a end of zone: %d\n", z->getSubType()));
-      ascii().addPos(pos);
-      ascii().addNote("Entries(GroupDEnd)");
-      m_input->seek(pos+4+sz, WPX_SEEK_SET);
+      m_input->seek(pos, WPX_SEEK_SET);
     }
   }
 
@@ -1222,7 +1248,8 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
 ////////////////////////////////////////////////////////////
 bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
 {
-  if (!zone || zone->getSubType() != CWGraphInternal::Zone::T_Pict)
+  if (!zone || (zone->getSubType() != CWGraphInternal::Zone::T_Pict &&
+                zone->getSubType() != CWGraphInternal::Zone::T_Movie))
     return false;
   CWGraphInternal::ZonePict *pZone =
     reinterpret_cast<CWGraphInternal::ZonePict *>(zone.get());
@@ -1247,11 +1274,30 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
   }
 
   m_input->seek(pos, WPX_SEEK_SET);
-  if (!readPS(*pZone)) {
-    m_input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
+  if (readPS(*pZone))
+    return true;
 
+  // find some msword document (with some embedding: Ole entry ?)
+  MWAW_DEBUG_MSG(("CWGraph::readPictData: unknown data file\n"));
+#ifdef DEBUG_WITH_FILES
+  if (1) {
+    WPXBinaryData file;
+    m_input->seek(pos+4, WPX_SEEK_SET);
+    m_input->readDataBlock(sz, file);
+    static int volatile pictName = 0;
+    libmwaw_tools::DebugStream f;
+    f << "DATA-" << ++pictName;
+    libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+  }
+#endif
+  ascii().addPos(pos);
+  if (zone->getSubType() == CWGraphInternal::Zone::T_Movie)
+    ascii().addNote("Entries(MovieData2)");
+  else
+    ascii().addNote("Entries(PictData2)");
+  ascii().skipZone(pos+4, pos+4+sz-1);
+
+  m_input->seek(pos+4+sz, WPX_SEEK_SET);
   return true;
 }
 
@@ -1299,13 +1345,11 @@ bool CWGraph::readPS(CWGraphInternal::ZonePict &zone)
   long sz = m_input->readULong(4);
   long header = m_input->readULong(4);
   if (header != 0x25215053L) {
-    MWAW_DEBUG_MSG(("CWGraph::readNamedPict: not a postcript file\n"));
     return false;
   }
   long endPos = pos+4+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("CWGraph::readNamedPict: file is too short\n"));
     return false;
   }
   zone.m_entries[1].setBegin(pos+4);
@@ -1418,8 +1462,13 @@ bool CWGraph::readBitmapColorMap(std::vector<Vec3uc> &cMap)
   long pos = m_input->tell();
   long sz = m_input->readULong(4);
   long endPos = pos+4+sz;
+  if (!sz) {
+    ascii().addPos(pos);
+    ascii().addNote("Nop");
+    return true;
+  }
   m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos || !sz) {
+  if (long(m_input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("CWGraph::readBitmapColorMap: file is too short\n"));
     return false;
   }
@@ -1459,13 +1508,14 @@ bool CWGraph::readBitmapData(CWGraphInternal::ZoneBitmap &zone)
   long endPos = pos+4+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos || !sz) {
-    MWAW_DEBUG_MSG(("CWGraph::readBitmapColorMap: file is too short\n"));
+    MWAW_DEBUG_MSG(("CWGraph::readBitmapData: file is too short\n"));
     return false;
   }
+  /* Fixme: this code can not works for the packed bitmap*/
   long numColors = zone.m_size[0]*zone.m_size[1];
   int numBytes = numColors ? sz/numColors : 0;
   if (sz != numBytes*numColors) {
-    MWAW_DEBUG_MSG(("CWGraph::readBitmapColorMap: unexpected size\n"));
+    MWAW_DEBUG_MSG(("CWGraph::readBitmapData: unexpected size\n"));
     return false;
   }
   zone.m_bitmapType = numBytes;
@@ -1703,6 +1753,7 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict)
     TMWAWPosition pictPos=TMWAWPosition(Vec2f(0,0),pict.m_box.size(), WPX_POINT);
     pictPos.setRelativePosition(TMWAWPosition::Char);
     switch(pict.getSubType()) {
+    case CWGraphInternal::Zone::T_Movie:
     case CWGraphInternal::Zone::T_Pict: {
       shared_ptr<libmwaw_tools::Pict> pict
       (libmwaw_tools::PictData::get(m_input, entry.length()));

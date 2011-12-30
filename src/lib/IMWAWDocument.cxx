@@ -79,12 +79,12 @@ Analyzes the content of an input stream to see if it can be parsed
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
-MWAWConfidence IMWAWDocument::isFileFormatSupported(WPXInputStream *input,  IMWAWDocument::DocumentType &type, DocumentKind &kind)
+IMWAWConfidence IMWAWDocument::isFileFormatSupported(WPXInputStream *input,  IMWAWDocument::DocumentType &type, DocumentKind &kind)
 {
-  MWAWConfidence confidence = MWAW_CONFIDENCE_NONE;
+  IMWAWConfidence confidence = IMWAW_CONFIDENCE_NONE;
   if (!input) {
     MWAW_DEBUG_MSG(("IMWAWDocument::isFileFormatSupported(): no input\n"));
-    return MWAW_CONFIDENCE_NONE;
+    return IMWAW_CONFIDENCE_NONE;
   }
 
   MWAW_DEBUG_MSG(("IMWAWDocument::isFileFormatSupported()\n"));
@@ -96,19 +96,19 @@ MWAWConfidence IMWAWDocument::isFileFormatSupported(WPXInputStream *input,  IMWA
   header.reset(IMWAWDocumentInternal::getHeader(ip, false));
 #endif
 
-  if (!header.get()) return MWAW_CONFIDENCE_NONE;
+  if (!header.get()) return IMWAW_CONFIDENCE_NONE;
   type = (IMWAWDocument::DocumentType)header->getType();
   kind = (IMWAWDocument::DocumentKind)header->getKind();
 
   switch (header->getType()) {
   case MW:
-    confidence = MWAW_CONFIDENCE_EXCELLENT;
+    confidence = IMWAW_CONFIDENCE_EXCELLENT;
     break;
   case CW:
-    confidence = MWAW_CONFIDENCE_EXCELLENT;
+    confidence = IMWAW_CONFIDENCE_EXCELLENT;
     break;
   case WPLUS:
-    confidence = MWAW_CONFIDENCE_GOOD;
+    confidence = IMWAW_CONFIDENCE_GOOD;
     break;
   default:
     break;
@@ -124,15 +124,15 @@ WPXDocumentInterface class implementation when needed. This is often commonly ca
 \param input The input stream
 \param documentInterface A IMWAWListener implementation
 */
-MWAWResult IMWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *documentInterface)
+IMWAWResult IMWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *documentInterface)
 {
-  MWAWResult error = MWAW_OK;
+  IMWAWResult error = IMWAW_OK;
 
   try {
     TMWAWInputStreamPtr ip(new TMWAWInputStream(input, false));
     shared_ptr<IMWAWHeader> header(IMWAWDocumentInternal::getHeader(ip, false));
 
-    if (!header.get()) return MWAW_UNKNOWN_ERROR;
+    if (!header.get()) return IMWAW_UNKNOWN_ERROR;
 
     switch (header->getType()) {
     case MW: {
@@ -155,14 +155,14 @@ MWAWResult IMWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *doc
     }
   } catch (libmwaw_libwpd::FileException)	{
     MWAW_DEBUG_MSG(("File exception trapped\n"));
-    error = MWAW_FILE_ACCESS_ERROR;
+    error = IMWAW_FILE_ACCESS_ERROR;
   } catch (libmwaw_libwpd::ParseException) {
     MWAW_DEBUG_MSG(("Parse exception trapped\n"));
-    error = MWAW_PARSE_ERROR;
+    error = IMWAW_PARSE_ERROR;
   } catch (...) {
     //fixme: too generic
     MWAW_DEBUG_MSG(("Unknown exception trapped\n"));
-    error = MWAW_UNKNOWN_ERROR;
+    error = IMWAW_UNKNOWN_ERROR;
   }
 
   return error;

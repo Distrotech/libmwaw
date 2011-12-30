@@ -30,25 +30,23 @@
 #ifndef IMWAWDOCUMENT_H
 #define IMWAWDOCUMENT_H
 
-#define MWAW_VERSION 2
-
 #ifdef _WINDLL
 #  ifdef BUILD_MWAW
-#    define MWAWLIB _declspec(dllexport)
+#    define IMWAWLIB _declspec(dllexport)
 #  else
-#    define MWAWLIB _declspec(dllimport)
+#    define IMWAWLIB _declspec(dllimport)
 #  endif
 #else
-#  define MWAWLIB
+#  define IMWAWLIB
 #endif
 
 
 #include <libwpd-stream/WPXStream.h>
 
 /** enum which defines the confidence that a file format is supported */
-enum MWAWConfidence { MWAW_CONFIDENCE_NONE=0, MWAW_CONFIDENCE_POOR, MWAW_CONFIDENCE_LIKELY, MWAW_CONFIDENCE_GOOD, MWAW_CONFIDENCE_EXCELLENT };
+enum IMWAWConfidence { IMWAW_CONFIDENCE_NONE=0, IMWAW_CONFIDENCE_POOR, IMWAW_CONFIDENCE_LIKELY, IMWAW_CONFIDENCE_GOOD, IMWAW_CONFIDENCE_EXCELLENT };
 /** enum which defines the result of the file parsing */
-enum MWAWResult { MWAW_OK, MWAW_FILE_ACCESS_ERROR, MWAW_PARSE_ERROR, MWAW_OLE_ERROR, MWAW_UNKNOWN_ERROR };
+enum IMWAWResult { IMWAW_OK, IMWAW_FILE_ACCESS_ERROR, IMWAW_PARSE_ERROR, IMWAW_OLE_ERROR, IMWAW_UNKNOWN_ERROR };
 
 class WPXDocumentInterface;
 class WDBInterface;
@@ -62,20 +60,22 @@ class IMWAWDocument
 public:
   /** an enum to define the different type of document
 
-  -CW: claris works document
-  -MW: macwrite document
+  -CW: ClarisWorks/AppleWorks document
+  -MW: MacWrite document
+  -NISUSW: Nisus Writer document (nothing done)
+  -WNOW: WriteNow (nothing done)
   -WPLUS: writerplus document ( or maybe not)
   */
-  enum DocumentType { UNKNOWN, CW, MW, WPLUS, WNOW };
+  enum DocumentType { UNKNOWN, CW, MW, NISUSW, WNOW, WPLUS };
 
   /** an enum to define the kind of document */
   enum DocumentKind { K_UNKNOWN, K_TEXT, K_DRAW,
                       K_PAINT, K_PRESENTATION, K_SPREADSHEET, K_DATABASE
                     };
 
-  static MWAWLIB MWAWConfidence isFileFormatSupported(WPXInputStream *input, DocumentType &type, DocumentKind &kind);
-  static MWAWLIB MWAWResult parse(WPXInputStream *input, WPXDocumentInterface *documentInterface);
+  static IMWAWLIB IMWAWConfidence isFileFormatSupported(WPXInputStream *input, DocumentType &type, DocumentKind &kind);
+  static IMWAWLIB IMWAWResult parse(WPXInputStream *input, WPXDocumentInterface *documentInterface);
 };
 
-#endif /* MWAWDOCUMENT_H */
+#endif /* IMWAWDOCUMENT_H */
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

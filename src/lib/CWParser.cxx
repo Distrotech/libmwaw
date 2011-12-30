@@ -145,7 +145,7 @@ void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType 
   assert(m_parser);
 
   long pos = m_input->tell();
-  reinterpret_cast<CWParser *>(m_parser)->sendTextZone(m_id);
+  reinterpret_cast<CWParser *>(m_parser)->sendZone(m_id);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 }
@@ -155,8 +155,8 @@ void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType 
 ////////////////////////////////////////////////////////////
 CWParser::CWParser(TMWAWInputStreamPtr input, IMWAWHeader * header) :
   IMWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_databaseParser(), m_graphParser(), m_spreadsheetParser(),
-  m_tableParser(), m_textParser(), m_listSubDocuments(),
+  m_pageSpan(), m_pageSpanSet(false), m_databaseParser(), m_graphParser(),
+  m_spreadsheetParser(), m_tableParser(), m_textParser(), m_listSubDocuments(),
   m_asciiFile(), m_asciiName("")
 {
   init();
@@ -239,9 +239,28 @@ void CWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // interface with the text parser
 ////////////////////////////////////////////////////////////
-bool CWParser::sendTextZone(int zoneId)
+bool CWParser::sendZone(int zoneId)
 {
-  return m_textParser->sendZone(zoneId);
+  if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
+    return false;
+  shared_ptr<CWStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
+  switch(zMap->m_type) {
+  case 0: // group
+  case 4: // bitmap
+    return m_graphParser->sendZone(zoneId);
+  case 1:
+    return m_textParser->sendZone(zoneId);
+  case 6:
+    return m_tableParser->sendZone(zoneId);
+  case 2:
+    // return m_spreadsheetParser->sendZone(zoneId);
+  case 3:
+    // return m_databaseParser->sendZone(zoneId);
+  default:
+    MWAW_DEBUG_MSG(("CWParser::sendZone: can not send zone: %d\n", zoneId));
+    break;
+  }
+  return false;
 }
 
 void CWParser::sendFootnote(int zoneId)
@@ -632,6 +651,9 @@ bool CWParser::readEndTable()
     } else if (entry.type() == "DSUM") {
       readDSUM(entry, false);
       parsed = true;
+    } else if (entry.type() == "TNAM") {
+      readTNAM(entry);
+      parsed = true;
     }
     if (parsed) {
       debPos = input->tell();
@@ -968,7 +990,75 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
   return zone;
 }
 
+///////////////////////////////////////////////////////////
+// try to read a unknown structured zone
 ////////////////////////////////////////////////////////////
+bool CWParser::readStructZone(char const *zoneName, bool hasEntete)
+{
+  TMWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  long sz = input->readULong(4);
+  long endPos = pos+4+sz;
+  input->seek(endPos,WPX_SEEK_SET);
+  if (long(input->tell()) != endPos) {
+    input->seek(pos, WPX_SEEK_SET);
+    MWAW_DEBUG_MSG(("CWParser::readStructZone: unexpected size for %s\n", zoneName));
+    return false;
+  }
+  libmwaw_tools::DebugStream f;
+  f << "Entries(" << zoneName << "):";
+
+  if (sz == 0) {
+    if (hasEntete) {
+      ascii().addPos(pos-4);
+      ascii().addNote(f.str().c_str());
+    } else {
+      ascii().addPos(pos);
+      ascii().addNote("NOP");
+    }
+    return true;
+  }
+
+  input->seek(pos+4, WPX_SEEK_SET);
+  int N = input->readLong(2);
+  f << "N=" << N << ",";
+  int type = input->readLong(2);
+  if (type != -1)
+    f << "#type=" << type << ",";
+  int val = input->readLong(2);
+  if (val) f << "#unkn=" << val << ",";
+  int fSz = input->readULong(2);
+  int hSz = input->readULong(2);
+  if (!fSz || N*fSz+hSz+12 != sz) {
+    input->seek(pos, WPX_SEEK_SET);
+    MWAW_DEBUG_MSG(("CWParser::readStructZone: unexpected size for %s\n", zoneName));
+    return false;
+  }
+
+  if (long(input->tell()) != pos+4+hSz)
+    ascii().addDelimiter(input->tell(), '|');
+  ascii().addPos(hasEntete ? pos-4 : pos);
+  ascii().addNote(f.str().c_str());
+
+
+  long debPos = endPos-N*fSz;
+  for (int i = 0; i < N; i++) {
+    input->seek(debPos, WPX_SEEK_SET);
+    f.str("");
+    f << zoneName << "-" << i << ":";
+
+    long actPos = input->tell();
+    if (actPos != debPos && actPos != debPos+fSz)
+      ascii().addDelimiter(input->tell(),'|');
+    ascii().addPos(debPos);
+    ascii().addNote(f.str().c_str());
+    debPos += fSz;
+  }
+  input->seek(endPos,WPX_SEEK_SET);
+  return true;
+}
+
+///////////////////////////////////////////////////////////
 // a list of snapshot
 ////////////////////////////////////////////////////////////
 bool CWParser::readSNAP(IMWAWEntry const &entry)
@@ -1066,7 +1156,50 @@ bool CWParser::readDSUM(IMWAWEntry const &entry, bool inHeader)
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
   return true;
+}
 
+////////////////////////////////////////////////////////////
+// a string: temporary file name ?
+////////////////////////////////////////////////////////////
+bool CWParser::readTNAM(IMWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.type() != "TNAM")
+    return false;
+  TMWAWInputStreamPtr input = getInput();
+  long pos = entry.begin();
+  long sz = entry.length()-8;
+  input->seek(pos+8, WPX_SEEK_SET);
+
+  libmwaw_tools::DebugStream f;
+  f << "Entries(TNAM):";
+
+  int strSize = input->readULong(1);
+  if (strSize != sz-1 || pos+8+sz > entry.end()) {
+    MWAW_DEBUG_MSG(("CWParser::readTNAM: unexpected string size\n"));
+    input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+  std::string name("");
+  for (int i = 0; i < strSize; i++) {
+    char c = input->readULong(1);
+    if (c) {
+      name += c;
+      continue;
+    }
+    MWAW_DEBUG_MSG(("CWParser::readTNAM: unexpected string char\n"));
+    input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+  if (name.length())
+    f << name << ",";
+  if (long(input->tell()) != entry.end()) {
+    ascii().addDelimiter(input->tell(),'|');
+    input->seek(entry.end(), WPX_SEEK_SET);
+  }
+
+  ascii().addPos(entry.begin());
+  ascii().addNote(f.str().c_str());
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -1205,6 +1338,28 @@ bool CWParser::readDocHeader()
     f << margin[i] << ",";
   }
   f << "],";
+  if (dim[0] > 0 && dim[1] > 0 &&
+      margin[0] >= 0 && margin[1] >= 0 && margin[2] >= 0 && margin[3] >= 0 &&
+      dim[0] > margin[0]+margin[2] && dim[1] > margin[1]+margin[3]) {
+
+    Vec2i paperSize(dim[1],dim[0]);
+    Vec2i lTopMargin(margin[1], margin[0]);
+    Vec2i rBotMargin(margin[3], margin[2]);
+
+    // decrease right | bottom
+    int rightMarg = rBotMargin.x() -50;
+    if (rightMarg < 0) rightMarg=0;
+    int botMarg = rBotMargin.y() -50;
+    if (botMarg < 0) botMarg=0;
+
+    m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
+    m_pageSpan.setMarginBottom(botMarg/72.0);
+    m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
+    m_pageSpan.setMarginRight(rightMarg/72.0);
+    m_pageSpan.setFormLength(paperSize.y()/72.);
+    m_pageSpan.setFormWidth(paperSize.x()/72.);
+    m_pageSpanSet = true;
+  }
   int dim2[2];
   for (int i = 0; i < 2; i++)
     dim2[i] = input->readLong(2);
@@ -1297,27 +1452,55 @@ bool CWParser::readDocHeader()
     if (!readDSUM(entry, true))
       return false;
     pos = input->tell();
+    long sz = input->readULong(4);
+    if (!sz) {
+      ascii().addPos(pos);
+      ascii().addNote("Nop");
+    } else {
+      long endPos = pos+4+sz;
+      input->seek(endPos, WPX_SEEK_SET);
+      if (long(input->tell()) != endPos) {
+        input->seek(pos, WPX_SEEK_SET);
+        MWAW_DEBUG_MSG(("CWParser::readDocHeader: unexpected DocUnkn0 size\n"));
+        return false;
+      }
+      ascii().addPos(pos);
+      ascii().addNote("Entries(DocUnkn0)");
+      input->seek(endPos, WPX_SEEK_SET);
+    }
+
+    if (version() > 4) {
+      val = input->readULong(4);
+      if (val != long(input->tell())) {
+        input->seek(pos, WPX_SEEK_SET);
+        MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not find local position\n"));
+        return false;
+      }
+      pos = input->tell();
+      if (!readStructZone("DocUnkn1", false)) {
+        input->seek(pos,WPX_SEEK_SET);
+        return false;
+      }
+    }
+
+    pos = input->tell();
     int expectedSize = 0;
     switch (version()) {
-    case 4:
-      expectedSize=4;
-      break;
     case 5:
-      expectedSize=148;
+      expectedSize=34;
       break;
     case 6:
-      expectedSize=150;
+      expectedSize=32;
       break;
     default:
       break;
     }
     if (expectedSize) {
-      f.str("");
-      f << "DocHeader-2:";
-      input->seek(expectedSize, WPX_SEEK_CUR);
       ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
+      ascii().addNote("DocHeader-3");
+      input->seek(pos+expectedSize, WPX_SEEK_SET);
     }
+
     if (!readPrintInfo()) {
       MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not find print info\n"));
       input->seek(pos, WPX_SEEK_SET);
@@ -1347,46 +1530,24 @@ bool CWParser::readDocHeader()
         input->seek(pos, WPX_SEEK_SET);
         return false;
       }
-      if (z == 1) {
+      input->seek(pos, WPX_SEEK_SET);
+      switch(z) {
+      case 0:
+        ascii().addPos(pos);
+        ascii().addNote("DocUnkn2");
+        break;
+      case 1:
         if (!m_graphParser->readColorMap(entry)) {
           input->seek(pos, WPX_SEEK_SET);
           return false;
         }
-        continue;
-      }
-      f.str("");
-      f << "Entries(HeaderZone" << z << "):";
-      if (z == 2) {
-        input->seek(pos+4, WPX_SEEK_SET);
-        int N = input->readULong(2);
-        f << "N=" << N << ",";
-        int val = input->readLong(2);
-        if (val != -1) f << "f0=" << val << ",";
-        val = input->readLong(2);
-        if (val) f << "f1=" << val << ",";
-        int fSz = input->readLong(2);
-        f << "fS=" << fSz << ",";
-
-        if ((N && !fSz) || N*fSz+8 > sz) {
-          MWAW_DEBUG_MSG(("CWPars er::readDocHeader: can not read final zones\n"));
+        break;
+      case 2:
+        if (!readStructZone("DocUnkn3", false)) {
           input->seek(pos, WPX_SEEK_SET);
           return false;
         }
-        input->seek(entry.end()-N*fSz, WPX_SEEK_SET);
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
-
-        for (int i = 0; i < N; i++) {
-          pos = input->tell();
-          f.str("");
-          f << "Entries(HeaderZone" << z << ")-" << i << ":";
-          ascii().addPos(pos);
-          ascii().addNote(f.str().c_str());
-          input->seek(pos+fSz, WPX_SEEK_SET);
-        }
-      } else {
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
+        break;
       }
       input->seek(entry.end(), WPX_SEEK_SET);
     }
@@ -1461,28 +1622,31 @@ bool CWParser::readPrintInfo()
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
-  // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().size() - info.page().size();
+  if (!m_pageSpanSet) {
+    // define margin from print info
+    Vec2i lTopMargin= -1 * info.paper().pos(0);
+    Vec2i rBotMargin=info.paper().size() - info.page().size();
 
-  // move margin left | top
-  int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
-  int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+    // move margin left | top
+    int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
+    int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
+    lTopMargin -= Vec2i(decalX, decalY);
+    rBotMargin += Vec2i(decalX, decalY);
 
-  // decrease right | bottom
-  int rightMarg = rBotMargin.x() -50;
-  if (rightMarg < 0) rightMarg=0;
-  int botMarg = rBotMargin.y() -50;
-  if (botMarg < 0) botMarg=0;
+    // decrease right | bottom
+    int rightMarg = rBotMargin.x() -50;
+    if (rightMarg < 0) rightMarg=0;
+    int botMarg = rBotMargin.y() -50;
+    if (botMarg < 0) botMarg=0;
 
-  m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
-  m_pageSpan.setMarginBottom(botMarg/72.0);
-  m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
-  m_pageSpan.setMarginRight(rightMarg/72.0);
-  m_pageSpan.setFormLength(paperSize.y()/72.);
-  m_pageSpan.setFormWidth(paperSize.x()/72.);
+    m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
+    m_pageSpan.setMarginBottom(botMarg/72.0);
+    m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
+    m_pageSpan.setMarginRight(rightMarg/72.0);
+    m_pageSpan.setFormLength(paperSize.y()/72.);
+    m_pageSpan.setFormWidth(paperSize.x()/72.);
+  }
+
   if (long(input->tell()) !=endPos) {
     input->seek(endPos, WPX_SEEK_SET);
     f << ", #endPos";
