@@ -88,6 +88,9 @@ public:
   //! close a section
   bool closeSection();
 
+  //! returns true if a paragraph is opened
+  bool isParagraphOpened() const;
+
   //! sets the text attributes
   void setTextAttribute(const uint32_t attribute);
   //! sets the text fonts

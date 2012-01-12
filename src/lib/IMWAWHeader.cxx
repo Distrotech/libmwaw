@@ -66,7 +66,29 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
     header->m_docType=IMWAWDocument::CW;
     return header;
   }
+  if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77) {
+    input->seek(8, WPX_SEEK_SET);
+    int version = input->readLong(2);
 
+#ifdef DEBUG
+    if (version < 0 || version > 3) {
+      MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a WriteNow file (unknown version %d)\n", version));
+
+      return 0;
+    }
+#else
+    if (version != 2) {
+      MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a WriteNow file (unknown version %d)\n", version));
+
+      return 0;
+    }
+#endif
+    MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a WriteNow file version=%d\n", version));
+
+    header=new IMWAWHeader(input, version);
+    header->m_docType=IMWAWDocument::WNOW;
+    return header;
+  }
   if (val[0] > 0 && val[0] < 8) {
     // version will be print by MWParser::check
     header=new IMWAWHeader(input, val[0]);

@@ -34,6 +34,7 @@
 
 #include "CWParser.hxx"
 #include "MWParser.hxx"
+#include "WNParser.hxx"
 #include "WPParser.hxx"
 
 namespace IMWAWDocumentInternal
@@ -107,6 +108,9 @@ IMWAWConfidence IMWAWDocument::isFileFormatSupported(WPXInputStream *input,  IMW
   case CW:
     confidence = IMWAW_CONFIDENCE_EXCELLENT;
     break;
+  case WNOW:
+    confidence = IMWAW_CONFIDENCE_EXCELLENT;
+    break;
   case WPLUS:
     confidence = IMWAW_CONFIDENCE_GOOD;
     break;
@@ -150,6 +154,11 @@ IMWAWResult IMWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *do
       parser.parse(documentInterface);
       break;
     }
+    case WNOW: {
+      WNParser parser (ip, header.get());
+      parser.parse(documentInterface);
+      break;
+    }
     default:
       break;
     }
@@ -186,7 +195,7 @@ IMWAWHeader *getHeader(TMWAWInputStreamPtr &ip, bool strict)
     if (!header) return 0L;
 
     bool ok = true;
-    if (header->getType() == IMWAWDocument::MW)
+    if (strict || header->getType() == IMWAWDocument::MW)
       ok = IMWAWDocumentInternal::checkBasicMacHeader(ip, *header, strict);
     if (!ok) {
       delete header;
@@ -217,6 +226,10 @@ bool checkBasicMacHeader(TMWAWInputStreamPtr &input, IMWAWHeader &header, bool s
   }
   case IMWAWDocument::MW: {
     MWParser parser(input, &header);
+    return parser.checkHeader(&header, strict);
+  }
+  case IMWAWDocument::WNOW: {
+    WNParser parser(input, &header);
     return parser.checkHeader(&header, strict);
   }
   case IMWAWDocument::WPLUS: {

@@ -41,14 +41,6 @@
 #include "libmwaw_tools.hxx"
 
 /* Various functions/defines that need not/should not be exported externally */
-#ifndef MWAW_DEBUG_MSG
-#  ifdef DEBUG
-#    define MWAW_DEBUG_MSG(M) printf M
-#  else
-#    define MWAW_DEBUG_MSG(M)
-#  endif
-#endif
-
 namespace libmwaw
 {
 //! some internal tools

@@ -91,6 +91,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWTable.cxx			\
 	CWText.cxx			\
 	MWParser.cxx			\
+	WNParser.cxx			\
+	WNText.cxx			\
 	WPParser.cxx			\
 	libmwaw.hxx			\
 	MWAWContentListener.hxx		\
@@ -104,6 +106,9 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWTable.hxx			\
 	CWText.hxx			\
 	MWParser.hxx			\
+	WNEntry.hxx			\
+	WNParser.hxx			\
+	WNText.hxx			\
 	WPParser.hxx
 
 if OS_WIN32

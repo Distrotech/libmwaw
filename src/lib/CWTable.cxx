@@ -193,7 +193,7 @@ bool Table::buildStructures()
 
     std::vector<int> positions;
     std::set<Compare::CellPoint, Compare>::iterator it = set.begin();
-    int prevPos, maxPosiblePos;
+    int prevPos, maxPosiblePos=0;
     int actCell = -1;
     for ( ; it != set.end(); it++) {
       int pos = it->getPos(dim);

@@ -94,6 +94,11 @@ IMWAWContentListener::~IMWAWContentListener()
   delete m_parseState;
 }
 
+bool IMWAWContentListener::isParagraphOpened() const
+{
+  return m_ps->m_isParagraphOpened;
+}
+
 bool IMWAWContentListener::isSectionOpened() const
 {
   return m_ps->m_isSectionOpened;

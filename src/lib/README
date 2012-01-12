@@ -7,6 +7,7 @@
 - MWAW* : specific classes ( MWAW document )
 - CW* : parser of ClarisWorks and AppleWorks documents
 - MW* : parser of MacWrite documents
+- WN* : parser of WriteNow documents
 - WP* : parser of WriterPlus documents
 ------------------------------------------------------------
 --------------            Exported           --------------
@@ -15,10 +16,6 @@
 ## new interface	
 - libmwaw.hxx
 - IMWAWDocument.hxx
-
-## wrapper to the old interface
-- libmwaw.h
-- IMWAWDocument.h
 
 ------------------------------------------------------------
 --------------   files DMWAW and libmwaw_libwpd  --------------
@@ -123,4 +120,8 @@ CWParser : parser of ClarisWorks/AppleWorks document
 -   CWText : class which reads the text and its structures
 
 MWParser : parser of MacWrite document : v2.2 v4.5
+WNParser : parser of WriteNow document : v3.0 v4.0
+-   WNText : class which reads the text and its structures
+-   WNEntry : class to store the entry found in the document
 WPParser : parser of WriterPlus document
+

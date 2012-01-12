@@ -1685,8 +1685,8 @@ bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap)
   int numColors = bitmap.m_colorMap.size();
   shared_ptr<libmwaw_tools::PictBitmap> bmap;
 
-  libmwaw_tools::PictBitmapIndexed *bmapIndexed;
-  libmwaw_tools::PictBitmapColor *bmapColor;
+  libmwaw_tools::PictBitmapIndexed *bmapIndexed = 0;
+  libmwaw_tools::PictBitmapColor *bmapColor = 0;
   bool indexed = false;
   if (numColors > 2) {
     bmapIndexed =  new libmwaw_tools::PictBitmapIndexed(bitmap.m_size);

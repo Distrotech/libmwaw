@@ -110,7 +110,7 @@ std::string Convertissor::getFontDebugString(MWAWStruct::Font const &ft) const
     ft.getColor(col);
     o << "col=(";
     for (int i = 0; i < 3; i++) o << col[i] << ",";
-    o << ")";
+    o << "),";
   }
   return o.str();
 }

@@ -82,7 +82,11 @@ PictMac::ReadResult PictMac::checkOrGet
     subvers = -input->readLong(2);
     if (subvers == 1) empty = (size == 42);
     else if (subvers == 2) empty = (size == 40);
-    else return MWAW_R_BAD;
+    else if (subvers >= -3 && subvers < 4) {
+      // find also 0 and -1 here...
+      MWAW_DEBUG_MSG(("PictMac::checkOrGet: unknown subversion: %d\n", subvers));
+      empty = (size == 0xd);
+    } else return MWAW_R_BAD;
     version = 2;
     break;
   }
