@@ -44,6 +44,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	IMWAWDocument.cxx		\
 	IMWAWHeader.cxx			\
 	IMWAWList.cxx			\
+	IMWAWTableHelper.cxx		\
 	IMWAWTextParser.cxx		\
 	libmwaw_internal.hxx		\
 	IMWAWCell.hxx			\
@@ -54,6 +55,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	IMWAWList.hxx			\
 	IMWAWParser.hxx			\
 	IMWAWSubDocument.hxx		\
+	IMWAWTableHelper.hxx		\
 	IMWAWTextParser.hxx		\
 	TMWAWDebug.cxx			\
 	TMWAWInputStream.cxx		\

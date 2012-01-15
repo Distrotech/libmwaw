@@ -17,7 +17,7 @@ VS_VERSION_INFO VERSIONINFO
 	VALUE "FileDescription", "libmwaw"
 	VALUE "FileVersion", "@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.@MWAW_MICRO_VERSION@.BUILDNUMBER"
 	VALUE "InternalName", "libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@"
-	VALUE "LegalCopyright", "Copyright (C) 2006, 2007 Andrew Ziem, Fridrich Strba, other contributers"
+	VALUE "LegalCopyright", "Copyright (C) 2006-2012 Laurent Alonso, Andrew Ziem, Fridrich Strba, other contributers"
 	VALUE "OriginalFilename", "libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.dll"
 	VALUE "ProductName", "libmwaw"
 	VALUE "ProductVersion", "@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.@MWAW_MICRO_VERSION@"

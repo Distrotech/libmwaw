@@ -87,227 +87,167 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=../../src/libmwaw/DMWAWContentListener.cxx
+SOURCE=..\..\src\lib\CWDatabase.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/DMWAWEncryption.cxx
+SOURCE=..\..\src\lib\CWGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/DMWAWListener.cxx
+SOURCE=..\..\src\lib\CWParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/DMWAWMemoryStream.cxx
+SOURCE=..\..\src\lib\CWSpreadsheet.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/DMWAWOLEStream.cxx
+SOURCE=..\..\src\lib\CWTable.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/DMWAWPageSpan.cxx
+SOURCE=..\..\src\lib\CWText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/DMWAWSubDocument.cxx
+SOURCE=..\..\src\lib\DMWAWContentListener.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/DMWAWTable.cxx
+SOURCE=..\..\src\lib\DMWAWEncryption.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/IMWAWCell.cxx
+SOURCE=..\..\src\lib\DMWAWListener.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/IMWAWContentListener.cxx
+SOURCE=..\..\src\lib\DMWAWMemoryStream.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/IMWAWDocument.cxx
+SOURCE=..\..\src\lib\DMWAWOLEStream.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/IMWAWExtParser.cxx
+SOURCE=..\..\src\lib\DMWAWPageSpan.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/IMWAWExtTextParser.cxx
+SOURCE=..\..\src\lib\DMWAWSubDocument.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/IMWAWHeader.cxx
+SOURCE=..\..\src\lib\DMWAWTable.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/IMWAWList.cxx
+SOURCE=..\..\src\lib\IMWAWCell.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/IMWAWTextParser.cxx
+SOURCE=..\..\src\lib\IMWAWContentListener.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/TMWAWDebug.cxx
+SOURCE=..\..\src\lib\IMWAWDocument.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/TMWAWInputStream.cxx
+SOURCE=..\..\src\lib\IMWAWHeader.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/TMWAWMacFont.cxx
+SOURCE=..\..\src\lib\IMWAWList.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/TMWAWMacPrint.cxx
+SOURCE=..\..\src\lib\IMWAWTableHelper.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/TMWAWOleParser.cxx
+SOURCE=..\..\src\lib\IMWAWTextParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/TMWAWPictBasic.cxx
+SOURCE=..\..\src\lib\MWAWContentListener.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/TMWAWPictBitmap.cxx
+SOURCE=..\..\src\lib\MWAWStruct.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/TMWAWPictData.cxx
+SOURCE=..\..\src\lib\MWAWTools.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/TMWAWPictMac.cxx
+SOURCE=..\..\src\lib\MWParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/TMWAWPictOleContainer.cxx
+SOURCE=..\..\src\lib\TMWAWDebug.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/TMWAWPropertyHandler.cxx
+SOURCE=..\..\src\lib\TMWAWFont.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/TMWAWWin.cxx
+SOURCE=..\..\src\lib\TMWAWInputStream.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/WDB3MacMNParser.cxx
+SOURCE=..\..\src\lib\TMWAWOleParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/WKS3MacMNParser.cxx
+SOURCE=..\..\src\lib\TMWAWPictBasic.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/WKS4PcMNParser.cxx
+SOURCE=..\..\src\lib\TMWAWPictBitmap.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/MWAW3MacGraph.cxx
+SOURCE=..\..\src\lib\TMWAWPictData.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/MWAW3MacParser.cxx
+SOURCE=..\..\src\lib\TMWAWPictMac.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/MWAW3MacText.cxx
+SOURCE=..\..\src\lib\TMWAWPictOleContainer.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/MWAW4MacMNGraph.cxx
+SOURCE=..\..\src\lib\TMWAWPrint.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/MWAW4MacMNParser.cxx
+SOURCE=..\..\src\lib\TMWAWPropertyHandler.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/MWAW4MacMNText.cxx
+SOURCE=..\..\src\lib\WNParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/MWAW4MacParser.cxx
+SOURCE=..\..\src\lib\WNText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/MWAW4PcMNGraph.cxx
+SOURCE=..\..\src\lib\WPParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/MWAW4PcMNParser.cxx
+SOURCE=..\..\src\lib\libmwaw_internal.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=../../src/libmwaw/MWAW4PcMNText.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAW4PcParser.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAW8PcMNGraph.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAW8PcMNParser.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAW8PcMNStruct.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAW8PcMNTable.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAW8PcMNText.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAW8PcParser.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAWMacContentListener.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAWMacStruct.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAWMacTools.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAWPcContentListener.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAWPcStruct.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/MWAW_MacGraphParser.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/libmwaw_internal.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=../../src/libmwaw/libmwaw_libwpd.cxx
+SOURCE=..\..\src\lib\libmwaw_libwpd.cxx
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -315,283 +255,215 @@ SOURCE=../../src/libmwaw/libmwaw_libwpd.cxx
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\DMWAWContentListener.hxx
+SOURCE=..\..\src\lib\CWDatabase.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\DMWAWEncryption.hxx
+SOURCE=..\..\src\lib\CWGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\DMWAWFileStructure.hxx
+SOURCE=..\..\src\lib\CWParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\DMWAWListener.hxx
+SOURCE=..\..\src\lib\CWSpreadsheet.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\DMWAWMemoryStream.hxx
+SOURCE=..\..\src\lib\CWStruct.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\DMWAWOLEStream.hxx
+SOURCE=..\..\src\lib\CWTable.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\DMWAWPageSpan.hxx
+SOURCE=..\..\src\lib\CWText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\DMWAWSubDocument.hxx
+SOURCE=..\..\src\lib\DMWAWContentListener.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\DMWAWTable.hxx
+SOURCE=..\..\src\lib\DMWAWEncryption.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\IMWAWCell.hxx
+SOURCE=..\..\src\lib\DMWAWFileStructure.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\IMWAWContentListener.hxx
+SOURCE=..\..\src\lib\DMWAWListener.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\IMWAWDocument.hxx
+SOURCE=..\..\src\lib\DMWAWMemoryStream.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\IMWAWEntry.hxx
+SOURCE=..\..\src\lib\DMWAWOLEStream.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\IMWAWExtEntry.hxx
+SOURCE=..\..\src\lib\DMWAWPageSpan.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\IMWAWExtParser.hxx
+SOURCE=..\..\src\lib\DMWAWSubDocument.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\IMWAWExtTextParser.hxx
+SOURCE=..\..\src\lib\DMWAWTable.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\IMWAWHeader.hxx
+SOURCE=..\..\src\lib\IMWAWCell.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\IMWAWList.hxx
+SOURCE=..\..\src\lib\IMWAWContentListener.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\IMWAWParser.hxx
+SOURCE=..\..\src\lib\IMWAWDocument.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\IMWAWSubDocument.hxx
+SOURCE=..\..\src\lib\IMWAWEntry.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\IMWAWTextParser.hxx
+SOURCE=..\..\src\lib\IMWAWHeader.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWDebug.hxx
+SOURCE=..\..\src\lib\IMWAWList.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWInputStream.hxx
+SOURCE=..\..\src\lib\IMWAWParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWMacFont.hxx
+SOURCE=..\..\src\lib\IMWAWSubDocument.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWMacPrint.hxx
+SOURCE=..\..\src\lib\IMWAWTableHelper.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWOleParser.hxx
+SOURCE=..\..\src\lib\IMWAWTextParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWPict.hxx
+SOURCE=..\..\src\lib\MWAWContentListener.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWPictBasic.hxx
+SOURCE=..\..\src\lib\MWAWStruct.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWPictBitmap.hxx
+SOURCE=..\..\src\lib\MWAWTools.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWPictData.hxx
+SOURCE=..\..\src\lib\MWParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWPictMac.hxx
+SOURCE=..\..\src\lib\TMWAWDebug.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWPictOleContainer.hxx
+SOURCE=..\..\src\lib\TMWAWFont.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWPosition.hxx
+SOURCE=..\..\src\lib\TMWAWInputStream.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWPropertyHandler.hxx
+SOURCE=..\..\src\lib\TMWAWOleParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\TMWAWWin.hxx
+SOURCE=..\..\src\lib\TMWAWPict.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\WDB3MacMNParser.hxx
+SOURCE=..\..\src\lib\TMWAWPictBasic.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\WDBInterface.hxx
+SOURCE=..\..\src\lib\TMWAWPictBitmap.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\WDBTableInterface.hxx
+SOURCE=..\..\src\lib\TMWAWPictData.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\WKS3MacMNParser.hxx
+SOURCE=..\..\src\lib\TMWAWPictMac.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\WKS4PcMNParser.hxx
+SOURCE=..\..\src\lib\TMWAWPictOleContainer.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW3MacGraph.hxx
+SOURCE=..\..\src\lib\TMWAWPosition.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW3MacParser.hxx
+SOURCE=..\..\src\lib\TMWAWPrint.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW3MacText.hxx
+SOURCE=..\..\src\lib\TMWAWPropertyHandler.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW4MacMNGraph.hxx
+SOURCE=..\..\src\lib\WNEntry.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW4MacMNParser.hxx
+SOURCE=..\..\src\lib\WNParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW4MacMNText.hxx
+SOURCE=..\..\src\lib\WNText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW4MacParser.hxx
+SOURCE=..\..\src\lib\WPParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW4PcMNGraph.hxx
+SOURCE=..\..\src\lib\libmwaw.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW4PcMNParser.hxx
+SOURCE=..\..\src\lib\libmwaw_internal.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW4PcMNText.hxx
+SOURCE=..\..\src\lib\libmwaw_libwpd.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW4PcParser.hxx
+SOURCE=..\..\src\lib\libmwaw_libwpd_math.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW8PcMNGraph.hxx
+SOURCE=..\..\src\lib\libmwaw_libwpd_types.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\libmwaw\MWAW8PcMNParser.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\MWAW8PcMNStruct.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\MWAW8PcMNTable.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\MWAW8PcMNText.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\MWAW8PcParser.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\MWAWMacContentListener.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\MWAWMacStruct.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\MWAWMacTools.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\MWAWPcContentListener.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\MWAWPcStruct.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\MWAW_MacGraphParser.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\MWAW_MacGraphStruct.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\libmwaw.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\libmwaw_internal.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\libmwaw_libwpd.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\libmwaw_libwpd_math.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\libmwaw_libwpd_types.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\libmwaw\libmwaw_tools.hxx
+SOURCE=..\..\src\lib\libmwaw_tools.hxx
 # End Source File
 # End Group
 # End Target

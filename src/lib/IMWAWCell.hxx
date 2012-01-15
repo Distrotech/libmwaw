@@ -273,7 +273,7 @@ public:
   Vec2i const &position() const {
     return m_position;
   }
-  //! set the cell positions :  0,0 -> A1, 1,0 -> A2
+  //! set the cell positions :  0,0 -> A1, 0,1 -> A2
   void setPosition(Vec2i posi) {
     m_position = posi;
   }
@@ -290,14 +290,14 @@ public:
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, IMWAWCell const &cell);
 
-  //! return the name of a cell (given row and column) : 0,0 -> A1, 1,0 -> A2
+  //! return the name of a cell (given row and column) : 0,0 -> A1, 0,1 -> A2
   static std::string getCellName(Vec2i const &pos, Vec2b const &absolute);
 
   //! return the column name
   static std::string getColumnName(int col);
 
 protected:
-  //! the cell row and column : 0,0 -> A1, 1,0 -> A2
+  //! the cell row and column : 0,0 -> A1, 0,1 -> A2
   Vec2i m_position;
   //! the cell spanned : by default (1,1)
   Vec2i m_numberCellSpanned;

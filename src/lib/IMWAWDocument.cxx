@@ -83,6 +83,8 @@ the input stream can be parsed
 IMWAWConfidence IMWAWDocument::isFileFormatSupported(WPXInputStream *input,  IMWAWDocument::DocumentType &type, DocumentKind &kind)
 {
   IMWAWConfidence confidence = IMWAW_CONFIDENCE_NONE;
+  type = UNKNOWN;
+  kind = K_UNKNOWN;
   if (!input) {
     MWAW_DEBUG_MSG(("IMWAWDocument::isFileFormatSupported(): no input\n"));
     return IMWAW_CONFIDENCE_NONE;

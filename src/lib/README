@@ -1,7 +1,7 @@
 ------------------------------------------------------------
 --------------            Structure           --------------
 ------------------------------------------------------------
-- DMWAW* and libmwaw_libwpd* : files which come directly of libwpD/src/lib
+- DMWAW* and libmwaw_libwpd* : files which come directly of libwpd/src/lib
 - TMWAW* and libmwaw_tools* : some basic Tools ( mostly generic )
 - IMWAW* and libmwaw_internal* : internal core part of libmwaw (ie. classes used by many parser )
 - MWAW* : specific classes ( MWAW document )
@@ -90,17 +90,17 @@ These files defined basic structures which must be used by the parsers :
 
 ## IMWAWEntry.hxx
 	store an file entry as begin/end offset with the name of the entry
-	such an entry is used by all msworks file (excepted Mac v1, v2, v3)
 
 ## IMWAWParser.hxx
 	a basic parser
 ## IMWAWTextParser.hxx
 	a basic parser which can help to store the text data
-	and read a FDPP or FDPC entry, such entry exists in all files
-	(excepted Mac v1, v2, v3)
+
+## IMWAWTableHelper.hxx
+	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------
---------------------   CW/MW/WP -------------------
+--------------------   CW/MW/WN/WP       -------------------
 ------------------------------------------------------------
 Generic classes : 
 

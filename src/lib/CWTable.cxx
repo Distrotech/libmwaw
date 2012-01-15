@@ -41,7 +41,7 @@
 #include "TMWAWPosition.hxx"
 
 #include "IMWAWCell.hxx"
-
+#include "IMWAWTableHelper.hxx"
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
 #include "MWAWContentListener.hxx"
@@ -76,35 +76,40 @@ struct Border {
   int m_flags;
 };
 
-struct Cell {
-  Cell() : m_position(-1,-1), m_numSpan(), m_box(), m_size(),
-    m_zoneId(0), m_styleId(-1) {
+struct Cell : public IMWAWTableHelperCell {
+  Cell() : IMWAWTableHelperCell(), m_size(), m_zoneId(0), m_styleId(-1) {
+  }
+
+  virtual bool send(IMWAWContentListenerPtr listener) {
+    if (!listener) return true;
+    IMWAWCell cell;
+    cell.position() = m_position;
+    cell.setNumSpannedCells(m_numSpan);
+
+    listener->openTableCell(cell, WPXPropertyList());
+    listener->insertCharacter(' ');
+    listener->closeTableCell();
+    return true;
+  }
+
+  virtual bool sendContent(IMWAWContentListenerPtr listener) {
+    if (!listener) return true;
+    listener->insertCharacter(' ');
+    return true;
   }
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Cell const &cell) {
-    if (cell.m_position.x() >= 0) {
-      o << "pos=" << cell.m_position << ",";
-      if (cell.m_numSpan[0]!=1 || cell.m_numSpan[1]!=1)
-        o << "span=" << cell.m_position << ",";
-    }
-    Box2f box = cell.m_box;
-    box.scale(1./256.);
-    o << "box=" << box << ",";
+    o << reinterpret_cast<IMWAWTableHelperCell const&>(cell);
     Vec2f sz = cell.m_size;
-    sz = 1./256.*sz;
     o << "size=" << sz << ",";
     if (cell.m_zoneId) o << "zone=" << cell.m_zoneId << ",";
     if (cell.m_styleId >= 0)o << "style=" << cell.m_styleId << ",";
     return o;
   }
 
-  /* the position in the table */
-  Vec2i m_position, m_numSpan;
-  /* the cell bounding box : unit WPX_POINT/256*/
-  Box2i m_box;
-  /* the cell size : unit WPX_POINT/256 */
-  Vec2i m_size;
+  /* the cell size : unit WPX_POINT */
+  Vec2f m_size;
   /* the cell zone ( 0 is no content ) */
   int m_zoneId;
   /* the list of border id : Left, Top, Right, Bottom
@@ -119,139 +124,29 @@ struct Cell {
 
 ////////////////////////////////////////
 ////////////////////////////////////////
-struct Table : public CWStruct::DSET {
+struct Table : public CWStruct::DSET, public IMWAWTableHelper {
   //! constructor
   Table(CWStruct::DSET const dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_bordersList(),m_cellsList(),
-    m_rowsSize(), m_colsSize(), m_parsed(false) {
+    CWStruct::DSET(dset),IMWAWTableHelper(), m_bordersList(), m_parsed(false) {
   }
-
-  //! create the correspondance list, ...
-  bool buildStructures();
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Table const &doc) {
     o << static_cast<CWStruct::DSET const &>(doc);
     return o;
   }
+  //! return a cell corresponding to id
+  Cell *get(int id) {
+    if (id < 0 || id >= numCells()) {
+      MWAW_DEBUG_MSG(("CWTableInteral::Table::get: cell %d does not exists\n",id));
+      return 0;
+    }
+    return reinterpret_cast<Cell *>(IMWAWTableHelper::get(id).get());
+  }
 
   std::vector<Border> m_bordersList;
-  std::vector<Cell> m_cellsList;
-  std::vector<float> m_rowsSize, m_colsSize; // in inches
   bool m_parsed;
-
-protected:
-  //! a comparaison structure used retrieve the rows and the columns
-  struct Compare {
-    Compare(int dim) : m_coord(dim) {}
-    //! small structure to define a cell point
-    struct CellPoint {
-      CellPoint(int wh, Cell const *cell) : m_which(wh), m_cell(cell) {}
-      int getPos(int coord) const {
-        if (m_which)
-          return m_cell->m_box.max()[coord];
-        return m_cell->m_box.min()[coord];
-      }
-      int getSize(int coord) const {
-        return m_cell->m_box.size()[coord];
-      }
-      int m_which;
-      Cell const *m_cell;
-    };
-
-    //! comparaison function
-    bool operator()(CellPoint const &c1, CellPoint const &c2) const {
-      int diff = c1.getPos(m_coord)-c2.getPos(m_coord);
-      if (diff) return (diff < 0);
-      diff = c2.m_which - c1.m_which;
-      if (diff) return (diff < 0);
-      diff = c1.m_cell->m_box.size()[m_coord]
-             - c2.m_cell->m_box.size()[m_coord];
-      if (diff) return (diff < 0);
-      return long(c1.m_cell) < long(c2.m_cell);
-    }
-
-    //! the coord to compare
-    int m_coord;
-  };
 };
-
-bool Table::buildStructures()
-{
-  if (m_colsSize.size())
-    return true;
-
-  int numCells = m_cellsList.size();
-  std::vector<int> listPositions[2];
-  for (int dim = 0; dim < 2; dim++) {
-    Compare compareFunction(dim);
-    std::set<Compare::CellPoint, Compare> set(compareFunction);
-    for (int c = 0; c < numCells; c++) {
-      set.insert(Compare::CellPoint(0, &m_cellsList[c]));
-      set.insert(Compare::CellPoint(1, &m_cellsList[c]));
-    }
-
-    std::vector<int> positions;
-    std::set<Compare::CellPoint, Compare>::iterator it = set.begin();
-    int prevPos, maxPosiblePos=0;
-    int actCell = -1;
-    for ( ; it != set.end(); it++) {
-      int pos = it->getPos(dim);
-      if (actCell < 0 || pos > maxPosiblePos) {
-        actCell++;
-        prevPos = pos;
-        positions.push_back(pos);
-        maxPosiblePos = pos+512; // 2 pixel ok
-      }
-      if (it->m_which == 0 && it->getPos(1)-512 < maxPosiblePos)
-        maxPosiblePos = (it->getPos(dim)+pos)/2;
-    }
-    listPositions[dim] = positions;
-  }
-  for (int c = 0; c < numCells; c++) {
-    int cellPos[2], spanCell[2];
-    for (int dim = 0; dim < 2; dim++) {
-      int pt[2] = { m_cellsList[c].m_box.min()[dim],
-                    m_cellsList[c].m_box.max()[dim]
-                  };
-      std::vector<int> &pos = listPositions[dim];
-      int numPos = pos.size();
-      int i = 0;
-      while (i+1 < numPos && pos[i+1] < pt[0])
-        i++;
-      if (i+1 < numPos && (pos[i]+pos[i+1])/2 < pt[0])
-        i++;
-      if (i+1 > numPos) {
-        MWAW_DEBUG_MSG(("Table::buildStructures: impossible to find cell position !!!\n"));
-        return false;
-      }
-      cellPos[dim] = i;
-      while (i+1 < numPos && pos[i+1] < pt[1])
-        i++;
-      if (i+1 < numPos && (pos[i]+pos[i+1])/2 < pt[1])
-        i++;
-      spanCell[dim] = i-cellPos[dim];
-      if (spanCell[dim]==0 && m_cellsList[c].m_box.size()[dim]) {
-        MWAW_DEBUG_MSG(("Table::buildStructures: impossible to find span number !!!\n"));
-        return false;
-      }
-    }
-    m_cellsList[c].m_position = Vec2i(cellPos[0], cellPos[1]);
-    m_cellsList[c].m_numSpan = Vec2i(spanCell[0], spanCell[1]);
-  }
-  // finally update the row/col size
-  for (int dim = 0; dim < 2; dim++) {
-    std::vector<int> const &pos = listPositions[dim];
-    int numPos = pos.size();
-    if (!numPos) continue;
-    std::vector<float> &res = (dim==0) ? m_colsSize : m_rowsSize;
-    res.resize(numPos-1);
-    for (int i = 0; i < numPos-1; i++)
-      res[i] = (pos[i+1]-pos[i])/256.;
-  }
-
-  return true;
-}
 
 ////////////////////////////////////////
 //! Internal: the state of a CWTable
@@ -400,65 +295,12 @@ bool CWTable::sendZone(int number)
   shared_ptr<CWTableInternal::Table> table = iter->second;
   table->m_parsed = true;
 
-  if (!table->buildStructures())
-    return false;
   if (!m_listener)
     return true;
 
-  int numCells = table->m_cellsList.size();
-  int numCols = table->m_colsSize.size();
-  int numRows = table->m_rowsSize.size();
-  if (!numCols || !numRows)
-    return false;
-  std::vector<int> cellsId(numCols*numRows, -1);
-  for (int c = 0; c < numCells; c++) {
-    Vec2i const &pos=table->m_cellsList[c].m_position;
-    Vec2i const &span=table->m_cellsList[c].m_numSpan;
-
-    for (int x = pos[0]; x < pos[0]+span[0]; x++) {
-      if (x >= numCols) {
-        MWAW_DEBUG_MSG(("CWTable::sendZone: x is too big !!!\n"));
-        return false;
-      }
-      for (int y = pos[1]; y < pos[1]+span[1]; y++) {
-        if (y >= numRows) {
-          MWAW_DEBUG_MSG(("CWTable::sendZone: y is too big !!!\n"));
-          return false;
-        }
-        int tablePos = y*numCols+x;
-        if (cellsId[tablePos] != -1) {
-          MWAW_DEBUG_MSG(("CWTable::sendZone: cells is used!!!\n"));
-          return false;
-        }
-        if (x == pos[0] && y == pos[1])
-          cellsId[tablePos] = c;
-        else
-          cellsId[tablePos] = -2;
-      }
-    }
-  }
-
-  m_listener->openTable(table->m_colsSize, WPX_POINT);
-  for (int r = 0; r < numRows; r++) {
-    m_listener->openTableRow(table->m_rowsSize[r], WPX_POINT);
-    for (int c = 0; c < numCols; c++) {
-      int tablePos = r*numCols+c;
-      int id = cellsId[tablePos];
-      if (id < 0) continue;
-      IMWAWCell cell;
-      cell.position() = Vec2i(c, r);
-      Vec2i span = table->m_cellsList[id].m_numSpan;
-      cell.setNumSpannedCells(Vec2i(span[1],span[0]));
-      m_listener->openTableCell(cell, WPXPropertyList());
-      m_listener->insertCharacter(' ');
-      m_listener->closeTableCell();
-    }
-    m_listener->closeTableRow();
-  }
-
-  m_listener->closeTable();
-
-  return true;
+  if (table->sendTable(m_listener))
+    return true;
+  return table->sendAsText(m_listener);
 }
 
 void CWTable::flushExtra()
@@ -576,16 +418,18 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
 
   for (int i = 0; i < N; i++) {
     pos = m_input->tell();
-    CWTableInternal::Cell cell;
+    shared_ptr<CWTableInternal::Cell> cell(new CWTableInternal::Cell);
     int posi[6];
     for (int j = 0; j < 6; j++) posi[j] = m_input->readLong(4);
-    cell.m_box = Box2i(Vec2i(posi[1], posi[0]), Vec2i(posi[3], posi[2]));
-    cell.m_size = Vec2i(posi[5], posi[4]);
-    cell.m_zoneId = m_input->readULong(4);
-    cell.m_styleId = m_input->readULong(4);
-    table.m_cellsList.push_back(cell);
+    Box2f box = Box2f(Vec2f(posi[1], posi[0]), Vec2f(posi[3], posi[2]));
+    box.scale(1./256.);
+    cell->setBox(box);
+    cell->m_size = 1./256.*Vec2f(posi[5], posi[4]);
+    cell->m_zoneId = m_input->readULong(4);
+    cell->m_styleId = m_input->readULong(4);
+    table.add(cell);
     f.str("");
-    f << "TableCell-" << i << ":" << cell;
+    f << "TableCell-" << i << ":" << *cell;
     if (long(m_input->tell()) != pos+fSz)
       ascii().addDelimiter(m_input->tell(), '|');
     ascii().addPos(pos);
@@ -599,10 +443,10 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
 
 bool CWTable::readTableBordersId(CWTableInternal::Table &table)
 {
-  int numCells = table.m_cellsList.size();
+  int numCells = table.numCells();
   int numBorders = table.m_bordersList.size();
   for (int i = 0; i < 4*numCells; i++) {
-    CWTableInternal::Cell &cell = table.m_cellsList[i/4];
+    CWTableInternal::Cell *cell = table.get(i/4);
     long pos = m_input->tell();
     long sz = m_input->readULong(4);
     long endPos = pos+4+sz;
@@ -647,7 +491,8 @@ bool CWTable::readTableBordersId(CWTableInternal::Table &table)
       else
         f << "bordId=" << id << ",";
     }
-    cell.m_bordersId[i%4] = idsList;
+    if (cell)
+      cell->m_bordersId[i%4] = idsList;
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     m_input->seek(endPos, WPX_SEEK_SET);

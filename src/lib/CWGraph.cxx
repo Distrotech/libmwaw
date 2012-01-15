@@ -1600,9 +1600,11 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
     int roundValues[2];
     for (int i = 0; i < 2; i++) {
       if (2*pict.m_values[i] <= pictSz[i])
-        roundValues[i] = pict.m_values[i];
+        roundValues[i] = int(pict.m_values[i]);
+      else if (pictSz[i] >= 4.0)
+        roundValues[i]= int(pictSz[i])/2-1;
       else
-        roundValues[i]= pictSz[i]/2-1;
+        roundValues[i]=1;
     }
     res->setRoundCornerWidth(roundValues[0], roundValues[1]);
     pictPtr.reset(res);
@@ -1614,7 +1616,9 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
     break;
   }
   case CWGraphInternal::Zone::T_Arc: {
-    int angle[2] = { 90-pict.m_values[0]-pict.m_values[1], 90-pict.m_values[0]};
+    int angle[2] = { int(90-pict.m_values[0]-pict.m_values[1]),
+                     int(90-pict.m_values[0])
+                   };
     while (angle[1] > 360) {
       angle[0]-=360;
       angle[1]-=360;
@@ -1640,7 +1644,8 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
       if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
       else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
     }
-    Box2i realBox(Vec2i(center[0]+minVal[0],center[1]+minVal[1]), Vec2i(center[0]+maxVal[0],center[1]+maxVal[1]));
+    Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
+                  Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
     libmwaw_tools::PictArc *res=new libmwaw_tools::PictArc(realBox,box, angle[0], angle[1]);
     pictPtr.reset(res);
     break;

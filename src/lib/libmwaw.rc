@@ -17,7 +17,7 @@ VS_VERSION_INFO VERSIONINFO
 	VALUE "FileDescription", "libmwaw"
 	VALUE "FileVersion", "0.2.1.BUILDNUMBER"
 	VALUE "InternalName", "libmwaw-0.2"
-	VALUE "LegalCopyright", "Copyright (C) 2006, 2007 Andrew Ziem, Fridrich Strba, other contributers"
+	VALUE "LegalCopyright", "Copyright (C) 2006-2012 Laurent Alonso, Andrew Ziem, Fridrich Strba, other contributers"
 	VALUE "OriginalFilename", "libmwaw-0.2.dll"
 	VALUE "ProductName", "libmwaw"
 	VALUE "ProductVersion", "0.2.1"

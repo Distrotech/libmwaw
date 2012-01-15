@@ -1,3 +1,8 @@
 CHANGES:
-beginning -> 0.0.0
-- libmwaw based on libwps.
+
+01/12/2012: add first version of WriteNow 3.0 and 4.0 Parser 
+
+12/19/2011: creation -> 0.0.0
+- libmwaw created from on version of libwps.
+- add first version of MacWrite 4.5 and ClarisWorks/AppleWorks Parser
+

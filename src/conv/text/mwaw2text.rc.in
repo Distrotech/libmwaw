@@ -17,7 +17,7 @@ VS_VERSION_INFO VERSIONINFO
 	VALUE "FileDescription", "mwaw2text"
 	VALUE "FileVersion", "@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.@MWAW_MICRO_VERSION@.BUILDNUMBER"
 	VALUE "InternalName", "mwaw2text"
-	VALUE "LegalCopyright", "Copyright (C) 2002-2006 William Lachance, Marc Maurer, Fridrich Strba, other contributers"
+	VALUE "LegalCopyright", "Copyright (C) 2002-2012 Laurent Alonso, William Lachance, Marc Maurer, Fridrich Strba, other contributers"
 	VALUE "OriginalFilename", "mwaw2text.exe"
 	VALUE "ProductName", "libmwaw"
 	VALUE "ProductVersion", "@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.@MWAW_MICRO_VERSION@"

@@ -141,20 +141,6 @@ protected:
   mutable std::vector<Vec3uc>  m_palette4;
 };
 typedef shared_ptr<Convertissor> ConvertissorPtr;
-
-/////////////////////
-// Cell, ...
-/////////////////////
-
-
-/** reads a cell from actual position to end position-1 */
-bool readString(TMWAWInputStreamPtr input, long endPos, std::string &res);
-
-/** reads a number which can be preceded by a string */
-bool readNumber(TMWAWInputStreamPtr input, long endPos, double &res, std::string &str);
-
-/** reads a formula, returns the formula and the result's string*/
-bool readFormula(TMWAWInputStreamPtr input, long endPos, int dim, std::string &str, std::string &res, double &value);
 }
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

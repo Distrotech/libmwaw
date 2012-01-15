@@ -1157,7 +1157,7 @@ void WNText::setProperty(WNTextInternal::Ruler const &ruler)
   m_listener->setParagraphMargin(ruler.m_margins[1]/72., DMWAW_LEFT);
   int rPos = 0;
   if (ruler.m_margins[2] >= 0) {
-    rPos = ruler.m_margins[2]-28.;
+    rPos = int(ruler.m_margins[2]-28);
     if (rPos < 0) rPos = 0;
   }
   m_listener->setParagraphMargin(rPos/72., DMWAW_RIGHT);
@@ -1649,7 +1649,7 @@ void WNText::sendZone(int id)
     m_mainParser->getColumnInfo(nCol, width);
     if (nCol > 1 && m_listener) {
       if (width <= 0) // ok, we need to compute the width
-        width = (72.0*m_mainParser->pageWidth())/nCol;
+        width = int((72.0*m_mainParser->pageWidth())/nCol);
       std::vector<int> colSize;
       colSize.resize(nCol, width);
       if (m_listener->isSectionOpened())

@@ -1215,11 +1215,11 @@ void IMWAWContentListener::openTableCell(IMWAWCell const &cell, WPXPropertyList 
     }
   }
 
-  propList.insert("libwpd:column", cell.position()[1]);
-  propList.insert("libwpd:row", cell.position()[0]);
+  propList.insert("libwpd:column", cell.position()[0]);
+  propList.insert("libwpd:row", cell.position()[1]);
 
-  propList.insert("table:number-columns-spanned", cell.numSpannedCells()[1]);
-  propList.insert("table:number-rows-spanned", cell.numSpannedCells()[0]);
+  propList.insert("table:number-columns-spanned", cell.numSpannedCells()[0]);
+  propList.insert("table:number-rows-spanned", cell.numSpannedCells()[1]);
 
   int v = 1;
   static char const*bString[] = { "left", "right", "top", "bottom" };

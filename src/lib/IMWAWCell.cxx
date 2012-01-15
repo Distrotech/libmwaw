@@ -364,11 +364,11 @@ std::string IMWAWCell::getCellName(Vec2i const &pos, Vec2b const &absolute)
   std::stringstream f;
   f << "[.";
   if (absolute[1]) f << "$";
-  int col = pos[1];
+  int col = pos[0];
   if (col > 26) f << char('A'+col/26);
   f << char('A'+(col%26));
   if (absolute[0]) f << "$";
-  f << pos[0]+1 << ']';
+  f << pos[1]+1 << ']';
   return f.str();
 }
 
