@@ -792,7 +792,8 @@ bool MWParser::checkHeader(IMWAWHeader *header, bool strict)
 
   switch (vers) {
   case 3:
-    vName="v2.2";
+    vName="v1.0-2.2";
+    break;
   case 1:
   case 2:
   case 4:
@@ -804,7 +805,6 @@ bool MWParser::checkHeader(IMWAWHeader *header, bool strict)
     break;
   case 6: // version 4.5 ( also version 5.01 of Claris MacWrite )
     vName="v4.5-4.6";
-    m_state->m_version = vers;
     break;
   default:
     MWAW_DEBUG_MSG(("MWParser::checkHeader: unknown version\n"));

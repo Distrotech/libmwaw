@@ -39,7 +39,7 @@
 
 namespace MWAWTools
 {
-Convertissor::Convertissor() : m_fontManager(new libmwaw_tools_mac::Font), m_palette3(), m_palette4()
+Convertissor::Convertissor() : m_fontManager(new libmwaw_tools_mac::Font)
 { }
 Convertissor::~Convertissor() {}
 
@@ -116,81 +116,6 @@ std::string Convertissor::getFontDebugString(MWAWStruct::Font const &ft) const
 }
 #endif
 
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-void Convertissor::initPalettes() const
-{
-  if (m_palette3.size()) return;
-
-  //
-  // v3 color map
-  //
-  m_palette3.resize(256);
-  // the first 6 lines of 32 colors consisted of 6x6x6 blocks(clampsed) with gratuated color
-  int ind=0;
-  for (int k = 0; k < 6; k++) {
-    for (int j = 0; j < 6; j++) {
-      for (int i = 0; i < 6; i++, ind++) {
-        if (j==5 && i==2) break;
-        m_palette3[ind]=Vec3uc(255-51*i, 255-51*k, 255-51*j);
-      }
-    }
-  }
-
-  // the last 2 lines
-  for (int r = 0; r < 2; r++) {
-    // the black, red, green, blue zone of 5*2
-    for (int c = 0; c < 4; c++) {
-      for (int i = 0; i < 5; i++, ind++) {
-        int val = 17*r+51*i;
-        if (c == 0) {
-          m_palette3[ind]=Vec3uc(val, val, val);
-          continue;
-        }
-        int col[3]= {0,0,0};
-        col[c-1]=val;
-        m_palette3[ind]=Vec3uc(col[0],col[1],col[2]);
-      }
-    }
-    // last part of j==5, i=2..5
-    for (int k = r; k < 6; k+=2) {
-      for (int i = 2; i < 6; i++, ind++) m_palette3[ind]=Vec3uc(255-51*i, 255-51*k, 255-51*5);
-    }
-  }
-
-  //
-  // v4 color map
-  //
-  m_palette4.resize(256);
-  // the first 6 lines of 32 colors consisted of 6x6x6 blocks with gratuated color
-  // excepted m_palette4[215]=black -> set latter
-  ind=0;
-  for (int k = 0; k < 6; k++) {
-    for (int j = 0; j < 6; j++) {
-      for (int i = 0; i < 6; i++, ind++) {
-        m_palette4[ind]=Vec3uc(255-51*k, 255-51*j, 255-51*i);
-      }
-    }
-  }
-
-  ind--; // remove the black color
-  for (int c = 0; c < 4; c++) {
-    int col[3] = {0,0,0};
-    int val=251;
-    for (int i = 0; i < 10; i++) {
-      val -= 17;
-      if (c == 3) m_palette4[ind++]=Vec3uc(val, val, val);
-      else {
-        col[c] = val;
-        m_palette4[ind++]=Vec3uc(col[0],col[1],col[2]);
-      }
-      if ((i%2)==1) val -=17;
-    }
-  }
-
-  // last is black
-  m_palette4[ind++]=Vec3uc(0,0,0);
-}
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

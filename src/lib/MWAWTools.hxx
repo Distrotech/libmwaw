@@ -108,37 +108,12 @@ public:
     return flag;
   }
 
-  /////////////////////
-  // Palette
-  /////////////////////
-
-  /** returns the mac MS indexed colors
-  \note the MSWorks color palette, it seems used to store font color in Works 3.0 */
-  std::vector<Vec3uc> const &getColor3Palette() const {
-    initPalettes();
-    return m_palette3;
-  }
-
-  /** returns the mac bitmap indexed colors*/
-  std::vector<Vec3uc> const &getColor4Palette() const {
-    initPalettes();
-    return m_palette4;
-  }
 
   /*           conversion data                */
 
 protected:
   /** the font manager */
   shared_ptr<libmwaw_tools_mac::Font> m_fontManager;
-
-  /** init the different palettes if there are not initialized */
-  void initPalettes() const;
-
-  //! the mac.v3 color palette
-  mutable std::vector<Vec3uc>  m_palette3;
-
-  //! the mac.v4 color palette
-  mutable std::vector<Vec3uc>  m_palette4;
 };
 typedef shared_ptr<Convertissor> ConvertissorPtr;
 }

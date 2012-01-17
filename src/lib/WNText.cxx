@@ -37,6 +37,9 @@
 
 #include "TMWAWPosition.hxx"
 
+#include "IMWAWCell.hxx"
+#include "IMWAWTableHelper.hxx"
+
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
 #include "MWAWContentListener.hxx"
@@ -239,11 +242,20 @@ struct Token {
 ////////////////////////////////////////
 //! Internal: the table of a WNText
 struct TableData {
-  TableData() : m_type(-1), m_box(), m_error("") {
-    for (int i = 0; i < 2; i++) m_flags[i] = 0;
+  TableData() : m_type(-1), m_box(), m_color(255,255,255), m_error("") {
+    for (int i = 0; i < 4; i++) m_flags[i] = 0;
     for (int i = 0; i < 10; i++) m_values[i] = 0;
   }
 
+  int getBorderList() const {
+    int res = 0;
+    // checkme : 0, 80 = no border but what about the other bytes ...
+    if (m_flags[0]&0xf) res |= DMWAW_TABLE_CELL_TOP_BORDER_OFF;
+    if (m_flags[1]&0xf) res |= DMWAW_TABLE_CELL_RIGHT_BORDER_OFF;
+    if (m_flags[2]&0xf) res |= DMWAW_TABLE_CELL_BOTTOM_BORDER_OFF;
+    if (m_flags[3]&0xf) res |= DMWAW_TABLE_CELL_LEFT_BORDER_OFF;
+    return res;
+  }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TableData const &table) {
     switch(table.m_type) {
@@ -264,9 +276,12 @@ struct TableData {
     }
     if (table.m_box.size()[0] || table.m_box.size()[1])
       o << table.m_box << ",";
-    for (int i = 0; i < 2; i++) {
+    if (table.m_color[0] != 255 || table.m_color[1] != 255 || table.m_color[2] != 255)
+      o << "color=" << int(table.m_color[0]) << "x"
+        << int(table.m_color[1]) << "x" << int(table.m_color[2]) << ",";
+    for (int i = 0; i < 4; i++) {
       if (table.m_flags[i])
-        o << "fl" << i << "=" << std::hex << table.m_flags[i] << std::dec << ",";
+        o << "bFlags" << i << "=" << std::hex << table.m_flags[i] << std::dec << ",";
     }
     for (int i = 0; i < 10; i++) {
       if (!table.m_values[i]) continue;
@@ -282,8 +297,11 @@ struct TableData {
   //! the bdbox
   Box2i m_box;
 
-  //! some unknown flags
-  int m_flags[2];
+  //! the background color
+  Vec3uc m_color;
+
+  //! some unknown flags : T, R, B, L
+  int m_flags[4];
   //! some unknown values
   int m_values[10];
 
@@ -304,6 +322,7 @@ struct ContentZone {
   /** the type 0 : text,
       1<->7 : a char flag
       8<->f : a zone
+      10 : used to store a break
   */
   int m_type;
   //! the begin and the end pos
@@ -381,6 +400,8 @@ std::ostream &operator<<(std::ostream &o, ContentZone const &z)
   case 0xf:
     o << "font,";
     break;
+  case 0x10:
+    o << "break,";
   default:
     o << "type=#" << z.m_type << ",";
     break;
@@ -394,10 +415,16 @@ struct ContentZones {
   ContentZones() : m_entry(), m_id(-1), m_type(0),
     m_zonesList(), m_textCalledTypesList(), m_footnoteList(), m_sent(false) {
   }
+  /** returns true if the entry corresponds to a page/column break */
   bool hasPageColumnBreak() const {
     return m_type == 0 && (m_entry.m_val[0] >> 4) == 7;
   }
-
+  int getNumberOfZonesWithType(int type) const {
+    int res = 0;
+    for (int i = 0; i < int(m_zonesList.size()); i++)
+      if (m_zonesList[i].m_type == type) res++;
+    return res;
+  }
   //! the general zone
   WNEntry m_entry;
   //! the zone id
@@ -416,6 +443,69 @@ struct ContentZones {
 
 
 ////////////////////////////////////////
+//! Internal: the cell of a WNText
+struct Cell : public IMWAWTableHelperCell {
+  //! constructor
+  Cell(WNText &parser) : IMWAWTableHelperCell(), m_parser(parser),
+    m_color(255,255,255), m_borderList(0),
+    m_zonesList(), m_footnoteList() {}
+
+  //! send the content
+  virtual bool send(IMWAWContentListenerPtr listener) {
+    if (!listener) return true;
+    IMWAWCell cell;
+    cell.position() = m_position;
+    cell.setBorders(m_borderList);
+    cell.setNumSpannedCells(m_numSpan);
+
+    WPXPropertyList propList;
+    if (m_color[0] != 255 || m_color[1] != 255 || m_color[2] != 255) {
+      std::stringstream s;
+      s << std::hex << std::setfill('0') << "#"
+        << std::setw(2) << int(m_color[0])
+        << std::setw(2) << int(m_color[1])
+        << std::setw(2) << int(m_color[2]);
+      propList.insert("fo:background-color", s.str().c_str());
+    }
+
+    listener->openTableCell(cell, propList);
+    sendContent(listener);
+    listener->closeTableCell();
+    return true;
+  }
+
+  //! send the content
+  bool sendContent(IMWAWContentListenerPtr);
+  //! the text parser
+  WNText &m_parser;
+  //! the background color
+  Vec3uc m_color;
+  //! the border list : DMWAW_TABLE_CELL_LEFT_BORDER_OFF | ...
+  int m_borderList;
+  //! the list of zone
+  std::vector<ContentZone> m_zonesList;
+  //! a list to retrieve the footnote content
+  std::vector<shared_ptr<ContentZones> > m_footnoteList;
+};
+
+////////////////////////////////////////
+////////////////////////////////////////
+struct Table : public IMWAWTableHelper {
+  //! constructor
+  Table() : IMWAWTableHelper() {
+  }
+
+  //! return a cell corresponding to id
+  Cell *get(int id) {
+    if (id < 0 || id >= numCells()) {
+      MWAW_DEBUG_MSG(("WNTextInternal::Table::get: cell %d does not exists\n",id));
+      return 0;
+    }
+    return reinterpret_cast<Cell *>(IMWAWTableHelper::get(id).get());
+  }
+};
+
+////////////////////////////////////////
 //! Internal: structure used to store the content structure
 struct Zone {
   //! constructor
@@ -429,8 +519,8 @@ struct Zone {
 //! Internal: the state of a WNText
 struct State {
   //! constructor
-  State() : m_version(-1),  m_numPages(1), m_actualPage(1),
-    m_font(-1, 0, 0), m_header(), m_footer(),
+  State() : m_version(-1), m_numColumns(1), m_numPages(1), m_actualPage(1),
+    m_font(-1, 0, 0), m_ruler(), m_header(), m_footer(),
     m_styleMap(), m_styleList(), m_contentMap() {
   }
 
@@ -455,9 +545,14 @@ struct State {
 
   //! the file version
   mutable int m_version;
+  //! the number of column
+  int m_numColumns;
+
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
   //! the actual font
   MWAWStruct::Font m_font;
+  /** the paragraph properties */
+  Ruler m_ruler;
   //! the header and the footer
   shared_ptr<ContentZones> m_header, m_footer;
   //! the style indirection table
@@ -471,6 +566,15 @@ struct State {
   //! the list of contentZones
   std::map<long, shared_ptr<ContentZones> > m_contentMap;
 };
+
+bool Cell::sendContent(IMWAWContentListenerPtr)
+{
+  /** as a cell can be arbitrary cutted in small part,
+      we must retrieve the last ruler */
+  Ruler ruler = m_parser.m_state->m_ruler;
+  m_parser.send(m_zonesList, m_footnoteList, ruler);
+  return true;
+}
 
 }
 
@@ -499,13 +603,16 @@ int WNText::numPages() const
   int nCol, width;
   m_state->m_actualPage = m_state->m_numPages = 1;
   m_mainParser->getColumnInfo(nCol, width);
+  m_state->m_numColumns = nCol;
   if (nCol >= 2) return 1;
 
-  int numPages = 1;
-  for (int i = 0; i < int(m_state->m_mainZones[0].m_zones.size()); i++) {
-    if (m_state->m_mainZones[0].m_zones[i]->hasPageColumnBreak())
-      numPages++;
+  if (m_state->m_mainZones[0].m_zones.size()==0 ||
+      m_state->m_mainZones[0].m_zones[0]->m_type != 0) {
+    m_state->m_numPages = 1;
+    return 1;
   }
+  shared_ptr<WNTextInternal::ContentZones> mainContent = m_state->m_mainZones[0].m_zones[0];
+  int numPages = 1+mainContent->getNumberOfZonesWithType(0x10);
   m_state->m_numPages = numPages;
   return numPages;
 }
@@ -559,6 +666,11 @@ bool WNText::createZones()
     iter++;
   }
 
+  // update the number of columns
+  int nCol, width;
+  m_mainParser->getColumnInfo(nCol, width);
+  m_state->m_numColumns = nCol;
+
   std::map<long, shared_ptr<WNTextInternal::ContentZones> > listDone;
   std::map<long, shared_ptr<WNTextInternal::ContentZones> >::iterator it;
   /** we can now create the content zone and type them */
@@ -583,62 +695,83 @@ bool WNText::createZones()
       }
     }
   }
-  /* try to create the footnote and the header link */
+  /* we can now recreate a zone 0 which contains all the main content zone*/
   WNTextInternal::Zone &mainZone = m_state->m_mainZones[0];
   int numZones = mainZone.m_zones.size();
-  int numByTypes[2] = { 0, 0 }; // header+footer, footnote
+  std::vector<shared_ptr<WNTextInternal::ContentZones> > headerFooterList;
+  std::vector<int> calledTypesList;
 
+  shared_ptr<WNTextInternal::ContentZones> zone0(new WNTextInternal::ContentZones);
+  zone0->m_id = -1;
+  zone0->m_type = 0;
   for (int z = 0; z < numZones; z++) {
     shared_ptr<WNTextInternal::ContentZones> content =  mainZone.m_zones[z];
+    switch (content->m_type) {
+    case 0:
+      break;
+    case 1:
+      headerFooterList.push_back(content);
+      break;
+    case 2:
+      zone0->m_footnoteList.push_back(content);
+      break;
+    default:
+      MWAW_DEBUG_MSG(("WNText::createZones: find odd zone type(II):%d\n",content->m_type));
+      break;
+    }
     if (content->m_type != 0)
       continue;
-    content->m_footnoteList.resize(0);
-    int numCalledZones = content->m_textCalledTypesList.size();
-    for (int c = 0; c < numCalledZones; c++) {
-      int called = content->m_textCalledTypesList[c];
-      if (called < 4 || called > 6) {
-        MWAW_DEBUG_MSG(("WNText::createZones: unknown content %d\n", called));
-        continue;
-      }
-      int type = called == 4 ? 2 : 1;
-      int number = numByTypes[type-1]++;
-      int find = 0;
-      shared_ptr<WNTextInternal::ContentZones> res;
-      for (int search = 0; search < numZones; search++) {
-        shared_ptr<WNTextInternal::ContentZones> searchContent =  mainZone.m_zones[search];
-        if (searchContent->m_type != type)
-          continue;
-        if (find++ == number) {
-          res = searchContent;
-          break;
-        }
-      }
-      if (!res) {
-        MWAW_DEBUG_MSG(("WNText::createZones: can not find zone for type:%d\n",called));
-        continue;
-      }
-      if (called == 5) {
-        if (m_state->m_header)
-          MWAW_DEBUG_MSG(("WNText::createZones: header is already defined\n"));
-        else
-          m_state->m_header = res;
-        continue;
-      }
-      if (called == 6) {
-        if (m_state->m_footer)
-          MWAW_DEBUG_MSG(("WNText::createZones: footer is already defined\n"));
-        else
-          m_state->m_footer = res;
-        continue;
-      }
-      if (called == 4)
-        content->m_footnoteList.push_back(res);
+    if (content->hasPageColumnBreak()) {
+      WNTextInternal::ContentZone breakF;
+      breakF.m_type=0x10;
+      zone0->m_zonesList.push_back(breakF);
+    }
+    zone0->m_zonesList.insert(zone0->m_zonesList.end(),
+                              content->m_zonesList.begin(),
+                              content->m_zonesList.end());
+    calledTypesList.insert(calledTypesList.end(),
+                           content->m_textCalledTypesList.begin(),
+                           content->m_textCalledTypesList.end());
+  }
+  mainZone.m_zones.resize(0);
+  mainZone.m_zones.push_back(zone0);
+  /* try to create the footnote and the header link */
+  int numHeaderFooter = 0; // header+footer
+
+  shared_ptr<WNTextInternal::ContentZones> content =  mainZone.m_zones[0];
+  if (content->m_type != 0) return false;
+
+  int numCalledZones = calledTypesList.size();
+  for (int c = 0; c < numCalledZones; c++) {
+    int called = calledTypesList[c];
+    if (called < 5 || called > 6) {
+      MWAW_DEBUG_MSG(("WNText::createZones: unknown content %d\n", called));
+      continue;
+    }
+    int number = numHeaderFooter++;
+    if (number >= int(headerFooterList.size())) {
+      MWAW_DEBUG_MSG(("WNText::createZones: can not find zone for type:%d\n", called));
+      continue;
+    }
+    if (called == 5) {
+      if (m_state->m_header)
+        MWAW_DEBUG_MSG(("WNText::createZones: header is already defined\n"));
+      else
+        m_state->m_header = headerFooterList[number];
+    } else if (called == 6) {
+      if (m_state->m_footer)
+        MWAW_DEBUG_MSG(("WNText::createZones: footer is already defined\n"));
+      else
+        m_state->m_footer = headerFooterList[number];
     }
   }
 
-  return numData > 0;
+  return true;
 }
 
+////////////////////////////////////////////////////////////
+// try to parse a text data zone
+////////////////////////////////////////////////////////////
 shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &entry)
 {
   if (m_state->getContentZone(entry.begin())) {
@@ -729,7 +862,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
       zone.m_pos[1] = pos+1;
 
     text->m_zonesList.push_back(zone);
-    if (type >= 4 && type <= 6) // footnote header footer
+    if (type >= 5 && type <= 6) // header footer
       text->m_textCalledTypesList.push_back(type);
 
     f.str("");
@@ -749,6 +882,9 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
   return text;
 }
 
+////////////////////////////////////////////////////////////
+// try to parse a list of content zones
+////////////////////////////////////////////////////////////
 bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
 {
   listData.resize(0);
@@ -915,18 +1051,18 @@ bool WNText::readFontNames(WNEntry const &entry)
     if (pos == entry.end()) continue;
     if (pos+13 > entry.end()) {
       MWAW_DEBUG_MSG(("WNText::readFontNames: can not read entry : %d\n", n));
-      return false;
+      continue;
     }
 
     m_input->seek(pos, WPX_SEEK_SET);
     f.str("");
     f << "FontsData[" << n << "]:";
     val = m_input->readLong(2);
-    f << "f0=" << val << ","; // probably related to fid
+    f << "fId(local)=" << val << ","; // almost always local fid
     val = m_input->readLong(2);
     if (val) f << "unkn=" << val << ",";
     f << "ptr?=" << std::hex << m_input->readULong(4) << std::dec << ",";
-    for (int i = 1; i < 3; i++) { // always 0
+    for (int i = 0; i < 2; i++) { // always 0
       val = m_input->readLong(2);
       if (val) f << "f" << i << "=" << val << ",";
     }
@@ -1060,10 +1196,12 @@ bool WNText::readFont(TMWAWInputStream &input, bool inStyle, WNTextInternal::Fon
   return true;
 }
 
-void WNText::setProperty(WNTextInternal::Font const &font, bool force)
+void WNText::setProperty(MWAWStruct::Font const &font,
+                         MWAWStruct::Font &previousFont,
+                         bool force)
 {
   if (!m_listener) return;
-  font.m_font.sendTo(m_listener.get(), m_convertissor, m_state->m_font, force);
+  font.sendTo(m_listener.get(), m_convertissor, previousFont, force);
 }
 
 ////////////////////////////////////////////////////////////
@@ -1148,6 +1286,7 @@ bool WNText::readRuler(TMWAWInputStream &input, WNTextInternal::Ruler &ruler)
 
 void WNText::setProperty(WNTextInternal::Ruler const &ruler)
 {
+  m_state->m_ruler = ruler;
   if (!m_listener) return;
 
   m_listener->justificationChange(ruler.m_justify);
@@ -1426,11 +1565,17 @@ bool WNText::readTable(TMWAWInputStream &input, WNTextInternal::TableData &table
   input.seek(pos+1, WPX_SEEK_SET);
   int actVal = 0;
   table.m_values[actVal++] = input.readLong(1);
-  table.m_values[actVal++] = input.readLong(2);
-  for (int i = 0; i < 2; i++) {
-    table.m_flags[i] = input.readULong(1); // 0x80, 0x81, 5, 0
-    table.m_values[actVal++] = input.readLong(2); // 5, one time 0
-    table.m_values[actVal++] = input.readULong(1); // always 0 ?
+  table.m_values[actVal++] = input.readLong(1);
+  int backColor = input.readULong(1);
+  Vec3uc col;
+  if (m_mainParser->getColor(backColor,col))
+    table.m_color = col;
+  else {
+    MWAW_DEBUG_MSG(("WNText::readTable: can not read backgroundColor: %d\n", backColor));
+  }
+  for (int i = 0; i < 4; i++) {
+    table.m_flags[i] = input.readULong(1); // 0x80, 0x81, 5, 0 : border flag ?
+    table.m_values[actVal++] = input.readLong(1); //  always 0 ?
   }
   for (int i = 0; i < 3; i++)
     table.m_values[actVal++] = input.readLong(2); // alway 0
@@ -1466,27 +1611,61 @@ bool WNText::send(WNEntry const &entry)
     break;
   }
   text->m_sent = true;
-  return send(text->m_zonesList, text, ruler);
+  return send(text->m_zonesList, text->m_footnoteList, ruler);
 }
 
 bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
-                  shared_ptr<WNTextInternal::ContentZones> text,
+                  std::vector<shared_ptr<WNTextInternal::ContentZones> > &footnoteList,
                   WNTextInternal::Ruler &ruler)
 {
   libmwaw_tools::DebugStream f;
-  MWAWStruct::Font actFont = m_state->m_font;
+  MWAWStruct::Font actFont(-1, 0, 0);
   bool actFontSet = false;
   bool rulerSet = false;
   int numLineTabs = 0, actTabs = 0, numFootnote = 0;
 
+  shared_ptr<WNTextInternal::Table> table;
+  shared_ptr<WNTextInternal::Cell> cell;
+
   for (int z = 0; z < int(listZones.size()); z++) {
     WNTextInternal::ContentZone const &zone = listZones[z];
+    if (table && cell) {
+      bool done = true;
+      switch (zone.m_type) {
+      case 0xa:
+        done = false;
+        break;
+      case 4:
+        if (numFootnote < int(footnoteList.size())) {
+          cell->m_footnoteList.push_back(footnoteList[numFootnote]);
+          numFootnote++;
+        }
+        cell->m_zonesList.push_back(zone);
+        break;
+      case 0x10:
+        MWAW_DEBUG_MSG(("WNText::send: find a page/column break in table(ignored)\n"));
+        break;
+      default:
+        cell->m_zonesList.push_back(zone);
+        break;
+      }
+      if (done)
+        continue;
+    } else if (table && zone.m_type != 0xa) {
+      static bool first=true;
+      if (first) {
+        first = false;
+        MWAW_DEBUG_MSG(("WNText::send: find some data in table but outside cell\n"));
+      }
+    }
     switch(zone.m_type) {
     case 4:
-      if (numFootnote < int(text->m_footnoteList.size())) {
-        m_mainParser->sendFootnote(text->m_footnoteList[numFootnote]->m_entry);
+      if (numFootnote < int(footnoteList.size())) {
+        m_mainParser->sendFootnote(footnoteList[numFootnote]->m_entry);
         numFootnote++;
-        actFontSet = false;
+        if (actFontSet) setProperty(actFont, actFont, true);
+      } else {
+        MWAW_DEBUG_MSG(("WNText::send: can not find footnote:%d\n", numFootnote));
       }
       break;
     case 0xd:
@@ -1508,15 +1687,23 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
         break;
       }
       break;
+    case 0x10:
+      if (m_listener) {
+        if (m_state->m_numColumns <= 1 && ++m_state->m_actualPage <= m_state->m_numPages)
+          m_mainParser->newPage(m_state->m_actualPage);
+        else if (m_state->m_numColumns > 1 && m_listener)
+          m_listener->insertBreak(DMWAW_COLUMN_BREAK);
+      }
+      break;
     default:
       break;
     }
 
-    if ((zone.m_type>0 && zone.m_type < 8) || zone.m_type == 0xd)
+    if ((zone.m_type>0 && zone.m_type < 8) || zone.m_type == 0xd || zone.m_type == 0x10)
       continue;
 
     WPXBinaryData data;
-    m_input->seek(zone.m_pos[0],WPX_SEEK_SET);
+    m_input->seek(zone.m_pos[0],WPX_SEEK_SET); //000a2f
     while(int(m_input->tell()) < zone.m_pos[1]) {
       int ch = m_input->readULong(1);
       if (ch == 0xf0) {
@@ -1579,10 +1766,58 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     dataInput.setResponsable(false);
     switch(zone.m_type) {
     case 0xa:  { // only in writenow 4.0 : related to a table ?
-      WNTextInternal::TableData table;
-      if (readTable(dataInput, table))
-        f << table;
-      else
+      WNTextInternal::TableData tableData;
+      if (readTable(dataInput, tableData)) {
+        f << tableData;
+
+        bool needSendTable = false;
+        bool needCreateCell = false;
+        switch(zone.m_value) {
+        case 0:
+          if (table)
+            needSendTable = true;
+          else {
+            MWAW_DEBUG_MSG(("WNText::send: Find odd end of table\n"));
+          }
+          break;
+        case 1:
+          if (!table)
+            table.reset(new WNTextInternal::Table);
+          else {
+            MWAW_DEBUG_MSG(("WNText::send: Find a table in a table\n"));
+          }
+          break;
+        case 2:
+          if (table)
+            needCreateCell = true;
+          else {
+            MWAW_DEBUG_MSG(("WNText::send: Find cell outside a table\n"));
+          }
+          break;
+        default:
+          break;
+        }
+
+        if (needSendTable) {
+          if (table) {
+            if (!table->sendTable(m_listener))
+              table->sendAsText(m_listener);
+            if (actFontSet) setProperty(actFont, actFont, true);
+          } else {
+            MWAW_DEBUG_MSG(("WNText::send: can not find the cell to send...\n"));
+          }
+          table.reset();
+        }
+        if (needCreateCell) {
+          cell.reset(new WNTextInternal::Cell(*this));
+          // as the cells can overlap a little, we build a new box
+          Box2i box(tableData.m_box.min(), tableData.m_box.max()-Vec2i(1,1));
+          cell->setBox(box);
+          cell->m_color = tableData.m_color;
+          cell->m_borderList = tableData.getBorderList();
+          table->add(cell);
+        }
+      } else
         f << "#";
       break;
     }
@@ -1618,7 +1853,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     case 0xf: {
       WNTextInternal::Font font;
       if (readFont(dataInput, false, font)) {
-        setProperty(font, !actFontSet);
+        setProperty(font.m_font, actFont, !actFontSet);
         actFont = font.m_font;
         actFontSet = true;
         f << m_convertissor->getFontDebugString(font.m_font) << font;
@@ -1635,6 +1870,12 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     ascii().addNote(f.str().c_str());
   }
 
+  if (table) {
+    MWAW_DEBUG_MSG(("WNText::send: a table is not closed\n"));
+    if (!table->sendTable(m_listener))
+      table->sendAsText(m_listener);
+  }
+
   return true;
 }
 
@@ -1644,14 +1885,15 @@ void WNText::sendZone(int id)
     MWAW_DEBUG_MSG(("WNText::sendZone: called with id=%d\n",id));
     return;
   }
-  int nCol=1, width= 0;
+  int width= 0;
   if (id == 0) {
+    int nCol;
     m_mainParser->getColumnInfo(nCol, width);
-    if (nCol > 1 && m_listener) {
+    if (m_state->m_numColumns > 1 && m_listener) {
       if (width <= 0) // ok, we need to compute the width
-        width = int((72.0*m_mainParser->pageWidth())/nCol);
+        width = int((72.0*m_mainParser->pageWidth())/m_state->m_numColumns);
       std::vector<int> colSize;
-      colSize.resize(nCol, width);
+      colSize.resize(m_state->m_numColumns, width);
       if (m_listener->isSectionOpened())
         m_listener->closeSection();
       m_listener->openSection(colSize, WPX_POINT);
@@ -1661,17 +1903,9 @@ void WNText::sendZone(int id)
   WNTextInternal::Ruler ruler;
   for (int i = 0; i < int(mZone.m_zones.size()); i++) {
     if (mZone.m_zones[i]->m_sent) continue;
-    if (id == 0) {
-      if (mZone.m_zones[i]->m_type) continue;
-      if (mZone.m_zones[i]->hasPageColumnBreak()) {
-        if (nCol <= 1 && ++m_state->m_actualPage <= m_state->m_numPages)
-          m_mainParser->newPage(m_state->m_actualPage);
-        else if (nCol > 1 && m_listener)
-          m_listener->insertBreak(DMWAW_COLUMN_BREAK);
-      }
-    }
+    if (id == 0 && mZone.m_zones[i]->m_type) continue;
     if (id) ruler = WNTextInternal::Ruler();
-    send(mZone.m_zones[i]->m_zonesList, mZone.m_zones[i], ruler);
+    send(mZone.m_zones[i]->m_zonesList, mZone.m_zones[i]->m_footnoteList, ruler);
     mZone.m_zones[i]->m_sent = true;
   }
 }

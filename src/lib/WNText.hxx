@@ -78,6 +78,8 @@ struct Ruler;
 struct TableData;
 struct Token;
 
+struct Cell;
+
 struct State;
 }
 
@@ -94,7 +96,7 @@ class WNParser;
 class WNText
 {
   friend class WNParser;
-
+  friend class WNTextInternal::Cell;
 public:
   //! constructor
   WNText(TMWAWInputStreamPtr ip, WNParser &parser, MWAWTools::ConvertissorPtr &convertissor);
@@ -143,13 +145,15 @@ protected:
 
   //! send the text to the listener
   bool send(std::vector<WNTextInternal::ContentZone> &listZones,
-            shared_ptr<WNTextInternal::ContentZones> text,
+            std::vector<shared_ptr<WNTextInternal::ContentZones> > &footnoteList,
             WNTextInternal::Ruler &ruler);
 
   /*
    * \param font the font's properties
    * \param force if false, we only sent differences from the actual font */
-  void setProperty(WNTextInternal::Font const &font, bool force = false);
+  void setProperty(MWAWStruct::Font const &font,
+                   MWAWStruct::Font &previousFont,
+                   bool force = false);
   /** sends a paragraph property to the listener */
   void setProperty(WNTextInternal::Ruler const &ruler);
 
