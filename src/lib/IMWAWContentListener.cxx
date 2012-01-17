@@ -264,8 +264,8 @@ void IMWAWContentListener::insertEOL()
   if (m_ps->m_isListElementOpened) _closeListElement();
 
   // sub/superscript must not survive a new line
-  if (m_ps->m_textAttributeBits & (DMWAW_SUBSCRIPT_BIT | DMWAW_SUPERSCRIPT_BIT))
-    m_ps->m_textAttributeBits &= ~(DMWAW_SUBSCRIPT_BIT | DMWAW_SUPERSCRIPT_BIT);
+  if (m_ps->m_textAttributeBits & (DMWAW_SUBSCRIPT_BIT | DMWAW_SUPERSCRIPT_BIT | DMWAW_SUBSCRIPT100_BIT | DMWAW_SUPERSCRIPT100_BIT))
+    m_ps->m_textAttributeBits &= ~(DMWAW_SUBSCRIPT_BIT | DMWAW_SUPERSCRIPT_BIT | DMWAW_SUBSCRIPT100_BIT | DMWAW_SUPERSCRIPT100_BIT);
 }
 
 void IMWAWContentListener::insertTab()

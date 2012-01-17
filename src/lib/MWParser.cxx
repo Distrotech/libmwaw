@@ -704,13 +704,6 @@ bool MWParser::sendWindow(int zone)
   int numInfo = info.m_informations.size();
   int numPara = info.m_firstParagLine.size();
 
-  // first send the graphic
-  for (int i=0; i < numInfo; i++) {
-    if (info.m_informations[i].m_type != MWParserInternal::Information::GRAPHIC)
-      continue;
-    readGraphic(info.m_informations[i]);
-  }
-
   if (version() <= 3 && zone == 0)
     newPage(1);
   for (int i=0; i < numInfo; i++) {
@@ -733,11 +726,7 @@ bool MWParser::sendWindow(int zone)
       readParagraph(info.m_informations[i]);
       break;
     case MWParserInternal::Information::GRAPHIC:
-      if (m_listener && info.m_informations[i].m_height) {
-        // insert a line to take care of the graphic size
-        m_listener->lineSpacingChange(info.m_informations[i].m_height, WPX_POINT);
-        m_listener->insertEOL();
-      }
+      readGraphic(info.m_informations[i]);
       break;
     case MWParserInternal::Information::PAGEBREAK:
       readPageBreak(info.m_informations[i]);
@@ -804,7 +793,7 @@ bool MWParser::checkHeader(IMWAWHeader *header, bool strict)
 #endif
     break;
   case 6: // version 4.5 ( also version 5.01 of Claris MacWrite )
-    vName="v4.5-4.6";
+    vName="v4.5-5.01";
     break;
   default:
     MWAW_DEBUG_MSG(("MWParser::checkHeader: unknown version\n"));
@@ -894,7 +883,7 @@ bool MWParser::readPrintInfo()
 
   // define margin from print info
   Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().size() - info.page().size();
+  Vec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
@@ -903,7 +892,7 @@ bool MWParser::readPrintInfo()
   rBotMargin += Vec2i(decalX, decalY);
 
   // decrease right | bottom
-  int rightMarg = rBotMargin.x() -50;
+  int rightMarg = rBotMargin.x() -10;
   if (rightMarg < 0) rightMarg=0;
   int botMarg = rBotMargin.y() -50;
   if (botMarg < 0) botMarg=0;
@@ -1233,8 +1222,8 @@ bool MWParser::readInformations(IMWAWEntry const &entry, std::vector<MWParserInt
     if (paragFormat&0x8) flags |= DMWAW_UNDERLINE_BIT;
     if (paragFormat&0x10) flags |= DMWAW_EMBOSS_BIT;
     if (paragFormat&0x20) flags |= DMWAW_SHADOW_BIT;
-    if (paragFormat&0x40) flags |= DMWAW_SUPERSCRIPT_BIT;
-    if (paragFormat&0x80) flags |= DMWAW_SUBSCRIPT_BIT;
+    if (paragFormat&0x40) flags |= DMWAW_SUPERSCRIPT100_BIT;
+    if (paragFormat&0x80) flags |= DMWAW_SUBSCRIPT100_BIT;
     info.m_font.setFlags(flags);
 
     int fontSize = 0;
@@ -1260,7 +1249,7 @@ bool MWParser::readInformations(IMWAWEntry const &entry, std::vector<MWParserInt
       fontSize=14;
       break;
     default:
-      MWAW_DEBUG_MSG(("MWParser::readInformations: unknown size\n"));
+      MWAW_DEBUG_MSG(("MWParser::readInformations: unknown size=7\n"));
     }
     if (fontSize) info.m_font.setSize(fontSize);
     if ((paragFormat >> 11)&0x1F) info.m_font.setId((paragFormat >> 11)&0x1F);
@@ -1367,7 +1356,8 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     int pos = input->readULong(2);
 
     MWAWStruct::Font font;
-    font.setSize(input->readULong(1));
+    int fSz = input->readULong(1);
+    font.setSize(fSz);
     int flag = input->readULong(1);
     int flags = 0;
     // bit 1 = plain
@@ -1376,8 +1366,8 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     if (flag&0x4) flags |= DMWAW_UNDERLINE_BIT;
     if (flag&0x8) flags |= DMWAW_EMBOSS_BIT;
     if (flag&0x10) flags |= DMWAW_SHADOW_BIT;
-    if (flag&0x20) flags |= DMWAW_SUPERSCRIPT_BIT;
-    if (flag&0x40) flags |= DMWAW_SUBSCRIPT_BIT;
+    if (flag&0x20) flags |= DMWAW_SUPERSCRIPT100_BIT;
+    if (flag&0x40) flags |= DMWAW_SUBSCRIPT100_BIT;
     font.setFlags(flags);
     font.setId(input->readULong(2));
     listPos.push_back(pos);
@@ -1644,14 +1634,10 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
   }
 
   Vec2f actualSize(dim[3]-dim[1], dim[2]-dim[0]), naturalSize(actualSize);
-  Vec2f orig(dim[1],info.m_pos.origin().y()+m_pageSpan.getMarginTop()*72);
   if (box.size().x() > 0 && box.size().y()  > 0) naturalSize = box.size();
-  TMWAWPosition pictPos=TMWAWPosition(orig,actualSize, WPX_POINT);
-  pictPos.m_anchorTo =  TMWAWPosition::Page;
-  pictPos.m_wrapping =  TMWAWPosition::WRunThrough;
+  TMWAWPosition pictPos=TMWAWPosition(Vec2i(0,0),actualSize, WPX_POINT);
+  pictPos.setRelativePosition(TMWAWPosition::Char);
   pictPos.setNaturalSize(naturalSize);
-  pictPos.setPage(info.m_pos.page()+1);
-
   f << pictPos;
 
   // get the picture
@@ -1660,10 +1646,13 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
   shared_ptr<libmwaw_tools::Pict> pict(libmwaw_tools::PictData::get(input, entry.length()-8));
   if (pict)	{
     if (m_listener) {
+      m_listener->lineSpacingChange(1.0, WPX_PERCENT);
+
       WPXBinaryData data;
       std::string type;
       if (pict->getBinary(data,type))
         m_listener->insertPicture(pictPos, data, type);
+      m_listener->insertEOL();
     }
     ascii().skipZone(pos+8, entry.end()-1);
   }

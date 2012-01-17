@@ -790,6 +790,10 @@ void DMWAWContentListener::_openSpan()
     sSubScript.append(libmwaw_libwpd::doubleToString(DMWAW_DEFAULT_SUPER_SUB_SCRIPT));
     sSubScript.append("%");
     propList.insert("style:text-position", sSubScript);
+  } else if (attributeBits & DMWAW_SUPERSCRIPT100_BIT) {
+    propList.insert("style:text-position", "20 100");
+  } else if (attributeBits & DMWAW_SUBSCRIPT100_BIT) {
+    propList.insert("style:text-position", "-20 100");
   }
   if (attributeBits & DMWAW_ITALICS_BIT)
     propList.insert("fo:font-style", "italic");

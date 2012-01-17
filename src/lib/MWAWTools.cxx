@@ -101,8 +101,10 @@ std::string Convertissor::getFontDebugString(MWAWStruct::Font const &ft) const
   if (flags&DMWAW_SHADOW_BIT) o << "shadow:";
   if (flags&DMWAW_DOUBLE_UNDERLINE_BIT) o << "2underL:";
   if (flags&DMWAW_STRIKEOUT_BIT) o << "strikeout:";
-  if (flags&DMWAW_SUPERSCRIPT_BIT) o << "superS:";
-  if (flags&DMWAW_SUBSCRIPT_BIT) o << "subS:";
+  if ((flags&DMWAW_SUPERSCRIPT_BIT) || (flags&DMWAW_SUPERSCRIPT100_BIT))
+    o << "superS:";
+  if ((flags&DMWAW_SUBSCRIPT_BIT) || (flags&DMWAW_SUBSCRIPT100_BIT))
+    o << "subS:";
   if (flags) o << ",";
 
   if (ft.hasColor()) {
