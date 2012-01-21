@@ -62,12 +62,13 @@ public:
 
   -CW: ClarisWorks/AppleWorks document
   -MW: MacWrite document
+  -MWPRO: MacWritePro document
   -MSWORD: MSWord document (nothing done)
   -NISUSW: Nisus Writer document (nothing done)
   -WNOW: WriteNow
   -WPLUS: writerplus document ( or maybe not)
   */
-  enum DocumentType { UNKNOWN, CW, MSWORD, MW, NISUSW, WNOW, WPLUS };
+  enum DocumentType { UNKNOWN, CW, MSWORD, MW, MWPRO, NISUSW, WNOW, WPLUS };
 
   /** an enum to define the kind of document */
   enum DocumentKind { K_UNKNOWN, K_TEXT, K_DRAW,

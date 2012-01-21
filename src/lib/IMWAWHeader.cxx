@@ -89,7 +89,20 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
     header->m_docType=IMWAWDocument::WNOW;
     return header;
   }
-  if (val[0] > 0 && val[0] < 8) {
+
+  if (val[0] == 4 && val[1] == 4) {
+    MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a MacWritePro file[unparsed]\n"));
+    header=new IMWAWHeader(input, 1);
+    header->m_docType=IMWAWDocument::MWPRO;
+    return header;
+  }
+
+#ifdef DEBUG
+  bool mw = (val[0] > 0 && val[0] < 8);
+#else
+  bool mw = val[0] == 3 || val[0] == 6;
+#endif
+  if (mw) {
     // version will be print by MWParser::check
     header=new IMWAWHeader(input, val[0]);
     header->m_docType=IMWAWDocument::MW;

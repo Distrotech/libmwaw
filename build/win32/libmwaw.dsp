@@ -187,6 +187,10 @@ SOURCE=..\..\src\lib\MWParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWProParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\TMWAWDebug.cxx
 # End Source File
 # Begin Source File
@@ -372,6 +376,10 @@ SOURCE=..\..\src\lib\MWAWTools.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWProParser.hxx
 # End Source File
 # Begin Source File
 

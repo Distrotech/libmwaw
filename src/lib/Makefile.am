@@ -93,6 +93,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWTable.cxx			\
 	CWText.cxx			\
 	MWParser.cxx			\
+	MWProParser.cxx			\
 	WNParser.cxx			\
 	WNText.cxx			\
 	WPParser.cxx			\
@@ -108,6 +109,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWTable.hxx			\
 	CWText.hxx			\
 	MWParser.hxx			\
+	MWProParser.hxx			\
 	WNEntry.hxx			\
 	WNParser.hxx			\
 	WNText.hxx			\

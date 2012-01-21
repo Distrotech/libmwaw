@@ -48,6 +48,7 @@ SLOFILES= \
 	$(SLO)$/MWAWStruct.cxx			\
 	$(SLO)$/MWAWTools.cxx			\
 	$(SLO)$/MWParser.cxx			\
+	$(SLO)$/MWProParser.cxx			\
 	$(SLO)$/TMWAWDebug.cxx			\
 	$(SLO)$/TMWAWFont.cxx			\
 	$(SLO)$/TMWAWInputStream.cxx		\
