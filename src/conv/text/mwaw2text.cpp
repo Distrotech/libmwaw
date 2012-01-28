@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 	}
 	if (type == IMWAWDocument::UNKNOWN)
 	{
-		printf("ERROR: find an old mac file!\n");
+		printf("ERROR: can not determine the type of file!\n");
 		return 1;
 	}
 	if (kind != IMWAWDocument::K_TEXT && kind != IMWAWDocument::K_PRESENTATION)
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 	else if (error == IMWAW_PARSE_ERROR)
 		fprintf(stderr, "ERROR: Parse Exception!\n");
 	else if (error == IMWAW_OLE_ERROR)
-		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a Works stream!\n");
+		fprintf(stderr, "ERROR: File is an OLE document!\n");
 	else if (error != IMWAW_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
 

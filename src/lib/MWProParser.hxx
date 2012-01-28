@@ -47,6 +47,7 @@
 
 #include "IMWAWParser.hxx"
 
+class WPXBinaryData;
 typedef class MWAWContentListener MWProContentListener;
 typedef shared_ptr<MWProContentListener> MWProContentListenerPtr;
 
@@ -64,8 +65,14 @@ class PictData;
 namespace MWProParserInternal
 {
 struct State;
+struct TextZoneData;
+struct TextZone;
+struct Token;
+struct Zone;
 class SubDocument;
 }
+
+class MWProStructures;
 
 /** \brief the main class to read a MacWrite Pro file
  *
@@ -74,6 +81,7 @@ class SubDocument;
  */
 class MWProParser : public IMWAWParser
 {
+  friend class MWProStructures;
   friend class MWProParserInternal::SubDocument;
 
 public:
@@ -111,6 +119,33 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
+  //! retrieve the data which corresponds to a zone
+  bool getZoneData(WPXBinaryData &data, int blockId);
+
+  //! return the chain list of block ( used to get free blocks)
+  bool getFreeZoneList(int blockId, std::vector<int> &blockLists);
+
+  /** parse a data zone
+
+  \note type=0 ( text entry), type = 1 ( graphic entry ), other unknown
+  */
+  bool parseDataZone(int blockId, int type);
+
+  /** parse a text zone */
+  bool parseTextZone(shared_ptr<MWProParserInternal::Zone> zone);
+
+  /** try to read the text block entries */
+  bool readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
+                       std::vector<IMWAWEntry> &res, int textLength);
+  /** try to read the text id entries */
+  bool readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
+                   std::vector<MWProParserInternal::TextZoneData> &res,
+                   int textLength, int type);
+  /** try to read the text token entries */
+  bool readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
+                      std::vector<MWProParserInternal::Token> &res,
+                      int textLength);
+
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
   //! returns the page width, ie. paper size less margin (in inches)
@@ -118,6 +153,11 @@ protected:
 
   //! adds a new page
   void newPage(int number);
+
+  //
+  // interface with MWProParserStructures
+  //
+  bool sendTextZone(int blockId);
 
   //
   // low level
@@ -129,28 +169,22 @@ protected:
   //! try to read the doc header zone
   bool readDocHeader();
 
-  //! try to read the paragraph styles zone which begins at address 0x200
-  bool readStyles();
+#ifdef DEBUG
+  //! a debug function which can be used to check the block retrieving
+  void saveOriginal(TMWAWInputStreamPtr input);
+#endif
 
-  //! try to read a style
-  bool readStyle(int styleId);
+  //! try to send a picture
+  bool sendPicture(shared_ptr<MWProParserInternal::Zone> zone, TMWAWPosition pictPos);
 
-  //! try to read the character styles zone
-  bool readCharStyles();
+  //! try to send a text
+  bool sendText(shared_ptr<MWProParserInternal::TextZone> zone);
 
-  //! try to read a 16 bytes the zone which follow the char styles zone
-  bool readZoneA();
+  //! try to send a text
+  bool sendText(IMWAWEntry entry);
 
-  //! try to read the fonts zone
-  bool readFonts();
-
-  //! try to read a zone which follow the fonts zone(checkme)
-  bool readZoneB();
-
-  //! try to read a zone which follow the fonts zone
-  bool readZoneC();
-
-  bool readAZone();
+  //! a debug function which can be used to save the unparsed block
+  void markUnparsed();
 
   //! returns the debug file
   libmwaw_tools::DebugFile &ascii() {
@@ -174,6 +208,9 @@ protected:
 
   //! the state
   shared_ptr<MWProParserInternal::State> m_state;
+
+  //! the structures parser
+  shared_ptr<MWProStructures> m_structures;
 
   //! the actual document size
   DMWAWPageSpan m_pageSpan;

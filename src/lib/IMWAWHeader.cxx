@@ -91,7 +91,7 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
   }
 
   if (val[0] == 4 && val[1] == 4) {
-    MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a MacWritePro file[unparsed]\n"));
+    MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a MacWritePro file\n"));
     header=new IMWAWHeader(input, 1);
     header->m_docType=IMWAWDocument::MWPRO;
     return header;

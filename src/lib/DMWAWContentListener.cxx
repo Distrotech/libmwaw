@@ -91,7 +91,9 @@ _DMWAWContentParsingState::_DMWAWContentParsingState() :
   m_paragraphMarginLeft(0.0),
   m_paragraphMarginRight(0.0),
   m_paragraphMarginTop(0.0),
+  m_paragraphMarginTopUnit(WPX_INCH),
   m_paragraphMarginBottom(0.0),
+  m_paragraphMarginBottomUnit(WPX_INCH),
   m_leftMarginByPageMarginChange(0.0),
   m_rightMarginByPageMarginChange(0.0),
   m_sectionMarginLeft(0.0),
@@ -566,10 +568,9 @@ void DMWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList,
     }
     propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
   }
-  propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop);
-  propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom);
-
   // MWAW : osnola
+  propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop, m_ps->m_paragraphMarginBottomUnit);
+  propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom, m_ps->m_paragraphMarginBottomUnit);
   propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
 
   if (!m_ps->m_inSubDocument && m_ps->m_firstParagraphInPageSpan) {

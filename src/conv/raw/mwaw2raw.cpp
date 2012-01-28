@@ -32,7 +32,7 @@
 
 int printUsage()
 {
-	printf("Usage: mwaw2raw [OPTION] <Microsoft's Work Document>\n");
+	printf("Usage: mwaw2raw [OPTION] <Text Mac Document>\n");
 	printf("\n");
 	printf("Options:\n");
 	printf("--callgraph           Display the call graph nesting level\n");
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 	}
 	if (type == IMWAWDocument::UNKNOWN)
 	{
-		printf("ERROR: find an old mac file!\n");
+		printf("ERROR: can not determine the file type!\n");
 		return 1;
 	}
 
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 	else if (error == IMWAW_PARSE_ERROR)
 		fprintf(stderr, "ERROR: Parse Exception!\n");
 	else if (error == IMWAW_OLE_ERROR)
-		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a Works stream!\n");
+		fprintf(stderr, "ERROR: File is an OLE document!\n");
 	else if (error != IMWAW_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
 

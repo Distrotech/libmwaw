@@ -124,7 +124,9 @@ struct _DMWAWContentParsingState {
   double m_paragraphMarginLeft;  // resulting paragraph margin that is one of the paragraph
   double m_paragraphMarginRight; // properties
   double m_paragraphMarginTop;
+  WPXUnit m_paragraphMarginTopUnit; // OSNOLA
   double m_paragraphMarginBottom;
+  WPXUnit m_paragraphMarginBottomUnit; // OSNOLA
   double m_leftMarginByPageMarginChange;  // part of the margin due to the PAGE margin change
   double m_rightMarginByPageMarginChange; // inside a page that already has content.
   double m_sectionMarginLeft;  // In multicolumn sections, the above two will be rather interpreted

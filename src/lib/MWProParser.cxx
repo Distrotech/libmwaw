@@ -27,15 +27,13 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
-/*
-  300 : 8
-  500 : 4,
-  700 : 8 */
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <sstream>
 
+#include <libwpd/WPXBinaryData.h>
 #include <libwpd/WPXString.h>
 
 #include "TMWAWPosition.hxx"
@@ -49,75 +47,175 @@
 #include "MWAWContentListener.hxx"
 
 #include "MWProParser.hxx"
+#include "MWProStructures.hxx"
+
+// set this flag to true to create an ascii file of the original
+#define DEBUG_RECONSTRUCT 0
 
 /** Internal: the structures of a MWProParser */
 namespace MWProParserInternal
 {
-
 ////////////////////////////////////////
-/** Internal: class to store the paragraph properties */
-struct Paragraph {
-  //! Constructor
-  Paragraph() :  m_spacing(1.), m_tabs(), m_justify (DMWAW_PARAGRAPH_JUSTIFICATION_LEFT) {
-    for(int c = 0; c < 3; c++) m_margins[c] = 0.0;
+//! Internal: a struct used to store a zone
+struct Zone {
+  Zone() : m_type(-1), m_blockId(0), m_data(), m_input(), m_asciiFile(), m_parsed(false) {
   }
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
-    if (ind.m_justify) {
-      o << "Just=";
-      switch(ind.m_justify) {
-      case DMWAW_PARAGRAPH_JUSTIFICATION_LEFT:
-        o << "left";
-        break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_CENTER:
-        o << "centered";
-        break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT:
-        o << "right";
-        break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_FULL:
-        o << "full";
-        break;
-      default:
-        o << "#just=" << ind.m_justify << ", ";
-        break;
-      }
-      o << ", ";
-    }
-    if (ind.m_spacing != 1.0) o << "spacing=" << ind.m_spacing << ", ";
-    if (ind.m_margins[0]) o << "firstLPos=" << ind.m_margins[0] << ", ";
-    if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
-    if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
+  ~Zone() {
+    ascii().reset();
+  }
 
-    libmwaw::internal::printTabs(o, ind.m_tabs);
+  //! returns the debug file
+  libmwaw_tools::DebugFile &ascii() {
+    return m_asciiFile;
+  }
+
+  //! the type : 0(text), 1(graphic)
+  int m_type;
+
+  //! the first block id
+  int m_blockId;
+
+  //! the storage
+  WPXBinaryData m_data;
+
+  //! the main input
+  TMWAWInputStreamPtr m_input;
+
+  //! the debug file
+  libmwaw_tools::DebugFile m_asciiFile;
+
+  //! true if the zone is sended
+  bool m_parsed;
+};
+
+//! Internal: a struct used to store a text zone
+struct TextZoneData {
+  TextZoneData() : m_type(-1), m_length(0), m_id(0) {
+  }
+  friend std::ostream &operator<<(std::ostream &o, TextZoneData const &tData) {
+    switch(tData.m_type) {
+    case 0:
+      o << "C" << tData.m_id << ",";
+      break;
+    case 1:
+      o << "P" << tData.m_id << ",";
+      break;
+    default:
+      o << "type=" << tData.m_type << ",id=" << tData.m_id << ",";
+      break;
+    }
+    o << "nC=" << tData.m_length << ",";
     return o;
   }
-
-  /** the margins in inches
-   *
-   * 0: first line left, 1: left, 2: right
-   */
-  float m_margins[3];
-  /** the spacing */
-  float m_spacing;
-
-  //! the tabulations
-  std::vector<DMWAWTabStop> m_tabs;
-  //! paragraph justification : DWPS_PARAGRAPH_JUSTIFICATION*
-  int m_justify;
+  //! the type
+  int m_type;
+  //! the text length
+  int m_length;
+  //! an id
+  int m_id;
 };
+
+//! Internal: a struct used to store a text zone
+struct Token {
+  Token() : m_type(-1), m_length(0), m_value(0) {
+    for (int i = 0; i < 3; i++) m_flags[i] = 0;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Token const &tkn) {
+    o << "nC=" << tkn.m_length << ",";
+    switch(tkn.m_type) {
+    case 1:
+      o << "pagenumber,";
+      break;
+    case 2:
+      o << "footnote(pos),";
+      break;
+    case 3:
+      o << "footnote(content),";
+      break;
+    case 4:
+      o << "figure,";
+      break;
+    case 5:
+      o << "hyphen,";
+      break;
+    case 6:
+      o << "date,";
+      break;
+    case 7:
+      o << "time,";
+      break;
+    case 8:
+      o << "title,";
+      break;
+    case 9:
+      o << "revision,";
+      break;
+    case 10:
+      o << "sectionnumber,";
+      break;
+    default:
+      o << "#type=" << tkn.m_type << ",";
+    }
+    for (int i = 0; i < 3; i++) {
+      if (tkn.m_flags[i]) o << "flags=" << std::hex << tkn.m_flags[i] << ",";
+    }
+    if (tkn.m_value) o << "f0=" << tkn.m_value << ",";
+    return o;
+  }
+  //! the type
+  int m_type;
+  //! the text length
+  int m_length;
+  //! some flags
+  int m_flags[3];
+  //! the last value
+  int m_value;
+};
+
+//! Internal: a struct used to store a text zone
+struct TextZone {
+  TextZone() : m_textLength(0), m_entries(), m_tokens(), m_parsed(false) {
+  }
+
+  //! the text length
+  int m_textLength;
+
+  //! the list of entries
+  std::vector<IMWAWEntry> m_entries;
+
+  //! two vector list of id ( charIds, paragraphIds)
+  std::vector<TextZoneData> m_ids[2];
+
+  //! the tokens list
+  std::vector<Token> m_tokens;
+
+  //! true if the zone is sended
+  bool m_parsed;
+};
+
 
 ////////////////////////////////////////
 //! Internal: the state of a MWProParser
 struct State {
   //! constructor
-  State() : m_version(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  State() : m_version(-1), m_blocksMap(), m_dataMap(), m_textMap(),
+    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
 
   {
   }
 
   //! the file version
   int m_version;
+
+  //! the list of retrieved block : block -> new address
+  std::map<int,long> m_blocksMap;
+
+  //! the list of blockId->data zone
+  std::map<int, shared_ptr<Zone> > m_dataMap;
+
+  //! the list of blockId->text zone
+  std::map<int, shared_ptr<TextZone> > m_textMap;
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
@@ -199,7 +297,8 @@ bool SubDocument::operator!=(IMWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 MWProParser::MWProParser(TMWAWInputStreamPtr input, IMWAWHeader * header) :
   IMWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_listSubDocuments(), m_asciiFile(), m_asciiName("")
+  m_structures(), m_pageSpan(), m_listSubDocuments(),
+  m_asciiFile(), m_asciiName("")
 {
   init();
 }
@@ -216,6 +315,7 @@ void MWProParser::init()
   m_asciiName = "main-1";
 
   m_state.reset(new MWProParserInternal::State);
+  m_structures.reset(new MWProStructures(*this));
 
   // reduce the margin (in case, the page is not defined)
   m_pageSpan.setMarginTop(0.1);
@@ -227,6 +327,7 @@ void MWProParser::init()
 void MWProParser::setListener(MWProContentListenerPtr listen)
 {
   m_listener = listen;
+  m_structures->setListener(listen);
 }
 
 int MWProParser::version() const
@@ -276,12 +377,35 @@ void MWProParser::parse(WPXDocumentInterface *docInterface)
   if (!checkHeader(0L))  throw(libmwaw_libwpd::ParseException());
   bool ok = true;
   try {
+    m_state->m_blocksMap.clear();
+
     // create the asciiFile
     ascii().setStream(getInput());
     ascii().open(asciiName());
 
     checkHeader(0L);
+
     ok = createZones();
+#if DEBUG_RECONSTRUCT && defined(DEBUG_WITH_FILES)
+    saveOriginal(getInput());
+#endif
+    if (ok) {
+      createDocument(docInterface);
+      if (m_structures)
+        m_structures->flushExtra();
+    }
+
+    std::vector<int> freeList;
+    if (getFreeZoneList(2, freeList) && freeList.size() > 1) {
+      for (int i = 1; i < int(freeList.size()); i++) {
+        ascii().addPos(freeList[i]*0x100);
+        ascii().addNote("Entries(Free)");
+      }
+    }
+#ifdef DEBUG
+    markUnparsed();
+#endif
+
     ascii().reset();
   } catch (...) {
     MWAW_DEBUG_MSG(("MWProParser::parse: exception catched when parsing\n"));
@@ -289,6 +413,140 @@ void MWProParser::parse(WPXDocumentInterface *docInterface)
   }
 
   if (!ok) throw(libmwaw_libwpd::ParseException());
+}
+
+////////////////////////////////////////////////////////////
+// returns a data zone which corresponds to a zone id
+////////////////////////////////////////////////////////////
+bool MWProParser::getZoneData(WPXBinaryData &data, int blockId)
+{
+  data.clear();
+  if (blockId < 1) {
+    MWAW_DEBUG_MSG(("MWProParser::getZoneData: block %d is invalid\n", blockId));
+    return false;
+  }
+  TMWAWInputStreamPtr input = getInput();
+  input->seek((blockId-1)*0x100, WPX_SEEK_SET);
+
+  unsigned long read;
+  int first=blockId-1, last=blockId-1;
+  while (!input->atEOS()) {
+    bool ok = true;
+    for(int i=first; i<= last; i++) {
+      if (m_state->m_blocksMap.find(i) != m_state->m_blocksMap.end()) {
+        MWAW_DEBUG_MSG(("MWProParser::getZoneData: block %d already seems\n", i));
+        ok = false;
+        break;
+      }
+      m_state->m_blocksMap[i] = data.size()+(i-first)*0x100;
+    }
+    if (!ok) break;
+    long endPos = (last+1)*0x100 - 4;
+    long pos = input->tell();
+    input->seek(endPos, WPX_SEEK_SET);
+    long limit = input->tell();
+    if (limit <= pos) break;
+    input->seek(pos, WPX_SEEK_SET);
+
+    const unsigned char *dt = input->read(limit-pos, read);
+    data.append(dt, read);
+    ascii().skipZone(first*0x100, (last+1)*0x100-1);
+
+    if (long(read) != limit-pos) {
+      MWAW_DEBUG_MSG(("MWProParser::getZoneData: can not read all data\n"));
+      break;
+    }
+    if (limit < endPos)
+      break;
+    input->seek(limit, WPX_SEEK_SET);
+
+    int act = last;
+    long val = input->readLong(4);
+    if (val == 0) break;
+    if (val < 0)
+      first = (-val)-1;
+    else
+      first = val-1;
+    last = first;
+
+    if (first != act+1) {
+      input->seek(first*0x100, WPX_SEEK_SET);
+      if (long(input->tell()) != first*0x100) {
+        MWAW_DEBUG_MSG(("MWProParser::getZoneData: can not go to %d block\n", first));
+        break;
+      }
+    }
+    if (val < 0) {
+      int num = input->readULong(4);
+      last = first+(num-1);
+    }
+    if (last-first > 2) {
+      pos = input->tell();
+      input->seek((last-1)*0x100, WPX_SEEK_SET);
+      if (long(input->tell()) != (last-1)*0x100) {
+        MWAW_DEBUG_MSG(("MWProParser::getZoneData: num %d if odd\n", last));
+        last = input->tell();
+        last = (last>>8)+1;  // set last to the last block
+      }
+      input->seek(pos, WPX_SEEK_SET);
+    }
+  }
+  return data.size() != 0;
+}
+
+////////////////////////////////////////////////////////////
+// return the chain list of block ( used to get free blocks)
+////////////////////////////////////////////////////////////
+bool MWProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
+{
+  blockLists.clear();
+  if (blockId < 1) {
+    MWAW_DEBUG_MSG(("MWProParser::getFreeZoneList: block %d is invalid\n", blockId));
+    return false;
+  }
+  TMWAWInputStreamPtr input = getInput();
+
+  int first=blockId-1, last=blockId-1;
+  while (1) {
+    bool ok = true;
+    for(int i=first; i<= last; i++) {
+      if (m_state->m_blocksMap.find(i) != m_state->m_blocksMap.end()) {
+        MWAW_DEBUG_MSG(("MWProParser::getFreeZoneList: block %d already seems\n", i));
+        ok = false;
+        break;
+      }
+      blockLists.push_back(i);
+      m_state->m_blocksMap[i] = 0;
+    }
+    if (!ok) break;
+    long endPos = (last+1)*0x100 - 4;
+    input->seek(endPos, WPX_SEEK_SET);
+    if (long(input->tell()) != endPos) break;
+
+
+    int act = last;
+    long val = input->readLong(4);
+    if (val == 0) break;
+    if (val < 0)
+      first = (-val)-1;
+    else
+      first = val-1;
+    last = first;
+
+    if (val < 0) {
+      if (first != act+1) {
+        input->seek(first*0x100, WPX_SEEK_SET);
+        if (long(input->tell()) != first*0x100) {
+          MWAW_DEBUG_MSG(("MWProParser::getFreeZoneList: can not go to %d block\n", first));
+          break;
+        }
+      }
+
+      int num = input->readULong(4);
+      last = first+(num-1);
+    }
+  }
+  return blockLists.size() != 0;
 }
 
 ////////////////////////////////////////////////////////////
@@ -341,82 +599,10 @@ bool MWProParser::createZones()
   if (!readDocHeader()) {
     ascii().addPos(pos);
     ascii().addNote("##Entries(Data0)");
-    input->seek(0x200, WPX_SEEK_SET);
   }
 
-  long val;
-  bool ok = readStyles() && readCharStyles();
-  if (ok) {
-    pos = input->tell();
-    if (!readZoneA()) {
-      ascii().addPos(pos);
-      ascii().addNote("Entries(ZonA):#");
-      input->seek(pos+16, WPX_SEEK_SET);
-    }
-  }
-
-  if (ok) {
-    pos = input->tell();
-    ok = readFonts();
-    if (!ok) {
-      ascii().addPos(pos);
-      ascii().addNote("Entries(Fonts):#");
-    }
-  }
-  if (ok) {
-    pos = input->tell();
-    ok = readZoneB();
-    if (!ok) {
-      ascii().addPos(pos);
-      ascii().addNote("Entries(ZonB):#");
-    }
-  }
-  if (ok) {
-    pos = input->tell();
-    ok = readZoneC();
-    if (!ok) {
-      ascii().addPos(pos);
-      ascii().addNote("Entries(ZonC):#");
-    }
-  }
-  if (ok) {
-    pos = input->tell();
-    ascii().addPos(pos);
-    ascii().addNote("Entries(ZonD)");
-  }
-  pos = input->tell();
-
-  while(readAZone())
-    pos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
-  while (!input->atEOS()) {
-    pos = input->tell();
-    val = input->readULong(2);
-    if (val == 0xFFFFL) {
-      input->seek(-5, WPX_SEEK_CUR);
-      val = input->readULong(1);
-      if (val == 0x20 /* empty ruler? */|| val == 0x64 /* font ?*/) {
-        input->seek(pos-3, WPX_SEEK_SET);
-        long newPos = input->tell();
-        while (!input->atEOS() && readAZone())
-          newPos = input->tell();
-        if (newPos > pos) {
-          input->seek(newPos, WPX_SEEK_SET);
-          ascii().addPos(newPos);
-          ascii().addNote("_");
-          continue;
-        }
-      }
-      input->seek(pos+1, WPX_SEEK_SET);
-      continue;
-    }
-    if ((val&0xFF) == 0xFFL)
-      input->seek(pos+1, WPX_SEEK_SET);
-    else
-      input->seek(pos+2, WPX_SEEK_SET);
-  }
-
-  return true;
+  // ok now ask the structure manager to retrieve its data
+  return m_structures->createZones();
 }
 
 ////////////////////////////////////////////////////////////
@@ -545,61 +731,8 @@ bool MWProParser::readPrintInfo()
   return true;
 }
 
-bool MWProParser::readAZone()
-{
-  TMWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
-  libmwaw_tools::DebugStream f;
-
-  int val = input->readULong(1);
-  if (val == 0x20 ||
-      val == 0x14 || val == 0x15 /* font */) {
-    f << "Entries(Zone" << std::hex << val << std::dec << "):";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    input->seek(pos+8, WPX_SEEK_SET);
-    return true;
-  }
-  if (val == 0x64) {
-    f << "Entries(Zone" << std::hex << val << std::dec << "):";
-    input->seek(pos+11, WPX_SEEK_SET);
-    int len = input->readULong(1);
-    if (len) { // can be a style entry
-      std::string name("");
-      bool ok = true;
-      for (int i = 0; i < len; i++) {
-        int c = input->readULong(1);
-        ok = (c >= 9 && c <= 0x80);
-        if (!ok) {
-          input->seek(pos+12, WPX_SEEK_SET);
-          break;
-        }
-        name += char(c);
-      }
-      if (ok) {
-        f << name;
-        input->seek(pos+12+32, WPX_SEEK_SET);
-      }
-    }
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    return true;
-  }
-  input->seek(pos+26, WPX_SEEK_SET);
-  val = input->readULong(2);
-  if (val == 0xff) { // tab ? last N : follow by 4*N : data
-    ascii().addPos(pos);
-    ascii().addNote("Entries(ZoneA):");
-    input->seek(pos+32, WPX_SEEK_SET);
-    return true;
-  }
-
-  input->seek(pos, WPX_SEEK_SET);
-  return false;
-}
-
 ////////////////////////////////////////////////////////////
-// read an unknown zone
+// read the document header
 ////////////////////////////////////////////////////////////
 bool MWProParser::readDocHeader()
 {
@@ -701,474 +834,699 @@ bool MWProParser::readDocHeader()
 }
 
 ////////////////////////////////////////////////////////////
-// read the font names
-bool MWProParser::readFonts()
-{
-  TMWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
-  libmwaw_tools::DebugStream f;
-
-  long sz = input->readULong(2);
-  if (sz == 0) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
-    return true;
-  }
-  long endPos = pos+2+sz;
-  input->seek(endPos, WPX_SEEK_SET);
-  if (long(input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProParser::readFonts: file is too short\n"));
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-  input->seek(pos+2, WPX_SEEK_SET);
-  if (sz == 0) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
-    return true;
-  }
-  f << "Entries(Fonts):";
-  int N=input->readULong(2);
-  if (3*N+2 > sz) {
-    MWAW_DEBUG_MSG(("MWProParser::readFonts: can not read the number of fonts\n"));
-    input->seek(endPos, WPX_SEEK_SET);
-    f << "#";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    return true;
-  }
-
-  for (int ft = 0; ft < N; ft++) {
-    int fId = input->readLong(2);
-    f << "[id=" << fId << ",";
-    int sSz = input->readULong(1);
-    if (long(input->tell())+sSz > endPos) {
-      MWAW_DEBUG_MSG(("MWProParser::readFonts: can not read the %d font\n", ft));
-      f << "#";
-      break;
-    }
-    std::string name("");
-    for (int i = 0; i < sSz; i++)
-      name += char(input->readULong(1));
-    if (name.length()) {
-      m_convertissor->setFontCorrespondance(fId, name);
-      f << name;
-    }
-    f << "],";
-  }
-
-  if (long(input->tell()) != endPos)
-    ascii().addDelimiter(input->tell(),'|');
-  input->seek(endPos, WPX_SEEK_SET);
-
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  return true;
-}
-
+// try to parse a data zone
 ////////////////////////////////////////////////////////////
-// read the styles ( character )
-bool MWProParser::readCharStyles()
+bool MWProParser::parseDataZone(int blockId, int type)
 {
-  TMWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
-  libmwaw_tools::DebugStream f;
-
-  long sz = input->readULong(4);
-  if (sz == 0) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
+  if (m_state->m_dataMap.find(blockId) != m_state->m_dataMap.end())
     return true;
+  if (blockId < 1) {
+    MWAW_DEBUG_MSG(("MWProParser::parseDataZone: block %d seems bad\n", blockId));
+    return false;
   }
-  long endPos = pos+sz;
-  if ((sz%0x42) != 0) {
-    MWAW_DEBUG_MSG(("MWProParser::readCharStyles: find an odd value for sz\n"));
-    input->seek(pos, WPX_SEEK_SET);
+  if (m_state->m_blocksMap.find(blockId-1) != m_state->m_blocksMap.end()) {
+    MWAW_DEBUG_MSG(("MWProParser::parseDataZone: block %d is already parsed\n", blockId));
     return false;
   }
 
-  input->seek(endPos, WPX_SEEK_SET);
-  if (long(input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProParser::readCharStyles: file is too short\n"));
-    input->seek(pos, WPX_SEEK_SET);
+  shared_ptr<MWProParserInternal::Zone> zone(new MWProParserInternal::Zone);
+  zone->m_blockId = blockId;
+  zone->m_type = type;
+
+  if (!getZoneData(zone->m_data, blockId))
+    return false;
+  WPXInputStream *dataInput =
+    const_cast<WPXInputStream *>(zone->m_data.getDataStream());
+  if (!dataInput) {
+    MWAW_DEBUG_MSG(("MWProParser::parseDataZone: can not find my input\n"));
     return false;
   }
-  input->seek(pos+4, WPX_SEEK_SET);
-  f << "Entries(CharStyles):";
-  int N = sz/0x42;
-  f << "N=" << N;
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
 
-  for (int i = 0; i < N; i++) {
-    pos = input->tell();
-    f.str("");
-    f << "CharStyles-" << i << ":";
-    int sSz = input->readULong(1);
-    if (sSz > 33) {
-      MWAW_DEBUG_MSG(("MWProParser::readCharStyles: string size seems odd\n"));
-      sSz = 33;
-      f << "#";
-    }
-    std::string name("");
-    for (int c = 0; c < sSz; c++)
-      name += char(input->readULong(1));
-    f << name << ",";
-    input->seek(pos+34, WPX_SEEK_SET);
-    int val = input->readLong(2);
-    if (val != -1) f << "unkn=" << val << ",";
-    f << "ptr?=" << std::hex << input->readULong(4) << std::dec << ",";
-    val = input->readLong(2); // small number between 0 and 2 (nextId?)
-    if (val) f << "f0=" << val << ",";
-    for (int j = 1; j < 3; j++) { // [-1,0,1], [0,1 or ee]
-      val = input->readLong(1);
-      if (val) f << "f" << j <<"=" << val << ",";
-    }
-    for (int j = 3; j < 5; j++) { // always 0 ?
-      val = input->readLong(2);
-      if (val) f << "f" << j <<"=" << val << ",";
-    }
+  zone->m_input.reset(new TMWAWInputStream(dataInput, false));
+  zone->m_input->setResponsable(false);
 
-    int fId = input->readLong(2);
-    if (fId != -1)
-      f << "fId?="<< fId << ",";
-    val = input->readLong(2);
-    if (val!=-1 || fId != -1) // 0 28, 30, 38, 60
-      f << "fFlags=" << std::hex << val << std::dec << ",";
-    val = input->readLong(2); // always 0
-    if (val) f << "f5=" << val << ",";
-    for (int j = 0; j < 4; j++) { // [0,1,8], [0,2,4], [1,ff,24]
-      val = input->readULong(1);
-      if (j==3 && val == 0x64) continue;
-      if (val) f << "g" << j << "=" << val << ",";
-    }
-    for (int j = 0; j < 4; j++) {
-      val = input->readULong(2);
-      if (j == 1 && val == i) continue;
-      if (val) f << "h" << j << "=" << val << ",";
-    }
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+  zone->m_asciiFile.setStream(zone->m_input);
+  std::stringstream s;
+  s << "DataZone" << std::hex << blockId << std::dec;
+  zone->m_asciiFile.open(s.str());
+  m_state->m_dataMap[blockId] = zone;
 
-    input->seek(pos+0x42, WPX_SEEK_SET);
+  // ok init is done
+  if (type == 0)
+    parseTextZone(zone);
+  else if (type == 1) // REMOVE ME
+    sendPicture(zone, TMWAWPosition());
+  else {
+    libmwaw_tools::DebugStream f;
+    f << "Entries(DataZone):type" << type;
+    zone->m_asciiFile.addPos(0);
+    zone->m_asciiFile.addNote(f.str().c_str());
   }
   return true;
 }
 
-////////////////////////////////////////////////////////////
-// read the styles ( paragraph )
-bool MWProParser::readStyles()
+bool MWProParser::parseTextZone(shared_ptr<MWProParserInternal::Zone> zone)
 {
-  TMWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
-  libmwaw_tools::DebugStream f;
-
-  long sz = input->readULong(4);
-  if ((sz%0x106) != 0) {
-    MWAW_DEBUG_MSG(("MWProParser::readStyles: find an odd value for sz\n"));
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-  f << "Entries(Style):";
-  int N = sz/0x106;
-  f << "N=" << N;
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  for (int i = 0; i < N; i++) {
-    pos = input->tell();
-    if (!readStyle(i)) {
-      f.str("");
-      f << "#Style-" << i << ":";
-      input->seek(pos, WPX_SEEK_SET);
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
-      return false;
-    }
-  }
-  ascii().addPos(input->tell());
-  ascii().addNote("_");
-
-  return true;
-}
-
-bool MWProParser::readStyle(int styleId)
-{
-  TMWAWInputStreamPtr input = getInput();
-  long debPos = input->tell(), pos = debPos;
-  libmwaw_tools::DebugStream f;
-
-  // checkme something is odd here
-  long sz = styleId ? 0x106 : (0x106+8);
-  long endPos = pos+sz;
-  input->seek(endPos, WPX_SEEK_SET);
-  if (long(input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProParser::readStyle: file is too short\n"));
-    input->seek(pos, WPX_SEEK_SET);
+  if (!zone) return false;
+  if (zone->m_type != 0) {
+    MWAW_DEBUG_MSG(("MWProParser::parseTextZone: not a picture date\n"));
     return false;
   }
 
+  TMWAWInputStreamPtr input = zone->m_input;
+  TMWAWInputStreamPtr fileInput = getInput();
+  libmwaw_tools::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw_tools::DebugStream f;
+
+  shared_ptr<MWProParserInternal::TextZone> text(new MWProParserInternal::TextZone);
+
+  long pos = 0;
   input->seek(pos, WPX_SEEK_SET);
-  f << "Style-" << styleId << ":";
-  int strlen = input->readULong(1);
-  if (!strlen || strlen > 29) {
-    MWAW_DEBUG_MSG(("MWProParser::readStyle: style name length seems bad!!"));
-    input->seek(pos, WPX_SEEK_SET);
+  f << "Entries(TextZone):";
+  text->m_textLength = input->readLong(4);
+  f << "textLength=" << text->m_textLength << ",";
+
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+
+  if (!readTextEntries(zone, text->m_entries, text->m_textLength))
     return false;
-  }
-  std::string name("");
-  for (int i = 0; i < strlen; i++) // default
-    name+=char(input->readULong(1));
-  f << name << ",";
-  input->seek(pos+5+29, WPX_SEEK_SET); // probably end of name
-  int val = input->readLong(2); // almost always -1, sometimes 0 or 1
-  if (val!=-1) f << "f0=" << val << ",";
-  val = input->readLong(2);
-  if (val) f << "f1=" << val << ","; // numTabs or idStyle?
+  m_state->m_textMap[zone->m_blockId] = text;
 
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  pos = input->tell();
-  f.str("");
-  f << "Style-" << styleId << "(II):";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  input->seek(pos+32, WPX_SEEK_SET);
-  // normally a series of 0020 8 zones ( tab ?)
-  int const def[]= {0, 0x20, 0xFF, 0xFF, 0xFF, 0xFF, 0x2e, 0 };
-  for (int i = 0; i < 20; i++) {
-    pos = input->tell();
-    bool isDef = true;
-    for (int c = 0; c < 8; c++) {
-      val = input->readULong(1);
-      if (val != def[c])
-        isDef = false;
+  for (int i = 0; i < int(text->m_entries.size()); i++) {
+    IMWAWEntry &entry = text->m_entries[i];
+    fileInput->seek(entry.begin(), WPX_SEEK_SET);
+    if (long(fileInput->tell()) != entry.begin()) {
+      MWAW_DEBUG_MSG(("MWProParser::parseTextZone: bad block id for block %d\n", i));
+      entry.setBegin(-1);
     }
-    ascii().addPos(pos);
-    if (isDef) {
-      ascii().addNote("_");
-      continue;
-    }
-    f.str("");
-    f << "Style" << styleId << "[tab" << i << "]:";
-    ascii().addNote(f.str().c_str());
   }
-  pos = input->tell();
-  f.str("");
-  f << "Style-" << styleId << "(III):";
-  val = input->readLong(2);
-  if (val != styleId) f << "#id=" << val << ",";
-  val = input->readLong(2);
-  if (val != -1) f << "nextId?=" << val << ",";
-  val = input->readLong(1); // -1 0 or 1
-  if (val) f << "f0=" << val << ",";
-  for (int i = 1; i < 5; i++) { // 0, then 0|1, 0, 0
-    val = input->readLong(2);
-    if (val) f << "f" << i << "=" << val << ",";
+  for (int i = 0; i < 2; i++) {
+    if (!readTextIds(zone, text->m_ids[i], text->m_textLength, i))
+      return true;
   }
-  f << "fId?="<<input->readULong(1) << ",";
-  val = input->readLong(1); // always 0 ?
-  if (val) f << "f5=" << val << ",";
-  val = input->readULong(1); // 28, 30, 38, 60
-  f << "f6=" << std::hex << val << std::dec << ",";
-  val = input->readLong(2); // always 0
-  if (val) f << "f7=" << val << ",";
-  if (styleId == 0) {
-    int fl = input->readLong(2); // for all style ?
-    switch (fl) {
-    case 0:
-      break;
-    case -1:
-      for (int i = 0; i < 2; i++) { // -4 0
-        val = input->readLong(2);
-        if (val)
-          f << "g" << i << "=" << val << ",";
-      }
-      break;
-    default:
-      f << "#fl=" << fl << ",";
-      break;
-    }
-    int N = input->readLong(2); // often equal to numStyle, but not always...
-    f << "numStyle?=" << N << ",";
-  }
-  for (int i = 0; i < 3; i++) { // often 0, 0, 1 ( but not always)
-    val = input->readULong(1);
-    if (val)
-      f << "g" << i << "=" << std::hex << val << std::dec << ",";
-  }
-  bool ok = (input->readULong(1) == 0x64);
-  input->seek(-1, WPX_SEEK_CUR);
 
-  if (ok) {
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-
-    pos = input->tell();
-    ascii().addPos(pos);
-
-    f.str("");
-    f << "Style-" << styleId << "(end):";
-    ascii().addNote(f.str().c_str());
-    // almost always : 640000ffff00000000ffff but one time 640000000100000000ffff
-    input->seek(pos+11, WPX_SEEK_SET);
+  if (!readTextTokens(zone, text->m_tokens, text->m_textLength))
     return true;
-  }
 
-  MWAW_DEBUG_MSG(("MWProParser::readStyle: end of style seems bad\n"));
-  if (long(input->tell()) != endPos-11)
-    ascii().addDelimiter(input->tell(),'|');
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  f.str("");
-  f << "Style-" << styleId << "(end):###";
-  ascii().addPos(endPos-11);
-  ascii().addNote(f.str().c_str());
-  input->seek(endPos, WPX_SEEK_SET);
+  asciiFile.addPos(input->tell());
+  asciiFile.addNote("TextZone(end)");
 
   return true;
 }
 
-////////////////////////////////////////////////////////////
-// read some unknowns zone
-bool MWProParser::readZoneA()
+bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
+                                  std::vector<IMWAWEntry> &res, int textLength)
 {
-  TMWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
+  res.resize(0);
+  TMWAWInputStreamPtr input = zone->m_input;
+  libmwaw_tools::DebugFile &asciiFile = zone->m_asciiFile;
   libmwaw_tools::DebugStream f;
-
-  long endPos = pos+16;
-  input->seek(endPos, WPX_SEEK_SET);
-  if (long(input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProParser::readZonA: file is too short\n"));
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-  input->seek(pos, WPX_SEEK_SET);
-  f << "Entries(ZonA):";
-  int val = input->readLong(2);
-  f << "f0=" << val << ",";
-  val = input->readLong(2); // 0 or -1
-  if (val == -1) { // followed by -1, 0 ?
-    f << "*";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    input->seek(pos+8, WPX_SEEK_SET);
-    return true;
-  }
-  if (val) f << "f1=" << val << ",";
-  for (int i = 2; i < 8; i++) {
-    /* f0, f2 : small number , f4=f6 (almost always), others 0? */
-    val = input->readLong(2);
-    if (val && i >= 4) f << "f" << i << "=" << std::hex << val << std::dec << ",";
-    else if (val) f << "f" << i << "=" << val << ",";
-  }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  input->seek(endPos, WPX_SEEK_SET);
-  return true;
-}
-
-bool MWProParser::readZoneB()
-{
-  TMWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  libmwaw_tools::DebugStream f;
 
   int val = input->readULong(2);
-  if (val==0) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
-    return true;
-  }
-  f << "Entries(ZonB):val=" << val << ",";
-  int N = (val+4)/5;
-  if (val != 1 && val != 6) {
-    MWAW_DEBUG_MSG(("MWProParser::readZonB: length is approximated\n"));
-    f << "###";
-  }
-
-  long endPos = pos+N*14+2;
-  input->seek(endPos, WPX_SEEK_SET);
-  if (long(input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProParser::readZonB: file is too short\n"));
-    input->seek(pos, WPX_SEEK_SET);
+  int sz = input->readULong(2);
+  if ((sz%6) != 0) {
+    MWAW_DEBUG_MSG(("MWProParser::readTextEntries: find an odd size\n"));
     return false;
   }
-  input->seek(pos+2, WPX_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  long endPos = pos+sz+4;
 
-  for (int n = 0; n < N; n++) {
+  int numElt = sz/6;
+  f << "TextZone:entry(header),N=" << numElt << ",";
+  if (val) f << "unkn=" << val << ",";
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+
+  int remainLength = textLength;
+  for (int i = 0; i < numElt; i++) {
     pos = input->tell();
     f.str("");
-    f << "ZonB" << "-" << n;
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    input->seek(pos+14, WPX_SEEK_SET);
+    f << "TextZone-" << i<<":entry,";
+    int unkn = input->readLong(2);
+    if (unkn) f << "unkn=" << unkn << ",";
+    int bl = input->readLong(2);
+    f << "block=" << std::hex << bl << std::dec << ",";
+    int nChar = input->readULong(2);
+    f << "blockSz=" << nChar;
+
+    if (nChar > remainLength || nChar > 256) {
+      MWAW_DEBUG_MSG(("MWProParser::readTextEntries: bad size for block %d\n", i));
+      input->seek(pos, WPX_SEEK_SET);
+      break;
+    }
+    remainLength -= nChar;
+    bool ok = bl >= 3 && m_state->m_blocksMap.find(bl-1) == m_state->m_blocksMap.end();
+    if (!ok) {
+      MWAW_DEBUG_MSG(("MWProParser::readTextEntries: bad block id for block %d\n", i));
+      input->seek(pos, WPX_SEEK_SET);
+      break;
+    }
+
+    m_state->m_blocksMap[bl-1] = 0;
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    if (nChar==0) continue;
+
+    IMWAWEntry entry;
+    entry.setTextId(unkn);
+    entry.setBegin((bl-1)*0x100);
+    entry.setLength(nChar);
+    res.push_back(entry);
   }
+
+  if (remainLength) {
+    MWAW_DEBUG_MSG(("MWProParser::readTextEntries: can not find %d characters\n", remainLength));
+    asciiFile.addPos(input->tell());
+    asciiFile.addNote("TextEntry-#");
+  }
+
+  input->seek(endPos, WPX_SEEK_SET);
+  return long(input->tell() == endPos) && res.size() != 0;
+}
+
+bool MWProParser::readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
+                              std::vector<MWProParserInternal::TextZoneData> &res,
+                              int textLength, int type)
+{
+  res.resize(0);
+  TMWAWInputStreamPtr input = zone->m_input;
+  libmwaw_tools::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw_tools::DebugStream f;
+  long pos = input->tell();
+
+  int val = input->readULong(2);
+  int sz = input->readULong(2);
+  if (sz == 0) {
+    asciiFile.addPos(pos);
+    asciiFile.addNote("_");
+    return true;
+  }
+
+  if ((sz%6) != 0) {
+    MWAW_DEBUG_MSG(("MWProParser::readTextIds: find an odd size\n"));
+    return false;
+  }
+  long endPos = pos+sz+4;
+
+  int numElt = sz/6;
+  f << "TextZone:type=" << type << "(header),N=" << numElt << ",";
+  if (val) f << "unkn=" << val << ",";
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+
+  int remainLength = textLength;
+  for (int i = 0; i < numElt; i++) {
+    MWProParserInternal::TextZoneData data;
+    data.m_type = type;
+    pos = input->tell();
+    data.m_id = input->readLong(2);
+    int nChar = data.m_length = input->readULong(4);
+    f.str("");
+    f << "TextZone-" << i<< ":" << data;
+
+    if (nChar > remainLength) {
+      MWAW_DEBUG_MSG(("MWProParser::readTextIds: bad size for block %d\n", i));
+      input->seek(pos, WPX_SEEK_SET);
+      break;
+    }
+    remainLength -= nChar;
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    if (nChar==0) continue;
+
+    res.push_back(data);
+  }
+
+  if (remainLength) {
+    MWAW_DEBUG_MSG(("MWProParser::readTextIds: can not find %d characters\n", remainLength));
+    asciiFile.addPos(input->tell());
+    asciiFile.addNote("TextZone:id-#");
+  }
+
+  input->seek(endPos, WPX_SEEK_SET);
+  return long(input->tell() == endPos) && res.size() != 0;
+}
+
+bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
+                                 std::vector<MWProParserInternal::Token> &res,
+                                 int textLength)
+{
+  res.resize(0);
+  TMWAWInputStreamPtr input = zone->m_input;
+  libmwaw_tools::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw_tools::DebugStream f;
+  long pos = input->tell();
+
+  int val = input->readULong(2);
+  int sz = input->readULong(2);
+  if (sz == 0) {
+    asciiFile.addPos(pos);
+    asciiFile.addNote("_");
+    return true;
+  }
+
+  if ((sz%10) != 0) {
+    MWAW_DEBUG_MSG(("MWProParser::readTextTokens: find an odd size\n"));
+    return false;
+  }
+  long endPos = pos+sz+4;
+
+  int numElt = sz/10;
+  f << "TextZone:token(header),N=" << numElt << ",";
+  if (val) f << "unkn=" << val << ",";
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+
+  int remainLength = textLength;
+  for (int i = 0; i < numElt; i++) {
+    pos = input->tell();
+
+    MWProParserInternal::Token data;
+    data.m_type = input->readULong(1);
+    data.m_flags[0] = input->readULong(1);
+    int nChar = data.m_length = input->readULong(4);
+    for (int j = 1; j < 3; j++) data.m_flags[j] = input->readULong(1);
+    data.m_value = input->readLong(2);
+    f.str("");
+    f << "TextZone-" << i<< ":token," << data;
+    if (nChar > remainLength) {
+      MWAW_DEBUG_MSG(("MWProParser::readTextTokens: bad size for block %d\n", i));
+      input->seek(pos, WPX_SEEK_SET);
+      break;
+    }
+    remainLength -= nChar;
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    res.push_back(data);
+  }
+
+
+  input->seek(endPos, WPX_SEEK_SET);
+  return long(input->tell() == endPos) && res.size() != 0;
+}
+
+////////////////////////////////////////////////////////////
+// try to send a text
+////////////////////////////////////////////////////////////
+bool MWProParser::sendTextZone(int blockId)
+{
+  std::map<int, shared_ptr<MWProParserInternal::TextZone> >::iterator it;
+  it = m_state->m_textMap.find(blockId);
+  if (it == m_state->m_textMap.end()) {
+    MWAW_DEBUG_MSG(("MWProParser::sendTextZone: can not find text zone\n"));
+    return false;
+  }
+  sendText(it->second);
   return true;
 }
 
-bool MWProParser::readZoneC()
+namespace MWProParserInternal
 {
+struct DataPosition {
+  DataPosition(int type=-1, int id=-1, long pos=0) : m_type(type), m_id(id), m_pos(pos) {}
+  int m_type;
+  int m_id;
+  long m_pos;
+  struct Compare {
+    //! comparaison function
+    bool operator()(DataPosition const &p1, DataPosition const &p2) const {
+      long diff = p1.m_pos - p2.m_pos;
+      if (diff) return (diff < 0);
+      diff = p1.m_type - p2.m_type;
+      if (diff) return (diff < 0);
+      diff = p1.m_id - p2.m_id;
+      return (diff < 0);
+    }
+  };
+};
+}
+
+bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone)
+{
+  if (!zone->m_entries.size()) {
+    MWAW_DEBUG_MSG(("MWProParser::sendText: can not find the text entries\n"));
+    return false;
+  }
+
+  MWProParserInternal::DataPosition::Compare compareFunction;
+  std::set<MWProParserInternal::DataPosition, MWProParserInternal::DataPosition::Compare>
+  set(compareFunction);
+  long cPos = 0;
+  for (int i = 0; i < int(zone->m_entries.size()); i++) {
+    set.insert(MWProParserInternal::DataPosition(3, i, cPos));
+    cPos += zone->m_entries[i].length();
+  }
+  set.insert(MWProParserInternal::DataPosition(4, 0, cPos));
+  cPos = 0;
+  for (int i = 0; i < int(zone->m_tokens.size()); i++) {
+    cPos += zone->m_tokens[i].m_length;
+    set.insert(MWProParserInternal::DataPosition(2, i, cPos));
+  }
+  for (int id = 0; id < 2; id++) {
+    cPos = 0;
+    for (int i = 0; i < int(zone->m_ids[id].size()); i++) {
+      set.insert(MWProParserInternal::DataPosition(1-id, i, cPos));
+      cPos += zone->m_ids[id][i].m_length;
+    }
+  }
+
   TMWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
+  long pos = zone->m_entries[0].begin();
+  if (pos > 0) {
+    input->seek(pos, WPX_SEEK_SET);
+    ascii().addPos(pos);
+  }
+
+  libmwaw_tools::DebugStream f, f2;
+  cPos = 0;
+  std::set<MWProParserInternal::DataPosition,
+      MWProParserInternal::DataPosition::Compare>::const_iterator it;
+  MWProStructuresListenerState listenerState(m_structures);
+  bool first = true;
+  for (it = set.begin(); it != set.end(); it++) {
+    MWProParserInternal::DataPosition const &data = *it;
+    long oldPos = pos;
+    if (data.m_pos < cPos) {
+      MWAW_DEBUG_MSG(("MWProParser::sendText: position go backward, stop...\n"));
+      break;
+    }
+    if (data.m_pos != cPos) {
+      if (pos > 0) {
+        std::string text("");
+        for (int i = cPos; i < data.m_pos; i++) {
+          char ch = input->readULong(1);
+          if (!ch)
+            text+= "#";
+          else {
+            listenerState.sendChar(ch);
+            text+=ch;
+          }
+        }
+        f << "'" << text << "'";
+      }
+
+      if (pos > 0 && f.str().length()) {
+        f2.str("");
+        f2 << "Entries(TextContent):" << f.str();
+        f.str("");
+        ascii().addNote(f2.str().c_str());
+        pos += (data.m_pos-cPos);
+      }
+
+      cPos = data.m_pos;
+    }
+    switch (data.m_type) {
+    case 4:
+    case 3:
+      if (pos > 0 && (pos&0xFF))
+        ascii().addDelimiter(pos,'|');
+      if (data.m_type == 3) {
+        pos = zone->m_entries[data.m_id].begin();
+        if (pos > 0)
+          input->seek(pos, WPX_SEEK_SET);
+      }
+      break;
+    case 2:
+      switch (zone->m_tokens[data.m_id].m_type) {
+      case 1:
+        if (m_listener) m_listener->insertField(IMWAWContentListener::PageNumber);
+        break;
+      case 2:
+        break; // insert a footnote here
+      case 3:
+        break; // footnote content, ok
+      case 4:
+        break; // insert a graphic here
+      case 5:
+        break; // hyphen ok
+      case 6:
+        if (m_listener) m_listener->insertField(IMWAWContentListener::Date);
+        break;
+      case 7:
+        if (m_listener) m_listener->insertField(IMWAWContentListener::Time);
+        break;
+      case 8:
+        if (m_listener) m_listener->insertField(IMWAWContentListener::Title);
+        break;
+      case 9:
+        if (m_listener) m_listener->insertUnicodeString("#REVISION#");
+        break;
+      case 10:
+        if (m_listener) m_listener->insertUnicodeString("#SECTION#");
+        break;
+      default:
+        break;
+      }
+      f << "token[" << zone->m_tokens[data.m_id] << "],";
+      break;
+    case 1:
+      if (m_structures) {
+        listenerState.sendFont(zone->m_ids[0][data.m_id].m_id, first);
+        first = false;
+        f << "[" << listenerState.getFontDebugString(zone->m_ids[0][data.m_id].m_id) << "],";
+      } else
+        f << "[" << zone->m_ids[0][data.m_id] << "],";
+      break;
+    case 0:
+      if (m_structures) {
+        listenerState.sendParagraph(zone->m_ids[1][data.m_id].m_id);
+        first = false;
+        f << "[" << listenerState.getParagraphDebugString(zone->m_ids[1][data.m_id].m_id) << "],";
+      } else
+        f << "[" << zone->m_ids[1][data.m_id] << "],";
+      break;
+    default: {
+      static bool first = true;
+      if (first) {
+        MWAW_DEBUG_MSG(("MWProParser::sendText: find unexpected data type...\n"));
+        first = false;
+      }
+      f << "#";
+      break;
+    }
+
+    }
+    if (pos >= 0 && pos != oldPos)
+      ascii().addPos(pos);
+  }
+
+  return true;
+}
+
+bool MWProParser::sendText(IMWAWEntry entry)
+{
+  if (!entry.valid())
+    return false;
+  TMWAWInputStreamPtr input = getInput();
   libmwaw_tools::DebugStream f;
 
-  long sz = input->readULong(4);
-  if (sz == 0) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
-    return true;
-  }
-  long endPos = pos+sz;
-  if ((sz%20) != 0) {
-    MWAW_DEBUG_MSG(("MWProParser::readZoneC: find an odd value for sz\n"));
-    input->seek(pos, WPX_SEEK_SET);
+  f << "Entries(TextContent):";
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  if (long(input->tell()) != entry.begin()) {
+    MWAW_DEBUG_MSG(("MWProParser::sendText: can not find text block\n"));
     return false;
   }
 
-  input->seek(endPos, WPX_SEEK_SET);
-  if (long(input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProParser::readZoneC: file is too short\n"));
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
+  std::string text("");
+  bool findZero = false;
+  for (int c = 0; c < entry.length(); c++) {
+    char ch = input->readULong(1);
+    if (!ch) {
+      if (findZero) {
+        input->seek(-1, WPX_SEEK_CUR);
+        break;
+      }
+      findZero = true;
+      continue;
+    }
+    if (findZero) {
+      text += "#";
+      findZero = false;
+    }
+    text+=ch;
   }
-  input->seek(pos+4, WPX_SEEK_SET);
-  f << "Entries(ZonC):";
-  int N = sz/20;
-  f << "N=" << N;
-  ascii().addPos(pos);
+  f << text;
+  if (long(input->tell()) != entry.end() && entry.length()!=256) {
+    f << "##";
+    ascii().addDelimiter(input->tell(),'|');
+  } else if (entry.length() != 256)
+    ascii().addDelimiter(input->tell(),'|');
+  ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
 
-  for (int n = 0; n < N; n++) {
-    pos = input->tell();
-    if ((pos&0xff)>=0xfa) {
-      ascii().addPos(pos);
-      ascii().addNote("_ZonC");
-      pos = pos+4;
-      input->seek(pos, WPX_SEEK_SET);
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// try to send a picture
+////////////////////////////////////////////////////////////
+bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
+                              TMWAWPosition pictPos)
+{
+  if (!zone) return false;
+  if (zone->m_type != 1) {
+    MWAW_DEBUG_MSG(("MWProParser::sendPicture: not a picture date\n"));
+    return false;
+  }
+
+  zone->m_parsed = true;
+
+  // ok init is done
+  TMWAWInputStreamPtr input = zone->m_input;
+  libmwaw_tools::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw_tools::DebugStream f;
+
+  f << "Entries(PICT),";
+  asciiFile.addPos(0);
+  asciiFile.addNote(f.str().c_str());
+
+  input->seek(0, WPX_SEEK_SET);
+  long pictSize = input->readULong(4);
+  if (pictSize < 10 || pictSize > long(zone->m_data.size())) {
+    MWAW_DEBUG_MSG(("MWProParser::sendPicture: oops a pb with pictSize\n"));
+    asciiFile.addPos(4);
+    asciiFile.addNote("#PICT");
+    return false;
+  }
+  shared_ptr<libmwaw_tools::Pict> pict
+  (libmwaw_tools::PictData::get(input, pictSize));
+  if (!pict) {
+    // sometimes this just fails because the pictSize is not correct
+    input->seek(14, WPX_SEEK_SET);
+    if (input->readULong(2) == 0x1101) { // try to force the size to be ok
+      WPXBinaryData data;
+      input->seek(0, WPX_SEEK_SET);
+      input->readDataBlock(4+pictSize, data);
+      unsigned char *dataPtr=const_cast<unsigned char *>(data.getDataBuffer());
+
+      dataPtr[4]=dataPtr[2];
+      dataPtr[5]=dataPtr[3];
+
+      WPXInputStream *dataInput =
+        const_cast<WPXInputStream *>(data.getDataStream());
+      TMWAWInputStreamPtr input(new TMWAWInputStream(dataInput, false));
+      input->setResponsable(false);
+
+      input->seek(4, WPX_SEEK_SET);
+      pict.reset(libmwaw_tools::PictData::get(input, pictSize));
     }
-    f.str("");
-    f << "ZonC" << "-" << n;
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    input->seek(pos+20, WPX_SEEK_SET);
+  }
+
+#ifdef DEBUG_WITH_FILES
+  asciiFile.skipZone(4, 4+pictSize-1);
+  WPXBinaryData file;
+  input->seek(4, WPX_SEEK_SET);
+  input->readDataBlock(pictSize, file);
+  static int volatile pictName = 0;
+  f.str("");
+  f << "PICT-" << ++pictName;
+  libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+  asciiFile.addPos(4+pictSize);
+  asciiFile.addNote("PICT(end)");
+#endif
+
+  if (!pict) { // ok, we can not do anything except sending the data...
+    MWAW_DEBUG_MSG(("MWProParser::parseDataZone: no sure this is a picture\n"));
+    if (pictPos.size().x() <= 0 || pictPos.size().y() <= 0)
+      pictPos=TMWAWPosition(Vec2f(0,0),Vec2f(100.,100.), WPX_POINT);
+    if (m_listener) {
+      WPXBinaryData data;
+      input->seek(4, WPX_SEEK_SET);
+      input->readDataBlock(pictSize, data);
+      m_listener->insertPicture(pictPos, data);
+    }
+    return true;
+  }
+
+  if (pictPos.size().x() <= 0 || pictPos.size().y() <= 0) {
+    pictPos.setOrigin(Vec2f(0,0));
+    pictPos.setSize(pict->getBdBox().size());
+    pictPos.setUnit(WPX_POINT);
+  }
+  if (pict->getBdBox().size().x() > 0 && pict->getBdBox().size().y() > 0)
+    pictPos.setNaturalSize(pict->getBdBox().size());
+
+  if (m_listener) {
+    WPXBinaryData data;
+    std::string type;
+    if (pict->getBinary(data,type))
+      m_listener->insertPicture(pictPos, data, type);
   }
   return true;
 }
 
 ////////////////////////////////////////////////////////////
-// read a text
+// some debug functions
 ////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////
-// read a paragraph
-////////////////////////////////////////////////////////////
+#ifdef DEBUG
+void MWProParser::saveOriginal(TMWAWInputStreamPtr input)
+{
+  libmwaw_tools::DebugStream f;
+
+  libmwaw_tools::DebugFile orig;
+  orig.setStream(input);
+  orig.open("orig");
+  int bl = 0;
+  while(1) {
+    long pos = bl*0x100;
+    input->seek(pos, WPX_SEEK_SET);
+    if (long(input->tell()) != pos)
+      break;
+    f.str("");
+    int val = 0;
+    if (bl) {
+      input->seek(-4, WPX_SEEK_CUR);
+      val = input->readLong(4);
+      int next = val > 0 ? val : -val;
+      if (next > 0 && next < 0x1000) {
+        f << "next=" << std::hex << (next-1)*0x100 << std::dec << ",";
+        if (val < 0)
+          f << "N=?" << input->readLong(4) << ",";
+        orig.addPos(pos-4);
+        orig.addNote(f.str().c_str());
+      }
+    }
+    orig.addPos(input->tell());
+
+    if (m_state->m_blocksMap.find(bl) == m_state->m_blocksMap.end())
+      orig.addNote("unparsed*");
+    else {
+      f.str("");
+      f << std::hex << "(" << m_state->m_blocksMap.find(bl)->second << ")"
+        << std::dec;
+      orig.addNote(f.str().c_str());
+    }
+    bl++;
+  }
+  orig.reset();
+}
+#endif
+
+void MWProParser::markUnparsed()
+{
+  TMWAWInputStreamPtr input = getInput();
+
+  long pos;
+  int bl = 2;
+  std::stringstream notParsed;
+  while (1) {
+    pos = (bl++)*0x100;
+    input->seek(pos, WPX_SEEK_SET);
+    if (input->atEOS()) break;
+    if (m_state->m_blocksMap.find(bl-1) != m_state->m_blocksMap.end())
+      continue;
+    notParsed << std::hex <<  bl-1 << std::dec << ",";
+    // normaly there must remains only text entry...
+    IMWAWEntry entry;
+    entry.setBegin(pos);
+    entry.setLength(256);
+    sendText(entry);
+  }
+  if (notParsed.str().size()) {
+    MWAW_DEBUG_MSG(("MWProParser::markUnparsed: not parsed %s\n", notParsed.str().c_str()));
+  }
+}
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

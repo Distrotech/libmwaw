@@ -191,6 +191,10 @@ SOURCE=..\..\src\lib\MWProParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWProStructures.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\TMWAWDebug.cxx
 # End Source File
 # Begin Source File
@@ -380,6 +384,10 @@ SOURCE=..\..\src\lib\MWParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWProParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWProStructures.hxx
 # End Source File
 # Begin Source File
 

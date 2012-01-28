@@ -111,7 +111,7 @@ public:
    * \param margin is given in inches
    * \param pos in DMWAW_LEFT, DMWAW_RIGHT, DMWAW_TOP, DMWAW_BOTTOM
    */
-  void setParagraphMargin(double margin, int pos);
+  void setParagraphMargin(double margin, int pos, WPXUnit unit=WPX_INCH);
   /** sets the tabulations.
    *
    * \param tabStops the tabulations

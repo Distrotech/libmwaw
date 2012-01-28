@@ -395,8 +395,26 @@ void IMWAWContentListener::setParagraphTextIndent(double margin)
   m_ps->m_listReferencePosition = margin;
 }
 
-void IMWAWContentListener::setParagraphMargin(double margin, int pos)
+void IMWAWContentListener::setParagraphMargin(double margin, int pos, WPXUnit unit)
 {
+  switch(unit) {
+  case WPX_POINT:
+    if (pos == DMWAW_LEFT || pos == DMWAW_RIGHT)
+      margin/=72.;
+    break;
+  case WPX_TWIP:
+    if (pos == DMWAW_LEFT || pos == DMWAW_RIGHT)
+      margin/=1440.;
+    break;
+  case WPX_PERCENT:
+    MWAW_DEBUG_MSG(("IMWAWContentListener::setParagraphMargin: unit can not be percent\n"));
+    return;
+  case WPX_GENERIC:
+    MWAW_DEBUG_MSG(("IMWAWContentListener::setParagraphMargin: unit can not be generic\n"));
+    return;
+  default:
+    break;
+  }
   switch(pos) {
   case DMWAW_LEFT:
     m_ps->m_leftMarginByParagraphMarginChange = margin;
@@ -412,9 +430,11 @@ void IMWAWContentListener::setParagraphMargin(double margin, int pos)
     break;
   case DMWAW_TOP:
     m_ps->m_paragraphMarginTop = margin;
+    m_ps->m_paragraphMarginTopUnit = unit;
     break;
   case DMWAW_BOTTOM:
     m_ps->m_paragraphMarginBottom = margin;
+    m_ps->m_paragraphMarginBottomUnit = unit;
     break;
   default:
     MWAW_DEBUG_MSG(("IMWAWContentListener::setParagraphMargin: unknown pos"));
