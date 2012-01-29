@@ -81,10 +81,10 @@ struct Block {
   }
 
   bool isGraphic() const {
-    return m_type == GRAPHIC;
+    return m_fileBlock > 0 && m_type == GRAPHIC;
   }
   bool isText() const {
-    return m_type == TEXT;
+    return m_fileBlock > 0 && m_type == TEXT;
   }
 
   //! the type
@@ -367,9 +367,9 @@ bool MWProStructures::createZones()
   bool ok = readStyles() && readCharStyles();
   if (ok) {
     pos = m_input->tell();
-    if (!readStructA()) {
+    if (!readSelection()) {
       ascii().addPos(pos);
-      ascii().addNote("Entries(StructA):#");
+      ascii().addNote("Entries(Selection):#");
       m_input->seek(pos+16, WPX_SEEK_SET);
     }
   }
@@ -406,34 +406,19 @@ bool MWProStructures::createZones()
       ascii().addNote("Entries(ParaZone):#");
     }
   }
-  if (ok) {
+  for (int st = 0; st < 2; st++) {
+    if (!ok) break;
     pos = m_input->tell();
-    ok = readStructD();
+    ok = readSections();
     if (!ok) {
       ascii().addPos(pos);
-      ascii().addNote("Entries(StructD):#");
+      ascii().addNote("Entries(Sections):#");
     }
   }
   if (ok) {
     pos = m_input->tell();
     libmwaw_tools::DebugStream f;
-    f << "Entries(StructE):";
-    f << "N?=" << m_input->readLong(4); // small number 0, 2, 3, 5
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-
-    pos = m_input->tell();
-    ok = readStructD();
-    if (!ok) {
-      ascii().addPos(pos);
-      ascii().addNote("Entries(StructD):#");
-    }
-  }
-  if (ok) {
-    pos = m_input->tell();
-    libmwaw_tools::DebugStream f;
-    f << "Entries(StructE)[II]:";
-    f << "N?=" << m_input->readLong(4) << ","; // a dupplicated of previous zone E?
+    f << "Entries(UserName):";
     // username,
     std::string res;
     for (int i = 0; i < 2; i++) {
@@ -476,20 +461,20 @@ bool MWProStructures::readFontsName()
   long pos = m_input->tell();
   libmwaw_tools::DebugStream f;
 
-  long sz = m_input->readULong(2);
+  long sz = m_input->readULong(4);
   if (sz == 0) {
     ascii().addPos(pos);
     ascii().addNote("_");
     return true;
   }
-  long endPos = pos+2+sz;
+  long endPos = pos+4+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("MWProStructures::readFontsName: file is too short\n"));
     m_input->seek(pos, WPX_SEEK_SET);
     return false;
   }
-  m_input->seek(pos+2, WPX_SEEK_SET);
+  m_input->seek(pos+4, WPX_SEEK_SET);
   if (sz == 0) {
     ascii().addPos(pos);
     ascii().addNote("_");
@@ -497,7 +482,7 @@ bool MWProStructures::readFontsName()
   }
   f << "Entries(FontsName):";
   int N=m_input->readULong(2);
-  if (3*N+2 > sz) {
+  if (3*N+4 > sz) {
     MWAW_DEBUG_MSG(("MWProStructures::readFontsName: can not read the number of fonts\n"));
     m_input->seek(endPos, WPX_SEEK_SET);
     f << "#";
@@ -535,8 +520,8 @@ bool MWProStructures::readFontsName()
 }
 
 ////////////////////////////////////////////////////////////
-// read the styles ( character )
-bool MWProStructures::readCharStyles()
+// read the character properties
+bool MWProStructures::readFontsDef()
 {
   long pos = m_input->tell();
   libmwaw_tools::DebugStream f;
@@ -547,114 +532,96 @@ bool MWProStructures::readCharStyles()
     ascii().addNote("_");
     return true;
   }
-  long endPos = pos+sz;
-  if ((sz%0x42) != 0) {
-    MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: find an odd value for sz\n"));
+  long endPos = pos+4+sz;
+  if ((sz%20) != 0) {
+    MWAW_DEBUG_MSG(("MWProStructures::readFontsDef: find an odd value for sz\n"));
     m_input->seek(pos, WPX_SEEK_SET);
     return false;
   }
 
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: file is too short\n"));
+    MWAW_DEBUG_MSG(("MWProStructures::readFontsDef: file is too short\n"));
     m_input->seek(pos, WPX_SEEK_SET);
     return false;
   }
   m_input->seek(pos+4, WPX_SEEK_SET);
-  f << "Entries(CharStyles):";
-  int N = sz/0x42;
+  f << "Entries(FontsDef):";
+  int N = sz/20;
   f << "N=" << N;
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  for (int i = 0; i < N; i++) {
+  m_state->m_fontsList.resize(0);
+  for (int n = 0; n < N; n++) {
     pos = m_input->tell();
+    MWProStructuresInternal::Font font;
+    if (!readFont(font)) {
+      ascii().addPos(pos);
+      ascii().addNote("FontsDef-#");
+      m_input->seek(endPos, WPX_SEEK_SET);
+      return true;
+    }
+    m_state->m_fontsList.push_back(font);
     f.str("");
-    f << "CharStyles-" << i << ":";
-    int sSz = m_input->readULong(1);
-    if (sSz > 33) {
-      MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: string size seems odd\n"));
-      sSz = 33;
-      f << "#";
-    }
-    std::string name("");
-    for (int c = 0; c < sSz; c++)
-      name += char(m_input->readULong(1));
-    f << name << ",";
-    m_input->seek(pos+34, WPX_SEEK_SET);
-    int val = m_input->readLong(2);
-    if (val != -1) f << "unkn=" << val << ",";
-    f << "ptr?=" << std::hex << m_input->readULong(4) << std::dec << ",";
-    val = m_input->readLong(2); // small number between 0 and 2 (nextId?)
-    if (val) f << "f0=" << val << ",";
-    for (int j = 1; j < 3; j++) { // [-1,0,1], [0,1 or ee]
-      val = m_input->readLong(1);
-      if (val) f << "f" << j <<"=" << val << ",";
-    }
-    for (int j = 3; j < 5; j++) { // always 0 ?
-      val = m_input->readLong(2);
-      if (val) f << "f" << j <<"=" << val << ",";
-    }
-
-    int fId = m_input->readLong(2);
-    if (fId != -1)
-      f << "fId?="<< fId << ",";
-    val = m_input->readLong(2);
-    if (val!=-1 || fId != -1) // 0 28, 30, 38, 60
-      f << "fFlags=" << std::hex << val << std::dec << ",";
-    val = m_input->readLong(2); // always 0
-    if (val) f << "f5=" << val << ",";
-    for (int j = 0; j < 4; j++) { // [0,1,8], [0,2,4], [1,ff,24]
-      val = m_input->readULong(1);
-      if (j==3 && val == 0x64) continue;
-      if (val) f << "g" << j << "=" << val << ",";
-    }
-    for (int j = 0; j < 4; j++) {
-      val = m_input->readULong(2);
-      if (j == 1 && val == i) continue;
-      if (val) f << "h" << j << "=" << val << ",";
-    }
+    f << "FontsDef-C" << n << ":";
+    f << m_convertissor->getFontDebugString(font.m_font) << font << ",";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-
-    m_input->seek(pos+0x42, WPX_SEEK_SET);
   }
   return true;
 }
 
-////////////////////////////////////////////////////////////
-// read a string
-bool MWProStructures::readString(TMWAWInputStreamPtr input, std::string &res)
+bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
 {
-  res="";
-  long pos = input->tell();
-  int sz = input->readLong(2);
-  if (sz == 0) return true;
-  if (sz < 0) {
-    input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("MWProStructures::readString: odd value for size\n"));
-    return false;
+  long pos = m_input->tell();
+  libmwaw_tools::DebugStream f;
+  font = MWProStructuresInternal::Font();
+  font.m_values[0] = m_input->readLong(2); // 1, 3 or 6
+  font.m_font.setId(m_input->readULong(2));
+  font.m_font.setSize((m_input->readULong(2)+3)/4);
+  font.m_values[1] = m_input->readLong(2);
+  long flag = m_input->readULong(2);
+  int flags=0;
+  if (flag&0x1) flags |= DMWAW_BOLD_BIT;
+  if (flag&0x2) flags |= DMWAW_ITALICS_BIT;
+  if (flag&0x4) flags |= DMWAW_UNDERLINE_BIT;
+  if (flag&0x8) flags |= DMWAW_EMBOSS_BIT;
+  if (flag&0x10) flags |= DMWAW_SHADOW_BIT;
+  if (flag&0x20) flags |= DMWAW_SUPERSCRIPT100_BIT;
+  if (flag&0x40) flags |= DMWAW_SUBSCRIPT100_BIT;
+  if (flag&0x100) {
+    flags |= DMWAW_SUPERSCRIPT_BIT;
+    f << "superior,";
   }
-  input->seek(pos+sz+2, WPX_SEEK_SET);
-  if (long(input->tell())!=pos+sz+2) {
-    input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("MWProStructures::readString: file is too short\n"));
-    return false;
-  }
-  input->seek(pos+2, WPX_SEEK_SET);
-  for (int i= 0; i < sz; i++) {
-    char c = input->readULong(1);
-    if (c) {
-      res+=c;
-      continue;
-    }
-    if (i==sz-1) break;
+  if (flag&0x200) flags |= DMWAW_STRIKEOUT_BIT;
+  if (flag&0x400) flags |= DMWAW_ALL_CAPS_BIT;
+  if (flag&0x800) flags |= DMWAW_SMALL_CAPS_BIT;
+  if (flag&0x1000) flags |= DMWAW_UNDERLINE_BIT;
+  if (flag&0x2000) flags |= DMWAW_DOUBLE_UNDERLINE_BIT;
+  if (flag&0x4000) f << "lowercase,";
+  font.m_flags = (flag&0x8080L);
 
-    input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("MWProStructures::readString: find odd character in string\n"));
-    return false;
-  }
-  return true;
+
+  int color = m_input->readULong(1);
+  Vec3uc col;
+  if (color != 1 && getColor(color, col)) {
+    int colVal[] = { col[0], col[1], col[2] };
+    font.m_font.setColor(colVal);
+  } else if (color != 1)
+    f << "#colId=" << color << ",";
+  long val = m_input->readULong(1); // always 0x64 (unused?)
+  if (val != 0x64) font.m_values[2] = val;
+  font.m_language =  m_input->readLong(2);
+  font.m_token = m_input->readLong(2);
+  /* f3=1 spacing 1, f3=3 spacing 3 */
+  for (int i = 3; i < 5; i++)
+    font.m_values[i] = m_input->readLong(2);
+  font.m_font.setFlags(flags);
+  font.m_extra = f.str();
+
+  m_input->seek(pos+20, WPX_SEEK_SET);
+  return long(m_input->tell()) == pos+20;
 }
 
 ////////////////////////////////////////////////////////////
@@ -841,6 +808,94 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
 }
 
 ////////////////////////////////////////////////////////////
+// read the styles ( character )
+bool MWProStructures::readCharStyles()
+{
+  long pos = m_input->tell();
+  libmwaw_tools::DebugStream f;
+
+  long sz = m_input->readULong(4);
+  if (sz == 0) {
+    ascii().addPos(pos);
+    ascii().addNote("_");
+    return true;
+  }
+  long endPos = pos+sz;
+  if ((sz%0x42) != 0) {
+    MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: find an odd value for sz\n"));
+    m_input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+
+  m_input->seek(endPos, WPX_SEEK_SET);
+  if (long(m_input->tell()) != endPos) {
+    MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: file is too short\n"));
+    m_input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+  m_input->seek(pos+4, WPX_SEEK_SET);
+  f << "Entries(CharStyles):";
+  int N = sz/0x42;
+  f << "N=" << N;
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  for (int i = 0; i < N; i++) {
+    pos = m_input->tell();
+    f.str("");
+    f << "CharStyles-" << i << ":";
+    int sSz = m_input->readULong(1);
+    if (sSz > 33) {
+      MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: string size seems odd\n"));
+      sSz = 33;
+      f << "#";
+    }
+    std::string name("");
+    for (int c = 0; c < sSz; c++)
+      name += char(m_input->readULong(1));
+    f << name << ",";
+    m_input->seek(pos+34, WPX_SEEK_SET);
+    int val = m_input->readLong(2);
+    if (val != -1) f << "unkn=" << val << ",";
+    f << "ptr?=" << std::hex << m_input->readULong(4) << std::dec << ",";
+    val = m_input->readLong(2); // small number between 0 and 2 (nextId?)
+    if (val) f << "f0=" << val << ",";
+    for (int j = 1; j < 3; j++) { // [-1,0,1], [0,1 or ee]
+      val = m_input->readLong(1);
+      if (val) f << "f" << j <<"=" << val << ",";
+    }
+    for (int j = 3; j < 5; j++) { // always 0 ?
+      val = m_input->readLong(2);
+      if (val) f << "f" << j <<"=" << val << ",";
+    }
+
+    int fId = m_input->readLong(2);
+    if (fId != -1)
+      f << "fId?="<< fId << ",";
+    val = m_input->readLong(2);
+    if (val!=-1 || fId != -1) // 0 28, 30, 38, 60
+      f << "fFlags=" << std::hex << val << std::dec << ",";
+    val = m_input->readLong(2); // always 0
+    if (val) f << "f5=" << val << ",";
+    for (int j = 0; j < 4; j++) { // [0,1,8], [0,2,4], [1,ff,24]
+      val = m_input->readULong(1);
+      if (j==3 && val == 0x64) continue;
+      if (val) f << "g" << j << "=" << val << ",";
+    }
+    for (int j = 0; j < 4; j++) {
+      val = m_input->readULong(2);
+      if (j == 1 && val == i) continue;
+      if (val) f << "h" << j << "=" << val << ",";
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+
+    m_input->seek(pos+0x42, WPX_SEEK_SET);
+  }
+  return true;
+}
+
+////////////////////////////////////////////////////////////
 // read the styles ( paragraph + font)
 bool MWProStructures::readStyles()
 {
@@ -1018,7 +1073,7 @@ bool MWProStructures::readBlocksList()
   MWProStructuresInternal::Block block;
   while (readBlock(block)) {
     m_state->m_blocksList.push_back(block);
-    if (block.m_fileBlock && (block.isGraphic() || block.isText()))
+    if (block.isGraphic() || block.isText())
       m_mainParser.parseDataZone(block.m_fileBlock, block.isGraphic() ? 1 : 0);
   }
   return true;
@@ -1126,37 +1181,133 @@ bool MWProStructures::readBlock(MWProStructuresInternal::Block &block)
 }
 
 ////////////////////////////////////////////////////////////
-// read some unknowns zone
-bool MWProStructures::readStructA()
+// read the column information zone : checkme
+bool MWProStructures::readSections()
 {
   long pos = m_input->tell();
   libmwaw_tools::DebugStream f;
 
-  long endPos = pos+16;
+  long sz = m_input->readULong(4);
+  if (sz == 0) {
+    ascii().addPos(pos);
+    ascii().addNote("_");
+    return true;
+  }
+  long endPos = pos+4+sz;
+  if ((sz%0xd8)) {
+    MWAW_DEBUG_MSG(("MWProStructures::readSections: find an odd value for sz\n"));
+    ascii().addPos(pos);
+    ascii().addNote("Entries(Sections)#");
+    m_input->seek(endPos, WPX_SEEK_SET);
+    return true;
+  }
+
+  int N = sz/0xd8;
+  f << "Entries(Section):";
+  f << "N=" << N;
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  long val;
+  for (int n = 0; n < N; n++) {
+    pos = m_input->tell();
+    f.str("");
+    f << "Section" << "-" << n << ":";
+    val = m_input->readULong(4);
+    if (val) f << "textLength=" << val << ",";
+    val =  m_input->readLong(4); // almost always 0 or a dim?
+    if (val) f << "dim?=" << val/65536.;
+    for (int i = 0; i < 2; i++) {
+      val = m_input->readLong(2);
+      if (val)
+        f << "f" << i << "=" << val << ",";
+    }
+    // a flag ? and noused ?
+    for (int i = 0; i < 2; i++) {
+      val = m_input->readULong(1);
+      if (val == 0xFF) f << "fl" << i<< "=true,";
+      else if (val) f << "fl" << i << "=" << std::hex << val << std::dec << ",";
+    }
+
+    for (int st = 0; st < 2; st++) {
+      val = m_input->readLong(2); // alway 1 ?
+      if (val != 1) f << "f" << 2+st << "=" << val << ",";
+      // another flag ?
+      val = m_input->readULong(1);
+      if (val) f << "fl" << st+2 << "=" << std::hex << val << std::dec << ",";
+    }
+    int numColumns = m_input->readLong(2);
+    if (numColumns < 1 || numColumns > 20) {
+      MWAW_DEBUG_MSG(("MWProStructures::readSections: bad number of columns\n"));
+      f << "#nCol=" << numColumns << ",";
+      numColumns = 1;
+    } else
+      f << "nCol=" << numColumns << ",";
+    val = m_input->readLong(2); // find: 3, c, 24
+    if (val) f << "f4=" << val << ",";
+    for (int i = 5; i < 8; i++) { // always 0 ?
+      val = m_input->readLong(2);
+      if (val)
+        f << "f" << i << "=" << val << ",";
+    }
+    long actPos = m_input->tell();
+    for (int c = 0; c < numColumns; c++) {
+      f << "rightPos" << c << "=" << m_input->readLong(4)/65536. << ","; // right
+      f << "leftPos" <<  c+1 << "=" << m_input->readLong(4)/65536 << ","; // next left?
+    }
+    m_input->seek(actPos+20*8+4, WPX_SEEK_SET);
+    // 5 flags ( 1+unused?)
+    for (int i = 0; i < 6; i++) {
+      val = m_input->readULong(1);
+      if ((i!=5 && val!=1) || (i==5 && val))
+        f << "g" << i << "=" << val << ",";
+    }
+    for (int i = 0; i < 8; i++) { // h0=h2=h4=h6 =0, other small number h1=h5? h3=h7?
+      val = m_input->readLong(2);
+      if (val)
+        f << "h" << i << "=" << val << ",";
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    m_input->seek(pos+0xd8, WPX_SEEK_SET);
+  }
+
+  m_input->seek(endPos, WPX_SEEK_SET);
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// read the selection zone
+bool MWProStructures::readSelection()
+{
+  long pos = m_input->tell();
+  libmwaw_tools::DebugStream f;
+
+  long endPos = pos+14;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProStructures::readZonA: file is too short\n"));
+    MWAW_DEBUG_MSG(("MWProStructures::readSelection: file is too short\n"));
     m_input->seek(pos, WPX_SEEK_SET);
     return false;
   }
   m_input->seek(pos, WPX_SEEK_SET);
-  f << "Entries(StructA):";
+  f << "Entries(Selection):";
   int val = m_input->readLong(2);
-  f << "f0=" << val << ",";
-  val = m_input->readLong(2); // 0 or -1
-  if (val == -1) { // followed by -1, 0 ?
+  f << "f0=" << val << ","; // zone?
+  val = m_input->readLong(4); // -1 or 8 : zone type?
+  if (val == -1) { // none ?
     f << "*";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    m_input->seek(pos+8, WPX_SEEK_SET);
+    m_input->seek(pos+6, WPX_SEEK_SET);
     return true;
   }
-  if (val) f << "f1=" << val << ",";
-  for (int i = 2; i < 8; i++) {
-    /* f0, f2 : small number , f4=f6 (almost always), others 0? */
-    val = m_input->readLong(2);
-    if (val && i >= 4) f << "f" << i << "=" << std::hex << val << std::dec << ",";
-    else if (val) f << "f" << i << "=" << val << ",";
+  if (val!=8) f << "f1=" << val << ",";
+  f << "char=";
+  for (int i = 0; i < 2; i++) {
+    f << m_input->readULong(4);
+    if (i==0) f << "x";
+    else f << ",";
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1165,6 +1316,43 @@ bool MWProStructures::readStructA()
   return true;
 }
 
+////////////////////////////////////////////////////////////
+// read a string
+bool MWProStructures::readString(TMWAWInputStreamPtr input, std::string &res)
+{
+  res="";
+  long pos = input->tell();
+  int sz = input->readLong(2);
+  if (sz == 0) return true;
+  if (sz < 0) {
+    input->seek(pos, WPX_SEEK_SET);
+    MWAW_DEBUG_MSG(("MWProStructures::readString: odd value for size\n"));
+    return false;
+  }
+  input->seek(pos+sz+2, WPX_SEEK_SET);
+  if (long(input->tell())!=pos+sz+2) {
+    input->seek(pos, WPX_SEEK_SET);
+    MWAW_DEBUG_MSG(("MWProStructures::readString: file is too short\n"));
+    return false;
+  }
+  input->seek(pos+2, WPX_SEEK_SET);
+  for (int i= 0; i < sz; i++) {
+    char c = input->readULong(1);
+    if (c) {
+      res+=c;
+      continue;
+    }
+    if (i==sz-1) break;
+
+    input->seek(pos, WPX_SEEK_SET);
+    MWAW_DEBUG_MSG(("MWProStructures::readString: find odd character in string\n"));
+    return false;
+  }
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// read an unknown zone
 bool MWProStructures::readStructB()
 {
   long pos = m_input->tell();
@@ -1207,162 +1395,31 @@ bool MWProStructures::readStructB()
   return true;
 }
 
-bool MWProStructures::readFontsDef()
-{
-  long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
-
-  long sz = m_input->readULong(4);
-  if (sz == 0) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
-    return true;
-  }
-  long endPos = pos+4+sz;
-  if ((sz%20) != 0) {
-    MWAW_DEBUG_MSG(("MWProStructures::readFontsDef: find an odd value for sz\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProStructures::readFontsDef: file is too short\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-  m_input->seek(pos+4, WPX_SEEK_SET);
-  f << "Entries(FontsDef):";
-  int N = sz/20;
-  f << "N=" << N;
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  m_state->m_fontsList.resize(0);
-  for (int n = 0; n < N; n++) {
-    pos = m_input->tell();
-    MWProStructuresInternal::Font font;
-    if (!readFont(font)) {
-      ascii().addPos(pos);
-      ascii().addNote("FontsDef-#");
-      m_input->seek(endPos, WPX_SEEK_SET);
-      return true;
-    }
-    m_state->m_fontsList.push_back(font);
-    f.str("");
-    f << "FontsDef-C" << n << ":";
-    f << m_convertissor->getFontDebugString(font.m_font) << font << ",";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
-{
-  long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
-  font = MWProStructuresInternal::Font();
-  font.m_values[0] = m_input->readLong(2); // 1, 3 or 6
-  font.m_font.setId(m_input->readULong(2));
-  font.m_font.setSize((m_input->readULong(2)+3)/4);
-  font.m_values[1] = m_input->readLong(2);
-  long flag = m_input->readULong(2);
-  int flags=0;
-  if (flag&0x1) flags |= DMWAW_BOLD_BIT;
-  if (flag&0x2) flags |= DMWAW_ITALICS_BIT;
-  if (flag&0x4) flags |= DMWAW_UNDERLINE_BIT;
-  if (flag&0x8) flags |= DMWAW_EMBOSS_BIT;
-  if (flag&0x10) flags |= DMWAW_SHADOW_BIT;
-  if (flag&0x20) flags |= DMWAW_SUPERSCRIPT100_BIT;
-  if (flag&0x40) flags |= DMWAW_SUBSCRIPT100_BIT;
-  if (flag&0x100) {
-    flags |= DMWAW_SUPERSCRIPT_BIT;
-    f << "superior,";
-  }
-  if (flag&0x200) flags |= DMWAW_STRIKEOUT_BIT;
-  if (flag&0x400) flags |= DMWAW_ALL_CAPS_BIT;
-  if (flag&0x800) flags |= DMWAW_SMALL_CAPS_BIT;
-  if (flag&0x1000) flags |= DMWAW_UNDERLINE_BIT;
-  if (flag&0x2000) flags |= DMWAW_DOUBLE_UNDERLINE_BIT;
-  if (flag&0x4000) f << "lowercase,";
-  font.m_flags = (flag&0x8080L);
-
-
-  int color = m_input->readULong(1);
-  Vec3uc col;
-  if (color != 1 && getColor(color, col)) {
-    int colVal[] = { col[0], col[1], col[2] };
-    font.m_font.setColor(colVal);
-  } else if (color != 1)
-    f << "#colId=" << color << ",";
-  long val = m_input->readULong(1); // always 0x64 (unused?)
-  if (val != 0x64) font.m_values[2] = val;
-  font.m_language =  m_input->readLong(2);
-  font.m_token = m_input->readLong(2);
-  /* f3=1 spacing 1, f3=3 spacing 3 */
-  for (int i = 3; i < 5; i++)
-    font.m_values[i] = m_input->readLong(2);
-  font.m_font.setFlags(flags);
-  font.m_extra = f.str();
-
-  m_input->seek(pos+20, WPX_SEEK_SET);
-  return long(m_input->tell()) == pos+20;
-}
-
-
-bool MWProStructures::readStructD()
-{
-  long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
-
-  long sz = m_input->readULong(4);
-  if (sz == 0) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
-    return true;
-  }
-  long endPos = pos+sz;
-  if ((sz%0xd8)) {
-    MWAW_DEBUG_MSG(("MWProStructures::readStructD: find an odd value for sz\n"));
-    ascii().addPos(pos);
-    ascii().addNote("Entries(StructD)#");
-    m_input->seek(endPos, WPX_SEEK_SET);
-    return true;
-  }
-
-  int N = sz/0xd8;
-  f << "Entries(StructD):";
-  f << "N=" << N;
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  for (int n = 0; n < N; n++) {
-    pos = m_input->tell();
-    f.str("");
-    f << "StructD" << "-" << n;
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(pos+0xd8, WPX_SEEK_SET);
-  }
-
-  m_input->seek(endPos, WPX_SEEK_SET);
-  return true;
-}
 
 ////////////////////////////////////////////////////////////
 // send the not sent data
 void MWProStructures::flushExtra()
 {
+  // first send the text
   for (int i = 0; i < int(m_state->m_blocksList.size()); i++) {
     if (m_state->m_blocksList[i].m_send)
       continue;
     int blockId = m_state->m_blocksList[i].m_fileBlock;
-    if (blockId) {
-      if (m_state->m_blocksList[i].isText()) {
-        m_mainParser.sendTextZone(blockId);
-        if (m_listener) m_listener->insertEOL();
-      }
+    if (blockId && m_state->m_blocksList[i].isText()) {
+      m_mainParser.sendTextZone(blockId);
+      if (m_listener) m_listener->insertEOL();
+    }
+  }
+  // then send graphic
+  for (int i = 0; i < int(m_state->m_blocksList.size()); i++) {
+    if (m_state->m_blocksList[i].m_send)
+      continue;
+    int blockId = m_state->m_blocksList[i].m_fileBlock;
+    if (blockId && m_state->m_blocksList[i].isGraphic()) {
+      Box2f box = m_state->m_blocksList[i].m_box;
+      TMWAWPosition pictPos(Vec2i(0,0), box.size(), WPX_POINT);
+      pictPos.setRelativePosition(TMWAWPosition::Char);
+      m_mainParser.sendPictureZone(blockId, pictPos);
     }
   }
 }
@@ -1379,41 +1436,7 @@ MWProStructuresListenerState::~MWProStructuresListenerState()
 {
 }
 
-bool MWProStructuresListenerState::sendFont(int id, bool force)
-{
-  if (!m_structures) {
-    MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendFont: can not find structures\n"));
-    return false;
-  }
-  if (!m_structures->m_listener)
-    return true;
-  if (id < 0 || id >= int(m_structures->m_state->m_fontsList.size())) {
-    MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendFont: can not find font %d\n", id));
-    return false;
-  }
-
-
-  m_structures->m_state->m_fontsList[id].m_font.sendTo
-  (m_structures->m_listener.get(), m_structures->m_convertissor, m_font->m_font, force);
-  *m_font = m_structures->m_state->m_fontsList[id];
-  switch(m_font->m_language) {
-  case -1:
-    break;
-  case 0:
-    m_structures->m_listener->setTextLanguage("en_US");
-    break;
-  case 2:
-    m_structures->m_listener->setTextLanguage("en_GB");
-    break;
-  case 3:
-    m_structures->m_listener->setTextLanguage("de");
-    break;
-  default:
-    break;
-  }
-  return true;
-}
-
+// ----------- character function ---------------------
 void MWProStructuresListenerState::sendChar(char c)
 {
   if (!m_structures || !m_structures->m_listener)
@@ -1453,6 +1476,42 @@ void MWProStructuresListenerState::sendChar(char c)
   }
 }
 
+// ----------- font function ---------------------
+bool MWProStructuresListenerState::sendFont(int id, bool force)
+{
+  if (!m_structures) {
+    MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendFont: can not find structures\n"));
+    return false;
+  }
+  if (!m_structures->m_listener)
+    return true;
+  if (id < 0 || id >= int(m_structures->m_state->m_fontsList.size())) {
+    MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendFont: can not find font %d\n", id));
+    return false;
+  }
+
+
+  m_structures->m_state->m_fontsList[id].m_font.sendTo
+  (m_structures->m_listener.get(), m_structures->m_convertissor, m_font->m_font, force);
+  *m_font = m_structures->m_state->m_fontsList[id];
+  switch(m_font->m_language) {
+  case -1:
+    break;
+  case 0:
+    m_structures->m_listener->setTextLanguage("en_US");
+    break;
+  case 2:
+    m_structures->m_listener->setTextLanguage("en_GB");
+    break;
+  case 3:
+    m_structures->m_listener->setTextLanguage("de");
+    break;
+  default:
+    break;
+  }
+  return true;
+}
+
 std::string MWProStructuresListenerState::getFontDebugString(int fId)
 {
   if (!m_structures) {
@@ -1475,6 +1534,7 @@ std::string MWProStructuresListenerState::getFontDebugString(int fId)
   return s.str();
 }
 
+// ----------- paragraph function ---------------------
 bool MWProStructuresListenerState::sendParagraph(int id)
 {
   if (!m_structures) {

@@ -403,7 +403,7 @@ void MWProParser::parse(WPXDocumentInterface *docInterface)
       }
     }
 #ifdef DEBUG
-    markUnparsed();
+    checkUnparsed();
 #endif
 
     ascii().reset();
@@ -874,8 +874,8 @@ bool MWProParser::parseDataZone(int blockId, int type)
   // ok init is done
   if (type == 0)
     parseTextZone(zone);
-  else if (type == 1) // REMOVE ME
-    sendPicture(zone, TMWAWPosition());
+  else if (type == 1)
+    ;
   else {
     libmwaw_tools::DebugStream f;
     f << "Entries(DataZone):type" << type;
@@ -1314,53 +1314,22 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone)
   return true;
 }
 
-bool MWProParser::sendText(IMWAWEntry entry)
-{
-  if (!entry.valid())
-    return false;
-  TMWAWInputStreamPtr input = getInput();
-  libmwaw_tools::DebugStream f;
-
-  f << "Entries(TextContent):";
-  input->seek(entry.begin(), WPX_SEEK_SET);
-  if (long(input->tell()) != entry.begin()) {
-    MWAW_DEBUG_MSG(("MWProParser::sendText: can not find text block\n"));
-    return false;
-  }
-
-  std::string text("");
-  bool findZero = false;
-  for (int c = 0; c < entry.length(); c++) {
-    char ch = input->readULong(1);
-    if (!ch) {
-      if (findZero) {
-        input->seek(-1, WPX_SEEK_CUR);
-        break;
-      }
-      findZero = true;
-      continue;
-    }
-    if (findZero) {
-      text += "#";
-      findZero = false;
-    }
-    text+=ch;
-  }
-  f << text;
-  if (long(input->tell()) != entry.end() && entry.length()!=256) {
-    f << "##";
-    ascii().addDelimiter(input->tell(),'|');
-  } else if (entry.length() != 256)
-    ascii().addDelimiter(input->tell(),'|');
-  ascii().addPos(entry.begin());
-  ascii().addNote(f.str().c_str());
-
-  return true;
-}
 
 ////////////////////////////////////////////////////////////
 // try to send a picture
 ////////////////////////////////////////////////////////////
+bool MWProParser::sendPictureZone(int blockId, TMWAWPosition const &pictPos)
+{
+  std::map<int, shared_ptr<MWProParserInternal::Zone> >::iterator it;
+  it = m_state->m_dataMap.find(blockId);
+  if (it == m_state->m_dataMap.end()) {
+    MWAW_DEBUG_MSG(("MWProParser::sendPictureZone: can not find picture zone\n"));
+    return false;
+  }
+  sendPicture(it->second, pictPos);
+  return true;
+}
+
 bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
                               TMWAWPosition pictPos)
 {
@@ -1504,28 +1473,52 @@ void MWProParser::saveOriginal(TMWAWInputStreamPtr input)
 }
 #endif
 
-void MWProParser::markUnparsed()
+void MWProParser::checkUnparsed()
 {
   TMWAWInputStreamPtr input = getInput();
+  libmwaw_tools::DebugStream f;
 
   long pos;
-  int bl = 2;
   std::stringstream notParsed;
-  while (1) {
-    pos = (bl++)*0x100;
+  for (int bl = 3; bl < 1000; bl++) {
+    if (m_state->m_blocksMap.find(bl) != m_state->m_blocksMap.end())
+      continue;
+
+    pos = bl*0x100;
     input->seek(pos, WPX_SEEK_SET);
     if (input->atEOS()) break;
-    if (m_state->m_blocksMap.find(bl-1) != m_state->m_blocksMap.end())
-      continue;
-    notParsed << std::hex <<  bl-1 << std::dec << ",";
+    notParsed << std::hex <<  bl << std::dec << ",";
+
     // normaly there must remains only text entry...
-    IMWAWEntry entry;
-    entry.setBegin(pos);
-    entry.setLength(256);
-    sendText(entry);
+    f.str("");
+    f << "Entries(Unparsed):";
+
+    std::string text("");
+    bool findZero = false;
+    for (int c = 0; c < 256; c++) {
+      char ch = input->readULong(1);
+      if (!ch) {
+        if (findZero) {
+          input->seek(-1, WPX_SEEK_CUR);
+          break;
+        }
+        findZero = true;
+        continue;
+      }
+      if (findZero) {
+        text += "#";
+        findZero = false;
+      }
+      text+=ch;
+    }
+    f << text;
+    if (long(input->tell()) != pos+256)
+      ascii().addDelimiter(input->tell(),'|');
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
   }
   if (notParsed.str().size()) {
-    MWAW_DEBUG_MSG(("MWProParser::markUnparsed: not parsed %s\n", notParsed.str().c_str()));
+    MWAW_DEBUG_MSG(("MWProParser::checkUnparsed: not parsed %s\n", notParsed.str().c_str()));
   }
 }
 

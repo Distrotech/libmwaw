@@ -159,6 +159,9 @@ protected:
   //
   bool sendTextZone(int blockId);
 
+  //! try to send a picture
+  bool sendPictureZone(int blockId, TMWAWPosition const &pictPos);
+
   //
   // low level
   //
@@ -180,11 +183,8 @@ protected:
   //! try to send a text
   bool sendText(shared_ptr<MWProParserInternal::TextZone> zone);
 
-  //! try to send a text
-  bool sendText(IMWAWEntry entry);
-
   //! a debug function which can be used to save the unparsed block
-  void markUnparsed();
+  void checkUnparsed();
 
   //! returns the debug file
   libmwaw_tools::DebugFile &ascii() {

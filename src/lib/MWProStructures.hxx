@@ -170,14 +170,14 @@ protected:
   //! try to read a font
   bool readFont(MWProStructuresInternal::Font &font);
 
-  //! try to read a 16 bytes the zone which follow the char styles zone
-  bool readStructA();
+  //! try to read the section info ?
+  bool readSections();
+
+  //! try to read a 16 bytes the zone which follow the char styles zone ( the selection?)
+  bool readSelection();
 
   //! try to read a zone which follow the fonts zone(checkme)
   bool readStructB();
-
-  //! try to read a zone which follow the list of paragraphs
-  bool readStructD();
 
   //! try to read a string
   bool readString(TMWAWInputStreamPtr input, std::string &res);
