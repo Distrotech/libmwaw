@@ -1275,8 +1275,6 @@ void IMWAWContentListener::openTableCell(IMWAWCell const &cell, WPXPropertyList 
 
   m_ps->m_isTableCellOpened = true;
   m_documentInterface->openTableCell(propList);
-
-  _openParagraph();
 }
 
 void IMWAWContentListener::closeTableCell()

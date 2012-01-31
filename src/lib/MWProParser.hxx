@@ -73,6 +73,7 @@ class SubDocument;
 }
 
 class MWProStructures;
+class MWProStructuresListenerState;
 
 /** \brief the main class to read a MacWrite Pro file
  *
@@ -82,6 +83,7 @@ class MWProStructures;
 class MWProParser : public IMWAWParser
 {
   friend class MWProStructures;
+  friend class MWProStructuresListenerState;
   friend class MWProParserInternal::SubDocument;
 
 public:

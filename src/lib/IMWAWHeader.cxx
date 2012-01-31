@@ -54,11 +54,14 @@ IMWAWHeader::~IMWAWHeader()
  */
 IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
 {
+  input->seek(8, WPX_SEEK_SET);
+  if (input->atEOS() || input->tell() != 8)
+    return 0;
+
   input->seek(0, WPX_SEEK_SET);
   int val[4];
   for (int i = 0; i < 4; i++)
     val[i] = input->readULong(2);
-
   IMWAWHeader *header;
   if (val[2] == 0x424F && val[3] == 0x424F && (val[0]>>8) < 8) {
     MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Claris Works file[Limited parsing]\n"));

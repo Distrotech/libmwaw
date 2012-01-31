@@ -117,7 +117,7 @@ struct TextZoneData {
 
 //! Internal: a struct used to store a text zone
 struct Token {
-  Token() : m_type(-1), m_length(0), m_value(0) {
+  Token() : m_type(-1), m_length(0), m_blockId(-1) {
     for (int i = 0; i < 3; i++) m_flags[i] = 0;
   }
   //! operator<<
@@ -157,20 +157,20 @@ struct Token {
     default:
       o << "#type=" << tkn.m_type << ",";
     }
+    if (tkn.m_blockId >= 0) o << "blockId=" << tkn.m_blockId << ",";
     for (int i = 0; i < 3; i++) {
       if (tkn.m_flags[i]) o << "flags=" << std::hex << tkn.m_flags[i] << ",";
     }
-    if (tkn.m_value) o << "f0=" << tkn.m_value << ",";
     return o;
   }
   //! the type
   int m_type;
   //! the text length
   int m_length;
+  //! the block id
+  int m_blockId;
   //! some flags
   int m_flags[3];
-  //! the last value
-  int m_value;
 };
 
 //! Internal: a struct used to store a text zone
@@ -269,15 +269,12 @@ void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType 
     MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
     return;
   }
-  if (m_id != 1 && m_id != 2) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
-    return;
-  }
-
   assert(m_parser);
 
   long pos = m_input->tell();
-  // reinterpret_cast<MWProParser *>(m_parser)->sendWindow(m_id);
+  MWProParser *parser = reinterpret_cast<MWProParser *>(m_parser);
+  if (parser->m_structures.get())
+    parser->m_structures->send(m_id);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
@@ -391,8 +388,10 @@ void MWProParser::parse(WPXDocumentInterface *docInterface)
 #endif
     if (ok) {
       createDocument(docInterface);
-      if (m_structures)
+      if (m_structures) {
+        m_structures->sendMainZone();
         m_structures->flushExtra();
+      }
     }
 
     std::vector<int> freeList;
@@ -562,12 +561,32 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // update the page
   m_state->m_actPage = 0;
-  m_state->m_numPages = 1;
+  int numPages = m_structures ? m_structures->numPages() : 0;
+  if (numPages <= 0) numPages = 1;
+  m_state->m_numPages = numPages;
 
   // create the page list
   std::list<DMWAWPageSpan> pageList;
   DMWAWPageSpan ps(m_pageSpan);
 
+
+  DMWAWTableList tableList;
+  int headerId = m_structures->getHeaderId();
+  if (headerId) {
+    shared_ptr<MWProParserInternal::SubDocument> subdoc
+    (new MWProParserInternal::SubDocument(*this, getInput(), headerId));
+    m_listSubDocuments.push_back(subdoc);
+    ps.setHeaderFooter(HEADER, 0, ALL, subdoc.get(), tableList);
+
+  }
+  int footerId = m_structures->getFooterId();
+  if (footerId) {
+    shared_ptr<MWProParserInternal::SubDocument> subdoc
+    (new MWProParserInternal::SubDocument(*this, getInput(), footerId));
+    m_listSubDocuments.push_back(subdoc);
+    ps.setHeaderFooter(FOOTER, 0, ALL, subdoc.get(), tableList);
+
+  }
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
@@ -1107,7 +1126,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
     data.m_flags[0] = input->readULong(1);
     int nChar = data.m_length = input->readULong(4);
     for (int j = 1; j < 3; j++) data.m_flags[j] = input->readULong(1);
-    data.m_value = input->readLong(2);
+    data.m_blockId = input->readLong(2);
     f.str("");
     f << "TextZone-" << i<< ":token," << data;
     if (nChar > remainLength) {
@@ -1247,17 +1266,27 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone)
           input->seek(pos, WPX_SEEK_SET);
       }
       break;
-    case 2:
+    case 2: {
+      // save the position because we read some extra data ( footnote, table, textbox)
+      long actPos = input->tell();
       switch (zone->m_tokens[data.m_id].m_type) {
       case 1:
         if (m_listener) m_listener->insertField(IMWAWContentListener::PageNumber);
         break;
       case 2:
-        break; // insert a footnote here
+        if (listenerState.isSent(zone->m_tokens[data.m_id].m_blockId)) {
+          MWAW_DEBUG_MSG(("MWProParser::sendText: footnote is already sent...\n"));
+        } else {
+          IMWAWSubDocumentPtr subdoc(new MWProParserInternal::SubDocument(*this, getInput(), zone->m_tokens[data.m_id].m_blockId));
+          m_listener->insertNote(FOOTNOTE, subdoc);
+        }
+        break;
       case 3:
         break; // footnote content, ok
       case 4:
-        break; // insert a graphic here
+        listenerState.send(zone->m_tokens[data.m_id].m_blockId);
+        listenerState.resendAll();
+        break;
       case 5:
         break; // hyphen ok
       case 6:
@@ -1279,7 +1308,9 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone)
         break;
       }
       f << "token[" << zone->m_tokens[data.m_id] << "],";
+      input->seek(actPos, WPX_SEEK_SET);
       break;
+    }
     case 1:
       if (m_structures) {
         listenerState.sendFont(zone->m_ids[0][data.m_id].m_id, first);

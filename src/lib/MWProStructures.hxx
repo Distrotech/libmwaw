@@ -54,9 +54,15 @@ typedef shared_ptr<Convertissor> ConvertissorPtr;
 
 class MWProParser;
 
+namespace MWProParserInternal
+{
+class SubDocument;
+}
+
 namespace MWProStructuresInternal
 {
 struct Block;
+struct Cell;
 struct Font;
 struct Paragraph;
 struct State;
@@ -74,12 +80,21 @@ public:
   MWProStructuresListenerState(shared_ptr<MWProStructures> structures);
   //! the destructor
   ~MWProStructuresListenerState();
+
+  //! returns true if the block is already sent ( or does not exists)
+  bool isSent(int blockId);
+  //! try to send a block which corresponds to blockid
+  bool send(int blockId);
+
   //! try to send a character style
   bool sendFont(int id, bool force);
   //! try to send a paragraph
   bool sendParagraph(int id);
   //! send a character
   void sendChar(char c);
+
+  //! force resent data : font + paragraph
+  bool resendAll();
 
   //! debug function which returns a string corresponding to a fontId
   std::string getFontDebugString(int fontId);
@@ -88,7 +103,11 @@ public:
   std::string getParagraphDebugString(int paraId);
 
 protected:
+  void sendFont(MWProStructuresInternal::Font const &font, bool force);
   void sendParagraph(MWProStructuresInternal::Paragraph const &para);
+
+  // the actual page
+  int m_actPage;
 
   // the main structure parser
   shared_ptr<MWProStructures> m_structures;
@@ -106,6 +125,8 @@ protected:
 class MWProStructures
 {
   friend class MWProParser;
+  friend class MWProParserInternal::SubDocument;
+  friend class MWProStructuresInternal::Cell;
   friend class MWProStructuresListenerState;
 public:
   //! constructor
@@ -133,8 +154,22 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
+  //! returns the number of pages
+  int numPages() const;
+
+  //! send the main zone
+  bool sendMainZone();
+
+  //! return the header blockid ( or 0)
+  int getHeaderId();
+  //! return the footer blockid ( or 0)
+  int getFooterId();
+
   //! flush not send zones
   void flushExtra();
+
+  //! look for tables structures and if so, prepare data
+  void buildTableStructures();
 
   //
   // low level
@@ -155,8 +190,11 @@ protected:
   //! try to read a paragraph
   bool readParagraph(MWProStructuresInternal::Paragraph &para);
 
+  //! returns the size of the block end data
+  int getEndBlockSize();
+
   //! try to read a block entry
-  bool readBlock(MWProStructuresInternal::Block &block);
+  shared_ptr<MWProStructuresInternal::Block> readBlock();
 
   //! try to read the list of block entries
   bool readBlocksList();
@@ -171,7 +209,7 @@ protected:
   bool readFont(MWProStructuresInternal::Font &font);
 
   //! try to read the section info ?
-  bool readSections();
+  bool readSections(bool isDefault);
 
   //! try to read a 16 bytes the zone which follow the char styles zone ( the selection?)
   bool readSelection();
@@ -184,6 +222,12 @@ protected:
 
   //! try to return the color corresponding to colId
   bool getColor(int colId, Vec3uc &color) const;
+
+  //! returns true if the block is already sent ( or does not exists)
+  bool isSent(int blockId);
+
+  //! try to send a block which corresponds to blockid
+  bool send(int blockId);
 
   //! returns the debug file
   libmwaw_tools::DebugFile &ascii() {
