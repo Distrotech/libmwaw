@@ -753,7 +753,7 @@ void IMWAWContentListener::_handleFrameParameters
   }
 }
 
-bool IMWAWContentListener::openFrame(TMWAWPosition const &pos)
+bool IMWAWContentListener::openFrame(TMWAWPosition const &pos, WPXPropertyList extras)
 {
   if (isUndoOn()) return true;
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened) {
@@ -788,7 +788,7 @@ bool IMWAWContentListener::openFrame(TMWAWPosition const &pos)
     return false;
   }
 
-  WPXPropertyList propList;
+  WPXPropertyList propList(extras);
   _handleFrameParameters(propList, pos);
   m_documentInterface->openFrame(propList);
 
@@ -808,11 +808,12 @@ void IMWAWContentListener::closeFrame()
 }
 
 void IMWAWContentListener::insertTextBox(TMWAWPosition const &pos,
-    IMWAWSubDocumentPtr &subDocument)
+    IMWAWSubDocumentPtr subDocument,
+    WPXPropertyList frameExtras)
 {
   if (isUndoOn()) return;
 
-  if (!openFrame(pos)) return;
+  if (!openFrame(pos, frameExtras)) return;
 
   WPXPropertyList propList;
   m_documentInterface->openTextBox(propList);

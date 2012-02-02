@@ -159,10 +159,16 @@ protected:
   //
   // interface with MWProParserStructures
   //
-  bool sendTextZone(int blockId);
+
+  //! send a text box
+  bool sendTextZone(int blockId, bool mainZone = false);
 
   //! try to send a picture
   bool sendPictureZone(int blockId, TMWAWPosition const &pictPos);
+
+  //! send a textbox zone
+  bool sendTextBoxZone(int blockId, TMWAWPosition const &pos,
+                       WPXPropertyList extras = WPXPropertyList());
 
   //
   // low level
@@ -183,7 +189,7 @@ protected:
   bool sendPicture(shared_ptr<MWProParserInternal::Zone> zone, TMWAWPosition pictPos);
 
   //! try to send a text
-  bool sendText(shared_ptr<MWProParserInternal::TextZone> zone);
+  bool sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool mainZone = false);
 
   //! a debug function which can be used to save the unparsed block
   void checkUnparsed();

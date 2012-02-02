@@ -351,8 +351,11 @@ float MWProParser::pageWidth() const
 ////////////////////////////////////////////////////////////
 void MWProParser::newPage(int number)
 {
-  if (number <= m_state->m_actPage || number > m_state->m_numPages)
+  if (number <= m_state->m_actPage) return;
+  if (number > m_state->m_numPages) {
+    MWAW_DEBUG_MSG(("MWProParser::newPage: can not create new page\n"));
     return;
+  }
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
@@ -567,27 +570,42 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // create the page list
   std::list<DMWAWPageSpan> pageList;
-  DMWAWPageSpan ps(m_pageSpan);
 
 
   DMWAWTableList tableList;
-  int headerId = m_structures->getHeaderId();
-  if (headerId) {
-    shared_ptr<MWProParserInternal::SubDocument> subdoc
-    (new MWProParserInternal::SubDocument(*this, getInput(), headerId));
-    m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter(HEADER, 0, ALL, subdoc.get(), tableList);
+  int actHeaderId = 0, actFooterId = 0;
+  shared_ptr<MWProParserInternal::SubDocument> headerSubdoc, footerSubdoc;
+  for (int i = 0; i < m_state->m_numPages; i++) {
+    int headerId =  m_structures->getHeaderId(i+1);
+    if (headerId != actHeaderId) {
+      actHeaderId = headerId;
+      if (actHeaderId == 0)
+        headerSubdoc.reset();
+      else {
+        headerSubdoc.reset
+        (new MWProParserInternal::SubDocument(*this, getInput(), headerId));
+        m_listSubDocuments.push_back(headerSubdoc);
+      }
+    }
+    int footerId =  m_structures->getFooterId(i+1);
+    if (footerId != actFooterId) {
+      actFooterId = footerId;
+      if (actFooterId == 0)
+        footerSubdoc.reset();
+      else {
+        footerSubdoc.reset
+        (new MWProParserInternal::SubDocument(*this, getInput(), footerId));
+        m_listSubDocuments.push_back(footerSubdoc);
+      }
+    }
 
+    DMWAWPageSpan ps(m_pageSpan);
+    if (headerSubdoc)
+      ps.setHeaderFooter(HEADER, 0, ALL, headerSubdoc.get(), tableList);
+    if (footerSubdoc)
+      ps.setHeaderFooter(FOOTER, 0, ALL, footerSubdoc.get(), tableList);
+    pageList.push_back(ps);
   }
-  int footerId = m_structures->getFooterId();
-  if (footerId) {
-    shared_ptr<MWProParserInternal::SubDocument> subdoc
-    (new MWProParserInternal::SubDocument(*this, getInput(), footerId));
-    m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter(FOOTER, 0, ALL, subdoc.get(), tableList);
-
-  }
-  for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
   MWProContentListenerPtr listen =
@@ -787,16 +805,36 @@ bool MWProParser::readDocHeader()
   }
   val = input->readLong(2); // always 480 ?
   if (val != 0x480) f << "f10=" << val << ",";
-  int dim[6];
+  val = input->readULong(1); // always 0 ?
+  if (val) f << "f11=" << val << ",";
+  float dim[6];
   for (int i = 0; i < 6; i++)
-    dim[i] = input->readLong(4);
-  f << "dim=" << dim[1]/256. << "x" << dim[0]/256. << ",";
-  f << "margins=[";
-  for (int i = 2; i < 6; i++) f << dim[i]/256. << ",";
+    dim[i] = input->readLong(4)/65356.;
+  bool ok = true;
+  for (int i = 0; i < 6; i++) {
+    if (dim[i] < 0) ok = false;
+  }
+  if (ok) ok = dim[0] > dim[2]+dim[3] && dim[1] > dim[4]+dim[5];
+
+  if (ok) {
+    m_pageSpan.setMarginTop(dim[2]/72.0);
+    m_pageSpan.setMarginBottom(dim[3]/72.0);
+    m_pageSpan.setMarginLeft(dim[4]/72.0);
+    m_pageSpan.setMarginRight(dim[5]/72.0);
+    m_pageSpan.setFormLength(dim[0]/72.);
+    m_pageSpan.setFormWidth(dim[1]/72.);
+  } else {
+    MWAW_DEBUG_MSG(("MWProParser::readDocHeader: find odd page dimensions, ignored\n"));
+    f << "#";
+  }
+  f << "dim=" << dim[1] << "x" << dim[0] << ",";
+  f << "margins=["; // top, bottom, left, right
+  for (int i = 2; i < 6; i++) f << dim[i] << ",";
   f << "],";
+
   ascii().addDelimiter(input->tell(), '|');
   /** then find
-      00000000fd0000000000018200000100002f00
+      000000fd0000000000018200000100002f00
       44[40|80] followed by something like a7c3ec07|a7c4c3c6 : 2 ptrs ?
       6f6600000000000000080009000105050506010401
    */
@@ -1148,7 +1186,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
 ////////////////////////////////////////////////////////////
 // try to send a text
 ////////////////////////////////////////////////////////////
-bool MWProParser::sendTextZone(int blockId)
+bool MWProParser::sendTextZone(int blockId, bool mainZone)
 {
   std::map<int, shared_ptr<MWProParserInternal::TextZone> >::iterator it;
   it = m_state->m_textMap.find(blockId);
@@ -1156,7 +1194,18 @@ bool MWProParser::sendTextZone(int blockId)
     MWAW_DEBUG_MSG(("MWProParser::sendTextZone: can not find text zone\n"));
     return false;
   }
-  sendText(it->second);
+  sendText(it->second, mainZone);
+  return true;
+}
+
+bool MWProParser::sendTextBoxZone(int blockId, TMWAWPosition const &pos,
+                                  WPXPropertyList extras)
+{
+  shared_ptr<MWProParserInternal::SubDocument> subdoc
+  (new MWProParserInternal::SubDocument(*this, getInput(), blockId));
+  m_listSubDocuments.push_back(subdoc);
+  if (m_listener)
+    m_listener->insertTextBox(pos, subdoc, extras);
   return true;
 }
 
@@ -1181,7 +1230,7 @@ struct DataPosition {
 };
 }
 
-bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone)
+bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool mainZone)
 {
   if (!zone->m_entries.size()) {
     MWAW_DEBUG_MSG(("MWProParser::sendText: can not find the text entries\n"));
@@ -1212,16 +1261,15 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone)
 
   TMWAWInputStreamPtr input = getInput();
   long pos = zone->m_entries[0].begin();
-  if (pos > 0) {
+  long asciiPos = pos;
+  if (pos > 0)
     input->seek(pos, WPX_SEEK_SET);
-    ascii().addPos(pos);
-  }
 
   libmwaw_tools::DebugStream f, f2;
   cPos = 0;
   std::set<MWProParserInternal::DataPosition,
       MWProParserInternal::DataPosition::Compare>::const_iterator it;
-  MWProStructuresListenerState listenerState(m_structures);
+  MWProStructuresListenerState listenerState(m_structures, mainZone);
   bool first = true;
   for (it = set.begin(); it != set.end(); it++) {
     MWProParserInternal::DataPosition const &data = *it;
@@ -1239,6 +1287,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone)
             text+= "#";
           else {
             listenerState.sendChar(ch);
+            if (ch > 0 && ch < 20 && ch != 0xd && ch != 0x9) text+="#";
             text+=ch;
           }
         }
@@ -1249,6 +1298,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone)
         f2.str("");
         f2 << "Entries(TextContent):" << f.str();
         f.str("");
+        ascii().addPos(asciiPos);
         ascii().addNote(f2.str().c_str());
         pos += (data.m_pos-cPos);
       }
@@ -1302,7 +1352,12 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone)
         if (m_listener) m_listener->insertUnicodeString("#REVISION#");
         break;
       case 10:
-        if (m_listener) m_listener->insertUnicodeString("#SECTION#");
+        if (m_listener) {
+          int numSection = listenerState.numSection()+1;
+          std::stringstream s;
+          s << numSection;
+          m_listener->insertUnicodeString(s.str().c_str());
+        }
         break;
       default:
         break;
@@ -1322,16 +1377,15 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone)
     case 0:
       if (m_structures) {
         listenerState.sendParagraph(zone->m_ids[1][data.m_id].m_id);
-        first = false;
         f << "[" << listenerState.getParagraphDebugString(zone->m_ids[1][data.m_id].m_id) << "],";
       } else
         f << "[" << zone->m_ids[1][data.m_id] << "],";
       break;
     default: {
-      static bool first = true;
-      if (first) {
+      static bool firstError = true;
+      if (firstError) {
         MWAW_DEBUG_MSG(("MWProParser::sendText: find unexpected data type...\n"));
-        first = false;
+        firstError = false;
       }
       f << "#";
       break;
@@ -1339,7 +1393,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone)
 
     }
     if (pos >= 0 && pos != oldPos)
-      ascii().addPos(pos);
+      asciiPos = pos;
   }
 
   return true;

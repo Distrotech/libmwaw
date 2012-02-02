@@ -173,7 +173,7 @@ public:
   void insertComment(IMWAWSubDocumentPtr &subDocument);
 
   /** open a frame */
-  bool openFrame(TMWAWPosition const &pos);
+  bool openFrame(TMWAWPosition const &pos, WPXPropertyList extras=WPXPropertyList());
   /** close a frame */
   void closeFrame();
 
@@ -185,7 +185,8 @@ public:
   /** adds a textbox in given position
    *
    * \warning the position unit must be WPX_POINT, WPX_INCH or WPX_TWIP... */
-  void insertTextBox(TMWAWPosition const &pos, IMWAWSubDocumentPtr &subDocument);
+  void insertTextBox(TMWAWPosition const &pos, IMWAWSubDocumentPtr subDocument,
+                     WPXPropertyList frameExtras=WPXPropertyList());
 
   /** open a table*/
   void openTable(std::vector<int> const &colWidth, WPXUnit unit);

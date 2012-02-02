@@ -65,6 +65,7 @@ struct Block;
 struct Cell;
 struct Font;
 struct Paragraph;
+struct Section;
 struct State;
 class SubDocument;
 }
@@ -77,7 +78,7 @@ class MWProStructuresListenerState
 {
 public:
   //! the constructor
-  MWProStructuresListenerState(shared_ptr<MWProStructures> structures);
+  MWProStructuresListenerState(shared_ptr<MWProStructures> structures, bool mainZone);
   //! the destructor
   ~MWProStructuresListenerState();
 
@@ -86,6 +87,8 @@ public:
   //! try to send a block which corresponds to blockid
   bool send(int blockId);
 
+  //! try to send the i^th section
+  void sendSection(int numSection);
   //! try to send a character style
   bool sendFont(int id, bool force);
   //! try to send a paragraph
@@ -95,6 +98,15 @@ public:
 
   //! force resent data : font + paragraph
   bool resendAll();
+
+  //! returns the actual section
+  int numSection() const {
+    if (!m_isMainZone) {
+      MWAW_DEBUG_MSG(("MWProStructuresListenerState::numSection: not called in main zone\n"));
+      return 0;
+    }
+    return m_section;
+  }
 
   //! debug function which returns a string corresponding to a fontId
   std::string getFontDebugString(int fontId);
@@ -106,9 +118,18 @@ protected:
   void sendFont(MWProStructuresInternal::Font const &font, bool force);
   void sendParagraph(MWProStructuresInternal::Paragraph const &para);
 
+  // true if this is the mainZone
+  bool m_isMainZone;
   // the actual page
   int m_actPage;
-
+  // the actual tab
+  int m_actTab;
+  // the number of tab
+  int m_numTab;
+  // the actual section ( if mainZone )
+  int m_section;
+  // the actual number of columns
+  int m_numCols;
   // the main structure parser
   shared_ptr<MWProStructures> m_structures;
   // the current font
@@ -161,12 +182,15 @@ protected:
   bool sendMainZone();
 
   //! return the header blockid ( or 0)
-  int getHeaderId();
+  int getHeaderId(int page);
   //! return the footer blockid ( or 0)
-  int getFooterId();
+  int getFooterId(int page);
 
   //! flush not send zones
   void flushExtra();
+
+  //! look for pages structures
+  void buildPageStructures();
 
   //! look for tables structures and if so, prepare data
   void buildTableStructures();
@@ -209,7 +233,7 @@ protected:
   bool readFont(MWProStructuresInternal::Font &font);
 
   //! try to read the section info ?
-  bool readSections(bool isDefault);
+  bool readSections(std::vector<MWProStructuresInternal::Section> &sections);
 
   //! try to read a 16 bytes the zone which follow the char styles zone ( the selection?)
   bool readSelection();
@@ -227,7 +251,7 @@ protected:
   bool isSent(int blockId);
 
   //! try to send a block which corresponds to blockid
-  bool send(int blockId);
+  bool send(int blockId, bool mainZone=false);
 
   //! returns the debug file
   libmwaw_tools::DebugFile &ascii() {
