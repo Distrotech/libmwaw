@@ -767,8 +767,6 @@ bool IMWAWContentListener::openFrame(TMWAWPosition const &pos, WPXPropertyList e
 
   switch(pos.m_anchorTo) {
   case TMWAWPosition::Page:
-    if (!m_ps->m_inSubDocument && !m_ps->m_isSectionOpened)
-      openSection();
     break;
   case TMWAWPosition::Paragraph:
     if (m_ps->m_isParagraphOpened)

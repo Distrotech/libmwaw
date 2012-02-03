@@ -58,8 +58,8 @@ namespace MWProStructuresInternal
 struct Block {
   enum Type { UNKNOWN, GRAPHIC, TEXT };
   //! the constructor
-  Block() :m_type(-1), m_contentType(UNKNOWN), m_fileBlock(), m_id(-1), m_box(),
-    m_textPos(0), m_isHeader(false), m_row(0), m_col(0), m_textboxCellType(0),
+  Block() :m_type(-1), m_contentType(UNKNOWN), m_fileBlock(), m_id(-1), m_attachment(false), m_page(-1), m_box(),
+    m_baseline(0.), m_textPos(0), m_isHeader(false), m_row(0), m_col(0), m_textboxCellType(0),
     m_extra(""), m_send(false) {
     for (int i = 0; i < 3; i++) m_color[i] = -1;
   }
@@ -108,6 +108,7 @@ struct Block {
       if (bl.m_border[i].x() == 0 && bl.m_border[i].y()==0) continue;
       o << "bord" << i << "?=" << bl.m_border[i] << ",";
     }
+    if (bl.m_baseline) o << "baseline=" << bl.m_baseline << ",";
     if (bl.hasColor())
       o << "col=" << bl.m_color[0] << "x" << bl.m_color[1]
         << "x" << bl.m_color[1] << ",";
@@ -121,7 +122,7 @@ struct Block {
     return m_fileBlock > 0 && m_contentType == GRAPHIC;
   }
   bool isText() const {
-    return m_fileBlock > 0 && m_contentType == TEXT;
+    return (m_fileBlock > 0 && m_contentType == TEXT);
   }
   bool isTable() const {
     return m_fileBlock <= 0 && m_type == 3;
@@ -131,6 +132,26 @@ struct Block {
            (m_color[0] != 255 || m_color[1] != 255 ||  m_color[2] != 255);
   }
 
+  TMWAWPosition getPosition() const {
+    TMWAWPosition res;
+    if (m_attachment) {
+      res = TMWAWPosition(Vec2i(0,0), m_box.size(), WPX_POINT);
+      res.setRelativePosition(TMWAWPosition::Char, TMWAWPosition::XLeft, getRelativeYPos());
+    } else {
+      res = TMWAWPosition(m_box.min(), m_box.size(), WPX_POINT);
+      res.setRelativePosition(TMWAWPosition::Page);
+      res.setPage(m_page);
+      res.m_wrapping =  TMWAWPosition::WDynamic;
+    }
+    return res;
+  }
+
+  TMWAWPosition::YPos getRelativeYPos() const {
+    float height = m_box.size()[1];
+    if (m_baseline < 0.25*height) return TMWAWPosition::YBottom;
+    if (m_baseline < 0.75*height) return TMWAWPosition::YCenter;
+    return TMWAWPosition::YTop;
+  }
   bool contains(Box2f const &box) const {
     return box[0][0] >= m_box[0][0] && box[0][1] >= m_box[0][1] &&
            box[1][0] <= m_box[1][0] && box[1][1] <= m_box[1][1];
@@ -157,11 +178,20 @@ struct Block {
   //! the block id
   int m_id;
 
+  //! true if this is an attachment
+  bool m_attachment;
+
+  //! the page (if absolute)
+  int m_page;
+
   //! the bdbox
   Box2f m_box;
 
   //! the border or margin?
   Vec2f m_border[2];
+
+  //! the baseline ( in point 0=bottom aligned)
+  float m_baseline;
 
   //! the background color
   int m_color[3];
@@ -475,7 +505,7 @@ struct State {
   //! constructor
   State() : m_version(-1), m_numPages(1), m_inputData(), m_fontsList(), m_paragraphsList(),
     m_sectionsList(), m_blocksList(), m_blocksMap(), m_tablesMap(),
-    m_headersMap(), m_footersMap(), m_headerIds(), m_footerIds() {
+    m_headersMap(), m_footersMap() {
   }
 
   //! the file version
@@ -503,10 +533,6 @@ struct State {
   std::map<int, int> m_headersMap;
   //! a map page -> footer id
   std::map<int, int> m_footersMap;
-  //! the list of header id
-  std::vector<int> m_headerIds;
-  //! the list of footer id
-  std::vector<int> m_footerIds;
 };
 
 }
@@ -722,6 +748,18 @@ bool MWProStructures::sendMainZone()
     if (m_state->m_blocksList[i]->m_type != 5) continue;
     return send(m_state->m_blocksList[i]->m_id, true);
   }
+
+  //ok the main zone can be empty
+  for (int i = 0; i < int(m_state->m_blocksList.size()); i++) {
+    if (m_state->m_blocksList[i]->m_type != 5 ||
+        m_state->m_blocksList[i]->m_send) continue;
+
+    shared_ptr<MWProStructures> THIS
+    (this, MWAW_shared_ptr_noop_deleter<MWProStructures>());
+    MWProStructuresListenerState listenerState(THIS, true);
+    return true;
+  }
+
   MWAW_DEBUG_MSG(("MWProStructures::sendMainZone: can not find main zone...\n"));
   return false;
 }
@@ -730,10 +768,14 @@ bool MWProStructures::sendMainZone()
 // try to find the header and the pages break
 void MWProStructures::buildPageStructures()
 {
+  // first find the pages break
   std::set<int> set;
+  int actPage = 0;
   for (int i = 0; i < int(m_state->m_blocksList.size()); i++) {
+    m_state->m_blocksList[i]->m_page = actPage ? actPage : 1; // mainly ok
     if (m_state->m_blocksList[i]->m_type != 5)
       continue;
+    actPage++;
     set.insert(m_state->m_blocksList[i]->m_textPos);
   }
   int numSections = m_state->m_sectionsList.size();
@@ -746,8 +788,10 @@ void MWProStructures::buildPageStructures()
   std::vector<int> pagesBreak;
   pagesBreak.assign(set.begin(), set.end());
 
+  // now associates the header/footer to each pages
   int numPages = m_state->m_numPages = pagesBreak.size();
-  int actPage = 0, actPagePos = 0;
+  int actPagePos = 0;
+  actPage = 0;
   actSectPos = 0;
   for (int i = 0; i < numSections; i++) {
     MWProStructuresInternal::Section &sec = m_state->m_sectionsList[i];
@@ -775,16 +819,17 @@ void MWProStructures::buildPageStructures()
         m_state->m_footersMap[p] = footerId;
     }
   }
-  for (int s = 0; s < numSections; s++) {
-    MWProStructuresInternal::Section &sec = m_state->m_sectionsList[s];
-    for (int k = 0; k < 2; k++) {
-      if (sec.m_headerIds[k] && std::count
-          (m_state->m_headerIds.begin(), m_state->m_headerIds.end(),sec.m_headerIds[k]) == 0)
-        m_state->m_headerIds.push_back(sec.m_headerIds[k]);
-      if (sec.m_footerIds[k] && std::count
-          (m_state->m_footerIds.begin(), m_state->m_footerIds.end(),sec.m_footerIds[k]) == 0)
-        m_state->m_footerIds.push_back(sec.m_footerIds[k]);
+  // finally mark the attachment
+  std::vector<int> const &listCalled = m_mainParser.getBlocksCalledByToken();
+  for (int i = 0; i < int(listCalled.size()); i++) {
+    if (m_state->m_blocksMap.find(listCalled[i]) == m_state->m_blocksMap.end()) {
+      MWAW_DEBUG_MSG(("MWProStructures::buildPageStructures: can not find attachment block %d...\n",
+                      listCalled[i]));
+      continue;
     }
+    shared_ptr<MWProStructuresInternal::Block> block =
+      m_state->m_blocksMap.find(listCalled[i])->second;
+    block->m_attachment = true;
   }
 }
 
@@ -831,6 +876,7 @@ void MWProStructures::buildTableStructures()
     shared_ptr<MWProStructuresInternal::Table> newTable(new MWProStructuresInternal::Table);
     for (int j = 0; j < numCells; j++) {
       blockList[j]->m_send = true;
+      blockList[j]->m_attachment = true;
       Box2f box(blockList[j]->m_box.min(), blockList[j]->m_box.max()-Vec2f(1,1));
       shared_ptr<MWProStructuresInternal::Cell> newCell(new MWProStructuresInternal::Cell(*this));
       newCell->setBox(box);
@@ -1541,6 +1587,11 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   // check me
   block->m_border[0] = Vec2f(border[1], border[0]);
   block->m_border[1] = Vec2f(border[3], border[2]);
+  /* 4: pagebreak,
+     5: text
+     1: floating, 7: none(wrapping/attachment), b: attachment
+     0/a: table ?
+  */
   for (int i = 0; i < 2; i++) {
     val = m_input->readULong(2);
     if (val)
@@ -1553,12 +1604,13 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   val = m_input->readLong(2); // almost always 4 ( one time 0)
   if (val!=4)
     f << "f1=" << val << ",";
-  for (int i = 2; i < 9; i++) {
+  for (int i = 2; i < 7; i++) {
     /* always 0, except f3=-1 (in one file),
-       and in other file f4=1,f5=1,f6=1,f7=3,f8=1 */
+       and in other file f4=1,f5=1,f6=1, */
     val = m_input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
+  block->m_baseline = m_input->readLong(4)/65536.;
   int colorId = m_input->readLong(2);
   if (colorId) {
     Vec3uc col;
@@ -1567,7 +1619,9 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
     } else
       f << "#colorId=" << colorId << ",";
   }
-  // a list of smal number [1|2], 1, [1|2], [1|3|4], 1
+  /* g0: 2: normal, 1 transparent */
+  /* g3: wrap 3: none  1=wrap */
+  // a list of small number [1|2], 1, [1|2], [1|3|4], 1
   for (int i = 0; i < 5; i++)
     f << "g" << i << "=" << m_input->readLong(2) << ",";
   int contentType = m_input->readULong(1);
@@ -1816,8 +1870,8 @@ bool MWProStructures::readSelection()
   f << "Entries(Selection):";
   int val = m_input->readLong(2);
   f << "f0=" << val << ","; // zone?
-  val = m_input->readLong(4); // -1 or 8 : zone type?
-  if (val == -1) { // none ?
+  val = m_input->readLong(4); // -1, 0 or 8 : zone type?
+  if (val == -1 || val == 0) { // checkme: none ?
     f << "*";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1940,9 +1994,6 @@ bool MWProStructures::send(int blockId, bool mainZone)
     =  m_state->m_blocksMap.find(blockId)->second;
   block->m_send = true;
   if (block->m_type == 4 && block->m_textboxCellType == 0) {
-    Box2f box = block->m_box;
-    TMWAWPosition textPos(Vec2i(0,0), box.size(), WPX_POINT);
-    textPos.setRelativePosition(TMWAWPosition::Char);
     block->m_textboxCellType = 2;
     WPXPropertyList extras;
     if (block->hasColor()) {
@@ -1953,23 +2004,27 @@ bool MWProStructures::send(int blockId, bool mainZone)
         << std::setw(2) << int(block->m_color[2]);
       extras.insert("fo:background-color", s.str().c_str());
     }
-    m_mainParser.sendTextBoxZone(blockId, textPos, extras);
+    m_mainParser.sendTextBoxZone(blockId, block->getPosition(), extras);
     block->m_textboxCellType = 0;
   } else if (block->isText())
     m_mainParser.sendTextZone(block->m_fileBlock, mainZone);
   else if (block->isGraphic()) {
-    Box2f box = block->m_box;
-    TMWAWPosition pictPos(Vec2i(0,0), box.size(), WPX_POINT);
-    pictPos.setRelativePosition(TMWAWPosition::Char);
-    m_mainParser.sendPictureZone(block->m_fileBlock, pictPos);
+    m_mainParser.sendPictureZone(block->m_fileBlock, block->getPosition());
   } else if (block->m_type == 3) {
     if (m_state->m_tablesMap.find(blockId) == m_state->m_tablesMap.end()) {
       MWAW_DEBUG_MSG(("MWProStructures::send: can not find table with id=%d\n", blockId));
     } else {
-      shared_ptr<MWProStructuresInternal::Table> table =
-        m_state->m_tablesMap.find(blockId)->second;
-      if (!table->sendTable(m_listener))
-        table->sendAsText(m_listener);
+      bool needTextBox = m_listener && !block->m_attachment && block->m_textboxCellType == 0;
+      if (needTextBox) {
+        block->m_textboxCellType = 2;
+        m_mainParser.sendTextBoxZone(blockId, block->getPosition());
+      } else {
+        shared_ptr<MWProStructuresInternal::Table> table =
+          m_state->m_tablesMap.find(blockId)->second;
+        if (!table->sendTable(m_listener))
+          table->sendAsText(m_listener);
+        block->m_textboxCellType = 0;
+      }
     }
   } else if (block->m_type == 4 || block->m_type == 6) {
     // probably ok, can be an empty cell, textbox, header/footer ..
@@ -1999,25 +2054,33 @@ void MWProStructures::flushExtra()
       continue;
     }
     if (m_state->m_blocksList[i]->isText()) {
+      // force to non floating position
+      m_state->m_blocksList[i]->m_attachment = true;
       send(m_state->m_blocksList[i]->m_id);
       if (m_listener) m_listener->insertEOL();
-    } else if (m_state->m_blocksList[i]->m_type == 3)
+    } else if (m_state->m_blocksList[i]->m_type == 3) {
+      // force to non floating position
+      m_state->m_blocksList[i]->m_attachment = true;
       send(m_state->m_blocksList[i]->m_id);
+    }
   }
   // then send graphic
   for (int i = 0; i < int(m_state->m_blocksList.size()); i++) {
     if (m_state->m_blocksList[i]->m_send)
       continue;
-    if (m_state->m_blocksList[i]->isGraphic())
+    if (m_state->m_blocksList[i]->isGraphic()) {
+      // force to non floating position
+      m_state->m_blocksList[i]->m_attachment = true;
       send(m_state->m_blocksList[i]->m_id);
+    }
   }
 }
 
 ////////////////////////////////////////////////////////////
 // interface with the listener
 MWProStructuresListenerState::MWProStructuresListenerState(shared_ptr<MWProStructures> structures, bool mainZone)
-  : m_isMainZone(mainZone), m_actPage(1), m_actTab(0), m_numTab(0),
-    m_section(0), m_numCols(1), m_structures(structures),
+  : m_isMainZone(mainZone), m_actPage(0), m_actTab(0), m_numTab(0),
+    m_section(0), m_numCols(1), m_newPageDone(false), m_structures(structures),
     m_font(new MWProStructuresInternal::Font),
     m_paragraph(new MWProStructuresInternal::Paragraph)
 {
@@ -2025,8 +2088,10 @@ MWProStructuresListenerState::MWProStructuresListenerState(shared_ptr<MWProStruc
     MWAW_DEBUG_MSG(("MWProStructuresListenerState::MWProStructuresListenerState can not find structures parser\n"));
     return;
   }
-  if (mainZone)
+  if (mainZone) {
+    newPage();
     sendSection(0);
+  }
 }
 
 MWProStructuresListenerState::~MWProStructuresListenerState()
@@ -2041,13 +2106,57 @@ bool MWProStructuresListenerState::isSent(int blockId)
 
 bool MWProStructuresListenerState::send(int blockId)
 {
+  m_newPageDone = false;
   if (!m_structures) return false;
   return m_structures->send(blockId);
+}
+
+void MWProStructuresListenerState::insertSoftPageBreak()
+{
+  if (m_newPageDone) return;
+  newPage(true);
+}
+
+bool MWProStructuresListenerState::newPage(bool softBreak)
+{
+  if (!m_structures || !m_isMainZone) {
+    MWAW_DEBUG_MSG(("MWProStructuresListenerState::newPage: can not create a new page\n"));
+    return false;
+  }
+
+  // first send all the floating data
+  if (m_actPage == 0) {
+    for (int i = 0; i < int(m_structures->m_state->m_blocksList.size()); i++) {
+      shared_ptr<MWProStructuresInternal::Block> block = m_structures->m_state->m_blocksList[i];
+      if (block->m_send || block->m_attachment) continue;
+      if (block->m_type != 3 && block->m_type != 4 && block->m_type != 8) continue;
+      m_structures->send(block->m_id);
+    }
+  }
+
+  m_structures->m_mainParser.newPage(++m_actPage, softBreak);
+  m_actTab=0;
+  m_newPageDone = true;
+
+  return true;
+}
+
+std::vector<int> MWProStructuresListenerState::getPageBreaksPos() const
+{
+  std::vector<int> res;
+  if (!m_structures || !m_isMainZone) return res;
+  for (int i = 0; i < int(m_structures->m_state->m_blocksList.size()); i++) {
+    shared_ptr<MWProStructuresInternal::Block> block = m_structures->m_state->m_blocksList[i];
+    if (block->m_type != 5) continue;
+    if (block->m_textPos) res.push_back(block->m_textPos);
+  }
+  return res;
 }
 
 // ----------- character function ---------------------
 void MWProStructuresListenerState::sendChar(char c)
 {
+  m_newPageDone = false;
   if (!m_structures || !m_structures->m_listener)
     return;
   switch(c) {
@@ -2070,14 +2179,12 @@ void MWProStructuresListenerState::sendChar(char c)
     break;
   case 0xc:
     m_actTab = 0;
-    if (m_isMainZone)
-      m_structures->m_mainParser.newPage(++m_actPage);
+    if (m_isMainZone) newPage();
     break;
   case 0xb: // add a columnbreak
     m_actTab = 0;
     if (m_isMainZone) {
-      if (m_numCols <= 1)
-        m_structures->m_mainParser.newPage(++m_actPage);
+      if (m_numCols <= 1) newPage();
       else if (m_structures->m_listener)
         m_structures->m_listener->insertBreak(DMWAW_COLUMN_BREAK);
     }
@@ -2250,8 +2357,7 @@ void MWProStructuresListenerState::sendSection(int numSection)
   }
   MWProStructuresInternal::Section const &section =
     m_structures->m_state->m_sectionsList[numSection];
-  if (numSection && section.m_start != section.S_Line)
-    m_structures->m_mainParser.newPage(++m_actPage);
+  if (numSection && section.m_start != section.S_Line) newPage();
   m_numCols = section.numColumns();
   if (m_numCols==1) m_structures->m_listener->openSection();
   else {

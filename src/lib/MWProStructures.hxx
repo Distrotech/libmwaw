@@ -108,6 +108,11 @@ public:
     return m_section;
   }
 
+  //! return a list of page break position ( as some page break are soft )
+  std::vector<int> getPageBreaksPos() const;
+  //! insert a page break ( if we are not on a new page )
+  void insertSoftPageBreak();
+
   //! debug function which returns a string corresponding to a fontId
   std::string getFontDebugString(int fontId);
 
@@ -115,6 +120,9 @@ public:
   std::string getParagraphDebugString(int paraId);
 
 protected:
+  //! create a new page
+  bool newPage(bool softBreak=false);
+
   void sendFont(MWProStructuresInternal::Font const &font, bool force);
   void sendParagraph(MWProStructuresInternal::Paragraph const &para);
 
@@ -130,6 +138,8 @@ protected:
   int m_section;
   // the actual number of columns
   int m_numCols;
+  // a flag to know if a new page has just been open
+  bool m_newPageDone;
   // the main structure parser
   shared_ptr<MWProStructures> m_structures;
   // the current font

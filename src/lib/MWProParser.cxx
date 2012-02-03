@@ -200,9 +200,8 @@ struct TextZone {
 struct State {
   //! constructor
   State() : m_version(-1), m_blocksMap(), m_dataMap(), m_textMap(),
-    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
-
-  {
+    m_blocksCallByTokens(), m_actPage(0), m_numPages(0),
+    m_headerHeight(0), m_footerHeight(0) {
   }
 
   //! the file version
@@ -216,6 +215,9 @@ struct State {
 
   //! the list of blockId->text zone
   std::map<int, shared_ptr<TextZone> > m_textMap;
+
+  //! the list of blockId called by tokens
+  std::vector<int> m_blocksCallByTokens;
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
@@ -349,7 +351,7 @@ float MWProParser::pageWidth() const
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void MWProParser::newPage(int number)
+void MWProParser::newPage(int number, bool softBreak)
 {
   if (number <= m_state->m_actPage) return;
   if (number > m_state->m_numPages) {
@@ -361,10 +363,17 @@ void MWProParser::newPage(int number)
     m_state->m_actPage++;
     if (!m_listener || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(DMWAW_PAGE_BREAK);
+    if (softBreak)
+      m_listener->insertBreak(DMWAW_SOFT_PAGE_BREAK);
+    else
+      m_listener->insertBreak(DMWAW_PAGE_BREAK);
   }
 }
 
+std::vector<int> const &MWProParser::getBlocksCalledByToken() const
+{
+  return m_state->m_blocksCallByTokens;
+}
 
 
 ////////////////////////////////////////////////////////////
@@ -818,9 +827,10 @@ bool MWProParser::readDocHeader()
 
   if (ok) {
     m_pageSpan.setMarginTop(dim[2]/72.0);
-    m_pageSpan.setMarginBottom(dim[3]/72.0);
     m_pageSpan.setMarginLeft(dim[4]/72.0);
-    m_pageSpan.setMarginRight(dim[5]/72.0);
+    /* decrease a little the right/bottom margin to allow fonts discrepancy*/
+    m_pageSpan.setMarginBottom((dim[3]<36.0) ? 0.0 : dim[3]/72.0-0.5);
+    m_pageSpan.setMarginRight((dim[5]<18.0) ? 0.0 : dim[5]/72.0-0.25);
     m_pageSpan.setFormLength(dim[0]/72.);
     m_pageSpan.setFormWidth(dim[1]/72.);
   } else {
@@ -1176,6 +1186,8 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     res.push_back(data);
+    if (data.m_blockId && (data.m_type == 2 || data.m_type == 4))
+      m_state->m_blocksCallByTokens.push_back(data.m_blockId);
   }
 
 
@@ -1237,6 +1249,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
     return false;
   }
 
+  MWProStructuresListenerState listenerState(m_structures, mainZone);
   MWProParserInternal::DataPosition::Compare compareFunction;
   std::set<MWProParserInternal::DataPosition, MWProParserInternal::DataPosition::Compare>
   set(compareFunction);
@@ -1258,6 +1271,9 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       cPos += zone->m_ids[id][i].m_length;
     }
   }
+  std::vector<int> pageBreaks=listenerState.getPageBreaksPos();
+  for (int i = 0; i < int(pageBreaks.size()); i++)
+    set.insert(MWProParserInternal::DataPosition(-1, i, pageBreaks[i]));
 
   TMWAWInputStreamPtr input = getInput();
   long pos = zone->m_entries[0].begin();
@@ -1269,7 +1285,6 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
   cPos = 0;
   std::set<MWProParserInternal::DataPosition,
       MWProParserInternal::DataPosition::Compare>::const_iterator it;
-  MWProStructuresListenerState listenerState(m_structures, mainZone);
   bool first = true;
   for (it = set.begin(); it != set.end(); it++) {
     MWProParserInternal::DataPosition const &data = *it;
@@ -1306,6 +1321,9 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       cPos = data.m_pos;
     }
     switch (data.m_type) {
+    case -1:
+      listenerState.insertSoftPageBreak();
+      break;
     case 4:
     case 3:
       if (pos > 0 && (pos&0xFF))

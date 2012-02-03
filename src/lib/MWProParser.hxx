@@ -148,13 +148,17 @@ protected:
                       std::vector<MWProParserInternal::Token> &res,
                       int textLength);
 
+  /** return the list of blockid called by token. A hack to help
+      structures to retrieve the page attachment */
+  std::vector<int> const &getBlocksCalledByToken() const;
+
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
   //! returns the page width, ie. paper size less margin (in inches)
   float pageWidth() const;
 
   //! adds a new page
-  void newPage(int number);
+  void newPage(int number, bool softBreak=false);
 
   //
   // interface with MWProParserStructures
