@@ -1,13 +1,13 @@
 # -*-shell-script-*-
 
 [Meta]
-RootName: @libwps.sourceforge.net/libmwaw:0.0.0
+RootName: @libwps.sourceforge.net/libmwaw:0.0.1
 DisplayName: A library for importing old mac documents
 ShortName: libmwaw
 Maintainer: libmwaw Team - http://libmwaw.sourceforge.net/
 Packager: Robert Staudinger <robsta@stereolyzer.net>
 Summary: A library for importing Old Mac documents.
-SoftwareVersion: 0.0.0
+SoftwareVersion: 0.0.1
 AutopackageTarget: 1.0
 PackageVersion: 1
 
@@ -36,7 +36,7 @@ require @gnu.org/libstdc++ 3
 [Install]
 installExe ./bin/*
 installLib ./lib/*.so.*.*.*
-DATADEST="share/doc/libmwaw-0.0.0"
+DATADEST="share/doc/libmwaw-0.0.1"
 if [ ! -e "$PREFIX/$DATADEST" ] ; then
   mkdir -p "$PREFIX/$DATADEST"
 fi

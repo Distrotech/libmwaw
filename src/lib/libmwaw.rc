@@ -1,8 +1,8 @@
 #include <winver.h>
 
 VS_VERSION_INFO VERSIONINFO
-  FILEVERSION 0,0,0,BUILDNUMBER
-  PRODUCTVERSION 0,0,0,0
+  FILEVERSION 0,0,1,BUILDNUMBER
+  PRODUCTVERSION 0,0,1,0
   FILEFLAGSMASK 0
   FILEFLAGS 0
   FILEOS VOS__WINDOWS32
@@ -15,12 +15,12 @@ VS_VERSION_INFO VERSIONINFO
       BEGIN
 	VALUE "CompanyName", "The libmwaw developer community"
 	VALUE "FileDescription", "libmwaw"
-	VALUE "FileVersion", "0.0.0.BUILDNUMBER"
+	VALUE "FileVersion", "0.0.1.BUILDNUMBER"
 	VALUE "InternalName", "libmwaw-0.0"
 	VALUE "LegalCopyright", "Copyright (C) 2006-2012 Laurent Alonso, Andrew Ziem, Fridrich Strba, other contributers"
 	VALUE "OriginalFilename", "libmwaw-0.0.dll"
 	VALUE "ProductName", "libmwaw"
-	VALUE "ProductVersion", "0.0.0"
+	VALUE "ProductVersion", "0.0.1"
       END
     END
     BLOCK "VarFileInfo"

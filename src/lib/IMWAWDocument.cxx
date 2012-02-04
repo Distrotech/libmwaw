@@ -35,6 +35,7 @@
 #include "CWParser.hxx"
 #include "MWParser.hxx"
 #include "MWProParser.hxx"
+#include "MSWParser.hxx"
 #include "WNParser.hxx"
 #include "WPParser.hxx"
 
@@ -111,6 +112,11 @@ IMWAWConfidence IMWAWDocument::isFileFormatSupported(WPXInputStream *input,  IMW
   case MWPRO:
     confidence = IMWAW_CONFIDENCE_GOOD;
     break;
+#ifdef DEBUG
+  case MSWORD:
+    confidence = IMWAW_CONFIDENCE_GOOD;
+    break;
+#endif
   case CW:
     confidence = IMWAW_CONFIDENCE_EXCELLENT;
     break;
@@ -152,6 +158,11 @@ IMWAWResult IMWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *do
     }
     case MWPRO: {
       MWProParser parser (ip, header.get());
+      parser.parse(documentInterface);
+      break;
+    }
+    case MSWORD: {
+      MSWParser parser (ip, header.get());
       parser.parse(documentInterface);
       break;
     }
@@ -241,6 +252,10 @@ bool checkBasicMacHeader(TMWAWInputStreamPtr &input, IMWAWHeader &header, bool s
   }
   case IMWAWDocument::MWPRO: {
     MWProParser parser(input, &header);
+    return parser.checkHeader(&header, strict);
+  }
+  case IMWAWDocument::MSWORD: {
+    MSWParser parser(input, &header);
     return parser.checkHeader(&header, strict);
   }
   case IMWAWDocument::WNOW: {

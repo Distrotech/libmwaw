@@ -93,6 +93,13 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
     return header;
   }
 
+  if (val[0] == 0xfe37 && val[1] == 0x23) {
+    MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Word file[no parsing]\n"));
+    header=new IMWAWHeader(input, 1);
+    header->m_docType=IMWAWDocument::MSWORD;
+    return header;
+  }
+
   if (val[0] == 4 && val[1] == 4) {
     MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a MacWritePro file\n"));
     header=new IMWAWHeader(input, 1);
@@ -111,7 +118,6 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
     header->m_docType=IMWAWDocument::MW;
     return header;
   }
-
   if (val[0] == 0x110) {
     MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Writerplus file\n"));
     header=new IMWAWHeader(input, 1);

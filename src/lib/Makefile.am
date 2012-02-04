@@ -95,6 +95,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWParser.cxx			\
 	MWProParser.cxx			\
 	MWProStructures.cxx		\
+	MSWParser.cxx			\
 	WNParser.cxx			\
 	WNText.cxx			\
 	WPParser.cxx			\
@@ -112,6 +113,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWParser.hxx			\
 	MWProParser.hxx			\
 	MWProStructures.hxx		\
+	MSWParser.hxx			\
 	WNEntry.hxx			\
 	WNParser.hxx			\
 	WNText.hxx			\
