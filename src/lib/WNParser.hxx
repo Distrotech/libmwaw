@@ -77,7 +77,7 @@ struct WNEntryManager;
 
 class WNText;
 
-/** \brief the main class to read a MacWrite file
+/** \brief the main class to read a WriteNow file
  *
  *
  *

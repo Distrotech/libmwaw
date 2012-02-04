@@ -1027,7 +1027,7 @@ bool WNParser::checkHeader(IMWAWHeader *header, bool strict)
   // ok, we can finish initialization
   if (header) {
     header->setMajorVersion(m_state->m_version);
-    header->setType(IMWAWDocument::MW);
+    header->setType(IMWAWDocument::WNOW);
   }
 
   //
