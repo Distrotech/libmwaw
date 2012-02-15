@@ -119,7 +119,7 @@ void DebugFile::write()
   //! write the notes which does not have any position
   while(noteIter != m_notes.end() && noteIter->m_pos < 0) {
     if (!noteIter->m_text.empty())
-      std::cerr << "Skipped: " << noteIter->m_text << std::endl;
+      std::cerr << "DebugFile::write: skipped: " << noteIter->m_text << std::endl;
     noteIter++;
   }
 

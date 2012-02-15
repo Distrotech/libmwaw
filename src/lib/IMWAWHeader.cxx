@@ -93,9 +93,24 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
     return header;
   }
 
-  if (val[0] == 0xfe37 && val[1] == 0x23) {
-    MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Word file[no parsing]\n"));
-    header=new IMWAWHeader(input, 1);
+  if ((val[0]==0xfe34 && val[1]==0) ||
+      (val[0] == 0xfe37 && (val[1] == 0x23 || val[1] == 0x1c))) {
+    switch (val[1]) {
+    case 0:
+      MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Word 3.0 file[no parsing]\n"));
+      header=new IMWAWHeader(input, 3);
+      break;
+    case 0x1c:
+      MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Word 4.0 file[no parsing]\n"));
+      header=new IMWAWHeader(input, 4);
+      break;
+    case 0x23:
+      MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Word 5.0 file[minimal parsing]\n"));
+      header=new IMWAWHeader(input, 5);
+      break;
+    default:
+      return 0;
+    }
     header->m_docType=IMWAWDocument::MSWORD;
     return header;
   }

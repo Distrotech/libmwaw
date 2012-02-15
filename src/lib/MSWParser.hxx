@@ -28,7 +28,7 @@
  */
 
 /*
- * parser for Microsoft Word
+ * parser for Microsoft Word ( version 4.0-5.1 )
  */
 #ifndef MSW_MWAW_PARSER
 #  define MSW_MWAW_PARSER
@@ -66,6 +66,11 @@ class PictData;
 
 namespace MSWParserInternal
 {
+struct Entry;
+struct TextEntry;
+struct Font;
+struct Object;
+struct Paragraph;
 struct State;
 class SubDocument;
 }
@@ -114,8 +119,77 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
+  //! read the list of zones
+  bool readZoneList();
+
+  //! read the font names
+  bool readFontNames(MSWParserInternal::Entry &entry);
+
+  //! try to read a font
+  bool readFont(MSWParserInternal::Font &font);
+
+  //! try to read a paragraph
+  bool readParagraph(MSWParserInternal::Paragraph &para, int dataSz=-1);
+
   //! read the print info zone
-  bool readPrintInfo();
+  bool readPrintInfo(MSWParserInternal::Entry &entry);
+
+  //! read the printer name
+  bool readPrinter(MSWParserInternal::Entry &entry);
+
+  //! read the document sumary
+  bool readDocSum(MSWParserInternal::Entry &entry);
+
+  //! read a zone which consists in a list of int
+  bool readIntsZone(MSWParserInternal::Entry &entry, int sz, std::vector<int> &list);
+
+  //! read a zone which consists in a list of string
+  bool readStringsZone(MSWParserInternal::Entry &entry, std::vector<std::string> &list);
+
+  //! read the text section ?
+  bool readSection(MSWParserInternal::Entry &entry);
+
+  //! read the section data
+  bool readSectionData(MSWParserInternal::Entry &entry);
+
+  //! read the page limit ?
+  bool readPageBreak(MSWParserInternal::Entry &entry);
+
+  //! read the text ?
+  bool readTextData2(MSWParserInternal::Entry &entry);
+
+  //! read the objects
+  bool readObjects();
+
+  //! read the object list
+  bool readObjectList(MSWParserInternal::Entry &entry);
+
+  //! read the object flags
+  bool readObjectFlags(MSWParserInternal::Entry &entry);
+
+  //! read an object
+  bool readObject(MSWParserInternal::Object &obj);
+
+  //! read the line info(zone)
+  bool readLineInfo(MSWParserInternal::Entry &entry);
+
+  //! read the glossary data
+  bool readGlossary(MSWParserInternal::Entry &entry);
+
+  //! read the zone 17(unknown)
+  bool readZone17(MSWParserInternal::Entry &entry);
+
+  //! read the zone 18(some paragraph style+some text position?)
+  bool readZone18(MSWParserInternal::Entry &entry);
+
+  //! temporary function used to detect some picture
+  void searchPictures();
+
+  //! try to read a text zone
+  bool readText(MSWParserInternal::TextEntry &entry);
+
+  //! read a picture data
+  bool readPicture(MSWParserInternal::Entry &entry);
 
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
@@ -132,6 +206,11 @@ protected:
   //
   // low level
   //
+  //! try to read the styles zone
+  bool readStyles(MSWParserInternal::Entry &entry);
+
+  //! read a file entry
+  MSWParserInternal::Entry readEntry(std::string type, int id=-1);
 
   //! returns the debug file
   libmwaw_tools::DebugFile &ascii() {
