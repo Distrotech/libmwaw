@@ -101,7 +101,7 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
       header=new IMWAWHeader(input, 3);
       break;
     case 0x1c:
-      MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Word 4.0 file[no parsing]\n"));
+      MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Word 4.0 file[minimal parsing]\n"));
       header=new IMWAWHeader(input, 4);
       break;
     case 0x23:

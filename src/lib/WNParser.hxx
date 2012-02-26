@@ -122,9 +122,6 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
-  //! read the print info zone
-  bool readPrintInfo();
-
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
   //! returns the page width, ie. paper size less margin (in inches)

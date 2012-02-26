@@ -814,7 +814,9 @@ void DMWAWContentListener::_openSpan()
     propList.insert("style:text-blinking", "true");
   if (attributeBits & DMWAW_SHADOW_BIT)
     propList.insert("fo:text-shadow", "1pt 1pt");
-  // OSNOLA : this 3 following field are added for MWAW
+  // OSNOLA : these following fields are added for MWAW
+  if (attributeBits & DMWAW_HIDDEN_BIT)
+    propList.insert("text:display", "none");
   if (attributeBits & DMWAW_ALL_CAPS_BIT)
     propList.insert("fo:text-transform", "uppercase");
   if (attributeBits & DMWAW_EMBOSS_BIT)

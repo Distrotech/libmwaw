@@ -199,6 +199,10 @@ SOURCE=..\..\src\lib\MSWParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MSWText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\TMWAWDebug.cxx
 # End Source File
 # Begin Source File
@@ -396,6 +400,10 @@ SOURCE=..\..\src\lib\MWProStructures.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MSWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSWText.hxx
 # End Source File
 # Begin Source File
 

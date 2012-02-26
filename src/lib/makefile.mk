@@ -51,6 +51,7 @@ SLOFILES= \
 	$(SLO)$/MWProParser.cxx			\
 	$(SLO)$/MWProStructures.cxx		\
 	$(SLO)$/MSWParser.cxx			\
+	$(SLO)$/MSWText.cxx			\
 	$(SLO)$/TMWAWDebug.cxx			\
 	$(SLO)$/TMWAWFont.cxx			\
 	$(SLO)$/TMWAWInputStream.cxx		\

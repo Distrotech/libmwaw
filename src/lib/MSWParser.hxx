@@ -34,6 +34,7 @@
 #  define MSW_MWAW_PARSER
 
 #include <list>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -66,14 +67,22 @@ class PictData;
 
 namespace MSWParserInternal
 {
-struct Entry;
-struct TextEntry;
-struct Font;
 struct Object;
-struct Paragraph;
 struct State;
 class SubDocument;
 }
+
+class MSWText;
+
+//! the entry of MSWParser
+struct MSWEntry : public IMWAWEntry {
+  MSWEntry() : IMWAWEntry(), m_id(-1) {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, MSWEntry const &entry);
+  //! the identificator
+  int m_id;
+};
 
 /** \brief the main class to read a Microsoft Word file
  *
@@ -82,6 +91,7 @@ class SubDocument;
  */
 class MSWParser : public IMWAWParser
 {
+  friend class MSWText;
   friend class MSWParserInternal::SubDocument;
 
 public:
@@ -116,85 +126,54 @@ protected:
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
 
-  //! finds the different objects zones
+  //! finds the different zones
   bool createZones();
 
   //! read the list of zones
   bool readZoneList();
 
-  //! read the font names
-  bool readFontNames(MSWParserInternal::Entry &entry);
-
-  //! try to read a font
-  bool readFont(MSWParserInternal::Font &font);
-
-  //! try to read a paragraph
-  bool readParagraph(MSWParserInternal::Paragraph &para, int dataSz=-1);
-
   //! read the print info zone
-  bool readPrintInfo(MSWParserInternal::Entry &entry);
+  bool readPrintInfo(MSWEntry &entry);
 
   //! read the printer name
-  bool readPrinter(MSWParserInternal::Entry &entry);
+  bool readPrinter(MSWEntry &entry);
 
   //! read the document sumary
-  bool readDocSum(MSWParserInternal::Entry &entry);
-
-  //! read a zone which consists in a list of int
-  bool readIntsZone(MSWParserInternal::Entry &entry, int sz, std::vector<int> &list);
+  bool readDocSum(MSWEntry &entry);
 
   //! read a zone which consists in a list of string
-  bool readStringsZone(MSWParserInternal::Entry &entry, std::vector<std::string> &list);
-
-  //! read the text section ?
-  bool readSection(MSWParserInternal::Entry &entry);
-
-  //! read the section data
-  bool readSectionData(MSWParserInternal::Entry &entry);
-
-  //! read the page limit ?
-  bool readPageBreak(MSWParserInternal::Entry &entry);
-
-  //! read the text ?
-  bool readTextData2(MSWParserInternal::Entry &entry);
+  bool readStringsZone(MSWEntry &entry, std::vector<std::string> &list);
 
   //! read the objects
   bool readObjects();
 
   //! read the object list
-  bool readObjectList(MSWParserInternal::Entry &entry);
+  bool readObjectList(MSWEntry &entry);
 
   //! read the object flags
-  bool readObjectFlags(MSWParserInternal::Entry &entry);
+  bool readObjectFlags(MSWEntry &entry);
 
   //! read an object
   bool readObject(MSWParserInternal::Object &obj);
 
-  //! read the line info(zone)
-  bool readLineInfo(MSWParserInternal::Entry &entry);
+  //! read the page dimensions + ?
+  bool readDocumentInfo(MSWEntry &entry);
 
-  //! read the glossary data
-  bool readGlossary(MSWParserInternal::Entry &entry);
+  //! read the zone 17( some bdbox + text position ?)
+  bool readZone17(MSWEntry &entry);
 
-  //! read the zone 17(unknown)
-  bool readZone17(MSWParserInternal::Entry &entry);
-
-  //! read the zone 18(some paragraph style+some text position?)
-  bool readZone18(MSWParserInternal::Entry &entry);
-
-  //! temporary function used to detect some picture
-  void searchPictures();
-
-  //! try to read a text zone
-  bool readText(MSWParserInternal::TextEntry &entry);
+  //! check if a position corresponds or not to a picture entry
+  bool checkPicturePos(long pos, int type);
 
   //! read a picture data
-  bool readPicture(MSWParserInternal::Entry &entry);
+  bool readPicture(MSWEntry &entry);
 
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
   //! returns the page width, ie. paper size less margin (in inches)
   float pageWidth() const;
+  //! returns the color corresponding to an id
+  bool getColor(int id, Vec3uc &col) const;
 
   //! adds a new page
   void newPage(int number);
@@ -206,11 +185,12 @@ protected:
   //
   // low level
   //
-  //! try to read the styles zone
-  bool readStyles(MSWParserInternal::Entry &entry);
+
+  /** check if an entry is in file */
+  bool isFilePos(long pos);
 
   //! read a file entry
-  MSWParserInternal::Entry readEntry(std::string type, int id=-1);
+  MSWEntry readEntry(std::string type, int id=-1);
 
   //! returns the debug file
   libmwaw_tools::DebugFile &ascii() {
@@ -235,8 +215,14 @@ protected:
   //! the state
   shared_ptr<MSWParserInternal::State> m_state;
 
+  //! the list of entries
+  std::multimap<std::string, MSWEntry> m_entryMap;
+
   //! the actual document size
   DMWAWPageSpan m_pageSpan;
+
+  //! the text parser
+  shared_ptr<MSWText> m_textParser;
 
   //! a list of created subdocuments
   std::vector<shared_ptr<MSWParserInternal::SubDocument> > m_listSubDocuments;

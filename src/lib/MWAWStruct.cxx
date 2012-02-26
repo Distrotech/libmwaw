@@ -56,7 +56,7 @@ void Font::sendTo(IMWAWContentListener *listener, MWAWTools::ConvertissorPtr &co
     if (newSize == -1) newSize = 12;
   }
 
-  if (newSize != -1 && newSize != actualFont.size()) {
+  if (newSize != -1 && (force || newSize != actualFont.size())) {
     actualFont.setSize(newSize);
     std::string fName;
     int dSize = 0;
