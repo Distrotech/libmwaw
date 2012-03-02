@@ -1223,21 +1223,24 @@ void DMWAWContentListener::lineSpacingChange(const double lineSpacing, WPXUnit u
 }
 
 // OSNOLA: simplication of this function
-void DMWAWContentListener::justificationChange(const uint8_t justification)
+void DMWAWContentListener::justificationChange(const uint8_t justification,
+    bool force)
 {
   if (isUndoOn()) return;
 
   if (justification == m_ps->m_paragraphJustification) return;
 
-  // We discovered that if there is not a paragraph break before justificationChange,
-  // newer versions of WordPerfect add a temporary hard return just before the code.
-  // So, we will mimick them!
-  if (m_ps->m_isParagraphOpened)
-    _closeParagraph();
-  if (m_ps->m_isListElementOpened)
-    _closeListElement();
+  if (force) {
+    // We discovered that if there is not a paragraph break before justificationChange,
+    // newer versions of WordPerfect add a temporary hard return just before the code.
+    // So, we will mimick them!
+    if (m_ps->m_isParagraphOpened)
+      _closeParagraph();
+    if (m_ps->m_isListElementOpened)
+      _closeListElement();
 
-  m_ps->m_currentListLevel = 0;
+    m_ps->m_currentListLevel = 0;
+  }
 
   switch (justification) {
   case DMWAW_PARAGRAPH_JUSTIFICATION_LEFT:

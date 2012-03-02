@@ -175,7 +175,8 @@ protected:
 
   // OSNOLA: allows to change the unit
   void lineSpacingChange(const double lineSpacing, WPXUnit unit=WPX_PERCENT);
-  void justificationChange(const uint8_t justification);
+  // force a break if there is a justification change
+  void justificationChange(const uint8_t justification, bool force=false);
 
   DMWAWContentParsingState *m_ps; // parse state
   WPXDocumentInterface *m_documentInterface;

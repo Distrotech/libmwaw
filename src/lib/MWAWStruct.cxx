@@ -42,7 +42,7 @@ void Font::sendTo(IMWAWContentListener *listener, MWAWTools::ConvertissorPtr &co
   if (listener == 0L) return;
   int newSize = size();
 
-  if (force || (id() != -1 && id() != actualFont.id())) {
+  if (id() != -1 && (force || id() != actualFont.id())) {
     actualFont.setId(id());
 
     std::string fName;
@@ -56,7 +56,7 @@ void Font::sendTo(IMWAWContentListener *listener, MWAWTools::ConvertissorPtr &co
     if (newSize == -1) newSize = 12;
   }
 
-  if (newSize != -1 && (force || newSize != actualFont.size())) {
+  if (newSize > 0 && (force || newSize != actualFont.size())) {
     actualFont.setSize(newSize);
     std::string fName;
     int dSize = 0;

@@ -181,6 +181,14 @@ protected:
   /*
    * interface with subdocument
    */
+  //! try to send a footnote id
+  void sendFootnote(int id);
+
+  //! try to send a bookmark field id
+  void sendFieldComment(int id);
+
+  //! try to send a date
+  void send(int id, DMWAWSubDocumentType type);
 
   //
   // low level

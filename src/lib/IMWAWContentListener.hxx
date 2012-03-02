@@ -153,7 +153,7 @@ public:
   static void appendUnicode(uint32_t val, WPXString &buffer);
 
   //! adds an end of line
-  void insertEOL();
+  void insertEOL(bool softBreak=false);
   //! adds a tabulation
   void insertTab();
 
@@ -161,6 +161,8 @@ public:
   enum FieldType { None, PageNumber, Date, Time, Title, Link, Database };
   //! adds a field type
   void insertField(FieldType type);
+  //! insert a date/time field with given format (see strftime)
+  void insertDateTimeField(char const *format);
 
   /** adds note
    *

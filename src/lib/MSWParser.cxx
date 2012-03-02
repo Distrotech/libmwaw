@@ -162,8 +162,8 @@ struct State {
 class SubDocument : public IMWAWSubDocument
 {
 public:
-  SubDocument(MSWParser &pars, TMWAWInputStreamPtr input, int id) :
-    IMWAWSubDocument(&pars, input, IMWAWEntry()), m_id(id) {}
+  SubDocument(MSWParser &pars, TMWAWInputStreamPtr input, int id, DMWAWSubDocumentType type) :
+    IMWAWSubDocument(&pars, input, IMWAWEntry()), m_id(id), m_type(type) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -179,11 +179,13 @@ public:
   void parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType type);
 
 protected:
-  //! the subdocument file position
+  //! the subdocument id
   int m_id;
+  //! the subdocument type
+  DMWAWSubDocumentType m_type;
 };
 
-void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType /*type*/)
+void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType type)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -198,7 +200,7 @@ void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType 
   assert(m_parser);
 
   long pos = m_input->tell();
-  //  reinterpret_cast<MSWParser *>(m_parser)->send(m_id);
+  reinterpret_cast<MSWParser *>(m_parser)->send(m_id, type);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
@@ -208,6 +210,7 @@ bool SubDocument::operator!=(IMWAWSubDocument const &doc) const
   SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
   if (!sDoc) return true;
   if (m_id != sDoc->m_id) return true;
+  if (m_type != sDoc->m_type) return true;
   return false;
 }
 }
@@ -346,6 +349,37 @@ bool MSWParser::isFilePos(long pos)
   return ok;
 }
 
+void MSWParser::sendFootnote(int id)
+{
+  if (!m_listener) return;
+
+  IMWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, DMWAW_SUBDOCUMENT_NOTE));
+  m_listener->insertNote(FOOTNOTE, subdoc);
+}
+
+void MSWParser::sendFieldComment(int id)
+{
+  if (!m_listener) return;
+
+  IMWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, DMWAW_SUBDOCUMENT_COMMENT_ANNOTATION));
+  m_listener->insertComment(subdoc);
+}
+
+void MSWParser::send(int id, DMWAWSubDocumentType type)
+{
+  switch(type) {
+  case DMWAW_SUBDOCUMENT_COMMENT_ANNOTATION:
+    m_textParser->sendFieldComment(id);
+    break;
+  case DMWAW_SUBDOCUMENT_NOTE:
+    m_textParser->sendFootnote(id);
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MSWParser::send: find unexpected type\n"));
+    break;
+  }
+}
+
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
@@ -367,6 +401,7 @@ void MSWParser::parse(WPXDocumentInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
+      m_textParser->sendMainText();
 
       m_textParser->flushExtra();
     }
@@ -516,10 +551,10 @@ bool MSWParser::readZoneList()
       readEntry("PageBreak");
       break;
     case 6:
-      readEntry("NoteString");
+      readEntry("FieldName");
       break;
     case 7:
-      readEntry("NotePos");
+      readEntry("FieldPos");
       break; // size ?
     case 8:
       readEntry("HeaderFooter");
@@ -1309,16 +1344,16 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
     return false;
   }
 
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
   int fSz = input->readULong(2);
-  if (sz < 2 || fSz+4 > sz) {
+  if (fSz < 2 || fSz+4 > sz) {
     MWAW_DEBUG_MSG(("MSWParser::readObjects: pb reading the name\n"));
     f << "#";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     return false;
   }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
   obj.m_pos.setLength(sz);
   MSWEntry fileEntry = obj.getEntry();
   fileEntry.setParsed(true);

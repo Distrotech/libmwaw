@@ -252,7 +252,7 @@ void IMWAWContentListener::appendUnicode(uint32_t val, WPXString &buffer)
   for (i = 0; i < len; i++) buffer.append(outbuf[i]);
 }
 
-void IMWAWContentListener::insertEOL()
+void IMWAWContentListener::insertEOL(bool soft)
 {
   if (isUndoOn()) return;
 
@@ -260,8 +260,13 @@ void IMWAWContentListener::insertEOL()
   for (; m_parseState->m_numDeferredTabs > 0; m_parseState->m_numDeferredTabs--)
     m_documentInterface->insertTab();
 
-  if (m_ps->m_isParagraphOpened) _closeParagraph();
-  if (m_ps->m_isListElementOpened) _closeListElement();
+  if (soft) {
+    if (m_ps->m_isSpanOpened)  _flushText();
+    m_documentInterface->insertLineBreak();
+  } else {
+    if (m_ps->m_isParagraphOpened) _closeParagraph();
+    if (m_ps->m_isListElementOpened) _closeListElement();
+  }
 
   // sub/superscript must not survive a new line
   if (m_ps->m_textAttributeBits & (DMWAW_SUBSCRIPT_BIT | DMWAW_SUPERSCRIPT_BIT | DMWAW_SUBSCRIPT100_BIT | DMWAW_SUPERSCRIPT100_BIT))
@@ -537,28 +542,27 @@ void IMWAWContentListener::insertField(IMWAWContentListener::FieldType type)
     insertUnicodeString(tmp);
     break;
   }
-  case Date: {
-    time_t now = time ( 0L );
-    struct tm timeinfo = *(localtime ( &now));
-    char buf[256];
-    strftime(buf, 256, "%m/%d/%y", &timeinfo);
-    WPXString tmp(buf);
-    insertUnicodeString(tmp);
+  case Date:
+    insertDateTimeField("%m/%d/%y");
     break;
-  }
-  case Time: {
-    time_t now = time ( 0L );
-    struct tm timeinfo = *(localtime ( &now));
-    char buf[256];
-    strftime(buf, 256, "%I:%M:%S %p", &timeinfo);
-    WPXString tmp(buf);
-    insertUnicodeString(tmp);
+  case Time:
+    insertDateTimeField("%I:%M:%S %p");
     break;
-  }
   default:
     MWAW_DEBUG_MSG(("IMWAWContentListener::insertField: must not be called with type=%d\n", int(type)));
     break;
   }
+}
+
+void IMWAWContentListener::insertDateTimeField(char const *format)
+
+{
+  time_t now = time ( 0L );
+  struct tm timeinfo = *(localtime ( &now));
+  char buf[256];
+  strftime(buf, 256, format, &timeinfo);
+  WPXString tmp(buf);
+  insertUnicodeString(tmp);
 }
 
 ///////////////////

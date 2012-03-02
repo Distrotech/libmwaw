@@ -57,6 +57,9 @@ void printTabs(std::ostream &o, std::vector<DMWAWTabStop> const &tabs)
     case DECIMAL:
       o << ":decimal";
       break; // decimal align
+    case BAR:
+      o << ":bar";
+      break;
     default:
       break;
     }

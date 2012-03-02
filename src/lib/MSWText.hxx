@@ -99,12 +99,23 @@ protected:
     m_listener = listen;
   }
 
+  //! send a main zone
+  bool sendMainText();
+
   //! send a text zone
-  bool sendText(IMWAWEntry const &textEntry);
+  bool sendText(IMWAWEntry const &textEntry, bool mainZone);
   /* send a font
    *
    * \param font the font's properties*/
   void setProperty(MSWTextInternal::Font const &font);
+
+  //! send paragraph properties
+  void setProperty(MSWTextInternal::Paragraph const &para,
+                   MSWTextInternal::Font &actFont, bool recursive=false);
+
+  //! send section properties
+  void setProperty(MSWTextInternal::Section const &sec,
+                   MSWTextInternal::Font &actFont, bool recursive=false);
 
   //! finds the different zones given defaut text zone and textlength
   bool createZones(long bot, long (&textLength)[3]);
@@ -124,14 +135,20 @@ protected:
   //! read the char/paragraph plc list
   bool readPLCList(MSWEntry &entry);
 
-  //! read the note data
-  bool readNotes(MSWEntry &entry, std::vector<long> const &notePos);
+  //! read the field data
+  bool readFields(MSWEntry &entry, std::vector<long> const &fieldPos);
+
+  //! send a field note to a listener
+  bool sendFieldComment(int id);
 
   //! read the footnote pos in text + val
   bool readFootnotesPos(MSWEntry &entry, std::vector<long> const &noteDef);
 
   //! read the footnote data
   bool readFootnotesData(MSWEntry &entry);
+
+  //! send a note to a listener
+  bool sendFootnote(int id);
 
   //! read the font names
   bool readFontNames(MSWEntry &entry);
