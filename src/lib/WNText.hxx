@@ -173,6 +173,9 @@ protected:
   //! read a token
   bool readToken(TMWAWInputStream &input, WNTextInternal::Token &token);
 
+  //! read a token (v2)
+  bool readTokenV2(TMWAWInputStream &input, WNTextInternal::Token &token);
+
   //! read a table frame (checkme)
   bool readTable(TMWAWInputStream &input, WNTextInternal::TableData &table);
 

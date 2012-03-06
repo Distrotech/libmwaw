@@ -86,9 +86,9 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
       return 0;
     }
 #endif
-    MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a WriteNow file version=%d\n", version));
+    MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a WriteNow file version 3.0 or 4.0\n"));
 
-    header=new IMWAWHeader(input, version);
+    header=new IMWAWHeader(input, 3);
     header->m_docType=IMWAWDocument::WNOW;
     return header;
   }
@@ -122,8 +122,17 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
     return header;
   }
 
+  if (val[0]==0 && val[1]==0 && val[2]==0 && val[3]==0) {
+    input->seek(8, WPX_SEEK_SET);
+    if (input->readULong(1) == 0x4) {
+      MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a WriteNow 1.0 or 2.0 file\n"));
+      header=new IMWAWHeader(input, 2);
+      header->m_docType=IMWAWDocument::WNOW;
+      return header;
+    }
+  }
 #ifdef DEBUG
-  bool mw = (val[0] > 0 && val[0] < 8);
+  bool mw = (val[0] > 2 && val[0] < 8);
 #else
   bool mw = val[0] == 3 || val[0] == 6;
 #endif

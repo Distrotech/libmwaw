@@ -155,8 +155,12 @@ protected:
   //
   // low level
   //
-  //! try to read the document entries zone
+
+  //! try to read the document entries zone v3-v4
   bool readDocEntries();
+
+  //! try to read the document entries zone v2
+  bool readDocEntriesV2();
 
   /** try to read the graphic zone (unknown + list of entries )
       and to create the graphic data zone

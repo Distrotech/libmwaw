@@ -357,7 +357,10 @@ void WNParser::createDocument(WPXDocumentInterface *documentInterface)
 ////////////////////////////////////////////////////////////
 bool WNParser::createZones()
 {
-  if (!readDocEntries())
+  if (version() < 3) {
+    if (!readDocEntriesV2())
+      return false;
+  } else if (!readDocEntries())
     return false;
 
   std::map<std::string, WNEntry const *>::const_iterator iter;
@@ -385,7 +388,6 @@ bool WNParser::createZones()
   iter = m_entryManager->m_typeMap.find("UnknZone2");
   if (iter != m_entryManager->m_typeMap.end())
     readGenericUnkn(*iter->second);
-
 
   bool ok = m_textParser->createZones();
 
@@ -501,6 +503,58 @@ bool WNParser::readDocEntries()
   return true;
 }
 
+////////////////////////////////////////////////////////////
+// try to read the document main zone : v2
+////////////////////////////////////////////////////////////
+bool WNParser::readDocEntriesV2()
+{
+  TMWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  libmwaw_tools::DebugStream f;
+  std::stringstream s;
+  f << "Entries(DocEntries):";
+  for (int i = 0; i < 5; i++) {
+    if (input->readLong(1) != 4) {
+      MWAW_DEBUG_MSG(("WNParser::readDocEntriesV2: can not find entries header:%d\n",i));
+      return false;
+    }
+    long dataPos = input->readULong(1);
+    dataPos = (dataPos<<16)+input->readULong(2);
+    if (!checkIfPositionValid(dataPos)) {
+      MWAW_DEBUG_MSG(("WNParser::readDocEntriesV2:  find an invalid position for entry:%d\n",i));
+      continue;
+    }
+    WNEntry entry;
+    entry.setBegin(dataPos);
+    switch(i) {
+    case 0:
+    case 1:
+    case 2:
+      entry.setType("TextZone");
+      entry.m_id=i;
+      break;
+    case 4:
+      entry.setType("PrintZone");
+      break;
+    default: { // find 2 time 0006000800000000
+      std::stringstream s;
+      s << "Unknown" << i;
+      entry.setType(s.str());
+    }
+    }
+    long actPos = input->tell();
+    input->seek(dataPos, WPX_SEEK_SET);
+    entry.setLength(input->readULong(2)+2);
+    input->seek(actPos, WPX_SEEK_SET);
+    m_entryManager->add(entry);
+  }
+  ascii().addDelimiter(input->tell(),'|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  ascii().addPos(input->tell()+32);
+  ascii().addNote("_");
+  return true;
+}
 ////////////////////////////////////////////////////////////
 // try to read a graphic list zone
 ////////////////////////////////////////////////////////////
@@ -780,29 +834,32 @@ bool WNParser::readColorMap(WNEntry const &entry)
 bool WNParser::readPrintInfo(WNEntry const &entry)
 {
   TMWAWInputStreamPtr input = getInput();
-
-  if (!entry.valid() || entry.length() < 0x88) {
+  int expectedLength = version() <= 2 ? 0x78+2 : 0x88;
+  if (!entry.valid() || entry.length() < expectedLength) {
     MWAW_DEBUG_MSG(("WNParser::readPrintInfo: zone size is invalid\n"));
     return false;
   }
 
   input->seek(entry.begin(), WPX_SEEK_SET);
-  if (input->readLong(4) != entry.length()) {
+  long sz = version() <= 2 ? 2+input->readULong(2) : input->readLong(4);
+  if (sz != entry.length()) {
     MWAW_DEBUG_MSG(("WNParser::readPrintInfo: bad begin of last zone\n"));
     return false;
   }
   libmwaw_tools::DebugStream f;
   f << "Entries(PrintInfo):";
-  f << "ptr?=" << std::hex << input->readULong(4) << std::dec << ",";
-  f << "ptr2?=" << std::hex << input->readULong(4) << std::dec << ",";
-  long val;
-  for (int i = 0; i < 4; i++) { // 15, 0, ??, ???
-    val = input->readLong(2);
-    if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
-  }
-  for (int i = 0; i < 2; i++) { // 0
-    val = input->readLong(2);
-    if (val) f << "g" << i << "=" << val << ",";
+  if (version()>=3) {
+    f << "ptr?=" << std::hex << input->readULong(4) << std::dec << ",";
+    f << "ptr2?=" << std::hex << input->readULong(4) << std::dec << ",";
+    long val;
+    for (int i = 0; i < 4; i++) { // 15, 0, ??, ???
+      val = input->readLong(2);
+      if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
+    }
+    for (int i = 0; i < 2; i++) { // 0
+      val = input->readLong(2);
+      if (val) f << "g" << i << "=" << val << ",";
+    }
   }
   libmwaw_tools_mac::PrintInfo info;
   if (!info.read(input)) {
@@ -842,6 +899,8 @@ bool WNParser::readPrintInfo(WNEntry const &entry)
   entry.setParsed(true);
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
+  ascii().addPos(entry.end());
+  ascii().addNote("_");
   return true;
 }
 
@@ -985,24 +1044,52 @@ bool WNParser::checkHeader(IMWAWHeader *header, bool strict)
     return false;
   }
   input->seek(0, WPX_SEEK_SET);
-  if (input->readULong(4) != 0x57726974) // Writ
+  long val = input->readULong(4);
+  int version = 0;
+  switch(val) {
+  case 0:
+    if (input->readULong(4) != 0)
+      return false;
+    version = 2;
+    break;
+  case 0x57726974: // Writ
+    if (input->readULong(4) != 0x654e6f77) // eNow
+      return false;
+    version = 3;
+    break;
+  default:
     return false;
-  if (input->readULong(4) != 0x654e6f77) // eNow
-    return false;
-  long val = input->readULong(2);
+  }
+  m_state->m_version = version;
+  f << "FileHeader:";
 
+  if (version < 3) {
+    if (strict) {
+      if (input->readLong(1)!=4) return false;
+      input->seek(-1, WPX_SEEK_CUR);
+    }
+
+    ascii().addPos(0);
+    ascii().addNote(f.str().c_str());
+    ascii().addPos(input->tell());
+
+    return true;
+  }
+
+  val = input->readULong(2);
   if (strict && val > 3)
     return false;
 #ifndef DEBUG
   if (val != 2) return false;
 #endif
-  f << "FileHeader: f0=" << val << ",";
+  f << "f0=" << val << ",";
 
   for (int i = 1; i < 4; i++) {
     // all zero, excepted f1=1 in one file...
     val = input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
+
   // a flag ??
   val = input->readULong(2);
   if (val != 0x4000) f << "fl=" << std::hex << val << std::dec << ",";

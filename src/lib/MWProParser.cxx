@@ -262,6 +262,7 @@ protected:
 
 void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType /*type*/)
 {
+  if (m_id == -3) return; // empty block
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
     return;
@@ -1196,6 +1197,20 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
 }
 
 ////////////////////////////////////////////////////////////
+// try to send a empty zone
+////////////////////////////////////////////////////////////
+bool MWProParser::sendEmptyFrameZone(TMWAWPosition const &pos,
+                                     WPXPropertyList extras)
+{
+  shared_ptr<MWProParserInternal::SubDocument> subdoc
+  (new MWProParserInternal::SubDocument(*this, getInput(), -3));
+  m_listSubDocuments.push_back(subdoc);
+  if (m_listener)
+    m_listener->insertTextBox(pos, subdoc, extras);
+  return true;
+}
+
+////////////////////////////////////////////////////////////
 // try to send a text
 ////////////////////////////////////////////////////////////
 bool MWProParser::sendTextZone(int blockId, bool mainZone)
@@ -1421,7 +1436,8 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
 ////////////////////////////////////////////////////////////
 // try to send a picture
 ////////////////////////////////////////////////////////////
-bool MWProParser::sendPictureZone(int blockId, TMWAWPosition const &pictPos)
+bool MWProParser::sendPictureZone(int blockId, TMWAWPosition const &pictPos,
+                                  WPXPropertyList extras)
 {
   std::map<int, shared_ptr<MWProParserInternal::Zone> >::iterator it;
   it = m_state->m_dataMap.find(blockId);
@@ -1429,12 +1445,13 @@ bool MWProParser::sendPictureZone(int blockId, TMWAWPosition const &pictPos)
     MWAW_DEBUG_MSG(("MWProParser::sendPictureZone: can not find picture zone\n"));
     return false;
   }
-  sendPicture(it->second, pictPos);
+  sendPicture(it->second, pictPos, extras);
   return true;
 }
 
 bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
-                              TMWAWPosition pictPos)
+                              TMWAWPosition pictPos,
+                              WPXPropertyList const &extras)
 {
   if (!zone) return false;
   if (zone->m_type != 1) {
@@ -1506,7 +1523,7 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
       WPXBinaryData data;
       input->seek(4, WPX_SEEK_SET);
       input->readDataBlock(pictSize, data);
-      m_listener->insertPicture(pictPos, data);
+      m_listener->insertPicture(pictPos, data, "image/pict", extras);
     }
     return true;
   }
@@ -1523,7 +1540,7 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
     WPXBinaryData data;
     std::string type;
     if (pict->getBinary(data,type))
-      m_listener->insertPicture(pictPos, data, type);
+      m_listener->insertPicture(pictPos, data, type, extras);
   }
   return true;
 }

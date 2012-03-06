@@ -168,11 +168,15 @@ protected:
   bool sendTextZone(int blockId, bool mainZone = false);
 
   //! try to send a picture
-  bool sendPictureZone(int blockId, TMWAWPosition const &pictPos);
+  bool sendPictureZone(int blockId, TMWAWPosition const &pictPos,
+                       WPXPropertyList extras = WPXPropertyList());
 
   //! send a textbox zone
   bool sendTextBoxZone(int blockId, TMWAWPosition const &pos,
                        WPXPropertyList extras = WPXPropertyList());
+
+  //! try to send an empty zone (can exist in MWPro1.5)
+  bool sendEmptyFrameZone(TMWAWPosition const &pos, WPXPropertyList extras);
 
   //
   // low level
@@ -190,7 +194,7 @@ protected:
 #endif
 
   //! try to send a picture
-  bool sendPicture(shared_ptr<MWProParserInternal::Zone> zone, TMWAWPosition pictPos);
+  bool sendPicture(shared_ptr<MWProParserInternal::Zone> zone, TMWAWPosition pictPos, WPXPropertyList const &extras);
 
   //! try to send a text
   bool sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool mainZone = false);

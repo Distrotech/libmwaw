@@ -831,11 +831,12 @@ void IMWAWContentListener::insertTextBox(TMWAWPosition const &pos,
 }
 
 void IMWAWContentListener::insertPicture
-(TMWAWPosition const &pos, const WPXBinaryData &binaryData, std::string type)
+(TMWAWPosition const &pos, const WPXBinaryData &binaryData, std::string type,
+ WPXPropertyList frameExtras)
 {
   if (isUndoOn()) return;
 
-  if (!openFrame(pos)) return;
+  if (!openFrame(pos, frameExtras)) return;
 
   WPXPropertyList propList;
   propList.insert("libwpd:mimetype", type.c_str());

@@ -183,7 +183,8 @@ public:
    *
    * \warning the position unit must be WPX_POINT, WPX_INCH or WPX_TWIP... */
   void insertPicture(TMWAWPosition const &pos, const WPXBinaryData &binaryData,
-                     std::string type="image/pict");
+                     std::string type="image/pict",
+                     WPXPropertyList frameExtras=WPXPropertyList());
   /** adds a textbox in given position
    *
    * \warning the position unit must be WPX_POINT, WPX_INCH or WPX_TWIP... */

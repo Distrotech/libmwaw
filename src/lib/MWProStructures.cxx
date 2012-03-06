@@ -59,9 +59,9 @@ struct Block {
   enum Type { UNKNOWN, GRAPHIC, TEXT };
   //! the constructor
   Block() :m_type(-1), m_contentType(UNKNOWN), m_fileBlock(), m_id(-1), m_attachment(false), m_page(-1), m_box(),
-    m_baseline(0.), m_textPos(0), m_isHeader(false), m_row(0), m_col(0), m_textboxCellType(0),
+    m_baseline(0.), m_lineWidth(1.0), m_lineType(1), m_linePattern(2), m_textPos(0), m_isHeader(false), m_row(0), m_col(0), m_textboxCellType(0),
     m_extra(""), m_send(false) {
-    for (int i = 0; i < 3; i++) m_color[i] = -1;
+    for (int i = 0; i < 3; i++) m_color[i] = m_lineColor[i] = -1;
   }
 
   //! operator<<
@@ -92,6 +92,9 @@ struct Block {
       case 7:
         o << "[footnote]";
         break;
+      case 8:
+        o << "[empty frame]";
+        break;
       default:
         MWAW_DEBUG_MSG(("MWProStructuresInternal::Block::operator<< unknown type\n"));
         o << "[#" << bl.m_type << "]";
@@ -112,10 +115,87 @@ struct Block {
     if (bl.hasColor())
       o << "col=" << bl.m_color[0] << "x" << bl.m_color[1]
         << "x" << bl.m_color[1] << ",";
+    if (bl.m_lineWidth != 1.0) o << "lineWidth=" << bl.m_lineWidth << "pt,";
+    switch(bl.m_lineType) {
+    case 1:
+      break; // simple
+    case 2:
+      o << "double[line],";
+      break;
+    case 3:
+      o << "double[line,externalx2],";
+      break;
+    case 4:
+      o << "double[line,internalx2],";
+      break;
+    default:
+      o << "#lineType=" << bl.m_lineType << ",";
+      break;
+    }
+    switch(bl.m_linePattern) {
+    case 1:
+      o << "none,";
+      break;
+    case 2:
+      break; // normal
+    default:
+      o << "linePattern=" << bl.m_linePattern << ",";
+      break;
+    }
+    if (bl.hasLineColor())
+      o << "lineCol=" << bl.m_lineColor[0] << "x" << bl.m_lineColor[1]
+        << "x" << bl.m_lineColor[1] << ",";
     if (bl.m_fileBlock > 0) o << "block=" << std::hex << bl.m_fileBlock << std::dec << ",";
     if (bl.m_extra.length())
       o << bl.m_extra << ",";
     return o;
+  }
+  void fillFramePropertyList(WPXPropertyList &extra) const {
+    std::stringstream s, s2;
+    if (hasColor()) {
+      s.str("");
+      s << std::hex << std::setfill('0') << "#"
+        << std::setw(2) << int(m_color[0])
+        << std::setw(2) << int(m_color[1])
+        << std::setw(2) << int(m_color[2]);
+      extra.insert("fo:background-color", s.str().c_str());
+    }
+    if (hasBorderLine()) {
+      s.str("");
+      s2.str("");
+      switch(m_lineType) {
+      case 2:
+        s2 << m_lineWidth << "pt " << m_lineWidth << "pt " << m_lineWidth << "pt";
+        extra.insert("style:border-line-width", s2.str().c_str());
+        s << 3*m_lineWidth << "pt";
+        s << " double";
+        break;
+      case 3:
+        s2 << m_lineWidth << "pt " << m_lineWidth << "pt " << 2*m_lineWidth << "pt";
+        extra.insert("style:border-line-width", s2.str().c_str());
+        s << 4*m_lineWidth << "pt";
+        s << " double";
+        break;
+      case 4:
+        s2 << 2*m_lineWidth << "pt " << m_lineWidth << "pt " << m_lineWidth << "pt";
+        extra.insert("style:border-line-width", s2.str().c_str());
+        s << 4*m_lineWidth << "pt";
+        s << " double";
+        break;
+      default:
+      case 1:
+        s << m_lineWidth << "pt";
+        s << " solid";
+        break;
+      }
+      if (m_lineColor[0] >= 0) {
+        s << std::hex << std::setfill('0') << " #"
+          << std::setw(2) << int(m_lineColor[0])
+          << std::setw(2) << int(m_lineColor[1])
+          << std::setw(2) << int(m_lineColor[2]);
+      } else s << " #000000";
+      extra.insert("fo:border", s.str().c_str());
+    }
   }
 
   bool isGraphic() const {
@@ -130,6 +210,13 @@ struct Block {
   bool hasColor() const {
     return m_color[0] >= 0 &&
            (m_color[0] != 255 || m_color[1] != 255 ||  m_color[2] != 255);
+  }
+  bool hasLineColor() const {
+    return m_lineColor[0] >= 0 &&
+           (m_lineColor[0] != 0 || m_lineColor[1] != 0 ||  m_lineColor[2] != 0);
+  }
+  bool hasBorderLine() const {
+    return (m_lineWidth !=0.0 && m_linePattern!=1);
   }
 
   TMWAWPosition getPosition() const {
@@ -195,6 +282,18 @@ struct Block {
 
   //! the background color
   int m_color[3];
+
+  //! the line color
+  int m_lineColor[3];
+
+  //! the line witdh(in point)
+  float m_lineWidth;
+
+  //! the line type
+  int m_lineType;
+
+  //! the line pattern
+  int m_linePattern;
 
   /** filled for pagebreak pos */
   int m_textPos;
@@ -1619,11 +1718,52 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
     } else
       f << "#colorId=" << colorId << ",";
   }
-  /* g0: 2: normal, 1 transparent */
-  /* g3: wrap 3: none  1=wrap */
-  // a list of small number [1|2], 1, [1|2], [1|3|4], 1
-  for (int i = 0; i < 5; i++)
-    f << "g" << i << "=" << m_input->readLong(2) << ",";
+
+  val = m_input->readLong(2);/* 2: normal, 1 transparent  ?*/
+  if (val) f << "g0=" << val << ",";
+  colorId = m_input->readLong(2);
+  if (colorId!=1) {
+    Vec3uc col;
+    if (getColor(colorId, col)) {
+      for (int i = 0; i < 3; i++) block->m_lineColor[i] = col[i];
+    } else
+      f << "#lineColorId=" << colorId << ",";
+  }
+  block->m_linePattern = m_input->readLong(2);
+  val =  m_input->readLong(2);
+  switch(val) {
+  case 1:
+    block->m_lineWidth = 0.0;
+    break;
+  case 2:
+    block->m_lineWidth = 0.25;
+    break; // hairline
+  case 3:
+    block->m_lineWidth = 1.;
+    break;
+  case 4:
+    block->m_lineWidth = 2.;
+    break;
+  case 5:
+    block->m_lineWidth = 4.;
+    break;
+  case 6:
+    block->m_lineWidth = 6.;
+    break;
+  case 7:
+    block->m_lineWidth = 8.;
+    break;
+  case 8:
+    block->m_lineWidth = 10.;
+    break;
+  case 9:
+    block->m_lineWidth = 12.;
+    break;
+  default:
+    f << "#lineWidth=" << val << ",";
+    break;
+  }
+  block->m_lineType = m_input->readLong(2);
   int contentType = m_input->readULong(1);
   switch(contentType) {
   case 0:
@@ -1996,20 +2136,15 @@ bool MWProStructures::send(int blockId, bool mainZone)
   if (block->m_type == 4 && block->m_textboxCellType == 0) {
     block->m_textboxCellType = 2;
     WPXPropertyList extras;
-    if (block->hasColor()) {
-      std::stringstream s;
-      s << std::hex << std::setfill('0') << "#"
-        << std::setw(2) << int(block->m_color[0])
-        << std::setw(2) << int(block->m_color[1])
-        << std::setw(2) << int(block->m_color[2]);
-      extras.insert("fo:background-color", s.str().c_str());
-    }
+    block->fillFramePropertyList(extras);
     m_mainParser.sendTextBoxZone(blockId, block->getPosition(), extras);
     block->m_textboxCellType = 0;
   } else if (block->isText())
     m_mainParser.sendTextZone(block->m_fileBlock, mainZone);
   else if (block->isGraphic()) {
-    m_mainParser.sendPictureZone(block->m_fileBlock, block->getPosition());
+    WPXPropertyList extras;
+    block->fillFramePropertyList(extras);
+    m_mainParser.sendPictureZone(block->m_fileBlock, block->getPosition(), extras);
   } else if (block->m_type == 3) {
     if (m_state->m_tablesMap.find(blockId) == m_state->m_tablesMap.end()) {
       MWAW_DEBUG_MSG(("MWProStructures::send: can not find table with id=%d\n", blockId));
@@ -2029,6 +2164,10 @@ bool MWProStructures::send(int blockId, bool mainZone)
   } else if (block->m_type == 4 || block->m_type == 6) {
     // probably ok, can be an empty cell, textbox, header/footer ..
     if (m_listener) m_listener->insertCharacter(' ');
+  } else if (block->m_type == 8) { // empty frame
+    WPXPropertyList extras;
+    block->fillFramePropertyList(extras);
+    m_mainParser.sendEmptyFrameZone(block->getPosition(), extras);
   } else {
     MWAW_DEBUG_MSG(("MWProStructures::send: can not send block with type=%d\n", block->m_type));
   }
