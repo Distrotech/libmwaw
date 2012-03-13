@@ -1425,8 +1425,8 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
       m_listener->insertTab();
     /*    else if (ch == 0xd)
     			m_listener->insertEOL();*/
-    else if (ch >= 29)
-      m_listener->insertCharacter(c);
+    else if (ch >= 32)
+      m_listener->insertCharacter(ch);
     else {
       MWAW_DEBUG_MSG(("WPParser::readText: find an odd character : %d\n", int(ch)));
     }
