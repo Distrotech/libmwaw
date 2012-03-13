@@ -2623,7 +2623,7 @@ bool MSWText::sendText(IMWAWEntry const &textEntry, bool mainZone)
     case 0x1f: // hyphen
       break;
     case 0x13: // month
-    case 0x1a: // mont abreviated
+    case 0x1a: // month abreviated
     case 0x1b: // checkme month long
       m_listener->insertDateTimeField("%m");
       break;

@@ -156,6 +156,8 @@ protected:
   float pageHeight() const;
   //! returns the page width, ie. paper size less margin (in inches)
   float pageWidth() const;
+  //! returns the document number of columns ( filed in MWII)
+  int numColumns() const;
 
   //! adds a new page
   void newPage(int number, bool softBreak=false);
@@ -166,6 +168,9 @@ protected:
 
   //! send a text box
   bool sendTextZone(int blockId, bool mainZone = false);
+
+  //! compute the number of hard page break
+  int findNumHardBreaks(int blockId);
 
   //! try to send a picture
   bool sendPictureZone(int blockId, TMWAWPosition const &pictPos,
@@ -198,6 +203,9 @@ protected:
 
   //! try to send a text
   bool sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool mainZone = false);
+
+  //! compute the number of hard page break
+  int findNumHardBreaks(shared_ptr<MWProParserInternal::TextZone> zone);
 
   //! a debug function which can be used to save the unparsed block
   void checkUnparsed();

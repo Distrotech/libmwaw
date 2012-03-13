@@ -185,6 +185,12 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
+  /** finds the different objects zones in a MacWriteII file
+
+  \note: this function is called by createZones
+   */
+  bool createZonesV2();
+
   //! returns the number of pages
   int numPages() const;
 
@@ -230,6 +236,9 @@ protected:
   //! try to read a block entry
   shared_ptr<MWProStructuresInternal::Block> readBlock();
 
+  //! try to read a block entry
+  shared_ptr<MWProStructuresInternal::Block> readBlockV2(int id);
+
   //! try to read the list of block entries
   bool readBlocksList();
 
@@ -260,7 +269,10 @@ protected:
   //! returns true if the block is already sent ( or does not exists)
   bool isSent(int blockId);
 
-  //! try to send a block which corresponds to blockid
+  /** try to send a block which corresponds to blockid
+
+      note: blockId=-noteId to send footnote in MW2
+   */
   bool send(int blockId, bool mainZone=false);
 
   //! returns the debug file

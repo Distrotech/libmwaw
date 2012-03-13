@@ -115,6 +115,12 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
     return header;
   }
 
+  if (val[0] == 0x2e && val[1] == 0x2e) {
+    MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a MacWrite II file[no parsing]\n"));
+    header=new IMWAWHeader(input, 0);
+    header->m_docType=IMWAWDocument::MWPRO;
+    return header;
+  }
   if (val[0] == 4 && val[1] == 4) {
     MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a MacWritePro file\n"));
     header=new IMWAWHeader(input, 1);

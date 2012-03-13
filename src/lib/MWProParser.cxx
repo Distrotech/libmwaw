@@ -117,8 +117,8 @@ struct TextZoneData {
 
 //! Internal: a struct used to store a text zone
 struct Token {
-  Token() : m_type(-1), m_length(0), m_blockId(-1) {
-    for (int i = 0; i < 3; i++) m_flags[i] = 0;
+  Token() : m_type(-1), m_length(0), m_blockId(-1), m_box() {
+    for (int i = 0; i < 4; i++) m_flags[i] = 0;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Token const &tkn) {
@@ -158,8 +158,8 @@ struct Token {
       o << "#type=" << tkn.m_type << ",";
     }
     if (tkn.m_blockId >= 0) o << "blockId=" << tkn.m_blockId << ",";
-    for (int i = 0; i < 3; i++) {
-      if (tkn.m_flags[i]) o << "flags=" << std::hex << tkn.m_flags[i] << ",";
+    for (int i = 0; i < 4; i++) {
+      if (tkn.m_flags[i]) o << "fl" << i << "=" << std::hex << tkn.m_flags[i] << ",";
     }
     return o;
   }
@@ -169,8 +169,10 @@ struct Token {
   int m_length;
   //! the block id
   int m_blockId;
+  //! the bdbox ( filled in MWII for figure)
+  Box2f m_box;
   //! some flags
-  int m_flags[3];
+  int m_flags[4];
 };
 
 //! Internal: a struct used to store a text zone
@@ -200,7 +202,7 @@ struct TextZone {
 struct State {
   //! constructor
   State() : m_version(-1), m_blocksMap(), m_dataMap(), m_textMap(),
-    m_blocksCallByTokens(), m_actPage(0), m_numPages(0),
+    m_blocksCallByTokens(), m_col(1), m_actPage(0), m_numPages(0),
     m_headerHeight(0), m_footerHeight(0) {
   }
 
@@ -219,6 +221,7 @@ struct State {
   //! the list of blockId called by tokens
   std::vector<int> m_blocksCallByTokens;
 
+  int m_col /** the number of columns in MWII */;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
@@ -348,6 +351,11 @@ float MWProParser::pageWidth() const
   return m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight();
 }
 
+int MWProParser::numColumns() const
+{
+  if (m_state->m_col <= 1) return 1;
+  return m_state->m_col;
+}
 
 ////////////////////////////////////////////////////////////
 // new page
@@ -442,6 +450,7 @@ bool MWProParser::getZoneData(WPXBinaryData &data, int blockId)
 
   unsigned long read;
   int first=blockId-1, last=blockId-1;
+  int const linkSz = version()<= 0 ? 2 : 4;
   while (!input->atEOS()) {
     bool ok = true;
     for(int i=first; i<= last; i++) {
@@ -453,7 +462,7 @@ bool MWProParser::getZoneData(WPXBinaryData &data, int blockId)
       m_state->m_blocksMap[i] = data.size()+(i-first)*0x100;
     }
     if (!ok) break;
-    long endPos = (last+1)*0x100 - 4;
+    long endPos = (last+1)*0x100 - linkSz;
     long pos = input->tell();
     input->seek(endPos, WPX_SEEK_SET);
     long limit = input->tell();
@@ -473,7 +482,7 @@ bool MWProParser::getZoneData(WPXBinaryData &data, int blockId)
     input->seek(limit, WPX_SEEK_SET);
 
     int act = last;
-    long val = input->readLong(4);
+    long val = input->readLong(linkSz);
     if (val == 0) break;
     if (val < 0)
       first = (-val)-1;
@@ -489,7 +498,7 @@ bool MWProParser::getZoneData(WPXBinaryData &data, int blockId)
       }
     }
     if (val < 0) {
-      int num = input->readULong(4);
+      int num = input->readULong(linkSz);
       last = first+(num-1);
     }
     if (last-first > 2) {
@@ -681,6 +690,11 @@ bool MWProParser::checkHeader(IMWAWHeader *header, bool strict)
 
   f << "FileHeader:";
   switch (vers) {
+  case 0x2e:
+    vers = 0;
+    if (val != 0x2e)
+      return false;
+    break;
   case 4:
     vers = 1;
     if (val != 4) {
@@ -702,10 +716,12 @@ bool MWProParser::checkHeader(IMWAWHeader *header, bool strict)
   if (strict) {
     if (!readPrintInfo())
       return false;
-    input->seek(0xdd, WPX_SEEK_SET);
-    // "MP" seems always in this position
-    if (input->readULong(2) != 0x4d50)
-      return false;
+    if (vers) {
+      input->seek(0xdd, WPX_SEEK_SET);
+      // "MP" seems always in this position
+      if (input->readULong(2) != 0x4d50)
+        return false;
+    }
   }
 
 
@@ -788,35 +804,72 @@ bool MWProParser::readDocHeader()
   libmwaw_tools::DebugStream f;
 
   f << "Entries(Data0):";
-  long val = input->readLong(1); // always 0 ?
-  if (val) f << "unkn=" << val << ",";
-  int N=input->readLong(2); // find 2, a, 9e, 1a
-  f << "N?=" << N << ",";
-  N = input->readLong(1); // almost always 0, find one time 6 ?
-  if (N) f << "N1?=" << N << ",";
-  val = input->readLong(2); // almost always 0x622, find also 0 and 12
-  f << "f0=" << std::hex << val << std::dec << ",";
-  val = input->readLong(1); // always 0 ?
-  if (val) f << "unkn1=" << val << ",";
-  N = input->readLong(2);
-  f << "N2?=" << N << ",";
-  val = input->readLong(1); // almost always 1 ( find one time 2)
-  f << "f1=" << val << ",";
-  int const defVal[] = { 0x64, 0/*small number between 1 and 8*/, 0x24 };
-  for (int i = 0; i < 3; i++) {
-    val = input->readLong(2);
-    if (val != defVal[i])
-      f << "f" << i+2 << "=" << val << ",";
+  long val;
+  if (version()==0) {
+    val = input->readLong(2); // always 0 ?
+    if (val) f << "f0=" << val << ",";
+    /* fl0=[2|6|82|86], fl1=[80|a0|a4], other 0|1|-1 */
+    for (int i = 0; i < 9; i++) {
+      val = (i<2) ? input->readULong(1) : input->readLong(1);
+      if (!val) continue;
+      if (i < 2)
+        f << "fl" << i << "=" << std::hex << val << std::dec << ",";
+      else
+        f << "fl" << i << "=" << val << ",";
+    }
+    val = input->readLong(2); // always 612 ?
+    if (val != 0x612) f << "f1=" << val << ",";
+    val = input->readLong(1); // always 1 ?
+    if (val != 1) f << "f2=" << val << ",";
+    val = input->readLong(2); // always 2 ?
+    if (val != 2) f << "f3=" << val << ",";
+    val = input->readLong(2); // always 12c ?
+    if (val != 0x12c) f << "f4=" << val << ",";
+    for (int i = 0; i < 4; i++) { // 0, 0, 3c, a small number
+      val = input->readLong(2);
+      if (val) f << "g" << i << "=" << val << ",";
+    }
+    /* then
+      0009000020000000fd803333000600000000000120 |
+      000c000020000000fd803333000600000000000180 |
+      000c000020000000fd8033330006000000000001a0 |
+      000c0000200e0000fd8033330006000000000001a0 |
+      00240000200e0000fd8033330006000000000001a0
+
+      and
+      000001000000016f66000000000000000800090001000000
+     */
+  } else {
+    val = input->readLong(1); // always 0 ?
+    if (val) f << "unkn=" << val << ",";
+    int N=input->readLong(2); // find 2, a, 9e, 1a
+    f << "N?=" << N << ",";
+    N = input->readLong(1); // almost always 0, find one time 6 ?
+    if (N) f << "N1?=" << N << ",";
+    val = input->readLong(2); // almost always 0x622, find also 0 and 12
+    f << "f0=" << std::hex << val << std::dec << ",";
+    val = input->readLong(1); // always 0 ?
+    if (val) f << "unkn1=" << val << ",";
+    N = input->readLong(2);
+    f << "N2?=" << N << ",";
+    val = input->readLong(1); // almost always 1 ( find one time 2)
+    f << "f1=" << val << ",";
+    int const defVal[] = { 0x64, 0/*small number between 1 and 8*/, 0x24 };
+    for (int i = 0; i < 3; i++) {
+      val = input->readLong(2);
+      if (val != defVal[i])
+        f << "f" << i+2 << "=" << val << ",";
+    }
+    for (int i = 5; i < 10; i++) { // always 0 ?
+      val = input->readLong(1);
+      if (val)
+        f << "f" << i << "=" << val << ",";
+    }
+    val = input->readLong(2); // always 480 ?
+    if (val != 0x480) f << "f10=" << val << ",";
+    val = input->readULong(1); // always 0 ?
+    if (val) f << "f11=" << val << ",";
   }
-  for (int i = 5; i < 10; i++) { // always 0 ?
-    val = input->readLong(1);
-    if (val)
-      f << "f" << i << "=" << val << ",";
-  }
-  val = input->readLong(2); // always 480 ?
-  if (val != 0x480) f << "f10=" << val << ",";
-  val = input->readULong(1); // always 0 ?
-  if (val) f << "f11=" << val << ",";
   float dim[6];
   for (int i = 0; i < 6; i++)
     dim[i] = input->readLong(4)/65356.;
@@ -842,6 +895,10 @@ bool MWProParser::readDocHeader()
   f << "margins=["; // top, bottom, left, right
   for (int i = 2; i < 6; i++) f << dim[i] << ",";
   f << "],";
+  if (version()==0) {
+    m_state->m_col = input->readLong(2);
+    if (m_state->m_col != 1) f << "col=" << m_state->m_col << ",";
+  }
 
   ascii().addDelimiter(input->tell(), '|');
   /** then find
@@ -852,22 +909,31 @@ bool MWProParser::readDocHeader()
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  input->seek(pos+97, WPX_SEEK_SET);
-  pos = input->tell();
   f.str("");
   f << "Data0-A:";
-  val = input->readULong(2);
-  if (val != 0x4d50) // MP
-    f << "#keyWord=" << std::hex << val <<std::dec;
-  //always 4, 4, 6 ?
-  for (int i = 0; i < 3; i++) {
-    val = input->readLong(1);
-    if ((i==2 && val!=6) || (i < 2 && val != 4))
-      f << "f" << i << "=" << val << ",";
-  }
-  for (int i = 3; i < 9; i++) { // always 0 ?
-    val = input->readLong(2);
-    if (val) f << "f"  << i << "=" << val << ",";
+  if (version()==0) {
+    input->seek(pos+120, WPX_SEEK_SET);
+    pos = input->tell();
+    for (int i = 0; i < 3; i++) { // f0=f1, f2=0
+      val = input->readULong(4);
+      if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
+    }
+  } else {
+    input->seek(pos+97, WPX_SEEK_SET);
+    pos = input->tell();
+    val = input->readULong(2);
+    if (val != 0x4d50) // MP
+      f << "#keyWord=" << std::hex << val <<std::dec;
+    //always 4, 4, 6 ?
+    for (int i = 0; i < 3; i++) {
+      val = input->readLong(1);
+      if ((i==2 && val!=6) || (i < 2 && val != 4))
+        f << "f" << i << "=" << val << ",";
+    }
+    for (int i = 3; i < 9; i++) { // always 0 ?
+      val = input->readLong(2);
+      if (val) f << "f"  << i << "=" << val << ",";
+    }
   }
   // some dim ?
   f << "dim=[";
@@ -881,8 +947,8 @@ bool MWProParser::readDocHeader()
   }
   // always 0 ?
   for (int i = 2; i < 42; i++) {
-    val = input->readLong(2);
-    if (val) f << "g"  << i << "=" << val << ",";
+    val = input->readULong(2);
+    if (val) f << "g"  << i << "=" << std::hex << val << std::dec << ",";
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1007,6 +1073,8 @@ bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
                                   std::vector<IMWAWEntry> &res, int textLength)
 {
   res.resize(0);
+  int vers = version();
+  int expectedSize = vers == 0 ? 4 : 6;
   TMWAWInputStreamPtr input = zone->m_input;
   libmwaw_tools::DebugFile &asciiFile = zone->m_asciiFile;
   libmwaw_tools::DebugStream f;
@@ -1014,13 +1082,13 @@ bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
 
   int val = input->readULong(2);
   int sz = input->readULong(2);
-  if ((sz%6) != 0) {
+  if ((sz%expectedSize) != 0) {
     MWAW_DEBUG_MSG(("MWProParser::readTextEntries: find an odd size\n"));
     return false;
   }
   long endPos = pos+sz+4;
 
-  int numElt = sz/6;
+  int numElt = sz/expectedSize;
   f << "TextZone:entry(header),N=" << numElt << ",";
   if (val) f << "unkn=" << val << ",";
   asciiFile.addPos(pos);
@@ -1031,8 +1099,11 @@ bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
     pos = input->tell();
     f.str("");
     f << "TextZone-" << i<<":entry,";
-    int unkn = input->readLong(2);
-    if (unkn) f << "unkn=" << unkn << ",";
+    int unkn = 0;
+    if (vers >= 1) {
+      unkn = input->readLong(2);
+      if (unkn) f << "unkn=" << unkn << ",";
+    }
     int bl = input->readLong(2);
     f << "block=" << std::hex << bl << std::dec << ",";
     int nChar = input->readULong(2);
@@ -1141,12 +1212,20 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
                                  int textLength)
 {
   res.resize(0);
+  int vers = version();
+  int expectedSz = vers==0 ? 8 : 10;
   TMWAWInputStreamPtr input = zone->m_input;
   libmwaw_tools::DebugFile &asciiFile = zone->m_asciiFile;
   libmwaw_tools::DebugStream f;
   long pos = input->tell();
 
   int val = input->readULong(2);
+  if (val && vers == 0) {
+    input->seek(pos, WPX_SEEK_SET);
+    asciiFile.addPos(pos);
+    asciiFile.addNote("_");
+    return true;
+  }
   int sz = input->readULong(2);
   if (sz == 0) {
     asciiFile.addPos(pos);
@@ -1154,29 +1233,61 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
     return true;
   }
 
-  if ((sz%10) != 0) {
+  if ((sz%expectedSz) != 0) {
     MWAW_DEBUG_MSG(("MWProParser::readTextTokens: find an odd size\n"));
     return false;
   }
   long endPos = pos+sz+4;
 
-  int numElt = sz/10;
+  int numElt = sz/expectedSz;
   f << "TextZone:token(header),N=" << numElt << ",";
   if (val) f << "unkn=" << val << ",";
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
 
   int remainLength = textLength;
+  int numFootnotes = 0;
+  std::vector<int> pictPos;
   for (int i = 0; i < numElt; i++) {
+    f.str("");
     pos = input->tell();
 
     MWProParserInternal::Token data;
     data.m_type = input->readULong(1);
+    if (vers==0) { // check me
+      switch(data.m_type) {
+      case 2:  // page number
+        data.m_type=1;
+        break;
+      case 3:  // footnote content
+        break;
+      case 4: // figure
+        break;
+      case 5: // footnote pos
+        data.m_type=2;
+        data.m_blockId = ++numFootnotes; // for MW2
+        break;
+      case 0x15: // Fixme: must find other date
+      case 0x17: // date alpha
+        data.m_type=6;
+        break;
+      case 0x1a: // time
+        data.m_type=7;
+        break;
+      default:
+        MWAW_DEBUG_MSG(("MWProParser::readTextTokens: unknown block type %d\n", data.m_type));
+        f << "#type=" << data.m_type << ",";
+        data.m_type = -1;
+        break;
+      }
+    }
     data.m_flags[0] = input->readULong(1);
-    int nChar = data.m_length = input->readULong(4);
+    int nChar = data.m_length = input->readULong(vers == 0 ? 2 : 4);
     for (int j = 1; j < 3; j++) data.m_flags[j] = input->readULong(1);
-    data.m_blockId = input->readLong(2);
-    f.str("");
+    if (vers == 0)
+      data.m_flags[3] = input->readULong(2);
+    else
+      data.m_blockId = input->readULong(2);
     f << "TextZone-" << i<< ":token," << data;
     if (nChar > remainLength) {
       MWAW_DEBUG_MSG(("MWProParser::readTextTokens: bad size for block %d\n", i));
@@ -1186,13 +1297,47 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
     remainLength -= nChar;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
+    if (data.m_type == 4) pictPos.push_back(res.size());
     res.push_back(data);
-    if (data.m_blockId && (data.m_type == 2 || data.m_type == 4))
+
+    if (vers == 1 && data.m_blockId && (data.m_type == 2 || data.m_type == 4))
       m_state->m_blocksCallByTokens.push_back(data.m_blockId);
   }
-
-
   input->seek(endPos, WPX_SEEK_SET);
+  if (vers == 0 && pictPos.size()) {
+    int numPict = pictPos.size();
+    // checkme always inverted ?
+    for (int i = numPict-1; i >= 0; i--) {
+      MWProParserInternal::Token &token = res[pictPos[i]];
+      pos = input->tell();
+      f.str("");
+      f << "TextZone-pict" << i<< ":";
+      val = input->readLong(2);
+      if (val) f << "unkn=" << val << ",";
+      int blockId = input->readULong(2);
+      if (blockId) {
+        token.m_blockId = blockId;
+        f << "block=" << blockId << ",";
+        parseDataZone(blockId,1);
+      }
+      long sz = input->readULong(4);
+      f << "sz=" << std::hex << sz << std::dec << ",";
+      int dim[4];
+      for (int j = 0; j < 4; j++) dim[j] = input->readLong(2);
+      token.m_box = Box2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+      f << "dim=[" << dim[1] << "x" << dim[0] << "-"
+        << dim[3] << "x" << dim[2] << ",";
+      for (int j = 0; j < 4; j++) dim[j] = input->readLong(2);
+      f << "dim2=[" << dim[1] << "x" << dim[0] << "-"
+        << dim[3] << "x" << dim[2] << ",";
+      // followed by junk ?
+      ascii().addDelimiter(input->tell(),'|');
+      input->seek(pos+62, WPX_SEEK_SET);
+      asciiFile.addPos(pos);
+      asciiFile.addNote(f.str().c_str());
+    }
+  }
+
   return long(input->tell() == endPos) && res.size() != 0;
 }
 
@@ -1208,6 +1353,42 @@ bool MWProParser::sendEmptyFrameZone(TMWAWPosition const &pos,
   if (m_listener)
     m_listener->insertTextBox(pos, subdoc, extras);
   return true;
+}
+
+////////////////////////////////////////////////////////////
+// try to send a text
+////////////////////////////////////////////////////////////
+int MWProParser::findNumHardBreaks(int blockId)
+{
+  std::map<int, shared_ptr<MWProParserInternal::TextZone> >::iterator it;
+  it = m_state->m_textMap.find(blockId);
+  if (it == m_state->m_textMap.end()) {
+    MWAW_DEBUG_MSG(("MWProParser::findNumHardBreaks: can not find text zone\n"));
+    return 0;
+  }
+  return findNumHardBreaks(it->second);
+}
+
+int MWProParser::findNumHardBreaks(shared_ptr<MWProParserInternal::TextZone> zone)
+{
+  if (!zone->m_entries.size()) return 0;
+  int num = 0;
+  TMWAWInputStreamPtr input = getInput();
+  for (int i = 0; i < int(zone->m_entries.size()); i++) {
+    IMWAWEntry const &entry = zone->m_entries[i];
+    input->seek(entry.begin(), WPX_SEEK_SET);
+    for (int i = 0; i < entry.length(); i++) {
+      switch(input->readULong(1)) {
+      case 0xc: // hard page
+      case 0xb: // difficult to differentiate column/page break so...
+        num++;
+        break;
+      default:
+        break;
+      }
+    }
+  }
+  return num;
 }
 
 ////////////////////////////////////////////////////////////
@@ -1263,7 +1444,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
     MWAW_DEBUG_MSG(("MWProParser::sendText: can not find the text entries\n"));
     return false;
   }
-
+  int vers = version();
   MWProStructuresListenerState listenerState(m_structures, mainZone);
   MWProParserInternal::DataPosition::Compare compareFunction;
   std::set<MWProParserInternal::DataPosition, MWProParserInternal::DataPosition::Compare>
@@ -1287,8 +1468,13 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
     }
   }
   std::vector<int> pageBreaks=listenerState.getPageBreaksPos();
-  for (int i = 0; i < int(pageBreaks.size()); i++)
+  for (int i = 0; i < int(pageBreaks.size()); i++) {
+    if (pageBreaks[i] >= zone->m_textLength) {
+      MWAW_DEBUG_MSG(("MWProParser::sendText: page breaks seems bad\n"));
+      break;
+    }
     set.insert(MWProParserInternal::DataPosition(-1, i, pageBreaks[i]));
+  }
 
   TMWAWInputStreamPtr input = getInput();
   long pos = zone->m_entries[0].begin();
@@ -1357,18 +1543,26 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
         if (m_listener) m_listener->insertField(IMWAWContentListener::PageNumber);
         break;
       case 2:
-        if (listenerState.isSent(zone->m_tokens[data.m_id].m_blockId)) {
+        if (vers == 1 && listenerState.isSent(zone->m_tokens[data.m_id].m_blockId)) {
           MWAW_DEBUG_MSG(("MWProParser::sendText: footnote is already sent...\n"));
         } else {
-          IMWAWSubDocumentPtr subdoc(new MWProParserInternal::SubDocument(*this, getInput(), zone->m_tokens[data.m_id].m_blockId));
+          int id = zone->m_tokens[data.m_id].m_blockId;
+          if (vers == 0) id = -id;
+          IMWAWSubDocumentPtr subdoc(new MWProParserInternal::SubDocument(*this, getInput(), id));
           m_listener->insertNote(FOOTNOTE, subdoc);
         }
         break;
       case 3:
         break; // footnote content, ok
       case 4:
-        listenerState.send(zone->m_tokens[data.m_id].m_blockId);
-        listenerState.resendAll();
+        if (vers==0) {
+          TMWAWPosition pos(Vec2i(0,0), zone->m_tokens[data.m_id].m_box.size(), WPX_POINT);
+          pos.setRelativePosition(TMWAWPosition::Char, TMWAWPosition::XLeft, TMWAWPosition::YBottom);
+          sendPictureZone(zone->m_tokens[data.m_id].m_blockId, pos);
+        } else {
+          listenerState.send(zone->m_tokens[data.m_id].m_blockId);
+          listenerState.resendAll();
+        }
         break;
       case 5:
         break; // hyphen ok
@@ -1554,6 +1748,7 @@ void MWProParser::saveOriginal(TMWAWInputStreamPtr input)
 {
   libmwaw_tools::DebugStream f;
 
+  int ptSz = version()==0 ? 2 : 4;
   libmwaw_tools::DebugFile orig;
   orig.setStream(input);
   orig.open("orig");
@@ -1566,14 +1761,14 @@ void MWProParser::saveOriginal(TMWAWInputStreamPtr input)
     f.str("");
     int val = 0;
     if (bl) {
-      input->seek(-4, WPX_SEEK_CUR);
-      val = input->readLong(4);
+      input->seek(-ptSz, WPX_SEEK_CUR);
+      val = input->readLong(ptSz);
       int next = val > 0 ? val : -val;
       if (next > 0 && next < 0x1000) {
         f << "next=" << std::hex << (next-1)*0x100 << std::dec << ",";
         if (val < 0)
-          f << "N=?" << input->readLong(4) << ",";
-        orig.addPos(pos-4);
+          f << "N=?" << input->readLong(ptSz) << ",";
+        orig.addPos(pos-ptSz);
         orig.addNote(f.str().c_str());
       }
     }
