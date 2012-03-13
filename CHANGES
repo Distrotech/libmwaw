@@ -1,8 +1,20 @@
 CHANGES:
 
+03/17/2012: 
+- tags 0.0.2
+
+03/13/2012:
+- add MacWrite II, MacWrite Pro 1.5, WriteNow v1.0-v2.0 parser
+- add Microsoft Word v4.0-v5.0 parser
+  ( crude version which retrieves the text)
+
+02/04/2012:
+- add parser for MacWrite Pro 1.0
+- tags 0.0.1
+
 01/12/2012: add first version of WriteNow 3.0 and 4.0 Parser 
 
-12/19/2011: creation -> 0.0.0
+12/19/2011: creation
 - libmwaw created from on version of libwps.
 - add first version of MacWrite 4.5 and ClarisWorks/AppleWorks Parser
 

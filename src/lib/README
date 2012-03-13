@@ -8,7 +8,7 @@
 - CW* : parser of ClarisWorks and AppleWorks documents
 - MSW* : parser of Microsoft Word documents
 - MW* : parser of MacWrite documents
-- MWPro* : parser of MacWrite Pro documents
+- MWPro* : parser of MacWrite II, MacWrite Pro documents
 - WN* : parser of WriteNow documents
 - WP* : parser of WriterPlus documents
 ------------------------------------------------------------
@@ -126,7 +126,7 @@ MSWParser : parser of Microsoft Word document : v4.0-5.0
 
 MWParser : parser of MacWrite document : v1.0-5.01
 
-MWProParser : parser of MacWritePro document : v1.0-1.5
+MWProParser : parser of MacWrite II, Pro (v1.0-1.5) document
 -   MWProStructures : class which reads the main structures find in a document
 
 WNParser : parser of WriteNow document : v1.0-4.0

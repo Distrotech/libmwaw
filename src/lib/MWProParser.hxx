@@ -75,7 +75,7 @@ class SubDocument;
 class MWProStructures;
 class MWProStructuresListenerState;
 
-/** \brief the main class to read a MacWrite Pro file
+/** \brief the main class to read a MacWrite II and MacWrite Pro file
  *
  *
  *
