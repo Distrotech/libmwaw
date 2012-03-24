@@ -1419,7 +1419,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
     return false;
   }
   m_input->seek(pos, WPX_SEEK_SET);
-  int val, just;
+  int val, just = 0;
   if (vers == 0) {
     just = m_input->readULong(2);
     val = m_input->readLong(2);
@@ -1972,7 +1972,7 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
 
   ascii().addDelimiter(m_input->tell(), '|');
   m_input->seek(endPos, WPX_SEEK_SET);
-  while (m_input->readLong(2)==0 && !m_input->atEOS());
+  while (m_input->readLong(2)==0 && !m_input->atEOS()) {}
   m_input->seek(-2, WPX_SEEK_CUR);
   if (m_input->readLong(1)) m_input->seek(-1, WPX_SEEK_CUR);
   ascii().addPos(pos);
@@ -2783,7 +2783,7 @@ std::string MWProStructuresListenerState::getFontDebugString(int fId)
 {
   if (!m_structures) {
     MWAW_DEBUG_MSG(("MWProStructuresListenerState::getFontDebugString: can not find structures\n"));
-    return false;
+    return "";
   }
 
   std::stringstream s;
@@ -2851,7 +2851,7 @@ void MWProStructuresListenerState::sendParagraph(MWProStructuresInternal::Paragr
 
 std::string MWProStructuresListenerState::getParagraphDebugString(int pId)
 {
-  if (!m_structures) return false;
+  if (!m_structures) return "";
 
   std::stringstream s;
   if (pId < 0 || pId >= int(m_structures->m_state->m_paragraphsList.size())) {

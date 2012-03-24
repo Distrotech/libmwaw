@@ -68,7 +68,7 @@ struct Section;
 struct State;
 }
 
-class MSWEntry;
+struct MSWEntry;
 class MSWParser;
 
 /** \brief the main class to read the text part of Claris Works file

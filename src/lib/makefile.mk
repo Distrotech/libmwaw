@@ -50,6 +50,9 @@ SLOFILES= \
 	$(SLO)$/MWParser.cxx			\
 	$(SLO)$/MWProParser.cxx			\
 	$(SLO)$/MWProStructures.cxx		\
+	$(SLO)$/MSKGraph.cxx			\
+	$(SLO)$/MSKParser.cxx			\
+	$(SLO)$/MSKText.cxx			\
 	$(SLO)$/MSWParser.cxx			\
 	$(SLO)$/MSWText.cxx			\
 	$(SLO)$/TMWAWDebug.cxx			\

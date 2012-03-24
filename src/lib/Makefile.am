@@ -18,7 +18,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_DEPENDENCIES = @LIBMWAW_WIN
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic  -no-undefined
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	libmwaw_libwpd.cxx		\
-	DMWAWContentListener.cxx		\
+	DMWAWContentListener.cxx	\
 	DMWAWEncryption.cxx		\
 	DMWAWListener.cxx		\
 	DMWAWMemoryStream.cxx		\
@@ -38,6 +38,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	DMWAWSubDocument.hxx		\
 	DMWAWTable.h			\
 	DMWAWFileStructure.hxx		\
+					\
 	libmwaw_internal.cxx		\
 	IMWAWCell.cxx			\
 	IMWAWContentListener.cxx	\
@@ -57,6 +58,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	IMWAWSubDocument.hxx		\
 	IMWAWTableHelper.hxx		\
 	IMWAWTextParser.hxx		\
+					\
 	TMWAWDebug.cxx			\
 	TMWAWInputStream.cxx		\
 	TMWAWFont.cxx			\
@@ -83,27 +85,32 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	TMWAWPictOleContainer.hxx	\
 	TMWAWPosition.hxx		\
 	TMWAWPropertyHandler.hxx	\
+					\
 	MWAWContentListener.cxx		\
 	MWAWStruct.cxx			\
 	MWAWTools.cxx			\
+	libmwaw.hxx			\
+	MWAWContentListener.hxx		\
+	MWAWStruct.hxx			\
+	MWAWTools.hxx			\
+					\
 	CWDatabase.cxx			\
 	CWGraph.cxx			\
 	CWParser.cxx			\
 	CWSpreadsheet.cxx		\
 	CWTable.cxx			\
 	CWText.cxx			\
+	MSKGraph.cxx			\
+	MSKParser.cxx			\
+	MSKText.cxx			\
+	MSWParser.cxx			\
+	MSWText.cxx			\
 	MWParser.cxx			\
 	MWProParser.cxx			\
 	MWProStructures.cxx		\
-	MSWParser.cxx			\
-	MSWText.cxx			\
 	WNParser.cxx			\
 	WNText.cxx			\
 	WPParser.cxx			\
-	libmwaw.hxx			\
-	MWAWContentListener.hxx		\
-	MWAWStruct.hxx			\
-	MWAWTools.hxx			\
 	CWDatabase.hxx			\
 	CWGraph.hxx			\
 	CWParser.hxx			\
@@ -111,11 +118,14 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWStruct.hxx			\
 	CWTable.hxx			\
 	CWText.hxx			\
+	MSKGraph.hxx			\
+	MSKParser.hxx			\
+	MSKText.hxx			\
+	MSWParser.hxx			\
+	MSWText.hxx			\
 	MWParser.hxx			\
 	MWProParser.hxx			\
 	MWProStructures.hxx		\
-	MSWParser.hxx			\
-	MSWText.hxx			\
 	WNEntry.hxx			\
 	WNParser.hxx			\
 	WNText.hxx			\

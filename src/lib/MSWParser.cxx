@@ -1548,15 +1548,26 @@ bool MSWParser::readPrintInfo(MSWEntry &entry)
   lTopMargin -= Vec2i(decalX, decalY);
   rBotMargin += Vec2i(decalX, decalY);
 
+  int leftMargin = lTopMargin.x();
+  int topMargin = lTopMargin.y();
+
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -50;
-  if (rightMarg < 0) rightMarg=0;
+  if (rightMarg < 0) {
+    leftMargin -= (-rightMarg);
+    if (leftMargin < 0) leftMargin=0;
+    rightMarg=0;
+  }
   int botMarg = rBotMargin.y() -50;
-  if (botMarg < 0) botMarg=0;
+  if (botMarg < 0) {
+    topMargin -= (-botMarg);
+    if (topMargin < 0) topMargin=0;
+    botMarg=0;
+  }
 
-  m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
+  m_pageSpan.setMarginTop(topMargin/72.0);
   m_pageSpan.setMarginBottom(botMarg/72.0);
-  m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
+  m_pageSpan.setMarginLeft(leftMargin/72.0);
   m_pageSpan.setMarginRight(rightMarg/72.0);
   m_pageSpan.setFormLength(paperSize.y()/72.);
   m_pageSpan.setFormWidth(paperSize.x()/72.);

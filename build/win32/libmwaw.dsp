@@ -195,6 +195,18 @@ SOURCE=..\..\src\lib\MWProStructures.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MSKGraph.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSKParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSKText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MSWParser.cxx
 # End Source File
 # Begin Source File
@@ -396,6 +408,18 @@ SOURCE=..\..\src\lib\MWProParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWProStructures.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSKGraph.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSKParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSKText.hxx
 # End Source File
 # Begin Source File
 

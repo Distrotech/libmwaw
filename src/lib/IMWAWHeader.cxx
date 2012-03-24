@@ -63,6 +63,7 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
   for (int i = 0; i < 4; i++)
     val[i] = input->readULong(2);
   IMWAWHeader *header;
+  // ----------- clearly discriminant ------------------
   if (val[2] == 0x424F && val[3] == 0x424F && (val[0]>>8) < 8) {
     MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Claris Works file[Limited parsing]\n"));
     header=new IMWAWHeader(input, ((val[0]) >> 8));
@@ -115,8 +116,9 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
     return header;
   }
 
+  // ----------- less discriminant ------------------
   if (val[0] == 0x2e && val[1] == 0x2e) {
-    MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a MacWrite II file[no parsing]\n"));
+    MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a MacWrite II file\n"));
     header=new IMWAWHeader(input, 0);
     header->m_docType=IMWAWDocument::MWPRO;
     return header;
@@ -128,6 +130,7 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
     return header;
   }
 
+  // ----------- other ------------------
   if (val[0]==0 && val[1]==0 && val[2]==0 && val[3]==0) {
     input->seek(8, WPX_SEEK_SET);
     if (input->readULong(1) == 0x4) {
@@ -137,12 +140,33 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
       return header;
     }
   }
-#ifdef DEBUG
-  bool mw = (val[0] > 2 && val[0] < 8);
-#else
-  bool mw = val[0] == 3 || val[0] == 6;
-#endif
-  if (mw) {
+  if (val[0]==0) {
+    int vers = -1;
+    switch(val[1]) {
+    case 4:
+      vers = 1;
+      break;
+    case 8:
+      vers = 2;
+      break;
+    case 9:
+      vers = 3;
+      break;
+    case 11: // ok, but not text
+      vers = 4;
+      break;
+    default:
+      break;
+    }
+    if (vers > 0) {
+      MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Microsoft Works %d.0 file[no parsing]\n", vers));
+      header=new IMWAWHeader(input, vers);
+      header->m_docType=IMWAWDocument::MSWORKS;
+      return header;
+    }
+  }
+
+  if (val[0] == 3 || val[0] == 6) {
     // version will be print by MWParser::check
     header=new IMWAWHeader(input, val[0]);
     header->m_docType=IMWAWDocument::MW;

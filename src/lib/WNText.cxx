@@ -904,8 +904,9 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
   ascii().addNote("_");
 
   m_state->m_contentMap[entry.begin()] = text;
-  if (long(m_input->tell()) != entry.end())
+  if (long(m_input->tell()) != entry.end()) {
     MWAW_DEBUG_MSG(("WNText::parseContent: go after entry end\n"));
+  }
 
   return text;
 }

@@ -311,7 +311,7 @@ int CWText::numPages() const
     IMWAWEntry const &entry = iter->second->m_zones[i];
     m_input->seek(entry.begin()+4, WPX_SEEK_SET);
     int numC = entry.length()-4;
-    for (int c = 0; c < numC; c++) {
+    for (int ch = 0; ch < numC; ch++) {
       char c = m_input->readULong(1);
       if (c==0xb)
         numPage++;
@@ -1595,8 +1595,9 @@ bool CWText::readRuler(int id)
   if (val) f << "unkn1=" << val << ",";
   int numTabs = m_input->readULong(1);
   if (long(m_input->tell())+numTabs*4 > endPos) {
-    if (numTabs != 255) // 0xFF seems to be used in v1, v2
+    if (numTabs != 255) { // 0xFF seems to be used in v1, v2
       MWAW_DEBUG_MSG(("CWText::readRuler: numTabs is too big\n"));
+    }
     f << "numTabs*=" << numTabs << ",";
     numTabs = 0;
   }

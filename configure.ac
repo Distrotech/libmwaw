@@ -23,9 +23,9 @@ AC_LANG([C++])
 # ===========================
 # Find required base packages
 # ===========================
-AC_PROG_CC
-AC_PROG_CPP
-AC_PROG_CXX
+AC_PROG_CC([gcc cc clang])
+AC_PROG_CPP([g++ c++ clang++])
+AC_PROG_CXX([g++ c++ clang++])
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
@@ -151,8 +151,8 @@ AS_IF([test "x$native_win32" = "xyes"], [
 ], [
 	AS_IF([test x"$GCC" = xyes], [
 		# Be tough with warnings and produce less careless code
-		CFLAGS="$CFLAGS -Wall -pedantic"
-		CXXFLAGS="$CXXFLAGS -Wall -pedantic -Weffc++"
+		CFLAGS="$CFLAGS -Wall -pedantic -Wextra"
+		CXXFLAGS="$CXXFLAGS -Wall -pedantic -Wextra -Weffc++"
 	])
 ])
 AC_SUBST(DEBUG_CXXFLAGS)

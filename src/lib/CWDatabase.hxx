@@ -58,7 +58,7 @@ typedef shared_ptr<CWContentListener> CWContentListenerPtr;
 
 namespace MWAWStruct
 {
-struct Font;
+class Font;
 }
 
 namespace MWAWTools

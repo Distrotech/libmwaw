@@ -28,11 +28,11 @@
  */
 
 /*
- * Parser to Claris Works text document ( spreadsheet part )
+ * Parser to Microsoft Works text document ( graphic part )
  *
  */
-#ifndef CW_MWAW_SPREADSHEET
-#  define CW_MWAW_SPREADSHEET
+#ifndef MSK_MWAW_GRAPH
+#  define MSK_MWAW_GRAPH
 
 #include <list>
 #include <string>
@@ -51,10 +51,8 @@
 
 #include "IMWAWParser.hxx"
 
-#include "CWStruct.hxx"
-
-typedef class MWAWContentListener CWContentListener;
-typedef shared_ptr<CWContentListener> CWContentListenerPtr;
+typedef class MWAWContentListener MSKContentListener;
+typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
 
 namespace MWAWStruct
 {
@@ -67,29 +65,37 @@ class Convertissor;
 typedef shared_ptr<Convertissor> ConvertissorPtr;
 }
 
-namespace CWSpreadsheetInternal
+namespace libmwaw_tools
 {
-struct Spreadsheet;
-struct Field;
+class PictData;
+}
+
+namespace MSKGraphInternal
+{
+struct Font;
+struct Zone;
+struct DataPict;
+struct GroupZone;
+struct TextBox;
 struct State;
 }
 
-class CWParser;
+class MSKParser;
 
 /** \brief the main class to read the text part of Claris Works file
  *
  *
  *
  */
-class CWSpreadsheet
+class MSKGraph
 {
-  friend class CWParser;
+  friend class MSKParser;
 
 public:
   //! constructor
-  CWSpreadsheet(TMWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  MSKGraph(TMWAWInputStreamPtr ip, MSKParser &parser, MWAWTools::ConvertissorPtr &convertissor);
   //! destructor
-  virtual ~CWSpreadsheet();
+  virtual ~MSKGraph();
 
   /** returns the file version */
   int version() const;
@@ -97,30 +103,51 @@ public:
   /** returns the number of pages */
   int numPages() const;
 
-  //! reads the zone Text DSET
-  shared_ptr<CWStruct::DSET> readSpreadsheetZone
-  (CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete);
+  /** send a zone (textbox, ...) */
+  void send(int id);
 
 protected:
 
   //! sets the listener in this class and in the helper classes
-  void setListener(CWContentListenerPtr listen) {
+  void setListener(MSKContentListenerPtr listen) {
     m_listener = listen;
   }
+
+  //! sends the data which have not yet been sent to the listener
+  void flushExtra();
 
   //
   // Intermediate level
   //
 
-  /** try to read the first spreadsheet zone */
-  bool readZone1(CWSpreadsheetInternal::Spreadsheet &sheet);
+  //! read the picture header
+  bool readPictHeader(MSKGraphInternal::Zone &pict);
 
-  //! try to read the record structure
-  bool readContent(CWSpreadsheetInternal::Spreadsheet &sheet);
+  /** checks if the next zone is a v1 picture and returns a zone
+      id. If not, returns -1.
+   */
+  int getEntryPictureV1(IMWAWEntry &zone);
+
+  /** checks if the next zone is a v2 picture and returns a zone
+      id. If not, returns -1.
+   */
+  int getEntryPicture(IMWAWEntry &zone);
+
+
+  //! try to read a text zone
+  bool readText(MSKGraphInternal::TextBox &textBox);
+  /** send a textbox to the listener */
+  void send(MSKGraphInternal::TextBox &textBox);
 
   //
   // low level
   //
+  /** try to read the group data*/
+  shared_ptr<MSKGraphInternal::GroupZone> readGroup(MSKGraphInternal::Zone &group);
+  //! reads the textbox font
+  bool readFont(MSKGraphInternal::Font &font);
+  //! send the font properties
+  void setProperty(MSKGraphInternal::Font const &font);
 
   //! returns the debug file
   libmwaw_tools::DebugFile &ascii() {
@@ -128,8 +155,8 @@ protected:
   }
 
 private:
-  CWSpreadsheet(CWSpreadsheet const &orig);
-  CWSpreadsheet &operator=(CWSpreadsheet const &orig);
+  MSKGraph(MSKGraph const &orig);
+  MSKGraph &operator=(MSKGraph const &orig);
 
 protected:
   //
@@ -139,16 +166,16 @@ protected:
   TMWAWInputStreamPtr m_input;
 
   //! the listener
-  CWContentListenerPtr m_listener;
+  MSKContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWTools::ConvertissorPtr m_convertissor;
 
   //! the state
-  shared_ptr<CWSpreadsheetInternal::State> m_state;
+  shared_ptr<MSKGraphInternal::State> m_state;
 
   //! the main parser;
-  CWParser *m_mainParser;
+  MSKParser *m_mainParser;
 
   //! the debug file
   libmwaw_tools::DebugFile &m_asciiFile;

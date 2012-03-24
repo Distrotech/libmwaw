@@ -28,15 +28,17 @@
  */
 
 /*
- * Parser to Claris Works text document ( spreadsheet part )
+ * Parser to Microsoft Works text document
  *
  */
-#ifndef CW_MWAW_SPREADSHEET
-#  define CW_MWAW_SPREADSHEET
+#ifndef MSK_MWAW_TEXT
+#  define MSK_MWAW_TEXT
 
 #include <list>
 #include <string>
 #include <vector>
+
+#include "libmwaw_tools.hxx"
 
 #include "DMWAWPageSpan.hxx"
 
@@ -51,10 +53,8 @@
 
 #include "IMWAWParser.hxx"
 
-#include "CWStruct.hxx"
-
-typedef class MWAWContentListener CWContentListener;
-typedef shared_ptr<CWContentListener> CWContentListenerPtr;
+typedef class MWAWContentListener MSKContentListener;
+typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
 
 namespace MWAWStruct
 {
@@ -67,29 +67,30 @@ class Convertissor;
 typedef shared_ptr<Convertissor> ConvertissorPtr;
 }
 
-namespace CWSpreadsheetInternal
+namespace MSKTextInternal
 {
-struct Spreadsheet;
-struct Field;
+struct Font;
+struct Paragraph;
+struct LineZone;
+struct TextZone;
 struct State;
 }
 
-class CWParser;
+class MSKParser;
 
-/** \brief the main class to read the text part of Claris Works file
+/** \brief the main class to read the text part of Microsoft Works file
  *
  *
  *
  */
-class CWSpreadsheet
+class MSKText
 {
-  friend class CWParser;
-
+  friend class MSKParser;
 public:
   //! constructor
-  CWSpreadsheet(TMWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  MSKText(TMWAWInputStreamPtr ip, MSKParser &parser, MWAWTools::ConvertissorPtr &convertissor);
   //! destructor
-  virtual ~CWSpreadsheet();
+  virtual ~MSKText();
 
   /** returns the file version */
   int version() const;
@@ -97,30 +98,61 @@ public:
   /** returns the number of pages */
   int numPages() const;
 
-  //! reads the zone Text DSET
-  shared_ptr<CWStruct::DSET> readSpreadsheetZone
-  (CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete);
-
 protected:
 
   //! sets the listener in this class and in the helper classes
-  void setListener(CWContentListenerPtr listen) {
+  void setListener(MSKContentListenerPtr listen) {
     m_listener = listen;
   }
 
-  //
-  // Intermediate level
-  //
+  //! finds the different text zones
+  bool createZones();
 
-  /** try to read the first spreadsheet zone */
-  bool readZone1(CWSpreadsheetInternal::Spreadsheet &sheet);
+  // reads the header/footer string : version v1-2
+  std::string readHeaderFooterString(bool header);
 
-  //! try to read the record structure
-  bool readContent(CWSpreadsheetInternal::Spreadsheet &sheet);
+  //! sends the data which have not yet been sent to the listener
+  void flushExtra();
+
+  //! send a zone ( 0: mainZone)
+  void sendZone(int zoneId=0);
+
+  //! returns a header zone id ( or -1 )
+  int getHeader() const;
+
+  //! returns a footer zone id ( or -1 )
+  int getFooter() const;
 
   //
   // low level
   //
+
+  //! try to read a zone header
+  bool readZoneHeader(MSKTextInternal::LineZone &zone) const;
+
+  //! prepare a zone
+  void update(MSKTextInternal::TextZone &zone);
+
+  //! sends the zone data to the listener
+  void send(MSKTextInternal::TextZone &zone);
+
+  //! tries to read a font
+  bool readFont(MSKTextInternal::Font &font, long endPos);
+
+  //! send the font properties
+  void setProperty(MSKTextInternal::Font const &font);
+
+  //! tries to read a paragraph
+  bool readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Paragraph &parag);
+
+  //! send the paragraph properties
+  void setProperty(MSKTextInternal::Paragraph const &para);
+
+  //! tries to send a text zone
+  bool sendText(MSKTextInternal::LineZone &zone);
+
+  //! tries to send a string (for v1-2, header/footer zone)
+  bool sendString(std::string &str);
 
   //! returns the debug file
   libmwaw_tools::DebugFile &ascii() {
@@ -128,8 +160,8 @@ protected:
   }
 
 private:
-  CWSpreadsheet(CWSpreadsheet const &orig);
-  CWSpreadsheet &operator=(CWSpreadsheet const &orig);
+  MSKText(MSKText const &orig);
+  MSKText &operator=(MSKText const &orig);
 
 protected:
   //
@@ -139,16 +171,16 @@ protected:
   TMWAWInputStreamPtr m_input;
 
   //! the listener
-  CWContentListenerPtr m_listener;
+  MSKContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWTools::ConvertissorPtr m_convertissor;
 
   //! the state
-  shared_ptr<CWSpreadsheetInternal::State> m_state;
+  shared_ptr<MSKTextInternal::State> m_state;
 
   //! the main parser;
-  CWParser *m_mainParser;
+  MSKParser *m_mainParser;
 
   //! the debug file
   libmwaw_tools::DebugFile &m_asciiFile;

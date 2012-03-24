@@ -272,7 +272,8 @@ struct Section {
       f << std::hex << input->readULong(1) << std::dec << ",";
       break;
     case 0x82: // find one time with 168 (related to 7e ?)
-      f << "f" << std::hex << c << std::dec << "=" << val << ",";
+      if (dSz<3) return false;
+      f << "f" << std::hex << c << std::dec << "=" << input->readLong(2) << ",";
       break;
     case 0x83:
     case 0x84:
@@ -1998,12 +1999,11 @@ bool MSWText::readFont(MSWTextInternal::Font &font, bool mainZone)
     if (fId) {
       if (mainZone && (what & 0x50)==0) f << "#fId,";
       font.m_font.setId(fId);
-    } else if (what & 0x10)
-      ;//font.m_font.setId(0);
+    } else if (what & 0x10) {
+    }
     what &= 0xEF;
-  } else if (what & 0x10) // reset to default (times)
-    ;//font.m_font.setId(2);
-
+  } else if (what & 0x10) {
+  }
   font.m_font.setSize(0);
   if (sz >= 5) {
     int fSz = m_input->readULong(1)/2;

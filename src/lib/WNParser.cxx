@@ -841,7 +841,7 @@ bool WNParser::readPrintInfo(WNEntry const &entry)
   }
 
   input->seek(entry.begin(), WPX_SEEK_SET);
-  long sz = version() <= 2 ? 2+input->readULong(2) : input->readLong(4);
+  long sz = version() <= 2 ? 2+input->readULong(2) : input->readULong(4);
   if (sz != entry.length()) {
     MWAW_DEBUG_MSG(("WNParser::readPrintInfo: bad begin of last zone\n"));
     return false;

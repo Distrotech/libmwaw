@@ -810,7 +810,7 @@ bool MWProParser::readDocHeader()
     if (val) f << "f0=" << val << ",";
     /* fl0=[2|6|82|86], fl1=[80|a0|a4], other 0|1|-1 */
     for (int i = 0; i < 9; i++) {
-      val = (i<2) ? input->readULong(1) : input->readLong(1);
+      val = (i<2) ? int(input->readULong(1)) : input->readLong(1);
       if (!val) continue;
       if (i < 2)
         f << "fl" << i << "=" << std::hex << val << std::dec << ",";

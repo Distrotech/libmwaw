@@ -58,7 +58,7 @@ typedef shared_ptr<WNContentListener> WNContentListenerPtr;
 
 namespace MWAWStruct
 {
-struct Font;
+class Font;
 }
 
 namespace MWAWTools
@@ -96,7 +96,7 @@ class WNParser;
 class WNText
 {
   friend class WNParser;
-  friend class WNTextInternal::Cell;
+  friend struct WNTextInternal::Cell;
 public:
   //! constructor
   WNText(TMWAWInputStreamPtr ip, WNParser &parser, MWAWTools::ConvertissorPtr &convertissor);

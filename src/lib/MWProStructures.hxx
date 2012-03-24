@@ -157,7 +157,7 @@ class MWProStructures
 {
   friend class MWProParser;
   friend class MWProParserInternal::SubDocument;
-  friend class MWProStructuresInternal::Cell;
+  friend struct MWProStructuresInternal::Cell;
   friend class MWProStructuresListenerState;
 public:
   //! constructor
