@@ -104,7 +104,13 @@ public:
   int numPages() const;
 
   /** send a zone (textbox, ...) */
-  void send(int id);
+  void send(int id, bool local=true);
+
+  /** send page */
+  void sendAll();
+
+  /** try to update positions knowing pages and lines height */
+  void computePositions(std::vector<int> &linesHeight, std::vector<int> &pagesHeight);
 
 protected:
 

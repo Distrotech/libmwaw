@@ -119,6 +119,9 @@ protected:
   //! returns the page width, ie. paper size less margin (in inches)
   float pageWidth() const;
 
+  //! returns the page top left point
+  Vec2f getPageTopLeft() const;
+
   //! adds a new page
   void newPage(int number, bool softBreak=false);
   //
@@ -132,12 +135,15 @@ protected:
   bool readDocumentInfo();
   //! try to read a group zone (zone3)
   bool readGroup(IMWAWEntry &zone, int check);
+  //! try to send a textbox
+  bool sendTextBox(int id, TMWAWPosition const &pos, WPXPropertyList &extras);
 
   /** try to send an entry
 
   \note If id >= 0, the text parser zone id. If id < 0, the graph parser zone (-id-1)
    */
   void send(int id);
+
   //
   // low level
   //

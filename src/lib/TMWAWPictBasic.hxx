@@ -97,10 +97,11 @@ public:
   /** sets the surface color (color must be integer between 0 and 255)
    * default values : 0xFF,0xFF,0xFF, which corresponds to white
    */
-  void setSurfaceColor(int r, int g, int b) {
+  void setSurfaceColor(int r, int g, int b, bool hasColor = true) {
     m_surfaceColor[0] = r;
     m_surfaceColor[1] = g;
     m_surfaceColor[2] = b;
+    m_surfaceHasColor = hasColor;
   }
 
   /** returns the final representation in encoded odg (if possible) */
@@ -139,8 +140,10 @@ public:
     }
     for (int c = 0; c < 2; c++) {
       float diffF = m_extend[c]-aPict.m_extend[c];
-      if (diff) return diffF < 0.0 ? -1 : 1;
+      if (diffF) return diffF < 0.0 ? -1 : 1;
     }
+    if (m_surfaceHasColor != aPict.m_surfaceHasColor)
+      return m_surfaceHasColor;
     return 0;
   }
 protected:
@@ -167,14 +170,14 @@ protected:
   }
 
   //! protected constructor must not be called directly
-  PictBasic() : m_lineWidth(1.0) {
+  PictBasic() : m_lineWidth(1.0), m_surfaceHasColor(false) {
     for (int c = 0; c < 2; c++) m_extend[c]=0;
     for (int c = 0; c < 3; c++) m_lineColor[c]=0;
     for (int c = 0; c < 3; c++) m_surfaceColor[c]=255;
     setLineWidth(1.0);
   }
   //! protected constructor must not be called directly
-  PictBasic(PictBasic const &p) : Pict(), m_lineWidth(1.0) {
+  PictBasic(PictBasic const &p) : Pict(), m_lineWidth(1.0), m_surfaceHasColor(false) {
     *this=p;
   }
   //! protected= must not be called directly
@@ -185,6 +188,7 @@ protected:
     for (int c=0; c < 3; c++) m_lineColor[c] = p.m_lineColor[c];
     for (int c=0; c < 3; c++) m_surfaceColor[c] = p.m_surfaceColor[c];
     for (int c=0; c < 2; c++) m_extend[c] = p.m_extend[c];
+    m_surfaceHasColor = p.m_surfaceHasColor;
     return *this;
   }
 
@@ -195,6 +199,8 @@ private:
   int m_lineColor[3];
   //! the line color (in rgb)
   int m_surfaceColor[3];
+  //! true if the surface has some color
+  bool m_surfaceHasColor;
   //! m_extend[0]: from lineWidth, m_extend[1]: came from extra data
   float m_extend[2];
 };

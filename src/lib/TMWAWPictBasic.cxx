@@ -80,6 +80,11 @@ void PictBasic::endODG(TMWAWPropertyHandlerEncoder &doc) const
 void PictBasic::getStyle1DProperty(WPXPropertyList &list) const
 {
   list.clear();
+  if (m_lineWidth == 0) {
+    list.insert("lineFill", "none");
+    list.insert("lineWidth", "1pt");
+    return;
+  }
   list.insert("lineFill", "solid");
   std::stringstream s;
   s << std::hex << std::setfill('0') << "#"
@@ -93,7 +98,10 @@ void PictBasic::getStyle1DProperty(WPXPropertyList &list) const
 void PictBasic::getStyle2DProperty(WPXPropertyList &list) const
 {
   PictBasic::getStyle1DProperty(list);
-  list.insert("surfaceFill", "none");
+  if (!m_surfaceHasColor)
+    list.insert("surfaceFill", "none");
+  else
+    list.insert("surfaceFill", "solid");
   std::stringstream s;
   s << std::hex << std::setfill('0') << "#"
     << std::setw(2) << m_surfaceColor[0]

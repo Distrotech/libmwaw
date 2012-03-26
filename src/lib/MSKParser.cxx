@@ -207,6 +207,11 @@ float MSKParser::pageWidth() const
   return m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight();
 }
 
+Vec2f MSKParser::getPageTopLeft() const
+{
+  return Vec2f(m_pageSpan.getMarginLeft(),
+               m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0);
+}
 
 ////////////////////////////////////////////////////////////
 // new page
@@ -289,6 +294,7 @@ void MSKParser::parse(WPXDocumentInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
+      m_graphParser->sendAll();
       m_textParser->sendZone(0);
       m_textParser->flushExtra();
       m_graphParser->flushExtra();
@@ -321,9 +327,19 @@ bool MSKParser::checkIfPositionValid(long pos)
 void MSKParser::send(int id)
 {
   if (id < 0) {
-    MWAW_DEBUG_MSG(("MSKParser::send: do not know how to send %d zone\n", id));
+    m_graphParser->send(-id-1);
   } else
     m_textParser->sendZone(id);
+}
+
+bool  MSKParser::sendTextBox(int id, TMWAWPosition const &pos, WPXPropertyList &extras)
+{
+  shared_ptr<MSKParserInternal::SubDocument> subdoc
+  (new MSKParserInternal::SubDocument(*this, getInput(), -id-1));
+  m_listSubDocuments.push_back(subdoc);
+  if (m_listener)
+    m_listener->insertTextBox(pos, subdoc, extras);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -337,6 +353,7 @@ void MSKParser::createDocument(WPXDocumentInterface *documentInterface)
     return;
   }
 
+  int vers = version();
   // update the page
   int numPage = 1;
   if (m_textParser->numPages() > numPage)
@@ -351,6 +368,7 @@ void MSKParser::createDocument(WPXDocumentInterface *documentInterface)
   DMWAWPageSpan ps(m_pageSpan);
   int id = m_textParser->getHeader();
   if (id >= 0) {
+    if (vers <= 2) m_state->m_headerHeight = 12;
     DMWAWTableList tableList;
     shared_ptr<MSKParserInternal::SubDocument> subdoc
     (new MSKParserInternal::SubDocument(*this, getInput(), id));
@@ -360,6 +378,7 @@ void MSKParser::createDocument(WPXDocumentInterface *documentInterface)
 
   id = m_textParser->getFooter();
   if (id >= 0) {
+    if (vers <= 2) m_state->m_footerHeight = 12;
     DMWAWTableList tableList;
     shared_ptr<MSKParserInternal::SubDocument> subdoc
     (new MSKParserInternal::SubDocument(*this, getInput(), id));
@@ -437,8 +456,11 @@ bool MSKParser::createZones()
     ascii().addNote("_");
   }
 
-  // ok, we can find calculate the number of pages and the header and the footer height
+  // ok, prepare the data
   m_state->m_numPages = 1;
+  std::vector<int> linesH, pagesH;
+  if (m_textParser->getLinesPagesHeight(linesH, pagesH))
+    m_graphParser->computePositions(linesH, pagesH);
 
   return ok;
 }
@@ -530,6 +552,9 @@ bool MSKParser::checkHeader(IMWAWHeader *header, bool strict)
     return false;
 
   if (m_state->m_docType != IMWAWDocument::K_TEXT)
+    return false;
+
+  if (m_state->m_version < 1 || m_state->m_version > 2)
     return false;
 #endif
 

@@ -590,9 +590,10 @@ void IMWAWContentListener::_handleFrameParameters
 
   if ( pos.m_wrapping ==  TMWAWPosition::WDynamic)
     propList.insert( "style:wrap", "dynamic" );
-  else if ( pos.m_wrapping ==  TMWAWPosition::WRunThrough)
+  else if ( pos.m_wrapping ==  TMWAWPosition::WRunThrough) {
     propList.insert( "style:wrap", "run-through" );
-  else
+    propList.insert( "style:run-through", "background" );
+  } else
     propList.insert( "style:wrap", "none" );
 
   if (pos.m_anchorTo == TMWAWPosition::Paragraph) {

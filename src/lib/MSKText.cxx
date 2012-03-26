@@ -266,6 +266,19 @@ int MSKText::numPages() const
   return m_state->m_numPages;
 }
 
+bool MSKText::getLinesPagesHeight
+(std::vector<int> &lines, std::vector<int> &pages)
+{
+  if (!m_state->mainLineZone()) {
+    lines.resize(0);
+    pages.resize(0);
+    return false;
+  }
+  lines = m_state->mainLineZone()->m_linesHeight;
+  pages = m_state->mainLineZone()->m_pagesHeight;
+  return true;
+}
+
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////

@@ -113,11 +113,9 @@ IMWAWConfidence IMWAWDocument::isFileFormatSupported(WPXInputStream *input,  IMW
   case MWPRO:
     confidence = IMWAW_CONFIDENCE_GOOD;
     break;
-#ifdef DEBUG
   case MSWORKS:
     confidence = IMWAW_CONFIDENCE_GOOD;
     break;
-#endif
   case MSWORD:
     confidence = IMWAW_CONFIDENCE_GOOD;
     break;

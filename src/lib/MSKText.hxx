@@ -123,6 +123,10 @@ protected:
   //! returns a footer zone id ( or -1 )
   int getFooter() const;
 
+  //! return the lines and pages height ( for v1, ...)
+  bool getLinesPagesHeight(std::vector<int> &lines,
+                           std::vector<int> &pages);
+
   //
   // low level
   //

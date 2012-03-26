@@ -152,14 +152,20 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
     case 9:
       vers = 3;
       break;
-    case 11: // ok, but not text
+#ifdef DEBUG
+    case 11: // a msworks 4 file ( but not a text file)
       vers = 4;
       break;
+#endif
     default:
       break;
     }
     if (vers > 0) {
-      MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Microsoft Works %d.0 file[no parsing]\n", vers));
+      if (vers <= 2) {
+        MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Microsoft Works %d.0 file\n", vers));
+      } else  {
+        MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Microsoft Works %d.0 file[no parsing]\n", vers));
+      }
       header=new IMWAWHeader(input, vers);
       header->m_docType=IMWAWDocument::MSWORKS;
       return header;
