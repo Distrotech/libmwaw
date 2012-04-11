@@ -806,6 +806,8 @@ void DMWAWContentListener::_openSpan()
     propList.insert("style:text-underline-type", "double");
   else if (attributeBits & DMWAW_UNDERLINE_BIT)
     propList.insert("style:text-underline-type", "single");
+  if (attributeBits & DMWAW_OVERLINE_BIT)
+    propList.insert("style:text-overline-type", "single");
   if (attributeBits & DMWAW_OUTLINE_BIT)
     propList.insert("style:text-outline", "true");
   if (attributeBits & DMWAW_SMALL_CAPS_BIT)

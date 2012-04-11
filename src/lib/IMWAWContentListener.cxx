@@ -176,7 +176,8 @@ void IMWAWContentListener::_flushDeferredTabs()
 
   // CHECKME: the tab are not underline even if the underline bit is set
   uint32_t oldTextAttributes = m_ps->m_textAttributeBits;
-  uint32_t newAttributes = oldTextAttributes & (~DMWAW_UNDERLINE_BIT);
+  uint32_t newAttributes = oldTextAttributes & (~DMWAW_UNDERLINE_BIT) &
+                           (~DMWAW_OVERLINE_BIT);
   if (oldTextAttributes != newAttributes) setTextAttribute(newAttributes);
   if (!m_ps->m_isSpanOpened) _openSpan();
   for (; m_parseState->m_numDeferredTabs > 0; m_parseState->m_numDeferredTabs--)

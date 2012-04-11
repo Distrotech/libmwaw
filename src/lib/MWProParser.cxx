@@ -726,10 +726,8 @@ bool MWProParser::checkHeader(IMWAWHeader *header, bool strict)
 
 
   // ok, we can finish initialization
-  if (header) {
-    header->setMajorVersion(m_state->m_version);
-    header->setType(IMWAWDocument::MWPRO);
-  }
+  if (header)
+    header->reset(IMWAWDocument::MWPRO, m_state->m_version);
 
   //
   input->seek(headerSize, WPX_SEEK_SET);

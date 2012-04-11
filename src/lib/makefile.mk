@@ -37,6 +37,8 @@ SLOFILES= \
 	$(SLO)$/DMWAWPageSpan.cxx		\
 	$(SLO)$/DMWAWSubDocument.cxx		\
 	$(SLO)$/DMWAWTable.cxx			\
+	$(SLO)$/FWParser.cxx			\
+	$(SLO)$/FWText.cxx			\
 	$(SLO)$/IMWAWCell.cxx			\
 	$(SLO)$/IMWAWContentListener.cxx	\
 	$(SLO)$/IMWAWDocument.cxx		\

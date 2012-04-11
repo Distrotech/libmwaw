@@ -143,6 +143,14 @@ SOURCE=..\..\src\lib\DMWAWTable.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\FWParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\FWText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\IMWAWCell.cxx
 # End Source File
 # Begin Source File
@@ -344,6 +352,14 @@ SOURCE=..\..\src\lib\DMWAWSubDocument.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\DMWAWTable.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\FWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\FWText.hxx
 # End Source File
 # Begin Source File
 

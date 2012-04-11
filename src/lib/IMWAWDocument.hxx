@@ -60,13 +60,13 @@ class IMWAWDocument
 public:
   /** an enum to define the different type of document
 
-  -CW: ClarisWorks/AppleWorks document
+  -CW: ClarisWorks/AppleWorks document (basic)
   -FULLW: FullWrite Professionial (nothing done)
   -MINDW: MindWrite (nothing done)
   -MW: MacWrite document
   -MWPRO: MacWriteII or MacWritePro document
-  -MSWORD: MSWord document (basic done)
-  -MSWORKS: MSWorks document (nothing done)
+  -MSWORD: MSWord document (v4 v5: basic done)
+  -MSWORKS: MSWorks document (v1 v2)
   -NISUSW: Nisus Writer document (nothing done)
   -WNOW: WriteNow
   -WPLUS: writerplus document ( or maybe not)

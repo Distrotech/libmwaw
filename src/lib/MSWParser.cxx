@@ -723,6 +723,11 @@ bool MSWParser::checkHeader(IMWAWHeader *header, bool strict)
       if (val) f << "h" << i << "=" << val << ",";
     }
     input->seek(headerSize, WPX_SEEK_SET);
+
+    // ok, we can finish initialization
+    if (header)
+      header->reset(IMWAWDocument::MSWORD, m_state->m_version);
+
     ascii().addPos(0);
     ascii().addNote(f.str().c_str());
     return true;
@@ -786,10 +791,8 @@ bool MSWParser::checkHeader(IMWAWHeader *header, bool strict)
     if (val) f << "h" << i << "=" << val << ",";
   }
   // ok, we can finish initialization
-  if (header) {
-    header->setMajorVersion(m_state->m_version);
-    header->setType(IMWAWDocument::MSWORD);
-  }
+  if (header)
+    header->reset(IMWAWDocument::MSWORD, m_state->m_version);
 
   if (long(input->tell()) != headerSize) {
     ascii().addDelimiter(input->tell(), '|');

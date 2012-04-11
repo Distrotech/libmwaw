@@ -30,6 +30,8 @@
 #ifndef IMWAW_HEADER_H
 #define IMWAW_HEADER_H
 
+#include <vector>
+
 #include <libwpd-stream/libwpd-stream.h>
 #include "libmwaw_internal.hxx"
 
@@ -46,29 +48,33 @@ public:
   typedef enum IMWAWDocument::DocumentType DocumentType;
   typedef enum IMWAWDocument::DocumentKind DocumentKind;
 
-  //! constructor given the input and the document version \sa m_majorVersion
-  IMWAWHeader(TMWAWInputStreamPtr input, int majorVersion);
+
+  //! constructor given the input
+  IMWAWHeader(IMWAWDocument::DocumentType type=IMWAWDocument::UNKNOWN, int vers=0);
   //! destructor
   virtual ~IMWAWHeader();
 
   /** tests the input file and returns a header if the file looks like a MWAW document.
 
   \note this check phase can only be partial ; ie. we only test the first bytes of the file and/or the existence of some oles. This explains that IMWAWDocument implements a more complete test to recognize the difference Mac Files which share the same type of header...
-  \note TODO: moves this function in IMWAWDocument
   */
-  static IMWAWHeader * constructHeader(TMWAWInputStreamPtr input);
+  static std::vector<IMWAWHeader> constructHeader(TMWAWInputStreamPtr input);
 
-  //! returns the actual input
-  TMWAWInputStreamPtr getInput() const {
-    return m_input;
+  //! resets the data
+  void reset(IMWAWDocument::DocumentType type, int vers,
+             DocumentKind kind = IMWAWDocument::K_TEXT) {
+    m_docType = type;
+    m_version = vers;
+    m_docKind = kind;
   }
+
   //! returns the major version
   int getMajorVersion() const {
-    return m_majorVersion;
+    return m_version;
   }
   //! sets the major version
   void setMajorVersion(int version) {
-    m_majorVersion=version;
+    m_version=version;
   }
 
   //! returns the document type
@@ -90,20 +96,8 @@ public:
   }
 
 private:
-  //! internal constructor: forbidden
-  IMWAWHeader(const IMWAWHeader&);
-  //! internal copy operator: forbidden
-  IMWAWHeader& operator=(const IMWAWHeader&);
-
-  //! input
-  TMWAWInputStreamPtr m_input;
-  /** the document version
-   *
-   * - 2-8: means a Pc document version 2-8
-   * - 100: potential Mac Document ( partial check)
-   * - 101-104: means a Mac document version 1-4
-   */
-  int m_majorVersion;
+  /** the document version */
+  int m_version;
   /** the document type */
   DocumentType m_docType;
   /** the document kind */

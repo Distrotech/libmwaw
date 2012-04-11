@@ -837,12 +837,6 @@ bool MWParser::checkHeader(IMWAWHeader *header, bool strict)
   }
   f << fHeader;
 
-  // ok, we can finish initialization
-  if (header) {
-    header->setMajorVersion(m_state->m_version);
-    header->setType(IMWAWDocument::MW);
-  }
-
   //
   input->seek(headerSize, WPX_SEEK_SET);
   if (strict) {
@@ -855,6 +849,10 @@ bool MWParser::checkHeader(IMWAWHeader *header, bool strict)
   }
   input->seek(headerSize, WPX_SEEK_SET);
   m_state->m_fileHeader = fHeader;
+
+  // ok, we can finish initialization
+  if (header)
+    header->reset(IMWAWDocument::MW, m_state->m_version);
 
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());

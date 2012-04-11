@@ -97,6 +97,7 @@ std::string Convertissor::getFontDebugString(MWAWStruct::Font const &ft) const
   if (flags&DMWAW_BOLD_BIT) o << "b:";
   if (flags&DMWAW_ITALICS_BIT) o << "it:";
   if (flags&DMWAW_UNDERLINE_BIT) o << "underL:";
+  if (flags&DMWAW_OVERLINE_BIT) o << "overL:";
   if (flags&DMWAW_EMBOSS_BIT) o << "emboss:";
   if (flags&DMWAW_SHADOW_BIT) o << "shadow:";
   if (flags&DMWAW_OUTLINE_BIT) o << "outline:";
@@ -105,6 +106,8 @@ std::string Convertissor::getFontDebugString(MWAWStruct::Font const &ft) const
   if (flags&DMWAW_SMALL_CAPS_BIT) o << "smallCaps:";
   if (flags&DMWAW_ALL_CAPS_BIT) o << "allCaps:";
   if (flags&DMWAW_HIDDEN_BIT) o << "hidden:";
+  if (flags&DMWAW_SMALL_PRINT_BIT) o << "consended:";
+  if (flags&DMWAW_LARGE_BIT) o << "extended:";
   if ((flags&DMWAW_SUPERSCRIPT_BIT) || (flags&DMWAW_SUPERSCRIPT100_BIT))
     o << "superS:";
   if ((flags&DMWAW_SUBSCRIPT_BIT) || (flags&DMWAW_SUBSCRIPT100_BIT))

@@ -28,12 +28,11 @@
  */
 
 /*
- * parser for WriteNow 3.0 and 4.0
+ * Parser to convert FullWrite document
  *
- * Note: WriteNow 2.0 seems very different
  */
-#ifndef WN_MWAW_PARSER
-#  define WN_MWAW_PARSER
+#ifndef FP_MWAW_PARSER
+#  define FP_MWAW_PARSER
 
 #include <list>
 #include <string>
@@ -52,8 +51,8 @@
 
 #include "IMWAWParser.hxx"
 
-typedef class MWAWContentListener WNContentListener;
-typedef shared_ptr<WNContentListener> WNContentListenerPtr;
+typedef class MWAWContentListener FWContentListener;
+typedef shared_ptr<FWContentListener> FWContentListenerPtr;
 
 namespace MWAWTools
 {
@@ -66,32 +65,75 @@ namespace libmwaw_tools
 class PictData;
 }
 
-namespace WNParserInternal
+/** the definition of a zone in the file */
+struct FWEntry : public IMWAWEntry {
+  FWEntry(TMWAWInputStreamPtr input);
+  ~FWEntry();
+
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, FWEntry const &entry);
+
+  //! create a inputstream, ... if needed
+  void update();
+  //! write the debug file, ...
+  void closeDebugFile();
+
+  //! returns a reference to the ascii file
+  libmwaw_tools::DebugFile &getAsciiFile();
+  //! basic operator==
+  bool operator==(const FWEntry &a) const;
+  //! basic operator!=
+  bool operator!=(const FWEntry &a) const {
+    return !operator==(a);
+  }
+
+  //! the input
+  TMWAWInputStreamPtr m_input;
+  //! the definition id
+  int m_id;
+  //! the flags definition id
+  int m_flagsId;
+  //! the next entry id
+  int m_nextId;
+  //! the type id
+  int m_typeId;
+  //! some unknown values
+  int m_values[3];
+  //! the main data ( if the entry comes from several zone )
+  WPXBinaryData m_data;
+  //! the debug file
+  shared_ptr<libmwaw_tools::DebugFile> m_asciiFile;
+  //! the extra data ( for debugging )
+  std::string m_extra;
+private:
+  FWEntry(FWEntry const &);
+  FWEntry &operator=(FWEntry const &);
+};
+
+namespace FWParserInternal
 {
 struct State;
+struct Font;
 class SubDocument;
 }
 
-struct WNEntry;
-struct WNEntryManager;
+class FWText;
 
-class WNText;
-
-/** \brief the main class to read a WriteNow file
+/** \brief the main class to read a FullWrite file
  *
  *
  *
  */
-class WNParser : public IMWAWParser
+class FWParser : public IMWAWParser
 {
-  friend class WNText;
-  friend class WNParserInternal::SubDocument;
+  friend class FWText;
+  friend class FWParserInternal::SubDocument;
 
 public:
   //! constructor
-  WNParser(TMWAWInputStreamPtr input, IMWAWHeader * header);
+  FWParser(TMWAWInputStreamPtr input, IMWAWHeader * header);
   //! destructor
-  virtual ~WNParser();
+  virtual ~FWParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(IMWAWHeader *header, bool strict=false);
@@ -114,7 +156,7 @@ protected:
   void init();
 
   //! sets the listener in this class and in the helper classes
-  void setListener(WNContentListenerPtr listen);
+  void setListener(FWContentListenerPtr listen);
 
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
@@ -122,68 +164,52 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
+  //! sends the data which have not yet been sent to the listener
+  void flushExtra();
+
+  //! read the print info zone
+  bool readPrintInfo();
+
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
   //! returns the page width, ie. paper size less margin (in inches)
   float pageWidth() const;
 
-  //! returns the columns information
-  void getColumnInfo(int &numColumns, int &width) const;
-
   //! adds a new page
   void newPage(int number);
 
-  /*
-   * interface with WNText
-   */
-  //! returns the color which corresponds to colId
-  bool getColor(int colId, Vec3uc &col) const;
+  //! try to send a footnote/endnote entry
+  void sendFootnote(int id, bool endNote);
 
-  //! try to send a footnote entry
-  void sendFootnote(WNEntry const &entry);
+  //! find the last position of the document and read data
+  bool readDocPosition();
 
-  //! try to send the graphic zone
-  bool sendGraphic(int gId, Box2i const &bdbox);
+  //! try to read the zones main flags
+  bool readZoneFlags(shared_ptr<FWEntry> zone);
 
-  /*
-   * interface with subdocument
-   */
+  //! try to read the zone position
+  bool readZonePos(shared_ptr<FWEntry> zone);
 
-  //! try to send an entry
-  void send(WNEntry const &entry);
+  //! check if a zone is a graphic zone, ...
+  bool readGraphic(shared_ptr<FWEntry> zone);
+
+  //! send a graphic to a listener (if it exists)
+  bool sendGraphic(shared_ptr<FWEntry> zone);
+
+  //! check if a zone is a unknown zone, ...
+  bool readUnkn0(shared_ptr<FWEntry> zone);
+
+  //! check if a zone is the document information zone, ...
+  bool readDocInfo(shared_ptr<FWEntry> zone);
+
+  //
+  // interface to the text parser
+  //
+  bool send(int zId);
 
   //
   // low level
   //
-
-  //! try to read the document entries zone v3-v4
-  bool readDocEntries();
-
-  //! try to read the document entries zone v2
-  bool readDocEntriesV2();
-
-  /** try to read the graphic zone (unknown + list of entries )
-      and to create the graphic data zone
-   */
-  bool parseGraphicZone(WNEntry const &entry);
-
-  //! try to read the colormap zone
-  bool readColorMap(WNEntry const &entry);
-
-  //! try to read the print info zone
-  bool readPrintInfo(WNEntry const &entry);
-
-  //! try to read the last generic zones
-  bool readGenericUnkn(WNEntry const &entry);
-
-  //! try to send a picture to the listener
-  bool sendPicture(WNEntry const &entry, Box2i const &bdbox);
-
-  //! read a file entry
-  WNEntry readEntry();
-
-  //! check if a position is inside the file
-  bool checkIfPositionValid(long pos);
 
   //! returns the debug file
   libmwaw_tools::DebugFile &ascii() {
@@ -200,25 +226,22 @@ protected:
   // data
   //
   //! the listener
-  WNContentListenerPtr m_listener;
+  FWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWTools::ConvertissorPtr m_convertissor;
 
   //! the state
-  shared_ptr<WNParserInternal::State> m_state;
-
-  //! the list of entry
-  shared_ptr<WNEntryManager> m_entryManager;
+  shared_ptr<FWParserInternal::State> m_state;
 
   //! the actual document size
   DMWAWPageSpan m_pageSpan;
 
   //! the text parser
-  shared_ptr<WNText> m_textParser;
+  shared_ptr<FWText> m_textParser;
 
   //! a list of created subdocuments
-  std::vector<shared_ptr<WNParserInternal::SubDocument> > m_listSubDocuments;
+  std::vector<shared_ptr<FWParserInternal::SubDocument> > m_listSubDocuments;
 
   //! the debug file
   libmwaw_tools::DebugFile m_asciiFile;

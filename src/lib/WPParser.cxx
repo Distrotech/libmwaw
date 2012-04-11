@@ -775,7 +775,7 @@ bool WPParser::createZones()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool WPParser::checkHeader(IMWAWHeader */*header*/, bool strict)
+bool WPParser::checkHeader(IMWAWHeader *header, bool strict)
 {
   *m_state = WPParserInternal::State();
 
@@ -793,12 +793,16 @@ bool WPParser::checkHeader(IMWAWHeader */*header*/, bool strict)
   ascii().addPos(0);
   ascii().addNote("FileHeader");
 
+  bool ok = true;
   if (strict) {
-    bool ok = readWindowsInfo(0);
+    ok=readWindowsInfo(0);
     input->seek(2,WPX_SEEK_SET);
-    return ok;
   }
-  return true;
+
+  if (header)
+    header->reset(IMWAWDocument::WPLUS, 1);
+
+  return ok;
 }
 
 bool WPParser::readWindowsInfo(int zone)

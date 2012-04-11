@@ -33,6 +33,7 @@
 #include "IMWAWDocument.hxx"
 
 #include "CWParser.hxx"
+#include "FWParser.hxx"
 #include "MWParser.hxx"
 #include "MWProParser.hxx"
 #include "MSKParser.hxx"
@@ -102,25 +103,31 @@ IMWAWConfidence IMWAWDocument::isFileFormatSupported(WPXInputStream *input,  IMW
   header.reset(IMWAWDocumentInternal::getHeader(ip, false));
 #endif
 
-  if (!header.get()) return IMWAW_CONFIDENCE_NONE;
+  if (!header.get())
+    return IMWAW_CONFIDENCE_NONE;
   type = (IMWAWDocument::DocumentType)header->getType();
   kind = (IMWAWDocument::DocumentKind)header->getKind();
 
-  switch (header->getType()) {
-  case MW:
+  switch (type) {
+  case CW:
     confidence = IMWAW_CONFIDENCE_EXCELLENT;
     break;
-  case MWPRO:
+#ifdef DEBUG
+  case FULLW:
+    confidence = IMWAW_CONFIDENCE_GOOD;
+    break;
+#endif
+  case MSWORD:
     confidence = IMWAW_CONFIDENCE_GOOD;
     break;
   case MSWORKS:
     confidence = IMWAW_CONFIDENCE_GOOD;
     break;
-  case MSWORD:
-    confidence = IMWAW_CONFIDENCE_GOOD;
-    break;
-  case CW:
+  case MW:
     confidence = IMWAW_CONFIDENCE_EXCELLENT;
+    break;
+  case MWPRO:
+    confidence = IMWAW_CONFIDENCE_GOOD;
     break;
   case WNOW:
     confidence = IMWAW_CONFIDENCE_EXCELLENT;
@@ -153,6 +160,26 @@ IMWAWResult IMWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *do
     if (!header.get()) return IMWAW_UNKNOWN_ERROR;
 
     switch (header->getType()) {
+    case CW: {
+      CWParser parser(ip, header.get());
+      parser.parse(documentInterface);
+      break;
+    }
+    case FULLW: {
+      FWParser parser(ip, header.get());
+      parser.parse(documentInterface);
+      break;
+    }
+    case MSWORD: {
+      MSWParser parser (ip, header.get());
+      parser.parse(documentInterface);
+      break;
+    }
+    case MSWORKS: {
+      MSKParser parser (ip, header.get());
+      parser.parse(documentInterface);
+      break;
+    }
     case MW: {
       MWParser parser (ip, header.get());
       parser.parse(documentInterface);
@@ -163,28 +190,13 @@ IMWAWResult IMWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *do
       parser.parse(documentInterface);
       break;
     }
-    case MSWORKS: {
-      MSKParser parser (ip, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case MSWORD: {
-      MSWParser parser (ip, header.get());
+    case WNOW: {
+      WNParser parser (ip, header.get());
       parser.parse(documentInterface);
       break;
     }
     case WPLUS: {
       WPParser parser (ip, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case CW: {
-      CWParser parser(ip, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case WNOW: {
-      WNParser parser (ip, header.get());
       parser.parse(documentInterface);
       break;
     }
@@ -212,7 +224,7 @@ namespace IMWAWDocumentInternal
 /** return the header corresponding to an input. Or 0L if no input are found */
 IMWAWHeader *getHeader(TMWAWInputStreamPtr &ip, bool strict)
 {
-  IMWAWHeader *header = 0L;
+  std::vector<IMWAWHeader> listHeaders;
   try {
     /** avoid very short file */
     if (!ip.get() || ip->seek(10, WPX_SEEK_SET) != 0) return 0L;
@@ -220,18 +232,15 @@ IMWAWHeader *getHeader(TMWAWInputStreamPtr &ip, bool strict)
     ip->seek(0, WPX_SEEK_SET);
     ip->setReadInverted(false);
 
-    header = IMWAWHeader::constructHeader(ip);
-    if (!header) return 0L;
+    listHeaders = IMWAWHeader::constructHeader(ip);
+    int numHeaders = listHeaders.size();
+    if (numHeaders==0) return 0L;
 
-    bool ok = true;
-    if (strict || header->getType() == IMWAWDocument::MW)
-      ok = IMWAWDocumentInternal::checkBasicMacHeader(ip, *header, strict);
-    if (!ok) {
-      delete header;
-      return 0L;
+    for (int i = 0; i < numHeaders; i++) {
+      if (!IMWAWDocumentInternal::checkBasicMacHeader(ip, listHeaders[i], strict))
+        continue;
+      return new IMWAWHeader(listHeaders[i]);
     }
-
-    return header;
   } catch (libmwaw_libwpd::FileException)	{
     MWAW_DEBUG_MSG(("File exception trapped\n"));
   } catch (libmwaw_libwpd::ParseException) {
@@ -240,48 +249,53 @@ IMWAWHeader *getHeader(TMWAWInputStreamPtr &ip, bool strict)
     //fixme: too generic
     MWAW_DEBUG_MSG(("Unknown exception trapped\n"));
   }
-
-  if (header) delete header;
   return 0L;
 }
 
 /** Wrapper to check a basic header of a mac file */
 bool checkBasicMacHeader(TMWAWInputStreamPtr &input, IMWAWHeader &header, bool strict)
 {
-  switch(header.getType()) {
-  case IMWAWDocument::CW: {
-    CWParser parser(input, &header);
-    return parser.checkHeader(&header, strict);
-  }
-  case IMWAWDocument::MW: {
-    MWParser parser(input, &header);
-    return parser.checkHeader(&header, strict);
-  }
-  case IMWAWDocument::MWPRO: {
-    MWProParser parser(input, &header);
-    return parser.checkHeader(&header, strict);
-  }
-  case IMWAWDocument::MSWORD: {
-    MSWParser parser(input, &header);
-    return parser.checkHeader(&header, strict);
-  }
-  case IMWAWDocument::MSWORKS: {
-    MSKParser parser(input, &header);
-    return parser.checkHeader(&header, strict);
-  }
-  case IMWAWDocument::WNOW: {
-    WNParser parser(input, &header);
-    return parser.checkHeader(&header, strict);
-  }
-  case IMWAWDocument::WPLUS: {
-    WPParser parser(input, &header);
-    return parser.checkHeader(&header, strict);
-  }
-  default:
-    break;
+  try {
+    switch(header.getType()) {
+    case IMWAWDocument::CW: {
+      CWParser parser(input, &header);
+      return parser.checkHeader(&header, strict);
+    }
+    case IMWAWDocument::FULLW: {
+      FWParser parser(input, &header);
+      return parser.checkHeader(&header, strict);
+    }
+    case IMWAWDocument::MW: {
+      MWParser parser(input, &header);
+      return parser.checkHeader(&header, strict);
+    }
+    case IMWAWDocument::MWPRO: {
+      MWProParser parser(input, &header);
+      return parser.checkHeader(&header, strict);
+    }
+    case IMWAWDocument::MSWORD: {
+      MSWParser parser(input, &header);
+      return parser.checkHeader(&header, strict);
+    }
+    case IMWAWDocument::MSWORKS: {
+      MSKParser parser(input, &header);
+      return parser.checkHeader(&header, strict);
+    }
+    case IMWAWDocument::WNOW: {
+      WNParser parser(input, &header);
+      return parser.checkHeader(&header, strict);
+    }
+    case IMWAWDocument::WPLUS: {
+      WPParser parser(input, &header);
+      return parser.checkHeader(&header, strict);
+    }
+    default:
+      break;
+    }
+  } catch(...) {
   }
 
-  return true;
+  return false;
 }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

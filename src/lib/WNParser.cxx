@@ -1112,10 +1112,8 @@ bool WNParser::checkHeader(IMWAWHeader *header, bool strict)
   f << "entry=" << std::hex << entry.begin() << ":" << entry.end() << std::dec << ",";
 
   // ok, we can finish initialization
-  if (header) {
-    header->setMajorVersion(m_state->m_version);
-    header->setType(IMWAWDocument::WNOW);
-  }
+  if (header)
+    header->reset(IMWAWDocument::WNOW, m_state->m_version);
 
   //
   input->seek(headerSize, WPX_SEEK_SET);

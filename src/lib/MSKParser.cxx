@@ -565,11 +565,6 @@ bool MSKParser::checkHeader(IMWAWHeader *header, bool strict)
   headerZone.setType("FileHeader");
   m_listZones.push_back(headerZone);
 
-  if (header) {
-    header->setMajorVersion(m_state->m_version);
-    header->setKind(m_state->m_docType);
-  }
-
   //
   input->seek(0,WPX_SEEK_SET);
   f << "FileHeader: ";
@@ -628,6 +623,10 @@ bool MSKParser::checkHeader(IMWAWHeader *header, bool strict)
     }
     f << ",";
   }
+
+  if (header)
+    header->reset(IMWAWDocument::MSWORKS, m_state->m_version,
+                  m_state->m_docType);
 
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());

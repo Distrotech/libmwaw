@@ -36,10 +36,9 @@
 
 #include "IMWAWHeader.hxx"
 
-IMWAWHeader::IMWAWHeader(TMWAWInputStreamPtr input, int majorVersion) :
-  m_input(input),
-  m_majorVersion(majorVersion),
-  m_docType(IMWAWDocument::UNKNOWN),
+IMWAWHeader::IMWAWHeader(IMWAWDocument::DocumentType DocumentType, int vers) :
+  m_version(vers),
+  m_docType(DocumentType),
   m_docKind(IMWAWDocument::K_TEXT)
 {
 }
@@ -52,82 +51,73 @@ IMWAWHeader::~IMWAWHeader()
 /**
  * So far, we have identified
  */
-IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
+std::vector<IMWAWHeader> IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
 {
+  std::vector<IMWAWHeader> res;
+
   input->seek(8, WPX_SEEK_SET);
   if (input->atEOS() || input->tell() != 8)
-    return 0;
+    return res;
 
   input->seek(0, WPX_SEEK_SET);
   int val[4];
   for (int i = 0; i < 4; i++)
     val[i] = input->readULong(2);
-  IMWAWHeader *header;
+
   // ----------- clearly discriminant ------------------
   if (val[2] == 0x424F && val[3] == 0x424F && (val[0]>>8) < 8) {
     MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Claris Works file[Limited parsing]\n"));
-    header=new IMWAWHeader(input, ((val[0]) >> 8));
-    header->m_docType=IMWAWDocument::CW;
-    return header;
+    res.push_back(IMWAWHeader(IMWAWDocument::CW, (val[0]) >> 8));
   }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77) {
     input->seek(8, WPX_SEEK_SET);
     int version = input->readLong(2);
 
 #ifdef DEBUG
-    if (version < 0 || version > 3) {
+    bool ok = (version >= 0 && version <= 3);
+    if (ok)
+      MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a WriteNow file version 3.0 or 4.0\n"));
+    else
       MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a WriteNow file (unknown version %d)\n", version));
-
-      return 0;
-    }
 #else
-    if (version != 2) {
-      MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a WriteNow file (unknown version %d)\n", version));
-
-      return 0;
-    }
+    bool ok = version == 2;
 #endif
-    MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a WriteNow file version 3.0 or 4.0\n"));
 
-    header=new IMWAWHeader(input, 3);
-    header->m_docType=IMWAWDocument::WNOW;
-    return header;
+    if (ok)
+      res.push_back(IMWAWHeader(IMWAWDocument::WNOW, 3));
   }
 
   if ((val[0]==0xfe34 && val[1]==0) ||
       (val[0] == 0xfe37 && (val[1] == 0x23 || val[1] == 0x1c))) {
+    int vers = -1;
     switch (val[1]) {
     case 0:
       MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Word 3.0 file[no parsing]\n"));
-      header=new IMWAWHeader(input, 3);
+      vers = 3;
       break;
     case 0x1c:
       MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Word 4.0 file[minimal parsing]\n"));
-      header=new IMWAWHeader(input, 4);
+      vers = 4;
       break;
     case 0x23:
       MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Word 5.0 file[minimal parsing]\n"));
-      header=new IMWAWHeader(input, 5);
+      vers = 5;
       break;
     default:
-      return 0;
+      break;
     }
-    header->m_docType=IMWAWDocument::MSWORD;
-    return header;
+    if (vers >= 0)
+      res.push_back(IMWAWHeader(IMWAWDocument::MSWORD, vers));
   }
 
   // ----------- less discriminant ------------------
   if (val[0] == 0x2e && val[1] == 0x2e) {
     MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a MacWrite II file\n"));
-    header=new IMWAWHeader(input, 0);
-    header->m_docType=IMWAWDocument::MWPRO;
-    return header;
+    res.push_back(IMWAWHeader(IMWAWDocument::MWPRO, 0));
   }
   if (val[0] == 4 && val[1] == 4) {
     MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a MacWritePro file\n"));
-    header=new IMWAWHeader(input, 1);
-    header->m_docType=IMWAWDocument::MWPRO;
-    return header;
+    res.push_back(IMWAWHeader(IMWAWDocument::MWPRO, 1));
   }
 
   // ----------- other ------------------
@@ -135,9 +125,7 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
     input->seek(8, WPX_SEEK_SET);
     if (input->readULong(1) == 0x4) {
       MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a WriteNow 1.0 or 2.0 file\n"));
-      header=new IMWAWHeader(input, 2);
-      header->m_docType=IMWAWDocument::WNOW;
-      return header;
+      res.push_back(IMWAWHeader(IMWAWDocument::WNOW, 2));
     }
   }
   if (val[0]==0) {
@@ -166,26 +154,32 @@ IMWAWHeader * IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
       } else  {
         MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Microsoft Works %d.0 file[no parsing]\n", vers));
       }
-      header=new IMWAWHeader(input, vers);
-      header->m_docType=IMWAWDocument::MSWORKS;
-      return header;
+      res.push_back(IMWAWHeader(IMWAWDocument::MSWORKS, vers));
     }
   }
-
   if (val[0] == 3 || val[0] == 6) {
     // version will be print by MWParser::check
-    header=new IMWAWHeader(input, val[0]);
-    header->m_docType=IMWAWDocument::MW;
-    return header;
+    res.push_back(IMWAWHeader(IMWAWDocument::MW, val[0]));
   }
   if (val[0] == 0x110) {
     MWAW_DEBUG_MSG(("IMWAWHeader::constructHeader: find a Writerplus file\n"));
-    header=new IMWAWHeader(input, 1);
-    header->m_docType=IMWAWDocument::WPLUS;
-    return header;
+    res.push_back(IMWAWHeader(IMWAWDocument::WPLUS, 1));
+  }
+  //ok now look at the end of file
+  input->seek(0, WPX_SEEK_SET);
+  while(!input->atEOS()) {
+    if (input->seek(1000, WPX_SEEK_CUR) != 0) break;
+  }
+  input->seek(-4, WPX_SEEK_CUR);
+  for (int i = 0; i < 2; i++)
+    val[i]=input->readULong(2);
+  if (val[0] == 0x4657 && val[1]==0x5254) // FWRT
+    res.push_back(IMWAWHeader(IMWAWDocument::FULLW, 2));
+  if (val[0] == 0 && val[1]==1) { // not probable, but
+    res.push_back(IMWAWHeader(IMWAWDocument::FULLW, 1));
   }
 
   input->seek(0, WPX_SEEK_SET);
-  return 0;
+  return res;
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -858,6 +858,11 @@ bool CWParser::checkHeader(IMWAWHeader *header, bool strict)
 #endif
   input->seek(headerSize,WPX_SEEK_SET);
 
+
+  // ok, we can finish initialization
+  if (header)
+    header->reset(IMWAWDocument::CW, m_state->m_version);
+
   return true;
 }
 

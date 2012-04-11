@@ -100,6 +100,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWSpreadsheet.cxx		\
 	CWTable.cxx			\
 	CWText.cxx			\
+	FWParser.cxx			\
+	FWText.cxx			\
 	MSKGraph.cxx			\
 	MSKParser.cxx			\
 	MSKText.cxx			\
@@ -118,6 +120,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWStruct.hxx			\
 	CWTable.hxx			\
 	CWText.hxx			\
+	FWParser.hxx			\
+	FWText.hxx			\
 	MSKGraph.hxx			\
 	MSKParser.hxx			\
 	MSKText.hxx			\
