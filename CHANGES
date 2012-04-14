@@ -1,5 +1,9 @@
 CHANGES:
 
+04/14/2012: 
+- add Microsoft Works 1.0, 2.0 parser
+- add a crude parser for FullWrite Professional
+
 03/17/2012: 
 - tags 0.0.2
 

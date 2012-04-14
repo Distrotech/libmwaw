@@ -112,11 +112,9 @@ IMWAWConfidence IMWAWDocument::isFileFormatSupported(WPXInputStream *input,  IMW
   case CW:
     confidence = IMWAW_CONFIDENCE_EXCELLENT;
     break;
-#ifdef DEBUG
   case FULLW:
     confidence = IMWAW_CONFIDENCE_GOOD;
     break;
-#endif
   case MSWORD:
     confidence = IMWAW_CONFIDENCE_GOOD;
     break;

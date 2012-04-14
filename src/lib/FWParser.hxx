@@ -179,7 +179,7 @@ protected:
   void newPage(int number);
 
   //! try to send a footnote/endnote entry
-  void sendFootnote(int id, bool endNote);
+  void sendText(int id, DMWAWSubDocumentType type, int which=0);
 
   //! find the last position of the document and read data
   bool readDocPosition();

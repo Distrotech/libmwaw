@@ -137,10 +137,10 @@ std::vector<IMWAWHeader> IMWAWHeader::constructHeader(TMWAWInputStreamPtr input)
     case 8:
       vers = 2;
       break;
+#ifdef DEBUG
     case 9:
       vers = 3;
       break;
-#ifdef DEBUG
     case 11: // a msworks 4 file ( but not a text file)
       vers = 4;
       break;

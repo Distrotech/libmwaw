@@ -6,6 +6,8 @@
 - IMWAW* and libmwaw_internal* : internal core part of libmwaw (ie. classes used by many parser )
 - MWAW* : specific classes ( MWAW document )
 - CW* : parser of ClarisWorks and AppleWorks documents
+- FW* : parser of FullWrite documents
+- MSK* : parser of Microsoft Works documents
 - MSW* : parser of Microsoft Word documents
 - MW* : parser of MacWrite documents
 - MWPro* : parser of MacWrite II, MacWrite Pro documents
@@ -102,7 +104,7 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------
---------------------   CW/MSW/MW/WN/WP       -------------------
+--------------------   CW/FW/MSK/MSW/MW/WN/WP  -----------------
 ------------------------------------------------------------
 Generic classes : 
 
@@ -120,6 +122,13 @@ CWParser : parser of ClarisWorks/AppleWorks document
 -   CWDatabase/CWSpreadSheet : class which reads the database/spreadsheet structure ( uncomplete)
 -   CWTable : class which reads the table structures
 -   CWText : class which reads the text and its structures
+
+FWParser: parser of fullWrite : v1.0 v2.0
+-   FWText : class which reads the text
+
+MSKParser : parser of Microsoft Works document : v1.0-2.0
+-   MSKGraph : class which reads the picture/graph 
+-   MSKText : class which reads the text
 
 MSWParser : parser of Microsoft Word document : v4.0-5.0 
 -   MSWText : class which reads the text and its structures

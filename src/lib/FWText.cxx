@@ -52,9 +52,53 @@
 /** Internal: the structures of a FWText */
 namespace FWTextInternal
 {
+/** Internal: class to store a ColumnInfo */
+struct ColumnInfo {
+  ColumnInfo() : m_column(0), m_box(), m_beginPos(1) {
+  }
+
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, ColumnInfo const &c) {
+    if (c.m_column > 0) o << "col=" << c.m_column+1 << ",";
+    o << c.m_box << ",";
+    if (c.m_beginPos > 1) o << "textPos=" << c.m_beginPos << ",";
+    return o;
+  }
+  //! the column number
+  int m_column;
+  //! the bdbox
+  Box2i m_box;
+  //! the first data
+  int m_beginPos;
+};
+
+struct PageInfo {
+  PageInfo() : m_page(-1), m_columns() {
+  }
+
+  //! returns true if the page has same color position
+  bool isSimilar(PageInfo const &p) const {
+    int numColumns = m_columns.size();
+    if (numColumns != int(p.m_columns.size()))
+      return false;
+    for (int c = 0; c < numColumns; c++) {
+      if (m_columns[c].m_box[0].x() != p.m_columns[c].m_box[0].x())
+        return false;
+      if (m_columns[c].m_box[1].x() != p.m_columns[c].m_box[1].x())
+        return false;
+    }
+    return true;
+  }
+
+  //! the pages
+  int m_page;
+  //! the columns
+  std::vector<ColumnInfo> m_columns;
+};
+
 /** Internal: class to store a text zone */
 struct Zone {
-  Zone() : m_zone(), m_box(), m_begin(-1), m_end(-1), m_main(false), m_extra("") {
+  Zone() : m_zone(), m_box(), m_begin(-1), m_end(-1), m_main(false), m_pagesInfo(), m_extra("") {
     for (int i = 0; i < 2; i++) m_flags[i] = 0;
     for (int i = 0; i < 2; i++) m_pages[i] = 0;
   }
@@ -75,6 +119,26 @@ struct Zone {
       o << "extra=[" << z.m_extra << "],";
     return o;
   }
+  //! return the col/page break
+  std::vector<int> getBreaksPosition() const {
+    int numPages = m_pagesInfo.size();
+    int prevPos = 0;
+    std::vector<int> res;
+    for (int p = 0; p < numPages; p++) {
+      PageInfo const &page = m_pagesInfo[p];
+      for (int c = 0; c < int(page.m_columns.size()); c++) {
+        int pos = page.m_columns[c].m_beginPos;
+        if (pos < prevPos) {
+          MWAW_DEBUG_MSG(("FWTextInternal::Zone:;getBreaksPosition pos go back\n"));
+          p = numPages;
+          break;
+        }
+        res.push_back(pos);
+        prevPos = pos;
+      }
+    }
+    return res;
+  }
   //! the main zone
   shared_ptr<FWEntry> m_zone;
   //! the bdbox
@@ -90,6 +154,8 @@ struct Zone {
   int m_flags[2];
   //! the pages
   int m_pages[2];
+  //! the pages info
+  std::vector<PageInfo> m_pagesInfo;
   //! the extra data ( for debugging )
   std::string m_extra;
 };
@@ -238,13 +304,11 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
                   MWAWStruct::Font &font)
 {
   if (!m_listener) return;
-
   TMWAWInputStreamPtr input = zone->m_zone->m_input;
   long pos = input->tell();
   long endPos = pos+numChar;
   bool nextIsChar = false;
   bool fontSet = false;
-
   int val;
   for (int i = 0; i < numChar; i++) {
     long actPos = input->tell();
@@ -373,13 +437,25 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         if (actPos+2 > endPos) break;
         id = input->readULong(2); // fixme
         break;
-      case 0xd3: // footnote
-      case 0xd5: { // endnote
+      case 0xd2:
+      case 0xd3:
+      case 0xd5: {
         if (actPos+2 > endPos) break;
         id = input->readULong(2);
         int fId = m_state->getZoneId(id);
-        if (fId != -1)
-          m_mainParser->sendFootnote(fId, val==0xd5);
+        if (fId != -1) {
+          switch(val) {
+          case 0xd2:
+            m_mainParser->sendText(fId, DMWAW_SUBDOCUMENT_COMMENT_ANNOTATION);
+            break;
+          case 0xd3:
+            m_mainParser->sendText(fId, DMWAW_SUBDOCUMENT_NOTE, FOOTNOTE);
+            break;
+          case 0xd5:
+            m_mainParser->sendText(fId, DMWAW_SUBDOCUMENT_NOTE, ENDNOTE);
+            break;
+          }
+        }
         break;
       }
       case 0xa0: // potential hypen break
@@ -421,9 +497,8 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       case 0xca: // unknown
       case 0xcd:
-      case 0xd0:
-      case 0xd1:
-      case 0xd2:
+      case 0xd0: // header
+      case 0xd1: // footer ?
       case 0xd4: // contents
       case 0xd6: // biblio
       case 0xd7: // entry
@@ -477,6 +552,16 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
   MWAWStruct::Font font(3,12);
   FWTextInternal::Ruler ruler;
   bool rulerSent = true;
+
+  std::vector<int> listBreaks = zone->getBreaksPosition();
+  int numBreaks = listBreaks.size();
+  int numPages = zone->m_pagesInfo.size();
+  int actBreak = numBreaks, actBreakPos = -1;
+  if (numBreaks) {
+    actBreak = 0;
+    actBreakPos = listBreaks[actBreak];
+  }
+  int actPage = 0, actCol = 0, numCol=1;
   while(1) {
     pos = input->tell();
     int type = input->readULong(2);
@@ -484,7 +569,53 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     if (type & 0x8000)
       lengthSz = 2;
     f.str("");
-    f << "TextData-a[" << num++ << "]:";
+    f << "TextData-a[" << num << "]:";
+    bool sendData = false;
+    while (num==actBreakPos) {
+      if (num != 1) sendData = true;
+      if (actCol < numCol-1 && numCol > 1) {
+        m_listener->insertBreak(DMWAW_COLUMN_BREAK);
+        actCol++;
+      } else if (actPage >= numPages) {
+        MWAW_DEBUG_MSG(("FWText::send can not find the page information\n"));
+      } else {
+        FWTextInternal::PageInfo const &page = zone->m_pagesInfo[actPage];
+        if (sendData) {
+          if (zone->m_main)
+            m_mainParser->newPage(++m_state->m_actualPage);
+          else if (numCol > 1)
+            m_listener->insertBreak(DMWAW_COLUMN_BREAK);
+        }
+        actCol = 0;
+
+        if (!actPage || !page.isSimilar(zone->m_pagesInfo[actPage-1])) {
+          if (m_listener->isSectionOpened())
+            m_listener->closeSection();
+
+          int numC = page.m_columns.size();
+
+          if (numC<=1 && sendData) m_listener->openSection();
+          else {
+            std::vector<int> colSize;
+            colSize.resize(numC);
+            for (int i = 0; i < numC; i++) colSize[i] = page.m_columns[i].m_box.size().x();
+            m_listener->openSection(colSize, WPX_POINT);
+          }
+          numCol = numC;
+        }
+
+        actPage++;
+      }
+
+      if (num != 1) f << "break,";
+      sendData = true;
+      // update numbreaks
+      if (++actBreak < numBreaks)
+        actBreakPos = listBreaks[actBreak];
+      else
+        actBreakPos = -1;
+    }
+    num++;
     int numChar = input->readULong(lengthSz);
     if ((lengthSz==1 && (numChar & 0x80)) ||
         long(input->tell()+numChar) > zone->m_end) {
@@ -760,6 +891,9 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
         } else
           f << "[modId=" << input->readLong(2) << "]";
         break;
+      case 0xd0:
+      case 0xd1:
+      case 0xd2:
       case 0xd3:
       case 0xd5:
         if (actPos+2 > lastPos) {
@@ -768,6 +902,15 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
           break;
         }
         switch (val) {
+        case 0xd0:
+          f << "[headerId=" << input->readULong(2) << "]";
+          break;
+        case 0xd1:
+          f << "[footerId=" << input->readULong(2) << "]";
+          break;
+        case 0xd2:
+          f << "[noteId=" << input->readULong(2) << "]";
+          break;
         case 0xd3:
           f << "[footnoteId=" << input->readULong(2) << "]";
           break;
@@ -790,9 +933,6 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
         break;
       case 0xca:
       case 0xcd:
-      case 0xd0:
-      case 0xd1:
-      case 0xd2:
       case 0xd4: // contents
       case 0xd6: // biblio
       case 0xd7: // entry
@@ -814,7 +954,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
           f << "##";
         } else {
           f << "[f" << std::hex << val << "=" << input->readULong(2);
-          f << "x" << input->readULong(2) << std::dec << "]";
+          f << "<->" << input->readULong(2) << std::dec << "]";
         }
         break;
       case 0xe4:
@@ -922,7 +1062,7 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
   for (int i = 0; i < 2; i++) {
     val = input->readLong(2);
     if (val)
-      f << "N" << i+1 << "=" << val << ",";
+      f << "N" << i+1 << "=" << std::hex << val << std::dec << ",";
   }
   // two flag header/footer : 0|1, normal/other: 0|1?
   for (int i = 0; i < 2; i++) {
@@ -1027,6 +1167,7 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
   f << "numCols=" << input->readLong(2) << ",";
   ascii.addPos(pos);
   ascii.addNote(f.str().c_str());
+  int actPage = 0;
   while (1) {
     pos = input->tell();
     if (pos >= zone->end()) break;
@@ -1037,57 +1178,66 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
       sz = 32+num*52;
 
       input->seek(9, WPX_SEEK_CUR);
-      bool hasExtra = input->readULong(1)==1;
-      if (hasExtra) sz+=26;
 
       if (pos+sz > zone->end()) {
         input->seek(pos, WPX_SEEK_SET);
         break;
       }
+
+      FWTextInternal::PageInfo page;
+      page.m_page = actPage++;
+
       ascii.addPos(pos);
       ascii.addNote("TextData-c[ColH]");
 
       pos+=32;
+      input->seek(pos, WPX_SEEK_SET);
       for (int i = 0; i < num; i++) {
+        pos = input->tell();
         f.str("");
-        f << "TextData-c[Col" << i <<"]:";
+        f << "TextData-c[ColDef]:";
+        FWTextInternal::ColumnInfo col;
+        col.m_column = i;
+        col.m_beginPos = input->readLong(2);
+        int dim[4];
+        for (int j = 0; j < 4; j++) dim[j] = input->readLong(2);
+        col.m_box = Box2i(Vec2i(dim[0],dim[2]), Vec2i(dim[1], dim[3]));
+        f << col;
+        page.m_columns.push_back(col);
+
+        ascii.addDelimiter(input->tell(),'|');
         ascii.addPos(pos);
         ascii.addNote(f.str().c_str());
-        pos+=52;
+        input->seek(pos+52, WPX_SEEK_SET);
       }
-
-      if (hasExtra) {
-        ascii.addPos(pos);
-        ascii.addNote("TextData-c[ColExtra]:");
-        pos+=26;
-      }
-      input->seek(pos, WPX_SEEK_SET);
+      text->m_pagesInfo.push_back(page);
       continue;
     }
 
     // ok, probably link to a col field, but...
     // let try to correct
-    if ((val>>8)==0x21)
+    int high = (val>>8);
+    if (high==0x21)
       sz = 42;
-    else if ((val>>8)==0x61) {
+    else if (high==0x61|high==0x63) {
       input->seek(12, WPX_SEEK_CUR);
       int numData = input->readULong(2);
       if (!numData) break;
       sz = 26+9*numData;
-    } else if ((val>>8)==0xe1) {
+    } else if (high==0xe1) {
       input->seek(14, WPX_SEEK_CUR);
       int numData = input->readULong(2);
       if (!numData) break;
       sz = 30+9*numData;
-    }
-
+    } else if (high==0 && (val%50)!=30)
+      sz=26;
     if (sz == 0 || pos+sz > zone->end()) {
       input->seek(pos, WPX_SEEK_SET);
       break;
     }
 
     ascii.addPos(pos);
-    ascii.addNote("TextData-c:");
+    ascii.addNote("TextData-d:");
     input->seek(pos+sz, WPX_SEEK_SET);
   }
 
@@ -1123,6 +1273,7 @@ bool FWText::readStyle(shared_ptr<FWEntry> zone)
     if (readParagraph(zone)) continue;
     if (readColumns(zone)) continue;
     if (readCorrespondance(zone)) continue;
+    if (readStyleName(zone)) continue;
 
     int sz = 0;
     int val = input->readULong(2);
@@ -1130,30 +1281,20 @@ bool FWText::readStyle(shared_ptr<FWEntry> zone)
     f << "Style-" << num-1 << ":";
     bool done = false;
     switch (val) {
-#if 0
     case 0: {
       sz = input->readULong(2);
-      if (sz<24) {
+      if (sz && sz < 100 && (sz%2)==0)
+        sz += 4;
+      else
         sz = 0;
-        break;
-      }
-      if (pos+4+sz > zone->end()) {
-        sz = 0;
-        break;
-      }
-      sz+=4;
       break;
     }
-#endif
     case 4:
       if (input->readULong(2)) break;
       sz = 6;
       break;
     case 0x39:
       sz=2;
-      break;
-    case 0x46:
-      sz = 72;
       break;
     default:
       break;
@@ -1191,21 +1332,23 @@ bool FWText::readStyle(shared_ptr<FWEntry> zone)
         numZero++;
         continue;
       }
-      if ((val & 0xF8)==0x18 && numZero) {
+      int actNumZero = numZero;
+      numZero = 0;
+      if ((val & 0xF8)==0x18 && actNumZero) {
         long actPos = input->tell();
         input->seek(-2, WPX_SEEK_CUR);
         ok = readCorrespondance(zone, true);
         if (ok) break;
         input->seek(actPos, WPX_SEEK_SET);
-        numZero= 0;
-        continue;
       }
-      if (numZero < 3) {
-        numZero = 0;
-        continue;
+      if (val==0x46 && actNumZero) {
+        long actPos = input->tell();
+        input->seek(-2, WPX_SEEK_CUR);
+        ok = readStyleName(zone);
+        if (ok) break;
+        input->seek(actPos, WPX_SEEK_SET);
       }
-      numZero = 0;
-      if (val < 24) continue;
+      if (actNumZero < 3 || val < 24) continue;
       input->seek(1,WPX_SEEK_CUR);
       if (input->readULong(1) > 2) {
         input->seek(-2,WPX_SEEK_CUR);
@@ -1221,8 +1364,7 @@ bool FWText::readStyle(shared_ptr<FWEntry> zone)
       input->seek(actPos+4, WPX_SEEK_SET);
     }
     if (!ok) break;
-    ascii.addPos(pos);
-    ascii.addNote(f.str().c_str());
+    ascii.addDelimiter(pos,'#');
   }
   if (pos != zone->end()) {
     ascii.addPos(pos);
@@ -1246,8 +1388,8 @@ bool FWText::readParagraph(shared_ptr<FWEntry> zone)
   libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
   libmwaw_tools::DebugStream f;
   int vers = version();
-  if (vers == 1)
-    return false;
+  const int dataSz = vers==1 ? 14 : 10;
+  const int headerSz = vers==1 ? 24 : 30;
   long pos = input->tell();
   input->seek(pos, WPX_SEEK_SET);
   long sz = input->readULong(4);
@@ -1256,9 +1398,9 @@ bool FWText::readParagraph(shared_ptr<FWEntry> zone)
     return false;
   }
 
-  input->seek(22, WPX_SEEK_CUR);
+  input->seek(vers==1 ? 23: 22, WPX_SEEK_CUR);
   int N = input->readULong(1);
-  if (30+10*N != sz) {
+  if (headerSz+dataSz*N != sz) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
@@ -1266,7 +1408,8 @@ bool FWText::readParagraph(shared_ptr<FWEntry> zone)
   f << "Entries(Tabs):N=" << N << ",";
   ascii.addPos(pos);
   ascii.addNote(f.str().c_str());
-  input->seek(pos+4+30, WPX_SEEK_SET);
+  if (vers==2)
+    input->seek(pos+4+30, WPX_SEEK_SET);
   int val;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
@@ -1310,7 +1453,7 @@ bool FWText::readParagraph(shared_ptr<FWEntry> zone)
     if (val) f << "#f2=" <<  std::hex << val << std::dec << ",";
     ascii.addPos(pos);
     ascii.addNote(f.str().c_str());
-    input->seek(pos+10, WPX_SEEK_SET); // in v1: 14
+    input->seek(pos+dataSz, WPX_SEEK_SET);
   }
 
   return true;
@@ -1355,6 +1498,48 @@ bool FWText::readColumns(shared_ptr<FWEntry> zone)
 }
 
 ////////////////////////////////////////////////////////////
+// read an unknown zone
+bool FWText::readStyleName(shared_ptr<FWEntry> zone)
+{
+  TMWAWInputStreamPtr input = zone->m_input;
+  libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw_tools::DebugStream f;
+  f << "Entries(StylName):";
+
+  long pos = input->tell();
+  if (pos+72 > zone->end()) return false;
+
+  int val = input->readULong(2);
+  if (val != 0x46 || input->readULong(4)) {
+    input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+  int sz = input->readULong(1);
+  if (sz == 0 || sz >= 32) {
+    input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+  std::string str("");
+  for (int i = 0; i < sz; i++) {
+    char c= input->readLong(1);
+    if (!c) {
+      input->seek(pos, WPX_SEEK_SET);
+      return false;
+    }
+    str += c;
+  }
+  f << str << ",";
+  input->seek(pos+38, WPX_SEEK_SET);
+
+  ascii.addDelimiter(input->tell(),'|');
+  ascii.addPos(pos);
+  ascii.addNote(f.str().c_str());
+  input->seek(pos+72, WPX_SEEK_SET);
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
 // read the correspondance data
 bool FWText::readCorrespondance(shared_ptr<FWEntry> zone, bool extraCheck)
 {
@@ -1364,15 +1549,20 @@ bool FWText::readCorrespondance(shared_ptr<FWEntry> zone, bool extraCheck)
   f << "Entries(Correspondance):";
 
   long pos = input->tell();
-  int type = input->readULong(2);
-  if (!(type >= 0x18 && type <= 0x1a) && !(type >= 0x1c && type <=0x1e)) {
+  int val = input->readULong(1);
+  if ((extraCheck & val) || (val&0xfb)) {
+    input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+  if (val) f << "#type" << std::hex << val << std::dec << ",";
+  int type = input->readULong(1);
+  if (!(type >= 0x18 && type <=0x1f)) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
   int sz = 73;
-  if (type & 0x4) sz += 1;
   f << "type=" << std::hex << type << std::dec << ",";
-  int val = input->readULong(2);
+  val = input->readULong(2);
   if (val && extraCheck) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
@@ -1401,19 +1591,26 @@ bool FWText::readCorrespondance(shared_ptr<FWEntry> zone, bool extraCheck)
     if (val) f << "g" << i << "=" << val << ",";
   }
 
+  int numError = 0;
   val = input->readLong(2); // alway -2
-  if (val!=-2) {
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
+  if (val != -2) {
+    if (extraCheck || val > 0 || val < -2) {
+      input->seek(pos, WPX_SEEK_SET);
+      return false;
+    }
+    f << "#g4=" << val << ",";
+    numError++;
   }
-  if (val!=-2) f << "#g4=" << val << ",";
   for (int i = 0; i < 3; i++) {
     // first a small number < 3e1, g6,g7 almost always 0 expected one time g6=-1a9
     val = input->readLong(4);
     if (!val) continue;
-    if (extraCheck && i==2) {
-      input->seek(pos, WPX_SEEK_SET);
-      return false;
+    if (i==2) {
+      if (extraCheck || numError) {
+        input->seek(pos, WPX_SEEK_SET);
+        return false;
+      }
+      numError++;
     }
     f << "g" << i+5 << "=" << val << ",";
   }
@@ -1543,7 +1740,12 @@ void FWText::sortZones()
     pagesLimits[2*pos] = fPage;
     pagesLimits[2*pos+1] = lPage;
     numZones++;
-    numPages += (lPage-fPage)+1;
+    int nPages = (lPage-fPage)+1;
+    if (nPages < int(zone->m_pagesInfo.size())) {
+      MWAW_DEBUG_MSG(("FWText::sortZones: pages limit seems odd!!!\n"));
+      nPages = int(zone->m_pagesInfo.size());
+    }
+    numPages += nPages;
   }
   m_state->m_numPages = numPages;
 }

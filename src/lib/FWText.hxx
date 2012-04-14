@@ -160,6 +160,8 @@ protected:
 
   //! check if the input of the zone points to the correspondance definition, ...
   bool readCorrespondance(shared_ptr<FWEntry> zone, bool extraCheck=false);
+  //! check if the input of the zone points to a custom style, ...
+  bool readStyleName(shared_ptr<FWEntry> zone);
 
 private:
   FWText(FWText const &orig);

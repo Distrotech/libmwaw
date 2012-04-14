@@ -61,7 +61,7 @@ public:
   /** an enum to define the different type of document
 
   -CW: ClarisWorks/AppleWorks document (basic)
-  -FULLW: FullWrite Professionial (nothing done)
+  -FULLW: FullWrite Professional (crude parser)
   -MINDW: MindWrite (nothing done)
   -MW: MacWrite document
   -MWPRO: MacWriteII or MacWritePro document

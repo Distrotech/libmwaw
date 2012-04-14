@@ -1082,12 +1082,21 @@ bool FWParser::readPrintInfo()
   return true;
 }
 
-void FWParser::sendFootnote(int id, bool endnote)
+void FWParser::sendText(int id, DMWAWSubDocumentType type, int wh)
 {
   if (!m_listener) return;
 
   IMWAWSubDocumentPtr subdoc(new FWParserInternal::SubDocument(*this, getInput(), id));
-  m_listener->insertNote(endnote ? ENDNOTE : FOOTNOTE, subdoc);
+  switch(type) {
+  case DMWAW_SUBDOCUMENT_NOTE:
+    m_listener->insertNote(DMWAWNoteType(wh), subdoc);
+    break;
+  case DMWAW_SUBDOCUMENT_COMMENT_ANNOTATION:
+    m_listener->insertComment(subdoc);
+    break;
+  default:
+    MWAW_DEBUG_MSG(("FWParser::sendText: unknown type\n"));
+  }
 }
 
 bool FWParser::send(int zId)
