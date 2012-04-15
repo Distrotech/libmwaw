@@ -30,6 +30,8 @@
 #ifndef LIBMWAW_H
 #define LIBMWAW_H
 
+#define MWAW_GRAPHIC_EXPORT 1
+
 #include "IMWAWDocument.hxx"
 
 #endif /* LIBMWAW_H */
