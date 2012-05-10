@@ -40,6 +40,7 @@
 
 #include <iostream>
 #include <cmath>
+#include <cstring>
 
 IMWAWContentListener::ParsingState::ParsingState() :
   m_textBuffer(), m_numDeferredTabs(0),

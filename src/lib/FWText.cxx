@@ -1219,7 +1219,7 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
     int high = (val>>8);
     if (high==0x21)
       sz = 42;
-    else if (high==0x61|high==0x63) {
+    else if (high==0x61||high==0x63) {
       input->seek(12, WPX_SEEK_CUR);
       int numData = input->readULong(2);
       if (!numData) break;

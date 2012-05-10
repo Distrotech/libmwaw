@@ -27,14 +27,15 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
+#include <cstring>
+#include <iostream>
+
 #include <libwpd/WPXDocumentInterface.h>
 #include <libwpd/WPXPropertyList.h>
 
 #include "libmwaw_internal.hxx"
 
 #include "IMWAWList.hxx"
-
-#include <iostream>
 
 void IMWAWList::Level::addTo(WPXPropertyList &propList, double /*actTextPosition*/, double /*listBeginPos*/, int startVal) const
 {
@@ -81,7 +82,7 @@ void IMWAWList::Level::addTo(WPXPropertyList &propList, double /*actTextPosition
   m_sendToInterface = true;
 }
 
-int IMWAWList::Level::cmp(IMWAWList::Level::Level const &levl) const
+int IMWAWList::Level::cmp(IMWAWList::Level const &levl) const
 {
   int diff = int(m_type)-int(levl.m_type);
   if (diff) return diff;
@@ -98,7 +99,7 @@ int IMWAWList::Level::cmp(IMWAWList::Level::Level const &levl) const
   return 0;
 }
 
-std::ostream &operator<<(std::ostream &o, IMWAWList::Level::Level const &ft)
+std::ostream &operator<<(std::ostream &o, IMWAWList::Level const &ft)
 {
   o << "ListLevel[";
   switch(ft.m_type) {

@@ -26,6 +26,7 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
+#include <cstring>
 #include <stdio.h>
 #include <libwpd-stream/libwpd-stream.h>
 #include "IMWAWDocument.hxx"

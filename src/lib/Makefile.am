@@ -29,13 +29,13 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	libmwaw_libwpd_math.hxx		\
 	libmwaw_libwpd_types.hxx	\
 	DMWAWContentListener.hxx	\
-	DMWAWEncryption.h		\
+	DMWAWEncryption.hxx		\
 	DMWAWListener.hxx		\
 	DMWAWMemoryStream.hxx		\
-	DMWAWOLEStream.h		\
+	DMWAWOLEStream.hxx		\
 	DMWAWPageSpan.hxx		\
 	DMWAWSubDocument.hxx		\
-	DMWAWTable.h			\
+	DMWAWTable.hxx			\
 	DMWAWFileStructure.hxx		\
 					\
 	libmwaw_internal.cxx		\
@@ -70,7 +70,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	TMWAWPictOleContainer.cxx	\
 	TMWAWPropertyHandler.cxx	\
 	libmwaw_tools.hxx		\
-	TMWAWContentListener.hxx	\
 	TMWAWDebug.hxx			\
 	TMWAWInputStream.hxx		\
 	TMWAWFont.hxx			\

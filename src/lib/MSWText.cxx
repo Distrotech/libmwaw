@@ -1312,7 +1312,7 @@ bool MSWText::readSection(MSWEntry &entry)
     sec.m_type = m_input->readULong(1);
     sec.m_flag = m_input->readULong(1);
     sec.m_id = i;
-    long filePos = m_input->readULong(4);
+    unsigned long filePos = m_input->readULong(4);
     if (textPos[i] > m_state->m_textLength[0]) {
       MWAW_DEBUG_MSG(("MSWText::readSection: text positions is bad...\n"));
       f << "#";
