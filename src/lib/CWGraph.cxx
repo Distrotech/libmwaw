@@ -36,10 +36,10 @@
 
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPictBasic.hxx"
-#include "TMWAWPictBitmap.hxx"
-#include "TMWAWPictMac.hxx"
-#include "TMWAWPosition.hxx"
+#include "MWAWPictBasic.hxx"
+#include "MWAWPictBitmap.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPosition.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -250,7 +250,7 @@ struct ZonePict : public Zone {
   //! the sub type
   Type m_type;
   //! the picture entry followed by a ps entry ( if defined)
-  IMWAWEntry m_entries[2];
+  MWAWEntry m_entries[2];
 };
 
 struct ZoneBitmap : public Zone {
@@ -281,7 +281,7 @@ struct ZoneBitmap : public Zone {
   //! the bitmap size
   Vec2i m_size;
   //! the bitmap entry
-  IMWAWEntry m_entry;
+  MWAWEntry m_entry;
   //! the color map
   std::vector<Vec3uc> m_colorMap;
 };
@@ -438,7 +438,7 @@ void State::setDefaultColorMap(int version)
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 CWGraph::CWGraph
-(TMWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWGraphInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -477,14 +477,14 @@ bool CWGraph::getColor(int id, Vec3uc &col) const
 // a group of data mainly graphic
 ////////////////////////////////////////////////////////////
 shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
-(CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete)
+(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
   if (!entry.valid() || zone.m_type != 0)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   shared_ptr<CWGraphInternal::Group>
   graphicZone(new CWGraphInternal::Group(zone));
 
@@ -519,7 +519,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
   graphicZone->m_childs.resize(N);
   for (int i = 0; i < N; i++) {
     pos = m_input->tell();
-    IMWAWEntry gEntry;
+    MWAWEntry gEntry;
     gEntry.setBegin(pos);
     gEntry.setLength(data0Length);
     shared_ptr<CWGraphInternal::Zone> def = readGroupDef(gEntry);
@@ -553,14 +553,14 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
 ////////////////////////////////////////////////////////////
 // a group of data mainly graphic
 ////////////////////////////////////////////////////////////
-bool CWGraph::readColorMap(IMWAWEntry const &entry)
+bool CWGraph::readColorMap(MWAWEntry const &entry)
 {
   if (!entry.valid()) return false;
   long pos = entry.begin();
   m_input->seek(pos+4, WPX_SEEK_SET); // avoid header
   if (entry.length() == 4) return true;
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(ColorMap):";
   int N = m_input->readULong(2);
   f << "N=" << N << ",";
@@ -602,14 +602,14 @@ bool CWGraph::readColorMap(IMWAWEntry const &entry)
 }
 
 shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
-(CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete)
+(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
   if (!entry.valid() || zone.m_type != 4)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   shared_ptr<CWGraphInternal::Group>
   graphicZone(new CWGraphInternal::Group(zone));
 
@@ -662,7 +662,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
 
   for (int i = 0; i < N; i++) {
     pos = m_input->tell();
-    IMWAWEntry gEntry;
+    MWAWEntry gEntry;
     gEntry.setBegin(pos);
     gEntry.setLength(data0Length);
     f.str("");
@@ -722,7 +722,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
   return graphicZone;
 }
 
-shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(IMWAWEntry const &entry)
+shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
 {
   shared_ptr<CWGraphInternal::Zone> res;
   if (entry.length() < 32) {
@@ -733,7 +733,7 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(IMWAWEntry const &entry)
   }
   long pos = entry.begin();
   m_input->seek(pos, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "GroupDef:";
 
   CWGraphInternal::Zone zone;
@@ -910,7 +910,7 @@ bool CWGraph::readGroupData(shared_ptr<CWGraphInternal::Group> zone)
   }
 
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   long pos, sz;
   int numChilds = zone->m_zones.size();
@@ -1008,7 +1008,7 @@ bool CWGraph::readGroupData(shared_ptr<CWGraphInternal::Group> zone)
 // Low level
 //
 ////////////////////////////////////////////////////////////
-bool CWGraph::readBasicGraphic(IMWAWEntry const &entry,
+bool CWGraph::readBasicGraphic(MWAWEntry const &entry,
                                CWGraphInternal::ZoneBasic &zone)
 {
   long actPos = m_input->tell();
@@ -1061,7 +1061,7 @@ bool CWGraph::readBasicGraphic(IMWAWEntry const &entry,
 bool CWGraph::readGroupHeader()
 {
   long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(GroupHead):";
   int sz = m_input->readULong(4);
   long endPos = pos+4+sz;
@@ -1086,7 +1086,7 @@ bool CWGraph::readGroupHeader()
   int val = m_input->readLong(2);
   if (val) f << "#unkn=" << val << ",";
   int fSz = m_input->readULong(2);
-  if (!fSz || N*fSz+12 != sz) {
+  if (!fSz || N *fSz+12 != sz) {
     m_input->seek(pos, WPX_SEEK_SET);
     return false;
   }
@@ -1180,7 +1180,7 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
   }
 
   m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(PolygonData):";
   int N = m_input->readULong(2);
   f << "N=" << N << ",";
@@ -1285,9 +1285,9 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
     m_input->seek(pos+4, WPX_SEEK_SET);
     m_input->readDataBlock(sz, file);
     static int volatile pictName = 0;
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     f << "DATA-" << ++pictName;
-    libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+    libmwaw::Debug::dumpFile(file, f.str().c_str());
   }
 #endif
   ascii().addPos(pos);
@@ -1316,15 +1316,15 @@ bool CWGraph::readPICT(CWGraphInternal::ZonePict &zone)
     MWAW_DEBUG_MSG(("CWGraph::readPict: file is too short\n"));
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(Graphic):";
 
   Box2f box;
   m_input->seek(pos+4, WPX_SEEK_SET);
 
-  libmwaw_tools::Pict::ReadResult res =
-    libmwaw_tools::PictData::check(m_input, sz, box);
-  if (res == libmwaw_tools::Pict::MWAW_R_BAD) {
+  MWAWPict::ReadResult res =
+    MWAWPictData::check(m_input, sz, box);
+  if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("CWGraph::readPict: can not find the picture\n"));
     m_input->seek(pos, WPX_SEEK_SET);
     return false;
@@ -1360,13 +1360,13 @@ bool CWGraph::readPS(CWGraphInternal::ZonePict &zone)
     m_input->seek(pos+4, WPX_SEEK_SET);
     m_input->readDataBlock(sz, file);
     static int volatile pictName = 0;
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     f << "PostScript-" << ++pictName << ".ps";
-    libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+    libmwaw::Debug::dumpFile(file, f.str().c_str());
   }
 #endif
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(PostScript):";
   m_input->seek(endPos, WPX_SEEK_SET);
   ascii().addPos(pos);
@@ -1392,7 +1392,7 @@ bool CWGraph::readQTimeData(shared_ptr<CWGraphInternal::Zone> zone)
     m_input->seek(pos, WPX_SEEK_SET);
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(QTIM):";
   for (int i = 0; i < 2; i++) f << "f" << i << "=" << m_input->readULong(2) << ",";
   ascii().addPos(pos);
@@ -1437,13 +1437,13 @@ bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
     m_input->seek(pos+8, WPX_SEEK_SET);
     m_input->readDataBlock(sz, file);
     static int volatile pictName = 0;
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     f << "PICT2-" << ++pictName << "." << name;
-    libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+    libmwaw::Debug::dumpFile(file, f.str().c_str());
   }
 #endif
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(" << name << "):";
   m_input->seek(endPos, WPX_SEEK_SET);
   ascii().addPos(pos);
@@ -1474,7 +1474,7 @@ bool CWGraph::readBitmapColorMap(std::vector<Vec3uc> &cMap)
   }
 
   m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(BitmapColor):";
   f << "unkn=" << m_input->readLong(4) << ",";
   int maxColor = m_input->readLong(4);
@@ -1521,7 +1521,7 @@ bool CWGraph::readBitmapData(CWGraphInternal::ZoneBitmap &zone)
   zone.m_bitmapType = numBytes;
   zone.m_entry.setBegin(pos+4);
   zone.m_entry.setEnd(endPos);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(BitmapData):nBytes=" << numBytes;
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1581,22 +1581,22 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
   if (pictSz[1] < 0) pictSz.setY(-pictSz[1]);
   Box2i box(Vec2i(0,0), pictSz);
 
-  shared_ptr<libmwaw_tools::PictBasic> pictPtr;
+  shared_ptr<MWAWPictBasic> pictPtr;
   switch(pict.getSubType()) {
   case CWGraphInternal::Zone::T_Line: {
-    libmwaw_tools::PictLine *res=new libmwaw_tools::PictLine(Vec2i(0,0), pict.m_box.size());
+    MWAWPictLine *res=new MWAWPictLine(Vec2i(0,0), pict.m_box.size());
     pictPtr.reset(res);
     if (pict.m_style.m_lineFlags & 0x40) res->setArrow(0, true);
     if (pict.m_style.m_lineFlags & 0x80) res->setArrow(1, true);
     break;
   }
   case CWGraphInternal::Zone::T_Rect: {
-    libmwaw_tools::PictRectangle *res=new libmwaw_tools::PictRectangle(box);
+    MWAWPictRectangle *res=new MWAWPictRectangle(box);
     pictPtr.reset(res);
     break;
   }
   case CWGraphInternal::Zone::T_RectOval: {
-    libmwaw_tools::PictRectangle *res=new libmwaw_tools::PictRectangle(box);
+    MWAWPictRectangle *res=new MWAWPictRectangle(box);
     int roundValues[2];
     for (int i = 0; i < 2; i++) {
       if (2*pict.m_values[i] <= pictSz[i])
@@ -1611,7 +1611,7 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
     break;
   }
   case CWGraphInternal::Zone::T_Oval: {
-    libmwaw_tools::PictCircle *res=new libmwaw_tools::PictCircle(box);
+    MWAWPictCircle *res=new MWAWPictCircle(box);
     pictPtr.reset(res);
     break;
   }
@@ -1638,7 +1638,7 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
       float ang = (bord == limitAngle[0]) ? angle[0] :
                   (bord == limitAngle[1]+1) ? angle[1] : 90 * bord;
       ang *= M_PI/180.;
-      float actVal[2] = { axis[0]*std::cos(ang), -axis[1]*std::sin(ang)};
+      float actVal[2] = { axis[0] *std::cos(ang), -axis[1] *std::sin(ang)};
       if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
       else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
       if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
@@ -1646,14 +1646,14 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
     }
     Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
                   Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
-    libmwaw_tools::PictArc *res=new libmwaw_tools::PictArc(realBox,box, angle[0], angle[1]);
+    MWAWPictArc *res=new MWAWPictArc(realBox,box, angle[0], angle[1]);
     pictPtr.reset(res);
     break;
   }
   case CWGraphInternal::Zone::T_Poly: {
     if (!pict.m_vertices.size()) break;
     // if (pict.m_style.m_lineFlags & 1) : we must close the polygon ?
-    libmwaw_tools::PictPolygon *res=new libmwaw_tools::PictPolygon(box, pict.m_vertices);
+    MWAWPictPolygon *res=new MWAWPictPolygon(box, pict.m_vertices);
     pictPtr.reset(res);
     break;
   }
@@ -1672,8 +1672,8 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
   if (!pictPtr->getBinary(data,type)) return false;
   Box2f pictBox= pictPtr->getBdBox();
   pictBox.extend(4.0);
-  TMWAWPosition pictPos=TMWAWPosition(pictBox[0],pictBox.size(), WPX_POINT);
-  pictPos.setRelativePosition(TMWAWPosition::Char);
+  MWAWPosition pictPos=MWAWPosition(pictBox[0],pictBox.size(), WPX_POINT);
+  pictPos.setRelativePosition(MWAWPosition::Char);
 
 
   m_listener->insertPicture(pictPos,data, type);
@@ -1688,18 +1688,18 @@ bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap)
   if (!m_listener)
     return true;
   int numColors = bitmap.m_colorMap.size();
-  shared_ptr<libmwaw_tools::PictBitmap> bmap;
+  shared_ptr<MWAWPictBitmap> bmap;
 
-  libmwaw_tools::PictBitmapIndexed *bmapIndexed = 0;
-  libmwaw_tools::PictBitmapColor *bmapColor = 0;
+  MWAWPictBitmapIndexed *bmapIndexed = 0;
+  MWAWPictBitmapColor *bmapColor = 0;
   bool indexed = false;
   if (numColors > 2) {
-    bmapIndexed =  new libmwaw_tools::PictBitmapIndexed(bitmap.m_size);
+    bmapIndexed =  new MWAWPictBitmapIndexed(bitmap.m_size);
     bmapIndexed->setColors(bitmap.m_colorMap);
     bmap.reset(bmapIndexed);
     indexed = true;
   } else
-    bmap.reset((bmapColor=new libmwaw_tools::PictBitmapColor(bitmap.m_size)));
+    bmap.reset((bmapColor=new MWAWPictBitmapColor(bitmap.m_size)));
 
   //! let go
   int fSz = bitmap.m_bitmapType;
@@ -1733,8 +1733,8 @@ bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap)
     }
   }
 
-  TMWAWPosition pictPos=TMWAWPosition(Vec2f(0,0),bitmap.m_box.size(), WPX_POINT);
-  pictPos.setRelativePosition(TMWAWPosition::Char);
+  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),bitmap.m_box.size(), WPX_POINT);
+  pictPos.setRelativePosition(MWAWPosition::Char);
   WPXBinaryData data;
   std::string type;
   if (!bmap->getBinary(data,type)) return false;
@@ -1748,20 +1748,20 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict)
 {
   bool send = false;
   for (int z = 0; z < 2; z++) {
-    IMWAWEntry entry = pict.m_entries[z];
+    MWAWEntry entry = pict.m_entries[z];
     if (!entry.valid())
       continue;
 
     Box2f box;
     m_input->seek(entry.begin(), WPX_SEEK_SET);
 
-    TMWAWPosition pictPos=TMWAWPosition(Vec2f(0,0),pict.m_box.size(), WPX_POINT);
-    pictPos.setRelativePosition(TMWAWPosition::Char);
+    MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),pict.m_box.size(), WPX_POINT);
+    pictPos.setRelativePosition(MWAWPosition::Char);
     switch(pict.getSubType()) {
     case CWGraphInternal::Zone::T_Movie:
     case CWGraphInternal::Zone::T_Pict: {
-      shared_ptr<libmwaw_tools::Pict> pict
-      (libmwaw_tools::PictData::get(m_input, entry.length()));
+      shared_ptr<MWAWPict> pict
+      (MWAWPictData::get(m_input, entry.length()));
       if (pict) {
         if (!send && m_listener) {
           WPXBinaryData data;
@@ -1790,9 +1790,9 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict)
     m_input->seek(entry.begin(), WPX_SEEK_SET);
     m_input->readDataBlock(entry.length(), file);
     static int volatile pictName = 0;
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     f << "PICT-" << ++pictName;
-    libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+    libmwaw::Debug::dumpFile(file, f.str().c_str());
 #endif
   }
   return send;

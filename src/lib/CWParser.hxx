@@ -40,16 +40,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener CWContentListener;
 typedef shared_ptr<CWContentListener> CWContentListenerPtr;
@@ -87,7 +87,7 @@ class CWText;
  *
  *
  */
-class CWParser : public IMWAWParser
+class CWParser : public MWAWParser
 {
   friend class CWParserInternal::SubDocument;
   friend class CWDatabase;
@@ -98,12 +98,12 @@ class CWParser : public IMWAWParser
 
 public:
   //! constructor
-  CWParser(TMWAWInputStreamPtr input, IMWAWHeader * header);
+  CWParser(MWAWInputStreamPtr input, MWAWHeader *header);
   //! destructor
   virtual ~CWParser();
 
   //! checks if the document header is correct (or not)
-  bool checkHeader(IMWAWHeader *header, bool strict=false);
+  bool checkHeader(MWAWHeader *header, bool strict=false);
 
   /** returns the file version.
    *
@@ -190,22 +190,22 @@ protected:
   // THE NAMED ENTRY
 
   /* read the document summary */
-  bool readDSUM(IMWAWEntry const &entry, bool inHeader);
+  bool readDSUM(MWAWEntry const &entry, bool inHeader);
 
   /* read the temporary file name ? */
-  bool readTNAM(IMWAWEntry const &entry);
+  bool readTNAM(MWAWEntry const &entry);
 
   /* SNAP (in v6) : size[4]/size[2] picture... */
-  bool readSNAP(IMWAWEntry const &entry);
+  bool readSNAP(MWAWEntry const &entry);
 
   /* sequence of plist of printer : in v6
    */
-  bool readCPRT(IMWAWEntry const &entry);
+  bool readCPRT(MWAWEntry const &entry);
 
   /* style: sequence of zone : 1 by style ?*/
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -254,7 +254,7 @@ protected:
   std::vector<shared_ptr<CWParserInternal::SubDocument> > m_listSubDocuments;
 
   //! the debug file
-  libmwaw_tools::DebugFile m_asciiFile;
+  libmwaw::DebugFile m_asciiFile;
 
   //! the debug file name
   std::string m_asciiName;

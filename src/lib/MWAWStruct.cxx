@@ -29,7 +29,7 @@
 
 #include "libmwaw_libwpd.hxx"
 
-#include "IMWAWContentListener.hxx"
+#include "MWAWContentListener.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -37,7 +37,7 @@
 namespace MWAWStruct
 {
 
-void Font::sendTo(IMWAWContentListener *listener, MWAWTools::ConvertissorPtr &convert, Font &actualFont, bool force) const
+void Font::sendTo(MWAWContentListener *listener, MWAWTools::ConvertissorPtr &convert, Font &actualFont, bool force) const
 {
   if (listener == 0L) return;
   int newSize = size();

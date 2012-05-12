@@ -41,16 +41,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener WNContentListener;
 typedef shared_ptr<WNContentListener> WNContentListenerPtr;
@@ -82,19 +82,19 @@ class WNText;
  *
  *
  */
-class WNParser : public IMWAWParser
+class WNParser : public MWAWParser
 {
   friend class WNText;
   friend class WNParserInternal::SubDocument;
 
 public:
   //! constructor
-  WNParser(TMWAWInputStreamPtr input, IMWAWHeader * header);
+  WNParser(MWAWInputStreamPtr input, MWAWHeader *header);
   //! destructor
   virtual ~WNParser();
 
   //! checks if the document header is correct (or not)
-  bool checkHeader(IMWAWHeader *header, bool strict=false);
+  bool checkHeader(MWAWHeader *header, bool strict=false);
 
   /** returns the file version.
    *
@@ -186,7 +186,7 @@ protected:
   bool checkIfPositionValid(long pos);
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -221,7 +221,7 @@ protected:
   std::vector<shared_ptr<WNParserInternal::SubDocument> > m_listSubDocuments;
 
   //! the debug file
-  libmwaw_tools::DebugFile m_asciiFile;
+  libmwaw::DebugFile m_asciiFile;
 
   //! the debug file name
   std::string m_asciiName;

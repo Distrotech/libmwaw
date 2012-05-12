@@ -20,11 +20,11 @@ aclocal ; autoconf; automake
 
 Extensive installation instructions can be found in the INSTALL file.
 
-Windows ( NOT WORKING : help needed... )
+Windows
 =========================================
 Beta tester needed to test the compilation and report problems
 
-Windows - Microsoft(tm) Visual Studio/C++
+Windows - Microsoft(tm) Visual Studio/C++ ( NO TEST : help needed... )
 =========================================
 
 A workspace for MSVC6 can be found in the ./build/win32/ directory.
@@ -89,7 +89,7 @@ create only shared libraries. Myself, I build using following options:
  
   make clean all
 
-5. And last but not least, compile and install libwpd by running:
+5. And last but not least, compile and install libmwaw by running:
 
   make install [-i]
 
@@ -97,6 +97,11 @@ If you configure using "--enable-static --disable-shared" (pure static library
 creation), the libtool import libraries are not created. Make will try to install
 them and will stop with error. The "-i" option makes it to report the error, but
 not to stop. Like that the installation will succeed.
+
+6. If we want to compil mwaw2odt ( which will be a part of writerperfect), you
+must download the lastest version :
+  git clone git://libwpd.git.sourceforge.net/gitroot/libwpd/writerperfect
+and then recompile it.... 
 
 That's all folks! While no mailing exists, for more information, ask
 questions directly to osnola@users.sourceforge.net. Remember that Uncle Google can

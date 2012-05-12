@@ -36,11 +36,11 @@
 
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPosition.hxx"
-#include "TMWAWPictMac.hxx"
-#include "TMWAWPrint.hxx"
+#include "MWAWPosition.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPrinter.hxx"
 
-#include "IMWAWHeader.hxx"
+#include "MWAWHeader.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -58,19 +58,19 @@ namespace MSKParserInternal
 //! Internal: the state of a MSKParser
 struct State {
   //! constructor
-  State() : m_version(-1), m_docType(IMWAWDocument::K_TEXT), m_eof(-1), m_actPage(0), m_numPages(0),
+  State() : m_version(-1), m_docType(MWAWDocument::K_TEXT), m_eof(-1), m_actPage(0), m_numPages(0),
     m_headerText(""), m_footerText(""), m_hasHeader(false), m_hasFooter(false),
     m_headerHeight(0), m_footerHeight(0) {
   }
 
   //! returns true if this is a text document (hack for MSWorks 4.0 Draw)
   bool IsTextDoc() const {
-    return m_docType == IMWAWDocument::K_TEXT;
+    return m_docType == MWAWDocument::K_TEXT;
   }
   //! the file version
   int m_version;
   //! the type of document
-  IMWAWDocument::DocumentKind m_docType;
+  MWAWDocument::DocumentKind m_docType;
   //! the last known file position
   long m_eof;
 
@@ -84,19 +84,19 @@ struct State {
 
 ////////////////////////////////////////
 //! Internal: the subdocument of a MSKParser
-class SubDocument : public IMWAWSubDocument
+class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(MSKParser &pars, TMWAWInputStreamPtr input, int zoneId) :
-    IMWAWSubDocument(&pars, input, IMWAWEntry()), m_id(zoneId) {}
+  SubDocument(MSKParser &pars, MWAWInputStreamPtr input, int zoneId) :
+    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
 
   //! destructor
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(IMWAWSubDocument const &doc) const;
+  virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(IMWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const {
     return !operator!=(doc);
   }
 
@@ -110,7 +110,7 @@ public:
   }
 
   //! the parser function
-  void parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType type);
+  void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type);
 
 protected:
   /** the subdocument id
@@ -120,7 +120,7 @@ protected:
   int m_id;
 };
 
-void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -138,9 +138,9 @@ void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType 
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
-bool SubDocument::operator!=(IMWAWSubDocument const &doc) const
+bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 {
-  if (IMWAWSubDocument::operator!=(doc)) return true;
+  if (MWAWSubDocument::operator!=(doc)) return true;
   SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
   if (!sDoc) return true;
   if (m_id != sDoc->m_id) return true;
@@ -152,8 +152,8 @@ bool SubDocument::operator!=(IMWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSKParser::MSKParser(TMWAWInputStreamPtr input, IMWAWHeader * header) :
-  IMWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
+MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWHeader *header) :
+  MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
   m_pageSpan(), m_listZones(), m_graphParser(), m_textParser(), m_listSubDocuments(), m_asciiFile(), m_asciiName("")
 {
   init();
@@ -314,7 +314,7 @@ bool MSKParser::checkIfPositionValid(long pos)
 {
   if (pos <= m_state->m_eof)
     return true;
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
   input->seek(pos, WPX_SEEK_SET);
   bool ok = long(input->tell())==pos;
@@ -332,7 +332,7 @@ void MSKParser::send(int id)
     m_textParser->sendZone(id);
 }
 
-bool  MSKParser::sendTextBox(int id, TMWAWPosition const &pos, WPXPropertyList &extras)
+bool  MSKParser::sendTextBox(int id, MWAWPosition const &pos, WPXPropertyList &extras)
 {
   shared_ptr<MSKParserInternal::SubDocument> subdoc
   (new MSKParserInternal::SubDocument(*this, getInput(), -id-1));
@@ -369,28 +369,26 @@ void MSKParser::createDocument(WPXDocumentInterface *documentInterface)
   int id = m_textParser->getHeader();
   if (id >= 0) {
     if (vers <= 2) m_state->m_headerHeight = 12;
-    DMWAWTableList tableList;
     shared_ptr<MSKParserInternal::SubDocument> subdoc
     (new MSKParserInternal::SubDocument(*this, getInput(), id));
     m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter(HEADER, 0, ALL, subdoc.get(), tableList);
+    ps.setHeaderFooter(HEADER, 0, ALL, subdoc.get());
   }
 
   id = m_textParser->getFooter();
   if (id >= 0) {
     if (vers <= 2) m_state->m_footerHeight = 12;
-    DMWAWTableList tableList;
     shared_ptr<MSKParserInternal::SubDocument> subdoc
     (new MSKParserInternal::SubDocument(*this, getInput(), id));
     m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter(FOOTER, 0, ALL, subdoc.get(), tableList);
+    ps.setHeaderFooter(FOOTER, 0, ALL, subdoc.get());
   }
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
   MSKContentListenerPtr listen =
-    MSKContentListener::create(pageList, documentInterface, m_convertissor);
+    MSKContentListener::create(pageList, documentInterface);
   setListener(listen);
   listen->startDocument();
 }
@@ -403,10 +401,10 @@ void MSKParser::createDocument(WPXDocumentInterface *documentInterface)
 ////////////////////////////////////////////////////////////
 bool MSKParser::createZones()
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
 
-  IMWAWEntry pict;
+  MWAWEntry pict;
   while (!input->atEOS()) {
     pos = input->tell();
     int val = input->readLong(1);
@@ -414,14 +412,14 @@ bool MSKParser::createZones()
     bool ok = false;
     switch(val) {
     case 0: {
-      IMWAWEntry pict;
+      MWAWEntry pict;
       int pictId = m_graphParser->getEntryPicture(pict);
       if ((ok=(pictId >= 0)))
         input->seek(pict.end(), WPX_SEEK_SET);
       break;
     }
     case 1: {
-      IMWAWEntry pict;
+      MWAWEntry pict;
       int pictId = m_graphParser->getEntryPictureV1(pict);
       if ((ok=(pictId >= 0)))
         input->seek(pict.end(), WPX_SEEK_SET);
@@ -431,7 +429,7 @@ bool MSKParser::createZones()
       ok = readDocumentInfo();
       break;
     case 3: {
-      IMWAWEntry group;
+      MWAWEntry group;
       ok = readGroup(group, 2);
       break;
     }
@@ -475,16 +473,16 @@ bool MSKParser::createZones()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool MSKParser::checkHeader(IMWAWHeader *header, bool strict)
+bool MSKParser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = MSKParserInternal::State();
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
 
   int numError = 0, val;
 
   const int headerSize = 0x20;
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   input->seek(0,WPX_SEEK_SET);
 
@@ -533,13 +531,13 @@ bool MSKParser::checkHeader(IMWAWHeader *header, bool strict)
   case 1:
     break;
   case 2:
-    m_state->m_docType = IMWAWDocument::K_DATABASE;
+    m_state->m_docType = MWAWDocument::K_DATABASE;
     break;
   case 3:
-    m_state->m_docType = IMWAWDocument::K_SPREADSHEET;
+    m_state->m_docType = MWAWDocument::K_SPREADSHEET;
     break;
   case 12:
-    m_state->m_docType = IMWAWDocument::K_DRAW;
+    m_state->m_docType = MWAWDocument::K_DRAW;
     break;
   default:
     MWAW_DEBUG_MSG(("MSKParser::checkHeader: find odd type=%d: not implemented\n", type));
@@ -548,10 +546,10 @@ bool MSKParser::checkHeader(IMWAWHeader *header, bool strict)
 
 #ifndef DEBUG
   // I have never seen this file, so...
-  if (strict && m_state->m_version == 1 && m_state->m_docType != IMWAWDocument::K_TEXT)
+  if (strict && m_state->m_version == 1 && m_state->m_docType != MWAWDocument::K_TEXT)
     return false;
 
-  if (m_state->m_docType != IMWAWDocument::K_TEXT)
+  if (m_state->m_docType != MWAWDocument::K_TEXT)
     return false;
 
   if (m_state->m_version < 1 || m_state->m_version > 2)
@@ -559,7 +557,7 @@ bool MSKParser::checkHeader(IMWAWHeader *header, bool strict)
 #endif
 
   // ok, we can finish initialization
-  IMWAWEntry headerZone;
+  MWAWEntry headerZone;
   headerZone.setBegin(0);
   headerZone.setEnd(headerSize);
   headerZone.setType("FileHeader");
@@ -625,7 +623,7 @@ bool MSKParser::checkHeader(IMWAWHeader *header, bool strict)
   }
 
   if (header)
-    header->reset(IMWAWDocument::MSWORKS, m_state->m_version,
+    header->reset(MWAWDocument::MSWORKS, m_state->m_version,
                   m_state->m_docType);
 
   ascii().addPos(0);
@@ -641,9 +639,9 @@ bool MSKParser::checkHeader(IMWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 bool MSKParser::readDocumentInfo()
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   if (input->readLong(1) != 2)
     return false;
@@ -734,16 +732,16 @@ bool MSKParser::readDocumentInfo()
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool MSKParser::readGroup(IMWAWEntry &zone, int check)
+bool MSKParser::readGroup(MWAWEntry &zone, int check)
 {
-  zone = IMWAWEntry();
-  TMWAWInputStreamPtr input=getInput();
+  zone = MWAWEntry();
+  MWAWInputStreamPtr input=getInput();
   if (input->atEOS()) return false;
 
   long pos = input->tell();
   if (input->readULong(1) != 3) return false;
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int docId = input->readULong(1);
   int docExtra = input->readULong(1);
   int flag = input->readULong(1);
@@ -804,7 +802,7 @@ bool MSKParser::readGroup(IMWAWEntry &zone, int check)
   else
     m_state->m_docId = docId;
 #endif
-  IMWAWEntry pictZone;
+  MWAWEntry pictZone;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     if (m_graphParser->getEntryPicture(pictZone) >= 0)
@@ -827,11 +825,11 @@ bool MSKParser::readGroup(IMWAWEntry &zone, int check)
 ////////////////////////////////////////////////////////////
 bool MSKParser::readPrintInfo()
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   // print info
-  libmwaw_tools_mac::PrintInfo info;
+  libmwaw::PrinterInfo info;
   if (!checkIfPositionValid(pos+0x78+8) || !info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
 

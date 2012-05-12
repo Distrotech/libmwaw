@@ -30,23 +30,16 @@ SLOFILES= \
 	$(SLO)$/CWTable.cxx			\
 	$(SLO)$/CWText.cxx			\
 	$(SLO)$/DMWAWContentListener.cxx	\
-	$(SLO)$/DMWAWEncryption.cxx		\
-	$(SLO)$/DMWAWListener.cxx		\
-	$(SLO)$/DMWAWMemoryStream.cxx		\
 	$(SLO)$/DMWAWOLEStream.cxx		\
 	$(SLO)$/DMWAWPageSpan.cxx		\
-	$(SLO)$/DMWAWSubDocument.cxx		\
-	$(SLO)$/DMWAWTable.cxx			\
 	$(SLO)$/FWParser.cxx			\
 	$(SLO)$/FWText.cxx			\
-	$(SLO)$/IMWAWCell.cxx			\
-	$(SLO)$/IMWAWContentListener.cxx	\
-	$(SLO)$/IMWAWDocument.cxx		\
-	$(SLO)$/IMWAWHeader.cxx			\
-	$(SLO)$/IMWAWList.cxx			\
-	$(SLO)$/IMWAWTableHelper.cxx		\
-	$(SLO)$/IMWAWTextParser.cxx		\
-	$(SLO)$/MWAWContentListener.cxx		\
+	$(SLO)$/MWAWCell.cxx			\
+	$(SLO)$/MWAWContentListener.cxx	\
+	$(SLO)$/MWAWDocument.cxx		\
+	$(SLO)$/MWAWHeader.cxx			\
+	$(SLO)$/MWAWList.cxx			\
+	$(SLO)$/MWAWTableHelper.cxx		\
 	$(SLO)$/MWAWStruct.cxx			\
 	$(SLO)$/MWAWTools.cxx			\
 	$(SLO)$/MWParser.cxx			\
@@ -57,17 +50,17 @@ SLOFILES= \
 	$(SLO)$/MSKText.cxx			\
 	$(SLO)$/MSWParser.cxx			\
 	$(SLO)$/MSWText.cxx			\
-	$(SLO)$/TMWAWDebug.cxx			\
+	$(SLO)$/MWAWDebug.cxx			\
 	$(SLO)$/TMWAWFont.cxx			\
-	$(SLO)$/TMWAWInputStream.cxx		\
+	$(SLO)$/MWAWInputStream.cxx		\
 	$(SLO)$/TMWAWOleParser.cxx		\
-	$(SLO)$/TMWAWPictBasic.cxx		\
-	$(SLO)$/TMWAWPictBitmap.cxx		\
-	$(SLO)$/TMWAWPictData.cxx		\
-	$(SLO)$/TMWAWPictMac.cxx		\
-	$(SLO)$/TMWAWPictOleContainer.cxx	\
-	$(SLO)$/TMWAWPrint.cxx			\
-	$(SLO)$/TMWAWPropertyHandler.cxx	\
+	$(SLO)$/MWAWPictBasic.cxx		\
+	$(SLO)$/MWAWPictBitmap.cxx		\
+	$(SLO)$/MWAWPictData.cxx		\
+	$(SLO)$/MWAWPictMac.cxx		\
+	$(SLO)$/MWAWPictOLEContainer.cxx	\
+	$(SLO)$/MWAWPrinter.cxx			\
+	$(SLO)$/MWAWPropertyHandler.cxx	\
 	$(SLO)$/WNParser.cxx			\
 	$(SLO)$/WNText.cxx			\
 	$(SLO)$/WPParser.cxx			\

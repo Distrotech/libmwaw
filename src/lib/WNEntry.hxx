@@ -38,10 +38,10 @@
 #include <string>
 
 #include "libmwaw_tools.hxx"
-#include "IMWAWEntry.hxx"
+#include "MWAWEntry.hxx"
 
-struct WNEntry : public IMWAWEntry {
-  WNEntry() : IMWAWEntry(), m_id(-1), m_fileType(-1), m_entryType(-1) {
+struct WNEntry : public MWAWEntry {
+  WNEntry() : MWAWEntry(), m_id(-1), m_fileType(-1), m_entryType(-1) {
     for (int i = 0; i < 4; i++) m_val[i] = 0;
   }
   //! returns true if this entry store a zone

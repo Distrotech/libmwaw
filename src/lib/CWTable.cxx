@@ -36,12 +36,12 @@
 
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPictBasic.hxx"
-#include "TMWAWPictMac.hxx"
-#include "TMWAWPosition.hxx"
+#include "MWAWPictBasic.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWCell.hxx"
-#include "IMWAWTableHelper.hxx"
+#include "MWAWCell.hxx"
+#include "MWAWTableHelper.hxx"
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
 #include "MWAWContentListener.hxx"
@@ -76,13 +76,13 @@ struct Border {
   int m_flags;
 };
 
-struct Cell : public IMWAWTableHelperCell {
-  Cell() : IMWAWTableHelperCell(), m_size(), m_zoneId(0), m_styleId(-1) {
+struct Cell : public MWAWTableHelperCell {
+  Cell() : MWAWTableHelperCell(), m_size(), m_zoneId(0), m_styleId(-1) {
   }
 
-  virtual bool send(IMWAWContentListenerPtr listener) {
+  virtual bool send(MWAWContentListenerPtr listener) {
     if (!listener) return true;
-    IMWAWCell cell;
+    MWAWCell cell;
     cell.position() = m_position;
     cell.setNumSpannedCells(m_numSpan);
 
@@ -92,7 +92,7 @@ struct Cell : public IMWAWTableHelperCell {
     return true;
   }
 
-  virtual bool sendContent(IMWAWContentListenerPtr listener) {
+  virtual bool sendContent(MWAWContentListenerPtr listener) {
     if (!listener) return true;
     listener->insertCharacter(' ');
     return true;
@@ -100,7 +100,7 @@ struct Cell : public IMWAWTableHelperCell {
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Cell const &cell) {
-    o << reinterpret_cast<IMWAWTableHelperCell const&>(cell);
+    o << reinterpret_cast<MWAWTableHelperCell const &>(cell);
     Vec2f sz = cell.m_size;
     o << "size=" << sz << ",";
     if (cell.m_zoneId) o << "zone=" << cell.m_zoneId << ",";
@@ -124,10 +124,10 @@ struct Cell : public IMWAWTableHelperCell {
 
 ////////////////////////////////////////
 ////////////////////////////////////////
-struct Table : public CWStruct::DSET, public IMWAWTableHelper {
+struct Table : public CWStruct::DSET, public MWAWTableHelper {
   //! constructor
   Table(CWStruct::DSET const dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset),IMWAWTableHelper(), m_bordersList(), m_parsed(false) {
+    CWStruct::DSET(dset),MWAWTableHelper(), m_bordersList(), m_parsed(false) {
   }
 
   //! operator<<
@@ -141,7 +141,7 @@ struct Table : public CWStruct::DSET, public IMWAWTableHelper {
       MWAW_DEBUG_MSG(("CWTableInteral::Table::get: cell %d does not exists\n",id));
       return 0;
     }
-    return reinterpret_cast<Cell *>(IMWAWTableHelper::get(id).get());
+    return reinterpret_cast<Cell *>(MWAWTableHelper::get(id).get());
   }
 
   std::vector<Border> m_bordersList;
@@ -164,7 +164,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 CWTable::CWTable
-(TMWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWTableInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -191,14 +191,14 @@ int CWTable::numPages() const
 // a document part
 ////////////////////////////////////////////////////////////
 shared_ptr<CWStruct::DSET> CWTable::readTableZone
-(CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete)
+(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
   if (!entry.valid() || zone.m_type != 6 || entry.length() < 32)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   shared_ptr<CWTableInternal::Table>
   tableZone(new CWTableInternal::Table(zone));
 
@@ -336,7 +336,7 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
   }
 
   m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(TableBorders):";
   int N = m_input->readULong(2);
   f << "N=" << N << ",";
@@ -394,7 +394,7 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
   }
 
   m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(TableCell):";
   int N = m_input->readULong(2);
   f << "N=" << N << ",";
@@ -458,7 +458,7 @@ bool CWTable::readTableBordersId(CWTableInternal::Table &table)
     }
 
     m_input->seek(pos+4, WPX_SEEK_SET);
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     f << "Entries(TableBordersId)[" << i/4 << "," << i%4 << "],";
     int N = m_input->readULong(2);
     f << "N=" << N << ",";

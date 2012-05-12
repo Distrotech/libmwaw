@@ -42,16 +42,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener FWContentListener;
 typedef shared_ptr<FWContentListener> FWContentListenerPtr;
@@ -92,7 +92,7 @@ class FWText
   friend class FWParser;
 public:
   //! constructor
-  FWText(TMWAWInputStreamPtr ip, FWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  FWText(MWAWInputStreamPtr ip, FWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
   //! destructor
   virtual ~FWText();
 
@@ -172,7 +172,7 @@ protected:
   // data
   //
   //! the input
-  TMWAWInputStreamPtr m_input;
+  MWAWInputStreamPtr m_input;
 
   //! the listener
   FWContentListenerPtr m_listener;

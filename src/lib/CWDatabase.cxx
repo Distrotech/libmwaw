@@ -35,9 +35,9 @@
 
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPictBasic.hxx"
-#include "TMWAWPictMac.hxx"
-#include "TMWAWPosition.hxx"
+#include "MWAWPictBasic.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPosition.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -201,7 +201,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 CWDatabase::CWDatabase
-(TMWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWDatabaseInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -228,14 +228,14 @@ int CWDatabase::numPages() const
 // a document part
 ////////////////////////////////////////////////////////////
 shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
-(CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete)
+(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
   if (!entry.valid() || zone.m_type != 3 || entry.length() < 32)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   shared_ptr<CWDatabaseInternal::Database>
   databaseZone(new CWDatabaseInternal::Database(zone));
 
@@ -342,7 +342,7 @@ bool CWDatabase::readDatabaseFields(CWDatabaseInternal::Database &dBase)
   }
 
   m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(DatabaseField):";
   int N = m_input->readULong(2);
   f << "N=" << N << ",";
@@ -516,7 +516,7 @@ bool CWDatabase::readDatabaseDefaults(CWDatabaseInternal::Database &dBase)
 {
   int numFields = dBase.m_fields.size();
   int vers = version();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   for (int v = 0; v < numFields; v++) {
     CWDatabaseInternal::Field const &field = dBase.m_fields[v];
@@ -597,7 +597,7 @@ bool CWDatabase::readDatabaseContent(CWDatabaseInternal::Database &/*dBase*/)
   }
 
   m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(DatabaseContent):";
   int N = m_input->readULong(2);
   f << "N=" << N << ",";

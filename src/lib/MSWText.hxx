@@ -40,16 +40,16 @@
 
 #include "libmwaw_tools.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener MSWContentListener;
 typedef shared_ptr<MSWContentListener> MSWContentListenerPtr;
@@ -82,7 +82,7 @@ class MSWText
 
 public:
   //! constructor
-  MSWText(TMWAWInputStreamPtr ip, MSWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  MSWText(MWAWInputStreamPtr ip, MSWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
   //! destructor
   virtual ~MSWText();
 
@@ -103,7 +103,7 @@ protected:
   bool sendMainText();
 
   //! send a text zone
-  bool sendText(IMWAWEntry const &textEntry, bool mainZone);
+  bool sendText(MWAWEntry const &textEntry, bool mainZone);
   /* send a font
    *
    * \param font the font's properties*/
@@ -182,7 +182,7 @@ protected:
   void updateTextEntryStyle();
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -195,7 +195,7 @@ protected:
   // data
   //
   //! the input
-  TMWAWInputStreamPtr m_input;
+  MWAWInputStreamPtr m_input;
 
   //! the listener
   MSWContentListenerPtr m_listener;
@@ -210,7 +210,7 @@ protected:
   MSWParser *m_mainParser;
 
   //! the debug file
-  libmwaw_tools::DebugFile &m_asciiFile;
+  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

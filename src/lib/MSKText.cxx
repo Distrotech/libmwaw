@@ -35,11 +35,11 @@
 
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPictMac.hxx"
-#include "TMWAWPosition.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWCell.hxx"
-#include "IMWAWTableHelper.hxx"
+#include "MWAWCell.hxx"
+#include "MWAWTableHelper.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -92,7 +92,7 @@ struct LineZone {
   //! the type
   int m_type;
   //! the file position
-  IMWAWEntry m_pos;
+  MWAWEntry m_pos;
   //! the id
   int m_id;
   //! the zone flags
@@ -241,7 +241,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSKText::MSKText
-(TMWAWInputStreamPtr ip, MSKParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, MSKParser &parser, MWAWTools::ConvertissorPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new MSKTextInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -371,7 +371,7 @@ bool MSKText::sendText(MSKTextInternal::LineZone &zone)
 {
   m_input->seek(zone.m_pos.begin()+6, WPX_SEEK_SET);
   int vers = version();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(TextZone):" << zone << ",";
   MSKTextInternal::Font actFont, font;
   actFont.m_font = m_state->m_font;
@@ -409,16 +409,16 @@ bool MSKText::sendText(MSKTextInternal::LineZone &zone)
         if (id) f << "[" << id << "]";
         switch (c) {
         case 0x19:
-          m_listener->insertField(IMWAWContentListener::Title);
+          m_listener->insertField(MWAWContentListener::Title);
           break;
         case 0x18:
-          m_listener->insertField(IMWAWContentListener::PageNumber);
+          m_listener->insertField(MWAWContentListener::PageNumber);
           break;
         case 0x16:
-          m_listener->insertField(IMWAWContentListener::Time);
+          m_listener->insertField(MWAWContentListener::Time);
           break;
         case 0x17: // id = 0 : short date ; id=9 : long date
-          m_listener->insertField(IMWAWContentListener::Date);
+          m_listener->insertField(MWAWContentListener::Date);
           break;
         case 0x15:
           MWAW_DEBUG_MSG(("MSKText::sendText: find unknown field type 0x15\n"));
@@ -468,16 +468,16 @@ bool MSKText::sendString(std::string &str)
     case 0x11:
       break;
     case 0x19:
-      m_listener->insertField(IMWAWContentListener::Title);
+      m_listener->insertField(MWAWContentListener::Title);
       break;
     case 0x18:
-      m_listener->insertField(IMWAWContentListener::PageNumber);
+      m_listener->insertField(MWAWContentListener::PageNumber);
       break;
     case 0x16:
-      m_listener->insertField(IMWAWContentListener::Time);
+      m_listener->insertField(MWAWContentListener::Time);
       break;
     case 0x17: // id = 0 : short date ; id=9 : long date
-      m_listener->insertField(IMWAWContentListener::Date);
+      m_listener->insertField(MWAWContentListener::Date);
       break;
     case 0x15:
       MWAW_DEBUG_MSG(("MSKText::sendString: find unknown field type 0x15\n"));
@@ -514,7 +514,7 @@ bool MSKText::readFont(MSKTextInternal::Font &font, long endPos)
     m_input->seek(pos, WPX_SEEK_SET);
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int flag = m_input->readULong(1); // check or font ?
   if (flag) f << "#f0=" << flag << ",";
   font.m_font.setId(m_input->readULong(1));
@@ -568,7 +568,7 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
   m_input->seek(zone.m_pos.begin()+6, WPX_SEEK_SET);
 
   parag= MSKTextInternal::Paragraph();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   int fl[2];
   bool firstFlag = (dataSize & 1) == 0;

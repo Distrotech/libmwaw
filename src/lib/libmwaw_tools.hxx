@@ -416,18 +416,18 @@ public:
   }
 
   //! the minimum 2D point (in x and in y)
-  Vec2<T> const & min() const {
+  Vec2<T> const &min() const {
     return m_pt[0];
   }
   //! the maximum 2D point (in x and in y)
-  Vec2<T> const & max() const {
+  Vec2<T> const &max() const {
     return m_pt[1];
   }
   /*! \brief the two extremum points which defined the box
    * \param c value 0 means the minimum
    * \param c value 1 means the maximum
    */
-  Vec2<T> const & operator[](int c) const {
+  Vec2<T> const &operator[](int c) const {
     assert(c >= 0 && c <= 1);
     return m_pt[c];
   }

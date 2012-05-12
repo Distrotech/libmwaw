@@ -37,11 +37,11 @@
 
 #include <libwpd/WPXBinaryData.h>
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWCell.hxx"
-#include "IMWAWHeader.hxx"
-#include "IMWAWTableHelper.hxx"
+#include "MWAWCell.hxx"
+#include "MWAWHeader.hxx"
+#include "MWAWTableHelper.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -219,25 +219,25 @@ struct Block {
     return (m_lineWidth !=0.0 && m_linePattern!=1);
   }
 
-  TMWAWPosition getPosition() const {
-    TMWAWPosition res;
+  MWAWPosition getPosition() const {
+    MWAWPosition res;
     if (m_attachment) {
-      res = TMWAWPosition(Vec2i(0,0), m_box.size(), WPX_POINT);
-      res.setRelativePosition(TMWAWPosition::Char, TMWAWPosition::XLeft, getRelativeYPos());
+      res = MWAWPosition(Vec2i(0,0), m_box.size(), WPX_POINT);
+      res.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, getRelativeYPos());
     } else {
-      res = TMWAWPosition(m_box.min(), m_box.size(), WPX_POINT);
-      res.setRelativePosition(TMWAWPosition::Page);
+      res = MWAWPosition(m_box.min(), m_box.size(), WPX_POINT);
+      res.setRelativePosition(MWAWPosition::Page);
       res.setPage(m_page);
-      res.m_wrapping =  TMWAWPosition::WDynamic;
+      res.m_wrapping =  MWAWPosition::WDynamic;
     }
     return res;
   }
 
-  TMWAWPosition::YPos getRelativeYPos() const {
+  MWAWPosition::YPos getRelativeYPos() const {
     float height = m_box.size()[1];
-    if (m_baseline < 0.25*height) return TMWAWPosition::YBottom;
-    if (m_baseline < 0.75*height) return TMWAWPosition::YCenter;
-    return TMWAWPosition::YTop;
+    if (m_baseline < 0.25*height) return MWAWPosition::YBottom;
+    if (m_baseline < 0.75*height) return MWAWPosition::YCenter;
+    return MWAWPosition::YTop;
   }
   bool contains(Box2f const &box) const {
     return box[0][0] >= m_box[0][0] && box[0][1] >= m_box[0][1] &&
@@ -456,9 +456,9 @@ struct Paragraph {
 
 ////////////////////////////////////////
 //! Internal: the cell of a WNProStructure
-struct Cell : public IMWAWTableHelperCell {
+struct Cell : public MWAWTableHelperCell {
   //! constructor
-  Cell(MWProStructures &parser) : IMWAWTableHelperCell(), m_parser(parser),
+  Cell(MWProStructures &parser) : MWAWTableHelperCell(), m_parser(parser),
     m_blockId(0) {
     for (int i = 0; i < 3; i++)
       m_color[i] = -1;
@@ -469,7 +469,7 @@ struct Cell : public IMWAWTableHelperCell {
       m_color[i] = col[i];
   }
   //! send the content
-  virtual bool send(IMWAWContentListenerPtr listener) {
+  virtual bool send(MWAWContentListenerPtr listener) {
     if (!listener) return true;
     // fixme
     int border = DMWAW_TABLE_CELL_TOP_BORDER_OFF
@@ -477,7 +477,7 @@ struct Cell : public IMWAWTableHelperCell {
                  | DMWAW_TABLE_CELL_BOTTOM_BORDER_OFF
                  | DMWAW_TABLE_CELL_LEFT_BORDER_OFF;
 
-    IMWAWCell cell;
+    MWAWCell cell;
     cell.position() = m_position;
     cell.setBorders(border);
     cell.setNumSpannedCells(m_numSpan);
@@ -498,7 +498,7 @@ struct Cell : public IMWAWTableHelperCell {
   }
 
   //! send the content
-  bool sendContent(IMWAWContentListenerPtr listener) {
+  bool sendContent(MWAWContentListenerPtr listener) {
     if (m_blockId > 0)
       m_parser.send(m_blockId);
     else if (listener) // try to avoid empty cell
@@ -516,9 +516,9 @@ struct Cell : public IMWAWTableHelperCell {
 
 ////////////////////////////////////////
 ////////////////////////////////////////
-struct Table : public IMWAWTableHelper {
+struct Table : public MWAWTableHelper {
   //! constructor
-  Table() : IMWAWTableHelper() {
+  Table() : MWAWTableHelper() {
   }
 
   //! return a cell corresponding to id
@@ -527,7 +527,7 @@ struct Table : public IMWAWTableHelper {
       MWAW_DEBUG_MSG(("MWProStructuresInternal::Table::get: cell %d does not exists\n",id));
       return 0;
     }
-    return reinterpret_cast<Cell *>(IMWAWTableHelper::get(id).get());
+    return reinterpret_cast<Cell *>(MWAWTableHelper::get(id).get());
   }
 };
 
@@ -777,7 +777,7 @@ bool MWProStructures::createZones()
     MWAW_DEBUG_MSG(("MWProStructures::createZones: can not find my input\n"));
     return false;
   }
-  m_input.reset(new TMWAWInputStream(dataInput, false));
+  m_input.reset(new MWAWInputStream(dataInput, false));
   m_input->setResponsable(false);
 
   ascii().setStream(m_input);
@@ -852,7 +852,7 @@ bool MWProStructures::createZones()
   }
   if (ok) {
     pos = m_input->tell();
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     f << "Entries(UserName):";
     // username,
     std::string res;
@@ -897,14 +897,14 @@ bool MWProStructures::createZonesV2()
   if (!m_mainParser.getZoneData(m_state->m_inputData, 3))
     return false;
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   WPXInputStream *dataInput =
     const_cast<WPXInputStream *>(m_state->m_inputData.getDataStream());
   if (!dataInput) {
     MWAW_DEBUG_MSG(("MWProStructures::createZonesV2: can not find my input\n"));
     return false;
   }
-  m_input.reset(new TMWAWInputStream(dataInput, false));
+  m_input.reset(new MWAWInputStream(dataInput, false));
   m_input->setResponsable(false);
 
   ascii().setStream(m_input);
@@ -1172,7 +1172,7 @@ void MWProStructures::buildTableStructures()
 bool MWProStructures::readFontsName()
 {
   long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   long sz = m_input->readULong(4);
   if (sz == 0) {
@@ -1243,7 +1243,7 @@ bool MWProStructures::readFontsName()
 bool MWProStructures::readFontsDef()
 {
   long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   long sz = m_input->readULong(4);
   if (sz == 0) {
@@ -1296,7 +1296,7 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
 {
   long pos = m_input->tell();
   int vers = version();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   font = MWProStructuresInternal::Font();
   font.m_values[0] = m_input->readLong(2); // 1, 3 or 6
   int val = m_input->readULong(2);
@@ -1353,7 +1353,7 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
 bool MWProStructures::readParagraphs()
 {
   long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int dataSz = version()==0 ? 202 : 192;
 
   long sz = m_input->readULong(4);
@@ -1407,7 +1407,7 @@ bool MWProStructures::readParagraphs()
 
 bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
 {
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int vers = version();
   long pos = m_input->tell(), endPos = pos+(vers == 0 ? 200: 190);
   para = MWProStructuresInternal::Paragraph();
@@ -1554,7 +1554,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
 bool MWProStructures::readCharStyles()
 {
   long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int vers = version();
 
   int N;
@@ -1640,7 +1640,7 @@ bool MWProStructures::readCharStyles()
 bool MWProStructures::readStyles()
 {
   long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   long sz = m_input->readULong(4);
   if ((sz%0x106) != 0) {
     MWAW_DEBUG_MSG(("MWProStructures::readStyles: find an odd value for sz=%ld\n",sz));
@@ -1681,7 +1681,7 @@ bool MWProStructures::readStyles()
 bool MWProStructures::readStyle(int styleId)
 {
   long debPos = m_input->tell(), pos = debPos;
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   // checkme something is odd here
   long dataSz = 0x106;
   long endPos = pos+dataSz;
@@ -1776,7 +1776,7 @@ bool MWProStructures::readStyle(int styleId)
 bool MWProStructures::readBlocksList()
 {
   long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   long endPos = pos+45;
   m_input->seek(endPos, WPX_SEEK_SET);
@@ -1857,7 +1857,7 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
 {
   long pos = m_input->tell();
   long endPos = pos+76;
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   shared_ptr<MWProStructuresInternal::Block> res;
 
   m_input->seek(endPos, WPX_SEEK_SET);
@@ -1983,7 +1983,7 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
 shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
 {
   long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   long sz = m_input->readULong(4);
   // pat2*3?, dim[pt*65536], border[pt*65536], ?, [0|10|1c], 0, block?
@@ -2202,7 +2202,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
 bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section> &sections)
 {
   long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   long sz = m_input->readULong(4);
   if (sz == 0) {
@@ -2330,7 +2330,7 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
 bool MWProStructures::readSelection()
 {
   long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   long endPos = pos+14;
   m_input->seek(endPos, WPX_SEEK_SET);
@@ -2367,7 +2367,7 @@ bool MWProStructures::readSelection()
 
 ////////////////////////////////////////////////////////////
 // read a string
-bool MWProStructures::readString(TMWAWInputStreamPtr input, std::string &res)
+bool MWProStructures::readString(MWAWInputStreamPtr input, std::string &res)
 {
   res="";
   long pos = input->tell();
@@ -2405,7 +2405,7 @@ bool MWProStructures::readString(TMWAWInputStreamPtr input, std::string &res)
 bool MWProStructures::readStructB()
 {
   long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   int N = m_input->readULong(2);
   if (N==0) {

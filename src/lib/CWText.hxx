@@ -42,16 +42,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener CWContentListener;
 typedef shared_ptr<CWContentListener> CWContentListenerPtr;
@@ -92,7 +92,7 @@ class CWText
 
 public:
   //! constructor
-  CWText(TMWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  CWText(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
   //! destructor
   virtual ~CWText();
 
@@ -103,7 +103,7 @@ public:
   int numPages() const;
 
   //! reads the zone Text DSET
-  shared_ptr<CWStruct::DSET> readDSETZone(CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete);
+  shared_ptr<CWStruct::DSET> readDSETZone(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
 protected:
 
@@ -130,16 +130,16 @@ protected:
   //
 
   //! try to read the paragraph
-  bool readParagraphs(IMWAWEntry const &entry, CWTextInternal::Zone &zone);
+  bool readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone);
 
   //! try to read a font sequence
-  bool readFonts(IMWAWEntry const &entry, CWTextInternal::Zone &zone);
+  bool readFonts(MWAWEntry const &entry, CWTextInternal::Zone &zone);
 
   //! try to the token zone)
-  bool readTokens(IMWAWEntry const &entry, CWTextInternal::Zone &zone);
+  bool readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone);
 
   //! try to read the text zone size
-  bool readTextZoneSize(IMWAWEntry const &entry, CWTextInternal::Zone &zone);
+  bool readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone);
 
   //! send the text zone to the listener
   bool sendText(CWTextInternal::Zone const &zone);
@@ -161,7 +161,7 @@ protected:
   // THE NAMED ENTRY
 
   /* STYL (in v4-6) : styles definition */
-  bool readSTYLs(IMWAWEntry const &entry);
+  bool readSTYLs(MWAWEntry const &entry);
 
   /* read a STYL subzone (in v4-6) */
   bool readSTYL(int id);
@@ -187,7 +187,7 @@ protected:
   /* style: sequence of zone : 1 by style ?*/
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -200,7 +200,7 @@ protected:
   // data
   //
   //! the input
-  TMWAWInputStreamPtr m_input;
+  MWAWInputStreamPtr m_input;
 
   //! the listener
   CWContentListenerPtr m_listener;
@@ -215,7 +215,7 @@ protected:
   CWParser *m_mainParser;
 
   //! the debug file
-  libmwaw_tools::DebugFile &m_asciiFile;
+  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -31,7 +31,6 @@
 #include <string>
 #include <algorithm>
 #include <libwpd/WPXString.h>
-#include "DMWAWEncryption.hxx"
 #include "libmwaw_libwpd_types.hxx"
 
 /* Various functions/defines that need not/should not be exported externally */
@@ -83,12 +82,12 @@ namespace libmwaw_libwpd
 {
 // add more of these as needed for byteswapping
 // (the 8-bit functions are just there to make things consistent)
-uint8_t readU8(WPXInputStream *input, DMWAWEncryption *encryption);
-uint16_t readU16(WPXInputStream *input, DMWAWEncryption *encryption, bool bigendian=false);
-uint32_t readU32(WPXInputStream *input, DMWAWEncryption *encryption, bool bigendian=false);
+uint8_t readU8(WPXInputStream *input);
+uint16_t readU16(WPXInputStream *input, bool bigendian=false);
+uint32_t readU32(WPXInputStream *input, bool bigendian=false);
 
-WPXString readPascalString(WPXInputStream *input, DMWAWEncryption *encryption);
-WPXString readCString(WPXInputStream *input, DMWAWEncryption *encryption);
+WPXString readPascalString(WPXInputStream *input);
+WPXString readCString(WPXInputStream *input);
 
 void appendUCS4(WPXString &str, uint32_t ucs4);
 
@@ -128,7 +127,7 @@ enum DMWAWTabAlignment { LEFT, RIGHT, CENTER, DECIMAL, BAR };
 enum DMWAWVerticalAlignment { TOP, MIDDLE, BOTTOM, FULL };
 
 enum DMWAWTextColumnType { NEWSPAPER, NEWSPAPER_VERTICAL_BALANCE, PARALLEL, PARALLEL_PROTECT };
-enum DMWAWSubDocumentType { DMWAW_SUBDOCUMENT_NONE, DMWAW_SUBDOCUMENT_HEADER_FOOTER, DMWAW_SUBDOCUMENT_NOTE, DMWAW_SUBDOCUMENT_TEXT_BOX, DMWAW_SUBDOCUMENT_COMMENT_ANNOTATION };
+enum MWAWSubDocumentType { MWAW_SUBDOCUMENT_NONE, MWAW_SUBDOCUMENT_HEADER_FOOTER, MWAW_SUBDOCUMENT_NOTE, MWAW_SUBDOCUMENT_TEXT_BOX, MWAW_SUBDOCUMENT_COMMENT_ANNOTATION };
 
 // ATTRIBUTE bits
 #define DMWAW_EXTRA_LARGE_BIT 1
@@ -249,14 +248,6 @@ class ParseException
 };
 
 class GenericException
-{
-};
-
-class UnsupportedEncryptionException
-{
-};
-
-class SupportedEncryptionException
 {
 };
 

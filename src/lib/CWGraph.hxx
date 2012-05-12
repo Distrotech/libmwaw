@@ -40,16 +40,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 #include "CWStruct.hxx"
 
@@ -96,7 +96,7 @@ class CWGraph
 
 public:
   //! constructor
-  CWGraph(TMWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  CWGraph(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
   //! destructor
   virtual ~CWGraph();
 
@@ -108,14 +108,14 @@ public:
 
   //! reads the zone Group DSET
   shared_ptr<CWStruct::DSET> readGroupZone
-  (CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete);
+  (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
   //! reads the zone Bitmap DSET
   shared_ptr<CWStruct::DSET> readBitmapZone
-  (CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete);
+  (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
   //! reads a color map zone ( v4-v6)
-  bool readColorMap(IMWAWEntry const &entry);
+  bool readColorMap(MWAWEntry const &entry);
 
   //! return the color which corresponds to an id (if possible)
   bool getColor(int id, Vec3uc &col) const;
@@ -137,10 +137,10 @@ protected:
   //
 
   /* read a simple group */
-  shared_ptr<CWGraphInternal::Zone> readGroupDef(IMWAWEntry const &entry);
+  shared_ptr<CWGraphInternal::Zone> readGroupDef(MWAWEntry const &entry);
 
   /* read a simple graphic zone */
-  bool readBasicGraphic(IMWAWEntry const &entry,
+  bool readBasicGraphic(MWAWEntry const &entry,
                         CWGraphInternal::ZoneBasic &zone);
 
   /* read the group data */
@@ -189,7 +189,7 @@ protected:
   bool sendBitmap(CWGraphInternal::ZoneBitmap &pict);
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -202,7 +202,7 @@ protected:
   // data
   //
   //! the input
-  TMWAWInputStreamPtr m_input;
+  MWAWInputStreamPtr m_input;
 
   //! the listener
   CWContentListenerPtr m_listener;
@@ -217,7 +217,7 @@ protected:
   CWParser *m_mainParser;
 
   //! the debug file
-  libmwaw_tools::DebugFile &m_asciiFile;
+  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

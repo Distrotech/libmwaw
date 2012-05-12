@@ -37,22 +37,11 @@ const uint8_t DUMMY_INTERNAL_HEADER_FOOTER = 16;
 
 // precondition: 0 <= headerFooterType <= 3 (i.e.: we don't handle watermarks here)
 DMWAWHeaderFooter::DMWAWHeaderFooter(const DMWAWHeaderFooterType headerFooterType, const DMWAWHeaderFooterOccurence occurence,
-                                     const uint8_t internalType, const DMWAWSubDocument *subDocument, DMWAWTableList tableList) :
+                                     const uint8_t internalType, const MWAWSubDocument *subDocument) :
   m_type(headerFooterType),
   m_occurence(occurence),
   m_internalType(internalType),
-  m_subDocument(subDocument),
-  m_tableList(tableList)
-{
-}
-
-DMWAWHeaderFooter::DMWAWHeaderFooter(const DMWAWHeaderFooterType headerFooterType, const DMWAWHeaderFooterOccurence occurence,
-                                     const uint8_t internalType, const DMWAWSubDocument *subDocument) :
-  m_type(headerFooterType),
-  m_occurence(occurence),
-  m_internalType(internalType),
-  m_subDocument(subDocument),
-  m_tableList()
+  m_subDocument(subDocument)
 {
 }
 
@@ -60,8 +49,7 @@ DMWAWHeaderFooter::DMWAWHeaderFooter(const DMWAWHeaderFooter &headerFooter) :
   m_type(headerFooter.getType()),
   m_occurence(headerFooter.getOccurence()),
   m_internalType(headerFooter.getInternalType()),
-  m_subDocument(headerFooter.getSubDocument()),
-  m_tableList(headerFooter.getTableList())
+  m_subDocument(headerFooter.getSubDocument())
 {
 }
 
@@ -71,7 +59,6 @@ DMWAWHeaderFooter &DMWAWHeaderFooter::operator=(const DMWAWHeaderFooter &headerF
   m_occurence = headerFooter.getOccurence();
   m_internalType = headerFooter.getInternalType();
   m_subDocument = headerFooter.getSubDocument();
-  m_tableList = headerFooter.getTableList();
   return *this;
 }
 
@@ -154,9 +141,9 @@ DMWAWPageSpan::~DMWAWPageSpan()
 
 
 void DMWAWPageSpan::setHeaderFooter(const DMWAWHeaderFooterType type, const uint8_t headerFooterType, const DMWAWHeaderFooterOccurence occurence,
-                                    const  DMWAWSubDocument *subDocument, DMWAWTableList tableList)
+                                    const  MWAWSubDocument *subDocument)
 {
-  DMWAWHeaderFooter headerFooter(type, occurence, headerFooterType, subDocument, tableList);
+  DMWAWHeaderFooter headerFooter(type, occurence, headerFooterType, subDocument);
   switch (occurence) {
   case ALL:
   case NEVER:

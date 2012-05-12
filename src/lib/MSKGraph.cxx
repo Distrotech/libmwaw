@@ -37,10 +37,10 @@
 #include <libwpd/WPXBinaryData.h>
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPictBasic.hxx"
-#include "TMWAWPictBitmap.hxx"
-#include "TMWAWPictMac.hxx"
-#include "TMWAWPosition.hxx"
+#include "MWAWPictBasic.hxx"
+#include "MWAWPictBitmap.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPosition.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -149,7 +149,7 @@ struct Zone {
     return Unknown;
   }
   //! return a binary data (if known)
-  virtual bool getBinaryData(TMWAWInputStreamPtr,
+  virtual bool getBinaryData(MWAWInputStreamPtr,
                              WPXBinaryData &res, std::string &type) const {
     res.clear();
     type="";
@@ -182,17 +182,17 @@ struct Zone {
     return res;
   }
 
-  TMWAWPosition getPosition(bool local) const {
-    TMWAWPosition res;
+  MWAWPosition getPosition(bool local) const {
+    MWAWPosition res;
     Box2f box = getLocalBox();
     if (local || m_page < 0) {
-      res = TMWAWPosition(Vec2f(0,0), box.size(), WPX_POINT);
-      res.setRelativePosition(TMWAWPosition::Char, TMWAWPosition::XLeft, TMWAWPosition::YTop);
+      res = MWAWPosition(Vec2f(0,0), box.size(), WPX_POINT);
+      res.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YTop);
     } else {
-      res = TMWAWPosition(box.min()+m_decal, box.size(), WPX_POINT);
-      res.setRelativePosition(TMWAWPosition::Page);
+      res = MWAWPosition(box.min()+m_decal, box.size(), WPX_POINT);
+      res.setRelativePosition(MWAWPosition::Page);
       res.setPage(m_page+1);
-      res.m_wrapping =  TMWAWPosition::WRunThrough;
+      res.m_wrapping =  MWAWPosition::WRunThrough;
     }
     return res;
   }
@@ -213,7 +213,7 @@ struct Zone {
   //! the type
   int m_subType;
   //! the file position
-  IMWAWEntry m_pos;
+  MWAWEntry m_pos;
   //! the data begin position
   long m_dataPos;
   //! the file id
@@ -399,7 +399,7 @@ struct BasicForm : public Zone {
     }
   }
 
-  virtual bool getBinaryData(TMWAWInputStreamPtr,
+  virtual bool getBinaryData(MWAWInputStreamPtr,
                              WPXBinaryData &res, std::string &type) const;
 
   //! the form bdbox ( used by arc )
@@ -411,12 +411,12 @@ struct BasicForm : public Zone {
   std::vector<Vec2f> m_vertices;
 };
 
-bool BasicForm::getBinaryData(TMWAWInputStreamPtr,
+bool BasicForm::getBinaryData(MWAWInputStreamPtr,
                               WPXBinaryData &data, std::string &type) const
 {
   data.clear();
   type="";
-  shared_ptr<libmwaw_tools::Pict> pict;
+  shared_ptr<MWAWPict> pict;
   float lineW = 1.0;
   switch(m_lineWidth) {
   case 0: // fixme dotted
@@ -450,7 +450,7 @@ bool BasicForm::getBinaryData(TMWAWInputStreamPtr,
 
   switch(m_subType) {
   case 0: {
-    libmwaw_tools::PictLine *pct=new libmwaw_tools::PictLine(m_box.min(), m_box.max());
+    MWAWPictLine *pct=new MWAWPictLine(m_box.min(), m_box.max());
     if (m_lineFlags & 1) pct->setArrow(1, true);
     if (lineW != 1.0) pct->setLineWidth(lineW);
     if (hasLineColor) pct->setLineColor(lineColor[0], lineColor[1], lineColor[2]);
@@ -458,7 +458,7 @@ bool BasicForm::getBinaryData(TMWAWInputStreamPtr,
     break;
   }
   case 1: {
-    libmwaw_tools::PictRectangle *pct=new libmwaw_tools::PictRectangle(m_box);
+    MWAWPictRectangle *pct=new MWAWPictRectangle(m_box);
     if (lineW != 1.0) pct->setLineWidth(lineW);
     if (hasLineColor) pct->setLineColor(lineColor[0], lineColor[1], lineColor[2]);
     if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor[0], surfaceColor[1], surfaceColor[2]);
@@ -466,7 +466,7 @@ bool BasicForm::getBinaryData(TMWAWInputStreamPtr,
     break;
   }
   case 2: {
-    libmwaw_tools::PictRectangle *pct=new libmwaw_tools::PictRectangle(m_box);
+    MWAWPictRectangle *pct=new MWAWPictRectangle(m_box);
     int sz = 10;
     if (m_box.size().x() > 0 && m_box.size().x() < 2*sz)
       sz = int(m_box.size().x())/2;
@@ -480,7 +480,7 @@ bool BasicForm::getBinaryData(TMWAWInputStreamPtr,
     break;
   }
   case 3: {
-    libmwaw_tools::PictCircle *pct=new libmwaw_tools::PictCircle(m_box);
+    MWAWPictCircle *pct=new MWAWPictCircle(m_box);
     if (lineW != 1.0) pct->setLineWidth(lineW);
     if (hasLineColor) pct->setLineColor(lineColor[0], lineColor[1], lineColor[2]);
     if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor[0], surfaceColor[1], surfaceColor[2]);
@@ -489,7 +489,7 @@ bool BasicForm::getBinaryData(TMWAWInputStreamPtr,
   }
   case 4: {
     int angl2 = m_angle+((m_deltaAngle>0) ? m_deltaAngle : -m_deltaAngle);
-    libmwaw_tools::PictArc *pct=new libmwaw_tools::PictArc(m_box, m_formBox, 450-angl2, 450-m_angle);
+    MWAWPictArc *pct=new MWAWPictArc(m_box, m_formBox, 450-angl2, 450-m_angle);
     if (lineW != 1.0) pct->setLineWidth(lineW);
     if (hasLineColor) pct->setLineColor(lineColor[0], lineColor[1], lineColor[2]);
     if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor[0], surfaceColor[1], surfaceColor[2]);
@@ -497,7 +497,7 @@ bool BasicForm::getBinaryData(TMWAWInputStreamPtr,
     break;
   }
   case 5: {
-    libmwaw_tools::PictPolygon *pct = new libmwaw_tools::PictPolygon(m_box, m_vertices);
+    MWAWPictPolygon *pct = new MWAWPictPolygon(m_box, m_vertices);
     if (lineW != 1.0) pct->setLineWidth(lineW);
     if (hasLineColor) pct->setLineColor(lineColor[0], lineColor[1], lineColor[2]);
     if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor[0], surfaceColor[1], surfaceColor[2]);
@@ -525,7 +525,7 @@ struct DataPict : public Zone {
   virtual Type type() const {
     return Pict;
   }
-  virtual bool getBinaryData(TMWAWInputStreamPtr ip,
+  virtual bool getBinaryData(MWAWInputStreamPtr ip,
                              WPXBinaryData &res, std::string &type) const;
 
   //! operator<<
@@ -536,7 +536,7 @@ struct DataPict : public Zone {
   mutable Box2f m_naturalBox;
 };
 
-bool DataPict::getBinaryData(TMWAWInputStreamPtr ip,
+bool DataPict::getBinaryData(MWAWInputStreamPtr ip,
                              WPXBinaryData &data, std::string &type) const
 {
   data.clear();
@@ -553,22 +553,22 @@ bool DataPict::getBinaryData(TMWAWInputStreamPtr ip,
     ip->seek(m_dataPos, WPX_SEEK_SET);
     ip->readDataBlock(pictSize, file);
     static int volatile pictName = 0;
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     f << "Pict-" << ++pictName << ".pct";
-    libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+    libmwaw::Debug::dumpFile(file, f.str().c_str());
   }
 #endif
 
   ip->seek(m_dataPos, WPX_SEEK_SET);
-  libmwaw_tools::Pict::ReadResult res =
-    libmwaw_tools::PictData::check(ip, pictSize, m_naturalBox);
-  if (res == libmwaw_tools::Pict::MWAW_R_BAD) {
+  MWAWPict::ReadResult res =
+    MWAWPictData::check(ip, pictSize, m_naturalBox);
+  if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("MSKGraphInternal::DataPict::getBinaryData: can not find the picture\n"));
     return false;
   }
 
   ip->seek(m_dataPos, WPX_SEEK_SET);
-  shared_ptr<libmwaw_tools::Pict> pict(libmwaw_tools::PictData::get(ip, pictSize));
+  shared_ptr<MWAWPict> pict(MWAWPictData::get(ip, pictSize));
 
   if (!pict)
     return false;
@@ -636,7 +636,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSKGraph::MSKGraph
-(TMWAWInputStreamPtr ip, MSKParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, MSKParser &parser, MWAWTools::ConvertissorPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new MSKGraphInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -683,7 +683,7 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
     return false;
   int vers = version();
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int val;
   if (vers <= 2) {
     for (int i = 0; i < 2; i++) {
@@ -745,7 +745,7 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
   return true;
 }
 
-int MSKGraph::getEntryPicture(IMWAWEntry &zone)
+int MSKGraph::getEntryPicture(MWAWEntry &zone)
 {
   int zId = -1;
   MSKGraphInternal::Zone pict;
@@ -755,7 +755,7 @@ int MSKGraph::getEntryPicture(IMWAWEntry &zone)
     return zId;
 
   pict.m_pos.setBegin(pos);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int vers = version();
   long debData = m_input->tell();
   int dataSize = 0, versSize = 0;
@@ -995,7 +995,7 @@ void MSKGraph::computePositions(std::vector<int> &linesH, std::vector<int> &page
   }
 }
 
-int MSKGraph::getEntryPictureV1(IMWAWEntry &zone)
+int MSKGraph::getEntryPictureV1(MWAWEntry &zone)
 {
   int zId = -1;
   if (m_input->atEOS()) return zId;
@@ -1003,7 +1003,7 @@ int MSKGraph::getEntryPictureV1(IMWAWEntry &zone)
   long pos = m_input->tell();
   if (m_input->readULong(1) != 1) return zId;
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   long ptr = m_input->readULong(2);
   int flag = m_input->readULong(1);
   long size = m_input->readULong(2)+6;
@@ -1068,7 +1068,7 @@ int MSKGraph::getEntryPictureV1(IMWAWEntry &zone)
 shared_ptr<MSKGraphInternal::GroupZone> MSKGraph::readGroup(MSKGraphInternal::Zone &header)
 {
   shared_ptr<MSKGraphInternal::GroupZone> group(new MSKGraphInternal::GroupZone(header));
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   m_input->seek(header.m_dataPos, WPX_SEEK_SET);
   long dim[4];
   for (int i = 0; i < 4; i++) dim[i] = m_input->readLong(4);
@@ -1087,7 +1087,7 @@ shared_ptr<MSKGraphInternal::GroupZone> MSKGraph::readGroup(MSKGraphInternal::Zo
 
   m_input->seek(header.m_pos.end()-2, WPX_SEEK_SET);
   int N = m_input->readULong(2);
-  IMWAWEntry childZone;
+  MWAWEntry childZone;
   int childId;
   for (int i = 0; i < N; i++) {
     long pos = m_input->tell();
@@ -1110,7 +1110,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
 {
   if (textBox.m_numPositions < 0) return false; // can an empty text exist
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(SmallText):";
   long pos = m_input->tell();
   if (!m_mainParser->checkIfPositionValid(pos+4*(textBox.m_numPositions+1))) return false;
@@ -1286,18 +1286,18 @@ void MSKGraph::send(MSKGraphInternal::TextBox &textBox)
       m_listener->insertEOL();
       break;
     case 0x19:
-      m_listener->insertField(IMWAWContentListener::Title);
+      m_listener->insertField(MWAWContentListener::Title);
       break;
     case 0x18:
-      m_listener->insertField(IMWAWContentListener::PageNumber);
+      m_listener->insertField(MWAWContentListener::PageNumber);
       break;
     case 0x16:
       MWAW_DEBUG_MSG(("MSKGraph::sendText: find some time\n"));
-      m_listener->insertField(IMWAWContentListener::Time);
+      m_listener->insertField(MWAWContentListener::Time);
       break;
     case 0x17:
       MWAW_DEBUG_MSG(("MSKGraph::sendText: find some date\n"));
-      m_listener->insertField(IMWAWContentListener::Date);
+      m_listener->insertField(MWAWContentListener::Date);
       break;
     case 0x14: // fixme
       MWAW_DEBUG_MSG(("MSKGraph::sendText: footnote are not implemented\n"));
@@ -1326,7 +1326,7 @@ void MSKGraph::setProperty(MSKGraphInternal::Font const &font)
 bool MSKGraph::readFont(MSKGraphInternal::Font &font)
 {
   long pos = m_input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   if (!m_mainParser->checkIfPositionValid(pos+18))
     return false;
   font = MSKGraphInternal::Font();
@@ -1366,7 +1366,7 @@ void MSKGraph::send(int id, bool local)
   shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[id];
   zone->m_isSent = true;
 
-  TMWAWPosition pictPos = zone->getPosition(local);
+  MWAWPosition pictPos = zone->getPosition(local);
   if (!local)
     pictPos.setOrigin(pictPos.origin()+72.*m_mainParser->getPageTopLeft());
   WPXPropertyList extras;

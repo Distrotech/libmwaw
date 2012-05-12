@@ -35,11 +35,11 @@
 
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPictMac.hxx"
-#include "TMWAWPosition.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWCell.hxx"
-#include "IMWAWTableHelper.hxx"
+#include "MWAWCell.hxx"
+#include "MWAWTableHelper.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -276,7 +276,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 FWText::FWText
-(TMWAWInputStreamPtr ip, FWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, FWParser &parser, MWAWTools::ConvertissorPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new FWTextInternal::State),
   m_mainParser(&parser)
 {
@@ -304,7 +304,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
                   MWAWStruct::Font &font)
 {
   if (!m_listener) return;
-  TMWAWInputStreamPtr input = zone->m_zone->m_input;
+  MWAWInputStreamPtr input = zone->m_zone->m_input;
   long pos = input->tell();
   long endPos = pos+numChar;
   bool nextIsChar = false;
@@ -446,13 +446,13 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         if (fId != -1) {
           switch(val) {
           case 0xd2:
-            m_mainParser->sendText(fId, DMWAW_SUBDOCUMENT_COMMENT_ANNOTATION);
+            m_mainParser->sendText(fId, MWAW_SUBDOCUMENT_COMMENT_ANNOTATION);
             break;
           case 0xd3:
-            m_mainParser->sendText(fId, DMWAW_SUBDOCUMENT_NOTE, FOOTNOTE);
+            m_mainParser->sendText(fId, MWAW_SUBDOCUMENT_NOTE, FOOTNOTE);
             break;
           case 0xd5:
-            m_mainParser->sendText(fId, DMWAW_SUBDOCUMENT_NOTE, ENDNOTE);
+            m_mainParser->sendText(fId, MWAW_SUBDOCUMENT_NOTE, ENDNOTE);
             break;
           }
         }
@@ -540,9 +540,9 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
 
 bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
 {
-  TMWAWInputStreamPtr input = zone->m_zone->m_input;
-  libmwaw_tools::DebugFile &ascii = zone->m_zone->getAsciiFile();
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_zone->m_input;
+  libmwaw::DebugFile &ascii = zone->m_zone->getAsciiFile();
+  libmwaw::DebugStream f;
 
   zone->m_zone->setParsed(true);
 
@@ -999,8 +999,8 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
 // read the text data
 bool FWText::readTextData(shared_ptr<FWEntry> zone)
 {
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &ascii = zone->getAsciiFile();
   int vers = version();
 
   long pos = zone->begin();
@@ -1039,7 +1039,7 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
       return false;
   }
   input->seek(pos, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   if (header) {
     //find 8, 1c, 71, 76, 8a, 99, 9d, c6, c9, ce, f3, f4
     f << "N0=" << input->readLong(2) << ",";
@@ -1253,9 +1253,9 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
 // read the style data
 bool FWText::readStyle(shared_ptr<FWEntry> zone)
 {
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugStream f;
   //  int vers = version();
 
   long pos = zone->begin();
@@ -1384,9 +1384,9 @@ bool FWText::readStyle(shared_ptr<FWEntry> zone)
 // read the paragraph data
 bool FWText::readParagraph(shared_ptr<FWEntry> zone)
 {
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugStream f;
   int vers = version();
   const int dataSz = vers==1 ? 14 : 10;
   const int headerSz = vers==1 ? 24 : 30;
@@ -1400,7 +1400,7 @@ bool FWText::readParagraph(shared_ptr<FWEntry> zone)
 
   input->seek(vers==1 ? 23: 22, WPX_SEEK_CUR);
   int N = input->readULong(1);
-  if (headerSz+dataSz*N != sz) {
+  if (headerSz+dataSz *N != sz) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
@@ -1463,9 +1463,9 @@ bool FWText::readParagraph(shared_ptr<FWEntry> zone)
 // read the column data
 bool FWText::readColumns(shared_ptr<FWEntry> zone)
 {
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugStream f;
 
   long pos = input->tell();
   input->seek(pos, WPX_SEEK_SET);
@@ -1501,9 +1501,9 @@ bool FWText::readColumns(shared_ptr<FWEntry> zone)
 // read an unknown zone
 bool FWText::readStyleName(shared_ptr<FWEntry> zone)
 {
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugStream f;
   f << "Entries(StylName):";
 
   long pos = input->tell();
@@ -1543,9 +1543,9 @@ bool FWText::readStyleName(shared_ptr<FWEntry> zone)
 // read the correspondance data
 bool FWText::readCorrespondance(shared_ptr<FWEntry> zone, bool extraCheck)
 {
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugStream f;
   f << "Entries(Correspondance):";
 
   long pos = input->tell();

@@ -27,11 +27,15 @@
 
 #ifndef WPXPAGE_H
 #define WPXPAGE_H
-#include "DMWAWFileStructure.hxx"
 #include <vector>
-#include "DMWAWTable.hxx"
 #include "libmwaw_libwpd.hxx"
-#include "DMWAWSubDocument.hxx"
+#include "MWAWSubDocument.hxx"
+
+#define DMWAW_NUM_HEADER_FOOTER_TYPES 6
+#define DMWAW_HEADER_A 0x00
+#define DMWAW_HEADER_B 0x01
+#define DMWAW_FOOTER_A 0x02
+#define DMWAW_FOOTER_B 0x03
 
 // intermediate page representation class: for internal use only (by the high-level content/styles listeners). should not be exported.
 
@@ -39,9 +43,7 @@ class DMWAWHeaderFooter
 {
 public:
   DMWAWHeaderFooter(const DMWAWHeaderFooterType headerFooterType, const DMWAWHeaderFooterOccurence occurence,
-                    const uint8_t internalType, const DMWAWSubDocument *subDocument, DMWAWTableList tableList);
-  DMWAWHeaderFooter(const DMWAWHeaderFooterType headerFooterType, const DMWAWHeaderFooterOccurence occurence,
-                    const uint8_t internalType, const DMWAWSubDocument *subDocument);
+                    const uint8_t internalType, const MWAWSubDocument *subDocument);
   DMWAWHeaderFooter(const DMWAWHeaderFooter &headerFooter);
   ~DMWAWHeaderFooter();
   DMWAWHeaderFooter &operator=(const DMWAWHeaderFooter &headerFooter);
@@ -54,19 +56,15 @@ public:
   uint8_t getInternalType() const {
     return m_internalType;
   }
-  const DMWAWSubDocument *getSubDocument() const {
+  const MWAWSubDocument *getSubDocument() const {
     return m_subDocument;
-  }
-  DMWAWTableList getTableList() const {
-    return m_tableList;
   }
 
 private:
   DMWAWHeaderFooterType m_type;
   DMWAWHeaderFooterOccurence m_occurence;
   uint8_t m_internalType; // for suppression
-  const DMWAWSubDocument *m_subDocument;  // for the actual text
-  DMWAWTableList m_tableList;
+  const MWAWSubDocument *m_subDocument;  // for the actual text
 };
 
 class DMWAWPageSpan
@@ -131,7 +129,7 @@ public:
   }
 
   void setHeaderFooter(const DMWAWHeaderFooterType type, const uint8_t headerFooterType, const DMWAWHeaderFooterOccurence occurence,
-                       const DMWAWSubDocument *subDocument, DMWAWTableList tableList);
+                       const MWAWSubDocument *subDocument);
   void setPageNumberSuppression(const bool suppress) {
     m_isPageNumberSuppressed = suppress;
   }

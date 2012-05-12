@@ -40,16 +40,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 #include "CWStruct.hxx"
 
@@ -87,7 +87,7 @@ class CWDatabase
 
 public:
   //! constructor
-  CWDatabase(TMWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  CWDatabase(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
   //! destructor
   virtual ~CWDatabase();
 
@@ -99,7 +99,7 @@ public:
 
   //! reads the zone Text DSET
   shared_ptr<CWStruct::DSET> readDatabaseZone
-  (CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete);
+  (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
 protected:
 
@@ -125,7 +125,7 @@ protected:
   //
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -138,7 +138,7 @@ protected:
   // data
   //
   //! the input
-  TMWAWInputStreamPtr m_input;
+  MWAWInputStreamPtr m_input;
 
   //! the listener
   CWContentListenerPtr m_listener;
@@ -153,7 +153,7 @@ protected:
   CWParser *m_mainParser;
 
   //! the debug file
-  libmwaw_tools::DebugFile &m_asciiFile;
+  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -35,7 +35,7 @@
 
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -233,7 +233,7 @@ struct Zone : public CWStruct::DSET {
     return o;
   }
 
-  std::vector<IMWAWEntry> m_zones; // the text zones
+  std::vector<MWAWEntry> m_zones; // the text zones
   int m_numChar; // the number of char in text zone
   int m_numTextZone; // the number of text zone ( ie. number of page ? )
   int m_numParagInfo; // the number of paragraph info
@@ -282,7 +282,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 CWText::CWText
-(TMWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWTextInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -308,7 +308,7 @@ int CWText::numPages() const
   long pos = m_input->tell();
   bool lastSoftBreak = false;
   for (int i = 0; i < int(iter->second->m_zones.size()); i++) {
-    IMWAWEntry const &entry = iter->second->m_zones[i];
+    MWAWEntry const &entry = iter->second->m_zones[i];
     m_input->seek(entry.begin()+4, WPX_SEEK_SET);
     int numC = entry.length()-4;
     for (int ch = 0; ch < numC; ch++) {
@@ -331,14 +331,14 @@ int CWText::numPages() const
 ////////////////////////////////////////////////////////////
 // a document part
 ////////////////////////////////////////////////////////////
-shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete)
+shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
   if (!entry.valid() || zone.m_type != 1)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   shared_ptr<CWTextInternal::Zone> textZone(new CWTextInternal::Zone(zone));
 
   for (int i = 0; i < 2; i++) // N0 alway 0
@@ -441,7 +441,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, IMWA
       continue;
     }
 
-    IMWAWEntry zEntry;
+    MWAWEntry zEntry;
     zEntry.setBegin(pos);
     zEntry.setLength(sz+4);
 
@@ -542,7 +542,7 @@ bool CWText::readFont(int id, int &posC, MWAWStruct::Font &font)
   m_input->seek(pos, WPX_SEEK_SET);
   posC = m_input->readULong(4);
   font=MWAWStruct::Font();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   if (id >= 0)
     f << "Font-" << id << ":";
   else
@@ -604,7 +604,7 @@ bool CWText::readChar(int id, int fontSize, MWAWStruct::Font &font)
 
   m_input->seek(pos, WPX_SEEK_SET);
   font=MWAWStruct::Font();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   if (id == 0)
     f << "Entries(CHAR)-0:";
   else
@@ -669,7 +669,7 @@ void CWText::setProperty(MWAWStruct::Font const &font, bool force)
 ////////////////////////////////////////////////////////////
 // the fonts properties
 ////////////////////////////////////////////////////////////
-bool CWText::readFonts(IMWAWEntry const &entry, CWTextInternal::Zone &zone)
+bool CWText::readFonts(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 {
   long pos = entry.begin();
 
@@ -734,7 +734,7 @@ bool CWText::readFonts(IMWAWEntry const &entry, CWTextInternal::Zone &zone)
 ////////////////////////////////////////////////////////////
 // the paragraphs properties
 ////////////////////////////////////////////////////////////
-bool CWText::readParagraphs(IMWAWEntry const &entry, CWTextInternal::Zone &zone)
+bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 {
   long pos = entry.begin();
 
@@ -769,7 +769,7 @@ bool CWText::readParagraphs(IMWAWEntry const &entry, CWTextInternal::Zone &zone)
   ascii().addPos(pos);
   ascii().addNote("Entries(Paragraph)");
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int numRulers = m_state->m_rulersList.size();
   m_input->seek(pos+4, WPX_SEEK_SET); // skip header
   for (int i = 0; i < numElt; i++) {
@@ -804,7 +804,7 @@ bool CWText::readParagraphs(IMWAWEntry const &entry, CWTextInternal::Zone &zone)
 ////////////////////////////////////////////////////////////
 // zone which corresponds to the token
 ////////////////////////////////////////////////////////////
-bool CWText::readTokens(IMWAWEntry const &entry, CWTextInternal::Zone &zone)
+bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 {
   long pos = entry.begin();
 
@@ -836,7 +836,7 @@ bool CWText::readTokens(IMWAWEntry const &entry, CWTextInternal::Zone &zone)
   int numElt = (entry.length()-4)/dataSize;
   m_input->seek(pos+4, WPX_SEEK_SET); // skip header
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   for (int i = 0; i < numElt; i++) {
     pos = m_input->tell();
 
@@ -891,7 +891,7 @@ bool CWText::readTokens(IMWAWEntry const &entry, CWTextInternal::Zone &zone)
 ////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////
-bool CWText::readTextZoneSize(IMWAWEntry const &entry, CWTextInternal::Zone &zone)
+bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 {
   long pos = entry.begin();
 
@@ -906,7 +906,7 @@ bool CWText::readTextZoneSize(IMWAWEntry const &entry, CWTextInternal::Zone &zon
 
   m_input->seek(pos+4, WPX_SEEK_SET); // skip header
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   for (int i = 0; i < numElt; i++) {
     pos = m_input->tell();
@@ -939,9 +939,9 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
     m_mainParser->newPage(actPage);
   bool lastSoftBreak = false;
   for (int z = 0; z < numZones; z++) {
-    IMWAWEntry const &entry  =  zone.m_zones[z];
+    MWAWEntry const &entry  =  zone.m_zones[z];
     long pos = entry.begin();
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     f << "Entries(TextContent):";
 
     int numC = (entry.length()-4);
@@ -980,7 +980,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
           m_state->m_font = actFont;
           break;
         case CWTextInternal::TKN_PAGENUMBER:
-          m_listener->insertField(IMWAWContentListener::PageNumber);
+          m_listener->insertField(MWAWContentListener::PageNumber);
           break;
         default: // fixme
           break;
@@ -1001,13 +1001,13 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
       case 0x2: // footnote
         break;
       case 0x4:
-        m_listener->insertField(IMWAWContentListener::Date);
+        m_listener->insertField(MWAWContentListener::Date);
         break;
       case 0x5:
-        m_listener->insertField(IMWAWContentListener::Time);
+        m_listener->insertField(MWAWContentListener::Time);
         break;
       case 0x6:
-        m_listener->insertField(IMWAWContentListener::PageNumber);
+        m_listener->insertField(MWAWContentListener::PageNumber);
         break;
       case 0x7:
         // footnote index
@@ -1052,7 +1052,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
 bool CWText::readSTYL_LKUP(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   for (int i = 0; i < N; i++) {
     long pos = m_input->tell();
     f.str("");
@@ -1074,7 +1074,7 @@ bool CWText::readSTYL_LKUP(int N, int fSz)
 bool CWText::readSTYL_CHAR(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   if (m_state->m_fontsList.size()) {
     MWAW_DEBUG_MSG(("CWText::readSTYL_CHAR: font list already exists!!!\n"));
   }
@@ -1104,7 +1104,7 @@ bool CWText::readSTYL_RULR(int N, int fSz)
   if (fSz != 108) {
     MWAW_DEBUG_MSG(("CWText::readSTYL_RULR: Find old ruler size %d\n", fSz));
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   for (int i = 0; i < N; i++) {
     long pos = m_input->tell();
     if (fSz != 108 || !readRuler(i)) {
@@ -1124,7 +1124,7 @@ bool CWText::readSTYL_RULR(int N, int fSz)
 bool CWText::readSTYL_NAME(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   for (int i = 0; i < N; i++) {
     long pos = m_input->tell();
     f.str("");
@@ -1163,7 +1163,7 @@ bool CWText::readSTYL_FNTM(int N, int fSz)
   if (fSz == 0 || N== 0) return true;
   if (fSz < 16) return false;
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   for (int i = 0; i < N; i++) {
     long pos = m_input->tell();
     f.str("");
@@ -1222,7 +1222,7 @@ bool CWText::readSTYL_STYL(int N, int fSz)
     MWAW_DEBUG_MSG(("CWText::readSTYL_STYL: Find old ruler size %d\n", fSz));
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int val;
   for (int i = 0; i < N; i++) {
     long pos = m_input->tell();
@@ -1286,7 +1286,7 @@ bool CWText::readSTYL(int id)
     return false;
   }
   m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "STYL-" << id << ":";
   if (sz < 16) {
     if (sz) f << "#";
@@ -1354,7 +1354,7 @@ bool CWText::readSTYL(int id)
   return true;
 }
 
-bool CWText::readSTYLs(IMWAWEntry const &entry)
+bool CWText::readSTYLs(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.type() != "STYL")
     return false;
@@ -1367,7 +1367,7 @@ bool CWText::readSTYLs(IMWAWEntry const &entry)
     return false;
   }
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(STYL):";
   if (version() <= 3) {
     ascii().addPos(pos);
@@ -1426,7 +1426,7 @@ bool CWText::readRulers()
     return false;
   }
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(RULR):";
   f << "N=" << N << ", type?=" << type <<", fSz=" << fSz << ",";
   if (val) f << "unkn=" << val << ",";
@@ -1477,7 +1477,7 @@ bool CWText::readRuler(int id)
   CWTextInternal::Ruler ruler;
   long pos = m_input->tell();
   long endPos = pos+dataSize;
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   int val;
   if (version() >= 4 && id >= 0) {

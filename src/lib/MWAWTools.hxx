@@ -35,7 +35,7 @@
 #include "libmwaw_libwpd.hxx"
 
 #include "libmwaw_tools.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWInputStream.hxx"
 
 #include "MWAWStruct.hxx"
 

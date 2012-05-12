@@ -40,16 +40,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener FWContentListener;
 typedef shared_ptr<FWContentListener> FWContentListenerPtr;
@@ -66,8 +66,8 @@ class PictData;
 }
 
 /** the definition of a zone in the file */
-struct FWEntry : public IMWAWEntry {
-  FWEntry(TMWAWInputStreamPtr input);
+struct FWEntry : public MWAWEntry {
+  FWEntry(MWAWInputStreamPtr input);
   ~FWEntry();
 
   //! operator<<
@@ -79,7 +79,7 @@ struct FWEntry : public IMWAWEntry {
   void closeDebugFile();
 
   //! returns a reference to the ascii file
-  libmwaw_tools::DebugFile &getAsciiFile();
+  libmwaw::DebugFile &getAsciiFile();
   //! basic operator==
   bool operator==(const FWEntry &a) const;
   //! basic operator!=
@@ -88,7 +88,7 @@ struct FWEntry : public IMWAWEntry {
   }
 
   //! the input
-  TMWAWInputStreamPtr m_input;
+  MWAWInputStreamPtr m_input;
   //! the definition id
   int m_id;
   //! the flags definition id
@@ -102,7 +102,7 @@ struct FWEntry : public IMWAWEntry {
   //! the main data ( if the entry comes from several zone )
   WPXBinaryData m_data;
   //! the debug file
-  shared_ptr<libmwaw_tools::DebugFile> m_asciiFile;
+  shared_ptr<libmwaw::DebugFile> m_asciiFile;
   //! the extra data ( for debugging )
   std::string m_extra;
 private:
@@ -124,19 +124,19 @@ class FWText;
  *
  *
  */
-class FWParser : public IMWAWParser
+class FWParser : public MWAWParser
 {
   friend class FWText;
   friend class FWParserInternal::SubDocument;
 
 public:
   //! constructor
-  FWParser(TMWAWInputStreamPtr input, IMWAWHeader * header);
+  FWParser(MWAWInputStreamPtr input, MWAWHeader *header);
   //! destructor
   virtual ~FWParser();
 
   //! checks if the document header is correct (or not)
-  bool checkHeader(IMWAWHeader *header, bool strict=false);
+  bool checkHeader(MWAWHeader *header, bool strict=false);
 
   /** returns the file version.
    *
@@ -179,7 +179,7 @@ protected:
   void newPage(int number);
 
   //! try to send a footnote/endnote entry
-  void sendText(int id, DMWAWSubDocumentType type, int which=0);
+  void sendText(int id, MWAWSubDocumentType type, int which=0);
 
   //! find the last position of the document and read data
   bool readDocPosition();
@@ -212,7 +212,7 @@ protected:
   //
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -244,7 +244,7 @@ protected:
   std::vector<shared_ptr<FWParserInternal::SubDocument> > m_listSubDocuments;
 
   //! the debug file
-  libmwaw_tools::DebugFile m_asciiFile;
+  libmwaw::DebugFile m_asciiFile;
 
   //! the debug file name
   std::string m_asciiName;

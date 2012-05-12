@@ -35,11 +35,11 @@
 
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPictMac.hxx"
-#include "TMWAWPosition.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWCell.hxx"
-#include "IMWAWTableHelper.hxx"
+#include "MWAWCell.hxx"
+#include "MWAWTableHelper.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -449,16 +449,16 @@ struct ContentZones {
 
 ////////////////////////////////////////
 //! Internal: the cell of a WNText
-struct Cell : public IMWAWTableHelperCell {
+struct Cell : public MWAWTableHelperCell {
   //! constructor
-  Cell(WNText &parser) : IMWAWTableHelperCell(), m_parser(parser),
+  Cell(WNText &parser) : MWAWTableHelperCell(), m_parser(parser),
     m_color(255,255,255), m_borderList(0),
     m_zonesList(), m_footnoteList() {}
 
   //! send the content
-  virtual bool send(IMWAWContentListenerPtr listener) {
+  virtual bool send(MWAWContentListenerPtr listener) {
     if (!listener) return true;
-    IMWAWCell cell;
+    MWAWCell cell;
     cell.position() = m_position;
     cell.setBorders(m_borderList);
     cell.setNumSpannedCells(m_numSpan);
@@ -480,7 +480,7 @@ struct Cell : public IMWAWTableHelperCell {
   }
 
   //! send the content
-  bool sendContent(IMWAWContentListenerPtr);
+  bool sendContent(MWAWContentListenerPtr);
   //! the text parser
   WNText &m_parser;
   //! the background color
@@ -495,9 +495,9 @@ struct Cell : public IMWAWTableHelperCell {
 
 ////////////////////////////////////////
 ////////////////////////////////////////
-struct Table : public IMWAWTableHelper {
+struct Table : public MWAWTableHelper {
   //! constructor
-  Table() : IMWAWTableHelper() {
+  Table() : MWAWTableHelper() {
   }
 
   //! return a cell corresponding to id
@@ -506,7 +506,7 @@ struct Table : public IMWAWTableHelper {
       MWAW_DEBUG_MSG(("WNTextInternal::Table::get: cell %d does not exists\n",id));
       return 0;
     }
-    return reinterpret_cast<Cell *>(IMWAWTableHelper::get(id).get());
+    return reinterpret_cast<Cell *>(MWAWTableHelper::get(id).get());
   }
 };
 
@@ -572,7 +572,7 @@ struct State {
   std::map<long, shared_ptr<ContentZones> > m_contentMap;
 };
 
-bool Cell::sendContent(IMWAWContentListenerPtr)
+bool Cell::sendContent(MWAWContentListenerPtr)
 {
   /** as a cell can be arbitrary cutted in small part,
       we must retrieve the last ruler */
@@ -587,7 +587,7 @@ bool Cell::sendContent(IMWAWContentListenerPtr)
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 WNText::WNText
-(TMWAWInputStreamPtr ip, WNParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, WNParser &parser, MWAWTools::ConvertissorPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new WNTextInternal::State),
   m_entryManager(parser.m_entryManager), m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -791,7 +791,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
     return shared_ptr<WNTextInternal::ContentZones>();
   }
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(TextData)[" << entry.m_id << "]:";
   long val;
   shared_ptr<WNTextInternal::ContentZones> text;
@@ -938,7 +938,7 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
     return false;
   }
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(TextZone)[";
   switch(entry.m_id) {
   case 0:
@@ -1045,7 +1045,7 @@ bool WNText::readFontNames(WNEntry const &entry)
     MWAW_DEBUG_MSG(("WNText::readFontNames: bad begin of last zone\n"));
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(Fonts):";
   f << "ptr?=" << std::hex << m_input->readULong(4) << std::dec << ",";
   f << "ptr2?=" << std::hex << m_input->readULong(4) << std::dec << ",";
@@ -1154,11 +1154,11 @@ bool WNText::readFontNames(WNEntry const &entry)
 ////////////////////////////////////////////////////////////
 // the fonts properties
 ////////////////////////////////////////////////////////////
-bool WNText::readFont(TMWAWInputStream &input, bool inStyle, WNTextInternal::Font &font)
+bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font &font)
 {
   font = WNTextInternal::Font();
   int vers = version();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   long pos = input.tell();
   int expectedLength = vers <= 2 ? 4 : 14;
@@ -1260,9 +1260,9 @@ void WNText::setProperty(MWAWStruct::Font const &font,
 ////////////////////////////////////////////////////////////
 // the paragraphs properties
 ////////////////////////////////////////////////////////////
-bool WNText::readRuler(TMWAWInputStream &input, WNTextInternal::Ruler &ruler)
+bool WNText::readRuler(MWAWInputStream &input, WNTextInternal::Ruler &ruler)
 {
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int vers = version();
   ruler=WNTextInternal::Ruler();
   long pos = input.tell();
@@ -1391,7 +1391,7 @@ bool WNText::readStyles(WNEntry const &entry)
     MWAW_DEBUG_MSG(("WNText::readStyles: bad begin of last zone\n"));
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(Styles):";
   f << "ptr?=" << std::hex << m_input->readULong(4) << std::dec << ",";
   f << "ptr2?=" << std::hex << m_input->readULong(4) << std::dec << ",";
@@ -1564,7 +1564,7 @@ bool WNText::readStyles(WNEntry const &entry)
 ////////////////////////////////////////////////////////////
 // zone which corresponds to the token
 ////////////////////////////////////////////////////////////
-bool WNText::readToken(TMWAWInputStream &input, WNTextInternal::Token &token)
+bool WNText::readToken(MWAWInputStream &input, WNTextInternal::Token &token)
 {
   token=WNTextInternal::Token();
 
@@ -1605,7 +1605,7 @@ bool WNText::readToken(TMWAWInputStream &input, WNTextInternal::Token &token)
   return true;
 }
 
-bool WNText::readTokenV2(TMWAWInputStream &input, WNTextInternal::Token &token)
+bool WNText::readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token)
 {
   token=WNTextInternal::Token();
 
@@ -1622,8 +1622,8 @@ bool WNText::readTokenV2(TMWAWInputStream &input, WNTextInternal::Token &token)
   long sz = endPos-actPos-4;
   if (sz <= 0) return false;
   input.seek(actPos+4, WPX_SEEK_SET);
-  TMWAWInputStreamPtr ip(&input,MWAW_shared_ptr_noop_deleter<TMWAWInputStream>());
-  shared_ptr<libmwaw_tools::Pict> pict(libmwaw_tools::PictData::get(ip, sz));
+  MWAWInputStreamPtr ip(&input,MWAW_shared_ptr_noop_deleter<MWAWInputStream>());
+  shared_ptr<MWAWPict> pict(MWAWPictData::get(ip, sz));
   if (!pict) {
     MWAW_DEBUG_MSG(("WNParser::readTokenV2: can not read the picture\n"));
     return false;
@@ -1632,12 +1632,12 @@ bool WNText::readTokenV2(TMWAWInputStream &input, WNTextInternal::Token &token)
 
   WPXBinaryData data;
   std::string type;
-  TMWAWPosition pictPos;
+  MWAWPosition pictPos;
   if (box.x() > 0 && box.y() > 0) {
-    pictPos=TMWAWPosition(Vec2f(0,0),box, WPX_POINT);
+    pictPos=MWAWPosition(Vec2f(0,0),box, WPX_POINT);
     pictPos.setNaturalSize(pict->getBdBox().size());
   } else
-    pictPos=TMWAWPosition(Vec2f(0,0),pict->getBdBox().size(), WPX_POINT);
+    pictPos=MWAWPosition(Vec2f(0,0),pict->getBdBox().size(), WPX_POINT);
 
   if (pict->getBinary(data,type))
     m_listener->insertPicture(pictPos, data, type);
@@ -1648,7 +1648,7 @@ bool WNText::readTokenV2(TMWAWInputStream &input, WNTextInternal::Token &token)
 ////////////////////////////////////////////////////////////
 // zone which corresponds to the table
 ////////////////////////////////////////////////////////////
-bool WNText::readTable(TMWAWInputStream &input, WNTextInternal::TableData &table)
+bool WNText::readTable(MWAWInputStream &input, WNTextInternal::TableData &table)
 {
   table=WNTextInternal::TableData();
   long pos = input.tell();
@@ -1722,7 +1722,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
                   std::vector<shared_ptr<WNTextInternal::ContentZones> > &footnoteList,
                   WNTextInternal::Ruler &ruler)
 {
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int vers = version();
   MWAWStruct::Font actFont(3, 0, 0); // by default geneva
   bool actFontSet = false;
@@ -1778,15 +1778,15 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       switch(zone.m_value) {
       case 0:
         if (m_listener)
-          m_listener->insertField(IMWAWContentListener::PageNumber);
+          m_listener->insertField(MWAWContentListener::PageNumber);
         break;
       case 1:
         if (m_listener)
-          m_listener->insertField(IMWAWContentListener::Date);
+          m_listener->insertField(MWAWContentListener::Date);
         break;
       case 2:
         if (m_listener)
-          m_listener->insertField(IMWAWContentListener::Time);
+          m_listener->insertField(MWAWContentListener::Time);
         break;
       case 3: // note field : ok
       default:
@@ -1868,7 +1868,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       continue;
     }
 
-    TMWAWInputStream dataInput(const_cast<WPXInputStream *>(data.getDataStream()), false);
+    MWAWInputStream dataInput(const_cast<WPXInputStream *>(data.getDataStream()), false);
     dataInput.setResponsable(false);
     switch(zone.m_type) {
     case 0x9: { // only in v2
@@ -1883,7 +1883,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       actFontSet = true;
       break;
     }
-    case 0xa:  { // only in writenow 4.0 : related to a table ?
+    case 0xa: {  // only in writenow 4.0 : related to a table ?
       WNTextInternal::TableData tableData;
       if (readTable(dataInput, tableData)) {
         f << tableData;

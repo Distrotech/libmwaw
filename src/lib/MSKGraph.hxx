@@ -40,16 +40,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener MSKContentListener;
 typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
@@ -93,7 +93,7 @@ class MSKGraph
 
 public:
   //! constructor
-  MSKGraph(TMWAWInputStreamPtr ip, MSKParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  MSKGraph(MWAWInputStreamPtr ip, MSKParser &parser, MWAWTools::ConvertissorPtr &convertissor);
   //! destructor
   virtual ~MSKGraph();
 
@@ -132,12 +132,12 @@ protected:
   /** checks if the next zone is a v1 picture and returns a zone
       id. If not, returns -1.
    */
-  int getEntryPictureV1(IMWAWEntry &zone);
+  int getEntryPictureV1(MWAWEntry &zone);
 
   /** checks if the next zone is a v2 picture and returns a zone
       id. If not, returns -1.
    */
-  int getEntryPicture(IMWAWEntry &zone);
+  int getEntryPicture(MWAWEntry &zone);
 
 
   //! try to read a text zone
@@ -156,7 +156,7 @@ protected:
   void setProperty(MSKGraphInternal::Font const &font);
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -169,7 +169,7 @@ protected:
   // data
   //
   //! the input
-  TMWAWInputStreamPtr m_input;
+  MWAWInputStreamPtr m_input;
 
   //! the listener
   MSKContentListenerPtr m_listener;
@@ -184,7 +184,7 @@ protected:
   MSKParser *m_mainParser;
 
   //! the debug file
-  libmwaw_tools::DebugFile &m_asciiFile;
+  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

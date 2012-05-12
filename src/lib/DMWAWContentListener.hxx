@@ -37,27 +37,16 @@
 #ifndef WPXCONTENTLISTENER_H
 #define WPXCONTENTLISTENER_H
 
-#include "DMWAWTable.hxx"
 #include <libwpd/WPXPropertyListVector.h>
 #include <libwpd/WPXPropertyList.h>
 #include "libmwaw_libwpd.hxx"
-#include "DMWAWSubDocument.hxx"
+#include "MWAWSubDocument.hxx"
 #include "DMWAWPageSpan.hxx"
 #include <libwpd/WPXDocumentInterface.h>
-#include "DMWAWListener.hxx"
 #include <vector>
 #include <list>
 #include <set>
 class WPXString;
-
-typedef struct _DMWAWTableDefinition DMWAWTableDefinition;
-struct _DMWAWTableDefinition {
-  _DMWAWTableDefinition() : m_positionBits(0), m_leftOffset(0.0), m_columns(), m_columnsProperties() {};
-  uint8_t m_positionBits;
-  double m_leftOffset;
-  std::vector < DMWAWColumnDefinition > m_columns;
-  std::vector < DMWAWColumnProperties > m_columnsProperties;
-};
 
 typedef struct _DMWAWContentParsingState DMWAWContentParsingState;
 struct _DMWAWContentParsingState {
@@ -90,7 +79,6 @@ struct _DMWAWContentParsingState {
   bool m_firstParagraphInPageSpan;
 
   std::vector<unsigned int> m_numRowsToSkip;
-  DMWAWTableDefinition m_tableDefinition;
   int m_currentTableCol;
   int m_currentTableRow;
   int m_currentTableCellNumberInRow;
@@ -149,18 +137,18 @@ struct _DMWAWContentParsingState {
   std::vector<DMWAWTabStop> m_tabStops;
   bool m_isTabPositionRelative;
 
-  std::set <const DMWAWSubDocument *> m_subDocuments;
+  std::set <const MWAWSubDocument *> m_subDocuments;
 
   bool m_inSubDocument;
   bool m_isNote;
-  DMWAWSubDocumentType m_subDocumentType;
+  MWAWSubDocumentType m_subDocumentType;
 
 private:
   _DMWAWContentParsingState(const _DMWAWContentParsingState &);
   _DMWAWContentParsingState &operator=(const _DMWAWContentParsingState &);
 };
 
-class DMWAWContentListener : public DMWAWListener
+class DMWAWContentListener
 {
 protected:
   DMWAWContentListener(std::list<DMWAWPageSpan> &pageList, WPXDocumentInterface *documentInterface);
@@ -170,7 +158,7 @@ protected:
   void startSubDocument();
   void endDocument();
   void endSubDocument();
-  void handleSubDocument(const DMWAWSubDocument *subDocument, DMWAWSubDocumentType subDocumentType, DMWAWTableList tableList, int nextTableIndice);
+  void handleSubDocument(const MWAWSubDocument *subDocument, MWAWSubDocumentType subDocumentType);
   void insertBreak(const uint8_t breakType);
 
   // OSNOLA: allows to change the unit
@@ -181,8 +169,10 @@ protected:
   DMWAWContentParsingState *m_ps; // parse state
   WPXDocumentInterface *m_documentInterface;
   WPXPropertyList m_metaData;
+  std::list<DMWAWPageSpan> m_pageList;
+  bool m_isUndoOn;
 
-  virtual void _handleSubDocument(const DMWAWSubDocument *subDocument, DMWAWSubDocumentType subDocumentType, DMWAWTableList tableList, int nextTableIndice) = 0;
+  virtual void _handleSubDocument(const MWAWSubDocument *subDocument, MWAWSubDocumentType subDocumentType) = 0;
   virtual void _flushText() = 0;
   virtual void _changeList() = 0;
 
@@ -208,14 +198,8 @@ protected:
   void _openSpan();
   void _closeSpan();
 
-  void _openTable();
   void _closeTable();
-  void _openTableRow(const double height, const bool isMinimumHeight, const bool isHeaderRow);
   void _closeTableRow();
-  void _openTableCell(const uint8_t colSpan, const uint8_t rowSpan, const uint8_t borderBits,
-                      const libmwaw_libwpd::RGBSColor *cellFgColor, const libmwaw_libwpd::RGBSColor *cellBgColor,
-                      const libmwaw_libwpd::RGBSColor *cellBorderColor,
-                      const DMWAWVerticalAlignment cellVerticalAlignment);
   void _closeTableCell();
 
   double _movePositionToFirstColumn(double position);
@@ -230,6 +214,13 @@ protected:
   void _insertPageNumberParagraph(DMWAWPageNumberPosition position, DMWAWNumberingType type, WPXString fontName, double fontSize);
 
   uint32_t _mapNonUnicodeCharacter(uint32_t character);
+
+  bool isUndoOn() {
+    return m_isUndoOn;
+  }
+  void setUndoOn(bool isOn) {
+    m_isUndoOn = isOn;
+  }
 
 private:
   DMWAWContentListener(const DMWAWContentListener &);

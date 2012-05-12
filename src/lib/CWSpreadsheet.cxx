@@ -35,9 +35,9 @@
 
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPictBasic.hxx"
-#include "TMWAWPictMac.hxx"
-#include "TMWAWPosition.hxx"
+#include "MWAWPictBasic.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPosition.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -84,7 +84,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 CWSpreadsheet::CWSpreadsheet
-(TMWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWSpreadsheetInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -111,14 +111,14 @@ int CWSpreadsheet::numPages() const
 // a document part
 ////////////////////////////////////////////////////////////
 shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
-(CWStruct::DSET const &zone, IMWAWEntry const &entry, bool &complete)
+(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
   if (!entry.valid() || zone.m_type != 2 || entry.length() < 256)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   shared_ptr<CWSpreadsheetInternal::Spreadsheet>
   spreadsheetZone(new CWSpreadsheetInternal::Spreadsheet(zone));
 
@@ -263,7 +263,7 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
     return true;
   }
   int numElts = sz/fSize;
-  if (numElts*fSize != sz) {
+  if (numElts *fSize != sz) {
     m_input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWSpreadsheet::readZone1: unexpected size\n"));
     return false;
@@ -272,7 +272,7 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
   ascii().addPos(pos);
   ascii().addNote("Entries(SpreadsheetZone1)");
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   m_input->seek(pos+4, WPX_SEEK_SET);
   for (int i = 0; i < numElts; i++) {
     pos = m_input->tell();
@@ -307,7 +307,7 @@ bool CWSpreadsheet::readContent(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
   }
 
   m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(SpreadsheetContent):";
   int N = m_input->readULong(2);
   f << "N=" << N << ",";

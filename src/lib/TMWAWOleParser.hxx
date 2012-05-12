@@ -69,10 +69,10 @@
 #include <libwpd-stream/WPXStream.h>
 
 #include "libmwaw_tools.hxx"
-#include "TMWAWInputStream.hxx"
-#include "TMWAWPosition.hxx"
+#include "MWAWInputStream.hxx"
+#include "MWAWPosition.hxx"
 
-#include "TMWAWDebug.hxx"
+#include "MWAWDebug.hxx"
 
 class WPXBinaryData;
 
@@ -96,7 +96,7 @@ public:
 
   /** tries to parse basic OLE (excepted mainName)
       \return false if fileInput is not an Ole file */
-  bool parse(TMWAWInputStreamPtr fileInput);
+  bool parse(MWAWInputStreamPtr fileInput);
 
   //! returns the list of unknown ole
   std::vector<std::string> const &getNotParse() const {
@@ -108,7 +108,7 @@ public:
     return m_objectsId;
   }
   //! returns the list of data positions which have been read
-  std::vector<TMWAWPosition> const &getObjectsPosition() const {
+  std::vector<MWAWPosition> const &getObjectsPosition() const {
     return m_objectsPosition;
   }
   //! returns the list of data which have been read
@@ -117,7 +117,7 @@ public:
   }
 
   //! returns the picture corresponding to an id
-  bool getObject(int id, WPXBinaryData &obj, TMWAWPosition &pos)  const {
+  bool getObject(int id, WPXBinaryData &obj, MWAWPosition &pos)  const {
     for (int i = 0; i < int(m_objectsId.size()); i++) {
       if (m_objectsId[i] != id) continue;
       obj = m_objects[i];
@@ -131,7 +131,7 @@ public:
   /*! \brief sets an object
    * just in case, the external parsing find another representation
    */
-  void setObject(int id, WPXBinaryData const &obj, TMWAWPosition const &pos) {
+  void setObject(int id, WPXBinaryData const &obj, MWAWPosition const &pos) {
     for (int i = 0; i < int(m_objectsId.size()); i++) {
       if (m_objectsId[i] != id) continue;
       m_objects[i] = obj;
@@ -146,43 +146,43 @@ public:
 protected:
 
   //!  the "Ole" small structure : unknown contain
-  bool readOle(TMWAWInputStreamPtr ip, std::string const &oleName,
-               libmwaw_tools::DebugFile &ascii);
+  bool readOle(MWAWInputStreamPtr ip, std::string const &oleName,
+               libmwaw::DebugFile &ascii);
   //!  the "MM" small structure : seems to contain the file versions
-  bool readMM(TMWAWInputStreamPtr input, std::string const &oleName,
-              libmwaw_tools::DebugFile &ascii);
+  bool readMM(MWAWInputStreamPtr input, std::string const &oleName,
+              libmwaw::DebugFile &ascii);
   //!  the "ObjInfo" small structure : seems to contain 3 ints=0,3,4
-  bool readObjInfo(TMWAWInputStreamPtr input, std::string const &oleName,
-                   libmwaw_tools::DebugFile &ascii);
+  bool readObjInfo(MWAWInputStreamPtr input, std::string const &oleName,
+                   libmwaw::DebugFile &ascii);
   //!  the "CompObj" contains : UserType,ClipName,ProgIdName
-  bool readCompObj(TMWAWInputStreamPtr ip, std::string const &oleName,
-                   libmwaw_tools::DebugFile &ascii);
+  bool readCompObj(MWAWInputStreamPtr ip, std::string const &oleName,
+                   libmwaw::DebugFile &ascii);
 
   /** the OlePres001 seems to contain standart picture file and size */
-  bool isOlePres(TMWAWInputStreamPtr ip, std::string const &oleName);
+  bool isOlePres(MWAWInputStreamPtr ip, std::string const &oleName);
   /** extracts the picture of OlePres001 if it is possible */
-  bool readOlePres(TMWAWInputStreamPtr ip, WPXBinaryData &data, TMWAWPosition &pos,
-                   libmwaw_tools::DebugFile &ascii);
+  bool readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWAWPosition &pos,
+                   libmwaw::DebugFile &ascii);
 
   //! theOle10Native : basic Windows© picture, with no size
-  bool isOle10Native(TMWAWInputStreamPtr ip, std::string const &oleName);
+  bool isOle10Native(MWAWInputStreamPtr ip, std::string const &oleName);
   /** extracts the picture if it is possible */
-  bool readOle10Native(TMWAWInputStreamPtr ip, WPXBinaryData &data,
-                       libmwaw_tools::DebugFile &ascii);
+  bool readOle10Native(MWAWInputStreamPtr ip, WPXBinaryData &data,
+                       libmwaw::DebugFile &ascii);
 
   /** \brief the Contents : in general a picture : a PNG, an JPEG, a basic metafile,
    * I find also a Word art picture, which are not sucefull read
    */
-  bool readContents(TMWAWInputStreamPtr input, std::string const &oleName,
-                    WPXBinaryData &pict, TMWAWPosition &pos, libmwaw_tools::DebugFile &ascii);
+  bool readContents(MWAWInputStreamPtr input, std::string const &oleName,
+                    WPXBinaryData &pict, MWAWPosition &pos, libmwaw::DebugFile &ascii);
 
   /** the CONTENTS : seems to store a header size, the header
    * and then a object in EMF (with the same header)...
    * \note I only find such lib in 2 files, so the parsing may be incomplete
    *  and many such Ole rejected
    */
-  bool readCONTENTS(TMWAWInputStreamPtr input, std::string const &oleName,
-                    WPXBinaryData &pict, TMWAWPosition &pos, libmwaw_tools::DebugFile &ascii);
+  bool readCONTENTS(MWAWInputStreamPtr input, std::string const &oleName,
+                    WPXBinaryData &pict, MWAWPosition &pos, libmwaw::DebugFile &ascii);
 
 
   //! if filled, does not parse content with this name
@@ -193,7 +193,7 @@ protected:
   //! list of pictures read
   std::vector<WPXBinaryData> m_objects;
   //! list of picture size ( if known)
-  std::vector<TMWAWPosition> m_objectsPosition;
+  std::vector<MWAWPosition> m_objectsPosition;
   //! list of pictures id
   std::vector<int> m_objectsId;
 

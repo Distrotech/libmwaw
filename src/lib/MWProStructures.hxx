@@ -34,13 +34,13 @@
 #include <string>
 #include <vector>
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
 class WPXBinaryData;
 typedef class MWAWContentListener MWProContentListener;
@@ -261,7 +261,7 @@ protected:
   bool readStructB();
 
   //! try to read a string
-  bool readString(TMWAWInputStreamPtr input, std::string &res);
+  bool readString(MWAWInputStreamPtr input, std::string &res);
 
   //! try to return the color corresponding to colId
   bool getColor(int colId, Vec3uc &color) const;
@@ -276,7 +276,7 @@ protected:
   bool send(int blockId, bool mainZone=false);
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -291,7 +291,7 @@ protected:
   //
 
   //! the main input
-  TMWAWInputStreamPtr m_input;
+  MWAWInputStreamPtr m_input;
 
   //! the main parser
   MWProParser &m_mainParser;
@@ -306,7 +306,7 @@ protected:
   shared_ptr<MWProStructuresInternal::State> m_state;
 
   //! the debug file
-  libmwaw_tools::DebugFile m_asciiFile;
+  libmwaw::DebugFile m_asciiFile;
 
   //! the debug file name
   std::string m_asciiName;

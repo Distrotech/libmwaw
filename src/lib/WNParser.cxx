@@ -35,11 +35,11 @@
 
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPosition.hxx"
-#include "TMWAWPictMac.hxx"
-#include "TMWAWPrint.hxx"
+#include "MWAWPosition.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPrinter.hxx"
 
-#include "IMWAWHeader.hxx"
+#include "MWAWHeader.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -82,31 +82,31 @@ struct State {
 
 ////////////////////////////////////////
 //! Internal: the subdocument of a WNParser
-class SubDocument : public IMWAWSubDocument
+class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(WNParser &pars, TMWAWInputStreamPtr input, WNEntry pos) :
-    IMWAWSubDocument(&pars, input, IMWAWEntry()), m_pos(pos) {}
+  SubDocument(WNParser &pars, MWAWInputStreamPtr input, WNEntry pos) :
+    MWAWSubDocument(&pars, input, MWAWEntry()), m_pos(pos) {}
 
   //! destructor
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(IMWAWSubDocument const &doc) const;
+  virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(IMWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const {
     return !operator!=(doc);
   }
 
   //! the parser function
-  void parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType type);
+  void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type);
 
 protected:
   //! the subdocument file position
   WNEntry m_pos;
 };
 
-void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -125,9 +125,9 @@ void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType 
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
-bool SubDocument::operator!=(IMWAWSubDocument const &doc) const
+bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 {
-  if (IMWAWSubDocument::operator!=(doc)) return true;
+  if (MWAWSubDocument::operator!=(doc)) return true;
   SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
   if (!sDoc) return true;
   if (m_pos != sDoc->m_pos) return true;
@@ -139,8 +139,8 @@ bool SubDocument::operator!=(IMWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-WNParser::WNParser(TMWAWInputStreamPtr input, IMWAWHeader * header) :
-  IMWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
+WNParser::WNParser(MWAWInputStreamPtr input, MWAWHeader *header) :
+  MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
   m_entryManager(), m_pageSpan(), m_textParser(), m_listSubDocuments(),
   m_asciiFile(), m_asciiName("")
 {
@@ -229,7 +229,7 @@ void WNParser::sendFootnote(WNEntry const &entry)
 {
   if (!m_listener) return;
 
-  IMWAWSubDocumentPtr subdoc(new WNParserInternal::SubDocument(*this, getInput(), entry));
+  MWAWSubDocumentPtr subdoc(new WNParserInternal::SubDocument(*this, getInput(), entry));
   m_listener->insertNote(FOOTNOTE, subdoc);
 }
 
@@ -317,20 +317,18 @@ void WNParser::createDocument(WPXDocumentInterface *documentInterface)
 
   WNEntry entry = m_textParser->getHeader();
   if (entry.valid()) {
-    DMWAWTableList tableList;
     shared_ptr<WNParserInternal::SubDocument> subdoc
     (new WNParserInternal::SubDocument(*this, getInput(), entry));
     m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter(HEADER, 0, ALL, subdoc.get(), tableList);
+    ps.setHeaderFooter(HEADER, 0, ALL, subdoc.get());
   }
 
   entry = m_textParser->getFooter();
   if (entry.valid()) {
-    DMWAWTableList tableList;
     shared_ptr<WNParserInternal::SubDocument> subdoc
     (new WNParserInternal::SubDocument(*this, getInput(), entry));
     m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter(FOOTER, 0, ALL, subdoc.get(), tableList);
+    ps.setHeaderFooter(FOOTER, 0, ALL, subdoc.get());
   }
 
   int numPage = m_textParser->numPages();
@@ -340,7 +338,7 @@ void WNParser::createDocument(WPXDocumentInterface *documentInterface)
 
   //
   WNContentListenerPtr listen =
-    WNContentListener::create(pageList, documentInterface, m_convertissor);
+    WNContentListener::create(pageList, documentInterface);
   setListener(listen);
   listen->startDocument();
 }
@@ -392,7 +390,7 @@ bool WNParser::createZones()
   bool ok = m_textParser->createZones();
 
   // fixme: we must continue....
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   iter = m_entryManager->m_typeMap.begin();
   for (; iter != m_entryManager->m_typeMap.end(); iter++) {
     WNEntry ent = *iter->second;
@@ -419,7 +417,7 @@ bool WNParser::createZones()
 ////////////////////////////////////////////////////////////
 bool WNParser::readDocEntries()
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
 
   std::multimap<std::string, WNEntry const *>::iterator it =
     m_entryManager->m_typeMap.find("DocTable");
@@ -440,7 +438,7 @@ bool WNParser::readDocEntries()
     return false;
   }
   entry.setParsed(true);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(DocTable):";
 
   long val;
@@ -508,9 +506,9 @@ bool WNParser::readDocEntries()
 ////////////////////////////////////////////////////////////
 bool WNParser::readDocEntriesV2()
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   std::stringstream s;
   f << "Entries(DocEntries):";
   for (int i = 0; i < 5; i++) {
@@ -560,7 +558,7 @@ bool WNParser::readDocEntriesV2()
 ////////////////////////////////////////////////////////////
 bool WNParser::parseGraphicZone(WNEntry const &entry)
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
 
   if (!entry.valid() || entry.length() < 24) {
     MWAW_DEBUG_MSG(("WNParser::parseGraphicZone: zone size is invalid\n"));
@@ -572,7 +570,7 @@ bool WNParser::parseGraphicZone(WNEntry const &entry)
     MWAW_DEBUG_MSG(("WNParser::parseGraphicZone: bad begin of last zone\n"));
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(GraphicZone):";
   f << "ptr?=" << std::hex << input->readULong(4) << std::dec << ",";
   f << "ptr2?=" << std::hex << input->readULong(4) << std::dec << ",";
@@ -638,7 +636,7 @@ bool WNParser::parseGraphicZone(WNEntry const &entry)
 ////////////////////////////////////////////////////////////
 bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
 
   if (!entry.valid() || entry.length() < 24) {
     MWAW_DEBUG_MSG(("WNParser::sendPicture: zone size is invalid\n"));
@@ -650,7 +648,7 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
     MWAW_DEBUG_MSG(("WNParser::sendPicture: bad begin of last zone\n"));
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(GraphicData):";
   f << "ptr?=" << std::hex << input->readULong(4) << std::dec << ",";
   f << "ptr2?=" << std::hex << input->readULong(4) << std::dec << ",";
@@ -676,8 +674,8 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
   int sz = entry.length()-24;
   if (sz) {
     long pos = input->tell();
-    shared_ptr<libmwaw_tools::Pict> pict
-    (libmwaw_tools::PictData::get(input, sz));
+    shared_ptr<MWAWPict> pict
+    (MWAWPictData::get(input, sz));
     if (!pict) {
       MWAW_DEBUG_MSG(("WNParser::sendPicture: can not read the picture\n"));
       ascii().addDelimiter(pos, '|');
@@ -685,12 +683,12 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
       if (m_listener) {
         WPXBinaryData data;
         std::string type;
-        TMWAWPosition pictPos;
+        MWAWPosition pictPos;
         if (bdbox.size().x() > 0 && bdbox.size().y() > 0) {
-          pictPos=TMWAWPosition(Vec2f(0,0),bdbox.size(), WPX_POINT);
+          pictPos=MWAWPosition(Vec2f(0,0),bdbox.size(), WPX_POINT);
           pictPos.setNaturalSize(pict->getBdBox().size());
         } else
-          pictPos=TMWAWPosition(Vec2f(0,0),pict->getBdBox().size(), WPX_POINT);
+          pictPos=MWAWPosition(Vec2f(0,0),pict->getBdBox().size(), WPX_POINT);
 
         if (pict->getBinary(data,type))
           m_listener->insertPicture(pictPos, data, type);
@@ -703,9 +701,9 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
         input->seek(entry.begin(), WPX_SEEK_SET);
         input->readDataBlock(entry.length(), file);
         static int volatile pictName = 0;
-        libmwaw_tools::DebugStream f;
+        libmwaw::DebugStream f;
         f << "PICT-" << ++pictName << ".pct";
-        libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+        libmwaw::Debug::dumpFile(file, f.str().c_str());
       }
 #endif
     }
@@ -726,7 +724,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
 {
   m_state->m_colorMap.resize(0);
 
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
 
   if (!entry.valid() || entry.length() < 0x10) {
     MWAW_DEBUG_MSG(("WNParser::readColorMap: zone size is invalid\n"));
@@ -738,7 +736,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
     MWAW_DEBUG_MSG(("WNParser::readColorMap: bad begin of last zone\n"));
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(ColorMap):";
   f << "ptr?=" << std::hex << input->readULong(4) << std::dec << ",";
   f << "ptr2?=" << std::hex << input->readULong(4) << std::dec << ",";
@@ -833,7 +831,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
 ////////////////////////////////////////////////////////////
 bool WNParser::readPrintInfo(WNEntry const &entry)
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   int expectedLength = version() <= 2 ? 0x78+2 : 0x88;
   if (!entry.valid() || entry.length() < expectedLength) {
     MWAW_DEBUG_MSG(("WNParser::readPrintInfo: zone size is invalid\n"));
@@ -846,7 +844,7 @@ bool WNParser::readPrintInfo(WNEntry const &entry)
     MWAW_DEBUG_MSG(("WNParser::readPrintInfo: bad begin of last zone\n"));
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(PrintInfo):";
   if (version()>=3) {
     f << "ptr?=" << std::hex << input->readULong(4) << std::dec << ",";
@@ -861,7 +859,7 @@ bool WNParser::readPrintInfo(WNEntry const &entry)
       if (val) f << "g" << i << "=" << val << ",";
     }
   }
-  libmwaw_tools_mac::PrintInfo info;
+  libmwaw::PrinterInfo info;
   if (!info.read(input)) {
     MWAW_DEBUG_MSG(("WNParser::readPrintInfo: can not read print info\n"));
     return false;
@@ -909,7 +907,7 @@ bool WNParser::readPrintInfo(WNEntry const &entry)
 ////////////////////////////////////////////////////////////
 bool WNParser::readGenericUnkn(WNEntry const &entry)
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
 
   if (!entry.valid() || entry.length() < 0x10) {
     MWAW_DEBUG_MSG(("WNParser::readGenericUnkn: zone size is invalid\n"));
@@ -921,7 +919,7 @@ bool WNParser::readGenericUnkn(WNEntry const &entry)
     MWAW_DEBUG_MSG(("WNParser::readGenericUnkn: bad begin of last zone\n"));
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries(" << entry.type() << "):";
   f << "ptr?=" << std::hex << input->readULong(4) << std::dec << ",";
   f << "ptr2?=" << std::hex << input->readULong(4) << std::dec << ",";
@@ -995,7 +993,7 @@ bool WNParser::checkIfPositionValid(long pos)
 {
   if (pos <= m_state->m_endPos)
     return true;
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
   input->seek(pos, WPX_SEEK_SET);
   bool ok = long(input->tell())==pos;
@@ -1008,7 +1006,7 @@ bool WNParser::checkIfPositionValid(long pos)
 WNEntry WNParser::readEntry()
 {
   WNEntry res;
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   int val = input->readULong(2);
   res.m_fileType = (val >> 12);
   res.m_val[0]= val & 0x0FFF;
@@ -1030,13 +1028,13 @@ WNEntry WNParser::readEntry()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool WNParser::checkHeader(IMWAWHeader *header, bool strict)
+bool WNParser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = WNParserInternal::State();
 
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int headerSize=28;
   input->seek(headerSize,WPX_SEEK_SET);
   if (int(input->tell()) != headerSize) {
@@ -1113,7 +1111,7 @@ bool WNParser::checkHeader(IMWAWHeader *header, bool strict)
 
   // ok, we can finish initialization
   if (header)
-    header->reset(IMWAWDocument::WNOW, m_state->m_version);
+    header->reset(MWAWDocument::WNOW, m_state->m_version);
 
   //
   input->seek(headerSize, WPX_SEEK_SET);

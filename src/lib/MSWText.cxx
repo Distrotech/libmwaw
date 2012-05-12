@@ -36,7 +36,7 @@
 
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -54,8 +54,8 @@ namespace MSWTextInternal
 
 ////////////////////////////////////////
 //! Internal: the entry of MSWParser
-struct TextEntry : public IMWAWEntry {
-  TextEntry() : IMWAWEntry(), m_pos(-1), m_id(0), m_type(0), m_function(0),
+struct TextEntry : public MWAWEntry {
+  TextEntry() : MWAWEntry(), m_pos(-1), m_id(0), m_type(0), m_function(0),
     m_value(0), m_fontId(-2), m_paragraphId(-2) {
   }
   //! operator<<
@@ -225,11 +225,11 @@ struct Section {
     m_flag(0), m_default(false), m_error("") {
   }
   //! try to read a data
-  bool read(TMWAWInputStreamPtr &input, long endPos) {
+  bool read(MWAWInputStreamPtr &input, long endPos) {
     long pos = input->tell();
     long dSz = endPos-pos;
     if (dSz < 1) return false;
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     int c = input->readULong(1), val;
     switch(c) {
     case 0x75: // column break
@@ -412,7 +412,7 @@ struct Paragraph {
     return false;
   }
   //! try to read a data
-  bool read(TMWAWInputStreamPtr &input, long endPos) {
+  bool read(MWAWInputStreamPtr &input, long endPos) {
     long pos = input->tell();
     if (m_section.read(input,endPos)) {
       m_section.m_default=false;
@@ -422,7 +422,7 @@ struct Paragraph {
     input->seek(pos, WPX_SEEK_SET);
     long dSz = endPos-pos;
     if (dSz < 1) return false;
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     int c = input->readULong(1), val;
     switch(c) {
     case 0x5:
@@ -686,7 +686,7 @@ struct Footnote {
     return o;
   }
   //! the footnote data
-  IMWAWEntry m_pos;
+  MWAWEntry m_pos;
   //! the id
   int m_id;
   //! a value ( 1, 4)
@@ -813,7 +813,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSWText::MSWText
-(TMWAWInputStreamPtr ip, MSWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, MSWParser &parser, MWAWTools::ConvertissorPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new MSWTextInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -1002,7 +1002,7 @@ bool MSWText::readTextStruct(MSWEntry &entry)
   }
   long pos = entry.begin();
   m_input->seek(pos, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int type = m_input->readLong(1);
   if (type != 1 && type != 2) {
     MWAW_DEBUG_MSG(("MSWText::readTextStruct: find odd type %d\n", type));
@@ -1130,7 +1130,7 @@ bool MSWText::readFontNames(MSWEntry &entry)
 
   long pos = entry.begin();
   m_input->seek(pos, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int N = m_input->readULong(2);
   if (N*5+2 > entry.length()) {
     MWAW_DEBUG_MSG(("MSWText::readFontNames: the number of fonts seems bad\n"));
@@ -1189,7 +1189,7 @@ bool MSWText::readLineInfo(MSWEntry &entry)
   long pos = entry.begin();
   entry.setParsed(true);
   m_input->seek(pos, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "LineInfo:";
   int N=entry.length()/10;
 
@@ -1251,7 +1251,7 @@ bool MSWText::readPageBreak(MSWEntry &entry)
   long pos = entry.begin();
   entry.setParsed(true);
   m_input->seek(pos, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "PageBreak:";
   int N=entry.length()/14;
   std::vector<long> textPos; // checkme
@@ -1300,7 +1300,7 @@ bool MSWText::readSection(MSWEntry &entry)
   long pos = entry.begin();
   entry.setParsed(true);
   m_input->seek(pos, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Section:";
   int N=entry.length()/10;
   std::vector<long> textPos; // checkme
@@ -1352,7 +1352,7 @@ bool MSWText::readPLCList(MSWEntry &entry)
   long pos = entry.begin();
   entry.setParsed(true);
   m_input->seek(pos, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << entry.type() << ":";
   int N=entry.length()/6;
   std::vector<long> textPos; // limit of the text in the file
@@ -1410,7 +1410,7 @@ bool MSWText::readPLC(MSWEntry &entry, int type)
 
   long pos = entry.begin();
   entry.setParsed(true);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "Entries("<< entry.type() << ")[" << entry.m_id << "]:N=" << N << ",";
 
   m_input->seek(pos, WPX_SEEK_SET);
@@ -1437,7 +1437,7 @@ bool MSWText::readPLC(MSWEntry &entry, int type)
         mapPosId[decal[i]] = id;
 
         long actPos = m_input->tell();
-        libmwaw_tools::DebugStream f2;
+        libmwaw::DebugStream f2;
         f2 << entry.type() << "-";
 
         long dataPos = entry.begin()+posFactor*decal[i];
@@ -1526,7 +1526,7 @@ bool MSWText::readFootnotesPos(MSWEntry &entry, std::vector<long> const &noteDef
     MWAW_DEBUG_MSG(("MSWText::readFootnotesPos: the zone size seems odd\n"));
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int N=entry.length()/6;
   if (N+2 != int(noteDef.size())) {
     MWAW_DEBUG_MSG(("MSWText::readFootnotesPos: the number N seems odd\n"));
@@ -1589,7 +1589,7 @@ bool MSWText::readFootnotesData(MSWEntry &entry)
     MWAW_DEBUG_MSG(("MSWText::readFootnotesData: the zone size seems odd\n"));
     return false;
   }
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int N=entry.length()/14;
   long pos = entry.begin();
   entry.setParsed(true);
@@ -1647,7 +1647,7 @@ bool MSWText::readFields(MSWEntry &entry, std::vector<long> const &fieldPos)
     MWAW_DEBUG_MSG(("MSWText::readFields: the zone size seems odd\n"));
     return false;
   }
-  libmwaw_tools::DebugStream f, f2;
+  libmwaw::DebugStream f, f2;
   f << "FieldName:";
   int const endSize = (version()==5) ? 2 : 1;
   MSWTextInternal::PLC plc(MSWTextInternal::PLC::Field);
@@ -1728,7 +1728,7 @@ bool MSWText::readStyles(MSWEntry &entry)
   ascii().addNote("_");
 
   long pos = entry.begin();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   m_input->seek(pos, WPX_SEEK_SET);
   f << entry << ":";
   int N = m_input->readLong(2);
@@ -1965,7 +1965,7 @@ bool MSWText::readFont(MSWTextInternal::Font &font, bool mainZone)
 {
   font = MSWTextInternal::Font();
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   long pos = m_input->tell();
   int sz = m_input->readULong(1);
@@ -2123,7 +2123,7 @@ bool MSWText::readParagraph(MSWTextInternal::Paragraph &para, int dataSz)
   if (sz == 0) return true;
   if (!m_mainParser->isFilePos(pos+sz)) return false;
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   while (long(m_input->tell()) < endPos) {
     long actPos = m_input->tell();
     /* 5-16: basic paragraph properties
@@ -2392,7 +2392,7 @@ bool MSWText::readSection(MSWTextInternal::Section &sec, long debPos)
     return false;
   }
   m_input->seek(debPos, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int sz = m_input->readULong(1);
   long endPos = debPos+sz+1;
   if (sz < 1 || sz >= 255) {
@@ -2432,7 +2432,7 @@ bool MSWText::readLongZone(MSWEntry &entry, int sz, std::vector<long> &list)
 
   long pos = entry.begin();
   m_input->seek(pos, WPX_SEEK_SET);
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << entry.type() << ":";
   int N = entry.length()/sz;
   for (int i = 0; i < N; i++) {
@@ -2457,7 +2457,7 @@ bool MSWText::readLongZone(MSWEntry &entry, int sz, std::vector<long> &list)
 ////////////////////////////////////////////////////////////
 // try to read a text entry
 ////////////////////////////////////////////////////////////
-bool MSWText::sendText(IMWAWEntry const &textEntry, bool mainZone)
+bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone)
 {
   if (!textEntry.valid()) return false;
   if (!m_listener) {
@@ -2474,7 +2474,7 @@ bool MSWText::sendText(IMWAWEntry const &textEntry, bool mainZone)
   actFont.m_font = m_state->m_defaultFont;
   bool fontSent = false;
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   f << "TextContent:";
   std::multimap<long, MSWTextInternal::PLC>::iterator plcIt;
   while (!m_input->atEOS() && cPos < cEnd) {
@@ -2612,7 +2612,7 @@ bool MSWText::sendText(IMWAWEntry const &textEntry, bool mainZone)
     case 0xc: // end section (ok)
       break;
     case 0x2:
-      m_listener->insertField(IMWAWContentListener::PageNumber);
+      m_listener->insertField(MWAWContentListener::PageNumber);
       break;
     case 0x6:
       m_listener->insertCharacter('\\');
@@ -2636,14 +2636,14 @@ bool MSWText::sendText(IMWAWEntry const &textEntry, bool mainZone)
       m_listener->insertDateTimeField("%y");
       break;
     case 0x1d:
-      m_listener->insertField(IMWAWContentListener::Date);
+      m_listener->insertField(MWAWContentListener::Date);
       break;
     case 0x18: // checkme hour
     case 0x19: // checkme hour
       m_listener->insertDateTimeField("%H");
       break;
     case 0x4:
-      m_listener->insertField(IMWAWContentListener::Time);
+      m_listener->insertField(MWAWContentListener::Time);
       break;
     case 0x5: // footnote mark (ok)
       break;
@@ -2690,7 +2690,7 @@ bool MSWText::sendText(IMWAWEntry const &textEntry, bool mainZone)
 
 bool MSWText::sendMainText()
 {
-  IMWAWEntry entry;
+  MWAWEntry entry;
   entry.setBegin(0);
   entry.setLength(m_state->m_textLength[0]);
   sendText(entry, true);
@@ -2838,7 +2838,7 @@ void MSWText::flushExtra()
   }
 #endif
   if (m_state->m_textLength[2]) {
-    IMWAWEntry entry;
+    MWAWEntry entry;
     entry.setBegin(m_state->m_textLength[0]+m_state->m_textLength[1]);
     entry.setLength(m_state->m_textLength[2]);
     sendText(entry, false);

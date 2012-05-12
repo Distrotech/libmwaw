@@ -42,16 +42,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener WNContentListener;
 typedef shared_ptr<WNContentListener> WNContentListenerPtr;
@@ -99,7 +99,7 @@ class WNText
   friend struct WNTextInternal::Cell;
 public:
   //! constructor
-  WNText(TMWAWInputStreamPtr ip, WNParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  WNText(MWAWInputStreamPtr ip, WNParser &parser, MWAWTools::ConvertissorPtr &convertissor);
   //! destructor
   virtual ~WNText();
 
@@ -165,25 +165,25 @@ protected:
   bool readFontNames(WNEntry const &entry);
 
   //! read a font
-  bool readFont(TMWAWInputStream &input, bool inStyle, WNTextInternal::Font &font);
+  bool readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font &font);
 
   //! read a ruler
-  bool readRuler(TMWAWInputStream &input, WNTextInternal::Ruler &ruler);
+  bool readRuler(MWAWInputStream &input, WNTextInternal::Ruler &ruler);
 
   //! read a token
-  bool readToken(TMWAWInputStream &input, WNTextInternal::Token &token);
+  bool readToken(MWAWInputStream &input, WNTextInternal::Token &token);
 
   //! read a token (v2)
-  bool readTokenV2(TMWAWInputStream &input, WNTextInternal::Token &token);
+  bool readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token);
 
   //! read a table frame (checkme)
-  bool readTable(TMWAWInputStream &input, WNTextInternal::TableData &table);
+  bool readTable(MWAWInputStream &input, WNTextInternal::TableData &table);
 
   //! try to read the styles zone
   bool readStyles(WNEntry const &entry);
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -196,7 +196,7 @@ protected:
   // data
   //
   //! the input
-  TMWAWInputStreamPtr m_input;
+  MWAWInputStreamPtr m_input;
 
   //! the listener
   WNContentListenerPtr m_listener;
@@ -214,7 +214,7 @@ protected:
   WNParser *m_mainParser;
 
   //! the debug file
-  libmwaw_tools::DebugFile &m_asciiFile;
+  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

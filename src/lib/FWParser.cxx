@@ -36,12 +36,12 @@
 
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPosition.hxx"
-#include "TMWAWPictMac.hxx"
-#include "TMWAWPrint.hxx"
+#include "MWAWPosition.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPrinter.hxx"
 
-#include "IMWAWHeader.hxx"
-#include "IMWAWCell.hxx"
+#include "MWAWHeader.hxx"
+#include "MWAWCell.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -97,18 +97,18 @@ struct State {
 
 ////////////////////////////////////////
 //! Internal: the subdocument of a MWParser
-class SubDocument : public IMWAWSubDocument
+class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(FWParser &pars, TMWAWInputStreamPtr input, int zoneId) :
-    IMWAWSubDocument(&pars, input, IMWAWEntry()), m_id(zoneId) {}
+  SubDocument(FWParser &pars, MWAWInputStreamPtr input, int zoneId) :
+    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
 
   //! destructor
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(IMWAWSubDocument const &doc) const {
-    if (IMWAWSubDocument::operator!=(doc)) return true;
+  virtual bool operator!=(MWAWSubDocument const &doc) const {
+    if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
     if (m_id != sDoc->m_id) return true;
@@ -116,7 +116,7 @@ public:
   }
 
   //! operator!==
-  virtual bool operator==(IMWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const {
     return !operator!=(doc);
   }
 
@@ -130,14 +130,14 @@ public:
   }
 
   //! the parser function
-  void parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType type);
+  void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
 };
 
-void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -159,8 +159,8 @@ void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType 
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-FWParser::FWParser(TMWAWInputStreamPtr input, IMWAWHeader * header) :
-  IMWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
+FWParser::FWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
+  MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
   m_pageSpan(), m_textParser(), m_listSubDocuments(), m_asciiFile(), m_asciiName("")
 {
   init();
@@ -258,7 +258,7 @@ void FWParser::parse(WPXDocumentInterface *docInterface)
     }
     bool first = true;
     std::multimap<int, shared_ptr<FWEntry> >::iterator it;
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); it++) {
       shared_ptr<FWEntry> &zone = it->second;
       if (!zone || !zone->valid() || zone->isParsed()) continue;
@@ -270,7 +270,7 @@ void FWParser::parse(WPXDocumentInterface *docInterface)
       f << "Entries(" << zone->type() << ")";
       if (zone->m_nextId != -2) f << "[" << zone->m_nextId << "]";
 
-      libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
+      libmwaw::DebugFile &ascii = zone->getAsciiFile();
 
       ascii.addPos(zone->begin());
       ascii.addNote(f.str().c_str());
@@ -313,7 +313,7 @@ void FWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   //
   FWContentListenerPtr listen =
-    FWContentListener::create(pageList, documentInterface, m_convertissor);
+    FWContentListener::create(pageList, documentInterface);
   setListener(listen);
   listen->startDocument();
 }
@@ -381,11 +381,11 @@ bool FWParser::createZones()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool FWParser::checkHeader(IMWAWHeader *header, bool /*strict*/)
+bool FWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
   *m_state = FWParserInternal::State();
 
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
 
   int const minSize=50;
   input->seek(minSize,WPX_SEEK_SET);
@@ -400,7 +400,7 @@ bool FWParser::checkHeader(IMWAWHeader *header, bool /*strict*/)
   input->seek(0,WPX_SEEK_SET);
 
   if (header)
-    header->reset(IMWAWDocument::FULLW, 1);
+    header->reset(MWAWDocument::FULLW, 1);
 
   return true;
 }
@@ -409,9 +409,9 @@ bool FWParser::readDocInfo(shared_ptr<FWEntry> zone)
 {
   if (zone->length() < 0x4b2)
     return false;
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugStream f;
 
   long pos = zone->begin();
   input->seek(pos, WPX_SEEK_SET);
@@ -546,9 +546,9 @@ bool FWParser::readDocInfo(shared_ptr<FWEntry> zone)
 
 bool FWParser::readUnkn0(shared_ptr<FWEntry> zone)
 {
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugStream f;
 
   long pos = zone->begin();
   input->seek(pos, WPX_SEEK_SET);
@@ -606,9 +606,9 @@ bool FWParser::readGraphic(shared_ptr<FWEntry> zone)
 {
   int vers = version();
 
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugStream f;
 
   long pos = zone->begin();
   input->seek(pos, WPX_SEEK_SET);
@@ -664,7 +664,7 @@ bool FWParser::sendGraphic(shared_ptr<FWEntry> zone)
 
   // int vers = version();
 
-  TMWAWInputStreamPtr input = zone->m_input;
+  MWAWInputStreamPtr input = zone->m_input;
 
   long pos = zone->begin();
   input->seek(pos, WPX_SEEK_SET);
@@ -681,17 +681,17 @@ bool FWParser::sendGraphic(shared_ptr<FWEntry> zone)
     input->seek(pos+4, WPX_SEEK_SET);
     input->readDataBlock(sz, file);
     static int volatile pictName = 0;
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     f << "DATA-" << ++pictName;
-    libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+    libmwaw::Debug::dumpFile(file, f.str().c_str());
   }
 #endif
 
   input->seek(pos+4, WPX_SEEK_SET);
   Box2f box;
-  libmwaw_tools::Pict::ReadResult res =
-    libmwaw_tools::PictData::check(input, sz, box);
-  if (res == libmwaw_tools::Pict::MWAW_R_BAD) {
+  MWAWPict::ReadResult res =
+    MWAWPictData::check(input, sz, box);
+  if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("FWParser::sendGraphic: can not find the picture\n"));
     return false;
   }
@@ -703,13 +703,13 @@ bool FWParser::sendGraphic(shared_ptr<FWEntry> zone)
     MWAW_DEBUG_MSG(("WPParser::sendGraphic: can not find the picture size\n"));
     actualSize = naturalSize = Vec2f(100,100);
   }
-  TMWAWPosition pictPos=TMWAWPosition(Vec2f(0,0),actualSize, WPX_POINT);
-  pictPos.setRelativePosition(TMWAWPosition::Char);
+  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),actualSize, WPX_POINT);
+  pictPos.setRelativePosition(MWAWPosition::Char);
   pictPos.setNaturalSize(naturalSize);
 
   input->seek(pos+4, WPX_SEEK_SET);
-  shared_ptr<libmwaw_tools::Pict> pict
-  (libmwaw_tools::PictData::get(input, sz));
+  shared_ptr<MWAWPict> pict
+  (MWAWPictData::get(input, sz));
   if (pict) {
     WPXBinaryData data;
     std::string type;
@@ -734,10 +734,10 @@ bool FWParser::readZoneFlags(shared_ptr<FWEntry> zone)
     return false;
   }
   zone->setParsed(true);
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &ascii = zone->getAsciiFile();
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int numElt = zone->length()/dataSz;
   input->seek(zone->begin(), WPX_SEEK_SET);
   int numPosZone = 0;
@@ -829,10 +829,10 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
     return false;
   }
   zone->setParsed(true);
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &ascii = zone->getAsciiFile();
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &ascii = zone->getAsciiFile();
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int numElt = zone->length()/dataSz;
   input->seek(zone->begin(), WPX_SEEK_SET);
   int val;
@@ -925,8 +925,8 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
 
     if (entry->m_nextId < 0) {
       entry->m_input = input;
-      entry->m_asciiFile = shared_ptr<libmwaw_tools::DebugFile>
-                           (&ascii, MWAW_shared_ptr_noop_deleter<libmwaw_tools::DebugFile>());
+      entry->m_asciiFile = shared_ptr<libmwaw::DebugFile>
+                           (&ascii, MWAW_shared_ptr_noop_deleter<libmwaw::DebugFile>());
       continue;
     }
     // ok we must reconstruct a file
@@ -956,7 +956,7 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
 ////////////////////////////////////////////////////////////
 bool FWParser::readDocPosition()
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   if (m_state->m_eof < 0) {
     // find eof
     while (!input->atEOS())
@@ -966,7 +966,7 @@ bool FWParser::readDocPosition()
   if (m_state->m_eof < 48)
     return false;
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   long pos = m_state->m_eof-48;
   input->seek(m_state->m_eof-48, WPX_SEEK_SET);
   f << "Entries(DocPosition):";
@@ -982,8 +982,8 @@ bool FWParser::readDocPosition()
   long sz[2];
   for (int i = 0; i < 2; i++) {
     shared_ptr<FWEntry> zone(new FWEntry(input));
-    zone->m_asciiFile = shared_ptr<libmwaw_tools::DebugFile>
-                        (&ascii(), MWAW_shared_ptr_noop_deleter<libmwaw_tools::DebugFile>());
+    zone->m_asciiFile = shared_ptr<libmwaw::DebugFile>
+                        (&ascii(), MWAW_shared_ptr_noop_deleter<libmwaw::DebugFile>());
     zone->setBegin(input->readULong(4));
     zone->setLength((sz[i]=input->readULong(4)));
     if (zone->end() > m_state->m_eof || !zone->valid())
@@ -1034,11 +1034,11 @@ bool FWParser::readDocPosition()
 ////////////////////////////////////////////////////////////
 bool FWParser::readPrintInfo()
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   // print info
-  libmwaw_tools_mac::PrintInfo info;
+  libmwaw::PrinterInfo info;
   if (!info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
 
@@ -1082,16 +1082,16 @@ bool FWParser::readPrintInfo()
   return true;
 }
 
-void FWParser::sendText(int id, DMWAWSubDocumentType type, int wh)
+void FWParser::sendText(int id, MWAWSubDocumentType type, int wh)
 {
   if (!m_listener) return;
 
-  IMWAWSubDocumentPtr subdoc(new FWParserInternal::SubDocument(*this, getInput(), id));
+  MWAWSubDocumentPtr subdoc(new FWParserInternal::SubDocument(*this, getInput(), id));
   switch(type) {
-  case DMWAW_SUBDOCUMENT_NOTE:
+  case MWAW_SUBDOCUMENT_NOTE:
     m_listener->insertNote(DMWAWNoteType(wh), subdoc);
     break;
-  case DMWAW_SUBDOCUMENT_COMMENT_ANNOTATION:
+  case MWAW_SUBDOCUMENT_COMMENT_ANNOTATION:
     m_listener->insertComment(subdoc);
     break;
   default:
@@ -1122,7 +1122,7 @@ void FWParser::flushExtra()
 ////////////////////////////////////////
 //  the definition of a zone in the file
 ////////////////////////////////////////
-FWEntry::FWEntry(TMWAWInputStreamPtr input) : IMWAWEntry(), m_input(input), m_id(-1), m_flagsId(-1), m_nextId(-2), m_typeId(-1), m_data(), m_asciiFile(), m_extra("")
+FWEntry::FWEntry(MWAWInputStreamPtr input) : MWAWEntry(), m_input(input), m_id(-1), m_flagsId(-1), m_nextId(-2), m_typeId(-1), m_data(), m_asciiFile(), m_extra("")
 {
   for (int i = 0; i < 3; i++)
     m_values[i] = 0;
@@ -1166,10 +1166,10 @@ void FWEntry::update()
     MWAW_DEBUG_MSG(("FWEntry::update: can not create entry\n"));
     return;
   }
-  m_input.reset(new TMWAWInputStream(dataInput, false));
+  m_input.reset(new MWAWInputStream(dataInput, false));
   m_input->setResponsable(false);
 
-  m_asciiFile.reset(new libmwaw_tools::DebugFile(m_input));
+  m_asciiFile.reset(new libmwaw::DebugFile(m_input));
   std::stringstream s;
   s << "DataZone" << m_id;
   m_asciiFile->open(s.str());
@@ -1181,14 +1181,14 @@ void FWEntry::closeDebugFile()
   m_asciiFile->reset();
 }
 
-libmwaw_tools::DebugFile &FWEntry::getAsciiFile()
+libmwaw::DebugFile &FWEntry::getAsciiFile()
 {
   return *m_asciiFile;
 }
 
 bool FWEntry::operator==(const FWEntry &a) const
 {
-  if (IMWAWEntry::operator!=(a)) return false;
+  if (MWAWEntry::operator!=(a)) return false;
   if (m_input.get() != a.m_input.get()) return false;
   if (m_id != a.m_id) return false;
   if (m_nextId != a.m_nextId) return false;

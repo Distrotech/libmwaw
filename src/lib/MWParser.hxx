@@ -36,16 +36,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener MWContentListener;
 typedef shared_ptr<MWContentListener> MWContentListenerPtr;
@@ -74,18 +74,18 @@ class SubDocument;
  *
  *
  */
-class MWParser : public IMWAWParser
+class MWParser : public MWAWParser
 {
   friend class MWParserInternal::SubDocument;
 
 public:
   //! constructor
-  MWParser(TMWAWInputStreamPtr input, IMWAWHeader * header);
+  MWParser(MWAWInputStreamPtr input, MWAWHeader *header);
   //! destructor
   virtual ~MWParser();
 
   //! checks if the document header is correct (or not)
-  bool checkHeader(IMWAWHeader *header, bool strict=false);
+  bool checkHeader(MWAWHeader *header, bool strict=false);
 
   /** returns the file version.
    *
@@ -126,7 +126,7 @@ protected:
   bool readWindowsInfo(int wh);
 
   //! read the line height
-  bool readLinesHeight(IMWAWEntry const &entry, std::vector<int> &firstParagLine,
+  bool readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstParagLine,
                        std::vector<int> &linesHeight);
 
   //! read the information ( version <= 3)
@@ -134,7 +134,7 @@ protected:
                           std::vector<MWParserInternal::Information> &informations);
 
   //! read the information
-  bool readInformations(IMWAWEntry const &entry,
+  bool readInformations(MWAWEntry const &entry,
                         std::vector<MWParserInternal::Information> &informations);
 
   //! read a ruler
@@ -165,7 +165,7 @@ protected:
   //
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -194,7 +194,7 @@ protected:
   std::vector<shared_ptr<MWParserInternal::SubDocument> > m_listSubDocuments;
 
   //! the debug file
-  libmwaw_tools::DebugFile m_asciiFile;
+  libmwaw::DebugFile m_asciiFile;
 
   //! the debug file name
   std::string m_asciiName;

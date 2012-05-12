@@ -36,16 +36,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener MSKContentListener;
 typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
@@ -74,19 +74,19 @@ class MSKText;
  *
  *
  */
-class MSKParser : public IMWAWParser
+class MSKParser : public MWAWParser
 {
   friend class MSKParserInternal::SubDocument;
   friend class MSKGraph;
   friend class MSKText;
 public:
   //! constructor
-  MSKParser(TMWAWInputStreamPtr input, IMWAWHeader * header);
+  MSKParser(MWAWInputStreamPtr input, MWAWHeader *header);
   //! destructor
   virtual ~MSKParser();
 
   //! checks if the document header is correct (or not)
-  bool checkHeader(IMWAWHeader *header, bool strict=false);
+  bool checkHeader(MWAWHeader *header, bool strict=false);
 
   /** returns the file version.
    *
@@ -134,9 +134,9 @@ protected:
   //! try to read the documentinfo ( zone2)
   bool readDocumentInfo();
   //! try to read a group zone (zone3)
-  bool readGroup(IMWAWEntry &zone, int check);
+  bool readGroup(MWAWEntry &zone, int check);
   //! try to send a textbox
-  bool sendTextBox(int id, TMWAWPosition const &pos, WPXPropertyList &extras);
+  bool sendTextBox(int id, MWAWPosition const &pos, WPXPropertyList &extras);
 
   /** try to send an entry
 
@@ -155,7 +155,7 @@ protected:
   bool checkIfPositionValid(long pos);
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -181,7 +181,7 @@ protected:
   DMWAWPageSpan m_pageSpan;
 
   //! the list of different Zones
-  std::vector<IMWAWEntry> m_listZones;
+  std::vector<MWAWEntry> m_listZones;
 
   //! the graph parser
   shared_ptr<MSKGraph> m_graphParser;
@@ -193,7 +193,7 @@ protected:
   std::vector<shared_ptr<MSKParserInternal::SubDocument> > m_listSubDocuments;
 
   //! the debug file
-  libmwaw_tools::DebugFile m_asciiFile;
+  libmwaw::DebugFile m_asciiFile;
 
   //! the debug file name
   std::string m_asciiName;

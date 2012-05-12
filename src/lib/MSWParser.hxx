@@ -40,16 +40,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener MSWContentListener;
 typedef shared_ptr<MSWContentListener> MSWContentListenerPtr;
@@ -75,8 +75,8 @@ class SubDocument;
 class MSWText;
 
 //! the entry of MSWParser
-struct MSWEntry : public IMWAWEntry {
-  MSWEntry() : IMWAWEntry(), m_id(-1) {
+struct MSWEntry : public MWAWEntry {
+  MSWEntry() : MWAWEntry(), m_id(-1) {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, MSWEntry const &entry);
@@ -89,19 +89,19 @@ struct MSWEntry : public IMWAWEntry {
  *
  *
  */
-class MSWParser : public IMWAWParser
+class MSWParser : public MWAWParser
 {
   friend class MSWText;
   friend class MSWParserInternal::SubDocument;
 
 public:
   //! constructor
-  MSWParser(TMWAWInputStreamPtr input, IMWAWHeader * header);
+  MSWParser(MWAWInputStreamPtr input, MWAWHeader *header);
   //! destructor
   virtual ~MSWParser();
 
   //! checks if the document header is correct (or not)
-  bool checkHeader(IMWAWHeader *header, bool strict=false);
+  bool checkHeader(MWAWHeader *header, bool strict=false);
 
   /** returns the file version.
    *
@@ -188,7 +188,7 @@ protected:
   void sendFieldComment(int id);
 
   //! try to send a date
-  void send(int id, DMWAWSubDocumentType type);
+  void send(int id, MWAWSubDocumentType type);
 
   //
   // low level
@@ -201,7 +201,7 @@ protected:
   MSWEntry readEntry(std::string type, int id=-1);
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -236,7 +236,7 @@ protected:
   std::vector<shared_ptr<MSWParserInternal::SubDocument> > m_listSubDocuments;
 
   //! the debug file
-  libmwaw_tools::DebugFile m_asciiFile;
+  libmwaw::DebugFile m_asciiFile;
 
   //! the debug file name
   std::string m_asciiName;

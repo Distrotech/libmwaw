@@ -46,16 +46,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener WPContentListener;
 typedef shared_ptr<WPContentListener> WPContentListenerPtr;
@@ -86,18 +86,18 @@ class SubDocument;
  *
  *
  */
-class WPParser : public IMWAWParser
+class WPParser : public MWAWParser
 {
   friend class WPParserInternal::SubDocument;
 
 public:
   //! constructor
-  WPParser(TMWAWInputStreamPtr input, IMWAWHeader * header);
+  WPParser(MWAWInputStreamPtr input, MWAWHeader *header);
   //! destructor
   virtual ~WPParser();
 
   //! checks if the document header is correct (or not)
-  bool checkHeader(IMWAWHeader *header, bool strict=false);
+  bool checkHeader(MWAWHeader *header, bool strict=false);
 
   /** returns the file version.
    *
@@ -178,7 +178,7 @@ protected:
 
   //! read a paragraph data
   bool readParagraphData(WPParserInternal::ParagraphInfo const &info, bool hasFonts,
-                         WPParserInternal::ParagraphData & data);
+                         WPParserInternal::ParagraphData &data);
 
   //! read a list of font (with position)
   bool readFonts(int nFonts, int type,
@@ -190,7 +190,7 @@ protected:
 
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -219,7 +219,7 @@ protected:
   std::vector<shared_ptr<WPParserInternal::SubDocument> > m_listSubDocuments;
 
   //! the debug file
-  libmwaw_tools::DebugFile m_asciiFile;
+  libmwaw::DebugFile m_asciiFile;
 
   //! the debug file name
   std::string m_asciiName;

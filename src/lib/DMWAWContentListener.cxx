@@ -56,7 +56,6 @@ _DMWAWContentParsingState::_DMWAWContentParsingState() :
   m_firstParagraphInPageSpan(true),
 
   m_numRowsToSkip(),
-  m_tableDefinition(),
   m_currentTableCol(0),
   m_currentTableRow(0),
   m_currentTableCellNumberInRow(0),
@@ -119,7 +118,7 @@ _DMWAWContentParsingState::_DMWAWContentParsingState() :
 
   m_inSubDocument(false),
   m_isNote(false),
-  m_subDocumentType(DMWAW_SUBDOCUMENT_NONE)
+  m_subDocumentType(MWAW_SUBDOCUMENT_NONE)
 {
 }
 
@@ -131,10 +130,11 @@ _DMWAWContentParsingState::~_DMWAWContentParsingState()
 }
 
 DMWAWContentListener::DMWAWContentListener(std::list<DMWAWPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
-  DMWAWListener(pageList),
   m_ps(new DMWAWContentParsingState),
   m_documentInterface(documentInterface),
-  m_metaData()
+  m_metaData(),
+  m_pageList(pageList),
+  m_isUndoOn(false)
 {
 }
 
@@ -398,7 +398,7 @@ void DMWAWContentListener::_openPageSpan()
         m_documentInterface->openFooter(propList);
 
       // WPD_DEBUG_MSG(("Header Footer Element: Starting to parse the subDocument\n"));
-      handleSubDocument((*iter).getSubDocument(), DMWAW_SUBDOCUMENT_HEADER_FOOTER, (*iter).getTableList(), 0);
+      handleSubDocument((*iter).getSubDocument(), MWAW_SUBDOCUMENT_HEADER_FOOTER);
       // WPD_DEBUG_MSG(("Header Footer Element: End of the subDocument parsing\n"));
       if ((*iter).getType() == HEADER)
         m_documentInterface->closeHeader();
@@ -478,7 +478,7 @@ void DMWAWContentListener::_openParagraph()
     return;
 
   if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened) {
-    if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == DMWAW_SUBDOCUMENT_TEXT_BOX)) {
+    if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == MWAW_SUBDOCUMENT_TEXT_BOX)) {
       if (m_ps->m_sectionAttributesChanged)
         _closeSection();
 
@@ -699,7 +699,7 @@ void DMWAWContentListener::_openListElement()
     return;
 
   if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened) {
-    if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == DMWAW_SUBDOCUMENT_TEXT_BOX)) {
+    if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == MWAW_SUBDOCUMENT_TEXT_BOX)) {
       if (m_ps->m_sectionAttributesChanged)
         _closeSection();
 
@@ -860,62 +860,6 @@ void DMWAWContentListener::_closeSpan()
   m_ps->m_isSpanOpened = false;
 }
 
-void DMWAWContentListener::_openTable()
-{
-  _closeTable();
-
-  WPXPropertyList propList;
-  switch (m_ps->m_tableDefinition.m_positionBits) {
-  case DMWAW_TABLE_POSITION_ALIGN_WITH_LEFT_MARGIN:
-    propList.insert("table:align", "left");
-    propList.insert("fo:margin-left", 0.0);
-    break;
-  case DMWAW_TABLE_POSITION_ALIGN_WITH_RIGHT_MARGIN:
-    propList.insert("table:align", "right");
-    break;
-  case DMWAW_TABLE_POSITION_CENTER_BETWEEN_MARGINS:
-    propList.insert("table:align", "center");
-    break;
-  case DMWAW_TABLE_POSITION_ABSOLUTE_FROM_LEFT_MARGIN:
-    propList.insert("table:align", "left");
-    propList.insert("fo:margin-left", _movePositionToFirstColumn(m_ps->m_tableDefinition.m_leftOffset) -
-                    m_ps->m_pageMarginLeft - m_ps->m_sectionMarginLeft + m_ps->m_paragraphMarginLeft);
-    break;
-  case DMWAW_TABLE_POSITION_FULL:
-    propList.insert("table:align", "margins");
-    propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
-    propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
-    break;
-  default:
-    break;
-  }
-
-  // cater for the possibility to have the column/page break just before the table
-  _insertBreakIfNecessary(propList);
-  m_ps->m_isParagraphColumnBreak = false;
-  m_ps->m_isParagraphPageBreak = false;
-
-  double tableWidth = 0.0;
-  WPXPropertyListVector columns;
-  typedef std::vector<DMWAWColumnDefinition>::const_iterator CDVIter;
-  for (CDVIter iter = m_ps->m_tableDefinition.m_columns.begin(); iter != m_ps->m_tableDefinition.m_columns.end(); iter++) {
-    WPXPropertyList column;
-    // The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
-    column.insert("style:column-width", (*iter).m_width);
-    columns.append(column);
-
-    tableWidth += (*iter).m_width;
-  }
-  propList.insert("style:width", tableWidth);
-
-  m_documentInterface->openTable(propList, columns);
-  m_ps->m_isTableOpened = true;
-
-  m_ps->m_currentTableRow = (-1);
-  m_ps->m_currentTableCol = (-1);
-  m_ps->m_currentTableCellNumberInRow = (-1);
-}
-
 void DMWAWContentListener::_closeTable()
 {
   if (m_ps->m_isTableOpened) {
@@ -925,11 +869,7 @@ void DMWAWContentListener::_closeTable()
     m_documentInterface->closeTable();
   }
 
-  m_ps->m_currentTableRow = (-1);
-  m_ps->m_currentTableCol = (-1);
-  m_ps->m_currentTableCellNumberInRow = (-1);
   m_ps->m_isTableOpened = false;
-  m_ps->m_wasHeaderRow = false;
 
   _closeParagraph();
   _closeListElement();
@@ -944,161 +884,16 @@ void DMWAWContentListener::_closeTable()
     _closePageSpan();
 }
 
-void DMWAWContentListener::_openTableRow(const double height, const bool isMinimumHeight, const bool isHeaderRow)
-{
-  if (!m_ps->m_isTableOpened)
-    throw libmwaw_libwpd::ParseException();
-
-  if (m_ps->m_isTableRowOpened)
-    _closeTableRow();
-
-  m_ps->m_currentTableCol = 0;
-  m_ps->m_currentTableCellNumberInRow = 0;
-
-
-  WPXPropertyList propList;
-  if (isMinimumHeight && height != 0.0) // minimum height kind of stupid if it's not set, right?
-    propList.insert("style:min-row-height", height);
-  else if (height != 0.0) // this indicates that wordperfect didn't set a height
-    propList.insert("style:row-height", height);
-
-  // Only the first "Header Row" in a table is the actual "Header Row"
-  // The following "Header Row" flags are ignored
-  if (isHeaderRow & !m_ps->m_wasHeaderRow) {
-    propList.insert("libwpd:is-header-row", true);
-    m_ps->m_wasHeaderRow = true;
-  } else
-    propList.insert("libwpd:is-header-row", false);
-
-  m_documentInterface->openTableRow(propList);
-
-  m_ps->m_isTableRowOpened = true;
-  m_ps->m_isRowWithoutCell = true;
-  m_ps->m_currentTableRow++;
-}
-
 void DMWAWContentListener::_closeTableRow()
 {
-  if (m_ps->m_isTableRowOpened) {
-    if (m_ps->m_currentTableCol < 0)
-      throw libmwaw_libwpd::ParseException();
-    while ((unsigned long)m_ps->m_currentTableCol < (unsigned long)m_ps->m_numRowsToSkip.size()) {
-      if (!m_ps->m_numRowsToSkip[m_ps->m_currentTableCol]) { // This case should not happen, but does :-(
-        // m_ps->m_currentTableCol++;
-        // Fill the table row untill the end with empty cells
-        libmwaw_libwpd::RGBSColor tmpCellBorderColor(0x00, 0x00, 0x00, 0x64);
-        _openTableCell(1, 1, 0xFF, 0, 0, &tmpCellBorderColor, TOP);
-        _closeTableCell();
-      } else
-        m_ps->m_numRowsToSkip[m_ps->m_currentTableCol++]--;
-    }
-
-    if (m_ps->m_isTableCellOpened)
-      _closeTableCell();
-    // FIXME: this will need some love so that we actually insert covered cells with proper attributes
-    if (m_ps->m_isRowWithoutCell) {
-      m_ps->m_isRowWithoutCell = false;
-      WPXPropertyList tmpBlankList;
-      m_documentInterface->insertCoveredTableCell(tmpBlankList);
-    }
-    m_documentInterface->closeTableRow();
+  if (!m_ps->m_isTableRowOpened) {
+    return;
   }
-  m_ps->m_isTableRowOpened = false;
-}
-
-const double DMWAW_DEFAULT_TABLE_BORDER_WIDTH = 0.0007f;
-
-static void addBorderProps(const char *border, bool borderOn, const WPXString &borderColor, WPXPropertyList &propList)
-{
-#if 0
-// WLACH: a (not working, obviously) sketch of an alternate way of doing this
-// in case it turns out to be desirable. Right now it appears not, as we would have to
-// retranslate them on import to OOo (because they don't completely support xsl-fo)
-// .. but it would make things way easier in Abi.
-  if (borderOn) {
-    propList.insert("fo:border-left-width", DMWAW_DEFAULT_TABLE_BORDER_WIDTH);
-    propList.insert("fo:border-left-style", "solid");
-    propList.insert("fo:border-left-color", borderColor);
-  } else
-    propList.insert("fo:border-left-width", 0.0);
-#endif
-
-  WPXString borderStyle;
-  borderStyle.sprintf("fo:border-%s", border);
-  WPXString props;
-  if (borderOn) {
-    props.append(libmwaw_libwpd::doubleToString(DMWAW_DEFAULT_TABLE_BORDER_WIDTH));
-    props.append("in solid ");
-    props.append(borderColor);
-  } else
-    props.sprintf("0.0in");
-  propList.insert(borderStyle.cstr(), props);
-}
-
-void DMWAWContentListener::_openTableCell(const uint8_t colSpan, const uint8_t rowSpan, const uint8_t borderBits,
-    const libmwaw_libwpd::RGBSColor *cellFgColor, const libmwaw_libwpd::RGBSColor *cellBgColor,
-    const libmwaw_libwpd::RGBSColor *cellBorderColor, const DMWAWVerticalAlignment cellVerticalAlignment)
-{
-  if (!m_ps->m_isTableOpened || !m_ps->m_isTableRowOpened)
-    throw libmwaw_libwpd::ParseException();
-
-  uint8_t tmpColSpan = colSpan;
   if (m_ps->m_isTableCellOpened)
     _closeTableCell();
 
-  if (m_ps->m_currentTableCol < 0)
-    throw libmwaw_libwpd::ParseException();
-
-  while ((unsigned long)m_ps->m_currentTableCol < (unsigned long)m_ps->m_numRowsToSkip.size() &&
-         m_ps->m_numRowsToSkip[m_ps->m_currentTableCol]) {
-    m_ps->m_numRowsToSkip[m_ps->m_currentTableCol]--;
-    m_ps->m_currentTableCol++;
-  }
-
-  WPXPropertyList propList;
-  propList.insert("libwpd:column", m_ps->m_currentTableCol);
-  propList.insert("libwpd:row", m_ps->m_currentTableRow);
-
-  propList.insert("table:number-columns-spanned", colSpan);
-  propList.insert("table:number-rows-spanned", rowSpan);
-
-  WPXString borderColor = _colorToString(cellBorderColor);
-  addBorderProps("left", !(borderBits & DMWAW_TABLE_CELL_LEFT_BORDER_OFF), borderColor, propList);
-  addBorderProps("right", !(borderBits & DMWAW_TABLE_CELL_RIGHT_BORDER_OFF), borderColor, propList);
-  addBorderProps("top", !(borderBits & DMWAW_TABLE_CELL_TOP_BORDER_OFF), borderColor, propList);
-  addBorderProps("bottom", !(borderBits & DMWAW_TABLE_CELL_BOTTOM_BORDER_OFF), borderColor, propList);
-
-  switch (cellVerticalAlignment) {
-  case TOP:
-    propList.insert("style:vertical-align", "top");
-    break;
-  case MIDDLE:
-    propList.insert("style:vertical-align", "middle");
-    break;
-  case BOTTOM:
-    propList.insert("style:vertical-align", "bottom");
-    break;
-  case FULL: // full not in XSL-fo?
-  default:
-    break;
-  }
-  propList.insert("fo:background-color", _mergeColorsToString(cellFgColor, cellBgColor));
-  m_documentInterface->openTableCell(propList);
-  m_ps->m_currentTableCellNumberInRow++;
-  m_ps->m_isTableCellOpened = true;
-  m_ps->m_isCellWithoutParagraph = true;
-
-  if (m_ps->m_currentTableCol < 0)
-    throw libmwaw_libwpd::ParseException();
-
-  while ((unsigned long)m_ps->m_currentTableCol < (unsigned long)m_ps->m_numRowsToSkip.size() &&(tmpColSpan > 0)) {
-    if (m_ps->m_numRowsToSkip[m_ps->m_currentTableCol]) { // This case should not happen, but it happens in real-life documents :-(
-      m_ps->m_numRowsToSkip[m_ps->m_currentTableCol]=0;
-    }
-    m_ps->m_numRowsToSkip[m_ps->m_currentTableCol] += (rowSpan - 1);
-    m_ps->m_currentTableCol++;
-    tmpColSpan--;
-  }
+  m_ps->m_isTableRowOpened = false;
+  m_documentInterface->closeTableRow();
 }
 
 void DMWAWContentListener::_closeTableCell()
@@ -1123,8 +918,7 @@ void DMWAWContentListener::_closeTableCell()
 /**
 Creates an new document state. Saves the old state on a "stack".
 */
-void DMWAWContentListener::handleSubDocument(const DMWAWSubDocument *subDocument, DMWAWSubDocumentType subDocumentType,
-    DMWAWTableList tableList, int nextTableIndice)
+void DMWAWContentListener::handleSubDocument(const MWAWSubDocument *subDocument, MWAWSubDocumentType subDocumentType)
 {
   // save our old parsing state on our "stack"
   DMWAWContentParsingState *oldPS = m_ps;
@@ -1138,7 +932,7 @@ void DMWAWContentListener::handleSubDocument(const DMWAWSubDocument *subDocument
   m_ps->m_subDocumentType = subDocumentType;
   m_ps->m_isDocumentStarted = true;
   m_ps->m_isPageSpanOpened = true;
-  if (m_ps->m_subDocumentType == DMWAW_SUBDOCUMENT_TEXT_BOX) {
+  if (m_ps->m_subDocumentType == MWAW_SUBDOCUMENT_TEXT_BOX) {
     m_ps->m_pageMarginLeft = 0.0;
     m_ps->m_pageMarginRight = 0.0;
     m_ps->m_sectionAttributesChanged = true;
@@ -1150,9 +944,9 @@ void DMWAWContentListener::handleSubDocument(const DMWAWSubDocument *subDocument
   // Check whether the document is calling itself
   if ((subDocument) && (m_ps->m_subDocuments.find(subDocument) == m_ps->m_subDocuments.end())) {
     m_ps->m_subDocuments.insert(subDocument);
-    if (subDocumentType == DMWAW_SUBDOCUMENT_HEADER_FOOTER)
+    if (subDocumentType == MWAW_SUBDOCUMENT_HEADER_FOOTER)
       m_ps->m_isHeaderFooterWithoutParagraph = true;
-    _handleSubDocument(subDocument, subDocumentType, tableList, nextTableIndice);
+    _handleSubDocument(subDocument, subDocumentType);
     if (m_ps->m_isHeaderFooterWithoutParagraph) {
       _openSpan();
       _closeParagraph();
@@ -1162,7 +956,7 @@ void DMWAWContentListener::handleSubDocument(const DMWAWSubDocument *subDocument
   // restore our old parsing state
 
   setUndoOn(oldIsUndoOn);
-  if (m_ps->m_subDocumentType == DMWAW_SUBDOCUMENT_TEXT_BOX)
+  if (m_ps->m_subDocumentType == MWAW_SUBDOCUMENT_TEXT_BOX)
     _closeSection();
   delete m_ps;
   m_ps = oldPS;

@@ -36,11 +36,11 @@
 #include <libwpd/WPXBinaryData.h>
 #include <libwpd/WPXString.h>
 
-#include "TMWAWPosition.hxx"
-#include "TMWAWPictMac.hxx"
-#include "TMWAWPrint.hxx"
+#include "MWAWPosition.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPrinter.hxx"
 
-#include "IMWAWHeader.hxx"
+#include "MWAWHeader.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -65,7 +65,7 @@ struct Zone {
   }
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -79,10 +79,10 @@ struct Zone {
   WPXBinaryData m_data;
 
   //! the main input
-  TMWAWInputStreamPtr m_input;
+  MWAWInputStreamPtr m_input;
 
   //! the debug file
-  libmwaw_tools::DebugFile m_asciiFile;
+  libmwaw::DebugFile m_asciiFile;
 
   //! true if the zone is sended
   bool m_parsed;
@@ -184,7 +184,7 @@ struct TextZone {
   int m_textLength;
 
   //! the list of entries
-  std::vector<IMWAWEntry> m_entries;
+  std::vector<MWAWEntry> m_entries;
 
   //! two vector list of id ( charIds, paragraphIds)
   std::vector<TextZoneData> m_ids[2];
@@ -230,19 +230,19 @@ struct State {
 
 ////////////////////////////////////////
 //! Internal: the subdocument of a MWProParser
-class SubDocument : public IMWAWSubDocument
+class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(MWProParser &pars, TMWAWInputStreamPtr input, int zoneId) :
-    IMWAWSubDocument(&pars, input, IMWAWEntry()), m_id(zoneId) {}
+  SubDocument(MWProParser &pars, MWAWInputStreamPtr input, int zoneId) :
+    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
 
   //! destructor
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(IMWAWSubDocument const &doc) const;
+  virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(IMWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const {
     return !operator!=(doc);
   }
 
@@ -256,14 +256,14 @@ public:
   }
 
   //! the parser function
-  void parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType type);
+  void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
 };
 
-void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType /*type*/)
 {
   if (m_id == -3) return; // empty block
   if (!listener.get()) {
@@ -284,9 +284,9 @@ void SubDocument::parse(IMWAWContentListenerPtr &listener, DMWAWSubDocumentType 
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
-bool SubDocument::operator!=(IMWAWSubDocument const &doc) const
+bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 {
-  if (IMWAWSubDocument::operator!=(doc)) return true;
+  if (MWAWSubDocument::operator!=(doc)) return true;
   SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
   if (!sDoc) return true;
   if (m_id != sDoc->m_id) return true;
@@ -298,8 +298,8 @@ bool SubDocument::operator!=(IMWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MWProParser::MWProParser(TMWAWInputStreamPtr input, IMWAWHeader * header) :
-  IMWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
+MWProParser::MWProParser(MWAWInputStreamPtr input, MWAWHeader *header) :
+  MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
   m_structures(), m_pageSpan(), m_listSubDocuments(),
   m_asciiFile(), m_asciiName("")
 {
@@ -445,7 +445,7 @@ bool MWProParser::getZoneData(WPXBinaryData &data, int blockId)
     MWAW_DEBUG_MSG(("MWProParser::getZoneData: block %d is invalid\n", blockId));
     return false;
   }
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   input->seek((blockId-1)*0x100, WPX_SEEK_SET);
 
   unsigned long read;
@@ -525,7 +525,7 @@ bool MWProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
     MWAW_DEBUG_MSG(("MWProParser::getFreeZoneList: block %d is invalid\n", blockId));
     return false;
   }
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
 
   int first=blockId-1, last=blockId-1;
   while (1) {
@@ -591,7 +591,6 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
   std::list<DMWAWPageSpan> pageList;
 
 
-  DMWAWTableList tableList;
   int actHeaderId = 0, actFooterId = 0;
   shared_ptr<MWProParserInternal::SubDocument> headerSubdoc, footerSubdoc;
   for (int i = 0; i < m_state->m_numPages; i++) {
@@ -620,15 +619,15 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
 
     DMWAWPageSpan ps(m_pageSpan);
     if (headerSubdoc)
-      ps.setHeaderFooter(HEADER, 0, ALL, headerSubdoc.get(), tableList);
+      ps.setHeaderFooter(HEADER, 0, ALL, headerSubdoc.get());
     if (footerSubdoc)
-      ps.setHeaderFooter(FOOTER, 0, ALL, footerSubdoc.get(), tableList);
+      ps.setHeaderFooter(FOOTER, 0, ALL, footerSubdoc.get());
     pageList.push_back(ps);
   }
 
   //
   MWProContentListenerPtr listen =
-    MWProContentListener::create(pageList, documentInterface, m_convertissor);
+    MWProContentListener::create(pageList, documentInterface);
   setListener(listen);
   listen->startDocument();
 }
@@ -641,7 +640,7 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
 ////////////////////////////////////////////////////////////
 bool MWProParser::createZones()
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
 
   if (!readPrintInfo()) {
@@ -670,13 +669,13 @@ bool MWProParser::createZones()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool MWProParser::checkHeader(IMWAWHeader *header, bool strict)
+bool MWProParser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = MWProParserInternal::State();
 
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
 
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   int headerSize=4;
   input->seek(headerSize+0x78,WPX_SEEK_SET);
   if (int(input->tell()) != headerSize+0x78) {
@@ -727,7 +726,7 @@ bool MWProParser::checkHeader(IMWAWHeader *header, bool strict)
 
   // ok, we can finish initialization
   if (header)
-    header->reset(IMWAWDocument::MWPRO, m_state->m_version);
+    header->reset(MWAWDocument::MWPRO, m_state->m_version);
 
   //
   input->seek(headerSize, WPX_SEEK_SET);
@@ -744,11 +743,11 @@ bool MWProParser::checkHeader(IMWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 bool MWProParser::readPrintInfo()
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
   // print info
-  libmwaw_tools_mac::PrintInfo info;
+  libmwaw::PrinterInfo info;
   if (!info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
 
@@ -797,9 +796,9 @@ bool MWProParser::readPrintInfo()
 ////////////////////////////////////////////////////////////
 bool MWProParser::readDocHeader()
 {
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   f << "Entries(Data0):";
   long val;
@@ -994,7 +993,7 @@ bool MWProParser::parseDataZone(int blockId, int type)
     return false;
   }
 
-  zone->m_input.reset(new TMWAWInputStream(dataInput, false));
+  zone->m_input.reset(new MWAWInputStream(dataInput, false));
   zone->m_input->setResponsable(false);
 
   zone->m_asciiFile.setStream(zone->m_input);
@@ -1009,7 +1008,7 @@ bool MWProParser::parseDataZone(int blockId, int type)
   else if (type == 1)
     ;
   else {
-    libmwaw_tools::DebugStream f;
+    libmwaw::DebugStream f;
     f << "Entries(DataZone):type" << type;
     zone->m_asciiFile.addPos(0);
     zone->m_asciiFile.addNote(f.str().c_str());
@@ -1025,10 +1024,10 @@ bool MWProParser::parseTextZone(shared_ptr<MWProParserInternal::Zone> zone)
     return false;
   }
 
-  TMWAWInputStreamPtr input = zone->m_input;
-  TMWAWInputStreamPtr fileInput = getInput();
-  libmwaw_tools::DebugFile &asciiFile = zone->m_asciiFile;
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  MWAWInputStreamPtr fileInput = getInput();
+  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugStream f;
 
   shared_ptr<MWProParserInternal::TextZone> text(new MWProParserInternal::TextZone);
 
@@ -1046,7 +1045,7 @@ bool MWProParser::parseTextZone(shared_ptr<MWProParserInternal::Zone> zone)
   m_state->m_textMap[zone->m_blockId] = text;
 
   for (int i = 0; i < int(text->m_entries.size()); i++) {
-    IMWAWEntry &entry = text->m_entries[i];
+    MWAWEntry &entry = text->m_entries[i];
     fileInput->seek(entry.begin(), WPX_SEEK_SET);
     if (long(fileInput->tell()) != entry.begin()) {
       MWAW_DEBUG_MSG(("MWProParser::parseTextZone: bad block id for block %d\n", i));
@@ -1068,14 +1067,14 @@ bool MWProParser::parseTextZone(shared_ptr<MWProParserInternal::Zone> zone)
 }
 
 bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
-                                  std::vector<IMWAWEntry> &res, int textLength)
+                                  std::vector<MWAWEntry> &res, int textLength)
 {
   res.resize(0);
   int vers = version();
   int expectedSize = vers == 0 ? 4 : 6;
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &asciiFile = zone->m_asciiFile;
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugStream f;
   long pos = input->tell();
 
   int val = input->readULong(2);
@@ -1125,7 +1124,7 @@ bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
     asciiFile.addNote(f.str().c_str());
     if (nChar==0) continue;
 
-    IMWAWEntry entry;
+    MWAWEntry entry;
     entry.setTextId(unkn);
     entry.setBegin((bl-1)*0x100);
     entry.setLength(nChar);
@@ -1147,9 +1146,9 @@ bool MWProParser::readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
                               int textLength, int type)
 {
   res.resize(0);
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &asciiFile = zone->m_asciiFile;
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugStream f;
   long pos = input->tell();
 
   int val = input->readULong(2);
@@ -1212,9 +1211,9 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
   res.resize(0);
   int vers = version();
   int expectedSz = vers==0 ? 8 : 10;
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &asciiFile = zone->m_asciiFile;
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugStream f;
   long pos = input->tell();
 
   int val = input->readULong(2);
@@ -1342,7 +1341,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
 ////////////////////////////////////////////////////////////
 // try to send a empty zone
 ////////////////////////////////////////////////////////////
-bool MWProParser::sendEmptyFrameZone(TMWAWPosition const &pos,
+bool MWProParser::sendEmptyFrameZone(MWAWPosition const &pos,
                                      WPXPropertyList extras)
 {
   shared_ptr<MWProParserInternal::SubDocument> subdoc
@@ -1371,9 +1370,9 @@ int MWProParser::findNumHardBreaks(shared_ptr<MWProParserInternal::TextZone> zon
 {
   if (!zone->m_entries.size()) return 0;
   int num = 0;
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   for (int i = 0; i < int(zone->m_entries.size()); i++) {
-    IMWAWEntry const &entry = zone->m_entries[i];
+    MWAWEntry const &entry = zone->m_entries[i];
     input->seek(entry.begin(), WPX_SEEK_SET);
     for (int i = 0; i < entry.length(); i++) {
       switch(input->readULong(1)) {
@@ -1404,7 +1403,7 @@ bool MWProParser::sendTextZone(int blockId, bool mainZone)
   return true;
 }
 
-bool MWProParser::sendTextBoxZone(int blockId, TMWAWPosition const &pos,
+bool MWProParser::sendTextBoxZone(int blockId, MWAWPosition const &pos,
                                   WPXPropertyList extras)
 {
   shared_ptr<MWProParserInternal::SubDocument> subdoc
@@ -1474,13 +1473,13 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
     set.insert(MWProParserInternal::DataPosition(-1, i, pageBreaks[i]));
   }
 
-  TMWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = getInput();
   long pos = zone->m_entries[0].begin();
   long asciiPos = pos;
   if (pos > 0)
     input->seek(pos, WPX_SEEK_SET);
 
-  libmwaw_tools::DebugStream f, f2;
+  libmwaw::DebugStream f, f2;
   cPos = 0;
   std::set<MWProParserInternal::DataPosition,
       MWProParserInternal::DataPosition::Compare>::const_iterator it;
@@ -1538,7 +1537,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       long actPos = input->tell();
       switch (zone->m_tokens[data.m_id].m_type) {
       case 1:
-        if (m_listener) m_listener->insertField(IMWAWContentListener::PageNumber);
+        if (m_listener) m_listener->insertField(MWAWContentListener::PageNumber);
         break;
       case 2:
         if (vers == 1 && listenerState.isSent(zone->m_tokens[data.m_id].m_blockId)) {
@@ -1546,7 +1545,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
         } else {
           int id = zone->m_tokens[data.m_id].m_blockId;
           if (vers == 0) id = -id;
-          IMWAWSubDocumentPtr subdoc(new MWProParserInternal::SubDocument(*this, getInput(), id));
+          MWAWSubDocumentPtr subdoc(new MWProParserInternal::SubDocument(*this, getInput(), id));
           m_listener->insertNote(FOOTNOTE, subdoc);
         }
         break;
@@ -1554,8 +1553,8 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
         break; // footnote content, ok
       case 4:
         if (vers==0) {
-          TMWAWPosition pos(Vec2i(0,0), zone->m_tokens[data.m_id].m_box.size(), WPX_POINT);
-          pos.setRelativePosition(TMWAWPosition::Char, TMWAWPosition::XLeft, TMWAWPosition::YBottom);
+          MWAWPosition pos(Vec2i(0,0), zone->m_tokens[data.m_id].m_box.size(), WPX_POINT);
+          pos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
           sendPictureZone(zone->m_tokens[data.m_id].m_blockId, pos);
         } else {
           listenerState.send(zone->m_tokens[data.m_id].m_blockId);
@@ -1565,13 +1564,13 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       case 5:
         break; // hyphen ok
       case 6:
-        if (m_listener) m_listener->insertField(IMWAWContentListener::Date);
+        if (m_listener) m_listener->insertField(MWAWContentListener::Date);
         break;
       case 7:
-        if (m_listener) m_listener->insertField(IMWAWContentListener::Time);
+        if (m_listener) m_listener->insertField(MWAWContentListener::Time);
         break;
       case 8:
-        if (m_listener) m_listener->insertField(IMWAWContentListener::Title);
+        if (m_listener) m_listener->insertField(MWAWContentListener::Title);
         break;
       case 9:
         if (m_listener) m_listener->insertUnicodeString("#REVISION#");
@@ -1628,7 +1627,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
 ////////////////////////////////////////////////////////////
 // try to send a picture
 ////////////////////////////////////////////////////////////
-bool MWProParser::sendPictureZone(int blockId, TMWAWPosition const &pictPos,
+bool MWProParser::sendPictureZone(int blockId, MWAWPosition const &pictPos,
                                   WPXPropertyList extras)
 {
   std::map<int, shared_ptr<MWProParserInternal::Zone> >::iterator it;
@@ -1642,7 +1641,7 @@ bool MWProParser::sendPictureZone(int blockId, TMWAWPosition const &pictPos,
 }
 
 bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
-                              TMWAWPosition pictPos,
+                              MWAWPosition pictPos,
                               WPXPropertyList const &extras)
 {
   if (!zone) return false;
@@ -1654,9 +1653,9 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
   zone->m_parsed = true;
 
   // ok init is done
-  TMWAWInputStreamPtr input = zone->m_input;
-  libmwaw_tools::DebugFile &asciiFile = zone->m_asciiFile;
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugStream f;
 
   f << "Entries(PICT),";
   asciiFile.addPos(0);
@@ -1670,8 +1669,8 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
     asciiFile.addNote("#PICT");
     return false;
   }
-  shared_ptr<libmwaw_tools::Pict> pict
-  (libmwaw_tools::PictData::get(input, pictSize));
+  shared_ptr<MWAWPict> pict
+  (MWAWPictData::get(input, pictSize));
   if (!pict) {
     // sometimes this just fails because the pictSize is not correct
     input->seek(14, WPX_SEEK_SET);
@@ -1686,11 +1685,11 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
 
       WPXInputStream *dataInput =
         const_cast<WPXInputStream *>(data.getDataStream());
-      TMWAWInputStreamPtr input(new TMWAWInputStream(dataInput, false));
+      MWAWInputStreamPtr input(new MWAWInputStream(dataInput, false));
       input->setResponsable(false);
 
       input->seek(4, WPX_SEEK_SET);
-      pict.reset(libmwaw_tools::PictData::get(input, pictSize));
+      pict.reset(MWAWPictData::get(input, pictSize));
     }
   }
 
@@ -1702,7 +1701,7 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
   static int volatile pictName = 0;
   f.str("");
   f << "PICT-" << ++pictName;
-  libmwaw_tools::Debug::dumpFile(file, f.str().c_str());
+  libmwaw::Debug::dumpFile(file, f.str().c_str());
   asciiFile.addPos(4+pictSize);
   asciiFile.addNote("PICT(end)");
 #endif
@@ -1710,7 +1709,7 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
   if (!pict) { // ok, we can not do anything except sending the data...
     MWAW_DEBUG_MSG(("MWProParser::parseDataZone: no sure this is a picture\n"));
     if (pictPos.size().x() <= 0 || pictPos.size().y() <= 0)
-      pictPos=TMWAWPosition(Vec2f(0,0),Vec2f(100.,100.), WPX_POINT);
+      pictPos=MWAWPosition(Vec2f(0,0),Vec2f(100.,100.), WPX_POINT);
     if (m_listener) {
       WPXBinaryData data;
       input->seek(4, WPX_SEEK_SET);
@@ -1742,12 +1741,12 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
 ////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
-void MWProParser::saveOriginal(TMWAWInputStreamPtr input)
+void MWProParser::saveOriginal(MWAWInputStreamPtr input)
 {
-  libmwaw_tools::DebugStream f;
+  libmwaw::DebugStream f;
 
   int ptSz = version()==0 ? 2 : 4;
-  libmwaw_tools::DebugFile orig;
+  libmwaw::DebugFile orig;
   orig.setStream(input);
   orig.open("orig");
   int bl = 0;
@@ -1788,8 +1787,8 @@ void MWProParser::saveOriginal(TMWAWInputStreamPtr input)
 
 void MWProParser::checkUnparsed()
 {
-  TMWAWInputStreamPtr input = getInput();
-  libmwaw_tools::DebugStream f;
+  MWAWInputStreamPtr input = getInput();
+  libmwaw::DebugStream f;
 
   long pos;
   std::stringstream notParsed;

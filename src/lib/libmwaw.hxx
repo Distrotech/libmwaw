@@ -32,14 +32,14 @@
 
 #define MWAW_GRAPHIC_EXPORT 1
 
-#include "IMWAWDocument.hxx"
-#include "TMWAWPropertyHandler.hxx"
+#include "MWAWDocument.hxx"
+#include "MWAWPropertyHandler.hxx"
 
 /* to prepare future rewriting of libmwaw */
-typedef class TMWAWPropertyHandler MWAWPropertyHandler;
-typedef class IMWAWDocument MWAWDocument;
-typedef enum IMWAWConfidence MWAWConfidence;
+typedef class MWAWPropertyHandler TMWAWPropertyHandler;
+typedef class MWAWDocument IMWAWDocument;
+typedef enum MWAWConfidence IMWAWConfidence;
 
-#define MWAW_CONFIDENCE_NONE IMWAW_CONFIDENCE_NONE 
+#define IMWAW_CONFIDENCE_NONE MWAW_CONFIDENCE_NONE
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

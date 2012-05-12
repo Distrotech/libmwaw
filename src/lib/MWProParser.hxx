@@ -36,16 +36,16 @@
 
 #include "DMWAWPageSpan.hxx"
 
-#include "TMWAWPosition.hxx"
+#include "MWAWPosition.hxx"
 
-#include "IMWAWEntry.hxx"
-#include "IMWAWContentListener.hxx"
-#include "IMWAWSubDocument.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
-#include "TMWAWDebug.hxx"
-#include "TMWAWInputStream.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-#include "IMWAWParser.hxx"
+#include "MWAWParser.hxx"
 
 class WPXBinaryData;
 typedef class MWAWContentListener MWProContentListener;
@@ -80,7 +80,7 @@ class MWProStructuresListenerState;
  *
  *
  */
-class MWProParser : public IMWAWParser
+class MWProParser : public MWAWParser
 {
   friend class MWProStructures;
   friend class MWProStructuresListenerState;
@@ -88,12 +88,12 @@ class MWProParser : public IMWAWParser
 
 public:
   //! constructor
-  MWProParser(TMWAWInputStreamPtr input, IMWAWHeader * header);
+  MWProParser(MWAWInputStreamPtr input, MWAWHeader *header);
   //! destructor
   virtual ~MWProParser();
 
   //! checks if the document header is correct (or not)
-  bool checkHeader(IMWAWHeader *header, bool strict=false);
+  bool checkHeader(MWAWHeader *header, bool strict=false);
 
   /** returns the file version.
    *
@@ -138,7 +138,7 @@ protected:
 
   /** try to read the text block entries */
   bool readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
-                       std::vector<IMWAWEntry> &res, int textLength);
+                       std::vector<MWAWEntry> &res, int textLength);
   /** try to read the text id entries */
   bool readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
                    std::vector<MWProParserInternal::TextZoneData> &res,
@@ -173,15 +173,15 @@ protected:
   int findNumHardBreaks(int blockId);
 
   //! try to send a picture
-  bool sendPictureZone(int blockId, TMWAWPosition const &pictPos,
+  bool sendPictureZone(int blockId, MWAWPosition const &pictPos,
                        WPXPropertyList extras = WPXPropertyList());
 
   //! send a textbox zone
-  bool sendTextBoxZone(int blockId, TMWAWPosition const &pos,
+  bool sendTextBoxZone(int blockId, MWAWPosition const &pos,
                        WPXPropertyList extras = WPXPropertyList());
 
   //! try to send an empty zone (can exist in MWPro1.5)
-  bool sendEmptyFrameZone(TMWAWPosition const &pos, WPXPropertyList extras);
+  bool sendEmptyFrameZone(MWAWPosition const &pos, WPXPropertyList extras);
 
   //
   // low level
@@ -195,11 +195,11 @@ protected:
 
 #ifdef DEBUG
   //! a debug function which can be used to check the block retrieving
-  void saveOriginal(TMWAWInputStreamPtr input);
+  void saveOriginal(MWAWInputStreamPtr input);
 #endif
 
   //! try to send a picture
-  bool sendPicture(shared_ptr<MWProParserInternal::Zone> zone, TMWAWPosition pictPos, WPXPropertyList const &extras);
+  bool sendPicture(shared_ptr<MWProParserInternal::Zone> zone, MWAWPosition pictPos, WPXPropertyList const &extras);
 
   //! try to send a text
   bool sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool mainZone = false);
@@ -211,7 +211,7 @@ protected:
   void checkUnparsed();
 
   //! returns the debug file
-  libmwaw_tools::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
 
@@ -243,7 +243,7 @@ protected:
   std::vector<shared_ptr<MWProParserInternal::SubDocument> > m_listSubDocuments;
 
   //! the debug file
-  libmwaw_tools::DebugFile m_asciiFile;
+  libmwaw::DebugFile m_asciiFile;
 
   //! the debug file name
   std::string m_asciiName;

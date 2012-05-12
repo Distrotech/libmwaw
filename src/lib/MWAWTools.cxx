@@ -33,8 +33,8 @@
 
 #include "MWAWTools.hxx"
 
-#include "IMWAWCell.hxx"
-#include "IMWAWContentListener.hxx"
+#include "MWAWCell.hxx"
+#include "MWAWContentListener.hxx"
 #include "TMWAWFont.hxx"
 
 namespace MWAWTools
@@ -56,7 +56,7 @@ WPXString Convertissor::getUnicode(MWAWStruct::Font const &f, std::string const 
   WPXString res("");
   for (int l = 0; l < len; l++) {
     long unicode = m_fontManager->unicode(f.id(), str[l]);
-    if (unicode != -1) IMWAWContentListener::appendUnicode(unicode,res);
+    if (unicode != -1) MWAWContentListener::appendUnicode(unicode,res);
     else if (str[l] >= 28) res.append(str[l]);
   }
   return res;

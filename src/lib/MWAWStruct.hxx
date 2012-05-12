@@ -37,7 +37,7 @@
 
 #include "libmwaw_tools.hxx"
 
-class IMWAWContentListener;
+class MWAWContentListener;
 namespace MWAWTools
 {
 class Convertissor;
@@ -137,7 +137,7 @@ public:
   /** sends font to a listener
    *
    * if \a force = false, sends only difference with actFont */
-  void sendTo(IMWAWContentListener *listener, MWAWTools::ConvertissorPtr &convert, Font &actFont, bool force = false) const;
+  void sendTo(MWAWContentListener *listener, MWAWTools::ConvertissorPtr &convert, Font &actFont, bool force = false) const;
 
 protected:
   int m_id /** font identificator*/, m_size /** font size */, m_flags /** font attributes */, m_color[3] /** font color */;
