@@ -27,16 +27,18 @@
    THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef WPXOLESTREAM_H
-#define WPXOLESTREAM_H
+#ifndef MWAWOLESTREAM_HXX
+#define MWAWOLESTREAM_HXX
 
 #include <string>
 #include <fstream>
-#include <sstream>
 #include <vector>
-#include <list>
 
-namespace libmwaw_libwpd
+#include <libmwaw_internal.hxx>
+
+class WPXInputStream;
+
+namespace libmwaw
 {
 
 class StorageIO;
@@ -55,7 +57,7 @@ public:
   /**
    * Constructs a storage with data.
    **/
-  Storage( const std::stringstream &memorystream );
+  Storage( WPXInputStream *is );
 
   /**
    * Destroys the storage.
@@ -73,19 +75,14 @@ public:
   int result();
 
   /**
-   * Finds all stream and directories in given path.
-   **/
-  std::list<std::string> entries( const std::string &path = "/" );
-
-  /**
-   * Returns true if specified entry name is a directory.
-   */
-  bool isDirectory( const std::string &name );
-
-  /**
    * Returns the list of all ole leaves names
    **/
-  std::vector<std::string> allEntries();
+  std::vector<std::string> getOLENames();
+
+  /**
+   * Returns a WPXInputStream corresponding to a name
+   **/
+  WPXInputStream *getDocumentOLEStream(const std::string &name);
 
 private:
   StorageIO *io;
@@ -106,7 +103,6 @@ public:
   /**
    * Creates a new stream.
    */
-  // name must be absolute, e.g "/PerfectOffice_MAIN"
   Stream( Storage *storage, const std::string &name );
 
   /**
@@ -132,17 +128,7 @@ private:
   Stream &operator=( const Stream & );
 };
 
-/**
- * return the dir and base file name given a OleName
- **/
-void splitOleName(std::string const &oleName, std::string &dir, std::string &base);
-
-/**
- * Debugging function : flatten a name so it can be used to save data
- **/
-std::string flattenOleName(std::string const &name);
-
-}  // namespace libmwaw_libwpd
+}  // namespace libmwaw
 
 #endif // WPXOLESTREAM_H
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -969,11 +969,11 @@ bool MWParser::readWindowsInfo(int wh)
     input->seek(2,WPX_SEEK_CUR); // need to redraw
     informations.setBegin(input->readULong(4));
     informations.setLength(input->readULong(2));
-    informations.setTextId(which);
+    informations.setId(which);
 
     lineHeightEntry.setBegin(input->readULong(4));
     lineHeightEntry.setLength(input->readULong(2));
-    lineHeightEntry.setTextId(which);
+    lineHeightEntry.setId(which);
 
     f << std::hex
       << "lineHeight=[" << lineHeightEntry.begin() << "-" << lineHeightEntry.end() << "],"
@@ -1056,7 +1056,7 @@ bool MWParser::readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstPa
     int actHeight = 0;
     bool heightOk = false;
     f.str("");
-    f << "Entries(LineHeight)[" << entry.textId() << "-" << ++numParag << "]:";
+    f << "Entries(LineHeight)[" << entry.id() << "-" << ++numParag << "]:";
     for (int c = 0; c < sz; c++) {
       int val = input->readULong(1);
       if (val & 0x80) {
@@ -1168,7 +1168,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     pos = input->tell();
 
     f.str("");
-    f << "Entries(Information)[" << entry.textId() << "-" << i+1 << "]:";
+    f << "Entries(Information)[" << entry.id() << "-" << i+1 << "]:";
     MWParserInternal::Information info;
     int height = input->readLong(2);
     if (height < 0) {

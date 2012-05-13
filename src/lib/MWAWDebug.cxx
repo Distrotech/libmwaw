@@ -27,7 +27,6 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#include <iomanip>
 
 #include <libwpd/WPXBinaryData.h>
 #include <libwpd-stream/WPXStream.h>
@@ -37,12 +36,13 @@
 #include "MWAWDebug.hxx"
 
 #if defined(DEBUG_WITH_FILES)
+#include <iomanip>
 #include <iostream>
 namespace libmwaw
 {
 bool DebugFile::open(std::string const &filename)
 {
-  std::string name(filename);
+  std::string name=Debug::flattenFileName(filename);
   name += ".ascii";
   m_file.open(name.c_str());
   return m_on = m_file.is_open();
@@ -187,7 +187,9 @@ namespace Debug
 {
 bool dumpFile(WPXBinaryData &data, char const *fileName)
 {
-  FILE *file = fopen(fileName, "wb");
+  if (!fileName) return false;
+  std::string fName = Debug::flattenFileName(fileName);
+  FILE *file = fopen(fName.c_str(), "wb");
   if (!file) return false;
 
   WPXInputStream *tmpStream =

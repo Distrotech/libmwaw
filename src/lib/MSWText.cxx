@@ -1367,8 +1367,8 @@ bool MSWText::readPLCList(MSWEntry &entry)
     int expectedSize = (version() <= 3) ? 0x80 : 0x200;
 
     MSWEntry plc;
-    plc.setType(entry.m_id ? "ParagPLC" : "CharPLC");
-    plc.m_id = i;
+    plc.setType(entry.id() ? "ParagPLC" : "CharPLC");
+    plc.setId(i);
     plc.setBegin(defPos*expectedSize);
     plc.setLength(expectedSize);
     if (!m_mainParser->isFilePos(plc.end())) {
@@ -1376,7 +1376,7 @@ bool MSWText::readPLCList(MSWEntry &entry)
       MWAW_DEBUG_MSG(("MSWText::readPLCList: plc def is outside the file\n"));
     } else {
       long actPos = m_input->tell();
-      readPLC(plc, entry.m_id);
+      readPLC(plc, entry.id());
       m_input->seek(actPos, WPX_SEEK_SET);
     }
   }
@@ -1411,7 +1411,7 @@ bool MSWText::readPLC(MSWEntry &entry, int type)
   long pos = entry.begin();
   entry.setParsed(true);
   libmwaw::DebugStream f;
-  f << "Entries("<< entry.type() << ")[" << entry.m_id << "]:N=" << N << ",";
+  f << "Entries("<< entry.type() << ")[" << entry.id() << "]:N=" << N << ",";
 
   m_input->seek(pos, WPX_SEEK_SET);
   std::vector<long> filePos;

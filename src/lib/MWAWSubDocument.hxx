@@ -27,14 +27,14 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#ifndef MWAW_SUBDOCUMENT_H
-#define MWAW_SUBDOCUMENT_H
-
-#include "MWAWInputStream.hxx"
+#ifndef MWAW_SUBDOCUMENT_HXX
+#define MWAW_SUBDOCUMENT_HXX
 
 #include "libmwaw_internal.hxx"
 #include "MWAWEntry.hxx"
 
+class MWAWInputStream;
+typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 class MWAWContentListener;
 typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
@@ -45,31 +45,16 @@ class MWAWSubDocument
 {
 public:
   //! constructor from parser, input stream and zone in the input
-  MWAWSubDocument(MWAWParser *pars, MWAWInputStreamPtr ip, MWAWEntry const &z):
-    m_parser(pars), m_input(ip), m_zone(z) {}
+  MWAWSubDocument(MWAWParser *pars, MWAWInputStreamPtr ip, MWAWEntry const &z);
   //! copy constructor
-  MWAWSubDocument(MWAWSubDocument const &doc) : m_parser(0), m_input(), m_zone() {
-    *this = doc;
-  }
+  MWAWSubDocument(MWAWSubDocument const &doc);
   //! copy operator
-  MWAWSubDocument &operator=(MWAWSubDocument const &doc) {
-    if (&doc != this) {
-      m_parser = doc.m_parser;
-      m_input = doc.m_input;
-      m_zone = doc.m_zone;
-    }
-    return *this;
-  }
+  MWAWSubDocument &operator=(MWAWSubDocument const &doc);
   //! virtual destructor
-  virtual ~MWAWSubDocument() {}
+  virtual ~MWAWSubDocument();
 
   //! comparison operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
-    if (doc.m_parser != m_parser) return true;
-    if (doc.m_input.get() != m_input.get()) return true;
-    if (doc.m_zone != m_zone) return true;
-    return false;
-  }
+  virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! comparison operator==
   virtual bool operator==(MWAWSubDocument const &doc) const {
     return !operator!=(doc);
@@ -84,7 +69,7 @@ protected:
   //! the main zone parser
   MWAWParser *m_parser;
   //! the input
-  MWAWInputStreamPtr m_input;
+  shared_ptr<MWAWInputStream> m_input;
   //! if valid the zone to parse
   MWAWEntry m_zone;
 };
@@ -92,5 +77,5 @@ protected:
 //! a smartptr of MWAWSubDocument
 typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
 
-#endif /* MWAWSUBDOCUMENT_H */
+#endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

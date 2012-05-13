@@ -40,11 +40,7 @@
 #include "MWAWStruct.hxx"
 
 class WPXString;
-
-namespace libmwaw_tools_mac
-{
-class Font;
-}
+class MWAWFontConverter;
 
 /** Small function used to read a number, a string, a formula in a spreadsheet
     or a database */
@@ -113,7 +109,7 @@ public:
 
 protected:
   /** the font manager */
-  shared_ptr<libmwaw_tools_mac::Font> m_fontManager;
+  shared_ptr<MWAWFontConverter> m_fontManager;
 };
 typedef shared_ptr<Convertissor> ConvertissorPtr;
 }

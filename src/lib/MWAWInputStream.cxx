@@ -112,45 +112,24 @@ bool MWAWInputStream::isOLEStream()
   return m_storageOLE->isOLEStream();
 }
 
-std::vector<std::string> MWAWInputStream::allOLEEntries()
+std::vector<std::string> MWAWInputStream::getOLENames()
 {
   if (!createStorageOLE()) return std::vector<std::string>();
-  return m_storageOLE->allEntries();
+  return m_storageOLE->getOLENames();
 }
 
-shared_ptr<MWAWInputStream> MWAWInputStream::getDocumentOLEStream(const char *name)
+shared_ptr<MWAWInputStream> MWAWInputStream::getDocumentOLEStream(std::string name)
 {
   static shared_ptr<MWAWInputStream> empty;
   if (!createStorageOLE()) return empty;
 
-  libmwaw_libwpd::Stream oleStream(m_storageOLE, name);
-  if (m_storageOLE->result() != libmwaw_libwpd::Storage::Ok  || !oleStream.size())
+  long actPos = tell();
+  seek(0, WPX_SEEK_SET);
+  WPXInputStream *res=m_storageOLE->getDocumentOLEStream(name);
+  seek(actPos, WPX_SEEK_SET);
+
+  if (!res)
     return empty;
-
-  unsigned char *buf = new unsigned char[oleStream.size()];
-  if (buf == 0) return empty;
-
-  unsigned long oleLength = oleStream.read(buf, oleStream.size());
-  if (oleLength != oleStream.size()) {
-    MWAW_DEBUG_MSG(("MWAWInputStream::getDocumentOLEStream: Ole=%s expected length %ld but read %ld\n",
-                    name, oleStream.size(), oleLength));
-
-    // we ignore this error, if we read a ole in the root directory
-    // and we read at least 50% of the data. This may help to read
-    // a damaged file.
-    std::string oleName(name), dir, base;
-    libmwaw_libwpd::splitOleName(oleName, dir, base);
-    bool rootDir = (dir.length() <= 1);
-    if (!rootDir || oleLength <= (oleStream.size()+1)/2) {
-      delete [] buf;
-      return empty;
-    }
-    // continue
-    MWAW_DEBUG_MSG(("MWAWInputStream::getDocumentOLEStream: tries to use damaged OLE: %s\n", name));
-  }
-
-  WPXInputStream *res=new WPXStringStream(buf, oleLength);
-  delete [] buf;
   shared_ptr<MWAWInputStream> inp(new MWAWInputStream(res,m_inverseRead));
   inp->setResponsable(true);
   return inp;
@@ -160,23 +139,12 @@ bool MWAWInputStream::createStorageOLE()
 {
   if (m_storageOLE) return true;
 
-  std::stringstream memoryString;
   long actPos = tell();
-  bool ok = true;
-
   seek(0, WPX_SEEK_SET);
-
-  const unsigned char *readData;
-  unsigned long sizeRead;
-  while ((readData = m_stream->read(2048, sizeRead)) != 0)
-    memoryString.rdbuf()->sputn((char const *)readData, sizeRead);
-
-  m_storageOLE = new libmwaw_libwpd::Storage(memoryString);
-  if (!m_storageOLE) ok = false;
-
+  m_storageOLE = new libmwaw::Storage(m_stream);
   seek(actPos, WPX_SEEK_SET);
 
-  return ok;
+  return m_storageOLE;
 }
 
 ////////////////////////////////////////////////////////////

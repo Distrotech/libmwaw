@@ -39,7 +39,7 @@
 #include "MWAWPosition.hxx"
 
 #include "MWAWCell.hxx"
-#include "MWAWTableHelper.hxx"
+#include "MWAWTable.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"

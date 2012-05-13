@@ -30,16 +30,16 @@ SLOFILES= \
 	$(SLO)$/CWTable.cxx			\
 	$(SLO)$/CWText.cxx			\
 	$(SLO)$/DMWAWContentListener.cxx	\
-	$(SLO)$/DMWAWOLEStream.cxx		\
+	$(SLO)$/MWAWOLEStream.cxx		\
 	$(SLO)$/DMWAWPageSpan.cxx		\
 	$(SLO)$/FWParser.cxx			\
 	$(SLO)$/FWText.cxx			\
 	$(SLO)$/MWAWCell.cxx			\
-	$(SLO)$/MWAWContentListener.cxx	\
+	$(SLO)$/MWAWContentListener.cxx		\
 	$(SLO)$/MWAWDocument.cxx		\
 	$(SLO)$/MWAWHeader.cxx			\
 	$(SLO)$/MWAWList.cxx			\
-	$(SLO)$/MWAWTableHelper.cxx		\
+	$(SLO)$/MWAWTable.cxx			\
 	$(SLO)$/MWAWStruct.cxx			\
 	$(SLO)$/MWAWTools.cxx			\
 	$(SLO)$/MWParser.cxx			\
@@ -51,16 +51,17 @@ SLOFILES= \
 	$(SLO)$/MSWParser.cxx			\
 	$(SLO)$/MSWText.cxx			\
 	$(SLO)$/MWAWDebug.cxx			\
-	$(SLO)$/TMWAWFont.cxx			\
+	$(SLO)$/MWAWFontConverter.cxx			\
 	$(SLO)$/MWAWInputStream.cxx		\
-	$(SLO)$/TMWAWOleParser.cxx		\
+	$(SLO)$/MWAWOLEParser.cxx		\
 	$(SLO)$/MWAWPictBasic.cxx		\
 	$(SLO)$/MWAWPictBitmap.cxx		\
 	$(SLO)$/MWAWPictData.cxx		\
-	$(SLO)$/MWAWPictMac.cxx		\
+	$(SLO)$/MWAWPictMac.cxx			\
 	$(SLO)$/MWAWPictOLEContainer.cxx	\
 	$(SLO)$/MWAWPrinter.cxx			\
-	$(SLO)$/MWAWPropertyHandler.cxx	\
+	$(SLO)$/MWAWPropertyHandler.cxx		\
+	$(SLO)$/MWAWSubDocument.cxx		\
 	$(SLO)$/WNParser.cxx			\
 	$(SLO)$/WNText.cxx			\
 	$(SLO)$/WPParser.cxx			\

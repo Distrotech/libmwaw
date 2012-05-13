@@ -89,8 +89,6 @@ struct FWEntry : public MWAWEntry {
 
   //! the input
   MWAWInputStreamPtr m_input;
-  //! the definition id
-  int m_id;
   //! the flags definition id
   int m_flagsId;
   //! the next entry id
@@ -103,8 +101,6 @@ struct FWEntry : public MWAWEntry {
   WPXBinaryData m_data;
   //! the debug file
   shared_ptr<libmwaw::DebugFile> m_asciiFile;
-  //! the extra data ( for debugging )
-  std::string m_extra;
 private:
   FWEntry(FWEntry const &);
   FWEntry &operator=(FWEntry const &);

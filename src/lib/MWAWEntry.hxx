@@ -30,17 +30,20 @@
 #ifndef MWAW_ENTRY_H
 #define MWAW_ENTRY_H
 
+#include <ostream>
+#include <string>
+
 /** \brief  basic class to store an entry in a file
  * This contained :
  * - its begin and end positions
- * - its type and a textTypeId
+ * - its type, its name and an identificator
  * - a flag used to know if the file is or not parsed
  */
 class MWAWEntry
 {
 public:
   //!constructor
-  MWAWEntry() : m_begin(-1), m_length(-1), m_type(""), m_textId(-1), m_parsed(false) {}
+  MWAWEntry() : m_begin(-1), m_length(-1), m_type(""), m_name(""), m_id(-1), m_parsed(false), m_extra("") {}
 
   virtual ~MWAWEntry() {}
 
@@ -79,10 +82,9 @@ public:
   bool operator==(const MWAWEntry &a) const {
     if (m_begin != a.m_begin) return false;
     if (m_length != a.m_length) return false;
-    if (m_textId != a. m_textId) return false;
-    if (m_type.c_str() == 0) return a.m_type.c_str() == 0;
-    if (a.m_type.c_str() == 0) return false;
+    if (m_id != a. m_id) return false;
     if (m_type != a.m_type) return false;
+    if (m_name != a.m_name) return false;
     return true;
   }
   //! basic operator!=
@@ -100,11 +102,7 @@ public:
   }
 
   //! sets the type of the entry: BTEP,FDPP, BTEC, FDPC, PLC , TEXT, ...
-  void setType(char const *type) {
-    m_type=type;
-  }
-  //! sets the type of the entry: BTEP,FDPP, BTEC, FDPC, PLC , TEXT, ...
-  void setType(std::string const &type) {
+  void setType(std::string const type) {
     m_type=type;
   }
   //! returns the type of the entry
@@ -112,24 +110,47 @@ public:
     return m_type;
   }
   //! returns true if the type entry == \a type
-  bool hasType(char const *type) const {
-    return m_type == type;
-  }
-  //! returns true if the type entry == \a type
-  bool hasType(std::string const &type) const {
+  bool hasType(std::string const type) const {
     return m_type == type;
   }
 
-  /** \brief returns the text id
-   *
-   * This field is used to differentiate main text, header, ...)
-   */
-  int textId() const {
-    return m_textId;
+  //! sets the name of the entry
+  void setName(std::string const &nam) {
+    m_name=nam;
   }
-  //! sets the text id
-  void setTextId(int id) {
-    m_textId = id;
+  //! name of the entry
+  std::string const &name() const {
+    return m_name;
+  }
+  //! checks if the entry name is equal to \a name
+  bool hasName(std::string const &nam) const {
+    return m_name == nam;
+  }
+
+  /** \brief returns the id */
+  int id() const {
+    return m_id;
+  }
+  //! sets the id
+  void setId(int id) {
+    m_id = id;
+  }
+
+  //! retrieves the extra string
+  std::string const &extra() const {
+    return m_extra;
+  }
+  //! sets the extra string
+  void setExtra(std::string const &s) {
+    m_extra = s;
+  }
+
+  friend std::ostream &operator<< (std::ostream &o, MWAWEntry const &ent) {
+    o << ent.m_type;
+    if (ent.m_name.length()) o << "|" << ent.m_name;
+    if (ent.m_id >= 0) o << "[" << ent.m_id << "]";
+    if (ent.m_extra.length()) o << "[" << ent.m_extra << "]";
+    return o;
   }
 
 protected:
@@ -137,10 +158,14 @@ protected:
 
   //! the entry type
   std::string m_type;
-  //! the text identificator
-  int m_textId;
+  //! the name
+  std::string m_name;
+  //! an identificator
+  int m_id;
   //! a bool to store if the entry is or not parsed
   mutable bool m_parsed;
+  //! an extra string
+  std::string m_extra;
 };
 
 #endif

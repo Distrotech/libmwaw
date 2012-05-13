@@ -41,7 +41,7 @@
 #include "MWAWEntry.hxx"
 
 struct WNEntry : public MWAWEntry {
-  WNEntry() : MWAWEntry(), m_id(-1), m_fileType(-1), m_entryType(-1) {
+  WNEntry() : MWAWEntry(), m_fileType(-1), m_entryType(-1) {
     for (int i = 0; i < 4; i++) m_val[i] = 0;
   }
   //! returns true if this entry store a zone
@@ -56,7 +56,7 @@ struct WNEntry : public MWAWEntry {
   friend std::ostream &operator<<(std::ostream &o, WNEntry const &entry) {
     if (entry.type().length()) {
       o << entry.type();
-      if (entry.m_id >= 0) o << "[" << entry.m_id << "]";
+      if (entry.id() >= 0) o << "[" << entry.id() << "]";
       o << "=";
     }
     o << "[";
@@ -115,8 +115,6 @@ struct WNEntry : public MWAWEntry {
     o << "],";
     return o;
   }
-  //! the entry id
-  int m_id;
   //! the file entry id
   int m_fileType;
   //! the entry type (if this is a zone : find in the zone)

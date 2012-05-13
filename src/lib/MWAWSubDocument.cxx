@@ -1,7 +1,6 @@
 /* -*- Mode: C++; c-default-style: "k&r"; indent-tabs-mode: nil; tab-width: 2; c-basic-offset: 2 -*- */
-/* libwpd
- * Copyright (C) 2003 David Mandelin (mandelin@cs.wisc.edu)
- * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
+/* libmwaw
+ * Copyright (C) 2005 Fridrich Strba (fridrich.strba@bluewin.ch)
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,15 +23,40 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
+#include "MWAWSubDocument.hxx"
 
-#ifndef LIBWPD_MATH_H
-#define LIBWPD_MATH_H
+#include "MWAWInputStream.hxx"
 
-#include <math.h>
+MWAWSubDocument::MWAWSubDocument(MWAWParser *pars, MWAWInputStreamPtr ip, MWAWEntry const &z):
+  m_parser(pars), m_input(ip), m_zone(z)
+{
+}
 
-#if defined(_WIN32) && !defined(__MINGW32__)
-double rint(double x);
-#endif /* _WIN32 */
+MWAWSubDocument::MWAWSubDocument(MWAWSubDocument const &doc) : m_parser(0), m_input(), m_zone()
+{
+  *this = doc;
+}
 
-#endif /* LIBWPD_MATH_H */
+MWAWSubDocument::~MWAWSubDocument()
+{
+}
+
+MWAWSubDocument &MWAWSubDocument::operator=(MWAWSubDocument const &doc)
+{
+  if (&doc != this) {
+    m_parser = doc.m_parser;
+    m_input = doc.m_input;
+    m_zone = doc.m_zone;
+  }
+  return *this;
+}
+
+bool MWAWSubDocument::operator!=(MWAWSubDocument const &doc) const
+{
+  if (doc.m_parser != m_parser) return true;
+  if (doc.m_input.get() != m_input.get()) return true;
+  if (doc.m_zone != m_zone) return true;
+  return false;
+}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
+

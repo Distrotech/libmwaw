@@ -41,7 +41,7 @@
 
 #include "MWAWCell.hxx"
 #include "MWAWHeader.hxx"
-#include "MWAWTableHelper.hxx"
+#include "MWAWTable.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -456,9 +456,9 @@ struct Paragraph {
 
 ////////////////////////////////////////
 //! Internal: the cell of a WNProStructure
-struct Cell : public MWAWTableHelperCell {
+struct Cell : public MWAWTableCell {
   //! constructor
-  Cell(MWProStructures &parser) : MWAWTableHelperCell(), m_parser(parser),
+  Cell(MWProStructures &parser) : MWAWTableCell(), m_parser(parser),
     m_blockId(0) {
     for (int i = 0; i < 3; i++)
       m_color[i] = -1;
@@ -480,7 +480,7 @@ struct Cell : public MWAWTableHelperCell {
     MWAWCell cell;
     cell.position() = m_position;
     cell.setBorders(border);
-    cell.setNumSpannedCells(m_numSpan);
+    cell.setNumSpannedCells(m_numberCellSpanned);
 
     WPXPropertyList propList;
     if (m_color[0] >= 0 && m_color[1] >= 0 && m_color[2] >= 0) {
@@ -516,9 +516,9 @@ struct Cell : public MWAWTableHelperCell {
 
 ////////////////////////////////////////
 ////////////////////////////////////////
-struct Table : public MWAWTableHelper {
+struct Table : public MWAWTable {
   //! constructor
-  Table() : MWAWTableHelper() {
+  Table() : MWAWTable() {
   }
 
   //! return a cell corresponding to id
@@ -527,7 +527,7 @@ struct Table : public MWAWTableHelper {
       MWAW_DEBUG_MSG(("MWProStructuresInternal::Table::get: cell %d does not exists\n",id));
       return 0;
     }
-    return reinterpret_cast<Cell *>(MWAWTableHelper::get(id).get());
+    return reinterpret_cast<Cell *>(MWAWTable::get(id).get());
   }
 };
 

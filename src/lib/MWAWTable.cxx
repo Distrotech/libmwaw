@@ -39,28 +39,28 @@
 #include <set>
 #include <sstream>
 
-#include "MWAWTableHelper.hxx"
+#include "MWAWTable.hxx"
 
 #include "MWAWContentListener.hxx"
 
 ////////////////////////////////////////////////////////////
 // destructor, ...
-MWAWTableHelper::~MWAWTableHelper()
+MWAWTable::~MWAWTable()
 {
 }
 
-shared_ptr<MWAWTableHelperCell> MWAWTableHelper::get(int id)
+shared_ptr<MWAWTableCell> MWAWTable::get(int id)
 {
   if (id < 0 || id >= int(m_cellsList.size())) {
-    MWAW_DEBUG_MSG(("MWAWTableHelper::get: cell %d does not exists\n",id));
-    return shared_ptr<MWAWTableHelperCell>();
+    MWAW_DEBUG_MSG(("MWAWTable::get: cell %d does not exists\n",id));
+    return shared_ptr<MWAWTableCell>();
   }
   return m_cellsList[id];
 }
 
 ////////////////////////////////////////////////////////////
 // build the table structure
-bool MWAWTableHelper::buildStructures()
+bool MWAWTable::buildStructures()
 {
   if (m_colsSize.size())
     return true;
@@ -68,17 +68,17 @@ bool MWAWTableHelper::buildStructures()
   int numCells = m_cellsList.size();
   std::vector<float> listPositions[2];
   for (int dim = 0; dim < 2; dim++) {
-    MWAWTableHelperCell::Compare compareFunction(dim);
-    std::set<MWAWTableHelperCell::Compare::Point,
-        MWAWTableHelperCell::Compare> set(compareFunction);
+    MWAWTableCell::Compare compareFunction(dim);
+    std::set<MWAWTableCell::Compare::Point,
+        MWAWTableCell::Compare> set(compareFunction);
     for (int c = 0; c < numCells; c++) {
-      set.insert(MWAWTableHelperCell::Compare::Point(0, m_cellsList[c].get()));
-      set.insert(MWAWTableHelperCell::Compare::Point(1, m_cellsList[c].get()));
+      set.insert(MWAWTableCell::Compare::Point(0, m_cellsList[c].get()));
+      set.insert(MWAWTableCell::Compare::Point(1, m_cellsList[c].get()));
     }
 
     std::vector<float> positions;
-    std::set<MWAWTableHelperCell::Compare::Point,
-        MWAWTableHelperCell::Compare>::iterator it = set.begin();
+    std::set<MWAWTableCell::Compare::Point,
+        MWAWTableCell::Compare>::iterator it = set.begin();
     float prevPos, maxPosiblePos=0;
     int actCell = -1;
     for ( ; it != set.end(); it++) {
@@ -108,7 +108,7 @@ bool MWAWTableHelper::buildStructures()
       if (i+1 < numPos && (pos[i]+pos[i+1])/2 < pt[0])
         i++;
       if (i+1 > numPos) {
-        MWAW_DEBUG_MSG(("MWAWTableHelper::buildStructures: impossible to find cell position !!!\n"));
+        MWAW_DEBUG_MSG(("MWAWTable::buildStructures: impossible to find cell position !!!\n"));
         return false;
       }
       cellPos[dim] = i;
@@ -118,12 +118,12 @@ bool MWAWTableHelper::buildStructures()
         i++;
       spanCell[dim] = i-cellPos[dim];
       if (spanCell[dim]==0 && m_cellsList[c]->box().size()[dim]) {
-        MWAW_DEBUG_MSG(("MWAWTableHelper::buildStructures: impossible to find span number !!!\n"));
+        MWAW_DEBUG_MSG(("MWAWTable::buildStructures: impossible to find span number !!!\n"));
         return false;
       }
     }
     m_cellsList[c]->m_position = Vec2i(cellPos[0], cellPos[1]);
-    m_cellsList[c]->m_numSpan = Vec2i(spanCell[0], spanCell[1]);
+    m_cellsList[c]->m_numberCellSpanned = Vec2i(spanCell[0], spanCell[1]);
   }
   // finally update the row/col size
   for (int dim = 0; dim < 2; dim++) {
@@ -141,7 +141,7 @@ bool MWAWTableHelper::buildStructures()
 
 ////////////////////////////////////////////////////////////
 // try to send the table
-bool MWAWTableHelper::sendTable(MWAWContentListenerPtr listener)
+bool MWAWTable::sendTable(MWAWContentListenerPtr listener)
 {
   if (!buildStructures())
     return false;
@@ -157,21 +157,21 @@ bool MWAWTableHelper::sendTable(MWAWContentListenerPtr listener)
   for (int c = 0; c < numCells; c++) {
     if (!m_cellsList[c]) continue;
     Vec2i const &pos=m_cellsList[c]->m_position;
-    Vec2i const &span=m_cellsList[c]->m_numSpan;
+    Vec2i const &span=m_cellsList[c]->m_numberCellSpanned;
 
     for (int x = pos[0]; x < pos[0]+span[0]; x++) {
       if (x >= numCols) {
-        MWAW_DEBUG_MSG(("MWAWTableHelper::sendTable: x is too big !!!\n"));
+        MWAW_DEBUG_MSG(("MWAWTable::sendTable: x is too big !!!\n"));
         return false;
       }
       for (int y = pos[1]; y < pos[1]+span[1]; y++) {
         if (y >= numRows) {
-          MWAW_DEBUG_MSG(("MWAWTableHelper::sendTable: y is too big !!!\n"));
+          MWAW_DEBUG_MSG(("MWAWTable::sendTable: y is too big !!!\n"));
           return false;
         }
         int tablePos = y*numCols+x;
         if (cellsId[tablePos] != -1) {
-          MWAW_DEBUG_MSG(("MWAWTableHelper::sendTable: cells is used!!!\n"));
+          MWAW_DEBUG_MSG(("MWAWTable::sendTable: cells is used!!!\n"));
           return false;
         }
         if (x == pos[0] && y == pos[1])
@@ -201,7 +201,7 @@ bool MWAWTableHelper::sendTable(MWAWContentListenerPtr listener)
 
 ////////////////////////////////////////////////////////////
 // try to send the table
-bool MWAWTableHelper::sendAsText(MWAWContentListenerPtr listener)
+bool MWAWTable::sendAsText(MWAWContentListenerPtr listener)
 {
   if (!listener) return true;
 

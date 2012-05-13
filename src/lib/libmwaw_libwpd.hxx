@@ -31,7 +31,17 @@
 #include <string>
 #include <algorithm>
 #include <libwpd/WPXString.h>
-#include "libmwaw_libwpd_types.hxx"
+
+#if defined(_MSC_VER)
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef signed short int16_t;
+typedef unsigned short uint16_t;
+typedef signed int int32_t;
+typedef unsigned int uint32_t;
+#else /* _MSC_VER */
+#include <inttypes.h>
+#endif /* _MSC_VER */
 
 /* Various functions/defines that need not/should not be exported externally */
 #ifdef _MSC_VER
@@ -85,11 +95,6 @@ namespace libmwaw_libwpd
 uint8_t readU8(WPXInputStream *input);
 uint16_t readU16(WPXInputStream *input, bool bigendian=false);
 uint32_t readU32(WPXInputStream *input, bool bigendian=false);
-
-WPXString readPascalString(WPXInputStream *input);
-WPXString readCString(WPXInputStream *input);
-
-void appendUCS4(WPXString &str, uint32_t ucs4);
 
 // Various helper structures for the libwpd parser..
 

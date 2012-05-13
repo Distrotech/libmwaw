@@ -32,18 +32,18 @@
 
 #include "libmwaw_tools.hxx"
 
-#include "TMWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 
-namespace libmwaw_tools_mac
+namespace MWAWFontConverterInternal
 {
 //! Internal and low level: tools to convert Macintosh characters
-namespace FontConversion
+namespace Data
 {
 //! Internal and low level: a class to store a conversion map for character, ...
-struct ConvData {
+struct ConversionData {
   //! constructor
-  ConvData(std::map<unsigned char, unsigned long> &map,
-           char const *odtName="", int delta=0)
+  ConversionData(std::map<unsigned char, unsigned long> &map,
+                 char const *odtName="", int delta=0)
     : m_conversion(map), m_name(odtName), m_deltaSize(delta) {}
 
   //! the conversion map character -> unicode
@@ -254,12 +254,12 @@ public:
     initMaps();
   }
   //! returns the conversion map which corresponds to a name, or the default map
-  FontConversion::ConvData const &getConversionMaps(std::string fName);
+  Data::ConversionData const &getConversionMaps(std::string fName);
 
   // FIXME:
 
   //! return the default convertissor
-  ConvData const &getDefault() const {
+  ConversionData const &getDefault() const {
     return m_defaultConv;
   }
 protected:
@@ -275,8 +275,8 @@ protected:
     }
   }
 
-  /** the conversiont map fName -> ConvData */
-  std::map<std::string, ConvData const *> m_convertMap;
+  /** the conversiont map fName -> ConversionData */
+  std::map<std::string, ConversionData const *> m_convertMap;
 
   //! Internal and Low level: map char -> unicode for roman font
   std::map<unsigned char, unsigned long> m_romanMap;
@@ -298,27 +298,27 @@ protected:
   std::map<unsigned char, unsigned long> m_unknown200Map;
 
   //! Internal and Low level: the default convertissor: roman
-  ConvData m_defaultConv;
+  ConversionData m_defaultConv;
   //! Internal and Low level: the convertissor for times font
-  ConvData m_timeConv;
+  ConversionData m_timeConv;
   //! Internal and Low level: the convertissor for zapfChancery font
-  ConvData m_zapfChanceryConv;
+  ConversionData m_zapfChanceryConv;
   //! Internal and Low level: the convertissor for symbol font
-  ConvData m_symbolConv;
+  ConversionData m_symbolConv;
   //! Internal and Low level: the convertissor for dingbats font
-  ConvData m_dingbatsConv;
+  ConversionData m_dingbatsConv;
   //! Internal and Low level: the convertissor for cursive font
-  ConvData m_cursiveConv;
+  ConversionData m_cursiveConv;
   //! Internal and Low level: the convertissor for math font
-  ConvData m_mathConv;
+  ConversionData m_mathConv;
   //! Internal and Low level: the convertissor for scientific font
-  ConvData m_scientificConv;
+  ConversionData m_scientificConv;
   //! Internal and Low level: the convertissor for font 107
-  ConvData m_unknown107Conv;
+  ConversionData m_unknown107Conv;
   //! Internal and Low level: the convertissor for font 128
-  ConvData m_unknown128Conv;
+  ConversionData m_unknown128Conv;
   //! Internal and Low level: the convertissor for font 200
-  ConvData m_unknown200Conv;
+  ConversionData m_unknown200Conv;
 };
 
 
@@ -357,10 +357,10 @@ void KnownConversion::initMaps()
   m_convertMap[std::string("Unknown200")] = &m_unknown200Conv;
 }
 
-ConvData const &KnownConversion::getConversionMaps(std::string fName)
+ConversionData const &KnownConversion::getConversionMaps(std::string fName)
 {
   if (fName.empty()) return m_defaultConv;
-  std::map<std::string, ConvData const *>::iterator it= m_convertMap.find(fName);
+  std::map<std::string, ConversionData const *>::iterator it= m_convertMap.find(fName);
   if (it == m_convertMap.end()) return m_defaultConv;
   return *(it->second);
 }
@@ -369,15 +369,15 @@ ConvData const &KnownConversion::getConversionMaps(std::string fName)
 
 //------------------------------------------------------------
 //
-// Font implementation
+// Font convertor imlementation
 //
 //------------------------------------------------------------
-//! the default font manager
-class FontManager
+//! the default font converter
+class State
 {
 public:
   //! the constructor
-  FontManager() : knownConversion(), idNameMap(), nameIdMap(),
+  State() : knownConversion(), idNameMap(), nameIdMap(),
     nameIdCounter(0), uniqueId(256), unicodeCache() {
     initMaps();
   }
@@ -419,7 +419,7 @@ protected:
   void initMaps();
 
   //! the basic conversion map
-  FontConversion::KnownConversion knownConversion;
+  MWAWFontConverterInternal::Data::KnownConversion knownConversion;
   //! map sysid -> font name
   std::map<int, std::string> idNameMap;
   //! map font name -> sysid
@@ -440,13 +440,13 @@ protected:
     //! actual macId
     int macId;
     //! actual convertor
-    FontConversion::ConvData const *conv;
+    MWAWFontConverterInternal::Data::ConversionData const *conv;
   } unicodeCache;
 
 };
 
 // initializes the default conversion map
-void FontManager::initMaps()
+void State::initMaps()
 {
   // see http://developer.apple.com/documentation/mac/Text/Text-277.html
   // or Apple II Technical Notes #41 (  http://www.umich.edu/~archive/apple2/technotes/tn/iigs/TN.IIGS.041 )
@@ -492,7 +492,7 @@ void FontManager::initMaps()
 }
 
 // returns an unicode caracter
-int FontManager::unicode(int macId, unsigned char c)
+int State::unicode(int macId, unsigned char c)
 {
   if (!unicodeCache.conv || unicodeCache.macId != macId ||  unicodeCache.nameIdCounter != nameIdCounter) {
     unicodeCache.macId = macId;
@@ -509,10 +509,10 @@ int FontManager::unicode(int macId, unsigned char c)
   return it->second;
 }
 
-void FontManager::getOdtInfo(int macId, std::string &nm, int &deltaSize)
+void State::getOdtInfo(int macId, std::string &nm, int &deltaSize)
 {
   std::string nam = getName(macId);
-  FontConversion::ConvData const *conv = &knownConversion.getConversionMaps(nam);
+  MWAWFontConverterInternal::Data::ConversionData const *conv = &knownConversion.getConversionMaps(nam);
 
   nm = conv->m_name;
   deltaSize = conv->m_deltaSize;
@@ -531,35 +531,34 @@ void FontManager::getOdtInfo(int macId, std::string &nm, int &deltaSize)
 #endif
   nm = "Times New Roman";
 }
+}
 
-Font::Font() : m_manager(new FontManager) { }
-Font::~Font() {}
+MWAWFontConverter::MWAWFontConverter() : m_manager(new MWAWFontConverterInternal::State) { }
+MWAWFontConverter::~MWAWFontConverter() {}
 
 // mac font name <-> id functions
-void Font::setCorrespondance(int macId, std::string const &name)
+void MWAWFontConverter::setCorrespondance(int macId, std::string const &name)
 {
   m_manager->setCorrespondance(macId, name);
 }
-int Font::getId(std::string const &name)  const
+int MWAWFontConverter::getId(std::string const &name)  const
 {
   return m_manager->getId(name);
 }
 
-std::string Font::getName(int macId) const
+std::string MWAWFontConverter::getName(int macId) const
 {
   return m_manager->getName(macId);
 }
 
-void Font::getOdtInfo(int macId, std::string &nm, int &deltaSize) const
+void MWAWFontConverter::getOdtInfo(int macId, std::string &nm, int &deltaSize) const
 {
   m_manager->getOdtInfo(macId, nm, deltaSize);
 }
 
-int Font::unicode(int macId, unsigned char c) const
+int MWAWFontConverter::unicode(int macId, unsigned char c) const
 {
   return m_manager->unicode(macId, c);
-}
-
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

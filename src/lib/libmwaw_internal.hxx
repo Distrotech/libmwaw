@@ -37,7 +37,6 @@
 #include <libwpd/libwpd.h>
 #include <libwpd-stream/libwpd-stream.h>
 #include "libmwaw_libwpd.hxx"
-#include "libmwaw_libwpd_types.hxx"
 #include "libmwaw_tools.hxx"
 
 /* Various functions/defines that need not/should not be exported externally */

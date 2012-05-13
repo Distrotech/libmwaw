@@ -69,7 +69,7 @@ struct Object {
     res.setBegin(m_pos.begin());
     res.setEnd(m_pos.end());
     res.setType("ObjectData");
-    res.m_id = m_id;
+    res.setId(m_id);
     return res;
   }
 
@@ -813,7 +813,7 @@ MSWEntry MSWParser::readEntry(std::string type, int id)
   MWAWInputStreamPtr input = getInput();
   MSWEntry entry;
   entry.setType(type);
-  entry.m_id = id;
+  entry.setId(id);
   long pos = input->tell();
   libmwaw::DebugStream f;
 
@@ -1183,11 +1183,11 @@ bool MSWParser::readObjects()
     std::vector<std::string> list;
     readStringsZone(entry, list);
 
-    if (entry.m_id < 0 || entry.m_id > 1) {
-      MWAW_DEBUG_MSG(("MSWParser::readObjects: unexpected entry id: %d\n", entry.m_id));
+    if (entry.id() < 0 || entry.id() > 1) {
+      MWAW_DEBUG_MSG(("MSWParser::readObjects: unexpected entry id: %d\n", entry.id()));
       continue;
     }
-    std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[entry.m_id];
+    std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[entry.id()];
     int numObjects = listObject.size();
     if (int(list.size()) != numObjects) {
       MWAW_DEBUG_MSG(("MSWParser::readObjects: unexpected number of name\n"));
@@ -1208,11 +1208,11 @@ bool MSWParser::readObjects()
 
 bool MSWParser::readObjectList(MSWEntry &entry)
 {
-  if (entry.m_id < 0 || entry.m_id > 1) {
-    MWAW_DEBUG_MSG(("MSWParser::readObjectList: unexpected entry id: %d\n", entry.m_id));
+  if (entry.id() < 0 || entry.id() > 1) {
+    MWAW_DEBUG_MSG(("MSWParser::readObjectList: unexpected entry id: %d\n", entry.id()));
     return false;
   }
-  std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[entry.m_id];
+  std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[entry.id()];
   listObject.resize(0);
   if (entry.length() < 4 || (entry.length()%18) != 4) {
     MWAW_DEBUG_MSG(("MSWParser::readObjectList: the zone size seems odd\n"));
@@ -1223,7 +1223,7 @@ bool MSWParser::readObjectList(MSWEntry &entry)
   entry.setParsed(true);
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
-  f << "ObjectList[" << entry.m_id << "]:";
+  f << "ObjectList[" << entry.id() << "]:";
   int N=entry.length()/18;
   std::vector<long> textPos; // checkme
   textPos.resize(N+1);
@@ -1273,11 +1273,11 @@ bool MSWParser::readObjectList(MSWEntry &entry)
 
 bool MSWParser::readObjectFlags(MSWEntry &entry)
 {
-  if (entry.m_id < 0 || entry.m_id > 1) {
-    MWAW_DEBUG_MSG(("MSWParser::readObjectFlags: unexpected entry id: %d\n", entry.m_id));
+  if (entry.id() < 0 || entry.id() > 1) {
+    MWAW_DEBUG_MSG(("MSWParser::readObjectFlags: unexpected entry id: %d\n", entry.id()));
     return false;
   }
-  std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[entry.m_id];
+  std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[entry.id()];
   int numObject = listObject.size();
   if (entry.length() < 4 || (entry.length()%6) != 4) {
     MWAW_DEBUG_MSG(("MSWParser::readObjectFlags: the zone size seems odd\n"));
@@ -1288,7 +1288,7 @@ bool MSWParser::readObjectFlags(MSWEntry &entry)
   entry.setParsed(true);
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
-  f << "ObjectFlags[" << entry.m_id << "]:";
+  f << "ObjectFlags[" << entry.id() << "]:";
   int N=entry.length()/6;
   if (N != numObject) {
     MWAW_DEBUG_MSG(("MSWParser::readObjectFlags: unexpected number of object\n"));
@@ -1436,7 +1436,7 @@ bool MSWParser::checkPicturePos(long pos, int type)
   entry.setEnd(endPos);
   entry.setType("Picture");
   entry.setTextId(type);
-  entry.m_id = id++;
+  entry.setId(id++);
   m_entryMap.insert
   (std::multimap<std::string, MSWEntry>::value_type(entry.type(), entry));
 
@@ -1454,7 +1454,7 @@ bool MSWParser::readPicture(MSWEntry &entry)
   entry.setParsed(true);
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
-  f << "Entries(Picture)[" << entry.textId() << "-" << entry.m_id << "]:";
+  f << "Entries(Picture)[" << entry.textId() << "-" << entry.id() << "]:";
   long sz = input->readULong(4);
   if (sz > entry.length()) {
     MWAW_DEBUG_MSG(("MSWParser::readPicture: the zone size seems too big\n"));
@@ -1474,7 +1474,7 @@ bool MSWParser::readPicture(MSWEntry &entry)
   for (int n=0; n < N; n++) {
     pos = input->tell();
     f.str("");
-    f << "Picture-" << n << "[" << entry.textId() << "-" << entry.m_id << "]:";
+    f << "Picture-" << n << "[" << entry.textId() << "-" << entry.id() << "]:";
     sz = input->readULong(4);
     if (sz < 16 || sz+pos > entry.end()) {
       MWAW_DEBUG_MSG(("MSWParser::readPicture: pb with the picture size\n"));

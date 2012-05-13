@@ -18,13 +18,11 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LDFLAGS = $(version_info) -
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	libmwaw_libwpd.cxx		\
 	DMWAWContentListener.cxx	\
-	DMWAWOLEStream.cxx		\
+	MWAWOLEStream.cxx		\
 	DMWAWPageSpan.cxx		\
 	libmwaw_libwpd.hxx		\
-	libmwaw_libwpd_math.hxx		\
-	libmwaw_libwpd_types.hxx	\
 	DMWAWContentListener.hxx	\
-	DMWAWOLEStream.hxx		\
+	MWAWOLEStream.hxx		\
 	DMWAWPageSpan.hxx		\
 					\
 	libmwaw_internal.cxx		\
@@ -33,7 +31,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWDocument.cxx		\
 	MWAWHeader.cxx			\
 	MWAWList.cxx			\
-	MWAWTableHelper.cxx		\
+	MWAWSubDocument.cxx		\
+	MWAWTable.cxx		\
 	libmwaw_internal.hxx		\
 	MWAWCell.hxx			\
 	MWAWContentListener.hxx	\
@@ -43,13 +42,13 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWList.hxx			\
 	MWAWParser.hxx			\
 	MWAWSubDocument.hxx		\
-	MWAWTableHelper.hxx		\
+	MWAWTable.hxx		\
 					\
 	MWAWDebug.cxx			\
 	MWAWInputStream.cxx		\
-	TMWAWFont.cxx			\
+	MWAWFontConverter.cxx			\
 	MWAWPrinter.cxx			\
-	TMWAWOleParser.cxx		\
+	MWAWOLEParser.cxx		\
 	MWAWPictBasic.cxx		\
 	MWAWPictBitmap.cxx		\
 	MWAWPictData.cxx		\
@@ -59,9 +58,9 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	libmwaw_tools.hxx		\
 	MWAWDebug.hxx			\
 	MWAWInputStream.hxx		\
-	TMWAWFont.hxx			\
+	MWAWFontConverter.hxx			\
 	MWAWPrinter.hxx			\
-	TMWAWOleParser.hxx		\
+	MWAWOLEParser.hxx		\
 	MWAWPict.hxx			\
 	MWAWPictBasic.hxx		\
 	MWAWPictBitmap.hxx		\

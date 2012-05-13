@@ -1034,9 +1034,7 @@ void MWAWContentListener::_handleListChange()
     m_parseState->m_list->setLevel(m_ps->m_currentListLevel);
     m_parseState->m_list->openElement();
 
-    bool mustResend =  m_parseState->m_list->mustSendLevel
-                       (m_ps->m_currentListLevel,
-                        m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent, m_ps->m_listBeginPosition);
+    bool mustResend =  m_parseState->m_list->mustSendLevel(m_ps->m_currentListLevel);
 
     if (mustResend) {
       if (actualListLevel == m_ps->m_currentListLevel) {
@@ -1054,9 +1052,7 @@ void MWAWContentListener::_handleListChange()
         else
           m_parseState->m_list->setId(++m_actualListId);
       }
-      m_parseState->m_list->sendTo(*m_documentInterface, m_ps->m_currentListLevel,
-                                   m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent,
-                                   m_ps->m_listBeginPosition);
+      m_parseState->m_list->sendTo(*m_documentInterface, m_ps->m_currentListLevel);
     }
 
     propList2.insert("libwpd:id", m_parseState->m_list->getId());

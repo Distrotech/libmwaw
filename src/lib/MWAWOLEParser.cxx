@@ -1,5 +1,5 @@
 /* -*- Mode: C++; c-default-style: "k&r"; indent-tabs-mode: nil; tab-width: 2; c-basic-offset: 2 -*- */
-/* libwpd
+/* libmwaw
  * Copyright (C) 2009, 2011 Alonso Laurent (alonso@loria.fr)
  * Copyright (C) 2006, 2007 Andrew Ziem
  * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
@@ -78,12 +78,14 @@
 
 #include <libwpd/WPXBinaryData.h>
 
-#include "TMWAWOleParser.hxx"
+#include "MWAWPosition.hxx"
+
+#include "MWAWOLEParser.hxx"
 
 //////////////////////////////////////////////////
 // internal structure
 //////////////////////////////////////////////////
-namespace TMWAWOleParserInternal
+namespace MWAWOLEParserInternal
 {
 /** Internal: internal method to compobj definition */
 class CompObj
@@ -120,7 +122,7 @@ protected:
     m_mapCls[0x00030004]= "MSPowerPoint";
     m_mapCls[0x00030005]= "MSPowerPointSho";
     m_mapCls[0x00030006]= "MSGraph";
-    m_mapCls[0x00030007]= "MSDraw";
+    m_mapCls[0x00030007]= "MSDraw"; // find also with ca003 ?
     m_mapCls[0x00030008]= "Note-It";
     m_mapCls[0x00030009]= "WordArt";
     m_mapCls[0x0003000a]= "PBrush";
@@ -224,21 +226,46 @@ struct OleDef {
 }
 
 // constructor/destructor
-TMWAWOleParser::TMWAWOleParser(char const *mainName)
-  : m_avoidOLE(""), m_unknownOLEs(),
+MWAWOLEParser::MWAWOLEParser(std::string mainName)
+  : m_avoidOLE(mainName), m_unknownOLEs(),
     m_objects(), m_objectsPosition(), m_objectsId(), m_compObjIdName()
-{
-  if (mainName) m_avoidOLE = mainName;
-}
-TMWAWOleParser::~TMWAWOleParser()
 {
 }
 
+MWAWOLEParser::~MWAWOLEParser()
+{
+}
+
+bool MWAWOLEParser::getObject(int id, WPXBinaryData &obj, MWAWPosition &pos)  const
+{
+  for (int i = 0; i < int(m_objectsId.size()); i++) {
+    if (m_objectsId[i] != id) continue;
+    obj = m_objects[i];
+    pos = m_objectsPosition[i];
+    return true;
+  }
+  obj.clear();
+  return false;
+}
+
+void MWAWOLEParser::setObject(int id, WPXBinaryData const &obj, MWAWPosition const &pos)
+{
+  for (int i = 0; i < int(m_objectsId.size()); i++) {
+    if (m_objectsId[i] != id) continue;
+    m_objects[i] = obj;
+    m_objectsPosition[i] = pos;
+    return;
+  }
+  m_objects.push_back(obj);
+  m_objectsPosition.push_back(pos);
+  m_objectsId.push_back(id);
+}
+
 // parsing
-bool TMWAWOleParser::parse(MWAWInputStreamPtr file)
+bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
 {
   if (!m_compObjIdName)
-    m_compObjIdName.reset(new TMWAWOleParserInternal::CompObj);
+    m_compObjIdName.reset(new MWAWOLEParserInternal::CompObj);
 
   m_unknownOLEs.resize(0);
   m_objects.resize(0);
@@ -248,12 +275,12 @@ bool TMWAWOleParser::parse(MWAWInputStreamPtr file)
 
   if (!file->isOLEStream()) return false;
 
-  std::vector<std::string> namesList = file->allOLEEntries();
+  std::vector<std::string> namesList = file->getOLENames();
 
   //
   // we begin by grouping the Ole by their potential main id
   //
-  std::multimap<int, TMWAWOleParserInternal::OleDef> listsById;
+  std::multimap<int, MWAWOLEParserInternal::OleDef> listsById;
   std::vector<int> listIds;
   for (int i = 0; i < int(namesList.size()); i++) {
     std::string const &name = namesList[i];
@@ -276,7 +303,7 @@ bool TMWAWOleParser::parse(MWAWInputStreamPtr file)
 #ifdef PRINT_OLE_NAME
     std::cerr << "OLEName=" << name.c_str() << "\n";
 #endif
-    TMWAWOleParserInternal::OleDef data;
+    MWAWOLEParserInternal::OleDef data;
     data.m_name = name;
     data.m_dir = base;
 
@@ -304,13 +331,13 @@ bool TMWAWOleParser::parse(MWAWInputStreamPtr file)
     data.m_subId = id[1];
     if (listsById.find(data.m_id) == listsById.end())
       listIds.push_back(data.m_id);
-    listsById.insert(std::multimap<int, TMWAWOleParserInternal::OleDef>::value_type(data.m_id, data));
+    listsById.insert(std::multimap<int, MWAWOLEParserInternal::OleDef>::value_type(data.m_id, data));
   }
 
   for (int i = 0; i < int(listIds.size()); i++) {
     int id = listIds[i];
 
-    std::multimap<int, TMWAWOleParserInternal::OleDef>::iterator pos =
+    std::multimap<int, MWAWOLEParserInternal::OleDef>::iterator pos =
       listsById.lower_bound(id);
 
     // try to find a representation for each id
@@ -320,19 +347,18 @@ bool TMWAWOleParser::parse(MWAWInputStreamPtr file)
     MWAWPosition actualPos, potentialSize;
 
     while (pos != listsById.end()) {
-      TMWAWOleParserInternal::OleDef const &dOle = pos->second;
+      MWAWOLEParserInternal::OleDef const &dOle = pos->second;
       if (pos->first != id) break;
       pos++;
 
-      MWAWInputStreamPtr ole = file->getDocumentOLEStream(dOle.m_name.c_str());
+      MWAWInputStreamPtr ole = file->getDocumentOLEStream(dOle.m_name);
       if (!ole.get()) {
-        MWAW_DEBUG_MSG(("TMWAWOleParser: error: can not find OLE part: \"%s\"\n", dOle.m_name.c_str()));
+        MWAW_DEBUG_MSG(("MWAWOLEParser: error: can not find OLE part: \"%s\"\n", dOle.m_name.c_str()));
         continue;
       }
 
-      std::string fName = libmwaw_libwpd::flattenOleName(dOle.m_name);
       libmwaw::DebugFile asciiFile(ole);
-      asciiFile.open(fName);
+      asciiFile.open(dOle.m_name);
 
       WPXBinaryData data;
       bool hasData = false;
@@ -386,7 +412,7 @@ bool TMWAWOleParser::parse(MWAWInputStreamPtr file)
         if (actualPos.naturalSize().x() > 0 && actualPos.naturalSize().y() > 0)
           potentialSize = actualPos;
 #ifdef DEBUG_WITH_FILES
-        libmwaw::Debug::dumpFile(data, fName.c_str());
+        libmwaw::Debug::dumpFile(data, dOle.m_name.c_str());
 #endif
       }
 
@@ -419,8 +445,8 @@ bool TMWAWOleParser::parse(MWAWInputStreamPtr file)
 // small structure
 //
 ////////////////////////////////////////
-bool TMWAWOleParser::readOle(MWAWInputStreamPtr ip, std::string const &oleName,
-                             libmwaw::DebugFile &ascii)
+bool MWAWOLEParser::readOle(MWAWInputStreamPtr ip, std::string const &oleName,
+                            libmwaw::DebugFile &ascii)
 {
   if (!ip.get()) return false;
 
@@ -452,8 +478,8 @@ bool TMWAWOleParser::readOle(MWAWInputStreamPtr ip, std::string const &oleName,
   return true;
 }
 
-bool TMWAWOleParser::readObjInfo(MWAWInputStreamPtr input, std::string const &oleName,
-                                 libmwaw::DebugFile &ascii)
+bool MWAWOLEParser::readObjInfo(MWAWInputStreamPtr input, std::string const &oleName,
+                                libmwaw::DebugFile &ascii)
 {
   if (strcmp(oleName.c_str(),"ObjInfo") != 0) return false;
 
@@ -473,8 +499,8 @@ bool TMWAWOleParser::readObjInfo(MWAWInputStreamPtr input, std::string const &ol
   return true;
 }
 
-bool TMWAWOleParser::readMM(MWAWInputStreamPtr input, std::string const &oleName,
-                            libmwaw::DebugFile &ascii)
+bool MWAWOLEParser::readMM(MWAWInputStreamPtr input, std::string const &oleName,
+                           libmwaw::DebugFile &ascii)
 {
   if (strcmp(oleName.c_str(),"MM") != 0) return false;
 
@@ -485,7 +511,7 @@ bool TMWAWOleParser::readMM(MWAWInputStreamPtr input, std::string const &oleName
   int entete = input->readULong(2);
   if (entete != 0x444e) {
     if (entete == 0x4e44) {
-      MWAW_DEBUG_MSG(("TMWAWOleParser::readMM: ERROR: endian mode probably bad, potentially bad PC/Mac mode detection.\n"));
+      MWAW_DEBUG_MSG(("MWAWOLEParser::readMM: ERROR: endian mode probably bad, potentially bad PC/Mac mode detection.\n"));
     }
     return false;
   }
@@ -530,7 +556,7 @@ bool TMWAWOleParser::readMM(MWAWInputStreamPtr input, std::string const &oleName
 }
 
 
-bool TMWAWOleParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleName, libmwaw::DebugFile &ascii)
+bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleName, libmwaw::DebugFile &ascii)
 {
   if (strncmp(oleName.c_str(), "CompObj", 7) != 0) return false;
 
@@ -564,7 +590,7 @@ bool TMWAWOleParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNa
     if (clsName)
       f << "'" << clsName << "'";
     else {
-      MWAW_DEBUG_MSG(("TMWAWOleParser::readCompObj: unknown clsid=%ld\n", clsData[0]));
+      MWAW_DEBUG_MSG(("MWAWOLEParser::readCompObj: unknown clsid=%ld\n", clsData[0]));
       f << "unknCLSID='" << std::hex << clsData[0] << "'";
     }
   } else {
@@ -647,7 +673,7 @@ bool TMWAWOleParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNa
 //
 //////////////////////////////////////////////////
 
-bool TMWAWOleParser::isOlePres(MWAWInputStreamPtr ip, std::string const &oleName)
+bool MWAWOLEParser::isOlePres(MWAWInputStreamPtr ip, std::string const &oleName)
 {
   if (!ip.get()) return false;
 
@@ -689,8 +715,8 @@ bool TMWAWOleParser::isOlePres(MWAWInputStreamPtr ip, std::string const &oleName
   return true;
 }
 
-bool TMWAWOleParser::readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWAWPosition &pos,
-                                 libmwaw::DebugFile &ascii)
+bool MWAWOLEParser::readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWAWPosition &pos,
+                                libmwaw::DebugFile &ascii)
 {
   data.clear();
   if (!isOlePres(ip, "OlePres")) return false;
@@ -790,7 +816,7 @@ bool TMWAWOleParser::readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWA
 //
 //////////////////////////////////////////////////
 
-bool TMWAWOleParser::isOle10Native(MWAWInputStreamPtr ip, std::string const &oleName)
+bool MWAWOLEParser::isOle10Native(MWAWInputStreamPtr ip, std::string const &oleName)
 {
   if (strncmp("Ole10Native",oleName.c_str(),11) != 0) return false;
 
@@ -806,9 +832,9 @@ bool TMWAWOleParser::isOle10Native(MWAWInputStreamPtr ip, std::string const &ole
   return true;
 }
 
-bool TMWAWOleParser::readOle10Native(MWAWInputStreamPtr ip,
-                                     WPXBinaryData &data,
-                                     libmwaw::DebugFile &ascii)
+bool MWAWOLEParser::readOle10Native(MWAWInputStreamPtr ip,
+                                    WPXBinaryData &data,
+                                    libmwaw::DebugFile &ascii)
 {
   if (!isOle10Native(ip, "Ole10Native")) return false;
 
@@ -844,10 +870,10 @@ bool TMWAWOleParser::readOle10Native(MWAWInputStreamPtr ip,
 //        or OO/filter/sources/msfilter/msdffimp.cxx ?
 //
 ////////////////////////////////////////////////////////////////
-bool TMWAWOleParser::readContents(MWAWInputStreamPtr input,
-                                  std::string const &oleName,
-                                  WPXBinaryData &pict, MWAWPosition &pos,
-                                  libmwaw::DebugFile &ascii)
+bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
+                                 std::string const &oleName,
+                                 WPXBinaryData &pict, MWAWPosition &pos,
+                                 libmwaw::DebugFile &ascii)
 {
   pict.clear();
   if (strcmp(oleName.c_str(),"Contents") != 0) return false;
@@ -880,20 +906,20 @@ bool TMWAWOleParser::readContents(MWAWInputStreamPtr input,
   f << std::dec << "bdbox1=(" << naturalSize[0] << "," << naturalSize[1]<<"),";
   f << "unk=" << input->readULong(4) << ","; // 24 or 32
   if (input->atEOS()) {
-    MWAW_DEBUG_MSG(("TMWAWOleParser: warning: Contents header length\n"));
+    MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents header length\n"));
     return false;
   }
   if (dim[0] > 0 && dim[0] < 3000 &&
       dim[1] > 0 && dim[1] < 3000)
     pos.setSize(Vec2f(dim[0],dim[1]));
   else {
-    MWAW_DEBUG_MSG(("TMWAWOleParser: warning: Contents odd size : %d %d\n", dim[0], dim[1]));
+    MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents odd size : %d %d\n", dim[0], dim[1]));
   }
   if (naturalSize[0] > 0 && naturalSize[0] < 5000 &&
       naturalSize[1] > 0 && naturalSize[1] < 5000)
     pos.setNaturalSize(Vec2f(naturalSize[0],naturalSize[1]));
   else {
-    MWAW_DEBUG_MSG(("TMWAWOleParser: warning: Contents odd naturalsize : %d %d\n", naturalSize[0], naturalSize[1]));
+    MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents odd naturalsize : %d %d\n", naturalSize[0], naturalSize[1]));
   }
 
   long actPos = input->tell();
@@ -903,7 +929,7 @@ bool TMWAWOleParser::readContents(MWAWInputStreamPtr input,
     input->seek(actPos+size+4, WPX_SEEK_SET);
     if (input->tell() != actPos+size+4 || !input->atEOS()) {
       ok = false;
-      MWAW_DEBUG_MSG(("TMWAWOleParser: warning: Contents unexpected file size=%ld\n",
+      MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents unexpected file size=%ld\n",
                       size));
     }
   }
@@ -931,7 +957,7 @@ bool TMWAWOleParser::readContents(MWAWInputStreamPtr input,
   }
 
   if (!ok) {
-    MWAW_DEBUG_MSG(("TMWAWOleParser: warning: read ole Contents: failed\n"));
+    MWAW_DEBUG_MSG(("MWAWOLEParser: warning: read ole Contents: failed\n"));
   }
   return ok;
 }
@@ -942,10 +968,10 @@ bool TMWAWOleParser::readContents(MWAWInputStreamPtr input,
 // we seem to contain the header of a EMF and then the EMF file
 //
 ////////////////////////////////////////////////////////////////
-bool TMWAWOleParser::readCONTENTS(MWAWInputStreamPtr input,
-                                  std::string const &oleName,
-                                  WPXBinaryData &pict, MWAWPosition &pos,
-                                  libmwaw::DebugFile &ascii)
+bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
+                                 std::string const &oleName,
+                                 WPXBinaryData &pict, MWAWPosition &pos,
+                                 libmwaw::DebugFile &ascii)
 {
   pict.clear();
   if (strcmp(oleName.c_str(),"CONTENTS") != 0) return false;
@@ -963,7 +989,7 @@ bool TMWAWOleParser::readCONTENTS(MWAWInputStreamPtr input,
 
   if (hSize <= 52 || input->seek(hSize+8,WPX_SEEK_SET) != 0
       || input->tell() != hSize+8) {
-    MWAW_DEBUG_MSG(("TMWAWOleParser: warning: CONTENTS headerSize=%d\n",
+    MWAW_DEBUG_MSG(("MWAWOLEParser: warning: CONTENTS headerSize=%d\n",
                     hSize));
     return false;
   }
@@ -1030,7 +1056,7 @@ bool TMWAWOleParser::readCONTENTS(MWAWInputStreamPtr input,
 
   if (dataLength <= 0 || input->seek(hSize+4+dataLength,WPX_SEEK_SET) != 0
       || input->tell() != hSize+4+dataLength || !input->atEOS()) {
-    MWAW_DEBUG_MSG(("TMWAWOleParser: warning: CONTENTS unexpected file length=%ld\n",
+    MWAW_DEBUG_MSG(("MWAWOLEParser: warning: CONTENTS unexpected file length=%ld\n",
                     dataLength));
     return false;
   }

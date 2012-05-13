@@ -56,17 +56,17 @@ public:
 
   //! returns the works version
   int version() const {
-    return m_worksVersion;
+    return m_version;
   }
   //! sets the works version
   void setVersion(int vers) {
-    m_worksVersion = vers;
+    m_version = vers;
   }
 
 protected:
   //! constructor (protected
   MWAWParser(MWAWInputStreamPtr input, MWAWHeader *header):
-    m_worksVersion (header->getMajorVersion()), m_asciiFile(input),
+    m_version (header->getMajorVersion()), m_asciiFile(input),
     m_input(input), m_header(header) {}
 
   //! returns the header
@@ -85,7 +85,7 @@ protected:
   }
 
   //! the actual version
-  uint8_t m_worksVersion;
+  uint8_t m_version;
 
   //! a DebugFile used to write what we recognize when we parse the document
   libmwaw::DebugFile &ascii() {

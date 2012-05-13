@@ -39,7 +39,7 @@
 #include "MWAWPosition.hxx"
 
 #include "MWAWCell.hxx"
-#include "MWAWTableHelper.hxx"
+#include "MWAWTable.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -1147,12 +1147,12 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
   pos = text->m_end = input->tell();
   // ok, we can insert the data
   std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it =
-    m_state->m_entryMap.find(zone->m_id);
+    m_state->m_entryMap.find(zone->id());
   if (it != m_state->m_entryMap.end()) {
-    MWAW_DEBUG_MSG(("FWText::readTextData: entry %d already exists\n", zone->m_id));
+    MWAW_DEBUG_MSG(("FWText::readTextData: entry %d already exists\n", zone->id()));
   }
   m_state->m_entryMap.insert
-  ( std::multimap<int, shared_ptr<FWTextInternal::Zone> >::value_type(zone->m_id, text));
+  ( std::multimap<int, shared_ptr<FWTextInternal::Zone> >::value_type(zone->id(), text));
 
   f.str("");
   f << "TextData-b:";
@@ -1736,7 +1736,7 @@ void FWText::sortZones()
       pagesLimits[2*i+3]=pagesLimits[2*i+1];
       m_state->m_mainZones[i+1]=m_state->m_mainZones[i];
     }
-    m_state->m_mainZones[pos] = zone->m_zone->m_id;
+    m_state->m_mainZones[pos] = zone->m_zone->id();
     pagesLimits[2*pos] = fPage;
     pagesLimits[2*pos+1] = lPage;
     numZones++;

@@ -1125,7 +1125,7 @@ bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
     if (nChar==0) continue;
 
     MWAWEntry entry;
-    entry.setTextId(unkn);
+    entry.setId(unkn);
     entry.setBegin((bl-1)*0x100);
     entry.setLength(nChar);
     res.push_back(entry);

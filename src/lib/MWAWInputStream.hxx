@@ -33,13 +33,14 @@
 #include <stdint.h>
 #include <fstream>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "libmwaw_tools.hxx"
 
 #include <libwpd-stream/WPXStream.h>
 
-#include "DMWAWOLEStream.hxx"
+#include "MWAWOLEStream.hxx"
 #include "libmwaw_tools.hxx"
 
 class WPXBinaryData;
@@ -144,9 +145,9 @@ public:
   //! return true if the stream is ole
   bool isOLEStream();
   //! return the list of all ole zone
-  std::vector<std::string> allOLEEntries();
+  std::vector<std::string> getOLENames();
   //! return a new stream for a ole zone
-  shared_ptr<MWAWInputStream> getDocumentOLEStream(const char *name);
+  shared_ptr<MWAWInputStream> getDocumentOLEStream(std::string name);
 
 
 protected:
@@ -179,7 +180,7 @@ protected:
   std::vector<long> m_prevLimits;
 
   //! the ole storage
-  libmwaw_libwpd::Storage *m_storageOLE;
+  libmwaw::Storage *m_storageOLE;
 };
 
 //! a smart point of MWAWInputStream

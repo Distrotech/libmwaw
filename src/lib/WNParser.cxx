@@ -398,7 +398,7 @@ bool WNParser::createZones()
     ascii().addPos(ent.begin());
     f.str("");
     f << "Entries(" << iter->first << ")";
-    if (ent.m_id >= 0) f << "[" << ent.m_id << "]";
+    if (ent.id() >= 0) f << "[" << ent.id() << "]";
     ascii().addNote(f.str().c_str());
     ascii().addPos(ent.end());
     ascii().addNote("_");
@@ -469,7 +469,7 @@ bool WNParser::readDocEntries()
   for (int i = 0; i < 10; i++) {
     WNEntry entry = readEntry();
     entry.setType(entryName[i]);
-    if (i < 3) entry.m_id=i;
+    if (i < 3) entry.setId(i);
     if (entry.isZone())
       m_entryManager->add(entry);
     f << entry;
@@ -529,7 +529,7 @@ bool WNParser::readDocEntriesV2()
     case 1:
     case 2:
       entry.setType("TextZone");
-      entry.m_id=i;
+      entry.setId(i);
       break;
     case 4:
       entry.setType("PrintZone");
@@ -601,7 +601,7 @@ bool WNParser::parseGraphicZone(WNEntry const &entry)
     else
       f << "GraphicZone-" << i-8 << ":";
 
-    entry.m_id=(i < 8) ? i : i-8;
+    entry.setId((i < 8) ? i : i-8);
     if (entry.isZone()) {
       if (i == 0)
         entry.setType("PrintZone");

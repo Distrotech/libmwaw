@@ -39,7 +39,7 @@
 #include "MWAWPosition.hxx"
 
 #include "MWAWCell.hxx"
-#include "MWAWTableHelper.hxx"
+#include "MWAWTable.hxx"
 
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
@@ -449,9 +449,9 @@ struct ContentZones {
 
 ////////////////////////////////////////
 //! Internal: the cell of a WNText
-struct Cell : public MWAWTableHelperCell {
+struct Cell : public MWAWTableCell {
   //! constructor
-  Cell(WNText &parser) : MWAWTableHelperCell(), m_parser(parser),
+  Cell(WNText &parser) : MWAWTableCell(), m_parser(parser),
     m_color(255,255,255), m_borderList(0),
     m_zonesList(), m_footnoteList() {}
 
@@ -461,7 +461,7 @@ struct Cell : public MWAWTableHelperCell {
     MWAWCell cell;
     cell.position() = m_position;
     cell.setBorders(m_borderList);
-    cell.setNumSpannedCells(m_numSpan);
+    cell.setNumSpannedCells(m_numberCellSpanned);
 
     WPXPropertyList propList;
     if (m_color[0] != 255 || m_color[1] != 255 || m_color[2] != 255) {
@@ -495,9 +495,9 @@ struct Cell : public MWAWTableHelperCell {
 
 ////////////////////////////////////////
 ////////////////////////////////////////
-struct Table : public MWAWTableHelper {
+struct Table : public MWAWTable {
   //! constructor
-  Table() : MWAWTableHelper() {
+  Table() : MWAWTable() {
   }
 
   //! return a cell corresponding to id
@@ -506,7 +506,7 @@ struct Table : public MWAWTableHelper {
       MWAW_DEBUG_MSG(("WNTextInternal::Table::get: cell %d does not exists\n",id));
       return 0;
     }
-    return reinterpret_cast<Cell *>(MWAWTableHelper::get(id).get());
+    return reinterpret_cast<Cell *>(MWAWTable::get(id).get());
   }
 };
 
@@ -661,7 +661,7 @@ bool WNText::createZones()
   while (iter != m_entryManager->m_typeMap.end()) {
     if (iter->first != "TextZone")
       break;
-    int id = iter->second->m_id;
+    int id = iter->second->id();
     if (id < 0 || id > 2) {
       MWAW_DEBUG_MSG(("WNText::createZones: find odd zone type:%d\n",id));
       iter++;
@@ -689,7 +689,7 @@ bool WNText::createZones()
       }
 
       // ok we must create the data
-      data.m_id=numData++;
+      data.setId(numData++);
       shared_ptr<WNTextInternal::ContentZones> zone;
       if (m_entryManager->add(data))
         zone = parseContent(m_entryManager->m_posMap.find(data.begin())->second);
@@ -792,7 +792,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
   }
 
   libmwaw::DebugStream f;
-  f << "Entries(TextData)[" << entry.m_id << "]:";
+  f << "Entries(TextData)[" << entry.id() << "]:";
   long val;
   shared_ptr<WNTextInternal::ContentZones> text;
   if (vers >= 3) {
@@ -808,7 +808,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
 
     text.reset(new WNTextInternal::ContentZones);
     text->m_entry = entry;
-    text->m_id = entry.m_id;
+    text->m_id = entry.id();
 
     f << std::hex << "fl=" << entry.m_val[0] << std::dec << ",";
     f << "ptr?=" << std::hex << m_input->readULong(4) << std::dec << ",";
@@ -830,7 +830,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
 
     text.reset(new WNTextInternal::ContentZones);
     text->m_entry = entry;
-    text->m_id = entry.m_id;
+    text->m_id = entry.id();
   }
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
@@ -940,7 +940,7 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
 
   libmwaw::DebugStream f;
   f << "Entries(TextZone)[";
-  switch(entry.m_id) {
+  switch(entry.id()) {
   case 0:
     f << "main";
     break;
@@ -951,7 +951,7 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
     f << "note";
     break;
   default:
-    f << entry.m_id << "#";
+    f << entry.id() << "#";
     break;
   }
   f << "]:";

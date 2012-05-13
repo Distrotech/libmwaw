@@ -31,8 +31,8 @@
  *     - a namespace used to convert Mac font characters in unicode
  */
 
-#ifndef MWAW_MWAW_FONT
-#  define MWAW_MWAW_FONT
+#ifndef MWAW_FONT_CONVERTER
+#  define MWAW_FONT_CONVERTER
 
 #  include <assert.h>
 #  include <string>
@@ -40,10 +40,10 @@
 
 #  include "libmwaw_tools.hxx"
 
-/** some Macintosh tools */
-namespace libmwaw_tools_mac
+namespace MWAWFontConverterInternal
 {
-class FontManager;
+class State;
+}
 
 /*! \brief a namespace used to convert Mac font characters in unicode
  *
@@ -56,13 +56,13 @@ class FontManager;
  * A font also consists in 256 independent characters which are not normalised
  * (and a user can easily modify a characters of a font).
  */
-class Font
+class MWAWFontConverter
 {
 public:
   //! the constructor
-  Font();
+  MWAWFontConverter();
   //! the destructor
-  ~Font();
+  ~MWAWFontConverter();
 
   //! returns an unique id > 255, if unknown
   int getId(std::string const &name) const;
@@ -85,10 +85,8 @@ public:
 
 protected:
   //! the main manager
-  mutable shared_ptr<FontManager> m_manager;
+  mutable shared_ptr<MWAWFontConverterInternal::State> m_manager;
 };
-
-}
 
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

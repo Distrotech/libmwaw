@@ -41,7 +41,7 @@
 #include "MWAWPosition.hxx"
 
 #include "MWAWCell.hxx"
-#include "MWAWTableHelper.hxx"
+#include "MWAWTable.hxx"
 #include "MWAWStruct.hxx"
 #include "MWAWTools.hxx"
 #include "MWAWContentListener.hxx"
@@ -76,15 +76,15 @@ struct Border {
   int m_flags;
 };
 
-struct Cell : public MWAWTableHelperCell {
-  Cell() : MWAWTableHelperCell(), m_size(), m_zoneId(0), m_styleId(-1) {
+struct Cell : public MWAWTableCell {
+  Cell() : MWAWTableCell(), m_size(), m_zoneId(0), m_styleId(-1) {
   }
 
   virtual bool send(MWAWContentListenerPtr listener) {
     if (!listener) return true;
     MWAWCell cell;
     cell.position() = m_position;
-    cell.setNumSpannedCells(m_numSpan);
+    cell.setNumSpannedCells(m_numberCellSpanned);
 
     listener->openTableCell(cell, WPXPropertyList());
     listener->insertCharacter(' ');
@@ -100,7 +100,7 @@ struct Cell : public MWAWTableHelperCell {
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Cell const &cell) {
-    o << reinterpret_cast<MWAWTableHelperCell const &>(cell);
+    o << reinterpret_cast<MWAWTableCell const &>(cell);
     Vec2f sz = cell.m_size;
     o << "size=" << sz << ",";
     if (cell.m_zoneId) o << "zone=" << cell.m_zoneId << ",";
@@ -124,10 +124,10 @@ struct Cell : public MWAWTableHelperCell {
 
 ////////////////////////////////////////
 ////////////////////////////////////////
-struct Table : public CWStruct::DSET, public MWAWTableHelper {
+struct Table : public CWStruct::DSET, public MWAWTable {
   //! constructor
   Table(CWStruct::DSET const dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset),MWAWTableHelper(), m_bordersList(), m_parsed(false) {
+    CWStruct::DSET(dset),MWAWTable(), m_bordersList(), m_parsed(false) {
   }
 
   //! operator<<
@@ -141,7 +141,7 @@ struct Table : public CWStruct::DSET, public MWAWTableHelper {
       MWAW_DEBUG_MSG(("CWTableInteral::Table::get: cell %d does not exists\n",id));
       return 0;
     }
-    return reinterpret_cast<Cell *>(MWAWTableHelper::get(id).get());
+    return reinterpret_cast<Cell *>(MWAWTable::get(id).get());
   }
 
   std::vector<Border> m_bordersList;

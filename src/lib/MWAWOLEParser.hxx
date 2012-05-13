@@ -1,5 +1,5 @@
 /* -*- Mode: C++; c-default-style: "k&r"; indent-tabs-mode: nil; tab-width: 2; c-basic-offset: 2 -*- */
-/* libwpd
+/* libmwaw
  * Copyright (C) 2009, 2011 Alonso Laurent (alonso@loria.fr)
  * Copyright (C) 2006, 2007 Andrew Ziem
  * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
@@ -59,24 +59,20 @@
 #ifndef MWAW_OLE_PARSER_H
 #define MWAW_OLE_PARSER_H
 
-#include <list>
-#include <map>
 #include <string>
 #include <vector>
-#include <libwpd/WPXBinaryData.h>
-#include <libwpd/WPXString.h>
 
 #include <libwpd-stream/WPXStream.h>
 
 #include "libmwaw_tools.hxx"
 #include "MWAWInputStream.hxx"
-#include "MWAWPosition.hxx"
 
 #include "MWAWDebug.hxx"
 
 class WPXBinaryData;
+class MWAWPosition;
 
-namespace TMWAWOleParserInternal
+namespace MWAWOLEParserInternal
 {
 class CompObj;
 }
@@ -84,15 +80,15 @@ class CompObj;
 /** \brief a class used to parse some basic oles
     Tries to read the different ole parts and stores their contents in form of picture.
  */
-class TMWAWOleParser
+class MWAWOLEParser
 {
 public:
   /** constructor
       \param mainName: name of the main ole, we must avoid to parse */
-  TMWAWOleParser(char const *mainName);
+  MWAWOLEParser(std::string mainName);
 
   /** destructor */
-  ~TMWAWOleParser();
+  ~MWAWOLEParser();
 
   /** tries to parse basic OLE (excepted mainName)
       \return false if fileInput is not an Ole file */
@@ -117,31 +113,12 @@ public:
   }
 
   //! returns the picture corresponding to an id
-  bool getObject(int id, WPXBinaryData &obj, MWAWPosition &pos)  const {
-    for (int i = 0; i < int(m_objectsId.size()); i++) {
-      if (m_objectsId[i] != id) continue;
-      obj = m_objects[i];
-      pos = m_objectsPosition[i];
-      return true;
-    }
-    obj.clear();
-    return false;
-  }
+  bool getObject(int id, WPXBinaryData &obj, MWAWPosition &pos) const;
 
   /*! \brief sets an object
    * just in case, the external parsing find another representation
    */
-  void setObject(int id, WPXBinaryData const &obj, MWAWPosition const &pos) {
-    for (int i = 0; i < int(m_objectsId.size()); i++) {
-      if (m_objectsId[i] != id) continue;
-      m_objects[i] = obj;
-      m_objectsPosition[i] = pos;
-      return;
-    }
-    m_objects.push_back(obj);
-    m_objectsPosition.push_back(pos);
-    m_objectsId.push_back(id);
-  }
+  void setObject(int id, WPXBinaryData const &obj, MWAWPosition const &pos);
 
 protected:
 
@@ -198,7 +175,7 @@ protected:
   std::vector<int> m_objectsId;
 
   //! a smart ptr used to stored the list of compobj id->name
-  shared_ptr<TMWAWOleParserInternal::CompObj> m_compObjIdName;
+  shared_ptr<MWAWOLEParserInternal::CompObj> m_compObjIdName;
 
 };
 

@@ -35,11 +35,11 @@
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
-#include "TMWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 
 namespace MWAWTools
 {
-Convertissor::Convertissor() : m_fontManager(new libmwaw_tools_mac::Font)
+Convertissor::Convertissor() : m_fontManager(new MWAWFontConverter)
 { }
 Convertissor::~Convertissor() {}
 

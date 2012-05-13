@@ -47,7 +47,7 @@ namespace libmwaw
 //! debugging tools
 namespace Debug
 {
-//! a debug function to store in a datafile
+//! a debug function to store in a datafile in the current directory
 //! WARNING: this function erase the file fileName if it exists
 //! (if debug_with_files is not defined, does nothing)
 bool dumpFile(WPXBinaryData &data, char const *fileName);
@@ -88,12 +88,6 @@ public:
   }
   //! flushes the file
   void write();
-  //! flushes the file and adds a last remark
-  void writeAndAddRem(std::string const &s) {
-    write();
-    if (m_on) m_file << s << "\n";
-  }
-
   //! adds a new position in the file
   void addPos(long pos);
   //! adds a note in the file, in actual position
@@ -171,6 +165,11 @@ inline bool dumpFile(WPXBinaryData &, char const *)
 {
   return true;
 }
+//! returns a file name from an ole/... name
+inline std::string flattenFileName(std::string const &name)
+{
+  return name;
+}
 }
 
 class DebugStream
@@ -204,7 +203,6 @@ public:
   void addDelimiter(long, char) {}
 
   void write() {}
-  void writeAndAddRem(std::string const &) { }
   void reset() { }
 
   void skipZone(int , int ) {}

@@ -33,32 +33,30 @@
  *
  */
 
-#include <iostream>
-#include <string>
-#include <vector>
+#ifndef MWAW_TABLE_HELPER
+#  define MWAW_TABLE_HELPER
 
-#include <libwpd/WPXString.h>
+#include <iostream>
+#include <vector>
 
 #include "libmwaw_internal.hxx"
 
 class MWAWContentListener;
 typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
-#ifndef MWAW_TABLE_HELPER
-#  define MWAW_TABLE_HELPER
 
-class MWAWTableHelper;
+class MWAWTable;
 
 /** a virtual structure used to store/send a cell to a listener */
-class MWAWTableHelperCell
+class MWAWTableCell
 {
-  friend class MWAWTableHelper;
+  friend class MWAWTable;
 public:
   //! constructor
-  MWAWTableHelperCell() : m_box(), m_position(-1,-1), m_numSpan() {
+  MWAWTableCell() : m_box(), m_position(-1,-1), m_numberCellSpanned() {
   }
   //! destructor
-  virtual ~MWAWTableHelperCell() { }
+  virtual ~MWAWTableCell() { }
   //! set the bounding box (units in point)
   void setBox(Box2f const &box) {
     m_box = box;
@@ -69,10 +67,10 @@ public:
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, MWAWTableHelperCell const &cell) {
+  friend std::ostream &operator<<(std::ostream &o, MWAWTableCell const &cell) {
     if (cell.m_position.x() >= 0) {
       o << "pos=" << cell.m_position << ",";
-      if (cell.m_numSpan[0]!=1 || cell.m_numSpan[1]!=1)
+      if (cell.m_numberCellSpanned[0]!=1 || cell.m_numberCellSpanned[1]!=1)
         o << "span=" << cell.m_position << ",";
     }
     o << "box=" << cell.m_box << ",";
@@ -91,7 +89,7 @@ protected:
     Compare(int dim) : m_coord(dim) {}
     //! small structure to define a cell point
     struct Point {
-      Point(int wh, MWAWTableHelperCell const *cell) : m_which(wh), m_cell(cell) {}
+      Point(int wh, MWAWTableCell const *cell) : m_which(wh), m_cell(cell) {}
       float getPos(int coord) const {
         if (m_which)
           return m_cell->box().max()[coord];
@@ -101,7 +99,7 @@ protected:
         return m_cell->box().size()[coord];
       }
       int m_which;
-      MWAWTableHelperCell const *m_cell;
+      MWAWTableCell const *m_cell;
     };
 
     //! comparaison function
@@ -125,20 +123,20 @@ protected:
   Box2f m_box;
 
   /** the final position in the table */
-  Vec2i m_position, m_numSpan /** the number of cell span */;
+  Vec2i m_position, m_numberCellSpanned /** the number of cell span */;
 };
 
-class MWAWTableHelper
+class MWAWTable
 {
 public:
   //! the constructor
-  MWAWTableHelper() : m_cellsList(), m_rowsSize(), m_colsSize() {}
+  MWAWTable() : m_cellsList(), m_rowsSize(), m_colsSize() {}
 
   //! the destructor
-  virtual ~MWAWTableHelper();
+  virtual ~MWAWTable();
 
   //! add a new cells
-  void add(shared_ptr<MWAWTableHelperCell> cell) {
+  void add(shared_ptr<MWAWTableCell> cell) {
     m_cellsList.push_back(cell);
   }
 
@@ -147,7 +145,7 @@ public:
     return m_cellsList.size();
   }
   //! returns the i^th cell
-  shared_ptr<MWAWTableHelperCell> get(int id);
+  shared_ptr<MWAWTableCell> get(int id);
 
   /** try to send the table
 
@@ -163,7 +161,7 @@ protected:
   bool buildStructures();
 
   /** the list of cells */
-  std::vector<shared_ptr<MWAWTableHelperCell> > m_cellsList;
+  std::vector<shared_ptr<MWAWTableCell> > m_cellsList;
   /** the final row and col size (in point) */
   std::vector<float> m_rowsSize, m_colsSize;
 };

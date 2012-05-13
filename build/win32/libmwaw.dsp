@@ -115,7 +115,7 @@ SOURCE=..\..\src\lib\DMWAWContentListener.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMWAWOLEStream.cxx
+SOURCE=..\..\src\lib\MWAWOLEStream.cxx
 # End Source File
 # Begin Source File
 
@@ -151,7 +151,11 @@ SOURCE=..\..\src\lib\MWAWList.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWTableHelper.cxx
+SOURCE=..\..\src\lib\MWAWSubDocument.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWTable.cxx
 # End Source File
 # Begin Source File
 
@@ -199,7 +203,7 @@ SOURCE=..\..\src\lib\MWAWDebug.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\TMWAWFont.cxx
+SOURCE=..\..\src\lib\MWAWFontConverter.cxx
 # End Source File
 # Begin Source File
 
@@ -207,7 +211,7 @@ SOURCE=..\..\src\lib\MWAWInputStream.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\TMWAWOleParser.cxx
+SOURCE=..\..\src\lib\MWAWOLEParser.cxx
 # End Source File
 # Begin Source File
 
@@ -295,7 +299,7 @@ SOURCE=..\..\src\lib\DMWAWContentListener.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMWAWOLEStream.hxx
+SOURCE=..\..\src\lib\MWAWOLEStream.hxx
 # End Source File
 # Begin Source File
 
@@ -343,7 +347,7 @@ SOURCE=..\..\src\lib\MWAWSubDocument.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWTableHelper.hxx
+SOURCE=..\..\src\lib\MWAWTable.hxx
 # End Source File
 # Begin Source File
 
@@ -391,7 +395,7 @@ SOURCE=..\..\src\lib\MWAWDebug.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\TMWAWFont.hxx
+SOURCE=..\..\src\lib\MWAWFontConverter.hxx
 # End Source File
 # Begin Source File
 
@@ -399,7 +403,7 @@ SOURCE=..\..\src\lib\MWAWInputStream.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\TMWAWOleParser.hxx
+SOURCE=..\..\src\lib\MWAWOLEParser.hxx
 # End Source File
 # Begin Source File
 
@@ -464,14 +468,6 @@ SOURCE=..\..\src\lib\libmwaw_internal.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\libmwaw_libwpd.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\libmwaw_libwpd_math.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\libmwaw_libwpd_types.hxx
 # End Source File
 # Begin Source File
 

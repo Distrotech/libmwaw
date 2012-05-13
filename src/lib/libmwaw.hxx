@@ -41,5 +41,6 @@ typedef class MWAWDocument IMWAWDocument;
 typedef enum MWAWConfidence IMWAWConfidence;
 
 #define IMWAW_CONFIDENCE_NONE MWAW_CONFIDENCE_NONE
+#define IMWAW_OK MWAW_OK
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

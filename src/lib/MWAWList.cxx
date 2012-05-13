@@ -37,7 +37,7 @@
 
 #include "MWAWList.hxx"
 
-void MWAWList::Level::addTo(WPXPropertyList &propList, double /*actTextPosition*/, double /*listBeginPos*/, int startVal) const
+void MWAWList::Level::addTo(WPXPropertyList &propList, int startVal) const
 {
   propList.insert("text:min-label-width", m_labelWidth);
   propList.insert("text:space-before", m_labelIndent);
@@ -65,19 +65,6 @@ void MWAWList::Level::addTo(WPXPropertyList &propList, double /*actTextPosition*
   default:
     MWAW_DEBUG_MSG(("MWAWList::Level::addTo: the level type is not set\n"));
   }
-
-#if 0
-  std::cout << "Send level : " << *this << "(" << startVal << ")\n";
-  static Type lastType=DEFAULT;
-  static std::vector<bool> seenTypes;
-  if (lastType == DEFAULT)
-    seenTypes.resize(int(UPPER_ROMAN)-int(DEFAULT)+1,false);
-  if (lastType != m_type) {
-    if (!seenTypes[int(m_type)-int(DEFAULT)]) seenTypes[int(m_type)-int(DEFAULT)]=true;
-    else std::cout << "Type " << int(m_type) << " RESTARTS!!!!!!!\n";
-    lastType = m_type;
-  }
-#endif
 
   m_sendToInterface = true;
 }
@@ -143,24 +130,18 @@ void MWAWList::setId(int newId)
     m_levels[i].resetSendToInterface();
 }
 
-bool MWAWList::mustSendLevel(int level, double actTextPosition,
-                             double listBeginPos) const
+bool MWAWList::mustSendLevel(int level) const
 {
   if (level <= 0 || level > int(m_levels.size()) ||
       m_levels[level-1].isDefault()) {
     MWAW_DEBUG_MSG(("MWAWList::mustResentLevel: level %d is not defined\n",level));
     return false;
   }
-  if (m_lastActTextPosition[level-1]!= actTextPosition
-      || m_lastListBeginPos[level-1]!=listBeginPos
-      || !m_levels[level-1].isSendToInterface()) return true;
-
-  return false;
+  return !m_levels[level-1].isSendToInterface();
 }
 
 
-void MWAWList::sendTo(WPXDocumentInterface &docInterface, int level,
-                      double actTextPosition, double listBeginPos) const
+void MWAWList::sendTo(WPXDocumentInterface &docInterface, int level) const
 {
   if (level <= 0 || level > int(m_levels.size()) ||
       m_levels[level-1].isDefault()) {
@@ -174,18 +155,12 @@ void MWAWList::sendTo(WPXDocumentInterface &docInterface, int level,
     m_id = falseId++;
   }
 
-  bool needResend = (m_lastActTextPosition[level-1]!= actTextPosition)
-                    || (m_lastListBeginPos[level-1]!=listBeginPos);
-  m_lastActTextPosition[level-1] = actTextPosition;
-  m_lastListBeginPos[level-1]=listBeginPos;
-
-  if (!needResend && m_levels[level-1].isSendToInterface()) return;
+  if (m_levels[level-1].isSendToInterface()) return;
 
   WPXPropertyList propList;
   propList.insert("libwpd:id", m_id);
   propList.insert("libwpd:level", level);
-  m_levels[level-1].addTo(propList,actTextPosition,listBeginPos,
-                          m_actualIndices[level-1]);
+  m_levels[level-1].addTo(propList, m_actualIndices[level-1]);
   if (!m_levels[level-1].isNumeric())
     docInterface.defineUnorderedListLevel(propList);
   else
@@ -202,16 +177,10 @@ void MWAWList::set(int levl, Level const &level)
     m_levels.resize(levl);
     m_actualIndices.resize(levl, 0);
     m_nextIndices.resize(levl, 1);
-    m_lastListBeginPos.resize(levl,-1000.);
-    m_lastActTextPosition.resize(levl,-1000.);
   }
   int needReplace = m_levels[levl-1].cmp(level) != 0 ||
                     (level.m_startValue && m_nextIndices[levl-1] !=level.getStartValue());
   if (level.m_startValue > 0 || level.m_type != m_levels[levl-1].m_type) {
-#if 0
-    if (level.isNumeric() && (m_levels[levl-1].isNumeric() || level.m_startValue > 1))
-      std::cout << "StartValue force RESTARTS!!!!!!!\n";
-#endif
     m_nextIndices[levl-1]=level.getStartValue();
   }
   if (needReplace) m_levels[levl-1] = level;

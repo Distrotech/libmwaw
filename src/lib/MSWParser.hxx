@@ -76,12 +76,23 @@ class MSWText;
 
 //! the entry of MSWParser
 struct MSWEntry : public MWAWEntry {
-  MSWEntry() : MWAWEntry(), m_id(-1) {
+  MSWEntry() : MWAWEntry(), m_textId(-1) {
+  }
+  /** \brief returns the text id
+   *
+   * This field is used to differentiate main text, header, ...)
+   */
+  int textId() const {
+    return m_textId;
+  }
+  //! sets the text id
+  void setTextId(int id) {
+    m_textId = id;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, MSWEntry const &entry);
-  //! the identificator
-  int m_id;
+  //! the text identificator
+  int m_textId;
 };
 
 /** \brief the main class to read a Microsoft Word file

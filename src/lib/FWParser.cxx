@@ -357,7 +357,7 @@ bool FWParser::createZones()
         }
         break;
       default:
-        if (zone->m_id == m_state->m_biblioId) {
+        if (zone->id() == m_state->m_biblioId) {
           MWAW_DEBUG_MSG(("FWParser::createZones: find a bibliography zone: unparsed\n"));
           zone->setType("Biblio");
         } else {
@@ -636,7 +636,7 @@ bool FWParser::readGraphic(shared_ptr<FWEntry> zone)
   input->seek(sz, WPX_SEEK_CUR);
 
   m_state->m_graphicMap.insert
-  (std::multimap<int, shared_ptr<FWEntry> >::value_type(zone->m_id, zone));
+  (std::multimap<int, shared_ptr<FWEntry> >::value_type(zone->id(), zone));
 
   pos = input->tell();
   if (pos == zone->end())
@@ -753,7 +753,7 @@ bool FWParser::readZoneFlags(shared_ptr<FWEntry> zone)
         MWAW_DEBUG_MSG(("FWParser::readZoneFlags: can not find entry %d\n",id));
       }
       entry.reset(new FWEntry(input));
-      entry->m_id = id;
+      entry->setId(id);
     } else
       entry = it->second;
     f.str("");
@@ -805,7 +805,7 @@ bool FWParser::readZoneFlags(shared_ptr<FWEntry> zone)
     f << *entry << ",";
     f << extra;
 
-    if (entry->m_id < 0) {
+    if (entry->id() < 0) {
       if (entry->m_typeId != -2) {
         MWAW_DEBUG_MSG(("FWParser::readZoneFlags: find a null zone with unexpected type\n"));
       }
@@ -848,7 +848,7 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
 
     shared_ptr<FWEntry> entry(new FWEntry(input));
     entry->setType("Unknown");
-    entry->m_id = i;
+    entry->setId(i);
     entry->m_nextId = input->readLong(2);
     int id = input->readLong(2);
     if (fPos >= 0) {
@@ -868,7 +868,7 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
 
     input->seek(pos+dataSz, WPX_SEEK_SET);
 
-    entry->m_extra = f.str();
+    entry->setExtra(f.str());
     f.str("");
     if (i == 0) f << "Entries(ZonePos):";
     else f << "ZonePos" << i << ":";
@@ -1122,7 +1122,7 @@ void FWParser::flushExtra()
 ////////////////////////////////////////
 //  the definition of a zone in the file
 ////////////////////////////////////////
-FWEntry::FWEntry(MWAWInputStreamPtr input) : MWAWEntry(), m_input(input), m_id(-1), m_flagsId(-1), m_nextId(-2), m_typeId(-1), m_data(), m_asciiFile(), m_extra("")
+FWEntry::FWEntry(MWAWInputStreamPtr input) : MWAWEntry(), m_input(input), m_flagsId(-1), m_nextId(-2), m_typeId(-1), m_data(), m_asciiFile()
 {
   for (int i = 0; i < 3; i++)
     m_values[i] = 0;
@@ -1136,7 +1136,7 @@ std::ostream &operator<<(std::ostream &o, FWEntry const &entry)
 {
   if (entry.type().length()) {
     o << entry.type();
-    if (entry.m_id >= 0) o << "[" << entry.m_id << "]";
+    if (entry.id() >= 0) o << "[" << entry.id() << "]";
     o << ",";
   }
   if (entry.m_flagsId != -1) {
@@ -1190,7 +1190,7 @@ bool FWEntry::operator==(const FWEntry &a) const
 {
   if (MWAWEntry::operator!=(a)) return false;
   if (m_input.get() != a.m_input.get()) return false;
-  if (m_id != a.m_id) return false;
+  if (id() != a.id()) return false;
   if (m_nextId != a.m_nextId) return false;
   if (m_typeId != a.m_typeId) return false;
   if (m_flagsId != a.m_flagsId) return false;

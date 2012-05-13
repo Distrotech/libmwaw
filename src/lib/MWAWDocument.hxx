@@ -27,17 +27,17 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#ifndef IMWAWDOCUMENT_H
-#define IMWAWDOCUMENT_H
+#ifndef MWAWDOCUMENT_H
+#define MWAWDOCUMENT_H
 
 #ifdef _WINDLL
 #  ifdef BUILD_MWAW
-#    define IMWAWLIB _declspec(dllexport)
+#    define MWAWLIB _declspec(dllexport)
 #  else
-#    define IMWAWLIB _declspec(dllimport)
+#    define MWAWLIB _declspec(dllimport)
 #  endif
 #else
-#  define IMWAWLIB
+#  define MWAWLIB
 #endif
 
 
@@ -78,9 +78,9 @@ public:
                       K_PAINT, K_PRESENTATION, K_SPREADSHEET, K_DATABASE
                     };
 
-  static IMWAWLIB MWAWConfidence isFileFormatSupported(WPXInputStream *input, DocumentType &type, DocumentKind &kind);
-  static IMWAWLIB MWAWResult parse(WPXInputStream *input, WPXDocumentInterface *documentInterface);
+  static MWAWLIB MWAWConfidence isFileFormatSupported(WPXInputStream *input, DocumentType &type, DocumentKind &kind);
+  static MWAWLIB MWAWResult parse(WPXInputStream *input, WPXDocumentInterface *documentInterface);
 };
 
-#endif /* IMWAWDOCUMENT_H */
+#endif /* MWAWDOCUMENT_H */
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

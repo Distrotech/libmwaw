@@ -36,22 +36,22 @@
 */
 
 /*
- This file taken from libwpd WPXOLEStream.cpp 1.5 Thu Aug 17 21:21:30 2006
- and sligthly modified, look for MWAW...
+ This file taken from libwpd WPXOLEStream.cpp
 */
 
-#include <sstream>
+#include <cstring>
 #include <iostream>
 #include <list>
+#include <set>
+#include <sstream>
 #include <string>
 #include <vector>
 
-#include "DMWAWOLEStream.hxx"
-#include <string.h>
+#include "libwpd-stream/WPXStream.h"
 
-#define DEBUG_OLE 0
+#include "MWAWOLEStream.hxx"
 
-namespace libmwaw_libwpd
+namespace libmwaw
 {
 
 class Header
@@ -71,9 +71,7 @@ public:
 
   Header();
   bool valid();
-  void load( const unsigned char *buffer );
-  void save( unsigned char *buffer );
-  void debug();
+  void load( const unsigned char *buffer, unsigned long size );
 };
 
 class AllocTable
@@ -88,14 +86,10 @@ public:
   void clear();
   unsigned long count();
   void resize( unsigned long newsize );
-  void preserve( unsigned long n );
   void set( unsigned long index, unsigned long val );
-  unsigned unused();
-  void setChain( std::vector<unsigned long> );
   std::vector<unsigned long> follow( unsigned long start );
   unsigned long operator[](unsigned long index );
   void load( const unsigned char *buffer, unsigned len );
-  void save( unsigned char *buffer );
 private:
   std::vector<unsigned long> data;
   AllocTable( const AllocTable & );
@@ -121,36 +115,18 @@ class DirTree
 {
 public:
   static const unsigned End;
-  DirTree() : entries() {
-    clear();
-  }
+  DirTree();
   void clear();
-  unsigned entryCount() {
-    return entries.size();
-  }
+  unsigned entryCount();
   DirEntry *entry( unsigned index );
   DirEntry *entry( const std::string &name );
-  int indexOf( DirEntry *e );
-  int parent( unsigned index );
-  std::string fullName( unsigned index );
-  std::vector<unsigned> children( unsigned index );
   unsigned find_child( unsigned index, const std::string &name );
   void load( unsigned char *buffer, unsigned len );
-  void save( unsigned char *buffer );
+  std::vector<std::string> getOLENames();
 
-public: // OSNOLA: add for MWAW
-  std::vector<unsigned> getValidIndices(bool onlyDataEntries) {
-    unsigned count = entryCount();
-    std::vector<unsigned> res;
-    for (unsigned i = 0; i < count; i++) {
-      DirEntry *p = entry( i );
-      if (!p || !p->valid) continue;
-      if (onlyDataEntries && p->dir) continue;
-      res.push_back(i);
-    }
-    return res;
-  }
 private:
+  void getOLENames(unsigned index, const std::string &prefix,
+                   std::vector<std::string> &res, std::set<unsigned> &seen);
   std::vector<DirEntry> entries;
   DirTree( const DirTree & );
   DirTree &operator=( const DirTree & );
@@ -160,9 +136,8 @@ class StorageIO
 {
 public:
   Storage *storage;         // owner
-  std::stringstream buf;
+  WPXInputStream *input;
   int result;               // result of operation
-  unsigned long bufsize;    // size of the buffer
 
   Header *header;           // storage header
   DirTree *dirtree;         // directory tree
@@ -171,9 +146,9 @@ public:
 
   std::vector<unsigned long> sb_blocks; // blocks for "small" files
 
-  std::list<Stream *> streams;
+  bool isLoadDone;
 
-  StorageIO( Storage *storage, const std::stringstream &memorystream );
+  StorageIO( Storage *storage, WPXInputStream *is );
   ~StorageIO();
 
   bool isOLEStream();
@@ -189,17 +164,7 @@ public:
 
   StreamIO *streamIO( const std::string &name );
 
-public: // OSNOLA: add for MWAW
-  std::vector<std::string> allEntries() {
-    std::vector<std::string> res;
-    if (!dirtree) return res;
-    std::vector<unsigned> indices = dirtree->getValidIndices(true);
-    int nIndices=indices.size();
-    res.resize(nIndices);
-    for (int i = 0; i < nIndices; i++)
-      res[i] = dirtree->fullName(indices[i]);
-    return res;
-  }
+  std::vector<std::string> getOLENames();
 private:
   // no copy or assign
   StorageIO( const StorageIO & );
@@ -220,7 +185,6 @@ public:
   ~StreamIO();
   unsigned long size();
   unsigned long tell();
-  int getch();
   unsigned long read( unsigned char *data, unsigned long maxlen );
   unsigned long read( unsigned long pos, unsigned char *data, unsigned long maxlen );
 
@@ -236,11 +200,13 @@ private:
   unsigned long m_pos;
 
   // simple cache system to speed-up getch()
-  unsigned char *cache_data;
+  std::vector<unsigned char> cache_data;
   unsigned long cache_size;
   unsigned long cache_pos;
   void updateCache();
 };
+
+} // namespace libmwaw
 
 static inline unsigned long readU16( const unsigned char *ptr )
 {
@@ -252,13 +218,13 @@ static inline unsigned long readU32( const unsigned char *ptr )
   return ptr[0]+(ptr[1]<<8)+(ptr[2]<<16)+(ptr[3]<<24);
 }
 
-static const unsigned char macole_magic[] =
+static const unsigned char mwawole_magic[] =
 { 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 };
 
 
 // =========== Header ==========
 
-Header::Header() :
+libmwaw::Header::Header() :
   b_shift(9),
   s_shift(6),
   num_bat(0),
@@ -270,12 +236,12 @@ Header::Header() :
   num_mbat(0)
 {
   for( unsigned i = 0; i < 8; i++ )
-    id[i] = macole_magic[i];
+    id[i] = mwawole_magic[i];
   for( unsigned j=0; j<109; j++ )
-    bb_blocks[j] = AllocTable::Avail;
+    bb_blocks[j] = libmwaw::AllocTable::Avail;
 }
 
-bool Header::valid()
+bool libmwaw::Header::valid()
 {
   if( threshold != 4096 ) return false;
   if( num_bat == 0 ) return false;
@@ -288,34 +254,36 @@ bool Header::valid()
   return true;
 }
 
-void Header::load( const unsigned char *buffer )
+void libmwaw::Header::load( const unsigned char *buffer, unsigned long size )
 {
-  b_shift      = readU16( buffer + 0x1e );
-  s_shift      = readU16( buffer + 0x20 );
-  num_bat      = readU32( buffer + 0x2c );
-  dirent_start = readU32( buffer + 0x30 );
-  threshold    = readU32( buffer + 0x38 );
-  sbat_start   = readU32( buffer + 0x3c );
-  num_sbat     = readU32( buffer + 0x40 );
-  mbat_start   = readU32( buffer + 0x44 );
-  num_mbat     = readU32( buffer + 0x48 );
+  if (size < 512)
+    return;
+  b_shift      = ::readU16( buffer + 0x1e );
+  s_shift      = ::readU16( buffer + 0x20 );
+  num_bat      = ::readU32( buffer + 0x2c );
+  dirent_start = ::readU32( buffer + 0x30 );
+  threshold    = ::readU32( buffer + 0x38 );
+  sbat_start   = ::readU32( buffer + 0x3c );
+  num_sbat     = ::readU32( buffer + 0x40 );
+  mbat_start   = ::readU32( buffer + 0x44 );
+  num_mbat     = ::readU32( buffer + 0x48 );
 
   for( unsigned i = 0; i < 8; i++ )
     id[i] = buffer[i];
   for( unsigned j=0; j<109; j++ )
-    bb_blocks[j] = readU32( buffer + 0x4C+j*4 );
+    bb_blocks[j] = ::readU32( buffer + 0x4C+j*4 );
 }
 
 
 
 // =========== AllocTable ==========
 
-const unsigned AllocTable::Avail = 0xffffffff;
-const unsigned AllocTable::Eof = 0xfffffffe;
-const unsigned AllocTable::Bat = 0xfffffffd;
-const unsigned AllocTable::MetaBat = 0xfffffffc;
+const unsigned libmwaw::AllocTable::Avail = 0xffffffff;
+const unsigned libmwaw::AllocTable::Eof = 0xfffffffe;
+const unsigned libmwaw::AllocTable::Bat = 0xfffffffd;
+const unsigned libmwaw::AllocTable::MetaBat = 0xfffffffc;
 
-AllocTable::AllocTable() :
+libmwaw::AllocTable::AllocTable() :
   blockSize(4096),
   data()
 {
@@ -323,12 +291,12 @@ AllocTable::AllocTable() :
   resize( 128 );
 }
 
-unsigned long AllocTable::count()
+unsigned long libmwaw::AllocTable::count()
 {
   return data.size();
 }
 
-void AllocTable::resize( unsigned long newsize )
+void libmwaw::AllocTable::resize( unsigned long newsize )
 {
   unsigned oldsize = data.size();
   data.resize( newsize );
@@ -337,34 +305,17 @@ void AllocTable::resize( unsigned long newsize )
       data[i] = Avail;
 }
 
-// make sure there're still free blocks
-void AllocTable::preserve( unsigned long n )
-{
-  std::vector<unsigned long> pre;
-  for( unsigned i=0; i < n; i++ )
-    pre.push_back( unused() );
-}
-
-unsigned long AllocTable::operator[]( unsigned long index )
+unsigned long libmwaw::AllocTable::operator[]( unsigned long index )
 {
   unsigned long result;
   result = data[index];
   return result;
 }
 
-void AllocTable::set( unsigned long index, unsigned long value )
+void libmwaw::AllocTable::set( unsigned long index, unsigned long value )
 {
   if( index >= count() ) resize( index + 1);
   data[ index ] = value;
-}
-
-void AllocTable::setChain( std::vector<unsigned long> chain )
-{
-  if( chain.size() ) {
-    for( unsigned i=0; i<chain.size()-1; i++ )
-      set( chain[i], chain[i+1] );
-    set( chain[ chain.size()-1 ], AllocTable::Eof );
-  }
 }
 
 // TODO: optimize this with better search
@@ -378,7 +329,7 @@ static bool already_exist(const std::vector<unsigned long>& chain,
 }
 
 // follow
-std::vector<unsigned long> AllocTable::follow( unsigned long start )
+std::vector<unsigned long> libmwaw::AllocTable::follow( unsigned long start )
 {
   std::vector<unsigned long> chain;
 
@@ -391,36 +342,31 @@ std::vector<unsigned long> AllocTable::follow( unsigned long start )
     if( p == (unsigned long)MetaBat ) break;
     if( already_exist(chain, p) ) break;
     chain.push_back( p );
+    if( data[p] >= count() ) break;
     p = data[ p ];
   }
 
   return chain;
 }
 
-unsigned AllocTable::unused()
-{
-  // find first available block
-  for( unsigned i = 0; i < data.size(); i++ )
-    if( data[i] == Avail )
-      return i;
-
-  // completely full, so enlarge the table
-  unsigned block = data.size();
-  resize( data.size()+10 );
-  return block;
-}
-
-void AllocTable::load( const unsigned char *buffer, unsigned len )
+void libmwaw::AllocTable::load( const unsigned char *buffer, unsigned len )
 {
   resize( len / 4 );
   for( unsigned i = 0; i < count(); i++ )
-    set( i, readU32( buffer + i*4 ) );
+    set( i, ::readU32( buffer + i*4 ) );
 }
 
 // =========== DirTree ==========
-const unsigned DirTree::End = 0xffffffff;
 
-void DirTree::clear()
+const unsigned libmwaw::DirTree::End = 0xffffffff;
+
+libmwaw::DirTree::DirTree() :
+  entries()
+{
+  clear();
+}
+
+void libmwaw::DirTree::clear()
 {
   // leave only root entry
   entries.resize( 1 );
@@ -434,76 +380,22 @@ void DirTree::clear()
   entries[0].child = End;
 }
 
-DirEntry *DirTree::entry( unsigned index )
+unsigned libmwaw::DirTree::entryCount()
 {
-  if( index >= entryCount() ) return (DirEntry *) 0;
+  return entries.size();
+}
+
+libmwaw::DirEntry *libmwaw::DirTree::entry( unsigned index )
+{
+  if( index >= entryCount() ) return (libmwaw::DirEntry *) 0;
   return &entries[ index ];
 }
 
-int DirTree::indexOf( DirEntry *e )
-{
-  for( unsigned i = 0; i < entryCount(); i++ )
-    if( entry( i ) == e ) return i;
-
-  return -1;
-}
-
-int DirTree::parent( unsigned index )
-{
-  // brute-force, basically we iterate for each entries, find its children
-  // and check if one of the children is 'index'
-  for( unsigned j=0; j<entryCount(); j++ ) {
-    std::vector<unsigned> chi = children( j );
-    for( unsigned i=0; i<chi.size(); i++ )
-      if( chi[i] == index )
-        return j;
-  }
-
-  return -1;
-}
-
-std::string DirTree::fullName( unsigned index )
-{
-  // don't use root name ("Root Entry"), just give "/"
-  if( index == 0 ) return "/";
-
-  std::string result = entry( index )->name;
-  result.insert( 0,  "/" );
-  int p = parent( index );
-  DirEntry *_entry = 0;
-
-  std::vector<int> seens;
-  seens.push_back(p);
-
-  while( p > 0 ) {
-    _entry = entry( p );
-    if (_entry->dir && _entry->valid) {
-      result.insert( 0,  _entry->name);
-      result.insert( 0,  "/" );
-    }
-
-    p = parent(p);
-    if (p < 0) break;
-
-    bool ok = true;
-    // sanity check
-    for (int i = 0; i < int(seens.size()); i++) {
-      if (seens[i] == p) {
-        ok = false;
-        break;
-      }
-    }
-    if (!ok) break;
-    seens.push_back(p);
-  }
-  return result;
-}
-
 // given a fullname (e.g "/ObjectPool/_1020961869"), find the entry
-DirEntry *DirTree::entry( const std::string &name )
+libmwaw::DirEntry *libmwaw::DirTree::entry( const std::string &name )
 {
 
-  if( !name.length() ) return (DirEntry *)0;
+  if( !name.length() ) return (libmwaw::DirEntry *)0;
 
   // quick check for "/" (that's root)
   if( name == "/" ) return entry( 0 );
@@ -532,49 +424,17 @@ DirEntry *DirTree::entry( const std::string &name )
     child = find_child( index, *it );
     // traverse to the child
     if( child > 0 ) index = child;
-    else return (DirEntry *)0;
+    else return (libmwaw::DirEntry *)0;
   }
 
   return entry( index );
 }
 
-// helper function: recursively find siblings of index
-static void dirtree_find_siblings( DirTree *dirtree, std::vector<unsigned>& result,
-                                   unsigned index )
-{
-  DirEntry *e = dirtree->entry( index );
-  if( !e ) return;
-  if( !e->valid ) return;
-
-  // prevent infinite loop
-  for( unsigned i = 0; i < result.size(); i++ )
-    if( result[i] == index ) return;
-
-  // add myself
-  result.push_back( index );
-
-  // visit previous sibling, don't go infinitely
-  unsigned prev = e->prev;
-  if( ( prev > 0 ) && ( prev < dirtree->entryCount() ) ) {
-    for( unsigned i = 0; i < result.size(); i++ )
-      if( result[i] == prev ) prev = 0;
-    if( prev ) dirtree_find_siblings( dirtree, result, prev );
-  }
-
-  // visit next sibling, don't go infinitely
-  unsigned next = e->next;
-  if( ( next > 0 ) && ( next < dirtree->entryCount() ) ) {
-    for( unsigned i = 0; i < result.size(); i++ )
-      if( result[i] == next ) next = 0;
-    if( next ) dirtree_find_siblings( dirtree, result, next );
-  }
-}
-
-static unsigned dirtree_find_sibling( DirTree *dirtree, unsigned index, const std::string &name )
+static unsigned dirtree_find_sibling( libmwaw::DirTree *dirtree, unsigned index, const std::string &name )
 {
 
   unsigned count = dirtree->entryCount();
-  DirEntry *e = dirtree->entry( index );
+  libmwaw::DirEntry *e = dirtree->entry( index );
   if (!e || !e->valid) return 0;
   if (e->name == name) return index;
 
@@ -591,29 +451,18 @@ static unsigned dirtree_find_sibling( DirTree *dirtree, unsigned index, const st
   return 0;
 }
 
-unsigned DirTree::find_child( unsigned index, const std::string &name )
+unsigned libmwaw::DirTree::find_child( unsigned index, const std::string &name )
 {
 
   unsigned count = entryCount();
-  DirEntry *p = entry( index );
+  libmwaw::DirEntry *p = entry( index );
   if (p && p->valid && p->child < count )
     return dirtree_find_sibling( this, p->child, name );
 
   return 0;
 }
 
-std::vector<unsigned> DirTree::children( unsigned index )
-{
-  std::vector<unsigned> result;
-
-  DirEntry *e = entry( index );
-  if( e ) if( e->valid && e->child < entryCount() )
-      dirtree_find_siblings( this, result, e->child );
-
-  return result;
-}
-
-void DirTree::load( unsigned char *buffer, unsigned size )
+void libmwaw::DirTree::load( unsigned char *buffer, unsigned size )
 {
   entries.clear();
 
@@ -622,7 +471,7 @@ void DirTree::load( unsigned char *buffer, unsigned size )
 
     // parse name of this entry, which stored as Unicode 16-bit
     std::string name;
-    int name_len = readU16( buffer + 0x40+p );
+    int name_len = ::readU16( buffer + 0x40+p );
     if( name_len > 64 ) name_len = 64;
     for( int j=0; ( buffer[j+p]) && (j<name_len); j+= 2 )
       name.append( 1, buffer[j+p] );
@@ -635,14 +484,14 @@ void DirTree::load( unsigned char *buffer, unsigned size )
     // 2 = file (aka stream), 1 = directory (aka storage), 5 = root
     unsigned type = buffer[ 0x42 + p];
 
-    DirEntry e;
+    libmwaw::DirEntry e;
     e.valid = true;
     e.name = name;
-    e.start = readU32( buffer + 0x74+p );
-    e.size = readU32( buffer + 0x78+p );
-    e.prev = readU32( buffer + 0x44+p );
-    e.next = readU32( buffer + 0x48+p );
-    e.child = readU32( buffer + 0x4C+p );
+    e.start = ::readU32( buffer + 0x74+p );
+    e.size = ::readU32( buffer + 0x78+p );
+    e.prev = ::readU32( buffer + 0x44+p );
+    e.next = ::readU32( buffer + 0x48+p );
+    e.child = ::readU32( buffer + 0x4C+p );
     e.dir = ( type!=2 );
 
     // sanity checks
@@ -653,67 +502,124 @@ void DirTree::load( unsigned char *buffer, unsigned size )
   }
 }
 
+std::vector<std::string> libmwaw::DirTree::getOLENames()
+{
+  std::vector<std::string> res;
+  std::set<unsigned> seens;
+  getOLENames(0, "", res, seens);
+  return res;
+}
+
+void libmwaw::DirTree::getOLENames(unsigned index, const std::string &prefix,
+                                   std::vector<std::string> &res,
+                                   std::set<unsigned> &seen)
+{
+  if (seen.find(index) != seen.end())
+    return;
+  seen.insert(index);
+  unsigned count = entryCount();
+  libmwaw::DirEntry *p = entry( index );
+  if (!p || !p->valid)
+    return;
+  std::string name(prefix);
+  if (index) {
+    if (p->name.length())
+      name+= p->name;
+    else
+      return;
+  }
+  if (!p->dir) {
+    res.push_back(name);
+    return;
+  }
+  if (index)
+    name += "/";
+  std::set<unsigned> siblingsSeen;
+  std::vector<unsigned> siblingsStack;
+  siblingsStack.push_back(p->child);
+  siblingsSeen.insert(p->child);
+  while(siblingsStack.size()) {
+    unsigned child = siblingsStack.back();
+    siblingsStack.pop_back();
+    if (seen.find(child) == seen.end())
+      getOLENames(child, name, res, seen);
+    // look for next sibling
+    DirEntry *e = entry( child );
+    if (!e || !e->valid) continue;
+    child = e->next;
+    if (child > 0 && child <= count
+        && siblingsSeen.find(child) == siblingsSeen.end()) {
+      siblingsStack.push_back(child);
+      siblingsSeen.insert(child);
+    }
+    child = e->prev;
+    if (child > 0 && child <= count
+        && siblingsSeen.find(child) == siblingsSeen.end()) {
+      siblingsStack.push_back(child);
+      siblingsSeen.insert(child);
+    }
+  }
+}
+
 // =========== StorageIO ==========
 
-StorageIO::StorageIO( Storage *st, const std::stringstream &memorystream ) :
+libmwaw::StorageIO::StorageIO( libmwaw::Storage *st, WPXInputStream *is ) :
   storage(st),
-  buf( memorystream.str(), std::ios::binary | std::ios::in ),
-  result(Storage::Ok),
-  bufsize(0),
-  header(new Header()),
-  dirtree(new DirTree()),
-  bbat(new AllocTable()),
-  sbat(new AllocTable()),
+  input( is ),
+  result(libmwaw::Storage::Ok),
+  header(new libmwaw::Header()),
+  dirtree(new libmwaw::DirTree()),
+  bbat(new libmwaw::AllocTable()),
+  sbat(new libmwaw::AllocTable()),
   sb_blocks(),
-  streams()
+  isLoadDone(false)
 {
   bbat->blockSize = 1 << header->b_shift;
   sbat->blockSize = 1 << header->s_shift;
-  load();
 }
 
-StorageIO::~StorageIO()
+libmwaw::StorageIO::~StorageIO()
 {
   delete sbat;
   delete bbat;
   delete dirtree;
   delete header;
-
-  std::list<Stream *>::iterator it;
-  for( it = streams.begin(); it != streams.end(); ++it )
-    delete *it;
 }
 
-bool StorageIO::isOLEStream()
+bool libmwaw::StorageIO::isOLEStream()
 {
-  return (result == Storage::Ok);
+  if (!input) return false;
+  long actPos = input->tell();
+  load();
+  input->seek(actPos, WPX_SEEK_SET);
+  return (result == libmwaw::Storage::Ok);
 }
 
-void StorageIO::load()
+void libmwaw::StorageIO::load()
 {
-  unsigned char *buffer = 0;
-  unsigned long buflen = 0;
+  if (isLoadDone)
+    return;
+  isLoadDone = true;
   std::vector<unsigned long> blocks;
 
-  // find size of input file
-  buf.seekg( 0, std::ios::end );
-  bufsize = buf.tellg();
-
   // load header
-  buffer = new unsigned char[512];
-  buf.seekg( 0 );
-  buf.read( (char *)buffer, 512 );
-  header->load( buffer );
-  delete[] buffer;
+  unsigned long numBytesRead = 0;
+  input->seek(0, WPX_SEEK_SET);
+  const unsigned char *buf = input->read(512, numBytesRead);
+
+  result = libmwaw::Storage::NotOLE;
+  if (numBytesRead < 512)
+    return;
+
+  header->load( buf, numBytesRead );
 
   // check OLE magic id
-  result = Storage::NotOLE;
   for( unsigned i=0; i<8; i++ )
-    if( header->id[i] != macole_magic[i] )
+    if( header->id[i] != mwawole_magic[i] )
       return;
 
   // sanity checks
-  result = Storage::BadOLE;
+  result = libmwaw::Storage::BadOLE;
   if( !header->valid() ) return;
   if( header->threshold != 4096 ) return;
 
@@ -729,7 +635,7 @@ void StorageIO::load()
     if( j >= header->num_bat ) break;
     else blocks[j] = header->bb_blocks[j];
   if( (header->num_bat > 109) && (header->num_mbat > 0) ) {
-    unsigned char *buffer2 = new unsigned char[ bbat->blockSize ];
+    std::vector<unsigned char> buffer2( bbat->blockSize );
     unsigned k = 109;
     unsigned sector;
     for( unsigned r = 0; r < header->num_mbat; r++ ) {
@@ -737,78 +643,64 @@ void StorageIO::load()
         sector = header->mbat_start;
       else      // next meta bat location is the last current block value.
         sector = blocks[--k];
-      loadBigBlock( sector, buffer2, bbat->blockSize );
+      loadBigBlock( sector, &buffer2[0], bbat->blockSize );
       for( unsigned s=0; s < bbat->blockSize; s+=4 ) {
         if( k >= header->num_bat ) break;
-        else  blocks[k++] = readU32( buffer2 + s );
+        else  blocks[k++] = ::readU32( &buffer2[s] );
       }
-      /*
-      loadBigBlock( header->mbat_start+r, buffer2, bbat->blockSize );
-      for( unsigned s=0; s < bbat->blockSize; s+=4 )
-      {
-        if( k >= header->num_bat ) break;
-        else  blocks[k++] = readU32( buffer2 + s );
-      }
-      */
     }
-    delete[] buffer2;
   }
 
   // load big bat
-  buflen = blocks.size()*bbat->blockSize;
-  if( buflen > 0 ) {
-    buffer = new unsigned char[ buflen ];
-    loadBigBlocks( blocks, buffer, buflen );
-    bbat->load( buffer, buflen );
-    delete[] buffer;
+  if( blocks.size()*bbat->blockSize > 0 ) {
+    std::vector<unsigned char> buffer( blocks.size()*bbat->blockSize );
+    loadBigBlocks( blocks, &buffer[0], buffer.size() );
+    bbat->load( &buffer[0], buffer.size() );
   }
 
   // load small bat
   blocks.clear();
   blocks = bbat->follow( header->sbat_start );
-  buflen = blocks.size()*bbat->blockSize;
-  if( buflen > 0 ) {
-    buffer = new unsigned char[ buflen ];
-    loadBigBlocks( blocks, buffer, buflen );
-    sbat->load( buffer, buflen );
-    delete[] buffer;
+  if( blocks.size()*bbat->blockSize > 0 ) {
+    std::vector<unsigned char> buffer( blocks.size()*bbat->blockSize );
+    loadBigBlocks( blocks, &buffer[0], buffer.size() );
+    sbat->load( &buffer[0], buffer.size() );
   }
 
   // load directory tree
   blocks.clear();
   blocks = bbat->follow( header->dirent_start );
-  buflen = blocks.size()*bbat->blockSize;
-  buffer = new unsigned char[ buflen ];
-  loadBigBlocks( blocks, buffer, buflen );
-  dirtree->load( buffer, buflen );
-  unsigned sb_start = readU32( buffer + 0x74 );
-  delete[] buffer;
+  std::vector<unsigned char> buffer(blocks.size()*bbat->blockSize);
+  loadBigBlocks( blocks, &buffer[0], buffer.size() );
+  dirtree->load( &buffer[0], buffer.size() );
+  unsigned sb_start = ::readU32( &buffer[0x74] );
 
   // fetch block chain as data for small-files
   sb_blocks = bbat->follow( sb_start ); // small files
 
   // so far so good
-  result = Storage::Ok;
+  result = libmwaw::Storage::Ok;
 }
 
-StreamIO *StorageIO::streamIO( const std::string &name )
+libmwaw::StreamIO *libmwaw::StorageIO::streamIO( const std::string &name )
 {
   // sanity check
-  if( !name.length() ) return (StreamIO *)0;
+  if( !name.length() ) return (libmwaw::StreamIO *)0;
 
+  load();
   // search in the entries
-  DirEntry *entry = dirtree->entry( name );
-  if( !entry ) return (StreamIO *)0;
-  if( entry->dir ) return (StreamIO *)0;
+  libmwaw::DirEntry *entry = dirtree->entry( name );
+  if( !entry ) return (libmwaw::StreamIO *)0;
+  if( entry->dir ) return (libmwaw::StreamIO *)0;
 
-  StreamIO *res = new StreamIO( this, entry );
+  libmwaw::StreamIO *res = new libmwaw::StreamIO( this, entry );
   res->fullName = name;
 
   return res;
 }
 
-unsigned long StorageIO::loadBigBlocks( std::vector<unsigned long> blocks,
-                                        unsigned char *data, unsigned long maxlen )
+unsigned long libmwaw::StorageIO::loadBigBlocks( std::vector<unsigned long> blocks,
+    unsigned char *data, unsigned long maxlen )
 {
   // sentinel
   if( !data ) return 0;
@@ -821,17 +713,19 @@ unsigned long StorageIO::loadBigBlocks( std::vector<unsigned long> blocks,
     unsigned long block = blocks[i];
     unsigned long pos =  bbat->blockSize * ( block+1 );
     unsigned long p = (bbat->blockSize < maxlen-bytes) ? bbat->blockSize : maxlen-bytes;
-    if( pos + p > bufsize ) p = bufsize - pos;
-    buf.seekg( pos );
-    buf.read( (char *)data + bytes, p );
-    bytes += p;
+
+    input->seek(pos, WPX_SEEK_SET);
+    unsigned long numBytesRead = 0;
+    const unsigned char *buf = input->read(p, numBytesRead);
+    memcpy(data+bytes, buf, numBytesRead);
+    bytes += numBytesRead;
   }
 
   return bytes;
 }
 
-unsigned long StorageIO::loadBigBlock( unsigned long block,
-                                       unsigned char *data, unsigned long maxlen )
+unsigned long libmwaw::StorageIO::loadBigBlock( unsigned long block,
+    unsigned char *data, unsigned long maxlen )
 {
   // sentinel
   if( !data ) return 0;
@@ -845,7 +739,7 @@ unsigned long StorageIO::loadBigBlock( unsigned long block,
 }
 
 // return number of bytes which has been read
-unsigned long StorageIO::loadSmallBlocks( std::vector<unsigned long> blocks,
+unsigned long libmwaw::StorageIO::loadSmallBlocks( std::vector<unsigned long> blocks,
     unsigned char *data, unsigned long maxlen )
 {
   // sentinel
@@ -854,7 +748,7 @@ unsigned long StorageIO::loadSmallBlocks( std::vector<unsigned long> blocks,
   if( maxlen == 0 ) return 0;
 
   // our own local buffer
-  unsigned char *tmpBuf = new unsigned char[ bbat->blockSize ];
+  std::vector<unsigned char> tmpBuf( bbat->blockSize );
 
   // read small block one by one
   unsigned long bytes = 0;
@@ -866,22 +760,20 @@ unsigned long StorageIO::loadSmallBlocks( std::vector<unsigned long> blocks,
     unsigned long bbindex = pos / bbat->blockSize;
     if( bbindex >= sb_blocks.size() ) break;
 
-    loadBigBlock( sb_blocks[ bbindex ], tmpBuf, bbat->blockSize );
+    loadBigBlock( sb_blocks[ bbindex ], &tmpBuf[0], bbat->blockSize );
 
     // copy the data
     unsigned offset = pos % bbat->blockSize;
     unsigned long p = (maxlen-bytes < bbat->blockSize-offset ) ? maxlen-bytes :  bbat->blockSize-offset;
     p = (sbat->blockSize<p ) ? sbat->blockSize : p;
-    memcpy( data + bytes, tmpBuf + offset, p );
+    memcpy( data + bytes, &tmpBuf[offset], p );
     bytes += p;
   }
-
-  delete[] tmpBuf;
 
   return bytes;
 }
 
-unsigned long StorageIO::loadSmallBlock( unsigned long block,
+unsigned long libmwaw::StorageIO::loadSmallBlock( unsigned long block,
     unsigned char *data, unsigned long maxlen )
 {
   // sentinel
@@ -895,9 +787,16 @@ unsigned long StorageIO::loadSmallBlock( unsigned long block,
   return loadSmallBlocks( blocks, data, maxlen );
 }
 
+std::vector<std::string> libmwaw::StorageIO::getOLENames()
+{
+  if (!dirtree)
+    return std::vector<std::string>();
+  return dirtree->getOLENames();
+}
+
 // =========== StreamIO ==========
 
-StreamIO::StreamIO( StorageIO *s, DirEntry *e) :
+libmwaw::StreamIO::StreamIO( libmwaw::StorageIO *s, libmwaw::DirEntry *e) :
   io(s),
   entry(e),
   fullName(),
@@ -905,7 +804,7 @@ StreamIO::StreamIO( StorageIO *s, DirEntry *e) :
   fail(false),
   blocks(),
   m_pos(0),
-  cache_data(0),
+  cache_data(),
   cache_size(4096),
   cache_pos(0)
 {
@@ -915,41 +814,21 @@ StreamIO::StreamIO( StorageIO *s, DirEntry *e) :
     blocks = io->sbat->follow( entry->start );
 
   // prepare cache
-  cache_data = new unsigned char[cache_size];
+  cache_data = std::vector<unsigned char>(cache_size);
   updateCache();
 }
 
 // FIXME tell parent we're gone
-StreamIO::~StreamIO()
+libmwaw::StreamIO::~StreamIO()
 {
-  delete[] cache_data;
 }
 
-unsigned long StreamIO::tell()
+unsigned long libmwaw::StreamIO::tell()
 {
   return m_pos;
 }
 
-int StreamIO::getch()
-{
-  // past end-of-file ?
-  if( m_pos > entry->size ) return -1;
-
-  // need to update cache ?
-  if( !cache_size || ( m_pos < cache_pos ) ||
-      ( m_pos >= cache_pos + cache_size ) )
-    updateCache();
-
-  // something bad if we don't get good cache
-  if( !cache_size ) return -1;
-
-  int data = cache_data[m_pos - cache_pos];
-  m_pos++;
-
-  return data;
-}
-
-unsigned long StreamIO::read( unsigned long pos, unsigned char *data, unsigned long maxlen )
+unsigned long libmwaw::StreamIO::read( unsigned long pos, unsigned char *data, unsigned long maxlen )
 {
   // sanity checks
   if( !data ) return 0;
@@ -963,174 +842,141 @@ unsigned long StreamIO::read( unsigned long pos, unsigned char *data, unsigned l
 
     if( index >= blocks.size() ) return 0;
 
-    unsigned char *buf = new unsigned char[ io->sbat->blockSize ];
+    std::vector<unsigned char> buf( io->sbat->blockSize );
     unsigned long offset = pos % io->sbat->blockSize;
     while( totalbytes < maxlen ) {
       if( index >= blocks.size() ) break;
-      io->loadSmallBlock( blocks[index], buf, io->bbat->blockSize );
+      io->loadSmallBlock( blocks[index], &buf[0], io->bbat->blockSize );
       unsigned long count = io->sbat->blockSize - offset;
       if( count > maxlen-totalbytes ) count = maxlen-totalbytes;
-      memcpy( data+totalbytes, buf + offset, count );
+      memcpy( data+totalbytes, &buf[offset], count );
       totalbytes += count;
       offset = 0;
       index++;
     }
-    delete[] buf;
-
   } else {
     // big file
     unsigned long index = pos / io->bbat->blockSize;
 
     if( index >= blocks.size() ) return 0;
 
-    unsigned char *buf = new unsigned char[ io->bbat->blockSize ];
+    std::vector<unsigned char> buf( io->bbat->blockSize );
     unsigned long offset = pos % io->bbat->blockSize;
     while( totalbytes < maxlen ) {
       if( index >= blocks.size() ) break;
-      io->loadBigBlock( blocks[index], buf, io->bbat->blockSize );
+      io->loadBigBlock( blocks[index], &buf[0], io->bbat->blockSize );
       unsigned long count = io->bbat->blockSize - offset;
       if( count > maxlen-totalbytes ) count = maxlen-totalbytes;
-      memcpy( data+totalbytes, buf + offset, count );
+      memcpy( data+totalbytes, &buf[offset], count );
       totalbytes += count;
       index++;
       offset = 0;
     }
-    delete [] buf;
-
   }
 
   return totalbytes;
 }
 
-unsigned long StreamIO::read( unsigned char *data, unsigned long maxlen )
+unsigned long libmwaw::StreamIO::read( unsigned char *data, unsigned long maxlen )
 {
   unsigned long bytes = read( tell(), data, maxlen );
   m_pos += bytes;
   return bytes;
 }
 
-void StreamIO::updateCache()
+void libmwaw::StreamIO::updateCache()
 {
   // sanity check
-  if( !cache_data ) return;
+  if( cache_data.empty() ) return;
 
   cache_pos = m_pos - ( m_pos % cache_size );
   unsigned long bytes = cache_size;
   if( cache_pos + bytes > entry->size ) bytes = entry->size - cache_pos;
-  cache_size = read( cache_pos, cache_data, bytes );
+  cache_size = read( cache_pos, &cache_data[0], bytes );
 }
 
 
 // =========== Storage ==========
 
-Storage::Storage( const std::stringstream &memorystream ) :
+libmwaw::Storage::Storage( WPXInputStream *is ) :
   io(NULL)
 {
-  io = new StorageIO( this, memorystream );
+  io = new StorageIO( this, is );
 }
 
-Storage::~Storage()
+libmwaw::Storage::~Storage()
 {
   delete io;
 }
 
-int Storage::result()
+int libmwaw::Storage::result()
 {
   return io->result;
 }
 
-bool Storage::isOLEStream()
+bool libmwaw::Storage::isOLEStream()
 {
   return io->isOLEStream();
 }
 
-std::list<std::string> Storage::entries( const std::string &path )
+std::vector<std::string> libmwaw::Storage::getOLENames()
 {
-  std::list<std::string> result;
-  if (!io) return result;
-  DirTree *dt = io->dirtree;
-  DirEntry *e = dt->entry( path );
-  if( e  && e->dir ) {
-    unsigned parent = dt->indexOf( e );
-    std::vector<unsigned> children = dt->children( parent );
-    for( unsigned i = 0; i < children.size(); i++ )
-      result.push_back( dt->entry( children[i] )->name );
+  return io->getOLENames();
+}
+
+WPXInputStream *libmwaw::Storage::getDocumentOLEStream(const std::string &name)
+{
+  if (!isOLEStream() || !name.length())
+    return 0;
+  Stream stream(this, name);
+  unsigned long sz = stream.size();
+  if (result() != Ok  || !sz)
+    return 0;
+
+  unsigned char *buf = new unsigned char[sz];
+  if (buf == 0) return 0;
+
+  unsigned long oleLength = stream.read(buf, sz);
+  if (oleLength != sz) {
+    MWAW_DEBUG_MSG(("libmwaw::Storage::getDocumentOLEStream: Ole=%s expected length %ld but read %ld\n",
+                    name.c_str(), sz, oleLength));
+
+    // we ignore this error, if we read a ole in the root directory
+    // and we read at least 50% of the data. This may help to read
+    // a damaged file.
+    bool rootDir = name.find('/', 0) == std::string::npos;
+    if (!rootDir || oleLength <= (sz+1)/2) {
+      delete [] buf;
+      return 0;
+    }
+    // continue
+    MWAW_DEBUG_MSG(("libmwaw::Storage::getDocumentOLEStream: tries to use damaged OLE: %s\n", name.c_str()));
   }
 
-  return result;
-}
-
-bool Storage::isDirectory( const std::string &name )
-{
-  if (!io) return false;
-  DirEntry *e = io->dirtree->entry( name );
-  return e ? e->dir : false;
-}
-
-std::vector<std::string> Storage::allEntries()
-{
-  if (!io) return std::vector<std::string> ();
-  return io->allEntries();
+  WPXInputStream *res = new WPXStringStream(buf, oleLength);
+  delete [] buf;
+  return res;
 }
 
 // =========== Stream ==========
-Stream::Stream( Storage *storage, const std::string &name ) : io(storage->io->streamIO( name ))
-{ }
+libmwaw::Stream::Stream( libmwaw::Storage *storage, const std::string &name ) :
+  io(storage->io->streamIO( name ))
+{
+}
 
 // FIXME tell parent we're gone
-Stream::~Stream()
+libmwaw::Stream::~Stream()
 {
   delete io;
 }
 
-unsigned long Stream::size()
+unsigned long libmwaw::Stream::size()
 {
   return io ? io->entry->size : 0;
 }
 
-unsigned long Stream::read( unsigned char *data, unsigned long maxlen )
+unsigned long libmwaw::Stream::read( unsigned char *data, unsigned long maxlen )
 {
   return io ? io->read( data, maxlen ) : 0;
-}
-
-// =========== split name ==========
-void splitOleName(std::string const &oleName, std::string &dir, std::string &base)
-{
-  dir = "";
-
-  std::string::size_type pos = oleName.find_last_of('/');
-
-  if (pos == std::string::npos) base = oleName;
-  else if (pos == 0) base = oleName.substr(1);
-  else {
-    dir = oleName.substr(0,pos);
-    base = oleName.substr(pos+1);
-  }
-}
-
-// =========== Debug tool ==========
-std::string flattenOleName(std::string const &name)
-{
-  std::string res;
-  for (int i = 0; i < int(name.length()); i++) {
-    unsigned char c = name[i];
-    switch(c) {
-    case '\0':
-    case '/':
-    case '\\':
-    case ':': // potential file system separator
-    case ' ':
-    case '\t':
-    case '\n': // potential text separator
-      res += '_';
-      break;
-    default:
-      if (c <= 28) res += '#'; // other trouble potential char
-      else if (c > 0x80) res += '#'; // other trouble potential char
-      else res += c;
-    }
-  }
-  return res;
-}
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
