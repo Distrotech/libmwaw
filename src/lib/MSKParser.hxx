@@ -50,15 +50,8 @@
 typedef class MWAWContentListener MSKContentListener;
 typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
 
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
-
-namespace libmwaw_tools
-{
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace MSKParserInternal
 {
@@ -172,7 +165,7 @@ protected:
   MSKContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<MSKParserInternal::State> m_state;

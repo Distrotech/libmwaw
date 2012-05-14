@@ -36,15 +36,14 @@
 
 #include <libwpd/WPXString.h>
 
+#include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 #include "MWAWPosition.hxx"
 
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
+#include "MSWParser.hxx"
 
 #include "MSWText.hxx"
-
-#include "MSWParser.hxx"
 
 #define DEBUG_PLC 1
 
@@ -379,7 +378,7 @@ struct Font {
   }
 
   //! the font
-  MWAWStruct::Font m_font;
+  MWAWFont m_font;
   //! a second size
   int m_size;
   //! a unknown value
@@ -636,11 +635,11 @@ struct Paragraph {
   }
 
   //! operator<<
-  void print(std::ostream &o, MWAWTools::ConvertissorPtr m_convertissor) const {
+  void print(std::ostream &o, MWAWFontConverterPtr m_convertissor) const {
     if (!m_font2.m_default)
-      o << "font=[" << m_convertissor->getFontDebugString(m_font2.m_font) << m_font2 << "],";
+      o << "font=[" << m_font2.m_font.getDebugString(m_convertissor) << m_font2 << "],";
     else if (!m_font.m_default)
-      o << "font=[" << m_convertissor->getFontDebugString(m_font2.m_font) << m_font2 << "],";
+      o << "font=[" << m_font.m_font.getDebugString(m_convertissor) << m_font2 << "],";
     o << *this;
   }
 
@@ -758,10 +757,10 @@ struct State {
   long m_textLength[3];
 
   //! the default font ( NewYork 12pt)
-  MWAWStruct::Font m_defaultFont;
+  MWAWFont m_defaultFont;
 
   //! the actual font
-  MWAWStruct::Font m_font;
+  MWAWFont m_font;
 
   //! the text positions
   std::vector<TextEntry> m_textposList;
@@ -813,7 +812,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSWText::MSWText
-(MWAWInputStreamPtr ip, MSWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, MSWParser &parser, MWAWFontConverterPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new MSWTextInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -1163,7 +1162,7 @@ bool MSWText::readFontNames(MSWEntry &entry)
     for (int j = 0; j < fSz; j++)
       name += char(m_input->readLong(1));
     if (name.length())
-      m_convertissor->setFontCorrespondance(fId, name);
+      m_convertissor->setCorrespondance(fId, name);
     f << name;
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1449,7 +1448,7 @@ bool MSWText::readPLC(MSWEntry &entry, int type)
             font = MSWTextInternal::Font();
             f2 << "#";
           } else
-            f2 << m_convertissor->getFontDebugString(font.m_font) << font << ",";
+            f2 << font.m_font.getDebugString(m_convertissor) << font << ",";
           m_state->m_fontList.push_back(font);
         } else {
           MSWTextInternal::Paragraph para;
@@ -1837,7 +1836,7 @@ bool MSWText::readStyles(MSWEntry &entry)
       }
       font = MSWTextInternal::Font();
     } else
-      f << "font=[" << m_convertissor->getFontDebugString(font.m_font) << font << "],";
+      f << "font=[" << font.m_font.getDebugString(m_convertissor) << font << "],";
 
     m_state->m_styleFontMap.insert
     (std::multimap<int,MSWTextInternal::Font>::value_type(i-N,font));
@@ -2521,7 +2520,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone)
         if (entry.m_fontId <= 0) { // CHECKME
           int fId = actFont.m_font.id(), fSz =actFont.m_font.size();
           actFont = MSWTextInternal::Font();
-          actFont.m_font = MWAWStruct::Font(fId, fSz);
+          actFont.m_font = MWAWFont(fId, fSz);
         } else
           actFont = m_state->m_fontList[entry.m_fontId];
         fontSent = false;
@@ -2570,7 +2569,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone)
           // CHECKME: clearly
           int fSz =actFont.m_font.size();
           actFont = MSWTextInternal::Font();
-          actFont.m_font = MWAWStruct::Font(m_state->m_defaultFont.id(), fSz);
+          actFont.m_font = MWAWFont(m_state->m_defaultFont.id(), fSz);
         } else {
           int fId = actFont.m_font.id();
           actFont = m_state->m_fontList[plc.m_id];
@@ -2663,7 +2662,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone)
       m_listener->insertUnicode(0xf8ff);
       break;
     default: {
-      int unicode = m_convertissor->getUnicode (actFont.m_font, c);
+      int unicode = m_convertissor->unicode(actFont.m_font.id(), c);
       if (unicode == -1) {
         if (c < 32) {
           MWAW_DEBUG_MSG(("MSWText::sendText: Find odd char %x\n", int(c)));
@@ -2730,7 +2729,7 @@ bool MSWText::sendFieldComment(int id)
   std::string const &text = m_state->m_fieldList[id].m_text;
   if (!text.length()) m_listener->insertCharacter(' ');
   for (int c = 0; c < int(text.length()); c++) {
-    int unicode = m_convertissor->getUnicode (defFont.m_font, text[c]);
+    int unicode = m_convertissor->unicode(defFont.m_font.id(), text[c]);
     if (unicode == -1) {
       if (text[c] < 32) {
         MWAW_DEBUG_MSG(("MSWText::sendFieldComment: Find odd char %x\n", int(text[c])));
@@ -2746,7 +2745,7 @@ bool MSWText::sendFieldComment(int id)
 void MSWText::setProperty(MSWTextInternal::Font const &font)
 {
   if (!m_listener) return;
-  font.m_font.sendTo(m_listener.get(), m_convertissor, m_state->m_font, true);
+  font.m_font.sendTo(m_listener.get(), m_convertissor, m_state->m_font);
 }
 
 void MSWText::setProperty(MSWTextInternal::Section const &sec,

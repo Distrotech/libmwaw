@@ -159,11 +159,7 @@ SOURCE=..\..\src\lib\MWAWTable.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWStruct.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWTools.cxx
+SOURCE=..\..\src\lib\MWAWFont.cxx
 # End Source File
 # Begin Source File
 
@@ -351,11 +347,7 @@ SOURCE=..\..\src\lib\MWAWTable.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWStruct.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWTools.hxx
+SOURCE=..\..\src\lib\MWAWFont.hxx
 # End Source File
 # Begin Source File
 

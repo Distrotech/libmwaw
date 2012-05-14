@@ -36,20 +36,19 @@
 
 #include <libwpd/WPXString.h>
 
+#include "MWAWCell.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
-
-#include "MWAWCell.hxx"
 #include "MWAWTable.hxx"
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
-
-#include "CWTable.hxx"
 
 #include "CWParser.hxx"
 #include "CWStruct.hxx"
+
+#include "CWTable.hxx"
 
 /** Internal: the structures of a CWTable */
 namespace CWTableInternal
@@ -164,7 +163,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 CWTable::CWTable
-(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWTableInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {

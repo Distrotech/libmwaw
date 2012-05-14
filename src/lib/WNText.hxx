@@ -56,16 +56,10 @@
 typedef class MWAWContentListener WNContentListener;
 typedef shared_ptr<WNContentListener> WNContentListenerPtr;
 
-namespace MWAWStruct
-{
-class Font;
-}
+class MWAWFont;
 
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace WNTextInternal
 {
@@ -99,7 +93,7 @@ class WNText
   friend struct WNTextInternal::Cell;
 public:
   //! constructor
-  WNText(MWAWInputStreamPtr ip, WNParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  WNText(MWAWInputStreamPtr ip, WNParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
   virtual ~WNText();
 
@@ -148,12 +142,10 @@ protected:
             std::vector<shared_ptr<WNTextInternal::ContentZones> > &footnoteList,
             WNTextInternal::Ruler &ruler);
 
-  /*
-   * \param font the font's properties
-   * \param force if false, we only sent differences from the actual font */
-  void setProperty(MWAWStruct::Font const &font,
-                   MWAWStruct::Font &previousFont,
-                   bool force = false);
+  /* sends a font property to the listener
+
+   * \param font the font's properties */
+  void setProperty(MWAWFont const &font, MWAWFont &previousFont);
   /** sends a paragraph property to the listener */
   void setProperty(WNTextInternal::Ruler const &ruler);
 
@@ -202,7 +194,7 @@ protected:
   WNContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<WNTextInternal::State> m_state;

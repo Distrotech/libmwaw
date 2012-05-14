@@ -55,16 +55,8 @@
 typedef class MWAWContentListener WNContentListener;
 typedef shared_ptr<WNContentListener> WNContentListenerPtr;
 
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
-
-namespace libmwaw_tools
-{
-class PictData;
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace WNParserInternal
 {
@@ -203,7 +195,7 @@ protected:
   WNContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<WNParserInternal::State> m_state;

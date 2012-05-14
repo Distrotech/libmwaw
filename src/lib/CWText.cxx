@@ -35,11 +35,10 @@
 
 #include <libwpd/WPXString.h>
 
-#include "MWAWPosition.hxx"
-
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
 #include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
+#include "MWAWPosition.hxx"
 
 #include "CWText.hxx"
 
@@ -241,7 +240,7 @@ struct Zone : public CWStruct::DSET {
   int m_unknown[2];
 
   bool m_parsed;
-  std::map<long, MWAWStruct::Font> m_fontMap;
+  std::map<long, MWAWFont> m_fontMap;
   std::map<long, ParagraphInfo> m_styleMap;
   std::map<long, Token> m_tokenMap;
   std::vector<TextZoneInfo> m_textZoneList;
@@ -268,9 +267,9 @@ struct State {
   }
 
   mutable int m_version;
-  MWAWStruct::Font m_font; // the actual font
+  MWAWFont m_font; // the actual font
   std::vector<Ruler> m_rulersList;
-  std::vector<MWAWStruct::Font> m_fontsList; // used in style
+  std::vector<MWAWFont> m_fontsList; // used in style
   std::vector<Style> m_stylesList;
   std::map<int, int> m_lookupMap;
   std::map<int, shared_ptr<Zone> > m_zoneMap;
@@ -282,7 +281,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 CWText::CWText
-(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWTextInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -508,7 +507,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
 //
 ////////////////////////////////////////////////////////////
 
-bool CWText::readFont(int id, int &posC, MWAWStruct::Font &font)
+bool CWText::readFont(int id, int &posC, MWAWFont &font)
 {
   long pos = m_input->tell();
 
@@ -541,7 +540,7 @@ bool CWText::readFont(int id, int &posC, MWAWStruct::Font &font)
 
   m_input->seek(pos, WPX_SEEK_SET);
   posC = m_input->readULong(4);
-  font=MWAWStruct::Font();
+  font=MWAWFont();
   libmwaw::DebugStream f;
   if (id >= 0)
     f << "Font-" << id << ":";
@@ -589,7 +588,7 @@ bool CWText::readFont(int id, int &posC, MWAWStruct::Font &font)
   }
   font.setFlags(flags);
   font.setColor(color);
-  f << m_convertissor->getFontDebugString(font);
+  f << font.getDebugString(m_convertissor);
   if (long(m_input->tell()) != pos+fontSize)
     ascii().addDelimiter(m_input->tell(), '|');
   m_input->seek(pos+fontSize, WPX_SEEK_SET);
@@ -598,12 +597,12 @@ bool CWText::readFont(int id, int &posC, MWAWStruct::Font &font)
   return true;
 }
 
-bool CWText::readChar(int id, int fontSize, MWAWStruct::Font &font)
+bool CWText::readChar(int id, int fontSize, MWAWFont &font)
 {
   long pos = m_input->tell();
 
   m_input->seek(pos, WPX_SEEK_SET);
-  font=MWAWStruct::Font();
+  font=MWAWFont();
   libmwaw::DebugStream f;
   if (id == 0)
     f << "Entries(CHAR)-0:";
@@ -651,7 +650,7 @@ bool CWText::readChar(int id, int fontSize, MWAWStruct::Font &font)
       f << "#flag2=" << std::hex << flag << std::dec << ",";
   }
   font.setFlags(flags);
-  f << m_convertissor->getFontDebugString(font);
+  f << font.getDebugString(m_convertissor);
   if (long(m_input->tell()) != pos+fontSize)
     ascii().addDelimiter(m_input->tell(), '|');
   m_input->seek(pos+fontSize, WPX_SEEK_SET);
@@ -660,10 +659,10 @@ bool CWText::readChar(int id, int fontSize, MWAWStruct::Font &font)
   return true;
 }
 
-void CWText::setProperty(MWAWStruct::Font const &font, bool force)
+void CWText::setProperty(MWAWFont const &font)
 {
   if (!m_listener) return;
-  font.sendTo(m_listener.get(), m_convertissor, m_state->m_font, force);
+  font.sendTo(m_listener.get(), m_convertissor, m_state->m_font);
 }
 
 ////////////////////////////////////////////////////////////
@@ -719,7 +718,7 @@ bool CWText::readFonts(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 
   m_input->seek(pos+4, WPX_SEEK_SET); // skip header
   for (int i = 0; i < numElt; i++) {
-    MWAWStruct::Font font;
+    MWAWFont font;
     int posChar;
     if (!readFont(i, posChar, font)) return false;
     if (zone.m_fontMap.find(posChar) != zone.m_fontMap.end()) {
@@ -931,9 +930,8 @@ bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone
 bool CWText::sendText(CWTextInternal::Zone const &zone)
 {
   long actC = 0;
-  bool firstFontSend = false;
   int numRulers = m_state->m_rulersList.size();
-  MWAWStruct::Font actFont;
+  MWAWFont actFont;
   int actPage = 1, numZones = zone.m_zones.size();
   if (zone.m_id == 1 && m_listener)
     m_mainParser->newPage(actPage);
@@ -960,8 +958,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
       if (!m_listener) continue;
       if (zone.m_fontMap.find(actC) != zone.m_fontMap.end()) {
         actFont = zone.m_fontMap.find(actC)->second;
-        setProperty(actFont, !firstFontSend);
-        firstFontSend = true;
+        setProperty(actFont);
       }
       // we must change the paragraph property before seen the '\n' character
       if (zone.m_styleMap.find(actC) != zone.m_styleMap.end()) {
@@ -1025,7 +1022,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
         break;
 
       default: {
-        int unicode = m_convertissor->getUnicode (actFont,c);
+        int unicode = m_convertissor->unicode (actFont.id(),c);
         if (unicode == -1) {
           if (c < 30) {
             MWAW_DEBUG_MSG(("CWText::sendText: Find odd char %x\n", int(c)));
@@ -1081,7 +1078,7 @@ bool CWText::readSTYL_CHAR(int N, int fSz)
   m_state->m_fontsList.resize(N);
   for (int i = 0; i < N; i++) {
     long pos = m_input->tell();
-    MWAWStruct::Font font;
+    MWAWFont font;
     if (readChar(i, fSz, font))
       m_state->m_fontsList[i] = font;
     else {
@@ -1201,7 +1198,7 @@ bool CWText::readSTYL_FNTM(int N, int fSz)
       }
       f << "'" << name << "'";
       if (name.length() && ok) {
-        m_convertissor->setFontCorrespondance(i, name);
+        m_convertissor->setCorrespondance(i, name);
       }
     }
     if (long(m_input->tell()) != pos+fSz) {

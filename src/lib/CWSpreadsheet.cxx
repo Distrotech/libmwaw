@@ -35,18 +35,17 @@
 
 #include <libwpd/WPXString.h>
 
+#include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
-
-#include "CWSpreadsheet.hxx"
-
 #include "CWParser.hxx"
 #include "CWStruct.hxx"
+
+#include "CWSpreadsheet.hxx"
 
 /** Internal: the structures of a CWSpreadsheet */
 namespace CWSpreadsheetInternal
@@ -84,7 +83,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 CWSpreadsheet::CWSpreadsheet
-(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWSpreadsheetInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {

@@ -51,16 +51,8 @@ class WPXBinaryData;
 typedef class MWAWContentListener MWProContentListener;
 typedef shared_ptr<MWProContentListener> MWProContentListenerPtr;
 
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
-
-namespace libmwaw_tools
-{
-class PictData;
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace MWProParserInternal
 {
@@ -228,7 +220,7 @@ protected:
   MWProContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<MWProParserInternal::State> m_state;

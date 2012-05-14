@@ -558,6 +558,7 @@ void MWAWFontConverter::getOdtInfo(int macId, std::string &nm, int &deltaSize) c
 
 int MWAWFontConverter::unicode(int macId, unsigned char c) const
 {
+  if (c < 0x20) return -1;
   return m_manager->unicode(macId, c);
 }
 

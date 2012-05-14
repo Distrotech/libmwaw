@@ -35,19 +35,17 @@
 
 #include <libwpd/WPXString.h>
 
+#include "MWAWCell.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
-
-#include "MWAWCell.hxx"
 #include "MWAWTable.hxx"
 
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
+#include "MSKParser.hxx"
 
 #include "MSKText.hxx"
-
-#include "MSKParser.hxx"
 
 /** Internal: the structures of a MSKText */
 namespace MSKTextInternal
@@ -123,7 +121,7 @@ struct Font {
   }
 
   //! the font
-  MWAWStruct::Font m_font;
+  MWAWFont m_font;
   //! some unknown flag
   int m_flags[3];
   //! extra data
@@ -232,7 +230,7 @@ struct State {
 
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
   //! the actual font
-  MWAWStruct::Font m_font;
+  MWAWFont m_font;
 };
 
 }
@@ -241,7 +239,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSKText::MSKText
-(MWAWInputStreamPtr ip, MSKParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, MSKParser &parser, MWAWFontConverterPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new MSKTextInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -385,7 +383,7 @@ bool MSKText::sendText(MSKTextInternal::LineZone &zone)
     if ((c == 1 || c == 2) && readFont(font, zone.m_pos.end())) {
       actFont = font;
       setProperty(font);
-      f << "[" << m_convertissor->getFontDebugString(font.m_font) << font << "]";
+      f << "[" << font.m_font.getDebugString(m_convertissor) << font << "]";
       continue;
     }
     if (c == 0) {
@@ -434,7 +432,7 @@ bool MSKText::sendText(MSKTextInternal::LineZone &zone)
         ascii().addDelimiter(pos,'#');
         MWAW_DEBUG_MSG(("MSKText::sendText: find char=%x\n",int(c)));
       } else {
-        int unicode = m_convertissor->getUnicode (actFont.m_font, c);
+        int unicode = m_convertissor->unicode (actFont.m_font.id(), c);
         if (unicode == -1)
           m_listener->insertCharacter(c);
         else
@@ -455,7 +453,7 @@ bool MSKText::sendString(std::string &str)
   if (!m_listener)
     return true;
   MSKTextInternal::Font defFont;
-  defFont.m_font = MWAWStruct::Font(20,12);
+  defFont.m_font = MWAWFont(20,12);
   setProperty(defFont);
 
   for (int i = 0; i < int(str.length()); i++) {
@@ -489,7 +487,7 @@ bool MSKText::sendString(std::string &str)
       if (c <= 0x1f) {
         MWAW_DEBUG_MSG(("MSKText::sendString: find char=%x\n",int(c)));
       } else {
-        int unicode = m_convertissor->getUnicode (defFont.m_font, c);
+        int unicode = m_convertissor->unicode(defFont.m_font.id(), c);
         if (unicode == -1)
           m_listener->insertCharacter(c);
         else
@@ -555,7 +553,7 @@ bool MSKText::readFont(MSKTextInternal::Font &font, long endPos)
 void MSKText::setProperty(MSKTextInternal::Font const &font)
 {
   if (!m_listener) return;
-  font.m_font.sendTo(m_listener.get(), m_convertissor, m_state->m_font, true);
+  font.m_font.sendTo(m_listener.get(), m_convertissor, m_state->m_font);
 }
 
 ////////////////////////////////////////////////////////////

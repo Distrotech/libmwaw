@@ -56,16 +56,10 @@
 typedef class MWAWContentListener FWContentListener;
 typedef shared_ptr<FWContentListener> FWContentListenerPtr;
 
-namespace MWAWStruct
-{
-class Font;
-}
+class MWAWFont;
 
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace FWTextInternal
 {
@@ -92,7 +86,7 @@ class FWText
   friend class FWParser;
 public:
   //! constructor
-  FWText(MWAWInputStreamPtr ip, FWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  FWText(MWAWInputStreamPtr ip, FWParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
   virtual ~FWText();
 
@@ -130,7 +124,7 @@ protected:
 
   //! send a simple line
   void send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
-            MWAWStruct::Font &font);
+            MWAWFont &font);
 
   //! check if a zone is a style zone, if so read it...
   bool readStyle(shared_ptr<FWEntry> zone);
@@ -142,12 +136,9 @@ protected:
   // low level
   //
 
-  /*
-   * \param font the font's properties
-   * \param force if false, we only sent differences from the actual font */
-  void setProperty(MWAWStruct::Font const &font,
-                   MWAWStruct::Font &previousFont,
-                   bool force = false);
+  /* send the character properties
+   * \param font the font's properties */
+  void setProperty(MWAWFont const &font, MWAWFont &previousFont);
 
   /* send the ruler properties */
   void setProperty(FWTextInternal::Ruler const &para);
@@ -178,7 +169,7 @@ protected:
   FWContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<FWTextInternal::State> m_state;

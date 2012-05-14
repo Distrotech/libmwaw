@@ -36,19 +36,18 @@
 
 #include <libwpd/WPXString.h>
 
+#include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictBitmap.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
-
-#include "CWGraph.hxx"
-
 #include "CWParser.hxx"
 #include "CWStruct.hxx"
+
+#include "CWGraph.hxx"
 
 /** Internal: the structures of a CWGraph */
 namespace CWGraphInternal
@@ -438,7 +437,7 @@ void State::setDefaultColorMap(int version)
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 CWGraph::CWGraph
-(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWGraphInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {

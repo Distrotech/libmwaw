@@ -56,16 +56,8 @@
 typedef class MWAWContentListener CWContentListener;
 typedef shared_ptr<CWContentListener> CWContentListenerPtr;
 
-namespace MWAWStruct
-{
-class Font;
-}
-
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace CWTableInternal
 {
@@ -86,7 +78,7 @@ class CWTable
 
 public:
   //! constructor
-  CWTable(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  CWTable(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
   virtual ~CWTable();
 
@@ -150,7 +142,7 @@ protected:
   CWContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<CWTableInternal::State> m_state;

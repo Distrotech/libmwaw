@@ -54,16 +54,8 @@
 typedef class MWAWContentListener FWContentListener;
 typedef shared_ptr<FWContentListener> FWContentListenerPtr;
 
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
-
-namespace libmwaw_tools
-{
-class PictData;
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 /** the definition of a zone in the file */
 struct FWEntry : public MWAWEntry {
@@ -225,7 +217,7 @@ protected:
   FWContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<FWParserInternal::State> m_state;

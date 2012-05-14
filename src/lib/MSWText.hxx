@@ -54,11 +54,8 @@
 typedef class MWAWContentListener MSWContentListener;
 typedef shared_ptr<MSWContentListener> MSWContentListenerPtr;
 
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace MSWTextInternal
 {
@@ -82,7 +79,7 @@ class MSWText
 
 public:
   //! constructor
-  MSWText(MWAWInputStreamPtr ip, MSWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  MSWText(MWAWInputStreamPtr ip, MSWParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
   virtual ~MSWText();
 
@@ -201,7 +198,7 @@ protected:
   MSWContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<MSWTextInternal::State> m_state;

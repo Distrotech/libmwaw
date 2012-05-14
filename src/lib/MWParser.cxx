@@ -36,15 +36,13 @@
 
 #include <libwpd/WPXString.h>
 
-#include "MWAWPosition.hxx"
-#include "MWAWPictMac.hxx"
-#include "MWAWPrinter.hxx"
-
-#include "MWAWHeader.hxx"
-
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
 #include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
+#include "MWAWHeader.hxx"
+#include "MWAWPictMac.hxx"
+#include "MWAWPosition.hxx"
+#include "MWAWPrinter.hxx"
 
 #include "MWParser.hxx"
 
@@ -138,7 +136,7 @@ struct Information {
   MWAWEntry m_data;
 
   //! the font
-  MWAWStruct::Font m_font;
+  MWAWFont m_font;
 };
 
 std::ostream &operator<<(std::ostream &o, Information const &info)
@@ -407,7 +405,7 @@ MWParser::~MWParser()
 
 void MWParser::init()
 {
-  m_convertissor.reset(new MWAWTools::Convertissor);
+  m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
   m_asciiName = "main-1";
 
@@ -1254,7 +1252,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     informations.push_back(info);
     f << info;
 #ifdef DEBUG
-    f << "font=[" << m_convertissor->getFontDebugString(info.m_font) << "]";
+    f << "font=[" << info.m_font.getDebugString(m_convertissor) << "]";
 #endif
 
     input->seek(pos+16, WPX_SEEK_SET);
@@ -1347,12 +1345,12 @@ bool MWParser::readText(MWParserInternal::Information const &info,
   int numFormat = formatSize/6;
 
   std::vector<int> listPos;
-  std::vector<MWAWStruct::Font> listFonts;
+  std::vector<MWAWFont> listFonts;
 
   for (int i = 0; i < numFormat; i++) {
     int pos = input->readULong(2);
 
-    MWAWStruct::Font font;
+    MWAWFont font;
     int fSz = input->readULong(1);
     font.setSize(fSz);
     int flag = input->readULong(1);
@@ -1371,7 +1369,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     listFonts.push_back(font);
     f << ",f" << i << "=[pos=" << pos;
 #ifdef DEBUG
-    f << ",font=[" << m_convertissor->getFontDebugString(font) << "]";
+    f << ",font=[" << font.getDebugString(m_convertissor) << "]";
 #endif
     f << "]";
   }
@@ -1405,12 +1403,10 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     else
       m_listener->lineSpacingChange(1.2, WPX_PERCENT);
 
-    MWAWStruct::Font font;
-    bool fontSent = false;
+    MWAWFont font;
     if (!numFormat || listPos[0] != 0) {
       font = info.m_font;
-      font.sendTo(m_listener.get(), m_convertissor, font, true);
-      fontSent = true;
+      font.sendTo(m_listener.get(), m_convertissor, font);
     }
     if (info.m_justifySet)
       m_listener->justificationChange(info.m_justify);
@@ -1419,13 +1415,12 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     numChar = text.length();
     for (int i = 0; i < numChar; i++) {
       if (actFormat < numFormat && i == listPos[actFormat]) {
-        listFonts[actFormat].sendTo(m_listener.get(), m_convertissor, font, !fontSent);
+        listFonts[actFormat].sendTo(m_listener.get(), m_convertissor, font);
         font = listFonts[actFormat];
-        fontSent = true;
         actFormat++;
       }
       unsigned char c = text[i];
-      int unicode = m_convertissor->getUnicode (font, c);
+      int unicode = m_convertissor->unicode (font.id(), c);
       if (unicode != -1) m_listener->insertUnicode(unicode);
       else if (c == 0x9)
         m_listener->insertTab();

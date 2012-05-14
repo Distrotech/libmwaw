@@ -56,16 +56,8 @@
 typedef class MWAWContentListener CWContentListener;
 typedef shared_ptr<CWContentListener> CWContentListenerPtr;
 
-namespace MWAWStruct
-{
-class Font;
-}
-
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace CWDatabaseInternal
 {
@@ -87,7 +79,7 @@ class CWDatabase
 
 public:
   //! constructor
-  CWDatabase(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  CWDatabase(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
   virtual ~CWDatabase();
 
@@ -144,7 +136,7 @@ protected:
   CWContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<CWDatabaseInternal::State> m_state;

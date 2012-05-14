@@ -36,18 +36,16 @@
 #include <libwpd/WPXBinaryData.h>
 #include <libwpd/WPXString.h>
 
+#include "MWAWContentListener.hxx"
+#include "MWAWHeader.hxx"
+#include "MWAWFontConverter.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
 
-#include "MWAWHeader.hxx"
-
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWProStructures.hxx"
 
 #include "MWProParser.hxx"
-#include "MWProStructures.hxx"
 
 // set this flag to true to create an ascii file of the original
 #define DEBUG_RECONSTRUCT 0
@@ -313,7 +311,7 @@ MWProParser::~MWProParser()
 
 void MWProParser::init()
 {
-  m_convertissor.reset(new MWAWTools::Convertissor);
+  m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
   m_asciiName = "main-1";
 
@@ -1483,7 +1481,6 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
   cPos = 0;
   std::set<MWProParserInternal::DataPosition,
       MWProParserInternal::DataPosition::Compare>::const_iterator it;
-  bool first = true;
   for (it = set.begin(); it != set.end(); it++) {
     MWProParserInternal::DataPosition const &data = *it;
     long oldPos = pos;
@@ -1592,8 +1589,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
     }
     case 1:
       if (m_structures) {
-        listenerState.sendFont(zone->m_ids[0][data.m_id].m_id, first);
-        first = false;
+        listenerState.sendFont(zone->m_ids[0][data.m_id].m_id);
         f << "[" << listenerState.getFontDebugString(zone->m_ids[0][data.m_id].m_id) << "],";
       } else
         f << "[" << zone->m_ids[0][data.m_id] << "],";

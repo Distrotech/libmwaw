@@ -35,19 +35,17 @@
 
 #include <libwpd/WPXString.h>
 
+#include "MWAWCell.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
-
-#include "MWAWCell.hxx"
 #include "MWAWTable.hxx"
 
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
+#include "FWParser.hxx"
 
 #include "FWText.hxx"
-
-#include "FWParser.hxx"
 
 /** Internal: the structures of a FWText */
 namespace FWTextInternal
@@ -267,7 +265,7 @@ struct State {
 
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
   //! the actual font
-  MWAWStruct::Font m_font;
+  MWAWFont m_font;
 
 };
 }
@@ -276,7 +274,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 FWText::FWText
-(MWAWInputStreamPtr ip, FWParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, FWParser &parser, MWAWFontConverterPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new FWTextInternal::State),
   m_mainParser(&parser)
 {
@@ -301,7 +299,7 @@ int FWText::numPages() const
 // Intermediate level
 ////////////////////////////////////////////////////////////
 void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
-                  MWAWStruct::Font &font)
+                  MWAWFont &font)
 {
   if (!m_listener) return;
   MWAWInputStreamPtr input = zone->m_zone->m_input;
@@ -523,13 +521,13 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
     }
     if (done) continue;
     if (!fontSet) {
-      setProperty(font, m_state->m_font, true);
+      setProperty(font, m_state->m_font);
       fontSet = true;
     }
     if (val >= 256)
       m_listener->insertUnicode(val);
     else {
-      int unicode = m_convertissor->getUnicode (font, val);
+      int unicode = m_convertissor->unicode(font.id(), val);
       if (unicode != -1)
         m_listener->insertUnicode(unicode);
       else if (val > 0x1f)
@@ -549,7 +547,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
   long pos = zone->m_begin;
   input->seek(pos, WPX_SEEK_SET);
   int val, num=1;
-  MWAWStruct::Font font(3,12);
+  MWAWFont font(3,12);
   FWTextInternal::Ruler ruler;
   bool rulerSent = true;
 
@@ -1632,12 +1630,10 @@ bool FWText::readCorrespondance(shared_ptr<FWEntry> zone, bool extraCheck)
 }
 ////////////////////////////////////////////////////////////
 // send char/ruler property
-void FWText::setProperty(MWAWStruct::Font const &font,
-                         MWAWStruct::Font &previousFont,
-                         bool force)
+void FWText::setProperty(MWAWFont const &font, MWAWFont &previousFont)
 {
   if (!m_listener) return;
-  font.sendTo(m_listener.get(), m_convertissor, previousFont, force);
+  font.sendTo(m_listener.get(), m_convertissor, previousFont);
 }
 
 void FWText::setProperty(FWTextInternal::Ruler const &para)

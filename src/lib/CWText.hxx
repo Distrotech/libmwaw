@@ -56,16 +56,9 @@
 typedef class MWAWContentListener CWContentListener;
 typedef shared_ptr<CWContentListener> CWContentListenerPtr;
 
-namespace MWAWStruct
-{
-class Font;
-}
-
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
+class MWAWFont;
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace CWStruct
 {
@@ -92,7 +85,7 @@ class CWText
 
 public:
   //! constructor
-  CWText(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  CWText(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
   virtual ~CWText();
 
@@ -112,10 +105,9 @@ protected:
     m_listener = listen;
   }
 
-  /*
-   * \param font the font's properties
-   * \param force if false, we only sent differences from the actual font */
-  void setProperty(MWAWStruct::Font const &font, bool force = false);
+  /* sends a character property to the listener
+   * \param font the font's properties */
+  void setProperty(MWAWFont const &font);
   /** sends a paragraph property to the listener */
   void setProperty(CWTextInternal::Ruler const &ruler);
 
@@ -145,10 +137,10 @@ protected:
   bool sendText(CWTextInternal::Zone const &zone);
 
   //! try to read a font
-  bool readFont(int id, int &posC, MWAWStruct::Font &font);
+  bool readFont(int id, int &posC, MWAWFont &font);
 
   //! try to read a named font
-  bool readChar(int id, int fontSize, MWAWStruct::Font &font);
+  bool readChar(int id, int fontSize, MWAWFont &font);
 
   /** read the rulers block which is present at the beginning of the text in the first version of Claris Works : v1-2 */
   bool readRulers();
@@ -206,7 +198,7 @@ protected:
   CWContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<CWTextInternal::State> m_state;

@@ -79,13 +79,12 @@ bool MWAWTable::buildStructures()
     std::vector<float> positions;
     std::set<MWAWTableCell::Compare::Point,
         MWAWTableCell::Compare>::iterator it = set.begin();
-    float prevPos, maxPosiblePos=0;
+    float maxPosiblePos=0;
     int actCell = -1;
     for ( ; it != set.end(); it++) {
       float pos = it->getPos(dim);
       if (actCell < 0 || pos > maxPosiblePos) {
         actCell++;
-        prevPos = pos;
         positions.push_back(pos);
         maxPosiblePos = pos+2.0; // 2 pixel ok
       }

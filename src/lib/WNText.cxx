@@ -35,20 +35,18 @@
 
 #include <libwpd/WPXString.h>
 
+#include "MWAWCell.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
-
-#include "MWAWCell.hxx"
 #include "MWAWTable.hxx"
-
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
-
-#include "WNText.hxx"
 
 #include "WNParser.hxx"
 #include "WNEntry.hxx"
+
+#include "WNText.hxx"
 
 /** Internal: the structures of a WNText */
 namespace WNTextInternal
@@ -78,7 +76,7 @@ struct Font {
   }
 
   //! the font
-  MWAWStruct::Font m_font;
+  MWAWFont m_font;
   //! the char/ruler style id
   int m_styleId[2];
   //! some unknown flag
@@ -555,7 +553,7 @@ struct State {
 
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
   //! the actual font
-  MWAWStruct::Font m_font;
+  MWAWFont m_font;
   /** the paragraph properties */
   Ruler m_ruler;
   //! the header and the footer
@@ -587,7 +585,7 @@ bool Cell::sendContent(MWAWContentListenerPtr)
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 WNText::WNText
-(MWAWInputStreamPtr ip, WNParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, WNParser &parser, MWAWFontConverterPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new WNTextInternal::State),
   m_entryManager(parser.m_entryManager), m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -1139,7 +1137,7 @@ bool WNText::readFontNames(WNEntry const &entry)
     }
     f << name << ",";
     if (name.length() && ok)
-      m_convertissor->setFontCorrespondance(n, name);
+      m_convertissor->setCorrespondance(n, name);
 
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1249,12 +1247,10 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   return true;
 }
 
-void WNText::setProperty(MWAWStruct::Font const &font,
-                         MWAWStruct::Font &previousFont,
-                         bool force)
+void WNText::setProperty(MWAWFont const &font, MWAWFont &previousFont)
 {
   if (!m_listener) return;
-  font.sendTo(m_listener.get(), m_convertissor, previousFont, force);
+  font.sendTo(m_listener.get(), m_convertissor, previousFont);
 }
 
 ////////////////////////////////////////////////////////////
@@ -1528,7 +1524,7 @@ bool WNText::readStyles(WNEntry const &entry)
       WNTextInternal::Font font;
       if (readFont(*m_input, true, font)) {
         style.m_font = font;
-        f << m_convertissor->getFontDebugString(font.m_font) << font;
+        f << font.m_font.getDebugString(m_convertissor) << font;
       } else
         f << "#";
 
@@ -1724,8 +1720,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
 {
   libmwaw::DebugStream f;
   int vers = version();
-  MWAWStruct::Font actFont(3, 0, 0); // by default geneva
-  bool actFontSet = false;
+  MWAWFont actFont(3, 0, 0); // by default geneva
   int extraFontFlags = 0; // for v2
   bool rulerSet = false;
   int numLineTabs = 0, actTabs = 0, numFootnote = 0;
@@ -1769,7 +1764,6 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       if (numFootnote < int(footnoteList.size())) {
         m_mainParser->sendFootnote(footnoteList[numFootnote]->m_entry);
         numFootnote++;
-        if (actFontSet) setProperty(actFont, actFont, true);
       } else {
         MWAW_DEBUG_MSG(("WNText::send: can not find footnote:%d\n", numFootnote));
       }
@@ -1850,7 +1844,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
           actTabs = 0;
           break;
         default: {
-          int unicode = m_convertissor->getUnicode (actFont,c);
+          int unicode = m_convertissor->unicode (actFont.id(),c);
           if (unicode == -1) {
             if (c < 30) {
               MWAW_DEBUG_MSG(("WNText::send: Find odd char %x\n", int(c)));
@@ -1876,11 +1870,10 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       if (zone.m_value > 0) extraFontFlags = DMWAW_SUPERSCRIPT100_BIT;
       else if (zone.m_value < 0) extraFontFlags = DMWAW_SUBSCRIPT100_BIT;
       else extraFontFlags = 0;
-      MWAWStruct::Font font(actFont);
+      MWAWFont font(actFont);
       font.setFlags(fFlags | extraFontFlags);
-      setProperty(font, actFont, !actFontSet);
+      setProperty(font, actFont);
       actFont = font;
-      actFontSet = true;
       break;
     }
     case 0xa: {  // only in writenow 4.0 : related to a table ?
@@ -1920,7 +1913,6 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
           if (table) {
             if (!table->sendTable(m_listener))
               table->sendAsText(m_listener);
-            if (actFontSet) setProperty(actFont, actFont, true);
           } else {
             MWAW_DEBUG_MSG(("WNText::send: can not find the cell to send...\n"));
           }
@@ -1980,10 +1972,9 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       if (readFont(dataInput, false, font)) {
         if (extraFontFlags)
           font.m_font.setFlags(font.m_font.flags()|extraFontFlags);
-        setProperty(font.m_font, actFont, !actFontSet);
+        setProperty(font.m_font, actFont);
         actFont = font.m_font;
-        actFontSet = true;
-        f << m_convertissor->getFontDebugString(font.m_font) << font;
+        f << font.m_font.getDebugString(m_convertissor) << font;
       } else
         f << "#";
       break;

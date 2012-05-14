@@ -54,21 +54,8 @@
 typedef class MWAWContentListener MSKContentListener;
 typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
 
-namespace MWAWStruct
-{
-class Font;
-}
-
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
-
-namespace libmwaw_tools
-{
-class PictData;
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace MSKGraphInternal
 {
@@ -93,7 +80,7 @@ class MSKGraph
 
 public:
   //! constructor
-  MSKGraph(MWAWInputStreamPtr ip, MSKParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  MSKGraph(MWAWInputStreamPtr ip, MSKParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
   virtual ~MSKGraph();
 
@@ -175,7 +162,7 @@ protected:
   MSKContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<MSKGraphInternal::State> m_state;

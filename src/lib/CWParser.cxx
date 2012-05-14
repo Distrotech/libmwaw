@@ -35,18 +35,13 @@
 
 #include <libwpd/WPXString.h>
 
+#include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
+#include "MWAWHeader.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
-
-#include "MWAWHeader.hxx"
-#include "MWAWCell.hxx"
-
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
-
-#include "CWParser.hxx"
 
 #include "CWDatabase.hxx"
 #include "CWGraph.hxx"
@@ -54,6 +49,8 @@
 #include "CWSpreadsheet.hxx"
 #include "CWTable.hxx"
 #include "CWText.hxx"
+
+#include "CWParser.hxx"
 
 /** Internal: the structures of a CWParser */
 namespace CWParserInternal
@@ -168,7 +165,7 @@ CWParser::~CWParser()
 
 void CWParser::init()
 {
-  m_convertissor.reset(new MWAWTools::Convertissor);
+  m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
   m_asciiName = "main-1";
 
@@ -1399,7 +1396,7 @@ bool CWParser::readDocHeader()
   if (version() >= 4) f << "unkn=" << input->readULong(2) << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  MWAWStruct::Font font;
+  MWAWFont font;
   int posChar;
   if (!m_textParser->readFont(-1, posChar, font))
     return false;

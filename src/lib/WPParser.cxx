@@ -34,16 +34,14 @@
 
 #include <libwpd/WPXString.h>
 
+#include "MWAWCell.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
+#include "MWAWHeader.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
-
-#include "MWAWHeader.hxx"
-#include "MWAWCell.hxx"
-
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
 
 #include "WPParser.hxx"
 
@@ -337,7 +335,7 @@ struct Font {
     return o;
   }
   //! the font
-  MWAWStruct::Font m_font;
+  MWAWFont m_font;
   //! the first character
   int m_firstChar;
   //! some flag
@@ -607,7 +605,7 @@ WPParser::~WPParser()
 
 void WPParser::init()
 {
-  m_convertissor.reset(new MWAWTools::Convertissor);
+  m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
   m_asciiName = "main-1";
 
@@ -1400,18 +1398,15 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   std::vector<WPParserInternal::Font> const &fonts = data.m_fonts;
   int numChars = text.length();
   int actFont = 0, numFonts = fonts.size();
-  MWAWStruct::Font font;
-  bool fontSent = false;
+  MWAWFont font;
   int actLine = 0;
   numLines=lines.size();
   if (numLines == 0 && info.m_height > 0)
     m_listener->lineSpacingChange(info.m_height, WPX_POINT);
   for (int c = 0; c < numChars; c++) {
     if (actFont < numFonts && c ==  fonts[actFont].m_firstChar) {
-      fonts[actFont].m_font.sendTo
-      (m_listener.get(), m_convertissor, font, !fontSent);
+      fonts[actFont].m_font.sendTo(m_listener.get(), m_convertissor, font);
       font = fonts[actFont++].m_font;
-      fontSent = true;
     }
     if (actLine < numLines && c == lines[actLine].m_firstChar) {
       if (actLine) m_listener->insertEOL();
@@ -1422,7 +1417,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
       actLine++;
     }
     unsigned char ch = text[c];
-    int unicode = m_convertissor->getUnicode (font, ch);
+    int unicode = m_convertissor->unicode(font.id(), ch);
     if (unicode != -1) m_listener->insertUnicode(unicode);
     else if (ch == 0x9)
       m_listener->insertTab();
@@ -1785,7 +1780,7 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
   for (int i = 0; i < int(fonts.size()); i++) {
     f << "font" << i << "=[";
 #ifdef DEBUG
-    f << m_convertissor->getFontDebugString(fonts[i].m_font);
+    f << fonts[i].m_font.getDebugString(m_convertissor);
 #endif
     f << fonts[i] << "],";
   }
@@ -1818,7 +1813,7 @@ bool WPParser::readFonts
   for (int i = 0; i < nFonts; i++) {
     WPParserInternal::Font fInfo;
     for (int j = 0; j < 5; j++) fInfo.m_flags[j] = input->readULong(1);
-    MWAWStruct::Font &font = fInfo.m_font;
+    MWAWFont &font = fInfo.m_font;
     font.setId(input->readULong(1));
     int flag = input->readULong(1);
     int flags = 0;

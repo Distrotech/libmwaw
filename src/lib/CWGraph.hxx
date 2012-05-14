@@ -56,21 +56,8 @@
 typedef class MWAWContentListener CWContentListener;
 typedef shared_ptr<CWContentListener> CWContentListenerPtr;
 
-namespace MWAWStruct
-{
-class Font;
-}
-
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
-
-namespace libmwaw_tools
-{
-class PictData;
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace CWGraphInternal
 {
@@ -96,7 +83,7 @@ class CWGraph
 
 public:
   //! constructor
-  CWGraph(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  CWGraph(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
   virtual ~CWGraph();
 
@@ -208,7 +195,7 @@ protected:
   CWContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<CWGraphInternal::State> m_state;

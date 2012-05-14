@@ -36,19 +36,17 @@
 
 #include <libwpd/WPXString.h>
 
+#include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
+#include "MWAWHeader.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
 
-#include "MWAWHeader.hxx"
-
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
+#include "MSWParser.hxx"
 
 #include "MSWText.hxx"
-
-#include "MSWParser.hxx"
 
 /** Internal: the structures of a MSWParser */
 namespace MSWParserInternal
@@ -246,7 +244,7 @@ MSWParser::~MSWParser()
 
 void MSWParser::init()
 {
-  m_convertissor.reset(new MWAWTools::Convertissor);
+  m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
   m_asciiName = "main-1";
 

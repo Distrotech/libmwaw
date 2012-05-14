@@ -46,12 +46,8 @@ class WPXBinaryData;
 typedef class MWAWContentListener MWProContentListener;
 typedef shared_ptr<MWProContentListener> MWProContentListenerPtr;
 
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
-
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 class MWProParser;
 
 namespace MWProParserInternal
@@ -90,7 +86,7 @@ public:
   //! try to send the i^th section
   void sendSection(int numSection);
   //! try to send a character style
-  bool sendFont(int id, bool force);
+  bool sendFont(int id);
   //! try to send a paragraph
   bool sendParagraph(int id);
   //! send a character
@@ -123,7 +119,7 @@ protected:
   //! create a new page
   bool newPage(bool softBreak=false);
 
-  void sendFont(MWProStructuresInternal::Font const &font, bool force);
+  void sendFont(MWProStructuresInternal::Font const &font);
   void sendParagraph(MWProStructuresInternal::Paragraph const &para);
 
   // true if this is the mainZone
@@ -300,7 +296,7 @@ protected:
   MWProContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<MWProStructuresInternal::State> m_state;

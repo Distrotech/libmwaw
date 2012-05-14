@@ -28,7 +28,7 @@ These files are the files which come directly of libwpd/src/lib
 
 In order to avoid conflict problems, all WPX classes are renamed DMWAW while other classes, ..  are defined in namespace libmwaw_libwpd.
 
-## libs_libwpd (from libwpd_internal) : 
+## libmwaw_libwpd (from libwpd_internal) : 
    - introduction of new attributes DMWAW_ALL_CAPS_BIT/DMWAW_EMBOSS_BIT/DMWAW_ENGRAVE_BIT bits
    - comments some WP5/WP6 fonts
 
@@ -38,10 +38,7 @@ In order to avoid conflict problems, all WPX classes are renamed DMWAW while oth
    - virtualize _appendParagraphProperties in order to add border flags
    - change in WPXContentListener::justificationChange
 
-## WPXListener :
-   - m_pageList is no longer a reference on a std::list<WPXPageSpan>
-
-## WPXOLEStream :
+## MWAWOLEStream :
    - correct the function fullName
    - add a function allEntries to retrieve all the leaves names
 
@@ -97,8 +94,6 @@ These files defined basic structures which must be used by the parsers :
 
 ## MWAWParser.hxx
 	a basic parser
-## IMWAWTextParser.hxx
-	a basic parser which can help to store the text data
 
 ## MWAWTable.hxx
 	a helper to reconstruct a table structure from a list of cell
@@ -109,8 +104,7 @@ These files defined basic structures which must be used by the parsers :
 Generic classes : 
 
 MWAWContentListener.cxx 
-MWAWStruct.cxx 
-MWAWTools.cxx
+MWAWFont.cxx 
 
 Specific files which depends on the type of file which is converted
 

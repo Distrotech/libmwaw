@@ -56,16 +56,8 @@
 typedef class MWAWContentListener CWContentListener;
 typedef shared_ptr<CWContentListener> CWContentListenerPtr;
 
-namespace MWAWStruct
-{
-class Font;
-}
-
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace CWSpreadsheetInternal
 {
@@ -87,7 +79,7 @@ class CWSpreadsheet
 
 public:
   //! constructor
-  CWSpreadsheet(MWAWInputStreamPtr ip, CWParser &parser, MWAWTools::ConvertissorPtr &convertissor);
+  CWSpreadsheet(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
   virtual ~CWSpreadsheet();
 
@@ -142,7 +134,7 @@ protected:
   CWContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<CWSpreadsheetInternal::State> m_state;

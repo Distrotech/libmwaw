@@ -35,20 +35,18 @@
 
 #include <libwpd/WPXString.h>
 
+#include "MWAWContentListener.hxx"
+#include "MWAWHeader.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
 
-#include "MWAWHeader.hxx"
-
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
-
-#include "WNParser.hxx"
-
 #include "WNEntry.hxx"
 #include "WNText.hxx"
+
+#include "WNParser.hxx"
 
 /** Internal: the structures of a WNParser */
 namespace WNParserInternal
@@ -154,7 +152,7 @@ WNParser::~WNParser()
 
 void WNParser::init()
 {
-  m_convertissor.reset(new MWAWTools::Convertissor);
+  m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
   m_asciiName = "main-1";
 

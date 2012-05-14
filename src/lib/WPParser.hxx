@@ -60,16 +60,8 @@
 typedef class MWAWContentListener WPContentListener;
 typedef shared_ptr<WPContentListener> WPContentListenerPtr;
 
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
-
-namespace libmwaw_tools
-{
-class PictData;
-}
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace WPParserInternal
 {
@@ -207,7 +199,7 @@ protected:
   WPContentListenerPtr m_listener;
 
   //! a convertissor tools
-  MWAWTools::ConvertissorPtr m_convertissor;
+  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<WPParserInternal::State> m_state;

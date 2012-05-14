@@ -70,11 +70,9 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWPosition.hxx		\
 	MWAWPropertyHandler.hxx	\
 					\
-	MWAWStruct.cxx			\
-	MWAWTools.cxx			\
+	MWAWFont.cxx			\
 	libmwaw.hxx			\
-	MWAWStruct.hxx			\
-	MWAWTools.hxx			\
+	MWAWFont.hxx			\
 					\
 	CWDatabase.cxx			\
 	CWGraph.cxx			\

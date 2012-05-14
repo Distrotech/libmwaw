@@ -27,28 +27,20 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#ifndef MWAW_MWAW_STRUCT
-#  define MWAW_MWAW_STRUCT
+#ifndef MWAW_FONT
+#  define MWAW_FONT
 
 #include <assert.h>
-#include <iostream>
-
+#include <string>
 #include <vector>
 
 #include "libmwaw_tools.hxx"
 
 class MWAWContentListener;
-namespace MWAWTools
-{
-class Convertissor;
-typedef shared_ptr<Convertissor> ConvertissorPtr;
-}
+class MWAWFontConverter;
 
-//! namespace which defines some basic classes used to parse a version all MW-mac
-namespace MWAWStruct
-{
 //! Class to store font
-class Font
+class MWAWFont
 {
 public:
   /** constructor
@@ -56,7 +48,7 @@ public:
    * \param id system id font
    * \param size the font size
    * \param f the font attributes bold, ... */
-  Font(int id=-1, int size=12, int f = 0) : m_id(id), m_size(size), m_flags(f) {
+  MWAWFont(int id=-1, int size=12, int f = 0) : m_id(id), m_size(size), m_flags(f) {
     resetColor();
   };
   //! resets the font color to black
@@ -109,18 +101,20 @@ public:
   void getColor(int (&c) [3]) const {
     for (int i = 0; i < 3; i++) c[i]=m_color[i];
   }
+  //! returns a string which can be used for debugging
+  std::string getDebugString(shared_ptr<MWAWFontConverter> &converter) const;
 
   //! operator==
-  bool operator==(Font const &f) const {
+  bool operator==(MWAWFont const &f) const {
     return cmp(f) == 0;
   }
   //! operator!=
-  bool operator!=(Font const &f) const {
+  bool operator!=(MWAWFont const &f) const {
     return cmp(f) != 0;
   }
 
   //! a comparison function
-  int cmp(Font const &oth) const {
+  int cmp(MWAWFont const &oth) const {
     int diff = id() - oth.id();
     if (diff != 0) return diff;
     diff = size() - oth.size();
@@ -134,16 +128,12 @@ public:
     return diff;
   }
 
-  /** sends font to a listener
-   *
-   * if \a force = false, sends only difference with actFont */
-  void sendTo(MWAWContentListener *listener, MWAWTools::ConvertissorPtr &convert, Font &actFont, bool force = false) const;
+  /** sends font to a listener */
+  void sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverter> &convert, MWAWFont &actFont) const;
 
 protected:
   int m_id /** font identificator*/, m_size /** font size */, m_flags /** font attributes */, m_color[3] /** font color */;
 };
-}
-
 
 
 #endif

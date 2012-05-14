@@ -37,15 +37,13 @@
 
 #include <libwpd/WPXBinaryData.h>
 
-#include "MWAWPosition.hxx"
-
 #include "MWAWCell.hxx"
-#include "MWAWHeader.hxx"
-#include "MWAWTable.hxx"
-
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
 #include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
+#include "MWAWHeader.hxx"
+#include "MWAWPosition.hxx"
+#include "MWAWTable.hxx"
 
 #include "MWProStructures.hxx"
 #include "MWProParser.hxx"
@@ -361,7 +359,7 @@ struct Font {
   }
 
   //! the font
-  MWAWStruct::Font m_font;
+  MWAWFont m_font;
   //! some unknown flag
   int m_flags;
   //! the language
@@ -1220,7 +1218,7 @@ bool MWProStructures::readFontsName()
         name += char(m_input->readULong(1));
       if (name.length()) {
         if (st == 0)
-          m_convertissor->setFontCorrespondance(fId, name);
+          m_convertissor->setCorrespondance(fId, name);
         f << name << ",";
       }
       if (vers)
@@ -1285,7 +1283,7 @@ bool MWProStructures::readFontsDef()
     m_state->m_fontsList.push_back(font);
     f.str("");
     f << "FontsDef-C" << n << ":";
-    f << m_convertissor->getFontDebugString(font.m_font) << font << ",";
+    f << font.m_font.getDebugString(m_convertissor) << font << ",";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
@@ -1625,7 +1623,7 @@ bool MWProStructures::readCharStyles()
       MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: can not read the font\n"));
       f << "###";
     } else
-      f << m_convertissor->getFontDebugString(font.m_font) << font << ",";
+      f << font.m_font.getDebugString(m_convertissor) << font << ",";
 
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1754,7 +1752,7 @@ bool MWProStructures::readStyle(int styleId)
 
   f.str("");
   f << "FontsDef:";
-  f << m_convertissor->getFontDebugString(font.m_font) << font << ",";
+  f << font.m_font.getDebugString(m_convertissor) << font << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
@@ -2720,7 +2718,7 @@ void MWProStructuresListenerState::sendChar(char c)
     break;
     /* 0x10 and 0x13 : seems also to have some meaning ( replaced by 1 in on field )*/
   default: {
-    int unicode = m_structures->m_convertissor->getUnicode (m_font->m_font,c);
+    int unicode = m_structures->m_convertissor->unicode (m_font->m_font.id(),c);
     if (unicode == -1) {
       if (c < 32) {
         MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendChar: Find odd char %x\n", int(c)));
@@ -2736,13 +2734,13 @@ void MWProStructuresListenerState::sendChar(char c)
 bool MWProStructuresListenerState::resendAll()
 {
   sendParagraph(*m_paragraph);
-  sendFont(*m_font, true);
+  sendFont(*m_font);
   return true;
 }
 
 
 // ----------- font function ---------------------
-bool MWProStructuresListenerState::sendFont(int id, bool force)
+bool MWProStructuresListenerState::sendFont(int id)
 {
   if (!m_structures) return false;
   if (!m_structures->m_listener) return true;
@@ -2750,17 +2748,17 @@ bool MWProStructuresListenerState::sendFont(int id, bool force)
     MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendFont: can not find font %d\n", id));
     return false;
   }
-  sendFont(m_structures->m_state->m_fontsList[id], force);
+  sendFont(m_structures->m_state->m_fontsList[id]);
 
   return true;
 }
 
-void MWProStructuresListenerState::sendFont(MWProStructuresInternal::Font const &font, bool force)
+void MWProStructuresListenerState::sendFont(MWProStructuresInternal::Font const &font)
 {
   if (!m_structures || !m_structures->m_listener)
     return;
 
-  font.m_font.sendTo(m_structures->m_listener.get(), m_structures->m_convertissor, m_font->m_font, force);
+  font.m_font.sendTo(m_structures->m_listener.get(), m_structures->m_convertissor, m_font->m_font);
   *m_font = font;
   switch(m_font->m_language) {
   case -1:
@@ -2794,8 +2792,8 @@ std::string MWProStructuresListenerState::getFontDebugString(int fId)
   }
 
   s << "C" << fId << ":";
-  s << m_structures->m_convertissor->getFontDebugString
-    (m_structures->m_state->m_fontsList[fId].m_font)
+  s << m_structures->m_state->m_fontsList[fId].m_font.getDebugString
+    (m_structures->m_convertissor)
     << m_structures->m_state->m_fontsList[fId] << ",";
 
   return s.str();

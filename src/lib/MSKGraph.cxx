@@ -37,14 +37,13 @@
 #include <libwpd/WPXBinaryData.h>
 #include <libwpd/WPXString.h>
 
+#include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictBitmap.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
-
-#include "MWAWStruct.hxx"
-#include "MWAWTools.hxx"
-#include "MWAWContentListener.hxx"
 
 #include "MSKGraph.hxx"
 
@@ -75,7 +74,7 @@ struct Font {
   }
 
   //! the font
-  MWAWStruct::Font m_font;
+  MWAWFont m_font;
   //! some unknown flag
   int m_flags[6];
   //! extra data
@@ -625,7 +624,7 @@ struct State {
   std::vector<shared_ptr<Zone> > m_zonesList;
 
   //! the actual font
-  MWAWStruct::Font m_font;
+  MWAWFont m_font;
 
   //! the number of pages
   int m_numPages;
@@ -636,7 +635,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSKGraph::MSKGraph
-(MWAWInputStreamPtr ip, MSKParser &parser, MWAWTools::ConvertissorPtr &convert) :
+(MWAWInputStreamPtr ip, MSKParser &parser, MWAWFontConverterPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new MSKGraphInternal::State),
   m_mainParser(&parser), m_asciiFile(parser.ascii())
 {
@@ -1175,7 +1174,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
 
       f.str("");
       f << "SmallText:Font"<< i
-        << "(" << m_convertissor->getFontDebugString(font.m_font) << "," << font << "),";
+        << "(" << font.m_font.getDebugString(m_convertissor) << "," << font << "),";
 
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -1256,7 +1255,7 @@ void MSKGraph::send(MSKGraphInternal::TextBox &textBox)
 {
   if (!m_listener) return;
   MSKGraphInternal::Font actFont;
-  actFont.m_font = MWAWStruct::Font(20,12);
+  actFont.m_font = MWAWFont(20,12);
   setProperty(actFont);
   int numFonts = textBox.m_fontsList.size();
   int actFormatPos = 0;
@@ -1306,7 +1305,7 @@ void MSKGraph::send(MSKGraphInternal::TextBox &textBox)
       if (c <= 0x1f) {
         MWAW_DEBUG_MSG(("MSKGraph::sendText: find char=%x\n",int(c)));
       } else {
-        int unicode = m_convertissor->getUnicode (actFont.m_font, c);
+        int unicode = m_convertissor->unicode (actFont.m_font.id(), c);
         if (unicode == -1)
           m_listener->insertCharacter(c);
         else
@@ -1320,7 +1319,7 @@ void MSKGraph::send(MSKGraphInternal::TextBox &textBox)
 void MSKGraph::setProperty(MSKGraphInternal::Font const &font)
 {
   if (!m_listener) return;
-  font.m_font.sendTo(m_listener.get(), m_convertissor, m_state->m_font, true);
+  font.m_font.sendTo(m_listener.get(), m_convertissor, m_state->m_font);
 }
 
 bool MSKGraph::readFont(MSKGraphInternal::Font &font)
