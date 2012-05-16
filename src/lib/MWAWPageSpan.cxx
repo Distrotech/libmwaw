@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; c-default-style: "k&r"; indent-tabs-mode: nil; tab-width: 2; c-basic-offset: 2 -*- */
 /* libmwaw
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
@@ -199,8 +199,7 @@ void MWAWPageSpan::sendHeaderFooters(MWAWContentListener *listener,
       pageNumberInserted = true;
       _insertPageNumberParagraph(documentInterface);
     }
-    // OSNOLA: fixme
-    listener->handleSubDocument(hf->getSubDocument().get(), libmwaw::DOC_HEADER_FOOTER);
+    listener->handleSubDocument(hf->getSubDocument(), libmwaw::DOC_HEADER_FOOTER);
     if (!isHeader && m_pageNumberPosition >= BottomLeft &&
         m_pageNumberPosition <= BottomInsideLeftAndRight) {
       pageNumberInserted = true;
@@ -396,5 +395,4 @@ int MWAWPageSpan::_getHeaderFooterPosition(HeaderFooterType type, HeaderFooterOc
     m_headerFooterList.resize(res+1);
   return res;
 }
-
-/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
+// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

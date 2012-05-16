@@ -183,10 +183,10 @@ std::ostream &operator<<(std::ostream &o, MWAWCellFormat const &cell)
   int border = cell.m_bordersList;
   if (border) {
     o << ",bord=[";
-    if (border&DMWAW_TABLE_CELL_LEFT_BORDER_OFF) o << "Lef";
-    if (border&DMWAW_TABLE_CELL_RIGHT_BORDER_OFF) o << "Rig";
-    if (border&DMWAW_TABLE_CELL_TOP_BORDER_OFF) o << "Top";
-    if (border&DMWAW_TABLE_CELL_BOTTOM_BORDER_OFF) o << "Bot";
+    if (border&libmwaw::LeftBorderBit) o << "Lef";
+    if (border&libmwaw::RightBorderBit) o << "Rig";
+    if (border&libmwaw::TopBorderBit) o << "Top";
+    if (border&libmwaw::BottomBorderBit) o << "Bot";
     o << "]";
   }
   return o;

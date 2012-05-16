@@ -52,7 +52,7 @@ namespace CWTextInternal
 /** Internal: class to store the paragraph properties */
 struct Ruler {
   //! Constructor
-  Ruler() : m_justify (DMWAW_PARAGRAPH_JUSTIFICATION_LEFT),
+  Ruler() : m_justify(libmwaw::JustificationLeft),
     m_interlineFixed(-1), m_interlinePercent(0.0), m_tabs(),
     m_error("") {
     for(int c = 0; c < 2; c++) {
@@ -66,20 +66,20 @@ struct Ruler {
     if (ind.m_justify) {
       o << "Just=";
       switch(ind.m_justify) {
-      case DMWAW_PARAGRAPH_JUSTIFICATION_LEFT:
+      case libmwaw::JustificationLeft:
         o << "left";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_CENTER:
+      case libmwaw::JustificationCenter:
         o << "centered";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT:
+      case libmwaw::JustificationRight:
         o << "right";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_FULL:
+      case libmwaw::JustificationFull:
         o << "full";
         break;
       default:
-        o << "#just=" << ind.m_justify << ", ";
+        o << "#just=" << int(ind.m_justify) << ", ";
         break;
       }
       o << ", ";
@@ -91,7 +91,7 @@ struct Ruler {
     if (ind.m_spacings[1]) o << "afterSpace=" << ind.m_spacings[1] << "pt, ";
     if (ind.m_interlineFixed > 0) o << "interline=" << ind.m_interlineFixed << "pt,";
     if (ind.m_interlinePercent > 0.0) o << "interline=" << 100.*ind.m_interlinePercent << "%,";
-    DMWAWTabStop::printTabs(o, ind.m_tabs);
+    MWAWTabStop::printTabs(o, ind.m_tabs);
     if (ind.m_error.length()) o << "," << ind.m_error;
     return o;
   }
@@ -101,8 +101,8 @@ struct Ruler {
    * 0: first line left, 1: left, 2: right (from right)
    */
   float m_margins[3];
-  //! paragraph justification : DMWAW_PARAGRAPH_JUSTIFICATION*
-  int m_justify;
+  //! paragraph justification
+  libmwaw::Justification m_justify;
   /** interline (in point)*/
   int m_interlineFixed;
   /** interline */
@@ -110,7 +110,7 @@ struct Ruler {
   /** the spacings ( 0: before, 1: after ) in point*/
   int m_spacings[2];
   //! the tabulations
-  std::vector<DMWAWTabStop> m_tabs;
+  std::vector<MWAWTabStop> m_tabs;
   /** the errors */
   std::string m_error;
 };
@@ -550,14 +550,14 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   f << "pos=" << posC << ",";
   font.setId(m_input->readULong(2));
   int flag =m_input->readULong(2), flags=0;
-  if (flag&0x1) flags |= DMWAW_BOLD_BIT;
-  if (flag&0x2) flags |= DMWAW_ITALICS_BIT;
-  if (flag&0x4) flags |= DMWAW_UNDERLINE_BIT;
-  if (flag&0x8) flags |= DMWAW_EMBOSS_BIT;
-  if (flag&0x10) flags |= DMWAW_SHADOW_BIT;
+  if (flag&0x1) flags |= MWAW_BOLD_BIT;
+  if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+  if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
+  if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
+  if (flag&0x10) flags |= MWAW_SHADOW_BIT;
   /* flags & 0x20: condensed, flags & 0x40: extended */
-  if (flag&0x100) flags |= DMWAW_SUPERSCRIPT_BIT;
-  if (flag&0x200) flags |= DMWAW_SUBSCRIPT_BIT;
+  if (flag&0x100) flags |= MWAW_SUPERSCRIPT_BIT;
+  if (flag&0x200) flags |= MWAW_SUBSCRIPT_BIT;
   font.setSize(m_input->readLong(1));
 
   int colId = m_input->readULong(1);
@@ -579,9 +579,9 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   if (fontSize >= 14) {
     flag = m_input->readULong(2);
     if (flag & 0x2)
-      flags |= DMWAW_DOUBLE_UNDERLINE_BIT;
+      flags |= MWAW_DOUBLE_UNDERLINE_BIT;
     if (flag & 0x20)
-      flags |= DMWAW_STRIKEOUT_BIT;
+      flags |= MWAW_STRIKEOUT_BIT;
     flag &= 0xFFDD;
     if (flag)
       f << "#flag2=" << std::hex << flag << std::dec << ",";
@@ -623,14 +623,14 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   }
   font.setId(m_input->readULong(2));
   int flag =m_input->readULong(2), flags=0;
-  if (flag&0x1) flags |= DMWAW_BOLD_BIT;
-  if (flag&0x2) flags |= DMWAW_ITALICS_BIT;
-  if (flag&0x4) flags |= DMWAW_UNDERLINE_BIT;
-  if (flag&0x8) flags |= DMWAW_EMBOSS_BIT;
-  if (flag&0x10) flags |= DMWAW_SHADOW_BIT;
+  if (flag&0x1) flags |= MWAW_BOLD_BIT;
+  if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+  if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
+  if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
+  if (flag&0x10) flags |= MWAW_SHADOW_BIT;
   /* flags & 0x20: condensed, flags & 0x40: extended */
-  if (flag&0x100) flags |= DMWAW_SUPERSCRIPT_BIT;
-  if (flag&0x200) flags |= DMWAW_SUBSCRIPT_BIT;
+  if (flag&0x100) flags |= MWAW_SUPERSCRIPT_BIT;
+  if (flag&0x200) flags |= MWAW_SUBSCRIPT_BIT;
   font.setSize(m_input->readLong(1));
 
   int colId = m_input->readULong(1);
@@ -642,9 +642,9 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   if (fontSize >= 12 && version()==6) {
     flag = m_input->readULong(2);
     if (flag & 0x2)
-      flags |= DMWAW_DOUBLE_UNDERLINE_BIT;
+      flags |= MWAW_DOUBLE_UNDERLINE_BIT;
     if (flag & 0x20)
-      flags |= DMWAW_STRIKEOUT_BIT;
+      flags |= MWAW_STRIKEOUT_BIT;
     flag &= 0xFFDD;
     if (flag)
       f << "#flag2=" << std::hex << flag << std::dec << ",";
@@ -1513,13 +1513,13 @@ bool CWText::readRuler(int id)
   case 0:
     break;
   case 1:
-    ruler.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_CENTER;
+    ruler.m_justify = libmwaw::JustificationCenter;
     break;
   case 2:
-    ruler.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT;
+    ruler.m_justify = libmwaw::JustificationRight;
     break;
   case 3:
-    ruler.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_FULL;
+    ruler.m_justify = libmwaw::JustificationFull;
     break;
   default:
     break;
@@ -1599,7 +1599,7 @@ bool CWText::readRuler(int id)
     numTabs = 0;
   }
   for (int i = 0; i < numTabs; i++) {
-    DMWAWTabStop tab;
+    MWAWTabStop tab;
     tab.m_position = m_input->readLong(2)/72.;
     val = m_input->readULong(1);
     int leaderType = 0;
@@ -1622,13 +1622,13 @@ bool CWText::readRuler(int id)
     }
     switch(align&3) {
     case 1:
-      tab.m_alignment = CENTER;
+      tab.m_alignment = MWAWTabStop::CENTER;
       break;
     case 2:
-      tab.m_alignment = RIGHT;
+      tab.m_alignment = MWAWTabStop::RIGHT;
       break;
     case 3:
-      tab.m_alignment = DECIMAL;
+      tab.m_alignment = MWAWTabStop::DECIMAL;
       break;
     case 0: // left
     default:
@@ -1689,15 +1689,15 @@ void CWText::setProperty(CWTextInternal::Ruler const &ruler)
 
   double textWidth = m_mainParser->pageWidth();
   m_listener->setParagraphTextIndent(ruler.m_margins[0]);
-  m_listener->setParagraphMargin(ruler.m_margins[1], DMWAW_LEFT);
+  m_listener->setParagraphMargin(ruler.m_margins[1], MWAW_LEFT);
   float rPos = 0;
   if (ruler.m_margins[2] >= 0.0) {
     rPos = ruler.m_margins[2]-28./72.;
     if (rPos < 0) rPos = 0;
   }
-  m_listener->setParagraphMargin(rPos, DMWAW_RIGHT);
-  m_listener->setParagraphMargin(ruler.m_spacings[0]/72.,DMWAW_TOP);
-  m_listener->setParagraphMargin(ruler.m_spacings[1]/72.,DMWAW_BOTTOM);
+  m_listener->setParagraphMargin(rPos, MWAW_RIGHT);
+  m_listener->setParagraphMargin(ruler.m_spacings[0]/72.,MWAW_TOP);
+  m_listener->setParagraphMargin(ruler.m_spacings[1]/72.,MWAW_BOTTOM);
 
   if (ruler.m_interlineFixed > 0)
     m_listener->lineSpacingChange(ruler.m_interlineFixed, WPX_POINT);

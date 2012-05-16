@@ -62,7 +62,7 @@ MWAWContentListener::ParsingState::~ParsingState() {}
 ////////////////////////////////////////////////////////////
 MWAWContentListener::MWAWContentListener(std::list<MWAWPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
   DMWAWContentListener(pageList, documentInterface), m_parseState(0L), m_actualListId(0),
-  m_subDocuments(), m_listDocuments()
+  m_subDocuments()
 {
   // adjust the first paragraph margin
 
@@ -137,7 +137,7 @@ bool MWAWContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
     m_ps->m_textColumns.resize(numCols);
     m_ps->m_numColumns=numCols;
     for (int col = 0; col < numCols; col++) {
-      DMWAWColumnDefinition column;
+      MWAWColumnDefinition column;
       column.m_width = factor*colsWidth[col];
       m_ps->m_textColumns[col] = column;
     }
@@ -175,8 +175,8 @@ void MWAWContentListener::_flushDeferredTabs()
 
   // CHECKME: the tab are not underline even if the underline bit is set
   uint32_t oldTextAttributes = m_ps->m_textAttributeBits;
-  uint32_t newAttributes = oldTextAttributes & (~DMWAW_UNDERLINE_BIT) &
-                           (~DMWAW_OVERLINE_BIT);
+  uint32_t newAttributes = oldTextAttributes & (~MWAW_UNDERLINE_BIT) &
+                           (~MWAW_OVERLINE_BIT);
   if (oldTextAttributes != newAttributes) setTextAttribute(newAttributes);
   if (!m_ps->m_isSpanOpened) _openSpan();
   for (; m_parseState->m_numDeferredTabs > 0; m_parseState->m_numDeferredTabs--)
@@ -269,8 +269,8 @@ void MWAWContentListener::insertEOL(bool soft)
   }
 
   // sub/superscript must not survive a new line
-  if (m_ps->m_textAttributeBits & (DMWAW_SUBSCRIPT_BIT | DMWAW_SUPERSCRIPT_BIT | DMWAW_SUBSCRIPT100_BIT | DMWAW_SUPERSCRIPT100_BIT))
-    m_ps->m_textAttributeBits &= ~(DMWAW_SUBSCRIPT_BIT | DMWAW_SUPERSCRIPT_BIT | DMWAW_SUBSCRIPT100_BIT | DMWAW_SUPERSCRIPT100_BIT);
+  if (m_ps->m_textAttributeBits & (MWAW_SUBSCRIPT_BIT | MWAW_SUPERSCRIPT_BIT | MWAW_SUBSCRIPT100_BIT | MWAW_SUPERSCRIPT100_BIT))
+    m_ps->m_textAttributeBits &= ~(MWAW_SUBSCRIPT_BIT | MWAW_SUPERSCRIPT_BIT | MWAW_SUBSCRIPT100_BIT | MWAW_SUPERSCRIPT100_BIT);
 }
 
 void MWAWContentListener::insertTab()
@@ -284,7 +284,7 @@ void MWAWContentListener::insertTab()
 
   // CHECKME: the tab are not underline even if the underline bit is set
   uint32_t oldTextAttributes = m_ps->m_textAttributeBits;
-  uint32_t newAttributes = oldTextAttributes & (~DMWAW_UNDERLINE_BIT);
+  uint32_t newAttributes = oldTextAttributes & (~MWAW_UNDERLINE_BIT);
 
   if (oldTextAttributes != newAttributes) setTextAttribute(newAttributes);
 
@@ -404,11 +404,11 @@ void MWAWContentListener::setParagraphMargin(double margin, int pos, WPXUnit uni
 {
   switch(unit) {
   case WPX_POINT:
-    if (pos == DMWAW_LEFT || pos == DMWAW_RIGHT)
+    if (pos == MWAW_LEFT || pos == MWAW_RIGHT)
       margin/=72.;
     break;
   case WPX_TWIP:
-    if (pos == DMWAW_LEFT || pos == DMWAW_RIGHT)
+    if (pos == MWAW_LEFT || pos == MWAW_RIGHT)
       margin/=1440.;
     break;
   case WPX_PERCENT:
@@ -421,23 +421,23 @@ void MWAWContentListener::setParagraphMargin(double margin, int pos, WPXUnit uni
     break;
   }
   switch(pos) {
-  case DMWAW_LEFT:
+  case MWAW_LEFT:
     m_ps->m_leftMarginByParagraphMarginChange = margin;
     m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange
                                   + m_ps->m_leftMarginByParagraphMarginChange
                                   + m_ps->m_leftMarginByTabs;
     break;
-  case DMWAW_RIGHT:
+  case MWAW_RIGHT:
     m_ps->m_rightMarginByParagraphMarginChange = margin;
     m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange
                                    + m_ps->m_rightMarginByParagraphMarginChange
                                    + m_ps->m_rightMarginByTabs;
     break;
-  case DMWAW_TOP:
+  case MWAW_TOP:
     m_ps->m_paragraphMarginTop = margin;
     m_ps->m_paragraphMarginTopUnit = unit;
     break;
-  case DMWAW_BOTTOM:
+  case MWAW_BOTTOM:
     m_ps->m_paragraphMarginBottom = margin;
     m_ps->m_paragraphMarginBottomUnit = unit;
     break;
@@ -446,7 +446,7 @@ void MWAWContentListener::setParagraphMargin(double margin, int pos, WPXUnit uni
   }
 }
 
-void MWAWContentListener::setTabs(const std::vector<DMWAWTabStop> &tabStops, double maxW)
+void MWAWContentListener::setTabs(const std::vector<MWAWTabStop> &tabStops, double maxW)
 {
   if (isUndoOn()) return;
 
@@ -457,10 +457,10 @@ void MWAWContentListener::setTabs(const std::vector<DMWAWTabStop> &tabStops, dou
     return;
   }
 
-  std::vector<DMWAWTabStop> tabs = tabStops;
+  std::vector<MWAWTabStop> tabs = tabStops;
   for (int p = 0; p < int(tabs.size()); p++) {
     double pos = tabs[p].m_position;
-    if (pos > maxW-10./72. && tabs[p].m_alignment != RIGHT)
+    if (pos > maxW-10./72. && tabs[p].m_alignment != MWAWTabStop::RIGHT)
       tabs[p].m_position = maxW-10./72.;
   }
   m_ps->m_tabStops = tabs;
@@ -489,13 +489,13 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
       propList.insert("fo:border", "0.03cm solid #000000");
       return;
     }
-    if (border & DMWAW_TABLE_CELL_LEFT_BORDER_OFF)
+    if (border & libmwaw::LeftBorderBit)
       propList.insert("fo:border-left", "0.03cm solid #000000");
-    if (border & DMWAW_TABLE_CELL_RIGHT_BORDER_OFF)
+    if (border & libmwaw::RightBorderBit)
       propList.insert("fo:border-right", "0.03cm solid #000000");
-    if (border & DMWAW_TABLE_CELL_TOP_BORDER_OFF)
+    if (border & libmwaw::TopBorderBit)
       propList.insert("fo:border-top", "0.03cm solid #000000");
-    if (border & DMWAW_TABLE_CELL_BOTTOM_BORDER_OFF)
+    if (border & libmwaw::BottomBorderBit)
       propList.insert("fo:border-bottom", "0.03cm solid #000000");
   }
   if (parsingState()->m_language.length())
@@ -821,10 +821,8 @@ void MWAWContentListener::insertTextBox(MWAWPosition const &pos,
   WPXPropertyList propList;
   m_documentInterface->openTextBox(propList);
 
-  if (subDocument.get()) {
-    m_listDocuments.push_back(subDocument);
-    handleSubDocument(subDocument.get(), libmwaw::DOC_TEXT_BOX);
-  }
+  if (subDocument)
+    handleSubDocument(subDocument, libmwaw::DOC_TEXT_BOX);
   m_documentInterface->closeTextBox();
 
   closeFrame();
@@ -850,7 +848,7 @@ void MWAWContentListener::insertPicture
 // Note
 //
 ///////////////////
-void MWAWContentListener::insertNote(const DMWAWNoteType noteType, MWAWSubDocumentPtr &subDocument)
+void MWAWContentListener::insertNote(const MWAWContentListener::NoteType noteType, MWAWSubDocumentPtr &subDocument)
 {
   if (isUndoOn()) return;
 
@@ -878,9 +876,7 @@ void MWAWContentListener::insertNote(const DMWAWNoteType noteType, MWAWSubDocume
     m_documentInterface->openEndnote(propList);
   }
 
-  if (subDocument.get()) m_listDocuments.push_back(subDocument);
-
-  handleSubDocument(subDocument.get(), libmwaw::DOC_NOTE);
+  handleSubDocument(subDocument, libmwaw::DOC_NOTE);
 
   if (noteType == FOOTNOTE)
     m_documentInterface->closeFootnote();
@@ -910,8 +906,7 @@ void MWAWContentListener::insertComment(MWAWSubDocumentPtr &subDocument)
 
   m_ps->m_isNote = true;
 
-  if (subDocument.get()) m_listDocuments.push_back(subDocument);
-  handleSubDocument(subDocument.get(), libmwaw::DOC_COMMENT_ANNOTATION);
+  handleSubDocument(subDocument, libmwaw::DOC_COMMENT_ANNOTATION);
 
   m_documentInterface->closeComment();
   m_ps->m_isNote = false;
@@ -924,33 +919,26 @@ void MWAWContentListener::insertComment(MWAWSubDocumentPtr &subDocument)
 ///////////////////
 
 void MWAWContentListener::_handleSubDocument
-(const MWAWSubDocument *subDocument,
- libmwaw::SubDocumentType subDocumentType)
+(MWAWSubDocumentPtr &subDocument, libmwaw::SubDocumentType subDocumentType)
 {
   if (isUndoOn()) return;
 
   if (!subDocument) return;
 
-  MWAWSubDocument const *doc =
-    dynamic_cast<MWAWSubDocument const *>(subDocument);
-  if (!doc) {
-    MWAW_DEBUG_MSG(("Works: MWAWContentListener::_handleSubDocument unknown type of document\n"));
-    return;
-  }
   int numSubDocument = m_subDocuments.size();
   for (int i = 0; i < numSubDocument; i++) {
-    if (*doc != *(m_subDocuments[i])) continue;
+    if (*subDocument != m_subDocuments[i]) continue;
     MWAW_DEBUG_MSG(("Works: MWAWContentListener::_handleSubDocument recursive call\n"));
     return;
   }
 
   // save our old parsing state on our "stack"
   ParsingState *oldParseState = _pushParsingState();
-  m_subDocuments.push_back(doc);
+  m_subDocuments.push_back(subDocument);
   MWAWContentListenerPtr listen(this, MWAW_shared_ptr_noop_deleter<MWAWContentListener>());
   // do not loose oldParseState and try to continue
   try {
-    const_cast<MWAWSubDocument *>(doc)->parse(listen, subDocumentType);
+    subDocument->parse(listen, subDocumentType);
   } catch(...) {
     MWAW_DEBUG_MSG(("Works: MWAWContentListener::_handleSubDocument exception catched \n"));
   }

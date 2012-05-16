@@ -121,7 +121,7 @@ public:
   bool hasBorders() const {
     return m_bordersList != 0;
   }
-  //! return the cell border: DMWAW_TABLE_CELL_LEFT_BORDER_OFF | ...
+  //! return the cell border: libmwaw::LeftBorderBit | ...
   int borders() const {
     return m_bordersList;
   }
@@ -145,7 +145,7 @@ protected:
   int m_digits;
   //! the cell alignement : by default nothing
   HorizontalAlignment m_hAlign;
-  //! the cell border DMWAW_TABLE_CELL_LEFT_BORDER_OFF | ...
+  //! the cell border libmwaw::LeftBorderBit | ...
   int m_bordersList;
   //! cell protected
   bool m_protected;

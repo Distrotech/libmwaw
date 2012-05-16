@@ -153,7 +153,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 CWParser::CWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
   m_pageSpan(), m_pageSpanSet(false), m_databaseParser(), m_graphParser(),
-  m_spreadsheetParser(), m_tableParser(), m_textParser(), m_listSubDocuments(),
+  m_spreadsheetParser(), m_tableParser(), m_textParser(),
   m_asciiFile(), m_asciiName("")
 {
   init();
@@ -229,7 +229,7 @@ void CWParser::newPage(int number)
     m_state->m_actPage++;
     if (!m_listener || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(DMWAW_PAGE_BREAK);
+    m_listener->insertBreak(MWAW_PAGE_BREAK);
   }
 }
 
@@ -265,7 +265,7 @@ void CWParser::sendFootnote(int zoneId)
   if (!m_listener) return;
 
   MWAWSubDocumentPtr subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
-  m_listener->insertNote(FOOTNOTE, subdoc);
+  m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
 }
 
 ////////////////////////////////////////////////////////////

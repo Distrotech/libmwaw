@@ -159,7 +159,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 FWParser::FWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_textParser(), m_listSubDocuments(), m_asciiFile(), m_asciiName("")
+  m_pageSpan(), m_textParser(), m_asciiFile(), m_asciiName("")
 {
   init();
 }
@@ -227,7 +227,7 @@ void FWParser::newPage(int number)
     m_state->m_actPage++;
     if (!m_listener || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(DMWAW_PAGE_BREAK);
+    m_listener->insertBreak(MWAW_PAGE_BREAK);
   }
 }
 
@@ -1087,7 +1087,7 @@ void FWParser::sendText(int id, libmwaw::SubDocumentType type, int wh)
   MWAWSubDocumentPtr subdoc(new FWParserInternal::SubDocument(*this, getInput(), id));
   switch(type) {
   case libmwaw::DOC_NOTE:
-    m_listener->insertNote(DMWAWNoteType(wh), subdoc);
+    m_listener->insertNote(MWAWContentListener::NoteType(wh), subdoc);
     break;
   case libmwaw::DOC_COMMENT_ANNOTATION:
     m_listener->insertComment(subdoc);

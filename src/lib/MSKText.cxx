@@ -131,7 +131,7 @@ struct Font {
 /** Internal: class to store the paragraph properties */
 struct Paragraph {
   //! Constructor
-  Paragraph() : m_tabs(), m_justify (DMWAW_PARAGRAPH_JUSTIFICATION_LEFT), m_extra("") {
+  Paragraph() : m_tabs(), m_justify(libmwaw::JustificationLeft), m_extra("") {
     for(int c = 0; c < 3; c++) m_margins[c] = 0.0;
   }
   //! operator<<
@@ -139,20 +139,20 @@ struct Paragraph {
     if (ind.m_justify) {
       o << "Just=";
       switch(ind.m_justify) {
-      case DMWAW_PARAGRAPH_JUSTIFICATION_LEFT:
+      case libmwaw::JustificationLeft:
         o << "left";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_CENTER:
+      case libmwaw::JustificationCenter:
         o << "centered";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT:
+      case libmwaw::JustificationRight:
         o << "right";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_FULL:
+      case libmwaw::JustificationFull:
         o << "full";
         break;
       default:
-        o << "#just=" << ind.m_justify << ", ";
+        o << "#just=" << int(ind.m_justify) << ", ";
         break;
       }
       o << ", ";
@@ -161,7 +161,7 @@ struct Paragraph {
     if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
     if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
 
-    DMWAWTabStop::printTabs(o, ind.m_tabs);
+    MWAWTabStop::printTabs(o, ind.m_tabs);
     if (ind.m_extra.length()) o << "," << ind.m_extra;
     return o;
   }
@@ -172,9 +172,9 @@ struct Paragraph {
    */
   float m_margins[3];
   //! the tabulations
-  std::vector<DMWAWTabStop> m_tabs;
-  //! paragraph justification : DMWAW_PARAGRAPH_JUSTIFICATION*
-  int m_justify;
+  std::vector<MWAWTabStop> m_tabs;
+  //! paragraph justification
+  libmwaw::Justification m_justify;
   //! extra data
   std::string m_extra;
 };
@@ -519,13 +519,13 @@ bool MSKText::readFont(MSKTextInternal::Font &font, long endPos)
   font.m_font.setSize(m_input->readULong(1));
   flag = m_input->readULong(1);
   int flags = 0;
-  if (flag & 0x1) flags |= DMWAW_BOLD_BIT;
-  if (flag & 0x2) flags |= DMWAW_ITALICS_BIT;
-  if (flag & 0x4) flags |= DMWAW_UNDERLINE_BIT;
-  if (flag & 0x8) flags |= DMWAW_EMBOSS_BIT;
-  if (flag & 0x10) flags |= DMWAW_SHADOW_BIT;
-  if (flag & 0x20) flags |= DMWAW_SUPERSCRIPT100_BIT;
-  if (flag & 0x40) flags |= DMWAW_SUBSCRIPT100_BIT;
+  if (flag & 0x1) flags |= MWAW_BOLD_BIT;
+  if (flag & 0x2) flags |= MWAW_ITALICS_BIT;
+  if (flag & 0x4) flags |= MWAW_UNDERLINE_BIT;
+  if (flag & 0x8) flags |= MWAW_EMBOSS_BIT;
+  if (flag & 0x10) flags |= MWAW_SHADOW_BIT;
+  if (flag & 0x20) flags |= MWAW_SUPERSCRIPT100_BIT;
+  if (flag & 0x40) flags |= MWAW_SUBSCRIPT100_BIT;
   if ((flag & 0x80) && !(flag & 0x60)) f << "fFl80#,";
   font.m_font.setFlags(flags);
   int color = 1;
@@ -575,13 +575,13 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
   case 0x4c:
     break;
   case 0x43:
-    parag.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_CENTER;
+    parag.m_justify = libmwaw::JustificationCenter;
     break;
   case 0x52:
-    parag.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT;
+    parag.m_justify = libmwaw::JustificationRight;
     break;
   case 0x46:
-    parag.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_FULL;
+    parag.m_justify = libmwaw::JustificationFull;
     break;
   default:
     f << "#align=" << std::hex << fl[0] << ",";
@@ -636,16 +636,16 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
 
   for (int i = 0; i < numVal; i++) {
     int val = m_input->readULong(2);
-    enum DMWAWTabAlignment align = LEFT;
+    MWAWTabStop::Alignment align = MWAWTabStop::LEFT;
     switch (val >> 14) {
     case 1:
-      align = DECIMAL;
+      align = MWAWTabStop::DECIMAL;
       break;
     case 2:
-      align = RIGHT;
+      align = MWAWTabStop::RIGHT;
       break;
     case 3:
-      align = CENTER;
+      align = MWAWTabStop::CENTER;
       break;
     default:
       break;
@@ -682,15 +682,15 @@ void MSKText::setProperty(MSKTextInternal::Paragraph const &para)
   m_listener->justificationChange(para.m_justify);
 
   m_listener->setParagraphTextIndent(para.m_margins[1]);
-  m_listener->setParagraphMargin(para.m_margins[0], DMWAW_LEFT);
+  m_listener->setParagraphMargin(para.m_margins[0], MWAW_LEFT);
 
   double rMargin = para.m_margins[2] > 0 ? textWidth-para.m_margins[2] : 0.0;
   if (rMargin > 28./72.) rMargin -= 28./72.;
-  m_listener->setParagraphMargin(rMargin, DMWAW_RIGHT);
+  m_listener->setParagraphMargin(rMargin, MWAW_RIGHT);
 
 #if 0
-  m_listener->setParagraphMargin(para.m_spacings[0]/72., DMWAW_TOP);
-  m_listener->setParagraphMargin(para.m_spacings[1]/72., DMWAW_BOTTOM);
+  m_listener->setParagraphMargin(para.m_spacings[0]/72., MWAW_TOP);
+  m_listener->setParagraphMargin(para.m_spacings[1]/72., MWAW_BOTTOM);
 #endif
   m_listener->setTabs(para.m_tabs);
 }

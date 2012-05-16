@@ -594,7 +594,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 WPParser::WPParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_listSubDocuments(), m_asciiFile(), m_asciiName("")
+  m_pageSpan(), m_asciiFile(), m_asciiName("")
 {
   init();
 }
@@ -654,7 +654,7 @@ void WPParser::newPage(int number)
     m_state->m_actPage++;
     if (!m_listener || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(DMWAW_PAGE_BREAK);
+    m_listener->insertBreak(MWAW_PAGE_BREAK);
   }
 }
 
@@ -1075,7 +1075,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
             MWAW_DEBUG_MSG(("WPParser::readWindowsZone: pb with col break\n"));
           } else {
             actCol++;
-            if (m_listener) m_listener->insertBreak(DMWAW_COLUMN_BREAK);
+            if (m_listener) m_listener->insertBreak(MWAW_COLUMN_BREAK);
           }
         }
       case 0:
@@ -1815,13 +1815,13 @@ bool WPParser::readFonts
     font.setId(input->readULong(1));
     int flag = input->readULong(1);
     int flags = 0;
-    if (flag&0x1) flags |= DMWAW_BOLD_BIT;
-    if (flag&0x2) flags |= DMWAW_ITALICS_BIT;
-    if (flag&0x4) flags |= DMWAW_UNDERLINE_BIT;
-    if (flag&0x8) flags |= DMWAW_EMBOSS_BIT;
-    if (flag&0x10) flags |= DMWAW_SHADOW_BIT;
-    if (flag&0x20) flags |= DMWAW_SUPERSCRIPT_BIT;
-    if (flag&0x40) flags |= DMWAW_SUBSCRIPT_BIT;
+    if (flag&0x1) flags |= MWAW_BOLD_BIT;
+    if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+    if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
+    if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
+    if (flag&0x10) flags |= MWAW_SHADOW_BIT;
+    if (flag&0x20) flags |= MWAW_SUPERSCRIPT_BIT;
+    if (flag&0x40) flags |= MWAW_SUBSCRIPT_BIT;
 
     font.setFlags(flags);
     for (int j = 5; j < 7; j++)

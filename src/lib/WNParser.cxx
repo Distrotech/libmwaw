@@ -139,7 +139,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 WNParser::WNParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_entryManager(), m_pageSpan(), m_textParser(), m_listSubDocuments(),
+  m_entryManager(), m_pageSpan(), m_textParser(),
   m_asciiFile(), m_asciiName("")
 {
   init();
@@ -210,7 +210,7 @@ void WNParser::newPage(int number)
     m_state->m_actPage++;
     if (!m_listener || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(DMWAW_PAGE_BREAK);
+    m_listener->insertBreak(MWAW_PAGE_BREAK);
   }
 }
 
@@ -228,7 +228,7 @@ void WNParser::sendFootnote(WNEntry const &entry)
   if (!m_listener) return;
 
   MWAWSubDocumentPtr subdoc(new WNParserInternal::SubDocument(*this, getInput(), entry));
-  m_listener->insertNote(FOOTNOTE, subdoc);
+  m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
 }
 
 void WNParser::send(WNEntry const &entry)

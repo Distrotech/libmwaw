@@ -161,7 +161,7 @@ struct Zone {
 /** Internal: class to store the paragraph properties */
 struct Ruler {
   //! Constructor
-  Ruler() : m_justify (DMWAW_PARAGRAPH_JUSTIFICATION_LEFT),
+  Ruler() : m_justify(libmwaw::JustificationLeft),
     m_interline(1.0), m_interlinePercent(true), m_tabs(),
     m_error("") {
     for(int c = 0; c < 2; c++) // default value
@@ -175,20 +175,20 @@ struct Ruler {
     if (ind.m_justify) {
       o << "Just=";
       switch(ind.m_justify) {
-      case DMWAW_PARAGRAPH_JUSTIFICATION_LEFT:
+      case libmwaw::JustificationLeft:
         o << "left";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_CENTER:
+      case libmwaw::JustificationCenter:
         o << "centered";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT:
+      case libmwaw::JustificationRight:
         o << "right";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_FULL:
+      case libmwaw::JustificationFull:
         o << "full";
         break;
       default:
-        o << "#just=" << ind.m_justify << ", ";
+        o << "#just=" << int(ind.m_justify) << ", ";
         break;
       }
       o << ", ";
@@ -206,7 +206,7 @@ struct Ruler {
     if (ind.m_spacings[0]) o << "topSpace=" << ind.m_spacings[0] << ",";
     if (ind.m_spacings[1]) o << "bottomSpace=" << ind.m_spacings[0] << ",";
     if (ind.m_tabs.size()) {
-      DMWAWTabStop::printTabs(o, ind.m_tabs);
+      MWAWTabStop::printTabs(o, ind.m_tabs);
       o << ",";
     }
     if (ind.m_error.length()) o << ind.m_error << ",";
@@ -219,8 +219,8 @@ struct Ruler {
    */
   float m_margins[3];
 
-  //! paragraph justification : DMWAW_PARAGRAPH_JUSTIFICATION*
-  int m_justify;
+  //! paragraph justification
+  libmwaw::Justification m_justify;
   /** the line height */
   float m_interline;
   /** true if the interline is percent*/
@@ -228,7 +228,7 @@ struct Ruler {
   /** the top/bottom spacing in inches */
   float m_spacings[2];
   //! the tabulations
-  std::vector<DMWAWTabStop> m_tabs;
+  std::vector<MWAWTabStop> m_tabs;
   /** the errors */
   std::string m_error;
 };
@@ -330,43 +330,43 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0x81:
         break; // often found by pair around a " " a ","...
       case 0x83:
-        fFlags ^= DMWAW_BOLD_BIT;
+        fFlags ^= MWAW_BOLD_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x84:
-        fFlags ^= DMWAW_ITALICS_BIT;
+        fFlags ^= MWAW_ITALICS_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x86:
-        fFlags ^= DMWAW_OUTLINE_BIT;
+        fFlags ^= MWAW_OUTLINE_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x87:
-        fFlags ^= DMWAW_SHADOW_BIT;
+        fFlags ^= MWAW_SHADOW_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x88:
-        fFlags ^= DMWAW_SMALL_CAPS_BIT;
+        fFlags ^= MWAW_SMALL_CAPS_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
         //case 0x89: f << "[color]"; break;
       case 0x8a:
-        fFlags ^= DMWAW_SUPERSCRIPT100_BIT;
+        fFlags ^= MWAW_SUPERSCRIPT100_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x8b:
-        fFlags ^= DMWAW_SUBSCRIPT100_BIT;
+        fFlags ^= MWAW_SUBSCRIPT100_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x8c:
-        fFlags ^= DMWAW_STRIKEOUT_BIT;
+        fFlags ^= MWAW_STRIKEOUT_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
@@ -378,27 +378,27 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0x85:
       case 0x8e: // word underline
       case 0x92: // dotted underline
-        fFlags ^= DMWAW_UNDERLINE_BIT;
+        fFlags ^= MWAW_UNDERLINE_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x8f:
-        fFlags ^= DMWAW_DOUBLE_UNDERLINE_BIT;
+        fFlags ^= MWAW_DOUBLE_UNDERLINE_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x93:
-        fFlags ^= DMWAW_OVERLINE_BIT;
+        fFlags ^= MWAW_OVERLINE_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x94:
-        fFlags ^= DMWAW_ALL_CAPS_BIT;
+        fFlags ^= MWAW_ALL_CAPS_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x95:
-        fFlags ^= DMWAW_SMALL_CAPS_BIT;
+        fFlags ^= MWAW_SMALL_CAPS_BIT;
         font.setFlags(fFlags);
         fontSet=false;
         break;
@@ -447,10 +447,10 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
             m_mainParser->sendText(fId, libmwaw::DOC_COMMENT_ANNOTATION);
             break;
           case 0xd3:
-            m_mainParser->sendText(fId, libmwaw::DOC_NOTE, FOOTNOTE);
+            m_mainParser->sendText(fId, libmwaw::DOC_NOTE, MWAWContentListener::FOOTNOTE);
             break;
           case 0xd5:
-            m_mainParser->sendText(fId, libmwaw::DOC_NOTE, ENDNOTE);
+            m_mainParser->sendText(fId, libmwaw::DOC_NOTE, MWAWContentListener::ENDNOTE);
             break;
           }
         }
@@ -572,7 +572,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     while (num==actBreakPos) {
       if (num != 1) sendData = true;
       if (actCol < numCol-1 && numCol > 1) {
-        m_listener->insertBreak(DMWAW_COLUMN_BREAK);
+        m_listener->insertBreak(MWAW_COLUMN_BREAK);
         actCol++;
       } else if (actPage >= numPages) {
         MWAW_DEBUG_MSG(("FWText::send can not find the page information\n"));
@@ -582,7 +582,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
           if (zone->m_main)
             m_mainParser->newPage(++m_state->m_actualPage);
           else if (numCol > 1)
-            m_listener->insertBreak(DMWAW_COLUMN_BREAK);
+            m_listener->insertBreak(MWAW_COLUMN_BREAK);
         }
         actCol = 0;
 
@@ -1648,12 +1648,12 @@ void FWText::setProperty(FWTextInternal::Ruler const &para)
     m_listener->lineSpacingChange(1.0, WPX_PERCENT);
 
   m_listener->setParagraphTextIndent(para.m_margins[0]+para.m_margins[1]);
-  m_listener->setParagraphMargin(para.m_margins[1], DMWAW_LEFT);
+  m_listener->setParagraphMargin(para.m_margins[1], MWAW_LEFT);
   if (para.m_margins[2] >= 0.0)
-    m_listener->setParagraphMargin(para.m_margins[2], DMWAW_RIGHT);
+    m_listener->setParagraphMargin(para.m_margins[2], MWAW_RIGHT);
 
-  m_listener->setParagraphMargin(para.m_spacings[0]/72., DMWAW_TOP);
-  m_listener->setParagraphMargin(para.m_spacings[1]/72., DMWAW_BOTTOM);
+  m_listener->setParagraphMargin(para.m_spacings[0]/72., MWAW_TOP);
+  m_listener->setParagraphMargin(para.m_spacings[1]/72., MWAW_BOTTOM);
   m_listener->setTabs(para.m_tabs);
 }
 

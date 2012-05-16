@@ -231,7 +231,7 @@ std::ostream &operator<<(std::ostream &o, MSWEntry const &entry)
 ////////////////////////////////////////////////////////////
 MSWParser::MSWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_entryMap(), m_pageSpan(), m_textParser(), m_listSubDocuments(),
+  m_entryMap(), m_pageSpan(), m_textParser(),
   m_asciiFile(), m_asciiName("")
 {
   init();
@@ -295,7 +295,7 @@ void MSWParser::newPage(int number)
     m_state->m_actPage++;
     if (!m_listener || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(DMWAW_PAGE_BREAK);
+    m_listener->insertBreak(MWAW_PAGE_BREAK);
   }
 }
 
@@ -352,7 +352,7 @@ void MSWParser::sendFootnote(int id)
   if (!m_listener) return;
 
   MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_NOTE));
-  m_listener->insertNote(FOOTNOTE, subdoc);
+  m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
 }
 
 void MSWParser::sendFieldComment(int id)

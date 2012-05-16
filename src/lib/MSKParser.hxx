@@ -182,9 +182,6 @@ protected:
   //! the text parser
   shared_ptr<MSKText> m_textParser;
 
-  //! a list of created subdocuments
-  std::vector<shared_ptr<MSKParserInternal::SubDocument> > m_listSubDocuments;
-
   //! the debug file
   libmwaw::DebugFile m_asciiFile;
 

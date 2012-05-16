@@ -43,48 +43,9 @@ uint8_t readU8(WPXInputStream *input)
 
   return *p;
 }
-
-_RGBSColor::_RGBSColor(uint8_t r, uint8_t g, uint8_t b, uint8_t s)
-  :	m_r(r),
-    m_g(g),
-    m_b(b),
-    m_s(s)
-{
 }
 
-_RGBSColor::_RGBSColor()
-  :	m_r(0),
-    m_g(0),
-    m_b(0),
-    m_s(0)
-{
-}
-
-_RGBSColor::_RGBSColor(uint16_t red, uint16_t green, uint16_t blue)
-  :	m_r((uint8_t)((red >> 8) & 0xFF)),
-    m_g((uint8_t)((green >> 8) & 0xFF)),
-    m_b((uint8_t)((blue >> 8) & 0xFF)),
-    m_s(100)
-{
-}
-}
-
-_DMWAWTabStop::_DMWAWTabStop(double position, DMWAWTabAlignment alignment, uint16_t leaderCharacter, uint8_t leaderNumSpaces)
-  :	m_position(position),
-    m_alignment(alignment),
-    m_leaderCharacter(leaderCharacter),
-    m_leaderNumSpaces(leaderNumSpaces)
-{
-}
-
-_DMWAWTabStop::_DMWAWTabStop()
-  :	m_position(0.0),
-    m_alignment(LEFT),
-    m_leaderCharacter('\0'),
-    m_leaderNumSpaces(0)
-{
-}
-void _DMWAWTabStop::printTabs(std::ostream &o, std::vector<DMWAWTabStop> const &tabs)
+void MWAWTabStop::printTabs(std::ostream &o, std::vector<MWAWTabStop> const &tabs)
 {
   int nbTabs = tabs.size();
   if (!nbTabs) return;
@@ -119,19 +80,6 @@ void _DMWAWTabStop::printTabs(std::ostream &o, std::vector<DMWAWTabStop> const &
   o << ")";
 }
 
-_DMWAWColumnDefinition::_DMWAWColumnDefinition()
-  :	m_width(0.0),
-    m_leftGutter(0.0),
-    m_rightGutter(0.0)
-{
-}
-
-_DMWAWColumnProperties::_DMWAWColumnProperties()
-  :	m_attributes(0x00000000),
-    m_alignment(0x00)
-{
-}
-
 namespace libmwaw
 {
 std::string numberingTypeToString(NumberingType type)
@@ -152,30 +100,6 @@ std::string numberingTypeToString(NumberingType type)
   }
   MWAW_DEBUG_MSG(("libmwaw::numberingTypeToString: must not be called with type %d\n", int(type)));
   return "1";
-}
-
-
-WPXString doubleToString(const double value)
-{
-  WPXString tempString;
-  if (value < 0.0001 && value > -0.0001)
-    tempString.sprintf("0.0000");
-  else
-    tempString.sprintf("%.4f", value);
-#ifndef __ANDROID__
-  std::string decimalPoint(localeconv()->decimal_point);
-#else
-  std::string decimalPoint(".");
-#endif
-  if ((decimalPoint.size() == 0) || (decimalPoint == "."))
-    return tempString;
-  std::string stringValue(tempString.cstr());
-  if (!stringValue.empty()) {
-    std::string::size_type pos;
-    while ((pos = stringValue.find(decimalPoint)) != std::string::npos)
-      stringValue.replace(pos,decimalPoint.size(),".");
-  }
-  return WPXString(stringValue.c_str());
 }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

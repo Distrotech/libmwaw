@@ -49,23 +49,23 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
   if (size() > 0) o << "sz=" << size() << ",";
 
   if (m_flags) o << "fl=";
-  if (m_flags&DMWAW_BOLD_BIT) o << "b:";
-  if (m_flags&DMWAW_ITALICS_BIT) o << "it:";
-  if (m_flags&DMWAW_UNDERLINE_BIT) o << "underL:";
-  if (m_flags&DMWAW_OVERLINE_BIT) o << "overL:";
-  if (m_flags&DMWAW_EMBOSS_BIT) o << "emboss:";
-  if (m_flags&DMWAW_SHADOW_BIT) o << "shadow:";
-  if (m_flags&DMWAW_OUTLINE_BIT) o << "outline:";
-  if (m_flags&DMWAW_DOUBLE_UNDERLINE_BIT) o << "2underL:";
-  if (m_flags&DMWAW_STRIKEOUT_BIT) o << "strikeout:";
-  if (m_flags&DMWAW_SMALL_CAPS_BIT) o << "smallCaps:";
-  if (m_flags&DMWAW_ALL_CAPS_BIT) o << "allCaps:";
-  if (m_flags&DMWAW_HIDDEN_BIT) o << "hidden:";
-  if (m_flags&DMWAW_SMALL_PRINT_BIT) o << "consended:";
-  if (m_flags&DMWAW_LARGE_BIT) o << "extended:";
-  if ((m_flags&DMWAW_SUPERSCRIPT_BIT) || (m_flags&DMWAW_SUPERSCRIPT100_BIT))
+  if (m_flags&MWAW_BOLD_BIT) o << "b:";
+  if (m_flags&MWAW_ITALICS_BIT) o << "it:";
+  if (m_flags&MWAW_UNDERLINE_BIT) o << "underL:";
+  if (m_flags&MWAW_OVERLINE_BIT) o << "overL:";
+  if (m_flags&MWAW_EMBOSS_BIT) o << "emboss:";
+  if (m_flags&MWAW_SHADOW_BIT) o << "shadow:";
+  if (m_flags&MWAW_OUTLINE_BIT) o << "outline:";
+  if (m_flags&MWAW_DOUBLE_UNDERLINE_BIT) o << "2underL:";
+  if (m_flags&MWAW_STRIKEOUT_BIT) o << "strikeout:";
+  if (m_flags&MWAW_SMALL_CAPS_BIT) o << "smallCaps:";
+  if (m_flags&MWAW_ALL_CAPS_BIT) o << "allCaps:";
+  if (m_flags&MWAW_HIDDEN_BIT) o << "hidden:";
+  if (m_flags&MWAW_SMALL_PRINT_BIT) o << "consended:";
+  if (m_flags&MWAW_LARGE_BIT) o << "extended:";
+  if ((m_flags&MWAW_SUPERSCRIPT_BIT) || (m_flags&MWAW_SUPERSCRIPT100_BIT))
     o << "superS:";
-  if ((m_flags&DMWAW_SUBSCRIPT_BIT) || (m_flags&DMWAW_SUBSCRIPT100_BIT))
+  if ((m_flags&MWAW_SUBSCRIPT_BIT) || (m_flags&MWAW_SUBSCRIPT100_BIT))
     o << "subS:";
   if (m_flags) o << ",";
 

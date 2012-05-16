@@ -29,17 +29,41 @@
 #include <libwpd/WPXProperty.h>
 #include <limits>
 
+RGBSColor::RGBSColor(uint8_t r, uint8_t g, uint8_t b, uint8_t s)
+  :	m_r(r),
+    m_g(g),
+    m_b(b),
+    m_s(s)
+{
+}
+
+RGBSColor::RGBSColor()
+  :	m_r(0),
+    m_g(0),
+    m_b(0),
+    m_s(0)
+{
+}
+
+RGBSColor::RGBSColor(uint16_t red, uint16_t green, uint16_t blue)
+  :	m_r((uint8_t)((red >> 8) & 0xFF)),
+    m_g((uint8_t)((green >> 8) & 0xFF)),
+    m_b((uint8_t)((blue >> 8) & 0xFF)),
+    m_s(100)
+{
+}
+
 _DMWAWContentParsingState::_DMWAWContentParsingState() :
   m_textAttributeBits(0),
   m_fontSize(12.0/*WP6_DEFAULT_FONT_SIZE*/), // FIXME ME!!!!!!!!!!!!!!!!!!! HELP WP6_DEFAULT_FONT_SIZE
   m_fontName(new WPXString(/*WP6_DEFAULT_FONT_NAME*/"Times New Roman")), // EN PAS DEFAULT FONT AAN VOOR WP5/6/etc
-  m_fontColor(new libmwaw::RGBSColor(0x00,0x00,0x00,0x64)), //Set default to black. Maybe once it will change, but for the while...
+  m_fontColor(new RGBSColor(0x00,0x00,0x00,0x64)), //Set default to black. Maybe once it will change, but for the while...
   m_highlightColor(0),
 
   m_isParagraphColumnBreak(false),
   m_isParagraphPageBreak(false),
-  m_paragraphJustification(DMWAW_PARAGRAPH_JUSTIFICATION_LEFT),
-  m_tempParagraphJustification(0),
+  m_paragraphJustification(libmwaw::JustificationLeft),
+  m_tempParagraphJustification(libmwaw::JustificationLeft),
   m_paragraphLineSpacing(1.0),
   m_paragraphLineSpacingUnit(WPX_PERCENT), // OSNOLA
 
@@ -67,7 +91,7 @@ _DMWAWContentParsingState::_DMWAWContentParsingState() :
   m_isCellWithoutParagraph(false),
   m_isRowWithoutCell(false),
   m_cellAttributeBits(0x00000000),
-  m_paragraphJustificationBeforeTable(DMWAW_PARAGRAPH_JUSTIFICATION_LEFT),
+  m_paragraphJustificationBeforeTable(libmwaw::JustificationLeft),
 
   m_currentPage(0),
   m_numPagesRemainingInSpan(0),
@@ -215,7 +239,7 @@ void DMWAWContentListener::_openSection()
       propList.insert("libwpd:margin-bottom", 0.0);
 
     WPXPropertyListVector columns;
-    typedef std::vector<DMWAWColumnDefinition>::const_iterator CDVIter;
+    typedef std::vector<MWAWColumnDefinition>::const_iterator CDVIter;
     for (CDVIter iter = m_ps->m_textColumns.begin(); iter != m_ps->m_textColumns.end(); iter++) {
       WPXPropertyList column;
       // The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
@@ -384,28 +408,28 @@ void DMWAWContentListener::_resetParagraphState(const bool isListElement)
   m_ps->m_isCellWithoutParagraph = false;
   m_ps->m_isTextColumnWithoutParagraph = false;
   m_ps->m_isHeaderFooterWithoutParagraph = false;
-  m_ps->m_tempParagraphJustification = 0;
+  m_ps->m_tempParagraphJustification = libmwaw::JustificationLeft;
   m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
   m_ps->m_listBeginPosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
 }
 
-void DMWAWContentListener::_appendJustification(WPXPropertyList &propList, int justification)
+void DMWAWContentListener::_appendJustification(WPXPropertyList &propList, libmwaw::Justification justification)
 {
   switch (justification) {
-  case DMWAW_PARAGRAPH_JUSTIFICATION_LEFT:
+  case libmwaw::JustificationLeft:
     // doesn't require a paragraph prop - it is the default
     propList.insert("fo:text-align", "left");
     break;
-  case DMWAW_PARAGRAPH_JUSTIFICATION_CENTER:
+  case libmwaw::JustificationCenter:
     propList.insert("fo:text-align", "center");
     break;
-  case DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT:
+  case libmwaw::JustificationRight:
     propList.insert("fo:text-align", "end");
     break;
-  case DMWAW_PARAGRAPH_JUSTIFICATION_FULL:
+  case libmwaw::JustificationFull:
     propList.insert("fo:text-align", "justify");
     break;
-  case DMWAW_PARAGRAPH_JUSTIFICATION_FULL_ALL_LINES:
+  case libmwaw::JustificationFullAllLines:
     propList.insert("fo:text-align", "justify");
     propList.insert("fo:text-align-last", "justify");
     break;
@@ -414,7 +438,7 @@ void DMWAWContentListener::_appendJustification(WPXPropertyList &propList, int j
 
 void DMWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool isListElement)
 {
-  int justification;
+  libmwaw::Justification justification;
   if (m_ps->m_tempParagraphJustification)
     justification = m_ps->m_tempParagraphJustification;
   else
@@ -501,13 +525,13 @@ void DMWAWContentListener::_getTabStops(WPXPropertyListVector &tabStops)
 
     // type
     switch (m_ps->m_tabStops[i].m_alignment) {
-    case RIGHT:
+    case MWAWTabStop::RIGHT:
       tmpTabStop.insert("style:type", "right");
       break;
-    case CENTER:
+    case MWAWTabStop::CENTER:
       tmpTabStop.insert("style:type", "center");
       break;
-    case DECIMAL:
+    case MWAWTabStop::DECIMAL:
       tmpTabStop.insert("style:type", "char");
       tmpTabStop.insert("style:char", "."); // Assume a decimal point for now
       break;
@@ -599,8 +623,6 @@ void DMWAWContentListener::_closeListElement()
     _closePageSpan();
 }
 
-const double DMWAW_DEFAULT_SUPER_SUB_SCRIPT = 58.0;
-
 void DMWAWContentListener::_openSpan()
 {
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
@@ -645,49 +667,43 @@ void DMWAWContentListener::_openSpan()
   }
 
   WPXPropertyList propList;
-  if (attributeBits & DMWAW_SUPERSCRIPT_BIT) {
-    WPXString sSuperScript("super ");
-    sSuperScript.append(libmwaw::doubleToString(DMWAW_DEFAULT_SUPER_SUB_SCRIPT));
-    sSuperScript.append("%");
-    propList.insert("style:text-position", sSuperScript);
-  } else if (attributeBits & DMWAW_SUBSCRIPT_BIT) {
-    WPXString sSubScript("sub ");
-    sSubScript.append(libmwaw::doubleToString(DMWAW_DEFAULT_SUPER_SUB_SCRIPT));
-    sSubScript.append("%");
-    propList.insert("style:text-position", sSubScript);
-  } else if (attributeBits & DMWAW_SUPERSCRIPT100_BIT) {
+  if (attributeBits & MWAW_SUPERSCRIPT_BIT)
+    propList.insert("style:text-position", "super 58.0%");
+  else if (attributeBits & MWAW_SUBSCRIPT_BIT)
+    propList.insert("style:text-position", "sub 58.0%");
+  else if (attributeBits & MWAW_SUPERSCRIPT100_BIT) {
     propList.insert("style:text-position", "20 100");
-  } else if (attributeBits & DMWAW_SUBSCRIPT100_BIT) {
+  } else if (attributeBits & MWAW_SUBSCRIPT100_BIT) {
     propList.insert("style:text-position", "-20 100");
   }
-  if (attributeBits & DMWAW_ITALICS_BIT)
+  if (attributeBits & MWAW_ITALICS_BIT)
     propList.insert("fo:font-style", "italic");
-  if (attributeBits & DMWAW_BOLD_BIT)
+  if (attributeBits & MWAW_BOLD_BIT)
     propList.insert("fo:font-weight", "bold");
-  if (attributeBits & DMWAW_STRIKEOUT_BIT)
+  if (attributeBits & MWAW_STRIKEOUT_BIT)
     propList.insert("style:text-line-through-type", "single");
-  if (attributeBits & DMWAW_DOUBLE_UNDERLINE_BIT)
+  if (attributeBits & MWAW_DOUBLE_UNDERLINE_BIT)
     propList.insert("style:text-underline-type", "double");
-  else if (attributeBits & DMWAW_UNDERLINE_BIT)
+  else if (attributeBits & MWAW_UNDERLINE_BIT)
     propList.insert("style:text-underline-type", "single");
-  if (attributeBits & DMWAW_OVERLINE_BIT)
+  if (attributeBits & MWAW_OVERLINE_BIT)
     propList.insert("style:text-overline-type", "single");
-  if (attributeBits & DMWAW_OUTLINE_BIT)
+  if (attributeBits & MWAW_OUTLINE_BIT)
     propList.insert("style:text-outline", "true");
-  if (attributeBits & DMWAW_SMALL_CAPS_BIT)
+  if (attributeBits & MWAW_SMALL_CAPS_BIT)
     propList.insert("fo:font-variant", "small-caps");
-  if (attributeBits & DMWAW_BLINK_BIT)
+  if (attributeBits & MWAW_BLINK_BIT)
     propList.insert("style:text-blinking", "true");
-  if (attributeBits & DMWAW_SHADOW_BIT)
+  if (attributeBits & MWAW_SHADOW_BIT)
     propList.insert("fo:text-shadow", "1pt 1pt");
   // OSNOLA : these following fields are added for MWAW
-  if (attributeBits & DMWAW_HIDDEN_BIT)
+  if (attributeBits & MWAW_HIDDEN_BIT)
     propList.insert("text:display", "none");
-  if (attributeBits & DMWAW_ALL_CAPS_BIT)
+  if (attributeBits & MWAW_ALL_CAPS_BIT)
     propList.insert("fo:text-transform", "uppercase");
-  if (attributeBits & DMWAW_EMBOSS_BIT)
+  if (attributeBits & MWAW_EMBOSS_BIT)
     propList.insert("style:font-relief", "embossed");
-  else if (attributeBits & DMWAW_ENGRAVE_BIT)
+  else if (attributeBits & MWAW_ENGRAVE_BIT)
     propList.insert("style:font-relief", "engraved");
 
   if (m_ps->m_fontName)
@@ -698,7 +714,7 @@ void DMWAWContentListener::_openSpan()
   // Here we give the priority to the redline bit over the font color. This is how WordPerfect behaves:
   // redline overrides font color even if the color is changed when redline was already defined.
   // When redline finishes, the color is back.
-  if (attributeBits & DMWAW_REDLINE_BIT)
+  if (attributeBits & MWAW_REDLINE_BIT)
     propList.insert("fo:color", "#ff3333");  // #ff3333 = a nice bright red
   else if (m_ps->m_fontColor)
     propList.insert("fo:color", _colorToString(m_ps->m_fontColor));
@@ -782,7 +798,7 @@ void DMWAWContentListener::_closeTableCell()
 /**
 Creates an new document state. Saves the old state on a "stack".
 */
-void DMWAWContentListener::handleSubDocument(const MWAWSubDocument *subDocument, libmwaw::SubDocumentType subDocumentType)
+void DMWAWContentListener::handleSubDocument(MWAWSubDocumentPtr &subDocument, libmwaw::SubDocumentType subDocumentType)
 {
   // save our old parsing state on our "stack"
   DMWAWContentParsingState *oldPS = m_ps;
@@ -830,7 +846,7 @@ void DMWAWContentListener::insertBreak(const uint8_t breakType)
 {
   if (!isUndoOn()) {
     switch (breakType) {
-    case DMWAW_COLUMN_BREAK:
+    case MWAW_COLUMN_BREAK:
       if (!m_ps->m_isPageSpanOpened && !m_ps->m_inSubDocument)
         _openSpan();
       if (m_ps->m_isParagraphOpened)
@@ -840,7 +856,7 @@ void DMWAWContentListener::insertBreak(const uint8_t breakType)
       m_ps->m_isParagraphColumnBreak = true;
       m_ps->m_isTextColumnWithoutParagraph = true;
       break;
-    case DMWAW_PAGE_BREAK:
+    case MWAW_PAGE_BREAK:
       if (!m_ps->m_isPageSpanOpened && !m_ps->m_inSubDocument)
         _openSpan();
       if (m_ps->m_isParagraphOpened)
@@ -856,8 +872,8 @@ void DMWAWContentListener::insertBreak(const uint8_t breakType)
       return;
 
     switch (breakType) {
-    case DMWAW_PAGE_BREAK:
-    case DMWAW_SOFT_PAGE_BREAK:
+    case MWAW_PAGE_BREAK:
+    case MWAW_SOFT_PAGE_BREAK:
       if (m_ps->m_numPagesRemainingInSpan > 0)
         m_ps->m_numPagesRemainingInSpan--;
       else {
@@ -883,8 +899,7 @@ void DMWAWContentListener::lineSpacingChange(const double lineSpacing, WPXUnit u
 }
 
 // OSNOLA: simplication of this function
-void DMWAWContentListener::justificationChange(const uint8_t justification,
-    bool force)
+void DMWAWContentListener::justificationChange(libmwaw::Justification justification, bool force)
 {
   if (isUndoOn()) return;
 
@@ -903,12 +918,11 @@ void DMWAWContentListener::justificationChange(const uint8_t justification,
   }
 
   switch (justification) {
-  case DMWAW_PARAGRAPH_JUSTIFICATION_LEFT:
-  case DMWAW_PARAGRAPH_JUSTIFICATION_FULL:
-  case DMWAW_PARAGRAPH_JUSTIFICATION_CENTER:
-  case DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT:
-  case DMWAW_PARAGRAPH_JUSTIFICATION_FULL_ALL_LINES:
-  case DMWAW_PARAGRAPH_JUSTIFICATION_DECIMAL_ALIGNED:
+  case libmwaw::JustificationLeft:
+  case libmwaw::JustificationFull:
+  case libmwaw::JustificationCenter:
+  case libmwaw::JustificationRight:
+  case libmwaw::JustificationFullAllLines:
     m_ps->m_paragraphJustification = justification;
     break;
   }
@@ -916,7 +930,7 @@ void DMWAWContentListener::justificationChange(const uint8_t justification,
 
 double DMWAWContentListener::_getNextTabStop() const
 {
-  for (std::vector<DMWAWTabStop>::const_iterator iter = m_ps->m_tabStops.begin(); iter != (m_ps->m_tabStops.end() - 1); iter++) {
+  for (std::vector<MWAWTabStop>::const_iterator iter = m_ps->m_tabStops.begin(); iter != (m_ps->m_tabStops.end() - 1); iter++) {
     if (iter->m_position
         - (m_ps->m_isTabPositionRelative ? 0.0 : (m_ps->m_pageMarginLeft + m_ps->m_sectionMarginLeft + m_ps->m_leftMarginByParagraphMarginChange))
         == (m_ps->m_leftMarginByTabs + m_ps->m_textIndentByTabs + m_ps->m_textIndentByParagraphIndentChange))
@@ -933,7 +947,7 @@ double DMWAWContentListener::_getNextTabStop() const
 
 double DMWAWContentListener::_getPreviousTabStop() const
 {
-  for (std::vector<DMWAWTabStop>::reverse_iterator riter = m_ps->m_tabStops.rbegin(); riter != (m_ps->m_tabStops.rend() - 1); riter++) {
+  for (std::vector<MWAWTabStop>::reverse_iterator riter = m_ps->m_tabStops.rbegin(); riter != (m_ps->m_tabStops.rend() - 1); riter++) {
     if (riter->m_position
         - (m_ps->m_isTabPositionRelative ? 0.0 : (m_ps->m_pageMarginLeft + m_ps->m_sectionMarginLeft + m_ps->m_leftMarginByParagraphMarginChange))
         == (m_ps->m_leftMarginByTabs + m_ps->m_textIndentByTabs + m_ps->m_textIndentByParagraphIndentChange))
@@ -948,7 +962,7 @@ double DMWAWContentListener::_getPreviousTabStop() const
   return (std::numeric_limits<double>::max)();
 }
 
-WPXString DMWAWContentListener::_colorToString(const libmwaw::RGBSColor *color)
+WPXString DMWAWContentListener::_colorToString(const RGBSColor *color)
 {
   WPXString tmpString;
 
@@ -965,10 +979,10 @@ WPXString DMWAWContentListener::_colorToString(const libmwaw::RGBSColor *color)
   return tmpString;
 }
 
-WPXString DMWAWContentListener::_mergeColorsToString(const libmwaw::RGBSColor *fgColor, const libmwaw::RGBSColor *bgColor)
+WPXString DMWAWContentListener::_mergeColorsToString(const RGBSColor *fgColor, const RGBSColor *bgColor)
 {
   WPXString tmpColor;
-  libmwaw::RGBSColor tmpFgColor, tmpBgColor;
+  RGBSColor tmpFgColor, tmpBgColor;
 
   if (fgColor) {
     tmpFgColor.m_r = fgColor->m_r;

@@ -153,7 +153,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_listZones(), m_graphParser(), m_textParser(), m_listSubDocuments(), m_asciiFile(), m_asciiName("")
+  m_pageSpan(), m_listZones(), m_graphParser(), m_textParser(), m_asciiFile(), m_asciiName("")
 {
   init();
 }
@@ -225,9 +225,9 @@ void MSKParser::newPage(int number, bool softBreak)
     if (!m_listener || m_state->m_actPage == 1)
       continue;
     if (softBreak)
-      m_listener->insertBreak(DMWAW_SOFT_PAGE_BREAK);
+      m_listener->insertBreak(MWAW_SOFT_PAGE_BREAK);
     else
-      m_listener->insertBreak(DMWAW_PAGE_BREAK);
+      m_listener->insertBreak(MWAW_PAGE_BREAK);
   }
 }
 
@@ -335,7 +335,6 @@ bool  MSKParser::sendTextBox(int id, MWAWPosition const &pos, WPXPropertyList &e
 {
   shared_ptr<MSKParserInternal::SubDocument> subdoc
   (new MSKParserInternal::SubDocument(*this, getInput(), -id-1));
-  m_listSubDocuments.push_back(subdoc);
   if (m_listener)
     m_listener->insertTextBox(pos, subdoc, extras);
   return true;

@@ -298,8 +298,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 MWProParser::MWProParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_structures(), m_pageSpan(), m_listSubDocuments(),
-  m_asciiFile(), m_asciiName("")
+  m_structures(), m_pageSpan(), m_asciiFile(), m_asciiName("")
 {
   init();
 }
@@ -371,9 +370,9 @@ void MWProParser::newPage(int number, bool softBreak)
     if (!m_listener || m_state->m_actPage == 1)
       continue;
     if (softBreak)
-      m_listener->insertBreak(DMWAW_SOFT_PAGE_BREAK);
+      m_listener->insertBreak(MWAW_SOFT_PAGE_BREAK);
     else
-      m_listener->insertBreak(DMWAW_PAGE_BREAK);
+      m_listener->insertBreak(MWAW_PAGE_BREAK);
   }
 }
 
@@ -597,22 +596,18 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
       actHeaderId = headerId;
       if (actHeaderId == 0)
         headerSubdoc.reset();
-      else {
+      else
         headerSubdoc.reset
         (new MWProParserInternal::SubDocument(*this, getInput(), headerId));
-        m_listSubDocuments.push_back(headerSubdoc);
-      }
     }
     int footerId =  m_structures->getFooterId(i+1);
     if (footerId != actFooterId) {
       actFooterId = footerId;
       if (actFooterId == 0)
         footerSubdoc.reset();
-      else {
+      else
         footerSubdoc.reset
         (new MWProParserInternal::SubDocument(*this, getInput(), footerId));
-        m_listSubDocuments.push_back(footerSubdoc);
-      }
     }
 
     MWAWPageSpan ps(m_pageSpan);
@@ -1348,7 +1343,6 @@ bool MWProParser::sendEmptyFrameZone(MWAWPosition const &pos,
 {
   shared_ptr<MWProParserInternal::SubDocument> subdoc
   (new MWProParserInternal::SubDocument(*this, getInput(), -3));
-  m_listSubDocuments.push_back(subdoc);
   if (m_listener)
     m_listener->insertTextBox(pos, subdoc, extras);
   return true;
@@ -1410,7 +1404,6 @@ bool MWProParser::sendTextBoxZone(int blockId, MWAWPosition const &pos,
 {
   shared_ptr<MWProParserInternal::SubDocument> subdoc
   (new MWProParserInternal::SubDocument(*this, getInput(), blockId));
-  m_listSubDocuments.push_back(subdoc);
   if (m_listener)
     m_listener->insertTextBox(pos, subdoc, extras);
   return true;
@@ -1547,7 +1540,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
           int id = zone->m_tokens[data.m_id].m_blockId;
           if (vers == 0) id = -id;
           MWAWSubDocumentPtr subdoc(new MWProParserInternal::SubDocument(*this, getInput(), id));
-          m_listener->insertNote(FOOTNOTE, subdoc);
+          m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
         }
         break;
       case 3:

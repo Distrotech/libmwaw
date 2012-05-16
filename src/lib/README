@@ -1,7 +1,7 @@
 ------------------------------------------------------------
 --------------            Structure           --------------
 ------------------------------------------------------------
-- MWAW* : internal core part of libmwaw (ie. classes used by many parser )
+- MWAW* : internal core part of libmwaw (ie. classes used by all the parser )
 - CW* : parser of ClarisWorks and AppleWorks documents
 - FW* : parser of FullWrite documents
 - MSK* : parser of Microsoft Works documents
@@ -10,13 +10,14 @@
 - MWPro* : parser of MacWrite II, MacWrite Pro documents
 - WN* : parser of WriteNow documents
 - WP* : parser of WriterPlus documents
+
 ------------------------------------------------------------
 --------------            Exported           --------------
 ------------------------------------------------------------
-
 ## new interface	
 - libmwaw.hxx
 - MWAWDocument.hxx
+- MWAWPropertyHandler.hxx
 
 ------------------------------------------------------------
 --------------   files DMWAW and libmwaw_internal  --------------
@@ -25,7 +26,7 @@ These files are the files which come directly of libwpd/src/lib
 
 ## DMWAWContentListener by
    - introduction of a new field m_paragraphLineSpacingUnit
-   - gestion of  DMWAW_ALL_CAPS_BIT/DMWAW_EMBOSS_BIT/DMWAW_ENGRAVE_BIT bits
+   - gestion of  MWAW_ALL_CAPS_BIT/MWAW_EMBOSS_BIT/MWAW_ENGRAVE_BIT bits
    - virtualize _appendParagraphProperties in order to add border flags
    - change in WPXContentListener::justificationChange
 
@@ -77,6 +78,9 @@ These files defined basic structures which must be used by the parsers :
 
 ## MWAWEntry.hxx
 	store an file entry as begin/end offset with the name of the entry
+
+## MWAWList.hxx
+	store a simple list definition 
 
 ## MWAWParser.hxx
 	a basic parser

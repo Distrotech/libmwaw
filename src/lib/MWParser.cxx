@@ -109,7 +109,7 @@ struct Information {
   //! constructor
   Information() :
     m_type(UNKNOWN),  m_compressed(false), m_pos(), m_height(0),
-    m_justify(DMWAW_PARAGRAPH_JUSTIFICATION_LEFT), m_justifySet(false),
+    m_justify(libmwaw::JustificationLeft), m_justifySet(false),
     m_data(),m_font()
   {}
 
@@ -127,8 +127,8 @@ struct Information {
   //! the paragraph height
   int m_height;
 
-  //! paragraph justification : DMWAW_PARAGRAPH_JUSTIFICATION*
-  int m_justify;
+  //! paragraph justification : MWAW_PARAGRAPH_JUSTIFICATION*
+  libmwaw::Justification m_justify;
 
   //! true if the justification must be used
   bool m_justifySet;
@@ -165,16 +165,16 @@ std::ostream &operator<<(std::ostream &o, Information const &info)
 
   if (info.m_justifySet) {
     switch (info.m_justify) {
-    case DMWAW_PARAGRAPH_JUSTIFICATION_LEFT:
+    case libmwaw::JustificationLeft:
       o << "left[justify],";
       break;
-    case DMWAW_PARAGRAPH_JUSTIFICATION_CENTER:
+    case libmwaw::JustificationCenter:
       o << "center[justify],";
       break;
-    case DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT:
+    case libmwaw::JustificationRight:
       o << "right[justify],";
       break;
-    case DMWAW_PARAGRAPH_JUSTIFICATION_FULL:
+    case libmwaw::JustificationFull:
       o << "full[justify],";
       break;
     default:
@@ -191,7 +191,7 @@ std::ostream &operator<<(std::ostream &o, Information const &info)
 /** Internal: class to store the paragraph properties */
 struct Paragraph {
   //! Constructor
-  Paragraph() :  m_spacing(1.), m_tabs(), m_justify (DMWAW_PARAGRAPH_JUSTIFICATION_LEFT) {
+  Paragraph() :  m_spacing(1.), m_tabs(), m_justify(libmwaw::JustificationLeft) {
     for(int c = 0; c < 3; c++) m_margins[c] = 0.0;
   }
   //! operator<<
@@ -199,16 +199,16 @@ struct Paragraph {
     if (ind.m_justify) {
       o << "Just=";
       switch(ind.m_justify) {
-      case DMWAW_PARAGRAPH_JUSTIFICATION_LEFT:
+      case libmwaw::JustificationLeft:
         o << "left";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_CENTER:
+      case libmwaw::JustificationCenter:
         o << "centered";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT:
+      case libmwaw::JustificationRight:
         o << "right";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_FULL:
+      case libmwaw::JustificationFull:
         o << "full";
         break;
       default:
@@ -222,7 +222,7 @@ struct Paragraph {
     if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
     if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
 
-    DMWAWTabStop::printTabs(o, ind.m_tabs);
+    MWAWTabStop::printTabs(o, ind.m_tabs);
     return o;
   }
 
@@ -235,9 +235,9 @@ struct Paragraph {
   float m_spacing;
 
   //! the tabulations
-  std::vector<DMWAWTabStop> m_tabs;
-  //! paragraph justification : DWPS_PARAGRAPH_JUSTIFICATION*
-  int m_justify;
+  std::vector<MWAWTabStop> m_tabs;
+  //! paragraph justification
+  libmwaw::Justification m_justify;
 };
 
 ////////////////////////////////////////
@@ -393,7 +393,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 MWParser::MWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_listSubDocuments(), m_asciiFile(), m_asciiName("")
+  m_pageSpan(), m_asciiFile(), m_asciiName("")
 {
   init();
 }
@@ -454,7 +454,7 @@ void MWParser::newPage(int number)
     m_state->m_actPage++;
     if (!m_listener || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(DMWAW_PAGE_BREAK);
+    m_listener->insertBreak(MWAW_PAGE_BREAK);
   }
 }
 
@@ -1185,16 +1185,16 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     int paragStatus = input->readULong(1);
     switch(paragStatus & 0x3) {
     case 0:
-      info.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_LEFT;
+      info.m_justify = libmwaw::JustificationLeft;
       break;
     case 1:
-      info.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_CENTER;
+      info.m_justify = libmwaw::JustificationCenter;
       break;
     case 2:
-      info.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT;
+      info.m_justify = libmwaw::JustificationRight;
       break;
     case 3:
-      info.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_FULL;
+      info.m_justify = libmwaw::JustificationFull;
       break;
     default:
       break;
@@ -1210,13 +1210,13 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     int paragFormat = input->readULong(2);
     int flags = 0;
     // bit 1 = plain
-    if (paragFormat&0x2) flags |= DMWAW_BOLD_BIT;
-    if (paragFormat&0x4) flags |= DMWAW_ITALICS_BIT;
-    if (paragFormat&0x8) flags |= DMWAW_UNDERLINE_BIT;
-    if (paragFormat&0x10) flags |= DMWAW_EMBOSS_BIT;
-    if (paragFormat&0x20) flags |= DMWAW_SHADOW_BIT;
-    if (paragFormat&0x40) flags |= DMWAW_SUPERSCRIPT100_BIT;
-    if (paragFormat&0x80) flags |= DMWAW_SUBSCRIPT100_BIT;
+    if (paragFormat&0x2) flags |= MWAW_BOLD_BIT;
+    if (paragFormat&0x4) flags |= MWAW_ITALICS_BIT;
+    if (paragFormat&0x8) flags |= MWAW_UNDERLINE_BIT;
+    if (paragFormat&0x10) flags |= MWAW_EMBOSS_BIT;
+    if (paragFormat&0x20) flags |= MWAW_SHADOW_BIT;
+    if (paragFormat&0x40) flags |= MWAW_SUPERSCRIPT100_BIT;
+    if (paragFormat&0x80) flags |= MWAW_SUBSCRIPT100_BIT;
     info.m_font.setFlags(flags);
 
     int fontSize = 0;
@@ -1354,13 +1354,13 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     int flag = input->readULong(1);
     int flags = 0;
     // bit 1 = plain
-    if (flag&0x1) flags |= DMWAW_BOLD_BIT;
-    if (flag&0x2) flags |= DMWAW_ITALICS_BIT;
-    if (flag&0x4) flags |= DMWAW_UNDERLINE_BIT;
-    if (flag&0x8) flags |= DMWAW_EMBOSS_BIT;
-    if (flag&0x10) flags |= DMWAW_SHADOW_BIT;
-    if (flag&0x20) flags |= DMWAW_SUPERSCRIPT100_BIT;
-    if (flag&0x40) flags |= DMWAW_SUBSCRIPT100_BIT;
+    if (flag&0x1) flags |= MWAW_BOLD_BIT;
+    if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+    if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
+    if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
+    if (flag&0x10) flags |= MWAW_SHADOW_BIT;
+    if (flag&0x20) flags |= MWAW_SUPERSCRIPT100_BIT;
+    if (flag&0x40) flags |= MWAW_SUBSCRIPT100_BIT;
     font.setFlags(flags);
     font.setId(input->readULong(2));
     listPos.push_back(pos);
@@ -1470,16 +1470,16 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   int justify = input->readLong(1);
   switch(justify) {
   case 0:
-    parag.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_LEFT;
+    parag.m_justify = libmwaw::JustificationLeft;
     break;
   case 1:
-    parag.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_CENTER;
+    parag.m_justify = libmwaw::JustificationCenter;
     break;
   case 2:
-    parag.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT;
+    parag.m_justify = libmwaw::JustificationRight;
     break;
   case 3:
-    parag.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_FULL;
+    parag.m_justify = libmwaw::JustificationFull;
     break;
   default:
     f << "##justify=" << justify << ",";
@@ -1501,9 +1501,9 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   parag.m_tabs.resize(numTabs);
   for (int i = 0; i < numTabs; i++) {
     int numPixel = input->readLong(2);
-    enum DMWAWTabAlignment align = LEFT;
+    MWAWTabStop::Alignment align = MWAWTabStop::LEFT;
     if (numPixel < 0) {
-      align = DECIMAL;
+      align = MWAWTabStop::DECIMAL;
       numPixel *= -1;
     }
     parag.m_tabs[i].m_alignment = align;
@@ -1516,14 +1516,14 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
 
     // set the margin
     m_listener->setParagraphTextIndent(parag.m_margins[0]);
-    m_listener->setParagraphMargin(parag.m_margins[1], DMWAW_LEFT);
+    m_listener->setParagraphMargin(parag.m_margins[1], MWAW_LEFT);
 
     float rPos = 0;
     if (parag.m_margins[2] >= 0.0) {
       float rPos =textWidth-parag.m_margins[2]-28./72.;
       if (rPos < 0) rPos = 0;
     }
-    m_listener->setParagraphMargin(rPos, DMWAW_RIGHT);
+    m_listener->setParagraphMargin(rPos, MWAW_RIGHT);
 
     m_listener->setTabs(parag.m_tabs,textWidth);
     m_listener->justificationChange(parag.m_justify);

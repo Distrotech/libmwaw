@@ -110,7 +110,7 @@ public:
   /** sets the paragraph margin.
    *
    * \param margin is given in inches
-   * \param pos in DMWAW_LEFT, DMWAW_RIGHT, DMWAW_TOP, DMWAW_BOTTOM
+   * \param pos in MWAW_LEFT, MWAW_RIGHT, MWAW_TOP, MWAW_BOTTOM
    */
   void setParagraphMargin(double margin, int pos, WPXUnit unit=WPX_INCH);
   /** sets the tabulations.
@@ -118,10 +118,10 @@ public:
    * \param tabStops the tabulations
    * \param maxW if given, decals the tabulations which are too near of the right border
    */
-  void setTabs(const std::vector<DMWAWTabStop> &tabStops, double maxW = -1.);
+  void setTabs(const std::vector<MWAWTabStop> &tabStops, double maxW = -1.);
   /** indicates that the paragraph has a basic border (ie. a black line)
    *
-   * \param which = DMWAW_TABLE_CELL_LEFT_BORDER_OFF, ...
+   * \param which = libmwaw::LeftBorderBit, ...
    * \param flag sets to true
    */
   void setParagraphBorder(int which, bool flag);
@@ -168,7 +168,7 @@ public:
   /** adds note
    *
    * \warning checks if this does allow recursive insertion */
-  void insertNote(const DMWAWNoteType noteType,
+  void insertNote(const NoteType noteType,
                   MWAWSubDocumentPtr &subDocument);
   /** adds comment
    *
@@ -257,7 +257,7 @@ protected:
   //! closes the previous item (if needed) and open the new one
   void _changeList();
   //! function called to handle a sub document
-  void _handleSubDocument(const MWAWSubDocument *subDocument,
+  void _handleSubDocument(MWAWSubDocumentPtr &subDocument,
                           libmwaw::SubDocumentType subDocumentType);
   /** retrieve properties to open a new frame
    *
@@ -313,10 +313,8 @@ private:
   //! the actual list id
   int m_actualListId;
 
-  //! a list of actual subdocument used to avoid recursion
-  std::vector<MWAWSubDocument const *>  m_subDocuments;
   //! a list of actual subdocument smart pointer to forbide eroneous destruction
-  std::vector<MWAWSubDocumentPtr>  m_listDocuments;
+  std::vector<MWAWSubDocumentPtr>  m_subDocuments;
 
 };
 

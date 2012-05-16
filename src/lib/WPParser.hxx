@@ -207,9 +207,6 @@ protected:
   //! the actual document size
   MWAWPageSpan m_pageSpan;
 
-  //! a list of created subdocuments
-  std::vector<shared_ptr<WPParserInternal::SubDocument> > m_listSubDocuments;
-
   //! the debug file
   libmwaw::DebugFile m_asciiFile;
 

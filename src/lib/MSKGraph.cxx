@@ -1334,13 +1334,13 @@ bool MSKGraph::readFont(MSKGraphInternal::Font &font)
   font.m_font.setFont(m_input->readULong(2));
   int flags = m_input->readULong(1);
   int flag = 0;
-  if (flags & 0x1) flag |= DMWAW_BOLD_BIT;
-  if (flags & 0x2) flag |= DMWAW_ITALICS_BIT;
-  if (flags & 0x4) flag |= DMWAW_UNDERLINE_BIT;
-  if (flags & 0x8) flag |= DMWAW_EMBOSS_BIT;
-  if (flags & 0x10) flag |= DMWAW_SHADOW_BIT;
-  if (flags & 0x20) flag |= DMWAW_SUPERSCRIPT_BIT;
-  if (flags & 0x40) flag |= DMWAW_SUBSCRIPT_BIT;
+  if (flags & 0x1) flag |= MWAW_BOLD_BIT;
+  if (flags & 0x2) flag |= MWAW_ITALICS_BIT;
+  if (flags & 0x4) flag |= MWAW_UNDERLINE_BIT;
+  if (flags & 0x8) flag |= MWAW_EMBOSS_BIT;
+  if (flags & 0x10) flag |= MWAW_SHADOW_BIT;
+  if (flags & 0x20) flag |= MWAW_SUPERSCRIPT_BIT;
+  if (flags & 0x40) flag |= MWAW_SUBSCRIPT_BIT;
   if (flags & 0x80) f << "#smaller,";
   font.m_font.setFlags(flag);
 

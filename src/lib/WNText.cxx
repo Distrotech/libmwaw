@@ -88,7 +88,7 @@ struct Font {
 /** Internal: class to store the paragraph properties */
 struct Ruler {
   //! Constructor
-  Ruler() : m_justify (DMWAW_PARAGRAPH_JUSTIFICATION_LEFT),
+  Ruler() : m_justify(libmwaw::JustificationLeft),
     m_height(0.0), m_interlineFixed(false), m_tabs(),
     m_error("") {
     for(int c = 0; c < 3; c++) // default value
@@ -101,20 +101,20 @@ struct Ruler {
     if (ind.m_justify) {
       o << "Just=";
       switch(ind.m_justify) {
-      case DMWAW_PARAGRAPH_JUSTIFICATION_LEFT:
+      case libmwaw::JustificationLeft:
         o << "left";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_CENTER:
+      case libmwaw::JustificationCenter:
         o << "centered";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT:
+      case libmwaw::JustificationRight:
         o << "right";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_FULL:
+      case libmwaw::JustificationFull:
         o << "full";
         break;
       default:
-        o << "#just=" << ind.m_justify << ", ";
+        o << "#just=" << int(ind.m_justify) << ", ";
         break;
       }
       o << ", ";
@@ -125,7 +125,7 @@ struct Ruler {
     if (ind.m_interlineFixed) o << "interline[fixed],";
     if (ind.m_height > 0.0) o << "interline=" << ind.m_height << "pt,";
     if (ind.m_tabs.size()) {
-      DMWAWTabStop::printTabs(o, ind.m_tabs);
+      MWAWTabStop::printTabs(o, ind.m_tabs);
       o << ",";
     }
     for (int i = 0; i < 8; i++) {
@@ -141,14 +141,14 @@ struct Ruler {
    * 0: first line left, 1: left, 2: right (from right)
    */
   float m_margins[3];
-  //! paragraph justification : DMWAW_PARAGRAPH_JUSTIFICATION*
-  int m_justify;
+  //! paragraph justification
+  libmwaw::Justification m_justify;
   /** the line height */
   float m_height;
   /** true if the interline is fixed*/
   int m_interlineFixed;
   //! the tabulations
-  std::vector<DMWAWTabStop> m_tabs;
+  std::vector<MWAWTabStop> m_tabs;
   //! some unknown value
   int m_values[8];
   /** the errors */
@@ -249,10 +249,10 @@ struct TableData {
   int getBorderList() const {
     int res = 0;
     // checkme : 0, 80 = no border but what about the other bytes ...
-    if (m_flags[0]&0xf) res |= DMWAW_TABLE_CELL_TOP_BORDER_OFF;
-    if (m_flags[1]&0xf) res |= DMWAW_TABLE_CELL_RIGHT_BORDER_OFF;
-    if (m_flags[2]&0xf) res |= DMWAW_TABLE_CELL_BOTTOM_BORDER_OFF;
-    if (m_flags[3]&0xf) res |= DMWAW_TABLE_CELL_LEFT_BORDER_OFF;
+    if (m_flags[0]&0xf) res |= libmwaw::TopBorderBit;
+    if (m_flags[1]&0xf) res |= libmwaw::RightBorderBit;
+    if (m_flags[2]&0xf) res |= libmwaw::BottomBorderBit;
+    if (m_flags[3]&0xf) res |= libmwaw::LeftBorderBit;
     return res;
   }
   //! operator<<
@@ -483,7 +483,7 @@ struct Cell : public MWAWTableCell {
   WNText &m_parser;
   //! the background color
   Vec3uc m_color;
-  //! the border list : DMWAW_TABLE_CELL_LEFT_BORDER_OFF | ...
+  //! the border list : libmwaw::LeftBorderBit | ...
   int m_borderList;
   //! the list of zone
   std::vector<ContentZone> m_zonesList;
@@ -1171,11 +1171,11 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   font.m_font.setSize(input.readULong(vers <= 2 ? 1 : 2));
   int flag = input.readULong(1);
   int flags=0;
-  if (flag&0x1) flags |= DMWAW_BOLD_BIT;
-  if (flag&0x2) flags |= DMWAW_ITALICS_BIT;
-  if (flag&0x4) flags |= DMWAW_UNDERLINE_BIT;
-  if (flag&0x8) flags |= DMWAW_EMBOSS_BIT;
-  if (flag&0x10) flags |= DMWAW_SHADOW_BIT;
+  if (flag&0x1) flags |= MWAW_BOLD_BIT;
+  if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+  if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
+  if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
+  if (flag&0x10) flags |= MWAW_SHADOW_BIT;
   if (flag&0x20) f << "condensed,";
   if (flag&0x40) f << "extended,";
   if (flag&0x80) f << "#flag0[0x80],";
@@ -1186,29 +1186,29 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
     return true;
   }
   flag = input.readULong(1);
-  if (flag&0x80) flags |= DMWAW_STRIKEOUT_BIT;
+  if (flag&0x80) flags |= MWAW_STRIKEOUT_BIT;
   if (flag&0x7f) f << "#flag1=" << std::hex << (flag&0x7f) << std::dec << ",";
 
   flag = input.readULong(1);
-  if (flag&0x2) flags |= DMWAW_DOUBLE_UNDERLINE_BIT;
+  if (flag&0x2) flags |= MWAW_DOUBLE_UNDERLINE_BIT;
   if (flag&0x4) {
-    flags |= DMWAW_UNDERLINE_BIT;
+    flags |= MWAW_UNDERLINE_BIT;
     f << "underline[thick],";
   }
   if (flag&0x8) {
-    flags |= DMWAW_UNDERLINE_BIT;
+    flags |= MWAW_UNDERLINE_BIT;
     f << "underline[gray],";
   }
   if (flag&0x10) {
-    flags |= DMWAW_UNDERLINE_BIT;
+    flags |= MWAW_UNDERLINE_BIT;
     f << "underline[charcoal],";
   }
   if (flag&0x20) {
-    flags |= DMWAW_UNDERLINE_BIT;
+    flags |= MWAW_UNDERLINE_BIT;
     f << "underline[dashed],";
   }
   if (flag&0x40) {
-    flags |= DMWAW_UNDERLINE_BIT;
+    flags |= MWAW_UNDERLINE_BIT;
     f << "underline[dotted],";
   }
   if (flag&0x81) f << "#flag2=" << std::hex << (flag&0x81) << std::dec << ",";
@@ -1224,10 +1224,10 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   }
   int heightDecal = input.readLong(2);
   if (heightDecal > 0) {
-    flags |= DMWAW_SUPERSCRIPT100_BIT;
+    flags |= MWAW_SUPERSCRIPT100_BIT;
     f << "supY=" << heightDecal <<",";
   } else if (heightDecal < 0) {
-    flags |= DMWAW_SUBSCRIPT100_BIT;
+    flags |= MWAW_SUBSCRIPT100_BIT;
     f << "supY=" << -heightDecal <<",";
   }
 
@@ -1289,13 +1289,13 @@ bool WNText::readRuler(MWAWInputStream &input, WNTextInternal::Ruler &ruler)
   case 0:
     break; // left
   case 1:
-    ruler.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_FULL;
+    ruler.m_justify = libmwaw::JustificationFull;
     break;
   case 2:
-    ruler.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_CENTER;
+    ruler.m_justify = libmwaw::JustificationCenter;
     break;
   case 3:
-    ruler.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT;
+    ruler.m_justify = libmwaw::JustificationRight;
     break;
   default:
     break;
@@ -1311,7 +1311,7 @@ bool WNText::readRuler(MWAWInputStream &input, WNTextInternal::Ruler &ruler)
     int previousVal = 0;
     int tab = 0;
     while (!input.atEOS()) {
-      DMWAWTabStop newTab;
+      MWAWTabStop newTab;
       int newVal = input.readULong(2);
       if (tab && newVal < previousVal) {
         MWAW_DEBUG_MSG(("WNText::readRuler: find bad tab pos\n"));
@@ -1325,13 +1325,13 @@ bool WNText::readRuler(MWAWInputStream &input, WNTextInternal::Ruler &ruler)
       case 0:
         break;
       case 1:
-        newTab.m_alignment = CENTER;
+        newTab.m_alignment = MWAWTabStop::CENTER;
         break;
       case 2:
-        newTab.m_alignment = RIGHT;
+        newTab.m_alignment = MWAWTabStop::RIGHT;
         break;
       case 3:
-        newTab.m_alignment = DECIMAL;
+        newTab.m_alignment = MWAWTabStop::DECIMAL;
         break;
       default:
         break;
@@ -1352,14 +1352,14 @@ void WNText::setProperty(WNTextInternal::Ruler const &ruler)
 
   double textWidth = m_mainParser->pageWidth();
   m_listener->setParagraphTextIndent(ruler.m_margins[0]/72.);
-  m_listener->setParagraphMargin(ruler.m_margins[1]/72., DMWAW_LEFT);
+  m_listener->setParagraphMargin(ruler.m_margins[1]/72., MWAW_LEFT);
   int rPos = int(ruler.m_margins[2]);
   if (version() <= 2) rPos = int(textWidth)-rPos;
   if (rPos >= 0)
     rPos -= 28;
   if (rPos < 0) rPos = 0;
 
-  m_listener->setParagraphMargin(rPos/72., DMWAW_RIGHT);
+  m_listener->setParagraphMargin(rPos/72., MWAW_RIGHT);
 
   if (ruler.m_interlineFixed && ruler.m_height > 0)
     m_listener->lineSpacingChange(ruler.m_height+2, WPX_POINT);
@@ -1702,7 +1702,7 @@ bool WNText::send(WNEntry const &entry)
   WNTextInternal::Ruler ruler;
   switch(text->m_type) { // try to set the default
   case 1:
-    ruler.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_CENTER;
+    ruler.m_justify = libmwaw::JustificationCenter;
     break;
   case 2:
     for (int i=0; i < 3; i++) ruler.m_margins[i] = 0.0;
@@ -1792,7 +1792,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
         if (m_state->m_numColumns <= 1 && ++m_state->m_actualPage <= m_state->m_numPages)
           m_mainParser->newPage(m_state->m_actualPage);
         else if (m_state->m_numColumns > 1 && m_listener)
-          m_listener->insertBreak(DMWAW_COLUMN_BREAK);
+          m_listener->insertBreak(MWAW_COLUMN_BREAK);
       }
       break;
     default:
@@ -1867,8 +1867,8 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     switch(zone.m_type) {
     case 0x9: { // only in v2
       int fFlags = actFont.flags() & ~extraFontFlags;
-      if (zone.m_value > 0) extraFontFlags = DMWAW_SUPERSCRIPT100_BIT;
-      else if (zone.m_value < 0) extraFontFlags = DMWAW_SUBSCRIPT100_BIT;
+      if (zone.m_value > 0) extraFontFlags = MWAW_SUPERSCRIPT100_BIT;
+      else if (zone.m_value < 0) extraFontFlags = MWAW_SUBSCRIPT100_BIT;
       else extraFontFlags = 0;
       MWAWFont font(actFont);
       font.setFlags(fFlags | extraFontFlags);

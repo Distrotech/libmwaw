@@ -27,7 +27,7 @@
  * this file and DMWAWContentListener.cpp differ only from
  * libwpd::DMWAWContentListener by
  *   - introduction of a new field m_paragraphLineSpacingUnit
- *   - gestion of  DMWAW_ALL_CAPS_BIT/DMWAW_EMBOSS_BIT/DMWAW_ENGRAVE_BIT bits
+ *   - gestion of  MWAW_ALL_CAPS_BIT/MWAW_EMBOSS_BIT/MWAW_ENGRAVE_BIT bits
  *   - change in DMWAWContentListener::justificationChange
  *
  * the other file WPX... are only basic copy of WPX needed because
@@ -48,6 +48,17 @@
 #include <set>
 class WPXString;
 
+struct RGBSColor {
+  RGBSColor(uint8_t r, uint8_t g, uint8_t b, uint8_t s);
+  RGBSColor(uint16_t red, uint16_t green, uint16_t blue); // Construct
+  // RBBSColor from double precision RGB color used by WP3.x for Mac
+  RGBSColor(); // initializes all values to 0
+  uint8_t m_r;
+  uint8_t m_g;
+  uint8_t m_b;
+  uint8_t m_s;
+};
+
 typedef struct _DMWAWContentParsingState DMWAWContentParsingState;
 struct _DMWAWContentParsingState {
   _DMWAWContentParsingState();
@@ -56,13 +67,13 @@ struct _DMWAWContentParsingState {
   uint32_t m_textAttributeBits;
   double m_fontSize;
   WPXString *m_fontName;
-  libmwaw::RGBSColor *m_fontColor;
-  libmwaw::RGBSColor *m_highlightColor;
+  RGBSColor *m_fontColor;
+  RGBSColor *m_highlightColor;
 
   bool m_isParagraphColumnBreak;
   bool m_isParagraphPageBreak;
-  uint8_t m_paragraphJustification;
-  uint8_t m_tempParagraphJustification; // TODO: remove this one after the tabs are properly implemented
+  libmwaw::Justification m_paragraphJustification;
+  libmwaw::Justification m_tempParagraphJustification; // TODO: remove this one after the tabs are properly implemented
   double m_paragraphLineSpacing;
   WPXUnit m_paragraphLineSpacingUnit; // OSNOLA
 
@@ -98,7 +109,7 @@ struct _DMWAWContentParsingState {
 
   bool m_sectionAttributesChanged;
   int m_numColumns;
-  std::vector < DMWAWColumnDefinition > m_textColumns;
+  std::vector < MWAWColumnDefinition > m_textColumns;
   bool m_isTextColumnWithoutParagraph;
 
   double m_pageFormLength;
@@ -134,10 +145,10 @@ struct _DMWAWContentParsingState {
   uint8_t m_currentListLevel;
 
   uint16_t m_alignmentCharacter;
-  std::vector<DMWAWTabStop> m_tabStops;
+  std::vector<MWAWTabStop> m_tabStops;
   bool m_isTabPositionRelative;
 
-  std::set <const MWAWSubDocument *> m_subDocuments;
+  std::set<MWAWSubDocumentPtr> m_subDocuments;
 
   bool m_inSubDocument;
   bool m_isNote;
@@ -150,6 +161,8 @@ private:
 
 class DMWAWContentListener
 {
+public:
+  enum NoteType { FOOTNOTE, ENDNOTE };
 protected:
   DMWAWContentListener(std::list<MWAWPageSpan> &pageList, WPXDocumentInterface *documentInterface);
   virtual ~DMWAWContentListener();
@@ -158,13 +171,13 @@ protected:
   void startSubDocument();
   void endDocument();
   void endSubDocument();
-  void handleSubDocument(const MWAWSubDocument *subDocument, libmwaw::SubDocumentType subDocumentType);
+  void handleSubDocument(MWAWSubDocumentPtr &subDocument, libmwaw::SubDocumentType subDocumentType);
   void insertBreak(const uint8_t breakType);
 
   // OSNOLA: allows to change the unit
   void lineSpacingChange(const double lineSpacing, WPXUnit unit=WPX_PERCENT);
   // force a break if there is a justification change
-  void justificationChange(const uint8_t justification, bool force=false);
+  void justificationChange(libmwaw::Justification justification, bool force=false);
 
   DMWAWContentParsingState *m_ps; // parse state
   WPXDocumentInterface *m_documentInterface;
@@ -172,7 +185,7 @@ protected:
   std::list<MWAWPageSpan> m_pageList;
   bool m_isUndoOn;
 
-  virtual void _handleSubDocument(const MWAWSubDocument *subDocument, libmwaw::SubDocumentType subDocumentType) = 0;
+  virtual void _handleSubDocument(MWAWSubDocumentPtr &subDocument, libmwaw::SubDocumentType subDocumentType) = 0;
   virtual void _flushText() = 0;
   virtual void _changeList() = 0;
 
@@ -187,7 +200,7 @@ protected:
   // OSNOLA: adds to insert some properties before openSpan
   virtual void _appendExtraSpanProperties(WPXPropertyList &) {}
   void _getTabStops(WPXPropertyListVector &tabStops);
-  void _appendJustification(WPXPropertyList &propList, int justification);
+  void _appendJustification(WPXPropertyList &propList, libmwaw::Justification justification);
   void _resetParagraphState(const bool isListElement=false);
   virtual void _openParagraph();
   void _closeParagraph();
@@ -223,8 +236,8 @@ protected:
 private:
   DMWAWContentListener(const DMWAWContentListener &);
   DMWAWContentListener &operator=(const DMWAWContentListener &);
-  WPXString _colorToString(const libmwaw::RGBSColor *color);
-  WPXString _mergeColorsToString(const libmwaw::RGBSColor *fgColor, const libmwaw::RGBSColor *bgColor);
+  WPXString _colorToString(const RGBSColor *color);
+  WPXString _mergeColorsToString(const RGBSColor *fgColor, const RGBSColor *bgColor);
   uint32_t _mapSymbolFontCharacter(uint32_t character);
   uint32_t _mapDingbatsFontCharacter(uint32_t character);
 };

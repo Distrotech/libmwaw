@@ -377,7 +377,7 @@ struct Font {
 /** Internal: class to store the paragraph properties */
 struct Paragraph {
   //! Constructor
-  Paragraph() :  m_tabs(), m_justify (DMWAW_PARAGRAPH_JUSTIFICATION_LEFT),
+  Paragraph() :  m_tabs(), m_justify(libmwaw::JustificationLeft),
     m_value(0), m_extra("") {
     for(int c = 0; c < 3; c++) m_margins[c] = 0.0;
     for(int i = 0; i < 3; i++) {
@@ -391,20 +391,20 @@ struct Paragraph {
     if (ind.m_justify) {
       o << "Just=";
       switch(ind.m_justify) {
-      case DMWAW_PARAGRAPH_JUSTIFICATION_LEFT:
+      case libmwaw::JustificationLeft:
         o << "left";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_CENTER:
+      case libmwaw::JustificationCenter:
         o << "centered";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT:
+      case libmwaw::JustificationRight:
         o << "right";
         break;
-      case DMWAW_PARAGRAPH_JUSTIFICATION_FULL:
+      case libmwaw::JustificationFull:
         o << "full";
         break;
       default:
-        o << "#just=" << ind.m_justify << ", ";
+        o << "#just=" << int(ind.m_justify) << ", ";
         break;
       }
       o << ", ";
@@ -425,7 +425,7 @@ struct Paragraph {
     if (ind.m_margins[0]) o << "firstLPos=" << ind.m_margins[0] << ", ";
     if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
     if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
-    DMWAWTabStop::printTabs(o, ind.m_tabs);
+    MWAWTabStop::printTabs(o, ind.m_tabs);
     if (ind.m_value) o << "unkn=" << ind.m_value << ",";
     if (ind.m_extra.length()) o << "extra=[" << ind.m_extra << "],";
     return o;
@@ -441,9 +441,9 @@ struct Paragraph {
   /** the spacing unit (percent or point) */
   float m_spacingPercent[3];
   //! the tabulations
-  std::vector<DMWAWTabStop> m_tabs;
-  //! paragraph justification : DWPS_PARAGRAPH_JUSTIFICATION*
-  int m_justify;
+  std::vector<MWAWTabStop> m_tabs;
+  //! paragraph justification
+  libmwaw::Justification m_justify;
 
   //! a unknown value
   int m_value;
@@ -470,10 +470,10 @@ struct Cell : public MWAWTableCell {
   virtual bool send(MWAWContentListenerPtr listener) {
     if (!listener) return true;
     // fixme
-    int border = DMWAW_TABLE_CELL_TOP_BORDER_OFF
-                 | DMWAW_TABLE_CELL_RIGHT_BORDER_OFF
-                 | DMWAW_TABLE_CELL_BOTTOM_BORDER_OFF
-                 | DMWAW_TABLE_CELL_LEFT_BORDER_OFF;
+    int border = libmwaw::TopBorderBit
+                 | libmwaw::RightBorderBit
+                 | libmwaw::BottomBorderBit
+                 | libmwaw::LeftBorderBit;
 
     MWAWCell cell;
     cell.position() = m_position;
@@ -1307,19 +1307,19 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
     font.m_values[1] = m_input->readLong(2);
   long flag = m_input->readULong(2);
   int flags=0;
-  if (flag&0x1) flags |= DMWAW_BOLD_BIT;
-  if (flag&0x2) flags |= DMWAW_ITALICS_BIT;
-  if (flag&0x4) flags |= DMWAW_UNDERLINE_BIT;
-  if (flag&0x8) flags |= DMWAW_EMBOSS_BIT;
-  if (flag&0x10) flags |= DMWAW_SHADOW_BIT;
-  if (flag&0x20) flags |= DMWAW_SUPERSCRIPT100_BIT;
-  if (flag&0x40) flags |= DMWAW_SUBSCRIPT100_BIT;
-  if (flag&0x100) flags |= DMWAW_SUPERSCRIPT_BIT;
-  if (flag&0x200) flags |= DMWAW_STRIKEOUT_BIT;
-  if (flag&0x400) flags |= DMWAW_ALL_CAPS_BIT;
-  if (flag&0x800) flags |= DMWAW_SMALL_CAPS_BIT;
-  if (flag&0x1000) flags |= DMWAW_UNDERLINE_BIT;
-  if (flag&0x2000) flags |= DMWAW_DOUBLE_UNDERLINE_BIT;
+  if (flag&0x1) flags |= MWAW_BOLD_BIT;
+  if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+  if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
+  if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
+  if (flag&0x10) flags |= MWAW_SHADOW_BIT;
+  if (flag&0x20) flags |= MWAW_SUPERSCRIPT100_BIT;
+  if (flag&0x40) flags |= MWAW_SUBSCRIPT100_BIT;
+  if (flag&0x100) flags |= MWAW_SUPERSCRIPT_BIT;
+  if (flag&0x200) flags |= MWAW_STRIKEOUT_BIT;
+  if (flag&0x400) flags |= MWAW_ALL_CAPS_BIT;
+  if (flag&0x800) flags |= MWAW_SMALL_CAPS_BIT;
+  if (flag&0x1000) flags |= MWAW_UNDERLINE_BIT;
+  if (flag&0x2000) flags |= MWAW_DOUBLE_UNDERLINE_BIT;
   if (flag&0x4000) f << "lowercase,";
   font.m_flags = (flag&0x8080L);
 
@@ -1479,32 +1479,32 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
   case 0:
     break;
   case 1:
-    para.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_CENTER;
+    para.m_justify = libmwaw::JustificationCenter;
     break;
   case 2:
-    para.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_RIGHT;
+    para.m_justify = libmwaw::JustificationRight;
     break;
   case 3:
-    para.m_justify = DMWAW_PARAGRAPH_JUSTIFICATION_FULL;
+    para.m_justify = libmwaw::JustificationFull;
     break;
   }
   if (just&0xFC) f << "#justify=" << std::hex << just << std::dec << ",";
   bool emptyTabFound = false;
   for (int i = 0; i < 20; i++) {
     pos = m_input->tell();
-    DMWAWTabStop newTab;
+    MWAWTabStop newTab;
     int type = m_input->readULong(1);
     switch(type & 3) {
     case 0:
       break;
     case 1:
-      newTab.m_alignment = CENTER;
+      newTab.m_alignment = MWAWTabStop::CENTER;
       break;
     case 2:
-      newTab.m_alignment = RIGHT;
+      newTab.m_alignment = MWAWTabStop::RIGHT;
       break;
     case 3:
-      newTab.m_alignment = DECIMAL;
+      newTab.m_alignment = MWAWTabStop::DECIMAL;
       break;
     default:
       break;
@@ -2697,7 +2697,7 @@ void MWProStructuresListenerState::sendChar(char c)
     if (m_isMainZone) {
       if (m_numCols <= 1) newPage();
       else if (m_structures->m_listener)
-        m_structures->m_listener->insertBreak(DMWAW_COLUMN_BREAK);
+        m_structures->m_listener->insertBreak(MWAW_COLUMN_BREAK);
     }
     break;
   case 0xe:
@@ -2822,8 +2822,8 @@ void MWProStructuresListenerState::sendParagraph(MWProStructuresInternal::Paragr
   m_structures->m_listener->justificationChange(para.m_justify);
 
   m_structures->m_listener->setParagraphTextIndent(para.m_margins[0]);
-  m_structures->m_listener->setParagraphMargin(para.m_margins[1], DMWAW_LEFT);
-  m_structures->m_listener->setParagraphMargin(para.m_margins[2], DMWAW_RIGHT);
+  m_structures->m_listener->setParagraphMargin(para.m_margins[1], MWAW_LEFT);
+  m_structures->m_listener->setParagraphMargin(para.m_margins[2], MWAW_RIGHT);
 
   if (para.m_spacing[0] < 1)
     m_structures->m_listener->lineSpacingChange(1.0, WPX_PERCENT);
@@ -2840,7 +2840,7 @@ void MWProStructuresListenerState::sendParagraph(MWProStructuresInternal::Paragr
     else if (para.m_spacingPercent[sp])
       val = (val*7.)/72.;
     m_structures->m_listener->setParagraphMargin
-    (val, sp==1 ? DMWAW_TOP : DMWAW_BOTTOM, WPX_INCH);
+    (val, sp==1 ? MWAW_TOP : MWAW_BOTTOM, WPX_INCH);
   }
   m_numTab = para.m_tabs.size();
   m_structures->m_listener->setTabs(para.m_tabs);
