@@ -29,7 +29,7 @@
 
 #include <sstream>
 
-#include "libmwaw_libwpd.hxx"
+#include "libmwaw_internal.hxx"
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFontConverter.hxx"

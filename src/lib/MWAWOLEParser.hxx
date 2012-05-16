@@ -64,7 +64,7 @@
 
 #include <libwpd-stream/WPXStream.h>
 
-#include "libmwaw_tools.hxx"
+#include "libmwaw_internal.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MWAWDebug.hxx"

@@ -34,7 +34,7 @@
 #include <fstream>
 #include <vector>
 
-#include <libmwaw_internal.hxx>
+#include "libmwaw_internal.hxx"
 
 class WPXInputStream;
 

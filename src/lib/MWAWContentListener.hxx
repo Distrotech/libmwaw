@@ -47,19 +47,20 @@ class MWAWPosition;
 class MWAWSubDocument;
 typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
 
-
+class MWAWPageSpan;
 /** \brief an interne MWAWContentListener which adds some function to a basic DMWAWContentListener
  *
  * This class is mainly based on some specialised contentlistener libwpd */
 class MWAWContentListener : public DMWAWContentListener
 {
+  friend class MWAWPageSpan;
   //! the parent type
   typedef DMWAWContentListener parent;
 protected:
   struct ParsingState;
 public:
   //! access to the constructor
-  static shared_ptr<MWAWContentListener> create(std::list<DMWAWPageSpan> &pageList,
+  static shared_ptr<MWAWContentListener> create(std::list<MWAWPageSpan> &pageList,
       WPXDocumentInterface *documentInterface);
   //! a virtual destructor
   virtual ~MWAWContentListener();
@@ -213,7 +214,7 @@ public:
 
 protected:
   //! protected constructor \sa create
-  MWAWContentListener(std::list<DMWAWPageSpan> &pageList,
+  MWAWContentListener(std::list<MWAWPageSpan> &pageList,
                       WPXDocumentInterface *documentInterface);
   //! function called automatically after creation to initialize the data
   void _init();
@@ -257,7 +258,7 @@ protected:
   void _changeList();
   //! function called to handle a sub document
   void _handleSubDocument(const MWAWSubDocument *subDocument,
-                          MWAWSubDocumentType subDocumentType);
+                          libmwaw::SubDocumentType subDocumentType);
   /** retrieve properties to open a new frame
    *
    * \param propList the properties list

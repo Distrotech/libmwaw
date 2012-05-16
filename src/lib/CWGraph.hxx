@@ -38,8 +38,6 @@
 #include <string>
 #include <vector>
 
-#include "DMWAWPageSpan.hxx"
-
 #include "MWAWPosition.hxx"
 
 #include "MWAWEntry.hxx"

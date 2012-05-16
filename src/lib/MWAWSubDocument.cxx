@@ -58,5 +58,12 @@ bool MWAWSubDocument::operator!=(MWAWSubDocument const &doc) const
   if (doc.m_zone != m_zone) return true;
   return false;
 }
+
+bool MWAWSubDocument::operator!=(shared_ptr<MWAWSubDocument> const &doc) const
+{
+  if (!doc) return true;
+  return operator!=(*doc.get());
+}
+
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
 

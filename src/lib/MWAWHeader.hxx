@@ -33,7 +33,6 @@
 #include <vector>
 
 #include <libwpd-stream/libwpd-stream.h>
-#include "libmwaw_internal.hxx"
 
 #include "MWAWDocument.hxx"
 #include "MWAWInputStream.hxx"

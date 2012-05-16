@@ -97,14 +97,14 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type);
+  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument file position
   WNEntry m_pos;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -259,7 +259,7 @@ void WNParser::parse(WPXDocumentInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
-  if (!checkHeader(0L))  throw(libmwaw_libwpd::ParseException());
+  if (!checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile
@@ -292,7 +292,7 @@ void WNParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
-  if (!ok) throw(libmwaw_libwpd::ParseException());
+  if (!ok) throw(libmwaw::ParseException());
 }
 
 ////////////////////////////////////////////////////////////
@@ -310,23 +310,19 @@ void WNParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::list<DMWAWPageSpan> pageList;
-  DMWAWPageSpan ps(m_pageSpan);
+  std::list<MWAWPageSpan> pageList;
+  MWAWPageSpan ps(m_pageSpan);
 
   WNEntry entry = m_textParser->getHeader();
   if (entry.valid()) {
-    shared_ptr<WNParserInternal::SubDocument> subdoc
-    (new WNParserInternal::SubDocument(*this, getInput(), entry));
-    m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter(HEADER, 0, ALL, subdoc.get());
+    shared_ptr<MWAWSubDocument> subdoc(new WNParserInternal::SubDocument(*this, getInput(), entry));
+    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
   }
 
   entry = m_textParser->getFooter();
   if (entry.valid()) {
-    shared_ptr<WNParserInternal::SubDocument> subdoc
-    (new WNParserInternal::SubDocument(*this, getInput(), entry));
-    m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter(FOOTER, 0, ALL, subdoc.get());
+    shared_ptr<MWAWSubDocument> subdoc(new WNParserInternal::SubDocument(*this, getInput(), entry));
+    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
   }
 
   int numPage = m_textParser->numPages();

@@ -27,20 +27,18 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#include "MWAWSubDocument.hxx"
-
-#include "libmwaw_internal.hxx"
-#include "MWAWPosition.hxx"
+#include <iostream>
+#include <cmath>
+#include <cstring>
+#include <sstream>
 
 #include "MWAWCell.hxx"
 #include "MWAWList.hxx"
+#include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MWAWContentListener.hxx"
 
-#include <iostream>
-#include <cmath>
-#include <cstring>
 
 MWAWContentListener::ParsingState::ParsingState() :
   m_textBuffer(), m_numDeferredTabs(0),
@@ -62,7 +60,7 @@ MWAWContentListener::ParsingState::~ParsingState() {}
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
-MWAWContentListener::MWAWContentListener(std::list<DMWAWPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
+MWAWContentListener::MWAWContentListener(std::list<MWAWPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
   DMWAWContentListener(pageList, documentInterface), m_parseState(0L), m_actualListId(0),
   m_subDocuments(), m_listDocuments()
 {
@@ -73,7 +71,7 @@ MWAWContentListener::MWAWContentListener(std::list<DMWAWPageSpan> &pageList, WPX
     m_ps->m_pageMarginLeft = pageList.begin()->getMarginLeft();
 }
 
-MWAWContentListenerPtr MWAWContentListener::create(std::list<DMWAWPageSpan> &pageList,
+MWAWContentListenerPtr MWAWContentListener::create(std::list<MWAWPageSpan> &pageList,
     WPXDocumentInterface *documentInterface)
 {
   shared_ptr<MWAWContentListener> res(new MWAWContentListener(pageList, documentInterface));
@@ -112,7 +110,7 @@ bool MWAWContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
     return false;
   }
 
-  if (m_ps->m_isTableOpened || (m_ps->m_inSubDocument && m_ps->m_subDocumentType != MWAW_SUBDOCUMENT_TEXT_BOX)) {
+  if (m_ps->m_isTableOpened || (m_ps->m_inSubDocument && m_ps->m_subDocumentType != libmwaw::DOC_TEXT_BOX)) {
     MWAW_DEBUG_MSG(("MWAWContentListener::openSection: impossible to open a section\n"));
     return false;
   }
@@ -155,7 +153,7 @@ bool MWAWContentListener::closeSection()
     return false;
   }
 
-  if (m_ps->m_isTableOpened || (m_ps->m_inSubDocument && m_ps->m_subDocumentType != MWAW_SUBDOCUMENT_TEXT_BOX)) {
+  if (m_ps->m_isTableOpened || (m_ps->m_inSubDocument && m_ps->m_subDocumentType != libmwaw::DOC_TEXT_BOX)) {
     MWAW_DEBUG_MSG(("MWAWContentListener::closeSection: impossible to close a section\n"));
     return false;
   }
@@ -528,7 +526,7 @@ void MWAWContentListener::insertField(MWAWContentListener::FieldType type)
     _flushText();
     _openSpan();
     WPXPropertyList propList;
-    propList.insert("style:num-format", libmwaw_libwpd::_numberingTypeToString(ARABIC));
+    propList.insert("style:num-format", libmwaw::numberingTypeToString(libmwaw::ARABIC).c_str());
     m_documentInterface->insertField(WPXString("text:page-number"), propList);
     // Checkme WP6ContentListener.cpp finish by resetting the state:
     // _parseState->m_styleStateSequence.setCurrentState(m_parseState->m_styleStateSequence.getPreviousState());
@@ -825,7 +823,7 @@ void MWAWContentListener::insertTextBox(MWAWPosition const &pos,
 
   if (subDocument.get()) {
     m_listDocuments.push_back(subDocument);
-    handleSubDocument(subDocument.get(), MWAW_SUBDOCUMENT_TEXT_BOX);
+    handleSubDocument(subDocument.get(), libmwaw::DOC_TEXT_BOX);
   }
   m_documentInterface->closeTextBox();
 
@@ -882,7 +880,7 @@ void MWAWContentListener::insertNote(const DMWAWNoteType noteType, MWAWSubDocume
 
   if (subDocument.get()) m_listDocuments.push_back(subDocument);
 
-  handleSubDocument(subDocument.get(), MWAW_SUBDOCUMENT_NOTE);
+  handleSubDocument(subDocument.get(), libmwaw::DOC_NOTE);
 
   if (noteType == FOOTNOTE)
     m_documentInterface->closeFootnote();
@@ -913,7 +911,7 @@ void MWAWContentListener::insertComment(MWAWSubDocumentPtr &subDocument)
   m_ps->m_isNote = true;
 
   if (subDocument.get()) m_listDocuments.push_back(subDocument);
-  handleSubDocument(subDocument.get(), MWAW_SUBDOCUMENT_COMMENT_ANNOTATION);
+  handleSubDocument(subDocument.get(), libmwaw::DOC_COMMENT_ANNOTATION);
 
   m_documentInterface->closeComment();
   m_ps->m_isNote = false;
@@ -927,7 +925,7 @@ void MWAWContentListener::insertComment(MWAWSubDocumentPtr &subDocument)
 
 void MWAWContentListener::_handleSubDocument
 (const MWAWSubDocument *subDocument,
- MWAWSubDocumentType subDocumentType)
+ libmwaw::SubDocumentType subDocumentType)
 {
   if (isUndoOn()) return;
 

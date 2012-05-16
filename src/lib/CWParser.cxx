@@ -116,14 +116,14 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type);
+  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -275,7 +275,7 @@ void CWParser::parse(WPXDocumentInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
-  if (!checkHeader(0L))  throw(libmwaw_libwpd::ParseException());
+  if (!checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile
@@ -299,7 +299,7 @@ void CWParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
-  if (!ok) throw(libmwaw_libwpd::ParseException());
+  if (!ok) throw(libmwaw::ParseException());
 }
 
 ////////////////////////////////////////////////////////////
@@ -317,8 +317,8 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::list<DMWAWPageSpan> pageList;
-  DMWAWPageSpan ps(m_pageSpan);
+  std::list<MWAWPageSpan> pageList;
+  MWAWPageSpan ps(m_pageSpan);
   int numPage = m_textParser->numPages();
   if (m_databaseParser->numPages() > numPage)
     numPage = m_databaseParser->numPages();
@@ -335,10 +335,8 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
     if (zoneId == 0)
       continue;
 
-    shared_ptr<CWParserInternal::SubDocument> subdoc
-    (new CWParserInternal::SubDocument(*this, getInput(), zoneId));
-    m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter((i==0) ? HEADER : FOOTER, 0, ALL, subdoc.get());
+    shared_ptr<MWAWSubDocument> subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
+    ps.setHeaderFooter((i==0) ? MWAWPageSpan::HEADER : MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
   }
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);

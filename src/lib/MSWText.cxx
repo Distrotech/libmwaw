@@ -628,7 +628,7 @@ struct Paragraph {
       else
         o << "interline=" << -ind.m_interline << "pt[exactly],";
     }
-    libmwaw::internal::printTabs(o, ind.m_tabs);
+    DMWAWTabStop::printTabs(o, ind.m_tabs);
     if (!ind.m_section.m_default) o << ind.m_section << ",";
     if (ind.m_error.length()) o << "," << ind.m_error;
     return o;

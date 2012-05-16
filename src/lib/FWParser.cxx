@@ -128,14 +128,14 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type);
+  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -238,7 +238,7 @@ void FWParser::parse(WPXDocumentInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
-  if (!checkHeader(0L))  throw(libmwaw_libwpd::ParseException());
+  if (!checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile
@@ -284,7 +284,7 @@ void FWParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
-  if (!ok) throw(libmwaw_libwpd::ParseException());
+  if (!ok) throw(libmwaw::ParseException());
 }
 
 ////////////////////////////////////////////////////////////
@@ -302,8 +302,8 @@ void FWParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::list<DMWAWPageSpan> pageList;
-  DMWAWPageSpan ps(m_pageSpan);
+  std::list<MWAWPageSpan> pageList;
+  MWAWPageSpan ps(m_pageSpan);
 
   int numPage = m_textParser->numPages();
   m_state->m_numPages = numPage;
@@ -1080,16 +1080,16 @@ bool FWParser::readPrintInfo()
   return true;
 }
 
-void FWParser::sendText(int id, MWAWSubDocumentType type, int wh)
+void FWParser::sendText(int id, libmwaw::SubDocumentType type, int wh)
 {
   if (!m_listener) return;
 
   MWAWSubDocumentPtr subdoc(new FWParserInternal::SubDocument(*this, getInput(), id));
   switch(type) {
-  case MWAW_SUBDOCUMENT_NOTE:
+  case libmwaw::DOC_NOTE:
     m_listener->insertNote(DMWAWNoteType(wh), subdoc);
     break;
-  case MWAW_SUBDOCUMENT_COMMENT_ANNOTATION:
+  case libmwaw::DOC_COMMENT_ANNOTATION:
     m_listener->insertComment(subdoc);
     break;
   default:

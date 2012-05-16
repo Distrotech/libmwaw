@@ -31,8 +31,7 @@
 #include <libwpd/WPXBinaryData.h>
 #include <libwpd-stream/WPXStream.h>
 
-#include "libmwaw_libwpd.hxx"
-#include "libmwaw_tools.hxx"
+#include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
 #if defined(DEBUG_WITH_FILES)
@@ -195,7 +194,7 @@ bool dumpFile(WPXBinaryData &data, char const *fileName)
   WPXInputStream *tmpStream =
     const_cast<WPXInputStream *>(data.getDataStream());
   while (!tmpStream->atEOS())
-    fprintf(file, "%c", libmwaw_libwpd::readU8(tmpStream));
+    fprintf(file, "%c", libmwaw::readU8(tmpStream));
   fclose(file);
   return true;
 }

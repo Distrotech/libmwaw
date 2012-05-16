@@ -40,7 +40,7 @@
 
 #  include <libwpd/WPXBinaryData.h>
 
-#  include "libmwaw_tools.hxx"
+#  include "libmwaw_internal.hxx"
 #  include "MWAWPictData.hxx"
 
 /** \brief Class to read/store a Mac Pict1.0/2.0 */

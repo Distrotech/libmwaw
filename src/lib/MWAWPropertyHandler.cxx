@@ -33,7 +33,7 @@
 
 #include <stack>
 
-#include "libmwaw_tools.hxx"
+#include "libmwaw_internal.hxx"
 
 #include <libwpd/WPXBinaryData.h>
 #include <libwpd/WPXProperty.h>

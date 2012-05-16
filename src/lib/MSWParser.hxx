@@ -38,7 +38,7 @@
 #include <string>
 #include <vector>
 
-#include "DMWAWPageSpan.hxx"
+#include "MWAWPageSpan.hxx"
 
 #include "MWAWPosition.hxx"
 
@@ -191,7 +191,7 @@ protected:
   void sendFieldComment(int id);
 
   //! try to send a date
-  void send(int id, MWAWSubDocumentType type);
+  void send(int id, libmwaw::SubDocumentType type);
 
   //
   // low level
@@ -230,7 +230,7 @@ protected:
   std::multimap<std::string, MSWEntry> m_entryMap;
 
   //! the actual document size
-  DMWAWPageSpan m_pageSpan;
+  MWAWPageSpan m_pageSpan;
 
   //! the text parser
   shared_ptr<MSWText> m_textParser;

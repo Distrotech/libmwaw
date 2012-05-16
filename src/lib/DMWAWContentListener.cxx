@@ -24,8 +24,8 @@
  */
 
 #include "DMWAWContentListener.hxx"
-#include "DMWAWPageSpan.hxx"
-#include "libmwaw_libwpd.hxx"
+#include "MWAWPageSpan.hxx"
+#include "libmwaw_internal.hxx"
 #include <libwpd/WPXProperty.h>
 #include <limits>
 
@@ -33,7 +33,7 @@ _DMWAWContentParsingState::_DMWAWContentParsingState() :
   m_textAttributeBits(0),
   m_fontSize(12.0/*WP6_DEFAULT_FONT_SIZE*/), // FIXME ME!!!!!!!!!!!!!!!!!!! HELP WP6_DEFAULT_FONT_SIZE
   m_fontName(new WPXString(/*WP6_DEFAULT_FONT_NAME*/"Times New Roman")), // EN PAS DEFAULT FONT AAN VOOR WP5/6/etc
-  m_fontColor(new libmwaw_libwpd::RGBSColor(0x00,0x00,0x00,0x64)), //Set default to black. Maybe once it will change, but for the while...
+  m_fontColor(new libmwaw::RGBSColor(0x00,0x00,0x00,0x64)), //Set default to black. Maybe once it will change, but for the while...
   m_highlightColor(0),
 
   m_isParagraphColumnBreak(false),
@@ -80,7 +80,7 @@ _DMWAWContentParsingState::_DMWAWContentParsingState() :
 
   m_pageFormLength(11.0),
   m_pageFormWidth(8.5f),
-  m_pageFormOrientation(PORTRAIT),
+  m_pageFormOrientation(MWAWPageSpan::PORTRAIT),
 
   m_pageMarginLeft(1.0),
   m_pageMarginRight(1.0),
@@ -118,10 +118,11 @@ _DMWAWContentParsingState::_DMWAWContentParsingState() :
 
   m_inSubDocument(false),
   m_isNote(false),
-  m_subDocumentType(MWAW_SUBDOCUMENT_NONE)
+  m_subDocumentType(libmwaw::DOC_NONE)
 {
 }
 
+#define DELETEP(x) if(x) delete(x)
 _DMWAWContentParsingState::~_DMWAWContentParsingState()
 {
   DELETEP(m_fontName);
@@ -129,7 +130,7 @@ _DMWAWContentParsingState::~_DMWAWContentParsingState()
   DELETEP(m_highlightColor);
 }
 
-DMWAWContentListener::DMWAWContentListener(std::list<DMWAWPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
+DMWAWContentListener::DMWAWContentListener(std::list<MWAWPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
   m_ps(new DMWAWContentParsingState),
   m_documentInterface(documentInterface),
   m_metaData(),
@@ -247,44 +248,6 @@ void DMWAWContentListener::_closeSection()
   }
 }
 
-void DMWAWContentListener::_insertPageNumberParagraph(DMWAWPageNumberPosition position, DMWAWNumberingType numberingType, WPXString fontName, double fontSize)
-{
-  WPXPropertyList propList;
-  switch (position) {
-  case PAGENUMBER_POSITION_TOP_LEFT:
-  case PAGENUMBER_POSITION_BOTTOM_LEFT:
-    // doesn't require a paragraph prop - it is the default
-    propList.insert("fo:text-align", "left");
-    break;
-  case PAGENUMBER_POSITION_TOP_RIGHT:
-  case PAGENUMBER_POSITION_BOTTOM_RIGHT:
-    propList.insert("fo:text-align", "end");
-    break;
-  case PAGENUMBER_POSITION_TOP_CENTER:
-  case PAGENUMBER_POSITION_BOTTOM_CENTER:
-  default:
-    propList.insert("fo:text-align", "center");
-    break;
-  }
-
-  m_documentInterface->openParagraph(propList, WPXPropertyListVector());
-
-  propList.clear();
-  propList.insert("style:font-name", fontName.cstr());
-  propList.insert("fo:font-size", fontSize, WPX_POINT);
-  m_documentInterface->openSpan(propList);
-
-
-  propList.clear();
-  propList.insert("style:num-format", libmwaw_libwpd::_numberingTypeToString(numberingType));
-  m_documentInterface->insertField(WPXString("text:page-number"), propList);
-
-  propList.clear();
-  m_documentInterface->closeSpan();
-
-  m_documentInterface->closeParagraph();
-}
-
 void DMWAWContentListener::_openPageSpan()
 {
   if (m_ps->m_isPageSpanOpened)
@@ -292,6 +255,24 @@ void DMWAWContentListener::_openPageSpan()
 
   if (!m_ps->m_isDocumentStarted)
     startDocument();
+
+  if ( m_pageList.empty() || (m_ps->m_currentPage >= m_pageList.size()) ) {
+    MWAW_DEBUG_MSG(("m_pageList.empty() || (m_ps->m_currentPage >= m_pageList.size())\n"));
+    throw libmwaw::ParseException();
+  }
+
+  std::list<MWAWPageSpan>::iterator currentPageSpanIter = m_pageList.begin();
+  for ( unsigned i = 0; i < m_ps->m_currentPage; i++ )
+    currentPageSpanIter++;
+
+  MWAWPageSpan currentPage = (*currentPageSpanIter);
+
+  WPXPropertyList propList;
+  currentPage.getPageProperty(propList);
+  propList.insert("libwpd:is-last-page-span", ((m_ps->m_currentPage + 1 == m_pageList.size()) ? true : false));
+  m_documentInterface->openPageSpan(propList);
+
+  m_ps->m_isPageSpanOpened = true;
 
   // Hack to be sure that the paragraph margins are consistent even if the page margin changes
   if (m_ps->m_leftMarginByPageMarginChange != 0)
@@ -305,42 +286,17 @@ void DMWAWContentListener::_openPageSpan()
   m_ps->m_listReferencePosition += m_ps->m_pageMarginLeft;
   m_ps->m_listBeginPosition += m_ps->m_pageMarginLeft;
 
-  if ( m_pageList.empty() || (m_ps->m_currentPage >= m_pageList.size()) ) {
-    WPD_DEBUG_MSG(("m_pageList.empty() || (m_ps->m_currentPage >= m_pageList.size())\n"));
-    throw libmwaw_libwpd::ParseException();
-  }
-
-  std::list<DMWAWPageSpan>::iterator currentPageSpanIter = m_pageList.begin();
-  for ( unsigned i = 0; i < m_ps->m_currentPage; i++ )
-    currentPageSpanIter++;
-
-  DMWAWPageSpan currentPage = (*currentPageSpanIter);
-
-  WPXPropertyList propList;
-  propList.insert("libwpd:num-pages", currentPage.getPageSpan());
-
-  propList.insert("libwpd:is-last-page-span", ((m_ps->m_currentPage + 1 == m_pageList.size()) ? true : false));
-  propList.insert("fo:page-height", currentPage.getFormLength());
-  propList.insert("fo:page-width", currentPage.getFormWidth());
-  if (currentPage.getFormOrientation() == LANDSCAPE)
-    propList.insert("style:print-orientation", "landscape");
-  else
-    propList.insert("style:print-orientation", "portrait");
-  propList.insert("fo:margin-left", currentPage.getMarginLeft());
-  propList.insert("fo:margin-right", currentPage.getMarginRight());
-  propList.insert("fo:margin-top", currentPage.getMarginTop());
-  propList.insert("fo:margin-bottom", currentPage.getMarginBottom());
-
-  if (!m_ps->m_isPageSpanOpened)
-    m_documentInterface->openPageSpan(propList);
-
-  m_ps->m_isPageSpanOpened = true;
-
+  m_ps->m_pageFormLength = currentPage.getFormLength();
   m_ps->m_pageFormWidth = currentPage.getFormWidth();
+  m_ps->m_pageFormOrientation = currentPage.getFormOrientation();
   m_ps->m_pageMarginLeft = currentPage.getMarginLeft();
   m_ps->m_pageMarginRight = currentPage.getMarginRight();
   m_ps->m_pageMarginTop = currentPage.getMarginTop();
   m_ps->m_pageMarginBottom = currentPage.getMarginBottom();
+
+  // OSNOLA fixme
+  // we insert the header footer
+  currentPage.sendHeaderFooters((MWAWContentListener *)this, m_documentInterface);
 
   // Hack to be sure that the paragraph margins are consistent even if the page margin changes
   // Compute new values
@@ -359,102 +315,10 @@ void DMWAWContentListener::_openPageSpan()
                                 + m_ps->m_leftMarginByTabs;
   m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange
                                  + m_ps->m_rightMarginByTabs;
-
-
-  // we insert page numbers by inserting them into the header/footer of the wordperfect document. if we don't wind up
-  // inserting a header/footer to encapsulate them inside, it will be necessary to invent one just for this purpose
-  bool pageNumberInserted = false;
-
-  std::vector<DMWAWHeaderFooter> headerFooterList = currentPage.getHeaderFooterList();
-  for (std::vector<DMWAWHeaderFooter>::iterator iter = headerFooterList.begin(); iter != headerFooterList.end(); iter++) {
-    if (((*iter).getOccurence() != NEVER) && !currentPage.getHeaderFooterSuppression((*iter).getInternalType())) {
-      propList.clear();
-      switch ((*iter).getOccurence()) {
-      case ODD:
-        propList.insert("libwpd:occurence", "odd");
-        break;
-      case EVEN:
-        propList.insert("libwpd:occurence", "even");
-        break;
-      case ALL:
-        propList.insert("libwpd:occurence", "all");
-        break;
-      case NEVER:
-      default:
-        break;
-      }
-
-      if ((*iter).getType() == HEADER) {
-        m_documentInterface->openHeader(propList);
-        if (!currentPage.getPageNumberSuppression() &&
-            ((currentPage.getPageNumberPosition() >= PAGENUMBER_POSITION_TOP_LEFT &&
-              currentPage.getPageNumberPosition() <= PAGENUMBER_POSITION_TOP_LEFT_AND_RIGHT) ||
-             currentPage.getPageNumberPosition() == PAGENUMBER_POSITION_TOP_INSIDE_LEFT_AND_RIGHT)) {
-          _insertPageNumberParagraph(currentPage.getPageNumberPosition(), currentPage.getPageNumberingType(),
-                                     currentPage.getPageNumberingFontName(), currentPage.getPageNumberingFontSize());
-          pageNumberInserted = true;
-        }
-      } else
-        m_documentInterface->openFooter(propList);
-
-      // WPD_DEBUG_MSG(("Header Footer Element: Starting to parse the subDocument\n"));
-      handleSubDocument((*iter).getSubDocument(), MWAW_SUBDOCUMENT_HEADER_FOOTER);
-      // WPD_DEBUG_MSG(("Header Footer Element: End of the subDocument parsing\n"));
-      if ((*iter).getType() == HEADER)
-        m_documentInterface->closeHeader();
-      else {
-        if (currentPage.getPageNumberPosition() >= PAGENUMBER_POSITION_BOTTOM_LEFT &&
-            currentPage.getPageNumberPosition() != PAGENUMBER_POSITION_TOP_INSIDE_LEFT_AND_RIGHT &&
-            !currentPage.getPageNumberSuppression()) {
-          _insertPageNumberParagraph(currentPage.getPageNumberPosition(), currentPage.getPageNumberingType(),
-                                     currentPage.getPageNumberingFontName(), currentPage.getPageNumberingFontSize());
-          pageNumberInserted = true;
-        }
-        m_documentInterface->closeFooter();
-      }
-
-      WPD_DEBUG_MSG(("Header Footer Element: type: %i occurence: %i\n",
-                     (*iter).getType(), (*iter).getOccurence()));
-    }
-  }
-
-  if (!pageNumberInserted && currentPage.getPageNumberPosition() != PAGENUMBER_POSITION_NONE && !currentPage.getPageNumberSuppression()) {
-    if (currentPage.getPageNumberPosition() >= PAGENUMBER_POSITION_BOTTOM_LEFT &&
-        currentPage.getPageNumberPosition() != PAGENUMBER_POSITION_TOP_INSIDE_LEFT_AND_RIGHT) {
-      propList.clear();
-      propList.insert("libwpd:occurence", "all");
-      m_documentInterface->openFooter(propList);
-      _insertPageNumberParagraph(currentPage.getPageNumberPosition(), currentPage.getPageNumberingType(),
-                                 currentPage.getPageNumberingFontName(), currentPage.getPageNumberingFontSize());
-      m_documentInterface->closeFooter();
-    } else {
-      propList.clear();
-      propList.insert("libwpd:occurence", "all");
-      m_documentInterface->openHeader(propList);
-      _insertPageNumberParagraph(currentPage.getPageNumberPosition(), currentPage.getPageNumberingType(),
-                                 currentPage.getPageNumberingFontName(), currentPage.getPageNumberingFontSize());
-      m_documentInterface->closeHeader();
-    }
-  }
+  m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange + m_ps->m_textIndentByTabs;
 
   // first paragraph in span (necessary for resetting page number)
   m_ps->m_firstParagraphInPageSpan = true;
-
-  /* Some of this would maybe not be necessary, but it does not do any harm
-   * and apparently solves some troubles */
-  m_ps->m_pageFormLength = currentPage.getFormLength();
-  m_ps->m_pageFormWidth = currentPage.getFormWidth();
-  m_ps->m_pageFormOrientation = currentPage.getFormOrientation();
-  m_ps->m_pageMarginLeft = currentPage.getMarginLeft();
-  m_ps->m_pageMarginRight = currentPage.getMarginRight();
-
-  m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange
-                                + m_ps->m_leftMarginByTabs;
-  m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange
-                                 + m_ps->m_rightMarginByTabs;
-
-  m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange + m_ps->m_textIndentByTabs;
-
   m_ps->m_numPagesRemainingInSpan = (currentPage.getPageSpan() - 1);
   m_ps->m_currentPage++;
 }
@@ -478,7 +342,7 @@ void DMWAWContentListener::_openParagraph()
     return;
 
   if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened) {
-    if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == MWAW_SUBDOCUMENT_TEXT_BOX)) {
+    if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == libmwaw::DOC_TEXT_BOX)) {
       if (m_ps->m_sectionAttributesChanged)
         _closeSection();
 
@@ -574,13 +438,13 @@ void DMWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList,
   propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
 
   if (!m_ps->m_inSubDocument && m_ps->m_firstParagraphInPageSpan) {
-    std::list<DMWAWPageSpan>::iterator currentPageSpanIter = m_pageList.begin();
+    std::list<MWAWPageSpan>::iterator currentPageSpanIter = m_pageList.begin();
     for ( unsigned i = 0; (i+1) < m_ps->m_currentPage; i+=(*currentPageSpanIter).getPageSpan())
       currentPageSpanIter++;
 
-    DMWAWPageSpan currentPage = (*currentPageSpanIter);
-    if (currentPage.getPageNumberOverriden())
-      propList.insert("style:page-number", currentPage.getPageNumberOverride());
+    MWAWPageSpan currentPage = (*currentPageSpanIter);
+    if (currentPage.getPageNumber()>=0)
+      propList.insert("style:page-number", currentPage.getPageNumber());
   }
 
   _insertBreakIfNecessary(propList);
@@ -699,7 +563,7 @@ void DMWAWContentListener::_openListElement()
     return;
 
   if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened) {
-    if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == MWAW_SUBDOCUMENT_TEXT_BOX)) {
+    if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == libmwaw::DOC_TEXT_BOX)) {
       if (m_ps->m_sectionAttributesChanged)
         _closeSection();
 
@@ -783,12 +647,12 @@ void DMWAWContentListener::_openSpan()
   WPXPropertyList propList;
   if (attributeBits & DMWAW_SUPERSCRIPT_BIT) {
     WPXString sSuperScript("super ");
-    sSuperScript.append(libmwaw_libwpd::doubleToString(DMWAW_DEFAULT_SUPER_SUB_SCRIPT));
+    sSuperScript.append(libmwaw::doubleToString(DMWAW_DEFAULT_SUPER_SUB_SCRIPT));
     sSuperScript.append("%");
     propList.insert("style:text-position", sSuperScript);
   } else if (attributeBits & DMWAW_SUBSCRIPT_BIT) {
     WPXString sSubScript("sub ");
-    sSubScript.append(libmwaw_libwpd::doubleToString(DMWAW_DEFAULT_SUPER_SUB_SCRIPT));
+    sSubScript.append(libmwaw::doubleToString(DMWAW_DEFAULT_SUPER_SUB_SCRIPT));
     sSubScript.append("%");
     propList.insert("style:text-position", sSubScript);
   } else if (attributeBits & DMWAW_SUPERSCRIPT100_BIT) {
@@ -918,7 +782,7 @@ void DMWAWContentListener::_closeTableCell()
 /**
 Creates an new document state. Saves the old state on a "stack".
 */
-void DMWAWContentListener::handleSubDocument(const MWAWSubDocument *subDocument, MWAWSubDocumentType subDocumentType)
+void DMWAWContentListener::handleSubDocument(const MWAWSubDocument *subDocument, libmwaw::SubDocumentType subDocumentType)
 {
   // save our old parsing state on our "stack"
   DMWAWContentParsingState *oldPS = m_ps;
@@ -932,7 +796,7 @@ void DMWAWContentListener::handleSubDocument(const MWAWSubDocument *subDocument,
   m_ps->m_subDocumentType = subDocumentType;
   m_ps->m_isDocumentStarted = true;
   m_ps->m_isPageSpanOpened = true;
-  if (m_ps->m_subDocumentType == MWAW_SUBDOCUMENT_TEXT_BOX) {
+  if (m_ps->m_subDocumentType == libmwaw::DOC_TEXT_BOX) {
     m_ps->m_pageMarginLeft = 0.0;
     m_ps->m_pageMarginRight = 0.0;
     m_ps->m_sectionAttributesChanged = true;
@@ -944,7 +808,7 @@ void DMWAWContentListener::handleSubDocument(const MWAWSubDocument *subDocument,
   // Check whether the document is calling itself
   if ((subDocument) && (m_ps->m_subDocuments.find(subDocument) == m_ps->m_subDocuments.end())) {
     m_ps->m_subDocuments.insert(subDocument);
-    if (subDocumentType == MWAW_SUBDOCUMENT_HEADER_FOOTER)
+    if (subDocumentType == libmwaw::DOC_HEADER_FOOTER)
       m_ps->m_isHeaderFooterWithoutParagraph = true;
     _handleSubDocument(subDocument, subDocumentType);
     if (m_ps->m_isHeaderFooterWithoutParagraph) {
@@ -956,7 +820,7 @@ void DMWAWContentListener::handleSubDocument(const MWAWSubDocument *subDocument,
   // restore our old parsing state
 
   setUndoOn(oldIsUndoOn);
-  if (m_ps->m_subDocumentType == MWAW_SUBDOCUMENT_TEXT_BOX)
+  if (m_ps->m_subDocumentType == libmwaw::DOC_TEXT_BOX)
     _closeSection();
   delete m_ps;
   m_ps = oldPS;
@@ -1084,7 +948,7 @@ double DMWAWContentListener::_getPreviousTabStop() const
   return (std::numeric_limits<double>::max)();
 }
 
-WPXString DMWAWContentListener::_colorToString(const libmwaw_libwpd::RGBSColor *color)
+WPXString DMWAWContentListener::_colorToString(const libmwaw::RGBSColor *color)
 {
   WPXString tmpString;
 
@@ -1101,10 +965,10 @@ WPXString DMWAWContentListener::_colorToString(const libmwaw_libwpd::RGBSColor *
   return tmpString;
 }
 
-WPXString DMWAWContentListener::_mergeColorsToString(const libmwaw_libwpd::RGBSColor *fgColor, const libmwaw_libwpd::RGBSColor *bgColor)
+WPXString DMWAWContentListener::_mergeColorsToString(const libmwaw::RGBSColor *fgColor, const libmwaw::RGBSColor *bgColor)
 {
   WPXString tmpColor;
-  libmwaw_libwpd::RGBSColor tmpFgColor, tmpBgColor;
+  libmwaw::RGBSColor tmpFgColor, tmpBgColor;
 
   if (fgColor) {
     tmpFgColor.m_r = fgColor->m_r;
@@ -1126,11 +990,11 @@ WPXString DMWAWContentListener::_mergeColorsToString(const libmwaw_libwpd::RGBSC
   }
 
   double fgAmount = (double)tmpFgColor.m_s/100.0;
-  double bgAmount = LIBWPD_MAX(((double)tmpBgColor.m_s-(double)tmpFgColor.m_s)/100.0, 0.0);
+  double bgAmount = std::max(((double)tmpBgColor.m_s-(double)tmpFgColor.m_s)/100.0, 0.0);
 
-  int bgRed = LIBWPD_MIN((int)(((double)tmpFgColor.m_r*fgAmount)+((double)tmpBgColor.m_r*bgAmount)), 255);
-  int bgGreen = LIBWPD_MIN((int)(((double)tmpFgColor.m_g*fgAmount)+((double)tmpBgColor.m_g*bgAmount)), 255);
-  int bgBlue = LIBWPD_MIN((int)(((double)tmpFgColor.m_b*fgAmount)+((double)tmpBgColor.m_b*bgAmount)), 255);
+  int bgRed = std::min((int)(((double)tmpFgColor.m_r*fgAmount)+((double)tmpBgColor.m_r*bgAmount)), 255);
+  int bgGreen = std::min((int)(((double)tmpFgColor.m_g*fgAmount)+((double)tmpBgColor.m_g*bgAmount)), 255);
+  int bgBlue =  std::min((int)(((double)tmpFgColor.m_b*fgAmount)+((double)tmpBgColor.m_b*bgAmount)), 255);
 
   tmpColor.sprintf("#%.2x%.2x%.2x", bgRed, bgGreen, bgBlue);
 

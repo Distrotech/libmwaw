@@ -37,7 +37,7 @@
 #include <iostream>
 #include <vector>
 
-#include "libmwaw_tools.hxx"
+#include "libmwaw_internal.hxx"
 
 namespace CWStruct
 {

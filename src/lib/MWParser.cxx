@@ -222,7 +222,7 @@ struct Paragraph {
     if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
     if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
 
-    libmwaw::internal::printTabs(o, ind.m_tabs);
+    DMWAWTabStop::printTabs(o, ind.m_tabs);
     return o;
   }
 
@@ -347,14 +347,14 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type);
+  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -467,7 +467,7 @@ void MWParser::parse(WPXDocumentInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
-  if (!checkHeader(0L))  throw(libmwaw_libwpd::ParseException());
+  if (!checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile
@@ -487,7 +487,7 @@ void MWParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
-  if (!ok) throw(libmwaw_libwpd::ParseException());
+  if (!ok) throw(libmwaw::ParseException());
 }
 
 ////////////////////////////////////////////////////////////
@@ -505,8 +505,8 @@ void MWParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::list<DMWAWPageSpan> pageList;
-  DMWAWPageSpan ps(m_pageSpan);
+  std::list<MWAWPageSpan> pageList;
+  MWAWPageSpan ps(m_pageSpan);
   for (int i = 1; i < 3; i++) {
     if (m_state->m_windows[i].isEmpty()) {
 #ifdef DEBUG
@@ -514,10 +514,8 @@ void MWParser::createDocument(WPXDocumentInterface *documentInterface)
 #endif
       continue;
     }
-    shared_ptr<MWParserInternal::SubDocument> subdoc
-    (new MWParserInternal::SubDocument(*this, getInput(), i));
-    m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter((i==1) ? HEADER : FOOTER, 0, ALL, subdoc.get());
+    shared_ptr<MWAWSubDocument> subdoc(new MWParserInternal::SubDocument(*this, getInput(), i));
+    ps.setHeaderFooter((i==1) ? MWAWPageSpan::HEADER : MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
   }
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);

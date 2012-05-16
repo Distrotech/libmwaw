@@ -30,7 +30,7 @@
 
 #include <iostream>
 
-#include "libmwaw_tools.hxx"
+#include "libmwaw_internal.hxx"
 
 #include "MWAWFontConverter.hxx"
 

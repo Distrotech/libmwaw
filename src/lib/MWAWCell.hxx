@@ -35,8 +35,6 @@
 
 #include <string>
 
-#include <libwpd/WPXString.h>
-
 #include "libmwaw_internal.hxx"
 
 class WPXPropertyList;

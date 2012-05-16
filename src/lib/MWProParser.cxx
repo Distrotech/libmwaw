@@ -254,14 +254,14 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type);
+  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (m_id == -3) return; // empty block
   if (!listener.get()) {
@@ -390,7 +390,7 @@ void MWProParser::parse(WPXDocumentInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
-  if (!checkHeader(0L))  throw(libmwaw_libwpd::ParseException());
+  if (!checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     m_state->m_blocksMap.clear();
@@ -430,7 +430,7 @@ void MWProParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
-  if (!ok) throw(libmwaw_libwpd::ParseException());
+  if (!ok) throw(libmwaw::ParseException());
 }
 
 ////////////////////////////////////////////////////////////
@@ -586,7 +586,7 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_numPages = numPages;
 
   // create the page list
-  std::list<DMWAWPageSpan> pageList;
+  std::list<MWAWPageSpan> pageList;
 
 
   int actHeaderId = 0, actFooterId = 0;
@@ -615,11 +615,15 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
       }
     }
 
-    DMWAWPageSpan ps(m_pageSpan);
-    if (headerSubdoc)
-      ps.setHeaderFooter(HEADER, 0, ALL, headerSubdoc.get());
-    if (footerSubdoc)
-      ps.setHeaderFooter(FOOTER, 0, ALL, footerSubdoc.get());
+    MWAWPageSpan ps(m_pageSpan);
+    if (headerSubdoc) {
+      shared_ptr<MWAWSubDocument> doc(headerSubdoc);
+      ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, doc);
+    }
+    if (footerSubdoc) {
+      shared_ptr<MWAWSubDocument> doc(footerSubdoc);
+      ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, doc);
+    }
     pageList.push_back(ps);
   }
 

@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-#include "DMWAWPageSpan.hxx"
+#include "MWAWPageSpan.hxx"
 
 #include "MWAWPosition.hxx"
 
@@ -171,7 +171,7 @@ protected:
   shared_ptr<MSKParserInternal::State> m_state;
 
   //! the actual document size
-  DMWAWPageSpan m_pageSpan;
+  MWAWPageSpan m_pageSpan;
 
   //! the list of different Zones
   std::vector<MWAWEntry> m_listZones;

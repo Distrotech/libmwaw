@@ -39,7 +39,7 @@
 #include <string>
 #include <vector>
 
-#include "DMWAWPageSpan.hxx"
+#include "MWAWPageSpan.hxx"
 
 #include "MWAWPosition.hxx"
 
@@ -204,7 +204,7 @@ protected:
   shared_ptr<WNEntryManager> m_entryManager;
 
   //! the actual document size
-  DMWAWPageSpan m_pageSpan;
+  MWAWPageSpan m_pageSpan;
 
   //! the text parser
   shared_ptr<WNText> m_textParser;

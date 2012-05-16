@@ -161,7 +161,7 @@ struct Paragraph {
     if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
     if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
 
-    libmwaw::internal::printTabs(o, ind.m_tabs);
+    DMWAWTabStop::printTabs(o, ind.m_tabs);
     if (ind.m_extra.length()) o << "," << ind.m_extra;
     return o;
   }

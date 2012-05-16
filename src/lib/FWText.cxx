@@ -206,7 +206,7 @@ struct Ruler {
     if (ind.m_spacings[0]) o << "topSpace=" << ind.m_spacings[0] << ",";
     if (ind.m_spacings[1]) o << "bottomSpace=" << ind.m_spacings[0] << ",";
     if (ind.m_tabs.size()) {
-      libmwaw::internal::printTabs(o, ind.m_tabs);
+      DMWAWTabStop::printTabs(o, ind.m_tabs);
       o << ",";
     }
     if (ind.m_error.length()) o << ind.m_error << ",";
@@ -444,13 +444,13 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         if (fId != -1) {
           switch(val) {
           case 0xd2:
-            m_mainParser->sendText(fId, MWAW_SUBDOCUMENT_COMMENT_ANNOTATION);
+            m_mainParser->sendText(fId, libmwaw::DOC_COMMENT_ANNOTATION);
             break;
           case 0xd3:
-            m_mainParser->sendText(fId, MWAW_SUBDOCUMENT_NOTE, FOOTNOTE);
+            m_mainParser->sendText(fId, libmwaw::DOC_NOTE, FOOTNOTE);
             break;
           case 0xd5:
-            m_mainParser->sendText(fId, MWAW_SUBDOCUMENT_NOTE, ENDNOTE);
+            m_mainParser->sendText(fId, libmwaw::DOC_NOTE, ENDNOTE);
             break;
           }
         }

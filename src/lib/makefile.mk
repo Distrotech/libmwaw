@@ -31,7 +31,7 @@ SLOFILES= \
 	$(SLO)$/CWText.cxx			\
 	$(SLO)$/DMWAWContentListener.cxx	\
 	$(SLO)$/MWAWOLEStream.cxx		\
-	$(SLO)$/DMWAWPageSpan.cxx		\
+	$(SLO)$/MWAWPageSpan.cxx		\
 	$(SLO)$/FWParser.cxx			\
 	$(SLO)$/FWText.cxx			\
 	$(SLO)$/MWAWCell.cxx			\
@@ -64,8 +64,7 @@ SLOFILES= \
 	$(SLO)$/WNParser.cxx			\
 	$(SLO)$/WNText.cxx			\
 	$(SLO)$/WPParser.cxx			\
-	$(SLO)$/libmwaw_internal.cxx		\
-	$(SLO)$/libmwaw_libwpd.cxx
+	$(SLO)$/libmwaw_internal.cxx
 
 LIB1ARCHIV=$(LB)$/libmwawlib.a
 LIB1TARGET=$(SLB)$/$(TARGET).lib

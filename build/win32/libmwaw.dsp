@@ -119,7 +119,7 @@ SOURCE=..\..\src\lib\MWAWOLEStream.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMWAWPageSpan.cxx
+SOURCE=..\..\src\lib\MWAWPageSpan.cxx
 # End Source File
 # Begin Source File
 
@@ -253,10 +253,6 @@ SOURCE=..\..\src\lib\WPParser.cxx
 
 SOURCE=..\..\src\lib\libmwaw_internal.cxx
 # End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\libmwaw_libwpd.cxx
-# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -299,7 +295,7 @@ SOURCE=..\..\src\lib\MWAWOLEStream.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMWAWPageSpan.hxx
+SOURCE=..\..\src\lib\MWAWPageSpan.hxx
 # End Source File
 # Begin Source File
 
@@ -456,14 +452,6 @@ SOURCE=..\..\src\lib\libmwaw.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\libmwaw_internal.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\libmwaw_libwpd.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\libmwaw_tools.hxx
 # End Source File
 # End Group
 # End Target

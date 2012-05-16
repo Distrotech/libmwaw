@@ -32,7 +32,7 @@
 
 #include <libwpd/WPXBinaryData.h>
 
-#include "libmwaw_tools.hxx"
+#include "libmwaw_internal.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MWAWPictData.hxx"

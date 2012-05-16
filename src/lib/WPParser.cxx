@@ -558,14 +558,14 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type);
+  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -667,7 +667,7 @@ void WPParser::parse(WPXDocumentInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
-  if (!checkHeader(0L))  throw(libmwaw_libwpd::ParseException());
+  if (!checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile
@@ -691,7 +691,7 @@ void WPParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
-  if (!ok) throw(libmwaw_libwpd::ParseException());
+  if (!ok) throw(libmwaw::ParseException());
 }
 
 ////////////////////////////////////////////////////////////
@@ -709,16 +709,14 @@ void WPParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::list<DMWAWPageSpan> pageList;
-  DMWAWPageSpan ps(m_pageSpan);
+  std::list<MWAWPageSpan> pageList;
+  MWAWPageSpan ps(m_pageSpan);
   for (int i = 1; i < 3; i++) {
     if (m_state->m_windows[i].m_paragraphs.size() == 0)
       continue;
 
-    shared_ptr<WPParserInternal::SubDocument> subdoc
-    (new WPParserInternal::SubDocument(*this, getInput(), i));
-    m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter((i==1) ? HEADER : FOOTER, 0, ALL, subdoc.get());
+    shared_ptr<MWAWSubDocument> subdoc(new WPParserInternal::SubDocument(*this, getInput(), i));
+    ps.setHeaderFooter((i==1) ? MWAWPageSpan::HEADER : MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
   }
 
   m_state->m_numPages = int(m_state->m_windows[0].m_pages.size());

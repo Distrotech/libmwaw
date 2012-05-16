@@ -201,10 +201,10 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
     default:
       break;
     }
-  } catch (libmwaw_libwpd::FileException) {
+  } catch (libmwaw::FileException) {
     MWAW_DEBUG_MSG(("File exception trapped\n"));
     error = MWAW_FILE_ACCESS_ERROR;
-  } catch (libmwaw_libwpd::ParseException) {
+  } catch (libmwaw::ParseException) {
     MWAW_DEBUG_MSG(("Parse exception trapped\n"));
     error = MWAW_PARSE_ERROR;
   } catch (...) {
@@ -239,9 +239,9 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip, bool strict)
         continue;
       return new MWAWHeader(listHeaders[i]);
     }
-  } catch (libmwaw_libwpd::FileException) {
+  } catch (libmwaw::FileException) {
     MWAW_DEBUG_MSG(("File exception trapped\n"));
-  } catch (libmwaw_libwpd::ParseException) {
+  } catch (libmwaw::ParseException) {
     MWAW_DEBUG_MSG(("Parse exception trapped\n"));
   } catch (...) {
     //fixme: too generic

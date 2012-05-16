@@ -39,9 +39,9 @@
 
 #include <libwpd/WPXPropertyListVector.h>
 #include <libwpd/WPXPropertyList.h>
-#include "libmwaw_libwpd.hxx"
+#include "libmwaw_internal.hxx"
 #include "MWAWSubDocument.hxx"
-#include "DMWAWPageSpan.hxx"
+#include "MWAWPageSpan.hxx"
 #include <libwpd/WPXDocumentInterface.h>
 #include <vector>
 #include <list>
@@ -56,8 +56,8 @@ struct _DMWAWContentParsingState {
   uint32_t m_textAttributeBits;
   double m_fontSize;
   WPXString *m_fontName;
-  libmwaw_libwpd::RGBSColor *m_fontColor;
-  libmwaw_libwpd::RGBSColor *m_highlightColor;
+  libmwaw::RGBSColor *m_fontColor;
+  libmwaw::RGBSColor *m_highlightColor;
 
   bool m_isParagraphColumnBreak;
   bool m_isParagraphPageBreak;
@@ -103,7 +103,7 @@ struct _DMWAWContentParsingState {
 
   double m_pageFormLength;
   double m_pageFormWidth;
-  DMWAWFormOrientation m_pageFormOrientation;
+  MWAWPageSpan::FormOrientation m_pageFormOrientation;
 
   double m_pageMarginLeft;
   double m_pageMarginRight;
@@ -141,7 +141,7 @@ struct _DMWAWContentParsingState {
 
   bool m_inSubDocument;
   bool m_isNote;
-  MWAWSubDocumentType m_subDocumentType;
+  libmwaw::SubDocumentType m_subDocumentType;
 
 private:
   _DMWAWContentParsingState(const _DMWAWContentParsingState &);
@@ -151,14 +151,14 @@ private:
 class DMWAWContentListener
 {
 protected:
-  DMWAWContentListener(std::list<DMWAWPageSpan> &pageList, WPXDocumentInterface *documentInterface);
+  DMWAWContentListener(std::list<MWAWPageSpan> &pageList, WPXDocumentInterface *documentInterface);
   virtual ~DMWAWContentListener();
 
   void startDocument();
   void startSubDocument();
   void endDocument();
   void endSubDocument();
-  void handleSubDocument(const MWAWSubDocument *subDocument, MWAWSubDocumentType subDocumentType);
+  void handleSubDocument(const MWAWSubDocument *subDocument, libmwaw::SubDocumentType subDocumentType);
   void insertBreak(const uint8_t breakType);
 
   // OSNOLA: allows to change the unit
@@ -169,10 +169,10 @@ protected:
   DMWAWContentParsingState *m_ps; // parse state
   WPXDocumentInterface *m_documentInterface;
   WPXPropertyList m_metaData;
-  std::list<DMWAWPageSpan> m_pageList;
+  std::list<MWAWPageSpan> m_pageList;
   bool m_isUndoOn;
 
-  virtual void _handleSubDocument(const MWAWSubDocument *subDocument, MWAWSubDocumentType subDocumentType) = 0;
+  virtual void _handleSubDocument(const MWAWSubDocument *subDocument, libmwaw::SubDocumentType subDocumentType) = 0;
   virtual void _flushText() = 0;
   virtual void _changeList() = 0;
 
@@ -211,8 +211,6 @@ protected:
 
   void _insertBreakIfNecessary(WPXPropertyList &propList);
 
-  void _insertPageNumberParagraph(DMWAWPageNumberPosition position, DMWAWNumberingType type, WPXString fontName, double fontSize);
-
   uint32_t _mapNonUnicodeCharacter(uint32_t character);
 
   bool isUndoOn() {
@@ -225,8 +223,8 @@ protected:
 private:
   DMWAWContentListener(const DMWAWContentListener &);
   DMWAWContentListener &operator=(const DMWAWContentListener &);
-  WPXString _colorToString(const libmwaw_libwpd::RGBSColor *color);
-  WPXString _mergeColorsToString(const libmwaw_libwpd::RGBSColor *fgColor, const libmwaw_libwpd::RGBSColor *bgColor);
+  WPXString _colorToString(const libmwaw::RGBSColor *color);
+  WPXString _mergeColorsToString(const libmwaw::RGBSColor *fgColor, const libmwaw::RGBSColor *bgColor);
   uint32_t _mapSymbolFontCharacter(uint32_t character);
   uint32_t _mapDingbatsFontCharacter(uint32_t character);
 };

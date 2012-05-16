@@ -38,7 +38,7 @@
 #include <string>
 #include <vector>
 
-#include "DMWAWPageSpan.hxx"
+#include "MWAWPageSpan.hxx"
 
 #include "MWAWPosition.hxx"
 
@@ -222,7 +222,7 @@ protected:
   shared_ptr<CWParserInternal::State> m_state;
 
   //! the actual document size
-  DMWAWPageSpan m_pageSpan;
+  MWAWPageSpan m_pageSpan;
 
   //! a flag to know if pageSpan is filled
   bool m_pageSpanSet;

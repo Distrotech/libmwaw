@@ -38,7 +38,7 @@
 #include <string>
 #include <vector>
 
-#include "libmwaw_tools.hxx"
+#include "libmwaw_internal.hxx"
 
 #include "MWAWPosition.hxx"
 

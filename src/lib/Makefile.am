@@ -16,16 +16,15 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LIBADD  = $(LIBMWAW_LIBS) @
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_DEPENDENCIES = @LIBMWAW_WIN32_RESOURCE@  
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic  -no-undefined
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
-	libmwaw_libwpd.cxx		\
+	libmwaw_internal.cxx		\
 	DMWAWContentListener.cxx	\
 	MWAWOLEStream.cxx		\
-	DMWAWPageSpan.cxx		\
-	libmwaw_libwpd.hxx		\
+	MWAWPageSpan.cxx		\
+	libmwaw_internal.hxx		\
 	DMWAWContentListener.hxx	\
 	MWAWOLEStream.hxx		\
-	DMWAWPageSpan.hxx		\
+	MWAWPageSpan.hxx		\
 					\
-	libmwaw_internal.cxx		\
 	MWAWCell.cxx			\
 	MWAWContentListener.cxx	\
 	MWAWDocument.cxx		\
@@ -33,7 +32,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWList.cxx			\
 	MWAWSubDocument.cxx		\
 	MWAWTable.cxx		\
-	libmwaw_internal.hxx		\
 	MWAWCell.hxx			\
 	MWAWContentListener.hxx	\
 	MWAWDocument.hxx		\
@@ -55,7 +53,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWPictMac.cxx		\
 	MWAWPictOLEContainer.cxx	\
 	MWAWPropertyHandler.cxx	\
-	libmwaw_tools.hxx		\
 	MWAWDebug.hxx			\
 	MWAWInputStream.hxx		\
 	MWAWFontConverter.hxx			\

@@ -38,7 +38,7 @@
 #include <string>
 #include <vector>
 
-#include "DMWAWPageSpan.hxx"
+#include "MWAWPageSpan.hxx"
 
 #include "MWAWPosition.hxx"
 
@@ -167,7 +167,7 @@ protected:
   void newPage(int number);
 
   //! try to send a footnote/endnote entry
-  void sendText(int id, MWAWSubDocumentType type, int which=0);
+  void sendText(int id, libmwaw::SubDocumentType type, int which=0);
 
   //! find the last position of the document and read data
   bool readDocPosition();
@@ -223,7 +223,7 @@ protected:
   shared_ptr<FWParserInternal::State> m_state;
 
   //! the actual document size
-  DMWAWPageSpan m_pageSpan;
+  MWAWPageSpan m_pageSpan;
 
   //! the text parser
   shared_ptr<FWText> m_textParser;

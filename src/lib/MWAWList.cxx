@@ -34,6 +34,7 @@
 #include <libwpd/WPXPropertyList.h>
 
 #include "libmwaw_internal.hxx"
+#include "libmwaw_internal.hxx"
 
 #include "MWAWList.hxx"
 
@@ -44,7 +45,12 @@ void MWAWList::Level::addTo(WPXPropertyList &propList, int startVal) const
 
   switch(m_type) {
   case BULLET:
-    propList.insert("text:bullet-char", m_bullet.cstr());
+    if (m_bullet.len())
+      propList.insert("text:bullet-char", m_bullet.cstr());
+    else {
+      MWAW_DEBUG_MSG(("MWAWList::Level::addTo: the bullet char is not defined\n"));
+      propList.insert("text:bullet-char", "*");
+    }
     break;
   case DECIMAL:
   case LOWER_ALPHA:

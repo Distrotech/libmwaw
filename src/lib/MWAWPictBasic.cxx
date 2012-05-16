@@ -41,7 +41,7 @@
 #include <libwpd/WPXPropertyList.h>
 #include <libwpd/WPXString.h>
 
-#include "libmwaw_tools.hxx"
+#include "libmwaw_internal.hxx"
 #include "MWAWPropertyHandler.hxx"
 #include "MWAWInputStream.hxx"
 

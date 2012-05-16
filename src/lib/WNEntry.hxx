@@ -37,7 +37,7 @@
 #include <map>
 #include <string>
 
-#include "libmwaw_tools.hxx"
+#include "libmwaw_internal.hxx"
 #include "MWAWEntry.hxx"
 
 struct WNEntry : public MWAWEntry {

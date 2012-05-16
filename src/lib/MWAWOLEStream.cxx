@@ -49,7 +49,87 @@
 
 #include "libwpd-stream/WPXStream.h"
 
+#include "libmwaw_internal.hxx"
 #include "MWAWOLEStream.hxx"
+
+namespace libmwaw_internal
+{
+/** an internal class used to return the OLE InputStream */
+class MWAWStringStream: public WPXInputStream
+{
+public:
+  MWAWStringStream(const unsigned char *data, const unsigned int dataSize) :
+    buffer(dataSize), offset(0) {
+    memcpy(&buffer[0], data, dataSize);
+  }
+  ~MWAWStringStream() { }
+
+  const unsigned char *read(unsigned long numBytes, unsigned long &numBytesRead);
+  long tell() {
+    return offset;
+  }
+  int seek(long offset, WPX_SEEK_TYPE seekType);
+  bool atEOS() {
+    return ((long)offset >= (long)buffer.size());
+  }
+
+  bool isOLEStream() {
+    return false;
+  }
+  WPXInputStream *getDocumentOLEStream(const char *) {
+    return 0;
+  };
+
+private:
+  std::vector<unsigned char> buffer;
+  volatile long offset;
+  MWAWStringStream(const MWAWStringStream &);
+  MWAWStringStream &operator=(const MWAWStringStream &);
+};
+
+int MWAWStringStream::seek(long _offset, WPX_SEEK_TYPE seekType)
+{
+  if (seekType == WPX_SEEK_CUR)
+    offset += _offset;
+  else if (seekType == WPX_SEEK_SET)
+    offset = _offset;
+
+  if (offset < 0) {
+    offset = 0;
+    return 1;
+  }
+  if ((long)offset > (long)buffer.size()) {
+    offset = buffer.size();
+    return 1;
+  }
+  return 0;
+}
+
+const unsigned char *MWAWStringStream::read(unsigned long numBytes, unsigned long &numBytesRead)
+{
+  numBytesRead = 0;
+
+  if (numBytes == 0)
+    return 0;
+
+  int numBytesToRead;
+
+  if ((offset+numBytes) < buffer.size())
+    numBytesToRead = numBytes;
+  else
+    numBytesToRead = buffer.size() - offset;
+
+  numBytesRead = numBytesToRead; // about as paranoid as we can be..
+
+  if (numBytesToRead == 0)
+    return 0;
+
+  long oldOffset = offset;
+  offset += numBytesToRead;
+
+  return &buffer[oldOffset];
+}
+}
 
 namespace libmwaw
 {
@@ -953,7 +1033,7 @@ WPXInputStream *libmwaw::Storage::getDocumentOLEStream(const std::string &name)
     MWAW_DEBUG_MSG(("libmwaw::Storage::getDocumentOLEStream: tries to use damaged OLE: %s\n", name.c_str()));
   }
 
-  WPXInputStream *res = new WPXStringStream(buf, oleLength);
+  WPXInputStream *res = new libmwaw_internal::MWAWStringStream(buf, oleLength);
   delete [] buf;
   return res;
 }

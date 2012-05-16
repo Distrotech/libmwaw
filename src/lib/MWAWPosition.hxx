@@ -35,7 +35,7 @@
 
 #include <libwpd/WPXProperty.h>
 
-#include "libmwaw_tools.hxx"
+#include "libmwaw_internal.hxx"
 
 /** Class to define the position of an object (textbox, picture, ..) in the document
  *

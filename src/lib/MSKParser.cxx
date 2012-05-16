@@ -109,7 +109,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type);
+  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   /** the subdocument id
@@ -119,7 +119,7 @@ protected:
   int m_id;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -282,7 +282,7 @@ void MSKParser::parse(WPXDocumentInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
-  if (!checkHeader(0L))  throw(libmwaw_libwpd::ParseException());
+  if (!checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile
@@ -306,7 +306,7 @@ void MSKParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
-  if (!ok) throw(libmwaw_libwpd::ParseException());
+  if (!ok) throw(libmwaw::ParseException());
 }
 
 bool MSKParser::checkIfPositionValid(long pos)
@@ -363,24 +363,20 @@ void MSKParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::list<DMWAWPageSpan> pageList;
-  DMWAWPageSpan ps(m_pageSpan);
+  std::list<MWAWPageSpan> pageList;
+  MWAWPageSpan ps(m_pageSpan);
   int id = m_textParser->getHeader();
   if (id >= 0) {
     if (vers <= 2) m_state->m_headerHeight = 12;
-    shared_ptr<MSKParserInternal::SubDocument> subdoc
-    (new MSKParserInternal::SubDocument(*this, getInput(), id));
-    m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter(HEADER, 0, ALL, subdoc.get());
+    shared_ptr<MWAWSubDocument> subdoc(new MSKParserInternal::SubDocument(*this, getInput(), id));
+    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
   }
 
   id = m_textParser->getFooter();
   if (id >= 0) {
     if (vers <= 2) m_state->m_footerHeight = 12;
-    shared_ptr<MSKParserInternal::SubDocument> subdoc
-    (new MSKParserInternal::SubDocument(*this, getInput(), id));
-    m_listSubDocuments.push_back(subdoc);
-    ps.setHeaderFooter(FOOTER, 0, ALL, subdoc.get());
+    shared_ptr<MWAWSubDocument> subdoc(new MSKParserInternal::SubDocument(*this, getInput(), id));
+    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
   }
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);

@@ -31,6 +31,7 @@
 #define MWAW_SUBDOCUMENT_HXX
 
 #include "libmwaw_internal.hxx"
+#include "libmwaw_internal.hxx"
 #include "MWAWEntry.hxx"
 
 class MWAWInputStream;
@@ -56,14 +57,20 @@ public:
   //! comparison operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! comparison operator==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  bool operator==(MWAWSubDocument const &doc) const {
+    return !operator!=(doc);
+  }
+  //! comparison operator!=
+  bool operator!=(shared_ptr<MWAWSubDocument> const &doc) const;
+  //! comparison operator==
+  bool operator==(shared_ptr<MWAWSubDocument> const &doc) const {
     return !operator!=(doc);
   }
 
   /** virtual parse function
    *
    * this function is called to parse the subdocument */
-  virtual void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType subDocumentType) = 0;
+  virtual void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType subDocumentType) = 0;
 
 protected:
   //! the main zone parser

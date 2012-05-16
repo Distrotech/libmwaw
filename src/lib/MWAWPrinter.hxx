@@ -39,7 +39,7 @@
 #  include <assert.h>
 #  include <ostream>
 
-#  include "libmwaw_tools.hxx"
+#  include "libmwaw_internal.hxx"
 
 class MWAWInputStream;
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;

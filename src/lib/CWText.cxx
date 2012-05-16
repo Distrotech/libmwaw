@@ -91,7 +91,7 @@ struct Ruler {
     if (ind.m_spacings[1]) o << "afterSpace=" << ind.m_spacings[1] << "pt, ";
     if (ind.m_interlineFixed > 0) o << "interline=" << ind.m_interlineFixed << "pt,";
     if (ind.m_interlinePercent > 0.0) o << "interline=" << 100.*ind.m_interlinePercent << "%,";
-    libmwaw::internal::printTabs(o, ind.m_tabs);
+    DMWAWTabStop::printTabs(o, ind.m_tabs);
     if (ind.m_error.length()) o << "," << ind.m_error;
     return o;
   }

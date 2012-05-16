@@ -125,7 +125,7 @@ struct Ruler {
     if (ind.m_interlineFixed) o << "interline[fixed],";
     if (ind.m_height > 0.0) o << "interline=" << ind.m_height << "pt,";
     if (ind.m_tabs.size()) {
-      libmwaw::internal::printTabs(o, ind.m_tabs);
+      DMWAWTabStop::printTabs(o, ind.m_tabs);
       o << ",";
     }
     for (int i = 0; i < 8; i++) {

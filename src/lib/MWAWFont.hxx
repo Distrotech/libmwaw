@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-#include "libmwaw_tools.hxx"
+#include "libmwaw_internal.hxx"
 
 class MWAWContentListener;
 class MWAWFontConverter;

@@ -160,7 +160,7 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(MSWParser &pars, MWAWInputStreamPtr input, int id, MWAWSubDocumentType type) :
+  SubDocument(MSWParser &pars, MWAWInputStreamPtr input, int id, libmwaw::SubDocumentType type) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(id), m_type(type) {}
 
   //! destructor
@@ -174,16 +174,16 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type);
+  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
   //! the subdocument type
-  MWAWSubDocumentType m_type;
+  libmwaw::SubDocumentType m_type;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, MWAWSubDocumentType type)
+void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -351,7 +351,7 @@ void MSWParser::sendFootnote(int id)
 {
   if (!m_listener) return;
 
-  MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, MWAW_SUBDOCUMENT_NOTE));
+  MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_NOTE));
   m_listener->insertNote(FOOTNOTE, subdoc);
 }
 
@@ -359,17 +359,17 @@ void MSWParser::sendFieldComment(int id)
 {
   if (!m_listener) return;
 
-  MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, MWAW_SUBDOCUMENT_COMMENT_ANNOTATION));
+  MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_COMMENT_ANNOTATION));
   m_listener->insertComment(subdoc);
 }
 
-void MSWParser::send(int id, MWAWSubDocumentType type)
+void MSWParser::send(int id, libmwaw::SubDocumentType type)
 {
   switch(type) {
-  case MWAW_SUBDOCUMENT_COMMENT_ANNOTATION:
+  case libmwaw::DOC_COMMENT_ANNOTATION:
     m_textParser->sendFieldComment(id);
     break;
-  case MWAW_SUBDOCUMENT_NOTE:
+  case libmwaw::DOC_NOTE:
     m_textParser->sendFootnote(id);
     break;
   default:
@@ -385,7 +385,7 @@ void MSWParser::parse(WPXDocumentInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
-  if (!checkHeader(0L))  throw(libmwaw_libwpd::ParseException());
+  if (!checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile
@@ -410,7 +410,7 @@ void MSWParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
-  if (!ok) throw(libmwaw_libwpd::ParseException());
+  if (!ok) throw(libmwaw::ParseException());
 }
 
 ////////////////////////////////////////////////////////////
@@ -428,8 +428,8 @@ void MSWParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::list<DMWAWPageSpan> pageList;
-  DMWAWPageSpan ps(m_pageSpan);
+  std::list<MWAWPageSpan> pageList;
+  MWAWPageSpan ps(m_pageSpan);
 
   int numPage = 1;
   if (m_textParser->numPages() > numPage)

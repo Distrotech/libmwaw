@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-#include "DMWAWPageSpan.hxx"
+#include "MWAWPageSpan.hxx"
 
 #include "MWAWPosition.hxx"
 
@@ -179,7 +179,7 @@ protected:
   shared_ptr<MWParserInternal::State> m_state;
 
   //! the actual document size
-  DMWAWPageSpan m_pageSpan;
+  MWAWPageSpan m_pageSpan;
 
   //! a list of created subdocuments
   std::vector<shared_ptr<MWParserInternal::SubDocument> > m_listSubDocuments;

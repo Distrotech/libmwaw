@@ -38,7 +38,7 @@
 #  include <string>
 #  include <map>
 
-#  include "libmwaw_tools.hxx"
+#  include "libmwaw_internal.hxx"
 
 namespace MWAWFontConverterInternal
 {

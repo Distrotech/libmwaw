@@ -425,7 +425,7 @@ struct Paragraph {
     if (ind.m_margins[0]) o << "firstLPos=" << ind.m_margins[0] << ", ";
     if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
     if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
-    libmwaw::internal::printTabs(o, ind.m_tabs);
+    DMWAWTabStop::printTabs(o, ind.m_tabs);
     if (ind.m_value) o << "unkn=" << ind.m_value << ",";
     if (ind.m_extra.length()) o << "extra=[" << ind.m_extra << "],";
     return o;

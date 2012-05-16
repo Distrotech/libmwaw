@@ -36,7 +36,7 @@
 
 #include <libwpd/WPXBinaryData.h>
 
-#include "libmwaw_tools.hxx"
+#include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 

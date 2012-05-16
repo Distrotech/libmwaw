@@ -30,9 +30,9 @@
 #include <string.h>
 #include <iostream>
 
-#include "MWAWInputStream.hxx"
-
 #include "libmwaw_internal.hxx"
+
+#include "MWAWInputStream.hxx"
 
 #include "MWAWHeader.hxx"
 

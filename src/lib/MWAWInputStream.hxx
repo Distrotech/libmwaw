@@ -31,17 +31,12 @@
 #define MWAW_INPUT_STREAM_H
 
 #include <stdint.h>
-#include <fstream>
-#include <sstream>
 #include <string>
 #include <vector>
 
-#include "libmwaw_tools.hxx"
-
 #include <libwpd-stream/WPXStream.h>
-
+#include "libmwaw_internal.hxx"
 #include "MWAWOLEStream.hxx"
-#include "libmwaw_tools.hxx"
 
 class WPXBinaryData;
 

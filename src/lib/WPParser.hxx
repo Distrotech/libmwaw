@@ -44,7 +44,7 @@
 #include <string>
 #include <vector>
 
-#include "DMWAWPageSpan.hxx"
+#include "MWAWPageSpan.hxx"
 
 #include "MWAWPosition.hxx"
 
@@ -205,7 +205,7 @@ protected:
   shared_ptr<WPParserInternal::State> m_state;
 
   //! the actual document size
-  DMWAWPageSpan m_pageSpan;
+  MWAWPageSpan m_pageSpan;
 
   //! a list of created subdocuments
   std::vector<shared_ptr<WPParserInternal::SubDocument> > m_listSubDocuments;
