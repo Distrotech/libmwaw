@@ -42,6 +42,7 @@
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWTable.hxx"
 
@@ -375,81 +376,18 @@ struct Font {
 
 ////////////////////////////////////////
 /** Internal: class to store the paragraph properties */
-struct Paragraph {
+struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Paragraph() :  m_tabs(), m_justify(libmwaw::JustificationLeft),
-    m_value(0), m_extra("") {
-    for(int c = 0; c < 3; c++) m_margins[c] = 0.0;
-    for(int i = 0; i < 3; i++) {
-      m_spacing[i] = 0.0;
-      m_spacingPercent[i]=true;
-    }
-    m_spacing[0] = 1.0;
+  Paragraph() :  m_value(0) {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
-    if (ind.m_justify) {
-      o << "Just=";
-      switch(ind.m_justify) {
-      case libmwaw::JustificationLeft:
-        o << "left";
-        break;
-      case libmwaw::JustificationCenter:
-        o << "centered";
-        break;
-      case libmwaw::JustificationRight:
-        o << "right";
-        break;
-      case libmwaw::JustificationFull:
-        o << "full";
-        break;
-      default:
-        o << "#just=" << int(ind.m_justify) << ", ";
-        break;
-      }
-      o << ", ";
-    }
-    if (ind.m_spacing[0] != 1.0) {
-      o << "interline=" << ind.m_spacing[0];
-      if (ind.m_spacingPercent[0]) o << "%,";
-      else o << "inch,";
-    }
-    for (int i = 1; i < 3; i++) {
-      if (ind.m_spacing[i] == 0.0) continue;
-      if (i==1) o << "spaceBef=";
-      else o << "spaceAft=";
-      o << ind.m_spacing[i];
-      if (ind.m_spacingPercent[i]) o << "%,";
-      else o << "inch,";
-    }
-    if (ind.m_margins[0]) o << "firstLPos=" << ind.m_margins[0] << ", ";
-    if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
-    if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
-    MWAWTabStop::printTabs(o, ind.m_tabs);
+    o << reinterpret_cast<MWAWParagraph const &>(ind);
     if (ind.m_value) o << "unkn=" << ind.m_value << ",";
-    if (ind.m_extra.length()) o << "extra=[" << ind.m_extra << "],";
     return o;
   }
-
-  /** the margins in inches
-   *
-   * 0: first line left, 1: left, 2: right
-   */
-  float m_margins[3];
-  /** the spacing (interline, before, after) */
-  float m_spacing[3];
-  /** the spacing unit (percent or point) */
-  float m_spacingPercent[3];
-  //! the tabulations
-  std::vector<MWAWTabStop> m_tabs;
-  //! paragraph justification
-  libmwaw::Justification m_justify;
-
   //! a unknown value
   int m_value;
-
-  //! extra data
-  std::string m_extra;
 };
 
 ////////////////////////////////////////
@@ -1335,7 +1273,7 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   if (vers == 1) {
     font.m_language =  m_input->readLong(2);
     font.m_token = m_input->readLong(2);
-    /* f3=1 spacing 1, f3=3 spacing 3 */
+    /* f3=1 spacings 1, f3=3 spacings 3 */
     for (int i = 3; i < 5; i++)
       font.m_values[i] = m_input->readLong(2);
     m_input->seek(pos+20, WPX_SEEK_SET);
@@ -1428,43 +1366,51 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
   para.m_margins[2] = m_input->readLong(4)/72.0/65536.;
 
 
-  float spacing[3];
+  float spacings[3];
   for (int i = 0; i < 3; i++)
-    spacing[i] = m_input->readLong(4)/65536.;
+    spacings[i] = m_input->readLong(4)/65536.;
   for (int i = 0; i < 3; i++) {
     int dim = vers==0 ? m_input->readLong(4) : m_input->readULong(1);
     bool inPoint = true;
     bool ok = true;
     switch (dim) {
     case 0: // point
-      ok = spacing[i] < 721 && (i || spacing[0] > 0.0);
-      spacing[i]/=72.;
+      ok = spacings[i] < 721 && (i || spacings[0] > 0.0);
+      spacings[i]/=72.;
       break;
     case -1:
     case 0xFF: // percent
-      ok = (spacing[i] >= 0.0 && spacing[i]<46.0);
-      if (i==0) spacing[i]+=1.0;
+      ok = (spacings[i] >= 0.0 && spacings[i]<46.0);
+      if (i==0) spacings[i]+=1.0;
       inPoint=false;
       break;
     default:
       f << "#inter[dim]=" << std::hex << dim << std::dec << ",";
-      ok = spacing[i] < 721 && (i || spacing[0] > 0.0);
-      spacing[i]/=72.;
+      ok = spacings[i] < 721 && (i || spacings[0] > 0.0);
+      spacings[i]/=72.;
       break;
     }
     if (ok) {
-      // the interline spacing seems ignored when the dimension is point...
-      if (i == 0 && inPoint)
+      // the interline spacings seems ignored when the dimension is point...
+      if (i == 0 && inPoint) {
+        if (spacings[0]) f << "interline=" << spacings[0] << ",";
         continue;
-      para.m_spacing[i] = spacing[i];
-      if (inPoint && spacing[i] > 1.0) {
-        MWAW_DEBUG_MSG(("MWProStructures::readParagraph: spacing looks big decreasing it\n"));
-        f << "#prevSpacing" << i << "=" << spacing[i] << ",";
-        para.m_spacing[i] = 1.0;
       }
-      para.m_spacingPercent[i] = !inPoint;
+      para.m_spacings[i] = spacings[i];
+      if (inPoint && spacings[i] > 1.0) {
+        MWAW_DEBUG_MSG(("MWProStructures::readParagraph: spacings looks big decreasing it\n"));
+        f << "#prevSpacings" << i << "=" << spacings[i] << ",";
+        para.m_spacings[i] = 1.0;
+      } else if (!inPoint && i && spacings[i]) {
+        if (i==1) f << "spaceBef";
+        else f  << "spaceAft";
+        f << "=" << spacings[i] << "%,";
+        /** seems difficult to set bottom a percentage of the line unit,
+            so do the strict minimum... */
+        para.m_spacings[i] *= 7./72.;
+      }
     } else
-      f << "#spacing" << i << ",";
+      f << "#spacings" << i << ",";
   }
 
   if (vers==1) {
@@ -2818,32 +2764,8 @@ void MWProStructuresListenerState::sendParagraph(MWProStructuresInternal::Paragr
   if (!m_structures || !m_structures->m_listener)
     return;
   *m_paragraph = para;
-
-  m_structures->m_listener->justificationChange(para.m_justify);
-
-  m_structures->m_listener->setParagraphTextIndent(para.m_margins[0]);
-  m_structures->m_listener->setParagraphMargin(para.m_margins[1], MWAW_LEFT);
-  m_structures->m_listener->setParagraphMargin(para.m_margins[2], MWAW_RIGHT);
-
-  if (para.m_spacing[0] < 1)
-    m_structures->m_listener->lineSpacingChange(1.0, WPX_PERCENT);
-  else
-    m_structures->m_listener->lineSpacingChange
-    (para.m_spacing[0], para.m_spacingPercent[0] ? WPX_PERCENT: WPX_INCH);
-
-  for (int sp = 1; sp < 3; sp++) {
-    double val = para.m_spacing[sp];
-    if (val < 0)
-      val = 0;
-    /** seems difficult to set bottom a percentage of the line unit,
-        so do the strict minimum... */
-    else if (para.m_spacingPercent[sp])
-      val = (val*7.)/72.;
-    m_structures->m_listener->setParagraphMargin
-    (val, sp==1 ? MWAW_TOP : MWAW_BOTTOM, WPX_INCH);
-  }
+  para.send(m_structures->m_listener);
   m_numTab = para.m_tabs.size();
-  m_structures->m_listener->setTabs(para.m_tabs);
 }
 
 

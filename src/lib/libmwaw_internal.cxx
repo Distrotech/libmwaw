@@ -45,41 +45,6 @@ uint8_t readU8(WPXInputStream *input)
 }
 }
 
-void MWAWTabStop::printTabs(std::ostream &o, std::vector<MWAWTabStop> const &tabs)
-{
-  int nbTabs = tabs.size();
-  if (!nbTabs) return;
-
-  o << "tabs=(" << std::dec;
-  for (int i = 0; i < nbTabs; i++) {
-    o << tabs[i].m_position;
-
-    switch (tabs[i].m_alignment) {
-    case LEFT:
-      o << "L";
-      break;
-    case CENTER:
-      o << "C";
-      break;
-    case RIGHT:
-      o << "R";
-      break;
-    case DECIMAL:
-      o << ":decimal";
-      break; // decimal align
-    case BAR:
-      o << ":bar";
-      break;
-    default:
-      break;
-    }
-    if (tabs[i].m_leaderCharacter != '\0')
-      o << ":sep='"<< (char) tabs[i].m_leaderCharacter << "'";
-    o << ",";
-  }
-  o << ")";
-}
-
 namespace libmwaw
 {
 std::string numberingTypeToString(NumberingType type)

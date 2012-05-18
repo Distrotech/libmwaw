@@ -38,6 +38,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 
 #include "CWText.hxx"
@@ -50,79 +51,25 @@ namespace CWTextInternal
 {
 
 /** Internal: class to store the paragraph properties */
-struct Ruler {
+struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Ruler() : m_justify(libmwaw::JustificationLeft),
-    m_interlineFixed(-1), m_interlinePercent(0.0), m_tabs(),
-    m_error("") {
-    for(int c = 0; c < 2; c++) {
-      m_margins[c] = 0.0;
-      m_spacings[c] = 0;
-    }
-    m_margins[2] = -1.0;
+  Paragraph() : MWAWParagraph() {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Ruler const &ind) {
-    if (ind.m_justify) {
-      o << "Just=";
-      switch(ind.m_justify) {
-      case libmwaw::JustificationLeft:
-        o << "left";
-        break;
-      case libmwaw::JustificationCenter:
-        o << "centered";
-        break;
-      case libmwaw::JustificationRight:
-        o << "right";
-        break;
-      case libmwaw::JustificationFull:
-        o << "full";
-        break;
-      default:
-        o << "#just=" << int(ind.m_justify) << ", ";
-        break;
-      }
-      o << ", ";
-    }
-    if (ind.m_margins[0]) o << "firstLPos=" << ind.m_margins[0] << ", ";
-    if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
-    if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
-    if (ind.m_spacings[0]) o << "beforeSpace=" << ind.m_spacings[0] << "pt, ";
-    if (ind.m_spacings[1]) o << "afterSpace=" << ind.m_spacings[1] << "pt, ";
-    if (ind.m_interlineFixed > 0) o << "interline=" << ind.m_interlineFixed << "pt,";
-    if (ind.m_interlinePercent > 0.0) o << "interline=" << 100.*ind.m_interlinePercent << "%,";
-    MWAWTabStop::printTabs(o, ind.m_tabs);
-    if (ind.m_error.length()) o << "," << ind.m_error;
+  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
+    o << reinterpret_cast<MWAWParagraph const &>(ind);
     return o;
   }
-
-  /** the margins in inches
-   *
-   * 0: first line left, 1: left, 2: right (from right)
-   */
-  float m_margins[3];
-  //! paragraph justification
-  libmwaw::Justification m_justify;
-  /** interline (in point)*/
-  int m_interlineFixed;
-  /** interline */
-  float m_interlinePercent;
-  /** the spacings ( 0: before, 1: after ) in point*/
-  int m_spacings[2];
-  //! the tabulations
-  std::vector<MWAWTabStop> m_tabs;
-  /** the errors */
-  std::string m_error;
 };
 
 struct Style {
   //! constructor
-  Style() : m_fontId(-1), m_rulerId(-1) {
+  Style() : m_fontId(-1), m_paragraphId(-1) {
   }
   //! the char
   int m_fontId;
   //! the ruler
-  int m_rulerId;
+  int m_paragraphId;
 };
 
 struct ParagraphInfo {
@@ -250,12 +197,12 @@ struct Zone : public CWStruct::DSET {
 //! Internal: the state of a CWText
 struct State {
   //! constructor
-  State() : m_version(-1), m_font(-1, 0, 0), m_rulersList(), m_fontsList(),
+  State() : m_version(-1), m_font(-1, 0, 0), m_paragraphsList(), m_fontsList(),
     m_stylesList(), m_lookupMap(), m_zoneMap() {
   }
 
   //! return the ruler corresponding to a styleId
-  int getRulerId(int styleId) const {
+  int getParagraphId(int styleId) const {
     if (m_version <= 2)
       return styleId;
     if (m_lookupMap.find(styleId) == m_lookupMap.end())
@@ -263,12 +210,12 @@ struct State {
     int id = m_lookupMap.find(styleId)->second;
     if (id < 0 || int(m_stylesList.size()) <= id)
       return -1;
-    return m_stylesList[id].m_rulerId;
+    return m_stylesList[id].m_paragraphId;
   }
 
   mutable int m_version;
   MWAWFont m_font; // the actual font
-  std::vector<Ruler> m_rulersList;
+  std::vector<Paragraph> m_paragraphsList;
   std::vector<MWAWFont> m_fontsList; // used in style
   std::vector<Style> m_stylesList;
   std::map<int, int> m_lookupMap;
@@ -769,7 +716,7 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   ascii().addNote("Entries(Paragraph)");
 
   libmwaw::DebugStream f;
-  int numRulers = m_state->m_rulersList.size();
+  int numParagraphs = m_state->m_paragraphsList.size();
   m_input->seek(pos+4, WPX_SEEK_SET); // skip header
   for (int i = 0; i < numElt; i++) {
     pos = m_input->tell();
@@ -782,9 +729,9 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     if (styleSize >= 8)
       info.m_unknown = m_input->readLong(2);
     f << info;
-    int rulerId = m_state->getRulerId(info.m_styleId);
-    if (rulerId >= 0 && rulerId < numRulers)
-      f << "ruler"<< rulerId << "[" << m_state->m_rulersList[rulerId] << "]";
+    int rulerId = m_state->getParagraphId(info.m_styleId);
+    if (rulerId >= 0 && rulerId < numParagraphs)
+      f << "ruler"<< rulerId << "[" << m_state->m_paragraphsList[rulerId] << "]";
     if (long(m_input->tell()) != pos+styleSize)
       ascii().addDelimiter(m_input->tell(), '|');
 
@@ -930,7 +877,7 @@ bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone
 bool CWText::sendText(CWTextInternal::Zone const &zone)
 {
   long actC = 0;
-  int numRulers = m_state->m_rulersList.size();
+  int numParagraphs = m_state->m_paragraphsList.size();
   MWAWFont actFont;
   int actPage = 1, numZones = zone.m_zones.size();
   if (zone.m_id == 1 && m_listener)
@@ -964,9 +911,9 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
       if (zone.m_styleMap.find(actC) != zone.m_styleMap.end()) {
         CWTextInternal::ParagraphInfo const &parag =
           zone.m_styleMap.find(actC)->second;
-        int rulerId = m_state->getRulerId(parag.m_styleId);
-        if (rulerId >= 0 && rulerId < numRulers)
-          setProperty(m_state->m_rulersList[rulerId]);
+        int rulerId = m_state->getParagraphId(parag.m_styleId);
+        if (rulerId >= 0 && rulerId < numParagraphs)
+          setProperty(m_state->m_paragraphsList[rulerId]);
       }
       if (zone.m_tokenMap.find(actC) != zone.m_tokenMap.end()) {
         CWTextInternal::Token const &token =
@@ -1104,7 +1051,7 @@ bool CWText::readSTYL_RULR(int N, int fSz)
   libmwaw::DebugStream f;
   for (int i = 0; i < N; i++) {
     long pos = m_input->tell();
-    if (fSz != 108 || !readRuler(i)) {
+    if (fSz != 108 || !readParagraph(i)) {
       f.str("");
       if (!i)
         f << "Entries(RULR)-0:";
@@ -1256,8 +1203,8 @@ bool CWText::readSTYL_STYL(int N, int fSz)
     f << "],";
     f << "graphId?=" << m_input->readLong(2);
     f << "ruler=[";
-    style.m_rulerId = m_input->readLong(2);
-    f << "id=" << style.m_rulerId << ",";
+    style.m_paragraphId = m_input->readLong(2);
+    f << "id=" << style.m_paragraphId << ",";
     f << "hash=" << m_input->readLong(2) << ",";
     if (fSz >= 30)
       f << "unkn=" << m_input->readLong(2);
@@ -1399,7 +1346,7 @@ bool CWText::readSTYLs(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read a list of rulers
 ////////////////////////////////////////////////////////////
-bool CWText::readRulers()
+bool CWText::readParagraphs()
 {
   long pos = m_input->tell();
   long sz = m_input->readULong(4);
@@ -1407,7 +1354,7 @@ bool CWText::readRulers()
 
   m_input->seek(endPos, WPX_SEEK_SET);
   if (m_input->atEOS()) {
-    MWAW_DEBUG_MSG(("CWText::readRulers: ruler zone is too short\n"));
+    MWAW_DEBUG_MSG(("CWText::readParagraphs: ruler zone is too short\n"));
     return false;
   }
   m_input->seek(pos+4, WPX_SEEK_SET);
@@ -1419,7 +1366,7 @@ bool CWText::readRulers()
 
   if (sz != 12+fSz*N) {
     m_input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWText::readRulers: find odd ruler size\n"));
+    MWAW_DEBUG_MSG(("CWText::readParagraphs: find odd ruler size\n"));
     return false;
   }
 
@@ -1438,7 +1385,7 @@ bool CWText::readRulers()
 
   for (int i = 0; i < N; i++) {
     pos = m_input->tell();
-    if (!readRuler(i)) {
+    if (!readParagraph(i)) {
       m_input->seek(pos, WPX_SEEK_SET);
       return false;
     }
@@ -1449,7 +1396,7 @@ bool CWText::readRulers()
 ////////////////////////////////////////////////////////////
 // read a ruler zone
 ////////////////////////////////////////////////////////////
-bool CWText::readRuler(int id)
+bool CWText::readParagraph(int id)
 {
   int dataSize = 0;
   switch (version()) {
@@ -1467,11 +1414,11 @@ bool CWText::readRuler(int id)
     else dataSize = 96;
     break;
   default:
-    MWAW_DEBUG_MSG(("CWText::readRuler: unknown size\n"));
+    MWAW_DEBUG_MSG(("CWText::readParagraph: unknown size\n"));
     return false;
   }
 
-  CWTextInternal::Ruler ruler;
+  CWTextInternal::Paragraph ruler;
   long pos = m_input->tell();
   long endPos = pos+dataSize;
   libmwaw::DebugStream f;
@@ -1566,7 +1513,7 @@ bool CWText::readRuler(int id)
     }
     if (ok) val = 0;
     else {
-      MWAW_DEBUG_MSG(("CWText::readRuler: can not determine underline\n"));
+      MWAW_DEBUG_MSG(("CWText::readParagraph: can not determine underline\n"));
       interline = 0;
     }
     break;
@@ -1575,16 +1522,21 @@ bool CWText::readRuler(int id)
     break;
   }
   if (interline) {
-    if (inPoint) ruler.m_interlineFixed = interline;
-    else ruler.m_interlinePercent = 1.0+interline*0.5;
+    if (inPoint) {
+      ruler.m_spacings[0] = interline;
+      ruler.m_spacingsInterlineUnit = WPX_POINT;
+    } else
+      ruler.m_spacings[0] = 1.0+interline*0.5;
   }
   if (val) f << "#flags=" << std::hex << val << std::dec << ",";
   for (int i = 0; i < 3; i++)
     ruler.m_margins[i] = m_input->readLong(2)/72.;
   ruler.m_margins[0] +=  ruler.m_margins[1];
+  ruler.m_margins[2] -= 28./72.;
+  if (ruler.m_margins[2] < 0.0) ruler.m_margins[2] = 0.0;
   if (version() >= 2) {
     for(int i = 0; i < 2; i++) {
-      ruler.m_spacings[i] = m_input->readULong(1);
+      ruler.m_spacings[i+1] = m_input->readULong(1)/72.;
       m_input->seek(1, WPX_SEEK_CUR); // flags to define the printing unit
     }
   }
@@ -1593,7 +1545,7 @@ bool CWText::readRuler(int id)
   int numTabs = m_input->readULong(1);
   if (long(m_input->tell())+numTabs*4 > endPos) {
     if (numTabs != 255) { // 0xFF seems to be used in v1, v2
-      MWAW_DEBUG_MSG(("CWText::readRuler: numTabs is too big\n"));
+      MWAW_DEBUG_MSG(("CWText::readParagraph: numTabs is too big\n"));
     }
     f << "numTabs*=" << numTabs << ",";
     numTabs = 0;
@@ -1655,12 +1607,12 @@ bool CWText::readRuler(int id)
     if (val)
       f << "#unkn[tab" << i << "=" << std::hex << val << std::dec << "],";
   }
-  ruler.m_error = f.str();
+  ruler.m_extra = f.str();
   // save the style
   if (id >= 0) {
-    if (int(m_state->m_rulersList.size()) <= id)
-      m_state->m_rulersList.resize(id+1);
-    m_state->m_rulersList[id]=ruler;
+    if (int(m_state->m_paragraphsList.size()) <= id)
+      m_state->m_paragraphsList.resize(id+1);
+    m_state->m_paragraphsList[id]=ruler;
   }
   f.str("");
   if (id == 0)
@@ -1681,32 +1633,10 @@ bool CWText::readRuler(int id)
   return true;
 }
 
-void CWText::setProperty(CWTextInternal::Ruler const &ruler)
+void CWText::setProperty(CWTextInternal::Paragraph const &ruler)
 {
   if (!m_listener) return;
-
-  m_listener->justificationChange(ruler.m_justify);
-
-  double textWidth = m_mainParser->pageWidth();
-  m_listener->setParagraphTextIndent(ruler.m_margins[0]);
-  m_listener->setParagraphMargin(ruler.m_margins[1], MWAW_LEFT);
-  float rPos = 0;
-  if (ruler.m_margins[2] >= 0.0) {
-    rPos = ruler.m_margins[2]-28./72.;
-    if (rPos < 0) rPos = 0;
-  }
-  m_listener->setParagraphMargin(rPos, MWAW_RIGHT);
-  m_listener->setParagraphMargin(ruler.m_spacings[0]/72.,MWAW_TOP);
-  m_listener->setParagraphMargin(ruler.m_spacings[1]/72.,MWAW_BOTTOM);
-
-  if (ruler.m_interlineFixed > 0)
-    m_listener->lineSpacingChange(ruler.m_interlineFixed, WPX_POINT);
-  else if (ruler.m_interlinePercent > 0.0)
-    m_listener->lineSpacingChange(ruler.m_interlinePercent, WPX_PERCENT);
-  else
-    m_listener->lineSpacingChange(1.0, WPX_PERCENT);
-
-  m_listener->setTabs(ruler.m_tabs,textWidth);
+  ruler.send(m_listener);
 }
 
 bool CWText::sendZone(int number)

@@ -65,7 +65,7 @@ struct DSET;
 
 namespace CWTextInternal
 {
-struct Ruler;
+struct Paragraph;
 struct Zone;
 struct State;
 }
@@ -107,7 +107,7 @@ protected:
    * \param font the font's properties */
   void setProperty(MWAWFont const &font);
   /** sends a paragraph property to the listener */
-  void setProperty(CWTextInternal::Ruler const &ruler);
+  void setProperty(CWTextInternal::Paragraph const &ruler);
 
   //! sends the zone data to the listener (if it exists )
   bool sendZone(int number);
@@ -141,12 +141,12 @@ protected:
   bool readChar(int id, int fontSize, MWAWFont &font);
 
   /** read the rulers block which is present at the beginning of the text in the first version of Claris Works : v1-2 */
-  bool readRulers();
+  bool readParagraphs();
 
   /** the definition of ruler :
       present at the beginning of the text in the first version of Claris Works : v1-2,
       present in the STYL entries in v4-v6 files */
-  bool readRuler(int id=-1);
+  bool readParagraph(int id=-1);
 
   // THE NAMED ENTRY
 
@@ -171,7 +171,7 @@ protected:
   /* read a STYL Font sequence */
   bool readSTYL_CHAR(int N, int fSz);
 
-  /* read a STYL Ruler sequence */
+  /* read a STYL Paragraph sequence */
   bool readSTYL_RULR(int N, int fSz);
 
   /* style: sequence of zone : 1 by style ?*/

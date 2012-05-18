@@ -128,7 +128,7 @@ protected:
   bool readInformations(MWAWEntry const &entry,
                         std::vector<MWParserInternal::Information> &informations);
 
-  //! read a ruler
+  //! read a paragraph
   bool readParagraph(MWParserInternal::Information const &info);
 
   //! read a graphics

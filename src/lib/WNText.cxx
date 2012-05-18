@@ -39,6 +39,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWTable.hxx"
@@ -86,78 +87,32 @@ struct Font {
 };
 
 /** Internal: class to store the paragraph properties */
-struct Ruler {
+struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Ruler() : m_justify(libmwaw::JustificationLeft),
-    m_height(0.0), m_interlineFixed(false), m_tabs(),
-    m_error("") {
+  Paragraph() : MWAWParagraph() {
     for(int c = 0; c < 3; c++) // default value
       m_margins[c] = 72.0;
+    m_margins[2] -= 28.0;
+    m_marginsUnit = WPX_POINT;
     for(int i = 0; i < 8; i++)
       m_values[i] = 0;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Ruler const &ind) {
-    if (ind.m_justify) {
-      o << "Just=";
-      switch(ind.m_justify) {
-      case libmwaw::JustificationLeft:
-        o << "left";
-        break;
-      case libmwaw::JustificationCenter:
-        o << "centered";
-        break;
-      case libmwaw::JustificationRight:
-        o << "right";
-        break;
-      case libmwaw::JustificationFull:
-        o << "full";
-        break;
-      default:
-        o << "#just=" << int(ind.m_justify) << ", ";
-        break;
-      }
-      o << ", ";
-    }
-    if (ind.m_margins[0]) o << "firstLPos=" << ind.m_margins[0] << ", ";
-    if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
-    if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
-    if (ind.m_interlineFixed) o << "interline[fixed],";
-    if (ind.m_height > 0.0) o << "interline=" << ind.m_height << "pt,";
-    if (ind.m_tabs.size()) {
-      MWAWTabStop::printTabs(o, ind.m_tabs);
-      o << ",";
-    }
+  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
+    o << reinterpret_cast<MWAWParagraph const &>(ind);
     for (int i = 0; i < 8; i++) {
       if (!ind.m_values[i]) continue;
       o << "fR" << i << "=" << ind.m_values[i] << ",";
     }
-    if (ind.m_error.length()) o << ind.m_error << ",";
     return o;
   }
-
-  /** the margins in inches
-   *
-   * 0: first line left, 1: left, 2: right (from right)
-   */
-  float m_margins[3];
-  //! paragraph justification
-  libmwaw::Justification m_justify;
-  /** the line height */
-  float m_height;
-  /** true if the interline is fixed*/
-  int m_interlineFixed;
-  //! the tabulations
-  std::vector<MWAWTabStop> m_tabs;
   //! some unknown value
   int m_values[8];
-  /** the errors */
-  std::string m_error;
 };
 
 /** Internal: class to store a style */
 struct Style {
-  Style() : m_name(""), m_nextId(-1), m_font(), m_ruler() {
+  Style() : m_name(""), m_nextId(-1), m_font(), m_paragraph() {
     for (int i = 0; i < 13; i++) m_values[i] = 0;
     for (int i = 0; i < 6; i++) m_flags[i] = 0;
   }
@@ -188,7 +143,7 @@ struct Style {
   /** the font properties */
   Font m_font;
   /** the paragraph properties */
-  Ruler m_ruler;
+  Paragraph m_paragraph;
   /** some unknown value */
   int m_values[13];
   /** some unknown flags */
@@ -523,7 +478,7 @@ struct Zone {
 struct State {
   //! constructor
   State() : m_version(-1), m_numColumns(1), m_numPages(1), m_actualPage(1),
-    m_font(-1, 0, 0), m_ruler(), m_header(), m_footer(),
+    m_font(-1, 0, 0), m_paragraph(), m_header(), m_footer(),
     m_styleMap(), m_styleList(), m_contentMap() {
   }
 
@@ -555,7 +510,7 @@ struct State {
   //! the actual font
   MWAWFont m_font;
   /** the paragraph properties */
-  Ruler m_ruler;
+  Paragraph m_paragraph;
   //! the header and the footer
   shared_ptr<ContentZones> m_header, m_footer;
   //! the style indirection table
@@ -574,7 +529,7 @@ bool Cell::sendContent(MWAWContentListenerPtr)
 {
   /** as a cell can be arbitrary cutted in small part,
       we must retrieve the last ruler */
-  Ruler ruler = m_parser.m_state->m_ruler;
+  Paragraph ruler = m_parser.m_state->m_paragraph;
   m_parser.send(m_zonesList, m_footnoteList, ruler);
   return true;
 }
@@ -1256,16 +1211,16 @@ void WNText::setProperty(MWAWFont const &font, MWAWFont &previousFont)
 ////////////////////////////////////////////////////////////
 // the paragraphs properties
 ////////////////////////////////////////////////////////////
-bool WNText::readRuler(MWAWInputStream &input, WNTextInternal::Ruler &ruler)
+bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ruler)
 {
   libmwaw::DebugStream f;
   int vers = version();
-  ruler=WNTextInternal::Ruler();
+  ruler=WNTextInternal::Paragraph();
   long pos = input.tell();
   int expectedLength = vers <= 2 ? 8 : 16;
   input.seek(expectedLength, WPX_SEEK_CUR);
   if (pos+expectedLength != long(input.tell())) {
-    MWAW_DEBUG_MSG(("WNText::readRuler: zone is too short \n"));
+    MWAW_DEBUG_MSG(("WNText::readParagraph: zone is too short \n"));
     std::cout << long(input.tell()) - pos << "\n";
     return false;
   }
@@ -1279,8 +1234,9 @@ bool WNText::readRuler(MWAWInputStream &input, WNTextInternal::Ruler &ruler)
   ruler.m_margins[1]=input.readLong(2);
   ruler.m_margins[2]=input.readLong(2);
   ruler.m_margins[0]=input.readLong(2);
+  int height = 0;
   if (vers >= 3) {
-    ruler.m_height=input.readLong(2);
+    height=input.readLong(2);
     for (int i = 0; i < 3; i++)
       ruler.m_values[actVal++] = input.readULong(2);
   }
@@ -1300,10 +1256,10 @@ bool WNText::readRuler(MWAWInputStream &input, WNTextInternal::Ruler &ruler)
   default:
     break;
   }
-  if (flag & 0x80) ruler.m_interlineFixed = true;
+  bool interlineFixed = (flag & 0x80);
   ruler.m_values[actVal++] = (flag & 0x7c);
   if (vers <= 2)
-    ruler.m_height=input.readULong(1);
+    height=input.readULong(1);
   else
     ruler.m_values[actVal++] = input.readULong(1); // always 0
 
@@ -1314,7 +1270,7 @@ bool WNText::readRuler(MWAWInputStream &input, WNTextInternal::Ruler &ruler)
       MWAWTabStop newTab;
       int newVal = input.readULong(2);
       if (tab && newVal < previousVal) {
-        MWAW_DEBUG_MSG(("WNText::readRuler: find bad tab pos\n"));
+        MWAW_DEBUG_MSG(("WNText::readParagraph: find bad tab pos\n"));
         f << "#tab[" << tab << ",";
         input.seek(-1, WPX_SEEK_CUR);
         break;
@@ -1339,34 +1295,28 @@ bool WNText::readRuler(MWAWInputStream &input, WNTextInternal::Ruler &ruler)
       ruler.m_tabs.push_back(newTab);
     }
   }
-  ruler.m_error = f.str();
+  if (version() <= 2) // distance from right
+    ruler.m_margins[2] = int(72.0*m_mainParser->pageWidth())-ruler.m_margins[2];
+  ruler.m_margins[2] -= 28.;
+  if (ruler.m_margins[2] < 0) ruler.m_margins[2]=0;
+  if (!interlineFixed || height <= 0.0) {
+    if (height)
+      f << "interline>=" << height << "pt,";
+    ruler.m_spacings[0] = 1.0;
+    ruler.m_spacingsInterlineUnit = WPX_PERCENT;
+  } else {
+    ruler.m_spacings[0] = height+2;
+    ruler.m_spacingsInterlineUnit = WPX_POINT;
+  }
+  ruler.m_extra = f.str();
   return true;
 }
 
-void WNText::setProperty(WNTextInternal::Ruler const &ruler)
+void WNText::setProperty(WNTextInternal::Paragraph const &ruler)
 {
-  m_state->m_ruler = ruler;
+  m_state->m_paragraph = ruler;
   if (!m_listener) return;
-
-  m_listener->justificationChange(ruler.m_justify);
-
-  double textWidth = m_mainParser->pageWidth();
-  m_listener->setParagraphTextIndent(ruler.m_margins[0]/72.);
-  m_listener->setParagraphMargin(ruler.m_margins[1]/72., MWAW_LEFT);
-  int rPos = int(ruler.m_margins[2]);
-  if (version() <= 2) rPos = int(textWidth)-rPos;
-  if (rPos >= 0)
-    rPos -= 28;
-  if (rPos < 0) rPos = 0;
-
-  m_listener->setParagraphMargin(rPos/72., MWAW_RIGHT);
-
-  if (ruler.m_interlineFixed && ruler.m_height > 0)
-    m_listener->lineSpacingChange(ruler.m_height+2, WPX_POINT);
-  else
-    m_listener->lineSpacingChange(1.0, WPX_PERCENT);
-
-  m_listener->setTabs(ruler.m_tabs,textWidth);
+  ruler.send(m_listener);
 }
 
 ////////////////////////////////////////////////////////////
@@ -1538,9 +1488,9 @@ bool WNText::readStyles(WNEntry const &entry)
       m_input->seek(pos+relPos[2], WPX_SEEK_SET);
       int sz = m_input->readULong(2);
       m_input->pushLimit(pos+relPos[2]+sz);
-      WNTextInternal::Ruler ruler;
-      if (readRuler(*m_input, ruler)) {
-        style.m_ruler = ruler;
+      WNTextInternal::Paragraph ruler;
+      if (readParagraph(*m_input, ruler)) {
+        style.m_paragraph = ruler;
         f << ruler;
       } else
         f << "#";
@@ -1699,7 +1649,7 @@ bool WNText::send(WNEntry const &entry)
     MWAW_DEBUG_MSG(("WNText::send: can not find entry\n"));
     return false;
   }
-  WNTextInternal::Ruler ruler;
+  WNTextInternal::Paragraph ruler;
   switch(text->m_type) { // try to set the default
   case 1:
     ruler.m_justify = libmwaw::JustificationCenter;
@@ -1716,7 +1666,7 @@ bool WNText::send(WNEntry const &entry)
 
 bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
                   std::vector<shared_ptr<WNTextInternal::ContentZones> > &footnoteList,
-                  WNTextInternal::Ruler &ruler)
+                  WNTextInternal::Paragraph &ruler)
 {
   libmwaw::DebugStream f;
   int vers = version();
@@ -1940,9 +1890,9 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       break;
     }
     case 0xc: {
-      WNTextInternal::Ruler newRuler;
-      if (readRuler(dataInput, newRuler)) {
-        ruler = newRuler;
+      WNTextInternal::Paragraph newParagraph;
+      if (readParagraph(dataInput, newParagraph)) {
+        ruler = newParagraph;
         numLineTabs = ruler.m_tabs.size();
         setProperty(ruler);
         rulerSet = true;
@@ -2018,11 +1968,11 @@ void WNText::sendZone(int id)
     }
   }
   WNTextInternal::Zone &mZone = m_state->m_mainZones[id];
-  WNTextInternal::Ruler ruler;
+  WNTextInternal::Paragraph ruler;
   for (int i = 0; i < int(mZone.m_zones.size()); i++) {
     if (mZone.m_zones[i]->m_sent) continue;
     if (id == 0 && mZone.m_zones[i]->m_type) continue;
-    if (id) ruler = WNTextInternal::Ruler();
+    if (id) ruler = WNTextInternal::Paragraph();
     send(mZone.m_zones[i]->m_zonesList, mZone.m_zones[i]->m_footnoteList, ruler);
     mZone.m_zones[i]->m_sent = true;
   }

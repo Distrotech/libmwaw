@@ -1386,7 +1386,7 @@ bool CWParser::readDocHeader()
   ascii().addNote(f.str().c_str());
 
   /* zone 1 actual font, actul pos, .. */
-  if (!m_textParser->readRuler())
+  if (!m_textParser->readParagraph())
     return false;
   pos = input->tell();
   f.str("");
@@ -1431,7 +1431,7 @@ bool CWParser::readDocHeader()
   case 1:
   case 2: {
     pos = input->tell();
-    if (!m_textParser->readRulers())
+    if (!m_textParser->readParagraphs())
       return false;
     pos = input->tell();
     if (!readPrintInfo()) {

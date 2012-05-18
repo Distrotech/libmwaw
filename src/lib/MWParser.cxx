@@ -40,6 +40,7 @@
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
@@ -189,55 +190,15 @@ std::ostream &operator<<(std::ostream &o, Information const &info)
 
 ////////////////////////////////////////
 /** Internal: class to store the paragraph properties */
-struct Paragraph {
+struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Paragraph() :  m_spacing(1.), m_tabs(), m_justify(libmwaw::JustificationLeft) {
-    for(int c = 0; c < 3; c++) m_margins[c] = 0.0;
+  Paragraph() {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
-    if (ind.m_justify) {
-      o << "Just=";
-      switch(ind.m_justify) {
-      case libmwaw::JustificationLeft:
-        o << "left";
-        break;
-      case libmwaw::JustificationCenter:
-        o << "centered";
-        break;
-      case libmwaw::JustificationRight:
-        o << "right";
-        break;
-      case libmwaw::JustificationFull:
-        o << "full";
-        break;
-      default:
-        o << "#just=" << ind.m_justify << ", ";
-        break;
-      }
-      o << ", ";
-    }
-    if (ind.m_spacing != 1.0) o << "spacing=" << ind.m_spacing << ", ";
-    if (ind.m_margins[0]) o << "firstLPos=" << ind.m_margins[0] << ", ";
-    if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
-    if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
-
-    MWAWTabStop::printTabs(o, ind.m_tabs);
+    o << reinterpret_cast<MWAWParagraph const &>(ind);
     return o;
   }
-
-  /** the margins in inches
-   *
-   * 0: first line left, 1: left, 2: right
-   */
-  float m_margins[3];
-  /** the spacing */
-  float m_spacing;
-
-  //! the tabulations
-  std::vector<MWAWTabStop> m_tabs;
-  //! paragraph justification
-  libmwaw::Justification m_justify;
 };
 
 ////////////////////////////////////////
@@ -1397,9 +1358,9 @@ bool MWParser::readText(MWParserInternal::Information const &info,
 
   if (m_listener) {
     if (totalHeight && lHeight->size()) // fixme find a way to associate the good size to each line
-      m_listener->lineSpacingChange(totalHeight/double(lHeight->size()), WPX_POINT);
+      m_listener->setParagraphLineSpacing(totalHeight/double(lHeight->size()), WPX_POINT);
     else
-      m_listener->lineSpacingChange(1.2, WPX_PERCENT);
+      m_listener->setParagraphLineSpacing(1.2, WPX_PERCENT);
 
     MWAWFont font;
     if (!numFormat || listPos[0] != 0) {
@@ -1407,7 +1368,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
       font.sendTo(m_listener.get(), m_convertissor, font);
     }
     if (info.m_justifySet)
-      m_listener->justificationChange(info.m_justify);
+      m_listener->setParagraphJustification(info.m_justify);
 
     int actFormat = 0;
     numChar = text.length();
@@ -1495,7 +1456,7 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
     MWAW_DEBUG_MSG(("MWParser::readParagraph: high spacing bit set=%d\n", highspacing));
   }
   int spacing = input->readLong(1);
-  parag.m_spacing = 1.+spacing/2.0;
+  parag.m_spacings[0] = 1.+spacing/2.0;
   parag.m_margins[0] = input->readLong(2)/80.;
 
   parag.m_tabs.resize(numTabs);
@@ -1509,25 +1470,17 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
     parag.m_tabs[i].m_alignment = align;
     parag.m_tabs[i].m_position = numPixel/72.0;
   }
+  if (parag.m_margins[2] > 0.0)
+    parag.m_margins[2]=pageWidth()-parag.m_margins[2]-1.0;
+  if (parag.m_margins[2] < 0) parag.m_margins[2] = 0;
+  if (parag.m_spacings[0] < 1.0) {
+    f << "#interline=" << parag.m_spacings[0] << ",";
+    parag.m_spacings[0] = 1.0;
+  }
   f << parag;
 
-  if (m_listener) {
-    double textWidth = pageWidth();
-
-    // set the margin
-    m_listener->setParagraphTextIndent(parag.m_margins[0]);
-    m_listener->setParagraphMargin(parag.m_margins[1], MWAW_LEFT);
-
-    float rPos = 0;
-    if (parag.m_margins[2] >= 0.0) {
-      float rPos =textWidth-parag.m_margins[2]-28./72.;
-      if (rPos < 0) rPos = 0;
-    }
-    m_listener->setParagraphMargin(rPos, MWAW_RIGHT);
-
-    m_listener->setTabs(parag.m_tabs,textWidth);
-    m_listener->justificationChange(parag.m_justify);
-  }
+  if (m_listener)
+    parag.send(m_listener);
   ascii().addPos(version()<=3 ? pos-4 : pos);
   ascii().addNote(f.str().c_str());
 
@@ -1636,7 +1589,7 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, entry.length()-8));
   if (pict) {
     if (m_listener) {
-      m_listener->lineSpacingChange(1.0, WPX_PERCENT);
+      m_listener->setParagraphLineSpacing(1.0, WPX_PERCENT);
 
       WPXBinaryData data;
       std::string type;

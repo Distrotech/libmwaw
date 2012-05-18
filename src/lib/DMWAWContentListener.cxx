@@ -25,6 +25,7 @@
 
 #include "DMWAWContentListener.hxx"
 #include "MWAWPageSpan.hxx"
+#include "MWAWParagraph.hxx"
 #include "libmwaw_internal.hxx"
 #include <libwpd/WPXProperty.h>
 #include <limits>
@@ -891,7 +892,7 @@ void DMWAWContentListener::insertBreak(const uint8_t breakType)
 }
 
 // OSNOLA: add unit here
-void DMWAWContentListener::lineSpacingChange(const double lineSpacing, WPXUnit unit)
+void DMWAWContentListener::setParagraphLineSpacing(const double lineSpacing, WPXUnit unit)
 {
   if (isUndoOn()) return;
   m_ps->m_paragraphLineSpacing = lineSpacing;
@@ -899,14 +900,14 @@ void DMWAWContentListener::lineSpacingChange(const double lineSpacing, WPXUnit u
 }
 
 // OSNOLA: simplication of this function
-void DMWAWContentListener::justificationChange(libmwaw::Justification justification, bool force)
+void DMWAWContentListener::setParagraphJustification(libmwaw::Justification justification, bool force)
 {
   if (isUndoOn()) return;
 
   if (justification == m_ps->m_paragraphJustification) return;
 
   if (force) {
-    // We discovered that if there is not a paragraph break before justificationChange,
+    // We discovered that if there is not a paragraph break before setParagraphJustification,
     // newer versions of WordPerfect add a temporary hard return just before the code.
     // So, we will mimick them!
     if (m_ps->m_isParagraphOpened)

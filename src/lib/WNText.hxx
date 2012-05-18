@@ -65,7 +65,7 @@ struct ContentZone;
 struct ContentZones;
 
 struct Font;
-struct Ruler;
+struct Paragraph;
 
 struct TableData;
 struct Token;
@@ -138,14 +138,14 @@ protected:
   //! send the text to the listener
   bool send(std::vector<WNTextInternal::ContentZone> &listZones,
             std::vector<shared_ptr<WNTextInternal::ContentZones> > &footnoteList,
-            WNTextInternal::Ruler &ruler);
+            WNTextInternal::Paragraph &ruler);
 
   /* sends a font property to the listener
 
    * \param font the font's properties */
   void setProperty(MWAWFont const &font, MWAWFont &previousFont);
   /** sends a paragraph property to the listener */
-  void setProperty(WNTextInternal::Ruler const &ruler);
+  void setProperty(WNTextInternal::Paragraph const &ruler);
 
   //
   // low level
@@ -157,8 +157,8 @@ protected:
   //! read a font
   bool readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font &font);
 
-  //! read a ruler
-  bool readRuler(MWAWInputStream &input, WNTextInternal::Ruler &ruler);
+  //! read a paragraph format
+  bool readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ruler);
 
   //! read a token
   bool readToken(MWAWInputStream &input, WNTextInternal::Token &token);

@@ -34,11 +34,11 @@
 
 #include "MWAWCell.hxx"
 #include "MWAWList.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MWAWContentListener.hxx"
-
 
 MWAWContentListener::ParsingState::ParsingState() :
   m_textBuffer(), m_numDeferredTabs(0),
@@ -395,8 +395,24 @@ void MWAWContentListener::setTextLanguage(std::string const &locale)
 // tabs/...
 //
 ///////////////////
-void MWAWContentListener::setParagraphTextIndent(double margin)
+void MWAWContentListener::setParagraphTextIndent(double margin, WPXUnit unit)
 {
+  switch(unit) {
+  case WPX_POINT:
+    margin/=72.;
+    break;
+  case WPX_TWIP:
+    margin/=1440.;
+    break;
+  case WPX_PERCENT:
+    MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphTextIndent: unit can not be percent\n"));
+    return;
+  case WPX_GENERIC:
+    MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphTextIndent: unit can not be generic\n"));
+    return;
+  default:
+    break;
+  }
   m_ps->m_listReferencePosition = margin;
 }
 

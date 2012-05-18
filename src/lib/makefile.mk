@@ -39,6 +39,7 @@ SLOFILES= \
 	$(SLO)$/MWAWDocument.cxx		\
 	$(SLO)$/MWAWHeader.cxx			\
 	$(SLO)$/MWAWList.cxx			\
+	$(SLO)$/MWAWParagraph.cxx		\
 	$(SLO)$/MWAWTable.cxx			\
 	$(SLO)$/MWAWFont.cxx			\
 	$(SLO)$/MWParser.cxx			\

@@ -35,13 +35,11 @@
 
 #include <libwpd/WPXString.h>
 
-#include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
-#include "MWAWPictMac.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
-#include "MWAWTable.hxx"
 
 #include "MSKParser.hxx"
 
@@ -129,54 +127,15 @@ struct Font {
 };
 
 /** Internal: class to store the paragraph properties */
-struct Paragraph {
+struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Paragraph() : m_tabs(), m_justify(libmwaw::JustificationLeft), m_extra("") {
-    for(int c = 0; c < 3; c++) m_margins[c] = 0.0;
+  Paragraph() : MWAWParagraph() {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
-    if (ind.m_justify) {
-      o << "Just=";
-      switch(ind.m_justify) {
-      case libmwaw::JustificationLeft:
-        o << "left";
-        break;
-      case libmwaw::JustificationCenter:
-        o << "centered";
-        break;
-      case libmwaw::JustificationRight:
-        o << "right";
-        break;
-      case libmwaw::JustificationFull:
-        o << "full";
-        break;
-      default:
-        o << "#just=" << int(ind.m_justify) << ", ";
-        break;
-      }
-      o << ", ";
-    }
-    if (ind.m_margins[0]) o << "firstLPos=" << ind.m_margins[0] << ", ";
-    if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
-    if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
-
-    MWAWTabStop::printTabs(o, ind.m_tabs);
-    if (ind.m_extra.length()) o << "," << ind.m_extra;
+    o << reinterpret_cast<MWAWParagraph const &>(ind);
     return o;
   }
-
-  /** the margins in inches
-   *
-   * 0: first line left, 1: left, 2: right
-   */
-  float m_margins[3];
-  //! the tabulations
-  std::vector<MWAWTabStop> m_tabs;
-  //! paragraph justification
-  libmwaw::Justification m_justify;
-  //! extra data
-  std::string m_extra;
 };
 
 ////////////////////////////////////////
@@ -374,7 +333,7 @@ bool MSKText::sendText(MSKTextInternal::LineZone &zone)
   MSKTextInternal::Font actFont, font;
   actFont.m_font = m_state->m_font;
   if (m_listener && zone.m_height >= 0)
-    m_listener->lineSpacingChange(zone.m_height, WPX_POINT);
+    m_listener->setParagraphLineSpacing(zone.m_height, WPX_POINT);
 
   while(!m_input->atEOS()) {
     long pos = m_input->tell();
@@ -623,9 +582,13 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
     }
     if (val > 8000) continue;
     // i = 0 (last), i = 1 (firstL), i=2 (nextL)
-    parag.m_margins[(i+2)%3] = val/72.0;
+    parag.m_margins[2-i] = val/72.0;
   }
-
+  if (parag.m_margins[2] > 0.0)
+    parag.m_margins[2] = m_mainParser->pageWidth()-parag.m_margins[2];
+  if (parag.m_margins[2] > 56./72.) parag.m_margins[2] -= 28./72.;
+  else if (parag.m_margins[2] >=0.0) parag.m_margins[2] *= 0.5;
+  else parag.m_margins[2] = 0.0;
   int numVal = (dataSize-9)/2-3;
   parag.m_tabs.resize(numVal);
   int numTabs = 0;
@@ -677,22 +640,7 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
 void MSKText::setProperty(MSKTextInternal::Paragraph const &para)
 {
   if (!m_listener) return;
-
-  double textWidth = m_mainParser->pageWidth();
-  m_listener->justificationChange(para.m_justify);
-
-  m_listener->setParagraphTextIndent(para.m_margins[1]);
-  m_listener->setParagraphMargin(para.m_margins[0], MWAW_LEFT);
-
-  double rMargin = para.m_margins[2] > 0 ? textWidth-para.m_margins[2] : 0.0;
-  if (rMargin > 28./72.) rMargin -= 28./72.;
-  m_listener->setParagraphMargin(rMargin, MWAW_RIGHT);
-
-#if 0
-  m_listener->setParagraphMargin(para.m_spacings[0]/72., MWAW_TOP);
-  m_listener->setParagraphMargin(para.m_spacings[1]/72., MWAW_BOTTOM);
-#endif
-  m_listener->setTabs(para.m_tabs);
+  para.send(m_listener);
 }
 
 ////////////////////////////////////////////////////////////

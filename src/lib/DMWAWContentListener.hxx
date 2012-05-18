@@ -28,7 +28,7 @@
  * libwpd::DMWAWContentListener by
  *   - introduction of a new field m_paragraphLineSpacingUnit
  *   - gestion of  MWAW_ALL_CAPS_BIT/MWAW_EMBOSS_BIT/MWAW_ENGRAVE_BIT bits
- *   - change in DMWAWContentListener::justificationChange
+ *   - change in DMWAWContentListener::setParagraphJustification
  *
  * the other file WPX... are only basic copy of WPX needed because
  *    they are not exported
@@ -58,6 +58,8 @@ struct RGBSColor {
   uint8_t m_b;
   uint8_t m_s;
 };
+
+struct MWAWTabStop;
 
 typedef struct _DMWAWContentParsingState DMWAWContentParsingState;
 struct _DMWAWContentParsingState {
@@ -175,9 +177,9 @@ protected:
   void insertBreak(const uint8_t breakType);
 
   // OSNOLA: allows to change the unit
-  void lineSpacingChange(const double lineSpacing, WPXUnit unit=WPX_PERCENT);
+  void setParagraphLineSpacing(const double lineSpacing, WPXUnit unit=WPX_PERCENT);
   // force a break if there is a justification change
-  void justificationChange(libmwaw::Justification justification, bool force=false);
+  void setParagraphJustification(libmwaw::Justification justification, bool force=false);
 
   DMWAWContentParsingState *m_ps; // parse state
   WPXDocumentInterface *m_documentInterface;

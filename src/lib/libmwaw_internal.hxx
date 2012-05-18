@@ -123,24 +123,6 @@ struct MWAWColumnProperties {
   uint8_t m_alignment;
 };
 
-struct MWAWTabStop {
-  enum Alignment { LEFT, RIGHT, CENTER, DECIMAL, BAR };
-
-  MWAWTabStop(double position=0.0, Alignment alignment=LEFT, uint16_t leaderCharacter='\0', uint8_t leaderNumSpaces=0) :
-    m_position(position), m_alignment(alignment),
-    m_leaderCharacter(leaderCharacter), m_leaderNumSpaces(leaderNumSpaces) { }
-
-  /** \brief small function used to print a list of tabstop
-   *
-   * This function is used mainly for debugging. */
-  static void printTabs(std::ostream &o, std::vector<MWAWTabStop> const &tabs);
-
-  double m_position;
-  Alignment m_alignment;
-  uint16_t m_leaderCharacter;
-  uint8_t m_leaderNumSpaces;
-};
-
 namespace libmwaw
 {
 enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };

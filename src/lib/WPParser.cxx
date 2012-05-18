@@ -1400,7 +1400,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   int actLine = 0;
   numLines=lines.size();
   if (numLines == 0 && info.m_height > 0)
-    m_listener->lineSpacingChange(info.m_height, WPX_POINT);
+    m_listener->setParagraphLineSpacing(info.m_height, WPX_POINT);
   for (int c = 0; c < numChars; c++) {
     if (actFont < numFonts && c ==  fonts[actFont].m_firstChar) {
       fonts[actFont].m_font.sendTo(m_listener.get(), m_convertissor, font);
@@ -1409,9 +1409,9 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
     if (actLine < numLines && c == lines[actLine].m_firstChar) {
       if (actLine) m_listener->insertEOL();
       if (numLines == 1 && info.m_height > lines[0].m_height)
-        m_listener->lineSpacingChange(info.m_height, WPX_POINT);
+        m_listener->setParagraphLineSpacing(info.m_height, WPX_POINT);
       else if (lines[actLine].m_height)
-        m_listener->lineSpacingChange(lines[actLine].m_height, WPX_POINT);
+        m_listener->setParagraphLineSpacing(lines[actLine].m_height, WPX_POINT);
       actLine++;
     }
     unsigned char ch = text[c];
@@ -1647,7 +1647,7 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
   input->seek(pos+4, WPX_SEEK_SET);
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, length));
   if (m_listener) {
-    m_listener->lineSpacingChange(info.m_height, WPX_POINT);
+    m_listener->setParagraphLineSpacing(info.m_height, WPX_POINT);
     if (pict) {
       WPXBinaryData data;
       std::string type;
@@ -1655,7 +1655,7 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
         m_listener->insertPicture(pictPos, data, type);
     }
     m_listener->insertEOL();
-    m_listener->lineSpacingChange(1.0, WPX_PERCENT);
+    m_listener->setParagraphLineSpacing(1.0, WPX_PERCENT);
   }
   if (pict)
     ascii().skipZone(pos+4, pos+4+length-1);

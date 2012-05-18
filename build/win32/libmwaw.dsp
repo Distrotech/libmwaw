@@ -151,6 +151,10 @@ SOURCE=..\..\src\lib\MWAWList.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWParagraph.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWSubDocument.cxx
 # End Source File
 # Begin Source File
@@ -328,6 +332,10 @@ SOURCE=..\..\src\lib\MWAWHeader.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWList.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWParagraph.hxx
 # End Source File
 # Begin Source File
 

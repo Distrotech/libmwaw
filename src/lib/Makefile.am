@@ -26,21 +26,23 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWPageSpan.hxx		\
 					\
 	MWAWCell.cxx			\
-	MWAWContentListener.cxx	\
+	MWAWContentListener.cxx		\
 	MWAWDocument.cxx		\
 	MWAWHeader.cxx			\
 	MWAWList.cxx			\
+	MWAWParagraph.cxx		\
 	MWAWSubDocument.cxx		\
-	MWAWTable.cxx		\
+	MWAWTable.cxx			\
 	MWAWCell.hxx			\
-	MWAWContentListener.hxx	\
+	MWAWContentListener.hxx		\
 	MWAWDocument.hxx		\
 	MWAWEntry.hxx			\
 	MWAWHeader.hxx			\
 	MWAWList.hxx			\
+	MWAWParagraph.hxx		\
 	MWAWParser.hxx			\
 	MWAWSubDocument.hxx		\
-	MWAWTable.hxx		\
+	MWAWTable.hxx			\
 					\
 	MWAWDebug.cxx			\
 	MWAWInputStream.cxx		\

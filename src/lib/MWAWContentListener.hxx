@@ -75,8 +75,8 @@ public:
   using parent::insertBreak;
 
   // justification and line spacing
-  using parent::justificationChange;
-  using parent::lineSpacingChange;
+  using parent::setParagraphJustification;
+  using parent::setParagraphLineSpacing;
 
   //! sets the documents language (the simplified locale name)
   void setDocumentLanguage(std::string const &locale);
@@ -105,8 +105,8 @@ public:
   //! sets the text language (the simplified locale name)
   void setTextLanguage(std::string const &locale);
 
-  //! sets the first paragraph text indent. \warning unit are given in inches
-  void setParagraphTextIndent(double margin);
+  //! sets the first paragraph text indent.
+  void setParagraphTextIndent(double margin, WPXUnit unit=WPX_INCH);
   /** sets the paragraph margin.
    *
    * \param margin is given in inches

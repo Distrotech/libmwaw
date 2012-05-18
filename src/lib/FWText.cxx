@@ -35,13 +35,11 @@
 
 #include <libwpd/WPXString.h>
 
-#include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
-#include "MWAWPictMac.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
-#include "MWAWTable.hxx"
 
 #include "FWParser.hxx"
 
@@ -159,78 +157,14 @@ struct Zone {
 };
 
 /** Internal: class to store the paragraph properties */
-struct Ruler {
+struct Paragraph : MWAWParagraph {
   //! Constructor
-  Ruler() : m_justify(libmwaw::JustificationLeft),
-    m_interline(1.0), m_interlinePercent(true), m_tabs(),
-    m_error("") {
-    for(int c = 0; c < 2; c++) // default value
-      m_margins[c] = 0.0;
-    m_margins[2] = -1.0;
-    for(int c = 0; c < 2; c++) // default value
-      m_spacings[c] = 0.0;
-  }
+  Paragraph() : MWAWParagraph() { }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Ruler const &ind) {
-    if (ind.m_justify) {
-      o << "Just=";
-      switch(ind.m_justify) {
-      case libmwaw::JustificationLeft:
-        o << "left";
-        break;
-      case libmwaw::JustificationCenter:
-        o << "centered";
-        break;
-      case libmwaw::JustificationRight:
-        o << "right";
-        break;
-      case libmwaw::JustificationFull:
-        o << "full";
-        break;
-      default:
-        o << "#just=" << int(ind.m_justify) << ", ";
-        break;
-      }
-      o << ", ";
-    }
-    if (ind.m_margins[0]) o << "firstLPos=" << ind.m_margins[0] << ", ";
-    if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
-    if (ind.m_margins[2]>=0.0) o << "rightPos=" << ind.m_margins[2] << ", ";
-    if (ind.m_interline > 0.0) {
-      o << "interline=" << ind.m_interline;
-      if (ind.m_interlinePercent)
-        o << "%,";
-      else
-        o << "pt,";
-    }
-    if (ind.m_spacings[0]) o << "topSpace=" << ind.m_spacings[0] << ",";
-    if (ind.m_spacings[1]) o << "bottomSpace=" << ind.m_spacings[0] << ",";
-    if (ind.m_tabs.size()) {
-      MWAWTabStop::printTabs(o, ind.m_tabs);
-      o << ",";
-    }
-    if (ind.m_error.length()) o << ind.m_error << ",";
+  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
+    o << reinterpret_cast<MWAWParagraph const &>(ind);
     return o;
   }
-
-  /** the margins in inches
-   *
-   * 0: first line left, 1: left, 2: right (from right)
-   */
-  float m_margins[3];
-
-  //! paragraph justification
-  libmwaw::Justification m_justify;
-  /** the line height */
-  float m_interline;
-  /** true if the interline is percent*/
-  int m_interlinePercent;
-  /** the top/bottom spacing in inches */
-  float m_spacings[2];
-  //! the tabulations
-  std::vector<MWAWTabStop> m_tabs;
-  /** the errors */
-  std::string m_error;
 };
 
 ////////////////////////////////////////
@@ -548,7 +482,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
   input->seek(pos, WPX_SEEK_SET);
   int val, num=1;
   MWAWFont font(3,12);
-  FWTextInternal::Ruler ruler;
+  FWTextInternal::Paragraph ruler;
   bool rulerSent = true;
 
   std::vector<int> listBreaks = zone->getBreaksPosition();
@@ -745,10 +679,10 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
       case 0x9d:
       case 0x9e:
       case 0x9f:
-        ruler.m_interline = (1.0+(val-0x9d)/2.0);
-        ruler.m_interlinePercent = true;
+        ruler.m_spacings[0] = (1.0+(val-0x9d)/2.0);
+        ruler.m_spacingsInterlineUnit = WPX_PERCENT;
         rulerSent = false;
-        f << "[just=" << ruler.m_interline << "%]";
+        f << "[just=" << ruler.m_spacings[0] << "%]";
         break;
       case 0xe8:
         if (actPos+4 > lastPos) {
@@ -757,8 +691,8 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
         } else { // negatif : pt, positif %?
           int just = input->readLong(2);
           if (just < 0) {
-            ruler.m_interline = -just;
-            ruler.m_interlinePercent = false;
+            ruler.m_spacings[0] = -just;
+            ruler.m_spacingsInterlineUnit = WPX_POINT;
             rulerSent = false;
           }
           f << "[just=" << input->readLong(2) << ",";
@@ -978,6 +912,10 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     ascii.addNote(f.str().c_str());
 
     if (!rulerSent) {
+      if (ruler.m_spacings[0] <= 0.0) {
+        ruler.m_spacings[0] = 1.0;
+        ruler.m_spacingsInterlineUnit = WPX_PERCENT;
+      }
       setProperty(ruler);
       rulerSent = true;
     }
@@ -1636,25 +1574,10 @@ void FWText::setProperty(MWAWFont const &font, MWAWFont &previousFont)
   font.sendTo(m_listener.get(), m_convertissor, previousFont);
 }
 
-void FWText::setProperty(FWTextInternal::Ruler const &para)
+void FWText::setProperty(FWTextInternal::Paragraph const &para)
 {
   if (!m_listener) return;
-  m_listener->justificationChange(para.m_justify);
-
-  if (para.m_interline > 0.0)
-    m_listener->lineSpacingChange(para.m_interline,
-                                  para.m_interlinePercent ? WPX_PERCENT :  WPX_POINT);
-  else
-    m_listener->lineSpacingChange(1.0, WPX_PERCENT);
-
-  m_listener->setParagraphTextIndent(para.m_margins[0]+para.m_margins[1]);
-  m_listener->setParagraphMargin(para.m_margins[1], MWAW_LEFT);
-  if (para.m_margins[2] >= 0.0)
-    m_listener->setParagraphMargin(para.m_margins[2], MWAW_RIGHT);
-
-  m_listener->setParagraphMargin(para.m_spacings[0]/72., MWAW_TOP);
-  m_listener->setParagraphMargin(para.m_spacings[1]/72., MWAW_BOTTOM);
-  m_listener->setTabs(para.m_tabs);
+  para.send(m_listener);
 }
 
 ////////////////////////////////////////////////////////////

@@ -39,6 +39,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 
 #include "MSWParser.hxx"
@@ -392,22 +393,10 @@ struct Font {
 };
 
 /** Internal: class to store the paragraph properties */
-struct Paragraph {
+struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Paragraph() : m_font(), m_font2(), m_section(), m_justify(libmwaw::JustificationLeft),
-    m_interline(0), m_tabs(), m_error("") {
-    for(int c = 0; c < 2; c++) {
-      m_margins[c] = 0.0;
-      m_spacings[c] = 0;
-    }
-    m_margins[2] = 0.0;
-    for(int i = 0; i < 5; i++) m_borders[i] = false;
+  Paragraph() : m_textIndent(0.0), m_font(), m_font2(), m_section() {
     m_section.m_default = true;
-  }
-  //! return true if a paragraph has border
-  bool hasBorders() const {
-    for(int i = 0; i < 4; i++) if (m_borders[i]) return true;
-    return false;
   }
   //! try to read a data
   bool read(MWAWInputStreamPtr &input, long endPos) {
@@ -490,7 +479,7 @@ struct Paragraph {
       if (N*3+2*N0+2 != sz ) {
         MWAW_DEBUG_MSG(("MSWTextInternal::Paragraph::Read: num tab seems odd\n"));
         f << "#";
-        m_error += f.str();
+        m_extra += f.str();
         return false;
       }
       std::vector<float> tabs;
@@ -544,7 +533,7 @@ struct Paragraph {
     case 0x13: // first left
       if (dSz < 3) return false;
       val = input->readLong(2);
-      if (c == 0x13) m_margins[0] = val/1440.;
+      if (c == 0x13) m_textIndent = val/1440.;
       else if (c == 0x11) m_margins[1] = val/1440.;
       else m_margins[2] = val/1440.;
       return true;
@@ -553,9 +542,17 @@ struct Paragraph {
     case 0x16: // spacing after DWIPP
       if (dSz < 3) return false;
       val = input->readLong(2);
-      if (c == 0x14) m_interline = val/20;
-      else if (c == 0x15) m_spacings[0] = val/20;
-      else if (c == 0x16) m_spacings[1] = val/20;
+      m_spacings[c-0x14] = val/1440.;
+      if (c != 0x14) return true;
+      m_spacingsInterlineUnit = WPX_INCH;
+      if (val > 0)
+        m_extra += "interline[atLeast],";
+      else if (val < 0)
+        m_spacings[0] *= -1;
+      else {
+        m_spacings[0] = 1.0;
+        m_spacingsInterlineUnit = WPX_PERCENT;
+      }
       return true;
     case 0x1e:
     case 0x1f:
@@ -564,19 +561,18 @@ struct Paragraph {
     case 0x22:
       if (dSz < 3) return false;
       val = input->readULong(2);
-      m_borders[c-0x1e] = true;
       switch(c) {
       case 0x1e:
-        f << "border[top]";
+        m_border |= libmwaw::TopBorderBit;
         break;
       case 0x1f:
-        f << "border[left]";
+        m_border |= libmwaw::LeftBorderBit;
         break;
       case 0x20:
-        f << "border[bottom]";
+        m_border |= libmwaw::BottomBorderBit;
         break;
       case 0x21:
-        f << "border[right]";
+        m_border |= libmwaw::RightBorderBit;
         break;
       default:
       case 0x22:
@@ -590,46 +586,14 @@ struct Paragraph {
     default:
       return false;
     }
-    m_error += f.str();
+    m_extra += f.str();
     return true;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
-    if (ind.m_justify) {
-      o << "Just=";
-      switch(ind.m_justify) {
-      case libmwaw::JustificationLeft:
-        o << "left";
-        break;
-      case libmwaw::JustificationCenter:
-        o << "centered";
-        break;
-      case libmwaw::JustificationRight:
-        o << "right";
-        break;
-      case libmwaw::JustificationFull:
-        o << "full";
-        break;
-      default:
-        o << "#just=" << int(ind.m_justify) << ", ";
-        break;
-      }
-      o << ", ";
-    }
-    if (ind.m_margins[0]) o << "firstLPos=" << ind.m_margins[0] << ", ";
-    if (ind.m_margins[1]) o << "leftPos=" << ind.m_margins[1] << ", ";
-    if (ind.m_margins[2]) o << "rightPos=" << ind.m_margins[2] << ", ";
-    if (ind.m_spacings[0]) o << "beforeSpace=" << ind.m_spacings[0] << "pt, ";
-    if (ind.m_spacings[1]) o << "afterSpace=" << ind.m_spacings[1] << "pt, ";
-    if (ind.m_interline) {
-      if (ind.m_interline > 0.0)
-        o << "interline=" << ind.m_interline << "pt,";
-      else
-        o << "interline=" << -ind.m_interline << "pt[exactly],";
-    }
-    MWAWTabStop::printTabs(o, ind.m_tabs);
+    o << reinterpret_cast<MWAWParagraph const &>(ind);
+    if (ind.m_textIndent) o << "textIndent=" << ind.m_textIndent << ",";
     if (!ind.m_section.m_default) o << ind.m_section << ",";
-    if (ind.m_error.length()) o << "," << ind.m_error;
     return o;
   }
 
@@ -641,31 +605,12 @@ struct Paragraph {
       o << "font=[" << m_font.m_font.getDebugString(m_convertissor) << m_font2 << "],";
     o << *this;
   }
-
+  //! the text indent
+  double m_textIndent;
   //! the font (simplified)
   Font m_font, m_font2 /** font ( not simplified )*/;
   //! the section
   Section m_section;
-
-  /** the margins in inches
-   *
-   * 0: first line left, 1: left, 2: right (from right)
-   */
-  float m_margins[3];
-  //! paragraph justification
-  libmwaw::Justification m_justify;
-  /** interline (in point)*/
-  float m_interline;
-  /** the spacings ( 0: before, 1: after ) in point*/
-  int m_spacings[2];
-
-  //! the border top, left, bottom, right, middle
-  bool m_borders[5];
-  //! the tabulations
-  std::vector<MWAWTabStop> m_tabs;
-
-  /** the errors */
-  std::string m_error;
 };
 
 ////////////////////////////////////////
@@ -865,7 +810,7 @@ bool MSWText::createZones(long bot, long (&textLength)[3])
     MSWEntry &entry=it++->second;
 #ifndef DEBUG
     // first entry is often bad or share the same data than the second
-    if (entry.m_id == 0)
+    if (entry.id() == 0)
       continue;
 #endif
     if (entry.begin() == prevDeb) continue;
@@ -2364,7 +2309,6 @@ bool MSWText::readParagraph(MSWTextInternal::Paragraph &para, int dataSz)
       break;
     }
   }
-
   if (long(m_input->tell()) != endPos) {
     static bool first = true;
     if (first) {
@@ -2375,7 +2319,7 @@ bool MSWText::readParagraph(MSWTextInternal::Paragraph &para, int dataSz)
     f << "#";
     m_input->seek(endPos, WPX_SEEK_SET);
   }
-  para.m_error += f.str();
+  para.m_extra += f.str();
 
   return true;
 }
@@ -2787,33 +2731,10 @@ void MSWText::setProperty(MSWTextInternal::Paragraph const &para,
   if (!m_listener) return;
   if (!para.m_section.m_default && !recursive)
     setProperty(para.m_section, actFont, true);
-  m_listener->justificationChange(para.m_justify);
+  const_cast<MSWTextInternal::Paragraph&>(para).m_margins[0]=
+    para.m_textIndent+para.m_margins[1];
+  para.send(m_listener);
 
-  if (para.m_interline < 0.0)
-    m_listener->lineSpacingChange(-para.m_interline, WPX_POINT);
-  else if (para.m_interline) // fixme: in fact, this mean at least...
-    m_listener->lineSpacingChange(para.m_interline, WPX_POINT);
-  else
-    m_listener->lineSpacingChange(1.0, WPX_PERCENT);
-
-  m_listener->setParagraphTextIndent(para.m_margins[0]+para.m_margins[1]);
-  m_listener->setParagraphMargin(para.m_margins[1], MWAW_LEFT);
-  m_listener->setParagraphMargin(para.m_margins[2], MWAW_RIGHT);
-
-  m_listener->setParagraphMargin(para.m_spacings[0]/72., MWAW_TOP);
-  m_listener->setParagraphMargin(para.m_spacings[1]/72., MWAW_BOTTOM);
-  m_listener->setTabs(para.m_tabs);
-
-  if (!para.hasBorders())
-    m_listener->setParagraphBorder(0);
-  else {
-    int w = 0;
-    if (para.m_borders[0]) w |= libmwaw::TopBorderBit;
-    if (para.m_borders[1]) w |= libmwaw::LeftBorderBit;
-    if (para.m_borders[2]) w |= libmwaw::BottomBorderBit;
-    if (para.m_borders[3]) w |= libmwaw::RightBorderBit;
-    m_listener->setParagraphBorder(w);
-  }
   if (!para.m_font2.m_default) {
     setProperty(para.m_font2);
     actFont = para.m_font2;

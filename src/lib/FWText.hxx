@@ -62,7 +62,7 @@ typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 namespace FWTextInternal
 {
 struct Font;
-struct Ruler;
+struct Paragraph;
 
 struct Zone;
 
@@ -139,7 +139,7 @@ protected:
   void setProperty(MWAWFont const &font, MWAWFont &previousFont);
 
   /* send the ruler properties */
-  void setProperty(FWTextInternal::Ruler const &para);
+  void setProperty(FWTextInternal::Paragraph const &para);
 
   //! check if the input of the zone points to a paragraph zone, ...
   bool readParagraph(shared_ptr<FWEntry> zone);
