@@ -26,196 +26,158 @@
 /* "This product is not manufactured, approved, or supported by
  * Corel Corporation or Corel Corporation Limited."
  */
-
-#include <iostream>
-#include <cmath>
 #include <cstring>
+#include <iomanip>
 #include <sstream>
 
+#include <libwpd/WPXDocumentInterface.h>
+#include <libwpd/WPXProperty.h>
+
+#include "libmwaw_internal.hxx"
+
 #include "MWAWCell.hxx"
+#include "MWAWFont.hxx"
 #include "MWAWList.hxx"
+#include "MWAWPageSpan.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MWAWContentListener.hxx"
 
-MWAWContentListener::ParsingState::ParsingState() :
-  m_textBuffer(), m_numDeferredTabs(0),
-  m_footNoteNumber(0), m_endNoteNumber(0), m_numNestedNotes(0),
-  m_border(0), m_language(""),  m_parag_language(""),
-  m_doc_language("en"), m_isFrameOpened(false), m_list(), m_listOrderedLevels() {}
-
-MWAWContentListener::ParsingState::ParsingState
-(MWAWContentListener::ParsingState const &orig)  :
-  m_textBuffer(), m_numDeferredTabs(0),
-  m_footNoteNumber(0), m_endNoteNumber(0), m_numNestedNotes(0),
-  m_border(0), m_language(""),  m_parag_language(""),
-  m_doc_language("en"), m_isFrameOpened(false), m_list(), m_listOrderedLevels(0)
+MWAWDocumentParsingState::MWAWDocumentParsingState(std::vector<MWAWPageSpan> const &pageList) :
+  m_pageList(pageList),
+  m_metaData(),
+  m_footNoteNumber(0), m_endNoteNumber(0), m_newListId(0),
+  m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments()
 {
-  *this = orig;
 }
 
-MWAWContentListener::ParsingState::~ParsingState() {}
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-MWAWContentListener::MWAWContentListener(std::list<MWAWPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
-  DMWAWContentListener(pageList, documentInterface), m_parseState(0L), m_actualListId(0),
-  m_subDocuments()
+MWAWDocumentParsingState::~MWAWDocumentParsingState()
 {
-  // adjust the first paragraph margin
-
-  m_ps->m_paragraphMarginTop = m_ps->m_paragraphMarginBottom = 0.0;
-  if (pageList.begin() != pageList.end())
-    m_ps->m_pageMarginLeft = pageList.begin()->getMarginLeft();
 }
 
-MWAWContentListenerPtr MWAWContentListener::create(std::list<MWAWPageSpan> &pageList,
-    WPXDocumentInterface *documentInterface)
+MWAWContentParsingState::MWAWContentParsingState() :
+  m_textBuffer(""), m_numDeferredTabs(0),
+
+  m_textAttributeBits(0),	m_fontSize(12.0), m_fontName("Times New Roman"),
+  m_fontColor(0), m_textLanguage("UNSET"),
+
+  m_isParagraphColumnBreak(false), m_isParagraphPageBreak(false),
+
+  m_paragraphJustification(libmwaw::JustificationLeft),
+  m_paragraphLineSpacing(1.0), m_paragraphLineSpacingUnit(WPX_PERCENT),
+  m_paragraphBorders(0), m_paragraphBordersStyle(libmwaw::BorderSingle),
+  m_paragraphBordersWidth(1), m_paragraphBordersColor(0),
+
+  m_list(), m_currentListLevel(0),
+
+  m_isPageSpanOpened(false), m_isSectionOpened(false), m_isFrameOpened(false),
+  m_isPageSpanBreakDeferred(false),
+  m_isHeaderFooterWithoutParagraph(false),
+
+  m_isSpanOpened(false), m_isParagraphOpened(false), m_isListElementOpened(false),
+
+  m_firstParagraphInPageSpan(true),
+
+  m_numRowsToSkip(),
+  m_isTableOpened(false), m_isTableRowOpened(false), m_isTableColumnOpened(false),
+  m_isTableCellOpened(false),
+
+  m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
+
+  m_sectionAttributesChanged(false),
+  m_numColumns(1),
+  m_textColumns(),
+  m_isTextColumnWithoutParagraph(false),
+
+  m_pageFormLength(11.0),
+  m_pageFormWidth(8.5f),
+  m_pageFormOrientationIsPortrait(true),
+
+  m_pageMarginLeft(1.0),
+  m_pageMarginRight(1.0),
+  m_pageMarginTop(1.0),
+  m_pageMarginBottom(1.0),
+
+  m_sectionMarginLeft(0.0),
+  m_sectionMarginRight(0.0),
+  m_sectionMarginTop(0.0),
+  m_sectionMarginBottom(0.0),
+
+  m_paragraphMarginLeft(0.0),
+  m_paragraphMarginRight(0.0),
+  m_paragraphMarginTop(0.0), m_paragraphMarginTopUnit(WPX_INCH),
+  m_paragraphMarginBottom(0.0), m_paragraphMarginBottomUnit(WPX_INCH),
+
+  m_leftMarginByPageMarginChange(0.0),
+  m_rightMarginByPageMarginChange(0.0),
+  m_leftMarginByParagraphMarginChange(0.0),
+  m_rightMarginByParagraphMarginChange(0.0),
+  m_leftMarginByTabs(0.0),
+  m_rightMarginByTabs(0.0),
+
+  m_paragraphTextIndent(0.0),
+  m_textIndentByParagraphIndentChange(0.0),
+  m_textIndentByTabs(0.0),
+
+  m_listReferencePosition(0.0), m_listBeginPosition(0.0), m_listOrderedLevels(),
+
+  m_alignmentCharacter('.'),
+  m_tabStops(),
+  m_isTabPositionRelative(false),
+
+  m_inSubDocument(false),
+  m_isNote(false),
+  m_subDocumentType(libmwaw::DOC_NONE)
 {
-  shared_ptr<MWAWContentListener> res(new MWAWContentListener(pageList, documentInterface));
-  res->_init();
-  return res;
 }
 
-void MWAWContentListener::_init()
+MWAWContentParsingState::~MWAWContentParsingState()
 {
-  if (!m_parseState) m_parseState = _newParsingState();
+}
 
-  *m_ps->m_fontName = "Times New Roman";
-  m_ps->m_fontSize = 12.0;
-
+MWAWContentListener::MWAWContentListener(std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface) :
+  m_ds(new MWAWDocumentParsingState(pageList)), m_ps(new MWAWContentParsingState), m_psStack(),
+  m_documentInterface(documentInterface)
+{
+  _updatePageSpanDependent(true);
+  _recomputeParagraphPositions();
 }
 
 MWAWContentListener::~MWAWContentListener()
 {
-  delete m_parseState;
 }
 
-bool MWAWContentListener::isParagraphOpened() const
-{
-  return m_ps->m_isParagraphOpened;
-}
-
-bool MWAWContentListener::isSectionOpened() const
-{
-  return m_ps->m_isSectionOpened;
-}
-
-bool MWAWContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
-{
-  if (m_ps->m_isSectionOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openSection: a section is already opened\n"));
-    return false;
-  }
-
-  if (m_ps->m_isTableOpened || (m_ps->m_inSubDocument && m_ps->m_subDocumentType != libmwaw::DOC_TEXT_BOX)) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openSection: impossible to open a section\n"));
-    return false;
-  }
-
-  int numCols = colsWidth.size();
-  if (numCols <= 1) {
-    m_ps->m_textColumns.resize(0);
-    m_ps->m_numColumns=1;
-  } else {
-    float factor = 1.0;
-    switch(unit) {
-    case WPX_POINT:
-      factor = 1/72.;
-      break;
-    case WPX_TWIP:
-      factor = 1/1440.;
-      break;
-    case WPX_INCH:
-      break;
-    default:
-      MWAW_DEBUG_MSG(("MWAWContentListener::openSection: unknonwn unit\n"));
-      break;
-    }
-    m_ps->m_textColumns.resize(numCols);
-    m_ps->m_numColumns=numCols;
-    for (int col = 0; col < numCols; col++) {
-      MWAWColumnDefinition column;
-      column.m_width = factor*colsWidth[col];
-      m_ps->m_textColumns[col] = column;
-    }
-  }
-  _openSection();
-  return true;
-}
-
-bool MWAWContentListener::closeSection()
-{
-  if (!m_ps->m_isSectionOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::closeSection: no section are already opened\n"));
-    return false;
-  }
-
-  if (m_ps->m_isTableOpened || (m_ps->m_inSubDocument && m_ps->m_subDocumentType != libmwaw::DOC_TEXT_BOX)) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::closeSection: impossible to close a section\n"));
-    return false;
-  }
-
-  _closeSection();
-  return true;
-}
-
-void MWAWContentListener::setDocumentLanguage(std::string const &locale)
-{
-  if (!locale.length()) return;
-  if (parsingState()) m_parseState->m_doc_language = locale;
-  m_metaData.insert("libwpd:language", locale.c_str());
-}
-
-void MWAWContentListener::_flushDeferredTabs()
-{
-  if (isUndoOn() || m_parseState->m_numDeferredTabs == 0) return;
-
-  // CHECKME: the tab are not underline even if the underline bit is set
-  uint32_t oldTextAttributes = m_ps->m_textAttributeBits;
-  uint32_t newAttributes = oldTextAttributes & (~MWAW_UNDERLINE_BIT) &
-                           (~MWAW_OVERLINE_BIT);
-  if (oldTextAttributes != newAttributes) setTextAttribute(newAttributes);
-  if (!m_ps->m_isSpanOpened) _openSpan();
-  for (; m_parseState->m_numDeferredTabs > 0; m_parseState->m_numDeferredTabs--)
-    m_documentInterface->insertTab();
-  if (oldTextAttributes != newAttributes) setTextAttribute(oldTextAttributes);
-}
-
-
+///////////////////
+// text data
+///////////////////
 void MWAWContentListener::insertCharacter(uint8_t character)
 {
-  if (isUndoOn()) return;
   if (character >= 0x80) {
     insertUnicode(character);
     return;
   }
   _flushDeferredTabs ();
   if (!m_ps->m_isSpanOpened) _openSpan();
-  m_parseState->m_textBuffer.append(character);
+  m_ps->m_textBuffer.append(character);
 }
 
 void MWAWContentListener::insertUnicode(uint32_t val)
 {
-  if (isUndoOn()) return;
-
   // undef character, we skip it
   if (val == 0xfffd) return;
 
   _flushDeferredTabs ();
   if (!m_ps->m_isSpanOpened) _openSpan();
-  appendUnicode(val, m_parseState->m_textBuffer);
+  appendUnicode(val, m_ps->m_textBuffer);
 }
 
 void MWAWContentListener::insertUnicodeString(WPXString const &str)
 {
-  if (isUndoOn()) return;
-
   _flushDeferredTabs ();
   if (!m_ps->m_isSpanOpened) _openSpan();
-  m_parseState->m_textBuffer.append(str);
+  m_ps->m_textBuffer.append(str);
 }
 
 void MWAWContentListener::appendUnicode(uint32_t val, WPXString &buffer)
@@ -254,82 +216,96 @@ void MWAWContentListener::appendUnicode(uint32_t val, WPXString &buffer)
 
 void MWAWContentListener::insertEOL(bool soft)
 {
-  if (isUndoOn()) return;
-
-  if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened) _openSpan();
-  for (; m_parseState->m_numDeferredTabs > 0; m_parseState->m_numDeferredTabs--)
-    m_documentInterface->insertTab();
+  if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
+    _openSpan();
+  _flushDeferredTabs();
 
   if (soft) {
-    if (m_ps->m_isSpanOpened)  _flushText();
+    if (m_ps->m_isSpanOpened)
+      _flushText();
     m_documentInterface->insertLineBreak();
-  } else {
-    if (m_ps->m_isParagraphOpened) _closeParagraph();
-    if (m_ps->m_isListElementOpened) _closeListElement();
-  }
+  } else if (m_ps->m_isParagraphOpened)
+    _closeParagraph();
 
   // sub/superscript must not survive a new line
-  if (m_ps->m_textAttributeBits & (MWAW_SUBSCRIPT_BIT | MWAW_SUPERSCRIPT_BIT | MWAW_SUBSCRIPT100_BIT | MWAW_SUPERSCRIPT100_BIT))
-    m_ps->m_textAttributeBits &= ~(MWAW_SUBSCRIPT_BIT | MWAW_SUPERSCRIPT_BIT | MWAW_SUBSCRIPT100_BIT | MWAW_SUPERSCRIPT100_BIT);
+  static const uint32_t s_subsuperBits =
+    MWAW_SUBSCRIPT_BIT | MWAW_SUPERSCRIPT_BIT |
+    MWAW_SUBSCRIPT100_BIT | MWAW_SUPERSCRIPT100_BIT;
+  if (m_ps->m_textAttributeBits & s_subsuperBits)
+    m_ps->m_textAttributeBits &= ~s_subsuperBits;
 }
 
 void MWAWContentListener::insertTab()
 {
-  if (isUndoOn()) return;
-
   if (!m_ps->m_isParagraphOpened) {
-    m_parseState->m_numDeferredTabs++;
+    m_ps->m_numDeferredTabs++;
     return;
   }
-
-  // CHECKME: the tab are not underline even if the underline bit is set
-  uint32_t oldTextAttributes = m_ps->m_textAttributeBits;
-  uint32_t newAttributes = oldTextAttributes & (~MWAW_UNDERLINE_BIT);
-
-  if (oldTextAttributes != newAttributes) setTextAttribute(newAttributes);
-
-  if (!m_ps->m_isSpanOpened) _openSpan();
-  else _flushText();
-
-  m_documentInterface->insertTab();
-
-  if (oldTextAttributes != newAttributes)
-    setTextAttribute(oldTextAttributes);
+  if (m_ps->m_isSpanOpened) _flushText();
+  m_ps->m_numDeferredTabs++;
+  _flushDeferredTabs();
 }
 
-void MWAWContentListener::_flushText()
+void MWAWContentListener::insertBreak(const uint8_t breakType)
 {
-  if (m_parseState->m_textBuffer.len() == 0) return;
-
-  // when some many ' ' follows each other, call insertSpace
-  WPXString tmpText;
-  int numConsecutiveSpaces = 0;
-  WPXString::Iter i(m_parseState->m_textBuffer);
-  for (i.rewind(); i.next();) {
-    if (*(i()) == 0x20) // this test is compatible with unicode format
-      numConsecutiveSpaces++;
-    else
-      numConsecutiveSpaces = 0;
-
-    if (numConsecutiveSpaces > 1) {
-      if (tmpText.len() > 0) {
-        m_documentInterface->insertText(tmpText);
-        tmpText.clear();
-      }
-      m_documentInterface->insertSpace();
-    } else
-      tmpText.append(i());
+  switch (breakType) {
+  case MWAW_COLUMN_BREAK:
+    if (!m_ps->m_isPageSpanOpened && !m_ps->m_inSubDocument)
+      _openSpan();
+    if (m_ps->m_isParagraphOpened)
+      _closeParagraph();
+    m_ps->m_isParagraphColumnBreak = true;
+    m_ps->m_isTextColumnWithoutParagraph = true;
+    break;
+  case MWAW_PAGE_BREAK:
+    if (!m_ps->m_isPageSpanOpened && !m_ps->m_inSubDocument)
+      _openSpan();
+    if (m_ps->m_isParagraphOpened)
+      _closeParagraph();
+    m_ps->m_isParagraphPageBreak = true;
+    break;
+    // TODO: (.. line break?)
   }
-  m_documentInterface->insertText(tmpText);
-  m_parseState->m_textBuffer.clear();
+
+  if (m_ps->m_inSubDocument)
+    return;
+
+  switch (breakType) {
+  case MWAW_PAGE_BREAK:
+  case MWAW_SOFT_PAGE_BREAK:
+    if (m_ps->m_numPagesRemainingInSpan > 0)
+      m_ps->m_numPagesRemainingInSpan--;
+    else {
+      if (!m_ps->m_isTableOpened && !m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
+        _closePageSpan();
+      else
+        m_ps->m_isPageSpanBreakDeferred = true;
+    }
+    m_ps->m_currentPageNumber++;
+    break;
+  default:
+    break;
+  }
+}
+
+void MWAWContentListener::_insertBreakIfNecessary(WPXPropertyList &propList)
+{
+  if (m_ps->m_isParagraphPageBreak && !m_ps->m_inSubDocument) {
+    // no hard page-breaks in subdocuments
+    propList.insert("fo:break-before", "page");
+    m_ps->m_isParagraphPageBreak = false;
+  } else if (m_ps->m_isParagraphColumnBreak) {
+    if (m_ps->m_numColumns > 1)
+      propList.insert("fo:break-before", "column");
+    else
+      propList.insert("fo:break-before", "page");
+  }
 }
 
 ///////////////////
-//
-// font/character/
-//
+// font/character format
 ///////////////////
-void MWAWContentListener::setTextAttribute(const uint32_t attribute)
+void MWAWContentListener::setFontAttributes(const uint32_t attribute)
 {
   if (attribute == m_ps->m_textAttributeBits) return;
   _closeSpan();
@@ -339,33 +315,11 @@ void MWAWContentListener::setTextAttribute(const uint32_t attribute)
 
 void MWAWContentListener::setTextFont(const WPXString &fontName)
 {
-  if (fontName == *(m_ps->m_fontName)) return;
+  if (fontName == m_ps->m_fontName) return;
   _closeSpan();
   // FIXME verify that fontName does not contain bad characters,
   //       if so, pass a unicode string
-  *m_ps->m_fontName = fontName;
-}
-
-void MWAWContentListener::setFontColor(int const (&col) [3])
-{
-  if (m_ps->m_fontColor->m_r == col[0] &&
-      m_ps->m_fontColor->m_g == col[1] &&
-      m_ps->m_fontColor->m_b == col[2]) return;
-  _closeSpan();
-  m_ps->m_fontColor->m_r = col[0];
-  m_ps->m_fontColor->m_g = col[1];
-  m_ps->m_fontColor->m_b = col[2];
-}
-
-void MWAWContentListener::setFontColor(Vec3i const &col)
-{
-  if (m_ps->m_fontColor->m_r == col[0] &&
-      m_ps->m_fontColor->m_g == col[1] &&
-      m_ps->m_fontColor->m_b == col[2]) return;
-  _closeSpan();
-  m_ps->m_fontColor->m_r = col[0];
-  m_ps->m_fontColor->m_g = col[1];
-  m_ps->m_fontColor->m_b = col[2];
+  m_ps->m_fontName = fontName;
 }
 
 void MWAWContentListener::setFontSize(const uint16_t fontSize)
@@ -377,160 +331,117 @@ void MWAWContentListener::setFontSize(const uint16_t fontSize)
   m_ps->m_fontSize=fSize;
 }
 
+void MWAWContentListener::setTextColor(const uint32_t rgb)
+{
+  if (m_ps->m_fontColor==rgb) return;
+  _closeSpan();
+  m_ps->m_fontColor = rgb;
+}
+
 void MWAWContentListener::setTextLanguage(std::string const &locale)
 {
-  if (!parsingState()) return;
-  std::string lang;
-  if (m_parseState->m_doc_language==locale &&
-      m_parseState->m_parag_language=="")
-    lang = "";
-  else
-    lang = locale;
-  if (m_parseState->m_language!=lang) _closeSpan();
-  m_parseState->m_language = lang;
+  if (m_ps->m_textLanguage==locale) return;
+  _closeSpan();
+  m_ps->m_textLanguage=locale;
 }
 
 ///////////////////
-//
-// tabs/...
-//
+// paragraph tabs, tabs/...
 ///////////////////
+bool MWAWContentListener::isParagraphOpened() const
+{
+  return m_ps->m_isParagraphOpened;
+}
+
+void MWAWContentListener::setParagraphLineSpacing(const double lineSpacing, WPXUnit unit)
+{
+  m_ps->m_paragraphLineSpacing = lineSpacing;
+  m_ps->m_paragraphLineSpacingUnit = unit;
+}
+
+void MWAWContentListener::setParagraphJustification(libmwaw::Justification justification, bool force)
+{
+  if (justification == m_ps->m_paragraphJustification) return;
+
+  if (force) {
+    if (m_ps->m_isParagraphOpened)
+      _closeParagraph();
+
+    m_ps->m_currentListLevel = 0;
+  }
+  m_ps->m_paragraphJustification = justification;
+}
+
 void MWAWContentListener::setParagraphTextIndent(double margin, WPXUnit unit)
 {
-  switch(unit) {
-  case WPX_POINT:
-    margin/=72.;
-    break;
-  case WPX_TWIP:
-    margin/=1440.;
-    break;
-  case WPX_PERCENT:
-    MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphTextIndent: unit can not be percent\n"));
-    return;
-  case WPX_GENERIC:
-    MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphTextIndent: unit can not be generic\n"));
-    return;
-  default:
-    break;
-  }
-  m_ps->m_listReferencePosition = margin;
+  float scale=MWAWPosition::getScaleFactor(unit, WPX_INCH);
+  m_ps->m_textIndentByParagraphIndentChange = scale*margin;
+  _recomputeParagraphPositions();
 }
 
 void MWAWContentListener::setParagraphMargin(double margin, int pos, WPXUnit unit)
 {
-  switch(unit) {
-  case WPX_POINT:
-    if (pos == MWAW_LEFT || pos == MWAW_RIGHT)
-      margin/=72.;
-    break;
-  case WPX_TWIP:
-    if (pos == MWAW_LEFT || pos == MWAW_RIGHT)
-      margin/=1440.;
-    break;
-  case WPX_PERCENT:
-    MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphMargin: unit can not be percent\n"));
-    return;
-  case WPX_GENERIC:
-    MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphMargin: unit can not be generic\n"));
-    return;
-  default:
-    break;
-  }
+  margin*=MWAWPosition::getScaleFactor(unit, WPX_INCH);
   switch(pos) {
   case MWAW_LEFT:
     m_ps->m_leftMarginByParagraphMarginChange = margin;
-    m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange
-                                  + m_ps->m_leftMarginByParagraphMarginChange
-                                  + m_ps->m_leftMarginByTabs;
+    _recomputeParagraphPositions();
     break;
   case MWAW_RIGHT:
     m_ps->m_rightMarginByParagraphMarginChange = margin;
-    m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange
-                                   + m_ps->m_rightMarginByParagraphMarginChange
-                                   + m_ps->m_rightMarginByTabs;
+    _recomputeParagraphPositions();
     break;
   case MWAW_TOP:
     m_ps->m_paragraphMarginTop = margin;
-    m_ps->m_paragraphMarginTopUnit = unit;
     break;
   case MWAW_BOTTOM:
     m_ps->m_paragraphMarginBottom = margin;
-    m_ps->m_paragraphMarginBottomUnit = unit;
     break;
   default:
     MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphMargin: unknown pos"));
   }
 }
 
-void MWAWContentListener::setTabs(const std::vector<MWAWTabStop> &tabStops, double maxW)
+void MWAWContentListener::setTabs(const std::vector<MWAWTabStop> &tabStops)
 {
-  if (isUndoOn()) return;
-
   m_ps->m_isTabPositionRelative = true;
-
-  if (maxW <= 0) {
-    m_ps->m_tabStops = tabStops;
-    return;
-  }
-
-  std::vector<MWAWTabStop> tabs = tabStops;
-  for (int p = 0; p < int(tabs.size()); p++) {
-    double pos = tabs[p].m_position;
-    if (pos > maxW-10./72. && tabs[p].m_alignment != MWAWTabStop::RIGHT)
-      tabs[p].m_position = maxW-10./72.;
-  }
-  m_ps->m_tabStops = tabs;
+  m_ps->m_tabStops = tabStops;
 }
 
-void MWAWContentListener::setParagraphBorder(int which, bool flag)
+void MWAWContentListener::setParagraphBorders(int which, libmwaw::BorderStyle style, int width, uint32_t color)
 {
-  if (!parsingState()) return;
-  if (flag) parsingState()->m_border |= which;
-  else parsingState()->m_border &= (~which);
-}
-
-void MWAWContentListener::setParagraphBorder(bool flag)
-{
-  if (!parsingState()) return;
-  parsingState()->m_border = flag ? 0xf : 0;
-}
-
-void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool isListElement)
-{
-  DMWAWContentListener::_appendParagraphProperties(propList, isListElement);
-  if (!parsingState()) return;
-  if (parsingState()->m_border) {
-    int border = parsingState()->m_border;
-    if (border == 0xF) {
-      propList.insert("fo:border", "0.03cm solid #000000");
-      return;
-    }
-    if (border & libmwaw::LeftBorderBit)
-      propList.insert("fo:border-left", "0.03cm solid #000000");
-    if (border & libmwaw::RightBorderBit)
-      propList.insert("fo:border-right", "0.03cm solid #000000");
-    if (border & libmwaw::TopBorderBit)
-      propList.insert("fo:border-top", "0.03cm solid #000000");
-    if (border & libmwaw::BottomBorderBit)
-      propList.insert("fo:border-bottom", "0.03cm solid #000000");
-  }
-  if (parsingState()->m_language.length())
-    propList.insert("fo:language", parsingState()->m_language.c_str());
-  parsingState()->m_parag_language = parsingState()->m_language;
-}
-
-void MWAWContentListener::_appendExtraSpanProperties(WPXPropertyList &propList)
-{
-  DMWAWContentListener::_appendExtraSpanProperties(propList);
-  if (!parsingState()) return;
-  if (parsingState()->m_language != parsingState()->m_parag_language)
-    propList.insert("fo:language", parsingState()->m_language.c_str());
+  m_ps->m_paragraphBorders = which;
+  m_ps->m_paragraphBordersStyle = style;
+  m_ps->m_paragraphBordersWidth = width >= 1 ? width : 1;
+  m_ps->m_paragraphBordersColor = color;
 }
 
 ///////////////////
-//
+// List: Minimal implementation
+///////////////////
+void MWAWContentListener::setCurrentListLevel(int level)
+{
+  m_ps->m_currentListLevel = level;
+  // to be compatible with MWAWContentListerner
+  if (level)
+    m_ps->m_listBeginPosition =
+      m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
+  else
+    m_ps->m_listBeginPosition = 0;
+}
+void MWAWContentListener::setCurrentList(shared_ptr<MWAWList> list)
+{
+  m_ps->m_list=list;
+  if (list && list->getId() <= 0 && list->numLevels())
+    list->setId(++m_ds->m_newListId);
+}
+shared_ptr<MWAWList> MWAWContentListener::getCurrentList() const
+{
+  return m_ps->m_list;
+}
+
+///////////////////
 // field :
-//
 ///////////////////
 #include <time.h>
 void MWAWContentListener::insertField(MWAWContentListener::FieldType type)
@@ -544,8 +455,6 @@ void MWAWContentListener::insertField(MWAWContentListener::FieldType type)
     WPXPropertyList propList;
     propList.insert("style:num-format", libmwaw::numberingTypeToString(libmwaw::ARABIC).c_str());
     m_documentInterface->insertField(WPXString("text:page-number"), propList);
-    // Checkme WP6ContentListener.cpp finish by resetting the state:
-    // _parseState->m_styleStateSequence.setCurrentState(m_parseState->m_styleStateSequence.getPreviousState());
     break;
   }
   case Database: {
@@ -582,10 +491,865 @@ void MWAWContentListener::insertDateTimeField(char const *format)
 }
 
 ///////////////////
-//
-// Frame/Text picture
-//
+// section
 ///////////////////
+bool MWAWContentListener::isSectionOpened() const
+{
+  return m_ps->m_isSectionOpened;
+}
+
+bool MWAWContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
+{
+  if (m_ps->m_isSectionOpened) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::openSection: a section is already opened\n"));
+    return false;
+  }
+
+  if (m_ps->m_isTableOpened || (m_ps->m_inSubDocument && m_ps->m_subDocumentType != libmwaw::DOC_TEXT_BOX)) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::openSection: impossible to open a section\n"));
+    return false;
+  }
+
+  int numCols = colsWidth.size();
+  if (numCols <= 1) {
+    m_ps->m_textColumns.resize(0);
+    m_ps->m_numColumns=1;
+  } else {
+    float factor = 1.0;
+    switch(unit) {
+    case WPX_POINT:
+    case WPX_TWIP:
+      factor = MWAWPosition::getScaleFactor(unit, WPX_INCH);
+    case WPX_INCH:
+      break;
+    default:
+      MWAW_DEBUG_MSG(("MWAWContentListener::openSection: unknown unit\n"));
+      return false;
+    }
+    m_ps->m_textColumns.resize(numCols);
+    m_ps->m_numColumns=numCols;
+    for (int col = 0; col < numCols; col++) {
+      MWAWColumnDefinition column;
+      column.m_width = factor*colsWidth[col];
+      m_ps->m_textColumns[col] = column;
+    }
+  }
+  _openSection();
+  return true;
+}
+
+bool MWAWContentListener::closeSection()
+{
+  if (!m_ps->m_isSectionOpened) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::closeSection: no section are already opened\n"));
+    return false;
+  }
+
+  if (m_ps->m_isTableOpened || (m_ps->m_inSubDocument && m_ps->m_subDocumentType != libmwaw::DOC_TEXT_BOX)) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::closeSection: impossible to close a section\n"));
+    return false;
+  }
+
+  _closeSection();
+  return true;
+}
+
+///////////////////
+// document
+///////////////////
+void MWAWContentListener::setDocumentLanguage(std::string locale)
+{
+  if (!locale.length()) return;
+  m_ds->m_metaData.insert("libwpd:language", locale.c_str());
+}
+
+void MWAWContentListener::startDocument()
+{
+  if (m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::startDocument: the document is already started\n"));
+    return;
+  }
+
+  // FIXME: this is stupid, we should store a property list filled with the relevant metadata
+  // and then pass that directly..
+  m_documentInterface->setDocumentMetaData(m_ds->m_metaData);
+
+  m_documentInterface->startDocument();
+  m_ds->m_isDocumentStarted = true;
+}
+
+void MWAWContentListener::endDocument()
+{
+  if (!m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::startDocument: the document is not started\n"));
+    return;
+  }
+
+  if (!m_ps->m_isPageSpanOpened)
+    _openSpan();
+
+  if (m_ps->m_isTableOpened)
+    closeTable();
+  if (m_ps->m_isParagraphOpened)
+    _closeParagraph();
+
+  m_ps->m_currentListLevel = 0;
+  _changeList(); // flush the list exterior
+
+  // close the document nice and tight
+  _closeSection();
+  _closePageSpan();
+  m_documentInterface->endDocument();
+  m_ds->m_isDocumentStarted = false;
+}
+
+///////////////////
+// page
+///////////////////
+void MWAWContentListener::_openPageSpan()
+{
+  if (m_ps->m_isPageSpanOpened)
+    return;
+
+  if (!m_ds->m_isDocumentStarted)
+    startDocument();
+
+  if (m_ds->m_pageList.size()==0) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::_openPageSpan: can not find any page\n"));
+    throw libmwaw::ParseException();
+  }
+  unsigned actPage = 0;
+  std::vector<MWAWPageSpan>::iterator it = m_ds->m_pageList.begin();
+  while(actPage < m_ps->m_currentPage) {
+    actPage+=it->getPageSpan();
+    it++;
+    if (it == m_ds->m_pageList.end()) {
+      MWAW_DEBUG_MSG(("MWAWContentListener::_openPageSpan: can not find current page\n"));
+      throw libmwaw::ParseException();
+    }
+  }
+  MWAWPageSpan &currentPage = *it;
+
+  WPXPropertyList propList;
+  currentPage.getPageProperty(propList);
+  propList.insert("libwpd:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
+
+  if (!m_ps->m_isPageSpanOpened)
+    m_documentInterface->openPageSpan(propList);
+
+  m_ps->m_isPageSpanOpened = true;
+
+  _updatePageSpanDependent(false);
+  m_ps->m_pageFormLength = currentPage.getFormLength();
+  m_ps->m_pageFormWidth = currentPage.getFormWidth();
+  m_ps->m_pageMarginLeft = currentPage.getMarginLeft();
+  m_ps->m_pageMarginRight = currentPage.getMarginRight();
+  m_ps->m_pageFormOrientationIsPortrait =
+    currentPage.getFormOrientation() == MWAWPageSpan::PORTRAIT;
+  m_ps->m_pageMarginTop = currentPage.getMarginTop();
+  m_ps->m_pageMarginBottom = currentPage.getMarginBottom();
+
+  _updatePageSpanDependent(true);
+  _recomputeParagraphPositions();
+  // we insert the header footer
+  currentPage.sendHeaderFooters(this, m_documentInterface);
+
+  // first paragraph in span (necessary for resetting page number)
+  m_ps->m_firstParagraphInPageSpan = true;
+  m_ps->m_numPagesRemainingInSpan = (currentPage.getPageSpan() - 1);
+  m_ps->m_currentPage++;
+}
+
+void MWAWContentListener::_closePageSpan()
+{
+  if (!m_ps->m_isPageSpanOpened)
+    return;
+
+  if (m_ps->m_isSectionOpened)
+    _closeSection();
+
+  m_documentInterface->closePageSpan();
+  m_ps->m_isPageSpanOpened = m_ps->m_isPageSpanBreakDeferred = false;
+}
+
+void MWAWContentListener::_updatePageSpanDependent(bool set)
+{
+  double deltaRight = set ? -m_ps->m_pageMarginRight : m_ps->m_pageMarginRight;
+  double deltaLeft = set ? -m_ps->m_pageMarginLeft : m_ps->m_pageMarginLeft;
+  if (m_ps->m_sectionMarginLeft)
+    m_ps->m_sectionMarginLeft += deltaLeft;
+  if (m_ps->m_sectionMarginRight)
+    m_ps->m_sectionMarginRight += deltaRight;
+  m_ps->m_listReferencePosition += deltaLeft;
+  m_ps->m_listBeginPosition += deltaLeft;
+}
+
+void MWAWContentListener::_recomputeParagraphPositions()
+{
+  m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange
+                                + m_ps->m_leftMarginByParagraphMarginChange + m_ps->m_leftMarginByTabs;
+  m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange
+                                 + m_ps->m_rightMarginByParagraphMarginChange + m_ps->m_rightMarginByTabs;
+  m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange + m_ps->m_textIndentByTabs;
+  m_ps->m_listBeginPosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
+  m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
+}
+
+///////////////////
+// section
+///////////////////
+void MWAWContentListener::_openSection()
+{
+  if (m_ps->m_isSectionOpened) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::_openSection: a section is already opened\n"));
+    return;
+  }
+
+  if (!m_ps->m_isPageSpanOpened)
+    _openPageSpan();
+
+  WPXPropertyList propList;
+  propList.insert("fo:margin-left", m_ps->m_sectionMarginLeft);
+  propList.insert("fo:margin-right", m_ps->m_sectionMarginRight);
+  if (m_ps->m_numColumns > 1)
+    propList.insert("text:dont-balance-text-columns", false);
+  if (m_ps->m_sectionMarginTop)
+    propList.insert("libwpd:margin-top", m_ps->m_sectionMarginTop);
+  if (m_ps->m_sectionMarginBottom)
+    propList.insert("libwpd:margin-bottom", m_ps->m_sectionMarginBottom);
+
+  WPXPropertyListVector columns;
+  for (int i = 0; i < int(m_ps->m_textColumns.size()); i++) {
+    MWAWColumnDefinition const &col = m_ps->m_textColumns[i];
+    WPXPropertyList column;
+    // The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
+    column.insert("style:rel-width", col.m_width * 1440.0, WPX_TWIP);
+    column.insert("fo:start-indent", col.m_leftGutter);
+    column.insert("fo:end-indent", col.m_rightGutter);
+    columns.append(column);
+  }
+  m_documentInterface->openSection(propList, columns);
+
+  m_ps->m_sectionAttributesChanged = false;
+  m_ps->m_isSectionOpened = true;
+}
+
+void MWAWContentListener::_closeSection()
+{
+  if (!m_ps->m_isSectionOpened ||m_ps->m_isTableOpened)
+    return;
+
+  if (m_ps->m_isParagraphOpened)
+    _closeParagraph();
+  _changeList();
+
+  m_documentInterface->closeSection();
+
+  m_ps->m_sectionAttributesChanged = false;
+  m_ps->m_isSectionOpened = false;
+}
+
+///////////////////
+// paragraph
+///////////////////
+void MWAWContentListener::_openParagraph()
+{
+  if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
+    return;
+
+  if (m_ps->m_isParagraphOpened || m_ps->m_isListElementOpened) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::_openParagraph: a paragraph (or a list) is already opened"));
+    return;
+  }
+  if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == libmwaw::DOC_TEXT_BOX)) {
+    if (m_ps->m_sectionAttributesChanged)
+      _closeSection();
+
+    if (!m_ps->m_isSectionOpened)
+      _openSection();
+  }
+
+  WPXPropertyListVector tabStops;
+  _getTabStops(tabStops);
+
+  WPXPropertyList propList;
+  _appendParagraphProperties(propList);
+
+  if (!m_ps->m_isParagraphOpened)
+    m_documentInterface->openParagraph(propList, tabStops);
+
+  _resetParagraphState();
+  m_ps->m_firstParagraphInPageSpan = false;
+}
+
+void MWAWContentListener::_closeParagraph()
+{
+  if (m_ps->m_isListElementOpened) {
+    _closeListElement();
+    return;
+  }
+
+  if (m_ps->m_isParagraphOpened) {
+    if (m_ps->m_isSpanOpened)
+      _closeSpan();
+
+    m_documentInterface->closeParagraph();
+  }
+
+  m_ps->m_isParagraphOpened = false;
+  m_ps->m_currentListLevel = 0;
+
+  if (!m_ps->m_isTableOpened && m_ps->m_isPageSpanBreakDeferred && !m_ps->m_inSubDocument)
+    _closePageSpan();
+}
+
+void MWAWContentListener::_resetParagraphState(const bool isListElement)
+{
+  m_ps->m_isParagraphColumnBreak = false;
+  m_ps->m_isParagraphPageBreak = false;
+  if (isListElement) {
+    m_ps->m_isListElementOpened = true;
+    m_ps->m_isParagraphOpened = true;
+  } else {
+    m_ps->m_isListElementOpened = false;
+    m_ps->m_isParagraphOpened = true;
+  }
+  m_ps->m_leftMarginByTabs = 0.0;
+  m_ps->m_rightMarginByTabs = 0.0;
+  m_ps->m_textIndentByTabs = 0.0;
+  m_ps->m_isTextColumnWithoutParagraph = false;
+  m_ps->m_isHeaderFooterWithoutParagraph = false;
+  _recomputeParagraphPositions();
+}
+
+void MWAWContentListener::_appendJustification(WPXPropertyList &propList, libmwaw::Justification justification)
+{
+  switch (justification) {
+  case libmwaw::JustificationLeft:
+    // doesn't require a paragraph prop - it is the default
+    propList.insert("fo:text-align", "left");
+    break;
+  case libmwaw::JustificationCenter:
+    propList.insert("fo:text-align", "center");
+    break;
+  case libmwaw::JustificationRight:
+    propList.insert("fo:text-align", "end");
+    break;
+  case libmwaw::JustificationFull:
+    propList.insert("fo:text-align", "justify");
+    break;
+  case libmwaw::JustificationFullAllLines:
+    propList.insert("fo:text-align", "justify");
+    propList.insert("fo:text-align-last", "justify");
+    break;
+  }
+}
+
+void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool isListElement)
+{
+  _appendJustification(propList, m_ps->m_paragraphJustification);
+
+  if (!m_ps->m_isTableOpened) {
+    // these properties are not appropriate when a table is opened..
+    if (isListElement) {
+      propList.insert("fo:margin-left", (m_ps->m_listBeginPosition - m_ps->m_paragraphTextIndent));
+      propList.insert("fo:text-indent", m_ps->m_paragraphTextIndent);
+    } else {
+      propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
+      propList.insert("fo:text-indent", m_ps->m_listReferencePosition - m_ps->m_paragraphMarginLeft);
+    }
+    propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
+    if (m_ps->m_paragraphBorders) {
+      std::stringstream stream;
+      stream << m_ps->m_paragraphBordersWidth*0.03 << "cm";
+      switch (m_ps->m_paragraphBordersStyle) {
+      case libmwaw::BorderSingle:
+      case libmwaw::BorderDot:
+      case libmwaw::BorderLargeDot:
+      case libmwaw::BorderDash:
+        stream << " solid";
+        break;
+      case libmwaw::BorderDouble:
+        stream << " double";
+        break;
+      }
+      stream << " #" << std::hex << std::setfill('0') << std::setw(6)
+             << (m_ps->m_paragraphBordersColor&0xFFFFFF);
+      std::string style = stream.str();
+      int border = m_ps->m_paragraphBorders;
+      if (border == 0xF) {
+        propList.insert("fo:border", style.c_str());
+        return;
+      }
+      if (border & libmwaw::LeftBorderBit)
+        propList.insert("fo:border-left", style.c_str());
+      if (border & libmwaw::RightBorderBit)
+        propList.insert("fo:border-right", style.c_str());
+      if (border & libmwaw::TopBorderBit)
+        propList.insert("fo:border-top", style.c_str());
+      if (border & libmwaw::BottomBorderBit)
+        propList.insert("fo:border-bottom", style.c_str());
+    }
+  }
+  propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop, m_ps->m_paragraphMarginBottomUnit);
+  propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom, m_ps->m_paragraphMarginBottomUnit);
+  propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
+
+
+  if (!m_ps->m_inSubDocument && m_ps->m_firstParagraphInPageSpan) {
+    unsigned actPage = 1;
+    std::vector<MWAWPageSpan>::const_iterator it = m_ds->m_pageList.begin();
+    while(actPage < m_ps->m_currentPage) {
+      if (it == m_ds->m_pageList.end())
+        break;
+
+      actPage+=it->getPageSpan();
+      it++;
+    }
+    MWAWPageSpan const &currentPage = *it;
+    if (currentPage.getPageNumber() >= 0)
+      propList.insert("style:page-number", currentPage.getPageNumber());
+  }
+
+  _insertBreakIfNecessary(propList);
+}
+
+void MWAWContentListener::_getTabStops(WPXPropertyListVector &tabStops)
+{
+  double decalX = m_ps->m_isTabPositionRelative ? -m_ps->m_leftMarginByTabs :
+                  -m_ps->m_paragraphMarginLeft-m_ps->m_sectionMarginLeft-m_ps->m_pageMarginLeft;
+  for (int i=0; i<(int)m_ps->m_tabStops.size(); i++)
+    m_ps->m_tabStops[i].addTo(tabStops, decalX);
+}
+
+///////////////////
+// list
+///////////////////
+void MWAWContentListener::_openListElement()
+{
+  if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
+    return;
+
+  if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened) {
+    if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == libmwaw::DOC_TEXT_BOX)) {
+      if (m_ps->m_sectionAttributesChanged)
+        _closeSection();
+
+      if (!m_ps->m_isSectionOpened)
+        _openSection();
+    }
+
+    WPXPropertyList propList;
+    _appendParagraphProperties(propList, true);
+
+    WPXPropertyListVector tabStops;
+    _getTabStops(tabStops);
+
+    if (!m_ps->m_isListElementOpened)
+      m_documentInterface->openListElement(propList, tabStops);
+    _resetParagraphState(true);
+  }
+}
+
+void MWAWContentListener::_closeListElement()
+{
+  if (m_ps->m_isListElementOpened) {
+    if (m_ps->m_isSpanOpened)
+      _closeSpan();
+
+    m_documentInterface->closeListElement();
+  }
+
+  m_ps->m_isListElementOpened = m_ps->m_isParagraphOpened = false;
+  m_ps->m_currentListLevel = 0;
+
+  if (!m_ps->m_isTableOpened && m_ps->m_isPageSpanBreakDeferred && !m_ps->m_inSubDocument)
+    _closePageSpan();
+}
+
+void MWAWContentListener::_changeList()
+{
+  if (m_ps->m_isParagraphOpened)
+    _closeParagraph();
+
+  if (!m_ps->m_isSectionOpened && !m_ps->m_inSubDocument && !m_ps->m_isTableOpened)
+    _openSection();
+
+  // FIXME: even if nobody really care, if we close an ordered or an unordered
+  //      elements, we must keep the previous to close this part...
+  int actualListLevel = m_ps->m_listOrderedLevels.size();
+  for (int i=actualListLevel; i > m_ps->m_currentListLevel; i--) {
+    if (m_ps->m_listOrderedLevels[i-1])
+      m_documentInterface->closeOrderedListLevel();
+    else
+      m_documentInterface->closeUnorderedListLevel();
+  }
+
+  WPXPropertyList propList2;
+  if (m_ps->m_currentListLevel) {
+    if (!m_ps->m_list.get()) {
+      MWAW_DEBUG_MSG(("MWAWContentListener::_handleListChange: can not find any list\n"));
+      return;
+    }
+    m_ps->m_list->setLevel(m_ps->m_currentListLevel);
+    m_ps->m_list->openElement();
+
+    if (m_ps->m_list->mustSendLevel(m_ps->m_currentListLevel)) {
+      if (actualListLevel == m_ps->m_currentListLevel) {
+        if (m_ps->m_listOrderedLevels[actualListLevel-1])
+          m_documentInterface->closeOrderedListLevel();
+        else
+          m_documentInterface->closeUnorderedListLevel();
+        actualListLevel--;
+      }
+      if (m_ps->m_currentListLevel==1) {
+        // we must change the listID for writerperfect
+        int prevId;
+        if ((prevId=m_ps->m_list->getPreviousId()) > 0)
+          m_ps->m_list->setId(prevId);
+        else
+          m_ps->m_list->setId(++m_ds->m_newListId);
+      }
+      m_ps->m_list->sendTo(*m_documentInterface, m_ps->m_currentListLevel);
+    }
+
+    propList2.insert("libwpd:id", m_ps->m_list->getId());
+    m_ps->m_list->closeElement();
+  }
+
+  if (actualListLevel == m_ps->m_currentListLevel) return;
+
+  m_ps->m_listOrderedLevels.resize(m_ps->m_currentListLevel, false);
+  for (int i=actualListLevel+1; i<= m_ps->m_currentListLevel; i++) {
+    if (m_ps->m_list->isNumeric(i)) {
+      m_ps->m_listOrderedLevels[i-1] = true;
+      m_documentInterface->openOrderedListLevel(propList2);
+    } else {
+      m_ps->m_listOrderedLevels[i-1] = false;
+      m_documentInterface->openUnorderedListLevel(propList2);
+    }
+  }
+}
+
+///////////////////
+// span
+///////////////////
+void MWAWContentListener::_openSpan()
+{
+  if (m_ps->m_isSpanOpened)
+    return;
+
+  if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
+    return;
+
+  if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened) {
+    _changeList();
+    if (m_ps->m_currentListLevel == 0)
+      _openParagraph();
+    else
+      _openListElement();
+  }
+
+  uint32_t attributeBits = m_ps->m_textAttributeBits;
+  double fontSizeChange = 1.0;
+  switch (attributeBits& 0x0000001f) {
+  case 0x01:  // Extra large
+    fontSizeChange = 2.0;
+    break;
+  case 0x02: // Very large
+    fontSizeChange = 1.5f;
+    break;
+  case 0x04: // Large
+    fontSizeChange = 1.2f;
+    break;
+  case 0x08: // Small print
+    fontSizeChange = 0.8f;
+    break;
+  case 0x10: // Fine print
+    fontSizeChange = 0.6f;
+    break;
+  default: // Normal
+    fontSizeChange = 1.0;
+    break;
+  }
+
+  WPXPropertyList propList;
+  if (attributeBits & MWAW_SUPERSCRIPT_BIT)
+    propList.insert("style:text-position", "super 58.0%");
+  else if (attributeBits & MWAW_SUBSCRIPT_BIT)
+    propList.insert("style:text-position", "sub 58.0%");
+  else if (attributeBits & MWAW_SUPERSCRIPT100_BIT)
+    propList.insert("style:text-position", "20 100");
+  else if (attributeBits & MWAW_SUBSCRIPT100_BIT)
+    propList.insert("style:text-position", "-20 100");
+
+  if (attributeBits & MWAW_ITALICS_BIT)
+    propList.insert("fo:font-style", "italic");
+  if (attributeBits & MWAW_BOLD_BIT)
+    propList.insert("fo:font-weight", "bold");
+  if (attributeBits & MWAW_STRIKEOUT_BIT)
+    propList.insert("style:text-line-through-type", "single");
+  if (attributeBits & MWAW_DOUBLE_UNDERLINE_BIT)
+    propList.insert("style:text-underline-type", "double");
+  else if (attributeBits & MWAW_UNDERLINE_BIT)
+    propList.insert("style:text-underline-type", "single");
+  if (attributeBits & MWAW_OVERLINE_BIT)
+    propList.insert("style:text-overline-type", "single");
+  if (attributeBits & MWAW_OUTLINE_BIT)
+    propList.insert("style:text-outline", "true");
+  if (attributeBits & MWAW_SMALL_CAPS_BIT)
+    propList.insert("fo:font-variant", "small-caps");
+  if (attributeBits & MWAW_BLINK_BIT)
+    propList.insert("style:text-blinking", "true");
+  if (attributeBits & MWAW_SHADOW_BIT)
+    propList.insert("fo:text-shadow", "1pt 1pt");
+  if (attributeBits & MWAW_HIDDEN_BIT)
+    propList.insert("text:display", "none");
+  if (attributeBits & MWAW_ALL_CAPS_BIT)
+    propList.insert("fo:text-transform", "uppercase");
+  if (attributeBits & MWAW_EMBOSS_BIT)
+    propList.insert("style:font-relief", "embossed");
+  else if (attributeBits & MWAW_ENGRAVE_BIT)
+    propList.insert("style:font-relief", "engraved");
+
+  if (m_ps->m_fontName.len())
+    propList.insert("style:font-name", m_ps->m_fontName.cstr());
+
+  propList.insert("fo:font-size", fontSizeChange*m_ps->m_fontSize, WPX_POINT);
+
+  char color[20];
+  sprintf(color,"#%06x",m_ps->m_fontColor);
+  propList.insert("fo:color", color);
+
+  if (m_ps->m_textLanguage != "UNSET")
+    _addLanguage(m_ps->m_textLanguage, propList);
+
+  m_documentInterface->openSpan(propList);
+
+  m_ps->m_isSpanOpened = true;
+}
+
+void MWAWContentListener::_closeSpan()
+{
+  if (!m_ps->m_isSpanOpened)
+    return;
+
+  _flushText();
+  m_documentInterface->closeSpan();
+  m_ps->m_isSpanOpened = false;
+}
+
+///////////////////
+// text (send data)
+///////////////////
+void MWAWContentListener::_flushDeferredTabs()
+{
+  if (m_ps->m_numDeferredTabs == 0) return;
+
+  // CHECKME: the tab are not underline even if the underline bit is set
+  uint32_t oldTextAttributes = m_ps->m_textAttributeBits;
+  static const uint32_t s_underoverlineBits =
+    MWAW_UNDERLINE_BIT | MWAW_DOUBLE_UNDERLINE_BIT | MWAW_OVERLINE_BIT;
+  uint32_t newAttributes = oldTextAttributes & (~s_underoverlineBits);
+  if (oldTextAttributes != newAttributes) setFontAttributes(newAttributes);
+  if (!m_ps->m_isSpanOpened) _openSpan();
+  for (; m_ps->m_numDeferredTabs > 0; m_ps->m_numDeferredTabs--)
+    m_documentInterface->insertTab();
+  if (oldTextAttributes != newAttributes) setFontAttributes(oldTextAttributes);
+}
+
+void MWAWContentListener::_flushText()
+{
+  if (m_ps->m_textBuffer.len() == 0) return;
+
+  // when some many ' ' follows each other, call insertSpace
+  WPXString tmpText;
+  int numConsecutiveSpaces = 0;
+  WPXString::Iter i(m_ps->m_textBuffer);
+  for (i.rewind(); i.next();) {
+    if (*(i()) == 0x20) // this test is compatible with unicode format
+      numConsecutiveSpaces++;
+    else
+      numConsecutiveSpaces = 0;
+
+    if (numConsecutiveSpaces > 1) {
+      if (tmpText.len() > 0) {
+        m_documentInterface->insertText(tmpText);
+        tmpText.clear();
+      }
+      m_documentInterface->insertSpace();
+    } else
+      tmpText.append(i());
+  }
+  m_documentInterface->insertText(tmpText);
+  m_ps->m_textBuffer.clear();
+}
+
+///////////////////
+// Note/Comment/picture/textbox
+///////////////////
+void MWAWContentListener::insertNote(const NoteType noteType, MWAWSubDocumentPtr &subDocument)
+{
+  if (m_ps->m_isNote) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertNote try to insert a note recursively (ingnored)\n"));
+    return;
+  }
+  WPXString label("");
+  insertLabelNote(noteType, label, subDocument);
+}
+
+void MWAWContentListener::insertLabelNote(const NoteType noteType, WPXString const &label, MWAWSubDocumentPtr &subDocument)
+{
+  if (m_ps->m_isNote) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertLabelNote try to insert a note recursively (ingnored)\n"));
+    return;
+  }
+
+  m_ps->m_isNote = true;
+  if (m_ds->m_isHeaderFooterStarted) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertLabelNote try to insert a note in a header/footer\n"));
+    /** Must not happen excepted in corrupted document, so we do the minimum.
+    	Note that we have no choice, either we begin by closing the paragraph,
+    	... or we reprogram handleSubDocument.
+    */
+    if (m_ps->m_isParagraphOpened)
+      _closeParagraph();
+    int prevListLevel = m_ps->m_currentListLevel;
+    m_ps->m_currentListLevel = 0;
+    _changeList(); // flush the list exterior
+    handleSubDocument(subDocument, libmwaw::DOC_NOTE);
+    m_ps->m_currentListLevel = prevListLevel;
+  } else {
+    if (!m_ps->m_isParagraphOpened)
+      _openParagraph();
+    else {
+      _flushText();
+      _closeSpan();
+    }
+
+    WPXPropertyList propList;
+    if (label.len())
+      propList.insert("text:label", label);
+    if (noteType == FOOTNOTE) {
+      propList.insert("libwpd:number", ++(m_ds->m_footNoteNumber));
+      m_documentInterface->openFootnote(propList);
+    } else {
+      propList.insert("libwpd:number", ++(m_ds->m_endNoteNumber));
+      m_documentInterface->openEndnote(propList);
+    }
+
+    handleSubDocument(subDocument, libmwaw::DOC_NOTE);
+
+    if (noteType == FOOTNOTE)
+      m_documentInterface->closeFootnote();
+    else
+      m_documentInterface->closeEndnote();
+  }
+  m_ps->m_isNote = false;
+}
+
+void MWAWContentListener::insertComment(MWAWSubDocumentPtr &subDocument)
+{
+  if (m_ps->m_isNote) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertComment try to insert a note recursively (ingnored)"));
+    return;
+  }
+
+  if (!m_ps->m_isParagraphOpened)
+    _openParagraph();
+  else {
+    _flushText();
+    _closeSpan();
+  }
+
+  WPXPropertyList propList;
+  m_documentInterface->openComment(propList);
+
+  m_ps->m_isNote = true;
+  handleSubDocument(subDocument, libmwaw::DOC_COMMENT_ANNOTATION);
+
+  m_documentInterface->closeComment();
+  m_ps->m_isNote = false;
+}
+
+void MWAWContentListener::insertTextBox
+(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, WPXPropertyList frameExtras)
+{
+  if (!_openFrame(pos, frameExtras)) return;
+
+  WPXPropertyList propList;
+  m_documentInterface->openTextBox(propList);
+  handleSubDocument(subDocument, libmwaw::DOC_TEXT_BOX);
+  m_documentInterface->closeTextBox();
+
+  _closeFrame();
+}
+
+void MWAWContentListener::insertPicture
+(MWAWPosition const &pos, const WPXBinaryData &binaryData, std::string type,
+ WPXPropertyList frameExtras)
+{
+  if (!_openFrame(pos, frameExtras)) return;
+
+  WPXPropertyList propList;
+  propList.insert("libwpd:mimetype", type.c_str());
+  m_documentInterface->insertBinaryObject(propList, binaryData);
+
+  _closeFrame();
+}
+
+///////////////////
+// frame
+///////////////////
+bool MWAWContentListener::_openFrame(MWAWPosition const &pos, WPXPropertyList extras)
+{
+  if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: called in table but cell is not opened\n"));
+    return false;
+  }
+  if (m_ps->m_isFrameOpened) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: called but a frame is already opened\n"));
+    return false;
+  }
+
+  switch(pos.m_anchorTo) {
+  case MWAWPosition::Page:
+    break;
+  case MWAWPosition::Paragraph:
+    if (m_ps->m_isParagraphOpened)
+      _flushText();
+    else
+      _openParagraph();
+    break;
+  case MWAWPosition::CharBaseLine:
+  case MWAWPosition::Char:
+    if (m_ps->m_isSpanOpened)
+      _flushText();
+    else
+      _openSpan();
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: can not determine the anchor\n"));
+    return false;
+  }
+
+  WPXPropertyList propList(extras);
+  _handleFrameParameters(propList, pos);
+  m_documentInterface->openFrame(propList);
+
+  m_ps->m_isFrameOpened = true;
+  return true;
+}
+
+void MWAWContentListener::_closeFrame()
+{
+  if (!m_ps->m_isFrameOpened) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::closeFrame: called but no frame is already opened\n"));
+    return;
+  }
+  m_documentInterface->closeFrame();
+  m_ps->m_isFrameOpened = false;
+}
 
 void MWAWContentListener::_handleFrameParameters
 ( WPXPropertyList &propList, MWAWPosition const &pos)
@@ -774,311 +1538,96 @@ void MWAWContentListener::_handleFrameParameters
   }
 }
 
-bool MWAWContentListener::openFrame(MWAWPosition const &pos, WPXPropertyList extras)
+///////////////////
+// subdocument
+///////////////////
+void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr &subDocument, libmwaw::SubDocumentType subDocumentType)
 {
-  if (isUndoOn()) return true;
-  if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: called in table but cell is not opened\n"));
-    return false;
-  }
-  if (m_parseState->m_isFrameOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: called but a frame is already opened\n"));
-    return false;
-  }
+  _pushParsingState();
+  _startSubDocument();
+  m_ps->m_subDocumentType = subDocumentType;
 
-  switch(pos.m_anchorTo) {
-  case MWAWPosition::Page:
+  m_ps->m_isPageSpanOpened = true;
+  m_ps->m_list.reset();
+
+  switch(subDocumentType) {
+  case libmwaw::DOC_TEXT_BOX:
+    m_ps->m_pageMarginLeft = m_ps->m_pageMarginRight =
+                               m_ps->m_pageMarginTop = m_ps->m_pageMarginBottom = 0.0;
+    m_ps->m_sectionAttributesChanged = true;
     break;
-  case MWAWPosition::Paragraph:
-    if (m_ps->m_isParagraphOpened)
-      _flushText();
-    else
-      _openParagraph();
-    break;
-  case MWAWPosition::CharBaseLine:
-  case MWAWPosition::Char:
-    if (m_ps->m_isSpanOpened)
-      _flushText();
-    else
-      _openSpan();
+  case libmwaw::DOC_HEADER_FOOTER:
+    m_ps->m_isHeaderFooterWithoutParagraph = true;
+    m_ds->m_isHeaderFooterStarted = true;
     break;
   default:
-    MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: can not determine the anchor\n"));
-    return false;
+    break;
   }
 
-  WPXPropertyList propList(extras);
-  _handleFrameParameters(propList, pos);
-  m_documentInterface->openFrame(propList);
+  // Check whether the document is calling itself
+  bool sendDoc = true;
+  for (int i = 0; i < int(m_ds->m_subDocuments.size()); i++) {
+    if (!subDocument)
+      break;
+    if (subDocument == m_ds->m_subDocuments[i]) {
+      MWAW_DEBUG_MSG(("MWAWContentListener::handleSubDocument: recursif call, stop...\n"));
+      sendDoc = false;
+      break;
+    }
+  }
+  if (sendDoc) {
+    if (subDocument) {
+      m_ds->m_subDocuments.push_back(subDocument);
+      shared_ptr<MWAWContentListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWContentListener>());
+      try {
+        subDocument->parse(listen, subDocumentType);
+      } catch(...) {
+        MWAW_DEBUG_MSG(("Works: MWAWContentListener::handleSubDocument exception catched \n"));
+      }
+      m_ds->m_subDocuments.pop_back();
+    }
+    if (m_ps->m_isHeaderFooterWithoutParagraph)
+      _openSpan();
+  }
 
-  m_parseState->m_isFrameOpened = true;
-  return true;
+  switch (m_ps->m_subDocumentType) {
+  case libmwaw::DOC_TEXT_BOX:
+    _closeSection();
+    break;
+  case libmwaw::DOC_HEADER_FOOTER:
+    m_ds->m_isHeaderFooterStarted = false;
+  default:
+    break;
+  }
+  _endSubDocument();
+  _popParsingState();
 }
 
-void MWAWContentListener::closeFrame()
+bool MWAWContentListener::isHeaderFooterOpened() const
 {
-  if (isUndoOn()) return;
-  if (!m_parseState->m_isFrameOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::closeFrame: called but no frame is already opened\n"));
-    return;
-  }
-  m_documentInterface->closeFrame();
-  m_parseState->m_isFrameOpened = false;
+  return m_ds->m_isHeaderFooterStarted;
 }
 
-void MWAWContentListener::insertTextBox(MWAWPosition const &pos,
-                                        MWAWSubDocumentPtr subDocument,
-                                        WPXPropertyList frameExtras)
+void MWAWContentListener::_startSubDocument()
 {
-  if (isUndoOn()) return;
-
-  if (!openFrame(pos, frameExtras)) return;
-
-  WPXPropertyList propList;
-  m_documentInterface->openTextBox(propList);
-
-  if (subDocument)
-    handleSubDocument(subDocument, libmwaw::DOC_TEXT_BOX);
-  m_documentInterface->closeTextBox();
-
-  closeFrame();
+  m_ds->m_isDocumentStarted = true;
+  m_ps->m_inSubDocument = true;
 }
 
-void MWAWContentListener::insertPicture
-(MWAWPosition const &pos, const WPXBinaryData &binaryData, std::string type,
- WPXPropertyList frameExtras)
+void MWAWContentListener::_endSubDocument()
 {
-  if (isUndoOn()) return;
-
-  if (!openFrame(pos, frameExtras)) return;
-
-  WPXPropertyList propList;
-  propList.insert("libwpd:mimetype", type.c_str());
-  m_documentInterface->insertBinaryObject(propList, binaryData);
-
-  closeFrame();
-}
-
-///////////////////
-//
-// Note
-//
-///////////////////
-void MWAWContentListener::insertNote(const MWAWContentListener::NoteType noteType, MWAWSubDocumentPtr &subDocument)
-{
-  if (isUndoOn()) return;
-
-  if (m_ps->m_isNote) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertNote try to insert a note recursively (ingnored)"));
-    return;
-  }
-
-  if (!m_ps->m_isParagraphOpened)
-    _openParagraph();
-  else {
-    _flushText();
-    _closeSpan();
-  }
-
-  m_ps->m_isNote = true;
-
-  WPXPropertyList propList;
-
-  if (noteType == FOOTNOTE) {
-    propList.insert("libwpd:number", ++(m_parseState->m_footNoteNumber));
-    m_documentInterface->openFootnote(propList);
-  } else {
-    propList.insert("libwpd:number", ++(m_parseState->m_endNoteNumber));
-    m_documentInterface->openEndnote(propList);
-  }
-
-  handleSubDocument(subDocument, libmwaw::DOC_NOTE);
-
-  if (noteType == FOOTNOTE)
-    m_documentInterface->closeFootnote();
-  else
-    m_documentInterface->closeEndnote();
-  m_ps->m_isNote = false;
-}
-
-void MWAWContentListener::insertComment(MWAWSubDocumentPtr &subDocument)
-{
-  if (isUndoOn()) return;
-
-  if (m_ps->m_isNote) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertComment try to insert a note recursively (ingnored)"));
-    return;
-  }
-
-  if (!m_ps->m_isParagraphOpened)
-    _openParagraph();
-  else {
-    _flushText();
-    _closeSpan();
-  }
-
-  WPXPropertyList propList;
-  m_documentInterface->openComment(propList);
-
-  m_ps->m_isNote = true;
-
-  handleSubDocument(subDocument, libmwaw::DOC_COMMENT_ANNOTATION);
-
-  m_documentInterface->closeComment();
-  m_ps->m_isNote = false;
-}
-
-///////////////////
-//
-// document handle
-//
-///////////////////
-
-void MWAWContentListener::_handleSubDocument
-(MWAWSubDocumentPtr &subDocument, libmwaw::SubDocumentType subDocumentType)
-{
-  if (isUndoOn()) return;
-
-  if (!subDocument) return;
-
-  int numSubDocument = m_subDocuments.size();
-  for (int i = 0; i < numSubDocument; i++) {
-    if (*subDocument != m_subDocuments[i]) continue;
-    MWAW_DEBUG_MSG(("Works: MWAWContentListener::_handleSubDocument recursive call\n"));
-    return;
-  }
-
-  // save our old parsing state on our "stack"
-  ParsingState *oldParseState = _pushParsingState();
-  m_subDocuments.push_back(subDocument);
-  MWAWContentListenerPtr listen(this, MWAW_shared_ptr_noop_deleter<MWAWContentListener>());
-  // do not loose oldParseState and try to continue
-  try {
-    subDocument->parse(listen, subDocumentType);
-  } catch(...) {
-    MWAW_DEBUG_MSG(("Works: MWAWContentListener::_handleSubDocument exception catched \n"));
-  }
-  m_subDocuments.resize(numSubDocument);
-
-  // Close the sub-document properly
   if (m_ps->m_isTableOpened)
-    _closeTable();
+    closeTable();
   if (m_ps->m_isParagraphOpened)
     _closeParagraph();
-  if (m_ps->m_isListElementOpened)
-    _closeListElement();
 
   m_ps->m_currentListLevel = 0;
-  _changeList();
-
-  _popParsingState(oldParseState);
+  _changeList(); // flush the list exterior
 }
 
 ///////////////////
-//
-// Minimal implementation
-//
+// table
 ///////////////////
-void MWAWContentListener::setCurrentListLevel(int level)
-{
-  m_ps->m_currentListLevel = level;
-  // to be compatible with DMWAWContentListerner
-  if (level)
-    m_ps->m_listBeginPosition =
-      m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
-  else
-    m_ps->m_listBeginPosition = 0;
-}
-void MWAWContentListener::setCurrentList(shared_ptr<MWAWList> list)
-{
-  m_parseState->m_list=list;
-  if (list && list->getId() <= 0)
-    list->setId(++m_actualListId);
-}
-shared_ptr<MWAWList> MWAWContentListener::getCurrentList() const
-{
-  return m_parseState->m_list;
-}
-
-
-void MWAWContentListener::_changeList()
-{
-  if (m_ps->m_isParagraphOpened)
-    _closeParagraph();
-  if (m_ps->m_isListElementOpened)
-    _closeListElement();
-  _handleListChange();
-}
-
-
-// basic model of unordered list
-void MWAWContentListener::_handleListChange()
-{
-  if (!m_ps->m_isSectionOpened && !m_ps->m_inSubDocument && !m_ps->m_isTableOpened)
-    _openSection();
-
-  // FIXME: even if nobody really care, if we close an ordered or an unordered
-  //      elements, we must keep the previous to close this part...
-  int actualListLevel = m_parseState->m_listOrderedLevels.size();
-  for (int i=actualListLevel; i > m_ps->m_currentListLevel; i--) {
-    if (m_parseState->m_listOrderedLevels[i-1])
-      m_documentInterface->closeOrderedListLevel();
-    else
-      m_documentInterface->closeUnorderedListLevel();
-  }
-
-  WPXPropertyList propList2;
-  if (m_ps->m_currentListLevel) {
-    if (!m_parseState->m_list.get()) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::_handleListChange: can not find any list\n"));
-      return;
-    }
-    m_parseState->m_list->setLevel(m_ps->m_currentListLevel);
-    m_parseState->m_list->openElement();
-
-    bool mustResend =  m_parseState->m_list->mustSendLevel(m_ps->m_currentListLevel);
-
-    if (mustResend) {
-      if (actualListLevel == m_ps->m_currentListLevel) {
-        if (m_parseState->m_listOrderedLevels[actualListLevel-1])
-          m_documentInterface->closeOrderedListLevel();
-        else
-          m_documentInterface->closeUnorderedListLevel();
-        actualListLevel--;
-      }
-      if (m_ps->m_currentListLevel==1) {
-        // we must change the listID for writerperfect
-        int prevId;
-        if ((prevId=m_parseState->m_list->getPreviousId()) > 0)
-          m_parseState->m_list->setId(prevId);
-        else
-          m_parseState->m_list->setId(++m_actualListId);
-      }
-      m_parseState->m_list->sendTo(*m_documentInterface, m_ps->m_currentListLevel);
-    }
-
-    propList2.insert("libwpd:id", m_parseState->m_list->getId());
-    m_parseState->m_list->closeElement();
-  }
-
-  if (actualListLevel == m_ps->m_currentListLevel) return;
-
-  m_parseState->m_listOrderedLevels.resize(m_ps->m_currentListLevel, false);
-  for (int i=actualListLevel+1; i<= m_ps->m_currentListLevel; i++) {
-    if (m_parseState->m_list->isNumeric(i)) {
-      m_parseState->m_listOrderedLevels[i-1] = true;
-      m_documentInterface->openOrderedListLevel(propList2);
-    } else {
-      m_parseState->m_listOrderedLevels[i-1] = false;
-      m_documentInterface->openUnorderedListLevel(propList2);
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////
-// Table gestion
-////////////////////////////////////////////////////////////
-
 void MWAWContentListener::openTable(std::vector<float> const &colWidth, WPXUnit unit)
 {
   if (m_ps->m_isTableOpened) {
@@ -1088,6 +1637,10 @@ void MWAWContentListener::openTable(std::vector<float> const &colWidth, WPXUnit 
 
   if (m_ps->m_isParagraphOpened)
     _closeParagraph();
+
+  _pushParsingState();
+  _startSubDocument();
+  m_ps->m_subDocumentType = libmwaw::DOC_TABLE;
 
   WPXPropertyList propList;
   propList.insert("table:align", "left");
@@ -1107,35 +1660,6 @@ void MWAWContentListener::openTable(std::vector<float> const &colWidth, WPXUnit 
   propList.insert("style:width", tableWidth, unit);
   m_documentInterface->openTable(propList, columns);
   m_ps->m_isTableOpened = true;
-
-}
-
-void MWAWContentListener::openTable(std::vector<int> const &colWidth, WPXUnit unit)
-{
-  if (m_ps->m_isTableOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openTable: called with m_isTableOpened=true\n"));
-    return;
-  }
-
-  WPXPropertyList propList;
-  propList.insert("table:align", "left");
-  propList.insert("fo:margin-left", 0.0);
-
-  long tableWidth = 0;
-  WPXPropertyListVector columns;
-
-  int nCols = colWidth.size();
-  for (int c = 0; c < nCols; c++) {
-    WPXPropertyList column;
-    column.insert("style:column-width", colWidth[c], unit);
-    columns.append(column);
-
-    tableWidth += colWidth[c];
-  }
-  propList.insert("style:width", tableWidth, unit);
-  m_documentInterface->openTable(propList, columns);
-  m_ps->m_isTableOpened = true;
-
 }
 
 void MWAWContentListener::closeTable()
@@ -1144,13 +1668,14 @@ void MWAWContentListener::closeTable()
     MWAW_DEBUG_MSG(("MWAWContentListener::closeTable: called with m_isTableOpened=false\n"));
     return;
   }
-// close the table
+
   m_ps->m_isTableOpened = false;
+  _endSubDocument();
   m_documentInterface->closeTable();
+
+  _popParsingState();
 }
-////////////////////////////////////////////////////////////
-// Row gestion
-////////////////////////////////////////////////////////////
+
 void MWAWContentListener::openTableRow(float h, WPXUnit unit, bool headerRow)
 {
   if (m_ps->m_isTableRowOpened) {
@@ -1179,9 +1704,6 @@ void MWAWContentListener::closeTableRow()
   m_documentInterface->closeTableRow();
 }
 
-////////////////////////////////////////////////////////////
-// Cell gestion
-////////////////////////////////////////////////////////////
 void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList const &extras)
 {
   if (!m_ps->m_isTableRowOpened) {
@@ -1283,11 +1805,63 @@ void MWAWContentListener::closeTableCell()
     MWAW_DEBUG_MSG(("MWAWContentListener::closeTableCell: called with m_isTableCellOpened=false\n"));
     return;
   }
+
   _closeParagraph();
+  m_ps->m_currentListLevel = 0;
+  _changeList(); // flush the list exterior
 
   m_ps->m_isTableCellOpened = false;
   m_documentInterface->closeTableCell();
 }
 
+///////////////////
+// others
+///////////////////
+void MWAWContentListener::_addLanguage(std::string const &lang, WPXPropertyList &propList)
+{
+  if (lang.length()) {
+    std::string language(lang);
+    std::string country("none");
+    if (lang.length() > 3 && lang[2]=='_') {
+      country=lang.substr(3);
+      language=lang.substr(0,2);
+    }
+    propList.insert("fo:language", language.c_str());
+    propList.insert("fo:country", country.c_str());
+  } else {
+    propList.insert("fo:language", "none");
+    propList.insert("fo:country", "none");
+  }
+}
 
+// ---------- state stack ------------------
+shared_ptr<MWAWContentParsingState> MWAWContentListener::_pushParsingState()
+{
+  shared_ptr<MWAWContentParsingState> actual = m_ps;
+  m_psStack.push_back(actual);
+  m_ps.reset(new MWAWContentParsingState);
+
+  // BEGIN: copy page properties into the new parsing state
+  m_ps->m_pageFormLength = actual->m_pageFormLength;
+  m_ps->m_pageFormWidth = actual->m_pageFormWidth;
+  m_ps->m_pageFormOrientationIsPortrait =	actual->m_pageFormWidth;
+  m_ps->m_pageMarginLeft = actual->m_pageMarginLeft;
+  m_ps->m_pageMarginRight = actual->m_pageMarginRight;
+  m_ps->m_pageMarginTop = actual->m_pageMarginTop;
+  m_ps->m_pageMarginBottom = actual->m_pageMarginBottom;
+
+  m_ps->m_isNote = actual->m_isNote;
+
+  return actual;
+}
+
+void MWAWContentListener::_popParsingState()
+{
+  if (m_psStack.size()==0) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::_popParsingState: psStack is empty()\n"));
+    throw libmwaw::ParseException();
+  }
+  m_ps = m_psStack.back();
+  m_psStack.pop_back();
+}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

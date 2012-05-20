@@ -31,6 +31,7 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <set>
 #include <sstream>
 
 #include <libwpd/WPXBinaryData.h>
@@ -585,7 +586,7 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_numPages = numPages;
 
   // create the page list
-  std::list<MWAWPageSpan> pageList;
+  std::vector<MWAWPageSpan> pageList;
 
 
   int actHeaderId = 0, actFooterId = 0;
@@ -623,8 +624,7 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   //
-  MWProContentListenerPtr listen =
-    MWProContentListener::create(pageList, documentInterface);
+  MWProContentListenerPtr listen(new MWProContentListener(pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

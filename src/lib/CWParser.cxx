@@ -317,7 +317,7 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::list<MWAWPageSpan> pageList;
+  std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(m_pageSpan);
   int numPage = m_textParser->numPages();
   if (m_databaseParser->numPages() > numPage)
@@ -342,8 +342,7 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  CWContentListenerPtr listen =
-    CWContentListener::create(pageList, documentInterface);
+  CWContentListenerPtr listen(new CWContentListener(pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

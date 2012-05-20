@@ -90,9 +90,9 @@ struct Font {
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() : MWAWParagraph() {
-    for(int c = 0; c < 3; c++) // default value
-      m_margins[c] = 72.0;
-    m_margins[2] -= 28.0;
+    m_margins[0] = 0;
+    m_margins[1] = 72.0;
+    m_margins[2] = 72.0-28.0;
     m_marginsUnit = WPX_POINT;
     for(int i = 0; i < 8; i++)
       m_values[i] = 0;
@@ -1171,10 +1171,9 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   int color = input.readULong(1); // fixme find color map
   if (color) {
     Vec3uc col;
-    if (m_mainParser->getColor(color,col)) {
-      int colors[3] = {col[0], col[1], col[2]};
-      font.m_font.setColor(colors);
-    } else
+    if (m_mainParser->getColor(color,col))
+      font.m_font.setColor(col);
+    else
       f << "#colorId=" << color << ",";
   }
   int heightDecal = input.readLong(2);
@@ -1216,6 +1215,7 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   libmwaw::DebugStream f;
   int vers = version();
   ruler=WNTextInternal::Paragraph();
+  for (int i=0; i < 3; i++) ruler.m_margins[i] = 0.0;
   long pos = input.tell();
   int expectedLength = vers <= 2 ? 8 : 16;
   input.seek(expectedLength, WPX_SEEK_CUR);
@@ -1234,6 +1234,7 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   ruler.m_margins[1]=input.readLong(2);
   ruler.m_margins[2]=input.readLong(2);
   ruler.m_margins[0]=input.readLong(2);
+  ruler.m_margins[0]-=ruler.m_margins[1];
   int height = 0;
   if (vers >= 3) {
     height=input.readLong(2);

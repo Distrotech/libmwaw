@@ -111,10 +111,6 @@ SOURCE=..\..\src\lib\CWText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMWAWContentListener.cxx
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\MWAWOLEStream.cxx
 # End Source File
 # Begin Source File
@@ -288,10 +284,6 @@ SOURCE=..\..\src\lib\CWTable.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\CWText.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\DMWAWContentListener.hxx
 # End Source File
 # Begin Source File
 

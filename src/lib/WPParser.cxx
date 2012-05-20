@@ -709,7 +709,7 @@ void WPParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::list<MWAWPageSpan> pageList;
+  std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(m_pageSpan);
   for (int i = 1; i < 3; i++) {
     if (m_state->m_windows[i].m_paragraphs.size() == 0)
@@ -723,8 +723,7 @@ void WPParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  WPContentListenerPtr listen =
-    WPContentListener::create(pageList, documentInterface);
+  WPContentListenerPtr listen(new WPContentListener(pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
@@ -1530,7 +1529,7 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
   }
 
   if (m_listener) {
-    std::vector<int> colSize(numData);
+    std::vector<float> colSize(numData);
     for (int i = 0; i < numData; i++) {
       WPParserInternal::ColumnTableInfo const &cols = columns[i];
       colSize[i] = cols.m_colX[1]-cols.m_colX[0];

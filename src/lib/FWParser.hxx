@@ -38,16 +38,15 @@
 #include <string>
 #include <vector>
 
-#include "MWAWPageSpan.hxx"
-
-#include "MWAWPosition.hxx"
-
-#include "MWAWEntry.hxx"
-#include "MWAWContentListener.hxx"
-#include "MWAWSubDocument.hxx"
+#include <libwpd/WPXBinaryData.h>
 
 #include "MWAWDebug.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
 #include "MWAWInputStream.hxx"
+#include "MWAWPageSpan.hxx"
+#include "MWAWPosition.hxx"
+#include "MWAWSubDocument.hxx"
 
 #include "MWAWParser.hxx"
 

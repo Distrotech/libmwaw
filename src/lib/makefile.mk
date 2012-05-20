@@ -29,7 +29,6 @@ SLOFILES= \
 	$(SLO)$/CWSpreadsheet.cxx		\
 	$(SLO)$/CWTable.cxx			\
 	$(SLO)$/CWText.cxx			\
-	$(SLO)$/DMWAWContentListener.cxx	\
 	$(SLO)$/MWAWOLEStream.cxx		\
 	$(SLO)$/MWAWPageSpan.cxx		\
 	$(SLO)$/FWParser.cxx			\

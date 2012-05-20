@@ -310,7 +310,7 @@ void WNParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::list<MWAWPageSpan> pageList;
+  std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(m_pageSpan);
 
   WNEntry entry = m_textParser->getHeader();
@@ -331,8 +331,7 @@ void WNParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  WNContentListenerPtr listen =
-    WNContentListener::create(pageList, documentInterface);
+  WNContentListenerPtr listen(new WNContentListener(pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

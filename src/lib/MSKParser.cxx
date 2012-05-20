@@ -362,7 +362,7 @@ void MSKParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::list<MWAWPageSpan> pageList;
+  std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(m_pageSpan);
   int id = m_textParser->getHeader();
   if (id >= 0) {
@@ -381,8 +381,7 @@ void MSKParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MSKContentListenerPtr listen =
-    MSKContentListener::create(pageList, documentInterface);
+  MSKContentListenerPtr listen(new MSKContentListener(pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

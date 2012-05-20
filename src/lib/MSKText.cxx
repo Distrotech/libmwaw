@@ -499,10 +499,9 @@ bool MSKText::readFont(MSKTextInternal::Font &font, long endPos)
   }
   if (color != 1) {
     Vec3uc col;
-    if (m_mainParser->getColor(color,col)) {
-      int colors[3] = {col[0], col[1], col[2]};
-      font.m_font.setColor(colors);
-    } else
+    if (m_mainParser->getColor(color,col))
+      font.m_font.setColor(col);
+    else
       f << "#fColor=" << color << ",";
   }
   font.m_extra = f.str();
@@ -584,6 +583,7 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
     // i = 0 (last), i = 1 (firstL), i=2 (nextL)
     parag.m_margins[2-i] = val/72.0;
   }
+  parag.m_margins[0] -= parag.m_margins[1];
   if (parag.m_margins[2] > 0.0)
     parag.m_margins[2] = m_mainParser->pageWidth()-parag.m_margins[2];
   if (parag.m_margins[2] > 56./72.) parag.m_margins[2] -= 28./72.;

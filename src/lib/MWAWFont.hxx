@@ -48,12 +48,12 @@ public:
    * \param id system id font
    * \param size the font size
    * \param f the font attributes bold, ... */
-  MWAWFont(int id=-1, int size=12, int f = 0) : m_id(id), m_size(size), m_flags(f) {
+  MWAWFont(int id=-1, int size=12, int f = 0) : m_id(id), m_size(size), m_flags(f), m_color() {
     resetColor();
   };
   //! resets the font color to black
   void resetColor() {
-    m_color[0] = m_color[1] = m_color[2] = 0;
+    m_color = Vec3uc();
   }
   //! sets the font id and resets size to the previous size for this font
   void setFont(int id) {
@@ -73,7 +73,7 @@ public:
     m_flags = flags;
   }
   //! sets the font color
-  void setColor(int const color[3]) {
+  void setColor(Vec3uc color) {
     for (int i = 0; i < 3; i++) m_color[i] = color[i];
   }
   //! returns true if the font id is initialized
@@ -98,7 +98,7 @@ public:
     return false;
   }
   //! returns the font color
-  void getColor(int (&c) [3]) const {
+  void getColor(Vec3uc &c) const {
     for (int i = 0; i < 3; i++) c[i]=m_color[i];
   }
   //! returns a string which can be used for debugging
@@ -132,7 +132,8 @@ public:
   void sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverter> &convert, MWAWFont &actFont) const;
 
 protected:
-  int m_id /** font identificator*/, m_size /** font size */, m_flags /** font attributes */, m_color[3] /** font color */;
+  int m_id /** font identificator*/, m_size /** font size */, m_flags /** font attributes */;
+  Vec3uc m_color /** font color */;
 };
 
 

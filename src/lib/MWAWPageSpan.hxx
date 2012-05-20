@@ -34,7 +34,6 @@ class WPXPropertyList;
 class WPXDocumentInterface;
 class WPXDocumentProperty;
 
-class DMWAWContentListener; // OSNOLA fixme
 class MWAWContentListener;
 
 class MWAWSubDocument;
@@ -48,7 +47,6 @@ typedef shared_ptr<HeaderFooter> HeaderFooterPtr;
 
 class MWAWPageSpan
 {
-  friend class DMWAWContentListener; // OSNOLA fixme
   friend class MWAWContentListener;
 public:
   enum FormOrientation { PORTRAIT, LANDSCAPE };

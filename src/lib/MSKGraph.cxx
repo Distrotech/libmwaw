@@ -1348,7 +1348,7 @@ bool MSKGraph::readFont(MSKGraphInternal::Font &font)
   if (val) f << "#flags2=" << val << ",";
   font.m_font.setSize(m_input->readULong(2));
 
-  int color[3];
+  Vec3uc color;
   for (int i = 0; i < 3; i++) color[i] = (m_input->readULong(2)>>8);
   font.m_font.setColor(color);
   font.m_extra = f.str();

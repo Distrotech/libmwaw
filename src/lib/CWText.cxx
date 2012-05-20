@@ -508,12 +508,12 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   font.setSize(m_input->readLong(1));
 
   int colId = m_input->readULong(1);
-  int color[3] = { 0, 0, 0};
+  Vec3uc color;
   if (colId!=1) {
     Vec3uc col;
-    if (m_mainParser->getColor(colId, col)) {
-      for (int i = 0; i < 3; i++) color[i] = col[i];
-    } else if (version() != 1) {
+    if (m_mainParser->getColor(colId, col))
+      color = col;
+    else if (version() != 1) {
       MWAW_DEBUG_MSG(("CWText::readFont: unknown color %d\n", colId));
     }
     /*V1:
@@ -581,7 +581,7 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   font.setSize(m_input->readLong(1));
 
   int colId = m_input->readULong(1);
-  int color[3] = { 0, 0, 0};
+  Vec3uc color;
   if (colId!=1) {
     f << "#col=" << std::hex << colId << std::dec << ",";
   }
@@ -1531,7 +1531,6 @@ bool CWText::readParagraph(int id)
   if (val) f << "#flags=" << std::hex << val << std::dec << ",";
   for (int i = 0; i < 3; i++)
     ruler.m_margins[i] = m_input->readLong(2)/72.;
-  ruler.m_margins[0] +=  ruler.m_margins[1];
   ruler.m_margins[2] -= 28./72.;
   if (ruler.m_margins[2] < 0.0) ruler.m_margins[2] = 0.0;
   if (version() >= 2) {

@@ -395,7 +395,7 @@ struct Font {
 /** Internal: class to store the paragraph properties */
 struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Paragraph() : m_textIndent(0.0), m_font(), m_font2(), m_section() {
+  Paragraph() : m_font(), m_font2(), m_section() {
     m_section.m_default = true;
   }
   //! try to read a data
@@ -533,7 +533,7 @@ struct Paragraph : public MWAWParagraph {
     case 0x13: // first left
       if (dSz < 3) return false;
       val = input->readLong(2);
-      if (c == 0x13) m_textIndent = val/1440.;
+      if (c == 0x13) m_margins[0] = val/1440.;
       else if (c == 0x11) m_margins[1] = val/1440.;
       else m_margins[2] = val/1440.;
       return true;
@@ -592,7 +592,6 @@ struct Paragraph : public MWAWParagraph {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
     o << reinterpret_cast<MWAWParagraph const &>(ind);
-    if (ind.m_textIndent) o << "textIndent=" << ind.m_textIndent << ",";
     if (!ind.m_section.m_default) o << ind.m_section << ",";
     return o;
   }
@@ -605,8 +604,6 @@ struct Paragraph : public MWAWParagraph {
       o << "font=[" << m_font.m_font.getDebugString(m_convertissor) << m_font2 << "],";
     o << *this;
   }
-  //! the text indent
-  double m_textIndent;
   //! the font (simplified)
   Font m_font, m_font2 /** font ( not simplified )*/;
   //! the section
@@ -1985,10 +1982,9 @@ bool MSWText::readFont(MSWTextInternal::Font &font, bool mainZone)
     if (val & 0xF0) {
       if (what & 0x20) {
         Vec3uc col;
-        if (m_mainParser->getColor((val>>4),col)) {
-          int colors[3] = {col[0], col[1], col[2]};
-          font.m_font.setColor(colors);
-        } else
+        if (m_mainParser->getColor((val>>4),col))
+          font.m_font.setColor(col);
+        else
           f << "#fColor=" << (val>>4) << ",";
       } else
         f << "#fColor=" << (val>>4) << ",";
@@ -2731,8 +2727,6 @@ void MSWText::setProperty(MSWTextInternal::Paragraph const &para,
   if (!m_listener) return;
   if (!para.m_section.m_default && !recursive)
     setProperty(para.m_section, actFont, true);
-  const_cast<MSWTextInternal::Paragraph&>(para).m_margins[0]=
-    para.m_textIndent+para.m_margins[1];
   para.send(m_listener);
 
   if (!para.m_font2.m_default) {

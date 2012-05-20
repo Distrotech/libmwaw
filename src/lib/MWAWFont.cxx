@@ -70,10 +70,8 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
   if (m_flags) o << ",";
 
   if (hasColor()) {
-    int col[3];
-    getColor(col);
     o << "col=(";
-    for (int i = 0; i < 3; i++) o << col[i] << ",";
+    for (int i = 0; i < 3; i++) o << m_color[i] << ",";
     o << "),";
   }
   return o.str();
@@ -103,8 +101,9 @@ void MWAWFont::sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverte
   }
 
   actualFont.setFlags(flags());
-  listener->setTextAttribute(actualFont.flags());
+  listener->setFontAttributes(actualFont.flags());
   actualFont.setColor(m_color);
-  listener->setFontColor(m_color);
+  uint32_t col = ((m_color[0]&0xFF)<<16) | ((m_color[1]&0xFF)<<8) | (m_color[2]&0xFF);
+  listener->setTextColor(col);
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

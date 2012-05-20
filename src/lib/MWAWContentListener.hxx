@@ -28,136 +28,220 @@
  */
 
 #ifndef MWAW_CONTENT_LISTENER_H
-#  define MWAW_CONTENT_LISTENER_H
+#define MWAW_CONTENT_LISTENER_H
 
-#include <string>
 #include <vector>
 
-#include <libwpd/WPXString.h>
-
-#include "MWAWInputStream.hxx"
+#include <libwpd/WPXPropertyList.h>
 
 #include "libmwaw_internal.hxx"
 
-#include "DMWAWContentListener.hxx"
+class WPXBinaryData;
+class WPXDocumentInterface;
+class WPXString;
+class WPXPropertyListVector;
 
 class MWAWCell;
+class MWAWFont;
 class MWAWList;
+class MWAWPageSpan;
 class MWAWPosition;
 class MWAWSubDocument;
+struct MWAWTabStop;
+
 typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
 
-class MWAWPageSpan;
-/** \brief an interne MWAWContentListener which adds some function to a basic DMWAWContentListener
- *
- * This class is mainly based on some specialised contentlistener libwpd */
-class MWAWContentListener : public DMWAWContentListener
+struct MWAWDocumentParsingState {
+  MWAWDocumentParsingState(std::vector<MWAWPageSpan> const &pageList);
+  ~MWAWDocumentParsingState();
+
+  std::vector<MWAWPageSpan> m_pageList;
+  WPXPropertyList m_metaData;
+
+  int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
+  int m_newListId; // a new free id
+
+  bool m_isDocumentStarted, m_isHeaderFooterStarted;
+  std::vector<MWAWSubDocumentPtr> m_subDocuments; /** list of document actually open */
+
+private:
+  MWAWDocumentParsingState(const MWAWDocumentParsingState &);
+  MWAWDocumentParsingState &operator=(const MWAWDocumentParsingState &);
+};
+
+struct MWAWContentParsingState {
+  MWAWContentParsingState();
+  ~MWAWContentParsingState();
+
+  WPXString m_textBuffer;
+  int m_numDeferredTabs;
+
+  uint32_t m_textAttributeBits;
+  double m_fontSize;
+  WPXString m_fontName;
+  uint32_t m_fontColor;
+  std::string m_textLanguage;
+
+  bool m_isParagraphColumnBreak;
+  bool m_isParagraphPageBreak;
+  libmwaw::Justification m_paragraphJustification;
+  double m_paragraphLineSpacing;
+  WPXUnit m_paragraphLineSpacingUnit;
+  int m_paragraphBorders;
+  libmwaw::BorderStyle m_paragraphBordersStyle;
+  int m_paragraphBordersWidth;
+  uint32_t m_paragraphBordersColor;
+
+  shared_ptr<MWAWList> m_list;
+  uint8_t m_currentListLevel;
+
+  bool m_isPageSpanOpened;
+  bool m_isSectionOpened;
+  bool m_isFrameOpened;
+  bool m_isPageSpanBreakDeferred;
+  bool m_isHeaderFooterWithoutParagraph;
+
+  bool m_isSpanOpened;
+  bool m_isParagraphOpened;
+  bool m_isListElementOpened;
+
+  bool m_firstParagraphInPageSpan;
+
+  std::vector<unsigned int> m_numRowsToSkip;
+  bool m_isTableOpened;
+  bool m_isTableRowOpened;
+  bool m_isTableColumnOpened;
+  bool m_isTableCellOpened;
+
+  unsigned m_currentPage;
+  int m_numPagesRemainingInSpan;
+  int m_currentPageNumber;
+
+  bool m_sectionAttributesChanged;
+  int m_numColumns;
+  std::vector < MWAWColumnDefinition > m_textColumns;
+  bool m_isTextColumnWithoutParagraph;
+
+  double m_pageFormLength;
+  double m_pageFormWidth;
+  bool m_pageFormOrientationIsPortrait;
+
+  double m_pageMarginLeft;
+  double m_pageMarginRight;
+  double m_pageMarginTop;
+  double m_pageMarginBottom;
+
+  double m_sectionMarginLeft;  // In multicolumn sections, the above two will be rather interpreted
+  double m_sectionMarginRight; // as section margin change
+  double m_sectionMarginTop;
+  double m_sectionMarginBottom;
+  double m_paragraphMarginLeft;  // resulting paragraph margin that is one of the paragraph
+  double m_paragraphMarginRight; // properties
+  double m_paragraphMarginTop;
+  WPXUnit m_paragraphMarginTopUnit;
+  double m_paragraphMarginBottom;
+  WPXUnit m_paragraphMarginBottomUnit;
+  double m_leftMarginByPageMarginChange;  // part of the margin due to the PAGE margin change
+  double m_rightMarginByPageMarginChange; // inside a page that already has content.
+  double m_leftMarginByParagraphMarginChange;  // part of the margin due to the PARAGRAPH
+  double m_rightMarginByParagraphMarginChange; // margin change (in WP6)
+  double m_leftMarginByTabs;  // part of the margin due to the LEFT or LEFT/RIGHT Indent; the
+  double m_rightMarginByTabs; // only part of the margin that is reset at the end of a paragraph
+
+  double m_paragraphTextIndent; // resulting first line indent that is one of the paragraph properties
+  double m_textIndentByParagraphIndentChange; // part of the indent due to the PARAGRAPH indent (WP6???)
+  double m_textIndentByTabs; // part of the indent due to the "Back Tab" or "Left Tab"
+
+  double m_listReferencePosition; // position from the left page margin of the list number/bullet
+  double m_listBeginPosition; // position from the left page margin of the beginning of the list
+  std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
+
+  uint16_t m_alignmentCharacter;
+  std::vector<MWAWTabStop> m_tabStops;
+  bool m_isTabPositionRelative;
+
+  bool m_inSubDocument;
+
+  bool m_isNote;
+  libmwaw::SubDocumentType m_subDocumentType;
+
+private:
+  MWAWContentParsingState(const MWAWContentParsingState &);
+  MWAWContentParsingState &operator=(const MWAWContentParsingState &);
+};
+
+class MWAWContentListener
 {
-  friend class MWAWPageSpan;
-  //! the parent type
-  typedef DMWAWContentListener parent;
-protected:
-  struct ParsingState;
 public:
-  //! access to the constructor
-  static shared_ptr<MWAWContentListener> create(std::list<MWAWPageSpan> &pageList,
-      WPXDocumentInterface *documentInterface);
-  //! a virtual destructor
+  MWAWContentListener(std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
   virtual ~MWAWContentListener();
 
+  void setDocumentLanguage(std::string locale);
 
-  //! starts the document
-  using parent::startDocument;
-  //! ends the document
-  using parent::endDocument;
+  void startDocument();
+  void endDocument();
+  void handleSubDocument(MWAWSubDocumentPtr &subDocument, libmwaw::SubDocumentType subDocumentType);
+  bool isHeaderFooterOpened() const;
 
-  //! inserts a break : page, ..
-  using parent::insertBreak;
-
-  // justification and line spacing
-  using parent::setParagraphJustification;
-  using parent::setParagraphLineSpacing;
-
-  //! sets the documents language (the simplified locale name)
-  void setDocumentLanguage(std::string const &locale);
-
-  //! returns true if a section is opened
-  bool isSectionOpened() const;
-  //! open a section if possible
-  bool openSection(std::vector<int> colsWidth=std::vector<int>(), WPXUnit unit=WPX_POINT);
-
-  //! close a section
-  bool closeSection();
-
-  //! returns true if a paragraph is opened
-  bool isParagraphOpened() const;
-
-  //! sets the text attributes
-  void setTextAttribute(const uint32_t attribute);
-  //! sets the text fonts
-  void setTextFont(const WPXString &fontName);
-  //! sets the font size
-  void setFontSize(const uint16_t fontSize);
-  //! sets the font color
-  void setFontColor(int const (&col) [3]);
-  //! sets the font color
-  void setFontColor(Vec3i const &col);
-  //! sets the text language (the simplified locale name)
-  void setTextLanguage(std::string const &locale);
-
-  //! sets the first paragraph text indent.
-  void setParagraphTextIndent(double margin, WPXUnit unit=WPX_INCH);
-  /** sets the paragraph margin.
-   *
-   * \param margin is given in inches
-   * \param pos in MWAW_LEFT, MWAW_RIGHT, MWAW_TOP, MWAW_BOTTOM
-   */
-  void setParagraphMargin(double margin, int pos, WPXUnit unit=WPX_INCH);
-  /** sets the tabulations.
-   *
-   * \param tabStops the tabulations
-   * \param maxW if given, decals the tabulations which are too near of the right border
-   */
-  void setTabs(const std::vector<MWAWTabStop> &tabStops, double maxW = -1.);
-  /** indicates that the paragraph has a basic border (ie. a black line)
-   *
-   * \param which = libmwaw::LeftBorderBit, ...
-   * \param flag sets to true
-   */
-  void setParagraphBorder(int which, bool flag);
-  //! indicates that the paragraph has a basic borders (ie. 4 black lines)
-  void setParagraphBorder(bool flag);
-
-  /** function to set the actual list
-   *
-   * \note set the listid if not set
-   */
-  void setCurrentList(shared_ptr<MWAWList> list);
-
-  /** returns the current list */
-  shared_ptr<MWAWList> getCurrentList() const;
-
-  /** function to create an unordered list
-   *
-   * \warning minimal implementation : this part must be complety rewritten ...*/
-  void setCurrentListLevel(int level);
+  // ------ text data -----------
 
   //! adds a basic character, ..
   void insertCharacter(uint8_t character);
-  /** adds an unicode character
-   *
-   * by convention if \a character=0xfffd(undef), no character is added */
+  /** adds an unicode character.
+   *  By convention if \a character=0xfffd(undef), no character is added */
   void insertUnicode(uint32_t character);
   //! adds a unicode string
   void insertUnicodeString(WPXString const &str);
-  //! internal function used to add an unicode character to a string
+  //! add an unicode character to a string ( with correct encoding ).
   static void appendUnicode(uint32_t val, WPXString &buffer);
 
-  //! adds an end of line
-  void insertEOL(bool softBreak=false);
-  //! adds a tabulation
   void insertTab();
+  void insertEOL(bool softBreak=false);
+  void insertBreak(const uint8_t breakType);
 
+  // ------ text format -----------
+  void setTextFont(const WPXString &fontName);
+  void setFontSize(const uint16_t fontSize);
+  void setFontAttributes(const uint32_t fontAttributes);
+  void setTextLanguage(std::string const &locale);
+  void setTextColor(const uint32_t rgb);
+
+  // ------ paragraph format -----------
+  //! returns true if a paragraph or a list is opened
+  bool isParagraphOpened() const;
+  void setParagraphLineSpacing(const double lineSpacing, WPXUnit unit=WPX_PERCENT);
+  /** Define the paragraph justification. You can set force=true to
+      force a break if there is a justification change. */
+  void setParagraphJustification(libmwaw::Justification justification, bool force=false);
+  /** sets the first paragraph text indent.
+      \note: the first character will appear at paragraphLeftmargin + paragraphTextIndent*/
+  void setParagraphTextIndent(double margin, WPXUnit unit=WPX_INCH);
+  /** sets the paragraph margin.
+   * \note pos must be MWAW_LEFT, MWAW_RIGHT, MWAW_TOP, MWAW_BOTTOM
+   */
+  void setParagraphMargin(double margin, int pos, WPXUnit unit=WPX_INCH);
+  /** sets the tabulations.
+   * \param tabStops the tabulations
+   */
+  void setTabs(const std::vector<MWAWTabStop> &tabStops);
+  /** indicates that the paragraph has a basic borders (ie. a black line)
+   * \param which = libmwaw::LeftBorderBit | ...
+   * \param style = libmwaw::BorderSingle | libmwaw::BorderDouble
+   * \param width = 1,2,3,...
+   * \param color: an rgb color
+   */
+  void setParagraphBorders(int which, libmwaw::BorderStyle style=libmwaw::BorderSingle, int width=1, uint32_t color=0);
+
+  // ------ list format -----------
+  /** function to set the actual list */
+  void setCurrentList(shared_ptr<MWAWList> list);
+  /** returns the current list */
+  shared_ptr<MWAWList> getCurrentList() const;
+  /** function to set the level of the current list
+   * \warning minimal implementation...*/
+  void setCurrentListLevel(int level);
+
+  // ------- fields ----------------
   /** Defines some basic type for field */
   enum FieldType { None, PageNumber, Date, Time, Title, Link, Database };
   //! adds a field type
@@ -165,159 +249,105 @@ public:
   //! insert a date/time field with given format (see strftime)
   void insertDateTimeField(char const *format);
 
-  /** adds note
-   *
-   * \warning checks if this does allow recursive insertion */
-  void insertNote(const NoteType noteType,
-                  MWAWSubDocumentPtr &subDocument);
-  /** adds comment
-   *
-   * \warning checks if this does allow recursive insertion */
+  // ------- subdocument -----------------
+  /** defines the footnote type */
+  enum NoteType { FOOTNOTE, ENDNOTE };
+  /** adds note */
+  void insertNote(const NoteType noteType, MWAWSubDocumentPtr &subDocument);
+  /** adds a label note */
+  void insertLabelNote(const NoteType noteType, WPXString const &label, MWAWSubDocumentPtr &subDocument);
+  /** adds comment */
   void insertComment(MWAWSubDocumentPtr &subDocument);
 
-  /** open a frame */
-  bool openFrame(MWAWPosition const &pos, WPXPropertyList extras=WPXPropertyList());
-  /** close a frame */
-  void closeFrame();
-
-  /** adds a picture in given position
-   *
-   * \warning the position unit must be WPX_POINT, WPX_INCH or WPX_TWIP... */
+  /** adds a picture in given position */
   void insertPicture(MWAWPosition const &pos, const WPXBinaryData &binaryData,
                      std::string type="image/pict",
                      WPXPropertyList frameExtras=WPXPropertyList());
-  /** adds a textbox in given position
-   *
-   * \warning the position unit must be WPX_POINT, WPX_INCH or WPX_TWIP... */
+  /** adds a textbox in given position */
   void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument,
                      WPXPropertyList frameExtras=WPXPropertyList());
 
+
+  // ------- table -----------------
   /** open a table*/
-  void openTable(std::vector<int> const &colWidth, WPXUnit unit);
   void openTable(std::vector<float> const &colWidth, WPXUnit unit);
   /** closes this table */
   void closeTable();
-
   /** open a row with given height*/
   void openTableRow(float h, WPXUnit unit, bool headerRow=false);
   /** closes this row */
   void closeTableRow();
-
   /** low level function to define a cell.
-      \param cell the cell position, alignement, ...
-      \param extras to be used to pass extra data, for instance spreadsheet data
-
-  \note openTableRow, .. must call before*/
+  	\param cell the cell position, alignement, ...
+  	\param extras to be used to pass extra data, for instance spreadsheet data*/
   void openTableCell(MWAWCell const &cell, WPXPropertyList const &extras);
-  /** low level function to define a cell */
+  /** close a cell */
   void closeTableCell();
 
-protected:
-  //! protected constructor \sa create
-  MWAWContentListener(std::list<MWAWPageSpan> &pageList,
-                      WPXDocumentInterface *documentInterface);
-  //! function called automatically after creation to initialize the data
-  void _init();
+  // ------- section ---------------
+  //! returns true if a section is opened
+  bool isSectionOpened() const;
+  //! open a section if possible
+  bool openSection(std::vector<int> colsWidth=std::vector<int>(), WPXUnit unit=WPX_POINT);
+  //! close a section
+  bool closeSection();
 
-  //! virtual function called to create the parsing state
-  virtual ParsingState *_newParsingState() const {
-    return new ParsingState;
-  }
-  //! returns the actual parsing state
-  ParsingState *parsingState() {
-    return m_parseState;
-  }
+protected:
+  void _openSection();
+  void _closeSection();
+
+  void _openPageSpan();
+  void _closePageSpan();
+  void _updatePageSpanDependent(bool set);
+  void _recomputeParagraphPositions();
+
+  void _startSubDocument();
+  void _endSubDocument();
+
+  void _handleFrameParameters( WPXPropertyList &propList, MWAWPosition const &pos);
+  bool _openFrame(MWAWPosition const &pos, WPXPropertyList extras=WPXPropertyList());
+  void _closeFrame();
+
+  void _openParagraph();
+  void _closeParagraph();
+  void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
+  void _getTabStops(WPXPropertyListVector &tabStops);
+  void _appendJustification(WPXPropertyList &propList, libmwaw::Justification justification);
+  void _resetParagraphState(const bool isListElement=false);
+
+  void _openListElement();
+  void _closeListElement();
+  void _changeList();
+
+  void _openSpan();
+  void _closeSpan();
+
+  void _flushText();
+  void _flushDeferredTabs();
+
+  void _insertBreakIfNecessary(WPXPropertyList &propList);
+
+  static void _addLanguage(std::string const &locale, WPXPropertyList &propList);
 
   /** creates a new parsing state (copy of the actual state)
    *
    * \return the old one */
-  ParsingState *_pushParsingState() {
-    ParsingState *oldState = m_parseState;
-    m_parseState = _newParsingState();
-    m_parseState->m_numNestedNotes = oldState->m_numNestedNotes;
-    return oldState;
-  }
-  //! resets the previous parsing state (obtained from pushParsingState)
-  void _popParsingState(ParsingState *oldState) {
-    oldState->m_numNestedNotes = m_parseState->m_numNestedNotes;
-    delete m_parseState;
-    m_parseState = oldState;
-
-  }
-
-  //! flushes the text
-  void _flushText();
-  //! flushes the deferred tabs
-  void _flushDeferredTabs();
-
-  //! adds the gestion of border or language
-  void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
-  //! inserts some language property if needed
-  void _appendExtraSpanProperties(WPXPropertyList &propList);
-  //! closes the previous item (if needed) and open the new one
-  void _changeList();
-  //! function called to handle a sub document
-  void _handleSubDocument(MWAWSubDocumentPtr &subDocument,
-                          libmwaw::SubDocumentType subDocumentType);
-  /** retrieve properties to open a new frame
-   *
-   * \param propList the properties list
-   * \param pos the frame position
-   * \warning the position unit must be WPX_POINT, WPX_INCH or WPX_TWIP...
-   */
-  void _handleFrameParameters( WPXPropertyList &propList, MWAWPosition const &pos);
-
-  //! sets list properties when the list changes
-  void _handleListChange();
+  shared_ptr<MWAWContentParsingState> _pushParsingState();
+  //! resets the previous parsing state
+  void _popParsingState();
 
 protected:
-  /** the MWAWContentListener's state */
-  struct ParsingState {
-    //! basic constructor
-    ParsingState();
-    //! the copy constructor
-    ParsingState(ParsingState const &orig);
-    //! virtual destructor
-    virtual ~ParsingState();
-
-    //! the text to flush
-    WPXString m_textBuffer;
-
-    //! the tabs which need to be flushed
-    int m_numDeferredTabs;
-    int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** end number*/, m_numNestedNotes /** number of nested notes */;
-
-    //! a flag used to add a ''basic'' border to a paragraph
-    int m_border;
-
-
-    std::string m_language/** the language (simplified locale name)*/,
-        m_parag_language /** the actual paragraph language */,
-        m_doc_language /** the document language (simplified locale name)*/;
-    bool m_isFrameOpened; /** true if a frame is opened */
-    //! the list
-    shared_ptr<MWAWList> m_list;
-    //! a stack used to know what is open
-    std::vector<bool> m_listOrderedLevels;
-  };
+  shared_ptr<MWAWDocumentParsingState> m_ds; // main parse state
+  shared_ptr<MWAWContentParsingState> m_ps; // parse state
+  std::vector<shared_ptr<MWAWContentParsingState> > m_psStack;
+  WPXDocumentInterface *m_documentInterface;
 
 private:
-  //! protected copy constructor. Must not be called.
   MWAWContentListener(const MWAWContentListener &);
-  //! protected copy operator. Must not be called.
   MWAWContentListener &operator=(const MWAWContentListener &);
-
-  //! the actual state
-  ParsingState *m_parseState;
-
-  //! the actual list id
-  int m_actualListId;
-
-  //! a list of actual subdocument smart pointer to forbide eroneous destruction
-  std::vector<MWAWSubDocumentPtr>  m_subDocuments;
-
 };
 
 typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
+
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

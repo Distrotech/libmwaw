@@ -466,7 +466,7 @@ void MWParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::list<MWAWPageSpan> pageList;
+  std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(m_pageSpan);
   for (int i = 1; i < 3; i++) {
     if (m_state->m_windows[i].isEmpty()) {
@@ -482,8 +482,7 @@ void MWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MWContentListenerPtr listen =
-    MWContentListener::create(pageList, documentInterface);
+  MWContentListenerPtr listen(new MWContentListener(pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
@@ -1470,6 +1469,7 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
     parag.m_tabs[i].m_alignment = align;
     parag.m_tabs[i].m_position = numPixel/72.0;
   }
+  parag.m_margins[0] -= parag.m_margins[1];
   if (parag.m_margins[2] > 0.0)
     parag.m_margins[2]=pageWidth()-parag.m_margins[2]-1.0;
   if (parag.m_margins[2] < 0) parag.m_margins[2] = 0;

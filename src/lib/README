@@ -20,18 +20,6 @@
 - MWAWPropertyHandler.hxx
 
 ------------------------------------------------------------
---------------   files DMWAW and libmwaw_internal  --------------
-------------------------------------------------------------
-These files are the files which come directly of libwpd/src/lib
-
-## DMWAWContentListener by
-   - introduction of a new field m_paragraphLineSpacingUnit
-   - gestion of  MWAW_ALL_CAPS_BIT/MWAW_EMBOSS_BIT/MWAW_ENGRAVE_BIT bits
-   - virtualize _appendParagraphProperties in order to add border flags
-   - change in WPXContentListener::setParagraphJustification
-
-
-------------------------------------------------------------
 --------------      generic tools             --------------
 ------------------------------------------------------------
 
@@ -68,15 +56,17 @@ These files defined basic tools which must be used by the parsers :
 
 These files defined basic structures which must be used by the parsers :
 
-## MWAWContentListener.hxx
 ## MWAWHeader.hxx
 ## MWAWSubDocument.hxx
 	Files to parse document inspired of libwpd/WP*
 
-## MWAWFont.cxx 
+## MWAWContentListener.hxx
+	The content listener
+
+## MWAWFont.hxx 
 	store the font property
 
-## MWAWParagraph.cxx 
+## MWAWParagraph.hxx 
 	store the paragraph property
 
 ## MWAWEntry.hxx

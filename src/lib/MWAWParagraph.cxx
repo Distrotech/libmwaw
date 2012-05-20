@@ -228,11 +228,6 @@ void MWAWParagraph::send(shared_ptr<MWAWContentListener> listener) const
   } else
     listener->setCurrentListLevel(0);
 
-#if 1
-  listener->setParagraphBorder(m_border);
-#else
-  /* OSNOLA FIXME */
   listener->setParagraphBorders(m_border, m_borderStyle, m_borderWidth, m_borderColor);
-#endif
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

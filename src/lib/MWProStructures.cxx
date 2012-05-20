@@ -1263,10 +1263,9 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
 
   int color = m_input->readULong(1);
   Vec3uc col;
-  if (color != 1 && getColor(color, col)) {
-    int colVal[] = { col[0], col[1], col[2] };
-    font.m_font.setColor(colVal);
-  } else if (color != 1)
+  if (color != 1 && getColor(color, col))
+    font.m_font.setColor(col);
+  else if (color != 1)
     f << "#colId=" << color << ",";
   val = m_input->readULong(1); // always 0x64 (unused?)
   if (val != 0x64) font.m_values[2] = val;
@@ -1362,7 +1361,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
     if (val) f << "unkn=" << val << ",";
   }
   para.m_margins[1] = m_input->readLong(4)/72.0/65536.;
-  para.m_margins[0] = m_input->readLong(4)/72.0/65536.+para.m_margins[1];
+  para.m_margins[0] = m_input->readLong(4)/72.0/65536.;
   para.m_margins[2] = m_input->readLong(4)/72.0/65536.;
 
 

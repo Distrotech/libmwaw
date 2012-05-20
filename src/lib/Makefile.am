@@ -17,11 +17,9 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_DEPENDENCIES = @LIBMWAW_WIN
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic  -no-undefined
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	libmwaw_internal.cxx		\
-	DMWAWContentListener.cxx	\
 	MWAWOLEStream.cxx		\
 	MWAWPageSpan.cxx		\
 	libmwaw_internal.hxx		\
-	DMWAWContentListener.hxx	\
 	MWAWOLEStream.hxx		\
 	MWAWPageSpan.hxx		\
 					\
