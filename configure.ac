@@ -125,6 +125,11 @@ AS_IF([test x"$enable_werror" != "xno"], [
 	CFLAGS="$CFLAGS -Werror"
 	CXXFLAGS="$CXXFLAGS -Werror"
 ])
+AC_ARG_ENABLE([weffc],
+	[AS_HELP_STRING([--disable-weffc], [Disable -Weffc++ warnings, usefull for all gcc compiler or old boost implementation])],
+	[enable_weffc="$enableval"],
+	[enable_weffc=yes]
+)
 # Courtesy of Glib: Ensure MSVC-compatible struct packing convention
 # is used when compiling for Win32 with gcc.
 AS_IF([test "x$native_win32" = "xyes"], [
@@ -152,7 +157,10 @@ AS_IF([test "x$native_win32" = "xyes"], [
 	AS_IF([test x"$GCC" = xyes], [
 		# Be tough with warnings and produce less careless code
 		CFLAGS="$CFLAGS -Wall -pedantic -Wextra"
-		CXXFLAGS="$CXXFLAGS -Wall -pedantic -Wextra -Weffc++"
+		CXXFLAGS="$CXXFLAGS -Wall -pedantic -Wextra"
+		AS_IF([test x"$enable_weffc" != "xno"], [
+			CXXFLAGS="$CXXFLAGS -Weffc++"
+		])
 	])
 ])
 AC_SUBST(DEBUG_CXXFLAGS)
