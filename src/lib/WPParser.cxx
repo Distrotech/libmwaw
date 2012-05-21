@@ -1028,8 +1028,6 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
   if (maxPages == 0 || zone || !sendAll) maxPages = 1;
 
   int actParag = 0;
-  bool firstTextSend = !sendAll;
-
   int actCol = 0, numCols = 0;
   for (int pg = 0; pg < maxPages; pg++) {
     int endParag = 0;
@@ -1079,7 +1077,6 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
         }
       case 0:
       case 2:
-        firstTextSend = true;
         ok = readText(pInfo);
         break;
       case 1: {

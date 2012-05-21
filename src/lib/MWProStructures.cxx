@@ -885,7 +885,6 @@ bool MWProStructures::createZonesV2()
   if (ok) {
     pos = m_input->tell();
     int id = 0;
-    bool first = true;
     shared_ptr<MWProStructuresInternal::Block> block;
     while (1) {
       block = readBlockV2(id++);
@@ -898,10 +897,8 @@ bool MWProStructures::createZonesV2()
       block->m_id=id;
       m_state->m_blocksMap[block->m_id] = block;
       m_state->m_blocksList.push_back(block);
-      if (block->m_fileBlock) {
+      if (block->m_fileBlock)
         m_mainParser.parseDataZone(block->m_fileBlock, 0);
-        first = true;
-      }
       pos =  m_input->tell();
       int val = m_input->readLong(1);
       if (val == 2) continue;

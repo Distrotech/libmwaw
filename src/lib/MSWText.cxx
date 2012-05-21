@@ -1794,7 +1794,6 @@ bool MSWText::readStyles(MSWEntry &entry)
   ascii().addPos(pos);
   f.str("");
   f << "Styles(paragraph):";
-  bool szOk = true;
   if (endPos > entry.end()) {
     // sometimes entry.end() seems a little to short :-~
     if (endPos > entry.end()+100) {
@@ -1802,7 +1801,6 @@ bool MSWText::readStyles(MSWEntry &entry)
       MWAW_DEBUG_MSG(("MSWText::readStyles: can not read styles(paragraph)...\n"));
       return false;
     }
-    szOk = false;
     MWAW_DEBUG_MSG(("MSWText::readStyles: styles(paragraph) size seems incoherent...\n"));
     f << "#sz=" << dataSz << ",";
   }
