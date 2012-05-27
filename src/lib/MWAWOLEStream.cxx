@@ -979,7 +979,7 @@ void libmwaw::StreamIO::updateCache()
 // =========== Storage ==========
 
 libmwaw::Storage::Storage( WPXInputStream *is ) :
-  io(NULL)
+  io(0)
 {
   io = new StorageIO( this, is );
 }

@@ -23,48 +23,48 @@ INCPRE+=$(SOLARVER)$/$(UPD)$/$(INPATH)$/inc$/libwpd
 .ENDIF
 
 SLOFILES= \
-	$(SLO)$/CWDatabase.cxx			\
-	$(SLO)$/CWGraph.cxx			\
-	$(SLO)$/CWParser.cxx			\
-	$(SLO)$/CWSpreadsheet.cxx		\
-	$(SLO)$/CWTable.cxx			\
-	$(SLO)$/CWText.cxx			\
-	$(SLO)$/MWAWOLEStream.cxx		\
-	$(SLO)$/MWAWPageSpan.cxx		\
-	$(SLO)$/FWParser.cxx			\
-	$(SLO)$/FWText.cxx			\
-	$(SLO)$/MWAWCell.cxx			\
-	$(SLO)$/MWAWContentListener.cxx		\
-	$(SLO)$/MWAWDocument.cxx		\
-	$(SLO)$/MWAWHeader.cxx			\
-	$(SLO)$/MWAWList.cxx			\
-	$(SLO)$/MWAWParagraph.cxx		\
-	$(SLO)$/MWAWTable.cxx			\
-	$(SLO)$/MWAWFont.cxx			\
-	$(SLO)$/MWParser.cxx			\
-	$(SLO)$/MWProParser.cxx			\
-	$(SLO)$/MWProStructures.cxx		\
-	$(SLO)$/MSKGraph.cxx			\
-	$(SLO)$/MSKParser.cxx			\
-	$(SLO)$/MSKText.cxx			\
-	$(SLO)$/MSWParser.cxx			\
-	$(SLO)$/MSWText.cxx			\
-	$(SLO)$/MWAWDebug.cxx			\
-	$(SLO)$/MWAWFontConverter.cxx			\
-	$(SLO)$/MWAWInputStream.cxx		\
-	$(SLO)$/MWAWOLEParser.cxx		\
-	$(SLO)$/MWAWPictBasic.cxx		\
-	$(SLO)$/MWAWPictBitmap.cxx		\
-	$(SLO)$/MWAWPictData.cxx		\
-	$(SLO)$/MWAWPictMac.cxx			\
-	$(SLO)$/MWAWPictOLEContainer.cxx	\
-	$(SLO)$/MWAWPrinter.cxx			\
-	$(SLO)$/MWAWPropertyHandler.cxx		\
-	$(SLO)$/MWAWSubDocument.cxx		\
-	$(SLO)$/WNParser.cxx			\
-	$(SLO)$/WNText.cxx			\
-	$(SLO)$/WPParser.cxx			\
-	$(SLO)$/libmwaw_internal.cxx
+	$(SLO)$/CWDatabase.obj			\
+	$(SLO)$/CWGraph.obj			\
+	$(SLO)$/CWParser.obj			\
+	$(SLO)$/CWSpreadsheet.obj		\
+	$(SLO)$/CWTable.obj			\
+	$(SLO)$/CWText.obj			\
+	$(SLO)$/MWAWOLEStream.obj		\
+	$(SLO)$/MWAWPageSpan.obj		\
+	$(SLO)$/FWParser.obj			\
+	$(SLO)$/FWText.obj			\
+	$(SLO)$/MWAWCell.obj			\
+	$(SLO)$/MWAWContentListener.obj		\
+	$(SLO)$/MWAWDocument.obj		\
+	$(SLO)$/MWAWHeader.obj			\
+	$(SLO)$/MWAWList.obj			\
+	$(SLO)$/MWAWParagraph.obj		\
+	$(SLO)$/MWAWTable.obj			\
+	$(SLO)$/MWAWFont.obj			\
+	$(SLO)$/MWParser.obj			\
+	$(SLO)$/MWProParser.obj			\
+	$(SLO)$/MWProStructures.obj		\
+	$(SLO)$/MSKGraph.obj			\
+	$(SLO)$/MSKParser.obj			\
+	$(SLO)$/MSKText.obj			\
+	$(SLO)$/MSWParser.obj			\
+	$(SLO)$/MSWText.obj			\
+	$(SLO)$/MWAWDebug.obj			\
+	$(SLO)$/MWAWFontConverter.obj		\
+	$(SLO)$/MWAWInputStream.obj		\
+	$(SLO)$/MWAWOLEParser.obj		\
+	$(SLO)$/MWAWPictBasic.obj		\
+	$(SLO)$/MWAWPictBitmap.obj		\
+	$(SLO)$/MWAWPictData.obj		\
+	$(SLO)$/MWAWPictMac.obj			\
+	$(SLO)$/MWAWPictOLEContainer.obj	\
+	$(SLO)$/MWAWPrinter.obj			\
+	$(SLO)$/MWAWPropertyHandler.obj		\
+	$(SLO)$/MWAWSubDocument.obj		\
+	$(SLO)$/WNParser.obj			\
+	$(SLO)$/WNText.obj			\
+	$(SLO)$/WPParser.obj			\
+	$(SLO)$/libmwaw_internal.obj
 
 LIB1ARCHIV=$(LB)$/libmwawlib.a
 LIB1TARGET=$(SLB)$/$(TARGET).lib

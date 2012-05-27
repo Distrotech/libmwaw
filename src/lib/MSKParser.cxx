@@ -53,15 +53,36 @@
 /** Internal: the structures of a MSKParser */
 namespace MSKParserInternal
 {
+//! Internal: a zone of a MSKParser ( main, header, footer )
+struct Zone {
+  //! the different type
+  enum Type { MAIN, HEADER, FOOTER, NONE };
+  //! the constructor
+  Zone(Type type=NONE, int zoneId=-1) : m_type(type), m_zoneId(zoneId), m_textId(-1) {}
+  //! the zone type
+  Type m_type;
+  //! the parser zone id
+  int m_zoneId;
+  //! the text internal id
+  int m_textId;
+};
+
 ////////////////////////////////////////
 //! Internal: the state of a MSKParser
 struct State {
   //! constructor
-  State() : m_version(-1), m_docType(MWAWDocument::K_TEXT), m_eof(-1), m_actPage(0), m_numPages(0),
+  State() : m_version(-1), m_docType(MWAWDocument::K_TEXT), m_zoneMap(), m_eof(-1), m_actPage(0), m_numPages(0),
     m_headerText(""), m_footerText(""), m_hasHeader(false), m_hasFooter(false),
     m_headerHeight(0), m_footerHeight(0) {
   }
 
+  //! return a zone
+  Zone get(Zone::Type type) {
+    Zone res;
+    if (m_zoneMap.find(int(type)) != m_zoneMap.end())
+      res = m_zoneMap[int(type)];
+    return res;
+  }
   //! returns true if this is a text document (hack for MSWorks 4.0 Draw)
   bool IsTextDoc() const {
     return m_docType == MWAWDocument::K_TEXT;
@@ -70,6 +91,8 @@ struct State {
   int m_version;
   //! the type of document
   MWAWDocument::DocumentKind m_docType;
+  //! the list of zone
+  std::map<int, Zone> m_zoneMap;
   //! the last known file position
   long m_eof;
 
@@ -86,8 +109,10 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(MSKParser &pars, MWAWInputStreamPtr input, int zoneId) :
-    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
+  enum Type { Zone, Graphic, Text };
+  SubDocument(MSKParser &pars, MWAWInputStreamPtr input, Type type,
+              int zoneId, int noteId=-1) :
+    MWAWSubDocument(&pars, input, MWAWEntry()), m_type(type), m_id(zoneId), m_noteId(noteId) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -112,11 +137,12 @@ public:
   void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
-  /** the subdocument id
-
-  \note m_id >= 0: correspond to the text parser data, while m_id < 0
-  corresponds to a graph parser zone (ie. a textbox) */
+  /** the type */
+  Type m_type;
+  /** the subdocument id*/
   int m_id;
+  /** the note id */
+  int m_noteId;
 };
 
 void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
@@ -133,7 +159,18 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_parser);
 
   long pos = m_input->tell();
-  reinterpret_cast<MSKParser *>(m_parser)->send(m_id);
+  MSKParser *parser = reinterpret_cast<MSKParser *>(m_parser);
+  switch(m_type) {
+  case Text:
+    parser->sendText(m_id, m_noteId);
+    break;
+  case Graphic:
+    parser->sendGraphic(m_id);
+    break;
+  case Zone:
+    parser->sendZone(m_id);
+    break;
+  }
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
@@ -143,6 +180,8 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
   SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
   if (!sDoc) return true;
   if (m_id != sDoc->m_id) return true;
+  if (m_type != sDoc->m_type) return true;
+  if (m_noteId != sDoc->m_noteId) return true;
   return false;
 }
 }
@@ -264,6 +303,47 @@ bool MSKParser::getColor(int id, Vec3uc &col) const
       break;
     }
     break;
+  case 3: {
+    static std::vector<Vec3uc> palette;
+    if (palette.size()==0) {
+      palette.resize(256);
+      int ind=0;
+      for (int k = 0; k < 6; k++) {
+        for (int j = 0; j < 6; j++) {
+          for (int i = 0; i < 6; i++, ind++) {
+            if (j==5 && i==2) break;
+            palette[ind]=Vec3uc(255-51*i, 255-51*k, 255-51*j);
+          }
+        }
+      }
+
+      // the last 2 lines
+      for (int r = 0; r < 2; r++) {
+        // the black, red, green, blue zone of 5*2
+        for (int c = 0; c < 4; c++) {
+          for (int i = 0; i < 5; i++, ind++) {
+            int val = 17*r+51*i;
+            if (c == 0) {
+              palette[ind]=Vec3uc(val, val, val);
+              continue;
+            }
+            int col[3]= {0,0,0};
+            col[c-1]=val;
+            palette[ind]=Vec3uc(col[0],col[1],col[2]);
+          }
+        }
+        // last part of j==5, i=2..5
+        for (int k = r; k < 6; k+=2) {
+          for (int i = 2; i < 6; i++, ind++) palette[ind]=Vec3uc(255-51*i, 255-51*k, 255-51*5);
+        }
+      }
+    }
+    if (id >= 0 && id <= 255) {
+      col=palette[id];
+      return true;
+    }
+    break;
+  }
   default:
     break;
   }
@@ -293,8 +373,7 @@ void MSKParser::parse(WPXDocumentInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
-      m_graphParser->sendAll();
-      m_textParser->sendZone(0);
+      sendZone(MSKParserInternal::Zone::MAIN);
       m_textParser->flushExtra();
       m_graphParser->flushExtra();
       if (m_listener) m_listener->endDocument();
@@ -323,18 +402,42 @@ bool MSKParser::checkIfPositionValid(long pos)
   return ok;
 }
 
-void MSKParser::send(int id)
+void MSKParser::sendText(int id, int noteId)
 {
-  if (id < 0) {
-    m_graphParser->send(-id-1);
-  } else
+  if (noteId < 0)
     m_textParser->sendZone(id);
+  else
+    m_textParser->sendNote(id, noteId);
+}
+
+void MSKParser::sendGraphic(int id)
+{
+  m_graphParser->send(id, MWAWPosition::Char);
+}
+
+void MSKParser::sendZone(int zoneType)
+{
+  if (!m_listener) return;
+  MSKParserInternal::Zone zone=m_state->get(MSKParserInternal::Zone::Type(zoneType));
+  if (zone.m_zoneId >= 0)
+    m_graphParser->sendAll(zone.m_zoneId, zoneType==MSKParserInternal::Zone::MAIN);
+  if (zone.m_textId >= 0)
+    m_textParser->sendZone(zone.m_textId);
+}
+
+bool MSKParser::sendFootNote(int zoneId, int noteId)
+{
+  MWAWSubDocumentPtr subdoc
+  (new MSKParserInternal::SubDocument(*this, getInput(), MSKParserInternal::SubDocument::Text, zoneId, noteId));
+  if (m_listener)
+    m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+  return true;
 }
 
 bool  MSKParser::sendTextBox(int id, MWAWPosition const &pos, WPXPropertyList &extras)
 {
   shared_ptr<MSKParserInternal::SubDocument> subdoc
-  (new MSKParserInternal::SubDocument(*this, getInput(), -id-1));
+  (new MSKParserInternal::SubDocument(*this, getInput(), MSKParserInternal::SubDocument::Graphic, id));
   if (m_listener)
     m_listener->insertTextBox(pos, subdoc, extras);
   return true;
@@ -352,12 +455,14 @@ void MSKParser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   int vers = version();
+
+  MSKParserInternal::Zone mainZone=m_state->get(MSKParserInternal::Zone::MAIN);
   // update the page
   int numPage = 1;
-  if (m_textParser->numPages() > numPage)
-    numPage = m_textParser->numPages();
-  if (m_graphParser->numPages() > numPage)
-    numPage = m_graphParser->numPages();
+  if (mainZone.m_textId >= 0 && m_textParser->numPages(mainZone.m_textId) > numPage)
+    numPage = m_textParser->numPages(mainZone.m_textId);
+  if (mainZone.m_zoneId >= 0 && m_graphParser->numPages(mainZone.m_zoneId) > numPage)
+    numPage = m_graphParser->numPages(mainZone.m_zoneId);
   m_state->m_numPages = numPage;
   m_state->m_actPage = 0;
 
@@ -367,14 +472,27 @@ void MSKParser::createDocument(WPXDocumentInterface *documentInterface)
   int id = m_textParser->getHeader();
   if (id >= 0) {
     if (vers <= 2) m_state->m_headerHeight = 12;
-    shared_ptr<MWAWSubDocument> subdoc(new MSKParserInternal::SubDocument(*this, getInput(), id));
+    shared_ptr<MWAWSubDocument> subdoc
+    (new MSKParserInternal::SubDocument
+     (*this, getInput(), MSKParserInternal::SubDocument::Text, id));
+    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+  } else if (m_state->get(MSKParserInternal::Zone::HEADER).m_zoneId >= 0) {
+    shared_ptr<MWAWSubDocument> subdoc
+    (new MSKParserInternal::SubDocument
+     (*this, getInput(), MSKParserInternal::SubDocument::Zone, int(MSKParserInternal::Zone::HEADER)));
     ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
   }
-
   id = m_textParser->getFooter();
   if (id >= 0) {
     if (vers <= 2) m_state->m_footerHeight = 12;
-    shared_ptr<MWAWSubDocument> subdoc(new MSKParserInternal::SubDocument(*this, getInput(), id));
+    shared_ptr<MWAWSubDocument> subdoc
+    (new MSKParserInternal::SubDocument
+     (*this, getInput(), MSKParserInternal::SubDocument::Text, id));
+    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+  } else if (m_state->get(MSKParserInternal::Zone::FOOTER).m_zoneId >= 0) {
+    shared_ptr<MWAWSubDocument> subdoc
+    (new MSKParserInternal::SubDocument
+     (*this, getInput(), MSKParserInternal::SubDocument::Zone, int(MSKParserInternal::Zone::FOOTER)));
     ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
   }
 
@@ -397,63 +515,47 @@ bool MSKParser::createZones()
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
 
-  MWAWEntry pict;
+  if (version()>=3) {
+    bool ok = true;
+    if (m_state->m_hasHeader)
+      ok = readGroupHeaderInfo(true,99);
+    if (ok) pos = input->tell();
+    else input->seek(pos, WPX_SEEK_SET);
+    if (ok && m_state->m_hasFooter)
+      ok = readGroupHeaderInfo(false,99);
+    if (ok) pos = input->tell();
+    else input->seek(pos, WPX_SEEK_SET);
+  }
+
+  MSKParserInternal::Zone::Type const type = MSKParserInternal::Zone::MAIN;
+  MSKParserInternal::Zone newZone(type, m_state->m_zoneMap.size());
+  m_state->m_zoneMap.insert(std::map<int,MSKParserInternal::Zone>::value_type(int(type),newZone));
+  MSKParserInternal::Zone &mainZone = m_state->m_zoneMap.find(int(type))->second;
   while (!input->atEOS()) {
     pos = input->tell();
-    int val = input->readLong(1);
-    input->seek(-1, WPX_SEEK_CUR);
-    bool ok = false;
-    switch(val) {
-    case 0: {
-      MWAWEntry pict;
-      int pictId = m_graphParser->getEntryPicture(pict);
-      if ((ok=(pictId >= 0)))
-        input->seek(pict.end(), WPX_SEEK_SET);
+    if (!readZone(mainZone)) {
+      input->seek(pos, WPX_SEEK_SET);
       break;
     }
-    case 1: {
-      MWAWEntry pict;
-      int pictId = m_graphParser->getEntryPictureV1(pict);
-      if ((ok=(pictId >= 0)))
-        input->seek(pict.end(), WPX_SEEK_SET);
-      break;
-    }
-    case 2:
-      ok = readDocumentInfo();
-      break;
-    case 3: {
-      MWAWEntry group;
-      ok = readGroup(group, 2);
-      break;
-    }
-    default:
-      break;
-    }
-    if (ok) continue;
-    input->seek(pos, WPX_SEEK_SET);
-    break;
   }
+
+  mainZone.m_textId = m_textParser->createZones(-1, true);
 
   pos = input->tell();
-  bool ok = m_textParser->createZones();
-  if (ok)
-    pos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
 
-  if (!input->atEOS()) {
-    ascii().addPos(pos);
-    ascii().addNote("Entries(End)");
-    ascii().addPos(pos+100);
-    ascii().addNote("_");
-  }
+  if (!input->atEOS())
+    ascii().addPos(input->tell());
+  ascii().addNote("Entries(End)");
+  ascii().addPos(pos+100);
+  ascii().addNote("_");
 
   // ok, prepare the data
   m_state->m_numPages = 1;
   std::vector<int> linesH, pagesH;
-  if (m_textParser->getLinesPagesHeight(linesH, pagesH))
-    m_graphParser->computePositions(linesH, pagesH);
+  if (m_textParser->getLinesPagesHeight(mainZone.m_textId, linesH, pagesH))
+    m_graphParser->computePositions(mainZone.m_zoneId, linesH, pagesH);
 
-  return ok;
+  return true;
 }
 
 
@@ -462,6 +564,54 @@ bool MSKParser::createZones()
 // Low level
 //
 ////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////
+// read a generic zone
+////////////////////////////////////////////////////////////
+bool MSKParser::readZone(MSKParserInternal::Zone &zone)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+
+  MWAWEntry pict;
+  int val = input->readLong(1);
+  input->seek(-1, WPX_SEEK_CUR);
+  switch(val) {
+  case 0: {
+    MWAWEntry pict;
+    int pictId = m_graphParser->getEntryPicture(zone.m_zoneId, pict);
+    if (pictId >= 0) {
+      input->seek(pict.end(), WPX_SEEK_SET);
+      return true;
+    }
+    break;
+  }
+  case 1: {
+    MWAWEntry pict;
+    int pictId = m_graphParser->getEntryPictureV1(zone.m_zoneId, pict);
+    if (pictId >= 0) {
+      input->seek(pict.end(), WPX_SEEK_SET);
+      return true;
+    }
+    break;
+  }
+  case 2:
+    if (readDocumentInfo())
+      return true;
+    break;
+  case 3: {
+    MWAWEntry group;
+    if (readGroup(zone, group, 2))
+      return true;
+    break;
+  }
+  default:
+    break;
+  }
+
+  input->seek(pos, WPX_SEEK_SET);
+  return false;
+}
 
 ////////////////////////////////////////////////////////////
 // read the header
@@ -483,8 +633,12 @@ bool MSKParser::checkHeader(MWAWHeader *header, bool strict)
   int vers = input->readULong(4);
   switch (vers) {
   case 11:
+#ifndef DEBUG
+    return false;
+#else
     m_state->m_version = 4;
     break; // no-text Works4 file have classic header
+#endif
   case 9:
     m_state->m_version = 3;
     break;
@@ -545,7 +699,7 @@ bool MSKParser::checkHeader(MWAWHeader *header, bool strict)
   if (m_state->m_docType != MWAWDocument::K_TEXT)
     return false;
 
-  if (m_state->m_version < 1 || m_state->m_version > 2)
+  if (m_state->m_version < 1 || m_state->m_version > 3)
     return false;
 #endif
 
@@ -678,6 +832,10 @@ bool MSKParser::readDocumentInfo()
   f.str("");
   f << "DocInfo-1:";
   int val = input->readLong(2);
+  if ((val & 0x0400) && vers >= 3) {
+    f << "titlepage,";
+    val &= 0xFBFF;
+  }
   if (val) f << "unkn=" << val << ",";
   if (vers <= 2) {
     for (int wh = 0; wh < 2; wh++) {
@@ -712,7 +870,18 @@ bool MSKParser::readDocumentInfo()
   int numData = (endPos - input->tell())/2;
   for (int i = 0; i < numData; i++) {
     val = input->readLong(2);
-    if (val) f << "g" << i << "=" << val << ",";
+    switch(i) {
+    case 2:
+      if (val!=1) f << "firstPageNumber=" << val << ",";
+      break;
+    case 3:
+      if (val!=1) f << "firstNoteNumber=" << val << ",";
+      break;
+    default:
+      if (val)
+        f << "g" << i << "=" << val << ",";
+      break;
+    }
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -723,11 +892,11 @@ bool MSKParser::readDocumentInfo()
 }
 
 ////////////////////////////////////////////////////////////
-// read the print info
+// read a basic zone info
 ////////////////////////////////////////////////////////////
-bool MSKParser::readGroup(MWAWEntry &zone, int check)
+bool MSKParser::readGroup(MSKParserInternal::Zone &zone, MWAWEntry &entry, int check)
 {
-  zone = MWAWEntry();
+  entry = MWAWEntry();
   MWAWInputStreamPtr input=getInput();
   if (input->atEOS()) return false;
 
@@ -750,16 +919,16 @@ bool MSKParser::readGroup(MWAWEntry &zone, int check)
   if (size != blockSize)
     f << "end=" << std::hex << pos+size << std::dec << ",";
 
-  zone.setBegin(pos);
-  zone.setLength(size);
-  zone.setType("GroupHeader");
+  entry.setBegin(pos);
+  entry.setLength(size);
+  entry.setType("GroupHeader");
 
-  if (!checkIfPositionValid(zone.end())) {
+  if (!checkIfPositionValid(entry.end())) {
     if (!checkIfPositionValid(pos+blockSize)) {
       MWAW_DEBUG_MSG(("MSKParser::readGroup: can not determine group %d size \n", docId));
       return false;
     }
-    zone.setLength(blockSize);
+    entry.setLength(blockSize);
   }
 
   if (check <= 0) return true;
@@ -791,25 +960,122 @@ bool MSKParser::readGroup(MWAWEntry &zone, int check)
 #if 0
   if (check < 99) return true;
   if (m_state->m_docId >= 0 && docId != m_state->m_docId)
-    MWAW_DEBUG_MSG(("MSKParser::getNextEntryGroup: find a different zone id 0x%x: not implemented\n", docId));
+    MWAW_DEBUG_MSG(("MSKParser::readGroup: find a different zone id 0x%x: not implemented\n", docId));
   else
     m_state->m_docId = docId;
 #endif
   MWAWEntry pictZone;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
-    if (m_graphParser->getEntryPicture(pictZone) >= 0)
+    if (m_graphParser->getEntryPicture(zone.m_zoneId, pictZone) >= 0)
       continue;
-    MWAW_DEBUG_MSG(("MSKParser::getNextEntryGroup: can not find the end of group \n"));
+    MWAW_DEBUG_MSG(("MSKParser::readGroup: can not find the end of group \n"));
     input->seek(pos, WPX_SEEK_SET);
     break;
   }
-  if (input->tell() < zone.end()) {
+  if (input->tell() < entry.end()) {
     ascii().addPos(input->tell());
     ascii().addNote("Entries(GroupData)");
-    input->seek(zone.end(), WPX_SEEK_SET);
+    input->seek(entry.end(), WPX_SEEK_SET);
   }
 
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// read a header/footer zone info
+////////////////////////////////////////////////////////////
+bool MSKParser::readGroupHeaderInfo(bool header, int check)
+{
+  if (version() < 3) return false;
+
+  MWAWInputStreamPtr input=getInput();
+  long debPos = input->tell();
+
+  long ptr = input->readULong(2);
+  if (input->atEOS()) return false;
+  if (ptr) {
+    if (check == 49) return false;
+    if (check == 99) {
+      MWAW_DEBUG_MSG(("MSKParser::readGroupHeaderInfo: find ptr=0x%lx\n", ptr));
+    }
+  }
+
+  libmwaw::DebugStream f;
+
+  int size = input->readLong(2)+4;
+  int realSize = 0x11;
+  if (size < realSize) return false;
+  if (input->readLong(2) != 0) return false;
+  f << "Entries(GroupHInfo)";
+  if (header)
+    f << "[header]";
+  else
+    f << "[footer]";
+  f << ": size=" << std::hex << size << std::dec << " BTXT";
+
+  if (!checkIfPositionValid(debPos+size)) return false;
+
+  input->seek(debPos+6, WPX_SEEK_SET);
+  int N=input->readLong(2);
+  f << ", N=" << N;
+  int dim[4];
+  for (int i = 0; i < 4; i++)
+    dim[i] = input->readLong(2);
+
+  Box2i box(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
+  if (box.size().x() < -2000 || box.size().y() < -2000 ||
+      box.size().x() > 2000 || box.size().y() > 2000 ||
+      box.min().x() < -200 || box.min().y() < -200) return false;
+  if (check == 49 && box.size().x() == 0 &&  box.size().y() == 0) return false;
+  f << ", BDBox =" << box;
+  int val = input->readULong(1);
+  if (val) f << ", flag=" << val;
+
+  input->seek(debPos+size, WPX_SEEK_SET);
+  if (check < 99) return true;
+  if (header) m_state->m_headerHeight = box.size().y();
+  else m_state->m_footerHeight = box.size().y();
+  MSKParserInternal::Zone::Type type=
+    header ? MSKParserInternal::Zone::HEADER : MSKParserInternal::Zone::FOOTER;
+  MSKParserInternal::Zone zone(type, m_state->m_zoneMap.size());
+
+  ascii().addPos(debPos);
+  ascii().addNote(f.str().c_str());
+  ascii().addPos(input->tell());
+
+  input->seek(debPos+realSize, WPX_SEEK_SET);
+  input->pushLimit(debPos+size);
+  bool limitSet = true;
+  for (int i = 0; i < N; i++) {
+    long pos = input->tell();
+    if (limitSet && pos==debPos+size) {
+      limitSet = false;
+      input->popLimit();
+    }
+    if (readZone(zone)) continue;
+    input->seek(pos, WPX_SEEK_SET);
+    zone.m_textId = m_textParser->createZones(N-i, false);
+    if (zone.m_textId >= 0)
+      break;
+    MWAW_DEBUG_MSG(("MSKParser::readGroupHeaderInfo: can not find end of group\n"));
+    input->seek(pos, WPX_SEEK_SET);
+  }
+  if (limitSet) input->popLimit();
+  if (long(input->tell()) < debPos+size) {
+    ascii().addPos(input->tell());
+    ascii().addNote("GroupHInfo-II");
+
+    input->seek(debPos+size, WPX_SEEK_SET);
+
+    ascii().addPos(debPos + size);
+    ascii().addNote("_");
+  }
+  //  m_graphParser->addDeltaToPositions(zone.m_zoneId, -1*box[0]);
+  if (m_state->m_zoneMap.find(int(type)) != m_state->m_zoneMap.end()) {
+    MWAW_DEBUG_MSG(("MSKParser::readGroupHeaderInfo: the zone already exists\n"));
+  } else
+    m_state->m_zoneMap.insert(std::map<int,MSKParserInternal::Zone>::value_type(int(type),zone));
   return true;
 }
 

@@ -131,8 +131,8 @@ struct Pattern {
 struct Zone {
   enum Type { Unknown, Basic, Group, Pict, Text};
   //! constructor
-  Zone() : m_subType(-1), m_pos(), m_dataPos(-1), m_fileId(-1), m_id(-1), m_page(-1), m_decal(), m_box(), m_line(-1),
-    m_lineWidth(2), m_lineColor(0,0,0), m_linePattern(Pattern::P_Percent, 1.0), m_lineFlags(0),
+  Zone() : m_subType(-1), m_zoneId(-1), m_pos(), m_dataPos(-1), m_fileId(-1), m_id(-1), m_page(-1), m_decal(), m_box(), m_line(-1),
+    m_lineType(2), m_lineWidth(-1), m_lineColor(0,0,0), m_linePattern(Pattern::P_Percent, 1.0), m_lineFlags(0),
     m_surfaceColor(255,255,255), m_surfacePattern(Pattern::P_None),m_extra(""), m_isSent(false) {
   }
   //! destructor
@@ -181,10 +181,14 @@ struct Zone {
     return res;
   }
 
-  MWAWPosition getPosition(bool local) const {
+  MWAWPosition getPosition(MWAWPosition::AnchorTo rel) const {
     MWAWPosition res;
     Box2f box = getLocalBox();
-    if (local || m_page < 0) {
+    if (rel==MWAWPosition::Paragraph) {
+      res = MWAWPosition(box.min()+m_decal, box.size(), WPX_POINT);
+      res.setRelativePosition(MWAWPosition::Paragraph);
+      res.m_wrapping =  MWAWPosition::WRunThrough;
+    } else if (rel!=MWAWPosition::Page || m_page < 0) {
       res = MWAWPosition(Vec2f(0,0), box.size(), WPX_POINT);
       res.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YTop);
     } else {
@@ -199,7 +203,7 @@ struct Zone {
   //! the virtual print function
   virtual void print(std::ostream &o) const;
 
-  //! return a string #rrggbb to code a color
+  //! return a string "#rrggbb" to code a color
   static std::string getColorString(Vec3uc const &col) {
     std::stringstream s;
     s << std::hex << std::setfill('0') << "#"
@@ -211,6 +215,8 @@ struct Zone {
 
   //! the type
   int m_subType;
+  //! the main zone id
+  int m_zoneId;
   //! the file position
   MWAWEntry m_pos;
   //! the data begin position
@@ -227,7 +233,9 @@ struct Zone {
   Box2f m_box;
   //! the line position(v1)
   int m_line;
-  //! the line width : 0= dotted, 1=half, 2=1, 3=2pt?, 4:4pt
+  //! the line type (v2) : 0= dotted, 1=half, 2=1, 3=2pt?, 4:4pt
+  int m_lineType;
+  //! the line width (v3, ...)
   int m_lineWidth;
   //! the line color
   Vec3uc m_lineColor;
@@ -247,7 +255,11 @@ struct Zone {
 
 void Zone::print(std::ostream &o) const
 {
-  if (m_fileId >= 0) o << "P" << m_fileId << ",";
+  if (m_fileId >= 0) {
+    o << "P" << m_fileId;
+    if (m_zoneId >= 0) o << "[" << m_zoneId << "],";
+    else o << ",";
+  }
   switch(m_subType) {
   case 0:
     o << "line,";
@@ -298,7 +310,7 @@ void Zone::print(std::ostream &o) const
   if (m_page>=0) o << "page=" << m_page << ",";
   if (m_decal.x() || m_decal.y()) o << "pos=" << m_decal << ",";
   o << "bdbox=" << m_box << ",";
-  switch(m_lineWidth) {
+  switch(m_lineType) {
   case 0:
     o << "line=dotted,";
     break;
@@ -306,6 +318,7 @@ void Zone::print(std::ostream &o) const
     o << "lineWidth=1/2pt,";
     break;
   case 2:
+    if (m_lineWidth >= 0) o << "lineWidth=" << m_lineWidth << "pt,";
     break;
   case 3:
     o << "lineWidth=2pt,";
@@ -314,15 +327,15 @@ void Zone::print(std::ostream &o) const
     o << "lineWidth=4pt,";
     break;
   default:
-    o << "#lineWidth=" << m_lineWidth << ",";
+    o << "#lineType=" << m_lineType << ",";
     break;
   }
   if (m_linePattern.m_type != Pattern::P_Percent || m_linePattern.m_filled != 1.0)
     o << "linePattern=[" << m_linePattern << "],";
-  if (m_lineColor[0] || m_lineColor[0]|| m_lineColor[2])
+  if (m_lineColor[0] || m_lineColor[1]|| m_lineColor[2])
     o << "lineColor=" << int(m_lineColor[0]) << "x"
       << int(m_lineColor[1]) << "x" << int(m_lineColor[2]) << ",";
-  if (m_surfaceColor[0]!=255 || m_surfaceColor[0]!=255|| m_surfaceColor[2]!=255)
+  if (m_surfaceColor[0]!=255 || m_surfaceColor[1]!=255|| m_surfaceColor[2]!=255)
     o << "surfaceColor=" << int(m_surfaceColor[0]) << "x"
       << int(m_surfaceColor[1]) << "x" << int(m_surfaceColor[2]) << ",";
   if (m_surfacePattern.hasPattern())
@@ -331,9 +344,21 @@ void Zone::print(std::ostream &o) const
      0: black, 13: ~gray10, 26: horizontal
   */
   if (m_line >= 0) o << "line=" << m_line << ",";
-  if (m_lineFlags&1) o << "endArrow,";
-  if (m_lineFlags& 0xFE)
-    o << "#lineFlags=" << std::hex << int(m_lineFlags&0xFE) << std::dec << ",";
+  switch(m_lineFlags&3) {
+  case 0:
+    break;
+  case 1:
+    o << "endArrow,";
+    break;
+  case 2:
+    o << "doubleArrow,";
+    break;
+  default:
+    o << "#arrow=3,";
+    break;
+  }
+  if (m_lineFlags& 0xFC)
+    o << "#lineFlags=" << std::hex << int(m_lineFlags&0xFC) << std::dec << ",";
   if (m_extra.length()) o << m_extra;
 }
 ////////////////////////////////////////
@@ -386,8 +411,9 @@ struct BasicForm : public Zone {
   }
 
   virtual float needExtraBorderWidth() const {
-    switch(m_lineWidth) {
+    switch(m_lineType) {
     case 2:
+      if (m_lineWidth >= 0) return 0.5*(1+m_lineWidth);
       return 1.0;
     case 3:
       return 1.5;
@@ -417,12 +443,13 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
   type="";
   shared_ptr<MWAWPict> pict;
   float lineW = 1.0;
-  switch(m_lineWidth) {
+  switch(m_lineType) {
   case 0: // fixme dotted
   case 1:
     lineW = 0.5;
     break;
   case 2:
+    if (m_lineWidth >= 0) lineW = m_lineWidth;
     break;
   case 3:
     lineW = 2.0;
@@ -450,7 +477,15 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
   switch(m_subType) {
   case 0: {
     MWAWPictLine *pct=new MWAWPictLine(m_box.min(), m_box.max());
-    if (m_lineFlags & 1) pct->setArrow(1, true);
+    switch(m_lineFlags&3) {
+    case 2:
+      pct->setArrow(0, true);
+    case 1:
+      pct->setArrow(1, true);
+      break;
+    default:
+      break;
+    }
     if (lineW != 1.0) pct->setLineWidth(lineW);
     if (hasLineColor) pct->setLineColor(lineColor[0], lineColor[1], lineColor[2]);
     pict.reset(pct);
@@ -579,7 +614,7 @@ bool DataPict::getBinaryData(MWAWInputStreamPtr ip,
 //! Internal: the picture of a MSKGraph
 struct TextBox : public Zone {
   //! constructor
-  TextBox(Zone const &z) : Zone(z), m_numPositions(-1), m_fontsList(), m_positions(), m_formats(), m_text(""), m_sentPhase(0)
+  TextBox(Zone const &z) : Zone(z), m_numPositions(-1), m_fontsList(), m_positions(), m_formats(), m_text(""), m_justify(libmwaw::JustificationLeft), m_sentPhase(0)
   { }
 
   //! return the type
@@ -589,6 +624,25 @@ struct TextBox : public Zone {
   //! operator<<
   virtual void print(std::ostream &o) const {
     Zone::print(o);
+    switch(m_justify) {
+    case libmwaw::JustificationLeft:
+      break;
+    case libmwaw::JustificationCenter:
+      o << ",centered";
+      break;
+    case libmwaw::JustificationRight:
+      o << ",right";
+      break;
+    case libmwaw::JustificationFull:
+      o << ",full";
+      break;
+    case libmwaw::JustificationFullAllLines:
+      o << ",fullAllLines";
+      break;
+    default:
+      o << ",#just=" << m_justify;
+      break;
+    }
   }
 
   //! add frame parameters to propList (if needed )
@@ -607,6 +661,8 @@ struct TextBox : public Zone {
   std::vector<int> m_formats;
   //! the text
   std::string m_text;
+  //! the paragraph alignement
+  libmwaw::Justification m_justify;
   //! 0 if not sent, 1 if the frame is already sent (and we write the text)
   bool m_sentPhase;
 };
@@ -651,7 +707,7 @@ int MSKGraph::version() const
   return m_state->m_version;
 }
 
-int MSKGraph::numPages() const
+int MSKGraph::numPages(int zoneId) const
 {
   if (m_state->m_numPages > 0)
     return m_state->m_numPages;
@@ -660,6 +716,7 @@ int MSKGraph::numPages() const
   int numZones = m_state->m_zonesList.size();
   for (int i = 0; i < numZones; i++) {
     shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[i];
+    if (zoneId >= 0 && zone->m_zoneId!=zoneId) continue;
     if (zone->m_page > maxPage)
       maxPage = zone->m_page;
   }
@@ -684,16 +741,25 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
 
   libmwaw::DebugStream f;
   int val;
+  if (vers >= 3) {
+    val = m_input->readLong(2);
+    if (vers == 4)
+      pict.m_page = val;
+    else if (val)
+      f << "f0=" << val << ",";
+  }
+  // color
+  for (int i = 0; i < 2; i++) {
+    int rId = m_input->readLong(2);
+    int cId = (vers <= 2) ? rId+1 : rId;
+    Vec3uc col;
+    if (m_mainParser->getColor(cId,col)) {
+      if (i) pict.m_surfaceColor = col;
+      else pict.m_lineColor = col;
+    } else
+      f << "#col" << i << "=" << rId << ",";
+  }
   if (vers <= 2) {
-    for (int i = 0; i < 2; i++) {
-      int cId = m_input->readLong(2)+1;
-      Vec3uc col;
-      if (m_mainParser->getColor(cId,col)) {
-        if (i) pict.m_surfaceColor = col;
-        else pict.m_lineColor = col;
-      } else
-        f << "#col" << i << "=" << cId-1 << ",";
-    }
     for (int i = 0; i < 2; i++) {
       int pId = m_input->readLong(2);
       float percent = MSKGraphInternal::Pattern::getPercentV2(pId);
@@ -703,18 +769,44 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
       if (i) pict.m_surfacePattern = MSKGraphInternal::Pattern(type, percent);
       else pict.m_linePattern = MSKGraphInternal::Pattern(type, percent);
     }
-    pict.m_lineWidth=m_input->readLong(2);
+    pict.m_lineType=m_input->readLong(2);
   } else {
-    pict.m_page = m_input->readLong(2);
-    f << "unkn=[";
-    for (int i = 0; i < 11; i++) {  // fl[9] == pensize ?
-      val = m_input->readLong(2);
-      if (val)
-        f << val << ",";
-      else
-        f << "_,";
+    for (int i = 0; i < 2; i++) {
+      if (i) f << "surface";
+      else f << "line";
+      f << "Pattern=[";
+      val =  m_input->readULong(2);
+      if (val != 0xFA3) f << std::hex << val << ",";
+      else f << "_,";
+      int patId = m_input->readULong(2);
+      if (patId) f << patId << ",";
+      else f << "_,";
+      val = m_input->readULong(2);
+      if (val >= 0 && val <= 100) {
+        MSKGraphInternal::Pattern pat(patId ? MSKGraphInternal::Pattern::P_Percent : MSKGraphInternal::Pattern::P_None, val/100.);
+        if (i) pict.m_surfacePattern = pat;
+        else pict.m_linePattern = pat;
+      } else
+        f << "##";
+      f << val << "%,";
+      f << "],";
     }
-    f << "],";
+    int penSize[2];
+    for (int i = 0; i < 2; i++)
+      penSize[i] = m_input->readLong(2);
+    if (penSize[0]==penSize[1])
+      pict.m_lineWidth=penSize[0];
+    else {
+      f << "pen=" << penSize[0] << "x" << penSize[1] << ",";
+      pict.m_lineWidth=(penSize[0]+penSize[1]+1)/2;
+    }
+    if (pict.m_lineWidth < 0 || pict.m_lineWidth > 10) {
+      f << "##penSize=" << pict.m_lineWidth << ",";
+      pict.m_lineWidth = 1;
+    }
+    val =  m_input->readLong(2);
+    if (val)
+      f << "f1=" << val << ",";
   }
 
   int offset[4];
@@ -744,7 +836,7 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
   return true;
 }
 
-int MSKGraph::getEntryPicture(MWAWEntry &zone)
+int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
 {
   int zId = -1;
   MSKGraphInternal::Zone pict;
@@ -752,7 +844,7 @@ int MSKGraph::getEntryPicture(MWAWEntry &zone)
 
   if (!readPictHeader(pict))
     return zId;
-
+  pict.m_zoneId = zoneId;
   pict.m_pos.setBegin(pos);
   libmwaw::DebugStream f;
   int vers = version();
@@ -843,7 +935,7 @@ int MSKGraph::getEntryPicture(MWAWEntry &zone)
       for (int i = 0; i < 4; i++)
         dim[i] = m_input->readLong(4)/65536.;
       Box2f box(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
-      f << "bdbox=" << box << ",";
+      f << "bdbox2=" << box << ",";
       break;
     }
     default:
@@ -890,7 +982,7 @@ int MSKGraph::getEntryPicture(MWAWEntry &zone)
     break;
   }
   case 7: {
-    val =  m_input->readULong(2);
+    val =  m_input->readULong(vers >= 3 ? 1 : 2);
     if (val) f << "g1=" << val << ",";
     // skip size (already read)
     pict.m_dataPos = m_input->tell()+2;
@@ -903,18 +995,34 @@ int MSKGraph::getEntryPicture(MWAWEntry &zone)
     res = readGroup(pict);
     break;
   case 9: { // textbox normal
+    libmwaw::Justification justify = libmwaw::JustificationLeft;
+    val = m_input->readLong(2);
+    switch(val) {
+    case 0:
+      break;
+    case 1:
+      justify = libmwaw::JustificationCenter;
+      break;
+    case 2:
+      justify = libmwaw::JustificationFull;
+      break;
+    case -1:
+      justify = libmwaw::JustificationRight;
+      break;
+    default:
+      f << "##align=" << val << ",";
+      break;
+    }
     if (vers >= 3) {
-      val = m_input->readLong(2);
-      if (val) f << "g1=" << val << ",";
-      f << "h=" << m_input->readLong(4);
-      for (int i = 0; i < 5; i++) {
+      f << "h=" << m_input->readLong(4) << ",";
+      for (int i = 0; i < 6; i++) {
         val = m_input->readLong(2);
         if (val) f << "g" << i+2 << "=" << val << ",";
       }
       pict.m_dataPos += 0x10;
     }
     f << "Fl=[";
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 4; i++) {
       val = m_input->readLong(2);
       if (val) f << std::hex << val << std::dec << ",";
       else f << ",";
@@ -932,6 +1040,7 @@ int MSKGraph::getEntryPicture(MWAWEntry &zone)
       << ", "	<< std::dec << long(off[3]-off[0]) << "]";
 
     MSKGraphInternal::TextBox *text  = new MSKGraphInternal::TextBox(pict);
+    text->m_justify = justify;
     text->m_numPositions = numPos;
     res.reset(text);
     if (!readText(*text)) return zId;
@@ -963,18 +1072,20 @@ int MSKGraph::getEntryPicture(MWAWEntry &zone)
   return zId;
 }
 
-void MSKGraph::computePositions(std::vector<int> &linesH, std::vector<int> &pagesH)
+void MSKGraph::computePositions(int zoneId, std::vector<int> &linesH, std::vector<int> &pagesH)
 {
   int numLines = linesH.size();
   int numPages = pagesH.size();
   int numZones = m_state->m_zonesList.size();
   for (int i = 0; i < numZones; i++) {
     shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[i];
+    if (zone->m_zoneId != -1 && zoneId != zone->m_zoneId) continue;
     if (zone->m_line >= 0) {
-      int h;
+      int h = 0;
       if (zone->m_line >= numLines) {
         MWAW_DEBUG_MSG(("MSKGraph::computePositions: linepos is too big\n"));
-        h = linesH[numLines-1];
+        if (numLines)
+          h = linesH[numLines-1];
       } else
         h = linesH[zone->m_line];
       zone->m_decal = Vec2f(0, h);
@@ -994,7 +1105,7 @@ void MSKGraph::computePositions(std::vector<int> &linesH, std::vector<int> &page
   }
 }
 
-int MSKGraph::getEntryPictureV1(MWAWEntry &zone)
+int MSKGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone)
 {
   int zId = -1;
   if (m_input->atEOS()) return zId;
@@ -1009,6 +1120,7 @@ int MSKGraph::getEntryPictureV1(MWAWEntry &zone)
   if (size < 22) return zId;
 
   shared_ptr<MSKGraphInternal::DataPict> pict(new MSKGraphInternal::DataPict);
+  pict->m_zoneId = zoneId;
   pict->m_subType = 0x100;
   pict->m_pos.setBegin(pos);
   pict->m_pos.setLength(size);
@@ -1090,7 +1202,7 @@ shared_ptr<MSKGraphInternal::GroupZone> MSKGraph::readGroup(MSKGraphInternal::Zo
   int childId;
   for (int i = 0; i < N; i++) {
     long pos = m_input->tell();
-    childId = getEntryPicture(childZone);
+    childId = getEntryPicture(header.m_zoneId, childZone);
     if (childId < 0) {
       MWAW_DEBUG_MSG(("MSKGraph::readGroup: can not find child\n"));
       m_input->seek(pos, WPX_SEEK_SET);
@@ -1257,6 +1369,7 @@ void MSKGraph::send(MSKGraphInternal::TextBox &textBox)
   MSKGraphInternal::Font actFont;
   actFont.m_font = MWAWFont(20,12);
   setProperty(actFont);
+  m_listener->setParagraphJustification(textBox.m_justify);
   int numFonts = textBox.m_fontsList.size();
   int actFormatPos = 0;
   int numFormats = textBox.m_formats.size();
@@ -1355,7 +1468,7 @@ bool MSKGraph::readFont(MSKGraphInternal::Font &font)
   return true;
 }
 
-void MSKGraph::send(int id, bool local)
+void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
 {
   if (id < 0 || id >= int(m_state->m_zonesList.size())) {
     MWAW_DEBUG_MSG(("MSKGraph::send: can not find zone %d\n", id));
@@ -1365,8 +1478,8 @@ void MSKGraph::send(int id, bool local)
   shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[id];
   zone->m_isSent = true;
 
-  MWAWPosition pictPos = zone->getPosition(local);
-  if (!local)
+  MWAWPosition pictPos = zone->getPosition(anchor);
+  if (anchor == MWAWPosition::Page)
     pictPos.setOrigin(pictPos.origin()+72.*m_mainParser->getPageTopLeft());
   WPXPropertyList extras;
   zone->fillFramePropertyList(extras);
@@ -1402,12 +1515,13 @@ void MSKGraph::send(int id, bool local)
   MWAW_DEBUG_MSG(("MSKGraph::send: can not send zone %d\n", id));
 }
 
-void MSKGraph::sendAll()
+void MSKGraph::sendAll(int zoneId, bool mainZone)
 {
   for (int i = 0; i < int(m_state->m_zonesList.size()); i++) {
     shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[i];
-    if (zone->m_isSent) continue;
-    send(i, false);
+    if (zoneId >= 0 && zoneId!=zone->m_zoneId)
+      continue;
+    send(i, mainZone ? MWAWPosition::Page : MWAWPosition::Paragraph);
   }
 }
 
@@ -1416,7 +1530,7 @@ void MSKGraph::flushExtra()
   for (int i = 0; i < int(m_state->m_zonesList.size()); i++) {
     shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[i];
     if (zone->m_isSent) continue;
-    send(i);
+    send(i, MWAWPosition::Char);
   }
 }
 

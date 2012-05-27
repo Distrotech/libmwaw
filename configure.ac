@@ -6,8 +6,8 @@ AC_PREREQ([2.60])
 # Version informations
 # ====================
 m4_define([libmwaw_version_major],[0])
-m4_define([libmwaw_version_minor],[0])
-m4_define([libmwaw_version_micro],[3])
+m4_define([libmwaw_version_minor],[1])
+m4_define([libmwaw_version_micro],[0])
 m4_define([libmwaw_version],[libmwaw_version_major.libmwaw_version_minor.libmwaw_version_micro])
 
 # =============
@@ -126,7 +126,7 @@ AS_IF([test x"$enable_werror" != "xno"], [
 	CXXFLAGS="$CXXFLAGS -Werror"
 ])
 AC_ARG_ENABLE([weffc],
-	[AS_HELP_STRING([--disable-weffc], [Disable -Weffc++ warnings, usefull for all gcc compiler or old boost implementation])],
+	[AS_HELP_STRING([--disable-weffc], [Disable -Weffc++ warnings, usefull when using an old version of gcc or some boost version])],
 	[enable_weffc="$enableval"],
 	[enable_weffc=yes]
 )
@@ -304,7 +304,7 @@ docs/Makefile
 docs/doxygen/Makefile
 build/Makefile
 build/win32/Makefile
-libmwaw-0.0.pc
+libmwaw-0.1.pc
 libmwaw.spec
 libmwaw-zip
 autopackage/Makefile

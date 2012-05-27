@@ -15,8 +15,9 @@ Unix/Linux/Darwin
 Installation on Unix/Linux/Darwin should be simple.
 Simply execute the following sequence of commands:
 
-aclocal ; autoconf; automake
-./configure ; make ; su -c 'make install'
+./configure [--with-sharedptr=boost|c++11|tr1]; make ; sudo make install
+
+Myself, I build using following options: "./configure --with-sharedptr=tr1"
 
 Extensive installation instructions can be found in the INSTALL file.
 
@@ -24,7 +25,7 @@ Windows
 =========================================
 Beta tester needed to test the compilation and report problems
 
-Windows - Microsoft(tm) Visual Studio/C++ ( NO TEST : help needed... )
+Windows - Microsoft(tm) Visual Studio/C++ ( can not test, so probably broken : HELP NEEDED... )
 =========================================
 
 A workspace for MSVC6 can be found in the ./build/win32/ directory.
@@ -82,8 +83,7 @@ not found, the generated configure script will be ending with an error.
   ./configure [--prefix=<target>] [--enable-static] [--disable-shared] [--with-sharedptr=boost|c++11|tr1]
 
 By default, the configure script uses as prefix "/usr/local" and configures to
-create only shared libraries. Myself, I build using following options:
-"./configure --with-sharedptr=tr1"
+create only shared libraries.
 
 4. Nearly done. Make sure you have a clean build by running:
  
@@ -98,10 +98,18 @@ creation), the libtool import libraries are not created. Make will try to instal
 them and will stop with error. The "-i" option makes it to report the error, but
 not to stop. Like that the installation will succeed.
 
-6. If we want to compil mwaw2odt ( which will be a part of writerperfect), you
-must download the lastest version :
+Mwaw2odt
+===============
+If we want to compile mwaw2odt ( which is a part of writerperfect), you
+must download the lastest git version :
   git clone git://libwpd.git.sourceforge.net/gitroot/libwpd/writerperfect
-and then recompile it.... 
+and then depending on the version:
+  - version 0.0.?: you can recompile it directly. 
+  - pre-version 0.1.?: you will have to update the libmwaw version
+     in configure.ac ( ie. replace libmwaw-0.0 by libmwaw-0.1 ) and
+     to remove the line <<#include "MWAWPropertyHandler.hxx">> in
+     cmdline/mwawObjectHandler.hxx, before launching autogen.sh and 
+     recompiling writerperfect.
 
 That's all folks! While no mailing exists, for more information, ask
 questions directly to osnola@users.sourceforge.net. Remember that Uncle Google can

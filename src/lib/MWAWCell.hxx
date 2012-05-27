@@ -39,7 +39,7 @@
 
 class WPXPropertyList;
 
-/** a structure used to defined the cell format, .. */
+/** a structure used to defined the cell format */
 class MWAWCellFormat
 {
 public:

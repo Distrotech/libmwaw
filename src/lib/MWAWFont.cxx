@@ -70,9 +70,9 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
   if (m_flags) o << ",";
 
   if (hasColor()) {
-    o << "col=(";
-    for (int i = 0; i < 3; i++) o << m_color[i] << ",";
-    o << "),";
+    o << "col=(" << std::hex;
+    for (int i = 0; i < 3; i++) o << int(m_color[i]) << ",";
+    o << std::dec << "),";
   }
   return o.str();
 }

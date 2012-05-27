@@ -66,10 +66,10 @@ struct LineZone {
       o << "Tabs,";
       break;
     default:
-      o << "##type==" << std::hex << (z.m_type >> 5) << std::dec << ",";
+      o << "##type=" << std::hex << (z.m_type >> 5) << std::dec << ",";
     }
     if (z.m_type&0x8) o << "note,";
-    if (z.m_type&0xF) o << "#type=" << std::hex << (z.m_type&0xf) << std::dec << ",";
+    if (z.m_type&0x7) o << "#type=" << std::hex << (z.m_type&0x7) << std::dec << ",";
     if (z.m_id) o  << "id=" << z.m_id << ",";
     if (z.m_flags&1) o << "softBreak,";
     if (z.m_flags&2) o << "hardBreak,";
@@ -84,6 +84,10 @@ struct LineZone {
   //! return true if this is a note
   bool isNote() const {
     return m_type&0x8;
+  }
+  //! return true if this is a tabs
+  bool isRuler() const {
+    return (m_type&0xE0)==0x80;
   }
   //! the type
   int m_type;
@@ -141,13 +145,16 @@ struct Paragraph : public MWAWParagraph {
 ////////////////////////////////////////
 //! Internal: the text zone
 struct TextZone {
+  enum Type { Header, Footer, Main, Unknown };
   //! constructor
-  TextZone() : m_id(0), m_zonesList(), m_linesHeight(), m_pagesHeight(), m_pagesPosition(), m_text(""), m_isSent(false) { }
+  TextZone() : m_type(Unknown), m_id(0), m_zonesList(), m_linesHeight(), m_pagesHeight(), m_pagesPosition(), m_footnoteMap(), m_text(""), m_isSent(false) { }
 
   //! return true if this is the main zone
-  bool mainLineZone() const {
-    return true;
+  bool isMain() const {
+    return m_type == Main;
   }
+  //! the zone type;
+  int m_type;
   //! the zone id
   int m_id;
   //! the list of zones
@@ -158,6 +165,8 @@ struct TextZone {
   std::vector<int> m_pagesHeight;
   //! the zone id -> hard break
   std::map<int, bool> m_pagesPosition;
+  //! the note id -> zone limit
+  std::map<int, Vec2i> m_footnoteMap;
   //! a string used to store v1-2 files header/footer
   std::string m_text;
   //! flag to know if the zone is send or not
@@ -170,14 +179,6 @@ struct State {
   //! constructor
   State() : m_version(-1), m_numColumns(1), m_zones(),
     m_numPages(1), m_actualPage(1), m_font(20, 12, 0) {
-  }
-  //! return a pointer to the mainLineZone
-  TextZone *mainLineZone() {
-    for (int i = 0; i < int(m_zones.size()); i++) {
-      if (m_zones[i].m_id) continue;
-      return &m_zones[i];
-    }
-    return 0;
   }
   //! the file version
   mutable int m_version;
@@ -214,71 +215,104 @@ int MSKText::version() const
   return m_state->m_version;
 }
 
-int MSKText::numPages() const
+int MSKText::numPages(int zoneId) const
 {
-  m_state->m_actualPage = 1;
-  m_state->m_numPages = 1;
-  if (m_state->mainLineZone())
-    m_state->m_numPages+= m_state->mainLineZone()->m_pagesPosition.size();
-  return m_state->m_numPages;
+  if (zoneId < 0 || zoneId >= int(m_state->m_zones.size())) {
+    MWAW_DEBUG_MSG(("MSKText::numPages: unknown zone %d\n", zoneId));
+    return 0;
+  }
+  MSKTextInternal::TextZone const &zone = m_state->m_zones[zoneId];
+  int numPages = 1 + zone.m_pagesPosition.size();
+  if (zone.isMain()) {
+    m_state->m_actualPage = 1;
+    m_state->m_numPages = numPages;
+  } else {
+    MWAW_DEBUG_MSG(("MSKText::numPages: called on no main zone: %d\n", zoneId));
+  }
+  return numPages;
 }
 
 bool MSKText::getLinesPagesHeight
-(std::vector<int> &lines, std::vector<int> &pages)
+(int zoneId, std::vector<int> &lines, std::vector<int> &pages)
 {
-  if (!m_state->mainLineZone()) {
-    lines.resize(0);
-    pages.resize(0);
+  lines.resize(0);
+  pages.resize(0);
+  if (zoneId < 0 || zoneId >= int(m_state->m_zones.size())) {
+    MWAW_DEBUG_MSG(("MSKText::getLinesPagesHeight: unknown zone %d\n", zoneId));
     return false;
   }
-  lines = m_state->mainLineZone()->m_linesHeight;
-  pages = m_state->mainLineZone()->m_pagesHeight;
+  lines = m_state->m_zones[zoneId].m_linesHeight;
+  pages = m_state->m_zones[zoneId].m_pagesHeight;
   return true;
 }
 
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
+int MSKText::getMainZone() const
+{
+  for (int i = 0; i < int(m_state->m_zones.size()); i++)
+    if (m_state->m_zones[i].m_type != MSKTextInternal::TextZone::Header &&
+        m_state->m_zones[i].m_type != MSKTextInternal::TextZone::Footer)
+      return i;
+  return -1;
+}
+
 int MSKText::getHeader() const
 {
   for (int i = 0; i < int(m_state->m_zones.size()); i++)
-    if (m_state->m_zones[i].m_id == 1)
-      return 1;
+    if (m_state->m_zones[i].m_type == MSKTextInternal::TextZone::Header)
+      return i;
   return -1;
 }
 
 int MSKText::getFooter() const
 {
   for (int i = 0; i < int(m_state->m_zones.size()); i++)
-    if (m_state->m_zones[i].m_id == 2)
-      return 2;
+    if (m_state->m_zones[i].m_type == MSKTextInternal::TextZone::Footer)
+      return i;
   return -1;
 }
 
 ////////////////////////////////////////////////////////////
 // try to find the different zone
 ////////////////////////////////////////////////////////////
-bool MSKText::createZones()
+int MSKText::createZones(int numLines, bool mainZone)
 {
   MSKTextInternal::LineZone zone;
+  int zoneId = m_state->m_zones.size();
   m_state->m_zones.push_back(MSKTextInternal::TextZone());
-  MSKTextInternal::TextZone &mainLineZone = m_state->m_zones.back();
-  mainLineZone.m_id = 0;
+  MSKTextInternal::TextZone &actualZone = m_state->m_zones.back();
+  actualZone.m_id = zoneId;
+  if (mainZone)
+    actualZone.m_type = MSKTextInternal::TextZone::Main;
+  bool hasNote=false;
+  int firstNote=0;
   while(!m_input->atEOS()) {
+    if (numLines==0) break;
+    if (numLines>0) numLines--;
     long pos = m_input->tell();
     if (!readZoneHeader(zone)) {
       m_input->seek(pos, WPX_SEEK_SET);
       break;
     }
-    mainLineZone.m_zonesList.push_back(zone);
+    if (!hasNote && zone.isNote()) {
+      firstNote = actualZone.m_zonesList.size();
+      hasNote = true;
+    }
+    actualZone.m_zonesList.push_back(zone);
     m_input->seek(zone.m_pos.end(), WPX_SEEK_SET);
   }
-  int numLineZones = mainLineZone.m_zonesList.size();
-  if (numLineZones == 0)
-    return false;
+  int numLineZones = actualZone.m_zonesList.size();
+  if (numLineZones == 0) {
+    m_state->m_zones.pop_back();
+    return -1;
+  }
 
-  update(mainLineZone);
-  return true;
+  update(actualZone);
+  if (hasNote)
+    updateNotes(actualZone, firstNote);
+  return zoneId;
 }
 
 void MSKText::update(MSKTextInternal::TextZone &zone)
@@ -305,6 +339,68 @@ void MSKText::update(MSKTextInternal::TextZone &zone)
   }
 }
 
+void MSKText::updateNotes(MSKTextInternal::TextZone &zone, int firstNote)
+{
+  int numLineZones = zone.m_zonesList.size();
+  if (firstNote < 0 || firstNote >= numLineZones) {
+    MWAW_DEBUG_MSG(("MSKText::updateNotes: can not find first note position\n"));
+    return;
+  }
+
+  MSKTextInternal::Font font;
+  int noteId = -1;
+  long lastIndentPos = -1;
+  Vec2i notePos;
+
+  for (int n = firstNote; n < numLineZones; n++) {
+    MSKTextInternal::LineZone const &z = zone.m_zonesList[n];
+    if (!z.isNote()) {
+      noteId=-1;
+      MWAW_DEBUG_MSG(("MSKText::updateNotes: find extra data in notes, stop recording note\n"));
+      break;
+    }
+    if (z.isRuler()) {
+      lastIndentPos = n;
+      continue;
+    }
+    if (z.m_pos.length() < 8) continue;
+    long actPos = z.m_pos.begin();
+    m_input->seek(actPos+6,WPX_SEEK_SET);
+
+    int c = m_input->readULong(1);
+    if ((c == 1 || c == 2) && readFont(font, z.m_pos.end())) {
+      if (long(m_input->tell())+2 > z.m_pos.end())
+        continue;
+      c = m_input->readULong(1);
+      if (c <= 4) {
+        if (long(m_input->tell())+2 > z.m_pos.end())
+          continue;
+        c = m_input->readULong(1);
+      }
+    }
+    if (c != 0x14) continue;
+    if (noteId >= 0) {
+      notePos[1] = (lastIndentPos != -1) ? lastIndentPos : n;
+      if (zone.m_footnoteMap.find(noteId)==zone.m_footnoteMap.end())
+        zone.m_footnoteMap[noteId] = notePos;
+      else {
+        MWAW_DEBUG_MSG(("MSKText::updateNotes: note %d is already defined, ignored\n", noteId));
+      }
+    }
+    noteId =  m_input->readULong(2);
+    notePos[0] = (lastIndentPos != -1) ? lastIndentPos : n;
+    lastIndentPos = -1;
+  }
+  if (noteId >= 0) {
+    notePos[1] = numLineZones;
+    if (zone.m_footnoteMap.find(noteId)==zone.m_footnoteMap.end())
+      zone.m_footnoteMap[noteId] = notePos;
+    else {
+      MWAW_DEBUG_MSG(("MSKText::updateNotes: note %d is already defined, ignored\n", noteId));
+    }
+  }
+}
+
 bool MSKText::readZoneHeader(MSKTextInternal::LineZone &zone) const
 {
   zone = MSKTextInternal::LineZone();
@@ -324,7 +420,7 @@ bool MSKText::readZoneHeader(MSKTextInternal::LineZone &zone) const
 ////////////////////////////////////////////////////////////
 // the text:
 ////////////////////////////////////////////////////////////
-bool MSKText::sendText(MSKTextInternal::LineZone &zone)
+bool MSKText::sendText(MSKTextInternal::LineZone &zone, int zoneId)
 {
   m_input->seek(zone.m_pos.begin()+6, WPX_SEEK_SET);
   int vers = version();
@@ -332,9 +428,9 @@ bool MSKText::sendText(MSKTextInternal::LineZone &zone)
   f << "Entries(TextZone):" << zone << ",";
   MSKTextInternal::Font actFont, font;
   actFont.m_font = m_state->m_font;
-  if (m_listener && zone.m_height >= 0)
+  if (m_listener && zone.m_height > 0)
     m_listener->setParagraphLineSpacing(zone.m_height, WPX_POINT);
-
+  bool firstChar = true;
   while(!m_input->atEOS()) {
     long pos = m_input->tell();
     if (pos >= zone.m_pos.end()) break;
@@ -380,8 +476,9 @@ bool MSKText::sendText(MSKTextInternal::LineZone &zone)
         case 0x15:
           MWAW_DEBUG_MSG(("MSKText::sendText: find unknown field type 0x15\n"));
           break;
-        case 0x14: // fixme
-          MWAW_DEBUG_MSG(("MSKText::sendText: footnote are not implemented\n"));
+        case 0x14:
+          if (!zone.isNote() || !firstChar)
+            m_mainParser->sendFootNote(zoneId, id);
           break;
         default:
           break;
@@ -397,6 +494,7 @@ bool MSKText::sendText(MSKTextInternal::LineZone &zone)
         else
           m_listener->insertUnicode(unicode);
       }
+      firstChar = false;
       break;
     }
   }
@@ -553,6 +651,10 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
   bool ok = true;
   for (int i = 0; i < 3; i++) {
     dim[i] = m_input->readULong(2);
+    if (i==0&&(dim[0]&0x8000)) {
+      dim[0] &= 0x7FFF;
+      f << "6linesByInches,";
+    }
     if (dim[i] > 3000) ok = false;
   }
   if (!ok) {
@@ -684,7 +786,9 @@ std::string MSKText::readHeaderFooterString(bool header)
   if (res.length()) {
     m_state->m_zones.push_back(MSKTextInternal::TextZone());
     MSKTextInternal::TextZone &zone = m_state->m_zones.back();
-    zone.m_id = header ? 1 : 2;
+    zone.m_id = int(m_state->m_zones.size())-1;
+    zone.m_type = header ? MSKTextInternal::TextZone::Header :
+                  MSKTextInternal::TextZone::Footer;
     zone.m_text = res;
   }
   return res;
@@ -695,7 +799,7 @@ std::string MSKText::readHeaderFooterString(bool header)
 // Low level
 //
 ////////////////////////////////////////////////////////////
-void MSKText::send(MSKTextInternal::TextZone &zone)
+void MSKText::send(MSKTextInternal::TextZone &zone, Vec2i limit)
 {
   int numZones = zone.m_zonesList.size();
   if (numZones == 0 && zone.m_text.length()) {
@@ -703,8 +807,30 @@ void MSKText::send(MSKTextInternal::TextZone &zone)
     zone.m_isSent = true;
     return;
   }
-  bool isMain = zone.mainLineZone();
-  for (int i = 0; i < numZones; i++) {
+  bool isMain = false;
+  Vec2i notePos(-1,-1);
+  if (limit[0] < 0) {
+    limit = Vec2i(0,numZones);
+    isMain = zone.isMain();
+    // find the notes in the text zones
+    std::map<int, Vec2i>::const_iterator noteIt;
+    for (noteIt=zone.m_footnoteMap.begin(); noteIt != zone.m_footnoteMap.end(); noteIt++) {
+      if (notePos[0]==-1) {
+        notePos = noteIt->second;
+        continue;
+      }
+      if (notePos[0] > noteIt->second[0])
+        notePos[0] = noteIt->second[0];
+      if (notePos[1] < noteIt->second[1])
+        notePos[1] = noteIt->second[1];
+    }
+  }
+
+  for (int i = limit[0]; i < limit[1]; i++) {
+    if (i == notePos[0]) {
+      i = notePos[1]-1;
+      continue;
+    }
     if (isMain && zone.m_pagesPosition.find(i) != zone.m_pagesPosition.end()) {
       MSKTextInternal::Font actFont;
       actFont.m_font = m_state->m_font;
@@ -717,20 +843,34 @@ void MSKText::send(MSKTextInternal::TextZone &zone)
       if (readParagraph(z, parag))
         setProperty(parag);
     } else
-      sendText(z);
+      sendText(z, zone.m_id);
   }
   zone.m_isSent = true;
 }
 
-void MSKText::sendZone(int zoneId)
+void MSKText::sendNote(int zoneId, int noteId)
 {
-  for (int i = 0; i < int(m_state->m_zones.size()); i++) {
-    if (m_state->m_zones[i].m_id != zoneId)
-      continue;
-    send(m_state->m_zones[i]);
+  if (zoneId < 0 || zoneId >= int(m_state->m_zones.size())) {
+    if (m_listener) m_listener->insertCharacter(' ');
+    MWAW_DEBUG_MSG(("MSKText::sendNote: unknown zone %d\n", zoneId));
     return;
   }
-  MWAW_DEBUG_MSG(("MSKText::sendZone: unknown zone %d\n", zoneId));
+  MSKTextInternal::TextZone &zone=m_state->m_zones[zoneId];
+  std::map<int, Vec2i>::const_iterator noteIt = zone.m_footnoteMap.find(noteId);
+  if (noteIt==zone.m_footnoteMap.end()) {
+    MWAW_DEBUG_MSG(("MSKText::sendNote: unknown note %d-%d\n", zoneId, noteId));
+    if (m_listener) m_listener->insertCharacter(' ');
+  } else
+    send(zone, noteIt->second);
+}
+
+void MSKText::sendZone(int zoneId)
+{
+  if (zoneId < 0 || zoneId >= int(m_state->m_zones.size())) {
+    MWAW_DEBUG_MSG(("MSKText::sendZone: unknown zone %d\n", zoneId));
+    return;
+  }
+  send(m_state->m_zones[zoneId]);
 }
 
 

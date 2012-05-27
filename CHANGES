@@ -1,5 +1,12 @@
 CHANGES:
 
+05/28/2012:
+- add a Microsoft Works 3.0 parser
+
+05/20/2012: ----- version 1.0 ---------
+- rename all the files to simplify the hierarchy,
+  which implies a major version bump:-~,
+
 04/14/2012: 
 - add Microsoft Works 1.0, 2.0 parser
 - add a crude parser for FullWrite Professional

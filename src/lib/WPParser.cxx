@@ -427,7 +427,7 @@ struct SectionInfo {
 };
 
 ////////////////////////////////////////
-/** Internal: class to store the beginning of all <<paragraph>> data */
+/** Internal: class to store the beginning of all paragraph data */
 struct ParagraphData {
   //! Constructor
   ParagraphData() : m_type(-1), m_typeFlag(0),

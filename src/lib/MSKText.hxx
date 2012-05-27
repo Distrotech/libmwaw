@@ -86,7 +86,7 @@ public:
   int version() const;
 
   /** returns the number of pages */
-  int numPages() const;
+  int numPages(int zoneId) const;
 
 protected:
 
@@ -95,8 +95,8 @@ protected:
     m_listener = listen;
   }
 
-  //! finds the different text zones
-  bool createZones();
+  //! finds the different text zones. Returns the zoneId or -1.
+  int createZones(int numLines=-1, bool mainZone=false);
 
   // reads the header/footer string : version v1-2
   std::string readHeaderFooterString(bool header);
@@ -104,8 +104,14 @@ protected:
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
-  //! send a zone ( 0: mainZone)
-  void sendZone(int zoneId=0);
+  //! send a zone
+  void sendZone(int zoneId);
+
+  //! send a note
+  void sendNote(int zoneId, int noteId);
+
+  //! returns a main zone id
+  int getMainZone() const;
 
   //! returns a header zone id ( or -1 )
   int getHeader() const;
@@ -114,7 +120,8 @@ protected:
   int getFooter() const;
 
   //! return the lines and pages height ( for v1, ...)
-  bool getLinesPagesHeight(std::vector<int> &lines,
+  bool getLinesPagesHeight(int zoneId,
+                           std::vector<int> &lines,
                            std::vector<int> &pages);
 
   //
@@ -127,8 +134,12 @@ protected:
   //! prepare a zone
   void update(MSKTextInternal::TextZone &zone);
 
-  //! sends the zone data to the listener
-  void send(MSKTextInternal::TextZone &zone);
+  //! prepare the note zones given a zone and the position of the first note
+  void updateNotes(MSKTextInternal::TextZone &zone, int firstNote);
+
+  /** sends the zone data to the listener. You can set limit to send
+      a subzone data ( like note ) */
+  void send(MSKTextInternal::TextZone &zone, Vec2i limit=Vec2i(-1,-1));
 
   //! tries to read a font
   bool readFont(MSKTextInternal::Font &font, long endPos);
@@ -143,7 +154,7 @@ protected:
   void setProperty(MSKTextInternal::Paragraph const &para);
 
   //! tries to send a text zone
-  bool sendText(MSKTextInternal::LineZone &zone);
+  bool sendText(MSKTextInternal::LineZone &zone, int zoneId);
 
   //! tries to send a string (for v1-2, header/footer zone)
   bool sendString(std::string &str);

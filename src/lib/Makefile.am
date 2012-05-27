@@ -16,100 +16,96 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LIBADD  = $(LIBMWAW_LIBS) @
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_DEPENDENCIES = @LIBMWAW_WIN32_RESOURCE@  
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic  -no-undefined
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
-	libmwaw_internal.cxx		\
-	MWAWOLEStream.cxx		\
-	MWAWPageSpan.cxx		\
-	libmwaw_internal.hxx		\
-	MWAWOLEStream.hxx		\
-	MWAWPageSpan.hxx		\
-					\
-	MWAWCell.cxx			\
-	MWAWContentListener.cxx		\
-	MWAWDocument.cxx		\
-	MWAWHeader.cxx			\
-	MWAWList.cxx			\
-	MWAWParagraph.cxx		\
-	MWAWSubDocument.cxx		\
-	MWAWTable.cxx			\
-	MWAWCell.hxx			\
-	MWAWContentListener.hxx		\
-	MWAWDocument.hxx		\
-	MWAWEntry.hxx			\
-	MWAWHeader.hxx			\
-	MWAWList.hxx			\
-	MWAWParagraph.hxx		\
-	MWAWParser.hxx			\
-	MWAWSubDocument.hxx		\
-	MWAWTable.hxx			\
-					\
-	MWAWDebug.cxx			\
-	MWAWInputStream.cxx		\
-	MWAWFontConverter.cxx			\
-	MWAWPrinter.cxx			\
-	MWAWOLEParser.cxx		\
-	MWAWPictBasic.cxx		\
-	MWAWPictBitmap.cxx		\
-	MWAWPictData.cxx		\
-	MWAWPictMac.cxx		\
-	MWAWPictOLEContainer.cxx	\
-	MWAWPropertyHandler.cxx	\
-	MWAWDebug.hxx			\
-	MWAWInputStream.hxx		\
-	MWAWFontConverter.hxx			\
-	MWAWPrinter.hxx			\
-	MWAWOLEParser.hxx		\
-	MWAWPict.hxx			\
-	MWAWPictBasic.hxx		\
-	MWAWPictBitmap.hxx		\
-	MWAWPictData.hxx		\
-	MWAWPictMac.hxx		\
-	MWAWPictOLEContainer.hxx	\
-	MWAWPosition.hxx		\
-	MWAWPropertyHandler.hxx	\
-					\
-	MWAWFont.cxx			\
 	libmwaw.hxx			\
-	MWAWFont.hxx			\
-					\
+	libmwaw_internal.cxx		\
+	libmwaw_internal.hxx		\
 	CWDatabase.cxx			\
-	CWGraph.cxx			\
-	CWParser.cxx			\
-	CWSpreadsheet.cxx		\
-	CWTable.cxx			\
-	CWText.cxx			\
-	FWParser.cxx			\
-	FWText.cxx			\
-	MSKGraph.cxx			\
-	MSKParser.cxx			\
-	MSKText.cxx			\
-	MSWParser.cxx			\
-	MSWText.cxx			\
-	MWParser.cxx			\
-	MWProParser.cxx			\
-	MWProStructures.cxx		\
-	WNParser.cxx			\
-	WNText.cxx			\
-	WPParser.cxx			\
 	CWDatabase.hxx			\
+	CWGraph.cxx			\
 	CWGraph.hxx			\
+	CWParser.cxx			\
 	CWParser.hxx			\
+	CWSpreadsheet.cxx		\
 	CWSpreadsheet.hxx		\
 	CWStruct.hxx			\
+	CWTable.cxx			\
 	CWTable.hxx			\
+	CWText.cxx			\
 	CWText.hxx			\
+	FWParser.cxx			\
 	FWParser.hxx			\
+	FWText.cxx			\
 	FWText.hxx			\
+	MSKGraph.cxx			\
 	MSKGraph.hxx			\
+	MSKParser.cxx			\
 	MSKParser.hxx			\
+	MSKText.cxx			\
 	MSKText.hxx			\
+	MSWParser.cxx			\
 	MSWParser.hxx			\
+	MSWText.cxx			\
 	MSWText.hxx			\
+	MWAWCell.cxx			\
+	MWAWCell.hxx			\
+	MWAWContentListener.cxx		\
+	MWAWContentListener.hxx		\
+	MWAWDebug.cxx			\
+	MWAWDebug.hxx			\
+	MWAWDocument.cxx		\
+	MWAWDocument.hxx		\
+	MWAWEntry.hxx			\
+	MWAWFont.cxx			\
+	MWAWFont.hxx			\
+	MWAWFontConverter.cxx		\
+	MWAWFontConverter.hxx		\
+	MWAWHeader.cxx			\
+	MWAWHeader.hxx			\
+	MWAWInputStream.cxx		\
+	MWAWInputStream.hxx		\
+	MWAWList.cxx			\
+	MWAWList.hxx			\
+	MWAWOLEParser.cxx		\
+	MWAWOLEParser.hxx		\
+	MWAWOLEStream.cxx		\
+	MWAWOLEStream.hxx		\
+	MWAWPageSpan.cxx		\
+	MWAWPageSpan.hxx		\
+	MWAWParagraph.cxx		\
+	MWAWParagraph.hxx		\
+	MWAWParser.hxx			\
+	MWAWPict.hxx			\
+	MWAWPictBasic.cxx		\
+	MWAWPictBasic.hxx		\
+	MWAWPictBitmap.cxx		\
+	MWAWPictBitmap.hxx		\
+	MWAWPictData.cxx		\
+	MWAWPictData.hxx		\
+	MWAWPictMac.cxx			\
+	MWAWPictMac.hxx			\
+	MWAWPictOLEContainer.cxx	\
+	MWAWPictOLEContainer.hxx	\
+	MWAWPosition.hxx		\
+	MWAWPrinter.cxx			\
+	MWAWPrinter.hxx			\
+	MWAWPropertyHandler.cxx		\
+	MWAWPropertyHandler.hxx		\
+	MWAWSubDocument.cxx		\
+	MWAWSubDocument.hxx		\
+	MWAWTable.cxx			\
+	MWAWTable.hxx			\
+	MWParser.cxx			\
 	MWParser.hxx			\
+	MWProParser.cxx			\
 	MWProParser.hxx			\
+	MWProStructures.cxx		\
 	MWProStructures.hxx		\
 	WNEntry.hxx			\
+	WNParser.cxx			\
 	WNParser.hxx			\
+	WNText.cxx			\
 	WNText.hxx			\
+	WPParser.cxx			\
 	WPParser.hxx
 
 if OS_WIN32

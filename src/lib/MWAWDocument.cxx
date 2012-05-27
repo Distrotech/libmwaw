@@ -81,6 +81,8 @@ the full 100%.
 /**
 Analyzes the content of an input stream to see if it can be parsed
 \param input The input stream
+\param type The document type ( filled if the file is supported )
+\param kind The document kind ( filled if the file is supported )
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */

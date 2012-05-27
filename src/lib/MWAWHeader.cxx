@@ -137,10 +137,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader(MWAWInputStreamPtr input)
     case 8:
       vers = 2;
       break;
-#ifdef DEBUG
     case 9:
       vers = 3;
       break;
+#ifdef DEBUG
     case 11: // a msworks 4 file ( but not a text file)
       vers = 4;
       break;
@@ -149,7 +149,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader(MWAWInputStreamPtr input)
       break;
     }
     if (vers > 0) {
-      if (vers <= 2) {
+      if (vers <= 3) {
         MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Microsoft Works %d.0 file\n", vers));
       } else {
         MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Microsoft Works %d.0 file[no parsing]\n", vers));

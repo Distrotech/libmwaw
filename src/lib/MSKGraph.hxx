@@ -86,16 +86,16 @@ public:
   int version() const;
 
   /** returns the number of pages */
-  int numPages() const;
+  int numPages(int zoneId) const;
 
   /** send a zone (textbox, ...) */
-  void send(int id, bool local=true);
+  void send(int id, MWAWPosition::AnchorTo anchor);
 
-  /** send page */
-  void sendAll();
+  /** send all the picture corresponding to a zone */
+  void sendAll(int zoneId, bool mainZone);
 
   /** try to update positions knowing pages and lines height */
-  void computePositions(std::vector<int> &linesHeight, std::vector<int> &pagesHeight);
+  void computePositions(int zoneId, std::vector<int> &linesHeight, std::vector<int> &pagesHeight);
 
 protected:
 
@@ -117,12 +117,12 @@ protected:
   /** checks if the next zone is a v1 picture and returns a zone
       id. If not, returns -1.
    */
-  int getEntryPictureV1(MWAWEntry &zone);
+  int getEntryPictureV1(int zoneId, MWAWEntry &zone);
 
   /** checks if the next zone is a v2 picture and returns a zone
       id. If not, returns -1.
    */
-  int getEntryPicture(MWAWEntry &zone);
+  int getEntryPicture(int zoneId, MWAWEntry &zone);
 
 
   //! try to read a text zone

@@ -56,6 +56,7 @@ typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 namespace MSKParserInternal
 {
 struct State;
+struct Zone;
 class SubDocument;
 }
 
@@ -124,18 +125,25 @@ protected:
   //! return the color which correspond to an index
   bool getColor(int id, Vec3uc &col) const;
 
+  //! try to read a generic zone
+  bool readZone(MSKParserInternal::Zone &zone);
   //! try to read the documentinfo ( zone2)
   bool readDocumentInfo();
   //! try to read a group zone (zone3)
-  bool readGroup(MWAWEntry &zone, int check);
+  bool readGroup(MSKParserInternal::Zone &zone, MWAWEntry &entry, int check);
+  //! try to read a zone information (zone0)
+  bool readGroupHeaderInfo(bool header, int check);
   //! try to send a textbox
   bool sendTextBox(int id, MWAWPosition const &pos, WPXPropertyList &extras);
+  /** try to send a note */
+  bool sendFootNote(int zoneId, int noteId);
 
-  /** try to send an entry
-
-  \note If id >= 0, the text parser zone id. If id < 0, the graph parser zone (-id-1)
-   */
-  void send(int id);
+  /** try to send a text entry */
+  void sendText(int id, int noteId=-1);
+  /** try to send a graphic entry */
+  void sendGraphic(int id);
+  /** try to send a zone */
+  void sendZone(int zoneType);
 
   //
   // low level
