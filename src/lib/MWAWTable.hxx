@@ -58,8 +58,8 @@ public:
   //! destructor
   virtual ~MWAWTableCell() { }
   //! set the bounding box (units in point)
-  void setBox(Box2f const &box) {
-    m_box = box;
+  void setBox(Box2f const &dim) {
+    m_box = dim;
   }
   //! return the bounding box
   Box2f const &box() const {
@@ -105,12 +105,14 @@ protected:
     //! comparaison function
     bool operator()(Point const &c1, Point const &c2) const {
       float diffF = c1.getPos(m_coord)-c2.getPos(m_coord);
-      if (diffF) return (diffF < 0);
+      if (diffF < 0) return true;
+      if (diffF > 0) return false;
       int diff = c2.m_which - c1.m_which;
       if (diff) return (diff < 0);
       diffF = c1.m_cell->box().size()[m_coord]
               - c2.m_cell->box().size()[m_coord];
-      if (diffF) return (diffF < 0);
+      if (diffF < 0) return true;
+      if (diffF > 0) return false;
       return long(c1.m_cell) < long(c2.m_cell);
     }
 
@@ -142,7 +144,7 @@ public:
 
   //! returns the number of cell
   int numCells() const {
-    return m_cellsList.size();
+    return int(m_cellsList.size());
   }
   //! returns the i^th cell
   shared_ptr<MWAWTableCell> get(int id);

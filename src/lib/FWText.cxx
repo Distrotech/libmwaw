@@ -74,10 +74,10 @@ struct PageInfo {
 
   //! returns true if the page has same color position
   bool isSimilar(PageInfo const &p) const {
-    int numColumns = m_columns.size();
-    if (numColumns != int(p.m_columns.size()))
+    size_t numColumns = m_columns.size();
+    if (numColumns != p.m_columns.size())
       return false;
-    for (int c = 0; c < numColumns; c++) {
+    for (size_t c = 0; c < numColumns; c++) {
       if (m_columns[c].m_box[0].x() != p.m_columns[c].m_box[0].x())
         return false;
       if (m_columns[c].m_box[1].x() != p.m_columns[c].m_box[1].x())
@@ -117,12 +117,12 @@ struct Zone {
   }
   //! return the col/page break
   std::vector<int> getBreaksPosition() const {
-    int numPages = m_pagesInfo.size();
+    size_t numPages = m_pagesInfo.size();
     int prevPos = 0;
     std::vector<int> res;
-    for (int p = 0; p < numPages; p++) {
+    for (size_t p = 0; p < numPages; p++) {
       PageInfo const &page = m_pagesInfo[p];
-      for (int c = 0; c < int(page.m_columns.size()); c++) {
+      for (size_t c = 0; c < page.m_columns.size(); c++) {
         int pos = page.m_columns[c].m_beginPos;
         if (pos < prevPos) {
           MWAW_DEBUG_MSG(("FWTextInternal::Zone:;getBreaksPosition pos go back\n"));
@@ -246,13 +246,13 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
     long actPos = input->tell();
     if (actPos >= endPos)
       break;
-    val = input->readULong(1);
+    val = (int)input->readULong(1);
     bool done = false;
     if (nextIsChar)
       nextIsChar = false;
     else {
       done = true;
-      int fFlags = font.flags();
+      uint32_t fFlags = font.flags();
       int id;
       switch(val) {
       case 0:
@@ -350,7 +350,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break; // insecable-
       case 0xb2:
         if (actPos+1 > endPos) break;
-        font.setSize(input->readULong(1));
+        font.setSize((int)input->readULong(1));
         fontSet=false;
         break;
       case 0xb3:
@@ -358,22 +358,22 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       case 0xc1:
         if (actPos+2 > endPos) break;
-        font.setId(input->readULong(2));
+        font.setId((int)input->readULong(2));
         fontSet = false;
         break;
       case 0xc7: // item id
         if (actPos+2 > endPos) break;
-        id = input->readULong(2); // fixme
+        id = (int)input->readULong(2); // fixme
         break;
       case 0xcb: // space/and or color
         if (actPos+2 > endPos) break;
-        id = input->readULong(2); // fixme
+        id = (int)input->readULong(2); // fixme
         break;
       case 0xd2:
       case 0xd3:
       case 0xd5: {
         if (actPos+2 > endPos) break;
-        id = input->readULong(2);
+        id = (int)input->readULong(2);
         int fId = m_state->getZoneId(id);
         if (fId != -1) {
           switch(val) {
@@ -385,6 +385,8 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
             break;
           case 0xd5:
             m_mainParser->sendText(fId, libmwaw::DOC_NOTE, MWAWContentListener::ENDNOTE);
+            break;
+          default:
             break;
           }
         }
@@ -459,13 +461,13 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       fontSet = true;
     }
     if (val >= 256)
-      m_listener->insertUnicode(val);
+      m_listener->insertUnicode((uint32_t) val);
     else {
-      int unicode = m_convertissor->unicode(font.id(), val);
+      int unicode = m_convertissor->unicode(font.id(), (unsigned char) val);
       if (unicode != -1)
-        m_listener->insertUnicode(unicode);
+        m_listener->insertUnicode((uint32_t) unicode);
       else if (val > 0x1f)
-        m_listener->insertCharacter(val);
+        m_listener->insertCharacter((unsigned char) val);
     }
   }
 }
@@ -486,17 +488,17 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
   bool rulerSent = true;
 
   std::vector<int> listBreaks = zone->getBreaksPosition();
-  int numBreaks = listBreaks.size();
-  int numPages = zone->m_pagesInfo.size();
+  int numBreaks = int(listBreaks.size());
+  int nPages = int(zone->m_pagesInfo.size());
   int actBreak = numBreaks, actBreakPos = -1;
   if (numBreaks) {
     actBreak = 0;
-    actBreakPos = listBreaks[actBreak];
+    actBreakPos = listBreaks[size_t(actBreak)];
   }
   int actPage = 0, actCol = 0, numCol=1;
   while(1) {
     pos = input->tell();
-    int type = input->readULong(2);
+    int type = (int)input->readULong(2);
     int lengthSz = 1;
     if (type & 0x8000)
       lengthSz = 2;
@@ -508,10 +510,10 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
       if (actCol < numCol-1 && numCol > 1) {
         m_listener->insertBreak(MWAW_COLUMN_BREAK);
         actCol++;
-      } else if (actPage >= numPages) {
+      } else if (actPage >= nPages) {
         MWAW_DEBUG_MSG(("FWText::send can not find the page information\n"));
       } else {
-        FWTextInternal::PageInfo const &page = zone->m_pagesInfo[actPage];
+        FWTextInternal::PageInfo const &page = zone->m_pagesInfo[size_t(actPage)];
         if (sendData) {
           if (zone->m_main)
             m_mainParser->newPage(++m_state->m_actualPage);
@@ -520,20 +522,20 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
         }
         actCol = 0;
 
-        if (!actPage || !page.isSimilar(zone->m_pagesInfo[actPage-1])) {
+        if (!actPage || !page.isSimilar(zone->m_pagesInfo[size_t(actPage-1)])) {
           if (m_listener->isSectionOpened())
             m_listener->closeSection();
 
-          int numC = page.m_columns.size();
+          size_t numC = page.m_columns.size();
 
           if (numC<=1 && sendData) m_listener->openSection();
           else {
             std::vector<int> colSize;
             colSize.resize(numC);
-            for (int i = 0; i < numC; i++) colSize[i] = page.m_columns[i].m_box.size().x();
+            for (size_t i = 0; i < numC; i++) colSize[i] = page.m_columns[i].m_box.size().x();
             m_listener->openSection(colSize, WPX_POINT);
           }
-          numCol = numC;
+          numCol = int(numC);
         }
 
         actPage++;
@@ -543,12 +545,12 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
       sendData = true;
       // update numbreaks
       if (++actBreak < numBreaks)
-        actBreakPos = listBreaks[actBreak];
+        actBreakPos = listBreaks[(size_t)actBreak];
       else
         actBreakPos = -1;
     }
     num++;
-    int numChar = input->readULong(lengthSz);
+    int numChar = (int)input->readULong(lengthSz);
     if ((lengthSz==1 && (numChar & 0x80)) ||
         long(input->tell()+numChar) > zone->m_end) {
       input->seek(pos, WPX_SEEK_SET);
@@ -557,54 +559,54 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
 
     if (type & 0x4000) {
       f << "f0=[";
-      val = input->readLong(1); // always 0 ?
+      val = (int)input->readLong(1); // always 0 ?
       if (val) f << "unkn=" << val << ",";
-      f << "N=" << input->readLong(2) << ","; // small number
-      val = input->readLong(1); // almost always 0, but find 1 and 0x49
+      f << "N=" << (int)input->readLong(2) << ","; // small number
+      val = (int)input->readLong(1); // almost always 0, but find 1 and 0x49
       if (val) f << "unkn1=" << val << ",";
-      val = input->readLong(2); // 0 or -1
+      val = (int)input->readLong(2); // 0 or -1
       if (val == -1) f << "*,";
       else if (val) f << "unkn2=" << val << ",";
-      val = input->readLong(1); // small number between 20 and -20?
+      val = (int)input->readLong(1); // small number between 20 and -20?
       if (val) f << "N1=" << val << ",";
-      val = input->readLong(1); // almost always 0, but find 80 ff, 66 cc
+      val = (int)input->readLong(1); // almost always 0, but find 80 ff, 66 cc
       if (val) f << "unkn3=" << std::hex << val << std::dec << ",";
-      val = input->readLong(2); // check me
+      val = (int)input->readLong(2); // check me
       if (val) f << "textId=" << val << ",";
-      f << "w=" << input->readLong(2) << ",";
+      f << "w=" << (int)input->readLong(2) << ",";
       f << "],";
     }
     if (type & 0x2000) {
       // small number between 1 and 4
-      f << "f1=" << input->readLong(1) << ",";
+      f << "f1=" << (int)input->readLong(1) << ",";
     }
     if (type & 0x1000) {
       // small number between 1 and 2
-      f << "f2=" << input->readLong(1) << ",";
+      f << "f2=" << (int)input->readLong(1) << ",";
     }
     if (type & 0x800) {
       // small number between 1 and 2
-      f << "f3=" << input->readLong(1) << ",";
+      f << "f3=" << (int)input->readLong(1) << ",";
     }
     if (type & 0x400) {
       // small number  1
-      f << "f4=" << input->readLong(1) << ",";
+      f << "f4=" << (int)input->readLong(1) << ",";
     }
     if (type & 0x200) {
       // small int between 0 and 0x4f : ident ?
-      f << "f5=" << input->readLong(2) << ",";
+      f << "f5=" << (int)input->readLong(2) << ",";
     }
     if (type & 0x100) {
       // small int between 0 and 0xb0 : ident ?
-      f << "f6=" << input->readLong(2) << ",";
+      f << "f6=" << (int)input->readLong(2) << ",";
     }
     if (type & 0x80) {
       // small int between 0 and 0x5b : ident ?
-      f << "f7=" << input->readLong(2) << ",";
+      f << "f7=" << (int)input->readLong(2) << ",";
     }
     if (type & 0x40) {
       // small int between 0 and 0xcf : ident ?
-      f << "f8=" << input->readLong(2) << ",";
+      f << "f8=" << (int)input->readLong(2) << ",";
     }
     if (type & 0x20) {
       /* first small number:
@@ -615,7 +617,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
       */
       f << "f9=[";
       for (int i = 0; i < 4; i++) {
-        val = input->readULong(1);
+        val = (int)input->readULong(1);
         if (val) f << std::hex << val << std::dec << ",";
         else f << "_,";
       }
@@ -624,20 +626,20 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     if (type & 0x10) {
       f << "font=[";
       // 0x3385 or 2|3|10|14|..
-      int fId = input->readLong(2);
-      int fSz = input->readULong(2);
+      int fId = (int)input->readLong(2);
+      int fSz = (int)input->readULong(2);
       font.setId(fId);
       font.setSize(fSz);
       f << "id=" << fId << ",";
       f << "sz=" << fSz << ",";
       // a small number ( often 1 but can be negative )
-      f << "unkn0=" << input->readLong(2) << ",";
-      val = input->readULong(2); // often 0, but also 3333, 8000, b6b0, cccd, e666 : gray color ?
+      f << "unkn0=" << (int)input->readLong(2) << ",";
+      val = (int)input->readULong(2); // often 0, but also 3333, 8000, b6b0, cccd, e666 : gray color ?
       if (val) f << "unkn1=" << std::hex << val << std::dec << ",";
       f << "],";
     }
     if (type & 0x8) { // font flag ?
-      val = input->readULong(2);
+      val = (int)input->readULong(2);
       f << "fa=" << std::hex << val << std::dec << ";";
     }
     if (type & 0x4) {
@@ -647,11 +649,11 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
       input->seek(2, WPX_SEEK_CUR);
     }
     if (type & 0x2) { // 0 or 2
-      val = input->readULong(2);
+      val = (int)input->readULong(2);
       f << "fb=" << val << ";";
     }
     if (type & 0x1) { // small number between 1 and 1b
-      val = input->readLong(2);
+      val = (int)input->readLong(2);
       f << "fc=" << val << ";";
     }
 
@@ -664,7 +666,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
       long actPos = input->tell();
       if (actPos >= lastPos)
         break;
-      val = input->readULong(1);
+      val = (int)input->readULong(1);
       if (nextIsChar) {
         if (val < 0x80)
           f << "#" << int(val);
@@ -689,14 +691,14 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
           MWAW_DEBUG_MSG(("FWText::send: can not find justify!!!!\n"));
           f << "##";
         } else { // negatif : pt, positif %?
-          int just = input->readLong(2);
+          int just = (int)input->readLong(2);
           if (just < 0) {
             ruler.m_spacings[0] = -just;
             ruler.m_spacingsInterlineUnit = WPX_POINT;
             rulerSent = false;
           }
-          f << "[just=" << input->readLong(2) << ",";
-          f << "typ?=" << input->readLong(2) << "]";
+          f << "[just=" << (int)input->readLong(2) << ",";
+          f << "typ?=" << (int)input->readLong(2) << "]";
         }
         break;
       case 0xc6:
@@ -704,7 +706,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
           MWAW_DEBUG_MSG(("FWText::send: can not find ruler!!!!\n"));
           f << "##";
         } else
-          f << "[rulerId=" << input->readLong(2) << "]";
+          f << "[rulerId=" << (int)input->readLong(2) << "]";
         break;
 
         // -------- relative to char style
@@ -767,14 +769,14 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
           MWAW_DEBUG_MSG(("FWText::send: can not read font size!!!!\n"));
           f << "##";
         } else
-          f << "[fs=" << input->readULong(1) << "]";
+          f << "[fs=" << (int)input->readULong(1) << "]";
         break;
       case 0xc1:
         if (actPos+2 > lastPos) {
           MWAW_DEBUG_MSG(("FWText::send: can not read font id!!!!\n"));
           f << "##";
         } else
-          f << "[fId=" << input->readULong(2) << "]";
+          f << "[fId=" << (int)input->readULong(2) << "]";
         break;
 
         // -------- relative to char
@@ -814,14 +816,14 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
           MWAW_DEBUG_MSG(("FWText::send: can not find item id!!!!\n"));
           f << "##";
         } else
-          f << "[itemId=" << input->readLong(2) << "]";
+          f << "[itemId=" << (int)input->readLong(2) << "]";
         break;
       case 0xcb:
         if (actPos+2 > lastPos) {
           MWAW_DEBUG_MSG(("FWText::send: can not after/bef/col space!!!!\n"));
           f << "##";
         } else
-          f << "[modId=" << input->readLong(2) << "]";
+          f << "[modId=" << (int)input->readLong(2) << "]";
         break;
       case 0xd0:
       case 0xd1:
@@ -835,19 +837,19 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
         }
         switch (val) {
         case 0xd0:
-          f << "[headerId=" << input->readULong(2) << "]";
+          f << "[headerId=" << (int)input->readULong(2) << "]";
           break;
         case 0xd1:
-          f << "[footerId=" << input->readULong(2) << "]";
+          f << "[footerId=" << (int)input->readULong(2) << "]";
           break;
         case 0xd2:
-          f << "[noteId=" << input->readULong(2) << "]";
+          f << "[noteId=" << (int)input->readULong(2) << "]";
           break;
         case 0xd3:
-          f << "[footnoteId=" << input->readULong(2) << "]";
+          f << "[footnoteId=" << (int)input->readULong(2) << "]";
           break;
         case 0xd5:
-          f << "[endnoteId=" << input->readULong(2) << "]";
+          f << "[endnoteId=" << (int)input->readULong(2) << "]";
           break;
         default:
           break;
@@ -878,7 +880,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
           MWAW_DEBUG_MSG(("FWText::send: can find %x data!!!!\n", val));
           f << "##";
         } else
-          f << "[f" << std::hex << val << std::dec << "=" << input->readULong(2) << "]";
+          f << "[f" << std::hex << val << std::dec << "=" << (int)input->readULong(2) << "]";
         break;
       case 0xe9:
         if (actPos+4 > lastPos) {
@@ -894,7 +896,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
           MWAW_DEBUG_MSG(("FWText::send: can not find field number!!!!\n"));
           f << "##";
         } else {
-          f << "[FNum=" << input->readLong(2) << "]";
+          f << "[FNum=" << (int)input->readLong(2) << "]";
         }
         break;
       case 0x96:
@@ -941,7 +943,7 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
 
   long pos = zone->begin();
   input->seek(pos, WPX_SEEK_SET);
-  int header = input->readULong(2);
+  int header = (int)input->readULong(2);
   if (header&0xFC00) return false;
 
   shared_ptr<FWTextInternal::Zone> text(new FWTextInternal::Zone);
@@ -951,26 +953,26 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
   if (header) { // attachement
     text->m_main = false;
     for (int i = 0; i < 2; i++) {
-      val = input->readLong(2);
+      val = (int)input->readLong(2);
       if (val <= 0 || val > 2) return false;
     }
-    val = input->readLong(vers==1 ? 1 : 2);
+    val = (int)input->readLong(vers==1 ? 1 : 2);
     if (val < 0 || val > 4) return false;
     if (vers==2 && val== 0) return false;
-    val = input->readLong(2);
+    val = (int)input->readLong(2);
     if (val) return false;
   } else { // main
     text->m_main = true;
     for (int i = 0; i < 2; i++) {
-      val = input->readLong(2);
+      val = (int)input->readLong(2);
       if (val <= 0 || val >= 0x200) return false;
 
     }
     for (int i = 0; i < 2; i++) {
-      val = input->readULong(1);
+      val = (int)input->readULong(1);
       if (val>1) return false;
     }
-    val = input->readLong(2);
+    val = (int)input->readLong(2);
     if (val < 1 || val > 5)
       return false;
   }
@@ -978,12 +980,12 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
   libmwaw::DebugStream f;
   if (header) {
     //find 8, 1c, 71, 76, 8a, 99, 9d, c6, c9, ce, f3, f4
-    f << "N0=" << input->readLong(2) << ",";
+    f << "N0=" << (int)input->readLong(2) << ",";
     for (int i = 0; i < 2; i++) { // f0=f1=1 ? f2=1/2
-      val = input->readLong(2);
+      val = (int)input->readLong(2);
       if (val != 1) f << "f" << i << "=" << val << ",";
     }
-    val = input->readLong(vers==1 ? 1 : 2);
+    val = (int)input->readLong(vers==1 ? 1 : 2);
     if (val != 1) f << "f2=" << val << ",";
     if (vers == 1) {
       ascii.addDelimiter(input->tell(),'|');
@@ -991,47 +993,47 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
       ascii.addDelimiter(input->tell(),'|');
     }
   }
-  val = input->readLong(2); // always 0 ?
+  val = (int)input->readLong(2); // always 0 ?
   if (val) f << "f3=" << val << ",";
 
   /* N1=small number between 1 an 1b, N2 between 1 and 5e */
   for (int i = 0; i < 2; i++) {
-    val = input->readLong(2);
+    val = (int)input->readLong(2);
     if (val)
       f << "N" << i+1 << "=" << std::hex << val << std::dec << ",";
   }
   // two flag header/footer : 0|1, normal/other: 0|1?
   for (int i = 0; i < 2; i++) {
-    text->m_flags[i] = input->readLong(1);
+    text->m_flags[i] = (int)input->readLong(1);
     if (text->m_flags[i])
       f << "fl" << i << "=" << text->m_flags[i] << ",";
   }
-  val = input->readLong(2); // small number 1/2
+  val = (int)input->readLong(2); // small number 1/2
   if (val!=1) f << "f4=" << val << ",";
 
   // between 1 and 202 ( very similar to dim[2]
-  int N = input->readLong(2);
+  int N = (int)input->readLong(2);
   // two flags 0|ce|fa, 0
   for (int i = 3; i < 5; i++) {
-    val = input->readLong(1);
+    val = (int)input->readLong(1);
     if (val)
       f << "fl" << i << "=" << val << ",";
   }
   // between 8 and 58
-  f << "N3=" << input->readLong(2) << ",";
+  f << "N3=" << (int)input->readLong(2) << ",";
   int dim[4]; // box with almost always y1=y0+1?
   for (int i = 0; i < 4; i++)
-    dim[i]=input->readLong(2);
+    dim[i]=(int)input->readLong(2);
   if (N != dim[2]) f << "N=" << N << ",";
 
-  text->m_box=Box2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
-  text->m_pages[1] = input->readLong(2);
+  text->m_box=Box2f(Vec2f(float(dim[0]),float(dim[1])),Vec2f(float(dim[2]),float(dim[3])));
+  text->m_pages[1] = (int)input->readLong(2);
   if (text->m_pages[1] == 16000) text->m_pages[1] = 0;
-  text->m_pages[0] = input->readLong(2);
+  text->m_pages[0] = (int)input->readLong(2);
   if (text->m_pages[0] == 16000) text->m_pages[0] = text->m_pages[1];
 
   for (int i = 0; i < 2; i++) { // 1, 2 or 16000=infty?
-    val = input->readLong(2);
+    val = (int)input->readLong(2);
     if (val) f << "g" << i << "=" << val << ",";
   }
 
@@ -1047,11 +1049,11 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
   while(1) {
     pos = input->tell();
     if (pos+2 >= zone->end()) break;
-    int type = input->readULong(2);
+    int type = (int)input->readULong(2);
     int lengthSz = 1;
     if (type & 0x8000)
       lengthSz = 2;
-    int numChar = input->readULong(lengthSz);
+    int numChar = (int)input->readULong(lengthSz);
     if ((lengthSz==1 && (numChar & 0x80)) ||
         long(input->tell()+numChar) > zone->end()) {
       input->seek(pos, WPX_SEEK_SET);
@@ -1092,22 +1094,22 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
 
   f.str("");
   f << "TextData-b:";
-  val = input->readULong(2);
-  if (val || input->readULong(1) != 0xFF) {
+  val = (int)input->readULong(2);
+  if (val || (int)input->readULong(1) != 0xFF) {
     f << "##";
     ascii.addPos(pos);
     ascii.addNote(f.str().c_str());
     return true;
   }
 
-  f << "numCols=" << input->readLong(2) << ",";
+  f << "numCols=" << (int)input->readLong(2) << ",";
   ascii.addPos(pos);
   ascii.addNote(f.str().c_str());
   int actPage = 0;
   while (1) {
     pos = input->tell();
     if (pos >= zone->end()) break;
-    int val = input->readULong(2);
+    val = (int)input->readULong(2);
     int sz = 0;
     if ((val%50)==30) {
       int num = val/50;
@@ -1134,9 +1136,8 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
         f << "TextData-c[ColDef]:";
         FWTextInternal::ColumnInfo col;
         col.m_column = i;
-        col.m_beginPos = input->readLong(2);
-        int dim[4];
-        for (int j = 0; j < 4; j++) dim[j] = input->readLong(2);
+        col.m_beginPos = (int)input->readLong(2);
+        for (int j = 0; j < 4; j++) dim[j] = (int)input->readLong(2);
         col.m_box = Box2i(Vec2i(dim[0],dim[2]), Vec2i(dim[1], dim[3]));
         f << col;
         page.m_columns.push_back(col);
@@ -1157,12 +1158,12 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
       sz = 42;
     else if (high==0x61||high==0x63) {
       input->seek(12, WPX_SEEK_CUR);
-      int numData = input->readULong(2);
+      int numData = (int)input->readULong(2);
       if (!numData) break;
       sz = 26+9*numData;
     } else if (high==0xe1) {
       input->seek(14, WPX_SEEK_CUR);
-      int numData = input->readULong(2);
+      int numData = (int)input->readULong(2);
       if (!numData) break;
       sz = 30+9*numData;
     } else if (high==0 && (val%50)!=30)
@@ -1212,13 +1213,13 @@ bool FWText::readStyle(shared_ptr<FWEntry> zone)
     if (readStyleName(zone)) continue;
 
     int sz = 0;
-    int val = input->readULong(2);
+    int val = (int)input->readULong(2);
     f.str("");
     f << "Style-" << num-1 << ":";
     bool done = false;
     switch (val) {
     case 0: {
-      sz = input->readULong(2);
+      sz = (int)input->readULong(2);
       if (sz && sz < 100 && (sz%2)==0)
         sz += 4;
       else
@@ -1226,7 +1227,7 @@ bool FWText::readStyle(shared_ptr<FWEntry> zone)
       break;
     }
     case 4:
-      if (input->readULong(2)) break;
+      if ((int)input->readULong(2)) break;
       sz = 6;
       break;
     case 0x39:
@@ -1241,7 +1242,7 @@ bool FWText::readStyle(shared_ptr<FWEntry> zone)
 
     if (!sz) {
       input->seek(pos+2, WPX_SEEK_SET);
-      int nextVal = input->readULong(2);
+      int nextVal = (int)input->readULong(2);
       if (nextVal == 0xFFFF) // color
         sz = 10;
       else if (nextVal == 0 && (val & 0xF00F) ==  0x800a)
@@ -1263,7 +1264,7 @@ bool FWText::readStyle(shared_ptr<FWEntry> zone)
     while (1) {
       if (long(input->tell())+0x1e > zone->end())
         break;
-      int val = input->readULong(1);
+      val = (int)input->readULong(1);
       if (val == 0) {
         numZero++;
         continue;
@@ -1286,7 +1287,7 @@ bool FWText::readStyle(shared_ptr<FWEntry> zone)
       }
       if (actNumZero < 3 || val < 24) continue;
       input->seek(1,WPX_SEEK_CUR);
-      if (input->readULong(1) > 2) {
+      if ((int)input->readULong(1) > 2) {
         input->seek(-2,WPX_SEEK_CUR);
         continue;
       }
@@ -1328,14 +1329,14 @@ bool FWText::readParagraph(shared_ptr<FWEntry> zone)
   const int headerSz = vers==1 ? 24 : 30;
   long pos = input->tell();
   input->seek(pos, WPX_SEEK_SET);
-  long sz = input->readULong(4);
+  long sz = (long) input->readULong(4);
   if (sz<24 || pos+4+sz > zone->end()) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
 
   input->seek(vers==1 ? 23: 22, WPX_SEEK_CUR);
-  int N = input->readULong(1);
+  int N = (int)input->readULong(1);
   if (headerSz+dataSz *N != sz) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
@@ -1351,7 +1352,7 @@ bool FWText::readParagraph(shared_ptr<FWEntry> zone)
     pos = input->tell();
     f.str("");
     f << "Tabs-" << i << ":";
-    val = input->readULong(1);
+    val = (int)input->readULong(1);
     switch((val>>5) & 3) {
     case 0:
       break;
@@ -1368,13 +1369,13 @@ bool FWText::readParagraph(shared_ptr<FWEntry> zone)
     }
     if (val & 0x80) f << "tableLimit,";
     // if (val & 0x1F) f << "#type=" << std::hex << (val & 0x1F) << std::dec << ",";
-    val = input->readULong(1);
+    val = (int)input->readULong(1);
     if (val != 0x2e) f << "#f0=" <<  std::hex << val << std::dec << ",";
-    f << "pos=" << input->readLong(4)/65536. << ",";
-    val = input->readLong(2);
+    f << "pos=" << float(input->readLong(4))/65536.f << ",";
+    val = (int)input->readLong(2);
     if (val) f << "repeat=" << val/256.;
 
-    val = input->readULong(1);
+    val = (int)input->readULong(1);
     switch(val) {
     case 0x20:
       break;
@@ -1385,7 +1386,7 @@ bool FWText::readParagraph(shared_ptr<FWEntry> zone)
       f << "leader=" << char(val) << ",";
       break;
     }
-    val = input->readULong(1);
+    val = (int)input->readULong(1);
     if (val) f << "#f2=" <<  std::hex << val << std::dec << ",";
     ascii.addPos(pos);
     ascii.addNote(f.str().c_str());
@@ -1405,14 +1406,14 @@ bool FWText::readColumns(shared_ptr<FWEntry> zone)
 
   long pos = input->tell();
   input->seek(pos, WPX_SEEK_SET);
-  long sz = input->readULong(4);
+  long sz = (long) input->readULong(4);
   if (sz<34 || pos+4+sz > zone->end()) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
 
   input->seek(13, WPX_SEEK_CUR);
-  int N = input->readULong(1);
+  int N = (int)input->readULong(1);
   if (24+10*N != sz) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
@@ -1445,19 +1446,19 @@ bool FWText::readStyleName(shared_ptr<FWEntry> zone)
   long pos = input->tell();
   if (pos+72 > zone->end()) return false;
 
-  int val = input->readULong(2);
+  int val = (int)input->readULong(2);
   if (val != 0x46 || input->readULong(4)) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
-  int sz = input->readULong(1);
+  int sz = (int)input->readULong(1);
   if (sz == 0 || sz >= 32) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
   std::string str("");
   for (int i = 0; i < sz; i++) {
-    char c= input->readLong(1);
+    char c= (char)input->readLong(1);
     if (!c) {
       input->seek(pos, WPX_SEEK_SET);
       return false;
@@ -1485,50 +1486,50 @@ bool FWText::readCorrespondance(shared_ptr<FWEntry> zone, bool extraCheck)
   f << "Entries(Correspondance):";
 
   long pos = input->tell();
-  int val = input->readULong(1);
+  int val = (int)input->readULong(1);
   if ((extraCheck & val) || (val&0xfb)) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
   if (val) f << "#type" << std::hex << val << std::dec << ",";
-  int type = input->readULong(1);
+  int type = (int)input->readULong(1);
   if (!(type >= 0x18 && type <=0x1f)) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
   int sz = 73;
   f << "type=" << std::hex << type << std::dec << ",";
-  val = input->readULong(2);
+  val = (int)input->readULong(2);
   if (val && extraCheck) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
   if (val)
     f << "#f0=" << val << ",";
-  val = input->readULong(1); // 0, 6 or 0x10, 0x1e
+  val = (int)input->readULong(1); // 0, 6 or 0x10, 0x1e
   if (val) f << "f1=" << std::hex << val << std::dec << ",";
-  val = input->readLong(1); // 0 or  0x1 or -10
+  val = (int)input->readLong(1); // 0 or  0x1 or -10
   if (val != 1) f << "f2=" << val << ",";
-  int N = input->readLong(2);
+  int N = (int)input->readLong(2);
   if (N) // can be a big number, but some time 0, 1, 3, 4, ...
     f << "N0=" << N << ",";
   // small number between 1 and 0x1f
-  val = input->readLong(2);
+  val = (int)input->readLong(2);
   if (val) f << "N1=" << val << ",";
 
-  val = input->readLong(1); // 0, 1, 2, -1, -2
+  val = (int)input->readLong(1); // 0, 1, 2, -1, -2
   if (val) f << "f3=" << val << ",";
-  val = input->readULong(1); // 12, 1f, 22, 23, 25, 2d, 32, 60, 62, 66, 67, ...
+  val = (int)input->readULong(1); // 12, 1f, 22, 23, 25, 2d, 32, 60, 62, 66, 67, ...
   if (val) f << "f4=" << std::hex << val << std::dec << ",";
 
   // small number, g0, g2 often negative
   for (int i = 0; i < 4; i++) {
-    val = input->readLong(2);
+    val = (int)input->readLong(2);
     if (val) f << "g" << i << "=" << val << ",";
   }
 
   int numError = 0;
-  val = input->readLong(2); // alway -2
+  val = (int)input->readLong(2); // alway -2
   if (val != -2) {
     if (extraCheck || val > 0 || val < -2) {
       input->seek(pos, WPX_SEEK_SET);
@@ -1539,7 +1540,7 @@ bool FWText::readCorrespondance(shared_ptr<FWEntry> zone, bool extraCheck)
   }
   for (int i = 0; i < 3; i++) {
     // first a small number < 3e1, g6,g7 almost always 0 expected one time g6=-1a9
-    val = input->readLong(4);
+    val = (int)input->readLong(4);
     if (!val) continue;
     if (i==2) {
       if (extraCheck || numError) {
@@ -1550,8 +1551,8 @@ bool FWText::readCorrespondance(shared_ptr<FWEntry> zone, bool extraCheck)
     }
     f << "g" << i+5 << "=" << val << ",";
   }
-  int fileId = input->readULong(2);
-  int textId = input->readULong(2);
+  int fileId = (int)input->readULong(2);
+  int textId = (int)input->readULong(2);
   std::map<int,int>::iterator it = m_state->m_textFileIdMap.find(textId);
   if (it != m_state->m_textFileIdMap.end()) {
     MWAW_DEBUG_MSG(("FWText::readCorrespondance: id %d already exists\n", textId));
@@ -1584,13 +1585,13 @@ void FWText::setProperty(FWTextInternal::Paragraph const &para)
 //! send data to the listener
 bool FWText::sendMainText()
 {
-  int numZones = m_state->m_mainZones.size();
+  size_t numZones = m_state->m_mainZones.size();
   if (!numZones) {
     MWAW_DEBUG_MSG(("FWText::sendMainText: can not find main zone\n"));
     return false;
   }
   if (!m_listener) return true;
-  for (int i = 0; i < numZones; i++) {
+  for (size_t i = 0; i < numZones; i++) {
     std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it;
     it = m_state->m_entryMap.find(m_state->m_mainZones[i]);
     if (it == m_state->m_entryMap.end() || !it->second) {
@@ -1629,7 +1630,7 @@ void FWText::flushExtra()
 void FWText::sortZones()
 {
   std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it;
-  int numZones = 0, numPages = 0;
+  int numZones = 0, totalNumPages = 0;
   std::vector<int> pagesLimits;
   for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); it++) {
     shared_ptr<FWTextInternal::Zone> zone = it->second;
@@ -1642,31 +1643,31 @@ void FWText::sortZones()
     }
     int pos = 0;
     while (pos < numZones) {
-      if (fPage < pagesLimits[2*pos])
+      if (fPage < pagesLimits[size_t(2*pos)])
         break;
-      if (fPage == pagesLimits[2*pos] && lPage <= pagesLimits[2*pos+1])
+      if (fPage == pagesLimits[size_t(2*pos)] && lPage <= pagesLimits[size_t(2*pos+1)])
         break;
       pos++;
     }
-    pagesLimits.resize(2*numZones+2);
-    m_state->m_mainZones.resize(numZones+1);
-    for (int i = numZones-1; i >= pos; i--) {
-      pagesLimits[2*i+2]=pagesLimits[2*i];
-      pagesLimits[2*i+3]=pagesLimits[2*i+1];
-      m_state->m_mainZones[i+1]=m_state->m_mainZones[i];
+    pagesLimits.resize(size_t(2*numZones+2));
+    m_state->m_mainZones.resize(size_t(numZones+1));
+    for (int i = numZones-1; i > pos-1; i--) {
+      pagesLimits[size_t(2*i+2)]=pagesLimits[size_t(2*i)];
+      pagesLimits[size_t(2*i+3)]=pagesLimits[size_t(2*i+1)];
+      m_state->m_mainZones[size_t(i+1)]=m_state->m_mainZones[size_t(i)];
     }
-    m_state->m_mainZones[pos] = zone->m_zone->id();
-    pagesLimits[2*pos] = fPage;
-    pagesLimits[2*pos+1] = lPage;
+    m_state->m_mainZones[size_t(pos)] = zone->m_zone->id();
+    pagesLimits[size_t(2*pos)] = fPage;
+    pagesLimits[size_t(2*pos+1)] = lPage;
     numZones++;
     int nPages = (lPage-fPage)+1;
     if (nPages < int(zone->m_pagesInfo.size())) {
       MWAW_DEBUG_MSG(("FWText::sortZones: pages limit seems odd!!!\n"));
       nPages = int(zone->m_pagesInfo.size());
     }
-    numPages += nPages;
+    totalNumPages += nPages;
   }
-  m_state->m_numPages = numPages;
+  m_state->m_numPages = totalNumPages;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

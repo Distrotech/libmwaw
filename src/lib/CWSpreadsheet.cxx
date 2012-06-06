@@ -127,8 +127,8 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   ascii().addNote(f.str().c_str());
 
   // read the last part
-  int data0Length = zone.m_dataSz;
-  int N = zone.m_numData;
+  long data0Length = zone.m_dataSz;
+  long N = zone.m_numData;
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       MWAW_DEBUG_MSG(("CWSpreadsheet::readSpreadsheetZone: can not find definition size\n"));
@@ -164,7 +164,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
     f.str("");
     f << "Entries(SpreadsheetCol):";
     for (int i = 0; i < 256; i++)
-      colSize.push_back(m_input->readULong(1));
+      colSize.push_back((int)m_input->readULong(1));
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
 
@@ -230,7 +230,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
 bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
 {
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   long endPos = pos+4+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
@@ -261,7 +261,7 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
     m_input->seek(endPos, WPX_SEEK_SET);
     return true;
   }
-  int numElts = sz/fSize;
+  long numElts = sz/fSize;
   if (numElts *fSize != sz) {
     m_input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWSpreadsheet::readZone1: unexpected size\n"));
@@ -281,7 +281,7 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
     f << "row?=" << m_input->readLong(2) << ",";
     f << "col?=" << m_input->readLong(2) << ",";
     if (fSize == 6) {
-      int val = m_input->readLong(2);
+      int val = (int) m_input->readLong(2);
       if (val != -1)
         f << "#unkn=" << val << ",";
     }
@@ -295,7 +295,7 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
 bool CWSpreadsheet::readContent(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
 {
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   /** ARGHH: this zone is almost the only zone which count the header in sz ... */
   long endPos = pos+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
@@ -308,7 +308,7 @@ bool CWSpreadsheet::readContent(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
   m_input->seek(pos+4, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(SpreadsheetContent):";
-  int N = m_input->readULong(2);
+  int N = (int) m_input->readULong(2);
   f << "N=" << N << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -316,7 +316,7 @@ bool CWSpreadsheet::readContent(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
   while (long(m_input->tell()) < endPos) {
     // Normally a list of name field : CTAB (COLM CHNK+)*
     pos = m_input->tell();
-    sz = m_input->readULong(4);
+    sz = (long) m_input->readULong(4);
     if (pos+4+sz > endPos || (sz && sz < 12)) {
       m_input->seek(pos, WPX_SEEK_SET);
       MWAW_DEBUG_MSG(("CWSpreadsheet::readContent: find a odd content field\n"));

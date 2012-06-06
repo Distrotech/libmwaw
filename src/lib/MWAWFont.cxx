@@ -97,13 +97,13 @@ void MWAWFont::sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverte
     actualFont.setSize(newSize);
     dSize = 0;
     convert->getOdtInfo(actualFont.id(), fName, dSize);
-    listener->setFontSize(actualFont.size()+dSize);
+    listener->setFontSize(uint16_t(actualFont.size()+dSize));
   }
 
   actualFont.setFlags(flags());
   listener->setFontAttributes(actualFont.flags());
   actualFont.setColor(m_color);
-  uint32_t col = ((m_color[0]&0xFF)<<16) | ((m_color[1]&0xFF)<<8) | (m_color[2]&0xFF);
+  uint32_t col = uint32_t(((m_color[0]&0xFF)<<16) | ((m_color[1]&0xFF)<<8) | (m_color[2]&0xFF));
   listener->setTextColor(col);
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

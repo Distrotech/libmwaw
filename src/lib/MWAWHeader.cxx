@@ -36,9 +36,9 @@
 
 #include "MWAWHeader.hxx"
 
-MWAWHeader::MWAWHeader(MWAWDocument::DocumentType DocumentType, int vers) :
+MWAWHeader::MWAWHeader(MWAWDocument::DocumentType documentType, int vers) :
   m_version(vers),
-  m_docType(DocumentType),
+  m_docType(documentType),
   m_docKind(MWAWDocument::K_TEXT)
 {
 }
@@ -62,7 +62,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader(MWAWInputStreamPtr input)
   input->seek(0, WPX_SEEK_SET);
   int val[4];
   for (int i = 0; i < 4; i++)
-    val[i] = input->readULong(2);
+    val[i] = int(input->readULong(2));
 
   // ----------- clearly discriminant ------------------
   if (val[2] == 0x424F && val[3] == 0x424F && (val[0]>>8) < 8) {
@@ -71,7 +71,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader(MWAWInputStreamPtr input)
   }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77) {
     input->seek(8, WPX_SEEK_SET);
-    int version = input->readLong(2);
+    int version = int(input->readLong(2));
 
 #ifdef DEBUG
     bool ok = (version >= 0 && version <= 3);
@@ -172,7 +172,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader(MWAWInputStreamPtr input)
   }
   input->seek(-4, WPX_SEEK_CUR);
   for (int i = 0; i < 2; i++)
-    val[i]=input->readULong(2);
+    val[i]=int(input->readULong(2));
   if (val[0] == 0x4657 && val[1]==0x5254) // FWRT
     res.push_back(MWAWHeader(MWAWDocument::FULLW, 2));
   if (val[0] == 0 && val[1]==1) { // not probable, but

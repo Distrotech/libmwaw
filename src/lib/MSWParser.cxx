@@ -275,12 +275,12 @@ int MSWParser::version() const
 ////////////////////////////////////////////////////////////
 float MSWParser::pageHeight() const
 {
-  return m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
+  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float MSWParser::pageWidth() const
 {
-  return m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight();
+  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
 }
 
 ////////////////////////////////////////////////////////////
@@ -372,6 +372,10 @@ void MSWParser::send(int id, libmwaw::SubDocumentType type)
   case libmwaw::DOC_NOTE:
     m_textParser->sendFootnote(id);
     break;
+  case libmwaw::DOC_NONE:
+  case libmwaw::DOC_HEADER_FOOTER:
+  case libmwaw::DOC_TABLE:
+  case libmwaw::DOC_TEXT_BOX:
   default:
     MWAW_DEBUG_MSG(("MSWParser::send: find unexpected type\n"));
     break;
@@ -661,7 +665,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
   }
   input->seek(0, WPX_SEEK_SET);
-  int val = input->readULong(2);
+  int val = (int) input->readULong(2);
   switch (val) {
   case 0xfe34:
     switch (input->readULong(2)) {
@@ -694,29 +698,29 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
   }
 
   f << "FileHeader:";
-  val = input->readLong(1);
+  val = (int) input->readLong(1);
   if (val) f << "f0=" << val << ",";
   for (int i = 1; i < 3; i++) { // always 0
-    val = input->readLong(2);
+    val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
-  val = input->readLong(2); // v4-v5: find 4, 8, c, 24, 2c
+  val = (int) input->readLong(2); // v4-v5: find 4, 8, c, 24, 2c
   if (val)
     f << "unkn=" << std::hex << val << std::dec << ",";
-  val = input->readLong(1); // always 0 ?
+  val = (int) input->readLong(1); // always 0 ?
   if (val) f << "f4=" << val << ",";
-  val = input->readLong(2); // always 0x19: for version 4, 5
+  val = (int) input->readLong(2); // always 0x19: for version 4, 5
   if (val!=0x19) f << "f5=" << val << ",";
 
   if (version() <= 3) {
-    val = input->readLong(2);
+    val = (int) input->readLong(2);
     if (val) f << "f6=" << val << ",";
     m_state->m_bot = 0x100;
-    m_state->m_eot = input->readULong(2);
+    m_state->m_eot = (int) input->readULong(2);
     m_state->m_textLength = m_state->m_eot-0x100;
 
     for (int i = 0; i < 6; i++) { // always 0?
-      val = input->readLong(2);
+      val = (int) input->readLong(2);
       if (val) f << "h" << i << "=" << val << ",";
     }
     input->seek(headerSize, WPX_SEEK_SET);
@@ -731,12 +735,12 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
   }
 
   for (int i = 0; i < 6; i++) { // always 0 ?
-    val = input->readLong(1);
+    val = (int) input->readLong(1);
     if (val) f << "g" << i << "=" << val << ",";
   }
   if (val) f << "g7=" << val << ","; // always 0 ?
-  m_state->m_bot =  input->readULong(4);
-  m_state->m_eot = input->readULong(4);
+  m_state->m_bot =  (long) input->readULong(4);
+  m_state->m_eot = (long) input->readULong(4);
 
   if (m_state->m_bot > m_state->m_eot) {
     f << "#text:" << std::hex << m_state->m_bot << "<->" << m_state->m_eot << ",";
@@ -749,7 +753,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
     }
   }
 
-  long endOfData = input->readULong(4);
+  long endOfData = (long) input->readULong(4);
   if (endOfData < 100) {
     MWAW_DEBUG_MSG(("MSWParser::checkHeader: end of file pos is too small\n"));
     return false;
@@ -770,21 +774,21 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
   ascii().addPos(endOfData);
   ascii().addNote("Entries(End)");
   input->seek(actPos, WPX_SEEK_SET);
-  val = input->readLong(4); // always 0 ?
+  val = (int) input->readLong(4); // always 0 ?
   if (val) f << "unkn2=" << val << ",";
 
   // seen to regroup main textZone + ?
-  m_state->m_textLength= input->readULong(4);
+  m_state->m_textLength= (long) input->readULong(4);
   f << "textLength=" << std::hex << m_state->m_textLength << std::dec << ",";
-  m_state->m_footnoteLength = input->readULong(4);
+  m_state->m_footnoteLength = (long) input->readULong(4);
   if (m_state->m_footnoteLength)
     f << "footnoteLength=" << std::hex << m_state->m_footnoteLength << std::dec << ",";
-  m_state->m_headerfooterLength  = input->readULong(4);
+  m_state->m_headerfooterLength  = (long) input->readULong(4);
   if (m_state->m_headerfooterLength)
     f << "headerFooterLength=" << std::hex << m_state->m_headerfooterLength << std::dec << ",";
 
   for (int i = 0; i < 8; i++) { // always 0 ?
-    val = input->readLong(2);
+    val = (int) input->readLong(2);
     if (val) f << "h" << i << "=" << val << ",";
   }
   // ok, we can finish initialization
@@ -814,8 +818,8 @@ MSWEntry MSWParser::readEntry(std::string type, int id)
   long pos = input->tell();
   libmwaw::DebugStream f;
 
-  long debPos = input->readULong(4);
-  long sz =  input->readULong(2);
+  long debPos = (long) input->readULong(4);
+  long sz = (long) input->readULong(2);
   if (id >= 0) f << "Entries(" << type << ")[" << id << "]:";
   else f << "Entries(" << type << "):";
   if (sz == 0) {
@@ -860,15 +864,15 @@ bool MSWParser::readDocumentInfo(MSWEntry &entry)
   f << "DocumentInfo:";
 
   float dim[2];
-  for (int i = 0; i < 2; i++) dim[i] =  input->readLong(2)/1440.;
+  for (int i = 0; i < 2; i++) dim[i] =  float(input->readLong(2))/1440.f;
   f << "dim?=" << dim[1] << "x" << dim[0] << ",";
 
   float margin[4];
   f << ",marg=["; // top, left?, bottom, right?
   for (int i = 0; i < 4; i++) {
-    margin[i] = input->readLong(2)/1440.;
+    margin[i] = float(input->readLong(2))/1440.f;
     f << margin[i] << ",";
-    if (margin[i] < 0.0) margin[i] *= -1.0;
+    if (margin[i] < 0.0) margin[i] *= -1.0f;
   }
   f << "],";
 
@@ -885,25 +889,25 @@ bool MSWParser::readDocumentInfo(MSWEntry &entry)
     MWAW_DEBUG_MSG(("MSWParser::readDocumentInfo: the page dimensions seems odd\n"));
   }
 
-  int val = input->readLong(2); // always 0 ?
+  int val = (int) input->readLong(2); // always 0 ?
   if (val) f << "unkn=" << val << ",";
-  val = input->readLong(2); // 0x2c5 or 0x2d0?
+  val = (int) input->readLong(2); // 0x2c5 or 0x2d0?
   f << "f0=" << val << ",";
   for (int i = 0; i < 4; i++) { //[a|12|40|42|4a|52|54|d2],0,0|80,1
-    val = input->readULong(1);
+    val = (int) input->readULong(1);
     if (val) f << "fl" << i << "=" << std::hex << val << std::dec << ",";
   }
-  val = input->readLong(2); // always 1 ?
+  val = (int) input->readLong(2); // always 1 ?
   if (val != 1) f << "f1=" << val << ",";
   // a small number between 0 and 77
-  f << "f2=" << input->readLong(2) << ",";
+  f << "f2=" << (int) input->readLong(2) << ",";
   for (int i = 0; i < 4; i++) { //[0|2|40|42|44|46|48|58],0|64,0|10|80,[0|2|5]
-    val = input->readULong(1);
+    val = (int) input->readULong(1);
     if (val) f << "flA" << i << "=" << std::hex << val << std::dec << ",";
   }
-  val = input->readLong(2); // always 0 ?
+  val = (int) input->readLong(2); // always 0 ?
   if (val != 1) f << "f3=" << val << ",";
-  val = input->readLong(2); // 0, 48, 50
+  val = (int) input->readLong(2); // 0, 48, 50
   if (val) f << "f4=" << val << ",";
 
   ascii().addPos(entry.begin());
@@ -944,34 +948,34 @@ bool MSWParser::readZone17(MSWEntry &entry)
     f1=0|1|8|34|88 */
   int val;
   for (int i = 0; i < 2; i++) {
-    val = input->readULong(1);
+    val = (int) input->readULong(1);
     if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
   // 0 or 1, followed by 0
   for (int i = 2; i < 4; i++) {
-    val = input->readLong(1);
+    val = (int) input->readLong(1);
     if (val) f << "f" << i << "=" << val << ",";
   }
-  long ptr = input->readULong(4); // a text ptr ( often near to textLength )
+  long ptr = (long) input->readULong(4); // a text ptr ( often near to textLength )
   if (ptr > m_state->m_textLength) f << "#";
   f << "textPos[sel?]=" << std::hex << ptr << std::dec << ",";
-  val  = input->readULong(4); // almost always ptr
+  val  = (int) input->readULong(4); // almost always ptr
   if (val != ptr)
     f << "textPos1=" << std::hex << val << std::dec << ",";
   // a small int between 6 and b
-  val = input->readLong(2);
+  val = (int) input->readLong(2);
   if (val) f << "f4=" << val << ",";
 
   for (int i = 5; i < 7; i++) { // 0,0 or 3,5 or 8000, 8000
-    val = input->readULong(2);
+    val = (int) input->readULong(2);
     if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
-  val  = input->readULong(4); // almost always ptr
+  val  = (int) input->readULong(4); // almost always ptr
   if (val != ptr)
     f << "textPos2=" << std::hex << val << std::dec << ",";
   /* g0=[0,1,5,c], g1=[0,1,3,4] */
   for (int i = 0; i < 2; i++) {
-    val = input->readLong(2);
+    val = (int) input->readLong(2);
     if (val) f << "g" << i << "=" << val << ",";
   }
   if (version() == 5) {
@@ -1006,12 +1010,12 @@ bool MSWParser::readPrinter(MSWEntry &entry)
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Printer:";
-  int sz = input->readULong(2);
+  int sz = (int) input->readULong(2);
   if (sz > entry.length()) {
     MWAW_DEBUG_MSG(("MSWParser::readPrinter: the zone seems to short\n"));
     return false;
   }
-  int strSz = input->readULong(1);
+  int strSz = (int) input->readULong(1);
   if (strSz+2> sz) {
     MWAW_DEBUG_MSG(("MSWParser::readPrinter: name seems to big\n"));
     return false;
@@ -1022,7 +1026,7 @@ bool MSWParser::readPrinter(MSWEntry &entry)
   f << name << ",";
   int i= 0;
   while (long(input->tell())+2 <= entry.end()) { // almost always a,0,0
-    int val = input->readLong(2);
+    int val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
     i++;
   }
@@ -1053,7 +1057,7 @@ bool MSWParser::readDocSum(MSWEntry &entry)
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "DocSum:";
-  int sz = input->readULong(2);
+  int sz = (int) input->readULong(2);
   if (sz > entry.length()) {
     MWAW_DEBUG_MSG(("MSWParser::readDocSum: the zone seems to short\n"));
     return false;
@@ -1068,7 +1072,7 @@ bool MSWParser::readDocSum(MSWEntry &entry)
     long actPos = input->tell();
     if (actPos == entry.end()) break;
 
-    int sz = input->readULong(1);
+    sz = (int) input->readULong(1);
     if (sz == 0 || sz == 0xFF) continue;
 
     if (actPos+1+sz > entry.end()) {
@@ -1109,7 +1113,7 @@ bool MSWParser::readStringsZone(MSWEntry &entry, std::vector<std::string> &list)
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << entry;
-  int sz = input->readULong(2);
+  int sz = (int) input->readULong(2);
   if (sz > entry.length()) {
     MWAW_DEBUG_MSG(("MSWParser::readStringsZone: the zone seems to short\n"));
     return false;
@@ -1120,7 +1124,7 @@ bool MSWParser::readStringsZone(MSWEntry &entry, std::vector<std::string> &list)
   int id = 0;
   while (long(input->tell()) != entry.end()) {
     pos = input->tell();
-    int strSz = input->readULong(1);
+    int strSz = (int) input->readULong(1);
     if (pos+strSz+1> entry.end()) {
       MWAW_DEBUG_MSG(("MSWParser::readStringsZone: a string seems to big\n"));
       f << "#";
@@ -1185,19 +1189,19 @@ bool MSWParser::readObjects()
       continue;
     }
     std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[entry.id()];
-    int numObjects = listObject.size();
-    if (int(list.size()) != numObjects) {
+    size_t numObjects = listObject.size();
+    if (list.size() != numObjects) {
       MWAW_DEBUG_MSG(("MSWParser::readObjects: unexpected number of name\n"));
-      if (int(list.size()) < numObjects) numObjects = list.size();
+      if (list.size() < numObjects) numObjects = list.size();
     }
-    for (int i = 0; i < numObjects; i++)
+    for (size_t i = 0; i < numObjects; i++)
       listObject[i].m_name = list[i];
   }
 
   for (int st = 0; st < 2; st++) {
     std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[st];
 
-    for (int i = 0; i < int(listObject.size()); i++)
+    for (size_t i = 0; i < listObject.size(); i++)
       readObject(listObject[i]);
   }
   return true;
@@ -1221,13 +1225,13 @@ bool MSWParser::readObjectList(MSWEntry &entry)
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "ObjectList[" << entry.id() << "]:";
-  int N=entry.length()/18;
+  int N=int(entry.length()/18);
   std::vector<long> textPos; // checkme
-  textPos.resize(N+1);
+  textPos.resize((size_t)N+1);
   f << "[";
   for (int i = 0; i < N+1; i++) {
-    textPos[i] = input->readULong(4);
-    f << std::hex << textPos[i] << std::dec << ",";
+    textPos[(size_t)i] = (long) input->readULong(4);
+    f << std::hex << textPos[(size_t)i] << std::dec << ",";
   }
   f << "],";
   ascii().addPos(pos);
@@ -1236,17 +1240,17 @@ bool MSWParser::readObjectList(MSWEntry &entry)
 
   for (int i = 0; i < N; i++) {
     MSWParserInternal::Object object;
-    object.m_textPos = textPos[i];
+    object.m_textPos = textPos[(size_t)i];
     pos = input->tell();
     f.str("");
-    object.m_id = input->readLong(2);
+    object.m_id = (int) input->readLong(2);
     for (int st = 0; st < 2; st++) {
-      object.m_ids[st] = input->readLong(2); // small number -1, 0, 2, 3, 4
-      object.m_idsFlag[st] = input->readULong(1); // 0, 48 .
+      object.m_ids[st] = (int) input->readLong(2); // small number -1, 0, 2, 3, 4
+      object.m_idsFlag[st] = (int) input->readULong(1); // 0, 48 .
     }
 
-    object.m_pos.setBegin(input->readULong(4));
-    val = input->readLong(2); // always 0 ?
+    object.m_pos.setBegin((long) input->readULong(4));
+    val = (int) input->readLong(2); // always 0 ?
     if (val) f << "#f1=" << val << ",";
     object.m_extra = f.str();
     f.str("");
@@ -1275,7 +1279,7 @@ bool MSWParser::readObjectFlags(MSWEntry &entry)
     return false;
   }
   std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[entry.id()];
-  int numObject = listObject.size();
+  int numObject = (int) listObject.size();
   if (entry.length() < 4 || (entry.length()%6) != 4) {
     MWAW_DEBUG_MSG(("MSWParser::readObjectFlags: the zone size seems odd\n"));
     return false;
@@ -1286,15 +1290,15 @@ bool MSWParser::readObjectFlags(MSWEntry &entry)
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "ObjectFlags[" << entry.id() << "]:";
-  int N=entry.length()/6;
+  int N=int(entry.length()/6);
   if (N != numObject) {
     MWAW_DEBUG_MSG(("MSWParser::readObjectFlags: unexpected number of object\n"));
   }
 
   f << "[";
   for (int i = 0; i < N+1; i++) {
-    long textPos = input->readULong(4);
-    if (i < numObject && textPos != listObject[i].m_textPos && textPos != listObject[i].m_textPos+1)
+    long textPos = (long) input->readULong(4);
+    if (i < numObject && textPos != listObject[(size_t)i].m_textPos && textPos != listObject[(size_t)i].m_textPos+1)
       f << "#";
     f << std::hex << textPos << std::dec << ",";
   }
@@ -1305,12 +1309,12 @@ bool MSWParser::readObjectFlags(MSWEntry &entry)
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     int fl[2];
-    for (int st = 0; st < 2; st++) fl[st] = input->readULong(1);
+    for (int st = 0; st < 2; st++) fl[st] = (int) input->readULong(1);
     f.str("");
     f << "ObjectFlags-" << i << ":";
     if (i < numObject) {
-      for (int st = 0; st < 2; st++) listObject[i].m_flags[st] = fl[st];
-      f << "Obj" << listObject[i].m_id << ",";
+      for (int st = 0; st < 2; st++) listObject[(size_t)i].m_flags[st] = fl[st];
+      f << "Obj" << listObject[(size_t)i].m_id << ",";
     }
     if (fl[0] != 0x48) f << "fl0="  << std::hex << fl[0] << std::dec << ",";
     if (fl[1]) f << "fl1="  << std::hex << fl[1] << std::dec << ",";
@@ -1333,7 +1337,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
   if (!pos) return false;
 
   input->seek(pos, WPX_SEEK_SET);
-  int sz = input->readULong(4);
+  int sz = (int) input->readULong(4);
 
   f << "Entries(ObjectData):Obj" << obj.m_id << ",";
   if (!isFilePos(pos+sz) || sz < 6) {
@@ -1344,7 +1348,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
     return false;
   }
 
-  int fSz = input->readULong(2);
+  int fSz = (int) input->readULong(2);
   if (fSz < 2 || fSz+4 > sz) {
     MWAW_DEBUG_MSG(("MSWParser::readObjects: pb reading the name\n"));
     f << "#";
@@ -1364,7 +1368,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
   long endPos = pos+4+fSz;
   std::string name(""); // first equation, second "" or Equation Word?
   while(long(input->tell()) != endPos) {
-    int c = input->readULong(1);
+    int c = (int) input->readULong(1);
     if (c == 0) {
       if (name.length()) f << name << ",";
       name = "";
@@ -1378,17 +1382,17 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
   endPos = obj.m_pos.end();
   int val;
   if (pos+2 <= endPos) {
-    val = input->readLong(2);
+    val = (int) input->readLong(2);
     if (val) f << "#unkn=" << val <<",";
   }
   // Equation Word? : often contains not other data
   long dataSz = 0;
   if (pos+9 <= endPos) {
     for (int i = 0; i < 3; i++) { // always 0
-      val = input->readLong(1);
+      val = (int) input->readLong(1);
       if (val) f << "f" << i << "=" << val <<",";
     }
-    dataSz = input->readULong(4);
+    dataSz = (long) input->readULong(4);
   }
   pos = input->tell();
   if (dataSz && pos+dataSz != endPos) f << "#";
@@ -1412,15 +1416,15 @@ bool MSWParser::checkPicturePos(long pos, int type)
 
   MWAWInputStreamPtr input = getInput();
   input->seek(pos, WPX_SEEK_SET);
-  long sz = input->readULong(4);
+  long sz = (long) input->readULong(4);
   long endPos = pos+sz;
   if (sz < 14 || !isFilePos(sz+pos)) return false;
-  int num = input->readLong(1);
+  int num = (int) input->readLong(1);
   if (num < 0 || num > 4) return false;
   input->seek(pos+14, WPX_SEEK_SET);
   for (int n = 0; n < num; n++) {
     long actPos = input->tell();
-    long pSz = input->readULong(4);
+    long pSz = (long) input->readULong(4);
     if (pSz+actPos > endPos) return false;
     input->seek(pSz+actPos, WPX_SEEK_SET);
   }
@@ -1452,18 +1456,18 @@ bool MSWParser::readPicture(MSWEntry &entry)
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(Picture)[" << entry.textId() << "-" << entry.id() << "]:";
-  long sz = input->readULong(4);
+  long sz = (long) input->readULong(4);
   if (sz > entry.length()) {
     MWAW_DEBUG_MSG(("MSWParser::readPicture: the zone size seems too big\n"));
     return false;
   }
-  int N = input->readULong(1);
+  int N = (int) input->readULong(1);
   f << "N=" << N << ",";
-  int val = input->readULong(1); // find 0 or 0x80
+  int val = (int) input->readULong(1); // find 0 or 0x80
   if (val) f << "fl=" << std::hex << val << std::dec << ",";
   int dim[4];
   for (int i = 0; i < 4; i++)
-    dim[i] = input->readLong(2);
+    dim[i] = (int) input->readLong(2);
   f << "dim=[" << dim[1] << "x" << dim[0] << "," << dim[3] << "x" << dim[2] << "],";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1472,7 +1476,7 @@ bool MSWParser::readPicture(MSWEntry &entry)
     pos = input->tell();
     f.str("");
     f << "Picture-" << n << "[" << entry.textId() << "-" << entry.id() << "]:";
-    sz = input->readULong(4);
+    sz = (long) input->readULong(4);
     if (sz < 16 || sz+pos > entry.end()) {
       MWAW_DEBUG_MSG(("MSWParser::readPicture: pb with the picture size\n"));
       f << "#";
@@ -1480,14 +1484,14 @@ bool MSWParser::readPicture(MSWEntry &entry)
       ascii().addNote(f.str().c_str());
       return false;
     }
-    val = input->readULong(1); // always 8?
+    val = (int) input->readULong(1); // always 8?
     if (val) f << "type?=" << val << ",";
-    val = input->readLong(1); // always 0 ?
+    val = (int) input->readLong(1); // always 0 ?
     if (val) f << "unkn=" << val << ",";
-    val = input->readLong(2); // almost always 1 : two time 0?
+    val = (int) input->readLong(2); // almost always 1 : two time 0?
     if (val) f << "id?=" << val << ",";
     for (int i = 0; i < 4; i++)
-      dim[i] = input->readLong(2);
+      dim[i] = (int) input->readLong(2);
     f << "dim=[" << dim[1] << "x" << dim[0] << "," << dim[3] << "x" << dim[2] << "],";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1498,9 +1502,9 @@ bool MSWParser::readPicture(MSWEntry &entry)
       input->seek(pos+16, WPX_SEEK_SET);
       input->readDataBlock(sz-16, file);
       static int volatile pictName = 0;
-      libmwaw::DebugStream f;
-      f << "PICT-" << ++pictName << ".pct";
-      libmwaw::Debug::dumpFile(file, f.str().c_str());
+      libmwaw::DebugStream f2;
+      f2 << "PICT-" << ++pictName << ".pct";
+      libmwaw::Debug::dumpFile(file, f2.str().c_str());
     }
 #endif
     input->seek(pos+sz, WPX_SEEK_SET);

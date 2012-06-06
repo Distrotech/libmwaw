@@ -58,7 +58,7 @@ namespace libmwaw_internal
 class MWAWStringStream: public WPXInputStream
 {
 public:
-  MWAWStringStream(const unsigned char *data, const unsigned int dataSize) :
+  MWAWStringStream(const unsigned char *data, const unsigned long dataSize) :
     buffer(dataSize), offset(0) {
     memcpy(&buffer[0], data, dataSize);
   }
@@ -98,8 +98,8 @@ int MWAWStringStream::seek(long _offset, WPX_SEEK_TYPE seekType)
     offset = 0;
     return 1;
   }
-  if ((long)offset > (long)buffer.size()) {
-    offset = buffer.size();
+  if (offset > (long)buffer.size()) {
+    offset = (long) buffer.size();
     return 1;
   }
   return 0;
@@ -112,12 +112,12 @@ const unsigned char *MWAWStringStream::read(unsigned long numBytes, unsigned lon
   if (numBytes == 0)
     return 0;
 
-  int numBytesToRead;
+  unsigned long numBytesToRead;
 
-  if ((offset+numBytes) < buffer.size())
+  if (((unsigned long)offset+numBytes) < buffer.size())
     numBytesToRead = numBytes;
   else
-    numBytesToRead = buffer.size() - offset;
+    numBytesToRead = (unsigned long) ((long)buffer.size() - offset);
 
   numBytesRead = numBytesToRead; // about as paranoid as we can be..
 
@@ -127,7 +127,7 @@ const unsigned char *MWAWStringStream::read(unsigned long numBytes, unsigned lon
   long oldOffset = offset;
   offset += numBytesToRead;
 
-  return &buffer[oldOffset];
+  return &buffer[size_t(oldOffset)];
 }
 }
 
@@ -288,14 +288,14 @@ private:
 
 } // namespace libmwaw
 
-static inline unsigned long readU16( const unsigned char *ptr )
+static inline uint16_t readU16( const unsigned char *ptr )
 {
-  return ptr[0]+(ptr[1]<<8);
+  return uint16_t(ptr[0]+(ptr[1]<<8));
 }
 
-static inline unsigned long readU32( const unsigned char *ptr )
+static inline uint32_t readU32( const unsigned char *ptr )
 {
-  return ptr[0]+(ptr[1]<<8)+(ptr[2]<<16)+(ptr[3]<<24);
+  return uint32_t(ptr[0]+(ptr[1]<<8)+(ptr[2]<<16)+(ptr[3]<<24));
 }
 
 static const unsigned char mwawole_magic[] =
@@ -378,7 +378,7 @@ unsigned long libmwaw::AllocTable::count()
 
 void libmwaw::AllocTable::resize( unsigned long newsize )
 {
-  unsigned oldsize = data.size();
+  unsigned oldsize = unsigned(data.size());
   data.resize( newsize );
   if( newsize > oldsize )
     for( unsigned i = oldsize; i<newsize; i++ )
@@ -462,7 +462,7 @@ void libmwaw::DirTree::clear()
 
 unsigned libmwaw::DirTree::entryCount()
 {
-  return entries.size();
+  return unsigned(entries.size());
 }
 
 libmwaw::DirEntry *libmwaw::DirTree::entry( unsigned index )
@@ -493,7 +493,7 @@ libmwaw::DirEntry *libmwaw::DirTree::entry( const std::string &name )
   }
 
   // start from root
-  int index = 0 ;
+  unsigned index = 0 ;
 
   // trace one by one
   std::list<std::string>::iterator it;
@@ -551,10 +551,10 @@ void libmwaw::DirTree::load( unsigned char *buffer, unsigned size )
 
     // parse name of this entry, which stored as Unicode 16-bit
     std::string name;
-    int name_len = ::readU16( buffer + 0x40+p );
+    unsigned name_len = ::readU16( buffer + 0x40+p );
     if( name_len > 64 ) name_len = 64;
-    for( int j=0; ( buffer[j+p]) && (j<name_len); j+= 2 )
-      name.append( 1, buffer[j+p] );
+    for( unsigned j=0; ( buffer[j+p]) && (j<name_len); j+= 2 )
+      name.append( 1, (char) buffer[j+p] );
 
     // would be < 32 if first char in the name isn't printable
     // first char isn't printable ? remove it...
@@ -717,7 +717,7 @@ void libmwaw::StorageIO::load()
   if( (header->num_bat > 109) && (header->num_mbat > 0) ) {
     std::vector<unsigned char> buffer2( bbat->blockSize );
     unsigned k = 109;
-    unsigned sector;
+    unsigned long sector;
     for( unsigned r = 0; r < header->num_mbat; r++ ) {
       if(r == 0) // 1st meta bat location is in file header.
         sector = header->mbat_start;
@@ -735,7 +735,7 @@ void libmwaw::StorageIO::load()
   if( blocks.size()*bbat->blockSize > 0 ) {
     std::vector<unsigned char> buffer( blocks.size()*bbat->blockSize );
     loadBigBlocks( blocks, &buffer[0], buffer.size() );
-    bbat->load( &buffer[0], buffer.size() );
+    bbat->load( &buffer[0], unsigned(buffer.size()) );
   }
 
   // load small bat
@@ -744,7 +744,7 @@ void libmwaw::StorageIO::load()
   if( blocks.size()*bbat->blockSize > 0 ) {
     std::vector<unsigned char> buffer( blocks.size()*bbat->blockSize );
     loadBigBlocks( blocks, &buffer[0], buffer.size() );
-    sbat->load( &buffer[0], buffer.size() );
+    sbat->load( &buffer[0], unsigned(buffer.size()) );
   }
 
   // load directory tree
@@ -752,7 +752,7 @@ void libmwaw::StorageIO::load()
   blocks = bbat->follow( header->dirent_start );
   std::vector<unsigned char> buffer(blocks.size()*bbat->blockSize);
   loadBigBlocks( blocks, &buffer[0], buffer.size() );
-  dirtree->load( &buffer[0], buffer.size() );
+  dirtree->load( &buffer[0], unsigned(buffer.size()) );
   unsigned sb_start = ::readU32( &buffer[0x74] );
 
   // fetch block chain as data for small-files
@@ -794,7 +794,7 @@ unsigned long libmwaw::StorageIO::loadBigBlocks( std::vector<unsigned long> bloc
     unsigned long pos =  bbat->blockSize * ( block+1 );
     unsigned long p = (bbat->blockSize < maxlen-bytes) ? bbat->blockSize : maxlen-bytes;
 
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(long(pos), WPX_SEEK_SET);
     unsigned long numBytesRead = 0;
     const unsigned char *buf = input->read(p, numBytesRead);
     memcpy(data+bytes, buf, numBytesRead);
@@ -843,7 +843,7 @@ unsigned long libmwaw::StorageIO::loadSmallBlocks( std::vector<unsigned long> bl
     loadBigBlock( sb_blocks[ bbindex ], &tmpBuf[0], bbat->blockSize );
 
     // copy the data
-    unsigned offset = pos % bbat->blockSize;
+    unsigned offset = unsigned(pos % bbat->blockSize);
     unsigned long p = (maxlen-bytes < bbat->blockSize-offset ) ? maxlen-bytes :  bbat->blockSize-offset;
     p = (sbat->blockSize<p ) ? sbat->blockSize : p;
     memcpy( data + bytes, &tmpBuf[offset], p );

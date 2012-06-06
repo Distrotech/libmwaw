@@ -80,9 +80,9 @@ public:
     return m_subFormat;
   }
   //! sets the format type
-  void setFormat(Format format, int subformat=0) {
-    m_format = format;
-    m_subFormat = subformat;
+  void setFormat(Format form, int subform=0) {
+    m_format = form;
+    m_subFormat = subform;
   }
   //! sets the subformat
   void setSubformat(int subFormat) {
@@ -173,8 +173,8 @@ public:
   }
 
   //! sets the double value
-  void setValue(double value) {
-    m_value = value;
+  void setValue(double val) {
+    m_value = val;
     m_valueSet = true;
   }
   //! return the double value
@@ -187,8 +187,8 @@ public:
   }
 
   //! sets the text value
-  void setText(std::string const value) {
-    m_textValue = value;
+  void setText(std::string const val) {
+    m_textValue = val;
     m_textValueSet = true;
   }
   //! returns the text value
@@ -205,8 +205,8 @@ public:
   }
 
   //! sets the formula value
-  void setFormula(std::string const value) {
-    m_formulaValue = value;
+  void setFormula(std::string const val) {
+    m_formulaValue = val;
   }
   //! returns the formula value
   std::string const &formula() const {

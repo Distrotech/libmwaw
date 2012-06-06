@@ -65,6 +65,7 @@ class SubDocument;
 }
 
 class MSWText;
+class MSWTextStyles;
 
 //! the entry of MSWParser
 struct MSWEntry : public MWAWEntry {
@@ -78,8 +79,8 @@ struct MSWEntry : public MWAWEntry {
     return m_textId;
   }
   //! sets the text id
-  void setTextId(int id) {
-    m_textId = id;
+  void setTextId(int newId) {
+    m_textId = newId;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, MSWEntry const &entry);
@@ -95,6 +96,7 @@ struct MSWEntry : public MWAWEntry {
 class MSWParser : public MWAWParser
 {
   friend class MSWText;
+  friend class MSWTextStyles;
   friend class MSWParserInternal::SubDocument;
 
 public:

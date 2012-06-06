@@ -166,7 +166,7 @@ struct ParagraphInfo {
       o << "numCols=" << p.m_numLines << ",";
       if (p.m_linesHeight.size()) {
         o << "numDataByCols=[";
-        for (int i= 0; i < int(p.m_linesHeight.size()); i++)
+        for (size_t i= 0; i < p.m_linesHeight.size(); i++)
           o << p.m_linesHeight[i] << ",";
         o << "],";
       }
@@ -174,7 +174,7 @@ struct ParagraphInfo {
       if (p.m_numLines) o << "numLines=" << p.m_numLines << ",";
       if (p.m_linesHeight.size()) {
         o << "lineH=[";
-        for (int i= 0; i < int(p.m_linesHeight.size()); i++)
+        for (size_t i= 0; i < p.m_linesHeight.size(); i++)
           o << p.m_linesHeight[i] << ",";
         o << "],";
       }
@@ -185,7 +185,7 @@ struct ParagraphInfo {
     }
     if (p.m_unknowns.size()) {
       o << "unkn=[";
-      for (int i = 0; i < int(p.m_unknowns.size()); i++) {
+      for (size_t i = 0; i < p.m_unknowns.size(); i++) {
         if (p.m_unknowns[i])
           o << p.m_unknowns[i] << ",";
         else
@@ -257,9 +257,10 @@ bool WindowsInfo::getColumnLimitsFor(int line, std::vector<int> &listPos)
 {
   listPos.resize(0);
 
-  int numColumns = m_columns.size();
-  int firstColumn, numCols = 0;
-  for (int i = 0; i < numColumns; i++) {
+  size_t numColumns = m_columns.size();
+  size_t firstColumn;
+  int numCols = 0;
+  for (size_t i = 0; i < numColumns; i++) {
     if (m_columns[i].m_firstLine == line+2) {
       numCols=m_columns[i].m_numCol;
       if (numCols <= 1 || m_columns[i].m_col != 1) return false;
@@ -272,16 +273,16 @@ bool WindowsInfo::getColumnLimitsFor(int line, std::vector<int> &listPos)
   if (numCols <= 1)
     return true;
 
-  int numPara = m_paragraphs.size();
-  listPos.resize(numCols);
-  for (int i = 0; i < numCols; i++) {
+  size_t numPara = m_paragraphs.size();
+  listPos.resize((size_t)numCols);
+  for (size_t i = 0; i < (size_t)numCols; i++) {
     ColumnInfo const &colInfo =  m_columns[firstColumn++];
     int l = colInfo.m_firstLine-1;
-    if (l < 0 || l >= numPara) {
+    if (l < 0 || l >= (int) numPara) {
       MWAW_DEBUG_MSG(("WindowsInfo::getColumnLimitsFor: pb with line position\n"));
       return false;
     }
-    if (i && m_paragraphs[l].getType() != 3) {
+    if (i && m_paragraphs[(size_t)l].getType() != 3) {
       MWAW_DEBUG_MSG(("WindowsInfo::getColumnLimitsFor: can not find cols break\n"));
       return false;
     }
@@ -633,12 +634,12 @@ int WPParser::version() const
 ////////////////////////////////////////////////////////////
 float WPParser::pageHeight() const
 {
-  return m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
+  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float WPParser::pageWidth() const
 {
-  return m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight();
+  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
 }
 
 
@@ -831,7 +832,7 @@ bool WPParser::readWindowsInfo(int zone)
   }
   f << ":";
   for (int i = 0; i < 2; i++) {
-    int val = input->readLong(1);
+    int val = (int) input->readLong(1);
     f << "f" << i << "=" << val << ",";
   }
   f << "unkn=" << input->readLong(2);
@@ -839,20 +840,19 @@ bool WPParser::readWindowsInfo(int zone)
   long pos;
   for (int i = 0; i < 7; i++) {
     pos = input->tell();
-    WPParserInternal::WindowsInfo::Zone zone;
-    zone.m_unknown[0] = input->readULong(1);
-    zone.m_width = input->readULong(2);
-    zone.m_unknown[1] = input->readULong(1);
-    zone.m_unknown[2] = input->readULong(2);
-    zone.m_size = input->readULong(2);
-    zone.m_number = input->readULong(2);
-    info.m_zone[i] = zone;
+    WPParserInternal::WindowsInfo::Zone infoZone;
+    infoZone.m_unknown[0] = (int) input->readULong(1);
+    infoZone.m_width = (int) input->readULong(2);
+    infoZone.m_unknown[1] = (int) input->readULong(1);
+    infoZone.m_unknown[2] = (int) input->readULong(2);
+    infoZone.m_size = (int) input->readULong(2);
+    infoZone.m_number = (int) input->readULong(2);
+    info.m_zone[i] = infoZone;
   }
   f << "," << info;
 
   ascii().addPos(debPos);
   ascii().addNote(f.str().c_str());
-
 
   pos = input->tell();
   ascii().addPos(pos);
@@ -872,12 +872,12 @@ bool WPParser::readWindowsInfo(int zone)
   input->seek(pos, WPX_SEEK_SET);
   f.str("");
   f << "WindowsZone(A-7):";
-  int val = input->readLong(2);
+  int val = (int) input->readLong(2);
   if (val) f << "unkn=" << val << ",";
-  int width = input->readLong(2);
-  info.m_footerY = input->readLong(2);
-  info.m_headerY = input->readLong(2);
-  int height = input->readLong(2);
+  int width = (int) input->readLong(2);
+  info.m_footerY = (int) input->readLong(2);
+  info.m_headerY = (int) input->readLong(2);
+  int height = (int) input->readLong(2);
   info.m_pageDim = Vec2i(width, height);
   f << "page=" << info.m_pageDim << ",";
   if (info.m_headerY)
@@ -885,7 +885,7 @@ bool WPParser::readWindowsInfo(int zone)
   if (info.m_footerY)
     f << "footer[height]=" << info.m_footerY << ",";
   for (int i = 0; i < 3; i++) // always 17 12 0 left|right ?
-    f << "f" << i << "=" << input->readLong(2) << ",";
+    f << "f" << i << "=" << (int) input->readLong(2) << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   if (info.dimensionInvalid())
@@ -899,20 +899,20 @@ bool WPParser::readWindowsInfo(int zone)
   f << "WindowsZone(B):";
   int dim[4];
   for (int i = 0; i < 4; i++)
-    dim[i] = input->readLong(2);
+    dim[i] = (int) input->readLong(2);
   f << "dim(?)=" << dim[1] << "x" << dim[0] << "-" << dim[3] << "x" << dim[2] << ",";
   for (int i = 0; i < 2; i++) {
-    int fl = input->readLong(1); // almost always 0 except some time 1
+    int fl = (int) input->readLong(1); // almost always 0 except some time 1
     if (fl) f << "fl" << i << "=" << fl << ",";
   }
   for (int i = 0; i < 6; i++) {
-    int val[3];
-    val[0] = input->readULong(1);
-    val[1] = input->readLong(2);
-    val[2] = input->readULong(1);
-    if (val[0] == 0 && val[1] == 0 && val[2] == 0) continue;
-    f << "f" << i << "=[" << val[0] << ", w=" << val[1]
-      << ", " << std::hex << val[2] << std::dec << "],";
+    int values[3];
+    values[0] = (int) input->readULong(1);
+    values[1] = (int) input->readLong(2);
+    values[2] = (int) input->readULong(1);
+    if (values[0] == 0 && values[1] == 0 && values[2] == 0) continue;
+    f << "f" << i << "=[" << values[0] << ", w=" << values[1]
+      << ", " << std::hex << values[2] << std::dec << "],";
   }
 
   m_state->m_windows[zone]=info;
@@ -985,12 +985,12 @@ bool WPParser::readWindowsZone(int zone)
   }
 
   for (int i = int(wInfo.m_paragraphs.size())-1; i >= 0; i--) {
-    WPParserInternal::ParagraphInfo const &pInfo = wInfo.m_paragraphs[i];
+    WPParserInternal::ParagraphInfo const &pInfo = wInfo.m_paragraphs[(size_t)i];
     if (!pInfo.m_pos)	continue;
 
     input->seek(pInfo.m_pos, WPX_SEEK_SET);
-    long length = input->readULong(2);
-    long length2 = input->readULong(2);
+    long length = (long) input->readULong(2);
+    long length2 = (long) input->readULong(2);
     long endPos = pInfo.m_pos+4+length+length2;
     input->seek(endPos, WPX_SEEK_SET);
     if (long(input->tell()) != endPos) {
@@ -999,7 +999,7 @@ bool WPParser::readWindowsZone(int zone)
     }
     switch (pInfo.getType()) {
     case 4:
-      length = input->readULong(4);
+      length = (long) input->readULong(4);
       input->seek(length, WPX_SEEK_CUR);
       if (long(input->tell()) != endPos+length+4) {
         MWAW_DEBUG_MSG(("WPParser::readWindowsZone: graphics zone is too short\n"));
@@ -1024,7 +1024,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
 
   bool sendAll = limits[0] < 0;
 
-  int maxPages = wInfo.m_pages.size();
+  int maxPages = int(wInfo.m_pages.size());
   if (maxPages == 0 || zone || !sendAll) maxPages = 1;
 
   int actParag = 0;
@@ -1050,7 +1050,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
       if (pg == maxPages-1 || wInfo.m_pages.size() == 0)
         endParag =  int(wInfo.m_paragraphs.size());
       else {
-        endParag = wInfo.m_pages[pg+1].m_firstLine-1;
+        endParag = wInfo.m_pages[(size_t)pg+1].m_firstLine-1;
         if (endParag == -1 || endParag < actParag) {
           MWAW_DEBUG_MSG(("WPParser::readWindowsZone: pb with page zone\n"));
           continue;
@@ -1059,7 +1059,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
     }
 
     for (int i = actParag; i < endParag; i++) {
-      WPParserInternal::ParagraphInfo const &pInfo = wInfo.m_paragraphs[i];
+      WPParserInternal::ParagraphInfo const &pInfo = wInfo.m_paragraphs[(size_t)i];
       if (!pInfo.m_pos) {
         readText(pInfo);
         continue;
@@ -1088,7 +1088,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
               MWAW_DEBUG_MSG(("WPParser::readWindowsZone: find a section in auxilliary zone\n"));
             }
           } else {
-            numCols = colSize.size();
+            numCols = int(colSize.size());
             actCol = numCols ? 1 : 0;
             if (m_listener) {
               if (m_listener->isSectionOpened())
@@ -1108,12 +1108,12 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
       case 5:
         if (pInfo.m_numLines + i <= endParag) {
           if ((ok = readTable(pInfo)) && m_listener) {
-            m_listener->openTableRow(pInfo.m_height, WPX_POINT);
+            m_listener->openTableRow((float)pInfo.m_height, WPX_POINT);
 
-            for (int j = 0; j < int(pInfo.m_linesHeight.size()); j++) {
+            for (size_t j = 0; j < pInfo.m_linesHeight.size(); j++) {
               int numData = pInfo.m_linesHeight[j];
               MWAWCell cell;
-              cell.position() = Vec2i(0, j);
+              cell.position() = Vec2i(0, int(j));
               m_listener->openTableCell(cell, WPXPropertyList());
               sendWindow(zone, Vec2i(i+1, i+1+numData));
               i += numData;
@@ -1159,7 +1159,7 @@ bool WPParser::findSectionColumns(int zone, Vec2i limits, std::vector<int> &colS
   if (!wInfo.getColumnLimitsFor(limits[0], listPos))
     return false;
 
-  int numPos = listPos.size();
+  size_t numPos = listPos.size();
   if (!numPos)
     return true;
   if (listPos[numPos-1] >= limits[1]) {
@@ -1169,9 +1169,9 @@ bool WPParser::findSectionColumns(int zone, Vec2i limits, std::vector<int> &colS
 
   MWAWInputStreamPtr input = getInput();
   int totalSize = 0;
-  for (int j = 0; j < numPos; j++) {
+  for (size_t j = 0; j < numPos; j++) {
     int line = listPos[j];
-    int pos = wInfo.m_paragraphs[line].m_pos;
+    long pos = wInfo.m_paragraphs[(size_t)line].m_pos;
     if (!pos) {
       MWAW_DEBUG_MSG(("WPParser::findSectionColumns: bad data pos\n"));
       return false;
@@ -1182,7 +1182,7 @@ bool WPParser::findSectionColumns(int zone, Vec2i limits, std::vector<int> &colS
       return false;
     }
     input->seek(8, WPX_SEEK_CUR); // sz2 and type, h, indent
-    int val = input->readLong(2);
+    int val = (int) input->readLong(2);
     if (val <= 0 || long(input->tell()) != pos + 12) {
       MWAW_DEBUG_MSG(("WPParser::findSectionColumns: file is too short\n"));
       return false;
@@ -1224,16 +1224,16 @@ bool WPParser::readPageInfo(int zone)
   for (int page = 0; page < numPages; page++) {
     pos = input->tell();
     WPParserInternal::PageInfo pInfo;
-    pInfo.m_firstLine = input->readLong(2);
+    pInfo.m_firstLine = (int) input->readLong(2);
     if ((page == 0 && pInfo.m_firstLine != 1) || pInfo.m_firstLine < actNumLine)
       return false;
     actNumLine=pInfo.m_firstLine;
     for (int i = 0; i < 2; i++)
-      pInfo.m_unknown[i] = input->readLong(2);
-    pInfo.m_heightFromBegin = input->readULong(2);
+      pInfo.m_unknown[i] = (int) input->readLong(2);
+    pInfo.m_heightFromBegin = (int) input->readULong(2);
     if (pInfo.m_heightFromBegin < prevTotalHeight) return false;
     prevTotalHeight = pInfo.m_heightFromBegin;
-    pInfo.m_height = input->readULong(2);
+    pInfo.m_height = (int) input->readULong(2);
     if (pInfo.m_height > maxHeight) return false;
 
     wInfo.m_pages.push_back(pInfo);
@@ -1270,14 +1270,14 @@ bool WPParser::readParagraphInfo(int zone)
 
     f.str("");
     f << "Entries(ParaInfo)-"<< para+1 << ":";
-    int wh = input->readLong(1);
+    int wh = (int) input->readLong(1);
     if ((wh%2) == 0) {
       if (wh < 4) return false;
       for (int i = 0; i < (wh-4)/2; i++)
-        pInfo.m_unknowns.push_back(input->readULong(2));
+        pInfo.m_unknowns.push_back((int) input->readULong(2));
       pInfo.m_type = -1;
-      pInfo.m_numLines = input->readULong(1); // probably numLine
-      pInfo.m_height = input->readULong(2);
+      pInfo.m_numLines = (int) input->readULong(1); // probably numLine
+      pInfo.m_height = (int) input->readULong(2);
       f << pInfo;
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -1285,20 +1285,20 @@ bool WPParser::readParagraphInfo(int zone)
     }
     para++;
     pInfo.m_flags[0] = (wh>>1);
-    pInfo.m_flags[1] = input->readULong(1); // almost always 0
-    pInfo.m_type = input->readULong(1);
-    pInfo.m_numLines = input->readULong(1); // or numColumns if type==5
-    pInfo.m_height = input->readULong(2);
-    pInfo.m_pos = input->readULong(4);
-    pInfo.m_flags[2] = input->readULong(1); // almost always 0
-    pInfo.m_width = input->readULong(2);
+    pInfo.m_flags[1] = (int) input->readULong(1); // almost always 0
+    pInfo.m_type = (int) input->readULong(1);
+    pInfo.m_numLines = (int) input->readULong(1); // or numColumns if type==5
+    pInfo.m_height = (int) input->readULong(2);
+    pInfo.m_pos = (long) input->readULong(4);
+    pInfo.m_flags[2] = (int) input->readULong(1); // almost always 0
+    pInfo.m_width = (int) input->readULong(2);
     for (int i = 3; i < 5; i++)
-      pInfo.m_flags[i] = input->readULong(1);
+      pInfo.m_flags[i] = (int) input->readULong(1);
     if (pInfo.m_numLines!=1) {
       for (int i = 0; i < pInfo.m_numLines; i++)
-        pInfo.m_linesHeight.push_back(input->readULong(1));
+        pInfo.m_linesHeight.push_back((int) input->readULong(1));
     }
-    pInfo.m_height2 = input->readULong(1);
+    pInfo.m_height2 = (int) input->readULong(1);
     wInfo.m_paragraphs.push_back(pInfo);
     f << pInfo;
 
@@ -1330,13 +1330,13 @@ bool WPParser::readColInfo(int zone)
   for (int col = 0; col < numCols; col++) {
     long pos = input->tell();
     WPParserInternal::ColumnInfo cInfo;
-    cInfo.m_col = input->readLong(2);
-    cInfo.m_unknown[0] = input->readLong(2);
-    cInfo.m_numCol = input->readLong(2);
-    cInfo.m_firstLine = input->readLong(2);
+    cInfo.m_col = (int) input->readLong(2);
+    cInfo.m_unknown[0] = (int) input->readLong(2);
+    cInfo.m_numCol = (int) input->readLong(2);
+    cInfo.m_firstLine = (int) input->readLong(2);
     for (int i = 1; i < 4; i++)
-      cInfo.m_unknown[i] = input->readLong(2);
-    cInfo.m_height = input->readLong(2);
+      cInfo.m_unknown[i] = (int) input->readLong(2);
+    cInfo.m_height = (int) input->readLong(2);
     wInfo.m_columns.push_back(cInfo);
 
     f.str("");
@@ -1372,7 +1372,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
     f << "###lines,";
   }
   for (int i = 0; i < numLines; i++)
-    f << "line" << i << "=[" << lines[i] << "],";
+    f << "line" << i << "=[" << lines[(size_t)i] << "],";
 
   if (long(input->tell()) != data.m_endPos) {
     ascii().addDelimiter(input->tell(), '|');
@@ -1390,11 +1390,11 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
     return true;
   std::string const &text = data.m_text;
   std::vector<WPParserInternal::Font> const &fonts = data.m_fonts;
-  int numChars = text.length();
-  int actFont = 0, numFonts = fonts.size();
+  long numChars = (long) text.length();
+  size_t actFont = 0, numFonts = fonts.size();
   MWAWFont font;
   int actLine = 0;
-  numLines=lines.size();
+  numLines=int(lines.size());
   if (numLines == 0 && info.m_height > 0)
     m_listener->setParagraphLineSpacing(info.m_height, WPX_POINT);
   for (int c = 0; c < numChars; c++) {
@@ -1402,17 +1402,17 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
       fonts[actFont].m_font.sendTo(m_listener.get(), m_convertissor, font);
       font = fonts[actFont++].m_font;
     }
-    if (actLine < numLines && c == lines[actLine].m_firstChar) {
+    if (actLine < numLines && c == lines[(size_t) actLine].m_firstChar) {
       if (actLine) m_listener->insertEOL();
       if (numLines == 1 && info.m_height > lines[0].m_height)
         m_listener->setParagraphLineSpacing(info.m_height, WPX_POINT);
-      else if (lines[actLine].m_height)
-        m_listener->setParagraphLineSpacing(lines[actLine].m_height, WPX_POINT);
+      else if (lines[(size_t) actLine].m_height)
+        m_listener->setParagraphLineSpacing(lines[(size_t) actLine].m_height, WPX_POINT);
       actLine++;
     }
-    unsigned char ch = text[c];
+    unsigned char ch = (unsigned char) text[(size_t)c];
     int unicode = m_convertissor->unicode(font.id(), ch);
-    if (unicode != -1) m_listener->insertUnicode(unicode);
+    if (unicode != -1) m_listener->insertUnicode((uint32_t) unicode);
     else if (ch == 0x9)
       m_listener->insertTab();
     /*    else if (ch == 0xd)
@@ -1457,12 +1457,12 @@ bool WPParser::readSection(WPParserInternal::ParagraphInfo const &info, bool mai
   for (int i = 0; i < numData; i++) {
     WPParserInternal::SectionInfo section;
     for (int j = 0; j < 2; j++)
-      section.m_flags[j] = input->readLong(2);
-    section.m_numCol = input->readLong(2); // checkme
+      section.m_flags[j] = (int) input->readLong(2);
+    section.m_numCol = (int) input->readLong(2); // checkme
     for (int j = 0; j < 3; j++)
-      section.m_dim[j] = input->readLong(2);
+      section.m_dim[j] = (int) input->readLong(2);
     for (int j = 2; j < 4; j++)
-      section.m_flags[j] = input->readLong(2);
+      section.m_flags[j] = (int) input->readLong(2);
     sections.push_back(section);
     if (!section.empty())
       f << "section" << i << "=[" << section << "],";
@@ -1513,23 +1513,23 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
   std::vector<WPParserInternal::ColumnTableInfo> columns;
   for (int i = 0; i < numData; i++) {
     WPParserInternal::ColumnTableInfo cols;
-    cols.m_height = input->readLong(2);
+    cols.m_height = (int) input->readLong(2);
     for (int j = 0; j < 2; j++)
-      cols.m_colX[j] = input->readLong(2);
-    cols.m_numData = input->readLong(2);
-    cols.m_flags  = input->readLong(2);
+      cols.m_colX[j] = (int) input->readLong(2);
+    cols.m_numData = (int) input->readLong(2);
+    cols.m_flags  = (int) input->readLong(2);
     for (int j = 0; j < 3; j++)
-      cols.m_textX[j] = input->readLong(2);
+      cols.m_textX[j] = (int) input->readLong(2);
 
     columns.push_back(cols);
     f << "col" << i << "=[" << cols << "],";
   }
 
   if (m_listener) {
-    std::vector<float> colSize(numData);
+    std::vector<float> colSize((size_t)numData);
     for (int i = 0; i < numData; i++) {
-      WPParserInternal::ColumnTableInfo const &cols = columns[i];
-      colSize[i] = cols.m_colX[1]-cols.m_colX[0];
+      WPParserInternal::ColumnTableInfo const &cols = columns[(size_t)i];
+      colSize[(size_t)i] = float(cols.m_colX[1]-cols.m_colX[0]);
     }
     m_listener->openTable(colSize, WPX_POINT);
   }
@@ -1576,12 +1576,12 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
   std::vector<WPParserInternal::GraphicInfo> graphicsInfos;
   for (int i = 0; i < numData; i++) {
     WPParserInternal::GraphicInfo gInfo;
-    gInfo.m_flags[0] = input->readLong(1);
-    gInfo.m_width = input->readLong(2);
-    gInfo.m_flags[1] = input->readULong(1); //
-    gInfo.m_graphicWidth = input->readLong(2); // total width
+    gInfo.m_flags[0] = (int) input->readLong(1);
+    gInfo.m_width = (int) input->readLong(2);
+    gInfo.m_flags[1] = (int) input->readULong(1); //
+    gInfo.m_graphicWidth = (int) input->readLong(2); // total width
     for (int j = 2; j < 7; j++)
-      gInfo.m_flags[j] = input->readLong(2);
+      gInfo.m_flags[j] = (int) input->readLong(2);
     f << "data" << i << "=[" << gInfo << "],";
     graphicsInfos.push_back(gInfo);
   }
@@ -1596,7 +1596,7 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
 
   // read the graphic:
   pos = input->tell();
-  long length = input->readULong(4);
+  long length = (long) input->readULong(4);
   if (!length) {
     MWAW_DEBUG_MSG(("WPParser::readGraphic: find a zero size graphics\n"));
     ascii().addPos(pos);
@@ -1616,8 +1616,7 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
 
   Box2f box;
   input->seek(pos+4, WPX_SEEK_SET);
-  MWAWPict::ReadResult res =
-    MWAWPictData::check(input, length, box);
+  MWAWPict::ReadResult res = MWAWPictData::check(input, (int)length, box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("WPParser::readGraphic: can not find the picture\n"));
     input->seek(endPos, WPX_SEEK_SET);
@@ -1641,14 +1640,14 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
 
   // get the picture
   input->seek(pos+4, WPX_SEEK_SET);
-  shared_ptr<MWAWPict> pict(MWAWPictData::get(input, length));
+  shared_ptr<MWAWPict> pict(MWAWPictData::get(input, (int)length));
   if (m_listener) {
     m_listener->setParagraphLineSpacing(info.m_height, WPX_POINT);
     if (pict) {
-      WPXBinaryData data;
+      WPXBinaryData pictData;
       std::string type;
-      if (pict->getBinary(data,type))
-        m_listener->insertPicture(pictPos, data, type);
+      if (pict->getBinary(pictData,type))
+        m_listener->insertPicture(pictPos, pictData, type);
     }
     m_listener->insertEOL();
     m_listener->setParagraphLineSpacing(1.0, WPX_PERCENT);
@@ -1687,7 +1686,7 @@ bool WPParser::readUnknown(WPParserInternal::ParagraphInfo const &info)
   for (int i = 0; i < numData; i++) {
     f << "data" << i << "=[";
     for (int j = 0; j < 8; j++) {
-      int val = input->readLong(2);
+      int val = (int) input->readLong(2);
       if (!val) f << "_,";
       else f << val << ",";
     }
@@ -1721,8 +1720,8 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
   input->seek(pos, WPX_SEEK_SET);
 
   data = WPParserInternal::ParagraphData();
-  int textLength = input->readLong(2);
-  int length2 = input->readLong(2);
+  int textLength = (int) input->readLong(2);
+  int length2 = (int) input->readLong(2);
   data.m_endPos = pos+4+textLength+length2;
 
   input->seek(data.m_endPos, WPX_SEEK_SET);
@@ -1734,12 +1733,12 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
   if (textLength) {
     std::string &text = data.m_text;
     for (int i = 0; i < textLength; i++) {
-      char c = input->readULong(1);
+      char c = (char) input->readULong(1);
       if (c == '\0') return false;
       text += c;
     }
   }
-  int type = input->readULong(2);
+  int type = (int) input->readULong(2);
   data.m_type = (type & 7);
   data.m_typeFlag = (type & 0xFFF8);
 
@@ -1751,14 +1750,14 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
     f << "#diffType=" << info.m_type << ",";
   }
 
-  data.m_height = input->readLong(2);
-  data.m_indent[0] = input->readLong(2);
-  data.m_width = input->readLong(2);
-  data.m_indent[1] = input->readLong(2);
-  data.m_unknown = input->readLong(2);
+  data.m_height = (int) input->readLong(2);
+  data.m_indent[0] = (int) input->readLong(2);
+  data.m_width = (int) input->readLong(2);
+  data.m_indent[1] = (int) input->readLong(2);
+  data.m_unknown = (int) input->readLong(2);
 
   for (int i = 0; i < 2; i++)
-    data.m_numData[i] = input->readLong(2);
+    data.m_numData[i] = (int) input->readLong(2);
 
   std::vector<WPParserInternal::Font> &fonts = data.m_fonts;
   if (hasFonts) {
@@ -1771,7 +1770,7 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
   }
 
   f << data;
-  for (int i = 0; i < int(fonts.size()); i++) {
+  for (size_t i = 0; i < fonts.size(); i++) {
     f << "font" << i << "=[";
 #ifdef DEBUG
     f << fonts[i].m_font.getDebugString(m_convertissor);
@@ -1806,11 +1805,11 @@ bool WPParser::readFonts
   std::vector<WPParserInternal::Font> lFonts;
   for (int i = 0; i < nFonts; i++) {
     WPParserInternal::Font fInfo;
-    for (int j = 0; j < 5; j++) fInfo.m_flags[j] = input->readULong(1);
+    for (int j = 0; j < 5; j++) fInfo.m_flags[j] = (int) input->readULong(1);
     MWAWFont &font = fInfo.m_font;
-    font.setId(input->readULong(1));
-    int flag = input->readULong(1);
-    int flags = 0;
+    font.setId((int) input->readULong(1));
+    int flag = (int) input->readULong(1);
+    uint32_t flags = 0;
     if (flag&0x1) flags |= MWAW_BOLD_BIT;
     if (flag&0x2) flags |= MWAW_ITALICS_BIT;
     if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
@@ -1823,16 +1822,16 @@ bool WPParser::readFonts
     for (int j = 5; j < 7; j++)
       // g5 frequent 4, 10, 14 sometimes 2,12
       // g6 always 0
-      fInfo.m_flags[j] = input->readLong(1);
-    font.setSize(input->readLong(1));
+      fInfo.m_flags[j] = (int) input->readLong(1);
+    font.setSize((int) input->readLong(1));
     fInfo.m_firstChar = actPos;
-    int nChar = input->readULong(2);
+    int nChar = (int) input->readULong(2);
     actPos += nChar;
     if (!hasFontExtra)
       input->seek(4, WPX_SEEK_CUR);
     else {
       for (int j = 7; j < 9; j++)
-        fInfo.m_flags[j] = input->readLong(2);
+        fInfo.m_flags[j] = (int) input->readLong(2);
     }
     fonts.push_back(fInfo);
   }
@@ -1854,10 +1853,10 @@ bool WPParser::readLines
   std::vector<WPParserInternal::Line> lLines;
   for (int i = 0; i < nLines; i++) {
     WPParserInternal::Line lInfo;
-    lInfo.m_height = input->readLong(2);
-    lInfo.m_maxFontSize = input->readLong(2); // checkMe
-    lInfo.m_width = input->readLong(2);
-    int nChar = input->readLong(2);
+    lInfo.m_height = (int) input->readLong(2);
+    lInfo.m_maxFontSize = (int) input->readLong(2); // checkMe
+    lInfo.m_width = (int) input->readLong(2);
+    int nChar = (int) input->readLong(2);
     lInfo.m_firstChar = actPos;
     actPos += nChar;
     /*
@@ -1867,7 +1866,7 @@ bool WPParser::readLines
     	 f3 almost always 0, if not 200, 400, 6465, 7600, dfc, e03, e04, e06 : junk?
      */
     for (int j = 0; j < 4; j++)
-      lInfo.m_flags[j] = input->readLong(2);
+      lInfo.m_flags[j] = (int) input->readLong(2);
     lines.push_back(lInfo);
   }
   return true;

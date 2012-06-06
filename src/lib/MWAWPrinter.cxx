@@ -51,9 +51,9 @@ bool PrinterRect::read(MWAWInputStreamPtr input, Vec2i const &res)
 {
   int x,y;
   for (int st = 0; st < 2; st++) {
-    y = input->readLong(2);
+    y = int(input->readLong(2));
     y = int(float(y)*72./float(res.y()));
-    x = input->readLong(2);
+    x = int(input->readLong(2));
     x = int(float(x)*72./float(res.x()));
     m_pos[st].set(x,y);
   }
@@ -84,9 +84,9 @@ struct PrinterRectResolution {
   }
   //! reads the data from file
   bool read(MWAWInputStreamPtr input) {
-    m_iDev = input->readLong(2);
-    int y = input->readLong(2);
-    int x = input->readLong(2);
+    m_iDev = int(input->readLong(2));
+    int y = int(input->readLong(2));
+    int x = int(input->readLong(2));
     if (x <= 0 || y <= 0) return false;
     m_resolution.set(x,y);
     return m_rect.read(input, m_resolution);
@@ -109,12 +109,12 @@ struct PrinterStyle {
   }
   //! reads data from file
   bool read(MWAWInputStreamPtr input) {
-    m_wDev = input->readLong(2);
-    m_pageWidth = input->readLong(2);
-    m_pageHeight = input->readLong(2);
+    m_wDev = (int) input->readLong(2);
+    m_pageWidth = (int) input->readLong(2);
+    m_pageHeight = (int) input->readLong(2);
     if (m_pageWidth < 0 || m_pageHeight < 0) return false;
-    m_port = input->readULong(1);
-    m_feed = input->readLong(1);
+    m_port = (int) input->readULong(1);
+    m_feed = (int) input->readLong(1);
     if (input->atEOS()) return false;
     return true;
   }
@@ -135,17 +135,17 @@ struct PrinterJob {
   }
   //! read data from file
   bool read(MWAWInputStreamPtr input) {
-    m_firstPage = input->readLong(2);
-    m_lastPage = input->readLong(2);
-    m_copies = input->readLong(2);
-    m_jobDocLoop = input->readULong(1);
-    m_fromUser = input->readLong(1);
+    m_firstPage = (int) input->readLong(2);
+    m_lastPage = (int) input->readLong(2);
+    m_copies = (int) input->readLong(2);
+    m_jobDocLoop = (int) input->readULong(1);
+    m_fromUser = (int) input->readLong(1);
     // skip pIdleProc
     if (input->seek(4, WPX_SEEK_CUR) != 0 || input->atEOS()) return false;
     // skip pFileName
     if (input->seek(4, WPX_SEEK_CUR) != 0 || input->atEOS()) return false;
-    m_fileVol = input->readLong(2);
-    m_fileVers = input->readLong(1);
+    m_fileVol = (int) input->readLong(2);
+    m_fileVers = (int) input->readLong(1);
     return true;
   }
 
@@ -209,7 +209,7 @@ std::ostream &operator<< (std::ostream &o, PrinterInfo const &r)
 
 bool PrinterInfo::read(MWAWInputStreamPtr input)
 {
-  m_data->m_version = input->readLong(2);
+  m_data->m_version = (int) input->readLong(2);
   if (!m_data->m_info.read(input)) return false;
   if (!m_data->m_paper.read(input, m_data->m_info.resolution())) return false;
   if (!m_data->m_feed.read(input)) return false;

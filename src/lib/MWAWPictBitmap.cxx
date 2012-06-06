@@ -50,7 +50,7 @@ bool getPBMData(MWAWPictBitmapContainer<T> const &orig, WPXBinaryData &data, T w
   std::stringstream f;
   f << "P4\n" << sz[0] << " " << sz[1] << "\n";
   std::string const &header = f.str();
-  data.append((const unsigned char *)header.c_str(), (int)header.size());
+  data.append((const unsigned char *)header.c_str(), header.size());
 
   for (int j = 0; j < sz[1]; j++) {
     T const *row = orig.getRow(j);
@@ -58,7 +58,7 @@ bool getPBMData(MWAWPictBitmapContainer<T> const &orig, WPXBinaryData &data, T w
     unsigned char mask = 0x80, value = 0;
     for (int i = 0; i < sz[0]; i++) {
       if (row[i] != white) value |= mask;
-      mask >>= 1;
+      mask = (unsigned char)(mask >> 1);
       if (mask != 0) continue;
       data.append(value);
       value = 0;
@@ -76,13 +76,13 @@ bool getPPMData(MWAWPictBitmapContainer<T> const &orig, WPXBinaryData &data, std
   Vec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
 
-  int nColors = indexedColor.size();
+  int nColors = int(indexedColor.size());
 
   data.clear();
   std::stringstream f;
   f << "P6\n" << sz[0] << " " << sz[1] << " 255\n";
   std::string const &header = f.str();
-  data.append((const unsigned char *)header.c_str(), (int)header.size());
+  data.append((const unsigned char *)header.c_str(), header.size());
   for (int j = 0; j < sz[1]; j++) {
     T const *row = orig.getRow(j);
 
@@ -92,7 +92,7 @@ bool getPPMData(MWAWPictBitmapContainer<T> const &orig, WPXBinaryData &data, std
         MWAW_DEBUG_MSG(("MWAWPictBitmap::getPPMData invalid index %d\n", ind));
         return false;
       }
-      Vec3uc const &col = indexedColor[ind];
+      Vec3uc const &col = indexedColor[size_t(ind)];
       for (int c = 0; c < 3; c++) data.append((unsigned char) col[c]);
     }
   }
@@ -109,7 +109,7 @@ bool getPPMData(MWAWPictBitmapContainer<Vec3uc> const &orig, WPXBinaryData &data
   std::stringstream f;
   f << "P6\n" << sz[0] << " " << sz[1] << " 255\n";
   std::string const &header = f.str();
-  data.append((const unsigned char *)header.c_str(), (int)header.size());
+  data.append((const unsigned char *)header.c_str(), header.size());
   for (int j = 0; j < sz[1]; j++) {
     Vec3uc const *row = orig.getRow(j);
 

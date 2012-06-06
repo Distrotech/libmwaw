@@ -203,12 +203,12 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
 
   f << "Entries(TableDef):" << *tableZone << ",";
   float dim[2];
-  for (int i = 0; i < 2; i++) dim[i] = m_input->readLong(4)/256.;
+  for (int i = 0; i < 2; i++) dim[i] = float(m_input->readLong(4))/256.f;
   f << "dim=" << dim[0] << "x" << dim[1] << ",";
   int val;
   for (int i = 0; i < 3; i++) {
     // f1=parentZoneId ?
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   ascii().addDelimiter(m_input->tell(), '|');
@@ -216,8 +216,8 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
   ascii().addNote(f.str().c_str());
 
   // read the last part
-  int data0Length = zone.m_dataSz;
-  int N = zone.m_numData;
+  long data0Length = zone.m_dataSz;
+  long N = zone.m_numData;
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       MWAW_DEBUG_MSG(("CWTable::readTableZone: can not find definition size\n"));
@@ -325,7 +325,7 @@ void CWTable::flushExtra()
 bool CWTable::readTableBorders(CWTableInternal::Table &table)
 {
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   long endPos = pos+4+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
@@ -337,20 +337,20 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
   m_input->seek(pos+4, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(TableBorders):";
-  int N = m_input->readULong(2);
+  int N = (int) m_input->readULong(2);
   f << "N=" << N << ",";
-  int val = m_input->readLong(2);
+  int val =(int)  m_input->readLong(2);
   if (val != -1) f << "f0=" << val << ",";
-  val = m_input->readLong(2);
+  val = (int) m_input->readLong(2);
   if (val) f << "f1=" << val << ",";
-  int fSz = m_input->readLong(2);
+  int fSz = (int) m_input->readLong(2);
   if (sz != 12+fSz*N || fSz < 18) {
     m_input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWTable::readTableBorders: find odd data size\n"));
     return false;
   }
   for (int i = 2; i < 4; i++) {
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
 
   }
@@ -363,10 +363,10 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
     f.str("");
     f << "TableBorders-" << i << ":";
     int posi[4];
-    for (int i = 0; i < 4; i++) posi[i] = m_input->readLong(4);
+    for (int j = 0; j < 4; j++) posi[j] = (int) m_input->readLong(4);
     border.m_position[0] = Vec2i(posi[1], posi[0]);
     border.m_position[1] = Vec2i(posi[3], posi[2]);
-    border.m_flags = m_input->readULong(2);
+    border.m_flags = (int) m_input->readULong(2);
     table.m_bordersList.push_back(border);
     f << border;
     if (long(m_input->tell()) != pos+fSz)
@@ -383,7 +383,7 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
 bool CWTable::readTableCells(CWTableInternal::Table &table)
 {
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   long endPos = pos+4+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
@@ -395,20 +395,20 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
   m_input->seek(pos+4, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(TableCell):";
-  int N = m_input->readULong(2);
+  int N = (int) m_input->readULong(2);
   f << "N=" << N << ",";
-  int val = m_input->readLong(2);
+  int val = (int) m_input->readLong(2);
   if (val != -1) f << "f0=" << val << ",";
-  val = m_input->readLong(2);
+  val = (int) m_input->readLong(2);
   if (val) f << "f1=" << val << ",";
-  int fSz = m_input->readLong(2);
+  int fSz = (int) m_input->readLong(2);
   if (sz != 12+fSz*N || fSz < 32) {
     m_input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWTable::readTableCells: find odd data size\n"));
     return false;
   }
   for (int i = 2; i < 4; i++) {
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
 
   }
@@ -419,13 +419,13 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
     pos = m_input->tell();
     shared_ptr<CWTableInternal::Cell> cell(new CWTableInternal::Cell);
     int posi[6];
-    for (int j = 0; j < 6; j++) posi[j] = m_input->readLong(4);
-    Box2f box = Box2f(Vec2f(posi[1], posi[0]), Vec2f(posi[3], posi[2]));
+    for (int j = 0; j < 6; j++) posi[j] = (int) m_input->readLong(4);
+    Box2f box = Box2f(Vec2f(float(posi[1]), float(posi[0])), Vec2f(float(posi[3]), float(posi[2])));
     box.scale(1./256.);
     cell->setBox(box);
-    cell->m_size = 1./256.*Vec2f(posi[5], posi[4]);
-    cell->m_zoneId = m_input->readULong(4);
-    cell->m_styleId = m_input->readULong(4);
+    cell->m_size = 1./256.*Vec2f(float(posi[5]), float(posi[4]));
+    cell->m_zoneId = (int) m_input->readULong(4);
+    cell->m_styleId = (int) m_input->readULong(4);
     table.add(cell);
     f.str("");
     f << "TableCell-" << i << ":" << *cell;
@@ -443,11 +443,11 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
 bool CWTable::readTableBordersId(CWTableInternal::Table &table)
 {
   int numCells = table.numCells();
-  int numBorders = table.m_bordersList.size();
+  int numBorders = int(table.m_bordersList.size());
   for (int i = 0; i < 4*numCells; i++) {
     CWTableInternal::Cell *cell = table.get(i/4);
     long pos = m_input->tell();
-    long sz = m_input->readULong(4);
+    long sz = (long) m_input->readULong(4);
     long endPos = pos+4+sz;
     m_input->seek(endPos, WPX_SEEK_SET);
     if (long(m_input->tell()) != endPos) {
@@ -459,26 +459,26 @@ bool CWTable::readTableBordersId(CWTableInternal::Table &table)
     m_input->seek(pos+4, WPX_SEEK_SET);
     libmwaw::DebugStream f;
     f << "Entries(TableBordersId)[" << i/4 << "," << i%4 << "],";
-    int N = m_input->readULong(2);
+    int N = (int)m_input->readULong(2);
     f << "N=" << N << ",";
-    int val = m_input->readLong(2);
+    int val = (int)m_input->readLong(2);
     if (val != -1) f << "f0=" << val << ",";
-    val = m_input->readLong(2);
+    val = (int)m_input->readLong(2);
     if (val) f << "f1=" << val << ",";
-    int fSz = m_input->readLong(2);
+    int fSz = (int)m_input->readLong(2);
     if (N==0 || sz != 12+fSz*N || fSz < 2) {
       m_input->seek(pos, WPX_SEEK_SET);
       MWAW_DEBUG_MSG(("CWTable::readTableBordersId: find odd data size\n"));
       return false;
     }
     for (int j = 2; j < 4; j++) {
-      val = m_input->readLong(2);
+      val = (int)m_input->readLong(2);
       if (val) f << "f" << j << "=" << val << ",";
     }
 
     std::vector<int> idsList;
     for (int j = 0; j < N; j++) {
-      int id = m_input->readLong(2);
+      int id = (int)m_input->readLong(2);
       if (id < 0 || id >= numBorders) {
         m_input->seek(pos, WPX_SEEK_SET);
         MWAW_DEBUG_MSG(("CWTable::readTableBordersId: unexpected id\n"));

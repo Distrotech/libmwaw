@@ -75,7 +75,7 @@ unsigned long MWAWInputStream::readULong(int num, unsigned long a)
 
 long MWAWInputStream::readLong(int num)
 {
-  long v = readULong(num);
+  long v = long(readULong(num));
   switch (num) {
   case 4:
     return (int32_t) v;
@@ -83,10 +83,12 @@ long MWAWInputStream::readLong(int num)
     return (int16_t) v;
   case 1:
     return (int8_t) v;
+  default:
+    break;
   }
 
-  if ((v & (0x1 << (num*8-1))) == 0) return v;
-  return v | (0xFFFFFFFF << 8*num);
+  if ((v & long(0x1 << (num*8-1))) == 0) return v;
+  return v | long(0xFFFFFFFF << 8*num);
 }
 
 uint8_t MWAWInputStream::readU8()
@@ -168,7 +170,7 @@ bool MWAWInputStream::readDataBlock(long size, WPXBinaryData &data)
   }
   if (size > 2048) return false;
 
-  readData=m_stream->read(size, sizeRead);
+  readData=m_stream->read((unsigned long)size, sizeRead);
   if (size != long(sizeRead)) return false;
   data.append(readData, sizeRead);
 

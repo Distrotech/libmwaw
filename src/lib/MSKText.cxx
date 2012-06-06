@@ -221,15 +221,15 @@ int MSKText::numPages(int zoneId) const
     MWAW_DEBUG_MSG(("MSKText::numPages: unknown zone %d\n", zoneId));
     return 0;
   }
-  MSKTextInternal::TextZone const &zone = m_state->m_zones[zoneId];
-  int numPages = 1 + zone.m_pagesPosition.size();
+  MSKTextInternal::TextZone const &zone = m_state->m_zones[(size_t) zoneId];
+  int nPages = 1 + int(zone.m_pagesPosition.size());
   if (zone.isMain()) {
     m_state->m_actualPage = 1;
-    m_state->m_numPages = numPages;
+    m_state->m_numPages = nPages;
   } else {
     MWAW_DEBUG_MSG(("MSKText::numPages: called on no main zone: %d\n", zoneId));
   }
-  return numPages;
+  return nPages;
 }
 
 bool MSKText::getLinesPagesHeight
@@ -241,8 +241,8 @@ bool MSKText::getLinesPagesHeight
     MWAW_DEBUG_MSG(("MSKText::getLinesPagesHeight: unknown zone %d\n", zoneId));
     return false;
   }
-  lines = m_state->m_zones[zoneId].m_linesHeight;
-  pages = m_state->m_zones[zoneId].m_pagesHeight;
+  lines = m_state->m_zones[(size_t)zoneId].m_linesHeight;
+  pages = m_state->m_zones[(size_t)zoneId].m_pagesHeight;
   return true;
 }
 
@@ -251,26 +251,26 @@ bool MSKText::getLinesPagesHeight
 ////////////////////////////////////////////////////////////
 int MSKText::getMainZone() const
 {
-  for (int i = 0; i < int(m_state->m_zones.size()); i++)
+  for (size_t i = 0; i < m_state->m_zones.size(); i++)
     if (m_state->m_zones[i].m_type != MSKTextInternal::TextZone::Header &&
         m_state->m_zones[i].m_type != MSKTextInternal::TextZone::Footer)
-      return i;
+      return int(i);
   return -1;
 }
 
 int MSKText::getHeader() const
 {
-  for (int i = 0; i < int(m_state->m_zones.size()); i++)
+  for (size_t i = 0; i < m_state->m_zones.size(); i++)
     if (m_state->m_zones[i].m_type == MSKTextInternal::TextZone::Header)
-      return i;
+      return int(i);
   return -1;
 }
 
 int MSKText::getFooter() const
 {
-  for (int i = 0; i < int(m_state->m_zones.size()); i++)
+  for (size_t i = 0; i < m_state->m_zones.size(); i++)
     if (m_state->m_zones[i].m_type == MSKTextInternal::TextZone::Footer)
-      return i;
+      return int(i);
   return -1;
 }
 
@@ -280,7 +280,7 @@ int MSKText::getFooter() const
 int MSKText::createZones(int numLines, bool mainZone)
 {
   MSKTextInternal::LineZone zone;
-  int zoneId = m_state->m_zones.size();
+  int zoneId = int(m_state->m_zones.size());
   m_state->m_zones.push_back(MSKTextInternal::TextZone());
   MSKTextInternal::TextZone &actualZone = m_state->m_zones.back();
   actualZone.m_id = zoneId;
@@ -297,13 +297,13 @@ int MSKText::createZones(int numLines, bool mainZone)
       break;
     }
     if (!hasNote && zone.isNote()) {
-      firstNote = actualZone.m_zonesList.size();
+      firstNote = int(actualZone.m_zonesList.size());
       hasNote = true;
     }
     actualZone.m_zonesList.push_back(zone);
     m_input->seek(zone.m_pos.end(), WPX_SEEK_SET);
   }
-  int numLineZones = actualZone.m_zonesList.size();
+  int numLineZones = int(actualZone.m_zonesList.size());
   if (numLineZones == 0) {
     m_state->m_zones.pop_back();
     return -1;
@@ -317,14 +317,14 @@ int MSKText::createZones(int numLines, bool mainZone)
 
 void MSKText::update(MSKTextInternal::TextZone &zone)
 {
-  int numLineZones = zone.m_zonesList.size();
+  size_t numLineZones = zone.m_zonesList.size();
   if (numLineZones == 0) return;
 
   int textHeight = int(72.*m_mainParser->pageHeight());
 
   int actH = 0, actualPH = 0;
   zone.m_linesHeight.push_back(0);
-  for (int i = 0; i < numLineZones; i++) {
+  for (size_t i = 0; i < numLineZones; i++) {
     MSKTextInternal::LineZone &z = zone.m_zonesList[i];
     if (z.isNote()) continue; // a note
     actH += z.m_height;
@@ -332,7 +332,7 @@ void MSKText::update(MSKTextInternal::TextZone &zone)
     bool newPage = ((z.m_flags&1) && actualPH) || (z.m_flags&2);
     actualPH += z.m_height;
     if (newPage || (actualPH > textHeight && textHeight > 0)) {
-      zone.m_pagesPosition[i]=(z.m_flags&2);
+      zone.m_pagesPosition[int(i)]=(z.m_flags&2);
       zone.m_pagesHeight.push_back(actualPH-z.m_height);
       actualPH=z.m_height;
     }
@@ -341,7 +341,7 @@ void MSKText::update(MSKTextInternal::TextZone &zone)
 
 void MSKText::updateNotes(MSKTextInternal::TextZone &zone, int firstNote)
 {
-  int numLineZones = zone.m_zonesList.size();
+  int numLineZones = int(zone.m_zonesList.size());
   if (firstNote < 0 || firstNote >= numLineZones) {
     MWAW_DEBUG_MSG(("MSKText::updateNotes: can not find first note position\n"));
     return;
@@ -353,7 +353,7 @@ void MSKText::updateNotes(MSKTextInternal::TextZone &zone, int firstNote)
   Vec2i notePos;
 
   for (int n = firstNote; n < numLineZones; n++) {
-    MSKTextInternal::LineZone const &z = zone.m_zonesList[n];
+    MSKTextInternal::LineZone const &z = zone.m_zonesList[(size_t) n];
     if (!z.isNote()) {
       noteId=-1;
       MWAW_DEBUG_MSG(("MSKText::updateNotes: find extra data in notes, stop recording note\n"));
@@ -367,28 +367,28 @@ void MSKText::updateNotes(MSKTextInternal::TextZone &zone, int firstNote)
     long actPos = z.m_pos.begin();
     m_input->seek(actPos+6,WPX_SEEK_SET);
 
-    int c = m_input->readULong(1);
+    int c = (int) m_input->readULong(1);
     if ((c == 1 || c == 2) && readFont(font, z.m_pos.end())) {
       if (long(m_input->tell())+2 > z.m_pos.end())
         continue;
-      c = m_input->readULong(1);
+      c = (int) m_input->readULong(1);
       if (c <= 4) {
         if (long(m_input->tell())+2 > z.m_pos.end())
           continue;
-        c = m_input->readULong(1);
+        c = (int) m_input->readULong(1);
       }
     }
     if (c != 0x14) continue;
     if (noteId >= 0) {
-      notePos[1] = (lastIndentPos != -1) ? lastIndentPos : n;
+      notePos[1] = (lastIndentPos != -1) ? int(lastIndentPos) : n;
       if (zone.m_footnoteMap.find(noteId)==zone.m_footnoteMap.end())
         zone.m_footnoteMap[noteId] = notePos;
       else {
         MWAW_DEBUG_MSG(("MSKText::updateNotes: note %d is already defined, ignored\n", noteId));
       }
     }
-    noteId =  m_input->readULong(2);
-    notePos[0] = (lastIndentPos != -1) ? lastIndentPos : n;
+    noteId =  (int) m_input->readULong(2);
+    notePos[0] = (lastIndentPos != -1) ? int(lastIndentPos) : n;
     lastIndentPos = -1;
   }
   if (noteId >= 0) {
@@ -407,12 +407,12 @@ bool MSKText::readZoneHeader(MSKTextInternal::LineZone &zone) const
   long pos = m_input->tell();
   if (!m_mainParser->checkIfPositionValid(pos+6)) return false;
   zone.m_pos.setBegin(pos);
-  zone.m_type = m_input->readULong(1);
+  zone.m_type = (int) m_input->readULong(1);
   if (zone.m_type & 0x17) return false;
-  zone.m_id = m_input->readULong(1);
-  zone.m_flags = m_input->readULong(1);
-  zone.m_height = m_input->readULong(1);
-  zone.m_pos.setLength(6+m_input->readULong(2));
+  zone.m_id = (int) m_input->readULong(1);
+  zone.m_flags = (int) m_input->readULong(1);
+  zone.m_height = (int) m_input->readULong(1);
+  zone.m_pos.setLength(6+(long)m_input->readULong(2));
   if (!m_mainParser->checkIfPositionValid(zone.m_pos.end())) return false;
   return true;
 }
@@ -434,7 +434,7 @@ bool MSKText::sendText(MSKTextInternal::LineZone &zone, int zoneId)
   while(!m_input->atEOS()) {
     long pos = m_input->tell();
     if (pos >= zone.m_pos.end()) break;
-    int c = m_input->readULong(1);
+    int c = (int) m_input->readULong(1);
     if ((c == 1 || c == 2) && readFont(font, zone.m_pos.end())) {
       actFont = font;
       setProperty(font);
@@ -458,7 +458,7 @@ bool MSKText::sendText(MSKTextInternal::LineZone &zone, int zoneId)
     default:
       if (c >= 0x14 && c <= 0x19 && vers >= 3) {
         int sz = (c==0x19) ? 0 : (c == 0x18) ? 1 : 2;
-        int id = (sz && pos+1+sz <=  zone.m_pos.end()) ? m_input->readLong(sz) : 0;
+        int id = (sz && pos+1+sz <=  zone.m_pos.end()) ? int(m_input->readLong(sz)) : 0;
         if (id) f << "[" << id << "]";
         switch (c) {
         case 0x19:
@@ -488,11 +488,11 @@ bool MSKText::sendText(MSKTextInternal::LineZone &zone, int zoneId)
         ascii().addDelimiter(pos,'#');
         MWAW_DEBUG_MSG(("MSKText::sendText: find char=%x\n",int(c)));
       } else {
-        int unicode = m_convertissor->unicode (actFont.m_font.id(), c);
+        int unicode = m_convertissor->unicode (actFont.m_font.id(), (unsigned char)c);
         if (unicode == -1)
-          m_listener->insertCharacter(c);
+          m_listener->insertCharacter((uint8_t)c);
         else
-          m_listener->insertUnicode(unicode);
+          m_listener->insertUnicode((uint32_t) unicode);
       }
       firstChar = false;
       break;
@@ -514,7 +514,7 @@ bool MSKText::sendString(std::string &str)
   setProperty(defFont);
 
   for (int i = 0; i < int(str.length()); i++) {
-    char c = str[i];
+    char c = str[(size_t)i];
     switch(c) {
     case 0x9:
       m_listener->insertTab();
@@ -544,11 +544,11 @@ bool MSKText::sendString(std::string &str)
       if (c <= 0x1f) {
         MWAW_DEBUG_MSG(("MSKText::sendString: find char=%x\n",int(c)));
       } else {
-        int unicode = m_convertissor->unicode(defFont.m_font.id(), c);
+        int unicode = m_convertissor->unicode(defFont.m_font.id(), (unsigned char)c);
         if (unicode == -1)
-          m_listener->insertCharacter(c);
+          m_listener->insertCharacter((uint8_t) c);
         else
-          m_listener->insertUnicode(unicode);
+          m_listener->insertUnicode((uint32_t)unicode);
       }
       break;
     }
@@ -564,18 +564,18 @@ bool MSKText::readFont(MSKTextInternal::Font &font, long endPos)
   font = MSKTextInternal::Font();
   long pos  = m_input->tell();
   m_input->seek(-1, WPX_SEEK_CUR);
-  int type = m_input->readLong(1);
+  int type = (int) m_input->readLong(1);
   if ((type != 1 && type != 2) || pos+type+3 > endPos) {
     m_input->seek(pos, WPX_SEEK_SET);
     return false;
   }
   libmwaw::DebugStream f;
-  int flag = m_input->readULong(1); // check or font ?
+  int flag = (int) m_input->readULong(1); // check or font ?
   if (flag) f << "#f0=" << flag << ",";
-  font.m_font.setId(m_input->readULong(1));
-  font.m_font.setSize(m_input->readULong(1));
-  flag = m_input->readULong(1);
-  int flags = 0;
+  font.m_font.setId((int) m_input->readULong(1));
+  font.m_font.setSize((int) m_input->readULong(1));
+  flag = (int) m_input->readULong(1);
+  uint32_t flags = 0;
   if (flag & 0x1) flags |= MWAW_BOLD_BIT;
   if (flag & 0x2) flags |= MWAW_ITALICS_BIT;
   if (flag & 0x4) flags |= MWAW_UNDERLINE_BIT;
@@ -587,9 +587,9 @@ bool MSKText::readFont(MSKTextInternal::Font &font, long endPos)
   font.m_font.setFlags(flags);
   int color = 1;
   if (type == 2) {
-    color=m_input->readULong(1);
+    color=(int) m_input->readULong(1);
   } else if (pos+type+5 <= endPos) {
-    int val = m_input->readULong(1);
+    int val = (int) m_input->readULong(1);
     if (val == 0)
       f << "end0#,";
     else
@@ -617,7 +617,7 @@ void MSKText::setProperty(MSKTextInternal::Font const &font)
 ////////////////////////////////////////////////////////////
 bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Paragraph &parag)
 {
-  int dataSize = zone.m_pos.length()-6;
+  int dataSize = int(zone.m_pos.length())-6;
   if (dataSize < 15) return false;
   m_input->seek(zone.m_pos.begin()+6, WPX_SEEK_SET);
 
@@ -626,7 +626,7 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
 
   int fl[2];
   bool firstFlag = (dataSize & 1) == 0;
-  fl[0] = firstFlag ? m_input->readULong(1) : 0x4c;
+  fl[0] = firstFlag ? (int) m_input->readULong(1) : 0x4c;
   switch(fl[0]) {
   case 0x4c:
     break;
@@ -644,13 +644,13 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
     MWAW_DEBUG_MSG(("MSKText::readParagraph: unknown alignment %x\n", fl[0]));
     break;
   }
-  fl[1] = m_input->readULong(1);
+  fl[1] = (int) m_input->readULong(1);
   if (fl[1])
     f << "fl0=" <<fl[1] << std::dec << ",";
   int dim[3];
   bool ok = true;
   for (int i = 0; i < 3; i++) {
-    dim[i] = m_input->readULong(2);
+    dim[i] = (int) m_input->readULong(2);
     if (i==0&&(dim[0]&0x8000)) {
       dim[0] &= 0x7FFF;
       f << "6linesByInches,";
@@ -669,12 +669,12 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
 
   int fl2[2];
   for (int i = 0; i < 2; i++) // between -16 and 16
-    fl2[i] = m_input->readULong(1);
+    fl2[i] = (int) m_input->readULong(1);
   if (fl2[0] || fl2[1])
     f << "fl2=(" << std::hex << fl2[0] << ", " <<fl2[1] << ")" << std::dec << ",";
 
   for (int i = 0; i < 3; i++) {
-    int val = m_input->readULong(2);
+    int val = (int) m_input->readULong(2);
     int flag = (val & 0xc000) >> 14;
     val = (val & 0x3fff);
     if (val > 8000 || flag) {
@@ -692,15 +692,15 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
   else if (parag.m_margins[2] >=0.0) parag.m_margins[2] *= 0.5;
   else parag.m_margins[2] = 0.0;
   int numVal = (dataSize-9)/2-3;
-  parag.m_tabs.resize(numVal);
-  int numTabs = 0;
+  parag.m_tabs.resize((size_t)numVal);
+  size_t numTabs = 0;
 
   // checkme: in order to avoid x_tabs > textWidth (appears sometimes when i=0)
   long maxWidth = long(m_mainParser->pageWidth()*72-36);
   if (dim[1] > maxWidth) maxWidth = dim[1];
 
   for (int i = 0; i < numVal; i++) {
-    int val = m_input->readULong(2);
+    int val = (int) m_input->readULong(2);
     MWAWTabStop::Alignment align = MWAWTabStop::LEFT;
     switch (val >> 14) {
     case 1:
@@ -728,7 +728,7 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
     parag.m_tabs[numTabs].m_alignment = align;
     parag.m_tabs[numTabs++].m_position = val/72.0;
   }
-  if (numTabs!=numVal) parag.m_tabs.resize(numTabs);
+  if (int(numTabs)!=numVal) parag.m_tabs.resize(numTabs);
   parag.m_extra = f.str();
 
   f.str("");
@@ -751,16 +751,16 @@ void MSKText::setProperty(MSKTextInternal::Paragraph const &para)
 std::string MSKText::readHeaderFooterString(bool header)
 {
   std::string res("");
-  int numChar = m_input->readULong(1);
+  int numChar = (int) m_input->readULong(1);
   if (!numChar) return res;
   for (int i = 0; i < numChar; i++) {
-    unsigned char c = m_input->readULong(1);
+    unsigned char c = (unsigned char) m_input->readULong(1);
     if (c == 0) {
       m_input->seek(-1, WPX_SEEK_CUR);
       break;
     }
     if (c == '&') {
-      unsigned char nextC = m_input->readULong(1);
+      unsigned char nextC = (unsigned char) m_input->readULong(1);
       bool field = true;
       switch (nextC) {
       case 'F':
@@ -781,7 +781,7 @@ std::string MSKText::readHeaderFooterString(bool header)
       if (field) continue;
       m_input->seek(-1, WPX_SEEK_CUR);
     }
-    res += c;
+    res += (char) c;
   }
   if (res.length()) {
     m_state->m_zones.push_back(MSKTextInternal::TextZone());
@@ -801,7 +801,7 @@ std::string MSKText::readHeaderFooterString(bool header)
 ////////////////////////////////////////////////////////////
 void MSKText::send(MSKTextInternal::TextZone &zone, Vec2i limit)
 {
-  int numZones = zone.m_zonesList.size();
+  int numZones = int(zone.m_zonesList.size());
   if (numZones == 0 && zone.m_text.length()) {
     sendString(zone.m_text);
     zone.m_isSent = true;
@@ -837,7 +837,7 @@ void MSKText::send(MSKTextInternal::TextZone &zone, Vec2i limit)
       m_mainParser->newPage(++m_state->m_actualPage, zone.m_pagesPosition[i]);
       setProperty(actFont);
     }
-    MSKTextInternal::LineZone &z = zone.m_zonesList[i];
+    MSKTextInternal::LineZone &z = zone.m_zonesList[(size_t)i];
     if (z.m_type & 0x80) {
       MSKTextInternal::Paragraph parag;
       if (readParagraph(z, parag))
@@ -855,7 +855,7 @@ void MSKText::sendNote(int zoneId, int noteId)
     MWAW_DEBUG_MSG(("MSKText::sendNote: unknown zone %d\n", zoneId));
     return;
   }
-  MSKTextInternal::TextZone &zone=m_state->m_zones[zoneId];
+  MSKTextInternal::TextZone &zone=m_state->m_zones[(size_t)zoneId];
   std::map<int, Vec2i>::const_iterator noteIt = zone.m_footnoteMap.find(noteId);
   if (noteIt==zone.m_footnoteMap.end()) {
     MWAW_DEBUG_MSG(("MSKText::sendNote: unknown note %d-%d\n", zoneId, noteId));
@@ -870,13 +870,13 @@ void MSKText::sendZone(int zoneId)
     MWAW_DEBUG_MSG(("MSKText::sendZone: unknown zone %d\n", zoneId));
     return;
   }
-  send(m_state->m_zones[zoneId]);
+  send(m_state->m_zones[(size_t)zoneId]);
 }
 
 
 void MSKText::flushExtra()
 {
-  for (int i = 0; i < int(m_state->m_zones.size()); i++) {
+  for (size_t i = 0; i < m_state->m_zones.size(); i++) {
     if (m_state->m_zones[i].m_isSent)
       continue;
     send(m_state->m_zones[i]);

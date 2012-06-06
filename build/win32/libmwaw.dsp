@@ -195,6 +195,10 @@ SOURCE=..\..\src\lib\MSWText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MSWTextStyles.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWDebug.cxx
 # End Source File
 # Begin Source File
@@ -376,6 +380,10 @@ SOURCE=..\..\src\lib\MSWParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MSWText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSWTextStyles.hxx
 # End Source File
 # Begin Source File
 

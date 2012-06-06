@@ -78,7 +78,7 @@ void MWAWPictBasic::endODG(MWAWPropertyHandlerEncoder &doc) const
 void MWAWPictBasic::getStyle1DProperty(WPXPropertyList &list) const
 {
   list.clear();
-  if (m_lineWidth == 0) {
+  if (m_lineWidth <= 0) {
     list.insert("lineFill", "none");
     list.insert("lineWidth", "1pt");
     return;
@@ -172,8 +172,8 @@ bool MWAWPictRectangle::getODGBinary(WPXBinaryData &res) const
   list.insert("w",getStringPt(pt.x()).c_str());
   list.insert("h",getStringPt(pt.y()).c_str());
   if (m_cornerWidth[0] > 0 && m_cornerWidth[1] > 0) {
-    list.insert("rw",getStringPt(m_cornerWidth[0]).c_str());
-    list.insert("rh",getStringPt(m_cornerWidth[1]).c_str());
+    list.insert("rw",getStringPt(float(m_cornerWidth[0])).c_str());
+    list.insert("rh",getStringPt(float(m_cornerWidth[1])).c_str());
   }
   doc.startElement("libmwaw:drawRectangle", list);
   doc.endElement("libmwaw:drawRectangle");
@@ -264,9 +264,9 @@ void MWAWPictArc::getGraphicStyleProperty(WPXPropertyList &list) const
 ////////////////////////////////////////////////////////////
 bool MWAWPictPolygon::getODGBinary(WPXBinaryData &res) const
 {
-  int numPt = m_verticesList.size();
+  size_t numPt = m_verticesList.size();
   if (numPt < 2) {
-    MWAW_DEBUG_MSG(("MWAWPictPolygon::getODGBinary: can not draw a polygon with %d vertices\n", numPt));
+    MWAW_DEBUG_MSG(("MWAWPictPolygon::getODGBinary: can not draw a polygon with %ld vertices\n", numPt));
     return false;
   }
 
@@ -280,8 +280,8 @@ bool MWAWPictPolygon::getODGBinary(WPXBinaryData &res) const
   Vec2f pt=bdbox[1]-bdbox[0];
   list.insert("w",getStringPt(pt.x()).c_str());
   list.insert("h",getStringPt(pt.y()).c_str());
-  for (int i = 0; i < numPt; i++) {
-    Vec2f pt=m_verticesList[i]-bdbox[0];
+  for (size_t i = 0; i < numPt; i++) {
+    pt=m_verticesList[i]-bdbox[0];
     std::stringstream s;
     s.str("");
     s << "x" << i;

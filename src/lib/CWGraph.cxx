@@ -169,13 +169,23 @@ struct ZoneBasic : public Zone {
     case T_Poly:
       o << "POLY,";
       break;
+    case T_Zone:
+    case T_Basic:
+    case T_Picture:
+    case T_Chart:
+    case T_DataBox:
+    case T_Unknown:
+    case T_Pict:
+    case T_QTim:
+    case T_Movie:
+    case T_Bitmap:
     default:
       o << "##type = " << m_type << ",";
       break;
     }
     if (m_vertices.size()) {
       o << "vertices=[";
-      for (int i = 0; i < int(m_vertices.size()); i++)
+      for (size_t i = 0; i < m_vertices.size(); i++)
         o << m_vertices[i] << ",";
       o << "],";
     }
@@ -224,6 +234,19 @@ struct ZonePict : public Zone {
     case T_Movie:
       o << "MOVIE,";
       break;
+    case T_Zone:
+    case T_Basic:
+    case T_Picture:
+    case T_Chart:
+    case T_DataBox:
+    case T_Line:
+    case T_Rect:
+    case T_RectOval:
+    case T_Oval:
+    case T_Arc:
+    case T_Poly:
+    case T_Unknown:
+    case T_Bitmap:
     default:
       o << "##type = " << m_type << ",";
       break;
@@ -330,6 +353,20 @@ struct ZoneUnknown : public Zone {
     case T_Chart:
       o << "CHART,";
       break;
+    case T_Zone:
+    case T_Basic:
+    case T_Picture:
+    case T_Line:
+    case T_Rect:
+    case T_RectOval:
+    case T_Oval:
+    case T_Arc:
+    case T_Poly:
+    case T_Unknown:
+    case T_Pict:
+    case T_QTim:
+    case T_Movie:
+    case T_Bitmap:
     default:
       o << "##type=" << m_typeId << ",";
       break;
@@ -427,8 +464,8 @@ void State::setDefaultColorMap(int version)
     0x11,0xeeeeee,0xdddddd,0xaaaaaa,0x888888,0x444444,0x222222,0x111111,
   };
   m_colorMap.resize(256);
-  for (int i = 0; i < 256; i++)
-    m_colorMap[i] = Vec3uc((defCol[i]>>16)&0xff, (defCol[i]>>8)&0xff,defCol[i]&0xff);
+  for (size_t i = 0; i < 256; i++)
+    m_colorMap[i] = Vec3uc((unsigned char)((defCol[i]>>16)&0xff), (unsigned char)((defCol[i]>>8)&0xff),(unsigned char)(defCol[i]&0xff));
 }
 
 }
@@ -461,14 +498,14 @@ int CWGraph::numPages() const
 ////////////////////////////////////////////////////////////
 bool CWGraph::getColor(int id, Vec3uc &col) const
 {
-  int numColor = m_state->m_colorMap.size();
+  int numColor = (int) m_state->m_colorMap.size();
   if (!numColor) {
     m_state->setDefaultColorMap(version());
-    numColor = m_state->m_colorMap.size();
+    numColor = int(m_state->m_colorMap.size());
   }
   if (id < 0 || id >= numColor)
     return false;
-  col = m_state->m_colorMap[id];
+  col = m_state->m_colorMap[size_t(id)];
   return true;
 }
 
@@ -494,8 +531,8 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
   ascii().addNote(f.str().c_str());
 
   // read the last part
-  int data0Length = zone.m_dataSz;
-  int N = zone.m_numData;
+  long data0Length = zone.m_dataSz;
+  long N = zone.m_numData;
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       MWAW_DEBUG_MSG(("CWGraph::readGroupZone: can not find definition size\n"));
@@ -515,7 +552,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
 
   m_input->seek(beginDefGroup, WPX_SEEK_SET);
 
-  graphicZone->m_childs.resize(N);
+  graphicZone->m_childs.resize(size_t(N));
   for (int i = 0; i < N; i++) {
     pos = m_input->tell();
     MWAWEntry gEntry;
@@ -525,7 +562,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
     graphicZone->m_zones.push_back(def);
 
     if (def)
-      graphicZone->m_childs[i] = def->getChild();
+      graphicZone->m_childs[size_t(i)] = def->getChild();
     else {
       f.str("");
       f << "GroupDef#";
@@ -561,11 +598,11 @@ bool CWGraph::readColorMap(MWAWEntry const &entry)
 
   libmwaw::DebugStream f;
   f << "Entries(ColorMap):";
-  int N = m_input->readULong(2);
+  int N = (int) m_input->readULong(2);
   f << "N=" << N << ",";
   int val;
   for(int i = 0; i < 2; i++) {
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
 
@@ -581,12 +618,12 @@ bool CWGraph::readColorMap(MWAWEntry const &entry)
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  m_state->m_colorMap.resize(N);
+  m_state->m_colorMap.resize(size_t(N));
   for (int i = 0; i < N; i++) {
     pos = m_input->tell();
-    int color[3];
-    for (int c=0; c < 3; c++) color[c] = m_input->readULong(2);
-    m_state->m_colorMap[i]= Vec3uc(color[0]/256, color[1]/256,color[2]/256);
+    unsigned char color[3];
+    for (int c=0; c < 3; c++) color[c] = (unsigned char) (m_input->readULong(2)/256);
+    m_state->m_colorMap[size_t(i)]= Vec3uc(color[0], color[1],color[2]);
 
     f.str("");
     f << "ColorMap[" << i << "]:";
@@ -617,8 +654,8 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
   ascii().addDelimiter(m_input->tell(), '|');
 
   // read the last part
-  int data0Length = zone.m_dataSz;
-  int N = zone.m_numData;
+  long data0Length = zone.m_dataSz;
+  long N = zone.m_numData;
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       ascii().addPos(pos);
@@ -641,7 +678,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
     ascii().addDelimiter(pos+sizePos,'[');
     int dim[2]; // ( we must add 2 to add the border )
     for (int j = 0; j < 2; j++)
-      dim[j] = m_input->readLong(2);
+      dim[j] = (int) m_input->readLong(2);
     f << "sz=" << dim[1] << "x" << dim[0] << ",";
     if (dim[0] > 0 && dim[1] > 0) {
       bitmap->m_size = Vec2i(dim[1]+2, dim[0]+2);
@@ -666,7 +703,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
     gEntry.setLength(data0Length);
     f.str("");
     f << "BitmapDef-" << i << ":";
-    long val = m_input->readULong(4);
+    long val = (long) m_input->readULong(4);
     if (val) {
       if (i == 0)
         f << "unkn=" << val << ",";
@@ -675,18 +712,18 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
     }
     // f0 : 0 true color, if not number of bytes
     for (int j = 0; j < 3; j++) {
-      val = m_input->readLong(2);
+      val = (int) m_input->readLong(2);
       if (val) f << "f" << j << "=" << val << ",";
     }
     int dim[2]; // ( we must add 2 to add the border )
     for (int j = 0; j < 2; j++)
-      dim[j] = m_input->readLong(2);
+      dim[j] = (int) m_input->readLong(2);
     if (i == N-1 && !sizeSet)
       bitmap->m_size = Vec2i(dim[0]+2, dim[1]+2);
 
     f << "dim?=" << dim[0] << "x" << dim[1] << ",";
     for (int j = 3; j < 6; j++) {
-      val = m_input->readLong(2);
+      val = (int) m_input->readLong(2);
       if ((j != 5 && val!=1) || (j==5 && val)) // always 1, 1, 0
         f << "f" << j << "=" << val << ",";
     }
@@ -738,7 +775,7 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
   CWGraphInternal::Zone zone;
   CWGraphInternal::Style &style = zone.m_style;
 
-  int typeId = m_input->readULong(1);
+  int typeId = (int) m_input->readULong(1);
   CWGraphInternal::Zone::Type type = CWGraphInternal::Zone::T_Unknown;
 
   switch(version()) {
@@ -818,42 +855,42 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
     }
     break;
   }
-  style.m_flags[0] = m_input->readULong(1);
-  style.m_lineFlags = m_input->readULong(1);
-  style.m_flags[1] = m_input->readULong(1);
+  style.m_flags[0] = (int) m_input->readULong(1);
+  style.m_lineFlags = (int) m_input->readULong(1);
+  style.m_flags[1] = (int) m_input->readULong(1);
 
   int dim[4];
   for (int j = 0; j < 4; j++) {
-    int val = int(m_input->readLong(4)/256.);
+    int val = int(m_input->readLong(4)/256);
     dim[j] = val;
     if (val < -100) f << "##dim?,";
   }
   zone.m_box = Box2i(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
-  style.m_lineWidth = m_input->readLong(1);
-  style.m_flags[2] = m_input->readLong(1);
+  style.m_lineWidth = (int) m_input->readLong(1);
+  style.m_flags[2] = (int) m_input->readLong(1);
   for (int j = 0; j < 2; j++)
-    style.m_color[j] = m_input->readULong(1);
+    style.m_color[j] = (int) m_input->readULong(1);
 
   for (int j = 0; j < 2; j++) {
-    style.m_flags[3+j] =  m_input->readULong(1); // probably also related to surface
-    style.m_pattern[j] = m_input->readULong(1);
+    style.m_flags[3+j] =  (int) m_input->readULong(1); // probably also related to surface
+    style.m_pattern[j] = (int) m_input->readULong(1);
   }
 
   if (version() > 1)
-    style.m_id = m_input->readLong(2);
+    style.m_id = (int) m_input->readLong(2);
 
   switch (type) {
   case CWGraphInternal::Zone::T_Zone: {
     CWGraphInternal::ZoneZone *z = new CWGraphInternal::ZoneZone(zone);
     res.reset(z);
-    z->m_flags[0] = m_input->readLong(2);
-    z->m_id = m_input->readULong(2);
+    z->m_flags[0] = (int) m_input->readLong(2);
+    z->m_id = (int) m_input->readULong(2);
 
-    int numRemains = entry.end()-long(m_input->tell());
+    int numRemains = int(entry.end()-long(m_input->tell()));
     numRemains/=2;
     if (numRemains > 8) numRemains = 8;
     for (int j = 0; j < numRemains; j++)
-      z->m_flags[j+1] = m_input->readLong(2);
+      z->m_flags[j+1] = (int) m_input->readLong(2);
     break;
   }
   case CWGraphInternal::Zone::T_Pict:
@@ -874,6 +911,10 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
   }
   case CWGraphInternal::Zone::T_DataBox:
   case CWGraphInternal::Zone::T_Chart:
+  case CWGraphInternal::Zone::T_Basic:
+  case CWGraphInternal::Zone::T_Picture:
+  case CWGraphInternal::Zone::T_Unknown:
+  case CWGraphInternal::Zone::T_Bitmap:
   default: {
     CWGraphInternal::ZoneUnknown *z = new CWGraphInternal::ZoneUnknown(zone);
     res.reset(z);
@@ -912,15 +953,15 @@ bool CWGraph::readGroupData(shared_ptr<CWGraphInternal::Group> zone)
   libmwaw::DebugStream f;
 
   long pos, sz;
-  int numChilds = zone->m_zones.size();
+  size_t numChilds = zone->m_zones.size();
   int numError = 0;
-  for (int i = 0; i < numChilds; i++) {
+  for (size_t i = 0; i < numChilds; i++) {
     shared_ptr<CWGraphInternal::Zone> z = zone->m_zones[i];
     int numZoneExpected = z ? z->getNumData() : 0;
 
     if (numZoneExpected) {
       pos = m_input->tell();
-      sz = m_input->readULong(4);
+      sz = (long) m_input->readULong(4);
       f.str("");
       if (sz == 0) {
         MWAW_DEBUG_MSG(("CWGraph::readGroupData: find a nop zone for type: %d\n",
@@ -932,7 +973,7 @@ bool CWGraph::readGroupData(shared_ptr<CWGraphInternal::Group> zone)
           return false;
         }
         pos = m_input->tell();
-        sz = m_input->readULong(4);
+        sz = (long) m_input->readULong(4);
       }
       m_input->seek(pos, WPX_SEEK_SET);
       bool parsed = true;
@@ -951,6 +992,18 @@ bool CWGraph::readGroupData(shared_ptr<CWGraphInternal::Group> zone)
         if (!readPolygonData(z))
           return false;
         break;
+      case CWGraphInternal::Zone::T_Line:
+      case CWGraphInternal::Zone::T_Rect:
+      case CWGraphInternal::Zone::T_RectOval:
+      case CWGraphInternal::Zone::T_Oval:
+      case CWGraphInternal::Zone::T_Arc:
+      case CWGraphInternal::Zone::T_Zone:
+      case CWGraphInternal::Zone::T_Basic:
+      case CWGraphInternal::Zone::T_Picture:
+      case CWGraphInternal::Zone::T_Chart:
+      case CWGraphInternal::Zone::T_DataBox:
+      case CWGraphInternal::Zone::T_Unknown:
+      case CWGraphInternal::Zone::T_Bitmap:
       default:
         parsed = false;
         break;
@@ -974,7 +1027,7 @@ bool CWGraph::readGroupData(shared_ptr<CWGraphInternal::Group> zone)
         m_input->seek(pos+4+sz, WPX_SEEK_SET);
         if (numZoneExpected==2) {
           pos = m_input->tell();
-          sz = m_input->readULong(4);
+          sz = (long) m_input->readULong(4);
           if (sz) {
             m_input->seek(pos, WPX_SEEK_SET);
             MWAW_DEBUG_MSG(("CWGraph::readGroupData: two zones is not implemented for zone: %d\n",
@@ -988,7 +1041,7 @@ bool CWGraph::readGroupData(shared_ptr<CWGraphInternal::Group> zone)
     }
     if (version()==6) {
       pos = m_input->tell();
-      sz = m_input->readULong(4);
+      sz = (long) m_input->readULong(4);
       if (sz == 0) {
         ascii().addPos(pos);
         ascii().addNote("Nop");
@@ -1011,7 +1064,7 @@ bool CWGraph::readBasicGraphic(MWAWEntry const &entry,
                                CWGraphInternal::ZoneBasic &zone)
 {
   long actPos = m_input->tell();
-  int remainBytes = entry.end()-actPos;
+  int remainBytes = int(entry.end()-actPos);
   if (remainBytes < 0)
     return false;
 
@@ -1029,7 +1082,7 @@ bool CWGraph::readBasicGraphic(MWAWEntry const &entry,
       return false;
     }
     for (int i = 0; i < 2; i++)
-      zone.m_values[i] = m_input->readLong(2);
+      zone.m_values[i] = (float) m_input->readLong(2);
     break;
   }
   case CWGraphInternal::Zone::T_RectOval: {
@@ -1038,21 +1091,31 @@ bool CWGraph::readBasicGraphic(MWAWEntry const &entry,
       return false;
     }
     for (int i = 0; i < 2; i++) {
-      zone.m_values[i] = m_input->readLong(2)/2.0;
-      zone.m_flags[actFlag++] = m_input->readULong(2);
+      zone.m_values[size_t(i)] = float(m_input->readLong(2))/2.0f;
+      zone.m_flags[actFlag++] = (int) m_input->readULong(2);
     }
     break;
   }
+  case CWGraphInternal::Zone::T_Zone:
+  case CWGraphInternal::Zone::T_Basic:
+  case CWGraphInternal::Zone::T_Picture:
+  case CWGraphInternal::Zone::T_Chart:
+  case CWGraphInternal::Zone::T_DataBox:
+  case CWGraphInternal::Zone::T_Unknown:
+  case CWGraphInternal::Zone::T_Pict:
+  case CWGraphInternal::Zone::T_QTim:
+  case CWGraphInternal::Zone::T_Movie:
+  case CWGraphInternal::Zone::T_Bitmap:
   default:
     MWAW_DEBUG_MSG(("CWGraph::readSimpleGraphicZone: unknown type\n"));
     return false;
   }
 
-  int numRemain = entry.end()-m_input->tell();
+  int numRemain = int(entry.end()-m_input->tell());
   numRemain /= 2;
   if (numRemain+actFlag > 8) numRemain = 8-actFlag;
   for (int i = 0; i < numRemain; i++)
-    zone.m_flags[actFlag++] = m_input->readLong(2);
+    zone.m_flags[actFlag++] = (int) m_input->readLong(2);
 
   return true;
 }
@@ -1062,7 +1125,7 @@ bool CWGraph::readGroupHeader()
   long pos = m_input->tell();
   libmwaw::DebugStream f;
   f << "Entries(GroupHead):";
-  int sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   long endPos = pos+4+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()!=endPos) || (sz && sz < 16)) {
@@ -1077,20 +1140,20 @@ bool CWGraph::readGroupHeader()
   }
 
   m_input->seek(pos+4, WPX_SEEK_SET);
-  int N = m_input->readULong(2);
+  int N = (int) m_input->readULong(2);
   f << "N=" << N << ",";
-  int type = m_input->readLong(2);
+  int type = (int) m_input->readLong(2);
   if (type != -1)
     f << "#type=" << type << ",";
-  int val = m_input->readLong(2);
+  int val = (int) m_input->readLong(2);
   if (val) f << "#unkn=" << val << ",";
-  int fSz = m_input->readULong(2);
+  int fSz = (int) m_input->readULong(2);
   if (!fSz || N *fSz+12 != sz) {
     m_input->seek(pos, WPX_SEEK_SET);
     return false;
   }
   for (int i = 0; i < 2; i++) { // always 0, 2
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val)
       f << "f" << i << "=" << val;
   }
@@ -1110,7 +1173,7 @@ bool CWGraph::readGroupHeader()
   // now try to read the graphic data
   for (int i = 0; i < N; i++) {
     pos = m_input->tell();
-    sz = m_input->readULong(4);
+    sz = (long) m_input->readULong(4);
     m_input->seek(pos+sz+4, WPX_SEEK_SET);
     if (long(m_input->tell())!= pos+sz+4) {
       m_input->seek(pos, WPX_SEEK_SET);
@@ -1138,7 +1201,7 @@ bool CWGraph::readGroupHeader()
   int numBlock = 1;//version()==6 ? N : 1;
   for (int i = 0; i < numBlock; i++) {
     pos= m_input->tell();
-    int sz = m_input->readULong(4);
+    sz = (long) m_input->readULong(4);
     m_input->seek(pos+4+sz, WPX_SEEK_SET);
     if (long(m_input->tell()) != pos+4+sz) {
       MWAW_DEBUG_MSG(("CWGraph::readGroupHeader: pb with last block\n"));
@@ -1169,7 +1232,7 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
   CWGraphInternal::ZoneBasic *bZone =
     reinterpret_cast<CWGraphInternal::ZoneBasic *>(zone.get());
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   long endPos = pos+4+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos || sz < 12) {
@@ -1181,20 +1244,20 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
   m_input->seek(pos+4, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(PolygonData):";
-  int N = m_input->readULong(2);
+  int N = (int) m_input->readULong(2);
   f << "N=" << N << ",";
-  int val = m_input->readLong(2);
+  int val = (int) m_input->readLong(2);
   if (val != -1) f << "f0=" << val << ",";
-  val = m_input->readLong(2);
+  val = (int) m_input->readLong(2);
   if (val) f << "f1=" << val << ",";
-  int fSz = m_input->readLong(2);
+  int fSz = (int) m_input->readLong(2);
   if (sz != 12+fSz*N) {
     m_input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWGraph::readPolygonData: find odd data size\n"));
     return false;
   }
   for (int i = 2; i < 4; i++) {
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
 
   }
@@ -1207,18 +1270,19 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
     f << "PolygonData-" << i << ":";
     float position[2];
     for (int j = 0; j < 2; j++)
-      position[j] = m_input->readLong(4)/256.;
+      position[j] = float(m_input->readLong(4))/256.f;
     bZone->m_vertices.push_back(Vec2f(position[1], position[0]));
     f << position[1] << "x" << position[0] << ",";
     if (fSz >= 26) {
       for (int cPt = 0; cPt < 2; cPt++) {
         float ctrlPos[2];
         for (int j = 0; j < 2; j++)
-          ctrlPos[j] = m_input->readLong(4)/256.;
-        if (position[0] != ctrlPos[0] || position[1] != ctrlPos[1])
+          ctrlPos[j] = float(m_input->readLong(4))/256.f;
+        if (position[0] < ctrlPos[0] || position[0] > ctrlPos[0] ||
+            position[1] < ctrlPos[1] || position[1] > ctrlPos[1])
           f << "ctrPt" << cPt << "=" << ctrlPos[1] << "x" << ctrlPos[0] << ",";
       }
-      int fl = m_input->readULong(2);
+      int fl = (int) m_input->readULong(2);
       switch (fl>>14) {
       case 1:
         break;
@@ -1259,7 +1323,7 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
     return false;
   }
   pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   m_input->seek(pos+4+sz, WPX_SEEK_SET);
   if (long(m_input->tell()) != pos+4+sz) {
     m_input->seek(pos, WPX_SEEK_SET);
@@ -1303,7 +1367,7 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
 bool CWGraph::readPICT(CWGraphInternal::ZonePict &zone)
 {
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   long endPos = pos+4+sz;
   if (sz < 12) {
     MWAW_DEBUG_MSG(("CWGraph::readPict: file is too short\n"));
@@ -1321,8 +1385,7 @@ bool CWGraph::readPICT(CWGraphInternal::ZonePict &zone)
   Box2f box;
   m_input->seek(pos+4, WPX_SEEK_SET);
 
-  MWAWPict::ReadResult res =
-    MWAWPictData::check(m_input, sz, box);
+  MWAWPict::ReadResult res = MWAWPictData::check(m_input, (int)sz, box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("CWGraph::readPict: can not find the picture\n"));
     m_input->seek(pos, WPX_SEEK_SET);
@@ -1341,8 +1404,8 @@ bool CWGraph::readPICT(CWGraphInternal::ZonePict &zone)
 bool CWGraph::readPS(CWGraphInternal::ZonePict &zone)
 {
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
-  long header = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
+  long header = (long) m_input->readULong(4);
   if (header != 0x25215053L) {
     return false;
   }
@@ -1385,7 +1448,7 @@ bool CWGraph::readQTimeData(shared_ptr<CWGraphInternal::Zone> zone)
   CWGraphInternal::ZonePict *pZone =
     reinterpret_cast<CWGraphInternal::ZonePict *>(zone.get());
   long pos = m_input->tell();
-  long header = m_input->readULong(4);
+  long header = (long) m_input->readULong(4);
   if (header != 0x5154494dL) {
     MWAW_DEBUG_MSG(("CWGraph::readQTimeData: find a odd qtim zone\n"));
     m_input->seek(pos, WPX_SEEK_SET);
@@ -1412,14 +1475,14 @@ bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
   long pos = m_input->tell();
   std::string name("");
   for (int i = 0; i < 4; i++) {
-    char c = m_input->readULong(1);
+    char c = (char) m_input->readULong(1);
     if (c < ' ' || c > 'z') {
       MWAW_DEBUG_MSG(("CWGraph::readNamedPict: can not find the name\n"));
       return false;
     }
     name+=c;
   }
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   long endPos = pos+8+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos || !sz) {
@@ -1459,7 +1522,7 @@ bool CWGraph::readBitmapColorMap(std::vector<Vec3uc> &cMap)
 {
   cMap.resize(0);
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   long endPos = pos+4+sz;
   if (!sz) {
     ascii().addPos(pos);
@@ -1476,21 +1539,21 @@ bool CWGraph::readBitmapColorMap(std::vector<Vec3uc> &cMap)
   libmwaw::DebugStream f;
   f << "Entries(BitmapColor):";
   f << "unkn=" << m_input->readLong(4) << ",";
-  int maxColor = m_input->readLong(4);
+  int maxColor = (int) m_input->readLong(4);
   if (sz != 8+8*(maxColor+1)) {
     MWAW_DEBUG_MSG(("CWGraph::readBitmapColorMap: sz is odd\n"));
     return false;
   }
-  cMap.resize(maxColor+1);
+  cMap.resize(size_t(maxColor+1));
   for (int i = 0; i <= maxColor; i++) {
-    int id = m_input->readULong(2);
+    int id = (int) m_input->readULong(2);
     if (id != i) {
       MWAW_DEBUG_MSG(("CWGraph::readBitmapColorMap: find odd index : %d\n", i));
       return false;
     }
-    int col[3];
-    for (int c = 0; c < 3; c++) col[c] = (m_input->readULong(2)>>8);
-    cMap[i] = Vec3uc(col[0], col[1], col[2]);
+    unsigned char col[3];
+    for (int c = 0; c < 3; c++) col[c] = (unsigned char)(m_input->readULong(2)>>8);
+    cMap[(size_t)i] = Vec3uc(col[0], col[1], col[2]);
   }
 
   m_input->seek(endPos, WPX_SEEK_SET);
@@ -1503,7 +1566,7 @@ bool CWGraph::readBitmapColorMap(std::vector<Vec3uc> &cMap)
 bool CWGraph::readBitmapData(CWGraphInternal::ZoneBitmap &zone)
 {
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   long endPos = pos+4+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos || !sz) {
@@ -1512,7 +1575,7 @@ bool CWGraph::readBitmapData(CWGraphInternal::ZoneBitmap &zone)
   }
   /* Fixme: this code can not works for the packed bitmap*/
   long numColors = zone.m_size[0]*zone.m_size[1];
-  int numBytes = numColors ? sz/numColors : 0;
+  int numBytes = numColors ? int(sz/numColors) : 0;
   if (sz != numBytes*numColors) {
     MWAW_DEBUG_MSG(("CWGraph::readBitmapData: unexpected size\n"));
     return false;
@@ -1539,7 +1602,7 @@ bool CWGraph::sendZone(int number)
   if (iter == m_state->m_zoneMap.end())
     return false;
   shared_ptr<CWGraphInternal::Group> group = iter->second;
-  for (int g = 0; g < int(group->m_zones.size()); g++) {
+  for (size_t g = 0; g < group->m_zones.size(); g++) {
     switch (group->m_zones[g]->getType()) {
     case CWGraphInternal::Zone::T_Zone:
       // fixme
@@ -1562,6 +1625,15 @@ bool CWGraph::sendZone(int number)
     case CWGraphInternal::Zone::T_Chart:
     case CWGraphInternal::Zone::T_Unknown:
       break;
+    case CWGraphInternal::Zone::T_Pict:
+    case CWGraphInternal::Zone::T_QTim:
+    case CWGraphInternal::Zone::T_Movie:
+    case CWGraphInternal::Zone::T_Line:
+    case CWGraphInternal::Zone::T_Rect:
+    case CWGraphInternal::Zone::T_RectOval:
+    case CWGraphInternal::Zone::T_Oval:
+    case CWGraphInternal::Zone::T_Arc:
+    case CWGraphInternal::Zone::T_Poly:
     default:
       MWAW_DEBUG_MSG(("CWGraph::sendZone: find unknown zone\n"));
       break;
@@ -1634,9 +1706,9 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
     for (int i = 0; i < 2; i++)
       limitAngle[i] = (angle[i] < 0) ? int(angle[i]/90)-1 : int(angle[i]/90);
     for (int bord = limitAngle[0]; bord <= limitAngle[1]+1; bord++) {
-      float ang = (bord == limitAngle[0]) ? angle[0] :
-                  (bord == limitAngle[1]+1) ? angle[1] : 90 * bord;
-      ang *= M_PI/180.;
+      float ang = (bord == limitAngle[0]) ? float(angle[0]) :
+                  (bord == limitAngle[1]+1) ? float(angle[1]) : float(90 * bord);
+      ang *= float(M_PI/180.);
       float actVal[2] = { axis[0] *std::cos(ang), -axis[1] *std::sin(ang)};
       if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
       else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
@@ -1645,7 +1717,7 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
     }
     Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
                   Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
-    MWAWPictArc *res=new MWAWPictArc(realBox,box, angle[0], angle[1]);
+    MWAWPictArc *res=new MWAWPictArc(realBox,box, float(angle[0]), float(angle[1]));
     pictPtr.reset(res);
     break;
   }
@@ -1656,13 +1728,23 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict)
     pictPtr.reset(res);
     break;
   }
+  case CWGraphInternal::Zone::T_Zone:
+  case CWGraphInternal::Zone::T_Basic:
+  case CWGraphInternal::Zone::T_Picture:
+  case CWGraphInternal::Zone::T_Chart:
+  case CWGraphInternal::Zone::T_DataBox:
+  case CWGraphInternal::Zone::T_Unknown:
+  case CWGraphInternal::Zone::T_Bitmap:
+  case CWGraphInternal::Zone::T_Pict:
+  case CWGraphInternal::Zone::T_QTim:
+  case CWGraphInternal::Zone::T_Movie:
   default:
     break;
   }
 
   if (!pictPtr)
     return false;
-  pictPtr->setLineWidth(pict.m_style.m_lineWidth);
+  pictPtr->setLineWidth((float)pict.m_style.m_lineWidth);
   Vec3uc color;
   if (getColor(pict.m_style.m_color[0], color)) pictPtr->setLineColor(color[0], color[1], color[2]);
   if (getColor(pict.m_style.m_color[1], color)) pictPtr->setSurfaceColor(color[0], color[1], color[2]);
@@ -1686,7 +1768,7 @@ bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap)
 
   if (!m_listener)
     return true;
-  int numColors = bitmap.m_colorMap.size();
+  int numColors = int(bitmap.m_colorMap.size());
   shared_ptr<MWAWPictBitmap> bmap;
 
   MWAWPictBitmapIndexed *bmapIndexed = 0;
@@ -1705,20 +1787,20 @@ bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap)
   m_input->seek(bitmap.m_entry.begin(), WPX_SEEK_SET);
   for (int r = 0; r < bitmap.m_size[1]; r++) {
     for (int c = 0; c < bitmap.m_size[0]; c++) {
-      long val = m_input->readULong(fSz);
+      long val = (long) m_input->readULong(fSz);
       if (indexed) {
-        bmapIndexed->set(c,r, val);
+        bmapIndexed->set(c,r,(int)val);
         continue;
       }
       switch(fSz) {
       case 1:
-        bmapColor->set(c,r, Vec3uc(val,val,val));
+        bmapColor->set(c,r, Vec3uc((unsigned char)val,(unsigned char)val,(unsigned char)val));
         break;
       case 2: // rgb compressed ?
-        bmapColor->set(c,r, Vec3uc(((val>>10)&0x1F) << 3,((val>>5)&0x1F) << 3,((val>>0)&0x1F) << 3));
+        bmapColor->set(c,r, Vec3uc((unsigned char)(((val>>10)&0x1F) << 3),(unsigned char)(((val>>5)&0x1F) << 3),(unsigned char)(((val>>0)&0x1F) << 3)));
         break;
       case 4:
-        bmapColor->set(c,r, Vec3uc((val>>16)&0xff,(val>>8)&0xff,(val>>0)&0xff));
+        bmapColor->set(c,r, Vec3uc((unsigned char)((val>>16)&0xff),(unsigned char)((val>>8)&0xff),(unsigned char)((val>>0)&0xff)));
         break;
       default: {
         static bool first = true;
@@ -1759,19 +1841,32 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict)
     switch(pict.getSubType()) {
     case CWGraphInternal::Zone::T_Movie:
     case CWGraphInternal::Zone::T_Pict: {
-      shared_ptr<MWAWPict> pict
-      (MWAWPictData::get(m_input, entry.length()));
-      if (pict) {
+      shared_ptr<MWAWPict> thePict(MWAWPictData::get(m_input, (int)entry.length()));
+      if (thePict) {
         if (!send && m_listener) {
           WPXBinaryData data;
           std::string type;
-          if (pict->getBinary(data,type))
+          if (thePict->getBinary(data,type))
             m_listener->insertPicture(pictPos, data, type);
         }
         send = true;
       }
       break;
     }
+    case CWGraphInternal::Zone::T_Line:
+    case CWGraphInternal::Zone::T_Rect:
+    case CWGraphInternal::Zone::T_RectOval:
+    case CWGraphInternal::Zone::T_Oval:
+    case CWGraphInternal::Zone::T_Arc:
+    case CWGraphInternal::Zone::T_Poly:
+    case CWGraphInternal::Zone::T_Zone:
+    case CWGraphInternal::Zone::T_Basic:
+    case CWGraphInternal::Zone::T_Picture:
+    case CWGraphInternal::Zone::T_Chart:
+    case CWGraphInternal::Zone::T_DataBox:
+    case CWGraphInternal::Zone::T_Unknown:
+    case CWGraphInternal::Zone::T_Bitmap:
+    case CWGraphInternal::Zone::T_QTim:
     default:
       if (!send && m_listener) {
         WPXBinaryData data;

@@ -149,7 +149,7 @@ void HtmlDocumentGenerator::openParagraph(const WPXPropertyList &propList, const
 			*m_pOutputStream << "text-indent:" << propList["fo:text-indent"]->getStr().cstr() << ";";
 
 		// Osnola: replace getDouble by getStr
-		if (propList["fo:line-height"] && propList["fo:line-height"]->getDouble() != 1.0)
+		if (propList["fo:line-height"] && (propList["fo:line-height"]->getDouble() < 1.0 || propList["fo:line-height"]->getDouble() < 1.0))
 			*m_pOutputStream << "line-height:" << propList["fo:line-height"]->getStr().cstr() << ";";
 		*m_pOutputStream << "\">";
 	}

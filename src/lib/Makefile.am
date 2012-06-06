@@ -46,6 +46,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MSWParser.hxx			\
 	MSWText.cxx			\
 	MSWText.hxx			\
+	MSWTextStyles.cxx		\
+	MSWTextStyles.hxx		\
 	MWAWCell.cxx			\
 	MWAWCell.hxx			\
 	MWAWContentListener.cxx		\

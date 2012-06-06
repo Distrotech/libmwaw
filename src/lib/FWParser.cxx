@@ -206,12 +206,12 @@ int FWParser::version() const
 ////////////////////////////////////////////////////////////
 float FWParser::pageHeight() const
 {
-  return m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
+  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float FWParser::pageWidth() const
 {
-  return m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight();
+  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
 }
 
 
@@ -268,12 +268,12 @@ void FWParser::parse(WPXDocumentInterface *docInterface)
       f << "Entries(" << zone->type() << ")";
       if (zone->m_nextId != -2) f << "[" << zone->m_nextId << "]";
 
-      libmwaw::DebugFile &ascii = zone->getAsciiFile();
+      libmwaw::DebugFile &asciiFile = zone->getAsciiFile();
 
-      ascii.addPos(zone->begin());
-      ascii.addNote(f.str().c_str());
-      ascii.addPos(zone->end());
-      ascii.addNote("_");
+      asciiFile.addPos(zone->begin());
+      asciiFile.addNote(f.str().c_str());
+      asciiFile.addPos(zone->end());
+      asciiFile.addNote("_");
 
       zone->closeDebugFile();
     }
@@ -407,21 +407,21 @@ bool FWParser::readDocInfo(shared_ptr<FWEntry> zone)
   if (zone->length() < 0x4b2)
     return false;
   MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugFile &asciiFile = zone->getAsciiFile();
   libmwaw::DebugStream f;
 
   long pos = zone->begin();
   input->seek(pos, WPX_SEEK_SET);
-  int N = input->readLong(2);
+  int N = (int)input->readLong(2);
   if (!N) return false;
   input->seek(4, WPX_SEEK_CUR);
-  int val = input->readLong(2);
+  int val = (int)input->readLong(2);
   if (N < val-2 || N > val+2) return false;
   input->seek(2, WPX_SEEK_CUR);
-  int nC = input->readULong(1);
+  int nC = (int)input->readULong(1);
   if (!nC || nC > 70) return false;
   for (int i = 0; i < nC; i++) {
-    int c = input->readULong(1);
+    int c = (int)input->readULong(1);
     if (c < 0x20) return false;
   }
 
@@ -431,59 +431,59 @@ bool FWParser::readDocInfo(shared_ptr<FWEntry> zone)
   f << "N0=" << N << ",";
   f << "unkn0=" << std::hex << input->readULong(2) << std::dec << ","; // big number
   for (int i = 0; i < 2; i++) { // almost always ° + small number
-    val = input->readULong(1);
+    val = (int)input->readULong(1);
     if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
-  val = input->readLong(2); // almost always N
+  val = (int)input->readLong(2); // almost always N
   if (val != N) f << "N1=" << val << ",";
   f << "unkn1=" << std::hex << input->readULong(2) << std::dec << ","; // big number
   std::string title("");
-  nC = input->readULong(1);
+  nC = (int)input->readULong(1);
   for (int i = 0; i < nC; i++)
-    title += input->readLong(1);
+    title += (char) input->readLong(1);
   f << "title=" << title << ",";
-  ascii.addDelimiter(input->tell(),'|');
-  ascii.addPos(pos);
-  ascii.addNote(f.str().c_str());
+  asciiFile.addDelimiter(input->tell(),'|');
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
 
   pos += 10+70; // checkme
   input->seek(pos, WPX_SEEK_SET);
   f.str("");
   f << "DocInfo-A:";
   for (int i = 0; i < 4; i++) { // 0, 1, 2, 80
-    val = input->readULong(1);
+    val = (int)input->readULong(1);
     if (val)
       f << "fl" << i << "=" << std::hex << val << std::dec << ",";
   }
-  val = input->readLong(2); // almost always 0, but find also 53, 64, ba, f4
+  val = (int)input->readLong(2); // almost always 0, but find also 53, 64, ba, f4
   if (val) f << "f0=" << val << ",";
   f << "unkn=["; // 2 big number which seems realted
   for (int i = 0; i < 2; i++)
     f << std::hex << input->readULong(4) << std::dec << ",";
   f << "],";
   for (int i = 4; i < 6; i++) { // always 1, 0 ?
-    val = input->readULong(1);
+    val = (int)input->readULong(1);
     if (val!=5-i) f << "fl" << i << "=" << std::hex << val << std::dec << ",";
   }
   // 5 relative big number : multiple of 4
-  long ptr = input->readULong(4);
+  long ptr = (long) input->readULong(4);
   f << "unkn2=[" << std::hex << ptr << "," << std::dec;
   for (int i = 0; i < 4; i++)
     f << long(input->readULong(4))-ptr << ",";
   f << "],";
-  val = input->readLong(2); // almost always -2, but find also 6
+  val = (int)input->readLong(2); // almost always -2, but find also 6
   if (val != -2)
     f << "f1=" << val << ",";
   for (int i = 0; i < 2; i++) { // always 0,0
-    val = input->readULong(2);
+    val = (int)input->readULong(2);
     if (val) f << "f" << i+2 << "=" << std::hex << val << std::dec << ",";
   }
   for (int st=0; st < 2; st++) {
     long actPos = input->tell();
-    val = input->readULong(2); // big number
+    val = (int)input->readULong(2); // big number
     if (val) f << "g" << st << "=" << std::hex << val << std::dec << ",";
 
-    nC = input->readULong(1);
+    nC = (int)input->readULong(1);
     if (nC > 32) {
       MWAW_DEBUG_MSG(("FWParser::readDocInfo: can not read user name\n"));
       nC = 0;
@@ -495,11 +495,11 @@ bool FWParser::readDocInfo(shared_ptr<FWEntry> zone)
     input->seek(actPos+36, WPX_SEEK_SET);
   }
 
-  ascii.addPos(pos);
-  ascii.addNote(f.str().c_str());
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
   pos = input->tell();
-  ascii.addPos(pos);
-  ascii.addNote("DocInfo-B");
+  asciiFile.addPos(pos);
+  asciiFile.addNote("DocInfo-B");
   pos+=196;
   input->seek(pos, WPX_SEEK_SET);
   for (int i = 0; i < 6; i++) {
@@ -507,8 +507,8 @@ bool FWParser::readDocInfo(shared_ptr<FWEntry> zone)
     f.str("");
     f << "DocInfo-C" << i << ":" << input->readLong(2);
 
-    ascii.addPos(pos);
-    ascii.addNote(f.str().c_str());
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
     input->seek(pos+48, WPX_SEEK_SET);
   }
   for (int i = 0; i < 9; i++) {
@@ -516,24 +516,24 @@ bool FWParser::readDocInfo(shared_ptr<FWEntry> zone)
     f.str("");
     f << "DocInfo-D" << i << ":";
 
-    ascii.addPos(pos);
-    ascii.addNote(f.str().c_str());
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
     input->seek(pos+38, WPX_SEEK_SET);
   }
   pos = input->tell();
-  ascii.addPos(pos);
-  ascii.addNote("DocInfo-E");
+  asciiFile.addPos(pos);
+  asciiFile.addNote("DocInfo-E");
   input->seek(pos+182, WPX_SEEK_SET);
 
   // this part in v1 and v2
   pos = input->tell();
-  ascii.addPos(pos);
-  ascii.addNote("DocInfo-F");
+  asciiFile.addPos(pos);
+  asciiFile.addNote("DocInfo-F");
   if (version()==2) {
     input->seek(pos+436, WPX_SEEK_SET);
     pos = input->tell();
-    ascii.addPos(pos);
-    ascii.addNote("DocInfo-G");
+    asciiFile.addPos(pos);
+    asciiFile.addNote("DocInfo-G");
     // if all is ok 3*[Name:4bytes, 0:4 bytes, sz:4 bytes, sz bytes ]
   }
 
@@ -544,12 +544,12 @@ bool FWParser::readDocInfo(shared_ptr<FWEntry> zone)
 bool FWParser::readUnkn0(shared_ptr<FWEntry> zone)
 {
   MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugFile &asciiFile = zone->getAsciiFile();
   libmwaw::DebugStream f;
 
   long pos = zone->begin();
   input->seek(pos, WPX_SEEK_SET);
-  int N = input->readLong(2);
+  int N = (int)input->readLong(2);
   if ((N & 0xF)||N<=0) return false;
   input->seek(pos+6, WPX_SEEK_SET);
   for (int i = 0; i < N-1; i++) {
@@ -574,8 +574,8 @@ bool FWParser::readUnkn0(shared_ptr<FWEntry> zone)
   f << "N=" << N << ",";
   input->seek(pos+2, WPX_SEEK_SET);
   f << "unkn=" << std::hex << input->readULong(4) << std::dec << ",";
-  ascii.addPos(pos);
-  ascii.addNote(f.str().c_str());
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
   for (int i = 0; i < N-1; i++) {
     pos = input->tell();
     long v = input->readLong(1);
@@ -585,8 +585,8 @@ bool FWParser::readUnkn0(shared_ptr<FWEntry> zone)
       break;
     f.str("");
     f << "Unkn0-" << i << ":";
-    ascii.addPos(pos);
-    ascii.addNote(f.str().c_str());
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
   }
   if (input->tell() != zone->end()) {
     MWAW_DEBUG_MSG(("FWParser::readUnkn0: end seems odd\n"));
@@ -604,32 +604,32 @@ bool FWParser::readGraphic(shared_ptr<FWEntry> zone)
   int vers = version();
 
   MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugFile &asciiFile = zone->getAsciiFile();
   libmwaw::DebugStream f;
 
   long pos = zone->begin();
   input->seek(pos, WPX_SEEK_SET);
-  long sz = input->readULong(4);
+  long sz = (long) input->readULong(4);
   int expectedSz = vers==1 ? 0x5c : 0x54;
   if (sz != expectedSz || pos+sz > zone->end()) return false;
   input->seek(sz, WPX_SEEK_CUR);
   f << "Entries(Graphic)";
   if (zone->m_nextId != -2) f << "[" << zone->m_nextId << "]";
   f << "|" << *zone << ":";
-  ascii.addPos(pos);
-  ascii.addNote(f.str().c_str());
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
 
   pos = input->tell();
-  sz = input->readULong(4);
+  sz = (long) input->readULong(4);
   if (!sz || pos+4+sz > zone->end()) {
     MWAW_DEBUG_MSG(("FWParser::readGraphic: can not read graphic size\n"));
     return false;
   }
   f.str("");
   f << "Graphic:sz=" << std::hex << sz << std::dec << ",";
-  ascii.addPos(pos);
-  ascii.addNote(f.str().c_str());
-  ascii.skipZone(pos+4, pos+4+sz-1);
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+  asciiFile.skipZone(pos+4, pos+4+sz-1);
   input->seek(sz, WPX_SEEK_CUR);
 
   m_state->m_graphicMap.insert
@@ -639,17 +639,17 @@ bool FWParser::readGraphic(shared_ptr<FWEntry> zone)
   if (pos == zone->end())
     return true;
 
-  sz = input->readULong(4);
+  sz = (long)input->readULong(4);
   if (sz)
     input->seek(sz, WPX_SEEK_CUR);
   if (pos+4+sz!=zone->end()) {
     MWAW_DEBUG_MSG(("FWParser::readGraphic: end graphic seems odds\n"));
   }
-  ascii.addPos(pos);
-  ascii.addNote("Graphic-A");
+  asciiFile.addPos(pos);
+  asciiFile.addNote("Graphic-A");
 
-  ascii.addPos(input->tell());
-  ascii.addNote("_");
+  asciiFile.addPos(input->tell());
+  asciiFile.addNote("_");
 
   return true;
 }
@@ -665,12 +665,12 @@ bool FWParser::sendGraphic(shared_ptr<FWEntry> zone)
 
   long pos = zone->begin();
   input->seek(pos, WPX_SEEK_SET);
-  long sz = input->readULong(4);
+  int sz = (int)input->readULong(4);
   input->seek(sz, WPX_SEEK_CUR);
 
   // header
   pos = input->tell();
-  sz = input->readULong(4);
+  sz = (int)input->readULong(4);
 
 #ifdef DEBUG_WITH_FILES
   if (1) {
@@ -732,17 +732,17 @@ bool FWParser::readZoneFlags(shared_ptr<FWEntry> zone)
   }
   zone->setParsed(true);
   MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugFile &asciiFile = zone->getAsciiFile();
 
   libmwaw::DebugStream f;
-  int numElt = zone->length()/dataSz;
+  long numElt = zone->length()/dataSz;
   input->seek(zone->begin(), WPX_SEEK_SET);
   int numPosZone = 0;
   int numNegZone = 0;
   std::multimap<int, shared_ptr<FWEntry> >::iterator it;
-  for (int i = 0; i < numElt; i++) {
+  for (long i = 0; i < numElt; i++) {
     long pos = input->tell();
-    int id = input->readLong(2);
+    int id = (int)input->readLong(2);
     it = m_state->m_entryMap.find(id);
     shared_ptr<FWEntry> entry;
     if (it == m_state->m_entryMap.end()) {
@@ -755,18 +755,18 @@ bool FWParser::readZoneFlags(shared_ptr<FWEntry> zone)
       entry = it->second;
     f.str("");
     entry->setType("UnknownZone");
-    int val = input->readLong(2); // always -2 ?
+    int val = (int)input->readLong(2); // always -2 ?
     if (val != -2) f << "g0=" << val << ",";
-    val  = input->readLong(2); // always 0 ?
+    val  = (int)input->readLong(2); // always 0 ?
     if (val) f << "g1=" << val << ",";
     // a small number between 1 and 0x100
-    entry->m_values[0] =  input->readLong(2);
+    entry->m_values[0] =  (int)input->readLong(2);
     for (int j = 0; j < 2; j++) { // always 0
-      val  = input->readLong(2);
+      val  = (int)input->readLong(2);
       if (val) f << "g" << j+2 << "=" << val << ",";
     }
     /** -1: generic, -2: null, other fId */
-    entry->m_typeId =  input->readLong(2);
+    entry->m_typeId =  (int)input->readLong(2);
     if (entry->m_typeId >= 0)
       entry->m_flagsId = numPosZone++;
     else if (entry->m_typeId == -1) {
@@ -778,18 +778,18 @@ bool FWParser::readZoneFlags(shared_ptr<FWEntry> zone)
         break;
       }
       if (!find) {
-        MWAW_DEBUG_MSG(("FWParser::readZoneFlags: can not find generic zone id %d\n",i));
+        MWAW_DEBUG_MSG(("FWParser::readZoneFlags: can not find generic zone id %ld\n",i));
         entry->m_flagsId = numNegZone;
         f << "#";
       }
       numNegZone++;
     }
     // v2: always  0|0x14, v1 two small number or 0x7FFF
-    entry->m_values[1] =  input->readLong(1);
-    entry->m_values[2] =  input->readLong(1);
+    entry->m_values[1] =  (int)input->readLong(1);
+    entry->m_values[2] =  (int)input->readLong(1);
     if (vers == 1) {
       for (int j = 0; j < 3; j++) { // always 0, -2|0, 0 ?
-        val  = input->readLong(2);
+        val  = (int)input->readLong(2);
         if ((j==1 && val !=-2) || (j!=1 && val))
           f << "g" << j+4 << "=" << val << ",";
       }
@@ -809,11 +809,11 @@ bool FWParser::readZoneFlags(shared_ptr<FWEntry> zone)
     }
 
     input->seek(pos+dataSz, WPX_SEEK_SET);
-    ascii.addPos(pos);
-    ascii.addNote(f.str().c_str());
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
   }
-  ascii.addPos(zone->end());
-  ascii.addNote("Entries(ZoneAfter)");
+  asciiFile.addPos(zone->end());
+  asciiFile.addNote("Entries(ZoneAfter)");
   return true;
 }
 
@@ -827,10 +827,10 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
   }
   zone->setParsed(true);
   MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &ascii = zone->getAsciiFile();
+  libmwaw::DebugFile &asciiFile = zone->getAsciiFile();
 
   libmwaw::DebugStream f;
-  int numElt = zone->length()/dataSz;
+  int numElt = int(zone->length()/dataSz);
   input->seek(zone->begin(), WPX_SEEK_SET);
   int val;
 
@@ -838,7 +838,7 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
   std::set<long> filePositions;
   std::vector<shared_ptr<FWEntry> > listEntry;
   if (numElt>0)
-    listEntry.resize(numElt);
+    listEntry.resize(size_t(numElt));
   for (int i = 0; i < numElt; i++) {
     long pos = input->tell();
     long fPos = input->readLong(4);
@@ -846,8 +846,8 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
     shared_ptr<FWEntry> entry(new FWEntry(input));
     entry->setType("Unknown");
     entry->setId(i);
-    entry->m_nextId = input->readLong(2);
-    int id = input->readLong(2);
+    entry->m_nextId = (int) input->readLong(2);
+    int id = (int) input->readLong(2);
     if (fPos >= 0) {
       filePositions.insert(fPos);
       entry->setBegin(fPos);
@@ -859,7 +859,7 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
       f << "pos=" << std::hex << entry->begin() << std::dec << ",";
     if (entry->m_nextId != -2) f << "nextId=" << entry->m_nextId << ",";
     if (vers==1) {
-      val = input->readLong(0);
+      val = (int) input->readLong(2);
       if (val) f << "f0=" << val << ",";
     }
 
@@ -871,19 +871,19 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
     else f << "ZonePos" << i << ":";
     f << *entry;
 
-    ascii.addPos(pos);
-    ascii.addNote(f.str().c_str());
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
 
     if (id != -2 && (id < 1 || id >= numElt)) {
       MWAW_DEBUG_MSG(("FWParser::readZonePos: entry id seems bad\n"));
     }
-    listEntry[i] = entry;
+    listEntry[size_t(i)] = entry;
   }
   filePositions.insert(zone->begin());
 
   // compute end of each entry
   for (int i = 0; i < numElt; i++) {
-    shared_ptr<FWEntry> entry = listEntry[i];
+    shared_ptr<FWEntry> entry = listEntry[size_t(i)];
     if (!entry || entry->begin() < 0)
       continue;
     std::set<long>::iterator it=filePositions.find(entry->begin());
@@ -904,17 +904,17 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
       MWAW_DEBUG_MSG(("FWParser::readZonePos: can not find the next entry\n"));
       continue;
     }
-    if (!listEntry[entry->m_nextId] || listEntry[entry->m_nextId]->isParsed()) {
+    if (!listEntry[size_t(entry->m_nextId)] || listEntry[size_t(entry->m_nextId)]->isParsed()) {
       entry->m_nextId = -1;
       MWAW_DEBUG_MSG(("FWParser::readZonePos:  next entry %d is already used\n",
                       entry->m_nextId));
       continue;
     }
-    listEntry[entry->m_nextId]->setParsed(true);
+    listEntry[size_t(entry->m_nextId)]->setParsed(true);
   }
 
   for (int i = 0; i < numElt; i++) {
-    shared_ptr<FWEntry> entry = listEntry[i];
+    shared_ptr<FWEntry> entry = listEntry[size_t(i)];
     if (!entry || !entry->valid() || entry->isParsed()) continue;
 
     m_state->m_entryMap.insert
@@ -923,7 +923,7 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
     if (entry->m_nextId < 0) {
       entry->m_input = input;
       entry->m_asciiFile = shared_ptr<libmwaw::DebugFile>
-                           (&ascii, MWAW_shared_ptr_noop_deleter<libmwaw::DebugFile>());
+                           (&asciiFile, MWAW_shared_ptr_noop_deleter<libmwaw::DebugFile>());
       continue;
     }
     // ok we must reconstruct a file
@@ -933,18 +933,18 @@ bool FWParser::readZonePos(shared_ptr<FWEntry> zone)
       if (!actEnt->valid()) break;
       input->seek(actEnt->begin(), WPX_SEEK_SET);
       unsigned long read;
-      const unsigned char *dt = input->read(actEnt->length(), read);
+      const unsigned char *dt = input->read((size_t)actEnt->length(), read);
       data.append(dt, read);
-      ascii.skipZone(actEnt->begin(), actEnt->end()-1);
+      asciiFile.skipZone(actEnt->begin(), actEnt->end()-1);
       if (actEnt->m_nextId < 0) break;
-      actEnt = listEntry[actEnt->m_nextId];
+      actEnt = listEntry[size_t(actEnt->m_nextId)];
       if (actEnt) actEnt->setParsed(true);
     }
     entry->update();
   }
 
-  ascii.addPos(zone->end());
-  ascii.addNote("_");
+  asciiFile.addPos(zone->end());
+  asciiFile.addNote("_");
   return true;
 }
 
@@ -968,8 +968,8 @@ bool FWParser::readDocPosition()
   input->seek(m_state->m_eof-48, WPX_SEEK_SET);
   f << "Entries(DocPosition):";
 
-  int val;
-  m_state->m_biblioId = input->readLong(2);
+  long val;
+  m_state->m_biblioId = (int) input->readLong(2);
   if (m_state->m_biblioId != -2)
     f << "bibId=" << m_state->m_biblioId << ",";
   for (int i = 0; i < 4; i++) { // always 0?
@@ -981,8 +981,8 @@ bool FWParser::readDocPosition()
     shared_ptr<FWEntry> zone(new FWEntry(input));
     zone->m_asciiFile = shared_ptr<libmwaw::DebugFile>
                         (&ascii(), MWAW_shared_ptr_noop_deleter<libmwaw::DebugFile>());
-    zone->setBegin(input->readULong(4));
-    zone->setLength((sz[i]=input->readULong(4)));
+    zone->setBegin((long)input->readULong(4));
+    zone->setLength((sz[i]=(long)input->readULong(4)));
     if (zone->end() > m_state->m_eof || !zone->valid())
       return false;
     if (i == 1) m_state->m_zoneList = zone;
@@ -990,7 +990,7 @@ bool FWParser::readDocPosition()
   }
   f << "flZones=[";
   for (int i = 0; i < 3; i++) {
-    m_state->m_zoneFlagsId[2-i] = input->readLong(2);
+    m_state->m_zoneFlagsId[2-i] = (int)input->readLong(2);
     f << m_state->m_zoneFlagsId[2-i] << ",";
   }
   f << "],";
@@ -998,14 +998,14 @@ bool FWParser::readDocPosition()
   if (val) f << "g0=" << val << ",";
   // a big number
   f << std::hex << "unkn=" << input->readULong(2) << std::dec << ",";
-  val = input->readULong(4);
+  val = (long) input->readULong(4);
   if (val != 1 && val != 0xbeecf54L) // always 1 in v1 and 0xbeecf54L in v2 ?
     f << std::hex << "unkn2=" << val << std::dec << ",";
   // always 1 ?
-  val = input->readULong(4);
+  val = (long) input->readULong(4);
   if (val != 1) // always 1 in v1
     f << "g1=" << val << ",";
-  val = input->readULong(4);
+  val = (long) input->readULong(4);
   if (val==0x46575254L) {
     if ((sz[0]%16)==0 && (sz[1]%8)==0)
       m_state->m_version=2;
@@ -1091,8 +1091,12 @@ void FWParser::sendText(int id, libmwaw::SubDocumentType type, int wh)
   case libmwaw::DOC_COMMENT_ANNOTATION:
     m_listener->insertComment(subdoc);
     break;
+  case libmwaw::DOC_HEADER_FOOTER:
+  case libmwaw::DOC_TABLE:
+  case libmwaw::DOC_TEXT_BOX:
+  case libmwaw::DOC_NONE:
   default:
-    MWAW_DEBUG_MSG(("FWParser::sendText: unknown type\n"));
+    MWAW_DEBUG_MSG(("FWParser::sendText: unexpected type\n"));
   }
 }
 
@@ -1156,7 +1160,7 @@ void FWEntry::update()
   if (!m_data.size()) return;
 
   setBegin(0);
-  setLength(m_data.size());
+  setLength((long)m_data.size());
   WPXInputStream *dataInput =
     const_cast<WPXInputStream *>(m_data.getDataStream());
   if (!dataInput) {

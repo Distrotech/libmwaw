@@ -157,6 +157,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCellFormat const &cell)
       break;
     }
     break;
+  case MWAWCellFormat::F_UNKNOWN:
   default:
     break; // default
   }
@@ -177,6 +178,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCellFormat const &cell)
   case MWAWCellFormat::HALIGN_FULL:
     o << ",full";
     break;
+  case MWAWCellFormat::HALIGN_DEFAULT:
   default:
     break; // default
   }
@@ -195,10 +197,10 @@ std::ostream &operator<<(std::ostream &o, MWAWCellFormat const &cell)
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 bool MWAWCellContent::getDataCellProperty(MWAWCellFormat::Format format, WPXPropertyList &propList,
-    std::string &text) const
+    std::string &textVal) const
 {
   propList.clear();
-  text = "";
+  textVal = "";
   std::stringstream f;
 
   bool isFormula = false;
@@ -211,7 +213,7 @@ bool MWAWCellContent::getDataCellProperty(MWAWCellFormat::Format format, WPXProp
   }
   if (!isFormula && !isValueSet()) return false;
 
-  std::string actualText = MWAWCellContent::text();
+  std::string actualText = text();
   switch (format) {
   case MWAWCellFormat::F_TEXT:
   case MWAWCellFormat::F_NUMBER:
@@ -219,8 +221,8 @@ bool MWAWCellContent::getDataCellProperty(MWAWCellFormat::Format format, WPXProp
     // if (actualText.length() == 0) {
     f.str("");
     f << value();
-    text = f.str();
-    propList.insert("office:value", text.c_str());
+    textVal = f.str();
+    propList.insert("office:value", textVal.c_str());
     return true;
   case MWAWCellFormat::F_DATE: {
     int Y=0, M=0, D=0;
@@ -243,7 +245,7 @@ bool MWAWCellContent::getDataCellProperty(MWAWCellFormat::Format format, WPXProp
       f << Y << "/" << std::setw(2) << D << "/"	<< std::setw(2) << M;
       actualText = f.str();
     }
-    text = actualText;
+    textVal = actualText;
     return true;
   }
   case MWAWCellFormat::F_TIME: {
@@ -269,14 +271,15 @@ bool MWAWCellContent::getDataCellProperty(MWAWCellFormat::Format format, WPXProp
         << std::setw(2) << S ;
       actualText = f.str();
     }
-    text = actualText;
+    textVal = actualText;
     return true;
   }
+  case MWAWCellFormat::F_UNKNOWN:
   default:
     break;
   }
   propList.clear();
-  text = "";
+  textVal = "";
   return false;
 }
 
@@ -329,6 +332,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCellContent const &cell)
     o << ",formula=" << cell.formula();
     if (cell.isValueSet()) o << "[" << cell.value() << "]";
     break;
+  case MWAWCellContent::C_UNKNOWN:
   default:
     o << ",###unknown type";
   }

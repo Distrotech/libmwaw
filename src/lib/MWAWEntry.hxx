@@ -56,8 +56,8 @@ public:
     m_length = l;
   }
   //! sets the end offset
-  void setEnd(long end) {
-    m_length = end-m_begin;
+  void setEnd(long off) {
+    m_length = off-m_begin;
   }
 
   //! returns the begin offset
@@ -102,16 +102,16 @@ public:
   }
 
   //! sets the type of the entry: BTEP,FDPP, BTEC, FDPC, PLC , TEXT, ...
-  void setType(std::string const type) {
-    m_type=type;
+  void setType(std::string const newType) {
+    m_type=newType;
   }
   //! returns the type of the entry
   std::string const &type() const {
     return m_type;
   }
   //! returns true if the type entry == \a type
-  bool hasType(std::string const type) const {
-    return m_type == type;
+  bool hasType(std::string const typ) const {
+    return m_type == typ;
   }
 
   //! sets the name of the entry
@@ -132,8 +132,8 @@ public:
     return m_id;
   }
   //! sets the id
-  void setId(int id) {
-    m_id = id;
+  void setId(int newId) {
+    m_id = newId;
   }
 
   //! retrieves the extra string

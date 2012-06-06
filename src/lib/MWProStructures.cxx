@@ -101,20 +101,23 @@ struct Block {
       }
       o << ",";
       break;
+    case UNKNOWN:
     default:
       break;
     }
     if (bl.m_id >= 0) o << "id=" << bl.m_id << ",";
     o << "box=" << bl.m_box << ",";
     for (int i = 0; i < 2; i++) {
-      if (bl.m_border[i].x() == 0 && bl.m_border[i].y()==0) continue;
-      o << "bord" << i << "?=" << bl.m_border[i] << ",";
+      if ((bl.m_border[i].x() <= 0 || bl.m_border[i].x() > 0) ||
+          (bl.m_border[i].y() <= 0 || bl.m_border[i].y() > 0))
+        o << "bord" << i << "?=" << bl.m_border[i] << ",";
     }
-    if (bl.m_baseline) o << "baseline=" << bl.m_baseline << ",";
+    if (bl.m_baseline < 0 || bl.m_baseline >0) o << "baseline=" << bl.m_baseline << ",";
     if (bl.hasColor())
       o << "col=" << bl.m_color[0] << "x" << bl.m_color[1]
         << "x" << bl.m_color[1] << ",";
-    if (bl.m_lineWidth != 1.0) o << "lineWidth=" << bl.m_lineWidth << "pt,";
+    if (bl.m_lineWidth < 1.0 || bl.m_lineWidth>1.0)
+      o << "lineWidth=" << bl.m_lineWidth << "pt,";
     switch(bl.m_lineType) {
     case 1:
       break; // simple
@@ -215,7 +218,7 @@ struct Block {
            (m_lineColor[0] != 0 || m_lineColor[1] != 0 ||  m_lineColor[2] != 0);
   }
   bool hasBorderLine() const {
-    return (m_lineWidth !=0.0 && m_linePattern!=1);
+    return (m_lineWidth > 0.0 && m_linePattern!=1);
   }
 
   MWAWPosition getPosition() const {
@@ -480,7 +483,7 @@ struct Section {
   //! return the number of columns
   int numColumns() const {
     if (m_colsWidth.size())
-      return m_colsWidth.size();
+      return int(m_colsWidth.size());
     return 1;
   }
   //! operator<<
@@ -497,15 +500,17 @@ struct Section {
     case S_PageRight:
       o << "newPage[right],";
       break;
+    default:
+      break;
     }
-    int numColumns = sec.numColumns();
+    size_t numColumns = size_t(sec.numColumns());
     if (numColumns != 1) {
       o << "nCols=" << numColumns << ",";
       o << "colsW=[";
-      for (int i = 0; i < numColumns; i++)
+      for (size_t i = 0; i < numColumns; i++)
         o << sec.m_colsWidth[i] << ",";
       o << "], colsPos=[";
-      for (int i = 0; i < numColumns; i++)
+      for (size_t i = 0; i < numColumns; i++)
         o << sec.m_colsBegin[i] << ",";
       o << "],";
     }
@@ -690,7 +695,7 @@ bool MWProStructures::getColor(int colId, Vec3uc &color) const
     col = colorMap[colId];
   }
 
-  color = Vec3uc((col>>16)&0xff, (col>>8)&0xff,col&0xff);
+  color = Vec3uc((unsigned char)((col>>16)&0xff), (unsigned char)((col>>8)&0xff),(unsigned char)(col&0xff));
   return true;
 }
 
@@ -853,7 +858,7 @@ bool MWProStructures::createZonesV2()
   long val;
   if (ok) {
     pos = m_input->tell();
-    val = m_input->readULong(4);
+    val = (long) m_input->readULong(4);
     if (val) {
       MWAW_DEBUG_MSG(("MWProStructures::createZonesV2: argh!!! find data after the fonts name zone. Trying to continue.\n"));
       f.str("");
@@ -900,7 +905,7 @@ bool MWProStructures::createZonesV2()
       if (block->m_fileBlock)
         m_mainParser.parseDataZone(block->m_fileBlock, 0);
       pos =  m_input->tell();
-      int val = m_input->readLong(1);
+      val = m_input->readLong(1);
       if (val == 2) continue;
       if (val != 3) break;
       m_input->seek(-1, WPX_SEEK_CUR);
@@ -909,9 +914,9 @@ bool MWProStructures::createZonesV2()
   ascii().addPos(pos);
   ascii().addNote("Entries(DataEnd):");
 
-  int numPages = 1;
+  int nPages = 1;
   for (int i = 0; i < int(m_state->m_blocksList.size()); i++) {
-    shared_ptr<MWProStructuresInternal::Block> &block = m_state->m_blocksList[i];
+    shared_ptr<MWProStructuresInternal::Block> &block = m_state->m_blocksList[size_t(i)];
     switch (block->m_type) {
     case 6:
       if (block->m_isHeader)
@@ -920,20 +925,20 @@ bool MWProStructures::createZonesV2()
         m_state->m_footersMap[0] = i;
       break;
     case 5: // soft page break
-      numPages++;
+      nPages++;
       break;
     case 7:
       m_state->m_footnotesList.push_back(i);
       break;
     case -1: // hard page break
       if (block->isText())
-        numPages += m_mainParser.findNumHardBreaks(block->m_fileBlock);
+        nPages += m_mainParser.findNumHardBreaks(block->m_fileBlock);
       break;
     default:
       break;
     }
   }
-  m_state->m_numPages = numPages;
+  m_state->m_numPages = nPages;
 
   return true;
 }
@@ -943,7 +948,7 @@ bool MWProStructures::createZonesV2()
 bool MWProStructures::sendMainZone()
 {
   int vers = version();
-  for (int i = 0; i < int(m_state->m_blocksList.size()); i++) {
+  for (size_t i = 0; i < m_state->m_blocksList.size(); i++) {
     if (!m_state->m_blocksList[i]->isText() ||
         m_state->m_blocksList[i]->m_send) continue;
     if (vers == 1 && m_state->m_blocksList[i]->m_type != 5)
@@ -951,11 +956,11 @@ bool MWProStructures::sendMainZone()
     // fixme
     if (vers == 0 && m_state->m_blocksList[i]->m_type != -1)
       continue;
-    return send(vers==0 ? i : m_state->m_blocksList[i]->m_id, true);
+    return send(vers==0 ? int(i) : m_state->m_blocksList[i]->m_id, true);
   }
 
   //ok the main zone can be empty
-  for (int i = 0; i < int(m_state->m_blocksList.size()); i++) {
+  for (size_t i = 0; i < m_state->m_blocksList.size(); i++) {
     if (m_state->m_blocksList[i]->m_type != 5 ||
         m_state->m_blocksList[i]->m_send) continue;
 
@@ -974,18 +979,18 @@ bool MWProStructures::sendMainZone()
 void MWProStructures::buildPageStructures()
 {
   // first find the pages break
-  std::set<int> set;
+  std::set<long> set;
   int actPage = 0;
-  for (int i = 0; i < int(m_state->m_blocksList.size()); i++) {
+  for (size_t i = 0; i < m_state->m_blocksList.size(); i++) {
     m_state->m_blocksList[i]->m_page = actPage ? actPage : 1; // mainly ok
     if (m_state->m_blocksList[i]->m_type != 5)
       continue;
     actPage++;
     set.insert(m_state->m_blocksList[i]->m_textPos);
   }
-  int numSections = m_state->m_sectionsList.size();
-  int actSectPos = 0;
-  for (int i = 0; i < numSections; i++) {
+  size_t numSections = m_state->m_sectionsList.size();
+  long actSectPos = 0;
+  for (size_t i = 0; i < numSections; i++) {
     MWProStructuresInternal::Section &sec = m_state->m_sectionsList[i];
     if (sec.m_start != sec.S_Line) set.insert(actSectPos);
     actSectPos += sec.m_textLength;
@@ -994,19 +999,19 @@ void MWProStructures::buildPageStructures()
   pagesBreak.assign(set.begin(), set.end());
 
   // now associates the header/footer to each pages
-  int numPages = m_state->m_numPages = pagesBreak.size();
+  int nPages = m_state->m_numPages = int(pagesBreak.size());
   int actPagePos = 0;
   actPage = 0;
   actSectPos = 0;
-  for (int i = 0; i < numSections; i++) {
+  for (size_t i = 0; i < numSections; i++) {
     MWProStructuresInternal::Section &sec = m_state->m_sectionsList[i];
     std::vector<int> listPages;
     actSectPos += sec.m_textLength;
     while (actPagePos < actSectPos) {
       listPages.push_back(actPage);
-      if (actPage == numPages-1 || pagesBreak[actPage+1] > actSectPos)
+      if (actPage == nPages-1 || pagesBreak[size_t(actPage+1)] > actSectPos)
         break;
-      actPagePos=pagesBreak[++actPage];
+      actPagePos=pagesBreak[(size_t)++actPage];
     }
     int headerId = 0, footerId = 0;
     for (int k = 0; k < 2; k++) {
@@ -1016,7 +1021,7 @@ void MWProStructures::buildPageStructures()
         footerId = sec.m_footerIds[k];
     }
     if (!headerId && !footerId) continue;
-    for (int j = 0; j < int(listPages.size()); j++) {
+    for (size_t j = 0; j < listPages.size(); j++) {
       int p = listPages[j]+1;
       if (headerId && m_state->m_headersMap.find(p) == m_state->m_headersMap.end())
         m_state->m_headersMap[p] = headerId;
@@ -1026,7 +1031,7 @@ void MWProStructures::buildPageStructures()
   }
   // finally mark the attachment
   std::vector<int> const &listCalled = m_mainParser.getBlocksCalledByToken();
-  for (int i = 0; i < int(listCalled.size()); i++) {
+  for (size_t i = 0; i < listCalled.size(); i++) {
     if (m_state->m_blocksMap.find(listCalled[i]) == m_state->m_blocksMap.end()) {
       MWAW_DEBUG_MSG(("MWProStructures::buildPageStructures: can not find attachment block %d...\n",
                       listCalled[i]));
@@ -1042,14 +1047,14 @@ void MWProStructures::buildPageStructures()
 // try to find the main text zone and sent it
 void MWProStructures::buildTableStructures()
 {
-  int numBlocks = m_state->m_blocksList.size();
-  for (int i = 0; i < numBlocks; i++) {
+  size_t numBlocks = m_state->m_blocksList.size();
+  for (size_t i = 0; i < numBlocks; i++) {
     if (m_state->m_blocksList[i]->m_type != 3)
       continue;
     shared_ptr<MWProStructuresInternal::Block> table
       = m_state->m_blocksList[i];
     std::vector<shared_ptr<MWProStructuresInternal::Block> > blockList;
-    int j = i+1;
+    size_t j = i+1;
     for ( ; j < numBlocks; j++) {
       shared_ptr<MWProStructuresInternal::Block> cell = m_state->m_blocksList[j];
       if (cell->m_type != 4)
@@ -1057,7 +1062,7 @@ void MWProStructures::buildTableStructures()
       if (!table->contains(cell->m_box))
         break;
       bool ok = true;
-      for (int k = 0; k < int(blockList.size()); k++) {
+      for (size_t k = 0; k < blockList.size(); k++) {
         if (cell->intersects(blockList[k]->m_box)) {
           ok = false;
           break;
@@ -1069,25 +1074,25 @@ void MWProStructures::buildTableStructures()
     }
     if (j-1 >= i) i = j-1;
 
-    int numCells = blockList.size();
+    size_t numCells = blockList.size();
     bool ok = numCells > 1;
     if (!ok && numCells == 1)
       ok = table->m_col == 1 && table->m_row == 1;
     if (!ok) {
-      MWAW_DEBUG_MSG(("MWProStructures::buildTableStructures: find a table with %d cells : ignored...\n", numCells));
+      MWAW_DEBUG_MSG(("MWProStructures::buildTableStructures: find a table with %ld cells : ignored...\n", numCells));
       continue;
     }
 
     shared_ptr<MWProStructuresInternal::Table> newTable(new MWProStructuresInternal::Table);
-    for (int j = 0; j < numCells; j++) {
-      blockList[j]->m_send = true;
-      blockList[j]->m_attachment = true;
-      Box2f box(blockList[j]->m_box.min(), blockList[j]->m_box.max()-Vec2f(1,1));
+    for (size_t k = 0; k < numCells; k++) {
+      blockList[k]->m_send = true;
+      blockList[k]->m_attachment = true;
+      Box2f box(blockList[k]->m_box.min(), blockList[k]->m_box.max()-Vec2f(1,1));
       shared_ptr<MWProStructuresInternal::Cell> newCell(new MWProStructuresInternal::Cell(*this));
       newCell->setBox(box);
-      newCell->setBackColor(blockList[j]->m_color);
-      newCell->m_blockId = blockList[j]->m_id;
-      blockList[j]->m_textboxCellType=1;
+      newCell->setBackColor(blockList[k]->m_color);
+      newCell->m_blockId = blockList[k]->m_id;
+      blockList[k]->m_textboxCellType=1;
       newTable->add(newCell);
     }
     m_state->m_tablesMap[table->m_id]=newTable;
@@ -1107,7 +1112,7 @@ bool MWProStructures::readFontsName()
   long pos = m_input->tell();
   libmwaw::DebugStream f;
 
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   if (sz == 0) {
     ascii().addPos(pos);
     ascii().addNote("_");
@@ -1128,7 +1133,7 @@ bool MWProStructures::readFontsName()
     return true;
   }
   f << "Entries(FontsName):";
-  int N=m_input->readULong(2);
+  int N=(int) m_input->readULong(2);
   if (3*N+4 > sz) {
     MWAW_DEBUG_MSG(("MWProStructures::readFontsName: can not read the number of fonts\n"));
     m_input->seek(endPos, WPX_SEEK_SET);
@@ -1139,10 +1144,10 @@ bool MWProStructures::readFontsName()
   }
 
   for (int ft = 0; ft < N; ft++) {
-    int fId = m_input->readLong(2);
+    int fId = (int) m_input->readLong(2);
     f << "[id=" << fId << ",";
     for (int st = 0; st < 2; st++) {
-      int sSz = m_input->readULong(1);
+      int sSz = (int) m_input->readULong(1);
       if (long(m_input->tell())+sSz > endPos) {
         MWAW_DEBUG_MSG(("MWProStructures::readFontsName: can not read the %d font\n", ft));
         f << "#";
@@ -1178,7 +1183,7 @@ bool MWProStructures::readFontsDef()
   long pos = m_input->tell();
   libmwaw::DebugStream f;
 
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   if (sz == 0) {
     ascii().addPos(pos);
     ascii().addNote("_");
@@ -1200,7 +1205,7 @@ bool MWProStructures::readFontsDef()
   }
   m_input->seek(pos+4, WPX_SEEK_SET);
   f << "Entries(FontsDef):";
-  int N = sz/expectedSize;
+  int N = int(sz/expectedSize);
   f << "N=" << N;
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1231,17 +1236,17 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   int vers = version();
   libmwaw::DebugStream f;
   font = MWProStructuresInternal::Font();
-  font.m_values[0] = m_input->readLong(2); // 1, 3 or 6
-  int val = m_input->readULong(2);
+  font.m_values[0] = (int) m_input->readLong(2); // 1, 3 or 6
+  int val = (int) m_input->readULong(2);
   if (val != 0xFFFF)
     font.m_font.setId(val);
-  val = m_input->readULong(2);
+  val = (int) m_input->readULong(2);
   if (val != 0xFFFF)
     font.m_font.setSize((val+3)/4);
   if (vers >= 1)
-    font.m_values[1] = m_input->readLong(2);
-  long flag = m_input->readULong(2);
-  int flags=0;
+    font.m_values[1] = (int) m_input->readLong(2);
+  long flag = (long) m_input->readULong(2);
+  uint32_t flags=0;
   if (flag&0x1) flags |= MWAW_BOLD_BIT;
   if (flag&0x2) flags |= MWAW_ITALICS_BIT;
   if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
@@ -1258,20 +1263,20 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   if (flag&0x4000) f << "lowercase,";
   font.m_flags = (flag&0x8080L);
 
-  int color = m_input->readULong(1);
+  int color = (int) m_input->readULong(1);
   Vec3uc col;
   if (color != 1 && getColor(color, col))
     font.m_font.setColor(col);
   else if (color != 1)
     f << "#colId=" << color << ",";
-  val = m_input->readULong(1); // always 0x64 (unused?)
+  val = (int) m_input->readULong(1); // always 0x64 (unused?)
   if (val != 0x64) font.m_values[2] = val;
   if (vers == 1) {
-    font.m_language =  m_input->readLong(2);
-    font.m_token = m_input->readLong(2);
+    font.m_language =  (int) m_input->readLong(2);
+    font.m_token = (int) m_input->readLong(2);
     /* f3=1 spacings 1, f3=3 spacings 3 */
     for (int i = 3; i < 5; i++)
-      font.m_values[i] = m_input->readLong(2);
+      font.m_values[i] = (int) m_input->readLong(2);
     m_input->seek(pos+20, WPX_SEEK_SET);
   }
   font.m_font.setFlags(flags);
@@ -1288,7 +1293,7 @@ bool MWProStructures::readParagraphs()
   libmwaw::DebugStream f;
   int dataSz = version()==0 ? 202 : 192;
 
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   if (sz == 0) {
     ascii().addPos(pos);
     ascii().addNote("_");
@@ -1309,7 +1314,7 @@ bool MWProStructures::readParagraphs()
   }
   m_input->seek(pos+4, WPX_SEEK_SET);
   f << "Entries(ParaZone):";
-  int N = sz/dataSz;
+  int N = int(sz/dataSz);
   f << "N=" << N;
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1318,7 +1323,7 @@ bool MWProStructures::readParagraphs()
   m_state->m_paragraphsList.resize(0);
   for (int n = 0; n < N; n++) {
     pos = m_input->tell();
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     f.str("");
     f << "Entries(Paragraph)[" << n << "]:";
     if (val) f << "numChar?="<<val <<",";
@@ -1353,43 +1358,43 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
   m_input->seek(pos, WPX_SEEK_SET);
   int val, just = 0;
   if (vers == 0) {
-    just = m_input->readULong(2);
-    val = m_input->readLong(2);
+    just = (int) m_input->readULong(2);
+    val = (int) m_input->readLong(2);
     if (val) f << "unkn=" << val << ",";
   }
-  para.m_margins[1] = m_input->readLong(4)/72.0/65536.;
-  para.m_margins[0] = m_input->readLong(4)/72.0/65536.;
-  para.m_margins[2] = m_input->readLong(4)/72.0/65536.;
+  para.m_margins[1] = float(m_input->readLong(4))/72.0f/65536.f;
+  para.m_margins[0] = float(m_input->readLong(4))/72.0f/65536.f;
+  para.m_margins[2] = float(m_input->readLong(4))/72.0f/65536.f;
 
 
   float spacings[3];
   for (int i = 0; i < 3; i++)
-    spacings[i] = m_input->readLong(4)/65536.;
+    spacings[i] = float(m_input->readLong(4))/65536.f;
   for (int i = 0; i < 3; i++) {
-    int dim = vers==0 ? m_input->readLong(4) : m_input->readULong(1);
+    int dim = vers==0 ? (int)m_input->readLong(4) : (int)m_input->readULong(1);
     bool inPoint = true;
     bool ok = true;
     switch (dim) {
     case 0: // point
       ok = spacings[i] < 721 && (i || spacings[0] > 0.0);
-      spacings[i]/=72.;
+      spacings[i]/=72.f;
       break;
     case -1:
     case 0xFF: // percent
       ok = (spacings[i] >= 0.0 && spacings[i]<46.0);
-      if (i==0) spacings[i]+=1.0;
+      if (i==0) spacings[i]+=1.0f;
       inPoint=false;
       break;
     default:
       f << "#inter[dim]=" << std::hex << dim << std::dec << ",";
       ok = spacings[i] < 721 && (i || spacings[0] > 0.0);
-      spacings[i]/=72.;
+      spacings[i]/=72.f;
       break;
     }
     if (ok) {
       // the interline spacings seems ignored when the dimension is point...
       if (i == 0 && inPoint) {
-        if (spacings[0]) f << "interline=" << spacings[0] << ",";
+        if (spacings[0] < 0 || spacings[0] > 0) f << "interline=" << spacings[0] << ",";
         continue;
       }
       para.m_spacings[i] = spacings[i];
@@ -1397,7 +1402,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
         MWAW_DEBUG_MSG(("MWProStructures::readParagraph: spacings looks big decreasing it\n"));
         f << "#prevSpacings" << i << "=" << spacings[i] << ",";
         para.m_spacings[i] = 1.0;
-      } else if (!inPoint && i && spacings[i]) {
+      } else if (!inPoint && i && (spacings[i]<0 || spacings[i]>0)) {
         if (i==1) f << "spaceBef";
         else f  << "spaceAft";
         f << "=" << spacings[i] << "%,";
@@ -1410,7 +1415,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
   }
 
   if (vers==1) {
-    just = m_input->readULong(1);
+    just = (int) m_input->readULong(1);
     m_input->seek(pos+28, WPX_SEEK_SET);
   } else {
     ascii().addDelimiter(m_input->tell(),'|');
@@ -1429,13 +1434,15 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
   case 3:
     para.m_justify = libmwaw::JustificationFull;
     break;
+  default:
+    break;
   }
   if (just&0xFC) f << "#justify=" << std::hex << just << std::dec << ",";
   bool emptyTabFound = false;
   for (int i = 0; i < 20; i++) {
     pos = m_input->tell();
     MWAWTabStop newTab;
-    int type = m_input->readULong(1);
+    int type = (int) m_input->readULong(1);
     switch(type & 3) {
     case 0:
       break;
@@ -1455,9 +1462,9 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
       MWAW_DEBUG_MSG(("MWProStructures::readParagraph: tab type is odd\n"));
       f << "tabs" << i << "[#type]=" << std::hex << (type & 0xFc) << std::dec << ",";
     }
-    int leader = m_input->readULong(1);
+    int leader = (int) m_input->readULong(1);
     if (leader != 0x20)
-      newTab.m_leaderCharacter = leader;
+      newTab.m_leaderCharacter = (uint16_t) leader;
     unsigned long tabPos = m_input->readULong(4);
     if (tabPos == 0xFFFFFFFFL) {
       emptyTabFound = true;
@@ -1469,10 +1476,10 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
       f << "tab" << i << "#";
     }
     newTab.m_position = float(tabPos)/72./65536.-para.m_margins[1];
-    int decimalChar = m_input->readULong(1);
+    int decimalChar = (int) m_input->readULong(1);
     if (decimalChar != '.' && decimalChar != ',')
       f << "tab" << i << "[decimalChar]=" << char(decimalChar) << ",";
-    val = m_input->readLong(1); // always 0?
+    val = (int) m_input->readLong(1); // always 0?
     if (val)
       f << "tab" << i << "[#unkn=" << std::hex << val << std::dec << "],";
     para.m_tabs.push_back(newTab);
@@ -1481,7 +1488,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
 
   if (vers==1) {
     m_input->seek(endPos-2, WPX_SEEK_SET);
-    para.m_value = m_input->readLong(2);
+    para.m_value = (int) m_input->readLong(2);
   }
   para.m_extra=f.str();
 
@@ -1500,15 +1507,15 @@ bool MWProStructures::readCharStyles()
   int N;
   int expectedSz = 0x42;
   if (version() == 1) {
-    long sz = m_input->readULong(4);
+    long sz = (long) m_input->readULong(4);
     if ((sz%0x42) != 0) {
       MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: find an odd value for sz=%ld\n",sz));
       m_input->seek(pos, WPX_SEEK_SET);
       return false;
     }
-    N = sz/0x42;
+    N = int(sz/0x42);
   } else {
-    N = m_input->readULong(2);
+    N = (int) m_input->readULong(2);
     expectedSz = 0x2a;
   }
 
@@ -1535,7 +1542,7 @@ bool MWProStructures::readCharStyles()
     pos = m_input->tell();
     f.str("");
     f << "CharStyles-" << i << ":";
-    int sSz = m_input->readULong(1);
+    int sSz = (int) m_input->readULong(1);
     if (sSz > 31) {
       MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: string size seems odd\n"));
       sSz = 31;
@@ -1548,15 +1555,15 @@ bool MWProStructures::readCharStyles()
     m_input->seek(pos+32, WPX_SEEK_SET);
 
     if (vers == 1) {
-      int val = m_input->readLong(2);
+      int val = (int) m_input->readLong(2);
       if (val) f << "unkn0=" << val << ",";
-      val = m_input->readLong(2);
+      val = (int) m_input->readLong(2);
       if (val != -1) f << "unkn1=" << val << ",";
       f << "ptr?=" << std::hex << m_input->readULong(4) << std::dec << ",";
-      val = m_input->readLong(2); // small number between 0 and 2 (nextId?)
+      val = (int) m_input->readLong(2); // small number between 0 and 2 (nextId?)
       if (val) f << "f0=" << val << ",";
       for (int j = 1; j < 5; j++) { // [-1,0,1], [0,1 or ee], 0, 0
-        val = m_input->readLong(1);
+        val = (int) m_input->readLong(1);
         if (val) f << "f" << j <<"=" << val << ",";
       }
     }
@@ -1581,13 +1588,13 @@ bool MWProStructures::readStyles()
 {
   long pos = m_input->tell();
   libmwaw::DebugStream f;
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   if ((sz%0x106) != 0) {
     MWAW_DEBUG_MSG(("MWProStructures::readStyles: find an odd value for sz=%ld\n",sz));
     m_input->seek(pos, WPX_SEEK_SET);
     return false;
   }
-  int N = sz/0x106;
+  int N = int(sz/0x106);
 
   if (N==0) {
     ascii().addPos(pos);
@@ -1634,7 +1641,7 @@ bool MWProStructures::readStyle(int styleId)
 
   m_input->seek(pos, WPX_SEEK_SET);
   f << "Style-" << styleId << ":";
-  int strlen = m_input->readULong(1);
+  int strlen = (int) m_input->readULong(1);
   if (!strlen || strlen > 31) {
     MWAW_DEBUG_MSG(("MWProStructures::readStyle: style name length seems bad!!\n"));
     m_input->seek(pos, WPX_SEEK_SET);
@@ -1648,7 +1655,7 @@ bool MWProStructures::readStyle(int styleId)
 
   int val;
   for (int i = 0; i < 3; i++) { // 0 | [0,1,-1] | numTabs or idStyle?
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   f << "ptr?=" << std::hex << m_input->readULong(4) << std::dec << ",";
@@ -1671,12 +1678,12 @@ bool MWProStructures::readStyle(int styleId)
   pos = m_input->tell();
   f.str("");
   f << "Style-" << styleId << "(II):";
-  val = m_input->readLong(2);
+  val = (int) m_input->readLong(2);
   if (val != -1) f << "nextId?=" << val << ",";
-  val = m_input->readLong(1); // -1 0 or 1
+  val = (int) m_input->readLong(1); // -1 0 or 1
   if (val) f << "f0=" << val << ",";
   for (int i = 1; i < 4; i++) { // 0, then 0|1
-    val = m_input->readLong(i==3?1:2);
+    val = (int) m_input->readLong(i==3?1:2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   ascii().addPos(pos);
@@ -1702,7 +1709,7 @@ bool MWProStructures::readStyle(int styleId)
 
   f.str("");
   f << "Style-" << styleId << "(end):";
-  val = m_input->readLong(2);
+  val = (int) m_input->readLong(2);
   if (val!=-1) f << "unkn=" << val << ",";
 
   ascii().addPos(pos);
@@ -1727,25 +1734,25 @@ bool MWProStructures::readBlocksList()
   }
   m_input->seek(pos, WPX_SEEK_SET);
   f << "Entries(Block):";
-  int N= m_input->readLong(4); // 1 or 3
+  int N= (int) m_input->readLong(4); // 1 or 3
   f << "N?=" << N << ",";
   long val = m_input->readLong(4); // 0 or small number 1|fe 72, 529
   if (val) f << "f0=" << val << ",";
   for (int i = 0; i < 4; i++) { // [0|81|ff][0|03|33|63|ff][0|ff][0|ff]
-    val = m_input->readULong(1);
+    val = (long) m_input->readULong(1);
     if (val) f << "flA" << i << "=" << std::hex << val << std::dec << ",";
   }
   val = m_input->readLong(4); // 0, 2, 46, 1479
   if (val) f << "f1=" << val << ",";
   for (int i = 0; i < 4; i++) { // [0|1][0|74][0][0|4]
-    val = m_input->readULong(1);
+    val = (long) m_input->readULong(1);
     if (val) f << "flB" << i << "=" << std::hex << val << std::dec << ",";
   }
   for (int i = 2; i < 4; i++) { // [0|72] [0|a]
     val = m_input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
-  val = m_input->readULong(4);
+  val = (long) m_input->readULong(4);
   if (val) f << "ptr?=" << std::hex << val << std::dec << ",";
 
   std::string str;
@@ -1807,7 +1814,7 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
   }
   m_input->seek(pos, WPX_SEEK_SET);
   long val;
-  int type = m_input->readULong(1);
+  int type = (int) m_input->readULong(1);
   res.reset(new MWProStructuresInternal::Block);
   res->m_contentType = MWProStructuresInternal::Block::TEXT;
 
@@ -1815,8 +1822,8 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
     f << "type=3,";
     val = m_input->readLong(1);
     if (val) f<< "unkn=" << val << ",";
-    int wh = m_input->readULong(1);
-    switch(wh &0xF0) {
+    int what = (int) m_input->readULong(1);
+    switch(what &0xF0) {
     case 0x40:
       res->m_isHeader = true;
     case 0x80:
@@ -1830,7 +1837,7 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
       f << "#";
       break;
     }
-    if (wh & 0xf) f << "f0=" << std::hex << int(wh & 0xf) << std::dec << ",";
+    if (what & 0xf) f << "f0=" << std::hex << int(what & 0xf) << std::dec << ",";
     m_input->seek(23, WPX_SEEK_CUR);
     ascii().addDelimiter(m_input->tell(),'|');
   } else {
@@ -1849,7 +1856,7 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
       return res;
     }
 
-    int id =  m_input->readLong(2); // small number, id ?
+    int id =  (int) m_input->readLong(2); // small number, id ?
     if (id) f << "id=" << id << ",";
     val = m_input->readLong(1); // always -1 ?
     if (val != -1) f << "f2=" << val << ",";
@@ -1861,18 +1868,18 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
     }
     val = m_input->readLong(1); // 3 or -3
     f << "f6=" << val << ",";
-    val = m_input->readULong(1); // 0, 6a, 78, f2, fa : type ?
+    val = (long) m_input->readULong(1); // 0, 6a, 78, f2, fa : type ?
     if (val) f << "g0=" << val << ",";
     f << "unkn=[";
     for (int i = 0; i < 6; i++) {
-      val = m_input->readULong(2);
+      val = (long) m_input->readULong(2);
       if (val==0) f << "_,";
       else f << std::hex << val << std::dec << ",";
     }
     f << "],";
     f << "unkn2=[";
     for (int i = 0; i < 6; i++) { // can be 0*12, bb*12 : junk ?
-      val = m_input->readULong(2);
+      val = (long) m_input->readULong(2);
       if (val==0) f << "_,";
       else f << std::hex << val << std::dec << ",";
     }
@@ -1880,28 +1887,28 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
   }
 
   // can be fileblock or pageid
-  res->m_fileBlock = m_input->readULong(2);
+  res->m_fileBlock = (int) m_input->readULong(2);
 
   float dim[4];
   for (int i = 0; i < 4; i++)
-    dim[i] = m_input->readLong(2);
+    dim[i] = float(m_input->readLong(2));
   res->m_box = Box2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
   for (int i = 0; i < 4; i++) { // 8000*4 ?
-    val = m_input->readULong(i==3 ? 1 : 2);
+    val = (long) m_input->readULong(i==3 ? 1 : 2);
     if (val != 0x8000) f << "g" << i+1 << "=" << std::hex << val << std::dec << ",";
   }
-  res->m_textPos =  m_input->readULong(4);
+  res->m_textPos =  (int) m_input->readULong(4);
   if (res->m_textPos) {
     // ok this is a soft page break block
     res->m_type = 5;
     res->m_page = res->m_fileBlock;
     res->m_fileBlock = 0;
   }
-  val =  m_input->readULong(1);
+  val =  (long) m_input->readULong(1);
   if (val) f << "g5=" << std::hex << val << std::dec << ",";
   f << "unkn3=[";
   for (int i = 0; i < 6; i++) { // can be 0*12, cc*12 : junk ?
-    val = m_input->readULong(2);
+    val = (long) m_input->readULong(2);
     if (val==0) f << "_,";
     else f << std::hex << val << std::dec << ",";
   }
@@ -1925,7 +1932,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   long pos = m_input->tell();
   libmwaw::DebugStream f;
 
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   // pat2*3?, dim[pt*65536], border[pt*65536], ?, [0|10|1c], 0, block?
   if (sz < 0x40) {
     m_input->seek(pos, WPX_SEEK_SET);
@@ -1947,14 +1954,14 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   for (int i = 0; i < 2; i++)
     f << m_input->readULong(2) << ",";
   f << std::dec << "],";
-  block->m_type = m_input->readULong(2);
+  block->m_type = (int) m_input->readULong(2);
   float dim[4];
   for (int i = 0; i < 4; i++)
-    dim[i] = m_input->readLong(4)/65536.;
+    dim[i] = float(m_input->readLong(4))/65536.f;
   block->m_box = Box2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
   float border[4];
   for (int i = 0; i < 4; i++)
-    border[i]=m_input->readLong(4)/65536.;
+    border[i]=float(m_input->readLong(4))/65536.f;
   // check me
   block->m_border[0] = Vec2f(border[1], border[0]);
   block->m_border[1] = Vec2f(border[3], border[2]);
@@ -1964,25 +1971,25 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
      0/a: table ?
   */
   for (int i = 0; i < 2; i++) {
-    val = m_input->readULong(2);
+    val = (long) m_input->readULong(2);
     if (val)
       f << "fl" << i << "=" << std::hex << val << std::dec << ",";
   }
   val = m_input->readLong(2);
   if (val) f << "f0=" << val << ",";
-  block->m_fileBlock = m_input->readLong(2);
-  block->m_id = m_input->readLong(2);
-  val = m_input->readLong(2); // almost always 4 ( one time 0)
+  block->m_fileBlock = (int) m_input->readLong(2);
+  block->m_id = (int) m_input->readLong(2);
+  val = (int) m_input->readLong(2); // almost always 4 ( one time 0)
   if (val!=4)
     f << "f1=" << val << ",";
   for (int i = 2; i < 7; i++) {
     /* always 0, except f3=-1 (in one file),
        and in other file f4=1,f5=1,f6=1, */
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
-  block->m_baseline = m_input->readLong(4)/65536.;
-  int colorId = m_input->readLong(2);
+  block->m_baseline = float(m_input->readLong(4))/65536.f;
+  int colorId = (int) m_input->readLong(2);
   if (colorId) {
     Vec3uc col;
     if (getColor(colorId, col)) {
@@ -1993,7 +2000,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
 
   val = m_input->readLong(2);/* 2: normal, 1 transparent  ?*/
   if (val) f << "g0=" << val << ",";
-  colorId = m_input->readLong(2);
+  colorId = (int) m_input->readLong(2);
   if (colorId!=1) {
     Vec3uc col;
     if (getColor(colorId, col)) {
@@ -2001,7 +2008,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
     } else
       f << "#lineColorId=" << colorId << ",";
   }
-  block->m_linePattern = m_input->readLong(2);
+  block->m_linePattern = (int) m_input->readLong(2);
   val =  m_input->readLong(2);
   switch(val) {
   case 1:
@@ -2035,8 +2042,8 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
     f << "#lineWidth=" << val << ",";
     break;
   }
-  block->m_lineType = m_input->readLong(2);
-  int contentType = m_input->readULong(1);
+  block->m_lineType = (int) m_input->readLong(2);
+  int contentType = (int) m_input->readULong(1);
   switch(contentType) {
   case 0:
     block->m_contentType = MWProStructuresInternal::Block::TEXT;
@@ -2069,8 +2076,8 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
     f << "Block-end(" << m_state->m_blocksList.size()<< ")[" << block->m_type << "]:";
     switch(block->m_type) {
     case 3: { // table
-      block->m_row = m_input->readLong(2);
-      block->m_col = m_input->readLong(2);
+      block->m_row = (int) m_input->readLong(2);
+      block->m_col = (int) m_input->readLong(2);
       f << "numRow=" << block->m_row << ",";
       f << "numCol=" << block->m_col << ",";
       break;
@@ -2078,26 +2085,26 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
     case 4: { // cell/textbox : no sure it contain data?
       val =  m_input->readLong(2); // always 0 ?
       if (val) f << "f0=" << val << ",";
-      val = m_input->readULong(2); // [0|10|1e|10c0|1cc0|a78a|a7a6|d0c0|dcc0]
+      val = (long) m_input->readULong(2); // [0|10|1e|10c0|1cc0|a78a|a7a6|d0c0|dcc0]
       if (val) f << "fl?=" << std::hex << val << std::dec << ",";
       break;
     }
     case 5: { // text or ?
       bool emptyBlock = block->m_fileBlock <= 0;
-      val =  m_input->readULong(2); // always 0 ?
+      val =  (long) m_input->readULong(2); // always 0 ?
       if (emptyBlock) {
         if (val & 0xFF00)
           f << "#f0=" << val << ",";
-        block->m_textPos=((val&0xFF)<<16) | m_input->readULong(2);
+        block->m_textPos=int(((val&0xFF)<<16) | (int) m_input->readULong(2));
         f << "posC=" << block->m_textPos << ",";
       } else if (val) f << "f0=" << val << ",";
-      val = m_input->readULong(2); // 30c0[normal], 20c0|0[empty]
+      val = (long) m_input->readULong(2); // 30c0[normal], 20c0|0[empty]
       f << "fl?=" << std::hex << val << ",";
       break;
     }
     case 6: {
       for (int i = 0; i < 4; i++) { // [10|d0],40, 0, 0
-        val =  m_input->readULong(1);
+        val =  (long) m_input->readULong(1);
         f << "f" << i << "=" << val << ",";
       }
       val =  m_input->readLong(1);
@@ -2121,13 +2128,15 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
     }
     case 7: { // footnote: something here ?
       for (int i = 0; i < 3; i++) { // 0, 0, [0|4000]
-        val =  m_input->readULong(2);
+        val =  (long) m_input->readULong(2);
         f << "f" << i << "=" << std::hex << val << std::dec << ",";
       }
       break;
     }
     case 8:
       break; // graphic: clearly nothing
+    default:
+      break;
     }
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -2144,7 +2153,7 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
   long pos = m_input->tell();
   libmwaw::DebugStream f;
 
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   if (sz == 0) {
     ascii().addPos(pos);
     ascii().addNote("_");
@@ -2159,7 +2168,7 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
     return true;
   }
 
-  int N = sz/0xd8;
+  int N = int(sz/0xd8);
   f << "Entries(Section):";
   f << "N=" << N;
   ascii().addPos(pos);
@@ -2170,10 +2179,10 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
     MWProStructuresInternal::Section sec;
     pos = m_input->tell();
     f.str("");
-    sec.m_textLength = m_input->readULong(4);
+    sec.m_textLength = (long)m_input->readULong(4);
     val =  m_input->readLong(4); // almost always 0 or a dim?
-    if (val) f << "dim?=" << val/65536. << ",";
-    int startWay = m_input->readLong(2);
+    if (val) f << "dim?=" << float(val)/65536.f << ",";
+    int startWay = (int) m_input->readLong(2);
     switch(startWay) {
     case 1:
       sec.m_start = sec.S_Line;
@@ -2196,7 +2205,7 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
       f << "f0=" << val << ",";
     // a flag ? and noused ?
     for (int i = 0; i < 2; i++) {
-      val = m_input->readULong(1);
+      val = (long) m_input->readULong(1);
       if (val == 0xFF) f << "fl" << i<< "=true,";
       else if (val) f << "fl" << i << "=" << std::hex << val << std::dec << ",";
     }
@@ -2205,10 +2214,10 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
       val = m_input->readLong(2); // alway 1 ?
       if (val != 1) f << "f" << 1+st << "=" << val << ",";
       // another flag ?
-      val = m_input->readULong(1);
+      val = (long) m_input->readULong(1);
       if (val) f << "fl" << st+2 << "=" << std::hex << val << std::dec << ",";
     }
-    int numColumns = m_input->readLong(2);
+    int numColumns = (int) m_input->readLong(2);
     if (numColumns < 1 || numColumns > 20) {
       MWAW_DEBUG_MSG(("MWProStructures::readSections: bad number of columns\n"));
       f << "#nCol=" << numColumns << ",";
@@ -2225,10 +2234,10 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
     float prevPos = 0;
     f << "rightPos=[";
     for (int c = 0; c < numColumns; c++) {
-      float rightPos = m_input->readLong(4)/65536.;
+      float rightPos = float(m_input->readLong(4))/65536.f;
       f << rightPos << ",";
       sec.m_colsBegin.push_back(prevPos);
-      float leftPos = m_input->readLong(4)/65536.;
+      float leftPos = float(m_input->readLong(4))/65536.f;
       sec.m_colsWidth.push_back(leftPos-prevPos);
       prevPos = leftPos;
     }
@@ -2236,7 +2245,7 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
     m_input->seek(actPos+20*8+4, WPX_SEEK_SET);
     // 5 flags ( 1+unused?)
     for (int i = 0; i < 6; i++) {
-      val = m_input->readULong(1);
+      val = (long) m_input->readULong(1);
       if ((i!=5 && val!=1) || (i==5 && val))
         f << "g" << i << "=" << val << ",";
     }
@@ -2247,8 +2256,8 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
           f << "#h" << 2*st+i << "=" << val << ",";
 
         val = m_input->readLong(2);
-        if (i==0) sec.m_headerIds[st] = val;
-        else sec.m_footerIds[st] = val;
+        if (i==0) sec.m_headerIds[st] = (int)val;
+        else sec.m_footerIds[st] = (int)val;
       }
     }
     sec.m_extra=f.str();
@@ -2281,9 +2290,9 @@ bool MWProStructures::readSelection()
   }
   m_input->seek(pos, WPX_SEEK_SET);
   f << "Entries(Selection):";
-  int val = m_input->readLong(2);
+  int val = (int) m_input->readLong(2);
   f << "f0=" << val << ","; // zone?
-  val = m_input->readLong(4); // -1, 0 or 8 : zone type?
+  val = (int) m_input->readLong(4); // -1, 0 or 8 : zone type?
   if (val == -1 || val == 0) { // checkme: none ?
     f << "*";
     ascii().addPos(pos);
@@ -2311,7 +2320,7 @@ bool MWProStructures::readString(MWAWInputStreamPtr input, std::string &res)
 {
   res="";
   long pos = input->tell();
-  int sz = input->readLong(2);
+  int sz = (int) input->readLong(2);
   if (sz == 0) return true;
   if (sz < 0) {
     input->seek(pos, WPX_SEEK_SET);
@@ -2326,7 +2335,7 @@ bool MWProStructures::readString(MWAWInputStreamPtr input, std::string &res)
   }
   input->seek(pos+2, WPX_SEEK_SET);
   for (int i= 0; i < sz; i++) {
-    char c = input->readULong(1);
+    char c = (char) input->readULong(1);
     if (c) {
       res+=c;
       continue;
@@ -2347,7 +2356,7 @@ bool MWProStructures::readStructB()
   long pos = m_input->tell();
   libmwaw::DebugStream f;
 
-  int N = m_input->readULong(2);
+  int N = (int) m_input->readULong(2);
   if (N==0) {
     ascii().addPos(pos);
     ascii().addNote("_");
@@ -2364,10 +2373,10 @@ bool MWProStructures::readStructB()
     return false;
   }
   m_input->seek(pos+2, WPX_SEEK_SET);
-  int val = m_input->readULong(2);
+  int val = (int) m_input->readULong(2);
   if (val != 0x2af8)
     f << "f0=" << std::hex << val << std::dec << ",";
-  val = m_input->readULong(2);
+  val = (int) m_input->readULong(2);
   if (val) f << "f1=" << val << ",";
 
   ascii().addPos(pos);
@@ -2393,7 +2402,7 @@ bool MWProStructures::isSent(int blockId)
       MWAW_DEBUG_MSG(("MWProStructures::send: can not find the block %d\n", blockId));
       return false;
     }
-    return m_state->m_blocksList[blockId]->m_send;
+    return m_state->m_blocksList[(size_t)blockId]->m_send;
   }
 
   if (m_state->m_blocksMap.find(blockId) == m_state->m_blocksMap.end()) {
@@ -2414,13 +2423,13 @@ bool MWProStructures::send(int blockId, bool mainZone)
         MWAW_DEBUG_MSG(("MWProStructures::send: can not find the footnote %d\n", -blockId));
         return false;
       }
-      block = m_state->m_blocksList[m_state->m_footnotesList[-blockId-1]];
+      block = m_state->m_blocksList[(size_t)m_state->m_footnotesList[size_t(-blockId-1)]];
     } else {
       if (blockId < 0 || blockId >= int(m_state->m_blocksList.size())) {
         MWAW_DEBUG_MSG(("MWProStructures::send: can not find the block %d\n", blockId));
         return false;
       }
-      block = m_state->m_blocksList[blockId];
+      block = m_state->m_blocksList[(size_t)blockId];
     }
   } else {
     if (m_state->m_blocksMap.find(blockId) == m_state->m_blocksMap.end()) {
@@ -2481,7 +2490,7 @@ void MWProStructures::flushExtra()
     m_listener->openSection();
   }
   // first send the text
-  for (int i = 0; i < int(m_state->m_blocksList.size()); i++) {
+  for (size_t i = 0; i < m_state->m_blocksList.size(); i++) {
     if (m_state->m_blocksList[i]->m_send)
       continue;
     if (m_state->m_blocksList[i]->m_type == 6) {
@@ -2490,7 +2499,7 @@ void MWProStructures::flushExtra()
       MWAW_DEBUG_MSG(("MWProStructures::flushExtra: find some header/footer\n"));
       continue;
     }
-    int id = vers == 0 ? i : m_state->m_blocksList[i]->m_id;
+    int id = vers == 0 ? int(i) : m_state->m_blocksList[i]->m_id;
     if (m_state->m_blocksList[i]->isText()) {
       // force to non floating position
       m_state->m_blocksList[i]->m_attachment = true;
@@ -2503,7 +2512,7 @@ void MWProStructures::flushExtra()
     }
   }
   // then send graphic
-  for (int i = 0; i < int(m_state->m_blocksList.size()); i++) {
+  for (size_t i = 0; i < m_state->m_blocksList.size(); i++) {
     if (m_state->m_blocksList[i]->m_send)
       continue;
     if (m_state->m_blocksList[i]->isGraphic()) {
@@ -2564,7 +2573,7 @@ bool MWProStructuresListenerState::newPage(bool softBreak)
 
   // first send all the floating data
   if (m_actPage == 0) {
-    for (int i = 0; i < int(m_structures->m_state->m_blocksList.size()); i++) {
+    for (size_t i = 0; i < m_structures->m_state->m_blocksList.size(); i++) {
       shared_ptr<MWProStructuresInternal::Block> block = m_structures->m_state->m_blocksList[i];
       if (block->m_send || block->m_attachment) continue;
       if (block->m_type != 3 && block->m_type != 4 && block->m_type != 8) continue;
@@ -2583,7 +2592,7 @@ std::vector<int> MWProStructuresListenerState::getPageBreaksPos() const
 {
   std::vector<int> res;
   if (!m_structures || !m_isMainZone) return res;
-  for (int i = 0; i < int(m_structures->m_state->m_blocksList.size()); i++) {
+  for (size_t i = 0; i < m_structures->m_state->m_blocksList.size(); i++) {
     shared_ptr<MWProStructuresInternal::Block> block = m_structures->m_state->m_blocksList[i];
     if (block->m_type != 5) continue;
     if (block->m_textPos) res.push_back(block->m_textPos);
@@ -2660,14 +2669,14 @@ void MWProStructuresListenerState::sendChar(char c)
     break;
     /* 0x10 and 0x13 : seems also to have some meaning ( replaced by 1 in on field )*/
   default: {
-    int unicode = m_structures->m_convertissor->unicode (m_font->m_font.id(),c);
+    int unicode = m_structures->m_convertissor->unicode (m_font->m_font.id(),(unsigned char)c);
     if (unicode == -1) {
       if (c < 32) {
         MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendChar: Find odd char %x\n", int(c)));
       } else
-        m_structures->m_listener->insertCharacter(c);
+        m_structures->m_listener->insertCharacter((unsigned char)c);
     } else
-      m_structures->m_listener->insertUnicode(unicode);
+      m_structures->m_listener->insertUnicode((uint32_t) unicode);
     break;
   }
   }
@@ -2690,7 +2699,7 @@ bool MWProStructuresListenerState::sendFont(int id)
     MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendFont: can not find font %d\n", id));
     return false;
   }
-  sendFont(m_structures->m_state->m_fontsList[id]);
+  sendFont(m_structures->m_state->m_fontsList[(size_t)id]);
 
   return true;
 }
@@ -2734,9 +2743,9 @@ std::string MWProStructuresListenerState::getFontDebugString(int fId)
   }
 
   s << "C" << fId << ":";
-  s << m_structures->m_state->m_fontsList[fId].m_font.getDebugString
+  s << m_structures->m_state->m_fontsList[(size_t)fId].m_font.getDebugString
     (m_structures->m_convertissor)
-    << m_structures->m_state->m_fontsList[fId] << ",";
+    << m_structures->m_state->m_fontsList[(size_t)fId] << ",";
 
   return s.str();
 }
@@ -2751,7 +2760,7 @@ bool MWProStructuresListenerState::sendParagraph(int id)
     return false;
   }
 
-  sendParagraph(m_structures->m_state->m_paragraphsList[id]);
+  sendParagraph(m_structures->m_state->m_paragraphsList[(size_t)id]);
   return true;
 }
 
@@ -2761,7 +2770,7 @@ void MWProStructuresListenerState::sendParagraph(MWProStructuresInternal::Paragr
     return;
   *m_paragraph = para;
   para.send(m_structures->m_listener);
-  m_numTab = para.m_tabs.size();
+  m_numTab = int(para.m_tabs.size());
 }
 
 
@@ -2777,12 +2786,12 @@ std::string MWProStructuresListenerState::getParagraphDebugString(int pId)
   }
 
   s << "P" << pId << ":";
-  s << m_structures->m_state->m_paragraphsList[pId] << ",";
+  s << m_structures->m_state->m_paragraphsList[(size_t)pId] << ",";
   return s.str();
 }
 
 // ----------- section function ---------------------
-void MWProStructuresListenerState::sendSection(int numSection)
+void MWProStructuresListenerState::sendSection(int nSection)
 {
   if (!m_structures || !m_structures->m_listener) return;
   if (m_structures->m_listener->isSectionOpened()) {
@@ -2798,27 +2807,27 @@ void MWProStructuresListenerState::sendSection(int numSection)
     if (m_numCols==1) m_structures->m_listener->openSection();
     else {
       std::vector<int> colSize;
-      float colWidth =  72.*m_structures->m_mainParser.pageWidth()/m_numCols;
-      colSize.resize(m_numCols);
-      for (int i = 0; i < m_numCols; i++) colSize[i] = int(colWidth);
+      float colWidth =  float(72.*m_structures->m_mainParser.pageWidth()/m_numCols);
+      colSize.resize(size_t(m_numCols));
+      for (size_t i = 0; i < size_t(m_numCols); i++) colSize[i] = int(colWidth);
       m_structures->m_listener->openSection(colSize, WPX_POINT);
     }
     return;
   }
 
-  if (numSection >= int(m_structures->m_state->m_sectionsList.size())) {
-    MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendSection: can not find section %d\n", numSection));
+  if (nSection >= int(m_structures->m_state->m_sectionsList.size())) {
+    MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendSection: can not find section %d\n", nSection));
     return;
   }
   MWProStructuresInternal::Section const &section =
-    m_structures->m_state->m_sectionsList[numSection];
-  if (numSection && section.m_start != section.S_Line) newPage();
+    m_structures->m_state->m_sectionsList[(size_t)nSection];
+  if (nSection && section.m_start != section.S_Line) newPage();
   m_numCols = section.numColumns();
   if (m_numCols==1) m_structures->m_listener->openSection();
   else {
     std::vector<int> colSize;
-    colSize.resize(m_numCols);
-    for (int i = 0; i < m_numCols; i++) colSize[i] = int(section. m_colsWidth[i]);
+    colSize.resize(size_t(m_numCols));
+    for (size_t i = 0; i < size_t(m_numCols); i++) colSize[i] = int(section. m_colsWidth[i]);
     m_structures->m_listener->openSection(colSize, WPX_POINT);
   }
 }

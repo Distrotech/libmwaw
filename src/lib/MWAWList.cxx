@@ -68,6 +68,7 @@ void MWAWList::Level::addTo(WPXPropertyList &propList, int startVal) const
     break;
   case NONE:
     break;
+  case DEFAULT:
   default:
     MWAW_DEBUG_MSG(("MWAWList::Level::addTo: the level type is not set\n"));
   }
@@ -80,9 +81,11 @@ int MWAWList::Level::cmp(MWAWList::Level const &levl) const
   int diff = int(m_type)-int(levl.m_type);
   if (diff) return diff;
   double fDiff = m_labelIndent-levl.m_labelIndent;
-  if (fDiff) return fDiff < 0.0 ? -1 : 1;
+  if (fDiff < 0.0) return -1;
+  if (fDiff > 0.0) return 1;
   fDiff = m_labelWidth-levl.m_labelWidth;
-  if (fDiff) return fDiff < 0.0 ? -1 : 1;
+  if (fDiff < 0.0) return -1;
+  if (fDiff > 0.0) return 1;
   diff = strcmp(m_prefix.cstr(),levl.m_prefix.cstr());
   if (diff) return diff;
   diff = strcmp(m_suffix.cstr(),levl.m_suffix.cstr());
@@ -114,6 +117,9 @@ std::ostream &operator<<(std::ostream &o, MWAWList::Level const &ft)
   case MWAWList::Level::UPPER_ROMAN:
     o << "ROMAN";
     break;
+  case MWAWList::Level::NONE:
+    break;
+  case MWAWList::Level::DEFAULT:
   default:
     o << "####";
   }
@@ -121,8 +127,8 @@ std::ostream &operator<<(std::ostream &o, MWAWList::Level const &ft)
     o << ",startVal= " << ft.m_startValue;
   if (ft.m_prefix.len()) o << ", prefix='" << ft.m_prefix.cstr()<<"'";
   if (ft.m_suffix.len()) o << ", suffix='" << ft.m_suffix.cstr()<<"'";
-  if (ft.m_labelIndent) o << ", indent=" << ft.m_labelIndent;
-  if (ft.m_labelWidth) o << ", width=" << ft.m_labelWidth;
+  if (ft.m_labelIndent < 0 || ft.m_labelIndent > 0) o << ", indent=" << ft.m_labelIndent;
+  if (ft.m_labelWidth < 0 || ft.m_labelWidth > 0) o << ", width=" << ft.m_labelWidth;
   o << "]";
   return o;
 }
@@ -132,25 +138,25 @@ void MWAWList::setId(int newId)
   if (m_id == newId) return;
   m_previousId = m_id;
   m_id = newId;
-  for (int i = 0; i < int(m_levels.size()); i++)
+  for (size_t i = 0; i < m_levels.size(); i++)
     m_levels[i].resetSendToInterface();
 }
 
 bool MWAWList::mustSendLevel(int level) const
 {
   if (level <= 0 || level > int(m_levels.size()) ||
-      m_levels[level-1].isDefault()) {
+      m_levels[size_t(level-1)].isDefault()) {
     MWAW_DEBUG_MSG(("MWAWList::mustResentLevel: level %d is not defined\n",level));
     return false;
   }
-  return !m_levels[level-1].isSendToInterface();
+  return !m_levels[size_t(level-1)].isSendToInterface();
 }
 
 
 void MWAWList::sendTo(WPXDocumentInterface &docInterface, int level) const
 {
   if (level <= 0 || level > int(m_levels.size()) ||
-      m_levels[level-1].isDefault()) {
+      m_levels[size_t(level-1)].isDefault()) {
     MWAW_DEBUG_MSG(("MWAWList::sendTo: level %d is not defined\n",level));
     return;
   }
@@ -161,13 +167,13 @@ void MWAWList::sendTo(WPXDocumentInterface &docInterface, int level) const
     m_id = falseId++;
   }
 
-  if (m_levels[level-1].isSendToInterface()) return;
+  if (m_levels[size_t(level-1)].isSendToInterface()) return;
 
   WPXPropertyList propList;
   propList.insert("libwpd:id", m_id);
   propList.insert("libwpd:level", level);
-  m_levels[level-1].addTo(propList, m_actualIndices[level-1]);
-  if (!m_levels[level-1].isNumeric())
+  m_levels[size_t(level-1)].addTo(propList, m_actualIndices[size_t(level-1)]);
+  if (!m_levels[size_t(level-1)].isNumeric())
     docInterface.defineUnorderedListLevel(propList);
   else
     docInterface.defineOrderedListLevel(propList);
@@ -180,16 +186,16 @@ void MWAWList::set(int levl, Level const &level)
     return;
   }
   if (levl > int(m_levels.size())) {
-    m_levels.resize(levl);
-    m_actualIndices.resize(levl, 0);
-    m_nextIndices.resize(levl, 1);
+    m_levels.resize(size_t(levl));
+    m_actualIndices.resize(size_t(levl), 0);
+    m_nextIndices.resize(size_t(levl), 1);
   }
-  int needReplace = m_levels[levl-1].cmp(level) != 0 ||
-                    (level.m_startValue && m_nextIndices[levl-1] !=level.getStartValue());
-  if (level.m_startValue > 0 || level.m_type != m_levels[levl-1].m_type) {
-    m_nextIndices[levl-1]=level.getStartValue();
+  int needReplace = m_levels[size_t(levl-1)].cmp(level) != 0 ||
+                    (level.m_startValue && m_nextIndices[size_t(levl-1)] !=level.getStartValue());
+  if (level.m_startValue > 0 || level.m_type != m_levels[size_t(levl-1)].m_type) {
+    m_nextIndices[size_t(levl-1)]=level.getStartValue();
   }
-  if (needReplace) m_levels[levl-1] = level;
+  if (needReplace) m_levels[size_t(levl-1)] = level;
 }
 
 void MWAWList::setLevel(int levl) const
@@ -200,8 +206,8 @@ void MWAWList::setLevel(int levl) const
   }
 
   if (levl < int(m_levels.size()))
-    m_actualIndices[levl]=
-      (m_nextIndices[levl]=m_levels[levl].getStartValue())-1;
+    m_actualIndices[size_t(levl)]=
+      (m_nextIndices[size_t(levl)]=m_levels[size_t(levl)].getStartValue())-1;
 
   m_actLevel=levl-1;
 }
@@ -212,8 +218,8 @@ void MWAWList::openElement() const
     MWAW_DEBUG_MSG(("MWAWList::openElement: can not set level %d\n",m_actLevel));
     return;
   }
-  if (m_levels[m_actLevel].isNumeric())
-    m_actualIndices[m_actLevel]=m_nextIndices[m_actLevel]++;
+  if (m_levels[size_t(m_actLevel)].isNumeric())
+    m_actualIndices[size_t(m_actLevel)]=m_nextIndices[size_t(m_actLevel)]++;
 }
 
 bool MWAWList::isNumeric(int levl) const
@@ -223,6 +229,6 @@ bool MWAWList::isNumeric(int levl) const
     return false;
   }
 
-  return m_levels[levl-1].isNumeric();
+  return m_levels[size_t(levl-1)].isNumeric();
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

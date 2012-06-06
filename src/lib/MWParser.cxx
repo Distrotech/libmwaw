@@ -157,6 +157,7 @@ std::ostream &operator<<(std::ostream &o, Information const &info)
   case Information::PAGEBREAK:
     o << "pageBreak,";
     break;
+  case Information::UNKNOWN:
   default:
     o << "###unknownType,";
     break;
@@ -177,6 +178,9 @@ std::ostream &operator<<(std::ostream &o, Information const &info)
       break;
     case libmwaw::JustificationFull:
       o << "full[justify],";
+      break;
+    case libmwaw::JustificationFullAllLines:
+      o << "fullAllLines[justify],";
       break;
     default:
       o << "###unknown[justify],";
@@ -216,7 +220,7 @@ struct WindowsInfo {
     if (m_pageNumber.x() >= 0 || m_date.x() >= 0 || m_time.x() >= 0)
       return false;
     if (m_informations.size() > 2) return false;
-    for (int i = 0; i < int(m_informations.size()); i++) {
+    for (size_t i = 0; i < m_informations.size(); i++) {
       switch (m_informations[i].m_type) {
       case Information::GRAPHIC:
         return false;
@@ -226,6 +230,8 @@ struct WindowsInfo {
         // empty line : ok
         break;
       case Information::RULER:
+      case Information::PAGEBREAK:
+      case Information::UNKNOWN:
       default:
         break;
       }
@@ -394,12 +400,12 @@ int MWParser::version() const
 ////////////////////////////////////////////////////////////
 float MWParser::pageHeight() const
 {
-  return m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
+  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float MWParser::pageWidth() const
 {
-  return m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight();
+  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
 }
 
 
@@ -529,14 +535,14 @@ bool MWParser::createZones()
     if (info.isEmpty()) // avoid reserving space for empty header/footer
       continue;
     int height = 0;
-    for (int j=0; j < int(info.m_informations.size()); j++)
+    for (size_t j=0; j < info.m_informations.size(); j++)
       height+=info.m_informations[j].m_height;
     if (i == 1) m_state->m_headerHeight = height;
     else m_state->m_footerHeight = height;
   }
   int numPages = 0;
   MWParserInternal::WindowsInfo const &mainInfo = m_state->m_windows[0];
-  for (int i=0; i < int(mainInfo.m_informations.size()); i++) {
+  for (size_t i=0; i < mainInfo.m_informations.size(); i++) {
     if (mainInfo.m_informations[i].m_pos.page() > numPages)
       numPages = mainInfo.m_informations[i].m_pos.page();
   }
@@ -597,8 +603,8 @@ bool MWParser::createZonesV3()
     MWParserInternal::WindowsInfo &wInfo = m_state->m_windows[z];
     for (int p = 0; p < numParag; p++) {
       pos = input->tell();
-      int type = input->readLong(2);
-      int sz = input->readLong(2);
+      int type = (int) input->readLong(2);
+      int sz = (int) input->readLong(2);
       input->seek(pos+4+sz, WPX_SEEK_SET);
       if (sz < 0 || long(input->tell()) !=  pos+4+sz) {
         MWAW_DEBUG_MSG(("MWParser::createZonesV3: pb with dataZone\n"));
@@ -609,7 +615,7 @@ bool MWParser::createZonesV3()
       entry.setLength(sz);
       if (int(wInfo.m_informations.size()) <= p)
         continue;
-      wInfo.m_informations[p].m_data = entry;
+      wInfo.m_informations[(size_t)p].m_data = entry;
       MWParserInternal::Information::Type newType =
         MWParserInternal::Information::UNKNOWN;
 
@@ -626,10 +632,10 @@ bool MWParser::createZonesV3()
       default:
         break;
       }
-      if (newType != wInfo.m_informations[p].m_type) {
+      if (newType != wInfo.m_informations[(size_t)p].m_type) {
         MWAW_DEBUG_MSG(("MWParser::createZonesV3: types are inconstant\n"));
         if (newType != MWParserInternal::Information::UNKNOWN)
-          wInfo.m_informations[p].m_type = newType;
+          wInfo.m_informations[(size_t)p].m_type = newType;
       }
     }
   }
@@ -640,7 +646,7 @@ bool MWParser::createZonesV3()
 
   int numPages = 0;
   MWParserInternal::WindowsInfo const &mainInfo = m_state->m_windows[0];
-  for (int i=0; i < int(mainInfo.m_informations.size()); i++) {
+  for (size_t i=0; i < mainInfo.m_informations.size(); i++) {
     if (mainInfo.m_informations[i].m_pos.page() > numPages)
       numPages = mainInfo.m_informations[i].m_pos.page();
   }
@@ -656,23 +662,23 @@ bool MWParser::sendWindow(int zone)
   }
 
   MWParserInternal::WindowsInfo const &info = m_state->m_windows[zone];
-  int numInfo = info.m_informations.size();
-  int numPara = info.m_firstParagLine.size();
+  size_t numInfo = info.m_informations.size();
+  int numPara = int(info.m_firstParagLine.size());
 
   if (version() <= 3 && zone == 0)
     newPage(1);
-  for (int i=0; i < numInfo; i++) {
+  for (size_t i=0; i < numInfo; i++) {
     if (zone == 0)
       newPage(info.m_informations[i].m_pos.page()+1);
     switch(info.m_informations[i].m_type) {
     case MWParserInternal::Information::TEXT:
       if (!zone || info.m_informations[i].m_data.length() != 10) {
         std::vector<int> lineHeight;
-        if (i < numPara) {
+        if (int(i) < numPara) {
           int firstLine = info.m_firstParagLine[i];
-          int lastLine = (i+1 < numPara) ?  info.m_firstParagLine[i+1] : int(info.m_linesHeight.size());
+          int lastLine = (int(i+1) < numPara) ?  info.m_firstParagLine[i+1] : int(info.m_linesHeight.size());
           for (int line = firstLine; line < lastLine; line++)
-            lineHeight.push_back(info.m_linesHeight[line]);
+            lineHeight.push_back(info.m_linesHeight[(size_t)line]);
         }
         readText(info.m_informations[i], lineHeight);
       }
@@ -688,6 +694,7 @@ bool MWParser::sendWindow(int zone)
       if (zone == 0 && version() <= 3)
         newPage(info.m_informations[i].m_pos.page()+2);
       break;
+    case MWParserInternal::Information::UNKNOWN:
     default:
       break;
     }
@@ -729,7 +736,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool strict)
   }
   input->seek(0,WPX_SEEK_SET);
 
-  int vers = input->readULong(2);
+  int vers = (int) input->readULong(2);
   m_state->m_version = vers;
 
   std::string vName("");
@@ -762,10 +769,10 @@ bool MWParser::checkHeader(MWAWHeader *header, bool strict)
 
   f << "FileHeader: vers=" << vers << ",";
 
-  if (version() <= 3) fHeader.m_dataPos = input->readULong(2);
+  if (version() <= 3) fHeader.m_dataPos = (int) input->readULong(2);
 
   for (int i = 0; i < 3; i++) {
-    int numParag = input->readLong(2);
+    int numParag = (int) input->readLong(2);
     fHeader.m_numParagraphs[i] = numParag;
     if (numParag < 0) {
       MWAW_DEBUG_MSG(("MWParser::checkHeader: numParagraphs if negative : %d\n",
@@ -778,16 +785,16 @@ bool MWParser::checkHeader(MWAWHeader *header, bool strict)
     input->seek(6, WPX_SEEK_CUR); // unknown
     if (input->readLong(1)) f << "hasFooter(?);";
     if (input->readLong(1)) f << "hasHeader(?),";
-    fHeader.m_startNumberPage = input->readLong(2);
+    fHeader.m_startNumberPage = (int) input->readLong(2);
     headerSize=20;
   } else {
     fHeader.m_hideFirstPageHeaderFooter = (input->readULong(1)==0xFF);
 
     input->seek(7, WPX_SEEK_CUR); // unused + 4 display flags + active doc
-    fHeader.m_startNumberPage = input->readLong(2);
-    fHeader.m_freeListPos = input->readULong(4);
-    fHeader.m_freeListLength = input->readULong(2);
-    fHeader.m_freeListAllocated = input->readULong(2);
+    fHeader.m_startNumberPage = (int) input->readLong(2);
+    fHeader.m_freeListPos = (long) input->readULong(4);
+    fHeader.m_freeListLength = (int) input->readULong(2);
+    fHeader.m_freeListAllocated = (int) input->readULong(2);
     // 14 unused
   }
   f << fHeader;
@@ -909,26 +916,26 @@ bool MWParser::readWindowsInfo(int wh)
   MWAWEntry lineHeightEntry;
 
   for (int i = 0; i < 2; i++) {
-    int x = input->readLong(2);
-    int y = input->readLong(2);
+    int x = (int) input->readLong(2);
+    int y = (int) input->readLong(2);
     if (i == 0) info.m_startSel = Vec2i(x,y);
     else info.m_endSel = Vec2i(x,y);
   }
 
   if (version() <= 3) {
     for (int i = 0; i < 2; i++) {
-      int val = input->readLong(2);
+      int val = (int) input->readLong(2);
       if (val) f << "unkn" << i << "=" << val << ",";
     }
   } else {
-    info.m_posTopY = input->readLong(2);
+    info.m_posTopY = (int) input->readLong(2);
     input->seek(2,WPX_SEEK_CUR); // need to redraw
-    informations.setBegin(input->readULong(4));
-    informations.setLength(input->readULong(2));
+    informations.setBegin((long) input->readULong(4));
+    informations.setLength((long) input->readULong(2));
     informations.setId(which);
 
-    lineHeightEntry.setBegin(input->readULong(4));
-    lineHeightEntry.setLength(input->readULong(2));
+    lineHeightEntry.setBegin((long) input->readULong(4));
+    lineHeightEntry.setLength((long) input->readULong(2));
     lineHeightEntry.setId(which);
 
     f << std::hex
@@ -937,8 +944,8 @@ bool MWParser::readWindowsInfo(int wh)
       << std::dec;
   }
   for (int i = 0; i < 3; i++) {
-    int x = input->readLong(2);
-    int y = input->readLong(2);
+    int x = (int) input->readLong(2);
+    int y = (int) input->readLong(2);
     if (i == 0) info.m_pageNumber = Vec2i(x,y);
     else if (i == 1) info.m_date = Vec2i(x,y);
     else info.m_time = Vec2i(x,y);
@@ -949,7 +956,7 @@ bool MWParser::readWindowsInfo(int wh)
     input->seek(6,WPX_SEEK_CUR); // unknown flags: ff ff ff ff ff 00
     f << "actFont=" << input->readLong(1) << ",";
     for (int i= 0; i < 2; i++) {
-      int val = input->readULong(1);
+      int val = (int) input->readULong(1);
       if (val==255) f << "f" << i << "=true,";
     }
     f << "flg=" << input->readLong(1);
@@ -1002,19 +1009,19 @@ bool MWParser::readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstPa
   int numParag=0;
   while(input->tell() != endPos) {
     pos = input->tell();
-    int sz = input->readULong(2);
+    int sz = (int) input->readULong(2);
     if (pos+sz+2 > endPos) {
       MWAW_DEBUG_MSG(("MWParser::readLinesHeight: find odd line\n"));
       return false;
     }
 
-    firstParagLine.push_back(linesHeight.size());
+    firstParagLine.push_back(int(linesHeight.size()));
     int actHeight = 0;
     bool heightOk = false;
     f.str("");
     f << "Entries(LineHeight)[" << entry.id() << "-" << ++numParag << "]:";
     for (int c = 0; c < sz; c++) {
-      int val = input->readULong(1);
+      int val = (int) input->readULong(1);
       if (val & 0x80) {
         val &= 0x7f;
         if (!heightOk || val==0) {
@@ -1041,7 +1048,7 @@ bool MWParser::readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstPa
     if ((sz%2)==1) sz++;
     input->seek(pos+sz+2, WPX_SEEK_SET);
   }
-  firstParagLine.push_back(linesHeight.size());
+  firstParagLine.push_back(int(linesHeight.size()));
 
   ascii().addPos(endPos);
   ascii().addNote("_");
@@ -1067,7 +1074,7 @@ bool MWParser::readInformationsV3(int numEntries, std::vector<MWParserInternal::
     MWParserInternal::Information info;
     f.str("");
     f << "Entries(Information)[" << i+1 << "]:";
-    int height = input->readLong(2);
+    int height = (int) input->readLong(2);
     info.m_height = height;
     if (info.m_height < 0) {
       info.m_height = 0;
@@ -1077,9 +1084,9 @@ bool MWParser::readInformationsV3(int numEntries, std::vector<MWParserInternal::
     else
       info.m_type = MWParserInternal::Information::RULER;
 
-    int y = input->readLong(2);
-    info.m_pos=MWAWPosition(Vec2f(0,y), Vec2f(0, height), WPX_POINT);
-    info.m_pos.setPage(input->readLong(1));
+    int y = (int) input->readLong(2);
+    info.m_pos=MWAWPosition(Vec2f(0,float(y)), Vec2f(0, float(height)), WPX_POINT);
+    info.m_pos.setPage((int) input->readLong(1));
     f << info;
     informations.push_back(info);
 
@@ -1116,7 +1123,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     MWAW_DEBUG_MSG(("MWParser::readInformations: entry size is odd\n"));
     return false;
   }
-  int numEntries = (endPos-pos)/16;
+  int numEntries = int((endPos-pos)/16);
   libmwaw::DebugStream f;
 
   input->seek(pos, WPX_SEEK_SET);
@@ -1126,7 +1133,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     f.str("");
     f << "Entries(Information)[" << entry.id() << "-" << i+1 << "]:";
     MWParserInternal::Information info;
-    int height = input->readLong(2);
+    int height = (int) input->readLong(2);
     if (height < 0) {
       info.m_type = MWParserInternal::Information::GRAPHIC;
       height *= -1;
@@ -1136,13 +1143,13 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
       info.m_type = MWParserInternal::Information::TEXT;
     info.m_height = height;
 
-    int y = input->readLong(2);
-    int page = input->readULong(1);
+    int y = (int) input->readLong(2);
+    int page = (int) input->readULong(1);
     input->seek(3, WPX_SEEK_CUR); // unused
-    info.m_pos = MWAWPosition(Vec2f(0,y), Vec2f(0, height), WPX_POINT);
+    info.m_pos = MWAWPosition(Vec2f(0,float(y)), Vec2f(0, float(height)), WPX_POINT);
     info.m_pos.setPage(page);
 
-    int paragStatus = input->readULong(1);
+    int paragStatus = (int) input->readULong(1);
     switch(paragStatus & 0x3) {
     case 0:
       info.m_justify = libmwaw::JustificationLeft;
@@ -1163,12 +1170,12 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     info.m_justifySet = (paragStatus & 0x20);
 
     // other bits used internally
-    unsigned int highPos = input->readULong(1);
-    info.m_data.setBegin((highPos<<16)+input->readULong(2));
-    info.m_data.setLength(input->readULong(2));
+    unsigned int highPos = (unsigned int) input->readULong(1);
+    info.m_data.setBegin(long(highPos<<16)+(long)input->readULong(2));
+    info.m_data.setLength((long)input->readULong(2));
 
-    int paragFormat = input->readULong(2);
-    int flags = 0;
+    int paragFormat = (int) input->readULong(2);
+    uint32_t flags = 0;
     // bit 1 = plain
     if (paragFormat&0x2) flags |= MWAW_BOLD_BIT;
     if (paragFormat&0x4) flags |= MWAW_ITALICS_BIT;
@@ -1245,7 +1252,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
   libmwaw::DebugStream f;
   f << "Entries(Text):";
 
-  int numChar = input->readULong(2);
+  int numChar = (int) input->readULong(2);
   std::string text("");
   if (!info.m_compressed) {
     if (numChar+2 >= entry.length()) {
@@ -1269,14 +1276,14 @@ bool MWParser::readText(MWParserInternal::Information const &info,
             MWAW_DEBUG_MSG(("MWParser::readText: text is too long\n"));
             return false;
           }
-          actualChar = input->readULong(1);
+          actualChar = (int) input->readULong(1);
           actVal = (actualChar >> 4);
         } else
           actVal = (actualChar & 0xf);
         actualCharSet = !actualCharSet;
         if (st == 0) {
           if (actVal == 0xf) continue;
-          text += compressCorr[actVal];
+          text += compressCorr[(size_t) actVal];
           break;
         }
         if (st == 1) { // high bytes
@@ -1295,7 +1302,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     actPos++;
   }
 
-  int formatSize = input->readULong(2);
+  int formatSize = (int) input->readULong(2);
   if ((formatSize%6)!=0 || actPos+2+formatSize > entry.end()) {
     MWAW_DEBUG_MSG(("MWParser::readText: format is too long\n"));
     return false;
@@ -1306,13 +1313,13 @@ bool MWParser::readText(MWParserInternal::Information const &info,
   std::vector<MWAWFont> listFonts;
 
   for (int i = 0; i < numFormat; i++) {
-    int pos = input->readULong(2);
+    int tPos = (int) input->readULong(2);
 
     MWAWFont font;
-    int fSz = input->readULong(1);
+    int fSz = (int) input->readULong(1);
     font.setSize(fSz);
-    int flag = input->readULong(1);
-    int flags = 0;
+    int flag = (int) input->readULong(1);
+    uint32_t flags = 0;
     // bit 1 = plain
     if (flag&0x1) flags |= MWAW_BOLD_BIT;
     if (flag&0x2) flags |= MWAW_ITALICS_BIT;
@@ -1322,10 +1329,10 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     if (flag&0x20) flags |= MWAW_SUPERSCRIPT100_BIT;
     if (flag&0x40) flags |= MWAW_SUBSCRIPT100_BIT;
     font.setFlags(flags);
-    font.setId(input->readULong(2));
-    listPos.push_back(pos);
+    font.setId((int) input->readULong(2));
+    listPos.push_back(tPos);
     listFonts.push_back(font);
-    f << ",f" << i << "=[pos=" << pos;
+    f << ",f" << i << "=[pos=" << tPos;
 #ifdef DEBUG
     f << ",font=[" << font.getDebugString(m_convertissor) << "]";
 #endif
@@ -1337,7 +1344,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
   std::vector<int> textLineHeight;
   if (version() <= 3) {
     std::vector<int> fParagLines;
-    long pos = input->tell();
+    pos = input->tell();
     MWAWEntry hEntry;
     hEntry.setBegin(pos);
     hEntry.setEnd(entry.end());
@@ -1345,7 +1352,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     if (readLinesHeight(hEntry, fParagLines, textLineHeight)) {
       lHeight = &textLineHeight;
       totalHeight = 0;
-      for (int i = 0; i < int(textLineHeight.size()); i++)
+      for (size_t i = 0; i < textLineHeight.size(); i++)
         totalHeight+=textLineHeight[i];
     } else
       input->seek(pos, WPX_SEEK_SET);
@@ -1370,16 +1377,16 @@ bool MWParser::readText(MWParserInternal::Information const &info,
       m_listener->setParagraphJustification(info.m_justify);
 
     int actFormat = 0;
-    numChar = text.length();
+    numChar = int(text.length());
     for (int i = 0; i < numChar; i++) {
-      if (actFormat < numFormat && i == listPos[actFormat]) {
-        listFonts[actFormat].sendTo(m_listener.get(), m_convertissor, font);
-        font = listFonts[actFormat];
+      if (actFormat < numFormat && i == listPos[(size_t)actFormat]) {
+        listFonts[(size_t)actFormat].sendTo(m_listener.get(), m_convertissor, font);
+        font = listFonts[(size_t)actFormat];
         actFormat++;
       }
-      unsigned char c = text[i];
+      unsigned char c = (unsigned char) text[(size_t)i];
       int unicode = m_convertissor->unicode (font.id(), c);
-      if (unicode != -1) m_listener->insertUnicode(unicode);
+      if (unicode != -1) m_listener->insertUnicode((uint32_t) unicode);
       else if (c == 0x9)
         m_listener->insertTab();
       else if (c == 0xd)
@@ -1392,7 +1399,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     }
   }
 
-  ascii().addPos(version()<=3 ? pos-4 : pos);
+  ascii().addPos(version()<=3 ? entry.begin()-4 : entry.begin());
   ascii().addNote(f.str().c_str());
 
   return true;
@@ -1425,9 +1432,9 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   libmwaw::DebugStream f;
   f << "Entries(Paragraph):";
 
-  parag.m_margins[1] = input->readLong(2)/80.;
-  parag.m_margins[2] = input->readLong(2)/80.;
-  int justify = input->readLong(1);
+  parag.m_margins[1] = float(input->readLong(2))/80.f;
+  parag.m_margins[2] = float(input->readLong(2))/80.f;
+  int justify = (int) input->readLong(1);
   switch(justify) {
   case 0:
     parag.m_justify = libmwaw::JustificationLeft;
@@ -1445,22 +1452,22 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
     f << "##justify=" << justify << ",";
     break;
   }
-  int numTabs = input->readLong(1);
+  int numTabs = (int) input->readLong(1);
   if (numTabs < 0 || numTabs > 10) {
     f << "##numTabs=" << numTabs << ",";
     numTabs = 0;
   }
-  int highspacing = input->readLong(1);
+  int highspacing = (int) input->readLong(1);
   if (highspacing) {
     MWAW_DEBUG_MSG(("MWParser::readParagraph: high spacing bit set=%d\n", highspacing));
   }
-  int spacing = input->readLong(1);
+  int spacing = (int) input->readLong(1);
   parag.m_spacings[0] = 1.+spacing/2.0;
-  parag.m_margins[0] = input->readLong(2)/80.;
+  parag.m_margins[0] = float(input->readLong(2))/80.f;
 
-  parag.m_tabs.resize(numTabs);
-  for (int i = 0; i < numTabs; i++) {
-    int numPixel = input->readLong(2);
+  parag.m_tabs.resize((size_t) numTabs);
+  for (size_t i = 0; i < (size_t) numTabs; i++) {
+    int numPixel = (int) input->readLong(2);
     MWAWTabStop::Alignment align = MWAWTabStop::LEFT;
     if (numPixel < 0) {
       align = MWAWTabStop::DECIMAL;
@@ -1515,11 +1522,11 @@ bool MWParser::readPageBreak(MWParserInternal::Information const &info)
 
   f << "Entries(PageBreak):";
   for (int i = 0; i < 2; i++) {
-    int val = input->readLong(2);
+    int val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   int dim[2]= {0,0};
-  for (int i = 0; i < 2; i++) dim[i] = input->readLong(2);
+  for (int i = 0; i < 2; i++) dim[i] = (int) input->readLong(2);
   f << "pageSize(?)=" << dim[0] << "x" << dim[1] << ",";
   f << "unk=" << input->readLong(2) << ","; // find 0xd
 
@@ -1560,7 +1567,7 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
 
   int dim[4];
   for (int i = 0; i < 4; i++)
-    dim[i] = input->readLong(2);
+    dim[i] = (int) input->readLong(2);
   if (dim[2] < dim[0] || dim[3] < dim[1]) {
     MWAW_DEBUG_MSG(("MWParser::readGraphic: bdbox is bad\n"));
     return false;
@@ -1569,14 +1576,13 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
   f << "Entries(Graphic):";
 
   Box2f box;
-  MWAWPict::ReadResult res =
-    MWAWPictData::check(input, entry.length()-8, box);
+  MWAWPict::ReadResult res = MWAWPictData::check(input, int(entry.length()-8), box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("MWParser::readGraphic: can not find the picture\n"));
     return false;
   }
 
-  Vec2f actualSize(dim[3]-dim[1], dim[2]-dim[0]), naturalSize(actualSize);
+  Vec2f actualSize(float(dim[3]-dim[1]), float(dim[2]-dim[0])), naturalSize(actualSize);
   if (box.size().x() > 0 && box.size().y()  > 0) naturalSize = box.size();
   MWAWPosition pictPos=MWAWPosition(Vec2i(0,0),actualSize, WPX_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
@@ -1586,7 +1592,7 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
   // get the picture
   input->seek(pos+8, WPX_SEEK_SET);
 
-  shared_ptr<MWAWPict> pict(MWAWPictData::get(input, entry.length()-8));
+  shared_ptr<MWAWPict> pict(MWAWPictData::get(input, int(entry.length()-8)));
   if (pict) {
     if (m_listener) {
       m_listener->setParagraphLineSpacing(1.0, WPX_PERCENT);
@@ -1627,8 +1633,8 @@ bool MWParser::checkFreeList()
   int num = 0;
   while(!input->atEOS()) {
     pos = input->tell();
-    long freePos = input->readULong(4);
-    long sz = input->readULong(4);
+    long freePos = (long) input->readULong(4);
+    long sz = (long) input->readULong(4);
 
     if (long(input->tell()) != pos+8) {
       MWAW_DEBUG_MSG(("MWParser::checkFreeList: list is too short\n"));

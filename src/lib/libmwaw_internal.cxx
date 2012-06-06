@@ -60,6 +60,8 @@ std::string numberingTypeToString(NumberingType type)
     return "i";
   case UPPERCASE_ROMAN:
     return "I";
+  case NONE:
+  case BULLET:
   default:
     break;
   }

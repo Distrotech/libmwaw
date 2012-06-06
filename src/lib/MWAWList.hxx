@@ -54,6 +54,8 @@ public:
     Level() : m_labelIndent(0.0), m_labelWidth(0.0), m_startValue(0), m_type(NONE),
       m_prefix(""), m_suffix(""), m_bullet(""), m_sendToInterface(false) { }
 
+    ~Level() {}
+
     /** returns true if the level type was not set */
     bool isDefault() const {
       return m_type ==DEFAULT;
@@ -122,7 +124,7 @@ public:
 
   /** returns the number of level */
   int numLevels() const {
-    return m_levels.size();
+    return int(m_levels.size());
   }
   /** sets a level */
   void set(int levl, Level const &level);

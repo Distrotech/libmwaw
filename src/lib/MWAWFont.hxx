@@ -48,7 +48,7 @@ public:
    * \param id system id font
    * \param size the font size
    * \param f the font attributes bold, ... */
-  MWAWFont(int id=-1, int size=12, int f = 0) : m_id(id), m_size(size), m_flags(f), m_color() {
+  MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_flags(f), m_color() {
     resetColor();
   };
   //! resets the font color to black
@@ -56,21 +56,21 @@ public:
     m_color = Vec3uc();
   }
   //! sets the font id and resets size to the previous size for this font
-  void setFont(int id) {
+  void setFont(int newId) {
     resetColor();
-    m_id=id;
+    m_id=newId;
   }
   //! sets the font id
-  void setId(int id) {
-    m_id = id;
+  void setId(int newId) {
+    m_id = newId;
   }
   //! sets the font size
-  void setSize(int size) {
-    m_size = size;
+  void setSize(int sz) {
+    m_size = sz;
   }
   //! sets the font attributes bold, ...
-  void setFlags(int flags) {
-    m_flags = flags;
+  void setFlags(uint32_t fl) {
+    m_flags = fl;
   }
   //! sets the font color
   void setColor(Vec3uc color) {
@@ -89,7 +89,7 @@ public:
     return m_size;
   }
   //! returns the font flags
-  int flags() const {
+  uint32_t flags() const {
     return m_flags;
   }
   //! returns true if the font color is not black
@@ -119,8 +119,7 @@ public:
     if (diff != 0) return diff;
     diff = size() - oth.size();
     if (diff != 0) return diff;
-    diff = flags() - oth.flags();
-    if (diff != 0) return diff;
+    if (flags() != oth.flags()) return diff;
     for (int i = 0; i < 3; i++) {
       diff = m_color[i] - oth.m_color[i];
       if (diff!=0) return diff;
@@ -132,7 +131,8 @@ public:
   void sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverter> &convert, MWAWFont &actFont) const;
 
 protected:
-  int m_id /** font identificator*/, m_size /** font size */, m_flags /** font attributes */;
+  int m_id /** font identificator*/, m_size /** font size */;
+  uint32_t m_flags /** font attributes */;
   Vec3uc m_color /** font color */;
 };
 

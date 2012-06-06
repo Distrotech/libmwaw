@@ -53,8 +53,8 @@ template <class T> class MWAWPictBitmapContainer
 {
 public:
   //! constructor given size
-  MWAWPictBitmapContainer(Vec2i const &size) : m_size(size), m_data(0L) {
-    if (m_size[0]*m_size[1] != 0) m_data = new T[m_size[0]*m_size[1]];
+  MWAWPictBitmapContainer(Vec2i const &sz) : m_size(sz), m_data(0L) {
+    if (m_size[0]*m_size[1] != 0) m_data = new T[size_t(m_size[0]*m_size[1])];
   }
   //! destructor
   virtual ~MWAWPictBitmapContainer() {
@@ -125,7 +125,7 @@ class MWAWPictBitmapContainerBool : public MWAWPictBitmapContainer<bool>
 {
 public:
   //! constructor
-  MWAWPictBitmapContainerBool(Vec2i const &size) : MWAWPictBitmapContainer<bool>(size) {}
+  MWAWPictBitmapContainerBool(Vec2i const &sz) : MWAWPictBitmapContainer<bool>(sz) {}
 
   //! allows to use packed m_data
   void setRowPacked(int j, unsigned char const *val) {
@@ -135,7 +135,7 @@ public:
       unsigned char mask = 0x80;
       for (int p = 0; p < 8 && i < m_size[0]; i++, p++, ind++) {
         m_data[ind] = ((v&mask) != 0);
-        mask >>= 1;
+        mask = (unsigned char) (mask >> 1);
       }
     }
   }
@@ -289,7 +289,7 @@ public:
     diff=m_data.size().cmpY(aPict.m_data.size());
     if (diff) return diff;
 
-    diff=m_colors.size()-aPict.m_colors.size();
+    diff=int(m_colors.size())-int(aPict.m_colors.size());
     if (diff) return (diff < 0) ? -1 : 1;
 
     long diffL = (long) this -(long) &aPict;

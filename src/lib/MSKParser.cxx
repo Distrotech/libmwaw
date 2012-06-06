@@ -170,6 +170,9 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   case Zone:
     parser->sendZone(m_id);
     break;
+  default:
+    MWAW_DEBUG_MSG(("SubDocument::parse: unexpected zone type\n"));
+    break;
   }
   m_input->seek(pos, WPX_SEEK_SET);
 }
@@ -237,18 +240,18 @@ int MSKParser::version() const
 ////////////////////////////////////////////////////////////
 float MSKParser::pageHeight() const
 {
-  return m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
+  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float MSKParser::pageWidth() const
 {
-  return m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight();
+  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
 }
 
 Vec2f MSKParser::getPageTopLeft() const
 {
-  return Vec2f(m_pageSpan.getMarginLeft(),
-               m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0);
+  return Vec2f(float(m_pageSpan.getMarginLeft()),
+               float(m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 ////////////////////////////////////////////////////////////
@@ -307,12 +310,12 @@ bool MSKParser::getColor(int id, Vec3uc &col) const
     static std::vector<Vec3uc> palette;
     if (palette.size()==0) {
       palette.resize(256);
-      int ind=0;
+      size_t ind=0;
       for (int k = 0; k < 6; k++) {
         for (int j = 0; j < 6; j++) {
           for (int i = 0; i < 6; i++, ind++) {
             if (j==5 && i==2) break;
-            palette[ind]=Vec3uc(255-51*i, 255-51*k, 255-51*j);
+            palette[ind]=Vec3uc((unsigned char)(255-51*i), (unsigned char)(255-51*k), (unsigned char)(255-51*j));
           }
         }
       }
@@ -324,22 +327,23 @@ bool MSKParser::getColor(int id, Vec3uc &col) const
           for (int i = 0; i < 5; i++, ind++) {
             int val = 17*r+51*i;
             if (c == 0) {
-              palette[ind]=Vec3uc(val, val, val);
+              palette[ind]=Vec3uc((unsigned char)val, (unsigned char)val, (unsigned char)val);
               continue;
             }
-            int col[3]= {0,0,0};
-            col[c-1]=val;
-            palette[ind]=Vec3uc(col[0],col[1],col[2]);
+            int color[3]= {0,0,0};
+            color[c-1]=val;
+            palette[ind]=Vec3uc((unsigned char)(color[0]),(unsigned char)(color[1]),(unsigned char)(color[2]));
           }
         }
         // last part of j==5, i=2..5
         for (int k = r; k < 6; k+=2) {
-          for (int i = 2; i < 6; i++, ind++) palette[ind]=Vec3uc(255-51*i, 255-51*k, 255-51*5);
+          for (int i = 2; i < 6; i++, ind++)
+            palette[ind]=Vec3uc((unsigned char)(255-51*i), (unsigned char)(255-51*k), (unsigned char)(255-51*5));
         }
       }
     }
     if (id >= 0 && id <= 255) {
-      col=palette[id];
+      col=palette[(size_t)id];
       return true;
     }
     break;
@@ -528,7 +532,7 @@ bool MSKParser::createZones()
   }
 
   MSKParserInternal::Zone::Type const type = MSKParserInternal::Zone::MAIN;
-  MSKParserInternal::Zone newZone(type, m_state->m_zoneMap.size());
+  MSKParserInternal::Zone newZone(type, int(m_state->m_zoneMap.size()));
   m_state->m_zoneMap.insert(std::map<int,MSKParserInternal::Zone>::value_type(int(type),newZone));
   MSKParserInternal::Zone &mainZone = m_state->m_zoneMap.find(int(type))->second;
   while (!input->atEOS()) {
@@ -574,11 +578,10 @@ bool MSKParser::readZone(MSKParserInternal::Zone &zone)
   long pos = input->tell();
 
   MWAWEntry pict;
-  int val = input->readLong(1);
+  int val = (int) input->readLong(1);
   input->seek(-1, WPX_SEEK_CUR);
   switch(val) {
   case 0: {
-    MWAWEntry pict;
     int pictId = m_graphParser->getEntryPicture(zone.m_zoneId, pict);
     if (pictId >= 0) {
       input->seek(pict.end(), WPX_SEEK_SET);
@@ -587,7 +590,6 @@ bool MSKParser::readZone(MSKParserInternal::Zone &zone)
     break;
   }
   case 1: {
-    MWAWEntry pict;
     int pictId = m_graphParser->getEntryPictureV1(zone.m_zoneId, pict);
     if (pictId >= 0) {
       input->seek(pict.end(), WPX_SEEK_SET);
@@ -630,7 +632,7 @@ bool MSKParser::checkHeader(MWAWHeader *header, bool strict)
   input->seek(0,WPX_SEEK_SET);
 
   m_state->m_hasHeader = m_state->m_hasFooter = false;
-  int vers = input->readULong(4);
+  int vers = (int) input->readULong(4);
   switch (vers) {
   case 11:
 #ifndef DEBUG
@@ -665,14 +667,14 @@ bool MSKParser::checkHeader(MWAWHeader *header, bool strict)
   if (input->seek(12,WPX_SEEK_SET) != 0) return false;
 
   for (int i = 0; i < 3; i++) {
-    val = input->readLong(1);
+    val = (int) (int) input->readLong(1);
     if (val < -10 || val > 10) {
       MWAW_DEBUG_MSG(("MSKParser::checkHeader: find odd val%d=0x%x: not implemented\n", i, val));
       numError++;
     }
   }
   input->seek(1,WPX_SEEK_CUR);
-  int type = input->readLong(2);
+  int type = (int) input->readLong(2);
   switch (type) {
     // Text document
   case 1:
@@ -724,11 +726,11 @@ bool MSKParser::checkHeader(MWAWHeader *header, bool strict)
   for (int i = 0; i < 4; i++) f << dim[i]<<",";
   f << "),";
   for (int i = 0; i < 4; i++) {
-    val = input->readULong(1);
+    val = (int) input->readULong(1);
     if (!val) continue;
     f << "##v" << i << "=" << std::hex << val <<",";
   }
-  type = input->readULong(2);
+  type = (int) input->readULong(2);
   f << std::dec;
   switch(type) {
   case 1:
@@ -748,12 +750,12 @@ bool MSKParser::checkHeader(MWAWHeader *header, bool strict)
     break;
   }
   f << "numlines?=" << input->readLong(2) << ",";
-  val = input->readLong(1); // 0, v2: 0, 4 or -4
+  val = (int) input->readLong(1); // 0, v2: 0, 4 or -4
   if (val)  f << "f0=" << val << ",";
-  val = input->readLong(1); // almost always 1
+  val = (int) input->readLong(1); // almost always 1
   if (val != 1) f << "f1=" << val << ",";
   for (int i = 11; i < headerSize/2; i++) { // v1: 0, 0, v2: 0, 0|1
-    int val = input->readULong(2);
+    val = (int) input->readULong(2);
     if (!val) continue;
     f << "f" << i << "=" << std::hex << val << std::dec;
     if ( m_state->IsTextDoc() && version() >= 3 && i == 12) {
@@ -794,10 +796,10 @@ bool MSKParser::readDocumentInfo()
     return false;
 
   int vers = version();
-  int docId = input->readULong(1);
-  int docExtra = input->readULong(1);
-  int flag = input->readULong(1);
-  long sz = input->readULong(2);
+  int docId = (int) input->readULong(1);
+  int docExtra = (int) input->readULong(1);
+  int flag = (int) input->readULong(1);
+  long sz = (long) input->readULong(2);
   long endPos = pos+6+sz;
   if (!checkIfPositionValid(endPos))
     return false;
@@ -831,7 +833,7 @@ bool MSKParser::readDocumentInfo()
   pos = input->tell();
   f.str("");
   f << "DocInfo-1:";
-  int val = input->readLong(2);
+  int val = (int) input->readLong(2);
   if ((val & 0x0400) && vers >= 3) {
     f << "titlepage,";
     val &= 0xFBFF;
@@ -844,19 +846,19 @@ bool MSKParser::readDocumentInfo()
       std::string text = m_textParser->readHeaderFooterString(wh==0);
       if (text.size()) f << name << "="<< text << ",";
 
-      int remain = debPos+100 - input->tell();
-      for (int i = 0; i < remain; i++) {
-        unsigned char c = input->readULong(1);
+      long remain = debPos+100 - input->tell();
+      for (long i = 0; i < remain; i++) {
+        unsigned char c = (unsigned char) input->readULong(1);
         if (c == 0) continue;
         f << std::dec << "f"<< i << "=" << (int) c << ",";
       }
     }
     f << "defFid=" << input->readULong(2) << ",";
     f << "defFsz=" << input->readULong(2)/2 << ",";
-    val = input->readULong(2); // 0 or 8
+    val = (int) input->readULong(2); // 0 or 8
     if (val) f << "#unkn=" << val << ",";
     int dim[2];
-    for (int i = 0; i < 2; i++) dim[i] = input->readULong(2);
+    for (int i = 0; i < 2; i++) dim[i] = (int) input->readULong(2);
     f << "dim=" << dim[0] << "x" << dim[1] << ",";
     /* followed by 0 (v1) or 0|0x21|0* (v2)*/
     ascii().addPos(pos);
@@ -867,9 +869,9 @@ bool MSKParser::readDocumentInfo()
   }
 
   // last data ( normally 26)
-  int numData = (endPos - input->tell())/2;
+  int numData = int((endPos - input->tell())/2);
   for (int i = 0; i < numData; i++) {
-    val = input->readLong(2);
+    val = (int) input->readLong(2);
     switch(i) {
     case 2:
       if (val!=1) f << "firstPageNumber=" << val << ",";
@@ -904,10 +906,10 @@ bool MSKParser::readGroup(MSKParserInternal::Zone &zone, MWAWEntry &entry, int c
   if (input->readULong(1) != 3) return false;
 
   libmwaw::DebugStream f;
-  int docId = input->readULong(1);
-  int docExtra = input->readULong(1);
-  int flag = input->readULong(1);
-  long size = input->readULong(2)+6;
+  int docId = (int) input->readULong(1);
+  int docExtra = (int) input->readULong(1);
+  int flag = (int) input->readULong(1);
+  long size = (long) input->readULong(2)+6;
 
   int blockSize = version() <= 2 ? 340 : 360;
   if (size < blockSize) return false;
@@ -934,7 +936,7 @@ bool MSKParser::readGroup(MSKParserInternal::Zone &zone, MWAWEntry &entry, int c
   if (check <= 0) return true;
   input->seek(pos+8, WPX_SEEK_SET);
   for (int i = 0; i < 52; i++) {
-    int v = input->readLong(2);
+    int v = (int) input->readLong(2);
     if (i < 8 && (v < -100 || v > 100)) return false;
     if (v) {
       f << "f" << i << "=";
@@ -950,7 +952,7 @@ bool MSKParser::readGroup(MSKParserInternal::Zone &zone, MWAWEntry &entry, int c
 
   pos = pos+blockSize;
   input->seek(pos, WPX_SEEK_SET);
-  int N=input->readLong(2);
+  int N=(int) input->readLong(2);
 
   f.str("");
   f << "GroupHeader:N=" << N << ",";
@@ -992,7 +994,7 @@ bool MSKParser::readGroupHeaderInfo(bool header, int check)
   MWAWInputStreamPtr input=getInput();
   long debPos = input->tell();
 
-  long ptr = input->readULong(2);
+  long ptr = (long) input->readULong(2);
   if (input->atEOS()) return false;
   if (ptr) {
     if (check == 49) return false;
@@ -1003,7 +1005,7 @@ bool MSKParser::readGroupHeaderInfo(bool header, int check)
 
   libmwaw::DebugStream f;
 
-  int size = input->readLong(2)+4;
+  int size = (int) input->readLong(2)+4;
   int realSize = 0x11;
   if (size < realSize) return false;
   if (input->readLong(2) != 0) return false;
@@ -1017,11 +1019,11 @@ bool MSKParser::readGroupHeaderInfo(bool header, int check)
   if (!checkIfPositionValid(debPos+size)) return false;
 
   input->seek(debPos+6, WPX_SEEK_SET);
-  int N=input->readLong(2);
+  int N=(int) input->readLong(2);
   f << ", N=" << N;
   int dim[4];
   for (int i = 0; i < 4; i++)
-    dim[i] = input->readLong(2);
+    dim[i] = (int) input->readLong(2);
 
   Box2i box(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
   if (box.size().x() < -2000 || box.size().y() < -2000 ||
@@ -1029,7 +1031,7 @@ bool MSKParser::readGroupHeaderInfo(bool header, int check)
       box.min().x() < -200 || box.min().y() < -200) return false;
   if (check == 49 && box.size().x() == 0 &&  box.size().y() == 0) return false;
   f << ", BDBox =" << box;
-  int val = input->readULong(1);
+  int val = (int) input->readULong(1);
   if (val) f << ", flag=" << val;
 
   input->seek(debPos+size, WPX_SEEK_SET);
@@ -1038,7 +1040,7 @@ bool MSKParser::readGroupHeaderInfo(bool header, int check)
   else m_state->m_footerHeight = box.size().y();
   MSKParserInternal::Zone::Type type=
     header ? MSKParserInternal::Zone::HEADER : MSKParserInternal::Zone::FOOTER;
-  MSKParserInternal::Zone zone(type, m_state->m_zoneMap.size());
+  MSKParserInternal::Zone zone(type, int(m_state->m_zoneMap.size()));
 
   ascii().addPos(debPos);
   ascii().addNote(f.str().c_str());
@@ -1102,7 +1104,7 @@ bool MSKParser::readPrintInfo()
   int maxSize = paperSize.x() > paperSize.y() ? paperSize.x() : paperSize.y();
   f << ", margin=(";
   for (int i = 0; i < 4; i++) {
-    margin[i] = int(72./120.*input->readLong(2));
+    margin[i] = int(72.f/120.f*(float)input->readLong(2));
     if (margin[i] < -maxSize || margin[i] > maxSize) return false;
     f << margin[i];
     if (i != 3) f << ", ";

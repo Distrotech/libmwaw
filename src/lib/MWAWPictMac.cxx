@@ -60,7 +60,7 @@ MWAWPictMac::ReadResult MWAWPictMac::checkOrGet
   if (size < 0xd)
     return MWAW_R_BAD;
 
-  int readSize = input->readULong(2);
+  int readSize = int(input->readULong(2));
   long dim[4];
   for (int i = 0; i < 4; i++) dim[i] = input->readLong(2);
   long lastFlag = input->readLong(2);
@@ -77,7 +77,7 @@ MWAWPictMac::ReadResult MWAWPictMac::checkOrGet
     if (size < 40) return  MWAW_R_BAD;
     if (input->readULong(2) != 0x2ff) return  MWAW_R_BAD;
     if (input->readULong(2) != 0xC00) return  MWAW_R_BAD;
-    subvers = -input->readLong(2);
+    subvers = -int(input->readLong(2));
     if (subvers == 1) empty = (size == 42);
     else if (subvers == 2) empty = (size == 40);
     else if (subvers >= -3 && subvers < 4) {
@@ -97,9 +97,9 @@ MWAWPictMac::ReadResult MWAWPictMac::checkOrGet
     if (input->readULong(1) != 0xff) return MWAW_R_BAD;
   }
 
-  box.set(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+  box.set(Vec2f(float(dim[1]),float(dim[0])), Vec2f(float(dim[3]),float(dim[2])));
   if (!empty && (box.size().x() < 0 || box.size().y() < 0)) return MWAW_R_BAD;
-  if (box.size().x() == 0 || box.size().y() == 0) empty = true;
+  if (box.size().x() <= 0 || box.size().y() <= 0) empty = true;
 
   if (empty) return MWAW_R_OK_EMPTY;
   if (!result) return MWAW_R_OK;
@@ -149,7 +149,7 @@ public:
     o << "reg=" << f.m_box;
     if (f.m_points.size()==0) return o;
     o << ", [";
-    for (int c = 0; c < int(f.m_points.size()); c++) {
+    for (size_t c = 0; c < f.m_points.size(); c++) {
       if (c) o << ",";
       o << f.m_points[c];
     }
@@ -161,7 +161,7 @@ public:
     long actualPos = input.tell();
 
     // the region size
-    int sz = input.readULong(2);
+    int sz = (int)input.readULong(2);
     if ((sz%2) != 0) {
       MWAW_DEBUG_MSG(("Pict1:Region: read odd size: %d\n", sz));
       return false;
@@ -172,7 +172,7 @@ public:
       return false;
     }
     int val[4];
-    for (int i = 0; i < 4; i++) val[i] = input.readLong(2);
+    for (int i = 0; i < 4; i++) val[i] = (int) input.readLong(2);
     m_box.set(Vec2i(val[0], val[1]), Vec2i(val[2], val[3]));
     sz -= 5;
     m_points.resize(0);
@@ -189,7 +189,7 @@ public:
     }
     input.seek(actualPos+10, WPX_SEEK_SET);
     while (sz > 0) {
-      int x = input.readLong(2);
+      int x = (int)input.readLong(2);
       sz--;
       if (x == 0x7fff) break;
       if (x < m_box[0].x() || x > m_box[1].x()) {
@@ -198,7 +198,7 @@ public:
       }
       bool endF = false;
       while (sz > 0) {
-        int y = input.readLong(2);
+        int y = (int)input.readLong(2);
         sz--;
         if (y == 0x7fff) {
           endF = true;
@@ -236,7 +236,7 @@ struct Bitmap {
     m_bitmap(), m_mode(0) {}
   //! tries to read a bitmap
   bool read (MWAWInputStream &input, bool packed, bool hasRegion) {
-    m_rowBytes = input.readULong(2);
+    m_rowBytes = (int) input.readULong(2);
     m_rowBytes &= 0x3FFF;
     if (m_rowBytes < 0 || (!packed && m_rowBytes > 8)) {
       MWAW_DEBUG_MSG(("Pict1:Bitmap: find odd rowBytes %d... \n", m_rowBytes));
@@ -247,7 +247,7 @@ struct Bitmap {
     // and the two general rectangle src, dst
     for (int c = 0; c < 3; c++) {
       int val[4];
-      for (int d = 0; d < 4; d++) val[d] = input.readLong(2);
+      for (int d = 0; d < 4; d++) val[d] = (int) input.readLong(2);
       Box2i box(Vec2i(val[1],val[0]), Vec2i(val[3],val[2]));
       if (box.size().x() <= 0 || box.size().y() <= 0) {
         MWAW_DEBUG_MSG(("Pict1:Bitmap: find odd rectangle %d... \n", c));
@@ -262,7 +262,7 @@ struct Bitmap {
       MWAW_DEBUG_MSG(("Pict1:Bitmap: row bytes seems to short: %d/%d... \n", m_rowBytes*8, m_rect.size().y()));
       return false;
     }
-    m_mode = input.readLong(2); // mode: I find 0,1 and 3
+    m_mode = (int) input.readLong(2); // mode: I find 0,1 and 3
     if (m_mode < 0 && m_mode > 64) {
       MWAW_DEBUG_MSG(("Pict1:Bitmap: unknown mode: %d \n", m_mode));
       return false;
@@ -315,12 +315,12 @@ struct Bitmap {
   //! saves the bitmap in file (debugging function)
   bool saveBitmap() const {
     if (m_rowBytes <= 0) return false;
-    int nRows = m_bitmap.size()/m_rowBytes;
+    int nRows = int(m_bitmap.size())/m_rowBytes;
     MWAWPictBitmapBW bitmap(Vec2i(m_rect.size().x(),nRows));
     if (!bitmap.valid()) return false;
 
     for (int i = 0; i < nRows; i++)
-      bitmap.setRowPacked(i, &m_bitmap[i*m_rowBytes]);
+      bitmap.setRowPacked(i, &m_bitmap[size_t(i*m_rowBytes)]);
 
     WPXBinaryData dt;
     std::string type;
@@ -335,23 +335,23 @@ struct Bitmap {
   //! creates the bitmap from the packdata
   bool unpackedData(unsigned char const *pData, int sz) {
     int rPos = 0;
-    int wPos = m_bitmap.size(), wNPos = wPos+m_rowBytes;
-    m_bitmap.resize(wNPos);
+    size_t wPos = m_bitmap.size(), wNPos = wPos+size_t(m_rowBytes);
+    m_bitmap.resize(size_t(wNPos));
 
     while (rPos < sz) {
       if (rPos+2 > sz) return false;
       signed char n = (signed char) pData[rPos++];
       if (n < 0) {
         int nCount = 1-n;
-        if (wPos+nCount > wNPos) return false;
+        if (wPos+size_t(nCount) > wNPos) return false;
 
-        int val = pData[rPos++];
+        unsigned char val = pData[rPos++];
         for (int i = 0; i < nCount; i++)
           m_bitmap[wPos++] = val;
         continue;
       }
       int nCount = 1+n;
-      if (rPos+nCount > sz || wPos+nCount > wNPos) return false;
+      if (rPos+nCount > sz || wPos+size_t(nCount) > wNPos) return false;
       for (int i = 0; i < nCount; i++)
         m_bitmap[wPos++] = pData[rPos++];
     }
@@ -367,15 +367,15 @@ struct Bitmap {
       //        from collected data files, we have 246 < limit < 254
       if (m_rowBytes > 250) szRowSize = 2;
     } else
-      m_bitmap.resize(numRows*m_rowBytes);
+      m_bitmap.resize(size_t(numRows*m_rowBytes));
 
-    int pos=0;
+    size_t pos=0;
     for (int i = 0; i < numRows; i++) {
       if (input.atEOS()) break;
 
       if (!packed) {
         unsigned long numR = 0;
-        unsigned char const *data = input.read(m_rowBytes, numR);
+        unsigned char const *data = input.read(size_t(m_rowBytes), numR);
         if (!data || int(numR) != m_rowBytes) {
           MWAW_DEBUG_MSG(("Pict1:Bitmap: can not read line %d/%d (%d chars)\n", i, numRows, m_rowBytes));
           return false;
@@ -383,13 +383,13 @@ struct Bitmap {
         for (int j = 0; j < m_rowBytes; j++)
           m_bitmap[pos++]=data[j];
       } else {
-        int numB = input.readLong(szRowSize);
+        int numB = (int) input.readLong(szRowSize);
         if (numB < 0 || numB > 2*m_rowBytes) {
           MWAW_DEBUG_MSG(("Pict1:Bitmap: odd numB:%d in row: %d/%d\n", numB, i, numRows));
           return false;
         }
         unsigned long numR = 0;
-        unsigned char const *data = input.read(numB, numR);
+        unsigned char const *data = input.read(size_t(numB), numR);
         if (!data || int(numR) != numB) {
           MWAW_DEBUG_MSG(("Pict1:Bitmap: can not read line %d/%d (%d chars)\n", i, numRows, numB));
           return false;
@@ -423,15 +423,15 @@ struct ColorTable {
   bool read (MWAWInputStream &input) {
     long actPos = input.tell();
     input.seek(4, WPX_SEEK_CUR); // ignore seed
-    m_flags = input.readULong(2);
-    int n = input.readLong(2)+1;
+    m_flags = (int) input.readULong(2);
+    int n = (int) input.readLong(2)+1;
     if (n < 0) return false;
-    m_colors.resize(n);
-    for (int i = 0; i < n; i++) {
+    m_colors.resize(size_t(n));
+    for (size_t i = 0; i < size_t(n); i++) {
       input.readULong(2); // indexId: ignored
-      int col[3];
+      unsigned char col[3];
       for (int c = 0 ; c < 3; c++) {
-        col[c] = input.readULong(1);
+        col[c] = (unsigned char) input.readULong(1);
         input.readULong(1);
       }
       m_colors[i] = Vec3uc(col[0], col[1], col[2]);
@@ -441,11 +441,11 @@ struct ColorTable {
 
   //! operator<< for ColorTable
   friend std::ostream &operator<< (std::ostream &o, ColorTable const &f) {
-    int numColor = f.m_colors.size();
+    size_t numColor = f.m_colors.size();
     o << "color";
     if (f.m_flags) o << "(" << std::hex << f.m_flags << ")";
     o << "={" << std::dec;
-    for (int i = 0; i < numColor; i++)
+    for (size_t i = 0; i < numColor; i++)
       o << "col" << i << "="
         << int(f.m_colors[i][0]) << "x" << int(f.m_colors[i][1]) << "x"<< int(f.m_colors[i][2]) << ",";
     o << "}";
@@ -470,29 +470,29 @@ struct Pixmap {
   bool read (MWAWInputStream &input, bool packed, bool colorTable, bool hasRectsMode, bool hasRegion) {
     if (!colorTable) input.readULong(4); // skip the base address
 
-    m_rowBytes = input.readULong(2);
+    m_rowBytes = (int) input.readULong(2);
     m_rowBytes &= 0x3FFF;
 
     // read the rectangle: bound
     int val[4];
-    for (int d = 0; d < 4; d++) val[d] = input.readLong(2);
+    for (int d = 0; d < 4; d++) val[d] = (int) input.readLong(2);
     m_rect = Box2i(Vec2i(val[1],val[0]), Vec2i(val[3],val[2]));
     if (m_rect.size().x() <= 0 || m_rect.size().y() <= 0) {
       MWAW_DEBUG_MSG(("Pict1:Pixmap: find odd bound rectangle ... \n"));
       return false;
     }
-    m_version = input.readLong(2);
-    m_packType = input.readLong(2);
-    m_packSize = input.readLong(4);
+    m_version = (int) input.readLong(2);
+    m_packType = (int) input.readLong(2);
+    m_packSize = (int) input.readLong(4);
     for (int c = 0; c < 2; c++) {
-      m_Res[c] = input.readLong(2);
+      m_Res[c] = (int) input.readLong(2);
       input.readLong(2);
     }
-    m_pixelType = input.readLong(2);
-    m_pixelSize = input.readLong(2);
-    m_compCount = input.readLong(2);
-    m_compSize = input.readLong(2);
-    m_planeBytes = input.readLong(4);
+    m_pixelType = (int) input.readLong(2);
+    m_pixelSize = (int) input.readLong(2);
+    m_compCount = (int) input.readLong(2);
+    m_compSize = (int) input.readLong(2);
+    m_planeBytes = (int) input.readLong(4);
 
     // ignored: colorHandle+reserved
     input.seek(8, WPX_SEEK_CUR);
@@ -511,16 +511,16 @@ struct Pixmap {
     // read the two general rectangle src, dst
     if (hasRectsMode) {
       for (int c = 0; c < 2; c++) {
-        int val[4];
-        for (int d = 0; d < 4; d++) val[d] = input.readLong(2);
-        Box2i box(Vec2i(val[1],val[0]), Vec2i(val[3],val[2]));
+        int dim[4];
+        for (int d = 0; d < 4; d++) dim[d] = (int) input.readLong(2);
+        Box2i box(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
         if (box.size().x() <= 0 || box.size().y() <= 0) {
           MWAW_DEBUG_MSG(("Pict1:Bitmap: find odd rectangle %d... \n", c));
           return false;
         } else if (c==0) m_src = box;
         else m_dst = box;
       }
-      m_mode = input.readLong(2); // mode: I find 0,1 and 3
+      m_mode = (int) input.readLong(2); // mode: I find 0,1 and 3
       if (m_mode < 0 && m_mode > 64) {
         MWAW_DEBUG_MSG(("Pict1:Pixmap: unknown mode: %d \n", m_mode));
         return false;
@@ -578,13 +578,13 @@ struct Pixmap {
     int W = m_rect.size().x();
     if (W <= 0) return false;
     if (m_colorTable.get() && m_indices.size()) {
-      int nRows = m_indices.size()/W;
+      int nRows = int(m_indices.size())/W;
       MWAWPictBitmapIndexed pixmap(Vec2i(W,nRows));
       if (!pixmap.valid()) return false;
 
       pixmap.setColors(m_colorTable->m_colors);
 
-      int rPos = 0;
+      size_t rPos = 0;
       for (int i = 0; i < nRows; i++) {
         for (int x = 0; x < W; x++)
           pixmap.set(x, i, m_indices[rPos++]);
@@ -599,11 +599,11 @@ struct Pixmap {
       f << "PictPixmap" << ppmNumber++ << ".ppm";
       return libmwaw::Debug::dumpFile(dt, f.str().c_str());
     } else if (m_colors.size()) {
-      int nRows = m_colors.size()/W;
+      int nRows = int(m_colors.size())/W;
       MWAWPictBitmapColor pixmap(Vec2i(W,nRows));
       if (!pixmap.valid()) return false;
 
-      int rPos = 0;
+      size_t rPos = 0;
       for (int i = 0; i < nRows; i++) {
         for (int x = 0; x < W; x++)
           pixmap.set(x, i, m_colors[rPos++]);
@@ -630,7 +630,6 @@ struct Pixmap {
   bool unpackedData(unsigned char const *pData, int sz, int byteSz, int nSize, std::vector<unsigned char> &res) {
     assert(byteSz >= 1 && byteSz <= 4);
     int rPos = 0, wPos = 0, maxW = m_rowBytes+24;
-
     while (rPos < sz) {
       if (rPos+2 > sz) return false;
       signed char n = (signed char) pData[rPos++];
@@ -638,11 +637,11 @@ struct Pixmap {
         int nCount = 1-n;
         if (rPos+byteSz > sz || wPos+byteSz *nCount >= maxW) return false;
 
-        int val[4];
+        unsigned char val[4];
         for (int b = 0; b < byteSz; b++) val[b] = pData[rPos++];
         for (int i = 0; i < nCount; i++) {
           if (wPos+byteSz >= maxW) break;
-          for (int b = 0; b < byteSz; b++)res[wPos++] = val[b];
+          for (int b = 0; b < byteSz; b++)res[(size_t)wPos++] = val[b];
         }
         continue;
       }
@@ -650,7 +649,7 @@ struct Pixmap {
       if (rPos+byteSz *nCount > sz || wPos+byteSz *nCount >= maxW) return false;
       for (int i = 0; i < nCount; i++) {
         if (wPos+byteSz >= maxW) break;
-        for (int b = 0; b < byteSz; b++) res[wPos++] = pData[rPos++];
+        for (int b = 0; b < byteSz; b++) res[(size_t)wPos++] = pData[rPos++];
       }
     }
     return wPos >= nSize;
@@ -666,7 +665,7 @@ struct Pixmap {
     int nPlanes = 1, nBytes = 3, rowBytes = m_rowBytes;
     int numValuesByInt = 1;
     int maxValues = (1 << m_pixelSize)-1;
-    int numColors = m_colorTable.get() ? m_colorTable->m_colors.size() : 0;
+    int numColors = m_colorTable.get() ? int(m_colorTable->m_colors.size()) : 0;
     int maxColorsIndex = -1;
 
     bool packed = !( m_rowBytes < 8 || m_packType == 1 );
@@ -714,35 +713,35 @@ struct Pixmap {
       return false;
     }
     if (m_pixelSize <= 8)
-      m_indices.resize(H*W);
+      m_indices.resize(size_t(H*W));
     else {
       if (rowBytes != W * nBytes * nPlanes) {
         MWAW_DEBUG_MSG(("Pict1:Pixmap: find W=%d pixelsize=%d, rowSize=%d\n", W, m_pixelSize, m_rowBytes));
       }
-      m_colors.resize(H*W);
+      m_colors.resize(size_t(H*W));
     }
 
     std::vector<unsigned char> values;
-    values.resize(m_rowBytes+24);
+    values.resize(size_t(m_rowBytes+24));
 
     for ( int y = 0; y < H; y++ ) {
       if (!packed) {
         unsigned long numR = 0;
-        unsigned char const *data = input.read(m_rowBytes, numR);
+        unsigned char const *data = input.read(size_t(m_rowBytes), numR);
         if (!data || int(numR) != m_rowBytes) {
           MWAW_DEBUG_MSG(("Pict1:Pixmap: readColors can not read line %d/%d (%d chars)\n", y, H, m_rowBytes));
           return false;
         }
-        for (int j = 0; j < m_rowBytes; j++)
+        for (size_t j = 0; j < size_t(m_rowBytes); j++)
           values[j]=data[j];
       } else { // ok, packed
-        int numB = input.readLong(szRowSize);
+        int numB = (int) input.readLong(szRowSize);
         if (numB < 0 || numB > 2*m_rowBytes) {
           MWAW_DEBUG_MSG(("Pict1:Pixmap: odd numB:%d in row: %d/%d\n", numB, y, H));
           return false;
         }
         unsigned long numR = 0;
-        unsigned char const *data = input.read(numB, numR);
+        unsigned char const *data = input.read(size_t(numB), numR);
         if (!data || int(numR) != numB) {
           MWAW_DEBUG_MSG(("Pict1:Pixmap: can not read line %d/%d (%d chars)\n", y, H, numB));
           return false;
@@ -759,29 +758,29 @@ struct Pixmap {
       int wPos = y*W;
       if (m_pixelSize <= 8) { // indexed
         for (int x = 0, rPos = 0; x < W; ) {
-          unsigned char val = values[rPos++];
+          unsigned char val = values[(size_t)rPos++];
           for (int v = numValuesByInt-1; v >=0; v--) {
             int index = (val>>(v*m_pixelSize))&maxValues;
             if (index > maxColorsIndex) maxColorsIndex = index;
-            m_indices[wPos++] = index;
+            m_indices[(size_t)wPos++] = index;
             if (++x >= W) break;
           }
         }
       } else if (m_pixelSize == 16) {
         for (int x = 0, rPos = 0; x < W; x++) {
-          unsigned int val = 256*(unsigned int)values[rPos]+(unsigned int)values[rPos+1];
+          unsigned int val = 256*(unsigned int)values[(size_t)rPos]+(unsigned int)values[(size_t)rPos+1];
           rPos+=2;
-          m_colors[wPos++]=Vec3uc((val>>7)& 0xF8, (val>>2) & 0xF8, (val << 3));
+          m_colors[(size_t)wPos++]=Vec3uc((val>>7)& 0xF8, (val>>2) & 0xF8, (unsigned char)(val << 3));
         }
       } else if (nPlanes==1) {
         for (int x = 0, rPos = 0; x < W; x++) {
           if (nBytes==4) rPos++;
-          m_colors[wPos++]=Vec3uc(values[rPos], values[rPos+1],  values[rPos+2]);
+          m_colors[(size_t)wPos++]=Vec3uc(values[(size_t)rPos], values[size_t(rPos+1)],  values[size_t(rPos+2)]);
           rPos+=3;
         }
       } else {
         for (int x = 0, rPos = (nPlanes==4) ? W:0; x < W; x++) {
-          m_colors[wPos++]=Vec3uc(values[rPos], values[rPos+W],  values[rPos+2*W]);
+          m_colors[(size_t)wPos++]=Vec3uc(values[(size_t)rPos], values[size_t(rPos+W)],  values[size_t(rPos+2*W)]);
           rPos+=1;
         }
       }
@@ -797,7 +796,7 @@ struct Pixmap {
 
       int decGray = (numUnset==1) ? 0 : 255/(numUnset-1);
       for (int i = 0; i < numUnset; i++)
-        cols.push_back(Vec3uc(255-i*decGray, 255-i*decGray, 255-i*decGray));
+        cols.push_back(Vec3uc((unsigned char)(255-i*decGray), (unsigned char)(255-i*decGray), (unsigned char)(255-i*decGray)));
       MWAW_DEBUG_MSG(("Pict1:Pixmap: find index=%d >= numColors=%d\n", maxColorsIndex, numColors));
 
       return true;
@@ -836,17 +835,17 @@ struct Pixpattern {
   Pixpattern() : m_color(), m_pixmap() {}
   //! tries to read a pixpat
   bool read (MWAWInputStream &input) {
-    int type = input.readULong(2);
+    int type = (int)input.readULong(2);
     if (type !=1 && type != 2) {
       MWAW_DEBUG_MSG(("PixPat:Read: unknown type=%d... \n", type));
       return false;
     }
-    for (int i = 0; i < 8; i++) m_pat[i] = input.readULong(1);
+    for (int i = 0; i < 8; i++) m_pat[i] = (int)input.readULong(1);
 
     if (type == 2) {
-      int val[3];
-      for (int i = 0; i < 3; i++) val[i] = input.readULong(2);
-      m_color = Vec3uc(val[0], val[1], val[2]);
+      int val[3]; // checkme
+      for (int i = 0; i < 3; i++) val[i] = (int)input.readULong(2);
+      m_color = Vec3uc((unsigned char)val[0], (unsigned char)val[1], (unsigned char)val[2]);
       return true;
     }
 
@@ -928,7 +927,7 @@ struct Value {
       break;
     case WP_POLY:
       o << "[reg=" << f.m_box << ":";
-      for (int c = 0; c < int(f.m_listPoint.size()); c++) {
+      for (size_t c = 0; c < f.m_listPoint.size(); c++) {
         if (c) o << ",";
         o << f.m_listPoint[c];
       }
@@ -960,6 +959,19 @@ struct Value {
       break;
     case WP_QUICKTIME:
       break;
+    case WP_NONE:
+    case WP_BYTE:
+    case WP_UBYTE:
+    case WP_UINT:
+    case WP_UFIXED:
+    case WP_POINTBYTE:
+    case WP_POINTUBYTE:
+    case WP_LTEXT:
+    case WP_RBITMAP:
+    case WP_PBITMAP:
+    case WP_RPBITMAP:
+    case WP_UNKNOWN:
+    case WP_CRBITMAP:
     default:
       MWAW_DEBUG_MSG(("Pict1:Value: does not know how to print my values... \n"));
     }
@@ -1017,10 +1029,10 @@ struct OpCode {
    *
    * If the read is succefull, fills listValue with the read argument */
   bool readData(MWAWInputStream &input, std::vector<Value> &listValue) const {
-    int numTypes = m_types.size();
+    size_t numTypes = m_types.size();
     listValue.resize(numTypes);
     Value newVal;
-    for (int i = 0; i < numTypes; i++) {
+    for (size_t i = 0; i < numTypes; i++) {
       long actualPos = input.tell();
       if (readValue(input, m_types[i], newVal)) {
         listValue[i] = newVal;
@@ -1037,8 +1049,8 @@ struct OpCode {
     long actPos = input.tell();
     sz = 0;
 
-    int numTypes = m_types.size();
-    for (int i = 0; i < numTypes; i++) {
+    size_t numTypes = m_types.size();
+    for (size_t i = 0; i < numTypes; i++) {
       input.seek(actPos+sz, WPX_SEEK_SET);
       int newSz = getSize(input, m_types[i]);
       if (newSz < 0) return false;
@@ -1056,6 +1068,31 @@ struct OpCode {
     case WP_RECT:
       valType = WP_POINT;
       break;
+    case WP_NONE:
+    case WP_BYTE:
+    case WP_UBYTE:
+    case WP_INT:
+    case WP_UINT:
+    case WP_UFIXED:
+    case WP_COLOR:
+    case WP_PATTERN:
+    case WP_POINT:
+    case WP_POINTBYTE:
+    case WP_POINTUBYTE:
+    case WP_POLY:
+    case WP_REGION:
+    case WP_TEXT:
+    case WP_LTEXT:
+    case WP_BITMAP:
+    case WP_RBITMAP:
+    case WP_PBITMAP:
+    case WP_RPBITMAP:
+    case WP_UNKNOWN:
+    case WP_CCOLOR:
+    case WP_CPATTERN:
+    case WP_CBITMAP:
+    case WP_CRBITMAP:
+    case WP_QUICKTIME:
     default:
       MWAW_DEBUG_MSG(("Pict1:OpCode: readRect is called with %d\n", type));
       return false;
@@ -1101,15 +1138,15 @@ protected:
       long actPos = input.tell();
       shared_ptr<Pixpattern> pattern(new Pixpattern);
       if (!pattern->read(input)) return -1;
-      return input.tell()-actPos;
+      return int(input.tell()-actPos);
     }
     case WP_POLY:
     case WP_REGION:
-      return input.readULong(2);
+      return (int)input.readULong(2);
     case WP_TEXT:
-      return 1+input.readULong(1);
+      return 1+(int)input.readULong(1);
     case WP_LTEXT:
-      return 2+input.readULong(2);
+      return 2+(int)input.readULong(2);
     case WP_BITMAP:
     case WP_RBITMAP:
     case WP_PBITMAP:
@@ -1128,7 +1165,7 @@ protected:
         shared_ptr<Bitmap> btmap(new Bitmap);
         if (!btmap->read(input, packed, hasRgn)) return -1;
       }
-      return input.tell()-actPos;
+      return int(input.tell()-actPos);
     }
     case WP_CBITMAP:
     case WP_CRBITMAP: {
@@ -1137,11 +1174,12 @@ protected:
       bool hasRgn = type ==WP_CRBITMAP;
       shared_ptr<Pixmap> pxmap(new Pixmap);
       if (!pxmap->read(input, false, false, true, hasRgn)) return -1;
-      return input.tell()-actPos;
+      return int(input.tell()-actPos);
     }
     case WP_QUICKTIME:
-      return 4+input.readULong(4);
+      return 4+(int)input.readULong(4);
     case WP_UNKNOWN:
+    case WP_NONE:
     default:
       return -1;
     }
@@ -1229,12 +1267,13 @@ protected:
       return readCColor(input, type, val.m_rgb);
     case WP_QUICKTIME: { // version 2
       val.m_type = WP_QUICKTIME;
-      long size = input.readULong(4);
+      long size = (long) input.readULong(4);
       return input.seek(size, WPX_SEEK_CUR) == 0;
     }
     case WP_UNKNOWN:
       MWAW_DEBUG_MSG(("Pict1:readValue: find unknown type... \n"));
       break;
+    case WP_NONE:
     default:
       MWAW_DEBUG_MSG(("Pict1:readValue: does not know how to read type %d... \n", type));
     }
@@ -1247,20 +1286,41 @@ protected:
     res = 0;
     switch(type) {
     case WP_BYTE:
-      res = input.readLong((sz=1));
+      res = (int) input.readLong((sz=1));
       break;
     case WP_UBYTE:
-      res = input.readULong((sz=1));
+      res = (int) input.readULong((sz=1));
       break;
     case WP_INT:
-      res = input.readLong((sz=2));
+      res = (int) input.readLong((sz=2));
       break;
     case WP_UINT:
-      res = input.readULong((sz=2));
+      res = (int) input.readULong((sz=2));
       break;
     case WP_UFIXED:
-      res = input.readULong((sz=4));
+      res = (int) input.readULong((sz=4));
       break;
+    case WP_NONE:
+    case WP_COLOR:
+    case WP_PATTERN:
+    case WP_POINT:
+    case WP_POINTBYTE:
+    case WP_POINTUBYTE:
+    case WP_POLY:
+    case WP_RECT:
+    case WP_REGION:
+    case WP_TEXT:
+    case WP_LTEXT:
+    case WP_BITMAP:
+    case WP_RBITMAP:
+    case WP_PBITMAP:
+    case WP_RPBITMAP:
+    case WP_UNKNOWN:
+    case WP_CCOLOR:
+    case WP_CPATTERN:
+    case WP_CBITMAP:
+    case WP_CRBITMAP:
+    case WP_QUICKTIME:
     default:
       MWAW_DEBUG_MSG(("Pict1:OpCode: readInt is called with %d\n", type));
       return false;
@@ -1280,7 +1340,7 @@ protected:
       return false;
     }
     long actualPos = input.tell();
-    long val = input.readULong(4);
+    long val = (long) input.readULong(4);
     switch(val) {
     case 30:
       col[0] = col[1] = col[2] = 255;
@@ -1333,10 +1393,10 @@ protected:
       MWAW_DEBUG_MSG(("Pict1:OpCode: readCColor is called with %d\n", type));
       return false;
     }
-    long actualPos = input.tell();
+    long actualPos = (long) input.tell();
 
     for (int i = 0; i < 3; i++) {
-      int val = input.readULong(2);
+      int val = (int) input.readULong(2);
       col[i] = val >> 8;
     }
 
@@ -1355,7 +1415,7 @@ protected:
     }
     long actualPos = input.tell();
 
-    for (int i = 0; i < 8; i++) pat[i]=input.readULong(1);
+    for (int i = 0; i < 8; i++) pat[i]=(int) input.readULong(1);
 
     if (actualPos+8 != input.tell()) {
       MWAW_DEBUG_MSG(("Pict1:OpCode: readPattern find end of file...\n"));
@@ -1378,6 +1438,29 @@ protected:
     case WP_POINTUBYTE:
       valType = WP_UBYTE;
       break;
+    case WP_NONE:
+    case WP_BYTE:
+    case WP_UBYTE:
+    case WP_INT:
+    case WP_UINT:
+    case WP_UFIXED:
+    case WP_COLOR:
+    case WP_PATTERN:
+    case WP_POLY:
+    case WP_RECT:
+    case WP_REGION:
+    case WP_TEXT:
+    case WP_LTEXT:
+    case WP_BITMAP:
+    case WP_RBITMAP:
+    case WP_PBITMAP:
+    case WP_RPBITMAP:
+    case WP_UNKNOWN:
+    case WP_CCOLOR:
+    case WP_CPATTERN:
+    case WP_CBITMAP:
+    case WP_CRBITMAP:
+    case WP_QUICKTIME:
     default:
       MWAW_DEBUG_MSG(("Pict1:OpCode: readPoint is called with %d\n", type));
       return false;
@@ -1397,6 +1480,31 @@ protected:
       valType = WP_POINT;
       boxType = WP_RECT;
       break;
+    case WP_NONE:
+    case WP_BYTE:
+    case WP_UBYTE:
+    case WP_INT:
+    case WP_UINT:
+    case WP_UFIXED:
+    case WP_COLOR:
+    case WP_PATTERN:
+    case WP_POINT:
+    case WP_POINTBYTE:
+    case WP_POINTUBYTE:
+    case WP_RECT:
+    case WP_REGION:
+    case WP_TEXT:
+    case WP_LTEXT:
+    case WP_BITMAP:
+    case WP_RBITMAP:
+    case WP_PBITMAP:
+    case WP_RPBITMAP:
+    case WP_UNKNOWN:
+    case WP_CCOLOR:
+    case WP_CPATTERN:
+    case WP_CBITMAP:
+    case WP_CRBITMAP:
+    case WP_QUICKTIME:
     default:
       MWAW_DEBUG_MSG(("Pict1:OpCode: readPoly is called with %d\n", type));
       return false;
@@ -1419,12 +1527,12 @@ protected:
       return false;
     }
     numPt /= 2;
-    res.resize(numPt);
+    res.resize(size_t(numPt));
 
     Vec2i pt;
     for (int p = 0; p < numPt; p++) {
       if (!readPoint(input, valType, pt)) return false;
-      res[p] = pt;
+      res[size_t(p)] = pt;
     }
     return true;
   }
@@ -1440,6 +1548,30 @@ protected:
     case WP_LTEXT:
       if (!readInt(input, WP_INT, sz) || sz < 0) return false;
       break;
+    case WP_NONE:
+    case WP_BYTE:
+    case WP_UBYTE:
+    case WP_INT:
+    case WP_UINT:
+    case WP_UFIXED:
+    case WP_COLOR:
+    case WP_PATTERN:
+    case WP_POINT:
+    case WP_POINTBYTE:
+    case WP_POINTUBYTE:
+    case WP_POLY:
+    case WP_RECT:
+    case WP_REGION:
+    case WP_BITMAP:
+    case WP_RBITMAP:
+    case WP_PBITMAP:
+    case WP_RPBITMAP:
+    case WP_UNKNOWN:
+    case WP_CCOLOR:
+    case WP_CPATTERN:
+    case WP_CBITMAP:
+    case WP_CRBITMAP:
+    case WP_QUICKTIME:
     default:
       MWAW_DEBUG_MSG(("Pict1:OpCode: readText is called with %d\n", type));
       return false;
@@ -1448,7 +1580,7 @@ protected:
     long actualPos = input.tell();
     res = "";
     for (int i = 0; i < sz; i++) {
-      unsigned char c = input.readULong(1);
+      char c = (char) input.readULong(1);
       res += c;
     }
     if (actualPos+sz != input.tell()) {
@@ -1567,7 +1699,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
   bool ok = true;
 
   input->seek(0, WPX_SEEK_SET);
-  int sz = input->readULong(2);
+  int sz = (int) input->readULong(2);
   s.str("");
   s << "PictSize=" << sz;
   dFile.addPos(0);
@@ -1586,7 +1718,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
 
   while (ok && !input->atEOS()) {
     actPos = input->tell();
-    int code = input->readULong(1);
+    int code = (int) input->readULong(1);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
     if (it == m_mapIdOp.end() || it->second == 0L) {
       MWAW_DEBUG_MSG(("Pict1:OpCode:parsePict can not find opCode 0x%x\n", code));
@@ -1605,7 +1737,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     }
     s.str("");
     s << opCode.m_name << ":";
-    for (int i = 0; i < int(readData.size()); i++) {
+    for (size_t i = 0; i < readData.size(); i++) {
       if (i) s << ", ";
       s << readData[i];
     }
@@ -1628,16 +1760,16 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
   *(resPtr++) = (unsigned char)((val & 0xFF00) >> 8);	\
   *(resPtr++) = (unsigned char) (val & 0xFF); } while(0)
 
-  long pictSize = orig.size();
+  long pictSize = (long) orig.size();
   if (pictSize < 10) return false;
 
-  unsigned char *res = new unsigned char [2*pictSize+50], *resPtr = res;
+  unsigned char *res = new unsigned char [size_t(2*pictSize+50)], *resPtr = res;
   if (!res) return false;
 
   MWAWInputStream input(const_cast<WPXInputStream *>(orig.getDataStream()), false);
 
   input.seek(0, WPX_SEEK_SET);
-  long sz = input.readULong(2);
+  int sz = (int) input.readULong(2);
   if (pictSize != sz && pictSize != sz+1) {
     delete [] res;
     return false;
@@ -1671,7 +1803,7 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
   bool findEnd = false;
   while (!findEnd && !input.atEOS()) {
     long actPos = input.tell();
-    int code = input.readULong(1);
+    int code = (int) input.readULong(1);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
     if (it == m_mapIdOp.end() || it->second == 0L) {
       MWAW_DEBUG_MSG(("Pict1:convertToPict2 can not find opCode 0x%x\n", code));
@@ -1680,7 +1812,7 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
     }
 
     OpCode const &opCode = *(it->second);
-    int sz = 0;
+    sz = 0;
     if (!opCode.computeSize(input, sz)) {
       MWAW_DEBUG_MSG(("Pict1:convertToPict2 can not compute size for opCode 0x%x\n", code));
       delete [] res;
@@ -1694,7 +1826,7 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
       *(resPtr++) = (unsigned char) code;
       input.seek(actPos+1, WPX_SEEK_SET);
       for (int i = 0; i < sz; i++)
-        *(resPtr++) = input.readULong(1);
+        *(resPtr++) = (unsigned char) input.readULong(1);
       if ((sz%2)==1) *(resPtr++) = 0;
     }
     input.seek(actPos+1+sz, WPX_SEEK_SET);
@@ -1718,7 +1850,7 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
   res[0] = (unsigned char)((newSize & 0xFF00) >> 8);
   res[1] = (unsigned char) (newSize & 0xFF);
   result.clear();
-  result.append(res, newSize);
+  result.append(res, (unsigned long)newSize);
   delete [] res;
 
   return true;
@@ -1753,11 +1885,11 @@ struct OpCode : public libmwaw_applepict1::OpCode {
    *
    * If the read is succefull, fills listValue with the read argument */
   bool readData(MWAWInputStream &input, std::vector<Value> &listValue) const {
-    int numTypes = m_types.size();
+    size_t numTypes = m_types.size();
     listValue.resize(numTypes);
     Value newVal;
     long debPos = input.tell();
-    for (int i = 0; i < numTypes; i++) {
+    for (size_t i = 0; i < numTypes; i++) {
       long actualPos = input.tell();
       if (readValue(input, m_types[i], newVal)) {
         listValue[i] = newVal;
@@ -1827,7 +1959,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
   bool ok = true;
 
   input->seek(0, WPX_SEEK_SET);
-  int sz = input->readULong(2);
+  int sz = (int) input->readULong(2);
   s.str("");
   s << "PictSize=" << sz;
   dFile.addPos(0);
@@ -1855,7 +1987,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
   }
 
   // header
-  long headerOp = input->readULong(2);
+  long headerOp = (long)input->readULong(2);
   long version = -input->readLong(2);
   long subVersion = input->readLong(2);
   if (ok && headerOp == 0xC00 && (version == 1 || version == 2)) {
@@ -1866,7 +1998,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
       s << ", dim=(";
       for (int i = 0; i < 4; i++) {
         long dim = input->readLong(2);
-        long dim2 = input->readULong(2);
+        long dim2 = (long)input->readULong(2);
         s << dim;
         if (dim2) s << "." << float(dim2)/65336.;
         s << ",";
@@ -1878,15 +2010,15 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     case 2: {
       s << ", res=(";
       for (int i = 0; i < 2; i++) {
-        long dim = input->readULong(2);
-        long dim2 = input->readULong(2);
+        long dim = (long)input->readULong(2);
+        long dim2 = (long)input->readULong(2);
         s << dim;
         if (dim2) s << "." << float(dim2)/65336.;
         s << ",";
       }
       s << "), dim=(";
       for (int i = 0; i < 4; i++) {
-        long dim = input->readULong(2);
+        long dim = (long)input->readULong(2);
         s << dim << ",";
       }
       s << ")";
@@ -1906,7 +2038,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
   }
   while (ok && !input->atEOS()) {
     actPos = input->tell();
-    int code = input->readULong(2);
+    int code = (int)input->readULong(2);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
     if (it == m_mapIdOp.end() || it->second == 0L) {
       MWAW_DEBUG_MSG(("Pict2:OpCode:parsePict can not find opCode 0x%x\n", code));
@@ -1925,7 +2057,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     }
     s.str("");
     s << opCode.m_name << ":";
-    for (int i = 0; i < int(readData.size()); i++) {
+    for (size_t i = 0; i < readData.size(); i++) {
       if (i) s << ", ";
       s << readData[i];
     }

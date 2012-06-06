@@ -140,6 +140,7 @@ std::ostream &operator<<(std::ostream &o, Token const &tok)
   case TKN_GRAPHIC:
     o << "graphic,";
     break;
+  case TKN_UNKNOWN:
   default:
     o << "##field[unknown]" << ",";
     break;
@@ -210,7 +211,7 @@ struct State {
     int id = m_lookupMap.find(styleId)->second;
     if (id < 0 || int(m_stylesList.size()) <= id)
       return -1;
-    return m_stylesList[id].m_paragraphId;
+    return m_stylesList[(size_t)id].m_paragraphId;
   }
 
   mutable int m_version;
@@ -253,12 +254,12 @@ int CWText::numPages() const
   int numPage = 1;
   long pos = m_input->tell();
   bool lastSoftBreak = false;
-  for (int i = 0; i < int(iter->second->m_zones.size()); i++) {
+  for (size_t i = 0; i < iter->second->m_zones.size(); i++) {
     MWAWEntry const &entry = iter->second->m_zones[i];
     m_input->seek(entry.begin()+4, WPX_SEEK_SET);
-    int numC = entry.length()-4;
+    int numC = int(entry.length()-4);
     for (int ch = 0; ch < numC; ch++) {
-      char c = m_input->readULong(1);
+      char c = (char) m_input->readULong(1);
       if (c==0xb)
         numPage++;
       else if (c==0x1 && !lastSoftBreak)
@@ -288,11 +289,11 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
   shared_ptr<CWTextInternal::Zone> textZone(new CWTextInternal::Zone(zone));
 
   for (int i = 0; i < 2; i++) // N0 alway 0
-    textZone->m_unknown[i] = m_input->readULong(2);
-  textZone->m_numChar = m_input->readULong(4);
-  textZone->m_numTextZone = m_input->readULong(2);
-  textZone->m_numParagInfo = m_input->readULong(2);
-  textZone->m_numFont = m_input->readULong(2);
+    textZone->m_unknown[i] = (int) m_input->readULong(2);
+  textZone->m_numChar = (int) m_input->readULong(4);
+  textZone->m_numTextZone = (int) m_input->readULong(2);
+  textZone->m_numParagInfo = (int) m_input->readULong(2);
+  textZone->m_numFont = (int) m_input->readULong(2);
   f << "Entries(DSETT):" << *textZone << ",";
 
   if (long(m_input->tell())%2)
@@ -324,7 +325,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
     break;
   }
 
-  int N = zone.m_numData;
+  int N = int(zone.m_numData);
   if (long(m_input->tell())+N*data0Length > entry.end()) {
     MWAW_DEBUG_MSG(("CWText::readDSETZone: file is too short\n"));
     return shared_ptr<CWStruct::DSET>();
@@ -341,11 +342,11 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
       f.str("");
       f << "DSETT-" << i << ":";
       CWStruct::DSET::Child child;
-      child.m_posC = m_input->readULong(4);
+      child.m_posC = (long) m_input->readULong(4);
       child.m_type = CWStruct::DSET::Child::TEXT;
       int dim[2];
       for (int j = 0; j < 2; j++)
-        dim[j] = m_input->readLong(2);
+        dim[j] = (int) m_input->readLong(2);
       child.m_box = Box2i(Vec2i(0,0), Vec2i(dim[0], dim[1]));
       textZone->m_childs.push_back(child);
 
@@ -354,11 +355,11 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
       f << "f0=" << m_input->readLong(2) << ","; // a small number ?
       f << "y[real]=" << m_input->readLong(2) << ",";
       for (int j = 1; j < 4; j++) {
-        val = m_input->readLong(2);
+        val = (int) m_input->readLong(2);
         if (val)
           f << "f" << j << "=" << val << ",";
       }
-      int what = m_input->readLong(2);
+      int what = (int) m_input->readLong(2);
       // 0: main text ?, 1 : header/footnote ?, 2: footer
       if (what)
         f << "what=" << what << ",";
@@ -378,7 +379,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
   // now normally three zones: paragraph, font, ???
   for (int z = 0; z < 4+textZone->m_numTextZone; z++) {
     pos = m_input->tell();
-    long sz = m_input->readULong(4);
+    long sz = (long) m_input->readULong(4);
     if (!sz) {
       f.str("");
       f << "DSETT-Z" << z;
@@ -486,7 +487,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   }
 
   m_input->seek(pos, WPX_SEEK_SET);
-  posC = m_input->readULong(4);
+  posC = int(m_input->readULong(4));
   font=MWAWFont();
   libmwaw::DebugStream f;
   if (id >= 0)
@@ -495,8 +496,9 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
     f << "Font:";
 
   f << "pos=" << posC << ",";
-  font.setId(m_input->readULong(2));
-  int flag =m_input->readULong(2), flags=0;
+  font.setId((int) m_input->readULong(2));
+  int flag =(int) m_input->readULong(2);
+  uint32_t flags=0;
   if (flag&0x1) flags |= MWAW_BOLD_BIT;
   if (flag&0x2) flags |= MWAW_ITALICS_BIT;
   if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
@@ -505,9 +507,9 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   /* flags & 0x20: condensed, flags & 0x40: extended */
   if (flag&0x100) flags |= MWAW_SUPERSCRIPT_BIT;
   if (flag&0x200) flags |= MWAW_SUBSCRIPT_BIT;
-  font.setSize(m_input->readLong(1));
+  font.setSize((int) m_input->readLong(1));
 
-  int colId = m_input->readULong(1);
+  int colId = (int) m_input->readULong(1);
   Vec3uc color;
   if (colId!=1) {
     Vec3uc col;
@@ -524,7 +526,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   if (fontSize >= 12)
     f << "lookupId=" << m_input->readLong(2) << ",";
   if (fontSize >= 14) {
-    flag = m_input->readULong(2);
+    flag = (int) m_input->readULong(2);
     if (flag & 0x2)
       flags |= MWAW_DOUBLE_UNDERLINE_BIT;
     if (flag & 0x20)
@@ -556,11 +558,11 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   else
     f << "CHAR-" << id << ":";
 
-  int val = m_input->readLong(2);
+  int val = (int) m_input->readLong(2);
   if (val != -1) f << "f0=" << val << ",";
   f << "flags=[";
   for (int i = 0; i < 6; i++) {
-    val  = m_input->readLong(2);
+    val  = (int) m_input->readLong(2);
     if (val) {
       if (i == 3)
         f << "f" << i << "=" << std::hex << val << std::dec << ",";
@@ -568,8 +570,9 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
         f << "f" << i << "=" << val << ",";
     }
   }
-  font.setId(m_input->readULong(2));
-  int flag =m_input->readULong(2), flags=0;
+  font.setId((int) m_input->readULong(2));
+  int flag =(int) m_input->readULong(2);
+  uint32_t flags=0;
   if (flag&0x1) flags |= MWAW_BOLD_BIT;
   if (flag&0x2) flags |= MWAW_ITALICS_BIT;
   if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
@@ -578,16 +581,16 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   /* flags & 0x20: condensed, flags & 0x40: extended */
   if (flag&0x100) flags |= MWAW_SUPERSCRIPT_BIT;
   if (flag&0x200) flags |= MWAW_SUBSCRIPT_BIT;
-  font.setSize(m_input->readLong(1));
+  font.setSize((int) m_input->readLong(1));
 
-  int colId = m_input->readULong(1);
+  int colId = (int) m_input->readULong(1);
   Vec3uc color;
   if (colId!=1) {
     f << "#col=" << std::hex << colId << std::dec << ",";
   }
   font.setColor(color);
   if (fontSize >= 12 && version()==6) {
-    flag = m_input->readULong(2);
+    flag = (int) m_input->readULong(2);
     if (flag & 0x2)
       flags |= MWAW_DOUBLE_UNDERLINE_BIT;
     if (flag & 0x20)
@@ -641,14 +644,14 @@ bool CWText::readFonts(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   if ((entry.length()%fontSize) != 4)
     return false;
 
-  int numElt = (entry.length()-4)/fontSize;
-  int actC = -1;
+  int numElt = int((entry.length()-4)/fontSize);
+  long actC = -1;
 
   m_input->seek(pos+4, WPX_SEEK_SET); // skip header
   // first check char pos is ok
   for (int i = 0; i < numElt; i++) {
     pos = m_input->tell();
-    long newC = m_input->readULong(4);
+    long newC = (long) m_input->readULong(4);
     if (newC < actC) return false;
     actC = newC;
     bool ok = m_input->readULong(1)==0;
@@ -698,14 +701,14 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   if ((entry.length()%styleSize) != 4)
     return false;
 
-  int numElt = (entry.length()-4)/styleSize;
-  int actC = -1;
+  int numElt = int((entry.length()-4)/styleSize);
+  long actC = -1;
 
   m_input->seek(pos+4, WPX_SEEK_SET); // skip header
   // first check char pos is ok
   for (int i = 0; i < numElt; i++) {
     pos = m_input->tell();
-    long newC = m_input->readULong(4);
+    long newC = (long) m_input->readULong(4);
     if (newC < actC) return false;
     actC = newC;
     m_input->seek(pos+styleSize, WPX_SEEK_SET);
@@ -716,27 +719,27 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   ascii().addNote("Entries(Paragraph)");
 
   libmwaw::DebugStream f;
-  int numParagraphs = m_state->m_paragraphsList.size();
+  int numParagraphs = int(m_state->m_paragraphsList.size());
   m_input->seek(pos+4, WPX_SEEK_SET); // skip header
   for (int i = 0; i < numElt; i++) {
     pos = m_input->tell();
     CWTextInternal::ParagraphInfo info;
 
-    int posC = m_input->readULong(4);
+    long posC = (long) m_input->readULong(4);
     f.str("");
     f << "Paragraph-" << i << ": pos=" << posC << ",";
-    info.m_styleId = m_input->readLong(2);
+    info.m_styleId = (int) m_input->readLong(2);
     if (styleSize >= 8)
-      info.m_unknown = m_input->readLong(2);
+      info.m_unknown = (int) m_input->readLong(2);
     f << info;
     int rulerId = m_state->getParagraphId(info.m_styleId);
     if (rulerId >= 0 && rulerId < numParagraphs)
-      f << "ruler"<< rulerId << "[" << m_state->m_paragraphsList[rulerId] << "]";
+      f << "ruler"<< rulerId << "[" << m_state->m_paragraphsList[(size_t) rulerId] << "]";
     if (long(m_input->tell()) != pos+styleSize)
       ascii().addDelimiter(m_input->tell(), '|');
 
     if (zone.m_styleMap.find(posC) != zone.m_styleMap.end()) {
-      MWAW_DEBUG_MSG(("CWText::readParagraphs: entry %d already exists\n", posC));
+      MWAW_DEBUG_MSG(("CWText::readParagraphs: entry %ld already exists\n", posC));
     }
     zone.m_styleMap[posC] = info;
     m_input->seek(pos+styleSize, WPX_SEEK_SET);
@@ -779,17 +782,17 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     return true;
   }
 
-  int numElt = (entry.length()-4)/dataSize;
+  int numElt = int((entry.length()-4)/dataSize);
   m_input->seek(pos+4, WPX_SEEK_SET); // skip header
 
   libmwaw::DebugStream f;
   for (int i = 0; i < numElt; i++) {
     pos = m_input->tell();
 
-    int posC = m_input->readULong(4);
+    int posC = (int) m_input->readULong(4);
     CWTextInternal::Token token;
 
-    int type = m_input->readLong(2);
+    int type = (int) m_input->readLong(2);
     f.str("");
     switch(type) {
     case 0:
@@ -807,13 +810,13 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
       break;
     }
 
-    token.m_unknown[0] =  m_input->readLong(2);
-    token.m_zoneId = m_input->readLong(2);
-    token.m_unknown[1] =  m_input->readLong(1);
-    token.m_page = m_input->readLong(1);
-    token.m_unknown[2] =  m_input->readLong(2);
+    token.m_unknown[0] =  (int) m_input->readLong(2);
+    token.m_zoneId = (int) m_input->readLong(2);
+    token.m_unknown[1] =  (int) m_input->readLong(1);
+    token.m_page = (int) m_input->readLong(1);
+    token.m_unknown[2] =  (int) m_input->readLong(2);
     for (int j = 0; j < 2; j++)
-      token.m_size[j] =  m_input->readLong(2);
+      token.m_size[j] =  (int) m_input->readLong(2);
 
     token.m_error = f.str();
     f.str("");
@@ -848,7 +851,7 @@ bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone
   ascii().addPos(pos);
   ascii().addNote("Entries(TextZoneSz)");
 
-  int numElt = (entry.length()-4)/dataSize;
+  int numElt = int((entry.length()-4)/dataSize);
 
   m_input->seek(pos+4, WPX_SEEK_SET); // skip header
 
@@ -859,8 +862,8 @@ bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone
     f.str("");
     f << "TextZoneSz-" << i << ":";
     CWTextInternal::TextZoneInfo info;
-    info.m_pos = m_input->readULong(4);
-    info.m_N =  m_input->readULong(2);
+    info.m_pos = (long) m_input->readULong(4);
+    info.m_N =  (int) m_input->readULong(2);
     f << info;
     zone.m_textZoneList.push_back(info);
     if (long(m_input->tell()) != pos+dataSize)
@@ -877,25 +880,26 @@ bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone
 bool CWText::sendText(CWTextInternal::Zone const &zone)
 {
   long actC = 0;
-  int numParagraphs = m_state->m_paragraphsList.size();
+  int numParagraphs = int(m_state->m_paragraphsList.size());
   MWAWFont actFont;
-  int actPage = 1, numZones = zone.m_zones.size();
+  int actPage = 1;
+  size_t numZones = zone.m_zones.size();
   if (zone.m_id == 1 && m_listener)
     m_mainParser->newPage(actPage);
   bool lastSoftBreak = false;
-  for (int z = 0; z < numZones; z++) {
+  for (size_t z = 0; z < numZones; z++) {
     MWAWEntry const &entry  =  zone.m_zones[z];
     long pos = entry.begin();
     libmwaw::DebugStream f;
     f << "Entries(TextContent):";
 
-    int numC = (entry.length()-4);
+    int numC = int(entry.length()-4);
 
     m_input->seek(pos+4, WPX_SEEK_SET); // skip header
 
     std::string text("");
     for (int i = 0; i < numC; i++) {
-      char c = m_input->readULong(1);
+      char c = (char) m_input->readULong(1);
       if (c == '\0') {
         if (i == numC-1) break;
         return false;
@@ -913,7 +917,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
           zone.m_styleMap.find(actC)->second;
         int rulerId = m_state->getParagraphId(parag.m_styleId);
         if (rulerId >= 0 && rulerId < numParagraphs)
-          setProperty(m_state->m_paragraphsList[rulerId]);
+          setProperty(m_state->m_paragraphsList[(size_t) rulerId]);
       }
       if (zone.m_tokenMap.find(actC) != zone.m_tokenMap.end()) {
         CWTextInternal::Token const &token =
@@ -926,7 +930,9 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
         case CWTextInternal::TKN_PAGENUMBER:
           m_listener->insertField(MWAWContentListener::PageNumber);
           break;
-        default: // fixme
+        case CWTextInternal::TKN_GRAPHIC: // FIXME
+        case CWTextInternal::TKN_UNKNOWN:
+        default:
           break;
         }
         if (c < 30) {
@@ -969,15 +975,15 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
         break;
 
       default: {
-        int unicode = m_convertissor->unicode (actFont.id(),c);
+        int unicode = m_convertissor->unicode (actFont.id(), (unsigned char) c);
         if (unicode == -1) {
           if (c < 30) {
             MWAW_DEBUG_MSG(("CWText::sendText: Find odd char %x\n", int(c)));
             text+="#";
           } else
-            m_listener->insertCharacter(c);
+            m_listener->insertCharacter((uint8_t) c);
         } else
-          m_listener->insertUnicode(unicode);
+          m_listener->insertUnicode((uint32_t) unicode);
       }
       }
       lastSoftBreak = (c == 0xb);
@@ -1002,7 +1008,7 @@ bool CWText::readSTYL_LKUP(int N, int fSz)
     f.str("");
     if (i == 0) f << "Entries(LKUP_STYL): LKUP_STYL-0:";
     else f << "LKUP_STYL-" << i << ":";
-    int val = m_input->readLong(2);
+    int val = (int) m_input->readLong(2);
     m_state->m_lookupMap[i] = val;
     f << "styleId=" << val;
     if (fSz != 2) {
@@ -1022,12 +1028,12 @@ bool CWText::readSTYL_CHAR(int N, int fSz)
   if (m_state->m_fontsList.size()) {
     MWAW_DEBUG_MSG(("CWText::readSTYL_CHAR: font list already exists!!!\n"));
   }
-  m_state->m_fontsList.resize(N);
+  m_state->m_fontsList.resize((size_t)N);
   for (int i = 0; i < N; i++) {
     long pos = m_input->tell();
     MWAWFont font;
     if (readChar(i, fSz, font))
-      m_state->m_fontsList[i] = font;
+      m_state->m_fontsList[(size_t) i] = font;
     else {
       f.str("");
       if (!i)
@@ -1076,7 +1082,7 @@ bool CWText::readSTYL_NAME(int N, int fSz)
     else f << "NAME_STYL-" << i << ":";
     f << "id=" << m_input->readLong(2) << ",";
     if (fSz > 4) {
-      int nChar = m_input->readULong(1);
+      int nChar = (int) m_input->readULong(1);
       if (3+nChar > fSz) {
         static bool first = true;
         if (first) {
@@ -1116,7 +1122,7 @@ bool CWText::readSTYL_FNTM(int N, int fSz)
     f << "unkn=" << m_input->readLong(2) << ",";
     f << "type?=" << m_input->readLong(2) << ",";
 
-    int nChar = m_input->readULong(1);
+    int nChar = (int) m_input->readULong(1);
     if (5+nChar > fSz) {
       static bool first = true;
       if (first) {
@@ -1128,7 +1134,7 @@ bool CWText::readSTYL_FNTM(int N, int fSz)
       std::string name("");
       bool ok = true;
       for (int c = 0; c < nChar; c++) {
-        char ch = m_input->readULong(1);
+        char ch = (char) m_input->readULong(1);
         if (ch == '\0') {
           MWAW_DEBUG_MSG(("CWText::readSTYL_FNTM: pb with name field %d\n", i));
           ok = false;
@@ -1176,34 +1182,32 @@ bool CWText::readSTYL_STYL(int N, int fSz)
       f << "Entries(Style)-0:";
     else
       f << "Style-" << i << ":";
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val != -1) f << "f0=" << val << ",";
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val) f << "f1=" << val << ",";
     f << "used?=" << m_input->readLong(2) << ",";
-    int styleId = m_input->readLong(2);
+    int styleId = (int) m_input->readLong(2);
     if (i != styleId && styleId != -1) f << "#";
     f << "styleId=" << styleId << ",";
-    int lookupId = m_input->readLong(2);
+    int lookupId = (int) m_input->readLong(2);
     f << "lookupId=" << lookupId << ",";
-    for (int i = 0; i < 2; i++) {
+    for (int j = 0; j < 2; j++) {
       // unknown : hash, dataId ?
-      f << "g" << i << "=" << m_input->readLong(1) << ",";
+      f << "g" << j << "=" << m_input->readLong(1) << ",";
     }
-    for (int i = 2; i < 4; i++) {
-      // unknown : hash, dataId ?
-      f << "g" << i << "=" << m_input->readLong(2) << ",";
-    }
-    int lookupId2 = m_input->readLong(2);
+    for (int j = 2; j < 4; j++)
+      f << "g" << j << "=" << m_input->readLong(2) << ",";
+    int lookupId2 = (int) m_input->readLong(2);
     f << "lookupId2=" << lookupId2 << ",";
     f << "char=[";
-    style.m_fontId = m_input->readLong(2);
+    style.m_fontId = (int) m_input->readLong(2);
     f << "id=" << style.m_fontId << ",";
     f << "hash=" << m_input->readLong(2) << ",";
     f << "],";
     f << "graphId?=" << m_input->readLong(2);
     f << "ruler=[";
-    style.m_paragraphId = m_input->readLong(2);
+    style.m_paragraphId = (int) m_input->readLong(2);
     f << "id=" << style.m_paragraphId << ",";
     f << "hash=" << m_input->readLong(2) << ",";
     if (fSz >= 30)
@@ -1222,7 +1226,7 @@ bool CWText::readSTYL_STYL(int N, int fSz)
 bool CWText::readSTYL(int id)
 {
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   long endPos = pos+4+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
@@ -1241,15 +1245,15 @@ bool CWText::readSTYL(int id)
   }
 
   std::string name("");
-  int N = m_input->readLong(2);
-  int type = m_input->readLong(2);
-  int val =  m_input->readLong(2);
-  int fSz =  m_input->readLong(2);
+  int N = (int) m_input->readLong(2);
+  int type = (int) m_input->readLong(2);
+  int val =  (int) m_input->readLong(2);
+  int fSz =  (int) m_input->readLong(2);
   f << "N=" << N << ", type?=" << type <<", fSz=" << fSz << ",";
   if (val) f << "unkn=" << val << ",";
 
   for (int i = 0; i < 2; i++) {
-    int val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val)  f << "f" << i << "=" << val << ",";
   }
   for (int i = 0; i < 4; i++)
@@ -1304,7 +1308,7 @@ bool CWText::readSTYLs(MWAWEntry const &entry)
     return false;
   long pos = entry.begin();
   m_input->seek(pos+4, WPX_SEEK_SET); // skip header
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   if (sz > entry.length()) {
     MWAW_DEBUG_MSG(("CWText::readSTYLs: pb with entry length"));
     m_input->seek(pos, WPX_SEEK_SET);
@@ -1349,7 +1353,7 @@ bool CWText::readSTYLs(MWAWEntry const &entry)
 bool CWText::readParagraphs()
 {
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   long endPos = pos+4+sz;
 
   m_input->seek(endPos, WPX_SEEK_SET);
@@ -1359,10 +1363,10 @@ bool CWText::readParagraphs()
   }
   m_input->seek(pos+4, WPX_SEEK_SET);
 
-  int N = m_input->readULong(2);
-  int type = m_input->readLong(2);
-  int val =  m_input->readLong(2);
-  int fSz =  m_input->readLong(2);
+  int N = (int) m_input->readULong(2);
+  int type = (int) m_input->readLong(2);
+  int val =  (int) m_input->readLong(2);
+  int fSz =  (int) m_input->readLong(2);
 
   if (sz != 12+fSz*N) {
     m_input->seek(pos, WPX_SEEK_SET);
@@ -1376,7 +1380,7 @@ bool CWText::readParagraphs()
   if (val) f << "unkn=" << val << ",";
 
   for (int i = 0; i < 2; i++) {
-    int val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val)  f << "f" << i << "=" << val << ",";
   }
 
@@ -1425,21 +1429,21 @@ bool CWText::readParagraph(int id)
 
   int val;
   if (version() >= 4 && id >= 0) {
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val != -1) f << "f0=" << val << ",";
-    val = m_input->readLong(4);
+    val = (int) m_input->readLong(4);
     f << "f1=" << val << ",";
     int dim[2];
     for (int i = 0; i < 2; i++)
-      dim[i] = m_input->readLong(2);
+      dim[i] = (int) m_input->readLong(2);
     f << "dim?=" << dim[0] << "x" << dim[1] << ",";
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val) f << "unkn=" << val << ",";
   }
 
-  val = m_input->readLong(2);
+  val = (int) m_input->readLong(2);
   f << "num[used]=" << val << ",";
-  val = m_input->readULong(2);
+  val = (int) m_input->readULong(2);
   int align = 0;
   switch(version()) {
   case 1:
@@ -1530,18 +1534,18 @@ bool CWText::readParagraph(int id)
   }
   if (val) f << "#flags=" << std::hex << val << std::dec << ",";
   for (int i = 0; i < 3; i++)
-    ruler.m_margins[i] = m_input->readLong(2)/72.;
+    ruler.m_margins[i] = float(m_input->readLong(2))/72.f;
   ruler.m_margins[2] -= 28./72.;
   if (ruler.m_margins[2] < 0.0) ruler.m_margins[2] = 0.0;
   if (version() >= 2) {
     for(int i = 0; i < 2; i++) {
-      ruler.m_spacings[i+1] = m_input->readULong(1)/72.;
+      ruler.m_spacings[i+1] = float(m_input->readULong(1))/72.f;
       m_input->seek(1, WPX_SEEK_CUR); // flags to define the printing unit
     }
   }
-  val = m_input->readLong(1);
+  val = (int) m_input->readLong(1);
   if (val) f << "unkn1=" << val << ",";
-  int numTabs = m_input->readULong(1);
+  int numTabs = (int) m_input->readULong(1);
   if (long(m_input->tell())+numTabs*4 > endPos) {
     if (numTabs != 255) { // 0xFF seems to be used in v1, v2
       MWAW_DEBUG_MSG(("CWText::readParagraph: numTabs is too big\n"));
@@ -1551,8 +1555,8 @@ bool CWText::readParagraph(int id)
   }
   for (int i = 0; i < numTabs; i++) {
     MWAWTabStop tab;
-    tab.m_position = m_input->readLong(2)/72.;
-    val = m_input->readULong(1);
+    tab.m_position = float(m_input->readLong(2))/72.f;
+    val = (int) m_input->readULong(1);
     int leaderType = 0;
     switch(version()) {
     case 1:
@@ -1569,6 +1573,8 @@ bool CWText::readParagraph(int id)
       align = (val >> 5);
       leaderType = (val & 3);
       val &= 0x9C;
+      break;
+    default:
       break;
     }
     switch(align&3) {
@@ -1599,7 +1605,7 @@ bool CWText::readParagraph(int id)
     default:
       break;
     }
-    char decimalChar = m_input->readULong(1);
+    char decimalChar = (char) m_input->readULong(1);
     if (decimalChar != ',' && decimalChar != '.')
       f << "decimalChar=" << decimalChar << ",";
     ruler.m_tabs.push_back(tab);
@@ -1610,8 +1616,8 @@ bool CWText::readParagraph(int id)
   // save the style
   if (id >= 0) {
     if (int(m_state->m_paragraphsList.size()) <= id)
-      m_state->m_paragraphsList.resize(id+1);
-    m_state->m_paragraphsList[id]=ruler;
+      m_state->m_paragraphsList.resize((size_t)id+1);
+    m_state->m_paragraphsList[(size_t)id]=ruler;
   }
   f.str("");
   if (id == 0)

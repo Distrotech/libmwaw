@@ -96,6 +96,7 @@ struct Field {
     case F_Multimedia :
       o << "multimedia,";
       break;
+    case F_Unknown :
     default:
       o << "type=#unknown,";
       break;
@@ -155,6 +156,7 @@ struct Field {
     case F_RadioButton :
     case F_ValueList :
       return 2;
+    case F_Unknown :
     default:
       break;
     }
@@ -244,8 +246,8 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
   ascii().addNote(f.str().c_str());
 
   // read the last part
-  int data0Length = zone.m_dataSz;
-  int N = zone.m_numData;
+  long data0Length = zone.m_dataSz;
+  long N = zone.m_numData;
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       MWAW_DEBUG_MSG(("CWDatabase::readDatabaseZone: can not find definition size\n"));
@@ -265,6 +267,9 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
     break;
   case 6:
     numLast = 8;
+    break;
+  default:
+    MWAW_DEBUG_MSG(("CWDatabase::readDatabaseZone: unexpected version\n"));
     break;
   }
   if (numLast >= 0 && long(m_input->tell()) + data0Length + numLast <= dataEnd) {
@@ -331,7 +336,7 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
 bool CWDatabase::readDatabaseFields(CWDatabaseInternal::Database &dBase)
 {
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   long endPos = pos+4+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
@@ -343,28 +348,28 @@ bool CWDatabase::readDatabaseFields(CWDatabaseInternal::Database &dBase)
   m_input->seek(pos+4, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(DatabaseField):";
-  int N = m_input->readULong(2);
+  int N = (int) m_input->readULong(2);
   f << "N=" << N << ",";
-  int val = m_input->readLong(2);
+  int val = (int) m_input->readLong(2);
   if (val != -1) f << "f0=" << val << ",";
-  val = m_input->readLong(2);
+  val = (int) m_input->readLong(2);
   if (val) f << "f1=" << val << ",";
-  int fSz = m_input->readLong(2);
+  int fSz = (int) m_input->readLong(2);
   if (sz != 12+fSz*N || fSz < 18) {
     m_input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWDatabase::readDatabaseFields: find odd data size\n"));
     return false;
   }
   for (int i = 2; i < 4; i++) {
-    val = m_input->readLong(2);
+    val = (int) m_input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
 
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  dBase.m_fields.resize(N);
-  for (int i = 0; i < N; i++) {
+  dBase.m_fields.resize(size_t(N));
+  for (size_t i = 0; i < size_t(N); i++) {
     pos = m_input->tell();
     f.str("");
     f << "DatabaseField-" << i << ":";
@@ -372,7 +377,7 @@ bool CWDatabase::readDatabaseFields(CWDatabaseInternal::Database &dBase)
 
     int fNameMaxSz = 64;
     std::string name("");
-    sz = m_input->readULong(1);
+    sz = (long) m_input->readULong(1);
     if ((fNameMaxSz && sz > fNameMaxSz-1) || sz > fSz-1) {
       m_input->seek(pos, WPX_SEEK_SET);
       MWAW_DEBUG_MSG(("CWDatabase::readDatabaseFields: find odd field name\n"));
@@ -383,7 +388,7 @@ bool CWDatabase::readDatabaseFields(CWDatabaseInternal::Database &dBase)
     field.m_name = name;
 
     m_input->seek(pos+fNameMaxSz, WPX_SEEK_SET);
-    int type = m_input->readULong(1);
+    int type = (int) m_input->readULong(1);
     bool ok = true;
     switch(type) {
       // or name
@@ -438,18 +443,18 @@ bool CWDatabase::readDatabaseFields(CWDatabaseInternal::Database &dBase)
     }
     if (!ok)
       f << "#type=" << type << ",";
-    val = m_input->readULong(1);
+    val = (int) m_input->readULong(1);
     if (val)
       f << "#unkn=" << val << ",";
-    val = m_input->readULong(4);
-    if (val) // set for formula
-      f << "ptr=" << std::hex << val << std::dec << ",";
+    unsigned long ptr = m_input->readULong(4);
+    if (ptr) // set for formula
+      f << "ptr=" << std::hex << ptr << std::dec << ",";
     f << "fl?=[" << std::hex;
     f << m_input->readULong(2) << ",";
     f << m_input->readULong(1) << ",";
     for (int j = 0; j < 6; j++) {
       // some int which seems constant on the database...
-      val = m_input->readULong(2);
+      val = (int) m_input->readULong(2);
       f <<  val << ",";
     }
     f << std::dec << "],";
@@ -460,10 +465,10 @@ bool CWDatabase::readDatabaseFields(CWDatabaseInternal::Database &dBase)
             f16 = 0[checkbox, ... ], 2[number or text],3 [name field], 82[value list],
             f16 & 8: can not be empty
         */
-        val = m_input->readLong(2);
+        val = (int) m_input->readLong(2);
         if (val) f << "f" << j << "=" << std::hex << val << std::dec << ",";
       }
-      int subType = m_input->readULong(2);
+      int subType = (int) m_input->readULong(2);
       if (version() == 2) {
         if (subType) f << "f17=" << std::hex << subType << std::dec << ",";
       } else {
@@ -493,9 +498,9 @@ bool CWDatabase::readDatabaseFields(CWDatabaseInternal::Database &dBase)
         }
         if (!ok) f << "#unkSubType=" << std::hex << subType << std::dec << ",";
       }
-      val = m_input->readLong(2);
+      val = (int) m_input->readLong(2);
       if (val) f << "#unk1=" << std::hex << val << std::dec << ",";
-      field.m_defType = m_input->readULong(1);
+      field.m_defType = (int) m_input->readULong(1);
       // default, followed by a number/ptr/... : 7fff ( mean none)
     }
     f << field << ",";
@@ -513,11 +518,11 @@ bool CWDatabase::readDatabaseFields(CWDatabaseInternal::Database &dBase)
 
 bool CWDatabase::readDatabaseDefaults(CWDatabaseInternal::Database &dBase)
 {
-  int numFields = dBase.m_fields.size();
+  size_t numFields = dBase.m_fields.size();
   int vers = version();
   libmwaw::DebugStream f;
 
-  for (int v = 0; v < numFields; v++) {
+  for (size_t v = 0; v < numFields; v++) {
     CWDatabaseInternal::Field const &field = dBase.m_fields[v];
     int numExpected = field.getNumDefault(vers);
 
@@ -526,7 +531,7 @@ bool CWDatabase::readDatabaseDefaults(CWDatabaseInternal::Database &dBase)
     for (int fi = 0; fi < numExpected; fi++) {
       // actually we guess which one are ok
       long pos = m_input->tell();
-      long sz = m_input->readULong(4);
+      long sz = (long) m_input->readULong(4);
 
       long endPos = pos+4+sz;
       m_input->seek(endPos, WPX_SEEK_SET);
@@ -536,12 +541,12 @@ bool CWDatabase::readDatabaseDefaults(CWDatabaseInternal::Database &dBase)
         return false;
       }
       m_input->seek(pos+4, WPX_SEEK_SET);
-      int length = (vers <= 2 && field.isText()) ? sz : m_input->readULong(1);
+      long length = (vers <= 2 && field.isText()) ? sz : (int) m_input->readULong(1);
       f.str("");
       f << "Entries(DatabaseDft)[" << v << "]:";
       if (formField) {
         if (length != sz-1) {
-          MWAW_DEBUG_MSG(("CWDatabase::readDatabaseDefaults: can not find formula for field: %d\n", v));
+          MWAW_DEBUG_MSG(("CWDatabase::readDatabaseDefaults: can not find formula for field: %ld\n", v));
           m_input->seek(pos, WPX_SEEK_SET);
           return false;
         }
@@ -553,14 +558,14 @@ bool CWDatabase::readDatabaseDefaults(CWDatabaseInternal::Database &dBase)
         else
           f << "string,";
         if (vers > 2 && !listField && length != sz-1) {
-          MWAW_DEBUG_MSG(("CWDatabase::readDatabaseDefaults: can not find strings for field: %d\n", v));
+          MWAW_DEBUG_MSG(("CWDatabase::readDatabaseDefaults: can not find strings for field: %ld\n", v));
           m_input->seek(pos, WPX_SEEK_SET);
           return false;
         }
         while (1) {
           long actPos = m_input->tell();
           if (actPos+length > endPos) {
-            MWAW_DEBUG_MSG(("CWDatabase::readDatabaseDefaults: can not find strings for field: %d\n", v));
+            MWAW_DEBUG_MSG(("CWDatabase::readDatabaseDefaults: can not find strings for field: %ld\n", v));
 
             m_input->seek(pos, WPX_SEEK_SET);
             return true;
@@ -571,7 +576,7 @@ bool CWDatabase::readDatabaseDefaults(CWDatabaseInternal::Database &dBase)
           f << "'" << name << "',";
           if (long(m_input->tell()) == endPos)
             break;
-          length = m_input->readULong(1);
+          length = (long) m_input->readULong(1);
         }
       }
       ascii().addPos(pos);
@@ -585,7 +590,7 @@ bool CWDatabase::readDatabaseDefaults(CWDatabaseInternal::Database &dBase)
 bool CWDatabase::readDatabaseContent(CWDatabaseInternal::Database &/*dBase*/)
 {
   long pos = m_input->tell();
-  long sz = m_input->readULong(4);
+  long sz = (long) m_input->readULong(4);
   /** ARGHH: this zone is almost the only zone which count the header in sz ... */
   long endPos = pos+sz;
   m_input->seek(endPos, WPX_SEEK_SET);
@@ -598,7 +603,7 @@ bool CWDatabase::readDatabaseContent(CWDatabaseInternal::Database &/*dBase*/)
   m_input->seek(pos+4, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(DatabaseContent):";
-  int N = m_input->readULong(2);
+  int N = (int) m_input->readULong(2);
   f << "N=" << N << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -606,7 +611,7 @@ bool CWDatabase::readDatabaseContent(CWDatabaseInternal::Database &/*dBase*/)
   while (long(m_input->tell()) < endPos) {
     // Normally a list of name field : CTAB (COLM CHNK+)*
     pos = m_input->tell();
-    sz = m_input->readULong(4);
+    sz = (long) m_input->readULong(4);
     if (pos+4+sz > endPos || (sz && sz < 12)) {
       m_input->seek(pos, WPX_SEEK_SET);
       MWAW_DEBUG_MSG(("CWDatabase::readDatabaseContent: find a odd content field\n"));

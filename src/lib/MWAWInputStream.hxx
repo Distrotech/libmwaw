@@ -56,8 +56,8 @@ public:
    * \param inverted must be set to true for pc doc and ole part
    * \param inverted must be set to false for mac doc
    */
-  MWAWInputStream(WPXInputStream *input, bool inverted)
-    : m_stream(input), m_resp(false), m_inverseRead(inverted), m_readLimit(-1),
+  MWAWInputStream(WPXInputStream *inp, bool inverted)
+    : m_stream(inp), m_resp(false), m_inverseRead(inverted), m_readLimit(-1),
       m_prevLimits(), m_storageOLE(0) {}
 
   //! destructor

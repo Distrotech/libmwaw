@@ -184,12 +184,12 @@ int WNParser::version() const
 ////////////////////////////////////////////////////////////
 float WNParser::pageHeight() const
 {
-  return m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
+  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float WNParser::pageWidth() const
 {
-  return m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight();
+  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
 }
 
 void WNParser::getColumnInfo(int &numColumns, int &width) const
@@ -217,7 +217,7 @@ void WNParser::newPage(int number)
 bool WNParser::getColor(int colId, Vec3uc &col) const
 {
   if (colId >= 0 && colId < int(m_state->m_colorMap.size())) {
-    col = m_state->m_colorMap[colId];
+    col = m_state->m_colorMap[(size_t)colId];
     return true;
   }
   return false;
@@ -242,12 +242,12 @@ bool WNParser::sendGraphic(int gId, Box2i const &bdbox)
     MWAW_DEBUG_MSG(("WNParser::sendGraphic: called with bad id=%d\n", gId));
     return false;
   }
-  if (!m_state->m_picturesList[gId-8].isZone()) {
+  if (!m_state->m_picturesList[(size_t)gId-8].isZone()) {
     MWAW_DEBUG_MSG(("WNParser::sendGraphic: called with a no zone id=%d\n", gId));
     return false;
   }
 
-  sendPicture(m_state->m_picturesList[gId-8], bdbox);
+  sendPicture(m_state->m_picturesList[(size_t)gId-8], bdbox);
   return true;
 }
 
@@ -279,7 +279,7 @@ void WNParser::parse(WPXDocumentInterface *docInterface)
       // ok, we can now send what is not send.
       m_textParser->flushExtra();
       Box2i emptyBdBox;
-      for (int i = 0; i < int(m_state->m_picturesList.size()); i++) {
+      for (size_t i = 0; i < m_state->m_picturesList.size(); i++) {
         if (m_state->m_picturesList[i].isParsed() ||
             !m_state->m_picturesList[i].isZone()) continue;
         sendPicture(m_state->m_picturesList[i], emptyBdBox);
@@ -438,7 +438,7 @@ bool WNParser::readDocEntries()
   long expectedVal[] = { 0, 0x80, 0x40000000L};
   long freePos = 0;
   for (int i = 0; i < 7; i++) { // 0, 80, 4000
-    val = input->readULong(4);
+    val = (long) input->readULong(4);
     if (i == 3) {
       freePos = val;
       continue;
@@ -460,12 +460,12 @@ bool WNParser::readDocEntries()
                                 "UnknZone1", "UnknZone2"
                               };
   for (int i = 0; i < 10; i++) {
-    WNEntry entry = readEntry();
-    entry.setType(entryName[i]);
-    if (i < 3) entry.setId(i);
-    if (entry.isZone())
-      m_entryManager->add(entry);
-    f << entry;
+    WNEntry zone = readEntry();
+    zone.setType(entryName[i]);
+    if (i < 3) zone.setId(i);
+    if (zone.isZone())
+      m_entryManager->add(zone);
+    f << zone;
   }
   ascii().addDelimiter(input->tell(), '|');
   ascii().addPos(entry.begin());
@@ -475,11 +475,11 @@ bool WNParser::readDocEntries()
     input->seek(pos, WPX_SEEK_SET);
     f.str("");
     f << "DocTable-II:";
-    m_state->m_numColumns = input->readLong(1);
+    m_state->m_numColumns = (int) input->readLong(1);
     f << "nCol=" << m_state->m_numColumns << ",";
     val = input->readLong(1);
     if (val != 1) f << "unkn=" << val << ",";
-    m_state->m_columnWidth = input->readLong(2);
+    m_state->m_columnWidth = (int) input->readLong(2);
     f << "colWidth=" << m_state->m_columnWidth << ",";
 
     ascii().addPos(pos);
@@ -509,8 +509,8 @@ bool WNParser::readDocEntriesV2()
       MWAW_DEBUG_MSG(("WNParser::readDocEntriesV2: can not find entries header:%d\n",i));
       return false;
     }
-    long dataPos = input->readULong(1);
-    dataPos = (dataPos<<16)+input->readULong(2);
+    long dataPos = (long) input->readULong(1);
+    dataPos = (dataPos<<16)+(long) input->readULong(2);
     if (!checkIfPositionValid(dataPos)) {
       MWAW_DEBUG_MSG(("WNParser::readDocEntriesV2:  find an invalid position for entry:%d\n",i));
       continue;
@@ -528,14 +528,14 @@ bool WNParser::readDocEntriesV2()
       entry.setType("PrintZone");
       break;
     default: { // find 2 time 0006000800000000
-      std::stringstream s;
+      std::stringstream name;
       s << "Unknown" << i;
-      entry.setType(s.str());
+      entry.setType(name.str());
     }
     }
     long actPos = input->tell();
     input->seek(dataPos, WPX_SEEK_SET);
-    entry.setLength(input->readULong(2)+2);
+    entry.setLength((long) input->readULong(2)+2);
     input->seek(actPos, WPX_SEEK_SET);
     m_entryManager->add(entry);
   }
@@ -572,7 +572,7 @@ bool WNParser::parseGraphicZone(WNEntry const &entry)
     val = input->readLong(2);
     if (val)  f << "f" << i << "=" << val << ",";
   }
-  int N = input->readLong(2);
+  int N = (int) input->readLong(2);
   f << "N?=" << N << ",";
   for (int i = 4; i < 6; i++) { // alway 0 ?
     val = input->readLong(2);
@@ -587,32 +587,32 @@ bool WNParser::parseGraphicZone(WNEntry const &entry)
   }
   for (int i = 0; i < N; i++) {
     long pos = input->tell();
-    WNEntry entry = readEntry();
+    WNEntry zone = readEntry();
     f.str("");
     if (i < 8)
       f << "GraphicZoneA-" << i << ":";
     else
       f << "GraphicZone-" << i-8 << ":";
 
-    entry.setId((i < 8) ? i : i-8);
-    if (entry.isZone()) {
+    zone.setId((i < 8) ? i : i-8);
+    if (zone.isZone()) {
       if (i == 0)
-        entry.setType("PrintZone");
+        zone.setType("PrintZone");
       else if (i < 8) {
         std::stringstream s;
         s << "GraphicUnkn" << i;
-        entry.setType(s.str());
+        zone.setType(s.str());
       } else
-        entry.setType("GraphicData");
+        zone.setType("GraphicData");
       if (i < 8)
-        m_entryManager->add(entry);
-    } else if (entry.m_val[2]==-1 && entry.m_val[3]==0x76543210L) {
-      entry.m_val[2]= entry.m_val[3]=0;
+        m_entryManager->add(zone);
+    } else if (zone.m_val[2]==-1 && zone.m_val[3]==0x76543210L) {
+      zone.m_val[2]= zone.m_val[3]=0;
       f << "*";
     }
     if (i >= 8)
-      m_state->m_picturesList.push_back(entry);
-    f << entry;
+      m_state->m_picturesList.push_back(zone);
+    f << zone;
 
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -645,7 +645,7 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
   f << "Entries(GraphicData):";
   f << "ptr?=" << std::hex << input->readULong(4) << std::dec << ",";
   f << "ptr2?=" << std::hex << input->readULong(4) << std::dec << ",";
-  int type = input->readLong(2);
+  int type = (int) input->readLong(2);
   if (type != 14) f << "#type=" << type << ",";
   long val;
   /* fl0 : 0[pict1] or 1[pict2] : graphic type ?, fl1 : always 0
@@ -664,7 +664,7 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
 
-  int sz = entry.length()-24;
+  int sz = (int) entry.length()-24;
   if (sz) {
     long pos = input->tell();
     shared_ptr<MWAWPict> pict
@@ -675,7 +675,7 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
     } else {
       if (m_listener) {
         WPXBinaryData data;
-        std::string type;
+        std::string pictType;
         MWAWPosition pictPos;
         if (bdbox.size().x() > 0 && bdbox.size().y() > 0) {
           pictPos=MWAWPosition(Vec2f(0,0),bdbox.size(), WPX_POINT);
@@ -683,8 +683,8 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
         } else
           pictPos=MWAWPosition(Vec2f(0,0),pict->getBdBox().size(), WPX_POINT);
 
-        if (pict->getBinary(data,type))
-          m_listener->insertPicture(pictPos, data, type);
+        if (pict->getBinary(data,pictType))
+          m_listener->insertPicture(pictPos, data, pictType);
       }
 
 #ifdef DEBUG_WITH_FILES
@@ -694,9 +694,9 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
         input->seek(entry.begin(), WPX_SEEK_SET);
         input->readDataBlock(entry.length(), file);
         static int volatile pictName = 0;
-        libmwaw::DebugStream f;
-        f << "PICT-" << ++pictName << ".pct";
-        libmwaw::Debug::dumpFile(file, f.str().c_str());
+        libmwaw::DebugStream f2;
+        f2 << "PICT-" << ++pictName << ".pct";
+        libmwaw::Debug::dumpFile(file, f2.str().c_str());
       }
 #endif
     }
@@ -738,10 +738,10 @@ bool WNParser::readColorMap(WNEntry const &entry)
     val = input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
-  int N=input->readULong(2);
+  int N=(int) input->readULong(2);
   f << "N=" << N << ",";
   for (int i = 0; i < 2; i++) { // 0
-    val = input->readLong(2);
+    val = (int) input->readLong(2);
     if (val) f << "g" << i << "=" << val << ",";
   }
   if (long(input->tell())+N*8 > entry.end()) {
@@ -755,7 +755,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
     pos = input->tell();
     f.str("");
     f << "ColorMap[" << n << "]:";
-    int type = input->readLong(1);
+    int type = (int) input->readLong(1);
     switch(type) {
     case 1:
       f << "named(RGB),";
@@ -775,7 +775,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
       val = input->readLong(1);
       if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
     }
-    val = input->readULong(4);
+    val = (long) input->readULong(4);
     defPos.push_back(pos+val);
     // fixme: used this to read the data...
     f << "defPos=" << std::hex << pos+val << std::dec << ",";
@@ -784,7 +784,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
   }
 
   for (int n = 0; n < N; n++) {
-    pos = defPos[n];
+    pos = defPos[(size_t) n];
     if (pos+12 > entry.end()) {
       MWAW_DEBUG_MSG(("WNParser::readColorMap: can not read entry : %d\n", n));
       return false;
@@ -794,13 +794,13 @@ bool WNParser::readColorMap(WNEntry const &entry)
     f.str("");
     f << "ColorMapData[" << n << "]:";
     int col[4];
-    for (int i = 0; i < 4; i++) col[i] = input->readULong(2)/256;
+    for (int i = 0; i < 4; i++) col[i] = (int) input->readULong(2)/256;
     f << "col=" << col[0] << "x" << col[1] << "x" << col[2];
     if (col[3]) f << "x" << col[3];
     f << ",";
-    m_state->m_colorMap.push_back(Vec3uc(col[0],col[1],col[2]));
+    m_state->m_colorMap.push_back(Vec3uc((unsigned char)col[0],(unsigned char)col[1],(unsigned char)col[2]));
 
-    int sz = input->readULong(1);
+    int sz = (int) input->readULong(1);
     if (pos+8+1+sz > entry.end()) {
       MWAW_DEBUG_MSG(("WNParser::readColorMap: can not read end of entry : %d\n", n));
       return false;
@@ -832,7 +832,7 @@ bool WNParser::readPrintInfo(WNEntry const &entry)
   }
 
   input->seek(entry.begin(), WPX_SEEK_SET);
-  long sz = version() <= 2 ? 2+input->readULong(2) : input->readULong(4);
+  long sz = version() <= 2 ? 2+(long) input->readULong(2) : (long) input->readULong(4);
   if (sz != entry.length()) {
     MWAW_DEBUG_MSG(("WNParser::readPrintInfo: bad begin of last zone\n"));
     return false;
@@ -921,7 +921,7 @@ bool WNParser::readGenericUnkn(WNEntry const &entry)
     val = input->readLong(2);
     if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
-  int N=input->readULong(2);
+  int N=(int) input->readULong(2);
   f << "N=" << N << ",";
   for (int i = 0; i < 2; i++) { // 0
     val = input->readLong(2);
@@ -938,7 +938,7 @@ bool WNParser::readGenericUnkn(WNEntry const &entry)
     pos = input->tell();
     f.str("");
     f << entry.type() << "[" << n << "]:";
-    int type = input->readULong(1);
+    int type = (int) input->readULong(1);
     switch(type) {
     case 0:
       f << "def,";
@@ -952,7 +952,7 @@ bool WNParser::readGenericUnkn(WNEntry const &entry)
       val = input->readLong(1);
       if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
     }
-    val = input->readULong(4);
+    val = (long) input->readULong(4);
     defPos.push_back(pos+val);
     // fixme: used this to read the data...
     f << "defPos=" << std::hex << pos+val << std::dec << ",";
@@ -961,7 +961,7 @@ bool WNParser::readGenericUnkn(WNEntry const &entry)
   }
 
   for (int n = 0; n < N; n++) {
-    pos = defPos[n];
+    pos = defPos[(size_t) n];
     if (pos == entry.end()) continue;
     if (pos+12 > entry.end()) {
       MWAW_DEBUG_MSG(("WNParser::readGenericUnkn: can not read entry : %d\n", n));
@@ -1000,20 +1000,20 @@ WNEntry WNParser::readEntry()
 {
   WNEntry res;
   MWAWInputStreamPtr input = getInput();
-  int val = input->readULong(2);
+  int val = (int) input->readULong(2);
   res.m_fileType = (val >> 12);
   res.m_val[0]= val & 0x0FFF;
-  res.m_val[1]= input->readLong(2);
+  res.m_val[1]= (int) input->readLong(2);
   if (res.isZoneType()) {
-    res.setBegin(input->readULong(4));
-    res.setLength(input->readULong(4));
+    res.setBegin((long) input->readULong(4));
+    res.setLength((long) input->readULong(4));
     if (!checkIfPositionValid(res.end())) {
       MWAW_DEBUG_MSG(("WNParser::readEntry: find an invalid entry\n"));
       res.setLength(0);
     }
   } else {
-    res.m_val[2]= input->readLong(4);
-    res.m_val[3]= input->readLong(4);
+    res.m_val[2]= (int) input->readLong(4);
+    res.m_val[3]= (int) input->readLong(4);
   }
   return res;
 }
@@ -1035,26 +1035,26 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
   }
   input->seek(0, WPX_SEEK_SET);
-  long val = input->readULong(4);
-  int version = 0;
+  long val = (long) input->readULong(4);
+  int vers = 0;
   switch(val) {
   case 0:
     if (input->readULong(4) != 0)
       return false;
-    version = 2;
+    vers = 2;
     break;
   case 0x57726974: // Writ
     if (input->readULong(4) != 0x654e6f77) // eNow
       return false;
-    version = 3;
+    vers = 3;
     break;
   default:
     return false;
   }
-  m_state->m_version = version;
+  m_state->m_version = vers;
   f << "FileHeader:";
 
-  if (version < 3) {
+  if (vers < 3) {
     if (strict) {
       if (input->readLong(1)!=4) return false;
       input->seek(-1, WPX_SEEK_CUR);
@@ -1067,7 +1067,7 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
     return true;
   }
 
-  val = input->readULong(2);
+  val = (long) input->readULong(2);
   if (strict && val > 3)
     return false;
 #ifndef DEBUG
@@ -1082,15 +1082,15 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
   }
 
   // a flag ??
-  val = input->readULong(2);
+  val = (long) input->readULong(2);
   if (val != 0x4000) f << "fl=" << std::hex << val << std::dec << ",";
-  val = input->readLong(2);
+  val = (long) input->readLong(2);
   if (val) f << "f4=" << val << ",";
 
   // last entry
   WNEntry entry;
-  entry.setBegin(input->readULong(4));
-  entry.setLength(input->readULong(4));
+  entry.setBegin((long) input->readULong(4));
+  entry.setLength((long) input->readULong(4));
   entry.m_fileType = 4;
 
   if (!checkIfPositionValid(entry.end())) {

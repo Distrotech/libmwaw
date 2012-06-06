@@ -183,7 +183,7 @@ template <class T> class Vec2
 {
 public:
   //! constructor
-  Vec2(T x=0,T y=0) : m_x(x), m_y(y) { }
+  Vec2(T xx=0,T yy=0) : m_x(xx), m_y(yy) { }
   //! generic copy constructor
   template <class U> Vec2(Vec2<U> const &p) : m_x(T(p.x())), m_y(T(p.y())) {}
 
@@ -207,17 +207,17 @@ public:
   }
 
   //! resets the two elements
-  void set(T x, T y) {
-    m_x = x;
-    m_y = y;
+  void set(T xx, T yy) {
+    m_x = xx;
+    m_y = yy;
   }
   //! resets the first element
-  void setX(T x) {
-    m_x = x;
+  void setX(T xx) {
+    m_x = xx;
   }
   //! resets the second element
-  void setY(T y) {
-    m_y = y;
+  void setY(T yy) {
+    m_y = yy;
   }
 
   //! increases the actuals values by \a dx and \a dy
@@ -278,17 +278,21 @@ public:
   //! a comparison function: which first compares x then y
   int cmp(Vec2<T> const &p) const {
     T diff  = m_x-p.m_x;
-    if (diff) return (diff < 0) ? -1 : 1;
+    if (diff < 0) return -1;
+    if (diff > 0) return 1;
     diff = m_y-p.m_y;
-    if (diff) return (diff < 0) ? -1 : 1;
+    if (diff < 0) return -1;
+    if (diff > 0) return 1;
     return 0;
   }
   //! a comparison function: which first compares y then x
   int cmpY(Vec2<T> const &p) const {
     T diff  = m_y-p.m_y;
-    if (diff) return (diff < 0) ? -1 : 1;
+    if (diff < 0) return -1;
+    if (diff > 0) return 1;
     diff = m_x-p.m_x;
-    if (diff) return (diff < 0) ? -1 : 1;
+    if (diff < 0) return -1;
+    if (diff > 0) return 1;
     return 0;
   }
 
@@ -343,10 +347,10 @@ template <class T> class Vec3
 {
 public:
   //! constructor
-  Vec3(T x=0,T y=0,T z=0) {
-    m_val[0] = x;
-    m_val[1] = y;
-    m_val[2] = z;
+  Vec3(T xx=0,T yy=0,T zz=0) {
+    m_val[0] = xx;
+    m_val[1] = yy;
+    m_val[2] = zz;
   }
   //! generic copy constructor
   template <class U> Vec3(Vec3<U> const &p) {
@@ -377,22 +381,22 @@ public:
   }
 
   //! resets the three elements
-  void set(T x, T y, T z) {
-    m_val[0] = x;
-    m_val[1] = y;
-    m_val[2] = z;
+  void set(T xx, T yy, T zz) {
+    m_val[0] = xx;
+    m_val[1] = yy;
+    m_val[2] = zz;
   }
   //! resets the first element
-  void setX(T x) {
-    m_val[0] = x;
+  void setX(T xx) {
+    m_val[0] = xx;
   }
   //! resets the second element
-  void setY(T y) {
-    m_val[1] = y;
+  void setY(T yy) {
+    m_val[1] = yy;
   }
   //! resets the third element
-  void setZ(T z) {
-    m_val[2] = z;
+  void setZ(T zz) {
+    m_val[2] = zz;
   }
 
   //! increases the actuals values by \a dx, \a dy, \a dz
@@ -404,12 +408,12 @@ public:
 
   //! operator+=
   Vec3<T> &operator+=(Vec3<T> const &p) {
-    for (int c = 0; c < 3; c++) m_val[c] += p.m_val[c];
+    for (int c = 0; c < 3; c++) m_val[c] = T(m_val[c]+p.m_val[c]);
     return *this;
   }
   //! operator-=
   Vec3<T> &operator-=(Vec3<T> const &p) {
-    for (int c = 0; c < 3; c++) m_val[c] -= p.m_val[c];
+    for (int c = 0; c < 3; c++) m_val[c] = T(m_val[c]-p.m_val[c]);
     return *this;
   }
   //! generic operator*=
@@ -561,9 +565,9 @@ public:
   }
   //!  resize the box keeping the center
   void resizeFromCenter(Vec2<T> const &sz) {
-    Vec2<T> center = 0.5*(m_pt[0]+m_pt[1]);
-    m_pt[0] = center - 0.5*sz;
-    m_pt[1] = center + (sz - 0.5*sz);
+    Vec2<T> centerPt = 0.5*(m_pt[0]+m_pt[1]);
+    m_pt[0] = centerPt - 0.5*sz;
+    m_pt[1] = centerPt + (sz - 0.5*sz);
   }
 
   //! scales all points of the box by \a factor

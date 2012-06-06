@@ -53,7 +53,9 @@ void MWAWTabStop::addTo(WPXPropertyListVector &propList, double decalX)
     tab.insert("style:type", "char");
     tab.insert("style:char", "."); // Assume a decimal point for now
     break;
-  default:  // Left alignment is the default and BAR is not handled in OOo
+  case LEFT:
+  case BAR: // BAR is not handled in OO
+  default:
     break;
   }
 
@@ -104,21 +106,24 @@ std::ostream &operator<<(std::ostream &o, MWAWTabStop const &tab)
   return o;
 }
 
+MWAWParagraph::~MWAWParagraph()
+{
+}
 //! operator<<
 std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
 {
-  if (pp.m_margins[0]) o << "textIndent=" << pp.m_margins[0] << ",";
-  if (pp.m_margins[1]) o << "leftMarg=" << pp.m_margins[1] << ",";
-  if (pp.m_margins[2]) o << "rightMarg=" << pp.m_margins[2] << ",";
+  if (pp.m_margins[0]<0||pp.m_margins[0]>0) o << "textIndent=" << pp.m_margins[0] << ",";
+  if (pp.m_margins[1]<0||pp.m_margins[1]>0) o << "leftMarg=" << pp.m_margins[1] << ",";
+  if (pp.m_margins[2]<0||pp.m_margins[2]>0) o << "rightMarg=" << pp.m_margins[2] << ",";
 
   if (pp.m_spacingsInterlineUnit==WPX_PERCENT) {
-    if (pp.m_spacings[0] != 1.0)
+    if (pp.m_spacings[0] < 1.0 || pp.m_spacings[0] > 1.0)
       o << "interLineSpacing=" << pp.m_spacings[0] << "%,";
   } else if (pp.m_spacings[0] > 0.0)
     o << "interLineSpacing=" << pp.m_spacings[0] << ",";
 
-  if (pp.m_spacings[1]) o << "befSpacing=" << pp.m_spacings[1] << ",";
-  if (pp.m_spacings[2]) o << "aftSpacing=" << pp.m_spacings[2] << ",";
+  if (pp.m_spacings[1]<0||pp.m_spacings[1]>0) o << "befSpacing=" << pp.m_spacings[1] << ",";
+  if (pp.m_spacings[2]<0||pp.m_spacings[2]>0) o << "aftSpacing=" << pp.m_spacings[2] << ",";
 
   if (pp.m_breakStatus & libmwaw::NoBreakBit) o << "dontbreak,";
   if (pp.m_breakStatus & libmwaw::NoBreakWithNextBit) o << "dontbreakafter,";
@@ -145,7 +150,7 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
 
   if (pp.m_tabs.size()) {
     o << "tabs=(";
-    for (int i = 0; i < int(pp.m_tabs.size()); i++)
+    for (size_t i = 0; i < pp.m_tabs.size(); i++)
       o << pp.m_tabs[i] << ",";
     o << "),";
   }

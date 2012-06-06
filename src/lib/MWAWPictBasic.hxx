@@ -126,7 +126,8 @@ public:
     if (diff) return (diff < 0) ? -1 : 1;
 
     float diffF = m_lineWidth - aPict.m_lineWidth;
-    if (diffF) return (diffF < 0) ? -1 : 1;
+    if (diffF < 0) return -1;
+    if (diffF > 0) return 1;
 
     for (int c=0; c < 3; c++) {
       diff = m_lineColor[c]-aPict.m_lineColor[c];
@@ -137,8 +138,9 @@ public:
       if (diff) return (diff < 0) ? -1 : 1;
     }
     for (int c = 0; c < 2; c++) {
-      float diffF = m_extend[c]-aPict.m_extend[c];
-      if (diffF) return diffF < 0.0 ? -1 : 1;
+      diffF = m_extend[c]-aPict.m_extend[c];
+      if (diffF < 0) return -1;
+      if (diffF > 0) return 1;
     }
     if (m_surfaceHasColor != aPict.m_surfaceHasColor)
       return m_surfaceHasColor;
@@ -370,8 +372,9 @@ protected:
     diff = m_circleBox.cmp(m_circleBox);
     if (diff) return diff;
     for (int c = 0; c < 2; c++) {
-      float diff = m_angle[c]-aArc.m_angle[c];
-      if (diff) return (diff <0) ? -1 : 1;
+      float diffF = m_angle[c]-aArc.m_angle[c];
+      if (diffF < 0) return -1;
+      if (diffF > 0) return 1;
     }
     return 0;
   }
@@ -410,11 +413,13 @@ protected:
     int diff = MWAWPictBasic::cmp(a);
     if (diff) return diff;
     MWAWPictPolygon const &aPoly = static_cast<MWAWPictPolygon const &>(a);
-    diff = m_verticesList.size()-aPoly.m_verticesList.size();
-    if (diff) return (diff <0) ? -1 : 1;
+    if (m_verticesList.size()<aPoly.m_verticesList.size())
+      return -1;
+    if (m_verticesList.size()>aPoly.m_verticesList.size())
+      return 1;
 
     // check the vertices
-    for (int c = 0; c < 2; c++) {
+    for (size_t c = 0; c < m_verticesList.size(); c++) {
       diff = m_verticesList[c].cmpY(aPoly.m_verticesList[c]);
       if (diff) return diff;
     }

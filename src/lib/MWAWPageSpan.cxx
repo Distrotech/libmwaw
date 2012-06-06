@@ -142,6 +142,8 @@ void MWAWPageSpan::setHeaderFooter(const HeaderFooterType type, const HeaderFoot
   case EVEN:
     _removeHeaderFooter(type, ALL);
     break;
+  default:
+    break;
   }
 
   _setHeaderFooter(type, occurence, subDocument);
@@ -170,7 +172,7 @@ void MWAWPageSpan::sendHeaderFooters(MWAWContentListener *listener,
   }
 
   bool pageNumberInserted = false;
-  for (int i = 0; i < int(m_headerFooterList.size()); i++) {
+  for (size_t i = 0; i < m_headerFooterList.size(); i++) {
     MWAWPageSpanInternal::HeaderFooterPtr &hf = m_headerFooterList[i];
     if (!hf) continue;
 
@@ -252,11 +254,14 @@ bool MWAWPageSpan::operator==(shared_ptr<MWAWPageSpan> const &page2) const
 {
   if (!page2) return false;
   if (page2.get() == this) return true;
-  if (m_formLength != page2->m_formLength || m_formWidth != page2->m_formLength ||
+  if (m_formLength < page2->m_formLength || m_formLength > page2->m_formLength ||
+      m_formWidth < page2->m_formWidth || m_formWidth > page2->m_formWidth ||
       m_formOrientation != page2->m_formOrientation)
     return false;
-  if (getMarginLeft() != page2->getMarginLeft() || getMarginRight() != page2->getMarginRight() ||
-      getMarginTop() != page2->getMarginTop()|| getMarginBottom() != page2->getMarginBottom())
+  if (getMarginLeft() < page2->getMarginLeft() || getMarginLeft() > page2->getMarginLeft() ||
+      getMarginRight() < page2->getMarginRight() || getMarginRight() > page2->getMarginRight() ||
+      getMarginTop() < page2->getMarginTop() || getMarginTop() > page2->getMarginTop() ||
+      getMarginBottom() < page2->getMarginBottom() || getMarginBottom() > page2->getMarginBottom())
     return false;
 
   if (getPageNumberPosition() != page2->getPageNumberPosition())
@@ -269,21 +274,22 @@ bool MWAWPageSpan::operator==(shared_ptr<MWAWPageSpan> const &page2) const
     return false;
 
   if (getPageNumberingFontName() != page2->getPageNumberingFontName() ||
-      getPageNumberingFontSize() != page2->getPageNumberingFontSize())
+      getPageNumberingFontSize() < page2->getPageNumberingFontSize() ||
+      getPageNumberingFontSize() > page2->getPageNumberingFontSize())
     return false;
 
-  int numHF = m_headerFooterList.size();
-  int numHF2 = page2->m_headerFooterList.size();
-  for (int i = numHF; i < numHF2; i++) {
+  size_t numHF = m_headerFooterList.size();
+  size_t numHF2 = page2->m_headerFooterList.size();
+  for (size_t i = numHF; i < numHF2; i++) {
     if (page2->m_headerFooterList[i])
       return false;
   }
-  for (int i = numHF2; i < numHF; i++) {
+  for (size_t i = numHF2; i < numHF; i++) {
     if (m_headerFooterList[i])
       return false;
   }
   if (numHF2 < numHF) numHF = numHF2;
-  for (int i = 0; i < numHF; i++) {
+  for (size_t i = 0; i < numHF; i++) {
     if (!m_headerFooterList[i]) {
       if (page2->m_headerFooterList[i])
         return false;
@@ -314,7 +320,15 @@ void MWAWPageSpan::_insertPageNumberParagraph(WPXDocumentInterface *documentInte
     break;
   case TopCenter:
   case BottomCenter:
+  case None:
+    propList.insert("fo:text-align", "center");
+    break;
   default:
+  case TopLeftAndRight:
+  case TopInsideLeftAndRight:
+  case BottomLeftAndRight:
+  case BottomInsideLeftAndRight:
+    MWAW_DEBUG_MSG(("MWAWPageSpan::_insertPageNumberParagraph: unexpected value\n"));
     propList.insert("fo:text-align", "center");
     break;
   }
@@ -344,21 +358,21 @@ void MWAWPageSpan::_setHeaderFooter(HeaderFooterType type, HeaderFooterOccurence
 
   int pos = _getHeaderFooterPosition(type, occurence);
   if (pos == -1) return;
-  m_headerFooterList[pos]=MWAWPageSpanInternal::HeaderFooterPtr(new MWAWPageSpanInternal::HeaderFooter(type, occurence, doc));
+  m_headerFooterList[size_t(pos)]=MWAWPageSpanInternal::HeaderFooterPtr(new MWAWPageSpanInternal::HeaderFooter(type, occurence, doc));
 }
 
 void MWAWPageSpan::_removeHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence)
 {
   int pos = _getHeaderFooterPosition(type, occurence);
   if (pos == -1) return;
-  m_headerFooterList[pos].reset();
+  m_headerFooterList[size_t(pos)].reset();
 }
 
 bool MWAWPageSpan::_containsHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence)
 {
   int pos = _getHeaderFooterPosition(type, occurence);
-  if (pos == -1 || ! m_headerFooterList[pos]) return false;
-  if (!m_headerFooterList[pos]->getSubDocument()) return false;
+  if (pos == -1 || ! m_headerFooterList[size_t(pos)]) return false;
+  if (!m_headerFooterList[size_t(pos)]->getSubDocument()) return false;
   return true;
 }
 
@@ -386,13 +400,14 @@ int MWAWPageSpan::_getHeaderFooterPosition(HeaderFooterType type, HeaderFooterOc
   case EVEN:
     occurencePos = 2;
     break;
+  case NEVER:
   default:
     MWAW_DEBUG_MSG(("MWAWPageSpan::getVectorPosition: unknown occurence\n"));
     return -1;
   }
-  int res = typePos*3+occurencePos;
-  if (res >= int(m_headerFooterList.size()))
+  size_t res = size_t(typePos*3+occurencePos);
+  if (res >= m_headerFooterList.size())
     m_headerFooterList.resize(res+1);
-  return res;
+  return int(res);
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -238,7 +238,7 @@ MWAWOLEParser::~MWAWOLEParser()
 
 bool MWAWOLEParser::getObject(int id, WPXBinaryData &obj, MWAWPosition &pos)  const
 {
-  for (int i = 0; i < int(m_objectsId.size()); i++) {
+  for (size_t i = 0; i < m_objectsId.size(); i++) {
     if (m_objectsId[i] != id) continue;
     obj = m_objects[i];
     pos = m_objectsPosition[i];
@@ -250,7 +250,7 @@ bool MWAWOLEParser::getObject(int id, WPXBinaryData &obj, MWAWPosition &pos)  co
 
 void MWAWOLEParser::setObject(int id, WPXBinaryData const &obj, MWAWPosition const &pos)
 {
-  for (int i = 0; i < int(m_objectsId.size()); i++) {
+  for (size_t i = 0; i < m_objectsId.size(); i++) {
     if (m_objectsId[i] != id) continue;
     m_objects[i] = obj;
     m_objectsPosition[i] = pos;
@@ -282,7 +282,7 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
   //
   std::multimap<int, MWAWOLEParserInternal::OleDef> listsById;
   std::vector<int> listIds;
-  for (int i = 0; i < int(namesList.size()); i++) {
+  for (size_t i = 0; i < namesList.size(); i++) {
     std::string const &name = namesList[i];
 
     // separated the directory and the name
@@ -334,7 +334,7 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
     listsById.insert(std::multimap<int, MWAWOLEParserInternal::OleDef>::value_type(data.m_id, data));
   }
 
-  for (int i = 0; i < int(listIds.size()); i++) {
+  for (size_t i = 0; i < listIds.size(); i++) {
     int id = listIds[i];
 
     std::multimap<int, MWAWOLEParserInternal::OleDef>::iterator pos =
@@ -458,7 +458,7 @@ bool MWAWOLEParser::readOle(MWAWInputStreamPtr ip, std::string const &oleName,
 
   int val[20];
   for (int i= 0; i < 20; i++) {
-    val[i] = ip->readLong(1);
+    val[i] = (int) ip->readLong(1);
     if (val[i] < -10 || val[i] > 10) return false;
   }
 
@@ -508,7 +508,7 @@ bool MWAWOLEParser::readMM(MWAWInputStreamPtr input, std::string const &oleName,
   if (input->tell() != 14 || !input->atEOS()) return false;
 
   input->seek(0, WPX_SEEK_SET);
-  int entete = input->readULong(2);
+  int entete = (int) input->readULong(2);
   if (entete != 0x444e) {
     if (entete == 0x4e44) {
       MWAW_DEBUG_MSG(("MWAWOLEParser::readMM: ERROR: endian mode probably bad, potentially bad PC/Mac mode detection.\n"));
@@ -520,7 +520,7 @@ bool MWAWOLEParser::readMM(MWAWInputStreamPtr input, std::string const &oleName,
 
   int val[6];
   for (int i = 0; i < 6; i++)
-    val[i] = input->readLong(2);
+    val[i] = (int) input->readLong(2);
 
   switch(val[5]) {
   case 0:
@@ -569,7 +569,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
   ip->seek(0,WPX_SEEK_SET);
 
   for (int i = 0; i < 6; i++) {
-    int16_t val = ip->readULong(2);
+    int val = (int) ip->readULong(2);
     f << val << ", ";
   }
 
@@ -622,7 +622,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
       st = f.str();
     } else {
       for (int i = 0; i < sz; i++)
-        st += ip->readULong(1);
+        st += (char) ip->readULong(1);
     }
 
     f.str("");
@@ -637,6 +637,8 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
     case 2:
       f << "ProgIdName=";
       break;
+    default:
+      break;
     }
     f << st;
     ascii.addPos(actPos);
@@ -646,7 +648,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
   if (ip->atEOS()) return true;
 
   long actPos = ip->tell();
-  int nbElt = 4;
+  long nbElt = 4;
   if (ip->seek(actPos+16,WPX_SEEK_SET) != 0 ||
       ip->tell() != actPos+16) {
     if ((ip->tell()-actPos)%4) return false;
@@ -656,7 +658,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
   f.str("");
   f << "@@CompObj(Footer): " << std::hex;
   ip->seek(actPos,WPX_SEEK_SET);
-  for (int i = 0; i < nbElt; i++)
+  for (long i = 0; i < nbElt; i++)
     f << ip->readULong(4) << ",";
   ascii.addPos(actPos);
   ascii.addNote(f.str().c_str());
@@ -688,7 +690,7 @@ bool MWAWOLEParser::isOlePres(MWAWInputStreamPtr ip, std::string const &oleName)
   }
 
   long actPos = ip->tell();
-  int hSize = ip->readLong(4);
+  long hSize = ip->readLong(4);
   if (hSize < 4) return false;
   if (ip->seek(actPos+hSize+28, WPX_SEEK_SET) != 0
       || ip->tell() != actPos+hSize+28)
@@ -732,7 +734,7 @@ bool MWAWOLEParser::readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWAW
   }
 
   long actPos = ip->tell();
-  int hSize = ip->readLong(4);
+  long hSize = ip->readLong(4);
   if (hSize < 4) return false;
   f << "hSize = " << hSize;
   ascii.addPos(0);
@@ -752,12 +754,12 @@ bool MWAWOLEParser::readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWAW
         std::string str;
         bool find = false;
         while (ip->tell() < endHPos) {
-          unsigned char c = ip->readULong(1);
+          unsigned char c = (unsigned char)ip->readULong(1);
           if (c == 0) {
             find = true;
             break;
           }
-          str += c;
+          str += (char) c;
         }
         if (!find) {
           ok = false;
@@ -786,9 +788,9 @@ bool MWAWOLEParser::readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWAW
     f << val << ", ";
   }
   // dim in TWIP ?
-  int extendX = ip->readULong(4);
-  int extendY = ip->readULong(4);
-  if (extendX > 0 && extendY > 0) pos.setNaturalSize(Vec2f(extendX/20., extendY/20.));
+  long extendX = (long) ip->readULong(4);
+  long extendY = (long)ip->readULong(4);
+  if (extendX > 0 && extendY > 0) pos.setNaturalSize(Vec2f(float(extendX)/20.f, float(extendY)/20.f));
   long fSize = ip->readLong(4);
   f << "extendX="<< extendX << ", extendY=" << extendY << ", fSize=" << fSize;
 
@@ -886,13 +888,13 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
 
   bool ok = true;
   // bdbox 0 : size in the file ?
-  int dim[2];
+  long dim[2];
   dim[0] = input->readLong(4);
   dim[1] = input->readLong(4);
   f << "bdbox0=(" << dim[0] << "," << dim[1]<<"),";
   for (int i = 0; i < 3; i++) {
     /* 0,{10|21|75|101|116}x2 */
-    long val = input->readULong(4);
+    long val = (long) input->readULong(4);
     if (val < 1000)
       f << val << ",";
     else
@@ -900,7 +902,7 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
     if (val > 0x10000) ok=false;
   }
   // new bdbox : size of the picture ?
-  int naturalSize[2];
+  long naturalSize[2];
   naturalSize[0] = input->readLong(4);
   naturalSize[1] = input->readLong(4);
   f << std::dec << "bdbox1=(" << naturalSize[0] << "," << naturalSize[1]<<"),";
@@ -911,19 +913,19 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
   }
   if (dim[0] > 0 && dim[0] < 3000 &&
       dim[1] > 0 && dim[1] < 3000)
-    pos.setSize(Vec2f(dim[0],dim[1]));
+    pos.setSize(Vec2f(float(dim[0]),float(dim[1])));
   else {
-    MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents odd size : %d %d\n", dim[0], dim[1]));
+    MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents odd size : %ld %ld\n", dim[0], dim[1]));
   }
   if (naturalSize[0] > 0 && naturalSize[0] < 5000 &&
       naturalSize[1] > 0 && naturalSize[1] < 5000)
-    pos.setNaturalSize(Vec2f(naturalSize[0],naturalSize[1]));
+    pos.setNaturalSize(Vec2f(float(naturalSize[0]),float(naturalSize[1])));
   else {
-    MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents odd naturalsize : %d %d\n", naturalSize[0], naturalSize[1]));
+    MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents odd naturalsize : %ld %ld\n", naturalSize[0], naturalSize[1]));
   }
 
   long actPos = input->tell();
-  long size = input->readULong(4);
+  long size = (long) input->readULong(4);
   if (size <= 0) ok = false;
   if (ok) {
     input->seek(actPos+size+4, WPX_SEEK_SET);
@@ -983,22 +985,22 @@ bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
   input->seek(0, WPX_SEEK_SET);
   f << "@@CONTENTS:";
 
-  int hSize = input->readULong(4);
+  long hSize = (long)input->readULong(4);
   if (input->atEOS()) return false;
   f << "hSize=" << std::hex << hSize << std::dec;
 
   if (hSize <= 52 || input->seek(hSize+8,WPX_SEEK_SET) != 0
       || input->tell() != hSize+8) {
-    MWAW_DEBUG_MSG(("MWAWOLEParser: warning: CONTENTS headerSize=%d\n",
+    MWAW_DEBUG_MSG(("MWAWOLEParser: warning: CONTENTS headerSize=%ld\n",
                     hSize));
     return false;
   }
 
   // minimal checking of the "copied" header
   input->seek(4, WPX_SEEK_SET);
-  int type = input->readULong(4);
+  long type = (long) input->readULong(4);
   if (type < 0 || type > 4) return false;
-  long newSize = input->readULong(4);
+  long newSize = (long) input->readULong(4);
 
   f << ", type=" << type;
   if (newSize < 8) return false;
@@ -1009,11 +1011,11 @@ bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
   // checkme: two bdbox, in document then data : units ?
   //     Maybe first in POINT, second in TWIP ?
   for (int st = 0; st < 2 ; st++) {
-    int dim[4];
+    long dim[4];
     for (int i = 0; i < 4; i++) dim[i] = input->readLong(4);
 
     bool ok = dim[0] >= 0 && dim[2] > dim[0] && dim[1] >= 0 && dim[3] > dim[2];
-    if (ok && st==0) pos.setNaturalSize(Vec2f(dim[2]-dim[0], dim[3]-dim[1]));
+    if (ok && st==0) pos.setNaturalSize(Vec2f(float(dim[2]-dim[0]), float(dim[3]-dim[1])));
     if (st==0) f << ", bdbox(Text)";
     else f << ", bdbox(Data)";
     if (!ok) f << "###";
@@ -1025,10 +1027,10 @@ bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
   f << ",typ=\""<<dataType<<"\""; // always " EMF" ?
 
   for (int i = 0; i < 2; i++) { // always id0=0, id1=1 ?
-    int val = input->readULong(2);
+    int val = (int) input->readULong(2);
     if (val) f << ",id"<< i << "=" << val;
   }
-  long dataLength = input->readULong(4);
+  long dataLength = (long) input->readULong(4);
   f << ",length=" << dataLength+hSize;
 
   ascii.addPos(0);
@@ -1042,14 +1044,14 @@ bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
     // or f0=a,f1=1,f2=2,f3=6c,f5=480,f6=360,f7=140,f8=f0
     // or f0=61,f1=1,f2=2,f3=58,f5=280,f6=1e0,f7=a9,f8=7f
     // f3=some header sub size ? f5/f6 and f7/f8 two other bdbox ?
-    long val = input->readULong(4);
+    long val = (long) input->readULong(4);
     if (val) f << std::hex << ",f" << i << "=" << val;
   }
   for (int i = 0; 2*i+100 < hSize; i++) {
     // g0=e3e3,g1=6,g2=4e6e,g3=4
     // g0=e200,g1=4,g2=a980,g3=3,g4=4c,g5=50
     // ---
-    long val = input->readULong(2);
+    long val = (long) input->readULong(2);
     if (val) f << std::hex << ",g" << i << "=" << val;
   }
   ascii.addNote(f.str().c_str());

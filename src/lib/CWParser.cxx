@@ -204,12 +204,12 @@ int CWParser::version() const
 ////////////////////////////////////////////////////////////
 float CWParser::pageHeight() const
 {
-  return m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
+  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float CWParser::pageWidth() const
 {
-  return m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight();
+  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
 }
 
 bool CWParser::getColor(int colId, Vec3uc &col) const
@@ -385,7 +385,7 @@ bool CWParser::createZones()
   // look for graphic
   while (!input->atEOS()) {
     pos = input->tell();
-    int val = input->readULong(2);
+    int val = (int) input->readULong(2);
     if (input->atEOS()) break;
     bool ok = false;
     if (val == 0x4453) {
@@ -398,8 +398,8 @@ bool CWParser::createZones()
       long debPos = (val == 0x1102) ? pos-15 : pos-14;
       input->seek(debPos, WPX_SEEK_SET);
       if (input->readULong(2) == 0) {
-        int sz = input->readULong(2);
-        int fSz  = input->readULong(2);
+        int sz = (int) input->readULong(2);
+        int fSz  = (int) input->readULong(2);
         if (sz >= 0x10 && (val == 0x1102 || sz == fSz)) {
           ok = true;
           input->seek(-6, WPX_SEEK_CUR);
@@ -450,10 +450,10 @@ int CWParser::findZonesGraph()
   std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter2;
   for ( ; iter != m_state->m_zonesMap.end(); iter++) {
     shared_ptr<CWStruct::DSET> zone = iter->second;
-    int numChilds = zone->m_childs.size();
+    size_t numChilds = zone->m_childs.size();
     int id = zone->m_id;
     for (int step = 0; step < 2; step++) {
-      for (int c = 0; c < numChilds; c++) {
+      for (size_t c = 0; c < numChilds; c++) {
         int cId = step == 0 ? zone->m_childs[c].m_id : zone->m_otherChilds[c];
         if (cId < 0) continue;
         if (cId == 0) {
@@ -495,7 +495,7 @@ int CWParser::findZonesGraph()
     mainList.push_back(zone->m_id);
   }
 
-  int numMain = mainList.size();
+  int numMain = int(mainList.size());
   if (numMain == 1)
     return mainList[0];
 #ifdef DEBUG
@@ -504,7 +504,7 @@ int CWParser::findZonesGraph()
   std::cout << "--------------------------------------------------------\n";
   std::cout << "List of potential main zones : ";
   for (int i = 0; i < numMain; i++)
-    std::cout << mainList[i] << ",";
+    std::cout << mainList[(size_t)i] << ",";
   std::cout << "\n";
   for ( ; iter != m_state->m_zonesMap.end(); iter++) {
     shared_ptr<CWStruct::DSET> zone = iter->second;
@@ -525,11 +525,11 @@ int CWParser::findZonesGraph()
   int totalZones = 0;
   int bestMain = -1, nodesInBest = -1;
   for (int i = 0; i < numMain; i++) {
-    int numNodes = 1+computeNumChildren(mainList[i]);
+    int numNodes = 1+computeNumChildren(mainList[(size_t)i]);
     totalZones += numNodes;
     if (numNodes > nodesInBest) {
       nodesInBest = numNodes;
-      bestMain = mainList[i];
+      bestMain = mainList[(size_t)i];
     }
   }
   if (totalZones != int(m_state->m_zonesMap.size())) {
@@ -555,8 +555,8 @@ int CWParser::computeNumChildren(int zoneId) const
   int res = 0;
   zone->m_internal = 1;
   for (int step=0; step < 2; step++) {
-    int numChilds = step==0 ? zone->m_childs.size() : zone->m_otherChilds.size();
-    for (int c = 0; c < numChilds; c++) {
+    size_t numChilds = step==0 ? zone->m_childs.size() : zone->m_otherChilds.size();
+    for (size_t c = 0; c < numChilds; c++) {
       int cId = step == 0 ? zone->m_childs[c].m_id : zone->m_otherChilds[c];
       res += 1+computeNumChildren(cId);
     }
@@ -583,7 +583,7 @@ bool CWParser::readEndTable()
     return false;
   input->seek(-20, WPX_SEEK_CUR);
 
-  long entryPos=input->readULong(4);
+  long entryPos= (long) input->readULong(4);
   if (entryPos >= m_state->m_EOF-20)
     return false;
 
@@ -591,13 +591,13 @@ bool CWParser::readEndTable()
   if (input->readULong(4) != 0x4554424c)
     return false;
 
-  long sz = input->readULong(4);
+  long sz = (long) input->readULong(4);
   if (sz <= 16 || (sz%8) != 0 || sz+entryPos+8 != m_state->m_EOF) {
     MWAW_DEBUG_MSG(("CWParser::readEndTable: bad size\n"));
     return false;
   }
 
-  int numEntries = (sz-16)/8;
+  int numEntries = int((sz-16)/8);
   libmwaw::DebugStream f;
   f << "Entries(ETBL):";
   long prevPos = 0;
@@ -607,7 +607,7 @@ bool CWParser::readEndTable()
     std::string name("");
     for (int j = 0; j < 4; j++)
       name+=char(input->readULong(1));
-    long pos = input->readULong(4);
+    long pos = (long) input->readULong(4);
     if (pos < prevPos+4 || (i!=numEntries-1 && pos+4 > entryPos)) {
       MWAW_DEBUG_MSG(("CWParser::readEndTable: bad pos\n"));
       return false;
@@ -629,7 +629,7 @@ bool CWParser::readEndTable()
   ascii().addNote(f.str().c_str());
 
   for (int i = 0; i < numEntries-1; i++) {
-    MWAWEntry const &entry = listEntries[i];
+    MWAWEntry const &entry = listEntries[(size_t) i];
     long debPos = entry.begin();
     bool parsed = false;
     if (entry.type() == "CPRT") {
@@ -671,7 +671,7 @@ bool CWParser::readZone()
   libmwaw::DebugStream f;
 
   std::string name("");
-  char c = input->readULong(1);
+  char c = (char) input->readULong(1);
   if (!c)
     input->seek(-1, WPX_SEEK_CUR);
   else {
@@ -680,7 +680,7 @@ bool CWParser::readZone()
     else
       return false;
     for (int i = 0; i < 3; i++) {
-      c= input->readULong(1);
+      c= (char) input->readULong(1);
       if (c >= ' ' && c <= 'z')
         name += c;
       else
@@ -692,7 +692,7 @@ bool CWParser::readZone()
     sz = 4;
   else {
     long debPos = input->tell();
-    sz = input->readULong(4);
+    sz = (long) input->readULong(4);
     if (long(input->tell()) != debPos+4) return false;
   }
 
@@ -722,10 +722,10 @@ bool CWParser::readZone()
   } else {
     //
     input->seek(actPos, WPX_SEEK_SET);
-    int firstOffset = input->readULong(2);
+    int firstOffset = (int) input->readULong(2);
     if (sz >= 16) {
       input->seek(8, WPX_SEEK_CUR);
-      int val = input->readULong(2);
+      int val = (int) input->readULong(2);
       if (val == 0x1101  && firstOffset == sz)
         parsed = true;
       else if (val == 0x11 && input->readULong(1)==0x2)
@@ -778,7 +778,7 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
   }
   input->seek(0,WPX_SEEK_SET);
   f << "FileHeader:";
-  int vers = input->readLong(1);
+  int vers = (int) input->readLong(1);
   m_state->m_version = vers;
   if (vers <=0 || vers > 6) {
     MWAW_DEBUG_MSG(("CWParser::checkHeader: unknown version: %d\n", vers));
@@ -786,7 +786,7 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
   }
   f << "vers=" << vers << ",";
   f << "unk=" << std::hex << input->readULong(2) << ",";
-  int val = input->readLong(1);
+  int val = (int) input->readLong(1);
   if (val)
     f << "unkn1=" << val << ",";
   if (input->readULong(2) != 0x424f && input->readULong(2) != 0x424f)
@@ -813,11 +813,13 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
   case 6:
     typePos = 278;
     break;
+  default:
+    break;
   }
   input->seek(typePos, WPX_SEEK_SET);
   if (long(input->tell()) != typePos)
     return false;
-  int type = input->readULong(1);
+  int type = (int) input->readULong(1);
   if (header) {
     switch (type) {
     case 0:
@@ -870,7 +872,7 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
   libmwaw::DebugStream f;
   if (input->readULong(4) != 0x44534554L)
     return shared_ptr<CWStruct::DSET>();
-  long sz = input->readULong(4);
+  long sz = (long) input->readULong(4);
   MWAWEntry entry;
   entry.setBegin(pos);
   entry.setLength(sz+8);
@@ -886,28 +888,28 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
   CWStruct::DSET dset;
   input->seek(pos+8, WPX_SEEK_SET);
   dset.m_size = sz;
-  dset.m_numData = input->readULong(2);
+  dset.m_numData = (int) input->readULong(2);
 
   input->seek(10, WPX_SEEK_CUR);
-  dset.m_type = input->readULong(1);
+  dset.m_type = (int) input->readULong(1);
   input->seek(-11, WPX_SEEK_CUR);
   int nFlags = 0;
   switch (dset.m_type) {
   case 1: // text
-    dset.m_beginSelection = input->readLong(4);
-    dset.m_endSelection = input->readLong(4);
+    dset.m_beginSelection = (int) input->readLong(4);
+    dset.m_endSelection = (int) input->readLong(4);
     break;
   default:
-    dset.m_flags[nFlags++] = input->readLong(2); // normally -1
-    dset.m_flags[nFlags++] = input->readLong(2);
-    dset.m_dataSz = input->readULong(2);
-    dset.m_headerSz = input->readULong(2);
+    dset.m_flags[nFlags++] = (int) input->readLong(2); // normally -1
+    dset.m_flags[nFlags++] = (int) input->readLong(2);
+    dset.m_dataSz = (int) input->readULong(2);
+    dset.m_headerSz = (int) input->readULong(2);
     break;
   }
-  dset.m_flags[nFlags++] = input->readLong(2);
+  dset.m_flags[nFlags++] = (int) input->readLong(2);
   input->seek(1, WPX_SEEK_CUR);
-  dset.m_flags[nFlags++] = input->readLong(1);
-  dset.m_id = input->readULong(2) ;
+  dset.m_flags[nFlags++] = (int) input->readLong(1);
+  dset.m_id = (int) input->readULong(2) ;
 
   bool parsed = true;
   shared_ptr<CWStruct::DSET> res;
@@ -949,8 +951,8 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
   shared_ptr<CWStruct::DSET> zone(new CWStruct::DSET(dset));
   f << "Entries(DSETU): " << *zone;
 
-  int data0Length = zone->m_dataSz;
-  int N = zone->m_numData;
+  int data0Length = (int) zone->m_dataSz;
+  int N = (int) zone->m_numData;
 
   ascii().addDelimiter(input->tell(), '|');
   ascii().addPos(pos);
@@ -995,7 +997,7 @@ bool CWParser::readStructZone(char const *zoneName, bool hasEntete)
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  long sz = input->readULong(4);
+  long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
   input->seek(endPos,WPX_SEEK_SET);
   if (long(input->tell()) != endPos) {
@@ -1018,15 +1020,15 @@ bool CWParser::readStructZone(char const *zoneName, bool hasEntete)
   }
 
   input->seek(pos+4, WPX_SEEK_SET);
-  int N = input->readLong(2);
+  int N = (int) input->readLong(2);
   f << "N=" << N << ",";
-  int type = input->readLong(2);
+  int type = (int) input->readLong(2);
   if (type != -1)
     f << "#type=" << type << ",";
-  int val = input->readLong(2);
+  int val = (int) input->readLong(2);
   if (val) f << "#unkn=" << val << ",";
-  int fSz = input->readULong(2);
-  int hSz = input->readULong(2);
+  int fSz = (int) input->readULong(2);
+  int hSz = (int) input->readULong(2);
   if (!fSz || N *fSz+hSz+12 != sz) {
     input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWParser::readStructZone: unexpected size for %s\n", zoneName));
@@ -1066,7 +1068,7 @@ bool CWParser::readSNAP(MWAWEntry const &entry)
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
   input->seek(pos+4, WPX_SEEK_SET); // skip header
-  long sz = input->readULong(4);
+  long sz = (long) input->readULong(4);
   if (sz > entry.length()) {
     MWAW_DEBUG_MSG(("CWParser::readSNAP: pb with entry length"));
     input->seek(pos, WPX_SEEK_SET);
@@ -1080,8 +1082,8 @@ bool CWParser::readSNAP(MWAWEntry const &entry)
   int id = 0;
   while (long(input->tell()) < entry.end()) {
     pos = input->tell();
-    int type=input->readLong(1);
-    sz = input->readULong(4);
+    int type=(int) input->readLong(1);
+    sz = (long) input->readULong(4);
     if (pos+sz > entry.end()) {
       MWAW_DEBUG_MSG(("CWParser::readSNAP: pb with sub zone: %d", id));
       input->seek(pos, WPX_SEEK_SET);
@@ -1128,9 +1130,9 @@ bool CWParser::readDSUM(MWAWEntry const &entry, bool inHeader)
   for (int entete = 0; entete < 6; entete++) {
     char const *(entryNames[]) = { "Title",  "Category", "Description", "Author", "Version", "Keywords"};
     pos = input->tell();
-    int sz = input->readULong(4);
+    long sz = (int) input->readULong(4);
     if (!sz) continue;
-    int strSize = input->readULong(1);
+    int strSize = (int) input->readULong(1);
     if (strSize != sz-1 || pos+4+sz > entry.end()) {
       MWAW_DEBUG_MSG(("CWParser::readDSUM: unexpected string size\n"));
       input->seek(pos, WPX_SEEK_SET);
@@ -1138,7 +1140,7 @@ bool CWParser::readDSUM(MWAWEntry const &entry, bool inHeader)
     }
     std::string name("");
     for (int i = 0; i < strSize; i++) {
-      char c = input->readULong(1);
+      char c = (char) input->readULong(1);
       if (c) {
         name += c;
         continue;
@@ -1171,7 +1173,7 @@ bool CWParser::readTNAM(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   f << "Entries(TNAM):";
 
-  int strSize = input->readULong(1);
+  int strSize = (int) input->readULong(1);
   if (strSize != sz-1 || pos+8+sz > entry.end()) {
     MWAW_DEBUG_MSG(("CWParser::readTNAM: unexpected string size\n"));
     input->seek(pos, WPX_SEEK_SET);
@@ -1179,7 +1181,7 @@ bool CWParser::readTNAM(MWAWEntry const &entry)
   }
   std::string name("");
   for (int i = 0; i < strSize; i++) {
-    char c = input->readULong(1);
+    char c = (char) input->readULong(1);
     if (c) {
       name += c;
       continue;
@@ -1210,7 +1212,7 @@ bool CWParser::readCPRT(MWAWEntry const &entry)
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
   input->seek(pos+4, WPX_SEEK_SET); // skip header
-  long sz = input->readULong(4);
+  long sz = (long) input->readULong(4);
   if (sz > entry.length()) {
     MWAW_DEBUG_MSG(("CWParser::readCPRT: pb with entry length"));
     input->seek(pos, WPX_SEEK_SET);
@@ -1224,7 +1226,7 @@ bool CWParser::readCPRT(MWAWEntry const &entry)
   int id = 0;
   while (long(input->tell()) < entry.end()) {
     pos = input->tell();
-    sz = input->readULong(4);
+    sz = (long) input->readULong(4);
     if (pos+sz > entry.end()) {
       MWAW_DEBUG_MSG(("CWParser::readCPRT: pb with sub zone: %d", id));
       input->seek(pos, WPX_SEEK_SET);
@@ -1266,13 +1268,13 @@ bool CWParser::readDocHeader()
   if (version() >= 6) {
     f << "unkn=[";
     for (int i = 0; i < 4; i++) {
-      val = input->readLong(1);
+      val = (int) input->readLong(1);
       if (val) f << val << ", ";
       else f << "_, ";
     }
     f << "],";
     for (int i = 0; i < 4; i++) {
-      val = input->readLong(2);
+      val = (int) input->readLong(2);
       if (val) f << "e" << i << "=" << val << ",";
     }
   }
@@ -1317,22 +1319,22 @@ bool CWParser::readDocHeader()
     return false;
   }
   input->seek(pos, WPX_SEEK_SET);
-  val = input->readLong(2); // always find 1
+  val = (int) input->readLong(2); // always find 1
   if (val != 1)
     f << "#unkn=" << std::hex << val << std::dec << ",";
   for (int i = 0; i < 4; i++) {
-    val = input->readULong(2);
+    val = (int) input->readULong(2);
     if (val)
       f << std::hex << "f" << i << "="  << std::hex << val << std::dec << ",";
   }
   int dim[2];
   for (int i = 0; i < 2; i++)
-    dim[i] = input->readLong(2);
+    dim[i] = (int) input->readLong(2);
   f << "dim?=" << dim[1] << "x" << dim[0] << ",";
   int margin[6];
   f << "margin?=[";
   for (int i = 0; i < 6; i++) {
-    margin[i] = input->readLong(2);
+    margin[i] = (int) input->readLong(2);
     f << margin[i] << ",";
   }
   f << "],";
@@ -1360,12 +1362,12 @@ bool CWParser::readDocHeader()
   }
   int dim2[2];
   for (int i = 0; i < 2; i++)
-    dim2[i] = input->readLong(2);
+    dim2[i] = (int) input->readLong(2);
   f << "dim2?=" << dim2[1] << "x" << dim2[0] << ",";
   int fl[4];
   f << "fl?=[";
   for (int i = 0; i < 4; i++) {
-    fl[i] = input->readULong(1);
+    fl[i] = (int) input->readULong(1);
     if (fl[i])
       f << fl[i] << ",";
     else
@@ -1373,7 +1375,7 @@ bool CWParser::readDocHeader()
   }
   f << "],";
   for (int i = 0; i < 9; i++) {
-    val = input->readLong(2);
+    val = (int) input->readLong(2);
     if (val)
       f << "g" << i << "="  << val << ",";
   }
@@ -1403,13 +1405,13 @@ bool CWParser::readDocHeader()
   f.str("");
   f << "DocHeader-1:";
   for (int i = 0; i < 6; i++) {
-    val = input->readULong(2);
+    val = (int) input->readULong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   input->seek(4, WPX_SEEK_CUR);
-  int type = input->readULong(1);
+  int type = (int) input->readULong(1);
   f << "type=" << type << ",";
-  val = input->readULong(1);
+  val = (int) input->readULong(1);
   if (type != val) f << "#unkn=" << val << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1450,7 +1452,7 @@ bool CWParser::readDocHeader()
     if (!readDSUM(entry, true))
       return false;
     pos = input->tell();
-    long sz = input->readULong(4);
+    long sz = (long) input->readULong(4);
     if (!sz) {
       ascii().addPos(pos);
       ascii().addNote("Nop");
@@ -1468,7 +1470,7 @@ bool CWParser::readDocHeader()
     }
 
     if (version() > 4) {
-      val = input->readULong(4);
+      val = (int) input->readULong(4);
       if (val != long(input->tell())) {
         input->seek(pos, WPX_SEEK_SET);
         MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not find local position\n"));
@@ -1513,7 +1515,7 @@ bool CWParser::readDocHeader()
   if (version() >= 4) {
     for (int z = 0; z < 3; z++) { // zone0, zone1 : color palette, zone2 (val:2, id:2)
       pos = input->tell();
-      long sz = input->readULong(4);
+      long sz = (long) input->readULong(4);
       if (!sz) {
         ascii().addPos(pos);
         ascii().addNote("Nop");
@@ -1546,6 +1548,8 @@ bool CWParser::readDocHeader()
           return false;
         }
         break;
+      default:
+        break;
       }
       input->seek(entry.end(), WPX_SEEK_SET);
     }
@@ -1561,14 +1565,14 @@ bool CWParser::readDocHeader()
       }
       f << "ptr=" << std::hex << input->readULong(4) << std::dec << ",";
       for (int i = 0; i < 6; i++) {
-        val = input->readULong(2);
+        val = (int) input->readULong(2);
         if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
       }
-      m_state->m_headerId = input->readLong(2);
+      m_state->m_headerId = (int) input->readLong(2);
       if (m_state->m_headerId) f << "headerId=" << m_state->m_headerId << ",";
-      val = input->readLong(2);
+      val = (int) input->readLong(2);
       if (val) f << "unkn=" << val << ",";
-      m_state->m_footerId = input->readLong(2);
+      m_state->m_footerId = (int) input->readLong(2);
       if (m_state->m_footerId) f << "footerId=" << m_state->m_footerId << ",";
     }
     if (int(input->tell()) != pos)
@@ -1588,7 +1592,7 @@ bool CWParser::readPrintInfo()
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   if (input->readULong(2) != 0) return false;
-  long sz = input->readULong(2);
+  long sz = (long) input->readULong(2);
   if (sz < 0x78)
     return false;
   long endPos = pos+4+sz;

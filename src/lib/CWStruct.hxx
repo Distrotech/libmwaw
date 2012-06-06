@@ -92,9 +92,9 @@ struct DSET {
       if (doc.m_flags[i])
         o << "fl" << i << "=" << std::hex << doc.m_flags[i] << std::dec << ",";
     }
-    for (int i = 0; i < int(doc.m_childs.size()); i++)
+    for (size_t i = 0; i < doc.m_childs.size(); i++)
       o << "child" << i << "=[" << doc.m_childs[i] << "],";
-    for (int i = 0; i < int(doc.m_otherChilds.size()); i++)
+    for (size_t i = 0; i < doc.m_otherChilds.size(); i++)
       o << "otherChild" << i << "=" << doc.m_otherChilds[i] << ",";
     return o;
   }
@@ -162,6 +162,7 @@ struct DSET {
         break;
       case UNKNOWN:
         o << "#type,";
+      default:
         break;
       }
       if (ch.m_id != -1) o << "id=" << ch.m_id << ",";

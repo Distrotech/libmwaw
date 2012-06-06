@@ -160,7 +160,7 @@ void MWAWContentListener::insertCharacter(uint8_t character)
   }
   _flushDeferredTabs ();
   if (!m_ps->m_isSpanOpened) _openSpan();
-  m_ps->m_textBuffer.append(character);
+  m_ps->m_textBuffer.append((char) character);
 }
 
 void MWAWContentListener::insertUnicode(uint32_t val)
@@ -207,11 +207,11 @@ void MWAWContentListener::appendUnicode(uint32_t val, WPXString &buffer)
   uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
   int i;
   for (i = len - 1; i > 0; --i) {
-    outbuf[i] = (val & 0x3f) | 0x80;
+    outbuf[i] = uint8_t((val & 0x3f) | 0x80);
     val >>= 6;
   }
-  outbuf[0] = val | first;
-  for (i = 0; i < len; i++) buffer.append(outbuf[i]);
+  outbuf[0] = uint8_t(val | first);
+  for (i = 0; i < len; i++) buffer.append((char)outbuf[i]);
 }
 
 void MWAWContentListener::insertEOL(bool soft)
@@ -265,6 +265,8 @@ void MWAWContentListener::insertBreak(const uint8_t breakType)
     m_ps->m_isParagraphPageBreak = true;
     break;
     // TODO: (.. line break?)
+  default:
+    break;
   }
 
   if (m_ps->m_inSubDocument)
@@ -325,7 +327,7 @@ void MWAWContentListener::setTextFont(const WPXString &fontName)
 void MWAWContentListener::setFontSize(const uint16_t fontSize)
 {
   float fSize = fontSize;
-  if (m_ps->m_fontSize==fSize) return;
+  if (m_ps->m_fontSize >= fSize && m_ps->m_fontSize <= fSize) return;
 
   _closeSpan();
   m_ps->m_fontSize=fSize;
@@ -421,7 +423,7 @@ void MWAWContentListener::setParagraphBorders(int which, libmwaw::BorderStyle st
 ///////////////////
 void MWAWContentListener::setCurrentListLevel(int level)
 {
-  m_ps->m_currentListLevel = level;
+  m_ps->m_currentListLevel = uint8_t(level);
   // to be compatible with MWAWContentListerner
   if (level)
     m_ps->m_listBeginPosition =
@@ -473,6 +475,7 @@ void MWAWContentListener::insertField(MWAWContentListener::FieldType type)
   case Time:
     insertDateTimeField("%I:%M:%S %p");
     break;
+  case Link:
   default:
     MWAW_DEBUG_MSG(("MWAWContentListener::insertField: must not be called with type=%d\n", int(type)));
     break;
@@ -510,7 +513,7 @@ bool MWAWContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
     return false;
   }
 
-  int numCols = colsWidth.size();
+  size_t numCols = colsWidth.size();
   if (numCols <= 1) {
     m_ps->m_textColumns.resize(0);
     m_ps->m_numColumns=1;
@@ -522,15 +525,17 @@ bool MWAWContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
       factor = MWAWPosition::getScaleFactor(unit, WPX_INCH);
     case WPX_INCH:
       break;
+    case WPX_PERCENT:
+    case WPX_GENERIC:
     default:
       MWAW_DEBUG_MSG(("MWAWContentListener::openSection: unknown unit\n"));
       return false;
     }
     m_ps->m_textColumns.resize(numCols);
-    m_ps->m_numColumns=numCols;
-    for (int col = 0; col < numCols; col++) {
+    m_ps->m_numColumns=int(numCols);
+    for (size_t col = 0; col < numCols; col++) {
       MWAWColumnDefinition column;
-      column.m_width = factor*colsWidth[col];
+      column.m_width = factor*float(colsWidth[col]);
       m_ps->m_textColumns[col] = column;
     }
   }
@@ -621,7 +626,7 @@ void MWAWContentListener::_openPageSpan()
   unsigned actPage = 0;
   std::vector<MWAWPageSpan>::iterator it = m_ds->m_pageList.begin();
   while(actPage < m_ps->m_currentPage) {
-    actPage+=it->getPageSpan();
+    actPage+=(unsigned)it->getPageSpan();
     it++;
     if (it == m_ds->m_pageList.end()) {
       MWAW_DEBUG_MSG(("MWAWContentListener::_openPageSpan: can not find current page\n"));
@@ -676,9 +681,9 @@ void MWAWContentListener::_updatePageSpanDependent(bool set)
 {
   double deltaRight = set ? -m_ps->m_pageMarginRight : m_ps->m_pageMarginRight;
   double deltaLeft = set ? -m_ps->m_pageMarginLeft : m_ps->m_pageMarginLeft;
-  if (m_ps->m_sectionMarginLeft)
+  if (m_ps->m_sectionMarginLeft < 0 || m_ps->m_sectionMarginLeft > 0)
     m_ps->m_sectionMarginLeft += deltaLeft;
-  if (m_ps->m_sectionMarginRight)
+  if (m_ps->m_sectionMarginRight < 0 || m_ps->m_sectionMarginRight > 0)
     m_ps->m_sectionMarginRight += deltaRight;
   m_ps->m_listReferencePosition += deltaLeft;
   m_ps->m_listBeginPosition += deltaLeft;
@@ -713,13 +718,13 @@ void MWAWContentListener::_openSection()
   propList.insert("fo:margin-right", m_ps->m_sectionMarginRight);
   if (m_ps->m_numColumns > 1)
     propList.insert("text:dont-balance-text-columns", false);
-  if (m_ps->m_sectionMarginTop)
+  if (m_ps->m_sectionMarginTop > 0 || m_ps->m_sectionMarginTop < 0)
     propList.insert("libwpd:margin-top", m_ps->m_sectionMarginTop);
-  if (m_ps->m_sectionMarginBottom)
+  if (m_ps->m_sectionMarginBottom > 0 || m_ps->m_sectionMarginBottom < 0)
     propList.insert("libwpd:margin-bottom", m_ps->m_sectionMarginBottom);
 
   WPXPropertyListVector columns;
-  for (int i = 0; i < int(m_ps->m_textColumns.size()); i++) {
+  for (size_t i = 0; i < m_ps->m_textColumns.size(); i++) {
     MWAWColumnDefinition const &col = m_ps->m_textColumns[i];
     WPXPropertyList column;
     // The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
@@ -842,6 +847,8 @@ void MWAWContentListener::_appendJustification(WPXPropertyList &propList, libmwa
     propList.insert("fo:text-align", "justify");
     propList.insert("fo:text-align-last", "justify");
     break;
+  default:
+    break;
   }
 }
 
@@ -871,6 +878,8 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
         break;
       case libmwaw::BorderDouble:
         stream << " double";
+        break;
+      default:
         break;
       }
       stream << " #" << std::hex << std::setfill('0') << std::setw(6)
@@ -903,7 +912,7 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
       if (it == m_ds->m_pageList.end())
         break;
 
-      actPage+=it->getPageSpan();
+      actPage+=(unsigned)it->getPageSpan();
       it++;
     }
     MWAWPageSpan const &currentPage = *it;
@@ -918,7 +927,7 @@ void MWAWContentListener::_getTabStops(WPXPropertyListVector &tabStops)
 {
   double decalX = m_ps->m_isTabPositionRelative ? -m_ps->m_leftMarginByTabs :
                   -m_ps->m_paragraphMarginLeft-m_ps->m_sectionMarginLeft-m_ps->m_pageMarginLeft;
-  for (int i=0; i<(int)m_ps->m_tabStops.size(); i++)
+  for (size_t i=0; i<m_ps->m_tabStops.size(); i++)
     m_ps->m_tabStops[i].addTo(tabStops, decalX);
 }
 
@@ -977,8 +986,8 @@ void MWAWContentListener::_changeList()
 
   // FIXME: even if nobody really care, if we close an ordered or an unordered
   //      elements, we must keep the previous to close this part...
-  int actualListLevel = m_ps->m_listOrderedLevels.size();
-  for (int i=actualListLevel; i > m_ps->m_currentListLevel; i--) {
+  size_t actualListLevel = m_ps->m_listOrderedLevels.size();
+  for (size_t i=actualListLevel; i > m_ps->m_currentListLevel; i--) {
     if (m_ps->m_listOrderedLevels[i-1])
       m_documentInterface->closeOrderedListLevel();
     else
@@ -1020,8 +1029,8 @@ void MWAWContentListener::_changeList()
   if (actualListLevel == m_ps->m_currentListLevel) return;
 
   m_ps->m_listOrderedLevels.resize(m_ps->m_currentListLevel, false);
-  for (int i=actualListLevel+1; i<= m_ps->m_currentListLevel; i++) {
-    if (m_ps->m_list->isNumeric(i)) {
+  for (size_t i=actualListLevel+1; i<= m_ps->m_currentListLevel; i++) {
+    if (m_ps->m_list->isNumeric(int(i))) {
       m_ps->m_listOrderedLevels[i-1] = true;
       m_documentInterface->openOrderedListLevel(propList2);
     } else {
@@ -1218,7 +1227,7 @@ void MWAWContentListener::insertLabelNote(const NoteType noteType, WPXString con
     m_ps->m_currentListLevel = 0;
     _changeList(); // flush the list exterior
     handleSubDocument(subDocument, libmwaw::DOC_NOTE);
-    m_ps->m_currentListLevel = prevListLevel;
+    m_ps->m_currentListLevel = (uint8_t)prevListLevel;
   } else {
     if (!m_ps->m_isParagraphOpened)
       _openParagraph();
@@ -1387,41 +1396,38 @@ void MWAWContentListener::_handleFrameParameters
     w *= inchFactor;
     switch ( pos.m_xPos) {
     case MWAWPosition::XRight:
-      if (origin[0] == 0.0) {
+      if (origin[0] < 0.0 || origin[0] > 0.0) {
+        propList.insert( "style:horizontal-pos", "from-left");
+        propList.insert( "svg:x", double(origin[0] - pos.size()[0] + w), unit);
+      } else
         propList.insert("style:horizontal-pos", "right");
-        break;
-      }
-      propList.insert( "style:horizontal-pos", "from-left");
-      propList.insert( "svg:x", double(origin[0] - pos.size()[0] + w), unit);
       break;
     case MWAWPosition::XCenter:
-      if (origin[0] == 0.0) {
+      if (origin[0] < 0.0 || origin[0] > 0.0) {
+        propList.insert( "style:horizontal-pos", "from-left");
+        propList.insert( "svg:x", double(origin[0] - pos.size()[0]/2.0 + w/2.0), unit);
+      } else
         propList.insert("style:horizontal-pos", "center");
-        break;
-      }
-      propList.insert( "style:horizontal-pos", "from-left");
-      propList.insert( "svg:x", double(origin[0] - pos.size()[0]/2.0 + w/2.0), unit);
       break;
     case MWAWPosition::XLeft:
+    case MWAWPosition::XFull:
     default:
-      if (origin[0] == 0.0)
-        propList.insert("style:horizontal-pos", "left");
-      else {
+      if (origin[0] < 0.0 || origin[0] > 0.0) {
         propList.insert( "style:horizontal-pos", "from-left");
         propList.insert( "svg:x", double(origin[0]), unit);
-      }
+      } else
+        propList.insert("style:horizontal-pos", "left");
       break;
     }
 
-    if (origin[1] == 0.0)
-      propList.insert( "style:vertical-pos", "top" );
-    else {
+    if (origin[1] < 0.0 || origin[1] > 0.0) {
       propList.insert( "style:vertical-pos", "from-top" );
       propList.insert( "svg:y", double(origin[1]), unit);
-    }
-
+    } else
+      propList.insert( "style:vertical-pos", "top" );
     return;
   }
+
   if ( pos.m_anchorTo == MWAWPosition::Page ) {
     // Page position seems to do not use the page margin...
     propList.insert("text:anchor-type", "page");
@@ -1437,36 +1443,35 @@ void MWAWContentListener::_handleFrameParameters
     case MWAWPosition::YFull:
       propList.insert("svg:height", double(h), unit);
     case MWAWPosition::YTop:
-      if ( origin[1] == 0.0) {
+      if (origin[1] < 0.0 || origin[1] > 0.0) {
+        propList.insert("style:vertical-pos", "from-top" );
+        newPosition = origin[1];
+        if (newPosition > h -pos.size()[1])
+          newPosition = h - pos.size()[1];
+        propList.insert("svg:y", double(newPosition), unit);
+      } else
         propList.insert("style:vertical-pos", "top" );
-        break;
-      }
-      propList.insert("style:vertical-pos", "from-top" );
-      newPosition = origin[1];
-      if (newPosition > h -pos.size()[1])
-        newPosition = h - pos.size()[1];
-      propList.insert("svg:y", double(newPosition), unit);
       break;
     case MWAWPosition::YCenter:
-      if (origin[1] == 0.0) {
+      if (origin[1] < 0.0 || origin[1] > 0.0) {
+        propList.insert("style:vertical-pos", "from-top" );
+        newPosition = (h - pos.size()[1])/2.0;
+        if (newPosition > h -pos.size()[1]) newPosition = h - pos.size()[1];
+        propList.insert("svg:y", double(newPosition), unit);
+      } else
         propList.insert("style:vertical-pos", "middle" );
-        break;
-      }
-      propList.insert("style:vertical-pos", "from-top" );
-      newPosition = (h - pos.size()[1])/2.0;
-      if (newPosition > h -pos.size()[1]) newPosition = h - pos.size()[1];
-      propList.insert("svg:y", double(newPosition), unit);
       break;
     case MWAWPosition::YBottom:
-      if (origin[1] == 0.0) {
+      if (origin[1] < 0.0 || origin[1] > 0.0) {
+        propList.insert("style:vertical-pos", "from-top" );
+        newPosition = h - pos.size()[1]-origin[1];
+        if (newPosition > h -pos.size()[1]) newPosition = h -pos.size()[1];
+        else if (newPosition < 0) newPosition = 0;
+        propList.insert("svg:y", double(newPosition), unit);
+      } else
         propList.insert("style:vertical-pos", "bottom" );
-        break;
-      }
-      propList.insert("style:vertical-pos", "from-top" );
-      newPosition = h - pos.size()[1]-origin[1];
-      if (newPosition > h -pos.size()[1]) newPosition = h -pos.size()[1];
-      else if (newPosition < 0) newPosition = 0;
-      propList.insert("svg:y", double(newPosition), unit);
+      break;
+    default:
       break;
     }
 
@@ -1474,28 +1479,27 @@ void MWAWContentListener::_handleFrameParameters
     case MWAWPosition::XFull:
       propList.insert("svg:width", double(w), unit);
     case MWAWPosition::XLeft:
-      if ( origin[0] == 0.0 )
-        propList.insert( "style:horizontal-pos", "left");
-      else {
+      if ( origin[0] < 0.0 || origin[0] > 0.0 ) {
         propList.insert( "style:horizontal-pos", "from-left");
         propList.insert( "svg:x", double(origin[0]), unit);
-      }
+      } else
+        propList.insert( "style:horizontal-pos", "left");
       break;
     case MWAWPosition::XRight:
-      if ( origin[0] == 0.0 )
-        propList.insert( "style:horizontal-pos", "right");
-      else {
+      if ( origin[0] < 0.0 || origin[0] > 0.0 ) {
         propList.insert( "style:horizontal-pos", "from-left");
         propList.insert( "svg:x",double( w - pos.size()[0] + origin[0]), unit);
-      }
+      } else
+        propList.insert( "style:horizontal-pos", "right");
       break;
     case MWAWPosition::XCenter:
-      if ( origin[0] == 0.0 )
-        propList.insert( "style:horizontal-pos", "center" );
-      else {
+      if ( origin[0] < 0.0 || origin[0] > 0.0 ) {
         propList.insert( "style:horizontal-pos", "from-left");
         propList.insert( "svg:x", double((w - pos.size()[0])/2. + origin[0]), unit);
-      }
+      } else
+        propList.insert( "style:horizontal-pos", "center" );
+      break;
+    default:
       break;
     }
     return;
@@ -1511,29 +1515,26 @@ void MWAWContentListener::_handleFrameParameters
   switch ( pos.m_yPos ) {
   case MWAWPosition::YFull:
   case MWAWPosition::YTop:
-    if ( origin[1] == 0.0 )
-      propList.insert( "style:vertical-pos", "top" );
-    else {
+    if ( origin[1] < 0.0 || origin[1] > 0.0) {
       propList.insert( "style:vertical-pos", "from-top" );
       propList.insert( "svg:y", double(origin[1]), unit);
-    }
+    } else
+      propList.insert( "style:vertical-pos", "top" );
     break;
   case MWAWPosition::YCenter:
-    if ( origin[1] == 0.0 )
-      propList.insert( "style:vertical-pos", "middle" );
-    else {
+    if ( origin[1] < 0.0 || origin[1] > 0.0) {
       propList.insert( "style:vertical-pos", "from-top" );
       propList.insert( "svg:y", double(origin[1] - pos.size()[1]/2.0), unit);
-    }
+    } else
+      propList.insert( "style:vertical-pos", "middle" );
     break;
   case MWAWPosition::YBottom:
   default:
-    if ( origin[1] == 0.0 )
-      propList.insert( "style:vertical-pos", "bottom" );
-    else {
+    if ( origin[1] < 0.0 || origin[1] > 0.0) {
       propList.insert( "style:vertical-pos", "from-top" );
       propList.insert( "svg:y", double(origin[1] - pos.size()[1]), unit);
-    }
+    } else
+      propList.insert( "style:vertical-pos", "bottom" );
     break;
   }
 }
@@ -1560,13 +1561,17 @@ void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr &subDocument, lib
     m_ps->m_isHeaderFooterWithoutParagraph = true;
     m_ds->m_isHeaderFooterStarted = true;
     break;
+  case libmwaw::DOC_NONE:
+  case libmwaw::DOC_NOTE:
+  case libmwaw::DOC_TABLE:
+  case libmwaw::DOC_COMMENT_ANNOTATION:
   default:
     break;
   }
 
   // Check whether the document is calling itself
   bool sendDoc = true;
-  for (int i = 0; i < int(m_ds->m_subDocuments.size()); i++) {
+  for (size_t i = 0; i < m_ds->m_subDocuments.size(); i++) {
     if (!subDocument)
       break;
     if (subDocument == m_ds->m_subDocuments[i]) {
@@ -1596,6 +1601,10 @@ void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr &subDocument, lib
     break;
   case libmwaw::DOC_HEADER_FOOTER:
     m_ds->m_isHeaderFooterStarted = false;
+  case libmwaw::DOC_NONE:
+  case libmwaw::DOC_NOTE:
+  case libmwaw::DOC_TABLE:
+  case libmwaw::DOC_COMMENT_ANNOTATION:
   default:
     break;
   }
@@ -1649,8 +1658,8 @@ void MWAWContentListener::openTable(std::vector<float> const &colWidth, WPXUnit 
   float tableWidth = 0;
   WPXPropertyListVector columns;
 
-  int nCols = colWidth.size();
-  for (int c = 0; c < nCols; c++) {
+  size_t nCols = colWidth.size();
+  for (size_t c = 0; c < nCols; c++) {
     WPXPropertyList column;
     column.insert("style:column-width", colWidth[c], unit);
     columns.append(column);
@@ -1752,6 +1761,8 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
         propList.insert("style:data-style-name", f.str().c_str());
       }
       break;
+    case MWAWCell::F_TEXT:
+    case MWAWCell::F_UNKNOWN:
     default:
       break;
     }
@@ -1791,6 +1802,7 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
     break;
   case MWAWCell::HALIGN_DEFAULT:
     break; // default
+  case MWAWCell::HALIGN_FULL:
   default:
     MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: called with unknown align=%d\n", cell.hAlignement()));
   }
@@ -1844,7 +1856,7 @@ shared_ptr<MWAWContentParsingState> MWAWContentListener::_pushParsingState()
   // BEGIN: copy page properties into the new parsing state
   m_ps->m_pageFormLength = actual->m_pageFormLength;
   m_ps->m_pageFormWidth = actual->m_pageFormWidth;
-  m_ps->m_pageFormOrientationIsPortrait =	actual->m_pageFormWidth;
+  m_ps->m_pageFormOrientationIsPortrait =	actual->m_pageFormOrientationIsPortrait;
   m_ps->m_pageMarginLeft = actual->m_pageMarginLeft;
   m_ps->m_pageMarginRight = actual->m_pageMarginRight;
   m_ps->m_pageMarginTop = actual->m_pageMarginTop;

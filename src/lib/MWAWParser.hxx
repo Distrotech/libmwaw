@@ -85,7 +85,7 @@ protected:
   }
 
   //! the actual version
-  uint8_t m_version;
+  int m_version;
 
   //! a DebugFile used to write what we recognize when we parse the document
   libmwaw::DebugFile &ascii() {

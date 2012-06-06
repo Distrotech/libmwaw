@@ -49,6 +49,7 @@ SLOFILES= \
 	$(SLO)$/MSKText.obj			\
 	$(SLO)$/MSWParser.obj			\
 	$(SLO)$/MSWText.obj			\
+	$(SLO)$/MSWTextStles.obj		\
 	$(SLO)$/MWAWDebug.obj			\
 	$(SLO)$/MWAWFontConverter.obj		\
 	$(SLO)$/MWAWInputStream.obj		\

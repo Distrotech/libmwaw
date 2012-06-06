@@ -379,7 +379,7 @@ struct ContentZones {
   }
   int getNumberOfZonesWithType(int type) const {
     int res = 0;
-    for (int i = 0; i < int(m_zonesList.size()); i++)
+    for (size_t i = 0; i < m_zonesList.size(); i++)
       if (m_zonesList[i].m_type == type) res++;
     return res;
   }
@@ -489,7 +489,7 @@ struct State {
       return Style();
     int rId = it->second;
     if (rId < int(m_styleList.size()))
-      return m_styleList[rId];
+      return m_styleList[(size_t) rId];
     return Style();
   }
 
@@ -570,9 +570,9 @@ int WNText::numPages() const
     return 1;
   }
   shared_ptr<WNTextInternal::ContentZones> mainContent = m_state->m_mainZones[0].m_zones[0];
-  int numPages = 1+mainContent->getNumberOfZonesWithType(0x10);
-  m_state->m_numPages = numPages;
-  return numPages;
+  int nPages = 1+mainContent->getNumberOfZonesWithType(0x10);
+  m_state->m_numPages = nPages;
+  return nPages;
 }
 
 WNEntry WNText::getHeader() const
@@ -633,7 +633,7 @@ bool WNText::createZones()
   std::map<long, shared_ptr<WNTextInternal::ContentZones> >::iterator it;
   /** we can now create the content zone and type them */
   for (int z = 2; z >= 0; z--) {
-    for (int i = 0; i < int(listData[z].size()); i++) {
+    for (size_t i = 0; i < listData[z].size(); i++) {
       WNEntry data = listData[z][i];
       it = listDone.find(data.begin());
       if (it != listDone.end()) {
@@ -655,14 +655,14 @@ bool WNText::createZones()
   }
   /* we can now recreate a zone 0 which contains all the main content zone*/
   WNTextInternal::Zone &mainZone = m_state->m_mainZones[0];
-  int numZones = mainZone.m_zones.size();
+  size_t numZones = mainZone.m_zones.size();
   std::vector<shared_ptr<WNTextInternal::ContentZones> > headerFooterList;
   std::vector<int> calledTypesList;
 
   shared_ptr<WNTextInternal::ContentZones> zone0(new WNTextInternal::ContentZones);
   zone0->m_id = -1;
   zone0->m_type = 0;
-  for (int z = 0; z < numZones; z++) {
+  for (size_t z = 0; z < numZones; z++) {
     shared_ptr<WNTextInternal::ContentZones> content =  mainZone.m_zones[z];
     switch (content->m_type) {
     case 0:
@@ -699,8 +699,8 @@ bool WNText::createZones()
   shared_ptr<WNTextInternal::ContentZones> content =  mainZone.m_zones[0];
   if (content->m_type != 0) return false;
 
-  int numCalledZones = calledTypesList.size();
-  for (int c = 0; c < numCalledZones; c++) {
+  size_t numCalledZones = calledTypesList.size();
+  for (size_t c = 0; c < numCalledZones; c++) {
     int called = calledTypesList[c];
     if (called < 5 || called > 6) {
       MWAW_DEBUG_MSG(("WNText::createZones: unknown content %d\n", called));
@@ -715,12 +715,12 @@ bool WNText::createZones()
       if (m_state->m_header)
         MWAW_DEBUG_MSG(("WNText::createZones: header is already defined\n"));
       else
-        m_state->m_header = headerFooterList[number];
+        m_state->m_header = headerFooterList[(size_t)number];
     } else if (called == 6) {
       if (m_state->m_footer)
         MWAW_DEBUG_MSG(("WNText::createZones: footer is already defined\n"));
       else
-        m_state->m_footer = headerFooterList[number];
+        m_state->m_footer = headerFooterList[(size_t)number];
     }
   }
 
@@ -792,7 +792,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
   while (long(m_input->tell()) < entry.end()) {
     long pos = m_input->tell();
     WNTextInternal::ContentZone zone;
-    c = m_input->readULong(1);
+    c = (int) m_input->readULong(1);
     if (c == 0xf0) {
       MWAW_DEBUG_MSG(("WNText::parseContent: find 0xf0 entry\n"));
       ascii().addPos(pos);
@@ -805,7 +805,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
     zone.m_type = type;
     if (type == 0) { // text entry
       while (long(m_input->tell()) != entry.end()) {
-        c = m_input->readULong(1);
+        c = (int) m_input->readULong(1);
         if (c == 0xf0) continue;
         if ((c&0xf0)==0xf0) {
           m_input->seek(-1, WPX_SEEK_CUR);
@@ -818,14 +818,14 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
       int numChar = 0;
       zone.m_pos[1] = entry.end();
       while (long(m_input->tell()) != entry.end()) {
-        c = m_input->readULong(1);
+        c = (int) m_input->readULong(1);
         if (c==0xf7) {
           zone.m_pos[1] = long(m_input->tell())-1;
           break;
         }
 
         if (c==0xf0)
-          c = 0xf0 | (m_input->readULong(1) & 0xf);
+          c = int(0xf0 | (m_input->readULong(1) & 0xf));
         numChar++;
         if (!firstSeen) {
           zone.m_value = c;
@@ -885,7 +885,7 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
   long endPos = entry.end();
 
   m_input->seek(entry.begin(), WPX_SEEK_SET);
-  long sz = m_input->readULong(lengthSz);
+  long sz = (long) m_input->readULong(lengthSz);
   if (vers>2 && sz != entry.length()) {
     MWAW_DEBUG_MSG(("WNText::parseZone: bad begin of last zone\n"));
     return false;
@@ -917,10 +917,10 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
       f << "f" << i << "=" << val << ",";
     }
   }
-  int numElts = (entry.length()-headerSz)/dataSz;
+  int numElts = int((entry.length()-headerSz)/dataSz);
   for (int elt=0; elt<numElts; elt++) {
     f << "entry" << elt << "=[";
-    int flags = m_input->readULong(1);
+    int flags = (int) m_input->readULong(1);
     /*  find
         40 44 45 : header ?
         60 61 64 65 : text ?
@@ -929,19 +929,19 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
     */
     f << "fl=" << std::hex << flags << std::dec << ",";
     for (int i = 0; i < 3; i++) {
-      val = m_input->readULong(1);
+      val = (long) m_input->readULong(1);
       if (!i && val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
       if (vers <= 2) break;
     }
 
     WNEntry zEntry;
-    zEntry.setBegin(m_input->readULong(vers <= 2 ? 2 : 4));
-    if (vers > 2) zEntry.setLength(m_input->readULong(4));
+    zEntry.setBegin((long) m_input->readULong(vers <= 2 ? 2 : 4));
+    if (vers > 2) zEntry.setLength((long) m_input->readULong(4));
     else if (zEntry.begin() &&
              m_mainParser->checkIfPositionValid(zEntry.begin())) {
       long actPos = m_input->tell();
       m_input->seek(zEntry.begin(), WPX_SEEK_SET);
-      zEntry.setLength(m_input->readULong(2)+2);
+      zEntry.setLength((long) m_input->readULong(2)+2);
       m_input->seek(actPos, WPX_SEEK_SET);
     }
     zEntry.setType("TextData");
@@ -1007,7 +1007,7 @@ bool WNText::readFontNames(WNEntry const &entry)
     val = m_input->readLong(2);
     if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
-  int N=m_input->readULong(2);
+  int N=(int) m_input->readULong(2);
   f << "N=" << N << ",";
   for (int i = 0; i < 2; i++) { // 0
     val = m_input->readLong(2);
@@ -1024,7 +1024,7 @@ bool WNText::readFontNames(WNEntry const &entry)
     pos = m_input->tell();
     f.str("");
     f << "Fonts[" << n << "]:";
-    int type = m_input->readULong(1);
+    int type = (int) m_input->readULong(1);
     switch(type) {
     case 0:
       f << "def,";
@@ -1038,7 +1038,7 @@ bool WNText::readFontNames(WNEntry const &entry)
       val = m_input->readLong(1);
       if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
     }
-    val = m_input->readULong(4);
+    val = (long) m_input->readULong(4);
     defPos.push_back(pos+val);
     // fixme: used this to read the data...
     f << "defPos=" << std::hex << pos+val << std::dec << ",";
@@ -1047,7 +1047,7 @@ bool WNText::readFontNames(WNEntry const &entry)
   }
 
   for (int n = 0; n < N; n++) {
-    pos = defPos[n];
+    pos = defPos[(size_t) n];
     if (pos == entry.end()) continue;
     if (pos+13 > entry.end()) {
       MWAW_DEBUG_MSG(("WNText::readFontNames: can not read entry : %d\n", n));
@@ -1066,7 +1066,7 @@ bool WNText::readFontNames(WNEntry const &entry)
       val = m_input->readLong(2);
       if (val) f << "f" << i << "=" << val << ",";
     }
-    int sz = m_input->readULong(1);
+    int sz = (int) m_input->readULong(1);
     if (pos+13+sz > entry.end()) {
       MWAW_DEBUG_MSG(("WNText::readFontNames: can not read entry name : %d\n", n));
       return false;
@@ -1075,7 +1075,7 @@ bool WNText::readFontNames(WNEntry const &entry)
     bool ok = true;
     std::string name("");
     for (int i = 0; i < sz; i++) {
-      char ch = m_input->readULong(1);
+      char ch = (char) m_input->readULong(1);
       if (ch == '\0') {
         MWAW_DEBUG_MSG(("WNText::readFontNames: pb with name field %d\n", n));
         ok = false;
@@ -1122,10 +1122,10 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   }
   input.seek(pos, WPX_SEEK_SET);
 
-  font.m_font.setId(input.readULong(2));
-  font.m_font.setSize(input.readULong(vers <= 2 ? 1 : 2));
-  int flag = input.readULong(1);
-  int flags=0;
+  font.m_font.setId((int) input.readULong(2));
+  font.m_font.setSize((int) input.readULong(vers <= 2 ? 1 : 2));
+  int flag = (int) input.readULong(1);
+  uint32_t flags=0;
   if (flag&0x1) flags |= MWAW_BOLD_BIT;
   if (flag&0x2) flags |= MWAW_ITALICS_BIT;
   if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
@@ -1140,11 +1140,11 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
     font.m_extra = f.str();
     return true;
   }
-  flag = input.readULong(1);
+  flag = (int) input.readULong(1);
   if (flag&0x80) flags |= MWAW_STRIKEOUT_BIT;
   if (flag&0x7f) f << "#flag1=" << std::hex << (flag&0x7f) << std::dec << ",";
 
-  flag = input.readULong(1);
+  flag = (int) input.readULong(1);
   if (flag&0x2) flags |= MWAW_DOUBLE_UNDERLINE_BIT;
   if (flag&0x4) {
     flags |= MWAW_UNDERLINE_BIT;
@@ -1168,7 +1168,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   }
   if (flag&0x81) f << "#flag2=" << std::hex << (flag&0x81) << std::dec << ",";
 
-  int color = input.readULong(1); // fixme find color map
+  int color = (int) input.readULong(1); // fixme find color map
   if (color) {
     Vec3uc col;
     if (m_mainParser->getColor(color,col))
@@ -1176,7 +1176,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
     else
       f << "#colorId=" << color << ",";
   }
-  int heightDecal = input.readLong(2);
+  int heightDecal = (int) input.readLong(2);
   if (heightDecal > 0) {
     flags |= MWAW_SUPERSCRIPT100_BIT;
     f << "supY=" << heightDecal <<",";
@@ -1190,13 +1190,13 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
 
   int act = 0;
   if (inStyle) {
-    font.m_flags[act++] = input.readULong(4);
-    font.m_flags[act++] = input.readLong(2);
+    font.m_flags[act++] = (int) input.readULong(4);
+    font.m_flags[act++] = (int) input.readLong(2);
   } else {
-    font.m_flags[act++] = input.readLong(1); // 5: note def, 6: note pos ?
-    font.m_styleId[0] = input.readULong(1)-1;
-    font.m_styleId[1] = input.readULong(1)-1;
-    font.m_flags[act++] = input.readLong(1); // alway 0
+    font.m_flags[act++] = (int) input.readLong(1); // 5: note def, 6: note pos ?
+    font.m_styleId[0] = (int) input.readULong(1)-1;
+    font.m_styleId[1] = (int) input.readULong(1)-1;
+    font.m_flags[act++] = (int) input.readLong(1); // alway 0
   }
   return true;
 }
@@ -1229,19 +1229,19 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   /* small number, 0, small number < 3 */
   if (vers >= 3) {
     for (int i = 0; i < 2; i++)
-      ruler.m_values[actVal++] = input.readULong(1);
+      ruler.m_values[actVal++] = (int) input.readULong(1);
   }
-  ruler.m_margins[1]=input.readLong(2);
-  ruler.m_margins[2]=input.readLong(2);
-  ruler.m_margins[0]=input.readLong(2);
+  ruler.m_margins[1]=(int) input.readLong(2);
+  ruler.m_margins[2]=(int) input.readLong(2);
+  ruler.m_margins[0]=(int) input.readLong(2);
   ruler.m_margins[0]-=ruler.m_margins[1];
   int height = 0;
   if (vers >= 3) {
-    height=input.readLong(2);
+    height=(int) input.readLong(2);
     for (int i = 0; i < 3; i++)
-      ruler.m_values[actVal++] = input.readULong(2);
+      ruler.m_values[actVal++] = (int) input.readULong(2);
   }
-  int flag = input.readULong(1);
+  int flag = (int) input.readULong(1);
   switch (flag & 3) {
   case 0:
     break; // left
@@ -1260,16 +1260,16 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   bool interlineFixed = (flag & 0x80);
   ruler.m_values[actVal++] = (flag & 0x7c);
   if (vers <= 2)
-    height=input.readULong(1);
+    height=(int) input.readULong(1);
   else
-    ruler.m_values[actVal++] = input.readULong(1); // always 0
+    ruler.m_values[actVal++] = (int) input.readULong(1); // always 0
 
   if (!input.atEOS()) {
     int previousVal = 0;
     int tab = 0;
     while (!input.atEOS()) {
       MWAWTabStop newTab;
-      int newVal = input.readULong(2);
+      int newVal = (int) input.readULong(2);
       if (tab && newVal < previousVal) {
         MWAW_DEBUG_MSG(("WNText::readParagraph: find bad tab pos\n"));
         f << "#tab[" << tab << ",";
@@ -1347,7 +1347,7 @@ bool WNText::readStyles(WNEntry const &entry)
     val = m_input->readLong(2);
     if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
-  int N=m_input->readULong(2);
+  int N=(int) m_input->readULong(2);
   f << "N=" << N << ",";
   for (int i = 0; i < 2; i++) { // 0
     val = m_input->readLong(2);
@@ -1366,7 +1366,7 @@ bool WNText::readStyles(WNEntry const &entry)
     pos = m_input->tell();
     f.str("");
     f << "Styles[" << n << "]:";
-    int type = m_input->readULong(1);
+    int type = (int) m_input->readULong(1);
     switch(type) {
     case 0:
       f << "def[named],";
@@ -1389,14 +1389,14 @@ bool WNText::readStyles(WNEntry const &entry)
       val = m_input->readLong(1);
       if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
     }
-    val = m_input->readULong(4);
+    val = (long) m_input->readULong(4);
     if (type != 0x80 && pos+val != entry.end()) {
       seenIt = seenMap.find(pos+val);
       int id = 0;
       if (seenIt != seenMap.end())
         id = seenIt->second;
       else {
-        id = defPos.size();
+        id = int(defPos.size());
         defPos.push_back(pos+val);
         seenMap[pos+val] = id;
       }
@@ -1407,17 +1407,17 @@ bool WNText::readStyles(WNEntry const &entry)
     ascii().addNote(f.str().c_str());
   }
 
-  for (int n = 0; n < int(defPos.size()); n++) {
+  for (size_t n = 0; n < defPos.size(); n++) {
     pos = defPos[n];
     if (pos+34 > entry.end()) {
-      MWAW_DEBUG_MSG(("WNText::readStyles: can not read entry : %d\n", n));
+      MWAW_DEBUG_MSG(("WNText::readStyles: can not read entry : %ld\n", n));
       return false;
     }
 
     WNTextInternal::Style style;
     m_input->seek(pos, WPX_SEEK_SET);
     f.str("");
-    int type = m_input->readULong(1);
+    int type = (int) m_input->readULong(1);
     style.m_values[0] = int(type>>4);// find 1, 2 or 3
     style.m_values[1] = int(type&0xF); // always 0 ?
 
@@ -1425,33 +1425,33 @@ bool WNText::readStyles(WNEntry const &entry)
        f3: small number : maybe a previous id?
      */
     for (int i = 2; i < 4; i++) {
-      style.m_values[i] = m_input->readULong(1);
+      style.m_values[i] = (int) m_input->readULong(1);
     }
-    style.m_nextId = m_input->readLong(1)-1; // almost always n+1, so...
+    style.m_nextId = (int) m_input->readLong(1)-1; // almost always n+1, so...
     /* f4: almost always 0, but one time f4=nextId
        f5: always=0
      */
     for (int i = 4; i < 6; i++) {
-      style.m_values[i] = m_input->readULong(1);
+      style.m_values[i] = (int) m_input->readULong(1);
     }
     for (int i = 7; i < 10; i++) { // always 0
-      style.m_values[i] = m_input->readLong(2);
+      style.m_values[i] = (int) m_input->readLong(2);
     }
     for (int i = 0; i < 6; i++) {
-      style.m_flags[i] = m_input->readULong(2);
+      style.m_flags[i] = (int) m_input->readULong(2);
     }
     for (int i = 10; i < 12; i++) { // always 0
-      style.m_values[i] = m_input->readLong(2);
+      style.m_values[i] = (int) m_input->readLong(2);
     }
     int relPos[3];
     for (int i = 0; i < 3; i++)
-      relPos[i] = m_input->readULong(2);
-    style.m_values[12] = m_input->readULong(2); // another pos ?
+      relPos[i] = (int) m_input->readULong(2);
+    style.m_values[12] = (int) m_input->readULong(2); // another pos ?
     if (relPos[0]) { // style name
       m_input->seek(pos+relPos[0], WPX_SEEK_SET);
-      int sz = m_input->readULong(1);
+      int sz = (int) m_input->readULong(1);
       if (!sz || pos+relPos[0]+1+sz > entry.end()) {
-        MWAW_DEBUG_MSG(("WNText::readStyles: can not read name for entry : %d\n", n));
+        MWAW_DEBUG_MSG(("WNText::readStyles: can not read name for entry : %ld\n", n));
         f << "name[length],";
       } else {
         std::string name("");
@@ -1487,7 +1487,7 @@ bool WNText::readStyles(WNEntry const &entry)
       f.str("");
       f << "StylesData[" << n << ":ruler]:";
       m_input->seek(pos+relPos[2], WPX_SEEK_SET);
-      int sz = m_input->readULong(2);
+      int sz = (int) m_input->readULong(2);
       m_input->pushLimit(pos+relPos[2]+sz);
       WNTextInternal::Paragraph ruler;
       if (readParagraph(*m_input, ruler)) {
@@ -1524,14 +1524,14 @@ bool WNText::readToken(MWAWInputStream &input, WNTextInternal::Token &token)
   input.seek(pos, WPX_SEEK_SET);
   int dim[4];
   for (int i=0; i < 4; i++)
-    dim[i] = input.readLong(2);
+    dim[i] = (int) input.readLong(2);
   token.m_box = Box2i(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
   int actVal = 0;
   for (int st = 0; st < 2; st++) {
-    int dim0 = input.readLong(2);
-    token.m_values[actVal++] = input.readLong(2); // always 0
-    token.m_values[actVal++] = input.readLong(2); // always 0
-    int dim1 = input.readLong(2);
+    int dim0 = (int) input.readLong(2);
+    token.m_values[actVal++] = (int) input.readLong(2); // always 0
+    token.m_values[actVal++] = (int) input.readLong(2); // always 0
+    int dim1 = (int) input.readLong(2);
     token.m_pos[st] = Vec2i(dim1, -dim0);
   }
   /*
@@ -1539,16 +1539,16 @@ bool WNText::readToken(MWAWInputStream &input, WNTextInternal::Token &token)
     f1/f3 : 0 or big number
    */
   for (int i = 0; i < 4; i++) {
-    token.m_values[actVal++] = input.readULong(2);
+    token.m_values[actVal++] = (int) input.readULong(2);
   }
   /*
     f8=1, f9=14
     other 0
   */
   for (int i = 0; i < 10; i++) {
-    token.m_values[actVal++] = input.readLong(2);
+    token.m_values[actVal++] = (int) input.readLong(2);
   }
-  token.m_graphicZone = input.readLong(2);
+  token.m_graphicZone = (int) input.readLong(2);
   return true;
 }
 
@@ -1559,7 +1559,7 @@ bool WNText::readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token)
   long actPos = input.tell();
   int dim[2];
   for (int i=0; i < 2; i++)
-    dim[i] = input.readLong(2);
+    dim[i] = (int) input.readLong(2);
   Vec2i box(dim[1], dim[0]);
   token.m_box=Box2i(Vec2i(0,0), box);
   // we need to get the size, so...
@@ -1570,7 +1570,7 @@ bool WNText::readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token)
   if (sz <= 0) return false;
   input.seek(actPos+4, WPX_SEEK_SET);
   MWAWInputStreamPtr ip(&input,MWAW_shared_ptr_noop_deleter<MWAWInputStream>());
-  shared_ptr<MWAWPict> pict(MWAWPictData::get(ip, sz));
+  shared_ptr<MWAWPict> pict(MWAWPictData::get(ip, (int) sz));
   if (!pict) {
     MWAW_DEBUG_MSG(("WNParser::readTokenV2: can not read the picture\n"));
     return false;
@@ -1600,7 +1600,7 @@ bool WNText::readTable(MWAWInputStream &input, WNTextInternal::TableData &table)
   table=WNTextInternal::TableData();
   long pos = input.tell();
 
-  table.m_type = input.readULong(1);
+  table.m_type = (int) input.readULong(1);
   if (input.atEOS()) {
     if (table.m_type!=0) {
       MWAW_DEBUG_MSG(("WNText::readTable: find a zone will 0 size\n"));
@@ -1615,9 +1615,9 @@ bool WNText::readTable(MWAWInputStream &input, WNTextInternal::TableData &table)
   }
   input.seek(pos+1, WPX_SEEK_SET);
   int actVal = 0;
-  table.m_values[actVal++] = input.readLong(1);
-  table.m_values[actVal++] = input.readLong(1);
-  int backColor = input.readULong(1);
+  table.m_values[actVal++] = (int) input.readLong(1);
+  table.m_values[actVal++] = (int) input.readLong(1);
+  int backColor = (int) input.readULong(1);
   Vec3uc col;
   if (m_mainParser->getColor(backColor,col))
     table.m_color = col;
@@ -1625,17 +1625,17 @@ bool WNText::readTable(MWAWInputStream &input, WNTextInternal::TableData &table)
     MWAW_DEBUG_MSG(("WNText::readTable: can not read backgroundColor: %d\n", backColor));
   }
   for (int i = 0; i < 4; i++) {
-    table.m_flags[i] = input.readULong(1); // 0x80, 0x81, 5, 0 : border flag ?
-    table.m_values[actVal++] = input.readLong(1); //  always 0 ?
+    table.m_flags[i] = (int) input.readULong(1); // 0x80, 0x81, 5, 0 : border flag ?
+    table.m_values[actVal++] = (int) input.readLong(1); //  always 0 ?
   }
   for (int i = 0; i < 3; i++)
-    table.m_values[actVal++] = input.readLong(2); // alway 0
+    table.m_values[actVal++] = (int) input.readLong(2); // alway 0
 
   int dim[4];
   for (int i = 0; i < 4; i++)
-    dim[i] = input.readLong(2);
+    dim[i] = (int) input.readLong(2);
   table.m_box = Box2i(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
-  table.m_values[actVal++] = input.readLong(2);
+  table.m_values[actVal++] = (int) input.readLong(2);
 
   return true;
 }
@@ -1672,14 +1672,14 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
   libmwaw::DebugStream f;
   int vers = version();
   MWAWFont actFont(3, 0, 0); // by default geneva
-  int extraFontFlags = 0; // for v2
+  uint32_t extraFontFlags = 0; // for v2
   bool rulerSet = false;
   int numLineTabs = 0, actTabs = 0, numFootnote = 0;
 
   shared_ptr<WNTextInternal::Table> table;
   shared_ptr<WNTextInternal::Cell> cell;
 
-  for (int z = 0; z < int(listZones.size()); z++) {
+  for (size_t z = 0; z < listZones.size(); z++) {
     WNTextInternal::ContentZone const &zone = listZones[z];
     if (table && cell) {
       bool done = true;
@@ -1689,7 +1689,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
         break;
       case 4:
         if (numFootnote < int(footnoteList.size())) {
-          cell->m_footnoteList.push_back(footnoteList[numFootnote]);
+          cell->m_footnoteList.push_back(footnoteList[(size_t) numFootnote]);
           numFootnote++;
         }
         cell->m_zonesList.push_back(zone);
@@ -1713,7 +1713,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     switch(zone.m_type) {
     case 4:
       if (numFootnote < int(footnoteList.size())) {
-        m_mainParser->sendFootnote(footnoteList[numFootnote]->m_entry);
+        m_mainParser->sendFootnote(footnoteList[(size_t) numFootnote]->m_entry);
         numFootnote++;
       } else {
         MWAW_DEBUG_MSG(("WNText::send: can not find footnote:%d\n", numFootnote));
@@ -1756,25 +1756,25 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     WPXBinaryData data;
     m_input->seek(zone.m_pos[0],WPX_SEEK_SET); //000a2f
     while(int(m_input->tell()) < zone.m_pos[1]) {
-      int ch = m_input->readULong(1);
+      int ch = (int) m_input->readULong(1);
       if (ch == 0xf0) {
-        ch = m_input->readULong(1);
+        ch = (int) m_input->readULong(1);
         if (ch & 0xf0) {
           MWAW_DEBUG_MSG(("WNText::send: find odd 0xF0 following\n"));
           continue;
         }
-        data.append(0xf0 | ch);
+        data.append((unsigned char)(0xf0 | ch));
       } else
-        data.append(ch);
+        data.append((unsigned char)ch);
     }
 
     f.str("");
     if (zone.m_type == 0) {
-      long sz = data.size();
+      long sz = (long) data.size();
       const unsigned char *buffer = data.getDataBuffer();
       if (sz && !rulerSet) {
         setProperty(ruler);
-        numLineTabs = ruler.m_tabs.size();
+        numLineTabs = int(ruler.m_tabs.size());
         rulerSet = true;
       }
       for (int i = 0; i < sz; i++) {
@@ -1803,7 +1803,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
             } else
               m_listener->insertCharacter(c);
           } else
-            m_listener->insertUnicode(unicode);
+            m_listener->insertUnicode((uint32_t) unicode);
           break;
         }
         }
@@ -1817,7 +1817,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     dataInput.setResponsable(false);
     switch(zone.m_type) {
     case 0x9: { // only in v2
-      int fFlags = actFont.flags() & ~extraFontFlags;
+      uint32_t fFlags = actFont.flags() & ~extraFontFlags;
       if (zone.m_value > 0) extraFontFlags = MWAW_SUPERSCRIPT100_BIT;
       else if (zone.m_value < 0) extraFontFlags = MWAW_SUBSCRIPT100_BIT;
       else extraFontFlags = 0;
@@ -1894,7 +1894,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       WNTextInternal::Paragraph newParagraph;
       if (readParagraph(dataInput, newParagraph)) {
         ruler = newParagraph;
-        numLineTabs = ruler.m_tabs.size();
+        numLineTabs = int(ruler.m_tabs.size());
         setProperty(ruler);
         rulerSet = true;
         f << ruler;
@@ -1962,7 +1962,7 @@ void WNText::sendZone(int id)
       if (width <= 0) // ok, we need to compute the width
         width = int((72.0*m_mainParser->pageWidth())/m_state->m_numColumns);
       std::vector<int> colSize;
-      colSize.resize(m_state->m_numColumns, width);
+      colSize.resize((size_t) m_state->m_numColumns, width);
       if (m_listener->isSectionOpened())
         m_listener->closeSection();
       m_listener->openSection(colSize, WPX_POINT);
@@ -1970,7 +1970,7 @@ void WNText::sendZone(int id)
   }
   WNTextInternal::Zone &mZone = m_state->m_mainZones[id];
   WNTextInternal::Paragraph ruler;
-  for (int i = 0; i < int(mZone.m_zones.size()); i++) {
+  for (size_t i = 0; i < mZone.m_zones.size(); i++) {
     if (mZone.m_zones[i]->m_sent) continue;
     if (id == 0 && mZone.m_zones[i]->m_type) continue;
     if (id) ruler = WNTextInternal::Paragraph();

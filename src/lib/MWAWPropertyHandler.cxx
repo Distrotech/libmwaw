@@ -85,14 +85,16 @@ void MWAWPropertyHandlerEncoder::characters(std::string const &sCharacters)
 
 void MWAWPropertyHandlerEncoder::writeString(const char *name)
 {
-  int sz = (name == 0L) ? 0 : strlen(name);
+  int sz = (name == 0L) ? 0 : int(strlen(name));
   writeInteger(sz);
   if (sz) m_f.write(name, sz);
 }
 
 void MWAWPropertyHandlerEncoder::writeInteger(int val)
 {
-  m_f.write((char const *)&val, sizeof(int));
+  int32_t value=(int32_t) val;
+  unsigned char const allValue[]= {(unsigned char)(value&0xFF), (unsigned char)((value>>8)&0xFF), (unsigned char)((value>>16)&0xFF), (unsigned char)((value>>24)&0xFF)};
+  m_f.write((const char *)allValue, 4);
 }
 
 bool MWAWPropertyHandlerEncoder::getData(WPXBinaryData &data)
@@ -126,7 +128,7 @@ public:
   //! tries to read the data
   bool readData(WPXBinaryData const &encoded) {
     try {
-      WPXInputStream *inp = (WPXInputStream *)encoded.getDataStream();
+      WPXInputStream *inp = const_cast<WPXInputStream *>(encoded.getDataStream());
       if (!inp) return false;
 
       while (!inp->atEOS()) {
@@ -242,24 +244,24 @@ protected:
       return true;
     }
     unsigned long numRead;
-    const unsigned char *dt = input.read(numC, numRead);
+    const unsigned char *dt = input.read((unsigned long)numC, numRead);
     if (dt == 0L || numRead != (unsigned long) numC) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInteger: can not read a string\n"));
       return false;
     }
-    s = std::string((const char *)dt, numC);
+    s = std::string((const char *)dt, size_t(numC));
     return true;
   }
 
   //! low level: reads an integer value
   bool readInteger(WPXInputStream &input, int &val) {
     unsigned long numRead = 0;
-    const unsigned char *dt = input.read(sizeof(int), numRead);
-    if (dt == 0L || numRead != sizeof(int)) {
+    const unsigned char *dt = input.read(4, numRead);
+    if (dt == 0L || numRead != 4) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInteger: can not read int\n"));
       return false;
     }
-    val = *(int *) dt;
+    val = int((dt[3]<<16)|(dt[2]<<16)|(dt[1]<<8)|dt[0]);
     return true;
   }
 private:

@@ -268,9 +268,9 @@ protected:
 
   //! Internal and Low level: initializes a map with a vector of \a numElt elements (char, unicode)
   static void initAMap(int const *arr, int numElt, std::map<unsigned char, unsigned long> &map) {
-    for (int i = 0; i < numElt; i++) {
-      unsigned char c = arr[2*i];
-      unsigned long unicode = arr[2*i+1];
+    for (size_t i = 0; i < size_t(numElt); i++) {
+      unsigned char c = (unsigned char)arr[2*i];
+      unsigned long unicode = (unsigned long)arr[2*i+1];
       map[c] = unicode;
     }
   }
@@ -326,9 +326,9 @@ protected:
 void KnownConversion::initMaps()
 {
   int numRoman = sizeof(s_romanUnicode)/(2*sizeof(int));
-  for (int i = 0; i < numRoman; i++) {
-    unsigned char c = s_romanUnicode[2*i];
-    unsigned long unicode = s_romanUnicode[2*i+1];
+  for (size_t i = 0; i < size_t(numRoman); i++) {
+    unsigned char c = (unsigned char)s_romanUnicode[2*i];
+    unsigned long unicode = (unsigned long)s_romanUnicode[2*i+1];
     m_romanMap[c] = unicode;
     m_cursiveMap[c] = m_mathMap[c] = m_scientificMap[c] = unicode;
     m_unknown107Map[c] = m_unknown128Map[c] = m_unknown200Map[c] = unicode;
@@ -506,7 +506,7 @@ int State::unicode(int macId, unsigned char c)
   std::map<unsigned char, unsigned long>::iterator it = unicodeCache.conv->m_conversion.find(c);
 
   if (it == unicodeCache.conv->m_conversion.end()) return -1;
-  return it->second;
+  return (int) it->second;
 }
 
 void State::getOdtInfo(int macId, std::string &nm, int &deltaSize)

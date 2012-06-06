@@ -135,6 +135,9 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
   case WPLUS:
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
+  case MINDW:
+  case NISUSW:
+  case UNKNOWN:
   default:
     break;
   }
@@ -200,6 +203,9 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       parser.parse(documentInterface);
       break;
     }
+    case MINDW:
+    case NISUSW:
+    case UNKNOWN:
     default:
       break;
     }
@@ -233,10 +239,10 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip, bool strict)
     ip->setReadInverted(false);
 
     listHeaders = MWAWHeader::constructHeader(ip);
-    int numHeaders = listHeaders.size();
+    size_t numHeaders = listHeaders.size();
     if (numHeaders==0) return 0L;
 
-    for (int i = 0; i < numHeaders; i++) {
+    for (size_t i = 0; i < numHeaders; i++) {
       if (!MWAWDocumentInternal::checkBasicMacHeader(ip, listHeaders[i], strict))
         continue;
       return new MWAWHeader(listHeaders[i]);
@@ -289,6 +295,9 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWHeader &header, bool str
       WPParser parser(input, &header);
       return parser.checkHeader(&header, strict);
     }
+    case MWAWDocument::MINDW:
+    case MWAWDocument::NISUSW:
+    case MWAWDocument::UNKNOWN:
     default:
       break;
     }

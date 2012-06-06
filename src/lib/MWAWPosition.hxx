@@ -55,9 +55,9 @@ public:
 
 public:
   //! constructor
-  MWAWPosition(Vec2f const &origin=Vec2f(), Vec2f const &size=Vec2f(), WPXUnit unit=WPX_INCH):
+  MWAWPosition(Vec2f const &orig=Vec2f(), Vec2f const &sz=Vec2f(), WPXUnit theUnit=WPX_INCH):
     m_anchorTo(Char), m_xPos(XLeft), m_yPos(YTop), m_wrapping(WNone),
-    m_page(0), m_orig(origin), m_size(size), m_naturalSize(), m_unit(unit), m_order(0) {}
+    m_page(0), m_orig(orig), m_size(sz), m_naturalSize(), m_unit(theUnit), m_order(0) {}
 
   virtual ~MWAWPosition() {}
   //! operator<<
@@ -74,6 +74,8 @@ public:
     case WPX_TWIP:
       o << "(tw)";
       break;
+    case WPX_PERCENT:
+    case WPX_GENERIC:
     default:
       break;
     }
@@ -124,6 +126,8 @@ public:
     case WPX_INCH:
       actSc = 1440;
       break;
+    case WPX_PERCENT:
+    case WPX_GENERIC:
     default:
       MWAW_DEBUG_MSG(("MWAWPosition::getScaleFactor %d unit must not appear\n", int(orig)));
     }
@@ -136,39 +140,41 @@ public:
     case WPX_INCH:
       newSc = 1440;
       break;
+    case WPX_PERCENT:
+    case WPX_GENERIC:
     default:
       MWAW_DEBUG_MSG(("MWAWPosition::getScaleFactor %d unit must not appear\n", int(dest)));
     }
     return actSc/newSc;
   }
   //! returns a float which can be used to scale some data in object unit
-  float getInvUnitScale(WPXUnit unit) const {
-    return getScaleFactor(unit, m_unit);
+  float getInvUnitScale(WPXUnit fromUnit) const {
+    return getScaleFactor(fromUnit, m_unit);
   }
 
   //! sets the page
-  void setPage(int page) const {
-    const_cast<MWAWPosition *>(this)->m_page = page;
+  void setPage(int pg) const {
+    const_cast<MWAWPosition *>(this)->m_page = pg;
   }
   //! sets the frame origin
-  void setOrigin(Vec2f const &origin) {
-    m_orig = origin;
+  void setOrigin(Vec2f const &orig) {
+    m_orig = orig;
   }
   //! sets the frame size
-  void setSize(Vec2f const &size) {
-    m_size = size;
+  void setSize(Vec2f const &sz) {
+    m_size = sz;
   }
   //! sets the natural size (if known)
-  void setNaturalSize(Vec2f const &naturalSize) {
-    m_naturalSize = naturalSize;
+  void setNaturalSize(Vec2f const &naturalSz) {
+    m_naturalSize = naturalSz;
   }
   //! sets the dimension unit
-  void setUnit(WPXUnit unit) {
-    m_unit = unit;
+  void setUnit(WPXUnit newUnit) {
+    m_unit = newUnit;
   }
   //! sets/resets the page and the origin
-  void setPagePos(int page, Vec2f const &newOrig) const {
-    const_cast<MWAWPosition *>(this)->m_page = page;
+  void setPagePos(int pg, Vec2f const &newOrig) const {
+    const_cast<MWAWPosition *>(this)->m_page = pg;
     const_cast<MWAWPosition *>(this)->m_orig = newOrig;
   }
 
@@ -184,8 +190,8 @@ public:
     return m_order;
   }
   //! set background/foward order
-  void setOrder(int order) const {
-    m_order = order;
+  void setOrder(int ord) const {
+    m_order = ord;
   }
 
   //! anchor position

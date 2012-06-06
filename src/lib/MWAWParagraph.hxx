@@ -69,7 +69,8 @@ struct MWAWParagraph {
     for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
     m_spacings[0] = 1.0; // interline normal
   }
-  virtual ~MWAWParagraph() {}
+  virtual ~MWAWParagraph();
+
   //! send data to the listener
   void send(shared_ptr<MWAWContentListener> listener) const;
   //! operator <<
