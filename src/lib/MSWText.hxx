@@ -57,8 +57,6 @@ typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace MSWTextInternal
 {
-struct Paragraph;
-struct Section;
 struct State;
 }
 
@@ -74,12 +72,21 @@ class MSWText
 public:
   //! Internal: the plc
   struct PLC {
-    enum Type { Line, Section, Page, Font, Paragraph, Footnote, FootnoteDef, Field, Object, HeaderFooter, TextPosition };
+    enum Type { TextPosition, HeaderFooter, Page, Section, Table, ZoneInfo, Paragraph, Font, Footnote, FootnoteDef, Field, Object };
     PLC(Type type, int id=0) : m_type(type), m_id(id), m_extra("") {
     }
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, PLC const &plc);
-
+    //! a comparaison structure
+    struct ltstr {
+      bool operator()(PLC const &s1, PLC const &s2) const {
+        if (s1.m_type != s2.m_type)
+          return int(s1.m_type) < int(s2.m_type);
+        if (s1.m_id != s2.m_id)
+          return s1.m_id < s2.m_id;
+        return false;
+      }
+    };
     //! the plc type
     Type m_type;
     //! the identificator
@@ -108,15 +115,7 @@ protected:
   bool sendMainText();
 
   //! send a text zone
-  bool sendText(MWAWEntry const &textEntry, bool mainZone);
-
-  //! send paragraph properties
-  void setProperty(MSWTextInternal::Paragraph const &para,
-                   MSWTextStyles::Font &actFont, bool recursive=false);
-
-  //! send section properties
-  void setProperty(MSWTextInternal::Section const &sec,
-                   MSWTextStyles::Font &actFont, bool recursive=false);
+  bool sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell=false);
 
   //! finds the different zones given defaut text zone and textlength
   bool createZones(long bot, long (&textLength)[3]);
@@ -127,14 +126,8 @@ protected:
   //! read the page limit ?
   bool readPageBreak(MSWEntry &entry);
 
-  //! read the line info(zone)
-  bool readLineInfo(MSWEntry &entry);
-
-  //! read the text section ?
-  bool readSection(MSWEntry &entry);
-
-  //! read the char/paragraph plc list
-  bool readPLCList(MSWEntry &entry);
+  //! read the zone info
+  bool readZoneInfo(MSWEntry &entry);
 
   //! read the field data
   bool readFields(MSWEntry &entry, std::vector<long> const &fieldPos);
@@ -154,51 +147,27 @@ protected:
   //! read the font names
   bool readFontNames(MSWEntry &entry);
 
-  //! try to read the styles zone
-  bool readStyles(MSWEntry &entry);
-
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
+
+  //! try to send a table.
+  bool sendTable(MSWEntry &tableEntry);
 
   // interface with MSWTextStyles
 
   //! returns the main text length
   long getMainTextLength() const;
-
   //! returns the text correspondance zone ( textpos, plc )
   std::multimap<long, MSWText::PLC> &getTextPLCMap();
+  //! returns the file correspondance zone ( filepos, plc )
+  std::multimap<long, MSWText::PLC> &getFilePLCMap();
 
   //
   // low level
   //
 
-  //! try to read a paragraph
-  bool readParagraph(MSWTextInternal::Paragraph &para, int dataSz=-1);
-
-  //! try to read the styles hierachy
-  bool readStylesHierarchy(MSWEntry &entry, int N, std::vector<int> &previous);
-  //! try to read the styles names and fill the number of "named" styles...
-  bool readStylesNames(MSWEntry const &zone, int N, int &Nnamed);
-  //! try to read the styles fonts
-  bool readStylesFont(MSWEntry &zone, int N, std::vector<int> const &previous,
-                      std::vector<int> const &order);
-  //! try to read the styles fonts
-  bool readStylesParagraph(MSWEntry &zone, int N, std::vector<int> const &previous,
-                           std::vector<int> const &order);
-  //! try to reorder the styles to find a good order
-  std::vector<int> orderStyles(std::vector<int> const &previous);
-
-  //! try to read the section data
-  bool readSection(MSWTextInternal::Section &section, long pos);
-
-  //! read the char/paragraph plc : type=0: char, type=1: parag
-  bool readPLC(MSWEntry &entry, int type);
-
   //! read a zone which consists in a list of int
   bool readLongZone(MSWEntry &entry, int sz, std::vector<long> &list);
-
-  //! finds the style which must be used for each style
-  void updateTextEntryStyle();
 
   //! returns the debug file
   libmwaw::DebugFile &ascii() {

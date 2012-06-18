@@ -112,23 +112,28 @@ MWAWParagraph::~MWAWParagraph()
 //! operator<<
 std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
 {
-  if (pp.m_margins[0]<0||pp.m_margins[0]>0) o << "textIndent=" << pp.m_margins[0] << ",";
-  if (pp.m_margins[1]<0||pp.m_margins[1]>0) o << "leftMarg=" << pp.m_margins[1] << ",";
-  if (pp.m_margins[2]<0||pp.m_margins[2]>0) o << "rightMarg=" << pp.m_margins[2] << ",";
+  if (pp.m_margins[0].get()<0||pp.m_margins[0].get()>0)
+    o << "textIndent=" << pp.m_margins[0].get() << ",";
+  if (pp.m_margins[1].get()<0||pp.m_margins[1].get()>0)
+    o << "leftMarg=" << pp.m_margins[1].get() << ",";
+  if (pp.m_margins[2].get()<0||pp.m_margins[2].get()>0)
+    o << "rightMarg=" << pp.m_margins[2].get() << ",";
 
-  if (pp.m_spacingsInterlineUnit==WPX_PERCENT) {
-    if (pp.m_spacings[0] < 1.0 || pp.m_spacings[0] > 1.0)
-      o << "interLineSpacing=" << pp.m_spacings[0] << "%,";
-  } else if (pp.m_spacings[0] > 0.0)
-    o << "interLineSpacing=" << pp.m_spacings[0] << ",";
+  if (pp.m_spacingsInterlineUnit.get()==WPX_PERCENT) {
+    if (pp.m_spacings[0].get() < 1.0 || pp.m_spacings[0].get() > 1.0)
+      o << "interLineSpacing=" << pp.m_spacings[0].get() << "%,";
+  } else if (pp.m_spacings[0].get() > 0.0)
+    o << "interLineSpacing=" << pp.m_spacings[0].get() << ",";
 
-  if (pp.m_spacings[1]<0||pp.m_spacings[1]>0) o << "befSpacing=" << pp.m_spacings[1] << ",";
-  if (pp.m_spacings[2]<0||pp.m_spacings[2]>0) o << "aftSpacing=" << pp.m_spacings[2] << ",";
+  if (pp.m_spacings[1].get()<0||pp.m_spacings[1].get()>0)
+    o << "befSpacing=" << pp.m_spacings[1].get() << ",";
+  if (pp.m_spacings[2].get()<0||pp.m_spacings[2].get()>0)
+    o << "aftSpacing=" << pp.m_spacings[2].get() << ",";
 
-  if (pp.m_breakStatus & libmwaw::NoBreakBit) o << "dontbreak,";
-  if (pp.m_breakStatus & libmwaw::NoBreakWithNextBit) o << "dontbreakafter,";
+  if (pp.m_breakStatus.get() & libmwaw::NoBreakBit) o << "dontbreak,";
+  if (pp.m_breakStatus.get() & libmwaw::NoBreakWithNextBit) o << "dontbreakafter,";
 
-  switch(pp.m_justify) {
+  switch(pp.m_justify.get()) {
   case libmwaw::JustificationLeft:
     break;
   case libmwaw::JustificationCenter:
@@ -144,22 +149,22 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
     o << "just=fullAllLines, ";
     break;
   default:
-    o << "just=" << pp.m_justify << ", ";
+    o << "just=" << pp.m_justify.get() << ", ";
     break;
   }
 
-  if (pp.m_tabs.size()) {
+  if (pp.m_tabs->size()) {
     o << "tabs=(";
-    for (size_t i = 0; i < pp.m_tabs.size(); i++)
-      o << pp.m_tabs[i] << ",";
+    for (size_t i = 0; i < pp.m_tabs->size(); i++)
+      o << pp.m_tabs.get()[i] << ",";
     o << "),";
   }
-  if (pp.m_listLevelIndex >= 1)
-    o << pp.m_listLevel << ":" << pp.m_listLevelIndex <<",";
+  if (pp.m_listLevelIndex.get() >= 1)
+    o << pp.m_listLevel.get() << ":" << pp.m_listLevelIndex.get() <<",";
 
-  if (pp.m_border) {
+  if (pp.m_border.get()) {
     o << "bord";
-    switch (pp.m_borderStyle) {
+    switch (pp.m_borderStyle.get()) {
     case libmwaw::BorderSingle:
       break;
     case libmwaw::BorderDot:
@@ -176,17 +181,17 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
       break;
     default:
       MWAW_DEBUG_MSG(("MWAWParagraph::operator<<: find unknown style\n"));
-      o << "(#style=" << int(pp.m_borderStyle) << "),";
+      o << "(#style=" << int(pp.m_borderStyle.get()) << "),";
       break;
     }
     o << "=";
-    if (pp.m_border&libmwaw::TopBorderBit) o << "T";
-    if (pp.m_border&libmwaw::BottomBorderBit) o << "B";
-    if (pp.m_border&libmwaw::LeftBorderBit) o << "L";
-    if (pp.m_border&libmwaw::RightBorderBit) o << "R";
-    if (pp.m_borderWidth > 1) o << "(w=" << pp.m_borderWidth << ")";
-    if (pp.m_borderColor)
-      o << "(col=" << std::hex << pp.m_borderColor << std::dec << "),";
+    if (pp.m_border.get()&libmwaw::TopBorderBit) o << "T";
+    if (pp.m_border.get()&libmwaw::BottomBorderBit) o << "B";
+    if (pp.m_border.get()&libmwaw::LeftBorderBit) o << "L";
+    if (pp.m_border.get()&libmwaw::RightBorderBit) o << "R";
+    if (pp.m_borderWidth.get() > 1) o << "(w=" << pp.m_borderWidth.get() << ")";
+    if (pp.m_borderColor.isSet() && pp.m_borderColor.get())
+      o << "(col=" << std::hex << pp.m_borderColor.get() << std::dec << "),";
     o << ",";
   }
 
@@ -198,41 +203,41 @@ void MWAWParagraph::send(shared_ptr<MWAWContentListener> listener) const
 {
   if (!listener)
     return;
-  listener->setParagraphJustification(m_justify);
-  listener->setTabs(m_tabs);
+  listener->setParagraphJustification(m_justify.get());
+  listener->setTabs(m_tabs.get());
 
-  double leftMargin = m_margins[1];
+  double leftMargin = m_margins[1].get();
   MWAWList::Level level;
-  if (m_listLevelIndex >= 1) {
-    float factorToLevel = MWAWPosition::getScaleFactor(m_marginsUnit, WPX_INCH);
-    level = m_listLevel;
+  if (m_listLevelIndex.get() >= 1) {
+    float factorToLevel = MWAWPosition::getScaleFactor(m_marginsUnit.get(), WPX_INCH);
+    level = m_listLevel.get();
     level.m_labelWidth = (factorToLevel*leftMargin-level.m_labelIndent);
     if (level.m_labelWidth<0.1)
       level.m_labelWidth = 0.1;
     leftMargin=level.m_labelIndent/factorToLevel;
     level.m_labelIndent = 0;
   }
-  listener->setParagraphMargin(leftMargin, MWAW_LEFT, m_marginsUnit);
-  listener->setParagraphMargin(m_margins[2], MWAW_RIGHT, m_marginsUnit);
-  listener->setParagraphTextIndent(m_margins[0], m_marginsUnit);
+  listener->setParagraphMargin(leftMargin, MWAW_LEFT, m_marginsUnit.get());
+  listener->setParagraphMargin(m_margins[2].get(), MWAW_RIGHT, m_marginsUnit.get());
+  listener->setParagraphTextIndent(m_margins[0].get(), m_marginsUnit.get());
 
-  double interline = m_spacings[0];
-  if (interline<= 0.0 || m_spacingsInterlineUnit==WPX_PERCENT)
+  double interline = m_spacings[0].get();
+  if (interline<= 0.0 || m_spacingsInterlineUnit.get()==WPX_PERCENT)
     listener->setParagraphLineSpacing(interline>0.0 ? interline : 1.0, WPX_PERCENT);
   else
-    listener->setParagraphLineSpacing(interline, m_spacingsInterlineUnit);
+    listener->setParagraphLineSpacing(interline, m_spacingsInterlineUnit.get());
 
-  listener->setParagraphMargin(m_spacings[1],MWAW_TOP);
-  listener->setParagraphMargin(m_spacings[2],MWAW_BOTTOM);
+  listener->setParagraphMargin(m_spacings[1].get(),MWAW_TOP);
+  listener->setParagraphMargin(m_spacings[2].get(),MWAW_BOTTOM);
 
-  if (m_listLevelIndex >= 1) {
+  if (m_listLevelIndex.get() >= 1) {
     if (!listener->getCurrentList())
       listener->setCurrentList(shared_ptr<MWAWList>(new MWAWList));
-    listener->getCurrentList()->set(m_listLevelIndex, level);
-    listener->setCurrentListLevel(m_listLevelIndex);
+    listener->getCurrentList()->set(m_listLevelIndex.get(), level);
+    listener->setCurrentListLevel(m_listLevelIndex.get());
   } else
     listener->setCurrentListLevel(0);
 
-  listener->setParagraphBorders(m_border, m_borderStyle, m_borderWidth, m_borderColor);
+  listener->setParagraphBorders(m_border.get(), m_borderStyle.get(), m_borderWidth.get(), m_borderColor.get());
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

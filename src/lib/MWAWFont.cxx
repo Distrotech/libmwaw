@@ -48,30 +48,32 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
   }
   if (size() > 0) o << "sz=" << size() << ",";
 
-  if (m_flags) o << "fl=";
-  if (m_flags&MWAW_BOLD_BIT) o << "b:";
-  if (m_flags&MWAW_ITALICS_BIT) o << "it:";
-  if (m_flags&MWAW_UNDERLINE_BIT) o << "underL:";
-  if (m_flags&MWAW_OVERLINE_BIT) o << "overL:";
-  if (m_flags&MWAW_EMBOSS_BIT) o << "emboss:";
-  if (m_flags&MWAW_SHADOW_BIT) o << "shadow:";
-  if (m_flags&MWAW_OUTLINE_BIT) o << "outline:";
-  if (m_flags&MWAW_DOUBLE_UNDERLINE_BIT) o << "2underL:";
-  if (m_flags&MWAW_STRIKEOUT_BIT) o << "strikeout:";
-  if (m_flags&MWAW_SMALL_CAPS_BIT) o << "smallCaps:";
-  if (m_flags&MWAW_ALL_CAPS_BIT) o << "allCaps:";
-  if (m_flags&MWAW_HIDDEN_BIT) o << "hidden:";
-  if (m_flags&MWAW_SMALL_PRINT_BIT) o << "consended:";
-  if (m_flags&MWAW_LARGE_BIT) o << "extended:";
-  if ((m_flags&MWAW_SUPERSCRIPT_BIT) || (m_flags&MWAW_SUPERSCRIPT100_BIT))
-    o << "superS:";
-  if ((m_flags&MWAW_SUBSCRIPT_BIT) || (m_flags&MWAW_SUBSCRIPT100_BIT))
-    o << "subS:";
-  if (m_flags) o << ",";
+  if (m_flags.isSet() && m_flags.get()) {
+    o << "fl=";
+    if (m_flags.get()&MWAW_BOLD_BIT) o << "b:";
+    if (m_flags.get()&MWAW_ITALICS_BIT) o << "it:";
+    if (m_flags.get()&MWAW_UNDERLINE_BIT) o << "underL:";
+    if (m_flags.get()&MWAW_OVERLINE_BIT) o << "overL:";
+    if (m_flags.get()&MWAW_EMBOSS_BIT) o << "emboss:";
+    if (m_flags.get()&MWAW_SHADOW_BIT) o << "shadow:";
+    if (m_flags.get()&MWAW_OUTLINE_BIT) o << "outline:";
+    if (m_flags.get()&MWAW_DOUBLE_UNDERLINE_BIT) o << "2underL:";
+    if (m_flags.get()&MWAW_STRIKEOUT_BIT) o << "strikeout:";
+    if (m_flags.get()&MWAW_SMALL_CAPS_BIT) o << "smallCaps:";
+    if (m_flags.get()&MWAW_ALL_CAPS_BIT) o << "allCaps:";
+    if (m_flags.get()&MWAW_HIDDEN_BIT) o << "hidden:";
+    if (m_flags.get()&MWAW_SMALL_PRINT_BIT) o << "consended:";
+    if (m_flags.get()&MWAW_LARGE_BIT) o << "extended:";
+    if ((m_flags.get()&MWAW_SUPERSCRIPT_BIT) || (m_flags.get()&MWAW_SUPERSCRIPT100_BIT))
+      o << "superS:";
+    if ((m_flags.get()&MWAW_SUBSCRIPT_BIT) || (m_flags.get()&MWAW_SUBSCRIPT100_BIT))
+      o << "subS:";
+    o << ",";
+  }
 
   if (hasColor()) {
     o << "col=(" << std::hex;
-    for (int i = 0; i < 3; i++) o << int(m_color[i]) << ",";
+    for (int i = 0; i < 3; i++) o << int(m_color.get()[i]) << ",";
     o << std::dec << "),";
   }
   return o.str();
@@ -102,8 +104,8 @@ void MWAWFont::sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverte
 
   actualFont.setFlags(flags());
   listener->setFontAttributes(actualFont.flags());
-  actualFont.setColor(m_color);
-  uint32_t col = uint32_t(((m_color[0]&0xFF)<<16) | ((m_color[1]&0xFF)<<8) | (m_color[2]&0xFF));
+  actualFont.setColor(m_color.get());
+  uint32_t col = uint32_t(((m_color.get()[0]&0xFF)<<16) | ((m_color.get()[1]&0xFF)<<8) | (m_color.get()[2]&0xFF));
   listener->setTextColor(col);
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

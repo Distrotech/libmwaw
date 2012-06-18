@@ -621,7 +621,7 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
   if (dataSize < 15) return false;
   m_input->seek(zone.m_pos.begin()+6, WPX_SEEK_SET);
 
-  parag= MSKTextInternal::Paragraph();
+  parag = MSKTextInternal::Paragraph();
   libmwaw::DebugStream f;
 
   int fl[2];
@@ -685,14 +685,14 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
     // i = 0 (last), i = 1 (firstL), i=2 (nextL)
     parag.m_margins[2-i] = val/72.0;
   }
-  parag.m_margins[0] -= parag.m_margins[1];
-  if (parag.m_margins[2] > 0.0)
-    parag.m_margins[2] = m_mainParser->pageWidth()-parag.m_margins[2];
-  if (parag.m_margins[2] > 56./72.) parag.m_margins[2] -= 28./72.;
-  else if (parag.m_margins[2] >=0.0) parag.m_margins[2] *= 0.5;
+  *(parag.m_margins[0]) -= *(parag.m_margins[1]);
+  if (parag.m_margins[2].get() > 0.0)
+    parag.m_margins[2] = m_mainParser->pageWidth()-*(parag.m_margins[2]);
+  if (parag.m_margins[2].get() > 56./72.) *(parag.m_margins[2]) -= 28./72.;
+  else if (parag.m_margins[2].get() >=0.0) *(parag.m_margins[2]) *= 0.5;
   else parag.m_margins[2] = 0.0;
   int numVal = (dataSize-9)/2-3;
-  parag.m_tabs.resize((size_t)numVal);
+  parag.m_tabs->resize((size_t)numVal);
   size_t numTabs = 0;
 
   // checkme: in order to avoid x_tabs > textWidth (appears sometimes when i=0)
@@ -725,10 +725,10 @@ bool MSKText::readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Pa
       f << "#tabs" << i << "=" << val << ",";
       continue;
     }
-    parag.m_tabs[numTabs].m_alignment = align;
-    parag.m_tabs[numTabs++].m_position = val/72.0;
+    (*parag.m_tabs)[numTabs].m_alignment = align;
+    (*parag.m_tabs)[numTabs++].m_position = val/72.0;
   }
-  if (int(numTabs)!=numVal) parag.m_tabs.resize(numTabs);
+  if (int(numTabs)!=numVal) parag.m_tabs->resize(numTabs);
   parag.m_extra = f.str();
 
   f.str("");

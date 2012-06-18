@@ -191,6 +191,10 @@ SOURCE=..\..\src\lib\MSWParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MSWStruct.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MSWText.cxx
 # End Source File
 # Begin Source File
@@ -376,6 +380,10 @@ SOURCE=..\..\src\lib\MSKText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MSWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSWStruct.hxx
 # End Source File
 # Begin Source File
 

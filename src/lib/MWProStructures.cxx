@@ -327,7 +327,6 @@ struct Font {
     m_extra("") {
     for (int i = 0; i < 5; i++) m_values[i] = 0;
   }
-
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Font const &font) {
     if (font.m_flags) o << "flags=" << std::hex << font.m_flags << std::dec << ",";
@@ -1408,7 +1407,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
         f << "=" << spacings[i] << "%,";
         /** seems difficult to set bottom a percentage of the line unit,
             so do the strict minimum... */
-        para.m_spacings[i] *= 7./72.;
+        *(para.m_spacings[i]) *= 7./72.;
       }
     } else
       f << "#spacings" << i << ",";
@@ -1475,14 +1474,14 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
       MWAW_DEBUG_MSG(("MWProStructures::readParagraph: empty tab already found\n"));
       f << "tab" << i << "#";
     }
-    newTab.m_position = float(tabPos)/72./65536.-para.m_margins[1];
+    newTab.m_position = float(tabPos)/72./65536.-para.m_margins[1].get();
     int decimalChar = (int) m_input->readULong(1);
     if (decimalChar != '.' && decimalChar != ',')
       f << "tab" << i << "[decimalChar]=" << char(decimalChar) << ",";
     val = (int) m_input->readLong(1); // always 0?
     if (val)
       f << "tab" << i << "[#unkn=" << std::hex << val << std::dec << "],";
-    para.m_tabs.push_back(newTab);
+    para.m_tabs->push_back(newTab);
     m_input->seek(pos+8, WPX_SEEK_SET);
   }
 
@@ -2770,7 +2769,7 @@ void MWProStructuresListenerState::sendParagraph(MWProStructuresInternal::Paragr
     return;
   *m_paragraph = para;
   para.send(m_structures->m_listener);
-  m_numTab = int(para.m_tabs.size());
+  m_numTab = int(para.m_tabs->size());
 }
 
 

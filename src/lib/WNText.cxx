@@ -60,7 +60,6 @@ struct Font {
     for (int i = 0; i < 3; i++) m_flags[i] = 0;
     for (int i = 0; i < 2; i++) m_styleId[i] = -1;
   }
-
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Font const &font) {
     for (int i = 0; i < 3; i++) {
@@ -1214,7 +1213,7 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
 {
   libmwaw::DebugStream f;
   int vers = version();
-  ruler=WNTextInternal::Paragraph();
+  ruler = WNTextInternal::Paragraph();
   for (int i=0; i < 3; i++) ruler.m_margins[i] = 0.0;
   long pos = input.tell();
   int expectedLength = vers <= 2 ? 8 : 16;
@@ -1234,7 +1233,7 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   ruler.m_margins[1]=(int) input.readLong(2);
   ruler.m_margins[2]=(int) input.readLong(2);
   ruler.m_margins[0]=(int) input.readLong(2);
-  ruler.m_margins[0]-=ruler.m_margins[1];
+  *(ruler.m_margins[0])-=ruler.m_margins[1].get();
   int height = 0;
   if (vers >= 3) {
     height=(int) input.readLong(2);
@@ -1277,7 +1276,7 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
         break;
       }
       previousVal = newVal;
-      newTab.m_position = ((newVal>>2)-ruler.m_margins[1])/72.;
+      newTab.m_position = ((newVal>>2)-ruler.m_margins[1].get())/72.;
       switch(newVal & 3) {
       case 0:
         break;
@@ -1293,13 +1292,13 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
       default:
         break;
       }
-      ruler.m_tabs.push_back(newTab);
+      ruler.m_tabs->push_back(newTab);
     }
   }
   if (version() <= 2) // distance from right
-    ruler.m_margins[2] = int(72.0*m_mainParser->pageWidth())-ruler.m_margins[2];
-  ruler.m_margins[2] -= 28.;
-  if (ruler.m_margins[2] < 0) ruler.m_margins[2]=0;
+    ruler.m_margins[2] = int(72.0*m_mainParser->pageWidth())-ruler.m_margins[2].get();
+  *(ruler.m_margins[2]) -= 28.;
+  if (ruler.m_margins[2].get() < 0) ruler.m_margins[2]=0;
   if (!interlineFixed || height <= 0.0) {
     if (height)
       f << "interline>=" << height << "pt,";
@@ -1774,7 +1773,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       const unsigned char *buffer = data.getDataBuffer();
       if (sz && !rulerSet) {
         setProperty(ruler);
-        numLineTabs = int(ruler.m_tabs.size());
+        numLineTabs = int(ruler.m_tabs->size());
         rulerSet = true;
       }
       for (int i = 0; i < sz; i++) {
@@ -1894,7 +1893,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       WNTextInternal::Paragraph newParagraph;
       if (readParagraph(dataInput, newParagraph)) {
         ruler = newParagraph;
-        numLineTabs = int(ruler.m_tabs.size());
+        numLineTabs = int(ruler.m_tabs->size());
         setProperty(ruler);
         rulerSet = true;
         f << ruler;
@@ -1973,7 +1972,7 @@ void WNText::sendZone(int id)
   for (size_t i = 0; i < mZone.m_zones.size(); i++) {
     if (mZone.m_zones[i]->m_sent) continue;
     if (id == 0 && mZone.m_zones[i]->m_type) continue;
-    if (id) ruler = WNTextInternal::Paragraph();
+    if (id) ruler=WNTextInternal::Paragraph();
     send(mZone.m_zones[i]->m_zonesList, mZone.m_zones[i]->m_footnoteList, ruler);
     mZone.m_zones[i]->m_sent = true;
   }

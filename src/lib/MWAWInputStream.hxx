@@ -52,7 +52,7 @@ class WPXBinaryData;
 class MWAWInputStream
 {
 public:
-  /*!\brief creates a stream with given endian from \param input
+  /*!\brief creates a stream with given endian from \param inp
    * \param inverted must be set to true for pc doc and ole part
    * \param inverted must be set to false for mac doc
    */

@@ -488,7 +488,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
 
   m_input->seek(pos, WPX_SEEK_SET);
   posC = int(m_input->readULong(4));
-  font=MWAWFont();
+  font = MWAWFont();
   libmwaw::DebugStream f;
   if (id >= 0)
     f << "Font-" << id << ":";
@@ -551,7 +551,7 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   long pos = m_input->tell();
 
   m_input->seek(pos, WPX_SEEK_SET);
-  font=MWAWFont();
+  font = MWAWFont();
   libmwaw::DebugStream f;
   if (id == 0)
     f << "Entries(CHAR)-0:";
@@ -1535,8 +1535,8 @@ bool CWText::readParagraph(int id)
   if (val) f << "#flags=" << std::hex << val << std::dec << ",";
   for (int i = 0; i < 3; i++)
     ruler.m_margins[i] = float(m_input->readLong(2))/72.f;
-  ruler.m_margins[2] -= 28./72.;
-  if (ruler.m_margins[2] < 0.0) ruler.m_margins[2] = 0.0;
+  *(ruler.m_margins[2]) -= 28./72.;
+  if (ruler.m_margins[2].get() < 0.0) ruler.m_margins[2] = 0.0;
   if (version() >= 2) {
     for(int i = 0; i < 2; i++) {
       ruler.m_spacings[i+1] = float(m_input->readULong(1))/72.f;
@@ -1608,7 +1608,7 @@ bool CWText::readParagraph(int id)
     char decimalChar = (char) m_input->readULong(1);
     if (decimalChar != ',' && decimalChar != '.')
       f << "decimalChar=" << decimalChar << ",";
-    ruler.m_tabs.push_back(tab);
+    ruler.m_tabs->push_back(tab);
     if (val)
       f << "#unkn[tab" << i << "=" << std::hex << val << std::dec << "],";
   }

@@ -175,6 +175,57 @@ enum BorderStyle { BorderSingle, BorderDouble, BorderDot, BorderLargeDot, Border
 #define MWAW_TOP 0x03
 #define MWAW_BOTTOM 0x04
 
+//! a generic variable template: value + flag to know if the variable is set
+template <class T> struct Variable {
+  Variable() : m_data(), m_set(false) {}
+  Variable(T def) : m_data(def), m_set(false) {}
+  Variable(Variable const &orig) : m_data(orig.m_data), m_set(orig.m_set) {}
+  Variable &operator=(Variable const &orig) {
+    if (this != &orig) {
+      m_data = orig.m_data;
+      m_set = orig.m_set;
+    }
+    return *this;
+  }
+  Variable &operator=(T val) {
+    m_data = val;
+    m_set = true;
+    return *this;
+  }
+  void insert(Variable const &orig) {
+    if (orig.m_set) {
+      m_data = orig.m_data;
+      m_set = orig.m_set;
+    }
+  }
+  T const *operator->() const {
+    return &m_data;
+  }
+  T *operator->() {
+    m_set = true;
+    return &m_data;
+  }
+  T const &operator*() const {
+    return m_data;
+  }
+  T &operator*() {
+    m_set = true;
+    return m_data;
+  }
+  T const &get() const {
+    return m_data;
+  }
+  bool isSet() const {
+    return m_set;
+  }
+  void setSet(bool newVal) {
+    m_set=newVal;
+  }
+protected:
+  T m_data;
+  bool m_set;
+};
+
 /* ---------- vec2/box2f ------------- */
 /*! \class Vec2
  *   \brief small class which defines a vector with 2 elements

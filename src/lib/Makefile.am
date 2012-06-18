@@ -44,6 +44,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MSKText.hxx			\
 	MSWParser.cxx			\
 	MSWParser.hxx			\
+	MSWStruct.cxx			\
+	MSWStruct.hxx			\
 	MSWText.cxx			\
 	MSWText.hxx			\
 	MSWTextStyles.cxx		\

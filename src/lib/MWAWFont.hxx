@@ -45,12 +45,24 @@ class MWAWFont
 public:
   /** constructor
    *
-   * \param id system id font
-   * \param size the font size
+   * \param newId system id font
+   * \param sz the font size
    * \param f the font attributes bold, ... */
   MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_flags(f), m_color() {
     resetColor();
   };
+  //! inserts the set value in the current font
+  void insert(MWAWFont &ft) {
+    m_id.insert(ft.m_id);
+    m_size.insert(ft.m_size);
+    if (ft.m_flags.isSet()) {
+      if (m_flags.isSet())
+        setFlags(flags()| ft.flags());
+      else
+        m_flags = ft.m_flags;
+    }
+    m_color.insert(ft.m_color);
+  }
   //! resets the font color to black
   void resetColor() {
     m_color = Vec3uc();
@@ -74,32 +86,31 @@ public:
   }
   //! sets the font color
   void setColor(Vec3uc color) {
-    for (int i = 0; i < 3; i++) m_color[i] = color[i];
+    m_color = color;
   }
   //! returns true if the font id is initialized
   bool isSet() const {
-    return m_id >= 0;
+    return m_id.isSet();
   }
   //! returns the font id
   int id() const {
-    return m_id;
+    return m_id.get();
   }
   //! returns the font size
   int size() const {
-    return m_size;
+    return m_size.get();
   }
   //! returns the font flags
   uint32_t flags() const {
-    return m_flags;
+    return m_flags.get();
   }
   //! returns true if the font color is not black
   bool hasColor() const {
-    for (int i = 0; i < 3; i++) if (m_color[i]) return true;
-    return false;
+    return m_color.isSet();
   }
   //! returns the font color
   void getColor(Vec3uc &c) const {
-    for (int i = 0; i < 3; i++) c[i]=m_color[i];
+    c = m_color.get();
   }
   //! returns a string which can be used for debugging
   std::string getDebugString(shared_ptr<MWAWFontConverter> &converter) const;
@@ -121,7 +132,7 @@ public:
     if (diff != 0) return diff;
     if (flags() != oth.flags()) return diff;
     for (int i = 0; i < 3; i++) {
-      diff = m_color[i] - oth.m_color[i];
+      diff = m_color.get()[i] - oth.m_color.get()[i];
       if (diff!=0) return diff;
     }
     return diff;
@@ -131,9 +142,9 @@ public:
   void sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverter> &convert, MWAWFont &actFont) const;
 
 protected:
-  int m_id /** font identificator*/, m_size /** font size */;
-  uint32_t m_flags /** font attributes */;
-  Vec3uc m_color /** font color */;
+  Variable<int> m_id /** font identificator*/, m_size /** font size */;
+  Variable<uint32_t> m_flags /** font attributes */;
+  Variable<Vec3uc> m_color /** font color */;
 };
 
 

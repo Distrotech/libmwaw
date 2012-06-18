@@ -684,7 +684,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
         ruler.m_spacings[0] = (1.0+(val-0x9d)/2.0);
         ruler.m_spacingsInterlineUnit = WPX_PERCENT;
         rulerSent = false;
-        f << "[just=" << ruler.m_spacings[0] << "%]";
+        f << "[just=" << ruler.m_spacings[0].get() << "%]";
         break;
       case 0xe8:
         if (actPos+4 > lastPos) {
@@ -914,7 +914,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     ascii.addNote(f.str().c_str());
 
     if (!rulerSent) {
-      if (ruler.m_spacings[0] <= 0.0) {
+      if (ruler.m_spacings[0].get() <= 0.0) {
         ruler.m_spacings[0] = 1.0;
         ruler.m_spacingsInterlineUnit = WPX_PERCENT;
       }

@@ -70,7 +70,24 @@ struct MWAWParagraph {
     m_spacings[0] = 1.0; // interline normal
   }
   virtual ~MWAWParagraph();
-
+  void insert(MWAWParagraph const &para) {
+    for(int i = 0; i < 3; i++) {
+      m_margins[i].insert(para.m_margins[i]);
+      m_spacings[i].insert(para.m_spacings[i]);
+    }
+    m_marginsUnit.insert(para.m_marginsUnit);
+    m_spacingsInterlineUnit.insert(para.m_spacingsInterlineUnit);
+    m_tabs.insert(para.m_tabs);
+    m_justify.insert(para.m_justify);
+    m_breakStatus.insert(para.m_breakStatus);
+    m_listLevelIndex.insert(para.m_listLevelIndex);
+    m_listLevel.insert(para.m_listLevel);
+    m_border.insert(para.m_border);
+    m_borderStyle.insert(para.m_borderStyle);
+    m_borderWidth.insert(para.m_borderWidth);
+    m_borderColor.insert(para.m_borderColor);
+    m_extra += para.m_extra;
+  }
   //! send data to the listener
   void send(shared_ptr<MWAWContentListener> listener) const;
   //! operator <<
@@ -81,38 +98,38 @@ struct MWAWParagraph {
    * - 0: first line left margin
    * - 1: left margin
    * - 2: right margin*/
-  double m_margins[3]; // 0: first line left, 1: left, 2: right
+  Variable<double> m_margins[3]; // 0: first line left, 1: left, 2: right
   /** the margins INCH, ... */
-  WPXUnit m_marginsUnit;
+  Variable<WPXUnit> m_marginsUnit;
   /** the line spacing
    *
    * - 0: interline
    * - 1: before
    * - 2: after */
-  double m_spacings[3]; // 0: interline, 1: before, 2: after
+  Variable<double> m_spacings[3]; // 0: interline, 1: before, 2: after
   /** the interline unit PERCENT or INCH, ... */
-  WPXUnit m_spacingsInterlineUnit;
+  Variable<WPXUnit> m_spacingsInterlineUnit;
   //! the tabulations
-  std::vector<MWAWTabStop> m_tabs;
+  Variable<std::vector<MWAWTabStop> > m_tabs;
 
   /** the justification */
-  libmwaw::Justification m_justify;
+  Variable<libmwaw::Justification> m_justify;
   /** a list of bits: 0x1 (unbreakable), 0x2 (do not break after) */
-  int m_breakStatus; // BITS: 1: unbreakable, 2: dont break after
+  Variable<int> m_breakStatus; // BITS: 1: unbreakable, 2: dont break after
 
   /** the actual level index */
-  int m_listLevelIndex;
+  Variable<int> m_listLevelIndex;
   /** the actual level */
-  ListLevel m_listLevel;
+  Variable<ListLevel> m_listLevel;
 
   //! list of bits to indicated a border 1: LeftBorderBit, 2: RightBorderBit, ...
-  int m_border;
+  Variable<int> m_border;
   //! the border style
-  libmwaw::BorderStyle m_borderStyle;
+  Variable<libmwaw::BorderStyle> m_borderStyle;
   //! the border width
-  int m_borderWidth;
+  Variable<int> m_borderWidth;
   //! the border color
-  uint32_t m_borderColor;
+  Variable<uint32_t> m_borderColor;
 
   //! a string to store some errors
   std::string m_extra;

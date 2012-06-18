@@ -48,6 +48,7 @@ SLOFILES= \
 	$(SLO)$/MSKParser.obj			\
 	$(SLO)$/MSKText.obj			\
 	$(SLO)$/MSWParser.obj			\
+	$(SLO)$/MSWStruct.obj			\
 	$(SLO)$/MSWText.obj			\
 	$(SLO)$/MSWTextStles.obj		\
 	$(SLO)$/MWAWDebug.obj			\

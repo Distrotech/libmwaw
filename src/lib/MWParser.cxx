@@ -1465,7 +1465,7 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   parag.m_spacings[0] = 1.+spacing/2.0;
   parag.m_margins[0] = float(input->readLong(2))/80.f;
 
-  parag.m_tabs.resize((size_t) numTabs);
+  parag.m_tabs->resize((size_t) numTabs);
   for (size_t i = 0; i < (size_t) numTabs; i++) {
     int numPixel = (int) input->readLong(2);
     MWAWTabStop::Alignment align = MWAWTabStop::LEFT;
@@ -1473,15 +1473,15 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
       align = MWAWTabStop::DECIMAL;
       numPixel *= -1;
     }
-    parag.m_tabs[i].m_alignment = align;
-    parag.m_tabs[i].m_position = numPixel/72.0;
+    (*parag.m_tabs)[i].m_alignment = align;
+    (*parag.m_tabs)[i].m_position = numPixel/72.0;
   }
-  parag.m_margins[0] -= parag.m_margins[1];
-  if (parag.m_margins[2] > 0.0)
-    parag.m_margins[2]=pageWidth()-parag.m_margins[2]-1.0;
-  if (parag.m_margins[2] < 0) parag.m_margins[2] = 0;
-  if (parag.m_spacings[0] < 1.0) {
-    f << "#interline=" << parag.m_spacings[0] << ",";
+  *(parag.m_margins[0]) -= parag.m_margins[1].get();
+  if (parag.m_margins[2].get() > 0.0)
+    parag.m_margins[2]=pageWidth()-parag.m_margins[2].get()-1.0;
+  if (parag.m_margins[2].get() < 0) parag.m_margins[2] = 0;
+  if (parag.m_spacings[0].get() < 1.0) {
+    f << "#interline=" << parag.m_spacings[0].get() << ",";
     parag.m_spacings[0] = 1.0;
   }
   f << parag;

@@ -32,6 +32,7 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <set>
 #include <sstream>
 
 #include <libwpd/WPXString.h>
@@ -43,10 +44,14 @@
 #include "MWAWPosition.hxx"
 
 #include "MSWParser.hxx"
+#include "MSWStruct.hxx"
 
 #include "MSWText.hxx"
 
 #define DEBUG_PLC 1
+#define DEBUG_PARAGRAPH 1
+#define DEBUG_SECTION 1
+#define DEBUG_ZONEINFO 1
 
 /** Internal: the structures of a MSWText */
 namespace MSWTextInternal
@@ -55,16 +60,17 @@ namespace MSWTextInternal
 ////////////////////////////////////////
 //! Internal: the entry of MSWParser
 struct TextEntry : public MWAWEntry {
-  TextEntry() : MWAWEntry(), m_pos(-1), m_id(0), m_type(0), m_function(0),
-    m_value(0), m_fontId(-2), m_paragraphId(-2) {
+  TextEntry() : MWAWEntry(), m_pos(-1), m_id(0), m_type(0), m_paragraphId(-1),  m_extra("") {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TextEntry const &entry) {
     if (entry.m_pos>=0) o << "textPos=" << entry.m_pos << ",";
     o << "id?=" << entry.m_id << ",";
+    if (entry.m_paragraphId >= 0) o << "tP" << entry.m_paragraphId << ",";
     switch(entry.m_type) {
-    case 0x80: // same line
-    case 0: // contains a new line
+    case 0x80: // keep font ?
+    case 0: // reset font ?
+      o << "type=" << std::hex << entry.m_type << std::dec << ",";
       break;
     default:
       o << "#type=" << std::hex << entry.m_type << std::dec << ",";
@@ -72,25 +78,15 @@ struct TextEntry : public MWAWEntry {
     }
     if (entry.valid())
       o << std::hex << "fPos=" << entry.begin() << ":" << entry.end() << std::dec << ",";
-    switch (entry.m_function) {
-    case 0:
-      break;
-    case 0x80:
-      o << "tP" << entry.m_value << ",";
-      break;
-    default: // see also readParagraph
-      o << "f" << std::hex << entry.m_function << "=" <<  entry.m_value << std::dec << ",";
-      break;
-    }
+    if (entry.m_extra.length())
+      o << entry.m_extra << ",";
     return o;
   }
 
   //! returns the paragraph id ( or -1, if unknown )
   int getParagraphId() const {
-    if (m_function != 0x80) return -1;
-    return m_value;
+    return m_paragraphId;
   }
-
   //! a struct used to compare file textpos
   struct CompareFilePos {
     //! comparaison function
@@ -105,162 +101,45 @@ struct TextEntry : public MWAWEntry {
   int m_id;
   //! the type
   int m_type;
-  //! the function (if not 0)
-  int m_function;
-  //! the function paramater
-  int m_value;
-  //! the font id : -2: not fixed
-  int m_fontId;
-  //! the paragraph id : -2: not fixed
+  //! the paragraph id
   int m_paragraphId;
+  //! extra data
+  std::string m_extra;
 };
 
 ////////////////////////////////////////
-//! Internal: the line
-struct Line {
+//! Internal: the zone
+struct ZoneInfo {
   //! constructor
-  Line() : m_id(-1), m_type(0), m_height(-1), m_value(0), m_error("") {
-    for (int i = 0; i < 2; i++) m_flags[i] = 0;
+  ZoneInfo() : m_id(-1), m_type(0), m_dim(), m_value(0), m_error("") {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Line const &line) {
-    if (line.m_id >= 0) o << "L" << line.m_id << ":";
-    else o << "L_:";
-    switch(line.m_type) {
+  friend std::ostream &operator<<(std::ostream &o, ZoneInfo const &zone) {
+    switch(zone.m_type) {
     case 0:
       break; // hard line break
     case 0x20:
       o << "soft,";
       break;
     default:
-      if (line.m_type&0xf0) o << "type?=" << (line.m_type>>4) << ",";
-      if (line.m_type&0x0f) o << "#unkn=" << (line.m_type&0xf) << ",";
+      if (zone.m_type&0xf0) o << "type?=" << (zone.m_type>>4) << ",";
+      if (zone.m_type&0x0f) o << "#unkn=" << (zone.m_type&0xf) << ",";
       break;
     }
-    if (line.m_height >= 0) o << "height=" << line.m_height << ",";
-    if (line.m_value) o << "f0=" << line.m_value << ",";
-    for (int i = 0; i < 2; i++)
-      o << "fl" << i << "=" << std::hex << line.m_flags[i] << std::dec << ",";
-    if (line.m_error.length()) o << line.m_error << ",";
+    if (zone.m_dim[0] > 0) o << "width=" << zone.m_dim[0] << ",";
+    if (zone.m_dim[1] > 0) o << "height=" << zone.m_dim[1] << ",";
+    if (zone.m_value) o << "f0=" << zone.m_value << ",";
+    if (zone.m_error.length()) o << zone.m_error << ",";
     return o;
   }
   //! the identificator
   int m_id;
   //! the type
   int m_type;
-  //! the height
-  int m_height;
+  //! the zone dimension
+  Vec2f m_dim;
   //! a value ( between -1 and 9)
   int m_value;
-  //! two flags ( first small, second a multiple of 4)
-  int m_flags[2];
-  /** the errors */
-  std::string m_error;
-};
-
-////////////////////////////////////////
-//! Internal: the section
-struct Section {
-  //! constructor
-  Section() : m_id(-1), m_type(0), m_paragraphId(-9999), m_col(1), m_colSep(0.5), m_colBreak(false),
-    m_flag(0), m_default(false), m_error("") {
-  }
-  //! try to read a data
-  bool read(MWAWInputStreamPtr &input, long endPos) {
-    long pos = input->tell();
-    long dSz = endPos-pos;
-    if (dSz < 1) return false;
-    libmwaw::DebugStream f;
-    int c = (int) input->readULong(1), val;
-    switch(c) {
-    case 0x75: // column break
-      if (dSz < 2) return false;
-      val = (int) input->readLong(1);
-      switch(val) {
-      case 0:
-        m_colBreak = false;
-        return true;
-      case 1:
-        m_colBreak = true;
-        return true;
-      default:
-        f << "#f75=" << val << ",";
-        break;
-      }
-      break;
-    case 0x77: // num column
-      if (dSz<3) return false;
-      m_col = (int) input->readLong(2)+1;
-      return true;
-    case 0x78:
-      if (dSz<3) return false;
-      m_colSep = float(input->readULong(2))/1440.f;
-      return true;
-      // FIXME: UNKNOWN
-    case 0x80: // a small number
-    case 0x76: // always 1 ?
-    case 0x79:
-    case 0x7d: // always 1
-    case 0x7e: // always 0
-      if (dSz<2) return false;
-      f << "f" << std::hex << c << std::dec << "=" << input->readLong(1) << ",";
-      break;
-    case 0x7b: // 2e1 3d08
-    case 0x7c: // 4da, 6a5, 15ff
-      if (dSz<3) return false;
-      f << "f" << std::hex << c << std::dec << "=";
-      f << std::hex << input->readULong(1) << std::dec << ":";
-      f << std::hex << input->readULong(1) << std::dec << ",";
-      break;
-    case 0x82: // find one time with 168 (related to 7e ?)
-      if (dSz<3) return false;
-      f << "f" << std::hex << c << std::dec << "=" << input->readLong(2) << ",";
-      break;
-    case 0x83:
-    case 0x84:
-      if (dSz < 3) return false;
-      val = (int) input->readLong(2);
-      if (c == 0x83) f << "header[top]=" << val/1440. << ",";
-      else f << "header[bottom]=" << val/1440. << ",";
-      break;
-    default:
-      return false;
-    }
-    m_error += f.str();
-    return true;
-  }
-
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Section const &section) {
-    if (section.m_id >= 0) o << "S" << section.m_id << ":";
-    else o << "S_:";
-    if (section.m_type) o << "type=" << std::hex << section.m_type << std::dec << ",";
-    if (section.m_paragraphId > -9999) o << "sP=" << section.m_paragraphId << ",";
-    if (section.m_col != 1) o << "cols=" << section.m_col << ",";
-    if (section.m_colSep < 0.5 || section.m_colSep > 0.5)
-      o << "colSep=" << section.m_colSep << "in,";
-    if (section.m_colBreak) o << "colBreak,";
-    if (section.m_flag)
-      o << "fl=" << std::hex << section.m_flag << std::dec << ",";
-    if (section.m_error.length()) o << section.m_error << ",";
-    return o;
-  }
-  //! the identificator
-  int m_id;
-  //! the type
-  int m_type;
-  //! the paragraph id
-  int m_paragraphId;
-  //! the num of columns
-  int m_col;
-  //! the spacing between column
-  float m_colSep;
-  //! only a column break
-  bool m_colBreak;
-  //! some flag ( in the main position)
-  int m_flag;
-  //! true if is default
-  bool m_default;
   /** the errors */
   std::string m_error;
 };
@@ -295,224 +174,6 @@ struct Page {
   int m_values[4];
   /** the errors */
   std::string m_error;
-};
-
-/** Internal: class to store the paragraph properties */
-struct Paragraph : public MWAWParagraph {
-  //! Constructor
-  Paragraph() : m_font(), m_font2(), m_section() {
-    m_section.m_default = true;
-  }
-  //! try to read a data
-  bool read(MWAWInputStreamPtr &input, long endPos) {
-    long pos = input->tell();
-    if (m_section.read(input,endPos)) {
-      m_section.m_default=false;
-      return true;
-    }
-
-    input->seek(pos, WPX_SEEK_SET);
-    long dSz = endPos-pos;
-    if (dSz < 1) return false;
-    libmwaw::DebugStream f;
-    int c = (int) input->readULong(1), val;
-    switch(c) {
-    case 0x5:
-      if (dSz < 2) return false;
-      val = (int) input->readLong(1);
-      switch (val) {
-      case 0:
-        return true;
-      case 1:
-        m_justify = libmwaw::JustificationCenter;
-        return true;
-      case 2:
-        m_justify = libmwaw::JustificationRight;
-        return true;
-      case 3:
-        m_justify = libmwaw::JustificationFull;
-        return true;
-      default:
-        MWAW_DEBUG_MSG(("MSWTextInternal::Paragraph::Read: can not read align\n"));
-        f << "#align=" << val << ",";
-        break;
-      }
-      break;
-    case 0x6: // a small number : always 1 ?
-    case 0x7:
-    case 0x8:
-    case 0x9:
-      if (dSz < 2) return false;
-      val = (int) input->readLong(1);
-      switch(c) {
-      case 7:
-        f << "keeplineTogether";
-        break;
-      case 8:
-        f << "keepwithnext";
-        break;
-      case 9:
-        f << "pagebreakbefore";
-        break;
-      default:
-        f << "f" << std::hex << c << std::dec;
-        break;
-      }
-      if (val==0) f << "*";
-      else if (val != 1) f << "=" << val;
-      f << ",";
-      break;
-    case 0xf: { // tabs
-      int sz = (int) input->readULong(1);
-      if (sz<2 || 2+sz > dSz) {
-        MWAW_DEBUG_MSG(("MSWTextInternal::Paragraph::Read: can not read tab\n"));
-        return false;
-      }
-      int N0 = (int) input->readULong(1);
-      if (2*N0 > sz) {
-        MWAW_DEBUG_MSG(("MSWTextInternal::Paragraph::Read: num tab0 seems odd\n"));
-        return false;
-      }
-      if (N0) { // CHECKME: an increasing list, but what is it ? Often N0=0 or N ?
-        f << "tabs0?=[";
-        for (int i = 0; i < N0; i++) {
-          f << float(input->readLong(2))/1440.f << ",";
-        }
-        f << "],";
-      }
-      int N = (int) input->readULong(1);
-      if (N*3+2*N0+2 != sz ) {
-        MWAW_DEBUG_MSG(("MSWTextInternal::Paragraph::Read: num tab seems odd\n"));
-        f << "#";
-        m_extra += f.str();
-        return false;
-      }
-      std::vector<float> tabs;
-      tabs.resize((size_t) N);
-      for (int i = 0; i < N; i++) tabs[(size_t) i] = float(input->readLong(2))/1440.f;
-      for (int i = 0; i < N; i++) {
-        MWAWTabStop tab;
-        tab.m_position = tabs[(size_t) i];
-        val = (int) input->readULong(1);
-        switch(val>>5) {
-        case 0:
-          break;
-        case 1:
-          tab.m_alignment = MWAWTabStop::CENTER;
-          break;
-        case 2:
-          tab.m_alignment = MWAWTabStop::RIGHT;
-          break;
-        case 3:
-          tab.m_alignment = MWAWTabStop::DECIMAL;
-          break;
-        case 4:
-          tab.m_alignment = MWAWTabStop::BAR;
-          break;
-        default:
-          f << "#tabAlign=" << int(val>>5) << ",";
-          break;
-        }
-        switch((val>>2)&3) {
-        case 1:
-          tab.m_leaderCharacter = '.';
-          break;
-        case 2:
-          tab.m_leaderCharacter = '-';
-          break;
-        case 3:
-          tab.m_leaderCharacter = '_';
-          break;
-        case 0:
-        default:
-          break;
-        }
-        if (val & 0x13)
-          f << "#tabsFlags=" << std::hex << (val & 0x13) << ",";
-        m_tabs.push_back(tab);
-      }
-      break;
-    }
-    case 0x10: // right
-    case 0x11: // left
-    case 0x13: // first left
-      if (dSz < 3) return false;
-      val = (int) input->readLong(2);
-      if (c == 0x13) m_margins[0] = val/1440.;
-      else if (c == 0x11) m_margins[1] = val/1440.;
-      else m_margins[2] = val/1440.;
-      return true;
-    case 0x14: // alignement : 240 normal, 480 : double, ..
-    case 0x15: // spacing before DWIPP
-    case 0x16: // spacing after DWIPP
-      if (dSz < 3) return false;
-      val = (int) input->readLong(2);
-      m_spacings[c-0x14] = val/1440.;
-      if (c != 0x14) return true;
-      m_spacingsInterlineUnit = WPX_INCH;
-      if (val > 0)
-        m_extra += "interline[atLeast],";
-      else if (val < 0)
-        m_spacings[0] *= -1;
-      else {
-        m_spacings[0] = 1.0;
-        m_spacingsInterlineUnit = WPX_PERCENT;
-      }
-      return true;
-    case 0x1e:
-    case 0x1f:
-    case 0x20:
-    case 0x21:
-    case 0x22:
-      if (dSz < 3) return false;
-      val = (int) input->readULong(2);
-      switch(c) {
-      case 0x1e:
-        m_border |= libmwaw::TopBorderBit;
-        break;
-      case 0x1f:
-        m_border |= libmwaw::LeftBorderBit;
-        break;
-      case 0x20:
-        m_border |= libmwaw::BottomBorderBit;
-        break;
-      case 0x21:
-        m_border |= libmwaw::RightBorderBit;
-        break;
-      default:
-      case 0x22:
-        f << "border[middle]";
-        break;
-      }
-      if (val & 0x7E00) f << ":textSep=" << int((val& 0x8E00)>>9) << "pt";
-      if (val & 0x8000) f << "*";
-      if (val & 0x1FF) f << ":fl=" << std::hex << (val & 0x1FF) << std::dec << ",";
-      break;
-    default:
-      return false;
-    }
-    m_extra += f.str();
-    return true;
-  }
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
-    o << reinterpret_cast<MWAWParagraph const &>(ind);
-    if (!ind.m_section.m_default) o << ind.m_section << ",";
-    return o;
-  }
-
-  //! operator<<
-  void print(std::ostream &o, MWAWFontConverterPtr m_convertissor) const {
-    if (!m_font2.m_default)
-      o << "font=[" << m_font2.m_font.getDebugString(m_convertissor) << m_font2 << "],";
-    else if (!m_font.m_default)
-      o << "font=[" << m_font.m_font.getDebugString(m_convertissor) << m_font2 << "],";
-    o << *this;
-  }
-  //! the font (simplified)
-  MSWTextStyles::Font m_font, m_font2 /** font ( not simplified )*/;
-  //! the section
-  Section m_section;
 };
 
 ////////////////////////////////////////
@@ -565,9 +226,7 @@ struct Field {
 struct State {
   //! constructor
   State() : m_version(-1), m_bot(0x100), m_textposList(), m_plcMap(), m_filePlcMap(),
-    m_styleFontMap(), m_styleParagraphMap(),m_textstructParagraphList(), m_fontList(), m_paragraphList(),
-    m_lineList(), m_sectionList(), m_pageList(),
-    m_fieldList(), m_footnoteList(), m_cols(1), m_actPage(0), m_numPages(-1) {
+    m_zoneList(), m_pageList(), m_fieldList(), m_footnoteList(), m_cols(1), m_actPage(0), m_numPages(-1) {
     for (int i = 0; i < 3; i++) m_textLength[i] = 0;
   }
   //! returns the total text size
@@ -608,29 +267,11 @@ struct State {
   //! the text correspondance zone ( textpos, plc )
   std::multimap<long, MSWText::PLC> m_plcMap;
 
-  //! the text correspondance zone ( filepos, plc )
+  //! the file correspondance zone ( filepos, plc )
   std::multimap<long, MSWText::PLC> m_filePlcMap;
 
-  //! the list of fonts in style
-  std::map<int, MSWTextStyles::Font> m_styleFontMap;
-
-  //! the list of paragraph in style
-  std::map<int, Paragraph> m_styleParagraphMap;
-
-  //! the list of paragraph in textstruct
-  std::vector<Paragraph> m_textstructParagraphList;
-
-  //! the list of fonts
-  std::vector<MSWTextStyles::Font> m_fontList;
-
-  //! the list of paragraph
-  std::vector<Paragraph> m_paragraphList;
-
-  //! the list of lines
-  std::vector<Line> m_lineList;
-
-  //! the list of section
-  std::vector<Section> m_sectionList;
+  //! the list of zones
+  std::vector<ZoneInfo> m_zoneList;
 
   //! the list of pages
   std::vector<Page> m_pageList;
@@ -691,6 +332,10 @@ std::multimap<long, MSWText::PLC> &MSWText::getTextPLCMap()
   return m_state->m_plcMap;
 }
 
+std::multimap<long, MSWText::PLC> &MSWText::getFilePLCMap()
+{
+  return m_state->m_filePlcMap;
+}
 
 ////////////////////////////////////////////////////////////
 // Intermediate level
@@ -699,8 +344,8 @@ std::multimap<long, MSWText::PLC> &MSWText::getTextPLCMap()
 std::ostream &operator<<(std::ostream &o, MSWText::PLC const &plc)
 {
   switch(plc.m_type) {
-  case MSWText::PLC::Line:
-    o << "L";
+  case MSWText::PLC::ZoneInfo:
+    o << "Z";
     break;
   case MSWText::PLC::Section:
     o << "S";
@@ -731,6 +376,9 @@ std::ostream &operator<<(std::ostream &o, MSWText::PLC const &plc)
     break;
   case MSWText::PLC::TextPosition:
     o << "textPos";
+    break;
+  case MSWText::PLC::Table:
+    o << "table";
     break;
   default:
     o << "#type" + char('a'+int(plc.m_type));
@@ -775,7 +423,7 @@ bool MSWText::createZones(long bot, long (&textLength)[3])
 #endif
     if (entry.begin() == prevDeb) continue;
     prevDeb = entry.begin();
-    readStyles(entry);
+    m_stylesManager->readStyles(entry);
   }
   // read the text structure
   it = entryMap.find("TextStruct");
@@ -786,12 +434,12 @@ bool MSWText::createZones(long bot, long (&textLength)[3])
   it = entryMap.find("PageBreak");
   if (it != entryMap.end())
     readPageBreak(it->second);
-  it = entryMap.find("LineInfo");
+  it = entryMap.find("ZoneInfo");
   if (it != entryMap.end())
-    readLineInfo(it->second);
+    readZoneInfo(it->second);
   it = entryMap.find("Section");
   if (it != entryMap.end())
-    readSection(it->second);
+    m_stylesManager->readSection(it->second);
 
   //! read the header footer limit
   it = entryMap.find("HeaderFooter");
@@ -846,61 +494,12 @@ bool MSWText::createZones(long bot, long (&textLength)[3])
 
   it = entryMap.find("ParagList");
   if (it != entryMap.end())
-    readPLCList(it->second);
+    m_stylesManager->readPLCList(it->second);
   it = entryMap.find("CharList");
   if (it != entryMap.end())
-    readPLCList(it->second);
-
-  updateTextEntryStyle();
+    m_stylesManager->readPLCList(it->second);
 
   return true;
-}
-
-////////////////////////////////////////////////////////////
-// finds the style which must be used for each style
-////////////////////////////////////////////////////////////
-void MSWText::updateTextEntryStyle()
-{
-  size_t N = m_state->m_textposList.size();
-  if (N == 0) return;
-  std::vector<MSWTextInternal::TextEntry *> list;
-  list.resize(N);
-  for (size_t i = 0; i < N; i++) list[i] = & m_state->m_textposList[i];
-  MSWTextInternal::TextEntry::CompareFilePos compare;
-  std::sort(list.begin(), list.end(), compare);
-
-  std::multimap<long, MSWText::PLC>::iterator it
-    = m_state->m_filePlcMap.begin();
-  int actFont = -1, actParag = -1;
-  for (size_t i = 0; i < N; i++) {
-    MSWTextInternal::TextEntry &entry = *list[i];
-    long pos = entry.begin();
-    while (it != m_state->m_filePlcMap.end()) {
-      if (it->first > pos) break;
-      MSWText::PLC &plc = it++->second;
-      switch(plc.m_type) {
-      case MSWText::PLC::Font:
-        actFont = plc.m_id;
-        break;
-      case MSWText::PLC::Paragraph:
-        actParag = plc.m_id;
-        break;
-      case MSWText::PLC::Line:
-      case MSWText::PLC::Section:
-      case MSWText::PLC::Page:
-      case MSWText::PLC::Footnote:
-      case MSWText::PLC::FootnoteDef:
-      case MSWText::PLC::Field:
-      case MSWText::PLC::Object:
-      case MSWText::PLC::HeaderFooter:
-      case MSWText::PLC::TextPosition:
-      default:
-        break;
-      }
-    }
-    entry.m_fontId = actFont;
-    entry.m_paragraphId = actParag;
-  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -912,53 +511,16 @@ bool MSWText::readTextStruct(MSWEntry &entry)
     MWAW_DEBUG_MSG(("MSWText::readTextStruct: the zone seems to short\n"));
     return false;
   }
-  long pos = entry.begin();
-  m_input->seek(pos, WPX_SEEK_SET);
+  if (!m_stylesManager->readTextStructList(entry))
+    return false;
+  long pos = m_input->tell();
   libmwaw::DebugStream f;
   int type = (int) m_input->readLong(1);
-  if (type != 1 && type != 2) {
+  if (type != 2) {
     MWAW_DEBUG_MSG(("MSWText::readTextStruct: find odd type %d\n", type));
     return false;
   }
   entry.setParsed(true);
-  int num = 0;
-  while (type == 1) {
-    /* probably a paragraph definition. Fixme: create a function */
-    int length = (int) m_input->readULong(2);
-    long endPos = pos+3+length;
-    if (endPos> entry.end()) {
-      ascii().addPos(pos);
-      ascii().addNote("TextStruct[paragraph]#");
-      MWAW_DEBUG_MSG(("MSWText::readTextStruct: zone(paragraph) is too big\n"));
-      return false;
-    }
-    f.str("");
-    f << "ParagPLC:tP" << num++<< "]:";
-    MSWTextInternal::Paragraph para;
-    m_input->seek(-2,WPX_SEEK_CUR);
-    if (readParagraph(para) && long(m_input->tell()) <= endPos) {
-#ifdef DEBUG_WITH_FILES
-      para.print(f, m_convertissor);
-#endif
-    } else {
-      para = MSWTextInternal::Paragraph();
-      f << "#";
-    }
-    m_state->m_textstructParagraphList.push_back(para);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(endPos, WPX_SEEK_SET);
-
-    pos = m_input->tell();
-    type = (int) m_input->readULong(1);
-    if (type == 2) break;
-    if (type != 1) {
-      MWAW_DEBUG_MSG(("MSWText::readTextStruct: find odd type %d\n", type));
-      return false;
-    }
-  }
-
-  f.str("");
   f << "TextStruct-pos:";
   int sz = (int) m_input->readULong(2);
   long endPos = pos+3+sz;
@@ -991,7 +553,7 @@ bool MSWText::readTextStruct(MSWEntry &entry)
   f << std::dec << "],";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  MSWText::PLC plc(MSWText::PLC::TextPosition);
+  PLC plc(PLC::TextPosition);
 
   for (int i = 0; i < N; i++) {
     pos = m_input->tell();
@@ -1000,22 +562,34 @@ bool MSWText::readTextStruct(MSWEntry &entry)
     f<< "TextStruct-pos" << i << ":";
     tEntry.m_pos = (int) textPos[(size_t)i];
     tEntry.m_type = (int) m_input->readULong(1);
+    // same value for all entries ?
     tEntry.m_id = (int) m_input->readULong(1);
     long ptr = (long) m_input->readULong(4);
     tEntry.setBegin(ptr);
     tEntry.setLength(textPos[(size_t)i+1]-textPos[(size_t)i]);
-    tEntry.m_function = (int) m_input->readULong(1);
-    tEntry.m_value  = (int) m_input->readULong(1);
+    tEntry.m_paragraphId = m_stylesManager->readTextStructParaZone(tEntry.m_extra);
     m_state->m_textposList.push_back(tEntry);
     if (!m_mainParser->isFilePos(ptr)) {
       MWAW_DEBUG_MSG(("MSWText::readTextStruct: find a bad file position \n"));
       f << "#";
     } else {
       plc.m_id = i;
-      m_state->m_plcMap.insert(std::multimap<long,MSWText::PLC>::value_type
+      m_state->m_plcMap.insert(std::multimap<long,PLC>::value_type
                                (textPos[(size_t)i],plc));
+      int pId = tEntry.getParagraphId();
+      bool inTable = false;
+      if (pId >= 0 && !inTable) {
+        MSWStruct::Paragraph para;
+        inTable = m_stylesManager->getParagraph(MSWTextStyles::TextStructZone, pId, para) && para.m_inCell.get();
+      }
+      if (inTable) {
+        PLC tablePlc(PLC::Table);
+        m_state->m_plcMap.insert(std::multimap<long,PLC>::value_type
+                                 (textPos[(size_t)i], tablePlc));
+      }
     }
     f << tEntry;
+    m_input->seek(pos+8, WPX_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
@@ -1090,19 +664,19 @@ bool MSWText::readFontNames(MSWEntry &entry)
 }
 
 ////////////////////////////////////////////////////////////
-// read the line info zone
+// read the zone info zone
 ////////////////////////////////////////////////////////////
-bool MSWText::readLineInfo(MSWEntry &entry)
+bool MSWText::readZoneInfo(MSWEntry &entry)
 {
   if (entry.length() < 4 || (entry.length()%10) != 4) {
-    MWAW_DEBUG_MSG(("MSWText::readLineInfo: the zone size seems odd\n"));
+    MWAW_DEBUG_MSG(("MSWText::readZoneInfo: the zone size seems odd\n"));
     return false;
   }
   long pos = entry.begin();
   entry.setParsed(true);
   m_input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
-  f << "LineInfo:";
+  f << "ZoneInfo:";
   int N=int(entry.length()/10);
 
   std::vector<long> textPositions;
@@ -1116,28 +690,26 @@ bool MSWText::readLineInfo(MSWEntry &entry)
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  MSWText::PLC plc(MSWText::PLC::Line);
+  PLC plc(PLC::ZoneInfo);
   for (int i = 0; i < N; i++) {
     pos = m_input->tell();
     f.str("");
-    f << "LineInfo-" << i << ":" << std::hex << textPositions[(size_t) i] << std::dec << ",";
-    MSWTextInternal::Line line;
-    line.m_id = i;
-    line.m_type = (int) m_input->readULong(1); // 0, 20, 40, 60
-    line.m_value = (int) m_input->readLong(1); // f0: -1 up to 9
-    for (int j = 0; j < 2; j++) { // fl0: 0 to 3b, fl1 always a multiple of 4?
-      line.m_flags[j] = (int) m_input->readULong(1);
-    }
-    line.m_height = (int) m_input->readLong(2);
-    f << line;
-    m_state->m_lineList.push_back(line);
+    f << "ZoneInfo-Z" << i << ":" << std::hex << textPositions[(size_t) i] << std::dec << ",";
+    MSWTextInternal::ZoneInfo zone;
+    zone.m_id = i;
+    zone.m_type = (int) m_input->readULong(1); // 0, 20, 40, 60
+    zone.m_value = (int) m_input->readLong(1); // f0: -1 up to 9
+    zone.m_dim.setX(float(m_input->readULong(2)/1440.));
+    zone.m_dim.setY(float(m_input->readLong(2)/72.));
+    f << zone;
+    m_state->m_zoneList.push_back(zone);
 
     if (textPositions[(size_t) i] > m_state->m_textLength[0]) {
-      MWAW_DEBUG_MSG(("MSWText::readLineInfo: text positions is bad...\n"));
+      MWAW_DEBUG_MSG(("MSWText::readZoneInfo: text positions is bad...\n"));
       f << "#";
     } else {
       plc.m_id=i;
-      m_state->m_plcMap.insert(std::multimap<long,MSWText::PLC>::value_type
+      m_state->m_plcMap.insert(std::multimap<long,PLC>::value_type
                                (textPositions[(size_t) i],plc));
     }
 
@@ -1169,7 +741,7 @@ bool MSWText::readPageBreak(MSWEntry &entry)
   std::vector<long> textPos; // checkme
   textPos.resize((size_t) N+1);
   for (int i = 0; i <= N; i++) textPos[(size_t) i] = (long) m_input->readULong(4);
-  MSWText::PLC plc(MSWText::PLC::Page);
+  PLC plc(PLC::Page);
   for (int i = 0; i < N; i++) {
     MSWTextInternal::Page page;
     page.m_id = i;
@@ -1186,241 +758,12 @@ bool MSWText::readPageBreak(MSWEntry &entry)
       f << "#";
     } else {
       plc.m_id = i;
-      m_state->m_plcMap.insert(std::multimap<long,MSWText::PLC>::value_type
+      m_state->m_plcMap.insert(std::multimap<long,PLC>::value_type
                                (textPos[(size_t)i],plc));
     }
     f << std::hex << "[pos?=" << textPos[(size_t)i] << std::dec << "," << page << "],";
   }
   f << "end=" << std::hex << textPos[(size_t)N] << std::dec << ",";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  ascii().addPos(entry.end());
-  ascii().addNote("_");
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the section zone
-////////////////////////////////////////////////////////////
-bool MSWText::readSection(MSWEntry &entry)
-{
-  if (entry.length() < 14 || (entry.length()%10) != 4) {
-    MWAW_DEBUG_MSG(("MSWText::readSection: the zone size seems odd\n"));
-    return false;
-  }
-  long pos = entry.begin();
-  entry.setParsed(true);
-  m_input->seek(pos, WPX_SEEK_SET);
-  libmwaw::DebugStream f;
-  f << "Section:";
-  int N=int(entry.length()/10);
-  std::vector<long> textPos; // checkme
-  textPos.resize((size_t)N+1);
-  for (int i = 0; i <= N; i++) textPos[(size_t)i] = (long) m_input->readULong(4);
-  MSWText::PLC plc(MSWText::PLC::Section);
-  for (int i = 0; i < N; i++) {
-    MSWTextInternal::Section sec;
-    sec.m_type = (int) m_input->readULong(1);
-    sec.m_flag = (int) m_input->readULong(1);
-    sec.m_id = i;
-    unsigned long filePos = m_input->readULong(4);
-    if (textPos[(size_t)i] > m_state->m_textLength[0]) {
-      MWAW_DEBUG_MSG(("MSWText::readSection: text positions is bad...\n"));
-      f << "#";
-    } else {
-      plc.m_id = i;
-      m_state->m_plcMap.insert(std::multimap<long,MSWText::PLC>::value_type
-                               (textPos[(size_t)i],plc));
-    }
-    f << std::hex << "pos?=" << textPos[(size_t)i] << ":[" << sec << ",";
-    if (filePos != 0xFFFFFFFFL) {
-      f << "pos=" << std::hex << filePos << std::dec << ",";
-      long actPos = m_input->tell();
-      readSection(sec,(long) filePos);
-      m_input->seek(actPos, WPX_SEEK_SET);
-    }
-    f << "],";
-
-    m_state->m_sectionList.push_back(sec);
-  }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  ascii().addPos(entry.end());
-  ascii().addNote("_");
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the char/parag plc list
-////////////////////////////////////////////////////////////
-bool MSWText::readPLCList(MSWEntry &entry)
-{
-  if (entry.length() < 10 || (entry.length()%6) != 4) {
-    MWAW_DEBUG_MSG(("MSWText::readPLCList: the zone size seems odd\n"));
-    return false;
-  }
-  long pos = entry.begin();
-  entry.setParsed(true);
-  m_input->seek(pos, WPX_SEEK_SET);
-  libmwaw::DebugStream f;
-  f << entry.type() << ":";
-  int N=int(entry.length()/6);
-  std::vector<long> textPos; // limit of the text in the file
-  textPos.resize((size_t)N+1);
-  for (int i = 0; i <= N; i++) textPos[(size_t)i] = (long) m_input->readULong(4);
-  for (int i = 0; i < N; i++) {
-    if (!m_mainParser->isFilePos(textPos[(size_t)i])) f << "#";
-
-    long defPos = (long) m_input->readULong(2);
-    f << std::hex << "[filePos?=" << textPos[(size_t)i] << ",dPos=" << defPos << std::dec << ",";
-    f << "],";
-    int expectedSize = (version() <= 3) ? 0x80 : 0x200;
-
-    MSWEntry plc;
-    plc.setType(entry.id() ? "ParagPLC" : "CharPLC");
-    plc.setId(i);
-    plc.setBegin(defPos*expectedSize);
-    plc.setLength(expectedSize);
-    if (!m_mainParser->isFilePos(plc.end())) {
-      f << "#PLC,";
-      MWAW_DEBUG_MSG(("MSWText::readPLCList: plc def is outside the file\n"));
-    } else {
-      long actPos = m_input->tell();
-      readPLC(plc, entry.id());
-      m_input->seek(actPos, WPX_SEEK_SET);
-    }
-  }
-  f << std::hex << "end?=" << textPos[(size_t)N] << ",";
-
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  ascii().addPos(entry.end());
-  ascii().addNote("_");
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the char/parag plc
-////////////////////////////////////////////////////////////
-bool MSWText::readPLC(MSWEntry &entry, int type)
-{
-  int expectedSize = (version() <= 3) ? 0x80 : 0x200;
-  int posFactor = (version() <= 3) ? 1 : 2;
-  if (entry.length() != expectedSize) {
-    MWAW_DEBUG_MSG(("MSWText::readPLC: the zone size seems odd\n"));
-    return false;
-  }
-  m_input->seek(entry.end()-1, WPX_SEEK_SET);
-  int N=(int) m_input->readULong(1);
-  if (5*(N+1) > entry.length()) {
-    MWAW_DEBUG_MSG(("MSWText::readPLC: the number of plc seems odd\n"));
-    return false;
-  }
-
-  long pos = entry.begin();
-  entry.setParsed(true);
-  libmwaw::DebugStream f;
-  f << "Entries("<< entry.type() << ")[" << entry.id() << "]:N=" << N << ",";
-
-  m_input->seek(pos, WPX_SEEK_SET);
-  std::vector<long> filePos;
-  filePos.resize((size_t) N+1);
-  for (int i = 0; i <= N; i++)
-    filePos[(size_t)i] = (long) m_input->readULong(4);
-  std::map<int, int> mapPosId;
-  std::vector<int> decal;
-  decal.resize((size_t)N);
-  size_t numData = type == 0 ? m_state->m_fontList.size() :
-                   m_state->m_paragraphList.size();
-  MSWText::PLC::Type plcType =
-    type == 0 ? MSWText::PLC::Font : MSWText::PLC::Paragraph;
-
-  for (size_t i = 0; i < size_t(N); i++) {
-    decal[i] = (int) m_input->readULong(1);
-    int id = -1;
-    if (decal[i]) {
-      if (mapPosId.find(decal[i]) != mapPosId.end())
-        id = mapPosId.find(decal[i])->second;
-      else {
-        id = int(numData++);
-        mapPosId[decal[i]] = id;
-
-        long actPos = m_input->tell();
-        libmwaw::DebugStream f2;
-        f2 << entry.type() << "-";
-
-        long dataPos = entry.begin()+posFactor*decal[i];
-        if (type == 0) {
-          m_input->seek(dataPos, WPX_SEEK_SET);
-          f2 << "F" << id << ":";
-          MSWTextStyles::Font font;
-          if (!m_stylesManager->readFont(font, true)) {
-            font = MSWTextStyles::Font();
-            f2 << "#";
-          } else
-            f2 << font.m_font.getDebugString(m_convertissor) << font << ",";
-          m_state->m_fontList.push_back(font);
-        } else {
-          MSWTextInternal::Paragraph para;
-          f2 << "P" << id << ":";
-
-          m_input->seek(dataPos, WPX_SEEK_SET);
-          int sz = (int) m_input->readLong(1);
-          if (sz < 4 || dataPos+2*sz > entry.end()-1) {
-            MWAW_DEBUG_MSG(("MSWText::readPLC: can not read plcSz\n"));
-            f2 << "#";
-          } else {
-            int pId = (int) m_input->readLong(1);
-            if (m_state->m_styleParagraphMap.find(pId)==m_state->m_styleParagraphMap.end()) {
-              MWAW_DEBUG_MSG(("MSWText::readPLC: can not find parent paragraph\n"));
-              f2 << "#";
-            } else
-              para = m_state->m_styleParagraphMap.find(pId)->second;
-            f2 << "sP" << pId << ",";
-            int val = (int) m_input->readLong(1);
-            if (val) // some flag ?
-              f2 << "g0=" << std::hex << val << std::dec << ",";
-            val = (int) m_input->readLong(1);
-            if (val) // a small number
-              f2 << "g1=" << val << ",";
-            for (int j = 2; j < 4; j++) {
-              val = (int) m_input->readULong(2);
-              if (val) f2 << "g" << j << "=" << std::hex << val << std::dec << ",";
-            }
-            if (sz > 4) {
-              ascii().addDelimiter(dataPos+8,'|');
-              m_input->seek(dataPos+8, WPX_SEEK_SET);
-              if (readParagraph(para, sz*2+1-8)) {
-#ifdef DEBUG_WITH_FILES
-                para.print(f2, m_convertissor);
-#endif
-              } else {
-                para = MSWTextInternal::Paragraph();
-                f2 << "#";
-              }
-            }
-          }
-          m_state->m_paragraphList.push_back(para);
-        }
-        m_input->seek(actPos, WPX_SEEK_SET);
-        ascii().addPos(dataPos);
-        ascii().addNote(f2.str().c_str());
-      }
-    }
-    f << std::hex << filePos[i] << std::dec;
-    MSWText::PLC plc(plcType, id);
-    m_state->m_filePlcMap.insert
-    (std::multimap<long,MSWText::PLC>::value_type(filePos[i], plc));
-    if (id >= 0) {
-      if (type==0) f << ":F" << id;
-      else f << ":P" << id;
-    }
-    f << ",";
-  }
-
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
@@ -1459,8 +802,8 @@ bool MSWText::readFootnotesPos(MSWEntry &entry, std::vector<long> const &noteDef
   for (int i = 0; i <= N; i++)
     textPos[(size_t)i]= (long) m_input->readULong(4);
   long debFootnote = m_state->m_textLength[0];
-  MSWText::PLC plc(MSWText::PLC::Footnote);
-  MSWText::PLC defPlc(MSWText::PLC::FootnoteDef);
+  PLC plc(PLC::Footnote);
+  PLC defPlc(PLC::FootnoteDef);
   for (int i = 0; i < N; i++) {
     MSWTextInternal::Footnote note;
     note.m_id = i;
@@ -1477,9 +820,9 @@ bool MSWText::readFootnotesPos(MSWEntry &entry, std::vector<long> const &noteDef
       f << "#";
     } else {
       defPlc.m_id = plc.m_id = i;
-      m_state->m_plcMap.insert(std::multimap<long,MSWText::PLC>::value_type
+      m_state->m_plcMap.insert(std::multimap<long,PLC>::value_type
                                (textPos[(size_t)i], plc));
-      m_state->m_plcMap.insert(std::multimap<long,MSWText::PLC>::value_type
+      m_state->m_plcMap.insert(std::multimap<long,PLC>::value_type
                                (note.m_pos.begin(), defPlc));
     }
     f << std::hex << textPos[(size_t)i] << std::dec << ":" << note << ",";
@@ -1562,7 +905,7 @@ bool MSWText::readFields(MSWEntry &entry, std::vector<long> const &fieldPos)
   libmwaw::DebugStream f, f2;
   f << "FieldName:";
   int const endSize = (version()==5) ? 2 : 1;
-  MSWText::PLC plc(MSWText::PLC::Field);
+  PLC plc(PLC::Field);
   for (int n = 1; n < N; n++) {
     if (m_input->tell() >= entry.end()) {
       MWAW_DEBUG_MSG(("MSWText::readFields: can not find all field\n"));
@@ -1611,7 +954,7 @@ bool MSWText::readFields(MSWEntry &entry, std::vector<long> const &fieldPos)
       f << "#";
     } else {
       plc.m_id = n-1;
-      m_state->m_plcMap.insert(std::multimap<long,MSWText::PLC>::value_type
+      m_state->m_plcMap.insert(std::multimap<long,PLC>::value_type
                                (fieldPos[(size_t)n], plc));
     }
   }
@@ -1620,669 +963,6 @@ bool MSWText::readFields(MSWEntry &entry, std::vector<long> const &fieldPos)
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
   ascii().addPos(entry.end());
-  ascii().addNote("_");
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the styles
-////////////////////////////////////////////////////////////
-bool MSWText::readStyles(MSWEntry &entry)
-{
-  if (entry.length() < 6) {
-    MWAW_DEBUG_MSG(("MSWText::readStyles: zone seems to short...\n"));
-    return false;
-  }
-  m_state->m_styleFontMap.clear();
-  m_state->m_styleParagraphMap.clear();
-  entry.setParsed(true);
-  ascii().addPos(entry.end());
-  ascii().addNote("_");
-
-  long pos = entry.begin();
-  libmwaw::DebugStream f;
-  m_input->seek(pos, WPX_SEEK_SET);
-  f << entry << ":";
-  int N = (int) m_input->readLong(2);
-  if (N) f << "N?=" << N;
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  // first find the different zone
-  long debPos[4];
-  int overOk[3]= {0,30,100}; // name, font, paragraph
-  for (int st = 0; st < 3; st++) {
-    debPos[st] = m_input->tell();
-    int dataSz = (int) m_input->readULong(2);
-    long endPos = debPos[st]+dataSz;
-    if (dataSz < 2+N || endPos > entry.end()+overOk[st]) {
-      ascii().addPos(pos);
-      ascii().addNote("###Styles(bad)");
-      MWAW_DEBUG_MSG(("MSWText::readStyles: can not read styles(%d)...\n", st));
-      return false;
-    }
-    if (endPos > entry.end()) {
-      entry.setEnd(endPos+1);
-      MWAW_DEBUG_MSG(("MSWText::readStyles(%d): size seems incoherent...\n", st));
-      f.str("");
-      f << "#sz=" << dataSz << ",";
-      ascii().addPos(debPos[st]);
-      ascii().addNote(f.str().c_str());
-    }
-    m_input->seek(endPos, WPX_SEEK_SET);
-  }
-  debPos[3] = m_input->tell();
-  // read the styles parents
-  std::vector<int> previous, order;
-  if (readStylesHierarchy(entry, N, previous))
-    order=orderStyles(previous);
-
-  int N1=0;
-  MSWEntry zone;
-  zone.setBegin(debPos[0]);
-  zone.setEnd(debPos[1]);
-  if (!readStylesNames(zone, N, N1)) {
-    N1=int(previous.size())-N;
-    if (N1 < 0)
-      return false;
-  }
-  // ok, repair previous and order if need
-  if (int(previous.size()) < N+N1)
-    previous.resize(size_t(N+N1), -1000);
-  if (int(order.size()) < N+N1) {
-    for (int i = int(order.size()); i < N+N1; i++)
-      order.push_back(i);
-  }
-  zone.setBegin(debPos[1]);
-  zone.setEnd(debPos[2]);
-  readStylesFont(zone, N, previous, order);
-
-  zone.setBegin(debPos[2]);
-  zone.setEnd(debPos[3]);
-  readStylesParagraph(zone, N, previous, order);
-  return true;
-}
-
-bool MSWText::readStylesNames(MSWEntry const &zone, int N, int &Nnamed)
-{
-  long pos = zone.begin();
-  m_input->seek(pos+2, WPX_SEEK_SET);
-  libmwaw::DebugStream f;
-  f << "Styles(names):";
-  int actN=0;
-  while (long(m_input->tell()) < zone.end()) {
-    int sz = (int) m_input->readULong(1);
-    if (sz == 0) {
-      f << "*";
-      actN++;
-      continue;
-    }
-    if (sz == 0xFF) {
-      f << "_";
-      actN++;
-      continue;
-    }
-    pos = m_input->tell();
-    if (pos+sz > zone.end()) {
-      MWAW_DEBUG_MSG(("MSWText::readStylesNames: zone(names) seems to short...\n"));
-      f << "#";
-      ascii().addNote(f.str().c_str());
-      m_input->seek(pos-1, WPX_SEEK_SET);
-      break;
-    }
-    std::string s("");
-    for (int i = 0; i < sz; i++) s += char(m_input->readULong(1));
-    f << "N" << actN-N << "=" ;
-    f << s << ",";
-    actN++;
-  }
-  Nnamed=actN-N;
-  if (Nnamed < 0) {
-    MWAW_DEBUG_MSG(("MSWText::readStylesNames: zone(names) seems to short: stop...\n"));
-    f << "#";
-  }
-  ascii().addPos(zone.begin());
-  ascii().addNote(f.str().c_str());
-  return Nnamed >= 0;
-}
-
-bool MSWText::readStylesFont
-(MSWEntry &zone, int N, std::vector<int> const &previous, std::vector<int> const &order)
-{
-  libmwaw::DebugStream f;
-  long pos = zone.begin();
-  ascii().addPos(pos);
-  ascii().addNote("Styles(font):");
-
-  m_input->seek(pos+2, WPX_SEEK_SET);
-  size_t numElt = order.size();
-  std::vector<long> debPos;
-  std::vector<int> dataSize;
-  debPos.resize(numElt, 0);
-  dataSize.resize(numElt, 0);
-  for (size_t i = 0; i < numElt; i++) {
-    pos = m_input->tell();
-    debPos[i] = pos;
-    int sz = dataSize[i] = (int) m_input->readULong(1);
-    if (sz == 0xFF)
-      sz = 0;
-    else if (pos+1+sz > zone.end()) {
-      MWAW_DEBUG_MSG(("MSWText::readStylesFont: can not read a font\n"));
-      if (i == 0)
-        return false;
-      numElt = i-1;
-      break;
-    }
-    if (sz)
-      m_input->seek(sz, WPX_SEEK_CUR);
-    else {
-      f.str("");
-      f << "CharPLC(sF" << int(i)-N << "):";
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
-    }
-  }
-
-  for (size_t i = 0; i < order.size(); i++) {
-    int id = order[i];
-    if (id < 0 || id >= int(numElt)) continue;
-    int prevId = previous[(size_t)id];
-    MSWTextStyles::Font font;
-    if (prevId >= 0 && m_state->m_styleFontMap.find(prevId-N) != m_state->m_styleFontMap.end())
-      font = m_state->m_styleFontMap.find(prevId-N)->second;
-    if (dataSize[(size_t)id] && dataSize[(size_t)id] != 0xFF) {
-      m_input->seek(debPos[(size_t)id], WPX_SEEK_SET);
-
-      f.str("");
-      f << "CharPLC(sF" << id-int(N) << "):";
-      if (!m_stylesManager->readFont(font, false, false)) f << "#";
-      f << "font=[" << font.m_font.getDebugString(m_convertissor) << font << "],";
-      ascii().addPos(debPos[(size_t)id]);
-      ascii().addNote(f.str().c_str());
-    }
-    m_state->m_styleFontMap.insert
-    (std::multimap<int,MSWTextStyles::Font>::value_type(id-N,font));
-  }
-  return true;
-}
-
-bool MSWText::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> const &previous,
-                                  std::vector<int> const &order)
-{
-  libmwaw::DebugStream f;
-  long pos = zone.begin();
-  ascii().addPos(pos);
-  ascii().addNote("Styles(paragraph):");
-
-  m_input->seek(pos+2, WPX_SEEK_SET);
-  size_t numElt = order.size();
-  std::vector<long> debPos;
-  std::vector<int> dataSize;
-  debPos.resize(numElt, 0);
-  dataSize.resize(numElt, 0);
-  for (size_t i = 0; i < numElt; i++) {
-    pos = m_input->tell();
-    debPos[i] = pos;
-    int sz = dataSize[i] = (int) m_input->readULong(1);
-    if (sz != 0xFF && pos+1+sz > zone.end()) {
-      MWAW_DEBUG_MSG(("MSWText::readStylesParagraph: can not read a paragraph\n"));
-      if (i == 0)
-        return false;
-      numElt = i-1;
-      break;
-    }
-    if (sz && sz != 0xFF)
-      m_input->seek(sz, WPX_SEEK_CUR);
-    else {
-      f.str("");
-      f << "ParagPLC(sP" << int(i)-N << "):";
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
-    }
-  }
-  for (size_t i = 0; i < order.size(); i++) {
-    int id = order[i];
-    if (id < 0 || id >= int(numElt)) continue;
-    int prevId = previous[(size_t) id];
-    MSWTextInternal::Paragraph para;
-    if (prevId >= 0 && m_state->m_styleParagraphMap.find(prevId-N) != m_state->m_styleParagraphMap.end())
-      para = m_state->m_styleParagraphMap.find(prevId-N)->second;
-    if (m_state->m_styleFontMap.find(id-N) != m_state->m_styleFontMap.end())
-      para.m_font = m_state->m_styleFontMap.find(id-N)->second;
-    if (dataSize[(size_t) id] == 0 || dataSize[(size_t) id] == 0xFF) {
-    } else {
-      f.str("");
-      f << "ParagPLC(sP" << id-N << "):";
-      if (dataSize[(size_t) id] < 7) {
-        MWAW_DEBUG_MSG(("MSWText::readStylesParagraph: zone(paragraph) the id seems bad...\n"));
-        f << "#";
-      } else {
-        m_input->seek(debPos[(size_t) id]+1, WPX_SEEK_SET);
-        int pId = (int) m_input->readLong(1);
-        if (id >= N && pId != id-N) {
-          MWAW_DEBUG_MSG(("MSWText::readStyles: zone(paragraph) the id seems bad...\n"));
-          f << "#id=" << pId << ",";
-        }
-        for (int j = 0; j < 3; j++) { // 0, 0|c,0|1
-          int val = (int) m_input->readLong(2);
-          if (val) f << "g" << j << "=" << val << ",";
-        }
-        if (dataSize[(size_t) id] != 7 && !readParagraph(para, dataSize[(size_t) id]-7))
-          f << "#";
-#ifdef DEBUG_WITH_FILES
-        para.print(f, m_convertissor);
-#endif
-      }
-      ascii().addPos(debPos[(size_t) id]);
-      ascii().addNote(f.str().c_str());
-    }
-    m_state->m_styleParagraphMap.insert
-    (std::multimap<int,MSWTextInternal::Paragraph>::value_type(id-N,para));
-  }
-  return true;
-}
-
-bool MSWText::readStylesHierarchy(MSWEntry &entry, int N, std::vector<int> &previous)
-{
-  long pos = m_input->tell();
-  libmwaw::DebugStream f;
-  f << "Styles(hierarchy):";
-
-  int N2 = (int) m_input->readULong(2);
-  if (N2 < N) {
-    MWAW_DEBUG_MSG(("MSWText::readStylesHierarchy: N seems too small...\n"));
-    f << "#N=" << N2 << ",";
-    ascii().addPos(pos);
-    ascii().addNote("Styles(hierarchy):#"); // big problem
-    return false;
-  }
-  if (pos+(N2+1)*2 > entry.end()) {
-    if (N2>40) {
-      MWAW_DEBUG_MSG(("MSWText::readStylesHierarchy: N seems very big...\n"));
-      ascii().addPos(pos);
-      ascii().addNote("Styles(hierarchy):#"); // big problem
-    }
-    f << "#";
-  }
-  previous.resize(0);
-  previous.resize((size_t) N2, -1000);
-  for (int i = 0; i < N2; i++) {
-    int v0 = (int) m_input->readLong(1); // often 0 or i-N
-    int v1 = (int) m_input->readLong(1);
-    f << "prev(sP"<< i-N << ")";
-    if (v1 == -34) {
-    } else if (v1 < -N || v1+N >= N2)
-      f << "=###" << v1;
-    else {
-      previous[(size_t) i] = v1+N;
-      f << "=sP" << v1;
-    }
-    if (v0 ==0)
-      f << ",";
-    else if (v0==i-N)
-      f << "*,";
-    else if (v0)
-      f << "[" << v0 << "],";
-  }
-  orderStyles(previous);
-
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  pos = m_input->tell();
-  if (pos < entry.end()) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
-  } else if (pos > entry.end())
-    entry.setEnd(pos);
-
-  return true;
-}
-
-std::vector<int> MSWText::orderStyles(std::vector<int> const &previous)
-{
-  std::vector<int> order, numChild;
-  size_t N = previous.size();
-  numChild.resize(N, 0);
-  for (size_t i = 0; i < N; i++) {
-    if (previous[i] == -1000) continue;
-    if (previous[i] < 0 || previous[i] >= int(N)) {
-      MWAW_DEBUG_MSG(("MSWText::orderStyles: find a bad previous %d\n", previous[i]));
-      continue;
-    }
-    numChild[(size_t) previous[i]]++;
-  }
-  order.resize(N);
-  size_t numElt = 0;
-  while (numElt < N) {
-    bool read = false;
-    for (size_t i = 0; i < N; i++) {
-      if (numChild[i]) continue;
-      order[N-(++numElt)]=int(i);
-      if (previous[i] >= 0 && previous[i] < int(N))
-        numChild[(size_t) previous[i]]--;
-      read = true;
-      numChild[i]=-1;
-    }
-    if (read) continue;
-    MWAW_DEBUG_MSG(("MSWText::orderStyles: find a loop, stop...\n"));
-    for (size_t i = 0; i < N; i++) {
-      if (numChild[i] != -1)
-        order[N-(++numElt)]=int(i);
-    }
-    break;
-  }
-  return order;
-}
-
-////////////////////////////////////////////////////////////
-// try to read a paragraph
-////////////////////////////////////////////////////////////
-bool MSWText::readParagraph(MSWTextInternal::Paragraph &para, int dataSz)
-{
-  int sz;
-  if (dataSz >= 0)
-    sz = dataSz;
-  else
-    sz = (int) m_input->readULong(2);
-
-  long pos = m_input->tell();
-  long endPos = pos+sz;
-
-  if (sz == 0) return true;
-  if (!m_mainParser->isFilePos(pos+sz)) return false;
-
-  libmwaw::DebugStream f;
-  while (long(m_input->tell()) < endPos) {
-    long actPos = m_input->tell();
-    /* 5-16: basic paragraph properties
-       75-84: basic section properties
-       other
-     */
-    if (para.read(m_input,endPos)) continue;
-    m_input->seek(actPos, WPX_SEEK_SET);
-
-    int wh = (int) m_input->readULong(1), val;
-    bool done = true;
-    switch(wh) {
-    case 0:
-      done = actPos+1==endPos;
-      break;
-    case 0x3a:
-      f << "f" << std::hex << wh << std::dec << ",";
-      break;
-    case 0x2: // a small number between 0 and 4
-    case 0x18: // in cell ?
-    case 0x19: // new table
-    case 0x1d: // a small number 1, 6
-    case 0x34: // 0 ( one time)
-    case 0x45: // a small number between 0 or 1
-    case 0x47: // 0 one time
-    case 0x49: // 0 ( one time)
-    case 0x4c: // 0, 6, -12
-    case 0x4d: // a small number between -4 and 14
-    case 0x5e: // 0
-      if (actPos+2 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      val = (int) m_input->readLong(1);
-      switch(wh) {
-      case 0x18:
-        f << "table,";
-        break;
-      case 0x19:
-        f << "textbox?,";
-        break;
-      default:
-        f << "f" << std::hex << wh << std::dec << "=" << val << ",";
-      }
-      break;
-    case 0x3c: // always 0x80 | 0x81 ?
-    case 0x3d: // always 0x80 | 0x81 ?
-    case 0x3e:
-    case 0x3f:
-    case 0x40:
-    case 0x41:
-    case 0x42:
-    case 0x43:
-    case 0x4a: // in general a small number
-      if (actPos+2 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      val = (int) m_input->readULong(1);
-      f << "f" << std::hex << wh << "=" << val << std::dec << ",";
-      break;
-    case 0x1a: // a small negative number
-    case 0x1b: // a small negative number
-    case 0x1c: // dim: related to caps ?
-    case 0x23: // alway 0 ?
-    case 0x24: // always b4 ?
-    case 0x92: // alway 0 ?
-    case 0x93: // a dim ?
-    case 0x99: // alway 0 ?
-      if (actPos+3 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      val = (int) m_input->readLong(2);
-      f << "f" << std::hex << wh << std::dec << "=" << val << ",";
-      break;
-    case 0x9f: // two small number
-    case 0x44: // two flag?
-      if (actPos+3 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      f << "f" << std::hex << wh << "=[";
-      for (int i = 0; i < 2; i++)
-        f << m_input->readULong(1) << ",";
-      f << std::dec << "],";
-      break;
-    case 3: // four small number
-      if (actPos+5 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      f << "f" << std::hex << wh << std::dec << "=[";
-      for (int i = 0; i < 4; i++)
-        f << m_input->readLong(1) << ",";
-      f << "],";
-      break;
-    case 0x50: // two small number
-      if (actPos+4 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      f << "f" << std::hex << wh << std::dec << "=[";
-      f << m_input->readLong(1) << ",";
-      f << m_input->readLong(2) << ",";
-      f << "],";
-      break;
-    case 0x38:
-    case 0x4f: // a small int and a pos?
-      if (actPos+4 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      f << "f" << std::hex << wh << std::dec << "=[";
-      f << m_input->readLong(1) << ",";
-      f << std::hex << m_input->readULong(2) << std::dec << "],";
-      break;
-    case 0x9e:
-    case 0xa0: // two small int and a pos?
-      if (actPos+5 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      f << "f" << std::hex << wh << std::dec << "=[";
-      for (int i = 0; i < 2; i++)
-        f << m_input->readLong(1) << ",";
-      f << std::hex << m_input->readULong(2) << std::dec << "],";
-      break;
-    case 0x9d: // three small int and a pos?
-    case 0xa3: // three small int and a pos?
-      if (actPos+6 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      f << "f" << std::hex << wh << std::dec << "=[";
-      for (int i = 0; i < 3; i++)
-        f << m_input->readLong(1) << ",";
-      f << std::hex << m_input->readULong(2) << std::dec << "],";
-      break;
-    case 0x4e:
-    case 0x53: { // same as 4e but with size=0xa
-      MSWTextStyles::Font font;
-      if (!m_stylesManager->readFont(font, false) || long(m_input->tell()) > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      if (wh == 0x4e) para.m_font = font;
-      else para.m_font2 = font;
-      break;
-    }
-    case 0x5f: { // 4 index
-      if (actPos+10 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      sz = (int) m_input->readULong(1);
-      if (sz != 8) f << "#sz=" << sz << ",";
-      f << "f5f=[";
-      for (int i = 0; i < 4; i++) f << m_input->readLong(2) << ",";
-      f << "],";
-      break;
-    }
-    case 0x17: {
-      sz = (int) m_input->readULong(1);
-      if (!sz || actPos+2+sz > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      f << "f" << std::hex << wh << "=[";
-      for (int i = 0; i < sz; i++) {
-        val= (int) m_input->readULong(1);
-        if (val) f << val << ",";
-        else f << "_,";
-      }
-      f << std::dec << "],";
-      break;
-    }
-    case 0x94: // checkme space between column divided by 2 (in table) ?
-      if (actPos+3 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      val = (int) m_input->readLong(2);
-      f << "colsSep?=" << 2*val/1440. << ",";
-      break;
-    case 0x98: { // tabs columns
-      sz = (int) m_input->readULong(2);
-      if (!sz || actPos+2+sz > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      int N = (int) m_input->readULong(1);
-      if (1+(N+1)*2 > sz) {
-        done = false;
-        f << "#";
-        break;
-      }
-      f << "table[N=" << N << ",posCol=[";
-      for (int i=0; i <= N; i++) {
-        f << float(m_input->readLong(2))/20.0 << ",";
-      }
-      f << "],";
-      int N1 = (sz-(N+1)*2-2)/2; // 0 or 5*N ?
-      if (N1) {
-        f << "unk=[N1=" << N1 << ",";
-        for (int i = 0; i < N1; i++) {
-          val = (int) m_input->readULong(2);
-          if (val) f << std::hex << val << std::dec << ",";
-          else f << "_";
-        }
-        f << "]";
-      }
-      f << "],";
-      if (long(m_input->tell()) != actPos+2+sz) {
-        ascii().addDelimiter(m_input->tell(),'#');
-        m_input->seek(actPos+2+sz, WPX_SEEK_SET);
-      }
-      break;
-    }
-    default:
-      done = false;
-      break;
-    }
-    if (!done) {
-      m_input->seek(actPos, WPX_SEEK_SET);
-      break;
-    }
-  }
-  if (long(m_input->tell()) != endPos) {
-    static bool first = true;
-    if (first) {
-      MWAW_DEBUG_MSG(("MSWText::readParagraph: can not read end of paragraph\n"));
-      first = false;
-    }
-    ascii().addDelimiter(m_input->tell(),'|');
-    f << "#";
-    m_input->seek(endPos, WPX_SEEK_SET);
-  }
-  para.m_extra += f.str();
-
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the section data
-////////////////////////////////////////////////////////////
-bool MSWText::readSection(MSWTextInternal::Section &sec, long debPos)
-{
-  if (!m_mainParser->isFilePos(debPos)) {
-    MWAW_DEBUG_MSG(("MSWText::readSection: can not find section data...\n"));
-    return false;
-  }
-  m_input->seek(debPos, WPX_SEEK_SET);
-  libmwaw::DebugStream f;
-  int sz = (int) m_input->readULong(1);
-  long endPos = debPos+sz+1;
-  if (sz < 1 || sz >= 255) {
-    MWAW_DEBUG_MSG(("MSWText::readSection: data section size seems bad...\n"));
-    f << "Section-" << sec << ":#";
-    ascii().addPos(debPos);
-    ascii().addNote(f.str().c_str());
-    return false;
-  }
-
-  while (m_input->tell() < endPos) {
-    long pos = m_input->tell();
-    if (sec.read(m_input, endPos)) continue;
-    f << "#";
-    ascii().addDelimiter(pos,'|');
-    break;
-  }
-  f << "Section-" << sec;
-  ascii().addPos(debPos);
-  ascii().addNote(f.str().c_str());
-
-  ascii().addPos(endPos);
   ascii().addNote("_");
   return true;
 }
@@ -2325,7 +1005,7 @@ bool MSWText::readLongZone(MSWEntry &entry, int sz, std::vector<long> &list)
 ////////////////////////////////////////////////////////////
 // try to read a text entry
 ////////////////////////////////////////////////////////////
-bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone)
+bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell)
 {
   if (!textEntry.valid()) return false;
   if (!m_listener) {
@@ -2337,141 +1017,284 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone)
   m_input->seek(pos, WPX_SEEK_SET);
   long cEnd = textEntry.end();
 
-  MSWTextInternal::Paragraph actPara;
-  MSWTextStyles::Font actFont;
+  MSWStruct::Font actFont;
   actFont.m_font = m_stylesManager->getDefaultFont();
-  bool fontSent = false;
+  MSWStruct::Font paraFont(actFont);
+  MSWStruct::Paragraph paraLine, paraFinalLine;
+  bool paraSent = true, newLine = true;
 
   libmwaw::DebugStream f;
-  f << "TextContent:";
-  std::multimap<long, MSWText::PLC>::iterator plcIt;
+  f << "TextContent[" << cDebPos << "]:";
+  std::multimap<long, PLC>::iterator plcIt;
   while (!m_input->atEOS() && cPos < cEnd) {
+    MSWStruct::Font font;
+    MSWStruct::Paragraph para, textStructPara;
+    bool needPrintData=false, newFont = false, newParagraph = false,
+         newTextStructPara = false, resetTextStructPara = false,
+         newTable = false, sentTable = false;
+    long cEndPos = cEnd;
+
+    // first find the list of the plc
+    PLC::ltstr compare;
+    std::set<PLC, PLC::ltstr> textPosPLC(compare), filePosPLC(compare);
     plcIt = m_state->m_plcMap.find(cPos);
     while (plcIt != m_state->m_plcMap.end() && plcIt->first == cPos) {
-      MSWText::PLC &plc = plcIt++->second;
+      PLC const &plc = plcIt++->second;
+      textPosPLC.insert(plc);
+      switch(plc.m_type) {
+      case PLC::TextPosition: {
+        if (plc.m_id < 0 || plc.m_id >= int(m_state->m_textposList.size()))
+          break;
+        MSWTextInternal::TextEntry const &entry=m_state->m_textposList[(size_t) plc.m_id];
+        if (pos != entry.begin()) {
+          pos = entry.begin();
+          m_input->seek(pos, WPX_SEEK_SET);
+          needPrintData = true;
+        }
+#if DEBUG_PARAGRAPH
+        if (entry.getParagraphId()>=0)
+          needPrintData = true;
+#endif
+        break;
+      }
+      case PLC::Section:
+#if DEBUG_SECTION
+        needPrintData = true;
+#endif
+        break;
+      case PLC::ZoneInfo:
+#if DEBUG_ZONEINFO
+        needPrintData = true;
+#endif
+        break;
+      case PLC::Table:
+        newTable = !tableCell;
+        break;
+      case PLC::Field:
+      case PLC::Font:
+      case PLC::Footnote:
+      case PLC::FootnoteDef:
+      case PLC::HeaderFooter:
+      case PLC::Object:
+      case PLC::Page:
+      case PLC::Paragraph:
+      default:
+        break;
+      }
+    }
+    plcIt = m_state->m_filePlcMap.find(pos);
+    while (plcIt != m_state->m_filePlcMap.end() && plcIt->first == pos) {
+      PLC const &plc = plcIt++->second;
+      filePosPLC.insert(plc);
+      switch(plc.m_type) {
+      case PLC::Paragraph:
+#if DEBUG_PARAGRAPH
+        needPrintData = true;
+#endif
+        break;
+      case PLC::Table:
+        newTable = !tableCell;
+        break;
+      case PLC::Field:
+      case PLC::Font:
+      case PLC::Footnote:
+      case PLC::FootnoteDef:
+      case PLC::HeaderFooter:
+      case PLC::Object:
+      case PLC::Page:
+      case PLC::Section:
+      case PLC::TextPosition:
+      case PLC::ZoneInfo:
+      default:
+        break;
+      }
+    }
+    plcIt = m_state->m_plcMap.upper_bound(cPos);
+    if (plcIt != m_state->m_plcMap.end() && plcIt->first < cEndPos && plcIt->first > cPos)
+      cEndPos = plcIt->first;
+    plcIt = m_state->m_filePlcMap.upper_bound(pos);
+    if (plcIt != m_state->m_filePlcMap.end()) {
+      long sz = plcIt->first-pos;
+      if (sz>0 && cPos+sz < cEndPos) cEndPos = cPos+sz;
+    }
+    if (needPrintData && cPos != cDebPos) {
+      ascii().addPos(debPos);
+      ascii().addNote(f.str().c_str());
+      f.str("");
+      f << "TextContent["<<cPos<<"]:";
+      cDebPos = cPos;
+      debPos = pos;
+    }
+    for (std::set<PLC, PLC::ltstr>::const_iterator pIt = textPosPLC.begin(); pIt != textPosPLC.end(); pIt++) {
+      PLC const &plc = *pIt;
+      // time to send the table
+      if (newTable && int(plc.m_type) >= int(PLC::Table)) {
+        MSWEntry tableEntry;
+        tableEntry.setBegin(cPos);
+        tableEntry.setEnd(cEnd);
+        newTable = false;
+        if (!sendTable(tableEntry)) {
+          f << "###table,";
+          m_input->seek(pos, WPX_SEEK_SET);
+        } else {
+          sentTable = true;
+          ascii().addPos(debPos);
+          ascii().addNote(f.str().c_str());
+
+          cPos = cDebPos = tableEntry.end();
+          pos=debPos=m_state->getFilePos(cPos);
+          m_input->seek(pos, WPX_SEEK_SET);
+
+          f.str("");
+          f << "TextContent["<<cPos<<"]:";
+          break;
+        }
+      }
 #if DEBUG_PLC
       if (plc.m_type != plc.TextPosition)
         f << "@[" << plc << "]";
 #endif
       switch (plc.m_type) {
-      case MSWText::PLC::Page: {
+      case PLC::Page: {
+        if (tableCell) break;
         if (mainZone) m_mainParser->newPage(++m_state->m_actPage);
-        actFont = MSWTextStyles::Font();
-        actFont.m_font =  m_stylesManager->getDefaultFont();
-        fontSent = false;
+        font.m_font =  m_stylesManager->getDefaultFont();
+        newFont = true;
         break;
       }
-      case MSWText::PLC::Section: {
-        if (plc.m_id < 0 || plc.m_id >= int(m_state->m_sectionList.size())) {
-          MWAW_DEBUG_MSG(("MSWText::sendText: can not find new section\n"));
-          break;
+      case PLC::Section: {
+        if (tableCell) break;
+        int numColumns=m_state->m_cols;
+        if (m_stylesManager->sendSection(plc.m_id, actFont, numColumns)) {
+          m_state->m_cols = numColumns;
+          if (m_stylesManager->getSectionFont(MSWTextStyles::TextZone, plc.m_id, font))
+            newFont = true;
         }
-        actFont = MSWTextStyles::Font();
-        actFont.m_font = m_stylesManager->getDefaultFont();
-        fontSent = false;
-        setProperty(m_state->m_sectionList[(size_t) plc.m_id], actFont);
+#if DEBUG_SECTION
+        MSWStruct::Section sec;
+        m_stylesManager->getSection(MSWTextStyles::TextZone, plc.m_id, sec);
+        f << "S" << plc.m_id << "=[" << sec << "],";
+#endif
         break;
       }
-      case MSWText::PLC::TextPosition: {
+      case PLC::TextPosition: {
         if (plc.m_id < 0 || plc.m_id >= int(m_state->m_textposList.size())) {
           MWAW_DEBUG_MSG(("MSWText::sendText: can not find new text position\n"));
           break;
         }
         MSWTextInternal::TextEntry const &entry=m_state->m_textposList[(size_t) plc.m_id];
+        actFont = paraFont;
+        resetTextStructPara = (entry.m_type != 0x80);
+        paraSent = false;
+        //resetTextStructPara = true;
         int pId = entry.getParagraphId();
         if (pId >= 0) {
-          if (pId < int(m_state->m_textstructParagraphList.size()))
-            setProperty(m_state->m_textstructParagraphList[(size_t) pId],actFont);
-          else {
-            MWAW_DEBUG_MSG(("MSWText::sendText: can not find a paragraph in textstruct...\n"));
-          }
+          newTextStructPara = m_stylesManager->getParagraph(MSWTextStyles::TextStructZone, pId, textStructPara);
+          paraSent = false;
+#if DEBUG_PARAGRAPH && defined(DEBUG_WITH_FILES)
+          f << "tP" << pId << "=[";
+          textStructPara.print(f, m_convertissor);
+          f << "],";
+#endif
         }
-        if (entry.m_fontId <= 0) { // CHECKME
-          int fId = actFont.m_font.id(), fSz =actFont.m_font.size();
-          actFont = MSWTextStyles::Font();
-          actFont.m_font = MWAWFont(fId, fSz);
-        } else
-          actFont = m_state->m_fontList[(size_t)entry.m_fontId];
-        fontSent = false;
-        if (entry.begin() == pos)
-          break;
-        if (cPos != cDebPos) {
-          ascii().addPos(debPos);
-          ascii().addNote(f.str().c_str());
-          f.str("");
-          f << "TextContent:";
-          cDebPos = cPos;
-        }
-        debPos = pos = m_state->m_textposList[(size_t)plc.m_id].begin();
-        m_input->seek(debPos, WPX_SEEK_SET);
         break;
       }
-      case MSWText::PLC::Field: // some fields ?
+      case PLC::Field: // some fields ?
 #ifdef DEBUG
         m_mainParser->sendFieldComment(plc.m_id);
 #endif
         break;
-      case MSWText::PLC::Footnote: {
+      case PLC::Footnote: {
         int numCols = m_state->m_cols;
         m_state->m_cols=1;
         m_mainParser->sendFootnote(plc.m_id);
         m_state->m_cols=numCols;
         break;
       }
-      case MSWText::PLC::FootnoteDef:
+      case PLC::FootnoteDef:
         break;
-      case MSWText::PLC::Line:
-      case MSWText::PLC::Font:
-      case MSWText::PLC::Paragraph:
-      case MSWText::PLC::Object:
-      case MSWText::PLC::HeaderFooter:
+      case PLC::ZoneInfo: {
+        newLine = true;
+#if DEBUG_ZONEINFO
+        if (plc.m_id >= 0 && plc.m_id < int(m_state->m_zoneList.size())) {
+          MSWTextInternal::ZoneInfo const &zone=m_state->m_zoneList[(size_t) plc.m_id];
+          f << "Z" << plc.m_id  << "=[" << zone << "],";
+        }
+#endif
+        break;
+      }
+      case PLC::Table:
+      case PLC::Font:
+      case PLC::Paragraph:
+      case PLC::Object:
+      case PLC::HeaderFooter:
       default:
         break;
       }
     }
-    cPos++;
-    plcIt = m_state->m_filePlcMap.find(pos);
-    while (plcIt != m_state->m_filePlcMap.end() && plcIt->first == pos) {
-      MSWText::PLC &plc = plcIt++->second;
+    // time to send the table
+    if (newTable) {
+      MSWEntry tableEntry;
+      tableEntry.setBegin(cPos);
+      tableEntry.setEnd(cEnd);
+      newTable = false;
+      if (!sendTable(tableEntry)) {
+        f << "###table,";
+        m_input->seek(pos, WPX_SEEK_SET);
+      } else {
+        sentTable = true;
+        if (cPos != cDebPos) {
+          ascii().addPos(debPos);
+          ascii().addNote(f.str().c_str());
+        }
+
+        cDebPos = cPos = tableEntry.end();
+        pos=debPos=m_state->getFilePos(cPos);
+        m_input->seek(pos, WPX_SEEK_SET);
+
+        f.str("");
+        f << "TextContent["<<cPos<<"]:";
+      }
+    }
+    if (sentTable)
+      continue;
+    for (std::set<PLC, PLC::ltstr>::const_iterator pIt = filePosPLC.begin(); pIt != filePosPLC.end(); pIt++) {
+      PLC const &plc = *pIt;
       switch (plc.m_type) {
-      case MSWText::PLC::Font:
-        if (plc.m_id < -1 || plc.m_id >= int(m_state->m_fontList.size())) {
-          MWAW_DEBUG_MSG(("MSWText::sendText: can not find new font\n"));
-          break;
-        }
+      case PLC::Font:
+        if (plc.m_id != -1)
+          m_stylesManager->getFont(MSWTextStyles::TextZone, plc.m_id, font);
+        newFont = true;
+        break;
+      case PLC::Paragraph: {
         if (plc.m_id == -1) {
-          // CHECKME: some better to reset the size to default, sometimes not:-~
-          int fSz =actFont.m_font.size();
-          actFont = MSWTextStyles::Font();
-          actFont.m_font = MWAWFont(m_stylesManager->getDefaultFont().id(), fSz);
-        } else {
-          int fId = actFont.m_font.id();
-          actFont = m_state->m_fontList[(size_t)plc.m_id];
-          if (actFont.m_font.id() == -1) actFont.m_font.setId(fId);
-        }
-        fontSent = false;
-        break;
-      case MSWText::PLC::Paragraph:
-        if (plc.m_id < -1 || plc.m_id >= int(m_state->m_paragraphList.size())) {
-          MWAW_DEBUG_MSG(("MSWText::sendText: can not find new paragraph\n"));
+          m_stylesManager->sendDefaultParagraph(actFont);
           break;
         }
-        if (plc.m_id == -1)
-          actPara = MSWTextInternal::Paragraph();
+        MSWStruct::Paragraph newPara;
+        if (!m_stylesManager->getParagraph(MSWTextStyles::TextZone, plc.m_id, newPara))
+          f << "##";
         else {
-          actPara = m_state->m_paragraphList[(size_t)plc.m_id];
+          para = newPara;
+          newParagraph = true;
+#if DEBUG_PARAGRAPH && defined(DEBUG_WITH_FILES)
+          f << "P" << plc.m_id << "=[";
+          para.print(f, m_convertissor);
+          f << "],";
+#endif
         }
-        setProperty(actPara, actFont);
         break;
-      case MSWText::PLC::Line:
-      case MSWText::PLC::Section:
-      case MSWText::PLC::Page:
-      case MSWText::PLC::Footnote:
-      case MSWText::PLC::FootnoteDef:
-      case MSWText::PLC::Field:
-      case MSWText::PLC::Object:
-      case MSWText::PLC::HeaderFooter:
-      case MSWText::PLC::TextPosition:
+      }
+      case PLC::ZoneInfo:
+      case PLC::Section:
+      case PLC::Page:
+      case PLC::Footnote:
+      case PLC::FootnoteDef:
+      case PLC::Field:
+      case PLC::Object:
+      case PLC::HeaderFooter:
+      case PLC::TextPosition:
+      case PLC::Table:
       default:
         break;
       }
@@ -2479,94 +1302,224 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone)
       f << "@[" << plc << "]";
 #endif
     }
-    if (!fontSent) {
+    if (!paraSent || newParagraph || resetTextStructPara || newLine) {
+      MSWStruct::Paragraph finalPara;
+      if (newLine || resetTextStructPara) {
+        if (newParagraph)
+          paraLine = para;
+        finalPara = paraFinalLine = paraLine;
+        if (newTextStructPara) {
+          paraFinalLine.insert(textStructPara, false);
+          finalPara.insert(textStructPara);
+        }
+      } else {
+        finalPara = paraFinalLine;
+        if (newParagraph)
+          finalPara.insert(para);
+        if (newTextStructPara)
+          finalPara.insert(textStructPara);
+      }
+      m_stylesManager->setProperty(finalPara, actFont);
+      if (finalPara.getFont(paraFont)) {
+        actFont = paraFont;
+      }
+      paraSent = true;
+    }
+    if (newFont) {
+      actFont = paraFont;
+      actFont.insert(font);
       m_stylesManager->setProperty(actFont);
-      fontSent = true;
     }
-    int c = (int) m_input->readULong(1);
-    pos++;
-    switch (c) {
-    case 0x1: // FIXME: object insertion
-      break;
-    case 0x7: // FIXME: cell end ?
-      m_listener->insertEOL();
-      break;
-    case 0xc: // end section (ok)
-      break;
-    case 0x2:
-      m_listener->insertField(MWAWContentListener::PageNumber);
-      break;
-    case 0x6:
-      m_listener->insertCharacter('\\');
-      break;
-    case 0x1e: // unbreaking - ?
-      m_listener->insertCharacter('-');
-      break;
-    case 0x1f: // hyphen
-      break;
-    case 0x13: // month
-    case 0x1a: // month abreviated
-    case 0x1b: // checkme month long
-      m_listener->insertDateTimeField("%m");
-      break;
-    case 0x10: // day
-    case 0x16: // checkme: day abbreviated
-    case 0x17: // checkme: day long
-      m_listener->insertDateTimeField("%d");
-      break;
-    case 0x15: // year
-      m_listener->insertDateTimeField("%y");
-      break;
-    case 0x1d:
-      m_listener->insertField(MWAWContentListener::Date);
-      break;
-    case 0x18: // checkme hour
-    case 0x19: // checkme hour
-      m_listener->insertDateTimeField("%H");
-      break;
-    case 0x4:
-      m_listener->insertField(MWAWContentListener::Time);
-      break;
-    case 0x5: // footnote mark (ok)
-      break;
-    case 0x9:
-      m_listener->insertTab();
-      break;
-    case 0xb: // line break (simple but no a paragraph break ~soft)
-      m_listener->insertEOL(true);
-      break;
-    case 0xd: // line break hard
-      m_listener->insertEOL();
-      break;
-    case 0x11: // command key in help
-      m_listener->insertUnicode(0x2318);
-      break;
-    case 0x14: // apple logo ( note only in private zone)
-      m_listener->insertUnicode(0xf8ff);
-      break;
-    default: {
-      int unicode = m_convertissor->unicode(actFont.m_font.id(), (unsigned char)c);
-      if (unicode == -1) {
-        if (c < 32) {
-          MWAW_DEBUG_MSG(("MSWText::sendText: Find odd char %x\n", int(c)));
-          f << "#";
+    for (long p = cPos; p < cEndPos; p++) {
+      int c = (int) m_input->readULong(1);
+      cPos++;
+      pos++;
+      newLine = false;
+      switch (c) {
+      case 0x1: // FIXME: object insertion
+        break;
+      case 0x7: // FIXME: cell end ?
+        newLine = true;
+        m_listener->insertEOL();
+        break;
+      case 0xc: // end section (ok)
+        break;
+      case 0x2:
+        m_listener->insertField(MWAWContentListener::PageNumber);
+        break;
+      case 0x6:
+        m_listener->insertCharacter('\\');
+        break;
+      case 0x1e: // unbreaking - ?
+        m_listener->insertCharacter('-');
+        break;
+      case 0x1f: // hyphen
+        break;
+      case 0x13: // month
+      case 0x1a: // month abreviated
+      case 0x1b: // checkme month long
+        m_listener->insertDateTimeField("%m");
+        break;
+      case 0x10: // day
+      case 0x16: // checkme: day abbreviated
+      case 0x17: // checkme: day long
+        m_listener->insertDateTimeField("%d");
+        break;
+      case 0x15: // year
+        m_listener->insertDateTimeField("%y");
+        break;
+      case 0x1d:
+        m_listener->insertField(MWAWContentListener::Date);
+        break;
+      case 0x18: // checkme hour
+      case 0x19: // checkme hour
+        m_listener->insertDateTimeField("%H");
+        break;
+      case 0x4:
+        m_listener->insertField(MWAWContentListener::Time);
+        break;
+      case 0x5: // footnote mark (ok)
+        break;
+      case 0x9:
+        m_listener->insertTab();
+        break;
+      case 0xb: // line break (simple but no a paragraph break ~soft)
+        newLine = true;
+        m_listener->insertEOL(true);
+        break;
+      case 0xd: // line break hard
+        newLine = true;
+        m_listener->insertEOL();
+        break;
+      case 0x11: // command key in help
+        m_listener->insertUnicode(0x2318);
+        break;
+      case 0x14: // apple logo ( note only in private zone)
+        m_listener->insertUnicode(0xf8ff);
+        break;
+      default: {
+        int unicode = m_convertissor->unicode(actFont.m_font->id(), (unsigned char)c);
+        if (unicode == -1) {
+          if (c < 32) {
+            MWAW_DEBUG_MSG(("MSWText::sendText: Find odd char %x\n", int(c)));
+            f << "#";
+          } else
+            m_listener->insertCharacter((uint8_t)c);
         } else
-          m_listener->insertCharacter((uint8_t)c);
-      } else
-        m_listener->insertUnicode((uint32_t) unicode);
-      break;
+          m_listener->insertUnicode((uint32_t) unicode);
+        break;
+      }
+      }
+      if (c)
+        f << char(c);
+      else
+        f << "###";
     }
-    }
-    if (c)
-      f << char(c);
-    else
-      f << "###";
   }
 
   ascii().addPos(debPos);
   ascii().addNote(f.str().c_str());
   ascii().addPos(m_input->tell());
   ascii().addNote("_");
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// try to read a table
+////////////////////////////////////////////////////////////
+bool MSWText::sendTable(MSWEntry &tableEntry)
+{
+  return false;
+  if (!m_listener) {
+    MWAW_DEBUG_MSG(("MSWText::sendTable: can not find a listener!\n"));
+    return true;
+  }
+  long actPos = m_input->tell();
+  long cPos = tableEntry.begin();
+  long cEnd = tableEntry.end();
+  long pos = m_state->getFilePos(cPos);
+  bool firstChar = true;
+  m_input->seek(pos, WPX_SEEK_SET);
+  /* first try to find the limit */
+  std::vector<long> limits;
+  limits.push_back(cPos);
+  std::multimap<long, PLC>::iterator plcIt;
+  MSWStruct::Paragraph para;
+  float height = 0.0, maxHeight=0.0;
+  while (cPos < cEnd && !m_input->atEOS()) {
+    bool newPara = false, cellChecked=false;
+    plcIt = m_state->m_plcMap.find(cPos);
+    while (plcIt != m_state->m_plcMap.end() && plcIt->first == cPos) {
+      PLC const &plc = plcIt++->second;
+      if (plc.m_type == PLC::TextPosition) {
+        MSWTextInternal::TextEntry const &entry=m_state->m_textposList[(size_t) plc.m_id];
+        if (pos != entry.begin()) {
+          pos = entry.begin();
+          m_input->seek(pos, WPX_SEEK_SET);
+        }
+        cellChecked = false;
+        int pId = entry.getParagraphId();
+        newPara = pId >=0 &&
+                  m_stylesManager->getParagraph(MSWTextStyles::TextStructZone, pId, para);
+        if (newPara && para.m_inCell.get())
+          cellChecked=true;
+      } else if (!firstChar && (plc.m_type == PLC::Page || plc.m_type == PLC::Section || plc.m_type == PLC::FootnoteDef)) {
+        MWAW_DEBUG_MSG(("MSWText::sendTable: find a page/section/footnote in a table!\n"));
+        m_input->seek(actPos, WPX_SEEK_SET);
+        return false;
+      }
+    }
+    plcIt = m_state->m_filePlcMap.find(pos);
+    while (plcIt != m_state->m_filePlcMap.end() && plcIt->first == pos) {
+      PLC const &plc = plcIt++->second;
+      if (plc.m_type != PLC::Paragraph || plc.m_id < 0)
+        continue;
+      newPara=m_stylesManager->getParagraph(MSWTextStyles::TextZone, plc.m_id, para);
+      if (newPara && !para.m_inCell.get() && !cellChecked) {
+        MWAW_DEBUG_MSG(("MSWText::sendTable: find a not cell paragraph!\n"));
+        m_input->seek(actPos, WPX_SEEK_SET);
+        return false;
+      }
+    }
+    if (newPara)
+      height += para.m_dim.get()[1];
+    else if (!cellChecked && firstChar) {
+      MWAW_DEBUG_MSG(("MSWText::sendTable: can not find first cell begin...\n"));
+      m_input->seek(actPos, WPX_SEEK_SET);
+      return false;
+    }
+    cPos++;
+    pos++;
+    firstChar = false;
+    int c = (int) m_input->readULong(1);
+    if (c!=0x7) continue;
+    if (height > maxHeight) maxHeight=height;
+    limits.push_back(cPos);
+    if (para.m_tableDef.get()) break;
+  }
+  size_t numCols = para.m_tableColumns->size();
+  size_t numLimits = limits.size();
+  if (!numCols || numLimits < numCols+1 || (numLimits%numCols)!=1) {
+    MWAW_DEBUG_MSG(("MSWText::sendTable: problem with the number of columns: find %ld %ld\n", limits.size()-1, long(para.m_tableColumns->size())));
+    m_input->seek(actPos, WPX_SEEK_SET);
+    return false;
+  }
+  // checkme can we really have many row ( or we read something bad)
+  size_t numRows = limits.size()/numCols;
+  for (size_t r = 0; r < numRows; r++) {
+    for (size_t c = r*numCols; c < (r+1)*numCols; c++) {
+      MSWEntry textData;
+      textData.setBegin(limits[c]);
+      textData.setEnd(limits[c+1]-1);
+      if (textData.length()<=0) {
+        m_listener->insertEOL();
+        continue;
+      }
+      sendText(textData, false, true);
+      m_listener->insertEOL();
+    }
+  }
+  tableEntry.setEnd(limits[numLimits-1]);
   return true;
 }
 
@@ -2604,15 +1557,14 @@ bool MSWText::sendFieldComment(int id)
     m_listener->insertCharacter(' ');
     return false;
   }
-  MSWTextStyles::Font defFont;
+  MSWStruct::Font defFont;
   defFont.m_font = m_stylesManager->getDefaultFont();
   m_stylesManager->setProperty(defFont);
-  MSWTextInternal::Paragraph defParag;
-  setProperty(defParag, defFont);
+  m_stylesManager->sendDefaultParagraph(defFont);
   std::string const &text = m_state->m_fieldList[(size_t) id].m_text;
   if (!text.length()) m_listener->insertCharacter(' ');
   for (size_t c = 0; c < text.length(); c++) {
-    int unicode = m_convertissor->unicode(defFont.m_font.id(), (unsigned char) text[c]);
+    int unicode = m_convertissor->unicode(defFont.m_font->id(), (unsigned char) text[c]);
     if (unicode == -1) {
       if (text[c] < 32) {
         MWAW_DEBUG_MSG(("MSWText::sendFieldComment: Find odd char %x\n", int(text[c])));
@@ -2623,57 +1575,6 @@ bool MSWText::sendFieldComment(int id)
       m_listener->insertUnicode((uint32_t) unicode);
   }
   return true;
-}
-
-void MSWText::setProperty(MSWTextInternal::Section const &sec,
-                          MSWTextStyles::Font &actFont, bool recursive)
-{
-  if (!m_listener) return;
-  int numCols = sec.m_col;
-  if (numCols >= 1 && m_state->m_cols > 1 && sec.m_colBreak) {
-    if (!m_listener->isSectionOpened()) {
-      MWAW_DEBUG_MSG(("MSWText::setProperty: section is not opened\n"));
-    } else
-      m_listener->insertBreak(MWAW_COLUMN_BREAK);
-  } else {
-    if (m_listener->isSectionOpened())
-      m_listener->closeSection();
-    if (numCols<=1) m_listener->openSection();
-    else {
-      // column seems to have equal size
-      int colWidth = int((72.0*m_mainParser->pageWidth())/numCols);
-      std::vector<int> colSize;
-      colSize.resize(size_t(numCols));
-      for (size_t i = 0; i < size_t(numCols); i++) colSize[i] = colWidth;
-      m_listener->openSection(colSize, WPX_POINT);
-    }
-    m_state->m_cols = numCols;
-  }
-  if (sec.m_paragraphId > -9999 && !recursive) {
-    if (m_state->m_styleParagraphMap.find(sec.m_paragraphId) ==
-        m_state->m_styleParagraphMap.end()) {
-      MWAW_DEBUG_MSG(("MSWText::setProperty: can not find paragraph in section\n"));
-    } else
-      setProperty(m_state->m_styleParagraphMap.find(sec.m_paragraphId)->second,
-                  actFont, true);
-  }
-}
-
-void MSWText::setProperty(MSWTextInternal::Paragraph const &para,
-                          MSWTextStyles::Font &actFont, bool recursive)
-{
-  if (!m_listener) return;
-  if (!para.m_section.m_default && !recursive)
-    setProperty(para.m_section, actFont, true);
-  para.send(m_listener);
-
-  if (!para.m_font2.m_default) {
-    m_stylesManager->setProperty(para.m_font2);
-    actFont = para.m_font2;
-  } else if (!para.m_font.m_default) {
-    m_stylesManager->setProperty(para.m_font);
-    actFont = para.m_font;
-  }
 }
 
 void MSWText::flushExtra()

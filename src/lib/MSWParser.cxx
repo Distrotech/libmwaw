@@ -573,7 +573,7 @@ bool MSWParser::readZoneList()
       readEntry("PrintInfo");
       break;
     case 14:
-      readEntry("LineInfo");
+      readEntry("ZoneInfo");
       break;
     case 15:
       readEntry("DocumentInfo");

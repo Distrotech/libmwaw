@@ -67,7 +67,7 @@ RawDocumentGenerator::RawDocumentGenerator(bool printCallgraphScore) :
 RawDocumentGenerator::~RawDocumentGenerator()
 {
 	if (m_printCallgraphScore)
-		printf("%d\n", m_atLeastOneCallback ? (int)(m_callStack.size() + m_callbackMisses) : -1);
+		printf("%d\n", m_atLeastOneCallback ? int(m_callStack.size()) + int(m_callbackMisses) : -1);
 }
 
 void RawDocumentGenerator::__iprintf(const char *format, ...)
