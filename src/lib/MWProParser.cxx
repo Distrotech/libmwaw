@@ -1673,12 +1673,20 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
       input->seek(0, WPX_SEEK_SET);
       input->readDataBlock(4+pictSize, data);
       unsigned char *dataPtr=const_cast<unsigned char *>(data.getDataBuffer());
+      if (!dataPtr) {
+        MWAW_DEBUG_MSG(("MWProParser::sendPicture: oops where is the picture...\n"));
+        return false;
+      }
 
       dataPtr[4]=dataPtr[2];
       dataPtr[5]=dataPtr[3];
 
       WPXInputStream *dataInput =
         const_cast<WPXInputStream *>(data.getDataStream());
+      if (!dataInput) {
+        MWAW_DEBUG_MSG(("MWProParser::sendPicture: oops where is the picture input...\n"));
+        return false;
+      }
       MWAWInputStreamPtr pictInput(new MWAWInputStream(dataInput, false));
       pictInput->setResponsable(false);
 

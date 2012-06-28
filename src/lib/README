@@ -5,6 +5,7 @@
 
 - CW* : parser of ClarisWorks and AppleWorks documents
 - FW* : parser of FullWrite documents
+- MDW* : parser of MindWrite documents
 - MSK* : parser of Microsoft Works documents
 - MSW* : parser of Microsoft Word documents
 - MW* : parser of MacWrite documents
@@ -98,6 +99,8 @@ CWParser : parser of ClarisWorks/AppleWorks document
 
 FWParser: parser of FullWrite : v1.0 v2.0
 -   FWText : class which reads the text
+
+MDWParser : parser of MindWrite document: v2.1
 
 MSKParser : parser of Microsoft Works document : v1.0-3.0
 -   MSKGraph : class which reads the picture/graph 

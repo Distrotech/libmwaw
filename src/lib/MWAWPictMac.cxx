@@ -1765,8 +1765,9 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
 
   unsigned char *res = new unsigned char [size_t(2*pictSize+50)], *resPtr = res;
   if (!res) return false;
-
-  MWAWInputStream input(const_cast<WPXInputStream *>(orig.getDataStream()), false);
+  WPXInputStream *dataStream = const_cast<WPXInputStream *>(orig.getDataStream());
+  if (!dataStream) return false;
+  MWAWInputStream input(dataStream, false);
 
   input.seek(0, WPX_SEEK_SET);
   int sz = (int) input.readULong(2);
@@ -2084,7 +2085,10 @@ static PictParser s_parser;
 
 void MWAWPictMac::parsePict1(WPXBinaryData const &pict, std::string const &fname)
 {
-  MWAWInputStream *input = new MWAWInputStream(const_cast<WPXInputStream *>(pict.getDataStream()), false);
+  WPXInputStream *dataStream = const_cast<WPXInputStream *>(pict.getDataStream());
+  if (!dataStream) return;
+
+  MWAWInputStream *input = new MWAWInputStream(dataStream, false);
   MWAWInputStreamPtr ip(input);
 
   libmwaw::DebugFile dFile(ip);
@@ -2094,7 +2098,10 @@ void MWAWPictMac::parsePict1(WPXBinaryData const &pict, std::string const &fname
 
 void MWAWPictMac::parsePict2(WPXBinaryData const &pict, std::string const &fname)
 {
-  MWAWInputStream *input = new MWAWInputStream(const_cast<WPXInputStream *>(pict.getDataStream()), false);
+  WPXInputStream *dataStream = const_cast<WPXInputStream *>(pict.getDataStream());
+  if (!dataStream) return;
+
+  MWAWInputStream *input = new MWAWInputStream(dataStream, false);
   MWAWInputStreamPtr ip(input);
 
   libmwaw::DebugFile dFile(ip);

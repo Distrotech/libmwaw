@@ -44,6 +44,9 @@ void MWAWList::Level::addTo(WPXPropertyList &propList, int startVal) const
   propList.insert("text:space-before", m_labelIndent);
 
   switch(m_type) {
+  case NONE:
+    propList.insert("text:bullet-char", " ");
+    break;
   case BULLET:
     if (m_bullet.len())
       propList.insert("text:bullet-char", m_bullet.cstr());
@@ -65,8 +68,6 @@ void MWAWList::Level::addTo(WPXPropertyList &propList, int startVal) const
     else if (m_type==LOWER_ROMAN) propList.insert("style:num-format", "i");
     else propList.insert("style:num-format", "I");
     propList.insert("text:start-value", startVal);
-    break;
-  case NONE:
     break;
   case DEFAULT:
   default:

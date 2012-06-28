@@ -1771,6 +1771,10 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     if (zone.m_type == 0) {
       long sz = (long) data.size();
       const unsigned char *buffer = data.getDataBuffer();
+      if (!buffer && sz) {
+        MWAW_DEBUG_MSG(("WNText::send: can find data buffer\n"));
+        sz = 0;
+      }
       if (sz && !rulerSet) {
         setProperty(ruler);
         numLineTabs = int(ruler.m_tabs->size());
@@ -1811,8 +1815,8 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       ascii().addNote(f.str().c_str());
       continue;
     }
-
-    MWAWInputStream dataInput(const_cast<WPXInputStream *>(data.getDataStream()), false);
+    WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
+    MWAWInputStream dataInput(dataStream, false);
     dataInput.setResponsable(false);
     switch(zone.m_type) {
     case 0x9: { // only in v2
@@ -1827,6 +1831,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       break;
     }
     case 0xa: {  // only in writenow 4.0 : related to a table ?
+      if (!dataStream) break;
       WNTextInternal::TableData tableData;
       if (readTable(dataInput, tableData)) {
         f << tableData;
@@ -1890,6 +1895,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       break;
     }
     case 0xc: {
+      if (!dataStream) break;
       WNTextInternal::Paragraph newParagraph;
       if (readParagraph(dataInput, newParagraph)) {
         ruler = newParagraph;
@@ -1902,6 +1908,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       break;
     }
     case 0xe: {
+      if (!dataStream) break;
       WNTextInternal::Token token;
       if (vers >= 3) {
         if (readToken(dataInput, token)) {
@@ -1918,6 +1925,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       break;
     }
     case 0xf: {
+      if (!dataStream) break;
       WNTextInternal::Font font;
       if (readFont(dataInput, false, font)) {
         if (extraFontFlags)

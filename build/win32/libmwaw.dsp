@@ -175,6 +175,10 @@ SOURCE=..\..\src\lib\MWProStructures.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MDWParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MSKGraph.cxx
 # End Source File
 # Begin Source File
@@ -364,6 +368,10 @@ SOURCE=..\..\src\lib\MWProParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWProStructures.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MDWParser.hxx
 # End Source File
 # Begin Source File
 

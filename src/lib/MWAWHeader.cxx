@@ -119,7 +119,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader(MWAWInputStreamPtr input)
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacWritePro file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWPRO, 1));
   }
-
+  if (val[0] == 0x7704) {
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MindWrite file 2.1\n"));
+    res.push_back(MWAWHeader(MWAWDocument::MINDW, 2));
+  }
   // ----------- other ------------------
   if (val[0]==0 && val[1]==0 && val[2]==0 && val[3]==0) {
     input->seek(8, WPX_SEEK_SET);

@@ -34,6 +34,7 @@
 
 #include "CWParser.hxx"
 #include "FWParser.hxx"
+#include "MDWParser.hxx"
 #include "MWParser.hxx"
 #include "MWProParser.hxx"
 #include "MSKParser.hxx"
@@ -117,6 +118,9 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
   case FULLW:
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
+  case MINDW:
+    confidence = MWAW_CONFIDENCE_GOOD;
+    break;
   case MSWORD:
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
@@ -135,7 +139,6 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
   case WPLUS:
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
-  case MINDW:
   case NISUSW:
   case UNKNOWN:
   default:
@@ -173,6 +176,11 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       parser.parse(documentInterface);
       break;
     }
+    case MINDW: {
+      MDWParser parser (ip, header.get());
+      parser.parse(documentInterface);
+      break;
+    }
     case MSWORD: {
       MSWParser parser (ip, header.get());
       parser.parse(documentInterface);
@@ -203,7 +211,6 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       parser.parse(documentInterface);
       break;
     }
-    case MINDW:
     case NISUSW:
     case UNKNOWN:
     default:
@@ -271,12 +278,8 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWHeader &header, bool str
       FWParser parser(input, &header);
       return parser.checkHeader(&header, strict);
     }
-    case MWAWDocument::MW: {
-      MWParser parser(input, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::MWPRO: {
-      MWProParser parser(input, &header);
+    case MWAWDocument::MINDW: {
+      MDWParser parser(input, &header);
       return parser.checkHeader(&header, strict);
     }
     case MWAWDocument::MSWORD: {
@@ -287,6 +290,14 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWHeader &header, bool str
       MSKParser parser(input, &header);
       return parser.checkHeader(&header, strict);
     }
+    case MWAWDocument::MW: {
+      MWParser parser(input, &header);
+      return parser.checkHeader(&header, strict);
+    }
+    case MWAWDocument::MWPRO: {
+      MWProParser parser(input, &header);
+      return parser.checkHeader(&header, strict);
+    }
     case MWAWDocument::WNOW: {
       WNParser parser(input, &header);
       return parser.checkHeader(&header, strict);
@@ -295,7 +306,6 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWHeader &header, bool str
       WPParser parser(input, &header);
       return parser.checkHeader(&header, strict);
     }
-    case MWAWDocument::MINDW:
     case MWAWDocument::NISUSW:
     case MWAWDocument::UNKNOWN:
     default:
