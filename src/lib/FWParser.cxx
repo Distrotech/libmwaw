@@ -57,14 +57,11 @@ namespace FWParserInternal
 //! Internal: the state of a FWParser
 struct State {
   //! constructor
-  State() : m_version(-1), m_eof(-1), m_zoneList(), m_zoneFlagsList(), m_biblioId(-1),
+  State() : m_eof(-1), m_zoneList(), m_zoneFlagsList(), m_biblioId(-1),
     m_entryMap(), m_graphicMap(), m_actPage(0), m_numPages(0),
     m_headerHeight(0), m_footerHeight(0) {
     for (int i=0; i < 3; i++) m_zoneFlagsId[i] = -1;
   }
-
-  //! the file version
-  int m_version;
 
   //! the last file position
   long m_eof;
@@ -159,7 +156,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 FWParser::FWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_textParser(), m_asciiFile(), m_asciiName("")
+  m_pageSpan(), m_textParser()
 {
   init();
 }
@@ -177,7 +174,7 @@ void FWParser::init()
 {
   m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
-  m_asciiName = "main-1";
+  setAsciiName("main-1");
 
   m_state.reset(new FWParserInternal::State);
 
@@ -194,11 +191,6 @@ void FWParser::setListener(FWContentListenerPtr listen)
 {
   m_listener = listen;
   m_textParser->setListener(listen);
-}
-
-int FWParser::version() const
-{
-  return m_state->m_version;
 }
 
 ////////////////////////////////////////////////////////////
@@ -1008,15 +1000,15 @@ bool FWParser::readDocPosition()
   val = (long) input->readULong(4);
   if (val==0x46575254L) {
     if ((sz[0]%16)==0 && (sz[1]%8)==0)
-      m_state->m_version=2;
+      setVersion(2);
     else if ((sz[0]%22)==0 && (sz[1]%10)==0)
-      m_state->m_version=1;
+      setVersion(1);
     else
       return false;
   } else {
     if (val != 1) f << "g2=" << val << ",";
     if ((sz[0]%22)==0 && (sz[1]%10)==0)
-      m_state->m_version=1;
+      setVersion(1);
     else
       return false;
   }

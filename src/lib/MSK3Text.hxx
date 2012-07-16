@@ -31,8 +31,8 @@
  * Parser to Microsoft Works text document
  *
  */
-#ifndef MSK_MWAW_TEXT
-#  define MSK_MWAW_TEXT
+#ifndef MSK3_TEXT
+#  define MSK3_TEXT
 
 #include <list>
 #include <string>
@@ -57,7 +57,7 @@ typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
-namespace MSKTextInternal
+namespace MSK3TextInternal
 {
 struct Font;
 struct Paragraph;
@@ -66,21 +66,21 @@ struct TextZone;
 struct State;
 }
 
-class MSKParser;
+class MSK3Parser;
 
 /** \brief the main class to read the text part of Microsoft Works file
  *
  *
  *
  */
-class MSKText
+class MSK3Text
 {
-  friend class MSKParser;
+  friend class MSK3Parser;
 public:
   //! constructor
-  MSKText(MWAWInputStreamPtr ip, MSKParser &parser, MWAWFontConverterPtr &convertissor);
+  MSK3Text(MWAWInputStreamPtr ip, MSK3Parser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
-  virtual ~MSKText();
+  virtual ~MSK3Text();
 
   /** returns the file version */
   int version() const;
@@ -129,32 +129,32 @@ protected:
   //
 
   //! try to read a zone header
-  bool readZoneHeader(MSKTextInternal::LineZone &zone) const;
+  bool readZoneHeader(MSK3TextInternal::LineZone &zone) const;
 
   //! prepare a zone
-  void update(MSKTextInternal::TextZone &zone);
+  void update(MSK3TextInternal::TextZone &zone);
 
   //! prepare the note zones given a zone and the position of the first note
-  void updateNotes(MSKTextInternal::TextZone &zone, int firstNote);
+  void updateNotes(MSK3TextInternal::TextZone &zone, int firstNote);
 
   /** sends the zone data to the listener. You can set limit to send
       a subzone data ( like note ) */
-  void send(MSKTextInternal::TextZone &zone, Vec2i limit=Vec2i(-1,-1));
+  void send(MSK3TextInternal::TextZone &zone, Vec2i limit=Vec2i(-1,-1));
 
   //! tries to read a font
-  bool readFont(MSKTextInternal::Font &font, long endPos);
+  bool readFont(MSK3TextInternal::Font &font, long endPos);
 
   //! send the font properties
-  void setProperty(MSKTextInternal::Font const &font);
+  void setProperty(MSK3TextInternal::Font const &font);
 
   //! tries to read a paragraph
-  bool readParagraph(MSKTextInternal::LineZone &zone, MSKTextInternal::Paragraph &parag);
+  bool readParagraph(MSK3TextInternal::LineZone &zone, MSK3TextInternal::Paragraph &parag);
 
   //! send the paragraph properties
-  void setProperty(MSKTextInternal::Paragraph const &para);
+  void setProperty(MSK3TextInternal::Paragraph const &para);
 
   //! tries to send a text zone
-  bool sendText(MSKTextInternal::LineZone &zone, int zoneId);
+  bool sendText(MSK3TextInternal::LineZone &zone, int zoneId);
 
   //! tries to send a string (for v1-2, header/footer zone)
   bool sendString(std::string &str);
@@ -165,8 +165,8 @@ protected:
   }
 
 private:
-  MSKText(MSKText const &orig);
-  MSKText &operator=(MSKText const &orig);
+  MSK3Text(MSK3Text const &orig);
+  MSK3Text &operator=(MSK3Text const &orig);
 
 protected:
   //
@@ -182,10 +182,10 @@ protected:
   MWAWFontConverterPtr m_convertissor;
 
   //! the state
-  shared_ptr<MSKTextInternal::State> m_state;
+  shared_ptr<MSK3TextInternal::State> m_state;
 
   //! the main parser;
-  MSKParser *m_mainParser;
+  MSK3Parser *m_mainParser;
 
   //! the debug file
   libmwaw::DebugFile &m_asciiFile;

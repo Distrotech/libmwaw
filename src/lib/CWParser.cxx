@@ -60,13 +60,10 @@ namespace CWParserInternal
 //! Internal: the state of a CWParser
 struct State {
   //! constructor
-  State() : m_version(-1), m_EOF(-1L), m_actPage(0), m_numPages(0),
+  State() : m_EOF(-1L), m_actPage(0), m_numPages(0),
     m_headerId(0), m_footerId(0), m_headerHeight(0), m_footerHeight(0),
     m_zonesMap() {
   }
-
-  //! the file version
-  int m_version;
 
   //! the last position
   long m_EOF;
@@ -153,8 +150,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 CWParser::CWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
   m_pageSpan(), m_pageSpanSet(false), m_databaseParser(), m_graphParser(),
-  m_spreadsheetParser(), m_tableParser(), m_textParser(),
-  m_asciiFile(), m_asciiName("")
+  m_spreadsheetParser(), m_tableParser(), m_textParser()
 {
   init();
 }
@@ -167,7 +163,7 @@ void CWParser::init()
 {
   m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
-  m_asciiName = "main-1";
+  setAsciiName("main-1");
 
   m_state.reset(new CWParserInternal::State);
 
@@ -192,11 +188,6 @@ void CWParser::setListener(CWContentListenerPtr listen)
   m_spreadsheetParser->setListener(listen);
   m_tableParser->setListener(listen);
   m_textParser->setListener(listen);
-}
-
-int CWParser::version() const
-{
-  return m_state->m_version;
 }
 
 ////////////////////////////////////////////////////////////
@@ -779,7 +770,7 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
   input->seek(0,WPX_SEEK_SET);
   f << "FileHeader:";
   int vers = (int) input->readLong(1);
-  m_state->m_version = vers;
+  setVersion(vers);
   if (vers <=0 || vers > 6) {
     MWAW_DEBUG_MSG(("CWParser::checkHeader: unknown version: %d\n", vers));
     return false;
@@ -856,7 +847,7 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
 
   // ok, we can finish initialization
   if (header)
-    header->reset(MWAWDocument::CW, m_state->m_version);
+    header->reset(MWAWDocument::CW, version());
 
   return true;
 }

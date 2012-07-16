@@ -27,174 +27,68 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#ifndef MSK_MWAW_PARSER
-#  define MSK_MWAW_PARSER
+#ifndef MSK_PARSER
+#  define MSK_PARSER
 
-#include <list>
 #include <string>
-#include <vector>
 
-#include "MWAWPageSpan.hxx"
-
-#include "MWAWPosition.hxx"
-
-#include "MWAWEntry.hxx"
-#include "MWAWContentListener.hxx"
-#include "MWAWSubDocument.hxx"
-
-#include "MWAWDebug.hxx"
-#include "MWAWInputStream.hxx"
+#include "libmwaw_internal.hxx"
 
 #include "MWAWParser.hxx"
+
+class MWAWPosition;
+class WPXPropertyList;
+
+class MSKGraph;
 
 typedef class MWAWContentListener MSKContentListener;
 typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
 
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
-
 namespace MSKParserInternal
 {
 struct State;
-struct Zone;
-class SubDocument;
 }
 
-class MSKGraph;
-class MSKText;
-
-/** \brief the main class to read a Microsoft Works file
+/** \brief generic parser for Microsoft Works file
  *
  *
  *
  */
 class MSKParser : public MWAWParser
 {
-  friend class MSKParserInternal::SubDocument;
   friend class MSKGraph;
-  friend class MSKText;
 public:
   //! constructor
   MSKParser(MWAWInputStreamPtr input, MWAWHeader *header);
+
   //! destructor
   virtual ~MSKParser();
 
-  //! checks if the document header is correct (or not)
-  bool checkHeader(MWAWHeader *header, bool strict=false);
-
-  /** returns the file version.
-   *
-   * this version is only correct after the header is parsed */
-  int version() const;
-
-  // the main parse function
-  void parse(WPXDocumentInterface *documentInterface);
-
-  //! Debugging: change the default ascii file
-  void setAsciiName(char const *name) {
-    m_asciiName = name;
-  }
-
-protected:
-  //! inits all internal variables
-  void init();
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MSKContentListenerPtr listen);
-
-  //! creates the listener which will be associated to the document
-  void createDocument(WPXDocumentInterface *documentInterface);
-
-  //! finds the different objects zones
-  bool createZones();
-
-  //! returns the page height, ie. paper size less margin (in inches)
-  float pageHeight() const;
-  //! returns the page width, ie. paper size less margin (in inches)
-  float pageWidth() const;
-
-  //! returns the page top left point
-  Vec2f getPageTopLeft() const;
-
-  //! adds a new page
-  void newPage(int number, bool softBreak=false);
-  //
-  // intermediate level
-  //
-
   //! return the color which correspond to an index
-  bool getColor(int id, Vec3uc &col) const;
+  bool getColor(int id, Vec3uc &col, int vers=-1) const;
 
-  //! try to read a generic zone
-  bool readZone(MSKParserInternal::Zone &zone);
-  //! try to read the documentinfo ( zone2)
-  bool readDocumentInfo();
-  //! try to read a group zone (zone3)
-  bool readGroup(MSKParserInternal::Zone &zone, MWAWEntry &entry, int check);
-  //! try to read a zone information (zone0)
-  bool readGroupHeaderInfo(bool header, int check);
-  //! try to send a textbox
-  bool sendTextBox(int id, MWAWPosition const &pos, WPXPropertyList &extras);
-  /** try to send a note */
-  bool sendFootNote(int zoneId, int noteId);
-
-  /** try to send a text entry */
-  void sendText(int id, int noteId=-1);
-  /** try to send a graphic entry */
-  void sendGraphic(int id);
-  /** try to send a zone */
-  void sendZone(int zoneType);
-
-  //
-  // low level
-  //
-
-  //! read the print info zone
-  bool readPrintInfo();
+  //! return a list of color corresponding to a version
+  static std::vector<Vec3uc> const &getPalette(int vers);
 
   //! check if a position is inside the file
   bool checkIfPositionValid(long pos);
 
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
+  //! virtual function used to send the text of a frame (v4)
+  virtual void sendFrameText(MWAWEntry const &entry, std::string const &frame);
 
-  //! return the ascii file name
-  std::string const &asciiName() const {
-    return m_asciiName;
-  }
+  //! virtual function used to send an OLE (v4)
+  virtual void sendOLE(int id, MWAWPosition const &pos,
+                       WPXPropertyList frameExtras);
+
+  //! returns the page top left point
+  virtual Vec2f getPageTopLeft() const = 0;
 
 protected:
-  //
-  // data
-  //
   //! the listener
   MSKContentListenerPtr m_listener;
 
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
-
   //! the state
   shared_ptr<MSKParserInternal::State> m_state;
-
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
-
-  //! the list of different Zones
-  std::vector<MWAWEntry> m_listZones;
-
-  //! the graph parser
-  shared_ptr<MSKGraph> m_graphParser;
-
-  //! the text parser
-  shared_ptr<MSKText> m_textParser;
-
-  //! the debug file
-  libmwaw::DebugFile m_asciiFile;
-
-  //! the debug file name
-  std::string m_asciiName;
 };
+
 #endif
-// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

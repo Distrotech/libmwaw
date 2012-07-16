@@ -59,7 +59,6 @@ public:
                           };
 public:
   MWAWPageSpan();
-  MWAWPageSpan(const MWAWPageSpan &page);
   virtual ~MWAWPageSpan();
 
   double getFormLength() const {

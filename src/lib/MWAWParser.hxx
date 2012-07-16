@@ -67,7 +67,7 @@ protected:
   //! constructor (protected
   MWAWParser(MWAWInputStreamPtr input, MWAWHeader *header):
     m_version (header->getMajorVersion()), m_asciiFile(input),
-    m_input(input), m_header(header) {}
+    m_asciiName(""), m_input(input), m_header(header) {}
 
   //! returns the header
   MWAWHeader *getHeader() {
@@ -91,9 +91,20 @@ protected:
   libmwaw::DebugFile &ascii() {
     return m_asciiFile;
   }
+  //! Debugging: change the default ascii file
+  void setAsciiName(char const *name) {
+    m_asciiName = name;
+  }
+  //! return the ascii file name
+  std::string const &asciiName() const {
+    return m_asciiName;
+  }
 
   //! the debug file
   libmwaw::DebugFile m_asciiFile;
+
+  //! the debug file name
+  std::string m_asciiName;
 
 private:
   //! private copy constructor: forbidden

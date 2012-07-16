@@ -27,8 +27,8 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#ifndef MW_MWAW_PARSER
-#  define MW_MWAW_PARSER
+#ifndef MSK3_PARSER
+#  define MSK3_PARSER
 
 #include <list>
 #include <string>
@@ -45,35 +45,39 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "MWAWParser.hxx"
+#include "MSKParser.hxx"
 
-typedef class MWAWContentListener MWContentListener;
-typedef shared_ptr<MWContentListener> MWContentListenerPtr;
+typedef class MWAWContentListener MSKContentListener;
+typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
+
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
-namespace MWParserInternal
+namespace MSK3ParserInternal
 {
 struct State;
-struct Information;
-struct Paragraph;
+struct Zone;
 class SubDocument;
 }
 
-/** \brief the main class to read a MacWrite file
+class MSKGraph;
+class MSK3Text;
+
+/** \brief the main class to read a Microsoft Works file
  *
  *
  *
  */
-class MWParser : public MWAWParser
+class MSK3Parser : public MSKParser
 {
-  friend class MWParserInternal::SubDocument;
-
+  friend class MSK3ParserInternal::SubDocument;
+  friend class MSKGraph;
+  friend class MSK3Text;
 public:
   //! constructor
-  MWParser(MWAWInputStreamPtr input, MWAWHeader *header);
+  MSK3Parser(MWAWInputStreamPtr input, MWAWHeader *header);
   //! destructor
-  virtual ~MWParser();
+  virtual ~MSK3Parser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -86,76 +90,75 @@ protected:
   void init();
 
   //! sets the listener in this class and in the helper classes
-  void setListener(MWContentListenerPtr listen);
+  void setListener(MSKContentListenerPtr listen);
 
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
 
-  //! send a zone ( 0: MAIN ZONE, 1 : HEADER, 2 : FOOTER )
-  bool sendWindow(int zone);
-
   //! finds the different objects zones
   bool createZones();
-
-  //! finds the different objects zones (version <= 3)
-  bool createZonesV3();
-
-  //! read the print info zone
-  bool readPrintInfo();
-
-  //! read the windows zone
-  bool readWindowsInfo(int wh);
-
-  //! read the line height
-  bool readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstParagLine,
-                       std::vector<int> &linesHeight);
-
-  //! read the information ( version <= 3)
-  bool readInformationsV3(int numInfo,
-                          std::vector<MWParserInternal::Information> &informations);
-
-  //! read the information
-  bool readInformations(MWAWEntry const &entry,
-                        std::vector<MWParserInternal::Information> &informations);
-
-  //! read a paragraph
-  bool readParagraph(MWParserInternal::Information const &info);
-
-  //! read a graphics
-  bool readGraphic(MWParserInternal::Information const &info);
-
-  //! read a text zone
-  bool readText(MWParserInternal::Information const &info, std::vector<int> const &lineHeight);
-
-  //! read a page break zone ( version <= 3)
-  bool readPageBreak(MWParserInternal::Information const &info);
-
-  //! check the free list
-  bool checkFreeList();
 
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
   //! returns the page width, ie. paper size less margin (in inches)
   float pageWidth() const;
 
+  //! returns the page top left point
+  Vec2f getPageTopLeft() const;
+
   //! adds a new page
-  void newPage(int number);
+  void newPage(int number, bool softBreak=false);
+
+  //
+  // intermediate level
+  //
+
+  //! try to read a generic zone
+  bool readZone(MSK3ParserInternal::Zone &zone);
+  //! try to read the documentinfo ( zone2)
+  bool readDocumentInfo();
+  //! try to read a group zone (zone3)
+  bool readGroup(MSK3ParserInternal::Zone &zone, MWAWEntry &entry, int check);
+  //! try to read a zone information (zone0)
+  bool readGroupHeaderInfo(bool header, int check);
+  /** try to send a note */
+  bool sendFootNote(int zoneId, int noteId);
+
+  /** try to send a text entry */
+  void sendText(int id, int noteId=-1);
+
+  /** try to send a zone */
+  void sendZone(int zoneType);
+
+  //
+  // low level
+  //
+
+  //! read the print info zone
+  bool readPrintInfo();
 
 protected:
   //
   // data
   //
-  //! the listener
-  MWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;
 
   //! the state
-  shared_ptr<MWParserInternal::State> m_state;
+  shared_ptr<MSK3ParserInternal::State> m_state;
 
   //! the actual document size
   MWAWPageSpan m_pageSpan;
+
+  //! the list of different Zones
+  std::vector<MWAWEntry> m_listZones;
+
+  //! the graph parser
+  shared_ptr<MSKGraph> m_graphParser;
+
+  //! the text parser
+  shared_ptr<MSK3Text> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

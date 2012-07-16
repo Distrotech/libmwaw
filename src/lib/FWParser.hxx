@@ -125,18 +125,8 @@ public:
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
-  /** returns the file version.
-   *
-   * this version is only correct after the header is parsed */
-  int version() const;
-
   // the main parse function
   void parse(WPXDocumentInterface *documentInterface);
-
-  //! Debugging: change the default ascii file
-  void setAsciiName(char const *name) {
-    m_asciiName = name;
-  }
 
 protected:
   //! inits all internal variables
@@ -194,20 +184,6 @@ protected:
   //
   bool send(int zId);
 
-  //
-  // low level
-  //
-
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
-  //! return the ascii file name
-  std::string const &asciiName() const {
-    return m_asciiName;
-  }
-
 protected:
   //
   // data
@@ -226,12 +202,6 @@ protected:
 
   //! the text parser
   shared_ptr<FWText> m_textParser;
-
-  //! the debug file
-  libmwaw::DebugFile m_asciiFile;
-
-  //! the debug file name
-  std::string m_asciiName;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

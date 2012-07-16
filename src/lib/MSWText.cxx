@@ -1500,7 +1500,7 @@ bool MSWText::sendTable(MSWEntry &tableEntry)
   size_t numCols = para.m_tableColumns->size();
   size_t numLimits = limits.size();
   if (!numCols || numLimits < numCols+1 || (numLimits%numCols)!=1) {
-    MWAW_DEBUG_MSG(("MSWText::sendTable: problem with the number of columns: find %ld %ld\n", limits.size()-1, long(para.m_tableColumns->size())));
+    MWAW_DEBUG_MSG(("MSWText::sendTable: problem with the number of columns: find %ld %ld\n", long(limits.size())-1, long(para.m_tableColumns->size())));
     m_input->seek(actPos, WPX_SEEK_SET);
     return false;
   }

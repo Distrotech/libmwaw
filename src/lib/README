@@ -102,9 +102,13 @@ FWParser: parser of FullWrite : v1.0 v2.0
 
 MDWParser : parser of MindWrite document: v2.1
 
-MSKParser : parser of Microsoft Works document : v1.0-3.0
--   MSKGraph : class which reads the picture/graph 
--   MSKText : class which reads the text
+MSKParser: generic parser of Microsoft Works parser
+- MSKGraph : class which reads the picture/graph 
+- MSK3Parser : parser of Microsoft Works document : v1.0-3.0
+-   MSK3Text : class which reads the text
+- MSK4Parser : parser of Microsoft Works document : v4.0
+-   MSK4Zone : parser of the text ole 
+-   MSK4Text : class which reads the text
 
 MSWParser : parser of Microsoft Word document : v4.0-5.0 
 -   MSWText : class which reads the text and its structures

@@ -262,15 +262,13 @@ std::ostream &operator<<(std::ostream &o, WindowsInfo const &w)
 //! Internal: the state of a MWParser
 struct State {
   //! constructor
-  State() : m_version(-1), m_compressCorr(""), m_actPage(0), m_numPages(0), m_fileHeader(),
+  State() : m_compressCorr(""), m_actPage(0), m_numPages(0), m_fileHeader(),
     m_headerHeight(0), m_footerHeight(0)
 
   {
     m_compressCorr = " etnroaisdlhcfp";
   }
 
-  //! the file version
-  int m_version;
   //! the correspondance between int compressed and char : must be 15 character
   std::string m_compressCorr;
 
@@ -360,7 +358,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 MWParser::MWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_asciiFile(), m_asciiName("")
+  m_pageSpan()
 {
   init();
 }
@@ -374,7 +372,7 @@ void MWParser::init()
 {
   m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
-  m_asciiName = "main-1";
+  setAsciiName("main-1");
 
   m_state.reset(new MWParserInternal::State);
 
@@ -388,11 +386,6 @@ void MWParser::init()
 void MWParser::setListener(MWContentListenerPtr listen)
 {
   m_listener = listen;
-}
-
-int MWParser::version() const
-{
-  return m_state->m_version;
 }
 
 ////////////////////////////////////////////////////////////
@@ -737,7 +730,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool strict)
   input->seek(0,WPX_SEEK_SET);
 
   int vers = (int) input->readULong(2);
-  m_state->m_version = vers;
+  setVersion(vers);
 
   std::string vName("");
 
@@ -814,7 +807,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool strict)
 
   // ok, we can finish initialization
   if (header)
-    header->reset(MWAWDocument::MW, m_state->m_version);
+    header->reset(MWAWDocument::MW, version());
 
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());

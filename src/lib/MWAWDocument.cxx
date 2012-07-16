@@ -37,7 +37,8 @@
 #include "MDWParser.hxx"
 #include "MWParser.hxx"
 #include "MWProParser.hxx"
-#include "MSKParser.hxx"
+#include "MSK3Parser.hxx"
+#include "MSK4Parser.hxx"
 #include "MSWParser.hxx"
 #include "WNParser.hxx"
 #include "WPParser.hxx"
@@ -187,8 +188,13 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       break;
     }
     case MSWORKS: {
-      MSKParser parser (ip, header.get());
-      parser.parse(documentInterface);
+      if (header->getMajorVersion() < 100) {
+        MSK3Parser parser (ip, header.get());
+        parser.parse(documentInterface);
+      } else {
+        MSK4Parser parser (ip, header.get());
+        parser.parse(documentInterface);
+      }
       break;
     }
     case MW: {
@@ -287,8 +293,13 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWHeader &header, bool str
       return parser.checkHeader(&header, strict);
     }
     case MWAWDocument::MSWORKS: {
-      MSKParser parser(input, &header);
-      return parser.checkHeader(&header, strict);
+      if (header.getMajorVersion() < 100) {
+        MSK3Parser parser(input, &header);
+        return parser.checkHeader(&header, strict);
+      } else {
+        MSK4Parser parser(input, &header);
+        return parser.checkHeader(&header, strict);
+      }
     }
     case MWAWDocument::MW: {
       MWParser parser(input, &header);

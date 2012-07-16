@@ -45,7 +45,7 @@ class MWAWPosition
 {
 public:
   //! a list of enum used to defined the anchor
-  enum AnchorTo { Char, CharBaseLine, Paragraph, Page };
+  enum AnchorTo { Char, CharBaseLine, Frame, Paragraph, Page };
   //! an enum used to define the wrapping
   enum Wrapping { WNone, WDynamic, WRunThrough }; // Add something for background ?
   //! an enum used to define the relative X position
@@ -63,7 +63,7 @@ public:
   //! operator<<
   friend  std::ostream &operator<<(std::ostream &o, MWAWPosition const &pos) {
     Vec2f dest(pos.m_orig+pos.m_size);
-    o << "Pos=" << pos.m_orig << "x" << dest;
+    o << "Pos=(" << pos.m_orig << ")x(" << dest << ")";
     switch(pos.m_unit) {
     case WPX_INCH:
       o << "(inch)";

@@ -86,6 +86,9 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader(MWAWInputStreamPtr input)
     if (ok)
       res.push_back(MWAWHeader(MWAWDocument::WNOW, 3));
   }
+  // magic ole header
+  if (val[0]==0xd0cf && val[1]==0x11e0 && val[2]==0xa1b1 && val[3]==0x1ae1)
+    res.push_back(MWAWHeader(MWAWDocument::MSWORKS, 104));
 
   if ((val[0]==0xfe34 && val[1]==0) ||
       (val[0] == 0xfe37 && (val[1] == 0x23 || val[1] == 0x1c))) {

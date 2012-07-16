@@ -506,14 +506,8 @@ struct ParagraphData {
 //! Internal: the state of a WPParser
 struct State {
   //! constructor
-  State() : m_version(-1), m_actPage(0), m_numPages(0),
-    m_headerHeight(0), m_footerHeight(0)
-
-  {
+  State() : m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
-
-  //! the file version
-  int m_version;
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
@@ -595,7 +589,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 WPParser::WPParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_asciiFile(), m_asciiName("")
+  m_pageSpan()
 {
   init();
 }
@@ -608,7 +602,7 @@ void WPParser::init()
 {
   m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
-  m_asciiName = "main-1";
+  setAsciiName("main-1");
 
   m_state.reset(new WPParserInternal::State);
 
@@ -622,11 +616,6 @@ void WPParser::init()
 void WPParser::setListener(WPContentListenerPtr listen)
 {
   m_listener = listen;
-}
-
-int WPParser::version() const
-{
-  return m_state->m_version;
 }
 
 ////////////////////////////////////////////////////////////

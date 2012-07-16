@@ -111,14 +111,19 @@ public:
   std::vector<WPXBinaryData> const &getObjects() const {
     return m_objects;
   }
+  //! returns the list of data type
+  std::vector<std::string> const &getObjectsType() const {
+    return m_objectsType;
+  }
 
   //! returns the picture corresponding to an id
-  bool getObject(int id, WPXBinaryData &obj, MWAWPosition &pos) const;
+  bool getObject(int id, WPXBinaryData &obj, MWAWPosition &pos, std::string &type) const;
 
   /*! \brief sets an object
    * just in case, the external parsing find another representation
    */
-  void setObject(int id, WPXBinaryData const &obj, MWAWPosition const &pos);
+  void setObject(int id, WPXBinaryData const &obj, MWAWPosition const &pos,
+                 std::string const &type);
 
 protected:
 
@@ -173,6 +178,8 @@ protected:
   std::vector<MWAWPosition> m_objectsPosition;
   //! list of pictures id
   std::vector<int> m_objectsId;
+  //! list of picture type
+  std::vector<std::string> m_objectsType;
 
   //! a smart ptr used to stored the list of compobj id->name
   shared_ptr<MWAWOLEParserInternal::CompObj> m_compObjIdName;

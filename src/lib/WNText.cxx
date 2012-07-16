@@ -1409,7 +1409,7 @@ bool WNText::readStyles(WNEntry const &entry)
   for (size_t n = 0; n < defPos.size(); n++) {
     pos = defPos[n];
     if (pos+34 > entry.end()) {
-      MWAW_DEBUG_MSG(("WNText::readStyles: can not read entry : %ld\n", n));
+      MWAW_DEBUG_MSG(("WNText::readStyles: can not read entry : %ld\n", long(n)));
       return false;
     }
 
@@ -1450,7 +1450,7 @@ bool WNText::readStyles(WNEntry const &entry)
       m_input->seek(pos+relPos[0], WPX_SEEK_SET);
       int sz = (int) m_input->readULong(1);
       if (!sz || pos+relPos[0]+1+sz > entry.end()) {
-        MWAW_DEBUG_MSG(("WNText::readStyles: can not read name for entry : %ld\n", n));
+        MWAW_DEBUG_MSG(("WNText::readStyles: can not read name for entry : %ld\n", long(n)));
         f << "name[length],";
       } else {
         std::string name("");

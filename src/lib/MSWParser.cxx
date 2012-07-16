@@ -119,7 +119,7 @@ struct Object {
 //! Internal: the state of a MSWParser
 struct State {
   //! constructor
-  State() : m_version(-1), m_eof(-1), m_bot(-1), m_eot(-1),
+  State() : m_eof(-1), m_bot(-1), m_eot(-1),
     m_textLength(0), m_footnoteLength(0), m_headerfooterLength(0),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
@@ -128,9 +128,6 @@ struct State {
   long getTotalTextSize() const {
     return m_textLength + m_footnoteLength + m_headerfooterLength;
   }
-
-  //! the file version
-  int m_version;
 
   //! end of file
   long m_eof;
@@ -231,8 +228,7 @@ std::ostream &operator<<(std::ostream &o, MSWEntry const &entry)
 ////////////////////////////////////////////////////////////
 MSWParser::MSWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_entryMap(), m_pageSpan(), m_textParser(),
-  m_asciiFile(), m_asciiName("")
+  m_entryMap(), m_pageSpan(), m_textParser()
 {
   init();
 }
@@ -246,7 +242,7 @@ void MSWParser::init()
 {
   m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
-  m_asciiName = "main-1";
+  setAsciiName("main-1");
 
   m_state.reset(new MSWParserInternal::State);
 
@@ -263,11 +259,6 @@ void MSWParser::setListener(MSWContentListenerPtr listen)
 {
   m_listener = listen;
   m_textParser->setListener(listen);
-}
-
-int MSWParser::version() const
-{
-  return m_state->m_version;
 }
 
 ////////////////////////////////////////////////////////////
@@ -671,7 +662,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
     switch (input->readULong(2)) {
     case 0x0:
       headerSize = 30;
-      m_state->m_version = 3;
+      setVersion(3);
 #ifndef DEBUG
       return false;
 #else
@@ -684,10 +675,10 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
   case 0xfe37:
     switch (input->readULong(2)) {
     case 0x1c:
-      m_state->m_version = 4;
+      setVersion(4);
       break;
     case 0x23:
-      m_state->m_version = 5;
+      setVersion(5);
       break;
     default:
       return false;
@@ -727,7 +718,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
 
     // ok, we can finish initialization
     if (header)
-      header->reset(MWAWDocument::MSWORD, m_state->m_version);
+      header->reset(MWAWDocument::MSWORD, version());
 
     ascii().addPos(0);
     ascii().addNote(f.str().c_str());
@@ -793,7 +784,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
   }
   // ok, we can finish initialization
   if (header)
-    header->reset(MWAWDocument::MSWORD, m_state->m_version);
+    header->reset(MWAWDocument::MSWORD, version());
 
   if (long(input->tell()) != headerSize) {
     ascii().addDelimiter(input->tell(), '|');

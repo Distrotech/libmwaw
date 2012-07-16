@@ -55,13 +55,10 @@ namespace WNParserInternal
 //! Internal: the state of a WNParser
 struct State {
   //! constructor
-  State() : m_version(-1), m_endPos(-1), m_colorMap(), m_picturesList(),
+  State() : m_endPos(-1), m_colorMap(), m_picturesList(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
     m_numColumns(1), m_columnWidth(-1) {
   }
-
-  //! the file version
-  int m_version;
 
   //! the last position
   long m_endPos;
@@ -139,8 +136,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 WNParser::WNParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_entryManager(), m_pageSpan(), m_textParser(),
-  m_asciiFile(), m_asciiName("")
+  m_entryManager(), m_pageSpan(), m_textParser()
 {
   init();
 }
@@ -154,7 +150,7 @@ void WNParser::init()
 {
   m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
-  m_asciiName = "main-1";
+  setAsciiName("main-1");
 
   m_state.reset(new WNParserInternal::State);
   m_entryManager.reset(new WNEntryManager);
@@ -172,11 +168,6 @@ void WNParser::setListener(WNContentListenerPtr listen)
 {
   m_listener = listen;
   m_textParser->setListener(listen);
-}
-
-int WNParser::version() const
-{
-  return m_state->m_version;
 }
 
 ////////////////////////////////////////////////////////////
@@ -1051,7 +1042,7 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
   default:
     return false;
   }
-  m_state->m_version = vers;
+  setVersion(vers);
   f << "FileHeader:";
 
   if (vers < 3) {
@@ -1104,7 +1095,7 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
 
   // ok, we can finish initialization
   if (header)
-    header->reset(MWAWDocument::WNOW, m_state->m_version);
+    header->reset(MWAWDocument::WNOW, version());
 
   //
   input->seek(headerSize, WPX_SEEK_SET);

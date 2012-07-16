@@ -174,15 +174,13 @@ struct ZoneInfo {
 //! Internal: the state of a MDWParser
 struct State {
   //! constructor
-  State() : m_version(-1), m_eof(-1), m_entryMap(), m_actPage(0), m_numPages(0),
+  State() : m_eof(-1), m_entryMap(), m_actPage(0), m_numPages(0),
     m_rulerParagraph(), m_actParagraph(), m_actListType(-1),
     m_headerHeight(0), m_footerHeight(0) {
     for (int i = 0; i < 3; i++)
       m_numLinesByZone[i] = 0;
   }
 
-  //! the file version
-  int m_version;
   //! the number of paragraph by zones ( main, header, footer )
   int m_numLinesByZone[3];
   //! the zones
@@ -272,7 +270,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 MDWParser::MDWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_asciiFile(), m_asciiName("")
+  m_pageSpan()
 {
   init();
 }
@@ -285,7 +283,7 @@ void MDWParser::init()
 {
   m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
-  m_asciiName = "main-1";
+  setAsciiName("main-1");
 
   m_state.reset(new MDWParserInternal::State);
 
@@ -299,11 +297,6 @@ void MDWParser::init()
 void MDWParser::setListener(MDWContentListenerPtr listen)
 {
   m_listener = listen;
-}
-
-int MDWParser::version() const
-{
-  return m_state->m_version;
 }
 
 ////////////////////////////////////////////////////////////

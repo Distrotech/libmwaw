@@ -79,8 +79,8 @@
 #include <libwpd/WPXBinaryData.h>
 
 #include "MWAWPosition.hxx"
-
 #include "MWAWOLEParser.hxx"
+#include "MWAWPictMac.hxx"
 
 //////////////////////////////////////////////////
 // internal structure
@@ -228,7 +228,7 @@ struct OleDef {
 // constructor/destructor
 MWAWOLEParser::MWAWOLEParser(std::string mainName)
   : m_avoidOLE(mainName), m_unknownOLEs(),
-    m_objects(), m_objectsPosition(), m_objectsId(), m_compObjIdName()
+    m_objects(), m_objectsPosition(), m_objectsId(), m_objectsType(), m_compObjIdName()
 {
 }
 
@@ -236,29 +236,33 @@ MWAWOLEParser::~MWAWOLEParser()
 {
 }
 
-bool MWAWOLEParser::getObject(int id, WPXBinaryData &obj, MWAWPosition &pos)  const
+bool MWAWOLEParser::getObject(int id, WPXBinaryData &obj, MWAWPosition &pos, std::string &type)  const
 {
   for (size_t i = 0; i < m_objectsId.size(); i++) {
     if (m_objectsId[i] != id) continue;
     obj = m_objects[i];
     pos = m_objectsPosition[i];
+    type = m_objectsType[i];
     return true;
   }
   obj.clear();
   return false;
 }
 
-void MWAWOLEParser::setObject(int id, WPXBinaryData const &obj, MWAWPosition const &pos)
+void MWAWOLEParser::setObject(int id, WPXBinaryData const &obj, MWAWPosition const &pos,
+                              std::string const &type)
 {
   for (size_t i = 0; i < m_objectsId.size(); i++) {
     if (m_objectsId[i] != id) continue;
     m_objects[i] = obj;
     m_objectsPosition[i] = pos;
+    m_objectsType[i] = type;
     return;
   }
   m_objects.push_back(obj);
   m_objectsPosition.push_back(pos);
   m_objectsId.push_back(id);
+  m_objectsType.push_back(type);
 }
 
 // parsing
@@ -270,6 +274,7 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
   m_unknownOLEs.resize(0);
   m_objects.resize(0);
   m_objectsId.resize(0);
+  m_objectsType.resize(0);
 
   if (!file.get()) return false;
 
@@ -345,6 +350,7 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
     WPXBinaryData pict;
     int confidence = -1000;
     MWAWPosition actualPos, potentialSize;
+    bool isPict = false;
 
     while (pos != listsById.end()) {
       MWAWOLEParserInternal::OleDef const &dOle = pos->second;
@@ -356,7 +362,6 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
         MWAW_DEBUG_MSG(("MWAWOLEParser: error: can not find OLE part: \"%s\"\n", dOle.m_name.c_str()));
         continue;
       }
-
       libmwaw::DebugFile asciiFile(ole);
       asciiFile.open(dOle.m_name);
 
@@ -365,6 +370,10 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
       int newConfidence = -2000;
       bool ok = true;
       MWAWPosition pictPos;
+
+      if (strncmp("Ole", dOle.m_dir.c_str(), 3) == 0 ||
+          strncmp("CompObj", dOle.m_dir.c_str(), 7) == 0)
+        ole->setReadInverted(true);
 
       try {
         if (readMM(ole, dOle.m_dir, asciiFile));
@@ -396,6 +405,20 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
         m_unknownOLEs.push_back(dOle.m_name);
         asciiFile.reset();
         continue;
+      }
+
+      /** first check if this is a mac pict as other oles
+          may not be understand by openOffice, ... */
+      WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
+      if (dataStream && data.size()) {
+        MWAWInputStreamPtr dataInput(new MWAWInputStream(dataStream, false));
+        dataInput->setResponsable(false);
+        dataInput->seek(0, WPX_SEEK_SET);
+        Box2f box;
+        if (MWAWPictData::check(dataInput, (int)data.size(), box) != MWAWPict::MWAW_R_BAD) {
+          isPict = true;
+          newConfidence = 100;
+        }
       }
 
       if (hasData && data.size()) {
@@ -432,6 +455,10 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
       }
       m_objectsPosition.push_back(actualPos);
       m_objectsId.push_back(id);
+      if (isPict)
+        m_objectsType.push_back("image/pict");
+      else
+        m_objectsType.push_back("object/ole");
     }
   }
 
@@ -569,7 +596,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
   ip->seek(0,WPX_SEEK_SET);
 
   for (int i = 0; i < 6; i++) {
-    int val = (int) ip->readULong(2);
+    int val = (int) ip->readLong(2);
     f << val << ", ";
   }
 
@@ -610,7 +637,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
     long actPos = ip->tell();
     long sz = ip->readLong(4);
     bool waitNumber = sz == -1;
-    if (waitNumber) sz = 4;
+    if (waitNumber || sz == -2) sz = 4;
     if (sz < 0 || ip->seek(actPos+4+sz,WPX_SEEK_SET) != 0 ||
         ip->tell() != actPos+4+sz) return false;
     ip->seek(actPos+4,WPX_SEEK_SET);
@@ -651,7 +678,8 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
   long nbElt = 4;
   if (ip->seek(actPos+16,WPX_SEEK_SET) != 0 ||
       ip->tell() != actPos+16) {
-    if ((ip->tell()-actPos)%4) return false;
+    if ((ip->tell()-actPos)%4)
+      return false;
     nbElt = (ip->tell()-actPos)/4;
   }
 
@@ -686,7 +714,10 @@ bool MWAWOLEParser::isOlePres(MWAWInputStreamPtr ip, std::string const &oleName)
   ip->seek(0, WPX_SEEK_SET);
   for (int i= 0; i < 2; i++) {
     long val = ip->readLong(4);
-    if (val < -10 || val > 10) return false;
+    if (val < -10 || val > 10) {
+      if (i!=1 && val != 0x50494354)
+        return false;
+    }
   }
 
   long actPos = ip->tell();

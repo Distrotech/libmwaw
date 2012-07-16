@@ -35,7 +35,11 @@ SLOFILES= \
 	$(SLO)$/MDWParser.obj			\
 	$(SLO)$/MSKGraph.obj			\
 	$(SLO)$/MSKParser.obj			\
-	$(SLO)$/MSKText.obj			\
+	$(SLO)$/MSK3Parser.obj			\
+	$(SLO)$/MSK3Text.obj			\
+	$(SLO)$/MSK4Parser.obj			\
+	$(SLO)$/MSK4Text.obj			\
+	$(SLO)$/MSK4Zone.obj			\
 	$(SLO)$/MSWParser.obj			\
 	$(SLO)$/MSWStruct.obj			\
 	$(SLO)$/MSWText.obj			\

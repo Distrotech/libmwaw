@@ -187,7 +187,23 @@ SOURCE=..\..\src\lib\MSKParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKText.cxx
+SOURCE=..\..\src\lib\MSK3Parser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSK3Text.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSK4Parser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSK4Text.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSK4Zone.cxx
 # End Source File
 # Begin Source File
 
@@ -383,7 +399,23 @@ SOURCE=..\..\src\lib\MSKParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKText.hxx
+SOURCE=..\..\src\lib\MSK3Parser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSK3Text.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSK4Parser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSK4Text.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSK4Zone.hxx
 # End Source File
 # Begin Source File
 

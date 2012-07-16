@@ -1078,7 +1078,7 @@ void MWProStructures::buildTableStructures()
     if (!ok && numCells == 1)
       ok = table->m_col == 1 && table->m_row == 1;
     if (!ok) {
-      MWAW_DEBUG_MSG(("MWProStructures::buildTableStructures: find a table with %ld cells : ignored...\n", numCells));
+      MWAW_DEBUG_MSG(("MWProStructures::buildTableStructures: find a table with %ld cells : ignored...\n", long(numCells)));
       continue;
     }
 

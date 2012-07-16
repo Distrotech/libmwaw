@@ -546,7 +546,7 @@ bool CWDatabase::readDatabaseDefaults(CWDatabaseInternal::Database &dBase)
       f << "Entries(DatabaseDft)[" << v << "]:";
       if (formField) {
         if (length != sz-1) {
-          MWAW_DEBUG_MSG(("CWDatabase::readDatabaseDefaults: can not find formula for field: %ld\n", v));
+          MWAW_DEBUG_MSG(("CWDatabase::readDatabaseDefaults: can not find formula for field: %ld\n", long(v)));
           m_input->seek(pos, WPX_SEEK_SET);
           return false;
         }
@@ -558,14 +558,14 @@ bool CWDatabase::readDatabaseDefaults(CWDatabaseInternal::Database &dBase)
         else
           f << "string,";
         if (vers > 2 && !listField && length != sz-1) {
-          MWAW_DEBUG_MSG(("CWDatabase::readDatabaseDefaults: can not find strings for field: %ld\n", v));
+          MWAW_DEBUG_MSG(("CWDatabase::readDatabaseDefaults: can not find strings for field: %ld\n", long(v)));
           m_input->seek(pos, WPX_SEEK_SET);
           return false;
         }
         while (1) {
           long actPos = m_input->tell();
           if (actPos+length > endPos) {
-            MWAW_DEBUG_MSG(("CWDatabase::readDatabaseDefaults: can not find strings for field: %ld\n", v));
+            MWAW_DEBUG_MSG(("CWDatabase::readDatabaseDefaults: can not find strings for field: %ld\n", long(v)));
 
             m_input->seek(pos, WPX_SEEK_SET);
             return true;

@@ -180,7 +180,7 @@ public:
 
   void startDocument();
   void endDocument();
-  void handleSubDocument(MWAWSubDocumentPtr &subDocument, libmwaw::SubDocumentType subDocumentType);
+  void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
   bool isHeaderFooterOpened() const;
 
   // ------ text data -----------
@@ -265,8 +265,8 @@ public:
                      WPXPropertyList frameExtras=WPXPropertyList());
   /** adds a textbox in given position */
   void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument,
-                     WPXPropertyList frameExtras=WPXPropertyList());
-
+                     WPXPropertyList frameExtras=WPXPropertyList(),
+                     WPXPropertyList textboxExtras=WPXPropertyList());
 
   // ------- table -----------------
   /** open a table*/
@@ -305,8 +305,9 @@ protected:
   void _endSubDocument();
 
   void _handleFrameParameters( WPXPropertyList &propList, MWAWPosition const &pos);
-  bool _openFrame(MWAWPosition const &pos, WPXPropertyList extras=WPXPropertyList());
-  void _closeFrame();
+  bool openFrame(MWAWPosition const &pos, WPXPropertyList extras=WPXPropertyList());
+  void closeFrame();
+
 
   void _openParagraph();
   void _closeParagraph();

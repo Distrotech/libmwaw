@@ -1282,35 +1282,35 @@ void MWAWContentListener::insertComment(MWAWSubDocumentPtr &subDocument)
 }
 
 void MWAWContentListener::insertTextBox
-(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, WPXPropertyList frameExtras)
+(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, WPXPropertyList frameExtras, WPXPropertyList textboxExtras)
 {
-  if (!_openFrame(pos, frameExtras)) return;
+  if (!openFrame(pos, frameExtras)) return;
 
-  WPXPropertyList propList;
+  WPXPropertyList propList(textboxExtras);
   m_documentInterface->openTextBox(propList);
   handleSubDocument(subDocument, libmwaw::DOC_TEXT_BOX);
   m_documentInterface->closeTextBox();
 
-  _closeFrame();
+  closeFrame();
 }
 
 void MWAWContentListener::insertPicture
 (MWAWPosition const &pos, const WPXBinaryData &binaryData, std::string type,
  WPXPropertyList frameExtras)
 {
-  if (!_openFrame(pos, frameExtras)) return;
+  if (!openFrame(pos, frameExtras)) return;
 
   WPXPropertyList propList;
   propList.insert("libwpd:mimetype", type.c_str());
   m_documentInterface->insertBinaryObject(propList, binaryData);
 
-  _closeFrame();
+  closeFrame();
 }
 
 ///////////////////
 // frame
 ///////////////////
-bool MWAWContentListener::_openFrame(MWAWPosition const &pos, WPXPropertyList extras)
+bool MWAWContentListener::openFrame(MWAWPosition const &pos, WPXPropertyList extras)
 {
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened) {
     MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: called in table but cell is not opened\n"));
@@ -1337,6 +1337,12 @@ bool MWAWContentListener::_openFrame(MWAWPosition const &pos, WPXPropertyList ex
     else
       _openSpan();
     break;
+  case MWAWPosition::Frame:
+    if (!m_ds->m_subDocuments.size()) {
+      MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: can not determine the frame\n"));
+      return false;
+    }
+    break;
   default:
     MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: can not determine the anchor\n"));
     return false;
@@ -1350,7 +1356,7 @@ bool MWAWContentListener::_openFrame(MWAWPosition const &pos, WPXPropertyList ex
   return true;
 }
 
-void MWAWContentListener::_closeFrame()
+void MWAWContentListener::closeFrame()
 {
   if (!m_ps->m_isFrameOpened) {
     MWAW_DEBUG_MSG(("MWAWContentListener::closeFrame: called but no frame is already opened\n"));
@@ -1370,6 +1376,8 @@ void MWAWContentListener::_handleFrameParameters
 
   propList.insert("svg:width", double(pos.size()[0]), unit);
   propList.insert("svg:height", double(pos.size()[1]), unit);
+  if (pos.order() > 0)
+    propList.insert("draw:z-index", pos.order());
   if (pos.naturalSize().x() > 4*pointFactor && pos.naturalSize().y() > 4*pointFactor) {
     propList.insert("libwpd:naturalWidth", pos.naturalSize().x(), pos.unit());
     propList.insert("libwpd:naturalHeight", pos.naturalSize().y(), pos.unit());
@@ -1385,10 +1393,13 @@ void MWAWContentListener::_handleFrameParameters
   } else
     propList.insert( "style:wrap", "none" );
 
-  if (pos.m_anchorTo == MWAWPosition::Paragraph) {
-    propList.insert("text:anchor-type", "paragraph");
-    propList.insert("style:vertical-rel", "paragraph" );
-    propList.insert("style:horizontal-rel", "paragraph");
+  if (pos.m_anchorTo == MWAWPosition::Paragraph ||
+      pos.m_anchorTo == MWAWPosition::Frame) {
+    std::string what= pos.m_anchorTo == MWAWPosition::Paragraph ?
+                      "paragraph" : "frame";
+    propList.insert("text:anchor-type", what.c_str());
+    propList.insert("style:vertical-rel", what.c_str());
+    propList.insert("style:horizontal-rel", what.c_str());
     double w = m_ps->m_pageFormWidth - m_ps->m_pageMarginLeft
                - m_ps->m_pageMarginRight - m_ps->m_sectionMarginLeft
                - m_ps->m_sectionMarginRight - m_ps->m_paragraphMarginLeft
@@ -1542,7 +1553,7 @@ void MWAWContentListener::_handleFrameParameters
 ///////////////////
 // subdocument
 ///////////////////
-void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr &subDocument, libmwaw::SubDocumentType subDocumentType)
+void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType)
 {
   _pushParsingState();
   _startSubDocument();

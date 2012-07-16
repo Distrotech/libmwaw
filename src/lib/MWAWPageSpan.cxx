@@ -103,24 +103,6 @@ MWAWPageSpan::MWAWPageSpan() :
 {
 }
 
-MWAWPageSpan::MWAWPageSpan(const MWAWPageSpan &page) :
-  m_formLength(page.getFormLength()),
-  m_formWidth(page.getFormWidth()),
-  m_formOrientation(page.getFormOrientation()),
-  m_marginLeft(page.getMarginLeft()),
-  m_marginRight(page.getMarginRight()),
-  m_marginTop(page.getMarginTop()),
-  m_marginBottom(page.getMarginBottom()),
-  m_pageNumberPosition(page.getPageNumberPosition()),
-  m_pageNumber(page.getPageNumber()),
-  m_pageNumberingType(page.getPageNumberingType()),
-  m_pageNumberingFontName(page.getPageNumberingFontName()),
-  m_pageNumberingFontSize(page.getPageNumberingFontSize()),
-  m_headerFooterList(page.getHeaderFooterList()),
-  m_pageSpan(page.getPageSpan())
-{
-}
-
 MWAWPageSpan::~MWAWPageSpan()
 {
 }

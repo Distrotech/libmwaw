@@ -42,8 +42,16 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MSKGraph.hxx			\
 	MSKParser.cxx			\
 	MSKParser.hxx			\
-	MSKText.cxx			\
-	MSKText.hxx			\
+	MSK3Parser.cxx			\
+	MSK3Parser.hxx			\
+	MSK3Text.cxx			\
+	MSK3Text.hxx			\
+	MSK4Parser.cxx			\
+	MSK4Parser.hxx			\
+	MSK4Text.cxx			\
+	MSK4Text.hxx			\
+	MSK4Zone.cxx			\
+	MSK4Zone.hxx			\
 	MSWParser.cxx			\
 	MSWParser.hxx			\
 	MSWStruct.cxx			\

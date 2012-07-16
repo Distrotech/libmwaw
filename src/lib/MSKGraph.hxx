@@ -60,12 +60,16 @@ namespace MSKGraphInternal
 struct Font;
 struct Zone;
 struct DataPict;
+struct Table;
 struct GroupZone;
 struct TextBox;
 struct State;
+class SubDocument;
 }
 
 class MSKParser;
+class MSK3Parser;
+class MSK4Zone;
 
 /** \brief the main class to read the text part of Claris Works file
  *
@@ -74,8 +78,9 @@ class MSKParser;
  */
 class MSKGraph
 {
-  friend class MSKParser;
-
+  friend class MSK3Parser;
+  friend class MSK4Zone;
+  friend class MSKGraphInternal::SubDocument;
 public:
   //! constructor
   MSKGraph(MWAWInputStreamPtr ip, MSKParser &parser, MWAWFontConverterPtr &convertissor);
@@ -94,10 +99,29 @@ public:
   /** send all the picture corresponding to a zone */
   void sendAll(int zoneId, bool mainZone);
 
+  struct SendData {
+    // constructor
+    SendData();
+    /** the type */
+    enum Type { RBDR, RBIL, ALL } m_type;
+    /** the rbil id */
+    int m_id;
+    /** the anchor */
+    MWAWPosition::AnchorTo m_anchor;
+    /** the page ( used if anchor==page) */
+    int m_page;
+    /** the size of the data ( used by rbil ) */
+    Vec2i m_size;
+  };
+  /** sends all the object of a page, frame, ...  */
+  void sendObjects(SendData const what);
+
   /** try to update positions knowing pages and lines height */
   void computePositions(int zoneId, std::vector<int> &linesHeight, std::vector<int> &pagesHeight);
 
 protected:
+  //! reinitializes all data
+  void reset(MSKParser &parser, MWAWFontConverterPtr &convertissor);
 
   //! sets the listener in this class and in the helper classes
   void setListener(MSKContentListenerPtr listen) {
@@ -124,17 +148,39 @@ protected:
    */
   int getEntryPicture(int zoneId, MWAWEntry &zone);
 
+  // version 4 file
+
+  /** reads the RBDR or a RBIL zone: a zone which seems to regroup all pages pictures */
+  bool readRB(MWAWInputStreamPtr input, MWAWEntry const &entry);
+
+
+  /** reads a Pict zone: a zone which seems to code in v4 : header/footer picture */
+  bool readPictureV4(MWAWInputStreamPtr input, MWAWEntry const &entry);
 
   //! try to read a text zone
   bool readText(MSKGraphInternal::TextBox &textBox);
   /** send a textbox to the listener */
-  void send(MSKGraphInternal::TextBox &textBox);
+  void sendTextBox(int id);
+  /** check the text box link */
+  void checkTextBoxLinks(int zId);
+
+  //! ask m_mainParser to send a frame text(v4)
+  void sendFrameText(MWAWEntry const &entry, std::string const &frame);
+
+  //! try to read a table zone
+  bool readTable(MSKGraphInternal::Table &table);
+  //! try to  a table zone
+  void sendTable(int id);
+
+  //! try to read a chart (very incomplete)
+  bool readChart(MSKGraphInternal::Zone &zone);
 
   //
   // low level
   //
   /** try to read the group data*/
   shared_ptr<MSKGraphInternal::GroupZone> readGroup(MSKGraphInternal::Zone &group);
+
   //! reads the textbox font
   bool readFont(MSKGraphInternal::Font &font);
   //! send the font properties
@@ -142,7 +188,7 @@ protected:
 
   //! returns the debug file
   libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
+    return *m_asciiFile;
   }
 
 private:
@@ -169,7 +215,7 @@ protected:
   MSKParser *m_mainParser;
 
   //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
+  libmwaw::DebugFile *m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

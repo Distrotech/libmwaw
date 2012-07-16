@@ -200,13 +200,10 @@ struct TextZone {
 //! Internal: the state of a MWProParser
 struct State {
   //! constructor
-  State() : m_version(-1), m_blocksMap(), m_dataMap(), m_textMap(),
+  State() : m_blocksMap(), m_dataMap(), m_textMap(),
     m_blocksCallByTokens(), m_col(1), m_actPage(0), m_numPages(0),
     m_headerHeight(0), m_footerHeight(0) {
   }
-
-  //! the file version
-  int m_version;
 
   //! the list of retrieved block : block -> new address
   std::map<int,long> m_blocksMap;
@@ -299,7 +296,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 MWProParser::MWProParser(MWAWInputStreamPtr input, MWAWHeader *header) :
   MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
-  m_structures(), m_pageSpan(), m_asciiFile(), m_asciiName("")
+  m_structures(), m_pageSpan()
 {
   init();
 }
@@ -313,7 +310,7 @@ void MWProParser::init()
 {
   m_convertissor.reset(new MWAWFontConverter);
   m_listener.reset();
-  m_asciiName = "main-1";
+  setAsciiName("main-1");
 
   m_state.reset(new MWProParserInternal::State);
   m_structures.reset(new MWProStructures(*this));
@@ -329,11 +326,6 @@ void MWProParser::setListener(MWProContentListenerPtr listen)
 {
   m_listener = listen;
   m_structures->setListener(listen);
-}
-
-int MWProParser::version() const
-{
-  return m_state->m_version;
 }
 
 ////////////////////////////////////////////////////////////
@@ -707,7 +699,7 @@ bool MWProParser::checkHeader(MWAWHeader *header, bool strict)
     MWAW_DEBUG_MSG(("MWProParser::checkHeader: unknown version\n"));
     return false;
   }
-  m_state->m_version = vers;
+  setVersion(vers);
   f << "vers=" << vers << ",";
   if (strict) {
     if (!readPrintInfo())
@@ -723,7 +715,7 @@ bool MWProParser::checkHeader(MWAWHeader *header, bool strict)
 
   // ok, we can finish initialization
   if (header)
-    header->reset(MWAWDocument::MWPRO, m_state->m_version);
+    header->reset(MWAWDocument::MWPRO, version());
 
   //
   input->seek(headerSize, WPX_SEEK_SET);
@@ -1045,7 +1037,7 @@ bool MWProParser::parseTextZone(shared_ptr<MWProParserInternal::Zone> zone)
     MWAWEntry &entry = text->m_entries[i];
     fileInput->seek(entry.begin(), WPX_SEEK_SET);
     if (long(fileInput->tell()) != entry.begin()) {
-      MWAW_DEBUG_MSG(("MWProParser::parseTextZone: bad block id for block %ld\n", i));
+      MWAW_DEBUG_MSG(("MWProParser::parseTextZone: bad block id for block %ld\n", long(i)));
       entry.setBegin(-1);
     }
   }

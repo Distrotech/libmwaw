@@ -266,7 +266,7 @@ bool MWAWPictPolygon::getODGBinary(WPXBinaryData &res) const
 {
   size_t numPt = m_verticesList.size();
   if (numPt < 2) {
-    MWAW_DEBUG_MSG(("MWAWPictPolygon::getODGBinary: can not draw a polygon with %ld vertices\n", numPt));
+    MWAW_DEBUG_MSG(("MWAWPictPolygon::getODGBinary: can not draw a polygon with %ld vertices\n", long(numPt)));
     return false;
   }
 
