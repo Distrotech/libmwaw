@@ -305,7 +305,7 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
     if (dir == "" && base == m_avoidOLE) continue;
 
 #define PRINT_OLE_NAME
-#ifdef PRINT_OLE_NAME
+#if defined(PRINT_OLE_NAME) && defined(DEBUG)
     std::cerr << "OLEName=" << name.c_str() << "\n";
 #endif
     MWAWOLEParserInternal::OleDef data;
