@@ -2378,7 +2378,7 @@ bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
     f << "Chart(A" << i << ")";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    int numLine = dataSz/0x10;
+    int numLine = int(dataSz/0x10);
     for (int l = 0; l < numLine; l++) {
       f.str("");
       f << "Chart(A" << i << "-" << l << ")";
