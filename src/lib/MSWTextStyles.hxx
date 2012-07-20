@@ -131,8 +131,8 @@ protected:
   bool getSectionFont(ZoneType type, int id, MSWStruct::Font &font);
   //! read the text section
   bool readSection(MSWEntry &entry);
-  //! try to send a section then update the font and numColumns
-  bool sendSection(int id, MSWStruct::Font &newFont, int &newNumColumns);
+  //! try to send a section then update the font
+  bool sendSection(int id, MSWStruct::Font &newFont);
 
   //! try to read the section data
   bool readSection(MSWStruct::Section &section, long pos);

@@ -34,6 +34,7 @@
 #  define MWAW_CELL_H
 
 #include <string>
+#include <vector>
 
 #include "libmwaw_internal.hxx"
 
@@ -67,7 +68,7 @@ public:
    */
   //! constructor
   MWAWCellFormat() : m_format(F_UNKNOWN), m_subFormat(0), m_digits(0),
-    m_hAlign(HALIGN_DEFAULT), m_bordersList(0), m_protected(false) { }
+    m_hAlign(HALIGN_DEFAULT), m_bordersList(), m_protected(false) { }
 
   virtual ~MWAWCellFormat() {}
 
@@ -119,16 +120,19 @@ public:
 
   //! return true if the cell has some border
   bool hasBorders() const {
-    return m_bordersList != 0;
+    return m_bordersList.size() != 0;
   }
   //! return the cell border: libmwaw::LeftBorderBit | ...
-  int borders() const {
+  std::vector<MWAWBorder> const & borders() const {
     return m_bordersList;
   }
-  //! sets the cell border
-  void setBorders(int bList) {
-    m_bordersList = bList;
+
+  //! reset the border
+  void resetBorders() {
+    m_bordersList.resize(0);
   }
+  //! sets the cell border: wh=MWAWBorder::LeftBit|...
+  void setBorders(int wh, MWAWBorder &border);
 
   //! a comparison  function
   int compare(MWAWCellFormat const &cell) const;
@@ -145,8 +149,8 @@ protected:
   int m_digits;
   //! the cell alignement : by default nothing
   HorizontalAlignment m_hAlign;
-  //! the cell border libmwaw::LeftBorderBit | ...
-  int m_bordersList;
+  //! the cell border MWAWBorder::Pos
+  std::vector<MWAWBorder> m_bordersList;
   //! cell protected
   bool m_protected;
 };

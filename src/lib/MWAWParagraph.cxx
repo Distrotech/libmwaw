@@ -162,37 +162,15 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
   if (pp.m_listLevelIndex.get() >= 1)
     o << pp.m_listLevel.get() << ":" << pp.m_listLevelIndex.get() <<",";
 
-  if (pp.m_border.get()) {
+  for (size_t i = 0; i < pp.m_borders.size(); i++) {
+    if (!pp.m_borders[i].isSet() || pp.m_borders[i]->m_style == MWAWBorder::None)
+      continue;
+    MWAWBorder const &border = pp.m_borders[i].get();
     o << "bord";
-    switch (pp.m_borderStyle.get()) {
-    case libmwaw::BorderSingle:
-      break;
-    case libmwaw::BorderDot:
-      o << "(dot)";
-      break;
-    case libmwaw::BorderLargeDot:
-      o << "(large dot)";
-      break;
-    case libmwaw::BorderDash:
-      o << "(dash)";
-      break;
-    case libmwaw::BorderDouble:
-      o << "(double)";
-      break;
-    default:
-      MWAW_DEBUG_MSG(("MWAWParagraph::operator<<: find unknown style\n"));
-      o << "(#style=" << int(pp.m_borderStyle.get()) << "),";
-      break;
-    }
-    o << "=";
-    if (pp.m_border.get()&libmwaw::TopBorderBit) o << "T";
-    if (pp.m_border.get()&libmwaw::BottomBorderBit) o << "B";
-    if (pp.m_border.get()&libmwaw::LeftBorderBit) o << "L";
-    if (pp.m_border.get()&libmwaw::RightBorderBit) o << "R";
-    if (pp.m_borderWidth.get() > 1) o << "(w=" << pp.m_borderWidth.get() << ")";
-    if (pp.m_borderColor.isSet() && pp.m_borderColor.get())
-      o << "(col=" << std::hex << pp.m_borderColor.get() << std::dec << "),";
-    o << ",";
+    char const *wh[] = { "L", "R", "T", "B", "MiddleH", "MiddleV" };
+    if (i < 6) o << wh[i];
+    else o << "[#wh=" << i << "]";
+    o << "=" << border << ",";
   }
 
   if (!pp.m_extra.empty()) o << "extras=(" << pp.m_extra << ")";
@@ -238,6 +216,16 @@ void MWAWParagraph::send(shared_ptr<MWAWContentListener> listener) const
   } else
     listener->setCurrentListLevel(0);
 
-  listener->setParagraphBorders(m_border.get(), m_borderStyle.get(), m_borderWidth.get(), m_borderColor.get());
+  listener->resetParagraphBorders();
+  int const wh[] = { MWAWBorder::LeftBit, MWAWBorder::RightBit, MWAWBorder::TopBit, MWAWBorder::BottomBit };
+  for (size_t i = 0; i < m_borders.size(); i++) {
+    if (i >= 4) {
+      MWAW_DEBUG_MSG(("MWAWParagraph::send: find odd borders\n"));
+      break;
+    }
+    if (!m_borders[i].isSet() || m_borders[i]->m_style == MWAWBorder::None)
+      continue;
+    listener->setParagraphBorder(wh[i], *m_borders[i]);
+  }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

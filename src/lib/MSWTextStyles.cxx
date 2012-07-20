@@ -47,8 +47,7 @@ struct State {
   State() : m_version(-1), m_defaultFont(2,12),
     m_fontList(), m_paragraphList(), m_sectionList(),
     m_textstructParagraphList(),
-    m_styleFontMap(), m_styleParagraphMap(),
-    m_cols(1) {
+    m_styleFontMap(), m_styleParagraphMap() {
   }
   //! the file version
   int m_version;
@@ -73,9 +72,6 @@ struct State {
 
   //! the list of paragraph in style
   std::map<int, MSWStruct::Paragraph> m_styleParagraphMap;
-
-  /** the actual number of columns */
-  int m_cols;
 };
 }
 
@@ -215,7 +211,8 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     if (m_mainParser->checkPicturePos(pictPos, wh)) {
       ok = true;
       m_input->seek(actPos, WPX_SEEK_SET);
-      f << "pict=" << std::hex << pictPos << std::dec << "[" << wh << "],";
+      font.m_picturePos = pictPos;
+      f << "pictWh=" << wh << ",";
     } else
       m_input->seek(pos+1+8, WPX_SEEK_SET);
   }
@@ -437,7 +434,6 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       para.m_modFont->m_font->setId(val);
       break;
     case 0x2: // a small number between 0 and 4
-    case 0x1d: // a small number 1, 6 (related to frame ?)
     case 0x34: // 0 ( one time)
     case 0x47: // 0 one time
     case 0x49: // 0 ( one time)
@@ -451,11 +447,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       val = (int) m_input->readLong(1);
       f << "f" << std::hex << wh << std::dec << "=" << val << ",";
       break;
-    case 0x1a: // a small negative number
-    case 0x1b: // a small negative number
-    case 0x1c: // dim: related to caps ?
     case 0x23: // alway 0 ?
-    case 0x24: // always b4 ? related to frame ?
     case 0x92: // alway 0 ?
     case 0x93: // a dim ?
     case 0x99: // alway 0 ?
@@ -1048,7 +1040,8 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec,
 {
   if (!m_listener) return;
   int numCols = sec.m_col.get();
-  if (numCols >= 1 && m_state->m_cols > 1 && sec.m_colBreak.get()) {
+  int actCols = m_listener->getSectionNumColumns();
+  if (numCols >= 1 && actCols > 1 && sec.m_colBreak.get()) {
     if (!m_listener->isSectionOpened()) {
       MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: section is not opened\n"));
     } else
@@ -1065,7 +1058,6 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec,
       for (int i = 0; i < numCols; i++) colSize[(size_t)i] = colWidth;
       m_listener->openSection(colSize, WPX_POINT);
     }
-    m_state->m_cols = numCols;
   }
   if (sec.m_paragraphId.isSet() && !recursifCall) {
     MSWStruct::Paragraph para;
@@ -1074,7 +1066,7 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec,
   }
 }
 
-bool MSWTextStyles::sendSection(int id, MSWStruct::Font &newFont, int &newNumColumns)
+bool MSWTextStyles::sendSection(int id, MSWStruct::Font &newFont)
 {
   if (!m_listener) return true;
 
@@ -1084,9 +1076,7 @@ bool MSWTextStyles::sendSection(int id, MSWStruct::Font &newFont, int &newNumCol
   }
   newFont = MSWStruct::Font();
   newFont.m_font = getDefaultFont();
-  m_state->m_cols = newNumColumns;
   setProperty(m_state->m_sectionList[(size_t) id], newFont);
-  newNumColumns = m_state->m_cols;
   return true;
 }
 

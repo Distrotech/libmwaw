@@ -410,14 +410,13 @@ struct Cell : public MWAWTableCell {
   virtual bool send(MWAWContentListenerPtr listener) {
     if (!listener) return true;
     // fixme
-    int border = libmwaw::TopBorderBit
-                 | libmwaw::RightBorderBit
-                 | libmwaw::BottomBorderBit
-                 | libmwaw::LeftBorderBit;
+    int const borderPos = MWAWBorder::TopBit | MWAWBorder::RightBit |
+                          MWAWBorder::BottomBit | MWAWBorder::LeftBit;
 
     MWAWCell cell;
+    MWAWBorder border;
     cell.position() = m_position;
-    cell.setBorders(border);
+    cell.setBorders(borderPos, border);
     cell.setNumSpannedCells(m_numberCellSpanned);
 
     WPXPropertyList propList;

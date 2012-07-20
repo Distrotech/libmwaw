@@ -225,8 +225,8 @@ struct Field {
 //! Internal: the state of a MSWParser
 struct State {
   //! constructor
-  State() : m_version(-1), m_bot(0x100), m_textposList(), m_plcMap(), m_filePlcMap(),
-    m_zoneList(), m_pageList(), m_fieldList(), m_footnoteList(), m_cols(1), m_actPage(0), m_numPages(-1) {
+  State() : m_version(-1), m_bot(0x100), m_headerFooterZones(), m_textposList(), m_plcMap(), m_filePlcMap(),
+    m_zoneList(), m_pageList(), m_fieldList(), m_footnoteList(), m_actPage(0), m_numPages(-1) {
     for (int i = 0; i < 3; i++) m_textLength[i] = 0;
   }
   //! returns the total text size
@@ -261,6 +261,9 @@ struct State {
   //! the text length (main, footnote, header+footer)
   long m_textLength[3];
 
+  //! the header/footer zones
+  std::vector<MWAWEntry> m_headerFooterZones;
+
   //! the text positions
   std::vector<TextEntry> m_textposList;
 
@@ -282,8 +285,6 @@ struct State {
   //! the list of footnotes
   std::vector<Footnote> m_footnoteList;
 
-  /** the actual number of columns */
-  int m_cols;
   int m_actPage/** the actual page*/, m_numPages /** the number of page of the final document */;
 };
 
@@ -325,6 +326,20 @@ void MSWText::setListener(MSWContentListenerPtr listen)
 long MSWText::getMainTextLength() const
 {
   return m_state->m_textLength[0];
+}
+
+MWAWEntry MSWText::getHeader() const
+{
+  if (m_state->m_headerFooterZones.size() == 0)
+    return MWAWEntry();
+  return m_state->m_headerFooterZones[0];
+}
+
+MWAWEntry MSWText::getFooter() const
+{
+  if (m_state->m_headerFooterZones.size() < 2)
+    return MWAWEntry();
+  return m_state->m_headerFooterZones[1];
 }
 
 std::multimap<long, MSWText::PLC> &MSWText::getTextPLCMap()
@@ -490,6 +505,12 @@ bool MSWText::createZones(long bot, long (&textLength)[3])
     plc.m_id = int(i);
     m_state->m_plcMap.insert(std::multimap<long,MSWText::PLC>::value_type
                              (hfLimits[i]+debHeader, plc));
+    if (i+1==hfLimits.size()) break;
+
+    MWAWEntry entry;
+    entry.setBegin(debHeader+hfLimits[i]);
+    entry.setEnd(debHeader+hfLimits[i+1]);
+    m_state->m_headerFooterZones.push_back(entry);
   }
 
   it = entryMap.find("ParagList");
@@ -1026,6 +1047,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
   libmwaw::DebugStream f;
   f << "TextContent[" << cDebPos << "]:";
   std::multimap<long, PLC>::iterator plcIt;
+  long pictPos = -1;
   while (!m_input->atEOS() && cPos < cEnd) {
     MSWStruct::Font font;
     MSWStruct::Paragraph para, textStructPara;
@@ -1164,9 +1186,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       }
       case PLC::Section: {
         if (tableCell) break;
-        int numColumns=m_state->m_cols;
-        if (m_stylesManager->sendSection(plc.m_id, actFont, numColumns)) {
-          m_state->m_cols = numColumns;
+        if (m_stylesManager->sendSection(plc.m_id, actFont)) {
           if (m_stylesManager->getSectionFont(MSWTextStyles::TextZone, plc.m_id, font))
             newFont = true;
         }
@@ -1204,13 +1224,9 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
         m_mainParser->sendFieldComment(plc.m_id);
 #endif
         break;
-      case PLC::Footnote: {
-        int numCols = m_state->m_cols;
-        m_state->m_cols=1;
+      case PLC::Footnote:
         m_mainParser->sendFootnote(plc.m_id);
-        m_state->m_cols=numCols;
         break;
-      }
       case PLC::FootnoteDef:
         break;
       case PLC::ZoneInfo: {
@@ -1328,6 +1344,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
     if (newFont) {
       actFont = paraFont;
       actFont.insert(font);
+      pictPos = actFont.m_picturePos.get();
       m_stylesManager->setProperty(actFont);
     }
     for (long p = cPos; p < cEndPos; p++) {
@@ -1336,7 +1353,12 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       pos++;
       newLine = false;
       switch (c) {
-      case 0x1: // FIXME: object insertion
+      case 0x1:
+        if (pictPos <= 0) {
+          MWAW_DEBUG_MSG(("MSWText::sendText: can not find picture\n"));
+          break;
+        }
+        m_mainParser->sendPicture(pictPos, int(cPos), MWAWPosition::Char);
         break;
       case 0x7: // FIXME: cell end ?
         newLine = true;
@@ -1589,12 +1611,6 @@ void MSWText::flushExtra()
     }
   }
 #endif
-  if (m_state->m_textLength[2]) {
-    MWAWEntry entry;
-    entry.setBegin(m_state->m_textLength[0]+m_state->m_textLength[1]);
-    entry.setLength(m_state->m_textLength[2]);
-    sendText(entry, false);
-  }
 }
 
 

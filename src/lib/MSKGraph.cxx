@@ -2488,6 +2488,9 @@ void MSKGraph::sendTable(int zoneId)
   m_listener->openTable(colsDims, WPX_POINT);
 
   MWAWFont actFont;
+  int const borderPos = MWAWBorder::TopBit | MWAWBorder::RightBit |
+                        MWAWBorder::BottomBit | MWAWBorder::LeftBit;
+  MWAWBorder border;
   for (size_t row = 0; row < nRows; row++) {
     m_listener->openTableRow(float(table.m_rowsDim[row]), WPX_POINT);
 
@@ -2496,7 +2499,7 @@ void MSKGraph::sendTable(int zoneId)
       MWAWCell cell;
       Vec2i cellPosition(Vec2i((int)row,(int)col));
       cell.setPosition(cellPosition);
-      cell.setBorders(0xF);
+      cell.setBorders(borderPos, border);
       // fixme setBackgroundColor
       m_listener->setParagraphJustification(libmwaw::JustificationCenter);
       m_listener->openTableCell(cell, emptyList);

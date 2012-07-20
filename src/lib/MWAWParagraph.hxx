@@ -65,7 +65,7 @@ struct MWAWParagraph {
   MWAWParagraph() : m_marginsUnit(WPX_INCH), m_spacingsInterlineUnit(WPX_PERCENT),
     m_tabs(), m_justify(libmwaw::JustificationLeft),
     m_breakStatus(0), m_listLevelIndex(0), m_listLevel(),
-    m_border(0), m_borderStyle(libmwaw::BorderSingle), m_borderWidth(1), m_borderColor(0), m_extra("") {
+    m_borders(), m_extra("") {
     for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
     m_spacings[0] = 1.0; // interline normal
   }
@@ -82,10 +82,10 @@ struct MWAWParagraph {
     m_breakStatus.insert(para.m_breakStatus);
     m_listLevelIndex.insert(para.m_listLevelIndex);
     m_listLevel.insert(para.m_listLevel);
-    m_border.insert(para.m_border);
-    m_borderStyle.insert(para.m_borderStyle);
-    m_borderWidth.insert(para.m_borderWidth);
-    m_borderColor.insert(para.m_borderColor);
+    if (m_borders.size() < para.m_borders.size())
+      m_borders.resize(para.m_borders.size());
+    for (size_t i = 0; i < para.m_borders.size(); i++)
+      m_borders[i].insert(para.m_borders[i]);
     m_extra += para.m_extra;
   }
   //! send data to the listener
@@ -122,14 +122,8 @@ struct MWAWParagraph {
   /** the actual level */
   Variable<ListLevel> m_listLevel;
 
-  //! list of bits to indicated a border 1: LeftBorderBit, 2: RightBorderBit, ...
-  Variable<int> m_border;
-  //! the border style
-  Variable<libmwaw::BorderStyle> m_borderStyle;
-  //! the border width
-  Variable<int> m_borderWidth;
-  //! the border color
-  Variable<uint32_t> m_borderColor;
+  //! list of border ( order MWAWBorder::Pos)
+  std::vector<Variable<MWAWBorder> > m_borders;
 
   //! a string to store some errors
   std::string m_extra;

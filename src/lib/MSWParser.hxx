@@ -69,23 +69,23 @@ class MSWTextStyles;
 
 //! the entry of MSWParser
 struct MSWEntry : public MWAWEntry {
-  MSWEntry() : MWAWEntry(), m_textId(-1) {
+  MSWEntry() : MWAWEntry(), m_pictType(-1) {
   }
   /** \brief returns the text id
    *
    * This field is used to differentiate main text, header, ...)
    */
-  int textId() const {
-    return m_textId;
+  int pictType() const {
+    return m_pictType;
   }
-  //! sets the text id
-  void setTextId(int newId) {
-    m_textId = newId;
+  //! sets the picture id
+  void setPictType(int newId) {
+    m_pictType = newId;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, MSWEntry const &entry);
-  //! the text identificator
-  int m_textId;
+  //! the picture identificator
+  int m_pictType;
 };
 
 /** \brief the main class to read a Microsoft Word file
@@ -162,6 +162,8 @@ protected:
 
   //! read a picture data
   bool readPicture(MSWEntry &entry);
+  //! send a picture
+  void sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor=MWAWPosition::Char);
 
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
@@ -182,8 +184,10 @@ protected:
   //! try to send a bookmark field id
   void sendFieldComment(int id);
 
-  //! try to send a date
+  //! try to send a footnote, a field to the textParser
   void send(int id, libmwaw::SubDocumentType type);
+  //! try to send a text to the textParser
+  void send(MWAWEntry const &entry);
 
   //
   // low level

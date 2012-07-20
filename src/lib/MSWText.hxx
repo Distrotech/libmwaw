@@ -106,7 +106,11 @@ public:
   /** returns the number of pages */
   int numPages() const;
 
+  /** returns the header entry */
+  MWAWEntry getHeader() const;
 
+  /** returns the footer entry */
+  MWAWEntry getFooter() const;
 protected:
   //! sets the listener in this class and in the helper classes
   void setListener(MSWContentListenerPtr listen);

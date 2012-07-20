@@ -57,10 +57,12 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
     case 1:
       break;
     default:
-      o << "=" << std::hex << font.m_flags[i].get() << ",";
+      o << "=" << std::hex << font.m_flags[i].get() << std::dec << ",";
     }
     o << ",";
   }
+  if (font.m_picturePos.get())
+    o << "pict=" << std::hex << font.m_picturePos.get() << std::dec << ",";
   if (font.m_unknown.get())
     o << "ft=" << std::hex << font.m_unknown.get() << std::dec << ",";
   if (font.m_size.isSet() && font.m_size.get() != font.m_font->size())
@@ -78,6 +80,7 @@ void Font::insert(Font const &font)
   m_font.insert(font.m_font);
   m_size.insert(font.m_size);
   m_value.insert(font.m_value);
+  m_picturePos.insert(font.m_picturePos);
   m_unknown.insert(font.m_unknown);
   for (int i = 0; i < NumFlags; i++)
     m_flags[i] = font.m_flags[i];
@@ -366,35 +369,135 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     if (val != 0 && val!=1)
       f << "#f" << std::hex << c << std::dec << "=" << val << ",";
     return true;
+  case 0x1a: // frame x,y,w
+  case 0x1b:
+  case 0x1c: {
+    if (dSz < 3) return false;
+    val = (int) input->readLong(2);
+    char const *what[] = {"frameX", "frameY", "frameWidth" };
+    f << what[c-0x1a] << "=";
+    if (val < 0) {
+      val = -val;
+      int type=(val&0x1C)>>2;
+      if (c==0x1a) {
+        switch(type) {
+        case 1:
+          f << "center";
+          break;
+        case 2:
+          f << "right";
+          break;
+        case 3:
+          f << "inside";
+          break;
+        case 4:
+          f << "outside";
+          break;
+        default:
+          f << "#" << type;
+          break;
+        }
+        val &= 0xFFE3;
+      } else if (c==0x1b) {
+        switch(type) {
+        case 1:
+          f << "top,";
+          break;
+        case 2:
+          f << "center,";
+          break;
+        case 3:
+          f << "bottom,";
+          break;
+        default:
+          f << "#" << type;
+          break;
+        }
+        val &= 0xFFE3;
+      }
+      if (val)
+        f << "[" << val << "]";
+      f << ",";
+    } else f << val/1440. << ",";
+    break;
+  }
+  case 0x1d:
+    if (dSz < 2) return false;
+    val = (int) input->readULong(1);
+    switch(val&3) {
+    case 0:
+      break; // column
+    case 1:
+      f << "Xrel=margin,";
+      break;
+    case 2:
+      f << "Xrel=page,";
+      break;
+    default:
+      f << "#Xrel=3,";
+      break;
+    }
+    if (val&4) f << "Yrel=page,"; // def margin
+    if (val&0xF8) f << "#rel=" << (val>>3) << ",";
+    break;
   case 0x1e:
   case 0x1f:
   case 0x20:
   case 0x21:
-  case 0x22:
+  case 0x22: {
     if (dSz < 3) return false;
     val = (int) input->readULong(2);
-    switch(c) {
-    case 0x1e:
-      *m_border |= libmwaw::TopBorderBit;
+    MWAWBorder border;
+    if (val & 0x3E00) f << "bord" << (c-0x1e) << "[textSep]=" << int((val& 0x3E00)>>9) << "pt";
+    if (val & 0x4000) f << "bord" << (c-0x1e) << "[textSep]=shad,";
+    if (val & 0x8000) f << "bord" << (c-0x1e) << "*";
+    switch(val &0x1FF) {
+    case 0:
+      border.m_style = MWAWBorder::None;
+      break; // checkme none
+    case 0x40:
+      break; // normal
+    case 0x49:
+      border.m_width = 2;
       break;
-    case 0x1f:
-      *m_border |= libmwaw::LeftBorderBit;
+    case 0x80:
+      border.m_style = MWAWBorder::Double;
       break;
-    case 0x20:
-      *m_border |= libmwaw::BottomBorderBit;
+    case 0x180:
+      border.m_style = MWAWBorder::Dot;
       break;
-    case 0x21:
-      *m_border |= libmwaw::RightBorderBit;
+    case 0x1c0:
+      border.m_style = MWAWBorder::Dash;
       break;
     default:
-    case 0x22:
-      f << "border[middle]";
+      f << ":fl=" << std::hex << (val & 0x1FF) << std::dec;
       break;
     }
-    if (val & 0x7E00) f << ":textSep=" << int((val& 0x8E00)>>9) << "pt";
-    if (val & 0x8000) f << "*";
-    /* 49: double, 40: normal*/
-    if (val & 0x1FF) f << ":fl=" << std::hex << (val & 0x1FF) << std::dec << ",";
+    if (c < 0x22) {
+      size_t const wh[] = { MWAWBorder::Top, MWAWBorder::Left,
+                            MWAWBorder::Bottom, MWAWBorder::Right
+                          };
+      size_t p = wh[c-0x1e];
+      if (m_borders.size() <= p)
+        m_borders.resize(p+1);
+      m_borders[p] = border;
+    } else {
+      m_borders[MWAWBorder::HMiddle] = border;
+      m_borders[MWAWBorder::VMiddle] = border;
+    }
+    break;
+  }
+  case 0x24: { // distance to text (related to frame ?)
+    if (dSz < 3) return false;
+    val = (int) input->readULong(2);
+    if (val) f << "distToText=" << val/1440. << ",";
+    break;
+  }
+  case 0x38:
+    if (dSz < 4) return false;
+    val = (int) input->readLong(1);
+    if (val != 2) f << "#shadType=" <<  val << ",";
+    f << "shad=" << input->readLong(2)/100. << "%,";
     break;
   case 0x98: { // tabs columns
     int sz = (int) input->readULong(2);

@@ -203,10 +203,10 @@ struct TableData {
   int getBorderList() const {
     int res = 0;
     // checkme : 0, 80 = no border but what about the other bytes ...
-    if (m_flags[0]&0xf) res |= libmwaw::TopBorderBit;
-    if (m_flags[1]&0xf) res |= libmwaw::RightBorderBit;
-    if (m_flags[2]&0xf) res |= libmwaw::BottomBorderBit;
-    if (m_flags[3]&0xf) res |= libmwaw::LeftBorderBit;
+    if (m_flags[0]&0xf) res |= MWAWBorder::TopBit;
+    if (m_flags[1]&0xf) res |= MWAWBorder::RightBit;
+    if (m_flags[2]&0xf) res |= MWAWBorder::BottomBit;
+    if (m_flags[3]&0xf) res |= MWAWBorder::LeftBit;
     return res;
   }
   //! operator<<
@@ -411,8 +411,9 @@ struct Cell : public MWAWTableCell {
   virtual bool send(MWAWContentListenerPtr listener) {
     if (!listener) return true;
     MWAWCell cell;
+    MWAWBorder border;
     cell.position() = m_position;
-    cell.setBorders(m_borderList);
+    cell.setBorders(m_borderList, border);
     cell.setNumSpannedCells(m_numberCellSpanned);
 
     WPXPropertyList propList;

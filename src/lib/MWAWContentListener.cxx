@@ -67,8 +67,7 @@ MWAWContentParsingState::MWAWContentParsingState() :
 
   m_paragraphJustification(libmwaw::JustificationLeft),
   m_paragraphLineSpacing(1.0), m_paragraphLineSpacingUnit(WPX_PERCENT),
-  m_paragraphBorders(0), m_paragraphBordersStyle(libmwaw::BorderSingle),
-  m_paragraphBordersWidth(1), m_paragraphBordersColor(0),
+  m_paragraphBorders(),
 
   m_list(), m_currentListLevel(0),
 
@@ -137,6 +136,26 @@ MWAWContentParsingState::~MWAWContentParsingState()
 {
 }
 
+bool MWAWContentParsingState::hasParagraphBorders() const
+{
+  for (size_t i = 0; i < m_paragraphBorders.size(); i++) {
+    if (m_paragraphBorders[i].m_style != MWAWBorder::None)
+      return true;
+  }
+  return false;
+}
+
+bool MWAWContentParsingState::hasParagraphDifferentBorders() const
+{
+  if (!hasParagraphBorders()) return false;
+  if (m_paragraphBorders.size() < 4) return true;
+  for (size_t i = 1; i < m_paragraphBorders.size(); i++) {
+    if (m_paragraphBorders[i] != m_paragraphBorders[0])
+      return true;
+  }
+  return false;
+}
+
 MWAWContentListener::MWAWContentListener(std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface) :
   m_ds(new MWAWDocumentParsingState(pageList)), m_ps(new MWAWContentParsingState), m_psStack(),
   m_documentInterface(documentInterface)
@@ -148,6 +167,7 @@ MWAWContentListener::MWAWContentListener(std::vector<MWAWPageSpan> const &pageLi
 MWAWContentListener::~MWAWContentListener()
 {
 }
+
 
 ///////////////////
 // text data
@@ -410,12 +430,32 @@ void MWAWContentListener::setTabs(const std::vector<MWAWTabStop> &tabStops)
   m_ps->m_tabStops = tabStops;
 }
 
-void MWAWContentListener::setParagraphBorders(int which, libmwaw::BorderStyle style, int width, uint32_t color)
+void MWAWContentListener::resetParagraphBorders()
 {
-  m_ps->m_paragraphBorders = which;
-  m_ps->m_paragraphBordersStyle = style;
-  m_ps->m_paragraphBordersWidth = width >= 1 ? width : 1;
-  m_ps->m_paragraphBordersColor = color;
+  m_ps->m_paragraphBorders.resize(0);
+}
+
+void MWAWContentListener::setParagraphBorder(int wh, MWAWBorder const &border)
+{
+  int const allBits = MWAWBorder::LeftBit|MWAWBorder::RightBit|MWAWBorder::TopBit|MWAWBorder::BottomBit|MWAWBorder::HMiddleBit|MWAWBorder::VMiddleBit;
+  if (wh & (~allBits)) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphBorder: unknown borders\n"));
+    return;
+  }
+  if (m_ps->m_paragraphBorders.size() < 4) {
+    MWAWBorder emptyBorder;
+    emptyBorder.m_style = MWAWBorder::None;
+    m_ps->m_paragraphBorders.resize(4, emptyBorder);
+  }
+  if (wh & MWAWBorder::LeftBit) m_ps->m_paragraphBorders[MWAWBorder::Left] = border;
+  if (wh & MWAWBorder::RightBit) m_ps->m_paragraphBorders[MWAWBorder::Right] = border;
+  if (wh & MWAWBorder::TopBit) m_ps->m_paragraphBorders[MWAWBorder::Top] = border;
+  if (wh & MWAWBorder::BottomBit) m_ps->m_paragraphBorders[MWAWBorder::Bottom] = border;
+  static bool first = true;
+  if ((wh & (MWAWBorder::HMiddleBit|MWAWBorder::VMiddleBit)) && first) {
+    first = false;
+    MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphBorder: set hmiddle or vmiddle is not implemented\n"));
+  }
 }
 
 ///////////////////
@@ -499,6 +539,11 @@ void MWAWContentListener::insertDateTimeField(char const *format)
 bool MWAWContentListener::isSectionOpened() const
 {
   return m_ps->m_isSectionOpened;
+}
+
+int MWAWContentListener::getSectionNumColumns() const
+{
+  return m_ps->m_numColumns;
 }
 
 bool MWAWContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
@@ -866,38 +911,34 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
       propList.insert("fo:text-indent", m_ps->m_listReferencePosition - m_ps->m_paragraphMarginLeft);
     }
     propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
-    if (m_ps->m_paragraphBorders) {
-      std::stringstream stream;
-      stream << m_ps->m_paragraphBordersWidth*0.03 << "cm";
-      switch (m_ps->m_paragraphBordersStyle) {
-      case libmwaw::BorderSingle:
-      case libmwaw::BorderDot:
-      case libmwaw::BorderLargeDot:
-      case libmwaw::BorderDash:
-        stream << " solid";
-        break;
-      case libmwaw::BorderDouble:
-        stream << " double";
-        break;
-      default:
-        break;
+    if (m_ps->hasParagraphBorders()) {
+      bool setAll = !m_ps->hasParagraphDifferentBorders();
+      for (size_t w = 0; w < m_ps->m_paragraphBorders.size(); w++) {
+        MWAWBorder const &border = m_ps->m_paragraphBorders[w];
+        std::string property = border.getPropertyValue();
+        if (property.length() == 0) continue;
+        if (setAll == 0xF) {
+          propList.insert("fo:border", property.c_str());
+          break;
+        }
+        switch(w) {
+        case MWAWBorder::Left:
+          propList.insert("fo:border-left", property.c_str());
+          break;
+        case MWAWBorder::Right:
+          propList.insert("fo:border-right", property.c_str());
+          break;
+        case MWAWBorder::Top:
+          propList.insert("fo:border-top", property.c_str());
+          break;
+        case MWAWBorder::Bottom:
+          propList.insert("fo:border-bottom", property.c_str());
+          break;
+        default:
+          MWAW_DEBUG_MSG(("MWAWContentListener::_appendParagraphProperties: can not send %d border\n",int(w)));
+          break;
+        }
       }
-      stream << " #" << std::hex << std::setfill('0') << std::setw(6)
-             << (m_ps->m_paragraphBordersColor&0xFFFFFF);
-      std::string style = stream.str();
-      int border = m_ps->m_paragraphBorders;
-      if (border == 0xF) {
-        propList.insert("fo:border", style.c_str());
-        return;
-      }
-      if (border & libmwaw::LeftBorderBit)
-        propList.insert("fo:border-left", style.c_str());
-      if (border & libmwaw::RightBorderBit)
-        propList.insert("fo:border-right", style.c_str());
-      if (border & libmwaw::TopBorderBit)
-        propList.insert("fo:border-top", style.c_str());
-      if (border & libmwaw::BottomBorderBit)
-        propList.insert("fo:border-bottom", style.c_str());
     }
   }
   propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop, m_ps->m_paragraphMarginBottomUnit);
@@ -1785,15 +1826,27 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
   propList.insert("table:number-columns-spanned", cell.numSpannedCells()[0]);
   propList.insert("table:number-rows-spanned", cell.numSpannedCells()[1]);
 
-  int v = 1;
-  static char const *bString[] = { "left", "right", "top", "bottom" };
-  int border = cell.borders();
-  for (int c = 0; c < 4; c++) {
-    std::stringstream g;
-    g << "fo:border-" << bString[c];
-    if (border & v)
-      propList.insert(g.str().c_str(), "0.01in solid #000000");
-    v <<= 1;
+  std::vector<MWAWBorder> const &borders = cell.borders();
+  for (size_t c = 0; c < borders.size(); c++) {
+    std::string property = borders[c].getPropertyValue();
+    if (property.length() == 0) continue;
+    switch(c) {
+    case MWAWBorder::Left:
+      propList.insert("fo:border-left", property.c_str());
+      break;
+    case MWAWBorder::Right:
+      propList.insert("fo:border-right", property.c_str());
+      break;
+    case MWAWBorder::Top:
+      propList.insert("fo:border-top", property.c_str());
+      break;
+    case MWAWBorder::Bottom:
+      propList.insert("fo:border-bottom", property.c_str());
+      break;
+    default:
+      MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: can not send %d border\n",int(c)));
+      break;
+    }
   }
   if (cell.isProtected())
     propList.insert("style:cell-protect","protected");

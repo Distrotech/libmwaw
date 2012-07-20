@@ -116,11 +116,54 @@ struct Object {
 };
 
 ////////////////////////////////////////
+//! Internal: the picture of a MSWParser
+struct Picture {
+  struct Zone;
+  Picture() : m_dim(), m_picturesList(), m_flag(0) {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Picture const &pict) {
+    o << "dim=" << pict.m_dim << ",";
+    if (pict.m_flag) o << "f0=" << std::hex << pict.m_flag << std::dec << ",";
+    return o;
+  }
+
+  //! the dimension
+  Box2i m_dim;
+  //! the list of picture
+  std::vector<Zone> m_picturesList;
+  //! an unknown flag
+  int m_flag;
+
+  // ! a small zone
+  struct Zone {
+    Zone() : m_pos(), m_dim() {
+      for (int i = 0; i < 3; i++) m_flags[i] = 0;
+    }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, Zone const &pict) {
+      o << "dim=" << pict.m_dim << ",";
+      if (pict.m_flags[0] != 8) o << "f0=" << pict.m_flags[0] << ",";
+      if (pict.m_flags[1]) o << "f1=" << pict.m_flags[1] << ",";
+      if (pict.m_flags[2] != 1) o << "f2=" << pict.m_flags[2] << ","; // or 0
+      return o;
+    }
+    //! the position in file
+    MWAWEntry m_pos;
+    //! the dimension
+    Box2i m_dim;
+    //! three unknown flags
+    int m_flags[3];
+  };
+
+};
+
+////////////////////////////////////////
 //! Internal: the state of a MSWParser
 struct State {
   //! constructor
   State() : m_eof(-1), m_bot(-1), m_eot(-1),
-    m_textLength(0), m_footnoteLength(0), m_headerfooterLength(0),
+    m_textLength(0), m_picturesMap(), m_footnoteLength(0), m_headerfooterLength(0),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
 
@@ -137,6 +180,8 @@ struct State {
   long m_eot;
   //! the total textlength
   long m_textLength;
+  //! the map filePos -> Picture
+  std::map<long, Picture> m_picturesMap;
   //! the size of the footnote data
   long m_footnoteLength;
   //! the size of the header/footer data
@@ -157,8 +202,15 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
+  //! constructor for footnote, comment
   SubDocument(MSWParser &pars, MWAWInputStreamPtr input, int id, libmwaw::SubDocumentType type) :
-    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(id), m_type(type) {}
+    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(id), m_type(type), m_pictFPos(-1), m_pictCPos(-1)  {}
+  //! constructor for header/footer
+  SubDocument(MSWParser &pars, MWAWInputStreamPtr input, MWAWEntry entry, libmwaw::SubDocumentType type) :
+    MWAWSubDocument(&pars, input, entry), m_id(-1), m_type(type), m_pictFPos(-1), m_pictCPos(-1)  {}
+  //! constructor for picture
+  SubDocument(MSWParser &pars, MWAWInputStreamPtr input, long fPos, int cPos) :
+    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(-1), m_type(libmwaw::DOC_NONE), m_pictFPos(fPos), m_pictCPos(cPos) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -178,6 +230,10 @@ protected:
   int m_id;
   //! the subdocument type
   libmwaw::SubDocumentType m_type;
+  //! the picture file position
+  long m_pictFPos;
+  //! the picture char position
+  int m_pictCPos;
 };
 
 void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type)
@@ -195,7 +251,12 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_parser);
 
   long pos = m_input->tell();
-  reinterpret_cast<MSWParser *>(m_parser)->send(m_id, type);
+  if (m_type == libmwaw::DOC_NONE && m_pictCPos >= 0 && m_pictFPos > 0)
+    reinterpret_cast<MSWParser *>(m_parser)->sendPicture(m_pictFPos, m_pictCPos, MWAWPosition::Frame);
+  else if (m_type == libmwaw::DOC_HEADER_FOOTER)
+    reinterpret_cast<MSWParser *>(m_parser)->send(m_zone);
+  else
+    reinterpret_cast<MSWParser *>(m_parser)->send(m_id, type);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
@@ -206,6 +267,8 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
   if (!sDoc) return true;
   if (m_id != sDoc->m_id) return true;
   if (m_type != sDoc->m_type) return true;
+  if (m_pictFPos != sDoc->m_pictFPos) return true;
+  if (m_pictCPos != sDoc->m_pictCPos) return true;
   return false;
 }
 }
@@ -354,6 +417,11 @@ void MSWParser::sendFieldComment(int id)
   m_listener->insertComment(subdoc);
 }
 
+void MSWParser::send(MWAWEntry const &entry)
+{
+  m_textParser->sendText(entry, false);
+}
+
 void MSWParser::send(int id, libmwaw::SubDocumentType type)
 {
   switch(type) {
@@ -425,7 +493,19 @@ void MSWParser::createDocument(WPXDocumentInterface *documentInterface)
   // create the page list
   std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(m_pageSpan);
+  MWAWEntry entry = m_textParser->getHeader();
+  if (entry.valid()) {
+    shared_ptr<MWAWSubDocument> subdoc
+    (new MSWParserInternal::SubDocument(*this, getInput(), entry, libmwaw::DOC_HEADER_FOOTER));
+    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+  }
+  entry = m_textParser->getFooter();
+  if (entry.valid()) {
+    shared_ptr<MWAWSubDocument> subdoc
+    (new MSWParserInternal::SubDocument(*this, getInput(), entry, libmwaw::DOC_HEADER_FOOTER));
+    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
 
+  }
   int numPage = 1;
   if (m_textParser->numPages() > numPage)
     numPage = m_textParser->numPages();
@@ -1427,7 +1507,7 @@ bool MSWParser::checkPicturePos(long pos, int type)
   entry.setBegin(pos);
   entry.setEnd(endPos);
   entry.setType("Picture");
-  entry.setTextId(type);
+  entry.setPictType(type);
   entry.setId(id++);
   m_entryMap.insert
   (std::multimap<std::string, MSWEntry>::value_type(entry.type(), entry));
@@ -1437,6 +1517,8 @@ bool MSWParser::checkPicturePos(long pos, int type)
 
 bool MSWParser::readPicture(MSWEntry &entry)
 {
+  if (m_state->m_picturesMap.find(entry.begin())!=m_state->m_picturesMap.end())
+    return true;
   if (entry.length() < 30 && entry.length() != 14) {
     MWAW_DEBUG_MSG(("MSWParser::readPicture: the zone seems too short\n"));
     return false;
@@ -1446,7 +1528,7 @@ bool MSWParser::readPicture(MSWEntry &entry)
   entry.setParsed(true);
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
-  f << "Entries(Picture)[" << entry.textId() << "-" << entry.id() << "]:";
+  f << "Entries(Picture)[" << entry.pictType() << "-" << entry.id() << "]:";
   long sz = (long) input->readULong(4);
   if (sz > entry.length()) {
     MWAW_DEBUG_MSG(("MSWParser::readPicture: the zone size seems too big\n"));
@@ -1454,19 +1536,21 @@ bool MSWParser::readPicture(MSWEntry &entry)
   }
   int N = (int) input->readULong(1);
   f << "N=" << N << ",";
-  int val = (int) input->readULong(1); // find 0 or 0x80
-  if (val) f << "fl=" << std::hex << val << std::dec << ",";
+  MSWParserInternal::Picture pict;
+  pict.m_flag = (int) input->readULong(1); // find 0 or 0x80
   int dim[4];
   for (int i = 0; i < 4; i++)
     dim[i] = (int) input->readLong(2);
-  f << "dim=[" << dim[1] << "x" << dim[0] << "," << dim[3] << "x" << dim[2] << "],";
+  pict.m_dim=Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+  f << pict;
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
   for (int n=0; n < N; n++) {
+    MSWParserInternal::Picture::Zone zone;
     pos = input->tell();
     f.str("");
-    f << "Picture-" << n << "[" << entry.textId() << "-" << entry.id() << "]:";
+    f << "Picture-" << n << "[" << entry.pictType() << "-" << entry.id() << "]:";
     sz = (long) input->readULong(4);
     if (sz < 16 || sz+pos > entry.end()) {
       MWAW_DEBUG_MSG(("MSWParser::readPicture: pb with the picture size\n"));
@@ -1475,38 +1559,98 @@ bool MSWParser::readPicture(MSWEntry &entry)
       ascii().addNote(f.str().c_str());
       return false;
     }
-    val = (int) input->readULong(1); // always 8?
-    if (val) f << "type?=" << val << ",";
-    val = (int) input->readLong(1); // always 0 ?
-    if (val) f << "unkn=" << val << ",";
-    val = (int) input->readLong(2); // almost always 1 : two time 0?
-    if (val) f << "id?=" << val << ",";
+    for (int i = 0; i < 3; i++)
+      zone.m_flags[i] = (int) input->readULong((i==2) ? 2 : 1);
     for (int i = 0; i < 4; i++)
       dim[i] = (int) input->readLong(2);
-    f << "dim=[" << dim[1] << "x" << dim[0] << "," << dim[3] << "x" << dim[2] << "],";
+    zone.m_dim=Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    zone.m_pos.setBegin(pos+16);
+    zone.m_pos.setLength(sz-16);
+    f << zone;
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
+    if (sz <= 16)
+      continue;
+    pict.m_picturesList.push_back(zone);
 #ifdef DEBUG_WITH_FILES
-    if (sz > 16) {
-      ascii().skipZone(pos+16, pos+sz-1);
-      WPXBinaryData file;
-      input->seek(pos+16, WPX_SEEK_SET);
-      input->readDataBlock(sz-16, file);
-      static int volatile pictName = 0;
-      libmwaw::DebugStream f2;
-      f2 << "PICT-" << ++pictName << ".pct";
-      libmwaw::Debug::dumpFile(file, f2.str().c_str());
-    }
+    ascii().skipZone(pos+16, pos+sz-1);
+    WPXBinaryData file;
+    input->seek(pos+16, WPX_SEEK_SET);
+    input->readDataBlock(sz-16, file);
+    static int volatile pictName = 0;
+    libmwaw::DebugStream f2;
+    f2 << "PICT-" << ++pictName << ".pct";
+    libmwaw::Debug::dumpFile(file, f2.str().c_str());
 #endif
+
     input->seek(pos+sz, WPX_SEEK_SET);
   }
-
+  m_state->m_picturesMap[entry.begin()]=pict;
   pos = input->tell();
   if (pos != entry.end())
     ascii().addDelimiter(pos, '|');
   ascii().addPos(entry.end());
   ascii().addNote("_");
   return true;
+}
+
+void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
+{
+  if (!m_listener) {
+    MWAW_DEBUG_MSG(("MSWParser::sendPicture: listener is not set\n"));
+    return;
+  }
+  if (m_state->m_picturesMap.find(fPos)==m_state->m_picturesMap.end()) {
+    MWAW_DEBUG_MSG(("MSWParser::sendPicture: can not find picture for pos %lx\n", fPos));
+    return;
+  }
+  MSWParserInternal::Picture const &pict= m_state->m_picturesMap.find(fPos)->second;
+  MWAWInputStreamPtr input = getInput();
+  if (pict.m_picturesList.size()!=1 &&
+      (anchor == MWAWPosition::Char || anchor == MWAWPosition::CharBaseLine)) {
+    shared_ptr<MSWParserInternal::SubDocument> subdoc
+    (new MSWParserInternal::SubDocument(*this, input, fPos, cPos));
+    MWAWPosition pictPos(pict.m_dim.min(), pict.m_dim.size(), WPX_POINT);;
+    pictPos.setRelativePosition(MWAWPosition::Char,
+                                MWAWPosition::XLeft, MWAWPosition::YTop);
+    pictPos.m_wrapping =  MWAWPosition::WRunThrough;
+    m_listener->insertTextBox(pictPos, subdoc);
+    return;
+  }
+  long actPos = input->tell();
+  MWAWPosition basicPos(Vec2f(0.,0.), Vec2f(100.,100.), WPX_POINT);
+  if (anchor != MWAWPosition::Page && anchor != MWAWPosition::Frame) {
+    basicPos.setRelativePosition(anchor, MWAWPosition::XLeft, MWAWPosition::YCenter);
+    basicPos.m_wrapping =  MWAWPosition::WRunThrough;
+  } else
+    basicPos.setRelativePosition(anchor);
+
+
+  std::string pictType;
+  WPXBinaryData data;
+  Box2f naturalBox;
+  for (size_t p = 0; p < pict.m_picturesList.size(); p++) {
+    MSWParserInternal::Picture::Zone const &zone=pict.m_picturesList[p];
+    if (!zone.m_pos.valid()) continue;
+    MWAWPosition pos(basicPos);
+    pos.setOrigin(pos.origin()+(Vec2f)zone.m_dim.min());
+    pos.setSize(zone.m_dim.size());
+
+    input->seek(zone.m_pos.begin(), WPX_SEEK_SET);
+    MWAWPict::ReadResult res = MWAWPictData::check(input, (int)zone.m_pos.length(), naturalBox);
+    if (res == MWAWPict::MWAW_R_BAD) {
+      MWAW_DEBUG_MSG(("MSWParser::sendPicture: can not find the picture %d\n", int(p)));
+      continue;
+    }
+
+    input->seek(zone.m_pos.begin(), WPX_SEEK_SET);
+    shared_ptr<MWAWPict> thePict(MWAWPictData::get(input, (int)zone.m_pos.length()));
+    if (!thePict) continue;
+    thePict->getBinary(data,pictType);
+    if (data.size())
+      m_listener->insertPicture(pos, data, pictType);
+  }
+  input->seek(actPos, WPX_SEEK_SET);
 }
 
 ////////////////////////////////////////////////////////////

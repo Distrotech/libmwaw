@@ -55,7 +55,7 @@ struct Font {
   enum { NumFlags=9 };
 
   //! the constructor
-  Font(): m_font(MWAWFont(-1,0)), m_size(0), m_value(0), m_unknown(0), m_extra("") {
+  Font(): m_font(MWAWFont(-1,0)), m_size(0), m_value(0), m_picturePos(0), m_unknown(0), m_extra("") {
     for (int i = 0; i < NumFlags; i++) m_flags[i]=Variable<int>(0);
   }
 
@@ -76,6 +76,8 @@ struct Font {
   Variable<int> m_value;
   //! a list of flags
   Variable<int> m_flags[NumFlags];
+  //! a picture file position (if this corresponds to a picture)
+  Variable<long> m_picturePos;
   //! some unknown flag
   Variable<int> m_unknown;
   //! extra data

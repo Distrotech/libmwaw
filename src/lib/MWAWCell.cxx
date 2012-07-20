@@ -36,6 +36,29 @@
 
 #include "MWAWCell.hxx"
 
+void MWAWCellFormat::setBorders(int wh, MWAWBorder &border)
+{
+  int const allBits = MWAWBorder::LeftBit|MWAWBorder::RightBit|MWAWBorder::TopBit|MWAWBorder::BottomBit|MWAWBorder::HMiddleBit|MWAWBorder::VMiddleBit;
+  if (wh & (~allBits)) {
+    MWAW_DEBUG_MSG(("MWAWCellFormat::setBorders: unknown borders\n"));
+    return;
+  }
+  size_t numData = 4;
+  if (wh & (MWAWBorder::HMiddleBit|MWAWBorder::VMiddleBit))
+    numData=6;
+  if (m_bordersList.size() < numData) {
+    MWAWBorder emptyBorder;
+    emptyBorder.m_style = MWAWBorder::None;
+    m_bordersList.resize(numData, emptyBorder);
+  }
+  if (wh & MWAWBorder::LeftBit) m_bordersList[MWAWBorder::Left] = border;
+  if (wh & MWAWBorder::RightBit) m_bordersList[MWAWBorder::Right] = border;
+  if (wh & MWAWBorder::TopBit) m_bordersList[MWAWBorder::Top] = border;
+  if (wh & MWAWBorder::BottomBit) m_bordersList[MWAWBorder::Bottom] = border;
+  if (wh & MWAWBorder::HMiddleBit) m_bordersList[MWAWBorder::HMiddle] = border;
+  if (wh & MWAWBorder::VMiddleBit) m_bordersList[MWAWBorder::VMiddle] = border;
+}
+
 int MWAWCellFormat::compare(MWAWCellFormat const &cell) const
 {
   int diff = int(m_format) - int(cell.m_format);
@@ -48,8 +71,12 @@ int MWAWCellFormat::compare(MWAWCellFormat const &cell) const
   if (diff) return diff;
   diff = int(m_hAlign) - int(cell.m_hAlign);
   if (diff) return diff;
-  diff = m_bordersList - cell.m_bordersList;
+  diff = int(m_bordersList.size()) - int(cell.m_bordersList.size());
   if (diff) return diff;
+  for (size_t c = 0; c < m_bordersList.size(); c++) {
+    diff = m_bordersList[c].compare(cell.m_bordersList[c]);
+    if (diff) return diff;
+  }
   return 0;
 }
 
@@ -182,14 +209,15 @@ std::ostream &operator<<(std::ostream &o, MWAWCellFormat const &cell)
   default:
     break; // default
   }
-  int border = cell.m_bordersList;
-  if (border) {
-    o << ",bord=[";
-    if (border&libmwaw::LeftBorderBit) o << "Lef";
-    if (border&libmwaw::RightBorderBit) o << "Rig";
-    if (border&libmwaw::TopBorderBit) o << "Top";
-    if (border&libmwaw::BottomBorderBit) o << "Bot";
-    o << "]";
+
+  for (size_t i = 0; i < cell.m_bordersList.size(); i++) {
+    if (cell.m_bordersList[i].m_style == MWAWBorder::None)
+      continue;
+    o << "bord";
+    char const *wh[] = { "L", "R", "T", "B", "MiddleH", "MiddleV" };
+    if (i < 6) o << wh[i];
+    else o << "[#wh=" << i << "]";
+    o << "=" << cell.m_bordersList[i] << ",";
   }
   return o;
 }

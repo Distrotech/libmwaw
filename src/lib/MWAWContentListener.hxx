@@ -73,6 +73,9 @@ struct MWAWContentParsingState {
   MWAWContentParsingState();
   ~MWAWContentParsingState();
 
+  bool hasParagraphBorders() const;
+  bool hasParagraphDifferentBorders() const;
+
   WPXString m_textBuffer;
   int m_numDeferredTabs;
 
@@ -87,10 +90,7 @@ struct MWAWContentParsingState {
   libmwaw::Justification m_paragraphJustification;
   double m_paragraphLineSpacing;
   WPXUnit m_paragraphLineSpacingUnit;
-  int m_paragraphBorders;
-  libmwaw::BorderStyle m_paragraphBordersStyle;
-  int m_paragraphBordersWidth;
-  uint32_t m_paragraphBordersColor;
+  std::vector<MWAWBorder> m_paragraphBorders;
 
   shared_ptr<MWAWList> m_list;
   uint8_t m_currentListLevel;
@@ -224,13 +224,13 @@ public:
    * \param tabStops the tabulations
    */
   void setTabs(const std::vector<MWAWTabStop> &tabStops);
-  /** indicates that the paragraph has a basic borders (ie. a black line)
-   * \param which = libmwaw::LeftBorderBit | ...
-   * \param style = libmwaw::BorderSingle | libmwaw::BorderDouble
-   * \param width = 1,2,3,...
-   * \param color: an rgb color
+  /** reset the paragraph to have no border */
+  void resetParagraphBorders();
+  /** set a paragraph has one or several border:
+   * \param which LeftBit | RightBit | ...
+   * \param border the border
    */
-  void setParagraphBorders(int which, libmwaw::BorderStyle style=libmwaw::BorderSingle, int width=1, uint32_t color=0);
+  void setParagraphBorder(int which, MWAWBorder const &border);
 
   // ------ list format -----------
   /** function to set the actual list */
@@ -287,6 +287,8 @@ public:
   // ------- section ---------------
   //! returns true if a section is opened
   bool isSectionOpened() const;
+  //! returns the actual number of columns ( or 1 if no section is opened )
+  int getSectionNumColumns() const;
   //! open a section if possible
   bool openSection(std::vector<int> colsWidth=std::vector<int>(), WPXUnit unit=WPX_POINT);
   //! close a section

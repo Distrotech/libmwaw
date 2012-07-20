@@ -23,11 +23,16 @@
 /* "This product is not manufactured, approved, or supported by
  * Corel Corporation or Corel Corporation Limited."
  */
-#include "libmwaw_internal.hxx"
-#include <libwpd-stream/WPXStream.h>
+#include <iomanip>
+#include <string>
+#include <sstream>
+
 #include <ctype.h>
 #include <locale.h>
-#include <string>
+
+#include <libwpd-stream/WPXStream.h>
+
+#include "libmwaw_internal.hxx"
 
 // OSNOLA
 /** namespace used to regroup all libwpd functions, enumerations which we have redefined for internal usage */
@@ -68,5 +73,72 @@ std::string numberingTypeToString(NumberingType type)
   MWAW_DEBUG_MSG(("libmwaw::numberingTypeToString: must not be called with type %d\n", int(type)));
   return "1";
 }
+}
+
+int MWAWBorder::compare(MWAWBorder const &orig) const
+{
+  int diff = int(m_style)-int(orig.m_style);
+  if (diff) return diff;
+  diff = m_width-orig.m_width;
+  if (diff) return diff;
+  if (m_color < orig.m_color) return -1;
+  if (m_color > orig.m_color) return -1;
+  return 0;
+}
+
+std::string MWAWBorder::getPropertyValue() const
+{
+  if (m_style == None) return "";
+  std::stringstream stream;
+  stream << m_width*0.03 << "cm";
+  switch (m_style) {
+  case Single:
+  case Dot:
+  case LargeDot:
+  case Dash:
+    stream << " solid";
+    break;
+  case Double:
+    stream << " double";
+    break;
+  case None:
+  default:
+    break;
+  }
+  stream << " #" << std::hex << std::setfill('0') << std::setw(6)
+         << (m_color&0xFFFFFF);
+  return stream.str();
+}
+
+std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
+{
+  switch (border.m_style) {
+  case MWAWBorder::None:
+    o << "none:";
+    break;
+  case MWAWBorder::Single:
+    break;
+  case MWAWBorder::Dot:
+    o << "dot:";
+    break;
+  case MWAWBorder::LargeDot:
+    o << "large dot:";
+    break;
+  case MWAWBorder::Dash:
+    o << "dash:";
+    break;
+  case MWAWBorder::Double:
+    o << "double:";
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MWAWBorder::operator<<: find unknown style\n"));
+    o << "#style=" << int(border.m_style) << ":";
+    break;
+  }
+  if (border.m_width > 1) o << "w=" << border.m_width << ":";
+  if (border.m_color)
+    o << "col=" << std::hex << border.m_color << std::dec << ":";
+  o << ",";
+  return o;
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
