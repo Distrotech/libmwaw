@@ -108,11 +108,10 @@ protected:
   //! try to read a paragraph
   bool readParagraph(MSWStruct::Paragraph &para, int dataSz=-1);
   //! send a default paragraph
-  void sendDefaultParagraph(MSWStruct::Font &actFont);
+  void sendDefaultParagraph();
 
   //! send paragraph properties
-  void setProperty(MSWStruct::Paragraph const &para,
-                   MSWStruct::Font &actFont, bool recursifCall=false);
+  void setProperty(MSWStruct::Paragraph const &para, bool recursifCall=false);
 
   //! read the main char/paragraph plc list
   bool readPLCList(MSWEntry &entry);
@@ -122,23 +121,24 @@ protected:
       Returns a textstruct parag id or -1 */
   int readTextStructParaZone(std::string &extra);
   //! read the char/paragraph plc : type=0: char, type=1: parag
-  bool readPLC(MSWEntry &entry, int type);
+  bool readPLC(MSWEntry &entry, int type, Vec2<long> const &fileLimit);
 
   // section:
   //! return a section corresponding to an index
   bool getSection(ZoneType type, int id, MSWStruct::Section &section);
+  //! return a paragraph corresponding to the section
+  bool getSectionParagraph(ZoneType type, int id, MSWStruct::Paragraph &para);
   //! return a font corresponding to the section
   bool getSectionFont(ZoneType type, int id, MSWStruct::Font &font);
   //! read the text section
   bool readSection(MSWEntry &entry);
-  //! try to send a section then update the font
-  bool sendSection(int id, MSWStruct::Font &newFont);
+  //! try to send a section
+  bool sendSection(int id);
 
   //! try to read the section data
   bool readSection(MSWStruct::Section &section, long pos);
   //! send section properties
-  void setProperty(MSWStruct::Section const &sec,
-                   MSWStruct::Font &actFont, bool recursifCall=false);
+  void setProperty(MSWStruct::Section const &sec);
 
   //! try to read the styles zone
   bool readStyles(MSWEntry &entry);

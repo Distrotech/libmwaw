@@ -320,15 +320,15 @@ bool MSWTextStyles::getParagraph(ZoneType type, int id, MSWStruct::Paragraph &pa
     return false;
   }
 
-  MWAW_DEBUG_MSG(("MSWTextStyles::getParagraph: can not find font with %d[type=%d]\n", id, int(type)));
+  MWAW_DEBUG_MSG(("MSWTextStyles::getParagraph: can not find paragraph with %d[type=%d]\n", id, int(type)));
   return false;
 }
 
-void MSWTextStyles::sendDefaultParagraph(MSWStruct::Font &actFont)
+void MSWTextStyles::sendDefaultParagraph()
 {
   if (!m_listener) return;
   MSWStruct::Paragraph defPara;
-  setProperty(defPara, actFont, false);
+  setProperty(defPara, false);
 }
 
 bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
@@ -459,6 +459,24 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       val = (int) m_input->readLong(2);
       f << "f" << std::hex << wh << std::dec << "=" << val << ",";
       break;
+    case 0x9a: { // a size and 2 number ?
+      if (actPos+2 > endPos) {
+        done = false;
+        f << "#";
+        break;
+      }
+      int dSz = (int) m_input->readULong(1);
+      if (actPos+2+dSz > endPos || (dSz%2)) {
+        done = false;
+        f << "#";
+        break;
+      }
+      f << "f" << std::hex << wh << "=[";
+      for (int i = 0; i < dSz/2; i++)
+        f << m_input->readULong(2) << ",";
+      f << std::dec << "],";
+      break;
+    }
     case 0x9f: // two small number
       if (actPos+3 > endPos) {
         done = false;
@@ -608,7 +626,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       first = false;
     }
     ascii().addDelimiter(m_input->tell(),'|');
-    f << "#";
+    f << "####";
     m_input->seek(endPos, WPX_SEEK_SET);
   }
   para.m_extra += f.str();
@@ -617,27 +635,12 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
 }
 
 void MSWTextStyles::setProperty(MSWStruct::Paragraph const &para,
-                                MSWStruct::Font &actFont, bool recursifCall)
+                                bool recursifCall)
 {
   if (!m_listener) return;
   if (para.m_section.isSet() && !recursifCall)
-    setProperty(para.m_section.get(), actFont, true);
+    setProperty(para.m_section.get());
   para.send(m_listener);
-
-  bool needSendFont = true;
-  if (para.m_font2.isSet())
-    actFont = para.m_font2.get();
-  else if (para.m_font.isSet())
-    actFont = para.m_font.get();
-  else
-    needSendFont = false;
-
-  if (needSendFont || para.m_modFont.isSet()) {
-    MSWStruct::Font finalFont = actFont;
-    if (para.m_modFont.isSet())
-      finalFont.insert(*para.m_modFont);
-    setProperty(finalFont);
-  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -676,7 +679,8 @@ bool MSWTextStyles::readPLCList(MSWEntry &entry)
       MWAW_DEBUG_MSG(("MSWTextStyles::readPLCList: plc def is outside the file\n"));
     } else {
       long actPos = m_input->tell();
-      readPLC(plc, entry.id());
+      Vec2<long> fLimit(textPos[(size_t)i], textPos[(size_t)i+1]);
+      readPLC(plc, entry.id(), fLimit);
       m_input->seek(actPos, WPX_SEEK_SET);
     }
   }
@@ -690,7 +694,7 @@ bool MSWTextStyles::readPLCList(MSWEntry &entry)
   return true;
 }
 
-bool MSWTextStyles::readPLC(MSWEntry &entry, int type)
+bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
 {
   int expectedSize = (version() <= 3) ? 0x80 : 0x200;
   int posFactor = (version() <= 3) ? 1 : 2;
@@ -715,6 +719,10 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type)
   filePos.resize((size_t) N+1);
   for (int i = 0; i <= N; i++)
     filePos[(size_t)i] = (long) m_input->readULong(4);
+  if (filePos[0] != fLimit[0]) {
+    MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: bad first limit\n"));
+    return false;
+  }
   std::map<int, int> mapPosId;
   std::vector<int> decal;
   decal.resize((size_t)N);
@@ -726,13 +734,10 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type)
   for (size_t i = 0; i < size_t(N); i++) {
     decal[i] = (int) m_input->readULong(1);
     int id = -1;
-    bool isTable = false;
     if (decal[i]) {
-      if (mapPosId.find(decal[i]) != mapPosId.end()) {
+      if (mapPosId.find(decal[i]) != mapPosId.end())
         id = mapPosId.find(decal[i])->second;
-        if (type && id >= 0 && size_t(id) < m_state->m_paragraphList.size())
-          isTable = m_state->m_paragraphList[size_t(id)].m_inCell.get();
-      } else {
+      else {
         id = int(numData++);
         mapPosId[decal[i]] = id;
 
@@ -789,7 +794,6 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type)
               }
             }
           }
-          isTable = para.m_inCell.get();
           m_state->m_paragraphList.push_back(para);
         }
         m_input->seek(actPos, WPX_SEEK_SET);
@@ -800,10 +804,6 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type)
     f << std::hex << filePos[i] << std::dec;
     MSWText::PLC plc(plcType, id);
     plcMap.insert(std::multimap<long,MSWText::PLC>::value_type(filePos[i], plc));
-    if (isTable) {
-      plc = MSWText::PLC(MSWText::PLC::Table, -1);
-      plcMap.insert(std::multimap<long,MSWText::PLC>::value_type(filePos[i], plc));
-    }
     if (id >= 0) {
       if (type==0) f << ":F" << id;
       else f << ":P" << id;
@@ -816,6 +816,12 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type)
 
   ascii().addPos(entry.end());
   ascii().addNote("_");
+  if (filePos[(size_t)N] != fLimit[1]) {
+    MSWEntry nextEntry(entry);
+    nextEntry.setBegin(entry.begin()+expectedSize);
+    Vec2<long> newLimit(filePos[(size_t)N], fLimit[1]);
+    readPLC(nextEntry,type,newLimit);
+  }
   return true;
 }
 
@@ -895,6 +901,11 @@ int MSWTextStyles::readTextStructParaZone(std::string &extra)
     if (readParagraph(para, 2)) {
       id = int(m_state->m_textstructParagraphList.size());
       m_state->m_textstructParagraphList.push_back(para);
+#ifdef DEBUG_WITH_FILES
+      f << "[";
+      para.print(f, m_convertissor);
+      f << "]";
+#endif
     } else {
       m_input->seek(pos+1, WPX_SEEK_SET);
       f << "#f" << std::hex << c << std::dec << "=" << (int) m_input->readULong(1);
@@ -930,6 +941,14 @@ bool MSWTextStyles::getSection(ZoneType type, int id, MSWStruct::Section &sectio
   return false;
 }
 
+bool MSWTextStyles::getSectionParagraph(ZoneType type, int id, MSWStruct::Paragraph &para)
+{
+  MSWStruct::Section sec;
+  if (!getSection(type, id, sec)) return false;
+  if (!sec.m_paragraphId.isSet()) return false;
+  return getParagraph(StyleZone, *sec.m_paragraphId, para);
+}
+
 bool MSWTextStyles::getSectionFont(ZoneType type, int id, MSWStruct::Font &font)
 {
   MSWStruct::Section sec;
@@ -937,7 +956,7 @@ bool MSWTextStyles::getSectionFont(ZoneType type, int id, MSWStruct::Font &font)
 
   if (!sec.m_paragraphId.isSet()) return false;
   MSWStruct::Paragraph para;
-  if (!getParagraph(StyleZone, id, para))
+  if (!getParagraph(StyleZone, *sec.m_paragraphId, para))
     return false;
 
   if (para.m_font2.isSet())
@@ -1035,38 +1054,36 @@ bool MSWTextStyles::readSection(MSWStruct::Section &sec, long debPos)
   return true;
 }
 
-void MSWTextStyles::setProperty(MSWStruct::Section const &sec,
-                                MSWStruct::Font &actFont, bool recursifCall)
+void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
 {
   if (!m_listener) return;
-  int numCols = sec.m_col.get();
-  int actCols = m_listener->getSectionNumColumns();
-  if (numCols >= 1 && actCols > 1 && sec.m_colBreak.get()) {
-    if (!m_listener->isSectionOpened()) {
-      MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: section is not opened\n"));
-    } else
-      m_listener->insertBreak(MWAW_COLUMN_BREAK);
+  if (m_listener->isHeaderFooterOpened()) {
+    MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: can not open a section in header/footer\n"));
   } else {
-    if (m_listener->isSectionOpened())
-      m_listener->closeSection();
-    if (numCols<=1) m_listener->openSection();
-    else {
-      // column seems to have equal size
-      int colWidth = int((72.0*m_mainParser->pageWidth())/numCols);
-      std::vector<int> colSize;
-      colSize.resize((size_t) numCols);
-      for (int i = 0; i < numCols; i++) colSize[(size_t)i] = colWidth;
-      m_listener->openSection(colSize, WPX_POINT);
+    int numCols = sec.m_col.get();
+    int actCols = m_listener->getSectionNumColumns();
+    if (numCols >= 1 && actCols > 1 && sec.m_colBreak.get()) {
+      if (!m_listener->isSectionOpened()) {
+        MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: section is not opened\n"));
+      } else
+        m_listener->insertBreak(MWAW_COLUMN_BREAK);
+    } else {
+      if (m_listener->isSectionOpened())
+        m_listener->closeSection();
+      if (numCols<=1) m_listener->openSection();
+      else {
+        // column seems to have equal size
+        int colWidth = int((72.0*m_mainParser->pageWidth())/numCols);
+        std::vector<int> colSize;
+        colSize.resize((size_t) numCols);
+        for (int i = 0; i < numCols; i++) colSize[(size_t)i] = colWidth;
+        m_listener->openSection(colSize, WPX_POINT);
+      }
     }
-  }
-  if (sec.m_paragraphId.isSet() && !recursifCall) {
-    MSWStruct::Paragraph para;
-    if (getParagraph(StyleZone, sec.m_paragraphId.get(), para))
-      setProperty(para, actFont, true);
   }
 }
 
-bool MSWTextStyles::sendSection(int id, MSWStruct::Font &newFont)
+bool MSWTextStyles::sendSection(int id)
 {
   if (!m_listener) return true;
 
@@ -1074,9 +1091,7 @@ bool MSWTextStyles::sendSection(int id, MSWStruct::Font &newFont)
     MWAW_DEBUG_MSG(("MSWTextStyles::sendText: can not find new section\n"));
     return false;
   }
-  newFont = MSWStruct::Font();
-  newFont.m_font = getDefaultFont();
-  setProperty(m_state->m_sectionList[(size_t) id], newFont);
+  setProperty(m_state->m_sectionList[(size_t) id]);
   return true;
 }
 

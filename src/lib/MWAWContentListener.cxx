@@ -67,6 +67,7 @@ MWAWContentParsingState::MWAWContentParsingState() :
 
   m_paragraphJustification(libmwaw::JustificationLeft),
   m_paragraphLineSpacing(1.0), m_paragraphLineSpacingUnit(WPX_PERCENT),
+  m_paragraphLineSpacingType(libmwaw::Fixed),
   m_paragraphBorders(),
 
   m_list(), m_currentListLevel(0),
@@ -375,10 +376,15 @@ bool MWAWContentListener::isParagraphOpened() const
   return m_ps->m_isParagraphOpened;
 }
 
-void MWAWContentListener::setParagraphLineSpacing(const double lineSpacing, WPXUnit unit)
+void MWAWContentListener::setParagraphLineSpacing(const double lineSpacing, WPXUnit unit, libmwaw::LineSpacing type)
 {
   m_ps->m_paragraphLineSpacing = lineSpacing;
   m_ps->m_paragraphLineSpacingUnit = unit;
+  m_ps->m_paragraphLineSpacingType = type;
+  if (type == libmwaw::AtLeast && unit == WPX_PERCENT) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphLineSpacing: can not used AtLeast with percent type\n"));
+    m_ps->m_paragraphLineSpacingType = libmwaw::Fixed;
+  }
 }
 
 void MWAWContentListener::setParagraphJustification(libmwaw::Justification justification, bool force)
@@ -559,10 +565,9 @@ bool MWAWContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
   }
 
   size_t numCols = colsWidth.size();
-  if (numCols <= 1) {
+  if (numCols <= 1)
     m_ps->m_textColumns.resize(0);
-    m_ps->m_numColumns=1;
-  } else {
+  else {
     float factor = 1.0;
     switch(unit) {
     case WPX_POINT:
@@ -577,7 +582,6 @@ bool MWAWContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
       return false;
     }
     m_ps->m_textColumns.resize(numCols);
-    m_ps->m_numColumns=int(numCols);
     for (size_t col = 0; col < numCols; col++) {
       MWAWColumnDefinition column;
       column.m_width = factor*float(colsWidth[col]);
@@ -599,7 +603,6 @@ bool MWAWContentListener::closeSection()
     MWAW_DEBUG_MSG(("MWAWContentListener::closeSection: impossible to close a section\n"));
     return false;
   }
-
   _closeSection();
   return true;
 }
@@ -780,6 +783,7 @@ void MWAWContentListener::_openSection()
   }
   m_documentInterface->openSection(propList, columns);
 
+  m_ps->m_numColumns = int(m_ps->m_textColumns.size());
   m_ps->m_sectionAttributesChanged = false;
   m_ps->m_isSectionOpened = true;
 }
@@ -795,6 +799,7 @@ void MWAWContentListener::_closeSection()
 
   m_documentInterface->closeSection();
 
+  m_ps->m_numColumns = 1;
   m_ps->m_sectionAttributesChanged = false;
   m_ps->m_isSectionOpened = false;
 }
@@ -943,8 +948,21 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
   }
   propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop, m_ps->m_paragraphMarginBottomUnit);
   propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom, m_ps->m_paragraphMarginBottomUnit);
-  propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
-
+  switch (m_ps->m_paragraphLineSpacingType) {
+  case libmwaw::Fixed:
+    propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
+    break;
+  case libmwaw::AtLeast:
+    if (m_ps->m_paragraphLineSpacingUnit != WPX_PERCENT)
+      propList.insert("fo:line-height-at-least", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
+    else {
+      MWAW_DEBUG_MSG(("MWAWContentListener::_appendParagraphProperties: can not set line spacing at least with percent type\n"));
+    }
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MWAWContentListener::_appendParagraphProperties: can not set line spacing type: %d\n",int(m_ps->m_paragraphLineSpacingType)));
+    break;
+  }
 
   if (!m_ps->m_inSubDocument && m_ps->m_firstParagraphInPageSpan) {
     unsigned actPage = 1;

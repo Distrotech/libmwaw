@@ -90,6 +90,7 @@ struct MWAWContentParsingState {
   libmwaw::Justification m_paragraphJustification;
   double m_paragraphLineSpacing;
   WPXUnit m_paragraphLineSpacingUnit;
+  libmwaw::LineSpacing m_paragraphLineSpacingType;
   std::vector<MWAWBorder> m_paragraphBorders;
 
   shared_ptr<MWAWList> m_list;
@@ -209,7 +210,7 @@ public:
   // ------ paragraph format -----------
   //! returns true if a paragraph or a list is opened
   bool isParagraphOpened() const;
-  void setParagraphLineSpacing(const double lineSpacing, WPXUnit unit=WPX_PERCENT);
+  void setParagraphLineSpacing(const double lineSpacing, WPXUnit unit=WPX_PERCENT, libmwaw::LineSpacing type=libmwaw::Fixed);
   /** Define the paragraph justification. You can set force=true to
       force a break if there is a justification change. */
   void setParagraphJustification(libmwaw::Justification justification, bool force=false);

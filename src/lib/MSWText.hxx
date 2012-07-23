@@ -72,7 +72,7 @@ class MSWText
 public:
   //! Internal: the plc
   struct PLC {
-    enum Type { TextPosition, HeaderFooter, Page, Section, Table, ZoneInfo, Paragraph, Font, Footnote, FootnoteDef, Field, Object };
+    enum Type { TextPosition, HeaderFooter, Page, Section, ZoneInfo, Paragraph, Font, Footnote, FootnoteDef, Field, Object };
     PLC(Type type, int id=0) : m_type(type), m_id(id), m_extra("") {
     }
     //! operator<<
@@ -169,6 +169,9 @@ protected:
   //
   // low level
   //
+
+  //! prepare the data to be send
+  void prepareData();
 
   //! read a zone which consists in a list of int
   bool readLongZone(MSWEntry &entry, int sz, std::vector<long> &list);

@@ -122,9 +122,12 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
   if (pp.m_spacingsInterlineUnit.get()==WPX_PERCENT) {
     if (pp.m_spacings[0].get() < 1.0 || pp.m_spacings[0].get() > 1.0)
       o << "interLineSpacing=" << pp.m_spacings[0].get() << "%,";
-  } else if (pp.m_spacings[0].get() > 0.0)
-    o << "interLineSpacing=" << pp.m_spacings[0].get() << ",";
-
+  } else if (pp.m_spacings[0].get() > 0.0) {
+    o << "interLineSpacing=" << pp.m_spacings[0].get();
+    if (pp.m_spacingsInterlineType.get()==libmwaw::AtLeast)
+      o << "[atLeast]";
+    o << ",";
+  }
   if (pp.m_spacings[1].get()<0||pp.m_spacings[1].get()>0)
     o << "befSpacing=" << pp.m_spacings[1].get() << ",";
   if (pp.m_spacings[2].get()<0||pp.m_spacings[2].get()>0)
@@ -203,7 +206,7 @@ void MWAWParagraph::send(shared_ptr<MWAWContentListener> listener) const
   if (interline<= 0.0 || m_spacingsInterlineUnit.get()==WPX_PERCENT)
     listener->setParagraphLineSpacing(interline>0.0 ? interline : 1.0, WPX_PERCENT);
   else
-    listener->setParagraphLineSpacing(interline, m_spacingsInterlineUnit.get());
+    listener->setParagraphLineSpacing(interline, m_spacingsInterlineUnit.get(), m_spacingsInterlineType.get());
 
   listener->setParagraphMargin(m_spacings[1].get(),MWAW_TOP);
   listener->setParagraphMargin(m_spacings[2].get(),MWAW_BOTTOM);
@@ -219,12 +222,12 @@ void MWAWParagraph::send(shared_ptr<MWAWContentListener> listener) const
   listener->resetParagraphBorders();
   int const wh[] = { MWAWBorder::LeftBit, MWAWBorder::RightBit, MWAWBorder::TopBit, MWAWBorder::BottomBit };
   for (size_t i = 0; i < m_borders.size(); i++) {
+    if (!m_borders[i].isSet() || m_borders[i]->m_style == MWAWBorder::None)
+      continue;
     if (i >= 4) {
       MWAW_DEBUG_MSG(("MWAWParagraph::send: find odd borders\n"));
       break;
     }
-    if (!m_borders[i].isSet() || m_borders[i]->m_style == MWAWBorder::None)
-      continue;
     listener->setParagraphBorder(wh[i], *m_borders[i]);
   }
 }

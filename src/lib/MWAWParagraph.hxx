@@ -62,12 +62,16 @@ struct MWAWParagraph {
   typedef MWAWList::Level ListLevel;
 
   //! constructor
-  MWAWParagraph() : m_marginsUnit(WPX_INCH), m_spacingsInterlineUnit(WPX_PERCENT),
+  MWAWParagraph() : m_marginsUnit(WPX_INCH), m_spacingsInterlineUnit(WPX_PERCENT), m_spacingsInterlineType(libmwaw::Fixed),
     m_tabs(), m_justify(libmwaw::JustificationLeft),
     m_breakStatus(0), m_listLevelIndex(0), m_listLevel(),
     m_borders(), m_extra("") {
     for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
     m_spacings[0] = 1.0; // interline normal
+    for(int i = 0; i < 3; i++) {
+      m_margins[i].setSet(false);
+      m_spacings[i].setSet(false);
+    }
   }
   virtual ~MWAWParagraph();
   void insert(MWAWParagraph const &para) {
@@ -77,6 +81,7 @@ struct MWAWParagraph {
     }
     m_marginsUnit.insert(para.m_marginsUnit);
     m_spacingsInterlineUnit.insert(para.m_spacingsInterlineUnit);
+    m_spacingsInterlineType.insert(para.m_spacingsInterlineType);
     m_tabs.insert(para.m_tabs);
     m_justify.insert(para.m_justify);
     m_breakStatus.insert(para.m_breakStatus);
@@ -109,6 +114,8 @@ struct MWAWParagraph {
   Variable<double> m_spacings[3]; // 0: interline, 1: before, 2: after
   /** the interline unit PERCENT or INCH, ... */
   Variable<WPXUnit> m_spacingsInterlineUnit;
+  /** the interline type: fixed, atLeast, ... */
+  Variable<libmwaw::LineSpacing> m_spacingsInterlineType;
   //! the tabulations
   Variable<std::vector<MWAWTabStop> > m_tabs;
 

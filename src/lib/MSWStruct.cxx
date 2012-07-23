@@ -223,6 +223,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     val = (int) input->readLong(1);
     switch (val) {
     case 0:
+      m_justify = libmwaw::JustificationLeft;
       return true;
     case 1:
       m_justify = libmwaw::JustificationCenter;
@@ -351,8 +352,9 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     m_spacings[c-0x14] = val/1440.;
     if (c != 0x14) return true;
     m_spacingsInterlineUnit = WPX_INCH;
+    m_spacingsInterlineType = libmwaw::Fixed;
     if (val > 0)
-      m_extra += "interline[atLeast],";
+      m_spacingsInterlineType = libmwaw::AtLeast;
     else if (val < 0)
       *(m_spacings[0]) *= -1;
     else {
@@ -482,6 +484,8 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
         m_borders.resize(p+1);
       m_borders[p] = border;
     } else {
+      if (m_borders.size() < 6)
+        m_borders.resize(6);
       m_borders[MWAWBorder::HMiddle] = border;
       m_borders[MWAWBorder::VMiddle] = border;
     }

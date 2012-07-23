@@ -165,6 +165,7 @@ enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEX
 enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
                      JustificationRight, JustificationFullAllLines
                    };
+enum LineSpacing { Fixed, AtLeast};
 enum { NoBreakBit = 0x1, NoBreakWithNextBit=0x2};
 }
 

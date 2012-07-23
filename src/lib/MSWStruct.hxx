@@ -130,11 +130,12 @@ struct Paragraph : public MWAWParagraph {
   struct Cell;
 
   //! Constructor
-  Paragraph() : m_dim(), m_font(), m_font2(), m_modFont(), m_section(),
+  Paragraph() : MWAWParagraph(), m_dim(), m_font(), m_font2(), m_modFont(), m_section(),
     m_inCell(false), m_tableDef(false), m_tableColumns(), m_tableCells() {
   }
   //! insert the new values
   void insert(Paragraph const &para, bool insertModif=true) {
+    MWAWParagraph::insert(para);
     m_dim.insert(para.m_dim);
     if (!m_font.isSet())
       m_font=para.m_font;
@@ -159,6 +160,10 @@ struct Paragraph : public MWAWParagraph {
   bool read(MWAWInputStreamPtr &input, long endPos);
   //! returns the font which correspond to the paragraph if possible
   bool getFont(Font &font) const;
+  //! returns true if we are in table
+  bool inTable() const {
+    return m_inCell.get();
+  }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind);
 
