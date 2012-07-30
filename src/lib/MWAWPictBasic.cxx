@@ -1,31 +1,35 @@
 /* -*- Mode: C++; c-default-style: "k&r"; indent-tabs-mode: nil; tab-width: 2; c-basic-offset: 2 -*- */
-/* libmwaw
- * Copyright (C) 2009, 2011 Alonso Laurent (alonso@loria.fr)
- * Copyright (C) 2006, 2007 Andrew Ziem
- * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
- * Copyright (C) 2004 Marc Maurer (uwog@uwog.net)
- * Copyright (C) 2003-2005 William Lachance (william.lachance@sympatico.ca)
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
- *
- * For further information visit http://libmwaw.sourceforge.net
- */
 
-/* "This product is not manufactured, approved, or supported by
- * Corel Corporation or Corel Corporation Limited."
- */
+/* libmwaw
+* Version: MPL 2.0 / LGPLv2+
+*
+* The contents of this file are subject to the Mozilla Public License Version
+* 2.0 (the "License"); you may not use this file except in compliance with
+* the License or as specified alternatively below. You may obtain a copy of
+* the License at http://www.mozilla.org/MPL/
+*
+* Software distributed under the License is distributed on an "AS IS" basis,
+* WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+* for the specific language governing rights and limitations under the
+* License.
+*
+* Major Contributor(s):
+* Copyright (C) 2002 William Lachance (wrlach@gmail.com)
+* Copyright (C) 2002,2004 Marc Maurer (uwog@uwog.net)
+* Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
+* Copyright (C) 2006, 2007 Andrew Ziem
+* Copyright (C) 2011, 2012 Alonso Laurent (alonso@loria.fr)
+*
+*
+* All Rights Reserved.
+*
+* For minor contributions see the git repository.
+*
+* Alternatively, the contents of this file may be used under the terms of
+* the GNU Lesser General Public License Version 2 or later (the "LGPLv2+"),
+* in which case the provisions of the LGPLv2+ are applicable
+* instead of those above.
+*/
 
 /* This header contains code specific to a pict mac file
  */
