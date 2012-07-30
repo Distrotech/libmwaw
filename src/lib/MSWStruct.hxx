@@ -50,6 +50,9 @@ typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace MSWStruct
 {
+//! generic function use to fill a border using the read data
+MWAWBorder getBorder(int val, std::string &extra);
+
 //! the font structure
 struct Font {
   enum { NumFlags=9 };
@@ -88,7 +91,7 @@ struct Font {
 struct Section {
   //! constructor
   Section() : m_id(-1), m_type(0), m_paragraphId(-9999), m_col(1),
-    m_colSep(0.5), m_colBreak(false), m_flag(0), m_error("") {
+    m_colSep(0.5), m_colBreak(false), m_flag(0), m_extra("") {
   }
   //! insert the new values
   void insert(Section const &sec) {
@@ -99,7 +102,7 @@ struct Section {
     m_colSep.insert(sec.m_colSep);
     m_colBreak.insert(sec.m_colBreak);
     m_flag.insert(sec.m_flag);
-    m_error+=sec.m_error;
+    m_extra+=sec.m_extra;
   }
   //! try to read a data
   bool read(MWAWInputStreamPtr &input, long endPos);
@@ -122,16 +125,89 @@ struct Section {
   //! some flag ( in the main position)
   Variable<int> m_flag;
   /** the errors */
-  std::string m_error;
+  std::string m_extra;
+};
+
+//! the table data
+struct Table {
+  struct Cell;
+  //! constructor
+  Table() : m_height(0), m_justify(libmwaw::JustificationLeft), m_indent(0),
+    m_columns(), m_cells(), m_extra("") {
+  }
+  //! insert the new values
+  void insert(Table const &table) {
+    m_height.insert(table.m_height);
+    m_justify.insert(table.m_justify);
+    m_indent.insert(table.m_indent);
+    m_columns.insert(table.m_columns);
+    size_t tNumCells = table.m_cells.size();
+    if (tNumCells > m_cells.size())
+      m_cells.resize(tNumCells, Variable<Cell>());
+    for (size_t i=0; i < tNumCells; i++) {
+      if (!m_cells[i].isSet())
+        m_cells[i] = table.m_cells[i];
+      else if (table.m_cells[i].isSet())
+        m_cells[i]->insert(*table.m_cells[i]);
+    }
+    m_extra+=table.m_extra;
+  }
+  //! try to read a data
+  bool read(MWAWInputStreamPtr &input, long endPos);
+  //! returns the ith Cell
+  Variable<Cell> &getCell(int id);
+
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Table const &table);
+
+  //! the row height in inches
+  Variable<float> m_height;
+  //! the justification
+  Variable<libmwaw::Justification> m_justify;
+  //! the indent
+  Variable<float> m_indent;
+  //! the table columns
+  Variable<std::vector<float> > m_columns;
+  //! the table cells
+  std::vector<Variable<Cell> > m_cells;
+  /** the errors */
+  std::string m_extra;
+
+  //! the cells definitions
+  struct Cell {
+    Cell() : m_borders(), m_backColor(1.0f), m_extra("") {
+    }
+    void insert(Cell const &cell) {
+      size_t cNumBorders = cell.m_borders.size();
+      if (cNumBorders > m_borders.size())
+        m_borders.resize(cNumBorders);
+      for (size_t i=0; i < cNumBorders; i++)
+        if (cell.m_borders[i].isSet()) m_borders[i]=*cell.m_borders[i];
+      m_backColor.insert(cell.m_backColor);
+      m_extra+=cell.m_extra;
+    }
+    bool hasBorders() const {
+      for (size_t i = 0; i < m_borders.size(); i++)
+        if (m_borders[i].isSet() && m_borders[i]->m_style != MWAWBorder::None)
+          return true;
+      return false;
+    }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
+    /* the borders TLBR */
+    std::vector<Variable<MWAWBorder> > m_borders;
+    /* the background gray color */
+    Variable<float> m_backColor;
+    /* extra data */
+    std::string m_extra;
+  };
 };
 
 //! the paragraph structure
 struct Paragraph : public MWAWParagraph {
-  struct Cell;
-
   //! Constructor
   Paragraph() : MWAWParagraph(), m_dim(), m_font(), m_font2(), m_modFont(), m_section(),
-    m_inCell(false), m_tableDef(false), m_tableColumns(), m_tableCells() {
+    m_inCell(false), m_tableDef(false), m_table() {
   }
   //! insert the new values
   void insert(Paragraph const &para, bool insertModif=true) {
@@ -152,9 +228,11 @@ struct Paragraph : public MWAWParagraph {
     else if (para.m_section.isSet())
       m_section->insert(*para.m_section);
     m_inCell.insert(para.m_inCell);
+    if (!m_table.isSet())
+      m_table = para.m_table;
+    else if (para.m_table.isSet())
+      m_table->insert(*para.m_table);
     m_tableDef.insert(para.m_tableDef);
-    m_tableColumns.insert(para.m_tableColumns);
-    m_tableCells.insert(para.m_tableCells);
   }
   //! try to read a data
   bool read(MWAWInputStreamPtr &input, long endPos);
@@ -178,30 +256,10 @@ struct Paragraph : public MWAWParagraph {
   Variable<Section> m_section;
   //! a cell/textbox
   Variable<bool> m_inCell;
-  //! a table
+  //! a table flag
   Variable<bool> m_tableDef;
-  //! the table columns
-  Variable<std::vector<float> > m_tableColumns;
-  //! the table cells
-  Variable<std::vector<Cell> > m_tableCells;
-
-  //! the cells definitions
-  struct Cell {
-    Cell() : m_extra("") {
-      for (int i = 0; i < 4; i++) m_borders[i] = false;
-    }
-    bool hasBorders() const {
-      for (int i = 0; i < 4; i++)
-        if (m_borders[i]) return true;
-      return false;
-    }
-    //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
-    /* the borders TLBR */
-    bool m_borders[4];
-    /* extra data */
-    std::string m_extra;
-  };
+  //! the table
+  Variable<Table> m_table;
 };
 }
 #endif

@@ -168,7 +168,7 @@ bool Section::read(MWAWInputStreamPtr &input, long endPos)
   default:
     return false;
   }
-  m_error += f.str();
+  m_extra += f.str();
   return true;
 }
 
@@ -185,25 +185,239 @@ std::ostream &operator<<(std::ostream &o, Section const &section)
   if (section.m_colBreak.get()) o << "colBreak,";
   if (section.m_flag.get())
     o << "fl=" << std::hex << section.m_flag.get() << std::dec << ",";
-  if (section.m_error.length()) o << section.m_error << ",";
+  if (section.m_extra.length()) o << section.m_extra << ",";
   return o;
 }
 
-// paragraph
-std::ostream &operator<<(std::ostream &o, Paragraph::Cell const &cell)
+// table
+Variable<Table::Cell> &Table::getCell(int id)
+{
+  if (id < 0) {
+    static Variable<Table::Cell> badCell;
+    MWAW_DEBUG_MSG(("MSWStruct::Table::getCell: can not return a negative cell id\n"));
+    return badCell;
+  }
+  if (m_cells.size() <= size_t(id)) m_cells.resize(size_t(id)+1);
+  return m_cells[size_t(id)];
+}
+
+bool Table::read(MWAWInputStreamPtr &input, long endPos)
+{
+  long pos = input->tell();
+  long dSz = endPos-pos;
+  if (dSz < 1) return false;
+  libmwaw::DebugStream f, f2;
+  int c = (int) input->readULong(1), val;
+  switch(c) {
+  case 0x98: { // tabs columns
+    int sz = (int) input->readULong(2);
+    if (!sz || dSz < 2+sz) return false;
+    int N = (int) input->readULong(1);
+    if (1+(N+1)*2 > sz) {
+      MWAW_DEBUG_MSG(("MSWStruct::Table::read: table definition seems odd\n"));
+      f << "#colDef";
+      input->seek(pos+2+sz, WPX_SEEK_SET);
+      break;
+    }
+    for (int i=0; i <= N; i++)
+      m_columns->push_back(float(input->readLong(2)/20.0));
+    int N1 = (sz-(N+1)*2-2);
+    for (int i=0; i < (N1+8)/10; i++) {
+      Cell cell;
+      int numElt= (N1-10*i)/2;
+      if (numElt>5) numElt=5;
+      f2.str("");
+      val = (int) input->readULong(2);
+      switch(val) {
+      case 0:
+        break;
+      case 0x4000:
+        f2 << "empty,";
+        break;
+      case 0x8000:
+        f2 << "merge,";
+        break;
+      default:
+        f2 << "#type=" << std::hex << val << std::dec << ",";
+      }
+      if (numElt > 0) {
+        cell.m_borders.resize(size_t(numElt)-1);
+        for (int b = 0; b < numElt-1; b++) {
+          std::string bExtra;
+          MWAWBorder border = getBorder((int) input->readULong(2), bExtra);
+          cell.m_borders[size_t(b)] = border;
+          if (bExtra.length())
+            f2 << "#bord" << b << "=" << bExtra << ",";
+        }
+      }
+      cell.m_extra = f2.str();
+      m_cells.push_back(cell);
+      m_cells.back().setSet(true);
+    }
+    input->seek(pos+2+sz, WPX_SEEK_SET);
+    return true;
+  }
+  case 0x92: // table alignement
+    if (dSz < 3) return false;
+    val = (int) input->readULong(2);
+    switch (val&3) {
+    case 0:
+      m_justify = libmwaw::JustificationLeft;
+      break;
+    case 1:
+      m_justify = libmwaw::JustificationCenter;
+      break;
+    case 2:
+      m_justify = libmwaw::JustificationRight;
+      break;
+    case 3:
+      m_justify = libmwaw::JustificationFull;
+      break;
+    default:
+      break;
+    }
+    if (val&0xFFFC) f << "#align=" << std::hex << (val&0xFFFC) << std::dec << ",";
+    break;
+  case 0x93: // table alignement indent
+    if (dSz < 3) return false;
+    m_indent = float(input->readLong(2))/1440.f;
+    return true;
+  case 0x99: // table height DWIPP
+    if (dSz < 3) return false;
+    m_height = float(input->readLong(2))/1440.f;
+    return true;
+  case 0x9d: { // table cell shading
+    if (dSz < 6) return false;
+    val = (int) input->readLong(1); // a small number often 4
+    if (val) f << "backColorUnk=" << val << ",";
+    int firstCol = (int) input->readLong(1);
+    int lastCol = (int) input->readLong(1);
+    if (firstCol < 0 || lastCol < 0 || firstCol+1 > lastCol) {
+      input->seek(2, WPX_SEEK_CUR);
+      MWAW_DEBUG_MSG(("MSWStruct::Table::read: pb for background range\n"));
+      f << "###backRange=" << firstCol << "<->" << lastCol-1 << ",";
+      break;
+    }
+    float backColor = float(1.-double(input->readULong(2))/10000.);
+    for (int i = firstCol; i < lastCol; i++)
+      getCell(i)->m_backColor = backColor;
+    break;
+  }
+  case 0xa0: { // mod table dim ?
+    if (dSz < 5) return false;
+    f << "unkn0=[";
+    int firstCol = (int) input->readLong(1);
+    int lastCol = (int) input->readLong(1);
+    if (lastCol < firstCol+1) f << "#";
+    f << "cells=" << firstCol << "<->" << lastCol-1 << ",";
+    f << std::hex << input->readULong(2) << std::dec << "],";
+    break;
+  }
+  case 0xa3: {
+    if (dSz < 6) return false;
+    // range 0: means A1
+    int firstCol = (int) input->readLong(1);
+    int lastCol = (int) input->readLong(1);
+    if (firstCol < 0 || lastCol < 0 || firstCol+1 > lastCol) {
+      input->seek(3, WPX_SEEK_CUR);
+      MWAW_DEBUG_MSG(("MSWStruct::Table::read: pb for mod color\n"));
+      f << "###backRange=" << firstCol << "<->" << lastCol-1 << ",";
+      break;
+    }
+    val = int(input->readULong(1));
+    size_t maxVal = 0;
+    if (val & 1) maxVal = 1;
+    if (val & 2) maxVal = 2;
+    if (val & 4) maxVal = 3;
+    if (val & 8) maxVal = 4;
+    if (val&0xF0) f << "borderMod[wh=#" << std::hex << int(val&0xF0) << std::dec << "],";
+    std::string bExtra;
+    MWAWBorder border = getBorder((int) input->readULong(2), bExtra);
+    for (int i = firstCol; i < lastCol; i++) {
+      Variable<Cell> &cell = getCell(i);
+      if (cell->m_borders.size() < maxVal)
+        cell->m_borders.resize(maxVal);
+      if (val&1) cell->m_borders[0] = border;
+      if (val&2) cell->m_borders[1] = border;
+      if (val&4) cell->m_borders[2] = border;
+      if (val&8) cell->m_borders[3] = border;
+    }
+    if (bExtra.length()) f << "borderMod=" << bExtra << ",";
+    break;
+  }
+  default:
+    return false;
+  }
+  m_extra += f.str();
+  return true;
+}
+
+std::ostream &operator<<(std::ostream &o, Table::Cell const &cell)
 {
   if (cell.hasBorders()) {
-    o << "border=";
-    if (cell.m_borders[0]) o << "T";
-    if (cell.m_borders[1]) o << "L";
-    if (cell.m_borders[2]) o << "B";
-    if (cell.m_borders[3]) o << "R";
-    o << ",";
+    o << "borders=[";
+    char const *(wh[]) = { "T", "L", "B", "R" };
+    for (size_t i = 0; i < cell.m_borders.size() ; i++) {
+      if (!cell.m_borders[i].isSet()) continue;
+      if (i < 4) o << wh[i];
+      else o << "#" << i;
+      o << "=" << cell.m_borders[i].get() << ",";
+    }
+    o << "],";
   }
+  if (cell.m_backColor.isSet()) o << "backColor=" << cell.m_backColor.get() << ",";
   if (cell.m_extra.length()) o << cell.m_extra;
   return o;
 }
 
+std::ostream &operator<<(std::ostream &o, Table const &table)
+{
+  if (table.m_height.isSet()) { // 0 means automatic
+    if (table.m_height.get() > 0)
+      o << "height[row]=" << table.m_height.get() << "[atLeast],";
+    else if (table.m_height.get() < 0)
+      o << "height[row]=" << table.m_height.get() << ",";
+  }
+  if (table.m_justify.isSet()) {
+    switch(table.m_justify.get()) {
+    case libmwaw::JustificationLeft:
+      o << "just=left,";
+      break;
+    case libmwaw::JustificationCenter:
+      o << "just=centered, ";
+      break;
+    case libmwaw::JustificationRight:
+      o << "just=right, ";
+      break;
+    case libmwaw::JustificationFull:
+      o << "just=full, ";
+      break;
+    case libmwaw::JustificationFullAllLines:
+      o << "just=fullAllLines, ";
+      break;
+    default:
+      o << "just=" << table.m_justify.get() << ", ";
+      break;
+    }
+  }
+  if (table.m_indent.isSet()) o << "indent=" << table.m_indent.get() << ",";
+  if (table.m_columns->size()) {
+    o << "cols=[";
+    for (size_t i = 0; i < table.m_columns->size(); i++)
+      o << table.m_columns.get()[i] << ",";
+    o << "],";
+  }
+  if (table.m_cells.size()) {
+    o << "cells=[";
+    for (size_t i = 0; i < table.m_cells.size(); i++)
+      o << "[" << table.m_cells[i].get() << "],";
+    o << "],";
+  }
+  if (table.m_extra.length()) o << table.m_extra;
+  return o;
+}
+
+// paragraph
 bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
 {
   long pos = input->tell();
@@ -213,9 +427,15 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
   if (!sectionSet) m_section.setSet(false);
 
   input->seek(pos, WPX_SEEK_SET);
+  bool tableSet = m_table.isSet();
+  if (m_table->read(input,endPos))
+    return true;
+  if (!tableSet) m_table.setSet(false);
+
+  input->seek(pos, WPX_SEEK_SET);
   long dSz = endPos-pos;
   if (dSz < 1) return false;
-  libmwaw::DebugStream f, f2;
+  libmwaw::DebugStream f;
   int c = (int) input->readULong(1), val;
   switch(c) {
   case 0x5:
@@ -448,33 +668,10 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
   case 0x21:
   case 0x22: {
     if (dSz < 3) return false;
-    val = (int) input->readULong(2);
-    MWAWBorder border;
-    if (val & 0x3E00) f << "bord" << (c-0x1e) << "[textSep]=" << int((val& 0x3E00)>>9) << "pt";
-    if (val & 0x4000) f << "bord" << (c-0x1e) << "[textSep]=shad,";
-    if (val & 0x8000) f << "bord" << (c-0x1e) << "*";
-    switch(val &0x1FF) {
-    case 0:
-      border.m_style = MWAWBorder::None;
-      break; // checkme none
-    case 0x40:
-      break; // normal
-    case 0x49:
-      border.m_width = 2;
-      break;
-    case 0x80:
-      border.m_style = MWAWBorder::Double;
-      break;
-    case 0x180:
-      border.m_style = MWAWBorder::Dot;
-      break;
-    case 0x1c0:
-      border.m_style = MWAWBorder::Dash;
-      break;
-    default:
-      f << ":fl=" << std::hex << (val & 0x1FF) << std::dec;
-      break;
-    }
+    std::string bExtra;
+    MWAWBorder border = getBorder((int) input->readULong(2), bExtra);
+    if (bExtra.length())
+      f << "bord" << (c-0x1e) << "[" << bExtra << "],";
     if (c < 0x22) {
       size_t const wh[] = { MWAWBorder::Top, MWAWBorder::Left,
                             MWAWBorder::Bottom, MWAWBorder::Right
@@ -503,50 +700,6 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     if (val != 2) f << "#shadType=" <<  val << ",";
     f << "shad=" << input->readLong(2)/100. << "%,";
     break;
-  case 0x98: { // tabs columns
-    int sz = (int) input->readULong(2);
-    if (!sz || dSz < 2+sz) return false;
-    int N = (int) input->readULong(1);
-    if (1+(N+1)*2 > sz) {
-      MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: table definition seems odd\n"));
-      f << "#tableDef";
-      input->seek(pos+2+sz, WPX_SEEK_SET);
-      break;
-    }
-    for (int i=0; i <= N; i++)
-      m_tableColumns->push_back(float(input->readLong(2)/20.0));
-    int N1 = (sz-(N+1)*2-2);
-    for (int i=0; i < (N1+8)/10; i++) {
-      Cell cell;
-      int numElt= (N1-10*i)/2;
-      if (numElt>5) numElt=5;
-      f2.str("");
-      val = (int) input->readULong(2);
-      switch(val) {
-      case 0:
-        break;
-      case 0x4000:
-        f2 << "empty,";
-        break;
-      case 0x8000:
-        f2 << "merge,";
-        break;
-      default:
-        f2 << "#type=" << std::hex << val << std::dec << ",";
-      }
-      for (int b = 0; b < numElt-1; b++) {
-        val = (int) input->readULong(2);
-        if (!val) continue;
-        cell.m_borders[b] = true;
-        if (val != 0x40)
-          f2 << "#bord" << b << "=" << std::hex << val << std::dec << ",";
-      }
-      cell.m_extra = f2.str();
-      m_tableCells->push_back(cell);
-    }
-    input->seek(pos+2+sz, WPX_SEEK_SET);
-    return true;
-  }
   default:
     return false;
   }
@@ -563,18 +716,7 @@ std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
   if (ind.m_section.isSet()) o << ind.m_section.get() << ",";
   if (ind.m_inCell.get()) o << "cell,";
   if (ind.m_tableDef.get()) o << "table[def],";
-  if (ind.m_tableColumns->size()) {
-    o << "tableCols=[";
-    for (size_t i = 0; i < ind.m_tableColumns->size(); i++)
-      o << ind.m_tableColumns.get()[i] << ",";
-    o << "],";
-  }
-  if (ind.m_tableCells->size()) {
-    o << "tableCells=[";
-    for (size_t i = 0; i < ind.m_tableCells->size(); i++)
-      o << "[" << ind.m_tableCells.get()[i] << "],";
-    o << "],";
-  }
+  if (ind.m_table.isSet()) o << "table=[" << ind.m_table.get() << "],";
   return o;
 }
 
@@ -604,4 +746,41 @@ void Paragraph::print(std::ostream &o, MWAWFontConverterPtr m_convertissor) cons
     o << "modifFont=[" << m_modFont->m_font->getDebugString(m_convertissor) << m_modFont.get() << "],";
   o << *this;
 }
+
+// generic
+MWAWBorder getBorder(int val, std::string &extra)
+{
+  MWAWBorder border;
+  libmwaw::DebugStream f;
+
+  if (val & 0x3E00) f << "textSep=" << int((val& 0x3E00)>>9) << "pt";
+  if (val & 0x4000) f << "shad,";
+  if (val & 0x8000) f << "*";
+  switch(val &0x1FF) {
+  case 0:
+    border.m_style = MWAWBorder::None;
+    break;
+  case 0x40:
+    break; // normal
+  case 0x49:
+    border.m_style = MWAWBorder::Double;
+    break;
+  case 0x80:
+    border.m_width = 2;
+    break;
+  case 0x180:
+    border.m_style = MWAWBorder::Dot;
+    break;
+  case 0x1c0:
+    border.m_style = MWAWBorder::Dash;
+    break;
+  default:
+    f << "#bType=" << std::hex << (val & 0x1FF) << std::dec;
+    break;
+  }
+
+  extra=f.str();
+  return border;
+}
+
 }

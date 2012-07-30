@@ -57,6 +57,7 @@ typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace MSWTextInternal
 {
+struct Property;
 struct State;
 }
 
@@ -155,7 +156,7 @@ protected:
   void flushExtra();
 
   //! try to send a table.
-  bool sendTable(MSWEntry &tableEntry);
+  bool sendTable(MSWTextInternal::Property const &prop);
 
   // interface with MSWTextStyles
 
@@ -172,6 +173,9 @@ protected:
 
   //! prepare the data to be send
   void prepareData();
+
+  //! prepare the table to be send
+  void prepareTables();
 
   //! read a zone which consists in a list of int
   bool readLongZone(MSWEntry &entry, int sz, std::vector<long> &list);

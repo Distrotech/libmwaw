@@ -415,17 +415,9 @@ struct Cell : public MWAWTableCell {
     cell.position() = m_position;
     cell.setBorders(m_borderList, border);
     cell.setNumSpannedCells(m_numberCellSpanned);
-
+    if (m_color[0] != 255 || m_color[1] != 255 || m_color[2] != 255)
+      cell.setBackgroundColor(uint32_t((m_color[0]<<16)|(m_color[1]<<8)|m_color[2]));
     WPXPropertyList propList;
-    if (m_color[0] != 255 || m_color[1] != 255 || m_color[2] != 255) {
-      std::stringstream s;
-      s << std::hex << std::setfill('0') << "#"
-        << std::setw(2) << int(m_color[0])
-        << std::setw(2) << int(m_color[1])
-        << std::setw(2) << int(m_color[2]);
-      propList.insert("fo:background-color", s.str().c_str());
-    }
-
     listener->openTableCell(cell, propList);
     sendContent(listener);
     listener->closeTableCell();

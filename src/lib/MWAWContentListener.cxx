@@ -761,6 +761,8 @@ void MWAWContentListener::_openSection()
   if (!m_ps->m_isPageSpanOpened)
     _openPageSpan();
 
+  m_ps->m_numColumns = int(m_ps->m_textColumns.size());
+
   WPXPropertyList propList;
   propList.insert("fo:margin-left", m_ps->m_sectionMarginLeft);
   propList.insert("fo:margin-right", m_ps->m_sectionMarginRight);
@@ -783,7 +785,6 @@ void MWAWContentListener::_openSection()
   }
   m_documentInterface->openSection(propList, columns);
 
-  m_ps->m_numColumns = int(m_ps->m_textColumns.size());
   m_ps->m_sectionAttributesChanged = false;
   m_ps->m_isSectionOpened = true;
 }
@@ -1768,7 +1769,10 @@ void MWAWContentListener::openTableRow(float h, WPXUnit unit, bool headerRow)
   WPXPropertyList propList;
   propList.insert("libwpd:is-header-row", headerRow);
 
-  propList.insert("style:row-height", h, unit);
+  if (h > 0)
+    propList.insert("style:row-height", h, unit);
+  else if (h < 0)
+    propList.insert("style:min-row-height", -h, unit);
   m_documentInterface->openTableRow(propList);
   m_ps->m_isTableRowOpened = true;
 }
@@ -1865,6 +1869,11 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
       MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: can not send %d border\n",int(c)));
       break;
     }
+  }
+  if (cell.backgroundColor() != 0xFFFFFF) {
+    char color[20];
+    sprintf(color,"#%06x",cell.backgroundColor());
+    propList.insert("fo:background-color", color);
   }
   if (cell.isProtected())
     propList.insert("style:cell-protect","protected");

@@ -36,7 +36,7 @@
 
 #include "MWAWCell.hxx"
 
-void MWAWCellFormat::setBorders(int wh, MWAWBorder &border)
+void MWAWCellFormat::setBorders(int wh, MWAWBorder const &border)
 {
   int const allBits = MWAWBorder::LeftBit|MWAWBorder::RightBit|MWAWBorder::TopBit|MWAWBorder::BottomBit|MWAWBorder::HMiddleBit|MWAWBorder::VMiddleBit;
   if (wh & (~allBits)) {
@@ -70,6 +70,8 @@ int MWAWCellFormat::compare(MWAWCellFormat const &cell) const
   diff = int(m_protected) - int(cell.m_protected);
   if (diff) return diff;
   diff = int(m_hAlign) - int(cell.m_hAlign);
+  if (diff) return diff;
+  diff = int(m_backgroundColor) - int(cell.m_backgroundColor);
   if (diff) return diff;
   diff = int(m_bordersList.size()) - int(cell.m_bordersList.size());
   if (diff) return diff;
@@ -210,6 +212,8 @@ std::ostream &operator<<(std::ostream &o, MWAWCellFormat const &cell)
     break; // default
   }
 
+  if (cell.m_backgroundColor != 0xFFFFFF)
+    o << ",backColor=" << std::hex << cell.m_backgroundColor << ",";
   for (size_t i = 0; i < cell.m_bordersList.size(); i++) {
     if (cell.m_bordersList[i].m_style == MWAWBorder::None)
       continue;

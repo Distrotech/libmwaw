@@ -68,7 +68,8 @@ public:
    */
   //! constructor
   MWAWCellFormat() : m_format(F_UNKNOWN), m_subFormat(0), m_digits(0),
-    m_hAlign(HALIGN_DEFAULT), m_bordersList(), m_protected(false) { }
+    m_hAlign(HALIGN_DEFAULT), m_bordersList(),
+    m_backgroundColor(0xFFFFFF), m_protected(false) { }
 
   virtual ~MWAWCellFormat() {}
 
@@ -122,7 +123,7 @@ public:
   bool hasBorders() const {
     return m_bordersList.size() != 0;
   }
-  //! return the cell border: libmwaw::LeftBorderBit | ...
+  //! return the cell border: libmwaw::LeftBit | ...
   std::vector<MWAWBorder> const & borders() const {
     return m_bordersList;
   }
@@ -132,7 +133,16 @@ public:
     m_bordersList.resize(0);
   }
   //! sets the cell border: wh=MWAWBorder::LeftBit|...
-  void setBorders(int wh, MWAWBorder &border);
+  void setBorders(int wh, MWAWBorder const &border);
+
+  //! returns the background color
+  uint32_t backgroundColor() const {
+    return m_backgroundColor;
+  }
+  //! set the background color
+  void setBackgroundColor(uint32_t color) {
+    m_backgroundColor = color;
+  }
 
   //! a comparison  function
   int compare(MWAWCellFormat const &cell) const;
@@ -151,6 +161,8 @@ protected:
   HorizontalAlignment m_hAlign;
   //! the cell border MWAWBorder::Pos
   std::vector<MWAWBorder> m_bordersList;
+  //! the backgroung color
+  uint32_t m_backgroundColor;
   //! cell protected
   bool m_protected;
 };

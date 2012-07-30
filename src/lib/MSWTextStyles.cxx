@@ -448,9 +448,6 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       f << "f" << std::hex << wh << std::dec << "=" << val << ",";
       break;
     case 0x23: // alway 0 ?
-    case 0x92: // alway 0 ?
-    case 0x93: // a dim ?
-    case 0x99: // alway 0 ?
       if (actPos+3 > endPos) {
         done = false;
         f << "#";
@@ -477,7 +474,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       f << std::dec << "],";
       break;
     }
-    case 0x9f: // two small number
+    case 0x9f: // two small number: table range?
       if (actPos+3 > endPos) {
         done = false;
         f << "#";
@@ -521,8 +518,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       f << m_input->readLong(1) << ",";
       f << std::hex << m_input->readULong(2) << std::dec << "],";
       break;
-    case 0x9e: // two small int and a pos?
-    case 0xa0: // related to border ?
+    case 0x9e: // two small number + a pos?
       if (actPos+5 > endPos) {
         done = false;
         f << "#";
@@ -530,18 +526,6 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       }
       f << "f" << std::hex << wh << std::dec << "=[";
       for (int i = 0; i < 2; i++)
-        f << m_input->readLong(1) << ",";
-      f << std::hex << m_input->readULong(2) << std::dec << "],";
-      break;
-    case 0x9d: // back pattern ? three small int and a pos?
-    case 0xa3: // related to border?
-      if (actPos+6 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
-      f << "f" << std::hex << wh << std::dec << "=[";
-      for (int i = 0; i < 3; i++)
         f << m_input->readLong(1) << ",";
       f << std::hex << m_input->readULong(2) << std::dec << "],";
       break;
