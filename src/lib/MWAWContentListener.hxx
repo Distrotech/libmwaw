@@ -288,6 +288,8 @@ public:
   void openTableCell(MWAWCell const &cell, WPXPropertyList const &extras);
   /** close a cell */
   void closeTableCell();
+  /** add empty cell */
+  void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1));
 
   // ------- section ---------------
   //! returns true if a section is opened

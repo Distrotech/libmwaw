@@ -141,7 +141,7 @@ std::vector<Vec3uc> const &MSKParser::getPalette(int vers)
     }
     return palette;
   }
-  case 4:  {
+  case 4: {
     static std::vector<Vec3uc> palette;
     if (palette.size()==0) {
       palette.resize(256);

@@ -73,7 +73,7 @@ class MSK4Parser
   friend class MSK4Zone;
 public:
   //! construtor
-  MSK4Parser(MWAWInputStreamPtr input, MWAWHeader * header);
+  MSK4Parser(MWAWInputStreamPtr input, MWAWHeader *header);
   //! destructor
   virtual ~MSK4Parser();
 

@@ -96,7 +96,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 
 void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type)
 {
-  if (!listener.get())  {
+  if (!listener.get()) {
     MWAW_DEBUG_MSG(("MSK4Parser::SubDocument::parse: no listener\n"));
     return;
   }
@@ -160,7 +160,7 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSK4Parser::MSK4Parser(MWAWInputStreamPtr inp, MWAWHeader * head) : m_input(inp), m_header(head), m_state(), m_listener(), m_convertissor()
+MSK4Parser::MSK4Parser(MWAWInputStreamPtr inp, MWAWHeader *head) : m_input(inp), m_header(head), m_state(), m_listener(), m_convertissor()
 {
   m_state.reset(new MSK4ParserInternal::State);
   m_convertissor.reset(new MWAWFontConverter);

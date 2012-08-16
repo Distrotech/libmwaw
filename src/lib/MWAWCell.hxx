@@ -128,7 +128,7 @@ public:
     return m_bordersList.size() != 0;
   }
   //! return the cell border: libmwaw::LeftBit | ...
-  std::vector<MWAWBorder> const & borders() const {
+  std::vector<MWAWBorder> const &borders() const {
     return m_bordersList;
   }
 

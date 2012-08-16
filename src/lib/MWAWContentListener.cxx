@@ -1792,6 +1792,25 @@ void MWAWContentListener::closeTableRow()
   m_documentInterface->closeTableRow();
 }
 
+void MWAWContentListener::addEmptyTableCell(Vec2i const &pos, Vec2i span)
+{
+  if (!m_ps->m_isTableRowOpened) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::addEmptyTableCell: called with m_isTableRowOpened=false\n"));
+    return;
+  }
+  if (m_ps->m_isTableCellOpened) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::addEmptyTableCell: called with m_isTableCellOpened=true\n"));
+    closeTableCell();
+  }
+  WPXPropertyList propList;
+  propList.insert("libwpd:column", pos[0]);
+  propList.insert("libwpd:row", pos[1]);
+  propList.insert("table:number-columns-spanned", span[0]);
+  propList.insert("table:number-rows-spanned", span[1]);
+  m_documentInterface->openTableCell(propList);
+  m_documentInterface->closeTableCell();
+}
+
 void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList const &extras)
 {
   if (!m_ps->m_isTableRowOpened) {

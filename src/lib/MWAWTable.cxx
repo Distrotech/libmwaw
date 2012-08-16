@@ -92,7 +92,7 @@ bool MWAWTable::buildStructures()
         positions.push_back(pos);
         maxPosiblePos = float(pos+2.0); // 2 pixel ok
       }
-      if (it->m_which == 0 && it->getPos(1)-2.0 < maxPosiblePos)
+      if (it->m_which == 0 && it->getPos(dim)-2.0 < maxPosiblePos)
         maxPosiblePos = float((it->getPos(dim)+pos)/2.);
     }
     listPositions[dim] = positions;
@@ -124,6 +124,11 @@ bool MWAWTable::buildStructures()
           (m_cellsList[c]->box().size()[dim] < 0 || m_cellsList[c]->box().size()[dim] > 0)) {
         MWAW_DEBUG_MSG(("MWAWTable::buildStructures: impossible to find span number !!!\n"));
         return false;
+      }
+      if (spanCell[dim] > 1 &&
+          pos[size_t(cellPos[dim])]+2.0f > pos[size_t(cellPos[dim]+1)]) {
+        spanCell[dim]--;
+        cellPos[dim]++;
       }
     }
     m_cellsList[c]->m_position = Vec2i(cellPos[0], cellPos[1]);
@@ -191,6 +196,8 @@ bool MWAWTable::sendTable(MWAWContentListenerPtr listener)
     for (size_t c = 0; c < numCols; c++) {
       size_t tablePos = r*numCols+c;
       int id = cellsId[tablePos];
+      if (id == -1)
+        listener->addEmptyTableCell(Vec2i(int(c), int(r)));
       if (id < 0) continue;
       m_cellsList[size_t(id)]->send(listener);
     }

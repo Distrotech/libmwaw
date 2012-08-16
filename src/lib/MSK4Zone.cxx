@@ -161,7 +161,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSK4Zone::MSK4Zone
-(MWAWInputStreamPtr input, MWAWHeader * header, MSK4Parser &parser, MWAWFontConverterPtr &convert, std::string const &oleName)
+(MWAWInputStreamPtr input, MWAWHeader *header, MSK4Parser &parser, MWAWFontConverterPtr &convert, std::string const &oleName)
   : MSKParser(input, header), m_mainParser(&parser), m_convertissor(convert),
     m_state(), m_entryMap(), m_pageSpan(), m_textParser(), m_graphParser()
 {
