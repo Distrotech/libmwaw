@@ -51,6 +51,9 @@ typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
+class MWAWRSRCParser;
+typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
+
 namespace MSK4ParserInternal
 {
 struct State;
@@ -73,7 +76,7 @@ class MSK4Parser
   friend class MSK4Zone;
 public:
   //! construtor
-  MSK4Parser(MWAWInputStreamPtr input, MWAWHeader *header);
+  MSK4Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   virtual ~MSK4Parser();
 
@@ -116,6 +119,9 @@ private:
 protected:
   //! the main input
   MWAWInputStreamPtr m_input;
+
+  //! the resource parser
+  MWAWRSRCParserPtr m_rsrcParser;
 
   //! the header
   MWAWHeader *m_header;

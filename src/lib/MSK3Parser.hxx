@@ -79,7 +79,7 @@ class MSK3Parser : public MSKParser
   friend class MSK3Text;
 public:
   //! constructor
-  MSK3Parser(MWAWInputStreamPtr input, MWAWHeader *header);
+  MSK3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   virtual ~MSK3Parser();
 

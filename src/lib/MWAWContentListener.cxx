@@ -959,7 +959,8 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
     propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
     break;
   case libmwaw::AtLeast:
-    if (m_ps->m_paragraphLineSpacingUnit != WPX_PERCENT)
+    if (m_ps->m_paragraphLineSpacing <= 0) {
+    } else if (m_ps->m_paragraphLineSpacingUnit != WPX_PERCENT)
       propList.insert("fo:line-height-at-least", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
     else {
       MWAW_DEBUG_MSG(("MWAWContentListener::_appendParagraphProperties: can not set line spacing at least with percent type\n"));

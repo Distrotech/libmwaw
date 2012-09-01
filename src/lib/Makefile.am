@@ -10,9 +10,9 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_include_HEADERS = libmwaw.hxx 
 
 INCLUDES = -I$(srcdir) -I..
 
-AM_CXXFLAGS = $(LIBMWAW_CXXFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = $(LIBMWAW_CXXFLAGS) $(DEBUG_CXXFLAGS) $(ZLIB_CFLAGS)
 
-libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LIBADD  = $(LIBMWAW_LIBS) @LIBMWAW_WIN32_RESOURCE@
+libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LIBADD  = $(ZLIB_LIBS) $(LIBMWAW_LIBS) @LIBMWAW_WIN32_RESOURCE@
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_DEPENDENCIES = @LIBMWAW_WIN32_RESOURCE@  
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic  -no-undefined
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
@@ -104,16 +104,22 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWPrinter.hxx			\
 	MWAWPropertyHandler.cxx		\
 	MWAWPropertyHandler.hxx		\
+	MWAWRSRCParser.cxx		\
+	MWAWRSRCParser.hxx		\
 	MWAWSubDocument.cxx		\
 	MWAWSubDocument.hxx		\
 	MWAWTable.cxx			\
 	MWAWTable.hxx			\
+	MWAWZipStream.cxx		\
+	MWAWZipStream.hxx		\
 	MWParser.cxx			\
 	MWParser.hxx			\
 	MWProParser.cxx			\
 	MWProParser.hxx			\
 	MWProStructures.cxx		\
 	MWProStructures.hxx		\
+	NSParser.cxx			\
+	NSParser.hxx			\
 	WNEntry.hxx			\
 	WNParser.cxx			\
 	WNParser.hxx			\

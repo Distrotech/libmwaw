@@ -82,7 +82,7 @@ class MDWParser : public MWAWParser
 
 public:
   //! constructor
-  MDWParser(MWAWInputStreamPtr input, MWAWHeader *header);
+  MDWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   virtual ~MDWParser();
 

@@ -151,8 +151,8 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-CWParser::CWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
-  MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
+CWParser::CWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
   m_pageSpan(), m_pageSpanSet(false), m_databaseParser(), m_graphParser(),
   m_spreadsheetParser(), m_tableParser(), m_textParser()
 {

@@ -7,7 +7,7 @@ AC_PREREQ([2.60])
 # ====================
 m4_define([libmwaw_version_major],[0])
 m4_define([libmwaw_version_minor],[1])
-m4_define([libmwaw_version_micro],[1])
+m4_define([libmwaw_version_micro],[2])
 m4_define([libmwaw_version],[libmwaw_version_major.libmwaw_version_minor.libmwaw_version_micro])
 
 # =============
@@ -307,6 +307,18 @@ AS_IF([test "x$with_docs" != "xno"], [
 	], [build_docs=yes])
 ], [build_docs=no])
 AM_CONDITIONAL([WITH_LIBMWAW_DOCS], [test "x$build_docs" != "xno"])
+
+# =========
+# Find zlib
+# =========
+PKG_CHECK_MODULES([ZLIB],[zlib],[],[
+    AC_CHECK_HEADER(zlib.h, [ZLIB_CFLAGS=],
+        [AC_MSG_ERROR(zlib.h not found. install zlib)], [])
+    AC_CHECK_LIB(z, inflate, [ ZLIB_LIBS=-lz ],
+        [AC_MSG_ERROR(zlib not found or functional)], [])
+])
+AC_SUBST(ZLIB_CFLAGS)
+AC_SUBST(ZLIB_LIBS)
 
 # =====================
 # Prepare all .in files

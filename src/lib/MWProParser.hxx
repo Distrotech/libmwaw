@@ -85,7 +85,7 @@ class MWProParser : public MWAWParser
 
 public:
   //! constructor
-  MWProParser(MWAWInputStreamPtr input, MWAWHeader *header);
+  MWProParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   virtual ~MWProParser();
 

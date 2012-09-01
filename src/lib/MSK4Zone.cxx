@@ -161,8 +161,8 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSK4Zone::MSK4Zone
-(MWAWInputStreamPtr input, MWAWHeader *header, MSK4Parser &parser, MWAWFontConverterPtr &convert, std::string const &oleName)
-  : MSKParser(input, header), m_mainParser(&parser), m_convertissor(convert),
+(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header, MSK4Parser &parser, MWAWFontConverterPtr &convert, std::string const &oleName)
+  : MSKParser(input, rsrcParser, header), m_mainParser(&parser), m_convertissor(convert),
     m_state(), m_entryMap(), m_pageSpan(), m_textParser(), m_graphParser()
 {
   setAscii(oleName);
@@ -183,17 +183,6 @@ void MSK4Zone::init()
   m_textParser.reset(new MSK4Text(*this, m_convertissor));
   m_textParser->setDefault(m_state->m_defFont);
   m_graphParser.reset(new MSKGraph(getInput(), *this, m_convertissor));
-}
-
-void MSK4Zone::reset(MWAWInputStreamPtr &input, std::string const &oleName)
-{
-  MWAWParser::resetInput(input);
-  setAscii(oleName);
-
-  m_state.reset(new MSK4ZoneInternal::State);
-  m_textParser->reset(*this, m_convertissor);
-  m_textParser->setDefault(m_state->m_defFont);
-  m_graphParser->reset(*this, m_convertissor);
 }
 
 void MSK4Zone::setListener(MSKContentListenerPtr listen)
@@ -752,7 +741,7 @@ bool MSK4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPag
       if (d == 4000) break;
       int pos = val-0x41;
       if (pos > 1) pos += 1-2*(pos%2);
-      dim[val-0x41] = d/72.;
+      dim[val-0x41] = double(d)/72.;
       break;
     }
 

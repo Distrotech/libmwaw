@@ -293,8 +293,8 @@ std::ostream &operator<<(std::ostream &o, MSWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSWParser::MSWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
-  MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
+MSWParser::MSWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
   m_entryMap(), m_pageSpan(), m_textParser()
 {
   init();

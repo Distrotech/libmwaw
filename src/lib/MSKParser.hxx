@@ -63,7 +63,7 @@ class MSKParser : public MWAWParser
   friend class MSKGraph;
 public:
   //! constructor
-  MSKParser(MWAWInputStreamPtr input, MWAWHeader *header);
+  MSKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
 
   //! destructor
   virtual ~MSKParser();

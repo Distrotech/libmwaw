@@ -416,7 +416,6 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
       WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
       if (dataStream && data.size()) {
         MWAWInputStreamPtr dataInput(new MWAWInputStream(dataStream, false));
-        dataInput->setResponsable(false);
         dataInput->seek(0, WPX_SEEK_SET);
         Box2f box;
         if (MWAWPictData::check(dataInput, (int)data.size(), box) != MWAWPict::MWAW_R_BAD) {

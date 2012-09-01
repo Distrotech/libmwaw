@@ -51,8 +51,8 @@ struct State {
 };
 }
 
-MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWHeader *header) :
-  MWAWParser(input, header), m_listener(), m_state(new MSKParserInternal::State)
+MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  MWAWParser(input, rsrcParser, header), m_listener(), m_state(new MSKParserInternal::State)
 {
 }
 

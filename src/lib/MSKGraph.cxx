@@ -1304,7 +1304,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
   if (pict.m_subType > 0xd) {
     f << ", " << std::hex << m_input->readULong(4) << std::dec << ", BdBox2=(";
     for (int i = 0; i < 4; i++)
-      f << m_input->readLong(4)/65536. << ", ";
+      f << float(m_input->readLong(4))/65536.f << ", ";
     f << ")";
   }
 

@@ -111,67 +111,11 @@ SOURCE=..\..\src\lib\CWText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWOLEStream.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWPageSpan.cxx
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\FWParser.cxx
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\src\lib\FWText.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWCell.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWContentListener.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWDocument.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWHeader.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWList.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWParagraph.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWSubDocument.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWTable.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWFont.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWParser.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWProParser.cxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWProStructures.cxx
 # End Source File
 # Begin Source File
 
@@ -223,7 +167,23 @@ SOURCE=..\..\src\lib\MSWTextStyles.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWCell.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWContentListener.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWDebug.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWDocument.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWFont.cxx
 # End Source File
 # Begin Source File
 
@@ -231,11 +191,31 @@ SOURCE=..\..\src\lib\MWAWFontConverter.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWHeader.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWInputStream.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWList.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWOLEParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWOLEStream.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWPageSpan.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWParagraph.cxx
 # End Source File
 # Begin Source File
 
@@ -264,6 +244,38 @@ SOURCE=..\..\src\lib\MWAWPrinter.cxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWPropertyHandler.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWRSRCParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWSubDocument.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWTable.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWZipStream.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWProParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWProStructures.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\NSParser.cxx
 # End Source File
 # Begin Source File
 
@@ -315,75 +327,11 @@ SOURCE=..\..\src\lib\CWText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWOLEStream.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWPageSpan.hxx
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\FWParser.hxx
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\src\lib\FWText.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWCell.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWContentListener.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWDocument.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWEntry.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWHeader.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWList.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWParagraph.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWParser.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWSubDocument.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWTable.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWFont.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWParser.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWProParser.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWProStructures.hxx
 # End Source File
 # Begin Source File
 
@@ -435,7 +383,27 @@ SOURCE=..\..\src\lib\MSWTextStyles.hxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWCell.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWContentListener.hxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWDebug.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWDocument.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWEntry.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWFont.hxx
 # End Source File
 # Begin Source File
 
@@ -443,11 +411,35 @@ SOURCE=..\..\src\lib\MWAWFontConverter.hxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWHeader.hxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWInputStream.hxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWList.hxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWOLEParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWOLEStream.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWPageSpan.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWParagraph.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWParser.hxx
 # End Source File
 # Begin Source File
 
@@ -484,6 +476,38 @@ SOURCE=..\..\src\lib\MWAWPrinter.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWPropertyHandler.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWRSRCParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWSubDocument.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWTable.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWZipStream.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWProParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWProStructures.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\NSParser.hxx
 # End Source File
 # Begin Source File
 

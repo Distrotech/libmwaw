@@ -40,7 +40,11 @@
 
 #include <libwpd-stream/WPXStream.h>
 #include "libmwaw_internal.hxx"
-#include "MWAWOLEStream.hxx"
+
+namespace libmwaw
+{
+class Storage;
+}
 
 class WPXBinaryData;
 
@@ -60,22 +64,18 @@ public:
    * \param inverted must be set to true for pc doc and ole part
    * \param inverted must be set to false for mac doc
    */
-  MWAWInputStream(WPXInputStream *inp, bool inverted)
-    : m_stream(inp), m_resp(false), m_inverseRead(inverted), m_readLimit(-1),
-      m_prevLimits(), m_storageOLE(0) {}
+  MWAWInputStream(shared_ptr<WPXInputStream> inp, bool inverted);
 
+  /*!\brief creates a stream with given endian from an existing input
+   *
+   * Note: this functions does not delete input
+   */
+  MWAWInputStream(WPXInputStream *input, bool inverted, bool checkCompression=false);
   //! destructor
-  ~MWAWInputStream() {
-    if (m_stream && m_resp) delete m_stream;
-    if (m_storageOLE) delete m_storageOLE;
-  }
-  //! sets this input responsable/or not of the deletion of the actual WPXInputStream
-  void setResponsable(bool newResp) {
-    m_resp = newResp;
-  }
+  ~MWAWInputStream();
 
   //! returns the basic WPXInputStream
-  WPXInputStream *input() {
+  shared_ptr<WPXInputStream> input() {
     return m_stream;
   }
   //! returns the endian mode (see constructor)
@@ -86,7 +86,6 @@ public:
   void setReadInverted(bool newVal) {
     m_inverseRead = newVal;
   }
-
   //
   // Position: access
   //
@@ -122,7 +121,7 @@ public:
 
   //! returns a uint8, uint16, uint32 readed from actualPos
   unsigned long readULong(int num) {
-    return readULong(num, 0);
+    return readULong(m_stream.get(), num, 0, m_inverseRead);
   }
   //! return a int8, int16, int32 readed from actualPos
   long readLong(int num);
@@ -148,17 +147,51 @@ public:
   //! return a new stream for a ole zone
   shared_ptr<MWAWInputStream> getDocumentOLEStream(std::string name);
 
+  //
+  // Finder Info access
+  //
+  /** returns the finder info type and creator (if known) */
+  bool getFinderInfo(std::string &type, std::string &creator) const {
+    if (!m_fInfoType.length() || !m_fInfoCreator.length()) {
+      type = creator = "";
+      return false;
+    }
+    type = m_fInfoType;
+    creator = m_fInfoCreator;
+    return true;
+  }
+
+  //
+  // Resource Fork access
+  //
+
+  /** returns the resource fork if find */
+  shared_ptr<MWAWInputStream> getResourceForkStream() {
+    return m_resourceFork;
+  }
+
 
 protected:
   //! internal function used to read a byte
-  uint8_t readU8();
+  static uint8_t readU8(WPXInputStream *stream);
   /*! \brief internal function used to read num byte,
    *  - where a is the previous read data
    */
-  unsigned long readULong(int num, unsigned long a);
+  static unsigned long readULong(WPXInputStream *stream, int num, unsigned long a, bool inverseRead);
 
   //! creates a storage ole
   bool createStorageOLE();
+
+  //! unbinhex the data in the file is a BinHex 4.0 file of a mac file
+  bool unBinHex();
+  //! unzip the data in the file is a zip file of a mac file
+  bool unzipStream();
+  //! check if some stream are in MacMIME format, if so de MacMIME
+  bool unMacMIME();
+  //! de MacMIME an input stream
+  bool unMacMIME(MWAWInputStream *input,
+                 shared_ptr<WPXInputStream> &dataInput,
+                 shared_ptr<WPXInputStream> &rsrcInput) const;
 
 private:
   MWAWInputStream(MWAWInputStream const &orig);
@@ -166,10 +199,7 @@ private:
 
 protected:
   //! the initial input
-  WPXInputStream *m_stream;
-  //! the flag to know if we must release the input
-  bool m_resp;
-
+  shared_ptr<WPXInputStream> m_stream;
   //! big or normal endian
   bool m_inverseRead;
 
@@ -178,11 +208,48 @@ protected:
   //! list of previous limits
   std::vector<long> m_prevLimits;
 
+  //! finder info type
+  mutable std::string m_fInfoType;
+  //! finder info type
+  mutable std::string m_fInfoCreator;
+  //! the resource fork
+  shared_ptr<MWAWInputStream> m_resourceFork;
   //! the ole storage
-  libmwaw::Storage *m_storageOLE;
+  shared_ptr<libmwaw::Storage> m_storageOLE;
 };
 
 //! a smart point of MWAWInputStream
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
+
+/** an internal class used to return the OLE/Zip InputStream */
+class MWAWStringStream: public WPXInputStream
+{
+public:
+  MWAWStringStream(const unsigned char *data, const unsigned long dataSize);
+  ~MWAWStringStream() { }
+
+  const unsigned char *read(unsigned long numBytes, unsigned long &numBytesRead);
+  long tell() {
+    return m_offset;
+  }
+  int seek(long offset, WPX_SEEK_TYPE seekType);
+  bool atEOS() {
+    return ((long)m_offset >= (long)m_buffer.size());
+  }
+
+  bool isOLEStream() {
+    return false;
+  }
+  WPXInputStream *getDocumentOLEStream(const char *) {
+    return 0;
+  };
+
+private:
+  std::vector<unsigned char> m_buffer;
+  volatile long m_offset;
+  MWAWStringStream(const MWAWStringStream &);
+  MWAWStringStream &operator=(const MWAWStringStream &);
+};
+
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -93,14 +93,11 @@ class MSK4Zone : public MSKParser
 
 public:
   //! constructor
-  MSK4Zone(MWAWInputStreamPtr input, MWAWHeader *header,
+  MSK4Zone(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header,
            MSK4Parser &parser, MWAWFontConverterPtr &convertissor,
            std::string const &oleName);
   //! destructor
   ~MSK4Zone();
-
-  //! reinitializes all data
-  void reset(MWAWInputStreamPtr &input, std::string const &entryName);
 
 protected:
   //! inits all internal variables

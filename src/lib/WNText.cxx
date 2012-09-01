@@ -1814,7 +1814,6 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     }
     WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
     MWAWInputStream dataInput(dataStream, false);
-    dataInput.setResponsable(false);
     switch(zone.m_type) {
     case 0x9: { // only in v2
       uint32_t fFlags = actFont.flags() & ~extraFontFlags;

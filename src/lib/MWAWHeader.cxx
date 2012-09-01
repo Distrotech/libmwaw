@@ -36,14 +36,16 @@
 
 #include "libmwaw_internal.hxx"
 
+#include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
+#include "MWAWRSRCParser.hxx"
 
 #include "MWAWHeader.hxx"
 
-MWAWHeader::MWAWHeader(MWAWDocument::DocumentType documentType, int vers) :
+MWAWHeader::MWAWHeader(MWAWDocument::DocumentType documentType, int vers, DocumentKind kind) :
   m_version(vers),
   m_docType(documentType),
-  m_docKind(MWAWDocument::K_TEXT)
+  m_docKind(kind)
 {
 }
 
@@ -51,14 +53,104 @@ MWAWHeader::~MWAWHeader()
 {
 }
 
-
 /**
  * So far, we have identified
  */
-std::vector<MWAWHeader> MWAWHeader::constructHeader(MWAWInputStreamPtr input)
+std::vector<MWAWHeader> MWAWHeader::constructHeader
+(MWAWInputStreamPtr input, shared_ptr<MWAWRSRCParser> /*rsrcParser*/)
 {
   std::vector<MWAWHeader> res;
+  if (!input) return res;
+  // ------------ first check finder info -------------
+  std::string type, creator;
+  if (input->getFinderInfo(type, creator)) {
+    // set basic version, the correct will be filled by check header
+    if (creator=="BOBO") {
+      if (type=="CWDB") {
+        res.push_back(MWAWHeader(MWAWDocument::CW, 1, MWAWDocument::K_DATABASE));
+        return res;
+      }
+      if (type=="CWGR") {
+        res.push_back(MWAWHeader(MWAWDocument::CW, 1, MWAWDocument::K_DRAW));
+        return res;
+      }
+      if (type=="CWSS") {
+        res.push_back(MWAWHeader(MWAWDocument::CW, 1, MWAWDocument::K_SPREADSHEET));
+        return res;
+      }
+      if (type=="CWWP") {
+        res.push_back(MWAWHeader(MWAWDocument::CW, 1));
+        return res;
+      }
+    } else if (creator=="FS03") {
+      if (type=="WRT+") {
+        res.push_back(MWAWHeader(MWAWDocument::WPLUS, 1));
+        return res;
+      }
+    } else if (creator=="FWRT") {
+      if (type=="FWRM") {
+        res.push_back(MWAWHeader(MWAWDocument::FULLW, 1));
+        return res;
+      }
+    } else if (creator=="MACA") {
+      if (type=="WORD") {
+        res.push_back(MWAWHeader(MWAWDocument::MW, 1));
+        return res;
+      }
+    } else if (creator=="MWII") { // MacWriteII
+      if (type=="MW2D") {
+        res.push_back(MWAWHeader(MWAWDocument::MWPRO, 0));
+        return res;
+      }
+    } else if (creator=="MWPR") {
+      if (type=="MWPd") {
+        res.push_back(MWAWHeader(MWAWDocument::MWPRO, 1));
+        return res;
+      }
+    } else if (creator=="MSWD") {
+      if (type=="WDBN") {
+        res.push_back(MWAWHeader(MWAWDocument::MSWORD, 1));
+        return res;
+      }
+      if (type=="GLOS") {
+        res.push_back(MWAWHeader(MWAWDocument::MSWORD, 1));
+        return res;
+      }
+    } else if (creator=="MSWK") {
+      if (type=="AWWP") {
+        res.push_back(MWAWHeader(MWAWDocument::MSWORKS, 3));
+        return res;
+      }
+      if (type=="RLRB") {
+        res.push_back(MWAWHeader(MWAWDocument::MSWORKS, 104));
+        return res;
+      }
+    } else if (creator=="NISI") {
+      if (type=="TEXT") {
+        res.push_back(MWAWHeader(MWAWDocument::NISUSW, 1));
+        return res;
+      }
+    } else if (creator=="PWRI") {
+      if (type=="OUTL") {
+        res.push_back(MWAWHeader(MWAWDocument::MINDW, 2));
+        return res;
+      }
+    } else if (creator=="nX^n") {
+      if (type=="nX^d") {
+        res.push_back(MWAWHeader(MWAWDocument::WNOW, 2));
+        return res;
+      }
+      if (type=="nX^2") {
+        res.push_back(MWAWHeader(MWAWDocument::WNOW, 3));
+        return res;
+      }
+    }
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: unknown finder info: type=%s[%s]\n", type.c_str(), creator.c_str()));
 
+  }
+
+  // ----------- now check resource fork ------------
+  // ----------- now check data fork ------------
   input->seek(8, WPX_SEEK_SET);
   if (input->atEOS() || input->tell() != 8)
     return res;

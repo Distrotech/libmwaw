@@ -740,8 +740,8 @@ bool MSWText::readZoneInfo(MSWEntry &entry)
     zone.m_id = i;
     zone.m_type = (int) m_input->readULong(1); // 0, 20, 40, 60
     zone.m_paragId = (int) m_input->readLong(1); // check me
-    zone.m_dim.setX(float(m_input->readULong(2)/1440.));
-    zone.m_dim.setY(float(m_input->readLong(2)/72.));
+    zone.m_dim.setX(float(m_input->readULong(2))/1440.f);
+    zone.m_dim.setY(float(m_input->readLong(2))/72.f);
     f << zone;
     m_state->m_zoneList.push_back(zone);
 

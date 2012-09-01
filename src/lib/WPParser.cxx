@@ -591,8 +591,8 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-WPParser::WPParser(MWAWInputStreamPtr input, MWAWHeader *header) :
-  MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
+WPParser::WPParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
   m_pageSpan()
 {
   init();

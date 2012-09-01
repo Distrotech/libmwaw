@@ -178,12 +178,16 @@ struct ZoneInfo {
 //! Internal: the state of a MDWParser
 struct State {
   //! constructor
-  State() : m_eof(-1), m_entryMap(), m_actPage(0), m_numPages(0),
+  State() : m_compressCorr(""), m_eof(-1), m_entryMap(), m_actPage(0), m_numPages(0),
     m_rulerParagraph(), m_actParagraph(), m_actListType(-1),
     m_headerHeight(0), m_footerHeight(0) {
+    m_compressCorr = " etnroaisdlhcfp";
     for (int i = 0; i < 3; i++)
       m_numLinesByZone[i] = 0;
   }
+
+  //! the correspondance between int compressed and char : must be 15 character
+  std::string m_compressCorr;
 
   //! the number of paragraph by zones ( main, header, footer )
   int m_numLinesByZone[3];
@@ -272,8 +276,8 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MDWParser::MDWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
-  MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
+MDWParser::MDWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
   m_pageSpan()
 {
   init();
@@ -374,6 +378,16 @@ void MDWParser::parse(WPXDocumentInterface *docInterface)
     ascii().open(asciiName());
 
     checkHeader(0L);
+    if (getRSRCParser()) {
+      MWAWEntry corrEntry = getRSRCParser()->getEntry("STR ", 700);
+      std::string corrString("");
+      if (corrEntry.valid() && getRSRCParser()->parseSTR(corrEntry, corrString)) {
+        if (corrString.length() != 15) {
+          MWAW_DEBUG_MSG(("MDWParser::parse: resource correspondance string seems bad\n"));
+        } else
+          m_state->m_compressCorr = corrString;
+      }
+    }
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
@@ -722,9 +736,9 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo const &line, MWAWParagraph
     MWAWTabStop tab;
     val = input->readLong(2);
     if (val > 0)
-      tab.m_position = (val-*(para.m_margins[1]))/72.;
+      tab.m_position = (float(val)-*(para.m_margins[1]))/72.f;
     else {
-      tab.m_position = (-val-*(para.m_margins[1]))/72.;
+      tab.m_position = (-float(val)-*(para.m_margins[1]))/72.f;
       tab.m_alignment = MWAWTabStop::CENTER;
     }
     para.m_tabs->push_back(tab);
@@ -930,7 +944,6 @@ bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
   }
   int actualChar = 0;
   bool actualCharSet = false;
-  static char compressCorr[] = " etnroaisdlhcfp";
   std::string text("");
   for (int n = 0; n < num; n++) {
     if (input->tell() >= endPos) {
@@ -952,7 +965,7 @@ bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
       actualCharSet = !actualCharSet;
       if (st == 0) {
         if (actVal == 0xf) continue;
-        text += (char) compressCorr[(size_t) actVal];
+        text += (char) m_state->m_compressCorr[(size_t) actVal];
         break;
       }
       if (st == 1) { // high bytes

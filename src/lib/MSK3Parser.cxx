@@ -188,8 +188,8 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSK3Parser::MSK3Parser(MWAWInputStreamPtr input, MWAWHeader *header) :
-  MSKParser(input, header), m_convertissor(), m_state(),
+MSK3Parser::MSK3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  MSKParser(input, rsrcParser, header), m_convertissor(), m_state(),
   m_pageSpan(), m_listZones(), m_graphParser(), m_textParser()
 {
   init();

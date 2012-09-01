@@ -158,8 +158,8 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-FWParser::FWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
-  MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
+FWParser::FWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
   m_pageSpan(), m_textParser()
 {
   init();
@@ -1164,7 +1164,6 @@ void FWEntry::update()
     return;
   }
   m_input.reset(new MWAWInputStream(dataInput, false));
-  m_input->setResponsable(false);
 
   m_asciiFile.reset(new libmwaw::DebugFile(m_input));
   std::stringstream s;

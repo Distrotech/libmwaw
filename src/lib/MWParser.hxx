@@ -34,8 +34,6 @@
 #ifndef MW_MWAW_PARSER
 #  define MW_MWAW_PARSER
 
-#include <list>
-#include <string>
 #include <vector>
 
 #include "MWAWPageSpan.hxx"
@@ -75,7 +73,7 @@ class MWParser : public MWAWParser
 
 public:
   //! constructor
-  MWParser(MWAWInputStreamPtr input, MWAWHeader *header);
+  MWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   virtual ~MWParser();
 

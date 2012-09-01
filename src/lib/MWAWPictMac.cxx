@@ -2092,8 +2092,7 @@ void MWAWPictMac::parsePict1(WPXBinaryData const &pict, std::string const &fname
   WPXInputStream *dataStream = const_cast<WPXInputStream *>(pict.getDataStream());
   if (!dataStream) return;
 
-  MWAWInputStream *input = new MWAWInputStream(dataStream, false);
-  MWAWInputStreamPtr ip(input);
+  MWAWInputStreamPtr ip( new MWAWInputStream(dataStream, false));
 
   libmwaw::DebugFile dFile(ip);
   dFile.open(fname);
@@ -2105,8 +2104,7 @@ void MWAWPictMac::parsePict2(WPXBinaryData const &pict, std::string const &fname
   WPXInputStream *dataStream = const_cast<WPXInputStream *>(pict.getDataStream());
   if (!dataStream) return;
 
-  MWAWInputStream *input = new MWAWInputStream(dataStream, false);
-  MWAWInputStreamPtr ip(input);
+  MWAWInputStreamPtr ip(new MWAWInputStream(dataStream, false));
 
   libmwaw::DebugFile dFile(ip);
   dFile.open(fname);

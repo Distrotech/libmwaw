@@ -122,7 +122,7 @@ class FWParser : public MWAWParser
 
 public:
   //! constructor
-  FWParser(MWAWInputStreamPtr input, MWAWHeader *header);
+  FWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   virtual ~FWParser();
 

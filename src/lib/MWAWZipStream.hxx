@@ -31,13 +31,34 @@
 * instead of those above.
 */
 
-#ifndef LIBMWAW_H
-#define LIBMWAW_H
+/*
+ *  freely inspired from libwpd/WPXZipStream.h :
+ */
+#ifndef __MWAWZIPSTREAM_H__
+#define __MWAWZIPSTREAM_H__
 
-#define MWAW_GRAPHIC_EXPORT 1
+#include <string>
+#include <vector>
+#include <libwpd-stream/WPXStream.h>
 
-#include "MWAWDocument.hxx"
-#include "MWAWPropertyHandler.hxx"
+class MWAWZipStream
+{
+public:
+  MWAWZipStream(WPXInputStream *input) : m_input(input) {}
+  bool isZipStream();
+  WPXInputStream *getDocumentZipStream(const std::string &name);
 
-#endif
+  /**
+   * Returns the list of all ole leaves names
+   **/
+  std::vector<std::string> getZipNames();
+
+protected:
+  WPXInputStream *m_input;
+private:
+  MWAWZipStream(MWAWZipStream const &orig);
+  MWAWZipStream &operator=(MWAWZipStream const &orig);
+};
+
+#endif // __MWAWZIPSTREAM_H__
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

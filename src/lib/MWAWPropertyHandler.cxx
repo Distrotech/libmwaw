@@ -127,7 +127,7 @@ class MWAWPropertyHandlerDecoder
 {
 public:
   //! constructor given a MWAWPropertyHandler
-  MWAWPropertyHandlerDecoder(MWAWPropertyHandler *hdl=0L):handler(hdl), openTag() {}
+  MWAWPropertyHandlerDecoder(MWAWPropertyHandler *hdl=0L):m_handler(hdl), m_openTag() {}
 
   //! tries to read the data
   bool readData(WPXBinaryData const &encoded) {
@@ -186,9 +186,9 @@ protected:
                       s.c_str()));
       return false;
     }
-    openTag.push(s);
+    m_openTag.push(s);
 
-    if (handler) handler->startElement(s.c_str(), lists);
+    if (m_handler) m_handler->startElement(s.c_str(), lists);
     return true;
   }
 
@@ -202,18 +202,18 @@ protected:
       return false;
     }
     // check stack
-    if (openTag.empty()) {
+    if (m_openTag.empty()) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readEndElement %s with no openElement\n",
                       s.c_str()));
       return false;
     }
-    if (openTag.top() != s) {
+    if (m_openTag.top() != s) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readEndElement %s but last open %s\n",
-                      openTag.top().c_str(), s.c_str()));
+                      m_openTag.top().c_str(), s.c_str()));
       return false;
     }
-    openTag.pop();
-    if (handler) handler->endElement(s.c_str());
+    m_openTag.pop();
+    if (m_handler) m_handler->endElement(s.c_str());
     return true;
   }
 
@@ -222,7 +222,7 @@ protected:
     std::string s;
     if (!readString(input, s)) return false;
     if (!s.length()) return true;
-    if (handler) handler->characters(WPXString(s.c_str()));
+    if (m_handler) m_handler->characters(WPXString(s.c_str()));
     return true;
   }
 
@@ -269,20 +269,15 @@ protected:
     return true;
   }
 private:
-  MWAWPropertyHandlerDecoder(MWAWPropertyHandlerDecoder const &orig) : handler(), openTag() {
-    *this = orig;
-  }
+  MWAWPropertyHandlerDecoder(MWAWPropertyHandlerDecoder const &orig);
+  MWAWPropertyHandlerDecoder &operator=(MWAWPropertyHandlerDecoder const &);
 
-  MWAWPropertyHandlerDecoder &operator=(MWAWPropertyHandlerDecoder const &) {
-    MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::operator=: MUST NOT BE CALLED\n"));
-    return *this;
-  }
 protected:
   //! the streamfile
-  MWAWPropertyHandler *handler;
+  MWAWPropertyHandler *m_handler;
 
   //! the list of open tags
-  std::stack<std::string> openTag;
+  std::stack<std::string> m_openTag;
 };
 
 ////////////////////////////////////////////////////

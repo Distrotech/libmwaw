@@ -715,7 +715,6 @@ bool MWProStructures::createZones()
     return false;
   }
   m_input.reset(new MWAWInputStream(dataInput, false));
-  m_input->setResponsable(false);
 
   ascii().setStream(m_input);
   ascii().open(asciiName());
@@ -842,7 +841,6 @@ bool MWProStructures::createZonesV2()
     return false;
   }
   m_input.reset(new MWAWInputStream(dataInput, false));
-  m_input->setResponsable(false);
 
   ascii().setStream(m_input);
   ascii().open(asciiName());

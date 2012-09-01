@@ -380,8 +380,8 @@ class State
 {
 public:
   //! the constructor
-  State() : knownConversion(), idNameMap(), nameIdMap(),
-    nameIdCounter(0), uniqueId(256), unicodeCache() {
+  State() : m_knownConversion(), m_idNameMap(), m_nameIdMap(),
+    m_nameIdCounter(0), m_uniqueId(256), m_unicodeCache() {
     initMaps();
   }
 
@@ -389,16 +389,16 @@ public:
   if not set creates one */
   int getId(std::string const &name) {
     if (name.empty()) return -1;
-    std::map<std::string,int>::iterator it=nameIdMap.find(name);
-    if (it != nameIdMap.end()) return it->second;
-    setCorrespondance(++uniqueId, name);
-    return uniqueId;
+    std::map<std::string,int>::iterator it=m_nameIdMap.find(name);
+    if (it != m_nameIdMap.end()) return it->second;
+    setCorrespondance(++m_uniqueId, name);
+    return m_uniqueId;
   }
 
   //! returns the name corresponding to an id or return std::string("")
   std::string getName(int macId) {
-    std::map<int, std::string>::iterator it=idNameMap.find(macId);
-    if (it==idNameMap.end()) return "";
+    std::map<int, std::string>::iterator it=m_idNameMap.find(macId);
+    if (it==m_idNameMap.end()) return "";
     return it->second;
   }
 
@@ -412,9 +412,9 @@ public:
 
   //! fixes the name corresponding to an id
   void setCorrespondance(int macId, std::string const &name) {
-    idNameMap[macId] = name;
-    nameIdMap[name] = macId;
-    nameIdCounter++;
+    m_idNameMap[macId] = name;
+    m_nameIdMap[name] = macId;
+    m_nameIdCounter++;
   }
 
 protected:
@@ -422,29 +422,29 @@ protected:
   void initMaps();
 
   //! the basic conversion map
-  MWAWFontConverterInternal::Data::KnownConversion knownConversion;
+  MWAWFontConverterInternal::Data::KnownConversion m_knownConversion;
   //! map sysid -> font name
-  std::map<int, std::string> idNameMap;
+  std::map<int, std::string> m_idNameMap;
   //! map font name -> sysid
-  std::map<std::string, int> nameIdMap;
+  std::map<std::string, int> m_nameIdMap;
 
   //!Internal: a counter modified when a new correspondance name<->id is found
-  long nameIdCounter;
+  long m_nameIdCounter;
 
   //! a int used to create new id for a name
-  int uniqueId;
+  int m_uniqueId;
 
   //! small structure to speedup unicode
   struct UnicodeCache {
     //! constructor
-    UnicodeCache() : nameIdCounter(-1), macId(-1), conv(0) {}
+    UnicodeCache() : m_nameIdCounter(-1), m_macId(-1), m_conv(0) {}
     //! actual counter
-    long nameIdCounter;
+    long m_nameIdCounter;
     //! actual macId
-    int macId;
+    int m_macId;
     //! actual convertor
-    MWAWFontConverterInternal::Data::ConversionData const *conv;
-  } unicodeCache;
+    MWAWFontConverterInternal::Data::ConversionData const *m_conv;
+  } m_unicodeCache;
 
 };
 
@@ -454,68 +454,68 @@ void State::initMaps()
   // see http://developer.apple.com/documentation/mac/Text/Text-277.html
   // or Apple II Technical Notes #41 (  http://www.umich.edu/~archive/apple2/technotes/tn/iigs/TN.IIGS.041 )
   // 0 system fonts, 1 appli fonts
-  idNameMap[2] = "NewYork";
-  idNameMap[3] = "Geneva";
-  idNameMap[4] = "Monaco";
-  idNameMap[5] = "Venise";
-  idNameMap[6] = "London";
-  idNameMap[7] = "Athens";
-  idNameMap[8] = "SanFran";
-  idNameMap[9] = "Toronto";
+  m_idNameMap[2] = "NewYork";
+  m_idNameMap[3] = "Geneva";
+  m_idNameMap[4] = "Monaco";
+  m_idNameMap[5] = "Venise";
+  m_idNameMap[6] = "London";
+  m_idNameMap[7] = "Athens";
+  m_idNameMap[8] = "SanFran";
+  m_idNameMap[9] = "Toronto";
 
-  idNameMap[11] = "Cairo";
-  idNameMap[12] = "LosAngeles";
-  idNameMap[13] = "Zapf Dingbats";
-  idNameMap[14] = "Bookman";
-  idNameMap[16] = "Palatino";
-  idNameMap[18] = "Zapf Chancery";
-  idNameMap[20] = "Times";
-  idNameMap[21] = "Helvetica";
-  idNameMap[22] = "Courier";
-  idNameMap[23] = "Symbol";
-  idNameMap[24] = "Mobile"; // or Taliesin: apple 2
+  m_idNameMap[11] = "Cairo";
+  m_idNameMap[12] = "LosAngeles";
+  m_idNameMap[13] = "Zapf Dingbats";
+  m_idNameMap[14] = "Bookman";
+  m_idNameMap[16] = "Palatino";
+  m_idNameMap[18] = "Zapf Chancery";
+  m_idNameMap[20] = "Times";
+  m_idNameMap[21] = "Helvetica";
+  m_idNameMap[22] = "Courier";
+  m_idNameMap[23] = "Symbol";
+  m_idNameMap[24] = "Mobile"; // or Taliesin: apple 2
 
   // ------- Apple II Technical Notes #41
-  idNameMap[33] = "Avant Garde";
-  idNameMap[34] = "New Century Schoolbook";
+  m_idNameMap[33] = "Avant Garde";
+  m_idNameMap[34] = "New Century Schoolbook";
 
   // ------- Osnola: from a personal computer
-  idNameMap[150] = "scientific";
-  idNameMap[157] = "Cursive";
-  idNameMap[201] = "Math";
+  m_idNameMap[150] = "scientific";
+  m_idNameMap[157] = "Cursive";
+  m_idNameMap[201] = "Math";
 
   // ------- Osnola: unknown name
-  idNameMap[107] = "Unknown107";
-  idNameMap[128] = "Unknown128";
-  idNameMap[200] = "Unknown200";
+  m_idNameMap[107] = "Unknown107";
+  m_idNameMap[128] = "Unknown128";
+  m_idNameMap[200] = "Unknown200";
 
   std::map<int, std::string>::iterator it;
-  for(it = idNameMap.begin(); it != idNameMap.end(); it++)
-    nameIdMap[it->second] = it->first;
+  for(it = m_idNameMap.begin(); it != m_idNameMap.end(); it++)
+    m_nameIdMap[it->second] = it->first;
 }
 
 // returns an unicode caracter
 int State::unicode(int macId, unsigned char c)
 {
-  if (!unicodeCache.conv || unicodeCache.macId != macId ||  unicodeCache.nameIdCounter != nameIdCounter) {
-    unicodeCache.macId = macId;
-    unicodeCache.nameIdCounter = nameIdCounter;
-    unicodeCache.conv = &knownConversion.getConversionMaps(getName(macId));
+  if (!m_unicodeCache.m_conv || m_unicodeCache.m_macId != macId ||  m_unicodeCache.m_nameIdCounter != m_nameIdCounter) {
+    m_unicodeCache.m_macId = macId;
+    m_unicodeCache.m_nameIdCounter = m_nameIdCounter;
+    m_unicodeCache.m_conv = &m_knownConversion.getConversionMaps(getName(macId));
   }
-  if (!unicodeCache.conv) {
+  if (!m_unicodeCache.m_conv) {
     MWAW_DEBUG_MSG(("unicode Error: can not find a convertor\n"));
     return -1;
   }
-  std::map<unsigned char, unsigned long>::iterator it = unicodeCache.conv->m_conversion.find(c);
+  std::map<unsigned char, unsigned long>::iterator it = m_unicodeCache.m_conv->m_conversion.find(c);
 
-  if (it == unicodeCache.conv->m_conversion.end()) return -1;
+  if (it == m_unicodeCache.m_conv->m_conversion.end()) return -1;
   return (int) it->second;
 }
 
 void State::getOdtInfo(int macId, std::string &nm, int &deltaSize)
 {
   std::string nam = getName(macId);
-  MWAWFontConverterInternal::Data::ConversionData const *conv = &knownConversion.getConversionMaps(nam);
+  MWAWFontConverterInternal::Data::ConversionData const *conv = &m_knownConversion.getConversionMaps(nam);
 
   nm = conv->m_name;
   deltaSize = conv->m_deltaSize;

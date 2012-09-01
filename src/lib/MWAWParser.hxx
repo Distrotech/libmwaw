@@ -40,6 +40,7 @@
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
+#include "MWAWRSRCParser.hxx"
 
 #include "MWAWEntry.hxx"
 #include "MWAWHeader.hxx"
@@ -68,9 +69,9 @@ public:
   }
 
 protected:
-  //! constructor (protected
-  MWAWParser(MWAWInputStreamPtr input, MWAWHeader *header):
-    m_version (header->getMajorVersion()), m_asciiFile(input),
+  //! constructor (protected)
+  MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header):
+    m_version(header->getMajorVersion()), m_rsrcParser(rsrcParser), m_asciiFile(input),
     m_asciiName(""), m_input(input), m_header(header) {}
 
   //! returns the header
@@ -81,16 +82,14 @@ protected:
   MWAWInputStreamPtr &getInput() {
     return m_input;
   }
-  //! reset the input and all stored data
-  void resetInput(MWAWInputStreamPtr &ip) {
-    m_input = ip;
-    m_asciiFile.reset();
-    m_asciiFile.setStream(ip);
+  //! returns the rsrc parser
+  MWAWRSRCParserPtr &getRSRCParser() {
+    return m_rsrcParser;
   }
-
   //! the actual version
   int m_version;
-
+  //! the resource parser
+  MWAWRSRCParserPtr m_rsrcParser;
   //! a DebugFile used to write what we recognize when we parse the document
   libmwaw::DebugFile &ascii() {
     return m_asciiFile;

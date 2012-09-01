@@ -105,7 +105,7 @@ class MSWParser : public MWAWParser
 
 public:
   //! constructor
-  MSWParser(MWAWInputStreamPtr input, MWAWHeader *header);
+  MSWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   virtual ~MSWParser();
 

@@ -298,8 +298,8 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MWProParser::MWProParser(MWAWInputStreamPtr input, MWAWHeader *header) :
-  MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
+MWProParser::MWProParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
   m_structures(), m_pageSpan()
 {
   init();
@@ -987,7 +987,6 @@ bool MWProParser::parseDataZone(int blockId, int type)
   }
 
   zone->m_input.reset(new MWAWInputStream(dataInput, false));
-  zone->m_input->setResponsable(false);
 
   zone->m_asciiFile.setStream(zone->m_input);
   std::stringstream s;
@@ -1684,7 +1683,6 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
         return false;
       }
       MWAWInputStreamPtr pictInput(new MWAWInputStream(dataInput, false));
-      pictInput->setResponsable(false);
 
       pictInput->seek(4, WPX_SEEK_SET);
       pict.reset(MWAWPictData::get(pictInput, (int)pictSize));

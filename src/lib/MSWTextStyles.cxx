@@ -766,8 +766,8 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
             val = (int) m_input->readLong(1);
             if (val) // a small number ?
               f2 << "g1=" << val << ",";
-            para.m_dim->setX(float(m_input->readULong(2)/1440.));
-            para.m_dim->setY(float(m_input->readULong(2)/72.));
+            para.m_dim->setX(float(m_input->readULong(2))/1440.f);
+            para.m_dim->setY(float(m_input->readULong(2))/72.f);
             if (sz > 4) {
               ascii().addDelimiter(dataPos+8,'|');
               m_input->seek(dataPos+8, WPX_SEEK_SET);

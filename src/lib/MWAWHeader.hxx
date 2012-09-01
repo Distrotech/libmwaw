@@ -41,10 +41,11 @@
 #include "MWAWDocument.hxx"
 #include "MWAWInputStream.hxx"
 
+class MWAWRSRCParser;
+
 /** \brief a function used by MWAWDocument to store the version of document and the input
  *
  * This class is mainly used to maintain a symetry with the libwpd library */
-
 class MWAWHeader
 {
 public:
@@ -53,15 +54,17 @@ public:
 
 
   //! constructor given the input
-  MWAWHeader(MWAWDocument::DocumentType type=MWAWDocument::UNKNOWN, int vers=0);
+  MWAWHeader(MWAWDocument::DocumentType type=MWAWDocument::UNKNOWN, int vers=0,
+             DocumentKind kind = MWAWDocument::K_TEXT);
   //! destructor
   virtual ~MWAWHeader();
 
-  /** tests the input file and returns a header if the file looks like a MWAW document.
+  /** tests the input file and returns a header if the file looks like a MWAW document ( trying first to use the resource parsed if it exists )
 
   \note this check phase can only be partial ; ie. we only test the first bytes of the file and/or the existence of some oles. This explains that MWAWDocument implements a more complete test to recognize the difference Mac Files which share the same type of header...
   */
-  static std::vector<MWAWHeader> constructHeader(MWAWInputStreamPtr input);
+  static std::vector<MWAWHeader> constructHeader
+  (MWAWInputStreamPtr input, shared_ptr<MWAWRSRCParser> rsrcParser);
 
   //! resets the data
   void reset(MWAWDocument::DocumentType type, int vers,

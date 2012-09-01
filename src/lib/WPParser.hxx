@@ -32,13 +32,7 @@
 */
 
 /*
- * Parser to convert some old text document ( created between 1987 and 1988)
- *    with an unknown application
- *
- * Named by elimination: can be WriterPlus document ( a french text editor )
- *       or maybe Nisus(?)
- *
- *       Eliminated: MacWrite, MicrosoftWorks, ClarisWorks, WriteNow
+ * Parser to convert some WriterPlus text document ( a french text editor )
  *
  */
 #ifndef WP_MWAW_PARSER
@@ -88,7 +82,7 @@ class WPParser : public MWAWParser
 
 public:
   //! constructor
-  WPParser(MWAWInputStreamPtr input, MWAWHeader *header);
+  WPParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   virtual ~WPParser();
 

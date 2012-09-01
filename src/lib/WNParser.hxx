@@ -84,7 +84,7 @@ class WNParser : public MWAWParser
 
 public:
   //! constructor
-  WNParser(MWAWInputStreamPtr input, MWAWHeader *header);
+  WNParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   virtual ~WNParser();
 

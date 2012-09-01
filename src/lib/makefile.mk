@@ -48,6 +48,7 @@ SLOFILES= \
 	$(SLO)$/MWAWContentListener.obj		\
 	$(SLO)$/MWAWDebug.obj			\
 	$(SLO)$/MWAWDocument.obj		\
+	$(SLO)$/MWAWFont.obj			\
 	$(SLO)$/MWAWFontConverter.obj		\
 	$(SLO)$/MWAWHeader.obj			\
 	$(SLO)$/MWAWInputStream.obj		\
@@ -63,12 +64,14 @@ SLOFILES= \
 	$(SLO)$/MWAWPictOLEContainer.obj	\
 	$(SLO)$/MWAWPrinter.obj			\
 	$(SLO)$/MWAWPropertyHandler.obj		\
+	$(SLO)$/MWAWRSRCParser.obj		\
 	$(SLO)$/MWAWSubDocument.obj		\
 	$(SLO)$/MWAWTable.obj			\
-	$(SLO)$/MWAWFont.obj			\
+	$(SLO)$/MWAWZipStream.obj		\
 	$(SLO)$/MWParser.obj			\
 	$(SLO)$/MWProParser.obj			\
 	$(SLO)$/MWProStructures.obj		\
+	$(SLO)$/NSParser.obj			\
 	$(SLO)$/WNParser.obj			\
 	$(SLO)$/WNText.obj			\
 	$(SLO)$/WPParser.obj

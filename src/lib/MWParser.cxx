@@ -360,8 +360,8 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MWParser::MWParser(MWAWInputStreamPtr input, MWAWHeader *header) :
-  MWAWParser(input, header), m_listener(), m_convertissor(), m_state(),
+MWParser::MWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
   m_pageSpan()
 {
   init();
@@ -437,8 +437,17 @@ void MWParser::parse(WPXDocumentInterface *docInterface)
     // create the asciiFile
     ascii().setStream(getInput());
     ascii().open(asciiName());
-
     checkHeader(0L);
+    if (getRSRCParser()) {
+      MWAWEntry corrEntry = getRSRCParser()->getEntry("STR ", 700);
+      std::string corrString("");
+      if (corrEntry.valid() && getRSRCParser()->parseSTR(corrEntry, corrString)) {
+        if (corrString.length() != 15) {
+          MWAW_DEBUG_MSG(("MWParser::parse: resource correspondance string seems bad\n"));
+        } else
+          m_state->m_compressCorr = corrString;
+      }
+    }
     ok = (version() <= 3) ? createZonesV3() : createZones();
     if (ok) {
       createDocument(docInterface);

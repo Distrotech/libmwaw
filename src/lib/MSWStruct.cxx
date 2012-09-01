@@ -224,7 +224,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
       break;
     }
     for (int i=0; i <= N; i++)
-      m_columns->push_back(float(input->readLong(2)/20.0));
+      m_columns->push_back(float(input->readLong(2))/20.0f);
     int N1 = (sz-(N+1)*2-2);
     for (int i=0; i < (N1+8)/10; i++) {
       Cell cell;
@@ -702,7 +702,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     if (dSz < 4) return false;
     val = (int) input->readLong(1);
     if (val != 2) f << "#shadType=" <<  val << ",";
-    f << "shad=" << input->readLong(2)/100. << "%,";
+    f << "shad=" << float(input->readLong(2))/100.f << "%,";
     break;
   default:
     return false;

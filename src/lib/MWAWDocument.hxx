@@ -66,14 +66,14 @@ public:
 
   -CW: ClarisWorks/AppleWorks document (basic)
   -FULLW: FullWrite Professional (crude parser)
-  -MINDW: MindWrite (nothing done)
+  -MINDW: MindWrite
   -MW: MacWrite document
   -MWPRO: MacWriteII or MacWritePro document
   -MSWORD: MSWord document (v4 v5: basic done)
   -MSWORKS: MSWorks document (v1 v2)
   -NISUSW: Nisus Writer document (nothing done)
   -WNOW: WriteNow
-  -WPLUS: writerplus document ( or maybe not)
+  -WPLUS: writerplus document
   */
   enum DocumentType { UNKNOWN, CW, FULLW, MINDW, MSWORD, MSWORKS, MW, MWPRO, NISUSW, WNOW, WPLUS };
 

@@ -94,7 +94,7 @@ class CWParser : public MWAWParser
 
 public:
   //! constructor
-  CWParser(MWAWInputStreamPtr input, MWAWHeader *header);
+  CWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   virtual ~CWParser();
 
