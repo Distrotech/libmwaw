@@ -248,7 +248,7 @@ public:
 
   // ------- fields ----------------
   /** Defines some basic type for field */
-  enum FieldType { None, PageNumber, Date, Time, Title, Link, Database };
+  enum FieldType { None, PageCount, PageNumber, Date, Time, Title, Link, Database };
   //! adds a field type
   void insertField(FieldType type);
   //! insert a date/time field with given format (see strftime)
@@ -261,6 +261,9 @@ public:
   void insertNote(const NoteType noteType, MWAWSubDocumentPtr &subDocument);
   /** adds a label note */
   void insertLabelNote(const NoteType noteType, WPXString const &label, MWAWSubDocumentPtr &subDocument);
+  /** set the next note number */
+  void resetNoteNumber(const NoteType noteType, int number);
+
   /** adds comment */
   void insertComment(MWAWSubDocumentPtr &subDocument);
 

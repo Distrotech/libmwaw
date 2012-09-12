@@ -81,6 +81,59 @@ std::string numberingTypeToString(NumberingType type)
   MWAW_DEBUG_MSG(("libmwaw::numberingTypeToString: must not be called with type %d\n", int(type)));
   return "1";
 }
+
+std::string numberingValueToString(NumberingType type, int value)
+{
+  std::stringstream ss;
+  std::string s("");
+  switch(type) {
+  case ARABIC:
+    ss << value;
+    return ss.str();
+  case LOWERCASE:
+  case UPPERCASE:
+    if (value <= 0) {
+      MWAW_DEBUG_MSG(("libmwaw::numberingValueToString: value can not be negative or null for type %d\n", int(type)));
+      return (type == LOWERCASE) ? "a" : "A";
+    }
+    while (value > 0) {
+      s = char((type == LOWERCASE ? 'a' : 'A')+((value-1)%26))+s;
+      value = (value-1)/26;
+    }
+    return s;
+  case LOWERCASE_ROMAN:
+  case UPPERCASE_ROMAN: {
+    static char const *(romanS[]) = {"M", "CM", "D", "CD", "C", "XC", "L",
+                                     "XL", "X", "IX", "V", "IV", "I"
+                                    };
+    static char const *(romans[]) = {"m", "cm", "d", "cd", "c", "xc", "l",
+                                     "xl", "x", "ix", "v", "iv", "i"
+                                    };
+    static int const (romanV[]) = {1000, 900, 500, 400,  100, 90, 50,
+                                   40, 10, 9, 5, 4, 1
+                                  };
+    if (value <= 0 || value >= 4000) {
+      MWAW_DEBUG_MSG(("libmwaw::numberingValueToString: out of range value for type %d\n", int(type)));
+      return (type == LOWERCASE_ROMAN) ? "i" : "I";
+    }
+    for (int p = 0; p < 13; p++) {
+      while (value >= romanV[p]) {
+        ss << ((type == LOWERCASE_ROMAN) ? romans[p] : romanS[p]);
+        value -= romanV[p];
+      }
+    }
+    return ss.str();
+  }
+  case NONE:
+    return "";
+    break;
+  case BULLET:
+  default:
+    MWAW_DEBUG_MSG(("libmwaw::numberingValueToString: must not be called with type %d\n", int(type)));
+    break;
+  }
+  return "";
+}
 }
 
 int MWAWBorder::compare(MWAWBorder const &orig) const

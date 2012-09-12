@@ -502,12 +502,16 @@ void MWAWContentListener::insertField(MWAWContentListener::FieldType type)
   switch(type) {
   case None:
     break;
+  case PageCount:
   case PageNumber: {
     _flushText();
     _openSpan();
     WPXPropertyList propList;
     propList.insert("style:num-format", libmwaw::numberingTypeToString(libmwaw::ARABIC).c_str());
-    m_documentInterface->insertField(WPXString("text:page-number"), propList);
+    if (type == PageNumber)
+      m_documentInterface->insertField(WPXString("text:page-number"), propList);
+    else
+      m_documentInterface->insertField(WPXString("text:page-count"), propList);
     break;
   }
   case Database: {
@@ -1263,6 +1267,14 @@ void MWAWContentListener::_flushText()
 ///////////////////
 // Note/Comment/picture/textbox
 ///////////////////
+void MWAWContentListener::resetNoteNumber(const NoteType noteType, int number)
+{
+  if (noteType == FOOTNOTE)
+    m_ds->m_footNoteNumber = number-1;
+  else
+    m_ds->m_endNoteNumber = number-1;
+}
+
 void MWAWContentListener::insertNote(const NoteType noteType, MWAWSubDocumentPtr &subDocument)
 {
   if (m_ps->m_isNote) {

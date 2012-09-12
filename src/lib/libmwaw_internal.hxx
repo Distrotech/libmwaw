@@ -168,6 +168,7 @@ namespace libmwaw
 {
 enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
 std::string numberingTypeToString(NumberingType type);
+std::string numberingValueToString(NumberingType type, int value);
 enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION };
 enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
                      JustificationRight, JustificationFullAllLines

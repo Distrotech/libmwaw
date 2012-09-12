@@ -151,10 +151,8 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
   case NISUSW:
-#ifdef DEBUG
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
-#endif
   case UNKNOWN:
   default:
     break;

@@ -120,6 +120,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWProStructures.hxx		\
 	NSParser.cxx			\
 	NSParser.hxx			\
+	NSStruct.cxx			\
+	NSStruct.hxx			\
+	NSText.cxx			\
+	NSText.hxx			\
 	WNEntry.hxx			\
 	WNParser.cxx			\
 	WNParser.hxx			\

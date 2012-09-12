@@ -32,29 +32,21 @@
 */
 
 /*
- * Parser to WriteNow text document
+ * Parser to FullWrite text document
  *
  */
-#ifndef FW_MWAW_TEXT
-#  define FW_MWAW_TEXT
-
-#include <list>
-#include <string>
-#include <vector>
+#ifndef FW_TEXT
+#  define FW_TEXT
 
 #include "libmwaw_internal.hxx"
 
-#include "MWAWPosition.hxx"
-
-#include "MWAWEntry.hxx"
-#include "MWAWContentListener.hxx"
-#include "MWAWSubDocument.hxx"
 
 #include "MWAWDebug.hxx"
-#include "MWAWInputStream.hxx"
 
-#include "MWAWParser.hxx"
+class MWAWInputStream;
+typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 
+class MWAWContentListener;
 typedef class MWAWContentListener FWContentListener;
 typedef shared_ptr<FWContentListener> FWContentListenerPtr;
 

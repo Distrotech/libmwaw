@@ -31,23 +31,22 @@
 * instead of those above.
 */
 
-#ifndef NS_MWAW_PARSER
-#  define NS_MWAW_PARSER
+#ifndef NS_PARSER
+#  define NS_PARSER
 
 #include <string>
 #include <vector>
 
 #include "MWAWPageSpan.hxx"
 
-#include "MWAWPosition.hxx"
-
 #include "MWAWContentListener.hxx"
-#include "MWAWSubDocument.hxx"
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MWAWParser.hxx"
+
+#include "NSStruct.hxx"
 
 class MWAWEntry;
 
@@ -58,50 +57,17 @@ typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace NSParserInternal
 {
-struct RecursifData;
 struct State;
-class SubDocument;
 }
 
-/** a position in a Nisus Writer file */
-struct NSPosition {
-  NSPosition() : m_paragraph(0), m_word(0), m_char(0) {
-  }
-  //! operator<<: prints data in form "XxYxZ"
-  friend std::ostream &operator<< (std::ostream &o, NSPosition const &pos);
-
-  //! a small compare operator
-  int cmp(NSPosition const &p2) const {
-    if (m_paragraph < p2.m_paragraph) return -1;
-    if (m_paragraph > p2.m_paragraph) return 1;
-    if (m_word < p2.m_word) return -1;
-    if (m_word > p2.m_word) return 1;
-    if (m_char < p2.m_char) return -1;
-    if (m_char > p2.m_char) return 1;
-    return 0;
-  }
-  /** the paragraph */
-  int m_paragraph;
-  /** the word */
-  int m_word;
-  /** the character position */
-  int m_char;
-
-  //! a comparaison structure used to sort the position
-  struct Compare {
-    //! comparaison function
-    bool operator()(NSPosition const &p1, NSPosition const &p2) const {
-      return p1.cmp(p2) < 0;
-    }
-  };
-};
+class NSText;
 
 /** \brief the main class to read a Nisus Writer file
  */
 class NSParser : public MWAWParser
 {
-  friend class NSParserInternal::SubDocument;
-
+  friend struct NSStruct::RecursifData;
+  friend class NSText;
 public:
   //! constructor
   NSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
@@ -128,9 +94,24 @@ protected:
   float pageHeight() const;
   //! returns the page width, ie. paper size less margin (in inches)
   float pageWidth() const;
+  //! returns the columns information
+  void getColumnInfo(int &numColumns, float &colSep) const;
+  //! returns the footnote information
+  void getFootnoteInfo(NSStruct::FootnoteInfo &fInfo) const;
 
   //! adds a new page
   void newPage(int number);
+
+  // variable access
+
+  //! returns the date format corresponding to a variable id or ""
+  std::string getDateFormat(NSStruct::ZoneType zoneId, int vId) const;
+
+  //! returns the fieldtype or a string corresponding to a variable
+  bool getReferenceData(NSStruct::ZoneType zoneId, int vId,
+                        MWAWContentListener::FieldType &fType,
+                        std::string &content,
+                        std::vector<int> &number) const;
 
   //! finds the different objects zones
   bool createZones();
@@ -140,51 +121,35 @@ protected:
   bool readPrintInfo(MWAWEntry const &entry);
   //! read the CPRC info zone ( id=128 ), an unknown zone
   bool readCPRC(MWAWEntry const &entry);
-  //! read the PGLY info zone ( id=128 ), an unknown zone
-  bool readPGLY(MWAWEntry const &entry);
+  //! read the PGLY info zone ( id=128 )
+  bool readPageLimit(MWAWEntry const &entry);
 
-  //! read the list of fonts
-  bool readFontsList(MWAWEntry const &entry);
   //! read a list of strings
   bool readStringsList(MWAWEntry const &entry, std::vector<std::string> &list);
 
-  /** read the header/footer main entry */
-  bool readHFHeader(MWAWEntry const &entry);
-  /** read the footnote main entry */
-  bool readFootnoteHeader(MWAWEntry const &entry);
-
-  /** read a text entry
-     \note the main text is in the data fork, but the footnote/header footer is in a ??TX rsrc. This function must disappear in the final release */
-  bool sendText(int zoneId);
-
-  //! read the FTAB/STYL resource: a font format list ?
-  bool readFonts(MWAWEntry const &entry);
-  //! read the FRMT resource: a list of filepos + id of fonts ?
-  bool readFRMT(MWAWEntry const &entry, int zoneId);
   //! read the INFO info zone, an unknown zone of size 0x23a: to doo
   bool readINFO(MWAWEntry const &entry);
   //! read the PGRA resource: a unknown number
   bool readPGRA(MWAWEntry const &entry);
-  //! read the RULE resource: a list of paragraphs
-  bool readParagraphs(MWAWEntry const &entry, int zoneId);
 
-  //! read the CNTR resource: a list of  ?
+  //! read the CNTR resource: a list of  version controler
   bool readCNTR(MWAWEntry const &entry, int zoneId);
   //! read the PICD resource: a list of pict ?
   bool readPICD(MWAWEntry const &entry, int zoneId);
   //! read the PLAC resource: a list of picture placements ?
   bool readPLAC(MWAWEntry const &entry);
 
-  //! read a recursif list: only in v4 ?
-  bool readRecursifList(MWAWEntry const &entry,
-                        NSParserInternal::RecursifData &data,
-                        int levl=0);
   //! parse the MRK7 resource
-  bool readMark(NSParserInternal::RecursifData const &data);
-  //! parse the DSPL resource: numbering definition
-  bool readNumberingDef(NSParserInternal::RecursifData const &data);
-  //! parse the DPND resource: numbering reset ( one by zone )
+  bool readReference(NSStruct::RecursifData const &data);
+  //! parse the DSPL/VARI/VRS resource: numbering definition, variable or variable ?
+  bool readVariable(NSStruct::RecursifData const &data);
+  //! parse the DPND resource: numbering reset ( one by zone ) : related to CNTR and VRS ?
   bool readNumberingReset(MWAWEntry const &entry, int zoneId);
+
+  //! parse the PLDT resource: a unknown resource
+  bool readPLDT(NSStruct::RecursifData const &data);
+  //! parse the SGP1 resource: a unknown resource
+  bool readSGP1(NSStruct::RecursifData const &data);
 
   //! return the input input
   MWAWInputStreamPtr rsrcInput();
@@ -206,6 +171,9 @@ protected:
 
   //! the actual document size
   MWAWPageSpan m_pageSpan;
+
+  //! the text parser
+  shared_ptr<NSText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

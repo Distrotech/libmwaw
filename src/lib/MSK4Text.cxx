@@ -291,6 +291,9 @@ std::ostream &operator<<(std::ostream &o, Token const &tok)
 {
   o << std::dec;
   switch (tok.m_type) {
+  case MWAWContentListener::PageCount:
+    o << "field[pageCount],";
+    break;
   case MWAWContentListener::PageNumber:
     o << "field[page],";
     break;

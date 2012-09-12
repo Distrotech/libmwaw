@@ -279,6 +279,14 @@ SOURCE=..\..\src\lib\NSParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\NSStruct.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\NSText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WNParser.cxx
 # End Source File
 # Begin Source File
@@ -508,6 +516,14 @@ SOURCE=..\..\src\lib\MWProStructures.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\NSParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\NSStruct.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\NSText.hxx
 # End Source File
 # Begin Source File
 

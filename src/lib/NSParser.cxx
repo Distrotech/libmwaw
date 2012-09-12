@@ -34,252 +34,273 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <set>
 #include <sstream>
 
 #include <libwpd/WPXString.h>
 
 #include "MWAWContentListener.hxx"
-#include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
-#include "MWAWParagraph.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSubDocument.hxx"
+
+#include "NSStruct.hxx"
+#include "NSText.hxx"
 
 #include "NSParser.hxx"
 
 /** Internal: the structures of a NSParser */
 namespace NSParserInternal
 {
-/** Internal: the fonts and many other data*/
-struct Font {
-  //! the constructor
-  Font(): m_font(-1,-1), m_pictureId(0), m_pictureHeight(0), m_markId(-1),
-    m_format(0), m_format2(0), m_extra("") { }
+/** Internal structure: use to store a numbering, a variable or a version */
+struct Variable {
+  //! Constructor
+  Variable(NSStruct::VariableType type = NSStruct::V_None) :
+    m_type(0), m_containerType(type), m_fieldType(-1), m_refId(-1),
+    m_numberingType(libmwaw::NONE), m_startNumber(1), m_increment(1),
+    m_prefix(""), m_suffix(""), m_dateFormat(0), m_sample(""), m_extra("") {
+  }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Font const &font);
-
-  //! the font
-  MWAWFont m_font;
-  //! the picture id ( if this is for a picture )
-  int m_pictureId;
-  //! the picture height
-  int m_pictureHeight;
-  //! a mark id
-  int m_markId;
-  //! the main format ...
-  int m_format;
-  //! a series of flags
-  int m_format2;
-  //! extra data
+  friend std::ostream &operator<<(std::ostream &o, Variable const &num);
+  //! returns true if this is a date
+  bool isDate() const {
+    return m_fieldType == 1 || m_fieldType == 0xf;
+  }
+  //! returns the date format
+  std::string getDateFormat() const {
+    if (!isDate()) return "";
+    switch(m_dateFormat) {
+    case 0:
+    case 0x20:
+      return "%m/%d/%Y";
+    case 0x40:
+      return "%d/%m/%Y";
+    case 1:
+    case 0x21:
+    case 2:
+    case 0x22: // normally DDD, MMM d Y
+      return "%A, %B %d %Y";
+    case 0x41:
+    case 0x42:
+      return "%A, %d %B, %Y";
+    case 0x81:
+    case 0xa1:
+    case 0x82:
+    case 0xa2: // normally DDD, MMM d Y
+      return "%B %d, %Y";
+    case 0xc1:
+    case 0xc2:
+      return "%d %B, %Y";
+    default:
+      break;
+    }
+    return "";
+  }
+  //! returns true if this is a number field
+  bool isNumbering() const {
+    return m_type == 1 || m_type == 2;
+  }
+  //! the main type
+  int m_type;
+  //! the container type
+  NSStruct::VariableType m_containerType;
+  //! the variable type
+  long m_fieldType;
+  //! the reference id
+  int m_refId;
+  //! the numbering type
+  libmwaw::NumberingType m_numberingType;
+  //! the start number
+  int m_startNumber;
+  //! the increment
+  int m_increment;
+  //! the prefix
+  std::string m_prefix;
+  //! the suffix
+  std::string m_suffix;
+  //! the date format
+  int m_dateFormat;
+  //! a sample used in a dialog ?
+  std::string m_sample;
+  //! some extra debuging information
   std::string m_extra;
 };
 
-
-std::ostream &operator<<(std::ostream &o, Font const &font)
+std::ostream &operator<<(std::ostream &o, Variable const &num)
 {
-  if (font.m_pictureId) o << "pictId=" << font.m_pictureId << ",";
-  if (font.m_pictureHeight) o << "pictH=" << font.m_pictureHeight << ",";
-  if (font.m_markId >= 0) o << "markId=" << font.m_markId << ",";
-  if (font.m_format2&0x4) o << "index,";
-  if (font.m_format2&0x8) o << "TOC,";
-  if (font.m_format2&0x10) o << "samePage,";
-  if (font.m_format2&0x20) o << "field,";
-  if (font.m_format2&0x40) o << "hyphenate,";
-  if (font.m_format2&0x83)
-    o << "#format2=" << std::hex << (font.m_format2 &0x83) << std::dec << ",";
-
-  if (font.m_format & 1) o << "noSpell,";
-  if (font.m_format & 8) o << "REVERTED,"; // writing is Right->Left
-  if (font.m_format & 0x10) o << "sameLine,";
-  if (font.m_format & 0x40) o << "endOfPage,"; // checkme
-  if (font.m_format & 0xA6)
-    o << "#fl=" << std::hex << (font.m_format & 0xA6) << std::dec << ",";
-  if (font.m_extra.length())
-    o << font.m_extra << ",";
-  return o;
-}
-
-/** Internal: class to store the paragraph properties */
-struct Paragraph : public MWAWParagraph {
-  //! Constructor
-  Paragraph() : MWAWParagraph(), m_name("") {
+  switch(num.m_type) {
+  case 1:
+    o << "numbering,";
+    break;
+  case 2:
+    o << "numbering[count],";
+    break;
+  case 3:
+    o << "version,";
+    break;
+  case 4:
+    o << "version[small],";
+    break;
+  case 5:
+    o << "date/time,";
+    break;
+  case 6:
+    o << "docTitle,";
+    break;
+  default:
+    o << "#type=" << num.m_type << ",";
+    break;
   }
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
-    o << reinterpret_cast<MWAWParagraph const &>(ind);
-    if (ind.m_name.length()) o << "name=" << ind.m_name << ",";
+  switch(num.m_containerType) {
+  case NSStruct::V_Numbering:
+    o << "number,";
+    break;
+  case NSStruct::V_Variable:
+    o << "variable,";
+    break;
+  case NSStruct::V_Version:
+    o << "version,";
+    break;
+  case NSStruct::V_None:
+    break;
+  default:
+    o << "#type[container]=" << int(num.m_containerType) << ",";
     return o;
   }
-  //! the paragraph name
-  std::string m_name;
-};
-
-/** different types
- *
- * - Format: font properties
- * - Ruler: new ruler
- */
-enum PLCType { P_Format=0, P_Ruler, P_Footnote, P_HeaderFooter, P_Unknown};
-
-/** Internal: class to store the PLC: Pointer List Content ? */
-struct DataPLC {
-  DataPLC() : m_type(P_Format), m_id(-1), m_extra("") {
-  }
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, DataPLC const &plc);
-  //! PLC type
-  PLCType m_type;
-  //! the id
-  int m_id;
-  //! an extra data to store message ( if needed )
-  std::string m_extra;
-};
-//! operator<< for DataPLC
-std::ostream &operator<<(std::ostream &o, DataPLC const &plc)
-{
-  switch(plc.m_type) {
-  case P_Format:
-    o << "F";
+  if (num.m_refId >= 0)
+    o << "refId=" << num.m_refId << ",";
+  switch(num.m_fieldType) {
+  case -1:
     break;
-  case P_Ruler:
-    o << "R";
+  case 0x1:
+    o << "date2,";
     break;
-  case P_Footnote:
-    o << "Fn";
+  case 0xe:
+    o << "version,";
     break;
-  case P_HeaderFooter:
-    o << "HF";
+  case 0xf:
+    o << "date,";
     break;
-  case P_Unknown:
+  case 0x10:
+    o << "time,";
+    break;
+  case 0x11:
+    o << "docTitle,";
+    break;
+  case 0x1c:
+    o << "footnote,";
+    break;
+  case 0x1d:
+    o << "reference?,";
+    break;
+    // alway in version variable ?
+  case 0x7FFFFFFF:
+    o << "none,";
+    break;
+    // in a variable find also 0xFFFF8014
   default:
-    o << "#type=" << int(plc.m_type) << ",";
+    if ((num.m_fieldType>>16)==0x7FFF)
+      o << "#fieldType=" << num.m_fieldType -0x7FFFFFFF-1  << ",";
+    else if ((num.m_fieldType>>16)==0xFFFF)
+      o << "#fieldType=X" << std::hex << num.m_fieldType << std::dec << ",";
+    else
+      o << "#fieldType=" << num.m_fieldType << ",";
+    break;
   }
-  if (plc.m_id >= 0) o << plc.m_id << ",";
-  else o << "_";
-  if (plc.m_extra.length()) o << plc.m_extra;
+  std::string type = libmwaw::numberingTypeToString(num.m_numberingType);
+  if (type.length())
+    o << "type=" << type << ",";
+  if (num.m_startNumber != 1) o << "start=" << num.m_startNumber << ",";
+  if (num.m_increment != 1) o << "increment=" << num.m_increment << ",";
+  static char const *(wh0[]) = { "unkn0", "prefix", "name", "comments" };
+  if (num.m_prefix.length())
+    o << wh0[num.m_containerType] << "=\"" << num.m_prefix << "\",";
+  static char const *(wh2[]) = { "unkn2", "suffix", "suffix", "unkn2" };
+  if (num.m_suffix.length())
+    o << wh2[num.m_containerType] << "=\"" << num.m_suffix << "\",";
+  static char const *(wh1[]) = { "unkn1", "sample", "sample", "author?" };
+  if (num.m_sample.length())
+    o << wh1[num.m_containerType] << "=\"" << num.m_sample << "\",";
+  if (num.m_dateFormat) {
+    switch(num.m_dateFormat & 0x9F) {
+    case 1:
+      o << "format=Day, Month D YYYY,";
+      break;
+    case 2:
+      o << "format=Day, Mon D YYYY,";
+      break;
+    case 0x81:
+      o << "format=Month D, YYYY,";
+      break;
+    case 0x82:
+      o << "format=Mon D, YYYY,";
+      break;
+    default:
+      o << "#format=" << std::hex << (num.m_dateFormat&0x9F) << std::dec << ",";
+      break;
+    }
+    if (num.m_dateFormat & 0x20) o << "[english]";
+    if (num.m_dateFormat & 0x40) o << "[european]";
+    o << ",";
+  }
+  if (num.m_extra.length())
+    o << num.m_extra;
   return o;
 }
 
-enum ZoneType { Main=0, Footnote, HeaderFooter };
-
-struct Zone {
-  typedef std::multimap<NSPosition,DataPLC,NSPosition::Compare> PLCMap;
-
+/** Internal structure: use to store a mark (reference) */
+struct Reference {
   //! constructor
-  Zone() : m_entry(), m_paragraphList(), m_plcMap() {
+  Reference() : m_id(-1), m_textPosition(), m_text("") {
   }
-  //! the position of text in the rsrc file
-  MWAWEntry m_entry;
-  //! the list of paragraph
-  std::vector<Paragraph> m_paragraphList;
-  //! the map pos -> format id
-  PLCMap m_plcMap;
+
+  // the mark id ?
+  int m_id;
+  // the text position
+  MWAWEntry m_textPosition;
+  // the mark text
+  std::string m_text;
 };
 
-////////////////////////////////////////
-//! Internal: low level a structure helping to read recursifList
-struct RecursifData {
-  RecursifData(ZoneType zone) : m_zoneId(zone), m_actualPos(), m_positionList(), m_entryList() {
+//! internal structure used to stored some zone data
+struct Zone {
+  //! constructor
+  Zone() : m_referenceList(), m_numberingResetList(), m_variableList(), m_versionList() {
   }
-  //! the zone id
-  ZoneType m_zoneId;
-  //! the actual position
-  Vec3i m_actualPos;
-  //! the list of read position
-  std::vector<Vec3i> m_positionList;
-  //! the list of data entry
-  std::vector<MWAWEntry> m_entryList;
+  /** the list of reference */
+  std::vector<Reference> m_referenceList;
+  //! the list of numbering reset id
+  std::vector<int> m_numberingResetList;
+  /** the list of variable */
+  std::vector<Variable> m_variableList;
+  /** the list of versions */
+  std::vector<Variable> m_versionList;
 };
 
 ////////////////////////////////////////
 //! Internal: the state of a NSParser
 struct State {
   //! constructor
-  State() : m_fontList(),
-    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
-
-  {
+  State() : m_numberingList(),
+    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
+    m_numColumns(1), m_columnSep(0.5f), m_footnoteInfo() {
   }
 
-  /** the font list */
-  std::vector<Font> m_fontList;
+  /** the list of numbering */
+  std::vector<Variable> m_numberingList;
   /** the main zones : Main, Footnote, HeaderFooter */
   Zone m_zones[3];
-
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
+  int m_numColumns /** the number of columns */;
+  float m_columnSep /** the columns separator */;
+  NSStruct::FootnoteInfo m_footnoteInfo;
 };
-
-////////////////////////////////////////
-//! Internal: the subdocument of a NSParser
-class SubDocument : public MWAWSubDocument
-{
-public:
-  SubDocument(NSParser &pars, MWAWInputStreamPtr input, int zoneId) :
-    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
-
-  //! destructor
-  virtual ~SubDocument() {}
-
-  //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const;
-  //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
-    return !operator!=(doc);
-  }
-
-  //! returns the subdocument \a id
-  int getId() const {
-    return m_id;
-  }
-  //! sets the subdocument \a id
-  void setId(int vid) {
-    m_id = vid;
-  }
-
-  //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
-
-protected:
-  //! the subdocument id
-  int m_id;
-};
-
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
-{
-  if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
-    return;
-  }
-  NSContentListener *listen = dynamic_cast<NSContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
-  if (m_id != 1 && m_id != 2) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
-    return;
-  }
-
-  assert(m_parser);
-
-  long pos = m_input->tell();
-  // reinterpret_cast<NSParser *>(m_parser)->sendWindow(m_id);
-  m_input->seek(pos, WPX_SEEK_SET);
-}
-
-bool SubDocument::operator!=(MWAWSubDocument const &doc) const
-{
-  if (MWAWSubDocument::operator!=(doc)) return true;
-  SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
-  if (!sDoc) return true;
-  if (m_id != sDoc->m_id) return true;
-  return false;
-}
 }
 
 
@@ -288,7 +309,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 NSParser::NSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan()
+  m_pageSpan(), m_textParser()
 {
   init();
 }
@@ -311,11 +332,14 @@ void NSParser::init()
   m_pageSpan.setMarginBottom(0.1);
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
+
+  m_textParser.reset(new NSText(getInput(), *this, m_convertissor));
 }
 
 void NSParser::setListener(NSContentListenerPtr listen)
 {
   m_listener = listen;
+  m_textParser->setListener(listen);
 }
 
 MWAWInputStreamPtr NSParser::rsrcInput()
@@ -341,6 +365,117 @@ float NSParser::pageWidth() const
   return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
 }
 
+void NSParser::getColumnInfo(int &numColumns, float &colSep) const
+{
+  numColumns = m_state->m_numColumns;
+  colSep = m_state->m_columnSep;
+}
+
+void NSParser::getFootnoteInfo(NSStruct::FootnoteInfo &fInfo) const
+{
+  fInfo = m_state->m_footnoteInfo;
+}
+
+std::string NSParser::getDateFormat(NSStruct::ZoneType zoneId, int vId) const
+{
+  if (zoneId < 0 || zoneId >= 3) {
+    MWAW_DEBUG_MSG(("NSParser::getDateFormat: bad zone %d\n", zoneId));
+    return "";
+  }
+  NSParserInternal::Zone const &zone = m_state->m_zones[zoneId];
+  if (vId < 0 || vId >= int(zone.m_variableList.size()) ||
+      !zone.m_variableList[size_t(vId)].isDate()) {
+    // some version 3 files do not contain any variables, so returns the default value...
+    if (version()==3 && zone.m_variableList.size()==0)
+      return "%m/%d/%Y";
+    MWAW_DEBUG_MSG(("NSParser::getDateFormat: can not find the variable %d\n", vId));
+    return "";
+  }
+  return zone.m_variableList[size_t(vId)].getDateFormat();
+}
+
+bool NSParser::getReferenceData
+(NSStruct::ZoneType zoneId, int vId,
+ MWAWContentListener::FieldType &fType, std::string &content, std::vector<int> &values) const
+{
+  fType = MWAWContentListener::None;
+  content = "";
+  if (zoneId < 0 || zoneId >= 3) {
+    MWAW_DEBUG_MSG(("NSParser::getReferenceData: bad zone %d\n", zoneId));
+    return false;
+  }
+  NSParserInternal::Zone const &zone = m_state->m_zones[zoneId];
+  if (vId < 0 || vId >= int(zone.m_variableList.size())) {
+    MWAW_DEBUG_MSG(("NSParser::getReferenceData: can not find the variable %d\n", vId));
+    return false;
+  }
+  NSParserInternal::Variable const &var=zone.m_variableList[size_t(vId)];
+  if ((var.m_type != 1 && var.m_type != 2) || var.m_refId<=0) {
+    MWAW_DEBUG_MSG(("NSParser::getReferenceData: find a variable with bad type %d\n", vId));
+    return false;
+  }
+  // first special case
+  if (var.m_type == 1 && var.m_refId == 14) {
+    fType = MWAWContentListener::PageNumber;
+    return true;
+  }
+  if (var.m_type == 2 && var.m_refId == 15) {
+    fType = MWAWContentListener::PageCount;
+    return true;
+  }
+  size_t numVar = m_state->m_numberingList.size();
+  if (var.m_refId-1 >= int(numVar)) {
+    MWAW_DEBUG_MSG(("NSParser::getReferenceData: can not find numbering variable for %d\n", vId));
+    return false;
+  }
+  // resize values if needed
+  for (size_t p = values.size(); p < numVar; p++)
+    values.push_back(m_state->m_numberingList[p].m_startNumber
+                     -m_state->m_numberingList[p].m_increment);
+  NSParserInternal::Variable const &ref=m_state->m_numberingList[size_t(var.m_refId-1)];
+  values[size_t(var.m_refId-1)] += ref.m_increment;
+
+  size_t numReset = zone.m_numberingResetList.size();
+  if (numReset < numVar+1)
+    numReset = numVar+1;
+  if (size_t(var.m_refId) < numReset) {
+    std::vector<bool> doneValues;
+    std::vector<int> toDoValues;
+    doneValues.resize(numReset, false);
+    doneValues[size_t(var.m_refId)]=true;
+    toDoValues.push_back(size_t(var.m_refId));
+    while(toDoValues.size()) {
+      int modId = (int) toDoValues.back();
+      toDoValues.pop_back();
+      for (size_t r = 0; r < numReset; r++) {
+        if (zone.m_numberingResetList[r] != modId)
+          continue;
+        if (r == 0 || doneValues[r]) continue;
+        doneValues[r] = true;
+        values[r-1] = m_state->m_numberingList[r-1].m_startNumber
+                      -m_state->m_numberingList[r-1].m_increment;
+        toDoValues.push_back(int(r));
+      }
+    }
+  }
+  std::stringstream s;
+  std::string str = ref.m_prefix + ref.m_suffix;
+  for (size_t p = 0; p < str.length(); p++) {
+    unsigned char c = (unsigned char) str[p];
+    if (c==0 || (c < 0x20 && c > numVar)) {
+      MWAW_DEBUG_MSG(("NSParser::getReferenceData: find unknown variable\n"));
+#ifdef DEBUG
+      s << "###[" << int(c) << "]";
+#endif
+    } else if (c < 0x20)
+      s << libmwaw::numberingValueToString
+        (m_state->m_numberingList[size_t(c-1)].m_numberingType,
+         values[size_t(c-1)]);
+    else s << (char)c;
+  }
+  content=s.str();
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
 // new page
@@ -373,11 +508,13 @@ void NSParser::parse(WPXDocumentInterface *docInterface)
     ascii().open(asciiName());
     checkHeader(0L);
     ok = createZones();
-    ok = false;
     if (ok) {
       createDocument(docInterface);
+      m_textParser->sendMainText();
+#ifdef DEBUG
+      m_textParser->flushExtra();
+#endif
     }
-
     ascii().reset();
   } catch (...) {
     MWAW_DEBUG_MSG(("NSParser::parse: exception catched when parsing\n"));
@@ -403,9 +540,22 @@ void NSParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // create the page list
   std::vector<MWAWPageSpan> pageList;
-  MWAWPageSpan ps(m_pageSpan);
-  m_state->m_numPages = 1;
-  for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
+  int numPages = 1;
+  if (m_textParser->numPages() > numPages)
+    numPages = m_textParser->numPages();
+  m_state->m_numPages = numPages;
+
+  shared_ptr<MWAWSubDocument> subDoc;
+  for (int i = 0; i <= numPages; i++) {
+    MWAWPageSpan ps(m_pageSpan);
+    subDoc = m_textParser->getHeader(i+1);
+    if (subDoc)
+      ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subDoc);
+    subDoc = m_textParser->getFooter(i+1);
+    if (subDoc)
+      ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subDoc);
+    pageList.push_back(ps);
+  }
 
   //
   NSContentListenerPtr listen(new NSContentListener(pageList, documentInterface));
@@ -445,8 +595,16 @@ bool NSParser::createZones()
     if (it->first != "PGLY")
       break;
     MWAWEntry &entry = it++->second;
-    readPGLY(entry);
+    readPageLimit(entry);
   }
+  it = entryMap.lower_bound("INFO");
+  while (it != entryMap.end()) {
+    if (it->first != "INFO")
+      break;
+    MWAWEntry &entry = it++->second;
+    readINFO(entry);
+  }
+
   // 20000
   it = entryMap.lower_bound("PGRA");
   while (it != entryMap.end()) {
@@ -456,13 +614,89 @@ bool NSParser::createZones()
     readPGRA(entry);
   }
 
-  // the 100* id
-  it = entryMap.lower_bound("FLST");
+  if (!m_textParser->createZones())
+    return false;
+
+  // numbering, mark, variable, version, ...
+  it = entryMap.lower_bound("DSPL");
   while (it != entryMap.end()) {
-    if (it->first != "FLST")
+    if (it->first != "DSPL")
       break;
     MWAWEntry &entry = it++->second;
-    readFontsList(entry);
+    entry.setName("NumberingDef");
+    NSStruct::RecursifData data(NSStruct::Z_Main, NSStruct::V_Numbering);
+    data.read(*this, entry);
+    readVariable(data);
+  }
+  char const *(variableNames[]) = { "VARI", "FVAR", "HVAR" };
+  for (int z = 0; z < 3; z++) {
+    it = entryMap.lower_bound(variableNames[z]);
+    while (it != entryMap.end()) {
+      if (it->first != variableNames[z])
+        break;
+      MWAWEntry &entry = it++->second;
+      entry.setName("Variable");
+      NSStruct::RecursifData data(NSStruct::ZoneType(z), NSStruct::V_Variable);
+      data.read(*this, entry);
+      readVariable(data);
+    }
+  }
+
+  char const *(cntrNames[]) = { "CNTR", "FCNT", "HCNT" };
+  for (int z = 0; z < 3; z++) {
+    it = entryMap.lower_bound(cntrNames[z]);
+    while (it != entryMap.end()) {
+      if (it->first != cntrNames[z])
+        break;
+      MWAWEntry &entry = it++->second;
+      readCNTR(entry, NSStruct::ZoneType(z));
+    }
+  }
+  char const *(numbResetNames[]) = { "DPND", "FDPN", "HDPN" };
+  for (int z = 0; z < 3; z++) {
+    it = entryMap.lower_bound(numbResetNames[z]);
+    while (it != entryMap.end()) {
+      if (it->first != numbResetNames[z])
+        break;
+      MWAWEntry &entry = it++->second;
+      readNumberingReset(entry, NSStruct::ZoneType(z));
+    }
+  }
+  char const *(versionNames[]) = { "VRS ", "FVRS", "HVRS" };
+  for (int z = 0; z < 3; z++) {
+    it = entryMap.lower_bound(versionNames[z]);
+    while (it != entryMap.end()) {
+      if (it->first != versionNames[z])
+        break;
+      MWAWEntry &entry = it++->second;
+      entry.setName("VariabS");
+      NSStruct::RecursifData data(NSStruct::ZoneType(z), NSStruct::V_Version);
+      data.read(*this, entry);
+      readVariable(data);
+    }
+  }
+
+  char const *(markNames[]) = { "MRK7", "FMRK", "HMRK" };
+  for (int z = 0; z < 3; z++) {
+    it = entryMap.lower_bound(markNames[z]);
+    while (it != entryMap.end()) {
+      if (it->first != markNames[z])
+        break;
+      MWAWEntry &entry = it++->second;
+      entry.setName("Reference");
+      NSStruct::RecursifData data = NSStruct::RecursifData(NSStruct::ZoneType(z));
+      data.read(*this, entry);
+      readReference(data);
+    }
+  }
+  it = entryMap.lower_bound("XMRK"); // related to mark7 ?
+  while (it != entryMap.end()) {
+    if (it->first != "XMRK")
+      break;
+    MWAWEntry &entry = it++->second;
+    entry.setName("XMRK");
+    NSStruct::RecursifData data(NSStruct::Z_Main);
+    data.read(*this, entry);
   }
 
   // the different pict zones
@@ -483,88 +717,16 @@ bool NSParser::createZones()
     getRSRCParser()->parsePICT(entry, data);
   }
 
-  // The style zone
-
-  // style name ( can also contains some flags... )
-  it = entryMap.lower_bound("STNM");
-  while (it != entryMap.end()) {
-    if (it->first != "STNM")
-      break;
-    MWAWEntry &entry = it++->second;
-    std::vector<std::string> list;
-    readStringsList(entry, list);
-  }
-  // style link to paragraph name
-  it = entryMap.lower_bound("STRL");
-  while (it != entryMap.end()) {
-    if (it->first != "STRL")
-      break;
-    MWAWEntry &entry = it++->second;
-    std::vector<std::string> list;
-    readStringsList(entry, list);
-  }
-  // style next name
-  it = entryMap.lower_bound("STNX");
-  while (it != entryMap.end()) {
-    if (it->first != "STNX")
-      break;
-    MWAWEntry &entry = it++->second;
-    std::vector<std::string> list;
-    readStringsList(entry, list);
-  }
-
-  it = entryMap.lower_bound("STYL");
-  while (it != entryMap.end()) {
-    if (it->first != "STYL")
-      break;
-    MWAWEntry &entry = it++->second;
-    readFonts(entry);
-  }
-
-  // the fonts (global)
-  it = entryMap.lower_bound("FTAB");
-  while (it != entryMap.end()) {
-    if (it->first != "FTAB")
-      break;
-    MWAWEntry &entry = it++->second;
-    readFonts(entry);
-  }
-  // the main zone paragraph (id 1003) + name paragraph (id 1004)
-  it = entryMap.lower_bound("RULE");
-  while (it != entryMap.end()) {
-    if (it->first != "RULE")
-      break;
-    MWAWEntry &entry = it++->second;
-    readParagraphs(entry, NSParserInternal::Main);
-  }
-  // the main zone changing of font position
-  it = entryMap.lower_bound("FRMT");
-  while (it != entryMap.end()) {
-    if (it->first != "FRMT")
-      break;
-    MWAWEntry &entry = it++->second;
-    readFRMT(entry, NSParserInternal::Main);
-  }
-  it = entryMap.lower_bound("CNTR");
-  while (it != entryMap.end()) {
-    if (it->first != "CNTR")
-      break;
-    MWAWEntry &entry = it++->second;
-    readCNTR(entry, NSParserInternal::Main);
-  }
-  it = entryMap.lower_bound("DPND");
-  while (it != entryMap.end()) {
-    if (it->first != "DPND")
-      break;
-    MWAWEntry &entry = it++->second;
-    readNumberingReset(entry, NSParserInternal::Main);
-  }
-  it = entryMap.lower_bound("PICD");
-  while (it != entryMap.end()) {
-    if (it->first != "PICD")
-      break;
-    MWAWEntry &entry = it++->second;
-    readPICD(entry, NSParserInternal::Main);
+  // picture position ?
+  char const *(pictDNames[]) = { "PICD", "FPIC", "HPIC" };
+  for (int z = 0; z < 3; z++) {
+    it = entryMap.lower_bound(pictDNames[z]);
+    while (it != entryMap.end()) {
+      if (it->first != pictDNames[z])
+        break;
+      MWAWEntry &entry = it++->second;
+      readPICD(entry, NSStruct::ZoneType(z));
+    }
   }
   it = entryMap.lower_bound("PLAC");
   while (it != entryMap.end()) {
@@ -573,233 +735,26 @@ bool NSParser::createZones()
     MWAWEntry &entry = it++->second;
     readPLAC(entry);
   }
-  it = entryMap.lower_bound("DSPL");
-  while (it != entryMap.end()) {
-    if (it->first != "DSPL")
-      break;
-    MWAWEntry &entry = it++->second;
-    entry.setName("NumbDef");
-    NSParserInternal::RecursifData data(NSParserInternal::Main);
-    readRecursifList(entry, data);
-    readNumberingDef(data);
-  }
-  it = entryMap.lower_bound("MRK7");
-  while (it != entryMap.end()) {
-    if (it->first != "MRK7")
-      break;
-    MWAWEntry &entry = it++->second;
-    entry.setName("Mark");
-    NSParserInternal::RecursifData data(NSParserInternal::Main);
-    readRecursifList(entry, data);
-    readMark(data);
-  }
   it = entryMap.lower_bound("PLDT");
   while (it != entryMap.end()) {
     if (it->first != "PLDT")
       break;
     MWAWEntry &entry = it++->second;
     entry.setName("PLDT");
-    NSParserInternal::RecursifData data(NSParserInternal::Main);
-    readRecursifList(entry, data);
+    NSStruct::RecursifData data(NSStruct::Z_Main);
+    data.read(*this, entry);
+    readPLDT(data);
   }
+  // unknown ?
   it = entryMap.lower_bound("SGP1");
   while (it != entryMap.end()) {
     if (it->first != "SGP1")
       break;
     MWAWEntry &entry = it++->second;
     entry.setName("SGP1");
-    NSParserInternal::RecursifData data(NSParserInternal::Main);
-    readRecursifList(entry, data);
-  }
-  it = entryMap.lower_bound("VARI");
-  while (it != entryMap.end()) {
-    if (it->first != "VARI")
-      break;
-    MWAWEntry &entry = it++->second;
-    entry.setName("VARI");
-    NSParserInternal::RecursifData data(NSParserInternal::Main);
-    readRecursifList(entry, data);
-  }
-  it = entryMap.lower_bound("VRS ");
-  while (it != entryMap.end()) {
-    if (it->first != "VRS ")
-      break;
-    MWAWEntry &entry = it++->second;
-    entry.setName("VRS");
-    NSParserInternal::RecursifData data(NSParserInternal::Main);
-    readRecursifList(entry, data);
-  }
-  it = entryMap.lower_bound("XMRK"); // related to mark7 ?
-  while (it != entryMap.end()) {
-    if (it->first != "XMRK")
-      break;
-    MWAWEntry &entry = it++->second;
-    entry.setName("XMRK");
-    NSParserInternal::RecursifData data(NSParserInternal::Main);
-    readRecursifList(entry, data);
-  }
-
-  // header zone :
-  it = entryMap.lower_bound("HF  "); // header
-  while (it != entryMap.end()) {
-    if (it->first != "HF  ")
-      break;
-    MWAWEntry &entry = it++->second;
-    readHFHeader(entry);
-  }
-  it = entryMap.lower_bound("HRUL"); // ruler
-  while (it != entryMap.end()) {
-    if (it->first != "HRUL")
-      break;
-    MWAWEntry &entry = it++->second;
-    readParagraphs(entry, NSParserInternal::HeaderFooter);
-  }
-  it = entryMap.lower_bound("HFRM");
-  while (it != entryMap.end()) {
-    if (it->first != "HFRM")
-      break;
-    MWAWEntry &entry = it++->second;
-    readFRMT(entry, NSParserInternal::HeaderFooter);
-  }
-  it = entryMap.lower_bound("HCNT");
-  while (it != entryMap.end()) {
-    if (it->first != "HCNT")
-      break;
-    MWAWEntry &entry = it++->second;
-    readCNTR(entry, NSParserInternal::HeaderFooter);
-  }
-  it = entryMap.lower_bound("HDPN");
-  while (it != entryMap.end()) {
-    if (it->first != "HDPN")
-      break;
-    MWAWEntry &entry = it++->second;
-    readNumberingReset(entry, NSParserInternal::HeaderFooter);
-  }
-  it = entryMap.lower_bound("HPIC");
-  while (it != entryMap.end()) {
-    if (it->first != "HPIC")
-      break;
-    MWAWEntry &entry = it++->second;
-    readPICD(entry, NSParserInternal::HeaderFooter);
-  }
-  it = entryMap.lower_bound("HMRK");
-  while (it != entryMap.end()) {
-    if (it->first != "HMRK")
-      break;
-    MWAWEntry &entry = it++->second;
-    entry.setName("Mark");
-    NSParserInternal::RecursifData data(NSParserInternal::HeaderFooter);
-    readRecursifList(entry, data);
-    readMark(data);
-  }
-  it = entryMap.lower_bound("HVAR");
-  while (it != entryMap.end()) {
-    if (it->first != "HVAR")
-      break;
-    MWAWEntry &entry = it++->second;
-    entry.setName("VARI");
-    NSParserInternal::RecursifData data(NSParserInternal::HeaderFooter);
-    readRecursifList(entry, data);
-  }
-  it = entryMap.lower_bound("HVRS");
-  while (it != entryMap.end()) {
-    if (it->first != "HVRS")
-      break;
-    MWAWEntry &entry = it++->second;
-    entry.setName("VRS");
-    NSParserInternal::RecursifData data(NSParserInternal::HeaderFooter);
-    readRecursifList(entry, data);
-  }
-  it = entryMap.lower_bound("HFTX"); // text
-  while (it != entryMap.end()) {
-    if (it->first != "HFTX")
-      break;
-    m_state->m_zones[NSParserInternal::HeaderFooter].m_entry = it++->second;
-  }
-
-  // footnote zone :
-  it = entryMap.lower_bound("FOOT"); // header
-  while (it != entryMap.end()) {
-    if (it->first != "FOOT")
-      break;
-    MWAWEntry &entry = it++->second;
-    readFootnoteHeader(entry);
-  }
-  it = entryMap.lower_bound("FRUL"); // ruler
-  while (it != entryMap.end()) {
-    if (it->first != "FRUL")
-      break;
-    MWAWEntry &entry = it++->second;
-    readParagraphs(entry, NSParserInternal::Footnote);
-  }
-  it = entryMap.lower_bound("FFRM");
-  while (it != entryMap.end()) {
-    if (it->first != "FFRM")
-      break;
-    MWAWEntry &entry = it++->second;
-    readFRMT(entry, NSParserInternal::Footnote);
-  }
-  it = entryMap.lower_bound("FCNT"); // never seens but probably exists
-  while (it != entryMap.end()) {
-    if (it->first != "FCNT")
-      break;
-    MWAWEntry &entry = it++->second;
-    readCNTR(entry, NSParserInternal::Footnote);
-  }
-  it = entryMap.lower_bound("FDPN"); // never seens but probably exists
-  while (it != entryMap.end()) {
-    if (it->first != "FDPN")
-      break;
-    MWAWEntry &entry = it++->second;
-    readNumberingReset(entry, NSParserInternal::Footnote);
-  }
-  it = entryMap.lower_bound("FPIC"); // never seens but probably exists
-  while (it != entryMap.end()) {
-    if (it->first != "FPIC")
-      break;
-    MWAWEntry &entry = it++->second;
-    readPICD(entry, NSParserInternal::Footnote);
-  }
-  it = entryMap.lower_bound("FMRK");
-  while (it != entryMap.end()) {
-    if (it->first != "FMRK")
-      break;
-    MWAWEntry &entry = it++->second;
-    entry.setName("Mark");
-    NSParserInternal::RecursifData data(NSParserInternal::Footnote);
-    readRecursifList(entry, data);
-    readMark(data);
-  }
-  it = entryMap.lower_bound("FVAR");
-  while (it != entryMap.end()) {
-    if (it->first != "FVAR")
-      break;
-    MWAWEntry &entry = it++->second;
-    entry.setName("VARI");
-    NSParserInternal::RecursifData data(NSParserInternal::Footnote);
-    readRecursifList(entry, data);
-  }
-  it = entryMap.lower_bound("FVRS"); // never seens but probably exists
-  while (it != entryMap.end()) {
-    if (it->first != "FVRS")
-      break;
-    MWAWEntry &entry = it++->second;
-    entry.setName("VRS");
-    NSParserInternal::RecursifData data(NSParserInternal::Footnote);
-    readRecursifList(entry, data);
-  }
-  it = entryMap.lower_bound("FNTX"); // text
-  while (it != entryMap.end()) {
-    if (it->first != "FNTX")
-      break;
-    m_state->m_zones[NSParserInternal::Footnote].m_entry = it++->second;
-  }
-  // fixme
-  m_state->m_zones[NSParserInternal::Main].m_entry.setBegin(0);
-  m_state->m_zones[NSParserInternal::Main].m_entry.setEnd(0xFFFFFF);
-  for (int i = 0; i < 3; i++) {
-    if (m_state->m_zones[i].m_entry.valid())
-      sendText(i);
+    NSStruct::RecursifData data(NSStruct::Z_Main);
+    data.read(*this, entry);
+    readSGP1(data);
   }
   return true;
 }
@@ -837,195 +792,6 @@ bool NSParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   if (header)
     header->reset(MWAWDocument::NISUSW, version());
 
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read a  of string
-////////////////////////////////////////////////////////////
-bool NSParser::sendText(int zoneId)
-{
-  if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::sendText: find unexpected zoneId: %d\n", zoneId));
-    return false;
-  }
-  NSParserInternal::Zone &zone = m_state->m_zones[zoneId];
-  MWAWEntry entry = zone.m_entry;
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("NSParser::sendText: the entry is bad\n"));
-    return false;
-  }
-
-  entry.setParsed(true);
-  MWAWInputStreamPtr input = zoneId == 0 ? getInput() : rsrcInput();
-  libmwaw::DebugFile &ascFile = zoneId == 0 ? ascii() : rsrcAscii();
-  long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
-
-  libmwaw::DebugStream f;
-  f << "Entries(TEXT)[" << zoneId << "]:";
-  std::string str("");
-  NSPosition actPos;
-  NSParserInternal::Zone::PLCMap::iterator it = zone.m_plcMap.begin();
-  // fixme: treat here the first char
-  for (int i = 0; i < entry.length(); i++) {
-    if (input->atEOS())
-      break;
-    char c = (char) input->readULong(1);
-    while (it != zone.m_plcMap.end() && it->first.cmp(actPos) <= 0) {
-      NSPosition const &plcPos = it->first;
-      NSParserInternal::DataPLC const &plc = it++->second;
-      f << str;
-      str="";
-      if (plcPos.cmp(actPos) < 0) {
-        MWAW_DEBUG_MSG(("NSParser::sendText: oops find unexpected position\n"));
-        f << "###[" << plc << "]";
-        continue;
-      }
-      f << "[" << plc << "]";
-    }
-
-    // 0xc: page break
-    // 0xd: line break
-    // 0xf: date
-    // 0x10: time
-    // 0x1d: chapter
-    str+=(char) c;
-    if (c==0xd) {
-      f << str;
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
-
-      str = "";
-      pos = input->tell();
-      f.str("");
-      f << "TEXT" << zoneId << ":";
-    }
-
-    switch(c) {
-    case 0xd:
-      actPos.m_paragraph++;
-      actPos.m_word = actPos.m_char = 0;
-      break;
-    case '\t':
-    case ' ':
-      actPos.m_word++;
-      actPos.m_char = 0;
-      break;
-    default:
-      actPos.m_char++;
-      break;
-    }
-  }
-  f << str;
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the header/footer main entry
-////////////////////////////////////////////////////////////
-bool NSParser::readHFHeader(MWAWEntry const &entry)
-{
-  if (!entry.valid() || (entry.length()%32)) {
-    MWAW_DEBUG_MSG(("NSParser::readHFHeader: the entry is bad\n"));
-    return false;
-  }
-  NSParserInternal::Zone &zone = m_state->m_zones[NSParserInternal::HeaderFooter];
-  entry.setParsed(true);
-  MWAWInputStreamPtr input = rsrcInput();
-  long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
-
-  int numElt = int(entry.length()/32);
-  libmwaw::DebugStream f;
-  f << "Entries(HFHeader)[" << entry.id() << "]:N=" << numElt;
-  rsrcAscii().addPos(pos-4);
-  rsrcAscii().addNote(f.str().c_str());
-
-  NSParserInternal::DataPLC plc;
-  plc.m_type = NSParserInternal::P_HeaderFooter;
-  for (int i = 0; i < numElt; i++) {
-    pos = input->tell();
-    f.str("");
-    f << "HFHeader" << i << ":";
-    long textPara = (long) input->readULong(4); // checkme or ??? m_paragraph
-    f << "textParag[def]=" << textPara << ",";
-    NSPosition headerPosition;
-    headerPosition.m_paragraph = (int) input->readULong(4); // checkme or ??? m_paragraph
-    f << "lastParag=" << headerPosition.m_paragraph << ",";
-    plc.m_id = i+1;
-    zone.m_plcMap.insert(NSParserInternal::Zone::PLCMap::value_type(headerPosition, plc));
-
-    rsrcAscii().addDelimiter(input->tell(),'|');
-    rsrcAscii().addPos(pos);
-    rsrcAscii().addNote(f.str().c_str());
-    input->seek(pos+32, WPX_SEEK_SET);
-  }
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the footnote main entry
-////////////////////////////////////////////////////////////
-bool NSParser::readFootnoteHeader(MWAWEntry const &entry)
-{
-  if (!entry.valid() || (entry.length()%36)) {
-    MWAW_DEBUG_MSG(("NSParser::readFootnoteHeader: the entry is bad\n"));
-    return false;
-  }
-  NSParserInternal::Zone &mainZone = m_state->m_zones[NSParserInternal::Main];
-  NSParserInternal::Zone &zone = m_state->m_zones[NSParserInternal::Footnote];
-  entry.setParsed(true);
-  MWAWInputStreamPtr input = rsrcInput();
-  long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
-
-  int numElt = int(entry.length()/36);
-  libmwaw::DebugStream f;
-  f << "Entries(FootnoteHeader)[" << entry.id() << "]:N=" << numElt;
-  rsrcAscii().addPos(pos-4);
-  rsrcAscii().addNote(f.str().c_str());
-
-  NSParserInternal::DataPLC plc;
-  plc.m_type = NSParserInternal::P_Footnote;
-  for (int i = 0; i < numElt; i++) {
-    pos = input->tell();
-    f.str("");
-    f << "FootnoteHeader" << i << ":";
-    NSPosition textPosition;
-    textPosition.m_paragraph = (int) input->readULong(4); // checkme or ??? m_paragraph
-    textPosition.m_word = (int) input->readULong(2);
-    textPosition.m_char = (int) input->readULong(2);
-    f << "pos=" << textPosition << ",";
-    NSPosition notePosition;
-    notePosition.m_paragraph = (int) input->readULong(4); // checkme or ??? m_paragraph
-    f << "lastParag[inNote]=" << notePosition.m_paragraph << ",";
-    rsrcAscii().addDelimiter(input->tell(),'|');
-    rsrcAscii().addDelimiter(pos+24,'|');
-    for (int wh = 0; wh < 2; wh++) {
-      input->seek(pos+24+wh*6, WPX_SEEK_SET);
-      std::string label("");
-      for (int c = 0; c < 6; c++) {
-        char ch = (char) input->readULong(1);
-        if (ch == 0)
-          break;
-        label += ch;
-      }
-      if (wh==0) f << "label[note]=" << label << ",";
-      else f << "label[text]=" << label << ",";
-    }
-
-    plc.m_id = i;
-    mainZone.m_plcMap.insert(NSParserInternal::Zone::PLCMap::value_type(textPosition, plc));
-    plc.m_id = i+1;
-    zone.m_plcMap.insert(NSParserInternal::Zone::PLCMap::value_type(notePosition, plc));
-
-    rsrcAscii().addPos(pos);
-    rsrcAscii().addNote(f.str().c_str());
-    input->seek(pos+36, WPX_SEEK_SET);
-  }
   return true;
 }
 
@@ -1107,542 +873,279 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
 }
 
 ////////////////////////////////////////////////////////////
-// read a list of fonts
+// read DSPL or the VRS zone: numbering definition or version
 ////////////////////////////////////////////////////////////
-bool NSParser::readFontsList(MWAWEntry const &entry)
+bool NSParser::readVariable(NSStruct::RecursifData const &data)
 {
-  if (!entry.valid() && entry.length()!=0) {
-    MWAW_DEBUG_MSG(("NSParser::readFontsList: the entry is bad\n"));
+  if (!data.m_info || data.m_info->m_zoneType < 0 || data.m_info->m_zoneType >= 3) {
+    MWAW_DEBUG_MSG(("NSParser::readVariable: find unexpected zoneType\n"));
     return false;
   }
-  entry.setParsed(true);
-  MWAWInputStreamPtr input = rsrcInput();
-  long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
-
-  libmwaw::DebugStream f;
-  f << "Entries(FontNames)[" << entry.id() << "]:";
-  rsrcAscii().addPos(pos-4);
-  rsrcAscii().addNote(f.str().c_str());
-
-  int num=0;
-  while(!input->atEOS()) {
-    pos = input->tell();
-    if (pos == entry.end()) break;
-    if (pos+4 > entry.end()) {
-      rsrcAscii().addPos(pos);
-      rsrcAscii().addNote("FontNames###");
-
-      MWAW_DEBUG_MSG(("NSParser::readFontsList: can not read flst\n"));
-      return false;
-    }
-    int fId = (int)input->readULong(2);
-    f.str("");
-    f << "FontNames" << num++ << ":fId=" << std::hex << fId << std::dec << ",";
-    int pSz = (int)input->readULong(1);
-
-    if (pSz+1+pos+2 > entry.end()) {
-      f << "###";
-      rsrcAscii().addPos(pos);
-      rsrcAscii().addNote(f.str().c_str());
-
-      MWAW_DEBUG_MSG(("NSParser::readFontsList: can not read pSize\n"));
-      return false;
-    }
-    std::string name("");
-    for (int c=0; c < pSz; c++)
-      name += (char) input->readULong(1);
-    m_convertissor->setCorrespondance(fId, name);
-    f << name;
-    rsrcAscii().addPos(pos);
-    rsrcAscii().addNote(f.str().c_str());
-    if ((pSz%2)==0) input->seek(1,WPX_SEEK_CUR);
-  }
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the FTAB/STYL resource: a font format ?
-////////////////////////////////////////////////////////////
-bool NSParser::readFonts(MWAWEntry const &entry)
-{
-  bool isStyle = entry.type()=="STYL";
-  int const fSize = isStyle ? 58 : 98;
-  std::string name(isStyle ? "Style" : "Fonts");
-  if ((!entry.valid()&&entry.length()) || (entry.length()%fSize)) {
-    MWAW_DEBUG_MSG(("NSParser::readFonts: the entry is bad\n"));
-    return false;
-  }
-  entry.setParsed(true);
-  MWAWInputStreamPtr input = rsrcInput();
-  long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
-
-  int numElt = int(entry.length()/fSize);
-  libmwaw::DebugStream f;
-  f << "Entries(" << name << ")[" << entry.id() << "]:N=" << numElt;
-  rsrcAscii().addPos(pos-4);
-  rsrcAscii().addNote(f.str().c_str());
-
-  long val;
-  for (int i = 0; i < numElt; i++) {
-    NSParserInternal::Font font;
-    pos = input->tell();
-    f.str("");
-    if (!isStyle)
-      font.m_pictureId = (int)input->readLong(2);
-
-    if (font.m_pictureId) {
-      // the two value seems to differ slightly for a picture
-      val = (long)input->readULong(2);
-      if (val != 0xFF01) f << "#pictFlags0=" << std::hex << val << ",";
-      font.m_pictureHeight = (int)input->readLong(2);
-    } else {
-      val = (long)input->readULong(2);
-      if (val != 0xFF00)
-        font.m_font.setId(int(val));
-      val = (long)input->readULong(2);
-      if (val != 0xFF00)
-        font.m_font.setSize(int(val));
-    }
-
-    uint32_t flags=0;
-    int flag = (int) input->readULong(2);
-
-    if (flag&0x1) flags |= MWAW_BOLD_BIT;
-    if (flag&0x2) flags |= MWAW_ITALICS_BIT;
-    if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
-    if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
-    if (flag&0x10) flags |= MWAW_SHADOW_BIT;
-    if (flag&0x20) f << "condensed,";
-    if (flag&0x40) f << "extended,";
-    if (flag &0xFF80)
-      f << "#flags0=" << std::hex << (flag &0xFF80) << std::dec << ",";
-    flag = (int) input->readULong(2);
-    if (flag & 1) {
-      flags |= MWAW_UNDERLINE_BIT;
-      f << "underline[lower],";
-    }
-    if (flag & 2) {
-      flags |= MWAW_UNDERLINE_BIT;
-      f << "underline[dot],";
-    }
-    if (flag & 4) {
-      flags |= MWAW_UNDERLINE_BIT;
-      f << "underline[word],";
-    }
-    if (flag & 0x8) flags |= MWAW_SUPERSCRIPT_BIT;
-    if (flag & 0x10) flags |= MWAW_SUBSCRIPT_BIT;
-    if (flag & 0x20) flags |= MWAW_STRIKEOUT_BIT;
-    if (flag & 0x40) flags |= MWAW_OVERLINE_BIT;
-    if (flag & 0x80) flags |= MWAW_SMALL_CAPS_BIT;
-    if (flag & 0x100) flags |= MWAW_ALL_CAPS_BIT;
-    if (flag & 0x200) // checkme: possible ?
-      f << "boxed,";
-    if (flag & 0x400) flags |= MWAW_HIDDEN_BIT;
-    if (flag & 0x1000) {
-      flags |= MWAW_SUPERSCRIPT_BIT;
-      f << "superscript2,";
-    }
-    if (flag & 0x2000) {
-      flags |= MWAW_SUBSCRIPT_BIT;
-      f << "subscript2,";
-    }
-    if (flag & 0x4000) // fixme
-      f << "invert,";
-    if (flag & 0x8800)
-      f << "#flags1=" << std::hex << (flag & 0x8800) << std::dec << ",";
-    val = input->readLong(2);
-    if (val) f << "#f0=" << std::hex << val << ",";
-    font.m_format = (int) input->readULong(1);
-    font.m_format2 = (int) input->readULong(1);
-    font.m_font.setFlags(flags);
-
-    int color = 0;
-    // now data differs
-    if (isStyle) {
-      val = (int) input->readULong(2); // find [0-3] here
-      if (val) f << "unkn0=" << val << ",";
-      for (int j = 0; j < 6; j++) { // find s0=67, s1=a728
-        val = (int) input->readULong(2);
-        if (val) f << "f" << j << "=" << std::hex << val << std::dec << ",";
-      }
-      color = (int) input->readULong(2);
-    } else {
-      color = (int) input->readULong(2);
-      for (int j = 1; j < 6; j++) { // find always 0 here...
-        val = (int) input->readULong(2);
-        if (val) f << "#f" << j << "=" << val << ",";
-      }
-      bool hasMark = false;
-      val = (int) input->readULong(2);
-      if (val == 1) hasMark = true;
-      else if (val) f << "#hasMark=" << val << ",";
-      val = (int) input->readULong(2);
-      if (hasMark) font.m_markId = int(val);
-      else if (val) f << "#markId=" << val << ",";
-    }
-
-    static const uint32_t colors[] =
-    { 0, 0xFF0000, 0x00FF00, 0x0000FF, 0x00FFFF, 0xFF00FF, 0xFFFF00, 0xFFFFFF };
-    if (color < 8) {
-      uint32_t col = colors[color];
-      font.m_font.setColor
-      (Vec3uc((unsigned char)(col>>16),(unsigned char)((col>>8)&0xFF), (unsigned char)(col&0xFF)));
-    } else if (color != 0xFF00)
-      f << "#color=" << color << ",";
-    font.m_extra = f.str();
-    if (!isStyle)
-      m_state->m_fontList.push_back(font);
-
-    f.str("");
-    f << name << i << ":" << font.m_font.getDebugString(m_convertissor)
-      << font;
-    rsrcAscii().addDelimiter(input->tell(),'|');
-    rsrcAscii().addPos(pos);
-    rsrcAscii().addNote(f.str().c_str());
-    input->seek(pos+fSize, WPX_SEEK_SET);
-  }
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the FRMT resource: a list of ?
-////////////////////////////////////////////////////////////
-bool NSParser::readFRMT(MWAWEntry const &entry, int zoneId)
-{
-  if (!entry.valid() || (entry.length()%10)) {
-    MWAW_DEBUG_MSG(("NSParser::readFRMT: the entry is bad\n"));
-    return false;
-  }
-  if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::readFRMT: find unexpected zoneId: %d\n", zoneId));
-    return false;
-  }
-  NSParserInternal::Zone &zone = m_state->m_zones[zoneId];
-  entry.setParsed(true);
-  MWAWInputStreamPtr input = rsrcInput();
-  long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
-
-  int numElt = int(entry.length()/10);
-  libmwaw::DebugStream f;
-  f << "Entries(FRMT)[" << zoneId << "]:N=" << numElt;
-  rsrcAscii().addPos(pos-4);
-  rsrcAscii().addNote(f.str().c_str());
-
-  NSPosition position;
-  NSParserInternal::DataPLC plc;
-  plc.m_type = NSParserInternal::P_Format;
-  for (int i = 0; i < numElt; i++) {
-    pos = input->tell();
-    f.str("");
-    f << "FRMT" << i << "[" << zoneId << "]:";
-    position.m_paragraph = (int) input->readULong(4); // checkme or ??? m_paragraph
-    position.m_word = (int) input->readULong(2);
-    position.m_char = (int) input->readULong(2);
-    f << "pos=" << position << ",";
-    int id = (int) input->readLong(2);
-    f << "F" << id << ",";
-    plc.m_id = id;
-    zone.m_plcMap.insert(NSParserInternal::Zone::PLCMap::value_type(position, plc));
-    rsrcAscii().addPos(pos);
-    rsrcAscii().addNote(f.str().c_str());
-    input->seek(pos+10, WPX_SEEK_SET);
-  }
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the RULE resource: a list of ruler ?
-////////////////////////////////////////////////////////////
-bool NSParser::readParagraphs(MWAWEntry const &entry, int zoneId)
-{
-  if (!entry.valid() && entry.length() != 0) {
-    MWAW_DEBUG_MSG(("NSParser::readParagraphs: the entry is bad\n"));
-    return false;
-  }
-  if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::readParagraphs: find unexpected zoneId: %d\n", zoneId));
-    return false;
-  }
-  NSParserInternal::Zone &zone = m_state->m_zones[zoneId];
-
-  entry.setParsed(true);
-  MWAWInputStreamPtr input = rsrcInput();
-  long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
-
-  int numElt = int(entry.length()/98);
-  libmwaw::DebugStream f, f2;
-  f << "Entries(RULE)[" << entry.type() << entry.id() << "]";
-  if (entry.id()==1004) f << "[Styl]";
-  else if (entry.id() != 1003) {
-    MWAW_DEBUG_MSG(("NSParser::readParagraphs: find unexpected entryId: %d\n", entry.id()));
-    f << "###";
-  }
-  f << ":N=" << numElt;
-  rsrcAscii().addPos(pos-4);
-  rsrcAscii().addNote(f.str().c_str());
-
-  NSParserInternal::DataPLC plc;
-  plc.m_type = NSParserInternal::P_Ruler;
-
-  long val;
-  while (input->tell() != entry.end()) {
-    int num = (entry.id() == 1003) ? (int)zone.m_paragraphList.size() : -1;
-    pos = input->tell();
-    f.str("");
-    if (pos+8 > entry.end() || input->atEOS()) {
-      f << "RULE" << num << "[" << zoneId << "]:###";
-      rsrcAscii().addPos(pos);
-      rsrcAscii().addNote(f.str().c_str());
-
-      MWAW_DEBUG_MSG(("NSParser::readParagraphs: can not read end of zone\n"));
-      return false;
-    }
-
-    long nPara = (long) input->readULong(4);
-    if (nPara == 0x7FFFFFFF) {
-      input->seek(-4, WPX_SEEK_CUR);
-      break;
-    }
-    NSPosition textPosition;
-    textPosition.m_paragraph = (int) nPara;  // checkme or ???? + para
-
-    long sz = (long) input->readULong(4);
-    if (sz < 0x42 || pos+sz > entry.end()) {
-      f << "RULE" << num << "[" << zoneId << "]:###";
-      rsrcAscii().addPos(pos);
-      rsrcAscii().addNote(f.str().c_str());
-
-      MWAW_DEBUG_MSG(("NSParser::readParagraphs: can not read the size zone\n"));
-      return false;
-    }
-    NSParserInternal::Paragraph para;
-    para.m_spacingsInterlineUnit = WPX_POINT; // set default
-    para.m_spacingsInterlineType = libmwaw::AtLeast;
-    para.m_spacings[0] = float(input->readLong(4))/65536.f;
-    para.m_spacings[1] = float(input->readLong(4))/65536.f/72.f;
-    int wh = int(input->readLong(2));
-    switch(wh) {
-    case 0:
-      break; // left
-    case 1:
-      para.m_justify = libmwaw::JustificationCenter;
-      break;
-    case 2:
-      para.m_justify = libmwaw::JustificationRight;
-      break;
-    case 3:
-      para.m_justify = libmwaw::JustificationFull;
-      break;
-    default:
-      f << "#align=" << wh << ",";
-      break;
-    }
-    val = input->readLong(2);
-    if (val) f << "#f0=" << val << ",";
-
-    para.m_marginsUnit = WPX_INCH;
-    para.m_margins[1] = float(input->readLong(4))/65536.f/72.f;
-    para.m_margins[0] = float(input->readLong(4))/65536.f/72.f;
-    para.m_margins[2] = pageWidth()-float(input->readLong(4))/65536.f/72.f;
-
-    wh = int(input->readULong(1));
-    switch(wh) {
-    case 0:
-      para.m_spacings[0]=0;
-      break; // auto
-    case 1:
-      para.m_spacingsInterlineType = libmwaw::Fixed;
-      break;
-    case 2:
-      para.m_spacingsInterlineUnit = WPX_PERCENT;
-      para.m_spacingsInterlineType = libmwaw::Fixed;
-      break;
-    default:
-      f << "#interline=" << (val&0xFC) << ",";
-      para.m_spacings[0]=0;
-      break;
-    }
-    val = input->readLong(1);
-    if (val) f << "#f1=" << val << ",";
-    for (int i = 0; i < 14; i++) {
-      val = input->readLong(2);
-      if (val) f << "g" << i << "=" << val << ",";
-    }
-    input->seek(pos+0x3E, WPX_SEEK_SET);
-    long numTabs = input->readLong(2);
-    bool ok = true;
-    if (0x40+8*numTabs+2 > sz) {
-      f << "###";
-      MWAW_DEBUG_MSG(("NSParser::readParagraphs: can not read the string\n"));
-      ok = false;
-      numTabs = 0;
-    }
-    for (int i = 0; i < numTabs; i++) {
-      long tabPos = input->tell();
-      MWAWTabStop tab;
-
-      f2.str("");
-      tab.m_position = float(input->readLong(4))/72.f/65536.; // from left pos
-      val = (long) input->readULong(1);
-      switch(val) {
-      case 1:
-        break;
-      case 2:
-        tab.m_alignment = MWAWTabStop::CENTER;
-        break;
-      case 3:
-        tab.m_alignment = MWAWTabStop::RIGHT;
-        break;
-      case 4:
-        tab.m_alignment = MWAWTabStop::DECIMAL;
-        break;
-      case 6:
-        f2 << "justify,";
-        break;
-      default:
-        f2 << "#type=" << val << ",";
-        break;
-      }
-      tab.m_leaderCharacter = (unsigned short)input->readULong(1);
-      val = (long) input->readLong(2); // unused ?
-      if (val) f2 << "#unkn0=" << val << ",";
-      para.m_tabs->push_back(tab);
-      if (f2.str().length())
-        f << "tab" << i << "=[" << f2.str() << "],";
-      input->seek(tabPos+8, WPX_SEEK_SET);
-    }
-
-    // ruler name
-    long pSz = ok ? (long) input->readULong(1) : 0;
-    if (pSz) {
-      if (input->tell()+pSz != pos+sz && input->tell()+pSz+1 != pos+sz) {
-        f << "name###";
-        MWAW_DEBUG_MSG(("NSParser::readParagraphs: can not read the ruler name\n"));
-        rsrcAscii().addDelimiter(input->tell()-1,'#');
-      } else {
-        std::string str("");
-        for (int i = 0; i < pSz; i++)
-          str += (char) input->readULong(1);
-        para.m_name = str;
-      }
-    }
-    plc.m_id = num;
-    para.m_extra=f.str();
-    if (entry.id() == 1003) {
-      zone.m_paragraphList.push_back(para);
-      zone.m_plcMap.insert(NSParserInternal::Zone::PLCMap::value_type(textPosition, plc));
-    }
-
-    f.str("");
-    f << "RULE" << num << "[" << zoneId << "]:";
-    f << "paragraph=" << nPara << "," << para;
-
-    rsrcAscii().addPos(pos);
-    rsrcAscii().addNote(f.str().c_str());
-    input->seek(pos+sz, WPX_SEEK_SET);
-  }
-  pos = input->tell();
-  f.str("");
-  f << "RULE[" << zoneId << "](II):";
-  if (pos+66 != entry.end() || input->readULong(4) != 0x7FFFFFFF) {
-    f << "###";
-    rsrcAscii().addPos(pos);
-    rsrcAscii().addNote(f.str().c_str());
-
-    MWAW_DEBUG_MSG(("NSParser::readParagraphs: find odd end\n"));
+  if (!data.m_childList.size())
     return true;
-  }
-  for (int i = 0; i < 31; i++) { // only find 0 expected f12=0|100
-    val = (long) input->readLong(2);
-    if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
-  }
-  rsrcAscii().addPos(pos);
-  rsrcAscii().addNote(f.str().c_str());
 
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read DSPL zone: numbering definition
-////////////////////////////////////////////////////////////
-bool NSParser::readNumberingDef(NSParserInternal::RecursifData const &data)
-{
-  size_t numData = data.m_positionList.size();
-  if (data.m_entryList.size() != numData) {
-    MWAW_DEBUG_MSG(("NSParser::readNumberingDef: the position and the entry do not coincide\n"));
+  if (data.m_childList.size() > 1) {
+    MWAW_DEBUG_MSG(("NSParser::readVariable: level 0 node contains more than 1 node\n"));
+  }
+  if (data.m_childList[0].isLeaf()) {
+    MWAW_DEBUG_MSG(("NSParser::readVariable: level 1 node is a leaf\n"));
     return false;
   }
+  NSStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
+  size_t numData = mainData.m_childList.size();
+  NSParserInternal::Zone &zone = m_state->m_zones[int(data.m_info->m_zoneType)];
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugStream f;
-  size_t n = 0;
   long val;
-  while (n < numData) {
-    Vec3i const &wh = data.m_positionList[n];
 
-    static int const minExpectedSz[] = { 5, 8, 5, 6, 6, 6, 8, 8, 5, 8 };
-    while (n < numData) {
-      Vec3i actWh = data.m_positionList[n];
-      Vec3i diffWh = actWh-wh;
-      if (diffWh[0] || diffWh[1]) break;
-      MWAWEntry const &entry = data.m_entryList[n++];
+  std::vector<NSParserInternal::Variable> *result = 0;
+  int lastMaxId = 0;
+  switch(data.m_info->m_variableType) {
+  case NSStruct::V_Numbering:
+    lastMaxId = 11;
+    result = &m_state->m_numberingList;
+    break;
+  case NSStruct::V_Version:
+    lastMaxId = 8;
+    result = &zone.m_versionList;
+    break;
+  case NSStruct::V_Variable:
+    lastMaxId = 12;
+    result = &zone.m_variableList;
+    break;
+  case NSStruct::V_None:
+  default:
+    MWAW_DEBUG_MSG(("NSParser::readVariable: find unexpected dataType\n"));
+    return false;
+  }
+  for (size_t n = 0; n < numData; n++) {
+    static int const minExpectedSz[] = { 1, 4, 1, 2, 2, 2, 4, 4, 1, 4, 1 };
+    NSStruct::RecursifData::Node const &node = mainData.m_childList[n];
+    NSParserInternal::Variable num(data.m_info->m_variableType);
+    num.m_type = node.m_type;
+
+    if (node.isLeaf()) {
+      MWAW_DEBUG_MSG(("NSParser::readVariable: level 2 node is a leaf\n"));
+      continue;
+    }
+    NSStruct::RecursifData const &dt = *node.m_data;
+    f.str("");
+    int lastId = lastMaxId;
+    switch(num.m_type) {
+    case 1: // [2..12] with v12 is a string
+      lastId = 12;
+      f << "numbering,";
+      break;
+    case 2: // idem
+      lastId = 12;
+      f << "numbering[count],";
+      break;
+    case 3: // type = [2, 3.. 8]
+      lastId = 8;
+      f << "version,";
+      break;
+    case 4: // type = [2,3,4]
+      lastId = 4;
+      f << "version[small],";
+      break;
+    case 5: //type=[2,3,4,4]  second id=4: a small int : Date format/time
+      lastId = 4;
+      f << "date/time,";
+      break;
+    case 6:  // type=[2,3,4]
+      lastId = 4;
+      f << "docTitle,";
+      break;
+    default:
+      f << "#";
+      break;
+    }
+    rsrcAscii().addPos(node.m_entry.begin()-16);
+    rsrcAscii().addNote(f.str().c_str());
+
+    for (size_t nDt = 0; nDt < dt.m_childList.size(); nDt++) {
+      if (!dt.m_childList[nDt].isLeaf()) {
+        MWAW_DEBUG_MSG(("NSParser::readVariable: level 3 node is not a leaf\n"));
+        continue;
+      }
+      MWAWEntry const &entry = dt.m_childList[nDt].m_entry;
       f.str("");
       input->seek(entry.begin(), WPX_SEEK_SET);
-      val = input->readLong(2);
-      if (val) f << "#f0=" << val << ",";
-      int id = (int) input->readLong(2);
-      if (id != diffWh[2]+2) f << "#id=" << id << ",";
+      int id = dt.m_childList[nDt].m_type;
+      bool checkId = false;
+      if (id != int(nDt)+2) {
+        if (id == 4 && mainData.m_childList[n].m_type == 5 && entry.length() >= 2) {
+          checkId = true;
+          id = -4;
+        } else
+          f << "#id=" << id << ",";
+      }
 
-      if (actWh[2] < 0 || actWh[2] > 9 || id != diffWh[2]+2 ||
-          entry.length() < minExpectedSz[actWh[2]]) {
-        MWAW_DEBUG_MSG(("NSParser::readNumberingDef: find unexpected size for data %d\n", actWh[2]));
+      if (!checkId && (id < 2 || id > lastId || entry.length() < minExpectedSz[id-2])) {
+        MWAW_DEBUG_MSG(("NSParser::readVariable: find unexpected size for data %d\n", int(nDt)));
         f << "###";
-        rsrcAscii().addPos(entry.begin()-8);
+        rsrcAscii().addPos(entry.begin()-12);
         rsrcAscii().addNote(f.str().c_str());
         continue;
       }
-
-      switch(actWh[2]) {
-      case 0: // main text
-      case 2: // display example
-      case 8: { // postfix : list of fields
+      switch(id) {
+      case 2:
+      case 4: // display example
+      case 10:
+      case 12: { // postfix : list of fields
         int mSz = (int) input->readULong(1);
-        if (mSz+1+4 > entry.length()) {
-          MWAW_DEBUG_MSG(("NSParser::readNumberingDef: the dpsl seems to short\n"));
+        if (mSz+1 > entry.length()) {
+          MWAW_DEBUG_MSG(("NSParser::readVariable: the dpsl seems to short\n"));
           f << "###Text";
           break;
         }
         std::string text("");
         for (int i = 0; i < mSz; i++)
           text+= (char) input->readULong(1);
-        f << "g" << actWh[2] << "=\"" << text << "\"";
+        static char const *(wh0[]) = { "unkn0", "prefix", "name", "comments" };
+        static char const *(wh1[]) = { "unkn1", "sample", "sample", "author?" };
+        static char const *(wh2[]) = { "unkn2", "suffix", "suffix", "unkn2" };
+        switch(id) {
+        case 2:
+          num.m_prefix = text;
+          f << wh0[num.m_containerType];
+          break;
+        case 4:
+          num.m_sample = text;
+          f << wh1[num.m_containerType];
+          break;
+        case 10:
+          num.m_suffix = text;
+          f << wh2[num.m_containerType];
+          break;
+        case 12:
+          f << "f12";
+          break;
+        default:
+          f << "###id[" << id << "]";
+        }
+        f << "=\"" << text << "\"";
         break;
       }
-      case 3: // style : 0=arabic, 1=roman, upperroman, abgadhawaz(arabic), alpha, upperalpha, hebrew
-      case 4: // start number
-      case 5: // increment
-        val = (long) input->readULong(2);
-        f << "g" << actWh[2] << "=" << std::hex << val << std::dec << ",";
+      case -4: { // date format
+        num.m_dateFormat = (int) input->readULong(2);
+        if (!num.m_dateFormat) break; // default
+        std::string format("");
+        format = num.getDateFormat();
+        if (format.length()) f << "format=" << format << ",";
+        else f << "#format=" << std::hex << (num.m_dateFormat&0x9F) << std::dec << ",";
         break;
-      case 1: // find f or 1d
-      case 6: // always 0 ?
-      case 7: // main id
-      case 9: // find 0-2
+      }
+      case 5: // style : 0=arabic, 1=roman, upperroman, abgadhawaz(arabic), alpha, upperalpha, hebrew
+        val = (long) input->readULong(2);
+        f << "type=";
+        num.m_numberingType = libmwaw::ARABIC;
+        switch(val) {
+        case 0:
+          f << "arabic,";
+          break;
+        case 1:
+          num.m_numberingType = libmwaw::LOWERCASE_ROMAN;
+          f << "roman,";
+          break;
+        case 2:
+          num.m_numberingType = libmwaw::UPPERCASE_ROMAN;
+          f << "upperroman,";
+          break;
+        case 3:
+          f << "abgadhawaz,";
+          break;
+        case 4:
+          num.m_numberingType = libmwaw::LOWERCASE;
+          f << "alpha,";
+          break;
+        case 5:
+          num.m_numberingType = libmwaw::UPPERCASE;
+          f << "upperalpha,";
+          break;
+        case 6:
+          f << "hebrew,";
+          break;
+        default:
+          f << "#" << val << ",";
+        }
+        break;
+      case 6: // start number
+        num.m_startNumber = (int) input->readLong(2);
+        f << "start=" << num.m_startNumber <<",";
+        break;
+      case 7: // increment
+        num.m_increment = (int) input->readLong(2);
+        f << "increment=" << num.m_increment <<",";
+        break;
+      case 9: // id ?
+        num.m_refId = (int) input->readULong(4);
+        f << "refId=" << num.m_refId << ",";
+        break;
+      case 3:
+        num.m_fieldType = (long) input->readULong(4);
+        switch (num.m_fieldType) {
+          // 1(type 5) date ?
+        case 0xe:
+          f << "version,";
+          break;
+        case 0xf:
+          f << "date,";
+          break;
+        case 0x10:
+          f << "time,";
+          break;
+        case 0x11:
+          f << "docTitle,";
+          break;
+        case 0x14: // find with 0xFFFF8014
+          f << "mark,";
+          break;
+        case 0x1c:
+          f << "footnote,";
+          break;
+        case 0x1d:
+          f << "reference?,";
+          break;
+          // alway in version variable ?
+        case 0x7FFFFFFF:
+          f << "none,";
+          break;
+        default:
+          if ((num.m_fieldType>>16)==0x7FFF)
+            f << "#fieldType=" << num.m_fieldType -0x7FFFFFFF-1  << ",";
+          else if ((num.m_fieldType>>16)==0xFFFF)
+            f << "#fieldType=X" << std::hex << num.m_fieldType << std::dec << ",";
+          else
+            f << "#fieldType=" << num.m_fieldType << ",";
+          break;
+        }
+        break;
+      case 8: // always 0 ?
         val = (long) input->readULong(4);
-        f << "g" << actWh[2] << "=" << std::hex << val << std::dec << ",";
+        f << "g8=" << val << ",";
+        break;
+      case 11: // find 0-2: if numbering g11=0 means add default data, if not num data?
+        val = (long) input->readULong(4);
+        if (val==0) {
+          f << "auto,";
+          if (num.m_suffix.length())
+            f << "###";
+          else
+            num.m_suffix += char(num.m_refId);
+        } else
+          f << "numVar?=" << val << ",";
         break;
       default:
         break;
       }
 
       if (f.str().length()) {
-        rsrcAscii().addPos(entry.begin()-8);
+        rsrcAscii().addPos(entry.begin()-12);
         rsrcAscii().addNote(f.str().c_str());
       }
     }
+    result->push_back(num);
   }
   return true;
 }
@@ -1661,15 +1164,25 @@ bool NSParser::readNumberingReset(MWAWEntry const &entry, int zoneId)
     MWAW_DEBUG_MSG(("NSParser::readNumberingReset: find unexpected zoneId: %d\n", zoneId));
     return false;
   }
-  //  NSParserInternal::Zone &zone = m_state->m_zones[zoneId];
+  NSParserInternal::Zone &zone = m_state->m_zones[zoneId];
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
   input->seek(pos, WPX_SEEK_SET);
-
+  int sz = (int) input->readULong(2);
+  if (sz+2 != entry.length() || sz%2) {
+    MWAW_DEBUG_MSG(("NSParser::readNumberingReset: entry size seems odd\n"));
+    return false;
+  }
   libmwaw::DebugStream f;
   f << "Entries(NumberingReset)[" << zoneId << "]:";
-  /* sz, list of reset ? */
+  size_t numElt = size_t(sz/2);
+  zone.m_numberingResetList.resize(numElt, 0);
+  for (size_t i = 0; i < numElt; i++) {
+    int val = int(input->readULong(2));
+    zone.m_numberingResetList[i] = val;
+    if (val) f << "reset" << int(i) << "=" << val << ",";
+  }
   rsrcAscii().addPos(pos-4);
   rsrcAscii().addNote(f.str().c_str());
   return true;
@@ -1678,217 +1191,371 @@ bool NSParser::readNumberingReset(MWAWEntry const &entry, int zoneId)
 ////////////////////////////////////////////////////////////
 // read mark zone ( ie the reference structure )
 ////////////////////////////////////////////////////////////
-bool NSParser::readMark(NSParserInternal::RecursifData const &data)
+bool NSParser::readReference(NSStruct::RecursifData const &data)
 {
-  size_t numData = data.m_positionList.size();
-  if (data.m_entryList.size() != numData) {
-    MWAW_DEBUG_MSG(("NSParser::readMark: the position and the entry do not coincide\n"));
+  if (!data.m_info || data.m_info->m_zoneType < 0 || data.m_info->m_zoneType >= 3) {
+    MWAW_DEBUG_MSG(("NSParser::readReference: find unexpected zoneType\n"));
     return false;
   }
+
+  if (!data.m_childList.size())
+    return true;
+
+  if (data.m_childList.size() > 1) {
+    MWAW_DEBUG_MSG(("NSParser::readReference: level 0 node contains more than 1 node\n"));
+  }
+  if (data.m_childList[0].isLeaf()) {
+    MWAW_DEBUG_MSG(("NSParser::readReference: level 1 node is a leaf\n"));
+    return false;
+  }
+  NSStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
+  size_t numData = mainData.m_childList.size();
+  NSParserInternal::Zone &zone = m_state->m_zones[(int) data.m_info->m_zoneType];
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugStream f;
 
   size_t n = 0;
   bool pbFound = false;
   while (n < numData) {
-    Vec3i const &wh = data.m_positionList[n];
-    MWAWEntry const &entry = data.m_entryList[n++];
-    if ((wh[1]%2) || wh[2] || n+1 >= numData ||
-        data.m_positionList[n+1][1] <= wh[1] || entry.length() < 12) {
+    if (n+1 >= numData) {
+      MWAW_DEBUG_MSG(("NSParser::readReference: find an odd number of data\n"));
+      break;
+    }
+
+    // ----- First the position -----
+    NSStruct::RecursifData::Node const &nd=mainData.m_childList[n++];
+    if (nd.isLeaf() || nd.m_type != 0x7FFFFFFF) {
       if (!pbFound) {
-        MWAW_DEBUG_MSG(("NSParser::readMark: the data order seems bads\n"));
+        MWAW_DEBUG_MSG(("NSParser::readReference: oops find bad type for the filePos node\n"));
         pbFound = true;
       }
-      rsrcAscii().addPos(entry.begin()-8);
+      continue;
+    }
+    NSParserInternal::Reference ref;
+    NSStruct::RecursifData const &dt=*nd.m_data;
+    if (dt.m_childList.size() != 1 || !dt.m_childList[0].isLeaf()) {
+      if (!pbFound) {
+        MWAW_DEBUG_MSG(("NSParser::readReference: the filePos node contain unexpected data\n"));
+        pbFound = true;
+      }
+      zone.m_referenceList.push_back(ref);
+      continue;
+    }
+    MWAWEntry entry = dt.m_childList[0].m_entry;
+    if (entry.length() < 8) {
+      if (!pbFound) {
+        MWAW_DEBUG_MSG(("NSParser::readReference: the filePos size seem bad\n"));
+        pbFound = true;
+      }
+      zone.m_referenceList.push_back(ref);
+      rsrcAscii().addPos(entry.begin()-12);
       rsrcAscii().addNote("###");
       continue;
     }
 
-    // the mark position in the text part
+    // the file position in the text part
     long pos = entry.begin();
     input->seek(pos, WPX_SEEK_SET);
     f.str("");
-    f << "[Position]:";
-    long val = (long) input->readULong(2);
-    if (val != 0x7fff) f << "#f0=" << val << ",";
-    val = input->readLong(2);
-    if (val != -1) f << "#f1=" << val << ",";
-    f << "filePos=" << std::hex << input->readULong(4) << "<->";
-    f << input->readULong(4) << std::dec << ",";
-    rsrcAscii().addPos(pos-8);
+    f << "Position:";
+    ref.m_textPosition.setBegin(input->readULong(4));
+    ref.m_textPosition.setEnd(input->readULong(4));
+    f << "filePos=" << std::hex
+      << ref.m_textPosition.begin() << "<->" << ref.m_textPosition.end() << std::dec << ",";
+    rsrcAscii().addPos(pos-12);
     rsrcAscii().addNote(f.str().c_str());
 
-    // the mark data
-    size_t numMarkData = 0;
-    while (n+numMarkData < numData) {
-      Vec3i diffWh = data.m_positionList[n+numMarkData]-wh;
-      if (diffWh[0] || diffWh[1]!=1)
-        break;
-      numMarkData++;
-    }
-    if (numMarkData != 2 || data.m_entryList[n].length() < 8 ||
-        data.m_entryList[n+1].length() < 9) {
+    // ----- Second the data node -----
+    NSStruct::RecursifData::Node const &nd1=mainData.m_childList[n++];
+
+    if (nd1.isLeaf() || nd1.m_type == 0x7FFFFFFF) {
       if (!pbFound) {
-        MWAW_DEBUG_MSG(("NSParser::readMark: the mark data seems odds\n"));
+        MWAW_DEBUG_MSG(("NSParser::readReference: the date node contain unexpected data\n"));
         pbFound = true;
       }
-      for (size_t d=0; d < numMarkData; d++) {
-        rsrcAscii().addPos(data.m_entryList[n+d].begin()-8);
-        rsrcAscii().addNote("Data###");
+      zone.m_referenceList.push_back(ref);
+      n--;
+      continue;
+    }
+
+    f.str("");
+    switch (nd1.m_type) {
+    case 1:
+      break; // type=1:id, type=100:text
+    case 2:
+      f << "unknown,";
+      break; // type=1:id, type=-4:?, type=220: ?, type=300: list of chain?
+    default:
+      f << "#type=" << nd1.m_type << ",";
+      break;
+    }
+    if (f.str().length()) {
+      rsrcAscii().addPos(nd1.m_entry.begin()-16);
+      rsrcAscii().addNote(f.str().c_str());
+    }
+    long val;
+    NSStruct::RecursifData const &dt1=*nd1.m_data;
+    for (size_t c=0; c < dt1.m_childList.size(); c++) {
+      if (!dt1.m_childList[c].isLeaf()) {
+        if (!pbFound) {
+          MWAW_DEBUG_MSG(("NSParser::readReference: find some level 2 data array nodes\n"));
+          pbFound = true;
+        }
+        continue;
       }
-      n+=numMarkData;
-      continue;
+      NSStruct::RecursifData::Node const &childNode = dt1.m_childList[c];
+      entry = childNode.m_entry;
+      pos = entry.begin();
+      input->seek(pos, WPX_SEEK_SET);
+      f.str("");
+      switch(childNode.m_type) {
+      case 1:
+        f << "II:";
+        if (entry.length() < 4) {
+          f << "###";
+          break;
+        }
+        ref.m_id = (int) input->readLong(4); // some kind of id ?
+        f << "id?=" << ref.m_id << ",";
+        break;
+      case 0x7ffffffc: // find one time with 0
+        f << "III:";
+        if (entry.length() < 4) {
+          f << "###";
+          break;
+        }
+        val = input->readLong(4);
+        f << "unkn=" << val << ",";
+        break;
+      case 100: {
+        f << "Text:";
+        if (entry.length() < 1) {
+          f << "###";
+          break;
+        }
+        int mSz = (int) input->readULong(1);
+        if (mSz+1 > entry.length()) {
+          f << "###";
+          break;
+        }
+        std::string mark("");
+        for (int i = 0; i < mSz; i++)
+          mark+=(char) input->readULong(1);
+        ref.m_text = mark;
+        f << mark;
+        break;
+      }
+      case 220: // find with size 0x24
+      case 300: // find with size 0x28
+        break;
+      default:
+        f << "#type";
+        break;
+      }
+      if (f.str().length()) {
+        rsrcAscii().addPos(pos-12);
+        rsrcAscii().addNote(f.str().c_str());
+      }
     }
-
-    pos = data.m_entryList[n++].begin();
-    input->seek(pos, WPX_SEEK_SET);
-    f.str("");
-    f << "[II]:";
-    val = input->readLong(4); // always 1 ?
-    if (val != 1) f << "#f0=" << val << ",";
-    val = input->readLong(4); // some kind of id ?
-    f << "id?=" << val << ",";
-    rsrcAscii().addPos(pos-8);
-    rsrcAscii().addNote(f.str().c_str());
-
-    MWAWEntry const &textEntry = data.m_entryList[n++];
-    pos = textEntry.begin();
-    input->seek(pos, WPX_SEEK_SET);
-    f.str("");
-    f << "[Text]:";
-    val = input->readLong(2); // always 0 ?
-    if (val) f << "#f0=" << val << ",";
-    val = input->readLong(2); // always 0x64 ?
-    if (val != 100) f << "#f1=" << val << ",";
-    int mSz = (int) input->readULong(1);
-    if (mSz+1+4 > textEntry.length()) {
-      MWAW_DEBUG_MSG(("NSParser::readMark: the mark text seems to short\n"));
-      rsrcAscii().addPos(pos-8);
-      rsrcAscii().addNote("###Text");
-      continue;
-    }
-    std::string mark("");
-    for (int i = 0; i < mSz; i++)
-      mark+=(char) input->readULong(1);
-    f << mark;
-    rsrcAscii().addPos(pos-8);
-    rsrcAscii().addNote(f.str().c_str());
-    // fixme: save here the mark wh[1]/2
+    zone.m_referenceList.push_back(ref);
   }
   return true;
 }
 
 ////////////////////////////////////////////////////////////
-// read a recursive zone of ? Only in v4 ?
+// read PLDT zone: a unknown zone (a type, an id/anchor type? and a bdbox )
 ////////////////////////////////////////////////////////////
-bool NSParser::readRecursifList
-(MWAWEntry const &entry, NSParserInternal::RecursifData &data, int level)
+bool NSParser::readPLDT(NSStruct::RecursifData const &data)
 {
-  if (!entry.valid() || entry.length() < 8) {
-    MWAW_DEBUG_MSG(("NSParser::readRecursifList: the entry is bad\n"));
-    return false;
-  }
-  if (level < 0 || level >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::readRecursifList: find unexpected level: %d\n", level));
+  if (!data.m_info || data.m_info->m_zoneType < 0 || data.m_info->m_zoneType >= 3) {
+    MWAW_DEBUG_MSG(("NSParser::readPLDT: find unexpected zoneType\n"));
     return false;
   }
 
-  entry.setParsed(true);
+  if (!data.m_childList.size())
+    return true;
+
+  if (data.m_childList.size() > 1) {
+    MWAW_DEBUG_MSG(("NSParser::readPLDT: level 0 node contains more than 1 node\n"));
+  }
+  if (data.m_childList[0].isLeaf()) {
+    MWAW_DEBUG_MSG(("NSParser::readPLDT: level 1 node is a leaf\n"));
+    return false;
+  }
+  NSStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
+  size_t numData = mainData.m_childList.size();
+  //  NSParserInternal::Zone &zone = m_state->m_zones[(int) data.m_info->m_zoneType];
   MWAWInputStreamPtr input = rsrcInput();
-  long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
-
   libmwaw::DebugStream f;
-  if (level == 0) {
-    f << "Entries(" << entry.name() << "):";
-    rsrcAscii().addPos(pos);
+
+  long val;
+  for (size_t n = 0 ; n < numData; n++) {
+    if (mainData.m_childList[n].isLeaf()) {
+      MWAW_DEBUG_MSG(("NSParser::readPLDT: oops some level 2 node are leaf\n"));
+      continue;
+    }
+    NSStruct::RecursifData const &dt=*mainData.m_childList[n].m_data;
+    /* type == 7fffffff and wh = 2 */
+    if (dt.m_childList.size() != 1) {
+      MWAW_DEBUG_MSG(("NSParser::readPLDT: find an odd number of 3 leavers\n"));
+      continue;
+    }
+    NSStruct::RecursifData::Node const &child= dt.m_childList[0];
+    if (!child.isLeaf() || child.m_entry.length() < 14) {
+      MWAW_DEBUG_MSG(("NSParser::readPLDT: find an odd level 3 leaf\n"));
+      continue;
+    }
+
+    long pos = child.m_entry.begin();
+    input->seek(pos, WPX_SEEK_SET);
+    f.str("");
+    std::string type("");   // find different small string here
+    for (int i = 0; i < 4; i++)
+      type += (char) input->readULong(1);
+    f << type << ",";
+    val = input->readLong(2); // a small number find 4,5,b,d
+    if (val) f << "f0=" << val << ",";
+    int dim[4];
+    for (int i = 0; i < 4; i++) dim[i] = (int) input->readLong(2);
+    f << "bdbox=(" << dim[1] << "x" << dim[0] << "<->"
+      << dim[3] << "x" << dim[2] << "),";
+    rsrcAscii().addPos(pos-12);
     rsrcAscii().addNote(f.str().c_str());
   }
-  int num = 0;
-  while (input->tell() != entry.end()) {
-    pos = input->tell();
-    f.str("");
-    if (level==0) data.m_actualPos[level]=num++;
-    f << entry.name();
-    for (int i = 0; i <= level; i++) {
-      f << data.m_actualPos[i];
-      if (i!=level) f << "-";
-    }
-    if (data.m_zoneId) f << "[" << data.m_zoneId << "]";
-    f << ":";
-    int depth = (int) input->readLong(2);
-    if (depth != level+1) {
-      f << "###";
-      rsrcAscii().addPos(pos);
-      rsrcAscii().addNote(f.str().c_str());
-      return false;
-    }
-    int val = (int) input->readLong(2);
-    f << "unkn=" << val << ","; // always 10 ?
-    long sz = input->readLong(4);
-    long minSize = 16;
-    if (level == 2) {
-      sz += 13;
-      if (sz%2) sz++;
-      minSize = 14;
-    }
-    long endPos = pos+sz;
-    if (sz < minSize || endPos > entry.end()) {
-      MWAW_DEBUG_MSG(("NSParser::readRecursifList: can not read entry %d\n", num));
-      f << "###";
-      rsrcAscii().addPos(pos);
-      rsrcAscii().addNote(f.str().c_str());
-      return false;
-    }
+  return true;
+}
 
-    rsrcAscii().addPos(pos);
-    rsrcAscii().addNote(f.str().c_str());
-    if (level == 2) {
-      MWAWEntry child(entry);
-      child.setBegin(input->tell());
-      child.setEnd(endPos);
-      data.m_positionList.push_back(data.m_actualPos);
-      data.m_entryList.push_back(child);
-      input->seek(endPos, WPX_SEEK_SET);
-      break;
-    }
-    input->seek(8, WPX_SEEK_CUR);
+////////////////////////////////////////////////////////////
+// read SGP1 zone: a unknown zone (a type, an id/anchor type? and a bdbox )
+////////////////////////////////////////////////////////////
+bool NSParser::readSGP1(NSStruct::RecursifData const &data)
+{
+  if (!data.m_info || data.m_info->m_zoneType < 0 || data.m_info->m_zoneType >= 3) {
+    MWAW_DEBUG_MSG(("NSParser::readSGP1: find unexpected zoneType\n"));
+    return false;
+  }
 
-    int childNum = 0;
-    while (input->tell() != endPos) {
-      data.m_actualPos[level+1] = childNum++;
-      pos = input->tell();
-      MWAWEntry child(entry);
-      child.setBegin(pos);
-      child.setEnd(endPos);
-      if (input->atEOS() || pos >= endPos) {
-        MWAW_DEBUG_MSG(("NSParser::readRecursifList: bad position for child entry\n"));
-        f.str("");
-        f << entry.name() << "###";
-        rsrcAscii().addPos(pos);
-        rsrcAscii().addNote(f.str().c_str());
-        return false;
+  if (!data.m_childList.size())
+    return true;
+
+  if (data.m_childList.size() > 1) {
+    MWAW_DEBUG_MSG(("NSParser::readSGP1: level 0 node contains more than 1 node\n"));
+  }
+  if (data.m_childList[0].isLeaf()) {
+    MWAW_DEBUG_MSG(("NSParser::readSGP1: level 1 node is a leaf\n"));
+    return false;
+  }
+  NSStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
+  size_t numData = mainData.m_childList.size();
+  //  NSParserInternal::Zone &zone = m_state->m_zones[(int) data.m_info->m_zoneType];
+  MWAWInputStreamPtr input = rsrcInput();
+  libmwaw::DebugStream f;
+
+  long val;
+  for (size_t n = 0 ; n < numData; n++) {
+    if (mainData.m_childList[n].isLeaf()) {
+      MWAW_DEBUG_MSG(("NSParser::readSGP1: oops some level 2 node are leaf\n"));
+      continue;
+    }
+    NSStruct::RecursifData const &dt=*mainData.m_childList[n].m_data;
+    for (size_t i = 0; i < dt.m_childList.size(); i++) {
+      NSStruct::RecursifData::Node const &child= dt.m_childList[i];
+      if (!child.isLeaf()) {
+        MWAW_DEBUG_MSG(("NSParser::readSGP1: find an odd level 3 leaf\n"));
+        continue;
       }
 
-      if (!readRecursifList(child, data, level+1)) {
-        MWAW_DEBUG_MSG(("NSParser::readRecursifList: can not read child entry\n"));
-        input->seek(pos, WPX_SEEK_SET);
-        if ((int) input->readLong(2)==level+1) {
-          // seems to happens sometimes in XMRK zone :-~
-          input->seek(pos, WPX_SEEK_SET);
+      long pos = child.m_entry.begin();
+      input->seek(pos, WPX_SEEK_SET);
+      f.str("");
+      switch(child.m_type) {
+      case 110:
+        if (child.m_entry.length()==0) break;
+        if (child.m_entry.length()!=4) {
+          MWAW_DEBUG_MSG(("NSParser::readSGP1: unexpected length for type 110\n"));
+          f << "###sz";
           break;
         }
-
-        f.str("");
-        f << entry.name() << "###";
-        rsrcAscii().addPos(pos);
-        rsrcAscii().addNote(f.str().c_str());
-        input->seek(endPos, WPX_SEEK_SET);
+        // find 2c
+        val = input->readLong(4);
+        f << "val=" << val << ",";
+        break;
+      case 120:
+      case 200: { /* checkme: always find mSz=0 here */
+        if (child.m_entry.length()==0) {
+          MWAW_DEBUG_MSG(("NSParser::readSGP1: unexpected length for type %d\n", child.m_type));
+          f << "###sz";
+          break;
+        }
+        int mSz = (int) input->readULong(1);
+        if (mSz+1 > child.m_entry.length()) {
+          MWAW_DEBUG_MSG(("NSParser::readSGP1: the %d text seems to short\n", child.m_type));
+          f << "###sz";
+          break;
+        }
+        std::string text("");
+        for (int c = 0; c < mSz; c++)
+          text+=(char) input->readULong(1);
+        f << "text=" << text << ",";
         break;
       }
+      case 100: {
+        if (child.m_entry.length()!=0x24) {
+          MWAW_DEBUG_MSG(("NSParser::readSGP1: unexpected length for type 100\n"));
+          f << "###sz";
+          break;
+        }
+        // find f1=1, f3=[0|1], f5=0x28, other always 0...
+        for (int j = 0; j < 18; j++) {
+          val = input->readLong(2);
+          if (val) f << "f" << j << "=" << val << ",";
+        }
+        break;
+      }
+      case 300: {
+        if (child.m_entry.length()!=0x5c) {
+          MWAW_DEBUG_MSG(("NSParser::readSGP1: unexpected length for type 300\n"));
+          f << "###sz";
+          break;
+        }
+        val = (long) input->readULong(2); // always 0x8000 ?
+        if (val != 0x8000) f << "f0=" << std::hex << val << std::dec << ",";
+        for (int j = 0; j < 2; j++) { // find [0,-2]|0
+          val = input->readLong(2);
+          if (val) f << "f" << j+1 << "=" << val << ",";
+        }
+        val = (long) input->readULong(2); // find 0 and 1 time 0x7101
+        if (val) f << "f3=" << std::hex << val << std::dec << ",";
+        int mSz = (int) input->readULong(1);
+        if (mSz >= 32) {
+          f << "###textSz=" << mSz << ",";
+          mSz = 0;
+        }
+        std::string text("");
+        for (int j = 0; j < mSz; j++)
+          text += (char) input->readULong(1);
+        if (text.length()) f << "\"" << text << "\",";
+        // checkme: where does the data begins again
+        input->seek(child.m_entry.begin()+40, WPX_SEEK_SET);
+        for (int j = 0; j < 17; j++) { // find always 0 here
+          val = input->readLong(2);
+          if (val) f << "g" << j << "=" << val << ",";
+        }
+        val = (long) input->readULong(2); // 1|b
+        f << "unkn=" << val << ",";
+        for (int j = 0; j < 8; j++) { // find always 0 here
+          val = input->readLong(2);
+          if (val) f << "h" << j << "=" << val << ",";
+        }
+        break;
+      }
+      default:
+        f << "type=" << child.m_type << ",";
+        break;
+      }
+      rsrcAscii().addPos(pos-12);
+      rsrcAscii().addNote(f.str().c_str());
     }
-    if (level)
-      break;
   }
   return true;
 }
@@ -1961,16 +1628,16 @@ bool NSParser::readPrintInfo(MWAWEntry const &entry)
 }
 
 ////////////////////////////////////////////////////////////
-// read the PGLY zone ( unknown )
+// read the PGLY zone ( page limit )
 ////////////////////////////////////////////////////////////
-bool NSParser::readPGLY(MWAWEntry const &entry)
+bool NSParser::readPageLimit(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 0xa2) {
-    MWAW_DEBUG_MSG(("NSParser::readPGLY: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NSParser::readPageLimit: the entry is bad\n"));
     return false;
   }
   if (entry.id() != 128) {
-    MWAW_DEBUG_MSG(("NSParser::readPGLY: the entry id %d is odd\n", entry.id()));
+    MWAW_DEBUG_MSG(("NSParser::readPageLimit: the entry id %d is odd\n", entry.id()));
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
@@ -1979,9 +1646,9 @@ bool NSParser::readPGLY(MWAWEntry const &entry)
 
   libmwaw::DebugStream f;
   if (entry.id() != 128)
-    f << "Entries(PGLY)[#" << entry.id() << "]:";
+    f << "Entries(Page)[#" << entry.id() << "]:";
   else
-    f << "Entries(PGLY):";
+    f << "Entries(Page):";
 
   long val = input->readLong(2); // always 0x88 ?
   if (val != 0x88) f << "f0=" << val << ",";
@@ -1990,24 +1657,47 @@ bool NSParser::readPGLY(MWAWEntry const &entry)
   val = input->readLong(2); // always 0x0
   if (val) f << "f2=" << val << ",";
 
-  /** checkme
-      bdbox0=page,
-      bdbox1=page less margin
-      bdbox2=column ?
-  */
-  int dim[4];
+  Box2i boxes[3];
   for (int i = 0; i < 3; i++) {
+    int dim[4];
     for (int d = 0; d < 4; d++)
       dim[d] = (int) input->readLong(2);
-    f << "bdbox" << i << "=[" << dim[1] << "x" << dim[0]
-      << "<->" << dim[3] << "x" << dim[2] << "],";
+    boxes[i] = Box2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
   }
-  static int const expectedValues[]= {0,0,0,0, 0x24, 0, 3, 1};
-  // find also, g0=2, g3=1 [ncol?], g5=0x10, g6=g7=0 (in v3 file)
-  for (int i = 0; i < 8; i++) {
+  f << "page=" << boxes[0] << ",";
+  f << "page[text]=" << boxes[1] << ",";
+  f << "page[columns]=" << boxes[2] << ",";
+  Vec2i pageDim = boxes[0].size();
+  Vec2i LT=boxes[1][0]-boxes[0][0];
+  Vec2i RB=boxes[0][1]-boxes[1][1];
+  bool dimOk=pageDim[0] > 0 && pageDim[1] > 0 &&
+             LT[0] >= 0 && LT[1] >= 0 && RB[0] >= 0 && RB[1] >= 0;
+  if (!dimOk) {
+    MWAW_DEBUG_MSG(("NSParser::readPageLimit: the page margins seems odd\n"));
+    f << "###dim,";
+  }
+  // all zero expected some time g0=2
+  for (int i = 0; i < 3; i++) {
+    val = input->readLong(2);
+    if (val) f << "g" << i << "=" << val << ",";
+  }
+  int numColumns = (int) input->readLong(2)+1;
+  int colSeps = (int) input->readLong(2);
+  if (numColumns <= 0 || numColumns > 8 || colSeps < 0 || colSeps*numColumns >= pageDim[0]) {
+    MWAW_DEBUG_MSG(("NSParser::readPageLimit: the columns definition seems odd\n"));
+    f << "###";
+  } else {
+    m_state->m_numColumns = numColumns;
+    m_state->m_columnSep = float(colSeps)/72.f;
+  }
+  if (numColumns != 1) f << "nCols=" << numColumns << ",";
+  if (colSeps != 36) f << "colSeps=" << colSeps << "pt,";
+  static int const expectedValues[]= { 0, 3, 1};
+  // find also, g3=0x10, g4=g5=0 (in v3 file)
+  for (int i = 0; i < 3; i++) {
     val = input->readLong(2);
     if (int(val) != expectedValues[i])
-      f << "g" << i << "=" << val << ",";
+      f << "g" << i+3 << "=" << val << ",";
   }
   // find only 0 expected h2=[0|1], h6=[0|-1]
   for (int i = 0; i < 7; i++) {
@@ -2032,7 +1722,7 @@ bool NSParser::readPGLY(MWAWEntry const &entry)
 
   pos = input->tell();
   f.str("");
-  f << "PGLY[A]:";
+  f << "Page[A]:";
   // find 0,3ea0f83e|3ea19dbd|3ea2433b|3ec00000|3ec0a57f
   val = (long) input->readULong(4);
   if (val) f << "f0=" << std::hex << val << std::dec << ",";
@@ -2048,12 +1738,34 @@ bool NSParser::readPGLY(MWAWEntry const &entry)
     if (val != 0x48)
       f << "f" << i << "=" << val << ",";
   }
+  int dim[4];
   for (int d = 0; d < 4; d++)
     dim[d] = (int) input->readLong(2);
-  f << "bdbox=[" << dim[1] << "x" << dim[0]
-    << "<->" << dim[3] << "x" << dim[2] << "],";
-  // 6 flags, 0|1|-1
-  for (int i = 0; i < 6; i++) {
+  Box2i realPage = Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+  if (dimOk && realPage.size()[0] >= pageDim[0] && realPage.size()[1] >= pageDim[1]) {
+    LT -= realPage[0];
+    RB += (realPage[1]-boxes[0][1]);
+    pageDim = realPage.size();
+  } else if (dimOk) {
+    MWAW_DEBUG_MSG(("NSParser::readPageLimit: realPage is smaller than page\n"));
+    f << "###";
+    dimOk = false;
+  }
+  f << "page[complete]=" << realPage << ",";
+  val = input->readLong(1);
+  bool portrait = true;
+  switch(val) {
+  case 0:
+    break;
+  case 1:
+    portrait = false;
+    f << "landscape,";
+    break;
+  default:
+    f << "#pageOrientation=" << val << ",";
+    break;
+  }
+  for (int i = 0; i < 5; i++) {
     val = input->readLong(1);
     if (val)
       f << "fl" << i << "=" << val << ",";
@@ -2103,6 +1815,16 @@ bool NSParser::readPGLY(MWAWEntry const &entry)
   rsrcAscii().addPos(pos);
   rsrcAscii().addNote(f.str().c_str());
 
+  if (!dimOk) return true;
+  m_pageSpan.setMarginTop(double(LT[1])/72.0);
+  m_pageSpan.setMarginBottom(double(RB[1])/72.0);
+  m_pageSpan.setMarginLeft(double(LT[0])/72.0);
+  m_pageSpan.setMarginRight(double(RB[0])/72.0);
+  m_pageSpan.setFormLength(double(pageDim[1])/72.);
+  m_pageSpan.setFormWidth(double(pageDim[0])/72.);
+  if (!portrait)
+    m_pageSpan.setFormOrientation(MWAWPageSpan::LANDSCAPE);
+
   return true;
 }
 
@@ -2143,7 +1865,7 @@ bool NSParser::readCPRC(MWAWEntry const &entry)
 }
 
 ////////////////////////////////////////////////////////////
-// read the CNTR zone ( a list of  ? )
+// read the CNTR zone ( a list of related to VRS ?  )
 ////////////////////////////////////////////////////////////
 bool NSParser::readCNTR(MWAWEntry const &entry, int zoneId)
 {
@@ -2163,20 +1885,21 @@ bool NSParser::readCNTR(MWAWEntry const &entry, int zoneId)
 
   int numElt = int(entry.length()/12)-1;
   libmwaw::DebugStream f;
-  f << "Entries(CNTR)[" << zoneId << "]:N=" << numElt;
+  f << "Entries(VariabCntr)[" << zoneId << "]:N=" << numElt;
   rsrcAscii().addPos(pos-4);
   rsrcAscii().addNote(f.str().c_str());
   for (int i = 0; i < numElt; i++) {
+    // unkn[16] * 3, 0[16], refId, 0[16],  unkn[16]
     pos = input->tell();
     f.str("");
-    f << "CNTR" << i << ":";
+    f << "VariabCntr" << i << ":";
     rsrcAscii().addPos(pos);
     rsrcAscii().addNote(f.str().c_str());
     input->seek(pos+12, WPX_SEEK_SET);
   }
 
   f.str("");
-  f << "CNTR(II)";
+  f << "VariabCntr(II)";
   rsrcAscii().addPos(input->tell());
   rsrcAscii().addNote(f.str().c_str());
 
@@ -2255,6 +1978,123 @@ bool NSParser::readPLAC(MWAWEntry const &entry)
 }
 
 ////////////////////////////////////////////////////////////
+//! read the INFO resource: a unknown zone
+////////////////////////////////////////////////////////////
+bool NSParser::readINFO(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.length() < 0x23a) {
+    MWAW_DEBUG_MSG(("NSParser::readINFO: the entry is bad\n"));
+    return false;
+  }
+  if (entry.id() != 1003) {
+    MWAW_DEBUG_MSG(("NSParser::readINFO: the entry id %d is odd\n", entry.id()));
+  }
+  entry.setParsed(true);
+  MWAWInputStreamPtr input = rsrcInput();
+  long pos = entry.begin();
+  input->seek(pos, WPX_SEEK_SET);
+
+  libmwaw::DebugStream f;
+  if (entry.id() != 1003)
+    f << "Entries(INFO)[#" << entry.id() << "]:";
+  else
+    f << "Entries(INFO):";
+  long val = input->readLong(2);
+  if (val != 1) f << "f0=" << val << ",";
+  int select[2]; // checkme
+  for (int i = 0; i < 2; i++)
+    select[i] = (int) input->readLong(4);
+  if (select[0] || select[1]) {
+    f << "select=" << select[0];
+    if (select[1] != select[0]) f << "x" << select[1];
+    f << ",";
+  }
+  val =  input->readLong(2);
+  if (val) f << "f1=" << val << ",";
+  // a dim or 2 position ?
+  int dim[4];
+  for (int i = 0; i < 4; i++)
+    dim[i] = (int) input->readLong(2);
+  if (dim[0] || dim[1] || dim[2] || dim[3])
+    f << "dim|pos?=" << dim[0] << "x" << dim[1]
+      << "<->" << dim[2] << "x" << dim[3] << ",";
+  int sz[2];
+  for (int i = 0; i < 2; i++)
+    sz[i] = (int) input->readLong(2);
+  if (sz[0] || sz[1])
+    f << "sz=" << sz[0] << "x" << sz[1] << ",";
+  for (int i = 0; i < 2; i++) { // always 1|1
+    val = input->readLong(1);
+    if (val) f << "fl" << i << "=" << val << ",";
+  }
+  for (int i = 0; i < 8; i++) { // always 0
+    val = input->readLong(2);
+    if (val) f << "g" << i << "=" << val << ",";
+  }
+  rsrcAscii().addPos(pos-4);
+  rsrcAscii().addNote(f.str().c_str());
+
+  pos = input->tell();
+  f.str("");
+  f << "INFOA0:";
+  for (int i = 0; i < 4; i++) { // find 0-0-0-0 or 1-1-1-1 or 1-1-1-4
+    val = input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  // 4 times the same val: 0, aa55, ffff
+  int unkn = (int) input->readULong(2);
+  if (unkn) f << "unknA0=" << std::hex << unkn << std::dec << ",";
+  for (int i = 1; i < 4; i++) {
+    val = input->readULong(2);
+    if (val != unkn)
+      f << "unknA" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  // 4 times the same val: 0, ffff
+  unkn = (int) input->readULong(2);
+  if (unkn) f << "unknB0=" << std::hex << unkn << std::dec << ",";
+  for (int i = 1; i < 4; i++) {
+    val = input->readULong(2);
+    if (val != unkn)
+      f << "unknB" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  rsrcAscii().addDelimiter(input->tell(),'|');
+  rsrcAscii().addPos(pos);
+  rsrcAscii().addNote(f.str().c_str());
+
+  input->seek(pos+0x2c, WPX_SEEK_SET);
+  pos = input->tell();
+  f.str("");
+  f << "INFOB:";
+  rsrcAscii().addPos(pos);
+  rsrcAscii().addNote(f.str().c_str());
+
+  input->seek(pos+0x112, WPX_SEEK_SET);
+  pos = input->tell();
+  f.str("");
+  f << "INFOA1:";
+  rsrcAscii().addPos(pos);
+  rsrcAscii().addNote(f.str().c_str());
+
+  input->seek(entry.begin() + 0x194, WPX_SEEK_SET);
+  pos = input->tell();
+  f.str("");
+  f << "INFOC:";
+
+  NSStruct::FootnoteInfo &ftInfo = m_state->m_footnoteInfo;
+  ftInfo.m_flags = (int)input->readULong(2);
+  ftInfo.m_unknown = (int)input->readLong(2);
+  ftInfo.m_distToDocument = (int)input->readLong(2);
+  ftInfo.m_distSeparator = (int)input->readLong(2);
+  ftInfo.m_separatorLength = (int)input->readLong(2);
+  f << "footnote=[" << ftInfo << "],";
+  rsrcAscii().addDelimiter(input->tell(), '|');
+  rsrcAscii().addPos(pos);
+  rsrcAscii().addNote(f.str().c_str());
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
 //! read the PGRA resource: a unknown number (id 20000)
 ////////////////////////////////////////////////////////////
 bool NSParser::readPGRA(MWAWEntry const &entry)
@@ -2285,16 +2125,4 @@ bool NSParser::readPGRA(MWAWEntry const &entry)
   return true;
 }
 
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-std::ostream &operator<< (std::ostream &o, NSPosition const &pos)
-{
-  o << pos.m_paragraph << "x";
-  if (pos.m_word) o << pos.m_word << "x";
-  else o << "_x";
-  if (pos.m_char) o << pos.m_char;
-  else o << "_";
-
-  return o;
-}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
