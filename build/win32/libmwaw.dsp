@@ -275,6 +275,10 @@ SOURCE=..\..\src\lib\MWProStructures.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\NSGraph.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\NSParser.cxx
 # End Source File
 # Begin Source File
@@ -512,6 +516,10 @@ SOURCE=..\..\src\lib\MWProParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWProStructures.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\NSGraph.hxx
 # End Source File
 # Begin Source File
 

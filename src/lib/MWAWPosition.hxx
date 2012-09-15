@@ -60,7 +60,7 @@ public:
   //! constructor
   MWAWPosition(Vec2f const &orig=Vec2f(), Vec2f const &sz=Vec2f(), WPXUnit theUnit=WPX_INCH):
     m_anchorTo(Char), m_xPos(XLeft), m_yPos(YTop), m_wrapping(WNone),
-    m_page(0), m_orig(orig), m_size(sz), m_naturalSize(), m_unit(theUnit), m_order(0) {}
+    m_page(0), m_orig(orig), m_size(sz), m_naturalSize(), m_LTClip(), m_RBClip(), m_unit(theUnit), m_order(0) {}
 
   virtual ~MWAWPosition() {}
   //! operator<<
@@ -113,6 +113,14 @@ public:
   //! returns the natural size (if known)
   Vec2f const &naturalSize() const {
     return m_naturalSize;
+  }
+  //! returns the left top clipping
+  Vec2f const &leftTopClipping() const {
+    return m_LTClip;
+  }
+  //! returns the right bottom clipping
+  Vec2f const &rightBottomClipping() const {
+    return m_RBClip;
   }
   //! returns the unit
   WPXUnit unit() const {
@@ -188,6 +196,12 @@ public:
     m_yPos = Y;
   }
 
+  //! sets the clipping position
+  void setClippingPosition(Vec2f lTop, Vec2f rBottom) {
+    m_LTClip = lTop;
+    m_RBClip = rBottom;
+  }
+
   //! returns background/foward order
   int order() const {
     return m_order;
@@ -225,6 +239,10 @@ protected:
     if (diff) return diff;
     diff = m_naturalSize.cmpY(f.m_naturalSize);
     if (diff) return diff;
+    diff = m_LTClip.cmpY(f.m_LTClip);
+    if (diff) return diff;
+    diff = m_RBClip.cmpY(f.m_RBClip);
+    if (diff) return diff;
 
     return 0;
   }
@@ -232,7 +250,8 @@ protected:
   //! the page
   int m_page;
   Vec2f m_orig /** the origin position in a page */, m_size /* the size of the data*/, m_naturalSize /** the natural size of the data (if known) */;
-  //! the unit used in \a orig and in \a m_size. Default: in inches
+  Vec2f m_LTClip /** the left top clip position */, m_RBClip /* the right bottom clip position */;
+  //! the unit used in \a orig, in \a m_size and in \a m_LTClip , .... Default: in inches
   WPXUnit m_unit;
   //! background/foward order
   mutable int m_order;

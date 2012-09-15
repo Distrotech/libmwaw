@@ -1460,7 +1460,15 @@ void MWAWContentListener::_handleFrameParameters
     propList.insert("libwpd:naturalWidth", pos.naturalSize().x(), pos.unit());
     propList.insert("libwpd:naturalHeight", pos.naturalSize().y(), pos.unit());
   }
-
+  Vec2f TLClip = (1.f/pointFactor)*pos.leftTopClipping();
+  Vec2f RBClip = (1.f/pointFactor)*pos.rightBottomClipping();
+  if (TLClip[0] > 0 || TLClip[1] > 0 || RBClip[0] > 0 || RBClip[1] > 0) {
+    // in ODF1.2 we need to separate the value with ,
+    std::stringstream s;
+    s << "rect(" << TLClip[1] << "pt " << RBClip[0] << "pt "
+      <<  RBClip[1] << "pt " << TLClip[0] << "pt)";
+    propList.insert("fo:clip", s.str().c_str());
+  }
   double newPosition;
 
   if ( pos.m_wrapping ==  MWAWPosition::WDynamic)

@@ -71,6 +71,7 @@ SLOFILES= \
 	$(SLO)$/MWParser.obj			\
 	$(SLO)$/MWProParser.obj			\
 	$(SLO)$/MWProStructures.obj		\
+	$(SLO)$/NSGraph.obj			\
 	$(SLO)$/NSParser.obj			\
 	$(SLO)$/NSStruct.obj			\
 	$(SLO)$/NSText.obj			\

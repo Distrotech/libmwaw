@@ -32,55 +32,58 @@
 */
 
 /*
- * Parser to Nisus text document
+ * Parser to Nisus text document ( graphic part )
  *
  */
-#ifndef NS_TEXT
-#  define NS_TEXT
+#ifndef NS_GRAPH
+#  define NS_GRAPH
+
+#include <string>
+#include <vector>
+
+#include <libwpd/WPXPropertyList.h>
 
 #include "libmwaw_internal.hxx"
+
 #include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
 #include "NSStruct.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-
-class MWAWContentListener;
 typedef class MWAWContentListener NSContentListener;
 typedef shared_ptr<NSContentListener> NSContentListenerPtr;
 
 class MWAWEntry;
 
-class MWAWFont;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
-class MWAWSubDocument;
+class MWAWPosition;
 
-namespace NSTextInternal
+namespace NSGraphInternal
 {
-class SubDocument;
-struct Paragraph;
+struct RSSOEntry;
 struct State;
+class SubDocument;
 }
 
 class NSParser;
 
-/** \brief the main class to read the text part of writenow file
+/** \brief the main class to read the graphic part of a Nisus file
  *
  *
  *
  */
-class NSText
+class NSGraph
 {
-  friend class NSTextInternal::SubDocument;
   friend class NSParser;
+  friend class NSGraphInternal::SubDocument;
+
 public:
   //! constructor
-  NSText(MWAWInputStreamPtr ip, NSParser &parser, MWAWFontConverterPtr &convertissor);
+  NSGraph(MWAWInputStreamPtr ip, NSParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
-  virtual ~NSText();
+  virtual ~NSGraph();
 
   /** returns the file version */
   int version() const;
@@ -95,71 +98,44 @@ protected:
     m_listener = listen;
   }
 
-  //! finds the different text zones
+  //! finds the different graphic zones
   bool createZones();
-
-  //! return an header subdocument
-  shared_ptr<MWAWSubDocument> getHeader(int page);
-  //! return a footer subdocument
-  shared_ptr<MWAWSubDocument> getFooter(int page);
-
-  //! send a main zone
-  bool sendMainText();
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
-  /** read a text entry.
-     \note entry.id() must correspond to the zone id.
-     \note while the main text is in the data fork, the footnote/header footer is in a ??TX rsrc.*/
-  bool sendText(MWAWEntry entry, NSStruct::Position fPos=NSStruct::Position());
-
-  /** try to send the ith footnote */
-  bool sendFootnote(int footnoteId);
-
-  /** try to send the ith header footer */
-  bool sendHeaderFooter(int hfId);
+  //! try to send a picture
+  bool sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
+                   WPXPropertyList extras = WPXPropertyList());
+  //! try to send the page graphic
+  bool sendPageGraphics();
 
   //
-  // intermediate level
+  // Intermediate level
   //
 
-  /** compute the positions */
-  void computePositions();
-
-  /* sends a font property to the listener
-   * \param font the font's properties */
-  void setProperty(MWAWFont const &font, MWAWFont &previousFont);
-  /** sends a paragraph property to the listener */
-  void setProperty(NSTextInternal::Paragraph const &ruler, int width);
-
-  //! read the list of fonts
-  bool readFontsList(MWAWEntry const &entry);
-  /** read the header/footer main entry */
-  bool readHeaderFooter(MWAWEntry const &entry);
-  /** read the footnote main entry */
-  bool readFootnotes(MWAWEntry const &entry);
-
-  //! read the FTAB/STYL resource: a list of fonts
-  bool readFonts(MWAWEntry const &entry);
-  //! read the FRMT resource: a list of filepos -> fontId
-  bool readPosToFont(MWAWEntry const &entry, NSStruct::ZoneType zoneId);
-
-  //! read the RULE resource: a list of paragraphs
-  bool readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId);
-
-  //! read the PICD resource: a list of pict link to the paragraph
-  bool readPICD(MWAWEntry const &entry, NSStruct::ZoneType zoneId);
+  //! read the PLAC resource: a list of picture placements ?
+  bool readPLAC(MWAWEntry const &entry);
+  //! parse the PLDT resource: a unknown resource
+  bool readPLDT(NSStruct::RecursifData const &data);
+  //! read the PGRA resource: the number of page? graphics
+  bool readPGRA(MWAWEntry const &entry);
 
   //
   // low level
   //
 
-  //! find the file pos which correspond to a pos
-  long findFilePos(NSStruct::ZoneType zoneId, NSStruct::Position const &pos);
+  //! try to find a RSSO entry in a picture file
+  std::vector<NSGraphInternal::RSSOEntry> findRSSOEntry(MWAWInputStreamPtr inp) const;
+
+  //! returns the debug file
+  libmwaw::DebugFile &ascii() {
+    return m_asciiFile;
+  }
+
 private:
-  NSText(NSText const &orig);
-  NSText &operator=(NSText const &orig);
+  NSGraph(NSGraph const &orig);
+  NSGraph &operator=(NSGraph const &orig);
 
 protected:
   //
@@ -175,11 +151,13 @@ protected:
   MWAWFontConverterPtr m_convertissor;
 
   //! the state
-  shared_ptr<NSTextInternal::State> m_state;
+  shared_ptr<NSGraphInternal::State> m_state;
 
   //! the main parser;
   NSParser *m_mainParser;
 
+  //! the debug file
+  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

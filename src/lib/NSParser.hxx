@@ -37,29 +37,30 @@
 #include <string>
 #include <vector>
 
-#include "MWAWPageSpan.hxx"
+#include <libwpd/WPXPropertyList.h>
 
 #include "MWAWContentListener.hxx"
-
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
-
-#include "MWAWParser.hxx"
+#include "MWAWPageSpan.hxx"
 
 #include "NSStruct.hxx"
 
-class MWAWEntry;
+#include "MWAWParser.hxx"
 
 typedef class MWAWContentListener NSContentListener;
 typedef shared_ptr<NSContentListener> NSContentListenerPtr;
+class MWAWEntry;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWPosition;
 
 namespace NSParserInternal
 {
 struct State;
 }
 
+class NSGraph;
 class NSText;
 
 /** \brief the main class to read a Nisus Writer file
@@ -67,6 +68,7 @@ class NSText;
 class NSParser : public MWAWParser
 {
   friend struct NSStruct::RecursifData;
+  friend class NSGraph;
   friend class NSText;
 public:
   //! constructor
@@ -94,6 +96,8 @@ protected:
   float pageHeight() const;
   //! returns the page width, ie. paper size less margin (in inches)
   float pageWidth() const;
+  //! returns the page left top point ( in inches)
+  Vec2f getPageLeftTop() const;
   //! returns the columns information
   void getColumnInfo(int &numColumns, float &colSep) const;
   //! returns the footnote information
@@ -113,10 +117,16 @@ protected:
                         std::string &content,
                         std::vector<int> &number) const;
 
+  // interface with the graph parser
+
+  //! try to send a picture
+  bool sendPicture(int pictId, MWAWPosition const &pictPos,
+                   WPXPropertyList extras = WPXPropertyList());
+
+protected:
   //! finds the different objects zones
   bool createZones();
 
-protected:
   //! read the print info zone ( id=128 )
   bool readPrintInfo(MWAWEntry const &entry);
   //! read the CPRC info zone ( id=128 ), an unknown zone
@@ -129,25 +139,16 @@ protected:
 
   //! read the INFO info zone, an unknown zone of size 0x23a: to doo
   bool readINFO(MWAWEntry const &entry);
-  //! read the PGRA resource: a unknown number
-  bool readPGRA(MWAWEntry const &entry);
-
-  //! read the CNTR resource: a list of  version controler
-  bool readCNTR(MWAWEntry const &entry, int zoneId);
-  //! read the PICD resource: a list of pict ?
-  bool readPICD(MWAWEntry const &entry, int zoneId);
-  //! read the PLAC resource: a list of picture placements ?
-  bool readPLAC(MWAWEntry const &entry);
 
   //! parse the MRK7 resource
   bool readReference(NSStruct::RecursifData const &data);
   //! parse the DSPL/VARI/VRS resource: numbering definition, variable or variable ?
   bool readVariable(NSStruct::RecursifData const &data);
+  //! read the CNTR resource: a list of  version controler ?
+  bool readCNTR(MWAWEntry const &entry, int zoneId);
   //! parse the DPND resource: numbering reset ( one by zone ) : related to CNTR and VRS ?
   bool readNumberingReset(MWAWEntry const &entry, int zoneId);
 
-  //! parse the PLDT resource: a unknown resource
-  bool readPLDT(NSStruct::RecursifData const &data);
   //! parse the SGP1 resource: a unknown resource
   bool readSGP1(NSStruct::RecursifData const &data);
 
@@ -171,6 +172,9 @@ protected:
 
   //! the actual document size
   MWAWPageSpan m_pageSpan;
+
+  //! the graph parser
+  shared_ptr<NSGraph> m_graphParser;
 
   //! the text parser
   shared_ptr<NSText> m_textParser;

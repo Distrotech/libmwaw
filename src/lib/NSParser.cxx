@@ -37,16 +37,17 @@
 #include <set>
 #include <sstream>
 
+#include <libwpd/WPXBinaryData.h>
 #include <libwpd/WPXString.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
-#include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWSubDocument.hxx"
 
+#include "NSGraph.hxx"
 #include "NSStruct.hxx"
 #include "NSText.hxx"
 
@@ -309,7 +310,7 @@ struct State {
 ////////////////////////////////////////////////////////////
 NSParser::NSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_textParser()
+  m_pageSpan(), m_graphParser(), m_textParser()
 {
   init();
 }
@@ -333,6 +334,7 @@ void NSParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
+  m_graphParser.reset(new NSGraph(getInput(), *this, m_convertissor));
   m_textParser.reset(new NSText(getInput(), *this, m_convertissor));
 }
 
@@ -340,6 +342,7 @@ void NSParser::setListener(NSContentListenerPtr listen)
 {
   m_listener = listen;
   m_textParser->setListener(listen);
+  m_graphParser->setListener(listen);
 }
 
 MWAWInputStreamPtr NSParser::rsrcInput()
@@ -365,6 +368,12 @@ float NSParser::pageWidth() const
   return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
 }
 
+Vec2f NSParser::getPageLeftTop() const
+{
+  return Vec2f(float(m_pageSpan.getMarginLeft()),
+               float(m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
+}
+
 void NSParser::getColumnInfo(int &numColumns, float &colSep) const
 {
   numColumns = m_state->m_numColumns;
@@ -376,6 +385,21 @@ void NSParser::getFootnoteInfo(NSStruct::FootnoteInfo &fInfo) const
   fInfo = m_state->m_footnoteInfo;
 }
 
+////////////////////////////////////////////////////////////
+// interface with the graph parser
+////////////////////////////////////////////////////////////
+bool NSParser::sendPicture(int pictId, MWAWPosition const &pictPos, WPXPropertyList extras)
+{
+  if (!rsrcInput()) return false;
+  long pos = rsrcInput()->tell();
+  bool ok=m_graphParser->sendPicture(pictId, true, pictPos, extras);
+  rsrcInput()->seek(pos, WPX_SEEK_SET);
+  return ok;
+}
+
+////////////////////////////////////////////////////////////
+// access to variable date
+////////////////////////////////////////////////////////////
 std::string NSParser::getDateFormat(NSStruct::ZoneType zoneId, int vId) const
 {
   if (zoneId < 0 || zoneId >= 3) {
@@ -510,8 +534,10 @@ void NSParser::parse(WPXDocumentInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
+      m_graphParser->sendPageGraphics();
       m_textParser->sendMainText();
 #ifdef DEBUG
+      m_graphParser->flushExtra();
       m_textParser->flushExtra();
 #endif
     }
@@ -541,6 +567,8 @@ void NSParser::createDocument(WPXDocumentInterface *documentInterface)
   // create the page list
   std::vector<MWAWPageSpan> pageList;
   int numPages = 1;
+  if (m_graphParser->numPages() > numPages)
+    numPages = m_graphParser->numPages();
   if (m_textParser->numPages() > numPages)
     numPages = m_textParser->numPages();
   m_state->m_numPages = numPages;
@@ -605,17 +633,9 @@ bool NSParser::createZones()
     readINFO(entry);
   }
 
-  // 20000
-  it = entryMap.lower_bound("PGRA");
-  while (it != entryMap.end()) {
-    if (it->first != "PGRA")
-      break;
-    MWAWEntry &entry = it++->second;
-    readPGRA(entry);
-  }
-
   if (!m_textParser->createZones())
     return false;
+  m_graphParser->createZones();
 
   // numbering, mark, variable, version, ...
   it = entryMap.lower_bound("DSPL");
@@ -697,53 +717,6 @@ bool NSParser::createZones()
     entry.setName("XMRK");
     NSStruct::RecursifData data(NSStruct::Z_Main);
     data.read(*this, entry);
-  }
-
-  // the different pict zones
-  it = entryMap.lower_bound("PICT");
-  while (it != entryMap.end()) {
-    if (it->first != "PICT")
-      break;
-    MWAWEntry &entry = it++->second;
-    WPXBinaryData data;
-    getRSRCParser()->parsePICT(entry, data);
-  }
-  it = entryMap.lower_bound("RSSO");
-  while (it != entryMap.end()) {
-    if (it->first != "RSSO")
-      break;
-    MWAWEntry &entry = it++->second;
-    WPXBinaryData data;
-    getRSRCParser()->parsePICT(entry, data);
-  }
-
-  // picture position ?
-  char const *(pictDNames[]) = { "PICD", "FPIC", "HPIC" };
-  for (int z = 0; z < 3; z++) {
-    it = entryMap.lower_bound(pictDNames[z]);
-    while (it != entryMap.end()) {
-      if (it->first != pictDNames[z])
-        break;
-      MWAWEntry &entry = it++->second;
-      readPICD(entry, NSStruct::ZoneType(z));
-    }
-  }
-  it = entryMap.lower_bound("PLAC");
-  while (it != entryMap.end()) {
-    if (it->first != "PLAC")
-      break;
-    MWAWEntry &entry = it++->second;
-    readPLAC(entry);
-  }
-  it = entryMap.lower_bound("PLDT");
-  while (it != entryMap.end()) {
-    if (it->first != "PLDT")
-      break;
-    MWAWEntry &entry = it++->second;
-    entry.setName("PLDT");
-    NSStruct::RecursifData data(NSStruct::Z_Main);
-    data.read(*this, entry);
-    readPLDT(data);
   }
   // unknown ?
   it = entryMap.lower_bound("SGP1");
@@ -1363,69 +1336,6 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
 }
 
 ////////////////////////////////////////////////////////////
-// read PLDT zone: a unknown zone (a type, an id/anchor type? and a bdbox )
-////////////////////////////////////////////////////////////
-bool NSParser::readPLDT(NSStruct::RecursifData const &data)
-{
-  if (!data.m_info || data.m_info->m_zoneType < 0 || data.m_info->m_zoneType >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::readPLDT: find unexpected zoneType\n"));
-    return false;
-  }
-
-  if (!data.m_childList.size())
-    return true;
-
-  if (data.m_childList.size() > 1) {
-    MWAW_DEBUG_MSG(("NSParser::readPLDT: level 0 node contains more than 1 node\n"));
-  }
-  if (data.m_childList[0].isLeaf()) {
-    MWAW_DEBUG_MSG(("NSParser::readPLDT: level 1 node is a leaf\n"));
-    return false;
-  }
-  NSStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
-  size_t numData = mainData.m_childList.size();
-  //  NSParserInternal::Zone &zone = m_state->m_zones[(int) data.m_info->m_zoneType];
-  MWAWInputStreamPtr input = rsrcInput();
-  libmwaw::DebugStream f;
-
-  long val;
-  for (size_t n = 0 ; n < numData; n++) {
-    if (mainData.m_childList[n].isLeaf()) {
-      MWAW_DEBUG_MSG(("NSParser::readPLDT: oops some level 2 node are leaf\n"));
-      continue;
-    }
-    NSStruct::RecursifData const &dt=*mainData.m_childList[n].m_data;
-    /* type == 7fffffff and wh = 2 */
-    if (dt.m_childList.size() != 1) {
-      MWAW_DEBUG_MSG(("NSParser::readPLDT: find an odd number of 3 leavers\n"));
-      continue;
-    }
-    NSStruct::RecursifData::Node const &child= dt.m_childList[0];
-    if (!child.isLeaf() || child.m_entry.length() < 14) {
-      MWAW_DEBUG_MSG(("NSParser::readPLDT: find an odd level 3 leaf\n"));
-      continue;
-    }
-
-    long pos = child.m_entry.begin();
-    input->seek(pos, WPX_SEEK_SET);
-    f.str("");
-    std::string type("");   // find different small string here
-    for (int i = 0; i < 4; i++)
-      type += (char) input->readULong(1);
-    f << type << ",";
-    val = input->readLong(2); // a small number find 4,5,b,d
-    if (val) f << "f0=" << val << ",";
-    int dim[4];
-    for (int i = 0; i < 4; i++) dim[i] = (int) input->readLong(2);
-    f << "bdbox=(" << dim[1] << "x" << dim[0] << "<->"
-      << dim[3] << "x" << dim[2] << "),";
-    rsrcAscii().addPos(pos-12);
-    rsrcAscii().addNote(f.str().c_str());
-  }
-  return true;
-}
-
-////////////////////////////////////////////////////////////
 // read SGP1 zone: a unknown zone (a type, an id/anchor type? and a bdbox )
 ////////////////////////////////////////////////////////////
 bool NSParser::readSGP1(NSStruct::RecursifData const &data)
@@ -1907,77 +1817,6 @@ bool NSParser::readCNTR(MWAWEntry const &entry, int zoneId)
 }
 
 ////////////////////////////////////////////////////////////
-// read the PICD zone ( a list of picture ? )
-////////////////////////////////////////////////////////////
-bool NSParser::readPICD(MWAWEntry const &entry, int zoneId)
-{
-  if ((!entry.valid()&&entry.length()) || (entry.length()%14)) {
-    MWAW_DEBUG_MSG(("NSParser::readPICD: the entry is bad\n"));
-    return false;
-  }
-  if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::readPICD: find unexpected zoneId: %d\n", zoneId));
-    return false;
-  }
-  //  NSParserInternal::Zone &zone = m_state->m_zones[zoneId];
-  entry.setParsed(true);
-  MWAWInputStreamPtr input = rsrcInput();
-  long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
-
-  int numElt = int(entry.length()/14);
-  libmwaw::DebugStream f;
-  f << "Entries(PICD)[" << zoneId << "]:N=" << numElt;
-  rsrcAscii().addPos(pos-4);
-  rsrcAscii().addNote(f.str().c_str());
-
-  for (int i = 0; i < numElt; i++) {
-    pos = input->tell();
-    f.str("");
-    f << "PICD" << i << ":";
-    rsrcAscii().addPos(pos);
-    rsrcAscii().addNote(f.str().c_str());
-    input->seek(pos+14, WPX_SEEK_SET);
-  }
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the PLAC zone ( a list of picture placement ? )
-////////////////////////////////////////////////////////////
-bool NSParser::readPLAC(MWAWEntry const &entry)
-{
-  if ((!entry.valid()&&entry.length()) || (entry.length()%202)) {
-    MWAW_DEBUG_MSG(("NSParser::readPLAC: the entry is bad\n"));
-    return false;
-  }
-  entry.setParsed(true);
-  MWAWInputStreamPtr input = rsrcInput();
-  long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
-
-  int numElt = int(entry.length()/202);
-  libmwaw::DebugStream f;
-  f << "Entries(PLAC)[" << entry.id() << "]:N=" << numElt;
-  rsrcAscii().addPos(pos-4);
-  rsrcAscii().addNote(f.str().c_str());
-
-  long val;
-  for (int i = 0; i < numElt; i++) {
-    pos = input->tell();
-    f.str("");
-    f << "PLAC" << i << ":";
-    val = (int) input->readULong(2);
-    f << "pictId=" << val;
-    rsrcAscii().addDelimiter(input->tell(),'|');
-    rsrcAscii().addPos(pos);
-    rsrcAscii().addNote(f.str().c_str());
-    input->seek(pos+202, WPX_SEEK_SET);
-  }
-  return true;
-}
-
-////////////////////////////////////////////////////////////
 //! read the INFO resource: a unknown zone
 ////////////////////////////////////////////////////////////
 bool NSParser::readINFO(MWAWEntry const &entry)
@@ -2091,37 +1930,6 @@ bool NSParser::readINFO(MWAWEntry const &entry)
   rsrcAscii().addPos(pos);
   rsrcAscii().addNote(f.str().c_str());
 
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-//! read the PGRA resource: a unknown number (id 20000)
-////////////////////////////////////////////////////////////
-bool NSParser::readPGRA(MWAWEntry const &entry)
-{
-  if (!entry.valid() || entry.length() < 2) {
-    MWAW_DEBUG_MSG(("NSParser::readPGRA: the entry is bad\n"));
-    return false;
-  }
-  if (entry.id() != 20000) {
-    MWAW_DEBUG_MSG(("NSParser::readPGRA: the entry id %d is odd\n", entry.id()));
-  }
-  entry.setParsed(true);
-  MWAWInputStreamPtr input = rsrcInput();
-  long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
-
-  libmwaw::DebugStream f;
-  if (entry.id() != 20000)
-    f << "Entries(PGRA)[#" << entry.id() << "]:";
-  else
-    f << "Entries(PGRA):";
-  f << "N=" << input->readLong(2) << ","; // a number between 0 and 2
-  if (entry.length()!=2)
-    f << "###size=" << entry.length() << ",";
-
-  rsrcAscii().addPos(pos-4);
-  rsrcAscii().addNote(f.str().c_str());
   return true;
 }
 

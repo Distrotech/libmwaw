@@ -35,28 +35,24 @@
  * Parser to Claris Works text document ( graphic part )
  *
  */
-#ifndef CW_MWAW_GRAPH
-#  define CW_MWAW_GRAPH
+#ifndef CW_GRAPH
+#  define CW_GRAPH
 
-#include <list>
 #include <string>
 #include <vector>
 
-#include "MWAWPosition.hxx"
-
-#include "MWAWEntry.hxx"
-#include "MWAWContentListener.hxx"
-#include "MWAWSubDocument.hxx"
+#include "libmwaw_internal.hxx"
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "MWAWParser.hxx"
-
 #include "CWStruct.hxx"
 
+class MWAWContentListener;
 typedef class MWAWContentListener CWContentListener;
 typedef shared_ptr<CWContentListener> CWContentListenerPtr;
+
+class MWAWEntry;
 
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
@@ -74,7 +70,7 @@ struct ZonePict;
 
 class CWParser;
 
-/** \brief the main class to read the text part of Claris Works file
+/** \brief the main class to read the graphic part of Claris Works file
  *
  *
  *

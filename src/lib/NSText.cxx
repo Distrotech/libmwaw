@@ -60,7 +60,7 @@ namespace NSTextInternal
 /** Internal: the fonts and many other data*/
 struct Font {
   //! the constructor
-  Font(): m_font(-1,-1), m_pictureId(0), m_pictureHeight(0), m_markId(-1), m_variableId(0),
+  Font(): m_font(-1,-1), m_pictureId(0), m_pictureWidth(0), m_markId(-1), m_variableId(0),
     m_format(0), m_format2(0), m_extra("") { }
   bool isVariable() const {
     return (m_format2&0x20);
@@ -73,8 +73,8 @@ struct Font {
   MWAWFont m_font;
   //! the picture id ( if this is for a picture )
   int m_pictureId;
-  //! the picture height
-  int m_pictureHeight;
+  //! the picture width
+  int m_pictureWidth;
   //! a mark id
   int m_markId;
   //! the variable id : in fact cst[unkn] + v_id
@@ -83,6 +83,8 @@ struct Font {
   int m_format;
   //! a series of flags
   int m_format2;
+  //! two picture dim ( orig && file ?)
+  Box2i m_pictureDim[2];
   //! extra data
   std::string m_extra;
 };
@@ -91,7 +93,7 @@ struct Font {
 std::ostream &operator<<(std::ostream &o, Font const &font)
 {
   if (font.m_pictureId) o << "pictId=" << font.m_pictureId << ",";
-  if (font.m_pictureHeight) o << "pictH=" << font.m_pictureHeight << ",";
+  if (font.m_pictureWidth) o << "pictW=" << font.m_pictureWidth << ",";
   if (font.m_markId >= 0) o << "markId=" << font.m_markId << ",";
   if (font.m_variableId > 0) o << "variableId=" << font.m_variableId << ",";
   if (font.m_format2&0x4) o << "index,";
@@ -108,6 +110,11 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
   if (font.m_format & 0x40) o << "endOfPage,"; // checkme
   if (font.m_format & 0xA6)
     o << "#fl=" << std::hex << (font.m_format & 0xA6) << std::dec << ",";
+  if (font.m_pictureDim[0].size()[0] || font.m_pictureDim[0].size()[1])
+    o << "pictDim=" << font.m_pictureDim[0] << ",";
+  if (font.m_pictureDim[0] != font.m_pictureDim[1] &&
+      (font.m_pictureDim[1].size()[0] || font.m_pictureDim[1].size()[1]))
+    o << "pictDim[crop]=" << font.m_pictureDim[1] << ",";
   if (font.m_extra.length())
     o << font.m_extra << ",";
   return o;
@@ -238,13 +245,36 @@ std::ostream &operator<<(std::ostream &o, Footnote const &ft)
   return o;
 }
 
+//! Internal: the picture data ( PICD )
+struct PicturePara {
+  //! constructor
+  PicturePara() : m_id(-1), m_paragraph(-1), m_position() {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, PicturePara const &pict);
+  //! the picture id
+  int m_id;
+  //! the paragraph position
+  int m_paragraph;
+  //! the position
+  Box2i m_position;
+};
+
+std::ostream &operator<<(std::ostream &o, PicturePara const &pict)
+{
+  if (pict.m_id > 0) o << "pictId=" << pict.m_id << ",";
+  if (pict.m_paragraph >= 0) o << "paragraph=" << pict.m_paragraph << ",";
+  if (pict.m_position.size()[0] || pict.m_position.size()[1])
+    o << "pos=" << pict.m_position << ",";
+  return o;
+}
 
 /** different types
  *
  * - Format: font properties
  * - Ruler: new ruler
  */
-enum PLCType { P_Format=0, P_Ruler, P_Footnote, P_HeaderFooter, P_Unknown};
+enum PLCType { P_Format=0, P_Ruler, P_Footnote, P_HeaderFooter, P_PicturePara, P_Unknown};
 
 /** Internal: class to store the PLC: Pointer List Content ? */
 struct DataPLC {
@@ -275,6 +305,9 @@ std::ostream &operator<<(std::ostream &o, DataPLC const &plc)
   case P_HeaderFooter:
     o << "HF";
     break;
+  case P_PicturePara:
+    o << "Pict";
+    break;
   case P_Unknown:
   default:
     o << "#type=" << int(plc.m_type) << ",";
@@ -290,12 +323,14 @@ struct Zone {
   typedef std::multimap<NSStruct::Position,DataPLC,NSStruct::Position::Compare> PLCMap;
 
   //! constructor
-  Zone() : m_entry(), m_paragraphList(),  m_plcMap() {
+  Zone() : m_entry(), m_paragraphList(), m_pictureParaList(), m_plcMap() {
   }
   //! the position of text in the rsrc file
   MWAWEntry m_entry;
   //! the list of paragraph
   std::vector<Paragraph> m_paragraphList;
+  //! the list of paragraph
+  std::vector<PicturePara> m_pictureParaList;
 
   //! the map pos -> format id
   PLCMap m_plcMap;
@@ -595,6 +630,17 @@ bool NSText::createZones()
       readParagraphs(entry, NSStruct::ZoneType(z));
     }
   }
+  // the picture associated to the paragraph
+  char const *(pictDNames[]) = { "PICD", "FPIC", "HPIC" };
+  for (int z = 0; z < 3; z++) {
+    it = entryMap.lower_bound(pictDNames[z]);
+    while (it != entryMap.end()) {
+      if (it->first != pictDNames[z])
+        break;
+      MWAWEntry &entry = it++->second;
+      readPICD(entry, NSStruct::ZoneType(z));
+    }
+  }
 
   // End of the style zone
 
@@ -741,7 +787,7 @@ bool NSText::readFonts(MWAWEntry const &entry)
       // the two value seems to differ slightly for a picture
       val = (long)input->readULong(2);
       if (val != 0xFF01) f << "#pictFlags0=" << std::hex << val << ",";
-      font.m_pictureHeight = (int)input->readLong(2);
+      font.m_pictureWidth = (int)input->readLong(2);
     } else {
       val = (long)input->readULong(2);
       if (val != 0xFF00)
@@ -833,6 +879,18 @@ bool NSText::readFonts(MWAWEntry const &entry)
       }
       // 0, -1 or a small number related to the variable id : probably unknowncst+vId
       font.m_variableId = (int)input->readLong(4);
+      // the remaining seems to be 0 excepted for picture
+      for (int j = 0; j < 4; j++) { // find 0,0,[0|d5|f5|f8|ba], big number
+        val = (int) input->readULong(2);
+        if (val) f << "h" << j << "=" << std::hex << val << std::dec << ",";
+      }
+      // two dim ?
+      int dim[4];
+      for (int st = 0; st < 2; st++) {
+        for (int j = 0; j < 4; j++)
+          dim[j] = (int) input->readLong(2);
+        font.m_pictureDim[st]=Box2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
+      }
     }
 
     static const uint32_t colors[] =
@@ -850,7 +908,8 @@ bool NSText::readFonts(MWAWEntry const &entry)
     f.str("");
     f << name << i << ":" << font.m_font.getDebugString(m_convertissor)
       << font;
-    asciiFile.addDelimiter(input->tell(),'|');
+    if (input->tell() != pos+fSize)
+      asciiFile.addDelimiter(input->tell(),'|');
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     input->seek(pos+fSize, WPX_SEEK_SET);
@@ -1293,6 +1352,57 @@ bool NSText::readFootnotes(MWAWEntry const &entry)
   return true;
 }
 
+// read the PICD zone ( a list of picture ? )
+bool NSText::readPICD(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
+{
+  if ((!entry.valid()&&entry.length()) || (entry.length()%14)) {
+    MWAW_DEBUG_MSG(("NSText::readPICD: the entry is bad\n"));
+    return false;
+  }
+  if (zoneId < 0 || zoneId >= 3) {
+    MWAW_DEBUG_MSG(("NSText::readPICD: find unexpected zoneId: %d\n", zoneId));
+    return false;
+  }
+  NSTextInternal::Zone &zone = m_state->m_zones[zoneId];
+  entry.setParsed(true);
+  MWAWInputStreamPtr input = m_mainParser->rsrcInput();
+  libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
+  long pos = entry.begin();
+  input->seek(pos, WPX_SEEK_SET);
+
+  int numElt = int(entry.length()/14);
+  libmwaw::DebugStream f;
+  f << "Entries(PICD)[" << zoneId << "]:N=" << numElt;
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+
+  NSTextInternal::DataPLC plc;
+  plc.m_type = NSTextInternal::P_PicturePara;
+  for (int i = 0; i < numElt; i++) {
+    pos = input->tell();
+    f.str("");
+    NSTextInternal::PicturePara pict;
+    pict.m_paragraph = (int) input->readLong(4);
+    int dim[4];
+    for (int j = 0; j < 4; j++)
+      dim[j] = (int) input->readLong(2);
+    pict.m_position = Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    pict.m_id = (int) input->readULong(2);
+    zone.m_pictureParaList.push_back(pict);
+
+    NSStruct::Position pictPosition;
+    pictPosition.m_paragraph= pict.m_paragraph;
+    plc.m_id = i;
+    zone.m_plcMap.insert(NSTextInternal::Zone::PLCMap::value_type(pictPosition, plc));
+
+    f << "PICD" << i << ":" << pict;
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+14, WPX_SEEK_SET);
+  }
+  return true;
+}
+
 ////////////////////////////////////////////////////////////
 //
 // Low level
@@ -1546,6 +1656,18 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
 
         break;
       }
+      case NSTextInternal::P_PicturePara: {
+        if (plc.m_id < 0 || plc.m_id >= int(zone.m_pictureParaList.size())) {
+          MWAW_DEBUG_MSG(("NSText::sendText: can not find the paragraph picture\n"));
+          break;
+        }
+        NSTextInternal::PicturePara &pict = zone.m_pictureParaList[int(plc.m_id)];
+        MWAWPosition pictPos(pict.m_position.min(), pict.m_position.size(), WPX_POINT);
+        pictPos.setRelativePosition(MWAWPosition::Paragraph);
+        pictPos.m_wrapping = MWAWPosition::WRunThrough;
+        m_mainParser->sendPicture(pict.m_id, pictPos);
+        break;
+      }
       case NSTextInternal::P_HeaderFooter:
         break;
       case NSTextInternal::P_Unknown:
@@ -1592,10 +1714,20 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
     // send char
     lastCharFootnote = false;
     switch(c) {
-    case 0x1:
-      if (actFont.m_pictureId > 0) break;
-      f << "#";
+    case 0x1: {
+      if (actFont.m_pictureId <= 0) {
+        MWAW_DEBUG_MSG(("NSText::sendText: can not find pictureId for char 1\n"));
+        f << "#";
+        break;
+      }
+      MWAWPosition pictPos(actFont.m_pictureDim[0].min(), actFont.m_pictureDim[0].size(), WPX_POINT);
+      pictPos.setRelativePosition(MWAWPosition::CharBaseLine);
+      pictPos.setClippingPosition
+      (actFont.m_pictureDim[1].min()-actFont.m_pictureDim[0].min(),
+       actFont.m_pictureDim[0].max()-actFont.m_pictureDim[1].max());
+      m_mainParser->sendPicture(actFont.m_pictureId, pictPos);
       break;
+    }
     case 0x9:
       m_listener->insertTab();
       break;

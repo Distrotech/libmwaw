@@ -146,14 +146,6 @@ bool MWAWRSRCParser::parse()
       MWAWEntry &tEntry = (it++)->second;
       parseSTR(tEntry, str);
     }
-    it = m_entryMap.lower_bound("PICT");
-    while (it != m_entryMap.end()) {
-      if (it->first != "PICT")
-        break;
-      MWAWEntry &tEntry = (it++)->second;
-      WPXBinaryData pict;
-      parsePICT(tEntry, pict);
-    }
   } catch(...) {
     MWAW_DEBUG_MSG(("MWAWRSRCParser::parse: can not parse the input\n"));
     return false;

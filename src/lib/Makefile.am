@@ -118,6 +118,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWProParser.hxx			\
 	MWProStructures.cxx		\
 	MWProStructures.hxx		\
+	NSGraph.cxx			\
+	NSGraph.hxx			\
 	NSParser.cxx			\
 	NSParser.hxx			\
 	NSStruct.cxx			\
