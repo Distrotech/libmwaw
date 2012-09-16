@@ -101,15 +101,11 @@ not to stop. Like that the installation will succeed.
 Mwaw2odt
 ===============
 If we want to compile mwaw2odt ( which is a part of writerperfect), you
-must download the lastest git version :
+must first download the last version of libwpg in http://sourceforge.net/projects/libwpg/
+and then download the lastest git version :
   git clone git://libwpd.git.sourceforge.net/gitroot/libwpd/writerperfect
-and then depending on the version:
-  - version 0.0.?: you can recompile it directly. 
-  - pre-version 0.1.?: you will have to update the libmwaw version
-     in configure.ac ( ie. replace libmwaw-0.0 by libmwaw-0.1 ) and
-     to remove the line <<#include "MWAWPropertyHandler.hxx">> in
-     cmdline/mwawObjectHandler.hxx, before launching autogen.sh and 
-     recompiling writerperfect.
+and finally, execute autogen.sh and configure with the options corresponding
+to you computer and launch make to recompile. 
 
 That's all folks! While no mailing exists, for more information, ask
 questions directly to osnola@users.sourceforge.net. Remember that Uncle Google can

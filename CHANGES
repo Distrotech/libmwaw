@@ -1,5 +1,14 @@
 CHANGES:
 
+09/15/2012:
+- add Nisus Writer 4.0 parser
+- add code to read zip and binhexed files 
+    and so retrieve the resource fork
+- try to sign the libraries and the executable:
+    lib[mwaw|wpd|wpg]*.dylib and mwaw2odt
+
+07/31/2012: ----- version 1.2 ---------
+
 07/30/2012:
 - retrieve tables and pictures in Microsoft Word 4-5
   document (incomplete)

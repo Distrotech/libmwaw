@@ -10,6 +10,7 @@
 - MSW* : parser of Microsoft Word documents
 - MW* : parser of MacWrite documents
 - MWPro* : parser of MacWrite II, MacWrite Pro documents
+- NS* : parser of Nisus Writer documents,
 - WN* : parser of WriteNow documents
 - WP* : parser of WriterPlus documents
 
@@ -84,7 +85,7 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------
---------------------   CW/FW/MSK/MSW/MW/WN/WP  -----------------
+--------------------   CW/FW/MDW/MSK/MSW/MW/NS/WN/WP  -----------------
 ------------------------------------------------------------
 
 Specific files which depends on the type of file which is converted
@@ -111,12 +112,19 @@ MSKParser: generic parser of Microsoft Works parser
 -   MSK4Text : class which reads the text
 
 MSWParser : parser of Microsoft Word document : v4.0-5.0 
+-   MSWStruct : class which defines the different structures 
 -   MSWText : class which reads the text and its structures
+-   MSWTextStyles : class which reads the styles
 
 MWParser : parser of MacWrite document : v1.0-5.01
 
 MWProParser : parser of MacWrite II, Pro (v1.0-1.5) document
 -   MWProStructures : class which reads the main structures find in a document
+
+NSParser : parser of a Nisus Writer document : v4.0
+-   NSGraph : class which reads the picture/graph
+-   NSStruct : class which defines the different structures used by the parsed
+-   NSText : class which reads the text
 
 WNParser : parser of WriteNow document : v1.0-4.0
 -   WNText : class which reads the text and its structures
