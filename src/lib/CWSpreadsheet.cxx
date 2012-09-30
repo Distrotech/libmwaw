@@ -37,14 +37,11 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
-#include "MWAWPictBasic.hxx"
-#include "MWAWPictMac.hxx"
-#include "MWAWPosition.hxx"
 
 #include "CWParser.hxx"
 #include "CWStruct.hxx"
@@ -54,12 +51,11 @@
 /** Internal: the structures of a CWSpreadsheet */
 namespace CWSpreadsheetInternal
 {
-////////////////////////////////////////
-////////////////////////////////////////
-
+//! Internal the spreadsheet
 struct Spreadsheet : public CWStruct::DSET {
+  // constructor
   Spreadsheet(CWStruct::DSET const dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_parsed(false) {
+    CWStruct::DSET(dset) {
   }
 
   //! operator<<
@@ -67,11 +63,8 @@ struct Spreadsheet : public CWStruct::DSET {
     o << static_cast<CWStruct::DSET const &>(doc);
     return o;
   }
-
-  bool m_parsed;
 };
 
-////////////////////////////////////////
 //! Internal: the state of a CWSpreadsheet
 struct State {
   //! constructor
@@ -117,7 +110,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
 (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
-  if (!entry.valid() || zone.m_type != 2 || entry.length() < 256)
+  if (!entry.valid() || zone.m_fileType != 2 || entry.length() < 256)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
@@ -205,9 +198,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   } else
     m_state->m_spreadsheetMap[spreadsheetZone->m_id] = spreadsheetZone;
 
-  // fixme: in general followed by the layout zone
   spreadsheetZone->m_otherChilds.push_back(spreadsheetZone->m_id+1);
-
   pos = m_input->tell();
 
   bool ok = readZone1(*spreadsheetZone);
@@ -219,10 +210,21 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
     pos = m_input->tell();
     ok = readContent(*spreadsheetZone);
   }
+  if (ok) {
+    pos = m_input->tell();
+    // Checkme: it is a simple list or a set of list ?
+    // sometimes zero or a list of pair of int(pos?, id?)
+    ok = m_mainParser->readStructZone("SpreadsheetListUnkn0", false);
+  }
 
   if (!ok)
     m_input->seek(pos, WPX_SEEK_SET);
-
+#if 0
+  else {
+    ascii().addPos(m_input->tell());
+    ascii().addNote("Entries(UUSpreadSheetNext)");
+  }
+#endif
   return spreadsheetZone;
 }
 

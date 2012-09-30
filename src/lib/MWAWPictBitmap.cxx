@@ -37,7 +37,7 @@
 #include <sstream>
 #include <string>
 
-#include <libwpd/WPXBinaryData.h>
+#include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
 

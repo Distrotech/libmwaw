@@ -35,8 +35,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include <libwpd/WPXDocumentInterface.h>
-#include <libwpd/WPXProperty.h>
+#include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -1408,6 +1407,8 @@ bool MWAWContentListener::openFrame(MWAWPosition const &pos, WPXPropertyList ext
     else
       _openParagraph();
     break;
+  case MWAWPosition::Unknown:
+    MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: UNKNOWN position, insert as char position\n"));
   case MWAWPosition::CharBaseLine:
   case MWAWPosition::Char:
     if (m_ps->m_isSpanOpened)
@@ -1602,7 +1603,8 @@ void MWAWContentListener::_handleFrameParameters
     return;
   }
   if ( pos.m_anchorTo != MWAWPosition::Char &&
-       pos.m_anchorTo != MWAWPosition::CharBaseLine) return;
+       pos.m_anchorTo != MWAWPosition::CharBaseLine &&
+       pos.m_anchorTo != MWAWPosition::Unknown) return;
 
   propList.insert("text:anchor-type", "as-char");
   if ( pos.m_anchorTo == MWAWPosition::CharBaseLine)

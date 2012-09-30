@@ -36,7 +36,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include <libwpd/WPXPropertyList.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWCell.hxx"
 

@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#include <libwpd/WPXBinaryData.h>
-#include <libwpd-stream/WPXStream.h>
+#include <libwpd/libwpd.h>
+#include <libwpd-stream/libwpd-stream.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
@@ -103,9 +103,9 @@ void DebugFile::sort()
   for (i = 0; i < numSkip; i++) sMap[m_skipZones[i]] = 0;
 
   i = 0;
-  for (Vec2i::MapX::iterator it = sMap.begin();
-       it != sMap.end(); i++, it++)
-    m_skipZones[i] = it->first;
+  for (Vec2i::MapX::iterator it = sMap.begin(); it != sMap.end(); it++)
+    m_skipZones[i++] = it->first;
+  if (i < numSkip) m_skipZones.resize(i);
 }
 
 void DebugFile::write()

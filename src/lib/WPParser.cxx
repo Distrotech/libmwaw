@@ -36,7 +36,7 @@
 #include <limits>
 #include <sstream>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -1616,17 +1616,16 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
     return false;
   }
 
-  MWAWPosition graphicPos;
-  Vec2f actualSize(graphicPos.size()), naturalSize(actualSize);
+  Vec2f actualSize(0,0), naturalSize(actualSize);
   if (box.size().x() > 0 && box.size().y()  > 0) {
     if (actualSize.x() <= 0 || actualSize.y() <= 0) actualSize = box.size();
     naturalSize = box.size();
-  } else if (actualSize.x() <= 0 || actualSize.y() <= 0) {
+  } else {
     MWAW_DEBUG_MSG(("WPParser::readGraphic: can not find the picture size\n"));
     actualSize = Vec2f(100,100);
   }
 
-  MWAWPosition pictPos=MWAWPosition(graphicPos.origin(),actualSize, WPX_POINT);
+  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),actualSize, WPX_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
   pictPos.setNaturalSize(naturalSize);
   f << pictPos;

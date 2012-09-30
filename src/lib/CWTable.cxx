@@ -39,7 +39,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -47,7 +47,6 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictMac.hxx"
-#include "MWAWPosition.hxx"
 #include "MWAWTable.hxx"
 
 #include "CWParser.hxx"
@@ -81,7 +80,7 @@ struct Border {
 };
 
 struct Cell : public MWAWTableCell {
-  Cell() : MWAWTableCell(), m_size(), m_zoneId(0), m_styleId(-1) {
+  Cell(CWTable &parser) : MWAWTableCell(), m_parser(&parser), m_size(), m_zoneId(0), m_styleId(-1) {
   }
 
   virtual bool send(MWAWContentListenerPtr listener) {
@@ -91,14 +90,17 @@ struct Cell : public MWAWTableCell {
     cell.setNumSpannedCells(m_numberCellSpanned);
 
     listener->openTableCell(cell, WPXPropertyList());
-    listener->insertCharacter(' ');
+    sendContent(listener);
     listener->closeTableCell();
     return true;
   }
 
   virtual bool sendContent(MWAWContentListenerPtr listener) {
     if (!listener) return true;
-    listener->insertCharacter(' ');
+    if (m_zoneId <= 0)
+      listener->insertCharacter(' ');
+    else
+      m_parser->askMainToSendZone(m_zoneId);
     return true;
   }
 
@@ -112,32 +114,46 @@ struct Cell : public MWAWTableCell {
     return o;
   }
 
-  /* the cell size : unit WPX_POINT */
+  /** the main parser */
+  CWTable *m_parser;
+  /** the cell size : unit WPX_POINT */
   Vec2f m_size;
-  /* the cell zone ( 0 is no content ) */
+  /** the cell zone ( 0 is no content ) */
   int m_zoneId;
-  /* the list of border id : Left, Top, Right, Bottom
+  /** the list of border id : Left, Top, Right, Bottom
 
      Normally, one id but merge cells can have mutiple border
   */
   std::vector<int> m_bordersId[4];
-  // the style id ?
+  /// the style id ?
   int m_styleId;
-
+private:
+  Cell(Cell const &orig);
+  Cell &operator=(Cell const &orig);
 };
 
 ////////////////////////////////////////
 ////////////////////////////////////////
+/** the struct which stores the Table */
 struct Table : public CWStruct::DSET, public MWAWTable {
   //! constructor
   Table(CWStruct::DSET const dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset),MWAWTable(), m_bordersList(), m_parsed(false) {
+    CWStruct::DSET(dset),MWAWTable(), m_bordersList(), m_mainPtr(-1) {
   }
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Table const &doc) {
     o << static_cast<CWStruct::DSET const &>(doc);
     return o;
+  }
+  //! check that each child zone are valid
+  void checkChildZones() {
+    for (size_t i = 0; i < m_cellsList.size(); i++) {
+      Cell *cell = reinterpret_cast<Cell *>(m_cellsList[i].get());
+      if (!cell) continue;
+      if (cell->m_zoneId > 0 && !okChildId(cell->m_zoneId))
+        cell->m_zoneId = 0;
+    }
   }
   //! return a cell corresponding to id
   Cell *get(int id) {
@@ -148,8 +164,10 @@ struct Table : public CWStruct::DSET, public MWAWTable {
     return reinterpret_cast<Cell *>(MWAWTable::get(id).get());
   }
 
+  /** the list of border */
   std::vector<Border> m_bordersList;
-  bool m_parsed;
+  /** the relative main pointer */
+  long m_mainPtr;
 };
 
 ////////////////////////////////////////
@@ -182,6 +200,11 @@ int CWTable::version() const
   return m_mainParser->version();
 }
 
+bool CWTable::askMainToSendZone(int number)
+{
+  return m_mainParser->sendZone(number, MWAWPosition::Frame);
+}
+
 // fixme
 int CWTable::numPages() const
 {
@@ -198,24 +221,40 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
 (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
-  if (!entry.valid() || zone.m_type != 6 || entry.length() < 32)
+  if (!entry.valid() || zone.m_fileType != 6 || entry.length() < 32)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugStream f;
-  shared_ptr<CWTableInternal::Table>
-  tableZone(new CWTableInternal::Table(zone));
+  shared_ptr<CWTableInternal::Table> tableZone(new CWTableInternal::Table(zone));
 
   f << "Entries(TableDef):" << *tableZone << ",";
   float dim[2];
   for (int i = 0; i < 2; i++) dim[i] = float(m_input->readLong(4))/256.f;
   f << "dim=" << dim[0] << "x" << dim[1] << ",";
-  int val;
+  long val;
   for (int i = 0; i < 3; i++) {
     // f1=parentZoneId ?
-    val = (int) m_input->readLong(2);
+    val = m_input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
+  tableZone->m_mainPtr = (long) m_input->readULong(4);
+  f << "PTR=X" << std::hex << tableZone->m_mainPtr << std::dec << ",";
+  for (int i = 0; i < 2; i++) { // find 0,0 or -1,-1 here
+    val = m_input->readLong(2);
+    if (val) f << "f" << i+3 << "=" << val << ",";
+  }
+  f << "relPtr=PTR+[" << std::hex;
+  for (int i = 0; i < 3; i++) {
+    /** find 3 ptr here in general >= PTR, very often PTR+4,PTR+8,PTR+c,
+     but can be more complex for instance PTR+354,PTR-6924,PTR+7fc, */
+    val = (long) m_input->readULong(4);
+    if (val > tableZone->m_mainPtr)
+      f << val-tableZone->m_mainPtr << ",";
+    else
+      f << "-" << tableZone->m_mainPtr-val << ",";
+  }
+  f << std::dec << "],";
   ascii().addDelimiter(m_input->tell(), '|');
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -263,13 +302,21 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
   /** three fields which seems to follows the list of cells
       zone 0 : looks like a list of integer : related to last selected border ?
       zone 1 : looks like a list of integer : unknown meaning
-      zone 2 : looks like a list of 4 pointers
    */
-  for (int i = 0; ok && i < 3; i++) {
+  for (int i = 0; ok && i < 2; i++) {
     std::stringstream s;
     s << "TableUnknown-" << i;
+    std::vector<int> res;
     pos = m_input->tell();
-    ok = m_mainParser->readStructZone(s.str().c_str(), false);
+    ok = m_mainParser->readStructIntZone(s.str().c_str(), false, 2, res);
+  }
+  if (ok) {
+    pos = m_input->tell();
+    ok = readTablePointers(*tableZone);
+    if (!ok) {
+      m_input->seek(pos, WPX_SEEK_SET);
+      ok = m_mainParser->readStructZone("TablePointers", false);
+    }
   }
   if (ok) {
     pos = m_input->tell();
@@ -284,9 +331,7 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
   } else
     m_state->m_tableMap[tableZone->m_id] = tableZone;
 
-  // fixme: in general followed by another zone
   tableZone->m_otherChilds.push_back(tableZone->m_id+1);
-
   return tableZone;
 }
 
@@ -298,10 +343,13 @@ bool CWTable::sendZone(int number)
     return false;
   shared_ptr<CWTableInternal::Table> table = iter->second;
   table->m_parsed = true;
+  if (table->okChildId(number+1))
+    m_mainParser->forceParsed(number+1);
 
   if (!m_listener)
     return true;
 
+  table->checkChildZones();
   if (table->sendTable(m_listener))
     return true;
   return table->sendAsText(m_listener);
@@ -316,9 +364,7 @@ void CWTable::flushExtra()
     if (table->m_parsed)
       continue;
     if (m_listener) m_listener->insertEOL();
-#ifdef DEBUG
     sendZone(iter->first);
-#endif
   }
 }
 
@@ -422,7 +468,7 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
 
   for (int i = 0; i < N; i++) {
     pos = m_input->tell();
-    shared_ptr<CWTableInternal::Cell> cell(new CWTableInternal::Cell);
+    shared_ptr<CWTableInternal::Cell> cell(new CWTableInternal::Cell(*this));
     int posi[6];
     for (int j = 0; j < 6; j++) posi[j] = (int) m_input->readLong(4);
     Box2f box = Box2f(Vec2f(float(posi[1]), float(posi[0])), Vec2f(float(posi[3]), float(posi[2])));
@@ -432,6 +478,8 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
     cell->m_zoneId = (int) m_input->readULong(4);
     cell->m_styleId = (int) m_input->readULong(4);
     table.add(cell);
+    if (cell->m_zoneId)
+      table.m_otherChilds.push_back(cell->m_zoneId);
     f.str("");
     f << "TableCell-" << i << ":" << *cell;
     if (long(m_input->tell()) != pos+fSz)
@@ -501,6 +549,71 @@ bool CWTable::readTableBordersId(CWTableInternal::Table &table)
     ascii().addNote(f.str().c_str());
     m_input->seek(endPos, WPX_SEEK_SET);
   }
+  return true;
+}
+
+bool CWTable::readTablePointers(CWTableInternal::Table &table)
+{
+  long pos = m_input->tell();
+  long sz = (long) m_input->readULong(4);
+  long endPos = pos+4+sz;
+  m_input->seek(endPos, WPX_SEEK_SET);
+  if (long(m_input->tell()) != endPos) {
+    m_input->seek(pos, WPX_SEEK_SET);
+    MWAW_DEBUG_MSG(("CWTable::readTablePointers: file is too short\n"));
+    return false;
+  }
+  if (!sz) {
+    // find this one time as the last entry which ends the table
+    ascii().addPos(pos);
+    ascii().addNote("NOP");
+    return true;
+  }
+  m_input->seek(pos+4, WPX_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(TablePointers):";
+  int N = (int) m_input->readULong(2);
+  if (N != table.numCells()) {
+    MWAW_DEBUG_MSG(("CWTable::readTablePointers: the number of pointers seems odd\n"));
+    f << "###";
+  }
+  f << "N=" << N << ",";
+  long val = m_input->readLong(2);
+  if (val != -1) f << "f0=" << val << ",";
+  val = m_input->readLong(2);
+  if (val) f << "f1=" << val << ",";
+  int fSz = (int) m_input->readLong(2);
+  if (sz != 12+fSz*N || fSz < 16) {
+    m_input->seek(pos, WPX_SEEK_SET);
+    MWAW_DEBUG_MSG(("CWTable::readTablePointers: find odd data size\n"));
+    return false;
+  }
+  for (int i = 2; i < 4; i++) { // normally 0, 1
+    val = m_input->readLong(2);
+    if (val != i-2) f << "f" << i << "=" << val << ",";
+
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  for (int i = 0; i < N; i++) {
+    pos = m_input->tell();
+    f.str("");
+    f << "TablePointers-" << i << ":PTR+[" << std::hex;
+    for (int j = 0; j < 4; j++) {
+      val = (long) m_input->readULong(4);
+      if (val > table.m_mainPtr) f << val-table.m_mainPtr << ",";
+      else f << "-" << table.m_mainPtr-val << ",";
+    }
+    f << "]" << std::dec;
+    if (long(m_input->tell()) != pos+fSz)
+      ascii().addDelimiter(m_input->tell(), '|');
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    m_input->seek(pos+fSz, WPX_SEEK_SET);
+  }
+
+  m_input->seek(endPos, WPX_SEEK_SET);
   return true;
 }
 

@@ -40,8 +40,6 @@
 
 #include "MWAWPageSpan.hxx"
 
-#include "MWAWPosition.hxx"
-
 #include "MWAWEntry.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWSubDocument.hxx"

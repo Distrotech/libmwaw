@@ -270,7 +270,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   //ok now look at the end of file
   input->seek(0, WPX_SEEK_SET);
   while(!input->atEOS()) {
-    if (input->seek(1000, WPX_SEEK_CUR) != 0) break;
+    if (input->seek(1024, WPX_SEEK_CUR) != 0) break;
   }
   input->seek(-4, WPX_SEEK_CUR);
   for (int i = 0; i < 2; i++)

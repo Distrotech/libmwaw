@@ -38,7 +38,7 @@
 #include <limits>
 #include <sstream>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"

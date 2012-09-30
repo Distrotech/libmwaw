@@ -35,7 +35,7 @@
 #include <iostream>
 #include <vector>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
@@ -530,7 +530,6 @@ bool MSK4Zone::createZones(bool mainOle)
   }
 
   // SELN
-  m_state->m_framesList.resize(0);
   pos = m_entryMap.lower_bound("SELN");
   while (m_entryMap.end() != pos) {
     MWAWEntry const &entry = pos->second;

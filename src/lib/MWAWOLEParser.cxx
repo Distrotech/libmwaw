@@ -80,7 +80,7 @@
 #include <sstream>
 #include <string>
 
-#include <libwpd/WPXBinaryData.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWPosition.hxx"
 #include "MWAWOLEParser.hxx"
@@ -759,6 +759,7 @@ bool MWAWOLEParser::readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWAW
 
   pos = MWAWPosition();
   pos.setUnit(WPX_POINT);
+  pos.setRelativePosition(MWAWPosition::Char);
   libmwaw::DebugStream f;
   f << "@@OlePress(header): ";
   ip->seek(0,WPX_SEEK_SET);
@@ -917,6 +918,7 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
   libmwaw::DebugStream f;
   pos = MWAWPosition();
   pos.setUnit(WPX_POINT);
+  pos.setRelativePosition(MWAWPosition::Char);
   input->seek(0, WPX_SEEK_SET);
   f << "@@Contents:";
 
@@ -1016,6 +1018,7 @@ bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
 
   pos = MWAWPosition();
   pos.setUnit(WPX_POINT);
+  pos.setRelativePosition(MWAWPosition::Char);
   input->seek(0, WPX_SEEK_SET);
   f << "@@CONTENTS:";
 

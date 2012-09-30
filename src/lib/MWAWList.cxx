@@ -34,10 +34,8 @@
 #include <cstring>
 #include <iostream>
 
-#include <libwpd/WPXDocumentInterface.h>
-#include <libwpd/WPXPropertyList.h>
+#include <libwpd/libwpd.h>
 
-#include "libmwaw_internal.hxx"
 #include "libmwaw_internal.hxx"
 
 #include "MWAWList.hxx"

@@ -43,8 +43,8 @@
 #include <string>
 #include <vector>
 
-#include <libwpd-stream/WPXStream.h>
-#include <libwpd/WPXString.h>
+#include <libwpd-stream/libwpd-stream.h>
+#include <libwpd/libwpd.h>
 
 #if defined(_MSC_VER) || defined(__DJGPP__)
 typedef signed char int8_t;

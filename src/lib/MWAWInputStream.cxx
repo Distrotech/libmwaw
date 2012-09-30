@@ -329,6 +329,9 @@ bool MWAWInputStream::unBinHex()
 ////////////////////////////////////////////////////////////
 bool MWAWInputStream::unzipStream()
 {
+#if !defined(USE_ZIP)
+  return false;
+#else
   seek(0, WPX_SEEK_SET);
   MWAWZipStream zStream(m_stream.get());
   bool zipFile = zStream.isZipStream();
@@ -365,6 +368,7 @@ bool MWAWInputStream::unzipStream()
   m_resourceFork.reset(new MWAWInputStream(rsrcPtr,false));
   m_stream.reset(zStream.getDocumentZipStream(names[0]));
   return true;
+#endif
 }
 
 ////////////////////////////////////////////////////////////

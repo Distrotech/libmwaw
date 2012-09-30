@@ -38,7 +38,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
@@ -532,6 +532,7 @@ void NSGraph::flushExtra()
     if (entry.isParsed()) continue;
     MWAW_DEBUG_MSG(("NSGraph::sendPicture: picture unparsed: %d\n", entry.id()));
     MWAWPosition pictPos(Vec2f(0,0), Vec2f(1.,1.));
+    pictPos.setRelativePosition(MWAWPosition::Char);
     sendPicture(entry.id(), true, pictPos);
   }
   for (std::map<int, MWAWEntry>::iterator it = m_state->m_idRssoMap.begin();
@@ -540,6 +541,7 @@ void NSGraph::flushExtra()
     if (entry.isParsed()) continue;
     MWAW_DEBUG_MSG(("NSGraph::sendPicture: rsso picture unparsed: %d\n", entry.id()));
     MWAWPosition pictPos(Vec2f(0,0), Vec2f(1.,1.));
+    pictPos.setRelativePosition(MWAWPosition::Char);
     sendPicture(entry.id(), false, pictPos, WPXPropertyList());
   }
 }

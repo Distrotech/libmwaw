@@ -46,7 +46,7 @@
 #include <map>
 #include <vector>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
 

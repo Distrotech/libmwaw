@@ -37,7 +37,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
@@ -511,8 +511,8 @@ void NSText::computePositions()
   // compute the header/footer pages
   int actPage = 1;
   Vec2i headerId(-1,-1), footerId(-1,-1);
-  m_state->m_headersId.resize(nPages, -1);
-  m_state->m_footersId.resize(nPages, -1);
+  m_state->m_headersId.resize(size_t(nPages), -1);
+  m_state->m_footersId.resize(size_t(nPages), -1);
   for (size_t i = 0; i < m_state->m_hfList.size(); i++) {
     NSTextInternal::HeaderFooter &hf = m_state->m_hfList[i];
     int page = 1;
@@ -525,8 +525,8 @@ void NSText::computePositions()
     }
     //std::cerr << "find : page=" << page << " for hf" << int(i) << "\n";
     for (int p = actPage;  p < page; p++) {
-      m_state->m_headersId[p-1] = (p%2) ? headerId[0] : headerId[1];
-      m_state->m_footersId[p-1] = (p%2) ? footerId[0] : footerId[1];
+      m_state->m_headersId[size_t(p)-1] = (p%2) ? headerId[0] : headerId[1];
+      m_state->m_footersId[size_t(p)-1] = (p%2) ? footerId[0] : footerId[1];
     }
     actPage = hf.m_page = page;
     Vec2i &wh = hf.m_type == MWAWPageSpan::HEADER ? headerId : footerId;
@@ -548,8 +548,8 @@ void NSText::computePositions()
     }
   }
   for (int p = actPage;  p <= nPages; p++) {
-    m_state->m_headersId[p-1] = (p%2) ? headerId[0] : headerId[1];
-    m_state->m_footersId[p-1] = (p%2) ? footerId[0] : footerId[1];
+    m_state->m_headersId[size_t(p)-1] = (p%2) ? headerId[0] : headerId[1];
+    m_state->m_footersId[size_t(p)-1] = (p%2) ? footerId[0] : footerId[1];
   }
 }
 
@@ -1640,7 +1640,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
           break;
         }
         MWAWSubDocumentPtr subdoc(new NSTextInternal::SubDocument(*this, input, plc.m_id, libmwaw::DOC_NOTE));
-        NSTextInternal::Footnote const &fnote = m_state->m_footnoteList[plc.m_id];
+        NSTextInternal::Footnote const &fnote = m_state->m_footnoteList[size_t(plc.m_id)];
         noteId++;
         if (fnote.m_number && noteId != fnote.m_number)
           noteId = fnote.m_number;
@@ -1661,7 +1661,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
           MWAW_DEBUG_MSG(("NSText::sendText: can not find the paragraph picture\n"));
           break;
         }
-        NSTextInternal::PicturePara &pict = zone.m_pictureParaList[int(plc.m_id)];
+        NSTextInternal::PicturePara &pict = zone.m_pictureParaList[size_t(plc.m_id)];
         MWAWPosition pictPos(pict.m_position.min(), pict.m_position.size(), WPX_POINT);
         pictPos.setRelativePosition(MWAWPosition::Paragraph);
         pictPos.m_wrapping = MWAWPosition::WRunThrough;

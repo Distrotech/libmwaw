@@ -66,7 +66,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd-stream/WPXStream.h>
+#include <libwpd-stream/libwpd-stream.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWInputStream.hxx"

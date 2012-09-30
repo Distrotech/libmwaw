@@ -217,7 +217,12 @@ bool PrinterInfo::read(MWAWInputStreamPtr input)
   if (!m_data->m_info.read(input)) return false;
   if (!m_data->m_paper.read(input, m_data->m_info.resolution())) return false;
   if (!m_data->m_feed.read(input)) return false;
-  if (!m_data->m_info2.read(input)) return false;
+  long pos = input->tell();
+  if (!m_data->m_info2.read(input)) {
+    // can be left unfilled, so as we do not use the result, ...
+    input->seek(pos+14, WPX_SEEK_SET);
+    if (input->tell() != pos+14) return false;
+  }
   // skip unknown structure prXInfo
   if (input->seek(16, WPX_SEEK_CUR) != 0 || input->atEOS()) return false;
 

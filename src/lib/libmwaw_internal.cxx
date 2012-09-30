@@ -38,7 +38,7 @@
 #include <ctype.h>
 #include <locale.h>
 
-#include <libwpd-stream/WPXStream.h>
+#include <libwpd-stream/libwpd-stream.h>
 
 #include "libmwaw_internal.hxx"
 

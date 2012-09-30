@@ -37,7 +37,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -1581,6 +1581,7 @@ bool WNText::readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token)
     pictPos.setNaturalSize(pict->getBdBox().size());
   } else
     pictPos=MWAWPosition(Vec2f(0,0),pict->getBdBox().size(), WPX_POINT);
+  pictPos.setRelativePosition(MWAWPosition::Char);
 
   if (pict->getBinary(data,type))
     m_listener->insertPicture(pictPos, data, type);

@@ -42,14 +42,13 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/WPXBinaryData.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWInputStream.hxx"
 #include "MWAWPageSpan.hxx"
-#include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MWAWParser.hxx"

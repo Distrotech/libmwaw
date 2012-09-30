@@ -37,8 +37,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/WPXBinaryData.h>
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFontConverter.hxx"
@@ -467,7 +466,7 @@ bool NSParser::getReferenceData
     std::vector<int> toDoValues;
     doneValues.resize(numReset, false);
     doneValues[size_t(var.m_refId)]=true;
-    toDoValues.push_back(size_t(var.m_refId));
+    toDoValues.push_back(int(var.m_refId));
     while(toDoValues.size()) {
       int modId = (int) toDoValues.back();
       toDoValues.pop_back();
@@ -1231,8 +1230,8 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
     input->seek(pos, WPX_SEEK_SET);
     f.str("");
     f << "Position:";
-    ref.m_textPosition.setBegin(input->readULong(4));
-    ref.m_textPosition.setEnd(input->readULong(4));
+    ref.m_textPosition.setBegin((long)input->readULong(4));
+    ref.m_textPosition.setEnd((long)input->readULong(4));
     f << "filePos=" << std::hex
       << ref.m_textPosition.begin() << "<->" << ref.m_textPosition.end() << std::dec << ",";
     rsrcAscii().addPos(pos-12);
@@ -1884,7 +1883,7 @@ bool NSParser::readINFO(MWAWEntry const &entry)
   int unkn = (int) input->readULong(2);
   if (unkn) f << "unknA0=" << std::hex << unkn << std::dec << ",";
   for (int i = 1; i < 4; i++) {
-    val = input->readULong(2);
+    val = (long) input->readULong(2);
     if (val != unkn)
       f << "unknA" << i << "=" << std::hex << val << std::dec << ",";
   }
@@ -1892,7 +1891,7 @@ bool NSParser::readINFO(MWAWEntry const &entry)
   unkn = (int) input->readULong(2);
   if (unkn) f << "unknB0=" << std::hex << unkn << std::dec << ",";
   for (int i = 1; i < 4; i++) {
-    val = input->readULong(2);
+    val = (long) input->readULong(2);
     if (val != unkn)
       f << "unknB" << i << "=" << std::hex << val << std::dec << ",";
   }

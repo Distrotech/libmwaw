@@ -105,6 +105,9 @@ public:
     m_surfaceColor[2] = b;
     m_surfaceHasColor = hasColor;
   }
+  bool hasSurfaceColor() const {
+    return m_surfaceHasColor;
+  }
 
   /** returns the final representation in encoded odg (if possible) */
   virtual bool getBinary(WPXBinaryData &data, std::string &s) const {

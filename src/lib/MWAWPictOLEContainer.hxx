@@ -41,7 +41,7 @@
 #  include <assert.h>
 #  include <ostream>
 
-#  include <libwpd/WPXBinaryData.h>
+#  include <libwpd/libwpd.h>
 
 #  include "libmwaw_internal.hxx"
 #  include "MWAWPict.hxx"

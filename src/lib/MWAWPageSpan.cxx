@@ -31,8 +31,7 @@
 * instead of those above.
 */
 
-#include <libwpd/WPXDocumentInterface.h>
-#include <libwpd/WPXProperty.h>
+#include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWContentListener.hxx"

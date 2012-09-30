@@ -38,8 +38,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/WPXBinaryData.h>
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWHeader.hxx"

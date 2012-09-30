@@ -39,7 +39,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"

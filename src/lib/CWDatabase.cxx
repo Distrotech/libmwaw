@@ -37,14 +37,11 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
-#include "MWAWPictBasic.hxx"
-#include "MWAWPictMac.hxx"
-#include "MWAWPosition.hxx"
 
 #include "CWParser.hxx"
 #include "CWStruct.hxx"
@@ -177,7 +174,7 @@ struct Field {
 
 struct Database : public CWStruct::DSET {
   Database(CWStruct::DSET const dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_fields(), m_parsed(false) {
+    CWStruct::DSET(dset), m_fields() {
   }
 
   //! operator<<
@@ -187,7 +184,6 @@ struct Database : public CWStruct::DSET {
   }
 
   std::vector<Field> m_fields;
-  bool m_parsed;
 };
 
 ////////////////////////////////////////
@@ -236,7 +232,7 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
 (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
-  if (!entry.valid() || zone.m_type != 3 || entry.length() < 32)
+  if (!entry.valid() || zone.m_fileType != 3 || entry.length() < 32)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
@@ -267,7 +263,12 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
   switch(version()) {
   case 1:
   case 2:
+  case 3:
+  case 4:
     numLast = 0;
+    break;
+  case 5:
+    numLast = 4;
     break;
   case 6:
     numLast = 8;
@@ -303,7 +304,6 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
   } else
     m_state->m_databaseMap[databaseZone->m_id] = databaseZone;
 
-  // fixme: in general followed by the layout zone
   databaseZone->m_otherChilds.push_back(databaseZone->m_id+1);
 
   pos = m_input->tell();
@@ -315,7 +315,7 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
   }
   if (ok) {
     pos = m_input->tell();
-    ok = m_mainParser->readStructZone("DatabaseListUnkn", false);
+    ok = m_mainParser->readStructZone("DatabaseListUnkn0", false);
   }
   if (ok) {
     pos = m_input->tell();
@@ -326,9 +326,26 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
     pos = m_input->tell();
     ok = readDatabaseContent(*databaseZone);
   }
+  if (ok) {
+    pos = m_input->tell();
+    // a list of int32 ( almost always one int )
+    ok = m_mainParser->readStructZone("DatabaseListUnkn1", false);
+  }
+  if (ok) {
+    pos = m_input->tell();
+    // contains sometimes the string "Layout " : LayoutPref?
+    ok = m_mainParser->readStructZone("DatabaseListLayout", false);
+  }
+  if (ok) {
+    pos = m_input->tell();
+    /* a list of int16(increasing + 0xFFFF), 3 char (unknown), 1 char=id
+       + an int16 for v6
+     */
+    ok = m_mainParser->readStructZone("DatabaseListUnkn2", false);
+  }
+  // now the following seems to be different
   if (!ok)
     m_input->seek(pos, WPX_SEEK_SET);
-
   return databaseZone;
 }
 

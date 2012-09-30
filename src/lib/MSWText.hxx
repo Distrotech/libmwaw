@@ -44,8 +44,6 @@
 
 #include "libmwaw_internal.hxx"
 
-#include "MWAWPosition.hxx"
-
 #include "MWAWEntry.hxx"
 
 #include "MWAWDebug.hxx"

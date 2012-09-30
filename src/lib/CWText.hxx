@@ -44,8 +44,6 @@
 
 #include "libmwaw_internal.hxx"
 
-#include "MWAWPosition.hxx"
-
 #include "MWAWEntry.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWSubDocument.hxx"
@@ -134,6 +132,9 @@ protected:
 
   //! try to read the text zone size
   bool readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone);
+
+  //! try to read the section
+  bool readTextSection(CWTextInternal::Zone &zone);
 
   //! send the text zone to the listener
   bool sendText(CWTextInternal::Zone const &zone);

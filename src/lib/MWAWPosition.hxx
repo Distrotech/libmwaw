@@ -36,7 +36,7 @@
 
 #include <ostream>
 
-#include <libwpd/WPXProperty.h>
+#include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -48,7 +48,7 @@ class MWAWPosition
 {
 public:
   //! a list of enum used to defined the anchor
-  enum AnchorTo { Char, CharBaseLine, Frame, Paragraph, Page };
+  enum AnchorTo { Char, CharBaseLine, Frame, Paragraph, Page, Unknown };
   //! an enum used to define the wrapping
   enum Wrapping { WNone, WDynamic, WRunThrough }; // Add something for background ?
   //! an enum used to define the relative X position
@@ -59,7 +59,7 @@ public:
 public:
   //! constructor
   MWAWPosition(Vec2f const &orig=Vec2f(), Vec2f const &sz=Vec2f(), WPXUnit theUnit=WPX_INCH):
-    m_anchorTo(Char), m_xPos(XLeft), m_yPos(YTop), m_wrapping(WNone),
+    m_anchorTo(Unknown), m_xPos(XLeft), m_yPos(YTop), m_wrapping(WNone),
     m_page(0), m_orig(orig), m_size(sz), m_naturalSize(), m_LTClip(), m_RBClip(), m_unit(theUnit), m_order(0) {}
 
   virtual ~MWAWPosition() {}

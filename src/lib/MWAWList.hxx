@@ -38,7 +38,7 @@
 
 #include <vector>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 class WPXPropertyList;
 class WPXDocumentInterface;

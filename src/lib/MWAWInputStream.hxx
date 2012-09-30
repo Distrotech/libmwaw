@@ -38,7 +38,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd-stream/WPXStream.h>
+#include <libwpd-stream/libwpd-stream.h>
 #include "libmwaw_internal.hxx"
 
 namespace libmwaw
@@ -130,6 +130,10 @@ public:
    * \return a pointer to the read elements
    */
   const uint8_t *read(size_t numBytes, unsigned long &numBytesRead);
+  /*! \brief internal function used to read num byte,
+   *  - where a is the previous read data
+   */
+  static unsigned long readULong(WPXInputStream *stream, int num, unsigned long a, bool inverseRead);
 
   //! reads a WPXBinaryData with a given size in the actual section/file
   bool readDataBlock(long size, WPXBinaryData &data);
@@ -174,10 +178,6 @@ public:
 protected:
   //! internal function used to read a byte
   static uint8_t readU8(WPXInputStream *stream);
-  /*! \brief internal function used to read num byte,
-   *  - where a is the previous read data
-   */
-  static unsigned long readULong(WPXInputStream *stream, int num, unsigned long a, bool inverseRead);
 
   //! creates a storage ole
   bool createStorageOLE();

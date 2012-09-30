@@ -40,10 +40,7 @@
 #include <sstream>
 #include <string>
 
-#include <libwpd/WPXBinaryData.h>
-#include <libwpd/WPXProperty.h>
-#include <libwpd/WPXPropertyList.h>
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWPropertyHandler.hxx"
@@ -294,9 +291,13 @@ bool MWAWPictPolygon::getODGBinary(WPXBinaryData &res) const
     s << "y" << i;
     list.insert(s.str().c_str(),getStringPt(pt.y()).c_str());
   }
-  doc.startElement("libmwaw:drawPolygon", list);
-  doc.endElement("libmwaw:drawPolygon");
-
+  if (!hasSurfaceColor()) {
+    doc.startElement("libmwaw:drawPolyline", list);
+    doc.endElement("libmwaw:drawPolyline");
+  } else {
+    doc.startElement("libmwaw:drawPolygon", list);
+    doc.endElement("libmwaw:drawPolygon");
+  }
   endODG(doc);
 
   return doc.getData(res);
@@ -304,6 +305,9 @@ bool MWAWPictPolygon::getODGBinary(WPXBinaryData &res) const
 
 void MWAWPictPolygon::getGraphicStyleProperty(WPXPropertyList &list) const
 {
-  MWAWPictBasic::getStyle1DProperty(list);
+  if (!hasSurfaceColor())
+    MWAWPictBasic::getStyle1DProperty(list);
+  else
+    MWAWPictBasic::getStyle2DProperty(list);
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

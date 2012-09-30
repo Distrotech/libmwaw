@@ -1,5 +1,11 @@
 CHANGES:
 
+09/30/2012:
+- try to improve a little the claris/appleworks parser
+  ( reconstruct the table, build the graph structure + begin to
+    try to send some pages anchor picture/... )
+- add vcproj and vcxproj files (inpired by libwps, not tested)
+
 09/15/2012:
 - add Nisus Writer 4.0 parser
 - add code to read zip and binhexed files 

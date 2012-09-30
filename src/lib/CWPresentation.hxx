@@ -32,58 +32,53 @@
 */
 
 /*
- * Parser to Nisus text document ( graphic part )
+ * Parser to Claris Works text document ( presentation part )
  *
  */
-#ifndef NS_GRAPH
-#  define NS_GRAPH
+#ifndef CW_MWAW_PRESENTATION
+#  define CW_MWAW_PRESENTATION
 
-#include <string>
 #include <vector>
 
-#include <libwpd/libwpd.h>
-
-#include "libmwaw_internal.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWSubDocument.hxx"
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "NSStruct.hxx"
+#include "MWAWParser.hxx"
 
-typedef class MWAWContentListener NSContentListener;
-typedef shared_ptr<NSContentListener> NSContentListenerPtr;
+#include "CWStruct.hxx"
 
-class MWAWEntry;
+typedef class MWAWContentListener CWContentListener;
+typedef shared_ptr<CWContentListener> CWContentListenerPtr;
 
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
-class MWAWPosition;
-
-namespace NSGraphInternal
+namespace CWPresentationInternal
 {
-struct RSSOEntry;
+struct Presentation;
 struct State;
-class SubDocument;
 }
 
-class NSParser;
+class CWParser;
 
-/** \brief the main class to read the graphic part of a Nisus file
+/** \brief the main class to read the text part of Claris Works file
  *
  *
  *
  */
-class NSGraph
+class CWPresentation
 {
-  friend class NSParser;
-  friend class NSGraphInternal::SubDocument;
+  friend class CWParser;
 
 public:
   //! constructor
-  NSGraph(MWAWInputStreamPtr ip, NSParser &parser, MWAWFontConverterPtr &convertissor);
+  CWPresentation(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
-  virtual ~NSGraph();
+  virtual ~CWPresentation();
 
   /** returns the file version */
   int version() const;
@@ -91,42 +86,40 @@ public:
   /** returns the number of pages */
   int numPages() const;
 
+  //! reads the zone presentation DSET
+  shared_ptr<CWStruct::DSET> readPresentationZone
+  (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
+
+  //! returns the list of slide id
+  std::vector<int> getSlidesList() const;
+
 protected:
 
   //! sets the listener in this class and in the helper classes
-  void setListener(NSContentListenerPtr listen) {
+  void setListener(CWContentListenerPtr listen) {
     m_listener = listen;
   }
 
-  //! finds the different graphic zones
-  bool createZones();
+  //! sends the zone data to the listener (if it exists )
+  bool sendZone(int number);
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
-
-  //! try to send a picture
-  bool sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
-                   WPXPropertyList extras = WPXPropertyList());
-  //! try to send the page graphic
-  bool sendPageGraphics();
 
   //
   // Intermediate level
   //
 
-  //! read the PLAC resource: a list of picture placements ?
-  bool readPLAC(MWAWEntry const &entry);
-  //! parse the PLDT resource: a unknown resource
-  bool readPLDT(NSStruct::RecursifData const &data);
-  //! read the PGRA resource: the number of page? graphics
-  bool readPGRA(MWAWEntry const &entry);
+  /** try to read the first presentation zone ( the slide name ? ) */
+  bool readZone1(CWPresentationInternal::Presentation &pres);
+
+  /** try to read the second presentation zone ( title ) */
+  bool readZone2(CWPresentationInternal::Presentation &pres);
+
 
   //
   // low level
   //
-
-  //! try to find a RSSO entry in a picture file
-  std::vector<NSGraphInternal::RSSOEntry> findRSSOEntry(MWAWInputStreamPtr inp) const;
 
   //! returns the debug file
   libmwaw::DebugFile &ascii() {
@@ -134,8 +127,8 @@ protected:
   }
 
 private:
-  NSGraph(NSGraph const &orig);
-  NSGraph &operator=(NSGraph const &orig);
+  CWPresentation(CWPresentation const &orig);
+  CWPresentation &operator=(CWPresentation const &orig);
 
 protected:
   //
@@ -145,16 +138,16 @@ protected:
   MWAWInputStreamPtr m_input;
 
   //! the listener
-  NSContentListenerPtr m_listener;
+  CWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;
 
   //! the state
-  shared_ptr<NSGraphInternal::State> m_state;
+  shared_ptr<CWPresentationInternal::State> m_state;
 
   //! the main parser;
-  NSParser *m_mainParser;
+  CWParser *m_mainParser;
 
   //! the debug file
   libmwaw::DebugFile &m_asciiFile;

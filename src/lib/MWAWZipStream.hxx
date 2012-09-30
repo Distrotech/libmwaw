@@ -34,12 +34,12 @@
 /*
  *  freely inspired from libwpd/WPXZipStream.h :
  */
-#ifndef __MWAWZIPSTREAM_H__
-#define __MWAWZIPSTREAM_H__
+#if !defined(__MWAWZIPSTREAM_H__) && defined(USE_ZIP)
+#  define __MWAWZIPSTREAM_H__
 
 #include <string>
 #include <vector>
-#include <libwpd-stream/WPXStream.h>
+#include <libwpd-stream/libwpd-stream.h>
 
 class MWAWZipStream
 {

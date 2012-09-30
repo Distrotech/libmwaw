@@ -31,7 +31,7 @@
 * instead of those above.
 */
 
-#include <libwpd/WPXBinaryData.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWInputStream.hxx"
 #include "MWAWEntry.hxx"

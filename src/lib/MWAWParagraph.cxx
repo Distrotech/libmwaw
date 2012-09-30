@@ -31,7 +31,7 @@
 * instead of those above.
 */
 
-#include <libwpd/WPXPropertyListVector.h>
+#include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -216,9 +216,13 @@ void MWAWParagraph::send(shared_ptr<MWAWContentListener> listener) const
   listener->setParagraphMargin(m_spacings[2].get(),MWAW_BOTTOM);
 
   if (m_listLevelIndex.get() >= 1) {
-    if (!listener->getCurrentList())
-      listener->setCurrentList(shared_ptr<MWAWList>(new MWAWList));
-    listener->getCurrentList()->set(m_listLevelIndex.get(), level);
+    shared_ptr<MWAWList> list = listener->getCurrentList();
+    if (!list) {
+      list = shared_ptr<MWAWList>(new MWAWList);
+      list->set(m_listLevelIndex.get(), level);
+      listener->setCurrentList(list);
+    } else
+      list->set(m_listLevelIndex.get(), level);
     listener->setCurrentListLevel(m_listLevelIndex.get());
   } else
     listener->setCurrentListLevel(0);

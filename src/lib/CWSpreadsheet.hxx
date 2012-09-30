@@ -42,8 +42,6 @@
 #include <string>
 #include <vector>
 
-#include "MWAWPosition.hxx"
-
 #include "MWAWEntry.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWSubDocument.hxx"

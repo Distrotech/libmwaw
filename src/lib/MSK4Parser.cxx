@@ -36,9 +36,7 @@
 #include <iostream>
 #include <map>
 
-#include <libwpd/WPXBinaryData.h>
-#include <libwpd/WPXPropertyList.h>
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"

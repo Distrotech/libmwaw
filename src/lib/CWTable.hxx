@@ -42,8 +42,6 @@
 #include <string>
 #include <vector>
 
-#include "MWAWPosition.hxx"
-
 #include "MWAWEntry.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWSubDocument.hxx"
@@ -63,6 +61,7 @@ typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace CWTableInternal
 {
+struct Cell;
 struct Table;
 struct State;
 }
@@ -77,6 +76,7 @@ class CWParser;
 class CWTable
 {
   friend class CWParser;
+  friend struct CWTableInternal::Cell;
 
 public:
   //! constructor
@@ -104,6 +104,9 @@ protected:
   //! sends the zone data to the listener (if it exists )
   bool sendZone(int number);
 
+  //! ask the main parser to send a zone
+  bool askMainToSendZone(int number);
+
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
@@ -119,6 +122,9 @@ protected:
 
   //! try to read the table border
   bool readTableBordersId(CWTableInternal::Table &table);
+
+  //! try to read a list of pointer ( unknown meaning )
+  bool readTablePointers(CWTableInternal::Table &table);
 
   //
   // low level

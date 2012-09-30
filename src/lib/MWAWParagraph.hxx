@@ -39,7 +39,7 @@
 
 #include <vector>
 
-#include <libwpd/WPXProperty.h>
+#include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWList.hxx"

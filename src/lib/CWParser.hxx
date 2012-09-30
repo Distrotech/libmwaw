@@ -38,9 +38,11 @@
 #ifndef CW_MWAW_PARSER
 #  define CW_MWAW_PARSER
 
-#include <list>
+#include <set>
 #include <string>
 #include <vector>
+
+#include <libwpd/libwpd.h>
 
 #include "MWAWPageSpan.hxx"
 
@@ -55,6 +57,8 @@
 
 #include "MWAWParser.hxx"
 
+#include "CWStruct.hxx"
+
 typedef class MWAWContentListener CWContentListener;
 typedef shared_ptr<CWContentListener> CWContentListenerPtr;
 
@@ -67,13 +71,9 @@ struct State;
 class SubDocument;
 }
 
-namespace CWStruct
-{
-struct DSET;
-}
-
 class CWDatabase;
 class CWGraph;
+class CWPresentation;
 class CWSpreadsheet;
 class CWTable;
 class CWText;
@@ -88,6 +88,7 @@ class CWParser : public MWAWParser
   friend class CWParserInternal::SubDocument;
   friend class CWDatabase;
   friend class CWGraph;
+  friend class CWPresentation;
   friend class CWSpreadsheet;
   friend class CWTable;
   friend class CWText;
@@ -117,12 +118,19 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
-  /** try to find the zone tree graph... and if possible, returns the
-      main zone id */
-  int findZonesGraph();
+  //! try to return the type of a zone
+  CWStruct::DSET::Type getZoneType(int zId) const;
 
-  /** find the number of children of a zone */
-  int computeNumChildren(int zoneId) const;
+  /** try to find the zone dags structure... */
+  bool exploreZonesGraph();
+  /** try to find the zone tree graph ( DSF) function*/
+  bool exploreZonesGraphRec(int zId, std::set<int> &notDoneList);
+
+  /** try to type the main zones */
+  void typeMainZones();
+
+  /** try to type the main zones recursif, returns the father id*/
+  int typeMainZonesRec(int zId, CWStruct::DSET::Type type, int maxHeight);
 
   //! read a zone
   bool readZone();
@@ -133,11 +141,16 @@ protected:
   //! try to read a structured zone
   bool readStructZone(char const *zoneName, bool hasEntete);
 
+  /** try to read a int structured zone
+      where \a fSz to the int size: 1(int8), 2(int16), 4(int32) */
+  bool readStructIntZone(char const *zoneName, bool hasEntete, int fSz, std::vector<int> &res);
+
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
   //! returns the page width, ie. paper size less margin (in inches)
   float pageWidth() const;
-
+  //! returns the page left top point ( in inches)
+  Vec2f getPageLeftTop() const;
   //! adds a new page
   void newPage(int number);
 
@@ -146,10 +159,19 @@ protected:
   //
 
   //! send a zone
-  bool sendZone(int zoneId);
+  bool sendZone(int zoneId, MWAWPosition::AnchorTo anchor= MWAWPosition::Unknown);
+  //! send a zone in a frame
+  void sendZoneInFrame(int zoneId, MWAWPosition pos,
+                       WPXPropertyList extras = WPXPropertyList());
+  //! indicate that a zone is already parsed
+  void forceParsed(int zoneId);
 
   /** creates a document to send a footnote */
   void sendFootnote(int zoneId);
+
+  //! returns the columns information
+  void getColumnInfo(int &numColumns, std::vector<int> &width,
+                     std::vector<int> &sepWidth) const;
 
   //
   // interface with the graph parser
@@ -157,6 +179,9 @@ protected:
 
   //! returns the color corresponding to colId (if possible)
   bool getColor(int colId, Vec3uc &col) const;
+
+  //! returns the header/footer id
+  void getHeaderFooterId(int &headerId, int &footerId) const;
 
   //
   // low level
@@ -214,6 +239,9 @@ protected:
 
   //! the graph parser
   shared_ptr<CWGraph> m_graphParser;
+
+  //! the spreadsheet parser
+  shared_ptr<CWPresentation> m_presentationParser;
 
   //! the spreadsheet parser
   shared_ptr<CWSpreadsheet> m_spreadsheetParser;

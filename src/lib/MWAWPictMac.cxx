@@ -38,7 +38,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/WPXBinaryData.h>
+#include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
@@ -84,8 +84,8 @@ MWAWPictMac::ReadResult MWAWPictMac::checkOrGet
     subvers = -int(input->readLong(2));
     if (subvers == 1) empty = (size == 42);
     else if (subvers == 2) empty = (size == 40);
-    else if (subvers >= -3 && subvers < 4) {
-      // find also 0 and -1 here...
+    else if (subvers >= -6 && subvers < 6) {
+      // find also 0 and -1 and -4 here...
       MWAW_DEBUG_MSG(("MWAWPictMac::checkOrGet: unknown subversion: %d\n", subvers));
       empty = (size == 0xd);
     } else return MWAW_R_BAD;

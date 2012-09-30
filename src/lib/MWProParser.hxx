@@ -41,8 +41,6 @@
 
 #include "MWAWPageSpan.hxx"
 
-#include "MWAWPosition.hxx"
-
 #include "MWAWEntry.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWSubDocument.hxx"
@@ -58,6 +56,8 @@ typedef shared_ptr<MWProContentListener> MWProContentListenerPtr;
 
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+
+class MWAWPosition;
 
 namespace MWProParserInternal
 {

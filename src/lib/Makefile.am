@@ -25,6 +25,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWGraph.hxx			\
 	CWParser.cxx			\
 	CWParser.hxx			\
+	CWPresentation.cxx		\
+	CWPresentation.hxx		\
 	CWSpreadsheet.cxx		\
 	CWSpreadsheet.hxx		\
 	CWStruct.hxx			\

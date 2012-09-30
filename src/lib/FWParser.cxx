@@ -38,7 +38,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -693,7 +693,7 @@ bool FWParser::sendGraphic(shared_ptr<FWEntry> zone)
   if (box.size().x() > 0 && box.size().y()  > 0) {
     actualSize = naturalSize = box.size();
   } else if (actualSize.x() <= 0 || actualSize.y() <= 0) {
-    MWAW_DEBUG_MSG(("WPParser::sendGraphic: can not find the picture size\n"));
+    MWAW_DEBUG_MSG(("FWParser::sendGraphic: can not find the picture size\n"));
     actualSize = naturalSize = Vec2f(100,100);
   }
   MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),actualSize, WPX_POINT);

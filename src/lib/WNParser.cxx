@@ -37,7 +37,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWHeader.hxx"
@@ -662,8 +662,7 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
   int sz = (int) entry.length()-24;
   if (sz) {
     long pos = input->tell();
-    shared_ptr<MWAWPict> pict
-    (MWAWPictData::get(input, sz));
+    shared_ptr<MWAWPict> pict(MWAWPictData::get(input, sz));
     if (!pict) {
       MWAW_DEBUG_MSG(("WNParser::sendPicture: can not read the picture\n"));
       ascii().addDelimiter(pos, '|');
@@ -677,6 +676,7 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
           pictPos.setNaturalSize(pict->getBdBox().size());
         } else
           pictPos=MWAWPosition(Vec2f(0,0),pict->getBdBox().size(), WPX_POINT);
+        pictPos.setRelativePosition(MWAWPosition::Char);
 
         if (pict->getBinary(data,pictType))
           m_listener->insertPicture(pictPos, data, pictType);

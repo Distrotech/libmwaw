@@ -39,11 +39,8 @@
 
 #include "libmwaw_internal.hxx"
 
-#include <libwpd/WPXBinaryData.h>
-#include <libwpd/WPXProperty.h>
-#include <libwpd/WPXPropertyList.h>
-#include <libwpd/WPXString.h>
-#include <libwpd-stream/WPXStream.h>
+#include <libwpd/libwpd.h>
+#include <libwpd-stream/libwpd-stream.h>
 
 #include "MWAWPropertyHandler.hxx"
 

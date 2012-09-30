@@ -34,7 +34,7 @@
 /* This header contains code specific to a pict mac file
  */
 
-#include <libwpd/WPXBinaryData.h>
+#include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWInputStream.hxx"

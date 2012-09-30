@@ -31,13 +31,15 @@
 * instead of those above.
 */
 
+#include <algorithm>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <map>
 #include <sstream>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
@@ -49,8 +51,9 @@
 
 #include "CWDatabase.hxx"
 #include "CWGraph.hxx"
-#include "CWStruct.hxx"
+#include "CWPresentation.hxx"
 #include "CWSpreadsheet.hxx"
+#include "CWStruct.hxx"
 #include "CWTable.hxx"
 #include "CWText.hxx"
 
@@ -65,8 +68,9 @@ namespace CWParserInternal
 struct State {
   //! constructor
   State() : m_EOF(-1L), m_actPage(0), m_numPages(0),
+    m_columns(1), m_columnsWidth(), m_columnsSep(),
     m_headerId(0), m_footerId(0), m_headerHeight(0), m_footerHeight(0),
-    m_zonesMap() {
+    m_zonesMap(), m_mainZonesList() {
   }
 
   //! the last position
@@ -74,12 +78,19 @@ struct State {
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
+  /** the number of columns */
+  int m_columns;
+  /** the columns witdh in Points*/
+  std::vector<int> m_columnsWidth;
+  /** the columns separator in Points*/
+  std::vector<int> m_columnsSep;
   int m_headerId /** the header zone if known */,
       m_footerId /** the footer zone if known */;
 
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
-  std::map<int, shared_ptr<CWStruct::DSET> > m_zonesMap /* the map of zone*/;
+  std::map<int, shared_ptr<CWStruct::DSET> > m_zonesMap /** the map of zone*/;
+  std::vector<int> m_mainZonesList/** the list of main group */;
 };
 
 ////////////////////////////////////////
@@ -142,9 +153,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   assert(m_parser);
 
-  long pos = m_input->tell();
-  reinterpret_cast<CWParser *>(m_parser)->sendZone(m_id);
-  m_input->seek(pos, WPX_SEEK_SET);
+  reinterpret_cast<CWParser *>(m_parser)->sendZone(m_id, MWAWPosition::Frame);
 }
 }
 
@@ -153,7 +162,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 CWParser::CWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_pageSpanSet(false), m_databaseParser(), m_graphParser(),
+  m_pageSpan(), m_pageSpanSet(false), m_databaseParser(), m_graphParser(), m_presentationParser(),
   m_spreadsheetParser(), m_tableParser(), m_textParser()
 {
   init();
@@ -179,6 +188,7 @@ void CWParser::init()
 
   m_databaseParser.reset(new CWDatabase(getInput(), *this, m_convertissor));
   m_graphParser.reset(new CWGraph(getInput(), *this, m_convertissor));
+  m_presentationParser.reset(new CWPresentation(getInput(), *this, m_convertissor));
   m_spreadsheetParser.reset(new CWSpreadsheet(getInput(), *this, m_convertissor));
   m_tableParser.reset(new CWTable(getInput(), *this, m_convertissor));
   m_textParser.reset(new CWText(getInput(), *this, m_convertissor));
@@ -189,6 +199,7 @@ void CWParser::setListener(CWContentListenerPtr listen)
   m_listener = listen;
   m_databaseParser->setListener(listen);
   m_graphParser->setListener(listen);
+  m_presentationParser->setListener(listen);
   m_spreadsheetParser->setListener(listen);
   m_tableParser->setListener(listen);
   m_textParser->setListener(listen);
@@ -207,9 +218,30 @@ float CWParser::pageWidth() const
   return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
 }
 
+Vec2f CWParser::getPageLeftTop() const
+{
+  return Vec2f(float(m_pageSpan.getMarginLeft()),
+               float(m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
+}
+
 bool CWParser::getColor(int colId, Vec3uc &col) const
 {
   return m_graphParser->getColor(colId, col);
+}
+
+CWStruct::DSET::Type CWParser::getZoneType(int zId) const
+{
+  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter
+    = m_state->m_zonesMap.find(zId);
+  if (iter == m_state->m_zonesMap.end() || !iter->second)
+    return CWStruct::DSET::T_Unknown;
+  return iter->second->m_type;
+}
+
+void CWParser::getHeaderFooterId(int &headerId, int &footerId) const
+{
+  headerId = m_state->m_headerId;
+  footerId = m_state->m_footerId;
 }
 
 ////////////////////////////////////////////////////////////
@@ -229,30 +261,56 @@ void CWParser::newPage(int number)
 }
 
 ////////////////////////////////////////////////////////////
-// interface with the text parser
+// interface with the different parser
 ////////////////////////////////////////////////////////////
-bool CWParser::sendZone(int zoneId)
+bool CWParser::sendZone(int zoneId, MWAWPosition::AnchorTo anchor)
 {
   if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
     return false;
   shared_ptr<CWStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
-  switch(zMap->m_type) {
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  bool res = false;
+  switch(zMap->m_fileType) {
   case 0: // group
   case 4: // bitmap
-    return m_graphParser->sendZone(zoneId);
+    res = m_graphParser->sendZone(zoneId, anchor);
+    break;
   case 1:
-    return m_textParser->sendZone(zoneId);
+    res = m_textParser->sendZone(zoneId);
+    break;
+  case 5:
+    res = m_presentationParser->sendZone(zoneId);
+    break;
   case 6:
-    return m_tableParser->sendZone(zoneId);
+    res = m_tableParser->sendZone(zoneId);
+    break;
   case 2:
-    // return m_spreadsheetParser->sendZone(zoneId);
+    // res = m_spreadsheetParser->sendZone(zoneId);
+    MWAW_DEBUG_MSG(("CWParser::sendZone: sending a spreadsheet is not implemented\n"));
+    break;
   case 3:
-    // return m_databaseParser->sendZone(zoneId);
+    // res=m_databaseParser->sendZone(zoneId);
+    MWAW_DEBUG_MSG(("CWParser::sendZone: sending a database is not implemented\n"));
+    break;
   default:
     MWAW_DEBUG_MSG(("CWParser::sendZone: can not send zone: %d\n", zoneId));
     break;
   }
-  return false;
+  input->seek(pos, WPX_SEEK_SET);
+  zMap->m_parsed = true;
+  return res;
+}
+
+////////////////////////////////////////////////////////////
+// interface with the text parser
+////////////////////////////////////////////////////////////
+void CWParser::getColumnInfo(int &numColumns, std::vector<int> &width,
+                             std::vector<int> &sep) const
+{
+  numColumns = m_state->m_columns;
+  width = m_state->m_columnsWidth;
+  sep = m_state->m_columnsSep;
 }
 
 void CWParser::sendFootnote(int zoneId)
@@ -261,6 +319,22 @@ void CWParser::sendFootnote(int zoneId)
 
   MWAWSubDocumentPtr subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
   m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+}
+
+void CWParser::sendZoneInFrame(int zoneId, MWAWPosition pos, WPXPropertyList extras)
+{
+  if (!m_listener) return;
+
+  MWAWSubDocumentPtr subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
+  m_listener->insertTextBox(pos, subdoc, extras);
+}
+
+void CWParser::forceParsed(int zoneId)
+{
+  if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
+    return;
+  shared_ptr<CWStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
+  if (zMap) zMap->m_parsed = true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -281,10 +355,12 @@ void CWParser::parse(WPXDocumentInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
-      m_textParser->sendZone(1);
-      m_textParser->flushExtra();
-      m_tableParser->flushExtra();
+      for (size_t i = 0; i < m_state->m_mainZonesList.size(); i++)
+        sendZone(m_state->m_mainZonesList[i]);
+      m_presentationParser->flushExtra();
       m_graphParser->flushExtra();
+      m_tableParser->flushExtra();
+      m_textParser->flushExtra();
       if (m_listener) m_listener->endDocument();
       m_listener.reset();
     }
@@ -317,6 +393,8 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
   int numPage = m_textParser->numPages();
   if (m_databaseParser->numPages() > numPage)
     numPage = m_databaseParser->numPages();
+  if (m_presentationParser->numPages() > numPage)
+    numPage = m_presentationParser->numPages();
   if (m_graphParser->numPages() > numPage)
     numPage = m_graphParser->numPages();
   if (m_spreadsheetParser->numPages() > numPage)
@@ -431,75 +509,169 @@ bool CWParser::createZones()
   }
   if (m_state->m_EOF > 0)
     input->popLimit();
-  findZonesGraph();
+  exploreZonesGraph();
+  typeMainZones();
   return m_state->m_zonesMap.size() != 0;
+}
+
+////////////////////////////////////////////////////////////
+// try to mark the zones
+////////////////////////////////////////////////////////////
+void CWParser::typeMainZones()
+{
+  // first (ype the main zone and its father
+  typeMainZonesRec(1, CWStruct::DSET::T_Main, 100);
+
+  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter;
+  // finally the slid
+  std::vector<int> slidesList = m_presentationParser->getSlidesList();
+  for (size_t slide = 0; slide < slidesList.size(); slide++) {
+    iter = m_state->m_zonesMap.find(slidesList[slide]);
+    if (iter != m_state->m_zonesMap.end() && iter->second)
+      iter->second->m_type = CWStruct::DSET::T_Slide;
+  }
+  // now check the header/footer
+  if (m_state->m_headerId) {
+    iter = m_state->m_zonesMap.find(m_state->m_headerId);
+    if (iter != m_state->m_zonesMap.end() && iter->second)
+      iter->second->m_type = CWStruct::DSET::T_Header;
+  }
+  if (m_state->m_footerId) {
+    iter = m_state->m_zonesMap.find(m_state->m_footerId);
+    if (iter != m_state->m_zonesMap.end() && iter->second)
+      iter->second->m_type = CWStruct::DSET::T_Footer;
+  }
+  iter = m_state->m_zonesMap.begin();
+  std::vector<int> listZonesId[CWStruct::DSET::T_Unknown];
+  while (iter != m_state->m_zonesMap.end()) {
+    int id = iter->first;
+    shared_ptr<CWStruct::DSET> node = iter++->second;
+    CWStruct::DSET::Type type = node ? node->m_type : CWStruct::DSET::T_Unknown;
+    if (type == CWStruct::DSET::T_Unknown || type == CWStruct::DSET::T_Main)
+      continue;
+    if (node->m_fileType != 1) // only propage data from a text node
+      continue;
+    if (type > CWStruct::DSET::T_Unknown || type < 0) {
+      MWAW_DEBUG_MSG(("CWParser::typeMainZones: OOPS, internal problem with type\n"));
+      continue;
+    }
+    listZonesId[type].push_back(id);
+  }
+  bool isPres = getHeader() && getHeader()->getKind() == MWAWDocument::K_PRESENTATION;
+  for (int type=CWStruct::DSET::T_Header; type < CWStruct::DSET::T_Slide;  type++) {
+    for (size_t z = 0; z < listZonesId[type].size(); z++) {
+      int fId = typeMainZonesRec(listZonesId[type][z], CWStruct::DSET::Type(type), 1);
+      if (!fId)
+        continue;
+      if (isPres) // fixme: actually as the main type is not good too dangerous
+        fId=listZonesId[type][z];
+      if (type==CWStruct::DSET::T_Header && !m_state->m_headerId)
+        m_state->m_headerId = fId;
+      else if (type==CWStruct::DSET::T_Footer && !m_state->m_footerId)
+        m_state->m_footerId = fId;
+    }
+  }
+}
+
+int CWParser::typeMainZonesRec(int zId, CWStruct::DSET::Type type, int maxHeight)
+{
+  if (maxHeight < 0) return 0;
+
+  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter
+    = m_state->m_zonesMap.find(zId);
+  if (iter == m_state->m_zonesMap.end() || !iter->second)
+    return 0;
+  shared_ptr<CWStruct::DSET> node = iter->second;
+  if (node->m_type == CWStruct::DSET::T_Unknown)
+    node->m_type = type;
+  else if (node->m_type != type)
+    return 0;
+  if (maxHeight==0)
+    return zId;
+
+  int res = zId;
+  for (std::set<int>::iterator it = node->m_fathersList.begin();
+       it != node->m_fathersList.end(); it++) {
+    int fId = typeMainZonesRec(*it, type, maxHeight-1);
+    if (fId) res = fId;
+  }
+  return res;
 }
 
 ////////////////////////////////////////////////////////////
 // try to order the zones
 ////////////////////////////////////////////////////////////
-int CWParser::findZonesGraph()
+bool CWParser::exploreZonesGraph()
 {
-  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter =
-    m_state->m_zonesMap.begin();
-  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter2;
+  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter, iter2;
+  // first create the list of fathers
+  iter = m_state->m_zonesMap.begin();
   for ( ; iter != m_state->m_zonesMap.end(); iter++) {
     shared_ptr<CWStruct::DSET> zone = iter->second;
-    size_t numChilds = zone->m_childs.size();
+    if (!zone) continue;
+
     int id = zone->m_id;
+    size_t numChilds = zone->m_childs.size();
     for (int step = 0; step < 2; step++) {
       for (size_t c = 0; c < numChilds; c++) {
         int cId = step == 0 ? zone->m_childs[c].m_id : zone->m_otherChilds[c];
         if (cId < 0) continue;
         if (cId == 0) {
-          MWAW_DEBUG_MSG(("CWParser::findZonesGraph: find a zone with id=0\n"));
+          MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: find a zone with id=0\n"));
           continue;
         }
+
         iter2 = m_state->m_zonesMap.find(cId);
         if (iter2 == m_state->m_zonesMap.end()) {
-          MWAW_DEBUG_MSG(("CWParser::findZonesGraph: can not find zone %d\n", cId));
+          MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: can not find zone %d\n", cId));
           continue;
         }
-        shared_ptr<CWStruct::DSET> cZone = iter2->second;
-        if (cZone->m_fatherId == id)
-          continue;
-        if (cZone->m_fatherId) {
-          MWAW_DEBUG_MSG(("CWParser::findZonesGraph: zone %d already has a father\n", cId));
-          // we do not want any looping
-          if (step == 0)
-            zone->m_childs[c].m_id = 0;
-          else
-            zone->m_otherChilds[c] = 0;
-          continue;
-        }
-        cZone->m_fatherId = id;
+        iter2->second->m_fathersList.insert(id);
       }
+
       if (step == 1) break;
       numChilds = zone->m_otherChilds.size();
-      if (!numChilds)
-        break;
     }
-
   }
 
+  // find the list of potential root
+  std::vector<int> rootList;
+  std::set<int> notDoneList;
   iter = m_state->m_zonesMap.begin();
-  std::vector<int> mainList;
   for ( ; iter != m_state->m_zonesMap.end(); iter++) {
     shared_ptr<CWStruct::DSET> zone = iter->second;
-    if (zone->m_fatherId) continue;
-    mainList.push_back(zone->m_id);
+    if (!zone) continue;
+    zone->m_internal = 0;
+    notDoneList.insert(zone->m_id);
+    if (zone->m_fathersList.size()) continue;
+    rootList.push_back(zone->m_id);
   }
 
-  int numMain = int(mainList.size());
+  std::set<int> toDoList(rootList.begin(), rootList.end());
+  while(notDoneList.size()) {
+    int id;
+    if (toDoList.size()) {
+      id = *toDoList.begin();
+      toDoList.erase(id);
+    } else {
+      id = *notDoneList.begin();
+      MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: find a cycle, choose new root %d\n", id));
+      rootList.push_back(id);
+    }
+    exploreZonesGraphRec(id, notDoneList);
+  }
+
+  m_state->m_mainZonesList = rootList;
+  size_t numMain = rootList.size();
   if (numMain == 1)
-    return mainList[0];
+    return true;
 #ifdef DEBUG
-  // we have a problem : probably a database...
+  // we have do not have find the root note : probably a database...
   iter = m_state->m_zonesMap.begin();
   std::cout << "--------------------------------------------------------\n";
   std::cout << "List of potential main zones : ";
-  for (int i = 0; i < numMain; i++)
-    std::cout << mainList[(size_t)i] << ",";
+  for (size_t i = 0; i < numMain; i++)
+    std::cout << rootList[i] << ",";
   std::cout << "\n";
   for ( ; iter != m_state->m_zonesMap.end(); iter++) {
     shared_ptr<CWStruct::DSET> zone = iter->second;
@@ -508,56 +680,50 @@ int CWParser::findZonesGraph()
   std::cout << "--------------------------------------------------------\n";
 #endif
   if (numMain == 0) {
-    // we have a big cycle, no way to continue
-    MWAW_DEBUG_MSG(("CWParser::findZonesGraph: the graph contains no tree...\n"));
-    return -1;
+    // we have a big problem here, no way to continue
+    MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: the graph contains no tree...\n"));
+    return false;
   }
 
-  iter = m_state->m_zonesMap.begin();
-  for ( ; iter != m_state->m_zonesMap.end(); iter++)
-    iter->second->m_internal = 0;
 
-  int totalZones = 0;
-  int bestMain = -1, nodesInBest = -1;
-  for (int i = 0; i < numMain; i++) {
-    int numNodes = 1+computeNumChildren(mainList[(size_t)i]);
-    totalZones += numNodes;
-    if (numNodes > nodesInBest) {
-      nodesInBest = numNodes;
-      bestMain = mainList[(size_t)i];
-    }
-  }
-  if (totalZones != int(m_state->m_zonesMap.size())) {
-    // we have tree and also some cycle. No good
-    MWAW_DEBUG_MSG(("CWParser::findZonesGraph: the graph contains some cycle...\n"));
-    return -1;
-  }
-
-  return bestMain;
+  return true;
 }
 
-int CWParser::computeNumChildren(int zoneId) const
+bool CWParser::exploreZonesGraphRec(int zId, std::set<int> &notDoneList)
 {
-  if (zoneId <= 0)
-    return -1;
-  std::map<int, shared_ptr<CWStruct::DSET> >::const_iterator iter =
-    m_state->m_zonesMap.find(zoneId);
-  if (iter == m_state->m_zonesMap.end())
-    return -1;
+  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter, iter2;
+  notDoneList.erase(zId);
+  iter = m_state->m_zonesMap.find(zId);
+  if (iter == m_state->m_zonesMap.end()) {
+    MWAW_DEBUG_MSG(("CWParser::exploreZonesGraphRec: internal problem (can not find zone %d)\n", zId));
+    return false;
+  }
   shared_ptr<CWStruct::DSET> zone = iter->second;
-  if (zone->m_internal)
-    return -1;
-  int res = 0;
+  if (!zone) return true;
   zone->m_internal = 1;
-  for (int step=0; step < 2; step++) {
-    size_t numChilds = step==0 ? zone->m_childs.size() : zone->m_otherChilds.size();
+  size_t numChilds = zone->m_childs.size();
+  for (int step = 0; step < 2; step++) {
     for (size_t c = 0; c < numChilds; c++) {
       int cId = step == 0 ? zone->m_childs[c].m_id : zone->m_otherChilds[c];
-      res += 1+computeNumChildren(cId);
+      if (cId <= 0) continue;
+      if (notDoneList.find(cId) == notDoneList.end()) {
+        iter2 = m_state->m_zonesMap.find(cId);
+        if (iter2 == m_state->m_zonesMap.end()) {
+          MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: can not find zone %d\n", cId));
+        } else if (iter2->second->m_internal==1) {
+          MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: find a cycle: for child : %d(<-%d)\n", cId, zId));
+        } else
+          zone->m_validedChildList.insert(cId);
+      } else {
+        zone->m_validedChildList.insert(cId);
+        exploreZonesGraphRec(cId, notDoneList);
+      }
     }
+    if (step == 1) break;
+    numChilds = zone->m_otherChilds.size();
   }
-
-  return res;
+  zone->m_internal = 2;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -727,6 +893,16 @@ bool CWParser::readZone()
         parsed = true;
 
       if (parsed) {
+#ifdef DEBUG_WITH_FILES
+        WPXBinaryData file;
+        input->seek(actPos, WPX_SEEK_SET);
+        input->readDataBlock(sz, file);
+
+        libmwaw::DebugStream f2;
+        static int volatile pictName = 0;
+        f2 << "Parser" << ++pictName << ".pct";
+        libmwaw::Debug::dumpFile(file, f2.str().c_str());
+#endif
         f << "Entries(PICT)";
         ascii().skipZone(actPos, actPos+sz-1);
       }
@@ -816,6 +992,7 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
   int type = (int) input->readULong(1);
   if (header) {
+    header->reset(MWAWDocument::CW, version());
     switch (type) {
     case 0:
       header->setKind(MWAWDocument::K_DRAW);
@@ -840,6 +1017,10 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
       header->setKind(MWAWDocument::K_UNKNOWN);
       break;
     }
+#if 1 || defined(DEBUG)
+    if (type >= 0 && type < 5)
+      header->setKind(MWAWDocument::K_TEXT);
+#endif
   }
 
   if (strict && type > 5) return false;
@@ -847,11 +1028,6 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
   if (type > 8) return false;
 #endif
   input->seek(headerSize,WPX_SEEK_SET);
-
-
-  // ok, we can finish initialization
-  if (header)
-    header->reset(MWAWDocument::CW, version());
 
   return true;
 }
@@ -886,29 +1062,30 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
   dset.m_numData = (int) input->readULong(2);
 
   input->seek(10, WPX_SEEK_CUR);
-  dset.m_type = (int) input->readULong(1);
+  dset.m_fileType = (int) input->readULong(1);
   input->seek(-11, WPX_SEEK_CUR);
   int nFlags = 0;
-  switch (dset.m_type) {
+  switch (dset.m_fileType) {
   case 1: // text
     dset.m_beginSelection = (int) input->readLong(4);
     dset.m_endSelection = (int) input->readLong(4);
+    dset.m_textType = (int) input->readULong(1);
+    dset.m_flags[nFlags++] = (int) input->readLong(1);
     break;
   default:
     dset.m_flags[nFlags++] = (int) input->readLong(2); // normally -1
-    dset.m_flags[nFlags++] = (int) input->readLong(2);
+    dset.m_flags[nFlags++] = (int) input->readLong(2); // the 0
     dset.m_dataSz = (int) input->readULong(2);
     dset.m_headerSz = (int) input->readULong(2);
+    dset.m_flags[nFlags++] = (int) input->readLong(2);
     break;
   }
   dset.m_flags[nFlags++] = (int) input->readLong(2);
-  input->seek(1, WPX_SEEK_CUR);
-  dset.m_flags[nFlags++] = (int) input->readLong(1);
   dset.m_id = (int) input->readULong(2) ;
 
   bool parsed = true;
   shared_ptr<CWStruct::DSET> res;
-  switch (dset.m_type) {
+  switch (dset.m_fileType) {
   case 0:
     res = m_graphParser->readGroupZone(dset, entry, complete);
     break;
@@ -923,6 +1100,9 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
     break;
   case 4:
     res = m_graphParser->readBitmapZone(dset, entry, complete);
+    break;
+  case 5:
+    res = m_presentationParser->readPresentationZone(dset, entry, complete);
     break;
   case 6:
     res = m_tableParser->readTableZone(dset, entry, complete);
@@ -973,7 +1153,7 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
     debPos += data0Length;
   }
 
-  // in general, such a zone is followed by a small zone ( caption zone?)
+  // in general, such a zone is followed by a small zone ( a container)
   zone->m_otherChilds.push_back(zone->m_id+1);
   if (m_state->m_zonesMap.find(zone->m_id) != m_state->m_zonesMap.end()) {
     MWAW_DEBUG_MSG(("CWParser::readDSET: zone %d already exists!!!!\n",
@@ -1049,6 +1229,77 @@ bool CWParser::readStructZone(char const *zoneName, bool hasEntete)
     ascii().addNote(f.str().c_str());
     debPos += fSz;
   }
+  input->seek(endPos,WPX_SEEK_SET);
+  return true;
+}
+
+// try to read a list of structured zone
+bool CWParser::readStructIntZone(char const *zoneName, bool hasEntete, int intSz, std::vector<int> &res)
+{
+  res.resize(0);
+  if (intSz != 1 && intSz != 2 && intSz != 4) {
+    MWAW_DEBUG_MSG(("CWParser::readStructIntZone: unknown int size: %d\n", intSz));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
+  long endPos = pos+4+sz;
+  input->seek(endPos,WPX_SEEK_SET);
+  if (long(input->tell()) != endPos) {
+    input->seek(pos, WPX_SEEK_SET);
+    MWAW_DEBUG_MSG(("CWParser::readStructIntZone: unexpected size for %s\n", zoneName));
+    return false;
+  }
+  libmwaw::DebugStream f;
+  if (zoneName && strlen(zoneName))
+    f << "Entries(" << zoneName << "):";
+
+  if (sz == 0) {
+    if (hasEntete) {
+      ascii().addPos(pos-4);
+      ascii().addNote(f.str().c_str());
+    } else {
+      ascii().addPos(pos);
+      ascii().addNote("NOP");
+    }
+    return true;
+  }
+
+  input->seek(pos+4, WPX_SEEK_SET);
+  int N = (int) input->readLong(2);
+  f << "N=" << N << ",";
+  int type = (int) input->readLong(2);
+  if (type != -1)
+    f << "#type=" << type << ",";
+  long val = input->readLong(2);
+  if (val) f << "#unkn=" << val << ",";
+  int fSz = (int) input->readULong(2);
+  int hSz = (int) input->readULong(2);
+  if (fSz != intSz || N *fSz+hSz+12 != sz) {
+    input->seek(pos, WPX_SEEK_SET);
+    MWAW_DEBUG_MSG(("CWParser::readStructIntZone: unexpected  field size\n"));
+    return false;
+  }
+
+  long debPos = endPos-N*fSz;
+  if (long(input->tell()) != debPos) {
+    ascii().addDelimiter(input->tell(), '|');
+    if (N) ascii().addDelimiter(debPos, '|');
+  }
+  input->seek(debPos, WPX_SEEK_SET);
+  f << "[";
+  for (int i = 0; i < N; i++) {
+    val = input->readLong(fSz);
+    res.push_back((int) val);
+    f << val << ",";
+  }
+  f << "]";
+
+  ascii().addPos(hasEntete ? pos-4 : pos);
+  ascii().addNote(f.str().c_str());
+
   input->seek(endPos,WPX_SEEK_SET);
   return true;
 }
@@ -1130,8 +1381,11 @@ bool CWParser::readDSUM(MWAWEntry const &entry, bool inHeader)
     int strSize = (int) input->readULong(1);
     if (strSize != sz-1 || pos+4+sz > entry.end()) {
       MWAW_DEBUG_MSG(("CWParser::readDSUM: unexpected string size\n"));
-      input->seek(pos, WPX_SEEK_SET);
-      return false;
+      if (pos+4+sz > entry.end() || strSize > sz-1) {
+        input->seek(pos, WPX_SEEK_SET);
+        return false;
+      }
+      f << "###";
     }
     std::string name("");
     for (int i = 0; i < strSize; i++) {
@@ -1146,6 +1400,7 @@ bool CWParser::readDSUM(MWAWEntry const &entry, bool inHeader)
     }
     if (name.length())
       f << entryNames[entete] << "=" << name << ",";
+    input->seek(pos+4+sz, WPX_SEEK_SET);
   }
 
   ascii().addPos(entry.begin());
@@ -1231,7 +1486,7 @@ bool CWParser::readCPRT(MWAWEntry const &entry)
     f << "CPRT-" << id++ << ":";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-
+    if (!sz) continue;
 #ifdef DEBUG_WITH_FILES
     WPXBinaryData file;
     input->readDataBlock(sz, file);
@@ -1416,6 +1671,43 @@ bool CWParser::readDocHeader()
       return false;
     ascii().addPos(input->tell());
     ascii().addNote("DocHeader-2");
+    if (version()==2) {
+      input->seek(46, WPX_SEEK_CUR);
+      long actPos = input->tell();
+      f.str("");
+      f << "DocHeader(Col):";
+      int numCols = (int) input->readLong(2);
+      if (numCols < 1 || numCols > 9) {
+        MWAW_DEBUG_MSG(("CWParser::readDocHeader: pb reading number of columns\n"));
+        f << "###numCols=" << numCols;
+        numCols = 1;
+      }
+      if (numCols != 1)
+        f << "numCols=" << numCols << ",";
+      m_state->m_columns = numCols;
+      f << "colsW=[";
+      for (int i = 0; i < numCols; i++) {
+        val = (int) input->readULong(2);
+        m_state->m_columnsWidth.push_back(val);
+        f << val << ",";
+      }
+      f << "],";
+      input->seek(actPos+20, WPX_SEEK_SET);
+      if (numCols > 1) {
+        f << "colsS=[";
+        for (int i = 0; i < numCols-1; i++) {
+          val = (int) input->readULong(2);
+          m_state->m_columnsSep.push_back(val);
+          f << input->readULong(2) << ",";
+        }
+        f << "],";
+      }
+      input->seek(actPos+36, WPX_SEEK_SET);
+      val = (int) input->readLong(2);
+      if (val) f << "unkn=" << val << ",";
+      ascii().addPos(actPos);
+      ascii().addNote(f.str().c_str());
+    }
   } else if (long(input->tell()) != pos+zone1Length)
     ascii().addDelimiter(input->tell(), '|');
   input->seek(pos+zone1Length, WPX_SEEK_SET);
@@ -1569,6 +1861,28 @@ bool CWParser::readDocHeader()
       if (val) f << "unkn=" << val << ",";
       m_state->m_footerId = (int) input->readLong(2);
       if (m_state->m_footerId) f << "footerId=" << m_state->m_footerId << ",";
+      if (version()==1) {
+        ascii().addDelimiter(input->tell(), '|');
+        input->seek(20, WPX_SEEK_CUR);
+        ascii().addDelimiter(input->tell(), '|');
+
+        int numCols = (int) input->readLong(2);
+        if (numCols < 1 || numCols > 9) {
+          MWAW_DEBUG_MSG(("CWParser::readDocHeader: pb reading number of columns\n"));
+          f << "###numCols=" << numCols;
+          numCols = 1;
+        }
+        if (numCols != 1)
+          f << "numCols=" << numCols << ",";
+        m_state->m_columns = numCols;
+        if (numCols > 1) {
+          int colSep = (int) input->readLong(2);
+          for (int i = 0; i < numCols; i++)
+            m_state->m_columnsSep.push_back(colSep);
+          f << "colSep=" << colSep << ",";
+        } else
+          input->seek(2, WPX_SEEK_CUR);
+      }
     }
     if (int(input->tell()) != pos)
       ascii().addDelimiter(input->tell(), '|');

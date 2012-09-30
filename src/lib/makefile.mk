@@ -27,6 +27,7 @@ SLOFILES= \
 	$(SLO)$/CWDatabase.obj			\
 	$(SLO)$/CWGraph.obj			\
 	$(SLO)$/CWParser.obj			\
+	$(SLO)$/CWPresentation.obj		\
 	$(SLO)$/CWSpreadsheet.obj		\
 	$(SLO)$/CWTable.obj			\
 	$(SLO)$/CWText.obj			\

@@ -95,6 +95,7 @@ Specific files which depends on the type of file which is converted
 CWParser : parser of ClarisWorks/AppleWorks document
 -   CWGraph : class which reads the graphics and zone dispositions ...
 -   CWDatabase/CWSpreadSheet : class which reads the database/spreadsheet structure ( uncomplete)
+-   CWPresentation : class which reads the slide structures
 -   CWTable : class which reads the table structures
 -   CWText : class which reads the text and its structures
 
@@ -130,5 +131,5 @@ WNParser : parser of WriteNow document : v1.0-4.0
 -   WNText : class which reads the text and its structures
 -   WNEntry : class to store the entry found in the document
 
-WPParser : parser of WriterPlus(?) document
+WPParser : parser of WriterPlus document
 

@@ -41,6 +41,8 @@
 #include <string>
 #include <vector>
 
+#include <libwpd/libwpd.h>
+
 #include "libmwaw_internal.hxx"
 
 #include "MWAWDebug.hxx"
@@ -112,7 +114,7 @@ protected:
   }
 
   //! sends the zone data to the listener (if it exists )
-  bool sendZone(int number);
+  bool sendZone(int number, MWAWPosition::AnchorTo anchor);
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
@@ -128,8 +130,10 @@ protected:
   bool readBasicGraphic(MWAWEntry const &entry,
                         CWGraphInternal::ZoneBasic &zone);
 
-  /* read the group data */
-  bool readGroupData(shared_ptr<CWGraphInternal::Group> zone);
+  /* read the group data.
+
+     \note \a beginGroupPos is only used to help debugging */
+  bool readGroupData(CWGraphInternal::Group &group, long beginGroupPos);
 
   /* try to read the polygon data */
   bool readPolygonData(shared_ptr<CWGraphInternal::Zone> zone);
@@ -144,7 +148,10 @@ protected:
   /* read a postcript zone */
   bool readPS(CWGraphInternal::ZonePict &zone);
 
-  /////////////
+  /* read a ole document zone */
+  bool readOLE(CWGraphInternal::ZonePict &zone);
+
+/////////////
   /* try to read the qtime data zone */
   bool readQTimeData(shared_ptr<CWGraphInternal::Zone> zone);
 
@@ -162,16 +169,22 @@ protected:
   //
 
   /* read the first zone of a group type */
-  bool readGroupHeader();
+  bool readGroupHeader(CWGraphInternal::Group &group);
+
+  /* read some unknown data in first zone */
+  bool readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id);
 
   //! sends a picture zone
-  bool sendPicture(CWGraphInternal::ZonePict &pict);
+  bool sendPicture(CWGraphInternal::ZonePict &pict, MWAWPosition pos,
+                   WPXPropertyList extras = WPXPropertyList());
 
   //! sends a basic graphic zone
-  bool sendBasicPicture(CWGraphInternal::ZoneBasic &pict);
+  bool sendBasicPicture(CWGraphInternal::ZoneBasic &pict, MWAWPosition pos,
+                        WPXPropertyList extras = WPXPropertyList());
 
   //! sends a bitmap graphic zone
-  bool sendBitmap(CWGraphInternal::ZoneBitmap &pict);
+  bool sendBitmap(CWGraphInternal::ZoneBitmap &pict, MWAWPosition pos,
+                  WPXPropertyList extras = WPXPropertyList());
 
   //! returns the debug file
   libmwaw::DebugFile &ascii() {

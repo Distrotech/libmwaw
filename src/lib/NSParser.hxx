@@ -37,7 +37,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/WPXPropertyList.h>
+#include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
