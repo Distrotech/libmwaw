@@ -1216,8 +1216,8 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   int expectedLength = vers <= 2 ? 8 : 16;
   input.seek(expectedLength, WPX_SEEK_CUR);
   if (pos+expectedLength != long(input.tell())) {
-    MWAW_DEBUG_MSG(("WNText::readParagraph: zone is too short \n"));
-    std::cout << long(input.tell()) - pos << "\n";
+    MWAW_DEBUG_MSG(("WNText::readParagraph: zone is too short: %ld\n",
+		    long(input.tell()) - pos));
     return false;
   }
   input.seek(pos, WPX_SEEK_SET);
