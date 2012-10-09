@@ -112,7 +112,9 @@ MSKParser: generic parser of Microsoft Works parser
 -   MSK4Zone : parser of the text ole 
 -   MSK4Text : class which reads the text
 
-MSWParser : parser of Microsoft Word document : v4.0-5.0 
+MSW1Parser : parser of Microsoft Word document : v1.0 
+
+MSWParser : parser of Microsoft Word document : v3.0-5.0 
 -   MSWStruct : class which defines the different structures 
 -   MSWText : class which reads the text and its structures
 -   MSWTextStyles : class which reads the styles

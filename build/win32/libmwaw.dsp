@@ -1,3 +1,4 @@
+
 # Microsoft Developer Studio Project File - Name="libmwaw" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
@@ -152,6 +153,10 @@ SOURCE=..\..\src\lib\MSK4Text.cxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MSK4Zone.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSW1Parser.cxx
 # End Source File
 # Begin Source File
 
@@ -384,6 +389,10 @@ SOURCE=..\..\src\lib\MSK4Text.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MSK4Zone.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSW1Parser.hxx
 # End Source File
 # Begin Source File
 

@@ -166,14 +166,9 @@ struct Picture {
 //! Internal: the state of a MSWParser
 struct State {
   //! constructor
-  State() : m_eof(-1), m_bot(-1), m_eot(-1),
-    m_textLength(0), m_picturesMap(), m_footnoteLength(0), m_headerfooterLength(0),
-    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
-  }
-
-  //! returns the total text size
-  long getTotalTextSize() const {
-    return m_textLength + m_footnoteLength + m_headerfooterLength;
+  State() : m_eof(-1), m_bot(-1), m_eot(-1), m_endNote(false),
+    m_picturesMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
+    m_headersId(), m_footersId() {
   }
 
   //! end of file
@@ -182,14 +177,10 @@ struct State {
   long m_bot;
   //! end of the text
   long m_eot;
-  //! the total textlength
-  long m_textLength;
+  //! a flag to know if we must place the note at the end or in the foot part
+  bool m_endNote;
   //! the map filePos -> Picture
   std::map<long, Picture> m_picturesMap;
-  //! the size of the footnote data
-  long m_footnoteLength;
-  //! the size of the header/footer data
-  long m_headerfooterLength;
 
   //! the list of object ( mainZone, other zone)
   std::vector<Object> m_objectList[2];
@@ -198,6 +189,10 @@ struct State {
 
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
+  /** the list of header id which corresponds to each page */
+  std::vector<int> m_headersId;
+  /** the list of footer id which corresponds to each page */
+  std::vector<int> m_footersId;
 
 };
 
@@ -410,7 +405,8 @@ void MSWParser::sendFootnote(int id)
   if (!m_listener) return;
 
   MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_NOTE));
-  m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+  m_listener->insertNote
+  (m_state->m_endNote ? MWAWContentListener::ENDNOTE : MWAWContentListener::FOOTNOTE, subdoc);
 }
 
 void MSWParser::sendFieldComment(int id)
@@ -559,11 +555,7 @@ bool MSWParser::createZones()
   if (it != m_entryMap.end())
     readPrinter(it->second);
 
-  long textLength[3] = { m_state->m_textLength,
-                         m_state->m_footnoteLength,
-                         m_state->m_headerfooterLength
-                       };
-  bool ok = m_textParser->createZones(m_state->m_bot, textLength);
+  bool ok = m_textParser->createZones(m_state->m_bot);
 
   readObjects();
 
@@ -602,8 +594,9 @@ bool MSWParser::createZones()
 bool MSWParser::readZoneList()
 {
   MWAWInputStreamPtr input = getInput();
-
-  int numData = version() <= 3 ? 15: 20;
+  int const vers = version();
+  getInput()->seek(vers <= 3 ? 30 : 64, WPX_SEEK_SET);
+  int numData = vers <= 3 ? 15: 20;
   std::stringstream s;
   for (int i = 0; i < numData; i++) {
     switch(i) {
@@ -631,10 +624,10 @@ bool MSWParser::readZoneList()
       break;
     case 7:
       readEntry("FieldPos");
-      break; // size ?
+      break;
     case 8:
       readEntry("HeaderFooter");
-      break; // size
+      break;
     case 9:
       readEntry("CharList", 0);
       break;
@@ -644,11 +637,11 @@ bool MSWParser::readZoneList()
     case 12:
       readEntry("FontIds");
       break;
-    case 13:
+    case 13: // checkme: is it ok also for v3 file ?
       readEntry("PrintInfo");
       break;
     case 14:
-      readEntry("ZoneInfo");
+      readEntry(vers <= 3 ? "TextStruct" : "ZoneInfo");
       break;
     case 15:
       readEntry("DocumentInfo");
@@ -671,14 +664,16 @@ bool MSWParser::readZoneList()
     }
   }
 
+  if (vers <= 3) return true;
   long pos = input->tell();
   libmwaw::DebugStream f;
   f << "Entries(ListZoneData)[0]:";
   for (int i = 0; i < 2; i++) // two small int
     f << "f" << i << "=" << input->readLong(2) << ",";
+
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  if (version() <= 4) return true;
+  if (vers <= 4) return true;
 
   // main
   readEntry("ObjectName",0);
@@ -734,12 +729,12 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
 
   libmwaw::DebugStream f;
   int headerSize=64;
-  input->seek(headerSize,WPX_SEEK_SET);
-  if (int(input->tell()) != headerSize) {
+  if (!isFilePos(0x88)) {
     MWAW_DEBUG_MSG(("MSWParser::checkHeader: file is too short\n"));
     return false;
   }
-  input->seek(0, WPX_SEEK_SET);
+  long pos = 0;
+  input->seek(pos, WPX_SEEK_SET);
   int val = (int) input->readULong(2);
   switch (val) {
   case 0xfe34:
@@ -747,11 +742,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
     case 0x0:
       headerSize = 30;
       setVersion(3);
-#ifndef DEBUG
-      return false;
-#else
       break;
-#endif
     default:
       return false;
     }
@@ -772,53 +763,36 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
   }
 
+  int const vers = version();
   f << "FileHeader:";
-  val = (int) input->readLong(1);
+  val = (int) input->readULong(1); // v1: ab other 0 ?
   if (val) f << "f0=" << val << ",";
   for (int i = 1; i < 3; i++) { // always 0
     val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
-  val = (int) input->readLong(2); // v4-v5: find 4, 8, c, 24, 2c
-  if (val)
-    f << "unkn=" << std::hex << val << std::dec << ",";
-  val = (int) input->readLong(1); // always 0 ?
-  if (val) f << "f4=" << val << ",";
-  val = (int) input->readLong(2); // always 0x19: for version 4, 5
-  if (val!=0x19) f << "f5=" << val << ",";
-
-  if (version() <= 3) {
+  if (vers > 3) {
+    // find 4, 8, c, 24, 2c
     val = (int) input->readLong(2);
-    if (val) f << "f6=" << val << ",";
-    m_state->m_bot = 0x100;
-    m_state->m_eot = (int) input->readULong(2);
-    m_state->m_textLength = m_state->m_eot-0x100;
-
-    for (int i = 0; i < 6; i++) { // always 0?
-      val = (int) input->readLong(2);
-      if (val) f << "h" << i << "=" << val << ",";
+    if (val)
+      f << "unkn=" << std::hex << val << std::dec << ",";
+    // 0,0,0x19,0
+    for (int i = 4; i < 8; i++) {
+      val = (int) input->readLong(1);
+      if (val) f << "f" << i << "=" << val << ",";
     }
-    input->seek(headerSize, WPX_SEEK_SET);
-
-    // ok, we can finish initialization
-    if (header)
-      header->reset(MWAWDocument::MSWORD, version());
-
-    ascii().addPos(0);
-    ascii().addNote(f.str().c_str());
-    return true;
   }
 
-  for (int i = 0; i < 6; i++) { // always 0 ?
+  for (int i = 0; i < 5; i++) { // always 0 ?
     val = (int) input->readLong(1);
     if (val) f << "g" << i << "=" << val << ",";
   }
-  if (val) f << "g7=" << val << ","; // always 0 ?
-  m_state->m_bot =  (long) input->readULong(4);
-  m_state->m_eot = (long) input->readULong(4);
 
+  m_state->m_bot = vers <= 3 ? 0x100 : (long) input->readULong(4);
+  m_state->m_eot = (long) input->readULong(4);
+  f << "text=" << std::hex << m_state->m_bot << "<->" << m_state->m_eot << ",";
   if (m_state->m_bot > m_state->m_eot) {
-    f << "#text:" << std::hex << m_state->m_bot << "<->" << m_state->m_eot << ",";
+    f << "#text,";
     if (0x100 <= m_state->m_eot) {
       MWAW_DEBUG_MSG(("MSWParser::checkHeader: problem with text position: reset begin to default\n"));
       m_state->m_bot = 0x100;
@@ -828,56 +802,196 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
     }
   }
 
-  long endOfData = (long) input->readULong(4);
-  if (endOfData < 100) {
-    MWAW_DEBUG_MSG(("MSWParser::checkHeader: end of file pos is too small\n"));
-    return false;
+  if (vers <= 3) { // always 0
+    for (int i = 0; i < 6; i++) {
+      val = (int) input->readLong(2);
+      if (val) f << "h" << i << "=" << val << ",";
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    if (!readHeaderEndV3())
+      return false;
+    if (header)
+      header->reset(MWAWDocument::MSWORD, vers);
+    return true;
   }
 
-  long actPos = input->tell();
-  input->seek(endOfData, WPX_SEEK_SET);
-  if (long(input->tell()) != endOfData) {
-    if (strict) return false;
-    endOfData = input->tell();
-    if (endOfData < m_state->m_eot) {
-      MWAW_DEBUG_MSG(("MSWParser::checkHeader: file seems too short, break...\n"));
+  long endOfData = (long) input->readULong(4);
+  f << "eof=" << std::hex << endOfData << std::dec << ",";
+  if (endOfData < 100 || !isFilePos(endOfData)) {
+    MWAW_DEBUG_MSG(("MSWParser::checkHeader: end of file pos is too small\n"));
+    if (endOfData < m_state->m_eot || strict)
       return false;
-    }
-    MWAW_DEBUG_MSG(("MSWParser::checkHeader: file seems too short, continue...\n"));
+    f << "#endOfData,";
   }
-  m_state->m_eof = endOfData;
   ascii().addPos(endOfData);
   ascii().addNote("Entries(End)");
-  input->seek(actPos, WPX_SEEK_SET);
+
   val = (int) input->readLong(4); // always 0 ?
   if (val) f << "unkn2=" << val << ",";
-
-  // seen to regroup main textZone + ?
-  m_state->m_textLength= (long) input->readULong(4);
-  f << "textLength=" << std::hex << m_state->m_textLength << std::dec << ",";
-  m_state->m_footnoteLength = (long) input->readULong(4);
-  if (m_state->m_footnoteLength)
-    f << "footnoteLength=" << std::hex << m_state->m_footnoteLength << std::dec << ",";
-  m_state->m_headerfooterLength  = (long) input->readULong(4);
-  if (m_state->m_headerfooterLength)
-    f << "headerFooterLength=" << std::hex << m_state->m_headerfooterLength << std::dec << ",";
-
-  for (int i = 0; i < 8; i++) { // always 0 ?
-    val = (int) input->readLong(2);
-    if (val) f << "h" << i << "=" << val << ",";
-  }
-  // ok, we can finish initialization
-  if (header)
-    header->reset(MWAWDocument::MSWORD, version());
-
-  if (long(input->tell()) != headerSize) {
-    ascii().addDelimiter(input->tell(), '|');
-    input->seek(headerSize, WPX_SEEK_SET);
-  }
-
-  ascii().addPos(0);
+  ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
+  if (!m_textParser->readHeaderTextLength())
+    return false;
+
+  pos = input->tell();
+  f.str("");
+  f << "FileHeader[A]:";
+  for (int i = 0; i < 8; i++) {
+    val = (int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+
+  // ok, we can finish initialization
+  if (header)
+    header->reset(MWAWDocument::MSWORD, vers);
+
+  if (long(input->tell()) != headerSize)
+    ascii().addDelimiter(input->tell(), '|');
+
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// try to the end of the header
+////////////////////////////////////////////////////////////
+bool MSWParser::readHeaderEndV3()
+{
+  if (!isFilePos(0xb8))
+    return false;
+  MWAWInputStreamPtr input = getInput();
+  libmwaw::DebugStream f;
+  input->seek(0x78, WPX_SEEK_SET);
+  long pos = input->tell();
+  long val = input->readLong(4); // normally 0x100
+  if (val != 0x100)
+    f << "FileHeader[A]:" << std::hex << val << std::dec << ",";
+  else
+    f << "_";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  if (!m_textParser->readHeaderTextLength())
+    return false;
+  pos = input->tell();
+  f << "FileHeader[B]:";
+  for (int i = 0; i < 18; i++) { // always 0 ?
+    val = input->readLong(2);
+    if (val)
+      f << "f" << i << "=" << val << ",";
+  }
+  float dim[6]; // H, W+margin T, L, B, R
+  for (int i = 0; i < 6; i++)
+    dim[i] = float(input->readLong(2))/1440.0f;
+
+  f << "page=" << dim[1] << "x" << dim[0] << ",";
+  f << "margins=" << dim[3] << "x" << dim[2] << "-" << dim[5] << "x" << dim[4] << ",";
+  bool dimOk = true;
+  if (dim[0]>0 && dim[1]>0) {
+    for (int i = 2; i < 6; i++)
+      if (dim[i] < 0) dimOk = false;
+    if (2*(dim[3]+dim[5]) > dim[1] || 2*(dim[2]+dim[4]) > dim[0]) dimOk = false;
+    if (!dimOk) {
+      f << "###";
+      MWAW_DEBUG_MSG(("MSWParser::readHeaderEndV3: page dimensions seem bad\n"));
+    } else {
+      m_pageSpan.setMarginTop(dim[2]);
+      m_pageSpan.setMarginBottom(dim[4]);
+      m_pageSpan.setMarginLeft(dim[3]);
+      m_pageSpan.setMarginRight(dim[5]);
+      m_pageSpan.setFormLength(dim[0]);
+      m_pageSpan.setFormWidth(dim[1]);
+    }
+  } else
+    dimOk = false;
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos = input->tell();
+  f.str("");
+  f << "FileHeader[C]:";
+  val = input->readLong(2); // always 0 ?
+  if (val)
+    f << "margins[binding]=" << float(val)/1440.f << ",";
+  val = input->readLong(2);
+  f << "defTabs=" << float(val)/1440.f << ",";
+  int flags = (int) input->readULong(1);
+  if (flags & 0x80) // page vis a vis
+    f << "facingpage,";
+  if (flags & 0x40) // ligne creuse
+    f << "defTabs[emptyline],";
+  switch((flags>>1) & 0x3) {
+  case 0:
+    if (dimOk) m_state->m_endNote = true;
+    f << "endnote,";
+    break;
+  case 1:
+    f << "footnote,";
+    break;
+  case 2:
+    f << "footnote[undertext],";
+    break;
+  default:
+    f << "#notepos=3,";
+    break;
+  }
+  if (flags&1) {
+    f << "landscape,";
+    if (dimOk)
+      m_pageSpan.setFormOrientation(MWAWPageSpan::LANDSCAPE);
+  }
+  flags &= 0x38;
+  if (flags)
+    f << "#flags=" << std::hex << flags << std::dec << ",";
+  flags = (int) input->readULong(1);
+  if (flags) // always 1
+    f << "fl1=" << std::hex << flags << std::dec << ",";
+  char const *(wh[]) = { "note", "line", "page" };
+  for (int i = 0; i < 3; i++) {
+    val = (long) input->readULong(2);
+    if (val == 1) continue;
+    if (val & 0x8000)
+      f << wh[i] << "[firstNumber]=" << (val&0x7FFF) << "[auto],";
+    else
+      f << wh[i] << "[firstNumber]=" << val << ",";
+  }
+  for (int i = 0; i < 2; i++) { // first flags often 0x40, second?
+    flags = (int) input->readULong(1);
+    if (flags) // always 1
+      f << "fl" << 2+i << "=" << std::hex << flags << std::dec << ",";
+  }
+  for (int i = 0; i < 13; i++) { // always 0?
+    val = input->readLong(2);
+    if (val)
+      f << "f" << i << "=" << val << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos = input->tell();
+  f.str("");
+  f << "FileHeader[D]:";
+  int sz = (int) input->readULong(1);
+  if (sz == 0) {
+    ascii().addPos(pos);
+    ascii().addNote("_");
+    return true;
+  }
+  if (sz > 31) {
+    f << "###";
+    MWAW_DEBUG_MSG(("MSWParser::readHeaderEndV3: next filename seems bad\n"));
+  } else {
+    std::string fName("");
+    for (int i = 0; i < sz; i++)
+      fName += (char) input->readULong(1);
+    f << "nextFile=" << fName;
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(0x100, WPX_SEEK_SET);
   return true;
 }
 
@@ -1032,7 +1146,6 @@ bool MSWParser::readZone17(MSWEntry &entry)
     if (val) f << "f" << i << "=" << val << ",";
   }
   long ptr = (long) input->readULong(4); // a text ptr ( often near to textLength )
-  if (ptr > m_state->m_textLength) f << "#";
   f << "textPos[sel?]=" << std::hex << ptr << std::dec << ",";
   val  = (int) input->readULong(4); // almost always ptr
   if (val != ptr)
@@ -1708,6 +1821,7 @@ bool MSWParser::readPrintInfo(MSWEntry &entry)
     botMarg=0;
   }
 
+  m_pageSpan.setFormOrientation(MWAWPageSpan::PORTRAIT);
   m_pageSpan.setMarginTop(topMargin/72.0);
   m_pageSpan.setMarginBottom(botMarg/72.0);
   m_pageSpan.setMarginLeft(leftMargin/72.0);

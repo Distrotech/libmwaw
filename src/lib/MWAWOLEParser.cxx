@@ -89,6 +89,7 @@
 //////////////////////////////////////////////////
 // internal structure
 //////////////////////////////////////////////////
+/** Low level: namespace used to define/store the data used by MWAWOLEParser */
 namespace MWAWOLEParserInternal
 {
 /** Internal: internal method to compobj definition */

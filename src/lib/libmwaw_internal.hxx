@@ -429,6 +429,8 @@ protected:
 typedef Vec2<bool> Vec2b;
 /*! \brief Vec2 of int */
 typedef Vec2<int> Vec2i;
+/*! \brief Vec2 of long */
+typedef Vec2<long> Vec2l;
 /*! \brief Vec2 of float */
 typedef Vec2<float> Vec2f;
 

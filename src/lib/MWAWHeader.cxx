@@ -109,10 +109,15 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       }
     } else if (creator=="MSWD") {
       if (type=="WDBN") {
-        res.push_back(MWAWHeader(MWAWDocument::MSWORD, 1));
+        res.push_back(MWAWHeader(MWAWDocument::MSWORD, 3));
         return res;
       }
       if (type=="GLOS") {
+        res.push_back(MWAWHeader(MWAWDocument::MSWORD, 3));
+        return res;
+      }
+    } else if (creator=="WORD") {
+      if (type=="WDBN") {
         res.push_back(MWAWHeader(MWAWDocument::MSWORD, 1));
         return res;
       }
@@ -186,13 +191,18 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   if (val[0]==0xd0cf && val[1]==0x11e0 && val[2]==0xa1b1 && val[3]==0x1ae1)
     res.push_back(MWAWHeader(MWAWDocument::MSWORKS, 104));
 
-  if ((val[0]==0xfe34 && val[1]==0) ||
+  if ((val[0]==0xfe32 && val[1]==0) || (val[0]==0xfe34 && val[1]==0) ||
       (val[0] == 0xfe37 && (val[1] == 0x23 || val[1] == 0x1c))) {
     int vers = -1;
     switch (val[1]) {
     case 0:
-      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 3.0 file[no parsing]\n"));
-      vers = 3;
+      if (val[0]==0xfe34) {
+        MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 3.0 file[minimal parsing]\n"));
+        vers = 3;
+      } else if (val[0]==0xfe32) {
+        MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 1.0 file\n"));
+        vers = 1;
+      }
       break;
     case 0x1c:
       MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 4.0 file[minimal parsing]\n"));
@@ -254,7 +264,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       if (vers <= 3) {
         MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Microsoft Works %d.0 file\n", vers));
       } else {
-        MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Microsoft Works %d.0 file[no parsing]\n", vers));
+        MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Microsoft Works %d.0 file\n", vers));
       }
       res.push_back(MWAWHeader(MWAWDocument::MSWORKS, vers));
     }

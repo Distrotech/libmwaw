@@ -46,6 +46,7 @@
 				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS"
 				StringPooling="true"
 				RuntimeLibrary="0"
+				TreatWChar_tAsBuiltInType="false"
 				EnableFunctionLevelLinking="true"
 				RuntimeTypeInfo="true"
 				PrecompiledHeaderFile=".\Release/libmwaw.pch"
@@ -119,6 +120,7 @@
 				PreprocessorDefinitions="_DEBUG;DEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
+				TreatWChar_tAsBuiltInType="false"
 				RuntimeTypeInfo="true"
 				PrecompiledHeaderFile=".\Debug/libmwaw.pch"
 				AssemblerListingLocation=".\Debug/"
@@ -492,6 +494,26 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSKParser.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSW1Parser.cxx"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1361,6 +1383,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSKParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSW1Parser.hxx"
 				>
 			</File>
 			<File

@@ -48,6 +48,7 @@
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSubDocument.hxx"
 
 #include "MWParser.hxx"
 
@@ -107,8 +108,9 @@ std::ostream &operator<<(std::ostream &o, FileHeader const &header)
 }
 
 ////////////////////////////////////////
-//! the paragraph/.. information
+//! the paragraph... information
 struct Information {
+  /** the different type */
   enum Type { TEXT, RULER, GRAPHIC, PAGEBREAK, UNKNOWN };
 
   //! constructor
@@ -118,6 +120,7 @@ struct Information {
     m_data(),m_font()
   {}
 
+  //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Information const &info);
 
   //! the type
@@ -1501,7 +1504,7 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
 }
 
 ////////////////////////////////////////////////////////////
-// read a paragraph
+// read the page break
 ////////////////////////////////////////////////////////////
 bool MWParser::readPageBreak(MWParserInternal::Information const &info)
 {

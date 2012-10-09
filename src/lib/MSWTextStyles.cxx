@@ -192,8 +192,21 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     what &= 0xDF;
 
     if (val && (what & 0x4)) {
-      flags |= MWAW_UNDERLINE_BIT;
-      if (val != 2) f << "#underline=" << (val &0xf) << ",";
+      switch(val&0xf) {
+      case 8:
+        f << "underline[dotted],";
+        flags |= MWAW_UNDERLINE_BIT;
+        break;
+      case 6:
+        flags |= MWAW_DOUBLE_UNDERLINE_BIT;
+        break;
+      case 2:
+        flags |= MWAW_UNDERLINE_BIT;
+        break;
+      default:
+        f << "#underline=" << (val &0xf) << ",";
+        flags |= MWAW_UNDERLINE_BIT;
+      }
       what &= 0xFB;
     } else if (val & 0xf)
       f << "#underline?=" << (val &0xf) << ",";
@@ -330,7 +343,7 @@ bool MSWTextStyles::getParagraph(ZoneType type, int id, MSWStruct::Paragraph &pa
 void MSWTextStyles::sendDefaultParagraph()
 {
   if (!m_listener) return;
-  MSWStruct::Paragraph defPara;
+  MSWStruct::Paragraph defPara(version());
   setProperty(defPara, false);
 }
 
@@ -348,6 +361,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
   if (sz == 0) return true;
   if (!m_mainParser->isFilePos(endPos)) return false;
 
+  int const vers = version();
   libmwaw::DebugStream f;
   int numFonts[2]= {0,0};
   while (long(m_input->tell()) < endPos) {
@@ -360,20 +374,30 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
     m_input->seek(actPos, WPX_SEEK_SET);
 
     int wh = (int) m_input->readULong(1), val;
-    bool done = true;
+    if (vers <= 3 && wh >= 0x36 && wh <= 0x45) {
+      // this section data has different meaning in v3 and after...
+      m_input->seek(actPos, WPX_SEEK_SET);
+      break;
+    }
+    bool done = false;
+    long dSz = endPos-actPos;
     switch(wh) {
     case 0:
       done = (actPos+1==endPos||(dataSz==2 && actPos+2==endPos));
       break;
+    case 0x38:
+      if (dSz < 4) break;
+      val = (int) m_input->readLong(1);
+      if (val != 2) f << "#shadType=" <<  val << ",";
+      f << "shad=" << float(m_input->readLong(2))/100.f << "%,";
+      done = true;
+      break;
     case 0x3a:
       f << "f" << std::hex << wh << std::dec << ",";
+      done = true;
       break;
     case 0x4d: {
-      if (actPos+2 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (dSz < 2) break;
       val = (int) m_input->readLong(1);
       uint32_t flags = para.m_modFont->m_font->flags();
       if (val < 0) {
@@ -383,6 +407,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
         para.m_modFont->m_font->setFlags(flags|MWAW_SUPERSCRIPT100_BIT);
         f << "superScript=" << val/2 << ",";
       } else f << "#pos=" << 0 << ",";
+      done = true;
       break;
     }
     case 0x3c: // bold
@@ -395,11 +420,8 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
     case 0x43: // hidden (chekme)
     case 0x45: // underline
     case 0x4a: {
-      if (actPos+2 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (dSz < 2) break;
+      done = true;
       val = (int) m_input->readULong(1);
       if (wh == 0x4a) {
         if (val > 4 && val < 40)
@@ -428,11 +450,8 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       break;
     }
     case 0x44:
-      if (actPos+3 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (dSz < 3) break;
+      done = true;
       val = (int) m_input->readULong(2);
       para.m_modFont->m_font->setId(val);
       break;
@@ -442,91 +461,66 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
     case 0x49: // 0 ( one time)
     case 0x4c: // 0, 6, -12
     case 0x5e: // 0
-      if (actPos+2 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (dSz < 2) break;
+      done = true;
       val = (int) m_input->readLong(1);
       f << "f" << std::hex << wh << std::dec << "=" << val << ",";
       break;
     case 0x23: // alway 0 ?
-      if (actPos+3 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (dSz < 3) break;
+      done = true;
       val = (int) m_input->readLong(2);
       f << "f" << std::hex << wh << std::dec << "=" << val << ",";
       break;
     case 0x9a: { // a size and 2 number ?
-      if (actPos+2 > endPos) {
+      if (dSz < 2) break;
+      sz = (int) m_input->readULong(1);
+      if (2+sz > dSz || (sz%2)) {
         done = false;
         f << "#";
         break;
       }
-      int dSz = (int) m_input->readULong(1);
-      if (actPos+2+dSz > endPos || (dSz%2)) {
-        done = false;
-        f << "#";
-        break;
-      }
+      done = true;
       f << "f" << std::hex << wh << "=[";
-      for (int i = 0; i < dSz/2; i++)
+      for (int i = 0; i < sz/2; i++)
         f << m_input->readULong(2) << ",";
       f << std::dec << "],";
       break;
     }
     case 0x9f: // two small number: table range?
-      if (actPos+3 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (dSz < 3) break;
+      done = true;
       f << "f" << std::hex << wh << "=[";
       for (int i = 0; i < 2; i++)
         f << m_input->readULong(1) << ",";
       f << std::dec << "],";
       break;
     case 3: // four small number
-      if (actPos+5 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (dSz < 5) break;
+      done = true;
       f << "f" << std::hex << wh << std::dec << "=[";
       for (int i = 0; i < 4; i++)
         f << m_input->readLong(1) << ",";
       f << "],";
       break;
     case 0x50: // two small number
-      if (actPos+4 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (dSz < 4) break;
+      done = true;
       f << "f" << std::hex << wh << std::dec << "=[";
       f << m_input->readLong(1) << ",";
       f << m_input->readLong(2) << ",";
       f << "],";
       break;
-    case 0x38:
     case 0x4f: // a small int and a pos?
-      if (actPos+4 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (dSz < 4) break;
+      done = true;
       f << "f" << std::hex << wh << std::dec << "=[";
       f << m_input->readLong(1) << ",";
       f << std::hex << m_input->readULong(2) << std::dec << "],";
       break;
     case 0x9e: // two small number + a pos?
-      if (actPos+5 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (dSz < 5) break;
+      done = true;
       f << "f" << std::hex << wh << std::dec << "=[";
       for (int i = 0; i < 2; i++)
         f << m_input->readLong(1) << ",";
@@ -534,6 +528,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       break;
     case 0x4e:
     case 0x53: { // same as 4e but with size=0xa
+      done = true;
       Variable<MSWStruct::Font> tmp, *font = &tmp;
       bool extra=false;
       if (wh == 0x4e) {
@@ -559,11 +554,8 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       break;
     }
     case 0x5f: { // 4 index
-      if (actPos+10 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (dSz < 10) break;
+      done = true;
       sz = (int) m_input->readULong(1);
       if (sz != 8) f << "#sz=" << sz << ",";
       f << "f5f=[";
@@ -574,11 +566,8 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
     case 0x17: {
       // find sz=5,9,12,13,17
       sz = (int) m_input->readULong(1);
-      if (!sz || actPos+2+sz > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (!sz || 2+sz > dSz) break;
+      done = true;
       f << "f" << std::hex << wh << "=[";
       for (int i = 0; i < sz; i++) {
         val= (int) m_input->readULong(1);
@@ -589,16 +578,12 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       break;
     }
     case 0x94: // checkme space between column divided by 2 (in table) ?
-      if (actPos+3 > endPos) {
-        done = false;
-        f << "#";
-        break;
-      }
+      if (dSz < 3) break;
+      done = true;
       val = (int) m_input->readLong(2);
       f << "colsSep?=" << 2*val/1440. << ",";
       break;
     default:
-      done = false;
       break;
     }
     if (!done) {
@@ -648,13 +633,13 @@ bool MSWTextStyles::readPLCList(MSWEntry &entry)
   std::vector<long> textPos; // limit of the text in the file
   textPos.resize((size_t)N+1);
   for (int i = 0; i <= N; i++) textPos[(size_t)i] = (long) m_input->readULong(4);
+  int const expectedSize = (version() <= 3) ? 0x80 : 0x200;
   for (int i = 0; i < N; i++) {
     if (!m_mainParser->isFilePos(textPos[(size_t)i])) f << "#";
 
     long defPos = (long) m_input->readULong(2);
     f << std::hex << "[filePos?=" << textPos[(size_t)i] << ",dPos=" << defPos << std::dec << ",";
     f << "],";
-    int expectedSize = (version() <= 3) ? 0x80 : 0x200;
 
     MSWEntry plc;
     plc.setType(entry.id() ? "ParagPLC" : "CharPLC");
@@ -683,8 +668,9 @@ bool MSWTextStyles::readPLCList(MSWEntry &entry)
 
 bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
 {
-  int expectedSize = (version() <= 3) ? 0x80 : 0x200;
-  int posFactor = (version() <= 3) ? 1 : 2;
+  int const vers = version();
+  int const expectedSize = (vers <= 3) ? 0x80 : 0x200;
+  int const posFactor = (vers <= 3) ? 1 : 2;
   if (entry.length() != expectedSize) {
     MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: the zone size seems odd\n"));
     return false;
@@ -744,12 +730,18 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
             f2 << font.m_font->getDebugString(m_convertissor) << font << ",";
           m_state->m_fontList.push_back(font);
         } else {
-          MSWStruct::Paragraph para;
+          MSWStruct::Paragraph para(vers);
           f2 << "P" << id << ":";
 
           m_input->seek(dataPos, WPX_SEEK_SET);
           int sz = (int) m_input->readLong(1);
-          if (sz < 4 || dataPos+2*sz > entry.end()-1) {
+          long endPos;
+          if (vers <= 3) {
+            sz++;
+            endPos = dataPos+sz;
+          } else
+            endPos = dataPos+2*sz+1;
+          if (sz < 4 || endPos > entry.end()) {
             MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: can not read plcSz\n"));
             f2 << "#";
           } else {
@@ -766,17 +758,18 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
             val = (int) m_input->readLong(1);
             if (val) // a small number ?
               f2 << "g1=" << val << ",";
-            para.m_dim->setX(float(m_input->readULong(2))/1440.f);
-            para.m_dim->setY(float(m_input->readULong(2))/72.f);
+            if (vers > 3) {
+              para.m_dim->setX(float(m_input->readULong(2))/1440.f);
+              para.m_dim->setY(float(m_input->readULong(2))/72.f);
+            }
             if (sz > 4) {
-              ascii().addDelimiter(dataPos+8,'|');
-              m_input->seek(dataPos+8, WPX_SEEK_SET);
-              if (readParagraph(para, sz*2+1-8)) {
+              ascii().addDelimiter(m_input->tell(),'|');
+              if (readParagraph(para, int(endPos-m_input->tell()))) {
 #ifdef DEBUG_WITH_FILES
                 para.print(f2, m_convertissor);
 #endif
               } else {
-                para = MSWStruct::Paragraph();
+                para = MSWStruct::Paragraph(vers);
                 f2 << "#";
               }
             }
@@ -821,6 +814,7 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
     MWAW_DEBUG_MSG(("MSWTextStyles::readTextStructList: the zone seems to short\n"));
     return false;
   }
+  int const vers = version();
   long pos = entry.begin();
   m_input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
@@ -843,14 +837,14 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
     }
     f.str("");
     f << "ParagPLC:tP" << num++<< "]:";
-    MSWStruct::Paragraph para;
+    MSWStruct::Paragraph para(vers);
     m_input->seek(-2,WPX_SEEK_CUR);
     if (readParagraph(para) && long(m_input->tell()) <= endPos) {
 #ifdef DEBUG_WITH_FILES
       para.print(f, m_convertissor);
 #endif
     } else {
-      para = MSWStruct::Paragraph();
+      para = MSWStruct::Paragraph(vers);
       f << "#";
     }
     m_state->m_textstructParagraphList.push_back(para);
@@ -877,13 +871,14 @@ int MSWTextStyles::readTextStructParaZone(std::string &extra)
   int id = -1;
   int c = (int) m_input->readULong(1);
   switch (c) {
+    // find also 0x1e80 here, look like a tmp setting...
   case 0x80:
     id = (int) m_input->readULong(1);
     break;
   case 0:
     break;
   default: {
-    MSWStruct::Paragraph para;
+    MSWStruct::Paragraph para(version());
     m_input->seek(-1, WPX_SEEK_CUR);
     if (readParagraph(para, 2)) {
       id = int(m_state->m_textstructParagraphList.size());
@@ -942,7 +937,7 @@ bool MSWTextStyles::getSectionFont(ZoneType type, int id, MSWStruct::Font &font)
   if (!getSection(type, id, sec)) return false;
 
   if (!sec.m_paragraphId.isSet()) return false;
-  MSWStruct::Paragraph para;
+  MSWStruct::Paragraph para(version());
   if (!getParagraph(StyleZone, *sec.m_paragraphId, para))
     return false;
 
@@ -1013,6 +1008,7 @@ bool MSWTextStyles::readSection(MSWStruct::Section &sec, long debPos)
     MWAW_DEBUG_MSG(("MSWTextStyles::readSection: can not find section data...\n"));
     return false;
   }
+  int const vers = version();
   m_input->seek(debPos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   int sz = (int) m_input->readULong(1);
@@ -1024,10 +1020,14 @@ bool MSWTextStyles::readSection(MSWStruct::Section &sec, long debPos)
     ascii().addNote(f.str().c_str());
     return false;
   }
-
   while (m_input->tell() < endPos) {
     long pos = m_input->tell();
-    if (sec.read(m_input, endPos)) continue;
+    bool ok;
+    if (vers <= 3)
+      ok = sec.readV3(m_input, endPos);
+    else
+      ok = sec.read(m_input, endPos);
+    if (ok) continue;
     f << "#";
     ascii().addDelimiter(pos,'|');
     break;
@@ -1266,6 +1266,8 @@ bool MSWTextStyles::readStylesFont
 bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> const &previous,
                                         std::vector<int> const &order)
 {
+  int const vers=version();
+  int minSz = vers <= 3 ? 3 : 7;
   libmwaw::DebugStream f;
   long pos = zone.begin();
   ascii().addPos(pos);
@@ -1301,7 +1303,7 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
     int id = order[i];
     if (id < 0 || id >= int(numElt)) continue;
     int prevId = previous[(size_t) id];
-    MSWStruct::Paragraph para;
+    MSWStruct::Paragraph para(vers);
     if (prevId >= 0 && m_state->m_styleParagraphMap.find(prevId-N) != m_state->m_styleParagraphMap.end())
       para = m_state->m_styleParagraphMap.find(prevId-N)->second;
     if (m_state->m_styleFontMap.find(id-N) != m_state->m_styleFontMap.end())
@@ -1310,7 +1312,7 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
     } else {
       f.str("");
       f << "ParagPLC(sP" << id-N << "):";
-      if (dataSize[(size_t) id] < 7) {
+      if (dataSize[(size_t) id] < minSz) {
         MWAW_DEBUG_MSG(("MSWTextStyles::readStylesParagraph: zone(paragraph) the id seems bad...\n"));
         f << "#";
       } else {
@@ -1323,8 +1325,9 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
         for (int j = 0; j < 3; j++) { // 0, 0|c,0|1
           int val = (int) m_input->readLong(2);
           if (val) f << "g" << j << "=" << val << ",";
+          if (vers <= 3) break;
         }
-        if (dataSize[(size_t) id] != 7 && !readParagraph(para, dataSize[(size_t) id]-7))
+        if (dataSize[(size_t) id] != minSz && !readParagraph(para, dataSize[(size_t) id]-minSz))
           f << "#";
 #ifdef DEBUG_WITH_FILES
         para.print(f, m_convertissor);

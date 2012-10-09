@@ -37,6 +37,7 @@
 
 #include "MWAWFontConverter.hxx"
 
+//! Internal namespace used to store the data used by MWAWFontConverterInternal
 namespace MWAWFontConverterInternal
 {
 //! Internal and low level: tools to convert Macintosh characters

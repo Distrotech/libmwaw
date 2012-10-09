@@ -124,8 +124,11 @@ protected:
   //! send a text zone
   bool sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell=false);
 
-  //! finds the different zones given defaut text zone and textlength
-  bool createZones(long bot, long (&textLength)[3]);
+  //! reads the three different zone size
+  bool readHeaderTextLength();
+
+  //! finds the different zones
+  bool createZones(long bot);
 
   //! read the text structure(some paragraph style+some text position?)
   bool readTextStruct(MSWEntry &entry);
@@ -134,7 +137,7 @@ protected:
   bool readPageBreak(MSWEntry &entry);
 
   //! read the zone info
-  bool readZoneInfo(MSWEntry &entry);
+  bool readZoneInfo(MSWEntry entry);
 
   //! read the field data
   bool readFields(MSWEntry &entry, std::vector<long> const &fieldPos);

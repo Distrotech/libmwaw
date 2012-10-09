@@ -176,6 +176,180 @@ bool Section::read(MWAWInputStreamPtr &input, long endPos)
   return true;
 }
 
+// data seems very different in v3, so a new function....
+bool Section::readV3(MWAWInputStreamPtr &input, long endPos)
+{
+  long pos = input->tell();
+  long dSz = endPos-pos;
+  if (dSz < 1) return false;
+  libmwaw::DebugStream f;
+  int wh = (int) input->readULong(1), val;
+  switch(wh) {
+  case 0x36:
+    if (dSz < 2) return false;
+    val = (int) input->readLong(1);
+    switch(val) {
+    case 0:
+      f << "division=no,";
+      break;
+    case 1:
+      f << "division=columns,";
+      break;
+    case 2:
+      f << "division=page,";
+      break; // default
+    case 3:
+      f << "division=evenpage,";
+      break;
+    case 4:
+      f << "division=oddpage,";
+      break;
+    default:
+      f << "#division=" << val << ",";
+      break;
+    }
+    break;
+  case 0x37:
+    if (dSz < 2) return false;
+    val = (int) input->readLong(1);
+    switch(val) {
+    case 0:
+      break; // no front page
+    case 1:
+      f << "frontPage,";
+      break;
+    default:
+      f << "#frontPage=" << val << ",";
+      break;
+    }
+    break;
+  case 0x3a:
+    if (dSz < 2) return false;
+    val = (int) input->readLong(1);
+    switch(val) {
+    case 1:
+      f << "addNumbering,";
+      break;
+    default:
+      f << "#addNumbering=" << val << ",";
+      break;
+    }
+    break;
+  case 0x3b:
+    if (dSz < 2) return false;
+    val = (int) input->readLong(1);
+    switch(val) {
+    case 1:
+      f << "numbering=arabic,";
+      break; // normal
+    case 2:
+      f << "numbering=roman[upper],";
+      break;
+    case 3:
+      f << "numbering=alpha[upper],";
+      break;
+    case 4:
+      f << "numbering=alpha[lower],";
+      break;
+    case 5:
+      f << "numbering=roman[lower],";
+      break;
+    default:
+      f << "#numbering[type]=" << val << ",";
+      break;
+    }
+    break;
+  case 0x3e:
+    if (dSz < 2) return false;
+    val = (int) input->readLong(1);
+    switch(val) {
+    case 1:
+      f << "newNumber=byPage,";
+      break;
+    default:
+      f << "#newNumber=" << val << ",";
+      break;
+    }
+    break;
+  case 0x3f:
+    if (dSz < 2) return false;
+    val = (int) input->readLong(1);
+    switch(val) {
+    case 0:
+      f << "footnote,";
+      break;
+    case 1:
+      f << "endnote,";
+      break; // default
+    default:
+      f << "#endnote=" << val << ",";
+      break;
+    }
+    break;
+  case 0x40:
+    if (dSz < 2) return false;
+    val = (int) input->readLong(1);
+    switch(val) {
+    case 1:
+      f << "numberline=byDivision,";
+      break;
+    case 2:
+      f << "numberline=consecutive,";
+      break;
+    default:
+      f << "#numberline=" << val << ",";
+      break;
+    }
+    break;
+  case 0x41: // 8 or a
+    if (dSz < 2) return false;
+    val = (int) input->readLong(1);
+    f << "f41=" << std::hex << val << std::dec << ",";
+    break;
+  case 0x38:
+  case 0x39:
+  case 0x3c:
+  case 0x3d:
+  case 0x42:
+  case 0x43: // find 0x168
+  case 0x44:
+  case 0x45:
+    if (dSz < 3) return false;
+    val = (int) input->readLong(2);
+    switch(wh) {
+    case 0x38:
+      m_col = (int)val+1;
+      break;
+    case 0x42:
+      f << "numberline[lines]=" << val << ",";
+      break;
+    case 0x39:
+      m_colSep = float(val)/1440.f;
+      break;
+    case 0x3c:
+      f << "numberingPos[T]=" << val/1440.0 << ",";
+      break;
+    case 0x3d:
+      f << "numberingPos[R]=" << val/1440.0 << ",";
+      break;
+    case 0x44:
+      f << "headerSize=" << val/1440.0 << ",";
+      break;
+    case 0x45:
+      f << "footerSize=" << val/1440.0 << ",";
+      break;
+    default:
+      f << "f" << std::hex << wh << std::dec << "=" << val << ",";
+      break;
+    }
+    break;
+  default:
+    return false;
+  }
+  m_extra += f.str();
+  return true;
+}
+
 std::ostream &operator<<(std::ostream &o, Section const &section)
 {
   if (section.m_type.get())
@@ -426,7 +600,9 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
 {
   long pos = input->tell();
   bool sectionSet = m_section.isSet();
-  if (m_section->read(input,endPos))
+  if (m_version > 3 && m_section->read(input,endPos))
+    return true;
+  if (m_version == 3 && m_section->readV3(input,endPos))
     return true;
   if (!sectionSet) m_section.setSet(false);
 
@@ -487,6 +663,49 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     if (val==0) f << "*";
     else if (val != 1) f << "=" << val;
     f << ",";
+    break;
+  case 0xa: {
+    if (dSz < 2) return false;
+    val = (int) input->readLong(1);
+    MWAWBorder border;
+    switch(val) {
+    case 0:
+      break; // normal, checkme
+    case 1:
+      border.m_width = 2;
+      break;
+    case 2:
+      border.m_style = MWAWBorder::Double;
+      break;
+    case 3:
+      border.m_width = 2;
+      f << "border[shadow],";
+      break;
+    default:
+      f << "#borders=" << val << ",";
+      break;
+    }
+    m_bordersStyle = border;
+    break;
+  }
+  case 0xb:
+    if (dSz < 2) return false;
+    val = (int) input->readULong(1);
+    if (val && val <= 0x10) {
+      if (m_borders.size() < 4)
+        m_borders.resize(4);
+      if (val & 0x1)
+        m_borders[MWAWBorder::Top] = m_bordersStyle.get();
+      if (val & 0x2)
+        m_borders[MWAWBorder::Bottom] = m_bordersStyle.get();
+      // val & 0x4
+      if ((val & 0x4) || val==0x10)
+        m_borders[MWAWBorder::Left] = m_bordersStyle.get();
+      if (val & 0x8)
+        m_borders[MWAWBorder::Right] = m_bordersStyle.get();
+      return true;
+    } else if (val)
+      f << "#borders=" << val << ",";
     break;
   case 0xf: { // tabs
     int sz = (int) input->readULong(1);
@@ -575,6 +794,13 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     val = (int) input->readLong(2);
     m_spacings[c-0x14] = val/1440.;
     if (c != 0x14) return true;
+    if (val < -1440 || val > 1440) {
+      MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: interline spacing seems odd\n"));
+      f << "#interline=" << val << ",";
+      m_spacings[0] = 1.0;
+      m_spacingsInterlineUnit = WPX_PERCENT;
+      break;
+    }
     m_spacingsInterlineUnit = WPX_INCH;
     m_spacingsInterlineType = libmwaw::Fixed;
     if (val > 0)
@@ -592,8 +818,10 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     val = (int) input->readULong(1);
     if (c==0x18) m_inCell = (val!=0);
     else m_tableDef = (val != 0);
-    if (val != 0 && val!=1)
+    if (val != 0 && val!=1) {
       f << "#f" << std::hex << c << std::dec << "=" << val << ",";
+      break;
+    }
     return true;
   case 0x1a: // frame x,y,w
   case 0x1b:
@@ -698,12 +926,6 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     if (val) f << "distToText=" << val/1440. << ",";
     break;
   }
-  case 0x38:
-    if (dSz < 4) return false;
-    val = (int) input->readLong(1);
-    if (val != 2) f << "#shadType=" <<  val << ",";
-    f << "shad=" << float(input->readLong(2))/100.f << "%,";
-    break;
   default:
     return false;
   }
@@ -717,6 +939,8 @@ std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
   if (ind.m_dim.isSet() && (ind.m_dim.get()[0]>0 || ind.m_dim.get()[1]>0))
     o << "dim=" << ind.m_dim.get() << ",";
   o << reinterpret_cast<MWAWParagraph const &>(ind);
+  if (ind.m_bordersStyle.isSet())
+    o << "borders[style]=" << ind.m_bordersStyle.get() << ",";
   if (ind.m_section.isSet()) o << ind.m_section.get() << ",";
   if (ind.m_inCell.get()) o << "cell,";
   if (ind.m_tableDef.get()) o << "table[def],";

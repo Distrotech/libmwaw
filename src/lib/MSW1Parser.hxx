@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MW_PARSER
-#  define MW_PARSER
+#ifndef MSW1_PARSER
+#  define MSW1_PARSER
 
 #include <vector>
 
@@ -45,33 +45,32 @@
 
 class MWAWEntry;
 class MWAWContentListener;
-typedef class MWAWContentListener MWContentListener;
-typedef shared_ptr<MWContentListener> MWContentListenerPtr;
+typedef class MWAWContentListener MSW1ContentListener;
+typedef shared_ptr<MSW1ContentListener> MSW1ContentListenerPtr;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
-namespace MWParserInternal
+namespace MSW1ParserInternal
 {
-struct State;
-struct Information;
+struct Font;
 struct Paragraph;
+struct State;
 class SubDocument;
 }
 
-/** \brief the main class to read a MacWrite file
+/** \brief the main class to read a Microsoft Word 1 file
  *
  *
  *
  */
-class MWParser : public MWAWParser
+class MSW1Parser : public MWAWParser
 {
-  friend class MWParserInternal::SubDocument;
-
+  friend class MSW1ParserInternal::SubDocument;
 public:
   //! constructor
-  MWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MSW1Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MWParser();
+  virtual ~MSW1Parser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -82,54 +81,14 @@ public:
 protected:
   //! inits all internal variables
   void init();
-
   //! sets the listener in this class and in the helper classes
-  void setListener(MWContentListenerPtr listen);
+  void setListener(MSW1ContentListenerPtr listen);
 
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
 
-  //! send a zone ( 0: MAIN ZONE, 1 : HEADER, 2 : FOOTER )
-  bool sendWindow(int zone);
-
-  //! finds the different objects zones
-  bool createZones();
-
-  //! finds the different objects zones (version <= 3)
-  bool createZonesV3();
-
-  //! read the print info zone
-  bool readPrintInfo();
-
-  //! read the windows zone
-  bool readWindowsInfo(int wh);
-
-  //! read the line height
-  bool readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstParagLine,
-                       std::vector<int> &linesHeight);
-
-  //! read the information ( version <= 3)
-  bool readInformationsV3(int numInfo,
-                          std::vector<MWParserInternal::Information> &informations);
-
-  //! read the information
-  bool readInformations(MWAWEntry const &entry,
-                        std::vector<MWParserInternal::Information> &informations);
-
-  //! read a paragraph
-  bool readParagraph(MWParserInternal::Information const &info);
-
-  //! read a graphics
-  bool readGraphic(MWParserInternal::Information const &info);
-
-  //! read a text zone
-  bool readText(MWParserInternal::Information const &info, std::vector<int> const &lineHeight);
-
-  //! read a page break zone ( version <= 3)
-  bool readPageBreak(MWParserInternal::Information const &info);
-
-  //! check the free list
-  bool checkFreeList();
+  //! try to send the main zone
+  void sendMain();
 
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
@@ -139,18 +98,65 @@ protected:
   //! adds a new page
   void newPage(int number);
 
+
+  //! finds the different zones
+  bool createZones();
+
+  //! send the text structure to the listener
+  bool sendText(MWAWEntry const &entry, bool main=false);
+
+  //
+  // internal level
+  //
+
+  /** try to read a char property */
+  bool readFont(long fPos, MSW1ParserInternal::Font &font);
+
+  /** try to read a paragraph property */
+  bool readParagraph(long fPos, MSW1ParserInternal::Paragraph &para);
+
+  /** try to read the footnote correspondance ( zone2 ) */
+  bool readFootnoteCorrespondance(Vec2i limit);
+
+  /** try to read the document info (zone 3) */
+  bool readDocInfo(Vec2i limit);
+  /** try to read the list of zones: separator between text and footnote? (zone 4) */
+  bool readZones(Vec2i limit);
+  /** try to read the page break (zone 5) */
+  bool readPageBreak(Vec2i limit);
+
+  /** prepare the data: separate header/footer zones to the main stream... */
+  bool prepareTextZones();
+
+  //
+  // low level
+  //
+
+  /** check if an entry is in file */
+  bool isFilePos(long pos);
+  /** shorten an entry if the last character is EOL */
+  void removeLastCharIfEOL(MWAWEntry &entry);
+  /** read the two first zones (char and paragraph) */
+  bool readPLC(Vec2i limits, int wh);
+
+  /** send the character properties */
+  void setProperty(MSW1ParserInternal::Font const &font, MSW1ParserInternal::Font &previousFont);
+  /** send the ruler properties */
+  void setProperty(MSW1ParserInternal::Paragraph const &para);
+
+
 protected:
   //
   // data
   //
   //! the listener
-  MWContentListenerPtr m_listener;
+  MSW1ContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;
 
   //! the state
-  shared_ptr<MWParserInternal::State> m_state;
+  shared_ptr<MSW1ParserInternal::State> m_state;
 
   //! the actual document size
   MWAWPageSpan m_pageSpan;

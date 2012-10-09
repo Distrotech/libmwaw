@@ -1,5 +1,7 @@
 CHANGES:
 
+09/10/2012:
+- add a Microsoft Word parser for v1 and v3 (incomplete)
 09/30/2012:
 - try to improve a little the claris/appleworks parser
   ( reconstruct the table, build the graph structure + begin to

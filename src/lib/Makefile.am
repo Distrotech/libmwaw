@@ -54,6 +54,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MSK4Text.hxx			\
 	MSK4Zone.cxx			\
 	MSK4Zone.hxx			\
+	MSW1Parser.cxx			\
+	MSW1Parser.hxx			\
 	MSWParser.cxx			\
 	MSWParser.hxx			\
 	MSWStruct.cxx			\

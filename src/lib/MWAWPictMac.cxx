@@ -420,7 +420,9 @@ struct Bitmap {
 //
 // Code for version 2, ColorTable, Pixmap, PixPatttern
 //
+//! Internal and low level: a class used to read a color map in a Apple Pict
 struct ColorTable {
+  //! constructor
   ColorTable() : m_flags(0), m_colors() {}
 
   //! tries to read a colortable

@@ -32,7 +32,7 @@
 */
 
 /*
- * parser for Microsoft Word ( version 4.0-5.1 )
+ * parser for Microsoft Word ( version 3.0-5.1 )
  */
 #ifndef MSW_MWAW_PARSER
 #  define MSW_MWAW_PARSER
@@ -112,7 +112,7 @@ public:
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
-  // the main parse function
+  //! the main parse function
   void parse(WPXDocumentInterface *documentInterface);
 
 protected:
@@ -127,6 +127,9 @@ protected:
 
   //! finds the different zones
   bool createZones();
+
+  //! finish reading the header (v3)
+  bool readHeaderEndV3();
 
   //! read the list of zones
   bool readZoneList();

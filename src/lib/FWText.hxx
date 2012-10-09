@@ -130,11 +130,10 @@ protected:
   // low level
   //
 
-  /* send the character properties
-   * \param font the font's properties */
+  /** send the character properties */
   void setProperty(MWAWFont const &font, MWAWFont &previousFont);
 
-  /* send the ruler properties */
+  /** send the ruler properties */
   void setProperty(FWTextInternal::Paragraph const &para);
 
   //! check if the input of the zone points to a paragraph zone, ...

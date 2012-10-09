@@ -39,6 +39,7 @@
 
 #include "MWAWPageSpan.hxx"
 
+/** Low level: namespace used to define/store the data used by MWAWPageSpan */
 namespace MWAWPageSpanInternal
 {
 // intermediate page representation class: for internal use only (by the high-level content/styles listeners). should not be exported.

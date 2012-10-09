@@ -45,13 +45,14 @@ class StorageIO;
 class Stream;
 class StreamIO;
 
+/** class used to read/parse an OLE file */
 class Storage
 {
   friend class Stream;
 
 public:
 
-  // for Storage::result()
+  //! the Storage::result enum
   enum { Ok, OpenFailed, NotOLE, BadOLE, UnknownError };
 
   /**
@@ -85,6 +86,7 @@ public:
   WPXInputStream *getDocumentOLEStream(const std::string &name);
 
 private:
+  /** the internal IO */
   StorageIO *io;
 
   // no copy or assign
@@ -93,6 +95,7 @@ private:
 
 };
 
+/** a small stream used to retrieve a part in a OLE file */
 class Stream
 {
   friend class Storage;
@@ -121,6 +124,7 @@ public:
   unsigned long read( unsigned char *data, unsigned long maxlen );
 
 private:
+  /** the internal IO */
   StreamIO *io;
 
   // no copy or assign

@@ -433,14 +433,35 @@ std::ostream &operator<<(std::ostream &o, MSWText::PLC const &plc)
   return o;
 }
 
+bool MSWText::readHeaderTextLength()
+{
+  long pos = m_input->tell();
+  long endPos = pos+12;
+  if (!m_mainParser->isFilePos(endPos))
+    return false;
+  for (int i = 0; i < 3; i++)
+    m_state->m_textLength[i]= (long) m_input->readULong(4);
+  libmwaw::DebugStream f;
+  f << "FileHeader(textLength):text="
+    << std::hex << m_state->m_textLength[0] << ",";
+  if (m_state->m_textLength[1])
+    f << "footnote=" << m_state->m_textLength[1] << ",";
+  if (m_state->m_textLength[2])
+    f << "headerFooter=" << m_state->m_textLength[2] << ",";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  ascii().addPos(endPos);
+  ascii().addNote("_");
+  return true;
+}
+
 ////////////////////////////////////////////////////////////
 // try to find the different zone
 ////////////////////////////////////////////////////////////
-bool MSWText::createZones(long bot, long (&textLength)[3])
+bool MSWText::createZones(long bot)
 {
+  // int const vers=version();
   m_state->m_bot = bot;
-  for (int i = 0; i < 3; i++)
-    m_state->m_textLength[i]=textLength[i];
 
   std::multimap<std::string, MSWEntry> &entryMap
     = m_mainParser->m_entryMap;
@@ -488,16 +509,21 @@ bool MSWText::createZones(long bot, long (&textLength)[3])
   //! read the header footer limit
   it = entryMap.find("HeaderFooter");
   std::vector<long> hfLimits;
-  if (it != entryMap.end()) { // list of header/footer size
+  if (it != entryMap.end()) {
     readLongZone(it->second, 4, hfLimits);
-    size_t N = hfLimits.size();
-    if (N) {
-      if (version() <= 3) {
-        // we must update the different size
-        m_state->m_textLength[0] -= (hfLimits[N-1]+1);
-        m_state->m_textLength[2] = (hfLimits[N-1]+1);
-      } else if (N >= 2 && hfLimits[N-2] > m_state->m_textLength[2])
-        m_state->m_textLength[2] = hfLimits[N-2];
+
+    long debHeader = m_state->m_textLength[0]+m_state->m_textLength[1];
+    MSWText::PLC plc(MSWText::PLC::HeaderFooter);
+    // list Header0,Footer0,Header1,Footer1,...,Footern, 3
+    for (size_t i = 0; i+2 < hfLimits.size(); i++) {
+      plc.m_id = int(i);
+      m_state->m_plcMap.insert(std::multimap<long,MSWText::PLC>::value_type
+                               (hfLimits[i]+debHeader, plc));
+
+      MWAWEntry entry;
+      entry.setBegin(debHeader+hfLimits[i]);
+      entry.setEnd(debHeader+hfLimits[i+1]);
+      m_state->m_headerFooterZones.push_back(entry);
     }
   }
 
@@ -527,20 +553,6 @@ bool MSWText::createZones(long bot, long (&textLength)[3])
   it = entryMap.find("FootnoteData");
   if (it != entryMap.end()) { // a list of text pos
     readFootnotesData(it->second);
-  }
-  // we can now update the header/footer limits
-  long debHeader = m_state->m_textLength[0]+m_state->m_textLength[1];
-  MSWText::PLC plc(MSWText::PLC::HeaderFooter);
-  // list Header0,Footer0,Header1,Footer1,...,Footern, 3
-  for (size_t i = 0; i+2 < hfLimits.size(); i++) {
-    plc.m_id = int(i);
-    m_state->m_plcMap.insert(std::multimap<long,MSWText::PLC>::value_type
-                             (hfLimits[i]+debHeader, plc));
-
-    MWAWEntry entry;
-    entry.setBegin(debHeader+hfLimits[i]);
-    entry.setEnd(debHeader+hfLimits[i+1]);
-    m_state->m_headerFooterZones.push_back(entry);
   }
 
   it = entryMap.find("ParagList");
@@ -707,14 +719,19 @@ bool MSWText::readFontNames(MSWEntry &entry)
 ////////////////////////////////////////////////////////////
 // read the zone info zone
 ////////////////////////////////////////////////////////////
-bool MSWText::readZoneInfo(MSWEntry &entry)
+bool MSWText::readZoneInfo(MSWEntry entry)
 {
+  if (version()<=3) {
+    MWAW_DEBUG_MSG(("MSWText::readZoneInfo: does not know how to read a zoneInfo in v3 or less\n"));
+    return false;
+  }
   if (entry.length() < 4 || (entry.length()%10) != 4) {
     MWAW_DEBUG_MSG(("MSWText::readZoneInfo: the zone size seems odd\n"));
     return false;
   }
-  long pos = entry.begin();
   entry.setParsed(true);
+
+  long pos = entry.begin();
   m_input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "ZoneInfo:";
@@ -753,7 +770,7 @@ bool MSWText::readZoneInfo(MSWEntry &entry)
       m_state->m_plcMap.insert(std::multimap<long,PLC>::value_type
                                (textPositions[(size_t) i],plc));
     }
-
+    m_input->seek(pos+6, WPX_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
@@ -769,7 +786,9 @@ bool MSWText::readZoneInfo(MSWEntry &entry)
 ////////////////////////////////////////////////////////////
 bool MSWText::readPageBreak(MSWEntry &entry)
 {
-  if (entry.length() < 18 || (entry.length()%14) != 4) {
+  int const vers = version();
+  int const fSz = vers <= 3 ? 8 : 10;
+  if (entry.length() < fSz+8 || (entry.length()%(fSz+4)) != 4) {
     MWAW_DEBUG_MSG(("MSWText::readPageBreak: the zone size seems odd\n"));
     return false;
   }
@@ -778,7 +797,7 @@ bool MSWText::readPageBreak(MSWEntry &entry)
   m_input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "PageBreak:";
-  int N=int(entry.length()/14);
+  int N=int(entry.length()/(fSz+4));
   std::vector<long> textPos; // checkme
   textPos.resize((size_t) N+1);
   for (int i = 0; i <= N; i++) textPos[(size_t) i] = (long) m_input->readULong(4);
@@ -791,7 +810,8 @@ bool MSWText::readPageBreak(MSWEntry &entry)
     for (int j = 1; j < 3; j++) // always -1, 0
       page.m_values[j] = (int) m_input->readLong(2);
     page.m_page = (int) m_input->readLong(2);
-    page.m_values[3] = (int) m_input->readLong(2);
+    if (vers > 3)
+      page.m_values[3] = (int) m_input->readLong(2);
     m_state->m_pageList.push_back(page);
 
     if (textPos[(size_t)i] > m_state->m_textLength[0]) {
@@ -827,11 +847,6 @@ bool MSWText::readFootnotesPos(MSWEntry &entry, std::vector<long> const &noteDef
   if (N+2 != int(noteDef.size())) {
     MWAW_DEBUG_MSG(("MSWText::readFootnotesPos: the number N seems odd\n"));
     return false;
-  }
-  if (version() <= 3) {
-    // we must update the different size
-    m_state->m_textLength[0] -= (noteDef[(size_t)N+1]+1);
-    m_state->m_textLength[1] = (noteDef[(size_t)N+1]+1);
   }
   long pos = entry.begin();
   entry.setParsed(true);
@@ -1050,6 +1065,7 @@ void MSWText::prepareData()
 {
   long cPos = 0;
   long cEnd = 0;
+  int const vers = version();
   for (int i = 0; i < 3; i++) cEnd+=m_state->m_textLength[i];
   if (cEnd <= 0) return;
 
@@ -1062,7 +1078,11 @@ void MSWText::prepareData()
 
   enum { Page=0, ZoneInfo, Section, Normal, TextStruct };
   int paragraphId[TextStruct+1]= {-1,-2,-2,-2,-2};
-  MSWStruct::Paragraph paragraphList[TextStruct+1];
+  MSWStruct::Paragraph paragraphList[TextStruct+1] = {
+    MSWStruct::Paragraph(vers), MSWStruct::Paragraph(vers),
+    MSWStruct::Paragraph(vers), MSWStruct::Paragraph(vers),
+    MSWStruct::Paragraph(vers)
+  };
   libmwaw::DebugStream f, f2;
   PLC::ltstr compare;
 
@@ -1168,7 +1188,7 @@ void MSWText::prepareData()
         if (pId < 0) f << "P" << "_,";
         else {
           f <<  "P" << pId;
-          MSWStruct::Paragraph para;
+          MSWStruct::Paragraph para(vers);
           m_stylesManager->getParagraph
           ((i==TextStruct) ? MSWTextStyles::TextStructZone : MSWTextStyles::TextZone, pId, para);
           f << "=[";
@@ -1183,11 +1203,11 @@ void MSWText::prepareData()
       }
 #endif
       if (pId == -1) {
-        paragraphList[i]=MSWStruct::Paragraph();
+        paragraphList[i]=MSWStruct::Paragraph(vers);
         continue;
       }
 
-      MSWStruct::Paragraph newPara;
+      MSWStruct::Paragraph newPara(vers);
       bool ok = true;
       switch(i) {
       case Section:
@@ -1215,7 +1235,7 @@ void MSWText::prepareData()
     }
 
     if (lastModPos != -1) {
-      MSWStruct::Paragraph newParagraph;
+      MSWStruct::Paragraph newParagraph(vers);
       for (int i = 0; i <= lastModPos; i++) {
         newParagraph.insert(paragraphList[i]);
         paragraphId[i] = -2;
@@ -1224,7 +1244,8 @@ void MSWText::prepareData()
       newParagraph.getFont(paraFont);
       actFont = paraFont;
       actFont.insert(lastFileFont);
-      m_state->m_paragraphMap[cPos]=newParagraph;
+      m_state->m_paragraphMap.insert
+      (std::map<long, MSWStruct::Paragraph>::value_type(cPos,newParagraph));
     }
     if (fontId == -1)
       actFont = paraFont;
@@ -1468,6 +1489,9 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       case 0x18: // checkme hour
       case 0x19: // checkme hour
         m_listener->insertDateTimeField("%H");
+        break;
+      case 0x3: // v3
+        m_listener->insertField(MWAWContentListener::Date);
         break;
       case 0x4:
         m_listener->insertField(MWAWContentListener::Time);

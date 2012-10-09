@@ -57,7 +57,9 @@
 /** Internal: the structures of a CWTable */
 namespace CWTableInternal
 {
+/** Internal: the border of a CWTable */
 struct Border {
+  //! the constructor
   Border() : m_flags(0) {}
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Border const &bord) {
@@ -79,10 +81,12 @@ struct Border {
   int m_flags;
 };
 
+/** Internal: a cell inside a CWTable */
 struct Cell : public MWAWTableCell {
+  //! constructor
   Cell(CWTable &parser) : MWAWTableCell(), m_parser(&parser), m_size(), m_zoneId(0), m_styleId(-1) {
   }
-
+  //! send the cell to a listener
   virtual bool send(MWAWContentListenerPtr listener) {
     if (!listener) return true;
     MWAWCell cell;
@@ -95,6 +99,7 @@ struct Cell : public MWAWTableCell {
     return true;
   }
 
+  //! send the cell content to a listener
   virtual bool sendContent(MWAWContentListenerPtr listener) {
     if (!listener) return true;
     if (m_zoneId <= 0)
@@ -176,7 +181,7 @@ struct State {
   //! constructor
   State() : m_tableMap() {
   }
-
+  //! map id -> table
   std::map<int, shared_ptr<Table> > m_tableMap;
 };
 

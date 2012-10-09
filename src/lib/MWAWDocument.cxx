@@ -44,6 +44,7 @@
 #include "MWProParser.hxx"
 #include "MSK3Parser.hxx"
 #include "MSK4Parser.hxx"
+#include "MSW1Parser.hxx"
 #include "MSWParser.hxx"
 #include "NSParser.hxx"
 #include "WNParser.hxx"
@@ -204,8 +205,13 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       break;
     }
     case MSWORD: {
-      MSWParser parser (ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
+      if (header->getMajorVersion()==1) {
+        MSW1Parser parser (ip, rsrcParser, header.get());
+        parser.parse(documentInterface);
+      } else {
+        MSWParser parser (ip, rsrcParser, header.get());
+        parser.parse(documentInterface);
+      }
       break;
     }
     case MSWORKS: {
@@ -262,7 +268,7 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
   return error;
 }
 
-
+/** structure used to hide some functions needed by MWAWDocument (basically to check if the file is really supported). */
 namespace MWAWDocumentInternal
 {
 /** return the header corresponding to an input. Or 0L if no input are found */
@@ -315,10 +321,14 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
       MDWParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);
     }
-    case MWAWDocument::MSWORD: {
-      MSWParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
+    case MWAWDocument::MSWORD:
+      if (header.getMajorVersion()==1) {
+        MSW1Parser parser (input, rsrcParser, &header);
+        return parser.checkHeader(&header, strict);
+      } else {
+        MSWParser parser(input, rsrcParser, &header);
+        return parser.checkHeader(&header, strict);
+      }
     case MWAWDocument::MSWORKS: {
       if (header.getMajorVersion() < 100) {
         MSK3Parser parser(input, rsrcParser, &header);

@@ -1407,11 +1407,17 @@ bool MWProParser::sendTextBoxZone(int blockId, MWAWPosition const &pos,
 
 namespace MWProParserInternal
 {
+/** Internal and low level: structure used to sort the position of data */
 struct DataPosition {
+  //! constructor
   DataPosition(int type=-1, int id=-1, long pos=0) : m_type(type), m_id(id), m_pos(pos) {}
+  //! the type
   int m_type;
+  //! an id
   int m_id;
+  //! the position
   long m_pos;
+  //! the comparison structure
   struct Compare {
     //! comparaison function
     bool operator()(DataPosition const &p1, DataPosition const &p2) const {

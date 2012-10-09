@@ -668,16 +668,16 @@ bool CWParser::exploreZonesGraph()
 #ifdef DEBUG
   // we have do not have find the root note : probably a database...
   iter = m_state->m_zonesMap.begin();
-  std::cout << "--------------------------------------------------------\n";
-  std::cout << "List of potential main zones : ";
+  std::cerr << "--------------------------------------------------------\n";
+  std::cerr << "List of potential main zones : ";
   for (size_t i = 0; i < numMain; i++)
-    std::cout << rootList[i] << ",";
-  std::cout << "\n";
+    std::cerr << rootList[i] << ",";
+  std::cerr << "\n";
   for ( ; iter != m_state->m_zonesMap.end(); iter++) {
     shared_ptr<CWStruct::DSET> zone = iter->second;
-    std::cout << *zone << "\n";
+    std::cerr << *zone << "\n";
   }
-  std::cout << "--------------------------------------------------------\n";
+  std::cerr << "--------------------------------------------------------\n";
 #endif
   if (numMain == 0) {
     // we have a big problem here, no way to continue
@@ -1017,8 +1017,11 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
       header->setKind(MWAWDocument::K_UNKNOWN);
       break;
     }
-#if 1 || defined(DEBUG)
+#ifdef DEBUG
     if (type >= 0 && type < 5)
+      header->setKind(MWAWDocument::K_TEXT);
+#else
+    if (type == 0 || type == 4)
       header->setKind(MWAWDocument::K_TEXT);
 #endif
   }

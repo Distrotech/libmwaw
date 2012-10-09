@@ -52,14 +52,15 @@ typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
+/** namespace to store the main structure which appears in a Microsoft Word 3.0-5.0 file */
 namespace MSWStruct
 {
 //! generic function use to fill a border using the read data
 MWAWBorder getBorder(int val, std::string &extra);
 
-//! the font structure
+//! the font structure of a Microsoft Word file
 struct Font {
-  enum { NumFlags=9 };
+  enum { NumFlags /** the number of flags needed to store all datas*/=9 };
 
   //! the constructor
   Font(): m_font(MWAWFont(-1,0)), m_size(0), m_value(0), m_picturePos(0), m_unknown(0), m_extra("") {
@@ -91,7 +92,7 @@ struct Font {
   std::string m_extra;
 };
 
-//! the section structure
+//! the section structure of a Microsoft Word file
 struct Section {
   //! constructor
   Section() : m_id(-1), m_type(0), m_paragraphId(-9999), m_col(1),
@@ -110,6 +111,8 @@ struct Section {
   }
   //! try to read a data
   bool read(MWAWInputStreamPtr &input, long endPos);
+  //! try to read a data ( v3 code )
+  bool readV3(MWAWInputStreamPtr &input, long endPos);
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Section const &section);
@@ -132,7 +135,7 @@ struct Section {
   std::string m_extra;
 };
 
-//! the table data
+//! the table in a Microsoft Word file
 struct Table {
   struct Cell;
   //! constructor
@@ -177,10 +180,12 @@ struct Table {
   /** the errors */
   std::string m_extra;
 
-  //! the cells definitions
+  //! the cells definitions in a Microsoft Word Table
   struct Cell {
+    //! constructor
     Cell() : m_borders(), m_backColor(1.0f), m_extra("") {
     }
+    //! update the cell data by merging
     void insert(Cell const &cell) {
       size_t cNumBorders = cell.m_borders.size();
       if (cNumBorders > m_borders.size())
@@ -190,6 +195,7 @@ struct Table {
       m_backColor.insert(cell.m_backColor);
       m_extra+=cell.m_extra;
     }
+    //! returns true if the cell has borders
     bool hasBorders() const {
       for (size_t i = 0; i < m_borders.size(); i++)
         if (m_borders[i].isSet() && m_borders[i]->m_style != MWAWBorder::None)
@@ -198,20 +204,20 @@ struct Table {
     }
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
-    /* the borders TLBR */
+    /** the borders TLBR */
     std::vector<Variable<MWAWBorder> > m_borders;
-    /* the background gray color */
+    /** the background gray color */
     Variable<float> m_backColor;
-    /* extra data */
+    /** extra data */
     std::string m_extra;
   };
 };
 
-//! the paragraph structure
+//! the paragraph structure of a Microsoft Word file
 struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Paragraph() : MWAWParagraph(), m_dim(), m_font(), m_font2(), m_modFont(), m_section(),
-    m_inCell(false), m_tableDef(false), m_table() {
+  Paragraph(int version) : MWAWParagraph(), m_version(version), m_dim(), m_font(), m_font2(), m_modFont(), m_section(),
+    m_bordersStyle(), m_inCell(false), m_tableDef(false), m_table() {
   }
   //! insert the new values
   void insert(Paragraph const &para, bool insertModif=true) {
@@ -231,6 +237,8 @@ struct Paragraph : public MWAWParagraph {
       m_section = para.m_section;
     else if (para.m_section.isSet())
       m_section->insert(*para.m_section);
+    if (!m_bordersStyle.isSet() || para.m_bordersStyle.isSet())
+      m_bordersStyle = para.m_bordersStyle;
     m_inCell.insert(para.m_inCell);
     if (!m_table.isSet())
       m_table = para.m_table;
@@ -252,12 +260,16 @@ struct Paragraph : public MWAWParagraph {
   //! operator<<
   void print(std::ostream &o, MWAWFontConverterPtr m_convertissor) const;
 
+  //! the file version
+  int m_version;
   //! the dimension
   Variable<Vec2f> m_dim;
   //! the font (simplified)
   Variable<Font> m_font, m_font2 /** font ( not simplified )*/, m_modFont /** font (modifier) */;
   //! the section
   Variable<Section> m_section;
+  //! the border style ( old v3)
+  Variable<MWAWBorder> m_bordersStyle;
   //! a cell/textbox
   Variable<bool> m_inCell;
   //! a table flag

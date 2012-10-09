@@ -44,6 +44,7 @@
 
 #include "libmwaw_internal.hxx"
 
+/** namespace to store the main structure which appears in a Claris Works file */
 namespace CWStruct
 {
 //! main structure which correspond to a document part
@@ -213,10 +214,12 @@ struct DSET {
   //! an internal variable used to do some computation
   mutable int m_internal;
 
-  //! contructor
+  //! structure used to define the child of a DSET structure
   struct Child {
+    /** the different types */
     enum Type { ZONE, TEXT, GRAPHIC, TABLE, UNKNOWN };
 
+    //! constructor
     Child() : m_type(UNKNOWN), m_id(-1), m_posC(-1), m_box() {
     }
 
