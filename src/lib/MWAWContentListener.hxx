@@ -186,6 +186,9 @@ public:
   void startDocument();
   void endDocument();
   void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
+  /** return try if a subdocument is open  */
+  bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
+  /** returns true if the header/footer is open */
   bool isHeaderFooterOpened() const;
 
   // ------ text data -----------

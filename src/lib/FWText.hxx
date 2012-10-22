@@ -51,7 +51,6 @@ typedef class MWAWContentListener FWContentListener;
 typedef shared_ptr<FWContentListener> FWContentListenerPtr;
 
 class MWAWFont;
-
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
@@ -60,6 +59,7 @@ namespace FWTextInternal
 struct Font;
 struct Paragraph;
 
+struct LineHeader;
 struct Zone;
 
 struct State;
@@ -120,9 +120,6 @@ protected:
   void send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
             MWAWFont &font);
 
-  //! check if a zone is a style zone, if so read it...
-  bool readStyle(shared_ptr<FWEntry> zone);
-
   //! sort the different zones, finding the main zone, ...
   void sortZones();
 
@@ -136,16 +133,17 @@ protected:
   /** send the ruler properties */
   void setProperty(FWTextInternal::Paragraph const &para);
 
+  //! try to read the header of a line
+  bool readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::LineHeader &lHeader);
+
   //! check if the input of the zone points to a paragraph zone, ...
-  bool readParagraph(shared_ptr<FWEntry> zone);
+  bool readParagraphTabs(shared_ptr<FWEntry> zone, int id=-1);
+
+  //! try to read the paragraph modifier zone (Zone1f)
+  bool readParagraphMod(shared_ptr<FWEntry> zone, int id);
 
   //! check if the input of the zone points to the columns definition, ...
   bool readColumns(shared_ptr<FWEntry> zone);
-
-  //! check if the input of the zone points to the correspondance definition, ...
-  bool readCorrespondance(shared_ptr<FWEntry> zone, bool extraCheck=false);
-  //! check if the input of the zone points to a custom style, ...
-  bool readStyleName(shared_ptr<FWEntry> zone);
 
 private:
   FWText(FWText const &orig);

@@ -83,11 +83,11 @@ struct FWEntry : public MWAWEntry {
 
   //! the input
   MWAWInputStreamPtr m_input;
-  //! the flags definition id
-  int m_flagsId;
   //! the next entry id
   int m_nextId;
-  //! the type id
+  //! the zone type id find in DStruct
+  int m_type;
+  //! the type id (find in FZoneFlags)
   int m_typeId;
   //! some unknown values
   int m_values[3];
@@ -102,8 +102,8 @@ private:
 
 namespace FWParserInternal
 {
+struct DocZoneData;
 struct State;
-struct Font;
 class SubDocument;
 }
 
@@ -144,11 +144,11 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
+  //! create the file zone ( first step of create zones)
+  bool createFileZones();
+
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
-
-  //! read the print info zone
-  bool readPrintInfo();
 
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
@@ -158,17 +158,20 @@ protected:
   //! adds a new page
   void newPage(int number);
 
-  //! try to send a footnote/endnote entry
-  void sendText(int id, libmwaw::SubDocumentType type, int which=0);
-
   //! find the last position of the document and read data
   bool readDocPosition();
 
-  //! try to read the zones main flags
-  bool readZoneFlags(shared_ptr<FWEntry> zone);
+  //! try to read the file zones main flags
+  bool readFileZoneFlags(shared_ptr<FWEntry> zone);
 
-  //! try to read the zone position
-  bool readZonePos(shared_ptr<FWEntry> zone);
+  //! try to read the file zones position
+  bool readFileZonePos(shared_ptr<FWEntry> zone);
+
+  //! try to read the zone containing the data of each doc zone (ie. Zone0)
+  bool readDocZoneData(shared_ptr<FWEntry> zone);
+
+  //! try to read the zone which stores the structure of zone0, ...  (ie. Zone1)
+  bool readDocZoneStruct(shared_ptr<FWEntry> zone);
 
   //! check if a zone is a graphic zone, ...
   bool readGraphic(shared_ptr<FWEntry> zone);
@@ -176,16 +179,47 @@ protected:
   //! send a graphic to a listener (if it exists)
   bool sendGraphic(shared_ptr<FWEntry> zone);
 
-  //! check if a zone is a unknown zone, ...
-  bool readUnkn0(shared_ptr<FWEntry> zone);
-
-  //! check if a zone is the document information zone, ...
+  //! try to read zone2, a zone which stores the document information zone, ...
   bool readDocInfo(shared_ptr<FWEntry> zone);
+
+  //! try to read the end of zone2 (only v2) ?
+  bool readEndDocInfo(shared_ptr<FWEntry> zone);
+
+  //! try to read the list of citation (at the end of doc info)
+  bool readCitationDocInfo(shared_ptr<FWEntry> zone);
+
+  //! try read the print info zone
+  bool readPrintInfo(shared_ptr<FWEntry> zone);
 
   //
   // interface to the text parser
   //
-  bool send(int zId);
+
+  //! try to send a footnote/endnote entry
+  void sendText(int docId, libmwaw::SubDocumentType type, int which=0);
+  //! try to send a graphic
+  void sendGraphic(int docId);
+  //! try to send a variable, in pratice do nothing
+  void sendVariable(int docId);
+  //! try to send a reference, in pratice do nothing
+  void sendReference(int docId);
+  //! ask the text parser to send a zone
+  bool send(int fileId);
+
+  //
+  // low level
+  //
+
+  //! try to read the data of zone 13 or 14 (unknown zone)
+  bool readDoc1314Data(shared_ptr<FWEntry> zone, FWParserInternal::DocZoneData &doc);
+  //! try to read the graphic data
+  bool readGraphicData(shared_ptr<FWEntry> zone, FWParserInternal::DocZoneData &doc);
+  //! try to read the reference data
+  bool readReferenceData(shared_ptr<FWEntry> zone);
+  //! try to read the data header of <<classical>> zone
+  bool readDocDataHeader(shared_ptr<FWEntry> zone, FWParserInternal::DocZoneData &doc);
+  //! try to read the data of a zone which begins with a generic header
+  bool readGenericDocData(shared_ptr<FWEntry> zone, FWParserInternal::DocZoneData &doc);
 
 protected:
   //

@@ -1,5 +1,12 @@
 CHANGES:
 
+21/10/2012:
+- try to improve a little the FullWrite Professional parser
+  ( understand better two of the three main structures + begin to
+    send rulers, some anchor picture and some variable picture )
+
+10/31/2012: ----- version 1.3 ---------
+
 09/10/2012:
 - add a Microsoft Word parser for v1 and v3 (incomplete)
 09/30/2012:

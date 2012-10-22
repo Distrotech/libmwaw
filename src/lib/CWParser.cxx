@@ -976,7 +976,7 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
     typePos = 249;
     break;
   case 4:
-    typePos = 257;
+    typePos = 256;
     break;
   case 5:
     typePos = 268;

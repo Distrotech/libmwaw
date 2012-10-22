@@ -92,6 +92,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::FULLW, 1));
         return res;
       }
+      if (type=="FWRI") {
+        res.push_back(MWAWHeader(MWAWDocument::FULLW,2));
+        return res;
+      }
     } else if (creator=="MACA") {
       if (type=="WORD") {
         res.push_back(MWAWHeader(MWAWDocument::MW, 1));

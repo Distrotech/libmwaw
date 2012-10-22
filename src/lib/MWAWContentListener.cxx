@@ -1277,7 +1277,7 @@ void MWAWContentListener::resetNoteNumber(const NoteType noteType, int number)
 void MWAWContentListener::insertNote(const NoteType noteType, MWAWSubDocumentPtr &subDocument)
 {
   if (m_ps->m_isNote) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertNote try to insert a note recursively (ingnored)\n"));
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertNote try to insert a note recursively (ignored)\n"));
     return;
   }
   WPXString label("");
@@ -1287,7 +1287,7 @@ void MWAWContentListener::insertNote(const NoteType noteType, MWAWSubDocumentPtr
 void MWAWContentListener::insertLabelNote(const NoteType noteType, WPXString const &label, MWAWSubDocumentPtr &subDocument)
 {
   if (m_ps->m_isNote) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertLabelNote try to insert a note recursively (ingnored)\n"));
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertLabelNote try to insert a note recursively (ignored)\n"));
     return;
   }
 
@@ -1337,7 +1337,7 @@ void MWAWContentListener::insertLabelNote(const NoteType noteType, WPXString con
 void MWAWContentListener::insertComment(MWAWSubDocumentPtr &subDocument)
 {
   if (m_ps->m_isNote) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertComment try to insert a note recursively (ingnored)"));
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertComment try to insert a note recursively (ignored)\n"));
     return;
   }
 
@@ -1709,6 +1709,14 @@ void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libm
   }
   _endSubDocument();
   _popParsingState();
+}
+
+bool MWAWContentListener::isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const
+{
+  if (!m_ps->m_inSubDocument)
+    return false;
+  subdocType = m_ps->m_subDocumentType;
+  return true;
 }
 
 bool MWAWContentListener::isHeaderFooterOpened() const
