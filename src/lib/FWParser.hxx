@@ -216,7 +216,7 @@ protected:
   bool readGraphicData(shared_ptr<FWEntry> zone, FWParserInternal::DocZoneData &doc);
   //! try to read the reference data
   bool readReferenceData(shared_ptr<FWEntry> zone);
-  //! try to read the data header of <<classical>> zone
+  //! try to read the data header of a classical zone
   bool readDocDataHeader(shared_ptr<FWEntry> zone, FWParserInternal::DocZoneData &doc);
   //! try to read the data of a zone which begins with a generic header
   bool readGenericDocData(shared_ptr<FWEntry> zone, FWParserInternal::DocZoneData &doc);

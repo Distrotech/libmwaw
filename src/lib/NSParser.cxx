@@ -286,7 +286,7 @@ struct State {
   //! constructor
   State() : m_numberingList(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
-    m_numColumns(1), m_columnSep(0.5f), m_footnoteInfo() {
+    m_numColumns(1), m_columnSep(0.5f), m_footnoteInfo(), m_isTextDocument() {
   }
 
   /** the list of numbering */
@@ -299,7 +299,10 @@ struct State {
       m_footerHeight /** the footer height if known */;
   int m_numColumns /** the number of columns */;
   float m_columnSep /** the columns separator */;
+  /** the footnote placement */
   NSStruct::FootnoteInfo m_footnoteInfo;
+  /** a bool to know if we examine a text document or another thing glossary ... */
+  bool m_isTextDocument;
 };
 }
 
@@ -598,6 +601,10 @@ void NSParser::createDocument(WPXDocumentInterface *documentInterface)
 ////////////////////////////////////////////////////////////
 bool NSParser::createZones()
 {
+  MWAWInputStreamPtr input = getInput();
+  std::string type, creator;
+  if (input && input->getFinderInfo(type, creator) && type != "TEXT")
+    m_state->m_isTextDocument = false;
   std::multimap<std::string, MWAWEntry> &entryMap
     = getRSRCParser()->getEntriesMap();
   std::multimap<std::string, MWAWEntry>::iterator it;
@@ -631,12 +638,48 @@ bool NSParser::createZones()
     MWAWEntry &entry = it++->second;
     readINFO(entry);
   }
+  it = entryMap.lower_bound("ABBR");
+  while (it != entryMap.end()) {
+    if (it->first != "ABBR")
+      break;
+    MWAWEntry &entry = it++->second;
+    readABBR(entry);
+  }
+  it = entryMap.lower_bound("FTA2");
+  while (it != entryMap.end()) {
+    if (it->first != "FTA2")
+      break;
+    MWAWEntry &entry = it++->second;
+    readFTA2(entry);
+  }
+  it = entryMap.lower_bound("FnSc");
+  while (it != entryMap.end()) {
+    if (it->first != "FnSc")
+      break;
+    MWAWEntry &entry = it++->second;
+    readFnSc(entry);
+  }
+  /** find also the resources :
+      - alis: seems to contains data and some strings
+      - OPEN: seems to contains one string: author? (size 0x20)
+      - INF2: seems to contain some colors and some data (size 0x222)
+      - sect: in two files: 010[1|a]0000acc0015f0000000[1|6]000... (size 0x24)
+  */
 
   if (!m_textParser->createZones())
     return false;
   m_graphParser->createZones();
 
   // numbering, mark, variable, version, ...
+  it = entryMap.lower_bound("CNAM"); // numbering name added in v5, v6
+  while (it != entryMap.end()) {
+    if (it->first != "CNAM")
+      break;
+    MWAWEntry &entry = it++->second;
+    std::vector<std::string> list;
+    readStringsList(entry, list, true);
+  }
+
   it = entryMap.lower_bound("DSPL");
   while (it != entryMap.end()) {
     if (it->first != "DSPL")
@@ -746,20 +789,32 @@ bool NSParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   if (!getRSRCParser())
     return false;
   MWAWRSRCParser::Version vers;
-  MWAWEntry entry = getRSRCParser()->getEntry("vers", 1);
+  // read the Nisus version
+  int nisusVersion = -1;
+  MWAWEntry entry = getRSRCParser()->getEntry("vers", 2002);
+  if (!entry.valid()) entry = getRSRCParser()->getEntry("vers", 2);
+  if (entry.valid() && getRSRCParser()->parseVers(entry, vers))
+    nisusVersion = vers.m_majorVersion;
+  else if (nisusVersion==-1) {
+    MWAW_DEBUG_MSG(("NSParser::checkHeader: can not find the Nisus version\n"));
+  }
+
+  // read the file format version
+  entry = getRSRCParser()->getEntry("vers", 1);
   if (!entry.valid() || !getRSRCParser()->parseVers(entry, vers)) {
-    MWAW_DEBUG_MSG(("NSParser::checkHeader: can not find the version\n"));
+    MWAW_DEBUG_MSG(("NSParser::checkHeader: can not find the Nisus file format version\n"));
     return false;
   }
   switch(vers.m_majorVersion) {
   case 3:
   case 4:
-    MWAW_DEBUG_MSG(("NSParser::checkHeader: find Nisus file version %d\n", vers.m_majorVersion));
+    MWAW_DEBUG_MSG(("NSParser::checkHeader: find Nisus %d file with file format version %d\n", nisusVersion, vers.m_majorVersion));
     break;
   default:
-    MWAW_DEBUG_MSG(("NSParser::checkHeader: find Nisus file with unknown version %d\n", vers.m_majorVersion));
+    MWAW_DEBUG_MSG(("NSParser::checkHeader: find Nisus %d file with unknown file format version %d\n", nisusVersion, vers.m_majorVersion));
     return false;
   }
+
   setVersion(vers.m_majorVersion);
   if (header)
     header->reset(MWAWDocument::NISUSW, version());
@@ -770,7 +825,7 @@ bool NSParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 ////////////////////////////////////////////////////////////
 // read a list of string
 ////////////////////////////////////////////////////////////
-bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> &list)
+bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> &list, bool simpleList)
 {
   list.resize(0);
   if (!entry.valid() && entry.length()!=0) {
@@ -790,32 +845,35 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
   while(!input->atEOS()) {
     pos = input->tell();
     if (pos == entry.end()) break;
-    if (pos+2 > entry.end()) {
-      f.str("");
-      f << entry.type() << "###";
-      rsrcAscii().addPos(pos);
-      rsrcAscii().addNote(f.str().c_str());
-
-      MWAW_DEBUG_MSG(("NSParser::readStringsList: can not read strings\n"));
-      return false;
-    }
-    int sz = (int)input->readULong(2);
-    if (pos+2+sz > entry.end()) {
-      f.str("");
-      f << entry.type() << "###";
-      rsrcAscii().addPos(pos);
-      rsrcAscii().addNote(f.str().c_str());
-
-      MWAW_DEBUG_MSG(("NSParser::readStringsList: zone size is bad\n"));
-      return false;
-    }
+    long endPos = entry.end();
     f.str("");
     f << entry.type() << list.size() << ":";
+
+    if (!simpleList) {
+      if (pos+2 > entry.end()) {
+        f << "###";
+        rsrcAscii().addPos(pos);
+        rsrcAscii().addNote(f.str().c_str());
+
+        MWAW_DEBUG_MSG(("NSParser::readStringsList: can not read strings\n"));
+        return false;
+      }
+      int sz = (int)input->readULong(2);
+      endPos = pos+2+sz;
+      if (pos+2+sz > entry.end()) {
+        f.str("");
+        f << "###";
+        rsrcAscii().addPos(pos);
+        rsrcAscii().addNote(f.str().c_str());
+
+        MWAW_DEBUG_MSG(("NSParser::readStringsList: zone size is bad\n"));
+        return false;
+      }
+    }
 
     /* checkme: in STNM we can have a list of string, it is general or
        do we need to create a new functionNSParser::readStringsListList
      */
-    long endPos = pos+2+sz;
     std::string str("");
     while (input->tell() < endPos-1) {
       int pSz = (int)input->readULong(1);
@@ -835,11 +893,13 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
         str1 += (char) input->readULong(1);
       f << str1 << ",";
       str += str1;
+      if (simpleList) continue;
       if ((pSz%2)==0) input->seek(1,WPX_SEEK_CUR);
     }
     list.push_back(str);
     rsrcAscii().addPos(pos);
     rsrcAscii().addNote(f.str().c_str());
+    if (simpleList) break;
   }
   return true;
 }
@@ -1184,7 +1244,7 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
   size_t numData = mainData.m_childList.size();
   NSParserInternal::Zone &zone = m_state->m_zones[(int) data.m_info->m_zoneType];
   MWAWInputStreamPtr input = rsrcInput();
-  libmwaw::DebugStream f;
+  libmwaw::DebugStream f, f2;
 
   size_t n = 0;
   bool pbFound = false;
@@ -1317,7 +1377,29 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
         f << mark;
         break;
       }
-      case 220: // find with size 0x24
+      case 220: {
+        if (entry.length()==0) break;
+        if (entry.length()%12) {
+          MWAW_DEBUG_MSG(("NSParser::readReference: unexpected length for type 220\n"));
+          f << "###sz";
+          break;
+        }
+        int N=int(entry.length()/12);
+        for (int j = 0; j < N ; j++) {
+          long actPos = input->tell();
+          f2.str("");
+          f2 << "Reference2[" << j << "]:type=220,";
+          val = long(input->readULong(4)); // always 0?
+          if (val) f << "unkn=" << val << ",";
+          // unknown, maybe some dim...
+          f2 << "dim?=" << float(input->readLong(4))/65536.f << "<->";
+          f2 << float(input->readLong(4))/65536.f << ",";
+          rsrcAscii().addPos(actPos);
+          rsrcAscii().addNote(f2.str().c_str());
+          input->seek(actPos+12, WPX_SEEK_SET);
+        }
+        break;
+      }
       case 300: // find with size 0x28
         break;
       default:
@@ -1378,17 +1460,23 @@ bool NSParser::readSGP1(NSStruct::RecursifData const &data)
       input->seek(pos, WPX_SEEK_SET);
       f.str("");
       switch(child.m_type) {
-      case 110:
+      case 110: {
         if (child.m_entry.length()==0) break;
-        if (child.m_entry.length()!=4) {
+        if (child.m_entry.length()%4) {
           MWAW_DEBUG_MSG(("NSParser::readSGP1: unexpected length for type 110\n"));
           f << "###sz";
           break;
         }
-        // find 2c
-        val = input->readLong(4);
-        f << "val=" << val << ",";
+        // find some increasing sequence here
+        int N=int(child.m_entry.length()/4);
+        f << "unkn=[";
+        for (int j = 0; j < N; j++) {
+          val = input->readLong(4);
+          f << val << ",";
+        }
+        f << "]";
         break;
+      }
       case 120:
       case 200: { /* checkme: always find mSz=0 here */
         if (child.m_entry.length()==0) {
@@ -1581,7 +1669,8 @@ bool NSParser::readPageLimit(MWAWEntry const &entry)
   Vec2i RB=boxes[0][1]-boxes[1][1];
   bool dimOk=pageDim[0] > 0 && pageDim[1] > 0 &&
              LT[0] >= 0 && LT[1] >= 0 && RB[0] >= 0 && RB[1] >= 0;
-  if (!dimOk) {
+  if (!dimOk && m_state->m_isTextDocument) {
+    // can be ok in a glossary: in this case, all values can be 0
     MWAW_DEBUG_MSG(("NSParser::readPageLimit: the page margins seems odd\n"));
     f << "###dim,";
   }
@@ -1592,7 +1681,8 @@ bool NSParser::readPageLimit(MWAWEntry const &entry)
   }
   int numColumns = (int) input->readLong(2)+1;
   int colSeps = (int) input->readLong(2);
-  if (numColumns <= 0 || numColumns > 8 || colSeps < 0 || colSeps*numColumns >= pageDim[0]) {
+  if (!dimOk) ;
+  else if (numColumns <= 0 || numColumns > 8 || colSeps < 0 || colSeps*numColumns >= pageDim[0]) {
     MWAW_DEBUG_MSG(("NSParser::readPageLimit: the columns definition seems odd\n"));
     f << "###";
   } else {
@@ -1760,7 +1850,9 @@ bool NSParser::readCPRC(MWAWEntry const &entry)
   else
     f << "Entries(CPRC):";
 
-  // find only 0...
+  /** find only 0...
+      except one time f0=1[id?], f4=1900 f6=206c [2pos?]
+   */
   for (int i = 0; i < int(entry.length())/2; i++) {
     int val = (int) input->readULong(2);
     if (val) f << "#f" << i << "=" << std::hex << val << std::dec << ",";
@@ -1810,6 +1902,144 @@ bool NSParser::readCNTR(MWAWEntry const &entry, int zoneId)
   f.str("");
   f << "VariabCntr(II)";
   rsrcAscii().addPos(input->tell());
+  rsrcAscii().addNote(f.str().c_str());
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+//! read the ABBR resource: a list of abreviation ?
+////////////////////////////////////////////////////////////
+bool NSParser::readABBR(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.length()%32) {
+    MWAW_DEBUG_MSG(("NSParser::readABBR: the entry is bad\n"));
+    return false;
+  }
+  if (entry.id() != 1003) {
+    MWAW_DEBUG_MSG(("NSParser::readABBR: the entry id %d is odd\n", entry.id()));
+  }
+  entry.setParsed(true);
+  MWAWInputStreamPtr input = rsrcInput();
+  long pos = entry.begin();
+  input->seek(pos, WPX_SEEK_SET);
+
+  libmwaw::DebugStream f;
+  int numElt = int(entry.length()/32);
+  for (int n = 0; n < numElt; n++) {
+    pos = input->tell();
+    f.str("");
+    if (n==0) {
+      if (entry.id() != 1003)
+        f << "Entries(ABBR)[#" << entry.id() << "]";
+      else
+        f << "Entries(ABBR)";
+    } else
+      f << "ABBR";
+    f << "[" << n << "]:";
+    long id = input->readLong(4);
+    if (id != long(n))
+      f << "#id=" << id << ",";
+    int sSz = int(input->readULong(1));
+    if (sSz > 27) {
+      MWAW_DEBUG_MSG(("NSParser::readABBR: the string size is bad\n"));
+      f << "##";
+    } else {
+      std::string str("");
+      for (int i = 0; i < sSz; i++)
+        str += char(input->readULong(1));
+      f << "\"" << str << "\",";
+    }
+    rsrcAscii().addPos(n==0 ? pos-4 : pos);
+    rsrcAscii().addNote(f.str().c_str());
+    input->seek(pos+32, WPX_SEEK_SET);
+  }
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+//! read the FTA2 resource: a list of  ?
+////////////////////////////////////////////////////////////
+bool NSParser::readFTA2(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.length()%12) {
+    MWAW_DEBUG_MSG(("NSParser::readFTA2: the entry is bad\n"));
+    return false;
+  }
+  if (entry.id() != 1003) {
+    MWAW_DEBUG_MSG(("NSParser::readFTA2: the entry id %d is odd\n", entry.id()));
+  }
+  entry.setParsed(true);
+  MWAWInputStreamPtr input = rsrcInput();
+  long pos = entry.begin();
+  input->seek(pos, WPX_SEEK_SET);
+
+  libmwaw::DebugStream f;
+  int numElt = int(entry.length()/12);
+  int val;
+  for (int n = 0; n < numElt; n++) {
+    pos = input->tell();
+    f.str("");
+    if (n==0) {
+      if (entry.id() != 1003)
+        f << "Entries(FTA2)[#" << entry.id() << "]";
+      else
+        f << "Entries(FTA2)";
+    } else
+      f << "FTA2";
+    f << "[" << n << "]:";
+    val = int(input->readLong(1)); // 0|ff
+    if (val==-1) f << "f0,";
+    else if (val) f << "f0=" << val << ",";
+    val = int(input->readLong(1)); // 0|6|7|f ( maybe f1=0 if f0=ff )
+    if (val)
+      f << "f1=" << std::hex << val << std::dec << ",";
+    // always 0 excepted f3=0|ff9f|ffc1
+    for (int i = 0; i < 5; i++) {
+      val = int(input->readLong(2));
+      if (val) f << "f" << i+2 << "=" << val << ",";
+    }
+    rsrcAscii().addPos(n==0 ? pos-4 : pos);
+    rsrcAscii().addNote(f.str().c_str());
+    input->seek(pos+12, WPX_SEEK_SET);
+  }
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+//! read the FnSc resource: a list of  ?
+////////////////////////////////////////////////////////////
+bool NSParser::readFnSc(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.length() != 0x42) {
+    MWAW_DEBUG_MSG(("NSParser::readFnSc: the entry is bad\n"));
+    return false;
+  }
+  if (entry.id() != 1003) {
+    MWAW_DEBUG_MSG(("NSParser::readFnSc: the entry id %d is odd\n", entry.id()));
+  }
+  entry.setParsed(true);
+  MWAWInputStreamPtr input = rsrcInput();
+  long pos = entry.begin();
+  input->seek(pos, WPX_SEEK_SET);
+
+  libmwaw::DebugStream f;
+  if (entry.id() != 1003)
+    f << "Entries(FnSc)[#" << entry.id() << "]:";
+  else
+    f << "Entries(FnSc):";
+  long val;
+  val = input->readLong(2); // find 0|3|10|14
+  if (val) f << "f0=" << val << ",";
+  val = (long) input->readULong(2); // find 0|4000|4034
+  if (val) f << "f1=" << std::hex << val << std::dec << ",";
+  for (int i = 0; i < 31; i++) { // always 0?
+    val = input->readLong(2);
+    if (val) f << "f" << i+2 << "=" << val << ",";
+  }
+  rsrcAscii().addPos(pos-4);
   rsrcAscii().addNote(f.str().c_str());
 
   return true;
@@ -1931,5 +2161,4 @@ bool NSParser::readINFO(MWAWEntry const &entry)
 
   return true;
 }
-
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

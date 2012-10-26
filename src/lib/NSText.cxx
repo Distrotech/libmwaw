@@ -651,7 +651,7 @@ bool NSText::createZones()
       break;
     MWAWEntry &entry = it++->second;
     std::vector<std::string> list;
-    m_mainParser->readStringsList(entry, list);
+    m_mainParser->readStringsList(entry, list, false);
   }
   // style link to paragraph name
   it = entryMap.lower_bound("STRL");
@@ -660,7 +660,7 @@ bool NSText::createZones()
       break;
     MWAWEntry &entry = it++->second;
     std::vector<std::string> list;
-    m_mainParser->readStringsList(entry, list);
+    m_mainParser->readStringsList(entry, list, false);
   }
   // style next name
   it = entryMap.lower_bound("STNX");
@@ -669,7 +669,7 @@ bool NSText::createZones()
       break;
     MWAWEntry &entry = it++->second;
     std::vector<std::string> list;
-    m_mainParser->readStringsList(entry, list);
+    m_mainParser->readStringsList(entry, list, false);
   }
 
   // the text zone
@@ -1070,10 +1070,10 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     if (val) f << "#f0=" << val << ",";
 
     para.m_marginsUnit = WPX_INCH;
-    para.m_margins[1] = float(input->readLong(4))/65536.f/72.f;
     para.m_margins[0] = float(input->readLong(4))/65536.f/72.f;
+    para.m_margins[1] = float(input->readLong(4))/65536.f/72.f;
     para.m_margins[2] = float(input->readLong(4))/65536.f/72.f;
-
+    para.m_margins[0] =para.m_margins[0].get()-para.m_margins[1].get();
     wh = int(input->readULong(1));
     switch(wh) {
     case 0:
@@ -1728,8 +1728,13 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
       m_mainParser->sendPicture(actFont.m_pictureId, pictPos);
       break;
     }
+    case 0x3: // checkme: find in some file ( but seems to do nothing )
+      break;
     case 0x9:
       m_listener->insertTab();
+      break;
+    case 0xb:
+      m_listener->insertEOL(true);
       break;
     case 0xc:
       if (!isMain) break;
@@ -1766,7 +1771,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
       std::string content;
       if (!m_mainParser->getReferenceData(zoneId, actVar, fType, content, varValues)) {
         m_listener->insertCharacter(' ');
-        f << "#";
+        f << "#[ref]";
         break;
       }
       if (fType != MWAWContentListener::None)
@@ -1774,9 +1779,10 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
       else if (content.length())
         m_listener->insertUnicodeString(content.c_str());
       else
-        f << "#";
+        f << "#[ref]";
       break;
     }
+    // checkme: find also 0x8, 0x13, 0x15, 0x1e, 0x1f in glossary
     default: {
       int unicode = m_convertissor->unicode (actFont.m_font.id(),c);
       if (unicode == -1) {

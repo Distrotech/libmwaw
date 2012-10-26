@@ -1,5 +1,9 @@
 CHANGES:
 
+26/10/2012
+- minor improvements on the Nisus Parser + find some Nisus 3.4<->6.5 files
+  and check that the parser can read them.
+
 21/10/2012:
 - try to improve a little the FullWrite Professional parser
   ( understand better two of the three main structures + begin to

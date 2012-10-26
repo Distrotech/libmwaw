@@ -344,9 +344,7 @@ void MWAWContentListener::setTextFont(const WPXString &fontName)
 {
   if (fontName == m_ps->m_fontName) return;
   _closeSpan();
-  // FIXME verify that fontName does not contain bad characters,
-  //       if so, pass a unicode string
-  m_ps->m_fontName = fontName;
+  m_ps->m_fontName=fontName;
 }
 
 void MWAWContentListener::setFontSize(const uint16_t fontSize)

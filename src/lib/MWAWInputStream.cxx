@@ -291,6 +291,9 @@ bool MWAWInputStream::unBinHex()
   contentInput->seek(pos+dataLength+rsrcLength+4, WPX_SEEK_SET);
   if (contentInput->tell() != pos+dataLength+rsrcLength+4
       || dataLength<=0 || rsrcLength < 0) {
+    /** note: a empty Nisus file can have a dataLength==0 but as it is empty,
+    ok to do not consider it
+     */
     MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: the data/rsrc fork size seems odd\n"));
     return false;
   }

@@ -135,7 +135,7 @@ protected:
   bool readPageLimit(MWAWEntry const &entry);
 
   //! read a list of strings
-  bool readStringsList(MWAWEntry const &entry, std::vector<std::string> &list);
+  bool readStringsList(MWAWEntry const &entry, std::vector<std::string> &list, bool simpleList);
 
   //! read the INFO info zone, an unknown zone of size 0x23a: to doo
   bool readINFO(MWAWEntry const &entry);
@@ -151,6 +151,12 @@ protected:
 
   //! parse the SGP1 resource: a unknown resource
   bool readSGP1(NSStruct::RecursifData const &data);
+  //! parse the ABBR resource: a list of abreviation?
+  bool readABBR(MWAWEntry const &entry);
+  //! parse the FTA2 resource: a list of ? find in v6 document
+  bool readFTA2(MWAWEntry const &entry);
+  //! parse the FnSc resource: a unknown resource, find in v6 document
+  bool readFnSc(MWAWEntry const &entry);
 
   //! return the input input
   MWAWInputStreamPtr rsrcInput();

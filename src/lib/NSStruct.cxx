@@ -105,19 +105,22 @@ bool RecursifData::read(NSParser &parser, MWAWEntry const &entry)
   int num = 0;
   while (input->tell() != entry.end()) {
     pos = input->tell();
-    f.str("");
-    f << entry.name() << m_level << "-" << num++;
-    if (zoneId) f << "[" << zoneId << "]";
-    f << ":";
+    bool ok = true;
     if (pos+12 > entry.end()) {
       MWAW_DEBUG_MSG(("NSStruct::RecursifData::Read: can not read entry %d\n", num-1));
-      f << "###";
-      asciiFile.addPos(pos);
-      asciiFile.addNote(f.str().c_str());
-      return false;
+      ok = false;
     }
     int level = (int) input->readLong(2);
     if (level != m_level && level != m_level+1) {
+      MWAW_DEBUG_MSG(("NSStruct::RecursifData::Read: find unexpected level for entry %d\n", num-1));
+      ok = false;
+    }
+    f.str("");
+    f << entry.name() << level << "-" << num++;
+    if (zoneId) f << "[" << zoneId << "]";
+    f << ":";
+    if (!ok) {
+      f << "###";
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
       return false;

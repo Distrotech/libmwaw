@@ -139,6 +139,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::NISUSW, 1));
         return res;
       }
+      if (type=="GLOS") { // checkme: glossary, ie. a list of picture/word, keep it ?
+        res.push_back(MWAWHeader(MWAWDocument::NISUSW, 1));
+        return res;
+      }
+      // "edtt": empty file, probably created when the file is edited
     } else if (creator=="PWRI") {
       if (type=="OUTL") {
         res.push_back(MWAWHeader(MWAWDocument::MINDW, 2));

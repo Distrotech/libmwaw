@@ -71,7 +71,7 @@ public:
   -MWPRO: MacWriteII or MacWritePro document
   -MSWORD: MSWord document (v4 v5: basic done)
   -MSWORKS: MSWorks document (v1 v2)
-  -NISUSW: Nisus Writer document (nothing done)
+  -NISUSW: Nisus Writer document : v3.4-v6.5
   -WNOW: WriteNow
   -WPLUS: writerplus document
   */

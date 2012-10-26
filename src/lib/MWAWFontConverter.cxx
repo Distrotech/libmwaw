@@ -543,7 +543,21 @@ MWAWFontConverter::~MWAWFontConverter() {}
 // mac font name <-> id functions
 void MWAWFontConverter::setCorrespondance(int macId, std::string const &name)
 {
-  m_manager->setCorrespondance(macId, name);
+  std::string fName("");
+  static bool first = true;
+  for (size_t c = 0; c < name.length(); c++) {
+    unsigned char ch = (unsigned char)name[c];
+    if (ch > 0x1f && ch < 0x80) {
+      fName+=name[c];
+      continue;
+    }
+    if (first) {
+      MWAW_DEBUG_MSG(("MWAWFontConverter::setCorrespondance: fontName contains bad character\n"));
+      first = false;
+    }
+    fName += 'X';
+  }
+  m_manager->setCorrespondance(macId, fName);
 }
 int MWAWFontConverter::getId(std::string const &name)  const
 {
