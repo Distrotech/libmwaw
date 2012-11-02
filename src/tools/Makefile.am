@@ -1,0 +1,3 @@
+if PLATFORM_DARWIN_WITH_FS
+SUBDIRS = file
+endif

@@ -1,1 +1,1 @@
-SUBDIRS = lib conv
+SUBDIRS = lib conv tools

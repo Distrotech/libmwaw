@@ -291,6 +291,31 @@ AS_IF([test "x$with_sharedptr" = "xboost"], [
 ])
 
 # =========
+# Darwin: check for Carbon file functions
+# =========
+AS_IF([test "x$platform_darwin" = "xyes"], [
+	AC_MSG_CHECKING([for Carbon FSPathMakeRef])
+	AC_COMPILE_IFELSE([
+		AC_LANG_PROGRAM(
+			[[#if defined(__MACH__)]]
+			[[#  include <Carbon/Carbon.h>]]
+			[[#else]]
+			[[#  include <Carbon.h>]]
+			[[#endif]],
+			[[OSStatus result; Boolean isDirectory; FSRef fRef; FSCatalogInfo cInfo;]]
+			[[result = FSPathMakeRef((const UInt8*)"/tmp/", &fRef, &isDirectory);]]
+			[[result=FSGetCatalogInfo (&fRef, kFSCatInfoFinderInfo, &cInfo, NULL, NULL, NULL);]]
+		)
+	], [
+		AC_MSG_RESULT([yes])
+		[with_darwinFS="yes"]
+	], [
+		AC_MSG_RESULT([no])
+	])
+])
+AM_CONDITIONAL(PLATFORM_DARWIN_WITH_FS, [test "x$with_darwinFS" = "xyes"])
+
+# =========
 # Find zlib
 # =========
 AC_ARG_ENABLE([zip],
@@ -345,6 +370,8 @@ src/conv/raw/Makefile
 src/conv/raw/mwaw2raw.rc
 src/conv/text/Makefile
 src/conv/text/mwaw2text.rc
+src/tools/Makefile
+src/tools/file/Makefile
 src/lib/Makefile
 src/lib/libmwaw.rc
 docs/Makefile

@@ -1,17 +1,22 @@
 CHANGES:
 
-26/10/2012
+11/01/2012
+- add a OSX specific tools: mwawFile to allow to find the type of old file
+  ( Note: this tools using specific OSX calls deprecated in 10.8 can
+    probably only compile for mac target 10.4<->10.7 )
+
+10/26/2012
 - minor improvements on the Nisus Parser + find some Nisus 3.4<->6.5 files
   and check that the parser can read them.
 
-21/10/2012:
+10/21/2012:
 - try to improve a little the FullWrite Professional parser
   ( understand better two of the three main structures + begin to
     send rulers, some anchor picture and some variable picture )
 
-10/31/2012: ----- version 1.3 ---------
+09/30/2012: ----- version 1.3 ---------
 
-09/10/2012:
+10/09/2012:
 - add a Microsoft Word parser for v1 and v3 (incomplete)
 09/30/2012:
 - try to improve a little the claris/appleworks parser
