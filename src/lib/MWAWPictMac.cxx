@@ -1935,7 +1935,7 @@ public:
   PictParser() : m_mapIdOp() {
     int numCodes = sizeof(libmwaw_applepict1::s_listCodes)/sizeof(libmwaw_applepict1::OpCode);
     for (int i = 0; i < numCodes; i++)
-      m_mapIdOp[libmwaw_applepict1::s_listCodes[i].m_id] = reinterpret_cast<OpCode const *>(&(libmwaw_applepict1::s_listCodes[i]));
+      m_mapIdOp[libmwaw_applepict1::s_listCodes[i].m_id] = static_cast<OpCode const *>(&(libmwaw_applepict1::s_listCodes[i]));
     numCodes = sizeof(s_listCodes)/sizeof(OpCode);
     for (int i = 0; i < numCodes; i++)
       m_mapIdOp[s_listCodes[i].m_id] = &(s_listCodes[i]);

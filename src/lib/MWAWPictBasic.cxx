@@ -260,6 +260,45 @@ void MWAWPictArc::getGraphicStyleProperty(WPXPropertyList &list) const
 
 ////////////////////////////////////////////////////////////
 //
+//    MWAWPictPath
+//
+////////////////////////////////////////////////////////////
+bool MWAWPictPath::getODGBinary(WPXBinaryData &res) const
+{
+  if (!m_path.length()) {
+    MWAW_DEBUG_MSG(("MWAWPictPath::getODGBinary: the path is not defined\n"));
+    return false;
+  }
+  Box2f bdbox = getBdBox();
+
+  MWAWPropertyHandlerEncoder doc;
+  std::stringstream s;
+  startODG(doc);
+
+  WPXPropertyList list;
+  list.clear();
+  Vec2f pt=bdbox[1]-bdbox[0];
+  list.insert("w",getStringPt(pt.x()).c_str());
+  list.insert("h",getStringPt(pt.y()).c_str());
+  list.insert("path", m_path.c_str());
+  doc.startElement("libmwaw:drawPath", list);
+  doc.endElement("libmwaw:drawPath");
+
+  endODG(doc);
+
+  return doc.getData(res);
+}
+
+void MWAWPictPath::getGraphicStyleProperty(WPXPropertyList &list) const
+{
+  if (!hasSurfaceColor())
+    MWAWPictBasic::getStyle1DProperty(list);
+  else
+    MWAWPictBasic::getStyle2DProperty(list);
+}
+
+////////////////////////////////////////////////////////////
+//
 //    MWAWPictPolygon
 //
 ////////////////////////////////////////////////////////////

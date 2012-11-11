@@ -190,6 +190,8 @@ bool MWAWTable::sendTable(MWAWContentListenerPtr listener)
       }
     }
   }
+
+  sendPreTableData(listener);
   listener->openTable(m_colsSize, WPX_POINT);
   for (size_t r = 0; r < numRows; r++) {
     listener->openTableRow(m_rowsSize[r], WPX_POINT);

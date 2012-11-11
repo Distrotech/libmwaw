@@ -420,7 +420,7 @@ struct Cell : public MWAWTableCell {
     cell.setBorders(m_borderList, border);
     cell.setNumSpannedCells(m_numberCellSpanned);
     if (m_color[0] != 255 || m_color[1] != 255 || m_color[2] != 255)
-      cell.setBackgroundColor(uint32_t((m_color[0]<<16)|(m_color[1]<<8)|m_color[2]));
+      cell.setBackgroundColor(libmwaw::getUInt32(m_color));
     WPXPropertyList propList;
     listener->openTableCell(cell, propList);
     sendContent(listener);

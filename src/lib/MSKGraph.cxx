@@ -214,7 +214,7 @@ struct Zone {
       res = MWAWPosition(box.min()+m_decal, box.size(), WPX_POINT);
       res.setRelativePosition(rel);
       if (rel==MWAWPosition::Paragraph)
-        res.m_wrapping =  MWAWPosition::WRunThrough;
+        res.m_wrapping =  MWAWPosition::WBackground;
     } else if (rel!=MWAWPosition::Page || m_page < 0) {
       res = MWAWPosition(Vec2f(0,0), box.size(), WPX_POINT);
       res.setRelativePosition(MWAWPosition::Char,
@@ -223,7 +223,7 @@ struct Zone {
       res = MWAWPosition(box.min()+m_decal, box.size(), WPX_POINT);
       res.setRelativePosition(MWAWPosition::Page);
       res.setPage(m_page+1);
-      res.m_wrapping =  MWAWPosition::WRunThrough;
+      res.m_wrapping =  MWAWPosition::WBackground;
     }
     if (m_order > 0) res.setOrder(m_order);
     return res;
@@ -231,16 +231,6 @@ struct Zone {
 
   //! the virtual print function
   virtual void print(std::ostream &o) const;
-
-  //! return a string "#rrggbb" to code a color
-  static std::string getColorString(Vec3uc const &col) {
-    std::stringstream s;
-    s << std::hex << std::setfill('0') << "#"
-      << std::setw(2) << int(col[0])
-      << std::setw(2) << int(col[1])
-      << std::setw(2) << int(col[2]);
-    return s.str();
-  }
 
   //! the type
   int m_subType;
@@ -516,14 +506,16 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
   Vec3uc lineColor(0,0,0);
   bool hasLineColor = false;
   if (m_linePattern.hasPattern()) {
-    lineColor = m_linePattern.m_filled*m_lineColor + (1-m_linePattern.m_filled)*m_surfaceColor;
+    lineColor = m_linePattern.m_filled*Vec3f(float(m_lineColor[0]),float(m_lineColor[1]),float(m_lineColor[2]))
+                +(1.f-m_linePattern.m_filled)*Vec3f(float(m_surfaceColor[0]),float(m_surfaceColor[1]),float(m_surfaceColor[2]));
     hasLineColor = true;
   } else if (m_linePattern.m_type == MSKGraphInternal::Pattern::P_None)
     lineW = 0.;
   bool hasSurfaceColor = false;
   Vec3uc surfaceColor(255,255,255);
   if (m_surfacePattern.hasPattern()) {
-    surfaceColor = m_surfacePattern.m_filled*m_surfaceColor + (1-m_surfacePattern.m_filled)*m_lineColor;
+    surfaceColor = m_surfacePattern.m_filled*Vec3f(float(m_surfaceColor[0]),float(m_surfaceColor[1]),float(m_surfaceColor[2]))
+                   + (1-m_surfacePattern.m_filled)*Vec3f(float(m_lineColor[0]),float(m_lineColor[1]),float(m_lineColor[2]));
     hasSurfaceColor = true;
   }
 
@@ -813,7 +805,7 @@ struct TextBox : public Zone {
   //! add frame parameters to propList (if needed )
   virtual void fillFramePropertyList(WPXPropertyList &extras) const {
     if (m_surfaceColor[0]!=255 || m_surfaceColor[1]!=255 || m_surfaceColor[2]!=255)
-      extras.insert("fo:background-color", getColorString(m_surfaceColor).c_str());
+      extras.insert("fo:background-color", libmwaw::getColorString(m_surfaceColor).c_str());
   }
 
   //! the number of positions
@@ -874,7 +866,7 @@ struct TextBoxv4 : public Zone {
   //! add frame parameters to propList (if needed )
   virtual void fillFramePropertyList(WPXPropertyList &extras) const {
     if (m_surfaceColor[0]!=255 || m_surfaceColor[1]!=255 || m_surfaceColor[2]!=255)
-      extras.insert("fo:background-color", getColorString(m_surfaceColor).c_str());
+      extras.insert("fo:background-color", libmwaw::getColorString(m_surfaceColor).c_str());
   }
 
   //! the text of positions (0-0: means no text)
@@ -2717,7 +2709,7 @@ void MSKGraph::sendObjects(MSKGraph::SendData what)
         MWAWPosition pictPos(Vec2f(0,0), what.m_size, WPX_POINT);;
         pictPos.setRelativePosition(MWAWPosition::Char,
                                     MWAWPosition::XLeft, MWAWPosition::YTop);
-        pictPos.m_wrapping =  MWAWPosition::WRunThrough;
+        pictPos.m_wrapping =  MWAWPosition::WBackground;
         m_listener->insertTextBox(pictPos, subdoc);
         return;
       }

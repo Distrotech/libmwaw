@@ -71,6 +71,7 @@ struct ZonePict;
 }
 
 class CWParser;
+class CWStyleManager;
 
 /** \brief the main class to read the graphic part of Claris Works file
  *
@@ -102,19 +103,29 @@ public:
   (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
   //! reads a color map zone ( v4-v6)
-  bool readColorMap(MWAWEntry const &entry);
+  bool readColorList(MWAWEntry const &entry);
 
   //! return the color which corresponds to an id (if possible)
   bool getColor(int id, Vec3uc &col) const;
-protected:
 
+  //! return the pattern percent which corresponds to an id (or -1)
+  float getPatternPercent(int id) const;
+
+  //! return the wall paper color which corresponds to an id (if possible)
+  bool getWallPaperColor(int id, Vec3uc &col) const;
+
+  //! return the line color which corresponds to some ids (if possible)
+  bool getLineColor(CWGraphInternal::Style const style, Vec3uc &col) const;
+  //! return the surface color which corresponds to some ids (if possible)
+  bool getSurfaceColor(CWGraphInternal::Style const style, Vec3uc &col) const;
+protected:
   //! sets the listener in this class and in the helper classes
   void setListener(CWContentListenerPtr listen) {
     m_listener = listen;
   }
 
   //! sends the zone data to the listener (if it exists )
-  bool sendZone(int number, MWAWPosition::AnchorTo anchor);
+  bool sendZone(int number, MWAWPosition pos=MWAWPosition());
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
@@ -123,6 +134,8 @@ protected:
   // Intermediate level
   //
 
+  //! update the group information to choose how to send the group data
+  void updateInformation(CWGraphInternal::Group &group);
   /* read a simple group */
   shared_ptr<CWGraphInternal::Zone> readGroupDef(MWAWEntry const &entry);
 
@@ -213,6 +226,9 @@ protected:
 
   //! the main parser;
   CWParser *m_mainParser;
+
+  //! the style manager
+  shared_ptr<CWStyleManager> m_styleManager;
 
   //! the debug file
   libmwaw::DebugFile &m_asciiFile;

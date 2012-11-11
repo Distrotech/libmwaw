@@ -29,7 +29,8 @@ SLOFILES= \
 	$(SLO)$/CWParser.obj			\
 	$(SLO)$/CWPresentation.obj		\
 	$(SLO)$/CWSpreadsheet.obj		\
-	$(SLO)$/CWTable.obj			\
+	$(SLO)$/CWStruct.obj			\
+	$(SLO)$/CWStyleManager.obj		\
 	$(SLO)$/CWText.obj			\
 	$(SLO)$/FWParser.obj			\
 	$(SLO)$/FWText.obj			\

@@ -159,6 +159,11 @@ public:
    */
   bool sendTable(MWAWContentListenerPtr listener);
 
+  /** a function called just before calling listener->openTable(),
+      to insert extra data
+   */
+  virtual void sendPreTableData(MWAWContentListenerPtr ) {}
+
   /** try to send the table as basic text */
   bool sendAsText(MWAWContentListenerPtr listener);
 

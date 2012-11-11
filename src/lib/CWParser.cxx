@@ -54,6 +54,7 @@
 #include "CWPresentation.hxx"
 #include "CWSpreadsheet.hxx"
 #include "CWStruct.hxx"
+#include "CWStyleManager.hxx"
 #include "CWTable.hxx"
 #include "CWText.hxx"
 
@@ -146,6 +147,10 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
     return;
   }
+  if (m_id == -1) { // a number used to send linked frame
+    listen->insertCharacter(' ');
+    return;
+  }
   if (m_id == 0) {
     MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
     return;
@@ -153,7 +158,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   assert(m_parser);
 
-  reinterpret_cast<CWParser *>(m_parser)->sendZone(m_id, MWAWPosition::Frame);
+  reinterpret_cast<CWParser *>(m_parser)->sendZone(m_id);
 }
 }
 
@@ -163,7 +168,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 CWParser::CWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
   m_pageSpan(), m_pageSpanSet(false), m_databaseParser(), m_graphParser(), m_presentationParser(),
-  m_spreadsheetParser(), m_tableParser(), m_textParser()
+  m_spreadsheetParser(), m_styleManager(), m_tableParser(), m_textParser()
 {
   init();
 }
@@ -185,6 +190,8 @@ void CWParser::init()
   m_pageSpan.setMarginBottom(0.1);
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
+
+  m_styleManager.reset(new CWStyleManager(getInput(), *this, m_convertissor));
 
   m_databaseParser.reset(new CWDatabase(getInput(), *this, m_convertissor));
   m_graphParser.reset(new CWGraph(getInput(), *this, m_convertissor));
@@ -229,6 +236,11 @@ bool CWParser::getColor(int colId, Vec3uc &col) const
   return m_graphParser->getColor(colId, col);
 }
 
+float CWParser::getPatternPercent(int id) const
+{
+  return m_graphParser->getPatternPercent(id);
+}
+
 CWStruct::DSET::Type CWParser::getZoneType(int zId) const
 {
   std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter
@@ -242,6 +254,37 @@ void CWParser::getHeaderFooterId(int &headerId, int &footerId) const
 {
   headerId = m_state->m_headerId;
   footerId = m_state->m_footerId;
+}
+
+void CWParser::checkOrdering(std::vector<int16_t> &vec16, std::vector<int32_t> &vec32) const
+{
+  if (version() < 4) return;
+  int numSmallEndian = 0, numBigEndian = 0;
+  unsigned long val;
+  for (size_t i = 0; i < vec16.size(); i++) {
+    val = (unsigned long)(uint16_t) vec16[i];
+    if ((val & 0xFF00) && !(val & 0xFF))
+      numSmallEndian++;
+    else if ((val&0xFF) && !(val&0xFF00))
+      numBigEndian++;
+  }
+  for (size_t i = 0; i < vec32.size(); i++) {
+    val = (unsigned long)(uint32_t) vec32[i];
+    if ((val & 0xFFFF0000) && !(val & 0xFFFF))
+      numSmallEndian++;
+    else if ((val&0xFFFF) && !(val&0xFFFF0000))
+      numBigEndian++;
+  }
+  if (numBigEndian >= numSmallEndian)
+    return;
+  for (size_t i = 0; i < vec16.size(); i++) {
+    val = (unsigned long)(uint16_t) vec16[i];
+    vec16[i] = (int16_t)((val>>8) & ((val&0xFF)<<8));
+  }
+  for (size_t i = 0; i < vec32.size(); i++) {
+    val = (unsigned long)(uint32_t) vec32[i];
+    vec32[i] = (int32_t)((val>>16) & ((val&0xFFFF)<<16));
+  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -263,7 +306,7 @@ void CWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // interface with the different parser
 ////////////////////////////////////////////////////////////
-bool CWParser::sendZone(int zoneId, MWAWPosition::AnchorTo anchor)
+bool CWParser::sendZone(int zoneId, MWAWPosition position)
 {
   if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
     return false;
@@ -274,7 +317,7 @@ bool CWParser::sendZone(int zoneId, MWAWPosition::AnchorTo anchor)
   switch(zMap->m_fileType) {
   case 0: // group
   case 4: // bitmap
-    res = m_graphParser->sendZone(zoneId, anchor);
+    res = m_graphParser->sendZone(zoneId, position);
     break;
   case 1:
     res = m_textParser->sendZone(zoneId);
@@ -321,12 +364,12 @@ void CWParser::sendFootnote(int zoneId)
   m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
 }
 
-void CWParser::sendZoneInFrame(int zoneId, MWAWPosition pos, WPXPropertyList extras)
+void CWParser::sendZoneInFrame(int zoneId, MWAWPosition pos, WPXPropertyList extras, WPXPropertyList frameExtras)
 {
   if (!m_listener) return;
 
   MWAWSubDocumentPtr subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
-  m_listener->insertTextBox(pos, subdoc, extras);
+  m_listener->insertTextBox(pos, subdoc, extras, frameExtras);
 }
 
 void CWParser::forceParsed(int zoneId)
@@ -800,7 +843,7 @@ bool CWParser::readEndTable()
       readSNAP(entry);
       parsed = true;
     } else if (entry.type() == "STYL") {
-      m_textParser->readSTYLs(entry);
+      m_styleManager->readStyles(entry);
       parsed = true;
     } else if (entry.type() == "DSUM") {
       readDSUM(entry, false);
@@ -1764,6 +1807,9 @@ bool CWParser::readDocHeader()
       if (val != long(input->tell())) {
         input->seek(pos, WPX_SEEK_SET);
         MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not find local position\n"));
+        ascii().addPos(pos);
+        ascii().addNote("#");
+
         return false;
       }
       pos = input->tell();
@@ -1827,7 +1873,7 @@ bool CWParser::readDocHeader()
         ascii().addNote("DocUnkn2");
         break;
       case 1:
-        if (!m_graphParser->readColorMap(entry)) {
+        if (!m_graphParser->readColorList(entry)) {
           input->seek(pos, WPX_SEEK_SET);
           return false;
         }

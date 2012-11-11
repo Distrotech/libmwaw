@@ -75,6 +75,7 @@ class CWDatabase;
 class CWGraph;
 class CWPresentation;
 class CWSpreadsheet;
+class CWStyleManager;
 class CWTable;
 class CWText;
 
@@ -90,6 +91,7 @@ class CWParser : public MWAWParser
   friend class CWGraph;
   friend class CWPresentation;
   friend class CWSpreadsheet;
+  friend class CWStyleManager;
   friend class CWTable;
   friend class CWText;
 
@@ -159,10 +161,11 @@ protected:
   //
 
   //! send a zone
-  bool sendZone(int zoneId, MWAWPosition::AnchorTo anchor= MWAWPosition::Unknown);
+  bool sendZone(int zoneId, MWAWPosition pos=MWAWPosition());
   //! send a zone in a frame
   void sendZoneInFrame(int zoneId, MWAWPosition pos,
-                       WPXPropertyList extras = WPXPropertyList());
+                       WPXPropertyList extras = WPXPropertyList(),
+                       WPXPropertyList frameExtras = WPXPropertyList());
   //! indicate that a zone is already parsed
   void forceParsed(int zoneId);
 
@@ -179,6 +182,9 @@ protected:
 
   //! returns the color corresponding to colId (if possible)
   bool getColor(int colId, Vec3uc &col) const;
+
+  //! return the pattern percent which corresponds to an id (or -1)
+  float getPatternPercent(int id) const;
 
   //! returns the header/footer id
   void getHeaderFooterId(int &headerId, int &footerId) const;
@@ -213,6 +219,9 @@ protected:
    */
   bool readCPRT(MWAWEntry const &entry);
 
+  /** small fonction used to check unusual endian ordering of a list of int16_t, int32_t*/
+  void checkOrdering(std::vector<int16_t> &vec16, std::vector<int32_t> &vec32) const;
+
 protected:
 
 
@@ -245,6 +254,9 @@ protected:
 
   //! the spreadsheet parser
   shared_ptr<CWSpreadsheet> m_spreadsheetParser;
+
+  //! the style manager
+  shared_ptr<CWStyleManager> m_styleManager;
 
   //! the table parser
   shared_ptr<CWTable> m_tableParser;

@@ -45,6 +45,7 @@
 
 #include "CWParser.hxx"
 #include "CWStruct.hxx"
+#include "CWStyleManager.hxx"
 
 #include "CWDatabase.hxx"
 
@@ -204,7 +205,7 @@ struct State {
 CWDatabase::CWDatabase
 (MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWDatabaseInternal::State),
-  m_mainParser(&parser), m_asciiFile(parser.ascii())
+  m_mainParser(&parser), m_styleManager(parser.m_styleManager), m_asciiFile(parser.ascii())
 {
 }
 

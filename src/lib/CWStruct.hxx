@@ -39,10 +39,14 @@
 #  define CW_MWAW_STRUCT
 
 #include <iostream>
+#include <map>
 #include <set>
+#include <string>
 #include <vector>
 
 #include "libmwaw_internal.hxx"
+
+class CWParser;
 
 /** namespace to store the main structure which appears in a Claris Works file */
 namespace CWStruct
@@ -71,97 +75,7 @@ struct DSET {
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, DSET const &doc) {
-    switch(doc.m_type) {
-    case T_Unknown:
-      break;
-    case T_Frame:
-      o << "frame,";
-      break;
-    case T_Header:
-      o << "header,";
-      break;
-    case T_Footer:
-      o << "footer,";
-      break;
-    case T_Footnote:
-      o << "footnote,";
-      break;
-    case T_Main:
-      o << "main,";
-      break;
-    case T_Slide:
-      o << "slide,";
-      break;
-    case T_Table:
-      o << "table,";
-      break;
-    default:
-      o << "#type=" << doc.m_type << ",";
-      break;
-    }
-    switch(doc.m_fileType) {
-    case 0:
-      o << "normal,";
-      break;
-    case 1:
-      o << "text";
-      if (doc.m_textType==0xFF)
-        o << "*,";
-      else if (doc.m_textType)
-        o << "[#type=" << std::hex << doc.m_textType<< std::dec << "],";
-      else
-        o << ",";
-      break;
-    case 2:
-      o << "spreadsheet,";
-      break;
-    case 3:
-      o << "database,";
-      break;
-    case 4:
-      o << "bitmap,";
-      break;
-    case 5:
-      o << "presentation,";
-      break;
-    case 6:
-      o << "table,";
-      break;
-    default:
-      o << "#type=" << doc.m_fileType << ",";
-      break;
-    }
-    o << "id=" << doc.m_id << ",";
-    if (doc.m_fathersList.size()) {
-      o << "fathers=[";
-      std::set<int>::const_iterator it = doc.m_fathersList.begin();
-      for ( ; it != doc.m_fathersList.end(); it++)
-        o << *it << ",";
-      o << "],";
-    }
-    if (doc.m_validedChildList.size()) {
-      o << "child[valided]=[";
-      std::set<int>::const_iterator it = doc.m_validedChildList.begin();
-      for ( ; it != doc.m_validedChildList.end(); it++)
-        o << *it << ",";
-      o << "],";
-    }
-    o << "N=" << doc.m_numData << ",";
-    if (doc.m_dataSz >=0) o << "dataSz=" << doc.m_dataSz << ",";
-    if (doc.m_headerSz >= 0) o << "headerSz=" << doc.m_headerSz << ",";
-    if (doc.m_beginSelection) o << "begSel=" << doc.m_beginSelection << ",";
-    if (doc.m_endSelection >= 0) o << "endSel=" << doc.m_endSelection << ",";
-    for (int i = 0; i < 4; i++) {
-      if (doc.m_flags[i])
-        o << "fl" << i << "=" << std::hex << doc.m_flags[i] << std::dec << ",";
-    }
-    for (size_t i = 0; i < doc.m_childs.size(); i++)
-      o << "child" << i << "=[" << doc.m_childs[i] << "],";
-    for (size_t i = 0; i < doc.m_otherChilds.size(); i++)
-      o << "otherChild" << i << "=" << doc.m_otherChilds[i] << ",";
-    return o;
-  }
+  friend std::ostream &operator<<(std::ostream &o, DSET const &doc);
 
   //! the size of the DSET header
   long m_size;

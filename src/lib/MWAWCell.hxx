@@ -55,6 +55,10 @@ public:
                              HALIGN_FULL, HALIGN_DEFAULT
                            };
 
+  /** the default vertical alignement.
+  \note actually mainly used for table/spreadsheet cell,  not yet implemented */
+  enum VerticalAlignment { VALIGN_TOP, VALIGN_CENTER, VALIGN_BOTTOM, VALIGN_DEFAULT };
+
   /** the different types of cell's field */
   enum Format { F_TEXT, F_NUMBER, F_DATE, F_TIME, F_UNKNOWN };
 
@@ -72,7 +76,7 @@ public:
    */
   //! constructor
   MWAWCellFormat() : m_format(F_UNKNOWN), m_subFormat(0), m_digits(0),
-    m_hAlign(HALIGN_DEFAULT), m_bordersList(),
+    m_hAlign(HALIGN_DEFAULT), m_vAlign(VALIGN_DEFAULT), m_bordersList(),
     m_backgroundColor(0xFFFFFF), m_protected(false) { }
 
   virtual ~MWAWCellFormat() {}
@@ -123,6 +127,15 @@ public:
     m_hAlign = align;
   }
 
+  //! returns the vertical alignement
+  VerticalAlignment vAlignement() const {
+    return m_vAlign;
+  }
+  //! sets the vertical alignement
+  void setVAlignement(VerticalAlignment align) {
+    m_vAlign = align;
+  }
+
   //! return true if the cell has some border
   bool hasBorders() const {
     return m_bordersList.size() != 0;
@@ -163,6 +176,8 @@ protected:
   int m_digits;
   //! the cell alignement : by default nothing
   HorizontalAlignment m_hAlign;
+  //! the vertical cell alignement : by default nothing
+  VerticalAlignment m_vAlign;
   //! the cell border MWAWBorder::Pos
   std::vector<MWAWBorder> m_bordersList;
   //! the backgroung color

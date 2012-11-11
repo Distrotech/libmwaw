@@ -139,7 +139,7 @@ struct MWAWBorder {
   //! constructor
   MWAWBorder() : m_style(Single), m_width(1), m_color(0) { }
   //! return the properties
-  std::string getPropertyValue() const;
+  std::string getPropertyValue(bool tableBorder) const;
 
   //! operator==
   bool operator==(MWAWBorder const &orig) const {
@@ -579,12 +579,23 @@ protected:
   //! the values
   T m_val[3];
 };
+
 /*! \brief Vec3 of unsigned char */
 typedef Vec3<unsigned char> Vec3uc;
 /*! \brief Vec3 of int */
 typedef Vec3<int> Vec3i;
 /*! \brief Vec3 of float */
 typedef Vec3<float> Vec3f;
+
+namespace libmwaw
+{
+//! return a string with format rrggbb
+std::string getColorString(uint32_t col);
+//! return a string with format rrggbb
+std::string getColorString(Vec3uc const &col);
+//! return a uint32_t corresponding to a color
+uint32_t getUInt32(Vec3uc const &color);
+}
 
 /*! \class Box2
  *   \brief small class which defines a 2D Box

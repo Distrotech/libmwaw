@@ -136,6 +136,27 @@ std::string numberingValueToString(NumberingType type, int value)
 }
 }
 
+namespace libmwaw
+{
+uint32_t getUInt32(Vec3uc const &color)
+{
+  return uint32_t(((color[0]&0xFF)<<16) | ((color[1]&0xFF)<<8) | (color[2]&0xFF));
+}
+
+std::string getColorString(uint32_t col)
+{
+  std::stringstream stream;
+  stream << "#" << std::hex << std::setfill('0') << std::setw(6)
+         << (col&0xFFFFFF);
+  return stream.str();
+}
+
+std::string getColorString(Vec3uc const &col)
+{
+  return getColorString(getUInt32(col));
+}
+}
+
 int MWAWBorder::compare(MWAWBorder const &orig) const
 {
   int diff = int(m_style)-int(orig.m_style);
@@ -147,16 +168,26 @@ int MWAWBorder::compare(MWAWBorder const &orig) const
   return 0;
 }
 
-std::string MWAWBorder::getPropertyValue() const
+std::string MWAWBorder::getPropertyValue(bool tableBorder) const
 {
   if (m_style == None) return "";
   std::stringstream stream;
   stream << m_width*0.03 << "cm";
   switch (m_style) {
-  case Single:
   case Dot:
   case LargeDot:
+    if (tableBorder)
+      stream << " dotted";
+    else
+      stream << " solid";
+    break;
   case Dash:
+    if (tableBorder)
+      stream << " dashed";
+    else
+      stream << " solid";
+    break;
+  case Single:
     stream << " solid";
     break;
   case Double:
@@ -166,8 +197,7 @@ std::string MWAWBorder::getPropertyValue() const
   default:
     break;
   }
-  stream << " #" << std::hex << std::setfill('0') << std::setw(6)
-         << (m_color&0xFFFFFF);
+  stream << " " << libmwaw::getColorString(m_color);
   return stream.str();
 }
 

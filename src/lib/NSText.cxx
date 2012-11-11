@@ -1664,7 +1664,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         NSTextInternal::PicturePara &pict = zone.m_pictureParaList[size_t(plc.m_id)];
         MWAWPosition pictPos(pict.m_position.min(), pict.m_position.size(), WPX_POINT);
         pictPos.setRelativePosition(MWAWPosition::Paragraph);
-        pictPos.m_wrapping = MWAWPosition::WRunThrough;
+        pictPos.m_wrapping = MWAWPosition::WBackground;
         m_mainParser->sendPicture(pict.m_id, pictPos);
         break;
       }

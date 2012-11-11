@@ -927,7 +927,7 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
       bool setAll = !m_ps->hasParagraphDifferentBorders();
       for (size_t w = 0; w < m_ps->m_paragraphBorders.size(); w++) {
         MWAWBorder const &border = m_ps->m_paragraphBorders[w];
-        std::string property = border.getPropertyValue();
+        std::string property = border.getPropertyValue(false);
         if (property.length() == 0) continue;
         if (setAll == 0xF) {
           propList.insert("fo:border", property.c_str());
@@ -1472,10 +1472,12 @@ void MWAWContentListener::_handleFrameParameters
 
   if ( pos.m_wrapping ==  MWAWPosition::WDynamic)
     propList.insert( "style:wrap", "dynamic" );
-  else if ( pos.m_wrapping ==  MWAWPosition::WRunThrough) {
+  else if ( pos.m_wrapping ==  MWAWPosition::WBackground) {
     propList.insert( "style:wrap", "run-through" );
     propList.insert( "style:run-through", "background" );
-  } else
+  } else if ( pos.m_wrapping ==  MWAWPosition::WRunThrough)
+    propList.insert( "style:wrap", "run-through" );
+  else
     propList.insert( "style:wrap", "none" );
 
   if (pos.m_anchorTo == MWAWPosition::Paragraph ||
@@ -1903,7 +1905,7 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
 
   std::vector<MWAWBorder> const &borders = cell.borders();
   for (size_t c = 0; c < borders.size(); c++) {
-    std::string property = borders[c].getPropertyValue();
+    std::string property = borders[c].getPropertyValue(true);
     if (property.length() == 0) continue;
     switch(c) {
     case MWAWBorder::Left:
@@ -1948,7 +1950,23 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
     break; // default
   case MWAWCell::HALIGN_FULL:
   default:
-    MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: called with unknown align=%d\n", cell.hAlignement()));
+    MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: called with unknown halign=%d\n", cell.hAlignement()));
+  }
+  // alignement
+  switch(cell.vAlignement()) {
+  case MWAWCell::VALIGN_TOP:
+    propList.insert("style:vertical-align", "top");
+    break;
+  case MWAWCell::VALIGN_CENTER:
+    propList.insert("style:vertical-align", "middle");
+    break;
+  case MWAWCell::VALIGN_BOTTOM:
+    propList.insert("style:vertical-align", "bottom");
+    break;
+  case MWAWCell::VALIGN_DEFAULT:
+    break; // default
+  default:
+    MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: called with unknown valign=%d\n", cell.vAlignement()));
   }
 
   m_ps->m_isTableCellOpened = true;

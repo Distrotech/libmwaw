@@ -35,8 +35,8 @@
  * Parser to Claris Works text document ( table part )
  *
  */
-#ifndef CW_MWAW_TABLE
-#  define CW_MWAW_TABLE
+#ifndef CW_TABLE
+#  define CW_TABLE
 
 #include <list>
 #include <string>
@@ -67,6 +67,7 @@ struct State;
 }
 
 class CWParser;
+class CWStyleManager;
 
 /** \brief the main class to read the text part of Claris Works file
  *
@@ -77,6 +78,7 @@ class CWTable
 {
   friend class CWParser;
   friend struct CWTableInternal::Cell;
+  friend struct CWTableInternal::Table;
 
 public:
   //! constructor
@@ -93,6 +95,9 @@ public:
   //! reads the zone Text DSET
   shared_ptr<CWStruct::DSET> readTableZone
   (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
+
+  //! update the cell
+  void updateCell(CWTableInternal::Cell const &cell, MWAWCell &rCell, WPXPropertyList &pList);
 
 protected:
 
@@ -157,6 +162,9 @@ protected:
 
   //! the main parser;
   CWParser *m_mainParser;
+
+  //! the style manager
+  shared_ptr<CWStyleManager> m_styleManager;
 
   //! the debug file
   libmwaw::DebugFile &m_asciiFile;

@@ -29,7 +29,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWPresentation.hxx		\
 	CWSpreadsheet.cxx		\
 	CWSpreadsheet.hxx		\
+	CWStruct.cxx			\
 	CWStruct.hxx			\
+	CWStyleManager.cxx		\
+	CWStyleManager.hxx		\
 	CWTable.cxx			\
 	CWTable.hxx			\
 	CWText.cxx			\

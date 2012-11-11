@@ -466,7 +466,7 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
     MWAWPosition framePos(pictPos.origin(), pictPos.size(), WPX_POINT);;
     framePos.setRelativePosition(MWAWPosition::Char,
                                  MWAWPosition::XLeft, MWAWPosition::YTop);
-    framePos.m_wrapping =  MWAWPosition::WRunThrough;
+    framePos.m_wrapping =  MWAWPosition::WBackground;
     pictPos.setRelativePosition(MWAWPosition::Frame);
     pictPos.setOrigin(Vec2f(0,0));
     MWAWSubDocumentPtr subdoc
@@ -517,7 +517,7 @@ bool NSGraph::sendPageGraphics()
     }
     MWAWPosition pictPos(box.min()+LT, box.size(), WPX_POINT);
     pictPos.setRelativePosition(MWAWPosition::Page);
-    pictPos.m_wrapping = MWAWPosition::WRunThrough;
+    pictPos.m_wrapping = MWAWPosition::WBackground;
     pictPos.setPage(i+1);
     sendPicture(20000+i, true, pictPos);
   }

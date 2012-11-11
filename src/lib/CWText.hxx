@@ -73,6 +73,7 @@ struct State;
 }
 
 class CWParser;
+class CWStyleManager;
 
 /** \brief the main class to read the text part of Claris Works file
  *
@@ -82,6 +83,7 @@ class CWParser;
 class CWText
 {
   friend class CWParser;
+  friend class CWStyleManager;
 
 public:
   //! constructor
@@ -155,31 +157,11 @@ protected:
 
   // THE NAMED ENTRY
 
-  /* STYL (in v4-6) : styles definition */
-  bool readSTYLs(MWAWEntry const &entry);
-
-  /* read a STYL subzone (in v4-6) */
-  bool readSTYL(int id);
-
-  /* read a STYL sequence */
-  bool readSTYL_STYL(int N, int fSz);
-
-  /* read a STYL Lookup sequence */
-  bool readSTYL_LKUP(int N, int fSz);
-
-  /* read a STYL Name sequence */
-  bool readSTYL_NAME(int N, int fSz);
-
-  /* read a STYL Font Name sequence */
-  bool readSTYL_FNTM(int N, int fSz);
-
-  /* read a STYL Font sequence */
+  /** read a STYL Font sequence */
   bool readSTYL_CHAR(int N, int fSz);
 
-  /* read a STYL Paragraph sequence */
+  /** read a STYL Paragraph sequence */
   bool readSTYL_RULR(int N, int fSz);
-
-  /* style: sequence of zone : 1 by style ?*/
 
   //! returns the debug file
   libmwaw::DebugFile &ascii() {
@@ -208,6 +190,9 @@ protected:
 
   //! the main parser;
   CWParser *m_mainParser;
+
+  //! the style manager
+  shared_ptr<CWStyleManager> m_styleManager;
 
   //! the debug file
   libmwaw::DebugFile &m_asciiFile;

@@ -67,6 +67,7 @@ struct State;
 }
 
 class CWParser;
+class CWStyleManager;
 
 /** \brief the main class to read the text part of Claris Works file
  *
@@ -143,6 +144,9 @@ protected:
 
   //! the main parser;
   CWParser *m_mainParser;
+
+  //! the style manager
+  shared_ptr<CWStyleManager> m_styleManager;
 
   //! the debug file
   libmwaw::DebugFile &m_asciiFile;

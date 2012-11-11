@@ -82,6 +82,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::CW, 1));
         return res;
       }
+      if (type=="CWPR") {
+        res.push_back(MWAWHeader(MWAWDocument::CW, 1, MWAWDocument::K_PRESENTATION));
+        return res;
+      }
     } else if (creator=="FS03") {
       if (type=="WRT+") {
         res.push_back(MWAWHeader(MWAWDocument::WPLUS, 1));
@@ -144,6 +148,16 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
       // "edtt": empty file, probably created when the file is edited
+    } else if (creator=="PSIP") {
+      if (type=="AWWP") {
+        res.push_back(MWAWHeader(MWAWDocument::MSWORKS, 1));
+        return res;
+      }
+    } else if (creator=="PSI2") {
+      if (type=="AWWP") {
+        res.push_back(MWAWHeader(MWAWDocument::MSWORKS, 2));
+        return res;
+      }
     } else if (creator=="PWRI") {
       if (type=="OUTL") {
         res.push_back(MWAWHeader(MWAWDocument::MINDW, 2));

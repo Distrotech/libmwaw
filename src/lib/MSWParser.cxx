@@ -1730,7 +1730,7 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
     MWAWPosition pictPos(pict.m_dim.min(), pict.m_dim.size(), WPX_POINT);;
     pictPos.setRelativePosition(MWAWPosition::Char,
                                 MWAWPosition::XLeft, MWAWPosition::YTop);
-    pictPos.m_wrapping =  MWAWPosition::WRunThrough;
+    pictPos.m_wrapping =  MWAWPosition::WBackground;
     m_listener->insertTextBox(pictPos, subdoc);
     return;
   }
@@ -1738,7 +1738,7 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
   MWAWPosition basicPos(Vec2f(0.,0.), Vec2f(100.,100.), WPX_POINT);
   if (anchor != MWAWPosition::Page && anchor != MWAWPosition::Frame) {
     basicPos.setRelativePosition(anchor, MWAWPosition::XLeft, MWAWPosition::YCenter);
-    basicPos.m_wrapping =  MWAWPosition::WRunThrough;
+    basicPos.m_wrapping =  MWAWPosition::WBackground;
   } else
     basicPos.setRelativePosition(anchor);
 

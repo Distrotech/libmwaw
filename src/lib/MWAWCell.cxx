@@ -75,6 +75,8 @@ int MWAWCellFormat::compare(MWAWCellFormat const &cell) const
   if (diff) return diff;
   diff = int(m_hAlign) - int(cell.m_hAlign);
   if (diff) return diff;
+  diff = int(m_vAlign) - int(cell.m_vAlign);
+  if (diff) return diff;
   diff = int(m_backgroundColor) - int(cell.m_backgroundColor);
   if (diff) return diff;
   diff = int(m_bordersList.size()) - int(cell.m_bordersList.size());
@@ -212,6 +214,20 @@ std::ostream &operator<<(std::ostream &o, MWAWCellFormat const &cell)
     o << ",full";
     break;
   case MWAWCellFormat::HALIGN_DEFAULT:
+  default:
+    break; // default
+  }
+  switch(cell.m_vAlign) {
+  case MWAWCellFormat::VALIGN_TOP:
+    o << ",top";
+    break;
+  case MWAWCellFormat::VALIGN_CENTER:
+    o << ",centered[y]";
+    break;
+  case MWAWCellFormat::VALIGN_BOTTOM:
+    o << ",bottom";
+    break;
+  case MWAWCellFormat::VALIGN_DEFAULT:
   default:
     break; // default
   }

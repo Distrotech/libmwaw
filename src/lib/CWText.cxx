@@ -44,10 +44,11 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
 
-#include "CWText.hxx"
-
 #include "CWParser.hxx"
 #include "CWStruct.hxx"
+#include "CWStyleManager.hxx"
+
+#include "CWText.hxx"
 
 /** Internal: the structures of a CWText */
 namespace CWTextInternal
@@ -194,16 +195,6 @@ void Paragraph::updateListLevel()
   m_listLevel=theLevel;
 }
 
-struct Style {
-  //! constructor
-  Style() : m_fontId(-1), m_paragraphId(-1) {
-  }
-  //! the char
-  int m_fontId;
-  //! the ruler
-  int m_paragraphId;
-};
-
 struct ParagraphInfo {
   ParagraphInfo() : m_styleId(-1), m_unknown(0), m_extra("") {
   }
@@ -275,7 +266,7 @@ enum TokenType { TKN_UNKNOWN, TKN_FOOTNOTE, TKN_PAGENUMBER, TKN_GRAPHIC };
 /** Internal: class to store field definition: TOKN entry*/
 struct Token {
   //! constructor
-  Token() : m_type(TKN_UNKNOWN), m_zoneId(-1), m_page(-1), m_extra("") {
+  Token() : m_type(TKN_UNKNOWN), m_zoneId(-1), m_page(-1), m_descent(0), m_extra("") {
     for (int i = 0; i < 3; i++) m_unknown[i] = 0;
     for (int i = 0; i < 2; i++) m_size[i] = 0;
   }
@@ -289,6 +280,8 @@ struct Token {
   int m_page;
   //! the size(?)
   int m_size[2];
+  //! the descent
+  int m_descent;
   //! the unknown zone
   int m_unknown[3];
   //! a string used to store the parsing errors
@@ -331,6 +324,7 @@ std::ostream &operator<<(std::ostream &o, Token const &tok)
   if (tok.m_zoneId != -1) o << "zoneId=" << tok.m_zoneId << ",";
   if (tok.m_page != -1) o << "page?=" << tok.m_page << ",";
   o << "pos?=" << tok.m_size[0] << "x" << tok.m_size[1] << ",";
+  if (tok.m_descent) o << "descent=" << tok.m_descent << ",";
   for (int i = 0; i < 3; i++) {
     if (tok.m_unknown[i] == 0 || (i==0 && tok.m_type==TKN_PAGENUMBER))
       continue;
@@ -379,26 +373,16 @@ struct Zone : public CWStruct::DSET {
 struct State {
   //! constructor
   State() : m_version(-1), m_paragraphsList(), m_fontsList(),
-    m_stylesList(), m_lookupMap(), m_zoneMap() {
+    m_zoneMap() {
   }
 
-  //! return the ruler corresponding to a styleId
-  int getParagraphId(int styleId) const {
-    if (m_version <= 2)
-      return styleId;
-    if (m_lookupMap.find(styleId) == m_lookupMap.end())
-      return -1;
-    int id = m_lookupMap.find(styleId)->second;
-    if (id < 0 || int(m_stylesList.size()) <= id)
-      return -1;
-    return m_stylesList[(size_t)id].m_paragraphId;
-  }
-
+  //! the file version
   mutable int m_version;
+  //! the list of paragraph
   std::vector<Paragraph> m_paragraphsList;
-  std::vector<MWAWFont> m_fontsList; // used in style
-  std::vector<Style> m_stylesList;
-  std::map<int, int> m_lookupMap;
+  //! the list of fonts
+  std::vector<MWAWFont> m_fontsList;
+  //! the list of text zone
   std::map<int, shared_ptr<Zone> > m_zoneMap;
 };
 
@@ -410,7 +394,7 @@ struct State {
 CWText::CWText
 (MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convert) :
   m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWTextInternal::State),
-  m_mainParser(&parser), m_asciiFile(parser.ascii())
+  m_mainParser(&parser), m_styleManager(parser.m_styleManager), m_asciiFile(parser.ascii())
 {
 }
 
@@ -909,7 +893,8 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   long pos = entry.begin();
 
   int styleSize = 0;
-  switch(version()) {
+  int const vers = version();
+  switch(vers) {
   case 1:
     styleSize = 6;
     break;
@@ -955,7 +940,13 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     if (styleSize >= 8)
       info.m_unknown = (int) m_input->readLong(2);
     f << info;
-    int rulerId = m_state->getParagraphId(info.m_styleId);
+
+    int rulerId = info.m_styleId;
+    if (vers > 2) {
+      CWStyleManager::Style style;
+      m_styleManager->get(rulerId, style);
+      rulerId = style.m_rulerId;
+    }
     if (rulerId >= 0 && rulerId < numParagraphs)
       f << "ruler"<< rulerId << "[" << m_state->m_paragraphsList[(size_t) rulerId] << "]";
     if (long(m_input->tell()) != pos+styleSize)
@@ -1009,6 +1000,7 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   libmwaw::DebugStream f;
   CWTextInternal::PLC plc;
   plc.m_type = CWTextInternal::P_Token;
+  int val;
   for (int i = 0; i < numElt; i++) {
     pos = m_input->tell();
 
@@ -1039,8 +1031,12 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     token.m_page = (int) m_input->readLong(1);
     token.m_unknown[2] =  (int) m_input->readLong(2);
     for (int j = 0; j < 2; j++)
-      token.m_size[j] =  (int) m_input->readLong(2);
-
+      token.m_size[1-j] =  (int) m_input->readLong(2);
+    for (int j = 0; j < 3; j++) {
+      val = (int) m_input->readLong(2);
+      if (val) f << "f" << j << "=" << val << ",";
+    }
+    token.m_descent = (int) m_input->readLong(2);
     token.m_extra = f.str();
     f.str("");
     f << "Token-" << i << ": pos=" << posC << "," << token;
@@ -1323,9 +1319,15 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
             }
             break;
           case CWTextInternal::TKN_GRAPHIC:
-            if (zone.okChildId(token.m_zoneId))
-              m_mainParser->sendZone(token.m_zoneId, MWAWPosition::Char);
-            else
+            if (zone.okChildId(token.m_zoneId)) {
+              // fixme
+              if (token.m_descent != 0) {
+                MWAWPosition tPos(Vec2f(0,float(token.m_descent)), Vec2f(), WPX_POINT);
+                tPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
+                m_mainParser->sendZone(token.m_zoneId, tPos);
+              } else
+                m_mainParser->sendZone(token.m_zoneId);
+            } else
               f << "###";
             break;
           case CWTextInternal::TKN_UNKNOWN:
@@ -1431,28 +1433,6 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
 ////////////////////////////////////////////////////////////
 // the style definition?
 ////////////////////////////////////////////////////////////
-bool CWText::readSTYL_LKUP(int N, int fSz)
-{
-  if (fSz == 0 || N== 0) return true;
-  libmwaw::DebugStream f;
-  for (int i = 0; i < N; i++) {
-    long pos = m_input->tell();
-    f.str("");
-    if (i == 0) f << "Entries(LKUP_STYL): LKUP_STYL-0:";
-    else f << "LKUP_STYL-" << i << ":";
-    int val = (int) m_input->readLong(2);
-    m_state->m_lookupMap[i] = val;
-    f << "styleId=" << val;
-    if (fSz != 2) {
-      ascii().addDelimiter(m_input->tell(), '|');
-      m_input->seek(pos+fSz, WPX_SEEK_SET);
-    }
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-  return true;
-}
-
 bool CWText::readSTYL_CHAR(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
@@ -1484,7 +1464,7 @@ bool CWText::readSTYL_RULR(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
   if (fSz != 108) {
-    MWAW_DEBUG_MSG(("CWText::readSTYL_RULR: Find old ruler size %d\n", fSz));
+    MWAW_DEBUG_MSG(("CWText::readSTYL_RULR: Find odd ruler size %d\n", fSz));
   }
   libmwaw::DebugStream f;
   for (int i = 0; i < N; i++) {
@@ -1500,282 +1480,6 @@ bool CWText::readSTYL_RULR(int N, int fSz)
     }
     m_input->seek(pos+fSz, WPX_SEEK_SET);
   }
-  return true;
-}
-
-bool CWText::readSTYL_NAME(int N, int fSz)
-{
-  if (fSz == 0 || N== 0) return true;
-  libmwaw::DebugStream f;
-  for (int i = 0; i < N; i++) {
-    long pos = m_input->tell();
-    f.str("");
-    if (i == 0) f << "Entries(NAME_STYL): NAME_STYL-0:";
-    else f << "NAME_STYL-" << i << ":";
-    f << "id=" << m_input->readLong(2) << ",";
-    if (fSz > 4) {
-      int nChar = (int) m_input->readULong(1);
-      if (3+nChar > fSz) {
-        static bool first = true;
-        if (first) {
-          MWAW_DEBUG_MSG(("CWText::readSTYL_NAME: pb with name field %d", i));
-          first = false;
-        }
-        f << "#";
-      } else {
-        std::string name("");
-        for (int c = 0; c < nChar; c++)
-          name += char(m_input->readULong(1));
-        f << "'" << name << "'";
-      }
-    }
-    if (long(m_input->tell()) != pos+fSz) {
-      ascii().addDelimiter(m_input->tell(), '|');
-      m_input->seek(pos+fSz, WPX_SEEK_SET);
-    }
-
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool CWText::readSTYL_FNTM(int N, int fSz)
-{
-  if (fSz == 0 || N== 0) return true;
-  if (fSz < 16) return false;
-
-  libmwaw::DebugStream f;
-  for (int i = 0; i < N; i++) {
-    long pos = m_input->tell();
-    f.str("");
-    if (i == 0) f << "Entries(FNTM_STYL): FNTM_STYL-0:";
-    else f << "FNTM_STYL-" << i << ":";
-    f << "unkn=" << m_input->readLong(2) << ",";
-    f << "type?=" << m_input->readLong(2) << ",";
-
-    int nChar = (int) m_input->readULong(1);
-    if (5+nChar > fSz) {
-      static bool first = true;
-      if (first) {
-        MWAW_DEBUG_MSG(("CWText::readSTYL_FNTM: pb with name field %d", i));
-        first = false;
-      }
-      f << "#";
-    } else {
-      std::string name("");
-      bool ok = true;
-      for (int c = 0; c < nChar; c++) {
-        char ch = (char) m_input->readULong(1);
-        if (ch == '\0') {
-          MWAW_DEBUG_MSG(("CWText::readSTYL_FNTM: pb with name field %d\n", i));
-          ok = false;
-          break;
-        } else if (ch & 0x80) {
-          static bool first = true;
-          if (first) {
-            MWAW_DEBUG_MSG(("CWText::readSTYL_FNTM: find odd font\n"));
-            first = false;
-          }
-          ok = false;
-        }
-        name += ch;
-      }
-      f << "'" << name << "'";
-      if (name.length() && ok) {
-        m_convertissor->setCorrespondance(i, name);
-      }
-    }
-    if (long(m_input->tell()) != pos+fSz) {
-      ascii().addDelimiter(m_input->tell(), '|');
-      m_input->seek(pos+fSz, WPX_SEEK_SET);
-    }
-
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool CWText::readSTYL_STYL(int N, int fSz)
-{
-  if (fSz == 0 || N== 0) return true;
-  if (fSz < 28) {
-    MWAW_DEBUG_MSG(("CWText::readSTYL_STYL: Find old ruler size %d\n", fSz));
-    return false;
-  }
-  libmwaw::DebugStream f;
-  int val;
-  for (int i = 0; i < N; i++) {
-    long pos = m_input->tell();
-    CWTextInternal::Style style;
-    f.str("");
-    if (!i)
-      f << "Entries(Style)-0:";
-    else
-      f << "Style-" << i << ":";
-    val = (int) m_input->readLong(2);
-    if (val != -1) f << "f0=" << val << ",";
-    val = (int) m_input->readLong(2);
-    if (val) f << "f1=" << val << ",";
-    f << "used?=" << m_input->readLong(2) << ",";
-    int styleId = (int) m_input->readLong(2);
-    if (i != styleId && styleId != -1) f << "#";
-    f << "styleId=" << styleId << ",";
-    int lookupId = (int) m_input->readLong(2);
-    f << "lookupId=" << lookupId << ",";
-    for (int j = 0; j < 2; j++) {
-      // unknown : hash, dataId ?
-      f << "g" << j << "=" << m_input->readLong(1) << ",";
-    }
-    for (int j = 2; j < 4; j++)
-      f << "g" << j << "=" << m_input->readLong(2) << ",";
-    int lookupId2 = (int) m_input->readLong(2);
-    f << "lookupId2=" << lookupId2 << ",";
-    f << "char=[";
-    style.m_fontId = (int) m_input->readLong(2);
-    f << "id=" << style.m_fontId << ",";
-    f << "hash=" << m_input->readLong(2) << ",";
-    f << "],";
-    f << "graphId?=" << m_input->readLong(2) << ",";
-    f << "ruler=[";
-    style.m_paragraphId = (int) m_input->readLong(2);
-    f << "id=" << style.m_paragraphId << ",";
-    f << "hash=" << m_input->readLong(2) << ",";
-    if (fSz >= 30)
-      f << "unkn=" << m_input->readLong(2);
-    f << "],";
-    m_state->m_stylesList.push_back(style);
-    if (long(m_input->tell()) != pos+fSz)
-      ascii().addDelimiter(m_input->tell(), '|');
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(pos+fSz, WPX_SEEK_SET);
-  }
-  return true;
-}
-
-bool CWText::readSTYL(int id)
-{
-  long pos = m_input->tell();
-  long sz = (long) m_input->readULong(4);
-  long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("CWText::readSTYL: pb with sub zone: %d", id));
-    return false;
-  }
-  m_input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw::DebugStream f;
-  f << "STYL-" << id << ":";
-  if (sz < 16) {
-    if (sz) f << "#";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(endPos, WPX_SEEK_SET);
-    return true;
-  }
-
-  std::string name("");
-  int N = (int) m_input->readLong(2);
-  int type = (int) m_input->readLong(2);
-  int val =  (int) m_input->readLong(2);
-  int fSz =  (int) m_input->readLong(2);
-  f << "N=" << N << ", type?=" << type <<", fSz=" << fSz << ",";
-  if (val) f << "unkn=" << val << ",";
-
-  for (int i = 0; i < 2; i++) {
-    val = (int) m_input->readLong(2);
-    if (val)  f << "f" << i << "=" << val << ",";
-  }
-  for (int i = 0; i < 4; i++)
-    name += char(m_input->readULong(1));
-  f << name;
-
-  long actPos = m_input->tell();
-  if (actPos != pos && actPos != endPos - N*fSz)
-    ascii().addDelimiter(m_input->tell(), '|');
-
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  long numRemain = endPos - actPos;
-  if (N > 0 && fSz > 0 && numRemain >= N*fSz) {
-    m_input->seek(endPos-N*fSz, WPX_SEEK_SET);
-
-    bool ok = false;
-    if (name == "LKUP")
-      ok = readSTYL_LKUP(N, fSz);
-    else if (name == "NAME")
-      ok = readSTYL_NAME(N, fSz);
-    else if (name == "FNTM")
-      ok = readSTYL_FNTM(N, fSz);
-    else if (name == "RULR")
-      ok = readSTYL_RULR(N, fSz);
-    else if (name == "CHAR")
-      ok = readSTYL_CHAR(N, fSz);
-    else if (name == "STYL")
-      ok = readSTYL_STYL(N, fSz);
-
-    if (!ok) {
-      m_input->seek(endPos-N*fSz, WPX_SEEK_SET);
-      for (int i = 0; i < N; i++) {
-        pos = m_input->tell();
-        f.str("");
-        f << "STYL-" << id << "/" << name << "-" << i << ":";
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
-        m_input->seek(fSz, WPX_SEEK_CUR);
-      }
-    }
-  }
-
-  m_input->seek(endPos, WPX_SEEK_SET);
-  return true;
-}
-
-bool CWText::readSTYLs(MWAWEntry const &entry)
-{
-  if (!entry.valid() || entry.type() != "STYL")
-    return false;
-  long pos = entry.begin();
-  m_input->seek(pos+4, WPX_SEEK_SET); // skip header
-  long sz = (long) m_input->readULong(4);
-  if (sz > entry.length()) {
-    MWAW_DEBUG_MSG(("CWText::readSTYLs: pb with entry length"));
-    m_input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-
-  libmwaw::DebugStream f;
-  f << "Entries(STYL):";
-  if (version() <= 3) {
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(entry.end(), WPX_SEEK_SET);
-    return true;
-  }
-  bool limitSet = true;
-  if (version() <= 4) {
-    // version 4 does not contents total length fields
-    m_input->seek(-4, WPX_SEEK_CUR);
-    limitSet = false;
-  } else
-    m_input->pushLimit(entry.end());
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  int id = 0;
-  while (long(m_input->tell()) < entry.end()) {
-    pos = m_input->tell();
-    if (!readSTYL(id)) {
-      m_input->seek(pos, WPX_SEEK_SET);
-      if (limitSet) m_input->popLimit();
-      return false;
-    }
-    id++;
-  }
-  if (limitSet) m_input->popLimit();
-
   return true;
 }
 
@@ -2115,6 +1819,5 @@ void CWText::flushExtra()
     zone->m_parsed = true;
   }
 }
-
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

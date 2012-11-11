@@ -108,6 +108,14 @@ SOURCE=..\..\src\lib\CWSpreadsheet.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\CWStruct.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\CWStyleManager.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\CWTable.cxx
 # End Source File
 # Begin Source File
@@ -341,6 +349,10 @@ SOURCE=..\..\src\lib\CWSpreadsheet.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\CWStruct.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\CWStyleManager.hxx
 # End Source File
 # Begin Source File
 

@@ -52,7 +52,7 @@ public:
    * \param newId system id font
    * \param sz the font size
    * \param f the font attributes bold, ... */
-  MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_flags(f), m_color() {
+  MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_flags(f), m_color(0) {
     resetColor();
   };
   //! inserts the set value in the current font
@@ -69,7 +69,7 @@ public:
   }
   //! resets the font color to black
   void resetColor() {
-    m_color = Vec3uc();
+    m_color = 0;
   }
   //! sets the font id and resets size to the previous size for this font
   void setFont(int newId) {
@@ -90,6 +90,10 @@ public:
   }
   //! sets the font color
   void setColor(Vec3uc color) {
+    m_color = libmwaw::getUInt32(color);
+  }
+  //! sets the font color
+  void setColor(uint32_t color) {
     m_color = color;
   }
   //! returns true if the font id is initialized
@@ -113,7 +117,7 @@ public:
     return m_color.isSet();
   }
   //! returns the font color
-  void getColor(Vec3uc &c) const {
+  void getColor(uint32_t &c) const {
     c = m_color.get();
   }
   //! returns a string which can be used for debugging
@@ -135,10 +139,8 @@ public:
     diff = size() - oth.size();
     if (diff != 0) return diff;
     if (flags() != oth.flags()) return diff;
-    for (int i = 0; i < 3; i++) {
-      diff = m_color.get()[i] - oth.m_color.get()[i];
-      if (diff!=0) return diff;
-    }
+    if (m_color.get() < oth.m_color.get()) return -1;
+    if (m_color.get() > oth.m_color.get()) return 1;
     return diff;
   }
 
@@ -148,7 +150,7 @@ public:
 protected:
   Variable<int> m_id /** font identificator*/, m_size /** font size */;
   Variable<uint32_t> m_flags /** font attributes */;
-  Variable<Vec3uc> m_color /** font color */;
+  Variable<uint32_t> m_color /** font color */;
 };
 
 

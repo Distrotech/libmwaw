@@ -42,6 +42,7 @@
 
 #  include <assert.h>
 #  include <ostream>
+#  include <string>
 #  include <vector>
 
 #  include "libmwaw_internal.hxx"
@@ -62,7 +63,7 @@ class MWAWPropertyHandlerEncoder;
    libmwaw:drawCircle x0=".." y0=".." w=".." h=".." /
    libmwaw:drawArc x0=".." y0=".." w=".." h=".." angle0=".." angle1=".." /
    libmwaw:drawPolygon x0=".." y0=".." ... x{N-1}=".." y{N-1}=".."  w=".." h=".." /
-
+   libmwaw:drawPath path=".." w=".." h=".." /
    /libmwaw:document
 */
 
@@ -74,7 +75,7 @@ public:
   virtual ~MWAWPictBasic() {}
 
   //! the picture subtype ( line, rectangle, polygon, circle, arc)
-  enum SubType { Line, Rectangle, Polygon, Circle, Arc };
+  enum SubType { Line, Rectangle, Polygon, Circle, Arc, Path };
   //! returns the picture type
   virtual Type getType() const {
     return Basic;
@@ -376,7 +377,7 @@ protected:
     if (diff) return diff;
     MWAWPictArc const &aArc = static_cast<MWAWPictArc const &>(a);
     // first check the bdbox
-    diff = m_circleBox.cmp(m_circleBox);
+    diff = m_circleBox.cmp(aArc.m_circleBox);
     if (diff) return diff;
     for (int c = 0; c < 2; c++) {
       float diffF = m_angle[c]-aArc.m_angle[c];
@@ -391,6 +392,42 @@ protected:
 
   //! the two angles
   float m_angle[2];
+};
+
+//! \brief a class used to define a generic path ( a bezier curve, ... )
+class MWAWPictPath : public MWAWPictBasic
+{
+public:
+  /** \brief constructor: bdbox followed by the path definition */
+  MWAWPictPath(Box2f bdBox, std::string path) : MWAWPictBasic(), m_path(path) {
+    setBdBox(bdBox);
+  }
+  //! virtual destructor
+  virtual ~MWAWPictPath() {}
+
+  //! returns a ODG (encoded)
+  virtual bool getODGBinary(WPXBinaryData &res) const;
+
+protected:
+  //! returns the class type
+  virtual SubType getSubType() const {
+    return Path;
+  }
+  //! returns the graphics style
+  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  //! comparison function
+  virtual int cmp(MWAWPict const &a) const {
+    int diff = MWAWPictBasic::cmp(a);
+    if (diff) return diff;
+    MWAWPictPath const &aPath = static_cast<MWAWPictPath const &>(a);
+    // first check the bdbox
+    diff = m_path.compare(aPath.m_path);
+    if (diff) return diff;
+    return 0;
+  }
+
+  //! the string represented the path (in svg)
+  std::string m_path;
 };
 
 //! \brief a class used to define a polygon
