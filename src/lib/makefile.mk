@@ -31,6 +31,7 @@ SLOFILES= \
 	$(SLO)$/CWSpreadsheet.obj		\
 	$(SLO)$/CWStruct.obj			\
 	$(SLO)$/CWStyleManager.obj		\
+	$(SLO)$/CWTable.obj			\
 	$(SLO)$/CWText.obj			\
 	$(SLO)$/FWParser.obj			\
 	$(SLO)$/FWText.obj			\
