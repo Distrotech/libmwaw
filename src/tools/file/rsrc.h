@@ -34,6 +34,7 @@
 #endif
 
 #include <ostream>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -47,25 +48,53 @@ class RSRC
 {
 public:
   struct Version;
+protected:
+  //! small internal structure used to store entry data
+  struct MapEntry {
+    //! constructor
+    MapEntry() : m_type(""), m_numEntry(0), m_id(-1), m_pos(-1) {}
+    //! the entry type
+    std::string m_type;
+    //! the number of entry (if this is a main entry )
+    int m_numEntry;
+    //! the identificator (if this is a data entry )
+    int m_id;
+    //! the file position
+    long m_pos;
+  };
 
+public:
   //! the constructor
-  RSRC(InputStream &input) : m_input(input) { }
+  RSRC(InputStream &input) : m_input(input), m_dataOffset(-1), m_typeMapEntryMap() { }
   //! the destructor
   ~RSRC() {}
 
   //! returns a list of version
   std::vector<Version> getVersionList();
 
+  //! returns a string correspond to an id
+  std::string getString(int id);
+
 protected:
   //! try to parse a version entry
   bool parseVers(Version &vers);
 
 protected:
-  //! try to parse the map and return a list of Version (filed id + file pos )
-  bool parseMap(long beg, long end, long dataBegin, std::vector<Version> &versionList);
+  //! try to create the type to map entry
+  bool createMapEntries();
+
+  //! return a list of data entry corresponding to a type
+  std::vector<MapEntry> getMapEntries(std::string type);
 
   //! the input stream
   InputStream &m_input;
+
+  //! the first offset of the data map
+  long m_dataOffset;
+
+  //! the map type->MapEntry
+  std::map<std::string, MapEntry> m_typeMapEntryMap;
+
 private:
   RSRC(RSRC const &orig);
   RSRC &operator=(RSRC const &orig);

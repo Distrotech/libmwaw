@@ -69,7 +69,8 @@ struct File {
   //! the constructor
   File(char const *path) : m_fName(path), m_fRef(),
     m_fInfoCreator(""), m_fInfoType(""), m_fInfoResult(""),
-    m_fileVersion(), m_appliVersion(), m_dataResult() {
+    m_fileVersion(), m_appliVersion(), m_rsrcMissingMessage(""), m_rsrcResult(""),
+    m_dataResult(), m_printFileName(false) {
     OSStatus result;
     Boolean isDirectory;
     /* convert the POSIX path to an FSRef */
@@ -83,7 +84,8 @@ struct File {
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, File const &info) {
-    o << info.m_fName << ":\n";
+    if (info.m_printFileName)
+      o << info.m_fName << ":\n";
     if (info.m_fInfoCreator.length() || info.m_fInfoType.length()) {
       o << "------- fileInfo -------\n";
       if (info.m_fInfoCreator.length())
@@ -93,17 +95,22 @@ struct File {
       if (info.m_fInfoResult.length())
         o << "\t\t=>" << info.m_fInfoResult << "\n";
     }
-    if (info.m_fileVersion.ok() || info.m_appliVersion.ok()) {
+    if (info.m_fileVersion.ok() || info.m_appliVersion.ok() ||
+        info.m_rsrcMissingMessage.length() || info.m_rsrcResult.length()) {
       o << "------- resource fork -------\n";
       if (info.m_fileVersion.ok())
         o << "\tFile" << info.m_fileVersion << "\n";
       if (info.m_appliVersion.ok())
         o << "\tAppli" << info.m_appliVersion << "\n";
+      if (info.m_rsrcMissingMessage.length())
+        o << "\tmissingString=\"" << info.m_rsrcMissingMessage << "\"\n";
+      if (info.m_rsrcResult.length())
+        o << "\t\t=>" << info.m_rsrcResult << "\n";
     }
     if (info.m_dataResult.size()) {
       o << "------- data fork -------\n";
       for (size_t i = 0; i < info.m_dataResult.size(); i++)
-        o << "\t" << info.m_dataResult[i] << "\n";
+        o << "\t\t=>" << info.m_dataResult[i] << "\n";
     }
     return o;
   }
@@ -117,7 +124,7 @@ struct File {
 
   //! can type the file
   bool canPrintResult(int verbose) const {
-    if (m_fInfoResult.length() || m_dataResult.size()) return true;
+    if (m_fInfoResult.length() || m_dataResult.size() || m_rsrcResult.length()) return true;
     if (verbose <= 0) return false;
     if (m_fInfoCreator.length() || m_fInfoType.length()) return true;
     if (verbose <= 1) return false;
@@ -133,7 +140,12 @@ struct File {
   }
   bool checkFInfoType(char const *result) {
     m_fInfoResult=result;
-    m_fInfoResult+="["+m_fInfoType+"]";
+    if (m_fInfoType=="AAPL")
+      m_fInfoResult+="[Application]";
+    else if (m_fInfoType=="AIFF" || m_fInfoType=="AIFC")
+      m_fInfoResult+="[sound]";
+    else
+      m_fInfoResult+="["+m_fInfoType+"]";
     return true;
   }
 
@@ -152,9 +164,16 @@ struct File {
   RSRC::Version m_fileVersion;
   //! the application version (extracted from the resource fork )
   RSRC::Version m_appliVersion;
+  //! the application missing message
+  std::string m_rsrcMissingMessage;
+  //! the result of the resource fork
+  std::string m_rsrcResult;
 
   //! the result of the data analysis
   std::vector<std::string> m_dataResult;
+
+  //! print or not the filename
+  bool m_printFileName;
 };
 
 bool File::readFileInformation()
@@ -182,21 +201,27 @@ bool File::readFileInformation()
   }
   if (m_fInfoCreator=="" || m_fInfoType=="")
     return true;
-  if (m_fInfoType=="AAPL")
-    m_fInfoResult="Application["+m_fInfoCreator+"]";
-  else if (m_fInfoCreator=="BOBO") {
-    checkFInfoType("CWDB","ClarisWorks/AppleWorks[Database]")||
+  if (m_fInfoCreator=="BOBO") {
+    checkFInfoType("CWDB","ClarisWorks/AppleWorks 1.0[Database]")||
+    checkFInfoType("CWD2","ClarisWorks/AppleWorks 2.0-3.0[Database]")||
     checkFInfoType("CWGR","ClarisWorks/AppleWorks[Draw]")||
-    checkFInfoType("CWSS","ClarisWorks/AppleWorks[SpreadSheet]")||
+    checkFInfoType("CWSS","ClarisWorks/AppleWorks 1.0[SpreadSheet]")||
+    checkFInfoType("CWS2","ClarisWorks/AppleWorks 2.0-3.0[SpreadSheet]")||
+    checkFInfoType("CWRP","ClarisWorks/AppleWorks[Presentation]")||
     checkFInfoType("CWWP","ClarisWorks/AppleWorks")||
+    checkFInfoType("CWW2","ClarisWorks/AppleWorks 2.0-3.0")||
     checkFInfoType("ClarisWorks/AppleWorks");
   } else if (m_fInfoCreator=="CARO") {
     checkFInfoType("PDF ", "Acrobat PDF");
   } else if (m_fInfoCreator=="FS03") {
     checkFInfoType("WRT+","WriterPlus") || checkFInfoType("WriterPlus");
+  } else if (m_fInfoCreator=="Fram") {
+    checkFInfoType("FASL","FrameMaker") || checkFInfoType("MIF2","FrameMaker MIF2.0") ||
+    checkFInfoType("MIF3","FrameMaker MIF3.0") || checkFInfoType("MIF ","FrameMaker MIF") ||
+    checkFInfoType("FrameMaker");
   } else if (m_fInfoCreator=="FWRT") {
     checkFInfoType("FWRM","FullWrite 1.0") || checkFInfoType("FWRI","FullWrite 2.0") ||
-    checkFInfoType("FWRI","FullWrite");
+    checkFInfoType("FWRI","FullWrite") || checkFInfoType("FullWrite");
   } else if (m_fInfoCreator=="MACA") {
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   } else if (m_fInfoCreator=="MACD") { // checkme
@@ -205,6 +230,8 @@ bool File::readFileInformation()
     checkFInfoType("DRWG","MacDraw") || checkFInfoType("MacDraw");
   } else if (m_fInfoCreator=="MDPL") {
     checkFInfoType("DRWG","MacDraw II") || checkFInfoType("MacDraw II");
+  } else if (m_fInfoCreator=="MPNT") {
+    checkFInfoType("MacPaint");
   } else if (m_fInfoCreator=="MWII") {
     checkFInfoType("MW2D","MacWrite II") || checkFInfoType("MacWrite II");
   } else if (m_fInfoCreator=="MWPR") {
@@ -221,6 +248,8 @@ bool File::readFileInformation()
     checkFInfoType("TEXT","Nisus") || checkFInfoType("GLOS","Nisus[glossary]") ||
     checkFInfoType("SMAC","Nisus[macros]") || checkFInfoType("edtt","Nisus[lock]") ||
     checkFInfoType("Nisus");
+  } else if (m_fInfoCreator=="PPNT") { // checkme or PPT3
+    checkFInfoType("SLDS","Microsoft PowerPoint") || checkFInfoType("Microsoft PowerPoint");
   } else if (m_fInfoCreator=="PSIP") {
     checkFInfoType("AWWP","Microsoft Works 1.0") || checkFInfoType("Microsoft Works 1.0");
   } else if (m_fInfoCreator=="PSI2") {
@@ -229,13 +258,22 @@ bool File::readFileInformation()
     checkFInfoType("OUTL","MindWrite") || checkFInfoType("MindWrite");
   } else if (m_fInfoCreator=="R#+A") {
     checkFInfoType("R#+D","RagTime") || checkFInfoType("RagTime");
+  } else if (m_fInfoCreator=="RTF ") {
+    checkFInfoType("RTF ","RTF") || checkFInfoType("RTF");
+  } else if (m_fInfoCreator=="SSIW") { // check me
+    checkFInfoType("WordPerfect 1.0");
   } else if (m_fInfoCreator=="WORD") {
     checkFInfoType("WDBN","Microsoft Word 1") || checkFInfoType("Microsoft Word 1");
+  } else if (m_fInfoCreator=="WPC2") {
+    checkFInfoType("WordPerfect");
   } else if (m_fInfoCreator=="XCEL") {
     checkFInfoType("XCEL","Microsoft Excel 1") ||
+    checkFInfoType("XLS4","Microsoft Excel 3") ||
     checkFInfoType("XLS4","Microsoft Excel 4") ||
     checkFInfoType("XLS5","Microsoft Excel 5") ||
     checkFInfoType("Microsoft Excel");
+  } else if (m_fInfoCreator=="XPR3") {
+    checkFInfoType("XDOC","QuarkXPress") || checkFInfoType("QuarkXPress");
   } else if (m_fInfoCreator=="dPro") {
     checkFInfoType("dDoc","MacDraw Pro") || checkFInfoType("MacDraw Pro");
   } else if (m_fInfoCreator=="nX^n") {
@@ -309,7 +347,7 @@ bool File::readDataInformation()
   if (val[0] == 0x2e && val[1] == 0x2e)
     m_dataResult.push_back("MacWrite II");
   if (val[0] == 4 && val[1] == 4)
-    m_dataResult.push_back("MacWritePro");
+    m_dataResult.push_back("MacWrite Pro");
   if (val[0] == 0x7704)
     m_dataResult.push_back("MindWrite");
   if (val[0] == 0x110)
@@ -403,10 +441,12 @@ bool File::readRSRCInformation()
   if (!rsrcStream.length())
     return true;
   libmwaw_tools::RSRC rsrcManager(rsrcStream);
-  std::vector<RSRC::Version> listVersion = rsrcManager.getVersionList();
 #if 0
   MWAW_DEBUG_MSG(("File::readRSRCInformation: find a resource fork\n"));
 #endif
+  m_rsrcResult = rsrcManager.getString(-16396); // the application missing name
+  m_rsrcMissingMessage = rsrcManager.getString(-16397);
+  std::vector<RSRC::Version> listVersion = rsrcManager.getVersionList();
   for (size_t i=0; i < listVersion.size(); i++) {
     switch(listVersion[i].m_id) {
     case 1:
@@ -428,9 +468,12 @@ bool File::readRSRCInformation()
 bool File::printResult(std::ostream &o, int verbose) const
 {
   if (!canPrintResult(verbose)) return false;
-  o << m_fName << ":";
+  if (m_printFileName)
+    o << m_fName << ":";
   if (m_fInfoResult.length())
     o << m_fInfoResult;
+  else if (m_rsrcResult.length())
+    o << m_rsrcResult;
   else if (m_dataResult.size()) {
     size_t num = m_dataResult.size();
     if (num>1)
@@ -475,19 +518,28 @@ std::string UniStr255ToStr(HFSUniStr255 const &data)
 void usage(char const *fName)
 {
   std::cerr << "Syntax error, expect:\n";
-  std::cerr << "\t " << fName << " [-vNum] filename\n";
-  std::cerr << "\t where filename is the file path\n";
-  std::cerr << "\t and Num is the verbose flag\n";
+  std::cerr << "\t " << fName << " [-h][-H][-vNum] filename\n";
+  std::cerr << "\t where\t filename is the file path,\n";
+  std::cerr << "\t\t -h: does not print the filename,\n";
+  std::cerr << "\t\t -H: prints the filename[default],\n";
+  std::cerr << "\t\t -vNum: define the verbose level.\n";
 }
 
 int main(int argc, char *const argv[])
 {
   int ch, verbose=0;
+  bool printFileName=true;
 
-  while ((ch = getopt(argc, argv, "v:")) != -1) {
+  while ((ch = getopt(argc, argv, "hHv:")) != -1) {
     switch (ch) {
     case 'v':
       verbose=atoi(optarg);
+      break;
+    case 'h':
+      printFileName = false;
+      break;
+    case 'H':
+      printFileName = true;
       break;
     case '?':
     default:
@@ -519,6 +571,7 @@ int main(int argc, char *const argv[])
   } catch(...) {
   }
 
+  file->m_printFileName = printFileName;
   if (verbose >= 4)
     std::cout << *file;
   else if (file->canPrintResult(verbose))

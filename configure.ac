@@ -302,9 +302,9 @@ AS_IF([test "x$platform_darwin" = "xyes"], [
 			[[#else]]
 			[[#  include <Carbon.h>]]
 			[[#endif]],
-			[[OSStatus result; Boolean isDirectory; FSRef fRef; FSCatalogInfo cInfo;]]
-			[[result = FSPathMakeRef((const UInt8*)"/tmp/", &fRef, &isDirectory);]]
-			[[result=FSGetCatalogInfo (&fRef, kFSCatInfoFinderInfo, &cInfo, NULL, NULL, NULL);]]
+			[[Boolean isDirectory; FSRef fRef; FSCatalogInfo cInfo;]]
+			[[FSPathMakeRef((const UInt8*)"/tmp/", &fRef, &isDirectory);]]
+			[[FSGetCatalogInfo (&fRef, kFSCatInfoFinderInfo, &cInfo, NULL, NULL, NULL);]]
 		)
 	], [
 		AC_MSG_RESULT([yes])

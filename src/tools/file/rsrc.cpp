@@ -68,90 +68,136 @@ std::ostream &operator<< (std::ostream &o, RSRC::Version const &vers)
   return o;
 }
 
-std::vector<RSRC::Version> RSRC::getVersionList()
+bool RSRC::createMapEntries()
 {
-  std::vector<Version> res;
-  if (!m_input.length())
-    return res;
+  if (m_typeMapEntryMap.size()) return true;
+
   long eof = m_input.length();
+  if (eof < 16) return false;
   m_input.seek(0, InputStream::SK_SET);
-  long dataBegin = (long) m_input.readU32();
+  m_dataOffset = (long) m_input.readU32();
   long mapBegin = (long) m_input.readU32();
   long dataLength = (long) m_input.readU32();
   long mapLength = (long) m_input.readU32();
-  if (mapLength <= 0 || dataLength < 0 || dataBegin+dataLength > eof || mapBegin+mapLength > eof) {
-    MWAW_DEBUG_MSG(("RSRC::getVersionList: can not read the structure size\n"));
-    return res;
-  }
-  parseMap(mapBegin, mapBegin+mapLength, dataBegin, res);
-  return res;
-}
-
-bool RSRC::parseMap(long begin, long end, long dataBegin, std::vector<Version> &versionList)
-{
-  versionList.resize(0);
-  if (m_input.length() < end || end-begin < 28) {
-    MWAW_DEBUG_MSG(("RSRC::parseMap: entry map is two short\n"));
+  long mapEnd = mapBegin+mapLength;
+  if (mapLength < 28 || dataLength < 0 || m_dataOffset+dataLength > eof || mapBegin+mapLength > eof) {
+    MWAW_DEBUG_MSG(("RSRC::createMapEntries: can not read the structure size\n"));
     return false;
   }
 
-  m_input.seek(begin+24, InputStream::SK_SET);
+  m_input.seek(mapBegin+24, InputStream::SK_SET);
   long offsetTypes=(long)m_input.readU16();
   long offsetNameLists=(long)m_input.readU16();
   int numTypes = (int)m_input.readU16();
-  if (offsetTypes+2 > end-begin || offsetNameLists > end-begin) {
-    MWAW_DEBUG_MSG(("RSRC::parseMap: the offsets( limits seem bad\n"));
+  if (offsetTypes+2 > mapLength || offsetNameLists > mapLength) {
+    MWAW_DEBUG_MSG(("RSRC::createMapEntries: the offsets( limits seem bad\n"));
     return false;
   }
   // this case can appear if no data
   if (numTypes == 0xFFFF)
     numTypes = -1;
 
-  long pos = begin+offsetTypes+2;
+  long pos = mapBegin+offsetTypes+2;
   m_input.seek(pos, InputStream::SK_SET);
-  if (pos+8*(numTypes+1) > end) {
-    MWAW_DEBUG_MSG(("RSRC::parseMap: the type zones seems too short\n"));
+  if (pos+8*(numTypes+1) > mapEnd) {
+    MWAW_DEBUG_MSG(("RSRC::createMapEntries: the type zones seems too short\n"));
     return false;
   }
-  int nEntry=-1;
-  long dataPos = 0;
   for (int i = 0; i <= numTypes; i++) {
     pos = m_input.tell();
+    MapEntry entry;
     std::string type("");
     for (int c = 0; c < 4; c++)
       type+=(char)m_input.readU8();
-    if (type != "vers") {
-      m_input.seek(pos+8, InputStream::SK_SET);
+    entry.m_type = type;
+    entry.m_numEntry = (int) m_input.readU16()+1; // the number of entry
+    entry.m_pos = mapBegin+offsetTypes+(long) m_input.readU16();
+
+    if (entry.m_pos < 0 || entry.m_pos+12*entry.m_numEntry > mapEnd) {
+      MWAW_DEBUG_MSG(("RSRC::parseMap: can not read an entry: %s\n", type.c_str()));
       continue;
     }
-    nEntry = (int) m_input.readU16()+1; // the number of entry
-    dataPos = begin+offsetTypes+(long) m_input.readU16();
-    break;
+    m_typeMapEntryMap[type] = entry;
   }
-  if (nEntry <= 0)
-    return true;
-  if (dataPos+12*nEntry > end) {
-    MWAW_DEBUG_MSG(("RSRC::parseMap: can not read entry vers\n"));
-    return false;
-  }
-  m_input.seek(dataPos, InputStream::SK_SET);
-  for (int n = 0; n < nEntry; n++) {
-    pos = m_input.tell();
-    Version vers;
-    vers.m_id = (int)m_input.read16();
+
+  return true;
+}
+
+std::vector<RSRC::MapEntry> RSRC::getMapEntries(std::string type)
+{
+  std::vector<MapEntry> res;
+  if (!createMapEntries() ||
+      m_typeMapEntryMap.find(type) ==  m_typeMapEntryMap.end())
+    return res;
+
+  long eof = m_input.length();
+  MapEntry const &entry = m_typeMapEntryMap.find(type)->second;
+  m_input.seek(entry.m_pos, InputStream::SK_SET);
+  for (int n = 0; n < entry.m_numEntry; n++) {
+    long pos = m_input.tell();
+    MapEntry lEntry;
+    lEntry.m_type = type;
+    lEntry.m_id = (int)m_input.read16();
     long offset = (long) m_input.readU16();
     if (offset != 0xFFFF) { // never seems
-      MWAW_DEBUG_MSG(("RSRC::parseMap: find an offset=%lx\n", offset));
+      MWAW_DEBUG_MSG(("RSRC::getMapEntries: find an offset=%lx\n", offset));
     }
     unsigned long dOffset = m_input.readU32();
     if (dOffset & 0xFF000000)
       dOffset &= 0xFFFFFF;
-    vers.m_begin = dataBegin+long(dOffset);
-    parseVers(vers);
-    versionList.push_back(vers);
+    lEntry.m_pos = m_dataOffset+long(dOffset);
+    if (lEntry.m_pos >= 0 && lEntry.m_pos+4 < eof)
+      res.push_back(lEntry);
+    else {
+      MWAW_DEBUG_MSG(("RSRC::getMapEntries: find bad pos %lx\n", lEntry.m_pos));
+    }
     m_input.seek(pos+12, InputStream::SK_SET);
   }
-  return true;
+  return res;
+}
+
+std::string RSRC::getString(int id)
+{
+  std::string res("");
+  std::vector<MapEntry> lEntries = RSRC::getMapEntries("STR ");
+  for (size_t n = 0; n < lEntries.size(); n++) {
+    MapEntry const &entry = lEntries[n];
+    if (entry.m_id != id) continue;
+    m_input.seek(entry.m_pos, InputStream::SK_SET);
+
+    long sz = (long) m_input.readU32();
+    if (entry.m_pos+4+sz > m_input.length()) {
+      MWAW_DEBUG_MSG(("RSRC::getString: entry is invalid\n"));
+      return res;
+    }
+    int fSz = (int) m_input.readU8();
+    if (fSz+1 > sz) {
+      MWAW_DEBUG_MSG(("RSRC::getString: pascal size seems bad\n"));
+      return res;
+    }
+    for (int i = 0; i < fSz; i++)
+      res += (char) m_input.readU8();
+    break;
+  }
+
+  return res;
+}
+
+
+std::vector<RSRC::Version> RSRC::getVersionList()
+{
+  std::vector<Version> res;
+  std::vector<MapEntry> lEntries = RSRC::getMapEntries("vers");
+  for (size_t n = 0; n < lEntries.size(); n++) {
+    MapEntry &entry = lEntries[n];
+    Version vers;
+    vers.m_id = entry.m_id;
+    vers.m_begin = entry.m_pos;
+    parseVers(vers);
+    res.push_back(vers);
+  }
+
+  return res;
 }
 
 bool RSRC::parseVers(RSRC::Version &vers)
