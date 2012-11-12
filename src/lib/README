@@ -98,6 +98,9 @@ CWParser : parser of ClarisWorks/AppleWorks document
 -   CWPresentation : class which reads the slide structures
 -   CWTable : class which reads the table structures
 -   CWText : class which reads the text and its structures
+  and
+-   CWStruct : class which stores the main zone structures
+-   CWStyleManager : class which reads/stores many styles
 
 FWParser: parser of FullWrite : v1.0 v2.0
 -   FWText : class which reads the text

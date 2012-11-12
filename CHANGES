@@ -1,5 +1,11 @@
 CHANGES:
 
+11/12/2012
+- try to improve a little the claris/appleworks parser
+  ( use vertical descent to add AppleWorks v6 char attachment,
+    use border and background color parameters when building table
+    cells and some frames )
+
 11/01/2012
 - add a OSX specific tools: mwawFile to allow to find the type of old file
   ( Note: this tools using specific OSX calls deprecated in 10.8 can
