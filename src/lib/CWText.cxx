@@ -970,7 +970,8 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   long pos = entry.begin();
 
   int dataSize = 0;
-  switch(version()) {
+  int const vers=version();
+  switch(vers) {
   case 1:
   case 2:
   case 3:
@@ -1036,7 +1037,11 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
       val = (int) m_input->readLong(2);
       if (val) f << "f" << j << "=" << val << ",";
     }
-    token.m_descent = (int) m_input->readLong(2);
+    val = (int) m_input->readLong(2);
+    if (vers>=6) // checkme: ok for v6 & graphic, not for v2
+      token.m_descent = val;
+    else if (val)
+      f << "f3=" << val << ",";
     token.m_extra = f.str();
     f.str("");
     f << "Token-" << i << ": pos=" << posC << "," << token;
