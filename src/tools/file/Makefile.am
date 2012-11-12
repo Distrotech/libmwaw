@@ -3,6 +3,7 @@ bin_PROGRAMS = mwawFile
 AM_CXXFLAGS = $(LIBMWAW_CXXFLAGS) $(DEBUG_CXXFLAGS)
 
 mwawFile_SOURCES = 		\
+	file_internal.h		\
 	file.cpp		\
 	input.h			\
 	input.cpp		\
