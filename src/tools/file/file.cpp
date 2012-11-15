@@ -148,6 +148,12 @@ struct File {
       m_fInfoResult+="["+m_fInfoType+"]";
     return true;
   }
+  bool checkFInfoCreator(char const *result) {
+    m_fInfoResult=result;
+    if (m_fInfoCreator.length())
+      m_fInfoResult+="["+m_fInfoCreator+"]";
+    return true;
+  }
 
   //! the file name
   std::string m_fName;
@@ -207,7 +213,7 @@ bool File::readFileInformation()
     checkFInfoType("CWGR","ClarisWorks/AppleWorks[Draw]")||
     checkFInfoType("CWSS","ClarisWorks/AppleWorks 1.0[SpreadSheet]")||
     checkFInfoType("CWS2","ClarisWorks/AppleWorks 2.0-3.0[SpreadSheet]")||
-    checkFInfoType("CWRP","ClarisWorks/AppleWorks[Presentation]")||
+    checkFInfoType("CWPR","ClarisWorks/AppleWorks[Presentation]")||
     checkFInfoType("CWWP","ClarisWorks/AppleWorks")||
     checkFInfoType("CWW2","ClarisWorks/AppleWorks 2.0-3.0")||
     checkFInfoType("ClarisWorks/AppleWorks");
@@ -222,6 +228,8 @@ bool File::readFileInformation()
   } else if (m_fInfoCreator=="FWRT") {
     checkFInfoType("FWRM","FullWrite 1.0") || checkFInfoType("FWRI","FullWrite 2.0") ||
     checkFInfoType("FWRI","FullWrite") || checkFInfoType("FullWrite");
+  } else if (m_fInfoCreator=="HMdr") {
+    checkFInfoType("DRD2","HanMac Word-K") || checkFInfoType("HanMac Word-K");
   } else if (m_fInfoCreator=="MACA") {
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   } else if (m_fInfoCreator=="MACD") { // checkme
@@ -239,7 +247,10 @@ bool File::readFileInformation()
   } else if (m_fInfoCreator=="MSWD") {
     checkFInfoType("WDBN","Microsoft Word 3-5") ||
     checkFInfoType("GLOS","Microsoft Word 3-5[glossary]") ||
-    checkFInfoType("Microsoft Word 3-5");
+    checkFInfoType("W8BN", "Microsoft Word 97-2004") ||
+    checkFInfoType("W8TN", "Microsoft Word 97-2004") || // ?
+    checkFInfoType("WXBN", "Microsoft Word 97-2004") || // Office X ?
+    checkFInfoType("Microsoft Word");
   } else if (m_fInfoCreator=="MSWK") {
     checkFInfoType("AWWP","Microsoft Works 3") ||
     checkFInfoType("RLRB","Microsoft Works 4") ||
@@ -248,8 +259,10 @@ bool File::readFileInformation()
     checkFInfoType("TEXT","Nisus") || checkFInfoType("GLOS","Nisus[glossary]") ||
     checkFInfoType("SMAC","Nisus[macros]") || checkFInfoType("edtt","Nisus[lock]") ||
     checkFInfoType("Nisus");
-  } else if (m_fInfoCreator=="PPNT") { // checkme or PPT3
+  } else if (m_fInfoCreator=="PPNT") {
     checkFInfoType("SLDS","Microsoft PowerPoint") || checkFInfoType("Microsoft PowerPoint");
+  } else if (m_fInfoCreator=="PPT3") {
+    checkFInfoType("SLD8","Microsoft PowerPoint 97-2004") || checkFInfoType("Microsoft PowerPoint 97-2004");
   } else if (m_fInfoCreator=="PSIP") {
     checkFInfoType("AWWP","Microsoft Works 1.0") || checkFInfoType("Microsoft Works 1.0");
   } else if (m_fInfoCreator=="PSI2") {
@@ -259,9 +272,11 @@ bool File::readFileInformation()
   } else if (m_fInfoCreator=="R#+A") {
     checkFInfoType("R#+D","RagTime") || checkFInfoType("RagTime");
   } else if (m_fInfoCreator=="RTF ") {
-    checkFInfoType("RTF ","RTF") || checkFInfoType("RTF");
+    checkFInfoType("RTF ","RTF ") || checkFInfoType("RTF");
   } else if (m_fInfoCreator=="SSIW") { // check me
     checkFInfoType("WordPerfect 1.0");
+  } else if (m_fInfoCreator=="SIT!") {
+    checkFInfoType("SIT5", "archive SIT");
   } else if (m_fInfoCreator=="WORD") {
     checkFInfoType("WDBN","Microsoft Word 1") || checkFInfoType("Microsoft Word 1");
   } else if (m_fInfoCreator=="WPC2") {
@@ -271,6 +286,8 @@ bool File::readFileInformation()
     checkFInfoType("XLS4","Microsoft Excel 3") ||
     checkFInfoType("XLS4","Microsoft Excel 4") ||
     checkFInfoType("XLS5","Microsoft Excel 5") ||
+    checkFInfoType("XLS8","Microsoft Excel 97-2004") ||
+    checkFInfoType("TEXT","Microsoft Excel[text export]") ||
     checkFInfoType("Microsoft Excel");
   } else if (m_fInfoCreator=="XPR3") {
     checkFInfoType("XDOC","QuarkXPress") || checkFInfoType("QuarkXPress");
@@ -281,6 +298,12 @@ bool File::readFileInformation()
     checkFInfoType("WriteNow");
   } else if (m_fInfoCreator=="ttxt") {
     checkFInfoType("TEXT","Text(basic)");
+  }
+  // now by type
+  else if (m_fInfoType=="AAPL") {
+    checkFInfoCreator("Application");
+  } else if (m_fInfoType=="JFIF") {
+    checkFInfoCreator("JPEG");
   }
   if (m_fInfoCreator.length()==0) {
     MWAW_DEBUG_MSG(("File::readFileInformation: Find unknown file info %s[%s]\n", m_fInfoCreator.c_str(), m_fInfoType.c_str()));
@@ -312,17 +335,64 @@ bool File::readDataInformation()
     m_dataResult.push_back("WriteNow 3-4");
     return true;
   }
+  if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
+    m_dataResult.push_back("HanMac Word-K");
+    return true;
+  }
   if (val[0]==0x2550 && val[1]==0x4446) {
     m_dataResult.push_back("PDF");
     return true;
   }
-  // ----------- less discriminant ------------------
+  if (val[0]==0x2521 && val[1]==0x5053 && val[2]==0x2d41 && val[3] == 0x646f && val[4]==0x6265) {
+    m_dataResult.push_back("PostScript");
+    return true;
+  }
+  if (val[0]==0xc5d0 && val[1]==0xd3c6) {
+    m_dataResult.push_back("Adobe EPS");
+    return true;
+  }
+  if (val[2]==0x6d6f && val[3]==0x6f76) {
+    m_dataResult.push_back("QuickTime movie");
+    return true;
+  }
+  if (val[0]==0 && (val[1]>>8)==0 && val[2]==0x6674 && val[3]==0x7970 && val[4]==0x3367) {
+    m_dataResult.push_back("MP4");
+    return true;
+  }
+  if (val[0]==0x4749 && val[1]==0x4638 && (val[2]==0x3761 || val[2]==0x3961)) {
+    m_dataResult.push_back("GIF");
+    return true;
+  }
+  if (val[0]==0x8950 && val[1]==0x4e47 && val[2]==0x0d0a && val[3]==0x1a0a) {
+    m_dataResult.push_back("PNG");
+    return true;
+  }
+  if (val[0]==0xffd8 &&
+      ((val[1]==0xffe0 && val[3]==0x4a46 && val[4] == 0x4946) ||
+       (val[1]==0xffe1 && val[3]==0x4578 && val[4] == 0x6966) ||
+       (val[1]==0xffe8 && val[3]==0x5350 && val[4] == 0x4946))) {
+    m_dataResult.push_back("JPEG");
+    return true;
+  }
+  if (val[0]==0x4949 && val[1]==0x2a00) {
+    m_dataResult.push_back("TIF");
+    return true;
+  }
+  if (val[0]==0x4d4d && val[1]==0x002a) {
+    m_dataResult.push_back("TIFF");
+    return true;
+  }
+  if (val[0]==0x4f67 && val[1]==0x6753) {
+    m_dataResult.push_back("OGG data");
+    return true;
+  }
+// ----------- less discriminant ------------------
   if (val[0]==0xd0cf && val[1]==0x11e0 && val[2]==0xa1b1 && val[3]==0x1ae1) {
     m_dataResult.push_back("OLE file: can be DOC, DOT, PPS, PPT, XLA, XLS, WIZ, WPS(4.0), ...");
     return true;
   }
 
-  // less discriminant
+// less discriminant
   if ((val[0]==0xfe32 && val[1]==0) || (val[0]==0xfe34 && val[1]==0) ||
       (val[0] == 0xfe37 && (val[1] == 0x23 || val[1] == 0x1c))) {
     switch (val[1]) {

@@ -927,7 +927,7 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
       bool setAll = !m_ps->hasParagraphDifferentBorders();
       for (size_t w = 0; w < m_ps->m_paragraphBorders.size(); w++) {
         MWAWBorder const &border = m_ps->m_paragraphBorders[w];
-        std::string property = border.getPropertyValue(false);
+        std::string property = border.getPropertyValue();
         if (property.length() == 0) continue;
         if (setAll == 0xF) {
           propList.insert("fo:border", property.c_str());
@@ -1905,7 +1905,7 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
 
   std::vector<MWAWBorder> const &borders = cell.borders();
   for (size_t c = 0; c < borders.size(); c++) {
-    std::string property = borders[c].getPropertyValue(true);
+    std::string property = borders[c].getPropertyValue();
     if (property.length() == 0) continue;
     switch(c) {
     case MWAWBorder::Left:

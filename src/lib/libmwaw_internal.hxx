@@ -139,7 +139,7 @@ struct MWAWBorder {
   //! constructor
   MWAWBorder() : m_style(Single), m_width(1), m_color(0) { }
   //! return the properties
-  std::string getPropertyValue(bool tableBorder) const;
+  std::string getPropertyValue() const;
 
   //! operator==
   bool operator==(MWAWBorder const &orig) const {

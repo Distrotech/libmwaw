@@ -168,7 +168,7 @@ int MWAWBorder::compare(MWAWBorder const &orig) const
   return 0;
 }
 
-std::string MWAWBorder::getPropertyValue(bool tableBorder) const
+std::string MWAWBorder::getPropertyValue() const
 {
   if (m_style == None) return "";
   std::stringstream stream;
@@ -176,16 +176,10 @@ std::string MWAWBorder::getPropertyValue(bool tableBorder) const
   switch (m_style) {
   case Dot:
   case LargeDot:
-    if (tableBorder)
-      stream << " dotted";
-    else
-      stream << " solid";
+    stream << " dotted";
     break;
   case Dash:
-    if (tableBorder)
-      stream << " dashed";
-    else
-      stream << " solid";
+    stream << " dashed";
     break;
   case Single:
     stream << " solid";
