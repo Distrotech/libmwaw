@@ -185,7 +185,7 @@ struct Zone {
 };
 
 /** Internal: class to store the paragraph properties */
-struct Paragraph : MWAWParagraph {
+struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() : MWAWParagraph(), m_align(0),
     m_interSpacing(1.), m_interSpacingUnit(WPX_PERCENT), m_isTable(false), m_isSent(false) { }

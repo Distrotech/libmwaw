@@ -62,9 +62,10 @@ struct MWAWTabStop {
 };
 
 //! class to store the paragraph properties
-struct MWAWParagraph {
+class MWAWParagraph
+{
+public:
   typedef MWAWList::Level ListLevel;
-
   //! constructor
   MWAWParagraph() : m_marginsUnit(WPX_INCH), m_spacingsInterlineUnit(WPX_PERCENT), m_spacingsInterlineType(libmwaw::Fixed),
     m_tabs(), m_justify(libmwaw::JustificationLeft),

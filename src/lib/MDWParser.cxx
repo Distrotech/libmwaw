@@ -50,6 +50,7 @@
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSubDocument.hxx"
 
 #include "MDWParser.hxx"
 
@@ -625,7 +626,7 @@ bool MDWParser::sendZone(int id)
   return true;
 }
 ////////////////////////////////////////////////////////////
-// read a ruler zone
+// read a graphic zone
 ////////////////////////////////////////////////////////////
 bool MDWParser::readGraphic(MDWParserInternal::LineInfo const &line)
 {
@@ -1073,8 +1074,7 @@ bool MDWParser::checkHeader(MWAWHeader *header, bool strict)
   libmwaw::DebugStream f;
 
   int const headerSize=0x50;
-  input->seek(headerSize,WPX_SEEK_SET);
-  if (int(input->tell()) != headerSize) {
+  if (!isFilePos(headerSize)) {
     MWAW_DEBUG_MSG(("MDWParser::checkHeader: file is too short\n"));
     return false;
   }

@@ -67,6 +67,7 @@ public:
   -CW: ClarisWorks/AppleWorks document (basic)
   -FULLW: FullWrite Professional (crude parser)
   -HMAC: HanMac Word-K (nothing done)
+  -MARIW: Mariner Writer (nothing done)
   -MINDW: MindWrite
   -MW: MacWrite document
   -MWPRO: MacWriteII or MacWritePro document
@@ -76,7 +77,7 @@ public:
   -WNOW: WriteNow
   -WPLUS: writerplus document
   */
-  enum DocumentType { UNKNOWN, CW, FULLW, MINDW, MSWORD, MSWORKS, MW, MWPRO, NISUSW, WNOW, WPLUS, HMAC };
+  enum DocumentType { UNKNOWN, CW, FULLW, MINDW, MSWORD, MSWORKS, MW, MWPRO, NISUSW, WNOW, WPLUS, HMAC, MARIW };
 
   /** an enum to define the kind of document */
   enum DocumentKind { K_UNKNOWN, K_TEXT, K_DRAW,

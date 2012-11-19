@@ -32,13 +32,15 @@
 */
 
 /*
- * Parser to convert MindWrite document
+ * Parser to convert HanMac Word-K document
  */
-#ifndef MDW_PARSER
-#  define MDW_PARSER
+#ifndef HMW_PARSER
+#  define HMW_PARSER
 
 #include <string>
 #include <vector>
+
+class WPXBinaryData;
 
 #include "MWAWPageSpan.hxx"
 
@@ -49,35 +51,35 @@
 
 #include "MWAWParser.hxx"
 
-typedef class MWAWContentListener MDWContentListener;
-typedef shared_ptr<MDWContentListener> MDWContentListenerPtr;
+typedef class MWAWContentListener HMWContentListener;
+typedef shared_ptr<HMWContentListener> HMWContentListenerPtr;
 class MWAWEntry;
 class MWAWFont;
 class MWAWParagraph;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
-namespace MDWParserInternal
+namespace HMWParserInternal
 {
-struct LineInfo;
+struct Zone;
 struct State;
 class SubDocument;
 }
 
-/** \brief the main class to read a MindWrite file
+/** \brief the main class to read a HanMac Word-K file
  *
  *
  *
  */
-class MDWParser : public MWAWParser
+class HMWParser : public MWAWParser
 {
-  friend class MDWParserInternal::SubDocument;
+  friend class HMWParserInternal::SubDocument;
 
 public:
   //! constructor
-  MDWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  HMWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MDWParser();
+  virtual ~HMWParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -90,55 +92,13 @@ protected:
   void init();
 
   //! sets the listener in this class and in the helper classes
-  void setListener(MDWContentListenerPtr listen);
+  void setListener(HMWContentListenerPtr listen);
 
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
 
   //! finds the different objects zones
   bool createZones();
-
-  //! try to send a zone
-  bool sendZone(int i);
-
-  //! try to read a graphic
-  bool readGraphic(MDWParserInternal::LineInfo const &line);
-
-  //! try to read a ruler
-  bool readRuler(MDWParserInternal::LineInfo const &line, MWAWParagraph &para);
-
-  //! try to read a compressed text zone
-  bool readCompressedText(MDWParserInternal::LineInfo const &line);
-
-  //! try to read a non compressed text zone
-  bool readText(MDWParserInternal::LineInfo const &line);
-
-  //! try to send the text
-  void sendText(std::string const &text, std::vector<MWAWFont> const &fonts, std::vector<int> const &textPos);
-
-  //! try to read the fonts
-  bool readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts, std::vector<int> &textPos);
-
-  //! update the actual ruler using lineInfo
-  void updateRuler(MDWParserInternal::LineInfo const &line);
-
-  //! read the print info zone
-  bool readPrintInfo(MWAWEntry &entry);
-
-  //! read the lines information zone
-  bool readLinesInfo(MWAWEntry &entry);
-
-  //! read the last zone ( pos + 7fffffff )
-  bool readLastZone(MWAWEntry &entry);
-
-  //! read the 12 th zone
-  bool readZone12(MWAWEntry &entry);
-
-  /* sends a character property to the listener
-   * \param font the font's properties */
-  void setProperty(MWAWFont const &font);
-  /** sends a paragraph property to the listener */
-  void setProperty(MWAWParagraph const &para);
 
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
@@ -152,9 +112,12 @@ protected:
   // low level
   //
 
-  //! read a file entry
-  MWAWEntry readEntry();
-
+  /** try to read the zones list */
+  bool readZonesList();
+  /** try to read a generic zone */
+  bool readZone(MWAWEntry &entry);
+  /** try to decode a zone */
+  shared_ptr<HMWParserInternal::Zone> decodeZone(MWAWEntry const &entry);
   /** check if an entry is in file */
   bool isFilePos(long pos);
 
@@ -163,13 +126,13 @@ protected:
   // data
   //
   //! the listener
-  MDWContentListenerPtr m_listener;
+  HMWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;
 
   //! the state
-  shared_ptr<MDWParserInternal::State> m_state;
+  shared_ptr<HMWParserInternal::State> m_state;
 
   //! the actual document size
   MWAWPageSpan m_pageSpan;

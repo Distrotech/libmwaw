@@ -393,6 +393,26 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\HMWParser.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MDWParser.cxx"
 				>
 				<FileConfiguration
@@ -1395,6 +1415,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\FWText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWParser.hxx"
 				>
 			</File>
 			<File
