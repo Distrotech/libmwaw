@@ -52,9 +52,13 @@ public:
    * \param newId system id font
    * \param sz the font size
    * \param f the font attributes bold, ... */
-  MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_flags(f), m_color(0) {
+  MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_flags(f), m_underline(MWAWBorder::None), m_color(0) {
     resetColor();
   };
+  //! returns true if the font id is initialized
+  bool isSet() const {
+    return m_id.isSet();
+  }
   //! inserts the set value in the current font
   void insert(MWAWFont &ft) {
     m_id.insert(ft.m_id);
@@ -65,28 +69,49 @@ public:
       else
         m_flags = ft.m_flags;
     }
+    m_underline.insert(ft.m_underline);
     m_color.insert(ft.m_color);
-  }
-  //! resets the font color to black
-  void resetColor() {
-    m_color = 0;
   }
   //! sets the font id and resets size to the previous size for this font
   void setFont(int newId) {
     resetColor();
     m_id=newId;
   }
+
+  //! returns the font id
+  int id() const {
+    return m_id.get();
+  }
   //! sets the font id
   void setId(int newId) {
     m_id = newId;
+  }
+
+  //! returns the font size
+  int size() const {
+    return m_size.get();
   }
   //! sets the font size
   void setSize(int sz) {
     m_size = sz;
   }
+
+  //! returns the font flags
+  uint32_t flags() const {
+    return m_flags.get();
+  }
   //! sets the font attributes bold, ...
   void setFlags(uint32_t fl) {
     m_flags = fl;
+  }
+
+  //! returns true if the font color is not black
+  bool hasColor() const {
+    return m_color.isSet();
+  }
+  //! returns the font color
+  void getColor(uint32_t &c) const {
+    c = m_color.get();
   }
   //! sets the font color
   void setColor(Vec3uc color) {
@@ -96,30 +121,20 @@ public:
   void setColor(uint32_t color) {
     m_color = color;
   }
-  //! returns true if the font id is initialized
-  bool isSet() const {
-    return m_id.isSet();
+  //! resets the font color to black
+  void resetColor() {
+    m_color = 0;
   }
-  //! returns the font id
-  int id() const {
-    return m_id.get();
+
+  //! returns the underline style
+  MWAWBorder::Style getUnderlineStyle() const {
+    return m_underline.get();
   }
-  //! returns the font size
-  int size() const {
-    return m_size.get();
+  //! sets the underline style
+  void setUnderlineStyle(MWAWBorder::Style style=MWAWBorder::None) {
+    m_underline = style;
   }
-  //! returns the font flags
-  uint32_t flags() const {
-    return m_flags.get();
-  }
-  //! returns true if the font color is not black
-  bool hasColor() const {
-    return m_color.isSet();
-  }
-  //! returns the font color
-  void getColor(uint32_t &c) const {
-    c = m_color.get();
-  }
+
   //! returns a string which can be used for debugging
   std::string getDebugString(shared_ptr<MWAWFontConverter> &converter) const;
 
@@ -139,6 +154,8 @@ public:
     diff = size() - oth.size();
     if (diff != 0) return diff;
     if (flags() != oth.flags()) return diff;
+    if (m_underline.get() < oth.m_underline.get()) return -1;
+    if (m_underline.get() > oth.m_underline.get()) return 1;
     if (m_color.get() < oth.m_color.get()) return -1;
     if (m_color.get() > oth.m_color.get()) return 1;
     return diff;
@@ -150,6 +167,7 @@ public:
 protected:
   Variable<int> m_id /** font identificator*/, m_size /** font size */;
   Variable<uint32_t> m_flags /** font attributes */;
+  Variable<MWAWBorder::Style> m_underline /** underline attributes */;
   Variable<uint32_t> m_color /** font color */;
 };
 

@@ -692,7 +692,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAW_BOLD_BIT;
   if (flag&0x2) flags |= MWAW_ITALICS_BIT;
-  if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
+  if (flag&0x4) font.setUnderlineStyle(MWAWBorder::Single);
   if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
   if (flag&0x10) flags |= MWAW_SHADOW_BIT;
   /* flags & 0x20: condensed, flags & 0x40: extended */
@@ -701,7 +701,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   if (flag&0x200) flags |= MWAW_SUBSCRIPT100_BIT;
   if (flag&0x400) flags |= MWAW_SUPERSCRIPT_BIT;
   if (flag&0x800) flags |= MWAW_SUBSCRIPT_BIT;
-  if (flag&0x2000) flags |= MWAW_DOUBLE_UNDERLINE_BIT;
+  if (flag&0x2000) font.setUnderlineStyle(MWAWBorder::Double);
   font.setSize((int) m_input->readLong(1));
 
   int colId = (int) m_input->readULong(1);
@@ -723,9 +723,9 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   if (fontSize >= 14) {
     flag = (int) m_input->readULong(2);
     if (flag & 0x1)
-      flags |= MWAW_UNDERLINE_BIT;
+      font.setUnderlineStyle(MWAWBorder::Single);
     if (flag & 0x2)
-      flags |= MWAW_DOUBLE_UNDERLINE_BIT;
+      font.setUnderlineStyle(MWAWBorder::Double);
     if (flag & 0x20)
       flags |= MWAW_STRIKEOUT_BIT;
     flag &= 0xFFDC;
@@ -772,7 +772,7 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAW_BOLD_BIT;
   if (flag&0x2) flags |= MWAW_ITALICS_BIT;
-  if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
+  if (flag&0x4) font.setUnderlineStyle(MWAWBorder::Single);
   if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
   if (flag&0x10) flags |= MWAW_SHADOW_BIT;
   /* flags & 0x20: condensed, flags & 0x40: extended */
@@ -781,7 +781,7 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   if (flag&0x200) flags |= MWAW_SUBSCRIPT100_BIT;
   if (flag&0x400) flags |= MWAW_SUPERSCRIPT_BIT;
   if (flag&0x800) flags |= MWAW_SUBSCRIPT_BIT;
-  if (flag&0x2000) flags |= MWAW_DOUBLE_UNDERLINE_BIT;
+  if (flag&0x2000) font.setUnderlineStyle(MWAWBorder::Double);
   font.setSize((int) m_input->readLong(1));
 
   int colId = (int) m_input->readULong(1);
@@ -793,9 +793,9 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   if (fontSize >= 12 && version()==6) {
     flag = (int) m_input->readULong(2);
     if (flag & 0x1)
-      flags |= MWAW_UNDERLINE_BIT;
+      font.setUnderlineStyle(MWAWBorder::Single);
     if (flag & 0x2)
-      flags |= MWAW_DOUBLE_UNDERLINE_BIT;
+      font.setUnderlineStyle(MWAWBorder::Double);
     if (flag & 0x20)
       flags |= MWAW_STRIKEOUT_BIT;
     flag &= 0xFFDC;

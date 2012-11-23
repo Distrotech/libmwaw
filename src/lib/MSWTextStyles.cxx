@@ -194,18 +194,17 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     if (val && (what & 0x4)) {
       switch(val&0xf) {
       case 8:
-        f << "underline[dotted],";
-        flags |= MWAW_UNDERLINE_BIT;
+        font.m_font->setUnderlineStyle(MWAWBorder::Dot);
         break;
       case 6:
-        flags |= MWAW_DOUBLE_UNDERLINE_BIT;
+        font.m_font->setUnderlineStyle(MWAWBorder::Double);
         break;
       case 2:
-        flags |= MWAW_UNDERLINE_BIT;
+        font.m_font->setUnderlineStyle(MWAWBorder::Single);
         break;
       default:
         f << "#underline=" << (val &0xf) << ",";
-        flags |= MWAW_UNDERLINE_BIT;
+        font.m_font->setUnderlineStyle(MWAWBorder::Single);
       }
       what &= 0xFB;
     } else if (val & 0xf)
@@ -306,6 +305,7 @@ void MSWTextStyles::setProperty(MSWStruct::Font const &font)
   if (tmp.id() < 0) tmp.setId(m_state->m_defaultFont.id());
   if (tmp.size() <= 0) tmp.setSize(m_state->m_defaultFont.size());
   tmp.setFlags(font.getFlags());
+  tmp.setUnderlineStyle(font.getUnderlineStyle());
   tmp.sendTo(m_listener.get(), m_convertissor, tmp);
 }
 

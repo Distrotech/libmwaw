@@ -391,18 +391,19 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0x91:
         break; // extended
 
-      case 0x85:
+      case 0x85: // normal underline
       case 0x8e: // word underline
-      case 0x92: // dotted underline
-        fFlags ^= MWAW_UNDERLINE_BIT;
-        font.setFlags(fFlags);
+      case 0x8f: // double
+      case 0x92: { // dotted underline
+        MWAWBorder::Style style= (val==0x8f)? MWAWBorder::Double :
+                                 (val==0x92)? MWAWBorder::Dot : MWAWBorder::Single;
+        if (font.getUnderlineStyle()==style)
+          font.setUnderlineStyle(MWAWBorder::None);
+        else
+          font.setUnderlineStyle(style);
         fontSet=false;
         break;
-      case 0x8f:
-        fFlags ^= MWAW_DOUBLE_UNDERLINE_BIT;
-        font.setFlags(fFlags);
-        fontSet=false;
-        break;
+      }
       case 0x93:
         fFlags ^= MWAW_OVERLINE_BIT;
         font.setFlags(fFlags);

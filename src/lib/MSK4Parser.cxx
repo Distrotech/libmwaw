@@ -341,7 +341,7 @@ void MSK4Parser::flushExtra()
         // FIXME: add a message here
         if (first) {
           first = false;
-          m_listener->setTextFont("Times New Roman");
+          m_listener->setFontName("Times New Roman");
           m_listener->setFontSize(20);
           m_listener->setFontAttributes(0);
           WPXString message = "--------- The original document has some extra ole: -------- ";

@@ -1124,7 +1124,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAW_BOLD_BIT;
   if (flag&0x2) flags |= MWAW_ITALICS_BIT;
-  if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
+  if (flag&0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
   if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
   if (flag&0x10) flags |= MWAW_SHADOW_BIT;
   if (flag&0x20) f << "condensed,";
@@ -1141,27 +1141,21 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   if (flag&0x7f) f << "#flag1=" << std::hex << (flag&0x7f) << std::dec << ",";
 
   flag = (int) input.readULong(1);
-  if (flag&0x2) flags |= MWAW_DOUBLE_UNDERLINE_BIT;
+  if (flag&0x2) font.m_font.setUnderlineStyle(MWAWBorder::Double);
   if (flag&0x4) {
-    flags |= MWAW_UNDERLINE_BIT;
+    font.m_font.setUnderlineStyle(MWAWBorder::Single);
     f << "underline[thick],";
   }
   if (flag&0x8) {
-    flags |= MWAW_UNDERLINE_BIT;
+    font.m_font.setUnderlineStyle(MWAWBorder::Single);
     f << "underline[gray],";
   }
   if (flag&0x10) {
-    flags |= MWAW_UNDERLINE_BIT;
+    font.m_font.setUnderlineStyle(MWAWBorder::Single);
     f << "underline[charcoal],";
   }
-  if (flag&0x20) {
-    flags |= MWAW_UNDERLINE_BIT;
-    f << "underline[dashed],";
-  }
-  if (flag&0x40) {
-    flags |= MWAW_UNDERLINE_BIT;
-    f << "underline[dotted],";
-  }
+  if (flag&0x20) font.m_font.setUnderlineStyle(MWAWBorder::Dash);
+  if (flag&0x40) font.m_font.setUnderlineStyle(MWAWBorder::Dot);
   if (flag&0x81) f << "#flag2=" << std::hex << (flag&0x81) << std::dec << ",";
 
   int color = (int) input.readULong(1); // fixme find color map

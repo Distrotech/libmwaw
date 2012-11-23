@@ -81,6 +81,8 @@ void Font::insert(Font const &font)
 {
   uint32_t flags = getFlags();
   if (flags) m_font->setFlags(flags);
+  MWAWBorder::Style style = getUnderlineStyle();
+  if (style!=MWAWBorder::None) m_font->setUnderlineStyle(style);
   m_font.insert(font.m_font);
   m_size.insert(font.m_size);
   m_value.insert(font.m_value);
@@ -94,13 +96,12 @@ void Font::insert(Font const &font)
 uint32_t Font::getFlags() const
 {
   uint32_t res=0;
-  uint32_t const fl[NumFlags] = {
+  uint32_t const fl[NumFlags-1] = {
     MWAW_BOLD_BIT, MWAW_ITALICS_BIT, MWAW_STRIKEOUT_BIT, MWAW_OUTLINE_BIT,
-    MWAW_SHADOW_BIT, MWAW_SMALL_CAPS_BIT, MWAW_ALL_CAPS_BIT, MWAW_HIDDEN_BIT,
-    MWAW_UNDERLINE_BIT
+    MWAW_SHADOW_BIT, MWAW_SMALL_CAPS_BIT, MWAW_ALL_CAPS_BIT, MWAW_HIDDEN_BIT
   };
   if (m_font.isSet()) res = m_font->flags();
-  for (int i=0; i < NumFlags; i++) {
+  for (int i=0; i < NumFlags-1; i++) {
     if (!m_flags[i].isSet()) continue;
     int action = m_flags[i].get();
     if (action&0xFF7E) continue;
@@ -108,6 +109,20 @@ uint32_t Font::getFlags() const
     else res &= ~(fl[i]);
   }
   return res;
+}
+
+MWAWBorder::Style Font::getUnderlineStyle() const
+{
+  MWAWBorder::Style res=MWAWBorder::None;
+  if (m_font.isSet()) res = m_font->getUnderlineStyle();
+  if (!m_flags[NumFlags-1].isSet()) return res;
+
+  int action = m_flags[NumFlags-1].get();
+  if (action&0xFF7E) return res;
+
+  if (action & 1) return MWAWBorder::Single;
+
+  return MWAWBorder::None;
 }
 
 // ------ section -------------

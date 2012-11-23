@@ -67,7 +67,7 @@ struct State;
 
 class NSParser;
 
-/** \brief the main class to read the text part of writenow file
+/** \brief the main class to read the text part of Nisus file
  *
  *
  *

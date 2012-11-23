@@ -1162,7 +1162,7 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
     case 0x6: {
       int v = (int) input->readLong(1);
       if (v != 1) f << "##under=" << v << ",";
-      textAttributeBits |= MWAW_UNDERLINE_BIT;
+      font.m_font.setUnderlineStyle(MWAWBorder::Single);
       break;
     }
     case 0x7: {
@@ -1214,7 +1214,7 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
           ok = false;
           break;
         }
-        font.m_font = MWAWFont(m_state->m_fontNames[size_t(v)].m_id, font.m_font.size());
+        font.m_font.setId(m_state->m_fontNames[size_t(v)].m_id);
       } else { // fontSize
         if (v <= 0 || v > 200) {
           ok = false;

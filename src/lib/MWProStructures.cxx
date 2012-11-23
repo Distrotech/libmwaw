@@ -1243,7 +1243,7 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAW_BOLD_BIT;
   if (flag&0x2) flags |= MWAW_ITALICS_BIT;
-  if (flag&0x4) flags |= MWAW_UNDERLINE_BIT;
+  if (flag&0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
   if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
   if (flag&0x10) flags |= MWAW_SHADOW_BIT;
   if (flag&0x20) flags |= MWAW_SUPERSCRIPT100_BIT;
@@ -1252,8 +1252,8 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   if (flag&0x200) flags |= MWAW_STRIKEOUT_BIT;
   if (flag&0x400) flags |= MWAW_ALL_CAPS_BIT;
   if (flag&0x800) flags |= MWAW_SMALL_CAPS_BIT;
-  if (flag&0x1000) flags |= MWAW_UNDERLINE_BIT;
-  if (flag&0x2000) flags |= MWAW_DOUBLE_UNDERLINE_BIT;
+  if (flag&0x1000) font.m_font.setUnderlineStyle(MWAWBorder::Single);
+  if (flag&0x2000) font.m_font.setUnderlineStyle(MWAWBorder::Double);
   if (flag&0x4000) f << "lowercase,";
   font.m_flags = (flag&0x8080L);
 

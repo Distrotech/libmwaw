@@ -136,6 +136,10 @@ SOURCE=..\..\src\lib\HMWParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\HMWText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MDWParser.cxx
 # End Source File
 # Begin Source File
@@ -377,6 +381,10 @@ SOURCE=..\..\src\lib\FWText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\HMWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HMWText.hxx
 # End Source File
 # Begin Source File
 

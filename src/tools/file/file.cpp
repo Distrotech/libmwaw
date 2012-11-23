@@ -219,6 +219,8 @@ bool File::readFileInformation()
     checkFInfoType("ClarisWorks/AppleWorks");
   } else if (m_fInfoCreator=="CARO") {
     checkFInfoType("PDF ", "Acrobat PDF");
+  } else if (m_fInfoCreator=="CDrw") {
+    checkFInfoType("dDraw", "ClarisDraw") || checkFInfoType("ClarisDraw");
   } else if (m_fInfoCreator=="FS03") {
     checkFInfoType("WRT+","WriterPlus") || checkFInfoType("WriterPlus");
   } else if (m_fInfoCreator=="Fram") {
@@ -229,7 +231,7 @@ bool File::readFileInformation()
     checkFInfoType("FWRM","FullWrite 1.0") || checkFInfoType("FWRI","FullWrite 2.0") ||
     checkFInfoType("FWRI","FullWrite") || checkFInfoType("FullWrite");
   } else if (m_fInfoCreator=="HMdr") {
-    checkFInfoType("DRD2","HanMac Word-K") || checkFInfoType("HanMac Word-K");
+    checkFInfoType("DRD2","HanMac Word") || checkFInfoType("HanMac Word");
   } else if (m_fInfoCreator=="MACA") {
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   } else if (m_fInfoCreator=="MACD") { // checkme

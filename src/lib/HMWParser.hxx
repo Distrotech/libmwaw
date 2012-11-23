@@ -37,10 +37,11 @@
 #ifndef HMW_PARSER
 #  define HMW_PARSER
 
+#include <iostream>
 #include <string>
 #include <vector>
 
-class WPXBinaryData;
+#include <libwpd/libwpd.h>
 
 #include "MWAWPageSpan.hxx"
 
@@ -61,10 +62,66 @@ typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace HMWParserInternal
 {
-struct Zone;
 struct State;
 class SubDocument;
 }
+
+//! Small class used to store the decoded zone of HMWParser
+struct HMWZone {
+  //! constructor
+  HMWZone();
+  //! destructor
+  ~HMWZone();
+
+  //! return true if the zone data exists
+  bool valid() const {
+    return m_data.size() > 0;
+  }
+
+  //! returns the zone name
+  std::string name() const {
+    return name(m_type);
+  }
+  //! returns the zone name
+  static std::string name(int type);
+
+  //! operator <<
+  friend std::ostream &operator<<(std::ostream &o, HMWZone const &zone);
+
+  //! returns the debug file
+  libmwaw::DebugFile &ascii() {
+    return m_asciiFile;
+  }
+
+  //! the type : 1(text), ....
+  int m_type;
+
+  //! the zone id
+  long m_id;
+
+  //! the begin of the entry
+  long m_filePos;
+
+  //! the end of the entry
+  long m_endFilePos;
+
+  //! the storage
+  WPXBinaryData m_data;
+
+  //! the main input
+  MWAWInputStreamPtr m_input;
+
+  //! the debug file
+  libmwaw::DebugFile m_asciiFile;
+
+  //! some extra data
+  std::string m_extra;
+
+  //! true if the zone is sended
+  bool m_parsed;
+};
+
+class HMWText;
 
 /** \brief the main class to read a HanMac Word-K file
  *
@@ -73,6 +130,7 @@ class SubDocument;
  */
 class HMWParser : public MWAWParser
 {
+  friend class HMWText;
   friend class HMWParserInternal::SubDocument;
 
 public:
@@ -115,9 +173,29 @@ protected:
   /** try to read the zones list */
   bool readZonesList();
   /** try to read a generic zone */
-  bool readZone(MWAWEntry &entry);
+  bool readZone(shared_ptr<HMWZone> zone);
   /** try to decode a zone */
-  shared_ptr<HMWParserInternal::Zone> decodeZone(MWAWEntry const &entry);
+  shared_ptr<HMWZone> decodeZone(shared_ptr<HMWZone> zone);
+  /** try to read the frame definition (type 2)*/
+  bool readFrames(shared_ptr<HMWZone> zone);
+  /** try to read a zone storing a list of ?, frameType*/
+  bool readFramesUnkn(shared_ptr<HMWZone> zone);
+  /** try to read a picture zone (type d)*/
+  bool readPicture(shared_ptr<HMWZone> zone);
+  /** try to read a section info zone (type 4)*/
+  bool readSections(shared_ptr<HMWZone> zone);
+  /** try to read a printinfo zone (type 7)*/
+  bool readPrintInfo(shared_ptr<HMWZone> zone);
+  /** try to read a unknown zone of type 6*/
+  bool readZone6(shared_ptr<HMWZone> zone);
+  /** try to read a unknown zone of type 8*/
+  bool readZone8(shared_ptr<HMWZone> zone);
+  /** try to read a unknown zone of type a*/
+  bool readZonea(shared_ptr<HMWZone> zone);
+  /** try to read a unknown zone of type b*/
+  bool readZoneb(shared_ptr<HMWZone> zone);
+  /** try to read a unknown zone of type c*/
+  bool readZonec(shared_ptr<HMWZone> zone);
   /** check if an entry is in file */
   bool isFilePos(long pos);
 
@@ -136,6 +214,9 @@ protected:
 
   //! the actual document size
   MWAWPageSpan m_pageSpan;
+
+  //! the text parser
+  shared_ptr<HMWText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

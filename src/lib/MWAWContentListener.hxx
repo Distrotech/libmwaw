@@ -83,9 +83,10 @@ struct MWAWContentParsingState {
   WPXString m_textBuffer;
   int m_numDeferredTabs;
 
-  uint32_t m_textAttributeBits;
-  double m_fontSize;
   WPXString m_fontName;
+  double m_fontSize;
+  uint32_t m_fontAttributeBits;
+  MWAWBorder::Style m_fontUnderline;
   uint32_t m_fontColor;
   std::string m_textLanguage;
 
@@ -178,15 +179,22 @@ private:
 class MWAWContentListener
 {
 public:
+  /** constructor */
   MWAWContentListener(std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
+  /** destructor */
   virtual ~MWAWContentListener();
 
+  /** sets the documents language */
   void setDocumentLanguage(std::string locale);
 
+  /** starts the document */
   void startDocument();
+  /** ends the document */
   void endDocument();
+
+  /** function called to add a subdocument */
   void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
-  /** return try if a subdocument is open  */
+  /** returns try if a subdocument is open  */
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
   /** returns true if the header/footer is open */
   bool isHeaderFooterOpened() const;
@@ -200,19 +208,29 @@ public:
   void insertUnicode(uint32_t character);
   //! adds a unicode string
   void insertUnicodeString(WPXString const &str);
-  //! add an unicode character to a string ( with correct encoding ).
+  //! adds an unicode character to a string ( with correct encoding ).
   static void appendUnicode(uint32_t val, WPXString &buffer);
 
+  //! adds a tab
   void insertTab();
+  //! adds an end of line ( by default an hard one)
   void insertEOL(bool softBreak=false);
+  //! inserts a break type: ColumBreak, PageBreak, ..
   void insertBreak(const uint8_t breakType);
 
   // ------ text format -----------
-  void setTextFont(const WPXString &fontName);
+  //! sets the font name
+  void setFontName(const WPXString &fontName);
+  //! sets the font size
   void setFontSize(const uint16_t fontSize);
+  //! sets the font attribute: bold, italic, ...
   void setFontAttributes(const uint32_t fontAttributes);
+  //! sets the font underline style
+  void setFontUnderlineStyle(MWAWBorder::Style style);
+  //! sets the font color
+  void setFontColor(const uint32_t rgb);
+  //! sets the font language
   void setTextLanguage(std::string const &locale);
-  void setTextColor(const uint32_t rgb);
 
   // ------ paragraph format -----------
   //! returns true if a paragraph or a list is opened

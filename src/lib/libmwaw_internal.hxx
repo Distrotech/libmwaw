@@ -140,6 +140,8 @@ struct MWAWBorder {
   MWAWBorder() : m_style(Single), m_width(1), m_color(0) { }
   //! return the properties
   std::string getPropertyValue() const;
+  //! return the properties corresponding to a style
+  static std::string getPropertyValue(MWAWBorder::Style const &style);
 
   //! operator==
   bool operator==(MWAWBorder const &orig) const {
@@ -155,6 +157,8 @@ struct MWAWBorder {
 
   //! operator<<: prints data in form "XxY"
   friend std::ostream &operator<< (std::ostream &o, MWAWBorder const &border);
+  //! operator<<: prints data in form "none|dot|..."
+  friend std::ostream &operator<< (std::ostream &o, MWAWBorder::Style const &style);
   //! the border style
   Style m_style;
   //! the border width
@@ -189,10 +193,8 @@ enum { NoBreakBit = 0x1, NoBreakWithNextBit=0x2};
 #define MWAW_ITALICS_BIT 0x100
 #define MWAW_SHADOW_BIT 0x200
 #define MWAW_REDLINE_BIT 0x400
-#define MWAW_DOUBLE_UNDERLINE_BIT 0x800
 #define MWAW_BOLD_BIT 0x1000
 #define MWAW_STRIKEOUT_BIT 0x2000
-#define MWAW_UNDERLINE_BIT 0x4000
 #define MWAW_SMALL_CAPS_BIT 0x8000
 #define MWAW_BLINK_BIT 0x10000
 #define MWAW_REVERSEVIDEO_BIT 0x20000

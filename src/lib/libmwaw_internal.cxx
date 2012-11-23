@@ -168,58 +168,66 @@ int MWAWBorder::compare(MWAWBorder const &orig) const
   return 0;
 }
 
-std::string MWAWBorder::getPropertyValue() const
+std::string MWAWBorder::getPropertyValue(MWAWBorder::Style const &style)
 {
-  if (m_style == None) return "";
-  std::stringstream stream;
-  stream << m_width*0.03 << "cm";
-  switch (m_style) {
+  switch (style) {
   case Dot:
   case LargeDot:
-    stream << " dotted";
-    break;
+    return "dotted";
   case Dash:
-    stream << " dashed";
-    break;
+    return "dashed";
   case Single:
-    stream << " solid";
-    break;
+    return "solid";
   case Double:
-    stream << " double";
+    return "double";
     break;
   case None:
   default:
     break;
   }
-  stream << " " << libmwaw::getColorString(m_color);
+  return "";
+}
+
+std::string MWAWBorder::getPropertyValue() const
+{
+  if (m_style == None) return "";
+  std::stringstream stream;
+  stream << m_width*0.03 << "cm " << getPropertyValue(m_style)
+         << " " << libmwaw::getColorString(m_color);
   return stream.str();
 }
 
-std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
+std::ostream &operator<< (std::ostream &o, MWAWBorder::Style const &style)
 {
-  switch (border.m_style) {
+  switch (style) {
   case MWAWBorder::None:
-    o << "none:";
+    o << "none";
     break;
   case MWAWBorder::Single:
     break;
   case MWAWBorder::Dot:
-    o << "dot:";
+    o << "dot";
     break;
   case MWAWBorder::LargeDot:
-    o << "large dot:";
+    o << "large dot";
     break;
   case MWAWBorder::Dash:
-    o << "dash:";
+    o << "dash";
     break;
   case MWAWBorder::Double:
-    o << "double:";
+    o << "double";
     break;
   default:
     MWAW_DEBUG_MSG(("MWAWBorder::operator<<: find unknown style\n"));
-    o << "#style=" << int(border.m_style) << ":";
+    o << "#style=" << int(style);
     break;
   }
+  return o;
+}
+
+std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
+{
+  o << border.m_style << ":";
   if (border.m_width > 1) o << "w=" << border.m_width << ":";
   if (border.m_color)
     o << "col=" << std::hex << border.m_color << std::dec << ":";

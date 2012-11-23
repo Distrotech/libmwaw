@@ -34,6 +34,7 @@ SLOFILES= \
 	$(SLO)$/CWTable.obj			\
 	$(SLO)$/CWText.obj			\
 	$(SLO)$/HMWParser.obj			\
+	$(SLO)$/HMWText.obj			\
 	$(SLO)$/FWParser.obj			\
 	$(SLO)$/FWText.obj			\
 	$(SLO)$/MDWParser.obj			\

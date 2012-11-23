@@ -54,27 +54,28 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
 
   if (m_flags.isSet() && m_flags.get()) {
     o << "fl=";
-    if (m_flags.get()&MWAW_BOLD_BIT) o << "b:";
-    if (m_flags.get()&MWAW_ITALICS_BIT) o << "it:";
-    if (m_flags.get()&MWAW_UNDERLINE_BIT) o << "underL:";
-    if (m_flags.get()&MWAW_OVERLINE_BIT) o << "overL:";
-    if (m_flags.get()&MWAW_EMBOSS_BIT) o << "emboss:";
-    if (m_flags.get()&MWAW_SHADOW_BIT) o << "shadow:";
-    if (m_flags.get()&MWAW_OUTLINE_BIT) o << "outline:";
-    if (m_flags.get()&MWAW_DOUBLE_UNDERLINE_BIT) o << "2underL:";
-    if (m_flags.get()&MWAW_STRIKEOUT_BIT) o << "strikeout:";
-    if (m_flags.get()&MWAW_SMALL_CAPS_BIT) o << "smallCaps:";
-    if (m_flags.get()&MWAW_ALL_CAPS_BIT) o << "allCaps:";
-    if (m_flags.get()&MWAW_HIDDEN_BIT) o << "hidden:";
-    if (m_flags.get()&MWAW_SMALL_PRINT_BIT) o << "consended:";
-    if (m_flags.get()&MWAW_LARGE_BIT) o << "extended:";
-    if ((m_flags.get()&MWAW_SUPERSCRIPT_BIT) || (m_flags.get()&MWAW_SUPERSCRIPT100_BIT))
+    uint32_t flag = m_flags.get();
+    if (flag&MWAW_BOLD_BIT) o << "b:";
+    if (flag&MWAW_ITALICS_BIT) o << "it:";
+    if (flag&MWAW_OVERLINE_BIT) o << "overL:";
+    if (flag&MWAW_EMBOSS_BIT) o << "emboss:";
+    if (flag&MWAW_SHADOW_BIT) o << "shadow:";
+    if (flag&MWAW_OUTLINE_BIT) o << "outline:";
+    if (flag&MWAW_STRIKEOUT_BIT) o << "strikeout:";
+    if (flag&MWAW_SMALL_CAPS_BIT) o << "smallCaps:";
+    if (flag&MWAW_ALL_CAPS_BIT) o << "allCaps:";
+    if (flag&MWAW_HIDDEN_BIT) o << "hidden:";
+    if (flag&MWAW_SMALL_PRINT_BIT) o << "consended:";
+    if (flag&MWAW_LARGE_BIT) o << "extended:";
+    if ((flag&MWAW_SUPERSCRIPT_BIT) || (flag&MWAW_SUPERSCRIPT100_BIT))
       o << "superS:";
-    if ((m_flags.get()&MWAW_SUBSCRIPT_BIT) || (m_flags.get()&MWAW_SUBSCRIPT100_BIT))
+    if ((flag&MWAW_SUBSCRIPT_BIT) || (flag&MWAW_SUBSCRIPT100_BIT))
       o << "subS:";
+    if (flag&MWAW_REVERSEVIDEO_BIT) o << "reversed:";
+    if (flag&MWAW_BLINK_BIT) o << "blink:";
     o << ",";
   }
-
+  if (m_underline.isSet()) o << "underline=" << getUnderlineStyle() << ":";
   if (hasColor())
     o << "col=(" << std::hex << m_color.get() << std::dec << "),";
   return o.str();
@@ -91,7 +92,7 @@ void MWAWFont::sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverte
   if (id() != -1) {
     actualFont.setId(id());
     convert->getOdtInfo(actualFont.id(), fName, dSize);
-    listener->setTextFont(fName.c_str());
+    listener->setFontName(fName.c_str());
     // if no size reset to default
     if (newSize == -1) newSize = 12;
   }
@@ -105,7 +106,9 @@ void MWAWFont::sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverte
 
   actualFont.setFlags(flags());
   listener->setFontAttributes(actualFont.flags());
+  actualFont.setUnderlineStyle(getUnderlineStyle());
+  listener->setFontUnderlineStyle(actualFont.getUnderlineStyle());
   actualFont.setColor(m_color.get());
-  listener->setTextColor(m_color.get());
+  listener->setFontColor(m_color.get());
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

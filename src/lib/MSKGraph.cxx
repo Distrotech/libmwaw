@@ -2208,16 +2208,17 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
     if (bgColors)
       f2 << std::dec << "bgColorId(?)=" << bgColors << ", "; // indexed
 
+    cell.m_font=MWAWFont(m_convertissor->getId(fName), fSize);
     uint32_t flags = 0;
     if (fFlags & 0x1) flags |= MWAW_BOLD_BIT;
     if (fFlags & 0x2) flags |= MWAW_ITALICS_BIT;
-    if (fFlags & 0x4) flags |= MWAW_UNDERLINE_BIT;
+    if (fFlags & 0x4) cell.m_font.setUnderlineStyle(MWAWBorder::Single);
     if (fFlags & 0x8) flags |= MWAW_EMBOSS_BIT;
     if (fFlags & 0x10) flags |= MWAW_SHADOW_BIT;
     if (fFlags & 0x20) flags |= MWAW_SUPERSCRIPT_BIT;
     if (fFlags & 0x40) flags |= MWAW_SUBSCRIPT_BIT;
+    cell.m_font.setFlags(flags);
 
-    cell.m_font=MWAWFont(m_convertissor->getId(fName), fSize, flags);
     if (fColors != 0xFF) {
       Vec3uc col(0xD0, 0xD0, 0xD0); // see how to do that
       cell.m_font.setColor(col);
@@ -2557,7 +2558,7 @@ bool MSKGraph::readFont(MSKGraphInternal::Font &font)
   uint32_t flag = 0;
   if (flags & 0x1) flag |= MWAW_BOLD_BIT;
   if (flags & 0x2) flag |= MWAW_ITALICS_BIT;
-  if (flags & 0x4) flag |= MWAW_UNDERLINE_BIT;
+  if (flags & 0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
   if (flags & 0x8) flag |= MWAW_EMBOSS_BIT;
   if (flags & 0x10) flag |= MWAW_SHADOW_BIT;
   if (flags & 0x20) flag |= MWAW_SUPERSCRIPT_BIT;

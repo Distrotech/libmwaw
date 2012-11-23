@@ -73,6 +73,9 @@ struct Font {
   //! returns the font flags
   uint32_t getFlags() const;
 
+  //! returns the underline style
+  MWAWBorder::Style getUnderlineStyle() const;
+
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Font const &font);
 

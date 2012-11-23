@@ -64,8 +64,8 @@ MWAWDocumentParsingState::~MWAWDocumentParsingState()
 MWAWContentParsingState::MWAWContentParsingState() :
   m_textBuffer(""), m_numDeferredTabs(0),
 
-  m_textAttributeBits(0),	m_fontSize(12.0), m_fontName("Times New Roman"),
-  m_fontColor(0), m_textLanguage("UNSET"),
+  m_fontName("Times New Roman"), m_fontSize(12.0), m_fontAttributeBits(0),
+  m_fontUnderline(MWAWBorder::None), m_fontColor(0), m_textLanguage("UNSET"),
 
   m_isParagraphColumnBreak(false), m_isParagraphPageBreak(false),
 
@@ -256,8 +256,8 @@ void MWAWContentListener::insertEOL(bool soft)
   static const uint32_t s_subsuperBits =
     MWAW_SUBSCRIPT_BIT | MWAW_SUPERSCRIPT_BIT |
     MWAW_SUBSCRIPT100_BIT | MWAW_SUPERSCRIPT100_BIT;
-  if (m_ps->m_textAttributeBits & s_subsuperBits)
-    m_ps->m_textAttributeBits &= ~s_subsuperBits;
+  if (m_ps->m_fontAttributeBits & s_subsuperBits)
+    m_ps->m_fontAttributeBits &= ~s_subsuperBits;
 }
 
 void MWAWContentListener::insertTab()
@@ -334,13 +334,13 @@ void MWAWContentListener::_insertBreakIfNecessary(WPXPropertyList &propList)
 ///////////////////
 void MWAWContentListener::setFontAttributes(const uint32_t attribute)
 {
-  if (attribute == m_ps->m_textAttributeBits) return;
+  if (attribute == m_ps->m_fontAttributeBits) return;
   _closeSpan();
 
-  m_ps->m_textAttributeBits = attribute;
+  m_ps->m_fontAttributeBits = attribute;
 }
 
-void MWAWContentListener::setTextFont(const WPXString &fontName)
+void MWAWContentListener::setFontName(const WPXString &fontName)
 {
   if (fontName == m_ps->m_fontName) return;
   _closeSpan();
@@ -356,7 +356,14 @@ void MWAWContentListener::setFontSize(const uint16_t fontSize)
   m_ps->m_fontSize=fSize;
 }
 
-void MWAWContentListener::setTextColor(const uint32_t rgb)
+void MWAWContentListener::setFontUnderlineStyle(MWAWBorder::Style style)
+{
+  if (m_ps->m_fontUnderline==style) return;
+  _closeSpan();
+  m_ps->m_fontUnderline=style;
+}
+
+void MWAWContentListener::setFontColor(const uint32_t rgb)
 {
   if (m_ps->m_fontColor==rgb) return;
   _closeSpan();
@@ -1126,7 +1133,7 @@ void MWAWContentListener::_openSpan()
       _openListElement();
   }
 
-  uint32_t attributeBits = m_ps->m_textAttributeBits;
+  uint32_t attributeBits = m_ps->m_fontAttributeBits;
   double fontSizeChange = 1.0;
   switch (attributeBits& 0x0000001f) {
   case 0x01:  // Extra large
@@ -1165,10 +1172,16 @@ void MWAWContentListener::_openSpan()
     propList.insert("fo:font-weight", "bold");
   if (attributeBits & MWAW_STRIKEOUT_BIT)
     propList.insert("style:text-line-through-type", "single");
-  if (attributeBits & MWAW_DOUBLE_UNDERLINE_BIT)
-    propList.insert("style:text-underline-type", "double");
-  else if (attributeBits & MWAW_UNDERLINE_BIT)
-    propList.insert("style:text-underline-type", "single");
+  if (m_ps->m_fontUnderline != MWAWBorder::None) {
+    if(m_ps->m_fontUnderline == MWAWBorder::Double)
+      propList.insert("style:text-underline-type", "double");
+    else {
+      propList.insert("style:text-underline-type", "single");
+      std::string str = MWAWBorder::getPropertyValue(m_ps->m_fontUnderline);
+      if (str.size())
+        propList.insert("style:text-underline-style", str.c_str());
+    }
+  }
   if (attributeBits & MWAW_OVERLINE_BIT)
     propList.insert("style:text-overline-type", "single");
   if (attributeBits & MWAW_OUTLINE_BIT)
@@ -1223,15 +1236,17 @@ void MWAWContentListener::_flushDeferredTabs()
   if (m_ps->m_numDeferredTabs == 0) return;
 
   // CHECKME: the tab are not underline even if the underline bit is set
-  uint32_t oldTextAttributes = m_ps->m_textAttributeBits;
-  static const uint32_t s_underoverlineBits =
-    MWAW_UNDERLINE_BIT | MWAW_DOUBLE_UNDERLINE_BIT | MWAW_OVERLINE_BIT;
+  MWAWBorder::Style oldUnderline = m_ps->m_fontUnderline;
+  if (oldUnderline != MWAWBorder::None) setFontUnderlineStyle(MWAWBorder::None);
+  uint32_t oldTextAttributes = m_ps->m_fontAttributeBits;
+  static const uint32_t s_underoverlineBits = MWAW_OVERLINE_BIT;
   uint32_t newAttributes = oldTextAttributes & (~s_underoverlineBits);
   if (oldTextAttributes != newAttributes) setFontAttributes(newAttributes);
   if (!m_ps->m_isSpanOpened) _openSpan();
   for (; m_ps->m_numDeferredTabs > 0; m_ps->m_numDeferredTabs--)
     m_documentInterface->insertTab();
   if (oldTextAttributes != newAttributes) setFontAttributes(oldTextAttributes);
+  if (oldUnderline != MWAWBorder::None) setFontUnderlineStyle(oldUnderline);
 }
 
 void MWAWContentListener::_flushText()
