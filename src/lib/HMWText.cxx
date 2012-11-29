@@ -43,7 +43,6 @@
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
-#include "MWAWPageSpan.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWRSRCParser.hxx"
@@ -76,19 +75,63 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
   return o;
 }
 
-/** Internal: class to store the paragraph properties */
+/** Internal: class to store the paragraph properties of a HMWText */
 struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Paragraph() : MWAWParagraph() {
+  Paragraph() : MWAWParagraph(), m_type(0), m_addPageBreak(false) {
   }
   //! destructor
   ~Paragraph() {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
+    switch(ind.m_type) {
+    case 0:
+      break;
+    case 1:
+      o << "header,";
+      break;
+    case 2:
+      o << "footer,";
+      break;
+    case 5:
+      o << "footnote,";
+      break;
+    default:
+      o << "#type=" << ind.m_type << ",";
+      break;
+    }
     o << reinterpret_cast<MWAWParagraph const &>(ind) << ",";
+    if (ind.m_addPageBreak) o << "pageBreakBef,";
     return o;
   }
+  //! the type
+  int m_type;
+  //! flag to store a force page break
+  bool m_addPageBreak;
+};
+
+/** Internal: class to store the token properties of a HMWText */
+struct Token {
+  //! Constructor
+  Token() : m_type(0), m_id(-1), m_extra("") {
+  }
+  //! destructor
+  ~Token() {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Token const &tkn) {
+    o << "type=" << tkn.m_type << ",";
+    o << "id=" << std::hex << tkn.m_id << std::dec << ",";
+    o << tkn.m_extra;
+    return o;
+  }
+  //! the type
+  int m_type;
+  //! the identificator
+  long m_id;
+  //! extra data, mainly for debugging
+  std::string m_extra;
 };
 
 ////////////////////////////////////////
@@ -237,52 +280,55 @@ bool HMWText::readTextZone(shared_ptr<HMWZone> zone)
       break;
     }
     int type = (int) input->readLong(2);
-    bool ok = false, done=false;;
+    bool done=false;;
     switch(type) {
     case 1: {
+      f << "font,";
       HMWTextInternal::Font font;
-      ok=done=readFont(zone,font);
+      done=readFont(zone,font);
       break;
     }
     case 2: { // ruler
       f << "ruler,";
-      ok = (pos+106 <= dataSz);
-      if (!ok) break;
-
-      input->seek(pos+103, WPX_SEEK_SET);
-      int nTabs = (int) input->readLong(1);
-      ok = pos+106+nTabs*12 <= dataSz;
-      input->seek(pos+106+nTabs*12, WPX_SEEK_SET);
-      if (!ok) break;
+      HMWTextInternal::Paragraph para;
+      done=readParagraph(zone,para);
       break;
     }
-    case 3: // footnote, object?
-      f << "type=3,";
-      ok = (pos+14 <= dataSz);
-      if (!ok) break;
-      input->seek(pos+14, WPX_SEEK_SET);
+    case 3: { // footnote, object?
+      f << "token,";
+      HMWTextInternal::Token token;
+      done=readToken(zone,token);
       break;
+    }
     case 4:
       f << "section,";
-      ok = (pos+6 <= dataSz);
-      if (!ok) break;
-      input->seek(pos+6, WPX_SEEK_SET);
       break;
-      // 9: rubi text
-      // e: end rubi?
-    default: {
-      f << "##type=" << type;
-      long sz = input->readULong(2);
-      ok = pos+6+sz;
-      input->seek(pos+6+sz, WPX_SEEK_SET);
+    case 9:
+      f << "rubi,";
+      break;
+    case 14:
+      f << "endRubi?,";
+      break;
+    default:
       break;
     }
-    }
+
+    bool ok=true;
     if (!done) {
-      if (!ok) f << "###";
+      input->seek(pos+4, WPX_SEEK_SET);
+      long sz = (long) input->readULong(2);
+      ok = pos+6+sz <= dataSz;
+      if (!ok)
+        f << "###";
+      else
+        input->seek(pos+6+sz, WPX_SEEK_SET);
+
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
-      if (!ok) break;
+    }
+    if (!ok) {
+      MWAW_DEBUG_MSG(("HMWText::readTextZone: can not read a zone\n"));
+      break;
     }
 
     pos = input->tell();
@@ -307,8 +353,10 @@ bool HMWText::readTextZone(shared_ptr<HMWZone> zone)
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
     }
-    if (!ok)
+    if (!ok) {
+      MWAW_DEBUG_MSG(("HMWText::readTextZone: can not read a text zone\n"));
       break;
+    }
   }
   return true;
 }
@@ -316,6 +364,14 @@ bool HMWText::readTextZone(shared_ptr<HMWZone> zone)
 ////////////////////////////////////////////////////////////
 //     Fonts
 ////////////////////////////////////////////////////////////
+
+// send the font to the listener
+void HMWText::setProperty(MWAWFont const &font)
+{
+  if (!m_listener) return;
+  MWAWFont ft;
+  font.sendTo(m_listener.get(), m_convertissor, ft);
+}
 
 // a font in the text zone
 bool HMWText::readFont(shared_ptr<HMWZone> zone, HMWTextInternal::Font &font)
@@ -411,8 +467,13 @@ bool HMWText::readFont(shared_ptr<HMWZone> zone, HMWTextInternal::Font &font)
   font.m_font.setFlags(flags);
   font.m_extra = f.str();
 
+  static bool first=true;
   f.str("");
-  f << "TextZone[font]:";
+  if (first) {
+    f << "Entries(FontDef):";
+    first = false;
+  } else
+    f << "FontDef:";
   f << font.m_font.getDebugString(m_convertissor) << font << ",";
 
   zone->ascii().addPos(pos-4);
@@ -606,6 +667,17 @@ bool HMWText::readStyles(shared_ptr<HMWZone> zone)
 ////////////////////////////////////////////////////////////
 //     Paragraph
 ////////////////////////////////////////////////////////////
+void HMWText::setProperty(HMWTextInternal::Paragraph const &para, float width)
+{
+  if (!m_listener) return;
+  double origRMargin = para.m_margins[2].get();
+  double rMargin=double(width)-origRMargin;
+  if (rMargin < 0.0) rMargin = 0;
+  const_cast<HMWTextInternal::Paragraph &>(para).m_margins[2] = rMargin;
+  para.send(m_listener);
+  const_cast<HMWTextInternal::Paragraph &>(para).m_margins[2] = origRMargin;
+}
+
 bool HMWText::readParagraph(shared_ptr<HMWZone> zone, HMWTextInternal::Paragraph &para)
 {
   if (!zone) {
@@ -624,25 +696,272 @@ bool HMWText::readParagraph(shared_ptr<HMWZone> zone, HMWTextInternal::Paragraph
   }
 
   libmwaw::DebugStream f;
+  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
   int val = (int) input->readLong(2);
   if (val!=100) {
     MWAW_DEBUG_MSG(("HMWText::readParagraph: the data size seems bad\n"));
     f << "##dataSz=" << val << ",";
   }
-  input->seek(pos+98, WPX_SEEK_SET);
+  int flags = (int) input->readULong(1);
+  if (flags&0x80)
+    para.m_breakStatus = para.m_breakStatus.get()|libmwaw::NoBreakWithNextBit;
+  if (flags&0x40)
+    para.m_breakStatus = para.m_breakStatus.get()|libmwaw::NoBreakBit;
+  if (flags&0x2)
+    para.m_addPageBreak = true;
+  if (flags&0x4)
+    f << "linebreakByWord,";
+
+  if (flags & 0x39) f << "#fl=" << std::hex << (flags&0x39) << std::dec << ",";
+
+  val = (int) input->readLong(2);
+  if (val) f << "#f0=" << val << ",";
+  val = (int) input->readULong(2);
+  switch(val&3) {
+  case 0:
+    para.m_justify = libmwaw::JustificationLeft;
+    break;
+  case 1:
+    para.m_justify = libmwaw::JustificationRight;
+    break;
+  case 2:
+    para.m_justify = libmwaw::JustificationCenter;
+    break;
+  case 3:
+    para.m_justify = libmwaw::JustificationFull;
+    break;
+  default:
+    break;
+  }
+  if (val&0xFFFC) f << "#f1=" << val << ",";
+  val = (int) input->readLong(1);
+  if (val) f << "#f2=" << val << ",";
+  para.m_type = (int) input->readLong(2);
+
+  float dim[3];
+  for (int i = 0; i < 3; i++)
+    dim[i] = float(input->readLong(4))/65536.0f;
+  para.m_marginsUnit = WPX_POINT;
+  para.m_margins[0]=dim[0]+dim[1];
+  para.m_margins[1]=dim[0];
+  para.m_margins[2]=dim[2]; // ie. distance to rigth border - ...
+
+  for (int i = 0; i < 3; i++)
+    para.m_spacings[i] = float(input->readLong(4))/65536.0f;
+  int spacingsUnit[3]; // 1=mm, ..., 4=pt, b=line
+  for (int i = 0; i < 3; i++)
+    spacingsUnit[i] = (int) input->readULong(1);
+  if (spacingsUnit[0]==0xb)
+    para.m_spacingsInterlineUnit = WPX_PERCENT;
+  else
+    para.m_spacingsInterlineUnit = WPX_POINT;
+  for (int i = 1; i < 3; i++) // convert point|line -> inches
+    para.m_spacings[i]= ((spacingsUnit[i]==0xb) ? 12.0 : 1.0)*(para.m_spacings[i].get())/72.0;
+
+  val = (int) input->readLong(1);
+  if (val) f << "#f2=" << val << ",";
+  for (int i = 0; i < 17; i++) { // g2=0|1, g4=0|1, g6=0|1|8
+    val = (int) input->readLong(2);
+    if (val) f << "#g" << i << "=" << val << ",";
+  }
+  for (int i = 0; i < 5; i++) { // h0=h1=h3=1, h4=0|1, h2=1|6
+    val = (int) input->readLong(2);
+    if (val!=1) f << "#h" << i << "=" << val << ",";
+  }
+  for (int i = 0; i < 8; i++) { // always 0?
+    val = (int) input->readLong(2);
+    if (val) f << "#h" << 5+i << "=" << val << ",";
+  }
   int nTabs = (int) input->readULong(2);
-  if (pos+102+nTabs*12 <= dataSz) {
+  if (pos+102+nTabs*12 > dataSz) {
     MWAW_DEBUG_MSG(("HMWText::readParagraph: can not read numbers of tab\n"));
     return false;
   }
-  input->seek(pos+102+nTabs*12, WPX_SEEK_SET);
+  val = (int) input->readULong(2); // always 0
+  if (val) f << "#h14=" << val << ",";
+  para.m_extra=f.str();
+  static bool first=true;
+  f.str("");
+  if (first) {
+    f << "Entries(Ruler):";
+    first = false;
+  } else
+    f << "Ruler:";
+  f << para;
+
+  asciiFile.addPos(pos-4);
+  asciiFile.addNote(f.str().c_str());
+  for (int i = 0; i < nTabs; i++) {
+    pos = input->tell();
+    f.str("");
+    f << "Ruler[Tabs-" << i << "]:";
+
+    MWAWTabStop tab;
+    val = (int)input->readULong(1);
+    switch(val) {
+    case 0:
+      break;
+    case 1:
+      tab.m_alignment = MWAWTabStop::CENTER;
+      break;
+    case 2:
+      tab.m_alignment = MWAWTabStop::RIGHT;
+      break;
+    case 3:
+      tab.m_alignment = MWAWTabStop::DECIMAL;
+      break;
+    case 4:
+      tab.m_alignment = MWAWTabStop::BAR;
+      break;
+    default:
+      f << "#type=" << val << ",";
+      break;
+    }
+    val = (int)input->readULong(1);
+    if (val) f << "barType=" << val << ",";
+    val = (int)input->readULong(2);
+    if (val) f << "decimalChar=" << char(val) << ",";
+
+    tab.m_leaderCharacter = (uint16_t)input->readULong(2);
+    val = (int)input->readULong(2); // 0|73|74|a044|f170|f1e0|f590
+    if (val) f << "f0=" << std::hex << val << std::dec << ",";
+
+    tab.m_position = float(input->readLong(4))/65536.f/72.f;
+    para.m_tabs->push_back(tab);
+    f << tab;
+
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    input->seek(pos+12, WPX_SEEK_SET);
+  }
   return true;
 }
 
 ////////////////////////////////////////////////////////////
-//     the zones header
+//     the token
 ////////////////////////////////////////////////////////////
+bool HMWText::readToken(shared_ptr<HMWZone> zone, HMWTextInternal::Token &token)
+{
+  if (!zone) {
+    MWAW_DEBUG_MSG(("HMWText::readToken: called without any zone\n"));
+    return false;
+  }
 
+  token = HMWTextInternal::Token();
+
+  MWAWInputStreamPtr input = zone->m_input;
+  long pos = input->tell();
+  long dataSz = (long) zone->m_data.size();
+  if (pos+10 > dataSz) {
+    MWAW_DEBUG_MSG(("HMWText::readToken: the zone is too short\n"));
+    return false;
+  }
+
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  int val = (int) input->readLong(2);
+  if (val!=8) {
+    MWAW_DEBUG_MSG(("HMWText::readToken: the data size seems bad\n"));
+    f << "##dataSz=" << val << ",";
+  }
+
+  token.m_type = (int) input->readLong(1);
+  val = (int) input->readLong(1);
+  if (val) f << "f0=" << val << ",";
+  val = (int) input->readLong(2);
+  if (val) f << "f1=" << val << ",";
+  token.m_id = (long)  input->readULong(4);
+  token.m_extra = f.str();
+  f.str("");
+  static bool first=true;
+  f.str("");
+  if (first) {
+    f << "Entries(Token):";
+    first = false;
+  } else
+    f << "token:";
+  f << token;
+  asciiFile.addPos(pos-4);
+  asciiFile.addNote(f.str().c_str());
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+//     the sections
+////////////////////////////////////////////////////////////
+bool HMWText::readSections(shared_ptr<HMWZone> zone)
+{
+  if (!zone) {
+    MWAW_DEBUG_MSG(("HMWText::readSections: called without any zone\n"));
+    return false;
+  }
+  long dataSz = (long) zone->m_data.size();
+  if (dataSz < 160) {
+    MWAW_DEBUG_MSG(("HMWText::readSections: the zone seems too short\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = zone->m_input;
+  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugStream f;
+  zone->m_parsed = true;
+
+  f << zone->name() << "(A):PTR=" << std::hex << zone->m_filePos << std::dec << ",";
+  long pos=0;
+  input->seek(pos, WPX_SEEK_SET);
+  long val = input->readLong(2);
+  if (val != 1) // always 1
+    f << "f0=" << val << ",";
+  int numColumns = (int) input->readLong(2);
+  if (numColumns != 1)
+    f << "nCols=" << numColumns << ",";
+  for (int i= 0; i < 2; i++) { // 1,0
+    val = (long) input->readLong(1);
+    if (val) f << "f" << i+1 << "=" << val << ",";
+  }
+  for (int i = 0; i < 19; i++) { // always 0
+    val = (long) input->readLong(2);
+    if (val) f << "g" << i << "=" << val << ",";
+  }
+
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+  pos = input->tell();
+  // a small zone which look like similar to some end of printinfo zone(A):
+  f.str("");
+  f << zone->name() << "(B):";
+  float colWidth = float(input->readLong(4))/65536.f;
+  f << "colWidth=" << colWidth << ",";
+  asciiFile.addDelimiter(input->tell(),'|');
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+  input->seek(pos+24, WPX_SEEK_SET);
+
+  pos = input->tell();
+  f.str("");
+  f << zone->name() << "(C):";
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+  input->seek(pos+40, WPX_SEEK_SET);
+
+  pos = input->tell();
+  f.str("");
+  f << zone->name() << "(D):";
+  for (int i = 0; i < 4; i++) {
+    long id = input->readLong(4);
+    if (!id) continue;
+    if (i < 2) f << "headerId=" << std::hex << id << std::dec << ",";
+    else f << "footerId=" << std::hex << id << std::dec << ",";
+  }
+  for (int i = 0; i < 8; i++) {
+    val = input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  asciiFile.addDelimiter(input->tell(),'|');
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
 //

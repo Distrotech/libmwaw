@@ -32,53 +32,65 @@
 */
 
 /*
- * Parser to HanMac Word text document
+ * Parser to HanMac Word text document ( graphic part )
  *
  */
-#ifndef HMW_TEXT
-#  define HMW_TEXT
+#ifndef HMW_GRAPH
+#  define HMW_GRAPH
+
+#include <string>
+#include <vector>
+
+#include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
+
 #include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-
-class MWAWContentListener;
 typedef class MWAWContentListener HMWContentListener;
 typedef shared_ptr<HMWContentListener> HMWContentListenerPtr;
+
+class MWAWEntry;
 
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
-class MWAWSubDocument;
+class MWAWPosition;
 
-namespace HMWTextInternal
+namespace HMWGraphInternal
 {
-struct Font;
-struct Paragraph;
-struct Token;
-class SubDocument;
+struct Frame;
+struct BasicGraph;
+struct Group;
+struct PictureFrame;
+struct Table;
+struct TextBox;
+
+struct Picture;
+
 struct State;
+class SubDocument;
 }
 
 struct HMWZone;
 class HMWParser;
 
-/** \brief the main class to read the text part of HanMac Word file
+/** \brief the main class to read the graphic part of a Nisus file
  *
  *
  *
  */
-class HMWText
+class HMWGraph
 {
-  friend class HMWTextInternal::SubDocument;
   friend class HMWParser;
+  friend class HMWGraphInternal::SubDocument;
+
 public:
   //! constructor
-  HMWText(MWAWInputStreamPtr ip, HMWParser &parser, MWAWFontConverterPtr &convertissor);
+  HMWGraph(MWAWInputStreamPtr ip, HMWParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
-  virtual ~HMWText();
+  virtual ~HMWGraph();
 
   /** returns the file version */
   int version() const;
@@ -93,49 +105,50 @@ protected:
     m_listener = listen;
   }
 
-#if 0
-  //! finds the different text zones
-  bool createZones();
-#endif
-
-  //! send a main zone
-  bool sendMainText();
-
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
+
   //
-  // intermediate level
+  // Intermediate level
   //
 
-  /** try to read a text zone (type 1)*/
-  bool readTextZone(shared_ptr<HMWZone> zone);
-  /** try to read the fonts name zone (type 5)*/
-  bool readFontNames(shared_ptr<HMWZone> zone);
-  /** try to read the style zone (type 3) */
-  bool readStyles(shared_ptr<HMWZone> zone);
-  /** try to read a section info zone (type 4)*/
-  bool readSections(shared_ptr<HMWZone> zone);
+  /** try to read the frame definition (type 2)*/
+  bool readFrames(shared_ptr<HMWZone> zone);
+  /** try to read a picture zone (type d)*/
+  bool readPicture(shared_ptr<HMWZone> zone);
+
+
+  /** try to send a frame to the listener */
+  bool send(HMWGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  /** try to send a basic picture to the listener */
+  bool sendBasicGraph(HMWGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  /** try to send a picture to the listener */
+  bool send(HMWGraphInternal::Picture const &picture, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
 
   //
   // low level
   //
-  /** try to read a font in a text zone */
-  bool readFont(shared_ptr<HMWZone> zone, HMWTextInternal::Font &font);
-  /** send the character properties */
-  void setProperty(MWAWFont const &font);
 
-  /** try to read a paragraph in a text zone */
-  bool readParagraph(shared_ptr<HMWZone> zone, HMWTextInternal::Paragraph &para);
-  /** send the ruler properties */
-  void setProperty(HMWTextInternal::Paragraph const &para, float width);
+  /** try to read the basic graph data */
+  shared_ptr<HMWGraphInternal::BasicGraph> readBasicGraph(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header);
+  /** try to read the group data */
+  shared_ptr<HMWGraphInternal::Group> readGroup(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header);
+  /** try to read the picture data */
+  shared_ptr<HMWGraphInternal::PictureFrame> readPictureFrame(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header);
+  /** try to read the table data */
+  shared_ptr<HMWGraphInternal::Table> readTable(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header);
+  /** try to read the textbox data */
+  shared_ptr<HMWGraphInternal::TextBox> readTextBox(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header, bool hasHeader);
 
-  /** try to read an token in a text zone */
-  bool readToken(shared_ptr<HMWZone> zone, HMWTextInternal::Token &token);
+  //! returns the debug file
+  libmwaw::DebugFile &ascii() {
+    return m_asciiFile;
+  }
 
 private:
-  HMWText(HMWText const &orig);
-  HMWText &operator=(HMWText const &orig);
+  HMWGraph(HMWGraph const &orig);
+  HMWGraph &operator=(HMWGraph const &orig);
 
 protected:
   //
@@ -151,10 +164,13 @@ protected:
   MWAWFontConverterPtr m_convertissor;
 
   //! the state
-  shared_ptr<HMWTextInternal::State> m_state;
+  shared_ptr<HMWGraphInternal::State> m_state;
 
   //! the main parser;
   HMWParser *m_mainParser;
+
+  //! the debug file
+  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

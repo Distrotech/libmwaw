@@ -230,7 +230,8 @@ bool PrinterInfo::read(MWAWInputStreamPtr input)
   input->readLong(1);
 
   // skip printX 19 short + 2 align
-  if (input->seek(19*2,WPX_SEEK_CUR) != 0 || input->atEOS()) return false;
+  pos = input->tell();
+  if (input->seek(19*2,WPX_SEEK_CUR) != 0 || input->tell()!=pos+19*2) return false;
   return true;
 }
 }

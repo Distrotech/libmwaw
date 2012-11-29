@@ -121,6 +121,7 @@ struct HMWZone {
   bool m_parsed;
 };
 
+class HMWGraph;
 class HMWText;
 
 /** \brief the main class to read a HanMac Word-K file
@@ -130,6 +131,7 @@ class HMWText;
  */
 class HMWParser : public MWAWParser
 {
+  friend class HMWGraph;
   friend class HMWText;
   friend class HMWParserInternal::SubDocument;
 
@@ -176,14 +178,8 @@ protected:
   bool readZone(shared_ptr<HMWZone> zone);
   /** try to decode a zone */
   shared_ptr<HMWZone> decodeZone(shared_ptr<HMWZone> zone);
-  /** try to read the frame definition (type 2)*/
-  bool readFrames(shared_ptr<HMWZone> zone);
   /** try to read a zone storing a list of ?, frameType*/
   bool readFramesUnkn(shared_ptr<HMWZone> zone);
-  /** try to read a picture zone (type d)*/
-  bool readPicture(shared_ptr<HMWZone> zone);
-  /** try to read a section info zone (type 4)*/
-  bool readSections(shared_ptr<HMWZone> zone);
   /** try to read a printinfo zone (type 7)*/
   bool readPrintInfo(shared_ptr<HMWZone> zone);
   /** try to read a unknown zone of type 6*/
@@ -214,6 +210,9 @@ protected:
 
   //! the actual document size
   MWAWPageSpan m_pageSpan;
+
+  //! the graph parser
+  shared_ptr<HMWGraph> m_graphParser;
 
   //! the text parser
   shared_ptr<HMWText> m_textParser;
