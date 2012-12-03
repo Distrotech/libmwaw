@@ -140,7 +140,7 @@ public:
   bool hasBorders() const {
     return m_bordersList.size() != 0;
   }
-  //! return the cell border: libmwaw::LeftBit | ...
+  //! return the cell border: libmwaw::Left | ...
   std::vector<MWAWBorder> const &borders() const {
     return m_bordersList;
   }

@@ -722,7 +722,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
         if (m_state->m_plcList[(size_t) fod.m_id].m_type == MSK4TextInternal::PGD)
           pageBreak = true;
         else if (m_state->m_plcList[(size_t) fod.m_id].m_type == MSK4TextInternal::EOBJ) {
-          std::map<long, MSK4TextInternal::Object>::const_iterator eobjIt=m_state->m_eobjMap.find(actPos);
+          std::map<long, MSK4TextInternal::Object>::const_iterator eobjIt=m_state->m_eobjMap.find(long(actPos));
           if (eobjIt == m_state->m_eobjMap.end()) {
             MWAW_DEBUG_MSG(("MSK4Text::readText: can not find object\n"));
           } else {
@@ -734,7 +734,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
     }
 
     /* plain text */
-    input->seek(actPos, WPX_SEEK_SET);
+    input->seek(long(actPos), WPX_SEEK_SET);
 
     std::string s;
     if (fType == MSK4TextInternal::Font::Page && m_listener) {
@@ -766,11 +766,11 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
         fType = MSK4TextInternal::Font::None;
         if (!m_state->parseMain()) continue;
 
-        if (m_state->m_ftntMap.find(actPos) == m_state->m_ftntMap.end()) {
+        if (m_state->m_ftntMap.find(long(actPos)) == m_state->m_ftntMap.end()) {
           MWAW_DEBUG_MSG(("MSK4Text::readText: warning: can not find footnote for entry at %x\n", actPos));
           mainParser()->sendFootNote(-1);
         } else
-          mainParser()->sendFootNote(m_state->m_ftntMap[actPos].m_id);
+          mainParser()->sendFootNote(m_state->m_ftntMap[long(actPos)].m_id);
         continue;
       }
 
@@ -801,7 +801,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
       fType = MSK4TextInternal::Font::None;
 
     f << ", '" << s << "'";
-    ascii().addPos(actPos);
+    ascii().addPos(long(actPos));
     ascii().addNote(f.str().c_str());
   }
   return true;
@@ -833,7 +833,7 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
   long length = entry.length();
   long endPos = entry.end();
 
-  input->seek(page_offset, WPX_SEEK_SET);
+  input->seek(long(page_offset), WPX_SEEK_SET);
   uint16_t nPLC = (uint16_t) input->readULong(2); /* number of PLC */
   if (4*nPLC+10 > length) {
     MWAW_DEBUG_MSG(("MSK4Text::readPLC: error: nPLC = %i, pSize=%ld\n",
@@ -904,7 +904,7 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
     if (i != nPLC) fods.push_back(fod);
   }
   f << ")";
-  ascii().addPos(page_offset);
+  ascii().addPos(long(page_offset));
   ascii().addNote(f.str().c_str());
 
   listValues.resize(0);
@@ -1778,7 +1778,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
   }
 
   libmwaw::DebugStream f;
-  input->seek(page_offset, WPX_SEEK_SET);
+  input->seek(long(page_offset), WPX_SEEK_SET);
   uint16_t cfod = (uint16_t) input->readULong(deplSize);
 
   f << "FDP: N="<<(int) cfod;
@@ -1846,7 +1846,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
     }
 
     if (depl)
-      (*fods_iter).m_defPos = (unsigned int)depl + page_offset;
+      (*fods_iter).m_defPos = depl + (long) page_offset;
 
     f << (*fods_iter).m_pos << ":";
     if (depl) f << (*fods_iter).m_defPos << ", ";
@@ -1854,7 +1854,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
   }
   f << "), lstPos=" << lastReadPos << ", ";
 
-  ascii().addPos(page_offset);
+  ascii().addPos(long(page_offset));
   ascii().addNote(f.str().c_str());
   ascii().addPos(input->tell());
 

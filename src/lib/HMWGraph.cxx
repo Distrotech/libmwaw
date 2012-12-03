@@ -40,6 +40,7 @@
 
 #include <libwpd/libwpd.h>
 
+#include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -68,26 +69,30 @@ struct Frame {
   //! destructor
   virtual ~Frame() {
   }
+
   //! returns the line colors
   bool getLineColor(Vec3uc &color) const {
-    int col[3] = {int((m_colors[0]>>16)&0xFF),int((m_colors[0]>>8)&0xFF),
-                  int(m_colors[0]&0xFF)
-                 };
-    for (int i = 0; i < 3; i++)
-      color[i] = (unsigned char)
-                 (m_patterns[0]*float(col[i])+(1.f-m_patterns[0])*255.f);
+    color = getColor(m_colors[0], m_patterns[0]);
     return true;
   }
   //! returns the surface colors
   bool getSurfaceColor(Vec3uc &color) const {
-    int col[3] = {int((m_colors[1]>>16)&0xFF),int((m_colors[1]>>8)&0xFF),
-                  int(m_colors[1]&0xFF)
-                 };
-    for (int i = 0; i < 3; i++)
-      color[i] = (unsigned char)
-                 (m_patterns[1]*float(col[i])+(1.f-m_patterns[1])*255.f);
+    color = getColor(m_colors[1], m_patterns[1]);
     return true;
   }
+
+  //! returns a color corresponding to a pattern and a color
+  static Vec3uc getColor(uint32_t col, float pattern) {
+    int color[3] = {int((col>>16)&0xFF),int((col>>8)&0xFF),
+                    int(col&0xFF)
+                   };
+    Vec3f res;
+    for (int i = 0; i < 3; i++)
+      res[i] = (unsigned char)
+               (pattern*float(color[i])+(1.f-pattern)*255.f);
+    return res;
+  }
+
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Frame const &grph);
   //! the graph type
@@ -137,7 +142,7 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
     o << "table,";
     break;
   case 10:
-    o << "textbox[withHeader],";
+    o << "comments,"; // memo
     break;
   case 11:
     o << "group";
@@ -344,12 +349,70 @@ struct PictureFrame : public Frame {
   //! some unknown int
   int m_values[7];
 };
+
+////////////////////////////////////////
+//! a table cell in a table in HMWGraph
+struct TableCell {
+  //! constructor
+  TableCell(): m_row(-1), m_col(-1), m_span(1,1), m_dim(), m_backColor(0xffffff),
+    m_borders(), m_id(-1), m_fileId(-1), m_flags(0), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, TableCell const &cell);
+  //! the row
+  int m_row;
+  //! the column
+  int m_col;
+  //! the span ( numRow x numCol )
+  Vec2i m_span;
+  //! the dimension
+  Vec2f m_dim;
+  //! the background color
+  uint32_t m_backColor;
+  //! the border: order defined by MWAWBorder::Pos
+  std::vector<MWAWBorder> m_borders;
+  //! the cell id ( corresponding to the last data in the main zones list )
+  int m_id;
+  //! the file id
+  long m_fileId;
+  //! the cell data
+  int m_flags;
+  //! extra data
+  std::string m_extra;
+};
+
+std::ostream &operator<<(std::ostream &o, TableCell const &cell)
+{
+  o << "row=" << cell.m_row << ",";
+  o << "col=" << cell.m_col << ",";
+  if (cell.m_span.x() != 1 || cell.m_span.y() != 1)
+    o << "span=" << cell.m_span << ",";
+  o << "dim=" << cell.m_dim << ",";
+  if (cell.m_backColor != 0xffffff)
+    o << "backColor=" << std::hex << cell.m_backColor << std::dec << ",";
+  char const *(what[]) = {"T", "L", "B", "R"};
+  for (size_t b = 0; b < cell.m_borders.size(); b++)
+    o << "bord" << what[b] << "=[" << cell.m_borders[b] << "],";
+  if (cell.m_flags&1) o << "vAlign=center,";
+  if (cell.m_flags&4) o << "line[TL->BR],";
+  if (cell.m_flags&8) o << "line[BL->TR],";
+  if (cell.m_flags&0x10) o << "lock,";
+  if (cell.m_flags&0xFFE2)
+    o << "linesFlags=" << std::hex << (cell.m_flags&0xFFE2) << std::dec << ",";
+  if (cell.m_id > 0)
+    o << "cellId="  << std::hex << cell.m_id << std::dec << ",";
+  if (cell.m_fileId > 0)
+    o << "fileId="  << std::hex << cell.m_fileId << std::dec << ",";
+  o << cell.m_extra;
+  return o;
+}
+
 ////////////////////////////////////////
 //! Internal: the table of a HMWGraph
 struct Table : public Frame {
-  struct Cell;
   //! constructor
-  Table(Frame const &orig) : Frame(orig), m_rows(0), m_columns(0), m_numCells(0) {
+  Table(Frame const &orig) : Frame(orig), m_rows(0), m_columns(0), m_numCells(0),
+    m_cellsList(), m_textFileId(-1), m_rowsDim(), m_columnsDim(), m_cellsId(), m_hasExtraLines(false) {
   }
   //! destructor
   ~Table() {
@@ -369,60 +432,39 @@ struct Table : public Frame {
       s << "nColumns="  << m_columns << ",";
     if (m_numCells)
       s << "nCells="  << m_numCells << ",";
+    if (m_textFileId>0)
+      s << "textFileId=" << std::hex << m_textFileId << std::dec << ",";
     return s.str();
   }
-  //! a cell of a table in HMWGraph
-  struct Cell {
-    //! constructor
-    Cell(): m_row(-1), m_col(-1), m_span(1,1), m_dim(), m_id(-1), m_fileId(-1), m_extra("") {
-    }
-    //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
-    //! the row
-    int m_row;
-    //! the column
-    int m_col;
-    //! the span ( numRow x numCol )
-    Vec2i m_span;
-    //! the dimension
-    Vec2f m_dim;
-    //! the cell id ( corresponding to the last data in the main zones list )
-    int m_id;
-    //! the file id
-    long m_fileId;
-    //! extra data
-    std::string m_extra;
-  };
-
+  //! returns a cell position ( before any merge cell )
+  size_t getCellPos(int row, int col) const {
+    return size_t(row*m_columns+col);
+  }
   //! the number of row
   int m_rows;
   //! the number of columns
   int m_columns;
   //! the number of cells
   int m_numCells;
+  //! the list of cells
+  std::vector<TableCell> m_cellsList;
+  //! the text file id
+  long m_textFileId;
+  //! the rows dimension ( in points )
+  mutable std::vector<float> m_rowsDim;
+  //! the columns dimension ( in points )
+  mutable std::vector<float> m_columnsDim;
+  //! a list of id for each cells
+  mutable std::vector<int> m_cellsId;
+  //! a flag to know if the table has some extra line
+  mutable bool m_hasExtraLines;
 };
-
-std::ostream &operator<<(std::ostream &o, Table::Cell const &cell)
-{
-  o << "row=" << cell.m_row << ",";
-  o << "col=" << cell.m_col << ",";
-  if (cell.m_span.x() != 1 || cell.m_span.y() != 1)
-    o << "span=" << cell.m_span << ",";
-  o << "dim=" << cell.m_dim << ",";
-  if (cell.m_id > 0)
-    o << "cellId="  << std::hex << cell.m_id << std::dec << ",";
-  if (cell.m_fileId > 0)
-    o << "fileId="  << std::hex << cell.m_fileId << std::dec << ",";
-  o << cell.m_extra;
-  return o;
-}
 
 ////////////////////////////////////////
 //! Internal: the textbox of a HMWGraph
 struct TextBox : public Frame {
-  struct Cell;
   //! constructor
-  TextBox(Frame const &orig, bool isHeaderBox) : Frame(orig), m_headerTextBox(isHeaderBox) {
+  TextBox(Frame const &orig, bool isComment) : Frame(orig), m_commentBox(isComment), m_textFileId(-1) {
     for (int i = 0; i < 4; i++) m_values[i] = 0;
     for (int i = 0; i < 2; i++) m_flags[i] = 0;
     for (int i = 0; i < 2; i++) m_dim[i] = 0;
@@ -447,21 +489,23 @@ struct TextBox : public Frame {
       if (m_flags[i])
         s << "fl" << i << "=" << m_flags[i] << ",";
     }
-    for (int i = 0; i < 2; i++) { // 0x14, 0x14
-      if (m_dim[i])
-        s << "dim" << i << "=" << m_dim[i] << ",";
-    }
+    if (m_dim[0] > 0 || m_dim[1] > 0)
+      s << "commentsDim2=" << m_dim[0] << "x" << m_dim[1] << ",";
+    if (m_textFileId>0)
+      s << "textFileId=" << std::hex << m_textFileId << std::dec << ",";
 
     return s.str();
   }
 
-  //! a flag to know if this is a header textbox
-  bool m_headerTextBox;
+  //! a flag to know if this is a comment textbox
+  bool m_commentBox;
+  //! the text file id
+  long m_textFileId;
   //! four unknown value
   int m_values[4];
   //! two unknown flag
   int m_flags[2];
-  //! two unknown dim for header textbox
+  //! two auxilliary dim for memo textbox
   float m_dim[2];
 };
 
@@ -489,7 +533,7 @@ struct Picture {
   //! the file id
   long m_fileId;
   //! a flag to know if the picture was send to the receiver
-  bool m_parsed;
+  mutable bool m_parsed;
   //! extra data
   std::string m_extra;
 };
@@ -498,7 +542,7 @@ struct Picture {
 //! Internal: the state of a HMWGraph
 struct State {
   //! constructor
-  State() : m_numPages(0), m_framesList(), m_picturesList(), m_colorList(), m_patternPercentList() { }
+  State() : m_numPages(0), m_framesMap(), m_picturesMap(), m_colorList(), m_patternPercentList() { }
   //! returns a color correspond to an id
   bool getColor(int id, uint32_t &col) {
     initColors();
@@ -526,10 +570,10 @@ struct State {
   void initPatterns();
 
   int m_numPages /* the number of pages */;
-  //! a list of graphs
-  std::vector<shared_ptr<Frame> > m_framesList;
-  //! a list of picture
-  std::vector<shared_ptr<Picture> > m_picturesList;
+  //! a map fileId -> frame
+  std::multimap<long, shared_ptr<Frame> > m_framesMap;
+  //! a map fileId -> picture
+  std::map<long, shared_ptr<Picture> > m_picturesMap;
   //! a list colorId -> color
   std::vector<uint32_t> m_colorList;
   //! a list patternId -> percent
@@ -601,8 +645,15 @@ void State::initColors()
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(HMWGraph &pars, MWAWInputStreamPtr input, int id, MWAWPosition const &pos, WPXPropertyList const &extras) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(id), m_position(pos), m_extras(extras) {}
+  //! the document type
+  enum Type { Picture, FrameInFrame, Text, UnformattedTable, EmptyPicture };
+  //! constructor
+  SubDocument(HMWGraph &pars, MWAWInputStreamPtr input, Type type, long id, int subId=0) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_subId(subId), m_pos() {}
+
+  //! constructor
+  SubDocument(HMWGraph &pars, MWAWInputStreamPtr input, MWAWPosition pos, Type type, long id, int subId=0) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_subId(subId), m_pos(pos) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -620,12 +671,15 @@ public:
 protected:
   /** the graph parser */
   HMWGraph *m_graphParser;
-  //! the pict id
-  int m_id;
-  //! the pict position
-  MWAWPosition m_position;
-  //! the property list
-  WPXPropertyList m_extras;
+  //! the zone type
+  Type m_type;
+  //! the zone id
+  long m_id;
+  //! the zone subId ( for table cell )
+  int m_subId;
+  //! the position in a frame
+  MWAWPosition m_pos;
+
 private:
   SubDocument(SubDocument const &orig);
   SubDocument &operator=(SubDocument const &orig);
@@ -634,19 +688,38 @@ private:
 void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("HMWGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
   HMWContentListener *listen = dynamic_cast<HMWContentListener *>(listener.get());
   if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
+    MWAW_DEBUG_MSG(("HMWGraphInternal::SubDocument::parse: bad listener\n"));
     return;
   }
 
   assert(m_graphParser);
 
   long pos = m_input->tell();
-  //  m_graphParser->sendPicture(m_id, true, m_position, m_extras);
+  switch(m_type) {
+  case FrameInFrame:
+    m_graphParser->sendFrame(m_id, m_pos);
+    break;
+  case Picture:
+    m_graphParser->sendPicture(m_id, m_pos);
+    break;
+  case UnformattedTable:
+    m_graphParser->sendTableUnformatted(m_id);
+    break;
+  case Text:
+    m_graphParser->sendText(m_id, m_subId);
+    break;
+  case EmptyPicture:
+    m_graphParser->sendEmptyPicture(m_pos);
+    break;
+  default:
+    MWAW_DEBUG_MSG(("HMWGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
+    break;
+  }
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
@@ -656,8 +729,10 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
   SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
   if (!sDoc) return true;
   if (m_graphParser != sDoc->m_graphParser) return true;
+  if (m_type != sDoc->m_type) return true;
   if (m_id != sDoc->m_id) return true;
-  if (m_position != sDoc->m_position) return true;
+  if (m_subId != sDoc->m_subId) return true;
+  if (m_pos != sDoc->m_pos) return true;
   return false;
 }
 }
@@ -682,9 +757,25 @@ int HMWGraph::version() const
 
 int HMWGraph::numPages() const
 {
-  if (m_state->m_framesList.size())
-    m_state->m_numPages = 1;
-  return m_state->m_numPages;
+  if (m_state->m_numPages)
+    return m_state->m_numPages;
+  int nPages = 0;
+  std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::const_iterator fIt =
+    m_state->m_framesMap.begin();
+  for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
+    if (!fIt->second) continue;
+    int page = fIt->second->m_page+1;
+    if (page <= nPages) continue;
+    if (page >= nPages+100) continue; // a pb ?
+    nPages = page;
+  }
+  m_state->m_numPages = nPages;
+  return nPages;
+}
+
+bool HMWGraph::sendText(long textId, int id)
+{
+  return m_mainParser->sendText(textId, id);
 }
 
 ////////////////////////////////////////////////////////////
@@ -759,8 +850,8 @@ bool HMWGraph::readFrames(shared_ptr<HMWZone> zone)
 
   graph.m_extra=f.str();
   f.str("");
-
   f << zone->name() << "(A):PTR=" << std::hex << zone->m_filePos << std::dec << "," << graph;
+  graph.m_fileId = zone->m_id;
 
   asciiFile.addDelimiter(input->tell(),'|');
   asciiFile.addPos(pos);
@@ -787,7 +878,9 @@ bool HMWGraph::readFrames(shared_ptr<HMWZone> zone)
     break;
   }
   if (frame)
-    m_state->m_framesList.push_back(frame);
+    m_state->m_framesMap.insert
+    (std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::value_type
+     (zone->m_id, frame));
   return true;
 }
 
@@ -828,7 +921,12 @@ bool HMWGraph::readPicture(shared_ptr<HMWZone> zone)
   picture->m_pos[0] = input->tell();
   picture->m_pos[1] = picture->m_pos[0]+pictSz;
   picture->m_extra = f.str();
-  m_state->m_picturesList.push_back(picture);
+  long fId = picture->m_fileId;
+  if (!fId) fId = zone->m_id;
+  if (m_state->m_picturesMap.find(fId) != m_state->m_picturesMap.end())
+    MWAW_DEBUG_MSG(("HMWGraph::readPicture: oops I already find a picture for %lx\n", fId));
+  else
+    m_state->m_picturesMap[fId] = picture;
 
   f.str("");
   f << zone->name() << ":PTR=" << std::hex << zone->m_filePos << std::dec << "," << *picture;
@@ -836,18 +934,7 @@ bool HMWGraph::readPicture(shared_ptr<HMWZone> zone)
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
 
-  pos = input->tell();
-#ifdef DEBUG_WITH_FILES
-  WPXBinaryData file;
-  input->seek(pos, WPX_SEEK_SET);
-  input->readDataBlock(pictSz, file);
-
-  libmwaw::DebugStream f2;
-  static int volatile pictName = 0;
-  f2 << "Pict" << ++pictName << ".pct";
-  libmwaw::Debug::dumpFile(file, f2.str().c_str());
-#endif
-  asciiFile.skipZone(pos, pos+pictSz-1);
+  asciiFile.skipZone(picture->m_pos[0], picture->m_pos[1]-1);
 
   return true;
 }
@@ -855,20 +942,215 @@ bool HMWGraph::readPicture(shared_ptr<HMWZone> zone)
 ////////////////////////////////////////////////////////////
 // send data to a listener
 ////////////////////////////////////////////////////////////
-/** try to send a frame to the listener */
-bool HMWGraph::send(HMWGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras)
+bool HMWGraph::sendPicture(long pictId, MWAWPosition pos, WPXPropertyList extras)
+{
+  if (!m_listener) return true;
+  std::map<long, shared_ptr<HMWGraphInternal::Picture> >::const_iterator pIt
+    = m_state->m_picturesMap.find(pictId);
+
+  if (pIt == m_state->m_picturesMap.end() || !pIt->second) {
+    MWAW_DEBUG_MSG(("HMWGraph::sendPicture: can not find the picture %lx\n", pictId));
+    return false;
+  }
+  sendPicture(*pIt->second, pos, extras);
+  return true;
+}
+
+bool HMWGraph::sendPicture(HMWGraphInternal::Picture const &picture, MWAWPosition pos, WPXPropertyList extras)
+{
+#ifdef DEBUG_WITH_FILES
+  bool firstTime = picture.m_parsed == false;
+#endif
+  picture.m_parsed = true;
+  if (!m_listener) return true;
+
+  if (!picture.m_zone || picture.m_pos[0] >= picture.m_pos[1]) {
+    MWAW_DEBUG_MSG(("HMWGraph::sendPicture: can not find the picture\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = picture.m_zone->m_input;
+
+  WPXBinaryData data;
+  input->seek(picture.m_pos[0], WPX_SEEK_SET);
+  input->readDataBlock(picture.m_pos[1]-picture.m_pos[0], data);
+#ifdef DEBUG_WITH_FILES
+  if (firstTime) {
+    libmwaw::DebugStream f;
+    static int volatile pictName = 0;
+    f << "Pict" << ++pictName << ".pct";
+    libmwaw::Debug::dumpFile(data, f.str().c_str());
+  }
+#endif
+  m_listener->insertPicture(pos, data, "image/pict", extras);
+
+  return true;
+}
+
+bool HMWGraph::sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras)
+{
+  if (!m_listener) return true;
+  std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::const_iterator fIt=
+    m_state->m_framesMap.find(frameId);
+  if (fIt == m_state->m_framesMap.end() || !fIt->second) {
+    MWAW_DEBUG_MSG(("HMWGraph::sendFrame: can not find frame %lx\n", frameId));
+    return false;
+  }
+  return sendFrame(*fIt->second, pos, extras);
+}
+
+bool HMWGraph::sendFrame(HMWGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras)
 {
   if (!m_listener) return true;
 
   frame.m_parsed = true;
   switch(frame.m_type) {
+  case 4:
+  case 10:
+    return sendTextBox(reinterpret_cast<HMWGraphInternal::TextBox const &>(frame), pos, extras);
+  case 6: {
+    HMWGraphInternal::PictureFrame const &pict =
+      reinterpret_cast<HMWGraphInternal::PictureFrame const &>(frame);
+    if (pict.m_fileId==0) {
+      MWAWPosition framePos(pos);
+      framePos.m_anchorTo = MWAWPosition::Frame;
+      framePos.setOrigin(Vec2f(0,0));
+
+      MWAWSubDocumentPtr subdoc
+      (new HMWGraphInternal::SubDocument
+       (*this, m_input, framePos, HMWGraphInternal::SubDocument::EmptyPicture, pict.m_fileId));
+      m_listener->insertTextBox(pos, subdoc, extras);
+      return true;
+    }
+    return sendPictureFrame(pict, pos, extras);
+  }
   case 8:
     return sendBasicGraph(reinterpret_cast<HMWGraphInternal::BasicGraph const &>(frame), pos, extras);
+  case 9: {
+    HMWGraphInternal::Table const &table = reinterpret_cast<HMWGraphInternal::Table const &>(frame);
+    if (!updateTable(table)) {
+      MWAW_DEBUG_MSG(("HMWGraph::sendFrame: can not find the table structure\n"));
+      MWAWSubDocumentPtr subdoc
+      (new HMWGraphInternal::SubDocument
+       (*this, m_input, HMWGraphInternal::SubDocument::UnformattedTable, frame.m_fileId));
+      m_listener->insertTextBox(pos, subdoc, extras);
+      return true;
+    }
+    if (pos.m_anchorTo==MWAWPosition::Page ||
+        (pos.m_anchorTo!=MWAWPosition::Frame && table.m_hasExtraLines)) {
+      MWAWPosition framePos(pos);
+      framePos.m_anchorTo = MWAWPosition::Frame;
+      framePos.setOrigin(Vec2f(0,0));
+
+      MWAWSubDocumentPtr subdoc
+      (new HMWGraphInternal::SubDocument
+       (*this, m_input, framePos, HMWGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
+      m_listener->insertTextBox(pos, subdoc, extras);
+      return true;
+    }
+    if (pos.m_anchorTo==MWAWPosition::Frame && table.m_hasExtraLines)
+      sendPreTableData(table);
+    return sendTable(table);
+  }
+  case 11: // group: fixme must be implement for char position...
+    MWAW_DEBUG_MSG(("HMWGraph::sendFrame: sending group is not implemented\n"));
+    break;
   default:
-    MWAW_DEBUG_MSG(("HMWGraph::send: sending type %d is not implemented\n", frame.m_type));
+    MWAW_DEBUG_MSG(("HMWGraph::sendFrame: sending type %d is not implemented\n", frame.m_type));
     break;
   }
   return false;
+}
+
+bool HMWGraph::sendEmptyPicture(MWAWPosition pos)
+{
+  if (!m_listener)
+    return true;
+  Vec2f pictSz = pos.size();
+  shared_ptr<MWAWPict> pict;
+  MWAWPosition pictPos(Vec2f(0,0), pictSz, WPX_POINT);
+  pictPos.setRelativePosition(MWAWPosition::Frame);
+  pictPos.setOrder(-1);
+
+  for (int i = 0; i < 3; i++) {
+    if (i==0)
+      pict.reset(new MWAWPictRectangle(Box2f(Vec2f(0,0), pictSz)));
+    else if (i==1)
+      pict.reset(new MWAWPictLine(Vec2f(0,0), pictSz));
+    else
+      pict.reset(new MWAWPictLine(Vec2f(0,pictSz[1]), Vec2f(pictSz[0], 0)));
+
+    WPXBinaryData data;
+    std::string type;
+    if (!pict->getBinary(data,type)) continue;
+
+    m_listener->insertPicture(pictPos, data, type);
+  }
+  return true;
+}
+
+bool HMWGraph::sendPictureFrame(HMWGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras)
+{
+  if (!m_listener) return true;
+  Vec2f pictSz = pict.m_pos.size();
+  if (pictSz[0] < 0) pictSz.setX(-pictSz[0]);
+  if (pictSz[1] < 0) pictSz.setY(-pictSz[1]);
+
+  if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
+    pos.setSize(pictSz);
+  //fixme: check if we have border
+  sendPicture(pict.m_fileId, pos, extras);
+  return true;
+}
+
+bool HMWGraph::sendTextBox(HMWGraphInternal::TextBox const &textbox, MWAWPosition pos, WPXPropertyList extras)
+{
+  if (!m_listener) return true;
+  Vec2f textboxSz = textbox.m_pos.size();
+  if (textboxSz[0] < 0) textboxSz.setX(-textboxSz[0]);
+  if (textboxSz[1] < 0) textboxSz.setY(-textboxSz[1]);
+
+  if (textbox.m_type==10) {
+    if (textbox.m_dim[0] > textboxSz[0]) textboxSz[0]=textbox.m_dim[0];
+    if (textbox.m_dim[1] > textboxSz[1]) textboxSz[1]=textbox.m_dim[1];
+    pos.setSize(textboxSz);
+  } else if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
+    pos.setSize(textboxSz);
+  WPXPropertyList pList(extras);
+
+  Vec3uc color;
+  uint32_t lineColor=0, surfaceColor=0xFFFFFF;
+  if (textbox.getLineColor(color))
+    lineColor = libmwaw::getUInt32(color);
+  if (textbox.getSurfaceColor(color))
+    surfaceColor = libmwaw::getUInt32(color);
+
+  if (textbox.m_type == 10) {
+    std::stringstream stream;
+    stream << textbox.m_lineWidth*0.03 << "cm solid "
+           << libmwaw::getColorString(lineColor);
+    pList.insert("fo:border-left", stream.str().c_str());
+    pList.insert("fo:border-bottom", stream.str().c_str());
+    pList.insert("fo:border-right", stream.str().c_str());
+
+    stream.str("");
+    stream << textbox.m_borders[0][1]*textbox.m_lineWidth*0.03 << "cm solid "
+           << libmwaw::getColorString(lineColor);
+    pList.insert("fo:border-top", stream.str().c_str());
+  } else if (textbox.m_lineWidth > 0) {
+    std::stringstream stream;
+    stream << textbox.m_lineWidth*0.03 << "cm solid "
+           << libmwaw::getColorString(lineColor);
+    pList.insert("fo:border", stream.str().c_str());
+  }
+
+  if (surfaceColor != 0xFFFFFF)
+    pList.insert("fo:background-color", libmwaw::getColorString(surfaceColor).c_str());
+
+  MWAWSubDocumentPtr subdoc(new HMWGraphInternal::SubDocument(*this, m_input, HMWGraphInternal::SubDocument::Text, textbox.m_textFileId));
+  m_listener->insertTextBox(pos, subdoc, pList);
+
+  return true;
 }
 
 bool HMWGraph::sendBasicGraph(HMWGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras)
@@ -989,6 +1271,227 @@ bool HMWGraph::sendBasicGraph(HMWGraphInternal::BasicGraph const &pict, MWAWPosi
   return true;
 }
 
+// ----- table
+bool HMWGraph::updateTable(HMWGraphInternal::Table const &table)
+{
+  if (table.m_cellsId.size()) return true;
+
+  int nRows = table.m_rows;
+  int nColumns = table.m_columns;
+  size_t nCells = table.m_cellsList.size();
+  if (!nRows || !nColumns || !nCells || int(nCells) > nRows*nColumns) {
+    MWAW_DEBUG_MSG(("HMWGraph::updateTable: find an odd table\n"));
+    return false;
+  }
+  table.m_cellsId.resize(size_t(nRows*nColumns),-1);
+  for (size_t i=0; i < nCells; i++) {
+    HMWGraphInternal::TableCell const &cell=table.m_cellsList[i];
+    if (cell.m_row < 0 || cell.m_row >= nRows || cell.m_col < 0 || cell.m_col >= nColumns ||
+        cell.m_span[0] < 1 || cell.m_span[1] < 1) {
+      MWAW_DEBUG_MSG(("HMWGraph::updateTable: find a bad cell\n"));
+      continue;
+    }
+    if (cell.m_flags&0xc) table.m_hasExtraLines = true;
+    for (int r = cell.m_row; r < cell.m_row + cell.m_span[0]; r++) {
+      if (r >= nRows) {
+        MWAW_DEBUG_MSG(("HMWGraph::updateTable: find a bad row cell span\n"));
+        continue;
+      }
+      for (int c = cell.m_col; c < cell.m_col + cell.m_span[1]; c++) {
+        if (c >= nColumns) {
+          MWAW_DEBUG_MSG(("HMWGraph::updateTable: find a bad col cell span\n"));
+          continue;
+        }
+        size_t cPos = table.getCellPos(r,c);
+        if (table.m_cellsId[cPos]!=-1) {
+          MWAW_DEBUG_MSG(("HMWGraph::updateTable: oops find some cell in this position\n"));
+          table.m_cellsId.resize(0);
+          return false;
+        }
+        table.m_cellsId[cPos] = int(i);
+      }
+    }
+  }
+  // try to determine the row
+  std::vector<float> rowsLimit, colsLimit;
+  rowsLimit.resize(size_t(nRows+1),0.f);
+  for (int r = 0; r < nRows; r++) {
+    bool find = false;
+    for (int c = 0; c < nColumns; c++) {
+      size_t cPos = table.getCellPos(r,c);
+      if (table.m_cellsId[cPos]==-1) continue;
+      HMWGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
+      if (cell.m_row + cell.m_span[0] != r+1)
+        continue;
+      rowsLimit[size_t(r)+1] = rowsLimit[size_t(cell.m_row)]+cell.m_dim[1];
+      find = true;
+    }
+    if (!find) {
+      MWAW_DEBUG_MSG(("HMWGraph::updateTable: oops can not find the size of row %d\n", r));
+      table.m_cellsId.resize(0);
+      return false;
+    }
+  }
+  table.m_rowsDim.resize(size_t(nRows));
+  for (size_t r = 0; r < size_t(nRows); r++)
+    table.m_rowsDim[r] = rowsLimit[r+1]-rowsLimit[r];
+
+  // try to determine the row
+  colsLimit.resize(size_t(nColumns+1),0.f);
+  for (int c = 0; c < nColumns; c++) {
+    bool find = false;
+    for (int r = 0; r < nRows; r++) {
+      size_t cPos = table.getCellPos(r,c);
+      if (table.m_cellsId[cPos]==-1) continue;
+      HMWGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
+      if (cell.m_col + cell.m_span[1] != c+1)
+        continue;
+      colsLimit[size_t(c)+1] = colsLimit[size_t(cell.m_col)]+cell.m_dim[0];
+      find = true;
+    }
+    if (!find) {
+      MWAW_DEBUG_MSG(("HMWGraph::updateTable: oops can not find the size of cell %d\n", c));
+      table.m_cellsId.resize(0);
+      return false;
+    }
+  }
+  table.m_columnsDim.resize(size_t(nColumns));
+  for (size_t c = 0; c < size_t(nColumns); c++)
+    table.m_columnsDim[c] = colsLimit[c+1]-colsLimit[c];
+
+  return true;
+}
+
+bool HMWGraph::sendTableCell(HMWGraphInternal::TableCell const &cell)
+{
+  if (!m_listener)
+    return true;
+
+  WPXPropertyList pList;
+  MWAWCell fCell;
+  fCell.position() = Vec2i(cell.m_col,cell.m_row);
+  Vec2i span = cell.m_span;
+  if (span[0]<1) span[0]=1;
+  if (span[1]<1) span[1]=1;
+  fCell.setNumSpannedCells(Vec2i(span[1],span[0]));
+  fCell.setBackgroundColor(cell.m_backColor);
+  static int const (wh[]) = { MWAWBorder::LeftBit,  MWAWBorder::RightBit, MWAWBorder::TopBit, MWAWBorder::BottomBit};
+  for (size_t b = 0; b < cell.m_borders.size(); b++)
+    fCell.setBorders(wh[b], cell.m_borders[b]);
+  if (cell.m_flags&1) fCell.setVAlignement(MWAWCell::VALIGN_CENTER);
+  m_listener->openTableCell(fCell, pList);
+  m_mainParser->sendText(cell.m_fileId, cell.m_id);
+  m_listener->closeTableCell();
+
+  return true;
+}
+
+bool HMWGraph::sendPreTableData(HMWGraphInternal::Table const &table)
+{
+  if (!m_listener)
+    return true;
+  if (!updateTable(table) || !table.m_hasExtraLines)
+    return false;
+
+  int nRows = table.m_rows;
+  int nColumns = table.m_columns;
+  size_t nCells = table.m_cellsList.size();
+  std::vector<float> rowsPos, columnsPos;
+  rowsPos.resize(size_t(nRows+1)+1);
+  rowsPos[0] = 0;
+  for (size_t r = 0; r < size_t(nRows); r++)
+    rowsPos[r+1] = rowsPos[r]+table.m_rowsDim[r];
+  columnsPos.resize(size_t(nColumns+1)+1);
+  columnsPos[0] = 0;
+  for (size_t c = 0; c < size_t(nColumns); c++)
+    columnsPos[c+1] = columnsPos[c]+table.m_columnsDim[c];
+
+  for (size_t c = 0; c < nCells; c++) {
+    HMWGraphInternal::TableCell const &cell= table.m_cellsList[c];
+    if (!(cell.m_flags&0xc)) continue;
+    if (cell.m_row+cell.m_span[0] > nRows ||
+        cell.m_col+cell.m_span[1] > nColumns)
+      continue;
+    Box2f box;
+    box.setMin(Vec2f(columnsPos[size_t(cell.m_col)], rowsPos[size_t(cell.m_row)]));
+    box.setMax(Vec2f(columnsPos[size_t(cell.m_col+cell.m_span[1])],
+                     rowsPos[size_t(cell.m_row+cell.m_span[0])]));
+
+    shared_ptr<MWAWPictLine> lines[2];
+    if (cell.m_flags & 4)
+      lines[0].reset(new MWAWPictLine(Vec2f(0,0), box.size()));
+    if (cell.m_flags & 8)
+      lines[1].reset(new MWAWPictLine(Vec2f(0,box.size()[1]), Vec2f(box.size()[0], 0)));
+
+    for (int i = 0; i < 2; i++) {
+      if (!lines[i]) continue;
+
+      WPXBinaryData data;
+      std::string type;
+      if (!lines[i]->getBinary(data,type)) continue;
+
+      MWAWPosition pos(box[0], box.size(), WPX_POINT);
+      pos.setRelativePosition(MWAWPosition::Frame);
+      pos.setOrder(-1);
+      m_listener->insertPicture(pos, data, type);
+    }
+  }
+  return true;
+}
+
+bool HMWGraph::sendTableUnformatted(long fId)
+{
+  if (!m_listener)
+    return true;
+  std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::const_iterator fIt
+    = m_state->m_framesMap.find(fId);
+  if (fIt == m_state->m_framesMap.end() || !fIt->second || !fIt->second->m_type != 9) {
+    MWAW_DEBUG_MSG(("HMWGraph::sendTableUnformatted: can not find table %lx\n", fId));
+    return false;
+  }
+  HMWGraphInternal::Table const &table = reinterpret_cast<HMWGraphInternal::Table const &>(fIt->second);
+  for (size_t c = 0; c < table.m_cellsList.size(); c++) {
+    HMWGraphInternal::TableCell const &cell= table.m_cellsList[c];
+    if (cell.m_id < 0) continue;
+    m_mainParser->sendText(cell.m_fileId, cell.m_id);
+  }
+  return true;
+}
+
+bool HMWGraph::sendTable(HMWGraphInternal::Table const &table)
+{
+  if (!m_listener)
+    return true;
+  if (!updateTable(table)) {
+    // ok no other choice here
+    sendTableUnformatted(table.m_fileId);
+    return true;
+  }
+  int nRows = table.m_rows;
+  int nColumns = table.m_columns;
+
+  // ok send the data
+  m_listener->openTable(table.m_columnsDim, WPX_POINT);
+  for (size_t r = 0; r < size_t(nRows); r++) {
+    m_listener->openTableRow(table.m_rowsDim[r], WPX_POINT);
+    for (size_t c = 0; c < size_t(nColumns); c++) {
+      size_t cPos = table.getCellPos(int(r),int(c));
+      int id = table.m_cellsId[cPos];
+      if (id == -1)
+        m_listener->addEmptyTableCell(Vec2i(int(c), int(r)));
+
+      HMWGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
+      if (int(r) != cell.m_row || int(c) != cell.m_col) continue;
+
+      sendTableCell(cell);
+    }
+    m_listener->closeTableRow();
+  }
+  m_listener->closeTable();
+
+  return true;
+}
+
 ////////////////////////////////////////////////////////////
 // low level
 ////////////////////////////////////////////////////////////
@@ -1065,7 +1568,8 @@ shared_ptr<HMWGraphInternal::BasicGraph> HMWGraph::readBasicGraph(shared_ptr<HMW
     if (val) f << "f0=" << val << ",";
     int transf = (int) input->readULong(1);
     if (transf>=0 && transf <= 3) {
-      graph->m_angles[0] = transf*90;
+      int decal = (transf%2) ? 4-transf : transf;
+      graph->m_angles[0] = decal*90;
       graph->m_angles[1] = graph->m_angles[0]+90;
     } else {
       f << "#transf=" << transf << ",";
@@ -1207,7 +1711,7 @@ shared_ptr<HMWGraphInternal::PictureFrame> HMWGraph::readPictureFrame(shared_ptr
 }
 
 // try to read the textbox data
-shared_ptr<HMWGraphInternal::TextBox> HMWGraph::readTextBox(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header, bool hasHeader)
+shared_ptr<HMWGraphInternal::TextBox> HMWGraph::readTextBox(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header, bool isMemo)
 {
   shared_ptr<HMWGraphInternal::TextBox> textbox;
   if (!zone) {
@@ -1218,27 +1722,27 @@ shared_ptr<HMWGraphInternal::TextBox> HMWGraph::readTextBox(shared_ptr<HMWZone> 
   MWAWInputStreamPtr input = zone->m_input;
   long dataSz = (long) zone->m_data.size();
   long pos = input->tell();
-  int expectedSize = hasHeader ? 20 : 12;
+  int expectedSize = isMemo ? 20 : 12;
   if (pos+expectedSize > dataSz) {
     MWAW_DEBUG_MSG(("HMWGraph::readTextBox: the zone seems too short\n"));
     return textbox;
   }
 
-  textbox.reset(new HMWGraphInternal::TextBox(header, hasHeader));
+  textbox.reset(new HMWGraphInternal::TextBox(header, isMemo));
   libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
   libmwaw::DebugStream f;
   for (int i = 0; i < 2; i++) // 0|1, 0||1
     textbox->m_flags[i] = (int) input->readULong(1);
   for (int i = 0; i < 3; i++) // 0|1, 0, 0
     textbox->m_values[i] = (int) input->readLong(2);
-  textbox->m_fileId = (long) input->readULong(4);
-  if (hasHeader) { // checkme
+  textbox->m_textFileId = (long) input->readULong(4);
+  if (isMemo) { // checkme
     for (int i = 0; i < 2; i++)
-      textbox->m_dim[i] = float(input->readLong(4))/65536.f;
+      textbox->m_dim[1-i] = float(input->readLong(4))/65536.f;
   }
   f.str("");
   f << "FrameDef(textboxData):";
-  f << "fId=" << std::hex << textbox->m_fileId << std::dec << "," << textbox->print();
+  f << "fId=" << std::hex << textbox->m_textFileId << std::dec << "," << textbox->print();
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
   return textbox;
@@ -1263,13 +1767,13 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
 
   table.reset(new HMWGraphInternal::Table(header));
   libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
-  libmwaw::DebugStream f;
+  libmwaw::DebugStream f, f2;
   long val;
   for (int i = 0; i < 4; i++) {
     val = input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
-  table->m_fileId = (long) input->readULong(4);
+  table->m_textFileId = (long) input->readULong(4);
   table->m_rows = (int) input->readLong(2);
   table->m_columns = (int) input->readLong(2);
   table->m_numCells = (int) input->readLong(2);
@@ -1281,7 +1785,7 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
 
   f.str("");
   f << "FrameDef(tableData):";
-  f << "fId=" << std::hex << table->m_fileId << std::dec << ","
+  f << "fId=" << std::hex << table->m_textFileId << std::dec << ","
     << table->print() << extra;
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
@@ -1297,7 +1801,7 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
       asciiFile.addNote(f.str().c_str());
       break;
     }
-    HMWGraphInternal::Table::Cell cell;
+    HMWGraphInternal::TableCell cell;
     cell.m_row = (int) input->readLong(2);
     cell.m_col = (int) input->readLong(2);
     int span[2];
@@ -1308,25 +1812,71 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
     for (int j = 0; j < 2; j++)
       dim[j] = float(input->readLong(4))/65536.f;
     cell.m_dim = Vec2f(dim[0], dim[1]);
-    // checkme: where the border begin?
-    for (int j = 0; j < 4; j++) { // always 1,1,0,0?
-      val = input->readLong(2);
-      if ((j<2 && val!=1) || (j>=2 && val)) f << "f" << j << "=" << val << ",";
-    }
+
+    int color = (int) input->readULong(2);
+    uint32_t backCol = 0xffffff;
+    if (!m_state->getColor(color, backCol))
+      f << "#backcolor=" << color << ",";
+    int pattern = (int) input->readULong(2);
+    float patPercent = 1.0;
+    if (!m_state->getPatternPercent(pattern, patPercent))
+      f << "#backPattern=" << pattern << ",";
+    cell.m_backColor = libmwaw::getUInt32(table->getColor(backCol, patPercent));
+
+    cell.m_flags = (int) input->readULong(2);
+    val = input->readLong(2);
+    if (val) f << "f2=" << val << ",";
+
+    cell.m_borders.resize(4);
+    static char const *(what[]) = {"T", "L", "B", "R"};
+    static size_t const which[] = { MWAWBorder::Top, MWAWBorder::Left, MWAWBorder::Bottom, MWAWBorder::Right };
     for (int b = 0; b < 4; b++) { // find _,4000,_,_,1,_, and 1,_,_,_,1,_,
-      f << "bord" << b << "=[";
-      for (int j = 0; j < 6; j++) {
-        val = (long) input->readULong(2);
-        if (val) f << std::hex << val << std::dec << ",";
-        else f << "_,";
+      f2.str("");
+      MWAWBorder border;
+      float lineW = float(input->readLong(4))/65536.f;
+      border.m_width=int(lineW+0.999);
+      int type = int(input->readLong(2));
+      switch(type) {
+      case 0: // solid
+        break;
+      case 1:
+        border.m_style = MWAWBorder::Double;
+        break;
+      case 2:
+        border.m_style = MWAWBorder::Double;
+        f2 << "bottom[w=2],";
+        break;
+      case 3:
+        border.m_style = MWAWBorder::Double;
+        f2 << "top[w=2],";
+        break;
+      default:
+        f2 << "#style=" << type << ",";
+        break;
       }
-      f << "],";
+      color = (int) input->readULong(2);
+      uint32_t col = 0;
+      if (!m_state->getColor(color, col))
+        f2 << "#color=" << color << ",";
+      pattern = (int) input->readULong(2);
+      patPercent = 1.0;
+      if (!m_state->getPatternPercent(pattern, patPercent))
+        f2 << "#pattern=" << pattern << ",";
+      border.m_color = libmwaw::getUInt32(table->getColor(col, patPercent));
+      val = (long) input->readULong(2);
+      if (val) f2 << "unkn=" << val << ",";
+
+      cell.m_borders[which[b]] = border;
+      if (f2.str().length())
+        f << "bord" << what[b] << "=[" << f2.str() << "],";
     }
     cell.m_fileId = (long) input->readULong(4);
     val = input->readLong(2);
     if (val) f << "#f4=" << val << ",";
     cell.m_id = (int) input->readLong(2);
     cell.m_extra = f.str();
+    table->m_cellsList.push_back(cell);
+
     f.str("");
     f <<  "FrameDef(tableCell-" << i << "):" << cell;
 
@@ -1342,17 +1892,45 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
+bool HMWGraph::sendPageGraphics()
+{
+  std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::const_iterator fIt =
+    m_state->m_framesMap.begin();
+  for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
+    if (!fIt->second) continue;
+    HMWGraphInternal::Frame const &frame = *fIt->second;
+    if (frame.m_parsed /*|| frame.m_fileId <= 0*/)
+      continue;
+    MWAWPosition pos(frame.m_pos[0],frame.m_pos.size(),WPX_POINT);
+    pos.setRelativePosition(MWAWPosition::Page);
+    pos.setPage(frame.m_page+1);
+    sendFrame(frame, pos);
+  }
+  return true;
+}
 
 void HMWGraph::flushExtra()
 {
-  for (size_t i = 0; i < m_state->m_framesList.size(); i++) {
-    if (!m_state->m_framesList[i]) continue;
-    HMWGraphInternal::Frame const &frame = *m_state->m_framesList[i];
+  std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::const_iterator fIt =
+    m_state->m_framesMap.begin();
+  for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
+    if (!fIt->second) continue;
+    HMWGraphInternal::Frame const &frame = *fIt->second;
     if (frame.m_parsed)
       continue;
     MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),WPX_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
-    send(reinterpret_cast<HMWGraphInternal::BasicGraph const &>(frame), pos);
+    sendFrame(frame, pos);
+  }
+  std::map<long, shared_ptr<HMWGraphInternal::Picture> >::const_iterator pIt;
+  for (pIt = m_state->m_picturesMap.begin(); pIt != m_state->m_picturesMap.end(); pIt++) {
+    if (!pIt->second) continue;
+    HMWGraphInternal::Picture const &picture = *pIt->second;
+    if (picture.m_parsed)
+      continue;
+    MWAWPosition pos(Vec2f(0,0),Vec2f(100,100),WPX_POINT);
+    pos.setRelativePosition(MWAWPosition::Char);
+    sendPicture(picture, pos);
   }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

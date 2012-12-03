@@ -65,6 +65,7 @@ struct BasicGraph;
 struct Group;
 struct PictureFrame;
 struct Table;
+struct TableCell;
 struct TextBox;
 
 struct Picture;
@@ -105,6 +106,8 @@ protected:
     m_listener = listen;
   }
 
+  //! try to send the page graphic
+  bool sendPageGraphics();
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
@@ -119,16 +122,47 @@ protected:
   bool readPicture(shared_ptr<HMWZone> zone);
 
 
+  // interface with mainParser
+
   /** try to send a frame to the listener */
-  bool send(HMWGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
-  /** try to send a basic picture to the listener */
-  bool sendBasicGraph(HMWGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   /** try to send a picture to the listener */
-  bool send(HMWGraphInternal::Picture const &picture, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendPicture(long pictId, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+
+  //! ask main parser to send a text zone
+  bool sendText(long textId, int id);
 
   //
   // low level
   //
+
+  /** try to send a picture to the listener */
+  bool sendPicture(HMWGraphInternal::Picture const &picture, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+
+  /** try to send a frame to the listener */
+  bool sendFrame(HMWGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+
+  /** try to send a basic picture to the listener */
+  bool sendBasicGraph(HMWGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+
+  /** try to send a picture frame */
+  bool sendPictureFrame(HMWGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  /** try to send an empty picture */
+  bool sendEmptyPicture(MWAWPosition pos);
+
+  /** try to send a textbox to the listener */
+  bool sendTextBox(HMWGraphInternal::TextBox const &textbox, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+
+  /** try to send a table */
+  bool sendTable(HMWGraphInternal::Table const &table);
+  /** try to send a table unformatted*/
+  bool sendTableUnformatted(long fId);
+  /** check if the table is correct and if it can be send to a listener */
+  bool updateTable(HMWGraphInternal::Table const &table);
+  /** try to send a table */
+  bool sendPreTableData(HMWGraphInternal::Table const &table);
+  /** try to send a cell in a table */
+  bool sendTableCell(HMWGraphInternal::TableCell const &cell);
 
   /** try to read the basic graph data */
   shared_ptr<HMWGraphInternal::BasicGraph> readBasicGraph(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header);
@@ -139,7 +173,7 @@ protected:
   /** try to read the table data */
   shared_ptr<HMWGraphInternal::Table> readTable(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header);
   /** try to read the textbox data */
-  shared_ptr<HMWGraphInternal::TextBox> readTextBox(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header, bool hasHeader);
+  shared_ptr<HMWGraphInternal::TextBox> readTextBox(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header, bool isMemo);
 
   //! returns the debug file
   libmwaw::DebugFile &ascii() {

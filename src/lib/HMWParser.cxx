@@ -198,6 +198,11 @@ float HMWParser::pageWidth() const
   return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
 }
 
+Vec2f HMWParser::getPageLeftTop() const
+{
+  return Vec2f(float(m_pageSpan.getMarginLeft()),
+               float(m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
+}
 
 ////////////////////////////////////////////////////////////
 // new page
@@ -229,6 +234,16 @@ bool HMWParser::isFilePos(long pos)
   return ok;
 }
 
+bool HMWParser::sendText(long /*id*/, int /*subId*/)
+{
+  static bool first = true;
+  if (first) {
+    first = false;
+    MWAW_DEBUG_MSG(("HMWParser::sendText: sorry, function not implemented\n"));
+  }
+  return false;
+}
+
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
@@ -247,6 +262,8 @@ void HMWParser::parse(WPXDocumentInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
+      m_graphParser->sendPageGraphics();
+
       m_textParser->flushExtra();
       m_graphParser->flushExtra();
       if (m_listener) m_listener->endDocument();
@@ -537,19 +554,20 @@ bool HMWParser::readPrintInfo(shared_ptr<HMWZone> zone)
   input->seek(pos, WPX_SEEK_SET);
   long val;
   f << "margins?=[";
+  float margins[4]; // L, T, R, B
   for (int i= 0; i < 4; i++) {
-    val = (long) input->readLong(4);
-    f << float(val)/65536. << ",";
+    margins[i] = float(input->readLong(4))/65536.f;
+    f << margins[i] << ",";
   }
   f << "],";
   int dim[4];
   for (int i = 0; i < 4; i++) dim[i]=int(input->readLong(2));
   f << "paper=[" << dim[1] << "x" << dim[0] << " " << dim[3] << "x" << dim[2] << "],";
-  for (int i = 0; i < 2; i++) { // always 1, 0
-    val = (long) input->readULong(2);
-    if (val != 1-i)
-      f << "f" << i << "=" << val << ",";
-  }
+  val = (long) input->readULong(2);
+  if (val != 1) f << "firstSectNumber=" << val << ",";
+  val = (long) input->readULong(2);
+  if (val) f << "f0=" << val << ",";
+
   // after unknown
   asciiFile.addDelimiter(input->tell(),'|');
   asciiFile.addPos(pos);
@@ -578,26 +596,34 @@ bool HMWParser::readPrintInfo(shared_ptr<HMWZone> zone)
 
   Vec2i paperSize = info.paper().size();
   Vec2i pageSize = info.page().size();
-  bool ok = pageSize.x() > 0 && pageSize.y() > 0 &&
-            paperSize.x() > 0 && paperSize.y() > 0;
 
+  bool useDocInfo = (dim[3]-dim[1]>margins[2]+margins[0]) &&
+                    (dim[2]-dim[0]>margins[2]+margins[0]);
+  bool usePrintInfo = pageSize.x() > 0 && pageSize.y() > 0 &&
+                      paperSize.x() > 0 && paperSize.y() > 0;
+
+  Vec2f lTopMargin(margins[0],margins[1]), rBotMargin(margins[2],margins[3]);
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
+  if (useDocInfo)
+    paperSize = Vec2i(dim[3]-dim[1],dim[2]-dim[0]);
+  else if (usePrintInfo) {
+    lTopMargin= Vec2f(-float(info.paper().pos(0)[0]), -float(info.paper().pos(0)[1]));
+    rBotMargin=info.paper().pos(1) - info.page().pos(1);
 
-  // move margin left | top
-  int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
-  int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+    // move margin left | top
+    float decalX = lTopMargin.x() > 14 ? 14 : 0;
+    float decalY = lTopMargin.y() > 14 ? 14 : 0;
+    lTopMargin -= Vec2f(decalX, decalY);
+    rBotMargin += Vec2f(decalX, decalY);
+  }
 
   // decrease right | bottom
-  int rightMarg = rBotMargin.x() -10;
+  float rightMarg = rBotMargin.x() -10;
   if (rightMarg < 0) rightMarg=0;
-  int botMarg = rBotMargin.y() -50;
+  float botMarg = rBotMargin.y() -50;
   if (botMarg < 0) botMarg=0;
 
-  if (ok) {
+  if (useDocInfo || usePrintInfo) {
     m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
     m_pageSpan.setMarginBottom(botMarg/72.0);
     m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);

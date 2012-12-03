@@ -477,7 +477,7 @@ bool MSK4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
 
     if (0xFFFFFFFF == next_index_table)	break;
 
-    if (input->seek(next_index_table, WPX_SEEK_SET) != 0) return readSome;
+    if (input->seek(long(next_index_table), WPX_SEEK_SET) != 0) return readSome;
   } while (n_entries > 0);
 
   return true;

@@ -1236,7 +1236,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     m_input->seek(debData+dataSize, WPX_SEEK_SET);
     for (int i = 0; i < 2; i++) {
       long sz = (long) m_input->readULong(4);
-      if (sz<0 || (sz&0xF0000000L)) return zId;
+      if (sz<0 || (sz>>28)) return zId;
       dataSize += 4 + sz;
       m_input->seek(sz, WPX_SEEK_CUR);
     }
@@ -1254,7 +1254,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
 
     for (int i = 0; i < 3; i++) {
       long sz = (long) m_input->readULong(4);
-      if (sz<0 || (sz&0xF0000000L)) return zId;
+      if (sz<0 || ((sz>>28))) return zId;
       dataSize += 4 + sz;
       m_input->seek(sz, WPX_SEEK_CUR);
     }
@@ -1749,7 +1749,7 @@ bool MSKGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
   uint32_t page_offset = (uint32_t) entry.begin();
   long endOfPage = entry.end();
 
-  input->seek(page_offset, WPX_SEEK_SET);
+  input->seek(long(page_offset), WPX_SEEK_SET);
   f << input->readLong(4) << ", ";
   for (int i = 0; i < 4; i++) {
     long val = input->readLong(4);
@@ -1795,7 +1795,7 @@ bool MSKGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
     f << "ole='" << oleName << "', ";
   }
 
-  int i = int(input->tell()-page_offset);
+  int i = int(input->tell()-long(page_offset));
   if ((i%2) == 1) {
     int val = (int) input->readLong(1);
     if (val) f << "f" << i << "=" << val << ",";
@@ -1808,7 +1808,7 @@ bool MSKGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
   }
   int n = (int) input->readLong(2);
   f << "N= " << n;
-  ascii().addPos(page_offset);
+  ascii().addPos(long(page_offset));
   ascii().addNote(f.str().c_str());
 
   if (n == 0) return true;

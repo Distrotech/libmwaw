@@ -286,7 +286,7 @@ static bool findDataStream(WPXInputStream *input, CentralDirectoryEntry &entry, 
   CentralDirectoryEnd end;
   if (!readCentralDirectoryEnd(input, end))
     return false;
-  input->seek(end.cdir_offset, WPX_SEEK_SET);
+  input->seek(long(end.cdir_offset), WPX_SEEK_SET);
   while (!input->atEOS() && (unsigned)input->tell() < end.cdir_offset + end.cdir_size) {
     if (!readCentralDirectoryEntry(input, entry))
       return false;
@@ -297,7 +297,7 @@ static bool findDataStream(WPXInputStream *input, CentralDirectoryEntry &entry, 
     return false;
   if (entry.filename != name)
     return false;
-  input->seek(entry.offset, WPX_SEEK_SET);
+  input->seek(long(entry.offset), WPX_SEEK_SET);
   LocalFileHeader header;
   if (!readLocalFileHeader(input, header))
     return false;
@@ -314,7 +314,7 @@ static std::vector<std::string> getZipNames(WPXInputStream *input)
   CentralDirectoryEnd end;
   if (!readCentralDirectoryEnd(input, end))
     return res;
-  input->seek(end.cdir_offset, WPX_SEEK_SET);
+  input->seek(long(end.cdir_offset), WPX_SEEK_SET);
   while (!input->atEOS() && (unsigned)input->tell() < end.cdir_offset + end.cdir_size) {
     CentralDirectoryEntry entry;
     if (!readCentralDirectoryEntry(input, entry))
@@ -337,12 +337,12 @@ bool MWAWZipStream::isZipStream()
   CentralDirectoryEnd end;
   if (!readCentralDirectoryEnd(m_input, end))
     return false;
-  m_input->seek(end.cdir_offset, WPX_SEEK_SET);
+  m_input->seek(long(end.cdir_offset), WPX_SEEK_SET);
   // read first entry in the central directory
   CentralDirectoryEntry entry;
   if (!readCentralDirectoryEntry(m_input, entry))
     return false;
-  m_input->seek(entry.offset, WPX_SEEK_SET);
+  m_input->seek(long(entry.offset), WPX_SEEK_SET);
   // read the local file header and compare with the central directory information
   LocalFileHeader header;
   if (!readLocalFileHeader(m_input, header))
