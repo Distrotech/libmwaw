@@ -133,7 +133,7 @@ protected:
   bool sendPicture(long pictId, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
 
   //! ask main parser to send a text zone
-  bool sendText(long textId, int id);
+  bool sendText(long textId, long id);
 
   //
   // low level

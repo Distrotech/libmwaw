@@ -794,7 +794,7 @@ int HMWGraph::numPages() const
   return nPages;
 }
 
-bool HMWGraph::sendText(long textId, int id)
+bool HMWGraph::sendText(long textId, long id)
 {
   return m_mainParser->sendText(textId, id);
 }
