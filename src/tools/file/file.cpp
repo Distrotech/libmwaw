@@ -230,8 +230,10 @@ bool File::readFileInformation()
   } else if (m_fInfoCreator=="FWRT") {
     checkFInfoType("FWRM","FullWrite 1.0") || checkFInfoType("FWRI","FullWrite 2.0") ||
     checkFInfoType("FWRI","FullWrite") || checkFInfoType("FullWrite");
+  } else if (m_fInfoCreator=="HMiw") {
+    checkFInfoType("IWDC","HanMac Word-J") || checkFInfoType("HanMac Word-J");
   } else if (m_fInfoCreator=="HMdr") {
-    checkFInfoType("DRD2","HanMac Word") || checkFInfoType("HanMac Word");
+    checkFInfoType("DRD2","HanMac Word-K") || checkFInfoType("HanMac Word-K");
   } else if (m_fInfoCreator=="MACA") {
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   } else if (m_fInfoCreator=="MACD") { // checkme
@@ -249,8 +251,9 @@ bool File::readFileInformation()
   } else if (m_fInfoCreator=="MSWD") {
     checkFInfoType("WDBN","Microsoft Word 3-5") ||
     checkFInfoType("GLOS","Microsoft Word 3-5[glossary]") ||
-    checkFInfoType("W8BN", "Microsoft Word 97-2004") ||
-    checkFInfoType("W8TN", "Microsoft Word 97-2004") || // ?
+    checkFInfoType("W6BN", "Microsoft Word 6") ||
+    checkFInfoType("W8BN", "Microsoft Word 8") ||
+    checkFInfoType("W8TN", "Microsoft Word 8[W8TN]") || // ?
     checkFInfoType("WXBN", "Microsoft Word 97-2004") || // Office X ?
     checkFInfoType("Microsoft Word");
   } else if (m_fInfoCreator=="MSWK") {
@@ -341,8 +344,16 @@ bool File::readDataInformation()
     m_dataResult.push_back("HanMac Word-K");
     return true;
   }
+  if (val[0]==0x594c && val[1]==0x5953 && val[2]==0x100) {
+    m_dataResult.push_back("HanMac Word-J");
+    return true;
+  }
   if (val[0]==0x2550 && val[1]==0x4446) {
     m_dataResult.push_back("PDF");
+    return true;
+  }
+  if (val[0]==0x2854 && val[1]==0x6869 && val[2]==0x7320 && val[3]==0x6669) {
+    m_dataResult.push_back("BinHex");
     return true;
   }
   if (val[0]==0x2521 && val[1]==0x5053 && val[2]==0x2d41 && val[3] == 0x646f && val[4]==0x6265) {

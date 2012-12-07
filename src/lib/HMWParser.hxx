@@ -68,16 +68,58 @@ class SubDocument;
 
 //! Small class used to store the decoded zone of HMWParser
 struct HMWZone {
-  //! constructor
-  HMWZone();
+  //! constructor given an input and an asciiFile
+  HMWZone(MWAWInputStreamPtr input, libmwaw::DebugFile &asciiFile);
+  //! constructor given an asciiFile (used for compressed zone)
+  HMWZone(shared_ptr<libmwaw::DebugFile> asciiFile);
   //! destructor
   ~HMWZone();
 
-  //! return true if the zone data exists
+  //! returns the first position in the input
+  long begin() const {
+    return m_asciiFilePtr ? 0 : m_filePos;
+  }
+  //! returns the last position in the input
+  long end() const {
+    return m_asciiFilePtr ? (long) m_data.size() : m_endFilePos;
+  }
+  //! returns the zone size
+  long length() const {
+    if (m_asciiFilePtr) return (long) m_data.size();
+    return m_endFilePos-m_filePos;
+  }
+  //! returns true if the zone data exists
   bool valid() const {
-    return m_data.size() > 0;
+    return length() > 0;
   }
 
+  // function to define the zone in the original file
+
+  //! returns the file begin position
+  long fileBeginPos() const {
+    return m_filePos;
+  }
+  //! returns the file begin position
+  long fileEndPos() const {
+    return m_endFilePos;
+  }
+  //! sets the begin file pos
+  void setFileBeginPos(long begPos) {
+    m_filePos = m_endFilePos = begPos;
+  }
+  //! sets the file length
+  void setFileLength(long len) {
+    m_endFilePos = m_filePos+len;
+  }
+  //! sets the begin/end file pos
+  void setFilePositions(long begPos, long endPos) {
+    m_filePos = begPos;
+    m_endFilePos = endPos;
+  }
+  //! returns a pointer to the binary data
+  WPXBinaryData &getBinaryData() {
+    return m_data;
+  }
   //! returns the zone name
   std::string name() const {
     return name(m_type);
@@ -90,35 +132,49 @@ struct HMWZone {
 
   //! returns the debug file
   libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
+    return *m_asciiFile;
   }
 
   //! the type : 1(text), ....
   int m_type;
 
+  //! the japanese type
+  int m_JType;
+
   //! the zone id
   long m_id;
 
+  //! the zone subId
+  long m_subId;
+
+  //! the main input
+  MWAWInputStreamPtr m_input;
+
+  //! some extra data
+  std::string m_extra;
+
+  //! true if the zone is sended
+  mutable bool m_parsed;
+
+protected:
   //! the begin of the entry
   long m_filePos;
 
   //! the end of the entry
   long m_endFilePos;
 
-  //! the storage
+  //! the storage (if needed)
   WPXBinaryData m_data;
 
-  //! the main input
-  MWAWInputStreamPtr m_input;
-
   //! the debug file
-  libmwaw::DebugFile m_asciiFile;
+  libmwaw::DebugFile *m_asciiFile;
 
-  //! some extra data
-  std::string m_extra;
+  //! the file pointer
+  shared_ptr<libmwaw::DebugFile> m_asciiFilePtr;
 
-  //! true if the zone is sended
-  bool m_parsed;
+private:
+  HMWZone(HMWZone const &orig);
+  HMWZone &operator=(HMWZone const &orig);
 };
 
 class HMWGraph;
@@ -150,6 +206,8 @@ public:
 protected:
   //! inits all internal variables
   void init();
+  //! returns true if this is a Korean File
+  bool isKoreanFile() const;
 
   //! sets the listener in this class and in the helper classes
   void setListener(HMWContentListenerPtr listen);
@@ -157,8 +215,11 @@ protected:
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
 
-  //! finds the different objects zones
-  bool createZones();
+  //! finds the different objects zones in a Hapanese File
+  bool createJZones();
+
+  //! finds the different objects zones in a Korean File
+  bool createKZones();
 
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
@@ -173,22 +234,31 @@ protected:
   // interface with the text parser
 
   //! send a text zone (not implemented)
-  bool sendText(long id, int subId=0);
+  bool sendText(long id, long subId=0);
+
+  // interface with the graph parser
+
+  //! returns the color associated with a pattern
+  bool getColor(int colId, int patternId, uint32_t &color) const;
 
   //
   // low level
   //
 
-  /** try to read the zones list */
-  bool readZonesList();
-  /** try to read a generic zone */
-  bool readZone(shared_ptr<HMWZone> zone);
+  /** try to read the zones list (in a Japanese file)*/
+  bool readJZonesList();
+  /** try to read the zones list (in a Korean file)*/
+  bool readKZonesList();
+  /** try to read a generic zone (in a Japanese file)*/
+  bool readJZone(shared_ptr<HMWZone> zone);
+  /** try to read a generic zone (in a Korean file)*/
+  bool readKZone(shared_ptr<HMWZone> zone);
   /** try to decode a zone */
   shared_ptr<HMWZone> decodeZone(shared_ptr<HMWZone> zone);
   /** try to read a zone storing a list of ?, frameType*/
   bool readFramesUnkn(shared_ptr<HMWZone> zone);
   /** try to read a printinfo zone (type 7)*/
-  bool readPrintInfo(shared_ptr<HMWZone> zone);
+  bool readPrintInfo(HMWZone &zone);
   /** try to read a unknown zone of type 6*/
   bool readZone6(shared_ptr<HMWZone> zone);
   /** try to read a unknown zone of type 8*/
@@ -196,7 +266,7 @@ protected:
   /** try to read a unknown zone of type a*/
   bool readZonea(shared_ptr<HMWZone> zone);
   /** try to read a unknown zone of type b*/
-  bool readZoneb(shared_ptr<HMWZone> zone);
+  bool readZoneb(HMWZone &zone);
   /** try to read a unknown zone of type c*/
   bool readZonec(shared_ptr<HMWZone> zone);
   /** check if an entry is in file */

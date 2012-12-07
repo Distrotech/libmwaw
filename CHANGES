@@ -1,5 +1,12 @@
 CHANGES:
 
+12/07/2012
+- add a first parser for HanMac Word-K document ( 2.0.5 and 2.0.6 ),
+  in debug mode, the HanMac Word-J (2.0.4) are also recognised and a few
+  zones are parsed but no output is generated...
+
+11/12/2012: ----- version 1.4 ---------
+
 11/12/2012
 - try to improve a little the claris/appleworks parser
   ( use vertical descent to add AppleWorks v6 char attachment,

@@ -65,7 +65,7 @@ namespace HMWParserInternal
 //! Internal: the state of a HMWParser
 struct State {
   //! constructor
-  State() : m_zonesListBegin(-1), m_eof(-1), m_zonesMap(),
+  State() : m_zonesListBegin(-1), m_eof(-1), m_isKoreanFile(true), m_zonesMap(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
 
@@ -73,6 +73,8 @@ struct State {
   long m_zonesListBegin;
   //! end of file
   long m_eof;
+  //! a flag to known if we parse the korean or the japonese version
+  bool m_isKoreanFile;
   //! a map of entry: zoneId->zone
   std::multimap<long,shared_ptr<HMWZone> > m_zonesMap;
 
@@ -147,7 +149,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 }
 
 ////////////////////////////////////////////////////////////
-// constructor/destructor, ...
+// constructor/destructor + basic interface ...
 ////////////////////////////////////////////////////////////
 HMWParser::HMWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
@@ -178,11 +180,25 @@ void HMWParser::init()
   m_textParser.reset(new HMWText(getInput(), *this, m_convertissor));
 }
 
+bool HMWParser::isKoreanFile() const
+{
+  return m_state->m_isKoreanFile;
+}
+
 void HMWParser::setListener(HMWContentListenerPtr listen)
 {
   m_listener = listen;
   m_graphParser->setListener(listen);
   m_textParser->setListener(listen);
+}
+
+bool HMWParser::sendText(long id, long subId)
+{
+  return m_textParser->sendText(id, subId);
+}
+bool HMWParser::getColor(int colId, int patternId, uint32_t &color) const
+{
+  return m_graphParser->getColor(colId, patternId, color);
 }
 
 ////////////////////////////////////////////////////////////
@@ -234,16 +250,6 @@ bool HMWParser::isFilePos(long pos)
   return ok;
 }
 
-bool HMWParser::sendText(long /*id*/, int /*subId*/)
-{
-  static bool first = true;
-  if (first) {
-    first = false;
-    MWAW_DEBUG_MSG(("HMWParser::sendText: sorry, function not implemented\n"));
-  }
-  return false;
-}
-
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
@@ -251,7 +257,7 @@ void HMWParser::parse(WPXDocumentInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!checkHeader(0L)) throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile
@@ -259,7 +265,10 @@ void HMWParser::parse(WPXDocumentInterface *docInterface)
     ascii().open(asciiName());
 
     checkHeader(0L);
-    ok = createZones();
+    if (m_state->m_isKoreanFile)
+      ok = createKZones();
+    else
+      ok = createJZones();
     if (ok) {
       createDocument(docInterface);
       m_graphParser->sendPageGraphics();
@@ -315,23 +324,55 @@ void HMWParser::createDocument(WPXDocumentInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool HMWParser::createZones()
+bool HMWParser::createJZones()
 {
-  if (!HMWParser::readZonesList())
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  HMWZone mainZone(input, ascii());
+  mainZone.m_type = 11;
+  mainZone.setFilePositions(pos, pos+34);
+  if (!readZoneb(mainZone))
+    input->seek(pos+34, WPX_SEEK_SET);
+  if (!readJZonesList())
+    return false;
+
+  libmwaw::DebugStream f;
+  std::multimap<long,shared_ptr<HMWZone> >::const_iterator it =
+    m_state->m_zonesMap.begin();
+  for ( ; it != m_state->m_zonesMap.end(); it++) {
+    if (!it->second) continue;
+    readJZone(it->second);
+  }
+  for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); it++) {
+    if (!it->second) continue;
+    HMWZone const &zone = *it->second;
+    if (zone.m_parsed) continue;
+    f.str("");
+    f << "Entries(" << zone.name() << "):";
+    ascii().addPos(zone.begin());
+    ascii().addNote(f.str().c_str());
+  }
+
+  return false;
+}
+
+bool HMWParser::createKZones()
+{
+  if (!HMWParser::readKZonesList())
     return false;
 
   libmwaw::DebugStream f;
   std::multimap<long,shared_ptr<HMWZone> >::iterator it;
   for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); it++)
-    readZone(it->second);
+    readKZone(it->second);
   for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); it++) {
     shared_ptr<HMWZone> &zone = it->second;
     if (!zone || !zone->valid() || zone->m_parsed)
       continue;
     f.str("");
     f << "Entries(" << std::hex << zone->name() << std::dec << "):";
-    zone->m_asciiFile.addPos(0);
-    zone->m_asciiFile.addNote(f.str().c_str());
+    zone->ascii().addPos(0);
+    zone->ascii().addNote(f.str().c_str());
   }
   return true;
 }
@@ -341,10 +382,106 @@ bool HMWParser::createZones()
 // Low level
 //
 ////////////////////////////////////////////////////////////
-bool HMWParser::readZonesList()
+bool HMWParser::readJZonesList()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  if (!isFilePos(pos+82))
+    return false;
+
+  libmwaw::DebugStream f;
+  f << "Entries(Zones):";
+  long val;
+  for (int i = 0; i < 7; i++) { // f0=a000
+    val = (long) input->readULong(2);
+    if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos=input->tell();
+  f.str("");
+  f << "Zones(A):";
+
+  for (int i = 0; i < 20; i++) {
+    // Zones0: styleZone, Zones2: Ruler, Zones5: Picture+?, sure up to Zonesb=FontNames Zones19=EOF
+    long ptr = (long) input->readULong(4);
+    if (!ptr) continue;
+    bool ok = isFilePos(ptr);
+    if (!ok)
+      f << "###";
+    else if (i != 19) { // i==19: is end of file
+      shared_ptr<HMWZone> zone(new HMWZone(input, ascii()));
+      zone->m_type = -i;
+      zone->setFileBeginPos(ptr);
+      m_state->m_zonesMap.insert
+      (std::multimap<long,shared_ptr<HMWZone> >::value_type(zone->m_id,zone));
+    }
+    f << "Zone" << i << "=" << std::hex << ptr << std::dec << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  ascii().addPos(input->tell());
+  ascii().addNote("_");
+
+  return m_state->m_zonesMap.size();
+}
+
+bool HMWParser::readJZone(shared_ptr<HMWZone> zone)
+{
+  if (!zone) {
+    MWAW_DEBUG_MSG(("HMWParser::readJZone: can not find the zone\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = getInput();
+  libmwaw::DebugStream f;
+  long pos = zone->begin();
+  input->seek(pos, WPX_SEEK_SET);
+
+  zone->m_JType = (int) input->readULong(2); // number between 0 and f
+  long val = input->readLong(2);
+  if (val) f << "f0=" << val << ",";
+  zone->setFileLength((long) input->readULong(4));
+  if (zone->length() < 12 || !isFilePos(zone->end())) {
+    MWAW_DEBUG_MSG(("HMWParser::readJZone: header seems to short\n"));
+    return false;
+  }
+  zone->m_parsed = true;
+  zone->m_extra = f.str();
+
+  bool done = false;
+  switch(zone->m_type) {
+  case 0:
+    zone->m_type = 3;
+    done = m_textParser->readStyles(zone);
+    break;
+  case -11:
+    zone->m_type = 5;
+    done = m_textParser->readFontNames(zone);
+    break;
+  default:
+    break;
+  }
+
+  f.str("");
+  f << "Entries(" << zone->name() << "):" << *zone;
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  if (done) return true;
+  f.str("");
+  f << zone->name() << "[data]:";
+  ascii().addPos(pos+8);
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool HMWParser::readKZonesList()
 {
   if (m_state->m_zonesListBegin <= 0 || !isFilePos(m_state->m_zonesListBegin)) {
-    MWAW_DEBUG_MSG(("HMWParser::readZonesList: the list entry is not set \n"));
+    MWAW_DEBUG_MSG(("HMWParser::readKZonesList: the list entry is not set \n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
@@ -354,7 +491,7 @@ bool HMWParser::readZonesList()
   std::set<long> seeDebZone;
   while (debZone) {
     if (seeDebZone.find(debZone) != seeDebZone.end()) {
-      MWAW_DEBUG_MSG(("HMWParser::readZonesList: oops, we have already see this zone\n"));
+      MWAW_DEBUG_MSG(("HMWParser::readKZonesList: oops, we have already see this zone\n"));
       break;
     }
     seeDebZone.insert(debZone);
@@ -365,7 +502,7 @@ bool HMWParser::readZonesList()
     f << "Entries(Zones):";
     f << "N=" << numZones << ",";
     if (!numZones || !isFilePos(pos+16*(numZones+1))) {
-      MWAW_DEBUG_MSG(("HMWParser::readZonesList: can not read the number of zones\n"));
+      MWAW_DEBUG_MSG(("HMWParser::readKZonesList: can not read the number of zones\n"));
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
       break;
@@ -377,7 +514,7 @@ bool HMWParser::readZonesList()
     }
     long ptr = long(input->readULong(4));
     if (ptr != debZone) {
-      MWAW_DEBUG_MSG(("HMWParser::readZonesList: can not read the zone begin ptr\n"));
+      MWAW_DEBUG_MSG(("HMWParser::readKZonesList: can not read the zone begin ptr\n"));
       f << "#ptr=" << std::hex << ptr << std::dec << ",";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -387,7 +524,7 @@ bool HMWParser::readZonesList()
     if (nextPtr) {
       f << "nextPtr=" << std::hex << nextPtr << std::dec;
       if (!isFilePos(nextPtr)) {
-        MWAW_DEBUG_MSG(("HMWParser::readZonesList: can not read the next zone begin ptr\n"));
+        MWAW_DEBUG_MSG(("HMWParser::readKZonesList: can not read the next zone begin ptr\n"));
         nextPtr = 0;
         f << "###";
       }
@@ -404,17 +541,18 @@ bool HMWParser::readZonesList()
     for (int i = 0; i < numZones; i++) {
       pos = input->tell();
       f.str("");
-      shared_ptr<HMWZone> zone(new HMWZone);
+      shared_ptr<HMWZone> zone(new HMWZone(shared_ptr<libmwaw::DebugFile>(new libmwaw::DebugFile)));
       zone->m_type = int(input->readLong(2));
       val = int(input->readLong(2));
       if (val) f << "f0=" << val << ",";
-      zone->m_filePos = long(input->readULong(4));
+      zone->setFileBeginPos(long(input->readULong(4)));
       zone->m_id = long(input->readULong(4));
+      zone->m_subId = long(input->readULong(4));
       zone->m_extra = f.str();
       f.str("");
       f << "Zones-" << i << ":" << *zone;
       if (!isFilePos(ptr)) {
-        MWAW_DEBUG_MSG(("HMWParser::readZonesList: can not read the %d zone address\n", i));
+        MWAW_DEBUG_MSG(("HMWParser::readKZonesList: can not read the %d zone address\n", i));
         f << ",#Ptr";
       } else
         m_state->m_zonesMap.insert
@@ -433,16 +571,16 @@ bool HMWParser::readZonesList()
   return m_state->m_zonesMap.size();
 }
 
-bool HMWParser::readZone(shared_ptr<HMWZone> zone)
+bool HMWParser::readKZone(shared_ptr<HMWZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWParser::readZone: can not find the zone\n"));
+    MWAW_DEBUG_MSG(("HMWParser::readKZone: can not find the zone\n"));
     return false;
   }
 
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
-  long pos = zone->m_filePos;
+  long pos = zone->fileBeginPos();
   input->seek(pos, WPX_SEEK_SET);
   f << "Entries(" << zone->name() << "):";
   int n = int(input->readLong(2));
@@ -453,13 +591,13 @@ bool HMWParser::readZone(shared_ptr<HMWZone> zone)
   long totalSz = (long) input->readULong(4);
   long dataSz = (long) input->readULong(4);
   if (totalSz != dataSz+12 || !isFilePos(pos+totalSz)) {
-    MWAW_DEBUG_MSG(("HMWParser::readZone: can not read the zone size\n"));
+    MWAW_DEBUG_MSG(("HMWParser::readKZone: can not read the zone size\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     return false;
   }
-  zone->m_endFilePos=pos+totalSz;
+  zone->setFileLength(totalSz);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
@@ -493,7 +631,7 @@ bool HMWParser::readZone(shared_ptr<HMWZone> zone)
       return true;
     break;
   case 7:
-    if (readPrintInfo(zone))
+    if (readPrintInfo(*zone))
       return true;
     break;
   case 8:
@@ -509,7 +647,7 @@ bool HMWParser::readZone(shared_ptr<HMWZone> zone)
       return true;
     break;
   case 0xb:
-    if (readZoneb(zone))
+    if (readZoneb(*zone))
       return true;
     break;
   case 0xc:
@@ -524,7 +662,7 @@ bool HMWParser::readZone(shared_ptr<HMWZone> zone)
   }
   /** type1: text, type7: printInfo: typed: graphic */
   f.str("");
-  f << zone->name() << "[data]:PTR=" << std::hex << zone->m_filePos << std::dec << ",";
+  f << zone->name() << "[data]:PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
   zone->ascii().addPos(0);
   zone->ascii().addNote(f.str().c_str());
 
@@ -532,57 +670,75 @@ bool HMWParser::readZone(shared_ptr<HMWZone> zone)
 }
 
 // read the print info data
-bool HMWParser::readPrintInfo(shared_ptr<HMWZone> zone)
+bool HMWParser::readPrintInfo(HMWZone &zone)
 {
-  if (!zone) {
-    MWAW_DEBUG_MSG(("HMWParser::readPrintInfo: called without any zone\n"));
-    return false;
-  }
-  long dataSz = (long) zone->m_data.size();
-  if (dataSz < 192) {
+  bool isKorean = isKoreanFile();
+  long dataSz = zone.length();
+  MWAWInputStreamPtr input = zone.m_input;
+  libmwaw::DebugFile &asciiFile = zone.ascii();
+  long pos = zone.begin();
+
+  if ((isKorean && dataSz < 192) || !isFilePos(zone.end())) {
     MWAW_DEBUG_MSG(("HMWParser::readPrintInfo: the zone seems too short\n"));
     return false;
   }
 
-  MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
-  libmwaw::DebugStream f;
-  zone->m_parsed = true;
-
-  f << zone->name() << "(A):PTR=" << std::hex << zone->m_filePos << std::dec << ",";
-  long pos=0;
   input->seek(pos, WPX_SEEK_SET);
-  long val;
-  f << "margins?=[";
+  libmwaw::DebugStream f;
+  zone.m_parsed = true;
+
+  if (isKorean)
+    f << zone.name() << "(A):PTR=" << std::hex << zone.fileBeginPos() << std::dec << ",";
+  else
+    f << "Entries(" << zone.name() << "):";
   float margins[4]; // L, T, R, B
-  for (int i= 0; i < 4; i++) {
-    margins[i] = float(input->readLong(4))/65536.f;
-    f << margins[i] << ",";
-  }
-  f << "],";
   int dim[4];
-  for (int i = 0; i < 4; i++) dim[i]=int(input->readLong(2));
-  f << "paper=[" << dim[1] << "x" << dim[0] << " " << dim[3] << "x" << dim[2] << "],";
-  val = (long) input->readULong(2);
-  if (val != 1) f << "firstSectNumber=" << val << ",";
-  val = (long) input->readULong(2);
-  if (val) f << "f0=" << val << ",";
+  long val;
+  if (isKorean) {
+    f << "margins?=[";
+    for (int i= 0; i < 4; i++) {
+      margins[i] = float(input->readLong(4))/65536.f;
+      f << margins[i] << ",";
+    }
+    f << "],";
+    for (int i = 0; i < 4; i++) dim[i]=int(input->readLong(2));
+    f << "paper=[" << dim[1] << "x" << dim[0] << " " << dim[3] << "x" << dim[2] << "],";
+    val = (long) input->readULong(2);
+    if (val != 1) f << "firstSectNumber=" << val << ",";
+    val = (long) input->readULong(2);
+    if (val) f << "f0=" << val << ",";
+  } else {
+    val = (long) input->readULong(2);
+    if (val != 1) f << "firstSectNumber=" << val << ",";
+    val = (long) input->readULong(2);
+    if (val) f << "f0=" << val << ",";
+    for (int i = 0; i < 4; i++) dim[i]=int(input->readLong(2));
+    f << "paper=[" << dim[1] << "x" << dim[0] << " " << dim[3] << "x" << dim[2] << "],";
+    f << "margins?=[";
+    for (int i= 0; i < 4; i++) {
+      margins[i] = float(input->readLong(4))/65536.f;
+      f << margins[i] << ",";
+    }
+    f << "],";
+  }
 
   // after unknown
   asciiFile.addDelimiter(input->tell(),'|');
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
-  pos = 68;
+  pos += isKorean ? 68 : 44;
   input->seek(pos, WPX_SEEK_SET);
   f.str("");
-  f << zone->name() << "(B):";
-  long sz = (long) input->readULong(4);
-  if (sz < 0x78) {
-    MWAW_DEBUG_MSG(("HMWParser::readPrintInfo: the print info data zone seems too short\n"));
-    f << "###";
-    asciiFile.addPos(pos);
-    asciiFile.addNote(f.str().c_str());
-    return false;
+  f << zone.name() << "(B):";
+  if (isKorean) {
+    long sz = (long) input->readULong(4);
+    if (sz < 0x78) {
+      MWAW_DEBUG_MSG(("HMWParser::readPrintInfo: the print info data zone seems too short\n"));
+      f << "###";
+      asciiFile.addPos(pos);
+      asciiFile.addNote(f.str().c_str());
+      return false;
+    }
   }
 
   // print info
@@ -637,9 +793,10 @@ bool HMWParser::readPrintInfo(shared_ptr<HMWZone> zone)
 
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
-  input->seek(pos+4+0x78, WPX_SEEK_SET);
-  if (!input->atEOS())
+  if (input->tell()!=zone.end()) {
     asciiFile.addDelimiter(input->tell(),'|');
+    input->seek(zone.end(), WPX_SEEK_SET);
+  }
   return true;
 }
 
@@ -650,18 +807,18 @@ bool HMWParser::readFramesUnkn(shared_ptr<HMWZone> zone)
     MWAW_DEBUG_MSG(("HMWParser::readFramesUnkn: called without any zone\n"));
     return false;
   }
-  long dataSz = (long) zone->m_data.size();
+  long dataSz = zone->length();
   if (dataSz < 2) {
     MWAW_DEBUG_MSG(("HMWParser::readFramesUnkn: the zone seems too short\n"));
     return false;
   }
 
   MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   zone->m_parsed = true;
 
-  f << zone->name() << ":PTR=" << std::hex << zone->m_filePos << std::dec << ",";
+  f << zone->name() << ":PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
   input->seek(0, WPX_SEEK_SET);
   int N= (int) input->readLong(2); // always find val=0, so :-~
   f << "N?=" << N << ",";
@@ -721,14 +878,14 @@ bool HMWParser::readZone6(shared_ptr<HMWZone> zone)
     return false;
   }
 
-  long dataSz = (long) zone->m_data.size();
+  long dataSz = zone->length();
   if (dataSz < 8) {
     MWAW_DEBUG_MSG(("HMWParser::readZone6: the zone seems too short\n"));
     return false;
   }
 
   MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   zone->m_parsed = true;
   long pos=0;
@@ -745,7 +902,7 @@ bool HMWParser::readZone6(shared_ptr<HMWZone> zone)
 
     f.str("");
     if (st==0)
-      f << zone->name() << "(A):PTR=" << std::hex << zone->m_filePos << std::dec << ",";
+      f << zone->name() << "(A):PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
     else
       f << zone->name() << "(B):";
 
@@ -764,18 +921,18 @@ bool HMWParser::readZone8(shared_ptr<HMWZone> zone)
     MWAW_DEBUG_MSG(("HMWParser::readZone8: called without any zone\n"));
     return false;
   }
-  long dataSz = (long) zone->m_data.size();
+  long dataSz = zone->length();
   if (dataSz < 78) {
     MWAW_DEBUG_MSG(("HMWParser::readZone8: the zone seems too short\n"));
     return false;
   }
 
   MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   zone->m_parsed = true;
 
-  f << zone->name() << ":PTR=" << std::hex << zone->m_filePos << std::dec << ",";
+  f << zone->name() << ":PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
   input->seek(0, WPX_SEEK_SET);
   long val;
   // find f0=1 (N?), f3=1, f20=8, f22=6, f24=2, f26=144, f28=1, f30=1
@@ -798,18 +955,18 @@ bool HMWParser::readZonea(shared_ptr<HMWZone> zone)
     MWAW_DEBUG_MSG(("HMWParser::readZonea: called without any zone\n"));
     return false;
   }
-  long dataSz = (long) zone->m_data.size();
+  long dataSz = zone->length();
   if (dataSz < 114) {
     MWAW_DEBUG_MSG(("HMWParser::readZonea: the zone seems too short\n"));
     return false;
   }
 
   MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   zone->m_parsed = true;
 
-  f << zone->name() << ":PTR=" << std::hex << zone->m_filePos << std::dec << ",";
+  f << zone->name() << ":PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
   input->seek(0, WPX_SEEK_SET);
   long val;
   for (int i = 0; i < 40; i++) { // always 0 ?
@@ -836,25 +993,28 @@ bool HMWParser::readZonea(shared_ptr<HMWZone> zone)
 }
 
 // a small unknown zone
-bool HMWParser::readZoneb(shared_ptr<HMWZone> zone)
+bool HMWParser::readZoneb(HMWZone &zone)
 {
-  if (!zone) {
-    MWAW_DEBUG_MSG(("HMWParser::readZoneb: called without any zone\n"));
-    return false;
-  }
-  long dataSz = (long) zone->m_data.size();
-  if (dataSz < 34) {
+  bool isKorean = isKoreanFile();
+  long dataSz = zone.length();
+  MWAWInputStreamPtr input = zone.m_input;
+  libmwaw::DebugFile &asciiFile = zone.ascii();
+  long pos=zone.begin();
+
+  if ((isKorean && dataSz < 34) || !isFilePos(zone.end())) {
     MWAW_DEBUG_MSG(("HMWParser::readZoneb: the zone seems too short\n"));
     return false;
   }
 
-  MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
-  zone->m_parsed = true;
+  zone.m_parsed = true;
 
-  f << zone->name() << ":PTR=" << std::hex << zone->m_filePos << std::dec << ",";
-  input->seek(0, WPX_SEEK_SET);
+  if (isKorean)
+    f << zone.name() << ":PTR=" << std::hex << zone.fileBeginPos() << std::dec << ",";
+  else
+    f << "Entries(" << zone.name() << "):";
+
   long val = input->readLong(4); // 1c58b4
   f << "dim?=" << float(val)/65536.f << ",";
 
@@ -885,10 +1045,12 @@ bool HMWParser::readZoneb(shared_ptr<HMWZone> zone)
     if (val) f << "j3=" << val << ",";
   }
 
-  asciiFile.addPos(0);
+  asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
-  if (!input->atEOS())
+  if (input->tell()!=zone.end()) {
     asciiFile.addDelimiter(input->tell(),'|');
+    input->seek(zone.end(), WPX_SEEK_SET);
+  }
   return true;
 }
 
@@ -899,18 +1061,18 @@ bool HMWParser::readZonec(shared_ptr<HMWZone> zone)
     MWAW_DEBUG_MSG(("HMWParser::readZonec: called without any zone\n"));
     return false;
   }
-  long dataSz = (long) zone->m_data.size();
+  long dataSz = zone->length();
   if (dataSz < 52) {
     MWAW_DEBUG_MSG(("HMWParser::readZonec: the zone seems too short\n"));
     return false;
   }
 
   MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   zone->m_parsed = true;
 
-  f << zone->name() << ":PTR=" << std::hex << zone->m_filePos << std::dec << ",";
+  f << zone->name() << ":PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
   input->seek(0, WPX_SEEK_SET);
   long val = input->readLong(2); // 1|4
   if (val != 1) f << "f0=" << val << ",";
@@ -978,7 +1140,7 @@ bool HMWParser::readZonec(shared_ptr<HMWZone> zone)
 */
 shared_ptr<HMWZone> HMWParser::decodeZone(shared_ptr<HMWZone> zone)
 {
-  if (!zone || zone->m_filePos+12 >= zone->m_endFilePos) {
+  if (!zone || zone->fileBeginPos()+12 >= zone->fileEndPos()) {
     MWAW_DEBUG_MSG(("HMWParser::decodeZone: called with an invalid zone\n"));
     return zone;
   }
@@ -1006,15 +1168,15 @@ shared_ptr<HMWZone> HMWParser::decodeZone(shared_ptr<HMWZone> zone)
   short bitcounter = 0;  /* count of remaining bits in buffer */
 
   MWAWInputStreamPtr input = getInput();
-  input->seek(zone->m_filePos+12, WPX_SEEK_SET);
-  WPXBinaryData &dt = zone->m_data;
-  while (!input->atEOS() && input->tell() < zone->m_endFilePos) {
+  input->seek(zone->fileBeginPos()+12, WPX_SEEK_SET);
+  WPXBinaryData &dt = zone->getBinaryData();
+  while (!input->atEOS() && input->tell() < zone->fileEndPos()) {
     short a = root;
     bool ok = true;
     do {  /* once for each bit on path */
       if(bitcounter == 0) {
-        if (input->atEOS() || input->tell() >= zone->m_endFilePos) {
-          MWAW_DEBUG_MSG(("HMWParser::decodeZone: find some uncomplete data for zone%lx\n", zone->m_filePos));
+        if (input->atEOS() || input->tell() >= zone->fileEndPos()) {
+          MWAW_DEBUG_MSG(("HMWParser::decodeZone: find some uncomplete data for zone%lx\n", zone->fileBeginPos()));
           dt.append((unsigned char)a);
           ok = false;
           break;
@@ -1063,7 +1225,7 @@ shared_ptr<HMWZone> HMWParser::decodeZone(shared_ptr<HMWZone> zone)
   }
 
   WPXInputStream *dataInput =
-    const_cast<WPXInputStream *>(zone->m_data.getDataStream());
+    const_cast<WPXInputStream *>(zone->getBinaryData().getDataStream());
   if (!dataInput) {
     MWAW_DEBUG_MSG(("HMWParser::decodeZone: can not find my input\n"));
     zone.reset();
@@ -1071,13 +1233,14 @@ shared_ptr<HMWZone> HMWParser::decodeZone(shared_ptr<HMWZone> zone)
   }
 
   zone->m_input.reset(new MWAWInputStream(dataInput, false));
-  zone->m_asciiFile.setStream(zone->m_input);
+  zone->m_input->seek(0,WPX_SEEK_SET);
+  zone->ascii().setStream(zone->m_input);
   static int fId = 0;
   std::stringstream s;
   s << zone->name() << "-" << fId++;
-  zone->m_asciiFile.open(s.str());
+  zone->ascii().open(s.str());
 
-  ascii().skipZone(zone->m_filePos+12, zone->m_endFilePos-1);
+  ascii().skipZone(zone->fileBeginPos()+12, zone->fileEndPos()-1);
   return zone;
 }
 
@@ -1097,11 +1260,20 @@ bool HMWParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
   }
   input->seek(0,WPX_SEEK_SET);
-  bool ok = input->readULong(2) == 0x4859;
-  ok = ok && input->readULong(2) == 0x4c53;
-  ok = ok && input->readULong(2) == 0x0210;
-  if (!ok)
+  int head[3];
+  for (int i = 0; i < 3; i++)
+    head[i] = (int) input->readULong(2);
+  if (head[0] == 0x4859 && head[1] == 0x4c53 && head[2] == 0x0210)
+    m_state->m_isKoreanFile = true;
+  else if (head[0] == 0x594c && head[1] == 0x5953 && head[2] == 0x100) {
+    MWAW_DEBUG_MSG(("HMWParser::checkHeader: oops a Japanese file, no parsing\n"));
+    m_state->m_isKoreanFile = false; // Japanese
+#ifndef DEBUG
     return false;
+#endif
+  } else
+    return false;
+  bool isKorean = m_state->m_isKoreanFile;
   int val = (int) input->readLong(1);
   if (val) {
     if (strict) return false;
@@ -1113,36 +1285,55 @@ bool HMWParser::checkHeader(MWAWHeader *header, bool strict)
     if (strict) return false;
     f << "f0=" << val << ",";
   }
-  m_state->m_zonesListBegin = (int) input->readULong(4); // always 0x042c ?
-  if (m_state->m_zonesListBegin<0x14 || !isFilePos(m_state->m_zonesListBegin))
-    return false;
-  if (m_state->m_zonesListBegin < 0x33c) {
-    MWAW_DEBUG_MSG(("HMWParser::checkHeader: the header size seems short\n"));
-  }
-  f << "zonesBeg=" << std::hex << m_state->m_zonesListBegin << std::dec << ",";
-  long fLength = long(input->readULong(4));
-  if (fLength < m_state->m_zonesListBegin)
-    return false;
-  if (!isFilePos(fLength)) {
-    if (!isFilePos(fLength/2)) return false;
-    MWAW_DEBUG_MSG(("HMWParser::checkHeader: file seems incomplete, try to continue\n"));
-    f << "#len=" << std::hex << fLength << std::dec << ",";
-  }
-  long tLength = long(input->readULong(4));
-  f << "textLength=" << tLength << ",";
 
-  ascii().addPos(0);
-  ascii().addNote(f.str().c_str());
+  if (isKorean) {
+    m_state->m_zonesListBegin = (int) input->readULong(4); // always 0x042c ?
+    if (m_state->m_zonesListBegin<0x14 || !isFilePos(m_state->m_zonesListBegin))
+      return false;
+    if (m_state->m_zonesListBegin < 0x33c) {
+      MWAW_DEBUG_MSG(("HMWParser::checkHeader: the header size seems short\n"));
+    }
+    f << "zonesBeg=" << std::hex << m_state->m_zonesListBegin << std::dec << ",";
+    long fLength = long(input->readULong(4));
+    if (fLength < m_state->m_zonesListBegin)
+      return false;
+    if (!isFilePos(fLength)) {
+      if (!isFilePos(fLength/2)) return false;
+      MWAW_DEBUG_MSG(("HMWParser::checkHeader: file seems incomplete, try to continue\n"));
+      f << "#len=" << std::hex << fLength << std::dec << ",";
+    }
+    long tLength = long(input->readULong(4));
+    f << "textLength=" << tLength << ",";
+  } else {
+    m_state->m_zonesListBegin = 0x460;
+    for (int i = 0; i < 4; i++) { // always 0?
+      val = (int) input->readLong(2);
+      if (val) f << "f" << i+1 << "=" << val << ",";
+    }
+  }
 
   long pos;
   // title, subject, author, revision, remark, [2 documents tags], mail:
-  int const fieldSizes[] = { 128, 128, 32, 32, 256, 40, 64, 64, 64 };
+  int fieldSizes[] = { 128, 128, 32, 32, 256, isKorean ? 40 : 36, 64, 64, 64 };
   for (int i = 0; i < 9; i++) {
     pos=input->tell();
     if (i == 5) {
       ascii().addPos(pos);
       ascii().addNote("FileHeader[DocTags]:");
       input->seek(pos+fieldSizes[i], WPX_SEEK_SET);
+      if (!isKorean) {
+        pos=input->tell();
+        HMWZone printZone(input, ascii());
+        printZone.m_type = 7;
+        printZone.setFilePositions(pos, pos+164);
+        if (!readPrintInfo(printZone))
+          input->seek(pos+164, WPX_SEEK_SET);
+
+        pos=input->tell();
+        ascii().addPos(pos);
+        ascii().addNote("FileHeader[DocEnd]");
+        input->seek(pos+60, WPX_SEEK_SET);
+      }
       continue;
     }
     int fSz = (int) input->readULong(1);
@@ -1171,7 +1362,7 @@ bool HMWParser::checkHeader(MWAWHeader *header, bool strict)
   }
   pos=input->tell();
   f.str("");
-  f << "FileHeader(B):"; // unknown 240 bytes
+  f << "FileHeader(B):"; // unknown 76(J) or 240(K) bytes
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
@@ -1185,20 +1376,27 @@ bool HMWParser::checkHeader(MWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 // HMWZone
 ////////////////////////////////////////////////////////////
-HMWZone::HMWZone() : m_type(-1), m_id(-1), m_filePos(-1), m_endFilePos(-1),
-  m_data(), m_input(), m_asciiFile(), m_extra(""), m_parsed(false)
+HMWZone::HMWZone(MWAWInputStreamPtr input, libmwaw::DebugFile &asciiFile) : m_type(-1), m_JType(-1), m_id(-1), m_subId(-1), m_input(input), m_extra(""), m_parsed(false),
+  m_filePos(-1), m_endFilePos(-1), m_data(), m_asciiFile(&asciiFile), m_asciiFilePtr()
+{
+}
+
+HMWZone::HMWZone(shared_ptr<libmwaw::DebugFile> asciiFile) : m_type(-1), m_JType(-1), m_id(-1), m_subId(-1), m_input(), m_extra(""), m_parsed(false),
+  m_filePos(-1), m_endFilePos(-1), m_data(), m_asciiFile(asciiFile.get()), m_asciiFilePtr(asciiFile)
 {
 }
 
 HMWZone::~HMWZone()
 {
-  ascii().reset();
+  if (m_asciiFilePtr)
+    ascii().reset();
 }
 
 std::ostream &operator<<(std::ostream &o, HMWZone const &zone)
 {
   o << zone.name();
   if (zone.m_id > 0) o << "[" << std::hex << zone.m_id << "]";
+  if (zone.m_subId > 0) o << "[subId=" << std::hex << zone.m_subId << "]";
   if (zone.m_extra.length()) o << "," << zone.m_extra;
   return o;
 }
@@ -1226,7 +1424,10 @@ std::string HMWZone::name(int type)
     break;
   }
   std::stringstream s;
-  s << "Zone" << std::hex << type << std::dec;
+  if (type > 0)
+    s << "Zone" << std::hex << type << std::dec;
+  else
+    s << "JZone" << std::hex << -type << std::dec;
   return s.str();
 }
 

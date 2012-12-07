@@ -100,7 +100,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::FULLW,2));
         return res;
       }
-    } else if (creator=="HMdr") {
+    } else if (creator=="HMiw") { // japonese
+      if (type=="IWDC") {
+        res.push_back(MWAWHeader(MWAWDocument::HMAC,1));
+        return res;
+      }
+    } else if (creator=="HMdr") { // korean
       if (type=="DRD2") {
         res.push_back(MWAWHeader(MWAWDocument::HMAC,1));
         return res;
@@ -216,7 +221,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       res.push_back(MWAWHeader(MWAWDocument::WNOW, 3));
   }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
-    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-K file[no parsing]\n"));
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-K file[mininal parsing]\n"));
+    res.push_back(MWAWHeader(MWAWDocument::HMAC, 1));
+  }
+  if (val[0]==0x594c && val[1]==0x5953 && val[2]==0x100) {
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-J file[no parsing and no output]\n"));
     res.push_back(MWAWHeader(MWAWDocument::HMAC, 1));
   }
 

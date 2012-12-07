@@ -106,6 +106,9 @@ protected:
     m_listener = listen;
   }
 
+  //! returns the color associated with a pattern
+  bool getColor(int colId, int patternId, uint32_t &color) const;
+
   //! try to send the page graphic
   bool sendPageGraphics();
   //! sends the data which have not yet been sent to the listener

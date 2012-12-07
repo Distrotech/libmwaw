@@ -65,7 +65,8 @@ MWAWContentParsingState::MWAWContentParsingState() :
   m_textBuffer(""), m_numDeferredTabs(0),
 
   m_fontName("Times New Roman"), m_fontSize(12.0), m_fontAttributeBits(0),
-  m_fontUnderline(MWAWBorder::None), m_fontColor(0), m_textLanguage("UNSET"),
+  m_fontUnderline(MWAWBorder::None), m_fontColor(0), m_fontBackgroundColor(0xFFFFFF),
+  m_textLanguage("UNSET"),
 
   m_isParagraphColumnBreak(false), m_isParagraphPageBreak(false),
 
@@ -368,6 +369,13 @@ void MWAWContentListener::setFontColor(const uint32_t rgb)
   if (m_ps->m_fontColor==rgb) return;
   _closeSpan();
   m_ps->m_fontColor = rgb;
+}
+
+void MWAWContentListener::setFontBackgroundColor(const uint32_t rgb)
+{
+  if (m_ps->m_fontBackgroundColor==rgb) return;
+  _closeSpan();
+  m_ps->m_fontBackgroundColor = rgb;
 }
 
 void MWAWContentListener::setTextLanguage(std::string const &locale)
@@ -1209,6 +1217,10 @@ void MWAWContentListener::_openSpan()
   char color[20];
   sprintf(color,"#%06x",m_ps->m_fontColor);
   propList.insert("fo:color", color);
+  if ((m_ps->m_fontBackgroundColor&0xFFFFFF) != 0xFFFFFF) {
+    sprintf(color,"#%06x",m_ps->m_fontBackgroundColor);
+    propList.insert("fo:background-color", color);
+  }
 
   if (m_ps->m_textLanguage != "UNSET")
     _addLanguage(m_ps->m_textLanguage, propList);

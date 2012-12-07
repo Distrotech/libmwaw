@@ -78,6 +78,8 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
   if (m_underline.isSet()) o << "underline=" << getUnderlineStyle() << ":";
   if (hasColor())
     o << "col=(" << std::hex << m_color.get() << std::dec << "),";
+  if (m_backgroundColor.isSet() && m_backgroundColor.get() != 0xFFFFFF)
+    o << "backCol=(" << std::hex << m_backgroundColor.get() << std::dec << "),";
   return o.str();
 }
 
@@ -110,5 +112,7 @@ void MWAWFont::sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverte
   listener->setFontUnderlineStyle(actualFont.getUnderlineStyle());
   actualFont.setColor(m_color.get());
   listener->setFontColor(m_color.get());
+  actualFont.setBackgroundColor(m_backgroundColor.get());
+  listener->setFontBackgroundColor(m_backgroundColor.get());
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

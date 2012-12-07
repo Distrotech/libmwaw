@@ -74,20 +74,34 @@ private:
 };
 
 struct MWAWContentParsingState {
+  //! constructor
   MWAWContentParsingState();
+  //! destructor
   ~MWAWContentParsingState();
 
+  //! functions used to know if the paragraph has some borders
   bool hasParagraphBorders() const;
+  //! functions used to know if the paragraph has different borders
   bool hasParagraphDifferentBorders() const;
 
+  //! a buffer to stored the text
   WPXString m_textBuffer;
+  //! the number of tabs to add
   int m_numDeferredTabs;
 
+  //! the font name
   WPXString m_fontName;
+  //! the font text size
   double m_fontSize;
+  //! the font attribute
   uint32_t m_fontAttributeBits;
+  //! the underline style
   MWAWBorder::Style m_fontUnderline;
+  //! the font color
   uint32_t m_fontColor;
+  //! the font background color
+  uint32_t m_fontBackgroundColor;
+  //! the text language
   std::string m_textLanguage;
 
   bool m_isParagraphColumnBreak;
@@ -229,6 +243,8 @@ public:
   void setFontUnderlineStyle(MWAWBorder::Style style);
   //! sets the font color
   void setFontColor(const uint32_t rgb);
+  //! sets the font background color
+  void setFontBackgroundColor(const uint32_t rgb);
   //! sets the font language
   void setTextLanguage(std::string const &locale);
 

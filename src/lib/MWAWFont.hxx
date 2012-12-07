@@ -52,7 +52,7 @@ public:
    * \param newId system id font
    * \param sz the font size
    * \param f the font attributes bold, ... */
-  MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_flags(f), m_underline(MWAWBorder::None), m_color(0) {
+  MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_flags(f), m_underline(MWAWBorder::None), m_color(0), m_backgroundColor(0xFFFFFF) {
     resetColor();
   };
   //! returns true if the font id is initialized
@@ -121,9 +121,19 @@ public:
   void setColor(uint32_t color) {
     m_color = color;
   }
-  //! resets the font color to black
+
+  //! returns the font background color
+  void getBackgroundColor(uint32_t &c) const {
+    c = m_backgroundColor.get();
+  }
+  //! sets the font backgroundC color
+  void setBackgroundColor(uint32_t color) {
+    m_backgroundColor = color;
+  }
+  //! resets the font color to black and the background color to white
   void resetColor() {
     m_color = 0;
+    m_backgroundColor = 0xFFFFFF;
   }
 
   //! returns the underline style
@@ -158,6 +168,8 @@ public:
     if (m_underline.get() > oth.m_underline.get()) return 1;
     if (m_color.get() < oth.m_color.get()) return -1;
     if (m_color.get() > oth.m_color.get()) return 1;
+    if (m_backgroundColor.get() < oth.m_backgroundColor.get()) return -1;
+    if (m_backgroundColor.get() > oth.m_backgroundColor.get()) return 1;
     return diff;
   }
 
@@ -169,6 +181,7 @@ protected:
   Variable<uint32_t> m_flags /** font attributes */;
   Variable<MWAWBorder::Style> m_underline /** underline attributes */;
   Variable<uint32_t> m_color /** font color */;
+  Variable<uint32_t> m_backgroundColor /** font background color */;
 };
 
 

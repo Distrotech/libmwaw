@@ -71,27 +71,9 @@ struct Frame {
   }
 
   //! returns the line colors
-  bool getLineColor(Vec3uc &color) const {
-    color = getColor(m_colors[0], m_patterns[0]);
-    return true;
-  }
+  bool getLineColor(Vec3uc &color) const;
   //! returns the surface colors
-  bool getSurfaceColor(Vec3uc &color) const {
-    color = getColor(m_colors[1], m_patterns[1]);
-    return true;
-  }
-
-  //! returns a color corresponding to a pattern and a color
-  static Vec3uc getColor(uint32_t col, float pattern) {
-    int color[3] = {int((col>>16)&0xFF),int((col>>8)&0xFF),
-                    int(col&0xFF)
-                   };
-    Vec3f res;
-    for (int i = 0; i < 3; i++)
-      res[i] = (unsigned char)
-               (pattern*float(color[i])+(1.f-pattern)*255.f);
-    return res;
-  }
+  bool getSurfaceColor(Vec3uc &color) const;
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Frame const &grph);
@@ -372,7 +354,7 @@ struct TableCell {
   //! the border: order defined by MWAWBorder::Pos
   std::vector<MWAWBorder> m_borders;
   //! the cell id ( corresponding to the last data in the main zones list )
-  int m_id;
+  long m_id;
   //! the file id
   long m_fileId;
   //! the cell data
@@ -564,6 +546,18 @@ struct State {
     return true;
   }
 
+  //! returns a color corresponding to a pattern and a color
+  static Vec3uc getColor(uint32_t col, float pattern) {
+    int color[3] = {int((col>>16)&0xFF),int((col>>8)&0xFF),
+                    int(col&0xFF)
+                   };
+    Vec3f res;
+    for (int i = 0; i < 3; i++)
+      res[i] = (unsigned char)
+               (pattern*float(color[i])+(1.f-pattern)*255.f);
+    return res;
+  }
+
   //! init the color list
   void initColors();
   //! init the pattenr list
@@ -640,6 +634,18 @@ void State::initColors()
     m_colorList[i] = defCol[i];
 }
 
+bool Frame::getLineColor(Vec3uc &color) const
+{
+  color = State::getColor(m_colors[0], m_patterns[0]);
+  return true;
+}
+
+bool Frame::getSurfaceColor(Vec3uc &color) const
+{
+  color = State::getColor(m_colors[1], m_patterns[1]);
+  return true;
+}
+
 ////////////////////////////////////////
 //! Internal: the subdocument of a HMWGraph
 class SubDocument : public MWAWSubDocument
@@ -648,7 +654,7 @@ public:
   //! the document type
   enum Type { Picture, FrameInFrame, Text, UnformattedTable, EmptyPicture };
   //! constructor
-  SubDocument(HMWGraph &pars, MWAWInputStreamPtr input, Type type, long id, int subId=0) :
+  SubDocument(HMWGraph &pars, MWAWInputStreamPtr input, Type type, long id, long subId=0) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_subId(subId), m_pos() {}
 
   //! constructor
@@ -676,7 +682,7 @@ protected:
   //! the zone id
   long m_id;
   //! the zone subId ( for table cell )
-  int m_subId;
+  long m_subId;
   //! the position in a frame
   MWAWPosition m_pos;
 
@@ -755,6 +761,21 @@ int HMWGraph::version() const
   return m_mainParser->version();
 }
 
+bool HMWGraph::getColor(int colId, int patternId, uint32_t &color) const
+{
+  if (!m_state->getColor(colId, color) ) {
+    MWAW_DEBUG_MSG(("HMWGraph::getColor: can not find color for id=%d\n", colId));
+    return false;
+  }
+  float percent = 1.0;
+  if (!m_state->getPatternPercent(patternId, percent) ) {
+    MWAW_DEBUG_MSG(("HMWGraph::getColor: can not find pattern for id=%d\n", patternId));
+    return false;
+  }
+  color = libmwaw::getUInt32(m_state->getColor(color, percent));
+  return true;
+}
+
 int HMWGraph::numPages() const
 {
   if (m_state->m_numPages)
@@ -792,14 +813,14 @@ bool HMWGraph::readFrames(shared_ptr<HMWZone> zone)
     return false;
   }
 
-  long dataSz = (long) zone->m_data.size();
+  long dataSz = zone->length();
   if (dataSz < 70) {
     MWAW_DEBUG_MSG(("HMWGraph::readFrames: the zone seems too short\n"));
     return false;
   }
 
   MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   zone->m_parsed = true;
   long pos=0;
@@ -850,7 +871,7 @@ bool HMWGraph::readFrames(shared_ptr<HMWZone> zone)
 
   graph.m_extra=f.str();
   f.str("");
-  f << zone->name() << "(A):PTR=" << std::hex << zone->m_filePos << std::dec << "," << graph;
+  f << zone->name() << "(A):PTR=" << std::hex << zone->fileBeginPos() << std::dec << "," << graph;
   graph.m_fileId = zone->m_id;
 
   asciiFile.addDelimiter(input->tell(),'|');
@@ -892,14 +913,14 @@ bool HMWGraph::readPicture(shared_ptr<HMWZone> zone)
     return false;
   }
 
-  long dataSz = (long) zone->m_data.size();
+  long dataSz = zone->length();
   if (dataSz < 86) {
     MWAW_DEBUG_MSG(("HMWGraph::readPicture: the zone seems too short\n"));
     return false;
   }
 
   MWAWInputStreamPtr input = zone->m_input;
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   zone->m_parsed = true;
 
@@ -929,7 +950,7 @@ bool HMWGraph::readPicture(shared_ptr<HMWZone> zone)
     m_state->m_picturesMap[fId] = picture;
 
   f.str("");
-  f << zone->name() << ":PTR=" << std::hex << zone->m_filePos << std::dec << "," << *picture;
+  f << zone->name() << ":PTR=" << std::hex << zone->fileBeginPos() << std::dec << "," << *picture;
   f << "pictSz=" << pictSz << ",";
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
@@ -1506,7 +1527,7 @@ shared_ptr<HMWGraphInternal::BasicGraph> HMWGraph::readBasicGraph(shared_ptr<HMW
   }
 
   MWAWInputStreamPtr input = zone->m_input;
-  long dataSz = (long) zone->m_data.size();
+  long dataSz = zone->length();
   long pos = input->tell();
   if (pos+26 > dataSz) {
     MWAW_DEBUG_MSG(("HMWGraph::readBasicGraph: the zone seems too short\n"));
@@ -1514,7 +1535,7 @@ shared_ptr<HMWGraphInternal::BasicGraph> HMWGraph::readBasicGraph(shared_ptr<HMW
   }
 
   graph.reset(new HMWGraphInternal::BasicGraph(header));
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   graph->m_graphType = (int) input->readLong(1);
   long val;
@@ -1638,7 +1659,7 @@ shared_ptr<HMWGraphInternal::Group> HMWGraph::readGroup(shared_ptr<HMWZone> zone
   }
 
   MWAWInputStreamPtr input = zone->m_input;
-  long dataSz = (long) zone->m_data.size();
+  long dataSz = zone->length();
   long pos = input->tell();
   if (pos+2 > dataSz) {
     MWAW_DEBUG_MSG(("HMWGraph::readGroup: the zone seems too short\n"));
@@ -1650,7 +1671,7 @@ shared_ptr<HMWGraphInternal::Group> HMWGraph::readGroup(shared_ptr<HMWZone> zone
     return group;
   }
   group.reset(new HMWGraphInternal::Group(header));
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   for (int i = 0; i < N; i++) {
     HMWGraphInternal::Group::Child child;
@@ -1676,7 +1697,7 @@ shared_ptr<HMWGraphInternal::PictureFrame> HMWGraph::readPictureFrame(shared_ptr
   }
 
   MWAWInputStreamPtr input = zone->m_input;
-  long dataSz = (long) zone->m_data.size();
+  long dataSz = zone->length();
   long pos = input->tell();
   if (pos+32 > dataSz) {
     MWAW_DEBUG_MSG(("HMWGraph::readPicture: the zone seems too short\n"));
@@ -1684,7 +1705,7 @@ shared_ptr<HMWGraphInternal::PictureFrame> HMWGraph::readPictureFrame(shared_ptr
   }
 
   picture.reset(new HMWGraphInternal::PictureFrame(header));
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   picture->m_type = (int) input->readLong(2); // 0 or 4 : or maybe wrapping
   for (int i = 0; i < 5; i++) // always 0
@@ -1720,7 +1741,7 @@ shared_ptr<HMWGraphInternal::TextBox> HMWGraph::readTextBox(shared_ptr<HMWZone> 
   }
 
   MWAWInputStreamPtr input = zone->m_input;
-  long dataSz = (long) zone->m_data.size();
+  long dataSz = zone->length();
   long pos = input->tell();
   int expectedSize = isMemo ? 20 : 12;
   if (pos+expectedSize > dataSz) {
@@ -1729,7 +1750,7 @@ shared_ptr<HMWGraphInternal::TextBox> HMWGraph::readTextBox(shared_ptr<HMWZone> 
   }
 
   textbox.reset(new HMWGraphInternal::TextBox(header, isMemo));
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   for (int i = 0; i < 2; i++) // 0|1, 0||1
     textbox->m_flags[i] = (int) input->readULong(1);
@@ -1758,7 +1779,7 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
   }
 
   MWAWInputStreamPtr input = zone->m_input;
-  long dataSz = (long) zone->m_data.size();
+  long dataSz = zone->length();
   long pos = input->tell();
   if (pos+20 > dataSz) {
     MWAW_DEBUG_MSG(("HMWGraph::readTable: the zone seems too short\n"));
@@ -1766,7 +1787,7 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
   }
 
   table.reset(new HMWGraphInternal::Table(header));
-  libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
+  libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f, f2;
   long val;
   for (int i = 0; i < 4; i++) {
@@ -1821,7 +1842,7 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
     float patPercent = 1.0;
     if (!m_state->getPatternPercent(pattern, patPercent))
       f << "#backPattern=" << pattern << ",";
-    cell.m_backColor = libmwaw::getUInt32(table->getColor(backCol, patPercent));
+    cell.m_backColor = libmwaw::getUInt32(m_state->getColor(backCol, patPercent));
 
     cell.m_flags = (int) input->readULong(2);
     val = input->readLong(2);
@@ -1862,7 +1883,7 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
       patPercent = 1.0;
       if (!m_state->getPatternPercent(pattern, patPercent))
         f2 << "#pattern=" << pattern << ",";
-      border.m_color = libmwaw::getUInt32(table->getColor(col, patPercent));
+      border.m_color = libmwaw::getUInt32(m_state->getColor(col, patPercent));
       val = (long) input->readULong(2);
       if (val) f2 << "unkn=" << val << ",";
 
@@ -1871,9 +1892,7 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
         f << "bord" << what[b] << "=[" << f2.str() << "],";
     }
     cell.m_fileId = (long) input->readULong(4);
-    val = input->readLong(2);
-    if (val) f << "#f4=" << val << ",";
-    cell.m_id = (int) input->readLong(2);
+    cell.m_id = (long) input->readULong(4);
     cell.m_extra = f.str();
     table->m_cellsList.push_back(cell);
 

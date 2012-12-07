@@ -65,8 +65,8 @@ public:
   /** an enum to define the different type of document
 
   -CW: ClarisWorks/AppleWorks document (basic)
-  -FULLW: FullWrite Professional (crude parser)
-  -HMAC: HanMac Word-K (nothing done)
+  -FULLW: FullWrite Professional (basic)
+  -HMAC: HanMac Word-J or K (basic done for K document, almost nothing done for J document)
   -MARIW: Mariner Writer (nothing done)
   -MINDW: MindWrite
   -MW: MacWrite document

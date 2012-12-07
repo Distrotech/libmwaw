@@ -82,6 +82,8 @@ public:
 
   /** returns the file version */
   int version() const;
+  //! returns true if this is a Korean File
+  bool isKoreanFile() const;
 
   /** returns the number of pages */
   int numPages() const;
@@ -93,14 +95,8 @@ protected:
     m_listener = listen;
   }
 
-#if 0
-  //! finds the different text zones
-  bool createZones();
-#endif
-
-  //! send a main zone
-  bool sendMainText();
-
+  //! send a text zone
+  bool sendText(long id, long subId=0);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
@@ -117,21 +113,24 @@ protected:
   /** try to read a section info zone (type 4)*/
   bool readSections(shared_ptr<HMWZone> zone);
 
+  /** try to send a text zone (type 1)*/
+  bool sendText(HMWZone &zone);
+
   //
   // low level
   //
   /** try to read a font in a text zone */
-  bool readFont(shared_ptr<HMWZone> zone, HMWTextInternal::Font &font);
+  bool readFont(HMWZone &zone, HMWTextInternal::Font &font);
   /** send the character properties */
   void setProperty(MWAWFont const &font);
 
   /** try to read a paragraph in a text zone */
-  bool readParagraph(shared_ptr<HMWZone> zone, HMWTextInternal::Paragraph &para);
+  bool readParagraph(HMWZone &zone, HMWTextInternal::Paragraph &para);
   /** send the ruler properties */
   void setProperty(HMWTextInternal::Paragraph const &para, float width);
 
   /** try to read an token in a text zone */
-  bool readToken(shared_ptr<HMWZone> zone, HMWTextInternal::Token &token);
+  bool readToken(HMWZone &zone, HMWTextInternal::Token &token);
 
 private:
   HMWText(HMWText const &orig);
