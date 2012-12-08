@@ -115,6 +115,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MW, 1));
         return res;
       }
+    } else if (creator=="MDBB") {
+      if (type=="MBBT") {
+        res.push_back(MWAWHeader(MWAWDocument::MARIW, 1));
+        return res;
+      }
     } else if (creator=="MWII") { // MacWriteII
       if (type=="MW2D") {
         res.push_back(MWAWHeader(MWAWDocument::MWPRO, 0));
@@ -219,6 +224,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
 
     if (ok)
       res.push_back(MWAWHeader(MWAWDocument::WNOW, 3));
+  }
+  if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Mariner Write file[no parsing]\n"));
+    res.push_back(MWAWHeader(MWAWDocument::MARIW, 1));
   }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-K file[mininal parsing]\n"));

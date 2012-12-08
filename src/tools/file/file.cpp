@@ -221,6 +221,8 @@ bool File::readFileInformation()
     checkFInfoType("PDF ", "Acrobat PDF");
   } else if (m_fInfoCreator=="CDrw") {
     checkFInfoType("dDraw", "ClarisDraw") || checkFInfoType("ClarisDraw");
+  } else if (m_fInfoCreator=="DDAP") {
+    checkFInfoType("DDFL+","DiskDoubler") || checkFInfoType("DiskDoubler");
   } else if (m_fInfoCreator=="FS03") {
     checkFInfoType("WRT+","WriterPlus") || checkFInfoType("WriterPlus");
   } else if (m_fInfoCreator=="Fram") {
@@ -238,6 +240,8 @@ bool File::readFileInformation()
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   } else if (m_fInfoCreator=="MACD") { // checkme
     checkFInfoType("DRWG","MacDraw[unsure]");
+  } else if (m_fInfoCreator=="MMBB") {
+    checkFInfoType("MBBT","Mariner Write") || checkFInfoType("Mariner Write");
   } else if (m_fInfoCreator=="MDRW") {
     checkFInfoType("DRWG","MacDraw") || checkFInfoType("MacDraw");
   } else if (m_fInfoCreator=="MDPL") {
@@ -278,10 +282,12 @@ bool File::readFileInformation()
     checkFInfoType("R#+D","RagTime") || checkFInfoType("RagTime");
   } else if (m_fInfoCreator=="RTF ") {
     checkFInfoType("RTF ","RTF ") || checkFInfoType("RTF");
+  } else if (m_fInfoCreator=="SIT!") {
+    checkFInfoType("SIT5", "archive SIT") ||
+    checkFInfoType("SITD", "archive SIT") ||
+    checkFInfoType("SIT!", "archive SIT") || checkFInfoType("SIT");
   } else if (m_fInfoCreator=="SSIW") { // check me
     checkFInfoType("WordPerfect 1.0");
-  } else if (m_fInfoCreator=="SIT!") {
-    checkFInfoType("SIT5", "archive SIT");
   } else if (m_fInfoCreator=="WORD") {
     checkFInfoType("WDBN","Microsoft Word 1") || checkFInfoType("Microsoft Word 1");
   } else if (m_fInfoCreator=="WPC2") {
@@ -338,6 +344,10 @@ bool File::readDataInformation()
   }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77 && val[4]==2) {
     m_dataResult.push_back("WriteNow 3-4");
+    return true;
+  }
+  if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {
+    m_dataResult.push_back("Mariner Write");
     return true;
   }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
@@ -399,7 +409,7 @@ bool File::readDataInformation()
     m_dataResult.push_back("OGG data");
     return true;
   }
-// ----------- less discriminant ------------------
+  // ----------- less discriminant ------------------
   if (val[0]==0xd0cf && val[1]==0x11e0 && val[2]==0xa1b1 && val[3]==0x1ae1) {
     m_dataResult.push_back("OLE file: can be DOC, DOT, PPS, PPT, XLA, XLS, WIZ, WPS(4.0), ...");
     return true;
