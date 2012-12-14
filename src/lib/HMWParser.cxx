@@ -1164,7 +1164,7 @@ shared_ptr<HMWZone> HMWParser::decodeZone(shared_ptr<HMWZone> zone)
   short const sizeBit = 8;
   short const highBit=128; /* mask for the most sig bit of 8 bit byte */
 
-  short bitbuffer;       /* buffer to hold a byte for unpacking bits */
+  short bitbuffer = 0;       /* buffer to hold a byte for unpacking bits */
   short bitcounter = 0;  /* count of remaining bits in buffer */
 
   MWAWInputStreamPtr input = getInput();
