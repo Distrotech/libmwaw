@@ -115,7 +115,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MW, 1));
         return res;
       }
-    } else if (creator=="MDBB") {
+    } else if (creator=="MMBB") {
       if (type=="MBBT") {
         res.push_back(MWAWHeader(MWAWDocument::MARIW, 1));
         return res;

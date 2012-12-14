@@ -41,6 +41,7 @@
 #include "FWParser.hxx"
 #include "HMWParser.hxx"
 #include "MDWParser.hxx"
+#include "MRWParser.hxx"
 #include "MWParser.hxx"
 #include "MWProParser.hxx"
 #include "MSK3Parser.hxx"
@@ -135,6 +136,9 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
   case MARIW:
+#ifdef DEBUG
+    confidence = MWAW_CONFIDENCE_GOOD;
+#endif
     break;
   case MINDW:
     confidence = MWAW_CONFIDENCE_GOOD;
@@ -210,8 +214,11 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       parser.parse(documentInterface);
       break;
     }
-    case MARIW:
+    case MARIW: {
+      MRWParser parser (ip, rsrcParser, header.get());
+      parser.parse(documentInterface);
       break;
+    }
     case MINDW: {
       MDWParser parser (ip, rsrcParser, header.get());
       parser.parse(documentInterface);
@@ -334,8 +341,10 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
       HMWParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);
     }
-    case MWAWDocument::MARIW:
-      break;
+    case MWAWDocument::MARIW: {
+      MRWParser parser(input, rsrcParser, &header);
+      return parser.checkHeader(&header, strict);
+    }
     case MWAWDocument::MINDW: {
       MDWParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);

@@ -77,7 +77,7 @@ class SubDocument;
 struct HMWZone;
 class HMWParser;
 
-/** \brief the main class to read the graphic part of a Nisus file
+/** \brief the main class to read the graphic part of a HanMac Word file
  *
  *
  *

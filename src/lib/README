@@ -86,7 +86,7 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------
---------------------   CW/FW/MDW/MSK/MSW/MW/NS/WN/WP  -----------------
+--------------------   CW/FW/MDW/MRW/MSK/MSW/MW/NS/WN/WP  -----------------
 ------------------------------------------------------------
 
 Specific files which depends on the type of file which is converted
@@ -111,6 +111,10 @@ HMWParser : parser of HanMac Word-K 2.0.5-2.0.6
 -   HMWText : class which reads the text
 
 MDWParser : parser of MindWrite document: v2.1
+
+MRWParser : parser of Mariner Write 1.6 ( not functional )
+-   MRWGraph : class which reads the picture/graph/token
+-   MRWText : class which reads the text
 
 MSKParser: generic parser of Microsoft Works parser
 - MSKGraph : class which reads the picture/graph 

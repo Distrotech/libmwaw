@@ -148,6 +148,18 @@ SOURCE=..\..\src\lib\MDWParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MRWGraph.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MRWParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MRWText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MSKGraph.cxx
 # End Source File
 # Begin Source File
@@ -397,6 +409,18 @@ SOURCE=..\..\src\lib\HMWText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MDWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MRWGraph.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MRWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MRWText.hxx
 # End Source File
 # Begin Source File
 

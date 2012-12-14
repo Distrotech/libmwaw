@@ -49,6 +49,12 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	HMWText.hxx			\
 	MDWParser.cxx			\
 	MDWParser.hxx			\
+	MRWGraph.cxx			\
+	MRWGraph.hxx			\
+	MRWParser.cxx			\
+	MRWParser.hxx			\
+	MRWText.cxx			\
+	MRWText.hxx			\
 	MSKGraph.cxx			\
 	MSKGraph.hxx			\
 	MSKParser.cxx			\

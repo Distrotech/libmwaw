@@ -473,6 +473,66 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MRWGraph.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MRWParser.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MRWText.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MSK3Parser.cxx"
 				>
 				<FileConfiguration
@@ -1471,6 +1531,18 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MDWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MRWGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MRWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MRWText.hxx"
 				>
 			</File>
 			<File
