@@ -57,10 +57,63 @@
 namespace MRWGraphInternal
 {
 ////////////////////////////////////////
+//! Internal: the struct use to store a token entry
+struct Token {
+};
+
+////////////////////////////////////////
+//! Internal: the struct use to store a zone
+struct Zone {
+  struct PSFile;
+  //! constructor
+  Zone() : m_psFileMap() {
+  }
+  //! the map id->entry to a psfile
+  std::map<long, PSFile> m_psFileMap;
+
+  //! small structure used to store a PSFileData
+  struct PSFile {
+    //! constructor
+    PSFile() : m_pos(), m_type(0), m_id(0), m_parsed(false), m_extra("") {
+    }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, PSFile const &file) {
+      if (file.m_type) o << "type=" << file.m_type << ",";
+      if (file.m_id > 0) o << "id=" << std::dec << file.m_type << std::hex << ",";
+      o << file.m_extra;
+      return o;
+    }
+    //! the file position
+    MWAWEntry m_pos;
+    //! a local type?
+    int m_type;
+    //! an id
+    long m_id;
+    //! a flag to know if the data has been sent
+    bool m_parsed;
+    //! some extra data
+    std::string m_extra;
+  };
+};
+
+////////////////////////////////////////
 //! Internal: the state of a MRWGraph
 struct State {
   //! constructor
-  State() : m_numPages(0) { }
+  State() : m_zoneMap(), m_numPages(0) { }
+
+  //! return a reference to a textzone ( if zone not exists, created it )
+  Zone &getZone(int id) {
+    std::map<int,Zone>::iterator it = m_zoneMap.find(id);
+    if (it != m_zoneMap.end())
+      return it->second;
+    it = m_zoneMap.insert
+         (std::map<int,Zone>::value_type(id,Zone())).first;
+    return it->second;
+  }
+
+  //! a map id -> textZone
+  std::map<int,Zone> m_zoneMap;
 
   int m_numPages /* the number of pages */;
 };
@@ -189,25 +242,16 @@ bool MRWGraph::readToken(MRWEntry const &entry, int)
   size_t d = 0;
   long val;
   MRWStruct dt = dataList[d++];
-  if (!dt.isBasic()) {
-    MWAW_DEBUG_MSG(("MRWGraph::readToken: find unexpected type for id\n"));
-    f << "###id=" << dt << ",";
-  } else
+  if (dt.isBasic())
     f << "id=" << std::hex << dt.value(0) << std::dec << ",";
 
   dt = dataList[d++];
-  if (!dt.isBasic()) {
-    MWAW_DEBUG_MSG(("MRWGraph::readToken: find unexpected type for f0\n"));
-    f << "###f0=" << dt << ",";
-  } else if (dt.value(0) != 5) // always 5
+  if (dt.isBasic() && dt.value(0) != 5) // always 5
     f << "f0=" << std::hex << dt.value(0) << std::dec << ",";
 
   dt = dataList[d++];
-  int type = 0, subType = 0;
-  if (!dt.isBasic()) {
-    MWAW_DEBUG_MSG(("MRWGraph::readToken: find unexpected type for type\n"));
-    f << "###type=" << dt << ",";
-  } else {
+  int type = -1, subType = 0;
+  if (dt.isBasic()) {
     val = dt.value(0);
     type = int(val >> 16);
     subType = int(val&0xFFFF);
@@ -215,14 +259,21 @@ bool MRWGraph::readToken(MRWEntry const &entry, int)
   switch(type) {
   case 0:
     f << "graph";
-    if (subType!=20) f << "[" << subType << "]";
+    if (subType!=0x14) f << "[" << subType << "]";
     f << ",";
     break;
   case 1:
     if (subType==0x17) f << "date,";
     else if (subType==0x18) f << "time,";
     else if (subType==0x19) f << "page,";
+    else if (subType==0x1f) f << "ftnote[mark],";
+    else if (subType==0x23) f << "rule[called],";
     else f << "#fieldType=" << subType << ",";
+    break;
+  case 9:
+    f << "footnote[called]";
+    if (subType!=0x1e) f << "[" << subType << "]";
+    f << ",";
     break;
   default:
     f << "#type=" << type;
@@ -233,42 +284,39 @@ bool MRWGraph::readToken(MRWEntry const &entry, int)
   int dim[2];
   for (int i = 0; i < 2; i++) {
     MRWStruct const &data = dataList[d++];
-    if (!data.isBasic()) {
-      MWAW_DEBUG_MSG(("MRWGraph::readToken: can not read dim\n"));
-      f << "###dim" << i << "=" << data << ",";
-    } else
+    if (data.isBasic())
       dim[i] = int(data.value(0));
   }
   f << "dim=" << dim[0] << "x" << dim[1] << ",";
   for (int i = 0; i < 4; i++) { // always 0, except for field, find f4=0|1|6
     MRWStruct const &data = dataList[d++];
-    if (!data.isBasic()) {
-      MWAW_DEBUG_MSG(("MRWGraph::readToken: can not read f%d\n", i+1));
-      f << "###f" << i+1 << "=" << dt << ",";
-    } else if (data.value(0))
+    if (data.isBasic() && data.value(0))
       f << "f" << i+1 << "=" << data.value(0) << ",";
   }
 
   dt = dataList[d++];
-  if (!dt.isBasic()) {
-    MWAW_DEBUG_MSG(("MRWGraph::readToken: find unexpected type for id2\n"));
-    f << "###id2=" << dt << ",";
-  } else if (dt.value(0))
+  if (dt.isBasic() && dt.value(0))
     f << "id2=" << std::hex << dt.value(0) << std::dec << ",";
 
   dt = dataList[d++];
-  if (!dt.isBasic()) {
-    MWAW_DEBUG_MSG(("MRWGraph::readToken: find unexpected type for id2\n"));
-    f << "###id2=" << dt << ",";
-  } else if (int(dt.value(0)) != 1-type)
+  if (dt.isBasic() && int(dt.value(0)) != (type==0 ? 1 : 0))
     f << "#isGraph=" << dt.value(0) << ",";
   for (int i = 0; i < 3; i++) { // always 0
     MRWStruct const &data = dataList[d++];
-    if (!data.isBasic()) {
-      MWAW_DEBUG_MSG(("MRWGraph::readToken: can not read f%d\n", i+5));
-      f << "###f" << i+5 << "=" << data << ",";
-    } else if (data.value(0))
+    if (data.isBasic() && data.value(0))
       f << "f" << i+5 << "=" << data << ",";
+  }
+
+  for (size_t dd = 0; dd < 14; dd++) {
+    MRWStruct const &data = dataList[dd];
+    if (data.isBasic())
+      continue;
+    f << "#f" << dd << "=" << data << ",";
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("MRWGraph::readToken: find some struct block\n"));
+      first = false;
+    }
   }
 
   ascii().addPos(entry.begin());
@@ -322,24 +370,15 @@ bool MRWGraph::readToken(MRWEntry const &entry, int)
   f << entry.name() << "(III):";
   for (int i = 0; i < 8; i++) { // always 0
     MRWStruct const &data = dataList[d++];
-    if (!data.isBasic()) {
-      MWAW_DEBUG_MSG(("MRWGraph::readToken(III): can not read f%d\n", i));
-      f << "###f" << i << "=" << data << ",";
-    } else if (data.value(0))
+    if (data.isBasic() && data.value(0))
       f << "f" << i << "=" << data << ",";
   }
   dt = dataList[d++];
-  if (!dt.isBasic()) {
-    MWAW_DEBUG_MSG(("MRWGraph::readToken: find unexpected type for pictId\n"));
-    f << "###pictId=" << dt << ",";
-  } else if (dt.value(0))
+  if (dt.isBasic() && dt.value(0))
     f << "pictId=" << std::hex << dt.value(0) << std::dec << ",";
   for (int i = 0; i < 6; i++) { // always 0
     MRWStruct const &data = dataList[d++];
-    if (!data.isBasic()) {
-      MWAW_DEBUG_MSG(("MRWGraph::readToken(III): can not read g%d\n", i));
-      f << "###g" << i << "=" << data << ",";
-    } else if (data.value(0))
+    if (data.isBasic() && data.value(0))
       f << "g" << i << "=" << data << ",";
   }
 
@@ -362,13 +401,25 @@ bool MRWGraph::readToken(MRWEntry const &entry, int)
 #endif
   }
 
+  for (size_t dd = 16; dd < 31; dd++) {
+    MRWStruct const &data = dataList[dd];
+    if (data.isBasic())
+      continue;
+    f << "#f" << dd-16 << "=" << data << ",";
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("MRWGraph::readToken(III): find some struct block\n"));
+      first = false;
+    }
+  }
+
   for ( ; d < numData; d++) {
     MRWStruct const &data = dataList[d];
     f << "#" << data << ",";
     static bool first = true;
     if (first) {
       first = false;
-      MWAW_DEBUG_MSG(("MRWGraph::readToken: find some extra data \n"));
+      MWAW_DEBUG_MSG(("MRWGraph::readToken(III): find some extra data \n"));
     }
   }
   ascii().addNote(f.str().c_str());
@@ -428,7 +479,7 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, std::string &res)
   return true;
 }
 
-bool MRWGraph::readPostscript(MRWEntry const &entry, int )
+bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
 {
   if (entry.length() < 3) {
     MWAW_DEBUG_MSG(("MRWGraph::readPostscript: data seems to short\n"));
@@ -446,27 +497,28 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int )
   }
 
   libmwaw::DebugStream f;
-  f << entry.name() << ":";
   size_t d = 0;
-  long id = 0;
+  MRWGraphInternal::Zone &zone = m_state->getZone(zoneId);
+  MRWGraphInternal::Zone::PSFile psFile;
   for (int i = 0; i < 2; i++) {
     MRWStruct const &data = dataList[d++];
     if (!data.isBasic()) {
       MWAW_DEBUG_MSG(("MRWGraph::readPostscript: find unexpected type for f0\n"));
       f << "###f" << i << "=" << data << ",";
-    } else if (data.value(0)) {
-      if (i==0) // always 0?
-        f << "f" << i << "=" << data.value(0) << ",";
-      else if (i==1) {
-        id = data.value(0);
-        f << "id=" << std::hex << id << std::dec << ",";
-      }
-    }
+    } else if (i==0)
+      psFile.m_type = (int) data.value(0);
+    else
+      psFile.m_id = data.value(0);
   }
   MRWStruct const &data = dataList[d++];
   if (data.m_type != 0) {
     MWAW_DEBUG_MSG(("MRWGraph::readPostscript: can not find my file\n"));
+    f << "###";
+    psFile.m_extra=f.str();
   } else if (data.m_pos.valid()) {
+    psFile.m_extra=f.str();
+    psFile.m_pos = data.m_pos;
+    zone.m_psFileMap[psFile.m_id] = psFile;
 #ifdef DEBUG_WITH_FILES
     m_input->seek(data.m_pos.begin(), WPX_SEEK_SET);
     WPXBinaryData file;
@@ -480,6 +532,8 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int )
     ascii().skipZone(data.m_pos.begin(),data.m_pos.end()-1);
 #endif
   }
+  f.str("");
+  f << entry.name() << ":" << psFile;
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
   m_input->seek(entry.end(), WPX_SEEK_SET);

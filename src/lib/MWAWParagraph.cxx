@@ -166,6 +166,8 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
       o << pp.m_tabs.get()[i] << ",";
     o << "),";
   }
+  if (pp.m_backgroundColor.get() != 0xFFFFFF)
+    o << "backgroundColor=" << std::hex << pp.m_backgroundColor.get() << std::dec << ",";
   if (pp.m_listLevelIndex.get() >= 1)
     o << pp.m_listLevel.get() << ":" << pp.m_listLevelIndex.get() <<",";
 
@@ -227,6 +229,7 @@ void MWAWParagraph::send(shared_ptr<MWAWContentListener> listener) const
   } else
     listener->setCurrentListLevel(0);
 
+  listener->setParagraphBackgroundColor(m_backgroundColor.get());
   listener->resetParagraphBorders();
   int const wh[] = { MWAWBorder::LeftBit, MWAWBorder::RightBit, MWAWBorder::TopBit, MWAWBorder::BottomBit };
   for (size_t i = 0; i < m_borders.size(); i++) {

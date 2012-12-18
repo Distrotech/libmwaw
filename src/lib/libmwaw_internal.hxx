@@ -740,6 +740,8 @@ protected:
 typedef Box2<int> Box2i;
 /*! \brief Box2 of float */
 typedef Box2<float> Box2f;
+/*! \brief Box2 of long */
+typedef Box2<long> Box2l;
 
 #endif /* LIBMWAW_INTERNAL_H */
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -104,12 +104,21 @@ struct MWAWContentParsingState {
   //! the text language
   std::string m_textLanguage;
 
+  //! true if pararagraph add a column break
   bool m_isParagraphColumnBreak;
+  //! true if pararagraph add a page break
   bool m_isParagraphPageBreak;
+  //! the paragraph justification ( left, center, ... )
   libmwaw::Justification m_paragraphJustification;
+  //! the paragraph interline value
   double m_paragraphLineSpacing;
+  //! the paragraph interline unit ( point, percent, ...)
   WPXUnit m_paragraphLineSpacingUnit;
+  //! the paragraph interline type (fixed, at least )
   libmwaw::LineSpacing m_paragraphLineSpacingType;
+  //! the paragraph background color
+  uint32_t m_paragraphBackgroundColor;
+  //! the paragraph borders
   std::vector<MWAWBorder> m_paragraphBorders;
 
   shared_ptr<MWAWList> m_list;
@@ -266,6 +275,8 @@ public:
    * \param tabStops the tabulations
    */
   void setTabs(const std::vector<MWAWTabStop> &tabStops);
+  /** sets the paragraph background color */
+  void setParagraphBackgroundColor(uint32_t color=0xFFFFFF);
   /** reset the paragraph to have no border */
   void resetParagraphBorders();
   /** set a paragraph has one or several border:

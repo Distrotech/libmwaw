@@ -236,6 +236,8 @@ bool File::readFileInformation()
     checkFInfoType("IWDC","HanMac Word-J") || checkFInfoType("HanMac Word-J");
   } else if (m_fInfoCreator=="HMdr") {
     checkFInfoType("DRD2","HanMac Word-K") || checkFInfoType("HanMac Word-K");
+  } else if (m_fInfoCreator=="LWTE") {
+    checkFInfoType("TEXT","LightWayText") || checkFInfoType("LightWayText");
   } else if (m_fInfoCreator=="MACA") {
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   } else if (m_fInfoCreator=="MACD") { // checkme
@@ -302,6 +304,8 @@ bool File::readFileInformation()
     checkFInfoType("Microsoft Excel");
   } else if (m_fInfoCreator=="XPR3") {
     checkFInfoType("XDOC","QuarkXPress") || checkFInfoType("QuarkXPress");
+  } else if (m_fInfoCreator=="ZWRT") {
+    checkFInfoType("Zart","Z-Write") || checkFInfoType("Z-Write");
   } else if (m_fInfoCreator=="dPro") {
     checkFInfoType("dDoc","MacDraw Pro") || checkFInfoType("MacDraw Pro");
   } else if (m_fInfoCreator=="nX^n") {

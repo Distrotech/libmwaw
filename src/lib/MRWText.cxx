@@ -55,16 +55,124 @@
 /** Internal: the structures of a MRWText */
 namespace MRWTextInternal
 {
+////////////////////////////////////////
+//! Internal: struct used to store the font of a MRWText
+struct Font {
+  //! constructor
+  Font() : m_font(), m_localId(-1), m_tokenId(0), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Font const &font);
+
+  //! the font
+  MWAWFont m_font;
+  //! the local id
+  int m_localId;
+  //! the token id
+  long m_tokenId;
+  //! extra data
+  std::string m_extra;
+};
+
+std::ostream &operator<<(std::ostream &o, Font const &font)
+{
+  if (font.m_localId >= 0)
+    o << "FN" << font.m_localId << ",";
+  if (font.m_tokenId > 0)
+    o << "tokId=" << std::hex << font.m_tokenId << std::dec << ",";
+  o << font.m_extra;
+  return o;
+}
+
+////////////////////////////////////////
+//! Internal: struct used to store the paragraph of a MRWText
+struct Paragraph : public MWAWParagraph {
+  //! constructor
+  Paragraph() : MWAWParagraph() {
+    for (int i = 0; i < 2; i++)
+      m_backColor[i] = 0xFFFFFF;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Paragraph const &para);
+  //! two color
+  uint32_t m_backColor[2];
+};
+
+std::ostream &operator<<(std::ostream &o, Paragraph const &para)
+{
+  o << reinterpret_cast<MWAWParagraph const &>(para);
+  for (int i = 0; i < 2; i++) {
+    if (para.m_backColor[i] != 0xFFFFFF)
+      o << "backColor" << i << "=" << std::hex << para.m_backColor[i] << std::dec << ",";
+  }
+  return o;
+}
+////////////////////////////////////////
+//! Internal: struct used to store zone data of a MRWText
+struct TextZone {
+  struct Information;
+
+  //! constructor
+  TextZone() : m_infoList(), m_fontList(),m_rulerList(), m_idFontMap(), m_posFontMap(), m_posRulerMap(), m_actZone(0), m_parsed(false) {
+  }
+  //! the list of information of the text in the file
+  std::vector<Information> m_infoList;
+  //! a list of font
+  std::vector<Font> m_fontList;
+  //! a list of ruler
+  std::vector<Paragraph> m_rulerList;
+  //! a map id -> fontId
+  std::map<int,int> m_idFontMap;
+  //! a map pos -> fontId
+  std::map<long,int> m_posFontMap;
+  //! a map pos -> rulerId
+  std::map<long,int> m_posRulerMap;
+  //! a index used to know the next zone in MRWText::readTextZone
+  int m_actZone;
+  //! a flag to know if the zone is parsed
+  bool m_parsed;
+
+  //! struct used to keep the information of a small zone of MRWTextInternal::TextZone
+  struct Information {
+    //! constructor
+    Information() : m_pos(), m_cPos(0,0), m_extra("") { }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, Information const &info) {
+      if (info.m_cPos[0] || info.m_cPos[1])
+        o << "cPos=" << std::hex << info.m_cPos << std::dec << ",";
+      o << info.m_extra;
+      return o;
+    }
+
+    //! the file position
+    MWAWEntry m_pos;
+    //! the characters positions
+    Vec2l m_cPos;
+    //! extra data
+    std::string m_extra;
+  };
+};
 
 ////////////////////////////////////////
 //! Internal: the state of a MRWText
 struct State {
   //! constructor
-  State() : m_version(-1), m_numPages(-1), m_actualPage(0) {
+  State() : m_version(-1), m_textZoneMap(), m_numPages(-1), m_actualPage(0) {
   }
 
+  //! return a reference to a textzone ( if zone not exists, created it )
+  TextZone &getZone(int id) {
+    std::map<int,TextZone>::iterator it = m_textZoneMap.find(id);
+    if (it != m_textZoneMap.end())
+      return it->second;
+    it = m_textZoneMap.insert
+         (std::map<int,TextZone>::value_type(id,TextZone())).first;
+    return it->second;
+  }
   //! the file version
   mutable int m_version;
+  //! a map id -> textZone
+  std::map<int,TextZone> m_textZoneMap;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
@@ -163,7 +271,7 @@ int MRWText::numPages() const
 ////////////////////////////////////////////////////////////
 //     Text
 ////////////////////////////////////////////////////////////
-bool MRWText::readTextZone(MRWEntry const &entry, int)
+bool MRWText::readTextZone(MRWEntry const &entry, int zoneId)
 {
   if (entry.length() < 0x3) {
     MWAW_DEBUG_MSG(("MRWText::readTextZone: data seems to short\n"));
@@ -189,38 +297,172 @@ bool MRWText::readTextZone(MRWEntry const &entry, int)
     return false;
   }
 
+  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
+  if (zone.m_actZone < 0 || zone.m_actZone >= int(zone.m_infoList.size())) {
+    MWAW_DEBUG_MSG(("MRWText::readTextZone: actZone seems bad\n"));
+    if (zone.m_actZone < 0)
+      zone.m_actZone = int(zone.m_infoList.size());
+    zone.m_infoList.resize(size_t(zone.m_actZone)+1);
+  }
+  MRWTextInternal::TextZone::Information &info
+    = zone.m_infoList[size_t(zone.m_actZone++)];
+  info.m_pos = data.m_pos;
+
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
-  if (data.m_pos.length() <= 0)
-    return true;
-
-  long pos = data.m_pos.begin();
-  long endPos = data.m_pos.end();
-  m_input->seek(pos, WPX_SEEK_SET);
-
-  f.str("");
-  f << entry.name() << ":";
-  while (!m_input->atEOS()) {
-    char c = (char) m_input->readULong(1);
-    f << c;
-    long actPos = m_input->tell();
-    if (c==0xa || c==0xd || actPos==endPos) {
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
-
-      pos = actPos;
-      f.str("");
-      f << entry.name() << ":";
-    }
-    if (actPos==endPos)
-      break;
-  }
 
   m_input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
 
-bool MRWText::readPLCZone(MRWEntry const &entry, int)
+bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
+{
+  if (entry.length() < entry.m_N) {
+    MWAW_DEBUG_MSG(("MRWText::readTextStruct: data seems to short\n"));
+    return false;
+  }
+  m_input->seek(entry.begin(), WPX_SEEK_SET);
+  m_input->pushLimit(entry.end());
+  std::vector<MRWStruct> dataList;
+  m_mainParser->decodeZone(dataList, 1+22*entry.m_N);
+  m_input->popLimit();
+
+  if (int(dataList.size()) != 22*entry.m_N) {
+    MWAW_DEBUG_MSG(("MRWText::readTextStruct: find unexpected number of data\n"));
+    return false;
+  }
+
+  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
+  libmwaw::DebugStream f;
+  size_t d = 0;
+  for (int i = 0; i < entry.m_N; i++) {
+    MRWTextInternal::TextZone::Information info;
+    ascii().addPos(dataList[d].m_filePos);
+
+    int posi[4]= {0,0,0,0};
+    int dim[4]= {0,0,0,0}, dim2[4]= {0,0,0,0};
+    f.str("");
+    for (int j = 0; j < 22; j++) {
+      MRWStruct const &data = dataList[d++];
+      if (!data.isBasic()) {
+        f << "###f" << j << "=" << data << ",";
+        continue;
+      }
+      switch(j) {
+      case 0:
+      case 1:
+        info.m_cPos[j] = data.value(0);
+        break;
+      case 2:
+        if (data.value(0))
+          f << "fl0=" << std::hex << data.value(0) << std::dec << ",";
+        break;
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+        posi[j-3]=(int) data.value(0);
+        while (j < 6)
+          posi[++j-3]=(int) dataList[d++].value(0);
+        if (posi[0] || posi[1])
+          f << "pos0=" << posi[0] << ":" << posi[1] << ",";
+        if (posi[2] || posi[3])
+          f << "pos1=" << posi[2] << ":" << posi[3] << ",";
+        break;
+      case 8:
+      case 9:
+      case 10:
+      case 11:
+        dim[j-8]=(int) data.value(0);
+        while (j < 11)
+          dim[++j-8]=(int) dataList[d++].value(0);
+        if (dim[0]||dim[1]||dim[2]||dim[3])
+          f << "pos2=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
+        break;
+      case 12:
+        if (data.value(0)!=info.m_cPos[1]-info.m_cPos[0])
+          f << "nChar(diff)=" << info.m_cPos[1]-info.m_cPos[0]-data.value(0) << ",";
+        break;
+      case 14: // a small number(cst) in the list of structure
+      case 16: // an id?
+        if (data.value(0))
+          f << "f" << j << "=" << data.value(0) << ",";
+        break;
+      case 15: // 0xcc00|0xce40|... some flags? a dim
+        if (data.value(0))
+          f << "f" << j << "=" << std::hex << data.value(0) << std::dec << ",";
+        break;
+      case 17:
+      case 18:
+      case 19:
+      case 20:
+        dim2[j-17]=(int) data.value(0);
+        while (j < 20)
+          dim2[++j-17]=(int) dataList[d++].value(0);
+        if (dim2[0]||dim2[1]||dim2[2]||dim2[3])
+          f << "pos3=" << dim2[1] << "x" << dim2[0] << "<->" << dim2[3] << "x" << dim2[2] << ",";
+        break;
+      default:
+        if (data.value(0))
+          f << "#f" << j << "=" << data.value(0) << ",";
+        break;
+      }
+    }
+    info.m_extra = f.str();
+    zone.m_infoList.push_back(info);
+    f.str("");
+    f << entry.name() << "-" << i << ":" << info;
+    ascii().addNote(f.str().c_str());
+  }
+  m_input->seek(entry.end(), WPX_SEEK_SET);
+
+  return true;
+}
+
+bool MRWText::send(int zoneId)
+{
+  if (m_state->m_textZoneMap.find(zoneId) == m_state->m_textZoneMap.end()) {
+    MWAW_DEBUG_MSG(("MRWText::send: can not find the text zone %d\n", zoneId));
+    return false;
+  }
+  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
+  zone.m_parsed = true;
+
+  long actChar = 0;
+  for (size_t z = 0; z < zone.m_infoList.size(); z++) {
+    long pos = zone.m_infoList[z].m_pos.begin();
+    long endPos = zone.m_infoList[z].m_pos.end();
+    m_input->seek(pos, WPX_SEEK_SET);
+
+    libmwaw::DebugStream f;
+    f << "Text[" << std::hex << actChar << std::dec << "]:";
+    while (!m_input->atEOS()) {
+      long actPos = m_input->tell();
+      if (actPos == endPos)
+        break;
+      if (zone.m_posFontMap.find(actChar)!=zone.m_posFontMap.end())
+        f << "[F" << zone.m_posFontMap.find(actChar)->second << "]";
+      if (zone.m_posRulerMap.find(actChar)!=zone.m_posRulerMap.end())
+        f << "[P" << zone.m_posRulerMap.find(actChar)->second << "]";
+
+      char c = (char) m_input->readULong(1);
+      actChar++;
+      f << c;
+      if (c==0xa || c==0xd || actPos==endPos-1) {
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+
+        pos = actPos;
+        f.str("");
+        f << "Text:";
+      }
+    }
+  }
+
+  return true;
+}
+
+bool MRWText::readPLCZone(MRWEntry const &entry, int zoneId)
 {
   if (entry.length() < 2*entry.m_N-1) {
     MWAW_DEBUG_MSG(("MRWText::readPLCZone: data seems to short\n"));
@@ -238,16 +480,32 @@ bool MRWText::readPLCZone(MRWEntry const &entry, int)
     return false;
   }
 
+  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
+  bool isCharZone = entry.m_fileType==4;
+  std::map<long,int> &map = isCharZone ? zone.m_posFontMap : zone.m_posRulerMap;
   libmwaw::DebugStream f;
+  long pos = entry.begin();
   for (size_t d=0; d < dataList.size(); d+=2) {
-    f.str("");
-    f << entry.name() << "-" << d/2 << ":";
-    f << std::hex << dataList[d].value(0) << std::dec << ":"; //pos
-    f << dataList[d+1].value(0); // id
-
-    ascii().addPos(dataList[d].m_filePos);
-    ascii().addNote(f.str().c_str());
+    if (d%40==0) {
+      if (d) {
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+      }
+      f.str("");
+      f << entry.name() << ":";
+      pos = dataList[d].m_filePos;
+    }
+    long cPos = dataList[d].value(0);
+    int id = (int) dataList[d+1].value(0);
+    map[cPos] = id;
+    f << std::hex << cPos << std::dec; //pos
+    if (isCharZone)
+      f << "(F" << id << "),"; // id
+    else
+      f << "(P" << id << "),"; // id
   }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
   m_input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
@@ -255,7 +513,7 @@ bool MRWText::readPLCZone(MRWEntry const &entry, int)
 ////////////////////////////////////////////////////////////
 //     Fonts
 ////////////////////////////////////////////////////////////
-bool MRWText::readFontNames(MRWEntry const &entry, int)
+bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N) {
     MWAW_DEBUG_MSG(("MRWText::readFontNames: data seems to short\n"));
@@ -273,12 +531,13 @@ bool MRWText::readFontNames(MRWEntry const &entry, int)
     return false;
   }
 
+  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
   libmwaw::DebugStream f;
   size_t d = 0;
   int val;
   for (int i = 0; i < entry.m_N; i++) {
     f.str("");
-    f << entry.name() << "-" << i << ":";
+    f << entry.name() << "-FN" << i << ":";
     ascii().addPos(dataList[d].m_filePos);
     std::string fontName("");
     for (int j = 0; j < 2; j++, d++) {
@@ -320,15 +579,16 @@ bool MRWText::readFontNames(MRWEntry const &entry, int)
       else if (data.value(0))
         f << "f" << j-3 << "=" << data.value(0) << ",";
     }
-    if (fontName.length() && fId)
+    if (fontName.length())
       m_convertissor->setCorrespondance(fId, fontName);
+    zone.m_idFontMap[i] = fId;
     ascii().addNote(f.str().c_str());
   }
   m_input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
 
-bool MRWText::readFonts(MRWEntry const &entry, int)
+bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N+1) {
     MWAW_DEBUG_MSG(("MRWText::readFonts: data seems to short\n"));
@@ -346,6 +606,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int)
     return false;
   }
 
+  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
   libmwaw::DebugStream f;
   f << entry.name() << ":unkn=" << dataList[0].value(0);
   ascii().addPos(dataList[0].m_filePos);
@@ -353,12 +614,220 @@ bool MRWText::readFonts(MRWEntry const &entry, int)
 
   size_t d = 1;
   for (int i = 0; i < entry.m_N; i++) {
+    MRWTextInternal::Font font;
     f.str("");
-    f << entry.name() << "-" << i << ":";
     ascii().addPos(dataList[d].m_filePos);
 
-    for (int j = 0; j < 77; j++, d++)
-      f << dataList[d] << ",";
+    size_t fD = d;
+    long val;
+    uint32_t fFlags=0;
+    for (int j = 0; j < 77; j++) {
+      MRWStruct const &dt = dataList[d++];
+      if (!dt.isBasic()) continue;
+      int color[3];
+      switch (j) {
+      case 0:
+        font.m_localId=(int) dt.value(0);
+        break;
+      case 1: // 0|1
+      case 2: // 0
+      case 3: // small number
+      case 4: // 0|..|10
+      case 5: // 0|1|2
+      case 6: // 0
+      case 8: // small number or 1001,1002
+      case 17: // small number between 4 && 39
+      case 19: // 0
+      case 20: // 0|1|3|5
+      case 21: // 0
+      case 22: // 0
+      case 30: // small number between 0 or 0x3a9 ( a dim?)
+      case 59: // 0|9 ( associated with f74?)
+      case 66: // 0|1
+      case 74: // 0|1|2|3
+        if (dt.value(0))
+          f << "f" << j << "=" << dt.value(0) << ",";
+        break;
+      case 7:  // 0, 1000, 100000, 102004
+        if (dt.value(0))
+          f << "fl0=" << std::hex << dt.value(0) << std::dec << ",";
+        break;
+      case 9:
+      case 10:
+      case 11:
+        color[0]=color[1]=color[2]=0;
+        color[j-9]=(int) dt.value(0);
+        while (++j < 12)
+          color[j-9] = (int) dataList[d++].value(0);
+        j--;
+        font.m_font.setColor
+        (uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8)));
+        break;
+      case 12: // big number
+      case 16: // 0 or one time 0x180
+        if (dt.value(0))
+          f << "f" << j << "=" << std::hex << dt.value(0) << std::dec << ",";
+        break;
+      case 13:
+      case 14:
+      case 15:
+        color[0]=color[1]=color[2]=0xFFFF;
+        color[j-13]=(int) dt.value(0);
+        while (++j < 16)
+          color[j-13] = (int) dataList[d++].value(0);
+        j--;
+        font.m_font.setBackgroundColor
+        (uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8)));
+        break;
+      case 18: {
+        val = dt.value(0);
+        font.m_font.setSize(int(val>>16));
+        if (val & 0xFFFF)
+          f << "#fSz[high]=" << (val & 0xFFFF) << ",";
+        break;
+      }
+      case 23: { // f23[high]=0|1
+        int low = (int16_t)(dt.value(0));
+        if (low) f << "f" << j << "[low]=" << low << ",";
+        int high = (int16_t)(dt.value(0)>>16);
+        if (high) f << "f" << j << "[high]=" << high << ",";
+        break;
+      }
+      case 24: // 0
+      case 25: // 0
+      case 27: // 0
+      case 29: // 0
+      case 32: // 0
+      case 33: // 0
+      case 35: // 0
+        if (dt.value(0))
+          f << "f" << j << "=" << dt.value(0) << ",";
+        break;
+      case 26: // 0|very big number id f28
+      case 28: // 0|very big number
+      case 31: // 0|very big number
+      case 34: // an id?
+        if (!dt.value(0))
+          break;
+        switch(j) {
+        case 28:
+          f << "idA";
+          break;
+        case 31:
+          f << "idB";
+          break;
+        default:
+          f << "f" << j;
+          break;
+        }
+        f << "=" << std::hex << int32_t(dt.value(0)) << std::dec << ",";
+        break;
+        // tokens
+      case 36: // 0|1|6 related to token?
+        if (dt.value(0))
+          f << "tok0=" << dt.value(0) << ",";
+      case 37: // another id?
+        if (dt.value(0))
+          f << "tok1=" << std::hex << dt.value(0) << std::dec << ",";
+        break;
+      case 38:
+        font.m_tokenId = dt.value(0);
+        break;
+      case 39:
+      case 40:
+      case 41:
+      case 42:
+      case 43:
+      case 44:
+      case 45:
+      case 46:
+      case 47:
+      case 48:
+      case 49:
+      case 50:
+      case 58:
+        if (int16_t(dt.value(0))==-1) {
+          switch(j) {
+          case 39:
+            fFlags |= MWAW_BOLD_BIT;
+            break;
+          case 40:
+            fFlags |= MWAW_ITALICS_BIT;
+            break;
+          case 41:
+            font.m_font.setUnderlineStyle(MWAWBorder::Single);
+            break;
+          case 42:
+            fFlags |= MWAW_OUTLINE_BIT;
+            break;
+          case 43:
+            fFlags |= MWAW_SHADOW_BIT;
+            break;
+          case 44:
+            f << "condense,";
+            break;
+          case 45:
+            f << "expand,";
+            break;
+          case 46:
+            font.m_font.setUnderlineStyle(MWAWBorder::Double);
+            break;
+          case 47:
+            font.m_font.setUnderlineStyle(MWAWBorder::Single);
+            f << "underline[word],";
+            break;
+          case 48:
+            font.m_font.setUnderlineStyle(MWAWBorder::Dot);
+            break;
+          case 50:
+            fFlags |= MWAW_STRIKEOUT_BIT;
+            break;
+          case 58:
+            f << "boxed" << j-57 << ",";
+            break;
+          default:
+            MWAW_DEBUG_MSG(("MRWText::readFonts: find unknown font flag: %d\n", j));
+            f << "#f" << j << ",";
+            break;
+          }
+        } else if (dt.value(0))
+          f << "#f" << j << "=" << dt.value(0) << ",";
+        break;
+      case 51:
+        if (dt.value(0) > 0) {
+          fFlags |= MWAW_SUPERSCRIPT100_BIT;
+          if (dt.value(0) != 3)
+            f << "superscript[pos]=" << dt.value(0) << ",";
+        } else if (dt.value(0))
+          f << "#superscript=" << dt.value(0) << ",";
+        break;
+      case 52:
+        if (dt.value(0) > 0) {
+          fFlags |= MWAW_SUBSCRIPT100_BIT;
+          if (dt.value(0) != 3)
+            f << "subscript[pos]=" << dt.value(0) << ",";
+        } else if (dt.value(0))
+          f << "#subscript=" << dt.value(0) << ",";
+        break;
+      default:
+        if (dt.value(0))
+          f << "#f" << j << "=" << dt.value(0) << ",";
+        break;
+      }
+    }
+    font.m_font.setFlags(fFlags);
+    // the error
+    d = fD;
+    for (int j = 0; j < 77; j++, d++) {
+      if (!dataList[d].isBasic())
+        f << "#f" << j << "=" << dataList[d] << ",";
+    }
+    zone.m_fontList.push_back(font);
+
+    font.m_extra = f.str();
+    f.str("");
+    f << entry.name() << "-F" << i << ":"
+      << font.m_font.getDebugString(m_convertissor) << font;
     ascii().addNote(f.str().c_str());
   }
   m_input->seek(entry.end(), WPX_SEEK_SET);
@@ -426,7 +895,7 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
 ////////////////////////////////////////////////////////////
 //     Paragraph
 ////////////////////////////////////////////////////////////
-bool MRWText::readRulers(MRWEntry const &entry, int)
+bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N+1) {
     MWAW_DEBUG_MSG(("MRWText::readRulers: data seems to short\n"));
@@ -445,11 +914,11 @@ bool MRWText::readRulers(MRWEntry const &entry, int)
     return false;
   }
 
+  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
   libmwaw::DebugStream f;
   size_t d = 0;
   for (int i = 0; i < entry.m_N; i++) {
-    f.str("");
-    f << entry.name() << "-" << i << ":";
+    MRWTextInternal::Paragraph para;
     ascii().addPos(dataList[d].m_filePos);
 
     if (int(d+68) > numDatas) {
@@ -458,36 +927,228 @@ bool MRWText::readRulers(MRWEntry const &entry, int)
       ascii().addNote(f.str().c_str());
       return true;
     }
-    for (int j = 0; j < 57; j++, d++) {
-      MRWStruct const &data = dataList[d];
-      f << data << ",";
+    size_t fD = d;
+    int color[3];
+    f.str("");
+    int nTabs = 0;
+    for (int j = 0; j < 58; j++, d++) {
+      MRWStruct const &dt = dataList[d];
+      if (!dt.isBasic()) continue;
+      switch(j) {
+      case 0:
+        switch(dt.value(0)) {
+        case 0:
+          break;
+        case 1:
+          para.m_justify = libmwaw::JustificationCenter;
+          break;
+        case 2:
+          para.m_justify = libmwaw::JustificationRight;
+          break;
+        case 3:
+          para.m_justify = libmwaw::JustificationFull;
+          break;
+        case 4:
+          para.m_justify = libmwaw::JustificationFullAllLines;
+          break;
+        default:
+          f << "#justify=" << dt.value(0) << ",";
+        }
+        break;
+      case 3:
+      case 4:
+        para.m_margins[j-2] = float(dt.value(0))/72.f;
+        break;
+      case 5:
+        para.m_margins[0] = float(dt.value(0))/72.f;
+        break;
+      case 6:
+        if (!dt.value(0)) break;
+        para.m_spacings[0] = float(dt.value(0))/65536.f;
+        para.m_spacingsInterlineUnit = WPX_PERCENT;
+        break;
+      case 8:
+        if (!dt.value(0)) break;
+        para.m_spacings[0] = float(dt.value(0))/72.f/65536.f;
+        para.m_spacingsInterlineUnit = WPX_POINT;
+        break;
+      case 10:
+        if (!dt.value(0)) break;
+        para.m_spacings[1] = float(dt.value(0))/72.f;
+        break;
+      case 11:
+        if (!dt.value(0)) break;
+        para.m_spacings[2] = float(dt.value(0))/72.f;
+        break;
+      case 30:
+        if (!dt.value(0)!=0x18) break;
+        f << "#f30=" << dt.value(0) << ",";
+        break;
+      case 1: // always 0
+      case 2: // small number between -15 and 15
+      case 7: // always 0
+      case 9: // always 0
+      case 22: // 1|2|4 1=normal?
+      case 29: // 0|64
+      case 40: // 0|129|135|155|167|250|252 a dim?
+        if (dt.value(0))
+          f << "f" << j << "=" << dt.value(0) << ",";
+        break;
+      case 23: // big number related to fonts f28?
+      case 24: // big number related to fonts f31?
+        if (dt.value(0))
+          f << "id" << char('A'+(j-23)) << "=" << std::hex << int32_t(dt.value(0)) << std::dec << ",";
+        break;
+      case 35:
+      case 36:
+      case 37:
+        color[0]=color[1]=color[2]=0xFFFF;
+        color[j-35]=(int) dt.value(0);
+        while (++j < 38)
+          color[j-35] = (int) dataList[d++].value(0);
+        j--;
+        para.m_backColor[0] =
+          (uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8)));
+        break;
+      case 47:
+      case 48:
+      case 49:
+        color[0]=color[1]=color[2]=0xFFFF;
+        color[j-47]=(int) dt.value(0);
+        while (++j < 50)
+          color[j-47] = (int) dataList[d++].value(0);
+        j--;
+        para.m_backColor[1] =
+          (uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8)));
+        break;
+      case 56: { // border size or type?
+        long val = dt.value(0);
+        if (!val) break;
+        int depl = 24;
+        f << "bord?=[";
+        for (int b = 0; b < 4; b++) {
+          if ((val>>depl)&0xFF)
+            f << ((val>>depl)&0xFF) << ",";
+          else
+            f << "_";
+          depl -= 8;
+        }
+        f << "],";
+        break;
+      }
+      case 57:
+        nTabs = (int) dt.value(0);
+        break;
+      default:
+        if (dt.value(0))
+          f << "#f" << j << "=" << dt.value(0) << ",";
+        break;
+      }
     }
-    MRWStruct const &tabData = dataList[d++];
-    if (tabData.m_data.size() > 1) {
-      MWAW_DEBUG_MSG(("MRWText::readRulers: numtabs as unexpected type\n"));
-      f << "###";
-      ascii().addNote(f.str().c_str());
-      return true;
+    para.m_margins[0] = para.m_margins[0].get()+para.m_margins[1].get();
+    d = fD;
+    for (int j = 0; j < 58; j++, d++) {
+      if (!dataList[d].isBasic())
+        f << "#f" << j << "=" << dataList[d].isBasic() << ",";
     }
-    int nTabs = (int) tabData.value(0);
     if (nTabs < 0 || int(d)+4*nTabs+10 > numDatas) {
       MWAW_DEBUG_MSG(("MRWText::readRulers: can not read numtabs\n"));
-      f << "###";
+      para.m_extra = f.str();
+      f.str("");
+      f << entry.name() << "-P" << i << ":" << para << "," << "###";
       ascii().addNote(f.str().c_str());
+      zone.m_rulerList.push_back(para);
       return true;
     }
     if (nTabs) {
       for (int j = 0; j < nTabs; j++) {
-        f << "tabs" << j << "=[";
-        for (int k = 0; k < 4; k++, d++)
-          f << dataList[d] << ",";
-        f << "],";
+        MWAWTabStop tab;
+        for (int k = 0; k < 4; k++, d++) {
+          MRWStruct const &dt = dataList[d];
+          if (!dt.isBasic()) {
+            f << "#tabs" << j << "[" << k << "]=" << dt << ",";
+            continue;
+          }
+          switch(k) {
+          case 0:
+            switch(dt.value(0)) {
+            case 1:
+              break;
+            case 2:
+              tab.m_alignment = MWAWTabStop::CENTER;
+              break;
+            case 3:
+              tab.m_alignment = MWAWTabStop::RIGHT;
+              break;
+            case 4:
+              tab.m_alignment = MWAWTabStop::DECIMAL;
+              break;
+            default:
+              f << "#tabAlign" << j << "=" << dt.value(0) << ",";
+              break;
+            }
+            break;
+          case 1:
+            tab.m_position = float(dt.value(0))/72.f;
+            break;
+          case 2:
+            if (dt.value(0))
+              tab.m_leaderCharacter = uint16_t(dt.value(0));
+            break;
+          default:
+            if (dt.value(0))
+              f << "#tabs" << j << "[" << 3 << "]=" << dt.value(0) << ",";
+            break;
+          }
+        }
+        para.m_tabs->push_back(tab);
       }
     }
-    for (int j = 58; j < 68; j++, d++) {
-      MRWStruct const &data = dataList[d];
-      f << data << ",";
+    for (int j = 0; j < 10; j++, d++) {
+      MRWStruct const &dt = dataList[d];
+      if (j==1 && dt.m_type==0) { // a block with sz=40
+        m_input->seek(dt.m_pos.begin(), WPX_SEEK_SET);
+        int fSz = (int) m_input->readULong(1);
+        if (fSz+1>dt.m_pos.length()) {
+          MWAW_DEBUG_MSG(("MRWText::readRulers: can not read paragraph name\n"));
+          f << "#name,";
+          continue;
+        }
+        if (fSz == 0) continue;
+        std::string name("");
+        for (int k = 0; k < fSz; k++)
+          name+=(char) m_input->readULong(1);
+        f << "name=" << name << ",";
+        continue;
+      }
+      if (!dt.isBasic() || j==1) {
+        f << "#g" << j << "=" << dt << ",";
+        continue;
+      }
+      switch(j) {
+      case 0: // always 36 ?
+        if (dt.value(0)!=36)
+          f << "#g0=" << dt.value(0) << ",";
+        break;
+      case 4: // 0|80|1000
+        if (dt.value(0))
+          f << "bullet?=" << std::hex << dt.value(0) << std::dec << ",";
+        break;
+      case 7: // 1|3|de
+      case 8: // 0|4 : 4 for header entry?
+        if (dt.value(0))
+          f << "g" << j << "=" << dt.value(0) << ",";
+        break;
+      default:
+        if (dt.value(0))
+          f << "#g" << j << "=" << dt.value(0) << ",";
+        break;
+      }
     }
+    zone.m_rulerList.push_back(para);
+    para.m_extra = f.str();
+    f.str("");
+    f << entry.name() << "-P" << i << ":" << para << ",";
     ascii().addNote(f.str().c_str());
   }
   m_input->seek(entry.end(), WPX_SEEK_SET);
@@ -512,7 +1173,14 @@ bool MRWText::readRulers(MRWEntry const &entry, int)
 
 void MRWText::flushExtra()
 {
-  if (!m_listener) return;
+  //if (!m_listener) return;
+  std::map<int,MRWTextInternal::TextZone>::iterator it =
+    m_state->m_textZoneMap.begin();
+  for ( ; it != m_state->m_textZoneMap.end(); it++) {
+    if (it->second.m_parsed)
+      continue;
+    send(it->first);
+  }
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

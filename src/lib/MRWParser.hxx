@@ -159,7 +159,7 @@ protected:
   //! finds the different objects zones
   bool createZones();
   /** try to read a zone */
-  bool readZone(int &actZone);
+  bool readZone(int &actZone, bool onlyTest=false);
 
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
@@ -191,12 +191,14 @@ protected:
   bool readSeparator(MRWEntry const &entry);
   /** try to read the separator dimension ? */
   bool readDimSeparator(MRWEntry const &entry, int zoneId);
-  /** try to read zone 1 */
-  bool readZone1(MRWEntry const &entry, int zoneId);
+  /** try to read the zone header */
+  bool readZoneHeader(MRWEntry const &entry, int zoneId, bool onlyTest);
   /** try to read a unknown zone : one by separator?, borderdim? */
   bool readZoneb(MRWEntry const &entry, int zoneId);
   /** try to read a unknown zone of 9 int*/
   bool readZonec(MRWEntry const &entry, int zoneId);
+  /** try to read a unknown zone of 23 int*/
+  bool readZone13(MRWEntry const &entry, int zoneId);
   /** try to read a printinfo zone */
   bool readPrintInfo(MRWEntry const &entry);
   /** try to read a xml printinfo zone */

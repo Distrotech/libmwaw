@@ -96,7 +96,11 @@ protected:
   //
   // intermediate level
   //
+  /** try to send a zone (knowing zoneId) */
+  bool send(int zoneId);
 
+  /** try to read the text struct */
+  bool readTextStruct(MRWEntry const &entry, int zoneId);
   /** try to read a text zone */
   bool readTextZone(MRWEntry const &entry, int zoneId);
 

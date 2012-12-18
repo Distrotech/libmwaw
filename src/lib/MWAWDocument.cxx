@@ -135,6 +135,8 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
   case HMAC:
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
+  case LWTEXT:
+    break;
   case MARIW:
 #ifdef DEBUG
     confidence = MWAW_CONFIDENCE_GOOD;
@@ -155,14 +157,16 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
   case MWPRO:
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
+  case NISUSW:
+    confidence = MWAW_CONFIDENCE_GOOD;
+    break;
   case WNOW:
     confidence = MWAW_CONFIDENCE_EXCELLENT;
     break;
   case WPLUS:
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
-  case NISUSW:
-    confidence = MWAW_CONFIDENCE_GOOD;
+  case ZWRT:
     break;
   case UNKNOWN:
   default:
@@ -214,6 +218,8 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       parser.parse(documentInterface);
       break;
     }
+    case LWTEXT:
+      break;
     case MARIW: {
       MRWParser parser (ip, rsrcParser, header.get());
       parser.parse(documentInterface);
@@ -269,6 +275,8 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       parser.parse(documentInterface);
       break;
     }
+    case ZWRT:
+      break;
     case UNKNOWN:
     default:
       break;
@@ -341,6 +349,8 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
       HMWParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);
     }
+    case MWAWDocument::LWTEXT:
+      break;
     case MWAWDocument::MARIW: {
       MRWParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);
@@ -386,6 +396,8 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
       WPParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);
     }
+    case MWAWDocument::ZWRT:
+      break;
     case MWAWDocument::UNKNOWN:
     default:
       break;

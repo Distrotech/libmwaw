@@ -64,15 +64,73 @@
 namespace MRWParserInternal
 {
 ////////////////////////////////////////
+//! Internal: the struct used to store the zone of a MRWParser
+struct Zone {
+  //! a enum to define the diffent zone type
+  enum Type { Z_Main, Z_Footnote, Z_Header, Z_Footer, Z_Unknown };
+  //! constructor
+  Zone() : m_id(-1), m_type(Z_Unknown), m_height(0), m_pos(0,0), m_dim(),
+    m_backColor(0xFFFFFF), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Zone const &zone);
+  //! the zone id
+  int m_id;
+  //! the zone type
+  Type m_type;
+  //! height of the zone
+  long m_height;
+  //! left/top position
+  Vec2l m_pos;
+  //! the zone total position
+  Box2l m_dim;
+  //! the background color
+  uint32_t m_backColor;
+  //! extra data
+  std::string m_extra;
+};
+
+std::ostream &operator<<(std::ostream &o, Zone const &zone)
+{
+  switch(zone.m_type) {
+  case Zone::Z_Main:
+    o << "main,";
+    break;
+  case Zone::Z_Footnote:
+    o << "footnote,";
+    break;
+  case Zone::Z_Header:
+    o << "header,";
+    break;
+  case Zone::Z_Footer:
+    o << "footer,";
+    break;
+  case Zone::Z_Unknown:
+  default:
+    break;
+  }
+  if (zone.m_pos[0] || zone.m_pos[1])
+    o << "pos=" << zone.m_pos << ",";
+  if (zone.m_height)
+    o << "height=" << zone.m_height << ",";
+  if (zone.m_dim.size()[0] || zone.m_dim.size()[1])
+    o << "dim=" << zone.m_dim << ",";
+  if (zone.m_backColor != 0xFFFFFF)
+    o << "background=" << std::hex << zone.m_backColor << std::dec << ",";
+  o << zone.m_extra;
+  return o;
+}
+////////////////////////////////////////
 //! Internal: the state of a MRWParser
 struct State {
   //! constructor
-  State() : m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_eof(-1), m_zonesList(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
 
   //! end of file
   long m_eof;
-
+  //! the list of zone
+  std::vector<Zone> m_zonesList;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
@@ -247,6 +305,7 @@ void MRWParser::parse(WPXDocumentInterface *docInterface)
 
     checkHeader(0L);
     ok = createZones();
+    m_textParser->flushExtra(); // fixme
     if (ok) {
       createDocument(docInterface);
       m_graphParser->sendPageGraphics();
@@ -316,7 +375,7 @@ bool MRWParser::createZones()
   return false;
 }
 
-bool MRWParser::readZone(int &actZone)
+bool MRWParser::readZone(int &actZone, bool onlyTest)
 {
   MWAWInputStreamPtr input = getInput();
   if (input->atEOS())
@@ -336,10 +395,15 @@ bool MRWParser::readZone(int &actZone)
   case -1: // separator
   case -2: // last file
     done = readSeparator(zone);
+    if (onlyTest)
+      break;
     actZone++;
     break;
-  case 0x1:
-    done = readZone1(zone, actZone);
+  case 0:
+    done = readZoneHeader(zone, actZone, onlyTest);
+    break;
+  case 1:
+    done = m_textParser->readTextStruct(zone, actZone);
     break;
   case 2:
     done = m_textParser->readTextZone(zone, actZone);
@@ -369,6 +433,9 @@ bool MRWParser::readZone(int &actZone)
   case 0xc:
     done = readZonec(zone, actZone);
     break;
+  case 0x13:
+    done = readZone13(zone, actZone);
+    break;
   case 0x14:
     done = m_graphParser->readToken(zone, actZone);
     break;
@@ -394,7 +461,8 @@ bool MRWParser::readZone(int &actZone)
     input->seek(zone.end(), WPX_SEEK_SET);
     return true;
   }
-
+  if (onlyTest)
+    return false;
   input->seek(zone.begin(), WPX_SEEK_SET);
   input->pushLimit(zone.end());
   std::vector<MRWStruct> dataList;
@@ -466,6 +534,198 @@ bool MRWParser::readSeparator(MRWEntry const &entry)
   return true;
 }
 
+bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
+{
+  if (entry.length() < 3) {
+    MWAW_DEBUG_MSG(("MRWParser::readZoneHeader: data seems to short\n"));
+    return false;
+  }
+  MWAWInputStreamPtr input = getInput();
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->pushLimit(entry.end());
+  std::vector<MRWStruct> dataList;
+  decodeZone(dataList);
+  input->popLimit();
+
+  size_t numData = dataList.size();
+  if (numData < 47) {
+    MWAW_DEBUG_MSG(("MRWParser::readZoneHeader: find unexpected number of data\n"));
+    return false;
+  }
+  if (onlyTest)
+    return true;
+  size_t d = 0;
+  long val;
+  libmwaw::DebugStream f;
+  MRWParserInternal::Zone zone;
+  for (int j = 0; j < 47; j++) {
+    MRWStruct const &data = dataList[d++];
+    if (!data.isBasic()) {
+      f << "###f" << j << "=" << data << ",";
+      continue;
+    }
+    long sel[4]= {0,0,0,0};
+    int dim[4]= {0,0,0,0};
+    int color[3];
+    switch(j) {
+    case 0: // version?
+      f << "vers?=" << (data.value(0)>>16) << "[" << (data.value(0)&0xFFFF) << "],";
+      break;
+    case 1:
+      val = data.value(0);
+      if (val>>16) // 0 or 1000
+        f << "f1[high]=" << std::hex << (val>>16) << std::dec << ",";
+      if ((val&0xFFFF)!=1)
+        f << "f1[low]=" << (val& 0xFFFF) << ",";
+      break;
+    case 2: // find 8[01]0[0145]8120 or a0808120
+    case 3: // 80000[01] or 800000[01]
+      if (data.value(0))
+        f << "fl" << j-2 << "=" << std::hex << uint32_t(data.value(0)) << std::dec << ",";
+      break;
+    case 4: {
+      uint32_t v = uint32_t(data.value(0));
+      switch(v>>28) {
+      case 0: // main
+        zone.m_type = MRWParserInternal::Zone::Z_Main;
+        break;
+      case 0xc:
+        zone.m_type = MRWParserInternal::Zone::Z_Header;
+        break;
+      case 0xd:
+        zone.m_type = MRWParserInternal::Zone::Z_Footer;
+        break;
+      case 0xe:
+        zone.m_type = MRWParserInternal::Zone::Z_Footnote;
+        break;
+      default:
+        f << "#type=" << (v>>28) << ",";
+        break;
+      }
+      if (v&0xFFFFFFF) // a pos?
+        f << "type[low]=" << std::hex << (v&0xFFFFFFF) << std::dec << ",";
+      break;
+    }
+    case 9:
+      zone.m_pos[1] = data.value(0);
+      break;
+    case 10:
+      zone.m_height = data.value(0);
+      break;
+    case 13:
+      zone.m_pos[0] = data.value(0);
+      break;
+    case 14: // real value?
+      if (data.value(0))
+        f << "x[left?]=" << data.value(0) << ",";
+      break;
+    case 21:
+      if (data.value(0))
+        f << "h[act]=" << data.value(0) << ",";
+      break;
+    case 5: // 0|14|90
+    case 6: // 0|11-14
+    case 15: // -2: main?|-1
+    case 16: // -2: main?|-1
+    case 25: // 0|43
+    case 41: // 0|5|26
+      if (data.value(0))
+        f << "f" << j << "=" << data.value(0) << ",";
+      break;
+    case 7: // two units ?
+      if (data.value(0) != 0x480048)
+        f << "f" << j << "=" << std::hex << data.value(0) << std::dec << ",";
+      break;
+    case 8: // always -2?
+      if (data.value(0) != -2)
+        f << "#" << f << j << "=" << data.value(0) << ",";
+      break;
+    case 12: // always 16
+      if (data.value(0) != 16)
+        f << "#" << f << j << "=" << data.value(0) << ",";
+      break;
+    case 17:
+    case 18:
+    case 19:
+    case 20:
+      sel[j-17] = data.value(0);
+      while (j<20)
+        sel[++j-17] = dataList[d++].value(0);
+      if (sel[0]||sel[1])
+        f << "sel0=" << std::hex << sel[0] << "x" << sel[1] << std::dec << ",";
+      if (sel[2]||sel[3])
+        f << "sel1=" << std::hex << sel[2] << "x" << sel[3] << std::dec << ",";
+      break;
+    case 28:
+    case 29:
+    case 30:
+    case 31:
+      dim[j-28] = (int) data.value(0);
+      while (j<31)
+        dim[++j-28] = (int) dataList[d++].value(0);
+      zone.m_dim = Box2l(Vec2l(dim[1],dim[0]), Vec2l(dim[3],dim[2]));
+      break;
+    case 32:
+    case 33:
+    case 34: { // 35,36,37: front color?
+      color[0]=color[1]=color[2]=0xFFFF;
+      color[j-32]=(int) data.value(0);
+      while (j < 34)
+        color[++j-32] = (int) dataList[d++].value(0);
+      zone.m_backColor =
+        uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8));
+      break;
+    }
+    case 38:
+      if (data.value(0)!=1)
+        f << "#f" << j << "=" << data.value(0) << ",";
+      break;
+    case 39:
+      if (data.value(0) && data.value(0)!=0x4d4d4242) // MMBB: creator
+        f << "#creator=" << std::hex << uint32_t(data.value(0)) << std::dec << ",";
+      break;
+    case 40: // normally 0 or pretty small, but can also be very very big
+      if (data.value(0))
+        f << "f" << j << "=" << std::hex << data.value(0) << std::dec << ",";
+      break;
+    case 42:
+      if (data.value(0)!=43)
+        f << "#f" << j << "=" << data.value(0) << ",";
+      break;
+    case 44:
+      if (data.value(0))
+        f << "sel[pt]=" << std::hex << data.value(0) << std::dec << ",";
+      break;
+    case 45:
+      if (data.value(0)!=72)
+        f << "#f" << j << "=" << data.value(0) << ",";
+      break;
+    default:
+      if (data.value(0))
+        f << "#f" << j << "=" << data.value(0) << ",";
+      break;
+    }
+  }
+  while (d < numData) {
+    f << "#f" << d << "=" << dataList[d] << ",";
+    d++;
+  }
+  zone.m_extra = f.str();
+  if (actId < 0) {
+    MWAW_DEBUG_MSG(("MRWParser::readZoneHeader: called with negative id\n"));
+  } else {
+    if (actId >= int(m_state->m_zonesList.size()))
+      m_state->m_zonesList.resize(size_t(actId)+1);
+    m_state->m_zonesList[size_t(actId)] = zone;
+  }
+  f.str("");
+  f << entry.name() << ":" << zone;
+
+  ascii().addPos(entry.begin());
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
 bool MRWParser::readDimSeparator(MRWEntry const &entry, int )
 {
   if (entry.length() < entry.m_N) {
@@ -501,131 +761,6 @@ bool MRWParser::readDimSeparator(MRWEntry const &entry, int )
         dim[j] = (int) data.value(0);
     }
     f << "dim?=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
-    ascii().addNote(f.str().c_str());
-  }
-  input->seek(entry.end(), WPX_SEEK_SET);
-
-  return true;
-}
-
-bool MRWParser::readZone1(MRWEntry const &entry, int)
-{
-  if (entry.length() < entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWParser::readZone1: data seems to short\n"));
-    return false;
-  }
-  MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
-  input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
-  decodeZone(dataList, 1+22*entry.m_N);
-  input->popLimit();
-
-  if (int(dataList.size()) != 22*entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWParser::readZone1: find unexpected number of data\n"));
-    return false;
-  }
-
-  libmwaw::DebugStream f;
-  size_t d = 0;
-  for (int i = 0; i < entry.m_N; i++) {
-    f.str("");
-    f << entry.name() << "-" << i << ":";
-    ascii().addPos(dataList[d].m_filePos);
-
-    long cPos[2];
-    for (int j = 0; j < 2; j++) {
-      MRWStruct const &data = dataList[d++];
-      if (!data.isBasic()) {
-        MWAW_DEBUG_MSG(("MRWParser::readZone1: find unexpected pos data type\n"));
-        f << "###pos" << j << "=" << data << ",";
-        cPos[j]=0;
-      } else
-        cPos[j]=data.value(0);
-    }
-    f << "cPos=" << std::hex << cPos[0] << "<->" << cPos[1] << ",";
-    MRWStruct dt = dataList[d++];
-    if (!dt.isBasic()) {
-      MWAW_DEBUG_MSG(("MRWParser::readZone1: find unexpected fl0 type\n"));
-      f << "###fl0=" << dt << ",";
-    } else
-      f << "fl0=" << std::hex << dt.value(0) << std::dec << ",";
-    int posi[4];
-    for (int j = 0; j < 4; j++) { // first,length, first,length
-      MRWStruct const &data = dataList[d++];
-      if (!data.isBasic()) {
-        MWAW_DEBUG_MSG(("MRWParser::readZone1: find unexpected posi data type\n"));
-        f << "###pos" << j << "=" << data << ",";
-        posi[j]=0;
-      } else
-        posi[j]=int(data.value(0));
-    }
-    if (posi[0] || posi[1])
-      f << "pos0=" << posi[0] << ":" << posi[1] << ",";
-    if (posi[2] || posi[3])
-      f << "pos1=" << posi[2] << ":" << posi[3] << ",";
-
-    dt = dataList[d++];
-    if (!dt.isBasic()) {
-      MWAW_DEBUG_MSG(("MRWParser::readZone1: find unexpected f0 type\n"));
-      f << "###f0=" << dt << ",";
-    } else if (dt.value(0)) // alway 0
-      f << "f0=" << dt.value(0) << ",";
-    long pos[4];
-    for (int j = 0; j < 4; j++) { // ymin?, xmin, ymax?, xmax
-      MRWStruct const &data = dataList[d++];
-      if (!data.isBasic()) {
-        MWAW_DEBUG_MSG(("MRWParser::readZone1: find unexpected posi data type\n"));
-        f << "###pos" << j << "=" << data << ",";
-        pos[j] = 0;
-      } else
-        pos[j]=data.value(0);
-    }
-    if (pos[0]||pos[1]||pos[2]||pos[3])
-      f << "pos2=" << pos[1] << "x" << pos[0] << "<->" << pos[3] << "x" << pos[2] << ",";
-    dt = dataList[d++];
-    if (!dt.isBasic()) {
-      MWAW_DEBUG_MSG(("MRWParser::readZone1: find unexpected numChar type\n"));
-      f << "###nChar=" << dt << ",";
-    } else if (dt.value(0)) // seems ~cPos[1]-cPos[0]
-      f << "nChar?=" << std::hex << dt.value(0) << std::dec << ",";
-
-    dt = dataList[d++];
-    if (!dt.isBasic()) {
-      MWAW_DEBUG_MSG(("MRWParser::readZone1: find unexpected f0 type\n"));
-      f << "###f0=" << dt << ",";
-    } else if (dt.value(0)) // alway 0
-      f << "f0=" << dt.value(0) << ",";
-    for (int j = 14; j < 17; j++) { // f1 a small number(cst), f2=some flag, f3=id?
-      MRWStruct const &data = dataList[d++];
-      if (!data.isBasic()) {
-        MWAW_DEBUG_MSG(("MRWParser::readZone1: find unexpected dim data type\n"));
-        f << "###f" << j-13 << "=" << data << ",";
-      } else if (data.value(0)) {
-        if (j!=15)
-          f << "f" << j-13 << "=" << data.value(0) << ",";
-        else
-          f << "f" << j-13 << "=" << std::hex << data.value(0) << std::dec << ",";
-      }
-    }
-    for (int j = 0; j < 4; j++) { // ymin?, xmin, ymax?, xmax \in pos2
-      MRWStruct const &data = dataList[d++];
-      if (!data.isBasic()) {
-        MWAW_DEBUG_MSG(("MRWParser::readZone1: find unexpected posi data type\n"));
-        f << "###pos3" << j << "=" << data << ",";
-        pos[j] = 0;
-      } else
-        pos[j]=data.value(0);
-    }
-    if (pos[0]||pos[1]||pos[2]||pos[3])
-      f << "pos3=" << pos[1] << "x" << pos[0] << "<->" << pos[3] << "x" << pos[2] << ",";
-
-    dt = dataList[d++];
-    if (!dt.isBasic()) {
-      MWAW_DEBUG_MSG(("MRWParser::readZone1: find unexpected f4 type\n"));
-      f << "###f4=" << dt << ",";
-    } else if (dt.value(0)) // alway 0
-      f << "f4=" << dt.value(0) << ",";
     ascii().addNote(f.str().c_str());
   }
   input->seek(entry.end(), WPX_SEEK_SET);
@@ -708,6 +843,98 @@ bool MRWParser::readZonec(MRWEntry const &entry, int)
     }
     ascii().addNote(f.str().c_str());
   }
+  input->seek(entry.end(), WPX_SEEK_SET);
+
+  return true;
+}
+
+bool MRWParser::readZone13(MRWEntry const &entry, int)
+{
+  if (entry.length() < 3) {
+    MWAW_DEBUG_MSG(("MRWParser::readZone13: data seems to short\n"));
+    return false;
+  }
+  MWAWInputStreamPtr input = getInput();
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->pushLimit(entry.end());
+  std::vector<MRWStruct> dataList;
+  decodeZone(dataList, 1+23);
+  input->popLimit();
+
+  if (int(dataList.size()) != 23) {
+    MWAW_DEBUG_MSG(("MRWParser::readZone13: find unexpected number of data\n"));
+    return false;
+  }
+
+  libmwaw::DebugStream f;
+  size_t d = 0;
+  f << entry.name() << ":";
+  ascii().addPos(dataList[d].m_filePos);
+
+  int val;
+  for (int j = 0; j < 23; j++) {
+    MRWStruct const &data = dataList[d++];
+    if ((j!=14 && !data.isBasic()) || (j==14 && data.m_type)) {
+      MWAW_DEBUG_MSG(("MRWParser::readZone13: find unexpected struct data type\n"));
+      f << "#f" << j << "=" << data << ",";
+      continue;
+    }
+    if (j < 14) {
+      int const expectedValues[]= {13,10,9,31,8,12,14,28,29,30,31,0x7f,27,0};
+      if ((int) data.value(0) != expectedValues[j])
+        f << "f" << j << "=" << data.value(0) << ",";
+      continue;
+    }
+    if (j == 14) {
+      if (!data.m_pos.valid())
+        f << "#f" << j << "=" << data << ",";
+      else {
+        /* find v_{2i}=0 and v_{2i+1}=
+           {301,302,422,450,454,422,421,418,302,295,290,468,469,466,467,457,448}
+        */
+        f << "bl=[";
+        input->seek(data.m_pos.begin(), WPX_SEEK_SET);
+        int N = int(data.m_pos.length()/2);
+        for (int k = 0; k < N; k++) {
+          val = (int) input->readLong(2);
+          if (val) f << val << ",";
+          else f << "_,";
+        }
+        f << "],";
+      }
+      continue;
+    }
+    int color[3];
+    uint32_t col;
+    switch(j) {
+    case 15:
+    case 16:
+    case 17:
+      color[0]=color[1]=color[2]=0xFFFF;
+      color[j-15]=(int) data.value(0);
+      while (j < 17)
+        color[++j-15] = (int) dataList[d++].value(0);
+      col = uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8));
+      if (col != 0xFFFFFF)
+        f << "col0=" << std::hex << col << std::dec << ",";
+      break;
+    case 19:
+    case 20:
+    case 21:
+      color[0]=color[1]=color[2]=0xFFFF;
+      color[j-19]=(int) data.value(0);
+      while (j < 21)
+        color[++j-19] = (int) dataList[d++].value(0);
+      col = uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8));
+      if (col != 0xFFFFFF)
+        f << "col1=" << std::hex << col << std::dec << ",";
+      break;
+    default:
+      if (data.value(0))
+        f << "#f" << j << "=" << data.value(0) << ",";
+    }
+  }
+  ascii().addNote(f.str().c_str());
   input->seek(entry.end(), WPX_SEEK_SET);
 
   return true;
@@ -889,8 +1116,9 @@ bool MRWParser::decodeZone(std::vector<MRWStruct> &dataList, long numData)
 
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  while (dataList.size() < size_t(numData)) {
-    if (input->atEOS())
+  while (!input->atEOS()) {
+    size_t numVal = dataList.size();
+    if (numVal >= size_t(numData))
       break;
     MRWStruct data;
     data.m_filePos = pos;
@@ -904,13 +1132,22 @@ bool MRWParser::decodeZone(std::vector<MRWStruct> &dataList, long numData)
       if (input->atEOS()) break;
       int num = int(input->readULong(1));
       if (!num) break;
+      if (numVal==0) {
+        MWAW_DEBUG_MSG(("MRWParser::decodeZone: no previous data to copy\n"));
+      } else // checkme
+        data = dataList[numVal-1];
+
       for (int j = 0; j < num; j++)
         dataList.push_back(data);
       pos = input->tell();
       continue;
     }
     if ((type>>4)==0x8) {
-      dataList.push_back(data);
+      if (numVal==0) {
+        MWAW_DEBUG_MSG(("MRWParser::decodeZone: no previous data to copy(II)\n"));
+        dataList.push_back(data);
+      } else
+        dataList.push_back(dataList[numVal-1]);
       pos = input->tell();
       continue;
     }
@@ -951,9 +1188,9 @@ bool MRWParser::checkHeader(MWAWHeader *header, bool strict)
   input->seek(0,WPX_SEEK_SET);
 
   int actZone = -1;
-  if (!readZone(actZone))
+  if (!readZone(actZone, true))
     return false;
-  if (strict && !readZone(actZone))
+  if (strict && !readZone(actZone, true))
     return false;
 
   input->seek(0, WPX_SEEK_SET);
@@ -973,6 +1210,10 @@ std::string MRWEntry::name() const
     return "Separator";
   case -2:
     return "EndZone";
+  case 0:
+    return "ZoneHeader";
+  case 1:
+    return "TextStruct";
   case 2:
     return "TEXT";
   case 4:

@@ -72,7 +72,7 @@ MWAWContentParsingState::MWAWContentParsingState() :
 
   m_paragraphJustification(libmwaw::JustificationLeft),
   m_paragraphLineSpacing(1.0), m_paragraphLineSpacingUnit(WPX_PERCENT),
-  m_paragraphLineSpacingType(libmwaw::Fixed),
+  m_paragraphLineSpacingType(libmwaw::Fixed), m_paragraphBackgroundColor(0xFFFFFF),
   m_paragraphBorders(),
 
   m_list(), m_currentListLevel(0),
@@ -451,6 +451,11 @@ void MWAWContentListener::setTabs(const std::vector<MWAWTabStop> &tabStops)
 {
   m_ps->m_isTabPositionRelative = true;
   m_ps->m_tabStops = tabStops;
+}
+
+void MWAWContentListener::setParagraphBackgroundColor(uint32_t color)
+{
+  m_ps->m_paragraphBackgroundColor = color;
 }
 
 void MWAWContentListener::resetParagraphBorders()
@@ -938,6 +943,12 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
       propList.insert("fo:text-indent", m_ps->m_listReferencePosition - m_ps->m_paragraphMarginLeft);
     }
     propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
+    if (m_ps->m_paragraphBackgroundColor !=  0xFFFFFF) {
+      std::stringstream stream;
+      stream << "#" << std::hex << std::setfill('0') << std::setw(6)
+             << (m_ps->m_paragraphBackgroundColor&0xFFFFFF);
+      propList.insert("fo:background-color", stream.str().c_str());
+    }
     if (m_ps->hasParagraphBorders()) {
       bool setAll = !m_ps->hasParagraphDifferentBorders();
       for (size_t w = 0; w < m_ps->m_paragraphBorders.size(); w++) {
