@@ -7,6 +7,7 @@
 - FW* : parser of FullWrite documents
 - HMW* : parser of HanMac Word documents
 - MDW* : parser of MindWrite documents
+- MRW* : parser of Mariner Write documents
 - MSK* : parser of Microsoft Works documents
 - MSW* : parser of Microsoft Word documents
 - MW* : parser of MacWrite documents

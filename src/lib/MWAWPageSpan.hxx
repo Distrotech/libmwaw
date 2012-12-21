@@ -110,29 +110,40 @@ public:
     return m_headerFooterList;
   }
 
+  //! add a header/footer on some page
   void setHeaderFooter(const HeaderFooterType type, const HeaderFooterOccurence occurence,
                        MWAWSubDocumentPtr &subDocument);
+  //! set the total page length
   void setFormLength(const double formLength) {
     m_formLength = formLength;
   }
+  //! set the total page width
   void setFormWidth(const double formWidth) {
     m_formWidth = formWidth;
   }
+  //! set the form orientation
   void setFormOrientation(const FormOrientation formOrientation) {
     m_formOrientation = formOrientation;
   }
+  //! set the page left margin
   void setMarginLeft(const double marginLeft) {
     m_marginLeft = marginLeft;
   }
+  //! set the page right margin
   void setMarginRight(const double marginRight) {
     m_marginRight = marginRight;
   }
+  //! set the page top margin
   void setMarginTop(const double marginTop) {
     m_marginTop = marginTop;
   }
+  //! set the page bottom margin
   void setMarginBottom(const double marginBottom) {
     m_marginBottom = marginBottom;
   }
+  //! check if the page margins are consistent with the page dimension, if not update them
+  void checkMargins();
+
   void setPageNumberPosition(const PageNumberPosition pageNumberPosition) {
     m_pageNumberPosition = pageNumberPosition;
   }

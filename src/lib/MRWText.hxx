@@ -49,6 +49,7 @@ typedef class MWAWContentListener MRWContentListener;
 typedef shared_ptr<MRWContentListener> MRWContentListenerPtr;
 
 class MWAWEntry;
+class MWAWFont;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
@@ -56,8 +57,10 @@ class MWAWSubDocument;
 
 namespace MRWTextInternal
 {
-class SubDocument;
+struct Paragraph;
 struct State;
+struct Zone;
+class SubDocument;
 }
 
 struct MRWEntry;
@@ -89,6 +92,11 @@ protected:
   void setListener(MRWContentListenerPtr listen) {
     m_listener = listen;
   }
+  /* sends a character property to the listener
+   * \param font the font's properties */
+  void setProperty(MWAWFont const &font);
+  /** sends a paragraph property to the listener */
+  void setProperty(MRWTextInternal::Paragraph const &ruler);
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
@@ -102,8 +110,9 @@ protected:
   /** try to read the text struct */
   bool readTextStruct(MRWEntry const &entry, int zoneId);
   /** try to read a text zone */
-  bool readTextZone(MRWEntry const &entry, int zoneId);
-
+  bool readZone(MRWEntry const &entry, int zoneId);
+  /** try to compute the number of pages of a zone, returns 0 if not data */
+  int computeNumPages(MRWTextInternal::Zone const &zone) const;
   /** try to read a font zone */
   bool readFonts(MRWEntry const &entry, int zoneId);
 

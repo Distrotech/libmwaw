@@ -1,4 +1,8 @@
 CHANGES:
+12/21/2012
+- add a first parser for Mariner Write Lite 1.6, other Mariner Write 1.* may
+  be recognized ( ignoring some features : table, multi-columns, multi headers,
+  ...) ; but I do not have enough file to test.
 
 12/07/2012
 - add a first parser for HanMac Word-K document ( 2.0.5 and 2.0.6 ),

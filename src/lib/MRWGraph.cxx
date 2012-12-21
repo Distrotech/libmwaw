@@ -59,41 +59,180 @@ namespace MRWGraphInternal
 ////////////////////////////////////////
 //! Internal: the struct use to store a token entry
 struct Token {
+  //! constructor
+  Token() : m_type(-1), m_highType(-1), m_dim(0,0), m_refType(0), m_refId(0), m_fieldType(0), m_value(""),
+    m_pictData(), m_pictId(0), m_valPictId(0), m_rulerType(0), m_rulerPattern(0), m_parsed(true), m_extra("") {
+    for (int i = 0; i < 2; i++)
+      m_id[i] = 0;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Token const &tkn);
+  //! the token id and the graph? id
+  long m_id[2];
+  //! the field type
+  int m_type;
+  //! the high byte of the field type
+  int m_highType;
+  //! the dimension
+  Vec2i m_dim;
+  // for footnote
+  //! the zone to used type
+  int m_refType;
+  //! the zone to used id
+  uint32_t m_refId;
+  // for field
+  //! the field type
+  int m_fieldType;
+  //! the token value
+  std::string m_value;
+  // for picture
+  //! the picture data
+  MWAWEntry m_pictData;
+  //! a picture id
+  long m_pictId;
+  //! a optional picture id
+  long m_valPictId;
+  // for ruler
+  //! the ruler type
+  int m_rulerType;
+  //! the ruler pattern
+  int m_rulerPattern;
+  //! true if the token has been send to a listener
+  mutable bool m_parsed;
+  //! some extra data
+  std::string m_extra;
+};
+
+std::ostream &operator<<(std::ostream &o, Token const &tkn)
+{
+  if (tkn.m_id[0]) o << "id=" << std::hex << tkn.m_id[0] << std::dec << ",";
+  if (tkn.m_id[1]) o << "id2=" << std::hex << tkn.m_id[1] << std::dec << ",";
+  switch(tkn.m_type) {
+  case -1:
+    break;
+  case 0x14:
+    o << "graph";
+    if (tkn.m_highType) o << "[" << tkn.m_highType << "]";
+    o << ",";
+    break;
+  case 0x17:
+    o << "date";
+    if (tkn.m_highType!=1) o << "[" << tkn.m_highType << "]";
+    o << ",";
+    break;
+  case 0x18:
+    o << "time";
+    if (tkn.m_highType!=1) o << "[" << tkn.m_highType << "]";
+    o << ",";
+    break;
+  case 0x19:
+    o << "pagenumber";
+    if (tkn.m_highType!=1) o << "[" << tkn.m_highType << "]";
+    o << ",";
+    break;
+  case 0x1e:
+    o << "footnote[mark]";
+    if (tkn.m_highType!=9) o << "[" << tkn.m_highType << "]";
+    o << ",";
+    break;
+  case 0x1f:
+    o << "footnote[content]";
+    if (tkn.m_highType!=1) o << "[" << tkn.m_highType << "]";
+    o << ",";
+    break;
+  case 0x23:
+    o << "rule";
+    if (tkn.m_highType!=1) o << "[" << tkn.m_highType << "]";
+    o << ",";
+    break;
+  default:
+    o << "#type=" << tkn.m_type << "[" << tkn.m_highType << "],";
+  }
+  if (tkn.m_fieldType)
+    o << "field[type]=" << tkn.m_fieldType << ",";
+  if (tkn.m_dim[0] || tkn.m_dim[1])
+    o << "dim=" << tkn.m_dim << ",";
+  if (tkn.m_value.length())
+    o << "val=" << tkn.m_value << ",";
+  if (tkn.m_pictId)
+    o << "pictId=" << std::hex << tkn.m_pictId << std::dec << ",";
+  if (tkn.m_valPictId && tkn.m_valPictId != tkn.m_pictId)
+    o << "pictId[inValue]=" << std::hex << tkn.m_valPictId << std::dec << ",";
+  if (tkn.m_refId) {
+    o << "zone[ref]=";
+    if (tkn.m_refType==0xe)
+      o << "footnote[" << std::hex << (tkn.m_refId&0xFFFFFF) << std::dec << "],";
+    else
+      o << "#type" << tkn.m_refType << "[" << std::hex << (tkn.m_refId&0xFFFFFF) << std::dec << "],";
+  }
+  switch(tkn.m_rulerType) {
+  case 0:
+    break; // no
+  case 1:
+    o << "ruler[hairline],";
+    break;
+  case 2:
+    break; // single
+  case 3:
+    o << "ruler[w=2],";
+    break;
+  case 4:
+    o << "ruler[w=3],";
+    break;
+  case 5:
+    o << "ruler[w=4],";
+    break;
+  case 6:
+    o << "ruler[double],";
+    break;
+  case 7:
+    o << "ruler[double,w=2],";
+    break;
+  default:
+    o << "#ruler[type=" << tkn.m_rulerType << "],";
+    break;
+  }
+  if (tkn.m_rulerPattern)
+    o << "ruler[pattern]=" << tkn.m_rulerPattern << ",";
+  o << tkn.m_extra;
+  return o;
+}
+
+////////////////////////////////////////
+//! Internal: the struct use to store a ps zone of a MRWGraph
+struct PSZone {
+  //! constructor
+  PSZone() : m_pos(), m_type(0), m_id(0), m_parsed(false), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, PSZone const &file) {
+    if (file.m_type) o << "type=" << file.m_type << ",";
+    if (file.m_id > 0) o << "id=" << std::dec << file.m_type << std::hex << ",";
+    o << file.m_extra;
+    return o;
+  }
+  //! the file position
+  MWAWEntry m_pos;
+  //! a local type?
+  int m_type;
+  //! an id
+  long m_id;
+  //! a flag to know if the data has been sent
+  mutable bool m_parsed;
+  //! some extra data
+  std::string m_extra;
 };
 
 ////////////////////////////////////////
-//! Internal: the struct use to store a zone
+//! Internal: the struct use to store a zone of a MRWGraph
 struct Zone {
-  struct PSFile;
   //! constructor
-  Zone() : m_psFileMap() {
+  Zone() : m_tokenMap(), m_psZoneMap() {
   }
+  //! the map id->token
+  std::map<long, Token> m_tokenMap;
   //! the map id->entry to a psfile
-  std::map<long, PSFile> m_psFileMap;
-
-  //! small structure used to store a PSFileData
-  struct PSFile {
-    //! constructor
-    PSFile() : m_pos(), m_type(0), m_id(0), m_parsed(false), m_extra("") {
-    }
-    //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, PSFile const &file) {
-      if (file.m_type) o << "type=" << file.m_type << ",";
-      if (file.m_id > 0) o << "id=" << std::dec << file.m_type << std::hex << ",";
-      o << file.m_extra;
-      return o;
-    }
-    //! the file position
-    MWAWEntry m_pos;
-    //! a local type?
-    int m_type;
-    //! an id
-    long m_id;
-    //! a flag to know if the data has been sent
-    bool m_parsed;
-    //! some extra data
-    std::string m_extra;
-  };
+  std::map<long, PSZone> m_psZoneMap;
 };
 
 ////////////////////////////////////////
@@ -124,8 +263,8 @@ class SubDocument : public MWAWSubDocument
 {
 public:
   //! constructor
-  SubDocument(MRWGraph &pars, MWAWInputStreamPtr input, MWAWPosition pos, long id, int subId=0) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(id), m_subId(subId), m_pos(pos) {}
+  SubDocument(MRWGraph &pars, MWAWInputStreamPtr input, int id) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(id) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -144,11 +283,7 @@ protected:
   /** the graph parser */
   MRWGraph *m_graphParser;
   //! the zone id
-  long m_id;
-  //! the zone subId ( for table cell )
-  long m_subId;
-  //! the position in a frame
-  MWAWPosition m_pos;
+  int m_id;
 
 private:
   SubDocument(SubDocument const &orig);
@@ -170,6 +305,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_graphParser);
 
   long pos = m_input->tell();
+  m_graphParser->sendText(m_id);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
@@ -180,8 +316,6 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
   if (!sDoc) return true;
   if (m_graphParser != sDoc->m_graphParser) return true;
   if (m_id != sDoc->m_id) return true;
-  if (m_subId != sDoc->m_subId) return true;
-  if (m_pos != sDoc->m_pos) return true;
   return false;
 }
 }
@@ -213,13 +347,204 @@ int MRWGraph::numPages() const
   return nPages;
 }
 
+void MRWGraph::sendText(int zoneId)
+{
+  if (zoneId)
+    m_mainParser->sendText(zoneId);
+}
+
+void MRWGraph::sendToken(int zoneId, long tokenId)
+{
+  if (!m_listener) {
+    MWAW_DEBUG_MSG(("MRWGraph::sendToken: can not the listener\n"));
+    return;
+  }
+  if (m_state->m_zoneMap.find(zoneId)==m_state->m_zoneMap.end()) {
+    MWAW_DEBUG_MSG(("MRWGraph::sendToken: can not find zone %d\n", zoneId));
+    return;
+  }
+  MRWGraphInternal::Zone &zone = m_state->getZone(zoneId);
+  if (zone.m_tokenMap.find(tokenId)== zone.m_tokenMap.end()) {
+    MWAW_DEBUG_MSG(("MRWGraph::sendToken: can not find token id %ld\n", tokenId));
+    return;
+  }
+  MRWGraphInternal::Token const &token = zone.m_tokenMap.find(tokenId)->second;
+  token.m_parsed = true;
+  switch(token.m_type) {
+  case 0x14:
+    sendPicture(token);
+    return;
+  case 0x17:
+    if (token.m_value.length())
+      m_listener->insertUnicodeString(token.m_value.c_str());
+    else
+      m_listener->insertField(MWAWContentListener::Date);
+    return;
+  case 0x18:
+    if (token.m_value.length())
+      m_listener->insertUnicodeString(token.m_value.c_str());
+    else
+      m_listener->insertField(MWAWContentListener::Time);
+    return;
+  case 0x19: // fixme this can also be page count
+    switch(token.m_fieldType) {
+    case 0:
+    case 4: // big roman
+    case 6: // small roman
+      m_listener->insertField(MWAWContentListener::PageNumber);
+      break;
+    case 1:
+    case 5: // big roman
+    case 7: // small roman
+      m_listener->insertField(MWAWContentListener::PageCount);
+      break;
+    case 2:
+      m_listener->insertField(MWAWContentListener::PageNumber);
+      m_listener->insertUnicodeString(" of ");
+      m_listener->insertField(MWAWContentListener::PageCount);
+      break;
+    case 3:
+      m_listener->insertField(MWAWContentListener::PageNumber);
+      m_listener->insertCharacter('/');
+      m_listener->insertField(MWAWContentListener::PageCount);
+      break;
+    default:
+      MWAW_DEBUG_MSG(("MRWGraph::sendToken: find unknown pagenumber style\n"));
+      m_listener->insertField(MWAWContentListener::PageNumber);
+      break;
+    }
+    return;
+  case 0x1e: {
+    int fZoneId = m_mainParser->getZoneId(token.m_refId);
+    MWAWSubDocumentPtr subdoc(new MRWGraphInternal::SubDocument(*this, m_input, fZoneId));
+    m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+    return;
+  }
+  case 0x1f: // footnote content, ok to ignore
+    return;
+  case 0x23:
+    sendRuler(token);
+    return;
+  default:
+    break;
+  }
+
+  MWAW_DEBUG_MSG(("MRWGraph::sendToken: sending type %x is not unplemented\n", token.m_type));
+}
+
+void MRWGraph::sendRuler(MRWGraphInternal::Token const &tkn)
+{
+  Vec2i const &sz=tkn.m_dim;
+  if (sz[0] < 0 || sz[1] < 0 || (sz[0]==0 && sz[1]==0)) {
+    MWAW_DEBUG_MSG(("MRWGraph::sendRuler: the ruler size seems bad\n"));
+    return;
+  }
+  MWAWPictLine line(Vec2i(0,0), sz);
+  float w=1.0f;
+  switch(tkn.m_rulerType) {
+  case 0: // no width
+    return;
+  case 1:
+    w = 0.5f;
+    break;
+  case 2:
+  case 6: // fixme double
+    break;
+  case 3:
+  case 7: // fixme double
+    w = 2.0f;
+    break;
+  case 4:
+    w = 3.0f;
+    break;
+  case 5:
+    w = 4.0f;
+    break;
+  default:
+    break;
+  }
+  // fixme: we must use the other parameters ( pattern, ...)
+  line.setLineWidth(w);
+
+  WPXBinaryData data;
+  std::string type;
+  if (!line.getBinary(data,type)) return;
+
+  int decal=int(w/2.f)+1;
+  MWAWPosition pos(Vec2i(-decal,-decal), sz+Vec2i(decal,decal), WPX_POINT);
+  pos.setRelativePosition(MWAWPosition::Char);
+  m_listener->insertPicture(pos,data, type);
+}
+
+void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
+{
+  if (!tkn.m_pictData.valid()) {
+    MWAW_DEBUG_MSG(("MRWGraph::sendPicture: can not find the graph\n"));
+    return;
+  }
+
+  long pos = m_input->tell();
+  m_input->seek(tkn.m_pictData.begin(), WPX_SEEK_SET);
+  WPXBinaryData data;
+  m_input->readDataBlock(tkn.m_pictData.length(), data);
+
+#ifdef DEBUG_WITH_FILES
+  static int volatile pictName = 0;
+  std::stringstream fName;
+  fName << "Pict" << ++pictName << ".pct";
+  libmwaw::Debug::dumpFile(data, fName.str().c_str());
+
+  ascii().skipZone(tkn.m_pictData.begin(),tkn.m_pictData.end()-1);
+#endif
+  Vec2i dim(tkn.m_dim);
+  if (dim[0] <= 0 || dim[1] <= 0) {
+    MWAW_DEBUG_MSG(("MRWGraph::sendPicture: can not find the picture dim\n"));
+    dim = Vec2i(100,100);
+  }
+  MWAWPosition posi(Vec2i(0,0),dim,WPX_POINT);
+  posi.setRelativePosition(MWAWPosition::Char);
+  if (m_listener)
+    m_listener->insertPicture(posi, data, "image/pict");
+  m_input->seek(pos, WPX_SEEK_SET);
+}
+
+void MRWGraph::sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const &pos)
+{
+  ps.m_parsed = true;
+
+  if (!ps.m_pos.valid()) {
+    MWAW_DEBUG_MSG(("MRWGraph::sendPicture: can not find the graph\n"));
+    return;
+  }
+
+  long actPos = m_input->tell();
+  m_input->seek(ps.m_pos.begin(), WPX_SEEK_SET);
+  WPXBinaryData data;
+  m_input->readDataBlock(ps.m_pos.length(), data);
+
+#ifdef DEBUG_WITH_FILES
+  static int volatile pictName = 0;
+  std::stringstream fName;
+  fName << "PS" << ++pictName << ".ps";
+  libmwaw::Debug::dumpFile(data, fName.str().c_str());
+
+  ascii().skipZone(ps.m_pos.begin(),ps.m_pos.end()-1);
+#endif
+  MWAWPosition pictPos(pos);
+  if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
+    pictPos.setSize(Vec2f(100,100));
+  if (m_listener)
+    m_listener->insertPicture(pictPos, data, "image/ps");
+  m_input->seek(actPos, WPX_SEEK_SET);
+}
+
 ////////////////////////////////////////////////////////////
 //
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
 
-bool MRWGraph::readToken(MRWEntry const &entry, int)
+bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
 {
   if (entry.length() < 3) {
     MWAW_DEBUG_MSG(("MRWGraph::readToken: data seems to short\n"));
@@ -238,97 +563,88 @@ bool MRWGraph::readToken(MRWEntry const &entry, int)
   }
 
   libmwaw::DebugStream f;
-  f << entry.name() << ":";
   size_t d = 0;
   long val;
-  MRWStruct dt = dataList[d++];
-  if (dt.isBasic())
-    f << "id=" << std::hex << dt.value(0) << std::dec << ",";
 
-  dt = dataList[d++];
-  if (dt.isBasic() && dt.value(0) != 5) // always 5
-    f << "f0=" << std::hex << dt.value(0) << std::dec << ",";
-
-  dt = dataList[d++];
-  int type = -1, subType = 0;
-  if (dt.isBasic()) {
-    val = dt.value(0);
-    type = int(val >> 16);
-    subType = int(val&0xFFFF);
-  }
-  switch(type) {
-  case 0:
-    f << "graph";
-    if (subType!=0x14) f << "[" << subType << "]";
-    f << ",";
-    break;
-  case 1:
-    if (subType==0x17) f << "date,";
-    else if (subType==0x18) f << "time,";
-    else if (subType==0x19) f << "page,";
-    else if (subType==0x1f) f << "ftnote[mark],";
-    else if (subType==0x23) f << "rule[called],";
-    else f << "#fieldType=" << subType << ",";
-    break;
-  case 9:
-    f << "footnote[called]";
-    if (subType!=0x1e) f << "[" << subType << "]";
-    f << ",";
-    break;
-  default:
-    f << "#type=" << type;
-    if (subType) f << "[" << subType << "]";
-    f << ",";
-    break;
-  }
-  int dim[2];
-  for (int i = 0; i < 2; i++) {
-    MRWStruct const &data = dataList[d++];
-    if (data.isBasic())
-      dim[i] = int(data.value(0));
-  }
-  f << "dim=" << dim[0] << "x" << dim[1] << ",";
-  for (int i = 0; i < 4; i++) { // always 0, except for field, find f4=0|1|6
-    MRWStruct const &data = dataList[d++];
-    if (data.isBasic() && data.value(0))
-      f << "f" << i+1 << "=" << data.value(0) << ",";
-  }
-
-  dt = dataList[d++];
-  if (dt.isBasic() && dt.value(0))
-    f << "id2=" << std::hex << dt.value(0) << std::dec << ",";
-
-  dt = dataList[d++];
-  if (dt.isBasic() && int(dt.value(0)) != (type==0 ? 1 : 0))
-    f << "#isGraph=" << dt.value(0) << ",";
-  for (int i = 0; i < 3; i++) { // always 0
-    MRWStruct const &data = dataList[d++];
-    if (data.isBasic() && data.value(0))
-      f << "f" << i+5 << "=" << data << ",";
-  }
-
-  for (size_t dd = 0; dd < 14; dd++) {
-    MRWStruct const &data = dataList[dd];
-    if (data.isBasic())
+  MRWGraphInternal::Zone &zone = m_state->getZone(zoneId);
+  MRWGraphInternal::Token tkn;
+  for (int j = 0; j < 14; j++) {
+    MRWStruct const &dt = dataList[d++];
+    if (!dt.isBasic()) {
+      f << "#f" << j << "=" << dt << ",";
+      static bool first=true;
+      if (first) {
+        MWAW_DEBUG_MSG(("MRWGraph::readToken: find some struct block\n"));
+        first = false;
+      }
       continue;
-    f << "#f" << dd << "=" << data << ",";
-    static bool first=true;
-    if (first) {
-      MWAW_DEBUG_MSG(("MRWGraph::readToken: find some struct block\n"));
-      first = false;
+    }
+    int dim[2], border[4];
+    switch(j) {
+    case 0:
+      tkn.m_id[0] = dt.value(0);
+      break;
+    case 1: // always 5
+      if (dt.value(0) != 5)
+        f << "f0=" << dt.value(0) << ",";
+      break;
+    case 2:
+      val = dt.value(0);
+      tkn.m_highType = int(val >> 16);
+      tkn.m_type = int(val&0xFFFF);
+      break;
+    case 3:
+    case 4:
+      dim[0]= dim[1]= 0;
+      dim[j-3]=(int) dt.value(0);
+      if (j!=4)
+        dim[++j-3]=(int) dataList[d++].value(0);
+      tkn.m_dim = Vec2i(dim[0],dim[1]);
+      break;
+    case 6:
+      if (dt.value(0)) {
+        uint32_t v = uint32_t(dt.value(0));
+        tkn.m_refType = int(v>>28);
+        tkn.m_refId = v;
+      }
+      break;
+    case 8:
+      tkn.m_fieldType = (int) dt.value(0);
+      break;
+    case 9:
+      tkn.m_id[1] = dt.value(0);
+      break;
+    case 10:
+    case 11:
+    case 12:
+    case 13: // 0 or 1 for graph : link to border ?
+      border[0]=border[1]=border[2]=border[3]=0;
+      border[j-10]=(int) dt.value(0);
+      while(j!=13)
+        border[++j-10]=(int) dataList[d++].value(0);
+      if (border[0]||border[1]||border[2]||border[3])
+        f << "bord?=[" << border[0] << "," <<border[1]
+          << "," << border[2] << "," << border[3] << "],";
+      break;
+    default:
+      if (dt.value(0))
+        f << "#f" << j << "=" << dt.value(0) << ",";
+      break;
     }
   }
-
+  tkn.m_extra = f.str();
+  f.str("");
+  f << entry.name() << ":" << tkn;
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
 
   ascii().addPos(dataList[d].m_filePos);
   f.str("");
-  f << entry.name() << "(II):";
+  f << entry.name() << "(II):type=" << std::hex << tkn.m_type << std::dec << ",";
   for (int i = 0; i < 2; i++) {
     MRWStruct const &data = dataList[d++];
     std::string str;
-    if (i==0 && readTokenBlock0(data, str)) {
+    if (i==0 && readTokenBlock0(data, tkn, str)) {
       if (str.length())
         f << "block0=[" << str << "],";
       continue;
@@ -347,7 +663,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int)
     }
   }
 
-  if (type || numData < 32) {
+  if (tkn.m_type != 0x14 || numData < 32) {
     for ( ; d < numData; d++) {
       MRWStruct const &data = dataList[d];
       f << "#" << data << ",";
@@ -357,6 +673,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int)
         MWAW_DEBUG_MSG(("MRWGraph::readToken: find some extra data \n"));
       }
     }
+    zone.m_tokenMap[tkn.m_id[0]] = tkn;
     ascii().addNote(f.str().c_str());
 
     m_input->seek(entry.end(), WPX_SEEK_SET);
@@ -367,51 +684,32 @@ bool MRWGraph::readToken(MRWEntry const &entry, int)
   ascii().addNote(f.str().c_str());
   ascii().addPos(dataList[d].m_filePos);
   f.str("");
-  f << entry.name() << "(III):";
-  for (int i = 0; i < 8; i++) { // always 0
-    MRWStruct const &data = dataList[d++];
-    if (data.isBasic() && data.value(0))
-      f << "f" << i << "=" << data << ",";
-  }
-  dt = dataList[d++];
-  if (dt.isBasic() && dt.value(0))
-    f << "pictId=" << std::hex << dt.value(0) << std::dec << ",";
-  for (int i = 0; i < 6; i++) { // always 0
-    MRWStruct const &data = dataList[d++];
-    if (data.isBasic() && data.value(0))
-      f << "g" << i << "=" << data << ",";
+  for (int j = 0; j < 15; j++) {
+    MRWStruct const &dt = dataList[d++];
+    if (!dt.isBasic()) {
+      f << "#f" << j << "=" << dt << ",";
+      MWAW_DEBUG_MSG(("MRWGraph::readToken(III): find some struct block\n"));
+      continue;
+    }
+    switch(j) {
+    case 8:
+      if (!dt.value(0))
+        break;
+      tkn.m_pictId = dt.value(0);
+      f << "pictId=" <<  std::hex << tkn.m_pictId << std::dec << ",";
+      break;
+    default:
+      if (dt.value(0))
+        f << "#f" << j << "=" << dt.value(0) << ",";
+    }
   }
 
-  dt = dataList[d++];
+  MRWStruct dt = dataList[d++];
   if (dt.m_type != 0 || !dt.m_pos.length()) {
     MWAW_DEBUG_MSG(("MRWGraph::readToken: can not find the picture data\n"));
     f << "###pictData=" << dt << ",";
-  } else {
-#ifdef DEBUG_WITH_FILES
-    m_input->seek(dt.m_pos.begin(), WPX_SEEK_SET);
-    WPXBinaryData file;
-    m_input->readDataBlock(dt.m_pos.length(), file);
-
-    static int volatile pictName = 0;
-    std::stringstream fName;
-    fName << "Pict" << ++pictName << ".pct";
-    libmwaw::Debug::dumpFile(file, fName.str().c_str());
-
-    ascii().skipZone(dt.m_pos.begin(),dt.m_pos.end()-1);
-#endif
-  }
-
-  for (size_t dd = 16; dd < 31; dd++) {
-    MRWStruct const &data = dataList[dd];
-    if (data.isBasic())
-      continue;
-    f << "#f" << dd-16 << "=" << data << ",";
-    static bool first=true;
-    if (first) {
-      MWAW_DEBUG_MSG(("MRWGraph::readToken(III): find some struct block\n"));
-      first = false;
-    }
-  }
+  } else
+    tkn.m_pictData = dt.m_pos;
 
   for ( ; d < numData; d++) {
     MRWStruct const &data = dataList[d];
@@ -422,13 +720,18 @@ bool MRWGraph::readToken(MRWEntry const &entry, int)
       MWAW_DEBUG_MSG(("MRWGraph::readToken(III): find some extra data \n"));
     }
   }
-  ascii().addNote(f.str().c_str());
+  tkn.m_extra += f.str();
+  zone.m_tokenMap[tkn.m_id[0]] = tkn;
+
+  std::stringstream f2;
+  f2 << entry.name() << "(III):" << f.str();
+  ascii().addNote(f2.str().c_str());
 
   m_input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
 
-bool MRWGraph::readTokenBlock0(MRWStruct const &data, std::string &res)
+bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &tkn, std::string &res)
 {
   res = "";
   if (data.m_type != 0 || !data.m_pos.valid()) {
@@ -442,40 +745,90 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, std::string &res)
 
   std::stringstream f;
 
-  long pos = data.m_pos.begin();
+  long pos = data.m_pos.begin(), endPos = data.m_pos.end();
   m_input->seek(pos, WPX_SEEK_SET);
 
-  std::string fValue("");
+  // fixme: this depends on the token type
   long val;
-  for (int i = 0; i < 6; i++) { // pagenumber, ... value
-    val = (long) m_input->readULong(1);
-    if (!val) break;
-    fValue += (char) val;
+  int firstExpectedVal= (tkn.m_type==0x14) ? 28 :
+                        (tkn.m_type==0x17||tkn.m_type==0x18) ? 6 : 0;
+  for (int i = 0; i < firstExpectedVal/2; i++) {
+    val = (long) m_input->readLong(2);
+    if (val) f << "#f" << i << "=" << val << ",";
   }
-  if (fValue.length()) f << "val=" << fValue << ",";
-
-  m_input->seek(pos+6, WPX_SEEK_SET);
-  val = m_input->readLong(2);
-  if (val) f << "f0=" << val << ","; // find 6 in a data field
-
-  fValue = "";
-  for (int i = 0; i < 20; i++) { // data/time, ... value
-    val = (long) m_input->readULong(1);
-    if (!val) break;
-    fValue += (char) val;
+  m_input->seek(pos+firstExpectedVal, WPX_SEEK_SET);
+  std::string fValue("");
+  switch (tkn.m_type) {
+  case 0x14:
+    tkn.m_valPictId = m_input->readLong(4);
+    if (tkn.m_valPictId) f << "pId=" << std::hex << tkn.m_valPictId << ",";
+    break;
+  case 0x17:
+  case 0x18:
+    val = m_input->readLong(2);
+    if (val) f << "f0=" << val << ","; // fieldType?
+  case 0x19:
+  case 0x1e:
+  case 0x1f:
+    while(!m_input->atEOS()) {
+      if (m_input->tell() >= endPos)
+        break;
+      val = (long) m_input->readULong(1);
+      if (!val) {
+        m_input->seek(-1, WPX_SEEK_CUR);
+        break;
+      }
+      fValue += (char) val;
+    }
+    break;
+  case 0x23:
+    tkn.m_rulerType = (int) m_input->readLong(2);
+    tkn.m_rulerPattern = (int) m_input->readLong(2);
+    switch(tkn.m_rulerType) {
+    case 0:
+      break; // no
+    case 1:
+      f << "ruler[hairline],";
+      break;
+    case 2:
+      f << "ruler[single],";
+      break;
+    case 3:
+      f << "ruler[w=2],";
+      break;
+    case 4:
+      f << "ruler[w=3],";
+      break;
+    case 5:
+      f << "ruler[w=4],";
+      break;
+    case 6:
+      f << "ruler[double],";
+      break;
+    case 7:
+      f << "ruler[double,w=2],";
+      break;
+    default:
+      f << "#ruler[type=" << tkn.m_rulerType << "],";
+      break;
+    }
+    if (tkn.m_rulerPattern)
+      f << "ruler[pattern]=" << tkn.m_rulerPattern << ",";
+    break;
+  default:
+    break;
   }
-  if (fValue.length()) f << "val=" << fValue << ",";
-  m_input->seek(pos+28, WPX_SEEK_SET);
-
-  val = m_input->readLong(4);
-  if (val) f << "pId=" << std::hex << val << ",";
-
-  int numRemains = int(data.m_pos.end()-m_input->tell())/2;
+  if (fValue.length()) {
+    tkn.m_value = fValue;
+    f << "val=" << fValue << ",";
+  }
+  int numRemains = int(endPos-m_input->tell())/2;
   for (int i = 0; i < numRemains; i++) { // always 0
     val = m_input->readLong(2);
-    if (val) f << "f" << i+2 << "=" << val << ",";
+    if (val) f << "#g" << i << "=" << val << ",";
   }
   res = f.str();
+  tkn.m_extra += res;
   return true;
 }
 
@@ -499,7 +852,7 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
   libmwaw::DebugStream f;
   size_t d = 0;
   MRWGraphInternal::Zone &zone = m_state->getZone(zoneId);
-  MRWGraphInternal::Zone::PSFile psFile;
+  MRWGraphInternal::PSZone psFile;
   for (int i = 0; i < 2; i++) {
     MRWStruct const &data = dataList[d++];
     if (!data.isBasic()) {
@@ -518,7 +871,7 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
   } else if (data.m_pos.valid()) {
     psFile.m_extra=f.str();
     psFile.m_pos = data.m_pos;
-    zone.m_psFileMap[psFile.m_id] = psFile;
+    zone.m_psZoneMap[psFile.m_id] = psFile;
 #ifdef DEBUG_WITH_FILES
     m_input->seek(data.m_pos.begin(), WPX_SEEK_SET);
     WPXBinaryData file;
@@ -558,5 +911,31 @@ bool MRWGraph::sendPageGraphics()
 
 void MRWGraph::flushExtra()
 {
+#ifdef DEBUG
+  std::map<int,MRWGraphInternal::Zone>::const_iterator it = m_state->m_zoneMap.begin();
+  std::map<long,MRWGraphInternal::Token>::const_iterator tIt;
+  std::map<long,MRWGraphInternal::PSZone>::const_iterator psIt;
+  MWAWPosition pictPos(Vec2i(0,0),Vec2i(0,0),WPX_POINT);
+  pictPos.setRelativePosition(MWAWPosition::Char);
+
+  while (it != m_state->m_zoneMap.end()) {
+    int zId = it->first;
+    MRWGraphInternal::Zone const &zone = it++->second;
+
+    tIt = zone.m_tokenMap.begin();
+    while (tIt != zone.m_tokenMap.end()) {
+      long tId = it->first;
+      MRWGraphInternal::Token const &tkn = tIt++->second;
+      if (tkn.m_parsed) continue;
+      sendToken(zId, tId);
+    }
+    psIt = zone.m_psZoneMap.begin();
+    while (psIt != zone.m_psZoneMap.end()) {
+      MRWGraphInternal::PSZone const &psZone = psIt++->second;
+      if (psZone.m_parsed) continue;
+      sendPSZone(psZone, pictPos);
+    }
+  }
+#endif
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

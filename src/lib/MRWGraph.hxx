@@ -61,6 +61,8 @@ class MWAWPosition;
 namespace MRWGraphInternal
 {
 struct State;
+struct PSZone;
+struct Token;
 class SubDocument;
 }
 
@@ -113,10 +115,20 @@ protected:
   /** try to read a token zone (can be a picture or a field) */
   bool readToken(MRWEntry const &entry, int zoneId);
   /** try to read the first token zone ( which can contains some field text )*/
-  bool readTokenBlock0(MRWStruct const &data, std::string &res);
+  bool readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &tkn, std::string &res);
+  /** try to send a picture token as char */
+  void sendPicture(MRWGraphInternal::Token const &tkn);
+  /** try to send a ruler */
+  void sendRuler(MRWGraphInternal::Token const &tkn);
+  /** try to send a ps picture as pos */
+  void sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const &pos);
 
   // interface with mainParser
 
+  //! try to send a token
+  void sendToken(int zoneId, long tokenId);
+  //! ask the main parser to send a text zone
+  void sendText(int zoneId);
 
   //
   // low level

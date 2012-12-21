@@ -296,7 +296,7 @@ bool File::readFileInformation()
     checkFInfoType("WordPerfect");
   } else if (m_fInfoCreator=="XCEL") {
     checkFInfoType("XCEL","Microsoft Excel 1") ||
-    checkFInfoType("XLS4","Microsoft Excel 3") ||
+    checkFInfoType("XLS3","Microsoft Excel 3") ||
     checkFInfoType("XLS4","Microsoft Excel 4") ||
     checkFInfoType("XLS5","Microsoft Excel 5") ||
     checkFInfoType("XLS8","Microsoft Excel 97-2004") ||

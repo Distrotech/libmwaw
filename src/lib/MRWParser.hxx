@@ -173,8 +173,14 @@ protected:
 
   // interface with the text parser
 
+  //! return a zoneid corresponding to a fileId (or -1)
+  int getZoneId(uint32_t fileId);
+  //! ask the text parser to send a zone
+  void sendText(int zoneId);
 
   // interface with the graph parser
+  //! ask the graph parser to send a token
+  void sendToken(int zoneId, long tokenId);
 
   //
   // low level
@@ -189,8 +195,8 @@ protected:
 
   /** try to read the separator of differents part */
   bool readSeparator(MRWEntry const &entry);
-  /** try to read the separator dimension ? */
-  bool readDimSeparator(MRWEntry const &entry, int zoneId);
+  /** try to read the zone dimension ( normal and with margin ) */
+  bool readZoneDim(MRWEntry const &entry, int zoneId);
   /** try to read the zone header */
   bool readZoneHeader(MRWEntry const &entry, int zoneId, bool onlyTest);
   /** try to read a unknown zone : one by separator?, borderdim? */
@@ -199,6 +205,8 @@ protected:
   bool readZonec(MRWEntry const &entry, int zoneId);
   /** try to read a unknown zone of 23 int*/
   bool readZone13(MRWEntry const &entry, int zoneId);
+  /** try to read the doc info zone */
+  bool readDocInfo(MRWEntry const &entry, int zoneId);
   /** try to read a printinfo zone */
   bool readPrintInfo(MRWEntry const &entry);
   /** try to read a xml printinfo zone */
@@ -223,8 +231,8 @@ protected:
   //! the actual document size
   MWAWPageSpan m_pageSpan;
 
-  //! a flag to know if page span is et
-  bool  m_pageSpanSet;
+  //! a flag to know if page margins span are set
+  bool  m_pageMarginsSpanSet;
 
   //! the graph parser
   shared_ptr<MRWGraph> m_graphParser;

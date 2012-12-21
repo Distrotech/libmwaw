@@ -152,6 +152,18 @@ void MWAWPageSpan::setHeaderFooter(const HeaderFooterType type, const HeaderFoot
   }
 }
 
+void MWAWPageSpan::checkMargins()
+{
+  if (m_marginLeft+m_marginRight > 0.95*m_formWidth) {
+    MWAW_DEBUG_MSG(("MWAWPageSpan::checkMargins: left/right margins seems bad\n"));
+    m_marginLeft = m_marginRight = 0.05*m_formWidth;
+  }
+  if (m_marginTop+m_marginBottom > 0.95*m_formLength) {
+    MWAW_DEBUG_MSG(("MWAWPageSpan::checkMargins: top/bottom margins seems bad\n"));
+    m_marginTop = m_marginBottom = 0.05*m_formLength;
+  }
+}
+
 void MWAWPageSpan::sendHeaderFooters(MWAWContentListener *listener,
                                      WPXDocumentInterface *documentInterface)
 {

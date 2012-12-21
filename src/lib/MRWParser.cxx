@@ -69,21 +69,27 @@ struct Zone {
   //! a enum to define the diffent zone type
   enum Type { Z_Main, Z_Footnote, Z_Header, Z_Footer, Z_Unknown };
   //! constructor
-  Zone() : m_id(-1), m_type(Z_Unknown), m_height(0), m_pos(0,0), m_dim(),
-    m_backColor(0xFFFFFF), m_extra("") {
+  Zone() : m_id(-1), m_fileId(0), m_type(Z_Unknown), m_height(0), m_RBpos(0,0), m_dim(),
+    m_pageDim(), m_pageMDim(), m_backColor(0xFFFFFF), m_extra("") {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &zone);
   //! the zone id
   int m_id;
+  //! the file zone id
+  uint32_t m_fileId;
   //! the zone type
   Type m_type;
   //! height of the zone
   long m_height;
-  //! left/top position
-  Vec2l m_pos;
+  //! rigth/bottom position
+  Vec2l m_RBpos;
   //! the zone total position
   Box2l m_dim;
+  //! the page dimension (?)
+  Box2i m_pageDim;
+  //! the page dimension with margins (?)
+  Box2i m_pageMDim;
   //! the background color
   uint32_t m_backColor;
   //! extra data
@@ -109,8 +115,10 @@ std::ostream &operator<<(std::ostream &o, Zone const &zone)
   default:
     break;
   }
-  if (zone.m_pos[0] || zone.m_pos[1])
-    o << "pos=" << zone.m_pos << ",";
+  if (zone.m_fileId & 0xFFFFFF)
+    o << "fileId=" << std::hex << (zone.m_fileId&0xFFFFFF) << std::dec << ",";
+  if (zone.m_RBpos[0] || zone.m_RBpos[1])
+    o << "RBpos=" << zone.m_RBpos << ",";
   if (zone.m_height)
     o << "height=" << zone.m_height << ",";
   if (zone.m_dim.size()[0] || zone.m_dim.size()[1])
@@ -124,13 +132,15 @@ std::ostream &operator<<(std::ostream &o, Zone const &zone)
 //! Internal: the state of a MRWParser
 struct State {
   //! constructor
-  State() : m_eof(-1), m_zonesList(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_eof(-1), m_zonesList(), m_fileToZoneMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
 
   //! end of file
   long m_eof;
   //! the list of zone
   std::vector<Zone> m_zonesList;
+  //! a map fileZoneId -> localZoneId
+  std::map<uint32_t,int> m_fileToZoneMap;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
@@ -189,14 +199,10 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
     return;
   }
-  if (m_id != 1 && m_id != 2) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
-    return;
-  }
 
   assert(m_parser);
   long pos = m_input->tell();
-  //reinterpret_cast<MRWParser *>(m_parser)->sendZone(m_id);
+  reinterpret_cast<MRWParser *>(m_parser)->sendText(m_id);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 }
@@ -206,7 +212,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 MRWParser::MRWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_pageSpanSet(false), m_graphParser(), m_textParser()
+  m_pageSpan(), m_pageMarginsSpanSet(false), m_graphParser(), m_textParser()
 {
   init();
 }
@@ -290,6 +296,34 @@ bool MRWParser::isFilePos(long pos)
 }
 
 ////////////////////////////////////////////////////////////
+// interface
+////////////////////////////////////////////////////////////
+int MRWParser::getZoneId(uint32_t fileId)
+{
+  if (m_state->m_fileToZoneMap.find(fileId)==m_state->m_fileToZoneMap.end()) {
+    MWAW_DEBUG_MSG(("MRWParser::getZoneId: can not find zone for %x\n", fileId));
+    return -1;
+  }
+  return m_state->m_fileToZoneMap.find(fileId)->second;
+}
+
+void MRWParser::sendText(int zoneId)
+{
+  MWAWInputStreamPtr input = getInput();
+  long actPos = input->tell();
+  m_textParser->send(zoneId);
+  input->seek(actPos, WPX_SEEK_SET);
+}
+
+void MRWParser::sendToken(int zoneId, long tokenId)
+{
+  MWAWInputStreamPtr input = getInput();
+  long actPos = input->tell();
+  m_graphParser->sendToken(zoneId, tokenId);
+  input->seek(actPos, WPX_SEEK_SET);
+}
+
+////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
 void MRWParser::parse(WPXDocumentInterface *docInterface)
@@ -305,13 +339,15 @@ void MRWParser::parse(WPXDocumentInterface *docInterface)
 
     checkHeader(0L);
     ok = createZones();
-    m_textParser->flushExtra(); // fixme
     if (ok) {
       createDocument(docInterface);
       m_graphParser->sendPageGraphics();
+      m_textParser->send(0);
 
+#ifdef DEBUG
       m_textParser->flushExtra();
       m_graphParser->flushExtra();
+#endif
       if (m_listener) m_listener->endDocument();
       m_listener.reset();
     }
@@ -347,6 +383,22 @@ void MRWParser::createDocument(WPXDocumentInterface *documentInterface)
   std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(m_pageSpan);
 
+  // look for an header/footer
+  // FIXME: do not works if pages have different header or footer
+  int find[2]= {false, false};
+  for (size_t z = 0; z < m_state->m_zonesList.size(); z++) {
+    int w = (m_state->m_zonesList[z].m_type==MRWParserInternal::Zone::Z_Header) ? 0 :
+            (m_state->m_zonesList[z].m_type==MRWParserInternal::Zone::Z_Footer) ? 1 : -1;
+    if (w < 0) continue;
+    if (find[w]) {
+      MWAW_DEBUG_MSG(("MRWParser::createDocument: header/footer already exists\n"));
+      continue;
+    }
+    find[w]=true;
+    shared_ptr<MWAWSubDocument> subdoc(new MRWParserInternal::SubDocument(*this, getInput(), int(z)));
+    ps.setHeaderFooter((w==0) ? MWAWPageSpan::HEADER : MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+  }
+
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
@@ -372,7 +424,7 @@ bool MRWParser::createZones()
     pos = input->tell();
   ascii().addPos(pos);
   ascii().addNote("Entries(Loose)");
-  return false;
+  return m_state->m_zonesList.size();
 }
 
 bool MRWParser::readZone(int &actZone, bool onlyTest)
@@ -406,7 +458,7 @@ bool MRWParser::readZone(int &actZone, bool onlyTest)
     done = m_textParser->readTextStruct(zone, actZone);
     break;
   case 2:
-    done = m_textParser->readTextZone(zone, actZone);
+    done = m_textParser->readZone(zone, actZone);
     break;
   case 4:
   case 5:
@@ -421,17 +473,20 @@ bool MRWParser::readZone(int &actZone, bool onlyTest)
   case 8:
     done = m_textParser->readFontNames(zone, actZone);
     break;
-  case 9:
-    done = readDimSeparator(zone, actZone);
+  case 9: // zone size
+    done = readZoneDim(zone, actZone);
     break;
-  case 0xa:
-    done = readDimSeparator(zone, actZone);
+  case 0xa: // zone size with margins removal
+    done = readZoneDim(zone, actZone);
     break;
   case 0xb: // border dim?
     done = readZoneb(zone, actZone);
     break;
   case 0xc:
     done = readZonec(zone, actZone);
+    break;
+  case 0xf:
+    done = readDocInfo(zone, actZone);
     break;
   case 0x13:
     done = readZone13(zone, actZone);
@@ -602,22 +657,22 @@ bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
         f << "#type=" << (v>>28) << ",";
         break;
       }
-      if (v&0xFFFFFFF) // a pos?
-        f << "type[low]=" << std::hex << (v&0xFFFFFFF) << std::dec << ",";
+      zone.m_fileId=v;
+      m_state->m_fileToZoneMap[v]=actId;
       break;
     }
-    case 9:
-      zone.m_pos[1] = data.value(0);
+    case 9: // real bottom margin
+      if (data.value(0))
+        f << "y[bottom+footer?]=" << data.value(0) << ",";
+      break;
+      zone.m_RBpos[1] = data.value(0);
       break;
     case 10:
       zone.m_height = data.value(0);
       break;
-    case 13:
-      zone.m_pos[0] = data.value(0);
-      break;
-    case 14: // real value?
-      if (data.value(0))
-        f << "x[left?]=" << data.value(0) << ",";
+    case 13: // right margin
+    case 14: // bottom margin
+      zone.m_RBpos[j-13] = data.value(0);
       break;
     case 21:
       if (data.value(0))
@@ -656,8 +711,8 @@ bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
       if (sel[2]||sel[3])
         f << "sel1=" << std::hex << sel[2] << "x" << sel[3] << std::dec << ",";
       break;
-    case 28:
-    case 29:
+    case 28: // left margin
+    case 29: // top margin
     case 30:
     case 31:
       dim[j-28] = (int) data.value(0);
@@ -726,10 +781,10 @@ bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
   return true;
 }
 
-bool MRWParser::readDimSeparator(MRWEntry const &entry, int )
+bool MRWParser::readZoneDim(MRWEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWParser::readDimSeparator: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MRWParser::readZoneDim: data seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
@@ -740,7 +795,7 @@ bool MRWParser::readDimSeparator(MRWEntry const &entry, int )
   input->popLimit();
 
   if (int(dataList.size()) != 4*entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWParser::readDimSeparator: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MRWParser::readZoneDim: find unexpected number of data\n"));
     return false;
   }
 
@@ -755,12 +810,25 @@ bool MRWParser::readDimSeparator(MRWEntry const &entry, int )
     for (int j = 0; j < 4; j++) {
       MRWStruct const &data = dataList[d++];
       if (!data.isBasic()) {
-        MWAW_DEBUG_MSG(("MRWParser::readDimSeparator: find unexpected dim data type\n"));
+        MWAW_DEBUG_MSG(("MRWParser::readZoneDim: find unexpected dim data type\n"));
         f << "###dim" << j << "=" << data << ",";
       } else
         dim[j] = (int) data.value(0);
     }
-    f << "dim?=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
+    // checkme
+    Box2i dimension(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    f << "pos=" << dimension << ",";
+    if (i==0 && dim[0] >= 0 && dim[0] < dim[2] && dim[1] >= 0 && dim[1] < dim[3]) {
+      if (zoneId < 0 || zoneId >= int(m_state->m_zonesList.size())) {
+        MWAW_DEBUG_MSG(("MRWParser::readZoneDim: can not find the zone storage\n"));
+      } else if (entry.m_fileType == 9)
+        m_state->m_zonesList[size_t(zoneId)].m_pageDim = dimension;
+      else if (entry.m_fileType == 0xa)
+        m_state->m_zonesList[size_t(zoneId)].m_pageMDim = dimension;
+      else {
+        MWAW_DEBUG_MSG(("MRWParser::readZoneDim: unknown zone type\n"));
+      }
+    }
     ascii().addNote(f.str().c_str());
   }
   input->seek(entry.end(), WPX_SEEK_SET);
@@ -768,6 +836,137 @@ bool MRWParser::readDimSeparator(MRWEntry const &entry, int )
   return true;
 }
 
+bool MRWParser::readDocInfo(MRWEntry const &entry, int zoneId)
+{
+  if (entry.length() < 3) {
+    MWAW_DEBUG_MSG(("MRWParser::readDocInfo: data seems to short\n"));
+    return false;
+  }
+  MWAWInputStreamPtr input = getInput();
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->pushLimit(entry.end());
+  std::vector<MRWStruct> dataList;
+  decodeZone(dataList);
+  input->popLimit();
+
+  int numDatas = int(dataList.size());
+  if (numDatas < 60) {
+    MWAW_DEBUG_MSG(("MRWParser::readDocInfo: find unexpected number of data\n"));
+    return false;
+  }
+
+  libmwaw::DebugStream f;
+  f << entry.name() << ":";
+
+  int dim[2], margins[4]= {0,0,0,0}, color[3];
+  size_t d=0;
+  for (int j=0; j < numDatas; j++, d++) {
+    MRWStruct const &dt = dataList[d];
+    if (!dt.isBasic()) {
+      f << "#f" << d << "=" << dt << ",";
+      static bool first=true;
+      if (first) {
+        MWAW_DEBUG_MSG(("MRWParser::readDocInfo: find some struct block\n"));
+        first = false;
+      }
+      continue;
+    }
+    switch(j) {
+    case 0: // 37 or 64
+    case 2: // small number between 108 and 297
+    case 3: // f3=f2-24?
+    case 5: // small number between -18 and 57
+    case 6: // f6~=f5 ?
+    case 13: // a small number 1|2|3|4|58|61|283
+    case 35: // 1|2|31|60|283
+    case 44: // 0 or 1
+    case 46: // 0 or 1
+    case 47: // 0 or 1
+    case 48: // 0 or 1
+    case 51: // always 1
+      if (dt.value(0))
+        f << "f" << j << "=" << dt.value(0) << ",";
+      break;
+    case 1: // 1
+      if (dt.value(0)!=1)
+        f << "f" << j << "=" << dt.value(0) << ",";
+      break;
+    case 7:
+    case 8: // a dim?
+      dim[0] = dim[1] = 0;
+      dim[j-7]= (int) dt.value(0);
+      if (j!=8)
+        dim[++j-7] = (int) dataList[++d].value(0);
+      f << "dim?=" << dim[1] << "x" << dim[0] << ",";
+      break;
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+      margins[j-9]=(int) dt.value(0);
+      while(j<12)
+        margins[++j-9]= (int) dataList[++d].value(0);
+      f << "margins=" << margins[1] << "x" << margins[0]
+        << "<->"  << margins[3] << "x" << margins[2] << ",";
+      break;
+    case 14: // a very big number
+      if (dt.value(0))
+        f << "id?=" << std::hex << dt.value(0) << std::dec << ",";
+      break;
+    case 15: { // border type?
+      long val = dt.value(0);
+      if (!val) break;
+      int depl = 24;
+      f << "border?=[";
+      for (int b = 0; b < 4; b++) {
+        if ((val>>depl)&0xFF)
+          f << ((val>>depl)&0xFF) << ",";
+        else
+          f << "_";
+        depl -= 8;
+      }
+      f << "],";
+      break;
+    }
+    case 16:
+    case 17:
+    case 18: {
+      color[0]=color[1]=color[2]=0;
+      color[j-16]=(int) dt.value(0);
+      while (j < 18)
+        color[++j-16] = (int) dataList[++d].value(0);
+      uint32_t col =
+        uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8));
+      if (col) f << "color=" << std::hex << col << std::dec << ",";
+      break;
+    }
+    case 76: // a very big number
+    case 79:
+      if (dt.value(0))
+        f << "f" << j << "=" << std::hex << uint32_t(dt.value(0)) << std::dec << ",";
+      break;
+    default:
+      if (dt.value(0))
+        f << "#f" << j << "=" << dt.value(0) << ",";
+      break;
+    }
+  }
+  if (zoneId==0 && margins[0] > 0 && margins[1] > 0 &&
+      margins[2] > 0 && margins[3] > 0) {
+    m_pageMarginsSpanSet= true;
+    m_pageSpan.setMarginTop(double(margins[0])/72.0);
+    if (margins[2]>80)
+      m_pageSpan.setMarginBottom(double(margins[2]-40)/72.0);
+    else
+      m_pageSpan.setMarginBottom(double(margins[2]/2)/72.0);
+    m_pageSpan.setMarginLeft(double(margins[1])/72.0);
+    m_pageSpan.setMarginRight(double(margins[3])/72.0);
+
+  }
+  ascii().addPos(entry.begin());
+  ascii().addNote(f.str().c_str());
+  return true;
+}
 bool MRWParser::readZoneb(MRWEntry const &entry, int)
 {
   if (entry.length() < entry.m_N) {
@@ -990,7 +1189,7 @@ bool MRWParser::readPrintInfo(MRWEntry const &entry)
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
-  if (!m_pageSpanSet) {
+  if (!m_pageMarginsSpanSet) {
     // define margin from print info
     Vec2i lTopMargin= -1 * info.paper().pos(0);
     Vec2i rBotMargin=info.paper().size() - info.page().size();
@@ -1011,9 +1210,10 @@ bool MRWParser::readPrintInfo(MRWEntry const &entry)
     m_pageSpan.setMarginBottom(botMarg/72.0);
     m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
     m_pageSpan.setMarginRight(rightMarg/72.0);
-    m_pageSpan.setFormLength(paperSize.y()/72.);
-    m_pageSpan.setFormWidth(paperSize.x()/72.);
   }
+  m_pageSpan.setFormLength(paperSize.y()/72.);
+  m_pageSpan.setFormWidth(paperSize.x()/72.);
+  m_pageSpan.checkMargins();
 
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
@@ -1227,9 +1427,11 @@ std::string MRWEntry::name() const
   case 8:
     return "FontNames";
   case 9:
-    return "SepDim0";
+    return "PaperSize";
   case 0xa:
-    return "SepDim1";
+    return "PaperDim?";
+  case 0xf:
+    return "DocInfo";
   case 0x14: // token, picture, ...
     return "Token";
   case 0x1a:
@@ -1239,7 +1441,7 @@ std::string MRWEntry::name() const
   case 0x24:
     return "CPRT";
   case 0x41a:
-    return "DocInfo";
+    return "DocInf2";
   case 0x420:
     return "PSFile";
   default:

@@ -88,12 +88,14 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
 //! Internal: struct used to store the paragraph of a MRWText
 struct Paragraph : public MWAWParagraph {
   //! constructor
-  Paragraph() : MWAWParagraph() {
+  Paragraph() : MWAWParagraph(), m_colWidth(0) {
     for (int i = 0; i < 2; i++)
       m_backColor[i] = 0xFFFFFF;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &para);
+  //! a column width
+  int m_colWidth;
   //! two color
   uint32_t m_backColor[2];
 };
@@ -101,6 +103,8 @@ struct Paragraph : public MWAWParagraph {
 std::ostream &operator<<(std::ostream &o, Paragraph const &para)
 {
   o << reinterpret_cast<MWAWParagraph const &>(para);
+  if (para.m_colWidth)
+    o << "colWidth=" << para.m_colWidth << ",";
   for (int i = 0; i < 2; i++) {
     if (para.m_backColor[i] != 0xFFFFFF)
       o << "backColor" << i << "=" << std::hex << para.m_backColor[i] << std::dec << ",";
@@ -109,11 +113,34 @@ std::ostream &operator<<(std::ostream &o, Paragraph const &para)
 }
 ////////////////////////////////////////
 //! Internal: struct used to store zone data of a MRWText
-struct TextZone {
+struct Zone {
   struct Information;
 
   //! constructor
-  TextZone() : m_infoList(), m_fontList(),m_rulerList(), m_idFontMap(), m_posFontMap(), m_posRulerMap(), m_actZone(0), m_parsed(false) {
+  Zone() : m_infoList(), m_fontList(),m_rulerList(), m_idFontMap(), m_posFontMap(), m_posRulerMap(), m_actZone(0), m_parsed(false) {
+  }
+
+  //! returns a fonts corresponding to an id (if possible)
+  bool getFont(int id, Font &ft) {
+    if (id < 0 || id >= int(m_fontList.size())) {
+      MWAW_DEBUG_MSG(("MRWTextInternal::Zone::getFont: can not find font %d\n", id));
+      return false;
+    }
+    ft = m_fontList[size_t(id)];
+    if (m_idFontMap.find(ft.m_localId) == m_idFontMap.end()) {
+      MWAW_DEBUG_MSG(("MRWTextInternal::Zone::getFont: can not find font id %d\n", id));
+    } else
+      ft.m_font.setId(m_idFontMap[ft.m_localId]);
+    return true;
+  }
+  //! returns a ruler corresponding to an id (if possible)
+  bool getRuler(int id, Paragraph &ruler) {
+    if (id < 0 || id >= int(m_rulerList.size())) {
+      MWAW_DEBUG_MSG(("MRWTextInternal::Zone::getParagraph: can not find paragraph %d\n", id));
+      return false;
+    }
+    ruler = m_rulerList[size_t(id)];
+    return true;
   }
   //! the list of information of the text in the file
   std::vector<Information> m_infoList;
@@ -127,12 +154,12 @@ struct TextZone {
   std::map<long,int> m_posFontMap;
   //! a map pos -> rulerId
   std::map<long,int> m_posRulerMap;
-  //! a index used to know the next zone in MRWText::readTextZone
+  //! a index used to know the next zone in MRWText::readZone
   int m_actZone;
   //! a flag to know if the zone is parsed
   bool m_parsed;
 
-  //! struct used to keep the information of a small zone of MRWTextInternal::TextZone
+  //! struct used to keep the information of a small zone of MRWTextInternal::Zone
   struct Information {
     //! constructor
     Information() : m_pos(), m_cPos(0,0), m_extra("") { }
@@ -161,18 +188,18 @@ struct State {
   }
 
   //! return a reference to a textzone ( if zone not exists, created it )
-  TextZone &getZone(int id) {
-    std::map<int,TextZone>::iterator it = m_textZoneMap.find(id);
+  Zone &getZone(int id) {
+    std::map<int,Zone>::iterator it = m_textZoneMap.find(id);
     if (it != m_textZoneMap.end())
       return it->second;
     it = m_textZoneMap.insert
-         (std::map<int,TextZone>::value_type(id,TextZone())).first;
+         (std::map<int,Zone>::value_type(id,Zone())).first;
     return it->second;
   }
   //! the file version
   mutable int m_version;
   //! a map id -> textZone
-  std::map<int,TextZone> m_textZoneMap;
+  std::map<int,Zone> m_textZoneMap;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
@@ -261,6 +288,16 @@ int MRWText::version() const
 
 int MRWText::numPages() const
 {
+  if (m_state->m_numPages <= 0) {
+    int nPages = 0;
+    std::map<int,MRWTextInternal::Zone>::const_iterator it = m_state->m_textZoneMap.begin();
+    for ( ; it != m_state->m_textZoneMap.end(); it++) {
+      nPages = computeNumPages(it->second);
+      if (nPages)
+        break;
+    }
+    m_state->m_numPages=nPages ? nPages : 1;
+  }
   return m_state->m_numPages;
 }
 
@@ -271,10 +308,10 @@ int MRWText::numPages() const
 ////////////////////////////////////////////////////////////
 //     Text
 ////////////////////////////////////////////////////////////
-bool MRWText::readTextZone(MRWEntry const &entry, int zoneId)
+bool MRWText::readZone(MRWEntry const &entry, int zoneId)
 {
   if (entry.length() < 0x3) {
-    MWAW_DEBUG_MSG(("MRWText::readTextZone: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MRWText::readZone: data seems to short\n"));
     return false;
   }
 
@@ -285,7 +322,7 @@ bool MRWText::readTextZone(MRWEntry const &entry, int zoneId)
   m_input->popLimit();
 
   if (dataList.size() != 1) {
-    MWAW_DEBUG_MSG(("MRWText::readTextZone: can find my data\n"));
+    MWAW_DEBUG_MSG(("MRWText::readZone: can find my data\n"));
     return false;
   }
 
@@ -293,18 +330,18 @@ bool MRWText::readTextZone(MRWEntry const &entry, int zoneId)
   f << entry.name() << "[data]:";
   MRWStruct const &data = dataList[0];
   if (data.m_type) {
-    MWAW_DEBUG_MSG(("MRWText::readTextZone: find unexpected type zone\n"));
+    MWAW_DEBUG_MSG(("MRWText::readZone: find unexpected type zone\n"));
     return false;
   }
 
-  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
+  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
   if (zone.m_actZone < 0 || zone.m_actZone >= int(zone.m_infoList.size())) {
-    MWAW_DEBUG_MSG(("MRWText::readTextZone: actZone seems bad\n"));
+    MWAW_DEBUG_MSG(("MRWText::readZone: actZone seems bad\n"));
     if (zone.m_actZone < 0)
       zone.m_actZone = int(zone.m_infoList.size());
     zone.m_infoList.resize(size_t(zone.m_actZone)+1);
   }
-  MRWTextInternal::TextZone::Information &info
+  MRWTextInternal::Zone::Information &info
     = zone.m_infoList[size_t(zone.m_actZone++)];
   info.m_pos = data.m_pos;
 
@@ -313,6 +350,26 @@ bool MRWText::readTextZone(MRWEntry const &entry, int zoneId)
 
   m_input->seek(entry.end(), WPX_SEEK_SET);
   return true;
+}
+
+int MRWText::computeNumPages(MRWTextInternal::Zone const &zone) const
+{
+  int nPages = 0;
+  long pos = m_input->tell();
+  for (size_t z=0; z < zone.m_infoList.size(); z++) {
+    MRWTextInternal::Zone::Information const &info=zone.m_infoList[z];
+    if (!info.m_pos.valid()) continue;
+    if (nPages==0) nPages=1;
+    m_input->seek(info.m_pos.begin(), WPX_SEEK_SET);
+    long numChar = info.m_pos.length();
+    while (numChar-- > 0) {
+      if (m_input->readULong(1)==0xc)
+        nPages++;
+    }
+  }
+
+  m_input->seek(pos, WPX_SEEK_SET);
+  return nPages;
 }
 
 bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
@@ -332,11 +389,11 @@ bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
     return false;
   }
 
-  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
+  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
   libmwaw::DebugStream f;
   size_t d = 0;
   for (int i = 0; i < entry.m_N; i++) {
-    MRWTextInternal::TextZone::Information info;
+    MRWTextInternal::Zone::Information info;
     ascii().addPos(dataList[d].m_filePos);
 
     int posi[4]= {0,0,0,0};
@@ -421,14 +478,23 @@ bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
 
 bool MRWText::send(int zoneId)
 {
+  if (!m_listener) {
+    MWAW_DEBUG_MSG(("MRWText::send: can not find the listener\n"));
+    return false;
+  }
   if (m_state->m_textZoneMap.find(zoneId) == m_state->m_textZoneMap.end()) {
     MWAW_DEBUG_MSG(("MRWText::send: can not find the text zone %d\n", zoneId));
     return false;
   }
-  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
+  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
   zone.m_parsed = true;
 
   long actChar = 0;
+  MRWTextInternal::Font actFont;
+  setProperty(actFont.m_font);
+  int actPage = 1;
+  if (zoneId==0)
+    m_mainParser->newPage(actPage);
   for (size_t z = 0; z < zone.m_infoList.size(); z++) {
     long pos = zone.m_infoList[z].m_pos.begin();
     long endPos = zone.m_infoList[z].m_pos.end();
@@ -436,17 +502,95 @@ bool MRWText::send(int zoneId)
 
     libmwaw::DebugStream f;
     f << "Text[" << std::hex << actChar << std::dec << "]:";
+    int tokenEndPos = 0;
     while (!m_input->atEOS()) {
       long actPos = m_input->tell();
       if (actPos == endPos)
         break;
-      if (zone.m_posFontMap.find(actChar)!=zone.m_posFontMap.end())
-        f << "[F" << zone.m_posFontMap.find(actChar)->second << "]";
-      if (zone.m_posRulerMap.find(actChar)!=zone.m_posRulerMap.end())
-        f << "[P" << zone.m_posRulerMap.find(actChar)->second << "]";
+      if (zone.m_posRulerMap.find(actChar)!=zone.m_posRulerMap.end()) {
+        int id = zone.m_posRulerMap.find(actChar)->second;
+        f << "[P" << id << "]";
+        MRWTextInternal::Paragraph para;
+        if (zone.getRuler(id, para))
+          setProperty(para);
+      }
+      if (zone.m_posFontMap.find(actChar)!=zone.m_posFontMap.end()) {
+        int id = zone.m_posFontMap.find(actChar)->second;
+        f << "[F" << id << "]";
+        MRWTextInternal::Font font;
+        if (zone.getFont(id, font)) {
+          actFont = font;
+          setProperty(font.m_font);
+          if (font.m_tokenId > 0) {
+            m_mainParser->sendToken(zoneId, font.m_tokenId);
+            tokenEndPos = -2;
+          }
+        }
+      }
 
       char c = (char) m_input->readULong(1);
       actChar++;
+      if (tokenEndPos) {
+        if ((c=='[' && tokenEndPos==-2)||(c==']' && tokenEndPos==-1)) {
+          tokenEndPos++;
+          f << c;
+          continue;
+        }
+        tokenEndPos++;
+        MWAW_DEBUG_MSG(("MRWText::send: find unexpected char for a token\n"));
+      }
+      switch(c) {
+      case 0x6: {
+        static bool first = true;
+        if (first) {
+          MWAW_DEBUG_MSG(("MRWText::send: find some table: unimplemented\n"));
+          first = false;
+        }
+        f << "#";
+        m_listener->insertEOL();
+        break;
+      }
+      case 0x7: // fixme end of cell
+        f << "#";
+        m_listener->insertCharacter(' ');
+        break;
+      case 0x9:
+        m_listener->insertTab();
+        break;
+      case 0xa:
+        m_listener->insertEOL(true);
+        break;
+      case 0xc:
+        m_mainParser->newPage(++actPage);
+        break;
+      case 0xd:
+        m_listener->insertEOL();
+        break;
+        // some special character
+      case 0x11:
+        m_listener->insertUnicode(0x2318);
+        break;
+      case 0x12:
+        m_listener->insertUnicode(0x2713);
+        break;
+      case 0x14:
+        m_listener->insertUnicode(0xF8FF);
+        break;
+      case 0x1f: // soft hyphen, ignore
+        break;
+      default: {
+        int unicode = m_convertissor->unicode (actFont.m_font.id(), (unsigned char) c);
+        if (unicode == -1) {
+          if (c >= 0 && c < 0x20) {
+            MWAW_DEBUG_MSG(("MRWText::sendText: Find odd char %x\n", int(c)));
+            f << "#";
+          } else
+            m_listener->insertCharacter((uint8_t) c);
+        } else
+          m_listener->insertUnicode((uint32_t) unicode);
+      }
+      }
+
       f << c;
       if (c==0xa || c==0xd || actPos==endPos-1) {
         ascii().addPos(pos);
@@ -480,7 +624,7 @@ bool MRWText::readPLCZone(MRWEntry const &entry, int zoneId)
     return false;
   }
 
-  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
+  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
   bool isCharZone = entry.m_fileType==4;
   std::map<long,int> &map = isCharZone ? zone.m_posFontMap : zone.m_posRulerMap;
   libmwaw::DebugStream f;
@@ -513,6 +657,13 @@ bool MRWText::readPLCZone(MRWEntry const &entry, int zoneId)
 ////////////////////////////////////////////////////////////
 //     Fonts
 ////////////////////////////////////////////////////////////
+void MRWText::setProperty(MWAWFont const &font)
+{
+  if (!m_listener) return;
+  MWAWFont aFont;
+  font.sendTo(m_listener.get(), m_convertissor, aFont);
+}
+
 bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N) {
@@ -531,7 +682,7 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
     return false;
   }
 
-  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
+  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
   libmwaw::DebugStream f;
   size_t d = 0;
   int val;
@@ -606,7 +757,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
     return false;
   }
 
-  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
+  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
   libmwaw::DebugStream f;
   f << entry.name() << ":unkn=" << dataList[0].value(0);
   ascii().addPos(dataList[0].m_filePos);
@@ -895,6 +1046,12 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
 ////////////////////////////////////////////////////////////
 //     Paragraph
 ////////////////////////////////////////////////////////////
+void MRWText::setProperty(MRWTextInternal::Paragraph const &ruler)
+{
+  if (!m_listener) return;
+  ruler.send(m_listener);
+}
+
 bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N+1) {
@@ -914,7 +1071,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
     return false;
   }
 
-  MRWTextInternal::TextZone &zone = m_state->getZone(zoneId);
+  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
   libmwaw::DebugStream f;
   size_t d = 0;
   for (int i = 0; i < entry.m_N; i++) {
@@ -969,7 +1126,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         break;
       case 8:
         if (!dt.value(0)) break;
-        para.m_spacings[0] = float(dt.value(0))/72.f/65536.f;
+        para.m_spacings[0] = float(dt.value(0))/65536.f;
         para.m_spacingsInterlineUnit = WPX_POINT;
         break;
       case 10:
@@ -990,7 +1147,6 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       case 9: // always 0
       case 22: // 1|2|4 1=normal?
       case 29: // 0|64
-      case 40: // 0|129|135|155|167|250|252 a dim?
         if (dt.value(0))
           f << "f" << j << "=" << dt.value(0) << ",";
         break;
@@ -1010,6 +1166,9 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         para.m_backColor[0] =
           (uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8)));
         break;
+      case 40:
+        para.m_colWidth = (int) dt.value(0);
+        break;
       case 47:
       case 48:
       case 49:
@@ -1021,11 +1180,11 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         para.m_backColor[1] =
           (uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8)));
         break;
-      case 56: { // border size or type?
+      case 56: { // border type?
         long val = dt.value(0);
         if (!val) break;
         int depl = 24;
-        f << "bord?=[";
+        f << "border?=[";
         for (int b = 0; b < 4; b++) {
           if ((val>>depl)&0xFF)
             f << ((val>>depl)&0xFF) << ",";
@@ -1045,7 +1204,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         break;
       }
     }
-    para.m_margins[0] = para.m_margins[0].get()+para.m_margins[1].get();
+    //    para.m_margins[0] = para.m_margins[0].get()+para.m_margins[1].get();
     d = fD;
     for (int j = 0; j < 58; j++, d++) {
       if (!dataList[d].isBasic())
@@ -1130,10 +1289,22 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         if (dt.value(0)!=36)
           f << "#g0=" << dt.value(0) << ",";
         break;
-      case 4: // 0|80|1000
-        if (dt.value(0))
-          f << "bullet?=" << std::hex << dt.value(0) << std::dec << ",";
+      case 4: { // 0|80|1000
+        long val = dt.value(0);
+        if (!val) break;
+        if (val & 0x1000) {
+          val &= 0xFFFFEFFF;
+          MWAWList::Level theLevel;
+          theLevel.m_type = MWAWList::Level::BULLET;
+          theLevel.m_labelIndent = para.m_margins[1].get();
+          MWAWContentListener::appendUnicode(0x2022, theLevel.m_bullet);
+          para.m_listLevelIndex = 1;
+          para.m_listLevel=theLevel;
+        }
+        if (val)
+          f << "flag?=" << std::hex << val << std::dec << ",";
         break;
+      }
       case 7: // 1|3|de
       case 8: // 0|4 : 4 for header entry?
         if (dt.value(0))
@@ -1174,7 +1345,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
 void MRWText::flushExtra()
 {
   //if (!m_listener) return;
-  std::map<int,MRWTextInternal::TextZone>::iterator it =
+  std::map<int,MRWTextInternal::Zone>::iterator it =
     m_state->m_textZoneMap.begin();
   for ( ; it != m_state->m_textZoneMap.end(); it++) {
     if (it->second.m_parsed)
