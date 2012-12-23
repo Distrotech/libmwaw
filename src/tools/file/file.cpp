@@ -237,7 +237,8 @@ bool File::readFileInformation()
   } else if (m_fInfoCreator=="HMdr") {
     checkFInfoType("DRD2","HanMac Word-K") || checkFInfoType("HanMac Word-K");
   } else if (m_fInfoCreator=="LWTE") {
-    checkFInfoType("TEXT","LightWayText") || checkFInfoType("LightWayText");
+    checkFInfoType("TEXT","LightWayText") || checkFInfoType("MACR","LightWayText[MACR]") ||
+    checkFInfoType("pref","LightWayText[Preferences]") || checkFInfoType("LightWayText");
   } else if (m_fInfoCreator=="MACA") {
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   } else if (m_fInfoCreator=="MACD") { // checkme

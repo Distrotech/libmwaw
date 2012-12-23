@@ -1579,7 +1579,7 @@ bool NSParser::readPrintInfo(MWAWEntry const &entry)
   libmwaw::PrinterInfo info;
   if (!info.read(input)) return false;
   if (entry.id() != 128)
-    f << "Entries(PrintInfo)[#" << entry.id() << "]:";
+    f << "Entries(PrintInfo)[#" << entry.id() << "]:" << info;
   else
     f << "Entries(PrintInfo):" << info;
 
@@ -1617,7 +1617,7 @@ bool NSParser::readPrintInfo(MWAWEntry const &entry)
   rsrcAscii().addNote(f.str().c_str());
   input->seek(pos+0x78, WPX_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
-    MWAW_DEBUG_MSG(("MWParser::readPrintInfo: file is too short\n"));
+    MWAW_DEBUG_MSG(("NSParser::readPrintInfo: file is too short\n"));
     return false;
   }
 

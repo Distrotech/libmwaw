@@ -55,6 +55,8 @@ MWAWRSRCParser::~MWAWRSRCParser()
       f << "Entries(RSRC" << tEntry.type() << "):" << tEntry.id();
       ascii().addPos(tEntry.begin()-4);
       ascii().addNote(f.str().c_str());
+      ascii().addPos(tEntry.end());
+      ascii().addNote("_");
     }
   } catch (...) {
   }

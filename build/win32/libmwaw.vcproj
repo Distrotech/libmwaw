@@ -453,6 +453,66 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\LWGraph.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\LWParser.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\LWText.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MDWParser.cxx"
 				>
 				<FileConfiguration
@@ -1527,6 +1587,18 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\HMWText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\LWGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\LWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\LWText.hxx"
 				>
 			</File>
 			<File

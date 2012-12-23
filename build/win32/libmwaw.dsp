@@ -144,6 +144,18 @@ SOURCE=..\..\src\lib\HMWText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\LWGraph.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\LWParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\LWText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MDWParser.cxx
 # End Source File
 # Begin Source File
@@ -409,6 +421,18 @@ SOURCE=..\..\src\lib\HMWText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MDWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\LWGraph.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\LWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\LWText.hxx
 # End Source File
 # Begin Source File
 

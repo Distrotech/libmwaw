@@ -110,6 +110,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::HMAC,1));
         return res;
       }
+    } else if (creator=="LWTE") {
+      if (type=="TEXT") {
+        res.push_back(MWAWHeader(MWAWDocument::LWTEXT,1));
+        return res;
+      }
     } else if (creator=="MACA") {
       if (type=="WORD") {
         res.push_back(MWAWHeader(MWAWDocument::MW, 1));

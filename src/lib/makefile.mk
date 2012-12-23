@@ -38,6 +38,9 @@ SLOFILES= \
 	$(SLO)$/HMWText.obj			\
 	$(SLO)$/FWParser.obj			\
 	$(SLO)$/FWText.obj			\
+	$(SLO)$/LWGraph.obj			\
+	$(SLO)$/LWParser.obj			\
+	$(SLO)$/LWText.obj			\
 	$(SLO)$/MDWParser.obj			\
 	$(SLO)$/MRWGraph.obj			\
 	$(SLO)$/MRWParser.obj			\

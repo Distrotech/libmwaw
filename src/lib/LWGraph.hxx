@@ -32,11 +32,11 @@
 */
 
 /*
- * Parser to Nisus Writer document ( graphic part )
+ * Parser to LightWay Text document ( graphic part )
  *
  */
-#ifndef NS_GRAPH
-#  define NS_GRAPH
+#ifndef LW_GRAPH
+#  define LW_GRAPH
 
 #include <string>
 #include <vector>
@@ -48,10 +48,8 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "NSStruct.hxx"
-
-typedef class MWAWContentListener NSContentListener;
-typedef shared_ptr<NSContentListener> NSContentListenerPtr;
+typedef class MWAWContentListener LWContentListener;
+typedef shared_ptr<LWContentListener> LWContentListenerPtr;
 
 class MWAWEntry;
 
@@ -60,30 +58,29 @@ typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 class MWAWPosition;
 
-namespace NSGraphInternal
+namespace LWGraphInternal
 {
-struct RSSOEntry;
 struct State;
 class SubDocument;
 }
 
-class NSParser;
+class LWParser;
 
-/** \brief the main class to read the graphic part of a Nisus file
+/** \brief the main class to read the graphic part of a LightWay Text file
  *
  *
  *
  */
-class NSGraph
+class LWGraph
 {
-  friend class NSParser;
-  friend class NSGraphInternal::SubDocument;
+  friend class LWParser;
+  friend class LWGraphInternal::SubDocument;
 
 public:
   //! constructor
-  NSGraph(MWAWInputStreamPtr ip, NSParser &parser, MWAWFontConverterPtr &convertissor);
+  LWGraph(MWAWInputStreamPtr ip, LWParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
-  virtual ~NSGraph();
+  virtual ~LWGraph();
 
   /** returns the file version */
   int version() const;
@@ -94,7 +91,7 @@ public:
 protected:
 
   //! sets the listener in this class and in the helper classes
-  void setListener(NSContentListenerPtr listen) {
+  void setListener(LWContentListenerPtr listen) {
     m_listener = listen;
   }
 
@@ -104,9 +101,6 @@ protected:
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
-  //! try to send a picture
-  bool sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
-                   WPXPropertyList extras = WPXPropertyList());
   //! try to send the page graphic
   bool sendPageGraphics();
 
@@ -114,19 +108,12 @@ protected:
   // Intermediate level
   //
 
-  //! read the PLAC resource: a list of picture placements ?
-  bool readPLAC(MWAWEntry const &entry);
-  //! parse the PLDT resource: a unknown resource
-  bool readPLDT(NSStruct::RecursifData const &data);
-  //! read the PGRA resource: the number of page? graphics
-  bool readPGRA(MWAWEntry const &entry);
+  //! read the JPEG resource
+  bool readJPEG(MWAWEntry const &entry);
 
   //
   // low level
   //
-
-  //! try to find a RSSO entry in a picture file
-  std::vector<NSGraphInternal::RSSOEntry> findRSSOEntry(MWAWInputStreamPtr inp) const;
 
   //! returns the debug file
   libmwaw::DebugFile &ascii() {
@@ -134,8 +121,8 @@ protected:
   }
 
 private:
-  NSGraph(NSGraph const &orig);
-  NSGraph &operator=(NSGraph const &orig);
+  LWGraph(LWGraph const &orig);
+  LWGraph &operator=(LWGraph const &orig);
 
 protected:
   //
@@ -145,16 +132,16 @@ protected:
   MWAWInputStreamPtr m_input;
 
   //! the listener
-  NSContentListenerPtr m_listener;
+  LWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;
 
   //! the state
-  shared_ptr<NSGraphInternal::State> m_state;
+  shared_ptr<LWGraphInternal::State> m_state;
 
   //! the main parser;
-  NSParser *m_mainParser;
+  LWParser *m_mainParser;
 
   //! the debug file
   libmwaw::DebugFile &m_asciiFile;
