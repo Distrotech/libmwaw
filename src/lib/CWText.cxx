@@ -372,16 +372,15 @@ struct Zone : public CWStruct::DSET {
 //! Internal: the state of a CWText
 struct State {
   //! constructor
-  State() : m_version(-1), m_paragraphsList(), m_fontsList(),
-    m_zoneMap() {
+  State() : m_version(-1), m_fontsList(), m_paragraphsList(), m_zoneMap() {
   }
 
   //! the file version
   mutable int m_version;
-  //! the list of paragraph
-  std::vector<Paragraph> m_paragraphsList;
   //! the list of fonts
   std::vector<MWAWFont> m_fontsList;
+  //! the list of paragraph
+  std::vector<Paragraph> m_paragraphsList;
   //! the list of text zone
   std::map<int, shared_ptr<Zone> > m_zoneMap;
 };

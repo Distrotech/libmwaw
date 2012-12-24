@@ -173,6 +173,7 @@ void LWParser::parse(WPXDocumentInterface *docInterface)
     ascii().open(asciiName());
     checkHeader(0L);
     ok = createZones();
+    m_textParser->sendMainText(); // FIXME
     if (ok) {
       createDocument(docInterface);
       m_graphParser->sendPageGraphics();
@@ -245,7 +246,7 @@ bool LWParser::createZones()
     MWAWEntry const &entry = it++->second;
     switch(entry.id()) {
     case 1000:
-      readLWSR0(entry);
+      readDocument(entry);
       break;
     case 1001:
       readPrintInfo(entry);
@@ -510,8 +511,10 @@ bool LWParser::readTOC(MWAWEntry const &entry)
     }
     f.str("");
     f << "TOCdata-" << i << ":";
-    f << "cpos?=" << std::hex << input->readULong(4);
-    f << "<->" << input->readULong(4) << ",";
+    long cPos[2];
+    for (int j = 0; j < 2; j++)
+      cPos[j] = (long) input->readULong(4);
+    f << "cpos?=" << cPos[0] << "<->" << cPos[1] << ",";
     int nC = (int) input->readULong(1);
     if (pos+9+nC > entry.end()) {
       ok = false;
@@ -523,6 +526,10 @@ bool LWParser::readTOC(MWAWEntry const &entry)
     f << name;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
+    f.str("");
+    f << "[TOC" << i << "]";
+    ascii().addPos(cPos[0]);
+    ascii().addNote(f.str().c_str());
   }
   if (!ok) {
     f << "###";
@@ -536,12 +543,12 @@ bool LWParser::readTOC(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the Unknown data
 ////////////////////////////////////////////////////////////
-bool LWParser::readLWSR0(MWAWEntry const &entry)
+bool LWParser::readDocument(MWAWEntry const &entry)
 {
   if (entry.id() != 1000)
     return false;
   if (!entry.valid() || entry.length()<0x28) {
-    MWAW_DEBUG_MSG(("LWParser::readLWSR0: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("LWParser::readDocument: the entry seems bad\n"));
     return false;
   }
   MWAWInputStreamPtr input = rsrcInput();
@@ -550,7 +557,7 @@ bool LWParser::readLWSR0(MWAWEntry const &entry)
   input->seek(pos, WPX_SEEK_SET);
 
   libmwaw::DebugStream f;
-  f << "Entries(LWSR0):";
+  f << "Entries(Document):";
   entry.setParsed(true);
   long val;
   for (int i=0; i<3; i++) { // fl1=0|2|6, fl2=0|80
@@ -562,7 +569,7 @@ bool LWParser::readLWSR0(MWAWEntry const &entry)
     if (val) f << "f" << i << "=" << val << ",";
   }
   for (int i=0; i<3; i++) { // fl3=0|1, fl4=0|1, fl5=1
-    val = (long) input->readULong(2);
+    val = (long) input->readULong(1);
     if (val) f << "fl" << i+3 << "=" << val << ",";
   }
   int dim[4];
@@ -580,7 +587,7 @@ bool LWParser::readLWSR0(MWAWEntry const &entry)
     if (val) f << "f" << i+2 << "=" << val << ",";
   }
   for (int i=0; i<3; i++) { // gl0=3|3fff|4000|9001, gl1=3|4000|9001,gl2=d[12]|f[12]|1d2
-    val = (long) input->readULong(1);
+    val = (long) input->readULong(2);
     if (val) f << "gl" << i << "=" << std::hex << val << std::dec << ",";
   }
   ascFile.addPos(pos-4);
@@ -590,31 +597,41 @@ bool LWParser::readLWSR0(MWAWEntry const &entry)
 
   pos = input->tell();
   f.str("");
-  f << "LWSR0(II):";
+  f << "Document(HF):";
   if (entry.length()<0x50) {
     f << "###";
-    MWAW_DEBUG_MSG(("LWParser::readLWSR0: part II seems too short\n"));
+    MWAW_DEBUG_MSG(("LWParser::readDocument: part II seems too short\n"));
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     return false;
   }
 
+  /* s=0(header), s=1(footer) */
   for (int s=0; s < 2; s++) {
-    for (int i=0; i<2; i++) { // f0=b|..|2b, f1=6|25
-      val = (long) input->readLong(2);
-      if (val) f << "f" << s << "-" << i << "=" << val << ",";
-    }
-    // default font ?
+    if (s==0) f << "header=[";
+    else f << "footer=[";
+    val = (long) input->readLong(2);
+    if (val) f << "h=" << val << ",";
+    val = (long) input->readLong(2);
+    if (val) f << "numChar=" << val << ",";
+    // ruler align and ?
     val = (long) input->readULong(2); // [012]0[04]
-    if (val) f << "fFlags" << s << "=" << std::hex << val << std::dec << ",";
+    if (val) f << "rulerFlags=" << std::hex << val << std::dec << ",";
     val = (long) input->readULong(2); //3|400
-    if (val) f << "fId" << s << "=" << val << ",";
+    if (val) f << "fId=" << val << ",";
     val = (long) input->readULong(2); // a/c/e
-    if (val) f << "fSz" << s << "=" << val << ",";
-    for (int i=0; i<5; i++) { // f4=0|808|d4b
+    if (val) f << "fSz=" << val << ",";
+    for (int i=0; i<2; i++) {
       val = (long) input->readLong(2);
-      if (val) f << "f" << s << "-" << i+2 << "=" << std::hex << val << std::dec << ",";
+      if (val) f << "f" << i+2 << "=" << std::hex << val << std::dec << ",";
     }
+    int col[3];
+    for (int j=0; j < 3; j++)
+      col[j] = (int) input->readULong(2);
+    uint32_t color= uint32_t(((col[0]>>8)<<16)|((col[1]>>8)<<8)|(col[2]>>8));
+    if (color)
+      f << "color=" << std::hex << color << std::dec << ",";
+    f << "],";
   }
   int numRemains=int(entry.end()-input->tell());
   std::string name(""); // something like <NAME>(<PAGE>)
@@ -668,6 +685,50 @@ bool LWParser::readMPSR5(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   f << "Entries(MPSR5):";
   entry.setParsed(true);
+  long val = input->readLong(2); // a|c
+  if (val)
+    f << "f0=" << val << ",";
+  std::string name("");
+  for (int i = 0; i < 32; i++) {
+    char c = (char) input->readULong(1);
+    if (!c)
+      break;
+    name += c;
+  }
+  f << "defFont?=\"" << name << "\",";
+  input->seek(pos+34, WPX_SEEK_SET);
+  for (int i = 0; i < 2; i++) { // f1=3|4|6, f2=4
+    val = input->readLong(2);
+    if (val)
+      f << "f" << i+1 << "=" << val << ",";
+  }
+  int dim[4];
+  for (int s=0; s<2; s++) {
+    for(int i=0; i<4; i++)
+      dim[i] = (int) input->readLong(2);
+    f << "pos" << s << "=" << dim[1] << "x" << dim[0]
+      << "<->" << dim[3] << "x" << dim[2] << ",";
+  }
+  val = (long) input->readULong(4); // a very big number
+  if (val)
+    f << "unkn=" << std::hex << val << std::dec << ",";
+  long sel[2]; // checkme
+  for(int i=0; i<2; i++)
+    sel[i] = input->readLong(4);
+  if (sel[0]==sel[1])
+    f << "sel?=" << std::hex << sel[0] << std::dec << ",";
+  else
+    f << "sel?=" << std::hex << sel[0] << "x" << sel[1] << std::dec << ",";
+  for (int i = 0; i < 2; i++) { // g1=0|6
+    val = input->readLong(2);
+    if (val)
+      f << "g" << i << "=" << val << ",";
+  }
+  for (int i = 0; i < 2; i++) { // fl0=0|1, fl1=0|1
+    val = (long) input->readULong(1);
+    if (val)
+      f << "fl" << i << "=" << val << ",";
+  }
 
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());

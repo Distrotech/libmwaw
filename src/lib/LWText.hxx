@@ -105,11 +105,26 @@ protected:
   // intermediate level
   //
 
+  //! send a text
+  bool sendText(MWAWEntry &entry);
+
   /** compute the positions */
   void computePositions();
 
   //! read the fonts ( styl resource)
   bool readFonts(MWAWEntry const &entry);
+
+  //! read the rulers (stylx resource)
+  bool readRulers(MWAWEntry const &entry);
+
+  //! read the unknown styu resource
+  bool readStyleU(MWAWEntry const &entry);
+
+  //! read the Font2 resource ( underline, upperline, ...)
+  bool readFont2(MWAWEntry const &entry);
+
+  //! read the ruby data
+  bool readRuby(MWAWEntry const &entry);
 
   //! read the styl resource
   bool readUnknownStyle(MWAWEntry const &entry);
@@ -117,6 +132,11 @@ protected:
   //
   // low level
   //
+
+  //! returns the debug file
+  libmwaw::DebugFile &ascii() {
+    return m_asciiFile;
+  }
 
 private:
   LWText(LWText const &orig);
@@ -140,6 +160,9 @@ protected:
 
   //! the main parser;
   LWParser *m_mainParser;
+
+  //! the debug file
+  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

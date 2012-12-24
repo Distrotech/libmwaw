@@ -109,8 +109,8 @@ protected:
   bool readPrintInfo(MWAWEntry const &entry);
   //! read a DocInfo block
   bool readDocInfo(MWAWEntry const &entry);
-  //! read a LWSR block (1000)
-  bool readLWSR0(MWAWEntry const &entry);
+  //! read a Document, Header/Footer block (1000)
+  bool readDocument(MWAWEntry const &entry);
   //! read a LWSR block (1002)
   bool readLWSR2(MWAWEntry const &entry);
   //! read a MPSR block (1005)
