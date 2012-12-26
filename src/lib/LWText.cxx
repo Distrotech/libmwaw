@@ -31,6 +31,7 @@
 * instead of those above.
 */
 
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <limits>
