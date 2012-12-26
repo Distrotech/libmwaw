@@ -490,6 +490,48 @@ void State::initMaps()
   m_idNameMap[128] = "Unknown128";
   m_idNameMap[200] = "Unknown200";
 
+  // ------- fixme: find encoding
+  m_idNameMap[174] = "Futura";
+  m_idNameMap[258] = "ProFont";
+  m_idNameMap[513] = "ISO Latin Nr 1";
+  m_idNameMap[514] = "PCFont 437";
+  m_idNameMap[515] = "PCFont 850";
+  m_idNameMap[1029] = "VT80 Graphics";
+  m_idNameMap[1030] = "3270 Graphics";
+  m_idNameMap[1109] = "Trebuchet MS";
+  m_idNameMap[1345] = "ProFont";
+  m_idNameMap[1895] = "Nu Sans Regular";
+  m_idNameMap[2001] = "Arial";
+  m_idNameMap[2002] = "Charcoal";
+  m_idNameMap[2004] = "Sand";
+  m_idNameMap[2005] = "Courier New";
+  m_idNameMap[2006] = "Techno";
+  m_idNameMap[2010] = "Times New Roman";
+  m_idNameMap[2011] = "Wingdings";
+  m_idNameMap[2013] = "Hoefler Text";
+  m_idNameMap[2018] = "Hoefler Text Ornaments";
+  m_idNameMap[2039] = "Impact";
+  m_idNameMap[2305] = "Textile";
+  m_idNameMap[2307] = "Gadget";
+  m_idNameMap[2311] = "Apple Chancery";
+  m_idNameMap[2515] = "MT Extra";
+  m_idNameMap[4513] = "Comic Sans MS";
+  m_idNameMap[7092] = "Monotype.com";
+  m_idNameMap[7102] = "Andale Mono";
+  m_idNameMap[7203] = "Verdenal";
+  m_idNameMap[9728] = "Espi Sans";
+  m_idNameMap[9729] = "Charcoal";
+  m_idNameMap[9840] = "Espy Sans/Copland";
+  m_idNameMap[9841] = "Espy Sans/Bold";
+  m_idNameMap[9842] = "Espy Sans Bold/Copland";
+  m_idNameMap[10840] = "Klang MT";
+  m_idNameMap[10890] = "Script MT Bold";
+  m_idNameMap[10897] = "Old English Text MT";
+  m_idNameMap[10909] = "New Berolina MT";
+  m_idNameMap[10957] = "Bodoni MT Ultra Bold";
+  m_idNameMap[10967] = "Arial MT Condensed Light";
+  m_idNameMap[11103] = "Lydian MT";
+
   std::map<int, std::string>::iterator it;
   for(it = m_idNameMap.begin(); it != m_idNameMap.end(); it++)
     m_nameIdMap[it->second] = it->first;

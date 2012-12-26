@@ -116,6 +116,18 @@ struct Font {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Font const &font);
 
+  //! merge extra data to get final font
+  void merge(Font const &fExtra) {
+    m_font.setFlags(m_font.flags()|fExtra.m_font.flags());
+    if (fExtra.m_font.getUnderlineStyle() != MWAWBorder::None)
+      m_font.setUnderlineStyle(fExtra.m_font.getUnderlineStyle());
+    uint32_t backColor;
+    fExtra.m_font.getBackgroundColor(backColor);
+    m_font.setBackgroundColor(backColor);
+    m_pictId = fExtra.m_pictId;
+    m_extra += fExtra.m_extra;
+  }
+
   //! the font
   MWAWFont m_font;
   //! the line height
@@ -137,10 +149,60 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
 }
 
 ////////////////////////////////////////
+//! Internal: the header/footer zone of a LWText
+struct HFZone {
+  //! constructor
+  HFZone() : m_numChar(0), m_pos(), m_height(0), m_font(), m_justify(libmwaw::JustificationLeft), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, HFZone const &hf);
+  //! the number of char
+  int m_numChar;
+  //! the position of the text in the file
+  MWAWEntry m_pos;
+  //! the height
+  int m_height;
+  //! the font
+  MWAWFont m_font;
+  /** the paragraph justification */
+  libmwaw::Justification m_justify;
+  //! extra data
+  std::string m_extra;
+};
+
+std::ostream &operator<<(std::ostream &o, HFZone const &hf)
+{
+  if (hf.m_numChar > 0)
+    o << "nC=" << hf.m_numChar << ",";
+  if (hf.m_height > 0)
+    o << "h=" << hf.m_height << ",";
+  switch(hf.m_justify) {
+  case libmwaw::JustificationLeft:
+    break;
+  case libmwaw::JustificationCenter:
+    o << "just=centered, ";
+    break;
+  case libmwaw::JustificationRight:
+    o << "just=right, ";
+    break;
+  case libmwaw::JustificationFull:
+    o << "just=full, ";
+    break;
+  case libmwaw::JustificationFullAllLines:
+    o << "just=fullAllLines, ";
+    break;
+  default:
+    o << "#just=" << hf.m_justify << ", ";
+  }
+  o << hf.m_extra;
+  return o;
+}
+
+////////////////////////////////////////
 //! Internal: the state of a LWText
 struct State {
   //! constructor
-  State() : m_version(-1), m_numPages(-1), m_actualPage(0), m_fontsList(), m_auxiFontsList(), m_paragraphsList(), m_plcMap() {
+  State() : m_version(-1), m_numPages(-1), m_actualPage(0), m_fontsList(), m_auxiFontsList(), m_paragraphsList(), m_plcMap(), m_header(), m_footer() {
   }
 
   //! the file version
@@ -155,69 +217,10 @@ struct State {
   //! the list of paragraph
   std::vector<MWAWParagraph> m_paragraphsList;
   std::multimap<long, PLC> m_plcMap /** the plc map */;
+
+  HFZone m_header /** header */, m_footer /** footer */;
 };
 
-////////////////////////////////////////
-//! Internal: the subdocument of a LWText
-class SubDocument : public MWAWSubDocument
-{
-public:
-  SubDocument(LWText &pars, MWAWInputStreamPtr input, int id, libmwaw::SubDocumentType type) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_id(id), m_type(type) {}
-
-  //! destructor
-  virtual ~SubDocument() {}
-
-  //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const;
-  //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
-    return !operator!=(doc);
-  }
-
-  //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
-
-protected:
-  /** the text parser */
-  LWText *m_textParser;
-  //! the subdocument id
-  int m_id;
-  //! the subdocument type
-  libmwaw::SubDocumentType m_type;
-private:
-  SubDocument(SubDocument const &orig);
-  SubDocument &operator=(SubDocument const &orig);
-};
-
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
-{
-  if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
-    return;
-  }
-  LWContentListener *listen = dynamic_cast<LWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
-
-  assert(m_textParser);
-
-  long pos = m_input->tell();
-  m_input->seek(pos, WPX_SEEK_SET);
-}
-
-bool SubDocument::operator!=(MWAWSubDocument const &doc) const
-{
-  if (MWAWSubDocument::operator!=(doc)) return true;
-  SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
-  if (!sDoc) return true;
-  if (m_textParser != sDoc->m_textParser) return true;
-  if (m_id != sDoc->m_id) return true;
-  if (m_type != sDoc->m_type) return true;
-  return false;
-}
 }
 
 ////////////////////////////////////////////////////////////
@@ -253,6 +256,27 @@ void LWText::computePositions()
   int nPages = 1;
   m_state->m_actualPage = 1;
   m_state->m_numPages = nPages;
+}
+
+bool LWText::hasHeaderFooter(bool header) const
+{
+  if (header)
+    return m_state->m_header.m_pos.valid();
+  return m_state->m_footer.m_pos.valid();
+}
+
+bool LWText::getColor(int id, uint32_t &col) const
+{
+  if (id < 0 || id >= 11) {
+    MWAW_DEBUG_MSG(("LWText::createZones: can not find col for id=%d\n", id));
+    return false;
+  }
+  static uint32_t const color[] = {
+    0, 0xFF0000, 0x00FF00, 0xFF, 0xFFFF, 0xFF00FF, 0xFFFF00,
+    0xFF8040, 0x800000, 0x808080, 0xFFFFFF
+  };
+  col = color[id];
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -322,23 +346,32 @@ bool LWText::createZones()
   return true;
 }
 
-bool LWText::sendText(MWAWEntry &entry)
+bool LWText::sendMainText()
 {
-#if 0
   if (!m_listener) {
-    MWAW_DEBUG_MSG(("LWText::sendText: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("LWText::sendMainText: can not find a listener\n"));
     return false;
   }
-#endif
   std::multimap<long, LWTextInternal::PLC>::const_iterator plcIt;
 
-  long pos = entry.begin(), endPos = entry.end();
   libmwaw::DebugStream f, f2;
-  m_input->seek(pos, WPX_SEEK_SET);
+  long pos=m_input->tell();
+  m_input->seek(0, WPX_SEEK_SET);
+
+  MWAWFont actFont(3,12);
+  LWTextInternal::Font font, auxiFont;
+
+  int numCols, sepWidth;
+  if (m_mainParser->getColumnInfo(numCols, sepWidth) && numCols > 1) {
+    std::vector<int> width;
+    int colWidth = int((72.0*m_mainParser->pageWidth())/numCols);
+    width.resize((size_t) numCols, colWidth);
+    m_listener->openSection(width, WPX_POINT);
+  }
 
   while (1) {
     long actPos = m_input->tell();
-    bool done = m_input->atEOS() || actPos ==endPos;
+    bool done = m_input->atEOS();
     char c = done ? 0 : (char) m_input->readULong(1);
     if (c==0xd || done) {
       f2.str("");
@@ -351,14 +384,78 @@ bool LWText::sendText(MWAWEntry &entry)
     if (done) break;
 
     plcIt = m_state->m_plcMap.find(actPos);
+    bool fontChanged = false;
     while (plcIt != m_state->m_plcMap.end() && plcIt->first==actPos) {
       LWTextInternal::PLC const &plc = plcIt++->second;
       f << "[" << plc << "]";
+      switch(plc.m_type) {
+      case LWTextInternal::P_Font:
+        if (plc.m_id < 0 || plc.m_id >= int(m_state->m_fontsList.size())) {
+          MWAW_DEBUG_MSG(("LWText::sendMainText: can not find font %d\n", plc.m_id));
+          break;
+        }
+        font = m_state->m_fontsList[size_t(plc.m_id)];
+        fontChanged = true;
+        break;
+      case LWTextInternal::P_Font2:
+        if (plc.m_id < 0 || plc.m_id >= int(m_state->m_auxiFontsList.size())) {
+          MWAW_DEBUG_MSG(("LWText::sendMainText: can not find auxi font %d\n", plc.m_id));
+          break;
+        }
+        auxiFont = m_state->m_auxiFontsList[size_t(plc.m_id)];
+        fontChanged = true;
+        break;
+      case LWTextInternal::P_Ruler:
+        if (plc.m_id < 0 || plc.m_id >= int(m_state->m_paragraphsList.size())) {
+          MWAW_DEBUG_MSG(("LWText::sendMainText: can not find paragraph %d\n", plc.m_id));
+          break;
+        }
+        setProperty(m_state->m_paragraphsList[size_t(plc.m_id)]);
+        break;
+      case LWTextInternal::P_Ruby:
+      case LWTextInternal::P_StyleU:
+      case LWTextInternal::P_StyleV:
+      default:
+        break;
+      }
     }
-    if (c != 0xd)
-      f << c;
-    else if (c==0)
-      f << "#[0]";
+    f << c;
+    if (fontChanged) {
+      LWTextInternal::Font final(font);
+      final.merge(auxiFont);
+      actFont = final.m_font;
+      setProperty(actFont);
+      if (final.m_pictId>0) {
+        m_mainParser->sendGraphic(final.m_pictId);
+        if (c==(char)0xca)
+          continue;
+      }
+    }
+    switch (c) {
+    case 0x9:
+      m_listener->insertTab();
+      break;
+    case 0xa:
+      m_listener->insertEOL(true);
+      break;
+    case 0xc: // new section (done)
+      break;
+    case 0xd:
+      m_listener->insertEOL();
+      break;
+
+    default: {
+      int unicode = m_convertissor->unicode (actFont.id(), (unsigned char) c);
+      if (unicode == -1) {
+        if (c >= 0 && c < 0x20) {
+          MWAW_DEBUG_MSG(("LWText::sendMainText: Find odd char %x\n", int(c)));
+          f << "##";
+        } else
+          m_listener->insertCharacter((uint8_t) c);
+      } else
+        m_listener->insertUnicode((uint32_t) unicode);
+    }
+    }
   }
 
   return true;
@@ -367,6 +464,13 @@ bool LWText::sendText(MWAWEntry &entry)
 //////////////////////////////////////////////
 // Fonts
 //////////////////////////////////////////////
+void LWText::setProperty(MWAWFont const &font)
+{
+  if (!m_listener) return;
+  MWAWFont aFont;
+  font.sendTo(m_listener.get(), m_convertissor, aFont);
+}
+
 bool LWText::readFonts(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 2) {
@@ -556,14 +660,35 @@ bool LWText::readFont2(MWAWEntry const &entry)
       f << "#over=" << ((flag>>9)&7) << ",";
       break;
     }
-    if (flag >> 12)
-      f << "colorId[line]=" << (flag >> 12) << ",";
+    if (flag >> 12) {
+      uint32_t col=0;
+      if (getColor(int(flag >> 12), col))
+        f << "color[line]=" << std::hex << col << std::dec << ",";
+      else
+        f << "#colorId[line]=" << (flag >> 12) << ",";
+    }
     flag &= 0x0004;
     if (flag) f << "flags=#" << std::hex << flag << std::dec << ",";
     /* fl0=0|2|b|40|42|..|a0 */
     val = (long) input->readULong(1);
-    if (val & 0xf0)
-      f << "backColorId=" << (val>>4) << ",";
+    uint32_t backColor=0xFFFFFF;
+    if ((val & 0xf0) && !getColor(int(val>>4), backColor))
+      f << "#backColorId=" << (val>>4) << ",";
+    int percent = (val & 0xf);
+    if (percent >= 0 && percent <= 10) {
+      float percentVal = 0.1f*float(percent);
+      int col[3];
+      for (int c = 0; c < 3; c++)
+        col[c] = int((1.f-percentVal)*255.0f+
+                     float((backColor>>(8*c))&0xFF)*percentVal);
+      backColor = uint32_t(col[0]+(col[1]<<8)+(col[2]<<16));
+    } else if (percent == 11)
+      f << "border,";
+    else {
+      MWAW_DEBUG_MSG(("LWText::readFont2: find unknown percent id=%d\n", percent));
+    }
+    font.m_font.setBackgroundColor(backColor);
+    // 0: 0%, .. 10:100%, 11:border
     if (val & 0xf)
       f << "backPatternId=" << (val&0xf) << ",";
     flag = (uint32_t) input->readULong(1);
@@ -609,6 +734,11 @@ bool LWText::readFont2(MWAWEntry const &entry)
 //////////////////////////////////////////////
 // Ruler
 //////////////////////////////////////////////
+void LWText::setProperty(MWAWParagraph const &ruler)
+{
+  if (!m_listener) return;
+  ruler.send(m_listener);
+}
 bool LWText::readRulers(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%84) != 2) {
@@ -646,9 +776,12 @@ bool LWText::readRulers(MWAWEntry const &entry)
     pos = input->tell();
     f.str("");
     long cPos = input->readLong(4);
+    para.m_marginsUnit = WPX_POINT;
     para.m_margins[0] = (int) input->readLong(2);
     para.m_margins[1] = (int) input->readLong(2);
     para.m_margins[2] = (int) input->readLong(2);
+    para.m_margins[0] = para.m_margins[0].get()-para.m_margins[1].get();
+
     val = (int) input->readLong(2);
     if (val)
       para.m_spacings[1]=para.m_spacings[2]=float(val)/72.f;
@@ -748,6 +881,171 @@ bool LWText::readRulers(MWAWEntry const &entry)
   return true;
 }
 
+//////////////////////////////////////////////
+// HF
+//////////////////////////////////////////////
+bool LWText::sendHeaderFooter(bool header)
+{
+  if (!m_listener) {
+    MWAW_DEBUG_MSG(("LWText::sendHeaderFooter: can not find the listener\n"));
+    return false;
+  }
+  LWTextInternal::HFZone const &zone =
+    header ? m_state->m_header : m_state->m_footer;
+  if (!zone.m_pos.valid()) {
+    MWAW_DEBUG_MSG(("LWText::sendHeaderFooter: can not find the text\n"));
+    return false;
+  }
+  m_listener->setParagraphJustification(zone.m_justify);
+  MWAWFont actFont = zone.m_font;
+  setProperty(actFont);
+  MWAWInputStreamPtr input = m_mainParser->rsrcInput();
+  input->seek(zone.m_pos.begin(), WPX_SEEK_SET);
+
+  int numChar = (int) zone.m_pos.length();
+  std::string str("");
+  for (int c = 0; c < numChar; c++) {
+    if(input->atEOS()) {
+      MWAW_DEBUG_MSG(("LWText::sendHeaderFooter: can not read end of text\n"));
+      break;
+    }
+    str += (char) input->readULong(1);
+  }
+  std::string::const_iterator it = str.begin();
+  while (it!=str.end()) {
+    char c=*(it++);
+    if (c=='<' && it!= str.end()) {
+      char const *strPtr = &(*it);
+      bool done = true;
+      if (strncmp(strPtr, "PAGE>", 5)==0)
+        m_listener->insertField(MWAWContentListener::PageNumber);
+      else if (strncmp(strPtr, "DATE>", 5)==0)
+        m_listener->insertField(MWAWContentListener::Date);
+      else if (strncmp(strPtr, "TIME>", 5)==0)
+        m_listener->insertField(MWAWContentListener::Time);
+      else if (strncmp(strPtr, "PMAX>", 5)==0)
+        m_listener->insertField(MWAWContentListener::PageCount);
+      else if (strncmp(strPtr, "NAME>", 5)==0)
+        m_listener->insertField(MWAWContentListener::Title);
+      else
+        done=false;
+      if (done) {
+        it += 5;
+        continue;
+      }
+    }
+    int unicode = m_convertissor->unicode (actFont.id(), (unsigned char) c);
+    if (unicode == -1) {
+      if (c >= 0 && c < 0x20) {
+        MWAW_DEBUG_MSG(("LWText::sendHeaderFooter: Find odd char %x\n", int(c)));
+      } else
+        m_listener->insertCharacter((uint8_t) c);
+    } else
+      m_listener->insertUnicode((uint32_t) unicode);
+  }
+  return true;
+}
+
+bool LWText::readDocumentHF(MWAWEntry const &entry)
+{
+  MWAWInputStreamPtr input = m_mainParser->rsrcInput();
+  libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
+  long pos = input->tell();
+
+  libmwaw::DebugStream f, f2;
+  f << "Document(HF):";
+  if (entry.length()<0x50) {
+    f << "###";
+    MWAW_DEBUG_MSG(("LWText::readDocumentHF: HF seems too short\n"));
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+
+  long val;
+  for (int s=0; s < 2; s++) {
+    LWTextInternal::HFZone zone;
+    zone.m_height = (int) input->readLong(2);
+    zone.m_numChar = (int) input->readLong(2);
+    // ruler align
+    int flag = (int) input->readULong(1); // [012]
+    f2.str("");
+    switch(flag) {
+    case 0:
+      break; // left
+    case 1:
+      zone.m_justify = libmwaw::JustificationCenter;
+      break;
+    case 2:
+      zone.m_justify = libmwaw::JustificationRight;
+      break;
+    case 3:
+      zone.m_justify = libmwaw::JustificationFull;
+      break;
+    default:
+      f2 << "#justify=" << flag << ",";
+    }
+    uint32_t flags=0;
+    flag=(int) input->readULong(1);
+    if (flag&0x1) flags |= MWAW_BOLD_BIT;
+    if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+    if (flag&0x4) zone.m_font.setUnderlineStyle(MWAWBorder::Single);
+    if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
+    if (flag&0x10) flags |= MWAW_SHADOW_BIT;
+    if (flag&0x20) f2 << "expand,";
+    if (flag&0x40) f2 << "condense,";
+    if (flag&0x80) f2 << "#fl80,";
+    zone.m_font.setFlags(flags);
+    zone.m_font.setId((int) input->readULong(2));
+    zone.m_font.setSize((int) input->readULong(2));
+    int col[3];
+    for (int j=0; j < 3; j++)
+      col[j] = (int) input->readULong(2);
+    if (col[0] || col[1] || col[2])
+      zone.m_font.setColor(uint32_t(((col[0]>>8)<<16)|((col[1]>>8)<<8)|(col[2]>>8)));
+    val = input->readLong(2); // can be 0x200
+    if (val) f2 << "f0=" << std::hex << val << std::dec << ",";
+    zone.m_extra = f2.str();
+
+    if (s==0)
+      m_state->m_header = zone;
+    else
+      m_state->m_footer = zone;
+    f << (s==0 ? "header" :  "footer") << "=[" << zone  << ","
+      << zone.m_font.getDebugString(m_convertissor) << "],";
+
+    val = input->readLong(2);
+    if (val) {
+      if (s==0) f << "fPage=" << val+1 << ",";
+      else
+        f << "#f1=" << std::hex << val << std::dec << ",";
+    }
+  }
+  long debText = input->tell();
+  int numRemains=int(entry.end()-debText);
+  bool ok = numRemains == m_state->m_header.m_numChar+m_state->m_footer.m_numChar;
+  if (ok) {
+    if (m_state->m_header.m_numChar) {
+      m_state->m_header.m_pos.setBegin(debText);
+      m_state->m_header.m_pos.setLength(m_state->m_header.m_numChar);
+      debText+=m_state->m_header.m_numChar;
+    }
+    if (m_state->m_footer.m_numChar) {
+      m_state->m_footer.m_pos.setBegin(debText);
+      m_state->m_footer.m_pos.setLength(m_state->m_footer.m_numChar);
+    }
+  } else {
+    MWAW_DEBUG_MSG(("LWText::readDocumentHF: HF can not determine header/footer text\n"));
+    f << "###";
+  }
+  std::string name(""); // something like <NAME>(<PAGE>)
+  for (int i = 0; i < numRemains; i++)
+    name += (char) input->readULong(1);
+  f << name << ",";
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
 
 //////////////////////////////////////////////
 // Unknown
@@ -911,21 +1209,6 @@ bool LWText::readUnknownStyle(MWAWEntry const &entry)
 // Low level
 //
 ////////////////////////////////////////////////////////////
-
-//! send data to the listener
-bool LWText::sendMainText()
-{
-  // if (!m_listener) return true;
-  m_input->seek(0, WPX_SEEK_SET);
-  while (!m_input->atEOS())
-    m_input->seek(2048, WPX_SEEK_CUR);
-  MWAWEntry entry;
-  entry.setBegin(0);
-  entry.setEnd(m_input->tell());
-  sendText(entry);
-  return true;
-}
-
 
 void LWText::flushExtra()
 {

@@ -47,18 +47,15 @@ typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 class MWAWContentListener;
 typedef class MWAWContentListener LWContentListener;
 typedef shared_ptr<LWContentListener> LWContentListenerPtr;
-
 class MWAWEntry;
-
 class MWAWFont;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
-
-class MWAWSubDocument;
+class MWAWParagraph;
 
 namespace LWTextInternal
 {
-class SubDocument;
+struct Font;
 struct State;
 }
 
@@ -71,7 +68,6 @@ class LWParser;
  */
 class LWText
 {
-  friend class LWTextInternal::SubDocument;
   friend class LWParser;
 public:
   //! constructor
@@ -98,6 +94,9 @@ protected:
   //! send a main zone
   bool sendMainText();
 
+  //! return a color corresponding to an id
+  bool getColor(int id, uint32_t &col) const;
+
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
@@ -105,26 +104,33 @@ protected:
   // intermediate level
   //
 
-  //! send a text
-  bool sendText(MWAWEntry &entry);
-
   /** compute the positions */
   void computePositions();
 
   //! read the fonts ( styl resource)
   bool readFonts(MWAWEntry const &entry);
+  //! read the Font2 resource ( underline, upperline, ...)
+  bool readFont2(MWAWEntry const &entry);
+  /** send the character properties */
+  void setProperty(MWAWFont const &font);
 
   //! read the rulers (stylx resource)
   bool readRulers(MWAWEntry const &entry);
-
-  //! read the unknown styu resource
-  bool readStyleU(MWAWEntry const &entry);
-
-  //! read the Font2 resource ( underline, upperline, ...)
-  bool readFont2(MWAWEntry const &entry);
+  /** send the paragraph properties */
+  void setProperty(MWAWParagraph const &para);
 
   //! read the ruby data
   bool readRuby(MWAWEntry const &entry);
+
+  //! read the header/footer part of the document zone
+  bool readDocumentHF(MWAWEntry const &entry);
+  //! returns true if there is a header/footer
+  bool hasHeaderFooter(bool header) const;
+  //! try to send the header/footer
+  bool sendHeaderFooter(bool header);
+
+  //! read the unknown styu resource
+  bool readStyleU(MWAWEntry const &entry);
 
   //! read the styl resource
   bool readUnknownStyle(MWAWEntry const &entry);

@@ -95,7 +95,7 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MWParser
+//! Internal: the subdocument of a CWParser
 class SubDocument : public MWAWSubDocument
 {
 public:
@@ -139,12 +139,12 @@ protected:
 void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("CWParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   CWContentListener *listen = dynamic_cast<CWContentListener *>(listener.get());
   if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
+    MWAW_DEBUG_MSG(("CWParserInternal::SubDocument::parse: bad listener\n"));
     return;
   }
   if (m_id == -1) { // a number used to send linked frame
@@ -152,7 +152,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     return;
   }
   if (m_id == 0) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
+    MWAW_DEBUG_MSG(("CWParserInternal::SubDocument::parse: unknown zone\n"));
     return;
   }
 

@@ -59,75 +59,14 @@ namespace LWGraphInternal
 //! Internal: the state of a LWGraph
 struct State {
   //! constructor
-  State() : m_numPages(0) { }
+  State() : m_numPages(-1), m_idPictMap(), m_idJPEGMap() { }
 
   int m_numPages /* the number of pages */;
+  /** a map id -> PICT entry */
+  std::map<int, MWAWEntry> m_idPictMap;
+  /** a map id -> JPEG entry */
+  std::map<int, MWAWEntry> m_idJPEGMap;
 };
-
-////////////////////////////////////////
-//! Internal: the subdocument of a LWGraph
-class SubDocument : public MWAWSubDocument
-{
-public:
-  SubDocument(LWGraph &pars, MWAWInputStreamPtr input, int id, MWAWPosition const &pos, WPXPropertyList const &extras) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(id), m_position(pos), m_extras(extras) {}
-
-  //! destructor
-  virtual ~SubDocument() {}
-
-  //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const;
-  //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
-    return !operator!=(doc);
-  }
-
-  //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
-
-protected:
-  /** the graph parser */
-  LWGraph *m_graphParser;
-  //! the pict id
-  int m_id;
-  //! the pict position
-  MWAWPosition m_position;
-  //! the property list
-  WPXPropertyList m_extras;
-private:
-  SubDocument(SubDocument const &orig);
-  SubDocument &operator=(SubDocument const &orig);
-};
-
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
-{
-  if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
-    return;
-  }
-  LWContentListener *listen = dynamic_cast<LWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
-
-  assert(m_graphParser);
-
-  long pos = m_input->tell();
-  //  m_graphParser->sendPicture(m_id, true, m_position, m_extras);
-  m_input->seek(pos, WPX_SEEK_SET);
-}
-
-bool SubDocument::operator!=(MWAWSubDocument const &doc) const
-{
-  if (MWAWSubDocument::operator!=(doc)) return true;
-  SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
-  if (!sDoc) return true;
-  if (m_graphParser != sDoc->m_graphParser) return true;
-  if (m_id != sDoc->m_id) return true;
-  if (m_position != sDoc->m_position) return true;
-  return false;
-}
 }
 
 ////////////////////////////////////////////////////////////
@@ -150,6 +89,8 @@ int LWGraph::version() const
 
 int LWGraph::numPages() const
 {
+  if (m_state->m_numPages < 0)
+    m_state->m_numPages= (m_state->m_idPictMap.size() ||m_state->m_idJPEGMap.size()) ? 1 : 0;
   return m_state->m_numPages;
 }
 
@@ -175,6 +116,8 @@ bool LWGraph::createZones()
       break;
 
     MWAWEntry const &entry = it++->second;
+    m_state->m_idPictMap.insert
+    (std::map<int, MWAWEntry>::value_type(entry.id(), entry));
     // fixme stored the pict id here, ...
     WPXBinaryData data;
     rsrcParser->parsePICT(entry, data);
@@ -185,8 +128,9 @@ bool LWGraph::createZones()
       break;
 
     MWAWEntry const &entry = it++->second;
-    // fixme stored the pict id here, ...
-    readJPEG(entry);
+
+    m_state->m_idJPEGMap.insert
+    (std::map<int, MWAWEntry>::value_type(entry.id(), entry));
   }
   return true;
 }
@@ -194,12 +138,51 @@ bool LWGraph::createZones()
 ////////////////////////////////////////////////////////////
 // low level
 ////////////////////////////////////////////////////////////
-bool LWGraph::readJPEG(MWAWEntry const &entry)
+bool LWGraph::sendPICT(MWAWEntry const &entry)
 {
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("LWGraph::readJPEG: the entry is bad\n"));
+  entry.setParsed(true);
+  MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
+
+  if (!m_listener || !rsrcParser) {
+    MWAW_DEBUG_MSG(("LWGraph::sendPICT: can not find the listener\n"));
     return false;
   }
+  WPXBinaryData data;
+  rsrcParser->parsePICT(entry, data);
+
+  WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
+  if (!dataStream) {
+    MWAW_DEBUG_MSG(("LWGraph::sendPICT: can not find the stream\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input(new MWAWInputStream(dataStream, false));
+  shared_ptr<MWAWPict> pict(MWAWPictData::get(input, int(entry.length())));
+  if (!pict)
+    return false;
+
+  Box2f bdBox=pict->getBdBox();
+  MWAWPosition pictPos(Vec2f(0,0), bdBox.size(), WPX_POINT);
+  pictPos.setRelativePosition(MWAWPosition::Char);
+
+  WPXBinaryData pictData;
+  std::string type;
+  if (pict->getBinary(pictData,type))
+    m_listener->insertPicture(pictPos, data, type);
+  return true;
+}
+
+bool LWGraph::sendJPEG(MWAWEntry const &entry)
+{
+  if (!m_listener) {
+    MWAW_DEBUG_MSG(("LWGraph::sendJPEG: can not find the listener\n"));
+    return false;
+  }
+  if (!entry.valid()) {
+    MWAW_DEBUG_MSG(("LWGraph::sendJPEG: the entry is bad\n"));
+    return false;
+  }
+
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
@@ -207,10 +190,20 @@ bool LWGraph::readJPEG(MWAWEntry const &entry)
 
   libmwaw::DebugStream f;
   f << "Entries(JPEG):" << entry.id();
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
 
   WPXBinaryData data;
   input->seek(entry.begin(), WPX_SEEK_SET);
   input->readDataBlock(entry.length(), data);
+  MWAWPosition pictPos;
+  pictPos.setRelativePosition(MWAWPosition::Char);
+  Vec2i sz;
+  if (findJPEGSize(data,sz)) {
+    pictPos.setSize(sz);
+    pictPos.setUnit(WPX_POINT);
+  }
+  m_listener->insertPicture(pictPos, data, "image/pict");
 
 #ifdef DEBUG_WITH_FILES
   if (!entry.isParsed()) {
@@ -222,14 +215,67 @@ bool LWGraph::readJPEG(MWAWEntry const &entry)
 #endif
   entry.setParsed(true);
 
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
   return true;
+}
+
+bool LWGraph::findJPEGSize(WPXBinaryData const &data, Vec2i &sz)
+{
+  sz = Vec2i(100,100);
+  WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
+  if (!dataStream) {
+    MWAW_DEBUG_MSG(("LWGraph::findJPEGSize: can not find the stream\n"));
+    return false;
+  }
+  MWAWInputStreamPtr input(new MWAWInputStream(dataStream, false));
+  if (input->readULong(4)!=0xFFD8FFE0) {
+    MWAW_DEBUG_MSG(("LWGraph::findJPEGSize: invalid header\n"));
+    return false;
+  }
+  long pos = input->tell();
+  int len = (int) input->readULong(2);
+  if (input->readULong(4)!=0x4a464946) {
+    MWAW_DEBUG_MSG(("LWGraph::findJPEGSize: not a JFIF file\n"));
+    return false;
+  }
+  input->seek(pos+len, WPX_SEEK_SET);
+  while (!input->atEOS()) {
+    int header = (int) input->readULong(2);
+    pos = input->tell();
+    len = (int) input->readULong(2);
+    if ((header&0xFF00) != 0xFF00) {
+      MWAW_DEBUG_MSG(("LWGraph::findJPEGSize: oops bad data header\n"));
+      break;
+    }
+    if (header != 0xFFC0) {
+      input->seek(pos+len, WPX_SEEK_SET);
+      continue;
+    }
+    input->seek(1, WPX_SEEK_CUR);
+    int dim[2];
+    for (int i = 0; i < 2; i++)
+      dim[i] = (int) input->readULong(2);
+    sz = Vec2i(dim[1],dim[0]);
+    return true;
+  }
+  return false;
 }
 
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
+
+void LWGraph::send(int id)
+{
+  if (m_state->m_idJPEGMap.find(999+id) != m_state->m_idJPEGMap.end()) {
+    sendJPEG(m_state->m_idJPEGMap.find(999+id)->second);
+    return;
+  }
+  if (m_state->m_idPictMap.find(999+id) != m_state->m_idPictMap.end()) {
+    sendPICT(m_state->m_idPictMap.find(999+id)->second);
+    return;
+  }
+  MWAW_DEBUG_MSG(("LWGraph::send: can not find graphic %d\n", id));
+}
 
 bool LWGraph::sendPageGraphics()
 {
@@ -238,5 +284,18 @@ bool LWGraph::sendPageGraphics()
 
 void LWGraph::flushExtra()
 {
+#ifdef DEBUG
+  std::map<int, MWAWEntry>::const_iterator it;
+  for (it = m_state->m_idPictMap.begin() ; it != m_state->m_idPictMap.end(); it++) {
+    MWAWEntry const &entry = it->second;
+    if (entry.isParsed()) continue;
+    sendPICT(entry);
+  }
+  for (it = m_state->m_idJPEGMap.begin() ; it != m_state->m_idJPEGMap.end(); it++) {
+    MWAWEntry const &entry = it->second;
+    if (entry.isParsed()) continue;
+    sendJPEG(entry);
+  }
+#endif
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

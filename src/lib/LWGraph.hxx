@@ -61,7 +61,6 @@ class MWAWPosition;
 namespace LWGraphInternal
 {
 struct State;
-class SubDocument;
 }
 
 class LWParser;
@@ -74,7 +73,6 @@ class LWParser;
 class LWGraph
 {
   friend class LWParser;
-  friend class LWGraphInternal::SubDocument;
 
 public:
   //! constructor
@@ -104,16 +102,25 @@ protected:
   //! try to send the page graphic
   bool sendPageGraphics();
 
+  //! try to send a graph
+  void send(int id);
+
   //
   // Intermediate level
   //
 
-  //! read the JPEG resource
-  bool readJPEG(MWAWEntry const &entry);
+  //! try to send a JPEG resource
+  bool sendJPEG(MWAWEntry const &entry);
+
+  //! try to send a PICT resource
+  bool sendPICT(MWAWEntry const &entry);
 
   //
   // low level
   //
+
+  //! try to find a JPEG size
+  static bool findJPEGSize(WPXBinaryData const &data, Vec2i &sz);
 
   //! returns the debug file
   libmwaw::DebugFile &ascii() {

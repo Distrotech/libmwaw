@@ -55,6 +55,7 @@ class MWAWPosition;
 
 namespace LWParserInternal
 {
+class SubDocument;
 struct State;
 }
 
@@ -65,6 +66,7 @@ class LWText;
  */
 class LWParser : public MWAWParser
 {
+  friend class LWParserInternal::SubDocument;
   friend class LWGraph;
   friend class LWText;
 public:
@@ -95,11 +97,20 @@ protected:
   float pageWidth() const;
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
-
+  //! returns the number of column and the column separator (in point)
+  bool getColumnInfo(int &numCols, int &colSep) const;
   //! adds a new page
   void newPage(int number);
 
   // interface with the graph parser
+
+  //! ask the graph parser to send a graph
+  void sendGraphic(int graphId);
+
+  // interface with the text parser
+
+  //! try to send the header/footer
+  bool sendHeaderFooter(bool header);
 
 protected:
   //! finds the different objects zones
@@ -140,6 +151,8 @@ protected:
 
   //! the actual document size
   MWAWPageSpan m_pageSpan;
+  //! a flag to know if page span has been set
+  bool m_pageSpanSet;
 
   //! the graph parser
   shared_ptr<LWGraph> m_graphParser;

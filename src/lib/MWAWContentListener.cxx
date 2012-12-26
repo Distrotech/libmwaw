@@ -1489,8 +1489,10 @@ void MWAWContentListener::_handleFrameParameters
   float inchFactor=pos.getInvUnitScale(WPX_INCH);
   float pointFactor = pos.getInvUnitScale(WPX_POINT);
 
-  propList.insert("svg:width", double(pos.size()[0]), unit);
-  propList.insert("svg:height", double(pos.size()[1]), unit);
+  if (pos.size()[0]>0)
+    propList.insert("svg:width", double(pos.size()[0]), unit);
+  if (pos.size()[1]>0)
+    propList.insert("svg:height", double(pos.size()[1]), unit);
   if (pos.order() > 0)
     propList.insert("draw:z-index", pos.order());
   if (pos.naturalSize().x() > 4*pointFactor && pos.naturalSize().y() > 4*pointFactor) {
