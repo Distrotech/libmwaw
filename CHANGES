@@ -1,4 +1,8 @@
 CHANGES:
+12/26/2012
+- add a first parser for LightWayText 4.5 ( only Mac Format ), autoindent,
+  macros not implemented.
+
 12/21/2012
 - add a first parser for Mariner Write Lite 1.6, other Mariner Write 1.* may
   be recognized ( ignoring some features : table, multi-columns, multi headers,

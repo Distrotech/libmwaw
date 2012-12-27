@@ -6,6 +6,7 @@
 - CW* : parser of ClarisWorks and AppleWorks documents
 - FW* : parser of FullWrite documents
 - HMW* : parser of HanMac Word documents
+- LW* : parser of LightWay Text documents
 - MDW* : parser of MindWrite documents
 - MRW* : parser of Mariner Write documents
 - MSK* : parser of Microsoft Works documents
@@ -87,7 +88,7 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------
---------------------   CW/FW/MDW/MRW/MSK/MSW/MW/NS/WN/WP  -----------------
+---------   CW/FW/LW/MDW/MRW/MSK/MSW/MW/NS/WN/WP   ---------
 ------------------------------------------------------------
 
 Specific files which depends on the type of file which is converted
@@ -110,6 +111,10 @@ FWParser: parser of FullWrite : v1.0 v2.0
 HMWParser : parser of HanMac Word-K 2.0.5-2.0.6
 -   HMWGraph : class which reads the picture/graph/frame
 -   HMWText : class which reads the text
+
+LWParser : parser of LightWay Text v4.5
+-   LWGraph : class which reads the picture/graph/frame
+-   LWText : class which reads the text
 
 MDWParser : parser of MindWrite document: v2.1
 

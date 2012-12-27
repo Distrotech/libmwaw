@@ -373,7 +373,7 @@ bool LWText::sendMainText()
   while (1) {
     long actPos = m_input->tell();
     bool done = m_input->atEOS();
-    char c = done ? 0 : (char) m_input->readULong(1);
+    char c = done ? (char) 0 : (char) m_input->readULong(1);
     if (c==0xd || done) {
       f2.str("");
       f2 << "Entries(TextContent):" << f.str();
@@ -416,6 +416,7 @@ bool LWText::sendMainText()
       case LWTextInternal::P_Ruby:
       case LWTextInternal::P_StyleU:
       case LWTextInternal::P_StyleV:
+      case LWTextInternal::P_Unknown:
       default:
         break;
       }
