@@ -1021,6 +1021,8 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
   *m_state = WNParserInternal::State();
 
   MWAWInputStreamPtr input = getInput();
+  if (!input || !input->hasDataFork())
+    return false;
 
   libmwaw::DebugStream f;
   int headerSize=28;

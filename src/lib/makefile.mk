@@ -90,7 +90,9 @@ SLOFILES= \
 	$(SLO)$/NSText.obj			\
 	$(SLO)$/WNParser.obj			\
 	$(SLO)$/WNText.obj			\
-	$(SLO)$/WPParser.obj
+	$(SLO)$/WPParser.obj			\
+	$(SLO)$/ZWParser.obj			\
+	$(SLO)$/ZWText.obj
 
 LIB1ARCHIV=$(LB)$/libmwawlib.a
 LIB1TARGET=$(SLB)$/$(TARGET).lib

@@ -164,7 +164,7 @@ bool MWAWRSRCParser::parseMap(MWAWEntry const &entry, long dataBegin)
     return false;
   }
 
-  libmwaw::DebugStream f;
+  libmwaw::DebugStream f, f2;
   m_input->seek(entry.begin()+24, WPX_SEEK_SET);
   f << "Entries(RSRCMap):";
   long offsetTypes=(long)m_input->readULong(2);
@@ -225,8 +225,30 @@ bool MWAWRSRCParser::parseMap(MWAWEntry const &entry, long dataBegin)
       MWAWEntry rsrc(tEntry);
       rsrc.setId((int)m_input->readLong(2));
       long offset = (long) m_input->readULong(2);
-      if (offset != 0xFFFF) // never seems
-        f << "listNamesOffset=" << std::hex << offset << std::dec << ",";
+      if (offset != 0xFFFF) {
+        std::string name("");
+        if (offset+offsetNameLists+1 <= entry.length()) {
+          long actPos = m_input->tell();
+          m_input->seek(entry.begin()+offset+offsetNameLists, WPX_SEEK_SET);
+          int nSz = (int) m_input->readULong(1);
+          if (offset+offsetNameLists+1+nSz <= entry.length()) {
+            for (int j = 0; j < nSz; j++)
+              name+=(char)  m_input->readULong(1);
+            f2.str("");
+            f2 << "nameList:" << name;
+            ascii().addPos(entry.begin()+offset+offsetNameLists);
+            ascii().addNote(f2.str().c_str());
+          }
+          m_input->seek(actPos, WPX_SEEK_SET);
+        }
+        if (!name.length()) {
+          MWAW_DEBUG_MSG(("MWAWRSRCParser::parseMap: can not read name of entry %s[%d]\n", tEntry.type().c_str(), tEntry.id()));
+          f << "#listNamesOffset=" << std::hex << offset << std::dec << ",";
+        } else {
+          rsrc.setName(name);
+          f << "name=" << name << ",";
+        }
+      }
       unsigned long dOffset = m_input->readULong(4);
       if (dOffset & 0xFF000000) {
         f << "attributes=" << (dOffset>>12) << ",";
@@ -244,7 +266,7 @@ bool MWAWRSRCParser::parseMap(MWAWEntry const &entry, long dataBegin)
   }
   if (offsetNameLists != entry.length()) {
     ascii().addPos(entry.begin()+offsetNameLists);
-    ascii().addNote("RSRCMap[#nameList]");
+    ascii().addNote("RSRCMap[nameList]");
   }
   return true;
 }

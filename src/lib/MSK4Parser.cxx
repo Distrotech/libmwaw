@@ -364,7 +364,7 @@ void MSK4Parser::flushExtra()
 ////////////////////////////////////////////////////////////
 bool MSK4Parser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
-  if (!m_input->isOLEStream())
+  if (!m_input || !m_input->hasDataFork() || !m_input->isOLEStream())
     return false;
 
   MWAWInputStreamPtr mmOle = m_input->getDocumentOLEStream("MM");

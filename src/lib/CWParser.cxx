@@ -982,7 +982,8 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
   *m_state = CWParserInternal::State();
 
   MWAWInputStreamPtr input = getInput();
-
+  if (!input || !input->hasDataFork())
+    return false;
   libmwaw::DebugStream f;
   int const headerSize=8;
   input->seek(headerSize,WPX_SEEK_SET);

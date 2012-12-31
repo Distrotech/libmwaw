@@ -316,7 +316,6 @@ void LWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
-  //
   LWContentListenerPtr listen(new LWContentListener(pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
@@ -638,7 +637,7 @@ bool LWParser::readTOC(MWAWEntry const &entry)
 }
 
 ////////////////////////////////////////////////////////////
-// read the Unknown data
+// read the main document information data then unknown data
 ////////////////////////////////////////////////////////////
 bool LWParser::readDocument(MWAWEntry const &entry)
 {
@@ -814,7 +813,8 @@ bool LWParser::readMPSR5(MWAWEntry const &entry)
 bool LWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
   *m_state = LWParserInternal::State();
-  if (!getRSRCParser())
+  MWAWInputStreamPtr input = getInput();
+  if (!input || !input->hasDataFork() || !getRSRCParser())
     return false;
   // check if the LWSR string exists
   MWAWEntry entry = getRSRCParser()->getEntry("LWSR", 1000);

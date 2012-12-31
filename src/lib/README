@@ -16,6 +16,7 @@
 - NS* : parser of Nisus Writer documents,
 - WN* : parser of WriteNow documents
 - WP* : parser of WriterPlus documents
+- ZW* : parser of Z-Write documents
 
 ------------------------------------------------------------
 --------------            Exported           --------------
@@ -88,7 +89,7 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------
----------   CW/FW/LW/MDW/MRW/MSK/MSW/MW/NS/WN/WP   ---------
+--------   CW/FW/LW/MDW/MRW/MSK/MSW/MW/NS/WN/WP/ZW   -------
 ------------------------------------------------------------
 
 Specific files which depends on the type of file which is converted
@@ -153,3 +154,5 @@ WNParser : parser of WriteNow document : v1.0-4.0
 
 WPParser : parser of WriterPlus document
 
+ZWParser : parser of Z-Write document : v1.3
+-   ZWText : class which reads the text and its structures

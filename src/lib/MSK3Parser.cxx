@@ -497,6 +497,8 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = MSK3ParserInternal::State();
   MWAWInputStreamPtr input = getInput();
+  if (!input || !input->hasDataFork())
+    return false;
 
   int numError = 0, val;
 

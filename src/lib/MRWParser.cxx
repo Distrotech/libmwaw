@@ -1378,13 +1378,15 @@ bool MRWParser::decodeZone(std::vector<MRWStruct> &dataList, long numData)
 bool MRWParser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = MRWParserInternal::State();
+  MWAWInputStreamPtr input = getInput();
+  if (!input || !input->hasDataFork())
+    return false;
 
   long const headerSize=0x2e;
   if (!isFilePos(headerSize)) {
     MWAW_DEBUG_MSG(("MRWParser::checkHeader: file is too short\n"));
     return false;
   }
-  MWAWInputStreamPtr input = getInput();
   input->seek(0,WPX_SEEK_SET);
 
   int actZone = -1;

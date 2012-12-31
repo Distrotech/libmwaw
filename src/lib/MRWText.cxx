@@ -203,67 +203,6 @@ struct State {
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
-////////////////////////////////////////
-//! Internal: the subdocument of a MRWText
-class SubDocument : public MWAWSubDocument
-{
-public:
-  SubDocument(MRWText &pars, MWAWInputStreamPtr input, int id, libmwaw::SubDocumentType type) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_id(id), m_type(type) {}
-
-  //! destructor
-  virtual ~SubDocument() {}
-
-  //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const;
-  //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
-    return !operator!=(doc);
-  }
-
-  //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
-
-protected:
-  /** the text parser */
-  MRWText *m_textParser;
-  //! the subdocument id
-  int m_id;
-  //! the subdocument type
-  libmwaw::SubDocumentType m_type;
-private:
-  SubDocument(SubDocument const &orig);
-  SubDocument &operator=(SubDocument const &orig);
-};
-
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
-{
-  if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
-    return;
-  }
-  MRWContentListener *listen = dynamic_cast<MRWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
-
-  assert(m_textParser);
-
-  long pos = m_input->tell();
-  m_input->seek(pos, WPX_SEEK_SET);
-}
-
-bool SubDocument::operator!=(MWAWSubDocument const &doc) const
-{
-  if (MWAWSubDocument::operator!=(doc)) return true;
-  SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
-  if (!sDoc) return true;
-  if (m_textParser != sDoc->m_textParser) return true;
-  if (m_id != sDoc->m_id) return true;
-  if (m_type != sDoc->m_type) return true;
-  return false;
-}
 }
 
 ////////////////////////////////////////////////////////////

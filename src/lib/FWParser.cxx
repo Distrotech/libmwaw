@@ -628,6 +628,8 @@ bool FWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   *m_state = FWParserInternal::State();
 
   MWAWInputStreamPtr input = getInput();
+  if (!input || !input->hasDataFork())
+    return false;
 
   int const minSize=50;
   input->seek(minSize,WPX_SEEK_SET);

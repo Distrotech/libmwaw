@@ -67,7 +67,7 @@ public:
   -CW: ClarisWorks/AppleWorks document (basic)
   -FULLW: FullWrite Professional (basic)
   -HMAC: HanMac Word-J or K (basic done for K document, almost nothing done for J document)
-  -LWTEXT: LightWayText (nothing done)
+  -LWTEXT: LightWayText ( only v4.5 Mac format )
   -MARIW: Mariner Write ( only v1.6 Lite)
   -MINDW: MindWrite
   -MW: MacWrite document
@@ -77,7 +77,7 @@ public:
   -NISUSW: Nisus Writer document : v3.4-v6.5
   -WNOW: WriteNow
   -WPLUS: writerplus document
-  -ZWRT: Z-Write (nothing done)
+  -ZWRT: Z-Write : v1.3
   */
   enum DocumentType { UNKNOWN, CW, FULLW, MINDW, MSWORD, MSWORKS, MW, MWPRO, NISUSW, WNOW, WPLUS, HMAC, LWTEXT, MARIW, ZWRT };
 

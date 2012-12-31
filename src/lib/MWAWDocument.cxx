@@ -52,6 +52,7 @@
 #include "NSParser.hxx"
 #include "WNParser.hxx"
 #include "WPParser.hxx"
+#include "ZWParser.hxx"
 
 namespace MWAWDocumentInternal
 {
@@ -167,6 +168,7 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
   case ZWRT:
+    confidence = MWAW_CONFIDENCE_GOOD;
     break;
   case UNKNOWN:
   default:
@@ -278,8 +280,11 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       parser.parse(documentInterface);
       break;
     }
-    case ZWRT:
+    case ZWRT: {
+      ZWParser parser (ip, rsrcParser, header.get());
+      parser.parse(documentInterface);
       break;
+    }
     case UNKNOWN:
     default:
       break;
@@ -311,10 +316,16 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
 
   try {
     /** avoid very short file */
-    if (!ip.get() || ip->seek(10, WPX_SEEK_SET) != 0) return 0L;
+    if (!ip.get()) return 0L;
 
-    ip->seek(0, WPX_SEEK_SET);
-    ip->setReadInverted(false);
+    if (ip->hasDataFork()) {
+      if (ip->seek(10, WPX_SEEK_SET) != 0) return 0L;
+
+      ip->seek(0, WPX_SEEK_SET);
+      ip->setReadInverted(false);
+    } else if (!ip->hasResourceFork())
+      return 0L;
+
     listHeaders = MWAWHeader::constructHeader(ip, rsrcParser);
     size_t numHeaders = listHeaders.size();
     if (numHeaders==0) return 0L;
@@ -401,8 +412,10 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
       WPParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);
     }
-    case MWAWDocument::ZWRT:
-      break;
+    case MWAWDocument::ZWRT: {
+      ZWParser parser(input, rsrcParser, &header);
+      return parser.checkHeader(&header, strict);
+    }
     case MWAWDocument::UNKNOWN:
     default:
       break;

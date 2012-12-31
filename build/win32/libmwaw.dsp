@@ -356,6 +356,14 @@ SOURCE=..\..\src\lib\WPParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\ZWParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ZWText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\libmwaw_internal.cxx
 # End Source File
 # End Group
@@ -649,6 +657,14 @@ SOURCE=..\..\src\lib\WNText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ZWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ZWText.hxx
 # End Source File
 # Begin Source File
 

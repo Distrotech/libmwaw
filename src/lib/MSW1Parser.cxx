@@ -1362,6 +1362,8 @@ bool MSW1Parser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = MSW1ParserInternal::State();
   MWAWInputStreamPtr input = getInput();
+  if (!input || !input->hasDataFork())
+    return false;
 
   libmwaw::DebugStream f;
   if (!isFilePos(0x80)) {

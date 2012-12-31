@@ -183,6 +183,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MINDW, 2));
         return res;
       }
+    } else if (creator=="ZWRT") {
+      if (type=="Zart") {
+        res.push_back(MWAWHeader(MWAWDocument::ZWRT, 1));
+        return res;
+      }
     } else if (creator=="nX^n") {
       if (type=="nX^d") {
         res.push_back(MWAWHeader(MWAWDocument::WNOW, 2));
@@ -199,6 +204,9 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
 
   // ----------- now check resource fork ------------
   // ----------- now check data fork ------------
+  if (!input->hasDataFork())
+    return res;
+
   input->seek(8, WPX_SEEK_SET);
   if (input->atEOS() || input->tell() != 8)
     return res;

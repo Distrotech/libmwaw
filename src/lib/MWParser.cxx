@@ -735,6 +735,8 @@ bool MWParser::checkHeader(MWAWHeader *header, bool strict)
   MWParserInternal::FileHeader fHeader = m_state->m_fileHeader;
 
   MWAWInputStreamPtr input = getInput();
+  if (!input || !input->hasDataFork())
+    return false;
 
   libmwaw::DebugStream f;
   int headerSize=40;

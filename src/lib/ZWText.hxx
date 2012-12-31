@@ -32,11 +32,11 @@
 */
 
 /*
- * Parser to Mariner Write text document
+ * Parser to ZWrite document
  *
  */
-#ifndef MRW_TEXT
-#  define MRW_TEXT
+#ifndef ZW_TEXT
+#  define ZW_TEXT
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
@@ -45,39 +45,37 @@ class MWAWInputStream;
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 
 class MWAWContentListener;
-typedef class MWAWContentListener MRWContentListener;
-typedef shared_ptr<MRWContentListener> MRWContentListenerPtr;
-
+typedef class MWAWContentListener ZWContentListener;
+typedef shared_ptr<ZWContentListener> ZWContentListenerPtr;
 class MWAWEntry;
 class MWAWFont;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParagraph;
 
-class MWAWSubDocument;
-
-namespace MRWTextInternal
+namespace ZWTextInternal
 {
-struct Paragraph;
+struct Section;
 struct State;
-struct Zone;
+class SubDocument;
 }
 
-struct MRWEntry;
-class MRWParser;
+class ZWParser;
 
-/** \brief the main class to read the text part of Mariner Write file
+/** \brief the main class to read the text part of LightWay Text file
  *
  *
  *
  */
-class MRWText
+class ZWText
 {
-  friend class MRWParser;
+  friend class ZWParser;
+  friend class ZWTextInternal::SubDocument;
 public:
   //! constructor
-  MRWText(MWAWInputStreamPtr ip, MRWParser &parser, MWAWFontConverterPtr &convertissor);
+  ZWText(MWAWInputStreamPtr ip, ZWParser &parser, MWAWFontConverterPtr &convertissor);
   //! destructor
-  virtual ~MRWText();
+  virtual ~ZWText();
 
   /** returns the file version */
   int version() const;
@@ -86,15 +84,19 @@ public:
   int numPages() const;
 
 protected:
+  //! the list of code in the text
+  enum TextCode { None, Center, BookMark, NewPage, Tag, Link };
+
   //! sets the listener in this class and in the helper classes
-  void setListener(MRWContentListenerPtr listen) {
+  void setListener(ZWContentListenerPtr listen) {
     m_listener = listen;
   }
-  /* sends a character property to the listener
-   * \param font the font's properties */
-  void setProperty(MWAWFont const &font);
-  /** sends a paragraph property to the listener */
-  void setProperty(MRWTextInternal::Paragraph const &ruler);
+
+  //! finds the different text zones
+  bool createZones();
+
+  //! send a main zone
+  bool sendMainText();
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
@@ -102,29 +104,31 @@ protected:
   //
   // intermediate level
   //
-  /** try to send a zone (knowing zoneId) */
-  bool send(int zoneId);
 
-  /** try to read the text struct */
-  bool readTextStruct(MRWEntry const &entry, int zoneId);
-  /** try to read a text zone */
-  bool readZone(MRWEntry const &entry, int zoneId);
-  /** try to compute the number of pages of a zone, returns 0 if not data */
-  int computeNumPages(MRWTextInternal::Zone const &zone) const;
-  /** try to read a font zone */
-  bool readFonts(MRWEntry const &entry, int zoneId);
+  /** compute the positions */
+  void computePositions();
 
-  /** try to read a font name zone */
-  bool readFontNames(MRWEntry const &entry, int zoneId);
+  //! try to send a section
+  bool sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entry);
+  //! try to send a section using an id
+  bool sendText(int sectionId, MWAWEntry const &entry);
+  //! check if a character after '<' corresponds to a text code
+  TextCode isTextCode(MWAWInputStreamPtr &input, long endPos, MWAWEntry &dPos);
 
-  /** try to read a ruler zone */
-  bool readRulers(MRWEntry const &entry, int zoneId);
+  //! read the header/footer zone
+  bool readHFZone(MWAWEntry const &entry);
+  //! returns true if there is a header/footer
+  bool hasHeaderFooter(bool header) const;
+  //! try to send the header/footer
+  bool sendHeaderFooter(bool header);
 
-  /** try to read a PLC zone: position in text to char(zone 4) or ruler(zone 5) id */
-  bool readPLCZone(MRWEntry const &entry, int zoneId);
+  //! read the styles
+  bool readStyles(MWAWEntry const &entry);
 
-  /** try to read a style name zone */
-  bool readStyleNames(MRWEntry const &entry, int zoneId);
+  /** send the character properties */
+  void setProperty(MWAWFont const &font);
+  //! read a section fonts
+  bool readSectionFonts(MWAWEntry const &entry);
 
   //
   // low level
@@ -136,8 +140,8 @@ protected:
   }
 
 private:
-  MRWText(MRWText const &orig);
-  MRWText &operator=(MRWText const &orig);
+  ZWText(ZWText const &orig);
+  ZWText &operator=(ZWText const &orig);
 
 protected:
   //
@@ -147,16 +151,16 @@ protected:
   MWAWInputStreamPtr m_input;
 
   //! the listener
-  MRWContentListenerPtr m_listener;
+  ZWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;
 
   //! the state
-  shared_ptr<MRWTextInternal::State> m_state;
+  shared_ptr<ZWTextInternal::State> m_state;
 
   //! the main parser;
-  MRWParser *m_mainParser;
+  ZWParser *m_mainParser;
 
   //! the debug file
   libmwaw::DebugFile &m_asciiFile;

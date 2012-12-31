@@ -157,7 +157,11 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	WNText.cxx			\
 	WNText.hxx			\
 	WPParser.cxx			\
-	WPParser.hxx
+	WPParser.hxx			\
+	ZWParser.cxx			\
+	ZWParser.hxx			\
+	ZWText.cxx			\
+	ZWText.hxx
 
 if OS_WIN32
 

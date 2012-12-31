@@ -768,6 +768,8 @@ bool WPParser::checkHeader(MWAWHeader *header, bool strict)
   *m_state = WPParserInternal::State();
 
   MWAWInputStreamPtr input = getInput();
+  if (!input || !input->hasDataFork())
+    return false;
 
   int const headerSize=2;
   input->seek(headerSize,WPX_SEEK_SET);

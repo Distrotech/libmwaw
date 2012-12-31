@@ -392,8 +392,10 @@ public:
     if (name.empty()) return -1;
     std::map<std::string,int>::iterator it=m_nameIdMap.find(name);
     if (it != m_nameIdMap.end()) return it->second;
-    setCorrespondance(++m_uniqueId, name);
-    return m_uniqueId;
+    while (m_idNameMap.find(m_uniqueId)!=m_idNameMap.end())
+      m_uniqueId++;
+    setCorrespondance(m_uniqueId, name);
+    return m_uniqueId++;
   }
 
   //! returns the name corresponding to an id or return std::string("")
@@ -511,6 +513,7 @@ void State::initMaps()
   m_idNameMap[2013] = "Hoefler Text";
   m_idNameMap[2018] = "Hoefler Text Ornaments";
   m_idNameMap[2039] = "Impact";
+  m_idNameMap[2041] = "Mistral";
   m_idNameMap[2305] = "Textile";
   m_idNameMap[2307] = "Gadget";
   m_idNameMap[2311] = "Apple Chancery";

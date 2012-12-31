@@ -65,7 +65,8 @@ MWAWInputStream::MWAWInputStream(WPXInputStream *inp, bool inverted, bool checkC
 
   // now check for MacMIME format in m_stream or in m_resourceFork
   unMacMIME();
-  seek(0, WPX_SEEK_SET);
+  if (m_stream)
+    seek(0, WPX_SEEK_SET);
   if (m_resourceFork)
     m_resourceFork->seek(0, WPX_SEEK_SET);
 }
@@ -76,16 +77,26 @@ MWAWInputStream::~MWAWInputStream()
 
 const uint8_t *MWAWInputStream::read(size_t numBytes, unsigned long &numBytesRead)
 {
+  if (!hasDataFork())
+    throw libmwaw::FileException();
   return m_stream->read(numBytes,numBytesRead);
 }
 
 long MWAWInputStream::tell()
 {
+  if (!hasDataFork())
+    return 0;
   return m_stream->tell();
 }
 
 int MWAWInputStream::seek(long offset, WPX_SEEK_TYPE seekType)
 {
+  if (!hasDataFork()) {
+    if (offset == 0)
+      return 0;
+    throw libmwaw::FileException();
+  }
+
   if (seekType == WPX_SEEK_CUR)
     offset += tell();
 
@@ -99,6 +110,8 @@ int MWAWInputStream::seek(long offset, WPX_SEEK_TYPE seekType)
 
 bool MWAWInputStream::atEOS()
 {
+  if (!hasDataFork())
+    return true;
   if (m_readLimit > 0 && m_stream->tell() >= m_readLimit) return true;
 
   return m_stream->atEOS();
@@ -153,6 +166,8 @@ uint8_t MWAWInputStream::readU8(WPXInputStream *stream)
 ////////////////////////////////////////////////////////////
 bool MWAWInputStream::unBinHex()
 {
+  if (!hasDataFork())
+    return false;
   seek(45, WPX_SEEK_SET);
   if (atEOS() || tell() != 45)
     return false;
@@ -290,10 +305,7 @@ bool MWAWInputStream::unBinHex()
   long pos = contentInput->tell()+2; // skip CRC
   contentInput->seek(pos+dataLength+rsrcLength+4, WPX_SEEK_SET);
   if (contentInput->tell() != pos+dataLength+rsrcLength+4
-      || dataLength<=0 || rsrcLength < 0) {
-    /** note: a empty Nisus file can have a dataLength==0 but as it is empty,
-    ok to do not consider it
-     */
+      || dataLength<0 || rsrcLength < 0 || (dataLength==0 && rsrcLength==0)) {
     MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: the data/rsrc fork size seems odd\n"));
     return false;
   }
@@ -312,15 +324,19 @@ bool MWAWInputStream::unBinHex()
       m_resourceFork.reset(new MWAWInputStream(rsrc,false));
     }
   }
-  contentInput->seek(pos, WPX_SEEK_SET);
-  unsigned long numBytesRead = 0;
-  const unsigned char *data =
-    contentInput->read((unsigned long)dataLength, numBytesRead);
-  if (numBytesRead != (unsigned long)dataLength || !data) {
-    MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: can not read the data fork\n"));
-    return false;
+  if (!dataLength)
+    m_stream.reset();
+  else {
+    contentInput->seek(pos, WPX_SEEK_SET);
+    unsigned long numBytesRead = 0;
+    const unsigned char *data =
+      contentInput->read((unsigned long)dataLength, numBytesRead);
+    if (numBytesRead != (unsigned long)dataLength || !data) {
+      MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: can not read the data fork\n"));
+      return false;
+    }
+    m_stream.reset(new MWAWStringStream(data, numBytesRead));
   }
-  m_stream.reset(new MWAWStringStream(data, numBytesRead));
 
   return false;
 }
@@ -335,6 +351,7 @@ bool MWAWInputStream::unzipStream()
 #if !defined(USE_ZIP)
   return false;
 #else
+  if (!hasDataFork()) return false;
   seek(0, WPX_SEEK_SET);
   MWAWZipStream zStream(m_stream.get());
   bool zipFile = zStream.isZipStream();
@@ -422,7 +439,7 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
 {
   dataInput.reset();
   rsrcInput.reset();
-  if (!inp) return false;
+  if (!inp || !inp->hasDataFork()) return false;
 
   try {
     inp->seek(0, WPX_SEEK_SET);
@@ -559,6 +576,7 @@ shared_ptr<MWAWInputStream> MWAWInputStream::getDocumentOLEStream(std::string na
 bool MWAWInputStream::createStorageOLE()
 {
   if (m_storageOLE) return true;
+  if (!hasDataFork()) return false;
 
   long actPos = tell();
   seek(0, WPX_SEEK_SET);
@@ -576,6 +594,8 @@ bool MWAWInputStream::createStorageOLE()
 
 bool MWAWInputStream::readDataBlock(long size, WPXBinaryData &data)
 {
+  if (!hasDataFork()) return false;
+
   data.clear();
   if (size < 0) return false;
   if (size == 0) return true;
@@ -598,6 +618,8 @@ bool MWAWInputStream::readDataBlock(long size, WPXBinaryData &data)
 
 bool MWAWInputStream::readEndDataBlock(WPXBinaryData &data)
 {
+  if (!hasDataFork()) return false;
+
   if (m_readLimit>0) return readDataBlock(1+m_readLimit-tell(), data);
   data.clear();
 

@@ -786,7 +786,10 @@ bool NSParser::createZones()
 bool NSParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
   *m_state = NSParserInternal::State();
-  if (!getRSRCParser())
+  /** no data fork, may be ok, but this means
+      that the file contains no text, so... */
+  MWAWInputStreamPtr input = getInput();
+  if (!input || !input->hasDataFork() || !getRSRCParser())
     return false;
   MWAWRSRCParser::Version vers;
   // read the Nisus version
