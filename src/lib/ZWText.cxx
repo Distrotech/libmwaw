@@ -770,6 +770,9 @@ bool ZWText::sendHeaderFooter(bool header)
     case 0xa:
       m_listener->insertTab();
       break;
+    case 0xd:
+      m_listener->insertEOL();
+      break;
     case '#':
       if (actPos+1 < endPos) {
         char nextC = (char) input->readULong(1);
