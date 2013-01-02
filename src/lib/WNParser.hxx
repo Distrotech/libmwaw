@@ -122,7 +122,7 @@ protected:
    * interface with WNText
    */
   //! returns the color which corresponds to colId
-  bool getColor(int colId, Vec3uc &col) const;
+  bool getColor(int colId, MWAWColor &col) const;
 
   //! try to send a footnote entry
   void sendFootnote(WNEntry const &entry);

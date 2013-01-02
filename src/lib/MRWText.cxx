@@ -714,7 +714,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
     for (int j = 0; j < 77; j++) {
       MRWStruct const &dt = dataList[d++];
       if (!dt.isBasic()) continue;
-      int color[3];
+      unsigned char color[3];
       switch (j) {
       case 0:
         font.m_localId=(int) dt.value(0);
@@ -746,12 +746,10 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
       case 10:
       case 11:
         color[0]=color[1]=color[2]=0;
-        color[j-9]=(int) dt.value(0);
-        while (++j < 12)
-          color[j-9] = (int) dataList[d++].value(0);
-        j--;
-        font.m_font.setColor
-        (uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8)));
+        color[j-9]=(unsigned char) (dt.value(0)>>8);
+        while (j < 11)
+          color[++j-9] = (unsigned char) (dataList[d++].value(0));
+        font.m_font.setColor(MWAWColor(color[0],color[1],color[2]));
         break;
       case 12: // big number
       case 16: // 0 or one time 0x180
@@ -761,13 +759,11 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
       case 13:
       case 14:
       case 15:
-        color[0]=color[1]=color[2]=0xFFFF;
-        color[j-13]=(int) dt.value(0);
-        while (++j < 16)
-          color[j-13] = (int) dataList[d++].value(0);
-        j--;
-        font.m_font.setBackgroundColor
-        (uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8)));
+        color[0]=color[1]=color[2]=0xFF;
+        color[j-13]=(unsigned char) (dt.value(0)>>8);
+        while (j < 15)
+          color[++j-13] = (unsigned char) (dataList[d++].value(0)>>8);
+        font.m_font.setBackgroundColor(MWAWColor(color[0],color[1],color[2]));
         break;
       case 18: {
         val = dt.value(0);
@@ -839,19 +835,19 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
         if (int16_t(dt.value(0))==-1) {
           switch(j) {
           case 39:
-            fFlags |= MWAW_BOLD_BIT;
+            fFlags |= MWAWFont::boldBit;
             break;
           case 40:
-            fFlags |= MWAW_ITALICS_BIT;
+            fFlags |= MWAWFont::italicBit;
             break;
           case 41:
             font.m_font.setUnderlineStyle(MWAWBorder::Single);
             break;
           case 42:
-            fFlags |= MWAW_OUTLINE_BIT;
+            fFlags |= MWAWFont::outlineBit;
             break;
           case 43:
-            fFlags |= MWAW_SHADOW_BIT;
+            fFlags |= MWAWFont::shadowBit;
             break;
           case 44:
             f << "condense,";
@@ -870,7 +866,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
             font.m_font.setUnderlineStyle(MWAWBorder::Dot);
             break;
           case 50:
-            fFlags |= MWAW_STRIKEOUT_BIT;
+            fFlags |= MWAWFont::strikeOutBit;
             break;
           case 58:
             f << "boxed" << j-57 << ",";
@@ -885,7 +881,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
         break;
       case 51:
         if (dt.value(0) > 0) {
-          fFlags |= MWAW_SUPERSCRIPT100_BIT;
+          fFlags |= MWAWFont::superscript100Bit;
           if (dt.value(0) != 3)
             f << "superscript[pos]=" << dt.value(0) << ",";
         } else if (dt.value(0))
@@ -893,7 +889,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
         break;
       case 52:
         if (dt.value(0) > 0) {
-          fFlags |= MWAW_SUBSCRIPT100_BIT;
+          fFlags |= MWAWFont::subscript100Bit;
           if (dt.value(0) != 3)
             f << "subscript[pos]=" << dt.value(0) << ",";
         } else if (dt.value(0))

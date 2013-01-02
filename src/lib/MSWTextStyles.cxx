@@ -122,14 +122,14 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
 
   int flag = (int) m_input->readULong(1);
   uint32_t flags = 0;
-  if (flag&0x80) flags |= MWAW_BOLD_BIT;
-  if (flag&0x40) flags |= MWAW_ITALICS_BIT;
-  if (flag&0x20) flags |= MWAW_STRIKEOUT_BIT;
-  if (flag&0x10) flags |= MWAW_OUTLINE_BIT;
-  if (flag&0x8) flags |= MWAW_SHADOW_BIT;
-  if (flag&0x4) flags |= MWAW_SMALL_CAPS_BIT;
-  if (flag&0x2) flags |= MWAW_ALL_CAPS_BIT;
-  if (flag&0x1) flags |= MWAW_HIDDEN_BIT;
+  if (flag&0x80) flags |= MWAWFont::boldBit;
+  if (flag&0x40) flags |= MWAWFont::italicBit;
+  if (flag&0x20) flags |= MWAWFont::strikeOutBit;
+  if (flag&0x10) flags |= MWAWFont::outlineBit;
+  if (flag&0x8) flags |= MWAWFont::shadowBit;
+  if (flag&0x4) flags |= MWAWFont::smallCapsBit;
+  if (flag&0x2) flags |= MWAWFont::allCapsBit;
+  if (flag&0x1) flags |= MWAWFont::hiddenBit;
 
   int what = 0;
   /*  01: horizontal decal, 2: vertical decal, 4; underline, 08: fSize,  10: set font, 20: font color, 40: ???(maybe reset)
@@ -160,9 +160,9 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     if (decal) {
       if (what & 0x2) {
         if (decal > 0)
-          flags |= MWAW_SUPERSCRIPT100_BIT;
+          flags |= MWAWFont::superscript100Bit;
         else
-          flags |= MWAW_SUBSCRIPT100_BIT;
+          flags |= MWAWFont::subscript100Bit;
       } else
         f << "#vDecal=" << decal;
     }
@@ -401,10 +401,10 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       val = (int) m_input->readLong(1);
       uint32_t flags = para.m_modFont->m_font->flags();
       if (val < 0) {
-        para.m_modFont->m_font->setFlags(flags|MWAW_SUBSCRIPT100_BIT);
+        para.m_modFont->m_font->setFlags(flags|MWAWFont::subscript100Bit);
         f << "subScript=" << -val/2 << ",";
       } else if (val > 0) {
-        para.m_modFont->m_font->setFlags(flags|MWAW_SUPERSCRIPT100_BIT);
+        para.m_modFont->m_font->setFlags(flags|MWAWFont::superscript100Bit);
         f << "superScript=" << val/2 << ",";
       } else f << "#pos=" << 0 << ",";
       done = true;

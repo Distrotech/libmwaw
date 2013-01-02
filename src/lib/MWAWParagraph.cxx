@@ -166,8 +166,8 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
       o << pp.m_tabs.get()[i] << ",";
     o << "),";
   }
-  if (pp.m_backgroundColor.get() != 0xFFFFFF)
-    o << "backgroundColor=" << std::hex << pp.m_backgroundColor.get() << std::dec << ",";
+  if (!pp.m_backgroundColor.get().isWhite())
+    o << "backgroundColor=" << pp.m_backgroundColor.get() << ",";
   if (pp.m_listLevelIndex.get() >= 1)
     o << pp.m_listLevel.get() << ":" << pp.m_listLevelIndex.get() <<",";
 

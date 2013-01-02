@@ -67,7 +67,7 @@ struct State {
   //! the last position
   long m_endPos;
   //! the color map
-  std::vector<Vec3uc> m_colorMap;
+  std::vector<MWAWColor> m_colorMap;
   //! the list of picture entries
   std::vector<WNEntry> m_picturesList;
 
@@ -209,7 +209,7 @@ void WNParser::newPage(int number)
   }
 }
 
-bool WNParser::getColor(int colId, Vec3uc &col) const
+bool WNParser::getColor(int colId, MWAWColor &col) const
 {
   if (colId >= 0 && colId < int(m_state->m_colorMap.size())) {
     col = m_state->m_colorMap[(size_t)colId];
@@ -788,12 +788,10 @@ bool WNParser::readColorMap(WNEntry const &entry)
     input->seek(pos, WPX_SEEK_SET);
     f.str("");
     f << "ColorMapData[" << n << "]:";
-    int col[4];
-    for (int i = 0; i < 4; i++) col[i] = (int) input->readULong(2)/256;
-    f << "col=" << col[0] << "x" << col[1] << "x" << col[2];
-    if (col[3]) f << "x" << col[3];
-    f << ",";
-    m_state->m_colorMap.push_back(Vec3uc((unsigned char)col[0],(unsigned char)col[1],(unsigned char)col[2]));
+    unsigned char col[4];
+    for (int i = 0; i < 4; i++) col[i] = (unsigned char) (input->readULong(2)/256);
+    f << "col=" << MWAWColor(col[0],col[1],col[2],col[3]) << ",";
+    m_state->m_colorMap.push_back(MWAWColor((unsigned char)col[0],(unsigned char)col[1],(unsigned char)col[2]));
 
     int sz = (int) input->readULong(1);
     if (pos+8+1+sz > entry.end()) {

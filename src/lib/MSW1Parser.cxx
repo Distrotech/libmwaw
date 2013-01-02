@@ -631,8 +631,8 @@ bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
   uint32_t flags=0;
   if (sz >= 2) {
     val = (int) input->readULong(1);
-    if (val & 0x80) flags |= MWAW_BOLD_BIT;
-    if (val & 0x40) flags |= MWAW_ITALICS_BIT;
+    if (val & 0x80) flags |= MWAWFont::boldBit;
+    if (val & 0x40) flags |= MWAWFont::italicBit;
     if (val & 0x3f)
       font.m_font.setId((val & 0x3f));
   }
@@ -647,7 +647,7 @@ bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
     case 0:
       break;
     case 3:
-      flags |= MWAW_ALL_CAPS_BIT;
+      flags |= MWAWFont::allCapsBit;
       break;
     default:
       f << "#capBits=" << int((val&0xc)>>2) << ",";
@@ -658,15 +658,15 @@ bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
   }
   if (sz >= 5) {
     val = (int) input->readULong(1);
-    if (val & 0x10) flags |= MWAW_EMBOSS_BIT;
-    if (val & 0x8) flags |= MWAW_SHADOW_BIT;
+    if (val & 0x10) flags |= MWAWFont::embossBit;
+    if (val & 0x8) flags |= MWAWFont::shadowBit;
     if (val & 0xe7)
       f << "#flags2=" << std::hex << (val & 0xe7) << std::dec << ",";
   }
   if (sz >= 6) { // vdepl
     val = (int) input->readLong(1);
-    if (val > 0) flags |= MWAW_SUPERSCRIPT100_BIT;
-    else if (val < 0) flags |= MWAW_SUBSCRIPT100_BIT;
+    if (val > 0) flags |= MWAWFont::superscript100Bit;
+    else if (val < 0) flags |= MWAWFont::subscript100Bit;
   }
   if (sz >= 7) {
     f << "###";

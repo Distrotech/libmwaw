@@ -95,7 +95,7 @@ protected:
   bool sendMainText();
 
   //! return a color corresponding to an id
-  bool getColor(int id, uint32_t &col) const;
+  bool getColor(int id, MWAWColor &col) const;
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();

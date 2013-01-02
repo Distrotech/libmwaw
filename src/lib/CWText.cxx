@@ -689,17 +689,17 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   font.setId((int) m_input->readULong(2));
   int flag =(int) m_input->readULong(2);
   uint32_t flags=0;
-  if (flag&0x1) flags |= MWAW_BOLD_BIT;
-  if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+  if (flag&0x1) flags |= MWAWFont::boldBit;
+  if (flag&0x2) flags |= MWAWFont::italicBit;
   if (flag&0x4) font.setUnderlineStyle(MWAWBorder::Single);
-  if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
-  if (flag&0x10) flags |= MWAW_SHADOW_BIT;
+  if (flag&0x8) flags |= MWAWFont::embossBit;
+  if (flag&0x10) flags |= MWAWFont::shadowBit;
   /* flags & 0x20: condensed, flags & 0x40: extended */
-  if (flag&0x80) flags |= MWAW_STRIKEOUT_BIT;
-  if (flag&0x100) flags |= MWAW_SUPERSCRIPT100_BIT;
-  if (flag&0x200) flags |= MWAW_SUBSCRIPT100_BIT;
-  if (flag&0x400) flags |= MWAW_SUPERSCRIPT_BIT;
-  if (flag&0x800) flags |= MWAW_SUBSCRIPT_BIT;
+  if (flag&0x80) flags |= MWAWFont::strikeOutBit;
+  if (flag&0x100) flags |= MWAWFont::superscript100Bit;
+  if (flag&0x200) flags |= MWAWFont::subscript100Bit;
+  if (flag&0x400) flags |= MWAWFont::superscriptBit;
+  if (flag&0x800) flags |= MWAWFont::subscriptBit;
   if (flag&0x2000) font.setUnderlineStyle(MWAWBorder::Double);
   font.setSize((int) m_input->readLong(1));
 
@@ -726,7 +726,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
     if (flag & 0x2)
       font.setUnderlineStyle(MWAWBorder::Double);
     if (flag & 0x20)
-      flags |= MWAW_STRIKEOUT_BIT;
+      flags |= MWAWFont::strikeOutBit;
     flag &= 0xFFDC;
     if (flag)
       f << "#flag2=" << std::hex << flag << std::dec << ",";
@@ -769,17 +769,17 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   font.setId((int) m_input->readULong(2));
   int flag =(int) m_input->readULong(2);
   uint32_t flags=0;
-  if (flag&0x1) flags |= MWAW_BOLD_BIT;
-  if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+  if (flag&0x1) flags |= MWAWFont::boldBit;
+  if (flag&0x2) flags |= MWAWFont::italicBit;
   if (flag&0x4) font.setUnderlineStyle(MWAWBorder::Single);
-  if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
-  if (flag&0x10) flags |= MWAW_SHADOW_BIT;
+  if (flag&0x8) flags |= MWAWFont::embossBit;
+  if (flag&0x10) flags |= MWAWFont::shadowBit;
   /* flags & 0x20: condensed, flags & 0x40: extended */
-  if (flag&0x80) flags |= MWAW_STRIKEOUT_BIT;
-  if (flag&0x100) flags |= MWAW_SUPERSCRIPT100_BIT;
-  if (flag&0x200) flags |= MWAW_SUBSCRIPT100_BIT;
-  if (flag&0x400) flags |= MWAW_SUPERSCRIPT_BIT;
-  if (flag&0x800) flags |= MWAW_SUBSCRIPT_BIT;
+  if (flag&0x80) flags |= MWAWFont::strikeOutBit;
+  if (flag&0x100) flags |= MWAWFont::superscript100Bit;
+  if (flag&0x200) flags |= MWAWFont::subscript100Bit;
+  if (flag&0x400) flags |= MWAWFont::superscriptBit;
+  if (flag&0x800) flags |= MWAWFont::subscriptBit;
   if (flag&0x2000) font.setUnderlineStyle(MWAWBorder::Double);
   font.setSize((int) m_input->readLong(1));
 
@@ -796,7 +796,7 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
     if (flag & 0x2)
       font.setUnderlineStyle(MWAWBorder::Double);
     if (flag & 0x20)
-      flags |= MWAW_STRIKEOUT_BIT;
+      flags |= MWAWFont::strikeOutBit;
     flag &= 0xFFDC;
     if (flag)
       f << "#flag2=" << std::hex << flag << std::dec << ",";

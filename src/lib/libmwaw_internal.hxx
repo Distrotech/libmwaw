@@ -117,6 +117,77 @@ uint8_t readU8(WPXInputStream *input);
 }
 
 /* ---------- small enum/class ------------- */
+//! the class to store a color
+struct MWAWColor {
+  //! constructor
+  MWAWColor(uint32_t argb=0) : m_value(argb) {
+  }
+  //! constructor from color
+  MWAWColor(unsigned char r, unsigned char g,  unsigned char b, unsigned char a=0) :
+    m_value(uint32_t((a<<24)+(r<<16)+(g<<8)+b)) {
+  }
+  //! operator=
+  MWAWColor &operator=(uint32_t argb) {
+    m_value = argb;
+    return *this;
+  }
+  //! return the back color
+  static MWAWColor black() {
+    return MWAWColor(0);
+  }
+  //! return the white color
+  static MWAWColor white() {
+    return MWAWColor(0xFFFFFF);
+  }
+
+  //! return alpha*colA+beta*colB
+  static MWAWColor barycenter(float alpha, MWAWColor const colA,
+                              float beta, MWAWColor const colB);
+  //! return the rgba value
+  uint32_t value() const {
+    return m_value;
+  }
+  //! return true if the color is black
+  bool isBlack() const {
+    return (m_value&0xFFFFFF)==0;
+  }
+  //! return true if the color is white
+  bool isWhite() const {
+    return (m_value&0xFFFFFF)==0xFFFFFF;
+  }
+  //! operator==
+  bool operator==(MWAWColor const &c) const {
+    return (c.m_value&0xFFFFFF)==(m_value&0xFFFFFF);
+  }
+  //! operator!=
+  bool operator!=(MWAWColor const &c) const {
+    return !operator==(c);
+  }
+  //! operator<
+  bool operator<(MWAWColor const &c) const {
+    return (c.m_value&0xFFFFFF)<(m_value&0xFFFFFF);
+  }
+  //! operator<=
+  bool operator<=(MWAWColor const &c) const {
+    return (c.m_value&0xFFFFFF)<=(m_value&0xFFFFFF);
+  }
+  //! operator>
+  bool operator>(MWAWColor const &c) const {
+    return !operator<=(c);
+  }
+  //! operator>=
+  bool operator>=(MWAWColor const &c) const {
+    return !operator<(c);
+  }
+  //! operator<< in the form #rrggbb
+  friend std::ostream &operator<< (std::ostream &o, MWAWColor const &c);
+  //! print the color in the form #rrggbb
+  std::string str() const;
+protected:
+  //! the argb color
+  uint32_t m_value;
+};
+
 struct MWAWColumnDefinition {
   MWAWColumnDefinition() : m_width(0), m_leftGutter(0), m_rightGutter(0) {}
   double m_width;
@@ -180,31 +251,6 @@ enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
 enum LineSpacing { Fixed, AtLeast};
 enum { NoBreakBit = 0x1, NoBreakWithNextBit=0x2};
 }
-
-// ATTRIBUTE bits
-#define MWAW_EXTRA_LARGE_BIT 1
-#define MWAW_VERY_LARGE_BIT 2
-#define MWAW_LARGE_BIT 4
-#define MWAW_SMALL_PRINT_BIT 8
-#define MWAW_FINE_PRINT_BIT 0x10
-#define MWAW_SUPERSCRIPT_BIT 0x20
-#define MWAW_SUBSCRIPT_BIT 0x40
-#define MWAW_OUTLINE_BIT 0x80
-#define MWAW_ITALICS_BIT 0x100
-#define MWAW_SHADOW_BIT 0x200
-#define MWAW_REDLINE_BIT 0x400
-#define MWAW_BOLD_BIT 0x1000
-#define MWAW_STRIKEOUT_BIT 0x2000
-#define MWAW_SMALL_CAPS_BIT 0x8000
-#define MWAW_BLINK_BIT 0x10000
-#define MWAW_REVERSEVIDEO_BIT 0x20000
-#define MWAW_ALL_CAPS_BIT 0x40000
-#define MWAW_EMBOSS_BIT 0x80000
-#define MWAW_ENGRAVE_BIT 0x100000
-#define MWAW_SUPERSCRIPT100_BIT 0x200000
-#define MWAW_SUBSCRIPT100_BIT 0x400000
-#define MWAW_HIDDEN_BIT 0x800000
-#define MWAW_OVERLINE_BIT 0x1000000
 
 // BREAK bits
 #define MWAW_PAGE_BREAK 0x00
@@ -589,16 +635,6 @@ typedef Vec3<int> Vec3i;
 /*! \brief Vec3 of float */
 typedef Vec3<float> Vec3f;
 
-namespace libmwaw
-{
-//! return a string with format rrggbb
-std::string getColorString(uint32_t col);
-//! return a string with format rrggbb
-std::string getColorString(Vec3uc const &col);
-//! return a uint32_t corresponding to a color
-uint32_t getUInt32(Vec3uc const &color);
-}
-
 /*! \class Box2
  *   \brief small class which defines a 2D Box
  */
@@ -742,6 +778,16 @@ typedef Box2<int> Box2i;
 typedef Box2<float> Box2f;
 /*! \brief Box2 of long */
 typedef Box2<long> Box2l;
+
+namespace libmwaw
+{
+//! return a string with format rrggbb
+std::string getColorString(uint32_t col);
+//! return a string with format rrggbb
+std::string getColorString(Vec3uc const &col);
+//! return a uint32_t corresponding to a color
+uint32_t getUInt32(Vec3uc const &color);
+}
 
 #endif /* LIBMWAW_INTERNAL_H */
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

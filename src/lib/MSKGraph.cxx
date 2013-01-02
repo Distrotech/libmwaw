@@ -2210,13 +2210,13 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
 
     cell.m_font=MWAWFont(m_convertissor->getId(fName), fSize);
     uint32_t flags = 0;
-    if (fFlags & 0x1) flags |= MWAW_BOLD_BIT;
-    if (fFlags & 0x2) flags |= MWAW_ITALICS_BIT;
+    if (fFlags & 0x1) flags |= MWAWFont::boldBit;
+    if (fFlags & 0x2) flags |= MWAWFont::italicBit;
     if (fFlags & 0x4) cell.m_font.setUnderlineStyle(MWAWBorder::Single);
-    if (fFlags & 0x8) flags |= MWAW_EMBOSS_BIT;
-    if (fFlags & 0x10) flags |= MWAW_SHADOW_BIT;
-    if (fFlags & 0x20) flags |= MWAW_SUPERSCRIPT_BIT;
-    if (fFlags & 0x40) flags |= MWAW_SUBSCRIPT_BIT;
+    if (fFlags & 0x8) flags |= MWAWFont::embossBit;
+    if (fFlags & 0x10) flags |= MWAWFont::shadowBit;
+    if (fFlags & 0x20) flags |= MWAWFont::superscriptBit;
+    if (fFlags & 0x40) flags |= MWAWFont::subscriptBit;
     cell.m_font.setFlags(flags);
 
     if (fColors != 0xFF) {
@@ -2556,13 +2556,13 @@ bool MSKGraph::readFont(MSKGraphInternal::Font &font)
   font.m_font.setFont((int) m_input->readULong(2));
   int flags = (int) m_input->readULong(1);
   uint32_t flag = 0;
-  if (flags & 0x1) flag |= MWAW_BOLD_BIT;
-  if (flags & 0x2) flag |= MWAW_ITALICS_BIT;
+  if (flags & 0x1) flag |= MWAWFont::boldBit;
+  if (flags & 0x2) flag |= MWAWFont::italicBit;
   if (flags & 0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
-  if (flags & 0x8) flag |= MWAW_EMBOSS_BIT;
-  if (flags & 0x10) flag |= MWAW_SHADOW_BIT;
-  if (flags & 0x20) flag |= MWAW_SUPERSCRIPT_BIT;
-  if (flags & 0x40) flag |= MWAW_SUBSCRIPT_BIT;
+  if (flags & 0x8) flag |= MWAWFont::embossBit;
+  if (flags & 0x10) flag |= MWAWFont::shadowBit;
+  if (flags & 0x20) flag |= MWAWFont::superscriptBit;
+  if (flags & 0x40) flag |= MWAWFont::subscriptBit;
   if (flags & 0x80) f << "#smaller,";
   font.m_font.setFlags(flag);
 

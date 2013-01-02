@@ -199,7 +199,7 @@ struct Token {
 ////////////////////////////////////////
 //! Internal: the table of a WNText
 struct TableData {
-  TableData() : m_type(-1), m_box(), m_color(255,255,255), m_error("") {
+  TableData() : m_type(-1), m_box(), m_color(MWAWColor::white()), m_error("") {
     for (int i = 0; i < 4; i++) m_flags[i] = 0;
     for (int i = 0; i < 10; i++) m_values[i] = 0;
   }
@@ -233,9 +233,8 @@ struct TableData {
     }
     if (table.m_box.size()[0] || table.m_box.size()[1])
       o << table.m_box << ",";
-    if (table.m_color[0] != 255 || table.m_color[1] != 255 || table.m_color[2] != 255)
-      o << "color=" << int(table.m_color[0]) << "x"
-        << int(table.m_color[1]) << "x" << int(table.m_color[2]) << ",";
+    if (!table.m_color.isWhite())
+      o << "color=" << table.m_color << ",";
     for (int i = 0; i < 4; i++) {
       if (table.m_flags[i])
         o << "bFlags" << i << "=" << std::hex << table.m_flags[i] << std::dec << ",";
@@ -255,7 +254,7 @@ struct TableData {
   Box2i m_box;
 
   //! the background color
-  Vec3uc m_color;
+  MWAWColor m_color;
 
   //! some unknown flags : T, R, B, L
   int m_flags[4];
@@ -408,7 +407,7 @@ struct ContentZones {
 struct Cell : public MWAWTableCell {
   //! constructor
   Cell(WNText &parser) : MWAWTableCell(), m_parser(parser),
-    m_color(255,255,255), m_borderList(0),
+    m_color(MWAWColor::white()), m_borderList(0),
     m_zonesList(), m_footnoteList() {}
 
   //! send the content
@@ -419,8 +418,8 @@ struct Cell : public MWAWTableCell {
     cell.position() = m_position;
     cell.setBorders(m_borderList, border);
     cell.setNumSpannedCells(m_numberCellSpanned);
-    if (m_color[0] != 255 || m_color[1] != 255 || m_color[2] != 255)
-      cell.setBackgroundColor(libmwaw::getUInt32(m_color));
+    if (!m_color.isWhite())
+      cell.setBackgroundColor(m_color);
     WPXPropertyList propList;
     listener->openTableCell(cell, propList);
     sendContent(listener);
@@ -433,7 +432,7 @@ struct Cell : public MWAWTableCell {
   //! the text parser
   WNText &m_parser;
   //! the background color
-  Vec3uc m_color;
+  MWAWColor m_color;
   //! the border list : libmwaw::LeftBorderBit | ...
   int m_borderList;
   //! the list of zone
@@ -1122,11 +1121,11 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   font.m_font.setSize((int) input.readULong(vers <= 2 ? 1 : 2));
   int flag = (int) input.readULong(1);
   uint32_t flags=0;
-  if (flag&0x1) flags |= MWAW_BOLD_BIT;
-  if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+  if (flag&0x1) flags |= MWAWFont::boldBit;
+  if (flag&0x2) flags |= MWAWFont::italicBit;
   if (flag&0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
-  if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
-  if (flag&0x10) flags |= MWAW_SHADOW_BIT;
+  if (flag&0x8) flags |= MWAWFont::embossBit;
+  if (flag&0x10) flags |= MWAWFont::shadowBit;
   if (flag&0x20) f << "condensed,";
   if (flag&0x40) f << "extended,";
   if (flag&0x80) f << "#flag0[0x80],";
@@ -1137,7 +1136,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
     return true;
   }
   flag = (int) input.readULong(1);
-  if (flag&0x80) flags |= MWAW_STRIKEOUT_BIT;
+  if (flag&0x80) flags |= MWAWFont::strikeOutBit;
   if (flag&0x7f) f << "#flag1=" << std::hex << (flag&0x7f) << std::dec << ",";
 
   flag = (int) input.readULong(1);
@@ -1160,7 +1159,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
 
   int color = (int) input.readULong(1); // fixme find color map
   if (color) {
-    Vec3uc col;
+    MWAWColor col;
     if (m_mainParser->getColor(color,col))
       font.m_font.setColor(col);
     else
@@ -1168,10 +1167,10 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   }
   int heightDecal = (int) input.readLong(2);
   if (heightDecal > 0) {
-    flags |= MWAW_SUPERSCRIPT100_BIT;
+    flags |= MWAWFont::superscript100Bit;
     f << "supY=" << heightDecal <<",";
   } else if (heightDecal < 0) {
-    flags |= MWAW_SUBSCRIPT100_BIT;
+    flags |= MWAWFont::subscript100Bit;
     f << "supY=" << -heightDecal <<",";
   }
 
@@ -1609,7 +1608,7 @@ bool WNText::readTable(MWAWInputStream &input, WNTextInternal::TableData &table)
   table.m_values[actVal++] = (int) input.readLong(1);
   table.m_values[actVal++] = (int) input.readLong(1);
   int backColor = (int) input.readULong(1);
-  Vec3uc col;
+  MWAWColor col;
   if (m_mainParser->getColor(backColor,col))
     table.m_color = col;
   else {
@@ -1812,8 +1811,8 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     switch(zone.m_type) {
     case 0x9: { // only in v2
       uint32_t fFlags = actFont.flags() & ~extraFontFlags;
-      if (zone.m_value > 0) extraFontFlags = MWAW_SUPERSCRIPT100_BIT;
-      else if (zone.m_value < 0) extraFontFlags = MWAW_SUBSCRIPT100_BIT;
+      if (zone.m_value > 0) extraFontFlags = MWAWFont::superscript100Bit;
+      else if (zone.m_value < 0) extraFontFlags = MWAWFont::subscript100Bit;
       else extraFontFlags = 0;
       MWAWFont font(actFont);
       font.setFlags(fFlags | extraFontFlags);

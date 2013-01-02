@@ -136,6 +136,32 @@ std::string numberingValueToString(NumberingType type, int value)
 }
 }
 
+MWAWColor MWAWColor::barycenter(float alpha, MWAWColor const colA,
+                                float beta, MWAWColor const colB)
+{
+  uint32_t res = 0;
+  for (int i=0, depl=8; i<4; i++, depl+=8) {
+    unsigned char comp= (unsigned char)
+                        (alpha*float((colA.m_value>>depl)&0xFF)+beta*float((colB.m_value>>depl)&0xFF));
+    res+=uint32_t(comp<<depl);
+  }
+  return res;
+}
+
+std::ostream &operator<< (std::ostream &o, MWAWColor const &c)
+{
+  o << "#" << std::hex << std::setfill('0') << std::setw(6)
+    << (c.m_value&0xFFFFFF);
+  return o;
+}
+
+std::string MWAWColor::str() const
+{
+  std::stringstream stream;
+  stream << *this;
+  return stream.str();
+}
+
 namespace libmwaw
 {
 uint32_t getUInt32(Vec3uc const &color)

@@ -613,8 +613,8 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
     font.m_font.setId((int) input->readLong(2));
     int flag = (int) input->readULong(1);
     uint32_t flags = 0;
-    if (flag&0x1) flags |= MWAW_BOLD_BIT;
-    if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+    if (flag&0x1) flags |= MWAWFont::boldBit;
+    if (flag&0x2) flags |= MWAWFont::italicBit;
     if (flag&0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
     if (flag&0xF8) f << "fl0=" << std::hex << (flag&0xF8) << std::dec << ",";
 
@@ -623,11 +623,11 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
     font.m_font.setSize((int) input->readLong(2));
     if (sz != font.m_font.size())
       f << "#sz=" << sz << ",";
-    int col[3];
+    unsigned char col[3];
     for (int j=0; j < 3; j++)
-      col[j] = (int) input->readULong(2);
+      col[j] = (unsigned char) (input->readULong(2)>>8);
     if (col[0] || col[1] || col[2])
-      font.m_font.setColor(uint32_t(((col[0]>>8)<<16)|((col[1]>>8)<<8)|(col[2]>>8)));
+      font.m_font.setColor(MWAWColor(col[0],col[1],col[2]));
     font.m_font.setFlags(flags);
     font.m_extra = f.str();
     section.m_idFontMap.insert(std::map<long, ZWTextInternal::Font>::value_type(cPos, font));
@@ -679,7 +679,7 @@ bool ZWText::readStyles(MWAWEntry const &entry)
   for (size_t ff = 0; ff < numFields; ff++) {
     ZWField const &field = fields[ff];
     bool done = false;
-    int color[3];
+    unsigned char color[3];
     switch(ff) {
     case 0:
       done = field.getString(input, strVal);
@@ -700,14 +700,13 @@ bool ZWText::readStyles(MWAWEntry const &entry)
       done = field.getInt(input, intVal);
       if (!done)
         break;
-      color[ff-2]=intVal;
+      color[ff-2]=(unsigned char) intVal;
       while (ff < 4) {
         fields[++ff].getInt(input, intVal);
-        color[ff-2]=intVal;
+        color[ff-2]=(unsigned char) intVal;
       }
-      uint32_t col = uint32_t((color[0]<<16)|(color[1]<<8)|color[2]);
-      if (col)
-        f << "col=" << std::hex << col << std::hex << ",";
+      if (color[0]||color[1]||color[2])
+        f << "col=" << MWAWColor(color[0],color[1],color[2]) << ",";
       break;
     }
     case 5:
@@ -869,10 +868,10 @@ bool ZWText::readHFZone(MWAWEntry const &entry)
         continue;
       switch(ff) {
       case 0:
-        flags |= MWAW_BOLD_BIT;
+        flags |= MWAWFont::boldBit;
         break;
       case 2:
-        flags |= MWAW_ITALICS_BIT;
+        flags |= MWAWFont::italicBit;
         break;
       case 5:
         font.m_font.setUnderlineStyle(MWAWBorder::Single);
@@ -914,7 +913,7 @@ bool ZWText::readHFZone(MWAWEntry const &entry)
         break;
       uint32_t col = uint32_t((intList[0]<<16)|(intList[1]<<8)|intList[2]);
       if (col)
-        font.m_font.setColor(col);
+        font.m_font.setColor(MWAWColor(col));
       break;
     }
     default:

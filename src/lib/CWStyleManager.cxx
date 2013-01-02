@@ -484,7 +484,7 @@ bool CWStyleManager::readFontNames(int N, int fSz)
     f.str("");
     if (i == 0) f << "Entries(FntNames): FntNames-0:";
     else f << "FntNames-" << i << ":";
-    f << "unkn=" << m_input->readLong(2) << ",";
+    f << "nameEncoding=" << m_input->readLong(2) << ",";
     f << "type?=" << m_input->readLong(2) << ",";
 
     int nChar = (int) m_input->readULong(1);

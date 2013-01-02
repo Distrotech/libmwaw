@@ -1041,13 +1041,13 @@ bool MDWParser::readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts,
     int flag = (int) input->readULong(1);
     uint32_t flags = 0;
     // bit 1 = plain
-    if (flag&0x1) flags |= MWAW_BOLD_BIT;
-    if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+    if (flag&0x1) flags |= MWAWFont::boldBit;
+    if (flag&0x2) flags |= MWAWFont::italicBit;
     if (flag&0x4) font.setUnderlineStyle(MWAWBorder::Single);
-    if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
-    if (flag&0x10) flags |= MWAW_SHADOW_BIT;
-    if (flag&0x20) flags |= MWAW_SUPERSCRIPT100_BIT;
-    if (flag&0x40) flags |= MWAW_SUBSCRIPT100_BIT;
+    if (flag&0x8) flags |= MWAWFont::embossBit;
+    if (flag&0x10) flags |= MWAWFont::shadowBit;
+    if (flag&0x20) flags |= MWAWFont::superscript100Bit;
+    if (flag&0x40) flags |= MWAWFont::subscript100Bit;
     if (flag&0x80) f << "#fFlags80,";
     font.setFlags(flags);
     font.setId((int) input->readULong(2));

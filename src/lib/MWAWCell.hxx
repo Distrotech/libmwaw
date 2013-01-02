@@ -77,7 +77,7 @@ public:
   //! constructor
   MWAWCellFormat() : m_format(F_UNKNOWN), m_subFormat(0), m_digits(0),
     m_hAlign(HALIGN_DEFAULT), m_vAlign(VALIGN_DEFAULT), m_bordersList(),
-    m_backgroundColor(0xFFFFFF), m_protected(false) { }
+    m_backgroundColor(MWAWColor::white()), m_protected(false) { }
 
   virtual ~MWAWCellFormat() {}
 
@@ -153,11 +153,11 @@ public:
   void setBorders(int wh, MWAWBorder const &border);
 
   //! returns the background color
-  uint32_t backgroundColor() const {
+  MWAWColor backgroundColor() const {
     return m_backgroundColor;
   }
   //! set the background color
-  void setBackgroundColor(uint32_t color) {
+  void setBackgroundColor(MWAWColor color) {
     m_backgroundColor = color;
   }
 
@@ -181,7 +181,7 @@ protected:
   //! the cell border MWAWBorder::Pos
   std::vector<MWAWBorder> m_bordersList;
   //! the backgroung color
-  uint32_t m_backgroundColor;
+  MWAWColor m_backgroundColor;
   //! cell protected
   bool m_protected;
 };

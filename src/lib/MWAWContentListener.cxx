@@ -64,15 +64,15 @@ MWAWDocumentParsingState::~MWAWDocumentParsingState()
 MWAWContentParsingState::MWAWContentParsingState() :
   m_textBuffer(""), m_numDeferredTabs(0),
 
-  m_fontName("Times New Roman"), m_fontSize(12.0), m_fontAttributeBits(0),
-  m_fontUnderline(MWAWBorder::None), m_fontColor(0), m_fontBackgroundColor(0xFFFFFF),
+  m_fontName("Times New Roman"), m_fontSize(12.0), m_fontDLSpacing(0.0), m_fontAttributeBits(0),
+  m_fontUnderline(MWAWBorder::None), m_fontColor(MWAWColor::black()), m_fontBackgroundColor(MWAWColor::white()),
   m_textLanguage("UNSET"),
 
   m_isParagraphColumnBreak(false), m_isParagraphPageBreak(false),
 
   m_paragraphJustification(libmwaw::JustificationLeft),
   m_paragraphLineSpacing(1.0), m_paragraphLineSpacingUnit(WPX_PERCENT),
-  m_paragraphLineSpacingType(libmwaw::Fixed), m_paragraphBackgroundColor(0xFFFFFF),
+  m_paragraphLineSpacingType(libmwaw::Fixed), m_paragraphBackgroundColor(MWAWColor::white()),
   m_paragraphBorders(),
 
   m_list(), m_currentListLevel(0),
@@ -255,8 +255,8 @@ void MWAWContentListener::insertEOL(bool soft)
 
   // sub/superscript must not survive a new line
   static const uint32_t s_subsuperBits =
-    MWAW_SUBSCRIPT_BIT | MWAW_SUPERSCRIPT_BIT |
-    MWAW_SUBSCRIPT100_BIT | MWAW_SUPERSCRIPT100_BIT;
+    MWAWFont::subscriptBit | MWAWFont::superscriptBit |
+    MWAWFont::subscript100Bit | MWAWFont::superscript100Bit;
   if (m_ps->m_fontAttributeBits & s_subsuperBits)
     m_ps->m_fontAttributeBits &= ~s_subsuperBits;
 }
@@ -357,6 +357,16 @@ void MWAWContentListener::setFontSize(const uint16_t fontSize)
   m_ps->m_fontSize=fSize;
 }
 
+void MWAWContentListener::setFontDLSpacing(const int dSpacing)
+{
+  double dSpace=double(dSpacing);
+  if (m_ps->m_fontDLSpacing >= dSpace && m_ps->m_fontDLSpacing <= dSpace) return;
+
+  _closeSpan();
+  m_ps->m_fontDLSpacing=dSpace;
+
+}
+
 void MWAWContentListener::setFontUnderlineStyle(MWAWBorder::Style style)
 {
   if (m_ps->m_fontUnderline==style) return;
@@ -364,14 +374,14 @@ void MWAWContentListener::setFontUnderlineStyle(MWAWBorder::Style style)
   m_ps->m_fontUnderline=style;
 }
 
-void MWAWContentListener::setFontColor(const uint32_t rgb)
+void MWAWContentListener::setFontColor(MWAWColor const rgb)
 {
   if (m_ps->m_fontColor==rgb) return;
   _closeSpan();
   m_ps->m_fontColor = rgb;
 }
 
-void MWAWContentListener::setFontBackgroundColor(const uint32_t rgb)
+void MWAWContentListener::setFontBackgroundColor(MWAWColor const rgb)
 {
   if (m_ps->m_fontBackgroundColor==rgb) return;
   _closeSpan();
@@ -453,7 +463,7 @@ void MWAWContentListener::setTabs(const std::vector<MWAWTabStop> &tabStops)
   m_ps->m_tabStops = tabStops;
 }
 
-void MWAWContentListener::setParagraphBackgroundColor(uint32_t color)
+void MWAWContentListener::setParagraphBackgroundColor(MWAWColor const color)
 {
   m_ps->m_paragraphBackgroundColor = color;
 }
@@ -943,12 +953,8 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
       propList.insert("fo:text-indent", m_ps->m_listReferencePosition - m_ps->m_paragraphMarginLeft);
     }
     propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
-    if (m_ps->m_paragraphBackgroundColor !=  0xFFFFFF) {
-      std::stringstream stream;
-      stream << "#" << std::hex << std::setfill('0') << std::setw(6)
-             << (m_ps->m_paragraphBackgroundColor&0xFFFFFF);
-      propList.insert("fo:background-color", stream.str().c_str());
-    }
+    if (!m_ps->m_paragraphBackgroundColor.isWhite())
+      propList.insert("fo:background-color", m_ps->m_paragraphBackgroundColor.str().c_str());
     if (m_ps->hasParagraphBorders()) {
       bool setAll = !m_ps->hasParagraphDifferentBorders();
       for (size_t w = 0; w < m_ps->m_paragraphBorders.size(); w++) {
@@ -1153,43 +1159,21 @@ void MWAWContentListener::_openSpan()
   }
 
   uint32_t attributeBits = m_ps->m_fontAttributeBits;
-  double fontSizeChange = 1.0;
-  switch (attributeBits& 0x0000001f) {
-  case 0x01:  // Extra large
-    fontSizeChange = 2.0;
-    break;
-  case 0x02: // Very large
-    fontSizeChange = 1.5f;
-    break;
-  case 0x04: // Large
-    fontSizeChange = 1.2f;
-    break;
-  case 0x08: // Small print
-    fontSizeChange = 0.8f;
-    break;
-  case 0x10: // Fine print
-    fontSizeChange = 0.6f;
-    break;
-  default: // Normal
-    fontSizeChange = 1.0;
-    break;
-  }
-
   WPXPropertyList propList;
-  if (attributeBits & MWAW_SUPERSCRIPT_BIT)
+  if (attributeBits & MWAWFont::superscriptBit)
     propList.insert("style:text-position", "super 58.0%");
-  else if (attributeBits & MWAW_SUBSCRIPT_BIT)
+  else if (attributeBits & MWAWFont::subscriptBit)
     propList.insert("style:text-position", "sub 58.0%");
-  else if (attributeBits & MWAW_SUPERSCRIPT100_BIT)
+  else if (attributeBits & MWAWFont::superscript100Bit)
     propList.insert("style:text-position", "20 100");
-  else if (attributeBits & MWAW_SUBSCRIPT100_BIT)
+  else if (attributeBits & MWAWFont::subscript100Bit)
     propList.insert("style:text-position", "-20 100");
 
-  if (attributeBits & MWAW_ITALICS_BIT)
+  if (attributeBits & MWAWFont::italicBit)
     propList.insert("fo:font-style", "italic");
-  if (attributeBits & MWAW_BOLD_BIT)
+  if (attributeBits & MWAWFont::boldBit)
     propList.insert("fo:font-weight", "bold");
-  if (attributeBits & MWAW_STRIKEOUT_BIT)
+  if (attributeBits & MWAWFont::strikeOutBit)
     propList.insert("style:text-line-through-type", "single");
   if (m_ps->m_fontUnderline != MWAWBorder::None) {
     if(m_ps->m_fontUnderline == MWAWBorder::Double)
@@ -1201,37 +1185,35 @@ void MWAWContentListener::_openSpan()
         propList.insert("style:text-underline-style", str.c_str());
     }
   }
-  if (attributeBits & MWAW_OVERLINE_BIT)
+  if (attributeBits & MWAWFont::overlineBit)
     propList.insert("style:text-overline-type", "single");
-  if (attributeBits & MWAW_OUTLINE_BIT)
+  if (attributeBits & MWAWFont::outlineBit)
     propList.insert("style:text-outline", "true");
-  if (attributeBits & MWAW_SMALL_CAPS_BIT)
+  if (attributeBits & MWAWFont::smallCapsBit)
     propList.insert("fo:font-variant", "small-caps");
-  if (attributeBits & MWAW_BLINK_BIT)
+  if (attributeBits & MWAWFont::blinkBit)
     propList.insert("style:text-blinking", "true");
-  if (attributeBits & MWAW_SHADOW_BIT)
+  if (attributeBits & MWAWFont::shadowBit)
     propList.insert("fo:text-shadow", "1pt 1pt");
-  if (attributeBits & MWAW_HIDDEN_BIT)
+  if (attributeBits & MWAWFont::hiddenBit)
     propList.insert("text:display", "none");
-  if (attributeBits & MWAW_ALL_CAPS_BIT)
+  if (attributeBits & MWAWFont::allCapsBit)
     propList.insert("fo:text-transform", "uppercase");
-  if (attributeBits & MWAW_EMBOSS_BIT)
+  if (attributeBits & MWAWFont::embossBit)
     propList.insert("style:font-relief", "embossed");
-  else if (attributeBits & MWAW_ENGRAVE_BIT)
+  else if (attributeBits & MWAWFont::engraveBit)
     propList.insert("style:font-relief", "engraved");
 
   if (m_ps->m_fontName.len())
     propList.insert("style:font-name", m_ps->m_fontName.cstr());
 
-  propList.insert("fo:font-size", fontSizeChange*m_ps->m_fontSize, WPX_POINT);
+  propList.insert("fo:font-size", m_ps->m_fontSize, WPX_POINT);
+  if (m_ps->m_fontDLSpacing>0.0 || m_ps->m_fontDLSpacing < 0)
+    propList.insert("fo:letter-spacing", m_ps->m_fontDLSpacing, WPX_POINT);
 
-  char color[20];
-  sprintf(color,"#%06x",m_ps->m_fontColor);
-  propList.insert("fo:color", color);
-  if ((m_ps->m_fontBackgroundColor&0xFFFFFF) != 0xFFFFFF) {
-    sprintf(color,"#%06x",m_ps->m_fontBackgroundColor);
-    propList.insert("fo:background-color", color);
-  }
+  propList.insert("fo:color", m_ps->m_fontColor.str().c_str());
+  if (!m_ps->m_fontBackgroundColor.isWhite())
+    propList.insert("fo:background-color", m_ps->m_fontBackgroundColor.str().c_str());
 
   if (m_ps->m_textLanguage != "UNSET")
     _addLanguage(m_ps->m_textLanguage, propList);
@@ -1262,7 +1244,7 @@ void MWAWContentListener::_flushDeferredTabs()
   MWAWBorder::Style oldUnderline = m_ps->m_fontUnderline;
   if (oldUnderline != MWAWBorder::None) setFontUnderlineStyle(MWAWBorder::None);
   uint32_t oldTextAttributes = m_ps->m_fontAttributeBits;
-  static const uint32_t s_underoverlineBits = MWAW_OVERLINE_BIT;
+  static const uint32_t s_underoverlineBits = MWAWFont::overlineBit;
   uint32_t newAttributes = oldTextAttributes & (~s_underoverlineBits);
   if (oldTextAttributes != newAttributes) setFontAttributes(newAttributes);
   if (!m_ps->m_isSpanOpened) _openSpan();
@@ -1965,11 +1947,8 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
       break;
     }
   }
-  if (cell.backgroundColor() != 0xFFFFFF) {
-    char color[20];
-    sprintf(color,"#%06x",cell.backgroundColor());
-    propList.insert("fo:background-color", color);
-  }
+  if (!cell.backgroundColor().isWhite())
+    propList.insert("fo:background-color", cell.backgroundColor().str().c_str());
   if (cell.isProtected())
     propList.insert("style:cell-protect","protected");
   // alignement

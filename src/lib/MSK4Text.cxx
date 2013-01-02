@@ -1150,13 +1150,13 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
     case 0x4: {
       int v = (int) input->readLong(1);
       if (v != 1) f << "##bold=" << v << ",";
-      textAttributeBits |= MWAW_BOLD_BIT;
+      textAttributeBits |= MWAWFont::boldBit;
       break;
     }
     case 0x5: {
       int v = (int) input->readLong(1);
       if (v != 1) f << "##it=" << v << ",";
-      textAttributeBits |= MWAW_ITALICS_BIT;
+      textAttributeBits |= MWAWFont::italicBit;
       break;
     }
     case 0x6: {
@@ -1168,13 +1168,13 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
     case 0x7: {
       int v = (int) input->readLong(1);
       if (v != 1) f << "##emboss=" << v << ",";
-      textAttributeBits |= MWAW_EMBOSS_BIT;
+      textAttributeBits |= MWAWFont::embossBit;
       break;
     }
     case 0x8: {
       int v = (int) input->readLong(1);
       if (v != 1) f << "##shadow=" << v << ",";
-      textAttributeBits |= MWAW_SHADOW_BIT;
+      textAttributeBits |= MWAWFont::shadowBit;
       break;
     }
     case 0x9: { // small interval between char
@@ -1192,13 +1192,13 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
     case 0x18: {
       int v = (int) input->readLong(1);
       if (v != 1) f << "##super=" << v << ",";
-      textAttributeBits |= MWAW_SUPERSCRIPT_BIT;
+      textAttributeBits |= MWAWFont::superscriptBit;
       break;
     }
     case 0x19: {
       int v = (int) input->readLong(1);
       if (v != 1) f << "##sub =" << v << ",";
-      textAttributeBits |= MWAW_SUBSCRIPT_BIT;
+      textAttributeBits |= MWAWFont::subscriptBit;
     }
     break;
     case 0xe:

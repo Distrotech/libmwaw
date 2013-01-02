@@ -608,24 +608,24 @@ bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)
   if (flag&8)
     font.m_font.setUnderlineStyle(MWAWBorder::Dash);
   if (flag&0x10)
-    flags |= MWAW_STRIKEOUT_BIT;
+    flags |= MWAWFont::strikeOutBit;
   if (flag&0x20) {
-    flags |= MWAW_STRIKEOUT_BIT;
+    flags |= MWAWFont::strikeOutBit;
     f << "strike[double],";
   }
   if (flag&0xFFC0)
     f << "#flag0=" << std::hex << (flag&0xFFF2) << std::dec << ",";
   flag =(int) input->readULong(2);
-  if (flag&1) flags |= MWAW_BOLD_BIT;
-  if (flag&0x2) flags |= MWAW_ITALICS_BIT;
-  if (flag&0x4) flags |= MWAW_OUTLINE_BIT;
-  if (flag&0x8) flags |= MWAW_SHADOW_BIT;
-  if (flag&0x10) flags |= MWAW_REVERSEVIDEO_BIT;
-  if (flag&0x20) flags |= MWAW_SUPERSCRIPT100_BIT;
-  if (flag&0x40) flags |= MWAW_SUBSCRIPT100_BIT;
-  if (flag&0x80) flags |= MWAW_SUPERSCRIPT_BIT;
+  if (flag&1) flags |= MWAWFont::boldBit;
+  if (flag&0x2) flags |= MWAWFont::italicBit;
+  if (flag&0x4) flags |= MWAWFont::outlineBit;
+  if (flag&0x8) flags |= MWAWFont::shadowBit;
+  if (flag&0x10) flags |= MWAWFont::reverseVideoBit; // checkme: reverse ?
+  if (flag&0x20) flags |= MWAWFont::superscript100Bit;
+  if (flag&0x40) flags |= MWAWFont::subscript100Bit;
+  if (flag&0x80) flags |= MWAWFont::superscriptBit;
   if (flag&0x100) {
-    flags |= MWAW_OVERLINE_BIT;
+    flags |= MWAWFont::overlineBit;
     f << "overline[dotted],";
   }
   if (flag&0x200) f << "border[rectangle],";
@@ -645,7 +645,7 @@ bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)
   int color = (int) input->readLong(2);
   uint32_t col;
   if (color && m_mainParser->getColor(color, 1, col))
-    font.m_font.setColor(col);
+    font.m_font.setColor(MWAWColor(col));
   else if (color)
     f << "##fColor=" << color << ",";
   val = (int) input->readLong(2);

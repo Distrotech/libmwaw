@@ -69,7 +69,7 @@ public:
   //! constructor
   MWAWParagraph() : m_marginsUnit(WPX_INCH), m_spacingsInterlineUnit(WPX_PERCENT), m_spacingsInterlineType(libmwaw::Fixed),
     m_tabs(), m_justify(libmwaw::JustificationLeft),
-    m_breakStatus(0), m_listLevelIndex(0), m_listLevel(), m_backgroundColor(0xFFFFFF),
+    m_breakStatus(0), m_listLevelIndex(0), m_listLevel(), m_backgroundColor(MWAWColor::white()),
     m_borders(), m_extra("") {
     for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
     m_spacings[0] = 1.0; // interline normal
@@ -136,7 +136,7 @@ public:
   Variable<ListLevel> m_listLevel;
 
   //! the background color
-  Variable<uint32_t> m_backgroundColor;
+  Variable<MWAWColor> m_backgroundColor;
 
   //! list of border ( order MWAWBorder::Pos)
   std::vector<Variable<MWAWBorder> > m_borders;

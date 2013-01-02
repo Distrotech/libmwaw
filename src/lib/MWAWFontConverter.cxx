@@ -587,6 +587,7 @@ void State::initMaps()
   m_idNameMap[10957] = "Bodoni MT Ultra Bold";
   m_idNameMap[10967] = "Arial MT Condensed Light";
   m_idNameMap[11103] = "Lydian MT";
+  m_idNameMap[16384] = "Osaka";
 
   std::map<int, std::string>::iterator it;
   for(it = m_idNameMap.begin(); it != m_idNameMap.end(); it++)

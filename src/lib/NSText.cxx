@@ -800,11 +800,11 @@ bool NSText::readFonts(MWAWEntry const &entry)
     uint32_t flags=0;
     int flag = (int) input->readULong(2);
 
-    if (flag&0x1) flags |= MWAW_BOLD_BIT;
-    if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+    if (flag&0x1) flags |= MWAWFont::boldBit;
+    if (flag&0x2) flags |= MWAWFont::italicBit;
     if (flag&0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
-    if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
-    if (flag&0x10) flags |= MWAW_SHADOW_BIT;
+    if (flag&0x8) flags |= MWAWFont::embossBit;
+    if (flag&0x10) flags |= MWAWFont::shadowBit;
     if (flag&0x20) f << "condensed,";
     if (flag&0x40) f << "extended,";
     if (flag &0xFF80)
@@ -819,21 +819,21 @@ bool NSText::readFonts(MWAWEntry const &entry)
       font.m_font.setUnderlineStyle(MWAWBorder::Single);
       f << "underline[word],";
     }
-    if (flag & 0x8) flags |= MWAW_SUPERSCRIPT_BIT;
-    if (flag & 0x10) flags |= MWAW_SUBSCRIPT_BIT;
-    if (flag & 0x20) flags |= MWAW_STRIKEOUT_BIT;
-    if (flag & 0x40) flags |= MWAW_OVERLINE_BIT;
-    if (flag & 0x80) flags |= MWAW_SMALL_CAPS_BIT;
-    if (flag & 0x100) flags |= MWAW_ALL_CAPS_BIT;
+    if (flag & 0x8) flags |= MWAWFont::superscriptBit;
+    if (flag & 0x10) flags |= MWAWFont::subscriptBit;
+    if (flag & 0x20) flags |= MWAWFont::strikeOutBit;
+    if (flag & 0x40) flags |= MWAWFont::overlineBit;
+    if (flag & 0x80) flags |= MWAWFont::smallCapsBit;
+    if (flag & 0x100) flags |= MWAWFont::allCapsBit;
     if (flag & 0x200) // checkme: possible ?
       f << "boxed,";
-    if (flag & 0x400) flags |= MWAW_HIDDEN_BIT;
+    if (flag & 0x400) flags |= MWAWFont::hiddenBit;
     if (flag & 0x1000) {
-      flags |= MWAW_SUPERSCRIPT_BIT;
+      flags |= MWAWFont::superscriptBit;
       f << "superscript2,";
     }
     if (flag & 0x2000) {
-      flags |= MWAW_SUBSCRIPT_BIT;
+      flags |= MWAWFont::subscriptBit;
       f << "subscript2,";
     }
     if (flag & 0x4000) // fixme
@@ -892,11 +892,9 @@ bool NSText::readFonts(MWAWEntry const &entry)
 
     static const uint32_t colors[] =
     { 0, 0xFF0000, 0x00FF00, 0x0000FF, 0x00FFFF, 0xFF00FF, 0xFFFF00, 0xFFFFFF };
-    if (color < 8) {
-      uint32_t col = colors[color];
-      font.m_font.setColor
-      (Vec3uc((unsigned char)(col>>16),(unsigned char)((col>>8)&0xFF), (unsigned char)(col&0xFF)));
-    } else if (color != 0xFF00)
+    if (color < 8)
+      font.m_font.setColor(MWAWColor(colors[color]));
+    else if (color != 0xFF00)
       f << "#color=" << color << ",";
     font.m_extra = f.str();
     if (!isStyle)

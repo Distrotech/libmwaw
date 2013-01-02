@@ -97,8 +97,8 @@ uint32_t Font::getFlags() const
 {
   uint32_t res=0;
   uint32_t const fl[NumFlags-1] = {
-    MWAW_BOLD_BIT, MWAW_ITALICS_BIT, MWAW_STRIKEOUT_BIT, MWAW_OUTLINE_BIT,
-    MWAW_SHADOW_BIT, MWAW_SMALL_CAPS_BIT, MWAW_ALL_CAPS_BIT, MWAW_HIDDEN_BIT
+    MWAWFont::boldBit, MWAWFont::italicBit, MWAWFont::strikeOutBit, MWAWFont::outlineBit,
+    MWAWFont::shadowBit, MWAWFont::smallCapsBit, MWAWFont::allCapsBit, MWAWFont::hiddenBit
   };
   if (m_font.isSet()) res = m_font->flags();
   for (int i=0; i < NumFlags-1; i++) {

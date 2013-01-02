@@ -345,44 +345,44 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0x81:
         break; // often found by pair around a " " a ","...
       case 0x83:
-        fFlags ^= MWAW_BOLD_BIT;
+        fFlags ^= MWAWFont::boldBit;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x84:
-        fFlags ^= MWAW_ITALICS_BIT;
+        fFlags ^= MWAWFont::italicBit;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x86:
-        fFlags ^= MWAW_OUTLINE_BIT;
+        fFlags ^= MWAWFont::outlineBit;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x87:
-        fFlags ^= MWAW_SHADOW_BIT;
+        fFlags ^= MWAWFont::shadowBit;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x88:
-        fFlags ^= MWAW_SMALL_CAPS_BIT;
+        fFlags ^= MWAWFont::smallCapsBit;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x89: // change color
         break;
       case 0x8a:
-        fFlags ^= MWAW_SUPERSCRIPT100_BIT;
+        fFlags ^= MWAWFont::superscript100Bit;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x8b:
-        fFlags ^= MWAW_SUBSCRIPT100_BIT;
+        fFlags ^= MWAWFont::subscript100Bit;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x8c:
-        fFlags ^= MWAW_STRIKEOUT_BIT;
+        fFlags ^= MWAWFont::strikeOutBit;
         font.setFlags(fFlags);
         fontSet=false;
         break;
@@ -405,17 +405,17 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       }
       case 0x93:
-        fFlags ^= MWAW_OVERLINE_BIT;
+        fFlags ^= MWAWFont::overlineBit;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x94:
-        fFlags ^= MWAW_ALL_CAPS_BIT;
+        fFlags ^= MWAWFont::allCapsBit;
         font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x95:
-        fFlags ^= MWAW_SMALL_CAPS_BIT;
+        fFlags ^= MWAWFont::smallCapsBit;
         font.setFlags(fFlags);
         fontSet=false;
         break;

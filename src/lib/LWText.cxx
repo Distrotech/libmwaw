@@ -122,7 +122,7 @@ struct Font {
     m_font.setFlags(m_font.flags()|fExtra.m_font.flags());
     if (fExtra.m_font.getUnderlineStyle() != MWAWBorder::None)
       m_font.setUnderlineStyle(fExtra.m_font.getUnderlineStyle());
-    uint32_t backColor;
+    MWAWColor backColor;
     fExtra.m_font.getBackgroundColor(backColor);
     m_font.setBackgroundColor(backColor);
     m_pictId = fExtra.m_pictId;
@@ -266,7 +266,7 @@ bool LWText::hasHeaderFooter(bool header) const
   return m_state->m_footer.m_pos.valid();
 }
 
-bool LWText::getColor(int id, uint32_t &col) const
+bool LWText::getColor(int id, MWAWColor &col) const
 {
   if (id < 0 || id >= 11) {
     MWAW_DEBUG_MSG(("LWText::createZones: can not find col for id=%d\n", id));
@@ -512,11 +512,11 @@ bool LWText::readFonts(MWAWEntry const &entry)
     font.m_font.setId((int) input->readLong(2));
     uint32_t flags=0;
     int flag=(int) input->readULong(1);
-    if (flag&0x1) flags |= MWAW_BOLD_BIT;
-    if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+    if (flag&0x1) flags |= MWAWFont::boldBit;
+    if (flag&0x2) flags |= MWAWFont::italicBit;
     if (flag&0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
-    if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
-    if (flag&0x10) flags |= MWAW_SHADOW_BIT;
+    if (flag&0x8) flags |= MWAWFont::embossBit;
+    if (flag&0x10) flags |= MWAWFont::shadowBit;
     if (flag&0x20) f << "expand,";
     if (flag&0x40) f << "condense,";
     if (flag&0x80) f << "#fl80,";
@@ -526,11 +526,11 @@ bool LWText::readFonts(MWAWEntry const &entry)
     font.m_font.setSize((int) input->readLong(2));
     if (sz!=font.m_font.size())
       f << "#sz=" << sz << ",";
-    int col[3];
+    unsigned char col[3];
     for (int j=0; j < 3; j++)
-      col[j] = (int) input->readULong(2);
+      col[j] = (unsigned char) (input->readULong(2)>>8);
     if (col[0] || col[1] || col[2])
-      font.m_font.setColor(uint32_t(((col[0]>>8)<<16)|((col[1]>>8)<<8)|(col[2]>>8)));
+      font.m_font.setColor(MWAWColor(col[0],col[1],col[2]));
     font.m_extra=f.str();
     f.str("");
     f << "Fonts-" << i << ":cPos=" << std::hex << cPos << std::dec << ","
@@ -614,22 +614,22 @@ bool LWText::readFont2(MWAWEntry const &entry)
     case 0:
       break;
     case 1:
-      flags |= MWAW_STRIKEOUT_BIT;
+      flags |= MWAWFont::strikeOutBit;
       break;
     case 2:
-      flags |= MWAW_STRIKEOUT_BIT;
+      flags |= MWAWFont::strikeOutBit;
       f << "strike[double],";
       break;
     case 3:
-      flags |= MWAW_STRIKEOUT_BIT;
+      flags |= MWAWFont::strikeOutBit;
       f << "strike[w=2],";
       break;
     case 4:
-      flags |= MWAW_STRIKEOUT_BIT;
+      flags |= MWAWFont::strikeOutBit;
       f << "strike[dot],";
       break;
     case 5:
-      flags |= MWAW_STRIKEOUT_BIT;
+      flags |= MWAWFont::strikeOutBit;
       f << "strike[dot2],";
       break;
     default:
@@ -640,22 +640,22 @@ bool LWText::readFont2(MWAWEntry const &entry)
     case 0:
       break;
     case 1:
-      flags |= MWAW_OVERLINE_BIT;
+      flags |= MWAWFont::overlineBit;
       break;
     case 2:
-      flags |= MWAW_OVERLINE_BIT;
+      flags |= MWAWFont::overlineBit;
       f << "over[double],";
       break;
     case 3:
-      flags |= MWAW_OVERLINE_BIT;
+      flags |= MWAWFont::overlineBit;
       f << "over[w=2],";
       break;
     case 4:
-      flags |= MWAW_OVERLINE_BIT;
+      flags |= MWAWFont::overlineBit;
       f << "over[dot],";
       break;
     case 5:
-      flags |= MWAW_OVERLINE_BIT;
+      flags |= MWAWFont::overlineBit;
       f << "over[dot2],";
       break;
     default:
@@ -663,9 +663,9 @@ bool LWText::readFont2(MWAWEntry const &entry)
       break;
     }
     if (flag >> 12) {
-      uint32_t col=0;
+      MWAWColor col=0;
       if (getColor(int(flag >> 12), col))
-        f << "color[line]=" << std::hex << col << std::dec << ",";
+        f << "color[line]=" << col << ",";
       else
         f << "#colorId[line]=" << (flag >> 12) << ",";
     }
@@ -673,17 +673,13 @@ bool LWText::readFont2(MWAWEntry const &entry)
     if (flag) f << "flags=#" << std::hex << flag << std::dec << ",";
     /* fl0=0|2|b|40|42|..|a0 */
     val = (long) input->readULong(1);
-    uint32_t backColor=0xFFFFFF;
+    MWAWColor backColor(MWAWColor::white());
     if ((val & 0xf0) && !getColor(int(val>>4), backColor))
       f << "#backColorId=" << (val>>4) << ",";
     int percent = (val & 0xf);
     if (percent >= 0 && percent <= 10) {
       float percentVal = 0.1f*float(percent);
-      int col[3];
-      for (int c = 0; c < 3; c++)
-        col[c] = int((1.f-percentVal)*255.0f+
-                     float((backColor>>(8*c))&0xFF)*percentVal);
-      backColor = uint32_t(col[0]+(col[1]<<8)+(col[2]<<16));
+      backColor =MWAWColor::barycenter(percentVal,backColor,1.f-percentVal,MWAWColor(0xFFFFFF));
     } else if (percent == 11)
       f << "border,";
     else {
@@ -698,16 +694,16 @@ bool LWText::readFont2(MWAWEntry const &entry)
     case 0:
       break;
     case 1:
-      flags |= MWAW_SUPERSCRIPT100_BIT;
+      flags |= MWAWFont::superscript100Bit;
       break;
     case 2:
-      flags |= MWAW_SUBSCRIPT100_BIT;
+      flags |= MWAWFont::subscript100Bit;
       break;
     case 5:
-      flags |= MWAW_SUPERSCRIPT_BIT;
+      flags |= MWAWFont::superscriptBit;
       break;
     case 6:
-      flags |= MWAW_SUBSCRIPT_BIT;
+      flags |= MWAWFont::subscriptBit;
       break;
     default:
       f << "#pos=" << (flag&7) << ",";
@@ -936,6 +932,10 @@ bool LWText::sendHeaderFooter(bool header)
         continue;
       }
     }
+    if (c == 0xd) {
+      m_listener->insertEOL();
+      continue;
+    }
     int unicode = m_convertissor->unicode (actFont.id(), (unsigned char) c);
     if (unicode == -1) {
       if (c >= 0 && c < 0x20) {
@@ -989,22 +989,22 @@ bool LWText::readDocumentHF(MWAWEntry const &entry)
     }
     uint32_t flags=0;
     flag=(int) input->readULong(1);
-    if (flag&0x1) flags |= MWAW_BOLD_BIT;
-    if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+    if (flag&0x1) flags |= MWAWFont::boldBit;
+    if (flag&0x2) flags |= MWAWFont::italicBit;
     if (flag&0x4) zone.m_font.setUnderlineStyle(MWAWBorder::Single);
-    if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
-    if (flag&0x10) flags |= MWAW_SHADOW_BIT;
+    if (flag&0x8) flags |= MWAWFont::embossBit;
+    if (flag&0x10) flags |= MWAWFont::shadowBit;
     if (flag&0x20) f2 << "expand,";
     if (flag&0x40) f2 << "condense,";
     if (flag&0x80) f2 << "#fl80,";
     zone.m_font.setFlags(flags);
     zone.m_font.setId((int) input->readULong(2));
     zone.m_font.setSize((int) input->readULong(2));
-    int col[3];
+    unsigned char col[3];
     for (int j=0; j < 3; j++)
-      col[j] = (int) input->readULong(2);
+      col[j] = (unsigned char) (input->readULong(2)>>8);
     if (col[0] || col[1] || col[2])
-      zone.m_font.setColor(uint32_t(((col[0]>>8)<<16)|((col[1]>>8)<<8)|(col[2]>>8)));
+      zone.m_font.setColor(MWAWColor(col[0],col[1],col[2]));
     val = input->readLong(2); // can be 0x200
     if (val) f2 << "f0=" << std::hex << val << std::dec << ",";
     zone.m_extra = f2.str();

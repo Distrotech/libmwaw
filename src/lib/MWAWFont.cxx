@@ -51,35 +51,39 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
       o << "id=" << id() << ",";
   }
   if (size() > 0) o << "sz=" << size() << ",";
-
+  if (m_deltaSpacing.isSet() && m_deltaSpacing.get()) {
+    if (m_deltaSpacing.get() > 0)
+      o << "extended=" << m_deltaSpacing.get() << "pt,";
+    else
+      o << "condensed=" << -m_deltaSpacing.get() << "pt,";
+  }
   if (m_flags.isSet() && m_flags.get()) {
     o << "fl=";
     uint32_t flag = m_flags.get();
-    if (flag&MWAW_BOLD_BIT) o << "b:";
-    if (flag&MWAW_ITALICS_BIT) o << "it:";
-    if (flag&MWAW_OVERLINE_BIT) o << "overL:";
-    if (flag&MWAW_EMBOSS_BIT) o << "emboss:";
-    if (flag&MWAW_SHADOW_BIT) o << "shadow:";
-    if (flag&MWAW_OUTLINE_BIT) o << "outline:";
-    if (flag&MWAW_STRIKEOUT_BIT) o << "strikeout:";
-    if (flag&MWAW_SMALL_CAPS_BIT) o << "smallCaps:";
-    if (flag&MWAW_ALL_CAPS_BIT) o << "allCaps:";
-    if (flag&MWAW_HIDDEN_BIT) o << "hidden:";
-    if (flag&MWAW_SMALL_PRINT_BIT) o << "consended:";
-    if (flag&MWAW_LARGE_BIT) o << "extended:";
-    if ((flag&MWAW_SUPERSCRIPT_BIT) || (flag&MWAW_SUPERSCRIPT100_BIT))
+    if (flag&boldBit) o << "b:";
+    if (flag&italicBit) o << "it:";
+    if (flag&overlineBit) o << "overL:";
+    if (flag&embossBit) o << "emboss:";
+    if (flag&shadowBit) o << "shadow:";
+    if (flag&outlineBit) o << "outline:";
+    if (flag&strikeOutBit) o << "strikeout:";
+    if (flag&smallCapsBit) o << "smallCaps:";
+    if (flag&allCapsBit) o << "allCaps:";
+    if (flag&hiddenBit) o << "hidden:";
+    if ((flag&superscriptBit) || (flag&superscript100Bit))
       o << "superS:";
-    if ((flag&MWAW_SUBSCRIPT_BIT) || (flag&MWAW_SUBSCRIPT100_BIT))
+    if ((flag&subscriptBit) || (flag&subscript100Bit))
       o << "subS:";
-    if (flag&MWAW_REVERSEVIDEO_BIT) o << "reversed:";
-    if (flag&MWAW_BLINK_BIT) o << "blink:";
+    if (flag&reverseVideoBit) o << "reversed:";
+    if (flag&blinkBit) o << "blink:";
     o << ",";
   }
   if (m_underline.isSet()) o << "underline=" << getUnderlineStyle() << ":";
   if (hasColor())
-    o << "col=(" << std::hex << m_color.get() << std::dec << "),";
-  if (m_backgroundColor.isSet() && m_backgroundColor.get() != 0xFFFFFF)
-    o << "backCol=(" << std::hex << m_backgroundColor.get() << std::dec << "),";
+    o << "col=" << m_color.get()<< "),";
+  if (m_backgroundColor.isSet() && !m_backgroundColor.get().isWhite())
+    o << "backCol=" << m_backgroundColor.get() << ",";
+  o << m_extra;
   return o.str();
 }
 
@@ -105,6 +109,7 @@ void MWAWFont::sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverte
     convert->getOdtInfo(actualFont.id(), fName, dSize);
     listener->setFontSize(uint16_t(actualFont.size()+dSize));
   }
+  listener->setFontDLSpacing(deltaLetterSpacing());
 
   actualFont.setFlags(flags());
   listener->setFontAttributes(actualFont.flags());

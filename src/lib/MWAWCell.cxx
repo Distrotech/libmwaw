@@ -77,8 +77,8 @@ int MWAWCellFormat::compare(MWAWCellFormat const &cell) const
   if (diff) return diff;
   diff = int(m_vAlign) - int(cell.m_vAlign);
   if (diff) return diff;
-  diff = int(m_backgroundColor) - int(cell.m_backgroundColor);
-  if (diff) return diff;
+  if (m_backgroundColor != cell.m_backgroundColor)
+    return m_backgroundColor < cell.m_backgroundColor ? -1 : 1;
   diff = int(m_bordersList.size()) - int(cell.m_bordersList.size());
   if (diff) return diff;
   for (size_t c = 0; c < m_bordersList.size(); c++) {
@@ -232,8 +232,8 @@ std::ostream &operator<<(std::ostream &o, MWAWCellFormat const &cell)
     break; // default
   }
 
-  if (cell.m_backgroundColor != 0xFFFFFF)
-    o << ",backColor=" << std::hex << cell.m_backgroundColor << ",";
+  if (!cell.m_backgroundColor.isWhite())
+    o << ",backColor=" << cell.m_backgroundColor << ",";
   for (size_t i = 0; i < cell.m_bordersList.size(); i++) {
     if (cell.m_bordersList[i].m_style == MWAWBorder::None)
       continue;

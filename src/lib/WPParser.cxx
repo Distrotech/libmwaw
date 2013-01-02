@@ -1804,13 +1804,13 @@ bool WPParser::readFonts
     font.setId((int) input->readULong(1));
     int flag = (int) input->readULong(1);
     uint32_t flags = 0;
-    if (flag&0x1) flags |= MWAW_BOLD_BIT;
-    if (flag&0x2) flags |= MWAW_ITALICS_BIT;
+    if (flag&0x1) flags |= MWAWFont::boldBit;
+    if (flag&0x2) flags |= MWAWFont::italicBit;
     if (flag&0x4) font.setUnderlineStyle(MWAWBorder::Single);
-    if (flag&0x8) flags |= MWAW_EMBOSS_BIT;
-    if (flag&0x10) flags |= MWAW_SHADOW_BIT;
-    if (flag&0x20) flags |= MWAW_SUPERSCRIPT_BIT;
-    if (flag&0x40) flags |= MWAW_SUBSCRIPT_BIT;
+    if (flag&0x8) flags |= MWAWFont::embossBit;
+    if (flag&0x10) flags |= MWAWFont::shadowBit;
+    if (flag&0x20) flags |= MWAWFont::superscriptBit;
+    if (flag&0x40) flags |= MWAWFont::subscriptBit;
 
     font.setFlags(flags);
     for (int j = 5; j < 7; j++)

@@ -93,14 +93,16 @@ struct MWAWContentParsingState {
   WPXString m_fontName;
   //! the font text size
   double m_fontSize;
+  //! the font delta letter spacing
+  double m_fontDLSpacing;
   //! the font attribute
   uint32_t m_fontAttributeBits;
   //! the underline style
   MWAWBorder::Style m_fontUnderline;
   //! the font color
-  uint32_t m_fontColor;
+  MWAWColor m_fontColor;
   //! the font background color
-  uint32_t m_fontBackgroundColor;
+  MWAWColor m_fontBackgroundColor;
   //! the text language
   std::string m_textLanguage;
 
@@ -117,7 +119,7 @@ struct MWAWContentParsingState {
   //! the paragraph interline type (fixed, at least )
   libmwaw::LineSpacing m_paragraphLineSpacingType;
   //! the paragraph background color
-  uint32_t m_paragraphBackgroundColor;
+  MWAWColor m_paragraphBackgroundColor;
   //! the paragraph borders
   std::vector<MWAWBorder> m_paragraphBorders;
 
@@ -246,14 +248,16 @@ public:
   void setFontName(const WPXString &fontName);
   //! sets the font size
   void setFontSize(const uint16_t fontSize);
+  //! sets the font delta letter spacing
+  void setFontDLSpacing(const int dSpacing);
   //! sets the font attribute: bold, italic, ...
   void setFontAttributes(const uint32_t fontAttributes);
   //! sets the font underline style
   void setFontUnderlineStyle(MWAWBorder::Style style);
   //! sets the font color
-  void setFontColor(const uint32_t rgb);
+  void setFontColor(MWAWColor const rgb);
   //! sets the font background color
-  void setFontBackgroundColor(const uint32_t rgb);
+  void setFontBackgroundColor(MWAWColor const rgb);
   //! sets the font language
   void setTextLanguage(std::string const &locale);
 
@@ -276,7 +280,7 @@ public:
    */
   void setTabs(const std::vector<MWAWTabStop> &tabStops);
   /** sets the paragraph background color */
-  void setParagraphBackgroundColor(uint32_t color=0xFFFFFF);
+  void setParagraphBackgroundColor(MWAWColor const color=MWAWColor::white());
   /** reset the paragraph to have no border */
   void resetParagraphBorders();
   /** set a paragraph has one or several border:
