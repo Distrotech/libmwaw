@@ -47,12 +47,78 @@ class MWAWFontConverter;
 class MWAWFont
 {
 public:
+  /** a small struct to define the script position in MWAWFont */
+  struct Script {
+    //! constructor
+    Script(int delta=0, WPXUnit deltaUnit=WPX_PERCENT, int scale=100) :
+      m_delta(delta), m_deltaUnit(deltaUnit), m_scale(scale) {
+    }
+    //! return true if the position is not default
+    bool isSet() const {
+      return *this != Script();
+    }
+    //! return a yposition which correspond to a basic subscript
+    static Script sub() {
+      return Script(-33,WPX_PERCENT,58);
+    }
+    //! return a yposition which correspond to a basic subscript100
+    static Script sub100() {
+      return Script(-20);
+    }
+    //! return a yposition which correspond to a basic superscript
+    static Script super() {
+      return Script(33,WPX_PERCENT,58);
+    }
+    //! return a yposition which correspond to a basic superscript100
+    static Script super100() {
+      return Script(20);
+    }
+    //! return a string which correspond to style:text-position
+    std::string str(int fSize) const;
+
+    //! operator==
+    bool operator==(Script const &oth) const {
+      return cmp(oth)==0;
+    }
+    //! operator!=
+    bool operator!=(Script const &oth) const {
+      return cmp(oth)!=0;
+    }
+    //! operator<
+    bool operator<(Script const &oth) const {
+      return cmp(oth)<0;
+    }
+    //! operator<=
+    bool operator<=(Script const &oth) const {
+      return cmp(oth)<=0;
+    }
+    //! operator>
+    bool operator>(Script const &oth) const {
+      return cmp(oth)>0;
+    }
+    //! operator>=
+    bool operator>=(Script const &oth) const {
+      return cmp(oth)>=0;
+    }
+    //! small comparison function
+    int cmp(Script const &oth) const {
+      if (m_delta != oth.m_delta) return m_delta-oth.m_delta;
+      if (m_deltaUnit != oth.m_deltaUnit) return int(m_deltaUnit)-int(oth.m_deltaUnit);
+      if (m_scale != oth.m_scale) return m_scale-oth.m_scale;
+      return 0;
+    }
+    //! the ydelta
+    int m_delta;
+    //! the ydelta unit ( point or percent )
+    WPXUnit m_deltaUnit;
+    //! the font scaling ( in percent )
+    int m_scale;
+  };
+
   //! the different font bit
   enum FontBits { boldBit=1, italicBit=2, blinkBit=4, embossBit=8, engraveBit=0x10,
                   hiddenBit=0x20, outlineBit=0x40, shadowBit=0x80,
                   reverseVideoBit=0x100, smallCapsBit=0x200, allCapsBit=0x400,
-                  superscriptBit=0x1000, subscriptBit=0x2000,
-                  superscript100Bit=0x4000, subscript100Bit=0x8000,
                   strikeOutBit=0x10000, overlineBit=0x20000
                 };
   /** constructor
@@ -60,7 +126,8 @@ public:
    * \param newId system id font
    * \param sz the font size
    * \param f the font attributes bold, ... */
-  MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_deltaSpacing(0), m_flags(f), m_underline(MWAWBorder::None), m_color(MWAWColor::black()), m_backgroundColor(MWAWColor::white()), m_extra("") {
+  MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_deltaSpacing(0), m_scriptPosition(),
+    m_flags(f), m_underline(MWAWBorder::None), m_color(MWAWColor::black()), m_backgroundColor(MWAWColor::white()), m_extra("") {
     resetColor();
   };
   //! returns true if the font id is initialized
@@ -72,6 +139,7 @@ public:
     m_id.insert(ft.m_id);
     m_size.insert(ft.m_size);
     m_deltaSpacing.insert(ft.m_deltaSpacing);
+    m_scriptPosition.insert(ft.m_scriptPosition);
     if (ft.m_flags.isSet()) {
       if (m_flags.isSet())
         setFlags(flags()| ft.flags());
@@ -114,6 +182,17 @@ public:
   void setDeltaLetterSpacing(int d) {
     m_deltaSpacing=d;
   }
+
+  //! returns the script position
+  Script const &script() const {
+    return m_scriptPosition.get();
+  }
+
+  //! sets the script position
+  void setScript(Script const &newscript) {
+    m_scriptPosition = newscript;
+  }
+
   //! returns the font flags
   uint32_t flags() const {
     return m_flags.get();
@@ -132,10 +211,6 @@ public:
     c = m_color.get();
   }
   //! sets the font color
-  void setColor(Vec3uc color) {
-    m_color = libmwaw::getUInt32(color);
-  }
-  //! sets the font color
   void setColor(MWAWColor color) {
     m_color = color;
   }
@@ -144,7 +219,7 @@ public:
   void getBackgroundColor(MWAWColor &c) const {
     c = m_backgroundColor.get();
   }
-  //! sets the font backgroundC color
+  //! sets the font background color
   void setBackgroundColor(MWAWColor color) {
     m_backgroundColor = color;
   }
@@ -185,6 +260,8 @@ public:
     if (flags() > oth.flags()) return 1;
     if (m_deltaSpacing.get() < oth.m_deltaSpacing.get()) return -1;
     if (m_deltaSpacing.get() > oth.m_deltaSpacing.get()) return 1;
+    diff = script().cmp(oth.script());
+    if (diff != 0) return diff;
     if (m_underline.get() < oth.m_underline.get()) return -1;
     if (m_underline.get() > oth.m_underline.get()) return 1;
     if (m_color.get() < oth.m_color.get()) return -1;
@@ -200,6 +277,7 @@ public:
 protected:
   Variable<int> m_id /** font identificator*/, m_size /** font size */;
   Variable<int> m_deltaSpacing /** expand(>0), condensed(<0) depl in point*/;
+  Variable<Script> m_scriptPosition /* the sub/super script definition */;
   Variable<uint32_t> m_flags /** font attributes */;
   Variable<MWAWBorder::Style> m_underline /** underline attributes */;
   Variable<MWAWColor> m_color /** font color */;

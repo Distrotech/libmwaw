@@ -1193,8 +1193,10 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     if (paragFormat&0x8) info.m_font.setUnderlineStyle(MWAWBorder::Single);
     if (paragFormat&0x10) flags |= MWAWFont::embossBit;
     if (paragFormat&0x20) flags |= MWAWFont::shadowBit;
-    if (paragFormat&0x40) flags |= MWAWFont::superscript100Bit;
-    if (paragFormat&0x80) flags |= MWAWFont::subscript100Bit;
+    if (paragFormat&0x40)
+      info.m_font.setScript(MWAWFont::Script::super100());
+    if (paragFormat&0x80)
+      info.m_font.setScript(MWAWFont::Script::sub100());
     info.m_font.setFlags(flags);
 
     int fontSize = 0;
@@ -1337,8 +1339,8 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     if (flag&0x4) font.setUnderlineStyle(MWAWBorder::Single);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
-    if (flag&0x20) flags |= MWAWFont::superscript100Bit;
-    if (flag&0x40) flags |= MWAWFont::subscript100Bit;
+    if (flag&0x20) font.setScript(MWAWFont::Script::super100());
+    if (flag&0x40) font.setScript(MWAWFont::Script::sub100());
     font.setFlags(flags);
     font.setId((int) input->readULong(2));
     listPos.push_back(tPos);

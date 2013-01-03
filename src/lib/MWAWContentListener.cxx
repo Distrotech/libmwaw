@@ -64,7 +64,7 @@ MWAWDocumentParsingState::~MWAWDocumentParsingState()
 MWAWContentParsingState::MWAWContentParsingState() :
   m_textBuffer(""), m_numDeferredTabs(0),
 
-  m_fontName("Times New Roman"), m_fontSize(12.0), m_fontDLSpacing(0.0), m_fontAttributeBits(0),
+  m_fontName("Times New Roman"), m_fontSize(12.0), m_fontDLSpacing(0.0), m_fontScript(), m_fontAttributeBits(0),
   m_fontUnderline(MWAWBorder::None), m_fontColor(MWAWColor::black()), m_fontBackgroundColor(MWAWColor::white()),
   m_textLanguage("UNSET"),
 
@@ -254,11 +254,7 @@ void MWAWContentListener::insertEOL(bool soft)
     _closeParagraph();
 
   // sub/superscript must not survive a new line
-  static const uint32_t s_subsuperBits =
-    MWAWFont::subscriptBit | MWAWFont::superscriptBit |
-    MWAWFont::subscript100Bit | MWAWFont::superscript100Bit;
-  if (m_ps->m_fontAttributeBits & s_subsuperBits)
-    m_ps->m_fontAttributeBits &= ~s_subsuperBits;
+  m_ps->m_fontScript = MWAWFont::Script();
 }
 
 void MWAWContentListener::insertTab()
@@ -364,7 +360,15 @@ void MWAWContentListener::setFontDLSpacing(const int dSpacing)
 
   _closeSpan();
   m_ps->m_fontDLSpacing=dSpace;
+}
 
+void MWAWContentListener::setFontScript(MWAWFont::Script const &newscript)
+{
+  if (m_ps->m_fontScript==newscript)
+    return;
+
+  _closeSpan();
+  m_ps->m_fontScript=newscript;
 }
 
 void MWAWContentListener::setFontUnderlineStyle(MWAWBorder::Style style)
@@ -1160,14 +1164,11 @@ void MWAWContentListener::_openSpan()
 
   uint32_t attributeBits = m_ps->m_fontAttributeBits;
   WPXPropertyList propList;
-  if (attributeBits & MWAWFont::superscriptBit)
-    propList.insert("style:text-position", "super 58.0%");
-  else if (attributeBits & MWAWFont::subscriptBit)
-    propList.insert("style:text-position", "sub 58.0%");
-  else if (attributeBits & MWAWFont::superscript100Bit)
-    propList.insert("style:text-position", "20 100");
-  else if (attributeBits & MWAWFont::subscript100Bit)
-    propList.insert("style:text-position", "-20 100");
+  if (m_ps->m_fontScript.isSet()) {
+    std::string pos=m_ps->m_fontScript.str(int(m_ps->m_fontSize));
+    if (pos.length())
+      propList.insert("style:text-position", pos.c_str());
+  }
 
   if (attributeBits & MWAWFont::italicBit)
     propList.insert("fo:font-style", "italic");

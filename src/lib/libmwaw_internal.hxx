@@ -208,7 +208,7 @@ struct MWAWBorder {
   enum { LeftBit = 0x01,  RightBit = 0x02, TopBit=0x4, BottomBit = 0x08, HMiddleBit = 0x10, VMiddleBit = 0x20 };
 
   //! constructor
-  MWAWBorder() : m_style(Single), m_width(1), m_color(0) { }
+  MWAWBorder() : m_style(Single), m_width(1), m_color(MWAWColor::black()) { }
   //! return the properties
   std::string getPropertyValue() const;
   //! return the properties corresponding to a style
@@ -235,7 +235,7 @@ struct MWAWBorder {
   //! the border width
   int m_width;
   //! the border color
-  uint32_t m_color;
+  MWAWColor m_color;
 
 };
 
@@ -778,16 +778,6 @@ typedef Box2<int> Box2i;
 typedef Box2<float> Box2f;
 /*! \brief Box2 of long */
 typedef Box2<long> Box2l;
-
-namespace libmwaw
-{
-//! return a string with format rrggbb
-std::string getColorString(uint32_t col);
-//! return a string with format rrggbb
-std::string getColorString(Vec3uc const &col);
-//! return a uint32_t corresponding to a color
-uint32_t getUInt32(Vec3uc const &color);
-}
 
 #endif /* LIBMWAW_INTERNAL_H */
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

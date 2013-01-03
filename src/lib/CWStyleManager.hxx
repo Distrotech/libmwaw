@@ -136,19 +136,19 @@ public:
         m_pattern[i] = -1;
         m_patternPercent[i] = 1;
       }
-      m_color[0] = 0;
-      m_color[1] = 0xFFFFFFFF;
+      m_color[0] = MWAWColor::black();
+      m_color[1] = MWAWColor::white();
     }
     //! returns the line color
-    uint32_t getLineColor() const;
+    MWAWColor getLineColor() const;
     //! returns the surface color
-    uint32_t getSurfaceColor() const;
+    MWAWColor getSurfaceColor() const;
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, Graphic const &graph);
     //! the line width
     int m_lineWidth;
     //! the line and surface color
-    uint32_t m_color[2];
+    MWAWColor m_color[2];
     //! the line an surface pattern id
     int m_pattern[2];
     //! the line an surface pattern percent

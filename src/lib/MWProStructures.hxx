@@ -264,7 +264,7 @@ protected:
   bool readString(MWAWInputStreamPtr input, std::string &res);
 
   //! try to return the color corresponding to colId
-  bool getColor(int colId, Vec3uc &color) const;
+  bool getColor(int colId, MWAWColor &color) const;
 
   //! returns true if the block is already sent ( or does not exists)
   bool isSent(int blockId);

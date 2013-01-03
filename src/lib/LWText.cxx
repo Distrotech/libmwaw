@@ -122,6 +122,7 @@ struct Font {
     m_font.setFlags(m_font.flags()|fExtra.m_font.flags());
     if (fExtra.m_font.getUnderlineStyle() != MWAWBorder::None)
       m_font.setUnderlineStyle(fExtra.m_font.getUnderlineStyle());
+    m_font.setScript(fExtra.m_font.script());
     MWAWColor backColor;
     fExtra.m_font.getBackgroundColor(backColor);
     m_font.setBackgroundColor(backColor);
@@ -694,16 +695,16 @@ bool LWText::readFont2(MWAWEntry const &entry)
     case 0:
       break;
     case 1:
-      flags |= MWAWFont::superscript100Bit;
+      font.m_font.setScript(MWAWFont::Script::super100());
       break;
     case 2:
-      flags |= MWAWFont::subscript100Bit;
+      font.m_font.setScript(MWAWFont::Script::sub100());
       break;
     case 5:
-      flags |= MWAWFont::superscriptBit;
+      font.m_font.setScript(MWAWFont::Script::super());
       break;
     case 6:
-      flags |= MWAWFont::subscriptBit;
+      font.m_font.setScript(MWAWFont::Script::sub());
       break;
     default:
       f << "#pos=" << (flag&7) << ",";

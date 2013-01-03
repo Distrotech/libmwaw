@@ -440,7 +440,7 @@ struct ColorTable {
         col[c] = (unsigned char) input.readULong(1);
         input.readULong(1);
       }
-      m_colors[i] = Vec3uc(col[0], col[1], col[2]);
+      m_colors[i] = MWAWColor(col[0], col[1], col[2]);
     }
     return long(input.tell()) == actPos + 8+ 8*n;
   }
@@ -452,8 +452,7 @@ struct ColorTable {
     if (f.m_flags) o << "(" << std::hex << f.m_flags << ")";
     o << "={" << std::dec;
     for (size_t i = 0; i < numColor; i++)
-      o << "col" << i << "="
-        << int(f.m_colors[i][0]) << "x" << int(f.m_colors[i][1]) << "x"<< int(f.m_colors[i][2]) << ",";
+      o << "col" << i << "=" << f.m_colors[i] << ",";
     o << "}";
     return o;
   }
@@ -462,7 +461,7 @@ struct ColorTable {
   int m_flags;
 
   //! the list of colors
-  std::vector<Vec3uc> m_colors;
+  std::vector<MWAWColor> m_colors;
 };
 
 //!  Internal and low level: a class used to read pack/unpack color pixmap (version 2)
@@ -776,24 +775,24 @@ struct Pixmap {
         for (int x = 0, rPos = 0; x < W; x++) {
           unsigned int val = 256*(unsigned int)values[(size_t)rPos]+(unsigned int)values[(size_t)rPos+1];
           rPos+=2;
-          m_colors[(size_t)wPos++]=Vec3uc((val>>7)& 0xF8, (val>>2) & 0xF8, (unsigned char)(val << 3));
+          m_colors[(size_t)wPos++]=MWAWColor((val>>7)& 0xF8, (val>>2) & 0xF8, (unsigned char)(val << 3));
         }
       } else if (nPlanes==1) {
         for (int x = 0, rPos = 0; x < W; x++) {
           if (nBytes==4) rPos++;
-          m_colors[(size_t)wPos++]=Vec3uc(values[(size_t)rPos], values[size_t(rPos+1)],  values[size_t(rPos+2)]);
+          m_colors[(size_t)wPos++]=MWAWColor(values[(size_t)rPos], values[size_t(rPos+1)],  values[size_t(rPos+2)]);
           rPos+=3;
         }
       } else {
         for (int x = 0, rPos = (nPlanes==4) ? W:0; x < W; x++) {
-          m_colors[(size_t)wPos++]=Vec3uc(values[(size_t)rPos], values[size_t(rPos+W)],  values[size_t(rPos+2*W)]);
+          m_colors[(size_t)wPos++]=MWAWColor(values[(size_t)rPos], values[size_t(rPos+W)],  values[size_t(rPos+2*W)]);
           rPos+=1;
         }
       }
     }
     if (maxColorsIndex >= numColors) {
       if (!m_colorTable) m_colorTable.reset(new ColorTable);
-      std::vector<Vec3uc> &cols = m_colorTable->m_colors;
+      std::vector<MWAWColor> &cols = m_colorTable->m_colors;
 
       // can be ok for a pixpat ; in this case:
       // maxColorsIndex -> foregroundColor, numColors -> backGroundColor
@@ -802,7 +801,7 @@ struct Pixmap {
 
       int decGray = (numUnset==1) ? 0 : 255/(numUnset-1);
       for (int i = 0; i < numUnset; i++)
-        cols.push_back(Vec3uc((unsigned char)(255-i*decGray), (unsigned char)(255-i*decGray), (unsigned char)(255-i*decGray)));
+        cols.push_back(MWAWColor((unsigned char)(255-i*decGray), (unsigned char)(255-i*decGray), (unsigned char)(255-i*decGray)));
       MWAW_DEBUG_MSG(("Pict1:Pixmap: find index=%d >= numColors=%d\n", maxColorsIndex, numColors));
 
       return true;
@@ -830,7 +829,7 @@ struct Pixmap {
   //! the pixmap indices
   std::vector<int> m_indices;
   //! the colors
-  std::vector<Vec3uc> m_colors;
+  std::vector<MWAWColor> m_colors;
   //! the encoding mode ?
   int m_mode;
 };
@@ -851,7 +850,7 @@ struct Pixpattern {
     if (type == 2) {
       int val[3]; // checkme
       for (int i = 0; i < 3; i++) val[i] = (int)input.readULong(2);
-      m_color = Vec3uc((unsigned char)val[0], (unsigned char)val[1], (unsigned char)val[2]);
+      m_color = MWAWColor((unsigned char)val[0], (unsigned char)val[1], (unsigned char)val[2]);
       return true;
     }
 
@@ -869,7 +868,7 @@ struct Pixpattern {
     }
     o << ")," << std::dec;
     if (!f.m_pixmap.get()) {
-      o << "col=" << int(f.m_color[0]) << "x"  << int(f.m_color[1]) << "x"  << int(f.m_color[2]);
+      o << "col=" << f.m_color << ",";
       return o;
     }
     o << *f.m_pixmap;
@@ -877,7 +876,7 @@ struct Pixpattern {
   }
 
   //! the color
-  Vec3uc m_color;
+  MWAWColor m_color;
   //! the pattern
   int m_pat[8];
   //! the pixmap (if this is not an rgb color)
@@ -886,7 +885,7 @@ struct Pixpattern {
 
 //! Internal and low level: a class used to read and store all possible value
 struct Value {
-  Value() : m_type(), m_int(0), m_text(""), m_point(), m_box(), m_listPoint(),
+  Value() : m_type(), m_int(0), m_rgb(MWAWColor::white()), m_text(""), m_point(), m_box(), m_listPoint(),
     m_region(), m_bitmap(), m_pixmap(), m_pixpattern() {}
   virtual ~Value() {}
 
@@ -903,12 +902,7 @@ struct Value {
       break;
     case WP_COLOR:
     case WP_CCOLOR:
-      o << "col=(";
-      for(int c= 0; c < 3; c++) {
-        if (c) o << ",";
-        o << f.m_rgb[c];
-      }
-      o << ")";
+      o << "col=(" << f.m_rgb << ")";
       break;
     case WP_PATTERN:
       o << "pat=(" << std::hex;
@@ -987,7 +981,7 @@ struct Value {
   //! the int value when type=WP_INT
   int m_int;
   //! the color when type=WP_COLOR or WP_CCOLOR
-  int m_rgb[3];
+  MWAWColor m_rgb;
   //! the pattern when type=WP_PATTERN
   int m_pat[8];
   //! the text when type=WP_TEXT
@@ -1340,7 +1334,7 @@ protected:
   /** low level: reads a color argument
    *
    * \note check if this is not an indexed color */
-  static bool readColor(MWAWInputStream &input, DataType type, int (&col)[3]) {
+  static bool readColor(MWAWInputStream &input, DataType type, MWAWColor &col) {
     if (type != WP_COLOR) {
       MWAW_DEBUG_MSG(("Pict1:OpCode: readColor is called with %d\n", type));
       return false;
@@ -1349,38 +1343,32 @@ protected:
     long val = (long) input.readULong(4);
     switch(val) {
     case 30:
-      col[0] = col[1] = col[2] = 255;
+      col = MWAWColor::white();
       break; // white
     case 33:
-      col[0] = col[1] = col[2] = 0;
+      col = MWAWColor::black();
       break; // black
     case 69:
-      col[0] = col[1] = 255;
-      col[2] = 0;
+      col = MWAWColor(255,255,0);
       break; // yellow
     case 137:
-      col[0] = col[2] = 255;
-      col[1] = 0;
+      col = MWAWColor(255,0,255);
       break; // magenta
     case 205:
-      col[0] = 255;
-      col[1] = col[2] = 0;
+      col = MWAWColor(255,0,0);
       break; // red
     case 273:
-      col[0] = 0;
-      col[1] = col[2] = 255;
+      col = MWAWColor(0,255,255);
       break; // cyan
     case 341:
-      col[0] = col[2] = 0;
-      col[1] = 255;
+      col = MWAWColor(0,255,0);
       break; // green
     case 409:
-      col[0] = col[1] = 0;
-      col[2] = 255;
+      col = MWAWColor(0,0,255);
       break; // blue
     default:
       MWAW_DEBUG_MSG(("Pict1:OpCode: unknown color %ld\n", val));
-      col[0] = col[1] = col[2] = 128;
+      col = MWAWColor(128,128,128);
       break; // gray
     }
 
@@ -1394,17 +1382,17 @@ protected:
   /** low level: reads a color argument (version 2)
    *
    * \note check if this is not an indexed color */
-  static bool readCColor(MWAWInputStream &input, DataType type, int (&col)[3]) {
+  static bool readCColor(MWAWInputStream &input, DataType type, MWAWColor &col) {
     if (type != WP_CCOLOR) {
       MWAW_DEBUG_MSG(("Pict1:OpCode: readCColor is called with %d\n", type));
       return false;
     }
     long actualPos = (long) input.tell();
 
-    for (int i = 0; i < 3; i++) {
-      int val = (int) input.readULong(2);
-      col[i] = val >> 8;
-    }
+    unsigned char color[3];
+    for (int i = 0; i < 3; i++)
+      color[i] = (unsigned char) (input.readULong(2)>>8);
+    col = MWAWColor(color[0],color[1],color[2]);
 
     if (actualPos+6 != input.tell()) {
       MWAW_DEBUG_MSG(("Pict1:OpCode: readCColor find end of file...\n"));

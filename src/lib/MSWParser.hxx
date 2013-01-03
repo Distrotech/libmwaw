@@ -177,7 +177,7 @@ protected:
   //! returns the page width, ie. paper size less margin (in inches)
   float pageWidth() const;
   //! returns the color corresponding to an id
-  bool getColor(int id, Vec3uc &col) const;
+  bool getColor(int id, MWAWColor &col) const;
 
   //! adds a new page
   void newPage(int number);

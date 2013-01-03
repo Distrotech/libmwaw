@@ -196,7 +196,7 @@ bool HMWParser::sendText(long id, long subId)
 {
   return m_textParser->sendText(id, subId);
 }
-bool HMWParser::getColor(int colId, int patternId, uint32_t &color) const
+bool HMWParser::getColor(int colId, int patternId, MWAWColor &color) const
 {
   return m_graphParser->getColor(colId, patternId, color);
 }

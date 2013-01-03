@@ -621,9 +621,9 @@ bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)
   if (flag&0x4) flags |= MWAWFont::outlineBit;
   if (flag&0x8) flags |= MWAWFont::shadowBit;
   if (flag&0x10) flags |= MWAWFont::reverseVideoBit; // checkme: reverse ?
-  if (flag&0x20) flags |= MWAWFont::superscript100Bit;
-  if (flag&0x40) flags |= MWAWFont::subscript100Bit;
-  if (flag&0x80) flags |= MWAWFont::superscriptBit;
+  if (flag&0x20) font.m_font.setScript(MWAWFont::Script::super100());
+  if (flag&0x40) font.m_font.setScript(MWAWFont::Script::sub100());
+  if (flag&0x80) font.m_font.setScript(MWAWFont::Script::super());
   if (flag&0x100) {
     flags |= MWAWFont::overlineBit;
     f << "overline[dotted],";
@@ -643,9 +643,9 @@ bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)
     f << "#flag1=" << std::hex << (flag&0xC000) << std::dec << ",";
   /* 0: black, 0x16:red, 0x72:green, 0xc1: blue*/
   int color = (int) input->readLong(2);
-  uint32_t col;
+  MWAWColor col;
   if (color && m_mainParser->getColor(color, 1, col))
-    font.m_font.setColor(MWAWColor(col));
+    font.m_font.setColor(col);
   else if (color)
     f << "##fColor=" << color << ",";
   val = (int) input->readLong(2);

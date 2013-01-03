@@ -40,13 +40,14 @@
 
 #include "libmwaw_internal.hxx"
 
+#include "MWAWFont.hxx"
+
 class WPXBinaryData;
 class WPXDocumentInterface;
 class WPXString;
 class WPXPropertyListVector;
 
 class MWAWCell;
-class MWAWFont;
 class MWAWList;
 class MWAWPageSpan;
 class MWAWPosition;
@@ -95,6 +96,8 @@ struct MWAWContentParsingState {
   double m_fontSize;
   //! the font delta letter spacing
   double m_fontDLSpacing;
+  //! the font script sub/super position
+  MWAWFont::Script m_fontScript;
   //! the font attribute
   uint32_t m_fontAttributeBits;
   //! the underline style
@@ -250,6 +253,8 @@ public:
   void setFontSize(const uint16_t fontSize);
   //! sets the font delta letter spacing
   void setFontDLSpacing(const int dSpacing);
+  //! sets the script position
+  void setFontScript(MWAWFont::Script const &newscript);
   //! sets the font attribute: bold, italic, ...
   void setFontAttributes(const uint32_t fontAttributes);
   //! sets the font underline style

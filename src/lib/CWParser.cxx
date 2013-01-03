@@ -231,7 +231,7 @@ Vec2f CWParser::getPageLeftTop() const
                float(m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
-bool CWParser::getColor(int colId, Vec3uc &col) const
+bool CWParser::getColor(int colId, MWAWColor &col) const
 {
   return m_graphParser->getColor(colId, col);
 }

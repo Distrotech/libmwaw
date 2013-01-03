@@ -1599,9 +1599,8 @@ bool MSWText::sendTable(MSWTextInternal::Property const &prop)
           cell.setBorders(wh[i], tCell.m_borders[i].get());
         }
         if (tCell.m_backColor.isSet()) {
-          uint32_t col = uint32_t(tCell.m_backColor.get()*255.f);
-          if (col > 255) col=255;
-          cell.setBackgroundColor((col<<16)|(col<<8)|col);
+          unsigned char col = (unsigned char)(tCell.m_backColor.get()*255.f);
+          cell.setBackgroundColor(MWAWColor(col,col,col));
         }
       }
       cell.position() = Vec2i((int)r,(int)c);

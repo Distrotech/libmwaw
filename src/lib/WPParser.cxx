@@ -1809,8 +1809,8 @@ bool WPParser::readFonts
     if (flag&0x4) font.setUnderlineStyle(MWAWBorder::Single);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
-    if (flag&0x20) flags |= MWAWFont::superscriptBit;
-    if (flag&0x40) flags |= MWAWFont::subscriptBit;
+    if (flag&0x20) font.setScript(MWAWFont::Script::super());
+    if (flag&0x40) font.setScript(MWAWFont::Script::sub());
 
     font.setFlags(flags);
     for (int j = 5; j < 7; j++)

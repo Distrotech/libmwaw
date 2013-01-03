@@ -160,7 +160,7 @@ struct Style {
   int m_lineFlags;
   //! the line width
   int m_lineWidth;
-  //! the line and surface color
+  //! the line and surface color id
   int m_color[2];
   //! the surface pattern type
   int m_surfacePatternType;
@@ -405,7 +405,7 @@ struct ZoneBitmap : public Zone {
   //! the bitmap entry
   MWAWEntry m_entry;
   //! the color map
-  std::vector<Vec3uc> m_colorMap;
+  std::vector<MWAWColor> m_colorMap;
 };
 
 //! Internal: structure to store a link to a zone of a CWGraph
@@ -602,11 +602,11 @@ struct State {
 
   std::map<int, shared_ptr<Group> > m_zoneMap;
   //! a list colorId -> color
-  std::vector<Vec3uc> m_colorList;
+  std::vector<MWAWColor> m_colorList;
   //! a list patternId -> percent
   std::vector<float> m_patternList;
   //! a list wallPaperId -> color
-  std::vector<Vec3uc> m_wallpaperList;
+  std::vector<MWAWColor> m_wallpaperList;
   //! a int used to defined linked frame
   int m_frameId;
 };
@@ -614,7 +614,7 @@ struct State {
 void State::setDefaultColorList(int version)
 {
   if (version == 1 || m_colorList.size()) return;
-  int const defCol[256] = {
+  uint32_t const defCol[256] = {
     0xffffff,0x0,0x777777,0x555555,0xffff00,0xff6600,0xdd0000,0xff0099,
     0x660099,0xdd,0x99ff,0xee00,0x6600,0x663300,0x996633,0xbbbbbb,
     0xffffcc,0xffff99,0xffff66,0xffff33,0xffccff,0xffcccc,0xffcc99,0xffcc66,
@@ -650,7 +650,7 @@ void State::setDefaultColorList(int version)
   };
   m_colorList.resize(256);
   for (size_t i = 0; i < 256; i++)
-    m_colorList[i] = Vec3uc((unsigned char)((defCol[i]>>16)&0xff), (unsigned char)((defCol[i]>>8)&0xff),(unsigned char)(defCol[i]&0xff));
+    m_colorList[i] = defCol[i];
 }
 
 void State::setDefaultPatternList(int version)
@@ -677,7 +677,7 @@ void State::setDefaultWallPaperList(int version)
   if (version <= 2 || m_wallpaperList.size())
     return;
   // checkme: does ClarisWork v4 version has wallpaper?
-  int const defCol[20] = {
+  uint32_t const defCol[20] = {
     0xdcdcdc, 0x0000cd, 0xeeeeee, 0xeedd8e, 0xc71585,
     0xc9c9c9, 0xcd853f, 0x696969, 0xfa8072, 0x6495ed,
     0x4682b4, 0xdaa520, 0xcd5c5c, 0xb22222, 0x8b8682,
@@ -685,7 +685,7 @@ void State::setDefaultWallPaperList(int version)
   };
   m_wallpaperList.resize(20);
   for (size_t i = 0; i < 20; i++)
-    m_wallpaperList[i] = Vec3uc((unsigned char)((defCol[i]>>16)&0xff), (unsigned char)((defCol[i]>>8)&0xff),(unsigned char)(defCol[i]&0xff));
+    m_wallpaperList[i] = defCol[i];
 }
 
 }
@@ -716,7 +716,7 @@ int CWGraph::numPages() const
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
-bool CWGraph::getColor(int id, Vec3uc &col) const
+bool CWGraph::getColor(int id, MWAWColor &col) const
 {
   int numColor = (int) m_state->m_colorList.size();
   if (!numColor) {
@@ -741,7 +741,7 @@ float CWGraph::getPatternPercent(int id) const
   return m_state->m_patternList[size_t(id)];
 }
 
-bool CWGraph::getWallPaperColor(int id, Vec3uc &col) const
+bool CWGraph::getWallPaperColor(int id, MWAWColor &col) const
 {
   int numWallpaper = (int) m_state->m_wallpaperList.size();
   if (!numWallpaper) {
@@ -754,25 +754,24 @@ bool CWGraph::getWallPaperColor(int id, Vec3uc &col) const
   return true;
 }
 
-bool CWGraph::getLineColor(CWGraphInternal::Style const style, Vec3uc &col) const
+bool CWGraph::getLineColor(CWGraphInternal::Style const style, MWAWColor &col) const
 {
-  Vec3uc fCol;
+  MWAWColor fCol;
   if (!getColor(style.m_color[0], fCol))
     return false;
   col = fCol;
   float percent = getPatternPercent(style.m_pattern[0]);
   if (percent < 0)
     return true;
-  col = percent*Vec3f(float(fCol[0]), float(fCol[1]), float(fCol[2]))
-        + (1.f-percent)*Vec3f(255,255,255);
+  col = MWAWColor::barycenter(percent,fCol,(1.f-percent),MWAWColor::white());
   return true;
 }
 
-bool CWGraph::getSurfaceColor(CWGraphInternal::Style const style, Vec3uc &col) const
+bool CWGraph::getSurfaceColor(CWGraphInternal::Style const style, MWAWColor &col) const
 {
   if (style.m_surfacePatternType==1)
     return getWallPaperColor(style.m_pattern[1], col);
-  Vec3uc fCol;
+  MWAWColor fCol;
   if (!getColor(style.m_color[1], fCol))
     return false;
   col = fCol;
@@ -781,8 +780,7 @@ bool CWGraph::getSurfaceColor(CWGraphInternal::Style const style, Vec3uc &col) c
   float percent = getPatternPercent(style.m_pattern[1]);
   if (percent < 0)
     return true;
-  col = percent*Vec3f(float(fCol[0]), float(fCol[1]), float(fCol[2]))
-        + (1.f-percent)*Vec3f(255,255,255);
+  col = MWAWColor::barycenter(percent,fCol,(1.f-percent),MWAWColor::white());
   return true;
 }
 
@@ -915,7 +913,7 @@ bool CWGraph::readColorList(MWAWEntry const &entry)
     pos = m_input->tell();
     unsigned char color[3];
     for (int c=0; c < 3; c++) color[c] = (unsigned char) (m_input->readULong(2)/256);
-    m_state->m_colorList[size_t(i)]= Vec3uc(color[0], color[1],color[2]);
+    m_state->m_colorList[size_t(i)]= MWAWColor(color[0], color[1],color[2]);
 
     f.str("");
     f << "ColorList[" << i << "]:";
@@ -1933,7 +1931,7 @@ bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
 ////////////////////////////////////////////////////////////
 // read bitmap picture
 ////////////////////////////////////////////////////////////
-bool CWGraph::readBitmapColorMap(std::vector<Vec3uc> &cMap)
+bool CWGraph::readBitmapColorMap(std::vector<MWAWColor> &cMap)
 {
   cMap.resize(0);
   long pos = m_input->tell();
@@ -1968,7 +1966,7 @@ bool CWGraph::readBitmapColorMap(std::vector<Vec3uc> &cMap)
     }
     unsigned char col[3];
     for (int c = 0; c < 3; c++) col[c] = (unsigned char)(m_input->readULong(2)>>8);
-    cMap[(size_t)i] = Vec3uc(col[0], col[1], col[2]);
+    cMap[(size_t)i] = MWAWColor(col[0], col[1], col[2]);
   }
 
   m_input->seek(endPos, WPX_SEEK_SET);
@@ -2156,7 +2154,7 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
         CWStruct::DSET::Type type = m_mainParser->getZoneType(zId);
         CWGraphInternal::Style const cStyle = childZone.m_style;
         WPXPropertyList extras, textboxExtras;
-        Vec3uc color;
+        MWAWColor color;
         switch (cStyle.m_wrapping&3) {
         case 0:
           pos.m_wrapping = MWAWPosition::WRunThrough;
@@ -2169,14 +2167,14 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
           break;
         }
         if (cStyle.m_color[1] > 0 && getSurfaceColor(cStyle, color))
-          extras.insert("fo:background-color", libmwaw::getColorString(color).c_str());
+          extras.insert("fo:background-color", color.str().c_str());
         else
           extras.insert("style:background-transparency", "100%");
         if (cStyle.m_lineWidth > 0 && cStyle.m_color[0] > 0 &&
             getLineColor(cStyle, color)) {
           std::stringstream stream;
           stream << cStyle.m_lineWidth*0.03 << "cm solid "
-                 << libmwaw::getColorString(color);
+                 << color;
           extras.insert("fo:border", stream.str().c_str());
           // extend the frame to add border
           float extend = float(cStyle.m_lineWidth*0.85);
@@ -2374,11 +2372,11 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
     return false;
   CWGraphInternal::Style const &style = pict.m_style;
   pictPtr->setLineWidth((float)style.m_lineWidth);
-  Vec3uc color;
+  MWAWColor color;
   if (getLineColor(style, color))
-    pictPtr->setLineColor(color[0], color[1], color[2]);
+    pictPtr->setLineColor(color);
   if (getSurfaceColor(style, color))
-    pictPtr->setSurfaceColor(color[0], color[1], color[2]);
+    pictPtr->setSurfaceColor(color);
   WPXBinaryData data;
   std::string type;
 
@@ -2424,13 +2422,13 @@ bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap,
       }
       switch(fSz) {
       case 1:
-        bmapColor->set(c,r, Vec3uc((unsigned char)val,(unsigned char)val,(unsigned char)val));
+        bmapColor->set(c,r, MWAWColor((unsigned char)val,(unsigned char)val,(unsigned char)val));
         break;
       case 2: // rgb compressed ?
-        bmapColor->set(c,r, Vec3uc((unsigned char)(((val>>10)&0x1F) << 3),(unsigned char)(((val>>5)&0x1F) << 3),(unsigned char)(((val>>0)&0x1F) << 3)));
+        bmapColor->set(c,r, MWAWColor((unsigned char)(((val>>10)&0x1F) << 3),(unsigned char)(((val>>5)&0x1F) << 3),(unsigned char)(((val>>0)&0x1F) << 3)));
         break;
       case 4:
-        bmapColor->set(c,r, Vec3uc((unsigned char)((val>>16)&0xff),(unsigned char)((val>>8)&0xff),(unsigned char)((val>>0)&0xff)));
+        bmapColor->set(c,r, MWAWColor(uint32_t(val)));
         break;
       default: {
         static bool first = true;

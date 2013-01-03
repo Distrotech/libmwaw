@@ -345,11 +345,11 @@ public:
   }
 
   //! returns the array of indexed colors
-  std::vector<Vec3uc> const &getColors() const {
+  std::vector<MWAWColor> const &getColors() const {
     return m_colors;
   }
   //! sets the array of indexed colors
-  void setColors(std::vector<Vec3uc> const &cols) {
+  void setColors(std::vector<MWAWColor> const &cols) {
     m_colors = cols;
   }
 
@@ -360,7 +360,7 @@ protected:
   //! the m_data
   MWAWPictBitmapContainer<int> m_data;
   //! the colors
-  std::vector<Vec3uc> m_colors;
+  std::vector<MWAWColor> m_colors;
 };
 
 /** a bitmap of Vec3u to store true color bitmap */
@@ -409,24 +409,24 @@ public:
     return m_data.numColumns();
   }
   //! returns a cell content
-  Vec3uc get(int i, int j) const {
+  MWAWColor get(int i, int j) const {
     return m_data.get(i,j);
   }
   //! returns the cells content of a row
-  Vec3uc const *getRow(int j) const {
+  MWAWColor const *getRow(int j) const {
     return m_data.getRow(j);
   }
 
   //! sets a cell contents
-  void set(int i, int j, Vec3uc const &v) {
+  void set(int i, int j, MWAWColor const &v) {
     m_data.set(i,j, v);
   }
   //! sets all cell contents of a row
-  void setRow(int j, Vec3uc const *val) {
+  void setRow(int j, MWAWColor const *val) {
     m_data.setRow(j, val);
   }
   //! sets all cell contents of a column
-  void setColumn(int i, Vec3uc const *val) {
+  void setColumn(int i, MWAWColor const *val) {
     m_data.setColumn(i, val);
   }
 
@@ -435,7 +435,7 @@ protected:
   virtual bool createFileData(WPXBinaryData &result) const;
 
   //! the data
-  MWAWPictBitmapContainer<Vec3uc> m_data;
+  MWAWPictBitmapContainer<MWAWColor> m_data;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

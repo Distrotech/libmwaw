@@ -88,22 +88,15 @@ public:
     m_lineWidth = w;
     extendBDBox(m_lineWidth, 0);
   }
-  /** sets the line color (color must be integer between 0 and 255)
-   * default values : 0,0,0, which corresponds to black
+  /** sets the line color. default values : black
    */
-  void setLineColor(int r, int g, int b) {
-    m_lineColor[0] = r;
-    m_lineColor[1] = g;
-    m_lineColor[2] = b;
+  void setLineColor(MWAWColor const col) {
+    m_lineColor = col;
   }
 
-  /** sets the surface color (color must be integer between 0 and 255)
-   * default values : 0xFF,0xFF,0xFF, which corresponds to white
-   */
-  void setSurfaceColor(int r, int g, int b, bool hasColor = true) {
-    m_surfaceColor[0] = r;
-    m_surfaceColor[1] = g;
-    m_surfaceColor[2] = b;
+  /** sets the surface color. default value white */
+  void setSurfaceColor(MWAWColor const col, bool hasColor = true) {
+    m_surfaceColor = col;
     m_surfaceHasColor = hasColor;
   }
   bool hasSurfaceColor() const {
@@ -137,14 +130,10 @@ public:
     if (diffF < 0) return -1;
     if (diffF > 0) return 1;
 
-    for (int c=0; c < 3; c++) {
-      diff = m_lineColor[c]-aPict.m_lineColor[c];
-      if (diff) return (diff < 0) ? -1 : 1;
-    }
-    for (int c=0; c < 3; c++) {
-      diff = m_surfaceColor[c]-aPict.m_surfaceColor[c];
-      if (diff) return (diff < 0) ? -1 : 1;
-    }
+    if (m_lineColor < aPict.m_lineColor) return -1;
+    if (m_lineColor > aPict.m_lineColor) return 1;
+    if (m_surfaceColor < aPict.m_surfaceColor) return -1;
+    if (m_surfaceColor > aPict.m_surfaceColor) return 1;
     for (int c = 0; c < 2; c++) {
       diffF = m_extend[c]-aPict.m_extend[c];
       if (diffF < 0) return -1;
@@ -178,14 +167,12 @@ protected:
   }
 
   //! protected constructor must not be called directly
-  MWAWPictBasic() : m_lineWidth(1.0), m_surfaceHasColor(false) {
+  MWAWPictBasic() : m_lineWidth(1.0), m_lineColor(MWAWColor::black()), m_surfaceColor(MWAWColor::white()), m_surfaceHasColor(false) {
     for (int c = 0; c < 2; c++) m_extend[c]=0;
-    for (int c = 0; c < 3; c++) m_lineColor[c]=0;
-    for (int c = 0; c < 3; c++) m_surfaceColor[c]=255;
     setLineWidth(1.0);
   }
   //! protected constructor must not be called directly
-  MWAWPictBasic(MWAWPictBasic const &p) : MWAWPict(), m_lineWidth(1.0), m_surfaceHasColor(false) {
+  MWAWPictBasic(MWAWPictBasic const &p) : MWAWPict(), m_lineWidth(1.0), m_lineColor(MWAWColor::black()), m_surfaceColor(MWAWColor::white()), m_surfaceHasColor(false) {
     *this=p;
   }
   //! protected= must not be called directly
@@ -193,8 +180,8 @@ protected:
     if (&p == this) return *this;
     MWAWPict::operator=(p);
     m_lineWidth = p.m_lineWidth;
-    for (int c=0; c < 3; c++) m_lineColor[c] = p.m_lineColor[c];
-    for (int c=0; c < 3; c++) m_surfaceColor[c] = p.m_surfaceColor[c];
+    m_lineColor = p.m_lineColor;
+    m_surfaceColor = p.m_surfaceColor;
     for (int c=0; c < 2; c++) m_extend[c] = p.m_extend[c];
     m_surfaceHasColor = p.m_surfaceHasColor;
     return *this;
@@ -203,10 +190,10 @@ protected:
 private:
   //! the linewidth
   float m_lineWidth;
-  //! the line color (in rgb)
-  int m_lineColor[3];
-  //! the line color (in rgb)
-  int m_surfaceColor[3];
+  //! the line color
+  MWAWColor m_lineColor;
+  //! the line color
+  MWAWColor m_surfaceColor;
   //! true if the surface has some color
   bool m_surfaceHasColor;
   //! m_extend[0]: from lineWidth, m_extend[1]: came from extra data

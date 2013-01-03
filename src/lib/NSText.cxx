@@ -819,8 +819,8 @@ bool NSText::readFonts(MWAWEntry const &entry)
       font.m_font.setUnderlineStyle(MWAWBorder::Single);
       f << "underline[word],";
     }
-    if (flag & 0x8) flags |= MWAWFont::superscriptBit;
-    if (flag & 0x10) flags |= MWAWFont::subscriptBit;
+    if (flag & 0x8) font.m_font.setScript(MWAWFont::Script::super());
+    if (flag & 0x10) font.m_font.setScript(MWAWFont::Script::sub());
     if (flag & 0x20) flags |= MWAWFont::strikeOutBit;
     if (flag & 0x40) flags |= MWAWFont::overlineBit;
     if (flag & 0x80) flags |= MWAWFont::smallCapsBit;
@@ -829,11 +829,11 @@ bool NSText::readFonts(MWAWEntry const &entry)
       f << "boxed,";
     if (flag & 0x400) flags |= MWAWFont::hiddenBit;
     if (flag & 0x1000) {
-      flags |= MWAWFont::superscriptBit;
+      font.m_font.setScript(MWAWFont::Script::super());
       f << "superscript2,";
     }
     if (flag & 0x2000) {
-      flags |= MWAWFont::subscriptBit;
+      font.m_font.setScript(MWAWFont::Script::sub());
       f << "subscript2,";
     }
     if (flag & 0x4000) // fixme

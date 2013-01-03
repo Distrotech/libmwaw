@@ -62,9 +62,8 @@ struct Block {
   enum Type { UNKNOWN, GRAPHIC, TEXT };
   //! the constructor
   Block() :m_type(-1), m_contentType(UNKNOWN), m_fileBlock(0), m_id(-1), m_attachment(false), m_page(-1), m_box(),
-    m_baseline(0.), m_lineWidth(1.0), m_lineType(1), m_linePattern(2), m_textPos(0), m_isHeader(false), m_row(0), m_col(0), m_textboxCellType(0),
+    m_baseline(0.), m_surfaceColor(MWAWColor::white()), m_lineColor(MWAWColor::black()), m_lineWidth(1.0), m_lineType(1), m_linePattern(2), m_textPos(0), m_isHeader(false), m_row(0), m_col(0), m_textboxCellType(0),
     m_extra(""), m_send(false) {
-    for (int i = 0; i < 3; i++) m_color[i] = m_lineColor[i] = -1;
   }
 
   //! operator<<
@@ -117,9 +116,8 @@ struct Block {
         o << "bord" << i << "?=" << bl.m_border[i] << ",";
     }
     if (bl.m_baseline < 0 || bl.m_baseline >0) o << "baseline=" << bl.m_baseline << ",";
-    if (bl.hasColor())
-      o << "col=" << bl.m_color[0] << "x" << bl.m_color[1]
-        << "x" << bl.m_color[1] << ",";
+    if (bl.hasSurfaceColor())
+      o << "col=" << bl.m_surfaceColor << ",";
     if (bl.m_lineWidth < 1.0 || bl.m_lineWidth>1.0)
       o << "lineWidth=" << bl.m_lineWidth << "pt,";
     switch(bl.m_lineType) {
@@ -149,8 +147,7 @@ struct Block {
       break;
     }
     if (bl.hasLineColor())
-      o << "lineCol=" << bl.m_lineColor[0] << "x" << bl.m_lineColor[1]
-        << "x" << bl.m_lineColor[1] << ",";
+      o << "lineCol=" << bl.m_lineColor << ",";
     if (bl.m_fileBlock > 0) o << "block=" << std::hex << bl.m_fileBlock << std::dec << ",";
     if (bl.m_extra.length())
       o << bl.m_extra << ",";
@@ -158,14 +155,8 @@ struct Block {
   }
   void fillFramePropertyList(WPXPropertyList &extra) const {
     std::stringstream s, s2;
-    if (hasColor()) {
-      s.str("");
-      s << std::hex << std::setfill('0') << "#"
-        << std::setw(2) << int(m_color[0])
-        << std::setw(2) << int(m_color[1])
-        << std::setw(2) << int(m_color[2]);
-      extra.insert("fo:background-color", s.str().c_str());
-    }
+    if (hasSurfaceColor())
+      extra.insert("fo:background-color", m_surfaceColor.str().c_str());
     if (hasBorderLine()) {
       s.str("");
       s2.str("");
@@ -194,12 +185,9 @@ struct Block {
         s << " solid";
         break;
       }
-      if (m_lineColor[0] >= 0) {
-        s << std::hex << std::setfill('0') << " #"
-          << std::setw(2) << int(m_lineColor[0])
-          << std::setw(2) << int(m_lineColor[1])
-          << std::setw(2) << int(m_lineColor[2]);
-      } else s << " #000000";
+      if (hasLineColor())
+        s << " " << m_lineColor;
+      else s << " #000000";
       extra.insert("fo:border", s.str().c_str());
     }
   }
@@ -213,13 +201,11 @@ struct Block {
   bool isTable() const {
     return m_fileBlock <= 0 && m_type == 3;
   }
-  bool hasColor() const {
-    return m_color[0] >= 0 &&
-           (m_color[0] != 255 || m_color[1] != 255 ||  m_color[2] != 255);
+  bool hasSurfaceColor() const {
+    return !m_surfaceColor.isWhite();
   }
   bool hasLineColor() const {
-    return m_lineColor[0] >= 0 &&
-           (m_lineColor[0] != 0 || m_lineColor[1] != 0 ||  m_lineColor[2] != 0);
+    return !m_lineColor.isBlack();
   }
   bool hasBorderLine() const {
     return (m_lineWidth > 0.0 && m_linePattern!=1);
@@ -287,10 +273,10 @@ struct Block {
   float m_baseline;
 
   //! the background color
-  int m_color[3];
+  MWAWColor m_surfaceColor;
 
   //! the line color
-  int m_lineColor[3];
+  MWAWColor m_lineColor;
 
   //! the line witdh(in point)
   float m_lineWidth;
@@ -401,14 +387,11 @@ struct Paragraph : public MWAWParagraph {
 struct Cell : public MWAWTableCell {
   //! constructor
   Cell(MWProStructures &parser) : MWAWTableCell(), m_parser(parser),
-    m_blockId(0) {
-    for (int i = 0; i < 3; i++)
-      m_color[i] = -1;
+    m_blockId(0), m_color(MWAWColor::white()) {
   }
   //! set the background color
-  void setBackColor(int const (&col)[3]) {
-    for (int i = 0; i < 3; i++)
-      m_color[i] = col[i];
+  void setBackColor(MWAWColor const col) {
+    m_color = col;
   }
   //! send the content
   virtual bool send(MWAWContentListenerPtr listener) {
@@ -422,8 +405,7 @@ struct Cell : public MWAWTableCell {
     cell.position() = m_position;
     cell.setBorders(borderPos, border);
     cell.setNumSpannedCells(m_numberCellSpanned);
-    if (m_color[0] >= 0 && m_color[1] >= 0 && m_color[2] >= 0)
-      cell.setBackgroundColor(uint32_t((m_color[0]<<16)|(m_color[1]<<8)|m_color[2]));
+    cell.setBackgroundColor(m_color);
 
     WPXPropertyList propList;
     listener->openTableCell(cell, propList);
@@ -446,7 +428,7 @@ struct Cell : public MWAWTableCell {
   //! the block id
   int m_blockId;
   //! the background color
-  int m_color[3];
+  MWAWColor m_color;
 };
 
 ////////////////////////////////////////
@@ -635,35 +617,34 @@ int MWProStructures::getFooterId(int page)
 
 ////////////////////////////////////////////////////////////
 // try to return the color
-bool MWProStructures::getColor(int colId, Vec3uc &color) const
+bool MWProStructures::getColor(int colId, MWAWColor &color) const
 {
-  int col;
   if (version()==0) {
     // MWII: 2:red 4: blue, ..
     switch(colId) {
     case 0:
-      col = 0xFFFFFF;
+      color = 0xFFFFFF;
       break;
     case 1:
-      col = 0;
+      color = 0;
       break;
     case 2:
-      col = 0xFF0000;
+      color = 0xFF0000;
       break;
     case 3:
-      col = 0x00FF00;
+      color = 0x00FF00;
       break;
     case 4:
-      col = 0x0000FF;
+      color = 0x0000FF;
       break;
     case 5:
-      col = 0x00FFFF;
+      color = 0x00FFFF;
       break; // cyan
     case 6:
-      col = 0xFF00FF;
+      color = 0xFF00FF;
       break; // magenta
     case 7:
-      col = 0xFFFF00;
+      color = 0xFFFF00;
       break; // yellow
     default:
       MWAW_DEBUG_MSG(("MWProStructures::getColor: unknown color %d\n", colId));
@@ -673,7 +654,7 @@ bool MWProStructures::getColor(int colId, Vec3uc &color) const
     /* 0: white, 38: yellow, 44: magenta, 36: red, 41: cyan, 39: green, 42: blue
        checkme: this probably corresponds to the following 81 gray/color palette...
     */
-    int const colorMap[] = {
+    uint32_t const colorMap[] = {
       0xFFFFFF, 0x0, 0x222222, 0x444444, 0x666666, 0x888888, 0xaaaaaa, 0xcccccc, 0xeeeeee,
       0x440000, 0x663300, 0x996600, 0x002200, 0x003333, 0x003399, 0x000055, 0x330066, 0x660066,
       0x770000, 0x993300, 0xcc9900, 0x004400, 0x336666, 0x0033ff, 0x000077, 0x660099, 0x990066,
@@ -688,10 +669,8 @@ bool MWProStructures::getColor(int colId, Vec3uc &color) const
       MWAW_DEBUG_MSG(("MWProStructures::getColor: unknown color %d\n", colId));
       return false;
     }
-    col = colorMap[colId];
+    color = colorMap[colId];
   }
-
-  color = Vec3uc((unsigned char)((col>>16)&0xff), (unsigned char)((col>>8)&0xff),(unsigned char)(col&0xff));
   return true;
 }
 
@@ -1084,7 +1063,7 @@ void MWProStructures::buildTableStructures()
       Box2f box(blockList[k]->m_box.min(), blockList[k]->m_box.max()-Vec2f(1,1));
       shared_ptr<MWProStructuresInternal::Cell> newCell(new MWProStructuresInternal::Cell(*this));
       newCell->setBox(box);
-      newCell->setBackColor(blockList[k]->m_color);
+      newCell->setBackColor(blockList[k]->m_surfaceColor);
       newCell->m_blockId = blockList[k]->m_id;
       blockList[k]->m_textboxCellType=1;
       newTable->add(newCell);
@@ -1246,9 +1225,9 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   if (flag&0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
   if (flag&0x8) flags |= MWAWFont::embossBit;
   if (flag&0x10) flags |= MWAWFont::shadowBit;
-  if (flag&0x20) flags |= MWAWFont::superscript100Bit;
-  if (flag&0x40) flags |= MWAWFont::subscript100Bit;
-  if (flag&0x100) flags |= MWAWFont::superscriptBit;
+  if (flag&0x20) font.m_font.setScript(MWAWFont::Script::super100());
+  if (flag&0x40) font.m_font.setScript(MWAWFont::Script::sub100());
+  if (flag&0x100) font.m_font.setScript(MWAWFont::Script::super());
   if (flag&0x200) flags |= MWAWFont::strikeOutBit;
   if (flag&0x400) flags |= MWAWFont::allCapsBit;
   if (flag&0x800) flags |= MWAWFont::smallCapsBit;
@@ -1258,7 +1237,7 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   font.m_flags = (flag&0x8080L);
 
   int color = (int) m_input->readULong(1);
-  Vec3uc col;
+  MWAWColor col;
   if (color != 1 && getColor(color, col))
     font.m_font.setColor(col);
   else if (color != 1)
@@ -1985,10 +1964,10 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   block->m_baseline = float(m_input->readLong(4))/65536.f;
   int colorId = (int) m_input->readLong(2);
   if (colorId) {
-    Vec3uc col;
-    if (getColor(colorId, col)) {
-      for (int i = 0; i < 3; i++) block->m_color[i] = col[i];
-    } else
+    MWAWColor col;
+    if (getColor(colorId, col))
+      block->m_surfaceColor = col;
+    else
       f << "#colorId=" << colorId << ",";
   }
 
@@ -1996,10 +1975,10 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   if (val) f << "g0=" << val << ",";
   colorId = (int) m_input->readLong(2);
   if (colorId!=1) {
-    Vec3uc col;
-    if (getColor(colorId, col)) {
-      for (int i = 0; i < 3; i++) block->m_lineColor[i] = col[i];
-    } else
+    MWAWColor col;
+    if (getColor(colorId, col))
+      for (int i = 0; i < 3; i++) block->m_lineColor = col;
+    else
       f << "#lineColorId=" << colorId << ",";
   }
   block->m_linePattern = (int) m_input->readLong(2);

@@ -37,8 +37,45 @@
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWPosition.hxx"
 
 #include "MWAWFont.hxx"
+
+std::string MWAWFont::Script::str(int fSize) const
+{
+  if (!isSet())
+    return "";
+  std::stringstream o;
+  if (m_deltaUnit == WPX_GENERIC) {
+    MWAW_DEBUG_MSG(("MWAWFont::Script::str: can not be called with generic position\n"));
+    return "";
+  }
+  int delta = m_delta;
+  if (m_deltaUnit != WPX_PERCENT) {
+    // first transform in point
+    if (m_deltaUnit != WPX_POINT)
+      delta=int(MWAWPosition::getScaleFactor(m_deltaUnit, WPX_POINT)*float(delta));
+    // now transform in percent
+    if (fSize<=0) {
+      static bool first=true;
+      if (first) {
+        MWAW_DEBUG_MSG(("MWAWFont::Script::str: can not be find font size (supposed 12pt)\n"));
+        first = false;
+      }
+      fSize=12;
+    }
+    delta=int(100.f*float(delta)/float(fSize));
+  }
+  // fixme: o << delta << "% " << m_scale << "%";
+  if (delta==33) o << "super";
+  else if (delta==-33) o << "sub";
+  else o << delta;
+  o << " ";
+  if (m_scale==100) o << "100";
+  else if (m_scale==58) o << "58.0%";
+  else o << m_scale << "%";
+  return o.str();
+}
 
 std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) const
 {
@@ -57,6 +94,8 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     else
       o << "condensed=" << -m_deltaSpacing.get() << "pt,";
   }
+  if (m_scriptPosition.isSet() && m_scriptPosition.get().isSet())
+    o << "script=" << m_scriptPosition.get().str(size()) << ",";
   if (m_flags.isSet() && m_flags.get()) {
     o << "fl=";
     uint32_t flag = m_flags.get();
@@ -70,10 +109,6 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     if (flag&smallCapsBit) o << "smallCaps:";
     if (flag&allCapsBit) o << "allCaps:";
     if (flag&hiddenBit) o << "hidden:";
-    if ((flag&superscriptBit) || (flag&superscript100Bit))
-      o << "superS:";
-    if ((flag&subscriptBit) || (flag&subscript100Bit))
-      o << "subS:";
     if (flag&reverseVideoBit) o << "reversed:";
     if (flag&blinkBit) o << "blink:";
     o << ",";
@@ -109,7 +144,10 @@ void MWAWFont::sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverte
     convert->getOdtInfo(actualFont.id(), fName, dSize);
     listener->setFontSize(uint16_t(actualFont.size()+dSize));
   }
+  actualFont.setDeltaLetterSpacing(deltaLetterSpacing());
   listener->setFontDLSpacing(deltaLetterSpacing());
+  actualFont.setScript(script());
+  listener->setFontScript(script());
 
   actualFont.setFlags(flags());
   listener->setFontAttributes(actualFont.flags());

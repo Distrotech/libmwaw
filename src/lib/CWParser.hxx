@@ -181,7 +181,7 @@ protected:
   //
 
   //! returns the color corresponding to colId (if possible)
-  bool getColor(int colId, Vec3uc &col) const;
+  bool getColor(int colId, MWAWColor &col) const;
 
   //! return the pattern percent which corresponds to an id (or -1)
   float getPatternPercent(int id) const;

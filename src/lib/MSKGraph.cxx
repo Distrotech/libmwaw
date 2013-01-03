@@ -156,8 +156,8 @@ struct Zone {
   enum Type { Unknown, Basic, Group, Pict, Text, Textv4, Bitmap, TableZone, OLE};
   //! constructor
   Zone() : m_subType(-1), m_zoneId(-1), m_pos(), m_dataPos(-1), m_fileId(-1), m_page(-1), m_decal(), m_box(), m_line(-1),
-    m_lineType(2), m_lineWidth(-1), m_lineColor(0,0,0), m_linePattern(Pattern::P_Percent, 1.0), m_lineFlags(0),
-    m_surfaceColor(255,255,255), m_surfacePattern(Pattern::P_None),m_order(0), m_extra(""), m_isSent(false) {
+    m_lineType(2), m_lineWidth(-1), m_lineColor(MWAWColor::black()), m_linePattern(Pattern::P_Percent, 1.0), m_lineFlags(0),
+    m_surfaceColor(MWAWColor::white()), m_surfacePattern(Pattern::P_None),m_order(0), m_extra(""), m_isSent(false) {
     for (int i = 0; i < 3; i++) m_ids[i] = 0;
   }
   //! destructor
@@ -257,13 +257,13 @@ struct Zone {
   //! the line width (v3, ...)
   int m_lineWidth;
   //! the line color
-  Vec3uc m_lineColor;
+  MWAWColor m_lineColor;
   //! the line pattern
   Pattern m_linePattern;
   //! the line flag
   int m_lineFlags;
   //! the 2D surface color
-  Vec3uc m_surfaceColor;
+  MWAWColor m_surfaceColor;
   //! the line pattern
   Pattern m_surfacePattern;
   //! the picture order
@@ -375,12 +375,10 @@ void Zone::print(std::ostream &o) const
   if (m_linePattern.m_type != Pattern::P_Percent ||
       m_linePattern.m_filled < 1.0 || m_linePattern.m_filled > 1.0)
     o << "linePattern=[" << m_linePattern << "],";
-  if (m_lineColor[0] || m_lineColor[1]|| m_lineColor[2])
-    o << "lineColor=" << int(m_lineColor[0]) << "x"
-      << int(m_lineColor[1]) << "x" << int(m_lineColor[2]) << ",";
-  if (m_surfaceColor[0]!=255 || m_surfaceColor[1]!=255|| m_surfaceColor[2]!=255)
-    o << "surfaceColor=" << int(m_surfaceColor[0]) << "x"
-      << int(m_surfaceColor[1]) << "x" << int(m_surfaceColor[2]) << ",";
+  if (!m_lineColor.isBlack())
+    o << "lineColor=" << m_lineColor << ",";
+  if (!m_surfaceColor.isWhite())
+    o << "surfaceColor=" << m_surfaceColor << ",";
   if (m_surfacePattern.hasPattern())
     o << "surfacePattern=[" << m_surfacePattern << "],";
   /* linePattern: 38: none, 19: white, 25: diagonal(gray),
@@ -503,19 +501,17 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
   default:
     break;
   }
-  Vec3uc lineColor(0,0,0);
+  MWAWColor lineColor=MWAWColor::black();
   bool hasLineColor = false;
   if (m_linePattern.hasPattern()) {
-    lineColor = m_linePattern.m_filled*Vec3f(float(m_lineColor[0]),float(m_lineColor[1]),float(m_lineColor[2]))
-                +(1.f-m_linePattern.m_filled)*Vec3f(float(m_surfaceColor[0]),float(m_surfaceColor[1]),float(m_surfaceColor[2]));
+    lineColor = MWAWColor::barycenter(m_linePattern.m_filled, m_lineColor, 1.f-m_linePattern.m_filled, m_surfaceColor);
     hasLineColor = true;
   } else if (m_linePattern.m_type == MSKGraphInternal::Pattern::P_None)
     lineW = 0.;
   bool hasSurfaceColor = false;
-  Vec3uc surfaceColor(255,255,255);
+  MWAWColor surfaceColor=MWAWColor::white();
   if (m_surfacePattern.hasPattern()) {
-    surfaceColor = m_surfacePattern.m_filled*Vec3f(float(m_surfaceColor[0]),float(m_surfaceColor[1]),float(m_surfaceColor[2]))
-                   + (1-m_surfacePattern.m_filled)*Vec3f(float(m_lineColor[0]),float(m_lineColor[1]),float(m_lineColor[2]));
+    surfaceColor = MWAWColor::barycenter(m_surfacePattern.m_filled, m_surfaceColor, 1.f-m_surfacePattern.m_filled, m_lineColor);
     hasSurfaceColor = true;
   }
 
@@ -532,15 +528,15 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
       break;
     }
     pct->setLineWidth(lineW);
-    if (hasLineColor) pct->setLineColor(lineColor[0], lineColor[1], lineColor[2]);
+    if (hasLineColor) pct->setLineColor(lineColor);
     pict.reset(pct);
     break;
   }
   case 1: {
     MWAWPictRectangle *pct=new MWAWPictRectangle(m_box);
     pct->setLineWidth(lineW);
-    if (hasLineColor) pct->setLineColor(lineColor[0], lineColor[1], lineColor[2]);
-    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor[0], surfaceColor[1], surfaceColor[2]);
+    if (hasLineColor) pct->setLineColor(lineColor);
+    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor);
     pict.reset(pct);
     break;
   }
@@ -553,16 +549,16 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
       sz = int(m_box.size().y())/2;
     pct->setRoundCornerWidth(sz);
     pct->setLineWidth(lineW);
-    if (hasLineColor) pct->setLineColor(lineColor[0], lineColor[1], lineColor[2]);
-    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor[0], surfaceColor[1], surfaceColor[2]);
+    if (hasLineColor) pct->setLineColor(lineColor);
+    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor);
     pict.reset(pct);
     break;
   }
   case 3: {
     MWAWPictCircle *pct=new MWAWPictCircle(m_box);
     pct->setLineWidth(lineW);
-    if (hasLineColor) pct->setLineColor(lineColor[0], lineColor[1], lineColor[2]);
-    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor[0], surfaceColor[1], surfaceColor[2]);
+    if (hasLineColor) pct->setLineColor(lineColor);
+    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor);
     pict.reset(pct);
     break;
   }
@@ -570,16 +566,16 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
     int angl2 = m_angle+((m_deltaAngle>0) ? m_deltaAngle : -m_deltaAngle);
     MWAWPictArc *pct=new MWAWPictArc(m_box, m_formBox, float(450-angl2), float(450-m_angle));
     pct->setLineWidth(lineW);
-    if (hasLineColor) pct->setLineColor(lineColor[0], lineColor[1], lineColor[2]);
-    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor[0], surfaceColor[1], surfaceColor[2]);
+    if (hasLineColor) pct->setLineColor(lineColor);
+    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor);
     pict.reset(pct);
     break;
   }
   case 5: {
     MWAWPictPolygon *pct = new MWAWPictPolygon(m_box, m_vertices);
     pct->setLineWidth(lineW);
-    if (hasLineColor) pct->setLineColor(lineColor[0], lineColor[1], lineColor[2]);
-    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor[0], surfaceColor[1], surfaceColor[2]);
+    if (hasLineColor) pct->setLineColor(lineColor);
+    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor);
     pict.reset(pct);
     break;
   }
@@ -671,7 +667,7 @@ struct DataBitmap : public Zone {
     return Bitmap;
   }
   bool getPictureData(MWAWInputStreamPtr ip, WPXBinaryData &res,
-                      std::string &type, std::vector<Vec3uc> const &palette) const;
+                      std::string &type, std::vector<MWAWColor> const &palette) const;
 
   //! operator<<
   virtual void print(std::ostream &o) const {
@@ -690,7 +686,7 @@ struct DataBitmap : public Zone {
 
 bool DataBitmap::getPictureData
 (MWAWInputStreamPtr ip, WPXBinaryData &data, std::string &pictType,
- std::vector<Vec3uc> const &palette) const
+ std::vector<MWAWColor> const &palette) const
 {
   data.clear();
   pictType="";
@@ -804,8 +800,8 @@ struct TextBox : public Zone {
 
   //! add frame parameters to propList (if needed )
   virtual void fillFramePropertyList(WPXPropertyList &extras) const {
-    if (m_surfaceColor[0]!=255 || m_surfaceColor[1]!=255 || m_surfaceColor[2]!=255)
-      extras.insert("fo:background-color", libmwaw::getColorString(m_surfaceColor).c_str());
+    if (!m_surfaceColor.isWhite())
+      extras.insert("fo:background-color", m_surfaceColor.str().c_str());
   }
 
   //! the number of positions
@@ -865,8 +861,8 @@ struct TextBoxv4 : public Zone {
 
   //! add frame parameters to propList (if needed )
   virtual void fillFramePropertyList(WPXPropertyList &extras) const {
-    if (m_surfaceColor[0]!=255 || m_surfaceColor[1]!=255 || m_surfaceColor[2]!=255)
-      extras.insert("fo:background-color", libmwaw::getColorString(m_surfaceColor).c_str());
+    if (!m_surfaceColor.isWhite())
+      extras.insert("fo:background-color", m_surfaceColor.str().c_str());
   }
 
   //! the text of positions (0-0: means no text)
@@ -1081,7 +1077,7 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
   for (int i = 0; i < 2; i++) {
     int rId = (int) m_input->readLong(2);
     int cId = (vers <= 2) ? rId+1 : rId;
-    Vec3uc col;
+    MWAWColor col;
     if (m_mainParser->getColor(cId,col,vers <= 3 ? vers : 3)) {
       if (i) pict.m_surfaceColor = col;
       else pict.m_lineColor = col;
@@ -2215,12 +2211,12 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
     if (fFlags & 0x4) cell.m_font.setUnderlineStyle(MWAWBorder::Single);
     if (fFlags & 0x8) flags |= MWAWFont::embossBit;
     if (fFlags & 0x10) flags |= MWAWFont::shadowBit;
-    if (fFlags & 0x20) flags |= MWAWFont::superscriptBit;
-    if (fFlags & 0x40) flags |= MWAWFont::subscriptBit;
+    if (fFlags & 0x20) cell.m_font.setScript(MWAWFont::Script::super());
+    if (fFlags & 0x40) cell.m_font.setScript(MWAWFont::Script::sub());
     cell.m_font.setFlags(flags);
 
     if (fColors != 0xFF) {
-      Vec3uc col(0xD0, 0xD0, 0xD0); // see how to do that
+      MWAWColor col(0xD0, 0xD0, 0xD0); // see how to do that
       cell.m_font.setColor(col);
     }
     f << "[" << cell.m_font.getDebugString(m_convertissor) << "," << f2.str()<< "],";
@@ -2561,8 +2557,8 @@ bool MSKGraph::readFont(MSKGraphInternal::Font &font)
   if (flags & 0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
   if (flags & 0x8) flag |= MWAWFont::embossBit;
   if (flags & 0x10) flag |= MWAWFont::shadowBit;
-  if (flags & 0x20) flag |= MWAWFont::superscriptBit;
-  if (flags & 0x40) flag |= MWAWFont::subscriptBit;
+  if (flags & 0x20) font.m_font.setScript(MWAWFont::Script::super());
+  if (flags & 0x40) font.m_font.setScript(MWAWFont::Script::sub());
   if (flags & 0x80) f << "#smaller,";
   font.m_font.setFlags(flag);
 
@@ -2570,9 +2566,9 @@ bool MSKGraph::readFont(MSKGraphInternal::Font &font)
   if (val) f << "#flags2=" << val << ",";
   font.m_font.setSize((int) m_input->readULong(2));
 
-  Vec3uc color;
+  unsigned char color[3];
   for (int i = 0; i < 3; i++) color[i] = (unsigned char) (m_input->readULong(2)>>8);
-  font.m_font.setColor(color);
+  font.m_font.setColor(MWAWColor(color[0],color[1],color[2]));
   font.m_extra = f.str();
   return true;
 }

@@ -1046,8 +1046,8 @@ bool MDWParser::readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts,
     if (flag&0x4) font.setUnderlineStyle(MWAWBorder::Single);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
-    if (flag&0x20) flags |= MWAWFont::superscript100Bit;
-    if (flag&0x40) flags |= MWAWFont::subscript100Bit;
+    if (flag&0x20) font.setScript(MWAWFont::Script::super100());
+    if (flag&0x40) font.setScript(MWAWFont::Script::sub100());
     if (flag&0x80) f << "#fFlags80,";
     font.setFlags(flags);
     font.setId((int) input->readULong(2));

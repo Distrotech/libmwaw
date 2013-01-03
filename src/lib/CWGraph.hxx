@@ -106,18 +106,18 @@ public:
   bool readColorList(MWAWEntry const &entry);
 
   //! return the color which corresponds to an id (if possible)
-  bool getColor(int id, Vec3uc &col) const;
+  bool getColor(int id, MWAWColor &col) const;
 
   //! return the pattern percent which corresponds to an id (or -1)
   float getPatternPercent(int id) const;
 
   //! return the wall paper color which corresponds to an id (if possible)
-  bool getWallPaperColor(int id, Vec3uc &col) const;
+  bool getWallPaperColor(int id, MWAWColor &col) const;
 
   //! return the line color which corresponds to some ids (if possible)
-  bool getLineColor(CWGraphInternal::Style const style, Vec3uc &col) const;
+  bool getLineColor(CWGraphInternal::Style const style, MWAWColor &col) const;
   //! return the surface color which corresponds to some ids (if possible)
-  bool getSurfaceColor(CWGraphInternal::Style const style, Vec3uc &col) const;
+  bool getSurfaceColor(CWGraphInternal::Style const style, MWAWColor &col) const;
 protected:
   //! sets the listener in this class and in the helper classes
   void setListener(CWContentListenerPtr listen) {
@@ -173,7 +173,7 @@ protected:
 
   /////////////
   /* try to read a bitmap zone */
-  bool readBitmapColorMap(std::vector<Vec3uc> &cMap);
+  bool readBitmapColorMap(std::vector<MWAWColor> &cMap);
 
   /* try to read the bitmap  */
   bool readBitmapData(CWGraphInternal::ZoneBitmap &zone);

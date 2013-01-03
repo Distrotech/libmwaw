@@ -69,10 +69,10 @@ public:
   virtual ~MSKParser();
 
   //! return the color which correspond to an index
-  bool getColor(int id, Vec3uc &col, int vers=-1) const;
+  bool getColor(int id, MWAWColor &col, int vers=-1) const;
 
   //! return a list of color corresponding to a version
-  static std::vector<Vec3uc> const &getPalette(int vers);
+  static std::vector<MWAWColor> const &getPalette(int vers);
 
   //! check if a position is inside the file
   bool checkIfPositionValid(long pos);

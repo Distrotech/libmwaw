@@ -160,9 +160,9 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     if (decal) {
       if (what & 0x2) {
         if (decal > 0)
-          flags |= MWAWFont::superscript100Bit;
+          font.m_font->setScript(MWAWFont::Script::super100());
         else
-          flags |= MWAWFont::subscript100Bit;
+          font.m_font->setScript(MWAWFont::Script::sub100());
       } else
         f << "#vDecal=" << decal;
     }
@@ -181,7 +181,7 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     int val = (int) m_input->readULong(1);
     if (val & 0xF0) {
       if (what & 0x20) {
-        Vec3uc col;
+        MWAWColor col;
         if (m_mainParser->getColor((val>>4),col))
           font.m_font->setColor(col);
         else
@@ -399,12 +399,11 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
     case 0x4d: {
       if (dSz < 2) break;
       val = (int) m_input->readLong(1);
-      uint32_t flags = para.m_modFont->m_font->flags();
       if (val < 0) {
-        para.m_modFont->m_font->setFlags(flags|MWAWFont::subscript100Bit);
+        para.m_modFont->m_font->setScript(MWAWFont::Script::sub100());
         f << "subScript=" << -val/2 << ",";
       } else if (val > 0) {
-        para.m_modFont->m_font->setFlags(flags|MWAWFont::superscript100Bit);
+        para.m_modFont->m_font->setScript(MWAWFont::Script::super100());
         f << "superScript=" << val/2 << ",";
       } else f << "#pos=" << 0 << ",";
       done = true;

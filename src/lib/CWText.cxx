@@ -696,17 +696,17 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   if (flag&0x10) flags |= MWAWFont::shadowBit;
   /* flags & 0x20: condensed, flags & 0x40: extended */
   if (flag&0x80) flags |= MWAWFont::strikeOutBit;
-  if (flag&0x100) flags |= MWAWFont::superscript100Bit;
-  if (flag&0x200) flags |= MWAWFont::subscript100Bit;
-  if (flag&0x400) flags |= MWAWFont::superscriptBit;
-  if (flag&0x800) flags |= MWAWFont::subscriptBit;
+  if (flag&0x100) font.setScript(MWAWFont::Script::super100());
+  if (flag&0x200) font.setScript(MWAWFont::Script::sub100());
+  if (flag&0x400) font.setScript(MWAWFont::Script::super());
+  if (flag&0x800) font.setScript(MWAWFont::Script::sub());
   if (flag&0x2000) font.setUnderlineStyle(MWAWBorder::Double);
   font.setSize((int) m_input->readLong(1));
 
   int colId = (int) m_input->readULong(1);
-  Vec3uc color;
+  MWAWColor color(MWAWColor::black());
   if (colId!=1) {
-    Vec3uc col;
+    MWAWColor col;
     if (m_mainParser->getColor(colId, col))
       color = col;
     else if (vers != 1) {
@@ -776,15 +776,15 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   if (flag&0x10) flags |= MWAWFont::shadowBit;
   /* flags & 0x20: condensed, flags & 0x40: extended */
   if (flag&0x80) flags |= MWAWFont::strikeOutBit;
-  if (flag&0x100) flags |= MWAWFont::superscript100Bit;
-  if (flag&0x200) flags |= MWAWFont::subscript100Bit;
-  if (flag&0x400) flags |= MWAWFont::superscriptBit;
-  if (flag&0x800) flags |= MWAWFont::subscriptBit;
+  if (flag&0x100) font.setScript(MWAWFont::Script::super100());
+  if (flag&0x200) font.setScript(MWAWFont::Script::sub100());
+  if (flag&0x400) font.setScript(MWAWFont::Script::super());
+  if (flag&0x800) font.setScript(MWAWFont::Script::sub());
   if (flag&0x2000) font.setUnderlineStyle(MWAWBorder::Double);
   font.setSize((int) m_input->readLong(1));
 
   int colId = (int) m_input->readULong(1);
-  Vec3uc color;
+  MWAWColor color(MWAWColor::black());
   if (colId!=1) {
     f << "#col=" << std::hex << colId << std::dec << ",";
   }

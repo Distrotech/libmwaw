@@ -85,12 +85,7 @@ void MWAWPictBasic::getStyle1DProperty(WPXPropertyList &list) const
     return;
   }
   list.insert("lineFill", "solid");
-  std::stringstream s;
-  s << std::hex << std::setfill('0') << "#"
-    << std::setw(2) << m_lineColor[0]
-    << std::setw(2) << m_lineColor[1]
-    << std::setw(2) << m_lineColor[2];
-  list.insert("lineColor", s.str().c_str());
+  list.insert("lineColor", m_lineColor.str().c_str());
   list.insert("lineWidth", getStringPt(m_lineWidth).c_str());
 }
 
@@ -101,12 +96,7 @@ void MWAWPictBasic::getStyle2DProperty(WPXPropertyList &list) const
     list.insert("surfaceFill", "none");
   else
     list.insert("surfaceFill", "solid");
-  std::stringstream s;
-  s << std::hex << std::setfill('0') << "#"
-    << std::setw(2) << m_surfaceColor[0]
-    << std::setw(2) << m_surfaceColor[1]
-    << std::setw(2) << m_surfaceColor[2];
-  list.insert("surfaceColor", s.str().c_str());
+  list.insert("surfaceColor", m_surfaceColor.str().c_str());
 }
 
 

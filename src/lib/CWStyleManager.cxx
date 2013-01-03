@@ -75,10 +75,10 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::Graphic const &graph)
 {
   if (graph.m_lineWidth && graph.m_lineWidth != 1)
     o << "lineW=" << graph.m_lineWidth << ",";
-  if (graph.m_color[0] != 0)
-    o << "lineColor=" << std::hex << graph.m_color[0] << std::dec << ",";
-  if ((graph.m_color[1]&0xFFFFFF) != 0xFFFFFF)
-    o << "surfColor=" << std::hex << graph.m_color[1] << std::dec << ",";
+  if (!graph.m_color[0].isBlack())
+    o << "lineColor=" << graph.m_color[0] << ",";
+  if (!graph.m_color[1].isWhite())
+    o << "surfColor=" << graph.m_color[1] << ",";
   if (graph.m_pattern[0] != -1 && graph.m_pattern[0] != 2)
     o << "linePattern=" << graph.m_pattern[0] << "[" << graph.m_patternPercent[0] << "],";
   if (graph.m_pattern[1] != -1 && graph.m_pattern[1] != 2)
@@ -87,24 +87,18 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::Graphic const &graph)
   return o;
 }
 
-uint32_t CWStyleManager::Graphic::getLineColor() const
+MWAWColor CWStyleManager::Graphic::getLineColor() const
 {
   if (m_patternPercent[0] >= 1.0 || m_patternPercent[0] < 0)
     return m_color[0];
-  Vec3uc col = Vec3uc((unsigned char)((m_color[0]>>16)&0xff), (unsigned char)((m_color[0]>>8)&0xff),(unsigned char)(m_color[0]&0xff));
-  Vec3uc finalCol = m_patternPercent[0]*Vec3f(float(col[0]), float(col[1]), float(col[2]))
-                    +(1.f-m_patternPercent[0])*Vec3f(255,255,255);
-  return libmwaw::getUInt32(finalCol);
+  return MWAWColor::barycenter(m_patternPercent[0], m_color[0], 1.f-m_patternPercent[0], MWAWColor::white());
 }
 
-uint32_t CWStyleManager::Graphic::getSurfaceColor() const
+MWAWColor CWStyleManager::Graphic::getSurfaceColor() const
 {
   if (m_patternPercent[1] >= 1.0 || m_patternPercent[1] < 0)
     return m_color[1];
-  Vec3uc col = Vec3uc((unsigned char)((m_color[1]>>16)&0xff), (unsigned char)((m_color[1]>>8)&0xff),(unsigned char)(m_color[1]&0xff));
-  Vec3uc finalCol = m_patternPercent[1]*Vec3f(float(col[0]), float(col[1]), float(col[2]))
-                    +(1.f-m_patternPercent[1])*Vec3f(255,255,255);
-  return libmwaw::getUInt32(finalCol);
+  return MWAWColor::barycenter(m_patternPercent[1], m_color[1], 1.f-m_patternPercent[1], MWAWColor::white());
 }
 
 ////////////////////////////////////////////////////
@@ -647,9 +641,9 @@ bool CWStyleManager::readGraphStyles(int N, int fSz)
       f << "f3=" << std::hex << val << std::dec << ",";
     for (int j = 0; j < 2; j++) {
       int col = (int) m_input->readULong(1);
-      Vec3uc color;
+      MWAWColor color;
       if (m_mainParser->getColor(col, color))
-        graph.m_color[j] = libmwaw::getUInt32(color);
+        graph.m_color[j] = color;
       else
         f << "#col" << j << "=" << col << ",";
     }

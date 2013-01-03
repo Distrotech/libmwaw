@@ -352,32 +352,32 @@ void MSWParser::newPage(int number)
   }
 }
 
-bool MSWParser::getColor(int id, Vec3uc &col) const
+bool MSWParser::getColor(int id, MWAWColor &col) const
 {
   switch(id) {
   case 0:
-    col=Vec3uc(0,0,0);
+    col=MWAWColor(0,0,0);
     break; // black
   case 1:
-    col=Vec3uc(0,0,255);
+    col=MWAWColor(0,0,255);
     break; // blue
   case 2:
-    col=Vec3uc(0, 255,255);
+    col=MWAWColor(0, 255,255);
     break; // cyan
   case 3:
-    col=Vec3uc(0,255,0);
+    col=MWAWColor(0,255,0);
     break; // green
   case 4:
-    col=Vec3uc(255,0,255);
+    col=MWAWColor(255,0,255);
     break; // magenta
   case 5:
-    col=Vec3uc(255,0,0);
+    col=MWAWColor(255,0,0);
     break; // red
   case 6:
-    col=Vec3uc(255,255,0);
+    col=MWAWColor(255,255,0);
     break; // yellow
   case 7:
-    col=Vec3uc(255,255,255);
+    col=MWAWColor(255,255,255);
     break; // white
   default:
     MWAW_DEBUG_MSG(("MSWParser::getColor: unknown color=%d\n", id));

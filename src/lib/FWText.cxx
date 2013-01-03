@@ -372,13 +372,17 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0x89: // change color
         break;
       case 0x8a:
-        fFlags ^= MWAWFont::superscript100Bit;
-        font.setFlags(fFlags);
+        if (font.script()==MWAWFont::Script::super100())
+          font.setScript(MWAWFont::Script());
+        else
+          font.setScript(MWAWFont::Script::super100());
         fontSet=false;
         break;
       case 0x8b:
-        fFlags ^= MWAWFont::subscript100Bit;
-        font.setFlags(fFlags);
+        if (font.script()==MWAWFont::Script::sub100())
+          font.setScript(MWAWFont::Script());
+        else
+          font.setScript(MWAWFont::Script::sub100());
         fontSet=false;
         break;
       case 0x8c:

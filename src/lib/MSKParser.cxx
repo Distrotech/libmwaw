@@ -86,25 +86,25 @@ bool MSKParser::checkIfPositionValid(long pos)
   return ok;
 }
 
-std::vector<Vec3uc> const &MSKParser::getPalette(int vers)
+std::vector<MWAWColor> const &MSKParser::getPalette(int vers)
 {
   switch(vers) {
   case 2: {
-    static std::vector<Vec3uc> palette;
+    static std::vector<MWAWColor> palette;
     palette.resize(9);
-    palette[0]=Vec3uc(0,0,0); // undef
-    palette[1]=Vec3uc(0,0,0);
-    palette[2]=Vec3uc(255,255,255);
-    palette[3]=Vec3uc(255,0,0);
-    palette[4]=Vec3uc(0,255,0);
-    palette[5]=Vec3uc(0,0,255);
-    palette[6]=Vec3uc(0, 255,255);
-    palette[7]=Vec3uc(255,0,255);
-    palette[8]=Vec3uc(255,255,0);
+    palette[0]=MWAWColor(0,0,0); // undef
+    palette[1]=MWAWColor(0,0,0);
+    palette[2]=MWAWColor(255,255,255);
+    palette[3]=MWAWColor(255,0,0);
+    palette[4]=MWAWColor(0,255,0);
+    palette[5]=MWAWColor(0,0,255);
+    palette[6]=MWAWColor(0, 255,255);
+    palette[7]=MWAWColor(255,0,255);
+    palette[8]=MWAWColor(255,255,0);
     return palette;
   }
   case 3: {
-    static std::vector<Vec3uc> palette;
+    static std::vector<MWAWColor> palette;
     if (palette.size()==0) {
       palette.resize(256);
       size_t ind=0;
@@ -112,7 +112,7 @@ std::vector<Vec3uc> const &MSKParser::getPalette(int vers)
         for (int j = 0; j < 6; j++) {
           for (int i = 0; i < 6; i++, ind++) {
             if (j==5 && i==2) break;
-            palette[ind]=Vec3uc((unsigned char)(255-51*i), (unsigned char)(255-51*k), (unsigned char)(255-51*j));
+            palette[ind]=MWAWColor((unsigned char)(255-51*i), (unsigned char)(255-51*k), (unsigned char)(255-51*j));
           }
         }
       }
@@ -124,25 +124,25 @@ std::vector<Vec3uc> const &MSKParser::getPalette(int vers)
           for (int i = 0; i < 5; i++, ind++) {
             int val = 17*r+51*i;
             if (c == 0) {
-              palette[ind]=Vec3uc((unsigned char)val, (unsigned char)val, (unsigned char)val);
+              palette[ind]=MWAWColor((unsigned char)val, (unsigned char)val, (unsigned char)val);
               continue;
             }
             int color[3]= {0,0,0};
             color[c-1]=val;
-            palette[ind]=Vec3uc((unsigned char)(color[0]),(unsigned char)(color[1]),(unsigned char)(color[2]));
+            palette[ind]=MWAWColor((unsigned char)(color[0]),(unsigned char)(color[1]),(unsigned char)(color[2]));
           }
         }
         // last part of j==5, i=2..5
         for (int k = r; k < 6; k+=2) {
           for (int i = 2; i < 6; i++, ind++)
-            palette[ind]=Vec3uc((unsigned char)(255-51*i), (unsigned char)(255-51*k), (unsigned char)(255-51*5));
+            palette[ind]=MWAWColor((unsigned char)(255-51*i), (unsigned char)(255-51*k), (unsigned char)(255-51*5));
         }
       }
     }
     return palette;
   }
   case 4: {
-    static std::vector<Vec3uc> palette;
+    static std::vector<MWAWColor> palette;
     if (palette.size()==0) {
       palette.resize(256);
       size_t ind=0;
@@ -150,8 +150,8 @@ std::vector<Vec3uc> const &MSKParser::getPalette(int vers)
         for (int j = 0; j < 6; j++) {
           for (int i = 0; i < 6; i++, ind++) {
             palette[ind]=
-              Vec3uc((unsigned char)(255-51*k), (unsigned char)(255-51*j),
-                     (unsigned char)(255-51*i));
+              MWAWColor((unsigned char)(255-51*k), (unsigned char)(255-51*j),
+                        (unsigned char)(255-51*i));
           }
         }
       }
@@ -161,17 +161,17 @@ std::vector<Vec3uc> const &MSKParser::getPalette(int vers)
         unsigned char val=(unsigned char) 251;
         for (int i = 0; i < 10; i++) {
           val = (unsigned char)(val-17);
-          if (c == 3) palette[ind++]=Vec3uc(val, val, val);
+          if (c == 3) palette[ind++]=MWAWColor(val, val, val);
           else {
             color[c] = val;
-            palette[ind++]=Vec3uc(color[0],color[1],color[2]);
+            palette[ind++]=MWAWColor(color[0],color[1],color[2]);
           }
           if ((i%2)==1) val = (unsigned char)(val-17);
         }
       }
 
       // last is black
-      palette[ind++]=Vec3uc(0,0,0);
+      palette[ind++]=MWAWColor(0,0,0);
     }
     return palette;
   }
@@ -179,14 +179,14 @@ std::vector<Vec3uc> const &MSKParser::getPalette(int vers)
     break;
   }
   MWAW_DEBUG_MSG(("MSKParser::getPalette: can not find palette for version %d\n", vers));
-  static std::vector<Vec3uc> emptyPalette;
+  static std::vector<MWAWColor> emptyPalette;
   return emptyPalette;
 }
 
-bool MSKParser::getColor(int id, Vec3uc &col, int vers) const
+bool MSKParser::getColor(int id, MWAWColor &col, int vers) const
 {
   if (vers <= 0) vers = version();
-  std::vector<Vec3uc> const &palette = getPalette(vers);
+  std::vector<MWAWColor> const &palette = getPalette(vers);
   if (palette.size()==0 || id < 0 || id >= int(palette.size()) ||
       (version()==2 && id==0)) {
     static bool first = true;

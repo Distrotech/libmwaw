@@ -70,7 +70,7 @@ struct Zone {
   enum Type { Z_Main, Z_Footnote, Z_Header, Z_Footer, Z_Unknown };
   //! constructor
   Zone() : m_id(-1), m_fileId(0), m_type(Z_Unknown), m_height(0), m_RBpos(0,0), m_dim(),
-    m_pageDim(), m_pageMDim(), m_backColor(0xFFFFFF), m_extra("") {
+    m_pageDim(), m_pageMDim(), m_backColor(MWAWColor::white()), m_extra("") {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &zone);
@@ -91,7 +91,7 @@ struct Zone {
   //! the page dimension with margins (?)
   Box2i m_pageMDim;
   //! the background color
-  uint32_t m_backColor;
+  MWAWColor m_backColor;
   //! extra data
   std::string m_extra;
 };
@@ -123,8 +123,8 @@ std::ostream &operator<<(std::ostream &o, Zone const &zone)
     o << "height=" << zone.m_height << ",";
   if (zone.m_dim.size()[0] || zone.m_dim.size()[1])
     o << "dim=" << zone.m_dim << ",";
-  if (zone.m_backColor != 0xFFFFFF)
-    o << "background=" << std::hex << zone.m_backColor << std::dec << ",";
+  if (!zone.m_backColor.isWhite())
+    o << "background=" << zone.m_backColor << ",";
   o << zone.m_extra;
   return o;
 }
@@ -621,7 +621,7 @@ bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
     }
     long sel[4]= {0,0,0,0};
     int dim[4]= {0,0,0,0};
-    int color[3];
+    unsigned char color[3];
     switch(j) {
     case 0: // version?
       f << "vers?=" << (data.value(0)>>16) << "[" << (data.value(0)&0xFFFF) << "],";
@@ -723,12 +723,11 @@ bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
     case 32:
     case 33:
     case 34: { // 35,36,37: front color?
-      color[0]=color[1]=color[2]=0xFFFF;
-      color[j-32]=(int) data.value(0);
+      color[0]=color[1]=color[2]=0xFF;
+      color[j-32]=(unsigned char) (data.value(0)>>8);
       while (j < 34)
-        color[++j-32] = (int) dataList[d++].value(0);
-      zone.m_backColor =
-        uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8));
+        color[++j-32] = (unsigned char) (dataList[d++].value(0)>>8);
+      zone.m_backColor = MWAWColor(color[0],color[1],color[2]);
       break;
     }
     case 38:
@@ -858,7 +857,8 @@ bool MRWParser::readDocInfo(MRWEntry const &entry, int zoneId)
   libmwaw::DebugStream f;
   f << entry.name() << ":";
 
-  int dim[2], margins[4]= {0,0,0,0}, color[3];
+  int dim[2], margins[4]= {0,0,0,0};
+  unsigned char color[3];
   size_t d=0;
   for (int j=0; j < numDatas; j++, d++) {
     MRWStruct const &dt = dataList[d];
@@ -932,12 +932,11 @@ bool MRWParser::readDocInfo(MRWEntry const &entry, int zoneId)
     case 17:
     case 18: {
       color[0]=color[1]=color[2]=0;
-      color[j-16]=(int) dt.value(0);
+      color[j-16]=(unsigned char) (dt.value(0)>>8);
       while (j < 18)
-        color[++j-16] = (int) dataList[++d].value(0);
-      uint32_t col =
-        uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8));
-      if (col) f << "color=" << std::hex << col << std::dec << ",";
+        color[++j-16] = (unsigned char) (dataList[++d].value(0)>>8);
+      MWAWColor col(color[0],color[1],color[2]);
+      if (!col.isBlack()) f << "color=" << col << ",";
       break;
     }
     case 76: // a very big number
@@ -1103,30 +1102,30 @@ bool MRWParser::readZone13(MRWEntry const &entry, int)
       }
       continue;
     }
-    int color[3];
-    uint32_t col;
+    unsigned char color[3];
+    MWAWColor col;
     switch(j) {
     case 15:
     case 16:
     case 17:
-      color[0]=color[1]=color[2]=0xFFFF;
-      color[j-15]=(int) data.value(0);
+      color[0]=color[1]=color[2]=0xFF;
+      color[j-15]=(unsigned char) (data.value(0)>>8);
       while (j < 17)
-        color[++j-15] = (int) dataList[d++].value(0);
-      col = uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8));
-      if (col != 0xFFFFFF)
-        f << "col0=" << std::hex << col << std::dec << ",";
+        color[++j-15] = (unsigned char) (dataList[d++].value(0)>>8);
+      col = MWAWColor(color[0],color[1],color[2]);
+      if (!col.isWhite())
+        f << "col0=" << col << ",";
       break;
     case 19:
     case 20:
     case 21:
-      color[0]=color[1]=color[2]=0xFFFF;
-      color[j-19]=(int) data.value(0);
+      color[0]=color[1]=color[2]=0xFF;
+      color[j-19]=(unsigned char) (data.value(0)>>8);
       while (j < 21)
-        color[++j-19] = (int) dataList[d++].value(0);
-      col = uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8));
-      if (col != 0xFFFFFF)
-        f << "col1=" << std::hex << col << std::dec << ",";
+        color[++j-19] = (unsigned char) (dataList[d++].value(0)>>8);
+      col = MWAWColor(color[0],color[1],color[2]);
+      if (!col.isWhite())
+        f << "col1=" << col << ",";
       break;
     default:
       if (data.value(0))

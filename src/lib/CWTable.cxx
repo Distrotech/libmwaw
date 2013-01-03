@@ -221,12 +221,12 @@ void Table::sendPreTableData(MWAWContentListenerPtr listener)
       lines[0].reset(new MWAWPictLine(Vec2i(0,0), box.size()));
     if (ksen.m_lines & 2)
       lines[1].reset(new MWAWPictLine(Vec2i(0,box.size()[1]), Vec2i(box.size()[0], 0)));
-    uint32_t lColor = graph.getLineColor();
+    MWAWColor lColor = graph.getLineColor();
     for (int i = 0; i < 2; i++) {
       if (!lines[i]) continue;
       lines[i]->setLineWidth((float)graph.m_lineWidth);
-      if (lColor)
-        lines[i]->setLineColor((lColor>>16)&0xFF, (lColor>>8)&0xFF, (lColor)&0xFF);
+      if (!lColor.isBlack())
+        lines[i]->setLineColor(lColor);
 
       WPXBinaryData data;
       std::string type;
@@ -290,8 +290,8 @@ void CWTable::updateCell(CWTableInternal::Cell const &cell, MWAWCell &rCell, WPX
   if (cell.m_styleId >= 0 && m_styleManager->get(cell.m_styleId, style)) {
     CWStyleManager::Graphic graph;
     if (style.m_graphicId >= 0 && m_styleManager->get(style.m_graphicId, graph)) {
-      uint32_t sColor = graph.getSurfaceColor();
-      if ((sColor&0xFFFFFF)!=0xFFFFFF )
+      MWAWColor sColor = graph.getSurfaceColor();
+      if (!sColor.isWhite())
         rCell.setBackgroundColor(sColor);
     }
     CWStyleManager::KSEN ksen;

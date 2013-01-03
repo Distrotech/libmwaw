@@ -75,7 +75,7 @@ bool getPBMData(MWAWPictBitmapContainer<T> const &orig, WPXBinaryData &data, T w
 
 //! Internal: helper function to create a PPM
 template <class T>
-bool getPPMData(MWAWPictBitmapContainer<T> const &orig, WPXBinaryData &data, std::vector<Vec3uc> const &indexedColor)
+bool getPPMData(MWAWPictBitmapContainer<T> const &orig, WPXBinaryData &data, std::vector<MWAWColor> const &indexedColor)
 {
   Vec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
@@ -96,15 +96,16 @@ bool getPPMData(MWAWPictBitmapContainer<T> const &orig, WPXBinaryData &data, std
         MWAW_DEBUG_MSG(("MWAWPictBitmap::getPPMData invalid index %d\n", ind));
         return false;
       }
-      Vec3uc const &col = indexedColor[size_t(ind)];
-      for (int c = 0; c < 3; c++) data.append((unsigned char) col[c]);
+      uint32_t col = indexedColor[size_t(ind)].value();
+      for (int c = 0, depl=16; c < 3; c++, depl-=8)
+        data.append((unsigned char) ((col>>depl)&0xFF));
     }
   }
   return true;
 }
 
 //! Internal: helper function to create a PPM for a color bitmap
-bool getPPMData(MWAWPictBitmapContainer<Vec3uc> const &orig, WPXBinaryData &data)
+bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, WPXBinaryData &data)
 {
   Vec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
@@ -115,11 +116,12 @@ bool getPPMData(MWAWPictBitmapContainer<Vec3uc> const &orig, WPXBinaryData &data
   std::string const &header = f.str();
   data.append((const unsigned char *)header.c_str(), header.size());
   for (int j = 0; j < sz[1]; j++) {
-    Vec3uc const *row = orig.getRow(j);
+    MWAWColor const *row = orig.getRow(j);
 
     for (int i = 0; i < sz[0]; i++) {
-      Vec3uc const &col = row[i];
-      for (int c = 0; c < 3; c++) data.append((unsigned char) col[c]);
+      uint32_t col = row[i].value();
+      for (int c = 0, depl=16; c < 3; c++, depl-=8)
+        data.append((unsigned char) ((col>>depl)&0xFF));
     }
   }
   return true;

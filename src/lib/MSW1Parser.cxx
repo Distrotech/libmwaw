@@ -665,8 +665,8 @@ bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
   }
   if (sz >= 6) { // vdepl
     val = (int) input->readLong(1);
-    if (val > 0) flags |= MWAWFont::superscript100Bit;
-    else if (val < 0) flags |= MWAWFont::subscript100Bit;
+    if (val > 0) font.m_font.setScript(MWAWFont::Script::super100());
+    else if (val < 0) font.m_font.setScript(MWAWFont::Script::sub100());
   }
   if (sz >= 7) {
     f << "###";

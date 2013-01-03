@@ -62,8 +62,8 @@ struct Frame {
   //! constructor
   Frame() : m_type(-1), m_fileId(-1), m_id(-1), m_page(0),
     m_pos(), m_baseline(0.f), m_posFlags(0), m_lineWidth(0), m_parsed(false), m_extra("") {
-    m_colors[0]=0;
-    m_colors[1]=0xFFFFFF;
+    m_colors[0]=MWAWColor::black();
+    m_colors[1]=MWAWColor::white();
     m_patterns[0] = m_patterns[1] = 1.f;
   }
   //! destructor
@@ -71,9 +71,9 @@ struct Frame {
   }
 
   //! returns the line colors
-  bool getLineColor(Vec3uc &color) const;
+  bool getLineColor(MWAWColor &color) const;
   //! returns the surface colors
-  bool getSurfaceColor(Vec3uc &color) const;
+  bool getSurfaceColor(MWAWColor &color) const;
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Frame const &grph);
@@ -96,7 +96,7 @@ struct Frame {
   //! the line width
   float m_lineWidth;
   //! the line/surface colors
-  uint32_t m_colors[2];
+  MWAWColor m_colors[2];
   //! the line/surface percent pattern
   float m_patterns[2];
   //! true if we have send the data
@@ -148,12 +148,12 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
   if (!(flag & 0x80)) o << "transparent,"; // else opaque
   if (flag & 0x39) o << "posFlags=" << std::hex << (flag & 0x39) << std::dec << ",";
   o << "lineW=" << grph.m_lineWidth << ",";
-  if (grph.m_colors[0])
-    o << "lineColor=" << std::hex << grph.m_colors[0] << std::dec << ",";
+  if (!grph.m_colors[0].isBlack())
+    o << "lineColor=" << grph.m_colors[0] << ",";
   if (grph.m_patterns[0]<1.)
     o << "linePattern=" << 100.f*grph.m_patterns[0] << "%,";
-  if (grph.m_colors[1]!=0xFFFFFF)
-    o << "surfColor=" << std::hex << grph.m_colors[1] << std::dec << ",";
+  if (!grph.m_colors[1].isWhite())
+    o << "surfColor=" << grph.m_colors[1] << ",";
   if (grph.m_patterns[1]<1.)
     o << "surfPattern=" << 100.f*grph.m_patterns[1] << "%,";
   for (int i = 0; i < 4; i++) {
@@ -336,7 +336,7 @@ struct PictureFrame : public Frame {
 //! a table cell in a table in HMWGraph
 struct TableCell {
   //! constructor
-  TableCell(): m_row(-1), m_col(-1), m_span(1,1), m_dim(), m_backColor(0xffffff),
+  TableCell(): m_row(-1), m_col(-1), m_span(1,1), m_dim(), m_backColor(MWAWColor::white()),
     m_borders(), m_id(-1), m_fileId(-1), m_flags(0), m_extra("") {
   }
   //! operator<<
@@ -350,7 +350,7 @@ struct TableCell {
   //! the dimension
   Vec2f m_dim;
   //! the background color
-  uint32_t m_backColor;
+  MWAWColor m_backColor;
   //! the border: order defined by MWAWBorder::Pos
   std::vector<MWAWBorder> m_borders;
   //! the cell id ( corresponding to the last data in the main zones list )
@@ -370,8 +370,8 @@ std::ostream &operator<<(std::ostream &o, TableCell const &cell)
   if (cell.m_span.x() != 1 || cell.m_span.y() != 1)
     o << "span=" << cell.m_span << ",";
   o << "dim=" << cell.m_dim << ",";
-  if (cell.m_backColor != 0xffffff)
-    o << "backColor=" << std::hex << cell.m_backColor << std::dec << ",";
+  if (!cell.m_backColor.isWhite())
+    o << "backColor=" << cell.m_backColor << ",";
   char const *(what[]) = {"T", "L", "B", "R"};
   for (size_t b = 0; b < cell.m_borders.size(); b++)
     o << "bord" << what[b] << "=[" << cell.m_borders[b] << "],";
@@ -526,7 +526,7 @@ struct State {
   //! constructor
   State() : m_numPages(0), m_framesMap(), m_picturesMap(), m_colorList(), m_patternPercentList() { }
   //! returns a color correspond to an id
-  bool getColor(int id, uint32_t &col) {
+  bool getColor(int id, MWAWColor &col) {
     initColors();
     if (id < 0 || id >= int(m_colorList.size())) {
       MWAW_DEBUG_MSG(("HMWGraphInternal::State::getColor: can not find color %d\n", id));
@@ -547,15 +547,8 @@ struct State {
   }
 
   //! returns a color corresponding to a pattern and a color
-  static Vec3uc getColor(uint32_t col, float pattern) {
-    int color[3] = {int((col>>16)&0xFF),int((col>>8)&0xFF),
-                    int(col&0xFF)
-                   };
-    Vec3f res;
-    for (int i = 0; i < 3; i++)
-      res[i] = (unsigned char)
-               (pattern*float(color[i])+(1.f-pattern)*255.f);
-    return res;
+  static MWAWColor getColor(MWAWColor col, float pattern) {
+    return MWAWColor::barycenter(pattern,col,1.f-pattern,MWAWColor::white());
   }
 
   //! init the color list
@@ -569,7 +562,7 @@ struct State {
   //! a map fileId -> picture
   std::map<long, shared_ptr<Picture> > m_picturesMap;
   //! a list colorId -> color
-  std::vector<uint32_t> m_colorList;
+  std::vector<MWAWColor> m_colorList;
   //! a list patternId -> percent
   std::vector<float> m_patternPercentList;
 };
@@ -634,13 +627,13 @@ void State::initColors()
     m_colorList[i] = defCol[i];
 }
 
-bool Frame::getLineColor(Vec3uc &color) const
+bool Frame::getLineColor(MWAWColor &color) const
 {
   color = State::getColor(m_colors[0], m_patterns[0]);
   return true;
 }
 
-bool Frame::getSurfaceColor(Vec3uc &color) const
+bool Frame::getSurfaceColor(MWAWColor &color) const
 {
   color = State::getColor(m_colors[1], m_patterns[1]);
   return true;
@@ -761,7 +754,7 @@ int HMWGraph::version() const
   return m_mainParser->version();
 }
 
-bool HMWGraph::getColor(int colId, int patternId, uint32_t &color) const
+bool HMWGraph::getColor(int colId, int patternId, MWAWColor &color) const
 {
   if (!m_state->getColor(colId, color) ) {
     MWAW_DEBUG_MSG(("HMWGraph::getColor: can not find color for id=%d\n", colId));
@@ -772,7 +765,7 @@ bool HMWGraph::getColor(int colId, int patternId, uint32_t &color) const
     MWAW_DEBUG_MSG(("HMWGraph::getColor: can not find pattern for id=%d\n", patternId));
     return false;
   }
-  color = libmwaw::getUInt32(m_state->getColor(color, percent));
+  color = m_state->getColor(color, percent);
   return true;
 }
 
@@ -850,7 +843,7 @@ bool HMWGraph::readFrames(shared_ptr<HMWZone> zone)
   if (val) f << "#g0=" << val << ",";
   for (int i = 0; i < 2; i++) {
     int color = (int) input->readULong(2);
-    uint32_t col;
+    MWAWColor col;
     if (m_state->getColor(color, col))
       graph.m_colors[i] = col;
     else
@@ -1139,34 +1132,31 @@ bool HMWGraph::sendTextBox(HMWGraphInternal::TextBox const &textbox, MWAWPositio
     pos.setSize(textboxSz);
   WPXPropertyList pList(extras);
 
-  Vec3uc color;
-  uint32_t lineColor=0, surfaceColor=0xFFFFFF;
+  MWAWColor color;
+  MWAWColor lineColor=MWAWColor::black(), surfaceColor=MWAWColor::white();
   if (textbox.getLineColor(color))
-    lineColor = libmwaw::getUInt32(color);
+    lineColor = color;
   if (textbox.getSurfaceColor(color))
-    surfaceColor = libmwaw::getUInt32(color);
+    surfaceColor = color;
 
   if (textbox.m_type == 10) {
     std::stringstream stream;
-    stream << textbox.m_lineWidth*0.03 << "cm solid "
-           << libmwaw::getColorString(lineColor);
+    stream << textbox.m_lineWidth*0.03 << "cm solid " << lineColor;
     pList.insert("fo:border-left", stream.str().c_str());
     pList.insert("fo:border-bottom", stream.str().c_str());
     pList.insert("fo:border-right", stream.str().c_str());
 
     stream.str("");
-    stream << textbox.m_borders[0][1]*textbox.m_lineWidth*0.03 << "cm solid "
-           << libmwaw::getColorString(lineColor);
+    stream << textbox.m_borders[0][1]*textbox.m_lineWidth*0.03 << "cm solid " << lineColor;
     pList.insert("fo:border-top", stream.str().c_str());
   } else if (textbox.m_lineWidth > 0) {
     std::stringstream stream;
-    stream << textbox.m_lineWidth*0.03 << "cm solid "
-           << libmwaw::getColorString(lineColor);
+    stream << textbox.m_lineWidth*0.03 << "cm solid " << lineColor;
     pList.insert("fo:border", stream.str().c_str());
   }
 
-  if (surfaceColor != 0xFFFFFF)
-    pList.insert("fo:background-color", libmwaw::getColorString(surfaceColor).c_str());
+  if (!surfaceColor.isWhite())
+    pList.insert("fo:background-color", surfaceColor.str().c_str());
 
   MWAWSubDocumentPtr subdoc(new HMWGraphInternal::SubDocument(*this, m_input, HMWGraphInternal::SubDocument::Text, textbox.m_textFileId));
   m_listener->insertTextBox(pos, subdoc, pList);
@@ -1276,11 +1266,11 @@ bool HMWGraph::sendBasicGraph(HMWGraphInternal::BasicGraph const &pict, MWAWPosi
   if (!pictPtr)
     return false;
   pictPtr->setLineWidth(pict.m_lineWidth);
-  Vec3uc color;
+  MWAWColor color;
   if (pict.getLineColor(color))
-    pictPtr->setLineColor(color[0], color[1], color[2]);
+    pictPtr->setLineColor(color);
   if (pict.getSurfaceColor(color))
-    pictPtr->setSurfaceColor(color[0], color[1], color[2]);
+    pictPtr->setSurfaceColor(color);
 
   WPXBinaryData data;
   std::string type;
@@ -1835,14 +1825,14 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
     cell.m_dim = Vec2f(dim[0], dim[1]);
 
     int color = (int) input->readULong(2);
-    uint32_t backCol = 0xffffff;
+    MWAWColor backCol = MWAWColor::white();
     if (!m_state->getColor(color, backCol))
       f << "#backcolor=" << color << ",";
     int pattern = (int) input->readULong(2);
     float patPercent = 1.0;
     if (!m_state->getPatternPercent(pattern, patPercent))
       f << "#backPattern=" << pattern << ",";
-    cell.m_backColor = libmwaw::getUInt32(m_state->getColor(backCol, patPercent));
+    cell.m_backColor = m_state->getColor(backCol, patPercent);
 
     cell.m_flags = (int) input->readULong(2);
     val = input->readLong(2);
@@ -1876,14 +1866,14 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
         break;
       }
       color = (int) input->readULong(2);
-      uint32_t col = 0;
+      MWAWColor col = MWAWColor::black();
       if (!m_state->getColor(color, col))
         f2 << "#color=" << color << ",";
       pattern = (int) input->readULong(2);
       patPercent = 1.0;
       if (!m_state->getPatternPercent(pattern, patPercent))
         f2 << "#pattern=" << pattern << ",";
-      border.m_color = libmwaw::getUInt32(m_state->getColor(col, patPercent));
+      border.m_color = m_state->getColor(col, patPercent);
       val = (long) input->readULong(2);
       if (val) f2 << "unkn=" << val << ",";
 

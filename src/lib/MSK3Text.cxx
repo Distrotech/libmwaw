@@ -582,8 +582,8 @@ bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
   if (flag & 0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
   if (flag & 0x8) flags |= MWAWFont::embossBit;
   if (flag & 0x10) flags |= MWAWFont::shadowBit;
-  if (flag & 0x20) flags |= MWAWFont::superscript100Bit;
-  if (flag & 0x40) flags |= MWAWFont::subscript100Bit;
+  if (flag & 0x20) font.m_font.setScript(MWAWFont::Script::super100());
+  if (flag & 0x40) font.m_font.setScript(MWAWFont::Script::sub100());
   if ((flag & 0x80) && !(flag & 0x60)) f << "fFl80#,";
   font.m_font.setFlags(flags);
   int color = 1;
@@ -597,7 +597,7 @@ bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
       m_input->seek(-1, WPX_SEEK_CUR);
   }
   if (color != 1) {
-    Vec3uc col;
+    MWAWColor col;
     if (m_mainParser->getColor(color,col))
       font.m_font.setColor(col);
     else

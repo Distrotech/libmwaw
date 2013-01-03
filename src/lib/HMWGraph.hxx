@@ -107,7 +107,7 @@ protected:
   }
 
   //! returns the color associated with a pattern
-  bool getColor(int colId, int patternId, uint32_t &color) const;
+  bool getColor(int colId, int patternId, MWAWColor &color) const;
 
   //! try to send the page graphic
   bool sendPageGraphics();

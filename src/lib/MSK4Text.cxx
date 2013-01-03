@@ -1107,7 +1107,7 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
   // c[c] : normal ?, e[i]:font ?, f[i]: size?, 18[c] : supper, 19[c] : subs
   uint32_t textAttributeBits = 0;
 
-  Vec3uc col(0,0,0);
+  unsigned char col[3]= {0,0,0};
 
   while (input->tell() <= endPos-2) {
     bool ok = true;
@@ -1192,13 +1192,13 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
     case 0x18: {
       int v = (int) input->readLong(1);
       if (v != 1) f << "##super=" << v << ",";
-      textAttributeBits |= MWAWFont::superscriptBit;
+      font.m_font.setScript(MWAWFont::Script::super());
       break;
     }
     case 0x19: {
       int v = (int) input->readLong(1);
       if (v != 1) f << "##sub =" << v << ",";
-      textAttributeBits |= MWAWFont::subscriptBit;
+      font.m_font.setScript(MWAWFont::Script::sub());
     }
     break;
     case 0xe:
@@ -1230,10 +1230,8 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
         break;
       }
 
-      for (int i = 0; i < 3; i++) {
-        col[i] = (unsigned char) input->readULong(1);
-        input->readULong(1);
-      }
+      for (int i = 0; i < 3; i++)
+        col[i] = (unsigned char) (input->readULong(2)>>8);
       break;
     }
     default:
@@ -1260,7 +1258,7 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
     break;
   }
 
-  font.m_font.setColor(col);
+  font.m_font.setColor(MWAWColor(col[0],col[1],col[2]));
   font.m_font.setFlags(textAttributeBits);
   font.m_error = f.str();
 

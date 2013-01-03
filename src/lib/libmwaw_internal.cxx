@@ -136,6 +136,7 @@ std::string numberingValueToString(NumberingType type, int value)
 }
 }
 
+// color function
 MWAWColor MWAWColor::barycenter(float alpha, MWAWColor const colA,
                                 float beta, MWAWColor const colB)
 {
@@ -162,27 +163,7 @@ std::string MWAWColor::str() const
   return stream.str();
 }
 
-namespace libmwaw
-{
-uint32_t getUInt32(Vec3uc const &color)
-{
-  return uint32_t(((color[0]&0xFF)<<16) | ((color[1]&0xFF)<<8) | (color[2]&0xFF));
-}
-
-std::string getColorString(uint32_t col)
-{
-  std::stringstream stream;
-  stream << "#" << std::hex << std::setfill('0') << std::setw(6)
-         << (col&0xFFFFFF);
-  return stream.str();
-}
-
-std::string getColorString(Vec3uc const &col)
-{
-  return getColorString(getUInt32(col));
-}
-}
-
+// border function
 int MWAWBorder::compare(MWAWBorder const &orig) const
 {
   int diff = int(m_style)-int(orig.m_style);
@@ -219,7 +200,7 @@ std::string MWAWBorder::getPropertyValue() const
   if (m_style == None) return "";
   std::stringstream stream;
   stream << m_width*0.03 << "cm " << getPropertyValue(m_style)
-         << " " << libmwaw::getColorString(m_color);
+         << " " << m_color;
   return stream.str();
 }
 
@@ -255,8 +236,8 @@ std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
 {
   o << border.m_style << ":";
   if (border.m_width > 1) o << "w=" << border.m_width << ":";
-  if (border.m_color)
-    o << "col=" << std::hex << border.m_color << std::dec << ":";
+  if (!border.m_color.isBlack())
+    o << "col=" << border.m_color << ":";
   o << ",";
   return o;
 }

@@ -90,14 +90,14 @@ struct Paragraph : public MWAWParagraph {
   //! constructor
   Paragraph() : MWAWParagraph(), m_colWidth(0) {
     for (int i = 0; i < 2; i++)
-      m_backColor[i] = 0xFFFFFF;
+      m_backColor[i] = MWAWColor::white();
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &para);
   //! a column width
   int m_colWidth;
   //! two color
-  uint32_t m_backColor[2];
+  MWAWColor m_backColor[2];
 };
 
 std::ostream &operator<<(std::ostream &o, Paragraph const &para)
@@ -106,8 +106,8 @@ std::ostream &operator<<(std::ostream &o, Paragraph const &para)
   if (para.m_colWidth)
     o << "colWidth=" << para.m_colWidth << ",";
   for (int i = 0; i < 2; i++) {
-    if (para.m_backColor[i] != 0xFFFFFF)
-      o << "backColor" << i << "=" << std::hex << para.m_backColor[i] << std::dec << ",";
+    if (!para.m_backColor[i].isWhite())
+      o << "backColor" << i << "=" << para.m_backColor[i] << ",";
   }
   return o;
 }
@@ -881,7 +881,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
         break;
       case 51:
         if (dt.value(0) > 0) {
-          fFlags |= MWAWFont::superscript100Bit;
+          font.m_font.setScript(MWAWFont::Script::super100());
           if (dt.value(0) != 3)
             f << "superscript[pos]=" << dt.value(0) << ",";
         } else if (dt.value(0))
@@ -889,7 +889,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
         break;
       case 52:
         if (dt.value(0) > 0) {
-          fFlags |= MWAWFont::subscript100Bit;
+          font.m_font.setScript(MWAWFont::Script::sub100());
           if (dt.value(0) != 3)
             f << "subscript[pos]=" << dt.value(0) << ",";
         } else if (dt.value(0))
@@ -1020,7 +1020,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       return true;
     }
     size_t fD = d;
-    int color[3];
+    unsigned char color[3];
     f.str("");
     int nTabs = 0;
     for (int j = 0; j < 58; j++, d++) {
@@ -1093,13 +1093,11 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       case 35:
       case 36:
       case 37:
-        color[0]=color[1]=color[2]=0xFFFF;
-        color[j-35]=(int) dt.value(0);
-        while (++j < 38)
-          color[j-35] = (int) dataList[d++].value(0);
-        j--;
-        para.m_backColor[0] =
-          (uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8)));
+        color[0]=color[1]=color[2]=0xFF;
+        color[j-35]=(unsigned char) (dt.value(0)>>8);
+        while (j < 37)
+          color[++j-35] = (unsigned char) (dataList[d++].value(0)>>8);
+        para.m_backColor[0] = MWAWColor(color[0],color[1],color[2]);
         break;
       case 40:
         para.m_colWidth = (int) dt.value(0);
@@ -1107,13 +1105,11 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       case 47:
       case 48:
       case 49:
-        color[0]=color[1]=color[2]=0xFFFF;
-        color[j-47]=(int) dt.value(0);
-        while (++j < 50)
-          color[j-47] = (int) dataList[d++].value(0);
-        j--;
-        para.m_backColor[1] =
-          (uint32_t(((color[0]>>8)<<16)+((color[1]>>8)<<8)+(color[2]>>8)));
+        color[0]=color[1]=color[2]=0xFF;
+        color[j-47]=(unsigned char) (dt.value(0)>>8);
+        while (j < 49)
+          color[++j-47] = (unsigned char) (dataList[d++].value(0)>>8);
+        para.m_backColor[1] = MWAWColor(color[0],color[1],color[2]);
         break;
       case 56: { // border type?
         long val = dt.value(0);

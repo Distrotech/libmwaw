@@ -1167,10 +1167,10 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   }
   int heightDecal = (int) input.readLong(2);
   if (heightDecal > 0) {
-    flags |= MWAWFont::superscript100Bit;
+    font.m_font.setScript(MWAWFont::Script::super100());
     f << "supY=" << heightDecal <<",";
   } else if (heightDecal < 0) {
-    flags |= MWAWFont::subscript100Bit;
+    font.m_font.setScript(MWAWFont::Script::sub100());
     f << "supY=" << -heightDecal <<",";
   }
 
@@ -1662,7 +1662,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
   libmwaw::DebugStream f;
   int vers = version();
   MWAWFont actFont(3, 0, 0); // by default geneva
-  uint32_t extraFontFlags = 0; // for v2
+  int extraDecal = 0; // for v2
   bool rulerSet = false;
   int numLineTabs = 0, actTabs = 0, numFootnote = 0;
 
@@ -1810,14 +1810,11 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     MWAWInputStream dataInput(dataStream, false);
     switch(zone.m_type) {
     case 0x9: { // only in v2
-      uint32_t fFlags = actFont.flags() & ~extraFontFlags;
-      if (zone.m_value > 0) extraFontFlags = MWAWFont::superscript100Bit;
-      else if (zone.m_value < 0) extraFontFlags = MWAWFont::subscript100Bit;
-      else extraFontFlags = 0;
+      extraDecal = zone.m_value;
       MWAWFont font(actFont);
-      font.setFlags(fFlags | extraFontFlags);
-      setProperty(font, actFont);
-      actFont = font;
+      if (extraDecal > 0) font.setScript(MWAWFont::Script::super100());
+      else if (extraDecal < 0) font.setScript(MWAWFont::Script::sub100());
+      setProperty(font, font);
       break;
     }
     case 0xa: {  // only in writenow 4.0 : related to a table ?
@@ -1918,11 +1915,11 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       if (!dataStream) break;
       WNTextInternal::Font font;
       if (readFont(dataInput, false, font)) {
-        if (extraFontFlags)
-          font.m_font.setFlags(font.m_font.flags()|extraFontFlags);
         setProperty(font.m_font, actFont);
-        actFont = font.m_font;
         f << font.m_font.getDebugString(m_convertissor) << font;
+        if (extraDecal > 0) font.m_font.setScript(MWAWFont::Script::super100());
+        else if (extraDecal < 0) font.m_font.setScript(MWAWFont::Script::sub100());
+        setProperty(font.m_font, font.m_font);
       } else
         f << "#";
       break;
