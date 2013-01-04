@@ -63,6 +63,7 @@ SLOFILES= \
 	$(SLO)$/MWAWDocument.obj		\
 	$(SLO)$/MWAWFont.obj			\
 	$(SLO)$/MWAWFontConverter.obj		\
+	$(SLO)$/MWAWFontSJISConverter.obj	\
 	$(SLO)$/MWAWHeader.obj			\
 	$(SLO)$/MWAWInputStream.obj		\
 	$(SLO)$/MWAWList.obj			\

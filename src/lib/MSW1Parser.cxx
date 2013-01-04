@@ -642,7 +642,7 @@ bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
   }
   if (sz >= 4) {
     val = (int) input->readULong(1);
-    if (val & 0x80) font.m_font.setUnderlineStyle(MWAWBorder::Single);
+    if (val & 0x80) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
     switch((val&0xc)>>2) {
     case 0:
       break;
@@ -665,8 +665,8 @@ bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
   }
   if (sz >= 6) { // vdepl
     val = (int) input->readLong(1);
-    if (val > 0) font.m_font.setScript(MWAWFont::Script::super100());
-    else if (val < 0) font.m_font.setScript(MWAWFont::Script::sub100());
+    if (val > 0) font.m_font.set(MWAWFont::Script::super100());
+    else if (val < 0) font.m_font.set(MWAWFont::Script::sub100());
   }
   if (sz >= 7) {
     f << "###";

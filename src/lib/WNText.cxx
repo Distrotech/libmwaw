@@ -1123,11 +1123,11 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAWFont::boldBit;
   if (flag&0x2) flags |= MWAWFont::italicBit;
-  if (flag&0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
+  if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
   if (flag&0x8) flags |= MWAWFont::embossBit;
   if (flag&0x10) flags |= MWAWFont::shadowBit;
-  if (flag&0x20) f << "condensed,";
-  if (flag&0x40) f << "extended,";
+  if (flag&0x20) font.m_font.setDeltaLetterSpacing(-1);
+  if (flag&0x40) font.m_font.setDeltaLetterSpacing(1);
   if (flag&0x80) f << "#flag0[0x80],";
 
   if (vers <= 2) {
@@ -1140,21 +1140,21 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   if (flag&0x7f) f << "#flag1=" << std::hex << (flag&0x7f) << std::dec << ",";
 
   flag = (int) input.readULong(1);
-  if (flag&0x2) font.m_font.setUnderlineStyle(MWAWBorder::Double);
+  if (flag&0x2) font.m_font.setUnderlineStyle(MWAWFont::Line::Double);
   if (flag&0x4) {
-    font.m_font.setUnderlineStyle(MWAWBorder::Single);
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
     f << "underline[thick],";
   }
   if (flag&0x8) {
-    font.m_font.setUnderlineStyle(MWAWBorder::Single);
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
     f << "underline[gray],";
   }
   if (flag&0x10) {
-    font.m_font.setUnderlineStyle(MWAWBorder::Single);
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
     f << "underline[charcoal],";
   }
-  if (flag&0x20) font.m_font.setUnderlineStyle(MWAWBorder::Dash);
-  if (flag&0x40) font.m_font.setUnderlineStyle(MWAWBorder::Dot);
+  if (flag&0x20) font.m_font.setUnderlineStyle(MWAWFont::Line::Dash);
+  if (flag&0x40) font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
   if (flag&0x81) f << "#flag2=" << std::hex << (flag&0x81) << std::dec << ",";
 
   int color = (int) input.readULong(1); // fixme find color map
@@ -1166,13 +1166,8 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
       f << "#colorId=" << color << ",";
   }
   int heightDecal = (int) input.readLong(2);
-  if (heightDecal > 0) {
-    font.m_font.setScript(MWAWFont::Script::super100());
-    f << "supY=" << heightDecal <<",";
-  } else if (heightDecal < 0) {
-    font.m_font.setScript(MWAWFont::Script::sub100());
-    f << "supY=" << -heightDecal <<",";
-  }
+  if (heightDecal)
+    font.m_font.set(MWAWFont::Script(heightDecal, WPX_POINT));
 
   font.m_font.setFlags(flags);
   font.m_extra = f.str();
@@ -1812,8 +1807,8 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     case 0x9: { // only in v2
       extraDecal = zone.m_value;
       MWAWFont font(actFont);
-      if (extraDecal > 0) font.setScript(MWAWFont::Script::super100());
-      else if (extraDecal < 0) font.setScript(MWAWFont::Script::sub100());
+      if (extraDecal > 0) font.set(MWAWFont::Script::super100());
+      else if (extraDecal < 0) font.set(MWAWFont::Script::sub100());
       setProperty(font, font);
       break;
     }
@@ -1917,8 +1912,8 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       if (readFont(dataInput, false, font)) {
         setProperty(font.m_font, actFont);
         f << font.m_font.getDebugString(m_convertissor) << font;
-        if (extraDecal > 0) font.m_font.setScript(MWAWFont::Script::super100());
-        else if (extraDecal < 0) font.m_font.setScript(MWAWFont::Script::sub100());
+        if (extraDecal > 0) font.m_font.set(MWAWFont::Script::super100());
+        else if (extraDecal < 0) font.m_font.set(MWAWFont::Script::sub100());
         setProperty(font.m_font, font.m_font);
       } else
         f << "#";

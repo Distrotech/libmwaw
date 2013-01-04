@@ -598,15 +598,15 @@ bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)
   int flag =(int) input->readULong(2);
   uint32_t flags=0;
   if (flag&1)
-    font.m_font.setUnderlineStyle(MWAWBorder::Double);
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Double);
   if (flag&2)
-    font.m_font.setUnderlineStyle(MWAWBorder::Dot);
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
   if (flag&4) {
-    font.m_font.setUnderlineStyle(MWAWBorder::Dot);
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
     f << "underline[w=2],";
   }
   if (flag&8)
-    font.m_font.setUnderlineStyle(MWAWBorder::Dash);
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Dash);
   if (flag&0x10)
     flags |= MWAWFont::strikeOutBit;
   if (flag&0x20) {
@@ -621,22 +621,22 @@ bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)
   if (flag&0x4) flags |= MWAWFont::outlineBit;
   if (flag&0x8) flags |= MWAWFont::shadowBit;
   if (flag&0x10) flags |= MWAWFont::reverseVideoBit; // checkme: reverse ?
-  if (flag&0x20) font.m_font.setScript(MWAWFont::Script::super100());
-  if (flag&0x40) font.m_font.setScript(MWAWFont::Script::sub100());
-  if (flag&0x80) font.m_font.setScript(MWAWFont::Script::super());
+  if (flag&0x20) font.m_font.set(MWAWFont::Script::super100());
+  if (flag&0x40) font.m_font.set(MWAWFont::Script::sub100());
+  if (flag&0x80) font.m_font.set(MWAWFont::Script::super());
   if (flag&0x100) {
     flags |= MWAWFont::overlineBit;
     f << "overline[dotted],";
   }
   if (flag&0x200) f << "border[rectangle],";
   if (flag&0x400) f << "border[rounded],";
-  if (flag&0x800) font.m_font.setUnderlineStyle(MWAWBorder::Single);
+  if (flag&0x800) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
   if (flag&0x1000) {
-    font.m_font.setUnderlineStyle(MWAWBorder::Single);
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
     f << "underline[w=2]";
   }
   if (flag&0x2000) {
-    font.m_font.setUnderlineStyle(MWAWBorder::Single);
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
     f << "underline[w=3]";
   }
   if (flag&0xC000)

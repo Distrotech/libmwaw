@@ -81,8 +81,8 @@ void Font::insert(Font const &font)
 {
   uint32_t flags = getFlags();
   if (flags) m_font->setFlags(flags);
-  MWAWBorder::Style style = getUnderlineStyle();
-  if (style!=MWAWBorder::None) m_font->setUnderlineStyle(style);
+  MWAWFont::Line::Style style = getUnderlineStyle();
+  if (style!=MWAWFont::Line::None) m_font->setUnderlineStyle(style);
   m_font.insert(font.m_font);
   m_size.insert(font.m_size);
   m_value.insert(font.m_value);
@@ -111,18 +111,18 @@ uint32_t Font::getFlags() const
   return res;
 }
 
-MWAWBorder::Style Font::getUnderlineStyle() const
+MWAWFont::Line::Style Font::getUnderlineStyle() const
 {
-  MWAWBorder::Style res=MWAWBorder::None;
+  MWAWFont::Line::Style res=MWAWFont::Line::None;
   if (m_font.isSet()) res = m_font->getUnderlineStyle();
   if (!m_flags[NumFlags-1].isSet()) return res;
 
   int action = m_flags[NumFlags-1].get();
   if (action&0xFF7E) return res;
 
-  if (action & 1) return MWAWBorder::Single;
+  if (action & 1) return MWAWFont::Line::Single;
 
-  return MWAWBorder::None;
+  return MWAWFont::Line::None;
 }
 
 // ------ section -------------

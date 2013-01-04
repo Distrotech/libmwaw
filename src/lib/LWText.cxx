@@ -120,9 +120,9 @@ struct Font {
   //! merge extra data to get final font
   void merge(Font const &fExtra) {
     m_font.setFlags(m_font.flags()|fExtra.m_font.flags());
-    if (fExtra.m_font.getUnderlineStyle() != MWAWBorder::None)
+    if (fExtra.m_font.getUnderlineStyle() != MWAWFont::Line::None)
       m_font.setUnderlineStyle(fExtra.m_font.getUnderlineStyle());
-    m_font.setScript(fExtra.m_font.script());
+    m_font.set(fExtra.m_font.script());
     MWAWColor backColor;
     fExtra.m_font.getBackgroundColor(backColor);
     m_font.setBackgroundColor(backColor);
@@ -448,7 +448,7 @@ bool LWText::sendMainText()
       break;
 
     default: {
-      int unicode = m_convertissor->unicode (actFont.id(), (unsigned char) c);
+      int unicode = m_convertissor->unicode (actFont.id(), (unsigned char) c, m_input);
       if (unicode == -1) {
         if (c >= 0 && c < 0x20) {
           MWAW_DEBUG_MSG(("LWText::sendMainText: Find odd char %x\n", int(c)));
@@ -510,12 +510,12 @@ bool LWText::readFonts(MWAWEntry const &entry)
     long cPos = input->readLong(4);
     font.m_height = (int) input->readLong(2);
     int sz = (int) input->readLong(2);
-    font.m_font.setId((int) input->readLong(2));
+    font.m_font.setId((int) input->readULong(2));
     uint32_t flags=0;
     int flag=(int) input->readULong(1);
     if (flag&0x1) flags |= MWAWFont::boldBit;
     if (flag&0x2) flags |= MWAWFont::italicBit;
-    if (flag&0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
+    if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
     if (flag&0x20) f << "expand,";
@@ -591,20 +591,20 @@ bool LWText::readFont2(MWAWEntry const &entry)
     case 0:
       break;
     case 1:
-      font.m_font.setUnderlineStyle(MWAWBorder::Single);
+      font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
       break;
     case 2:
-      font.m_font.setUnderlineStyle(MWAWBorder::Double);
+      font.m_font.setUnderlineStyle(MWAWFont::Line::Double);
       break;
     case 3:
-      font.m_font.setUnderlineStyle(MWAWBorder::Single);
+      font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
       f << "underline[w=2],";
       break;
     case 4:
-      font.m_font.setUnderlineStyle(MWAWBorder::Dot);
+      font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
       break;
     case 5:
-      font.m_font.setUnderlineStyle(MWAWBorder::Dot);
+      font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
       f << "underline[dot2],";
       break;
     default:
@@ -695,16 +695,16 @@ bool LWText::readFont2(MWAWEntry const &entry)
     case 0:
       break;
     case 1:
-      font.m_font.setScript(MWAWFont::Script::super100());
+      font.m_font.set(MWAWFont::Script::super100());
       break;
     case 2:
-      font.m_font.setScript(MWAWFont::Script::sub100());
+      font.m_font.set(MWAWFont::Script::sub100());
       break;
     case 5:
-      font.m_font.setScript(MWAWFont::Script::super());
+      font.m_font.set(MWAWFont::Script::super());
       break;
     case 6:
-      font.m_font.setScript(MWAWFont::Script::sub());
+      font.m_font.set(MWAWFont::Script::sub());
       break;
     default:
       f << "#pos=" << (flag&7) << ",";
@@ -992,7 +992,7 @@ bool LWText::readDocumentHF(MWAWEntry const &entry)
     flag=(int) input->readULong(1);
     if (flag&0x1) flags |= MWAWFont::boldBit;
     if (flag&0x2) flags |= MWAWFont::italicBit;
-    if (flag&0x4) zone.m_font.setUnderlineStyle(MWAWBorder::Single);
+    if (flag&0x4) zone.m_font.setUnderlineStyle(MWAWFont::Line::Single);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
     if (flag&0x20) f2 << "expand,";

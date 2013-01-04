@@ -841,7 +841,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
             fFlags |= MWAWFont::italicBit;
             break;
           case 41:
-            font.m_font.setUnderlineStyle(MWAWBorder::Single);
+            font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
             break;
           case 42:
             fFlags |= MWAWFont::outlineBit;
@@ -856,14 +856,14 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
             f << "expand,";
             break;
           case 46:
-            font.m_font.setUnderlineStyle(MWAWBorder::Double);
+            font.m_font.setUnderlineStyle(MWAWFont::Line::Double);
             break;
           case 47:
-            font.m_font.setUnderlineStyle(MWAWBorder::Single);
+            font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
             f << "underline[word],";
             break;
           case 48:
-            font.m_font.setUnderlineStyle(MWAWBorder::Dot);
+            font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
             break;
           case 50:
             fFlags |= MWAWFont::strikeOutBit;
@@ -881,7 +881,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
         break;
       case 51:
         if (dt.value(0) > 0) {
-          font.m_font.setScript(MWAWFont::Script::super100());
+          font.m_font.set(MWAWFont::Script::super100());
           if (dt.value(0) != 3)
             f << "superscript[pos]=" << dt.value(0) << ",";
         } else if (dt.value(0))
@@ -889,7 +889,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
         break;
       case 52:
         if (dt.value(0) > 0) {
-          font.m_font.setScript(MWAWFont::Script::sub100());
+          font.m_font.set(MWAWFont::Script::sub100());
           if (dt.value(0) != 3)
             f << "subscript[pos]=" << dt.value(0) << ",";
         } else if (dt.value(0))

@@ -802,7 +802,7 @@ bool NSText::readFonts(MWAWEntry const &entry)
 
     if (flag&0x1) flags |= MWAWFont::boldBit;
     if (flag&0x2) flags |= MWAWFont::italicBit;
-    if (flag&0x4) font.m_font.setUnderlineStyle(MWAWBorder::Single);
+    if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
     if (flag&0x20) f << "condensed,";
@@ -811,16 +811,16 @@ bool NSText::readFonts(MWAWEntry const &entry)
       f << "#flags0=" << std::hex << (flag &0xFF80) << std::dec << ",";
     flag = (int) input->readULong(2);
     if (flag & 1) {
-      font.m_font.setUnderlineStyle(MWAWBorder::Single);
+      font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
       f << "underline[lower],";
     }
-    if (flag & 2)  font.m_font.setUnderlineStyle(MWAWBorder::Dot);
+    if (flag & 2)  font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
     if (flag & 4) {
-      font.m_font.setUnderlineStyle(MWAWBorder::Single);
+      font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
       f << "underline[word],";
     }
-    if (flag & 0x8) font.m_font.setScript(MWAWFont::Script::super());
-    if (flag & 0x10) font.m_font.setScript(MWAWFont::Script::sub());
+    if (flag & 0x8) font.m_font.set(MWAWFont::Script::super());
+    if (flag & 0x10) font.m_font.set(MWAWFont::Script::sub());
     if (flag & 0x20) flags |= MWAWFont::strikeOutBit;
     if (flag & 0x40) flags |= MWAWFont::overlineBit;
     if (flag & 0x80) flags |= MWAWFont::smallCapsBit;
@@ -829,11 +829,11 @@ bool NSText::readFonts(MWAWEntry const &entry)
       f << "boxed,";
     if (flag & 0x400) flags |= MWAWFont::hiddenBit;
     if (flag & 0x1000) {
-      font.m_font.setScript(MWAWFont::Script::super());
+      font.m_font.set(MWAWFont::Script::super());
       f << "superscript2,";
     }
     if (flag & 0x2000) {
-      font.m_font.setScript(MWAWFont::Script::sub());
+      font.m_font.set(MWAWFont::Script::sub());
       f << "subscript2,";
     }
     if (flag & 0x4000) // fixme

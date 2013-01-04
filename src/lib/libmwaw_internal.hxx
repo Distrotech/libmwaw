@@ -211,8 +211,6 @@ struct MWAWBorder {
   MWAWBorder() : m_style(Single), m_width(1), m_color(MWAWColor::black()) { }
   //! return the properties
   std::string getPropertyValue() const;
-  //! return the properties corresponding to a style
-  static std::string getPropertyValue(MWAWBorder::Style const &style);
 
   //! operator==
   bool operator==(MWAWBorder const &orig) const {

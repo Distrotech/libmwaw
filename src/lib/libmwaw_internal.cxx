@@ -175,32 +175,30 @@ int MWAWBorder::compare(MWAWBorder const &orig) const
   return 0;
 }
 
-std::string MWAWBorder::getPropertyValue(MWAWBorder::Style const &style)
+std::string MWAWBorder::getPropertyValue() const
 {
-  switch (style) {
+  if (m_style == None) return "";
+  std::stringstream stream;
+  stream << m_width*0.03 << "cm ";
+  switch (m_style) {
   case Dot:
   case LargeDot:
-    return "dotted";
+    stream << "dotted";
+    break;
   case Dash:
-    return "dashed";
+    stream << "dashed";
+    break;
   case Single:
-    return "solid";
+    stream << "solid";
+    break;
   case Double:
-    return "double";
+    stream << "double";
     break;
   case None:
   default:
     break;
   }
-  return "";
-}
-
-std::string MWAWBorder::getPropertyValue() const
-{
-  if (m_style == None) return "";
-  std::stringstream stream;
-  stream << m_width*0.03 << "cm " << getPropertyValue(m_style)
-         << " " << m_color;
+  stream << " " << m_color;
   return stream.str();
 }
 

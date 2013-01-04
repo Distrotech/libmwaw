@@ -40,10 +40,29 @@
 #include "MWAWPosition.hxx"
 
 #include "MWAWFont.hxx"
+std::string MWAWFont::Line::getPropertyValue(MWAWFont::Line::Style const &style)
+{
+  switch (style) {
+  case Dot:
+  case LargeDot:
+    return "dotted";
+  case Dash:
+    return "dash";
+  case Single:
+    return "solid";
+  case Double:
+    return "double";
+    break;
+  case None:
+  default:
+    break;
+  }
+  return "";
+}
 
 std::string MWAWFont::Script::str(int fSize) const
 {
-  if (!isSet())
+  if (!isSet() || (m_delta==0 && m_scale==100))
     return "";
   std::stringstream o;
   if (m_deltaUnit == WPX_GENERIC) {
@@ -65,15 +84,10 @@ std::string MWAWFont::Script::str(int fSize) const
       fSize=12;
     }
     delta=int(100.f*float(delta)/float(fSize));
+    if (delta > 100) delta = 100;
+    else if (delta < -100) delta = -100;
   }
-  // fixme: o << delta << "% " << m_scale << "%";
-  if (delta==33) o << "super";
-  else if (delta==-33) o << "sub";
-  else o << delta;
-  o << " ";
-  if (m_scale==100) o << "100";
-  else if (m_scale==58) o << "58.0%";
-  else o << m_scale << "%";
+  o << delta << "% " << m_scale << "%";
   return o.str();
 }
 
@@ -113,7 +127,7 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     if (flag&blinkBit) o << "blink:";
     o << ",";
   }
-  if (m_underline.isSet()) o << "underline=" << getUnderlineStyle() << ":";
+  if (m_underline.isSet()) o << "underline=" << Line::getPropertyValue(getUnderlineStyle()) << ":";
   if (hasColor())
     o << "col=" << m_color.get()<< "),";
   if (m_backgroundColor.isSet() && !m_backgroundColor.get().isWhite())
@@ -146,7 +160,7 @@ void MWAWFont::sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverte
   }
   actualFont.setDeltaLetterSpacing(deltaLetterSpacing());
   listener->setFontDLSpacing(deltaLetterSpacing());
-  actualFont.setScript(script());
+  actualFont.set(script());
   listener->setFontScript(script());
 
   actualFont.setFlags(flags());

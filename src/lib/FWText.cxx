@@ -373,16 +373,16 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       case 0x8a:
         if (font.script()==MWAWFont::Script::super100())
-          font.setScript(MWAWFont::Script());
+          font.set(MWAWFont::Script());
         else
-          font.setScript(MWAWFont::Script::super100());
+          font.set(MWAWFont::Script::super100());
         fontSet=false;
         break;
       case 0x8b:
         if (font.script()==MWAWFont::Script::sub100())
-          font.setScript(MWAWFont::Script());
+          font.set(MWAWFont::Script());
         else
-          font.setScript(MWAWFont::Script::sub100());
+          font.set(MWAWFont::Script::sub100());
         fontSet=false;
         break;
       case 0x8c:
@@ -399,10 +399,10 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0x8e: // word underline
       case 0x8f: // double
       case 0x92: { // dotted underline
-        MWAWBorder::Style style= (val==0x8f)? MWAWBorder::Double :
-                                 (val==0x92)? MWAWBorder::Dot : MWAWBorder::Single;
-        if (font.getUnderlineStyle()!=MWAWBorder::None)
-          font.setUnderlineStyle(MWAWBorder::None);
+        MWAWFont::Line::Style style= (val==0x8f)? MWAWFont::Line::Double :
+                                     (val==0x92)? MWAWFont::Line::Dot : MWAWFont::Line::Single;
+        if (font.getUnderlineStyle()!=MWAWFont::Line::None)
+          font.setUnderlineStyle(MWAWFont::Line::None);
         else
           font.setUnderlineStyle(style);
         fontSet=false;

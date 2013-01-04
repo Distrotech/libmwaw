@@ -36,6 +36,8 @@
 #include "libmwaw_internal.hxx"
 
 #include "MWAWFontConverter.hxx"
+#include "MWAWFontSJISConverter.hxx"
+
 
 //! Internal namespace used to store the data used by MWAWFontConverterInternal
 namespace MWAWFontConverterInternal
@@ -48,8 +50,13 @@ struct ConversionData {
   //! constructor
   ConversionData(std::map<unsigned char, unsigned long> &map,
                  char const *odtName="", int delta=0)
-    : m_conversion(map), m_name(odtName), m_deltaSize(delta) {}
+    : m_encoding(MWAWFontConverter::E_DEFAULT), m_conversion(map), m_name(odtName), m_deltaSize(delta) {}
+  //! constructor for different encoding
+  ConversionData(std::map<unsigned char, unsigned long> &map, MWAWFontConverter::Encoding encoding, char const *odtName="", int delta=0)
+    : m_encoding(encoding), m_conversion(map), m_name(odtName), m_deltaSize(delta) {}
 
+  //! the character encoding
+  MWAWFontConverter::Encoding m_encoding;
   //! the conversion map character -> unicode
   std::map<unsigned char, unsigned long> &m_conversion;
   //! the odt font name (if empty used the name)
@@ -204,37 +211,43 @@ static int const s_dingbatsUnicode[] = {
 //! Internal and Low level: vector (char, unicode) for wingdings font
 static int const s_wingdingsUnicode[] = {
   0x20,0x0020,  0x21,0x270f,  0x22,0x2702,  0x23,0x2701,  0x24,0x1F453,
-  0x25,0x1F514, 0x26,0x1F514, 0x27,0x25AF/*candle*/, 0x28,0x260E, 0x29,0x2706,
-  0x2A,0x2709,  0x2B,0x2709,  0x2C,0x1f4ea, 0x2D,0x1f4eb, 0x2E,0x1f4ec,
+  0x25,0x1F514, 0x26,0x1F514, 0x27,0x2710/*candle*/, 0x28,0x260E, 0x29,0x2706,
+  0x2A,0x2709,  0x2B,0x260E,  0x2C,0x1f4ea, 0x2D,0x1f4eb, 0x2E,0x1f4ec,
   0x2F,0x1f4ed, 0x30,0x1f4c1, 0x31,0x1f4c2, 0x32,0x1f4c4, 0x33,0x1f4c4,
-  0x34,0x1f4c4, 0x35,0x1f4c4, 0x36,0x231B,  0x37,0x2328,  0x38,0x234d/*mouse*/,
+  0x34,0x1f4c4, 0x35,0x25AF,  0x36,0x231B,  0x37,0x2328,  0x38,0x1F42F/*mouse*/,
   0x39,0x2328/*trackpad*/, 0x3A,0x1F4BB, 0x3B,0x2328/*harddisk*/, 0x3C,0x1F4BE,  0x3D,0x1F4BE,
-  0x3E,0x2707,  0x3F,0x270D,  0x40,0x270D,  0x41,0x270c,  0x42,0x270c,
-  0x43,0x270c,  0x44,0x270c,  0x45,0x261C,  0x46,0x261E,  0x47,0x261D,
-  0x48,0x261F,  0x49,0x270B,  0x4A,0x263A,  0x4B,0x263A,  0x4C,0x2639,
-  0x4D,0x1F4A3, 0x4E,0x2620,  0x4F,0x2690,  0x50,0x2690,  0x51,0x2708,
+  0x3E,0x2707,  0x3F,0x270D,  0x40,0x270D,  0x41,0x270c,  0x42,0x1F44C,
+  0x43,0x1F44D, 0x44,0x1F44E, 0x45,0x261C,  0x46,0x261E,  0x47,0x261D,
+  0x48,0x261F,  0x49,0x270B,  0x4A,0x263A,  0x4B,0x1F610, 0x4C,0x2639,
+  0x4D,0x1F4A3, 0x4E,0x2620,  0x4F,0x2690,  0x50,0x1F6A9, 0x51,0x2708,
   0x52,0x263C,  0x53,0x1F4A7, 0x54,0x2744,  0x55,0x271E,  0x56,0x271E,
-  0x57,0x271E,  0x58,0x2720,  0x59,0x2721,  0x5A,0x262a,  0x5B,0x262f,
+  0x57,0x271D,  0x58,0x2720,  0x59,0x2721,  0x5A,0x262a,  0x5B,0x262f,
   0x5C,0x0950,  0x5D,0x2638,  0x5E,0x2648,  0x5F,0x2649,  0x60,0x264a,
   0x61,0x264b,  0x62,0x264c,  0x63,0x264d,  0x64,0x264e,  0x65,0x264f,
   0x66,0x2650,  0x67,0x2651,  0x68,0x2652,  0x69,0x2653,  0x6A,0x0026,
   0x6B,0x0026,  0x6C,0x25CF,  0x6D,0x274D,  0x6E,0x25A0,  0x6F,0x27A1,
-  0x70,0x27A1,  0x71,0x2751,  0x72,0x2752,  0x73,0x2B27,  0x74,0x29EB,
+  0x70,0x2751,  0x71,0x2751,  0x72,0x2752,  0x73,0x2B27,  0x74,0x29EB,
   0x75,0x25C6,  0x76,0x2756,  0x77,0x2B25,  0x78,0x2327,  0x79,0x2353,
   0x7A,0x2318,  0x7B,0x2740,  0x7C,0x273F,  0x7D,0x275D,  0x7E,0x275E,
-  0x80,0x24EA,  0x81,0x2460,  0x82,0x2461,  0x83,0x2462,  0x84,0x2463,
-  0x85,0x2464,  0x86,0x2465,  0x87,0x2466,  0x88,0x2467,  0x89,0x2468,
-  0x8A,0x2469,  0x8B,0x24FF,  0x8C,0x2776,  0x8D,0x2777,  0x8E,0x2778,
-  0x8F,0x2779,  0x90,0x277A,  0x91,0x277B,  0x92,0x277C,  0x93,0x277D,
-  0x94,0x277E,  0x95,0x277F,  0x9E,0x00B7,  0x9F,0x277F,  0xA0,0x25AA,
-  0xA1,0x25CB,  0xA1,0x25CB,  0xA2,0x2B55,  0xA3,0x2B55,  0xA4,0x25C9,
-  0xA5,0x25CE,  0xA6,0x25CB,
+  0x7F,0x25AF,  0x80,0x24EA,  0x81,0x2460,  0x82,0x2461,  0x83,0x2462,
+  0x84,0x2463,  0x85,0x2464,  0x86,0x2465,  0x87,0x2466,  0x88,0x2467,
+  0x89,0x2468,  0x8A,0x2469,  0x8B,0x24FF,  0x8C,0x2776,  0x8D,0x2777,
+  0x8E,0x2778,  0x8F,0x2779,  0x90,0x277A,  0x91,0x277B,  0x92,0x277C,
+  0x93,0x277D,  0x94,0x277E,  0x95,0x277F,
+  0x96,0x269B,  0x97,0x269B,  0x98,0x269B,  0x99,0x269B,
+  0x9a,0x269B,  0x9b,0x269B,  0x9c,0x269B,  0x9d,0x269B,  // bud and vine leaf
+  0x9E,0x00B7,  0x9F,0x277F,  0xA0,0x25AA,  0xA1,0x25CB,  0xA2,0x2B55,
+  0xA3,0x2B55,  0xA4,0x25C9,  0xA5,0x25CE,  0xA6,0x25CB,
   0xA7,0x25AA,  0xA8,0x25FB,  0xA9,0x2726,  0xAA,0x2726,  0xAB,0x2605,
   0xAC,0x2736,  0xAD,0x2734,  0xAE,0x2739,  0xAF,0x2735,  0xB0,0x2316,
   0xB1,0x2316,  0xB2,0x27E1,  0xB3,0x2311,  0xB4,0x27E1,  0xB5,0x25CB,/*clock*/
-  0xB6,0x2730,  0xB7,0x2777,  0xB8,0x2778,  0xB9,0x2779,  0xBA,0x277A,
-  0xBB,0x25CB,  0xBC,0x25CB,  0xBD,0x25CB,  0xBE,0x25CB,  0xBF,0x25CB,
-  0xC0,0x25CB,  0xC1,0x25CB,  0xC2,0x25CB,
+  0xB6,0x2730,  0xB7,0x1F550, 0xB8,0x1F551, 0xB9,0x1F552, 0xBA,0x1F553,
+  0xBB,0x1F554, 0xBC,0x1F555, 0xBD,0x1F556, 0xBE,0x1F557, 0xBF,0x1F558,
+  0xC0,0x1F559, 0xC1,0x1F55A, 0xC2,0x1F55B, 0xC3,0x21B5,  0xC4,0x21B3,
+  0xC5,0x21B0,  0xC6,0x21B1,  0xC7,0x21BB,  0xC8,0x21BA,  0xC9,0x21BA,
+  0xCA,0x21BB,  0xCB,0x2722,  0xCC,0x2722,
+  0xCD,0x2743,  0xCE,0x2743,  0xCF,0x2743,  0xD0,0x2743,
+  0xD1,0x2743,  0xD2,0x2743,  0xD3,0x2743,  0xD4,0x2743,  /* normally leaf...*/
   0xD5,0x232B,  0xD6,0x2326,  0xD7,0x21E6,  0xD8,0x27A2,
   0xD9,0x21E7,  0xDA,0x21E9,  0xDB,0x21E6,  0xDC,0x27B2,  0xDD,0x21E7,
   0xDE,0x21E9,  0xDF,0x21E6,  0xE0,0x21E8,  0xE1,0x21E7,  0xE2,0x21E9,
@@ -288,18 +301,43 @@ static int const s_unknown200IncompleteUnicode[] = {
   0x76,0x2192, 0x77,0x2192, 0x61,0xFE3F
 };
 
+//! Internal and Low level: vector (char, unicode) for SJIS font (see MWAWFontSJISConverter )
+static int const s_SJISSimplifiedUnicode[]= {
+  0x20,0x0020, 0x21,0x0021, 0x22,0x0022, 0x23,0x0023, 0x24,0x0024, 0x25,0x0025, 0x26,0x0026, 0x27,0x0027,
+  0x28,0x0028, 0x29,0x0029, 0x2A,0x002A, 0x2B,0x002B, 0x2C,0x002C, 0x2D,0x002D, 0x2E,0x002E, 0x2F,0x002F,
+  0x30,0x0030, 0x31,0x0031, 0x32,0x0032, 0x33,0x0033, 0x34,0x0034, 0x35,0x0035, 0x36,0x0036, 0x37,0x0037,
+  0x38,0x0038, 0x39,0x0039, 0x3A,0x003A, 0x3B,0x003B, 0x3C,0x003C, 0x3D,0x003D, 0x3E,0x003E, 0x3F,0x003F,
+  0x40,0x0040, 0x41,0x0041, 0x42,0x0042, 0x43,0x0043, 0x44,0x0044, 0x45,0x0045, 0x46,0x0046, 0x47,0x0047,
+  0x48,0x0048, 0x49,0x0049, 0x4A,0x004A, 0x4B,0x004B, 0x4C,0x004C, 0x4D,0x004D, 0x4E,0x004E, 0x4F,0x004F,
+  0x50,0x0050, 0x51,0x0051, 0x52,0x0052, 0x53,0x0053, 0x54,0x0054, 0x55,0x0055, 0x56,0x0056, 0x57,0x0057,
+  0x58,0x0058, 0x59,0x0059, 0x5A,0x005A, 0x5B,0x005B, 0x5C,0x00A5, 0x5D,0x005D, 0x5E,0x005E, 0x5F,0x005F,
+  0x60,0x0060, 0x61,0x0061, 0x62,0x0062, 0x63,0x0063, 0x64,0x0064, 0x65,0x0065, 0x66,0x0066, 0x67,0x0067,
+  0x68,0x0068, 0x69,0x0069, 0x6A,0x006A, 0x6B,0x006B, 0x6C,0x006C, 0x6D,0x006D, 0x6E,0x006E, 0x6F,0x006F,
+  0x70,0x0070, 0x71,0x0071, 0x72,0x0072, 0x73,0x0073, 0x74,0x0074, 0x75,0x0075, 0x76,0x0076, 0x77,0x0077,
+  0x78,0x0078, 0x79,0x0079, 0x7A,0x007A, 0x7B,0x007B, 0x7C,0x007C, 0x7D,0x007D, 0x7E,0x203E, 0x7F,0x007F,
+  0xA1,0xFF61, 0xA2,0xFF62, 0xA3,0xFF63, 0xA4,0xFF64, 0xA5,0xFF65, 0xA6,0xFF66, 0xA7,0xFF67, 0xA8,0xFF68,
+  0xA9,0xFF69, 0xAA,0xFF6A, 0xAB,0xFF6B, 0xAC,0xFF6C, 0xAD,0xFF6D, 0xAE,0xFF6E, 0xAF,0xFF6F, 0xB0,0xFF70,
+  0xB1,0xFF71, 0xB2,0xFF72, 0xB3,0xFF73, 0xB4,0xFF74, 0xB5,0xFF75, 0xB6,0xFF76, 0xB7,0xFF77, 0xB8,0xFF78,
+  0xB9,0xFF79, 0xBA,0xFF7A, 0xBB,0xFF7B, 0xBC,0xFF7C, 0xBD,0xFF7D, 0xBE,0xFF7E, 0xBF,0xFF7F, 0xC0,0xFF80,
+  0xC1,0xFF81, 0xC2,0xFF82, 0xC3,0xFF83, 0xC4,0xFF84, 0xC5,0xFF85, 0xC6,0xFF86, 0xC7,0xFF87, 0xC8,0xFF88,
+  0xC9,0xFF89, 0xCA,0xFF8A, 0xCB,0xFF8B, 0xCC,0xFF8C, 0xCD,0xFF8D, 0xCE,0xFF8E, 0xCF,0xFF8F, 0xD0,0xFF90,
+  0xD1,0xFF91, 0xD2,0xFF92, 0xD3,0xFF93, 0xD4,0xFF94, 0xD5,0xFF95, 0xD6,0xFF96, 0xD7,0xFF97, 0xD8,0xFF98,
+  0xD9,0xFF99, 0xDA,0xFF9A, 0xDB,0xFF9B, 0xDC,0xFF9C, 0xDD,0xFF9D, 0xDE,0xFF9E, 0xDF,0xFF9F
+};
 
 class KnownConversion
 {
 public:
   //! constructor
-  KnownConversion() : m_convertMap(), m_romanMap(), m_symbolMap(), m_dingbatsMap(), m_cursiveMap(),
-    m_mathMap(), m_scientificMap(), m_wingdingsMap(), m_unknown107Map(), m_unknown128Map(),
+  KnownConversion() : m_convertMap(), m_familyMap(),
+    m_romanMap(), m_symbolMap(), m_dingbatsMap(), m_cursiveMap(),
+    m_mathMap(), m_scientificMap(), m_wingdingsMap(), m_SJISMap(), m_unknown107Map(), m_unknown128Map(),
     m_unknown200Map(),
     m_defaultConv(m_romanMap), m_timeConv(m_romanMap,"Times New Roman"),
     m_zapfChanceryConv(m_romanMap,"Apple Chancery", -2), m_symbolConv(m_symbolMap),
     m_dingbatsConv(m_dingbatsMap), m_cursiveConv(m_cursiveMap,"Apple Chancery"),
     m_mathConv(m_mathMap), m_scientificConv(m_scientificMap), m_wingdingsConv(m_wingdingsMap),
+    m_SJISConv(m_SJISMap, MWAWFontConverter::E_SJIS),
     m_unknown107Conv(m_unknown107Map), m_unknown128Conv(m_unknown128Map),
     m_unknown200Conv(m_unknown200Map) {
     initMaps();
@@ -307,8 +345,11 @@ public:
   //! returns the conversion map which corresponds to a name, or the default map
   Data::ConversionData const &getConversionMaps(std::string fName);
 
-  // FIXME:
-
+  //! set a family correspondance
+  void setFamily (std::string const &fName, std::string const &family) {
+    if (fName.length() && family.length())
+      m_familyMap[fName]=family;
+  }
   //! return the default convertissor
   ConversionData const &getDefault() const {
     return m_defaultConv;
@@ -329,6 +370,9 @@ protected:
   /** the conversiont map fName -> ConversionData */
   std::map<std::string, ConversionData const *> m_convertMap;
 
+  //! Internal and Low level: map font name -> family font name
+  std::map<std::string, std::string> m_familyMap;
+
   //! Internal and Low level: map char -> unicode for roman font
   std::map<unsigned char, unsigned long> m_romanMap;
   //! Internal and Low level: map char -> unicode for symbol font
@@ -343,6 +387,8 @@ protected:
   std::map<unsigned char, unsigned long> m_scientificMap;
   //! Internal and Low level: map char -> unicode for wingdings font
   std::map<unsigned char, unsigned long> m_wingdingsMap;
+  //! Internal and Low level: simplified map char -> unicode for SJIS font
+  std::map<unsigned char, unsigned long> m_SJISMap;
   //! Internal and Low level: map char -> unicode for font 107
   std::map<unsigned char, unsigned long> m_unknown107Map;
   //! Internal and Low level: map char -> unicode for font 128
@@ -368,6 +414,8 @@ protected:
   ConversionData m_scientificConv;
   //! Internal and Low level: the convertissor for wingdings font
   ConversionData m_wingdingsConv;
+  //! Internal and Low level: the convertissor for SJIS font
+  ConversionData m_SJISConv;
   //! Internal and Low level: the convertissor for font 107
   ConversionData m_unknown107Conv;
   //! Internal and Low level: the convertissor for font 128
@@ -395,6 +443,7 @@ void KnownConversion::initMaps()
   initAMap(s_mathIncompleteUnicode, sizeof(s_mathIncompleteUnicode)/(2*sizeof(int)), m_mathMap);
   initAMap(s_scientificIncompleteUnicode, sizeof(s_scientificIncompleteUnicode)/(2*sizeof(int)),m_scientificMap);
   initAMap(s_wingdingsUnicode, sizeof(s_wingdingsUnicode)/(2*sizeof(int)), m_wingdingsMap);
+  initAMap(s_SJISSimplifiedUnicode, sizeof(s_SJISSimplifiedUnicode)/(2*sizeof(int)), m_SJISMap);
   initAMap(s_unknown107IncompleteUnicode, sizeof(s_unknown107IncompleteUnicode)/(2*sizeof(int)),m_unknown107Map);
   initAMap(s_unknown128IncompleteUnicode, sizeof(s_unknown128IncompleteUnicode)/(2*sizeof(int)),m_unknown128Map);
   initAMap(s_unknown200IncompleteUnicode, sizeof(s_unknown200IncompleteUnicode)/(2*sizeof(int)),m_unknown200Map);
@@ -409,17 +458,36 @@ void KnownConversion::initMaps()
   m_convertMap[std::string("Math")] = &m_mathConv;
   m_convertMap[std::string("scientific")] = &m_scientificConv;
   m_convertMap[std::string("Wingdings")] = &m_wingdingsConv;
+  m_convertMap[std::string("Osaka")] = &m_SJISConv;
   m_convertMap[std::string("Unknown107")] = &m_unknown107Conv;
   m_convertMap[std::string("Unknown128")] = &m_unknown128Conv;
   m_convertMap[std::string("Unknown200")] = &m_unknown200Conv;
+
+  m_familyMap["Osaka Tohaba"]="Osaka";
+  m_familyMap["Heisei Mincho"]="Osaka";
+  m_familyMap["Heisei KakuGothic"]="Osaka";
+  m_familyMap["Hiragino MaruGo W3"]="Osaka";
+  m_familyMap["Hiragino MaruGo W4"]="Osaka";
+  m_familyMap["Hiragino MaruGo W6"]="Osaka";
+  m_familyMap["Hiragino Kakugo W3"]="Osaka";
+  m_familyMap["Hiragino Kakugo W6"]="Osaka";
+  m_familyMap["Hiragino Kakugo W8"]="Osaka";
 }
 
 ConversionData const &KnownConversion::getConversionMaps(std::string fName)
 {
   if (fName.empty()) return m_defaultConv;
   std::map<std::string, ConversionData const *>::iterator it= m_convertMap.find(fName);
-  if (it == m_convertMap.end()) return m_defaultConv;
-  return *(it->second);
+  if (it != m_convertMap.end()) return *(it->second);
+
+  // look for a family map
+  std::map<std::string, std::string>::iterator famIt= m_familyMap.find(fName);
+  if (famIt == m_familyMap.end())
+    return m_defaultConv;
+  fName = famIt->second;
+  it= m_convertMap.find(fName);
+  if (it != m_convertMap.end()) return *(it->second);
+  return  m_defaultConv;
 }
 
 }
@@ -435,7 +503,7 @@ class State
 public:
   //! the constructor
   State() : m_knownConversion(), m_idNameMap(), m_nameIdMap(),
-    m_nameIdCounter(0), m_uniqueId(256), m_unicodeCache() {
+    m_nameIdCounter(0), m_uniqueId(768), m_sjisConverter(), m_unicodeCache() {
     initMaps();
   }
 
@@ -461,21 +529,28 @@ public:
   /* converts a character in unicode
      \return -1 if the character is not transformed */
   int unicode(int macId, unsigned char c);
+  /* converts a character in unicode, if needed can read the next input caracter
+     \return -1 if the character is not transformed */
+  int unicode(int macId, unsigned char c, MWAWInputStreamPtr &input);
 
   /** final font name and a delta which can be used to change the size
   if no name is found, return "Times New Roman" */
   void getOdtInfo(int macId, std::string &nm, int &deltaSize);
 
   //! fixes the name corresponding to an id
-  void setCorrespondance(int macId, std::string const &name) {
+  void setCorrespondance(int macId, std::string const &name, std::string family="") {
     m_idNameMap[macId] = name;
     m_nameIdMap[name] = macId;
     m_nameIdCounter++;
+    if (family.length())
+      m_knownConversion.setFamily(name,family);
   }
 
 protected:
   //! initializes the map
   void initMaps();
+  //! try to update the cache
+  bool updateCache(int macId);
 
   //! the basic conversion map
   MWAWFontConverterInternal::Data::KnownConversion m_knownConversion;
@@ -489,6 +564,9 @@ protected:
 
   //! a int used to create new id for a name
   int m_uniqueId;
+
+  //! a SJIS convertor to convert Shit-JIS font
+  shared_ptr<MWAWFontSJISConverter> m_sjisConverter;
 
   //! small structure to speedup unicode
   struct UnicodeCache {
@@ -587,15 +665,26 @@ void State::initMaps()
   m_idNameMap[10957] = "Bodoni MT Ultra Bold";
   m_idNameMap[10967] = "Arial MT Condensed Light";
   m_idNameMap[11103] = "Lydian MT";
+
+  // japanese font ( check me )
   m_idNameMap[16384] = "Osaka";
+  m_idNameMap[16436] = "Osaka Tohaba";
+  m_idNameMap[16700] = "Heisei Mincho";
+  m_idNameMap[16701] = "Heisei KakuGothic";
+  m_idNameMap[35934] = "Hiragino MaruGo W4";
+  m_idNameMap[64640] = "Hiragino MaruGo W3";
+  m_idNameMap[64643] = "Hiragino MaruGo W6";
+  m_idNameMap[48166] = "Hiragino Kakugo W3";
+  m_idNameMap[48169] = "Hiragino Kakugo W6";
+  m_idNameMap[54024] = "Hiragino Kakugo W8";
 
   std::map<int, std::string>::iterator it;
   for(it = m_idNameMap.begin(); it != m_idNameMap.end(); it++)
     m_nameIdMap[it->second] = it->first;
 }
 
-// returns an unicode caracter
-int State::unicode(int macId, unsigned char c)
+// try to find the good convertissor
+bool State::updateCache(int macId)
 {
   if (!m_unicodeCache.m_conv || m_unicodeCache.m_macId != macId ||  m_unicodeCache.m_nameIdCounter != m_nameIdCounter) {
     m_unicodeCache.m_macId = macId;
@@ -604,10 +693,34 @@ int State::unicode(int macId, unsigned char c)
   }
   if (!m_unicodeCache.m_conv) {
     MWAW_DEBUG_MSG(("unicode Error: can not find a convertor\n"));
-    return -1;
+    return false;
   }
-  std::map<unsigned char, unsigned long>::iterator it = m_unicodeCache.m_conv->m_conversion.find(c);
+  return true;
+}
 
+// returns an unicode caracter
+int State::unicode(int macId, unsigned char c)
+{
+  if (!updateCache(macId))
+    return -1;
+  std::map<unsigned char, unsigned long>::const_iterator it = m_unicodeCache.m_conv->m_conversion.find(c);
+
+  if (it == m_unicodeCache.m_conv->m_conversion.end()) return -1;
+  return (int) it->second;
+}
+
+// returns an unicode caracter
+int State::unicode(int macId, unsigned char c, MWAWInputStreamPtr &input)
+{
+  if (!updateCache(macId))
+    return -1;
+  if (m_unicodeCache.m_conv->m_encoding==MWAWFontConverter::E_SJIS) {
+    if (!m_sjisConverter)
+      m_sjisConverter.reset(new MWAWFontSJISConverter);
+    return m_sjisConverter->unicode(c,input);
+  }
+
+  std::map<unsigned char, unsigned long>::const_iterator it = m_unicodeCache.m_conv->m_conversion.find(c);
   if (it == m_unicodeCache.m_conv->m_conversion.end()) return -1;
   return (int) it->second;
 }
@@ -634,13 +747,14 @@ void State::getOdtInfo(int macId, std::string &nm, int &deltaSize)
 #endif
   nm = "Times New Roman";
 }
+
 }
 
 MWAWFontConverter::MWAWFontConverter() : m_manager(new MWAWFontConverterInternal::State) { }
 MWAWFontConverter::~MWAWFontConverter() {}
 
 // mac font name <-> id functions
-void MWAWFontConverter::setCorrespondance(int macId, std::string const &name)
+void MWAWFontConverter::setCorrespondance(int macId, std::string const &name, std::string family)
 {
   std::string fName("");
   static bool first = true;
@@ -656,7 +770,7 @@ void MWAWFontConverter::setCorrespondance(int macId, std::string const &name)
     }
     fName += 'X';
   }
-  m_manager->setCorrespondance(macId, fName);
+  m_manager->setCorrespondance(macId, fName, family);
 }
 int MWAWFontConverter::getId(std::string const &name)  const
 {
@@ -679,4 +793,9 @@ int MWAWFontConverter::unicode(int macId, unsigned char c) const
   return m_manager->unicode(macId, c);
 }
 
+int MWAWFontConverter::unicode(int macId, unsigned char c, MWAWInputStreamPtr &input) const
+{
+  if (c < 0x20) return -1;
+  return m_manager->unicode(macId,c,input);
+}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

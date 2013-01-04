@@ -478,7 +478,8 @@ bool CWStyleManager::readFontNames(int N, int fSz)
     f.str("");
     if (i == 0) f << "Entries(FntNames): FntNames-0:";
     else f << "FntNames-" << i << ":";
-    f << "nameEncoding=" << m_input->readLong(2) << ",";
+    int fontEncoding = (int) m_input->readULong(2);
+    f << "nameEncoding=" << fontEncoding << ",";
     f << "type?=" << m_input->readLong(2) << ",";
 
     int nChar = (int) m_input->readULong(1);
@@ -504,13 +505,15 @@ bool CWStyleManager::readFontNames(int N, int fSz)
             MWAW_DEBUG_MSG(("CWStyleManager::readFontNames: find odd font\n"));
             first = false;
           }
-          ok = false;
+          if (fontEncoding!=0x4000)
+            ok = false;
         }
         name += ch;
       }
       f << "'" << name << "'";
       if (name.length() && ok) {
-        m_convertissor->setCorrespondance(i, name);
+        std::string family = fontEncoding==0x4000 ? "Osaka" : "";
+        m_convertissor->setCorrespondance(i, name, family);
       }
     }
     if (long(m_input->tell()) != pos+fSz) {

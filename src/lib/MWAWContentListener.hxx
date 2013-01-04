@@ -101,7 +101,7 @@ struct MWAWContentParsingState {
   //! the font attribute
   uint32_t m_fontAttributeBits;
   //! the underline style
-  MWAWBorder::Style m_fontUnderline;
+  MWAWFont::Line::Style m_fontUnderline;
   //! the font color
   MWAWColor m_fontColor;
   //! the font background color
@@ -258,7 +258,7 @@ public:
   //! sets the font attribute: bold, italic, ...
   void setFontAttributes(const uint32_t fontAttributes);
   //! sets the font underline style
-  void setFontUnderlineStyle(MWAWBorder::Style style);
+  void setFontUnderlineStyle(MWAWFont::Line::Style style);
   //! sets the font color
   void setFontColor(MWAWColor const rgb);
   //! sets the font background color

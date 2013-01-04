@@ -691,16 +691,16 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAWFont::boldBit;
   if (flag&0x2) flags |= MWAWFont::italicBit;
-  if (flag&0x4) font.setUnderlineStyle(MWAWBorder::Single);
+  if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Single);
   if (flag&0x8) flags |= MWAWFont::embossBit;
   if (flag&0x10) flags |= MWAWFont::shadowBit;
   /* flags & 0x20: condensed, flags & 0x40: extended */
   if (flag&0x80) flags |= MWAWFont::strikeOutBit;
-  if (flag&0x100) font.setScript(MWAWFont::Script::super100());
-  if (flag&0x200) font.setScript(MWAWFont::Script::sub100());
-  if (flag&0x400) font.setScript(MWAWFont::Script::super());
-  if (flag&0x800) font.setScript(MWAWFont::Script::sub());
-  if (flag&0x2000) font.setUnderlineStyle(MWAWBorder::Double);
+  if (flag&0x100) font.set(MWAWFont::Script::super100());
+  if (flag&0x200) font.set(MWAWFont::Script::sub100());
+  if (flag&0x400) font.set(MWAWFont::Script::super());
+  if (flag&0x800) font.set(MWAWFont::Script::sub());
+  if (flag&0x2000) font.setUnderlineStyle(MWAWFont::Line::Double);
   font.setSize((int) m_input->readLong(1));
 
   int colId = (int) m_input->readULong(1);
@@ -722,9 +722,9 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   if (fontSize >= 14) {
     flag = (int) m_input->readULong(2);
     if (flag & 0x1)
-      font.setUnderlineStyle(MWAWBorder::Single);
+      font.setUnderlineStyle(MWAWFont::Line::Single);
     if (flag & 0x2)
-      font.setUnderlineStyle(MWAWBorder::Double);
+      font.setUnderlineStyle(MWAWFont::Line::Double);
     if (flag & 0x20)
       flags |= MWAWFont::strikeOutBit;
     flag &= 0xFFDC;
@@ -771,16 +771,16 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAWFont::boldBit;
   if (flag&0x2) flags |= MWAWFont::italicBit;
-  if (flag&0x4) font.setUnderlineStyle(MWAWBorder::Single);
+  if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Single);
   if (flag&0x8) flags |= MWAWFont::embossBit;
   if (flag&0x10) flags |= MWAWFont::shadowBit;
   /* flags & 0x20: condensed, flags & 0x40: extended */
   if (flag&0x80) flags |= MWAWFont::strikeOutBit;
-  if (flag&0x100) font.setScript(MWAWFont::Script::super100());
-  if (flag&0x200) font.setScript(MWAWFont::Script::sub100());
-  if (flag&0x400) font.setScript(MWAWFont::Script::super());
-  if (flag&0x800) font.setScript(MWAWFont::Script::sub());
-  if (flag&0x2000) font.setUnderlineStyle(MWAWBorder::Double);
+  if (flag&0x100) font.set(MWAWFont::Script::super100());
+  if (flag&0x200) font.set(MWAWFont::Script::sub100());
+  if (flag&0x400) font.set(MWAWFont::Script::super());
+  if (flag&0x800) font.set(MWAWFont::Script::sub());
+  if (flag&0x2000) font.setUnderlineStyle(MWAWFont::Line::Double);
   font.setSize((int) m_input->readLong(1));
 
   int colId = (int) m_input->readULong(1);
@@ -792,9 +792,9 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   if (fontSize >= 12 && version()==6) {
     flag = (int) m_input->readULong(2);
     if (flag & 0x1)
-      font.setUnderlineStyle(MWAWBorder::Single);
+      font.setUnderlineStyle(MWAWFont::Line::Single);
     if (flag & 0x2)
-      font.setUnderlineStyle(MWAWBorder::Double);
+      font.setUnderlineStyle(MWAWFont::Line::Double);
     if (flag & 0x20)
       flags |= MWAWFont::strikeOutBit;
     flag &= 0xFFDC;
@@ -1236,7 +1236,11 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
     m_input->seek(pos+4, WPX_SEEK_SET); // skip header
 
     for (int i = 0; i < numC; i++) {
-      if (actC == nextSectionPos) {
+      if (nextSectionPos!=-1 && actC >= nextSectionPos) {
+        if (actC != nextSectionPos) {
+          MWAW_DEBUG_MSG(("CWText::sendText: find a section inside a complex char!!!\n"));
+          f << "###";
+        }
         std::vector<int> width, sepWidth;
         numSection++;
         numSectionInPage++;
@@ -1273,7 +1277,11 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
         numSectionInPage++;
       plcIt = zone.m_plcMap.find(actC);
       bool seeToken = false;
-      while (plcIt != zone.m_plcMap.end() && plcIt->first==actC) {
+      while (plcIt != zone.m_plcMap.end() && plcIt->first<=actC) {
+        if (actC != plcIt->first) {
+          MWAW_DEBUG_MSG(("CWText::sendText: find a plc inside a complex char!!!\n"));
+          f << "###";
+        }
         CWTextInternal::PLC const &plc = plcIt++->second;
         f << "[" << plc << "]";
         switch(plc.m_type) {
@@ -1411,7 +1419,15 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
         break;
 
       default: {
-        int unicode = m_convertissor->unicode (actFont.id(), (unsigned char) c);
+        long actPos = m_input->tell();
+        int unicode = (i==numC-1) ?
+                      m_convertissor->unicode (actFont.id(), (unsigned char) c) :
+                      m_convertissor->unicode (actFont.id(), (unsigned char) c, m_input);
+        int extraChar = int(m_input->tell()-actPos);
+        if (extraChar) {
+          i += extraChar;
+          actC += extraChar;
+        }
         if (unicode == -1) {
           if (c >= 0 && c < 0x20) {
             MWAW_DEBUG_MSG(("CWText::sendText: Find odd char %x\n", int(c)));

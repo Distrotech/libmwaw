@@ -44,6 +44,9 @@
 
 #  include "libmwaw_internal.hxx"
 
+class MWAWInputStream;
+typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
+
 namespace MWAWFontConverterInternal
 {
 class State;
@@ -63,6 +66,9 @@ class State;
 class MWAWFontConverter
 {
 public:
+  //! the character encoding type
+  enum Encoding { E_DEFAULT, E_SJIS };
+
   //! the constructor
   MWAWFontConverter();
   //! the destructor
@@ -73,7 +79,7 @@ public:
   //! returns empty string if unknown
   std::string getName(int macId) const;
   //! fixes the name corresponding to an id
-  void setCorrespondance(int macId, std::string const &name);
+  void setCorrespondance(int macId, std::string const &name, std::string family="");
 
   //
   // Odt data
@@ -87,6 +93,9 @@ public:
      \return -1 if the character is not transformed */
   int unicode(int macId, unsigned char c) const;
 
+  /* converts a character in unicode, if needed can read the next input caracter
+     \return -1 if the character is not transformed */
+  int unicode(int macId, unsigned char c, MWAWInputStreamPtr &input) const;
 protected:
   //! the main manager
   mutable shared_ptr<MWAWFontConverterInternal::State> m_manager;

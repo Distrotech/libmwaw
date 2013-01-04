@@ -953,6 +953,26 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWFontSJISConverter.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWHeader.cxx"
 				>
 				<FileConfiguration
@@ -1731,6 +1751,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWFontConverter.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWFontSJISConverter.hxx"
 				>
 			</File>
 			<File

@@ -47,6 +47,13 @@ class MWAWFontConverter;
 class MWAWFont
 {
 public:
+  /** a small struct to define a line in MWAWFont */
+  struct Line {
+    /** the line style */
+    enum Style { None, Single, Double, Dot, LargeDot, Dash };
+    //! return the properties corresponding to a style line
+    static std::string getPropertyValue(Style const &style);
+  };
   /** a small struct to define the script position in MWAWFont */
   struct Script {
     //! constructor
@@ -127,7 +134,7 @@ public:
    * \param sz the font size
    * \param f the font attributes bold, ... */
   MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_deltaSpacing(0), m_scriptPosition(),
-    m_flags(f), m_underline(MWAWBorder::None), m_color(MWAWColor::black()), m_backgroundColor(MWAWColor::white()), m_extra("") {
+    m_flags(f), m_underline(Line::None), m_color(MWAWColor::black()), m_backgroundColor(MWAWColor::white()), m_extra("") {
     resetColor();
   };
   //! returns true if the font id is initialized
@@ -189,7 +196,7 @@ public:
   }
 
   //! sets the script position
-  void setScript(Script const &newscript) {
+  void set(Script const &newscript) {
     m_scriptPosition = newscript;
   }
 
@@ -230,11 +237,11 @@ public:
   }
 
   //! returns the underline style
-  MWAWBorder::Style getUnderlineStyle() const {
+  Line::Style getUnderlineStyle() const {
     return m_underline.get();
   }
   //! sets the underline style
-  void setUnderlineStyle(MWAWBorder::Style style=MWAWBorder::None) {
+  void setUnderlineStyle(Line::Style style=Line::None) {
     m_underline = style;
   }
 
@@ -277,9 +284,9 @@ public:
 protected:
   Variable<int> m_id /** font identificator*/, m_size /** font size */;
   Variable<int> m_deltaSpacing /** expand(>0), condensed(<0) depl in point*/;
-  Variable<Script> m_scriptPosition /* the sub/super script definition */;
+  Variable<Script> m_scriptPosition /** the sub/super script definition */;
   Variable<uint32_t> m_flags /** font attributes */;
-  Variable<MWAWBorder::Style> m_underline /** underline attributes */;
+  Variable<Line::Style> m_underline /** underline attributes */;
   Variable<MWAWColor> m_color /** font color */;
   Variable<MWAWColor> m_backgroundColor /** font background color */;
 public:

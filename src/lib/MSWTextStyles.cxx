@@ -160,9 +160,9 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     if (decal) {
       if (what & 0x2) {
         if (decal > 0)
-          font.m_font->setScript(MWAWFont::Script::super100());
+          font.m_font->set(MWAWFont::Script::super100());
         else
-          font.m_font->setScript(MWAWFont::Script::sub100());
+          font.m_font->set(MWAWFont::Script::sub100());
       } else
         f << "#vDecal=" << decal;
     }
@@ -194,17 +194,17 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     if (val && (what & 0x4)) {
       switch(val&0xf) {
       case 8:
-        font.m_font->setUnderlineStyle(MWAWBorder::Dot);
+        font.m_font->setUnderlineStyle(MWAWFont::Line::Dot);
         break;
       case 6:
-        font.m_font->setUnderlineStyle(MWAWBorder::Double);
+        font.m_font->setUnderlineStyle(MWAWFont::Line::Double);
         break;
       case 2:
-        font.m_font->setUnderlineStyle(MWAWBorder::Single);
+        font.m_font->setUnderlineStyle(MWAWFont::Line::Single);
         break;
       default:
         f << "#underline=" << (val &0xf) << ",";
-        font.m_font->setUnderlineStyle(MWAWBorder::Single);
+        font.m_font->setUnderlineStyle(MWAWFont::Line::Single);
       }
       what &= 0xFB;
     } else if (val & 0xf)
@@ -400,10 +400,10 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       if (dSz < 2) break;
       val = (int) m_input->readLong(1);
       if (val < 0) {
-        para.m_modFont->m_font->setScript(MWAWFont::Script::sub100());
+        para.m_modFont->m_font->set(MWAWFont::Script::sub100());
         f << "subScript=" << -val/2 << ",";
       } else if (val > 0) {
-        para.m_modFont->m_font->setScript(MWAWFont::Script::super100());
+        para.m_modFont->m_font->set(MWAWFont::Script::super100());
         f << "superScript=" << val/2 << ",";
       } else f << "#pos=" << 0 << ",";
       done = true;

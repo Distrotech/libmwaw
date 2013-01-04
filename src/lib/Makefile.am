@@ -98,6 +98,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWFont.hxx			\
 	MWAWFontConverter.cxx		\
 	MWAWFontConverter.hxx		\
+	MWAWFontSJISConverter.cxx	\
+	MWAWFontSJISConverter.hxx	\
 	MWAWHeader.cxx			\
 	MWAWHeader.hxx			\
 	MWAWInputStream.cxx		\

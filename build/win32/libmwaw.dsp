@@ -244,6 +244,10 @@ SOURCE=..\..\src\lib\MWAWFontConverter.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWFontSJISConverter.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWHeader.cxx
 # End Source File
 # Begin Source File
@@ -529,6 +533,10 @@ SOURCE=..\..\src\lib\MWAWFont.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWFontConverter.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWFontSJISConverter.hxx
 # End Source File
 # Begin Source File
 
