@@ -122,6 +122,7 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     if (flag&strikeOutBit) o << "strikeout:";
     if (flag&smallCapsBit) o << "smallCaps:";
     if (flag&allCapsBit) o << "allCaps:";
+    if (flag&lowercaseBit) o << "lowercase:";
     if (flag&hiddenBit) o << "hidden:";
     if (flag&reverseVideoBit) o << "reversed:";
     if (flag&blinkBit) o << "blink:";

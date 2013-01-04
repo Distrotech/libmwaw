@@ -1190,16 +1190,18 @@ void MWAWContentListener::_openSpan()
     propList.insert("style:text-overline-type", "single");
   if (attributeBits & MWAWFont::outlineBit)
     propList.insert("style:text-outline", "true");
-  if (attributeBits & MWAWFont::smallCapsBit)
-    propList.insert("fo:font-variant", "small-caps");
   if (attributeBits & MWAWFont::blinkBit)
     propList.insert("style:text-blinking", "true");
   if (attributeBits & MWAWFont::shadowBit)
     propList.insert("fo:text-shadow", "1pt 1pt");
   if (attributeBits & MWAWFont::hiddenBit)
     propList.insert("text:display", "none");
+  if (attributeBits & MWAWFont::lowercaseBit)
+    propList.insert("fo:text-transform", "lowercase");
   if (attributeBits & MWAWFont::allCapsBit)
     propList.insert("fo:text-transform", "uppercase");
+  if (attributeBits & MWAWFont::smallCapsBit)
+    propList.insert("fo:font-variant", "small-caps");
   if (attributeBits & MWAWFont::embossBit)
     propList.insert("style:font-relief", "embossed");
   else if (attributeBits & MWAWFont::engraveBit)

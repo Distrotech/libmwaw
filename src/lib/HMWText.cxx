@@ -620,7 +620,7 @@ bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)
   if (flag&0x2) flags |= MWAWFont::italicBit;
   if (flag&0x4) flags |= MWAWFont::outlineBit;
   if (flag&0x8) flags |= MWAWFont::shadowBit;
-  if (flag&0x10) flags |= MWAWFont::reverseVideoBit; // checkme: reverse ?
+  if (flag&0x10) f << "#reverse,"; // checkme reverse writing?
   if (flag&0x20) font.m_font.set(MWAWFont::Script::super100());
   if (flag&0x40) font.m_font.set(MWAWFont::Script::sub100());
   if (flag&0x80) font.m_font.set(MWAWFont::Script::super());

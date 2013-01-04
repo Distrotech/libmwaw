@@ -327,24 +327,17 @@ std::ostream &operator<<(std::ostream &o, WindowsInfo const &w)
 /** Internal: class to store the font properties */
 struct Font {
   Font(): m_font(), m_firstChar(0) {
-    for (int i = 0; i < 9; i++) m_flags[i] = 0;
   }
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Font const &f) {
     if (f.m_firstChar) o << "firstChar=" << f.m_firstChar << ",";
-    for (int i = 0; i < 9; i++) {
-      if (!f.m_flags[i]) continue;
-      o << "fF" << i << "=" << f.m_flags[i] << ",";
-    }
     return o;
   }
   //! the font
   MWAWFont m_font;
   //! the first character
   int m_firstChar;
-  //! some flag
-  int m_flags[9]; // flags[5] frequent values 4, 10, 14 sometimes 2,12
 };
 
 ////////////////////////////////////////
@@ -1797,9 +1790,17 @@ bool WPParser::readFonts
   }
   int actPos = 0;
   std::vector<WPParserInternal::Font> lFonts;
+  libmwaw::DebugStream f;
+  int val;
   for (int i = 0; i < nFonts; i++) {
     WPParserInternal::Font fInfo;
-    for (int j = 0; j < 5; j++) fInfo.m_flags[j] = (int) input->readULong(1);
+    f.str("");
+    val = (int) input->readLong(2); // 65|315
+    if (val) f << "dim?=" << val << ",";
+    for (int j = 0; j < 3; j++) { // always 0: a color ?
+      val = (int) input->readLong(1);
+      if (val) f << "f" << j << "=" << val << ",";
+    }
     MWAWFont &font = fInfo.m_font;
     font.setId((int) input->readULong(1));
     int flag = (int) input->readULong(1);
@@ -1809,24 +1810,32 @@ bool WPParser::readFonts
     if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Single);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
-    if (flag&0x20) font.set(MWAWFont::Script::super());
-    if (flag&0x40) font.set(MWAWFont::Script::sub());
+    if (flag&0x60)
+      f << "#fl=" << std::hex << (flag&0x60) << std::dec << ",";
+    if (flag&0x80) f << "fl80,"; // frequent, find on complete line,
 
+    flag= (int) input->readULong(1);
+    if (flag&2) font.set(MWAWFont::Script::super100());
+    if (flag&4) font.set(MWAWFont::Script::sub100());
+    if (flag&0x10) f << "flA10,";// also frequent, find on complete line
+    if (flag&0xE9) f << "#flA=" << std::hex << (flag&0xE9) << std::dec << ",";
     font.setFlags(flags);
-    for (int j = 5; j < 7; j++)
-      // g5 frequent 4, 10, 14 sometimes 2,12
-      // g6 always 0
-      fInfo.m_flags[j] = (int) input->readLong(1);
+    val = (int) input->readLong(1);// always 0
+    if (val)
+      f << "#g0=" << val << ",";
     font.setSize((int) input->readLong(1));
     fInfo.m_firstChar = actPos;
     int nChar = (int) input->readULong(2);
     actPos += nChar;
     if (!hasFontExtra)
       input->seek(4, WPX_SEEK_CUR);
-    else {
-      for (int j = 7; j < 9; j++)
-        fInfo.m_flags[j] = (int) input->readLong(2);
+    else { // always 0
+      for (int j = 0; j < 2; j++) {
+        val = (int) input->readLong(2);
+        if (val) f << "g" << j+1 << "=" << val << ",";
+      }
     }
+    font.m_extra+=f.str();
     fonts.push_back(fInfo);
   }
 

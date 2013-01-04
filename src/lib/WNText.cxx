@@ -60,7 +60,7 @@ namespace WNTextInternal
 //! Internal: the fonts
 struct Font {
   //! the constructor
-  Font(): m_font(), m_extra("") {
+  Font(): m_font() {
     for (int i = 0; i < 3; i++) m_flags[i] = 0;
     for (int i = 0; i < 2; i++) m_styleId[i] = -1;
   }
@@ -74,8 +74,6 @@ struct Font {
     }
     if (font.m_styleId[0] >= 0) o << "id[charStyle]=" << font.m_styleId[0] << ",";
     if (font.m_styleId[1] >= 0) o << "id[rulerStyle]=" << font.m_styleId[1] << ",";
-    if (font.m_extra.length())
-      o << font.m_extra << ",";
     return o;
   }
 
@@ -85,8 +83,6 @@ struct Font {
   int m_styleId[2];
   //! some unknown flag
   int m_flags[3];
-  //! extra data
-  std::string m_extra;
 };
 
 /** Internal: class to store the paragraph properties */
@@ -1132,7 +1128,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
 
   if (vers <= 2) {
     font.m_font.setFlags(flags);
-    font.m_extra = f.str();
+    font.m_font.m_extra = f.str();
     return true;
   }
   flag = (int) input.readULong(1);
@@ -1170,7 +1166,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
     font.m_font.set(MWAWFont::Script(heightDecal, WPX_POINT));
 
   font.m_font.setFlags(flags);
-  font.m_extra = f.str();
+  font.m_font.m_extra = f.str();
 
   int act = 0;
   if (inStyle) {

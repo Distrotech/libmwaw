@@ -313,8 +313,7 @@ struct Block {
 //! Internal: the fonts
 struct Font {
   //! the constructor
-  Font(): m_font(), m_flags(0), m_language(-1), m_token(-1),
-    m_extra("") {
+  Font(): m_font(), m_flags(0), m_language(-1), m_token(-1) {
     for (int i = 0; i < 5; i++) m_values[i] = 0;
   }
   //! operator<<
@@ -346,8 +345,6 @@ struct Font {
       o << "token=" << font.m_token << ",";
       break;
     }
-    if (font.m_extra.length())
-      o << font.m_extra << ",";
     return o;
   }
 
@@ -361,9 +358,6 @@ struct Font {
   int m_token;
   //! unknown values
   int m_values[5];
-
-  //! extra data
-  std::string m_extra;
 };
 
 ////////////////////////////////////////
@@ -1225,15 +1219,15 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
   if (flag&0x8) flags |= MWAWFont::embossBit;
   if (flag&0x10) flags |= MWAWFont::shadowBit;
-  if (flag&0x20) font.m_font.set(MWAWFont::Script::super100());
-  if (flag&0x40) font.m_font.set(MWAWFont::Script::sub100());
+  if (flag&0x20) font.m_font.set(MWAWFont::Script(40,WPX_PERCENT));
+  if (flag&0x40) font.m_font.set(MWAWFont::Script(-40,WPX_PERCENT));
   if (flag&0x100) font.m_font.set(MWAWFont::Script::super());
   if (flag&0x200) flags |= MWAWFont::strikeOutBit;
   if (flag&0x400) flags |= MWAWFont::allCapsBit;
   if (flag&0x800) flags |= MWAWFont::smallCapsBit;
   if (flag&0x1000) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
   if (flag&0x2000) font.m_font.setUnderlineStyle(MWAWFont::Line::Double);
-  if (flag&0x4000) f << "lowercase,";
+  if (flag&0x4000) flags |= MWAWFont::lowercaseBit;
   font.m_flags = (flag&0x8080L);
 
   int color = (int) m_input->readULong(1);
@@ -1247,13 +1241,26 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   if (vers == 1) {
     font.m_language =  (int) m_input->readLong(2);
     font.m_token = (int) m_input->readLong(2);
-    /* f3=1 spacings 1, f3=3 spacings 3 */
-    for (int i = 3; i < 5; i++)
+    int spacings = (int) m_input->readLong(2);
+    if (spacings) {
+      if (spacings < -50 || spacings > 100) {
+        MWAW_DEBUG_MSG(("MWProStructures::readFont: character spacings seems odd\n"));
+        f << "#spacings=" << spacings << "%,";
+        spacings = spacings < 0 ? -50 : 100;
+      }
+      int fSz = font.m_font.size();
+      if (fSz <= 0) {
+        MWAW_DEBUG_MSG(("MWProStructures::readFont: expand called without fSize, assume 12pt\n"));
+        fSz = 12;
+      }
+      font.m_font.setDeltaLetterSpacing(int((fSz*spacings)/100));
+    }
+    for (int i = 4; i < 5; i++)
       font.m_values[i] = (int) m_input->readLong(2);
     m_input->seek(pos+20, WPX_SEEK_SET);
   }
   font.m_font.setFlags(flags);
-  font.m_extra = f.str();
+  font.m_font.m_extra = f.str();
 
   return true;
 }
