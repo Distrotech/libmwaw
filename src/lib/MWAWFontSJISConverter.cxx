@@ -1523,7 +1523,7 @@ int MWAWFontSJISConverter::unicode(unsigned char c, MWAWInputStreamPtr &input)
 {
   uint32_t sjisChar = uint32_t(c);
   long pos = input->tell();
-  if ((c >= 0x81 && c <= 0x8F) || (c >= 0xE0 && c <= 0xFC)) {
+  if ((c >= 0x81 && c <= 0x9F) || (c >= 0xE0 && c <= 0xFC)) {
     if (input->atEOS()) return -1;
     sjisChar = (sjisChar<<8)+uint32_t(input->readULong(1));
   }
