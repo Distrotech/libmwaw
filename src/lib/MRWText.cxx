@@ -866,7 +866,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
             font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
             break;
           case 50:
-            fFlags |= MWAWFont::strikeOutBit;
+            font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
             break;
           case 58:
             f << "boxed" << j-57 << ",";

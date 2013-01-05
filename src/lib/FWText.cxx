@@ -401,7 +401,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0x92: { // dotted underline
         MWAWFont::Line::Style style= (val==0x8f)? MWAWFont::Line::Double :
                                      (val==0x92)? MWAWFont::Line::Dot : MWAWFont::Line::Single;
-        if (font.getUnderlineStyle()!=MWAWFont::Line::None)
+        if (font.getUnderline().isSet())
           font.setUnderlineStyle(MWAWFont::Line::None);
         else
           font.setUnderlineStyle(style);

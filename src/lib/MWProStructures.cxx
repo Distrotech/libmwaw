@@ -1222,7 +1222,7 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   if (flag&0x20) font.m_font.set(MWAWFont::Script(40,WPX_PERCENT));
   if (flag&0x40) font.m_font.set(MWAWFont::Script(-40,WPX_PERCENT));
   if (flag&0x100) font.m_font.set(MWAWFont::Script::super());
-  if (flag&0x200) flags |= MWAWFont::strikeOutBit;
+  if (flag&0x200) font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
   if (flag&0x400) flags |= MWAWFont::allCapsBit;
   if (flag&0x800) flags |= MWAWFont::smallCapsBit;
   if (flag&0x1000) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);

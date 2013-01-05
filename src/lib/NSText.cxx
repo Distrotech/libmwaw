@@ -821,7 +821,7 @@ bool NSText::readFonts(MWAWEntry const &entry)
     }
     if (flag & 0x8) font.m_font.set(MWAWFont::Script::super());
     if (flag & 0x10) font.m_font.set(MWAWFont::Script::sub());
-    if (flag & 0x20) flags |= MWAWFont::strikeOutBit;
+    if (flag & 0x20) font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
     if (flag & 0x40) flags |= MWAWFont::overlineBit;
     if (flag & 0x80) flags |= MWAWFont::smallCapsBit;
     if (flag & 0x100) flags |= MWAWFont::allCapsBit;

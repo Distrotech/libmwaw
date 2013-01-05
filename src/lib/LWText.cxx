@@ -120,8 +120,10 @@ struct Font {
   //! merge extra data to get final font
   void merge(Font const &fExtra) {
     m_font.setFlags(m_font.flags()|fExtra.m_font.flags());
-    if (fExtra.m_font.getUnderlineStyle() != MWAWFont::Line::None)
-      m_font.setUnderlineStyle(fExtra.m_font.getUnderlineStyle());
+    if (fExtra.m_font.getUnderline().isSet())
+      m_font.setUnderline(fExtra.m_font.getUnderline());
+    if (fExtra.m_font.getStrikeOut().isSet())
+      m_font.setStrikeOut(fExtra.m_font.getStrikeOut());
     m_font.set(fExtra.m_font.script());
     MWAWColor backColor;
     fExtra.m_font.getBackgroundColor(backColor);
@@ -598,7 +600,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
       break;
     case 3:
       font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
-      f << "underline[w=2],";
+      font.m_font.setUnderlineWidth(2.0);
       break;
     case 4:
       font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
@@ -615,22 +617,20 @@ bool LWText::readFont2(MWAWEntry const &entry)
     case 0:
       break;
     case 1:
-      flags |= MWAWFont::strikeOutBit;
+      font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
       break;
     case 2:
-      flags |= MWAWFont::strikeOutBit;
-      f << "strike[double],";
+      font.m_font.setStrikeOutStyle(MWAWFont::Line::Double);
       break;
     case 3:
-      flags |= MWAWFont::strikeOutBit;
-      f << "strike[w=2],";
+      font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
+      font.m_font.setStrikeOutWidth(2.0);
       break;
     case 4:
-      flags |= MWAWFont::strikeOutBit;
-      f << "strike[dot],";
+      font.m_font.setStrikeOutStyle(MWAWFont::Line::Dot);
       break;
     case 5:
-      flags |= MWAWFont::strikeOutBit;
+      font.m_font.setStrikeOutStyle(MWAWFont::Line::Dot);
       f << "strike[dot2],";
       break;
     default:

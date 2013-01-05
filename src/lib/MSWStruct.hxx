@@ -73,7 +73,7 @@ struct Font {
   //! returns the font flags
   uint32_t getFlags() const;
 
-  //! returns the underline style
+  //! returns the underline style (fixme:replace by getUnderline)
   MWAWFont::Line::Style getUnderlineStyle() const;
 
   //! operator<<

@@ -33,6 +33,8 @@
 
 #include <sstream>
 
+#include <libwpd/libwpd.h>
+
 #include "libmwaw_internal.hxx"
 
 #include "MWAWContentListener.hxx"
@@ -40,26 +42,90 @@
 #include "MWAWPosition.hxx"
 
 #include "MWAWFont.hxx"
-std::string MWAWFont::Line::getPropertyValue(MWAWFont::Line::Style const &style)
+
+////////////////////////////////////////////////////////////
+// line function
+////////////////////////////////////////////////////////////
+std::ostream &operator<<(std::ostream &o, MWAWFont::Line const &line)
 {
-  switch (style) {
+  if (!line.isSet())
+    return o;
+  switch (line.m_style) {
+  case MWAWFont::Line::Dot:
+    o << "dotted";
+    break;
+  case MWAWFont::Line::LargeDot:
+    o << "dotted[large]";
+    break;
+  case MWAWFont::Line::Dash:
+    o << "dash";
+    break;
+  case MWAWFont::Line::Single:
+    o << "solid";
+    break;
+  case MWAWFont::Line::Double:
+    o << "double";
+    break;
+  case MWAWFont::Line::Wave:
+    o << "wave";
+    break;
+  case MWAWFont::Line::None:
+  default:
+    break;
+  }
+  if (line.m_width < 1.0 || line.m_width > 1.0)
+    o << ":w=" << line.m_width ;
+  if (!line.m_color.isBlack())
+    o << ":col=" << line.m_color;
+  return o;
+}
+
+void MWAWFont::Line::addTo(WPXPropertyList &propList, std::string const type) const
+{
+  if (!isSet()) return;
+
+  std::stringstream s;
+  s << "style:text-" << type << "-type";
+  propList.insert(s.str().c_str(), (m_style==Double) ? "double" : "single");
+
+  s.str("");
+  s << "style:text-" << type << "-style";
+  switch(m_style) {
   case Dot:
   case LargeDot:
-    return "dotted";
-  case Dash:
-    return "dash";
-  case Single:
-    return "solid";
-  case Double:
-    return "double";
+    propList.insert(s.str().c_str(), "dotted");
     break;
+  case Dash:
+    propList.insert(s.str().c_str(), "dash");
+    break;
+  case Single:
+    propList.insert(s.str().c_str(), "solid");
+    break;
+  case Wave:
+    propList.insert(s.str().c_str(), "wave");
+    break;
+  case Double:
   case None:
   default:
     break;
   }
-  return "";
+  if (!m_color.isBlack()) {
+    s.str("");
+    s << "style:text-" << type << "-color";
+    propList.insert(s.str().c_str(), m_color.str().c_str());
+  }
+  //normal, bold, thin, dash, medium, and thick
+  s.str("");
+  s << "style:text-" << type << "-width";
+  if (m_width <= 0.6)
+    propList.insert(s.str().c_str(), "thin");
+  else if (m_width >= 1.5)
+    propList.insert(s.str().c_str(), "thick");
 }
 
+////////////////////////////////////////////////////////////
+// script function
+////////////////////////////////////////////////////////////
 std::string MWAWFont::Script::str(int fSize) const
 {
   if (!isSet() || (m_delta==0 && m_scale==100))
@@ -91,6 +157,9 @@ std::string MWAWFont::Script::str(int fSize) const
   return o.str();
 }
 
+////////////////////////////////////////////////////////////
+// font function
+////////////////////////////////////////////////////////////
 std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) const
 {
   std::stringstream o;
@@ -128,7 +197,12 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     if (flag&blinkBit) o << "blink:";
     o << ",";
   }
-  if (m_underline.isSet()) o << "underline=" << Line::getPropertyValue(getUnderlineStyle()) << ":";
+  if (m_overline.isSet() && m_overline->isSet())
+    o << "overline=[" << m_overline.get() << "]:";
+  if (m_strikeoutline.isSet() && m_strikeoutline->isSet())
+    o << "strikeOut=[" << m_strikeoutline.get() << "]:";
+  if (m_underline.isSet() && m_underline->isSet())
+    o << "underline=[" << m_underline.get() << ":]";
   if (hasColor())
     o << "col=" << m_color.get()<< "),";
   if (m_backgroundColor.isSet() && !m_backgroundColor.get().isWhite())
@@ -166,8 +240,12 @@ void MWAWFont::sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverte
 
   actualFont.setFlags(flags());
   listener->setFontAttributes(actualFont.flags());
-  actualFont.setUnderlineStyle(getUnderlineStyle());
-  listener->setFontUnderlineStyle(actualFont.getUnderlineStyle());
+  actualFont.setOverline(getOverline());
+  listener->setFontOverline(actualFont.getOverline());
+  actualFont.setStrikeOut(getStrikeOut());
+  listener->setFontStrikeOut(actualFont.getStrikeOut());
+  actualFont.setUnderline(getUnderline());
+  listener->setFontUnderline(actualFont.getUnderline());
   actualFont.setColor(m_color.get());
   listener->setFontColor(m_color.get());
   actualFont.setBackgroundColor(m_backgroundColor.get());

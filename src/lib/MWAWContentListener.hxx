@@ -100,8 +100,12 @@ struct MWAWContentParsingState {
   MWAWFont::Script m_fontScript;
   //! the font attribute
   uint32_t m_fontAttributeBits;
+  //! the overline style
+  MWAWFont::Line m_fontOverline;
+  //! the strikeout style
+  MWAWFont::Line m_fontStrikeOutline;
   //! the underline style
-  MWAWFont::Line::Style m_fontUnderline;
+  MWAWFont::Line m_fontUnderline;
   //! the font color
   MWAWColor m_fontColor;
   //! the font background color
@@ -257,8 +261,12 @@ public:
   void setFontScript(MWAWFont::Script const &newscript);
   //! sets the font attribute: bold, italic, ...
   void setFontAttributes(const uint32_t fontAttributes);
+  //! sets the font overline style
+  void setFontOverline(MWAWFont::Line const &line);
+  //! sets the font strikeOut style
+  void setFontStrikeOut(MWAWFont::Line const &line);
   //! sets the font underline style
-  void setFontUnderlineStyle(MWAWFont::Line::Style style);
+  void setFontUnderline(MWAWFont::Line const &line);
   //! sets the font color
   void setFontColor(MWAWColor const rgb);
   //! sets the font background color

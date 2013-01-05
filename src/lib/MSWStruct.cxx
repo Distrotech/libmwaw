@@ -114,7 +114,7 @@ uint32_t Font::getFlags() const
 MWAWFont::Line::Style Font::getUnderlineStyle() const
 {
   MWAWFont::Line::Style res=MWAWFont::Line::None;
-  if (m_font.isSet()) res = m_font->getUnderlineStyle();
+  if (m_font.isSet()) res = m_font->getUnderline().m_style;
   if (!m_flags[NumFlags-1].isSet()) return res;
 
   int action = m_flags[NumFlags-1].get();

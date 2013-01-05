@@ -42,6 +42,7 @@
 
 class MWAWContentListener;
 class MWAWFontConverter;
+class WPXPropertyList;
 
 //! Class to store font
 class MWAWFont
@@ -50,9 +51,41 @@ public:
   /** a small struct to define a line in MWAWFont */
   struct Line {
     /** the line style */
-    enum Style { None, Single, Double, Dot, LargeDot, Dash };
-    //! return the properties corresponding to a style line
-    static std::string getPropertyValue(Style const &style);
+    enum Style { None, Single, Double, Dot, LargeDot, Dash, Wave };
+    //! constructor
+    Line(Style style=None, float w=1.0, MWAWColor col=MWAWColor::black()) :
+      m_style(style), m_width(w), m_color(col) { }
+    //! return true if the line is not empty
+    bool isSet() const {
+      return m_style != None && m_width>0;
+    }
+    //! add a line to the propList knowing the type (line-through, underline, overline )
+    void addTo(WPXPropertyList &propList, std::string const type) const;
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, Line const &line);
+    //! operator==
+    bool operator==(Line const &oth) const {
+      return cmp(oth)==0;
+    }
+    //! operator!=
+    bool operator!=(Line const &oth) const {
+      return cmp(oth)!=0;
+    }
+    //! small comparison function
+    int cmp(Line const &oth) const {
+      if (m_style != oth.m_style) return int(m_style)-int(oth.m_style);
+      if (m_width < oth.m_width) return -1;
+      if (m_width > oth.m_width) return 1;
+      if (m_color < oth.m_color) return -1;
+      if (m_color > oth.m_color) return 1;
+      return 0;
+    }
+    /** the style */
+    Style m_style;
+    /** the width in point */
+    float m_width;
+    /** the color */
+    MWAWColor m_color;
   };
   /** a small struct to define the script position in MWAWFont */
   struct Script {
@@ -135,7 +168,8 @@ public:
    * \param sz the font size
    * \param f the font attributes bold, ... */
   MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_deltaSpacing(0), m_scriptPosition(),
-    m_flags(f), m_underline(Line::None), m_color(MWAWColor::black()), m_backgroundColor(MWAWColor::white()), m_extra("") {
+    m_flags(f), m_overline(Line::None), m_strikeoutline(Line::None), m_underline(Line::None),
+    m_color(MWAWColor::black()), m_backgroundColor(MWAWColor::white()), m_extra("") {
     resetColor();
   };
   //! returns true if the font id is initialized
@@ -154,6 +188,8 @@ public:
       else
         m_flags = ft.m_flags;
     }
+    m_overline.insert(ft.m_overline);
+    m_strikeoutline.insert(ft.m_strikeoutline);
     m_underline.insert(ft.m_underline);
     m_color.insert(ft.m_color);
     m_extra += ft.m_extra;
@@ -237,13 +273,76 @@ public:
     m_backgroundColor = MWAWColor::white();
   }
 
-  //! returns the underline style
-  Line::Style getUnderlineStyle() const {
+  //! returns the overline
+  Line const &getOverline() const {
+    return m_overline.get();
+  }
+  //! sets the overline
+  void setOverline(Line const &line) {
+    m_overline = line;
+  }
+  //! sets the overline style ( by default, we also reset the style)
+  void setOverlineStyle(Line::Style style=Line::None, bool doReset=true) {
+    if (doReset)
+      m_overline = Line(style);
+    else
+      m_overline->m_style = style;
+  }
+  //! sets the overline width
+  void setOverlineWidth(float w) {
+    m_overline->m_width = w;
+  }
+  //! sets the overline color
+  void setOverlineColor(MWAWColor const &color) {
+    m_overline->m_color = color;
+  }
+
+  //! returns the strikeoutline
+  Line const &getStrikeOut() const {
+    return m_strikeoutline.get();
+  }
+  //! sets the strikeoutline
+  void setStrikeOut(Line const &line) {
+    m_strikeoutline = line;
+  }
+  //! sets the strikeoutline style ( by default, we also reset the style)
+  void setStrikeOutStyle(Line::Style style=Line::None, bool doReset=true) {
+    if (doReset)
+      m_strikeoutline = Line(style);
+    else
+      m_strikeoutline->m_style = style;
+  }
+  //! sets the strikeoutline width
+  void setStrikeOutWidth(float w) {
+    m_strikeoutline->m_width = w;
+  }
+  //! sets the strikeoutline color
+  void setStrikeOutColor(MWAWColor const &color) {
+    m_strikeoutline->m_color = color;
+  }
+
+  //! returns the underline
+  Line const &getUnderline() const {
     return m_underline.get();
   }
-  //! sets the underline style
-  void setUnderlineStyle(Line::Style style=Line::None) {
-    m_underline = style;
+  //! sets the underline
+  void setUnderline(Line const &line) {
+    m_underline = line;
+  }
+  //! sets the underline style ( by default, we also reset the style)
+  void setUnderlineStyle(Line::Style style=Line::None, bool doReset=true) {
+    if (doReset)
+      m_underline = Line(style);
+    else
+      m_underline->m_style = style;
+  }
+  //! sets the underline width
+  void setUnderlineWidth(float w) {
+    m_underline->m_width = w;
+  }
+  //! sets the underline color
+  void setUnderlineColor(MWAWColor const &color) {
+    m_underline->m_color = color;
   }
 
   //! returns a string which can be used for debugging
@@ -270,8 +369,12 @@ public:
     if (m_deltaSpacing.get() > oth.m_deltaSpacing.get()) return 1;
     diff = script().cmp(oth.script());
     if (diff != 0) return diff;
-    if (m_underline.get() < oth.m_underline.get()) return -1;
-    if (m_underline.get() > oth.m_underline.get()) return 1;
+    diff = m_overline.get().cmp(oth.m_overline.get());
+    if (diff != 0) return diff;
+    diff = m_strikeoutline.get().cmp(oth.m_strikeoutline.get());
+    if (diff != 0) return diff;
+    diff = m_underline.get().cmp(oth.m_underline.get());
+    if (diff != 0) return diff;
     if (m_color.get() < oth.m_color.get()) return -1;
     if (m_color.get() > oth.m_color.get()) return 1;
     if (m_backgroundColor.get() < oth.m_backgroundColor.get()) return -1;
@@ -287,7 +390,9 @@ protected:
   Variable<int> m_deltaSpacing /** expand(>0), condensed(<0) depl in point*/;
   Variable<Script> m_scriptPosition /** the sub/super script definition */;
   Variable<uint32_t> m_flags /** font attributes */;
-  Variable<Line::Style> m_underline /** underline attributes */;
+  Variable<Line> m_overline /** overline attributes */;
+  Variable<Line> m_strikeoutline /** overline attributes */;
+  Variable<Line> m_underline /** underline attributes */;
   Variable<MWAWColor> m_color /** font color */;
   Variable<MWAWColor> m_backgroundColor /** font background color */;
 public:

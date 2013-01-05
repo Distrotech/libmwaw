@@ -47,16 +47,23 @@
 class MWAWContentListener;
 class WPXPropertyListVector;
 
+/** class to store a tab use by MWAWParagraph */
 struct MWAWTabStop {
+  //! the tab alignement
   enum Alignment { LEFT, RIGHT, CENTER, DECIMAL, BAR };
+  //! constructor
   MWAWTabStop(double position = 0.0, Alignment alignment = LEFT, uint16_t leaderCharacter='\0', uint8_t leaderNumSpaces = 0)  :
     m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_leaderNumSpaces(leaderNumSpaces) {
   }
+  //! add a tab to the propList
   void addTo(WPXPropertyListVector &propList, double decalX=0.0);
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, MWAWTabStop const &ft);
+  //! the tab position
   double m_position;
+  //! the alignement ( left, center, ...)
   Alignment m_alignment;
+  //! the leader char
   uint16_t m_leaderCharacter;
   uint8_t m_leaderNumSpaces;
 };

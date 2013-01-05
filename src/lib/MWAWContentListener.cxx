@@ -65,8 +65,8 @@ MWAWContentParsingState::MWAWContentParsingState() :
   m_textBuffer(""), m_numDeferredTabs(0),
 
   m_fontName("Times New Roman"), m_fontSize(12.0), m_fontDLSpacing(0.0), m_fontScript(), m_fontAttributeBits(0),
-  m_fontUnderline(MWAWFont::Line::None), m_fontColor(MWAWColor::black()), m_fontBackgroundColor(MWAWColor::white()),
-  m_textLanguage("UNSET"),
+  m_fontOverline(MWAWFont::Line(MWAWFont::Line::None)), m_fontStrikeOutline(MWAWFont::Line(MWAWFont::Line::None)), m_fontUnderline(MWAWFont::Line(MWAWFont::Line::None)),
+  m_fontColor(MWAWColor::black()), m_fontBackgroundColor(MWAWColor::white()), m_textLanguage("UNSET"),
 
   m_isParagraphColumnBreak(false), m_isParagraphPageBreak(false),
 
@@ -371,11 +371,25 @@ void MWAWContentListener::setFontScript(MWAWFont::Script const &newscript)
   m_ps->m_fontScript=newscript;
 }
 
-void MWAWContentListener::setFontUnderlineStyle(MWAWFont::Line::Style style)
+void MWAWContentListener::setFontOverline(MWAWFont::Line const &line)
 {
-  if (m_ps->m_fontUnderline==style) return;
+  if (m_ps->m_fontOverline==line) return;
   _closeSpan();
-  m_ps->m_fontUnderline=style;
+  m_ps->m_fontOverline=line;
+}
+
+void MWAWContentListener::setFontStrikeOut(MWAWFont::Line const &line)
+{
+  if (m_ps->m_fontStrikeOutline==line) return;
+  _closeSpan();
+  m_ps->m_fontStrikeOutline=line;
+}
+
+void MWAWContentListener::setFontUnderline(MWAWFont::Line const &line)
+{
+  if (m_ps->m_fontUnderline==line) return;
+  _closeSpan();
+  m_ps->m_fontUnderline=line;
 }
 
 void MWAWContentListener::setFontColor(MWAWColor const rgb)
@@ -1176,16 +1190,12 @@ void MWAWContentListener::_openSpan()
     propList.insert("fo:font-weight", "bold");
   if (attributeBits & MWAWFont::strikeOutBit)
     propList.insert("style:text-line-through-type", "single");
-  if (m_ps->m_fontUnderline != MWAWFont::Line::None) {
-    if(m_ps->m_fontUnderline == MWAWFont::Line::Double)
-      propList.insert("style:text-underline-type", "double");
-    else {
-      propList.insert("style:text-underline-type", "single");
-      std::string str = MWAWFont::Line::getPropertyValue(m_ps->m_fontUnderline);
-      if (str.size())
-        propList.insert("style:text-underline-style", str.c_str());
-    }
-  }
+  if (m_ps->m_fontOverline.isSet())
+    m_ps->m_fontOverline.addTo(propList, "overline");
+  if (m_ps->m_fontStrikeOutline.isSet())
+    m_ps->m_fontStrikeOutline.addTo(propList, "line-through");
+  if (m_ps->m_fontUnderline.isSet())
+    m_ps->m_fontUnderline.addTo(propList, "underline");
   if (attributeBits & MWAWFont::overlineBit)
     propList.insert("style:text-overline-type", "single");
   if (attributeBits & MWAWFont::outlineBit)
@@ -1244,8 +1254,11 @@ void MWAWContentListener::_flushDeferredTabs()
   if (m_ps->m_numDeferredTabs == 0) return;
 
   // CHECKME: the tab are not underline even if the underline bit is set
-  MWAWFont::Line::Style oldUnderline = m_ps->m_fontUnderline;
-  if (oldUnderline != MWAWFont::Line::None) setFontUnderlineStyle(MWAWFont::Line::None);
+  MWAWFont::Line oldOverline(m_ps->m_fontOverline), oldStrikeOut(m_ps->m_fontStrikeOutline), oldUnderline(m_ps->m_fontUnderline);
+  if (oldOverline.isSet()) setFontOverline(MWAWFont::Line(MWAWFont::Line::None));
+  if (oldStrikeOut.isSet()) setFontStrikeOut(MWAWFont::Line(MWAWFont::Line::None));
+  if (oldUnderline.isSet()) setFontUnderline(MWAWFont::Line(MWAWFont::Line::None));
+
   uint32_t oldTextAttributes = m_ps->m_fontAttributeBits;
   static const uint32_t s_underoverlineBits = MWAWFont::overlineBit;
   uint32_t newAttributes = oldTextAttributes & (~s_underoverlineBits);
@@ -1254,7 +1267,9 @@ void MWAWContentListener::_flushDeferredTabs()
   for (; m_ps->m_numDeferredTabs > 0; m_ps->m_numDeferredTabs--)
     m_documentInterface->insertTab();
   if (oldTextAttributes != newAttributes) setFontAttributes(oldTextAttributes);
-  if (oldUnderline != MWAWFont::Line::None) setFontUnderlineStyle(oldUnderline);
+  if (oldOverline.isSet()) setFontOverline(oldUnderline);
+  if (oldStrikeOut.isSet()) setFontStrikeOut(oldStrikeOut);
+  if (oldUnderline.isSet()) setFontUnderline(oldUnderline);
 }
 
 void MWAWContentListener::_flushText()
