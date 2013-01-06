@@ -118,7 +118,7 @@ protected:
 
   //! send a simple line
   void send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
-            MWAWFont &font);
+            FWTextInternal::Font &font);
 
   //! sort the different zones, finding the main zone, ...
   void sortZones();

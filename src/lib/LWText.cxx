@@ -124,6 +124,8 @@ struct Font {
       m_font.setUnderline(fExtra.m_font.getUnderline());
     if (fExtra.m_font.getStrikeOut().isSet())
       m_font.setStrikeOut(fExtra.m_font.getStrikeOut());
+    if (fExtra.m_font.getOverline().isSet())
+      m_font.setOverline(fExtra.m_font.getOverline());
     m_font.set(fExtra.m_font.script());
     MWAWColor backColor;
     fExtra.m_font.getBackgroundColor(backColor);
@@ -641,22 +643,20 @@ bool LWText::readFont2(MWAWEntry const &entry)
     case 0:
       break;
     case 1:
-      flags |= MWAWFont::overlineBit;
+      font.m_font.setOverlineStyle(MWAWFont::Line::Single);
       break;
     case 2:
-      flags |= MWAWFont::overlineBit;
-      f << "over[double],";
+      font.m_font.setOverlineStyle(MWAWFont::Line::Double);
       break;
     case 3:
-      flags |= MWAWFont::overlineBit;
-      f << "over[w=2],";
+      font.m_font.setOverlineStyle(MWAWFont::Line::Single);
+      font.m_font.setOverlineWidth(2.0);
       break;
     case 4:
-      flags |= MWAWFont::overlineBit;
-      f << "over[dot],";
+      font.m_font.setOverlineStyle(MWAWFont::Line::Dot);
       break;
     case 5:
-      flags |= MWAWFont::overlineBit;
+      font.m_font.setOverlineStyle(MWAWFont::Line::Dot);
       f << "over[dot2],";
       break;
     default:

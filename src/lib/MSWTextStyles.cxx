@@ -124,7 +124,7 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
   uint32_t flags = 0;
   if (flag&0x80) flags |= MWAWFont::boldBit;
   if (flag&0x40) flags |= MWAWFont::italicBit;
-  if (flag&0x20) flags |= MWAWFont::strikeOutBit;
+  if (flag&0x20) font.m_font->setStrikeOutStyle(MWAWFont::Line::Single);
   if (flag&0x10) flags |= MWAWFont::outlineBit;
   if (flag&0x8) flags |= MWAWFont::shadowBit;
   if (flag&0x4) flags |= MWAWFont::smallCapsBit;
@@ -301,12 +301,11 @@ bool MSWTextStyles::sendFont(ZoneType type, int id, MSWStruct::Font &actFont)
 void MSWTextStyles::setProperty(MSWStruct::Font const &font)
 {
   if (!m_listener) return;
-  MWAWFont tmp = font.m_font.get();
-  if (tmp.id() < 0) tmp.setId(m_state->m_defaultFont.id());
-  if (tmp.size() <= 0) tmp.setSize(m_state->m_defaultFont.size());
-  tmp.setFlags(font.getFlags());
-  tmp.setUnderlineStyle(font.getUnderlineStyle());
-  tmp.sendTo(m_listener.get(), m_convertissor, tmp);
+  MSWStruct::Font tmp = font;
+  if (tmp.m_font->id() < 0) tmp.m_font->setId(m_state->m_defaultFont.id());
+  if (tmp.m_font->size() <= 0) tmp.m_font->setSize(m_state->m_defaultFont.size());
+  tmp.updateFontToFinalState();
+  tmp.m_font->sendTo(m_listener.get(), m_convertissor, *tmp.m_font);
 }
 
 ////////////////////////////////////////////////////////////

@@ -45,6 +45,7 @@ These files defined basic tools which must be used by the parsers :
 
 - MWAWDebug.hxx : class to store parsed data in an intermediate file
 - MWAWFontConverter.hxx : read and convert in unicode Apple© char fonts
+     MWAWFontSJISConverter.hxx : read S-JIS encoding fonts
 - MWAWPrinter.hxx : read the mac printer information
 - MWAWOLEParser.hxx : read some classic ole structure
 - MWAWPropertyHandler.hxx : some classes which keep a list of tag and WPXPropertyList,

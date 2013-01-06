@@ -179,9 +179,9 @@ struct MWAWColor {
   bool operator>=(MWAWColor const &c) const {
     return !operator<(c);
   }
-  //! operator<< in the form #rrggbb
+  //! operator<< in the form \#rrggbb
   friend std::ostream &operator<< (std::ostream &o, MWAWColor const &c);
-  //! print the color in the form #rrggbb
+  //! print the color in the form \#rrggbb
   std::string str() const;
 protected:
   //! the argb color

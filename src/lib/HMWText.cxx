@@ -603,16 +603,14 @@ bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)
     font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
   if (flag&4) {
     font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
-    f << "underline[w=2],";
+    font.m_font.setUnderlineWidth(2.0);
   }
   if (flag&8)
     font.m_font.setUnderlineStyle(MWAWFont::Line::Dash);
   if (flag&0x10)
-    flags |= MWAWFont::strikeOutBit;
-  if (flag&0x20) {
-    flags |= MWAWFont::strikeOutBit;
-    f << "strike[double],";
-  }
+    font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
+  if (flag&0x20)
+    font.m_font.setStrikeOutStyle(MWAWFont::Line::Double);
   if (flag&0xFFC0)
     f << "#flag0=" << std::hex << (flag&0xFFF2) << std::dec << ",";
   flag =(int) input->readULong(2);
@@ -624,20 +622,18 @@ bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)
   if (flag&0x20) font.m_font.set(MWAWFont::Script::super100());
   if (flag&0x40) font.m_font.set(MWAWFont::Script::sub100());
   if (flag&0x80) font.m_font.set(MWAWFont::Script::super());
-  if (flag&0x100) {
-    flags |= MWAWFont::overlineBit;
-    f << "overline[dotted],";
-  }
+  if (flag&0x100) // checkme
+    font.m_font.setOverlineStyle(MWAWFont::Line::Dot);
   if (flag&0x200) f << "border[rectangle],";
   if (flag&0x400) f << "border[rounded],";
   if (flag&0x800) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
   if (flag&0x1000) {
     font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
-    f << "underline[w=2]";
+    font.m_font.setUnderlineWidth(2.0);
   }
   if (flag&0x2000) {
     font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
-    f << "underline[w=3]";
+    font.m_font.setUnderlineWidth(3.0);
   }
   if (flag&0xC000)
     f << "#flag1=" << std::hex << (flag&0xC000) << std::dec << ",";

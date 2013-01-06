@@ -52,6 +52,20 @@
 /** Internal: the structures of a FWText */
 namespace FWTextInternal
 {
+/** Internal: class to store a font and it state */
+struct Font {
+  /** constructor */
+  Font() : m_font() {
+    for (int i = 0; i < 4; i++) m_underlineFlags[i]=false;
+    for (int i = 0; i < 2; i++) m_xdelta[i]=false;
+  }
+  /** the font */
+  MWAWFont m_font;
+  /** the underline flags */
+  bool m_underlineFlags[4];
+  /** the xdelta flags */
+  bool m_xdelta[2];
+};
 /** Internal: class to store the LineHeader */
 struct LineHeader {
   /** Constructor */
@@ -314,7 +328,7 @@ int FWText::numPages() const
 // Intermediate level
 ////////////////////////////////////////////////////////////
 void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
-                  MWAWFont &font)
+                  FWTextInternal::Font &font)
 {
   if (!m_listener) return;
   MWAWInputStreamPtr input = zone->m_zone->m_input;
@@ -333,7 +347,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       nextIsChar = false;
     else {
       done = true;
-      uint32_t fFlags = font.flags();
+      uint32_t fFlags = font.m_font.flags();
       int id;
       switch(val) {
       case 0:
@@ -346,81 +360,104 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break; // often found by pair around a " " a ","...
       case 0x83:
         fFlags ^= MWAWFont::boldBit;
-        font.setFlags(fFlags);
+        font.m_font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x84:
         fFlags ^= MWAWFont::italicBit;
-        font.setFlags(fFlags);
+        font.m_font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x86:
         fFlags ^= MWAWFont::outlineBit;
-        font.setFlags(fFlags);
+        font.m_font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x87:
         fFlags ^= MWAWFont::shadowBit;
-        font.setFlags(fFlags);
+        font.m_font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x88:
         fFlags ^= MWAWFont::smallCapsBit;
-        font.setFlags(fFlags);
+        font.m_font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x89: // change color
         break;
       case 0x8a:
-        if (font.script()==MWAWFont::Script::super100())
-          font.set(MWAWFont::Script());
+        if (font.m_font.script()==MWAWFont::Script::super100())
+          font.m_font.set(MWAWFont::Script());
         else
-          font.set(MWAWFont::Script::super100());
+          font.m_font.set(MWAWFont::Script::super100());
         fontSet=false;
         break;
       case 0x8b:
-        if (font.script()==MWAWFont::Script::sub100())
-          font.set(MWAWFont::Script());
+        if (font.m_font.script()==MWAWFont::Script::sub100())
+          font.m_font.set(MWAWFont::Script());
         else
-          font.set(MWAWFont::Script::sub100());
+          font.m_font.set(MWAWFont::Script::sub100());
         fontSet=false;
         break;
       case 0x8c:
-        fFlags ^= MWAWFont::strikeOutBit;
-        font.setFlags(fFlags);
+        if (font.m_font.getStrikeOut().isSet())
+          font.m_font.setStrikeOutStyle(MWAWFont::Line::None);
+        else
+          font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
         fontSet=false;
         break;
-      case 0x90:
-        break; // condensed
-      case 0x91:
-        break; // extended
-
-      case 0x85: // normal underline
-      case 0x8e: // word underline
-      case 0x8f: // double
-      case 0x92: { // dotted underline
-        MWAWFont::Line::Style style= (val==0x8f)? MWAWFont::Line::Double :
-                                     (val==0x92)? MWAWFont::Line::Dot : MWAWFont::Line::Single;
-        if (font.getUnderline().isSet())
-          font.setUnderlineStyle(MWAWFont::Line::None);
-        else
-          font.setUnderlineStyle(style);
+      case 0x90: // condensed
+      case 0x91: // expand
+        font.m_xdelta[val-0x90]=!font.m_xdelta[val-0x90];
+        font.m_font.setDeltaLetterSpacing
+        ((font.m_xdelta[0]?-1:0)+(font.m_xdelta[1]?1:0));
         fontSet=false;
+        break;
+      case 0x85:
+      case 0x8e:
+      case 0x8f:
+      case 0x92: {
+        switch(val) {
+        case 0x85: // normal underline
+          font.m_underlineFlags[0]=!font.m_underlineFlags[0];
+          break;
+        case 0x8e: // word underline
+          font.m_underlineFlags[1]=!font.m_underlineFlags[1];
+          break;
+        case 0x8f: // double
+          font.m_underlineFlags[2]=!font.m_underlineFlags[2];
+          break;
+        default:
+        case 0x92: // dot
+          font.m_underlineFlags[3]=!font.m_underlineFlags[3];
+          break;
+        }
+        fontSet=false;
+        if (font.m_underlineFlags[3])
+          font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
+        else if (font.m_underlineFlags[2])
+          font.m_font.setUnderlineStyle(MWAWFont::Line::Double);
+        else if (font.m_underlineFlags[0]||font.m_underlineFlags[1])
+          font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+        else
+          font.m_font.setUnderlineStyle(MWAWFont::Line::None);
         break;
       }
       case 0x93:
-        fFlags ^= MWAWFont::overlineBit;
-        font.setFlags(fFlags);
+        if (font.m_font.getOverline().isSet())
+          font.m_font.setOverlineStyle(MWAWFont::Line::None);
+        else
+          font.m_font.setOverlineStyle(MWAWFont::Line::Single);
         fontSet=false;
         break;
       case 0x94:
         fFlags ^= MWAWFont::allCapsBit;
-        font.setFlags(fFlags);
+        font.m_font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0x95:
-        fFlags ^= MWAWFont::smallCapsBit;
-        font.setFlags(fFlags);
+        fFlags ^= MWAWFont::lowercaseBit;
+        font.m_font.setFlags(fFlags);
         fontSet=false;
         break;
       case 0xa7: // fixme appear also as tabs separator
@@ -436,7 +473,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break; // insecable-
       case 0xb2:
         if (actPos+1 > endPos) break;
-        font.setSize((int)input->readULong(1));
+        font.m_font.setSize((int)input->readULong(1));
         fontSet=false;
         break;
       case 0xb3:
@@ -444,7 +481,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       case 0xc1:
         if (actPos+2 > endPos) break;
-        font.setId((int)input->readULong(2));
+        font.m_font.setId((int)input->readULong(2));
         fontSet = false;
         break;
       case 0xc7: // item id
@@ -559,13 +596,13 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
     }
     if (done) continue;
     if (!fontSet) {
-      setProperty(font, m_state->m_font);
+      setProperty(font.m_font, m_state->m_font);
       fontSet = true;
     }
     if (val >= 256)
       m_listener->insertUnicode((uint32_t) val);
     else {
-      int unicode = m_convertissor->unicode(font.id(), (unsigned char) val);
+      int unicode = m_convertissor->unicode(font.m_font.id(), (unsigned char) val);
       if (unicode != -1)
         m_listener->insertUnicode((uint32_t) unicode);
       else if (val > 0x1f)
@@ -707,7 +744,8 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
   long pos = zone->m_begin;
   input->seek(pos, WPX_SEEK_SET);
   int val, num=1;
-  MWAWFont font(3,12);
+  FWTextInternal::Font font;
+  font.m_font=MWAWFont(3,12);
   FWTextInternal::Paragraph ruler;
 
   std::vector<int> listBreaks = zone->getBreaksPosition();
@@ -782,8 +820,8 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     }
     f << lHeader;
     if (lHeader.m_fontSet) {
-      font.setId(lHeader.m_font.id());
-      font.setSize(lHeader.m_font.size());
+      font.m_font.setId(lHeader.m_font.id());
+      font.m_font.setSize(lHeader.m_font.size());
     }
     if (lHeader.m_numChar)
       ascii.addDelimiter(input->tell(),'|');
@@ -1519,23 +1557,25 @@ bool FWText::readParagraphMod(shared_ptr<FWEntry> zone, int id)
   }
   f.str("");
   f << "Entries(ParaMod):";
-  f << "[" << std::hex;
-  int val;
+  long val;
   /* f0 seems to be an font indexed color
-     in v2: 0x6000=black, 0x8202(green), 830e(pure green)
+     in v2: 0x6000=black, 0x801a(red), 0x8202(green), 830e(pure green)
    */
-  /* f0=6000|801a|8202|830e|ffff, f1=0|ffff, f2=0|199a|ffff,
-     f3=0|2|ffff,f4=0|1|2|3|199a|8000|ffff */
-  for (int i = 0; i < 5; i++) {
-    val = int(input->readULong(2));
-    if (val==0xffff)
-      f << "*,";
-    else if (val == 0)
-      f << "_,";
+  val=long(input->readULong(2));
+  if (val!=0xFFFF)
+    f << "col=" << std::hex << val << std::dec << ",";
+  /* other can be super/subs | *,*,*|0|2,*|0..3*/
+  for (int i = 0; i < 2; i++) {
+    val=input->readLong(4);
+    if (val==-1) continue;
+    if (i==0) f << "super=";
+    else f << "subs=";
+    if (val < 0)
+      f << -float(val)/65536.f << "pt";
     else
-      f << val << ",";
+      f << float(val)/65536.f << "li";
+    f << "|f" << i << "=" << std::hex << uint32_t(val) << std::hex << ",";
   }
-  f << std::dec << "],";
   if (m_state->m_paragraphModSet.find(id) == m_state->m_paragraphModSet.end())
     m_state->m_paragraphModSet.insert(id);
   else {

@@ -695,7 +695,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   if (flag&0x8) flags |= MWAWFont::embossBit;
   if (flag&0x10) flags |= MWAWFont::shadowBit;
   /* flags & 0x20: condensed, flags & 0x40: extended */
-  if (flag&0x80) flags |= MWAWFont::strikeOutBit;
+  if (flag&0x80) font.setStrikeOutStyle(MWAWFont::Line::Single);
   if (flag&0x100) font.set(MWAWFont::Script::super100());
   if (flag&0x200) font.set(MWAWFont::Script::sub100());
   if (flag&0x400) font.set(MWAWFont::Script::super());
@@ -726,7 +726,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
     if (flag & 0x2)
       font.setUnderlineStyle(MWAWFont::Line::Double);
     if (flag & 0x20)
-      flags |= MWAWFont::strikeOutBit;
+      font.setStrikeOutStyle(MWAWFont::Line::Single);
     flag &= 0xFFDC;
     if (flag)
       f << "#flag2=" << std::hex << flag << std::dec << ",";
@@ -775,7 +775,7 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   if (flag&0x8) flags |= MWAWFont::embossBit;
   if (flag&0x10) flags |= MWAWFont::shadowBit;
   /* flags & 0x20: condensed, flags & 0x40: extended */
-  if (flag&0x80) flags |= MWAWFont::strikeOutBit;
+  if (flag&0x80) font.setStrikeOutStyle(MWAWFont::Line::Single);
   if (flag&0x100) font.set(MWAWFont::Script::super100());
   if (flag&0x200) font.set(MWAWFont::Script::sub100());
   if (flag&0x400) font.set(MWAWFont::Script::super());
@@ -796,7 +796,7 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
     if (flag & 0x2)
       font.setUnderlineStyle(MWAWFont::Line::Double);
     if (flag & 0x20)
-      flags |= MWAWFont::strikeOutBit;
+      font.setStrikeOutStyle(MWAWFont::Line::Single);
     flag &= 0xFFDC;
     if (flag)
       f << "#flag2=" << std::hex << flag << std::dec << ",";

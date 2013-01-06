@@ -184,11 +184,9 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     uint32_t flag = m_flags.get();
     if (flag&boldBit) o << "b:";
     if (flag&italicBit) o << "it:";
-    if (flag&overlineBit) o << "overL:";
     if (flag&embossBit) o << "emboss:";
     if (flag&shadowBit) o << "shadow:";
     if (flag&outlineBit) o << "outline:";
-    if (flag&strikeOutBit) o << "strikeout:";
     if (flag&smallCapsBit) o << "smallCaps:";
     if (flag&allCapsBit) o << "allCaps:";
     if (flag&lowercaseBit) o << "lowercase:";

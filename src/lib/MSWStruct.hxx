@@ -44,6 +44,7 @@
 
 #include "libmwaw_internal.hxx"
 
+
 #include "MWAWFont.hxx"
 #include "MWAWParagraph.hxx"
 
@@ -70,11 +71,8 @@ struct Font {
   //! insert new font data ( beginning by updating font flags )
   void insert(Font const &font);
 
-  //! returns the font flags
-  uint32_t getFlags() const;
-
-  //! returns the underline style (fixme:replace by getUnderline)
-  MWAWFont::Line::Style getUnderlineStyle() const;
+  //! update the font to obtain the final font
+  void updateFontToFinalState();
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Font const &font);

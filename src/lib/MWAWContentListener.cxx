@@ -1188,16 +1188,12 @@ void MWAWContentListener::_openSpan()
     propList.insert("fo:font-style", "italic");
   if (attributeBits & MWAWFont::boldBit)
     propList.insert("fo:font-weight", "bold");
-  if (attributeBits & MWAWFont::strikeOutBit)
-    propList.insert("style:text-line-through-type", "single");
   if (m_ps->m_fontOverline.isSet())
     m_ps->m_fontOverline.addTo(propList, "overline");
   if (m_ps->m_fontStrikeOutline.isSet())
     m_ps->m_fontStrikeOutline.addTo(propList, "line-through");
   if (m_ps->m_fontUnderline.isSet())
     m_ps->m_fontUnderline.addTo(propList, "underline");
-  if (attributeBits & MWAWFont::overlineBit)
-    propList.insert("style:text-overline-type", "single");
   if (attributeBits & MWAWFont::outlineBit)
     propList.insert("style:text-outline", "true");
   if (attributeBits & MWAWFont::blinkBit)
@@ -1259,14 +1255,9 @@ void MWAWContentListener::_flushDeferredTabs()
   if (oldStrikeOut.isSet()) setFontStrikeOut(MWAWFont::Line(MWAWFont::Line::None));
   if (oldUnderline.isSet()) setFontUnderline(MWAWFont::Line(MWAWFont::Line::None));
 
-  uint32_t oldTextAttributes = m_ps->m_fontAttributeBits;
-  static const uint32_t s_underoverlineBits = MWAWFont::overlineBit;
-  uint32_t newAttributes = oldTextAttributes & (~s_underoverlineBits);
-  if (oldTextAttributes != newAttributes) setFontAttributes(newAttributes);
   if (!m_ps->m_isSpanOpened) _openSpan();
   for (; m_ps->m_numDeferredTabs > 0; m_ps->m_numDeferredTabs--)
     m_documentInterface->insertTab();
-  if (oldTextAttributes != newAttributes) setFontAttributes(oldTextAttributes);
   if (oldOverline.isSet()) setFontOverline(oldUnderline);
   if (oldStrikeOut.isSet()) setFontStrikeOut(oldStrikeOut);
   if (oldUnderline.isSet()) setFontUnderline(oldUnderline);

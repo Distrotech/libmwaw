@@ -159,8 +159,7 @@ public:
   enum FontBits { boldBit=1, italicBit=2, blinkBit=4, embossBit=8, engraveBit=0x10,
                   hiddenBit=0x20, outlineBit=0x40, shadowBit=0x80,
                   reverseVideoBit=0x100, smallCapsBit=0x200, allCapsBit=0x400,
-                  lowercaseBit=0x800,
-                  strikeOutBit=0x10000, overlineBit=0x20000
+                  lowercaseBit=0x800
                 };
   /** constructor
    *

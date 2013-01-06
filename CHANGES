@@ -1,5 +1,15 @@
 CHANGES:
 
+06/01/2013:
+- create a class MWAWColor to store color,
+- begin to rewrite MWAWFont to add new properties 
+  and update MacWrite*, WriteNow, WriterPlus parsers to use the new properties
+- add MWAWFontSJISConverter to decode S-JIS encoding
+  and update Claris/AppleWorks and LightWay Text to use it.
+  Seems to works for the first parser ( ie. Google finds resulting words :-) )
+  but not to the second parser ( ie. the SJIS-encoding is not even detected in
+  my 2 Japanese's files :-~ )
+
 01/01/2013: ----- version 1.5 ---------
 
 12/30/2012

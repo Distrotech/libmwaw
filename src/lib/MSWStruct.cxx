@@ -79,10 +79,7 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
 
 void Font::insert(Font const &font)
 {
-  uint32_t flags = getFlags();
-  if (flags) m_font->setFlags(flags);
-  MWAWFont::Line::Style style = getUnderlineStyle();
-  if (style!=MWAWFont::Line::None) m_font->setUnderlineStyle(style);
+  updateFontToFinalState();
   m_font.insert(font.m_font);
   m_size.insert(font.m_size);
   m_value.insert(font.m_value);
@@ -93,36 +90,41 @@ void Font::insert(Font const &font)
   m_extra+=font.m_extra;
 }
 
-uint32_t Font::getFlags() const
+void Font::updateFontToFinalState()
 {
   uint32_t res=0;
-  uint32_t const fl[NumFlags-1] = {
-    MWAWFont::boldBit, MWAWFont::italicBit, MWAWFont::strikeOutBit, MWAWFont::outlineBit,
-    MWAWFont::shadowBit, MWAWFont::smallCapsBit, MWAWFont::allCapsBit, MWAWFont::hiddenBit
+  uint32_t const fl[NumFlags] = {
+    MWAWFont::boldBit, MWAWFont::italicBit, 0, MWAWFont::outlineBit,
+    MWAWFont::shadowBit, MWAWFont::smallCapsBit, MWAWFont::allCapsBit, MWAWFont::hiddenBit, 0
   };
   if (m_font.isSet()) res = m_font->flags();
-  for (int i=0; i < NumFlags-1; i++) {
+  bool flagsMod = false;
+  for (int i=0; i < NumFlags; i++) {
     if (!m_flags[i].isSet()) continue;
     int action = m_flags[i].get();
     if (action&0xFF7E) continue;
-    if (action & 1) res|=fl[i];
-    else res &= ~(fl[i]);
+    switch (i) {
+    case 2:
+      if (action & 1)
+        m_font->setStrikeOutStyle(MWAWFont::Line::Single);
+      else
+        m_font->setStrikeOutStyle(MWAWFont::Line::None);
+      break;
+    case 8:
+      if (action & 1)
+        m_font->setUnderlineStyle(MWAWFont::Line::Single);
+      else
+        m_font->setUnderlineStyle(MWAWFont::Line::None);
+      break;
+    default:
+      if (action & 1) res|=fl[i];
+      else res &= ~(fl[i]);
+      flagsMod=true;
+      break;
+    }
   }
-  return res;
-}
-
-MWAWFont::Line::Style Font::getUnderlineStyle() const
-{
-  MWAWFont::Line::Style res=MWAWFont::Line::None;
-  if (m_font.isSet()) res = m_font->getUnderline().m_style;
-  if (!m_flags[NumFlags-1].isSet()) return res;
-
-  int action = m_flags[NumFlags-1].get();
-  if (action&0xFF7E) return res;
-
-  if (action & 1) return MWAWFont::Line::Single;
-
-  return MWAWFont::Line::None;
+  if (flagsMod)
+    m_font->setFlags(res);
 }
 
 // ------ section -------------
