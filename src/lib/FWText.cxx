@@ -53,18 +53,79 @@
 namespace FWTextInternal
 {
 /** Internal: class to store a font and it state */
+struct DataModifier {
+  //! constructor
+  DataModifier() {
+    for (int i = 0; i < 5; i++) m_data[i]=0xFFFF;
+  }
+  //! returns the color
+  bool getColor(MWAWColor &col) const {
+    if (m_data[0]==0xFFFF) return false;
+    if (m_data[0]&0x8000) // true color
+      col=MWAWColor((unsigned char)(((m_data[0]>>10)&0x1F)<<3),
+                    (unsigned char)(((m_data[0]>>5)&0x1F)<<3),
+                    (unsigned char)((m_data[0]&0x1F)<<3));
+    else if ((m_data[0]&0x6000)==0x6000) // black
+      col=MWAWColor(0,0,0);
+    else if (m_data[0]&0x4000) { // gray in %
+      int val = ((m_data[0]&0x7F)*255)/100;
+      if (val > 255) val = 0;
+      else val = 255-val;
+      unsigned char c = (unsigned char) val;
+      col=MWAWColor(c,c,c);
+    } else
+      return false;
+    return true;
+  }
+  //! returns the superscript value ( negative in pt, position in li)
+  float getSuper() const {
+    return float(int32_t((m_data[1]<<16)|m_data[2]))/65536.f;
+  }
+  //! returns the sub value ( negative in pt, position in li)
+  float getSub() const {
+    return float(int32_t((m_data[3]<<16)|m_data[4]))/65536.f;
+  }
+  //! returns the document extra id
+  int getDocExtraId() const {
+    return m_data[4];
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, DataModifier const &m) {
+    if (m.m_data[0]!=0xFFFF) {
+      MWAWColor col;
+      if (m.getColor(col))
+        o << "col=" << col << ",";
+      else
+        o << "##col=" << std::hex << m.m_data[0] << std::dec << ",";
+    }
+    if (m.m_data[2]!=0xFFFF)
+      o << "sup=" << m.getSuper() << ",";
+    if (m.m_data[4]!=0xFFFF)
+      o << "subs=" << m.getSub() << ",";
+    for (int i=1; i<5; i++) {
+      if (m.m_data[i] != 0xFFFF)
+        o << "f" << i << "=" << std::hex << m.m_data[i] << std::dec << ",";
+    }
+    return o;
+  }
+  //! the data
+  int m_data[5];
+};
+
+/** Internal: class to store a font and it state */
 struct Font {
   /** constructor */
-  Font() : m_font() {
-    for (int i = 0; i < 4; i++) m_underlineFlags[i]=false;
-    for (int i = 0; i < 2; i++) m_xdelta[i]=false;
+  Font() : m_font(), m_modifier(), m_defModifier(true) {
+    for (int i = 0; i < 128; i++) m_state[i]=false;
   }
   /** the font */
   MWAWFont m_font;
-  /** the underline flags */
-  bool m_underlineFlags[4];
-  /** the xdelta flags */
-  bool m_xdelta[2];
+  /** the rendering state */
+  bool m_state[128];
+  /** the modifier data */
+  DataModifier m_modifier;
+  /** a flag to know if the data modifier is default */
+  bool m_defModifier;
 };
 /** Internal: class to store the LineHeader */
 struct LineHeader {
@@ -226,6 +287,7 @@ struct Paragraph : public MWAWParagraph {
   void setInterlineSpacing(double spacing, WPXUnit unit) {
     m_interSpacing = spacing;
     m_interSpacingUnit = unit;
+    m_isSent = false;
   }
 
   //! update the paragraph data from a ruler
@@ -274,7 +336,7 @@ struct Paragraph : public MWAWParagraph {
 //! Internal: the state of a FWText
 struct State {
   //! constructor
-  State() : m_version(-1), m_entryMap(), m_paragraphMap(), m_paragraphModSet(),
+  State() : m_version(-1), m_entryMap(), m_paragraphMap(), m_dataModMap(),
     m_mainZones(), m_numPages(1), m_actualPage(0), m_font(-1, 0, 0) {
   }
 
@@ -286,8 +348,8 @@ struct State {
 
   //! rulerId -> ruler
   std::map<int, Paragraph> m_paragraphMap;
-  //! the list of seen paragraph mod id ( changme)
-  std::set<int> m_paragraphModSet;
+  //! modId -> font/paragraph modifier
+  std::map<int, DataModifier> m_dataModMap;
 
   //! the main zone index
   std::vector<int> m_mainZones;
@@ -335,7 +397,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
   long pos = input->tell();
   long endPos = pos+numChar;
   bool nextIsChar = false;
-  bool fontSet = false;
+  bool fontSet = false, checkModifier = false;
   int val;
   for (int i = 0; i < numChar; i++) {
     long actPos = input->tell();
@@ -349,6 +411,9 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       done = true;
       uint32_t fFlags = font.m_font.flags();
       int id;
+      bool on = false;
+      if (val >= 0x80)
+        on=font.m_state[val-0x80]=!font.m_state[val-0x80];
       switch(val) {
       case 0:
         val=' ';
@@ -383,71 +448,46 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         font.m_font.setFlags(fFlags);
         fontSet=false;
         break;
-      case 0x89: // change color
-        break;
-      case 0x8a:
-        if (font.m_font.script()==MWAWFont::Script::super100())
-          font.m_font.set(MWAWFont::Script());
-        else
-          font.m_font.set(MWAWFont::Script::super100());
-        fontSet=false;
-        break;
-      case 0x8b:
-        if (font.m_font.script()==MWAWFont::Script::sub100())
-          font.m_font.set(MWAWFont::Script());
-        else
-          font.m_font.set(MWAWFont::Script::sub100());
-        fontSet=false;
+      case 0x89: // color
+      case 0x8a: // super
+      case 0x8b: // subs
+        checkModifier=true;
         break;
       case 0x8c:
-        if (font.m_font.getStrikeOut().isSet())
-          font.m_font.setStrikeOutStyle(MWAWFont::Line::None);
+        if (on)
+          font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
         else
-          font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
+          font.m_font.setStrikeOutStyle(MWAWFont::Line::None);
         fontSet=false;
         break;
       case 0x90: // condensed
       case 0x91: // expand
-        font.m_xdelta[val-0x90]=!font.m_xdelta[val-0x90];
         font.m_font.setDeltaLetterSpacing
-        ((font.m_xdelta[0]?-1:0)+(font.m_xdelta[1]?1:0));
+        ((font.m_state[0x10]?-1:0)+(font.m_state[0x11]?1:0));
         fontSet=false;
         break;
-      case 0x85:
-      case 0x8e:
-      case 0x8f:
-      case 0x92: {
-        switch(val) {
-        case 0x85: // normal underline
-          font.m_underlineFlags[0]=!font.m_underlineFlags[0];
-          break;
-        case 0x8e: // word underline
-          font.m_underlineFlags[1]=!font.m_underlineFlags[1];
-          break;
-        case 0x8f: // double
-          font.m_underlineFlags[2]=!font.m_underlineFlags[2];
-          break;
-        default:
-        case 0x92: // dot
-          font.m_underlineFlags[3]=!font.m_underlineFlags[3];
-          break;
-        }
-        fontSet=false;
-        if (font.m_underlineFlags[3])
+      case 0x85: // normal underline
+      case 0x8e: // word underline
+      case 0x8f: // double
+      case 0x92: { // dot
+        if (font.m_state[0x12])
           font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
-        else if (font.m_underlineFlags[2])
-          font.m_font.setUnderlineStyle(MWAWFont::Line::Double);
-        else if (font.m_underlineFlags[0]||font.m_underlineFlags[1])
-          font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+        else if (font.m_state[0x5]||font.m_state[0xe]|| font.m_state[0xf])
+          font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
         else
           font.m_font.setUnderlineStyle(MWAWFont::Line::None);
+        if (font.m_state[0xf])
+          font.m_font.setUnderlineType(MWAWFont::Line::Double);
+        if (font.m_state[0xe])
+          font.m_font.setUnderlineWordFlag(true);
+        fontSet=false;
         break;
       }
       case 0x93:
-        if (font.m_font.getOverline().isSet())
-          font.m_font.setOverlineStyle(MWAWFont::Line::None);
+        if (on)
+          font.m_font.setOverlineStyle(MWAWFont::Line::Simple);
         else
-          font.m_font.setOverlineStyle(MWAWFont::Line::Single);
+          font.m_font.setOverlineStyle(MWAWFont::Line::None);
         fontSet=false;
         break;
       case 0x94:
@@ -490,7 +530,15 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       case 0xcb: // space/and or color
         if (actPos+2 > endPos) break;
-        id = (int)input->readULong(2); // fixme
+        id = (int)input->readULong(2);
+        if (m_state->m_dataModMap.find(id) == m_state->m_dataModMap.end()) {
+          font.m_modifier=FWTextInternal::DataModifier();
+          font.m_defModifier=true;
+        } else {
+          font.m_modifier=m_state->m_dataModMap.find(id)->second;
+          font.m_defModifier=false;
+        }
+        checkModifier = true;
         break;
       case 0xd2:
       case 0xd3:
@@ -522,7 +570,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
           done = false;
         }
         break;
-      case 0x98:
+      case 0x98: // checkme?
         val=' ';
         done = false;
         break; // fixme in a table ?
@@ -594,7 +642,44 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       }
     }
-    if (done) continue;
+    if (done && input->tell() != endPos) continue;
+    if (checkModifier) {
+      if (font.m_state[9]) {
+        MWAWColor col;
+        if (font.m_modifier.getColor(col))
+          font.m_font.setColor(col);
+        else {
+          font.m_font.setColor(MWAWColor(0,0,0));
+          MWAW_DEBUG_MSG(("FWText::send: Can not find font color\n"));
+        }
+      } else
+        font.m_font.setColor(MWAWColor(0,0,0));
+      if (font.m_state[0xa]) {
+        if (font.m_defModifier)
+          font.m_font.set(MWAWFont::Script::super100());
+        else {
+          float sup = font.m_modifier.getSuper();
+          if (sup < 0)
+            font.m_font.set(MWAWFont::Script(int(-sup),WPX_POINT));
+          else
+            font.m_font.set(MWAWFont::Script(int(sup*100.f),WPX_PERCENT));
+        }
+      } else if (font.m_state[0xb]) {
+        if (font.m_defModifier)
+          font.m_font.set(MWAWFont::Script::sub100());
+        else {
+          float sub = font.m_modifier.getSub();
+          if (sub < 0)
+            font.m_font.set(MWAWFont::Script(int(sub),WPX_POINT));
+          else
+            font.m_font.set(MWAWFont::Script(int(-sub*100.f),WPX_PERCENT));
+        }
+      } else
+        font.m_font.set(MWAWFont::Script());
+      fontSet = false;
+    }
+    if (done)
+      break;
     if (!fontSet) {
       setProperty(font.m_font, m_state->m_font);
       fontSet = true;
@@ -706,10 +791,8 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
     lHeader.m_font.setSize(fSz);
     f << "id=" << fId << ",";
     f << "sz=" << fSz << ",";
-    // a small number ( often 1 but can be negative )
-    f << "fontUnkn0=" << (int)input->readLong(2) << ",";
-    val = (int)input->readULong(2); // often 0, but also 3333, 8000, b6b0, cccd, e666 : gray color ?
-    if (val) f << "fontUnkn1=" << std::hex << val << std::dec << ",";
+    // negative: point, positive li
+    f << "justify=" << (float)(input->readLong(4))/65336.f << ",";
   }
   if (type & 0x8) { // font flag ?
     val = (int)input->readULong(2);
@@ -1002,11 +1085,11 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
           f << "##";
         } else {
           int mId = (int)input->readLong(2);
-          if (m_state->m_paragraphModSet.find(mId) == m_state->m_paragraphModSet.end()) {
+          if (m_state->m_dataModMap.find(mId) == m_state->m_dataModMap.end()) {
             MWAW_DEBUG_MSG(("FWText::send: find unknown modId %d\n", mId));
-            f << "[#modId=" << mId << "]";
+            f << "[#modifier=" << mId << "]";
           } else
-            f << "[modId=" << mId << "]";
+            f << "[modifier=" << m_state->m_dataModMap.find(mId)->second << "]";
         }
         break;
       case 0xd0:
@@ -1543,7 +1626,7 @@ bool FWText::readParagraphTabs(shared_ptr<FWEntry> zone, int id)
   return true;
 }
 
-bool FWText::readParagraphMod(shared_ptr<FWEntry> zone, int id)
+bool FWText::readDataMod(shared_ptr<FWEntry> zone, int id)
 {
   MWAWInputStreamPtr input = zone->m_input;
   libmwaw::DebugFile &ascii = zone->getAsciiFile();
@@ -1556,30 +1639,16 @@ bool FWText::readParagraphMod(shared_ptr<FWEntry> zone, int id)
     return false;
   }
   f.str("");
-  f << "Entries(ParaMod):";
-  long val;
-  /* f0 seems to be an font indexed color
-     in v2: 0x6000=black, 0x801a(red), 0x8202(green), 830e(pure green)
-   */
-  val=long(input->readULong(2));
-  if (val!=0xFFFF)
-    f << "col=" << std::hex << val << std::dec << ",";
-  /* other can be super/subs | *,*,*|0|2,*|0..3*/
-  for (int i = 0; i < 2; i++) {
-    val=input->readLong(4);
-    if (val==-1) continue;
-    if (i==0) f << "super=";
-    else f << "subs=";
-    if (val < 0)
-      f << -float(val)/65536.f << "pt";
-    else
-      f << float(val)/65536.f << "li";
-    f << "|f" << i << "=" << std::hex << uint32_t(val) << std::hex << ",";
-  }
-  if (m_state->m_paragraphModSet.find(id) == m_state->m_paragraphModSet.end())
-    m_state->m_paragraphModSet.insert(id);
+  f << "Entries(DataMod):";
+  FWTextInternal::DataModifier mod;
+  for (int i = 0; i < 5; i++)
+    mod.m_data[i] = int(input->readULong(2));
+  f << mod;
+  if (m_state->m_dataModMap.find(id) == m_state->m_dataModMap.end())
+    m_state->m_dataModMap.insert
+    (std::map<int, FWTextInternal::DataModifier>::value_type(id, mod));
   else {
-    MWAW_DEBUG_MSG(("FWText::readParagraphMod: Oops id %d already find\n", id));
+    MWAW_DEBUG_MSG(("FWText::readDataMod: Oops id %d already find\n", id));
   }
   ascii.addPos(pos);
   ascii.addNote(f.str().c_str());

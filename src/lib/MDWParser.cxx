@@ -1043,7 +1043,7 @@ bool MDWParser::readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts,
     // bit 1 = plain
     if (flag&0x1) flags |= MWAWFont::boldBit;
     if (flag&0x2) flags |= MWAWFont::italicBit;
-    if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Single);
+    if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
     if (flag&0x20) font.set(MWAWFont::Script::super100());

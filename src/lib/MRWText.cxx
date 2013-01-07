@@ -841,7 +841,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
             fFlags |= MWAWFont::italicBit;
             break;
           case 41:
-            font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+            font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
             break;
           case 42:
             fFlags |= MWAWFont::outlineBit;
@@ -856,17 +856,18 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
             f << "expand,";
             break;
           case 46:
-            font.m_font.setUnderlineStyle(MWAWFont::Line::Double);
+            font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
+            font.m_font.setUnderlineType(MWAWFont::Line::Double);
             break;
           case 47:
-            font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
-            f << "underline[word],";
+            font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
+            font.m_font.setUnderlineWordFlag(true);
             break;
           case 48:
             font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
             break;
           case 50:
-            font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
+            font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
             break;
           case 58:
             f << "boxed" << j-57 << ",";

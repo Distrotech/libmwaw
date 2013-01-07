@@ -106,13 +106,13 @@ void Font::updateFontToFinalState()
     switch (i) {
     case 2:
       if (action & 1)
-        m_font->setStrikeOutStyle(MWAWFont::Line::Single);
+        m_font->setStrikeOutStyle(MWAWFont::Line::Simple);
       else
         m_font->setStrikeOutStyle(MWAWFont::Line::None);
       break;
     case 8:
       if (action & 1)
-        m_font->setUnderlineStyle(MWAWFont::Line::Single);
+        m_font->setUnderlineStyle(MWAWFont::Line::Simple);
       else
         m_font->setUnderlineStyle(MWAWFont::Line::None);
       break;

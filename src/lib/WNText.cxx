@@ -1119,7 +1119,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAWFont::boldBit;
   if (flag&0x2) flags |= MWAWFont::italicBit;
-  if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+  if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
   if (flag&0x8) flags |= MWAWFont::embossBit;
   if (flag&0x10) flags |= MWAWFont::shadowBit;
   if (flag&0x20) font.m_font.setDeltaLetterSpacing(-1);
@@ -1132,17 +1132,20 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
     return true;
   }
   flag = (int) input.readULong(1);
-  if (flag&0x80) font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
+  if (flag&0x80) font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
   if (flag&0x7f) f << "#flag1=" << std::hex << (flag&0x7f) << std::dec << ",";
 
   flag = (int) input.readULong(1);
-  if (flag&0x2) font.m_font.setUnderlineStyle(MWAWFont::Line::Double);
+  if (flag&0x2) {
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
+    font.m_font.setUnderlineType(MWAWFont::Line::Double);
+  }
   if (flag&0x4) {
-    font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     font.m_font.setUnderlineWidth(2.0);
   }
   if (flag&0x8) {
-    font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     font.m_font.setUnderlineColor(MWAWColor(0xb0,0xb0,0xb0));
   }
   if (flag&0x10) {

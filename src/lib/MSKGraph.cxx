@@ -2208,7 +2208,7 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
     uint32_t flags = 0;
     if (fFlags & 0x1) flags |= MWAWFont::boldBit;
     if (fFlags & 0x2) flags |= MWAWFont::italicBit;
-    if (fFlags & 0x4) cell.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+    if (fFlags & 0x4) cell.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (fFlags & 0x8) flags |= MWAWFont::embossBit;
     if (fFlags & 0x10) flags |= MWAWFont::shadowBit;
     if (fFlags & 0x20) cell.m_font.set(MWAWFont::Script::super());
@@ -2554,7 +2554,7 @@ bool MSKGraph::readFont(MSKGraphInternal::Font &font)
   uint32_t flag = 0;
   if (flags & 0x1) flag |= MWAWFont::boldBit;
   if (flags & 0x2) flag |= MWAWFont::italicBit;
-  if (flags & 0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+  if (flags & 0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
   if (flags & 0x8) flag |= MWAWFont::embossBit;
   if (flags & 0x10) flag |= MWAWFont::shadowBit;
   if (flags & 0x20) font.m_font.set(MWAWFont::Script::super());

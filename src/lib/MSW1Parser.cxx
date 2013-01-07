@@ -642,7 +642,7 @@ bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
   }
   if (sz >= 4) {
     val = (int) input->readULong(1);
-    if (val & 0x80) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+    if (val & 0x80) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     switch((val&0xc)>>2) {
     case 0:
       break;

@@ -130,7 +130,7 @@ struct DocZoneStruct {
       o << "variableRedirect,";
       break;
     case 0x1f:
-      o << "paraMod,";
+      o << "dataMod,";
       break;
     default:
       o << "type=" << std::hex << dt.m_type << std::dec << ",";
@@ -884,7 +884,7 @@ bool FWParser::readEndDocInfo(shared_ptr<FWEntry> zone)
       ;
     else if (name=="bord") // block1
       fSz = 26;
-    else if (name=="extr") // block2
+    else if (name=="extr")
       fSz = 18;
     else if (name=="cite") // block3
       ok = readCitationDocInfo(zone);
@@ -905,6 +905,13 @@ bool FWParser::readEndDocInfo(shared_ptr<FWEntry> zone)
     asciiFile.addNote(f.str().c_str());
     if (num && blckSz == 2 + num*fSz) {
       long dataPos = input->tell();
+      if (fSz==18) {
+        /** FIXME: readme, this is paragraph spacing
+            befSpacing[int16], afterSpacing[int16]
+        */
+        MWAW_DEBUG_MSG(("FWParser::readEndDocInfo: read paragraph, bef, after spacing not implemented\n"));
+      }
+
       for (int j = 0; j < num; j++) {
         f.str("");
         f << "Doc" << name << "-" << j << ":";
@@ -1206,7 +1213,7 @@ bool FWParser::readDocZoneData(shared_ptr<FWEntry> zone)
         done = true;
         break;
       case 0x1f:
-        done = m_textParser->readParagraphMod(zone, int(z));
+        done = m_textParser->readDataMod(zone, int(z));
         break;
       default:
         done=doc.m_type<=0x18 && readGenericDocData(zone, docData);

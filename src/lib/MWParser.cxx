@@ -1190,7 +1190,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     // bit 1 = plain
     if (paragFormat&0x2) flags |= MWAWFont::boldBit;
     if (paragFormat&0x4) flags |= MWAWFont::italicBit;
-    if (paragFormat&0x8) info.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+    if (paragFormat&0x8) info.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (paragFormat&0x10) flags |= MWAWFont::embossBit;
     if (paragFormat&0x20) flags |= MWAWFont::shadowBit;
     if (paragFormat&0x40)
@@ -1336,7 +1336,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     // bit 1 = plain
     if (flag&0x1) flags |= MWAWFont::boldBit;
     if (flag&0x2) flags |= MWAWFont::italicBit;
-    if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Single);
+    if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
     if (flag&0x20) font.set(MWAWFont::Script::super100());

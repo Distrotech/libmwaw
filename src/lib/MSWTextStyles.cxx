@@ -124,7 +124,7 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
   uint32_t flags = 0;
   if (flag&0x80) flags |= MWAWFont::boldBit;
   if (flag&0x40) flags |= MWAWFont::italicBit;
-  if (flag&0x20) font.m_font->setStrikeOutStyle(MWAWFont::Line::Single);
+  if (flag&0x20) font.m_font->setStrikeOutStyle(MWAWFont::Line::Simple);
   if (flag&0x10) flags |= MWAWFont::outlineBit;
   if (flag&0x8) flags |= MWAWFont::shadowBit;
   if (flag&0x4) flags |= MWAWFont::smallCapsBit;
@@ -196,15 +196,16 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
       case 8:
         font.m_font->setUnderlineStyle(MWAWFont::Line::Dot);
         break;
-      case 6:
-        font.m_font->setUnderlineStyle(MWAWFont::Line::Double);
+      case 6: // checkme
+        font.m_font->setUnderlineStyle(MWAWFont::Line::Simple);
+        font.m_font->setUnderlineType(MWAWFont::Line::Double);
         break;
       case 2:
-        font.m_font->setUnderlineStyle(MWAWFont::Line::Single);
+        font.m_font->setUnderlineStyle(MWAWFont::Line::Simple);
         break;
       default:
         f << "#underline=" << (val &0xf) << ",";
-        font.m_font->setUnderlineStyle(MWAWFont::Line::Single);
+        font.m_font->setUnderlineStyle(MWAWFont::Line::Simple);
       }
       what &= 0xFB;
     } else if (val & 0xf)

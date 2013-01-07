@@ -519,7 +519,7 @@ bool LWText::readFonts(MWAWEntry const &entry)
     int flag=(int) input->readULong(1);
     if (flag&0x1) flags |= MWAWFont::boldBit;
     if (flag&0x2) flags |= MWAWFont::italicBit;
-    if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+    if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
     if (flag&0x20) f << "expand,";
@@ -595,13 +595,14 @@ bool LWText::readFont2(MWAWEntry const &entry)
     case 0:
       break;
     case 1:
-      font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+      font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
       break;
     case 2:
-      font.m_font.setUnderlineStyle(MWAWFont::Line::Double);
+      font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
+      font.m_font.setUnderlineType(MWAWFont::Line::Double);
       break;
     case 3:
-      font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+      font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
       font.m_font.setUnderlineWidth(2.0);
       break;
     case 4:
@@ -619,13 +620,14 @@ bool LWText::readFont2(MWAWEntry const &entry)
     case 0:
       break;
     case 1:
-      font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
+      font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
       break;
     case 2:
-      font.m_font.setStrikeOutStyle(MWAWFont::Line::Double);
+      font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
+      font.m_font.setStrikeOutType(MWAWFont::Line::Double);
       break;
     case 3:
-      font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
+      font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
       font.m_font.setStrikeOutWidth(2.0);
       break;
     case 4:
@@ -643,13 +645,14 @@ bool LWText::readFont2(MWAWEntry const &entry)
     case 0:
       break;
     case 1:
-      font.m_font.setOverlineStyle(MWAWFont::Line::Single);
+      font.m_font.setOverlineStyle(MWAWFont::Line::Simple);
       break;
     case 2:
-      font.m_font.setOverlineStyle(MWAWFont::Line::Double);
+      font.m_font.setOverlineStyle(MWAWFont::Line::Simple);
+      font.m_font.setOverlineType(MWAWFont::Line::Double);
       break;
     case 3:
-      font.m_font.setOverlineStyle(MWAWFont::Line::Single);
+      font.m_font.setOverlineStyle(MWAWFont::Line::Simple);
       font.m_font.setOverlineWidth(2.0);
       break;
     case 4:
@@ -992,7 +995,7 @@ bool LWText::readDocumentHF(MWAWEntry const &entry)
     flag=(int) input->readULong(1);
     if (flag&0x1) flags |= MWAWFont::boldBit;
     if (flag&0x2) flags |= MWAWFont::italicBit;
-    if (flag&0x4) zone.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+    if (flag&0x4) zone.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
     if (flag&0x20) f2 << "expand,";

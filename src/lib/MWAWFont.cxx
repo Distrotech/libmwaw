@@ -60,11 +60,8 @@ std::ostream &operator<<(std::ostream &o, MWAWFont::Line const &line)
   case MWAWFont::Line::Dash:
     o << "dash";
     break;
-  case MWAWFont::Line::Single:
+  case MWAWFont::Line::Simple:
     o << "solid";
-    break;
-  case MWAWFont::Line::Double:
-    o << "double";
     break;
   case MWAWFont::Line::Wave:
     o << "wave";
@@ -73,6 +70,18 @@ std::ostream &operator<<(std::ostream &o, MWAWFont::Line const &line)
   default:
     break;
   }
+  switch(line.m_type) {
+  case MWAWFont::Line::Double:
+    o << ":double";
+    break;
+  case MWAWFont::Line::Triple:
+    o << ":triple";
+    break;
+  case MWAWFont::Line::Single:
+  default:
+    break;
+  }
+  if (line.m_word) o << ":byword";
   if (line.m_width < 1.0 || line.m_width > 1.0)
     o << ":w=" << line.m_width ;
   if (!line.m_color.isBlack())
@@ -86,7 +95,13 @@ void MWAWFont::Line::addTo(WPXPropertyList &propList, std::string const type) co
 
   std::stringstream s;
   s << "style:text-" << type << "-type";
-  propList.insert(s.str().c_str(), (m_style==Double) ? "double" : "single");
+  propList.insert(s.str().c_str(), (m_type==Single) ? "single" : "double");
+
+  if (m_word) {
+    s.str("");
+    s << "style:text-" << type << "-mode";
+    propList.insert(s.str().c_str(), "skip-white-space");
+  }
 
   s.str("");
   s << "style:text-" << type << "-style";
@@ -98,13 +113,12 @@ void MWAWFont::Line::addTo(WPXPropertyList &propList, std::string const type) co
   case Dash:
     propList.insert(s.str().c_str(), "dash");
     break;
-  case Single:
+  case Simple:
     propList.insert(s.str().c_str(), "solid");
     break;
   case Wave:
     propList.insert(s.str().c_str(), "wave");
     break;
-  case Double:
   case None:
   default:
     break;

@@ -139,8 +139,8 @@ protected:
   //! check if the input of the zone points to a paragraph zone, ...
   bool readParagraphTabs(shared_ptr<FWEntry> zone, int id=-1);
 
-  //! try to read the paragraph modifier zone (Zone1f)
-  bool readParagraphMod(shared_ptr<FWEntry> zone, int id);
+  //! try to read the font/paragraph modifier zone (Zone1f)
+  bool readDataMod(shared_ptr<FWEntry> zone, int id);
 
   //! check if the input of the zone points to the columns definition, ...
   bool readColumns(shared_ptr<FWEntry> zone);

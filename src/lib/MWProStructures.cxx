@@ -1216,17 +1216,20 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAWFont::boldBit;
   if (flag&0x2) flags |= MWAWFont::italicBit;
-  if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+  if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
   if (flag&0x8) flags |= MWAWFont::embossBit;
   if (flag&0x10) flags |= MWAWFont::shadowBit;
   if (flag&0x20) font.m_font.set(MWAWFont::Script(40,WPX_PERCENT));
   if (flag&0x40) font.m_font.set(MWAWFont::Script(-40,WPX_PERCENT));
   if (flag&0x100) font.m_font.set(MWAWFont::Script::super());
-  if (flag&0x200) font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
+  if (flag&0x200) font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
   if (flag&0x400) flags |= MWAWFont::allCapsBit;
   if (flag&0x800) flags |= MWAWFont::smallCapsBit;
-  if (flag&0x1000) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
-  if (flag&0x2000) font.m_font.setUnderlineStyle(MWAWFont::Line::Double);
+  if (flag&0x1000) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
+  if (flag&0x2000) {
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
+    font.m_font.setUnderlineType(MWAWFont::Line::Double);
+  }
   if (flag&0x4000) flags |= MWAWFont::lowercaseBit;
   font.m_flags = (flag&0x8080L);
 

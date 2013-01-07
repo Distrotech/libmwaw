@@ -615,7 +615,7 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
     uint32_t flags = 0;
     if (flag&0x1) flags |= MWAWFont::boldBit;
     if (flag&0x2) flags |= MWAWFont::italicBit;
-    if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+    if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (flag&0xF8) f << "fl0=" << std::hex << (flag&0xF8) << std::dec << ",";
 
     flag = (int) input->readULong(1); // alway 0
@@ -874,7 +874,7 @@ bool ZWText::readHFZone(MWAWEntry const &entry)
         flags |= MWAWFont::italicBit;
         break;
       case 5:
-        font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+        font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
         break;
       case 7:
         f << "addDelimiter,";

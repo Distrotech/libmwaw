@@ -51,10 +51,12 @@ public:
   /** a small struct to define a line in MWAWFont */
   struct Line {
     /** the line style */
-    enum Style { None, Single, Double, Dot, LargeDot, Dash, Wave };
+    enum Style { None, Simple, Dot, LargeDot, Dash, Wave };
+    /** the line style */
+    enum Type { Single, Double, Triple };
     //! constructor
-    Line(Style style=None, float w=1.0, MWAWColor col=MWAWColor::black()) :
-      m_style(style), m_width(w), m_color(col) { }
+    Line(Style style=None, Type type=Single, bool wordFlag=false, float w=1.0, MWAWColor col=MWAWColor::black()) :
+      m_style(style), m_type(type), m_word(wordFlag), m_width(w), m_color(col) { }
     //! return true if the line is not empty
     bool isSet() const {
       return m_style != None && m_width>0;
@@ -74,6 +76,8 @@ public:
     //! small comparison function
     int cmp(Line const &oth) const {
       if (m_style != oth.m_style) return int(m_style)-int(oth.m_style);
+      if (m_type != oth.m_type) return int(m_type)-int(oth.m_type);
+      if (m_word != oth.m_word) return m_word ? -1 : 1;
       if (m_width < oth.m_width) return -1;
       if (m_width > oth.m_width) return 1;
       if (m_color < oth.m_color) return -1;
@@ -82,6 +86,10 @@ public:
     }
     /** the style */
     Style m_style;
+    /** the type */
+    Type m_type;
+    /** word or not word line */
+    bool m_word;
     /** the width in point */
     float m_width;
     /** the color */
@@ -287,6 +295,14 @@ public:
     else
       m_overline->m_style = style;
   }
+  //! sets the overline type
+  void setOverlineType(Line::Type type=Line::Single) {
+    m_overline->m_type = type;
+  }
+  //! sets the overline word flag
+  void setOverlineWordFlag(bool wordFlag=false) {
+    m_overline->m_word = wordFlag;
+  }
   //! sets the overline width
   void setOverlineWidth(float w) {
     m_overline->m_width = w;
@@ -311,6 +327,14 @@ public:
     else
       m_strikeoutline->m_style = style;
   }
+  //! sets the strikeoutline type
+  void setStrikeOutType(Line::Type type=Line::Single) {
+    m_strikeoutline->m_type = type;
+  }
+  //! sets the strikeoutline word flag
+  void setStrikeOutWordFlag(bool wordFlag=false) {
+    m_strikeoutline->m_word = wordFlag;
+  }
   //! sets the strikeoutline width
   void setStrikeOutWidth(float w) {
     m_strikeoutline->m_width = w;
@@ -334,6 +358,14 @@ public:
       m_underline = Line(style);
     else
       m_underline->m_style = style;
+  }
+  //! sets the underline type
+  void setUnderlineType(Line::Type type=Line::Single) {
+    m_underline->m_type = type;
+  }
+  //! sets the underline word flag
+  void setUnderlineWordFlag(bool wordFlag=false) {
+    m_underline->m_word = wordFlag;
   }
   //! sets the underline width
   void setUnderlineWidth(float w) {

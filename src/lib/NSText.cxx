@@ -802,7 +802,7 @@ bool NSText::readFonts(MWAWEntry const &entry)
 
     if (flag&0x1) flags |= MWAWFont::boldBit;
     if (flag&0x2) flags |= MWAWFont::italicBit;
-    if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+    if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
     if (flag&0x20) f << "condensed,";
@@ -811,18 +811,18 @@ bool NSText::readFonts(MWAWEntry const &entry)
       f << "#flags0=" << std::hex << (flag &0xFF80) << std::dec << ",";
     flag = (int) input->readULong(2);
     if (flag & 1) {
-      font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+      font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
       f << "underline[lower],";
     }
     if (flag & 2)  font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
     if (flag & 4) {
-      font.m_font.setUnderlineStyle(MWAWFont::Line::Single);
+      font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
       f << "underline[word],";
     }
     if (flag & 0x8) font.m_font.set(MWAWFont::Script::super());
     if (flag & 0x10) font.m_font.set(MWAWFont::Script::sub());
-    if (flag & 0x20) font.m_font.setStrikeOutStyle(MWAWFont::Line::Single);
-    if (flag & 0x40) font.m_font.setOverlineStyle(MWAWFont::Line::Single);
+    if (flag & 0x20) font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
+    if (flag & 0x40) font.m_font.setOverlineStyle(MWAWFont::Line::Simple);
     if (flag & 0x80) flags |= MWAWFont::smallCapsBit;
     if (flag & 0x100) flags |= MWAWFont::allCapsBit;
     if (flag & 0x200) // checkme: possible ?
