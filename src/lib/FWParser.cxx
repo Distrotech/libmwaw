@@ -94,6 +94,9 @@ struct DocZoneStruct {
     case 1:
       o << "tabs,";
       break;
+    case 2:
+      o << "item,";
+      break;
     case 0xa:
       o << "main,";
       break;
@@ -879,19 +882,19 @@ bool FWParser::readEndDocInfo(shared_ptr<FWEntry> zone)
     }
     input->seek(pos, WPX_SEEK_SET);
     ok = false;
-    int fSz = 0;
     if (name=="font") // block0 : unseen
       ;
-    else if (name=="bord") // block1
-      fSz = 26;
+    else if (name=="bord")
+      ok = m_textParser->readBorderDocInfo(zone);
     else if (name=="extr")
-      fSz = 18;
+      ok = m_textParser->readParaModDocInfo(zone);
     else if (name=="cite") // block3
       ok = readCitationDocInfo(zone);
 
     if (ok)
       continue;
 
+    MWAW_DEBUG_MSG(("FWParser::readEndDocInfo: can not read block %s\n", name.c_str()));
     input->seek(pos+5, WPX_SEEK_SET);
     long blckSz = input->readLong(4);
     if (blckSz < 2 || pos+8+blckSz > zone->end()) {
@@ -900,26 +903,9 @@ bool FWParser::readEndDocInfo(shared_ptr<FWEntry> zone)
     }
     int num=int(input->readULong(2));
     f.str("");
-    f << "Entries(Doc" << name << "):N=" << num;
+    f << "Entries(Doc" << name << "):N=" << num << ",###";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    if (num && blckSz == 2 + num*fSz) {
-      long dataPos = input->tell();
-      if (fSz==18) {
-        /** FIXME: readme, this is paragraph spacing
-            befSpacing[int16], afterSpacing[int16]
-        */
-        MWAW_DEBUG_MSG(("FWParser::readEndDocInfo: read paragraph, bef, after spacing not implemented\n"));
-      }
-
-      for (int j = 0; j < num; j++) {
-        f.str("");
-        f << "Doc" << name << "-" << j << ":";
-        asciiFile.addPos(dataPos);
-        asciiFile.addNote(f.str().c_str());
-        dataPos+=fSz;
-      }
-    }
     input->seek(pos+9+blckSz, WPX_SEEK_SET);
   }
   return true;
@@ -1103,23 +1089,9 @@ bool FWParser::readDocZoneData(shared_ptr<FWEntry> zone)
       case 1:
         done = m_textParser->readParagraphTabs(zone, int(z));
         break;
-      case 2: {
-        if (pos+st+25> zone->end()) break;
-        int numOk = 0, numZero=0;
-        for (int j = 0; j < 6; j++) {
-          val = int(input->readULong(2));
-          if (val==0) numZero++;
-          else if (val < 0x100) numOk++;
-        }
-        if (2*numOk<6-numZero) break;
-        f.str("");
-        f << "Entries(DZone2):" << doc;
-        asciiFile.addPos(pos+st);
-        asciiFile.addNote(f.str().c_str());
-        input->seek(pos+st+25, WPX_SEEK_SET);
-        done = true;
+      case 2:
+        done = m_textParser->readItem(zone, int(z));
         break;
-      }
       case 3: { // 4, 0 + [0|1]
         int sz = int(input->readLong(2));
         if (sz <= 0 || sz >= 0x100) break;

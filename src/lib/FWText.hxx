@@ -118,7 +118,8 @@ protected:
 
   //! send a simple line
   void send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
-            FWTextInternal::Font &font);
+            FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler,
+            std::string &str);
 
   //! sort the different zones, finding the main zone, ...
   void sortZones();
@@ -136,14 +137,25 @@ protected:
   //! try to read the header of a line
   bool readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::LineHeader &lHeader);
 
-  //! check if the input of the zone points to a paragraph zone, ...
+  //! check if the input of the zone points to a item zone in DataStruct Zone
+  bool readItem(shared_ptr<FWEntry> zone, int id=-1);
+
+  //! check if the input of the zone points to a paragraph zone in DataStruct Zone
   bool readParagraphTabs(shared_ptr<FWEntry> zone, int id=-1);
+  //! try to read the paragraph modifier (at the end of doc info)
+  bool readParaModDocInfo(shared_ptr<FWEntry> zone);
+
+  //! try to read the border definiton (at the end of doc info)
+  bool readBorderDocInfo(shared_ptr<FWEntry> zone);
 
   //! try to read the font/paragraph modifier zone (Zone1f)
   bool readDataMod(shared_ptr<FWEntry> zone, int id);
 
   //! check if the input of the zone points to the columns definition, ...
   bool readColumns(shared_ptr<FWEntry> zone);
+
+  //! try to convert a file data to a color
+  bool getColor(int color, MWAWColor &col) const;
 
 private:
   FWText(FWText const &orig);
