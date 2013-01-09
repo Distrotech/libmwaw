@@ -2128,6 +2128,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
 
 bool MSKGraph::readTable(MSKGraphInternal::Table &table)
 {
+  int vers=version();
   long actPos = m_input->tell();
   libmwaw::DebugStream f, f2;
   f << "Entries(Table): ";
@@ -2211,8 +2212,18 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
     if (fFlags & 0x4) cell.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (fFlags & 0x8) flags |= MWAWFont::embossBit;
     if (fFlags & 0x10) flags |= MWAWFont::shadowBit;
-    if (fFlags & 0x20) cell.m_font.set(MWAWFont::Script::super());
-    if (fFlags & 0x40) cell.m_font.set(MWAWFont::Script::sub());
+    if (fFlags & 0x20) {
+      if (vers==1)
+        cell.m_font.set(MWAWFont::Script(20,WPX_PERCENT,80));
+      else
+        cell.m_font.set(MWAWFont::Script::super100());
+    }
+    if (fFlags & 0x40) {
+      if (vers==1)
+        cell.m_font.set(MWAWFont::Script(-20,WPX_PERCENT,80));
+      else
+        cell.m_font.set(MWAWFont::Script::sub100());
+    }
     cell.m_font.setFlags(flags);
 
     if (fColors != 0xFF) {
@@ -2542,6 +2553,7 @@ void MSKGraph::setProperty(MSKGraphInternal::Font const &font)
 
 bool MSKGraph::readFont(MSKGraphInternal::Font &font)
 {
+  int vers = version();
   long pos = m_input->tell();
   libmwaw::DebugStream f;
   if (!m_mainParser->checkIfPositionValid(pos+18))
@@ -2557,8 +2569,18 @@ bool MSKGraph::readFont(MSKGraphInternal::Font &font)
   if (flags & 0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
   if (flags & 0x8) flag |= MWAWFont::embossBit;
   if (flags & 0x10) flag |= MWAWFont::shadowBit;
-  if (flags & 0x20) font.m_font.set(MWAWFont::Script::super());
-  if (flags & 0x40) font.m_font.set(MWAWFont::Script::sub());
+  if (flags & 0x20) {
+    if (vers==1)
+      font.m_font.set(MWAWFont::Script(20,WPX_PERCENT,80));
+    else
+      font.m_font.set(MWAWFont::Script::super100());
+  }
+  if (flags & 0x40) {
+    if (vers==1)
+      font.m_font.set(MWAWFont::Script(-20,WPX_PERCENT,80));
+    else
+      font.m_font.set(MWAWFont::Script::sub100());
+  }
   if (flags & 0x80) f << "#smaller,";
   font.m_font.setFlags(flag);
 

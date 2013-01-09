@@ -1424,7 +1424,7 @@ bool MWAWContentListener::openFrame(MWAWPosition const &pos, WPXPropertyList ext
     MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: called but a frame is already opened\n"));
     return false;
   }
-
+  MWAWPosition fPos(pos);
   switch(pos.m_anchorTo) {
   case MWAWPosition::Page:
     break;
@@ -1448,6 +1448,14 @@ bool MWAWContentListener::openFrame(MWAWPosition const &pos, WPXPropertyList ext
       MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: can not determine the frame\n"));
       return false;
     }
+    if (m_ps->m_subDocumentType==libmwaw::DOC_HEADER_FOOTER) {
+      MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: called with Frame position in header footer, switch to paragraph\n"));
+      if (m_ps->m_isParagraphOpened)
+        _flushText();
+      else
+        _openParagraph();
+      fPos.m_anchorTo=MWAWPosition::Paragraph;
+    }
     break;
   default:
     MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: can not determine the anchor\n"));
@@ -1455,7 +1463,7 @@ bool MWAWContentListener::openFrame(MWAWPosition const &pos, WPXPropertyList ext
   }
 
   WPXPropertyList propList(extras);
-  _handleFrameParameters(propList, pos);
+  _handleFrameParameters(propList, fPos);
   m_documentInterface->openFrame(propList);
 
   m_ps->m_isFrameOpened = true;

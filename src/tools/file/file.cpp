@@ -210,12 +210,16 @@ bool File::readFileInformation()
   if (m_fInfoCreator=="BOBO") {
     checkFInfoType("CWDB","ClarisWorks/AppleWorks 1.0[Database]")||
     checkFInfoType("CWD2","ClarisWorks/AppleWorks 2.0-3.0[Database]")||
+    checkFInfoType("sWDB","ClarisWorks/AppleWorks 2.0-3.0[Database]")||
     checkFInfoType("CWGR","ClarisWorks/AppleWorks[Draw]")||
+    checkFInfoType("sWGR","ClarisWorks/AppleWorks 2.0-3.0[Draw]")||
     checkFInfoType("CWSS","ClarisWorks/AppleWorks 1.0[SpreadSheet]")||
     checkFInfoType("CWS2","ClarisWorks/AppleWorks 2.0-3.0[SpreadSheet]")||
+    checkFInfoType("sWSS","ClarisWorks/AppleWorks 2.0-3.0[SpreadSheet]")||
     checkFInfoType("CWPR","ClarisWorks/AppleWorks[Presentation]")||
     checkFInfoType("CWWP","ClarisWorks/AppleWorks")||
     checkFInfoType("CWW2","ClarisWorks/AppleWorks 2.0-3.0")||
+    checkFInfoType("sWWP","ClarisWorks/AppleWorks 2.0-3.0")||
     checkFInfoType("ClarisWorks/AppleWorks");
   } else if (m_fInfoCreator=="CARO") {
     checkFInfoType("PDF ", "Acrobat PDF");
@@ -250,7 +254,7 @@ bool File::readFileInformation()
   } else if (m_fInfoCreator=="MDPL") {
     checkFInfoType("DRWG","MacDraw II") || checkFInfoType("MacDraw II");
   } else if (m_fInfoCreator=="MPNT") {
-    checkFInfoType("MacPaint");
+    checkFInfoType("PNTG","MacPaint") || checkFInfoType("MacPaint");
   } else if (m_fInfoCreator=="MWII") {
     checkFInfoType("MW2D","MacWrite II") || checkFInfoType("MacWrite II");
   } else if (m_fInfoCreator=="MWPR") {

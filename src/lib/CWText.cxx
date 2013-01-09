@@ -694,7 +694,8 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
   if (flag&0x8) flags |= MWAWFont::embossBit;
   if (flag&0x10) flags |= MWAWFont::shadowBit;
-  /* flags & 0x20: condensed, flags & 0x40: extended */
+  if (flag&0x20) font.setDeltaLetterSpacing(-1);
+  if (flag&0x40) font.setDeltaLetterSpacing(1);
   if (flag&0x80) font.setStrikeOutStyle(MWAWFont::Line::Simple);
   if (flag&0x100) font.set(MWAWFont::Script::super100());
   if (flag&0x200) font.set(MWAWFont::Script::sub100());
@@ -779,7 +780,8 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
   if (flag&0x8) flags |= MWAWFont::embossBit;
   if (flag&0x10) flags |= MWAWFont::shadowBit;
-  /* flags & 0x20: condensed, flags & 0x40: extended */
+  if (flag&0x20) font.setDeltaLetterSpacing(-1);
+  if (flag&0x40) font.setDeltaLetterSpacing(1);
   if (flag&0x80) font.setStrikeOutStyle(MWAWFont::Line::Simple);
   if (flag&0x100) font.set(MWAWFont::Script::super100());
   if (flag&0x200) font.set(MWAWFont::Script::sub100());

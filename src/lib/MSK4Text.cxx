@@ -1178,12 +1178,14 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
       break;
     }
     case 0x9: { // small interval between char
+      font.m_font.setDeltaLetterSpacing(-1);
       int v = (int) input->readLong(1);
       if (v != 1) f << "##Condensed=" << v << ",";
       else f << "Cond,";
       break;
     }
     case 0xa: { // big interval between char
+      font.m_font.setDeltaLetterSpacing(1);
       int v = (int) input->readLong(1);
       if (v != 1) f << "##Expand=" << v << ",";
       else f << "Expand,";
@@ -1192,13 +1194,13 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
     case 0x18: {
       int v = (int) input->readLong(1);
       if (v != 1) f << "##super=" << v << ",";
-      font.m_font.set(MWAWFont::Script::super());
+      font.m_font.set(MWAWFont::Script::super100());
       break;
     }
     case 0x19: {
       int v = (int) input->readLong(1);
       if (v != 1) f << "##sub =" << v << ",";
-      font.m_font.set(MWAWFont::Script::sub());
+      font.m_font.set(MWAWFont::Script::sub100());
     }
     break;
     case 0xe:

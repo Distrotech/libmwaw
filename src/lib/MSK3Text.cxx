@@ -562,6 +562,7 @@ bool MSK3Text::sendString(std::string &str)
 ////////////////////////////////////////////////////////////
 bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
 {
+  int vers = version();
   font = MSK3TextInternal::Font();
   long pos  = m_input->tell();
   m_input->seek(-1, WPX_SEEK_CUR);
@@ -582,8 +583,18 @@ bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
   if (flag & 0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
   if (flag & 0x8) flags |= MWAWFont::embossBit;
   if (flag & 0x10) flags |= MWAWFont::shadowBit;
-  if (flag & 0x20) font.m_font.set(MWAWFont::Script::super100());
-  if (flag & 0x40) font.m_font.set(MWAWFont::Script::sub100());
+  if (flag & 0x20) {
+    if (vers==1)
+      font.m_font.set(MWAWFont::Script(20,WPX_PERCENT,80));
+    else
+      font.m_font.set(MWAWFont::Script::super100());
+  }
+  if (flag & 0x40) {
+    if (vers==1)
+      font.m_font.set(MWAWFont::Script(-20,WPX_PERCENT,80));
+    else
+      font.m_font.set(MWAWFont::Script::sub100());
+  }
   if ((flag & 0x80) && !(flag & 0x60)) f << "fFl80#,";
   font.m_font.setFlags(flags);
   int color = 1;

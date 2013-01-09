@@ -1,6 +1,10 @@
 CHANGES:
 
-06/01/2013:
+01/10/2013
+- update FullWrite* parser to detect more paragraph properties (to be continued),
+- update Apple/ClarisWorks, FullWrite*, MindWrite, Microsoft Works parsers to use the new font properties,
+
+01/06/2013:
 - create a class MWAWColor to store color,
 - begin to rewrite MWAWFont to add new properties 
   and update MacWrite*, WriteNow, WriterPlus parsers to use the new properties

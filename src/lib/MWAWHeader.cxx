@@ -66,19 +66,19 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   if (input->getFinderInfo(type, creator)) {
     // set basic version, the correct will be filled by check header
     if (creator=="BOBO") {
-      if (type=="CWDB") {
+      if (type=="CWDB" || type=="CWD2" || type=="sWDB") {
         res.push_back(MWAWHeader(MWAWDocument::CW, 1, MWAWDocument::K_DATABASE));
         return res;
       }
-      if (type=="CWGR") {
+      if (type=="CWGR" || type=="sWGR") {
         res.push_back(MWAWHeader(MWAWDocument::CW, 1, MWAWDocument::K_DRAW));
         return res;
       }
-      if (type=="CWSS") {
+      if (type=="CWSS" || type=="CWS2" || type=="sWSS") {
         res.push_back(MWAWHeader(MWAWDocument::CW, 1, MWAWDocument::K_SPREADSHEET));
         return res;
       }
-      if (type=="CWWP") {
+      if (type=="CWWP" || type=="CWW2" || type=="sWPP") {
         res.push_back(MWAWHeader(MWAWDocument::CW, 1));
         return res;
       }
