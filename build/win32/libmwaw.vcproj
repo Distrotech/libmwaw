@@ -353,6 +353,45 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\DMParser.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\DMText.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
 				RelativePath="..\..\src\lib\FWParser.cxx"
 				>
 				<FileConfiguration
@@ -1627,6 +1666,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\CWText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\DMParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\DMText.hxx"
 				>
 			</File>
 			<File

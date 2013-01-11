@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mwaw2raw", "mwaw2raw.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mwaw2text", "mwaw2text.vcxproj", "{FCB2AC04-1AE5-4E43-A80B-BBAA9FA00F5A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mwawFile", "mwawFile.vcxproj", "{CCB2AC04-1AE5-4E43-A80B-BBAA9FA00F5A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -31,6 +33,10 @@ Global
 		{FCB2AC04-1AE5-4E43-A80B-BBAA9FA00F5A}.Debug|Win32.Build.0 = Debug|Win32
 		{FCB2AC04-1AE5-4E43-A80B-BBAA9FA00F5A}.Release|Win32.ActiveCfg = Release|Win32
 		{FCB2AC04-1AE5-4E43-A80B-BBAA9FA00F5A}.Release|Win32.Build.0 = Release|Win32
+		{CCB2AC04-1AE5-4E43-A80B-BBAA9FA00F5A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CCB2AC04-1AE5-4E43-A80B-BBAA9FA00F5A}.Debug|Win32.Build.0 = Debug|Win32
+		{CCB2AC04-1AE5-4E43-A80B-BBAA9FA00F5A}.Release|Win32.ActiveCfg = Release|Win32
+		{CCB2AC04-1AE5-4E43-A80B-BBAA9FA00F5A}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

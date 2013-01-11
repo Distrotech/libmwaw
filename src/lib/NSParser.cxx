@@ -875,7 +875,7 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
     }
 
     /* checkme: in STNM we can have a list of string, it is general or
-       do we need to create a new functionNSParser::readStringsListList
+       do we need to create a new function NSParser::readStringsListList
      */
     std::string str("");
     while (input->tell() < endPos-1) {

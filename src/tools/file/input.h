@@ -27,12 +27,7 @@
 * instead of those above.
 */
 
-#if defined(__MACH__)
-#  include <Carbon/Carbon.h>
-#else
-#  include <Carbon.h>
-#endif
-
+#include <stdio.h>
 #include <vector>
 
 namespace libmwaw_tools
@@ -89,7 +84,7 @@ private:
 class FileStream: public InputStream
 {
 public:
-  FileStream(FSRef fRef, HFSUniStr255 const &forkName);
+  FileStream(char const *path);
   ~FileStream();
   bool ok() const {
     return m_isOk;
@@ -97,7 +92,7 @@ public:
   unsigned char const *read(unsigned long numBytes, unsigned long &numBytesRead);
   long length();
 private:
-  FSIORefNum m_fRef;
+  FILE *m_file;
   bool m_isOk;
 
   std::vector<unsigned char> m_buffer;

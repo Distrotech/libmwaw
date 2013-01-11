@@ -139,8 +139,8 @@ std::vector<RSRC::MapEntry> RSRC::getMapEntries(std::string type)
     lEntry.m_type = type;
     lEntry.m_id = (int)m_input.read16();
     long offset = (long) m_input.readU16();
-    if (offset != 0xFFFF) { // never seems
-      MWAW_DEBUG_MSG(("RSRC::getMapEntries: find an offset=%lx\n", offset));
+    if (offset != 0xFFFF) {
+      // fixme: possible to read the entry name here ( see MWAWRSRCParser )
     }
     unsigned long dOffset = m_input.readU32();
     if (dOffset & 0xFF000000)

@@ -36,6 +36,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
@@ -85,8 +86,14 @@ public:
   //! try to parse a STR entry
   bool parseSTR(MWAWEntry const &entry, std::string &str);
 
+  //! try to parse a STR# entry
+  bool parseSTRList(MWAWEntry const &entry, std::vector<std::string> &list);
+
   //! try to parse a PICT entry
   bool parsePICT(MWAWEntry const &entry, WPXBinaryData &pict);
+
+  //! try to color map (clut entry)
+  bool parseClut(MWAWEntry const &entry, std::vector<MWAWColor> &list);
 
   //! try to parse a version entry
   bool parseVers(MWAWEntry const &entry, Version &vers);

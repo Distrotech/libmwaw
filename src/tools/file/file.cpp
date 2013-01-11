@@ -27,12 +27,7 @@
 * instead of those above.
 */
 
-#if defined(__MACH__)
-#  include <Carbon/Carbon.h>
-#else
-#  include <Carbon.h>
-#endif
-
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -45,6 +40,12 @@
 #include "input.h"
 #include "rsrc.h"
 
+#include <sys/stat.h>
+#if WITH_EXTENDED_FS
+#  include <sys/types.h>
+#  include <sys/xattr.h>
+#endif
+
 /**
    Can be compile with
    g++ -o mwawFile file.cpp -framework Carbon
@@ -55,29 +56,21 @@ class Exception
 {
 };
 
-void checkError(OSStatus result, char const *err, bool fatal)
-{
-  if (result == noErr)
-    return;
-  if (err) {
-    MWAW_DEBUG_MSG(("%s: get error %s\n", err, GetMacOSStatusErrorString(result)));
-  }
-  if (fatal) throw Exception();
-}
-
 struct File {
   //! the constructor
-  File(char const *path) : m_fName(path), m_fRef(),
+  File(char const *path) : m_fName(path),
     m_fInfoCreator(""), m_fInfoType(""), m_fInfoResult(""),
     m_fileVersion(), m_appliVersion(), m_rsrcMissingMessage(""), m_rsrcResult(""),
     m_dataResult(), m_printFileName(false) {
-    OSStatus result;
-    Boolean isDirectory;
-    /* convert the POSIX path to an FSRef */
-    result = FSPathMakeRef((const UInt8*)path, &m_fRef, &isDirectory);
-    libmwaw_tools::checkError(result, "FSPathMakeRef", true);
-    if (isDirectory) {
-      std::cerr << "File::File: the file " << m_fName << " is a directory\n";
+    if (!path || !m_fName.length()) {
+      std::cerr << "File::File: call without path\n";
+      throw libmwaw_tools::Exception();
+    }
+    // check if it is a regular file
+    struct stat status;
+    stat( path, &status );
+    if ( !S_ISREG(status.st_mode) ) {
+      std::cerr << "File::File: the file " << m_fName << " is a not a regular file\n";
       throw libmwaw_tools::Exception();
     }
   }
@@ -155,10 +148,22 @@ struct File {
     return true;
   }
 
+  //! wrapper to call xattr if it exists
+  ssize_t getxattrWrap(const char *attr, void *value, size_t size) const {
+#if WITH_EXTENDED_FS==0
+    return -1;
+#elif WITH_EXTENDED_FS==1
+    if (!attr || !m_fName.length())
+      return -1;
+    return getxattr(m_fName.c_str(), attr, value, size, 0, XATTR_SHOWCOMPRESSION);
+#else
+    if (!attr || !m_fName.length())
+      return -1;
+    return getxattr(m_fName.c_str(), attr, value, size);
+#endif
+  }
   //! the file name
   std::string m_fName;
-  //! the file reference
-  FSRef m_fRef;
   //! the file info creator
   std::string m_fInfoCreator;
   //! the file info type
@@ -184,27 +189,21 @@ struct File {
 
 bool File::readFileInformation()
 {
-  FSCatalogInfo cInfo;
-  OSStatus result;
-  result=FSGetCatalogInfo (&m_fRef, kFSCatInfoFinderInfo, &cInfo, NULL, NULL, NULL);
-  if (result != noErr) {
-    libmwaw_tools::checkError(result, "FSGetCatalogInfo", false);
+  ssize_t dSize=getxattrWrap("com.apple.FinderInfo", 0, 0);
+  if (dSize <= 8)
     return false;
-  }
-
-  FileInfo &fInfo = reinterpret_cast< FileInfo &>(cInfo.finderInfo);
-  m_fInfoCreator="";
-  if (fInfo.fileCreator) {
-    char const *str=reinterpret_cast<char *>(&fInfo.fileCreator);
-    for (int i = 0; i < 4; i++)
-      m_fInfoCreator+=str[3-i];
-  }
+  char *data = new char[size_t(dSize)];
+  if (data==0)
+    return false;
+  dSize= getxattrWrap("com.apple.FinderInfo", data, size_t(dSize));
   m_fInfoType = "";
-  if (fInfo.fileType) {
-    char const *str=reinterpret_cast<char *>(&fInfo.fileType);
-    for (int i = 0; i < 4; i++)
-      m_fInfoType+=str[3-i];
-  }
+  for (int i = 0; i < 4; i++)
+    m_fInfoType+=data[i];
+  m_fInfoCreator="";
+  for (int i = 0; i < 4; i++)
+    m_fInfoCreator+=data[4+i];
+  delete []data;
+
   if (m_fInfoCreator=="" || m_fInfoType=="")
     return true;
   if (m_fInfoCreator=="BOBO") {
@@ -225,6 +224,10 @@ bool File::readFileInformation()
     checkFInfoType("PDF ", "Acrobat PDF");
   } else if (m_fInfoCreator=="CDrw") {
     checkFInfoType("dDraw", "ClarisDraw") || checkFInfoType("ClarisDraw");
+  } else if (m_fInfoCreator=="DkmR") {
+    checkFInfoType("TEXT","Basic text(created by DOCMaker)") || checkFInfoType("DOCMaker");
+  } else if (m_fInfoCreator=="Dk@P") {
+    checkFInfoType("APPL","DOCMaker") || checkFInfoType("DOCMaker");
   } else if (m_fInfoCreator=="DDAP") {
     checkFInfoType("DDFL+","DiskDoubler") || checkFInfoType("DiskDoubler");
   } else if (m_fInfoCreator=="FS03") {
@@ -317,7 +320,7 @@ bool File::readFileInformation()
     checkFInfoType("nX^d","WriteNow 2") || checkFInfoType("nX^2","WriteNow 3-4") ||
     checkFInfoType("WriteNow");
   } else if (m_fInfoCreator=="ttxt") {
-    checkFInfoType("TEXT","Text(basic)");
+    checkFInfoType("TEXT","Basic text");
   }
   // now by type
   else if (m_fInfoType=="AAPL") {
@@ -333,9 +336,9 @@ bool File::readFileInformation()
 
 bool File::readDataInformation()
 {
-  HFSUniStr255 dataFName;
-  FSGetDataForkName(&dataFName);
-  libmwaw_tools::FileStream input(m_fRef, dataFName);
+  if (!m_fName.length())
+    return false;
+  libmwaw_tools::FileStream input(m_fName.c_str());
   if (!input.ok()) {
     MWAW_DEBUG_MSG(("File::readDataInformation: can not open the data fork\n"));
     return false;
@@ -535,17 +538,25 @@ bool File::readDataInformation()
 
 bool File::readRSRCInformation()
 {
-  HFSUniStr255 rsrcFName;
-  FSGetResourceForkName(&rsrcFName);
-  libmwaw_tools::FileStream rsrcStream(m_fRef, rsrcFName);
-  if (!rsrcStream.ok())
+  ssize_t dSize=getxattrWrap("com.apple.ResourceFork", 0, 0);
+  if (dSize <= 0)
     return false;
+  char *data = new char[size_t(dSize)];
+  if (data==0)
+    return false;
+  dSize=getxattrWrap("com.apple.ResourceFork", data, size_t(dSize));
+  if (dSize < 0) {
+    delete [] data;
+    return false;
+  }
+  libmwaw_tools::StringStream rsrcStream((unsigned char *)data,(unsigned long) dSize);
+  delete [] data;
   if (!rsrcStream.length())
     return true;
   libmwaw_tools::RSRC rsrcManager(rsrcStream);
-#if 0
+#  if 0
   MWAW_DEBUG_MSG(("File::readRSRCInformation: find a resource fork\n"));
-#endif
+#  endif
   m_rsrcResult = rsrcManager.getString(-16396); // the application missing name
   m_rsrcMissingMessage = rsrcManager.getString(-16397);
   std::vector<RSRC::Version> listVersion = rsrcManager.getVersionList();
@@ -601,19 +612,6 @@ bool File::printResult(std::ostream &o, int verbose) const
   }
   o << "\n";
   return true;
-}
-
-std::string UniStr255ToStr(HFSUniStr255 const &data)
-{
-  CFStringRef input = CFStringCreateWithCharacters( kCFAllocatorDefault,
-                      data.unicode, data.length );
-  std::string res("");
-  res.reserve(size_t(CFStringGetLength(input))+1);
-  CFStringGetCString(input, &res[0], CFStringGetLength(input)+1,
-                     kCFStringEncodingMacRoman);
-
-  CFRelease( input );
-  return res;
 }
 }
 

@@ -86,6 +86,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::CW, 1, MWAWDocument::K_PRESENTATION));
         return res;
       }
+    } else if (creator=="Dk@P") {
+      if (type=="APPL") {
+        res.push_back(MWAWHeader(MWAWDocument::DM, 1));
+        return res;
+      }
     } else if (creator=="FS03") {
       if (type=="WRT+") {
         res.push_back(MWAWHeader(MWAWDocument::WPLUS, 1));

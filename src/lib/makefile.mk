@@ -33,11 +33,13 @@ SLOFILES= \
 	$(SLO)$/CWStyleManager.obj		\
 	$(SLO)$/CWTable.obj			\
 	$(SLO)$/CWText.obj			\
+	$(SLO)$/DMParser.obj			\
+	$(SLO)$/DMText.obj			\
+	$(SLO)$/FWParser.obj			\
+	$(SLO)$/FWText.obj			\
 	$(SLO)$/HMWGraph.obj			\
 	$(SLO)$/HMWParser.obj			\
 	$(SLO)$/HMWText.obj			\
-	$(SLO)$/FWParser.obj			\
-	$(SLO)$/FWText.obj			\
 	$(SLO)$/LWGraph.obj			\
 	$(SLO)$/LWParser.obj			\
 	$(SLO)$/LWText.obj			\

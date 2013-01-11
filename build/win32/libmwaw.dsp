@@ -124,6 +124,14 @@ SOURCE=..\..\src\lib\CWText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\DMParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\DMText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\FWParser.cxx
 # End Source File
 # Begin Source File
@@ -409,6 +417,14 @@ SOURCE=..\..\src\lib\CWTable.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\CWText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\DMParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\DMText.hxx
 # End Source File
 # Begin Source File
 

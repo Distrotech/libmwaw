@@ -37,6 +37,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	CWTable.hxx			\
 	CWText.cxx			\
 	CWText.hxx			\
+	DMParser.cxx			\
+	DMParser.hxx			\
+	DMText.cxx			\
+	DMText.hxx			\
 	FWParser.cxx			\
 	FWParser.hxx			\
 	FWText.cxx			\

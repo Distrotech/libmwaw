@@ -71,6 +71,7 @@ AS_CASE([$host],
 		MWAW2HTML_WIN32_RESOURCE=mwaw2html-win32res.lo
 		MWAW2TEXT_WIN32_RESOURCE=mwaw2text-win32res.lo
 		MWAW2RAW_WIN32_RESOURCE=mwaw2raw-win32res.lo
+		MWAWFILE_WIN32_RESOURCE=mwawFile-win32res.lo
 	], [
 		native_win32=no
 		LIBMWAW_WIN32_RESOURCE=
@@ -78,6 +79,7 @@ AS_CASE([$host],
 		MWAW2HTML_WIN32_RESOURCE=
 		MWAW2TEXT_WIN32_RESOURCE=
 		MWAW2RAW_WIN32_RESOURCE=
+		MWAWFILE_WIN32_RESOURCE=
 	]
 )
 AC_MSG_RESULT([$native_win32])
@@ -87,6 +89,7 @@ AC_SUBST(LIBMWAW_STREAM_WIN32_RESOURCE)
 AC_SUBST(MWAW2HTML_WIN32_RESOURCE)
 AC_SUBST(MWAW2TEXT_WIN32_RESOURCE)
 AC_SUBST(MWAW2RAW_WIN32_RESOURCE)
+AC_SUBST(MWAWFILE_WIN32_RESOURCE)
 
 AC_MSG_CHECKING([for Win32 platform in general])
 AS_CASE([$host],
@@ -291,29 +294,33 @@ AS_IF([test "x$with_sharedptr" = "xboost"], [
 ])
 
 # =========
-# Darwin: check for Carbon file functions
+# check for file extended attribute functions
 # =========
-AS_IF([test "x$platform_darwin" = "xyes"], [
-	AC_MSG_CHECKING([for Carbon FSPathMakeRef])
+AC_MSG_CHECKING([for extended file system attributes])
+AC_COMPILE_IFELSE([
+	AC_LANG_PROGRAM(
+		[[#include <sys/xattr.h>]],
+		[[getxattr("/tmp/toto", "com.apple.FinderInfo", 0, 0, 0, XATTR_SHOWCOMPRESSION);]]
+	)
+], [
+	AC_MSG_RESULT([yes, find Darwin getxattr])
+	[XATTR_CFLAGS="-DWITH_EXTENDED_FS=1"]
+], [
 	AC_COMPILE_IFELSE([
 		AC_LANG_PROGRAM(
-			[[#if defined(__MACH__)]]
-			[[#  include <Carbon/Carbon.h>]]
-			[[#else]]
-			[[#  include <Carbon.h>]]
-			[[#endif]],
-			[[Boolean isDirectory; FSRef fRef; FSCatalogInfo cInfo;]]
-			[[FSPathMakeRef((const UInt8*)"/tmp/", &fRef, &isDirectory);]]
-			[[FSGetCatalogInfo (&fRef, kFSCatInfoFinderInfo, &cInfo, NULL, NULL, NULL);]]
+			[[#include <sys/types.h>]
+			 [#include <sys/xattr.h>]],
+			[[getxattr("/tmp/toto", "com.apple.FinderInfo", 0, 0);]]
 		)
 	], [
-		AC_MSG_RESULT([yes])
-		[with_darwinFS="yes"]
+		AC_MSG_RESULT([yes, find Linux getxattr])
+		[XATTR_CFLAGS="-DWITH_EXTENDED_FS=2"]
 	], [
 		AC_MSG_RESULT([no])
+		[XATTR_CFLAGS="-DWITH_EXTENDED_FS=0"]
 	])
 ])
-AM_CONDITIONAL(PLATFORM_DARWIN_WITH_FS, [test "x$with_darwinFS" = "xyes"])
+AC_SUBST(XATTR_CFLAGS)
 
 # =========
 # Find zlib
@@ -372,6 +379,7 @@ src/conv/text/Makefile
 src/conv/text/mwaw2text.rc
 src/tools/Makefile
 src/tools/file/Makefile
+src/tools/file/mwawFile.rc
 src/lib/Makefile
 src/lib/libmwaw.rc
 docs/Makefile

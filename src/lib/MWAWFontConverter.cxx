@@ -263,13 +263,17 @@ static int const s_wingdingsUnicode[] = {
 //
 // For the next one, we stored only the "known" differences between roman and font
 //
-//! Internal and Low level: vector (char, unicode) for cursive font \note only characters which differs from roman
+/** Internal and Low level: vector (char, unicode) for cursive font 
+
+\note only characters which differs from roman*/
 static int const s_cursiveIncompleteUnicode[] = {
   0xa2,0xBC, 0xa3,0x2153, 0xa4,0x2159, 0xaa,0xBD, 0xc1,0x2154
   // 0x40, 0xB0: some number,
 };
 
-//! Internal and Low level: vector (char, unicode) for math font \note only characters which differs from roman
+/** Internal and Low level: vector (char, unicode) for math font
+
+\note only characters which differs from roman */
 static int const s_mathIncompleteUnicode[] = {
   0x22,0x222A, 0x27,0x222A,  0x28,0x2229, 0x2b,0x2260, 0x31,0x2282,
   0x33,0x2227, 0x36,0x2A2F,  0x39,0x2282, 0x43,0x2102, 0x44,0x216E,
@@ -278,7 +282,9 @@ static int const s_mathIncompleteUnicode[] = {
   0x76,0x2174
 };
 
-//! Internal and Low level: vector (char, unicode) for scientific font \note only characters which differs from roman
+/** Internal and Low level: vector (char, unicode) for scientific font
+
+\note only characters which differs from roman*/
 static int const s_scientificIncompleteUnicode[] = {
   0x23,0x0394, 0x40,0x221A,  0x49,0x2160, 0x56,0x2164, 0x5c,0x007C,
   0x5b,0x2192, 0x5d,0x2192,  0x90,0x211D, 0x91,0x2192, 0xa7,0x03C3,
@@ -288,15 +294,21 @@ static int const s_scientificIncompleteUnicode[] = {
 };
 
 // other fonts with unknown names :
-//! Internal and Low level: vector (char, unicode) for font 107 \note only characters which differs from roman
+/** Internal and Low level: vector (char, unicode) for font 107
+
+\note only characters which differs from roman */
 static int const s_unknown107IncompleteUnicode[] = {
   0x76,0x221a
 };
-//! Internal and Low level: vector (char, unicode) for font 128 \note only characters which differs from roman
+/** Internal and Low level: vector (char, unicode) for font 128
+
+\note only characters which differs from roman*/
 static int const s_unknown128IncompleteUnicode[] = {
   0x43,0x2102, 0x4e,0x2115, 0x52,0x211D, 0x61,0xFE3F, 0x76,0x2192
 };
-//! Internal and Low level: vector (char, unicode) for font 200 \note only characters which differs from roman
+/** Internal and Low level: vector (char, unicode) for font 200
+
+\note only characters which differs from roman */
 static int const s_unknown200IncompleteUnicode[] = {
   0x76,0x2192, 0x77,0x2192, 0x61,0xFE3F
 };

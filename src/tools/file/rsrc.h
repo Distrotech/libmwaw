@@ -27,12 +27,6 @@
 * instead of those above.
 */
 
-#if defined(__MACH__)
-#  include <Carbon/Carbon.h>
-#else
-#  include <Carbon.h>
-#endif
-
 #include <ostream>
 #include <map>
 #include <string>

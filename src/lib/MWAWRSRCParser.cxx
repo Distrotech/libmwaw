@@ -51,6 +51,11 @@ MWAWRSRCParser::~MWAWRSRCParser()
     while (it != m_entryMap.end()) {
       MWAWEntry &tEntry = (it++)->second;
       if (tEntry.isParsed()) continue;
+
+      if (tEntry.type()=="CODE") { // skip the code...
+        ascii().skipZone(tEntry.begin()-4, tEntry.end()-1);
+        continue;
+      }
       f.str("");
       f << "Entries(RSRC" << tEntry.type() << "):" << tEntry.id();
       ascii().addPos(tEntry.begin()-4);
@@ -147,6 +152,14 @@ bool MWAWRSRCParser::parse()
       std::string str;
       MWAWEntry &tEntry = (it++)->second;
       parseSTR(tEntry, str);
+    }
+    it = m_entryMap.lower_bound("STR#");
+    while (it != m_entryMap.end()) {
+      if (it->first != "STR#")
+        break;
+      std::vector<std::string> list;
+      MWAWEntry &tEntry = (it++)->second;
+      parseSTRList(tEntry, list);
     }
   } catch(...) {
     MWAW_DEBUG_MSG(("MWAWRSRCParser::parse: can not parse the input\n"));
@@ -298,7 +311,7 @@ bool MWAWRSRCParser::parseSTR(MWAWEntry const &entry, std::string &str)
     }
     str += (char) m_input->readULong(1);
   }
-  f << "Entries(RSRCSTR)[" << entry.id() << "]:" << str;
+  f << "Entries(RSRCSTR)[" << entry.type() << ":" << entry.id() << "]:" << str;
   if (sz+1 != entry.length()) {
     // can this happens ?
     MWAW_DEBUG_MSG(("MWAWRSRCParser::parseSTR: ARGGS multiple strings\n"));
@@ -307,6 +320,116 @@ bool MWAWRSRCParser::parseSTR(MWAWEntry const &entry, std::string &str)
   }
   ascii().addPos(entry.begin()-4);
   ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool MWAWRSRCParser::parseSTRList(MWAWEntry const &entry, std::vector<std::string> &list)
+{
+  list.resize(0);
+  if (!m_input || !entry.valid() || entry.length()<2) {
+    MWAW_DEBUG_MSG(("MWAWRSRCParser::parseSTRList: the entry is bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  long pos = entry.begin();
+  long endPos = entry.end();
+  m_input->seek(pos, WPX_SEEK_SET);
+
+  libmwaw::DebugStream f;
+  f << "Entries(RSRCListStr)[(" << entry.type() << ":" << entry.id() << "]:";
+  int N=(int) m_input->readULong(2);
+  ascii().addPos(pos-4);
+  ascii().addNote(f.str().c_str());
+
+  for (int i = 0; i < N; i++) {
+    f.str("");
+    f << "RSRCListStr-" << i << ":";
+    pos = m_input->tell();
+    if (pos+1 > endPos) {
+      f << "###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+
+      MWAW_DEBUG_MSG(("MWAWRSRCParser::parseSTRList: can not read string %d\n", i));
+      return false;
+    }
+    int sz = (int)m_input->readULong(1);
+    if (pos+1+sz > endPos) {
+      f.str("");
+      f << "###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+
+      MWAW_DEBUG_MSG(("MWAWRSRCParser::parseSTRList: string size %d is bad\n", i));
+      return false;
+    }
+
+    std::string str("");
+    for (int c=0; c < sz; c++)
+      str += (char) m_input->readULong(1);
+    list.push_back(str);
+    f << str << ",";
+
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool MWAWRSRCParser::parseClut(MWAWEntry const &entry, std::vector<MWAWColor> &list)
+{
+  list.resize(0);
+  if (!m_input || !entry.valid() || entry.length()<8) {
+    MWAW_DEBUG_MSG(("MWAWRSRCParser::parseClut: the entry is bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  long pos = entry.begin();
+  // skip seed
+  m_input->seek(pos+4, WPX_SEEK_SET);
+
+  libmwaw::DebugStream f;
+  f << "Entries(RSRCClut)[(" << entry.type() << ":" << entry.id() << "]:";
+  int flags = (int) m_input->readULong(2);
+  if (flags==0x8000) f << "indexed,";
+  else if (flags) f << "#flags=" << std::hex << flags << ",";
+  int N= (int) m_input->readULong(2);
+  if (entry.length()==8+8*(N+1)) // N can be num or maxId
+    N++;
+  f << "N=" << N << ",";
+  if (entry.length()!=8+8*N) {
+    f << "###";
+    MWAW_DEBUG_MSG(("MWAWRSRCParser::parseClut: find unexpected size/format\n"));
+    ascii().addPos(pos-4);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  ascii().addPos(pos-4);
+  ascii().addNote(f.str().c_str());
+
+  for (int i = 0; i < N; i++) {
+    pos = m_input->tell();
+    f.str("");
+    f << "RSRCClut-" << i << ":";
+    int index = (int) m_input->readULong(2);
+    if (index != i) {
+      static bool first=true;
+      if (first) {
+        MWAW_DEBUG_MSG(("MWAWRSRCParser::parseClut: find some odd index value\n"));
+        first = false;
+      }
+      f << "#index=" << index << ",";
+    }
+    unsigned char col[3];
+    for (int j = 0; j < 3; j++)
+      col[j] = (unsigned char) (m_input->readULong(2)>>8);
+    MWAWColor color(col[0],col[1],col[2]);
+    list.push_back(color);
+    f << color << ",";
+
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
   return true;
 }
 
@@ -390,7 +513,7 @@ bool MWAWRSRCParser::parsePICT(MWAWEntry const &entry, WPXBinaryData &pict)
   if (!entry.isParsed()) {
     ascii().skipZone(entry.begin(), entry.end()-1);
     libmwaw::DebugStream f2;
-    f2 << "RSRC-" << entry.type() << "-" << entry.id() << ".pct";
+    f2 << "RSRC-" << entry.type() << ":" << entry.id() << ".pct";
     libmwaw::Debug::dumpFile(pict, f2.str().c_str());
   }
 #endif

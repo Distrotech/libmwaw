@@ -1460,7 +1460,7 @@ bool HMWGraph::sendTableUnformatted(long fId)
     MWAW_DEBUG_MSG(("HMWGraph::sendTableUnformatted: can not find table %lx\n", fId));
     return false;
   }
-  HMWGraphInternal::Table const &table = reinterpret_cast<HMWGraphInternal::Table const &>(fIt->second);
+  HMWGraphInternal::Table const &table = reinterpret_cast<HMWGraphInternal::Table const &>(*fIt->second);
   for (size_t c = 0; c < table.m_cellsList.size(); c++) {
     HMWGraphInternal::TableCell const &cell= table.m_cellsList[c];
     if (cell.m_id < 0) continue;

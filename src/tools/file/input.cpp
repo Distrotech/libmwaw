@@ -28,6 +28,7 @@
 */
 
 #include <stdint.h>
+#include <string.h>
 #include <iostream>
 
 #include "file_internal.h"
@@ -139,16 +140,13 @@ const unsigned char *StringStream::read(unsigned long numBytes, unsigned long &n
 //
 // FileStream
 //
-FileStream::FileStream(FSRef fRef, HFSUniStr255 const &forkName) : InputStream(), m_fRef(), m_isOk(true), m_buffer(), m_bufferPos(0)
+FileStream::FileStream(char const *path) : InputStream(), m_file(0), m_isOk(true), m_buffer(), m_bufferPos(0)
 {
-  OSStatus status = FSOpenFork (&fRef, forkName.length, forkName.unicode, fsRdPerm, &m_fRef);
-  if (status == noErr)
+  m_file = fopen(path,"r");
+  if (m_file)
     return;
 #ifdef DEBUG
-  std::cerr << "FileStream:FileStream can not open ";
-  for (int i = 0; i < forkName.length; i++)
-    std::cerr << char(forkName.unicode[i]);
-  std::cerr << " get error " << GetMacOSStatusErrorString(status) << "\n";
+  std::cerr << "FileStream:FileStream can not open " << path << "\n";
 #endif
   m_isOk = false;
 }
@@ -156,13 +154,13 @@ FileStream::FileStream(FSRef fRef, HFSUniStr255 const &forkName) : InputStream()
 FileStream::~FileStream()
 {
   if (!m_isOk) return;
-  FSCloseFork(m_fRef);
+  if (m_file) fclose(m_file);
 }
 
 unsigned char const *FileStream::read(unsigned long numBytes, unsigned long &numBytesRead)
 {
   numBytesRead = 0;
-  if (!m_isOk)
+  if (!m_isOk || !m_file)
     return 0;
   long lastPos = m_offset+long(numBytes);
   long fileLength = length();
@@ -170,23 +168,24 @@ unsigned char const *FileStream::read(unsigned long numBytes, unsigned long &num
   // check if the buffer is or not ok
   long bufSize = long(m_buffer.size());
   if (m_offset < m_bufferPos || lastPos > m_bufferPos+bufSize) {
-    long numToRead = long(numBytes);
+    size_t numToRead = size_t(numBytes);
     if (numToRead < 4096 && m_offset+4096 <= fileLength)
       numToRead = 4096;
     else if (numToRead < 4096)
-      numToRead = fileLength-m_offset;
+      numToRead = size_t(fileLength-m_offset);
     if (numToRead==0)
       return 0;
     // try to read numToRead bytes
     m_bufferPos = m_offset;
     m_buffer.resize(size_t(numToRead));
-    ByteCount nRead;
+
 #if 0
     MWAW_DEBUG_MSG(("FileStream::read called with %ld[%ld]: read %ld bytes\n", m_offset, numBytes, numToRead));
 #endif
-    OSStatus status = FSReadFork(m_fRef, fsFromStart, SInt64(m_offset), ByteCount(numToRead), &(m_buffer[0]), &nRead);
-    if (status != noErr) {
-      MWAW_DEBUG_MSG(("FileStream::read get error %s when reading data\n", GetMacOSStatusErrorString(status)));
+    fseek(m_file, m_offset, SEEK_SET);
+    size_t nRead = fread(&(m_buffer[0]), 1, numToRead, m_file);
+    if (nRead != numToRead) {
+      MWAW_DEBUG_MSG(("FileStream::read get error when reading data\n"));
       m_buffer.resize(size_t(nRead));
     }
   }
@@ -204,12 +203,9 @@ unsigned char const *FileStream::read(unsigned long numBytes, unsigned long &num
 
 long FileStream::length()
 {
-  if (!m_isOk) return 0;
-  SInt64 len;
-  OSStatus status = FSGetForkSize(m_fRef, &len);
-  if (status != noErr)
-    return 0;
-  return long(len);
+  if (!m_isOk || !m_file) return 0;
+  fseek(m_file, 0, SEEK_END);
+  return long(ftell(m_file));
 }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
