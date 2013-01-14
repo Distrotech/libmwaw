@@ -51,6 +51,7 @@ class HeaderFooter;
 typedef shared_ptr<HeaderFooter> HeaderFooterPtr;
 }
 
+/** A structure used to defined the page properties */
 class MWAWPageSpan
 {
   friend class MWAWContentListener;
@@ -64,29 +65,42 @@ public:
                             BottomLeft, BottomCenter, BottomRight, BottomLeftAndRight, BottomInsideLeftAndRight
                           };
 public:
+  //! constructor
   MWAWPageSpan();
+  //! destructor
   virtual ~MWAWPageSpan();
 
+  //! returns the page length
   double getFormLength() const {
     return m_formLength;
   }
+  //! returns the page width
   double getFormWidth() const {
     return m_formWidth;
   }
+  //! returns the page orientation
   FormOrientation getFormOrientation() const {
     return m_formOrientation;
   }
+  //! returns the left margin
   double getMarginLeft() const {
     return m_marginLeft;
   }
+  //! returns the right margin
   double getMarginRight() const {
     return m_marginRight;
   }
+  //! returns the top margin
   double getMarginTop() const {
     return m_marginTop;
   }
+  //! returns the bottom margin
   double getMarginBottom() const {
     return m_marginBottom;
+  }
+  //! returns the background color
+  MWAWColor backgroundColor() const {
+    return m_backgroundColor;
   }
   PageNumberPosition getPageNumberPosition() const {
     return m_pageNumberPosition;
@@ -144,6 +158,10 @@ public:
   //! check if the page margins are consistent with the page dimension, if not update them
   void checkMargins();
 
+  //! set the background color
+  void setBackgroundColor(MWAWColor color=MWAWColor::white()) {
+    m_backgroundColor=color;
+  }
   void setPageNumberPosition(const PageNumberPosition pageNumberPosition) {
     m_pageNumberPosition = pageNumberPosition;
   }
@@ -186,6 +204,7 @@ private:
   FormOrientation m_formOrientation;
   double m_marginLeft, m_marginRight;
   double m_marginTop, m_marginBottom;
+  MWAWColor m_backgroundColor;
   PageNumberPosition m_pageNumberPosition;
   int m_pageNumber;
   libmwaw::NumberingType m_pageNumberingType;

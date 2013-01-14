@@ -54,10 +54,13 @@ class MWAWFont;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
+class MWAWPageSpan;
 class MWAWSubDocument;
 
 namespace DMTextInternal
 {
+struct Zone;
+
 class SubDocument;
 struct State;
 }
@@ -85,6 +88,12 @@ public:
   /** returns the number of pages */
   int numPages() const;
 
+  /** returns the number of chapter */
+  int numChapters() const;
+
+  //! send a string as comment
+  void sendComment(std::string const &str);
+
 protected:
 
   //! sets the listener in this class and in the helper classes
@@ -105,19 +114,45 @@ protected:
   // intermediate level
   //
 
-  /** compute the positions */
-  void computePositions();
+  /** compute the number of page of a zone*/
+  void computeNumPages(DMTextInternal::Zone const &zone) const;
+
+  /** update the page span list */
+  void updatePageSpanList(std::vector<MWAWPageSpan> &spanList);
+
+  /* sends a font property to the listener */
+  void setProperty(MWAWFont const &font);
+
+  /** try to send the text corresponding to a zone */
+  bool sendText(DMTextInternal::Zone const &zone);
 
   //! try to read the font name ( resource rQDF )
   bool readFontNames(MWAWEntry const &entry);
 
+  //! try to read the styles ( resource styl )
+  bool readStyles(MWAWEntry const &entry);
+
+  //! try to read a TOC zone? ( resource cnt# )
+  bool readTOC(MWAWEntry const &entry);
+
+  //! try to send a TOC zone
+  bool sendTOC();
+
+  //! try to read the windows information zone? ( resource Wndo )
+  bool readWindows(MWAWEntry const &entry);
+
   //! try to read the footer zone ( resource foot )
   bool readFooter(MWAWEntry const &entry);
+
+  //! try to send a footer corresponding to a zone id
+  bool sendFooter(int zId);
 
   //
   // low level
   //
 
+  //! send a string to the listener
+  void sendString(std::string const &str, MWAWFont const &font) const;
 private:
   DMText(DMText const &orig);
   DMText &operator=(DMText const &orig);

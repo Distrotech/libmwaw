@@ -93,13 +93,9 @@ bool HeaderFooter::operator==(shared_ptr<HeaderFooter> const &hF) const
 
 // ----------------- MWAWPageSpan ------------------------
 MWAWPageSpan::MWAWPageSpan() :
-  m_formLength(11.0),
-  m_formWidth(8.5f),
-  m_formOrientation(MWAWPageSpan::PORTRAIT),
-  m_marginLeft(1.0),
-  m_marginRight(1.0),
-  m_marginTop(1.0),
-  m_marginBottom(1.0),
+  m_formLength(11.0), m_formWidth(8.5), m_formOrientation(MWAWPageSpan::PORTRAIT),
+  m_marginLeft(1.0), m_marginRight(1.0), m_marginTop(1.0), m_marginBottom(1.0),
+  m_backgroundColor(MWAWColor::white()),
   m_pageNumberPosition(None),
   m_pageNumber(-1),
   m_pageNumberingType(libmwaw::ARABIC),
@@ -248,6 +244,8 @@ void MWAWPageSpan::getPageProperty(WPXPropertyList &propList) const
   propList.insert("fo:margin-right", getMarginRight());
   propList.insert("fo:margin-top", getMarginTop());
   propList.insert("fo:margin-bottom", getMarginBottom());
+  if (!m_backgroundColor.isWhite())
+    propList.insert("fo:background-color", m_backgroundColor.str().c_str());
 }
 
 
@@ -264,13 +262,13 @@ bool MWAWPageSpan::operator==(shared_ptr<MWAWPageSpan> const &page2) const
       getMarginTop() < page2->getMarginTop() || getMarginTop() > page2->getMarginTop() ||
       getMarginBottom() < page2->getMarginBottom() || getMarginBottom() > page2->getMarginBottom())
     return false;
+  if (backgroundColor() != page2->backgroundColor())
+    return false;
 
   if (getPageNumberPosition() != page2->getPageNumberPosition())
     return false;
-
   if (getPageNumber() != page2->getPageNumber())
     return false;
-
   if (getPageNumberingType() != page2->getPageNumberingType())
     return false;
 

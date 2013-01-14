@@ -263,7 +263,7 @@ static int const s_wingdingsUnicode[] = {
 //
 // For the next one, we stored only the "known" differences between roman and font
 //
-/** Internal and Low level: vector (char, unicode) for cursive font 
+/** Internal and Low level: vector (char, unicode) for cursive font
 
 \note only characters which differs from roman*/
 static int const s_cursiveIncompleteUnicode[] = {

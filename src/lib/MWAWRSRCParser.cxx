@@ -336,7 +336,7 @@ bool MWAWRSRCParser::parseSTRList(MWAWEntry const &entry, std::vector<std::strin
   m_input->seek(pos, WPX_SEEK_SET);
 
   libmwaw::DebugStream f;
-  f << "Entries(RSRCListStr)[(" << entry.type() << ":" << entry.id() << "]:";
+  f << "Entries(RSRCListStr)[" << entry.type() << ":" << entry.id() << "]:";
   int N=(int) m_input->readULong(2);
   ascii().addPos(pos-4);
   ascii().addNote(f.str().c_str());
@@ -389,7 +389,7 @@ bool MWAWRSRCParser::parseClut(MWAWEntry const &entry, std::vector<MWAWColor> &l
   m_input->seek(pos+4, WPX_SEEK_SET);
 
   libmwaw::DebugStream f;
-  f << "Entries(RSRCClut)[(" << entry.type() << ":" << entry.id() << "]:";
+  f << "Entries(RSRCClut)[" << entry.type() << ":" << entry.id() << "]:";
   int flags = (int) m_input->readULong(2);
   if (flags==0x8000) f << "indexed,";
   else if (flags) f << "#flags=" << std::hex << flags << ",";

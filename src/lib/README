@@ -4,6 +4,7 @@
 - MWAW*, libmwaw* : internal core part of libmwaw (ie. classes used by all the parser )
 
 - CW* : parser of ClarisWorks and AppleWorks documents
+- DM* : parser of DOCMaker documents
 - FW* : parser of FullWrite documents
 - HMW* : parser of HanMac Word documents
 - LW* : parser of LightWay Text documents
@@ -90,7 +91,7 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------
---------   CW/FW/LW/MDW/MRW/MSK/MSW/MW/NS/WN/WP/ZW   -------
+-------   CW/DM/FW/LW/MDW/MRW/MSK/MSW/MW/NS/WN/WP/ZW   -----
 ------------------------------------------------------------
 
 Specific files which depends on the type of file which is converted
@@ -106,6 +107,9 @@ CWParser : parser of ClarisWorks/AppleWorks document
   and
 -   CWStruct : class which stores the main zone structures
 -   CWStyleManager : class which reads/stores many styles
+
+DMParser: parser of DOCMaker : v4
+-   DMText : class which reads the text
 
 FWParser: parser of FullWrite : v1.0 v2.0
 -   FWText : class which reads the text

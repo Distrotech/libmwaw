@@ -42,6 +42,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
+#include "MWAWPictData.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWSubDocument.hxx"
@@ -54,26 +55,150 @@
 namespace DMParserInternal
 {
 ////////////////////////////////////////
+//! Internal: store a picture information in DMParser
+struct PictInfo {
+  //! constructor
+  PictInfo() : m_id(-1), m_sndId(-1), m_align(1), m_print(false), m_invert(false),
+    m_action(0), m_actionString(""), m_extra("") {
+    for (int i= 0; i < 2; i++)
+      m_next[i]=0;
+    for (int i = 0; i < 3; i++)
+      m_appleScript[i]="";
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, PictInfo const &info);
+  //! the picture id
+  int m_id;
+  //! the sound id
+  int m_sndId;
+  //! the alignement ( 1:center, ... )
+  int m_align;
+  //! true if the picture is printed
+  bool m_print;
+  //! true if we must invert the picture
+  bool m_invert;
+  //! the action
+  int m_action;
+  //! the action string
+  std::string m_actionString;
+  //! the next chapter/paragraph position for goChapter
+  int m_next[2];
+  //! the applescript type
+  std::string m_appleScript[3];
+  //! extra data
+  std::string m_extra;
+};
+
+std::ostream &operator<<(std::ostream &o, PictInfo const &info)
+{
+  if (info.m_id >= 0) o << "pictId=" << info.m_id << ",";
+  switch(info.m_align) {
+  case 1:
+    o << "center,";
+    break;
+  case 2:
+    o << "left,";
+    break;
+  case 3:
+    o << "right,";
+    break;
+  default:
+    o << "#align=" << info.m_align << ",";
+    break;
+  }
+  static char const *wh[]= {
+    "", "goTo", "aboutDialog", "print", "quit", "launch", "sound", "QMOV",
+    "note", "export[asText]", "last[chapter]", "TOC[show]", "find", "appleEvent",
+    "next[chapter]", "prev[chapter]", "script"
+  };
+  if (info.m_action >= 0 && info.m_action <= 16)
+    o << wh[info.m_action];
+  else
+    o << "#action=" << info.m_action << ",";
+  switch(info.m_action) {
+  case 1:
+    o << "[chapter=" << info.m_next[0];
+    if (info.m_next[1]) o << ",para=" << info.m_next[1] << "]";
+    else o << "]";
+    break;
+  case 5:
+  case 7:
+  case 8:
+  case 0x10:
+    o << "[" << info.m_actionString << "]";
+    break;
+  case 6:
+    o << "[id=" << info.m_sndId << "]";
+    break;
+  case 0xd:
+    o << "[appli=" << info.m_appleScript[0] << ",class=" << info.m_appleScript[1]
+      << ",eventid=" << info.m_appleScript[2];
+    if (info.m_actionString.size())
+      o << ",data=" <<info.m_actionString;
+    o << "]";
+    break;
+  default:
+    break;
+  }
+  o << "],";
+  if (!info.m_print) o << "noPrint,";
+  if (info.m_invert) o << "invert,";
+  o << info.m_extra;
+  return o;
+}
+////////////////////////////////////////
 //! Internal: the state of a DMParser
 struct State {
   //! constructor
-  State() : m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_idPictEntryMap(), m_idPictInfoMap(), m_zonePictInfoUnit(100),
+    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
-
+  //! return a pictinfo id corresponding to a zone and a local if
+  int pictInfoId(int zId, int lId) const {
+    return (zId+2)*m_zonePictInfoUnit+lId;
+  }
+  //! try to find the picture info unit (fixme: a hack)
+  void findPictInfoUnit(int nZones);
+  //! a map id->pictEntry
+  std::map<int,MWAWEntry> m_idPictEntryMap;
+  //! a map id->pictInfo
+  std::map<int,PictInfo> m_idPictInfoMap;
+  //! the zone unit to retrieve pictInfo
+  int m_zonePictInfoUnit;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
 };
-}
 
+void State::findPictInfoUnit(int nZones)
+{
+  if (!m_idPictInfoMap.size())
+    return;
+  bool is100=true, is1000=true;
+  std::map<int,PictInfo>::const_iterator it=m_idPictInfoMap.begin();
+  for ( ; it != m_idPictInfoMap.end(); it++) {
+    int id=it->first;
+    if (id > (nZones+3)*100 || id < 200)
+      is100=false;
+    if (id > (nZones+3)*1000 || id < 2000)
+      is1000=false;
+  }
+  if (is100 && !is1000)
+    m_zonePictInfoUnit=100;
+  else if (is1000 && !is100)
+    m_zonePictInfoUnit=1000;
+  else {
+    MWAW_DEBUG_MSG(("DMParserInternal::State::findPictInfoUnit can not find unit\n"));
+  }
+}
+}
 
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 DMParser::DMParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_textParser()
+  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(), m_textParser()
 {
   init();
 }
@@ -89,12 +214,6 @@ void DMParser::init()
   m_listener.reset();
 
   m_state.reset(new DMParserInternal::State);
-
-  // reduce the margin (in case, the page is not defined)
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
 
   m_textParser.reset(new DMText(getInput(), *this, m_convertissor));
 }
@@ -113,25 +232,6 @@ MWAWInputStreamPtr DMParser::rsrcInput()
 libmwaw::DebugFile &DMParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
-}
-
-////////////////////////////////////////////////////////////
-// position and height
-////////////////////////////////////////////////////////////
-float DMParser::pageHeight() const
-{
-  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float DMParser::pageWidth() const
-{
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
-}
-
-Vec2f DMParser::getPageLeftTop() const
-{
-  return Vec2f(float(m_pageSpan.getMarginLeft()),
-               float(m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 ////////////////////////////////////////////////////////////
@@ -165,8 +265,10 @@ void DMParser::parse(WPXDocumentInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       m_textParser->sendMainText();
+      m_textParser->sendTOC();
 #ifdef DEBUG
       m_textParser->flushExtra();
+      flushExtra();
 #endif
     }
     ascii().reset();
@@ -193,14 +295,9 @@ void DMParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  int numPages = 1;
-  if (m_textParser->numPages() > numPages)
-    numPages = m_textParser->numPages();
-  m_state->m_numPages = numPages;
-
   std::vector<MWAWPageSpan> pageList;
-  MWAWPageSpan ps(m_pageSpan);
-  for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
+  m_textParser->updatePageSpanList(pageList);
+  m_state->m_numPages = int(pageList.size());
 
   //
   DMContentListenerPtr listen(new DMContentListener(pageList, documentInterface));
@@ -230,10 +327,25 @@ bool DMParser::createZones()
     if (it->first != "PICT")
       break;
     MWAWEntry const &entry = it++->second;
+    m_state->m_idPictEntryMap[entry.id()]=entry;
+  }
+  it = entryMap.lower_bound("conp"); // local picture 5000-...?
+  while (it != entryMap.end()) {
+    if (it->first != "conp")
+      break;
+    MWAWEntry const &entry = it++->second;
     WPXBinaryData data;
     rsrcParser->parsePICT(entry, data);
   }
+  it = entryMap.lower_bound("pInf"); // 201|202,301..309,401..410,501..
+  while (it != entryMap.end()) {
+    if (it->first != "pInf")
+      break;
+    MWAWEntry const &entry = it++->second;
+    readPictInfo(entry);
+  }
 
+  // chapiter name STR 2000..
   // entry 0: copyright
   it = entryMap.lower_bound("Dk@P");
   while (it != entryMap.end()) {
@@ -242,15 +354,6 @@ bool DMParser::createZones()
     MWAWEntry const &entry = it++->second;
     std::string str;
     rsrcParser->parseSTR(entry, str);
-  }
-  // entry 128: ?
-  it = entryMap.lower_bound("clut");
-  while (it != entryMap.end()) {
-    if (it->first != "clut")
-      break;
-    MWAWEntry const &entry = it++->second;
-    std::vector<MWAWColor> cmap;
-    rsrcParser->parseClut(entry, cmap);
   }
   it = entryMap.lower_bound("sTwD");
   while (it != entryMap.end()) {
@@ -266,14 +369,6 @@ bool DMParser::createZones()
     MWAWEntry const &entry = it++->second;
     readXtr2(entry);
   }
-  // entry 128 and following: ?
-  it = entryMap.lower_bound("Wndo");
-  while (it != entryMap.end()) {
-    if (it->first != "Wndo")
-      break;
-    MWAWEntry const &entry = it++->second;
-    readWndo(entry);
-  }
   //  1000:docname, 1001:footer name, 2001-... chapter name, others ...
   it = entryMap.lower_bound("STR ");
   while (it != entryMap.end()) {
@@ -284,17 +379,19 @@ bool DMParser::createZones()
     rsrcParser->parseSTR(entry, str);
   }
 
+  m_state->findPictInfoUnit(m_textParser->numChapters());
+
 #ifdef DEBUG_WITH_FILES
   // get rid of the default application resource
   libmwaw::DebugFile &ascFile = rsrcAscii();
   static char const *(appliRsrc[])= {
-    // default
-    "ALRT","BNDL","CNTL","CURS","CDEF", "DLOG","DITL","FREF","ICON","ICN#", "MENU",
-    "crsr","dctb","icl4","icl8","ics4", "ics8","ics#","snd ",
+    // default, Dialog (3000: DLOG,DITL,DLGX,dctb","ictb","STR ")
+    "ALRT","BNDL","CNTL","CURS","CDEF", "DLOG","DLGX","DITL","FREF","ICON", "ICN#","MENU","SIZE",
+    "crsr","dctb","icl4","icl8","ics4", "ics8","ics#","ictb","snd ",
     // local
-    "mstr" /* menu string */
+    "mstr" /* menu string */, "aete" /* some function name?*/
   };
-  for (int r=0; r < 19+1; r++) {
+  for (int r=0; r < 13+9+2; r++) {
     it = entryMap.lower_bound(appliRsrc[r]);
     while (it != entryMap.end()) {
       if (it->first != appliRsrc[r])
@@ -306,15 +403,208 @@ bool DMParser::createZones()
     }
   }
 #endif
-  return false;
+  return true;
 }
 
+void DMParser::flushExtra()
+{
+  MWAWRSRCParserPtr rsrcParser = getRSRCParser();
+  std::map<int,MWAWEntry>::const_iterator it = m_state->m_idPictEntryMap.begin();
+  for ( ; it != m_state->m_idPictEntryMap.end(); it++) {
+    MWAWEntry const &entry=it->second;
+    if (entry.isParsed()) continue;
+    WPXBinaryData data;
+    rsrcParser->parsePICT(entry,data);
+  }
+}
 
 ////////////////////////////////////////////////////////////
 //
 // Low level
 //
 ////////////////////////////////////////////////////////////
+bool DMParser::sendPicture(int zId, int lId, double /*lineW*/)
+{
+  int pictId=m_state->pictInfoId(zId,lId);
+  if (m_state->m_idPictInfoMap.find(pictId)==m_state->m_idPictInfoMap.end()) {
+    MWAW_DEBUG_MSG(("DMText::sendPicture: can not find picture for zone=%d, id=%d\n",zId,lId));
+    return false;
+  }
+  DMParserInternal::PictInfo const &info=m_state->m_idPictInfoMap.find(pictId)->second;
+  if (m_state->m_idPictEntryMap.find(info.m_id)==m_state->m_idPictEntryMap.end()) {
+    MWAW_DEBUG_MSG(("DMText::sendPicture: can not find picture for id=%d\n",info.m_id));
+    return false;
+  }
+  if (!m_listener) {
+    MWAW_DEBUG_MSG(("DMText::sendPicture: can not find the listener\n"));
+    return false;
+  }
+
+  if (info.m_action==8 && info.m_actionString.size())
+    m_textParser->sendComment(info.m_actionString);
+  MWAWInputStreamPtr input = rsrcInput();
+  MWAWRSRCParserPtr rsrcParser = getRSRCParser();
+  MWAWEntry const &entry=m_state->m_idPictEntryMap.find(info.m_id)->second;
+
+  WPXBinaryData data;
+  long pos = input->tell();
+  rsrcParser->parsePICT(entry,data);
+  input->seek(pos,WPX_SEEK_SET);
+
+  int dataSz=int(data.size());
+  if (!dataSz) {
+    return false;
+  }
+  WPXInputStream *dataInput = const_cast<WPXInputStream *>(data.getDataStream());
+  if (!dataInput) {
+    MWAW_DEBUG_MSG(("DMText::sendPicture: oops can not find an input\n"));
+    return false;
+  }
+  MWAWInputStreamPtr pictInput(new MWAWInputStream(dataInput, false));
+  Box2f box;
+  MWAWPict::ReadResult res = MWAWPictData::check(pictInput, dataSz,box);
+  if (res == MWAWPict::MWAW_R_BAD) {
+    MWAW_DEBUG_MSG(("DMText::sendPicture: can not find the picture\n"));
+    return false;
+  }
+  dataInput->seek(0,WPX_SEEK_SET);
+  shared_ptr<MWAWPict> thePict(MWAWPictData::get(pictInput, dataSz));
+  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), WPX_POINT);
+  MWAWPosition::XPos xpos= (info.m_align==1) ? MWAWPosition::XCenter :
+                           (info.m_align==3) ? MWAWPosition::XRight  : MWAWPosition::XLeft;
+  pictPos.setRelativePosition(MWAWPosition::Paragraph, xpos);
+  pictPos.m_wrapping = MWAWPosition::WRunThrough;
+  if (thePict) {
+    WPXBinaryData fData;
+    std::string type;
+    if (thePict->getBinary(fData,type))
+      m_listener->insertPicture(pictPos, fData, type);
+  }
+  return true;
+}
+
+bool DMParser::readPictInfo(MWAWEntry const &entry)
+{
+  long length = entry.length();
+  if (!entry.valid() || length<8) {
+    MWAW_DEBUG_MSG(("DMText::readPictInfo: the entry seems very short\n"));
+    return false;
+  }
+
+  entry.setParsed(true);
+  long pos = entry.begin();
+  long endPos = entry.end();
+  MWAWInputStreamPtr input = rsrcInput();
+  libmwaw::DebugFile &ascFile = rsrcAscii();
+  input->seek(pos, WPX_SEEK_SET);
+
+  libmwaw::DebugStream f;
+  DMParserInternal::PictInfo info;
+  info.m_id = (int) input->readULong(2);
+  info.m_align = (int) input->readLong(2);
+  int val =(int) input->readLong(2); // 0|1
+  if (val) f << "unkn=" << val << ",";
+
+  int action =(int) input->readLong(2); // 0..b
+  int extraN = int(endPos-input->tell());
+  if (action < 0) {
+    info.m_invert=true;
+    action = -action;
+  }
+  info.m_action=action;
+  switch(action) {
+  case 1:
+    if (extraN < 2) {
+      f << "actionArg##,";
+      break;
+    }
+    info.m_next[0]=(int) input->readLong(2);
+    if (extraN < 4)
+      break;
+    info.m_next[1]=(int) input->readLong(2);
+    break;
+  case 5:
+  case 7:
+  case 8:
+  case 0x10: {
+    if (extraN < 1) {
+      f << "actionArg##,";
+    }
+    int fSz=(int) input->readULong(1);
+    if (extraN < fSz+1) {
+      f << "##[N=" << fSz << "],";
+      break;
+    }
+    std::string name("");
+    for (int i = 0; i < fSz; i++)
+      name += (char) input->readULong(1);
+    info.m_actionString=name;
+    break;
+  }
+  case 6: {
+    if (extraN < 4) {
+      f << "actionArg##,";
+      break;
+    }
+    info.m_sndId=(int)input->readULong(2);
+    val = (int) input->readULong(2); // loop?
+    if (val)
+      f << "sndFlag=" << val << ",";
+    break;
+  }
+  case 0xd: {
+    if (extraN < 13) {
+      f << "actionArg##,";
+      break;
+    }
+    for (int w=0; w < 3; w++) {
+      std::string name("");
+      for (int i = 0; i < 4; i++)
+        name += (char) input->readULong(1);
+      info.m_appleScript[w]=name;
+    }
+    int fSz=(int) input->readULong(1);
+    if (extraN < fSz+13) {
+      f << "##[N=" << fSz << "],";
+      break;
+    }
+    std::string name("");
+    for (int i = 0; i < fSz; i++)
+      name += (char) input->readULong(1);
+    info.m_actionString=name;
+    break;
+  }
+  default:
+    break;
+  }
+  extraN = int(endPos-input->tell())/2;
+  if (extraN==1) {
+    val =(int) input->readLong(2);
+    if (val==0)
+      info.m_print = false;
+    else if (val==1)
+      info.m_print = true;
+    else if (val) {
+      f << "#print=" << val << ",";
+    }
+  } else {
+    for (int i = 0; i < extraN; i++) { // g0=0|1
+      val =(int) input->readLong(2);
+      if (val)
+        f << "#g" << i << "=" << val << ",";
+    }
+  }
+  info.m_extra=f.str();
+  m_state->m_idPictInfoMap[entry.id()]=info;
+  f.str("");
+  f << "Entries(PctInfo)[" << entry.type() << "-" << entry.id() << "]:" << info;
+
+  if (input->tell()!=entry.end())
+    ascFile.addDelimiter(input->tell(),'|');
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
 // read some unknown zone
@@ -349,41 +639,6 @@ bool DMParser::readSTwD(MWAWEntry const &entry)
       f << "f" << i+2 << "=" << val << ",";
   }
   f << "],";
-  if (input->tell()!=entry.end())
-    ascFile.addDelimiter(input->tell(),'|');
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-  return true;
-}
-
-bool DMParser::readWndo(MWAWEntry const &entry)
-{
-  if (!entry.valid() || entry.length()<20) {
-    MWAW_DEBUG_MSG(("DMText::readWndo: the entry seems very short\n"));
-    return false;
-  }
-
-  entry.setParsed(true);
-  long pos = entry.begin();
-  MWAWInputStreamPtr input = rsrcInput();
-  libmwaw::DebugFile &ascFile = rsrcAscii();
-  input->seek(pos, WPX_SEEK_SET);
-
-  libmwaw::DebugStream f;
-  f << "Entries(Wndo)[" << entry.type() << "-" << entry.id() << "]:";
-  int val=(int) input->readLong(2); // always 0?
-  if (val) f << "unkn=" << val << ",";
-  // f0=12|24, f1=4|7, f2=f0?, f3=e|36, f4=1d|36, f5=f1?, f6=f3?
-  for (int i=0; i < 7; i++) {
-    val =(int) input->readLong(2);
-    if (val)
-      f << "f" << i << "=" << val << ",";
-  }
-  int flag =(int) input->readLong(2); //9|3e|6d|a8|13e|16d
-  f << "fl=" << std::hex << flag << std::dec << ",";
-  val = (int) input->readLong(2); // always 0?
-  if (val) f << "unkn1=" << val << ",";
-
   if (input->tell()!=entry.end())
     ascFile.addDelimiter(input->tell(),'|');
   ascFile.addPos(pos-4);

@@ -87,10 +87,6 @@ protected:
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
 
-  //! returns the page height, ie. paper size less margin (in inches)
-  float pageHeight() const;
-  //! returns the page width, ie. paper size less margin (in inches)
-  float pageWidth() const;
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
 
@@ -100,18 +96,22 @@ protected:
 protected:
   //! finds the different objects zones
   bool createZones();
+  //! try to read a pict info zone ? ( resource pInf )
+  bool readPictInfo(MWAWEntry const &entry);
   //! try to read an unknown zone ( resource sTwD )
   bool readSTwD(MWAWEntry const &entry);
-  //! try to read an unknown zone ( resource Wndo )
-  bool readWndo(MWAWEntry const &entry);
   //! try to read an unknown zone ( resource xtr2 )
   bool readXtr2(MWAWEntry const &entry);
 
   // Intermediate level
 
+  //! try to send a picture knowing zId and local id
+  bool sendPicture(int zId, int lId, double lineW);
+  //! sends the data which have not yet been sent to the listener
+  void flushExtra();
+
   //! return the input input
   MWAWInputStreamPtr rsrcInput();
-
 
   //! a DebugFile used to write what we recognize when we parse the document in rsrc
   libmwaw::DebugFile &rsrcAscii();
@@ -127,9 +127,6 @@ protected:
 
   //! the state
   shared_ptr<DMParserInternal::State> m_state;
-
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
 
   //! the text parser
   shared_ptr<DMText> m_textParser;

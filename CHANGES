@@ -1,5 +1,8 @@
 CHANGES:
 
+01/14/2013
+- add a DOCMaker v4 parser
+
 01/10/2013
 - update FullWrite* parser to detect more paragraph properties (to be continued),
 - update Apple/ClarisWorks, FullWrite*, MindWrite, Microsoft Works parsers to use the new font properties,

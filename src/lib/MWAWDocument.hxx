@@ -65,7 +65,7 @@ public:
   /** an enum to define the different type of document
 
   -CW: ClarisWorks/AppleWorks document (basic)
-  -DM: DocMaker (nothing done)
+  -DM: DocMaker (v4)
   -FULLW: FullWrite Professional (basic)
   -HMAC: HanMac Word-J or K (basic done for K document, almost nothing done for J document)
   -LWTEXT: LightWayText ( only v4.5 Mac format )
