@@ -105,6 +105,10 @@ SOURCE=..\..\src\conv\tools\file\input.cpp
 
 SOURCE=..\..\src\conv\tools\file\rsrc.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=..\..\src\conv\tools\file\xattr.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -120,6 +124,10 @@ SOURCE=..\..\src\conv\tools\file\input.h
 # Begin Source File
 
 SOURCE=..\..\src\conv\tools\file\rsrc.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\conv\tools\file\xattr.h
 # End Source File
 # End Group
 # End Target

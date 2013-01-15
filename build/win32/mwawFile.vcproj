@@ -267,6 +267,28 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath="..\..\src\tools\file\xattr.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -282,6 +304,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\tools\file\rsrc.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\tools\file\xattr.h"
 				>
 			</File>
 		</Filter>

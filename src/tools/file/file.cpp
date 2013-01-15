@@ -39,12 +39,9 @@
 #include "file_internal.h"
 #include "input.h"
 #include "rsrc.h"
+#include "xattr.h"
 
 #include <sys/stat.h>
-#if WITH_EXTENDED_FS
-#  include <sys/types.h>
-#  include <sys/xattr.h>
-#endif
 
 /**
    Can be compile with
@@ -148,20 +145,6 @@ struct File {
     return true;
   }
 
-  //! wrapper to call xattr if it exists
-  ssize_t getxattrWrap(const char *attr, void *value, size_t size) const {
-#if WITH_EXTENDED_FS==0
-    return -1;
-#elif WITH_EXTENDED_FS==1
-    if (!attr || !m_fName.length())
-      return -1;
-    return getxattr(m_fName.c_str(), attr, value, size, 0, XATTR_SHOWCOMPRESSION);
-#else
-    if (!attr || !m_fName.length())
-      return -1;
-    return getxattr(m_fName.c_str(), attr, value, size);
-#endif
-  }
   //! the file name
   std::string m_fName;
   //! the file info creator
@@ -189,20 +172,26 @@ struct File {
 
 bool File::readFileInformation()
 {
-  ssize_t dSize=getxattrWrap("com.apple.FinderInfo", 0, 0);
-  if (dSize <= 8)
+  if (!m_fName.length())
     return false;
-  char *data = new char[size_t(dSize)];
-  if (data==0)
+
+  XAttr xattr(m_fName.c_str());
+  libmwaw_tools::InputStream *input = xattr.getStream("com.apple.FinderInfo");
+  if (!input) return false;
+
+  if (input->length() < 8) {
+    delete input;
     return false;
-  dSize= getxattrWrap("com.apple.FinderInfo", data, size_t(dSize));
+  }
+
+  input->seek(0, libmwaw_tools::InputStream::SK_SET);
   m_fInfoType = "";
   for (int i = 0; i < 4; i++)
-    m_fInfoType+=data[i];
+    m_fInfoType+= input->read8();
   m_fInfoCreator="";
   for (int i = 0; i < 4; i++)
-    m_fInfoCreator+=data[4+i];
-  delete []data;
+    m_fInfoCreator+= input->read8();
+  delete input;
 
   if (m_fInfoCreator=="" || m_fInfoType=="")
     return true;
@@ -538,22 +527,18 @@ bool File::readDataInformation()
 
 bool File::readRSRCInformation()
 {
-  ssize_t dSize=getxattrWrap("com.apple.ResourceFork", 0, 0);
-  if (dSize <= 0)
+  if (!m_fName.length())
     return false;
-  char *data = new char[size_t(dSize)];
-  if (data==0)
-    return false;
-  dSize=getxattrWrap("com.apple.ResourceFork", data, size_t(dSize));
-  if (dSize < 0) {
-    delete [] data;
-    return false;
-  }
-  libmwaw_tools::StringStream rsrcStream((unsigned char *)data,(unsigned long) dSize);
-  delete [] data;
-  if (!rsrcStream.length())
+
+  XAttr xattr(m_fName.c_str());
+  libmwaw_tools::InputStream *rsrcStream = xattr.getStream("com.apple.ResourceFork");
+  if (!rsrcStream) return false;
+
+  if (!rsrcStream->length()) {
+    delete rsrcStream;
     return true;
-  libmwaw_tools::RSRC rsrcManager(rsrcStream);
+  }
+  libmwaw_tools::RSRC rsrcManager(*rsrcStream);
 #  if 0
   MWAW_DEBUG_MSG(("File::readRSRCInformation: find a resource fork\n"));
 #  endif
@@ -575,6 +560,7 @@ bool File::readRSRCInformation()
       break;
     }
   }
+  delete rsrcStream;
   return true;
 }
 

@@ -17,7 +17,9 @@ mwawFile_SOURCES = 		\
 	input.h			\
 	input.cpp		\
 	rsrc.h			\
-	rsrc.cpp
+	rsrc.cpp		\
+	xattr.h			\
+	xattr.cpp
 
 if OS_WIN32
 @MWAWFILE_WIN32_RESOURCE@ : mwawFile.rc $(mwawFile_OBJECTS)

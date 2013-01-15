@@ -27,6 +27,8 @@
 * instead of those above.
 */
 
+#ifndef MWAW_FILE_H
+#  define MWAW_FILE_H
 #include <stdio.h>
 #include <vector>
 
@@ -103,5 +105,6 @@ private:
 };
 
 }
+#endif
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -1060,7 +1060,9 @@ struct OpCode {
     return true;
   }
 
-  //! read a rectangles field \note can be used to read the first dimensions of a picture
+  /** read a rectangles field
+
+  \note can be used to read the first dimensions of a picture */
   static bool readRect(MWAWInputStream &input, DataType type, Box2i &res) {
     Vec2i v[2];
     DataType valType;

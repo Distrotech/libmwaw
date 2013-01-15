@@ -107,7 +107,9 @@ protected:
 
 //! Internal: structure used to keep the printer style information
 struct PrinterStyle {
-  //! operator << \note print nothing
+  /** operator<<
+
+  \note print nothing*/
   friend std::ostream &operator<< (std::ostream &o, PrinterStyle const & ) {
     return o;
   }

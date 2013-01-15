@@ -2,6 +2,7 @@ CHANGES:
 
 01/14/2013
 - add a DOCMaker v4 parser
+- update mwawFile to use xattr functions and to look for a ._FILE if no attributes if found...
 
 01/10/2013
 - update FullWrite* parser to detect more paragraph properties (to be continued),

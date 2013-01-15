@@ -27,6 +27,8 @@
 * instead of those above.
 */
 
+#ifndef MWAW_RSRC_H
+#  define MWAW_RSRC_H
 #include <ostream>
 #include <map>
 #include <string>
@@ -130,5 +132,5 @@ public:
 };
 
 }
-
+#endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
