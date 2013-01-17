@@ -26,38 +26,49 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#include <cstring>
 #include <stdio.h>
+#include <unistd.h>
+
+#include <cstring>
+
 #include <libwpd-stream/libwpd-stream.h>
 #include "MWAWDocument.hxx"
 #include "HtmlDocumentGenerator.h"
 
 int printUsage()
 {
-	printf("Usage: mwaw2html [OPTION] <Text Mac Document>\n");
-	printf("\n");
-	printf("Options:\n");
-	printf("--help                Shows this help message\n");
+	printf("Usage: mwaw2html [-h][-o file.html] <Text Mac Document>\n");
+	printf("\t-h:                Shows this help message\n");
+	printf("\t-o file.html:      Define the output[default stdout]\n");
 	return -1;
 }
 
 int main(int argc, char *argv[])
 {
-	char *file = 0;
+	char const *file = 0;
+	char const *output=0;
+	bool printHelp=false;
+	int ch;
 
-	if (argc < 2)
-		return printUsage();
-
-	for (int i = 1; i < argc; i++)
+	while ((ch = getopt(argc, argv, "ho:")) != -1)
 	{
-		if (!file && strncmp(argv[i], "--", 2))
-			file = argv[i];
-		else
-			return printUsage();
+		switch (ch)
+		{
+		case 'o':
+			output=optarg;
+			break;
+		default:
+		case 'h':
+			printHelp = true;
+			break;
+		}
 	}
-
-	if (!file)
-		return printUsage();
+	if (argc != 1+optind || printHelp)
+	{
+		printUsage();
+		return -1;
+	}
+	file=argv[optind];
 
 	WPXFileStream input(file);
 
@@ -79,9 +90,20 @@ int main(int argc, char *argv[])
 		printf("ERROR: find a not text document!\n");
 		return 1;
 	}
-	HtmlDocumentGenerator documentGenerator;
-	MWAWResult error = MWAWDocument::parse(&input, &documentGenerator);
-
+	MWAWResult error=MWAW_OK;
+	try
+	{
+		HtmlDocumentGenerator documentGenerator(output);
+		error = MWAWDocument::parse(&input, &documentGenerator);
+	}
+	catch(MWAWResult err)
+	{
+		error=err;
+	}
+	catch(...)
+	{
+		error=MWAW_PARSE_ERROR;
+	}
 	if (error == MWAW_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
 	else if (error == MWAW_PARSE_ERROR)
@@ -90,7 +112,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ERROR: File is an OLE document!\n");
 	else if (error != MWAW_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
-
 	if (error != MWAW_OK)
 		return 1;
 

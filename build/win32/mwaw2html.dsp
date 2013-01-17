@@ -109,6 +109,10 @@ SOURCE=..\..\src\conv\html\mwaw2html.cpp
 
 SOURCE=..\..\src\conv\html\HtmlDocumentGenerator.h
 # End Source File
+# Begin Source File
+
+SOURCE=..\..\src\conv\html\mwaw2html.h
+# End Source File
 # End Group
 # End Target
 # End Project

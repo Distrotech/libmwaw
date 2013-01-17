@@ -183,7 +183,7 @@ InputStream *XAttr::unMacMIME(InputStream *inp, char const *what) const
       const unsigned char *data = inp->read(entrySize, numBytesRead);
       if (numBytesRead != entrySize || !data) {
         MWAW_DEBUG_MSG(("XAttr::unMacMIME: can not read %lX byte\n", entryPos));
-        return false;
+        return 0;
       }
       return new StringStream(data,(unsigned long) entrySize);
     }

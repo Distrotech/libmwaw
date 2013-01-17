@@ -26,7 +26,7 @@
 
 #ifndef RAWLISTENERIMPL_H
 #define RAWLISTENERIMPL_H
-#include <libwpd/WPXDocumentInterface.h>
+#include <libwpd/libwpd.h>
 #include <stack>
 
 #ifndef __GNUC__

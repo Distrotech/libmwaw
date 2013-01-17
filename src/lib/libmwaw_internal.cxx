@@ -141,7 +141,7 @@ MWAWColor MWAWColor::barycenter(float alpha, MWAWColor const colA,
                                 float beta, MWAWColor const colB)
 {
   uint32_t res = 0;
-  for (int i=0, depl=8; i<4; i++, depl+=8) {
+  for (int i=0, depl=0; i<4; i++, depl+=8) {
     unsigned char comp= (unsigned char)
                         (alpha*float((colA.m_value>>depl)&0xFF)+beta*float((colB.m_value>>depl)&0xFF));
     res+=uint32_t(comp<<depl);

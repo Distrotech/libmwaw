@@ -254,6 +254,10 @@
 				RelativePath="..\..\src\conv\html\HtmlDocumentGenerator.h"
 				>
 			</File>
+			<File
+				RelativePath="..\..\src\conv\html\mwaw2html.h"
+				>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>

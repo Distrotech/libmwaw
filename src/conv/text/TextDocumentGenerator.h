@@ -24,10 +24,10 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#ifndef TEXTLISTENERIMPL_H
-#define TEXTLISTENERIMPL_H
+#ifndef TEXT_DOCUMENT_GENERATOR_H
+#define TEXT_DOCUMENT_GENERATOR_H
 
-#include <libwpd/WPXDocumentInterface.h>
+#include <libwpd/libwpd.h>
 
 class TextDocumentGenerator : public WPXDocumentInterface
 {
@@ -103,5 +103,5 @@ private:
 	bool m_isInfo;
 };
 
-#endif /* TEXTLISTENERIMPL_H */
+#endif /* TEXT_DOCUMENT_GENERATOR_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

@@ -142,6 +142,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\conv\html\HtmlDocumentGenerator.h" />
+    <ClInclude Include="..\..\src\conv\html\mwaw2html.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="libmwaw.vcxproj">
