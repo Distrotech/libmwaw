@@ -32,7 +32,7 @@
 #include <sstream>
 #include <libwpd/libwpd.h>
 
-#include "mwaw2html.h"
+#include "mwaw2html_internal.h"
 
 namespace HtmlDocumentGeneratorInternal
 {

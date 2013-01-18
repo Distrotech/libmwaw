@@ -224,7 +224,73 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\conv\html\TableStyle.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\conv\html\TextRunStyle.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\conv\html\mwaw2html.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\conv\html\mwaw2html_internal.cpp"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -255,7 +321,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\conv\html\mwaw2html.h"
+				RelativePath="..\..\src\conv\html\TableStyle.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\conv\html\TextRunStyle.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\conv\html\mwaw2html_internal.h"
 				>
 			</File>
 		</Filter>

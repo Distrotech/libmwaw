@@ -32,6 +32,9 @@
 #include <iostream>
 #include <vector>
 #include "HtmlDocumentGenerator.h"
+#include "TableStyle.h"
+#include "TextRunStyle.h"
+
 #include "MWAWDocument.hxx"
 
 namespace HtmlDocumentGeneratorInternal
@@ -92,18 +95,24 @@ private:
 //! a special stream for the main zone
 struct MainStream : public Stream
 {
+public:
 	//! constructor
-	MainStream(shared_ptr<std::ostream> out) : Stream(), m_mainStream(out)
+	MainStream() : Stream(), m_mainStream()
 	{
 	}
 	//! return the stream
 	virtual std::ostream &stream()
 	{
-		return *m_mainStream;
+		return m_mainStream;
+	}
+	//! send the data to the zone
+	void sendMain(std::ostream &out)
+	{
+		out << m_mainStream.str() << "\n";
 	}
 protected:
 	//! the main stream
-	shared_ptr<std::ostream> m_mainStream;
+	std::ostringstream m_mainStream;
 };
 
 //
@@ -136,9 +145,9 @@ struct Zone
 		m_type=tp;
 	}
 	//! returns a new stream corresponding to the main zone output
-	static shared_ptr<Stream> getMainStream(shared_ptr<std::ostream> out)
+	static shared_ptr<Stream> getMainStream()
 	{
-		return shared_ptr<Stream>(new MainStream(out));
+		return shared_ptr<Stream>(new MainStream);
 	}
 	//! returns a new stream corresponding to this zone
 	shared_ptr<Stream> getNewStream();
@@ -180,7 +189,7 @@ struct Zone
 			{
 				if (str.compare(lastComPos,4,"</p>")==0 ||
 				        str.compare(lastComPos,5,"</ul>")==0 ||
-				        str.compare(lastComPos,5,"</li>")==0 ||
+				        str.compare(lastComPos,5,"</ol>")==0 ||
 				        str.compare(lastComPos,4,"<br>")==0)
 					continue;
 			}
@@ -283,11 +292,14 @@ std::string Zone::label(int id) const
 struct State
 {
 	//! constructor
-	State(shared_ptr<std::ostream> out) : m_actualPage(0), m_ignore(false), m_actualStream(), m_streamStack()
+	State() : m_actualPage(0), m_ignore(false), m_actualStream(), m_streamStack(), m_paragraphManager(), m_spanManager(), m_tableManager()
 	{
 		for (int i = 0; i < s_numZoneType; i++)
 			m_zones[i].setType(ZoneType(i));
-		m_actualStream=Zone::getMainStream(out);
+		m_actualStream=Zone::getMainStream();
+		m_paragraphManager.reset(new ParagraphStyleManager);
+		m_spanManager.reset(new SpanStyleManager);
+		m_tableManager.reset(new TableStyleManager);
 	};
 	//! returns the actual output ( sending delayed data if needed)
 	std::ostream &output(bool sendDelayed=true)
@@ -300,6 +312,21 @@ struct State
 	Stream &stream()
 	{
 		return *m_actualStream;
+	}
+	// access to the paragraph manager
+	ParagraphStyleManager &paragraphManager()
+	{
+		return *m_paragraphManager;
+	}
+	// access to the span manager
+	SpanStyleManager &spanManager()
+	{
+		return *m_spanManager;
+	}
+	// access to the table manager
+	TableStyleManager &tableManager()
+	{
+		return *m_tableManager;
 	}
 	void push(ZoneType type)
 	{
@@ -334,6 +361,13 @@ struct State
 			while (m_streamStack.size())
 				pop();
 		}
+		// first send the main data
+		if (!m_actualStream || !dynamic_cast<MainStream *>(m_actualStream.get()))
+		{
+			MWAW_DEBUG_MSG(("HtmlDocumentGenerator::flushUnsent: can not find the main block\n"));
+		}
+		else
+			dynamic_cast<MainStream *>(m_actualStream.get())->sendMain(out);
 		m_zones[Z_Comment].send(out);
 		m_zones[Z_FootNote].send(out);
 		m_zones[Z_EndNote].send(out);
@@ -344,6 +378,9 @@ struct State
 protected:
 	shared_ptr<Stream> m_actualStream;
 	std::vector<shared_ptr<Stream> > m_streamStack;
+	shared_ptr<ParagraphStyleManager> m_paragraphManager;
+	shared_ptr<SpanStyleManager> m_spanManager;
+	shared_ptr<TableStyleManager> m_tableManager;
 
 	Zone m_zones[s_numZoneType];
 private:
@@ -364,7 +401,7 @@ HtmlDocumentGenerator::HtmlDocumentGenerator(char const *fName) :
 			throw MWAWResult(MWAW_FILE_ACCESS_ERROR);
 		m_output=file;
 	}
-	m_state.reset(new HtmlDocumentGeneratorInternal::State(m_output));
+	m_state.reset(new HtmlDocumentGeneratorInternal::State());
 }
 
 HtmlDocumentGenerator::~HtmlDocumentGenerator()
@@ -389,18 +426,23 @@ void HtmlDocumentGenerator::setDocumentMetaData(const WPXPropertyList &propList)
 
 void HtmlDocumentGenerator::startDocument()
 {
-	*m_output << "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">" << std::endl;
-	*m_output << "<html>" << std::endl;
-	*m_output << "<head>" << std::endl;
-	*m_output << "<meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" >" << std::endl;
-	m_state->sendMetaData(*m_output);
-	*m_output << "<title></title>" << std::endl;
-	*m_output << "</head>" << std::endl;
-	*m_output << "<body>" << std::endl;
 }
 
 void HtmlDocumentGenerator::endDocument()
 {
+	*m_output << "<!DOCTYPE HTML>" << std::endl;
+	*m_output << "<html>" << std::endl;
+	*m_output << "<head>" << std::endl;
+	*m_output << "<meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" >" << std::endl;
+	m_state->sendMetaData(*m_output);
+	*m_output << "<style>" << std::endl;
+	m_state->paragraphManager().send(*m_output);
+	m_state->spanManager().send(*m_output);
+	m_state->tableManager().send(*m_output);
+	*m_output << "</style>" << std::endl;
+	*m_output << "<title></title>" << std::endl;
+	*m_output << "</head>" << std::endl;
+	*m_output << "<body>" << std::endl;
 	m_state->flushUnsent(*m_output);
 	*m_output << "</body>" << std::endl;
 	*m_output << "</html>" << std::endl;
@@ -436,28 +478,12 @@ void HtmlDocumentGenerator::closeFooter()
 	m_state->m_ignore = false;
 }
 
-void HtmlDocumentGenerator::openParagraph(const WPXPropertyList &propList, const WPXPropertyListVector & /* tabStops */)
+void HtmlDocumentGenerator::openParagraph(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
 {
 	if (m_state->m_ignore)
 		return;
 
-	std::ostream &out=m_state->output(false);
-	out << "<p style=\"";
-
-	if (propList["fo:text-align"])
-	{
-
-		if (propList["fo:text-align"]->getStr() == WPXString("end")) // stupid OOo convention..
-			out << "text-align:right;";
-		else
-			out << "text-align:" << propList["fo:text-align"]->getStr().cstr() << ";";
-	}
-	if (propList["fo:text-indent"])
-		out << "text-indent:" << propList["fo:text-indent"]->getStr().cstr() << ";";
-
-	if (propList["fo:line-height"] && (propList["fo:line-height"]->getDouble() < 1.0 || propList["fo:line-height"]->getDouble() < 1.0))
-		out << "line-height:" << propList["fo:line-height"]->getStr().cstr() << ";";
-	out << "\">";
+	m_state->output(false) << "<p class=\"" << m_state->paragraphManager().getClass(propList, tabStops) << "\">";
 }
 
 void HtmlDocumentGenerator::closeParagraph()
@@ -473,57 +499,7 @@ void HtmlDocumentGenerator::openSpan(const WPXPropertyList &propList)
 	if (m_state->m_ignore)
 		return;
 
-	std::ostream &out=m_state->output();
-	out << "<span style=\"";
-	if (propList["fo:background-color"])
-		out << "background-color: " << propList["fo:background-color"]->getStr().cstr() << ";";
-	if (propList["fo:color"])
-		out << "color: " << propList["fo:color"]->getStr().cstr() << ";";
-	if (propList["fo:font-size"])
-		out << "font-size: " << propList["fo:font-size"]->getStr().cstr() << ";";
-	if (propList["fo:font-style"])
-		out << "font-style: " << propList["fo:font-style"]->getStr().cstr() << ";";
-	if (propList["fo:font-variant"])
-		out << "font-variant: " << propList["fo:font-variant"]->getStr().cstr() << ";";
-	if (propList["fo:font-weight"])
-		out << "font-weight: " << propList["fo:font-weight"]->getStr().cstr() << ";";
-	if (propList["fo:letter-spacing"])
-		out << "letter-spacing: " << propList["fo:letter-spacing"]->getStr().cstr() << ";";
-	if (propList["fo:text-shadow"])
-		out << "text-shadow: 1px 1px 1px #666666;";
-	if (propList["fo:text-transform"])
-		out << "text-transform: " << propList["fo:text-transform"]->getStr().cstr() << ";";
-
-	if (propList["style:font-name"])
-		out << "font-family: \'" << propList["style:font-name"]->getStr().cstr() << "\';";
-#if 1
-	if ((propList["style:font-relief"] || propList["style:text-outline"]) && !propList["fo:font-weight"])
-		out << "font-weight: bold;";
-#else
-	// not working...
-	if (propList["style:font-relief"] && propList["style:font-relief"]->getStr().cstr())
-	{
-		if (strcmp(propList["style:font-relief"]->getStr().cstr(),"embossed")==0)
-			out << "font-effect: emboss;";
-		else if (strcmp(propList["style:font-relief"]->getStr().cstr(),"engraved")==0)
-			out << "font-effect: engrave;";
-	}
-	if (propList["style:text-outline"])
-		out << "font-effect: outline;";
-#endif
-	if (propList["style:text-blinking"])
-		out << "text-decoration: blink;";
-	if (propList["style:text-line-through-style"] || propList["style:text-line-through-type"])
-		out << "text-decoration: line-through;";
-	if (propList["style:text-overline-style"] || propList["style:text-overline-type"])
-		out << "text-decoration: overline;";
-	if (propList["style:text-underline-style"] || propList["style:text-underline-type"])
-		out << "text-decoration: underline;";
-
-	if (propList["text:display"])
-		out << "display: " << propList["text:display"]->getStr().cstr() << ";";
-
-	out << "\">";
+	m_state->output() << "<span class=\"" << m_state->spanManager().getClass(propList) << "\">";
 }
 
 void HtmlDocumentGenerator::closeSpan()
@@ -564,11 +540,11 @@ void HtmlDocumentGenerator::insertSpace()
 	m_state->output() << "&nbsp;";
 }
 
-void HtmlDocumentGenerator::openOrderedListLevel(const WPXPropertyList & /* propList */)
+void HtmlDocumentGenerator::openOrderedListLevel(const WPXPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
-	m_state->output() << "<ol>" << std::endl;
+	m_state->output(false) << "<ol class=\"" << m_state->paragraphManager().getClass(propList, WPXPropertyListVector(), true) << "\">\n";
 }
 
 void HtmlDocumentGenerator::closeOrderedListLevel()
@@ -578,11 +554,11 @@ void HtmlDocumentGenerator::closeOrderedListLevel()
 	m_state->output() << "</ol>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openUnorderedListLevel(const WPXPropertyList & /* propList */)
+void HtmlDocumentGenerator::openUnorderedListLevel(const WPXPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
-	m_state->output() << "<ul>" << std::endl;
+	m_state->output(false) << "<ul class=\"" << m_state->paragraphManager().getClass(propList, WPXPropertyListVector(), true) << "\">\n";
 }
 
 void HtmlDocumentGenerator::closeUnorderedListLevel()
@@ -593,11 +569,11 @@ void HtmlDocumentGenerator::closeUnorderedListLevel()
 }
 
 
-void HtmlDocumentGenerator::openListElement(const WPXPropertyList & /* propList */, const WPXPropertyListVector &/* tabStops */)
+void HtmlDocumentGenerator::openListElement(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
 {
 	if (m_state->m_ignore)
 		return;
-	m_state->output() << "<li>";
+	m_state->output(false) << "<li class=\"" << m_state->paragraphManager().getClass(propList, tabStops, true) << "\">";
 }
 
 void HtmlDocumentGenerator::closeListElement()
@@ -671,17 +647,20 @@ void HtmlDocumentGenerator::closeTextBox()
 	m_state->pop();
 }
 
-void HtmlDocumentGenerator::openTable(const WPXPropertyList & /* propList */, const WPXPropertyListVector & /* columns */)
+void HtmlDocumentGenerator::openTable(const WPXPropertyList & /* propList */, const WPXPropertyListVector &columns)
 {
 	if (m_state->m_ignore)
 		return;
-	m_state->output() << "<table border=\"1\">" << std::endl;
+	m_state->tableManager().openTable(columns);
+	m_state->output() << "<table>" << std::endl;
 	m_state->output() << "<tbody>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openTableRow(const WPXPropertyList & /* propList */)
+void HtmlDocumentGenerator::openTableRow(const WPXPropertyList &propList)
 {
-	m_state->output() << "<tr>" << std::endl;
+	if (m_state->m_ignore)
+		return;
+	m_state->output() << "<tr class=\"" << m_state->tableManager().getRowClass(propList) << "\">\n";
 }
 
 void HtmlDocumentGenerator::closeTableRow()
@@ -696,18 +675,13 @@ void HtmlDocumentGenerator::openTableCell(const WPXPropertyList &propList)
 	if (m_state->m_ignore)
 		return;
 	std::ostream &out=m_state->output();
-	out << "<td style=\"";
-	if (propList["fo:background-color"])
-		out << "background-color:" << propList["fo:background-color"]->getStr().cstr() << ";";
-
-	out << "\" ";
-
+	out << "<td class=\"" << m_state->tableManager().getCellClass(propList) << "\"";
 	if (propList["table:number-columns-spanned"])
-		out << "colspan=\"" << propList["table:number-columns-spanned"]->getInt() << "\" ";
+		out << " colspan=\"" << propList["table:number-columns-spanned"]->getInt() << "\"";
 	if (propList["table:number-rows-spanned"])
-		out << "rowspan=\"" << propList["table:number-rows-spanned"]->getInt() << "\" ";
-
+		out << " rowspan=\"" << propList["table:number-rows-spanned"]->getInt() << "\"";
 	out << ">" << std::endl;
+
 }
 
 void HtmlDocumentGenerator::closeTableCell()
@@ -723,5 +697,6 @@ void HtmlDocumentGenerator::closeTable()
 		return;
 	m_state->output() << "</tbody>" << std::endl;
 	m_state->output() << "</table>" << std::endl;
+	m_state->tableManager().closeTable();
 }
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

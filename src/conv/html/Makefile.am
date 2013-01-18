@@ -22,8 +22,13 @@ endif
 mwaw2html_SOURCES = \
 	HtmlDocumentGenerator.cpp	\
 	HtmlDocumentGenerator.h		\
+	TableStyle.cpp			\
+	TableStyle.h			\
+	TextRunStyle.cpp		\
+	TextRunStyle.h			\
 	mwaw2html.cpp			\
-	mwaw2html.h
+	mwaw2html_internal.cpp		\
+	mwaw2html_internal.h
 
 if OS_WIN32
 
