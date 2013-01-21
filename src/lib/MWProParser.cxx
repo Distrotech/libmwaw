@@ -619,7 +619,7 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   //
-  MWProContentListenerPtr listen(new MWProContentListener(pageList, documentInterface));
+  MWProContentListenerPtr listen(new MWProContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

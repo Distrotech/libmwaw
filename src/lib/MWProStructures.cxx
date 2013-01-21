@@ -2692,7 +2692,7 @@ void MWProStructuresListenerState::sendFont(MWProStructuresInternal::Font const 
   if (!m_structures || !m_structures->m_listener)
     return;
 
-  font.m_font.sendTo(m_structures->m_listener.get(), m_structures->m_convertissor, m_font->m_font);
+  font.m_font.sendTo(m_structures->m_listener.get(), m_font->m_font);
   *m_font = font;
   switch(m_font->m_language) {
   case -1:

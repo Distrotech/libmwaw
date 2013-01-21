@@ -459,7 +459,7 @@ void MDWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MDWContentListenerPtr listen(new MDWContentListener(pageList, documentInterface));
+  MDWContentListenerPtr listen(new MDWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
@@ -1416,7 +1416,7 @@ void MDWParser::setProperty(MWAWFont const &font)
 {
   if (!m_listener) return;
   MWAWFont ft;
-  font.sendTo(m_listener.get(), m_convertissor, ft);
+  font.sendTo(m_listener.get(), ft);
 }
 
 void MDWParser::setProperty(MWAWParagraph const &para)

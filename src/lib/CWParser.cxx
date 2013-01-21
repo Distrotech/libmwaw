@@ -458,7 +458,7 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  CWContentListenerPtr listen(new CWContentListener(pageList, documentInterface));
+  CWContentListenerPtr listen(new CWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

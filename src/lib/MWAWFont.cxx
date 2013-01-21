@@ -205,8 +205,10 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     if (flag&allCapsBit) o << "allCaps:";
     if (flag&lowercaseBit) o << "lowercase:";
     if (flag&hiddenBit) o << "hidden:";
-    if (flag&reverseVideoBit) o << "reversed:";
+    if (flag&reverseVideoBit) o << "reverseVideo:";
     if (flag&blinkBit) o << "blink:";
+    if (flag&boxedBit) o << "box:";
+    if (flag&reverseWritingBit) o << "reverseWriting:";
     o << ",";
   }
   if (m_overline.isSet() && m_overline->isSet())
@@ -223,44 +225,95 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
   return o.str();
 }
 
-void MWAWFont::sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverter> &convert, MWAWFont &actualFont) const
+void MWAWFont::sendTo(MWAWContentListener *listener, MWAWFont &actualFont) const
 {
   if (listener == 0L) return;
 
-  std::string fName;
-  int dSize = 0;
   int newSize = size();
+  MWAWFont const &oldFont=listener->getFont();
+  actualFont=*this;
+  if (id() == -1)
+    actualFont.setId(oldFont.id());
 
-  if (id() != -1) {
-    actualFont.setId(id());
-    convert->getOdtInfo(actualFont.id(), fName, dSize);
-    listener->setFontName(fName.c_str());
-    // if no size reset to default
-    if (newSize == -1) newSize = 12;
-  }
-
-  if (newSize > 0) {
+  if (newSize > 0)
     actualFont.setSize(newSize);
-    dSize = 0;
-    convert->getOdtInfo(actualFont.id(), fName, dSize);
-    listener->setFontSize(uint16_t(actualFont.size()+dSize));
-  }
-  actualFont.setDeltaLetterSpacing(deltaLetterSpacing());
-  listener->setFontDLSpacing(deltaLetterSpacing());
-  actualFont.set(script());
-  listener->setFontScript(script());
-
-  actualFont.setFlags(flags());
-  listener->setFontAttributes(actualFont.flags());
-  actualFont.setOverline(getOverline());
-  listener->setFontOverline(actualFont.getOverline());
-  actualFont.setStrikeOut(getStrikeOut());
-  listener->setFontStrikeOut(actualFont.getStrikeOut());
-  actualFont.setUnderline(getUnderline());
-  listener->setFontUnderline(actualFont.getUnderline());
-  actualFont.setColor(m_color.get());
-  listener->setFontColor(m_color.get());
-  actualFont.setBackgroundColor(m_backgroundColor.get());
-  listener->setFontBackgroundColor(m_backgroundColor.get());
+  else
+    actualFont.setSize(oldFont.size());
+  listener->setFont(actualFont);
 }
+
+void MWAWFont::addTo(WPXPropertyList &pList, shared_ptr<MWAWFontConverter> convert) const
+{
+  int dSize = 0;
+  std::string fName("");
+  convert->getOdtInfo(id(), fName, dSize);
+  if (fName.length())
+    pList.insert("style:font-name", fName.c_str());
+  int fSize = size()+dSize;
+  pList.insert("fo:font-size", fSize, WPX_POINT);
+
+  uint32_t attributeBits = m_flags.get();
+  if (attributeBits & italicBit)
+    pList.insert("fo:font-style", "italic");
+  if (attributeBits & boldBit)
+    pList.insert("fo:font-weight", "bold");
+  if (attributeBits & outlineBit)
+    pList.insert("style:text-outline", "true");
+  if (attributeBits & blinkBit)
+    pList.insert("style:text-blinking", "true");
+  if (attributeBits & shadowBit)
+    pList.insert("fo:text-shadow", "1pt 1pt");
+  if (attributeBits & hiddenBit)
+    pList.insert("text:display", "none");
+  if (attributeBits & lowercaseBit)
+    pList.insert("fo:text-transform", "lowercase");
+  if (attributeBits & allCapsBit)
+    pList.insert("fo:text-transform", "uppercase");
+  if (attributeBits & smallCapsBit)
+    pList.insert("fo:font-variant", "small-caps");
+  if (attributeBits & embossBit)
+    pList.insert("style:font-relief", "embossed");
+  else if (attributeBits & engraveBit)
+    pList.insert("style:font-relief", "engraved");
+
+  if (m_scriptPosition.isSet() && m_scriptPosition->isSet()) {
+    std::string pos=m_scriptPosition->str(fSize);
+    if (pos.length())
+      pList.insert("style:text-position", pos.c_str());
+  }
+
+  if (m_overline.isSet() && m_overline->isSet())
+    m_overline->addTo(pList, "overline");
+  if (m_strikeoutline.isSet() && m_strikeoutline->isSet())
+    m_strikeoutline->addTo(pList, "line-through");
+  if (m_underline.isSet() && m_underline->isSet())
+    m_underline->addTo(pList, "underline");
+  if (attributeBits & boxedBit) {
+    // do minimum: add a overline and a underline box
+    Line simple(Line::Simple);
+    if (!m_overline.isSet() || !m_overline->isSet())
+      simple.addTo(pList, "overline");
+    if (!m_underline.isSet() || !m_underline->isSet())
+      simple.addTo(pList, "underline");
+  }
+  if (m_deltaSpacing.isSet() && m_deltaSpacing.get())
+    pList.insert("fo:letter-spacing", m_deltaSpacing.get(), WPX_POINT);
+
+  if (attributeBits & reverseVideoBit) {
+    pList.insert("fo:color", m_backgroundColor->str().c_str());
+    pList.insert("fo:background-color", m_color->str().c_str());
+  } else {
+    pList.insert("fo:color", m_color->str().c_str());
+    if (m_backgroundColor.isSet() && !m_backgroundColor->isWhite())
+      pList.insert("fo:background-color", m_backgroundColor->str().c_str());
+  }
+  if (attributeBits && reverseWritingBit) {
+    static bool first = true;
+    if (first) {
+      first = false;
+      MWAW_DEBUG_MSG(("MWAWFont::addTo: sorry, reverse writing is not umplemented\n"));
+    }
+  }
+}
+
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -564,7 +564,7 @@ void HMWText::setProperty(MWAWFont const &font)
 {
   if (!m_listener) return;
   MWAWFont ft;
-  font.sendTo(m_listener.get(), m_convertissor, ft);
+  font.sendTo(m_listener.get(), ft);
 }
 
 // a font in the text zone

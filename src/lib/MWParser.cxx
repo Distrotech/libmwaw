@@ -497,7 +497,7 @@ void MWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MWContentListenerPtr listen(new MWContentListener(pageList, documentInterface));
+  MWContentListenerPtr listen(new MWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
@@ -1384,7 +1384,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     MWAWFont font;
     if (!numFormat || listPos[0] != 0) {
       font = info.m_font;
-      font.sendTo(m_listener.get(), m_convertissor, font);
+      font.sendTo(m_listener.get(), font);
     }
     if (info.m_justifySet)
       m_listener->setParagraphJustification(info.m_justify);
@@ -1393,7 +1393,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     numChar = int(text.length());
     for (int i = 0; i < numChar; i++) {
       if (actFormat < numFormat && i == listPos[(size_t)actFormat]) {
-        listFonts[(size_t)actFormat].sendTo(m_listener.get(), m_convertissor, font);
+        listFonts[(size_t)actFormat].sendTo(m_listener.get(), font);
         font = listFonts[(size_t)actFormat];
         actFormat++;
       }

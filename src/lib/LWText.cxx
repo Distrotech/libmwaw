@@ -475,7 +475,7 @@ void LWText::setProperty(MWAWFont const &font)
 {
   if (!m_listener) return;
   MWAWFont aFont;
-  font.sendTo(m_listener.get(), m_convertissor, aFont);
+  font.sendTo(m_listener.get(), aFont);
 }
 
 bool LWText::readFonts(MWAWEntry const &entry)

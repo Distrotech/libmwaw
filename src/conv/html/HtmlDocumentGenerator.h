@@ -76,8 +76,8 @@ public:
 	virtual void insertLineBreak();
 	virtual void insertField(const WPXString &/*type*/, const WPXPropertyList &/*propList*/) {}
 
-	virtual void defineOrderedListLevel(const WPXPropertyList & /* propList */) {}
-	virtual void defineUnorderedListLevel(const WPXPropertyList & /* propList */) {}
+	virtual void defineOrderedListLevel(const WPXPropertyList &propList);
+	virtual void defineUnorderedListLevel(const WPXPropertyList &propList);
 	virtual void openOrderedListLevel(const WPXPropertyList &propList);
 	virtual void openUnorderedListLevel(const WPXPropertyList &propList);
 	virtual void closeOrderedListLevel();

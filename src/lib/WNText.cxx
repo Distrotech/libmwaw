@@ -1187,7 +1187,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
 void WNText::setProperty(MWAWFont const &font, MWAWFont &previousFont)
 {
   if (!m_listener) return;
-  font.sendTo(m_listener.get(), m_convertissor, previousFont);
+  font.sendTo(m_listener.get(), previousFont);
 }
 
 ////////////////////////////////////////////////////////////

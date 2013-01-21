@@ -1092,7 +1092,7 @@ void MSK4Text::setDefault(MWAWFont &font)
 void MSK4Text::setProperty(MWAWFont const &ft)
 {
   if (!m_listener) return;
-  ft.sendTo(m_listener.get(), m_convertissor, m_state->m_font);
+  ft.sendTo(m_listener.get(), m_state->m_font);
 }
 
 // read
@@ -1217,6 +1217,7 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
           break;
         }
         font.m_font.setId(m_state->m_fontNames[size_t(v)].m_id);
+        font.m_font.setSize(12);
       } else { // fontSize
         if (v <= 0 || v > 200) {
           ok = false;

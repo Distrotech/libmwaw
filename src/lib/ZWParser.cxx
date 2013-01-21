@@ -276,7 +276,7 @@ void ZWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
-  ZWContentListenerPtr listen(new ZWContentListener(pageList, documentInterface));
+  ZWContentListenerPtr listen(new ZWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

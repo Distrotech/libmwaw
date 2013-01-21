@@ -56,10 +56,10 @@ struct Stream
 		std::string lbl=label();
 		if (!lbl.length())
 			return;
-		main << "<sup><a name=\"called" << lbl << "\"></a><a href=\"#data" << lbl << "\">" << lbl << "</a></sup>";
+		main << "<sup id=\"called" << lbl << "\"><a href=\"#data" << lbl << "\">" << lbl << "</a></sup>";
 		flush();
 		std::stringstream ss;
-		ss << "<sup><a name=\"data" << lbl << "\"></a><a href=\"#called" << lbl << "\">" << lbl << "</a></sup>";
+		ss << "<sup id=\"data" << lbl << "\"><a href=\"#called" << lbl << "\">" << lbl << "</a></sup>";
 		m_delayedLabel=ss.str();
 	}
 	//! flush delayed label, ...
@@ -292,12 +292,13 @@ std::string Zone::label(int id) const
 struct State
 {
 	//! constructor
-	State() : m_actualPage(0), m_ignore(false), m_actualStream(), m_streamStack(), m_paragraphManager(), m_spanManager(), m_tableManager()
+	State() : m_actualPage(0), m_ignore(false), m_actualStream(), m_streamStack(), m_listManager(), m_paragraphManager(), m_spanManager(), m_tableManager()
 	{
 		for (int i = 0; i < s_numZoneType; i++)
 			m_zones[i].setType(ZoneType(i));
 		m_actualStream=Zone::getMainStream();
 		m_paragraphManager.reset(new ParagraphStyleManager);
+		m_listManager.reset(new ListStyleManager);
 		m_spanManager.reset(new SpanStyleManager);
 		m_tableManager.reset(new TableStyleManager);
 	};
@@ -312,6 +313,11 @@ struct State
 	Stream &stream()
 	{
 		return *m_actualStream;
+	}
+	// access to the paragraph manager
+	ListStyleManager &listManager()
+	{
+		return *m_listManager;
 	}
 	// access to the paragraph manager
 	ParagraphStyleManager &paragraphManager()
@@ -378,6 +384,7 @@ struct State
 protected:
 	shared_ptr<Stream> m_actualStream;
 	std::vector<shared_ptr<Stream> > m_streamStack;
+	shared_ptr<ListStyleManager> m_listManager;
 	shared_ptr<ParagraphStyleManager> m_paragraphManager;
 	shared_ptr<SpanStyleManager> m_spanManager;
 	shared_ptr<TableStyleManager> m_tableManager;
@@ -436,6 +443,7 @@ void HtmlDocumentGenerator::endDocument()
 	*m_output << "<meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" >" << std::endl;
 	m_state->sendMetaData(*m_output);
 	*m_output << "<style>" << std::endl;
+	m_state->listManager().send(*m_output);
 	m_state->paragraphManager().send(*m_output);
 	m_state->spanManager().send(*m_output);
 	m_state->tableManager().send(*m_output);
@@ -540,17 +548,33 @@ void HtmlDocumentGenerator::insertSpace()
 	m_state->output() << "&nbsp;";
 }
 
+void HtmlDocumentGenerator::defineOrderedListLevel(const WPXPropertyList &propList)
+{
+	if (m_state->m_ignore)
+		return;
+	m_state->listManager().defineLevel(propList, true);
+}
+
+void HtmlDocumentGenerator::defineUnorderedListLevel(const WPXPropertyList &propList)
+{
+	if (m_state->m_ignore)
+		return;
+	m_state->listManager().defineLevel(propList, false);
+}
+
 void HtmlDocumentGenerator::openOrderedListLevel(const WPXPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
-	m_state->output(false) << "<ol class=\"" << m_state->paragraphManager().getClass(propList, WPXPropertyListVector(), true) << "\">\n";
+	// fixme: if level is > 1, we must first insert a div here
+	m_state->output(false) << "<ol class=\"" << m_state->listManager().openLevel(propList, true) << "\">\n";
 }
 
 void HtmlDocumentGenerator::closeOrderedListLevel()
 {
 	if (m_state->m_ignore)
 		return;
+	m_state->listManager().closeLevel();
 	m_state->output() << "</ol>" << std::endl;
 }
 
@@ -558,13 +582,15 @@ void HtmlDocumentGenerator::openUnorderedListLevel(const WPXPropertyList &propLi
 {
 	if (m_state->m_ignore)
 		return;
-	m_state->output(false) << "<ul class=\"" << m_state->paragraphManager().getClass(propList, WPXPropertyListVector(), true) << "\">\n";
+	// fixme: if level is > 1, we must first insert a div here
+	m_state->output(false) << "<ul class=\"" << m_state->listManager().openLevel(propList, false) << "\">\n";
 }
 
 void HtmlDocumentGenerator::closeUnorderedListLevel()
 {
 	if (m_state->m_ignore)
 		return;
+	m_state->listManager().closeLevel();
 	m_state->output() << "</ul>" << std::endl;
 }
 
@@ -573,7 +599,7 @@ void HtmlDocumentGenerator::openListElement(const WPXPropertyList &propList, con
 {
 	if (m_state->m_ignore)
 		return;
-	m_state->output(false) << "<li class=\"" << m_state->paragraphManager().getClass(propList, tabStops, true) << "\">";
+	m_state->output(false) << "<li class=\"" << m_state->listManager().getClass(propList, tabStops) << "\">";
 }
 
 void HtmlDocumentGenerator::closeListElement()

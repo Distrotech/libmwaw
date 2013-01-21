@@ -303,7 +303,7 @@ MSKContentListenerPtr MSK4Zone::createListener
   // create all the pages + an empty page, if we have some remaining data...
   for (int i = 0; i <= numPages; i++) pageList.push_back(ps);
   m_state->m_numPages=numPages+1;
-  MSKContentListenerPtr res(new MSKContentListener(pageList, interface));
+  MSKContentListenerPtr res(new MSKContentListener(m_convertissor, pageList, interface));
   return res;
 }
 

@@ -621,7 +621,7 @@ bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
 void MSK3Text::setProperty(MSK3TextInternal::Font const &font)
 {
   if (!m_listener) return;
-  font.m_font.sendTo(m_listener.get(), m_convertissor, m_state->m_font);
+  font.m_font.sendTo(m_listener.get(), m_state->m_font);
 }
 
 ////////////////////////////////////////////////////////////

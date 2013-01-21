@@ -316,7 +316,7 @@ void LWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
-  LWContentListenerPtr listen(new LWContentListener(pageList, documentInterface));
+  LWContentListenerPtr listen(new LWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

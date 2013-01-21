@@ -2509,7 +2509,7 @@ void MSKGraph::sendTable(int zoneId)
 
       MSKGraphInternal::Table::Cell const *tCell=table.getCell(cellPosition);
       if (tCell) {
-        tCell->m_font.sendTo(m_listener.get(), m_convertissor, actFont);
+        tCell->m_font.sendTo(m_listener.get(), actFont);
         size_t nChar = tCell->m_text.size();
         for (size_t ch = 0; ch < nChar; ch++) {
           unsigned char c = (unsigned char) tCell->m_text[ch];
@@ -2548,7 +2548,7 @@ void MSKGraph::sendTable(int zoneId)
 void MSKGraph::setProperty(MSKGraphInternal::Font const &font)
 {
   if (!m_listener) return;
-  font.m_font.sendTo(m_listener.get(), m_convertissor, m_state->m_font);
+  font.m_font.sendTo(m_listener.get(), m_state->m_font);
 }
 
 bool MSKGraph::readFont(MSKGraphInternal::Font &font)

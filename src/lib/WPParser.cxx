@@ -710,7 +710,7 @@ void WPParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  WPContentListenerPtr listen(new WPContentListener(pageList, documentInterface));
+  WPContentListenerPtr listen(new WPContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
@@ -1387,7 +1387,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
     m_listener->setParagraphLineSpacing(info.m_height, WPX_POINT);
   for (int c = 0; c < numChars; c++) {
     if (actFont < numFonts && c ==  fonts[actFont].m_firstChar) {
-      fonts[actFont].m_font.sendTo(m_listener.get(), m_convertissor, font);
+      fonts[actFont].m_font.sendTo(m_listener.get(), font);
       font = fonts[actFont++].m_font;
     }
     if (actLine < numLines && c == lines[(size_t) actLine].m_firstChar) {

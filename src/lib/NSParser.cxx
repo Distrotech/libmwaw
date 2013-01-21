@@ -588,7 +588,7 @@ void NSParser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   //
-  NSContentListenerPtr listen(new NSContentListener(pageList, documentInterface));
+  NSContentListenerPtr listen(new NSContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

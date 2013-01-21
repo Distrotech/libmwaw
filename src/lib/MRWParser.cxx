@@ -402,7 +402,7 @@ void MRWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MRWContentListenerPtr listen(new MRWContentListener(pageList, documentInterface));
+  MRWContentListenerPtr listen(new MRWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

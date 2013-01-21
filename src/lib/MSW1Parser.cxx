@@ -445,7 +445,7 @@ void MSW1Parser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   //
-  MSW1ContentListenerPtr listen(new MSW1ContentListener(pageList, documentInterface));
+  MSW1ContentListenerPtr listen(new MSW1ContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
@@ -1344,7 +1344,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
 void MSW1Parser::setProperty(MSW1ParserInternal::Font const &font, MSW1ParserInternal::Font &previousFont)
 {
   if (!m_listener) return;
-  font.m_font.sendTo(m_listener.get(), m_convertissor, previousFont.m_font);
+  font.m_font.sendTo(m_listener.get(), previousFont.m_font);
 }
 // send the ruler properties
 void MSW1Parser::setProperty(MSW1ParserInternal::Paragraph const &para)

@@ -167,7 +167,7 @@ public:
   enum FontBits { boldBit=1, italicBit=2, blinkBit=4, embossBit=8, engraveBit=0x10,
                   hiddenBit=0x20, outlineBit=0x40, shadowBit=0x80,
                   reverseVideoBit=0x100, smallCapsBit=0x200, allCapsBit=0x400,
-                  lowercaseBit=0x800
+                  lowercaseBit=0x800, boxedBit=0x1000, reverseWritingBit=0x2000
                 };
   /** constructor
    *
@@ -280,6 +280,18 @@ public:
     m_backgroundColor = MWAWColor::white();
   }
 
+  //! return true if the font has decorations line (overline, strikeout, underline)
+  bool hasDecorationLines() const {
+    return (m_overline.isSet() && m_overline->isSet()) ||
+           (m_strikeoutline.isSet() && m_strikeoutline->isSet()) ||
+           (m_underline.isSet() && m_underline->isSet());
+  }
+  //! reset the decoration
+  void resetDecorationLines() {
+    if (m_overline.isSet()) m_overline=Line(Line::None);
+    if (m_strikeoutline.isSet()) m_strikeoutline=Line(Line::None);
+    if (m_underline.isSet()) m_underline=Line(Line::None);
+  }
   //! returns the overline
   Line const &getOverline() const {
     return m_overline.get();
@@ -375,6 +387,8 @@ public:
   void setUnderlineColor(MWAWColor const &color) {
     m_underline->m_color = color;
   }
+  //! add to the propList
+  void addTo(WPXPropertyList &propList, shared_ptr<MWAWFontConverter> fontConverter) const;
 
   //! returns a string which can be used for debugging
   std::string getDebugString(shared_ptr<MWAWFontConverter> &converter) const;
@@ -414,7 +428,7 @@ public:
   }
 
   /** sends font to a listener */
-  void sendTo(MWAWContentListener *listener, shared_ptr<MWAWFontConverter> &convert, MWAWFont &actFont) const;
+  void sendTo(MWAWContentListener *listener, MWAWFont &actFont) const;
 
 protected:
   Variable<int> m_id /** font identificator*/, m_size /** font size */;

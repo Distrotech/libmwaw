@@ -378,7 +378,7 @@ void MSK3Parser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MSKContentListenerPtr listen(new MSKContentListener(pageList, documentInterface));
+  MSKContentListenerPtr listen(new MSKContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

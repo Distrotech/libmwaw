@@ -1941,7 +1941,7 @@ bool FWText::readColumns(shared_ptr<FWEntry> zone)
 void FWText::setProperty(MWAWFont const &font, MWAWFont &previousFont)
 {
   if (!m_listener) return;
-  font.sendTo(m_listener.get(), m_convertissor, previousFont);
+  font.sendTo(m_listener.get(), previousFont);
 }
 
 void FWText::setProperty(FWTextInternal::Paragraph const &para)

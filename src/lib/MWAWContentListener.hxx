@@ -48,6 +48,7 @@ class WPXString;
 class WPXPropertyListVector;
 
 class MWAWCell;
+class MWAWFontConverter;
 class MWAWList;
 class MWAWPageSpan;
 class MWAWPosition;
@@ -90,26 +91,8 @@ struct MWAWContentParsingState {
   //! the number of tabs to add
   int m_numDeferredTabs;
 
-  //! the font name
-  WPXString m_fontName;
-  //! the font text size
-  double m_fontSize;
-  //! the font delta letter spacing
-  double m_fontDLSpacing;
-  //! the font script sub/super position
-  MWAWFont::Script m_fontScript;
-  //! the font attribute
-  uint32_t m_fontAttributeBits;
-  //! the overline style
-  MWAWFont::Line m_fontOverline;
-  //! the strikeout style
-  MWAWFont::Line m_fontStrikeOutline;
-  //! the underline style
-  MWAWFont::Line m_fontUnderline;
-  //! the font color
-  MWAWColor m_fontColor;
-  //! the font background color
-  MWAWColor m_fontBackgroundColor;
+  //! the font
+  MWAWFont m_font;
   //! the text language
   std::string m_textLanguage;
 
@@ -212,7 +195,7 @@ class MWAWContentListener
 {
 public:
   /** constructor */
-  MWAWContentListener(std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
+  MWAWContentListener(shared_ptr<MWAWFontConverter> fontConverter, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
   /** destructor */
   virtual ~MWAWContentListener();
 
@@ -251,26 +234,10 @@ public:
   void insertBreak(const uint8_t breakType);
 
   // ------ text format -----------
-  //! sets the font name
-  void setFontName(const WPXString &fontName);
-  //! sets the font size
-  void setFontSize(const uint16_t fontSize);
-  //! sets the font delta letter spacing
-  void setFontDLSpacing(const int dSpacing);
-  //! sets the script position
-  void setFontScript(MWAWFont::Script const &newscript);
-  //! sets the font attribute: bold, italic, ...
-  void setFontAttributes(const uint32_t fontAttributes);
-  //! sets the font overline style
-  void setFontOverline(MWAWFont::Line const &line);
-  //! sets the font strikeOut style
-  void setFontStrikeOut(MWAWFont::Line const &line);
-  //! sets the font underline style
-  void setFontUnderline(MWAWFont::Line const &line);
-  //! sets the font color
-  void setFontColor(MWAWColor const rgb);
-  //! sets the font background color
-  void setFontBackgroundColor(MWAWColor const rgb);
+  //! sets the font
+  void setFont(MWAWFont const &font);
+  //! returns the actual font
+  MWAWFont const &getFont() const;
   //! sets the font language
   void setTextLanguage(std::string const &locale);
 
@@ -418,6 +385,7 @@ protected:
   shared_ptr<MWAWDocumentParsingState> m_ds; // main parse state
   shared_ptr<MWAWContentParsingState> m_ps; // parse state
   std::vector<shared_ptr<MWAWContentParsingState> > m_psStack;
+  shared_ptr<MWAWFontConverter> m_fontConverter; // the font convertor
   WPXDocumentInterface *m_documentInterface;
 
 private:
