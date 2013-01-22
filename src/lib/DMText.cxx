@@ -218,12 +218,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
     return;
   }
-  DMContentListener *listen = dynamic_cast<DMContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
-
   assert(m_textParser);
 
   long pos = m_input->tell();

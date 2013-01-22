@@ -185,7 +185,7 @@ void MSK4Zone::init()
   m_graphParser.reset(new MSKGraph(getInput(), *this, m_convertissor));
 }
 
-void MSK4Zone::setListener(MSKContentListenerPtr listen)
+void MSK4Zone::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_textParser->setListener(listen);
@@ -280,7 +280,7 @@ MWAWEntry MSK4Zone::getTextPosition() const
 ////////////////////////////////////////////////////////////
 // create the main listener ( given a header and a footer document)
 ////////////////////////////////////////////////////////////
-MSKContentListenerPtr MSK4Zone::createListener
+MWAWContentListenerPtr MSK4Zone::createListener
 (WPXDocumentInterface *interface, MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer)
 {
   std::vector<MWAWPageSpan> pageList;
@@ -303,7 +303,7 @@ MSKContentListenerPtr MSK4Zone::createListener
   // create all the pages + an empty page, if we have some remaining data...
   for (int i = 0; i <= numPages; i++) pageList.push_back(ps);
   m_state->m_numPages=numPages+1;
-  MSKContentListenerPtr res(new MSKContentListener(m_convertissor, pageList, interface));
+  MWAWContentListenerPtr res(new MWAWContentListener(m_convertissor, pageList, interface));
   return res;
 }
 

@@ -44,7 +44,6 @@
 
 #include "libmwaw_internal.hxx"
 
-
 #include "MWAWFont.hxx"
 #include "MWAWParagraph.hxx"
 

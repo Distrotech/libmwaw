@@ -46,15 +46,14 @@
 
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
-#include "MWAWContentListener.hxx"
 #include "MWAWInputStream.hxx"
 #include "MWAWPageSpan.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MWAWParser.hxx"
 
-typedef class MWAWContentListener FWContentListener;
-typedef shared_ptr<FWContentListener> FWContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
@@ -136,7 +135,7 @@ protected:
   void init();
 
   //! sets the listener in this class and in the helper classes
-  void setListener(FWContentListenerPtr listen);
+  void setListener(MWAWContentListenerPtr listen);
 
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
@@ -226,7 +225,7 @@ protected:
   // data
   //
   //! the listener
-  FWContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

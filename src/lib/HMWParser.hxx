@@ -43,17 +43,15 @@
 
 #include <libwpd/libwpd.h>
 
-#include "MWAWPageSpan.hxx"
-
-#include "MWAWContentListener.hxx"
-
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
+#include "MWAWPageSpan.hxx"
 
 #include "MWAWParser.hxx"
 
-typedef class MWAWContentListener HMWContentListener;
-typedef shared_ptr<HMWContentListener> HMWContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
+
 class MWAWEntry;
 class MWAWFont;
 class MWAWParagraph;
@@ -210,7 +208,7 @@ protected:
   bool isKoreanFile() const;
 
   //! sets the listener in this class and in the helper classes
-  void setListener(HMWContentListenerPtr listen);
+  void setListener(MWAWContentListenerPtr listen);
 
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
@@ -277,7 +275,7 @@ protected:
   // data
   //
   //! the listener
-  HMWContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

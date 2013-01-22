@@ -41,7 +41,6 @@
 #include "MWAWPageSpan.hxx"
 
 #include "MWAWEntry.hxx"
-#include "MWAWContentListener.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MWAWDebug.hxx"
@@ -49,8 +48,8 @@
 
 #include "MSKParser.hxx"
 
-typedef class MWAWContentListener MSKContentListener;
-typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
@@ -92,7 +91,7 @@ protected:
   void init();
 
   //! sets the listener in this class and in the helper classes
-  void setListener(MSKContentListenerPtr listen);
+  void setListener(MWAWContentListenerPtr listen);
 
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);

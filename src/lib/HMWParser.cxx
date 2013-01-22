@@ -131,11 +131,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
     return;
   }
-  HMWContentListener *listen = dynamic_cast<HMWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
   if (m_id != 1 && m_id != 2) {
     MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
     return;
@@ -185,7 +180,7 @@ bool HMWParser::isKoreanFile() const
   return m_state->m_isKoreanFile;
 }
 
-void HMWParser::setListener(HMWContentListenerPtr listen)
+void HMWParser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_graphParser->setListener(listen);
@@ -313,7 +308,7 @@ void HMWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  HMWContentListenerPtr listen(new HMWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

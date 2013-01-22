@@ -45,7 +45,6 @@
 
 class WPXBinaryData;
 
-#include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
@@ -53,8 +52,8 @@ class WPXBinaryData;
 
 #include "MWAWParser.hxx"
 
-typedef class MWAWContentListener MRWContentListener;
-typedef shared_ptr<MRWContentListener> MRWContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 class MWAWEntry;
 class MWAWFont;
 class MWAWParagraph;
@@ -151,7 +150,7 @@ protected:
   void init();
 
   //! sets the listener in this class and in the helper classes
-  void setListener(MRWContentListenerPtr listen);
+  void setListener(MWAWContentListenerPtr listen);
 
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
@@ -220,7 +219,7 @@ protected:
   // data
   //
   //! the listener
-  MRWContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

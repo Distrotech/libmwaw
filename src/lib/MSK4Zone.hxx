@@ -52,8 +52,8 @@ class MSK4Parser;
 class MSK4Text;
 class MSKGraph;
 
-typedef class MWAWContentListener MSKContentListener;
-typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
@@ -104,7 +104,7 @@ protected:
   void init();
 
   //! sets the listener in this class and in the helper classes
-  void setListener(MSKContentListenerPtr listen);
+  void setListener(MWAWContentListenerPtr listen);
 
   /** tries to find the beginning of the list of indices,
    * then try to find all entries in this list.
@@ -124,7 +124,7 @@ protected:
   void readContentZones(MWAWEntry const &entry, bool mainOle);
 
   /** creates the main listener */
-  MSKContentListenerPtr createListener
+  MWAWContentListenerPtr createListener
   (WPXDocumentInterface *interface,
    MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer);
 

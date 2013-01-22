@@ -41,14 +41,13 @@
 #include "MWAWPosition.hxx"
 
 #include "MWAWEntry.hxx"
-#include "MWAWContentListener.hxx"
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
 class WPXBinaryData;
-typedef class MWAWContentListener MWProContentListener;
-typedef shared_ptr<MWProContentListener> MWProContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
@@ -180,7 +179,7 @@ protected:
   void init();
 
   //! sets the listener in this class and in the helper classes
-  void setListener(MWProContentListenerPtr listen);
+  void setListener(MWAWContentListenerPtr listen);
 
   //! finds the different objects zones
   bool createZones();
@@ -297,7 +296,7 @@ protected:
   MWProParser &m_mainParser;
 
   //! the listener
-  MWProContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

@@ -100,16 +100,10 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("MSK4Parser::SubDocument::parse: no listener\n"));
     return;
   }
-  if (!dynamic_cast<MSKContentListener *>(listener.get())) {
-    MWAW_DEBUG_MSG(("MSK4Parser::SubDocument::parse: bad listener\n"));
-    return;
-  }
-  MSKContentListenerPtr &listen = reinterpret_cast<MSKContentListenerPtr &>(listener);
-
   // the foot note
   if (type == libmwaw::DOC_NOTE) {
     if (!m_parser) {
-      listen->insertCharacter(' ');
+      listener->insertCharacter(' ');
       return;
     }
     MSK4Zone *mnParser = reinterpret_cast<MSK4Zone *>(m_parser);
@@ -120,18 +114,18 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   if (!m_parser) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no parser\n"));
-    listen->insertCharacter(' ');
+    listener->insertCharacter(' ');
     return;
   }
 
   if (m_zone.isParsed() && type != libmwaw::DOC_HEADER_FOOTER) {
-    listen->insertCharacter(' ');
+    listener->insertCharacter(' ');
     MWAW_DEBUG_MSG(("SubDocument::parse: this zone is already parsed\n"));
     return;
   }
   m_zone.setParsed(true);
   if (m_zone.id() != MN) {
-    listen->insertCharacter(' ');
+    listener->insertCharacter(' ');
     MWAW_DEBUG_MSG(("SubDocument::parse: send not MN entry is not implemented\n"));
     return;
   }
@@ -171,7 +165,7 @@ MSK4Parser::~MSK4Parser()
   if (m_listener.get()) m_listener->endDocument();
 }
 
-void MSK4Parser::setListener(MSKContentListenerPtr listen)
+void MSK4Parser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_state->m_mn0Parser->setListener(listen);
@@ -216,7 +210,7 @@ void MSK4Parser::parse(WPXDocumentInterface *interface)
     footer.reset(new MSK4ParserInternal::SubDocument(m_state->m_footerParser.get(), m_state->m_footerParser->getInput(), empty));
 
   // and the listener
-  MSKContentListenerPtr listener
+  MWAWContentListenerPtr listener
     = m_state->m_mn0Parser->createListener(interface, header, footer);
   if (!listener) {
     MWAW_DEBUG_MSG(("MSK4Parser::parse: does not have listener\n"));

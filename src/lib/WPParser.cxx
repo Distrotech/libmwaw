@@ -563,11 +563,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
     return;
   }
-  WPContentListener *listen = dynamic_cast<WPContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
   if (m_id != 1 && m_id != 2) {
     MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
     return;
@@ -610,7 +605,7 @@ void WPParser::init()
   m_pageSpan.setMarginRight(0.1);
 }
 
-void WPParser::setListener(WPContentListenerPtr listen)
+void WPParser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
 }
@@ -710,7 +705,7 @@ void WPParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  WPContentListenerPtr listen(new WPContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

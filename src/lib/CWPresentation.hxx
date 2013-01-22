@@ -41,7 +41,6 @@
 #include <vector>
 
 #include "MWAWEntry.hxx"
-#include "MWAWContentListener.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MWAWDebug.hxx"
@@ -51,8 +50,8 @@
 
 #include "CWStruct.hxx"
 
-typedef class MWAWContentListener CWContentListener;
-typedef shared_ptr<CWContentListener> CWContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
@@ -97,7 +96,7 @@ public:
 protected:
 
   //! sets the listener in this class and in the helper classes
-  void setListener(CWContentListenerPtr listen) {
+  void setListener(MWAWContentListenerPtr listen) {
     m_listener = listen;
   }
 
@@ -139,7 +138,7 @@ protected:
   MWAWInputStreamPtr m_input;
 
   //! the listener
-  CWContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

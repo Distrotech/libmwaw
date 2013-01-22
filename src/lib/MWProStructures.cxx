@@ -574,7 +574,7 @@ void MWProStructures::init()
   m_asciiName = "struct";
 }
 
-void MWProStructures::setListener(MWProContentListenerPtr listen)
+void MWProStructures::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
 }

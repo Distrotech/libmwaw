@@ -45,8 +45,8 @@ class WPXPropertyList;
 
 class MSKGraph;
 
-typedef class MWAWContentListener MSKContentListener;
-typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 namespace MSKParserInternal
 {
@@ -89,7 +89,7 @@ public:
 
 protected:
   //! the listener
-  MSKContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! the state
   shared_ptr<MSKParserInternal::State> m_state;

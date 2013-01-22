@@ -340,7 +340,7 @@ void NSParser::init()
   m_textParser.reset(new NSText(getInput(), *this, m_convertissor));
 }
 
-void NSParser::setListener(NSContentListenerPtr listen)
+void NSParser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_textParser->setListener(listen);
@@ -588,7 +588,7 @@ void NSParser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   //
-  NSContentListenerPtr listen(new NSContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

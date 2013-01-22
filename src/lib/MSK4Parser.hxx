@@ -45,8 +45,8 @@
 class WPXDocumentInterface;
 class MWAWHeader;
 
-typedef class MWAWContentListener MSKContentListener;
-typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
@@ -88,7 +88,7 @@ public:
 
 protected:
   //! sets the listener in this class and in the helper classes
-  void setListener(MSKContentListenerPtr listen);
+  void setListener(MWAWContentListenerPtr listen);
 
   /** finds the principal ole zone: Ole pictures and MN0,
       then tries to find the main structures. Finally, parses the document */
@@ -130,7 +130,7 @@ protected:
   shared_ptr<MSK4ParserInternal::State> m_state;
 
   //! the listener
-  MSKContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

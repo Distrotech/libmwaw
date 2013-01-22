@@ -218,7 +218,7 @@ void DMParser::init()
   m_textParser.reset(new DMText(getInput(), *this, m_convertissor));
 }
 
-void DMParser::setListener(DMContentListenerPtr listen)
+void DMParser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_textParser->setListener(listen);
@@ -300,7 +300,7 @@ void DMParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_numPages = int(pageList.size());
 
   //
-  DMContentListenerPtr listen(new DMContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

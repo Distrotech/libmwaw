@@ -45,8 +45,7 @@ class MWAWInputStream;
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 
 class MWAWContentListener;
-typedef class MWAWContentListener ZWContentListener;
-typedef shared_ptr<ZWContentListener> ZWContentListenerPtr;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 class MWAWEntry;
 class MWAWFont;
 class MWAWFontConverter;
@@ -88,7 +87,7 @@ protected:
   enum TextCode { None, Center, BookMark, NewPage, Tag, Link };
 
   //! sets the listener in this class and in the helper classes
-  void setListener(ZWContentListenerPtr listen) {
+  void setListener(MWAWContentListenerPtr listen) {
     m_listener = listen;
   }
 
@@ -151,7 +150,7 @@ protected:
   MWAWInputStreamPtr m_input;
 
   //! the listener
-  ZWContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

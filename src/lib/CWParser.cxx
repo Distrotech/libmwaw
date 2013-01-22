@@ -142,13 +142,8 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("CWParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  CWContentListener *listen = dynamic_cast<CWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("CWParserInternal::SubDocument::parse: bad listener\n"));
-    return;
-  }
   if (m_id == -1) { // a number used to send linked frame
-    listen->insertCharacter(' ');
+    listener->insertCharacter(' ');
     return;
   }
   if (m_id == 0) {
@@ -201,7 +196,7 @@ void CWParser::init()
   m_textParser.reset(new CWText(getInput(), *this, m_convertissor));
 }
 
-void CWParser::setListener(CWContentListenerPtr listen)
+void CWParser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_databaseParser->setListener(listen);
@@ -458,7 +453,7 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  CWContentListenerPtr listen(new CWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

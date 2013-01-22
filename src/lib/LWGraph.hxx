@@ -48,8 +48,8 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-typedef class MWAWContentListener LWContentListener;
-typedef shared_ptr<LWContentListener> LWContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 class MWAWEntry;
 
@@ -89,7 +89,7 @@ public:
 protected:
 
   //! sets the listener in this class and in the helper classes
-  void setListener(LWContentListenerPtr listen) {
+  void setListener(MWAWContentListenerPtr listen) {
     m_listener = listen;
   }
 
@@ -139,7 +139,7 @@ protected:
   MWAWInputStreamPtr m_input;
 
   //! the listener
-  LWContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

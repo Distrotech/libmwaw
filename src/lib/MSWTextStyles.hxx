@@ -44,15 +44,14 @@
 #include "libmwaw_internal.hxx"
 
 #include "MWAWEntry.hxx"
-#include "MWAWFont.hxx"
 #include "MWAWParagraph.hxx"
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-typedef class MWAWContentListener MSWContentListener;
-typedef shared_ptr<MSWContentListener> MSWContentListenerPtr;
-
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
+class MWAWFont;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
@@ -87,7 +86,7 @@ public:
 
 protected:
   //! sets the listener in this class and in the helper classes
-  void setListener(MSWContentListenerPtr listen) {
+  void setListener(MWAWContentListenerPtr listen) {
     m_listener = listen;
   }
 
@@ -176,7 +175,7 @@ protected:
   MWAWInputStreamPtr m_input;
 
   //! the listener
-  MSWContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

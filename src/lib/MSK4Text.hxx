@@ -52,8 +52,8 @@ struct State;
 }
 
 class MSK4Zone;
-typedef class MWAWContentListener MSKContentListener;
-typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 /** The class which parses text zones in a mac MS Works document v4
  *
@@ -89,7 +89,7 @@ public:
   void reset(MSK4Zone &parser, MWAWFontConverterPtr &convertissor);
 
   //! sets the listener
-  void setListener(MSKContentListenerPtr listen) {
+  void setListener(MWAWContentListenerPtr listen) {
     m_listener = listen;
   }
 
@@ -272,7 +272,7 @@ protected:
   MWAWEntry m_textPositions;
 
   //! the listener
-  MSKContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! the internal state
   mutable shared_ptr<MSK4TextInternal::State> m_state;

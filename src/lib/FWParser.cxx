@@ -320,11 +320,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
     return;
   }
-  FWContentListener *listen = dynamic_cast<FWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
   assert(m_parser);
 
   long pos = m_input->tell();
@@ -369,7 +364,7 @@ void FWParser::init()
   m_textParser.reset(new FWText(getInput(), *this, m_convertissor));
 }
 
-void FWParser::setListener(FWContentListenerPtr listen)
+void FWParser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_textParser->setListener(listen);
@@ -496,7 +491,7 @@ void FWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  FWContentListenerPtr listen(new FWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

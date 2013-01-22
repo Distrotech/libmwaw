@@ -48,8 +48,6 @@
 
 #include "MWAWParser.hxx"
 
-typedef class MWAWContentListener NSContentListener;
-typedef shared_ptr<NSContentListener> NSContentListenerPtr;
 class MWAWEntry;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
@@ -87,7 +85,7 @@ protected:
   void init();
 
   //! sets the listener in this class and in the helper classes
-  void setListener(NSContentListenerPtr listen);
+  void setListener(MWAWContentListenerPtr listen);
 
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
@@ -168,7 +166,7 @@ protected:
   // data
   //
   //! the listener
-  NSContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

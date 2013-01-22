@@ -690,12 +690,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("HMWGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  HMWContentListener *listen = dynamic_cast<HMWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("HMWGraphInternal::SubDocument::parse: bad listener\n"));
-    return;
-  }
-
   assert(m_graphParser);
 
   long pos = m_input->tell();

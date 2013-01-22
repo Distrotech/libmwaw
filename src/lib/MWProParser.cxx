@@ -269,11 +269,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
     return;
   }
-  MWProContentListener *listen = dynamic_cast<MWProContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
   assert(m_parser);
 
   long pos = m_input->tell();
@@ -325,7 +320,7 @@ void MWProParser::init()
   m_pageSpan.setMarginRight(0.1);
 }
 
-void MWProParser::setListener(MWProContentListenerPtr listen)
+void MWProParser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_structures->setListener(listen);
@@ -619,7 +614,7 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   //
-  MWProContentListenerPtr listen(new MWProContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

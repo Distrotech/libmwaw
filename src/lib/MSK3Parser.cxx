@@ -148,11 +148,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("MSK3Parser::SubDocument::parse: no listener\n"));
     return;
   }
-  MSKContentListener *listen = dynamic_cast<MSKContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("MSK3Parser::SubDocument::parse: bad listener\n"));
-    return;
-  }
   assert(m_parser);
 
   long pos = m_input->tell();
@@ -217,7 +212,7 @@ void MSK3Parser::init()
   m_textParser.reset(new MSK3Text(getInput(), *this, m_convertissor));
 }
 
-void MSK3Parser::setListener(MSKContentListenerPtr listen)
+void MSK3Parser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_graphParser->setListener(listen);
@@ -378,7 +373,7 @@ void MSK3Parser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MSKContentListenerPtr listen(new MSKContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

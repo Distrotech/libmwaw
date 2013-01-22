@@ -948,11 +948,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("MSKParser::SubDocument::parse: no listener\n"));
     return;
   }
-  MSKContentListener *listen = dynamic_cast<MSKContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
   assert(m_graphParser);
 
   long pos = m_input->tell();

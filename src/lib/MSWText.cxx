@@ -349,7 +349,7 @@ int MSWText::numPages() const
   return m_state->m_numPages;
 }
 
-void MSWText::setListener(MSWContentListenerPtr listen)
+void MSWText::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_stylesManager->setListener(listen);

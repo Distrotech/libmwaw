@@ -212,19 +212,13 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
     return;
   }
-  ZWContentListener *listen = dynamic_cast<ZWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
-
   assert(m_textParser);
 
   long pos = m_input->tell();
   if (m_type==ZWText::Link)
-    listen->insertUnicodeString("link to ");
+    listener->insertUnicodeString("link to ");
   else if (m_type==ZWText::Tag)
-    listen->insertUnicodeString("ref: ");
+    listener->insertUnicodeString("ref: ");
   m_textParser->sendText(m_id, m_pos);
   m_input->seek(pos, WPX_SEEK_SET);
 }

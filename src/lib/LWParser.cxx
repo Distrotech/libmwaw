@@ -108,12 +108,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("LWParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  LWContentListener *listen = dynamic_cast<LWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("LWParserInternal::SubDocument::parse: bad listener\n"));
-    return;
-  }
-
   assert(m_parser);
 
   reinterpret_cast<LWParser *>(m_parser)->sendHeaderFooter(m_isHeader);
@@ -154,7 +148,7 @@ void LWParser::init()
   m_textParser.reset(new LWText(getInput(), *this, m_convertissor));
 }
 
-void LWParser::setListener(LWContentListenerPtr listen)
+void LWParser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_textParser->setListener(listen);
@@ -316,7 +310,7 @@ void LWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
-  LWContentListenerPtr listen(new LWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

@@ -45,7 +45,6 @@
 #include "MWAWPosition.hxx"
 
 #include "MWAWEntry.hxx"
-#include "MWAWContentListener.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MWAWDebug.hxx"
@@ -53,8 +52,8 @@
 
 #include "MWAWParser.hxx"
 
-typedef class MWAWContentListener MSKContentListener;
-typedef shared_ptr<MSKContentListener> MSKContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
@@ -128,7 +127,7 @@ protected:
   void reset(MSKParser &parser, MWAWFontConverterPtr &convertissor);
 
   //! sets the listener in this class and in the helper classes
-  void setListener(MSKContentListenerPtr listen) {
+  void setListener(MWAWContentListenerPtr listen) {
     m_listener = listen;
   }
 
@@ -207,7 +206,7 @@ protected:
   MWAWInputStreamPtr m_input;
 
   //! the listener
-  MSKContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

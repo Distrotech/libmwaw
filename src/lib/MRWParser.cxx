@@ -194,12 +194,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
     return;
   }
-  MRWContentListener *listen = dynamic_cast<MRWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
-
   assert(m_parser);
   long pos = m_input->tell();
   reinterpret_cast<MRWParser *>(m_parser)->sendText(m_id);
@@ -239,7 +233,7 @@ void MRWParser::init()
   m_textParser.reset(new MRWText(getInput(), *this, m_convertissor));
 }
 
-void MRWParser::setListener(MRWContentListenerPtr listen)
+void MRWParser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_graphParser->setListener(listen);
@@ -402,7 +396,7 @@ void MRWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MRWContentListenerPtr listen(new MRWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

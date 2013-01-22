@@ -257,11 +257,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
     return;
   }
-  MDWContentListener *listen = dynamic_cast<MDWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
   if (m_id != 1 && m_id != 2) {
     MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
     return;
@@ -303,7 +298,7 @@ void MDWParser::init()
   m_pageSpan.setMarginRight(0.1);
 }
 
-void MDWParser::setListener(MDWContentListenerPtr listen)
+void MDWParser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
 }
@@ -459,7 +454,7 @@ void MDWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MDWContentListenerPtr listen(new MDWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

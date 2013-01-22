@@ -51,8 +51,7 @@
 #include "CWStruct.hxx"
 
 class MWAWContentListener;
-typedef class MWAWContentListener CWContentListener;
-typedef shared_ptr<CWContentListener> CWContentListenerPtr;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 class MWAWEntry;
 
@@ -120,7 +119,7 @@ public:
   bool getSurfaceColor(CWGraphInternal::Style const style, MWAWColor &col) const;
 protected:
   //! sets the listener in this class and in the helper classes
-  void setListener(CWContentListenerPtr listen) {
+  void setListener(MWAWContentListenerPtr listen) {
     m_listener = listen;
   }
 
@@ -216,7 +215,7 @@ protected:
   MWAWInputStreamPtr m_input;
 
   //! the listener
-  CWContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

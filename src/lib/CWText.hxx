@@ -45,7 +45,6 @@
 #include "libmwaw_internal.hxx"
 
 #include "MWAWEntry.hxx"
-#include "MWAWContentListener.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MWAWDebug.hxx"
@@ -53,8 +52,8 @@
 
 #include "MWAWParser.hxx"
 
-typedef class MWAWContentListener CWContentListener;
-typedef shared_ptr<CWContentListener> CWContentListenerPtr;
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 class MWAWFont;
 class MWAWFontConverter;
@@ -103,7 +102,7 @@ public:
 protected:
 
   //! sets the listener in this class and in the helper classes
-  void setListener(CWContentListenerPtr listen) {
+  void setListener(MWAWContentListenerPtr listen) {
     m_listener = listen;
   }
 
@@ -180,7 +179,7 @@ protected:
   MWAWInputStreamPtr m_input;
 
   //! the listener
-  CWContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

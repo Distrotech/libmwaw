@@ -296,12 +296,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("MRWGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  MRWContentListener *listen = dynamic_cast<MRWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("MRWGraphInternal::SubDocument::parse: bad listener\n"));
-    return;
-  }
-
   assert(m_graphParser);
 
   long pos = m_input->tell();

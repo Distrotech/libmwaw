@@ -109,12 +109,6 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("ZWParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  ZWContentListener *listen = dynamic_cast<ZWContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("ZWParserInternal::SubDocument::parse: bad listener\n"));
-    return;
-  }
-
   assert(m_parser);
 
   reinterpret_cast<ZWParser *>(m_parser)->sendHeaderFooter(m_isHeader);
@@ -154,7 +148,7 @@ void ZWParser::init()
   m_textParser.reset(new ZWText(getInput(), *this, m_convertissor));
 }
 
-void ZWParser::setListener(ZWContentListenerPtr listen)
+void ZWParser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
   m_textParser->setListener(listen);
@@ -276,7 +270,7 @@ void ZWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
-  ZWContentListenerPtr listen(new ZWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

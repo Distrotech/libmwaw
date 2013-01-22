@@ -47,8 +47,7 @@ class MWAWInputStream;
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 
 class MWAWContentListener;
-typedef class MWAWContentListener FWContentListener;
-typedef shared_ptr<FWContentListener> FWContentListenerPtr;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 class MWAWFont;
 class MWAWFontConverter;
@@ -93,7 +92,7 @@ public:
 protected:
 
   //! sets the listener in this class and in the helper classes
-  void setListener(FWContentListenerPtr listen) {
+  void setListener(MWAWContentListenerPtr listen) {
     m_listener = listen;
   }
 
@@ -169,7 +168,7 @@ protected:
   MWAWInputStreamPtr m_input;
 
   //! the listener
-  FWContentListenerPtr m_listener;
+  MWAWContentListenerPtr m_listener;
 
   //! a convertissor tools
   MWAWFontConverterPtr m_convertissor;

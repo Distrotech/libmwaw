@@ -242,16 +242,10 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
     return;
   }
-  MSW1ContentListener *listen = dynamic_cast<MSW1ContentListener *>(listener.get());
-  if (!listen) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
-    return;
-  }
-
   assert(m_parser);
 
   if (!m_zone.valid()) {
-    listen->insertCharacter(' ');
+    listener->insertCharacter(' ');
     return;
   }
   long pos = m_input->tell();
@@ -291,7 +285,7 @@ void MSW1Parser::init()
   m_pageSpan.setMarginRight(0.1);
 }
 
-void MSW1Parser::setListener(MSW1ContentListenerPtr listen)
+void MSW1Parser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
 }
@@ -445,7 +439,7 @@ void MSW1Parser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   //
-  MSW1ContentListenerPtr listen(new MSW1ContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
