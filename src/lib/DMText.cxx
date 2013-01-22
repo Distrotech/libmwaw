@@ -680,7 +680,7 @@ bool DMText::readStyles(MWAWEntry const &entry)
     if (flag&0xe0) f << "#flags=" << std::hex << (flag&0xe0) << std::dec << ",";
     flag=(int) input->readULong(1);
     if (flag) f << "#flags1=" << std::hex << flag << std::dec << ",";
-    font.setSize((int)input->readULong(2));
+    font.setSize((float)input->readULong(2));
     font.setFlags(flags);
     unsigned char col[3];
     for (int j=0; j < 3; j++)
@@ -989,7 +989,7 @@ bool DMText::readFooter(MWAWEntry const &entry)
     }
   }
   footer.m_font.setId((int) input->readULong(2));
-  footer.m_font.setSize((int) input->readULong(2));
+  footer.m_font.setSize((float) input->readULong(2));
 
   footer.m_extra=f.str();
 

@@ -767,9 +767,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
         break;
       case 18: {
         val = dt.value(0);
-        font.m_font.setSize(int(val>>16));
-        if (val & 0xFFFF)
-          f << "#fSz[high]=" << (val & 0xFFFF) << ",";
+        font.m_font.setSize(float(val)/65536.f);
         break;
       }
       case 23: { // f23[high]=0|1

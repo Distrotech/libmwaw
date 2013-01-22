@@ -1224,7 +1224,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     default:
       MWAW_DEBUG_MSG(("MWParser::readInformations: unknown size=7\n"));
     }
-    if (fontSize) info.m_font.setSize(fontSize);
+    if (fontSize) info.m_font.setSize(float(fontSize));
     if ((paragFormat >> 11)&0x1F) info.m_font.setId((paragFormat >> 11)&0x1F);
 
     informations.push_back(info);
@@ -1329,8 +1329,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     int tPos = (int) input->readULong(2);
 
     MWAWFont font;
-    int fSz = (int) input->readULong(1);
-    font.setSize(fSz);
+    font.setSize((float)input->readULong(1));
     int flag = (int) input->readULong(1);
     uint32_t flags = 0;
     // bit 1 = plain

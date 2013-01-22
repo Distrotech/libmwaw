@@ -793,7 +793,7 @@ bool NSText::readFonts(MWAWEntry const &entry)
         font.m_font.setId(int(val));
       val = (long)input->readULong(2);
       if (val != 0xFF00)
-        font.m_font.setSize(int(val));
+        font.m_font.setSize(float(val));
     }
 
     uint32_t flags=0;
@@ -866,8 +866,8 @@ bool NSText::readFonts(MWAWEntry const &entry)
         val = (int) input->readULong(2);
         if (val) f << "g" << j << "=" << val << ",";
       }
-      int expand=int(input->readLong(4))>>16;
-      if (expand)
+      float expand=float(input->readLong(4))/65536.f;
+      if (expand < 0 || expand > 0)
         font.m_font.setDeltaLetterSpacing(expand);
       // 0, -1 or a small number related to the variable id : probably unknowncst+vId
       font.m_variableId = (int)input->readLong(4);

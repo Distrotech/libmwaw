@@ -2205,7 +2205,7 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
     if (bgColors)
       f2 << std::dec << "bgColorId(?)=" << bgColors << ", "; // indexed
 
-    cell.m_font=MWAWFont(m_convertissor->getId(fName), fSize);
+    cell.m_font=MWAWFont(m_convertissor->getId(fName), float(fSize));
     uint32_t flags = 0;
     if (fFlags & 0x1) flags |= MWAWFont::boldBit;
     if (fFlags & 0x2) flags |= MWAWFont::italicBit;
@@ -2586,7 +2586,7 @@ bool MSKGraph::readFont(MSKGraphInternal::Font &font)
 
   int val = (int) m_input->readULong(1);
   if (val) f << "#flags2=" << val << ",";
-  font.m_font.setSize((int) m_input->readULong(2));
+  font.m_font.setSize((float) m_input->readULong(2));
 
   unsigned char color[3];
   for (int i = 0; i < 3; i++) color[i] = (unsigned char) (m_input->readULong(2)>>8);

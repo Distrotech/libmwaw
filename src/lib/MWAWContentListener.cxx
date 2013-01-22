@@ -49,19 +49,168 @@
 
 #include "MWAWContentListener.hxx"
 
-MWAWDocumentParsingState::MWAWDocumentParsingState(std::vector<MWAWPageSpan> const &pageList) :
-  m_pageList(pageList),
-  m_metaData(),
-  m_footNoteNumber(0), m_endNoteNumber(0), m_newListId(0),
-  m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments()
+//! Internal and low level namespace to define the states of MWAWContentListener
+namespace MWAWContentListenerInternal
 {
-}
+//! a class to store the document state of a MWAWContentListener
+struct DocumentState {
+  //! constructor
+  DocumentState(std::vector<MWAWPageSpan> const &pageList) :
+    m_pageList(pageList), m_metaData(), m_footNoteNumber(0), m_endNoteNumber(0), m_newListId(0),
+    m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments() {
+  }
+  //! destructor
+  ~DocumentState() {
+  }
 
-MWAWDocumentParsingState::~MWAWDocumentParsingState()
-{
-}
+  //! the pages definition
+  std::vector<MWAWPageSpan> m_pageList;
+  //! the document meta data
+  WPXPropertyList m_metaData;
 
-MWAWContentParsingState::MWAWContentParsingState() :
+  int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
+  int m_newListId; /** a new free id */
+
+  bool m_isDocumentStarted /** a flag to know if the document is open */, m_isHeaderFooterStarted /** a flag to know if the header footer is started */;
+  std::vector<MWAWSubDocumentPtr> m_subDocuments; /** list of document actually open */
+
+private:
+  DocumentState(const DocumentState &);
+  DocumentState &operator=(const DocumentState &);
+};
+
+/** the state of a MWAWContentListener */
+struct State {
+  //! constructor
+  State();
+  //! destructor
+  ~State() { }
+
+  //! functions used to know if the paragraph has some borders
+  bool hasParagraphBorders() const {
+    for (size_t i = 0; i < m_paragraphBorders.size(); i++) {
+      if (m_paragraphBorders[i].m_style != MWAWBorder::None)
+        return true;
+    }
+    return false;
+  }
+  //! functions used to know if the paragraph has different borders
+  bool hasParagraphDifferentBorders() const {
+    if (!hasParagraphBorders()) return false;
+    if (m_paragraphBorders.size() < 4) return true;
+    for (size_t i = 1; i < m_paragraphBorders.size(); i++) {
+      if (m_paragraphBorders[i] != m_paragraphBorders[0])
+        return true;
+    }
+    return false;
+  }
+
+  //! a buffer to stored the text
+  WPXString m_textBuffer;
+  //! the number of tabs to add
+  int m_numDeferredTabs;
+
+  //! the font
+  MWAWFont m_font;
+  //! the text language
+  std::string m_textLanguage;
+
+  //! true if pararagraph add a column break
+  bool m_isParagraphColumnBreak;
+  //! true if pararagraph add a page break
+  bool m_isParagraphPageBreak;
+  //! the paragraph justification ( left, center, ... )
+  libmwaw::Justification m_paragraphJustification;
+  //! the paragraph interline value
+  double m_paragraphLineSpacing;
+  //! the paragraph interline unit ( point, percent, ...)
+  WPXUnit m_paragraphLineSpacingUnit;
+  //! the paragraph interline type (fixed, at least )
+  libmwaw::LineSpacing m_paragraphLineSpacingType;
+  //! the paragraph background color
+  MWAWColor m_paragraphBackgroundColor;
+  //! the paragraph borders
+  std::vector<MWAWBorder> m_paragraphBorders;
+
+  shared_ptr<MWAWList> m_list;
+  uint8_t m_currentListLevel;
+
+  bool m_isPageSpanOpened;
+  bool m_isSectionOpened;
+  bool m_isFrameOpened;
+  bool m_isPageSpanBreakDeferred;
+  bool m_isHeaderFooterWithoutParagraph;
+
+  bool m_isSpanOpened;
+  bool m_isParagraphOpened;
+  bool m_isListElementOpened;
+
+  bool m_firstParagraphInPageSpan;
+
+  std::vector<unsigned int> m_numRowsToSkip;
+  bool m_isTableOpened;
+  bool m_isTableRowOpened;
+  bool m_isTableColumnOpened;
+  bool m_isTableCellOpened;
+
+  unsigned m_currentPage;
+  int m_numPagesRemainingInSpan;
+  int m_currentPageNumber;
+
+  bool m_sectionAttributesChanged;
+  int m_numColumns;
+  std::vector < MWAWColumnDefinition > m_textColumns;
+  bool m_isTextColumnWithoutParagraph;
+
+  double m_pageFormLength;
+  double m_pageFormWidth;
+  bool m_pageFormOrientationIsPortrait;
+
+  double m_pageMarginLeft;
+  double m_pageMarginRight;
+  double m_pageMarginTop;
+  double m_pageMarginBottom;
+
+  double m_sectionMarginLeft;  // In multicolumn sections, the above two will be rather interpreted
+  double m_sectionMarginRight; // as section margin change
+  double m_sectionMarginTop;
+  double m_sectionMarginBottom;
+  double m_paragraphMarginLeft;  // resulting paragraph margin that is one of the paragraph
+  double m_paragraphMarginRight; // properties
+  double m_paragraphMarginTop;
+  WPXUnit m_paragraphMarginTopUnit;
+  double m_paragraphMarginBottom;
+  WPXUnit m_paragraphMarginBottomUnit;
+  double m_leftMarginByPageMarginChange;  // part of the margin due to the PAGE margin change
+  double m_rightMarginByPageMarginChange; // inside a page that already has content.
+  double m_leftMarginByParagraphMarginChange;  // part of the margin due to the PARAGRAPH
+  double m_rightMarginByParagraphMarginChange; // margin change (in WP6)
+  double m_leftMarginByTabs;  // part of the margin due to the LEFT or LEFT/RIGHT Indent; the
+  double m_rightMarginByTabs; // only part of the margin that is reset at the end of a paragraph
+
+  double m_paragraphTextIndent; // resulting first line indent that is one of the paragraph properties
+  double m_textIndentByParagraphIndentChange; // part of the indent due to the PARAGRAPH indent (WP6???)
+  double m_textIndentByTabs; // part of the indent due to the "Back Tab" or "Left Tab"
+
+  double m_listReferencePosition; // position from the left page margin of the list number/bullet
+  double m_listBeginPosition; // position from the left page margin of the beginning of the list
+  std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
+
+  uint16_t m_alignmentCharacter;
+  std::vector<MWAWTabStop> m_tabStops;
+  bool m_isTabPositionRelative;
+
+  bool m_inSubDocument;
+
+  bool m_isNote;
+  libmwaw::SubDocumentType m_subDocumentType;
+
+private:
+  State(const State &);
+  State &operator=(const State &);
+};
+
+State::State() :
   m_textBuffer(""), m_numDeferredTabs(0),
 
   m_font(20,12), m_textLanguage("UNSET"), // default time 12
@@ -135,33 +284,10 @@ MWAWContentParsingState::MWAWContentParsingState() :
   m_subDocumentType(libmwaw::DOC_NONE)
 {
 }
-
-MWAWContentParsingState::~MWAWContentParsingState()
-{
-}
-
-bool MWAWContentParsingState::hasParagraphBorders() const
-{
-  for (size_t i = 0; i < m_paragraphBorders.size(); i++) {
-    if (m_paragraphBorders[i].m_style != MWAWBorder::None)
-      return true;
-  }
-  return false;
-}
-
-bool MWAWContentParsingState::hasParagraphDifferentBorders() const
-{
-  if (!hasParagraphBorders()) return false;
-  if (m_paragraphBorders.size() < 4) return true;
-  for (size_t i = 1; i < m_paragraphBorders.size(); i++) {
-    if (m_paragraphBorders[i] != m_paragraphBorders[0])
-      return true;
-  }
-  return false;
 }
 
 MWAWContentListener::MWAWContentListener(shared_ptr<MWAWFontConverter> fontConverter, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface) :
-  m_ds(new MWAWDocumentParsingState(pageList)), m_ps(new MWAWContentParsingState), m_psStack(),
+  m_ds(new MWAWContentListenerInternal::DocumentState(pageList)), m_ps(new MWAWContentListenerInternal::State), m_psStack(),
   m_fontConverter(fontConverter), m_documentInterface(documentInterface)
 {
   _updatePageSpanDependent(true);
@@ -1935,11 +2061,11 @@ void MWAWContentListener::_addLanguage(std::string const &lang, WPXPropertyList 
 }
 
 // ---------- state stack ------------------
-shared_ptr<MWAWContentParsingState> MWAWContentListener::_pushParsingState()
+shared_ptr<MWAWContentListenerInternal::State> MWAWContentListener::_pushParsingState()
 {
-  shared_ptr<MWAWContentParsingState> actual = m_ps;
+  shared_ptr<MWAWContentListenerInternal::State> actual = m_ps;
   m_psStack.push_back(actual);
-  m_ps.reset(new MWAWContentParsingState);
+  m_ps.reset(new MWAWContentListenerInternal::State);
 
   // BEGIN: copy page properties into the new parsing state
   m_ps->m_pageFormLength = actual->m_pageFormLength;

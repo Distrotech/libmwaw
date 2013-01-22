@@ -588,12 +588,13 @@ bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)
   font.m_font.setId((int) input->readLong(2));
   val = (int) input->readLong(2);
   if (val) f << "#f1=" << val << ",";
-  font.m_font.setSize((int) input->readLong(2));
-  for (int i = 0; i < 5; i++) { // 0,0,0,1,0
-    val = (int) input->readLong(2);
-    if ((i==3 && val!=1) || (i!=3 && val))
-      f << "#f" << i+2 << "=" << val << ",";
-  }
+  font.m_font.setSize(float(input->readLong(4))/65536.f);
+  float expand = float(input->readLong(4))/65536.f;
+  if (expand < 0 || expand > 0)
+    font.m_font.setDeltaLetterSpacing(expand*font.m_font.size());
+  float xScale = float(input->readLong(4))/65536.f;
+  if (xScale < 1.0 || xScale > 1.0)
+    font.m_font.setTexteWidthScaling(xScale);
 
   int flag =(int) input->readULong(2);
   uint32_t flags=0;
@@ -622,26 +623,41 @@ bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)
   if (flag&0x2) flags |= MWAWFont::italicBit;
   if (flag&0x4) flags |= MWAWFont::outlineBit;
   if (flag&0x8) flags |= MWAWFont::shadowBit;
-  if (flag&0x10) f << "#reverse,"; // checkme reverse writing?
+  if (flag&0x10) flags |= MWAWFont::reverseVideoBit;
   if (flag&0x20) font.m_font.set(MWAWFont::Script::super100());
   if (flag&0x40) font.m_font.set(MWAWFont::Script::sub100());
-  if (flag&0x80) font.m_font.set(MWAWFont::Script::super());
-  if (flag&0x100) // checkme
+  if (flag&0x80) {
+    if (flag&0x20)
+      font.m_font.set(MWAWFont::Script(48,WPX_PERCENT,58));
+    else if (flag&0x40)
+      font.m_font.set(MWAWFont::Script(16,WPX_PERCENT,58));
+    else
+      font.m_font.set(MWAWFont::Script::super());
+  }
+  if (flag&0x100) {
     font.m_font.setOverlineStyle(MWAWFont::Line::Dot);
-  if (flag&0x200) f << "border[rectangle],";
-  if (flag&0x400) f << "border[rounded],";
-  if (flag&0x800) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
-  if (flag&0x1000) {
+    font.m_font.setOverlineWidth(2.0);
+  }
+  if (flag&0x200) flags |= MWAWFont::boxedBit;
+  if (flag&0x400) flags |= MWAWFont::boxedRoundedBit;
+  if (flag&0x800) {
+    font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
+    font.m_font.setUnderlineWidth(0.5);
+  }
+  if (flag&0x1000) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
+  if (flag&0x2000) {
     font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     font.m_font.setUnderlineWidth(2.0);
   }
-  if (flag&0x2000) {
+  if (flag&0x4000) {
     font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     font.m_font.setUnderlineWidth(3.0);
   }
-  if (flag&0xC000)
-    f << "#flag1=" << std::hex << (flag&0xC000) << std::dec << ",";
-  /* 0: black, 0x16:red, 0x72:green, 0xc1: blue*/
+  if (flag&0x8000) {
+    font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
+    font.m_font.setStrikeOutType(MWAWFont::Line::Double);
+    font.m_font.setUnderlineWidth(0.5);
+  }
   int color = (int) input->readLong(2);
   MWAWColor col;
   if (color && m_mainParser->getColor(color, 1, col))

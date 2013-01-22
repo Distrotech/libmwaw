@@ -80,7 +80,7 @@ struct Font {
   //! the font
   Variable<MWAWFont> m_font;
   //! a second size
-  Variable<int> m_size;
+  Variable<float> m_size;
   //! a unknown value
   Variable<int> m_value;
   //! a list of flags

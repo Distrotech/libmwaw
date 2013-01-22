@@ -1114,7 +1114,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   input.seek(pos, WPX_SEEK_SET);
 
   font.m_font.setId((int) input.readULong(2));
-  font.m_font.setSize((int) input.readULong(vers <= 2 ? 1 : 2));
+  font.m_font.setSize((float) input.readULong(vers <= 2 ? 1 : 2));
   int flag = (int) input.readULong(1);
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAWFont::boldBit;

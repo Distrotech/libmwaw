@@ -620,7 +620,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0x91: // expand
         f << "[" << onString << (val==0x90?"condensed":"expand") << "]";
         font.m_font.setDeltaLetterSpacing
-        ((font.m_state[0x10]?-1:0)+(font.m_state[0x11]?1:0));
+        (float((font.m_state[0x10]?-1:0)+(font.m_state[0x11]?1:0)));
         fontSet=false;
         break;
       case 0x85: // normal underline
@@ -701,7 +701,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
           f << "[##fSz]";
           break;
         }
-        font.m_font.setSize((int)input->readULong(1));
+        font.m_font.setSize((float)input->readULong(1));
         f << "[fSz=" << font.m_font.size() << "]";
         fontSet=false;
         break;
@@ -1065,7 +1065,7 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
   }
   if (type & 0x10) {
     int fId = (int)input->readLong(2);
-    int fSz = (int)input->readULong(2);
+    float fSz = (float)input->readULong(2);
     lHeader.m_fontSet = true;
     lHeader.m_font.setId(fId);
     lHeader.m_font.setSize(fSz);

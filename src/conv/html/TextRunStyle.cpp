@@ -349,6 +349,27 @@ std::string SpanStyleManager::getContent(WPXPropertyList const &pList) const
 	}
 	if (pList["style:text-outline"])
 		s << " font-effect: outline;";
+
+	if (pList["style:text-scale"])
+	{
+		if (pList["style:text-scale"]->getDouble() < 0.2)
+			s << " font-stretch: ultra-condensed;";
+		else if (pList["style:text-scale"]->getDouble() < 0.4)
+			s << " font-stretch: extra-condensed;";
+		else if (pList["style:text-scale"]->getDouble() < 0.6)
+			s << " font-stretch: condensed;";
+		else if (pList["style:text-scale"]->getDouble() < 0.8)
+			s << " font-stretch: semi-condensed;";
+		else if (pList["style:text-scale"]->getDouble() > 2.0)
+			s << " font-stretch: ultra-expanded;";
+		else if (pList["style:text-scale"]->getDouble() > 1.6)
+			s << " font-stretch: extra-expanded;";
+		else if (pList["style:text-scale"]->getDouble() > 1.4)
+			s << " font-stretch: expanded;";
+		else if (pList["style:text-scale"]->getDouble() > 1.2)
+			s << " font-stretch: semi-expanded;";
+
+	}
 	s << "\n}";
 
 	return s.str();

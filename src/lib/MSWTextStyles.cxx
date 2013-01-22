@@ -147,8 +147,8 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
   } else if (what & 0x10) {
   }
   if (sz >= 5) {
-    int fSz = (int) m_input->readULong(1)/2;
-    if (fSz) {
+    float fSz = (float) m_input->readULong(1)/2.0f;
+    if (fSz>0) {
       if (mainZone && (what & 0x48)==0) f << "#fSz,";
       font.m_font->setSize(fSz);
     }
@@ -240,7 +240,7 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
       break;
     case 0: // line height ?
       if (sz < 10) break;
-      font.m_size=(int) m_input->readULong(1)/2;
+      font.m_size=(float) m_input->readULong(1)/2.f;
       ok = true;
       break;
     default:
@@ -283,7 +283,8 @@ bool MSWTextStyles::getFont(ZoneType type, int id, MSWStruct::Font &font)
     MWAW_DEBUG_MSG(("MSWTextStyles::getFont: can not find font with %d[type=%d]\n", id, int(type)));
     return false;
   }
-  int fId = font.m_font->id(), fSz = font.m_font->size();
+  int fId = font.m_font->id();
+  float fSz = font.m_font->size();
   font = *fFont;
   if (font.m_font->id() < 0)
     font.m_font->setId(fId);
@@ -424,7 +425,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       val = (int) m_input->readULong(1);
       if (wh == 0x4a) {
         if (val > 4 && val < 40)
-          para.m_modFont->m_font->setSize(val/2);
+          para.m_modFont->m_font->setSize(float(val)/2.0f);
         else
           f << "#fSize=" << val << ",";
         break;

@@ -112,7 +112,7 @@ std::ostream &operator<<(std::ostream &o, PLC const &plc)
 //! Internal: struct used to store the font of a LWText
 struct Font {
   //! constructor
-  Font() : m_font(), m_height(0), m_pictId(0), m_extra("") {
+  Font() : m_font(), m_height(0), m_pictId(0) {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Font const &font);
@@ -130,8 +130,8 @@ struct Font {
     MWAWColor backColor;
     fExtra.m_font.getBackgroundColor(backColor);
     m_font.setBackgroundColor(backColor);
+    m_font.m_extra += fExtra.m_font.m_extra;
     m_pictId = fExtra.m_pictId;
-    m_extra += fExtra.m_extra;
   }
 
   //! the font
@@ -140,8 +140,6 @@ struct Font {
   int m_height;
   //! the pict id (if set)
   int m_pictId;
-  //! extra data
-  std::string m_extra;
 };
 
 std::ostream &operator<<(std::ostream &o, Font const &font)
@@ -150,9 +148,23 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
     o << "h=" << font.m_height << ",";
   if (font.m_pictId > 0)
     o << "pictId=" << font.m_pictId << ",";
-  o << font.m_extra;
   return o;
 }
+
+/** Internal: class to store the paragraph properties */
+struct Paragraph : public MWAWParagraph {
+  //! Constructor
+  Paragraph() : MWAWParagraph(), m_deltaSpacing(0) {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
+    o << reinterpret_cast<MWAWParagraph const &>(ind);
+    if (ind.m_deltaSpacing<0 || ind.m_deltaSpacing>0) o << "deltaSpacing=" << ind.m_deltaSpacing << ",";
+    return o;
+  }
+  //! the paragraph delta spacing
+  float m_deltaSpacing;
+};
 
 ////////////////////////////////////////
 //! Internal: the header/footer zone of a LWText
@@ -221,7 +233,7 @@ struct State {
   //! the auxiliar list of fonts
   std::vector<Font> m_auxiFontsList;
   //! the list of paragraph
-  std::vector<MWAWParagraph> m_paragraphsList;
+  std::vector<Paragraph> m_paragraphsList;
   std::multimap<long, PLC> m_plcMap /** the plc map */;
 
   HFZone m_header /** header */, m_footer /** footer */;
@@ -375,6 +387,7 @@ bool LWText::sendMainText()
     m_listener->openSection(width, WPX_POINT);
   }
 
+  float deltaSpacing=0;
   while (1) {
     long actPos = m_input->tell();
     bool done = m_input->atEOS();
@@ -411,13 +424,21 @@ bool LWText::sendMainText()
         auxiFont = m_state->m_auxiFontsList[size_t(plc.m_id)];
         fontChanged = true;
         break;
-      case LWTextInternal::P_Ruler:
+      case LWTextInternal::P_Ruler: {
+        float newDeltaSpacing = 0;
         if (plc.m_id < 0 || plc.m_id >= int(m_state->m_paragraphsList.size())) {
           MWAW_DEBUG_MSG(("LWText::sendMainText: can not find paragraph %d\n", plc.m_id));
-          break;
+        } else {
+          LWTextInternal::Paragraph const &para=m_state->m_paragraphsList[size_t(plc.m_id)];
+          newDeltaSpacing = para.m_deltaSpacing;
+          setProperty(para);
         }
-        setProperty(m_state->m_paragraphsList[size_t(plc.m_id)]);
+        if (deltaSpacing < newDeltaSpacing || deltaSpacing > newDeltaSpacing) {
+          deltaSpacing=newDeltaSpacing;
+          fontChanged = true;
+        }
         break;
+      }
       case LWTextInternal::P_Ruby:
       case LWTextInternal::P_StyleU:
       case LWTextInternal::P_StyleV:
@@ -430,6 +451,8 @@ bool LWText::sendMainText()
     if (fontChanged) {
       LWTextInternal::Font final(font);
       final.merge(auxiFont);
+      if (deltaSpacing<0||deltaSpacing>0)
+        final.m_font.setDeltaLetterSpacing(deltaSpacing+final.m_font.deltaLetterSpacing());
       actFont = final.m_font;
       setProperty(actFont);
       if (final.m_pictId>0) {
@@ -513,7 +536,7 @@ bool LWText::readFonts(MWAWEntry const &entry)
     f.str("");
     long cPos = input->readLong(4);
     font.m_height = (int) input->readLong(2);
-    int sz = (int) input->readLong(2);
+    float sz = (float) input->readLong(2);
     font.m_font.setId((int) input->readULong(2));
     uint32_t flags=0;
     int flag=(int) input->readULong(1);
@@ -522,21 +545,21 @@ bool LWText::readFonts(MWAWEntry const &entry)
     if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
-    if (flag&0x20) f << "expand,";
-    if (flag&0x40) f << "condense,";
+    if (flag&0x20) font.m_font.setDeltaLetterSpacing(-1);
+    if (flag&0x40) font.m_font.setDeltaLetterSpacing(1);
     if (flag&0x80) f << "#fl80,";
     val = (int) input->readULong(1); // always 0?
     if (val) f << "#f0=" << val << ",";
     font.m_font.setFlags(flags);
-    font.m_font.setSize((int) input->readLong(2));
-    if (sz!=font.m_font.size())
+    font.m_font.setSize((float) input->readLong(2));
+    if (sz < font.m_font.size() || sz > font.m_font.size())
       f << "#sz=" << sz << ",";
     unsigned char col[3];
     for (int j=0; j < 3; j++)
       col[j] = (unsigned char) (input->readULong(2)>>8);
     if (col[0] || col[1] || col[2])
       font.m_font.setColor(MWAWColor(col[0],col[1],col[2]));
-    font.m_extra=f.str();
+    font.m_font.m_extra=f.str();
     f.str("");
     f << "Fonts-" << i << ":cPos=" << std::hex << cPos << std::dec << ","
       << font.m_font.getDebugString(m_convertissor) << font;
@@ -610,7 +633,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
       break;
     case 5:
       font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
-      f << "underline[dot2],";
+      font.m_font.setUnderlineWidth(2.0);
       break;
     default:
       f << "#underline=" << ((flag>>3)&7) << ",";
@@ -635,7 +658,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
       break;
     case 5:
       font.m_font.setStrikeOutStyle(MWAWFont::Line::Dot);
-      f << "strike[dot2],";
+      font.m_font.setStrikeOutWidth(2.0);
       break;
     default:
       f << "#strike=" << ((flag>>6)&7) << ",";
@@ -660,7 +683,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
       break;
     case 5:
       font.m_font.setOverlineStyle(MWAWFont::Line::Dot);
-      f << "over[dot2],";
+      font.m_font.setOverlineWidth(2.0);
       break;
     default:
       f << "#over=" << ((flag>>9)&7) << ",";
@@ -668,28 +691,30 @@ bool LWText::readFont2(MWAWEntry const &entry)
     }
     if (flag >> 12) {
       MWAWColor col=0;
-      if (getColor(int(flag >> 12), col))
-        f << "color[line]=" << col << ",";
-      else
+      if (getColor(int(flag >> 12), col)) {
+        font.m_font.setOverlineColor(col);
+        font.m_font.setStrikeOutColor(col);
+        font.m_font.setUnderlineColor(col);
+      } else
         f << "#colorId[line]=" << (flag >> 12) << ",";
     }
     flag &= 0x0004;
     if (flag) f << "flags=#" << std::hex << flag << std::dec << ",";
     /* fl0=0|2|b|40|42|..|a0 */
     val = (long) input->readULong(1);
-    MWAWColor backColor(MWAWColor::white());
+    MWAWColor backColor(MWAWColor::black());
     if ((val & 0xf0) && !getColor(int(val>>4), backColor))
       f << "#backColorId=" << (val>>4) << ",";
     int percent = (val & 0xf);
     if (percent >= 0 && percent <= 10) {
       float percentVal = 0.1f*float(percent);
-      backColor =MWAWColor::barycenter(percentVal,backColor,1.f-percentVal,MWAWColor(0xFFFFFF));
-    } else if (percent == 11)
-      f << "border,";
+      backColor =MWAWColor::barycenter(percentVal,backColor,1.f-percentVal,MWAWColor::white());
+      font.m_font.setBackgroundColor(backColor);
+    } else if (percent == 11) // fixme: backColor is the border color
+      flags |= MWAWFont::boxedBit;
     else {
       MWAW_DEBUG_MSG(("LWText::readFont2: find unknown percent id=%d\n", percent));
     }
-    font.m_font.setBackgroundColor(backColor);
     // 0: 0%, .. 10:100%, 11:border
     if (val & 0xf)
       f << "backPatternId=" << (val&0xf) << ",";
@@ -698,10 +723,10 @@ bool LWText::readFont2(MWAWEntry const &entry)
     case 0:
       break;
     case 1:
-      font.m_font.set(MWAWFont::Script::super100());
+      font.m_font.set(MWAWFont::Script(33));
       break;
     case 2:
-      font.m_font.set(MWAWFont::Script::sub100());
+      font.m_font.set(MWAWFont::Script(-33));
       break;
     case 5:
       font.m_font.set(MWAWFont::Script::super());
@@ -717,7 +742,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
       f << "#pos2=" << std::hex << (flag&0xF0) << std::dec << ",";
     font.m_pictId = (int) input->readULong(2);
     font.m_font.setFlags(flags);
-    font.m_extra = f.str();
+    font.m_font.m_extra = f.str();
     plc.m_id = i;
     plc.m_extra = f.str();
     m_state->m_auxiFontsList.push_back(font);
@@ -741,6 +766,7 @@ void LWText::setProperty(MWAWParagraph const &ruler)
   if (!m_listener) return;
   ruler.send(m_listener);
 }
+
 bool LWText::readRulers(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%84) != 2) {
@@ -773,7 +799,7 @@ bool LWText::readRulers(MWAWEntry const &entry)
   LWTextInternal::PLC plc;
   plc.m_type = LWTextInternal::P_Ruler;
   for (int i = 0; i < N; i++) {
-    MWAWParagraph para;
+    LWTextInternal::Paragraph para;
 
     pos = input->tell();
     f.str("");
@@ -787,9 +813,7 @@ bool LWText::readRulers(MWAWEntry const &entry)
     val = (int) input->readLong(2);
     if (val)
       para.m_spacings[1]=para.m_spacings[2]=float(val)/72.f;
-    val = (int) input->readLong(2);
-    if (val)
-      f << "expand=" << val << ",";
+    para.m_deltaSpacing = (float) input->readLong(2);
     long flag = (long) input->readULong(1);
     switch(flag) {
     case 0:
@@ -998,12 +1022,12 @@ bool LWText::readDocumentHF(MWAWEntry const &entry)
     if (flag&0x4) zone.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
-    if (flag&0x20) f2 << "expand,";
-    if (flag&0x40) f2 << "condense,";
+    if (flag&0x20) zone.m_font.setDeltaLetterSpacing(-1);
+    if (flag&0x40) zone.m_font.setDeltaLetterSpacing(1);
     if (flag&0x80) f2 << "#fl80,";
     zone.m_font.setFlags(flags);
     zone.m_font.setId((int) input->readULong(2));
-    zone.m_font.setSize((int) input->readULong(2));
+    zone.m_font.setSize((float) input->readULong(2));
     unsigned char col[3];
     for (int j=0; j < 3; j++)
       col[j] = (unsigned char) (input->readULong(2)>>8);

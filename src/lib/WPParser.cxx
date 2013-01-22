@@ -1823,7 +1823,7 @@ bool WPParser::readFonts
     val = (int) input->readLong(1);// always 0
     if (val)
       f << "#g0=" << val << ",";
-    font.setSize((int) input->readLong(1));
+    font.setSize((float) input->readLong(1));
     fInfo.m_firstChar = actPos;
     int nChar = (int) input->readULong(2);
     actPos += nChar;

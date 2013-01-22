@@ -609,7 +609,7 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
     f.str("");
     long cPos=(long) input->readULong(4);
     font.m_height = (int) input->readLong(2);
-    int sz = (int) input->readLong(2);
+    float sz = (float) input->readLong(2);
     font.m_font.setId((int) input->readLong(2));
     int flag = (int) input->readULong(1);
     uint32_t flags = 0;
@@ -620,8 +620,8 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
 
     flag = (int) input->readULong(1); // alway 0
     if (flag) f << "#fl1=" << std::hex << flag << std::dec << ",";
-    font.m_font.setSize((int) input->readLong(2));
-    if (sz != font.m_font.size())
+    font.m_font.setSize((float) input->readLong(2));
+    if (sz < font.m_font.size() || sz > font.m_font.size())
       f << "#sz=" << sz << ",";
     unsigned char col[3];
     for (int j=0; j < 3; j++)
@@ -890,7 +890,7 @@ bool ZWText::readHFZone(MWAWEntry const &entry)
       if (!done||!intVal)
         break;
       if (ff==4)
-        font.m_font.setSize(intVal);
+        font.m_font.setSize(float(intVal));
       else
         f << "delimiterSize=" << intVal << ",";
       break;

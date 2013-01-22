@@ -178,7 +178,7 @@ struct Font {
   //! the field type: pagenumber, note, DTT=date/time/type
   enum FieldType { None, Page, Eobj, Note, DTT, DTTUnk};
   //! constructor: default value Geneva:12
-  Font(int fId=3, int size=12) :m_font(fId,size), m_fieldType(None), m_error("") {}
+  Font(int fId=3, int size=12) :m_font(fId,float(size)), m_fieldType(None), m_error("") {}
   //! copy constructor
   Font(MWAWFont const &ft) :m_font(ft), m_fieldType(None), m_error("") {}
   //! operator <<
@@ -1223,7 +1223,7 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
           ok = false;
           break;
         }
-        font.m_font.setSize(v);
+        font.m_font.setSize(float(v));
       }
       break;
     }

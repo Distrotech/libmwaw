@@ -1037,7 +1037,7 @@ bool MDWParser::readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts,
     textPos.push_back(tPos);
     f << "pos=" << tPos << ",";
     MWAWFont font;
-    font.setSize((int) input->readULong(1));
+    font.setSize((float) input->readULong(1));
     int flag = (int) input->readULong(1);
     uint32_t flags = 0;
     // bit 1 = plain

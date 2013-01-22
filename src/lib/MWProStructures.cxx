@@ -1209,7 +1209,7 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
     font.m_font.setId(val);
   val = (int) m_input->readULong(2);
   if (val != 0xFFFF)
-    font.m_font.setSize((val+3)/4);
+    font.m_font.setSize(float(val+3)/4.f);
   if (vers >= 1)
     font.m_values[1] = (int) m_input->readLong(2);
   long flag = (long) m_input->readULong(2);
@@ -1251,12 +1251,12 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
         f << "#spacings=" << spacings << "%,";
         spacings = spacings < 0 ? -50 : 100;
       }
-      int fSz = font.m_font.size();
+      float fSz = font.m_font.size();
       if (fSz <= 0) {
         MWAW_DEBUG_MSG(("MWProStructures::readFont: expand called without fSize, assume 12pt\n"));
         fSz = 12;
       }
-      font.m_font.setDeltaLetterSpacing(int((fSz*spacings)/100));
+      font.m_font.setDeltaLetterSpacing(fSz*float(spacings)/100.f);
     }
     for (int i = 4; i < 5; i++)
       font.m_values[i] = (int) m_input->readLong(2);

@@ -69,7 +69,8 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
     o << "pict=" << std::hex << font.m_picturePos.get() << std::dec << ",";
   if (font.m_unknown.get())
     o << "ft=" << std::hex << font.m_unknown.get() << std::dec << ",";
-  if (font.m_size.isSet() && font.m_size.get() != font.m_font->size())
+  if (font.m_size.isSet() && (font.m_size.get() < font.m_font->size() ||
+                              font.m_size.get() > font.m_font->size()))
     o << "#size2=" << font.m_size.get() << ",";
   if (font.m_value.isSet()) o << "id?=" << font.m_value.get() << ",";
   if (font.m_extra.length())

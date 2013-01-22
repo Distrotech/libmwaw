@@ -84,8 +84,8 @@ std::ostream &operator<<(std::ostream &o, MWAWFont::Line const &line)
   if (line.m_word) o << ":byword";
   if (line.m_width < 1.0 || line.m_width > 1.0)
     o << ":w=" << line.m_width ;
-  if (!line.m_color.isBlack())
-    o << ":col=" << line.m_color;
+  if (line.m_color.isSet())
+    o << ":col=" << line.m_color.get();
   return o;
 }
 
@@ -123,10 +123,10 @@ void MWAWFont::Line::addTo(WPXPropertyList &propList, std::string const type) co
   default:
     break;
   }
-  if (!m_color.isBlack()) {
+  if (m_color.isSet()) {
     s.str("");
     s << "style:text-" << type << "-color";
-    propList.insert(s.str().c_str(), m_color.str().c_str());
+    propList.insert(s.str().c_str(), m_color.get().str().c_str());
   }
   //normal, bold, thin, dash, medium, and thick
   s.str("");
@@ -140,7 +140,7 @@ void MWAWFont::Line::addTo(WPXPropertyList &propList, std::string const type) co
 ////////////////////////////////////////////////////////////
 // script function
 ////////////////////////////////////////////////////////////
-std::string MWAWFont::Script::str(int fSize) const
+std::string MWAWFont::Script::str(float fSize) const
 {
   if (!isSet() || (m_delta==0 && m_scale==100))
     return "";
@@ -163,7 +163,7 @@ std::string MWAWFont::Script::str(int fSize) const
       }
       fSize=12;
     }
-    delta=int(100.f*float(delta)/float(fSize));
+    delta=int(100.f*float(delta)/fSize);
     if (delta > 100) delta = 100;
     else if (delta < -100) delta = -100;
   }
@@ -185,12 +185,14 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
       o << "id=" << id() << ",";
   }
   if (size() > 0) o << "sz=" << size() << ",";
-  if (m_deltaSpacing.isSet() && m_deltaSpacing.get()) {
+  if (m_deltaSpacing.isSet()) {
     if (m_deltaSpacing.get() > 0)
       o << "extended=" << m_deltaSpacing.get() << "pt,";
-    else
+    else if (m_deltaSpacing.get() < 0)
       o << "condensed=" << -m_deltaSpacing.get() << "pt,";
   }
+  if (m_texteWidthScaling.isSet())
+    o << "scaling[width]=" <<  m_texteWidthScaling.get()*100.f << "%,";
   if (m_scriptPosition.isSet() && m_scriptPosition.get().isSet())
     o << "script=" << m_scriptPosition.get().str(size()) << ",";
   if (m_flags.isSet() && m_flags.get()) {
@@ -208,6 +210,7 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     if (flag&reverseVideoBit) o << "reverseVideo:";
     if (flag&blinkBit) o << "blink:";
     if (flag&boxedBit) o << "box:";
+    if (flag&boxedRoundedBit) o << "box[rounded]:";
     if (flag&reverseWritingBit) o << "reverseWriting:";
     o << ",";
   }
@@ -229,7 +232,7 @@ void MWAWFont::sendTo(MWAWContentListener *listener, MWAWFont &actualFont) const
 {
   if (listener == 0L) return;
 
-  int newSize = size();
+  float newSize = size();
   MWAWFont const &oldFont=listener->getFont();
   actualFont=*this;
   if (id() == -1)
@@ -249,7 +252,7 @@ void MWAWFont::addTo(WPXPropertyList &pList, shared_ptr<MWAWFontConverter> conve
   convert->getOdtInfo(id(), fName, dSize);
   if (fName.length())
     pList.insert("style:font-name", fName.c_str());
-  int fSize = size()+dSize;
+  float fSize = size()+float(dSize);
   pList.insert("fo:font-size", fSize, WPX_POINT);
 
   uint32_t attributeBits = m_flags.get();
@@ -288,7 +291,7 @@ void MWAWFont::addTo(WPXPropertyList &pList, shared_ptr<MWAWFontConverter> conve
     m_strikeoutline->addTo(pList, "line-through");
   if (m_underline.isSet() && m_underline->isSet())
     m_underline->addTo(pList, "underline");
-  if (attributeBits & boxedBit) {
+  if ((attributeBits & boxedBit) || (attributeBits & boxedRoundedBit)) {
     // do minimum: add a overline and a underline box
     Line simple(Line::Simple);
     if (!m_overline.isSet() || !m_overline->isSet())
@@ -296,9 +299,11 @@ void MWAWFont::addTo(WPXPropertyList &pList, shared_ptr<MWAWFontConverter> conve
     if (!m_underline.isSet() || !m_underline->isSet())
       simple.addTo(pList, "underline");
   }
-  if (m_deltaSpacing.isSet() && m_deltaSpacing.get())
+  if (m_deltaSpacing.isSet() && (m_deltaSpacing.get() < 0 || m_deltaSpacing.get()>0))
     pList.insert("fo:letter-spacing", m_deltaSpacing.get(), WPX_POINT);
-
+  if (m_texteWidthScaling.isSet() && m_texteWidthScaling.get() > 0.0 &&
+      (m_texteWidthScaling.get()>1.0||m_texteWidthScaling.get()<1.0))
+    pList.insert("style:text-scale", m_texteWidthScaling.get(), WPX_PERCENT);
   if (attributeBits & reverseVideoBit) {
     pList.insert("fo:color", m_backgroundColor->str().c_str());
     pList.insert("fo:background-color", m_color->str().c_str());
@@ -307,7 +312,7 @@ void MWAWFont::addTo(WPXPropertyList &pList, shared_ptr<MWAWFontConverter> conve
     if (m_backgroundColor.isSet() && !m_backgroundColor->isWhite())
       pList.insert("fo:background-color", m_backgroundColor->str().c_str());
   }
-  if (attributeBits && reverseWritingBit) {
+  if (attributeBits & reverseWritingBit) {
     static bool first = true;
     if (first) {
       first = false;

@@ -55,8 +55,8 @@ public:
     /** the line style */
     enum Type { Single, Double, Triple };
     //! constructor
-    Line(Style style=None, Type type=Single, bool wordFlag=false, float w=1.0, MWAWColor col=MWAWColor::black()) :
-      m_style(style), m_type(type), m_word(wordFlag), m_width(w), m_color(col) { }
+    Line(Style style=None, Type type=Single, bool wordFlag=false, float w=1.0) :
+      m_style(style), m_type(type), m_word(wordFlag), m_width(w), m_color(MWAWColor::black()) { }
     //! return true if the line is not empty
     bool isSet() const {
       return m_style != None && m_width>0;
@@ -80,8 +80,10 @@ public:
       if (m_word != oth.m_word) return m_word ? -1 : 1;
       if (m_width < oth.m_width) return -1;
       if (m_width > oth.m_width) return 1;
-      if (m_color < oth.m_color) return -1;
-      if (m_color > oth.m_color) return 1;
+      if (m_color.isSet() != oth.m_color.isSet())
+        return m_color.isSet();
+      if (m_color.get() < oth.m_color.get()) return -1;
+      if (m_color.get() > oth.m_color.get()) return 1;
       return 0;
     }
     /** the style */
@@ -92,8 +94,8 @@ public:
     bool m_word;
     /** the width in point */
     float m_width;
-    /** the color */
-    MWAWColor m_color;
+    /** the color ( if not set, we use the font color )*/
+    Variable<MWAWColor> m_color;
   };
   /** a small struct to define the script position in MWAWFont */
   struct Script {
@@ -122,7 +124,7 @@ public:
       return Script(20);
     }
     //! return a string which correspond to style:text-position
-    std::string str(int fSize) const;
+    std::string str(float fSize) const;
 
     //! operator==
     bool operator==(Script const &oth) const {
@@ -167,14 +169,15 @@ public:
   enum FontBits { boldBit=1, italicBit=2, blinkBit=4, embossBit=8, engraveBit=0x10,
                   hiddenBit=0x20, outlineBit=0x40, shadowBit=0x80,
                   reverseVideoBit=0x100, smallCapsBit=0x200, allCapsBit=0x400,
-                  lowercaseBit=0x800, boxedBit=0x1000, reverseWritingBit=0x2000
+                  lowercaseBit=0x800, boxedBit=0x1000, boxedRoundedBit=0x2000,
+                  reverseWritingBit=0x4000
                 };
   /** constructor
    *
    * \param newId system id font
    * \param sz the font size
    * \param f the font attributes bold, ... */
-  MWAWFont(int newId=-1, int sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_deltaSpacing(0), m_scriptPosition(),
+  MWAWFont(int newId=-1, float sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_deltaSpacing(0), m_texteWidthScaling(1.0), m_scriptPosition(),
     m_flags(f), m_overline(Line::None), m_strikeoutline(Line::None), m_underline(Line::None),
     m_color(MWAWColor::black()), m_backgroundColor(MWAWColor::white()), m_extra("") {
     resetColor();
@@ -188,6 +191,7 @@ public:
     m_id.insert(ft.m_id);
     m_size.insert(ft.m_size);
     m_deltaSpacing.insert(ft.m_deltaSpacing);
+    m_texteWidthScaling.insert(ft.m_texteWidthScaling);
     m_scriptPosition.insert(ft.m_scriptPosition);
     if (ft.m_flags.isSet()) {
       if (m_flags.isSet())
@@ -217,23 +221,30 @@ public:
   }
 
   //! returns the font size
-  int size() const {
+  float size() const {
     return m_size.get();
   }
   //! sets the font size
-  void setSize(int sz) {
+  void setSize(float sz) {
     m_size = sz;
   }
 
   //! returns the condensed(negative)/extended(positive) width
-  int deltaLetterSpacing() const {
+  float deltaLetterSpacing() const {
     return m_deltaSpacing.get();
   }
   //! set the letter spacing ( delta value in point )
-  void setDeltaLetterSpacing(int d) {
+  void setDeltaLetterSpacing(float d) {
     m_deltaSpacing=d;
   }
-
+  //! returns the texte width scaling
+  float texteWidthScaling() const {
+    return m_texteWidthScaling.get();
+  }
+  //! set the texte width scaling
+  void setTexteWidthScaling(float scale=1.0) {
+    m_texteWidthScaling = scale;
+  }
   //! returns the script position
   Script const &script() const {
     return m_scriptPosition.get();
@@ -406,12 +417,14 @@ public:
   int cmp(MWAWFont const &oth) const {
     int diff = id() - oth.id();
     if (diff != 0) return diff;
-    diff = size() - oth.size();
-    if (diff != 0) return diff;
+    if (size() < oth.size()) return -1;
+    if (size() > oth.size()) return -1;
     if (flags() < oth.flags()) return -1;
     if (flags() > oth.flags()) return 1;
     if (m_deltaSpacing.get() < oth.m_deltaSpacing.get()) return -1;
     if (m_deltaSpacing.get() > oth.m_deltaSpacing.get()) return 1;
+    if (m_texteWidthScaling.get() < oth.m_texteWidthScaling.get()) return -1;
+    if (m_texteWidthScaling.get() > oth.m_texteWidthScaling.get()) return 1;
     diff = script().cmp(oth.script());
     if (diff != 0) return diff;
     diff = m_overline.get().cmp(oth.m_overline.get());
@@ -431,8 +444,10 @@ public:
   void sendTo(MWAWContentListener *listener, MWAWFont &actFont) const;
 
 protected:
-  Variable<int> m_id /** font identificator*/, m_size /** font size */;
-  Variable<int> m_deltaSpacing /** expand(>0), condensed(<0) depl in point*/;
+  Variable<int> m_id /** font identificator*/;
+  Variable<float> m_size /** font size */;
+  Variable<float> m_deltaSpacing /** expand(>0), condensed(<0) depl in point*/;
+  Variable<float> m_texteWidthScaling /** the texte width scaling */;
   Variable<Script> m_scriptPosition /** the sub/super script definition */;
   Variable<uint32_t> m_flags /** font attributes */;
   Variable<Line> m_overline /** overline attributes */;

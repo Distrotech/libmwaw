@@ -638,7 +638,7 @@ bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
   }
   if (sz >= 3) {
     val = (int) input->readULong(1);
-    if (val) font.m_font.setSize(val/2);
+    if (val) font.m_font.setSize(float(val)/2.f);
   }
   if (sz >= 4) {
     val = (int) input->readULong(1);

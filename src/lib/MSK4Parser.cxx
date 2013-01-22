@@ -40,6 +40,7 @@
 
 #include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
+#include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWOLEParser.hxx"
 #include "MWAWPosition.hxx"

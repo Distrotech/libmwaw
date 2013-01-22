@@ -575,7 +575,7 @@ bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
   int flag = (int) m_input->readULong(1); // check or font ?
   if (flag) f << "#f0=" << flag << ",";
   font.m_font.setId((int) m_input->readULong(1));
-  font.m_font.setSize((int) m_input->readULong(1));
+  font.m_font.setSize((float) m_input->readULong(1));
   flag = (int) m_input->readULong(1);
   uint32_t flags = 0;
   if (flag & 0x1) flags |= MWAWFont::boldBit;
