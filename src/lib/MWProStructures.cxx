@@ -313,7 +313,7 @@ struct Block {
 //! Internal: the fonts
 struct Font {
   //! the constructor
-  Font(): m_font(), m_flags(0), m_language(-1), m_token(-1) {
+  Font(): m_font(), m_flags(0), m_token(-1) {
     for (int i = 0; i < 5; i++) m_values[i] = 0;
   }
   //! operator<<
@@ -322,21 +322,6 @@ struct Font {
     for (int i = 0; i < 5; i++) {
       if (!font.m_values[i]) continue;
       o << "f" << i << "=" << font.m_values[i] << ",";
-    }
-    switch(font.m_language) {
-    case -1:
-      break;
-    case 0:
-      break; // US
-    case 2:
-      o << "englUK,";
-      break;
-    case 3:
-      o << "german,";
-      break;
-    default:
-      o << "#lang=" << font.m_language << ",";
-      break;
     }
     switch(font.m_token) {
     case -1:
@@ -352,8 +337,6 @@ struct Font {
   MWAWFont m_font;
   //! some unknown flag
   int m_flags;
-  //! the language
-  int m_language;
   //! the token type(checkme)
   int m_token;
   //! unknown values
@@ -1209,7 +1192,7 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
     font.m_font.setId(val);
   val = (int) m_input->readULong(2);
   if (val != 0xFFFF)
-    font.m_font.setSize(float(val+3)/4.f);
+    font.m_font.setSize(float(val)/4.f);
   if (vers >= 1)
     font.m_values[1] = (int) m_input->readLong(2);
   long flag = (long) m_input->readULong(2);
@@ -1242,7 +1225,21 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   val = (int) m_input->readULong(1); // always 0x64 (unused?)
   if (val != 0x64) font.m_values[2] = val;
   if (vers == 1) {
-    font.m_language =  (int) m_input->readLong(2);
+    int lang = (int) m_input->readLong(2);
+    switch(lang) {
+    case 0:
+      font.m_font.setLanguage("en_US");
+      break;
+    case 2:
+      font.m_font.setLanguage("en_GB");
+      break;
+    case 3:
+      font.m_font.setLanguage("de");
+      break;
+    default:
+      f << "#lang=" << lang << ",";
+      break;
+    }
     font.m_token = (int) m_input->readLong(2);
     int spacings = (int) m_input->readLong(2);
     if (spacings) {
@@ -2694,21 +2691,6 @@ void MWProStructuresListenerState::sendFont(MWProStructuresInternal::Font const 
 
   font.m_font.sendTo(m_structures->m_listener.get(), m_font->m_font);
   *m_font = font;
-  switch(m_font->m_language) {
-  case -1:
-    break;
-  case 0:
-    m_structures->m_listener->setTextLanguage("en_US");
-    break;
-  case 2:
-    m_structures->m_listener->setTextLanguage("en_GB");
-    break;
-  case 3:
-    m_structures->m_listener->setTextLanguage("de");
-    break;
-  default:
-    break;
-  }
 }
 
 std::string MWProStructuresListenerState::getFontDebugString(int fId)

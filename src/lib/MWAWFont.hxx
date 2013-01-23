@@ -179,7 +179,7 @@ public:
    * \param f the font attributes bold, ... */
   MWAWFont(int newId=-1, float sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_deltaSpacing(0), m_texteWidthScaling(1.0), m_scriptPosition(),
     m_flags(f), m_overline(Line::None), m_strikeoutline(Line::None), m_underline(Line::None),
-    m_color(MWAWColor::black()), m_backgroundColor(MWAWColor::white()), m_extra("") {
+    m_color(MWAWColor::black()), m_backgroundColor(MWAWColor::white()), m_language(""), m_extra("") {
     resetColor();
   };
   //! returns true if the font id is initialized
@@ -398,6 +398,15 @@ public:
   void setUnderlineColor(MWAWColor const &color) {
     m_underline->m_color = color;
   }
+
+  //! return the language
+  std::string const &language() const {
+    return m_language.get();
+  }
+  //! set the language ( in the for en_US, en_GB, en, ...)
+  void setLanguage(std::string const &lang) {
+    m_language=lang;
+  }
   //! add to the propList
   void addTo(WPXPropertyList &propList, shared_ptr<MWAWFontConverter> fontConverter) const;
 
@@ -437,6 +446,8 @@ public:
     if (m_color.get() > oth.m_color.get()) return 1;
     if (m_backgroundColor.get() < oth.m_backgroundColor.get()) return -1;
     if (m_backgroundColor.get() > oth.m_backgroundColor.get()) return 1;
+    if (m_language.get() < oth.m_language.get()) return -1;
+    if (m_language.get() > oth.m_language.get()) return 1;
     return diff;
   }
 
@@ -455,6 +466,7 @@ protected:
   Variable<Line> m_underline /** underline attributes */;
   Variable<MWAWColor> m_color /** font color */;
   Variable<MWAWColor> m_backgroundColor /** font background color */;
+  Variable<std::string> m_language /** the language if set */;
 public:
   //! extra data
   std::string m_extra;

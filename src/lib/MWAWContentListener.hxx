@@ -109,8 +109,6 @@ public:
   void setFont(MWAWFont const &font);
   //! returns the actual font
   MWAWFont const &getFont() const;
-  //! sets the font language
-  void setTextLanguage(std::string const &locale);
 
   // ------ paragraph format -----------
   //! returns true if a paragraph or a list is opened
@@ -242,8 +240,6 @@ protected:
   void _flushDeferredTabs();
 
   void _insertBreakIfNecessary(WPXPropertyList &propList);
-
-  static void _addLanguage(std::string const &locale, WPXPropertyList &propList);
 
   /** creates a new parsing state (copy of the actual state)
    *

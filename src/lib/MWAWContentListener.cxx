@@ -112,8 +112,6 @@ struct State {
 
   //! the font
   MWAWFont m_font;
-  //! the text language
-  std::string m_textLanguage;
 
   //! true if pararagraph add a column break
   bool m_isParagraphColumnBreak;
@@ -213,7 +211,7 @@ private:
 State::State() :
   m_textBuffer(""), m_numDeferredTabs(0),
 
-  m_font(20,12), m_textLanguage("UNSET"), // default time 12
+  m_font(20,12), // default time 12
 
   m_isParagraphColumnBreak(false), m_isParagraphPageBreak(false),
 
@@ -464,13 +462,6 @@ void MWAWContentListener::setFont(MWAWFont const &font)
 MWAWFont const &MWAWContentListener::getFont() const
 {
   return m_ps->m_font;
-}
-
-void MWAWContentListener::setTextLanguage(std::string const &locale)
-{
-  if (m_ps->m_textLanguage==locale) return;
-  _closeSpan();
-  m_ps->m_textLanguage=locale;
 }
 
 ///////////////////
@@ -1238,9 +1229,6 @@ void MWAWContentListener::_openSpan()
 
   WPXPropertyList propList;
   m_ps->m_font.addTo(propList, m_fontConverter);
-
-  if (m_ps->m_textLanguage != "UNSET")
-    _addLanguage(m_ps->m_textLanguage, propList);
 
   m_documentInterface->openSpan(propList);
 
@@ -2043,22 +2031,6 @@ void MWAWContentListener::closeTableCell()
 ///////////////////
 // others
 ///////////////////
-void MWAWContentListener::_addLanguage(std::string const &lang, WPXPropertyList &propList)
-{
-  if (lang.length()) {
-    std::string language(lang);
-    std::string country("none");
-    if (lang.length() > 3 && lang[2]=='_') {
-      country=lang.substr(3);
-      language=lang.substr(0,2);
-    }
-    propList.insert("fo:language", language.c_str());
-    propList.insert("fo:country", country.c_str());
-  } else {
-    propList.insert("fo:language", "none");
-    propList.insert("fo:country", "none");
-  }
-}
 
 // ---------- state stack ------------------
 shared_ptr<MWAWContentListenerInternal::State> MWAWContentListener::_pushParsingState()

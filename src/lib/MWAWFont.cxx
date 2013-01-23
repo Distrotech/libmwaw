@@ -224,6 +224,8 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     o << "col=" << m_color.get()<< "),";
   if (m_backgroundColor.isSet() && !m_backgroundColor.get().isWhite())
     o << "backCol=" << m_backgroundColor.get() << ",";
+  if (m_language.isSet() && m_language.get().length())
+    o << "lang=" << m_language.get() << ",";
   o << m_extra;
   return o.str();
 }
@@ -311,6 +313,18 @@ void MWAWFont::addTo(WPXPropertyList &pList, shared_ptr<MWAWFontConverter> conve
     pList.insert("fo:color", m_color->str().c_str());
     if (m_backgroundColor.isSet() && !m_backgroundColor->isWhite())
       pList.insert("fo:background-color", m_backgroundColor->str().c_str());
+  }
+  if (m_language.isSet()) {
+    size_t len=m_language->length();
+    std::string lang(m_language.get());
+    std::string country("none");
+    if (len > 3 && lang[2]=='_') {
+      country=lang.substr(3);
+      lang=m_language->substr(0,2);
+    } else if (len==0)
+      lang="none";
+    pList.insert("fo:language", lang.c_str());
+    pList.insert("fo:country", country.c_str());
   }
   if (attributeBits & reverseWritingBit) {
     static bool first = true;

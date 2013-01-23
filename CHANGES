@@ -1,7 +1,7 @@
 CHANGES:
 
 01/21/2013
-- update HandMac WorkK, LightWay Text, Nisus parser to use the new font properties, 
+- update HandMac Word-K, LightWay Text, Nisus parser to use the new font properties, 
 - modify mwaw2html to use html5 and CSS properties,
 - add OS6 Central European, Cyrillic, Turkish encodings ( do not know if encoding finding works ).
 
