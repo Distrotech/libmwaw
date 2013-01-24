@@ -1582,10 +1582,8 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         }
         NSTextInternal::Font const &font = m_state->m_fontList[size_t(plc.m_id)];
         actFont = font;
-        if (font.m_pictureId <= 0) {
+        if (font.m_pictureId <= 0)
           m_listener->setFont(font.m_font);
-          actFont.m_font = m_listener->getFont();
-        }
         if (!font.isVariable())
           break;
         if (fontIdToVarIdMap.find(plc.m_id) != fontIdToVarIdMap.end())
@@ -1762,18 +1760,9 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
       break;
     }
     // checkme: find also 0x8, 0x13, 0x15, 0x1e, 0x1f in glossary
-    default: {
-      int unicode = m_convertissor->unicode (actFont.m_font.id(),c);
-      if (unicode == -1) {
-        if (c < 32) {
-          MWAW_DEBUG_MSG(("NSText::send: Find odd char %x\n", int(c)));
-          f << "#";
-        } else
-          m_listener->insertChar(c); // FIXME
-      } else
-        m_listener->insertUnicode((uint32_t) unicode);
+    default:
+      i+=m_listener->insertCharacter((unsigned char)c, input, entry.end());
       break;
-    }
     }
   }
   f << str;

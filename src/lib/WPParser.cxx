@@ -1375,16 +1375,13 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   std::vector<WPParserInternal::Font> const &fonts = data.m_fonts;
   long numChars = (long) text.length();
   size_t actFont = 0, numFonts = fonts.size();
-  MWAWFont font;
   int actLine = 0;
   numLines=int(lines.size());
   if (numLines == 0 && info.m_height > 0)
     m_listener->setParagraphLineSpacing(info.m_height, WPX_POINT);
   for (int c = 0; c < numChars; c++) {
-    if (actFont < numFonts && c ==  fonts[actFont].m_firstChar) {
-      m_listener->setFont(fonts[actFont].m_font);
-      font = fonts[actFont++].m_font;
-    }
+    if (actFont < numFonts && c ==  fonts[actFont].m_firstChar)
+      m_listener->setFont(fonts[actFont++].m_font);
     if (actLine < numLines && c == lines[(size_t) actLine].m_firstChar) {
       if (actLine) m_listener->insertEOL();
       if (numLines == 1 && info.m_height > lines[0].m_height)
@@ -1393,18 +1390,12 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
         m_listener->setParagraphLineSpacing(lines[(size_t) actLine].m_height, WPX_POINT);
       actLine++;
     }
+
     unsigned char ch = (unsigned char) text[(size_t)c];
-    int unicode = m_convertissor->unicode(font.id(), ch);
-    if (unicode != -1) m_listener->insertUnicode((uint32_t) unicode);
-    else if (ch == 0x9)
+    if (ch == 0x9)
       m_listener->insertTab();
-    /*    else if (ch == 0xd)
-    			m_listener->insertEOL();*/
-    else if (ch >= 32)
-      m_listener->insertChar(ch); // FIXME
-    else {
-      MWAW_DEBUG_MSG(("WPParser::readText: find an odd character : %d\n", int(ch)));
-    }
+    else
+      m_listener->insertCharacter(ch);
   }
   if (info.getType() != 3)
     m_listener->insertEOL();

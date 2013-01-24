@@ -1354,9 +1354,6 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
   m_input->seek(pos, WPX_SEEK_SET);
   long cEnd = textEntry.end();
 
-  MSWStruct::Font actFont;
-  actFont.m_font = m_stylesManager->getDefaultFont();
-
   libmwaw::DebugStream f;
   f << "TextContent[" << cPos << "]:";
   long pictPos = -1;
@@ -1437,9 +1434,9 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
     if (m_state->m_paragraphMap.find(cPos) != m_state->m_paragraphMap.end())
       m_stylesManager->setProperty(m_state->m_paragraphMap.find(cPos)->second);
     if (m_state->m_fontMap.find(cPos) != m_state->m_fontMap.end()) {
-      actFont = m_state->m_fontMap.find(cPos)->second;
-      pictPos = actFont.m_picturePos.get();
-      m_stylesManager->setProperty(actFont);
+      MSWStruct::Font font = m_state->m_fontMap.find(cPos)->second;
+      pictPos = font.m_picturePos.get();
+      m_stylesManager->setProperty(font);
     }
     for (long p = cPos; p < cEndPos; p++) {
       int c = (int) m_input->readULong(1);
@@ -1513,18 +1510,9 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       case 0x14: // apple logo ( note only in private zone)
         m_listener->insertUnicode(0xf8ff);
         break;
-      default: {
-        int unicode = m_convertissor->unicode(actFont.m_font->id(), (unsigned char)c);
-        if (unicode == -1) {
-          if (c < 32) {
-            MWAW_DEBUG_MSG(("MSWText::sendText: Find odd char %x\n", int(c)));
-            f << "#";
-          } else
-            m_listener->insertChar((uint8_t)c); // FIXME
-        } else
-          m_listener->insertUnicode((uint32_t) unicode);
+      default:
+        p+=m_listener->insertCharacter((unsigned char)c, m_input, m_input->tell()+(cEndPos-1-p));
         break;
-      }
       }
       if (c)
         f << char(c);
@@ -1664,17 +1652,8 @@ bool MSWText::sendFieldComment(int id)
   m_stylesManager->sendDefaultParagraph();
   std::string const &text = m_state->m_fieldList[(size_t) id].m_text;
   if (!text.length()) m_listener->insertChar(' ');
-  for (size_t c = 0; c < text.length(); c++) {
-    int unicode = m_convertissor->unicode(defFont.m_font->id(), (unsigned char) text[c]);
-    if (unicode == -1) {
-      if (text[c] < 32) {
-        MWAW_DEBUG_MSG(("MSWText::sendFieldComment: Find odd char %x\n", int(text[c])));
-        m_listener->insertChar(' ');
-      } else
-        m_listener->insertChar((uint8_t) text[c]); // FIXME
-    } else
-      m_listener->insertUnicode((uint32_t) unicode);
-  }
+  for (size_t c = 0; c < text.length(); c++)
+    m_listener->insertCharacter((unsigned char) text[c]);
   return true;
 }
 

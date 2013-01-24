@@ -2648,17 +2648,9 @@ void MWProStructuresListenerState::sendChar(char c)
   case 0x1f: // some hyphen
     break;
     /* 0x10 and 0x13 : seems also to have some meaning ( replaced by 1 in on field )*/
-  default: {
-    int unicode = m_structures->m_convertissor->unicode (m_font->m_font.id(),(unsigned char)c);
-    if (unicode == -1) {
-      if (c < 32) {
-        MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendChar: Find odd char %x\n", int(c)));
-      } else
-        m_structures->m_listener->insertChar((unsigned char)c); // FIXME
-    } else
-      m_structures->m_listener->insertUnicode((uint32_t) unicode);
+  default:
+    m_structures->m_listener->insertCharacter((unsigned char)c);
     break;
-  }
   }
 }
 

@@ -428,8 +428,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
   int vers = version();
   libmwaw::DebugStream f;
   f << "Entries(TextZone):" << zone << ",";
-  MSK3TextInternal::Font actFont, font;
-  actFont.m_font = m_listener->getFont();
+  MSK3TextInternal::Font font;
   if (m_listener && zone.m_height > 0)
     m_listener->setParagraphLineSpacing(zone.m_height, WPX_POINT);
   bool firstChar = true;
@@ -438,7 +437,6 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
     if (pos >= zone.m_pos.end()) break;
     int c = (int) m_input->readULong(1);
     if ((c == 1 || c == 2) && readFont(font, zone.m_pos.end())) {
-      actFont = font;
       m_listener->setFont(font.m_font);
       f << "[" << font.m_font.getDebugString(m_convertissor) << font << "]";
       continue;
@@ -489,13 +487,8 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
         f << "#" << std::hex << c << std::dec << "]";
         ascii().addDelimiter(pos,'#');
         MWAW_DEBUG_MSG(("MSK3Text::sendText: find char=%x\n",int(c)));
-      } else {
-        int unicode = m_convertissor->unicode (actFont.m_font.id(), (unsigned char)c);
-        if (unicode == -1)
-          m_listener->insertChar((uint8_t)c); // FIXME
-        else
-          m_listener->insertUnicode((uint32_t) unicode);
-      }
+      } else
+        m_listener->insertCharacter((unsigned char)c, m_input, zone.m_pos.end());
       firstChar = false;
       break;
     }
@@ -543,15 +536,7 @@ bool MSK3Text::sendString(std::string &str)
       MWAW_DEBUG_MSG(("MSK3Text::sendString: footnote are not implemented\n"));
       break;
     default:
-      if (c <= 0x1f) {
-        MWAW_DEBUG_MSG(("MSK3Text::sendString: find char=%x\n",int(c)));
-      } else {
-        int unicode = m_convertissor->unicode(defFont.m_font.id(), (unsigned char)c);
-        if (unicode == -1)
-          m_listener->insertChar((uint8_t) c); // FIXME
-        else
-          m_listener->insertUnicode((uint32_t)unicode);
-      }
+      m_listener->insertCharacter((unsigned char)c);
       break;
     }
   }

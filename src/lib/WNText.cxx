@@ -1776,18 +1776,9 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
           setProperty(ruler);
           actTabs = 0;
           break;
-        default: {
-          int unicode = m_convertissor->unicode (actFont.id(),c);
-          if (unicode == -1) {
-            if (c < 32) {
-              MWAW_DEBUG_MSG(("WNText::send: Find odd char %x\n", int(c)));
-              f << "#";
-            } else
-              m_listener->insertChar(c); // FIXME
-          } else
-            m_listener->insertUnicode((uint32_t) unicode);
+        default:
+          m_listener->insertCharacter(c);
           break;
-        }
         }
       }
       ascii().addPos(zone.m_pos[0]);

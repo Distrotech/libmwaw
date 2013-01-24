@@ -2400,8 +2400,7 @@ void MSKGraph::sendTextBox(int zoneId)
   if (!zone) return;
   MSKGraphInternal::TextBox &textBox = reinterpret_cast<MSKGraphInternal::TextBox &>(*zone);
   MSKGraphInternal::Font actFont;
-  actFont.m_font = MWAWFont(20,12);
-  m_listener->setFont(actFont.m_font);
+  m_listener->setFont(MWAWFont(20,12));
   m_listener->setParagraphJustification(textBox.m_justify);
   int numFonts = int(textBox.m_fontsList.size());
   int actFormatPos = 0;
@@ -2416,10 +2415,8 @@ void MSKGraph::sendTextBox(int zoneId)
       int id = textBox.m_formats[(size_t)actFormatPos++];
       if (id < 0 || id >= numFonts) {
         MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: can not find a font\n"));
-      } else {
-        actFont = textBox.m_fontsList[(size_t)id];
-        m_listener->setFont(actFont.m_font);
-      }
+      } else
+        m_listener->setFont(textBox.m_fontsList[(size_t)id].m_font);
     }
     unsigned char c = (unsigned char) textBox.m_text[i];
     switch(c) {
@@ -2448,15 +2445,7 @@ void MSKGraph::sendTextBox(int zoneId)
       MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: footnote are not implemented\n"));
       break;
     default:
-      if (c <= 0x1f) {
-        MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find char=%x\n",int(c)));
-      } else {
-        int unicode = m_convertissor->unicode (actFont.m_font.id(), c);
-        if (unicode == -1)
-          m_listener->insertChar(c); // FIXME
-        else
-          m_listener->insertUnicode((uint32_t)unicode);
-      }
+      m_listener->insertCharacter(c);
       break;
     }
   }
@@ -2485,7 +2474,6 @@ void MSKGraph::sendTable(int zoneId)
   for (size_t c = 0; c < nCols; c++) colsDims[c] = float(table.m_colsDim[c]);
   m_listener->openTable(colsDims, WPX_POINT);
 
-  MWAWFont actFont;
   int const borderPos = MWAWBorder::TopBit | MWAWBorder::RightBit |
                         MWAWBorder::BottomBit | MWAWBorder::LeftBit;
   MWAWBorder border;
@@ -2505,7 +2493,6 @@ void MSKGraph::sendTable(int zoneId)
       MSKGraphInternal::Table::Cell const *tCell=table.getCell(cellPosition);
       if (tCell) {
         m_listener->setFont(tCell->m_font);
-        actFont = m_listener->getFont();
         size_t nChar = tCell->m_text.size();
         for (size_t ch = 0; ch < nChar; ch++) {
           unsigned char c = (unsigned char) tCell->m_text[ch];
@@ -2518,15 +2505,7 @@ void MSKGraph::sendTable(int zoneId)
             m_listener->insertEOL();
             break;
           default:
-            if (c <= 0x1f) {
-              MWAW_DEBUG_MSG(("MSKGraph::sendTable: find char=%x\n",int(c)));
-            } else {
-              int unicode = m_convertissor->unicode (actFont.id(), c);
-              if (unicode == -1)
-                m_listener->insertChar(c); // FIXME
-              else
-                m_listener->insertUnicode((uint32_t)unicode);
-            }
+            m_listener->insertCharacter(c);
             break;
           }
         }

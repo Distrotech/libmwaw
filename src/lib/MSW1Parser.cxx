@@ -1243,7 +1243,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
   while (!input->atEOS() && input->tell() < textEntry.end()) {
     long actPos = input->tell();
     bool firstPlc = true;
-    while (plcIt != m_state->m_plcMap.end() && plcIt->first == actPos) {
+    while (plcIt != m_state->m_plcMap.end() && plcIt->first <= actPos) {
       if (firstPlc) {
         ascii().addPos(pos);
         ascii().addNote(f.str().c_str());
@@ -1315,18 +1315,9 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
     case 0xd:
       m_listener->insertEOL();
       break;
-    default: {
-      int unicode = m_convertissor->unicode (actFont.m_font.id(),c);
-      if (unicode == -1) {
-        if (c < 32) {
-          MWAW_DEBUG_MSG(("MSW1Parser::send: Find odd char %x\n", int(c)));
-          f << "#";
-        } else
-          m_listener->insertChar(c); // FIXME
-      } else
-        m_listener->insertUnicode((uint32_t) unicode);
+    default:
+      m_listener->insertCharacter((unsigned char)c, input, textEntry.end());
       break;
-    }
     }
   }
   ascii().addPos(pos);

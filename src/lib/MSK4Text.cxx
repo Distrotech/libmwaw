@@ -785,16 +785,9 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
         m_listener->insertEOL();
         break;
       }
-      default: {
+      default:
         if (!m_listener) break;
-
-        int unicode = m_convertissor->unicode(actFont.id(), readVal);
-        if (unicode != -1) m_listener->insertUnicode((uint32_t)unicode);
-        else if (readVal >= 30) m_listener->insertChar(readVal); // FIXME
-        else
-          f << ",###[" << std::hex << int(readVal) << std::dec << "]";
-        break;
-      }
+        i-=m_listener->insertCharacter((unsigned char)readVal, input, input->tell()+i-1);
       }
     }
     if (len && fType == MSK4TextInternal::Font::DTTUnk && m_listener)

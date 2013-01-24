@@ -509,18 +509,9 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
         m_listener->setParagraphJustification(libmwaw::JustificationLeft);
       }
       break;
-    default: {
-      int unicode = m_convertissor->unicode (actFont.m_font.id(), (unsigned char) c);
-      if (unicode == -1) {
-        if (c >= 0 && c < 0x20) {
-          MWAW_DEBUG_MSG(("ZWText::sendText: Find odd char %x\n", int(c)));
-          f << "#";
-        } else
-          m_listener->insertChar((uint8_t) c); // FIXME
-      } else
-        m_listener->insertUnicode((uint32_t) unicode);
-
-    }
+    default:
+      m_listener->insertCharacter((unsigned char) c, input, endPos);
+      break;
     }
     f << c;
   }
@@ -744,8 +735,7 @@ bool ZWText::sendHeaderFooter(bool header)
   }
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   input->seek(zone.m_pos.begin(), WPX_SEEK_SET);
-  MWAWFont const &actFont=zone.m_font.m_font;
-  m_listener->setFont(actFont);
+  m_listener->setFont(zone.m_font.m_font);
   long endPos = zone.m_pos.end();
   while(!input->atEOS()) {
     long actPos = input->tell();
@@ -787,16 +777,9 @@ bool ZWText::sendHeaderFooter(bool header)
           break;
       }
       input->seek(actPos+1, WPX_SEEK_SET);
-    default: {
-      int unicode = m_convertissor->unicode (actFont.id(), (unsigned char) c);
-      if (unicode == -1) {
-        if (c >= 0 && c < 0x20) {
-          MWAW_DEBUG_MSG(("ZWText::sendHeaderFooter: Find odd char %x\n", int(c)));
-        } else
-          m_listener->insertChar((uint8_t) c); // FIXME
-      } else
-        m_listener->insertUnicode((uint32_t) unicode);
-    }
+    default:
+      m_listener->insertCharacter((unsigned char) c, input, endPos);
+      break;
     }
   }
   return true;

@@ -1375,11 +1375,8 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     else
       m_listener->setParagraphLineSpacing(1.2, WPX_PERCENT);
 
-    MWAWFont font;
-    if (!numFormat || listPos[0] != 0) {
+    if (!numFormat || listPos[0] != 0)
       m_listener->setFont(info.m_font);
-      font = m_listener->getFont();
-    }
     if (info.m_justifySet)
       m_listener->setParagraphJustification(info.m_justify);
 
@@ -1388,21 +1385,15 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     for (int i = 0; i < numChar; i++) {
       if (actFormat < numFormat && i == listPos[(size_t)actFormat]) {
         m_listener->setFont(listFonts[(size_t)actFormat]);
-        font = m_listener->getFont();
         actFormat++;
       }
       unsigned char c = (unsigned char) text[(size_t)i];
-      int unicode = m_convertissor->unicode (font.id(), c);
-      if (unicode != -1) m_listener->insertUnicode((uint32_t) unicode);
-      else if (c == 0x9)
+      if (c == 0x9)
         m_listener->insertTab();
       else if (c == 0xd)
         m_listener->insertEOL();
-      else if (c >= 32)
-        m_listener->insertChar(c); // FIXME
-      else {
-        MWAW_DEBUG_MSG(("MWParser::readText: find an odd character : %d\n", int(c)));
-      }
+      else
+        m_listener->insertCharacter(c);
     }
   }
 
