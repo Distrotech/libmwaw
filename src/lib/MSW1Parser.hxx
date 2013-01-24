@@ -138,8 +138,6 @@ protected:
   /** read the two first zones (char and paragraph) */
   bool readPLC(Vec2i limits, int wh);
 
-  /** send the character properties */
-  void setProperty(MSW1ParserInternal::Font const &font, MSW1ParserInternal::Font &previousFont);
   /** send the ruler properties */
   void setProperty(MSW1ParserInternal::Paragraph const &para);
 

@@ -1184,12 +1184,6 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   return true;
 }
 
-void WNText::setProperty(MWAWFont const &font, MWAWFont &previousFont)
-{
-  if (!m_listener) return;
-  font.sendTo(m_listener.get(), previousFont);
-}
-
 ////////////////////////////////////////////////////////////
 // the paragraphs properties
 ////////////////////////////////////////////////////////////
@@ -1774,7 +1768,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
           if (actTabs++ < numLineTabs)
             m_listener->insertTab();
           else
-            m_listener->insertCharacter(' ');
+            m_listener->insertChar(' ');
           break;
         case 0xd:
           // this is marks the end of a paragraph
@@ -1785,11 +1779,11 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
         default: {
           int unicode = m_convertissor->unicode (actFont.id(),c);
           if (unicode == -1) {
-            if (c < 30) {
+            if (c < 32) {
               MWAW_DEBUG_MSG(("WNText::send: Find odd char %x\n", int(c)));
               f << "#";
             } else
-              m_listener->insertCharacter(c);
+              m_listener->insertChar(c); // FIXME
           } else
             m_listener->insertUnicode((uint32_t) unicode);
           break;
@@ -1808,7 +1802,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       MWAWFont font(actFont);
       if (extraDecal > 0) font.set(MWAWFont::Script::super100());
       else if (extraDecal < 0) font.set(MWAWFont::Script::sub100());
-      setProperty(font, font);
+      m_listener->setFont(font);
       break;
     }
     case 0xa: {  // only in writenow 4.0 : related to a table ?
@@ -1872,7 +1866,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       if (actTabs++ < numLineTabs)
         m_listener->insertTab();
       else
-        m_listener->insertCharacter(' ');
+        m_listener->insertChar(' ');
       break;
     }
     case 0xc: {
@@ -1909,11 +1903,11 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       if (!dataStream) break;
       WNTextInternal::Font font;
       if (readFont(dataInput, false, font)) {
-        setProperty(font.m_font, actFont);
+        actFont=font.m_font;
         f << font.m_font.getDebugString(m_convertissor) << font;
         if (extraDecal > 0) font.m_font.set(MWAWFont::Script::super100());
         else if (extraDecal < 0) font.m_font.set(MWAWFont::Script::sub100());
-        setProperty(font.m_font, font.m_font);
+        m_listener->setFont(font.m_font);
       } else
         f << "#";
       break;

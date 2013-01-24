@@ -224,7 +224,8 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   if (m_type == libmwaw::DOC_HEADER_FOOTER)
     m_textParser->sendFooter(m_id);
   else if (m_type == libmwaw::DOC_COMMENT_ANNOTATION) {
-    m_textParser->sendString(m_text, MWAWFont(3,10));
+    listener->setFont(MWAWFont(3,10));
+    m_textParser->sendString(m_text);
   } else {
     MWAW_DEBUG_MSG(("SubDocument::parse: oops do not know how to send this kind of document\n"));
   }
@@ -485,8 +486,7 @@ bool DMText::sendText(DMTextInternal::Zone const &zone)
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(TEXT)[" << zone.m_pos.id() << "]:";
-  MWAWFont actFont(3,12);
-  setProperty(actFont);
+  m_listener->setFont(MWAWFont(3,12));
   m_listener->setParagraphJustification(zone.m_justify);
   std::map<long, MWAWFont >::const_iterator fontIt;
   int nPict=0, zId=zone.m_pos.id()-128;
@@ -503,10 +503,8 @@ bool DMText::sendText(DMTextInternal::Zone const &zone)
       f << "TEXT:";
     }
     fontIt=zone.m_posFontMap.find(i);
-    if (fontIt != zone.m_posFontMap.end()) {
-      actFont=fontIt->second;
-      setProperty(actFont);
-    }
+    if (fontIt != zone.m_posFontMap.end())
+      m_listener->setFont(fontIt->second);
     if (c)
       f << c;
     switch(c) {
@@ -528,18 +526,9 @@ bool DMText::sendText(DMTextInternal::Zone const &zone)
     case 0xca:
       m_mainParser->sendPicture(zId, ++nPict, w);
       break;
-    default: {
-      int unicode = m_convertissor->unicode (actFont.id(),c);
-      if (unicode == -1) {
-        if (c < 32) {
-          MWAW_DEBUG_MSG(("DMText::send: Find odd char %x\n", int(c)));
-          f << "##[" << int(c) << "]";
-        } else
-          m_listener->insertCharacter(c);
-      } else
-        m_listener->insertUnicode((uint32_t) unicode);
+    default:
+      i += m_listener->insertCharacter(c, input, zone.m_pos.end());
       break;
-    }
     }
   }
   return true;
@@ -548,14 +537,6 @@ bool DMText::sendText(DMTextInternal::Zone const &zone)
 ////////////////////////////////////////////////////////////
 //     Fonts
 ////////////////////////////////////////////////////////////
-// send the font to the listener
-void DMText::setProperty(MWAWFont const &font)
-{
-  if (!m_listener) return;
-  MWAWFont ft;
-  font.sendTo(m_listener.get(), ft);
-}
-
 bool DMText::readFontNames(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<2) {
@@ -715,7 +696,7 @@ bool DMText::sendTOC()
   MWAWFont cFont(3,12);
   cFont.setFlags(MWAWFont::boldBit);
   MWAWFont actFont(3,10);
-  setProperty(actFont);
+  m_listener->setFont(actFont);
   double w = m_state->m_pageWidth;
   MWAWParagraph para;
   MWAWTabStop tab;
@@ -734,17 +715,17 @@ bool DMText::sendTOC()
 
     if (zId!=prevId) {
       prevId=zId;
-      setProperty(cFont);
+      m_listener->setFont(cFont);
 
       m_listener->insertUnicodeString(ss.str().c_str());
-      m_listener->insertCharacter(' ');
+      m_listener->insertChar(' ');
       std::string str("");
       if (m_state->m_idZoneMap.find(127+zId)!=m_state->m_idZoneMap.end())
-        sendString(m_state->m_idZoneMap.find(127+zId)->second.m_name,cFont);
+        sendString(m_state->m_idZoneMap.find(127+zId)->second.m_name);
       m_listener->insertEOL();
-      setProperty(actFont);
+      m_listener->setFont(actFont);
     }
-    sendString(toc.m_textList[i],actFont);
+    sendString(toc.m_textList[i]);
     m_listener->insertTab();
     m_listener->insertUnicodeString(ss.str().c_str());
     m_listener->insertEOL();
@@ -891,8 +872,7 @@ bool DMText::sendFooter(int zId)
     MWAW_DEBUG_MSG(("DMText::sendFooter: oops, can not find the zone\n"));
     return false;
   }
-  MWAWFont actFont=ft.m_font;
-  setProperty(actFont);
+  m_listener->setFont(ft.m_font);
 
   DMTextInternal::Zone const &zone=m_state->getZone(zId);
   double w = m_state->m_pageWidth-double(zone.m_margins[0]+zone.m_margins[2])/72.;
@@ -926,10 +906,10 @@ bool DMText::sendFooter(int zId)
         m_listener->insertField(MWAWContentListener::Title);
         break;
       case 7:
-        sendString(zone.m_name, actFont);
+        sendString(zone.m_name);
         break;
       case 8:
-        sendString(ft.m_userInfo, actFont);
+        sendString(ft.m_userInfo);
         break;
       default:
         break;
@@ -1006,21 +986,12 @@ bool DMText::readFooter(MWAWEntry const &entry)
 //
 ////////////////////////////////////////////////////////////
 
-void DMText::sendString(std::string const &str, MWAWFont const &font) const
+void DMText::sendString(std::string const &str) const
 {
   if (!m_listener) return;
 
-  for (size_t s=0; s < str.size(); s++) {
-    unsigned char c = (unsigned char)str[s];
-    int unicode = m_convertissor->unicode (font.id(),c);
-    if (unicode == -1) {
-      if (c < 32) {
-        MWAW_DEBUG_MSG(("DMText::sendString: Find odd char %x\n", int(c)));
-      } else
-        m_listener->insertCharacter(c);
-    } else
-      m_listener->insertUnicode((uint32_t) unicode);
-  }
+  for (size_t s=0; s < str.size(); s++)
+    m_listener->insertCharacter((unsigned char)str[s]);
 }
 
 bool DMText::sendMainText()

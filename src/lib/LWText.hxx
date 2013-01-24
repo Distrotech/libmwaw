@@ -110,8 +110,6 @@ protected:
   bool readFonts(MWAWEntry const &entry);
   //! read the Font2 resource ( underline, upperline, ...)
   bool readFont2(MWAWEntry const &entry);
-  /** send the character properties */
-  void setProperty(MWAWFont const &font);
 
   //! read the rulers (stylx resource)
   bool readRulers(MWAWEntry const &entry);

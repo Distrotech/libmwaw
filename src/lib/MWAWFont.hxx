@@ -40,7 +40,6 @@
 
 #include "libmwaw_internal.hxx"
 
-class MWAWContentListener;
 class MWAWFontConverter;
 class WPXPropertyList;
 
@@ -450,9 +449,6 @@ public:
     if (m_language.get() > oth.m_language.get()) return 1;
     return diff;
   }
-
-  /** sends font to a listener */
-  void sendTo(MWAWContentListener *listener, MWAWFont &actFont) const;
 
 protected:
   Variable<int> m_id /** font identificator*/;

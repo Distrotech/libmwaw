@@ -307,7 +307,7 @@ void MSWTextStyles::setProperty(MSWStruct::Font const &font)
   if (tmp.m_font->id() < 0) tmp.m_font->setId(m_state->m_defaultFont.id());
   if (tmp.m_font->size() <= 0) tmp.m_font->setSize(m_state->m_defaultFont.size());
   tmp.updateFontToFinalState();
-  tmp.m_font->sendTo(m_listener.get(), *tmp.m_font);
+  m_listener->setFont(*tmp.m_font);
 }
 
 ////////////////////////////////////////////////////////////

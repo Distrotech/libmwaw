@@ -64,7 +64,7 @@ void MSKParser::sendFrameText(MWAWEntry const &, std::string const &)
 {
   MWAW_DEBUG_MSG(("MSKParser::sendFrameText: must not be called\n"));
   if (!m_listener) return;
-  m_listener->insertCharacter(' ');
+  m_listener->insertChar(' ');
 }
 
 void MSKParser::sendOLE(int, MWAWPosition const &, WPXPropertyList)

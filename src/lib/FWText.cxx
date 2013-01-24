@@ -449,7 +449,7 @@ struct Paragraph : public MWAWParagraph {
 struct State {
   //! constructor
   State() : m_version(-1), m_entryMap(), m_paragraphMap(), m_itemMap(), m_dataModMap(),
-    m_paragraphModList(), m_borderList(), m_mainZones(), m_numPages(1), m_actualPage(0), m_font(-1, 0, 0) {
+    m_paragraphModList(), m_borderList(), m_mainZones(), m_numPages(1), m_actualPage(0) {
   }
 
   //! the file version
@@ -472,9 +472,6 @@ struct State {
   std::vector<int> m_mainZones;
 
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
-  //! the actual font
-  MWAWFont m_font;
-
 };
 }
 
@@ -923,7 +920,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       setProperty(ruler);
     }
     if (!fontSet) {
-      setProperty(font.m_font, m_state->m_font);
+      m_listener->setFont(font.m_font);
       fontSet = true;
     }
     fCharSent = true;
@@ -965,11 +962,8 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
     if (val >= 256)
       m_listener->insertUnicode((uint32_t) val);
     else {
-      int unicode = m_convertissor->unicode(font.m_font.id(), (unsigned char) val);
-      if (unicode != -1)
-        m_listener->insertUnicode((uint32_t) unicode);
-      else if (val > 0x1f)
-        m_listener->insertCharacter((unsigned char) val);
+      i += m_listener->insertCharacter
+           ((unsigned char)val, input, input->tell()+(numChar-1-i));
       if (val <= 0x1f)
         f << "#[" << std::hex << val << "]";
       else
@@ -1937,13 +1931,7 @@ bool FWText::readColumns(shared_ptr<FWEntry> zone)
 }
 
 ////////////////////////////////////////////////////////////
-// send char/ruler property
-void FWText::setProperty(MWAWFont const &font, MWAWFont &previousFont)
-{
-  if (!m_listener) return;
-  font.sendTo(m_listener.get(), previousFont);
-}
-
+// send ruler property
 void FWText::setProperty(FWTextInternal::Paragraph const &para)
 {
   if (!m_listener) return;

@@ -360,7 +360,6 @@ bool HMWText::sendText(HMWZone &zone)
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
 
-  MWAWFont actFont;
   int actPage = 1, actCol = 0, numCol=1, actSection = 1;
   float width = float(72.0*m_mainParser->pageWidth());
 
@@ -386,8 +385,7 @@ bool HMWText::sendText(HMWZone &zone)
       if (!readFont(zone,font))
         break;
       done = true;
-      actFont = font.m_font;
-      setProperty(actFont);
+      m_listener->setFont(font.m_font);
       break;
     }
     case 2: { // ruler
@@ -526,11 +524,7 @@ bool HMWText::sendText(HMWZone &zone)
           break;
         }
         f << char(c);
-        int unicode = m_convertissor->unicode(actFont.id(), (unsigned char) c);
-        if (unicode != -1)
-          m_listener->insertUnicode((uint32_t) unicode);
-        else
-          m_listener->insertCharacter((unsigned char) c);
+        m_listener->insertCharacter((unsigned char)c, input);
         break;
       }
       }
@@ -552,14 +546,6 @@ bool HMWText::sendText(HMWZone &zone)
 ////////////////////////////////////////////////////////////
 //     Fonts
 ////////////////////////////////////////////////////////////
-
-// send the font to the listener
-void HMWText::setProperty(MWAWFont const &font)
-{
-  if (!m_listener) return;
-  MWAWFont ft;
-  font.sendTo(m_listener.get(), ft);
-}
 
 // a font in the text zone
 bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)

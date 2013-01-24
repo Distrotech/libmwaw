@@ -132,9 +132,6 @@ protected:
   //! read the 12 th zone
   bool readZone12(MWAWEntry &entry);
 
-  /* sends a character property to the listener
-   * \param font the font's properties */
-  void setProperty(MWAWFont const &font);
   /** sends a paragraph property to the listener */
   void setProperty(MWAWParagraph const &para);
 

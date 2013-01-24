@@ -145,9 +145,6 @@ protected:
   //! tries to read a font
   bool readFont(MSK3TextInternal::Font &font, long endPos);
 
-  //! send the font properties
-  void setProperty(MSK3TextInternal::Font const &font);
-
   //! tries to read a paragraph
   bool readParagraph(MSK3TextInternal::LineZone &zone, MSK3TextInternal::Paragraph &parag);
 

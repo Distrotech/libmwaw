@@ -180,8 +180,7 @@ struct TextZone {
 //! Internal: the state of a MSK3Text
 struct State {
   //! constructor
-  State() : m_version(-1), m_zones(),
-    m_numPages(1), m_actualPage(1), m_font(20, 12, 0) {
+  State() : m_version(-1), m_zones(), m_numPages(1), m_actualPage(1) {
   }
   //! the file version
   mutable int m_version;
@@ -190,8 +189,6 @@ struct State {
   std::vector<TextZone> m_zones;
 
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
-  //! the actual font
-  MWAWFont m_font;
 };
 
 }
@@ -423,12 +420,16 @@ bool MSK3Text::readZoneHeader(MSK3TextInternal::LineZone &zone) const
 ////////////////////////////////////////////////////////////
 bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
 {
+  if (!m_listener) {
+    MWAW_DEBUG_MSG(("MSK3Text::sendText: can not find the listener\n"));
+    return true;
+  }
   m_input->seek(zone.m_pos.begin()+6, WPX_SEEK_SET);
   int vers = version();
   libmwaw::DebugStream f;
   f << "Entries(TextZone):" << zone << ",";
   MSK3TextInternal::Font actFont, font;
-  actFont.m_font = m_state->m_font;
+  actFont.m_font = m_listener->getFont();
   if (m_listener && zone.m_height > 0)
     m_listener->setParagraphLineSpacing(zone.m_height, WPX_POINT);
   bool firstChar = true;
@@ -438,7 +439,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
     int c = (int) m_input->readULong(1);
     if ((c == 1 || c == 2) && readFont(font, zone.m_pos.end())) {
       actFont = font;
-      setProperty(font);
+      m_listener->setFont(font.m_font);
       f << "[" << font.m_font.getDebugString(m_convertissor) << font << "]";
       continue;
     }
@@ -491,7 +492,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
       } else {
         int unicode = m_convertissor->unicode (actFont.m_font.id(), (unsigned char)c);
         if (unicode == -1)
-          m_listener->insertCharacter((uint8_t)c);
+          m_listener->insertChar((uint8_t)c); // FIXME
         else
           m_listener->insertUnicode((uint32_t) unicode);
       }
@@ -512,7 +513,7 @@ bool MSK3Text::sendString(std::string &str)
     return true;
   MSK3TextInternal::Font defFont;
   defFont.m_font = MWAWFont(20,12);
-  setProperty(defFont);
+  m_listener->setFont(defFont.m_font);
 
   for (int i = 0; i < int(str.length()); i++) {
     char c = str[(size_t)i];
@@ -547,7 +548,7 @@ bool MSK3Text::sendString(std::string &str)
       } else {
         int unicode = m_convertissor->unicode(defFont.m_font.id(), (unsigned char)c);
         if (unicode == -1)
-          m_listener->insertCharacter((uint8_t) c);
+          m_listener->insertChar((uint8_t) c); // FIXME
         else
           m_listener->insertUnicode((uint32_t)unicode);
       }
@@ -616,12 +617,6 @@ bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
   }
   font.m_extra = f.str();
   return true;
-}
-
-void MSK3Text::setProperty(MSK3TextInternal::Font const &font)
-{
-  if (!m_listener) return;
-  font.m_font.sendTo(m_listener.get(), m_state->m_font);
 }
 
 ////////////////////////////////////////////////////////////
@@ -814,6 +809,8 @@ std::string MSK3Text::readHeaderFooterString(bool header)
 void MSK3Text::send(MSK3TextInternal::TextZone &zone, Vec2i limit)
 {
   int numZones = int(zone.m_zonesList.size());
+  // set the default font
+  m_listener->setFont(MWAWFont(20,12));
   if (numZones == 0 && zone.m_text.length()) {
     sendString(zone.m_text);
     zone.m_isSent = true;
@@ -843,12 +840,8 @@ void MSK3Text::send(MSK3TextInternal::TextZone &zone, Vec2i limit)
       i = notePos[1]-1;
       continue;
     }
-    if (isMain && zone.m_pagesPosition.find(i) != zone.m_pagesPosition.end()) {
-      MSK3TextInternal::Font actFont;
-      actFont.m_font = m_state->m_font;
+    if (isMain && zone.m_pagesPosition.find(i) != zone.m_pagesPosition.end())
       m_mainParser->newPage(++m_state->m_actualPage, zone.m_pagesPosition[i]);
-      setProperty(actFont);
-    }
     MSK3TextInternal::LineZone &z = zone.m_zonesList[(size_t)i];
     if (z.m_type & 0x80) {
       MSK3TextInternal::Paragraph parag;
@@ -863,7 +856,7 @@ void MSK3Text::send(MSK3TextInternal::TextZone &zone, Vec2i limit)
 void MSK3Text::sendNote(int zoneId, int noteId)
 {
   if (zoneId < 0 || zoneId >= int(m_state->m_zones.size())) {
-    if (m_listener) m_listener->insertCharacter(' ');
+    if (m_listener) m_listener->insertChar(' ');
     MWAW_DEBUG_MSG(("MSK3Text::sendNote: unknown zone %d\n", zoneId));
     return;
   }
@@ -871,7 +864,7 @@ void MSK3Text::sendNote(int zoneId, int noteId)
   std::map<int, Vec2i>::const_iterator noteIt = zone.m_footnoteMap.find(noteId);
   if (noteIt==zone.m_footnoteMap.end()) {
     MWAW_DEBUG_MSG(("MSK3Text::sendNote: unknown note %d-%d\n", zoneId, noteId));
-    if (m_listener) m_listener->insertCharacter(' ');
+    if (m_listener) m_listener->insertChar(' ');
   } else
     send(zone, noteIt->second);
 }

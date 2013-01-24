@@ -1382,7 +1382,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
     m_listener->setParagraphLineSpacing(info.m_height, WPX_POINT);
   for (int c = 0; c < numChars; c++) {
     if (actFont < numFonts && c ==  fonts[actFont].m_firstChar) {
-      fonts[actFont].m_font.sendTo(m_listener.get(), font);
+      m_listener->setFont(fonts[actFont].m_font);
       font = fonts[actFont++].m_font;
     }
     if (actLine < numLines && c == lines[(size_t) actLine].m_firstChar) {
@@ -1401,7 +1401,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
     /*    else if (ch == 0xd)
     			m_listener->insertEOL();*/
     else if (ch >= 32)
-      m_listener->insertCharacter(ch);
+      m_listener->insertChar(ch); // FIXME
     else {
       MWAW_DEBUG_MSG(("WPParser::readText: find an odd character : %d\n", int(ch)));
     }

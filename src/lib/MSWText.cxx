@@ -1463,10 +1463,10 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
         m_listener->insertField(MWAWContentListener::PageNumber);
         break;
       case 0x6:
-        m_listener->insertCharacter('\\');
+        m_listener->insertChar('\\');
         break;
       case 0x1e: // unbreaking - ?
-        m_listener->insertCharacter('-');
+        m_listener->insertChar('-');
         break;
       case 0x1f: // hyphen
         break;
@@ -1520,7 +1520,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
             MWAW_DEBUG_MSG(("MSWText::sendText: Find odd char %x\n", int(c)));
             f << "#";
           } else
-            m_listener->insertCharacter((uint8_t)c);
+            m_listener->insertChar((uint8_t)c); // FIXME
         } else
           m_listener->insertUnicode((uint32_t) unicode);
         break;
@@ -1613,7 +1613,7 @@ bool MSWText::sendTable(MSWTextInternal::Property const &prop)
       long cEndPos = prop.m_cellsPos[cellPos+1]-1;
       textData.setEnd(cEndPos);
       if (textData.length()<=0)
-        m_listener->insertCharacter(' ');
+        m_listener->insertChar(' ');
       else
         sendText(textData, false, true);
       m_listener->closeTableCell();
@@ -1638,12 +1638,12 @@ bool MSWText::sendFootnote(int id)
   if (!m_listener) return true;
   if (id < 0 || id >= int(m_state->m_footnoteList.size())) {
     MWAW_DEBUG_MSG(("MSWText::sendFootnote: can not find footnote %d\n", id));
-    m_listener->insertCharacter(' ');
+    m_listener->insertChar(' ');
     return false;
   }
   MSWTextInternal::Footnote &footnote = m_state->m_footnoteList[(size_t) id];
   if (footnote.m_pos.isParsed())
-    m_listener->insertCharacter(' ');
+    m_listener->insertChar(' ');
   else
     sendText(footnote.m_pos, false);
   footnote.m_pos.setParsed();
@@ -1655,7 +1655,7 @@ bool MSWText::sendFieldComment(int id)
   if (!m_listener) return true;
   if (id < 0 || id >= int(m_state->m_fieldList.size())) {
     MWAW_DEBUG_MSG(("MSWText::sendFieldComment: can not find field %d\n", id));
-    m_listener->insertCharacter(' ');
+    m_listener->insertChar(' ');
     return false;
   }
   MSWStruct::Font defFont;
@@ -1663,15 +1663,15 @@ bool MSWText::sendFieldComment(int id)
   m_stylesManager->setProperty(defFont);
   m_stylesManager->sendDefaultParagraph();
   std::string const &text = m_state->m_fieldList[(size_t) id].m_text;
-  if (!text.length()) m_listener->insertCharacter(' ');
+  if (!text.length()) m_listener->insertChar(' ');
   for (size_t c = 0; c < text.length(); c++) {
     int unicode = m_convertissor->unicode(defFont.m_font->id(), (unsigned char) text[c]);
     if (unicode == -1) {
       if (text[c] < 32) {
         MWAW_DEBUG_MSG(("MSWText::sendFieldComment: Find odd char %x\n", int(text[c])));
-        m_listener->insertCharacter(' ');
+        m_listener->insertChar(' ');
       } else
-        m_listener->insertCharacter((uint8_t) text[c]);
+        m_listener->insertChar((uint8_t) text[c]); // FIXME
     } else
       m_listener->insertUnicode((uint32_t) unicode);
   }

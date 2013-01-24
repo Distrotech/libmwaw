@@ -124,8 +124,6 @@ protected:
   //! read the styles
   bool readStyles(MWAWEntry const &entry);
 
-  /** send the character properties */
-  void setProperty(MWAWFont const &font);
   //! read a section fonts
   bool readSectionFonts(MWAWEntry const &entry);
 

@@ -35,8 +35,8 @@
  * Parser to convert some WriterPlus text document ( a french text editor )
  *
  */
-#ifndef WP_MWAW_PARSER
-#  define WP_MWAW_PARSER
+#ifndef WP_PARSER
+#  define WP_PARSER
 
 #include <list>
 #include <string>

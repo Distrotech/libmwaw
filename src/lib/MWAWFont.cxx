@@ -230,23 +230,6 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
   return o.str();
 }
 
-void MWAWFont::sendTo(MWAWContentListener *listener, MWAWFont &actualFont) const
-{
-  if (listener == 0L) return;
-
-  float newSize = size();
-  MWAWFont const &oldFont=listener->getFont();
-  actualFont=*this;
-  if (id() == -1)
-    actualFont.setId(oldFont.id());
-
-  if (newSize > 0)
-    actualFont.setSize(newSize);
-  else
-    actualFont.setSize(oldFont.size());
-  listener->setFont(actualFont);
-}
-
 void MWAWFont::addTo(WPXPropertyList &pList, shared_ptr<MWAWFontConverter> convert) const
 {
   int dSize = 0;

@@ -35,8 +35,8 @@
  *
  * Note: WriteNow 2.0 seems very different
  */
-#ifndef WN_MWAW_PARSER
-#  define WN_MWAW_PARSER
+#ifndef WN_PARSER
+#  define WN_PARSER
 
 #include <list>
 #include <string>

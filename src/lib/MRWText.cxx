@@ -429,8 +429,7 @@ bool MRWText::send(int zoneId)
   zone.m_parsed = true;
 
   long actChar = 0;
-  MRWTextInternal::Font actFont;
-  setProperty(actFont.m_font);
+  m_listener->setFont(MWAWFont());
   int actPage = 1;
   if (zoneId==0)
     m_mainParser->newPage(actPage);
@@ -458,8 +457,7 @@ bool MRWText::send(int zoneId)
         f << "[F" << id << "]";
         MRWTextInternal::Font font;
         if (zone.getFont(id, font)) {
-          actFont = font;
-          setProperty(font.m_font);
+          m_listener->setFont(font.m_font);
           if (font.m_tokenId > 0) {
             m_mainParser->sendToken(zoneId, font.m_tokenId);
             tokenEndPos = -2;
@@ -491,7 +489,7 @@ bool MRWText::send(int zoneId)
       }
       case 0x7: // fixme end of cell
         f << "#";
-        m_listener->insertCharacter(' ');
+        m_listener->insertChar(' ');
         break;
       case 0x9:
         m_listener->insertTab();
@@ -517,17 +515,9 @@ bool MRWText::send(int zoneId)
         break;
       case 0x1f: // soft hyphen, ignore
         break;
-      default: {
-        int unicode = m_convertissor->unicode (actFont.m_font.id(), (unsigned char) c);
-        if (unicode == -1) {
-          if (c >= 0 && c < 0x20) {
-            MWAW_DEBUG_MSG(("MRWText::sendText: Find odd char %x\n", int(c)));
-            f << "#";
-          } else
-            m_listener->insertCharacter((uint8_t) c);
-        } else
-          m_listener->insertUnicode((uint32_t) unicode);
-      }
+      default:
+        actChar+=m_listener->insertCharacter((unsigned char) c, m_input, endPos);
+        break;
       }
 
       f << c;
@@ -596,13 +586,6 @@ bool MRWText::readPLCZone(MRWEntry const &entry, int zoneId)
 ////////////////////////////////////////////////////////////
 //     Fonts
 ////////////////////////////////////////////////////////////
-void MRWText::setProperty(MWAWFont const &font)
-{
-  if (!m_listener) return;
-  MWAWFont aFont;
-  font.sendTo(m_listener.get(), aFont);
-}
-
 bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N) {

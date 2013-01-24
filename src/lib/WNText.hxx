@@ -35,8 +35,8 @@
  * Parser to WriteNow text document
  *
  */
-#ifndef WN_MWAW_TEXT
-#  define WN_MWAW_TEXT
+#ifndef WN_TEXT
+#  define WN_TEXT
 
 #include <list>
 #include <string>
@@ -141,10 +141,6 @@ protected:
             std::vector<shared_ptr<WNTextInternal::ContentZones> > &footnoteList,
             WNTextInternal::Paragraph &ruler);
 
-  /* sends a font property to the listener
-
-   * \param font the font's properties */
-  void setProperty(MWAWFont const &font, MWAWFont &previousFont);
   /** sends a paragraph property to the listener */
   void setProperty(WNTextInternal::Paragraph const &ruler);
 

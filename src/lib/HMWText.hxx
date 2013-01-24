@@ -120,8 +120,6 @@ protected:
   //
   /** try to read a font in a text zone */
   bool readFont(HMWZone &zone, HMWTextInternal::Font &font);
-  /** send the character properties */
-  void setProperty(MWAWFont const &font);
 
   /** try to read a paragraph in a text zone */
   bool readParagraph(HMWZone &zone, HMWTextInternal::Paragraph &para);

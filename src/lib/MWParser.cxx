@@ -1377,8 +1377,8 @@ bool MWParser::readText(MWParserInternal::Information const &info,
 
     MWAWFont font;
     if (!numFormat || listPos[0] != 0) {
-      font = info.m_font;
-      font.sendTo(m_listener.get(), font);
+      m_listener->setFont(info.m_font);
+      font = m_listener->getFont();
     }
     if (info.m_justifySet)
       m_listener->setParagraphJustification(info.m_justify);
@@ -1387,8 +1387,8 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     numChar = int(text.length());
     for (int i = 0; i < numChar; i++) {
       if (actFormat < numFormat && i == listPos[(size_t)actFormat]) {
-        listFonts[(size_t)actFormat].sendTo(m_listener.get(), font);
-        font = listFonts[(size_t)actFormat];
+        m_listener->setFont(listFonts[(size_t)actFormat]);
+        font = m_listener->getFont();
         actFormat++;
       }
       unsigned char c = (unsigned char) text[(size_t)i];
@@ -1398,8 +1398,8 @@ bool MWParser::readText(MWParserInternal::Information const &info,
         m_listener->insertTab();
       else if (c == 0xd)
         m_listener->insertEOL();
-      else if (c >= 29)
-        m_listener->insertCharacter(c);
+      else if (c >= 32)
+        m_listener->insertChar(c); // FIXME
       else {
         MWAW_DEBUG_MSG(("MWParser::readText: find an odd character : %d\n", int(c)));
       }

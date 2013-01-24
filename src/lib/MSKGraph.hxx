@@ -186,8 +186,6 @@ protected:
 
   //! reads the textbox font
   bool readFont(MSKGraphInternal::Font &font);
-  //! send the font properties
-  void setProperty(MSKGraphInternal::Font const &font);
 
   //! returns the debug file
   libmwaw::DebugFile &ascii() {

@@ -1376,13 +1376,10 @@ void MDWParser::sendText(std::string const &text, std::vector<MWAWFont> const &f
       numFonts = textPos.size();
   }
   size_t actFontId = 0;
-  MWAWFont actFont(3,12);
   size_t numChar = text.length();
   for (size_t c = 0; c < numChar; c++) {
-    if (actFontId < numFonts && int(c) == textPos[actFontId]) {
-      actFont = fonts[actFontId++];
-      setProperty(actFont);
-    }
+    if (actFontId < numFonts && int(c) == textPos[actFontId])
+      m_listener->setFont(fonts[actFontId++]);
     unsigned char ch = (unsigned char)text[c];
     switch(ch) {
     case 0x9:
@@ -1391,27 +1388,11 @@ void MDWParser::sendText(std::string const &text, std::vector<MWAWFont> const &f
     case 0xd:
       m_listener->insertEOL(c!=numChar-1);
       break;
-    default: {
-      if (ch < 0x20) {
-        MWAW_DEBUG_MSG(("MDWParser::sendText: find old character: %x\n", int(ch)));
-        break;
-      }
-      int unicode = m_convertissor->unicode (actFont.id(), (unsigned char) ch);
-      if (unicode == -1)
-        m_listener->insertCharacter((uint8_t) ch);
-      else
-        m_listener->insertUnicode((uint32_t) unicode);
+    default:
+      m_listener->insertCharacter((unsigned char) ch);
       break;
     }
-    }
   }
-}
-
-void MDWParser::setProperty(MWAWFont const &font)
-{
-  if (!m_listener) return;
-  MWAWFont ft;
-  font.sendTo(m_listener.get(), ft);
 }
 
 void MDWParser::setProperty(MWAWParagraph const &para)

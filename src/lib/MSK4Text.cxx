@@ -383,7 +383,7 @@ std::ostream &operator<<(std::ostream &o, DataPLC const &plc)
  */
 struct State {
   //! constructor
-  State() : m_font(-1, 0), m_paragraph(), m_defFont(3,12), m_fontNames(),
+  State() : m_paragraph(), m_defFont(3,12), m_fontNames(),
     m_fontList(), m_paragraphList(), m_pgdList(), m_ftntList(),
     m_ftntMap(), m_eobjMap(), m_plcList(), m_knownPLC(), m_main(false) {}
 
@@ -395,9 +395,6 @@ struct State {
   void setParse(bool main) {
     m_main = main;
   }
-
-  //! the actual font
-  MWAWFont m_font;
 
   //! the actual paragraph
   Paragraph m_paragraph;
@@ -613,13 +610,13 @@ bool MSK4Text::readFootNote(MWAWInputStreamPtr input, int id)
     if (id >= 0) {
       MWAW_DEBUG_MSG(("MSK4Text::readFootNote: can not find footnote: %d\n", id));
     }
-    m_listener->insertCharacter(' ');
+    m_listener->insertChar(' ');
     return false;
   }
   MSK4TextInternal::Ftnt const &ft = m_state->m_ftntList[size_t(id)];
   if (ft.m_begin < m_textPositions.begin() || ft.m_end > m_textPositions.end()) {
     MWAW_DEBUG_MSG(("MSK4Text::readFootNote: invalid zone\n"));
-    m_listener->insertCharacter(' ');
+    m_listener->insertChar(' ');
     return false;
   }
 
@@ -645,7 +642,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
 {
   if (zone.begin() < m_textPositions.begin() || zone.end() > m_textPositions.end()) {
     MWAW_DEBUG_MSG(("MSK4Text::readText: invalid zone\n"));
-    if (m_listener) m_listener->insertCharacter(' ');
+    if (m_listener) m_listener->insertChar(' ');
     return false;
   }
 
@@ -663,8 +660,10 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
     else if (fod.m_type == DataFOD::ATTR_PARAG) prevPId = id;
   }
 
-  if (prevFId != -1) setProperty(m_state->m_fontList[size_t(prevFId)].m_font);
-  else setProperty(m_state->m_defFont);
+  MWAWFont actFont(prevFId != -1 ?
+                   m_state->m_fontList[size_t(prevFId)].m_font :
+                   m_state->m_defFont);
+  if (m_listener) m_listener->setFont(actFont);
   if (prevPId != -1) setProperty(m_state->m_paragraphList[size_t(prevPId)]);
   else setProperty(MSK4TextInternal::Paragraph());
 
@@ -699,8 +698,9 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
 #endif
       if (fod.m_id >= 0) {
         fType = m_state->m_fontList[(size_t) fod.m_id].m_fieldType;
-        setProperty(m_state->m_fontList[(size_t) fod.m_id].m_font);
-      } else setProperty(m_state->m_defFont);
+        actFont=m_state->m_fontList[(size_t) fod.m_id].m_font;
+      } else actFont=m_state->m_defFont;
+      if (m_listener) m_listener->setFont(actFont);
     } else if (fod.m_type == DataFOD::ATTR_PARAG) {
 #if DEBUG_PP
       f << "[";
@@ -788,9 +788,9 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
       default: {
         if (!m_listener) break;
 
-        int unicode = m_convertissor->unicode(m_state->m_font.id(), readVal);
+        int unicode = m_convertissor->unicode(actFont.id(), readVal);
         if (unicode != -1) m_listener->insertUnicode((uint32_t)unicode);
-        else if (readVal >= 30) m_listener->insertCharacter(readVal);
+        else if (readVal >= 30) m_listener->insertChar(readVal); // FIXME
         else
           f << ",###[" << std::hex << int(readVal) << std::dec << "]";
         break;
@@ -1087,12 +1087,6 @@ bool MSK4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
 void MSK4Text::setDefault(MWAWFont &font)
 {
   m_state->m_defFont = font;
-}
-
-void MSK4Text::setProperty(MWAWFont const &ft)
-{
-  if (!m_listener) return;
-  ft.sendTo(m_listener.get(), m_state->m_font);
 }
 
 // read

@@ -396,7 +396,7 @@ struct Cell : public MWAWTableCell {
     if (m_blockId > 0)
       m_parser.send(m_blockId);
     else if (listener) // try to avoid empty cell
-      listener->insertCharacter(' ');
+      listener->insertChar(' ');
     return true;
   }
 
@@ -2449,7 +2449,7 @@ bool MWProStructures::send(int blockId, bool mainZone)
     }
   } else if (block->m_type == 4 || block->m_type == 6) {
     // probably ok, can be an empty cell, textbox, header/footer ..
-    if (m_listener) m_listener->insertCharacter(' ');
+    if (m_listener) m_listener->insertChar(' ');
   } else if (block->m_type == 8) { // empty frame
     WPXPropertyList extras;
     block->fillFramePropertyList(extras);
@@ -2606,7 +2606,7 @@ void MWProStructuresListenerState::sendChar(char c)
     if (m_actTab++ < m_numTab)
       m_structures->m_listener->insertTab();
     else
-      m_structures->m_listener->insertCharacter(' ');
+      m_structures->m_listener->insertChar(' ');
     break;
   case 0xa:
     m_actTab = 0;
@@ -2654,7 +2654,7 @@ void MWProStructuresListenerState::sendChar(char c)
       if (c < 32) {
         MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendChar: Find odd char %x\n", int(c)));
       } else
-        m_structures->m_listener->insertCharacter((unsigned char)c);
+        m_structures->m_listener->insertChar((unsigned char)c); // FIXME
     } else
       m_structures->m_listener->insertUnicode((uint32_t) unicode);
     break;
@@ -2689,8 +2689,9 @@ void MWProStructuresListenerState::sendFont(MWProStructuresInternal::Font const 
   if (!m_structures || !m_structures->m_listener)
     return;
 
-  font.m_font.sendTo(m_structures->m_listener.get(), m_font->m_font);
+  m_structures->m_listener->setFont(font.m_font);
   *m_font = font;
+  m_font->m_font =  m_structures->m_listener->getFont();
 }
 
 std::string MWProStructuresListenerState::getFontDebugString(int fId)

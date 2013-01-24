@@ -245,7 +245,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_parser);
 
   if (!m_zone.valid()) {
-    listener->insertCharacter(' ');
+    listener->insertChar(' ');
     return;
   }
   long pos = m_input->tell();
@@ -389,7 +389,7 @@ void MSW1Parser::sendMain()
   }
   // maybe need if we have no text ; if not, nobody will see it
   if (m_listener)
-    m_listener->insertCharacter(' ');
+    m_listener->insertChar(' ');
 }
 
 ////////////////////////////////////////////////////////////
@@ -1257,9 +1257,10 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
       switch(plc.m_type) {
       case MSW1ParserInternal::FONT:
         if (plc.m_id >= 0 && plc.m_id < int(m_state->m_fontsList.size()))
-          setProperty(m_state->m_fontsList[size_t(plc.m_id)], actFont);
+          m_listener->setFont(m_state->m_fontsList[size_t(plc.m_id)].m_font);
         else
-          setProperty(defFont, actFont);
+          m_listener->setFont(defFont.m_font);
+        actFont.m_font = m_listener->getFont();
         fontNotSent = false;
         break;
       case MSW1ParserInternal::RULER:
@@ -1298,8 +1299,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
         setProperty(MSW1ParserInternal::Paragraph());
       rulerNotSent = false;
     }
-    if (fontNotSent)
-      setProperty(actFont, actFont);
+    if (fontNotSent) m_listener->setFont(actFont.m_font);
     unsigned char c = (unsigned char) input->readULong(1);
     f << (char) c;
     switch(c) {
@@ -1322,7 +1322,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
           MWAW_DEBUG_MSG(("MSW1Parser::send: Find odd char %x\n", int(c)));
           f << "#";
         } else
-          m_listener->insertCharacter(c);
+          m_listener->insertChar(c); // FIXME
       } else
         m_listener->insertUnicode((uint32_t) unicode);
       break;
@@ -1334,12 +1334,6 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
   return true;
 }
 
-// send the character properties
-void MSW1Parser::setProperty(MSW1ParserInternal::Font const &font, MSW1ParserInternal::Font &previousFont)
-{
-  if (!m_listener) return;
-  font.m_font.sendTo(m_listener.get(), previousFont.m_font);
-}
 // send the ruler properties
 void MSW1Parser::setProperty(MSW1ParserInternal::Paragraph const &para)
 {

@@ -376,7 +376,6 @@ bool LWText::sendMainText()
   long pos=m_input->tell();
   m_input->seek(0, WPX_SEEK_SET);
 
-  MWAWFont actFont(3,12);
   LWTextInternal::Font font, auxiFont;
 
   int numCols, sepWidth;
@@ -404,7 +403,7 @@ bool LWText::sendMainText()
 
     plcIt = m_state->m_plcMap.find(actPos);
     bool fontChanged = false;
-    while (plcIt != m_state->m_plcMap.end() && plcIt->first==actPos) {
+    while (plcIt != m_state->m_plcMap.end() && plcIt->first<=actPos) {
       LWTextInternal::PLC const &plc = plcIt++->second;
       f << "[" << plc << "]";
       switch(plc.m_type) {
@@ -453,8 +452,7 @@ bool LWText::sendMainText()
       final.merge(auxiFont);
       if (deltaSpacing<0||deltaSpacing>0)
         final.m_font.setDeltaLetterSpacing(deltaSpacing+final.m_font.deltaLetterSpacing());
-      actFont = final.m_font;
-      setProperty(actFont);
+      m_listener->setFont(final.m_font);
       if (final.m_pictId>0) {
         m_mainParser->sendGraphic(final.m_pictId);
         if (c==(char)0xca)
@@ -474,17 +472,9 @@ bool LWText::sendMainText()
       m_listener->insertEOL();
       break;
 
-    default: {
-      int unicode = m_convertissor->unicode (actFont.id(), (unsigned char) c, m_input);
-      if (unicode == -1) {
-        if (c >= 0 && c < 0x20) {
-          MWAW_DEBUG_MSG(("LWText::sendMainText: Find odd char %x\n", int(c)));
-          f << "##";
-        } else
-          m_listener->insertCharacter((uint8_t) c);
-      } else
-        m_listener->insertUnicode((uint32_t) unicode);
-    }
+    default:
+      m_listener->insertCharacter((unsigned char)c, m_input);
+      break;
     }
   }
 
@@ -494,13 +484,6 @@ bool LWText::sendMainText()
 //////////////////////////////////////////////
 // Fonts
 //////////////////////////////////////////////
-void LWText::setProperty(MWAWFont const &font)
-{
-  if (!m_listener) return;
-  MWAWFont aFont;
-  font.sendTo(m_listener.get(), aFont);
-}
-
 bool LWText::readFonts(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 2) {
@@ -923,8 +906,7 @@ bool LWText::sendHeaderFooter(bool header)
     return false;
   }
   m_listener->setParagraphJustification(zone.m_justify);
-  MWAWFont actFont = zone.m_font;
-  setProperty(actFont);
+  m_listener->setFont(zone.m_font);
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   input->seek(zone.m_pos.begin(), WPX_SEEK_SET);
 
@@ -964,14 +946,7 @@ bool LWText::sendHeaderFooter(bool header)
       m_listener->insertEOL();
       continue;
     }
-    int unicode = m_convertissor->unicode (actFont.id(), (unsigned char) c);
-    if (unicode == -1) {
-      if (c >= 0 && c < 0x20) {
-        MWAW_DEBUG_MSG(("LWText::sendHeaderFooter: Find odd char %x\n", int(c)));
-      } else
-        m_listener->insertCharacter((uint8_t) c);
-    } else
-      m_listener->insertUnicode((uint32_t) unicode);
+    m_listener->insertCharacter((unsigned char) c);
   }
   return true;
 }

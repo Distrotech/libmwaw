@@ -41,6 +41,8 @@
 
 #include "MWAWCell.hxx"
 #include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
+#include "MWAWInputStream.hxx"
 #include "MWAWList.hxx"
 #include "MWAWPageSpan.hxx"
 #include "MWAWParagraph.hxx"
@@ -300,7 +302,7 @@ MWAWContentListener::~MWAWContentListener()
 ///////////////////
 // text data
 ///////////////////
-void MWAWContentListener::insertCharacter(uint8_t character)
+void MWAWContentListener::insertChar(uint8_t character)
 {
   if (character >= 0x80) {
     insertUnicode(character);
@@ -309,6 +311,47 @@ void MWAWContentListener::insertCharacter(uint8_t character)
   _flushDeferredTabs ();
   if (!m_ps->m_isSpanOpened) _openSpan();
   m_ps->m_textBuffer.append((char) character);
+}
+
+void MWAWContentListener::insertCharacter(unsigned char c)
+{
+  int unicode = m_fontConverter->unicode (m_ps->m_font.id(), c);
+  if (unicode == -1) {
+    if (c < 0x20) {
+      MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: Find odd char %x\n", int(c)));
+    } else
+      insertChar((uint8_t) c);
+  } else
+    insertUnicode((uint32_t) unicode);
+}
+
+int MWAWContentListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &input, long endPos)
+{
+  if (!input || !m_fontConverter) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: input or font converter does not exist!!!!\n"));
+    return 0;
+  }
+  long debPos=input->tell();
+  int fId = m_ps->m_font.id();
+  int unicode = endPos==debPos ? m_fontConverter->unicode (fId, c) :
+                m_fontConverter->unicode (fId, c, input);
+
+  long pos=input->tell();
+  if (endPos > 0 && pos > endPos) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: problem reading a character\n"));
+    pos = debPos;
+    input->seek(pos, WPX_SEEK_SET);
+    unicode = m_fontConverter->unicode (fId, c);
+  }
+  if (unicode == -1) {
+    if (c < 0x20) {
+      MWAW_DEBUG_MSG(("MWAWContentListener::sendText: Find odd char %x\n", int(c)));
+    } else
+      insertChar((uint8_t) c);
+  } else
+    insertUnicode((uint32_t) unicode);
+
+  return int(pos-debPos);
 }
 
 void MWAWContentListener::insertUnicode(uint32_t val)
@@ -454,9 +497,17 @@ void MWAWContentListener::_insertBreakIfNecessary(WPXPropertyList &propList)
 void MWAWContentListener::setFont(MWAWFont const &font)
 {
   if (font == m_ps->m_font) return;
-  _closeSpan();
 
-  m_ps->m_font = font;
+  // check if id and size are defined, if not used the previous fields
+  MWAWFont finalFont(font);
+  if (font.id() == -1)
+    finalFont.setId(m_ps->m_font.id());
+  if (font.size() <= 0)
+    finalFont.setSize(m_ps->m_font.size());
+  if (finalFont == m_ps->m_font) return;
+
+  _closeSpan();
+  m_ps->m_font = finalFont;
 }
 
 MWAWFont const &MWAWContentListener::getFont() const

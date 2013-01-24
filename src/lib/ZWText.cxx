@@ -438,7 +438,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
   long cPos = pos-zone.m_pos.begin();
   while (fIt != zone.m_idFontMap.end() && fIt->first<cPos)
     actFont = fIt++->second;
-  setProperty(actFont.m_font);
+  m_listener->setFont(actFont.m_font);
   int fId=0;
   bool isCenter = false;
   while (1) {
@@ -456,7 +456,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
     if (done) break;
     while (fIt != zone.m_idFontMap.end() && fIt->first<=cPos) {
       actFont = fIt++->second;
-      setProperty(actFont.m_font);
+      m_listener->setFont(actFont.m_font);
       f << "[F" << fId++ << "]";
     }
 
@@ -516,7 +516,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
           MWAW_DEBUG_MSG(("ZWText::sendText: Find odd char %x\n", int(c)));
           f << "#";
         } else
-          m_listener->insertCharacter((uint8_t) c);
+          m_listener->insertChar((uint8_t) c); // FIXME
       } else
         m_listener->insertUnicode((uint32_t) unicode);
 
@@ -561,13 +561,6 @@ bool ZWText::sendMainText()
 //////////////////////////////////////////////
 // Fonts
 //////////////////////////////////////////////
-void ZWText::setProperty(MWAWFont const &font)
-{
-  if (!m_listener) return;
-  MWAWFont aFont;
-  font.sendTo(m_listener.get(), aFont);
-}
-
 bool ZWText::readSectionFonts(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 2) {
@@ -752,7 +745,7 @@ bool ZWText::sendHeaderFooter(bool header)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   input->seek(zone.m_pos.begin(), WPX_SEEK_SET);
   MWAWFont const &actFont=zone.m_font.m_font;
-  setProperty(actFont);
+  m_listener->setFont(actFont);
   long endPos = zone.m_pos.end();
   while(!input->atEOS()) {
     long actPos = input->tell();
@@ -800,7 +793,7 @@ bool ZWText::sendHeaderFooter(bool header)
         if (c >= 0 && c < 0x20) {
           MWAW_DEBUG_MSG(("ZWText::sendHeaderFooter: Find odd char %x\n", int(c)));
         } else
-          m_listener->insertCharacter((uint8_t) c);
+          m_listener->insertChar((uint8_t) c); // FIXME
       } else
         m_listener->insertUnicode((uint32_t) unicode);
     }

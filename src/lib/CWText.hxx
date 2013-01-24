@@ -106,9 +106,6 @@ protected:
     m_listener = listen;
   }
 
-  /* sends a character property to the listener
-   * \param font the font's properties */
-  void setProperty(MWAWFont const &font);
   /** sends a paragraph property to the listener */
   void setProperty(CWTextInternal::Paragraph const &ruler);
 

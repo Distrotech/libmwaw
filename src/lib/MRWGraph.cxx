@@ -399,7 +399,7 @@ void MRWGraph::sendToken(int zoneId, long tokenId)
       break;
     case 3:
       m_listener->insertField(MWAWContentListener::PageNumber);
-      m_listener->insertCharacter('/');
+      m_listener->insertChar('/');
       m_listener->insertField(MWAWContentListener::PageCount);
       break;
     default:

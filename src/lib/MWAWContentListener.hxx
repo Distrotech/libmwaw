@@ -48,12 +48,14 @@ class WPXPropertyListVector;
 class MWAWCell;
 class MWAWFont;
 class MWAWFontConverter;
+class MWAWInputStream;
 class MWAWList;
 class MWAWPageSpan;
 class MWAWPosition;
 class MWAWSubDocument;
 struct MWAWTabStop;
 
+typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
 
 namespace MWAWContentListenerInternal
@@ -88,7 +90,16 @@ public:
   // ------ text data -----------
 
   //! adds a basic character, ..
-  void insertCharacter(uint8_t character);
+  void insertChar(uint8_t character);
+  /** insert a character using the font converter to find the utf8
+      character */
+  void insertCharacter(unsigned char c);
+  /** insert a character using the font converter to find the utf8
+      character and if needed, input to read extra character.
+
+      \return the number of extra character read
+   */
+  int insertCharacter(unsigned char c, MWAWInputStreamPtr &input, long endPos=-1);
   /** adds an unicode character.
    *  By convention if \a character=0xfffd(undef), no character is added */
   void insertUnicode(uint32_t character);

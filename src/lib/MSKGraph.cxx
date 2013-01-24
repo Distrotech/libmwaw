@@ -2401,7 +2401,7 @@ void MSKGraph::sendTextBox(int zoneId)
   MSKGraphInternal::TextBox &textBox = reinterpret_cast<MSKGraphInternal::TextBox &>(*zone);
   MSKGraphInternal::Font actFont;
   actFont.m_font = MWAWFont(20,12);
-  setProperty(actFont);
+  m_listener->setFont(actFont.m_font);
   m_listener->setParagraphJustification(textBox.m_justify);
   int numFonts = int(textBox.m_fontsList.size());
   int actFormatPos = 0;
@@ -2418,14 +2418,14 @@ void MSKGraph::sendTextBox(int zoneId)
         MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: can not find a font\n"));
       } else {
         actFont = textBox.m_fontsList[(size_t)id];
-        setProperty(actFont);
+        m_listener->setFont(actFont.m_font);
       }
     }
     unsigned char c = (unsigned char) textBox.m_text[i];
     switch(c) {
     case 0x9:
       MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some tab\n"));
-      m_listener->insertCharacter(' ');
+      m_listener->insertChar(' ');
       break;
     case 0xd:
       m_listener->insertEOL();
@@ -2453,7 +2453,7 @@ void MSKGraph::sendTextBox(int zoneId)
       } else {
         int unicode = m_convertissor->unicode (actFont.m_font.id(), c);
         if (unicode == -1)
-          m_listener->insertCharacter(c);
+          m_listener->insertChar(c); // FIXME
         else
           m_listener->insertUnicode((uint32_t)unicode);
       }
@@ -2504,14 +2504,15 @@ void MSKGraph::sendTable(int zoneId)
 
       MSKGraphInternal::Table::Cell const *tCell=table.getCell(cellPosition);
       if (tCell) {
-        tCell->m_font.sendTo(m_listener.get(), actFont);
+        m_listener->setFont(tCell->m_font);
+        actFont = m_listener->getFont();
         size_t nChar = tCell->m_text.size();
         for (size_t ch = 0; ch < nChar; ch++) {
           unsigned char c = (unsigned char) tCell->m_text[ch];
           switch(c) {
           case 0x9:
             MWAW_DEBUG_MSG(("MSKGraph::sendTable: find a tab\n"));
-            m_listener->insertCharacter(' ');
+            m_listener->insertChar(' ');
             break;
           case 0xd:
             m_listener->insertEOL();
@@ -2522,7 +2523,7 @@ void MSKGraph::sendTable(int zoneId)
             } else {
               int unicode = m_convertissor->unicode (actFont.id(), c);
               if (unicode == -1)
-                m_listener->insertCharacter(c);
+                m_listener->insertChar(c); // FIXME
               else
                 m_listener->insertUnicode((uint32_t)unicode);
             }
@@ -2538,12 +2539,6 @@ void MSKGraph::sendTable(int zoneId)
 
   // close the table
   m_listener->closeTable();
-}
-
-void MSKGraph::setProperty(MSKGraphInternal::Font const &font)
-{
-  if (!m_listener) return;
-  font.m_font.sendTo(m_listener.get(), m_state->m_font);
 }
 
 bool MSKGraph::readFont(MSKGraphInternal::Font &font)
@@ -2747,7 +2742,7 @@ void MSKGraph::sendObjects(MSKGraph::SendData what)
     if (first) {
       first = false;
       if (what.m_anchor == MWAWPosition::Page && (!m_listener->isSectionOpened() && !m_listener->isParagraphOpened()))
-        m_listener->insertCharacter(' ');
+        m_listener->insertChar(' ');
     }
     send(int(id), what.m_anchor);
     zone->m_page = oldPage;

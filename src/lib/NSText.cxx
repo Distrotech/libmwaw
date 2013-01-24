@@ -685,13 +685,6 @@ bool NSText::createZones()
 //     Fonts
 ////////////////////////////////////////////////////////////
 
-// send the font to the listener
-void NSText::setProperty(MWAWFont const &font, MWAWFont &previousFont)
-{
-  if (!m_listener) return;
-  font.sendTo(m_listener.get(), previousFont);
-}
-
 // read a list of fonts
 bool NSText::readFontsList(MWAWEntry const &entry)
 {
@@ -1559,7 +1552,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
 
   NSTextInternal::Font actFont;
   actFont.m_font = MWAWFont(3,12);
-  setProperty(actFont.m_font, actFont.m_font);
+  m_listener->setFont(actFont.m_font);
   NSStruct::FootnoteInfo ftInfo;
   m_mainParser->getFootnoteInfo(ftInfo);
   bool lastCharFootnote = false;
@@ -1589,8 +1582,10 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         }
         NSTextInternal::Font const &font = m_state->m_fontList[size_t(plc.m_id)];
         actFont = font;
-        if (font.m_pictureId <= 0)
-          setProperty(font.m_font, actFont.m_font);
+        if (font.m_pictureId <= 0) {
+          m_listener->setFont(font.m_font);
+          actFont.m_font = m_listener->getFont();
+        }
         if (!font.isVariable())
           break;
         if (fontIdToVarIdMap.find(plc.m_id) != fontIdToVarIdMap.end())
@@ -1754,7 +1749,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
       MWAWContentListener::FieldType fType;
       std::string content;
       if (!m_mainParser->getReferenceData(zoneId, actVar, fType, content, varValues)) {
-        m_listener->insertCharacter(' ');
+        m_listener->insertChar(' ');
         f << "#[ref]";
         break;
       }
@@ -1774,7 +1769,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
           MWAW_DEBUG_MSG(("NSText::send: Find odd char %x\n", int(c)));
           f << "#";
         } else
-          m_listener->insertCharacter(c);
+          m_listener->insertChar(c); // FIXME
       } else
         m_listener->insertUnicode((uint32_t) unicode);
       break;
@@ -1810,7 +1805,7 @@ void NSText::flushExtra()
       continue;
     sendFootnote(int(f));
   }
-  m_listener->insertCharacter(' ');
+  m_listener->insertChar(' ');
   for (size_t hf = 0; hf < m_state->m_hfList.size(); hf++) {
     if (m_state->m_hfList[hf].m_parsed)
       continue;

@@ -156,8 +156,6 @@ protected:
   //! reads the font names entry : FONT
   bool readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry);
 
-  /** sends a font to the listener */
-  void setProperty(MWAWFont const &font);
   //! reads a font properties
   bool readFont (MWAWInputStreamPtr &input, long endPos,
                  int &id, std::string &mess);

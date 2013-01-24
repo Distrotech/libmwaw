@@ -127,9 +127,6 @@ protected:
   // low level
   //
 
-  /** send the character properties */
-  void setProperty(MWAWFont const &font, MWAWFont &previousFont);
-
   /** send the ruler properties */
   void setProperty(FWTextInternal::Paragraph const &para);
 

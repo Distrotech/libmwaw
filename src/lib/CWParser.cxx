@@ -143,7 +143,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     return;
   }
   if (m_id == -1) { // a number used to send linked frame
-    listener->insertCharacter(' ');
+    listener->insertChar(' ');
     return;
   }
   if (m_id == 0) {

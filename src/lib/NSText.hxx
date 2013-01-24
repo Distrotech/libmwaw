@@ -126,9 +126,6 @@ protected:
   /** compute the positions */
   void computePositions();
 
-  /* sends a font property to the listener
-   * \param font the font's properties */
-  void setProperty(MWAWFont const &font, MWAWFont &previousFont);
   /** sends a paragraph property to the listener */
   void setProperty(NSTextInternal::Paragraph const &ruler, int width);
 

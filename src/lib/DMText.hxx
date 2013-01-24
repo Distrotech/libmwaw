@@ -119,9 +119,6 @@ protected:
   /** update the page span list */
   void updatePageSpanList(std::vector<MWAWPageSpan> &spanList);
 
-  /* sends a font property to the listener */
-  void setProperty(MWAWFont const &font);
-
   /** try to send the text corresponding to a zone */
   bool sendText(DMTextInternal::Zone const &zone);
 
@@ -151,7 +148,7 @@ protected:
   //
 
   //! send a string to the listener
-  void sendString(std::string const &str, MWAWFont const &font) const;
+  void sendString(std::string const &str) const;
 private:
   DMText(DMText const &orig);
   DMText &operator=(DMText const &orig);

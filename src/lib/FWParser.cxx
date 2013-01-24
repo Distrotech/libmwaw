@@ -2392,7 +2392,7 @@ void FWParser::sendText(int id, libmwaw::SubDocumentType type, int wh)
 bool FWParser::send(int fileId)
 {
   if (fileId < 0) {
-    if (m_listener) m_listener->insertCharacter(' ');
+    if (m_listener) m_listener->insertChar(' ');
     return true;
   }
   return m_textParser->send(fileId);

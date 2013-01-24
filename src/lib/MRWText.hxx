@@ -89,9 +89,6 @@ protected:
   void setListener(MWAWContentListenerPtr listen) {
     m_listener = listen;
   }
-  /* sends a character property to the listener
-   * \param font the font's properties */
-  void setProperty(MWAWFont const &font);
   /** sends a paragraph property to the listener */
   void setProperty(MRWTextInternal::Paragraph const &ruler);
 

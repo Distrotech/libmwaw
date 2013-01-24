@@ -823,13 +823,6 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
   return true;
 }
 
-void CWText::setProperty(MWAWFont const &font)
-{
-  if (!m_listener) return;
-  MWAWFont aFont;
-  font.sendTo(m_listener.get(), aFont);
-}
-
 ////////////////////////////////////////////////////////////
 // the fonts properties
 ////////////////////////////////////////////////////////////
@@ -1225,7 +1218,6 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
   long actC = 0;
   bool main = zone.m_id == 1;
   int numParagraphs = int(m_state->m_paragraphsList.size());
-  MWAWFont actFont;
   int actPage = 1;
   size_t numZones = zone.m_zones.size();
   if (main)
@@ -1303,8 +1295,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
             f << "###";
             break;
           }
-          actFont = zone.m_fontList[size_t(plc.m_id)];
-          setProperty(actFont);
+          m_listener->setFont(zone.m_fontList[size_t(plc.m_id)]);
           break;
         case CWTextInternal::P_Ruler:
           if (plc.m_id >= 0 && plc.m_id < numParagraphs)
@@ -1431,23 +1422,12 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
         break;
 
       default: {
-        long actPos = m_input->tell();
-        int unicode = (i==numC-1) ?
-                      m_convertissor->unicode (actFont.id(), (unsigned char) c) :
-                      m_convertissor->unicode (actFont.id(), (unsigned char) c, m_input);
-        int extraChar = int(m_input->tell()-actPos);
+        int extraChar = m_listener->insertCharacter
+                        ((unsigned char)c, m_input, m_input->tell()+(numC-1-i));
         if (extraChar) {
           i += extraChar;
           actC += extraChar;
         }
-        if (unicode == -1) {
-          if (c >= 0 && c < 0x20) {
-            MWAW_DEBUG_MSG(("CWText::sendText: Find odd char %x\n", int(c)));
-            f << "#";
-          } else
-            m_listener->insertCharacter((uint8_t) c);
-        } else
-          m_listener->insertUnicode((uint32_t) unicode);
       }
       }
     }

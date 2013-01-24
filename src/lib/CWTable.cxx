@@ -190,7 +190,7 @@ bool Cell::sendContent(MWAWContentListenerPtr listener)
 {
   if (!listener) return true;
   if (m_zoneId <= 0)
-    listener->insertCharacter(' ');
+    listener->insertChar(' ');
   else
     m_table.m_parser->askMainToSendZone(m_zoneId);
   return true;

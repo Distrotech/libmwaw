@@ -103,7 +103,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   // the foot note
   if (type == libmwaw::DOC_NOTE) {
     if (!m_parser) {
-      listener->insertCharacter(' ');
+      listener->insertChar(' ');
       return;
     }
     MSK4Zone *mnParser = reinterpret_cast<MSK4Zone *>(m_parser);
@@ -114,18 +114,18 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   if (!m_parser) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no parser\n"));
-    listener->insertCharacter(' ');
+    listener->insertChar(' ');
     return;
   }
 
   if (m_zone.isParsed() && type != libmwaw::DOC_HEADER_FOOTER) {
-    listener->insertCharacter(' ');
+    listener->insertChar(' ');
     MWAW_DEBUG_MSG(("SubDocument::parse: this zone is already parsed\n"));
     return;
   }
   m_zone.setParsed(true);
   if (m_zone.id() != MN) {
-    listener->insertCharacter(' ');
+    listener->insertChar(' ');
     MWAW_DEBUG_MSG(("SubDocument::parse: send not MN entry is not implemented\n"));
     return;
   }
@@ -397,7 +397,7 @@ void MSK4Parser::sendFrameText(MWAWEntry const &entry, std::string const &frame)
   if (!m_listener) return;
 
   if (entry.length()==0) {
-    m_listener->insertCharacter(' ');
+    m_listener->insertChar(' ');
     return;
   }
 
@@ -408,7 +408,7 @@ void MSK4Parser::sendFrameText(MWAWEntry const &entry, std::string const &frame)
     parser = frameIt->second.get();
   if (!parser || parser->getTextPosition().length() < entry.end()) {
     MWAW_DEBUG_MSG(("MSK4Parser::sendFrameText: can not find frame ole: %s\n", frame.c_str()));
-    m_listener->insertCharacter(' ');
+    m_listener->insertChar(' ');
     return;
   }
 
