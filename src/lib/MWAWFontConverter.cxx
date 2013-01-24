@@ -622,16 +622,22 @@ public:
     initMaps();
   }
 
+  /** returns an unused id */
+  int getUnusedId() {
+    while (m_idNameMap.find(m_uniqueId)!=m_idNameMap.end())
+      m_uniqueId++;
+    return m_uniqueId;
+  }
+
   /** returns the identificator for a name,
   if not set creates one */
-  int getId(std::string const &name) {
+  int getId(std::string const &name, std::string family="") {
     if (name.empty()) return -1;
     std::map<std::string,int>::iterator it=m_nameIdMap.find(name);
     if (it != m_nameIdMap.end()) return it->second;
-    while (m_idNameMap.find(m_uniqueId)!=m_idNameMap.end())
-      m_uniqueId++;
-    setCorrespondance(m_uniqueId, name);
-    return m_uniqueId++;
+    int newId=getUnusedId();
+    setCorrespondance(newId, name, family);
+    return newId;
   }
 
   //! returns the name corresponding to an id or return std::string("")
@@ -887,9 +893,9 @@ void MWAWFontConverter::setCorrespondance(int macId, std::string const &name, st
   }
   m_manager->setCorrespondance(macId, fName, family);
 }
-int MWAWFontConverter::getId(std::string const &name)  const
+int MWAWFontConverter::getId(std::string const &name, std::string family)  const
 {
-  return m_manager->getId(name);
+  return m_manager->getId(name, family);
 }
 
 std::string MWAWFontConverter::getName(int macId) const

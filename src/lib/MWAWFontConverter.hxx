@@ -75,7 +75,7 @@ public:
   ~MWAWFontConverter();
 
   //! returns an unique id > 255, if unknown
-  int getId(std::string const &name) const;
+  int getId(std::string const &name, std::string family="") const;
   //! returns empty string if unknown
   std::string getName(int macId) const;
   //! fixes the name corresponding to an id

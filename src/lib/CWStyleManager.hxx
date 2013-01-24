@@ -76,6 +76,9 @@ public:
   /* try to read the styles definition (in v4-6) */
   bool readStyles(MWAWEntry const &entry);
 
+  //! return a mac font id corresponding to a local id
+  int getFontId(int localId) const;
+
   //! return the style corresponding to a styleId
   bool get(int styleId, Style &style) const;
   //! return the ksen style corresponding to a ksenId

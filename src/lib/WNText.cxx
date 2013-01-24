@@ -469,8 +469,8 @@ struct Zone {
 struct State {
   //! constructor
   State() : m_version(-1), m_numColumns(1), m_numPages(1), m_actualPage(1),
-    m_font(-1, 0, 0), m_paragraph(), m_header(), m_footer(),
-    m_styleMap(), m_styleList(), m_contentMap() {
+    m_paragraph(), m_header(), m_footer(),
+    m_localFIdMap(), m_styleMap(), m_styleList(), m_contentMap() {
   }
 
   //! return a style correspondint to an id
@@ -483,7 +483,12 @@ struct State {
       return m_styleList[(size_t) rId];
     return Style();
   }
-
+  //! return a mac font id corresponding to a local id
+  int getFontId(int localId) const {
+    if (m_localFIdMap.find(localId)==m_localFIdMap.end())
+      return localId;
+    return m_localFIdMap.find(localId)->second;
+  }
   //! return the content corresponding to a pos
   shared_ptr<ContentZones> getContentZone(long pos) const {
     std::map<long, shared_ptr<ContentZones> >::const_iterator it = m_contentMap.find(pos);
@@ -498,12 +503,12 @@ struct State {
   int m_numColumns;
 
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
-  //! the actual font
-  MWAWFont m_font;
   /** the paragraph properties */
   Paragraph m_paragraph;
   //! the header and the footer
   shared_ptr<ContentZones> m_header, m_footer;
+  //! a map local fontId->fontId
+  std::map<int, int> m_localFIdMap;
   //! the style indirection table
   std::map<int, int> m_styleMap;
   //! the list of styles
@@ -1083,8 +1088,7 @@ bool WNText::readFontNames(WNEntry const &entry)
     }
     f << name << ",";
     if (name.length() && ok)
-      m_convertissor->setCorrespondance(n, name);
-
+      m_state->m_localFIdMap[n]= m_convertissor->getId(name);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
@@ -1113,7 +1117,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   }
   input.seek(pos, WPX_SEEK_SET);
 
-  font.m_font.setId((int) input.readULong(2));
+  font.m_font.setId(m_state->getFontId((int) input.readULong(2)));
   font.m_font.setSize((float) input.readULong(vers <= 2 ? 1 : 2));
   int flag = (int) input.readULong(1);
   uint32_t flags=0;
@@ -1649,7 +1653,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
 {
   libmwaw::DebugStream f;
   int vers = version();
-  MWAWFont actFont(3, 0, 0); // by default geneva
+  MWAWFont actFont=m_listener->getFont();
   int extraDecal = 0; // for v2
   bool rulerSet = false;
   int numLineTabs = 0, actTabs = 0, numFootnote = 0;

@@ -686,7 +686,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
     f << "Font:";
 
   f << "pos=" << posC << ",";
-  font.setId((int) m_input->readULong(2));
+  font.setId(m_styleManager->getFontId((int) m_input->readULong(2)));
   int flag =(int) m_input->readULong(2);
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAWFont::boldBit;
@@ -772,7 +772,7 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
         f << "f" << i << "=" << val << ",";
     }
   }
-  font.setId((int) m_input->readULong(2));
+  font.setId(m_styleManager->getFontId((int) m_input->readULong(2)));
   int flag =(int) m_input->readULong(2);
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAWFont::boldBit;

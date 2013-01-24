@@ -52,11 +52,19 @@ namespace CWStyleManagerInternal
 {
 struct State {
   //! constructor
-  State() : m_version(-1), m_stylesMap(), m_lookupMap(), m_graphList(), m_ksenList() {
+  State() : m_version(-1), m_localFIdMap(), m_stylesMap(), m_lookupMap(), m_graphList(), m_ksenList() {
+  }
+  //! return a mac font id corresponding to a local id
+  int getFontId(int localId) const {
+    if (m_localFIdMap.find(localId)==m_localFIdMap.end())
+      return localId;
+    return m_localFIdMap.find(localId)->second;
   }
 
   //! the version
   int m_version;
+  //! a map local fontId->fontId
+  std::map<int, int> m_localFIdMap;
   //! the styles map id->style
   std::map<int, CWStyleManager::Style> m_stylesMap;
   //! the style lookupMap
@@ -204,6 +212,11 @@ int CWStyleManager::version() const
 }
 
 // accessor
+int CWStyleManager::getFontId(int localId) const
+{
+  return m_state->getFontId(localId);
+}
+
 bool CWStyleManager::get(int styleId, CWStyleManager::Style &style) const
 {
   style = Style();
@@ -513,7 +526,7 @@ bool CWStyleManager::readFontNames(int N, int fSz)
       f << "'" << name << "'";
       if (name.length() && ok) {
         std::string family = fontEncoding==0x4000 ? "Osaka" : "";
-        m_convertissor->setCorrespondance(i, name, family);
+        m_state->m_localFIdMap[i]=m_convertissor->getId(name, family);
       }
     }
     if (long(m_input->tell()) != pos+fSz) {
