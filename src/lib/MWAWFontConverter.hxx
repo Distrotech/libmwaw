@@ -89,14 +89,17 @@ public:
   if no name is found, return "Times New Roman" */
   void getOdtInfo(int macId, std::string &name, int &deltaSize) const;
 
-  /* converts a character in unicode
+  /** converts a character in unicode
      \return -1 if the character is not transformed */
   int unicode(int macId, unsigned char c) const;
 
-  /* converts a character in unicode, if needed can read the next input caracter
+  /** converts a character in unicode, if needed can read the next input caracter
      \return -1 if the character is not transformed */
   int unicode(int macId, unsigned char c, MWAWInputStreamPtr &input) const;
 protected:
+  /** check if a string is valid, if not, convert it to a valid string */
+  static std::string getValidName(std::string const &name);
+
   //! the main manager
   mutable shared_ptr<MWAWFontConverterInternal::State> m_manager;
 };

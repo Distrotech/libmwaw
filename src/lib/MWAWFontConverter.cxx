@@ -875,7 +875,7 @@ MWAWFontConverter::MWAWFontConverter() : m_manager(new MWAWFontConverterInternal
 MWAWFontConverter::~MWAWFontConverter() {}
 
 // mac font name <-> id functions
-void MWAWFontConverter::setCorrespondance(int macId, std::string const &name, std::string family)
+std::string MWAWFontConverter::getValidName(std::string const &name)
 {
   std::string fName("");
   static bool first = true;
@@ -886,16 +886,22 @@ void MWAWFontConverter::setCorrespondance(int macId, std::string const &name, st
       continue;
     }
     if (first) {
-      MWAW_DEBUG_MSG(("MWAWFontConverter::setCorrespondance: fontName contains bad character\n"));
+      MWAW_DEBUG_MSG(("MWAWFontConverter::getValidName: fontName contains bad character\n"));
       first = false;
     }
     fName += 'X';
   }
-  m_manager->setCorrespondance(macId, fName, family);
+  return fName;
 }
+
+void MWAWFontConverter::setCorrespondance(int macId, std::string const &name, std::string family)
+{
+  m_manager->setCorrespondance(macId, getValidName(name), family);
+}
+
 int MWAWFontConverter::getId(std::string const &name, std::string family)  const
 {
-  return m_manager->getId(name, family);
+  return m_manager->getId(getValidName(name), family);
 }
 
 std::string MWAWFontConverter::getName(int macId) const

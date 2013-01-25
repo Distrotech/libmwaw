@@ -785,9 +785,16 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
         m_listener->insertEOL();
         break;
       }
-      default:
+      default: {
         if (!m_listener) break;
-        i-=m_listener->insertCharacter((unsigned char)readVal, input, input->tell()+i-1);
+        uint32_t extra = (uint32_t) m_listener->insertCharacter((unsigned char)readVal, input, input->tell()+i-1);
+        if (extra > i-1) {
+          MWAW_DEBUG_MSG(("MSK4Text::readText: warning: extra is too large\n"));
+          input->seek(-long(extra+1-i), WPX_SEEK_CUR);
+          i = 0;
+        } else
+          i -= extra;
+      }
       }
     }
     if (len && fType == MSK4TextInternal::Font::DTTUnk && m_listener)

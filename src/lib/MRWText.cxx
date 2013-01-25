@@ -831,10 +831,10 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
             fFlags |= MWAWFont::shadowBit;
             break;
           case 44:
-            f << "condense,";
+            font.m_font.setDeltaLetterSpacing(-1);
             break;
           case 45:
-            f << "expand,";
+            font.m_font.setDeltaLetterSpacing(1);
             break;
           case 46:
             font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
@@ -851,7 +851,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
             font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
             break;
           case 58:
-            f << "boxed" << j-57 << ",";
+            fFlags |= MWAWFont::boxedBit;
             break;
           default:
             MWAW_DEBUG_MSG(("MRWText::readFonts: find unknown font flag: %d\n", j));
@@ -862,19 +862,15 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
           f << "#f" << j << "=" << dt.value(0) << ",";
         break;
       case 51:
-        if (dt.value(0) > 0) {
-          font.m_font.set(MWAWFont::Script::super100());
-          if (dt.value(0) != 3)
-            f << "superscript[pos]=" << dt.value(0) << ",";
-        } else if (dt.value(0))
+        if (dt.value(0) > 0)
+          font.m_font.set(MWAWFont::Script((int)dt.value(0),WPX_POINT));
+        else if (dt.value(0))
           f << "#superscript=" << dt.value(0) << ",";
         break;
       case 52:
-        if (dt.value(0) > 0) {
-          font.m_font.set(MWAWFont::Script::sub100());
-          if (dt.value(0) != 3)
-            f << "subscript[pos]=" << dt.value(0) << ",";
-        } else if (dt.value(0))
+        if (dt.value(0) > 0)
+          font.m_font.set(MWAWFont::Script((int)-dt.value(0),WPX_POINT));
+        else if (dt.value(0))
           f << "#subscript=" << dt.value(0) << ",";
         break;
       default:
