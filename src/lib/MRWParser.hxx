@@ -166,6 +166,8 @@ protected:
   float pageWidth() const;
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
+  //! returns the columns information
+  void getColumnInfo(int &numColumns, std::vector<int> &width) const;
 
   //! adds a new page
   void newPage(int number);
@@ -178,8 +180,10 @@ protected:
   void sendText(int zoneId);
 
   // interface with the graph parser
+  //! return the pattern percent which corresponds to an id (or -1)
+  float getPatternPercent(int id) const;
   //! ask the graph parser to send a token
-  void sendToken(int zoneId, long tokenId);
+  void sendToken(int zoneId, long tokenId, MWAWFont const &actFont);
 
   //
   // low level

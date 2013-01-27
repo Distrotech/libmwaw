@@ -58,6 +58,7 @@ namespace MRWTextInternal
 {
 struct Paragraph;
 struct State;
+struct Table;
 struct Zone;
 }
 
@@ -100,7 +101,13 @@ protected:
   //
   /** try to send a zone (knowing zoneId) */
   bool send(int zoneId);
+  /** try to send a zone */
+  bool send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry);
 
+  /** try to find the table structure beginning in actual position */
+  bool findTableStructure(MRWTextInternal::Table &table, MWAWEntry const &entry);
+  /** try to send a table */
+  bool sendTable(MRWTextInternal::Table &table);
   /** try to read the text struct */
   bool readTextStruct(MRWEntry const &entry, int zoneId);
   /** try to read a text zone */

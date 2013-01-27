@@ -215,13 +215,13 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     o << ",";
   }
   if (m_overline.isSet() && m_overline->isSet())
-    o << "overline=[" << m_overline.get() << "]:";
+    o << "overline=[" << m_overline.get() << "],";
   if (m_strikeoutline.isSet() && m_strikeoutline->isSet())
-    o << "strikeOut=[" << m_strikeoutline.get() << "]:";
+    o << "strikeOut=[" << m_strikeoutline.get() << "],";
   if (m_underline.isSet() && m_underline->isSet())
-    o << "underline=[" << m_underline.get() << ":]";
+    o << "underline=[" << m_underline.get() << "],";
   if (hasColor())
-    o << "col=" << m_color.get()<< "),";
+    o << "col=" << m_color.get()<< ",";
   if (m_backgroundColor.isSet() && !m_backgroundColor.get().isWhite())
     o << "backCol=" << m_backgroundColor.get() << ",";
   if (m_language.isSet() && m_language.get().length())

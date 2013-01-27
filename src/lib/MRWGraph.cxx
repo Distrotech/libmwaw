@@ -239,8 +239,10 @@ struct Zone {
 //! Internal: the state of a MRWGraph
 struct State {
   //! constructor
-  State() : m_zoneMap(), m_numPages(0) { }
+  State() : m_zoneMap(), m_patternList(), m_numPages(0) { }
 
+  //! set the default pattern map
+  void setDefaultPatternList(int version);
   //! return a reference to a textzone ( if zone not exists, created it )
   Zone &getZone(int id) {
     std::map<int,Zone>::iterator it = m_zoneMap.find(id);
@@ -253,9 +255,25 @@ struct State {
 
   //! a map id -> textZone
   std::map<int,Zone> m_zoneMap;
+  //! a list patternId -> percent
+  std::vector<float> m_patternList;
 
   int m_numPages /* the number of pages */;
 };
+
+void State::setDefaultPatternList(int)
+{
+  if (m_patternList.size()) return;
+  static float const defPercentPattern[29] = {
+    0., 0.09375, 0.125, 0.1875, 0.25, 0.28125, 0.375, 0.375,
+    0.5, 0.5625, 0.625, 0.6875, 0.75, 0.8125, 0.875, 0.90625,
+    1., 0.5, 0.5, 0.5, 0.5, 0.5, 0.75, 0.25,
+    0.25, 0.25, 0.25, 0.4375, 0.375
+  };
+  m_patternList.resize(29);
+  for (size_t i = 0; i < 29; i++)
+    m_patternList[i]=defPercentPattern[i];
+}
 
 ////////////////////////////////////////
 //! Internal: the subdocument of a MRWGraph
@@ -341,13 +359,25 @@ int MRWGraph::numPages() const
   return nPages;
 }
 
+float MRWGraph::getPatternPercent(int id) const
+{
+  int numPattern = (int) m_state->m_patternList.size();
+  if (!numPattern) {
+    m_state->setDefaultPatternList(version());
+    numPattern = int(m_state->m_patternList.size());
+  }
+  if (id < 0 || id >= numPattern)
+    return -1.;
+  return m_state->m_patternList[size_t(id)];
+}
+
 void MRWGraph::sendText(int zoneId)
 {
   if (zoneId)
     m_mainParser->sendText(zoneId);
 }
 
-void MRWGraph::sendToken(int zoneId, long tokenId)
+void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
 {
   if (!m_listener) {
     MWAW_DEBUG_MSG(("MRWGraph::sendToken: can not the listener\n"));
@@ -417,7 +447,7 @@ void MRWGraph::sendToken(int zoneId, long tokenId)
   case 0x1f: // footnote content, ok to ignore
     return;
   case 0x23:
-    sendRuler(token);
+    sendRule(token, actFont);
     return;
   default:
     break;
@@ -426,11 +456,11 @@ void MRWGraph::sendToken(int zoneId, long tokenId)
   MWAW_DEBUG_MSG(("MRWGraph::sendToken: sending type %x is not unplemented\n", token.m_type));
 }
 
-void MRWGraph::sendRuler(MRWGraphInternal::Token const &tkn)
+void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actFont)
 {
   Vec2i const &sz=tkn.m_dim;
   if (sz[0] < 0 || sz[1] < 0 || (sz[0]==0 && sz[1]==0)) {
-    MWAW_DEBUG_MSG(("MRWGraph::sendRuler: the ruler size seems bad\n"));
+    MWAW_DEBUG_MSG(("MRWGraph::sendRule: the ruler size seems bad\n"));
     return;
   }
   MWAWPictLine line(Vec2i(0,0), sz);
@@ -457,7 +487,12 @@ void MRWGraph::sendRuler(MRWGraphInternal::Token const &tkn)
   default:
     break;
   }
-  // fixme: we must use the other parameters ( pattern, ...)
+  float percent=getPatternPercent(tkn.m_rulerPattern);
+  MWAWColor col;
+  actFont.getColor(col);
+  if (percent > 0.0)
+    col=MWAWColor::barycenter(percent,col,1.f-percent,MWAWColor::white());
+  line.setLineColor(col);
   line.setLineWidth(w);
 
   WPXBinaryData data;
@@ -921,7 +956,7 @@ void MRWGraph::flushExtra()
       long tId = it->first;
       MRWGraphInternal::Token const &tkn = tIt++->second;
       if (tkn.m_parsed) continue;
-      sendToken(zId, tId);
+      sendToken(zId, tId, MWAWFont());
     }
     psIt = zone.m_psZoneMap.begin();
     while (psIt != zone.m_psZoneMap.end()) {

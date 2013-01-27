@@ -1096,7 +1096,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
             for (size_t j = 0; j < pInfo.m_linesHeight.size(); j++) {
               int numData = pInfo.m_linesHeight[j];
               MWAWCell cell;
-              cell.position() = Vec2i(0, int(j));
+              cell.position() = Vec2i(int(j), 0);
               m_listener->openTableCell(cell, WPXPropertyList());
               sendWindow(zone, Vec2i(i+1, i+1+numData));
               i += numData;

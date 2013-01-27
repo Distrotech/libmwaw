@@ -152,7 +152,7 @@ MWAWColor MWAWColor::barycenter(float alpha, MWAWColor const colA,
 std::ostream &operator<< (std::ostream &o, MWAWColor const &c)
 {
   o << "#" << std::hex << std::setfill('0') << std::setw(6)
-    << (c.m_value&0xFFFFFF);
+    << (c.m_value&0xFFFFFF) << std::dec;
   return o;
 }
 

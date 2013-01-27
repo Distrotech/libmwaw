@@ -70,7 +70,7 @@ struct Zone {
   enum Type { Z_Main, Z_Footnote, Z_Header, Z_Footer, Z_Unknown };
   //! constructor
   Zone() : m_id(-1), m_fileId(0), m_type(Z_Unknown), m_height(0), m_RBpos(0,0), m_dim(),
-    m_pageDim(), m_pageMDim(), m_backColor(MWAWColor::white()), m_extra("") {
+    m_pageDim(), m_pageTextDim(), m_backColor(MWAWColor::white()), m_extra("") {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &zone);
@@ -88,8 +88,8 @@ struct Zone {
   Box2l m_dim;
   //! the page dimension (?)
   Box2i m_pageDim;
-  //! the page dimension with margins (?)
-  Box2i m_pageMDim;
+  //! the zone of text dimension ( ie page less margins)
+  Box2i m_pageTextDim;
   //! the background color
   MWAWColor m_backColor;
   //! extra data
@@ -132,7 +132,8 @@ std::ostream &operator<<(std::ostream &o, Zone const &zone)
 //! Internal: the state of a MRWParser
 struct State {
   //! constructor
-  State() : m_eof(-1), m_zonesList(), m_fileToZoneMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_eof(-1), m_zonesList(), m_fileToZoneMap(), m_columnsWidth(),
+    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
 
   //! end of file
@@ -141,6 +142,8 @@ struct State {
   std::vector<Zone> m_zonesList;
   //! a map fileZoneId -> localZoneId
   std::map<uint32_t,int> m_fileToZoneMap;
+  //! the columns widths in point
+  std::vector<int> m_columnsWidth;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
@@ -259,6 +262,17 @@ Vec2f MRWParser::getPageLeftTop() const
                float(m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
+void MRWParser::getColumnInfo(int &numColumns, std::vector<int> &width) const
+{
+  if (m_state->m_columnsWidth.size() > 1) {
+    numColumns = int(m_state->m_columnsWidth.size());
+    width=m_state->m_columnsWidth;
+    return;
+  }
+  numColumns = 1;
+  width.resize(1, int(72.0f*MRWParser::pageWidth()));
+}
+
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
@@ -309,11 +323,16 @@ void MRWParser::sendText(int zoneId)
   input->seek(actPos, WPX_SEEK_SET);
 }
 
-void MRWParser::sendToken(int zoneId, long tokenId)
+float MRWParser::getPatternPercent(int id) const
+{
+  return m_graphParser->getPatternPercent(id);
+}
+
+void MRWParser::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
 {
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
-  m_graphParser->sendToken(zoneId, tokenId);
+  m_graphParser->sendToken(zoneId, tokenId, actFont);
   input->seek(actPos, WPX_SEEK_SET);
 }
 
@@ -794,6 +813,7 @@ bool MRWParser::readZoneDim(MRWEntry const &entry, int zoneId)
 
   libmwaw::DebugStream f;
   size_t d = 0;
+  std::vector<int> colWidth;
   for (int i = 0; i < entry.m_N; i++) {
     f.str("");
     f << entry.name() << "-" << i << ":";
@@ -811,19 +831,23 @@ bool MRWParser::readZoneDim(MRWEntry const &entry, int zoneId)
     // checkme
     Box2i dimension(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
     f << "pos=" << dimension << ",";
-    if (i==0 && dim[0] >= 0 && dim[0] < dim[2] && dim[1] >= 0 && dim[1] < dim[3]) {
+    bool dimOk=dim[0] >= 0 && dim[0] < dim[2] && dim[1] >= 0 && dim[1] < dim[3];
+    if (i==0 && dimOk) {
       if (zoneId < 0 || zoneId >= int(m_state->m_zonesList.size())) {
         MWAW_DEBUG_MSG(("MRWParser::readZoneDim: can not find the zone storage\n"));
       } else if (entry.m_fileType == 9)
         m_state->m_zonesList[size_t(zoneId)].m_pageDim = dimension;
       else if (entry.m_fileType == 0xa)
-        m_state->m_zonesList[size_t(zoneId)].m_pageMDim = dimension;
+        m_state->m_zonesList[size_t(zoneId)].m_pageTextDim = dimension;
       else {
         MWAW_DEBUG_MSG(("MRWParser::readZoneDim: unknown zone type\n"));
       }
-    }
+    } else if (i && dimOk)
+      colWidth.push_back(dim[3]-dim[1]);
     ascii().addNote(f.str().c_str());
   }
+  if (entry.m_fileType == 0xa)
+    m_state->m_columnsWidth=colWidth;
   input->seek(entry.end(), WPX_SEEK_SET);
 
   return true;
@@ -1424,7 +1448,7 @@ std::string MRWEntry::name() const
   case 9:
     return "PaperSize";
   case 0xa:
-    return "PaperDim?";
+    return "ColDim";
   case 0xf:
     return "DocInfo";
   case 0x14: // token, picture, ...

@@ -1591,7 +1591,7 @@ bool MSWText::sendTable(MSWTextInternal::Property const &prop)
           cell.setBackgroundColor(MWAWColor(col,col,col));
         }
       }
-      cell.position() = Vec2i((int)r,(int)c);
+      cell.position() = Vec2i((int)c,(int)r);
 
       WPXPropertyList extras;
       m_listener->openTableCell(cell, extras);

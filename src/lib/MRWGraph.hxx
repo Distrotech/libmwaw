@@ -103,7 +103,8 @@ protected:
   bool sendPageGraphics();
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
-
+  //! return the pattern percent which corresponds to an id (or -1)
+  float getPatternPercent(int id) const;
 
   //
   // Intermediate level
@@ -118,15 +119,15 @@ protected:
   bool readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &tkn, std::string &res);
   /** try to send a picture token as char */
   void sendPicture(MRWGraphInternal::Token const &tkn);
-  /** try to send a ruler */
-  void sendRuler(MRWGraphInternal::Token const &tkn);
+  /** try to send a rule */
+  void sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actFont);
   /** try to send a ps picture as pos */
   void sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const &pos);
 
   // interface with mainParser
 
   //! try to send a token
-  void sendToken(int zoneId, long tokenId);
+  void sendToken(int zoneId, long tokenId, MWAWFont const &actFont);
   //! ask the main parser to send a text zone
   void sendText(int zoneId);
 

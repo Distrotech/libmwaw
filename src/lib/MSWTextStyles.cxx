@@ -158,12 +158,9 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
   if (sz >= 6) {
     int decal = (int) m_input->readLong(1); // unit point
     if (decal) {
-      if (what & 0x2) {
-        if (decal > 0)
-          font.m_font->set(MWAWFont::Script::super100());
-        else
-          font.m_font->set(MWAWFont::Script::sub100());
-      } else
+      if (what & 0x2)
+        font.m_font->set(MWAWFont::Script(decal, WPX_POINT));
+      else
         f << "#vDecal=" << decal;
     }
     what &= 0xFD;
@@ -171,8 +168,8 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
   if (sz >= 7) {
     int decal = (int) m_input->readLong(1); // unit point > 0 -> expand < 0: condensed
     if (decal) {
-      if ((what & 0x1) == 0) f << "#";
-      f << "hDecal=" << decal <<",";
+      if ((what & 0x1) == 0) f << "#hDecal=" << decal <<",";
+      else font.m_font->setDeltaLetterSpacing(float(decal)/16.0f);
     }
     what &= 0xFE;
   }
@@ -192,24 +189,30 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     what &= 0xDF;
 
     if (val && (what & 0x4)) {
-      switch(val&0xf) {
-      case 8:
+      switch((val>>1)&0x7) {
+      case 4:
         font.m_font->setUnderlineStyle(MWAWFont::Line::Dot);
         break;
-      case 6: // checkme
+      case 3:
         font.m_font->setUnderlineStyle(MWAWFont::Line::Simple);
         font.m_font->setUnderlineType(MWAWFont::Line::Double);
         break;
       case 2:
         font.m_font->setUnderlineStyle(MWAWFont::Line::Simple);
+        font.m_font->setUnderlineWordFlag(true);
+        break;
+      case 1:
+        font.m_font->setUnderlineStyle(MWAWFont::Line::Simple);
         break;
       default:
-        f << "#underline=" << (val &0xf) << ",";
+        f << "#underline=" << ((val>>1) &0x7) << ",";
         font.m_font->setUnderlineStyle(MWAWFont::Line::Simple);
       }
       what &= 0xFB;
-    } else if (val & 0xf)
-      f << "#underline?=" << (val &0xf) << ",";
+    } else if (val & 0xe)
+      f << "#underline?=" << ((val>>1) &0x7) << ",";
+    if (val & 0xF1)
+      f << "#underline[unkn]=" << std::hex << (val & 0xF1) << std::dec << ",";
   }
 
   font.m_unknown =what;
