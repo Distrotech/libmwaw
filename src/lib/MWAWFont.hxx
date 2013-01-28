@@ -99,7 +99,7 @@ public:
   /** a small struct to define the script position in MWAWFont */
   struct Script {
     //! constructor
-    Script(int delta=0, WPXUnit deltaUnit=WPX_PERCENT, int scale=100) :
+    Script(float delta=0, WPXUnit deltaUnit=WPX_PERCENT, int scale=100) :
       m_delta(delta), m_deltaUnit(deltaUnit), m_scale(scale) {
     }
     //! return true if the position is not default
@@ -151,13 +151,14 @@ public:
     }
     //! small comparison function
     int cmp(Script const &oth) const {
-      if (m_delta != oth.m_delta) return m_delta-oth.m_delta;
+      if (m_delta > oth.m_delta) return -1;
+      if (m_delta < oth.m_delta) return 1;
       if (m_deltaUnit != oth.m_deltaUnit) return int(m_deltaUnit)-int(oth.m_deltaUnit);
       if (m_scale != oth.m_scale) return m_scale-oth.m_scale;
       return 0;
     }
     //! the ydelta
-    int m_delta;
+    float m_delta;
     //! the ydelta unit ( point or percent )
     WPXUnit m_deltaUnit;
     //! the font scaling ( in percent )

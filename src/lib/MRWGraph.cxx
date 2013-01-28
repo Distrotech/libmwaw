@@ -61,7 +61,7 @@ namespace MRWGraphInternal
 struct Token {
   //! constructor
   Token() : m_type(-1), m_highType(-1), m_dim(0,0), m_refType(0), m_refId(0), m_fieldType(0), m_value(""),
-    m_pictData(), m_pictId(0), m_valPictId(0), m_rulerType(0), m_rulerPattern(0), m_parsed(true), m_extra("") {
+    m_pictData(), m_pictId(0), m_valPictId(0), m_ruleType(0), m_rulePattern(0), m_parsed(true), m_extra("") {
     for (int i = 0; i < 2; i++)
       m_id[i] = 0;
   }
@@ -92,11 +92,11 @@ struct Token {
   long m_pictId;
   //! a optional picture id
   long m_valPictId;
-  // for ruler
-  //! the ruler type
-  int m_rulerType;
-  //! the ruler pattern
-  int m_rulerPattern;
+  // for rule
+  //! the rule type
+  int m_ruleType;
+  //! the rule pattern
+  int m_rulePattern;
   //! true if the token has been send to a listener
   mutable bool m_parsed;
   //! some extra data
@@ -149,7 +149,7 @@ std::ostream &operator<<(std::ostream &o, Token const &tkn)
     o << "#type=" << tkn.m_type << "[" << tkn.m_highType << "],";
   }
   if (tkn.m_fieldType)
-    o << "field[type]=" << tkn.m_fieldType << ",";
+    o << "field[type/val]=" << tkn.m_fieldType << ",";
   if (tkn.m_dim[0] || tkn.m_dim[1])
     o << "dim=" << tkn.m_dim << ",";
   if (tkn.m_value.length())
@@ -161,39 +161,39 @@ std::ostream &operator<<(std::ostream &o, Token const &tkn)
   if (tkn.m_refId) {
     o << "zone[ref]=";
     if (tkn.m_refType==0xe)
-      o << "footnote[" << std::hex << (tkn.m_refId&0xFFFFFF) << std::dec << "],";
+      o << "footnote[" << std::hex << (tkn.m_refId&0xFFFFFFF) << std::dec << "],";
     else
-      o << "#type" << tkn.m_refType << "[" << std::hex << (tkn.m_refId&0xFFFFFF) << std::dec << "],";
+      o << "#type" << tkn.m_refType << "[" << std::hex << (tkn.m_refId&0xFFFFFFF) << std::dec << "],";
   }
-  switch(tkn.m_rulerType) {
+  switch(tkn.m_ruleType) {
   case 0:
     break; // no
   case 1:
-    o << "ruler[hairline],";
+    o << "rule[hairline],";
     break;
   case 2:
     break; // single
   case 3:
-    o << "ruler[w=2],";
+    o << "rule[w=2],";
     break;
   case 4:
-    o << "ruler[w=3],";
+    o << "rule[w=3],";
     break;
   case 5:
-    o << "ruler[w=4],";
+    o << "rule[w=4],";
     break;
   case 6:
-    o << "ruler[double],";
+    o << "rule[double],";
     break;
   case 7:
-    o << "ruler[double,w=2],";
+    o << "rule[double,w=2],";
     break;
   default:
-    o << "#ruler[type=" << tkn.m_rulerType << "],";
+    o << "#rule[type=" << tkn.m_ruleType << "],";
     break;
   }
-  if (tkn.m_rulerPattern)
-    o << "ruler[pattern]=" << tkn.m_rulerPattern << ",";
+  if (tkn.m_rulePattern)
+    o << "rule[pattern]=" << tkn.m_rulePattern << ",";
   o << tkn.m_extra;
   return o;
 }
@@ -439,9 +439,10 @@ void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
     }
     return;
   case 0x1e: {
-    int fZoneId = m_mainParser->getZoneId(token.m_refId);
+    bool endNote=true;
+    int fZoneId = m_mainParser->getZoneId(token.m_refId, endNote);
     MWAWSubDocumentPtr subdoc(new MRWGraphInternal::SubDocument(*this, m_input, fZoneId));
-    m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+    m_listener->insertNote(endNote ? MWAWContentListener::ENDNOTE : MWAWContentListener::FOOTNOTE, subdoc);
     return;
   }
   case 0x1f: // footnote content, ok to ignore
@@ -460,12 +461,12 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actF
 {
   Vec2i const &sz=tkn.m_dim;
   if (sz[0] < 0 || sz[1] < 0 || (sz[0]==0 && sz[1]==0)) {
-    MWAW_DEBUG_MSG(("MRWGraph::sendRule: the ruler size seems bad\n"));
+    MWAW_DEBUG_MSG(("MRWGraph::sendRule: the rule size seems bad\n"));
     return;
   }
   MWAWPictLine line(Vec2i(0,0), sz);
   float w=1.0f;
-  switch(tkn.m_rulerType) {
+  switch(tkn.m_ruleType) {
   case 0: // no width
     return;
   case 1:
@@ -487,7 +488,7 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actF
   default:
     break;
   }
-  float percent=getPatternPercent(tkn.m_rulerPattern);
+  float percent=getPatternPercent(tkn.m_rulePattern);
   MWAWColor col;
   actFont.getColor(col);
   if (percent > 0.0)
@@ -811,38 +812,38 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
     }
     break;
   case 0x23:
-    tkn.m_rulerType = (int) m_input->readLong(2);
-    tkn.m_rulerPattern = (int) m_input->readLong(2);
-    switch(tkn.m_rulerType) {
+    tkn.m_ruleType = (int) m_input->readLong(2);
+    tkn.m_rulePattern = (int) m_input->readLong(2);
+    switch(tkn.m_ruleType) {
     case 0:
       break; // no
     case 1:
-      f << "ruler[hairline],";
+      f << "rule[hairline],";
       break;
     case 2:
-      f << "ruler[single],";
+      f << "rule[single],";
       break;
     case 3:
-      f << "ruler[w=2],";
+      f << "rule[w=2],";
       break;
     case 4:
-      f << "ruler[w=3],";
+      f << "rule[w=3],";
       break;
     case 5:
-      f << "ruler[w=4],";
+      f << "rule[w=4],";
       break;
     case 6:
-      f << "ruler[double],";
+      f << "rule[double],";
       break;
     case 7:
-      f << "ruler[double,w=2],";
+      f << "rule[double,w=2],";
       break;
     default:
-      f << "#ruler[type=" << tkn.m_rulerType << "],";
+      f << "#rule[type=" << tkn.m_ruleType << "],";
       break;
     }
-    if (tkn.m_rulerPattern)
-      f << "ruler[pattern]=" << tkn.m_rulerPattern << ",";
+    if (tkn.m_rulePattern)
+      f << "rule[pattern]=" << tkn.m_rulePattern << ",";
     break;
   default:
     break;

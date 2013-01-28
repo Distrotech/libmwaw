@@ -167,15 +167,15 @@ protected:
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
   //! returns the columns information
-  void getColumnInfo(int &numColumns, std::vector<int> &width) const;
+  void getColumnInfo(int zoneId, int &numColumns, std::vector<int> &width) const;
 
   //! adds a new page
   void newPage(int number);
 
   // interface with the text parser
 
-  //! return a zoneid corresponding to a fileId (or -1)
-  int getZoneId(uint32_t fileId);
+  //! return a zoneid corresponding to a fileId (or -1) and set the endnote flag
+  int getZoneId(uint32_t fileId, bool &endNote);
   //! ask the text parser to send a zone
   void sendText(int zoneId);
 

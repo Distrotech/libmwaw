@@ -200,9 +200,9 @@ void Font::update()
     else {
       float sup = m_modifier.getSuper();
       if (sup < 0)
-        m_font.set(MWAWFont::Script(int(-sup),WPX_POINT));
+        m_font.set(MWAWFont::Script(float(-sup),WPX_POINT));
       else
-        m_font.set(MWAWFont::Script(int(sup*100.f),WPX_PERCENT));
+        m_font.set(MWAWFont::Script(float(sup*100.f),WPX_PERCENT));
     }
   } else if (m_state[0xb]) {
     if (m_defModifier)
@@ -210,9 +210,9 @@ void Font::update()
     else {
       float sub = m_modifier.getSub();
       if (sub < 0)
-        m_font.set(MWAWFont::Script(int(sub),WPX_POINT));
+        m_font.set(MWAWFont::Script(float(sub),WPX_POINT));
       else
-        m_font.set(MWAWFont::Script(int(-sub*100.f),WPX_PERCENT));
+        m_font.set(MWAWFont::Script(float(-sub*100.f),WPX_PERCENT));
     }
   } else
     m_font.set(MWAWFont::Script());

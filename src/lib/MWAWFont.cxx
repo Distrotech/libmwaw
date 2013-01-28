@@ -142,18 +142,18 @@ void MWAWFont::Line::addTo(WPXPropertyList &propList, std::string const type) co
 ////////////////////////////////////////////////////////////
 std::string MWAWFont::Script::str(float fSize) const
 {
-  if (!isSet() || (m_delta==0 && m_scale==100))
+  if (!isSet() || ((m_delta<=0&&m_delta>=0) && m_scale==100))
     return "";
   std::stringstream o;
   if (m_deltaUnit == WPX_GENERIC) {
     MWAW_DEBUG_MSG(("MWAWFont::Script::str: can not be called with generic position\n"));
     return "";
   }
-  int delta = m_delta;
+  float delta = m_delta;
   if (m_deltaUnit != WPX_PERCENT) {
     // first transform in point
     if (m_deltaUnit != WPX_POINT)
-      delta=int(MWAWPosition::getScaleFactor(m_deltaUnit, WPX_POINT)*float(delta));
+      delta=MWAWPosition::getScaleFactor(m_deltaUnit, WPX_POINT)*delta;
     // now transform in percent
     if (fSize<=0) {
       static bool first=true;
@@ -163,7 +163,7 @@ std::string MWAWFont::Script::str(float fSize) const
       }
       fSize=12;
     }
-    delta=int(100.f*float(delta)/fSize);
+    delta=100.f*delta/fSize;
     if (delta > 100) delta = 100;
     else if (delta < -100) delta = -100;
   }

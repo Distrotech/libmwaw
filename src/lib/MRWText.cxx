@@ -710,7 +710,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
   if (isMain) {
     m_mainParser->newPage(actPage);
     std::vector<int> width;
-    m_mainParser->getColumnInfo(numCols, width);
+    m_mainParser->getColumnInfo(0, numCols, width);
     if (numCols > 1) {
       if (m_listener->isSectionOpened())
         m_listener->closeSection();
@@ -1011,7 +1011,7 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
       }
     }
   }
-  return firstCellInRow&&table.m_rowsList.size();
+  return table.m_rowsList.size();
 }
 
 ////////////////////////////////////////////////////////////
@@ -1818,7 +1818,8 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
 
 void MRWText::flushExtra()
 {
-  //if (!m_listener) return;
+  if (!m_listener) return;
+#ifdef DEBUG
   std::map<int,MRWTextInternal::Zone>::iterator it =
     m_state->m_textZoneMap.begin();
   for ( ; it != m_state->m_textZoneMap.end(); it++) {
@@ -1826,6 +1827,7 @@ void MRWText::flushExtra()
       continue;
     send(it->first);
   }
+#endif
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

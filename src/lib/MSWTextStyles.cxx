@@ -159,7 +159,7 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     int decal = (int) m_input->readLong(1); // unit point
     if (decal) {
       if (what & 0x2)
-        font.m_font->set(MWAWFont::Script(decal, WPX_POINT));
+        font.m_font->set(MWAWFont::Script(float(decal)/2.f, WPX_POINT));
       else
         f << "#vDecal=" << decal;
     }

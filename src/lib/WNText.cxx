@@ -1170,7 +1170,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   }
   int heightDecal = (int) input.readLong(2);
   if (heightDecal)
-    font.m_font.set(MWAWFont::Script(heightDecal, WPX_POINT));
+    font.m_font.set(MWAWFont::Script(float(heightDecal), WPX_POINT));
 
   font.m_font.setFlags(flags);
   font.m_font.m_extra = f.str();
