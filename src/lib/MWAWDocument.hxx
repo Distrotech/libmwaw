@@ -69,7 +69,7 @@ public:
   -FULLW: FullWrite Professional (basic)
   -HMAC: HanMac Word-J or K (basic done for K document, almost nothing done for J document)
   -LWTEXT: LightWayText ( only v4.5 Mac format )
-  -MARIW: Mariner Write ( only v1.6 Lite)
+  -MARIW: Mariner Write ( only v1.6-v3.5 Mac Classic)
   -MINDW: MindWrite
   -MW: MacWrite document
   -MWPRO: MacWriteII or MacWritePro document

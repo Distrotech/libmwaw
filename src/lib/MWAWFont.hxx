@@ -187,7 +187,7 @@ public:
     return m_id.isSet();
   }
   //! inserts the set value in the current font
-  void insert(MWAWFont &ft) {
+  void insert(MWAWFont const &ft) {
     m_id.insert(ft.m_id);
     m_size.insert(ft.m_size);
     m_deltaSpacing.insert(ft.m_deltaSpacing);

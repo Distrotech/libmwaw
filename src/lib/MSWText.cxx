@@ -53,7 +53,9 @@
 
 #include "MSWText.hxx"
 
+#define DEBUG_FONT 1
 #define DEBUG_PLC 1
+#define DEBUG_PAGE 1
 #define DEBUG_PARAGRAPH 1
 #define DEBUG_SECTION 1
 #define DEBUG_ZONEINFO 1
@@ -65,14 +67,22 @@ namespace MSWTextInternal
 ////////////////////////////////////////
 //! Internal: the entry of MSWParser
 struct TextEntry : public MWAWEntry {
-  TextEntry() : MWAWEntry(), m_pos(-1), m_id(0), m_type(0), m_paragraphId(-1),  m_extra("") {
+  TextEntry() : MWAWEntry(), m_pos(-1), m_id(0), m_type(0), m_paragraphId(-1), m_complex(false), m_extra("") {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TextEntry const &entry) {
     if (entry.m_pos>=0) o << "textPos=" << entry.m_pos << ",";
     o << "id?=" << entry.m_id << ",";
+    if (entry.m_complex) o << "complex,";
     if (entry.m_paragraphId >= 0) o << "tP" << entry.m_paragraphId << ",";
-    switch(entry.m_type) {
+    // checkme
+    if (entry.m_type&1)
+      o << "noEndPara,";
+    if (entry.m_type&2)
+      o << "paphNil,";
+    if (entry.m_type&4)
+      o << "dirty,";
+    switch(entry.m_type&0xF8) {
     case 0x80: // reset font ?
     case 0: // keep font ?
       o << "type=" << std::hex << entry.m_type << std::dec << ",";
@@ -108,6 +118,8 @@ struct TextEntry : public MWAWEntry {
   int m_type;
   //! the paragraph id
   int m_paragraphId;
+  //! a flag to know if we read a complex or a simple PRM
+  bool m_complex;
   //! extra data
   std::string m_extra;
 };
@@ -116,7 +128,7 @@ struct TextEntry : public MWAWEntry {
 //! Internal: the zone
 struct ZoneInfo {
   //! constructor
-  ZoneInfo() : m_id(-1), m_type(0), m_dim(), m_paragId(-1), m_error("") {
+  ZoneInfo() : m_id(-1), m_type(0), m_dim(), m_paragraphId(-1), m_error("") {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, ZoneInfo const &zone) {
@@ -133,7 +145,7 @@ struct ZoneInfo {
     }
     if (zone.m_dim[0] > 0) o << "width=" << zone.m_dim[0] << ",";
     if (zone.m_dim[1] > 0) o << "height=" << zone.m_dim[1] << ",";
-    if (zone.m_paragId) o << "P" << zone.m_paragId << ",";
+    if (zone.m_paragraphId) o << "P" << zone.m_paragraphId << ",";
     if (zone.m_error.length()) o << zone.m_error << ",";
     return o;
   }
@@ -144,7 +156,7 @@ struct ZoneInfo {
   //! the zone dimension
   Vec2f m_dim;
   //! the paragraph id ?
-  int m_paragId;
+  int m_paragraphId;
   /** the errors */
   std::string m_error;
 };
@@ -153,13 +165,14 @@ struct ZoneInfo {
 //! Internal: the page
 struct Page {
   //! constructor
-  Page() : m_id(-1), m_type(0), m_page(-1), m_error("") {
+  Page() : m_id(-1), m_type(0), m_page(-1), m_paragraphId(-2), m_error("") {
     for (int i = 0; i < 4; i++) m_values[i] = 0;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Page const &page) {
-    if (page.m_id >= 0) o << "P" << page.m_id << ":";
-    else o << "P_:";
+    if (page.m_id >= 0) o << "Pg" << page.m_id << ":";
+    else o << "Pg_:";
+    if (page.m_paragraphId >= 0) o << "P" << page.m_paragraphId << ",";
     if (page.m_page != page.m_id+1) o << "page=" << page.m_page << ",";
     if (page.m_type) o << "type=" << std::hex << page.m_type << std::dec << ",";
     for (int i = 0; i < 4; i++) {
@@ -175,6 +188,8 @@ struct Page {
   int m_type;
   //! the page number
   int m_page;
+  //! the paragraph id
+  int m_paragraphId;
   //! some values ( 0, -1, 0, small number )
   int m_values[4];
   /** the errors */
@@ -567,7 +582,7 @@ bool MSWText::createZones(long bot)
 }
 
 ////////////////////////////////////////////////////////////
-// read the text structure
+// read the text structure ( the PieCe Descriptors : plcfpcd )
 ////////////////////////////////////////////////////////////
 bool MSWText::readTextStruct(MSWEntry &entry)
 {
@@ -626,12 +641,12 @@ bool MSWText::readTextStruct(MSWEntry &entry)
     f<< "TextStruct-pos" << i << ":";
     tEntry.m_pos = (int) textPos[(size_t)i];
     tEntry.m_type = (int) m_input->readULong(1);
-    // same value for all entries ?
+    // fN internal...
     tEntry.m_id = (int) m_input->readULong(1);
     long ptr = (long) m_input->readULong(4);
     tEntry.setBegin(ptr);
     tEntry.setLength(textPos[(size_t)i+1]-textPos[(size_t)i]);
-    tEntry.m_paragraphId = m_stylesManager->readTextStructParaZone(tEntry.m_extra);
+    tEntry.m_paragraphId = m_stylesManager->readPropertyModifier(tEntry.m_complex, tEntry.m_extra);
     m_state->m_textposList.push_back(tEntry);
     if (!m_mainParser->isFilePos(ptr)) {
       MWAW_DEBUG_MSG(("MSWText::readTextStruct: find a bad file position \n"));
@@ -756,7 +771,7 @@ bool MSWText::readZoneInfo(MSWEntry entry)
     MSWTextInternal::ZoneInfo zone;
     zone.m_id = i;
     zone.m_type = (int) m_input->readULong(1); // 0, 20, 40, 60
-    zone.m_paragId = (int) m_input->readLong(1); // check me
+    zone.m_paragraphId = (int) m_input->readLong(1); // check me
     zone.m_dim.setX(float(m_input->readULong(2))/1440.f);
     zone.m_dim.setY(float(m_input->readLong(2))/72.f);
     f << zone;
@@ -1069,30 +1084,120 @@ void MSWText::prepareData()
   for (int i = 0; i < 3; i++) cEnd+=m_state->m_textLength[i];
   if (cEnd <= 0) return;
 
-  MSWStruct::Font actFont, defaultFont, paraFont, lastFileFont;
-  defaultFont.m_font = m_stylesManager->getDefaultFont();
+  MSWStruct::Font defaultFont;
 
   long pos = m_state->getFilePos(cPos);
   int textposSize = int(m_state->m_textposList.size());
   std::multimap<long, PLC>::iterator plcIt;
 
-  enum { Page=0, ZoneInfo, Section, Normal, TextStruct };
-  int paragraphId[TextStruct+1]= {-1,-2,-2,-2,-2};
-  MSWStruct::Paragraph paragraphList[TextStruct+1] = {
-    MSWStruct::Paragraph(vers), MSWStruct::Paragraph(vers),
-    MSWStruct::Paragraph(vers), MSWStruct::Paragraph(vers),
-    MSWStruct::Paragraph(vers)
+  enum { Page=0, ZoneInfo, Section, Paragraph, Font, TextStruct };
+
+  struct LocalState {
+    //! constructor
+    LocalState(int _version, MSWTextStyles &styleManager) :
+      m_version(_version), m_styleManager(styleManager),
+      m_actualFont(), m_actualPara(_version), m_previousFont(), m_previousPara(_version),
+      m_paraFont(), m_styleFont(), m_isLocalFont(false), m_isLocalPara(false) {
+      resetDataIds();
+    }
+
+    //! update the style
+    void updateStyleFont() {
+      if (m_actualPara.m_styleId.isSet() &&
+          m_styleManager.getFont(MSWTextStyles::StyleZone,m_actualPara.m_styleId.get(), m_styleFont))
+        return;
+      m_styleFont=MSWStruct::Font();
+    }
+    //! update the character font
+    void setCharacter(MSWStruct::Font const &charFont, bool isLocal) {
+      m_actualFont = m_paraFont;
+      m_actualFont.insert(charFont, &m_styleFont);
+      m_isLocalFont=isLocal;
+    }
+    //! update the paragraph
+    void setParagraph(MSWStruct::Paragraph const &para, bool isLocal) {
+      m_actualPara = para;
+      m_actualFont=MSWStruct::Font();
+      m_actualPara.getFont(m_actualFont);
+      m_paraFont=m_actualFont;
+      updateStyleFont();
+      m_isLocalPara=isLocal;
+    }
+    //! modify a paragraph
+    void addModifier(MSWStruct::Paragraph const &modifier) {
+      m_actualPara.insert(modifier, &m_styleFont);
+      updateStyleFont();
+
+      MSWStruct::Font modifierFont;
+      if (modifier.getFont(modifierFont))
+        m_actualFont.insert(modifierFont, &m_styleFont);
+    }
+    //! pop to actual state (if needed)
+    bool resetLocalState() {
+      bool res=false;
+      if (m_isLocalFont) {
+        m_actualFont=m_previousFont;
+        res = true;
+        m_isLocalFont=false;
+      }
+      if (m_isLocalPara) {
+        m_actualPara=m_previousPara;
+        updateStyleFont();
+        res = true;
+        m_isLocalPara=false;
+      }
+      return res;
+    }
+    //! update the state to new state
+    void updateState(bool local) {
+      resetLocalState();
+      m_isLocalFont = m_isLocalPara = local;
+      if (!local) return;
+      m_previousFont=m_actualFont;
+      m_previousPara=m_actualPara;
+    }
+    //! reset the data id
+    void resetDataIds() {
+      for (int i = 0; i <= TextStruct; i++) m_dataIdList[i]=-2;
+    }
+
+    //! the actual version
+    int m_version;
+    //! the style manager
+    MSWTextStyles &m_styleManager;
+
+    //! the actual font
+    MSWStruct::Font m_actualFont;
+    //! the actual paragraph
+    MSWStruct::Paragraph m_actualPara;
+    //! the previous font (before a push)
+    MSWStruct::Font m_previousFont;
+    //! the previous paragraph (before a push)
+    MSWStruct::Paragraph m_previousPara;
+
+    //! the new data id
+    int m_dataIdList[TextStruct+1];
+
+    //! the paragraph font
+    MSWStruct::Font m_paraFont;
+    //! the actual style font
+    MSWStruct::Font m_styleFont;
+    //! a local font
+    bool m_isLocalFont;
+    //! a local paragraph
+    bool m_isLocalPara;
   };
+  LocalState actState(vers, *m_stylesManager.get());
   libmwaw::DebugStream f, f2;
   PLC::ltstr compare;
 
-  int fontId = -1;
   while (cPos < cEnd) {
     f.str("");
     // first find the list of the plc
     long cNextPos = cEnd;
     std::set<PLC, PLC::ltstr> sortedPLC(compare);
-    bool resetFont = false;
+    bool fontChanged=false, paraChanged=false, isLocal=false;
+    actState.resetDataIds();
     for (int st = 0; st < 2; st++) {
       std::multimap<long, MSWText::PLC> &map = st==0 ? m_state->m_plcMap : m_state->m_filePlcMap;
       long wPos = st==0 ? cPos : pos;
@@ -1112,154 +1217,146 @@ void MSWText::prepareData()
 #endif
         switch(plc.m_type) {
         case PLC::TextPosition:
-          if (plc.m_id >= 0 && plc.m_id < textposSize) {
+          paraChanged = actState.resetLocalState();
+          actState.m_dataIdList[TextStruct] = plc.m_id < 0 ? -1 : plc.m_id;
+          if (plc.m_id < 0 || plc.m_id > textposSize) {
+            MWAW_DEBUG_MSG(("MSWText::prepareData: oops can not find textstruct!!!!\n"));
+            actState.m_dataIdList[TextStruct] = -2;
+            f << "[###tP" << plc.m_id << "]";
+          } else {
             MSWTextInternal::TextEntry const &entry=m_state->m_textposList[(size_t) plc.m_id];
             pos = entry.begin();
-            resetFont = true; // checkme: not always, related to entry.m_type or ?
-            if ((paragraphId[TextStruct]=entry.getParagraphId()) < 0)
-              paragraphId[TextStruct] = -1;
-          } else {
-            MWAW_DEBUG_MSG(("MSWText::prepareData: oops can not find textstruct\n"));
-            paragraphId[TextStruct] = -1;
+            isLocal = !entry.m_complex;
+            actState.updateState(isLocal);
           }
           break;
         case PLC::Section:
-          resetFont = true;
-          paragraphId[Section] = plc.m_id < 0 ? -1 : plc.m_id;
+          actState.m_dataIdList[Section] = plc.m_id < 0 ? -1 : plc.m_id;
           break;
         case PLC::ZoneInfo:
-          resetFont = true;
-          paragraphId[ZoneInfo] = -1;
-          if (plc.m_id >= 0 && plc.m_id < int(m_state->m_zoneList.size())) {
-            MSWTextInternal::ZoneInfo const &zone=m_state->m_zoneList[(size_t) plc.m_id];
-            paragraphId[ZoneInfo] = zone.m_paragId;
-#if DEBUG_ZONEINFO
-            f << "Z" << plc.m_id  << "=[" << zone << "],";
-#endif
-          }
+          actState.m_dataIdList[ZoneInfo] = plc.m_id < 0 ? -1 : plc.m_id;
+          break;
+        case PLC::Page:
+          actState.m_dataIdList[Page] = plc.m_id < 0 ? -1 : plc.m_id;
           break;
         case PLC::Paragraph:
-          paragraphId[Normal] = plc.m_id < 0 ? -1 : plc.m_id;
+          actState.m_dataIdList[Paragraph] = plc.m_id < 0 ? -1 : plc.m_id;
           break;
         case PLC::Font:
-          resetFont = true;
-          fontId = plc.m_id < 0 ? -1 : plc.m_id;
+          actState.m_dataIdList[Font] = plc.m_id < 0 ? -1 : plc.m_id;
           break;
         case PLC::Field:
         case PLC::Footnote:
         case PLC::FootnoteDef:
         case PLC::HeaderFooter:
         case PLC::Object:
-        case PLC::Page:
         default:
           break;
         }
       }
     }
-    if (resetFont) lastFileFont = MSWStruct::Font();
 
     MSWTextInternal::Property prop;
     prop.m_pos = pos;
     prop.m_plcList=std::vector<PLC>(sortedPLC.begin(), sortedPLC.end());
     // update the paragraph list
-    int lastModPos = -1;
-    for (int i = 0; i <= TextStruct; i++) {
-      int pId = paragraphId[i];
+    for (size_t i = 0; i <= TextStruct; i++) {
+      int pId = actState.m_dataIdList[i];
       if (pId == -2) continue;
-      lastModPos = i;
 
-#if defined(DEBUG_WITH_FILES)
+      int paraId=-2;
       switch(i) {
       case Section:
-#if DEBUG_SECTION
-        f << "S" << pId;
+#if defined(DEBUG_WITH_FILES) && DEBUG_SECTION
         if (pId >= 0) {
           MSWStruct::Section sec;
           m_stylesManager->getSection(MSWTextStyles::TextZone, pId, sec);
-          f << "=[" << sec << "],";
+          f << "S" << pId << "=[" << sec << "],";
         } else
-          f << ",";
+          f << "S_,";
 #endif
         break;
-      case TextStruct:
-      case Normal:
-#if DEBUG_PARAGRAPH
-        if (i==TextStruct) f << "t";
-        if (pId < 0) f << "P" << "_,";
-        else {
-          f <<  "P" << pId;
-          MSWStruct::Paragraph para(vers);
-          m_stylesManager->getParagraph
-          ((i==TextStruct) ? MSWTextStyles::TextStructZone : MSWTextStyles::TextZone, pId, para);
-          f << "=[";
-          para.print(f, m_convertissor);
-          f << "],";
+      case TextStruct: {
+        if (pId < 0 || pId >= textposSize) {
+          MWAW_DEBUG_MSG(("MSWText::prepareData: oops can not find textstruct\n"));
+          break;
         }
-#endif
-        break;
-      case Page:
-      default:
-        break;
-      }
-#endif
-      if (pId == -1) {
-        paragraphList[i]=MSWStruct::Paragraph(vers);
-        continue;
-      }
 
-      MSWStruct::Paragraph newPara(vers);
-      bool ok = true;
-      switch(i) {
-      case Section:
-        m_stylesManager->getSectionParagraph(MSWTextStyles::TextZone, pId,newPara);
+        MSWTextInternal::TextEntry const &entry=m_state->m_textposList[(size_t) pId];
+        paraId=entry.getParagraphId();
         break;
+      }
+      case Paragraph:
+        paraId=pId;
+        break;
+      case Font: {
+        MSWStruct::Font newChar;
+        if (pId >= 0 && m_stylesManager->getFont(MSWTextStyles::TextZone, pId, newChar)) {
+#if defined(DEBUG_WITH_FILES) && DEBUG_FONT
+          f << "F" << pId << "=[" << newChar.m_font->getDebugString(m_convertissor) << newChar << "],";
+#endif
+        } else {
+#if defined(DEBUG_WITH_FILES) && DEBUG_FONT
+          f << "F_,";
+#endif
+        }
+        actState.setCharacter(newChar, false);
+        fontChanged=true;
+        break;
+      }
       case ZoneInfo:
-#if 0
-        ok = m_stylesManager->getParagraph(MSWTextStyles::TextZone, pId, newPara);
+#if defined(DEBUG_WITH_FILES) && DEBUG_ZONEINFO
+        if (pId >= 0 && pId < int(m_state->m_zoneList.size()))
+          f << "Z" << pId  << "=[" << m_state->m_zoneList[(size_t) pId] << "],";
+        else
+          f << "Z_";
 #endif
         break;
-      case Normal:
-        ok = m_stylesManager->getParagraph(MSWTextStyles::TextZone, pId, newPara);
-        break;
-      case TextStruct:
-        m_stylesManager->getParagraph(MSWTextStyles::TextStructZone, pId, newPara);
-        break;
       case Page:
+#if defined(DEBUG_WITH_FILES) && DEBUG_PAGE
+        if (pId  >= 0 && pId < int(m_state->m_pageList.size()))
+          f << "Pg" << pId << "=[" << m_state->m_pageList[(size_t) pId] << "]";
+        else
+          f << "Pg_";
+#endif
+        break;
       default:
-        MWAW_DEBUG_MSG(("MSWText::prepareData: find unexpected changed\n"));
+        break;
       }
-      paragraphList[i] = newPara;
-      if (!ok) {
-        MWAW_DEBUG_MSG(("MSWText::prepareData: can not find paragraph for pos: %lx\n", pos));
+      if (paraId==-2)
+        continue;
+
+      MSWStruct::Paragraph para(vers);
+      if (paraId >= 0)
+        m_stylesManager->getParagraph
+        ((i==TextStruct) ? MSWTextStyles::TextStructZone : MSWTextStyles::TextZone, paraId, para);
+#if defined(DEBUG_WITH_FILES) && DEBUG_PARAGRAPH
+      if (i==TextStruct) f << "tP";
+      else f << "P";
+      if (paraId < 0)
+        f << "_,";
+      else {
+        f << paraId << "=[";
+        para.print(f, m_convertissor);
+        f << "],";
       }
+#endif
+
+      if (i==TextStruct)
+        actState.addModifier(para);
+      else
+        actState.setParagraph(para, false);
+      paraChanged = true;
     }
 
-    if (lastModPos != -1) {
-      MSWStruct::Paragraph newParagraph(vers);
-      for (int i = 0; i <= lastModPos; i++) {
-        newParagraph.insert(paragraphList[i]);
-        paragraphId[i] = -2;
-      }
-      paraFont = defaultFont;
-      newParagraph.getFont(paraFont);
-      actFont = paraFont;
-      actFont.insert(lastFileFont);
+    if (paraChanged) {
       m_state->m_paragraphMap.insert
-      (std::map<long, MSWStruct::Paragraph>::value_type(cPos,newParagraph));
+      (std::map<long, MSWStruct::Paragraph>::value_type(cPos,actState.m_actualPara));
+      fontChanged=true;
     }
-    if (fontId == -1)
-      actFont = paraFont;
-    else if (fontId >= 0) {
-      MSWStruct::Font newFont;
-      m_stylesManager->getFont(MSWTextStyles::TextZone, fontId, newFont);
-      lastFileFont = newFont;
-      actFont = paraFont;
-      actFont.insert(newFont);
-    }
-    if (lastModPos != -1 || fontId != -2) {
-      fontId = -2;
-      m_state->m_fontMap[cPos] = actFont;
-    }
+
+    if (fontChanged)
+      m_state->m_fontMap[cPos] = actState.m_actualFont;
     if (f.str().length()) {
       f2.str("");
       f2 << "TextContent["<<cPos<<"]:" << f.str();
@@ -1384,6 +1481,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
           break;
         MSWTextInternal::TextEntry const &entry=m_state->m_textposList[(size_t) plc.m_id];
         if (pos != entry.begin()) {
+          MWAW_DEBUG_MSG(("MSWText::sendText: the file position seems bad\n"));
         }
         break;
       }

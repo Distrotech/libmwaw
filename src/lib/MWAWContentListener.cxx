@@ -1116,7 +1116,12 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
     } else if (m_ps->m_paragraphLineSpacingUnit != WPX_PERCENT)
       propList.insert("style:line-height-at-least", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
     else {
-      MWAW_DEBUG_MSG(("MWAWContentListener::_appendParagraphProperties: can not set line spacing at least with percent type\n"));
+      propList.insert("style:line-height-at-least", m_ps->m_paragraphLineSpacing*12.0, WPX_POINT);
+      static bool first = true;
+      if (first) {
+        first = false;
+        MWAW_DEBUG_MSG(("MWAWContentListener::_appendParagraphProperties: assume height=12 to set line spacing at least with percent type\n"));
+      }
     }
     break;
   default:

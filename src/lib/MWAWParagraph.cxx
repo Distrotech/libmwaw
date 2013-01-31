@@ -124,8 +124,12 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
     o << "rightMarg=" << pp.m_margins[2].get() << ",";
 
   if (pp.m_spacingsInterlineUnit.get()==WPX_PERCENT) {
-    if (pp.m_spacings[0].get() < 1.0 || pp.m_spacings[0].get() > 1.0)
-      o << "interLineSpacing=" << pp.m_spacings[0].get() << "%,";
+    if (pp.m_spacings[0].get() < 1.0 || pp.m_spacings[0].get() > 1.0) {
+      o << "interLineSpacing=" << pp.m_spacings[0].get() << "%";
+      if (pp.m_spacingsInterlineType.get()==libmwaw::AtLeast)
+        o << "[atLeast]";
+      o << ",";
+    }
   } else if (pp.m_spacings[0].get() > 0.0) {
     o << "interLineSpacing=" << pp.m_spacings[0].get();
     if (pp.m_spacingsInterlineType.get()==libmwaw::AtLeast)
@@ -210,7 +214,7 @@ void MWAWParagraph::send(shared_ptr<MWAWContentListener> listener) const
 
   double interline = m_spacings[0].get();
   if (interline<= 0.0 || m_spacingsInterlineUnit.get()==WPX_PERCENT)
-    listener->setParagraphLineSpacing(interline>0.0 ? interline : 1.0, WPX_PERCENT);
+    listener->setParagraphLineSpacing(interline>0.0 ? interline : 1.0, WPX_PERCENT, m_spacingsInterlineType.get());
   else
     listener->setParagraphLineSpacing(interline, m_spacingsInterlineUnit.get(), m_spacingsInterlineType.get());
 

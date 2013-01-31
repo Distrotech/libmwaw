@@ -120,9 +120,9 @@ protected:
   bool readPLCList(MSWEntry &entry);
   //! read the paragraphs at the beginning of the text structure zone
   bool readTextStructList(MSWEntry &entry);
-  /** read the end of a line zone (2 bytes).
-      Returns a textstruct parag id or -1 */
-  int readTextStructParaZone(std::string &extra);
+  /** read the property modifier (2 bytes last bytes of text struct ).
+      Returns a textstruct parag id or -1 (PRM) */
+  int readPropertyModifier(bool &complex, std::string &extra);
   //! read the char/paragraph plc : type=0: char, type=1: parag
   bool readPLC(MSWEntry &entry, int type, Vec2<long> const &fileLimit);
 

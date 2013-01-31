@@ -498,14 +498,6 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
         f << m_input->readULong(1) << ",";
       f << std::dec << "],";
       break;
-    case 3: // four small number
-      if (dSz < 5) break;
-      done = true;
-      f << "f" << std::hex << wh << std::dec << "=[";
-      for (int i = 0; i < 4; i++)
-        f << m_input->readLong(1) << ",";
-      f << "],";
-      break;
     case 0x50: // two small number
       if (dSz < 4) break;
       done = true;
@@ -550,6 +542,11 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
         f << "#";
         break;
       } else if (extra) {
+        static bool first=true;
+        if (first) {
+          MWAW_DEBUG_MSG(("MSWTextStyles::readParagraph: find a list of font with unknown meaning...\n"));
+          first = false;
+        }
         f << "#font";
         if (wh == 0x53) f << "2";
         f << "=[" << tmp->m_font->getDebugString(m_convertissor) << "," << *tmp << "],";
@@ -605,6 +602,20 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
     m_input->seek(endPos, WPX_SEEK_SET);
   }
   para.m_extra += f.str();
+
+  if (para.m_styleId.isSet()) {
+    int stId=para.m_styleId.get();
+    if (m_state->m_styleParagraphMap.find(stId) != m_state->m_styleParagraphMap.end()) {
+      MSWStruct::Paragraph const &style=
+        m_state->m_styleParagraphMap.find(stId)->second;
+      MSWStruct::Paragraph res(style);
+      MSWStruct::Font const *styleFont=0;
+      if (m_state->m_styleFontMap.find(stId) != m_state->m_styleFontMap.end())
+        styleFont = &m_state->m_styleFontMap.find(stId)->second;
+      res.insert(para,styleFont);
+      para=res;
+    }
+  }
 
   return true;
 }
@@ -748,16 +759,16 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
             MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: can not read plcSz\n"));
             f2 << "#";
           } else {
-            int pId = (int) m_input->readLong(1);
-            if (m_state->m_styleParagraphMap.find(pId)==m_state->m_styleParagraphMap.end()) {
+            int stId = (int) m_input->readLong(1);
+            if (m_state->m_styleParagraphMap.find(stId)==m_state->m_styleParagraphMap.end()) {
               MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: can not find parent paragraph\n"));
               f2 << "#";
             } else
-              para = m_state->m_styleParagraphMap.find(pId)->second;
-            f2 << "sP" << pId << ",";
+              para.m_styleId = stId;
+            f2 << "sP" << stId << ",";
             int val = (int) m_input->readLong(1);
-            if (val) // some flag: 0, 20 ?
-              f2 << "g0=" << std::hex << val << std::dec << ",";
+            if (val) // some flag: 0, 20 ? hidden ?
+              f2 << "flags=" << std::hex << val << std::dec << ",";
             val = (int) m_input->readLong(1);
             if (val) // a small number ?
               f2 << "g1=" << val << ",";
@@ -765,7 +776,7 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
               para.m_dim->setX(float(m_input->readULong(2))/1440.f);
               para.m_dim->setY(float(m_input->readULong(2))/72.f);
             }
-            if (sz > 4) {
+            if (sz >= 4) {
               ascii().addDelimiter(m_input->tell(),'|');
               if (readParagraph(para, int(endPos-m_input->tell()))) {
 #ifdef DEBUG_WITH_FILES
@@ -867,36 +878,34 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
   return true;
 }
 
-int MSWTextStyles::readTextStructParaZone(std::string &extra)
+int MSWTextStyles::readPropertyModifier(bool &complex, std::string &extra)
 {
   long pos = m_input->tell();
-  libmwaw::DebugStream f;
-  int id = -1;
   int c = (int) m_input->readULong(1);
-  switch (c) {
-    // find also 0x1e80 here, look like a tmp setting...
-  case 0x80:
-    id = (int) m_input->readULong(1);
-    break;
-  case 0:
-    break;
-  default: {
-    MSWStruct::Paragraph para(version());
-    m_input->seek(-1, WPX_SEEK_CUR);
-    if (readParagraph(para, 2)) {
-      id = int(m_state->m_textstructParagraphList.size());
-      m_state->m_textstructParagraphList.push_back(para);
-#ifdef DEBUG_WITH_FILES
-      f << "[";
-      para.print(f, m_convertissor);
-      f << "]";
-#endif
-    } else {
-      m_input->seek(pos+1, WPX_SEEK_SET);
-      f << "#f" << std::hex << c << std::dec << "=" << (int) m_input->readULong(1);
-    }
-    break;
+  complex = false;
+  if (c&0x80) { // complex data, let get the id
+    complex=true;
+    return ((c&0x7F)<<8)|(int) m_input->readULong(1);
   }
+  if (c==0) {
+    m_input->seek(pos+2, WPX_SEEK_SET);
+    return -1;
+  }
+  int id = -1;
+  libmwaw::DebugStream f;
+  MSWStruct::Paragraph para(version());
+  m_input->seek(-1, WPX_SEEK_CUR);
+  if (readParagraph(para, 2)) {
+    id = int(m_state->m_textstructParagraphList.size());
+    m_state->m_textstructParagraphList.push_back(para);
+#ifdef DEBUG_WITH_FILES
+    f << "[";
+    para.print(f, m_convertissor);
+    f << "]";
+#endif
+  } else {
+    m_input->seek(pos+1, WPX_SEEK_SET);
+    f << "#f" << std::hex << c << std::dec << "=" << (int) m_input->readULong(1);
   }
   extra = f.str();
   m_input->seek(pos+2, WPX_SEEK_SET);
@@ -1257,6 +1266,7 @@ bool MSWTextStyles::readStylesFont
       f.str("");
       f << "CharPLC(sF" << id-int(N) << "):";
       if (!readFont(font, StyleZone)) f << "#";
+      else if (id==int(N)) m_state->m_defaultFont=font.m_font.get();
       f << "font=[" << font.m_font->getDebugString(m_convertissor) << font << "],";
       ascii().addPos(debPos[(size_t)id]);
       ascii().addNote(f.str().c_str());
@@ -1309,8 +1319,10 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
     MSWStruct::Paragraph para(vers);
     if (prevId >= 0 && m_state->m_styleParagraphMap.find(prevId-N) != m_state->m_styleParagraphMap.end())
       para = m_state->m_styleParagraphMap.find(prevId-N)->second;
+    MSWStruct::Font const *styleFont=0;
     if (m_state->m_styleFontMap.find(id-N) != m_state->m_styleFontMap.end())
-      para.m_font = m_state->m_styleFontMap.find(id-N)->second;
+      styleFont = &m_state->m_styleFontMap.find(id-N)->second;
+    if (styleFont) para.m_font = para.m_font2 = *styleFont;
     if (dataSize[(size_t) id] == 0 || dataSize[(size_t) id] == 0xFF) {
     } else {
       f.str("");
@@ -1339,6 +1351,11 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
       ascii().addPos(debPos[(size_t) id]);
       ascii().addNote(f.str().c_str());
     }
+    /** ok we can update the font to end the work .. */
+    MSWStruct::Font finalFont;
+    if (para.getFont(finalFont, styleFont))
+      para.m_font = para.m_font2 = finalFont;
+    para.m_modFont.setSet(false);
     m_state->m_styleParagraphMap.insert
     (std::map<int,MSWStruct::Paragraph>::value_type(id-N,para));
   }

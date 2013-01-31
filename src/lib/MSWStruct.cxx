@@ -51,13 +51,13 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
     o << what[i];
     switch(font.m_flags[i].get()) {
     case 0x80:
-      o << "=no*";
+      o << "=style";
       break;
     case 0:
       o << "=no";
       break;
     case 0x81:
-      o << "*";
+      o << "=noSyle";
     case 1:
       break;
     default:
@@ -78,10 +78,13 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
   return o;
 }
 
-void Font::insert(Font const &font)
+void Font::insert(Font const &font, Font const *styleFont)
 {
-  updateFontToFinalState();
-  m_font.insert(font.m_font);
+  updateFontToFinalState(styleFont);
+  if (!m_font.isSet())
+    m_font=font.m_font;
+  else if (font.m_font.isSet())
+    m_font->insert(font.m_font.get());
   m_size.insert(font.m_size);
   m_value.insert(font.m_value);
   m_picturePos.insert(font.m_picturePos);
@@ -91,7 +94,7 @@ void Font::insert(Font const &font)
   m_extra+=font.m_extra;
 }
 
-void Font::updateFontToFinalState()
+void Font::updateFontToFinalState(Font const *styleFont)
 {
   uint32_t res=0;
   uint32_t const fl[NumFlags] = {
@@ -104,21 +107,35 @@ void Font::updateFontToFinalState()
     if (!m_flags[i].isSet()) continue;
     int action = m_flags[i].get();
     if (action&0xFF7E) continue;
+    bool on = (action&1);
+    if (action&0x80 && styleFont) {
+      bool prev=false;
+      if (i==2)
+        prev = styleFont->m_font->getStrikeOut().isSet();
+      else if (i==8)
+        prev = styleFont->m_font->getUnderline().isSet();
+      else
+        prev = styleFont->m_font->flags()&fl[i];
+      if (action==0x80)
+        on = prev;
+      else
+        on = !prev;
+    }
     switch (i) {
     case 2:
-      if (action & 1)
+      if (on)
         m_font->setStrikeOutStyle(MWAWFont::Line::Simple);
       else
         m_font->setStrikeOutStyle(MWAWFont::Line::None);
       break;
     case 8:
-      if (action & 1)
+      if (on)
         m_font->setUnderlineStyle(MWAWFont::Line::Simple);
       else
         m_font->setUnderlineStyle(MWAWFont::Line::None);
       break;
     default:
-      if (action & 1) res|=fl[i];
+      if (on) res|=fl[i];
       else res &= ~(fl[i]);
       flagsMod=true;
       break;
@@ -636,6 +653,21 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
   libmwaw::DebugStream f;
   int c = (int) input->readULong(1), val;
   switch(c) {
+  case 0x2: // sprmPIstd
+    if (dSz < 2) return false;
+    m_styleId = (int) input->readLong(1);
+    break;
+  case 0x3: { // sprmPIstdPermute: checkme: alway find with 3,3,2,3
+    if (dSz < 2) return false;
+    int num= (int) input->readULong(1);
+    if (num<=0 || dSz < 2+num) return false;
+    MWAW_DEBUG_MSG(("Paragraph::read: find istd permute list, unimplemented\n"));
+    f << "istPerm=[";
+    for (int i = 0; i < num; i++)
+      f << input->readLong(1) << ",";
+    f << "],";
+    break;
+  }
   case 0x5:
     if (dSz < 2) return false;
     val = (int) input->readLong(1);
@@ -733,15 +765,12 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     }
     int N0 = (int) input->readULong(1);
     if (2*N0 > sz) {
-      MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: num tab0 seems odd\n"));
+      MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: num of deleted tabs seems odd\n"));
       return false;
     }
-    if (N0) { // CHECKME: an increasing list, but what is it ? Often N0=0 or N ?
-      f << "tabs0?=[";
-      for (int i = 0; i < N0; i++) {
-        f << float(input->readLong(2))/1440.f << ",";
-      }
-      f << "],";
+    if (N0) {
+      for (int i = 0; i < N0; i++)
+        m_deletedTabs->push_back(float(input->readLong(2))/1440.f);
     }
     int N = (int) input->readULong(1);
     if (N*3+2*N0+2 != sz ) {
@@ -954,6 +983,14 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
 // paragraph
 std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
 {
+  if (ind.m_styleId.isSet())
+    o << "styleId[orig]=" << ind.m_styleId.get() << ",";
+  if (ind.m_deletedTabs.isSet()) {
+    o << "deletedTab=[";
+    for (size_t i = 0; i < ind.m_deletedTabs.get().size(); i++)
+      o << ind.m_deletedTabs.get()[i] << ",";
+    o << "],";
+  }
   if (ind.m_dim.isSet() && (ind.m_dim.get()[0]>0 || ind.m_dim.get()[1]>0))
     o << "dim=" << ind.m_dim.get() << ",";
   o << reinterpret_cast<MWAWParagraph const &>(ind);
@@ -966,7 +1003,7 @@ std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
   return o;
 }
 
-bool Paragraph::getFont(Font &font) const
+bool Paragraph::getFont(Font &font, Font const *styleFont) const
 {
   bool res = true;
   if (m_font2.isSet())
@@ -976,10 +1013,56 @@ bool Paragraph::getFont(Font &font) const
   else
     res = false;
   if (m_modFont.isSet()) {
-    font.insert(*m_modFont);
+    font.insert(*m_modFont, styleFont);
     res = true;
   }
   return res;
+}
+
+void Paragraph::insert(Paragraph const &para, bool insertModif)
+{
+  MWAWParagraph::insert(para);
+  m_styleId.insert(para.m_styleId);
+  if (m_deletedTabs.isSet() && m_tabs.isSet()) {
+    for (size_t i = 0; i < m_deletedTabs->size(); i++) {
+      float val = m_deletedTabs.get()[i];
+      bool done = false;
+      for (size_t j = 0; j < m_tabs->size(); j++) {
+        if (m_tabs.get()[j].m_position < val-1e-4 || m_tabs.get()[j].m_position > val+1e-4)
+          continue;
+        m_tabs->erase (m_tabs->begin()+ssize_t(j));
+        done = true;
+        break;
+      }
+      if (!done) {
+        MWAW_DEBUG_MSG(("Paragraph::insert: can not delete a tabs\n"));
+      }
+    }
+    m_deletedTabs.setSet(false);
+  }
+  m_dim.insert(para.m_dim);
+  if (!m_font.isSet())
+    m_font=para.m_font;
+  else if (para.m_font.isSet())
+    m_font->insert(*para.m_font);
+  if (!m_font2.isSet())
+    m_font2 = para.m_font2;
+  else if (para.m_font2.isSet())
+    m_font2->insert(*para.m_font2);
+  if (insertModif)
+    m_modFont->insert(*para.m_modFont);
+  if (!m_section.isSet())
+    m_section = para.m_section;
+  else if (para.m_section.isSet())
+    m_section->insert(*para.m_section);
+  if (!m_bordersStyle.isSet() || para.m_bordersStyle.isSet())
+    m_bordersStyle = para.m_bordersStyle;
+  m_inCell.insert(para.m_inCell);
+  if (!m_table.isSet())
+    m_table = para.m_table;
+  else if (para.m_table.isSet())
+    m_table->insert(*para.m_table);
+  m_tableDef.insert(para.m_tableDef);
 }
 
 void Paragraph::print(std::ostream &o, MWAWFontConverterPtr m_convertissor) const

@@ -64,7 +64,10 @@ bool TableStyleManager::getColumnsWidth(int col, int numSpanned, double &w) cons
 		return false;
 	std::vector<double> const &widths=m_columWitdhsStack.back();
 	if (col < 0 || size_t(col+numSpanned-1) >= widths.size())
+	{
+		MWAW_DEBUG_MSG(("TableStyleManager::getColumnsWidth: can not compute the columns witdh\n"));
 		return false;
+	}
 	bool fixed = true;
 	w = 0;
 	for (size_t i=size_t(col); i < size_t(col+numSpanned); i++)

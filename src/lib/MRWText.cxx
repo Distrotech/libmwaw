@@ -915,7 +915,7 @@ bool MRWText::sendTable(MRWTextInternal::Table &table)
     for (size_t c=0; c < nCells; c++)
       colWidths[c]=(float)row.m_cellsList[c].m_width;
     m_listener->openTable(colWidths, WPX_POINT);
-    m_listener->openTableRow(-row.m_height, WPX_POINT);
+    m_listener->openTableRow(-float(row.m_height), WPX_POINT);
 
     WPXPropertyList extras;
     for (size_t c=0; c < nCells; c++) {
@@ -1239,13 +1239,10 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
         font.m_font.setSize(float(val)/65536.f);
         break;
       }
-      case 23: { // f23[high]=0|1
-        int low = (int16_t)(dt.value(0));
-        if (low) f << "f" << j << "[low]=" << low << ",";
-        int high = (int16_t)(dt.value(0)>>16);
-        if (high) f << "f" << j << "[high]=" << high << ",";
+      case 23: // kern
+        if (dt.value(0))
+          font.m_font.setDeltaLetterSpacing(float(dt.value(0))/65536.f);
         break;
-      }
       case 24: // 0
       case 25: // 0
       case 27: // 0
@@ -1299,6 +1296,8 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
       case 48:
       case 49:
       case 50:
+      case 54:
+      case 55:
       case 56:
       case 57:
       case 58:
@@ -1336,8 +1335,17 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
           case 48:
             font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
             break;
+          case 49:
+            fFlags |= MWAWFont::hiddenBit;
+            break;
           case 50:
             font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
+            break;
+          case 54:
+            fFlags |= MWAWFont::allCapsBit;
+            break;
+          case 55:
+            fFlags |= MWAWFont::lowercaseBit;
             break;
           case 56:
             fFlags |= MWAWFont::smallCapsBit;
@@ -1359,19 +1367,19 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
         break;
       case 51:
         if (dt.value(0) > 0)
-          font.m_font.set(MWAWFont::Script((int)dt.value(0),WPX_POINT));
+          font.m_font.set(MWAWFont::Script((float)dt.value(0),WPX_POINT));
         else if (dt.value(0))
           f << "#superscript=" << dt.value(0) << ",";
         break;
       case 52:
         if (dt.value(0) > 0)
-          font.m_font.set(MWAWFont::Script((int)-dt.value(0),WPX_POINT));
+          font.m_font.set(MWAWFont::Script((float)-dt.value(0),WPX_POINT));
         else if (dt.value(0))
           f << "#subscript=" << dt.value(0) << ",";
         break;
       case 59:
         if (dt.value(0))
-          font.m_font.set(MWAWFont::Script((int)dt.value(0),WPX_POINT,58));
+          font.m_font.set(MWAWFont::Script(float(dt.value(0))/3.0f,WPX_POINT,58));
         break;
       default:
         if (dt.value(0))

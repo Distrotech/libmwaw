@@ -1,5 +1,10 @@
 CHANGES:
 
+01/30/2013
+- update Mariner Write and Microsoft Word to use new font properties,
+- manage multi header, table, fill properties in Mariner Write filter,
+- improve a little the Microsoft Word filter to better manage character properties
+
 01/21/2013
 - update HandMac Word-K, LightWay Text, Nisus parser to use the new font properties, 
 - modify mwaw2html to use html5 and CSS properties,

@@ -68,14 +68,32 @@ struct Font {
   }
 
   //! insert new font data ( beginning by updating font flags )
-  void insert(Font const &font);
+  void insert(Font const &font, Font const *styleFont=0);
 
   //! update the font to obtain the final font
-  void updateFontToFinalState();
+  void updateFontToFinalState(Font const *styleFont=0);
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Font const &font);
 
+  //! operator==
+  int cmp(Font const &oth) const {
+    int diff = m_font.get().cmp(oth.m_font.get());
+    if (diff) return diff;
+    if (m_size.get() < oth.m_size.get()) return -1;
+    if (m_size.get() > oth.m_size.get()) return 1;
+    diff = m_value.get()-oth.m_value.get();
+    if (diff) return diff;
+    for (int i = 0; i < NumFlags; i++) {
+      diff = m_flags[i].get()-oth.m_flags[i].get();
+      if (diff) return diff;
+    }
+    if (m_picturePos.get()<oth.m_picturePos.get()) return -1;
+    if (m_picturePos.get()>oth.m_picturePos.get()) return 1;
+    diff = m_unknown.get()-oth.m_unknown.get();
+    if (diff) return diff;
+    return 0;
+  }
   //! the font
   Variable<MWAWFont> m_font;
   //! a second size
@@ -216,40 +234,16 @@ struct Table {
 //! the paragraph structure of a Microsoft Word file
 struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Paragraph(int version) : MWAWParagraph(), m_version(version), m_dim(), m_font(), m_font2(), m_modFont(), m_section(),
+  Paragraph(int version) : MWAWParagraph(), m_version(version), m_styleId(-1000),
+    m_deletedTabs(), m_dim(), m_font(), m_font2(), m_modFont(), m_section(),
     m_bordersStyle(), m_inCell(false), m_tableDef(false), m_table() {
   }
   //! insert the new values
-  void insert(Paragraph const &para, bool insertModif=true) {
-    MWAWParagraph::insert(para);
-    m_dim.insert(para.m_dim);
-    if (!m_font.isSet())
-      m_font=para.m_font;
-    else if (para.m_font.isSet())
-      m_font->insert(*para.m_font);
-    if (!m_font2.isSet())
-      m_font2 = para.m_font2;
-    else if (para.m_font2.isSet())
-      m_font2->insert(*para.m_font2);
-    if (insertModif)
-      m_modFont->insert(*para.m_modFont);
-    if (!m_section.isSet())
-      m_section = para.m_section;
-    else if (para.m_section.isSet())
-      m_section->insert(*para.m_section);
-    if (!m_bordersStyle.isSet() || para.m_bordersStyle.isSet())
-      m_bordersStyle = para.m_bordersStyle;
-    m_inCell.insert(para.m_inCell);
-    if (!m_table.isSet())
-      m_table = para.m_table;
-    else if (para.m_table.isSet())
-      m_table->insert(*para.m_table);
-    m_tableDef.insert(para.m_tableDef);
-  }
+  void insert(Paragraph const &para, bool insertModif=true);
   //! try to read a data
   bool read(MWAWInputStreamPtr &input, long endPos);
   //! returns the font which correspond to the paragraph if possible
-  bool getFont(Font &font) const;
+  bool getFont(Font &font, Font const *styleFont=0) const;
   //! returns true if we are in table
   bool inTable() const {
     return m_inCell.get();
@@ -262,6 +256,10 @@ struct Paragraph : public MWAWParagraph {
 
   //! the file version
   int m_version;
+  //! the style id (if known)
+  Variable<int> m_styleId;
+  //! the delete tabulation
+  Variable<std::vector<float> > m_deletedTabs;
   //! the dimension
   Variable<Vec2f> m_dim;
   //! the font (simplified)
