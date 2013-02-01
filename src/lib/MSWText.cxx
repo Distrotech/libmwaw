@@ -1226,7 +1226,10 @@ void MSWText::prepareData()
           } else {
             MSWTextInternal::TextEntry const &entry=m_state->m_textposList[(size_t) plc.m_id];
             pos = entry.begin();
-            isLocal = !entry.m_complex;
+            /**FIXME: normally, must depend on some textEntry data,
+               I tested with !entry.m_complex, entry.m_type&0x80
+               but in average, the results seem slightly worse :-~ */
+            isLocal = true;
             actState.updateState(isLocal);
           }
           break;

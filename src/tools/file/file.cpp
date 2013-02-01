@@ -375,6 +375,10 @@ bool File::readDataInformation()
     m_dataResult.push_back("Adobe EPS");
     return true;
   }
+  if (val[0]==0x7b5c && val[1]==0x7274 && (val[2]>>8)==0x66) {
+    m_dataResult.push_back("RTF");
+    return true;
+  }
   if (val[2]==0x6d6f && val[3]==0x6f76) {
     m_dataResult.push_back("QuickTime movie");
     return true;
@@ -416,7 +420,7 @@ bool File::readDataInformation()
     return true;
   }
 
-// less discriminant
+  // less discriminant
   if ((val[0]==0xfe32 && val[1]==0) || (val[0]==0xfe34 && val[1]==0) ||
       (val[0] == 0xfe37 && (val[1] == 0x23 || val[1] == 0x1c))) {
     switch (val[1]) {
@@ -446,6 +450,10 @@ bool File::readDataInformation()
     m_dataResult.push_back("MindWrite");
   if (val[0] == 0x110)
     m_dataResult.push_back("WriterPlus");
+  if (val[0]==0xdba5 && val[1]==0x2d00) {
+    m_dataResult.push_back("Microsoft Word 2.0[pc]");
+    return true;
+  }
   if (val[0] == 3 || val[0] == 6) {
     int numParaPos = val[0] == 3 ? 2 : 1;
     if (val[numParaPos] < 0x1000 && val[numParaPos+1] < 0x100 && val[numParaPos+2] < 0x100)
