@@ -132,6 +132,10 @@ SOURCE=..\..\src\lib\DMText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\EDParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\FWParser.cxx
 # End Source File
 # Begin Source File
@@ -425,6 +429,10 @@ SOURCE=..\..\src\lib\DMParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\DMText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\EDParser.hxx
 # End Source File
 # Begin Source File
 

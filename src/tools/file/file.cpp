@@ -305,6 +305,10 @@ bool File::readFileInformation()
     checkFInfoType("Zart","Z-Write") || checkFInfoType("Z-Write");
   } else if (m_fInfoCreator=="dPro") {
     checkFInfoType("dDoc","MacDraw Pro") || checkFInfoType("MacDraw Pro");
+  } else if (m_fInfoCreator=="eDcR") {
+    checkFInfoType("eDoc","eDOC") || checkFInfoType("eDOC");
+  } else if (m_fInfoCreator=="eSRD") {
+    checkFInfoType("APPL","eDOC(appli)");
   } else if (m_fInfoCreator=="nX^n") {
     checkFInfoType("nX^d","WriteNow 2") || checkFInfoType("nX^2","WriteNow 3-4") ||
     checkFInfoType("WriteNow");

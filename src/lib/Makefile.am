@@ -41,6 +41,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	DMParser.hxx			\
 	DMText.cxx			\
 	DMText.hxx			\
+	EDParser.cxx			\
+	EDParser.hxx			\
 	FWParser.cxx			\
 	FWParser.hxx			\
 	FWText.cxx			\

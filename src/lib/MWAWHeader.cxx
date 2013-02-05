@@ -193,6 +193,16 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::ZWRT, 1));
         return res;
       }
+    } else if (creator=="eDcR") {
+      if (type=="eDoc") {
+        res.push_back(MWAWHeader(MWAWDocument::ED, 1));
+        return res;
+      }
+    } else if (creator=="eSRD") { // self reading application
+      if (type=="APPL") {
+        res.push_back(MWAWHeader(MWAWDocument::ED, 1));
+        return res;
+      }
     } else if (creator=="nX^n") {
       if (type=="nX^d") {
         res.push_back(MWAWHeader(MWAWDocument::WNOW, 2));

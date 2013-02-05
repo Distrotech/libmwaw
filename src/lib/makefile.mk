@@ -35,6 +35,7 @@ SLOFILES= \
 	$(SLO)$/CWText.obj			\
 	$(SLO)$/DMParser.obj			\
 	$(SLO)$/DMText.obj			\
+	$(SLO)$/EDParser.obj			\
 	$(SLO)$/FWParser.obj			\
 	$(SLO)$/FWText.obj			\
 	$(SLO)$/HMWGraph.obj			\
