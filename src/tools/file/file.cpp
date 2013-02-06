@@ -195,7 +195,17 @@ bool File::readFileInformation()
 
   if (m_fInfoCreator=="" || m_fInfoType=="")
     return true;
-  if (m_fInfoCreator=="BOBO") {
+  if (m_fInfoCreator=="AB65") {
+    checkFInfoType("AD65", "Pagemaker6.5") || checkFInfoType("Pagemaker6.5");
+  } else if (m_fInfoCreator=="ALB4") {
+    checkFInfoType("ALD4", "Pagemaker4") || checkFInfoType("Pagemaker4");
+  } else if (m_fInfoCreator=="ALB4") {
+    checkFInfoType("ALD4", "Pagemaker4") || checkFInfoType("Pagemaker4");
+  } else if (m_fInfoCreator=="ALB5") {
+    checkFInfoType("ALD5", "Pagemaker5") || checkFInfoType("Pagemaker5");
+  } else if (m_fInfoCreator=="ALB6") {
+    checkFInfoType("ALD6", "Pagemaker6") || checkFInfoType("Pagemaker6");
+  } else if (m_fInfoCreator=="BOBO") {
     checkFInfoType("CWDB","ClarisWorks/AppleWorks 1.0[Database]")||
     checkFInfoType("CWD2","ClarisWorks/AppleWorks 2.0-3.0[Database]")||
     checkFInfoType("sWDB","ClarisWorks/AppleWorks 2.0-3.0[Database]")||
@@ -219,6 +229,10 @@ bool File::readFileInformation()
     checkFInfoType("APPL","DOCMaker") || checkFInfoType("DOCMaker");
   } else if (m_fInfoCreator=="DDAP") {
     checkFInfoType("DDFL+","DiskDoubler") || checkFInfoType("DiskDoubler");
+  } else if (m_fInfoCreator=="FH50") {
+    checkFInfoType("AGD1","FreeHand 5") || checkFInfoType("FreeHand 5");
+  } else if (m_fInfoCreator=="FHD3") {
+    checkFInfoType("FHA3","FreeHand 3") || checkFInfoType("FreeHand 3");
   } else if (m_fInfoCreator=="FS03") {
     checkFInfoType("WRT+","WriterPlus") || checkFInfoType("WriterPlus");
   } else if (m_fInfoCreator=="Fram") {

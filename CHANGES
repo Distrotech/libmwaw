@@ -1,5 +1,10 @@
 CHANGES:
 
+02/06/2013:
+- add a parser for eDOC v2.1 document
+
+01/30/2013: ----- version 1.6 ---------
+
 01/30/2013
 - update Mariner Write and Microsoft Word to use new font properties,
 - manage multi header, table, fill properties in Mariner Write filter,

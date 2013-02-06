@@ -85,8 +85,10 @@ protected:
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
 
-  //! returns the page left top point ( in inches)
-  Vec2f getPageLeftTop() const;
+  //! returns the page height, ie. paper size less margin (in inches)
+  float pageHeight() const;
+  //! returns the page width, ie. paper size less margin (in inches)
+  float pageWidth() const;
 
   //! adds a new page
   void newPage(int number);
@@ -95,10 +97,15 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
+  //! try to send the contents
+  bool sendContents();
+  //! try to send the index
+  bool sendIndex();
+
   // Intermediate level
 
-  //! parse the cPIC block ?
-  bool readcPIC(MWAWEntry const &entry);
+  //! try to send a picture
+  bool sendPicture(int pictId, bool compressed);
 
   //! parse the fonts name eDcF
   bool readFontsName(MWAWEntry const &entry);

@@ -41,8 +41,10 @@
 #include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
+#include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPictData.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
@@ -54,11 +56,46 @@
 namespace EDParserInternal
 {
 ////////////////////////////////////////
+//! Internal: an index of a EDParser
+struct Index {
+  //! constructor
+  Index() : m_levelId(0), m_text(""), m_page(-1), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Index const &index) {
+    if (index.m_text.length()) o << "text=\"" << index.m_text << "\",";
+    if (index.m_levelId) o << "levelId=" << index.m_levelId << ",";
+    if (index.m_page>0) o << "page=" << index.m_page << ",";
+    o << index.m_extra;
+    return o;
+  }
+  //! the font id
+  int m_levelId;
+  //! the text
+  std::string m_text;
+  //! the page number
+  int m_page;
+  //! extra data
+  std::string m_extra;
+};
+
+////////////////////////////////////////
 //! Internal: the state of a EDParser
 struct State {
   //! constructor
-  State() : m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_compressed(false), m_maxPictId(0), m_idCPICMap(), m_idPICTMap(),
+    m_indexList(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
+  //! a flag to know if the data are compressed or not
+  bool m_compressed;
+  //! the maximum of picture to read
+  int m_maxPictId;
+  //! a map id -> cPIC zone
+  std::map<int,MWAWEntry> m_idCPICMap;
+  //! a map id -> PICT zone
+  std::map<int,MWAWEntry> m_idPICTMap;
+  //! the index list
+  std::vector<Index> m_indexList;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
@@ -88,16 +125,21 @@ void EDParser::init()
 
   m_state.reset(new EDParserInternal::State);
 
-  // reduce the margin (in case, the page is not defined)
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
+  // no margins ( ie. the document is a set of picture corresponding to each page )
+  m_pageSpan.setMarginTop(0.);
+  m_pageSpan.setMarginBottom(0.);
+  m_pageSpan.setMarginLeft(0.);
+  m_pageSpan.setMarginRight(0.);
 }
 
 void EDParser::setListener(MWAWContentListenerPtr listen)
 {
   m_listener = listen;
+}
+
+float EDParser::pageWidth() const
+{
+  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
 }
 
 MWAWInputStreamPtr EDParser::rsrcInput()
@@ -138,8 +180,9 @@ void EDParser::parse(WPXDocumentInterface *docInterface)
   try {
     checkHeader(0L);
     ok = createZones();
-    if (0 && ok) {
+    if (ok) {
       createDocument(docInterface);
+      sendContents();
 #ifdef DEBUG
       flushExtra();
 #endif
@@ -169,11 +212,15 @@ void EDParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // create the page list
   std::vector<MWAWPageSpan> pageList;
-  int numPages = 1;
+  int numPages = m_state->m_maxPictId;
+  if (m_state->m_indexList.size())
+    numPages++;
+  if (numPages <= 0) numPages=1;
+  m_state->m_numPages=numPages;
+
   MWAWPageSpan ps(m_pageSpan);
   for (int i = 0; i <= numPages; i++)
     pageList.push_back(ps);
-
   //
   MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
   setListener(listen);
@@ -247,44 +294,133 @@ bool EDParser::findContents()
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
   std::multimap<std::string, MWAWEntry>::iterator it;
 
-  // the different compressed PICT zones
-  it = entryMap.lower_bound("cPIC");
-  while (it != entryMap.end()) {
-    if (it->first != "cPIC")
-      break;
-    MWAWEntry const &entry = it++->second;
-    WPXBinaryData data;
-    decodeZone(entry, data);
+  /* if the data is compress, we must look for cPIC zone ; if not,
+     we look for the first PICT zone.
+     Note: maybe we can also find text in TEXT zone, but I never see that
+   */
+  char const *(wh[2])= {"cPIC", "PICT"};
+  for (int st = 0; st < 2; st++) {
+    std::map<int, MWAWEntry> &map=st==0 ? m_state->m_idCPICMap : m_state->m_idPICTMap;
+    std::set<int> seens;
+    it = entryMap.lower_bound(wh[st]);
+    while (it != entryMap.end()) {
+      if (it->first != wh[st])
+        break;
+      MWAWEntry const &entry = it++->second;
+      map[entry.id()]= entry;
+      seens.insert(entry.id());
+    }
+    if (!seens.size() || m_state->m_maxPictId)
+      continue;
+    std::set<int>::iterator sIt=seens.lower_bound(1);
+    if (sIt==seens.end()|| *sIt>10)
+      continue;
+    int maxId=*sIt;
+    while(sIt!=seens.end() && *sIt<maxId+5)
+      maxId=*(sIt++);
+    m_state->m_maxPictId=maxId;
+    m_state->m_compressed=(st==0);
   }
-  // the different pict zones
-  it = entryMap.lower_bound("PICT");
-  while (it != entryMap.end()) {
-    if (it->first != "PICT")
-      break;
-    MWAWEntry const &entry = it++->second;
 
+  return true;
+}
+
+bool EDParser::sendContents()
+{
+  bool compressed=m_state->m_compressed;
+  int actPage=0;
+  for (int i=1; i <= m_state->m_maxPictId; i++) {
+    newPage(++actPage);
+    sendPicture(i, compressed);
+  }
+  if (m_state->m_indexList.size()) {
+    newPage(++actPage);
+    sendIndex();
+  }
+  return true;
+}
+
+bool EDParser::sendPicture(int pictId, bool compressed)
+{
+  if (!m_listener) {
+    MWAW_DEBUG_MSG(("EDParser::sendPicture: can not find the listener\n"));
+    return false;
+  }
+  std::map<int, MWAWEntry>::const_iterator it;
+  WPXBinaryData data;
+  if (compressed) {
+    it = m_state->m_idCPICMap.find(pictId);
+    if (it==m_state->m_idCPICMap.end() || !decodeZone(it->second,data))
+      return false;
+  } else {
+    it = m_state->m_idPICTMap.find(pictId);
+    if (it==m_state->m_idPICTMap.end())
+      return false;
+
+    MWAWEntry const &entry = it->second;
+
+    entry.setParsed(true);
+    MWAWInputStreamPtr input = rsrcInput();
+    input->seek(entry.begin(), WPX_SEEK_SET);
+    input->readDataBlock(entry.length(), data);
 #ifdef DEBUG_WITH_FILES
     libmwaw::DebugFile &ascFile = rsrcAscii();
-    MWAWInputStreamPtr input = rsrcInput();
-    WPXBinaryData file;
-    input->seek(entry.begin(), WPX_SEEK_SET);
-    input->readDataBlock(entry.length(), file);
 
     static int volatile pictName = 0;
     libmwaw::DebugStream f;
     f << "PICT" << ++pictName << ".pct";
-    libmwaw::Debug::dumpFile(file, f.str().c_str());
+    libmwaw::Debug::dumpFile(data, f.str().c_str());
 
     ascFile.addPos(entry.begin()-4);
     ascFile.addNote(f.str().c_str());
     ascFile.skipZone(entry.begin(),entry.end()-1);
 #endif
   }
+
+  int dataSz=int(data.size());
+  if (!dataSz)
+    return false;
+  WPXInputStream *dataInput = const_cast<WPXInputStream *>(data.getDataStream());
+  if (!dataInput) {
+    MWAW_DEBUG_MSG(("EDParser::sendPicture: oops can not find an input\n"));
+    return false;
+  }
+  MWAWInputStreamPtr pictInput(new MWAWInputStream(dataInput, false));
+  Box2f box;
+  MWAWPict::ReadResult res = MWAWPictData::check(pictInput, dataSz,box);
+  if (res == MWAWPict::MWAW_R_BAD) {
+    MWAW_DEBUG_MSG(("EDParser::sendPicture: can not find the picture\n"));
+    return false;
+  }
+  dataInput->seek(0,WPX_SEEK_SET);
+  shared_ptr<MWAWPict> thePict(MWAWPictData::get(pictInput, dataSz));
+  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), WPX_POINT);
+  pictPos.setRelativePosition(MWAWPosition::Char);
+  if (thePict) {
+    WPXBinaryData fData;
+    std::string type;
+    if (thePict->getBinary(fData,type))
+      m_listener->insertPicture(pictPos, fData, type);
+  }
   return true;
 }
 
 void EDParser::flushExtra()
 {
+#ifdef DEBUG
+  std::map<int, MWAWEntry>::const_iterator rIt = m_state->m_idCPICMap.begin();
+  for ( ; rIt != m_state->m_idCPICMap.end(); rIt++) {
+    MWAWEntry const &entry = rIt->second;
+    if (entry.isParsed()) continue;
+    sendPicture(entry.id(), true);
+  }
+  rIt = m_state->m_idPICTMap.begin();
+  for ( ; rIt != m_state->m_idPICTMap.end(); rIt++) {
+    MWAWEntry const &entry = rIt->second;
+    if (entry.isParsed()) continue;
+    sendPicture(entry.id(), false);
+  }
+#endif
 }
 
 ////////////////////////////////////////////////////////////
@@ -348,6 +484,51 @@ bool EDParser::readFontsName(MWAWEntry const &entry)
 }
 
 // the index
+bool EDParser::sendIndex()
+{
+  if (!m_listener) {
+    MWAW_DEBUG_MSG(("EDParser::sendPicture: can not find the listener\n"));
+    return false;
+  }
+  if (!m_state->m_indexList.size())
+    return true;
+
+  double w = pageWidth();
+  MWAWParagraph para;
+  MWAWTabStop tab;
+  tab.m_alignment = MWAWTabStop::RIGHT;
+  tab.m_leaderCharacter='.';
+  tab.m_position = w-0.3;
+
+  para.m_tabs->push_back(tab);
+  para.m_marginsUnit=WPX_INCH;
+
+  MWAWFont cFont(3,10);
+  cFont.setFlags(MWAWFont::boldBit);
+  MWAWFont actFont(3,12);
+
+  m_listener->insertEOL();
+  std::stringstream ss;
+  for (size_t i=0; i <  m_state->m_indexList.size(); i++) {
+    EDParserInternal::Index const &index = m_state->m_indexList[i];
+    para.m_margins[0] = 0.3f*float(index.m_levelId+1);
+    para.send(m_listener);
+    m_listener->setFont(actFont);
+    for (size_t c=0; c < index.m_text.length(); c++)
+      m_listener->insertCharacter((unsigned char)index.m_text[c]);
+
+    if (index.m_page >= 0) {
+      m_listener->setFont(cFont);
+      m_listener->insertTab();
+      ss.str("");
+      ss << index.m_page;
+      m_listener->insertUnicodeString(ss.str().c_str());
+    }
+    m_listener->insertEOL();
+  }
+  return true;
+}
+
 bool EDParser::readIndex(MWAWEntry const &entry)
 {
   long length = entry.length();
@@ -386,28 +567,30 @@ bool EDParser::readIndex(MWAWEntry const &entry)
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     f.str("");
-    f << "Index-" << i << ":";
     if (pos+14 > endPos) {
-      f << "###";
+      f << "Index-" << i << ":###";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
 
       MWAW_DEBUG_MSG(("EDParser::readIndex: can not read index %d\n", i));
       return false;
     }
+    EDParserInternal::Index index;
     val = (int) input->readULong(1); // 0|80
     if (val) f << "fl=" << std::hex << val << std::dec << ",";
-    val = (int) input->readULong(1); // small number fontId ?
-    if (val) f << "fId?=" << val << ",";
-    // f0: small increasing number: section?, f1: big number line in section?, other 0
-    for (int j = 0; j < 5; j++) {
+    index.m_levelId = (int) input->readULong(1);
+    index.m_page = (int) input->readLong(2);
+    // f1: y pos, other 0
+    for (int j = 0; j < 4; j++) {
       val = (int) input->readLong(2);
       if (val)
         f << "f" << j << "=" << val << ",";
     }
     int fSz = (int) input->readULong(1);
     if (pos+13+fSz > endPos) {
-      f << "###";
+      index.m_extra=f.str();
+      f.str("");
+      f << "Index-" << i << ":" << index << "###";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
 
@@ -417,7 +600,11 @@ bool EDParser::readIndex(MWAWEntry const &entry)
     std::string text("");
     for (int j = 0; j < fSz; j++)
       text += (char) input->readULong(1);
-    f << "\"" << text << "\"";
+    index.m_text=text;
+    index.m_extra=f.str();
+    m_state->m_indexList.push_back(index);
+    f.str("");
+    f << "Index-" << i << ":" << index;
     if ((fSz%2)==0) //
       input->seek(1,WPX_SEEK_CUR);
     ascFile.addPos(pos);
@@ -569,7 +756,7 @@ private:
 
 bool DeflateStruct::sendDuplicated(int num, int depl)
 {
-  ssize_t readPos=m_circQueuePos+ssize_t(depl);
+  ssize_t readPos=ssize_t(m_circQueuePos)+ssize_t(depl);
   while (readPos < 0) readPos+=0x2000;
   while (readPos >= 0x2000) readPos-=0x2000;
 

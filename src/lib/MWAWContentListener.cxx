@@ -529,7 +529,11 @@ void MWAWContentListener::setParagraphLineSpacing(const double lineSpacing, WPXU
   m_ps->m_paragraphLineSpacingUnit = unit;
   m_ps->m_paragraphLineSpacingType = type;
   if (type == libmwaw::AtLeast && unit == WPX_PERCENT) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphLineSpacing: can not used AtLeast with percent type\n"));
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphLineSpacing: can not used AtLeast with percent type\n"));
+      first=false;
+    }
     m_ps->m_paragraphLineSpacingType = libmwaw::Fixed;
   }
 }
