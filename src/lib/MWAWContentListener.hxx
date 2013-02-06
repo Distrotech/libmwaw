@@ -40,6 +40,9 @@
 
 #include "libmwaw_internal.hxx"
 
+// REMOVE
+#include "MWAWParagraph.hxx"
+
 class WPXBinaryData;
 class WPXDocumentInterface;
 class WPXString;
@@ -67,6 +70,9 @@ struct State;
 class MWAWContentListener
 {
 public:
+  enum BreakType { PageBreak=0, SoftPageBreak, ColumnBreak };
+  enum { PageBreakBit=0x1, SoftPageBreakBit=0x2, ColumnBreakBit=0x4 };
+
   /** constructor */
   MWAWContentListener(shared_ptr<MWAWFontConverter> fontConverter, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
   /** destructor */
@@ -113,7 +119,7 @@ public:
   //! adds an end of line ( by default an hard one)
   void insertEOL(bool softBreak=false);
   //! inserts a break type: ColumBreak, PageBreak, ..
-  void insertBreak(const uint8_t breakType);
+  void insertBreak(BreakType breakType);
 
   // ------ text format -----------
   //! sets the font
@@ -124,10 +130,10 @@ public:
   // ------ paragraph format -----------
   //! returns true if a paragraph or a list is opened
   bool isParagraphOpened() const;
-  void setParagraphLineSpacing(const double lineSpacing, WPXUnit unit=WPX_PERCENT, libmwaw::LineSpacing type=libmwaw::Fixed);
+  void setParagraphLineSpacing(const double lineSpacing, WPXUnit unit=WPX_PERCENT, MWAWParagraph::LineSpacingType type=MWAWParagraph::Fixed);
   /** Define the paragraph justification. You can set force=true to
       force a break if there is a justification change. */
-  void setParagraphJustification(libmwaw::Justification justification, bool force=false);
+  void setParagraphJustification(MWAWParagraph::Justification justification, bool force=false);
   /** sets the first paragraph text indent.
       \note: the first character will appear at paragraphLeftmargin + paragraphTextIndent*/
   void setParagraphTextIndent(double margin, WPXUnit unit=WPX_INCH);
@@ -237,7 +243,7 @@ protected:
   void _closeParagraph();
   void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
   void _getTabStops(WPXPropertyListVector &tabStops);
-  void _appendJustification(WPXPropertyList &propList, libmwaw::Justification justification);
+  void _appendJustification(WPXPropertyList &propList, MWAWParagraph::Justification justification);
   void _resetParagraphState(const bool isListElement=false);
 
   void _openListElement();

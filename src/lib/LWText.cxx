@@ -170,7 +170,7 @@ struct Paragraph : public MWAWParagraph {
 //! Internal: the header/footer zone of a LWText
 struct HFZone {
   //! constructor
-  HFZone() : m_numChar(0), m_pos(), m_height(0), m_font(), m_justify(libmwaw::JustificationLeft), m_extra("") {
+  HFZone() : m_numChar(0), m_pos(), m_height(0), m_font(), m_justify(MWAWParagraph::JustificationLeft), m_extra("") {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, HFZone const &hf);
@@ -183,7 +183,7 @@ struct HFZone {
   //! the font
   MWAWFont m_font;
   /** the paragraph justification */
-  libmwaw::Justification m_justify;
+  MWAWParagraph::Justification m_justify;
   //! extra data
   std::string m_extra;
 };
@@ -195,18 +195,18 @@ std::ostream &operator<<(std::ostream &o, HFZone const &hf)
   if (hf.m_height > 0)
     o << "h=" << hf.m_height << ",";
   switch(hf.m_justify) {
-  case libmwaw::JustificationLeft:
+  case MWAWParagraph::JustificationLeft:
     break;
-  case libmwaw::JustificationCenter:
+  case MWAWParagraph::JustificationCenter:
     o << "just=centered, ";
     break;
-  case libmwaw::JustificationRight:
+  case MWAWParagraph::JustificationRight:
     o << "just=right, ";
     break;
-  case libmwaw::JustificationFull:
+  case MWAWParagraph::JustificationFull:
     o << "just=full, ";
     break;
-  case libmwaw::JustificationFullAllLines:
+  case MWAWParagraph::JustificationFullAllLines:
     o << "just=fullAllLines, ";
     break;
   default:
@@ -802,13 +802,13 @@ bool LWText::readRulers(MWAWEntry const &entry)
     case 0:
       break; // left
     case 1:
-      para.m_justify = libmwaw::JustificationCenter;
+      para.m_justify = MWAWParagraph::JustificationCenter;
       break;
     case 2:
-      para.m_justify = libmwaw::JustificationRight;
+      para.m_justify = MWAWParagraph::JustificationRight;
       break;
     case 3:
-      para.m_justify = libmwaw::JustificationFull;
+      para.m_justify = MWAWParagraph::JustificationFull;
       break;
     default:
       f << "#justify=" << flag << ",";
@@ -979,13 +979,13 @@ bool LWText::readDocumentHF(MWAWEntry const &entry)
     case 0:
       break; // left
     case 1:
-      zone.m_justify = libmwaw::JustificationCenter;
+      zone.m_justify = MWAWParagraph::JustificationCenter;
       break;
     case 2:
-      zone.m_justify = libmwaw::JustificationRight;
+      zone.m_justify = MWAWParagraph::JustificationRight;
       break;
     case 3:
-      zone.m_justify = libmwaw::JustificationFull;
+      zone.m_justify = MWAWParagraph::JustificationFull;
       break;
     default:
       f2 << "#justify=" << flag << ",";

@@ -157,7 +157,7 @@ struct Section {
 struct Table {
   struct Cell;
   //! constructor
-  Table() : m_height(0), m_justify(libmwaw::JustificationLeft), m_indent(0),
+  Table() : m_height(0), m_justify(MWAWParagraph::JustificationLeft), m_indent(0),
     m_columns(), m_cells(), m_extra("") {
   }
   //! insert the new values
@@ -188,7 +188,7 @@ struct Table {
   //! the row height in inches
   Variable<float> m_height;
   //! the justification
-  Variable<libmwaw::Justification> m_justify;
+  Variable<MWAWParagraph::Justification> m_justify;
   //! the indent
   Variable<float> m_indent;
   //! the table columns

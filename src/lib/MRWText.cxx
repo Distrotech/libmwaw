@@ -849,7 +849,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
         break;
       case 0xe:
         if (numCols > 1) {
-          m_listener->insertBreak(MWAW_COLUMN_BREAK);
+          m_listener->insertBreak(MWAWContentListener::ColumnBreak);
           break;
         }
         MWAW_DEBUG_MSG(("MRWText::sendText: Find unexpected column break\n"));
@@ -1518,16 +1518,16 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         case 0:
           break;
         case 1:
-          para.m_justify = libmwaw::JustificationCenter;
+          para.m_justify = MWAWParagraph::JustificationCenter;
           break;
         case 2:
-          para.m_justify = libmwaw::JustificationRight;
+          para.m_justify = MWAWParagraph::JustificationRight;
           break;
         case 3:
-          para.m_justify = libmwaw::JustificationFull;
+          para.m_justify = MWAWParagraph::JustificationFull;
           break;
         case 4:
-          para.m_justify = libmwaw::JustificationFullAllLines;
+          para.m_justify = MWAWParagraph::JustificationFullAllLines;
           break;
         default:
           f << "#justify=" << dt.value(0) << ",";

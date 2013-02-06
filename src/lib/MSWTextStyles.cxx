@@ -1065,7 +1065,7 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
       if (!m_listener->isSectionOpened()) {
         MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: section is not opened\n"));
       } else
-        m_listener->insertBreak(MWAW_COLUMN_BREAK);
+        m_listener->insertBreak(MWAWContentListener::ColumnBreak);
     } else {
       if (m_listener->isSectionOpened())
         m_listener->closeSection();

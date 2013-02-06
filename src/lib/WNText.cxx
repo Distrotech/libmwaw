@@ -1227,13 +1227,13 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   case 0:
     break; // left
   case 1:
-    ruler.m_justify = libmwaw::JustificationFull;
+    ruler.m_justify = MWAWParagraph::JustificationFull;
     break;
   case 2:
-    ruler.m_justify = libmwaw::JustificationCenter;
+    ruler.m_justify = MWAWParagraph::JustificationCenter;
     break;
   case 3:
-    ruler.m_justify = libmwaw::JustificationRight;
+    ruler.m_justify = MWAWParagraph::JustificationRight;
     break;
   default:
     break;
@@ -1635,7 +1635,7 @@ bool WNText::send(WNEntry const &entry)
   WNTextInternal::Paragraph ruler;
   switch(text->m_type) { // try to set the default
   case 1:
-    ruler.m_justify = libmwaw::JustificationCenter;
+    ruler.m_justify = MWAWParagraph::JustificationCenter;
     break;
   case 2:
     for (int i=0; i < 3; i++) ruler.m_margins[i] = 0.0;
@@ -1725,7 +1725,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
         if (m_state->m_numColumns <= 1 && ++m_state->m_actualPage <= m_state->m_numPages)
           m_mainParser->newPage(m_state->m_actualPage);
         else if (m_state->m_numColumns > 1 && m_listener)
-          m_listener->insertBreak(MWAW_COLUMN_BREAK);
+          m_listener->insertBreak(MWAWContentListener::ColumnBreak);
       }
       break;
     default:

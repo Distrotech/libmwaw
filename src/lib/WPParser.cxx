@@ -636,7 +636,7 @@ void WPParser::newPage(int number)
     m_state->m_actPage++;
     if (!m_listener || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAW_PAGE_BREAK);
+    m_listener->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -1055,7 +1055,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
             MWAW_DEBUG_MSG(("WPParser::readWindowsZone: pb with col break\n"));
           } else {
             actCol++;
-            if (m_listener) m_listener->insertBreak(MWAW_COLUMN_BREAK);
+            if (m_listener) m_listener->insertBreak(MWAWContentListener::ColumnBreak);
           }
         }
       case 0:

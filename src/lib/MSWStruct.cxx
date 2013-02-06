@@ -475,16 +475,16 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
     val = (int) input->readULong(2);
     switch (val&3) {
     case 0:
-      m_justify = libmwaw::JustificationLeft;
+      m_justify = MWAWParagraph::JustificationLeft;
       break;
     case 1:
-      m_justify = libmwaw::JustificationCenter;
+      m_justify = MWAWParagraph::JustificationCenter;
       break;
     case 2:
-      m_justify = libmwaw::JustificationRight;
+      m_justify = MWAWParagraph::JustificationRight;
       break;
     case 3:
-      m_justify = libmwaw::JustificationFull;
+      m_justify = MWAWParagraph::JustificationFull;
       break;
     default:
       break;
@@ -593,19 +593,19 @@ std::ostream &operator<<(std::ostream &o, Table const &table)
   }
   if (table.m_justify.isSet()) {
     switch(table.m_justify.get()) {
-    case libmwaw::JustificationLeft:
+    case MWAWParagraph::JustificationLeft:
       o << "just=left,";
       break;
-    case libmwaw::JustificationCenter:
+    case MWAWParagraph::JustificationCenter:
       o << "just=centered, ";
       break;
-    case libmwaw::JustificationRight:
+    case MWAWParagraph::JustificationRight:
       o << "just=right, ";
       break;
-    case libmwaw::JustificationFull:
+    case MWAWParagraph::JustificationFull:
       o << "just=full, ";
       break;
-    case libmwaw::JustificationFullAllLines:
+    case MWAWParagraph::JustificationFullAllLines:
       o << "just=fullAllLines, ";
       break;
     default:
@@ -673,16 +673,16 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     val = (int) input->readLong(1);
     switch (val) {
     case 0:
-      m_justify = libmwaw::JustificationLeft;
+      m_justify = MWAWParagraph::JustificationLeft;
       return true;
     case 1:
-      m_justify = libmwaw::JustificationCenter;
+      m_justify = MWAWParagraph::JustificationCenter;
       return true;
     case 2:
-      m_justify = libmwaw::JustificationRight;
+      m_justify = MWAWParagraph::JustificationRight;
       return true;
     case 3:
-      m_justify = libmwaw::JustificationFull;
+      m_justify = MWAWParagraph::JustificationFull;
       return true;
     default:
       MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: can not read align\n"));
@@ -849,9 +849,9 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
       break;
     }
     m_spacingsInterlineUnit = WPX_INCH;
-    m_spacingsInterlineType = libmwaw::Fixed;
+    m_spacingsInterlineType = MWAWParagraph::Fixed;
     if (val > 0)
-      m_spacingsInterlineType = libmwaw::AtLeast;
+      m_spacingsInterlineType = MWAWParagraph::AtLeast;
     else if (val < 0)
       *(m_spacings[0]) *= -1;
     else {

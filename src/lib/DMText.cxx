@@ -121,7 +121,7 @@ struct Footer {
 //! Internal: structure to store a the data of a DMText Zone
 struct Zone {
   //! constructor
-  Zone() : m_pos(), m_justify(libmwaw::JustificationLeft), m_backgroundColor(MWAWColor::white()),
+  Zone() : m_pos(), m_justify(MWAWParagraph::JustificationLeft), m_backgroundColor(MWAWColor::white()),
     m_useFooter(true), m_name(""), m_posFontMap(), m_numPages(0), m_parsed(false) {
     for (int i = 0; i < 4; i++)
       m_margins[i]=54;
@@ -129,7 +129,7 @@ struct Zone {
   //! the text entry
   MWAWEntry m_pos;
   //! the paragraph justification
-  libmwaw::Justification m_justify;
+  MWAWParagraph::Justification m_justify;
   //! the background color
   MWAWColor m_backgroundColor;
   //! print or ignore the footer
@@ -836,11 +836,11 @@ bool DMText::readWindows(MWAWEntry const &entry)
   case 0:
     break;
   case 1:
-    zone.m_justify = libmwaw::JustificationCenter;
+    zone.m_justify = MWAWParagraph::JustificationCenter;
     f << "just=center,";
     break;
   case -1:
-    zone.m_justify = libmwaw::JustificationRight;
+    zone.m_justify = MWAWParagraph::JustificationRight;
     f << "just=right,";
     break;
   default:

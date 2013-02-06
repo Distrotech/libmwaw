@@ -469,7 +469,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
       switch (textCode) {
       case Center:
         isCenter=true;
-        m_listener->setParagraphJustification(libmwaw::JustificationCenter);
+        m_listener->setParagraphJustification(MWAWParagraph::JustificationCenter);
         break;
       case NewPage:
         if (main)
@@ -506,7 +506,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
       m_listener->insertEOL();
       if (isCenter) {
         isCenter=false;
-        m_listener->setParagraphJustification(libmwaw::JustificationLeft);
+        m_listener->setParagraphJustification(MWAWParagraph::JustificationLeft);
       }
       break;
     default:

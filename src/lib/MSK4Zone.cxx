@@ -261,7 +261,7 @@ void MSK4Zone::newPage(int number)
       continue;
     // FIXME: find a way to force the page break to happen
     //    ie. graphParser must add a space to force it :-~
-    if (m_state->m_mainOle) m_listener->insertBreak(MWAW_PAGE_BREAK);
+    if (m_state->m_mainOle) m_listener->insertBreak(MWAWContentListener::PageBreak);
 
     MSKGraph::SendData sendData;
     sendData.m_type = MSKGraph::SendData::RBDR;

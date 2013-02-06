@@ -120,13 +120,13 @@ struct State {
   //! true if pararagraph add a page break
   bool m_isParagraphPageBreak;
   //! the paragraph justification ( left, center, ... )
-  libmwaw::Justification m_paragraphJustification;
+  MWAWParagraph::Justification m_paragraphJustification;
   //! the paragraph interline value
   double m_paragraphLineSpacing;
   //! the paragraph interline unit ( point, percent, ...)
   WPXUnit m_paragraphLineSpacingUnit;
   //! the paragraph interline type (fixed, at least )
-  libmwaw::LineSpacing m_paragraphLineSpacingType;
+  MWAWParagraph::LineSpacingType m_paragraphLineSpacingType;
   //! the paragraph background color
   MWAWColor m_paragraphBackgroundColor;
   //! the paragraph borders
@@ -217,9 +217,9 @@ State::State() :
 
   m_isParagraphColumnBreak(false), m_isParagraphPageBreak(false),
 
-  m_paragraphJustification(libmwaw::JustificationLeft),
+  m_paragraphJustification(MWAWParagraph::JustificationLeft),
   m_paragraphLineSpacing(1.0), m_paragraphLineSpacingUnit(WPX_PERCENT),
-  m_paragraphLineSpacingType(libmwaw::Fixed), m_paragraphBackgroundColor(MWAWColor::white()),
+  m_paragraphLineSpacingType(MWAWParagraph::Fixed), m_paragraphBackgroundColor(MWAWColor::white()),
   m_paragraphBorders(),
 
   m_list(), m_currentListLevel(0),
@@ -433,10 +433,10 @@ void MWAWContentListener::insertTab()
   _flushDeferredTabs();
 }
 
-void MWAWContentListener::insertBreak(const uint8_t breakType)
+void MWAWContentListener::insertBreak(MWAWContentListener::BreakType breakType)
 {
   switch (breakType) {
-  case MWAW_COLUMN_BREAK:
+  case ColumnBreak:
     if (!m_ps->m_isPageSpanOpened && !m_ps->m_inSubDocument)
       _openSpan();
     if (m_ps->m_isParagraphOpened)
@@ -444,14 +444,14 @@ void MWAWContentListener::insertBreak(const uint8_t breakType)
     m_ps->m_isParagraphColumnBreak = true;
     m_ps->m_isTextColumnWithoutParagraph = true;
     break;
-  case MWAW_PAGE_BREAK:
+  case PageBreak:
     if (!m_ps->m_isPageSpanOpened && !m_ps->m_inSubDocument)
       _openSpan();
     if (m_ps->m_isParagraphOpened)
       _closeParagraph();
     m_ps->m_isParagraphPageBreak = true;
     break;
-    // TODO: (.. line break?)
+  case SoftPageBreak:
   default:
     break;
   }
@@ -460,8 +460,8 @@ void MWAWContentListener::insertBreak(const uint8_t breakType)
     return;
 
   switch (breakType) {
-  case MWAW_PAGE_BREAK:
-  case MWAW_SOFT_PAGE_BREAK:
+  case PageBreak:
+  case SoftPageBreak:
     if (m_ps->m_numPagesRemainingInSpan > 0)
       m_ps->m_numPagesRemainingInSpan--;
     else {
@@ -472,6 +472,7 @@ void MWAWContentListener::insertBreak(const uint8_t breakType)
     }
     m_ps->m_currentPageNumber++;
     break;
+  case ColumnBreak:
   default:
     break;
   }
@@ -523,22 +524,22 @@ bool MWAWContentListener::isParagraphOpened() const
   return m_ps->m_isParagraphOpened;
 }
 
-void MWAWContentListener::setParagraphLineSpacing(const double lineSpacing, WPXUnit unit, libmwaw::LineSpacing type)
+void MWAWContentListener::setParagraphLineSpacing(const double lineSpacing, WPXUnit unit, MWAWParagraph::LineSpacingType type)
 {
   m_ps->m_paragraphLineSpacing = lineSpacing;
   m_ps->m_paragraphLineSpacingUnit = unit;
   m_ps->m_paragraphLineSpacingType = type;
-  if (type == libmwaw::AtLeast && unit == WPX_PERCENT) {
+  if (type == MWAWParagraph::AtLeast && unit == WPX_PERCENT) {
     static bool first=true;
     if (first) {
       MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphLineSpacing: can not used AtLeast with percent type\n"));
       first=false;
     }
-    m_ps->m_paragraphLineSpacingType = libmwaw::Fixed;
+    m_ps->m_paragraphLineSpacingType = MWAWParagraph::Fixed;
   }
 }
 
-void MWAWContentListener::setParagraphJustification(libmwaw::Justification justification, bool force)
+void MWAWContentListener::setParagraphJustification(MWAWParagraph::Justification justification, bool force)
 {
   if (justification == m_ps->m_paragraphJustification) return;
 
@@ -1038,23 +1039,23 @@ void MWAWContentListener::_resetParagraphState(const bool isListElement)
   _recomputeParagraphPositions();
 }
 
-void MWAWContentListener::_appendJustification(WPXPropertyList &propList, libmwaw::Justification justification)
+void MWAWContentListener::_appendJustification(WPXPropertyList &propList, MWAWParagraph::Justification justification)
 {
   switch (justification) {
-  case libmwaw::JustificationLeft:
+  case MWAWParagraph::JustificationLeft:
     // doesn't require a paragraph prop - it is the default
     propList.insert("fo:text-align", "left");
     break;
-  case libmwaw::JustificationCenter:
+  case MWAWParagraph::JustificationCenter:
     propList.insert("fo:text-align", "center");
     break;
-  case libmwaw::JustificationRight:
+  case MWAWParagraph::JustificationRight:
     propList.insert("fo:text-align", "end");
     break;
-  case libmwaw::JustificationFull:
+  case MWAWParagraph::JustificationFull:
     propList.insert("fo:text-align", "justify");
     break;
-  case libmwaw::JustificationFullAllLines:
+  case MWAWParagraph::JustificationFullAllLines:
     propList.insert("fo:text-align", "justify");
     propList.insert("fo:text-align-last", "justify");
     break;
@@ -1112,10 +1113,10 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
   propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop, m_ps->m_paragraphMarginBottomUnit);
   propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom, m_ps->m_paragraphMarginBottomUnit);
   switch (m_ps->m_paragraphLineSpacingType) {
-  case libmwaw::Fixed:
+  case MWAWParagraph::Fixed:
     propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
     break;
-  case libmwaw::AtLeast:
+  case MWAWParagraph::AtLeast:
     if (m_ps->m_paragraphLineSpacing <= 0) {
     } else if (m_ps->m_paragraphLineSpacingUnit != WPX_PERCENT)
       propList.insert("style:line-height-at-least", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
@@ -1132,7 +1133,13 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
     MWAW_DEBUG_MSG(("MWAWContentListener::_appendParagraphProperties: can not set line spacing type: %d\n",int(m_ps->m_paragraphLineSpacingType)));
     break;
   }
-
+#if 0
+  // ADDME
+  if (m_ps->m_paragraphBreakStatus & MWAWParagraph::NoBreakBit)
+    propList.insert("fo:keep-together", "always");
+  if (m_ps->m_paragraphBreakStatus & MWAWParagraph::NoBreakWithNextBit)
+    propList.insert("fo:keep-with-next", "always");
+#endif
   if (!m_ps->m_inSubDocument && m_ps->m_firstParagraphInPageSpan) {
     unsigned actPage = 1;
     std::vector<MWAWPageSpan>::const_iterator it = m_ds->m_pageList.begin();

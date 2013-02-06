@@ -767,7 +767,7 @@ struct Table : public Zone {
 //! Internal: the textbox of a MSKGraph ( v2-v3)
 struct TextBox : public Zone {
   //! constructor
-  TextBox(Zone const &z) : Zone(z), m_numPositions(-1), m_fontsList(), m_positions(), m_formats(), m_text(""), m_justify(libmwaw::JustificationLeft)
+  TextBox(Zone const &z) : Zone(z), m_numPositions(-1), m_fontsList(), m_positions(), m_formats(), m_text(""), m_justify(MWAWParagraph::JustificationLeft)
   { }
 
   //! return the type
@@ -778,18 +778,18 @@ struct TextBox : public Zone {
   virtual void print(std::ostream &o) const {
     Zone::print(o);
     switch(m_justify) {
-    case libmwaw::JustificationLeft:
+    case MWAWParagraph::JustificationLeft:
       break;
-    case libmwaw::JustificationCenter:
+    case MWAWParagraph::JustificationCenter:
       o << ",centered";
       break;
-    case libmwaw::JustificationRight:
+    case MWAWParagraph::JustificationRight:
       o << ",right";
       break;
-    case libmwaw::JustificationFull:
+    case MWAWParagraph::JustificationFull:
       o << ",full";
       break;
-    case libmwaw::JustificationFullAllLines:
+    case MWAWParagraph::JustificationFullAllLines:
       o << ",fullAllLines";
       break;
     default:
@@ -815,7 +815,7 @@ struct TextBox : public Zone {
   //! the text
   std::string m_text;
   //! the paragraph alignement
-  libmwaw::Justification m_justify;
+  MWAWParagraph::Justification m_justify;
 };
 
 ////////////////////////////////////////
@@ -1339,19 +1339,19 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     res = readGroup(pict);
     break;
   case 9: { // textbox normal
-    libmwaw::Justification justify = libmwaw::JustificationLeft;
+    MWAWParagraph::Justification justify = MWAWParagraph::JustificationLeft;
     val = (int) m_input->readLong(2);
     switch(val) {
     case 0:
       break;
     case 1:
-      justify = libmwaw::JustificationCenter;
+      justify = MWAWParagraph::JustificationCenter;
       break;
     case 2:
-      justify = libmwaw::JustificationFull;
+      justify = MWAWParagraph::JustificationFull;
       break;
     case -1:
-      justify = libmwaw::JustificationRight;
+      justify = MWAWParagraph::JustificationRight;
       break;
     default:
       f << "##align=" << val << ",";
@@ -2487,7 +2487,7 @@ void MSKGraph::sendTable(int zoneId)
       cell.setPosition(cellPosition);
       cell.setBorders(borderPos, border);
       // fixme setBackgroundColor
-      m_listener->setParagraphJustification(libmwaw::JustificationCenter);
+      m_listener->setParagraphJustification(MWAWParagraph::JustificationCenter);
       m_listener->openTableCell(cell, emptyList);
 
       MSKGraphInternal::Table::Cell const *tCell=table.getCell(cellPosition);

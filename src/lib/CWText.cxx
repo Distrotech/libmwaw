@@ -1373,7 +1373,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
       switch (c) {
       case 0x1: // fixme: column break
         if (numCols) {
-          m_listener->insertBreak(MWAW_COLUMN_BREAK);
+          m_listener->insertBreak(MWAWContentListener::ColumnBreak);
           break;
         }
         MWAW_DEBUG_MSG(("CWText::sendText: Find unexpected char 1\n"));
@@ -1620,13 +1620,13 @@ bool CWText::readParagraph(int id)
   case 0:
     break;
   case 1:
-    ruler.m_justify = libmwaw::JustificationCenter;
+    ruler.m_justify = MWAWParagraph::JustificationCenter;
     break;
   case 2:
-    ruler.m_justify = libmwaw::JustificationRight ;
+    ruler.m_justify = MWAWParagraph::JustificationRight ;
     break;
   case 3:
-    ruler.m_justify = libmwaw::JustificationFull;
+    ruler.m_justify = MWAWParagraph::JustificationFull;
     break;
   default:
     break;

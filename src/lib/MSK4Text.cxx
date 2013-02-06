@@ -1304,19 +1304,19 @@ bool MSK4Text::readParagraph
       int value = (int) input->readLong(1);
       switch (value) {
       case 0:
-        parag.m_justify = libmwaw::JustificationLeft;
+        parag.m_justify = MWAWParagraph::JustificationLeft;
         break;
       case 1:
-        parag.m_justify = libmwaw::JustificationRight;
+        parag.m_justify = MWAWParagraph::JustificationRight;
         break;
       case 2:
-        parag.m_justify = libmwaw::JustificationCenter;
+        parag.m_justify = MWAWParagraph::JustificationCenter;
         break;
       case 3:
-        parag.m_justify = libmwaw::JustificationFull;
+        parag.m_justify = MWAWParagraph::JustificationFull;
         break;
       default:
-        parag.m_justify = libmwaw::JustificationLeft;
+        parag.m_justify = MWAWParagraph::JustificationLeft;
         f  << "#just="<<value<<",";
         break;
       }

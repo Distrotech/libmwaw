@@ -1406,13 +1406,13 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
   case 0:
     break;
   case 1:
-    para.m_justify = libmwaw::JustificationCenter;
+    para.m_justify = MWAWParagraph::JustificationCenter;
     break;
   case 2:
-    para.m_justify = libmwaw::JustificationRight;
+    para.m_justify = MWAWParagraph::JustificationRight;
     break;
   case 3:
-    para.m_justify = libmwaw::JustificationFull;
+    para.m_justify = MWAWParagraph::JustificationFull;
     break;
   default:
     break;
@@ -2628,7 +2628,7 @@ void MWProStructuresListenerState::sendChar(char c)
     if (m_isMainZone) {
       if (m_numCols <= 1) newPage();
       else if (m_structures->m_listener)
-        m_structures->m_listener->insertBreak(MWAW_COLUMN_BREAK);
+        m_structures->m_listener->insertBreak(MWAWContentListener::ColumnBreak);
     }
     break;
   case 0xe:

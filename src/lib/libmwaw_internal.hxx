@@ -243,17 +243,7 @@ enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN
 std::string numberingTypeToString(NumberingType type);
 std::string numberingValueToString(NumberingType type, int value);
 enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION };
-enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
-                     JustificationRight, JustificationFullAllLines
-                   };
-enum LineSpacing { Fixed, AtLeast};
-enum { NoBreakBit = 0x1, NoBreakWithNextBit=0x2};
 }
-
-// BREAK bits
-#define MWAW_PAGE_BREAK 0x00
-#define MWAW_SOFT_PAGE_BREAK 0x01
-#define MWAW_COLUMN_BREAK 0x02
 
 // Generic bits
 #define MWAW_LEFT 0x00

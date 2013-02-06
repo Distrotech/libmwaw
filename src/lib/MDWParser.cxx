@@ -329,7 +329,7 @@ void MDWParser::newPage(int number)
     m_state->m_actPage++;
     if (!m_listener || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAW_PAGE_BREAK);
+    m_listener->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -689,16 +689,16 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo const &line, MWAWParagraph
   long val = (long) input->readULong(1);
   switch(val) {
   case 0:
-    para.m_justify = libmwaw::JustificationLeft;
+    para.m_justify = MWAWParagraph::JustificationLeft;
     break;
   case 1:
-    para.m_justify = libmwaw::JustificationCenter;
+    para.m_justify = MWAWParagraph::JustificationCenter;
     break;
   case 2:
-    para.m_justify = libmwaw::JustificationRight;
+    para.m_justify = MWAWParagraph::JustificationRight;
     break;
   case 3:
-    para.m_justify = libmwaw::JustificationFull;
+    para.m_justify = MWAWParagraph::JustificationFull;
     break;
   default:
     f << "#align=" << std::hex << val << std::dec << ",";
@@ -754,20 +754,20 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo const &line, MWAWParagraph
 void MDWParser::updateRuler(MDWParserInternal::LineInfo const &line)
 {
   if (!m_listener || !line.m_entry.valid()) return;
-  libmwaw::Justification justify = *(m_state->m_rulerParagraph.m_justify);
+  MWAWParagraph::Justification justify = *(m_state->m_rulerParagraph.m_justify);
   if (line.m_flags[1] & 0x40) {
     switch (line.m_flags[1]&0x3) {
     case 0:
-      justify = libmwaw::JustificationLeft;
+      justify = MWAWParagraph::JustificationLeft;
       break;
     case 1:
-      justify = libmwaw::JustificationCenter;
+      justify = MWAWParagraph::JustificationCenter;
       break;
     case 2:
-      justify = libmwaw::JustificationRight;
+      justify = MWAWParagraph::JustificationRight;
       break;
     case 3:
-      justify = libmwaw::JustificationFull;
+      justify = MWAWParagraph::JustificationFull;
       break;
     default:
       break;

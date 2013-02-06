@@ -116,7 +116,7 @@ struct Information {
   //! constructor
   Information() :
     m_type(UNKNOWN),  m_compressed(false), m_pos(), m_height(0),
-    m_justify(libmwaw::JustificationLeft), m_justifySet(false),
+    m_justify(MWAWParagraph::JustificationLeft), m_justifySet(false),
     m_data(),m_font()
   {}
 
@@ -136,7 +136,7 @@ struct Information {
   int m_height;
 
   //! paragraph justification : MWAW_PARAGRAPH_JUSTIFICATION*
-  libmwaw::Justification m_justify;
+  MWAWParagraph::Justification m_justify;
 
   //! true if the justification must be used
   bool m_justifySet;
@@ -174,19 +174,19 @@ std::ostream &operator<<(std::ostream &o, Information const &info)
 
   if (info.m_justifySet) {
     switch (info.m_justify) {
-    case libmwaw::JustificationLeft:
+    case MWAWParagraph::JustificationLeft:
       o << "left[justify],";
       break;
-    case libmwaw::JustificationCenter:
+    case MWAWParagraph::JustificationCenter:
       o << "center[justify],";
       break;
-    case libmwaw::JustificationRight:
+    case MWAWParagraph::JustificationRight:
       o << "right[justify],";
       break;
-    case libmwaw::JustificationFull:
+    case MWAWParagraph::JustificationFull:
       o << "full[justify],";
       break;
-    case libmwaw::JustificationFullAllLines:
+    case MWAWParagraph::JustificationFullAllLines:
       o << "fullAllLines[justify],";
       break;
     default:
@@ -416,7 +416,7 @@ void MWParser::newPage(int number)
     m_state->m_actPage++;
     if (!m_listener || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAW_PAGE_BREAK);
+    m_listener->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -1158,16 +1158,16 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     int paragStatus = (int) input->readULong(1);
     switch(paragStatus & 0x3) {
     case 0:
-      info.m_justify = libmwaw::JustificationLeft;
+      info.m_justify = MWAWParagraph::JustificationLeft;
       break;
     case 1:
-      info.m_justify = libmwaw::JustificationCenter;
+      info.m_justify = MWAWParagraph::JustificationCenter;
       break;
     case 2:
-      info.m_justify = libmwaw::JustificationRight;
+      info.m_justify = MWAWParagraph::JustificationRight;
       break;
     case 3:
-      info.m_justify = libmwaw::JustificationFull;
+      info.m_justify = MWAWParagraph::JustificationFull;
       break;
     default:
       break;
@@ -1435,16 +1435,16 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   int justify = (int) input->readLong(1);
   switch(justify) {
   case 0:
-    parag.m_justify = libmwaw::JustificationLeft;
+    parag.m_justify = MWAWParagraph::JustificationLeft;
     break;
   case 1:
-    parag.m_justify = libmwaw::JustificationCenter;
+    parag.m_justify = MWAWParagraph::JustificationCenter;
     break;
   case 2:
-    parag.m_justify = libmwaw::JustificationRight;
+    parag.m_justify = MWAWParagraph::JustificationRight;
     break;
   case 3:
-    parag.m_justify = libmwaw::JustificationFull;
+    parag.m_justify = MWAWParagraph::JustificationFull;
     break;
   default:
     f << "##justify=" << justify << ",";

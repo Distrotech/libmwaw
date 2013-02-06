@@ -126,13 +126,13 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
   if (pp.m_spacingsInterlineUnit.get()==WPX_PERCENT) {
     if (pp.m_spacings[0].get() < 1.0 || pp.m_spacings[0].get() > 1.0) {
       o << "interLineSpacing=" << pp.m_spacings[0].get() << "%";
-      if (pp.m_spacingsInterlineType.get()==libmwaw::AtLeast)
+      if (pp.m_spacingsInterlineType.get()==MWAWParagraph::AtLeast)
         o << "[atLeast]";
       o << ",";
     }
   } else if (pp.m_spacings[0].get() > 0.0) {
     o << "interLineSpacing=" << pp.m_spacings[0].get();
-    if (pp.m_spacingsInterlineType.get()==libmwaw::AtLeast)
+    if (pp.m_spacingsInterlineType.get()==MWAWParagraph::AtLeast)
       o << "[atLeast]";
     o << ",";
   }
@@ -141,22 +141,22 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
   if (pp.m_spacings[2].get()<0||pp.m_spacings[2].get()>0)
     o << "aftSpacing=" << pp.m_spacings[2].get() << ",";
 
-  if (pp.m_breakStatus.get() & libmwaw::NoBreakBit) o << "dontbreak,";
-  if (pp.m_breakStatus.get() & libmwaw::NoBreakWithNextBit) o << "dontbreakafter,";
+  if (pp.m_breakStatus.get() & MWAWParagraph::NoBreakBit) o << "dontbreak,";
+  if (pp.m_breakStatus.get() & MWAWParagraph::NoBreakWithNextBit) o << "dontbreakafter,";
 
   switch(pp.m_justify.get()) {
-  case libmwaw::JustificationLeft:
+  case MWAWParagraph::JustificationLeft:
     break;
-  case libmwaw::JustificationCenter:
+  case MWAWParagraph::JustificationCenter:
     o << "just=centered, ";
     break;
-  case libmwaw::JustificationRight:
+  case MWAWParagraph::JustificationRight:
     o << "just=right, ";
     break;
-  case libmwaw::JustificationFull:
+  case MWAWParagraph::JustificationFull:
     o << "just=full, ";
     break;
-  case libmwaw::JustificationFullAllLines:
+  case MWAWParagraph::JustificationFullAllLines:
     o << "just=fullAllLines, ";
     break;
   default:

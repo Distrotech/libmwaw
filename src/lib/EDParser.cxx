@@ -164,7 +164,7 @@ void EDParser::newPage(int number)
     m_state->m_actPage++;
     if (!m_listener || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAW_PAGE_BREAK);
+    m_listener->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 

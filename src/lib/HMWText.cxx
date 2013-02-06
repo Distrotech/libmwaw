@@ -498,7 +498,7 @@ bool HMWText::sendText(HMWZone &zone)
       case 2:
         f << "[colBreak]";
         if (actCol < numCol-1 && numCol > 1) {
-          m_listener->insertBreak(MWAW_COLUMN_BREAK);
+          m_listener->insertBreak(MWAWContentListener::ColumnBreak);
           actCol++;
         } else {
           actCol = 0;
@@ -959,9 +959,9 @@ bool HMWText::readParagraph(HMWZone &zone, HMWTextInternal::Paragraph &para)
   }
   int flags = (int) input->readULong(1);
   if (flags&0x80)
-    para.m_breakStatus = para.m_breakStatus.get()|libmwaw::NoBreakWithNextBit;
+    para.m_breakStatus = para.m_breakStatus.get()|MWAWParagraph::NoBreakWithNextBit;
   if (flags&0x40)
-    para.m_breakStatus = para.m_breakStatus.get()|libmwaw::NoBreakBit;
+    para.m_breakStatus = para.m_breakStatus.get()|MWAWParagraph::NoBreakBit;
   if (flags&0x2)
     para.m_addPageBreak = true;
   if (flags&0x4)
@@ -974,16 +974,16 @@ bool HMWText::readParagraph(HMWZone &zone, HMWTextInternal::Paragraph &para)
   val = (int) input->readULong(2);
   switch(val&3) {
   case 0:
-    para.m_justify = libmwaw::JustificationLeft;
+    para.m_justify = MWAWParagraph::JustificationLeft;
     break;
   case 1:
-    para.m_justify = libmwaw::JustificationRight;
+    para.m_justify = MWAWParagraph::JustificationRight;
     break;
   case 2:
-    para.m_justify = libmwaw::JustificationCenter;
+    para.m_justify = MWAWParagraph::JustificationCenter;
     break;
   case 3:
-    para.m_justify = libmwaw::JustificationFull;
+    para.m_justify = MWAWParagraph::JustificationFull;
     break;
   default:
     break;

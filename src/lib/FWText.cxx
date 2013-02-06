@@ -414,16 +414,16 @@ struct Paragraph : public MWAWParagraph {
     }
     switch(m_align) {
     case 0:
-      m_justify = libmwaw::JustificationLeft;
+      m_justify = MWAWParagraph::JustificationLeft;
       break;
     case 1:
-      m_justify = libmwaw::JustificationCenter;
+      m_justify = MWAWParagraph::JustificationCenter;
       break;
     case 2:
-      m_justify = libmwaw::JustificationFull;
+      m_justify = MWAWParagraph::JustificationFull;
       break;
     case 3:
-      m_justify = libmwaw::JustificationRight;
+      m_justify = MWAWParagraph::JustificationRight;
       break;
     default:
       break;
@@ -1123,7 +1123,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     while (num==actBreakPos) {
       if (num != 1) sendData = true;
       if (actCol < numCol-1 && numCol > 1) {
-        m_listener->insertBreak(MWAW_COLUMN_BREAK);
+        m_listener->insertBreak(MWAWContentListener::ColumnBreak);
         actCol++;
       } else if (actPage >= nPages) {
         MWAW_DEBUG_MSG(("FWText::send can not find the page information\n"));
@@ -1133,7 +1133,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
           if (zone->m_main)
             m_mainParser->newPage(++m_state->m_actualPage);
           else if (numCol > 1)
-            m_listener->insertBreak(MWAW_COLUMN_BREAK);
+            m_listener->insertBreak(MWAWContentListener::ColumnBreak);
         }
         actCol = 0;
 

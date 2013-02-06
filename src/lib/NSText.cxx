@@ -1023,7 +1023,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     }
     NSTextInternal::Paragraph para;
     para.m_spacingsInterlineUnit = WPX_POINT; // set default
-    para.m_spacingsInterlineType = libmwaw::AtLeast;
+    para.m_spacingsInterlineType = MWAWParagraph::AtLeast;
     para.m_spacings[0] = float(input->readLong(4))/65536.f;
     para.m_spacings[1] = float(input->readLong(4))/65536.f/72.f;
     int wh = int(input->readLong(2));
@@ -1031,13 +1031,13 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     case 0:
       break; // left
     case 1:
-      para.m_justify = libmwaw::JustificationCenter;
+      para.m_justify = MWAWParagraph::JustificationCenter;
       break;
     case 2:
-      para.m_justify = libmwaw::JustificationRight;
+      para.m_justify = MWAWParagraph::JustificationRight;
       break;
     case 3:
-      para.m_justify = libmwaw::JustificationFull;
+      para.m_justify = MWAWParagraph::JustificationFull;
       break;
     default:
       f << "#align=" << wh << ",";
@@ -1057,11 +1057,11 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
       para.m_spacings[0]=0;
       break; // auto
     case 1:
-      para.m_spacingsInterlineType = libmwaw::Fixed;
+      para.m_spacingsInterlineType = MWAWParagraph::Fixed;
       break;
     case 2:
       para.m_spacingsInterlineUnit = WPX_PERCENT;
-      para.m_spacingsInterlineType = libmwaw::Fixed;
+      para.m_spacingsInterlineType = MWAWParagraph::Fixed;
       // before spacing is also in %, try to correct it
       para.m_spacings[1] = para.m_spacings[1].get()*12.0;
       break;

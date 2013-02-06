@@ -316,7 +316,7 @@ void MSW1Parser::newPage(int number)
     m_state->m_actPage++;
     if (!m_listener || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAW_PAGE_BREAK);
+    m_listener->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -692,13 +692,13 @@ bool MSW1Parser::readParagraph(long fPos, MSW1ParserInternal::Paragraph &para)
     case 0:
       break; // left
     case 1:
-      para.m_justify = libmwaw::JustificationCenter;
+      para.m_justify = MWAWParagraph::JustificationCenter;
       break;
     case 2:
-      para.m_justify = libmwaw::JustificationRight;
+      para.m_justify = MWAWParagraph::JustificationRight;
       break;
     case 3:
-      para.m_justify = libmwaw::JustificationFull;
+      para.m_justify = MWAWParagraph::JustificationFull;
       break;
     default:
       break;

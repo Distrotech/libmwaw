@@ -623,13 +623,13 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MSK3TextInternal:
   case 0x4c:
     break;
   case 0x43:
-    parag.m_justify = libmwaw::JustificationCenter;
+    parag.m_justify = MWAWParagraph::JustificationCenter;
     break;
   case 0x52:
-    parag.m_justify = libmwaw::JustificationRight;
+    parag.m_justify = MWAWParagraph::JustificationRight;
     break;
   case 0x46:
-    parag.m_justify = libmwaw::JustificationFull;
+    parag.m_justify = MWAWParagraph::JustificationFull;
     break;
   default:
     f << "#align=" << std::hex << fl[0] << ",";

@@ -72,10 +72,19 @@ struct MWAWTabStop {
 class MWAWParagraph
 {
 public:
+  /** some bit use to defined the break status */
+  enum { NoBreakBit = 0x1, NoBreakWithNextBit=0x2 };
+  /** an enum used to defined the paragraph justification: left, center, right, full ... */
+  enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
+                       JustificationRight, JustificationFullAllLines
+                     };
+  /** the line spacing type: fixed or at least */
+  enum LineSpacingType { Fixed, AtLeast};
+
   typedef MWAWList::Level ListLevel;
   //! constructor
-  MWAWParagraph() : m_marginsUnit(WPX_INCH), m_spacingsInterlineUnit(WPX_PERCENT), m_spacingsInterlineType(libmwaw::Fixed),
-    m_tabs(), m_justify(libmwaw::JustificationLeft),
+  MWAWParagraph() : m_marginsUnit(WPX_INCH), m_spacingsInterlineUnit(WPX_PERCENT), m_spacingsInterlineType(Fixed),
+    m_tabs(), m_justify(JustificationLeft),
     m_breakStatus(0), m_listLevelIndex(0), m_listLevel(), m_backgroundColor(MWAWColor::white()),
     m_borders(), m_extra("") {
     for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
@@ -128,12 +137,12 @@ public:
   /** the interline unit PERCENT or INCH, ... */
   Variable<WPXUnit> m_spacingsInterlineUnit;
   /** the interline type: fixed, atLeast, ... */
-  Variable<libmwaw::LineSpacing> m_spacingsInterlineType;
+  Variable<LineSpacingType> m_spacingsInterlineType;
   //! the tabulations
   Variable<std::vector<MWAWTabStop> > m_tabs;
 
   /** the justification */
-  Variable<libmwaw::Justification> m_justify;
+  Variable<Justification> m_justify;
   /** a list of bits: 0x1 (unbreakable), 0x2 (do not break after) */
   Variable<int> m_breakStatus; // BITS: 1: unbreakable, 2: dont break after
 

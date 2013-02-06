@@ -251,9 +251,9 @@ void MSK3Parser::newPage(int number, bool softBreak)
     if (!m_listener || m_state->m_actPage == 1)
       continue;
     if (softBreak)
-      m_listener->insertBreak(MWAW_SOFT_PAGE_BREAK);
+      m_listener->insertBreak(MWAWContentListener::SoftPageBreak);
     else
-      m_listener->insertBreak(MWAW_PAGE_BREAK);
+      m_listener->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
