@@ -234,7 +234,6 @@ struct MWAWBorder {
   int m_width;
   //! the border color
   MWAWColor m_color;
-
 };
 
 namespace libmwaw
@@ -252,11 +251,20 @@ enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEX
 #define MWAW_TOP 0x03
 #define MWAW_BOTTOM 0x04
 
-//! a generic variable template: value + flag to know if the variable is set
+/** a generic variable template: value + flag to know if the variable is set
+
+\note the variable is considered set as soon a new value is set or
+when its content is acceded by a function which returns a not-const
+reference... You can use the function setSet to unset it.
+*/
 template <class T> struct Variable {
+  //! constructor
   Variable() : m_data(), m_set(false) {}
+  //! constructor with a default value
   Variable(T def) : m_data(def), m_set(false) {}
+  //! copy constructor
   Variable(Variable const &orig) : m_data(orig.m_data), m_set(orig.m_set) {}
+  //! copy operator
   Variable &operator=(Variable const &orig) {
     if (this != &orig) {
       m_data = orig.m_data;
@@ -264,42 +272,53 @@ template <class T> struct Variable {
     }
     return *this;
   }
+  //! set a value
   Variable &operator=(T val) {
     m_data = val;
     m_set = true;
     return *this;
   }
+  //! update the current value if orig is set
   void insert(Variable const &orig) {
     if (orig.m_set) {
       m_data = orig.m_data;
       m_set = orig.m_set;
     }
   }
+  //! operator*
   T const *operator->() const {
     return &m_data;
   }
+  /** operator* */
   T *operator->() {
     m_set = true;
     return &m_data;
   }
+  //! operator*
   T const &operator*() const {
     return m_data;
   }
+  //! operator*
   T &operator*() {
     m_set = true;
     return m_data;
   }
+  //! return the current value
   T const &get() const {
     return m_data;
   }
+  //! return true if the variable is set
   bool isSet() const {
     return m_set;
   }
+  //! define if the variable is set
   void setSet(bool newVal) {
     m_set=newVal;
   }
 protected:
+  //! the value
   T m_data;
+  //! a flag to know if the variable is set or not
   bool m_set;
 };
 

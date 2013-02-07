@@ -54,6 +54,8 @@
 //! Internal and low level namespace to define the states of MWAWContentListener
 namespace MWAWContentListenerInternal
 {
+//! a enum to define basic break bit
+enum { PageBreakBit=0x1, ColumnBreakBit=0x2 };
 //! a class to store the document state of a MWAWContentListener
 struct DocumentState {
   //! constructor
@@ -115,10 +117,8 @@ struct State {
   //! the font
   MWAWFont m_font;
 
-  //! true if pararagraph add a column break
-  bool m_isParagraphColumnBreak;
-  //! true if pararagraph add a page break
-  bool m_isParagraphPageBreak;
+  //! a sequence of bit used to know if we need page/column break
+  int m_paragraphNeedBreak;
   //! the paragraph justification ( left, center, ... )
   MWAWParagraph::Justification m_paragraphJustification;
   //! the paragraph interline value
@@ -171,34 +171,17 @@ struct State {
   double m_pageMarginTop;
   double m_pageMarginBottom;
 
-  double m_sectionMarginLeft;  // In multicolumn sections, the above two will be rather interpreted
-  double m_sectionMarginRight; // as section margin change
-  double m_sectionMarginTop;
-  double m_sectionMarginBottom;
   double m_paragraphMarginLeft;  // resulting paragraph margin that is one of the paragraph
   double m_paragraphMarginRight; // properties
   double m_paragraphMarginTop;
-  WPXUnit m_paragraphMarginTopUnit;
   double m_paragraphMarginBottom;
-  WPXUnit m_paragraphMarginBottomUnit;
-  double m_leftMarginByPageMarginChange;  // part of the margin due to the PAGE margin change
-  double m_rightMarginByPageMarginChange; // inside a page that already has content.
-  double m_leftMarginByParagraphMarginChange;  // part of the margin due to the PARAGRAPH
-  double m_rightMarginByParagraphMarginChange; // margin change (in WP6)
-  double m_leftMarginByTabs;  // part of the margin due to the LEFT or LEFT/RIGHT Indent; the
-  double m_rightMarginByTabs; // only part of the margin that is reset at the end of a paragraph
 
   double m_paragraphTextIndent; // resulting first line indent that is one of the paragraph properties
-  double m_textIndentByParagraphIndentChange; // part of the indent due to the PARAGRAPH indent (WP6???)
-  double m_textIndentByTabs; // part of the indent due to the "Back Tab" or "Left Tab"
 
-  double m_listReferencePosition; // position from the left page margin of the list number/bullet
-  double m_listBeginPosition; // position from the left page margin of the beginning of the list
   std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
 
   uint16_t m_alignmentCharacter;
   std::vector<MWAWTabStop> m_tabStops;
-  bool m_isTabPositionRelative;
 
   bool m_inSubDocument;
 
@@ -215,7 +198,7 @@ State::State() :
 
   m_font(20,12), // default time 12
 
-  m_isParagraphColumnBreak(false), m_isParagraphPageBreak(false),
+  m_paragraphNeedBreak(0),
 
   m_paragraphJustification(MWAWParagraph::JustificationLeft),
   m_paragraphLineSpacing(1.0), m_paragraphLineSpacingUnit(WPX_PERCENT),
@@ -252,32 +235,17 @@ State::State() :
   m_pageMarginTop(1.0),
   m_pageMarginBottom(1.0),
 
-  m_sectionMarginLeft(0.0),
-  m_sectionMarginRight(0.0),
-  m_sectionMarginTop(0.0),
-  m_sectionMarginBottom(0.0),
-
   m_paragraphMarginLeft(0.0),
   m_paragraphMarginRight(0.0),
-  m_paragraphMarginTop(0.0), m_paragraphMarginTopUnit(WPX_INCH),
-  m_paragraphMarginBottom(0.0), m_paragraphMarginBottomUnit(WPX_INCH),
-
-  m_leftMarginByPageMarginChange(0.0),
-  m_rightMarginByPageMarginChange(0.0),
-  m_leftMarginByParagraphMarginChange(0.0),
-  m_rightMarginByParagraphMarginChange(0.0),
-  m_leftMarginByTabs(0.0),
-  m_rightMarginByTabs(0.0),
+  m_paragraphMarginTop(0.0),
+  m_paragraphMarginBottom(0.0),
 
   m_paragraphTextIndent(0.0),
-  m_textIndentByParagraphIndentChange(0.0),
-  m_textIndentByTabs(0.0),
 
-  m_listReferencePosition(0.0), m_listBeginPosition(0.0), m_listOrderedLevels(),
+  m_listOrderedLevels(),
 
   m_alignmentCharacter('.'),
   m_tabStops(),
-  m_isTabPositionRelative(false),
 
   m_inSubDocument(false),
   m_isNote(false),
@@ -290,8 +258,6 @@ MWAWContentListener::MWAWContentListener(shared_ptr<MWAWFontConverter> fontConve
   m_ds(new MWAWContentListenerInternal::DocumentState(pageList)), m_ps(new MWAWContentListenerInternal::State), m_psStack(),
   m_fontConverter(fontConverter), m_documentInterface(documentInterface)
 {
-  _updatePageSpanDependent(true);
-  _recomputeParagraphPositions();
 }
 
 MWAWContentListener::~MWAWContentListener()
@@ -441,7 +407,7 @@ void MWAWContentListener::insertBreak(MWAWContentListener::BreakType breakType)
       _openSpan();
     if (m_ps->m_isParagraphOpened)
       _closeParagraph();
-    m_ps->m_isParagraphColumnBreak = true;
+    m_ps->m_paragraphNeedBreak |= MWAWContentListenerInternal::ColumnBreakBit;
     m_ps->m_isTextColumnWithoutParagraph = true;
     break;
   case PageBreak:
@@ -449,7 +415,7 @@ void MWAWContentListener::insertBreak(MWAWContentListener::BreakType breakType)
       _openSpan();
     if (m_ps->m_isParagraphOpened)
       _closeParagraph();
-    m_ps->m_isParagraphPageBreak = true;
+    m_ps->m_paragraphNeedBreak |= MWAWContentListenerInternal::PageBreakBit;
     break;
   case SoftPageBreak:
   default:
@@ -480,16 +446,18 @@ void MWAWContentListener::insertBreak(MWAWContentListener::BreakType breakType)
 
 void MWAWContentListener::_insertBreakIfNecessary(WPXPropertyList &propList)
 {
-  if (m_ps->m_isParagraphPageBreak && !m_ps->m_inSubDocument) {
-    // no hard page-breaks in subdocuments
-    propList.insert("fo:break-before", "page");
-    m_ps->m_isParagraphPageBreak = false;
-  } else if (m_ps->m_isParagraphColumnBreak) {
-    if (m_ps->m_numColumns > 1)
-      propList.insert("fo:break-before", "column");
-    else
+  if (!m_ps->m_paragraphNeedBreak)
+    return;
+
+  if ((m_ps->m_paragraphNeedBreak&MWAWContentListenerInternal::PageBreakBit) ||
+      m_ps->m_numColumns <= 1) {
+    if (m_ps->m_inSubDocument) {
+      MWAW_DEBUG_MSG(("MWAWContentListener::_insertBreakIfNecessary: can not add page break in subdocument\n"));
+    } else
       propList.insert("fo:break-before", "page");
-  }
+  } else if (m_ps->m_paragraphNeedBreak&MWAWContentListenerInternal::ColumnBreakBit)
+    propList.insert("fo:break-before", "column");
+  m_ps->m_paragraphNeedBreak=0;
 }
 
 ///////////////////
@@ -555,8 +523,7 @@ void MWAWContentListener::setParagraphJustification(MWAWParagraph::Justification
 void MWAWContentListener::setParagraphTextIndent(double margin, WPXUnit unit)
 {
   float scale=MWAWPosition::getScaleFactor(unit, WPX_INCH);
-  m_ps->m_textIndentByParagraphIndentChange = scale*margin;
-  _recomputeParagraphPositions();
+  m_ps->m_paragraphTextIndent = scale*margin;
 }
 
 void MWAWContentListener::setParagraphMargin(double margin, int pos, WPXUnit unit)
@@ -564,12 +531,10 @@ void MWAWContentListener::setParagraphMargin(double margin, int pos, WPXUnit uni
   margin*=MWAWPosition::getScaleFactor(unit, WPX_INCH);
   switch(pos) {
   case MWAW_LEFT:
-    m_ps->m_leftMarginByParagraphMarginChange = margin;
-    _recomputeParagraphPositions();
+    m_ps->m_paragraphMarginLeft = margin;
     break;
   case MWAW_RIGHT:
-    m_ps->m_rightMarginByParagraphMarginChange = margin;
-    _recomputeParagraphPositions();
+    m_ps->m_paragraphMarginRight = margin;
     break;
   case MWAW_TOP:
     m_ps->m_paragraphMarginTop = margin;
@@ -584,7 +549,6 @@ void MWAWContentListener::setParagraphMargin(double margin, int pos, WPXUnit uni
 
 void MWAWContentListener::setTabs(const std::vector<MWAWTabStop> &tabStops)
 {
-  m_ps->m_isTabPositionRelative = true;
   m_ps->m_tabStops = tabStops;
 }
 
@@ -627,13 +591,8 @@ void MWAWContentListener::setParagraphBorder(int wh, MWAWBorder const &border)
 void MWAWContentListener::setCurrentListLevel(int level)
 {
   m_ps->m_currentListLevel = uint8_t(level);
-  // to be compatible with MWAWContentListerner
-  if (level)
-    m_ps->m_listBeginPosition =
-      m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
-  else
-    m_ps->m_listBeginPosition = 0;
 }
+
 void MWAWContentListener::setCurrentList(shared_ptr<MWAWList> list)
 {
   m_ps->m_list=list;
@@ -853,7 +812,6 @@ void MWAWContentListener::_openPageSpan()
 
   m_ps->m_isPageSpanOpened = true;
 
-  _updatePageSpanDependent(false);
   m_ps->m_pageFormLength = currentPage.getFormLength();
   m_ps->m_pageFormWidth = currentPage.getFormWidth();
   m_ps->m_pageMarginLeft = currentPage.getMarginLeft();
@@ -863,8 +821,6 @@ void MWAWContentListener::_openPageSpan()
   m_ps->m_pageMarginTop = currentPage.getMarginTop();
   m_ps->m_pageMarginBottom = currentPage.getMarginBottom();
 
-  _updatePageSpanDependent(true);
-  _recomputeParagraphPositions();
   // we insert the header footer
   currentPage.sendHeaderFooters(this, m_documentInterface);
 
@@ -886,29 +842,6 @@ void MWAWContentListener::_closePageSpan()
   m_ps->m_isPageSpanOpened = m_ps->m_isPageSpanBreakDeferred = false;
 }
 
-void MWAWContentListener::_updatePageSpanDependent(bool set)
-{
-  double deltaRight = set ? -m_ps->m_pageMarginRight : m_ps->m_pageMarginRight;
-  double deltaLeft = set ? -m_ps->m_pageMarginLeft : m_ps->m_pageMarginLeft;
-  if (m_ps->m_sectionMarginLeft < 0 || m_ps->m_sectionMarginLeft > 0)
-    m_ps->m_sectionMarginLeft += deltaLeft;
-  if (m_ps->m_sectionMarginRight < 0 || m_ps->m_sectionMarginRight > 0)
-    m_ps->m_sectionMarginRight += deltaRight;
-  m_ps->m_listReferencePosition += deltaLeft;
-  m_ps->m_listBeginPosition += deltaLeft;
-}
-
-void MWAWContentListener::_recomputeParagraphPositions()
-{
-  m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange
-                                + m_ps->m_leftMarginByParagraphMarginChange + m_ps->m_leftMarginByTabs;
-  m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange
-                                 + m_ps->m_rightMarginByParagraphMarginChange + m_ps->m_rightMarginByTabs;
-  m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange + m_ps->m_textIndentByTabs;
-  m_ps->m_listBeginPosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
-  m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
-}
-
 ///////////////////
 // section
 ///////////////////
@@ -925,14 +858,10 @@ void MWAWContentListener::_openSection()
   m_ps->m_numColumns = int(m_ps->m_textColumns.size());
 
   WPXPropertyList propList;
-  propList.insert("fo:margin-left", m_ps->m_sectionMarginLeft);
-  propList.insert("fo:margin-right", m_ps->m_sectionMarginRight);
+  propList.insert("fo:margin-left", 0.0);
+  propList.insert("fo:margin-right", 0.0);
   if (m_ps->m_numColumns > 1)
     propList.insert("text:dont-balance-text-columns", false);
-  if (m_ps->m_sectionMarginTop > 0 || m_ps->m_sectionMarginTop < 0)
-    propList.insert("libwpd:margin-top", m_ps->m_sectionMarginTop);
-  if (m_ps->m_sectionMarginBottom > 0 || m_ps->m_sectionMarginBottom < 0)
-    propList.insert("libwpd:margin-bottom", m_ps->m_sectionMarginBottom);
 
   WPXPropertyListVector columns;
   for (size_t i = 0; i < m_ps->m_textColumns.size(); i++) {
@@ -1022,8 +951,7 @@ void MWAWContentListener::_closeParagraph()
 
 void MWAWContentListener::_resetParagraphState(const bool isListElement)
 {
-  m_ps->m_isParagraphColumnBreak = false;
-  m_ps->m_isParagraphPageBreak = false;
+  m_ps->m_paragraphNeedBreak = 0;
   if (isListElement) {
     m_ps->m_isListElementOpened = true;
     m_ps->m_isParagraphOpened = true;
@@ -1031,12 +959,8 @@ void MWAWContentListener::_resetParagraphState(const bool isListElement)
     m_ps->m_isListElementOpened = false;
     m_ps->m_isParagraphOpened = true;
   }
-  m_ps->m_leftMarginByTabs = 0.0;
-  m_ps->m_rightMarginByTabs = 0.0;
-  m_ps->m_textIndentByTabs = 0.0;
   m_ps->m_isTextColumnWithoutParagraph = false;
   m_ps->m_isHeaderFooterWithoutParagraph = false;
-  _recomputeParagraphPositions();
 }
 
 void MWAWContentListener::_appendJustification(WPXPropertyList &propList, MWAWParagraph::Justification justification)
@@ -1064,19 +988,13 @@ void MWAWContentListener::_appendJustification(WPXPropertyList &propList, MWAWPa
   }
 }
 
-void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool isListElement)
+void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool /*isListElement*/)
 {
   _appendJustification(propList, m_ps->m_paragraphJustification);
 
   if (!m_ps->m_isTableOpened) {
-    // these properties are not appropriate when a table is opened..
-    if (isListElement) {
-      propList.insert("fo:margin-left", (m_ps->m_listBeginPosition - m_ps->m_paragraphTextIndent));
-      propList.insert("fo:text-indent", m_ps->m_paragraphTextIndent);
-    } else {
-      propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
-      propList.insert("fo:text-indent", m_ps->m_listReferencePosition - m_ps->m_paragraphMarginLeft);
-    }
+    propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
+    propList.insert("fo:text-indent", m_ps->m_paragraphTextIndent);
     propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
     if (!m_ps->m_paragraphBackgroundColor.isWhite())
       propList.insert("fo:background-color", m_ps->m_paragraphBackgroundColor.str().c_str());
@@ -1110,8 +1028,8 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
       }
     }
   }
-  propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop, m_ps->m_paragraphMarginBottomUnit);
-  propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom, m_ps->m_paragraphMarginBottomUnit);
+  propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop);
+  propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom);
   switch (m_ps->m_paragraphLineSpacingType) {
   case MWAWParagraph::Fixed:
     propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
@@ -1160,10 +1078,8 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
 
 void MWAWContentListener::_getTabStops(WPXPropertyListVector &tabStops)
 {
-  double decalX = m_ps->m_isTabPositionRelative ? -m_ps->m_leftMarginByTabs :
-                  -m_ps->m_paragraphMarginLeft-m_ps->m_sectionMarginLeft-m_ps->m_pageMarginLeft;
   for (size_t i=0; i<m_ps->m_tabStops.size(); i++)
-    m_ps->m_tabStops[i].addTo(tabStops, decalX);
+    m_ps->m_tabStops[i].addTo(tabStops, 0.0);
 }
 
 ///////////////////
@@ -1598,8 +1514,7 @@ void MWAWContentListener::_handleFrameParameters
     propList.insert("style:vertical-rel", what.c_str());
     propList.insert("style:horizontal-rel", what.c_str());
     double w = m_ps->m_pageFormWidth - m_ps->m_pageMarginLeft
-               - m_ps->m_pageMarginRight - m_ps->m_sectionMarginLeft
-               - m_ps->m_sectionMarginRight - m_ps->m_paragraphMarginLeft
+               - m_ps->m_pageMarginRight - m_ps->m_paragraphMarginLeft
                - m_ps->m_paragraphMarginRight;
     w *= inchFactor;
     switch ( pos.m_xPos) {

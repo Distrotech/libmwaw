@@ -71,7 +71,6 @@ class MWAWContentListener
 {
 public:
   enum BreakType { PageBreak=0, SoftPageBreak, ColumnBreak };
-  enum { PageBreakBit=0x1, SoftPageBreakBit=0x2, ColumnBreakBit=0x4 };
 
   /** constructor */
   MWAWContentListener(shared_ptr<MWAWFontConverter> fontConverter, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
@@ -228,8 +227,6 @@ protected:
 
   void _openPageSpan();
   void _closePageSpan();
-  void _updatePageSpanDependent(bool set);
-  void _recomputeParagraphPositions();
 
   void _startSubDocument();
   void _endSubDocument();

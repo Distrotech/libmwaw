@@ -94,7 +94,13 @@ public:
       m_spacings[i].setSet(false);
     }
   }
+  //! destructor
   virtual ~MWAWParagraph();
+  //! check if the paragraph has some borders
+  bool hasParagraphBorders() const;
+  //! check if the paragraph has different borders
+  bool hasParagraphDifferentBorders() const;
+  //! insert the set values of para in the actual paragraph
   void insert(MWAWParagraph const &para) {
     for(int i = 0; i < 3; i++) {
       m_margins[i].insert(para.m_margins[i]);

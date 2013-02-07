@@ -5,6 +5,7 @@
 
 - CW* : parser of ClarisWorks and AppleWorks documents
 - DM* : parser of DOCMaker documents
+- ED* : parser of eDOC documents
 - FW* : parser of FullWrite documents
 - HMW* : parser of HanMac Word documents
 - LW* : parser of LightWay Text documents
@@ -111,7 +112,7 @@ CWParser : parser of ClarisWorks/AppleWorks document
 DMParser: parser of DOCMaker : v4
 -   DMText : class which reads the text
 
-DMParser: parser of eDOC : v2
+EDParser: parser of eDOC : v2
 
 FWParser: parser of FullWrite : v1.0 v2.0
 -   FWText : class which reads the text
