@@ -54,6 +54,7 @@ class MWAWFontConverter;
 class MWAWInputStream;
 class MWAWList;
 class MWAWPageSpan;
+class MWAWParagraph;
 class MWAWPosition;
 class MWAWSubDocument;
 struct MWAWTabStop;
@@ -129,30 +130,19 @@ public:
   // ------ paragraph format -----------
   //! returns true if a paragraph or a list is opened
   bool isParagraphOpened() const;
+  //! sets the paragraph
+  void setParagraph(MWAWParagraph const &paragraph);
+  //! returns the actual paragraph
+  MWAWParagraph const &getParagraph() const;
+
   void setParagraphLineSpacing(const double lineSpacing, WPXUnit unit=WPX_PERCENT, MWAWParagraph::LineSpacingType type=MWAWParagraph::Fixed);
   /** Define the paragraph justification. You can set force=true to
       force a break if there is a justification change. */
   void setParagraphJustification(MWAWParagraph::Justification justification, bool force=false);
-  /** sets the first paragraph text indent.
-      \note: the first character will appear at paragraphLeftmargin + paragraphTextIndent*/
-  void setParagraphTextIndent(double margin, WPXUnit unit=WPX_INCH);
   /** sets the paragraph margin.
    * \note pos must be MWAW_LEFT, MWAW_RIGHT, MWAW_TOP, MWAW_BOTTOM
    */
   void setParagraphMargin(double margin, int pos, WPXUnit unit=WPX_INCH);
-  /** sets the tabulations.
-   * \param tabStops the tabulations
-   */
-  void setTabs(const std::vector<MWAWTabStop> &tabStops);
-  /** sets the paragraph background color */
-  void setParagraphBackgroundColor(MWAWColor const color=MWAWColor::white());
-  /** reset the paragraph to have no border */
-  void resetParagraphBorders();
-  /** set a paragraph has one or several border:
-   * \param which LeftBit | RightBit | ...
-   * \param border the border
-   */
-  void setParagraphBorder(int which, MWAWBorder const &border);
 
   // ------ list format -----------
   /** function to set the actual list */

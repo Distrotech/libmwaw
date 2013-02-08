@@ -56,7 +56,18 @@ struct MWAWTabStop {
     m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_leaderNumSpaces(leaderNumSpaces) {
   }
   //! add a tab to the propList
-  void addTo(WPXPropertyListVector &propList, double decalX=0.0);
+  void addTo(WPXPropertyListVector &propList, double decalX=0.0) const;
+  //! operator==
+  bool operator==(MWAWTabStop const &tabs) const {
+    return !operator!=(tabs);
+  }
+  //! operator!=
+  bool operator!=(MWAWTabStop const &tabs) const {
+    return m_position < tabs.m_position || m_position > tabs.m_position ||
+           m_alignment != tabs.m_alignment ||
+           m_leaderCharacter != tabs.m_leaderCharacter ||
+           m_leaderNumSpaces != tabs.m_leaderNumSpaces;
+  }
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, MWAWTabStop const &ft);
   //! the tab position
@@ -96,10 +107,18 @@ public:
   }
   //! destructor
   virtual ~MWAWParagraph();
+  //! operator==
+  bool operator==(MWAWParagraph const &p) const {
+    return !operator!=(p);
+  }
+  //! operator!=
+  bool operator!=(MWAWParagraph const &p) const;
+  //! return the paragraph margin width (in inches)
+  double getMarginsWidth() const;
   //! check if the paragraph has some borders
-  bool hasParagraphBorders() const;
+  bool hasBorders() const;
   //! check if the paragraph has different borders
-  bool hasParagraphDifferentBorders() const;
+  bool hasDifferentBorders() const;
   //! insert the set values of para in the actual paragraph
   void insert(MWAWParagraph const &para) {
     for(int i = 0; i < 3; i++) {

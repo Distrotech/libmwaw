@@ -90,25 +90,6 @@ struct State {
   //! destructor
   ~State() { }
 
-  //! functions used to know if the paragraph has some borders
-  bool hasParagraphBorders() const {
-    for (size_t i = 0; i < m_paragraphBorders.size(); i++) {
-      if (m_paragraphBorders[i].m_style != MWAWBorder::None)
-        return true;
-    }
-    return false;
-  }
-  //! functions used to know if the paragraph has different borders
-  bool hasParagraphDifferentBorders() const {
-    if (!hasParagraphBorders()) return false;
-    if (m_paragraphBorders.size() < 4) return true;
-    for (size_t i = 1; i < m_paragraphBorders.size(); i++) {
-      if (m_paragraphBorders[i] != m_paragraphBorders[0])
-        return true;
-    }
-    return false;
-  }
-
   //! a buffer to stored the text
   WPXString m_textBuffer;
   //! the number of tabs to add
@@ -116,24 +97,12 @@ struct State {
 
   //! the font
   MWAWFont m_font;
-
+  //! the paragraph
+  MWAWParagraph m_paragraph;
   //! a sequence of bit used to know if we need page/column break
   int m_paragraphNeedBreak;
-  //! the paragraph justification ( left, center, ... )
-  MWAWParagraph::Justification m_paragraphJustification;
-  //! the paragraph interline value
-  double m_paragraphLineSpacing;
-  //! the paragraph interline unit ( point, percent, ...)
-  WPXUnit m_paragraphLineSpacingUnit;
-  //! the paragraph interline type (fixed, at least )
-  MWAWParagraph::LineSpacingType m_paragraphLineSpacingType;
-  //! the paragraph background color
-  MWAWColor m_paragraphBackgroundColor;
-  //! the paragraph borders
-  std::vector<MWAWBorder> m_paragraphBorders;
 
   shared_ptr<MWAWList> m_list;
-  uint8_t m_currentListLevel;
 
   bool m_isPageSpanOpened;
   bool m_isSectionOpened;
@@ -171,17 +140,7 @@ struct State {
   double m_pageMarginTop;
   double m_pageMarginBottom;
 
-  double m_paragraphMarginLeft;  // resulting paragraph margin that is one of the paragraph
-  double m_paragraphMarginRight; // properties
-  double m_paragraphMarginTop;
-  double m_paragraphMarginBottom;
-
-  double m_paragraphTextIndent; // resulting first line indent that is one of the paragraph properties
-
   std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
-
-  uint16_t m_alignmentCharacter;
-  std::vector<MWAWTabStop> m_tabStops;
 
   bool m_inSubDocument;
 
@@ -198,14 +157,9 @@ State::State() :
 
   m_font(20,12), // default time 12
 
-  m_paragraphNeedBreak(0),
+  m_paragraph(), m_paragraphNeedBreak(0),
 
-  m_paragraphJustification(MWAWParagraph::JustificationLeft),
-  m_paragraphLineSpacing(1.0), m_paragraphLineSpacingUnit(WPX_PERCENT),
-  m_paragraphLineSpacingType(MWAWParagraph::Fixed), m_paragraphBackgroundColor(MWAWColor::white()),
-  m_paragraphBorders(),
-
-  m_list(), m_currentListLevel(0),
+  m_list(),
 
   m_isPageSpanOpened(false), m_isSectionOpened(false), m_isFrameOpened(false),
   m_isPageSpanBreakDeferred(false),
@@ -235,17 +189,7 @@ State::State() :
   m_pageMarginTop(1.0),
   m_pageMarginBottom(1.0),
 
-  m_paragraphMarginLeft(0.0),
-  m_paragraphMarginRight(0.0),
-  m_paragraphMarginTop(0.0),
-  m_paragraphMarginBottom(0.0),
-
-  m_paragraphTextIndent(0.0),
-
   m_listOrderedLevels(),
-
-  m_alignmentCharacter('.'),
-  m_tabStops(),
 
   m_inSubDocument(false),
   m_isNote(false),
@@ -492,96 +436,61 @@ bool MWAWContentListener::isParagraphOpened() const
   return m_ps->m_isParagraphOpened;
 }
 
+void MWAWContentListener::setParagraph(MWAWParagraph const &paragraph)
+{
+  if (paragraph==m_ps->m_paragraph) return;
+
+  m_ps->m_paragraph=paragraph;
+}
+
+MWAWParagraph const &MWAWContentListener::getParagraph() const
+{
+  return m_ps->m_paragraph;
+}
+
 void MWAWContentListener::setParagraphLineSpacing(const double lineSpacing, WPXUnit unit, MWAWParagraph::LineSpacingType type)
 {
-  m_ps->m_paragraphLineSpacing = lineSpacing;
-  m_ps->m_paragraphLineSpacingUnit = unit;
-  m_ps->m_paragraphLineSpacingType = type;
+  m_ps->m_paragraph.m_spacings[0] = lineSpacing;
+  m_ps->m_paragraph.m_spacingsInterlineUnit = unit;
+  m_ps->m_paragraph.m_spacingsInterlineType = type;
   if (type == MWAWParagraph::AtLeast && unit == WPX_PERCENT) {
     static bool first=true;
     if (first) {
       MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphLineSpacing: can not used AtLeast with percent type\n"));
       first=false;
     }
-    m_ps->m_paragraphLineSpacingType = MWAWParagraph::Fixed;
+    m_ps->m_paragraph.m_spacingsInterlineType = MWAWParagraph::Fixed;
   }
 }
 
 void MWAWContentListener::setParagraphJustification(MWAWParagraph::Justification justification, bool force)
 {
-  if (justification == m_ps->m_paragraphJustification) return;
+  if (justification == m_ps->m_paragraph.m_justify.get()) return;
 
   if (force) {
     if (m_ps->m_isParagraphOpened)
       _closeParagraph();
 
-    m_ps->m_currentListLevel = 0;
+    m_ps->m_paragraph.m_listLevelIndex = 0;
   }
-  m_ps->m_paragraphJustification = justification;
-}
-
-void MWAWContentListener::setParagraphTextIndent(double margin, WPXUnit unit)
-{
-  float scale=MWAWPosition::getScaleFactor(unit, WPX_INCH);
-  m_ps->m_paragraphTextIndent = scale*margin;
+  m_ps->m_paragraph.m_justify = justification;
 }
 
 void MWAWContentListener::setParagraphMargin(double margin, int pos, WPXUnit unit)
 {
-  margin*=MWAWPosition::getScaleFactor(unit, WPX_INCH);
   switch(pos) {
   case MWAW_LEFT:
-    m_ps->m_paragraphMarginLeft = margin;
-    break;
   case MWAW_RIGHT:
-    m_ps->m_paragraphMarginRight = margin;
+    margin *=(double) MWAWPosition::getScaleFactor(unit, *m_ps->m_paragraph.m_marginsUnit);
+    m_ps->m_paragraph.m_margins[pos==MWAW_LEFT ? 1 : 2] = margin;
     break;
   case MWAW_TOP:
-    m_ps->m_paragraphMarginTop = margin;
-    break;
   case MWAW_BOTTOM:
-    m_ps->m_paragraphMarginBottom = margin;
+    margin *=(double) MWAWPosition::getScaleFactor(unit, WPX_INCH);
+    m_ps->m_paragraph.m_spacings[pos==MWAW_TOP ? 1 : 2] = margin;
     break;
   default:
     MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphMargin: unknown pos"));
-  }
-}
-
-void MWAWContentListener::setTabs(const std::vector<MWAWTabStop> &tabStops)
-{
-  m_ps->m_tabStops = tabStops;
-}
-
-void MWAWContentListener::setParagraphBackgroundColor(MWAWColor const color)
-{
-  m_ps->m_paragraphBackgroundColor = color;
-}
-
-void MWAWContentListener::resetParagraphBorders()
-{
-  m_ps->m_paragraphBorders.resize(0);
-}
-
-void MWAWContentListener::setParagraphBorder(int wh, MWAWBorder const &border)
-{
-  int const allBits = MWAWBorder::LeftBit|MWAWBorder::RightBit|MWAWBorder::TopBit|MWAWBorder::BottomBit|MWAWBorder::HMiddleBit|MWAWBorder::VMiddleBit;
-  if (wh & (~allBits)) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphBorder: unknown borders\n"));
-    return;
-  }
-  if (m_ps->m_paragraphBorders.size() < 4) {
-    MWAWBorder emptyBorder;
-    emptyBorder.m_style = MWAWBorder::None;
-    m_ps->m_paragraphBorders.resize(4, emptyBorder);
-  }
-  if (wh & MWAWBorder::LeftBit) m_ps->m_paragraphBorders[MWAWBorder::Left] = border;
-  if (wh & MWAWBorder::RightBit) m_ps->m_paragraphBorders[MWAWBorder::Right] = border;
-  if (wh & MWAWBorder::TopBit) m_ps->m_paragraphBorders[MWAWBorder::Top] = border;
-  if (wh & MWAWBorder::BottomBit) m_ps->m_paragraphBorders[MWAWBorder::Bottom] = border;
-  static bool first = true;
-  if ((wh & (MWAWBorder::HMiddleBit|MWAWBorder::VMiddleBit)) && first) {
-    first = false;
-    MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphBorder: set hmiddle or vmiddle is not implemented\n"));
   }
 }
 
@@ -590,7 +499,7 @@ void MWAWContentListener::setParagraphBorder(int wh, MWAWBorder const &border)
 ///////////////////
 void MWAWContentListener::setCurrentListLevel(int level)
 {
-  m_ps->m_currentListLevel = uint8_t(level);
+  m_ps->m_paragraph.m_listLevelIndex = level;
 }
 
 void MWAWContentListener::setCurrentList(shared_ptr<MWAWList> list)
@@ -766,7 +675,7 @@ void MWAWContentListener::endDocument()
   if (m_ps->m_isParagraphOpened)
     _closeParagraph();
 
-  m_ps->m_currentListLevel = 0;
+  m_ps->m_paragraph.m_listLevelIndex = 0;
   _changeList(); // flush the list exterior
 
   // close the document nice and tight
@@ -943,7 +852,7 @@ void MWAWContentListener::_closeParagraph()
   }
 
   m_ps->m_isParagraphOpened = false;
-  m_ps->m_currentListLevel = 0;
+  m_ps->m_paragraph.m_listLevelIndex = 0;
 
   if (!m_ps->m_isTableOpened && m_ps->m_isPageSpanBreakDeferred && !m_ps->m_inSubDocument)
     _closePageSpan();
@@ -990,18 +899,20 @@ void MWAWContentListener::_appendJustification(WPXPropertyList &propList, MWAWPa
 
 void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool /*isListElement*/)
 {
-  _appendJustification(propList, m_ps->m_paragraphJustification);
+  _appendJustification(propList, m_ps->m_paragraph.m_justify.get());
 
   if (!m_ps->m_isTableOpened) {
-    propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
-    propList.insert("fo:text-indent", m_ps->m_paragraphTextIndent);
-    propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
-    if (!m_ps->m_paragraphBackgroundColor.isWhite())
-      propList.insert("fo:background-color", m_ps->m_paragraphBackgroundColor.str().c_str());
-    if (m_ps->hasParagraphBorders()) {
-      bool setAll = !m_ps->hasParagraphDifferentBorders();
-      for (size_t w = 0; w < m_ps->m_paragraphBorders.size(); w++) {
-        MWAWBorder const &border = m_ps->m_paragraphBorders[w];
+    propList.insert("fo:margin-left", *m_ps->m_paragraph.m_margins[1], *m_ps->m_paragraph.m_marginsUnit);
+    propList.insert("fo:text-indent", *m_ps->m_paragraph.m_margins[0], *m_ps->m_paragraph.m_marginsUnit);
+    propList.insert("fo:margin-right", *m_ps->m_paragraph.m_margins[2], *m_ps->m_paragraph.m_marginsUnit);
+    if (!m_ps->m_paragraph.m_backgroundColor->isWhite())
+      propList.insert("fo:background-color", m_ps->m_paragraph.m_backgroundColor->str().c_str());
+    if (m_ps->m_paragraph.hasBorders()) {
+      bool setAll = !m_ps->m_paragraph.hasDifferentBorders();
+      for (size_t w = 0; w < m_ps->m_paragraph.m_borders.size(); w++) {
+        if (!m_ps->m_paragraph.m_borders[w].isSet())
+          continue;
+        MWAWBorder const &border = *(m_ps->m_paragraph.m_borders[w]);
         std::string property = border.getPropertyValue();
         if (property.length() == 0) continue;
         if (setAll == 0xF) {
@@ -1028,18 +939,23 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
       }
     }
   }
-  propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop);
-  propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom);
-  switch (m_ps->m_paragraphLineSpacingType) {
+  propList.insert("fo:margin-top", *(m_ps->m_paragraph.m_spacings[1]));
+  propList.insert("fo:margin-bottom", *(m_ps->m_paragraph.m_spacings[2]));
+  switch (*m_ps->m_paragraph.m_spacingsInterlineType) {
   case MWAWParagraph::Fixed:
-    propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
+    propList.insert("fo:line-height", *(m_ps->m_paragraph.m_spacings[0]), *m_ps->m_paragraph.m_spacingsInterlineUnit);
     break;
   case MWAWParagraph::AtLeast:
-    if (m_ps->m_paragraphLineSpacing <= 0) {
-    } else if (m_ps->m_paragraphLineSpacingUnit != WPX_PERCENT)
-      propList.insert("style:line-height-at-least", m_ps->m_paragraphLineSpacing, m_ps->m_paragraphLineSpacingUnit);
+    if (*(m_ps->m_paragraph.m_spacings[0]) <= 0) {
+      static bool first = true;
+      if (first) {
+        MWAW_DEBUG_MSG(("MWAWContentListener::_appendParagraphProperties: interline spacing seems bad\n"));
+        first = false;
+      }
+    } else if (*m_ps->m_paragraph.m_spacingsInterlineUnit != WPX_PERCENT)
+      propList.insert("style:line-height-at-least", *(m_ps->m_paragraph.m_spacings[0]), *m_ps->m_paragraph.m_spacingsInterlineUnit);
     else {
-      propList.insert("style:line-height-at-least", m_ps->m_paragraphLineSpacing*12.0, WPX_POINT);
+      propList.insert("style:line-height-at-least", *(m_ps->m_paragraph.m_spacings[0])*12.0, WPX_POINT);
       static bool first = true;
       if (first) {
         first = false;
@@ -1048,16 +964,13 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
     }
     break;
   default:
-    MWAW_DEBUG_MSG(("MWAWContentListener::_appendParagraphProperties: can not set line spacing type: %d\n",int(m_ps->m_paragraphLineSpacingType)));
+    MWAW_DEBUG_MSG(("MWAWContentListener::_appendParagraphProperties: can not set line spacing type: %d\n",int(*m_ps->m_paragraph.m_spacingsInterlineType)));
     break;
   }
-#if 0
-  // ADDME
-  if (m_ps->m_paragraphBreakStatus & MWAWParagraph::NoBreakBit)
+  if (*m_ps->m_paragraph.m_breakStatus & MWAWParagraph::NoBreakBit)
     propList.insert("fo:keep-together", "always");
-  if (m_ps->m_paragraphBreakStatus & MWAWParagraph::NoBreakWithNextBit)
+  if (*m_ps->m_paragraph.m_breakStatus & MWAWParagraph::NoBreakWithNextBit)
     propList.insert("fo:keep-with-next", "always");
-#endif
   if (!m_ps->m_inSubDocument && m_ps->m_firstParagraphInPageSpan) {
     unsigned actPage = 1;
     std::vector<MWAWPageSpan>::const_iterator it = m_ds->m_pageList.begin();
@@ -1078,8 +991,8 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
 
 void MWAWContentListener::_getTabStops(WPXPropertyListVector &tabStops)
 {
-  for (size_t i=0; i<m_ps->m_tabStops.size(); i++)
-    m_ps->m_tabStops[i].addTo(tabStops, 0.0);
+  for (size_t i=0; i<m_ps->m_paragraph.m_tabs->size(); i++)
+    m_ps->m_paragraph.m_tabs.get()[i].addTo(tabStops, 0.0);
 }
 
 ///////////////////
@@ -1121,7 +1034,7 @@ void MWAWContentListener::_closeListElement()
   }
 
   m_ps->m_isListElementOpened = m_ps->m_isParagraphOpened = false;
-  m_ps->m_currentListLevel = 0;
+  m_ps->m_paragraph.m_listLevelIndex = 0;
 
   if (!m_ps->m_isTableOpened && m_ps->m_isPageSpanBreakDeferred && !m_ps->m_inSubDocument)
     _closePageSpan();
@@ -1138,7 +1051,8 @@ void MWAWContentListener::_changeList()
   // FIXME: even if nobody really care, if we close an ordered or an unordered
   //      elements, we must keep the previous to close this part...
   size_t actualListLevel = m_ps->m_listOrderedLevels.size();
-  for (size_t i=actualListLevel; i > m_ps->m_currentListLevel; i--) {
+  size_t newLevel= (size_t) m_ps->m_paragraph.m_listLevelIndex.get();
+  for (size_t i=actualListLevel; i > newLevel; i--) {
     if (m_ps->m_listOrderedLevels[i-1])
       m_documentInterface->closeOrderedListLevel();
     else
@@ -1146,23 +1060,23 @@ void MWAWContentListener::_changeList()
   }
 
   WPXPropertyList propList2;
-  if (m_ps->m_currentListLevel) {
+  if (newLevel) {
     if (!m_ps->m_list.get()) {
       MWAW_DEBUG_MSG(("MWAWContentListener::_handleListChange: can not find any list\n"));
       return;
     }
-    m_ps->m_list->setLevel(m_ps->m_currentListLevel);
+    m_ps->m_list->setLevel((int)newLevel);
     m_ps->m_list->openElement();
 
-    if (m_ps->m_list->mustSendLevel(m_ps->m_currentListLevel)) {
-      if (actualListLevel == m_ps->m_currentListLevel) {
+    if (m_ps->m_list->mustSendLevel((int)newLevel)) {
+      if (actualListLevel == newLevel) {
         if (m_ps->m_listOrderedLevels[actualListLevel-1])
           m_documentInterface->closeOrderedListLevel();
         else
           m_documentInterface->closeUnorderedListLevel();
         actualListLevel--;
       }
-      if (m_ps->m_currentListLevel==1) {
+      if (newLevel==1) {
         // we must change the listID for writerperfect
         int prevId;
         if ((prevId=m_ps->m_list->getPreviousId()) > 0)
@@ -1170,17 +1084,17 @@ void MWAWContentListener::_changeList()
         else
           m_ps->m_list->setId(++m_ds->m_newListId);
       }
-      m_ps->m_list->sendTo(*m_documentInterface, m_ps->m_currentListLevel);
+      m_ps->m_list->sendTo(*m_documentInterface, (int) newLevel);
     }
 
     propList2.insert("libwpd:id", m_ps->m_list->getId());
     m_ps->m_list->closeElement();
   }
 
-  if (actualListLevel == m_ps->m_currentListLevel) return;
+  if (actualListLevel == newLevel) return;
 
-  m_ps->m_listOrderedLevels.resize(m_ps->m_currentListLevel, false);
-  for (size_t i=actualListLevel+1; i<= m_ps->m_currentListLevel; i++) {
+  m_ps->m_listOrderedLevels.resize(newLevel, false);
+  for (size_t i=actualListLevel+1; i<= newLevel; i++) {
     if (m_ps->m_list->isNumeric(int(i))) {
       m_ps->m_listOrderedLevels[i-1] = true;
       m_documentInterface->openOrderedListLevel(propList2);
@@ -1204,7 +1118,7 @@ void MWAWContentListener::_openSpan()
 
   if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened) {
     _changeList();
-    if (m_ps->m_currentListLevel == 0)
+    if (*m_ps->m_paragraph.m_listLevelIndex == 0)
       _openParagraph();
     else
       _openListElement();
@@ -1314,11 +1228,11 @@ void MWAWContentListener::insertLabelNote(const NoteType noteType, WPXString con
     */
     if (m_ps->m_isParagraphOpened)
       _closeParagraph();
-    int prevListLevel = m_ps->m_currentListLevel;
-    m_ps->m_currentListLevel = 0;
+    int prevListLevel = *m_ps->m_paragraph.m_listLevelIndex;
+    m_ps->m_paragraph.m_listLevelIndex = 0;
     _changeList(); // flush the list exterior
     handleSubDocument(subDocument, libmwaw::DOC_NOTE);
-    m_ps->m_currentListLevel = (uint8_t)prevListLevel;
+    m_ps->m_paragraph.m_listLevelIndex = prevListLevel;
   } else {
     if (!m_ps->m_isParagraphOpened)
       _openParagraph();
@@ -1514,8 +1428,7 @@ void MWAWContentListener::_handleFrameParameters
     propList.insert("style:vertical-rel", what.c_str());
     propList.insert("style:horizontal-rel", what.c_str());
     double w = m_ps->m_pageFormWidth - m_ps->m_pageMarginLeft
-               - m_ps->m_pageMarginRight - m_ps->m_paragraphMarginLeft
-               - m_ps->m_paragraphMarginRight;
+               - m_ps->m_pageMarginRight - m_ps->m_paragraph.getMarginsWidth();
     w *= inchFactor;
     switch ( pos.m_xPos) {
     case MWAWPosition::XRight:
@@ -1762,7 +1675,7 @@ void MWAWContentListener::_endSubDocument()
   if (m_ps->m_isParagraphOpened)
     _closeParagraph();
 
-  m_ps->m_currentListLevel = 0;
+  m_ps->m_paragraph.m_listLevelIndex=0;
   _changeList(); // flush the list exterior
 }
 
@@ -2003,7 +1916,7 @@ void MWAWContentListener::closeTableCell()
   }
 
   _closeParagraph();
-  m_ps->m_currentListLevel = 0;
+  m_ps->m_paragraph.m_listLevelIndex=0;
   _changeList(); // flush the list exterior
 
   m_ps->m_isTableCellOpened = false;
