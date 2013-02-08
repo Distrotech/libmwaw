@@ -1370,15 +1370,17 @@ bool MWParser::readText(MWParserInternal::Information const &info,
   }
 
   if (m_listener) {
+    MWAWParagraph para=m_listener->getParagraph();
     if (totalHeight && lHeight->size()) // fixme find a way to associate the good size to each line
-      m_listener->setParagraphLineSpacing(totalHeight/double(lHeight->size()), WPX_POINT);
+      para.setInterline(totalHeight/double(lHeight->size()), WPX_POINT);
     else
-      m_listener->setParagraphLineSpacing(1.2, WPX_PERCENT);
+      para.setInterline(1.2, WPX_PERCENT);
+    if (info.m_justifySet)
+      para.m_justify=info.m_justify;
+    para.send(m_listener);
 
     if (!numFormat || listPos[0] != 0)
       m_listener->setFont(info.m_font);
-    if (info.m_justifySet)
-      m_listener->setParagraphJustification(info.m_justify);
 
     int actFormat = 0;
     numChar = int(text.length());
@@ -1460,7 +1462,11 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
     MWAW_DEBUG_MSG(("MWParser::readParagraph: high spacing bit set=%d\n", highspacing));
   }
   int spacing = (int) input->readLong(1);
-  parag.m_spacings[0] = 1.+spacing/2.0;
+  if (spacing < 0) {
+    f << "#interline=" << 1.+spacing/2.0 << ",";
+    spacing=0;
+  }
+  parag.setInterline(1.+spacing/2.0, WPX_PERCENT);
   parag.m_margins[0] = float(input->readLong(2))/80.f;
 
   parag.m_tabs->resize((size_t) numTabs);
@@ -1478,10 +1484,6 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   if (parag.m_margins[2].get() > 0.0)
     parag.m_margins[2]=pageWidth()-parag.m_margins[2].get()-1.0;
   if (parag.m_margins[2].get() < 0) parag.m_margins[2] = 0;
-  if (parag.m_spacings[0].get() < 1.0) {
-    f << "#interline=" << parag.m_spacings[0].get() << ",";
-    parag.m_spacings[0] = 1.0;
-  }
   f << parag;
 
   if (m_listener)
@@ -1593,7 +1595,9 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, int(entry.length()-8)));
   if (pict) {
     if (m_listener) {
-      m_listener->setParagraphLineSpacing(1.0, WPX_PERCENT);
+      MWAWParagraph para=m_listener->getParagraph();
+      para.setInterline(1.0, WPX_PERCENT);
+      para.send(m_listener);
 
       WPXBinaryData data;
       std::string type;

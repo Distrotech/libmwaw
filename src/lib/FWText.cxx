@@ -402,10 +402,8 @@ struct Paragraph : public MWAWParagraph {
   }
   //! update the paragraph data to be sent to a listener
   void update() {
-    if ( m_interSpacing>0) {
-      m_spacings[0] = m_interSpacing;
-      m_spacingsInterlineUnit = m_interSpacingUnit;
-    }
+    if ( m_interSpacing>0)
+      setInterline(m_interSpacing, m_interSpacingUnit);
     for (int i = 0; i < 2; i++) {
       if (m_befAftSpacings[i] <= 0)
         m_spacings[i+1]=(-m_befAftSpacings[i])/72.0;

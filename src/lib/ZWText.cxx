@@ -441,6 +441,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
   m_listener->setFont(actFont.m_font);
   int fId=0;
   bool isCenter = false;
+  MWAWParagraph para;
   while (1) {
     long actPos = input->tell();
     bool done = input->atEOS() || actPos==endPos;
@@ -469,7 +470,8 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
       switch (textCode) {
       case Center:
         isCenter=true;
-        m_listener->setParagraphJustification(MWAWParagraph::JustificationCenter);
+        para.m_justify=MWAWParagraph::JustificationCenter;
+        para.send(m_listener);
         break;
       case NewPage:
         if (main)
@@ -506,7 +508,8 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
       m_listener->insertEOL();
       if (isCenter) {
         isCenter=false;
-        m_listener->setParagraphJustification(MWAWParagraph::JustificationLeft);
+        para.m_justify=MWAWParagraph::JustificationLeft;
+        para.send(m_listener);
       }
       break;
     default:

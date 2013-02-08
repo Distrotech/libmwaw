@@ -844,8 +844,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     if (val < -1440 || val > 1440) {
       MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: interline spacing seems odd\n"));
       f << "#interline=" << val << ",";
-      m_spacings[0] = 1.0;
-      m_spacingsInterlineUnit = WPX_PERCENT;
+      setInterline(1.0, WPX_PERCENT);
       break;
     }
     m_spacingsInterlineUnit = WPX_INCH;
@@ -854,10 +853,8 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
       m_spacingsInterlineType = MWAWParagraph::AtLeast;
     else if (val < 0)
       *(m_spacings[0]) *= -1;
-    else {
-      m_spacings[0] = 1.0;
-      m_spacingsInterlineUnit = WPX_PERCENT;
-    }
+    else
+      setInterline(1.0, WPX_PERCENT);
     return true;
   case 0x18:
   case 0x19:

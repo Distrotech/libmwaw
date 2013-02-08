@@ -43,6 +43,7 @@
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
@@ -1377,17 +1378,23 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   size_t actFont = 0, numFonts = fonts.size();
   int actLine = 0;
   numLines=int(lines.size());
-  if (numLines == 0 && info.m_height > 0)
-    m_listener->setParagraphLineSpacing(info.m_height, WPX_POINT);
+  MWAWParagraph para;
+  if (numLines == 0 && info.m_height > 0) {
+    para.setInterline(info.m_height, WPX_POINT);
+    para.send(m_listener);
+  }
   for (int c = 0; c < numChars; c++) {
     if (actFont < numFonts && c ==  fonts[actFont].m_firstChar)
       m_listener->setFont(fonts[actFont++].m_font);
     if (actLine < numLines && c == lines[(size_t) actLine].m_firstChar) {
       if (actLine) m_listener->insertEOL();
-      if (numLines == 1 && info.m_height > lines[0].m_height)
-        m_listener->setParagraphLineSpacing(info.m_height, WPX_POINT);
-      else if (lines[(size_t) actLine].m_height)
-        m_listener->setParagraphLineSpacing(lines[(size_t) actLine].m_height, WPX_POINT);
+      if (numLines == 1 && info.m_height > lines[0].m_height) {
+        para.setInterline(info.m_height, WPX_POINT);
+        para.send(m_listener);
+      } else if (lines[(size_t) actLine].m_height) {
+        para.setInterline(lines[(size_t) actLine].m_height, WPX_POINT);
+        para.send(m_listener);
+      }
       actLine++;
     }
 
@@ -1615,7 +1622,9 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
   input->seek(pos+4, WPX_SEEK_SET);
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, (int)length));
   if (m_listener) {
-    m_listener->setParagraphLineSpacing(info.m_height, WPX_POINT);
+    MWAWParagraph para=m_listener->getParagraph();
+    para.setInterline(info.m_height, WPX_POINT);
+    para.send(m_listener);
     if (pict) {
       WPXBinaryData pictData;
       std::string type;
@@ -1623,7 +1632,8 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
         m_listener->insertPicture(pictPos, pictData, type);
     }
     m_listener->insertEOL();
-    m_listener->setParagraphLineSpacing(1.0, WPX_PERCENT);
+    para.setInterline(1.0, WPX_PERCENT);
+    para.send(m_listener);
   }
   if (pict)
     ascii().skipZone(pos+4, pos+4+length-1);

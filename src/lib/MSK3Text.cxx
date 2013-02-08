@@ -429,8 +429,11 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
   libmwaw::DebugStream f;
   f << "Entries(TextZone):" << zone << ",";
   MSK3TextInternal::Font font;
-  if (m_listener && zone.m_height > 0)
-    m_listener->setParagraphLineSpacing(zone.m_height, WPX_POINT);
+  if (m_listener && zone.m_height > 0) {
+    MWAWParagraph para=m_listener->getParagraph();
+    para.setInterline(zone.m_height, WPX_POINT);
+    para.send(m_listener);
+  }
   bool firstChar = true;
   while(!m_input->atEOS()) {
     long pos = m_input->tell();

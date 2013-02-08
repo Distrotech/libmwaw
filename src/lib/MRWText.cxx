@@ -1542,13 +1542,11 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         break;
       case 6:
         if (!dt.value(0)) break;
-        para.m_spacings[0] = float(dt.value(0))/65536.f;
-        para.m_spacingsInterlineUnit = WPX_PERCENT;
+        para.setInterline(double(dt.value(0))/65536., WPX_PERCENT);
         break;
       case 8:
         if (!dt.value(0)) break;
-        para.m_spacings[0] = float(dt.value(0))/65536.f;
-        para.m_spacingsInterlineUnit = WPX_POINT;
+        para.setInterline(double(dt.value(0))/65536., WPX_POINT);
         break;
       case 10:
         if (!dt.value(0)) break;

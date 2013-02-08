@@ -1022,9 +1022,8 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
       return false;
     }
     NSTextInternal::Paragraph para;
-    para.m_spacingsInterlineUnit = WPX_POINT; // set default
-    para.m_spacingsInterlineType = MWAWParagraph::AtLeast;
-    para.m_spacings[0] = float(input->readLong(4))/65536.f;
+
+    para.setInterline(double(input->readLong(4))/65536., WPX_POINT, MWAWParagraph::AtLeast);
     para.m_spacings[1] = float(input->readLong(4))/65536.f/72.f;
     int wh = int(input->readLong(2));
     switch(wh) {
@@ -1053,9 +1052,9 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     para.m_margins[0] =para.m_margins[0].get()-para.m_margins[1].get();
     wh = int(input->readULong(1));
     switch(wh) {
-    case 0:
-      para.m_spacings[0]=0;
-      break; // auto
+    case 0: // auto
+      para.setInterline(1.0, WPX_PERCENT);
+      break;
     case 1:
       para.m_spacingsInterlineType = MWAWParagraph::Fixed;
       break;
@@ -1065,9 +1064,9 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
       // before spacing is also in %, try to correct it
       para.m_spacings[1] = para.m_spacings[1].get()*12.0;
       break;
-    default:
+    default: // unknown, so...
       f << "#interline=" << (val&0xFC) << ",";
-      para.m_spacings[0]=0;
+      para.setInterline(1.0, WPX_PERCENT);
       break;
     }
     val = input->readLong(1);

@@ -448,34 +448,6 @@ MWAWParagraph const &MWAWContentListener::getParagraph() const
   return m_ps->m_paragraph;
 }
 
-void MWAWContentListener::setParagraphLineSpacing(const double lineSpacing, WPXUnit unit, MWAWParagraph::LineSpacingType type)
-{
-  m_ps->m_paragraph.m_spacings[0] = lineSpacing;
-  m_ps->m_paragraph.m_spacingsInterlineUnit = unit;
-  m_ps->m_paragraph.m_spacingsInterlineType = type;
-  if (type == MWAWParagraph::AtLeast && unit == WPX_PERCENT) {
-    static bool first=true;
-    if (first) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::setParagraphLineSpacing: can not used AtLeast with percent type\n"));
-      first=false;
-    }
-    m_ps->m_paragraph.m_spacingsInterlineType = MWAWParagraph::Fixed;
-  }
-}
-
-void MWAWContentListener::setParagraphJustification(MWAWParagraph::Justification justification, bool force)
-{
-  if (justification == m_ps->m_paragraph.m_justify.get()) return;
-
-  if (force) {
-    if (m_ps->m_isParagraphOpened)
-      _closeParagraph();
-
-    m_ps->m_paragraph.m_listLevelIndex = 0;
-  }
-  m_ps->m_paragraph.m_justify = justification;
-}
-
 void MWAWContentListener::setParagraphMargin(double margin, int pos, WPXUnit unit)
 {
   switch(pos) {

@@ -731,10 +731,8 @@ bool MSW1Parser::readParagraph(long fPos, MSW1ParserInternal::Paragraph &para)
   }
   if (sz >= 12) {
     val = (int) input->readLong(2);
-    if (val) {
-      para.m_spacingsInterlineUnit = WPX_INCH;
-      para.m_spacings[0] = float(val)/1440.0f;
-    }
+    if (val)
+      para.setInterline(double(val)/1440.0, WPX_INCH);
   }
   if (sz >= 14) {
     val = (int) input->readLong(2);

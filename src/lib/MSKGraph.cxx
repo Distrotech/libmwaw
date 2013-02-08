@@ -2401,7 +2401,9 @@ void MSKGraph::sendTextBox(int zoneId)
   MSKGraphInternal::TextBox &textBox = reinterpret_cast<MSKGraphInternal::TextBox &>(*zone);
   MSKGraphInternal::Font actFont;
   m_listener->setFont(MWAWFont(20,12));
-  m_listener->setParagraphJustification(textBox.m_justify);
+  MWAWParagraph para;
+  para.m_justify=textBox.m_justify;
+  para.send(m_listener);
   int numFonts = int(textBox.m_fontsList.size());
   int actFormatPos = 0;
   int numFormats = int(textBox.m_formats.size());
@@ -2477,6 +2479,8 @@ void MSKGraph::sendTable(int zoneId)
   int const borderPos = MWAWBorder::TopBit | MWAWBorder::RightBit |
                         MWAWBorder::BottomBit | MWAWBorder::LeftBit;
   MWAWBorder border;
+  MWAWParagraph para;
+  para.m_justify=MWAWParagraph::JustificationCenter;
   for (size_t row = 0; row < nRows; row++) {
     m_listener->openTableRow(float(table.m_rowsDim[row]), WPX_POINT);
 
@@ -2487,7 +2491,7 @@ void MSKGraph::sendTable(int zoneId)
       cell.setPosition(cellPosition);
       cell.setBorders(borderPos, border);
       // fixme setBackgroundColor
-      m_listener->setParagraphJustification(MWAWParagraph::JustificationCenter);
+      para.send(m_listener);
       m_listener->openTableCell(cell, emptyList);
 
       MSKGraphInternal::Table::Cell const *tCell=table.getCell(cellPosition);

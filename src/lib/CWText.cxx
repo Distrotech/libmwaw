@@ -1685,11 +1685,10 @@ bool CWText::readParagraph(int id)
     break;
   }
   if (interline) {
-    if (inPoint) {
-      ruler.m_spacings[0] = interline;
-      ruler.m_spacingsInterlineUnit = WPX_POINT;
-    } else
-      ruler.m_spacings[0] = 1.0+interline*0.5;
+    if (inPoint)
+      ruler.setInterline(interline, WPX_POINT);
+    else
+      ruler.setInterline(1.0+interline*0.5, WPX_PERCENT);
   }
   if (val) f << "#flags=" << std::hex << val << std::dec << ",";
   for (int i = 0; i < 3; i++)

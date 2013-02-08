@@ -1284,12 +1284,9 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   if (!interlineFixed || height <= 0.0) {
     if (height)
       f << "interline>=" << height << "pt,";
-    ruler.m_spacings[0] = 1.0;
-    ruler.m_spacingsInterlineUnit = WPX_PERCENT;
-  } else {
-    ruler.m_spacings[0] = height+2;
-    ruler.m_spacingsInterlineUnit = WPX_POINT;
-  }
+    ruler.setInterline(1.0,WPX_PERCENT);
+  } else
+    ruler.setInterline(height+2,WPX_POINT);
   ruler.m_extra = f.str();
   return true;
 }

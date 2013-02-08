@@ -40,7 +40,7 @@
 
 #include "libmwaw_internal.hxx"
 
-// REMOVE
+// REMOVEME
 #include "MWAWParagraph.hxx"
 
 class WPXBinaryData;
@@ -57,7 +57,6 @@ class MWAWPageSpan;
 class MWAWParagraph;
 class MWAWPosition;
 class MWAWSubDocument;
-struct MWAWTabStop;
 
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
@@ -135,10 +134,6 @@ public:
   //! returns the actual paragraph
   MWAWParagraph const &getParagraph() const;
 
-  void setParagraphLineSpacing(const double lineSpacing, WPXUnit unit=WPX_PERCENT, MWAWParagraph::LineSpacingType type=MWAWParagraph::Fixed);
-  /** Define the paragraph justification. You can set force=true to
-      force a break if there is a justification change. */
-  void setParagraphJustification(MWAWParagraph::Justification justification, bool force=false);
   /** sets the paragraph margin.
    * \note pos must be MWAW_LEFT, MWAW_RIGHT, MWAW_TOP, MWAW_BOTTOM
    */

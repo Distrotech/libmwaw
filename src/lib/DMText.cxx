@@ -487,7 +487,9 @@ bool DMText::sendText(DMTextInternal::Zone const &zone)
   libmwaw::DebugStream f;
   f << "Entries(TEXT)[" << zone.m_pos.id() << "]:";
   m_listener->setFont(MWAWFont(3,12));
-  m_listener->setParagraphJustification(zone.m_justify);
+  MWAWParagraph para;
+  para.m_justify=zone.m_justify;
+  para.send(m_listener);
   std::map<long, MWAWFont >::const_iterator fontIt;
   int nPict=0, zId=zone.m_pos.id()-128;
   double w = m_state->m_pageWidth-double(zone.m_margins[0]+zone.m_margins[2])/72.;

@@ -107,6 +107,12 @@ public:
   }
   //! destructor
   virtual ~MWAWParagraph();
+  //! set the interline
+  void setInterline(double value, WPXUnit unit, LineSpacingType type=Fixed) {
+    m_spacings[0]=value;
+    m_spacingsInterlineUnit=unit;
+    m_spacingsInterlineType=type;
+  }
   //! operator==
   bool operator==(MWAWParagraph const &p) const {
     return !operator!=(p);

@@ -905,7 +905,9 @@ bool LWText::sendHeaderFooter(bool header)
     MWAW_DEBUG_MSG(("LWText::sendHeaderFooter: can not find the text\n"));
     return false;
   }
-  m_listener->setParagraphJustification(zone.m_justify);
+  MWAWParagraph para;
+  para.m_justify=zone.m_justify;
+  para.send(m_listener);
   m_listener->setFont(zone.m_font);
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   input->seek(zone.m_pos.begin(), WPX_SEEK_SET);
