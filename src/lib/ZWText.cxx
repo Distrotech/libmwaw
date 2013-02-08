@@ -471,7 +471,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
       case Center:
         isCenter=true;
         para.m_justify=MWAWParagraph::JustificationCenter;
-        para.send(m_listener);
+        m_listener->setParagraph(para);
         break;
       case NewPage:
         if (main)
@@ -509,7 +509,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
       if (isCenter) {
         isCenter=false;
         para.m_justify=MWAWParagraph::JustificationLeft;
-        para.send(m_listener);
+        m_listener->setParagraph(para);
       }
       break;
     default:

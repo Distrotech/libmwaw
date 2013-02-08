@@ -489,7 +489,7 @@ bool DMText::sendText(DMTextInternal::Zone const &zone)
   m_listener->setFont(MWAWFont(3,12));
   MWAWParagraph para;
   para.m_justify=zone.m_justify;
-  para.send(m_listener);
+  m_listener->setParagraph(para);
   std::map<long, MWAWFont >::const_iterator fontIt;
   int nPict=0, zId=zone.m_pos.id()-128;
   double w = m_state->m_pageWidth-double(zone.m_margins[0]+zone.m_margins[2])/72.;
@@ -706,7 +706,7 @@ bool DMText::sendTOC()
   tab.m_leaderCharacter='.';
   tab.m_position = w;
   para.m_tabs->push_back(tab);
-  para.send(m_listener);
+  m_listener->setParagraph(para);
 
   std::stringstream ss;
   int prevId=-1;
@@ -886,7 +886,7 @@ bool DMText::sendFooter(int zId)
   tab.m_alignment = MWAWTabStop::RIGHT;
   tab.m_position = w;
   para.m_tabs->push_back(tab);
-  para.send(m_listener);
+  m_listener->setParagraph(para);
 
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   for (int st=0; st<2; st++) {

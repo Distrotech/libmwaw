@@ -1399,7 +1399,7 @@ void MDWParser::setProperty(MWAWParagraph const &para)
 {
   if (!m_listener) return;
   m_state->m_actParagraph = para;
-  para.send(m_listener);
+  m_listener->setParagraph(para);
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

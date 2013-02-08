@@ -1802,7 +1802,7 @@ bool CWText::readParagraph(int id)
 void CWText::setProperty(CWTextInternal::Paragraph const &ruler)
 {
   if (!m_listener) return;
-  ruler.send(m_listener);
+  m_listener->setParagraph(ruler);
 }
 
 bool CWText::sendZone(int number)

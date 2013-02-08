@@ -35,7 +35,6 @@
 
 #include "libmwaw_internal.hxx"
 
-#include "MWAWContentListener.hxx"
 #include "MWAWList.hxx"
 #include "MWAWPosition.hxx"
 
@@ -180,6 +179,111 @@ double MWAWParagraph::getMarginsWidth() const
   return factor*(*(m_margins[1])+*(m_margins[2]));
 }
 
+void MWAWParagraph::addTo(WPXPropertyList &propList, bool inTable) const
+{
+  switch (*m_justify) {
+  case JustificationLeft:
+    // doesn't require a paragraph prop - it is the default
+    propList.insert("fo:text-align", "left");
+    break;
+  case JustificationCenter:
+    propList.insert("fo:text-align", "center");
+    break;
+  case JustificationRight:
+    propList.insert("fo:text-align", "end");
+    break;
+  case JustificationFull:
+    propList.insert("fo:text-align", "justify");
+    break;
+  case JustificationFullAllLines:
+    propList.insert("fo:text-align", "justify");
+    propList.insert("fo:text-align-last", "justify");
+    break;
+  default:
+    break;
+  }
+  if (!inTable) {
+    if (*m_listLevelIndex >= 1) {
+      float factorToLevel = MWAWPosition::getScaleFactor(m_marginsUnit.get(), WPX_INCH);
+      propList.insert("fo:margin-left", m_listLevel->m_labelIndent/factorToLevel, *m_marginsUnit);
+    } else
+      propList.insert("fo:margin-left", *m_margins[1], *m_marginsUnit);
+    propList.insert("fo:text-indent", *m_margins[0], *m_marginsUnit);
+    propList.insert("fo:margin-right", *m_margins[2], *m_marginsUnit);
+    if (!m_backgroundColor->isWhite())
+      propList.insert("fo:background-color", m_backgroundColor->str().c_str());
+    if (hasBorders()) {
+      bool setAll = !hasDifferentBorders();
+      for (size_t w = 0; w < m_borders.size() && w < 4; w++) {
+        if (!m_borders[w].isSet())
+          continue;
+        MWAWBorder const &border = *(m_borders[w]);
+        std::string property = border.getPropertyValue();
+        if (property.length() == 0) continue;
+        if (setAll == 0xF) {
+          propList.insert("fo:border", property.c_str());
+          break;
+        }
+        switch(w) {
+        case MWAWBorder::Left:
+          propList.insert("fo:border-left", property.c_str());
+          break;
+        case MWAWBorder::Right:
+          propList.insert("fo:border-right", property.c_str());
+          break;
+        case MWAWBorder::Top:
+          propList.insert("fo:border-top", property.c_str());
+          break;
+        case MWAWBorder::Bottom:
+          propList.insert("fo:border-bottom", property.c_str());
+          break;
+        default:
+          MWAW_DEBUG_MSG(("MWAWParagraph::addTo: can not send %d border\n",int(w)));
+          break;
+        }
+      }
+    }
+  }
+  propList.insert("fo:margin-top", *(m_spacings[1]));
+  propList.insert("fo:margin-bottom", *(m_spacings[2]));
+  switch (*m_spacingsInterlineType) {
+  case Fixed:
+    propList.insert("fo:line-height", *(m_spacings[0]), *m_spacingsInterlineUnit);
+    break;
+  case AtLeast:
+    if (*(m_spacings[0]) <= 0) {
+      static bool first = true;
+      if (first) {
+        MWAW_DEBUG_MSG(("MWAWParagraph::addTo: interline spacing seems bad\n"));
+        first = false;
+      }
+    } else if (*m_spacingsInterlineUnit != WPX_PERCENT)
+      propList.insert("style:line-height-at-least", *(m_spacings[0]), *m_spacingsInterlineUnit);
+    else {
+      propList.insert("style:line-height-at-least", *(m_spacings[0])*12.0, WPX_POINT);
+      static bool first = true;
+      if (first) {
+        first = false;
+        MWAW_DEBUG_MSG(("MWAWParagraph::addTo: assume height=12 to set line spacing at least with percent type\n"));
+      }
+    }
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MWAWParagraph::addTo: can not set line spacing type: %d\n",int(*m_spacingsInterlineType)));
+    break;
+  }
+  if (*m_breakStatus & NoBreakBit)
+    propList.insert("fo:keep-together", "always");
+  if (*m_breakStatus & NoBreakWithNextBit)
+    propList.insert("fo:keep-with-next", "always");
+}
+
+void MWAWParagraph::addTabsTo(WPXPropertyListVector &pList, double decalX) const
+{
+  for (size_t i=0; i<m_tabs->size(); i++)
+    m_tabs.get()[i].addTo(pList, decalX);
+}
+
 std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
 {
   if (pp.m_margins[0].get()<0||pp.m_margins[0].get()>0)
@@ -256,30 +360,4 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
   return o;
 }
 
-void MWAWParagraph::send(shared_ptr<MWAWContentListener> listener) const
-{
-  if (!listener)
-    return;
-  listener->setParagraph(*this);
-
-  MWAWList::Level level;
-  if (m_listLevelIndex.get() >= 1) {
-    double leftMargin = m_margins[1].get();
-    float factorToLevel = MWAWPosition::getScaleFactor(m_marginsUnit.get(), WPX_INCH);
-    level = m_listLevel.get();
-    level.m_labelWidth = (factorToLevel*leftMargin-level.m_labelIndent);
-    if (level.m_labelWidth<0.1)
-      level.m_labelWidth = 0.1;
-    leftMargin=level.m_labelIndent/factorToLevel;
-    listener->setParagraphMargin(leftMargin, MWAW_LEFT, m_marginsUnit.get());
-    level.m_labelIndent = 0;
-    shared_ptr<MWAWList> list=listener->getCurrentList();
-    if (!list) {
-      list.reset(new MWAWList);
-      list->set(m_listLevelIndex.get(), level);
-      listener->setCurrentList(list);
-    } else
-      list->set(m_listLevelIndex.get(), level);
-  }
-}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

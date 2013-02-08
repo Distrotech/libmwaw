@@ -1278,7 +1278,7 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
 void MSK4Text::setProperty(MSK4TextInternal::Paragraph const &p)
 {
   if (!m_listener) return;
-  p.send(m_listener);
+  m_listener->setParagraph(p);
   m_state->m_paragraph = p;
 }
 

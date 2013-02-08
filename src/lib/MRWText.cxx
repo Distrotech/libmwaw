@@ -1470,7 +1470,7 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
 void MRWText::setProperty(MRWTextInternal::Paragraph const &ruler)
 {
   if (!m_listener) return;
-  ruler.send(m_listener);
+  m_listener->setParagraph(ruler);
 }
 
 bool MRWText::readRulers(MRWEntry const &entry, int zoneId)

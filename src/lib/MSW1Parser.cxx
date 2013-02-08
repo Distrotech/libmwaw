@@ -1327,7 +1327,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
 void MSW1Parser::setProperty(MSW1ParserInternal::Paragraph const &para)
 {
   if (!m_listener) return;
-  para.send(m_listener);
+  m_listener->setParagraph(para);
 }
 
 ////////////////////////////////////////////////////////////

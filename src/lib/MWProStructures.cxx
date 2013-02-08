@@ -2727,7 +2727,7 @@ void MWProStructuresListenerState::sendParagraph(MWProStructuresInternal::Paragr
   if (!m_structures || !m_structures->m_listener)
     return;
   *m_paragraph = para;
-  para.send(m_structures->m_listener);
+  m_structures->m_listener->setParagraph(para);
   m_numTab = int(para.m_tabs->size());
 }
 

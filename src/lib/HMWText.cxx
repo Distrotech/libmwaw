@@ -935,7 +935,7 @@ bool HMWText::readStyles(shared_ptr<HMWZone> zone)
 void HMWText::setProperty(HMWTextInternal::Paragraph const &para, float)
 {
   if (!m_listener) return;
-  para.send(m_listener);
+  m_listener->setParagraph(para);
 }
 
 bool HMWText::readParagraph(HMWZone &zone, HMWTextInternal::Paragraph &para)

@@ -1295,7 +1295,7 @@ void WNText::setProperty(WNTextInternal::Paragraph const &ruler)
 {
   m_state->m_paragraph = ruler;
   if (!m_listener) return;
-  ruler.send(m_listener);
+  m_listener->setParagraph(ruler);
 }
 
 ////////////////////////////////////////////////////////////

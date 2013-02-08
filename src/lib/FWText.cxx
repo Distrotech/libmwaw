@@ -1090,6 +1090,10 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
 
 bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
 {
+  if (!m_listener) {
+    MWAW_DEBUG_MSG(("FWText::send can not find the listener\n"));
+    return false;
+  }
   MWAWInputStreamPtr input = zone->m_zone->m_input;
   libmwaw::DebugFile &ascii = zone->m_zone->getAsciiFile();
   libmwaw::DebugStream f;
@@ -1112,7 +1116,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     actBreakPos = listBreaks[size_t(actBreak)];
   }
   int actPage = 0, actCol = 0, numCol=1;
-  MWAWParagraph().send(m_listener);
+  m_listener->setParagraph(ruler);
   while(1) {
     pos = input->tell();
     bool sendData = false;
@@ -1934,7 +1938,7 @@ void FWText::setProperty(FWTextInternal::Paragraph const &para)
 {
   if (!m_listener) return;
   para.m_isSent = true;
-  para.send(m_listener);
+  m_listener->setParagraph(para);
 }
 
 ////////////////////////////////////////////////////////////

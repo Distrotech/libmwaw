@@ -44,7 +44,7 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWList.hxx"
 
-class MWAWContentListener;
+class WPXPropertyList;
 class WPXPropertyListVector;
 
 /** class to store a tab use by MWAWParagraph */
@@ -107,12 +107,6 @@ public:
   }
   //! destructor
   virtual ~MWAWParagraph();
-  //! set the interline
-  void setInterline(double value, WPXUnit unit, LineSpacingType type=Fixed) {
-    m_spacings[0]=value;
-    m_spacingsInterlineUnit=unit;
-    m_spacingsInterlineType=type;
-  }
   //! operator==
   bool operator==(MWAWParagraph const &p) const {
     return !operator!=(p);
@@ -125,6 +119,17 @@ public:
   bool hasBorders() const;
   //! check if the paragraph has different borders
   bool hasDifferentBorders() const;
+  //! set the interline
+  void setInterline(double value, WPXUnit unit, LineSpacingType type=Fixed) {
+    m_spacings[0]=value;
+    m_spacingsInterlineUnit=unit;
+    m_spacingsInterlineType=type;
+  }
+  //! add to the propList
+  void addTo(WPXPropertyList &propList, bool inTable) const;
+  //! add tabs to the propList
+  void addTabsTo(WPXPropertyListVector &propList, double decalX=0.0) const;
+
   //! insert the set values of para in the actual paragraph
   void insert(MWAWParagraph const &para) {
     for(int i = 0; i < 3; i++) {
@@ -146,8 +151,6 @@ public:
       m_borders[i].insert(para.m_borders[i]);
     m_extra += para.m_extra;
   }
-  //! send data to the listener
-  void send(shared_ptr<MWAWContentListener> listener) const;
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, MWAWParagraph const &ft);
 

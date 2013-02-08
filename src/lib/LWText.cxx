@@ -747,7 +747,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
 void LWText::setProperty(MWAWParagraph const &ruler)
 {
   if (!m_listener) return;
-  ruler.send(m_listener);
+  m_listener->setParagraph(ruler);
 }
 
 bool LWText::readRulers(MWAWEntry const &entry)
@@ -907,7 +907,7 @@ bool LWText::sendHeaderFooter(bool header)
   }
   MWAWParagraph para;
   para.m_justify=zone.m_justify;
-  para.send(m_listener);
+  m_listener->setParagraph(para);
   m_listener->setFont(zone.m_font);
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   input->seek(zone.m_pos.begin(), WPX_SEEK_SET);

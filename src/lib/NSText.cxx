@@ -952,7 +952,7 @@ void NSText::setProperty(NSTextInternal::Paragraph const &para, int width)
   double rMargin=double(width)/72.-origRMargin;
   if (rMargin < 0.0) rMargin = 0;
   const_cast<NSTextInternal::Paragraph &>(para).m_margins[2] = rMargin;
-  para.send(m_listener);
+  m_listener->setParagraph(para);
   const_cast<NSTextInternal::Paragraph &>(para).m_margins[2] = origRMargin;
 }
 

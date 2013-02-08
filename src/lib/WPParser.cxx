@@ -1381,7 +1381,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   MWAWParagraph para;
   if (numLines == 0 && info.m_height > 0) {
     para.setInterline(info.m_height, WPX_POINT);
-    para.send(m_listener);
+    m_listener->setParagraph(para);
   }
   for (int c = 0; c < numChars; c++) {
     if (actFont < numFonts && c ==  fonts[actFont].m_firstChar)
@@ -1390,10 +1390,10 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
       if (actLine) m_listener->insertEOL();
       if (numLines == 1 && info.m_height > lines[0].m_height) {
         para.setInterline(info.m_height, WPX_POINT);
-        para.send(m_listener);
+        m_listener->setParagraph(para);
       } else if (lines[(size_t) actLine].m_height) {
         para.setInterline(lines[(size_t) actLine].m_height, WPX_POINT);
-        para.send(m_listener);
+        m_listener->setParagraph(para);
       }
       actLine++;
     }
@@ -1624,7 +1624,7 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
   if (m_listener) {
     MWAWParagraph para=m_listener->getParagraph();
     para.setInterline(info.m_height, WPX_POINT);
-    para.send(m_listener);
+    m_listener->setParagraph(para);
     if (pict) {
       WPXBinaryData pictData;
       std::string type;
@@ -1633,7 +1633,7 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
     }
     m_listener->insertEOL();
     para.setInterline(1.0, WPX_PERCENT);
-    para.send(m_listener);
+    m_listener->setParagraph(para);
   }
   if (pict)
     ascii().skipZone(pos+4, pos+4+length-1);

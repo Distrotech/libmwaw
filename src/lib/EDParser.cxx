@@ -512,7 +512,7 @@ bool EDParser::sendIndex()
   for (size_t i=0; i <  m_state->m_indexList.size(); i++) {
     EDParserInternal::Index const &index = m_state->m_indexList[i];
     para.m_margins[0] = 0.3f*float(index.m_levelId+1);
-    para.send(m_listener);
+    m_listener->setParagraph(para);
     m_listener->setFont(actFont);
     for (size_t c=0; c < index.m_text.length(); c++)
       m_listener->insertCharacter((unsigned char)index.m_text[c]);

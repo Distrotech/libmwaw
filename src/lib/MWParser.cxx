@@ -1244,6 +1244,10 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
 bool MWParser::readText(MWParserInternal::Information const &info,
                         std::vector<int> const &lineHeight)
 {
+  if (!m_listener) {
+    MWAW_DEBUG_MSG(("MWParser::readText: can not find the listener\n"));
+    return false;
+  }
   MWAWEntry const &entry = info.m_data;
   if (!entry.valid()) return false;
 
@@ -1377,7 +1381,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
       para.setInterline(1.2, WPX_PERCENT);
     if (info.m_justifySet)
       para.m_justify=info.m_justify;
-    para.send(m_listener);
+    m_listener->setParagraph(para);
 
     if (!numFormat || listPos[0] != 0)
       m_listener->setFont(info.m_font);
@@ -1487,7 +1491,7 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   f << parag;
 
   if (m_listener)
-    parag.send(m_listener);
+    m_listener->setParagraph(parag);
   ascii().addPos(version()<=3 ? pos-4 : pos);
   ascii().addNote(f.str().c_str());
 
@@ -1597,7 +1601,7 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
     if (m_listener) {
       MWAWParagraph para=m_listener->getParagraph();
       para.setInterline(1.0, WPX_PERCENT);
-      para.send(m_listener);
+      m_listener->setParagraph(para);
 
       WPXBinaryData data;
       std::string type;

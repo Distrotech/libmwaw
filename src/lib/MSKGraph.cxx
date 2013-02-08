@@ -45,6 +45,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictBitmap.hxx"
 #include "MWAWPictMac.hxx"
@@ -2403,7 +2404,7 @@ void MSKGraph::sendTextBox(int zoneId)
   m_listener->setFont(MWAWFont(20,12));
   MWAWParagraph para;
   para.m_justify=textBox.m_justify;
-  para.send(m_listener);
+  m_listener->setParagraph(para);
   int numFonts = int(textBox.m_fontsList.size());
   int actFormatPos = 0;
   int numFormats = int(textBox.m_formats.size());
@@ -2491,7 +2492,7 @@ void MSKGraph::sendTable(int zoneId)
       cell.setPosition(cellPosition);
       cell.setBorders(borderPos, border);
       // fixme setBackgroundColor
-      para.send(m_listener);
+      m_listener->setParagraph(para);
       m_listener->openTableCell(cell, emptyList);
 
       MSKGraphInternal::Table::Cell const *tCell=table.getCell(cellPosition);

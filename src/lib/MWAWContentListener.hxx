@@ -40,9 +40,6 @@
 
 #include "libmwaw_internal.hxx"
 
-// REMOVEME
-#include "MWAWParagraph.hxx"
-
 class WPXBinaryData;
 class WPXDocumentInterface;
 class WPXString;
@@ -134,11 +131,6 @@ public:
   //! returns the actual paragraph
   MWAWParagraph const &getParagraph() const;
 
-  /** sets the paragraph margin.
-   * \note pos must be MWAW_LEFT, MWAW_RIGHT, MWAW_TOP, MWAW_BOTTOM
-   */
-  void setParagraphMargin(double margin, int pos, WPXUnit unit=WPX_INCH);
-
   // ------ list format -----------
   /** function to set the actual list */
   void setCurrentList(shared_ptr<MWAWList> list);
@@ -224,8 +216,6 @@ protected:
   void _openParagraph();
   void _closeParagraph();
   void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
-  void _getTabStops(WPXPropertyListVector &tabStops);
-  void _appendJustification(WPXPropertyList &propList, MWAWParagraph::Justification justification);
   void _resetParagraphState(const bool isListElement=false);
 
   void _openListElement();

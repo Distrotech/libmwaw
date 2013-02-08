@@ -626,7 +626,7 @@ void MSWTextStyles::setProperty(MSWStruct::Paragraph const &para,
   if (!m_listener) return;
   if (para.m_section.isSet() && !recursifCall)
     setProperty(para.m_section.get());
-  para.send(m_listener);
+  m_listener->setParagraph(para);
 }
 
 ////////////////////////////////////////////////////////////

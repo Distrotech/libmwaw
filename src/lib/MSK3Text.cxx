@@ -432,7 +432,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
   if (m_listener && zone.m_height > 0) {
     MWAWParagraph para=m_listener->getParagraph();
     para.setInterline(zone.m_height, WPX_POINT);
-    para.send(m_listener);
+    m_listener->setParagraph(para);
   }
   bool firstChar = true;
   while(!m_input->atEOS()) {
@@ -737,7 +737,7 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MSK3TextInternal:
 void MSK3Text::setProperty(MSK3TextInternal::Paragraph const &para)
 {
   if (!m_listener) return;
-  para.send(m_listener);
+  m_listener->setParagraph(para);
 }
 
 ////////////////////////////////////////////////////////////
