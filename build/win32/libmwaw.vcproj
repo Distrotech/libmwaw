@@ -1533,6 +1533,26 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\TTParser.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\WNParser.cxx"
 				>
 				<FileConfiguration
@@ -1939,6 +1959,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\NSText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\TTParser.hxx"
 				>
 			</File>
 			<File

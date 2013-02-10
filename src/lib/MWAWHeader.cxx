@@ -188,6 +188,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MINDW, 2));
         return res;
       }
+    } else if (creator=="TBB5") {
+      if (type=="TEXT" || type=="ttro") {
+        res.push_back(MWAWHeader(MWAWDocument::TEDIT, 1));
+        return res;
+      }
     } else if (creator=="ZWRT") {
       if (type=="Zart") {
         res.push_back(MWAWHeader(MWAWDocument::ZWRT, 1));
@@ -210,6 +215,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       }
       if (type=="nX^2") {
         res.push_back(MWAWHeader(MWAWDocument::WNOW, 3));
+        return res;
+      }
+    } else if (creator=="ttxt") {
+      if (type=="TEXT" || type=="ttro") {
+        res.push_back(MWAWHeader(MWAWDocument::TEACH, 1));
         return res;
       }
     }

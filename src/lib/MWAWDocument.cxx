@@ -52,6 +52,7 @@
 #include "MSW1Parser.hxx"
 #include "MSWParser.hxx"
 #include "NSParser.hxx"
+#include "TTParser.hxx"
 #include "WNParser.hxx"
 #include "WPParser.hxx"
 #include "ZWParser.hxx"
@@ -169,6 +170,12 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
   case NISUSW:
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
+  case TEACH:
+    confidence = MWAW_CONFIDENCE_GOOD;
+    break;
+  case TEDIT:
+    confidence = MWAW_CONFIDENCE_GOOD;
+    break;
   case WNOW:
     confidence = MWAW_CONFIDENCE_EXCELLENT;
     break;
@@ -178,6 +185,8 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
   case ZWRT:
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
+  case ANARC:
+  case JOLIW:
   case UNKNOWN:
   default:
     break;
@@ -288,6 +297,12 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       parser.parse(documentInterface);
       break;
     }
+    case TEACH:
+    case TEDIT: {
+      TTParser parser (ip, rsrcParser, header.get());
+      parser.parse(documentInterface);
+      break;
+    }
     case WNOW: {
       WNParser parser (ip, rsrcParser, header.get());
       parser.parse(documentInterface);
@@ -303,6 +318,8 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       parser.parse(documentInterface);
       break;
     }
+    case ANARC:
+    case JOLIW:
     case UNKNOWN:
     default:
       break;
@@ -430,6 +447,11 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
       NSParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);
     }
+    case MWAWDocument::TEACH:
+    case MWAWDocument::TEDIT: {
+      TTParser parser(input, rsrcParser, &header);
+      return parser.checkHeader(&header, strict);
+    }
     case MWAWDocument::WNOW: {
       WNParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);
@@ -442,6 +464,8 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
       ZWParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);
     }
+    case MWAWDocument::ANARC:
+    case MWAWDocument::JOLIW:
     case MWAWDocument::UNKNOWN:
     default:
       break;

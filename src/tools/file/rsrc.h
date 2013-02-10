@@ -71,6 +71,8 @@ public:
   //! returns a string correspond to an id
   std::string getString(int id);
 
+  //! returns true if we have an entry corresponding to a type 
+  bool hasEntry(std::string, int id);
 protected:
   //! try to parse a version entry
   bool parseVers(Version &vers);

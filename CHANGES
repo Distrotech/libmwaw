@@ -1,5 +1,10 @@
 CHANGES:
 
+02/09/2013:
+- begin to rewrite MWAWParagraph
+- add a SimpleText/TeachText v1.2 parser
+- add a Tex-Edit v2.7 parser
+
 02/06/2013:
 - add a parser for eDOC v2.1 document
 

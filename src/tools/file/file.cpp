@@ -205,6 +205,12 @@ bool File::readFileInformation()
     checkFInfoType("ALD5", "Pagemaker5") || checkFInfoType("Pagemaker5");
   } else if (m_fInfoCreator=="ALB6") {
     checkFInfoType("ALD6", "Pagemaker6") || checkFInfoType("Pagemaker6");
+  } else if (m_fInfoCreator=="AOqc") {
+    checkFInfoType("TEXT","America Online") || checkFInfoType("ttro","America Online[readOnly]") ||
+    checkFInfoType("America Online");
+  } else if (m_fInfoCreator=="AOS1") {
+    checkFInfoType("TEXT","eWorld") || checkFInfoType("ttro","eWorld[readOnly]") ||
+    checkFInfoType("eWorld");
   } else if (m_fInfoCreator=="BOBO") {
     checkFInfoType("CWDB","ClarisWorks/AppleWorks 1.0[Database]")||
     checkFInfoType("CWD2","ClarisWorks/AppleWorks 2.0-3.0[Database]")||
@@ -242,6 +248,9 @@ bool File::readFileInformation()
   } else if (m_fInfoCreator=="FWRT") {
     checkFInfoType("FWRM","FullWrite 1.0") || checkFInfoType("FWRI","FullWrite 2.0") ||
     checkFInfoType("FWRI","FullWrite") || checkFInfoType("FullWrite");
+  } else if (m_fInfoCreator=="JWrt") {
+    checkFInfoType("TEXT","JoliWrite") || checkFInfoType("ttro","JoliWrite[readOnly]") ||
+    checkFInfoType("JoliWrite");
   } else if (m_fInfoCreator=="HMiw") {
     checkFInfoType("IWDC","HanMac Word-J") || checkFInfoType("HanMac Word-J");
   } else if (m_fInfoCreator=="HMdr") {
@@ -301,6 +310,9 @@ bool File::readFileInformation()
     checkFInfoType("SIT!", "archive SIT") || checkFInfoType("SIT");
   } else if (m_fInfoCreator=="SSIW") { // check me
     checkFInfoType("WordPerfect 1.0");
+  } else if (m_fInfoCreator=="TBB5") {
+    checkFInfoType("TEXT","Tex-Edit") || checkFInfoType("ttro","Tex-Edit[readOnly]") ||
+    checkFInfoType("Tex-Edit");
   } else if (m_fInfoCreator=="WORD") {
     checkFInfoType("WDBN","Microsoft Word 1") || checkFInfoType("Microsoft Word 1");
   } else if (m_fInfoCreator=="WPC2") {
@@ -327,7 +339,22 @@ bool File::readFileInformation()
     checkFInfoType("nX^d","WriteNow 2") || checkFInfoType("nX^2","WriteNow 3-4") ||
     checkFInfoType("WriteNow");
   } else if (m_fInfoCreator=="ttxt") {
-    checkFInfoType("TEXT","Basic text");
+    if (m_fInfoType=="TEXT") {
+      /* a little complex can be Classic MacOS SimpleText/TeachText or
+      a << normal >> text file */
+      XAttr rsrcAttr(m_fName.c_str());
+      libmwaw_tools::InputStream *rsrcStream =
+        rsrcAttr.getStream("com.apple.ResourceFork");
+      bool ok = false;
+      if (rsrcStream && rsrcStream->length()) {
+        libmwaw_tools::RSRC rsrcManager(*rsrcStream);
+        ok = rsrcManager.hasEntry("styl", 128);
+      }
+      if (rsrcStream) delete rsrcStream;
+      if (ok) checkFInfoType("TEXT","TeachText/SimpleText");
+      else checkFInfoType("TEXT","Basic text");
+    } else
+      checkFInfoType("ttro","TeachText/SimpleText[readOnly]");
   }
   // now by type
   else if (m_fInfoType=="AAPL") {

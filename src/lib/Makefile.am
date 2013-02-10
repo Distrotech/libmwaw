@@ -159,6 +159,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	NSStruct.hxx			\
 	NSText.cxx			\
 	NSText.hxx			\
+	TTParser.cxx			\
+	TTParser.hxx			\
 	WNEntry.hxx			\
 	WNParser.cxx			\
 	WNParser.hxx			\

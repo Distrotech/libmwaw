@@ -360,6 +360,10 @@ SOURCE=..\..\src\lib\NSText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\TTParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WNParser.cxx
 # End Source File
 # Begin Source File
@@ -673,6 +677,10 @@ SOURCE=..\..\src\lib\NSStruct.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\NSText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\TTParser.hxx
 # End Source File
 # Begin Source File
 

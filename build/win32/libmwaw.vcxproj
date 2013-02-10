@@ -374,6 +374,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\TTParser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\WNParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -472,6 +476,7 @@
     <ClInclude Include="..\..\src\lib\NSParser.hxx" />
     <ClInclude Include="..\..\src\lib\NSStruct.hxx" />
     <ClInclude Include="..\..\src\lib\NSText.hxx" />
+    <ClInclude Include="..\..\src\lib\TTParser.hxx" />
     <ClInclude Include="..\..\src\lib\WNEntry.hxx" />
     <ClInclude Include="..\..\src\lib\WNParser.hxx" />
     <ClInclude Include="..\..\src\lib\WNText.hxx" />

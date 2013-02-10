@@ -92,6 +92,7 @@ SLOFILES= \
 	$(SLO)$/NSParser.obj			\
 	$(SLO)$/NSStruct.obj			\
 	$(SLO)$/NSText.obj			\
+	$(SLO)$/TTParser.obj			\
 	$(SLO)$/WNParser.obj			\
 	$(SLO)$/WNText.obj			\
 	$(SLO)$/WPParser.obj			\

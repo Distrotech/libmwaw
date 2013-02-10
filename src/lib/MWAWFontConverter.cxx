@@ -568,6 +568,7 @@ void KnownConversion::initMaps()
   m_familyMap["Osaka Tohaba"]="Osaka";
   m_familyMap["Heisei Mincho"]="Osaka";
   m_familyMap["Heisei KakuGothic"]="Osaka";
+  m_familyMap["Hiragino KakuGothic ProN W3"]="Osaka";
   m_familyMap["Hiragino MaruGo W3"]="Osaka";
   m_familyMap["Hiragino MaruGo W4"]="Osaka";
   m_familyMap["Hiragino MaruGo W6"]="Osaka";
@@ -792,6 +793,7 @@ void State::initMaps()
   m_idNameMap[16436] = "Osaka Tohaba";
   m_idNameMap[16700] = "Heisei Mincho";
   m_idNameMap[16701] = "Heisei KakuGothic";
+  m_idNameMap[16800] = "Hiragino KakuGothic ProN W3";
   m_idNameMap[35934] = "Hiragino MaruGo W4";
   m_idNameMap[64640] = "Hiragino MaruGo W3";
   m_idNameMap[64643] = "Hiragino MaruGo W6";

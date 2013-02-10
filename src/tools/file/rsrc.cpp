@@ -156,6 +156,15 @@ std::vector<RSRC::MapEntry> RSRC::getMapEntries(std::string type)
   return res;
 }
 
+bool RSRC::hasEntry(std::string type, int id)
+{
+  std::vector<MapEntry> lEntries = RSRC::getMapEntries(type);
+  for (size_t n = 0; n < lEntries.size(); n++) {
+    if (lEntries[n].m_id == id) return true;
+  }
+  return false;
+}
+
 std::string RSRC::getString(int id)
 {
   std::string res("");
