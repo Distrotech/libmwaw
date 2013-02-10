@@ -314,7 +314,7 @@ bool TTParser::sendText()
       unsigned char nextC=(unsigned char) input->readULong(1);
       if (nextC < 0x20) {
         m_listener->insertChar('^');
-        m_listener->insertChar('@'+nextC);
+        m_listener->insertChar(uint8_t('@'+nextC));
         continue;
       }
       input->seek(-1, WPX_SEEK_CUR);

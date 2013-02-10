@@ -338,6 +338,8 @@ bool File::readFileInformation()
   } else if (m_fInfoCreator=="nX^n") {
     checkFInfoType("nX^d","WriteNow 2") || checkFInfoType("nX^2","WriteNow 3-4") ||
     checkFInfoType("WriteNow");
+  } else if (m_fInfoCreator=="ntxt") {
+    checkFInfoType("TEXT","Anarcho");
   } else if (m_fInfoCreator=="ttxt") {
     if (m_fInfoType=="TEXT") {
       /* a little complex can be Classic MacOS SimpleText/TeachText or

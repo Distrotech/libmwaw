@@ -63,13 +63,11 @@ class MWAWDocument
 {
 public:
   /** an enum to define the different type of document
-  -ANARC: Anarcho (nothing done)
   -CW: ClarisWorks/AppleWorks document (basic)
   -DM: DocMaker (v4)
   -ED: eDOC (v2)
   -FULLW: FullWrite Professional (basic)
   -HMAC: HanMac Word-J or K (basic done for K document, almost nothing done for J document)
-  -JOLIW: JoliWrite (nothing done )
   -LWTEXT: LightWayText ( only v4.5 Mac format )
   -MARIW: Mariner Write ( only v1.6-v3.5 Mac Classic)
   -MINDW: MindWrite
@@ -84,7 +82,7 @@ public:
   -WPLUS: writerplus document
   -ZWRT: Z-Write : v1.3
   */
-  enum DocumentType { UNKNOWN, CW, FULLW, MINDW, MSWORD, MSWORKS, MW, MWPRO, NISUSW, WNOW, WPLUS, HMAC, LWTEXT, MARIW, ZWRT, DM, ANARC, ED, JOLIW, TEACH, TEDIT };
+  enum DocumentType { UNKNOWN, CW, FULLW, MINDW, MSWORD, MSWORKS, MW, MWPRO, NISUSW, WNOW, WPLUS, HMAC, LWTEXT, MARIW, ZWRT, DM, ED, TEACH, TEDIT };
 
   /** an enum to define the kind of document */
   enum DocumentKind { K_UNKNOWN, K_TEXT, K_DRAW,
