@@ -8,6 +8,7 @@ EXTRA_DIST = \
 	mwaw2raw.dsp		\
 	mwaw2text.dsp		\
 	mwawFile.dsp		\
+	mwawZip.dsp		\
 				\
 	libmwaw.vcproj.sln	\
 	libmwaw.vcproj		\
@@ -15,10 +16,12 @@ EXTRA_DIST = \
 	mwaw2raw.vcproj		\
 	mwaw2text.vcproj	\
 	mwawFile.vcproj 	\
+	mwawZip.vcproj 		\
 				\
 	libmwaw.vcxproj.sln	\
 	libmwaw.vcxproj		\
 	mwaw2html.vcxproj	\
 	mwaw2raw.vcxproj	\
 	mwaw2text.vcxproj	\
-	mwawFile.vcxproj
+	mwawFile.vcxproj	\
+	mwawZip.vcxproj

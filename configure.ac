@@ -72,6 +72,7 @@ AS_CASE([$host],
 		MWAW2TEXT_WIN32_RESOURCE=mwaw2text-win32res.lo
 		MWAW2RAW_WIN32_RESOURCE=mwaw2raw-win32res.lo
 		MWAWFILE_WIN32_RESOURCE=mwawFile-win32res.lo
+		MWAWZIP_WIN32_RESOURCE=mwawZip-win32res.lo
 	], [
 		native_win32=no
 		LIBMWAW_WIN32_RESOURCE=
@@ -80,6 +81,7 @@ AS_CASE([$host],
 		MWAW2TEXT_WIN32_RESOURCE=
 		MWAW2RAW_WIN32_RESOURCE=
 		MWAWFILE_WIN32_RESOURCE=
+		MWAWZIP_WIN32_RESOURCE=
 	]
 )
 AC_MSG_RESULT([$native_win32])
@@ -90,6 +92,7 @@ AC_SUBST(MWAW2HTML_WIN32_RESOURCE)
 AC_SUBST(MWAW2TEXT_WIN32_RESOURCE)
 AC_SUBST(MWAW2RAW_WIN32_RESOURCE)
 AC_SUBST(MWAWFILE_WIN32_RESOURCE)
+AC_SUBST(MWAWZIP_WIN32_RESOURCE)
 
 AC_MSG_CHECKING([for Win32 platform in general])
 AS_CASE([$host],
@@ -345,6 +348,7 @@ else
 fi
 AC_SUBST(ZLIB_CFLAGS)
 AC_SUBST(ZLIB_LIBS)
+AM_CONDITIONAL([WITH_LIBMWAW_ZIP], [test "x$with_zip" != "xno"])
 
 # =============
 # Documentation
@@ -380,6 +384,8 @@ src/conv/text/mwaw2text.rc
 src/tools/Makefile
 src/tools/file/Makefile
 src/tools/file/mwawFile.rc
+src/tools/zip/Makefile
+src/tools/zip/mwawZip.rc
 src/lib/Makefile
 src/lib/libmwaw.rc
 docs/Makefile

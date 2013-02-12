@@ -43,10 +43,6 @@
 
 #include <sys/stat.h>
 
-/**
-   Can be compile with
-   g++ -o mwawFile file.cpp -framework Carbon
-*/
 namespace libmwaw_tools
 {
 class Exception
