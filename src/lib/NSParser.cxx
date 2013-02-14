@@ -335,15 +335,8 @@ void NSParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_graphParser.reset(new NSGraph(getInput(), *this, getFontConverter()));
-  m_textParser.reset(new NSText(getInput(), *this, getFontConverter()));
-}
-
-void NSParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-  m_textParser->setListener(listen);
-  m_graphParser->setListener(listen);
+  m_graphParser.reset(new NSGraph(*this));
+  m_textParser.reset(new NSText(*this));
 }
 
 MWAWInputStreamPtr NSParser::rsrcInput()

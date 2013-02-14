@@ -317,12 +317,6 @@ void MWProParser::init()
   m_pageSpan.setMarginRight(0.1);
 }
 
-void MWProParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-  m_structures->setListener(listen);
-}
-
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////

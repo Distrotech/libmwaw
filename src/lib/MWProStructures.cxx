@@ -538,7 +538,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MWProStructures::MWProStructures(MWProParser &parser) :
-  m_input(), m_mainParser(parser), m_listener(), m_convertissor(m_mainParser.getFontConverter()),
+  m_parserState(parser.getParserState()), m_input(), m_mainParser(parser),
   m_state(), m_asciiFile(), m_asciiName("")
 {
   init();
@@ -552,20 +552,19 @@ MWProStructures::~MWProStructures()
 void MWProStructures::init()
 {
   m_state.reset(new MWProStructuresInternal::State);
-  m_listener.reset();
   m_asciiName = "struct";
-}
-
-void MWProStructures::setListener(MWAWContentListenerPtr listen)
-{
-  m_listener = listen;
 }
 
 int MWProStructures::version() const
 {
   if (m_state->m_version < 0)
-    m_state->m_version = m_mainParser.version();
+    m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
+}
+
+MWAWContentListenerPtr &MWProStructures::getListener()
+{
+  return m_parserState->m_listener;
 }
 
 int MWProStructures::numPages() const
@@ -1107,7 +1106,7 @@ bool MWProStructures::readFontsName()
         name += char(m_input->readULong(1));
       if (name.length()) {
         if (st == 0)
-          m_convertissor->setCorrespondance(fId, name);
+          m_parserState->m_fontConverter->setCorrespondance(fId, name);
         f << name << ",";
       }
       if (vers)
@@ -1172,7 +1171,7 @@ bool MWProStructures::readFontsDef()
     m_state->m_fontsList.push_back(font);
     f.str("");
     f << "FontsDef-C" << n << ":";
-    f << font.m_font.getDebugString(m_convertissor) << font << ",";
+    f << font.m_font.getDebugString(m_parserState->m_fontConverter) << font << ",";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
@@ -1551,7 +1550,7 @@ bool MWProStructures::readCharStyles()
       MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: can not read the font\n"));
       f << "###";
     } else
-      f << font.m_font.getDebugString(m_convertissor) << font << ",";
+      f << font.m_font.getDebugString(m_parserState->m_fontConverter) << font << ",";
 
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1680,7 +1679,7 @@ bool MWProStructures::readStyle(int styleId)
 
   f.str("");
   f << "FontsDef:";
-  f << font.m_font.getDebugString(m_convertissor) << font << ",";
+  f << font.m_font.getDebugString(m_parserState->m_fontConverter) << font << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
@@ -2395,6 +2394,7 @@ bool MWProStructures::isSent(int blockId)
 // send a block
 bool MWProStructures::send(int blockId, bool mainZone)
 {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
   shared_ptr<MWProStructuresInternal::Block> block;
   if (version()==0) {
     if (blockId < 0) {
@@ -2434,21 +2434,21 @@ bool MWProStructures::send(int blockId, bool mainZone)
     if (m_state->m_tablesMap.find(blockId) == m_state->m_tablesMap.end()) {
       MWAW_DEBUG_MSG(("MWProStructures::send: can not find table with id=%d\n", blockId));
     } else {
-      bool needTextBox = m_listener && !block->m_attachment && block->m_textboxCellType == 0;
+      bool needTextBox = listener && !block->m_attachment && block->m_textboxCellType == 0;
       if (needTextBox) {
         block->m_textboxCellType = 2;
         m_mainParser.sendTextBoxZone(blockId, block->getPosition());
       } else {
         shared_ptr<MWProStructuresInternal::Table> table =
           m_state->m_tablesMap.find(blockId)->second;
-        if (!table->sendTable(m_listener))
-          table->sendAsText(m_listener);
+        if (!table->sendTable(listener))
+          table->sendAsText(listener);
         block->m_textboxCellType = 0;
       }
     }
   } else if (block->m_type == 4 || block->m_type == 6) {
     // probably ok, can be an empty cell, textbox, header/footer ..
-    if (m_listener) m_listener->insertChar(' ');
+    if (listener) listener->insertChar(' ');
   } else if (block->m_type == 8) { // empty frame
     WPXPropertyList extras;
     block->fillFramePropertyList(extras);
@@ -2464,9 +2464,10 @@ bool MWProStructures::send(int blockId, bool mainZone)
 void MWProStructures::flushExtra()
 {
   int vers = version();
-  if (m_listener && m_listener->isSectionOpened()) {
-    m_listener->closeSection();
-    m_listener->openSection();
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (listener && listener->isSectionOpened()) {
+    listener->closeSection();
+    listener->openSection();
   }
   // first send the text
   for (size_t i = 0; i < m_state->m_blocksList.size(); i++) {
@@ -2483,7 +2484,7 @@ void MWProStructures::flushExtra()
       // force to non floating position
       m_state->m_blocksList[i]->m_attachment = true;
       send(id);
-      if (m_listener) m_listener->insertEOL();
+      if (listener) listener->insertEOL();
     } else if (m_state->m_blocksList[i]->m_type == 3) {
       // force to non floating position
       m_state->m_blocksList[i]->m_attachment = true;
@@ -2584,8 +2585,9 @@ void MWProStructuresListenerState::sendChar(char c)
 {
   bool newPageDone = m_newPageDone;
   m_newPageDone = false;
-  if (!m_structures || !m_structures->m_listener)
-    return;
+  if (!m_structures) return;
+  MWAWContentListenerPtr listener=m_structures->getListener();
+  if (!listener) return;
   switch(c) {
   case 0:
     break; // ignore
@@ -2596,26 +2598,26 @@ void MWProStructuresListenerState::sendChar(char c)
   case 7:
     if (m_structures->version()==0) {
       m_actTab = 0;
-      m_structures->m_listener->insertEOL(true);
+      listener->insertEOL(true);
     } else {
       MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendChar: Find odd char 0x7\n"));
     }
     break;
   case 0x9:
     if (m_actTab++ < m_numTab)
-      m_structures->m_listener->insertTab();
+      listener->insertTab();
     else
-      m_structures->m_listener->insertChar(' ');
+      listener->insertChar(' ');
     break;
   case 0xa:
     m_actTab = 0;
     if (newPageDone) break;
-    m_structures->m_listener->insertEOL();
+    listener->insertEOL();
     break; // soft break
   case 0xd:
     m_actTab = 0;
     if (newPageDone) break;
-    m_structures->m_listener->insertEOL();
+    listener->insertEOL();
     sendParagraph(*m_paragraph);
     break;
   case 0xc:
@@ -2626,8 +2628,8 @@ void MWProStructuresListenerState::sendChar(char c)
     m_actTab = 0;
     if (m_isMainZone) {
       if (m_numCols <= 1) newPage();
-      else if (m_structures->m_listener)
-        m_structures->m_listener->insertBreak(MWAWContentListener::ColumnBreak);
+      else if (listener)
+        listener->insertBreak(MWAWContentListener::ColumnBreak);
     }
     break;
   case 0xe:
@@ -2635,8 +2637,8 @@ void MWProStructuresListenerState::sendChar(char c)
     if (!m_isMainZone) break;
 
     // create a new section here
-    if (m_structures->m_listener->isSectionOpened())
-      m_structures->m_listener->closeSection();
+    if (listener->isSectionOpened())
+      listener->closeSection();
     sendSection(++m_section);
     break;
   case 2: // for MWII
@@ -2648,7 +2650,7 @@ void MWProStructuresListenerState::sendChar(char c)
     break;
     /* 0x10 and 0x13 : seems also to have some meaning ( replaced by 1 in on field )*/
   default:
-    m_structures->m_listener->insertCharacter((unsigned char)c);
+    listener->insertCharacter((unsigned char)c);
     break;
   }
 }
@@ -2665,7 +2667,7 @@ bool MWProStructuresListenerState::resendAll()
 bool MWProStructuresListenerState::sendFont(int id)
 {
   if (!m_structures) return false;
-  if (!m_structures->m_listener) return true;
+  if (!m_structures->getListener()) return true;
   if (id < 0 || id >= int(m_structures->m_state->m_fontsList.size())) {
     MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendFont: can not find font %d\n", id));
     return false;
@@ -2677,12 +2679,12 @@ bool MWProStructuresListenerState::sendFont(int id)
 
 void MWProStructuresListenerState::sendFont(MWProStructuresInternal::Font const &font)
 {
-  if (!m_structures || !m_structures->m_listener)
+  if (!m_structures || !m_structures->getListener())
     return;
 
-  m_structures->m_listener->setFont(font.m_font);
+  m_structures->getListener()->setFont(font.m_font);
   *m_font = font;
-  m_font->m_font =  m_structures->m_listener->getFont();
+  m_font->m_font =  m_structures->getListener()->getFont();
 }
 
 std::string MWProStructuresListenerState::getFontDebugString(int fId)
@@ -2701,7 +2703,7 @@ std::string MWProStructuresListenerState::getFontDebugString(int fId)
 
   s << "C" << fId << ":";
   s << m_structures->m_state->m_fontsList[(size_t)fId].m_font.getDebugString
-    (m_structures->m_convertissor)
+    (m_structures->m_parserState->m_fontConverter)
     << m_structures->m_state->m_fontsList[(size_t)fId] << ",";
 
   return s.str();
@@ -2711,7 +2713,7 @@ std::string MWProStructuresListenerState::getFontDebugString(int fId)
 bool MWProStructuresListenerState::sendParagraph(int id)
 {
   if (!m_structures) return false;
-  if (!m_structures->m_listener) return true;
+  if (!m_structures->getListener()) return true;
   if (id < 0 || id >= int(m_structures->m_state->m_paragraphsList.size())) {
     MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendParagraph: can not find paragraph %d\n", id));
     return false;
@@ -2723,10 +2725,10 @@ bool MWProStructuresListenerState::sendParagraph(int id)
 
 void MWProStructuresListenerState::sendParagraph(MWProStructuresInternal::Paragraph const &para)
 {
-  if (!m_structures || !m_structures->m_listener)
+  if (!m_structures || !m_structures->getListener())
     return;
   *m_paragraph = para;
-  m_structures->m_listener->setParagraph(para);
+  m_structures->getListener()->setParagraph(para);
   m_numTab = int(para.m_tabs->size());
 }
 
@@ -2750,10 +2752,13 @@ std::string MWProStructuresListenerState::getParagraphDebugString(int pId)
 // ----------- section function ---------------------
 void MWProStructuresListenerState::sendSection(int nSection)
 {
-  if (!m_structures || !m_structures->m_listener) return;
-  if (m_structures->m_listener->isSectionOpened()) {
+
+  if (!m_structures) return;
+  MWAWContentListenerPtr listener=m_structures->getListener();
+  if (!listener) return;
+  if (listener->isSectionOpened()) {
     MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendSection: a section is already opened\n"));
-    m_structures->m_listener->closeSection();
+    listener->closeSection();
   }
   if (m_structures->version()==0) {
     m_numCols = m_structures->m_mainParser.numColumns();
@@ -2761,13 +2766,13 @@ void MWProStructuresListenerState::sendSection(int nSection)
       MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendSection: num columns is to big, reset to 1\n"));
       m_numCols = 1;
     }
-    if (m_numCols==1) m_structures->m_listener->openSection();
+    if (m_numCols==1) listener->openSection();
     else {
       std::vector<int> colSize;
       float colWidth =  float(72.*m_structures->m_mainParser.pageWidth()/m_numCols);
       colSize.resize(size_t(m_numCols));
       for (size_t i = 0; i < size_t(m_numCols); i++) colSize[i] = int(colWidth);
-      m_structures->m_listener->openSection(colSize, WPX_POINT);
+      listener->openSection(colSize, WPX_POINT);
     }
     return;
   }
@@ -2780,12 +2785,12 @@ void MWProStructuresListenerState::sendSection(int nSection)
     m_structures->m_state->m_sectionsList[(size_t)nSection];
   if (nSection && section.m_start != section.S_Line) newPage();
   m_numCols = section.numColumns();
-  if (m_numCols==1) m_structures->m_listener->openSection();
+  if (m_numCols==1) listener->openSection();
   else {
     std::vector<int> colSize;
     colSize.resize(size_t(m_numCols));
     for (size_t i = 0; i < size_t(m_numCols); i++) colSize[i] = int(section. m_colsWidth[i]);
-    m_structures->m_listener->openSection(colSize, WPX_POINT);
+    listener->openSection(colSize, WPX_POINT);
   }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

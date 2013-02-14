@@ -113,6 +113,10 @@ protected:
   //! constructor using a state
   MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_asciiName("") { }
 
+  //! returns the parser state
+  MWAWParserStatePtr getParserState() {
+    return m_parserState;
+  }
   //! returns the header
   MWAWHeader *getHeader() {
     return m_parserState->m_header;

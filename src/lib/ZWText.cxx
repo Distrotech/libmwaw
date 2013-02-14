@@ -227,9 +227,8 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-ZWText::ZWText(MWAWInputStreamPtr ip, ZWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert),
-  m_state(new ZWTextInternal::State), m_mainParser(&parser), m_asciiFile(parser.ascii())
+ZWText::ZWText(ZWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new ZWTextInternal::State), m_mainParser(&parser)
 {
 }
 
@@ -239,7 +238,7 @@ ZWText::~ZWText()
 int ZWText::version() const
 {
   if (m_state->m_version < 0)
-    m_state->m_version = m_mainParser->version();
+    m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
@@ -414,7 +413,8 @@ ZWText::TextCode ZWText::isTextCode
 
 bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entry)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("ZWText::sendText: can not find a listener\n"));
     return false;
   }
@@ -438,7 +438,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
   long cPos = pos-zone.m_pos.begin();
   while (fIt != zone.m_idFontMap.end() && fIt->first<cPos)
     actFont = fIt++->second;
-  m_listener->setFont(actFont.m_font);
+  listener->setFont(actFont.m_font);
   int fId=0;
   bool isCenter = false;
   MWAWParagraph para;
@@ -457,7 +457,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
     if (done) break;
     while (fIt != zone.m_idFontMap.end() && fIt->first<=cPos) {
       actFont = fIt++->second;
-      m_listener->setFont(actFont.m_font);
+      listener->setFont(actFont.m_font);
       f << "[F" << fId++ << "]";
     }
 
@@ -471,7 +471,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
       case Center:
         isCenter=true;
         para.m_justify=MWAWParagraph::JustificationCenter;
-        m_listener->setParagraph(para);
+        listener->setParagraph(para);
         break;
       case NewPage:
         if (main)
@@ -486,7 +486,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
           MWAW_DEBUG_MSG(("ZWText::sendText: find a tag, uses bookmark\n"));
         }
         MWAWSubDocumentPtr subdoc(new ZWTextInternal::SubDocument(*this, input, zone.m_id, textData, textCode));
-        m_listener->insertComment(subdoc);
+        listener->insertComment(subdoc);
         break;
       }
       case None:
@@ -502,18 +502,18 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
     }
     switch(c) {
     case 0x9:
-      m_listener->insertTab();
+      listener->insertTab();
       break;
     case 0xd:
-      m_listener->insertEOL();
+      listener->insertEOL();
       if (isCenter) {
         isCenter=false;
         para.m_justify=MWAWParagraph::JustificationLeft;
-        m_listener->setParagraph(para);
+        listener->setParagraph(para);
       }
       break;
     default:
-      m_listener->insertCharacter((unsigned char) c, input, endPos);
+      listener->insertCharacter((unsigned char) c, input, endPos);
       break;
     }
     f << c;
@@ -523,7 +523,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
 
 bool ZWText::sendText(int sectionId, MWAWEntry const &entry)
 {
-  if (!m_listener) {
+  if (!m_parserState->m_listener) {
     MWAW_DEBUG_MSG(("ZWText::sendText: can not find a listener\n"));
     return false;
   }
@@ -539,7 +539,7 @@ bool ZWText::sendText(int sectionId, MWAWEntry const &entry)
 
 bool ZWText::sendMainText()
 {
-  if (!m_listener) {
+  if (!m_parserState->m_listener) {
     MWAW_DEBUG_MSG(("ZWText::sendMainText: can not find a listener\n"));
     return false;
   }
@@ -615,7 +615,7 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
 
     f.str("");
     f << entry.type() << "-F" << i << ":cPos=" << std::hex << cPos << std::dec << ","
-      << font.m_font.getDebugString(m_convertissor) << font;
+      << font.m_font.getDebugString(m_parserState->m_fontConverter) << font;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(pos+20, WPX_SEEK_SET);
@@ -726,7 +726,8 @@ bool ZWText::readStyles(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 bool ZWText::sendHeaderFooter(bool header)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("ZWText::sendHeaderFooter: can not find a listener\n"));
     return false;
   }
@@ -738,7 +739,7 @@ bool ZWText::sendHeaderFooter(bool header)
   }
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   input->seek(zone.m_pos.begin(), WPX_SEEK_SET);
-  m_listener->setFont(zone.m_font.m_font);
+  listener->setFont(zone.m_font.m_font);
   long endPos = zone.m_pos.end();
   while(!input->atEOS()) {
     long actPos = input->tell();
@@ -747,10 +748,10 @@ bool ZWText::sendHeaderFooter(bool header)
     char c = (char) input->readULong(1);
     switch(c) {
     case 0xa:
-      m_listener->insertTab();
+      listener->insertTab();
       break;
     case 0xd:
-      m_listener->insertEOL();
+      listener->insertEOL();
       break;
     case '#':
       if (actPos+1 < endPos) {
@@ -758,19 +759,19 @@ bool ZWText::sendHeaderFooter(bool header)
         bool done = true;
         switch(nextC) {
         case 'd':
-          m_listener->insertField(MWAWContentListener::Date);
+          listener->insertField(MWAWContentListener::Date);
           break;
         case 'p':
-          m_listener->insertField(MWAWContentListener::PageNumber);
+          listener->insertField(MWAWContentListener::PageNumber);
           break;
         case 's':
-          m_listener->insertUnicodeString("#section#");
+          listener->insertUnicodeString("#section#");
           break;
         case 't':
-          m_listener->insertField(MWAWContentListener::Time);
+          listener->insertField(MWAWContentListener::Time);
           break;
         case '#':
-          m_listener->insertField(MWAWContentListener::PageCount);
+          listener->insertField(MWAWContentListener::PageCount);
           break;
         default:
           done=false;
@@ -781,7 +782,7 @@ bool ZWText::sendHeaderFooter(bool header)
       }
       input->seek(actPos+1, WPX_SEEK_SET);
     default:
-      m_listener->insertCharacter((unsigned char) c, input, endPos);
+      listener->insertCharacter((unsigned char) c, input, endPos);
       break;
     }
   }
@@ -871,7 +872,7 @@ bool ZWText::readHFZone(MWAWEntry const &entry)
       done = field.getString(input, strVal);
       if (!done||!strVal.length())
         break;
-      font.m_font.setId(m_convertissor->getId(strVal));
+      font.m_font.setId(m_parserState->m_fontConverter->getId(strVal));
       break;
     case 6:
       done = field.getDebugString(input, strVal);
@@ -904,7 +905,7 @@ bool ZWText::readHFZone(MWAWEntry const &entry)
   zone.m_extra=f.str();
   f.str("");
   f << "Entries(" << entry.type() << ")[" << entry << "]:"
-    << zone.getDebugString(m_convertissor);
+    << zone.getDebugString(m_parserState->m_fontConverter);
 
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());

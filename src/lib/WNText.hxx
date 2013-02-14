@@ -52,13 +52,9 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
 class MWAWFont;
-
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace WNTextInternal
 {
@@ -92,7 +88,7 @@ class WNText
   friend struct WNTextInternal::Cell;
 public:
   //! constructor
-  WNText(MWAWInputStreamPtr ip, WNParser &parser, MWAWFontConverterPtr &convertissor);
+  WNText(WNParser &parser);
   //! destructor
   virtual ~WNText();
 
@@ -109,12 +105,6 @@ public:
   WNEntry getFooter() const;
 
 protected:
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
-
   //! finds the different text zones
   bool createZones();
 
@@ -169,11 +159,6 @@ protected:
   //! try to read the styles zone
   bool readStyles(WNEntry const &entry);
 
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
 private:
   WNText(WNText const &orig);
   WNText &operator=(WNText const &orig);
@@ -182,14 +167,8 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<WNTextInternal::State> m_state;
@@ -199,9 +178,6 @@ protected:
 
   //! the main parser;
   WNParser *m_mainParser;
-
-  //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

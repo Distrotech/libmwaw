@@ -157,13 +157,7 @@ void WNParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_textParser.reset(new WNText(getInput(), *this, getFontConverter()));
-}
-
-void WNParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-  m_textParser->setListener(listen);
+  m_textParser.reset(new WNText(*this));
 }
 
 ////////////////////////////////////////////////////////////

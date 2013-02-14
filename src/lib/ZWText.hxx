@@ -44,13 +44,11 @@
 class MWAWInputStream;
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 class MWAWEntry;
 class MWAWFont;
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 class MWAWParagraph;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace ZWTextInternal
 {
@@ -72,7 +70,7 @@ class ZWText
   friend class ZWTextInternal::SubDocument;
 public:
   //! constructor
-  ZWText(MWAWInputStreamPtr ip, ZWParser &parser, MWAWFontConverterPtr &convertissor);
+  ZWText(ZWParser &parser);
   //! destructor
   virtual ~ZWText();
 
@@ -85,11 +83,6 @@ public:
 protected:
   //! the list of code in the text
   enum TextCode { None, Center, BookMark, NewPage, Tag, Link };
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
 
   //! finds the different text zones
   bool createZones();
@@ -127,15 +120,6 @@ protected:
   //! read a section fonts
   bool readSectionFonts(MWAWEntry const &entry);
 
-  //
-  // low level
-  //
-
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
 private:
   ZWText(ZWText const &orig);
   ZWText &operator=(ZWText const &orig);
@@ -144,23 +128,14 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<ZWTextInternal::State> m_state;
 
   //! the main parser;
   ZWParser *m_mainParser;
-
-  //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

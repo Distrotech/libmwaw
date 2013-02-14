@@ -430,8 +430,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-NSText::NSText(MWAWInputStreamPtr ip, NSParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert),
+NSText::NSText(NSParser &parser) : m_parserState(parser.getParserState()),
   m_state(new NSTextInternal::State), m_mainParser(&parser)
 {
 }
@@ -442,7 +441,7 @@ NSText::~NSText()
 int NSText::version() const
 {
   if (m_state->m_version < 0)
-    m_state->m_version = m_mainParser->version();
+    m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
@@ -730,7 +729,7 @@ bool NSText::readFontsList(MWAWEntry const &entry)
     std::string name("");
     for (int c=0; c < pSz; c++)
       name += (char) input->readULong(1);
-    m_convertissor->setCorrespondance(fId, name);
+    m_parserState->m_fontConverter->setCorrespondance(fId, name);
     f << name;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -883,7 +882,7 @@ bool NSText::readFonts(MWAWEntry const &entry)
       m_state->m_fontList.push_back(font);
 
     f.str("");
-    f << name << i << ":" << font.m_font.getDebugString(m_convertissor)
+    f << name << i << ":" << font.m_font.getDebugString(m_parserState->m_fontConverter)
       << font;
     if (input->tell() != pos+fSize)
       asciiFile.addDelimiter(input->tell(),'|');
@@ -947,12 +946,12 @@ bool NSText::readPosToFont(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
 // send the paragraph to the listener
 void NSText::setProperty(NSTextInternal::Paragraph const &para, int width)
 {
-  if (!m_listener) return;
+  if (!m_parserState->m_listener) return;
   double origRMargin = para.m_margins[2].get();
   double rMargin=double(width)/72.-origRMargin;
   if (rMargin < 0.0) rMargin = 0;
   const_cast<NSTextInternal::Paragraph &>(para).m_margins[2] = rMargin;
-  m_listener->setParagraph(para);
+  m_parserState->m_listener->setParagraph(para);
   const_cast<NSTextInternal::Paragraph &>(para).m_margins[2] = origRMargin;
 }
 
@@ -1436,7 +1435,7 @@ long NSText::findFilePos(NSStruct::ZoneType zoneId, NSStruct::Position const &po
 ////////////////////////////////////////////////////////////
 bool NSText::sendHeaderFooter(int hfId)
 {
-  if (!m_listener) {
+  if (!m_parserState->m_listener) {
     MWAW_DEBUG_MSG(("NSText::sendHeaderFooter: can not find the listener\n"));
     return false;
   }
@@ -1468,7 +1467,7 @@ bool NSText::sendHeaderFooter(int hfId)
 ////////////////////////////////////////////////////////////
 bool NSText::sendFootnote(int footnoteId)
 {
-  if (!m_listener) {
+  if (!m_parserState->m_listener) {
     MWAW_DEBUG_MSG(("NSText::sendFootnote: can not find the listener\n"));
     return false;
   }
@@ -1501,7 +1500,8 @@ bool NSText::sendFootnote(int footnoteId)
 ////////////////////////////////////////////////////////////
 bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("NSText::sendText: can not find the listener\n"));
     return false;
   }
@@ -1527,9 +1527,9 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
     if (isMain && nCol > 1) {
       std::vector<int> colSize;
       colSize.resize((size_t) nCol, width);
-      if (m_listener->isSectionOpened())
-        m_listener->closeSection();
-      m_listener->openSection(colSize, WPX_POINT);
+      if (listener->isSectionOpened())
+        listener->closeSection();
+      listener->openSection(colSize, WPX_POINT);
     }
   }
   MWAWInputStreamPtr input
@@ -1551,7 +1551,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
 
   NSTextInternal::Font actFont;
   actFont.m_font = MWAWFont(3,12);
-  m_listener->setFont(actFont.m_font);
+  listener->setFont(actFont.m_font);
   NSStruct::FootnoteInfo ftInfo;
   m_mainParser->getFootnoteInfo(ftInfo);
   bool lastCharFootnote = false;
@@ -1582,7 +1582,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         NSTextInternal::Font const &font = m_state->m_fontList[size_t(plc.m_id)];
         actFont = font;
         if (font.m_pictureId <= 0)
-          m_listener->setFont(font.m_font);
+          listener->setFont(font.m_font);
         if (!font.isVariable())
           break;
         if (fontIdToVarIdMap.find(plc.m_id) != fontIdToVarIdMap.end())
@@ -1612,7 +1612,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         if (plc.m_id < 0 || plc.m_id >= int(m_state->m_footnoteList.size())) {
           MWAW_DEBUG_MSG(("NSText::sendText: can not find the footnote\n"));
           MWAWSubDocumentPtr subdoc(new NSTextInternal::SubDocument(*this, input, -1, libmwaw::DOC_NOTE));
-          m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+          listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
           break;
         }
         MWAWSubDocumentPtr subdoc(new NSTextInternal::SubDocument(*this, input, plc.m_id, libmwaw::DOC_NOTE));
@@ -1623,12 +1623,12 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         MWAWContentListener::NoteType noteType
           = ftInfo.endNotes() ? MWAWContentListener::ENDNOTE :
             MWAWContentListener::FOOTNOTE;
-        m_listener->resetNoteNumber(noteType, noteId);
+        listener->resetNoteNumber(noteType, noteId);
         std::string label = fnote.getTextLabel(noteId);
         if (label.length())
-          m_listener->insertLabelNote(noteType, label.c_str(), subdoc);
+          listener->insertLabelNote(noteType, label.c_str(), subdoc);
         else
-          m_listener->insertNote(noteType, subdoc);
+          listener->insertNote(noteType, subdoc);
 
         break;
       }
@@ -1707,10 +1707,10 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
     case 0x3: // checkme: find in some file ( but seems to do nothing )
       break;
     case 0x9:
-      m_listener->insertTab();
+      listener->insertTab();
       break;
     case 0xb:
-      m_listener->insertEOL(true);
+      listener->insertEOL(true);
       break;
     case 0xc:
       if (!isMain) break;
@@ -1718,23 +1718,23 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
       if (ftInfo.resetNumberOnNewPage()) noteId = 0;
       break;
     case 0xd:
-      m_listener->insertEOL();
+      listener->insertEOL();
       break;
     case 0xf: {
       std::string format(m_mainParser->getDateFormat(zoneId, actVar));
       if (format.length())
-        m_listener->insertDateTimeField(format.c_str());
+        listener->insertDateTimeField(format.c_str());
       else {
         f << "#";
-        m_listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWContentListener::Date);
       }
       break;
     }
     case 0x10:
-      m_listener->insertDateTimeField("%H:%M");
+      listener->insertDateTimeField("%H:%M");
       break;
     case 0x11:
-      m_listener->insertField(MWAWContentListener::Title);
+      listener->insertField(MWAWContentListener::Title);
       break;
     case 0x14: // mark separator ( ok to ignore )
       break;
@@ -1746,21 +1746,21 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
       MWAWContentListener::FieldType fType;
       std::string content;
       if (!m_mainParser->getReferenceData(zoneId, actVar, fType, content, varValues)) {
-        m_listener->insertChar(' ');
+        listener->insertChar(' ');
         f << "#[ref]";
         break;
       }
       if (fType != MWAWContentListener::None)
-        m_listener->insertField(fType);
+        listener->insertField(fType);
       else if (content.length())
-        m_listener->insertUnicodeString(content.c_str());
+        listener->insertUnicodeString(content.c_str());
       else
         f << "#[ref]";
       break;
     }
     // checkme: find also 0x8, 0x13, 0x15, 0x1e, 0x1f in glossary
     default:
-      i+=m_listener->insertCharacter((unsigned char)c, input, entry.end());
+      i+=listener->insertCharacter((unsigned char)c, input, entry.end());
       break;
     }
   }
@@ -1773,7 +1773,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
 //! send data to the listener
 bool NSText::sendMainText()
 {
-  if (!m_listener) return true;
+  if (!m_parserState->m_listener) return true;
 
   if (!m_state->m_zones[0].m_entry.valid()) {
     MWAW_DEBUG_MSG(("NSText::sendMainText: can not find the main text\n"));
@@ -1787,13 +1787,13 @@ bool NSText::sendMainText()
 
 void NSText::flushExtra()
 {
-  if (!m_listener) return;
+  if (!m_parserState->m_listener) return;
   for (size_t f = 0; f < m_state->m_footnoteList.size(); f++) {
     if (m_state->m_footnoteList[f].m_parsed)
       continue;
     sendFootnote(int(f));
   }
-  m_listener->insertChar(' ');
+  m_parserState->m_listener->insertChar(' ');
   for (size_t hf = 0; hf < m_state->m_hfList.size(); hf++) {
     if (m_state->m_hfList[hf].m_parsed)
       continue;

@@ -46,11 +46,11 @@
 #include "MWAWInputStream.hxx"
 
 class WPXBinaryData;
+
 class MWAWContentListener;
 typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 class MWProParser;
 
 namespace MWProParserInternal
@@ -122,7 +122,9 @@ protected:
   //! create a new page
   bool newPage(bool softBreak=false);
 
+  //! sends the font properties to the listener
   void sendFont(MWProStructuresInternal::Font const &font);
+  //! sends the paragraph properties to the listener
   void sendParagraph(MWProStructuresInternal::Paragraph const &para);
 
   // true if this is the mainZone
@@ -177,9 +179,6 @@ public:
 protected:
   //! inits all internal variables
   void init();
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen);
 
   //! finds the different objects zones
   bool createZones();
@@ -274,6 +273,9 @@ protected:
    */
   bool send(int blockId, bool mainZone=false);
 
+  //! returns the actual listener
+  MWAWContentListenerPtr &getListener();
+
   //! returns the debug file
   libmwaw::DebugFile &ascii() {
     return m_asciiFile;
@@ -289,17 +291,14 @@ protected:
   // data
   //
 
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
+
   //! the main input
   MWAWInputStreamPtr m_input;
 
   //! the main parser
   MWProParser &m_mainParser;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<MWProStructuresInternal::State> m_state;

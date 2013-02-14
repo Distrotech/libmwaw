@@ -144,13 +144,7 @@ void ZWParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_textParser.reset(new ZWText(getInput(), *this, getFontConverter()));
-}
-
-void ZWParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-  m_textParser->setListener(listen);
+  m_textParser.reset(new ZWText(*this));
 }
 
 MWAWInputStreamPtr ZWParser::rsrcInput()

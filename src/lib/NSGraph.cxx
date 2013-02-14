@@ -150,10 +150,9 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-NSGraph::NSGraph
-(MWAWInputStreamPtr ip, NSParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert), m_state(new NSGraphInternal::State),
-  m_mainParser(&parser), m_asciiFile(parser.ascii())
+NSGraph::NSGraph (NSParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new NSGraphInternal::State),
+  m_mainParser(&parser)
 {
 }
 
@@ -162,7 +161,7 @@ NSGraph::~NSGraph()
 
 int NSGraph::version() const
 {
-  return m_mainParser->version();
+  return m_parserState->m_version;
 }
 
 int NSGraph::numPages() const
@@ -424,7 +423,8 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
                           WPXPropertyList extras)
 {
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("NSGraph::sendPicture: can not find the listener\n"));
     return true;
   }
@@ -466,11 +466,11 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
     pictPos.setOrigin(Vec2f(0,0));
     MWAWSubDocumentPtr subdoc
     (new NSGraphInternal::SubDocument(*this, m_mainParser->rsrcInput(), pictId, pictPos, extras));
-    m_listener->insertTextBox(framePos, subdoc);
+    listener->insertTextBox(framePos, subdoc);
     return true;
   }
   // first the picture
-  m_listener->insertPicture(pictPos, data, "image/pict", extras);
+  listener->insertPicture(pictPos, data, "image/pict", extras);
   // then the author possible picture
   pictPos.setClippingPosition(Vec2f(), Vec2f());
   for (size_t i=0; i < listRSSO.size(); i++) {
@@ -486,7 +486,7 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
 bool NSGraph::sendPageGraphics()
 {
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
-  if (!m_listener) {
+  if (!m_parserState->m_listener) {
     MWAW_DEBUG_MSG(("NSGraph::sendPageGraphics: can not find the listener\n"));
     return true;
   }
