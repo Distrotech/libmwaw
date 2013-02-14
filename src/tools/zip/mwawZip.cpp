@@ -54,7 +54,8 @@ static void usage(const char *cmdname)
   std::cerr << "\t where\t filename is the file to zip,\n";
   std::cerr << "\t where\t zipfile is the file to unzip,\n";
   std::cerr << "\t\t -h: print this help,\n";
-  std::cerr << "\t\t -x: check if the file is a binhex or a zip file, if so do not created a zipfile,\n";
+  std::cerr << "\t\t -x: do not zip a binhex or a zip file,\n";
+  std::cerr << "\t\t -D: only zip the file containing a resource fork or finder information.\n";
 }
 
 
@@ -62,11 +63,15 @@ int __cdecl main (int argc, char **argv)
 {
   bool checkZip=false;
   bool verbose=false;
+  bool doNotCompressSimpleFile=false;
   int ch;
-  while ((ch = getopt(argc, argv, "hx")) != -1) {
+  while ((ch = getopt(argc, argv, "hxD")) != -1) {
     switch (ch) {
     case 'x':
       checkZip=true;
+      break;
+    case 'D':
+      doNotCompressSimpleFile=true;
       break;
     default:
       verbose=-1;
@@ -100,13 +105,13 @@ int __cdecl main (int argc, char **argv)
       if (buff[0]=='P' && buff[1]=='K') {
         if (((buff[2]==(char)3||buff[2]==(char)5||buff[2]==(char)7) && buff[3]==buff[2]+(char)1) ||
             (buff[2]=='L'&&buff[3]=='I') || (buff[2]=='S'&&buff[3]=='p'))
-          return 1;
+          return 2;
       }
       // look for a binhex file signature
       if (buff[0]=='('&&buff[1]=='T'&&buff[2]=='h'&&buff[3]=='i') {
         file.read (buff,4);
         if (buff[0]=='s'&&buff[1]==' '&&buff[2]=='f'&&buff[3]=='i')
-          return 1;
+          return 2;
       }
     } catch(...) {
     }
@@ -172,6 +177,8 @@ int __cdecl main (int argc, char **argv)
           zip.addStream(fAuxiStream, name.c_str(), folder.c_str());
         }
       }
+      else if (doNotCompressSimpleFile)
+        return 2;
     }
     if (!zip.write(argv[optind+1]))
       return 1;

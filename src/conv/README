@@ -1,12 +1,13 @@
 a directory which contains a list of small convertors:
 
 - mwaw2html: convert a file ( accepted by libmwaw ) in html,
-   keeping most of the character and paragraph properties and the table,
-   but not the pictures, ...
+   keeping most of the character and paragraph properties and the
+   table, but not the pictures, ...
 - mwaw2text: convert a file ( accepted by libmwaw ) in text,
    keeping only the different characters
-- mwaw2raw: a utility which outputs the list of instructions sent by libmwaw,
-   can be used for debugging, ...
 
-Notes: most of this convertors are a simple copy of libwpd convertors, except
-   mwaw2html which has been a little enhanced...
+- mwaw2raw: a utility which outputs the list of instructions sent by
+   libmwaw, can be used for debugging, ...
+
+Note: most of these convertors are a simple copy of libwpd convertors,
+   except mwaw2html which has been a little enhanced...

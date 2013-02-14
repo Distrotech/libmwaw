@@ -288,6 +288,10 @@ SOURCE=..\..\src\lib\MWAWParagraph.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWPictBasic.cxx
 # End Source File
 # Begin Source File

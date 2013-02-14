@@ -52,13 +52,9 @@ class WPXBinaryData;
 
 #include "MWAWParser.hxx"
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 class MWAWEntry;
 class MWAWFont;
 class MWAWParagraph;
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace MRWParserInternal
 {
@@ -222,12 +218,6 @@ protected:
   //
   // data
   //
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
-
   //! the state
   shared_ptr<MRWParserInternal::State> m_state;
 

@@ -581,8 +581,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 WPParser::WPParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan()
+  MWAWParser(input, rsrcParser, header), m_state(), m_pageSpan()
 {
   init();
 }
@@ -593,8 +592,7 @@ WPParser::~WPParser()
 
 void WPParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new WPParserInternal::State);
@@ -608,7 +606,7 @@ void WPParser::init()
 
 void WPParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
 }
 
 ////////////////////////////////////////////////////////////
@@ -635,9 +633,9 @@ void WPParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -664,8 +662,6 @@ void WPParser::parse(WPXDocumentInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       sendWindow(0);
-      if (m_listener) m_listener->endDocument();
-      m_listener.reset();
     }
 
     ascii().reset();
@@ -674,6 +670,7 @@ void WPParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -683,7 +680,7 @@ void WPParser::parse(WPXDocumentInterface *docInterface)
 void WPParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("WPParser::createDocument: listener already exist\n"));
     return;
   }
@@ -1056,7 +1053,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
             MWAW_DEBUG_MSG(("WPParser::readWindowsZone: pb with col break\n"));
           } else {
             actCol++;
-            if (m_listener) m_listener->insertBreak(MWAWContentListener::ColumnBreak);
+            if (getListener()) getListener()->insertBreak(MWAWContentListener::ColumnBreak);
           }
         }
       case 0:
@@ -1074,10 +1071,10 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
           } else {
             numCols = int(colSize.size());
             actCol = numCols ? 1 : 0;
-            if (m_listener) {
-              if (m_listener->isSectionOpened())
-                m_listener->closeSection();
-              m_listener->openSection(colSize, WPX_POINT);
+            if (getListener()) {
+              if (getListener()->isSectionOpened())
+                getListener()->closeSection();
+              getListener()->openSection(colSize, WPX_POINT);
             }
             canCreateSection = false;
           }
@@ -1091,21 +1088,21 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
         break;
       case 5:
         if (pInfo.m_numLines + i <= endParag) {
-          if ((ok = readTable(pInfo)) && m_listener) {
-            m_listener->openTableRow((float)pInfo.m_height, WPX_POINT);
+          if ((ok = readTable(pInfo)) && getListener()) {
+            getListener()->openTableRow((float)pInfo.m_height, WPX_POINT);
 
             for (size_t j = 0; j < pInfo.m_linesHeight.size(); j++) {
               int numData = pInfo.m_linesHeight[j];
               MWAWCell cell;
               cell.position() = Vec2i(int(j), 0);
-              m_listener->openTableCell(cell, WPXPropertyList());
+              getListener()->openTableCell(cell, WPXPropertyList());
               sendWindow(zone, Vec2i(i+1, i+1+numData));
               i += numData;
-              m_listener->closeTableCell();
+              getListener()->closeTableCell();
             }
 
-            m_listener->closeTableRow();
-            m_listener->closeTable();
+            getListener()->closeTableRow();
+            getListener()->closeTable();
           }
         } else {
           MWAW_DEBUG_MSG(("WPParser::readWindowsZone: table across a page\n"));
@@ -1370,7 +1367,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   ascii().addPos(input->tell());
   ascii().addNote("_");
 
-  if (!m_listener)
+  if (!getListener())
     return true;
   std::string const &text = data.m_text;
   std::vector<WPParserInternal::Font> const &fonts = data.m_fonts;
@@ -1381,31 +1378,31 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   MWAWParagraph para;
   if (numLines == 0 && info.m_height > 0) {
     para.setInterline(info.m_height, WPX_POINT);
-    m_listener->setParagraph(para);
+    getListener()->setParagraph(para);
   }
   for (int c = 0; c < numChars; c++) {
     if (actFont < numFonts && c ==  fonts[actFont].m_firstChar)
-      m_listener->setFont(fonts[actFont++].m_font);
+      getListener()->setFont(fonts[actFont++].m_font);
     if (actLine < numLines && c == lines[(size_t) actLine].m_firstChar) {
-      if (actLine) m_listener->insertEOL();
+      if (actLine) getListener()->insertEOL();
       if (numLines == 1 && info.m_height > lines[0].m_height) {
         para.setInterline(info.m_height, WPX_POINT);
-        m_listener->setParagraph(para);
+        getListener()->setParagraph(para);
       } else if (lines[(size_t) actLine].m_height) {
         para.setInterline(lines[(size_t) actLine].m_height, WPX_POINT);
-        m_listener->setParagraph(para);
+        getListener()->setParagraph(para);
       }
       actLine++;
     }
 
     unsigned char ch = (unsigned char) text[(size_t)c];
     if (ch == 0x9)
-      m_listener->insertTab();
+      getListener()->insertTab();
     else
-      m_listener->insertCharacter(ch);
+      getListener()->insertCharacter(ch);
   }
   if (info.getType() != 3)
-    m_listener->insertEOL();
+    getListener()->insertEOL();
 
   return true;
 }
@@ -1455,9 +1452,9 @@ bool WPParser::readSection(WPParserInternal::ParagraphInfo const &info, bool mai
     f << "#endPos,";
   }
 
-  if (m_listener && mainBlock) {
-    if (!m_listener->isSectionOpened())
-      m_listener->openSection();
+  if (getListener() && mainBlock) {
+    if (!getListener()->isSectionOpened())
+      getListener()->openSection();
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1506,13 +1503,13 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
     f << "col" << i << "=[" << cols << "],";
   }
 
-  if (m_listener) {
+  if (getListener()) {
     std::vector<float> colSize((size_t)numData);
     for (int i = 0; i < numData; i++) {
       WPParserInternal::ColumnTableInfo const &cols = columns[(size_t)i];
       colSize[(size_t)i] = float(cols.m_colX[1]-cols.m_colX[0]);
     }
-    m_listener->openTable(colSize, WPX_POINT);
+    getListener()->openTable(colSize, WPX_POINT);
   }
 
   if (long(input->tell()) != data.m_endPos) {
@@ -1621,19 +1618,19 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
   // get the picture
   input->seek(pos+4, WPX_SEEK_SET);
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, (int)length));
-  if (m_listener) {
-    MWAWParagraph para=m_listener->getParagraph();
+  if (getListener()) {
+    MWAWParagraph para=getListener()->getParagraph();
     para.setInterline(info.m_height, WPX_POINT);
-    m_listener->setParagraph(para);
+    getListener()->setParagraph(para);
     if (pict) {
       WPXBinaryData pictData;
       std::string type;
       if (pict->getBinary(pictData,type))
-        m_listener->insertPicture(pictPos, pictData, type);
+        getListener()->insertPicture(pictPos, pictData, type);
     }
-    m_listener->insertEOL();
+    getListener()->insertEOL();
     para.setInterline(1.0, WPX_PERCENT);
-    m_listener->setParagraph(para);
+    getListener()->setParagraph(para);
   }
   if (pict)
     ascii().skipZone(pos+4, pos+4+length-1);

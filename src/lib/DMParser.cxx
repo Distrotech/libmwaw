@@ -198,20 +198,18 @@ void State::findPictInfoUnit(int nZones)
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 DMParser::DMParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(), m_textParser()
+  MWAWParser(input, rsrcParser, header), m_state(), m_textParser()
 {
   init();
 }
 
 DMParser::~DMParser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void DMParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
 
   m_state.reset(new DMParserInternal::State);
 
@@ -220,7 +218,7 @@ void DMParser::init()
 
 void DMParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
   m_textParser->setListener(listen);
 }
 
@@ -244,9 +242,9 @@ void DMParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -277,6 +275,7 @@ void DMParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -286,7 +285,7 @@ void DMParser::parse(WPXDocumentInterface *docInterface)
 void DMParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("DMParser::createDocument: listener already exist\n"));
     return;
   }
@@ -435,7 +434,7 @@ bool DMParser::sendPicture(int zId, int lId, double /*lineW*/)
     MWAW_DEBUG_MSG(("DMText::sendPicture: can not find picture for id=%d\n",info.m_id));
     return false;
   }
-  if (!m_listener) {
+  if (!getListener()) {
     MWAW_DEBUG_MSG(("DMText::sendPicture: can not find the listener\n"));
     return false;
   }
@@ -478,7 +477,7 @@ bool DMParser::sendPicture(int zId, int lId, double /*lineW*/)
     WPXBinaryData fData;
     std::string type;
     if (thePict->getBinary(fData,type))
-      m_listener->insertPicture(pictPos, fData, type);
+      getListener()->insertPicture(pictPos, fData, type);
   }
   return true;
 }

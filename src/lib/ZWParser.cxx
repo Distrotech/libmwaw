@@ -120,7 +120,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 ZWParser::ZWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
+  MWAWParser(input, rsrcParser, header), m_state(),
   m_pageSpan(), m_textParser()
 {
   init();
@@ -128,13 +128,11 @@ ZWParser::ZWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWH
 
 ZWParser::~ZWParser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void ZWParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new ZWParserInternal::State);
@@ -150,7 +148,7 @@ void ZWParser::init()
 
 void ZWParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
   m_textParser->setListener(listen);
 }
 
@@ -205,9 +203,9 @@ void ZWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -234,6 +232,7 @@ void ZWParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -243,7 +242,7 @@ void ZWParser::parse(WPXDocumentInterface *docInterface)
 void ZWParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("ZWParser::createDocument: listener already exist\n"));
     return;
   }

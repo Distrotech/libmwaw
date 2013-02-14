@@ -283,21 +283,18 @@ std::ostream &operator<<(std::ostream &o, MSWEntry const &entry)
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSWParser::MSWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
-  m_entryMap(), m_pageSpan(), m_textParser()
+  MWAWParser(input, rsrcParser, header), m_state(), m_entryMap(), m_pageSpan(), m_textParser()
 {
   init();
 }
 
 MSWParser::~MSWParser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void MSWParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new MSWParserInternal::State);
@@ -313,7 +310,7 @@ void MSWParser::init()
 
 void MSWParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
   m_textParser->setListener(listen);
 }
 
@@ -340,9 +337,9 @@ void MSWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -396,19 +393,19 @@ bool MSWParser::isFilePos(long pos)
 
 void MSWParser::sendFootnote(int id)
 {
-  if (!m_listener) return;
+  if (!getListener()) return;
 
   MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_NOTE));
-  m_listener->insertNote
+  getListener()->insertNote
   (m_state->m_endNote ? MWAWContentListener::ENDNOTE : MWAWContentListener::FOOTNOTE, subdoc);
 }
 
 void MSWParser::sendFieldComment(int id)
 {
-  if (!m_listener) return;
+  if (!getListener()) return;
 
   MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_COMMENT_ANNOTATION));
-  m_listener->insertComment(subdoc);
+  getListener()->insertComment(subdoc);
 }
 
 void MSWParser::send(MWAWEntry const &entry)
@@ -467,6 +464,7 @@ void MSWParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -476,7 +474,7 @@ void MSWParser::parse(WPXDocumentInterface *docInterface)
 void MSWParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("MSWParser::createDocument: listener already exist\n"));
     return;
   }
@@ -1709,7 +1707,7 @@ bool MSWParser::readPicture(MSWEntry &entry)
 
 void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
 {
-  if (!m_listener) {
+  if (!getListener()) {
     MWAW_DEBUG_MSG(("MSWParser::sendPicture: listener is not set\n"));
     return;
   }
@@ -1727,7 +1725,7 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
     pictPos.setRelativePosition(MWAWPosition::Char,
                                 MWAWPosition::XLeft, MWAWPosition::YTop);
     pictPos.m_wrapping =  MWAWPosition::WBackground;
-    m_listener->insertTextBox(pictPos, subdoc);
+    getListener()->insertTextBox(pictPos, subdoc);
     return;
   }
   long actPos = input->tell();
@@ -1761,7 +1759,7 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
     if (!thePict) continue;
     thePict->getBinary(data,pictType);
     if (data.size())
-      m_listener->insertPicture(pos, data, pictType);
+      getListener()->insertPicture(pos, data, pictType);
   }
   input->seek(actPos, WPX_SEEK_SET);
 }

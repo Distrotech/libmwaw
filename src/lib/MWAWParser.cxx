@@ -31,62 +31,36 @@
 * instead of those above.
 */
 
-#ifndef MSK_PARSER
-#  define MSK_PARSER
-
-#include <string>
-
-#include "libmwaw_internal.hxx"
+#include "MWAWContentListener.hxx"
+#include "MWAWFontConverter.hxx"
 
 #include "MWAWParser.hxx"
 
-class MWAWPosition;
-class WPXPropertyList;
-
-class MSKGraph;
-
-namespace MSKParserInternal
+MWAWParser::MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header):
+  m_convertissor(),
+  m_version(header->getMajorVersion()), m_input(input), m_header(header),
+  m_rsrcParser(rsrcParser), m_listener(), m_asciiFile(input), m_asciiName("")
 {
-struct State;
+  m_convertissor.reset(new MWAWFontConverter);
 }
 
-/** \brief generic parser for Microsoft Works file
- *
- *
- *
- */
-class MSKParser : public MWAWParser
+MWAWParser::~MWAWParser()
 {
-  friend class MSKGraph;
-public:
-  //! constructor
-  MSKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  if (m_listener.get()) {
+    MWAW_DEBUG_MSG(("MWAWParser::~MWAWParser: the listener is not closed, call enddocument without any subdoc\n"));
+    m_listener->endDocument(false);
+  }
+}
 
-  //! destructor
-  virtual ~MSKParser();
+void MWAWParser::setListener(MWAWContentListenerPtr &listener)
+{
+  m_listener=listener;
+}
 
-  //! return the color which correspond to an index
-  bool getColor(int id, MWAWColor &col, int vers=-1) const;
+void MWAWParser::resetListener()
+{
+  if (getListener()) getListener()->endDocument();
+  m_listener.reset();
+}
 
-  //! return a list of color corresponding to a version
-  static std::vector<MWAWColor> const &getPalette(int vers);
-
-  //! check if a position is inside the file
-  bool checkIfPositionValid(long pos);
-
-  //! virtual function used to send the text of a frame (v4)
-  virtual void sendFrameText(MWAWEntry const &entry, std::string const &frame);
-
-  //! virtual function used to send an OLE (v4)
-  virtual void sendOLE(int id, MWAWPosition const &pos,
-                       WPXPropertyList frameExtras);
-
-  //! returns the page top left point
-  virtual Vec2f getPageTopLeft() const = 0;
-
-protected:
-  //! the state
-  shared_ptr<MSKParserInternal::State> m_state;
-};
-
-#endif
+// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

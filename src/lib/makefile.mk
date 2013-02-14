@@ -74,6 +74,7 @@ SLOFILES= \
 	$(SLO)$/MWAWOLEStream.obj		\
 	$(SLO)$/MWAWPageSpan.obj		\
 	$(SLO)$/MWAWParagraph.obj		\
+	$(SLO)$/MWAWParser.obj			\
 	$(SLO)$/MWAWPictBasic.obj		\
 	$(SLO)$/MWAWPictBitmap.obj		\
 	$(SLO)$/MWAWPictData.obj		\

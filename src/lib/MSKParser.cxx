@@ -52,7 +52,7 @@ struct State {
 }
 
 MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_state(new MSKParserInternal::State)
+  MWAWParser(input, rsrcParser, header), m_state(new MSKParserInternal::State)
 {
 }
 
@@ -63,8 +63,8 @@ MSKParser::~MSKParser()
 void MSKParser::sendFrameText(MWAWEntry const &, std::string const &)
 {
   MWAW_DEBUG_MSG(("MSKParser::sendFrameText: must not be called\n"));
-  if (!m_listener) return;
-  m_listener->insertChar(' ');
+  if (!getListener()) return;
+  getListener()->insertChar(' ');
 }
 
 void MSKParser::sendOLE(int, MWAWPosition const &, WPXPropertyList)

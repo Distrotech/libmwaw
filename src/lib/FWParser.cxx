@@ -332,8 +332,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 FWParser::FWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan(), m_textParser()
+  MWAWParser(input, rsrcParser, header), m_state(), m_pageSpan(), m_textParser()
 {
   init();
 }
@@ -349,8 +348,7 @@ FWParser::~FWParser()
 
 void FWParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new FWParserInternal::State);
@@ -366,7 +364,7 @@ void FWParser::init()
 
 void FWParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
   m_textParser->setListener(listen);
 }
 
@@ -394,9 +392,9 @@ void FWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -427,8 +425,6 @@ void FWParser::parse(WPXDocumentInterface *docInterface)
       createDocument(docInterface);
       m_textParser->sendMainText();
       flushExtra();
-      if (m_listener) m_listener->endDocument();
-      m_listener.reset();
     }
     bool first = true;
     std::multimap<int, shared_ptr<FWEntry> >::iterator it;
@@ -465,6 +461,7 @@ void FWParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -474,7 +471,7 @@ void FWParser::parse(WPXDocumentInterface *docInterface)
 void FWParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("FWParser::createDocument: listener already exist\n"));
     return;
   }
@@ -1878,7 +1875,7 @@ bool FWParser::readGraphic(shared_ptr<FWEntry> zone)
 
 void FWParser::sendGraphic(int id)
 {
-  if (!m_listener) return;
+  if (!getListener()) return;
   if (id < 0 || id >= int(m_state->m_docZoneList.size())) {
     MWAW_DEBUG_MSG(("FWParser::sendGraphic: can not find graphic data for zone %d\n", id));
   } else {
@@ -1905,7 +1902,7 @@ void FWParser::sendGraphic(int id)
 
 bool FWParser::sendGraphic(shared_ptr<FWEntry> zone)
 {
-  if (!m_listener) return true;
+  if (!getListener()) return true;
   zone->setParsed(true);
 
   // int vers = version();
@@ -1960,7 +1957,7 @@ bool FWParser::sendGraphic(shared_ptr<FWEntry> zone)
     WPXBinaryData data;
     std::string type;
     if (pict->getBinary(data,type)) {
-      m_listener->insertPicture(pictPos, data, type);
+      getListener()->insertPicture(pictPos, data, type);
       return true;
     }
   }
@@ -2284,7 +2281,7 @@ bool FWParser::readDocPosition()
 ////////////////////////////////////////////////////////////
 void FWParser::sendReference(int id)
 {
-  if (!m_listener) return;
+  if (!getListener()) return;
 
   if (id < 0 || id >= int(m_state->m_docZoneList.size())) {
     MWAW_DEBUG_MSG(("FWParser::sendReference: can not find data for id=%d\n", id));
@@ -2314,7 +2311,7 @@ void FWParser::sendReference(int id)
 ////////////////////////////////////////////////////////////
 void FWParser::sendVariable(int id)
 {
-  if (!m_listener) return;
+  if (!getListener()) return;
 
   if (id < 0 || id >= int(m_state->m_docZoneList.size())) {
     MWAW_DEBUG_MSG(("FWParser::sendVariable: can not find data for id=%d\n", id));
@@ -2357,7 +2354,7 @@ void FWParser::sendVariable(int id)
 ////////////////////////////////////////////////////////////
 void FWParser::sendText(int id, libmwaw::SubDocumentType type, int wh)
 {
-  if (!m_listener) return;
+  if (!getListener()) return;
 
   if (id >= 0 && id < int(m_state->m_docZoneList.size())) {
     FWParserInternal::DocZoneStruct const &data =
@@ -2375,10 +2372,10 @@ void FWParser::sendText(int id, libmwaw::SubDocumentType type, int wh)
   MWAWSubDocumentPtr subdoc(new FWParserInternal::SubDocument(*this, getInput(), fId));
   switch(type) {
   case libmwaw::DOC_NOTE:
-    m_listener->insertNote(MWAWContentListener::NoteType(wh), subdoc);
+    getListener()->insertNote(MWAWContentListener::NoteType(wh), subdoc);
     break;
   case libmwaw::DOC_COMMENT_ANNOTATION:
-    m_listener->insertComment(subdoc);
+    getListener()->insertComment(subdoc);
     break;
   case libmwaw::DOC_HEADER_FOOTER:
   case libmwaw::DOC_TABLE:
@@ -2392,7 +2389,7 @@ void FWParser::sendText(int id, libmwaw::SubDocumentType type, int wh)
 bool FWParser::send(int fileId)
 {
   if (fileId < 0) {
-    if (m_listener) m_listener->insertChar(' ');
+    if (getListener()) getListener()->insertChar(' ');
     return true;
   }
   return m_textParser->send(fileId);

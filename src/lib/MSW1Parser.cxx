@@ -259,21 +259,18 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSW1Parser::MSW1Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan()
+  MWAWParser(input, rsrcParser, header), m_state(), m_pageSpan()
 {
   init();
 }
 
 MSW1Parser::~MSW1Parser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void MSW1Parser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new MSW1ParserInternal::State);
@@ -287,7 +284,7 @@ void MSW1Parser::init()
 
 void MSW1Parser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
 }
 
 ////////////////////////////////////////////////////////////
@@ -314,9 +311,9 @@ void MSW1Parser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -370,6 +367,7 @@ void MSW1Parser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -388,8 +386,8 @@ void MSW1Parser::sendMain()
     sendText(entry, true);
   }
   // maybe need if we have no text ; if not, nobody will see it
-  if (m_listener)
-    m_listener->insertChar(' ');
+  if (getListener())
+    getListener()->insertChar(' ');
 }
 
 ////////////////////////////////////////////////////////////
@@ -398,7 +396,7 @@ void MSW1Parser::sendMain()
 void MSW1Parser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("MSW1Parser::createDocument: listener already exist\n"));
     return;
   }
@@ -1196,7 +1194,7 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
 bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
 {
   if (!textEntry.valid()) return false;
-  if (!m_listener) {
+  if (!getListener()) {
     MWAW_DEBUG_MSG(("MSW1Parser::sendText: can not find a listener!"));
     return true;
   }
@@ -1204,11 +1202,11 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
 
   if (isMain) {
     numCols = m_state->m_numColumns;
-    if (numCols > 1 && !m_listener->isSectionOpened()) {
+    if (numCols > 1 && !getListener()->isSectionOpened()) {
       int colWidth = int((72.0*pageWidth())/numCols);
       std::vector<int> width;
       width.resize((size_t) numCols, colWidth);
-      m_listener->openSection(width, WPX_POINT);
+      getListener()->openSection(width, WPX_POINT);
     }
   }
   long pos = textEntry.begin();
@@ -1255,10 +1253,10 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
       switch(plc.m_type) {
       case MSW1ParserInternal::FONT:
         if (plc.m_id >= 0 && plc.m_id < int(m_state->m_fontsList.size()))
-          m_listener->setFont(m_state->m_fontsList[size_t(plc.m_id)].m_font);
+          getListener()->setFont(m_state->m_fontsList[size_t(plc.m_id)].m_font);
         else
-          m_listener->setFont(defFont.m_font);
-        actFont.m_font = m_listener->getFont();
+          getListener()->setFont(defFont.m_font);
+        actFont.m_font = getListener()->getFont();
         fontNotSent = false;
         break;
       case MSW1ParserInternal::RULER:
@@ -1280,7 +1278,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
         removeLastCharIfEOL(entry);
         shared_ptr<MWAWSubDocument> subdoc
         (new MSW1ParserInternal::SubDocument(*this, getInput(), entry));
-        m_listener->insertNote(m_state->m_endNote ? MWAWContentListener::ENDNOTE : MWAWContentListener::FOOTNOTE, subdoc);
+        getListener()->insertNote(m_state->m_endNote ? MWAWContentListener::ENDNOTE : MWAWContentListener::FOOTNOTE, subdoc);
         break;
       }
       case MSW1ParserInternal::ZONE:
@@ -1297,24 +1295,24 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
         setProperty(MSW1ParserInternal::Paragraph());
       rulerNotSent = false;
     }
-    if (fontNotSent) m_listener->setFont(actFont.m_font);
+    if (fontNotSent) getListener()->setFont(actFont.m_font);
     unsigned char c = (unsigned char) input->readULong(1);
     f << (char) c;
     switch(c) {
     case 1:
-      m_listener->insertUnicodeString("(picture)");
+      getListener()->insertUnicodeString("(picture)");
       break;
     case 5: // footnote mark
     case 0xc: // end of file
       break;
     case 0x9:
-      m_listener->insertTab();
+      getListener()->insertTab();
       break;
     case 0xd:
-      m_listener->insertEOL();
+      getListener()->insertEOL();
       break;
     default:
-      m_listener->insertCharacter((unsigned char)c, input, textEntry.end());
+      getListener()->insertCharacter((unsigned char)c, input, textEntry.end());
       break;
     }
   }
@@ -1326,8 +1324,8 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
 // send the ruler properties
 void MSW1Parser::setProperty(MSW1ParserInternal::Paragraph const &para)
 {
-  if (!m_listener) return;
-  m_listener->setParagraph(para);
+  if (!getListener()) return;
+  getListener()->setParagraph(para);
 }
 
 ////////////////////////////////////////////////////////////

@@ -45,11 +45,7 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 class MWAWEntry;
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 class MWAWPosition;
 
 namespace ZWParserInternal
@@ -162,11 +158,6 @@ protected:
   //
   // data
   //
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
 
   //! the state
   shared_ptr<ZWParserInternal::State> m_state;

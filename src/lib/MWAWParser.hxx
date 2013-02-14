@@ -47,6 +47,11 @@
 
 class WPXDocumentInterface;
 
+class MWAWContentListener;
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
+class MWAWFontConverter;
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+
 /** virtual class which defines the ancestor of all main zone parser
  *
  * \note this class is generally associated with a IMWAWTextParser
@@ -55,7 +60,7 @@ class MWAWParser
 {
 public:
   //! virtual destructor
-  virtual ~MWAWParser() {}
+  virtual ~MWAWParser();
   //! virtual function used to parse the input
   virtual void parse(WPXDocumentInterface *documentInterface) = 0;
 
@@ -70,9 +75,7 @@ public:
 
 protected:
   //! constructor (protected)
-  MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header):
-    m_version(header->getMajorVersion()), m_rsrcParser(rsrcParser), m_asciiFile(input),
-    m_asciiName(""), m_input(input), m_header(header) {}
+  MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
 
   //! returns the header
   MWAWHeader *getHeader() {
@@ -86,10 +89,14 @@ protected:
   MWAWRSRCParserPtr &getRSRCParser() {
     return m_rsrcParser;
   }
-  //! the actual version
-  int m_version;
-  //! the resource parser
-  MWAWRSRCParserPtr m_rsrcParser;
+  //! returns the listener
+  MWAWContentListenerPtr &getListener() {
+    return m_listener;
+  }
+  //! set the listener
+  void setListener(MWAWContentListenerPtr &listener);
+  //! reset the listener
+  void resetListener();
   //! a DebugFile used to write what we recognize when we parse the document
   libmwaw::DebugFile &ascii() {
     return m_asciiFile;
@@ -103,11 +110,9 @@ protected:
     return m_asciiName;
   }
 
-  //! the debug file
-  libmwaw::DebugFile m_asciiFile;
-
-  //! the debug file name
-  std::string m_asciiName;
+protected:
+  //! a convertissor tools
+  MWAWFontConverterPtr m_convertissor;
 
 private:
   //! private copy constructor: forbidden
@@ -115,10 +120,24 @@ private:
   //! private operator=: forbidden
   MWAWParser &operator=(const MWAWParser &);
 
+  //! the actual version
+  int m_version;
+
   //! the input
   MWAWInputStreamPtr m_input;
   //! the header
   MWAWHeader *m_header;
+
+  //! the resource parser
+  MWAWRSRCParserPtr m_rsrcParser;
+  //! the listener
+  MWAWContentListenerPtr m_listener;
+
+  //! the debug file
+  libmwaw::DebugFile m_asciiFile;
+  //! the debug file name
+  std::string m_asciiName;
+
 };
 
 

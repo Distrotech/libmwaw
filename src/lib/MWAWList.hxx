@@ -55,9 +55,8 @@ public:
               };
 
     /** basic constructor */
-    Level() : m_labelIndent(0.0), m_labelWidth(0.0), m_startValue(0), m_type(NONE),
+    Level() : m_labelBeforeSpace(0.0), m_labelWidth(0.1), m_labelAfterSpace(0.0), m_startValue(0), m_type(NONE),
       m_prefix(""), m_suffix(""), m_bullet(""), m_sendToInterface(false) { }
-
     ~Level() {}
 
     /** returns true if the level type was not set */
@@ -91,8 +90,9 @@ public:
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, Level const &ft);
 
-    double m_labelIndent /** the list indent*/;
-    double m_labelWidth /** the list width */;
+    double m_labelBeforeSpace /** the extra space between inserting a label */;
+    double m_labelWidth /** the minimum label width */;
+    double m_labelAfterSpace /** the minimum distance between the label and the text */;
     /** the actual value (if this is an ordered level ) */
     int m_startValue;
     /** the type of the level */

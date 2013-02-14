@@ -47,18 +47,18 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	FWParser.hxx			\
 	FWText.cxx			\
 	FWText.hxx			\
-	LWGraph.cxx			\
-	LWGraph.hxx			\
-	LWParser.cxx			\
-	LWParser.hxx			\
-	LWText.cxx			\
-	LWText.hxx			\
 	HMWGraph.cxx			\
 	HMWGraph.hxx			\
 	HMWParser.cxx			\
 	HMWParser.hxx			\
 	HMWText.cxx			\
 	HMWText.hxx			\
+	LWGraph.cxx			\
+	LWGraph.hxx			\
+	LWParser.cxx			\
+	LWParser.hxx			\
+	LWText.cxx			\
+	LWText.hxx			\
 	MDWParser.cxx			\
 	MDWParser.hxx			\
 	MRWGraph.cxx			\
@@ -120,6 +120,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWPageSpan.hxx		\
 	MWAWParagraph.cxx		\
 	MWAWParagraph.hxx		\
+	MWAWParser.cxx			\
 	MWAWParser.hxx			\
 	MWAWPict.hxx			\
 	MWAWPictBasic.cxx		\

@@ -83,20 +83,18 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 TTParser::TTParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(), m_pageSpan()
+  MWAWParser(input, rsrcParser, header), m_state(), m_pageSpan()
 {
   init();
 }
 
 TTParser::~TTParser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void TTParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new TTParserInternal::State);
@@ -109,7 +107,7 @@ void TTParser::init()
 
 void TTParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
 }
 
 MWAWInputStreamPtr TTParser::rsrcInput()
@@ -132,9 +130,9 @@ void TTParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -166,6 +164,7 @@ void TTParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -175,7 +174,7 @@ void TTParser::parse(WPXDocumentInterface *docInterface)
 void TTParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("TTParser::createDocument: listener already exist\n"));
     return;
   }
@@ -270,7 +269,7 @@ int TTParser::computeNumPages() const
 
 bool TTParser::sendText()
 {
-  if (!m_listener) {
+  if (!getListener()) {
     MWAW_DEBUG_MSG(("DMText::sendText: can not find the listener\n"));
     return false;
   }
@@ -280,7 +279,7 @@ bool TTParser::sendText()
 
   libmwaw::DebugStream f;
   f << "Entries(TEXT):";
-  m_listener->setFont(MWAWFont(3,12));
+  getListener()->setFont(MWAWFont(3,12));
 
   std::map<long, MWAWFont >::const_iterator fontIt;
   int nPict=0;
@@ -301,7 +300,7 @@ bool TTParser::sendText()
     fontIt=m_state->m_posFontMap.find(i);
     if (fontIt != m_state->m_posFontMap.end()) {
       f << "[Style,cPos=" << std::hex << i << std::dec << "]";
-      m_listener->setFont(fontIt->second);
+      getListener()->setFont(fontIt->second);
     }
     if (c)
       f << c;
@@ -313,8 +312,9 @@ bool TTParser::sendText()
       // tex-edit accept control character, ...
       unsigned char nextC=(unsigned char) input->readULong(1);
       if (nextC < 0x20) {
-        m_listener->insertChar('^');
-        m_listener->insertChar(uint8_t('@'+nextC));
+        i++;
+        getListener()->insertChar('^');
+        getListener()->insertChar(uint8_t('@'+nextC));
         continue;
       }
       input->seek(-1, WPX_SEEK_CUR);
@@ -323,25 +323,25 @@ bool TTParser::sendText()
     case 0x9:
       if (m_state->m_numberSpacesForTab>0) {
         for (int j = 0; j < m_state->m_numberSpacesForTab; j++)
-          m_listener->insertChar(' ');
+          getListener()->insertChar(' ');
       } else
-        m_listener->insertTab();
+        getListener()->insertTab();
       break;
     case 0xd:
-      m_listener->insertEOL();
+      getListener()->insertEOL();
       break;
     case 0x11: // command key
-      m_listener->insertUnicode(0x2318);
+      getListener()->insertUnicode(0x2318);
       break;
     case 0x14: // apple logo: check me
-      m_listener->insertUnicode(0xf8ff);
+      getListener()->insertUnicode(0xf8ff);
       break;
     case 0xca:
       sendPicture(1000+nPict++);
       break;
     default:
       if (c < 0x20) f  << "##[" << std::hex << int(c) << std::dec << "]";
-      i += m_listener->insertCharacter(c, input, m_state->m_eof);
+      i += getListener()->insertCharacter(c, input, m_state->m_eof);
       break;
     }
   }
@@ -452,7 +452,7 @@ bool TTParser::sendPicture(int id)
     MWAW_DEBUG_MSG(("TTParser::sendPicture: can not find picture for id=%d\n",id));
     return false;
   }
-  if (!m_listener) {
+  if (!getListener()) {
     MWAW_DEBUG_MSG(("TTParser::sendPicture: can not find the listener\n"));
     return false;
   }
@@ -491,7 +491,7 @@ bool TTParser::sendPicture(int id)
     WPXBinaryData fData;
     std::string type;
     if (thePict->getBinary(fData,type))
-      m_listener->insertPicture(pictPos, fData, type);
+      getListener()->insertPicture(pictPos, fData, type);
   }
   return true;
 }

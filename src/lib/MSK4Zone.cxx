@@ -162,22 +162,26 @@ struct State {
 ////////////////////////////////////////////////////////////
 MSK4Zone::MSK4Zone
 (MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header, MSK4Parser &parser, MWAWFontConverterPtr &convert, std::string const &oleName)
-  : MSKParser(input, rsrcParser, header), m_mainParser(&parser), m_convertissor(convert),
+  : MSKParser(input, rsrcParser, header), m_mainParser(&parser),
     m_state(), m_entryMap(), m_pageSpan(), m_textParser(), m_graphParser()
 {
+  m_convertissor=convert;
   setAscii(oleName);
   setVersion(4);
   init();
 }
 
-MSK4Zone::~MSK4Zone() {}
+MSK4Zone::~MSK4Zone()
+{
+  resetListener();
+}
 
 ////////////////////////////////////////////////////////////
 // small helper to manage interaction between parent and child, ...
 ////////////////////////////////////////////////////////////
 void MSK4Zone::init()
 {
-  m_listener.reset();
+  resetListener();
 
   m_state.reset(new MSK4ZoneInternal::State);
   m_textParser.reset(new MSK4Text(*this, m_convertissor));
@@ -187,7 +191,7 @@ void MSK4Zone::init()
 
 void MSK4Zone::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MSKParser::setListener(listen);
   m_textParser->setListener(listen);
   m_graphParser->setListener(listen);
 }
@@ -257,11 +261,11 @@ void MSK4Zone::newPage(int number)
   long pos = getInput()->tell();
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
     // FIXME: find a way to force the page break to happen
     //    ie. graphParser must add a space to force it :-~
-    if (m_state->m_mainOle) m_listener->insertBreak(MWAWContentListener::PageBreak);
+    if (m_state->m_mainOle) getListener()->insertBreak(MWAWContentListener::PageBreak);
 
     MSKGraph::SendData sendData;
     sendData.m_type = MSKGraph::SendData::RBDR;
@@ -599,12 +603,12 @@ void MSK4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
   sendData.m_page = 0;
   m_graphParser->sendObjects(sendData);
 
-  if (mainOle && m_listener && m_state->m_numColumns > 1) {
-    if (m_listener->isSectionOpened())
-      m_listener->closeSection();
+  if (mainOle && getListener() && m_state->m_numColumns > 1) {
+    if (getListener()->isSectionOpened())
+      getListener()->closeSection();
     int w = int(72.0*pageWidth()/m_state->m_numColumns);
     std::vector<int> colSize(size_t(m_state->m_numColumns), w);
-    m_listener->openSection(colSize, WPX_POINT);
+    getListener()->openSection(colSize, WPX_POINT);
   }
 
   MWAWEntry ent(entry);

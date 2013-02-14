@@ -133,7 +133,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 WNParser::WNParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
+  MWAWParser(input, rsrcParser, header), m_state(),
   m_entryManager(), m_pageSpan(), m_textParser()
 {
   init();
@@ -141,13 +141,11 @@ WNParser::WNParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWH
 
 WNParser::~WNParser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void WNParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new WNParserInternal::State);
@@ -164,7 +162,7 @@ void WNParser::init()
 
 void WNParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
   m_textParser->setListener(listen);
 }
 
@@ -197,9 +195,9 @@ void WNParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -214,10 +212,10 @@ bool WNParser::getColor(int colId, MWAWColor &col) const
 
 void WNParser::sendFootnote(WNEntry const &entry)
 {
-  if (!m_listener) return;
+  if (!getListener()) return;
 
   MWAWSubDocumentPtr subdoc(new WNParserInternal::SubDocument(*this, getInput(), entry));
-  m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+  getListener()->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
 }
 
 void WNParser::send(WNEntry const &entry)
@@ -281,6 +279,7 @@ void WNParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -290,7 +289,7 @@ void WNParser::parse(WPXDocumentInterface *docInterface)
 void WNParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("WNParser::createDocument: listener already exist\n"));
     return;
   }
@@ -661,7 +660,7 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
       MWAW_DEBUG_MSG(("WNParser::sendPicture: can not read the picture\n"));
       ascii().addDelimiter(pos, '|');
     } else {
-      if (m_listener) {
+      if (getListener()) {
         WPXBinaryData data;
         std::string pictType;
         MWAWPosition pictPos;
@@ -673,7 +672,7 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
         pictPos.setRelativePosition(MWAWPosition::Char);
 
         if (pict->getBinary(data,pictType))
-          m_listener->insertPicture(pictPos, data, pictType);
+          getListener()->insertPicture(pictPos, data, pictType);
       }
 
 #ifdef DEBUG_WITH_FILES

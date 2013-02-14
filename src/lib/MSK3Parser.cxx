@@ -183,7 +183,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSK3Parser::MSK3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MSKParser(input, rsrcParser, header), m_convertissor(), m_state(),
+  MSKParser(input, rsrcParser, header), m_state(),
   m_pageSpan(), m_listZones(), m_graphParser(), m_textParser()
 {
   init();
@@ -191,13 +191,11 @@ MSK3Parser::MSK3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, M
 
 MSK3Parser::~MSK3Parser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void MSK3Parser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new MSK3ParserInternal::State);
@@ -214,7 +212,7 @@ void MSK3Parser::init()
 
 void MSK3Parser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MSKParser::setListener(listen);
   m_graphParser->setListener(listen);
   m_textParser->setListener(listen);
 }
@@ -248,12 +246,12 @@ void MSK3Parser::newPage(int number, bool softBreak)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
     if (softBreak)
-      m_listener->insertBreak(MWAWContentListener::SoftPageBreak);
+      getListener()->insertBreak(MWAWContentListener::SoftPageBreak);
     else
-      m_listener->insertBreak(MWAWContentListener::PageBreak);
+      getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -278,8 +276,6 @@ void MSK3Parser::parse(WPXDocumentInterface *docInterface)
       sendZone(MSK3ParserInternal::Zone::MAIN);
       m_textParser->flushExtra();
       m_graphParser->flushExtra();
-      if (m_listener) m_listener->endDocument();
-      m_listener.reset();
     }
     ascii().reset();
   } catch (...) {
@@ -287,6 +283,7 @@ void MSK3Parser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -300,7 +297,7 @@ void MSK3Parser::sendText(int id, int noteId)
 
 void MSK3Parser::sendZone(int zoneType)
 {
-  if (!m_listener) return;
+  if (!getListener()) return;
   MSK3ParserInternal::Zone zone=m_state->get(MSK3ParserInternal::Zone::Type(zoneType));
   if (zone.m_zoneId >= 0)
     m_graphParser->sendAll(zone.m_zoneId, zoneType==MSK3ParserInternal::Zone::MAIN);
@@ -312,8 +309,8 @@ bool MSK3Parser::sendFootNote(int zoneId, int noteId)
 {
   MWAWSubDocumentPtr subdoc
   (new MSK3ParserInternal::SubDocument(*this, getInput(), MSK3ParserInternal::SubDocument::Text, zoneId, noteId));
-  if (m_listener)
-    m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+  if (getListener())
+    getListener()->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
   return true;
 }
 
@@ -323,7 +320,7 @@ bool MSK3Parser::sendFootNote(int zoneId, int noteId)
 void MSK3Parser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("MSK3Parser::createDocument: listener already exist\n"));
     return;
   }

@@ -52,12 +52,6 @@ class MSK4Parser;
 class MSK4Text;
 class MSKGraph;
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
-
 namespace MSK4ZoneInternal
 {
 struct State;
@@ -203,9 +197,6 @@ protected:
 
   //! the main parser
   MSK4Parser *m_mainParser;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
 
   //! the internal state
   shared_ptr<MSK4ZoneInternal::State> m_state;

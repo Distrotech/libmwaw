@@ -161,7 +161,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 CWParser::CWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
+  MWAWParser(input, rsrcParser, header), m_state(),
   m_pageSpan(), m_pageSpanSet(false), m_databaseParser(), m_graphParser(), m_presentationParser(),
   m_spreadsheetParser(), m_styleManager(), m_tableParser(), m_textParser()
 {
@@ -174,8 +174,7 @@ CWParser::~CWParser()
 
 void CWParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new CWParserInternal::State);
@@ -198,7 +197,7 @@ void CWParser::init()
 
 void CWParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
   m_databaseParser->setListener(listen);
   m_graphParser->setListener(listen);
   m_presentationParser->setListener(listen);
@@ -292,9 +291,9 @@ void CWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -353,18 +352,18 @@ void CWParser::getColumnInfo(int &numColumns, std::vector<int> &width,
 
 void CWParser::sendFootnote(int zoneId)
 {
-  if (!m_listener) return;
+  if (!getListener()) return;
 
   MWAWSubDocumentPtr subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
-  m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+  getListener()->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
 }
 
 void CWParser::sendZoneInFrame(int zoneId, MWAWPosition pos, WPXPropertyList extras, WPXPropertyList frameExtras)
 {
-  if (!m_listener) return;
+  if (!getListener()) return;
 
   MWAWSubDocumentPtr subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
-  m_listener->insertTextBox(pos, subdoc, extras, frameExtras);
+  getListener()->insertTextBox(pos, subdoc, extras, frameExtras);
 }
 
 void CWParser::forceParsed(int zoneId)
@@ -399,8 +398,6 @@ void CWParser::parse(WPXDocumentInterface *docInterface)
       m_graphParser->flushExtra();
       m_tableParser->flushExtra();
       m_textParser->flushExtra();
-      if (m_listener) m_listener->endDocument();
-      m_listener.reset();
     }
     ascii().reset();
   } catch (...) {
@@ -408,6 +405,7 @@ void CWParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -417,7 +415,7 @@ void CWParser::parse(WPXDocumentInterface *docInterface)
 void CWParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("CWParser::createDocument: listener already exist\n"));
     return;
   }

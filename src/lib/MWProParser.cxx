@@ -293,21 +293,18 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MWProParser::MWProParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
-  m_structures(), m_pageSpan()
+  MWAWParser(input, rsrcParser, header), m_state(), m_structures(), m_pageSpan()
 {
   init();
 }
 
 MWProParser::~MWProParser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void MWProParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new MWProParserInternal::State);
@@ -322,7 +319,7 @@ void MWProParser::init()
 
 void MWProParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
   m_structures->setListener(listen);
 }
 
@@ -358,12 +355,12 @@ void MWProParser::newPage(int number, bool softBreak)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
     if (softBreak)
-      m_listener->insertBreak(MWAWContentListener::SoftPageBreak);
+      getListener()->insertBreak(MWAWContentListener::SoftPageBreak);
     else
-      m_listener->insertBreak(MWAWContentListener::PageBreak);
+      getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -420,6 +417,7 @@ void MWProParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -564,7 +562,7 @@ bool MWProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
 void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("MWProParser::createDocument: listener already exist\n"));
     return;
   }
@@ -1336,8 +1334,8 @@ bool MWProParser::sendEmptyFrameZone(MWAWPosition const &pos,
 {
   shared_ptr<MWProParserInternal::SubDocument> subdoc
   (new MWProParserInternal::SubDocument(*this, getInput(), -3));
-  if (m_listener)
-    m_listener->insertTextBox(pos, subdoc, extras);
+  if (getListener())
+    getListener()->insertTextBox(pos, subdoc, extras);
   return true;
 }
 
@@ -1397,8 +1395,8 @@ bool MWProParser::sendTextBoxZone(int blockId, MWAWPosition const &pos,
 {
   shared_ptr<MWProParserInternal::SubDocument> subdoc
   (new MWProParserInternal::SubDocument(*this, getInput(), blockId));
-  if (m_listener)
-    m_listener->insertTextBox(pos, subdoc, extras);
+  if (getListener())
+    getListener()->insertTextBox(pos, subdoc, extras);
   return true;
 }
 
@@ -1530,7 +1528,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       long actPos = input->tell();
       switch (zone->m_tokens[(size_t)data.m_id].m_type) {
       case 1:
-        if (m_listener) m_listener->insertField(MWAWContentListener::PageNumber);
+        if (getListener()) getListener()->insertField(MWAWContentListener::PageNumber);
         break;
       case 2:
         if (vers == 1 && listenerState.isSent(zone->m_tokens[(size_t)data.m_id].m_blockId)) {
@@ -1539,7 +1537,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
           int id = zone->m_tokens[(size_t)data.m_id].m_blockId;
           if (vers == 0) id = -id;
           MWAWSubDocumentPtr subdoc(new MWProParserInternal::SubDocument(*this, getInput(), id));
-          m_listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+          getListener()->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
         }
         break;
       case 3:
@@ -1557,23 +1555,23 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       case 5:
         break; // hyphen ok
       case 6:
-        if (m_listener) m_listener->insertField(MWAWContentListener::Date);
+        if (getListener()) getListener()->insertField(MWAWContentListener::Date);
         break;
       case 7:
-        if (m_listener) m_listener->insertField(MWAWContentListener::Time);
+        if (getListener()) getListener()->insertField(MWAWContentListener::Time);
         break;
       case 8:
-        if (m_listener) m_listener->insertField(MWAWContentListener::Title);
+        if (getListener()) getListener()->insertField(MWAWContentListener::Title);
         break;
       case 9:
-        if (m_listener) m_listener->insertUnicodeString("#REVISION#");
+        if (getListener()) getListener()->insertUnicodeString("#REVISION#");
         break;
       case 10:
-        if (m_listener) {
+        if (getListener()) {
           int numSection = listenerState.numSection()+1;
           std::stringstream s;
           s << numSection;
-          m_listener->insertUnicodeString(s.str().c_str());
+          getListener()->insertUnicodeString(s.str().c_str());
         }
         break;
       default:
@@ -1708,11 +1706,11 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
     MWAW_DEBUG_MSG(("MWProParser::parseDataZone: no sure this is a picture\n"));
     if (pictPos.size().x() <= 0 || pictPos.size().y() <= 0)
       pictPos=MWAWPosition(Vec2f(0,0),Vec2f(100.,100.), WPX_POINT);
-    if (m_listener) {
+    if (getListener()) {
       WPXBinaryData data;
       input->seek(4, WPX_SEEK_SET);
       input->readDataBlock(pictSize, data);
-      m_listener->insertPicture(pictPos, data, "image/pict", extras);
+      getListener()->insertPicture(pictPos, data, "image/pict", extras);
     }
     return true;
   }
@@ -1725,11 +1723,11 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
   if (pict->getBdBox().size().x() > 0 && pict->getBdBox().size().y() > 0)
     pictPos.setNaturalSize(pict->getBdBox().size());
 
-  if (m_listener) {
+  if (getListener()) {
     WPXBinaryData data;
     std::string type;
     if (pict->getBinary(data,type))
-      m_listener->insertPicture(pictPos, data, type, extras);
+      getListener()->insertPicture(pictPos, data, type, extras);
   }
   return true;
 }

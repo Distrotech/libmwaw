@@ -273,7 +273,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MDWParser::MDWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
+  MWAWParser(input, rsrcParser, header), m_state(),
   m_pageSpan()
 {
   init();
@@ -285,8 +285,7 @@ MDWParser::~MDWParser()
 
 void MDWParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new MDWParserInternal::State);
@@ -300,7 +299,7 @@ void MDWParser::init()
 
 void MDWParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
 }
 
 ////////////////////////////////////////////////////////////
@@ -327,9 +326,9 @@ void MDWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -388,8 +387,6 @@ void MDWParser::parse(WPXDocumentInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       sendZone(0);
-      if (m_listener) m_listener->endDocument();
-      m_listener.reset();
     }
 
     libmwaw::DebugStream f;
@@ -412,6 +409,7 @@ void MDWParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -421,7 +419,7 @@ void MDWParser::parse(WPXDocumentInterface *docInterface)
 void MDWParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("MDWParser::createDocument: listener already exist\n"));
     return;
   }
@@ -652,10 +650,10 @@ bool MDWParser::readGraphic(MDWParserInternal::LineInfo const &line)
   }
   WPXBinaryData data;
   std::string type;
-  if (m_listener && pict->getBinary(data,type)) {
+  if (getListener() && pict->getBinary(data,type)) {
     MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), WPX_POINT);
     pictPos.setRelativePosition(MWAWPosition::Char);
-    m_listener->insertPicture(pictPos,data, type);
+    getListener()->insertPicture(pictPos,data, type);
   }
   ascii().skipZone(pos+8, pos+sz-1);
   ascii().addPos(pos);
@@ -753,7 +751,7 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo const &line, MWAWParagraph
 
 void MDWParser::updateRuler(MDWParserInternal::LineInfo const &line)
 {
-  if (!m_listener || !line.m_entry.valid()) return;
+  if (!getListener() || !line.m_entry.valid()) return;
   MWAWParagraph::Justification justify = *(m_state->m_rulerParagraph.m_justify);
   if (line.m_flags[1] & 0x40) {
     switch (line.m_flags[1]&0x3) {
@@ -781,8 +779,11 @@ void MDWParser::updateRuler(MDWParserInternal::LineInfo const &line)
     listChanged = true;
 
   if (!changeJustification && !listChanged) {
-    if (line.m_listLevel && m_listener)
-      m_listener->setCurrentListLevel(line.m_listLevel);
+    if (line.m_listLevel && getListener()) {
+      MWAWParagraph para=getListener()->getParagraph();
+      para.m_listLevelIndex = line.m_listLevel;
+      getListener()->setParagraph(para);
+    }
     return;
   }
 
@@ -791,23 +792,18 @@ void MDWParser::updateRuler(MDWParserInternal::LineInfo const &line)
 
   m_state->m_actListType = line.m_listType;
   int const level = line.m_listLevel;
-  double itemPos = level==0 ? 0.0 : level*0.5;
-  double textPos = level==0 ? 0.0 : itemPos+0.5;
-  if (line.m_listType == 0 && level) itemPos-=0.5;
-  if (!level)
-    *(para.m_margins[1]) += textPos*72.;
-  else {
+  if (level) {
     MWAWList::Level theLevel;
     switch(line.m_listType) {
-    case 0:
+    case 0: // Heading
       theLevel.m_type = MWAWList::Level::DECIMAL;
-      break; // Heading
+      break;
     case 1:
       theLevel.m_type = MWAWList::Level::NONE;
       break;
-    case 2:
+    case 2: // numbered
       theLevel.m_type = MWAWList::Level::DECIMAL;
-      break; // numbered
+      break;
     case 3:  // bullet
       theLevel.m_type = MWAWList::Level::BULLET;
       MWAWContentListener::appendUnicode(0x2022, theLevel.m_bullet);
@@ -820,9 +816,11 @@ void MDWParser::updateRuler(MDWParserInternal::LineInfo const &line)
         line.m_listType != m_state->m_actListType &&
         *(para.m_listLevelIndex)==level)
       theLevel.m_startValue=1;
-    theLevel.m_labelIndent = itemPos+*(para.m_margins[1])/72.0;
-    *(para.m_margins[1]) += textPos*72.;
-    //    theLevel.m_labelWidth = (textPos-itemPos);
+
+    theLevel.m_labelWidth=0.5;
+    theLevel.m_labelBeforeSpace=0.5*(level-1);
+    if (line.m_listType==0)
+      *(para.m_margins[1]) -= 0.5/72.;
     para.m_listLevel=theLevel;
   }
   para.m_listLevelIndex=level;
@@ -1367,7 +1365,7 @@ bool MDWParser::readPrintInfo(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 void MDWParser::sendText(std::string const &text, std::vector<MWAWFont> const &fonts, std::vector<int> const &textPos)
 {
-  if (!m_listener || !text.length())
+  if (!getListener() || !text.length())
     return;
   size_t numFonts = fonts.size();
   if (numFonts != textPos.size()) {
@@ -1379,17 +1377,17 @@ void MDWParser::sendText(std::string const &text, std::vector<MWAWFont> const &f
   size_t numChar = text.length();
   for (size_t c = 0; c < numChar; c++) {
     if (actFontId < numFonts && int(c) == textPos[actFontId])
-      m_listener->setFont(fonts[actFontId++]);
+      getListener()->setFont(fonts[actFontId++]);
     unsigned char ch = (unsigned char)text[c];
     switch(ch) {
     case 0x9:
-      m_listener->insertTab();
+      getListener()->insertTab();
       break;
     case 0xd:
-      m_listener->insertEOL(c!=numChar-1);
+      getListener()->insertEOL(c!=numChar-1);
       break;
     default:
-      m_listener->insertCharacter((unsigned char) ch);
+      getListener()->insertCharacter((unsigned char) ch);
       break;
     }
   }
@@ -1397,9 +1395,9 @@ void MDWParser::sendText(std::string const &text, std::vector<MWAWFont> const &f
 
 void MDWParser::setProperty(MWAWParagraph const &para)
 {
-  if (!m_listener) return;
+  if (!getListener()) return;
   m_state->m_actParagraph = para;
-  m_listener->setParagraph(para);
+  getListener()->setParagraph(para);
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

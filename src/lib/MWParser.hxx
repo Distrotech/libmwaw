@@ -44,10 +44,6 @@
 #include "MWAWParser.hxx"
 
 class MWAWEntry;
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 
 namespace MWParserInternal
 {
@@ -142,12 +138,6 @@ protected:
   //
   // data
   //
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
-
   //! the state
   shared_ptr<MWParserInternal::State> m_state;
 

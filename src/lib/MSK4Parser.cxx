@@ -162,7 +162,6 @@ MSK4Parser::MSK4Parser(MWAWInputStreamPtr inp, MWAWRSRCParserPtr rsrcParser, MWA
 
 MSK4Parser::~MSK4Parser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void MSK4Parser::setListener(MWAWContentListenerPtr listen)
@@ -223,6 +222,9 @@ void MSK4Parser::parse(WPXDocumentInterface *interface)
   try {
     flushExtra();
   } catch (...) { }
+
+  if (m_listener) m_listener->endDocument();
+  setListener(MWAWContentListenerPtr());
 }
 
 ////////////////////////////////////////////////////////////

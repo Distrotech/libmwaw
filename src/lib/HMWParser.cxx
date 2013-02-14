@@ -147,7 +147,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor + basic interface ...
 ////////////////////////////////////////////////////////////
 HMWParser::HMWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
+  MWAWParser(input, rsrcParser, header), m_state(),
   m_pageSpan(), m_graphParser(), m_textParser()
 {
   init();
@@ -159,8 +159,7 @@ HMWParser::~HMWParser()
 
 void HMWParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new HMWParserInternal::State);
@@ -182,7 +181,7 @@ bool HMWParser::isKoreanFile() const
 
 void HMWParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
   m_graphParser->setListener(listen);
   m_textParser->setListener(listen);
 }
@@ -225,9 +224,9 @@ void HMWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -270,8 +269,6 @@ void HMWParser::parse(WPXDocumentInterface *docInterface)
 
       m_textParser->flushExtra();
       m_graphParser->flushExtra();
-      if (m_listener) m_listener->endDocument();
-      m_listener.reset();
     }
     ascii().reset();
   } catch (...) {
@@ -279,6 +276,7 @@ void HMWParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -288,7 +286,7 @@ void HMWParser::parse(WPXDocumentInterface *docInterface)
 void HMWParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("HMWParser::createDocument: listener already exist\n"));
     return;
   }

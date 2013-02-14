@@ -191,7 +191,8 @@ void Paragraph::updateListLevel()
     MWAWContentListener::appendUnicode(0x2022, theLevel.m_bullet);
     break;
   }
-  theLevel.m_labelIndent = m_margins[1].get()-0.2f;
+  m_margins[1]=m_margins[1].get()-0.2;
+  theLevel.m_labelWidth=0.2;
   m_listLevel=theLevel;
 }
 

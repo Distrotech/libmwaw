@@ -48,12 +48,6 @@
 
 #include "MSKParser.hxx"
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
-
 namespace MSK3ParserInternal
 {
 struct State;
@@ -142,10 +136,6 @@ protected:
   //
   // data
   //
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
-
   //! the state
   shared_ptr<MSK3ParserInternal::State> m_state;
 

@@ -203,11 +203,7 @@ void MWAWParagraph::addTo(WPXPropertyList &propList, bool inTable) const
     break;
   }
   if (!inTable) {
-    if (*m_listLevelIndex >= 1) {
-      float factorToLevel = MWAWPosition::getScaleFactor(m_marginsUnit.get(), WPX_INCH);
-      propList.insert("fo:margin-left", m_listLevel->m_labelIndent/factorToLevel, *m_marginsUnit);
-    } else
-      propList.insert("fo:margin-left", *m_margins[1], *m_marginsUnit);
+    propList.insert("fo:margin-left", *m_margins[1], *m_marginsUnit);
     propList.insert("fo:text-indent", *m_margins[0], *m_marginsUnit);
     propList.insert("fo:margin-right", *m_margins[2], *m_marginsUnit);
     if (!m_backgroundColor->isWhite())

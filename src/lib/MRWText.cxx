@@ -1775,7 +1775,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
           val &= 0xFFFFEFFF;
           MWAWList::Level theLevel;
           theLevel.m_type = MWAWList::Level::BULLET;
-          theLevel.m_labelIndent = para.m_margins[1].get();
+          theLevel.m_labelWidth=0.1;
           MWAWContentListener::appendUnicode(0x2022, theLevel.m_bullet);
           para.m_listLevelIndex = 1;
           para.m_listLevel=theLevel;

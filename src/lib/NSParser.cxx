@@ -311,7 +311,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 NSParser::NSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
+  MWAWParser(input, rsrcParser, header), m_state(),
   m_pageSpan(), m_graphParser(), m_textParser()
 {
   init();
@@ -319,13 +319,11 @@ NSParser::NSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWH
 
 NSParser::~NSParser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void NSParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new NSParserInternal::State);
@@ -342,7 +340,7 @@ void NSParser::init()
 
 void NSParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
   m_textParser->setListener(listen);
   m_graphParser->setListener(listen);
 }
@@ -513,9 +511,9 @@ void NSParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -549,6 +547,7 @@ void NSParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -558,7 +557,7 @@ void NSParser::parse(WPXDocumentInterface *docInterface)
 void NSParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("NSParser::createDocument: listener already exist\n"));
     return;
   }

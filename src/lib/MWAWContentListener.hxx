@@ -80,7 +80,7 @@ public:
   /** starts the document */
   void startDocument();
   /** ends the document */
-  void endDocument();
+  void endDocument(bool sendDelayedSubDoc=true);
 
   /** function called to add a subdocument */
   void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
@@ -133,12 +133,9 @@ public:
 
   // ------ list format -----------
   /** function to set the actual list */
-  void setCurrentList(shared_ptr<MWAWList> list);
+  void setList(shared_ptr<MWAWList> list);
   /** returns the current list */
-  shared_ptr<MWAWList> getCurrentList() const;
-  /** function to set the level of the current list
-   * \warning minimal implementation...*/
-  void setCurrentListLevel(int level);
+  shared_ptr<MWAWList> getList() const;
 
   // ------- fields ----------------
   /** Defines some basic type for field */
@@ -202,7 +199,7 @@ protected:
   void _openSection();
   void _closeSection();
 
-  void _openPageSpan();
+  void _openPageSpan(bool sendHeaderFooters=true);
   void _closePageSpan();
 
   void _startSubDocument();

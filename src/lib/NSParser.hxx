@@ -49,8 +49,6 @@
 #include "MWAWParser.hxx"
 
 class MWAWEntry;
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 class MWAWPosition;
 
 namespace NSParserInternal
@@ -165,12 +163,6 @@ protected:
   //
   // data
   //
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
-
   //! the state
   shared_ptr<NSParserInternal::State> m_state;
 

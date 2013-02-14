@@ -443,17 +443,12 @@ void MWAWContentListener::setParagraph(MWAWParagraph const &para)
   if (listIndex <= 0) return;
 
   // FIXME: remove me when the list management is changed
-  float factorToLevel = MWAWPosition::getScaleFactor(*para.m_marginsUnit, WPX_INCH);
   MWAWList::Level level = *para.m_listLevel;
-  level.m_labelWidth = (factorToLevel*para.m_margins[1].get()-level.m_labelIndent);
-  if (level.m_labelWidth<0.1)
-    level.m_labelWidth = 0.1;
-  level.m_labelIndent = 0;
   shared_ptr<MWAWList> list=m_ps->m_list;
   if (!list) {
     list.reset(new MWAWList);
     list->set(listIndex, level);
-    setCurrentList(list);
+    setList(list);
   } else
     list->set(listIndex, level);
 }
@@ -466,19 +461,14 @@ MWAWParagraph const &MWAWContentListener::getParagraph() const
 ///////////////////
 // List: Minimal implementation
 ///////////////////
-void MWAWContentListener::setCurrentListLevel(int level)
-{
-  m_ps->m_paragraph.m_listLevelIndex = level;
-}
-
-void MWAWContentListener::setCurrentList(shared_ptr<MWAWList> list)
+void MWAWContentListener::setList(shared_ptr<MWAWList> list)
 {
   m_ps->m_list=list;
   if (list && list->getId() <= 0 && list->numLevels())
     list->setId(++m_ds->m_newListId);
 }
 
-shared_ptr<MWAWList> MWAWContentListener::getCurrentList() const
+shared_ptr<MWAWList> MWAWContentListener::getList() const
 {
   return m_ps->m_list;
 }
@@ -630,15 +620,18 @@ void MWAWContentListener::startDocument()
   m_ds->m_isDocumentStarted = true;
 }
 
-void MWAWContentListener::endDocument()
+void MWAWContentListener::endDocument(bool sendDelayedSubDoc)
 {
   if (!m_ds->m_isDocumentStarted) {
     MWAW_DEBUG_MSG(("MWAWContentListener::startDocument: the document is not started\n"));
     return;
   }
 
-  if (!m_ps->m_isPageSpanOpened)
+  if (!m_ps->m_isPageSpanOpened) {
+    // we must call by hand openPageSpan to avoid sending any header/footer documents
+    if (!sendDelayedSubDoc) _openPageSpan(false);
     _openSpan();
+  }
 
   if (m_ps->m_isTableOpened)
     closeTable();
@@ -658,7 +651,7 @@ void MWAWContentListener::endDocument()
 ///////////////////
 // page
 ///////////////////
-void MWAWContentListener::_openPageSpan()
+void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
 {
   if (m_ps->m_isPageSpanOpened)
     return;
@@ -701,7 +694,8 @@ void MWAWContentListener::_openPageSpan()
   m_ps->m_pageMarginBottom = currentPage.getMarginBottom();
 
   // we insert the header footer
-  currentPage.sendHeaderFooters(this, m_documentInterface);
+  if (sendHeaderFooters)
+    currentPage.sendHeaderFooters(this, m_documentInterface);
 
   // first paragraph in span (necessary for resetting page number)
   m_ps->m_firstParagraphInPageSpan = true;
@@ -921,7 +915,7 @@ void MWAWContentListener::_changeList()
       m_documentInterface->closeUnorderedListLevel();
   }
 
-  WPXPropertyList propList2;
+  WPXPropertyList propList;
   if (newLevel) {
     if (!m_ps->m_list.get()) {
       MWAW_DEBUG_MSG(("MWAWContentListener::_handleListChange: can not find any list\n"));
@@ -949,7 +943,7 @@ void MWAWContentListener::_changeList()
       m_ps->m_list->sendTo(*m_documentInterface, (int) newLevel);
     }
 
-    propList2.insert("libwpd:id", m_ps->m_list->getId());
+    propList.insert("libwpd:id", m_ps->m_list->getId());
     m_ps->m_list->closeElement();
   }
 
@@ -957,13 +951,12 @@ void MWAWContentListener::_changeList()
 
   m_ps->m_listOrderedLevels.resize(newLevel, false);
   for (size_t i=actualListLevel+1; i<= newLevel; i++) {
-    if (m_ps->m_list->isNumeric(int(i))) {
-      m_ps->m_listOrderedLevels[i-1] = true;
-      m_documentInterface->openOrderedListLevel(propList2);
-    } else {
-      m_ps->m_listOrderedLevels[i-1] = false;
-      m_documentInterface->openUnorderedListLevel(propList2);
-    }
+    bool ordered = m_ps->m_list->isNumeric(int(i));
+    m_ps->m_listOrderedLevels[i-1] = ordered;
+    if (ordered)
+      m_documentInterface->openOrderedListLevel(propList);
+    else
+      m_documentInterface->openUnorderedListLevel(propList);
   }
 }
 

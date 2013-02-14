@@ -359,21 +359,18 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MWParser::MWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
-  m_pageSpan()
+  MWAWParser(input, rsrcParser, header), m_state(), m_pageSpan()
 {
   init();
 }
 
 MWParser::~MWParser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void MWParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new MWParserInternal::State);
@@ -387,7 +384,7 @@ void MWParser::init()
 
 void MWParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
 }
 
 ////////////////////////////////////////////////////////////
@@ -414,9 +411,9 @@ void MWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -458,6 +455,7 @@ void MWParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -467,7 +465,7 @@ void MWParser::parse(WPXDocumentInterface *docInterface)
 void MWParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("MWParser::createDocument: listener already exist\n"));
     return;
   }
@@ -703,14 +701,14 @@ bool MWParser::sendWindow(int zone)
       break;
     }
   }
-  if (m_listener && zone) {
+  if (getListener() && zone) {
     // FIXME: try to insert field in the good place
     if (info.m_pageNumber.x() >= 0 && info.m_pageNumber.y() >= 0)
-      m_listener->insertField(MWAWContentListener::PageNumber);
+      getListener()->insertField(MWAWContentListener::PageNumber);
     if (info.m_date.x() >= 0 && info.m_date.y() >= 0)
-      m_listener->insertField(MWAWContentListener::Date);
+      getListener()->insertField(MWAWContentListener::Date);
     if (info.m_time.x() >= 0 && info.m_time.y() >= 0)
-      m_listener->insertField(MWAWContentListener::Time);
+      getListener()->insertField(MWAWContentListener::Time);
   }
   return true;
 }
@@ -1244,7 +1242,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
 bool MWParser::readText(MWParserInternal::Information const &info,
                         std::vector<int> const &lineHeight)
 {
-  if (!m_listener) {
+  if (!getListener()) {
     MWAW_DEBUG_MSG(("MWParser::readText: can not find the listener\n"));
     return false;
   }
@@ -1373,33 +1371,33 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     ascii().addDelimiter(input->tell(), '|');
   }
 
-  if (m_listener) {
-    MWAWParagraph para=m_listener->getParagraph();
+  if (getListener()) {
+    MWAWParagraph para=getListener()->getParagraph();
     if (totalHeight && lHeight->size()) // fixme find a way to associate the good size to each line
       para.setInterline(totalHeight/double(lHeight->size()), WPX_POINT);
     else
       para.setInterline(1.2, WPX_PERCENT);
     if (info.m_justifySet)
       para.m_justify=info.m_justify;
-    m_listener->setParagraph(para);
+    getListener()->setParagraph(para);
 
     if (!numFormat || listPos[0] != 0)
-      m_listener->setFont(info.m_font);
+      getListener()->setFont(info.m_font);
 
     int actFormat = 0;
     numChar = int(text.length());
     for (int i = 0; i < numChar; i++) {
       if (actFormat < numFormat && i == listPos[(size_t)actFormat]) {
-        m_listener->setFont(listFonts[(size_t)actFormat]);
+        getListener()->setFont(listFonts[(size_t)actFormat]);
         actFormat++;
       }
       unsigned char c = (unsigned char) text[(size_t)i];
       if (c == 0x9)
-        m_listener->insertTab();
+        getListener()->insertTab();
       else if (c == 0xd)
-        m_listener->insertEOL();
+        getListener()->insertEOL();
       else
-        m_listener->insertCharacter(c);
+        getListener()->insertCharacter(c);
     }
   }
 
@@ -1490,8 +1488,8 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   if (parag.m_margins[2].get() < 0) parag.m_margins[2] = 0;
   f << parag;
 
-  if (m_listener)
-    m_listener->setParagraph(parag);
+  if (getListener())
+    getListener()->setParagraph(parag);
   ascii().addPos(version()<=3 ? pos-4 : pos);
   ascii().addNote(f.str().c_str());
 
@@ -1598,16 +1596,16 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
 
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, int(entry.length()-8)));
   if (pict) {
-    if (m_listener) {
-      MWAWParagraph para=m_listener->getParagraph();
+    if (getListener()) {
+      MWAWParagraph para=getListener()->getParagraph();
       para.setInterline(1.0, WPX_PERCENT);
-      m_listener->setParagraph(para);
+      getListener()->setParagraph(para);
 
       WPXBinaryData data;
       std::string type;
       if (pict->getBinary(data,type))
-        m_listener->insertPicture(pictPos, data, type);
-      m_listener->insertEOL();
+        getListener()->insertPicture(pictPos, data, type);
+      getListener()->insertEOL();
     }
     ascii().skipZone(pos+8, entry.end()-1);
   }

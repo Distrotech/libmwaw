@@ -43,7 +43,9 @@
 void MWAWList::Level::addTo(WPXPropertyList &propList, int startVal) const
 {
   propList.insert("text:min-label-width", m_labelWidth);
-  propList.insert("text:space-before", m_labelIndent);
+  propList.insert("text:space-before", m_labelBeforeSpace);
+  if (m_labelAfterSpace > 0)
+    propList.insert("text:min-label-distance", m_labelAfterSpace);
 
   switch(m_type) {
   case NONE:
@@ -83,10 +85,13 @@ int MWAWList::Level::cmp(MWAWList::Level const &levl) const
 {
   int diff = int(m_type)-int(levl.m_type);
   if (diff) return diff;
-  double fDiff = m_labelIndent-levl.m_labelIndent;
+  double fDiff = m_labelBeforeSpace-levl.m_labelBeforeSpace;
   if (fDiff < 0.0) return -1;
   if (fDiff > 0.0) return 1;
   fDiff = m_labelWidth-levl.m_labelWidth;
+  if (fDiff < 0.0) return -1;
+  if (fDiff > 0.0) return 1;
+  fDiff = m_labelAfterSpace-levl.m_labelAfterSpace;
   if (fDiff < 0.0) return -1;
   if (fDiff > 0.0) return 1;
   diff = strcmp(m_prefix.cstr(),levl.m_prefix.cstr());
@@ -130,8 +135,9 @@ std::ostream &operator<<(std::ostream &o, MWAWList::Level const &ft)
     o << ",startVal= " << ft.m_startValue;
   if (ft.m_prefix.len()) o << ", prefix='" << ft.m_prefix.cstr()<<"'";
   if (ft.m_suffix.len()) o << ", suffix='" << ft.m_suffix.cstr()<<"'";
-  if (ft.m_labelIndent < 0 || ft.m_labelIndent > 0) o << ", indent=" << ft.m_labelIndent;
+  if (ft.m_labelBeforeSpace < 0 || ft.m_labelBeforeSpace > 0) o << ", indent=" << ft.m_labelBeforeSpace;
   if (ft.m_labelWidth < 0 || ft.m_labelWidth > 0) o << ", width=" << ft.m_labelWidth;
+  if (ft.m_labelAfterSpace > 0) o << ", labelTextW=" << ft.m_labelAfterSpace;
   o << "]";
   return o;
 }

@@ -119,7 +119,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 LWParser::LWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(),
+  MWAWParser(input, rsrcParser, header), m_state(),
   m_pageSpan(), m_pageSpanSet(false), m_graphParser(), m_textParser()
 {
   init();
@@ -127,13 +127,11 @@ LWParser::LWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWH
 
 LWParser::~LWParser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void LWParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
   setAsciiName("main-1");
 
   m_state.reset(new LWParserInternal::State);
@@ -150,7 +148,7 @@ void LWParser::init()
 
 void LWParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
   m_textParser->setListener(listen);
   m_graphParser->setListener(listen);
 }
@@ -235,9 +233,9 @@ void LWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -271,6 +269,7 @@ void LWParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -280,7 +279,7 @@ void LWParser::parse(WPXDocumentInterface *docInterface)
 void LWParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("LWParser::createDocument: listener already exist\n"));
     return;
   }

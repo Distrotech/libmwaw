@@ -108,20 +108,18 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 EDParser::EDParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_listener(), m_convertissor(), m_state(), m_pageSpan()
+  MWAWParser(input, rsrcParser, header), m_state(), m_pageSpan()
 {
   init();
 }
 
 EDParser::~EDParser()
 {
-  if (m_listener.get()) m_listener->endDocument();
 }
 
 void EDParser::init()
 {
-  m_convertissor.reset(new MWAWFontConverter);
-  m_listener.reset();
+  resetListener();
 
   m_state.reset(new EDParserInternal::State);
 
@@ -134,7 +132,7 @@ void EDParser::init()
 
 void EDParser::setListener(MWAWContentListenerPtr listen)
 {
-  m_listener = listen;
+  MWAWParser::setListener(listen);
 }
 
 float EDParser::pageWidth() const
@@ -162,9 +160,9 @@ void EDParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!m_listener || m_state->m_actPage == 1)
+    if (!getListener() || m_state->m_actPage == 1)
       continue;
-    m_listener->insertBreak(MWAWContentListener::PageBreak);
+    getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
 
@@ -193,6 +191,7 @@ void EDParser::parse(WPXDocumentInterface *docInterface)
     ok = false;
   }
 
+  resetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -202,7 +201,7 @@ void EDParser::parse(WPXDocumentInterface *docInterface)
 void EDParser::createDocument(WPXDocumentInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (m_listener) {
+  if (getListener()) {
     MWAW_DEBUG_MSG(("EDParser::createDocument: listener already exist\n"));
     return;
   }
@@ -342,7 +341,7 @@ bool EDParser::sendContents()
 
 bool EDParser::sendPicture(int pictId, bool compressed)
 {
-  if (!m_listener) {
+  if (!getListener()) {
     MWAW_DEBUG_MSG(("EDParser::sendPicture: can not find the listener\n"));
     return false;
   }
@@ -400,7 +399,7 @@ bool EDParser::sendPicture(int pictId, bool compressed)
     WPXBinaryData fData;
     std::string type;
     if (thePict->getBinary(fData,type))
-      m_listener->insertPicture(pictPos, fData, type);
+      getListener()->insertPicture(pictPos, fData, type);
   }
   return true;
 }
@@ -486,7 +485,7 @@ bool EDParser::readFontsName(MWAWEntry const &entry)
 // the index
 bool EDParser::sendIndex()
 {
-  if (!m_listener) {
+  if (!getListener()) {
     MWAW_DEBUG_MSG(("EDParser::sendPicture: can not find the listener\n"));
     return false;
   }
@@ -507,24 +506,24 @@ bool EDParser::sendIndex()
   cFont.setFlags(MWAWFont::boldBit);
   MWAWFont actFont(3,12);
 
-  m_listener->insertEOL();
+  getListener()->insertEOL();
   std::stringstream ss;
   for (size_t i=0; i <  m_state->m_indexList.size(); i++) {
     EDParserInternal::Index const &index = m_state->m_indexList[i];
     para.m_margins[0] = 0.3f*float(index.m_levelId+1);
-    m_listener->setParagraph(para);
-    m_listener->setFont(actFont);
+    getListener()->setParagraph(para);
+    getListener()->setFont(actFont);
     for (size_t c=0; c < index.m_text.length(); c++)
-      m_listener->insertCharacter((unsigned char)index.m_text[c]);
+      getListener()->insertCharacter((unsigned char)index.m_text[c]);
 
     if (index.m_page >= 0) {
-      m_listener->setFont(cFont);
-      m_listener->insertTab();
+      getListener()->setFont(cFont);
+      getListener()->insertTab();
       ss.str("");
       ss << index.m_page;
-      m_listener->insertUnicodeString(ss.str().c_str());
+      getListener()->insertUnicodeString(ss.str().c_str());
     }
-    m_listener->insertEOL();
+    getListener()->insertEOL();
   }
   return true;
 }
