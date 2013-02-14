@@ -154,10 +154,10 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSK4Parser::MSK4Parser(MWAWInputStreamPtr inp, MWAWRSRCParserPtr rsrcParser, MWAWHeader *head) : m_input(inp), m_rsrcParser(rsrcParser), m_header(head), m_state(), m_listener(), m_convertissor()
+MSK4Parser::MSK4Parser(MWAWInputStreamPtr inp, MWAWRSRCParserPtr rsrcParser, MWAWHeader *head) : m_input(inp), m_rsrcParser(rsrcParser), m_header(head), m_state(), m_listener(), m_fontConverter()
 {
   m_state.reset(new MSK4ParserInternal::State);
-  m_convertissor.reset(new MWAWFontConverter);
+  m_fontConverter.reset(new MWAWFontConverter);
 }
 
 MSK4Parser::~MSK4Parser()
@@ -282,7 +282,7 @@ bool MSK4Parser::createStructures()
       continue;
     }
 
-    shared_ptr<MSK4Zone> newParser(new MSK4Zone(ole, m_rsrcParser, m_header, *this, m_convertissor, name));
+    shared_ptr<MSK4Zone> newParser(new MSK4Zone(ole, m_rsrcParser, m_header, *this, m_fontConverter, name));
     try {
       ok = newParser->createZones(mainOle);
     } catch (...) {
@@ -329,7 +329,7 @@ void MSK4Parser::flushExtra()
       continue;
     }
 
-    shared_ptr<MSK4Zone> newParser(new MSK4Zone(ole, m_rsrcParser, m_header, *this, m_convertissor, name));
+    shared_ptr<MSK4Zone> newParser(new MSK4Zone(ole, m_rsrcParser, m_header, *this, m_fontConverter, name));
     bool ok = true;
     try {
       ok = newParser->createZones(false);

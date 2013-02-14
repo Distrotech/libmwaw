@@ -157,7 +157,7 @@ void WNParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_textParser.reset(new WNText(getInput(), *this, m_convertissor));
+  m_textParser.reset(new WNText(getInput(), *this, getFontConverter()));
 }
 
 void WNParser::setListener(MWAWContentListenerPtr listen)
@@ -319,7 +319,7 @@ void WNParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

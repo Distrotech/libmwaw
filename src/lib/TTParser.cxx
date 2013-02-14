@@ -47,6 +47,7 @@
 #include "MWAWPictData.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "TTParser.hxx"
@@ -190,7 +191,7 @@ void TTParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= numPages; i++)
     pageList.push_back(ps);
 
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
@@ -413,7 +414,7 @@ bool TTParser::readStyles(MWAWEntry const &entry)
     f.str("");
     f << "Style-" << i << ":" << "cPos=" << std::hex << cPos << std::dec << ",";
 #ifdef DEBUG
-    f << ",font=[" << font.getDebugString(m_convertissor) << "]";
+    f << ",font=[" << font.getDebugString(getFontConverter()) << "]";
 #endif
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());

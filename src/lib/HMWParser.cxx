@@ -170,8 +170,8 @@ void HMWParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_graphParser.reset(new HMWGraph(getInput(), *this, m_convertissor));
-  m_textParser.reset(new HMWText(getInput(), *this, m_convertissor));
+  m_graphParser.reset(new HMWGraph(getInput(), *this, getFontConverter()));
+  m_textParser.reset(new HMWText(getInput(), *this, getFontConverter()));
 }
 
 bool HMWParser::isKoreanFile() const
@@ -306,7 +306,7 @@ void HMWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

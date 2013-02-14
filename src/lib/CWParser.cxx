@@ -185,14 +185,14 @@ void CWParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_styleManager.reset(new CWStyleManager(getInput(), *this, m_convertissor));
+  m_styleManager.reset(new CWStyleManager(getInput(), *this, getFontConverter()));
 
-  m_databaseParser.reset(new CWDatabase(getInput(), *this, m_convertissor));
-  m_graphParser.reset(new CWGraph(getInput(), *this, m_convertissor));
-  m_presentationParser.reset(new CWPresentation(getInput(), *this, m_convertissor));
-  m_spreadsheetParser.reset(new CWSpreadsheet(getInput(), *this, m_convertissor));
-  m_tableParser.reset(new CWTable(getInput(), *this, m_convertissor));
-  m_textParser.reset(new CWText(getInput(), *this, m_convertissor));
+  m_databaseParser.reset(new CWDatabase(getInput(), *this, getFontConverter()));
+  m_graphParser.reset(new CWGraph(getInput(), *this, getFontConverter()));
+  m_presentationParser.reset(new CWPresentation(getInput(), *this, getFontConverter()));
+  m_spreadsheetParser.reset(new CWSpreadsheet(getInput(), *this, getFontConverter()));
+  m_tableParser.reset(new CWTable(getInput(), *this, getFontConverter()));
+  m_textParser.reset(new CWText(getInput(), *this, getFontConverter()));
 }
 
 void CWParser::setListener(MWAWContentListenerPtr listen)
@@ -451,7 +451,7 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

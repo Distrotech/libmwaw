@@ -538,8 +538,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MWProStructures::MWProStructures(MWProParser &parser) :
-  m_input(), m_mainParser(parser), m_listener(),
-  m_convertissor(m_mainParser.m_convertissor),
+  m_input(), m_mainParser(parser), m_listener(), m_convertissor(m_mainParser.getFontConverter()),
   m_state(), m_asciiFile(), m_asciiName("")
 {
   init();

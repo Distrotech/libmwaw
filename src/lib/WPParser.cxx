@@ -703,7 +703,7 @@ void WPParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
@@ -1753,7 +1753,7 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
   for (size_t i = 0; i < fonts.size(); i++) {
     f << "font" << i << "=[";
 #ifdef DEBUG
-    f << fonts[i].m_font.getDebugString(m_convertissor);
+    f << fonts[i].m_font.getDebugString(getFontConverter());
 #endif
     f << fonts[i] << "],";
   }

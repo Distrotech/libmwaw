@@ -44,6 +44,7 @@
 #include "MWAWHeader.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "ZWText.hxx"
@@ -143,7 +144,7 @@ void ZWParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_textParser.reset(new ZWText(getInput(), *this, m_convertissor));
+  m_textParser.reset(new ZWText(getInput(), *this, getFontConverter()));
 }
 
 void ZWParser::setListener(MWAWContentListenerPtr listen)
@@ -269,7 +270,7 @@ void ZWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

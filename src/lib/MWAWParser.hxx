@@ -40,7 +40,6 @@
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
-#include "MWAWRSRCParser.hxx"
 
 #include "MWAWEntry.hxx"
 #include "MWAWHeader.hxx"
@@ -51,6 +50,41 @@ class MWAWContentListener;
 typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWRSRCParser;
+typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
+
+/** a class to define the parser state */
+class MWAWParserState
+{
+public:
+  // Constructor
+  MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  //! destructor
+  ~MWAWParserState();
+
+  //! the actual version
+  int m_version;
+  //! the input
+  MWAWInputStreamPtr m_input;
+  //! the header
+  MWAWHeader *m_header;
+  //! the resource parser
+  MWAWRSRCParserPtr m_rsrcParser;
+
+  //! the fonct converter
+  MWAWFontConverterPtr m_fontConverter;
+  //! the listener
+  MWAWContentListenerPtr m_listener;
+
+  //! the debug file
+  libmwaw::DebugFile m_asciiFile;
+
+private:
+  MWAWParserState(MWAWParserState const &orig);
+  MWAWParserState &operator=(MWAWParserState const &orig);
+};
+
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 /** virtual class which defines the ancestor of all main zone parser
  *
@@ -66,40 +100,48 @@ public:
 
   //! returns the works version
   int version() const {
-    return m_version;
+    return m_parserState->m_version;
   }
   //! sets the works version
   void setVersion(int vers) {
-    m_version = vers;
+    m_parserState->m_version = vers;
   }
 
 protected:
   //! constructor (protected)
   MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  //! constructor using a state
+  MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_asciiName("") { }
 
   //! returns the header
   MWAWHeader *getHeader() {
-    return m_header;
+    return m_parserState->m_header;
   }
   //! returns the actual input
   MWAWInputStreamPtr &getInput() {
-    return m_input;
+    return m_parserState->m_input;
   }
   //! returns the rsrc parser
   MWAWRSRCParserPtr &getRSRCParser() {
-    return m_rsrcParser;
+    return m_parserState->m_rsrcParser;
   }
   //! returns the listener
   MWAWContentListenerPtr &getListener() {
-    return m_listener;
+    return m_parserState->m_listener;
   }
-  //! set the listener
+  //! sets the listener
   void setListener(MWAWContentListenerPtr &listener);
-  //! reset the listener
+  //! resets the listener
   void resetListener();
+  //! returns the font converter
+  MWAWFontConverterPtr &getFontConverter() {
+    return m_parserState->m_fontConverter;
+  }
+  //! sets the font convertor
+  void setFontConverter(MWAWFontConverterPtr fontConverter);
   //! a DebugFile used to write what we recognize when we parse the document
   libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
+    return m_parserState->m_asciiFile;
   }
   //! Debugging: change the default ascii file
   void setAsciiName(char const *name) {
@@ -110,36 +152,17 @@ protected:
     return m_asciiName;
   }
 
-protected:
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
-
 private:
   //! private copy constructor: forbidden
   MWAWParser(const MWAWParser &);
   //! private operator=: forbidden
   MWAWParser &operator=(const MWAWParser &);
 
-  //! the actual version
-  int m_version;
-
-  //! the input
-  MWAWInputStreamPtr m_input;
-  //! the header
-  MWAWHeader *m_header;
-
-  //! the resource parser
-  MWAWRSRCParserPtr m_rsrcParser;
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! the debug file
-  libmwaw::DebugFile m_asciiFile;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
   //! the debug file name
   std::string m_asciiName;
-
 };
-
 
 #endif /* MWAWPARSER_H */
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

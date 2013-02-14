@@ -45,6 +45,7 @@
 #include "MWAWPictData.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "DMText.hxx"
@@ -213,7 +214,7 @@ void DMParser::init()
 
   m_state.reset(new DMParserInternal::State);
 
-  m_textParser.reset(new DMText(getInput(), *this, m_convertissor));
+  m_textParser.reset(new DMText(getInput(), *this, getFontConverter()));
 }
 
 void DMParser::setListener(MWAWContentListenerPtr listen)
@@ -299,7 +300,7 @@ void DMParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_numPages = int(pageList.size());
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

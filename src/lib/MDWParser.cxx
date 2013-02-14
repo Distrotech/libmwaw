@@ -50,6 +50,7 @@
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MDWParser.hxx"
@@ -452,7 +453,7 @@ void MDWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
@@ -1046,7 +1047,7 @@ bool MDWParser::readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts,
     font.setId((int) input->readULong(2));
     fonts.push_back(font);
 #ifdef DEBUG
-    f << font.getDebugString(m_convertissor);
+    f << font.getDebugString(getFontConverter());
 #endif
     input->seek(pos+6, WPX_SEEK_SET);
 

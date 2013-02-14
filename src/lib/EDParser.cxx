@@ -48,6 +48,7 @@
 #include "MWAWPictData.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "EDParser.hxx"
@@ -221,7 +222,7 @@ void EDParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= numPages; i++)
     pageList.push_back(ps);
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

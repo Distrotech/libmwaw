@@ -437,7 +437,7 @@ void MSW1Parser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
@@ -1149,7 +1149,7 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
               m_state->m_fontsList.push_back(font);
               f2 << plc.m_id << ":";
 #ifdef DEBUG
-              f2 << font.m_font.getDebugString(m_convertissor) << font;
+              f2 << font.m_font.getDebugString(getFontConverter()) << font;
 #endif
             } else {
               plc.m_id = -1;

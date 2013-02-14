@@ -36,31 +36,46 @@
 
 #include "MWAWParser.hxx"
 
-MWAWParser::MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header):
-  m_convertissor(),
-  m_version(header->getMajorVersion()), m_input(input), m_header(header),
-  m_rsrcParser(rsrcParser), m_listener(), m_asciiFile(input), m_asciiName("")
+MWAWParserState::MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  m_version(0), m_input(input), m_header(header),
+  m_rsrcParser(rsrcParser), m_fontConverter(), m_listener(), m_asciiFile(input)
 {
-  m_convertissor.reset(new MWAWFontConverter);
+  if (header) m_version=header->getMajorVersion();
+  m_fontConverter.reset(new MWAWFontConverter);
+}
+
+MWAWParserState::~MWAWParserState()
+{
+}
+
+MWAWParser::MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header):
+  m_parserState(), m_asciiName("")
+{
+  m_parserState.reset(new MWAWParserState(input, rsrcParser, header));
 }
 
 MWAWParser::~MWAWParser()
 {
-  if (m_listener.get()) {
+  if (m_parserState->m_listener.get()) {
     MWAW_DEBUG_MSG(("MWAWParser::~MWAWParser: the listener is not closed, call enddocument without any subdoc\n"));
-    m_listener->endDocument(false);
+    m_parserState->m_listener->endDocument(false);
   }
 }
 
 void MWAWParser::setListener(MWAWContentListenerPtr &listener)
 {
-  m_listener=listener;
+  m_parserState->m_listener=listener;
 }
 
 void MWAWParser::resetListener()
 {
   if (getListener()) getListener()->endDocument();
-  m_listener.reset();
+  m_parserState->m_listener.reset();
+}
+
+void MWAWParser::setFontConverter(MWAWFontConverterPtr fontConverter)
+{
+  m_parserState->m_fontConverter=fontConverter;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

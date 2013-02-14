@@ -44,6 +44,7 @@
 #include "MWAWHeader.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "NSGraph.hxx"
@@ -334,8 +335,8 @@ void NSParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_graphParser.reset(new NSGraph(getInput(), *this, m_convertissor));
-  m_textParser.reset(new NSText(getInput(), *this, m_convertissor));
+  m_graphParser.reset(new NSGraph(getInput(), *this, getFontConverter()));
+  m_textParser.reset(new NSText(getInput(), *this, getFontConverter()));
 }
 
 void NSParser::setListener(MWAWContentListenerPtr listen)
@@ -587,7 +588,7 @@ void NSParser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

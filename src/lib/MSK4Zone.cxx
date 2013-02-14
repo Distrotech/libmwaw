@@ -165,7 +165,7 @@ MSK4Zone::MSK4Zone
   : MSKParser(input, rsrcParser, header), m_mainParser(&parser),
     m_state(), m_entryMap(), m_pageSpan(), m_textParser(), m_graphParser()
 {
-  m_convertissor=convert;
+  setFontConverter(convert);
   setAscii(oleName);
   setVersion(4);
   init();
@@ -184,9 +184,9 @@ void MSK4Zone::init()
   resetListener();
 
   m_state.reset(new MSK4ZoneInternal::State);
-  m_textParser.reset(new MSK4Text(*this, m_convertissor));
+  m_textParser.reset(new MSK4Text(*this, getFontConverter()));
   m_textParser->setDefault(m_state->m_defFont);
-  m_graphParser.reset(new MSKGraph(getInput(), *this, m_convertissor));
+  m_graphParser.reset(new MSKGraph(getInput(), *this, getFontConverter()));
 }
 
 void MSK4Zone::setListener(MWAWContentListenerPtr listen)
@@ -307,7 +307,7 @@ MWAWContentListenerPtr MSK4Zone::createListener
   // create all the pages + an empty page, if we have some remaining data...
   for (int i = 0; i <= numPages; i++) pageList.push_back(ps);
   m_state->m_numPages=numPages+1;
-  MWAWContentListenerPtr res(new MWAWContentListener(m_convertissor, pageList, interface));
+  MWAWContentListenerPtr res(new MWAWContentListener(getFontConverter(), pageList, interface));
   return res;
 }
 

@@ -44,6 +44,7 @@
 #include "MWAWHeader.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "LWGraph.hxx"
@@ -142,8 +143,8 @@ void LWParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_graphParser.reset(new LWGraph(getInput(), *this, m_convertissor));
-  m_textParser.reset(new LWText(getInput(), *this, m_convertissor));
+  m_graphParser.reset(new LWGraph(getInput(), *this, getFontConverter()));
+  m_textParser.reset(new LWText(getInput(), *this, getFontConverter()));
 }
 
 void LWParser::setListener(MWAWContentListenerPtr listen)
@@ -309,7 +310,7 @@ void LWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

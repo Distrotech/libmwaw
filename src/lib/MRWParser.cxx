@@ -257,8 +257,8 @@ void MRWParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_graphParser.reset(new MRWGraph(getInput(), *this, m_convertissor));
-  m_textParser.reset(new MRWText(getInput(), *this, m_convertissor));
+  m_graphParser.reset(new MRWGraph(getInput(), *this, getFontConverter()));
+  m_textParser.reset(new MRWText(getInput(), *this, getFontConverter()));
 }
 
 void MRWParser::setListener(MWAWContentListenerPtr listen)
@@ -474,7 +474,7 @@ void MRWParser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(m_convertissor, pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
