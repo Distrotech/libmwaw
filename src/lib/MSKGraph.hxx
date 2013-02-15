@@ -45,18 +45,10 @@
 #include "MWAWPosition.hxx"
 
 #include "MWAWEntry.hxx"
-#include "MWAWSubDocument.hxx"
-
-#include "MWAWDebug.hxx"
-#include "MWAWInputStream.hxx"
-
 #include "MWAWParser.hxx"
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace MSKGraphInternal
 {
@@ -86,7 +78,7 @@ class MSKGraph
   friend class MSKGraphInternal::SubDocument;
 public:
   //! constructor
-  MSKGraph(MWAWInputStreamPtr ip, MSKParser &parser, MWAWFontConverterPtr &convertissor);
+  MSKGraph(MSKParser &parser);
   //! destructor
   virtual ~MSKGraph();
 
@@ -123,14 +115,6 @@ public:
   void computePositions(int zoneId, std::vector<int> &linesHeight, std::vector<int> &pagesHeight);
 
 protected:
-  //! reinitializes all data
-  void reset(MSKParser &parser, MWAWFontConverterPtr &convertissor);
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
-
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
@@ -187,11 +171,6 @@ protected:
   //! reads the textbox font
   bool readFont(MSKGraphInternal::Font &font);
 
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return *m_asciiFile;
-  }
-
 private:
   MSKGraph(MSKGraph const &orig);
   MSKGraph &operator=(MSKGraph const &orig);
@@ -200,23 +179,14 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<MSKGraphInternal::State> m_state;
 
   //! the main parser;
   MSKParser *m_mainParser;
-
-  //! the debug file
-  libmwaw::DebugFile *m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

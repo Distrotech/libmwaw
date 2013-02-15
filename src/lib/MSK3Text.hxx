@@ -45,18 +45,9 @@
 #include "libmwaw_internal.hxx"
 
 #include "MWAWEntry.hxx"
-#include "MWAWSubDocument.hxx"
 
-#include "MWAWDebug.hxx"
-#include "MWAWInputStream.hxx"
-
-#include "MWAWParser.hxx"
-
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace MSK3TextInternal
 {
@@ -79,7 +70,7 @@ class MSK3Text
   friend class MSK3Parser;
 public:
   //! constructor
-  MSK3Text(MWAWInputStreamPtr ip, MSK3Parser &parser, MWAWFontConverterPtr &convertissor);
+  MSK3Text(MSK3Parser &parser);
   //! destructor
   virtual ~MSK3Text();
 
@@ -90,12 +81,6 @@ public:
   int numPages(int zoneId) const;
 
 protected:
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
-
   //! finds the different text zones. Returns the zoneId or -1.
   int createZones(int numLines=-1, bool mainZone=false);
 
@@ -157,11 +142,6 @@ protected:
   //! tries to send a string (for v1-2, header/footer zone)
   bool sendString(std::string &str);
 
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
 private:
   MSK3Text(MSK3Text const &orig);
   MSK3Text &operator=(MSK3Text const &orig);
@@ -170,23 +150,14 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<MSK3TextInternal::State> m_state;
 
   //! the main parser;
   MSK3Parser *m_mainParser;
-
-  //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

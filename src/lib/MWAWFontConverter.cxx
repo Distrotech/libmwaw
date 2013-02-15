@@ -435,7 +435,7 @@ public:
     if (fName.length() && family.length())
       m_familyMap[fName]=family;
   }
-  //! return the default convertissor
+  //! return the default converter
   ConversionData const &getDefault() const {
     return m_defaultConv;
   }
@@ -488,38 +488,38 @@ protected:
   //! Internal and Low level: map char -> unicode for font 200
   std::map<unsigned char, unsigned long> m_unknown200Map;
 
-  //! Internal and Low level: the default convertissor: roman
+  //! Internal and Low level: the default converter: roman
   ConversionData m_defaultConv;
-  //! Internal and Low level: the default convertissor: central european
+  //! Internal and Low level: the default converter: central european
   ConversionData m_centralEuroConv;
-  //! Internal and Low level: the default convertissor: cyrillic
+  //! Internal and Low level: the default converter: cyrillic
   ConversionData m_cyrillicConv;
-  //! Internal and Low level: the default convertissor: turkish
+  //! Internal and Low level: the default converter: turkish
   ConversionData m_turkishConv;
 
-  //! Internal and Low level: the convertissor for times font
+  //! Internal and Low level: the converter for times font
   ConversionData m_timeConv;
-  //! Internal and Low level: the convertissor for zapfChancery font
+  //! Internal and Low level: the converter for zapfChancery font
   ConversionData m_zapfChanceryConv;
-  //! Internal and Low level: the convertissor for symbol font
+  //! Internal and Low level: the converter for symbol font
   ConversionData m_symbolConv;
-  //! Internal and Low level: the convertissor for dingbats font
+  //! Internal and Low level: the converter for dingbats font
   ConversionData m_dingbatsConv;
-  //! Internal and Low level: the convertissor for cursive font
+  //! Internal and Low level: the converter for cursive font
   ConversionData m_cursiveConv;
-  //! Internal and Low level: the convertissor for math font
+  //! Internal and Low level: the converter for math font
   ConversionData m_mathConv;
-  //! Internal and Low level: the convertissor for scientific font
+  //! Internal and Low level: the converter for scientific font
   ConversionData m_scientificConv;
-  //! Internal and Low level: the convertissor for wingdings font
+  //! Internal and Low level: the converter for wingdings font
   ConversionData m_wingdingsConv;
-  //! Internal and Low level: the convertissor for SJIS font
+  //! Internal and Low level: the converter for SJIS font
   ConversionData m_SJISConv;
-  //! Internal and Low level: the convertissor for font 107
+  //! Internal and Low level: the converter for font 107
   ConversionData m_unknown107Conv;
-  //! Internal and Low level: the convertissor for font 128
+  //! Internal and Low level: the converter for font 128
   ConversionData m_unknown128Conv;
-  //! Internal and Low level: the convertissor for font 200
+  //! Internal and Low level: the converter for font 200
   ConversionData m_unknown200Conv;
 };
 
@@ -806,7 +806,7 @@ void State::initMaps()
     m_nameIdMap[it->second] = it->first;
 }
 
-// try to find the good convertissor
+// try to find the good converter
 bool State::updateCache(int macId)
 {
   if (!m_unicodeCache.m_conv || m_unicodeCache.m_macId != macId ||  m_unicodeCache.m_nameIdCounter != m_nameIdCounter) {

@@ -87,18 +87,14 @@ class MSK4Zone : public MSKParser
 
 public:
   //! constructor
-  MSK4Zone(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header,
-           MSK4Parser &parser, MWAWFontConverterPtr &convertissor,
-           std::string const &oleName);
+  MSK4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
+           MSK4Parser &parser, std::string const &oleName);
   //! destructor
   ~MSK4Zone();
 
 protected:
   //! inits all internal variables
   void init();
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen);
 
   /** tries to find the beginning of the list of indices,
    * then try to find all entries in this list.

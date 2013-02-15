@@ -994,31 +994,19 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSKGraph::MSKGraph
-(MWAWInputStreamPtr ip, MSKParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert), m_state(new MSKGraphInternal::State),
-  m_mainParser(&parser), m_asciiFile(&parser.ascii())
+MSKGraph::MSKGraph(MSKParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new MSKGraphInternal::State),
+  m_mainParser(&parser)
 {
 }
 
 MSKGraph::~MSKGraph()
 { }
 
-void MSKGraph::reset(MSKParser &parser, MWAWFontConverterPtr &convert)
-{
-  m_mainParser=&parser;
-  m_convertissor = convert;
-
-  m_input=parser.getInput();
-  m_state.reset(new MSKGraphInternal::State);
-  m_listener.reset();
-  m_asciiFile = &parser.ascii();
-}
-
 int MSKGraph::version() const
 {
   if (m_state->m_version < 0)
-    m_state->m_version = m_mainParser->version();
+    m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
@@ -1171,6 +1159,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     return zId;
   pict.m_zoneId = zoneId;
   pict.m_pos.setBegin(pos);
+  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
   int vers = version();
   long debData = input->tell();
@@ -1335,7 +1324,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     pict.m_dataPos = input->tell()+2;
     MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict);
     res.reset(pct);
-    ascii().skipZone(pct->m_dataPos, pct->m_pos.end()-1);
+    ascFile.skipZone(pct->m_dataPos, pct->m_pos.end()-1);
     break;
   }
   case 8:
@@ -1403,8 +1392,8 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
 
     f.str("");
     f << "Entries(Grapha):" << pict;
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
 
     return int(m_state->m_zonesList.size())-1;
   }
@@ -1457,9 +1446,9 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
       else { // maybe a not implemented case
         MWAW_DEBUG_MSG(("MSKGraph::getEntryPicture: bitmap size is a little odd\n"));
         f2 << "###";
-        ascii().addPos(actPos);
-        ascii().addNote(f2.str().c_str());
-        ascii().addDelimiter(input->tell(),'|');
+        ascFile.addPos(actPos);
+        ascFile.addNote(f2.str().c_str());
+        ascFile.addDelimiter(input->tell(),'|');
         break;
       }
     }
@@ -1467,8 +1456,8 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     int szCol = int(bitmapSize/nRow);
     if (szCol < nCol) return zId;
 
-    ascii().addPos(actPos);
-    ascii().addNote(f2.str().c_str());
+    ascFile.addPos(actPos);
+    ascFile.addNote(f2.str().c_str());
 
     pict.m_dataPos = input->tell();
     MSKGraphInternal::DataBitmap *pct  = new MSKGraphInternal::DataBitmap(pict);
@@ -1480,14 +1469,14 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
   }
   case 0xe: {
     long actPos = input->tell();
-    ascii().addPos(actPos);
-    ascii().addNote("Graphe(I)");
+    ascFile.addPos(actPos);
+    ascFile.addNote("Graphe(I)");
 
     // first: the picture ( fixme: kept while we do not parse the spreadsheet )
     input->seek(144, WPX_SEEK_CUR);
     actPos = input->tell();
-    ascii().addPos(actPos);
-    ascii().addNote("Graphe(pict)");
+    ascFile.addPos(actPos);
+    ascFile.addNote("Graphe(pict)");
     long dSize = (long) input->readLong(4);
     if (dSize < 0) return zId;
     pict.m_dataPos = actPos+4;
@@ -1495,16 +1484,16 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict);
     pct->m_dataEndPos = actPos+4+dSize;
     res.reset(pct);
-    ascii().skipZone(pct->m_dataPos, pct->m_dataEndPos-1);
+    ascFile.skipZone(pct->m_dataPos, pct->m_dataEndPos-1);
     input->seek(actPos+4+dSize, WPX_SEEK_SET);
 
     // now the spreadsheet ( a classic WKS file )
     actPos = input->tell();
     dSize = (long) input->readULong(4);
     if (dSize < 0) return zId;
-    ascii().addPos(actPos);
-    ascii().addNote("Graphe(sheet)");
-    ascii().skipZone(actPos+4, actPos+3+dSize);
+    ascFile.addPos(actPos);
+    ascFile.addNote("Graphe(sheet)");
+    ascFile.skipZone(actPos+4, actPos+3+dSize);
 #ifdef DEBUG_WITH_FILES
     if (dSize > 0) {
       WPXBinaryData file;
@@ -1519,8 +1508,8 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     input->seek(actPos+4+dSize, WPX_SEEK_SET);
 
     actPos = input->tell();
-    ascii().addPos(actPos);
-    ascii().addNote("Graphe(colWidth?)"); // blocksize, unknown+list of 100 w
+    ascFile.addPos(actPos);
+    ascFile.addNote("Graphe(colWidth?)"); // blocksize, unknown+list of 100 w
     break;
   }
   case 0xf: { // new text box v4 (a picture is stored)
@@ -1555,7 +1544,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
       f2 << "TextBox-" << ++textboxName << ".pct";
       libmwaw::Debug::dumpFile(file, f2.str().c_str());
 #endif
-      ascii().skipZone(pict.m_dataPos, pict.m_pos.end()-1);
+      ascFile.skipZone(pict.m_dataPos, pict.m_pos.end()-1);
     }
     break;
   }
@@ -1581,15 +1570,15 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     int fSz = (int) input->readLong(2);
     if (fSz) f << "fSz=" << fSz << ",";
 
-    ascii().addDelimiter(input->tell(),'|');
-    ascii().addPos(actPos);
-    ascii().addNote(f2.str().c_str());
+    ascFile.addDelimiter(input->tell(),'|');
+    ascFile.addPos(actPos);
+    ascFile.addNote(f2.str().c_str());
     input->seek(actPos+0x40, WPX_SEEK_SET);
 
     // a pict
     actPos = input->tell();
-    ascii().addPos(actPos);
-    ascii().addNote("Graph10(pict)");
+    ascFile.addPos(actPos);
+    ascFile.addNote("Graph10(pict)");
     long dSize = (long) input->readLong(4);
     if (dSize < 0) return zId;
     pict.m_dataPos = actPos+4;
@@ -1597,7 +1586,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict);
     pct->m_dataEndPos = actPos+4+dSize;
     res.reset(pct);
-    ascii().skipZone(pct->m_dataPos, pct->m_dataEndPos-1);
+    ascFile.skipZone(pct->m_dataPos, pct->m_dataEndPos-1);
     input->seek(actPos+4+dSize, WPX_SEEK_SET);
 
     // the table
@@ -1609,7 +1598,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     break;
   }
   default:
-    ascii().addDelimiter(debData, '|');
+    ascFile.addDelimiter(debData, '|');
     break;
   }
 
@@ -1623,8 +1612,8 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
 
   f.str("");
   f << "Entries(Graph" << std::hex << res->m_subType << std::dec << "):" << *res;
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   zone = res->m_pos;
   zone.setType("Graphic");
@@ -1675,6 +1664,7 @@ int MSKGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone)
   long pos = input->tell();
   if (input->readULong(1) != 1) return zId;
 
+  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
   long ptr = (long) input->readULong(2);
   int flag = (int) input->readULong(1);
@@ -1722,9 +1712,9 @@ int MSKGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone)
   f.str("");
   f << "Entries(GraphEntry):" << *pict;
 
-  ascii().skipZone(pict->m_dataPos, pict->m_pos.end()-1);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.skipZone(pict->m_dataPos, pict->m_pos.end()-1);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   input->seek(pict->m_pos.end(), WPX_SEEK_SET);
   return zId;
@@ -1736,6 +1726,7 @@ bool MSKGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
 {
   if (entry.length() < 0x164) return false;
   entry.setParsed(true);
+  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
   MSKGraphInternal::RBZone zone;
   zone.m_isMain = entry.name()=="RBDR";
@@ -1803,8 +1794,8 @@ bool MSKGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
   }
   int n = (int) input->readLong(2);
   f << "N= " << n;
-  ascii().addPos(long(page_offset));
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(long(page_offset));
+  ascFile.addNote(f.str().c_str());
 
   if (n == 0) return true;
 
@@ -1817,8 +1808,8 @@ bool MSKGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
     if (pictId < 0 || input->tell() <= debPos) {
       f.str("");
       f << "###" << entry.name();
-      ascii().addPos(debPos);
-      ascii().addNote(f.str().c_str());
+      ascFile.addPos(debPos);
+      ascFile.addNote(f.str().c_str());
       break;
     }
     for (size_t z = actId; z < m_state->m_zonesList.size(); z++) {
@@ -1922,7 +1913,7 @@ bool MSKGraph::readPictureV4(MWAWInputStreamPtr /*input*/, MWAWEntry const &entr
 
   MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict);
   shared_ptr<MSKGraphInternal::Zone>res(pct);
-  ascii().skipZone(entry.begin(), entry.end()-1);
+  m_mainParser->ascii().skipZone(entry.begin(), entry.end()-1);
 
   int zId = int(m_state->m_zonesList.size());
   res->m_fileId = zId;
@@ -1984,6 +1975,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
 {
   if (textBox.m_numPositions < 0) return false; // can an empty text exist
 
+  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
   f << "Entries(SmallText):";
   MWAWInputStreamPtr input=m_mainParser->getInput();
@@ -2011,8 +2003,8 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
     if (form >= nbFonts) nbFonts = form+1;
   }
   f << "] ";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   pos = input->tell();
   f.str("");
@@ -2023,8 +2015,8 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
   if (input->readLong(2) != -1)
     input->seek(pos,WPX_SEEK_SET);
   else {
-    ascii().addPos(pos);
-    ascii().addNote("SmallText:char Pos");
+    ascFile.addPos(pos);
+    ascFile.addNote("SmallText:char Pos");
     pos = input->tell();
   }
   f.str("");
@@ -2036,8 +2028,8 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
   if (numFonts >= nbFonts) {
     endFontPos = input->tell()+4+sizeOfData;
 
-    ascii().addPos(pos);
-    ascii().addNote("SmallText: Fonts");
+    ascFile.addPos(pos);
+    ascFile.addNote("SmallText: Fonts");
 
     for (int i = 0; i < numFonts; i++) {
       pos = input->tell();
@@ -2050,18 +2042,18 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
 
       f.str("");
       f << "SmallText:Font"<< i
-        << "(" << font.m_font.getDebugString(m_convertissor) << "," << font << "),";
+        << "(" << font.m_font.getDebugString(m_parserState->m_fontConverter) << "," << font << "),";
 
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
       pos = input->tell();
     }
   }
   int nChar = textBox.m_positions.back()-1;
   if (nbFonts > int(textBox.m_fontsList.size())) {
     MWAW_DEBUG_MSG(("MSKGraph::readText: can not read the fonts\n"));
-    ascii().addPos(pos);
-    ascii().addNote("SmallText:###");
+    ascFile.addPos(pos);
+    ascFile.addNote("SmallText:###");
     input->seek(endFontPos,WPX_SEEK_SET);
     textBox.m_fontsList.resize(0);
     textBox.m_positions.resize(0);
@@ -2100,8 +2092,8 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
       } else {
         textBox.m_text = chaine;
         f << "=" << chaine;
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
+        ascFile.addPos(pos);
+        ascFile.addNote(f.str().c_str());
         return true;
       }
     }
@@ -2109,8 +2101,8 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
     if (sizeOfData <= 100+nChar && (sizeOfData%2==0) ) {
       if (input->seek(sizeOfData, WPX_SEEK_CUR) != 0) return false;
       f << "#";
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
       f.str("");
       f << "SmallText:Text";
       continue;
@@ -2119,8 +2111,8 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
     // fixme: we can try to find the next string
     MWAW_DEBUG_MSG(("MSKGraph::readText: problem reading text\n"));
     f << "#";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
 
     return false;
   }
@@ -2132,6 +2124,7 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
   int vers=version();
   MWAWInputStreamPtr input=m_mainParser->getInput();
   long actPos = input->tell();
+  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f, f2;
   f << "Entries(Table): ";
 
@@ -2159,8 +2152,8 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
 
   long sz = input->readLong(4);
   f << "szOfCells=" << sz;
-  ascii().addPos(actPos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(actPos);
+  ascFile.addNote(f.str().c_str());
 
   actPos = input->tell();
   long endPos = actPos+sz;
@@ -2207,7 +2200,7 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
     if (bgColors)
       f2 << std::dec << "bgColorId(?)=" << bgColors << ", "; // indexed
 
-    cell.m_font=MWAWFont(m_convertissor->getId(fName), float(fSize));
+    cell.m_font=MWAWFont(m_parserState->m_fontConverter->getId(fName), float(fSize));
     uint32_t flags = 0;
     if (fFlags & 0x1) flags |= MWAWFont::boldBit;
     if (fFlags & 0x2) flags |= MWAWFont::italicBit;
@@ -2232,7 +2225,7 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
       MWAWColor col(0xD0, 0xD0, 0xD0); // see how to do that
       cell.m_font.setColor(col);
     }
-    f << "[" << cell.m_font.getDebugString(m_convertissor) << "," << f2.str()<< "],";
+    f << "[" << cell.m_font.getDebugString(m_parserState->m_fontConverter) << "," << f2.str()<< "],";
     // check what happens, if the size of text is greater than 4
     for (int c = 0; c < nbChar; c++)
       cell.m_text+=(char) input->readLong(1);
@@ -2240,8 +2233,8 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
 
     table.m_cellsList.push_back(cell);
 
-    ascii().addPos(actPos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(actPos);
+    ascFile.addNote(f.str().c_str());
   }
 
   return true;
@@ -2256,6 +2249,7 @@ bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
   if (!m_mainParser->checkIfPositionValid(pos+306))
     return false;
 
+  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
   f << "Entries(Chart):";
 
@@ -2315,12 +2309,12 @@ bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
     val =  (int) input->readLong(2);
     if (val) f << "g" << i << "=" << val << std::dec << ",";
   }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   pos = input->tell();
-  ascii().addPos(pos);
-  ascii().addNote("Chart(II)");
+  ascFile.addPos(pos);
+  ascFile.addNote("Chart(II)");
   input->seek(2428, WPX_SEEK_CUR);
 
   // three textbox
@@ -2351,15 +2345,15 @@ bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
   shared_ptr<MSKGraphInternal::Zone> res(pct);
   pct->m_dataPos = pos+4;
   pct->m_pos.setEnd(pos+4+dataSz);
-  ascii().skipZone(pct->m_dataPos, pct->m_pos.end()-1);
+  ascFile.skipZone(pct->m_dataPos, pct->m_pos.end()-1);
 
   int zId = int(m_state->m_zonesList.size());
   pct->m_fileId = zId;
   pct->m_order = 1;
   m_state->m_zonesList.push_back(res);
 
-  ascii().addPos(pos);
-  ascii().addNote("Chart(picture)");
+  ascFile.addPos(pos);
+  ascFile.addNote("Chart(picture)");
 #ifdef DEBUG_WITH_FILES
   WPXBinaryData file;
   input->seek(pos+4, WPX_SEEK_SET);
@@ -2382,14 +2376,14 @@ bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
     }
     f.str("");
     f << "Chart(A" << i << ")";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
     int numLine = int(dataSz/0x10);
     for (int l = 0; l < numLine; l++) {
       f.str("");
       f << "Chart(A" << i << "-" << l << ")";
-      ascii().addPos(pos+4+0x10*l);
-      ascii().addNote(f.str().c_str());
+      ascFile.addPos(pos+4+0x10*l);
+      ascFile.addNote(f.str().c_str());
     }
     input->seek(pos+4+dataSz, WPX_SEEK_SET);
   }
@@ -2399,7 +2393,8 @@ bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
 
 void MSKGraph::sendTextBox(int zoneId)
 {
-  if (!m_listener) return;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return;
   if (zoneId < 0 || zoneId >= int(m_state->m_zonesList.size())) {
     MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: can not find textbox %d\n", zoneId));
     return;
@@ -2408,10 +2403,10 @@ void MSKGraph::sendTextBox(int zoneId)
   if (!zone) return;
   MSKGraphInternal::TextBox &textBox = reinterpret_cast<MSKGraphInternal::TextBox &>(*zone);
   MSKGraphInternal::Font actFont;
-  m_listener->setFont(MWAWFont(20,12));
+  listener->setFont(MWAWFont(20,12));
   MWAWParagraph para;
   para.m_justify=textBox.m_justify;
-  m_listener->setParagraph(para);
+  listener->setParagraph(para);
   int numFonts = int(textBox.m_fontsList.size());
   int actFormatPos = 0;
   int numFormats = int(textBox.m_formats.size());
@@ -2426,36 +2421,36 @@ void MSKGraph::sendTextBox(int zoneId)
       if (id < 0 || id >= numFonts) {
         MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: can not find a font\n"));
       } else
-        m_listener->setFont(textBox.m_fontsList[(size_t)id].m_font);
+        listener->setFont(textBox.m_fontsList[(size_t)id].m_font);
     }
     unsigned char c = (unsigned char) textBox.m_text[i];
     switch(c) {
     case 0x9:
       MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some tab\n"));
-      m_listener->insertChar(' ');
+      listener->insertChar(' ');
       break;
     case 0xd:
-      m_listener->insertEOL();
+      listener->insertEOL();
       break;
     case 0x19:
-      m_listener->insertField(MWAWContentListener::Title);
+      listener->insertField(MWAWContentListener::Title);
       break;
     case 0x18:
-      m_listener->insertField(MWAWContentListener::PageNumber);
+      listener->insertField(MWAWContentListener::PageNumber);
       break;
     case 0x16:
       MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some time\n"));
-      m_listener->insertField(MWAWContentListener::Time);
+      listener->insertField(MWAWContentListener::Time);
       break;
     case 0x17:
       MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some date\n"));
-      m_listener->insertField(MWAWContentListener::Date);
+      listener->insertField(MWAWContentListener::Date);
       break;
     case 0x14: // fixme
       MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: footnote are not implemented\n"));
       break;
     default:
-      m_listener->insertCharacter(c);
+      listener->insertCharacter(c);
       break;
     }
   }
@@ -2463,7 +2458,8 @@ void MSKGraph::sendTextBox(int zoneId)
 
 void MSKGraph::sendTable(int zoneId)
 {
-  if (!m_listener) return;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return;
 
   if (zoneId < 0 || zoneId >= int(m_state->m_zonesList.size())) {
     MWAW_DEBUG_MSG(("MSKGraph::sendTable: can not find textbox %d\n", zoneId));
@@ -2482,7 +2478,7 @@ void MSKGraph::sendTable(int zoneId)
   }
   std::vector<float> colsDims(nCols);
   for (size_t c = 0; c < nCols; c++) colsDims[c] = float(table.m_colsDim[c]);
-  m_listener->openTable(colsDims, WPX_POINT);
+  listener->openTable(colsDims, WPX_POINT);
 
   int const borderPos = MWAWBorder::TopBit | MWAWBorder::RightBit |
                         MWAWBorder::BottomBit | MWAWBorder::LeftBit;
@@ -2490,7 +2486,7 @@ void MSKGraph::sendTable(int zoneId)
   MWAWParagraph para;
   para.m_justify=MWAWParagraph::JustificationCenter;
   for (size_t row = 0; row < nRows; row++) {
-    m_listener->openTableRow(float(table.m_rowsDim[row]), WPX_POINT);
+    listener->openTableRow(float(table.m_rowsDim[row]), WPX_POINT);
 
     for (size_t col = 0; col < nCols; col++) {
       WPXPropertyList emptyList;
@@ -2499,37 +2495,37 @@ void MSKGraph::sendTable(int zoneId)
       cell.setPosition(cellPosition);
       cell.setBorders(borderPos, border);
       // fixme setBackgroundColor
-      m_listener->setParagraph(para);
-      m_listener->openTableCell(cell, emptyList);
+      listener->setParagraph(para);
+      listener->openTableCell(cell, emptyList);
 
       MSKGraphInternal::Table::Cell const *tCell=table.getCell(cellPosition);
       if (tCell) {
-        m_listener->setFont(tCell->m_font);
+        listener->setFont(tCell->m_font);
         size_t nChar = tCell->m_text.size();
         for (size_t ch = 0; ch < nChar; ch++) {
           unsigned char c = (unsigned char) tCell->m_text[ch];
           switch(c) {
           case 0x9:
             MWAW_DEBUG_MSG(("MSKGraph::sendTable: find a tab\n"));
-            m_listener->insertChar(' ');
+            listener->insertChar(' ');
             break;
           case 0xd:
-            m_listener->insertEOL();
+            listener->insertEOL();
             break;
           default:
-            m_listener->insertCharacter(c);
+            listener->insertCharacter(c);
             break;
           }
         }
       }
 
-      m_listener->closeTableCell();
+      listener->closeTableCell();
     }
-    m_listener->closeTableRow();
+    listener->closeTableRow();
   }
 
   // close the table
-  m_listener->closeTable();
+  listener->closeTable();
 }
 
 bool MSKGraph::readFont(MSKGraphInternal::Font &font)
@@ -2583,7 +2579,8 @@ void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
     MWAW_DEBUG_MSG(("MSKGraph::send: can not find zone %d\n", id));
     return;
   }
-  if (!m_listener) return;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return;
   shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[(size_t)id];
   zone->m_isSent = true;
 
@@ -2598,13 +2595,13 @@ void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
   case MSKGraphInternal::Zone::Text: {
     shared_ptr<MSKGraphInternal::SubDocument> subdoc
     (new MSKGraphInternal::SubDocument(*this, input, MSKGraphInternal::SubDocument::TextBox, id));
-    m_listener->insertTextBox(pictPos, subdoc, extras);
+    listener->insertTextBox(pictPos, subdoc, extras);
     return;
   }
   case MSKGraphInternal::Zone::TableZone: {
     shared_ptr<MSKGraphInternal::SubDocument> subdoc
     (new MSKGraphInternal::SubDocument(*this, input, MSKGraphInternal::SubDocument::Table, id));
-    m_listener->insertTextBox(pictPos, subdoc, extras);
+    listener->insertTextBox(pictPos, subdoc, extras);
     return;
   }
   case MSKGraphInternal::Zone::Group:
@@ -2615,8 +2612,8 @@ void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
     std::string type;
     if (!bmap.getPictureData(input, data,type,m_mainParser->getPalette(4)))
       break;
-    ascii().skipZone(bmap.m_dataPos, bmap.m_pos.end()-1);
-    m_listener->insertPicture(pictPos, data, type, extras);
+    m_mainParser->ascii().skipZone(bmap.m_dataPos, bmap.m_pos.end()-1);
+    listener->insertPicture(pictPos, data, type, extras);
     return;
   }
   case MSKGraphInternal::Zone::Basic:
@@ -2625,7 +2622,7 @@ void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
     std::string type;
     if (!zone->getBinaryData(input, data,type))
       break;
-    m_listener->insertPicture(pictPos, data, type, extras);
+    listener->insertPicture(pictPos, data, type, extras);
     return;
   }
   case MSKGraphInternal::Zone::Textv4: {
@@ -2643,7 +2640,7 @@ void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
       fName.sprintf("Frame%ld", zone->m_ids[2]);
       textboxExtra.insert("libwpd:next-frame-name",fName);
     }
-    m_listener->insertTextBox(pictPos, subdoc, extras, textboxExtra);
+    listener->insertTextBox(pictPos, subdoc, extras, textboxExtra);
     return;
   }
   case MSKGraphInternal::Zone::OLE: {
@@ -2671,7 +2668,8 @@ void MSKGraph::sendAll(int zoneId, bool mainZone)
 
 void MSKGraph::sendObjects(MSKGraph::SendData what)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("MSKGraph::sendObjects: listener is not set\n"));
     return;
   }
@@ -2712,7 +2710,7 @@ void MSKGraph::sendObjects(MSKGraph::SendData what)
         pictPos.setRelativePosition(MWAWPosition::Char,
                                     MWAWPosition::XLeft, MWAWPosition::YTop);
         pictPos.m_wrapping =  MWAWPosition::WBackground;
-        m_listener->insertTextBox(pictPos, subdoc);
+        listener->insertTextBox(pictPos, subdoc);
         return;
       }
     }
@@ -2734,8 +2732,8 @@ void MSKGraph::sendObjects(MSKGraph::SendData what)
     if (zone->m_page > 0) zone->m_page--;
     if (first) {
       first = false;
-      if (what.m_anchor == MWAWPosition::Page && (!m_listener->isSectionOpened() && !m_listener->isParagraphOpened()))
-        m_listener->insertChar(' ');
+      if (what.m_anchor == MWAWPosition::Page && (!listener->isSectionOpened() && !listener->isParagraphOpened()))
+        listener->insertChar(' ');
     }
     send(int(id), what.m_anchor);
     zone->m_page = oldPage;

@@ -42,17 +42,9 @@
 
 #include "MWAWInputStream.hxx"
 
+#include "MWAWParser.hxx"
+
 class WPXDocumentInterface;
-class MWAWHeader;
-
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
-
-class MWAWRSRCParser;
-typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
 
 namespace MSK4ParserInternal
 {
@@ -87,9 +79,6 @@ public:
   virtual void parse(WPXDocumentInterface *documentInterface);
 
 protected:
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen);
-
   /** finds the principal ole zone: Ole pictures and MN0,
       then tries to find the main structures. Finally, parses the document */
   bool createStructures();
@@ -117,23 +106,11 @@ private:
   MSK4Parser &operator=(MSK4Parser const &orig);
 
 protected:
-  //! the main input
-  MWAWInputStreamPtr m_input;
-
-  //! the resource parser
-  MWAWRSRCParserPtr m_rsrcParser;
-
-  //! the header
-  MWAWHeader *m_header;
+  //! the parser stata
+  shared_ptr<MWAWParserState> m_parserState;
 
   //! the state
   shared_ptr<MSK4ParserInternal::State> m_state;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_fontConverter;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

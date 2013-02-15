@@ -57,6 +57,12 @@ MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWA
 {
 }
 
+MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWParserStatePtr parserState) :
+  MWAWParser(parserState), m_state(new MSKParserInternal::State),
+  m_input(input), m_asciiFile(input)
+{
+}
+
 MSKParser::~MSKParser()
 {
 }

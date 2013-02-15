@@ -206,15 +206,8 @@ void MSK3Parser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_graphParser.reset(new MSKGraph(getInput(), *this, getFontConverter()));
-  m_textParser.reset(new MSK3Text(getInput(), *this, getFontConverter()));
-}
-
-void MSK3Parser::setListener(MWAWContentListenerPtr listen)
-{
-  MSKParser::setListener(listen);
-  m_graphParser->setListener(listen);
-  m_textParser->setListener(listen);
+  m_graphParser.reset(new MSKGraph(*this));
+  m_textParser.reset(new MSK3Text(*this));
 }
 
 ////////////////////////////////////////////////////////////

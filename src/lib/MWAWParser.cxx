@@ -46,6 +46,10 @@ MWAWParserState::MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsr
 
 MWAWParserState::~MWAWParserState()
 {
+  if (m_listener.get()) {
+    MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: the listener is not closed, call enddocument without any subdoc\n"));
+    m_listener->endDocument(false);
+  }
 }
 
 MWAWParser::MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header):
@@ -56,10 +60,6 @@ MWAWParser::MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, M
 
 MWAWParser::~MWAWParser()
 {
-  if (m_parserState->m_listener.get()) {
-    MWAW_DEBUG_MSG(("MWAWParser::~MWAWParser: the listener is not closed, call enddocument without any subdoc\n"));
-    m_parserState->m_listener->endDocument(false);
-  }
 }
 
 void MWAWParser::setListener(MWAWContentListenerPtr &listener)

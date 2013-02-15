@@ -160,12 +160,11 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSK4Zone::MSK4Zone
-(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header, MSK4Parser &parser, MWAWFontConverterPtr &convert, std::string const &oleName)
-  : MSKParser(input, rsrcParser, header), m_mainParser(&parser),
-    m_state(), m_entryMap(), m_pageSpan(), m_textParser(), m_graphParser()
+MSK4Zone::MSK4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
+                   MSK4Parser &parser, std::string const &oleName) :
+  MSKParser(input, parserState), m_mainParser(&parser), m_state(), m_entryMap(),
+  m_pageSpan(), m_textParser(), m_graphParser()
 {
-  setFontConverter(convert);
   setAscii(oleName);
   setVersion(4);
   init();
@@ -173,7 +172,6 @@ MSK4Zone::MSK4Zone
 
 MSK4Zone::~MSK4Zone()
 {
-  resetListener();
 }
 
 ////////////////////////////////////////////////////////////
@@ -181,19 +179,10 @@ MSK4Zone::~MSK4Zone()
 ////////////////////////////////////////////////////////////
 void MSK4Zone::init()
 {
-  resetListener();
-
   m_state.reset(new MSK4ZoneInternal::State);
-  m_textParser.reset(new MSK4Text(*this, getFontConverter()));
+  m_textParser.reset(new MSK4Text(*this));
   m_textParser->setDefault(m_state->m_defFont);
-  m_graphParser.reset(new MSKGraph(getInput(), *this, getFontConverter()));
-}
-
-void MSK4Zone::setListener(MWAWContentListenerPtr listen)
-{
-  MSKParser::setListener(listen);
-  m_textParser->setListener(listen);
-  m_graphParser->setListener(listen);
+  m_graphParser.reset(new MSKGraph(*this));
 }
 
 void  MSK4Zone::setAscii(std::string const &oleName)

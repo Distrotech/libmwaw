@@ -61,6 +61,8 @@ class MSKParser : public MWAWParser
 public:
   //! constructor
   MSKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  //! constructor using the parser state
+  MSKParser(MWAWInputStreamPtr input, MWAWParserStatePtr parserState);
 
   //! destructor
   virtual ~MSKParser();

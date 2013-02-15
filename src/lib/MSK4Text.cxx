@@ -441,28 +441,15 @@ protected:
 ////////////////////////////////////////////////////////////
 // constructor/destructor
 ////////////////////////////////////////////////////////////
-MSK4Text::MSK4Text(MSK4Zone &parser, MWAWFontConverterPtr &convert) :
-  m_mainParser(&parser), m_convertissor(convert), m_textPositions(),
-  m_listener(), m_state(), m_FODsList(), m_FDPCs(), m_FDPPs(),
-  m_asciiFile(&parser.ascii())
+MSK4Text::MSK4Text(MSK4Zone &parser) :
+  m_parserState(parser.getParserState()), m_mainParser(&parser), m_textPositions(),
+  m_state(), m_FODsList(), m_FDPCs(), m_FDPPs()
 {
   m_state.reset(new MSK4TextInternal::State);
 }
 
 MSK4Text::~MSK4Text()
 { }
-
-void MSK4Text::reset(MSK4Zone &parser, MWAWFontConverterPtr &convert)
-{
-  m_mainParser = &parser;
-  m_asciiFile = &parser.ascii();
-  m_textPositions = MWAWEntry();
-  m_FODsList.resize(0);
-
-  m_convertissor = convert;
-  m_state.reset(new MSK4TextInternal::State);
-  m_listener.reset();
-}
 
 ////////////////////////////////////////////////////////////
 // number of page
@@ -605,18 +592,19 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
 ////////////////////////////////////////////////////////////
 bool MSK4Text::readFootNote(MWAWInputStreamPtr input, int id)
 {
-  if (!m_listener) return true;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return true;
   if (id < 0 || id >= int(m_state->m_ftntList.size())) {
     if (id >= 0) {
       MWAW_DEBUG_MSG(("MSK4Text::readFootNote: can not find footnote: %d\n", id));
     }
-    m_listener->insertChar(' ');
+    listener->insertChar(' ');
     return false;
   }
   MSK4TextInternal::Ftnt const &ft = m_state->m_ftntList[size_t(id)];
   if (ft.m_begin < m_textPositions.begin() || ft.m_end > m_textPositions.end()) {
     MWAW_DEBUG_MSG(("MSK4Text::readFootNote: invalid zone\n"));
-    m_listener->insertChar(' ');
+    listener->insertChar(' ');
     return false;
   }
 
@@ -640,9 +628,10 @@ bool MSK4Text::readFootNote(MWAWInputStreamPtr input, int id)
 bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
                         bool mainOle)
 {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (zone.begin() < m_textPositions.begin() || zone.end() > m_textPositions.end()) {
     MWAW_DEBUG_MSG(("MSK4Text::readText: invalid zone\n"));
-    if (m_listener) m_listener->insertChar(' ');
+    if (listener) listener->insertChar(' ');
     return false;
   }
 
@@ -663,7 +652,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
   MWAWFont actFont(prevFId != -1 ?
                    m_state->m_fontList[size_t(prevFId)].m_font :
                    m_state->m_defFont);
-  if (m_listener) m_listener->setFont(actFont);
+  if (listener) listener->setFont(actFont);
   if (prevPId != -1) setProperty(m_state->m_paragraphList[size_t(prevPId)]);
   else setProperty(MSK4TextInternal::Paragraph());
 
@@ -671,6 +660,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
   MSK4TextInternal::Font::FieldType fType = MSK4TextInternal::Font::None;
   bool pageBreak = false;
   int page=1;
+  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   for ( ; FODs_iter!= m_FODsList.end(); FODs_iter++) {
     DataFOD const &fod = *(FODs_iter);
     uint32_t actPos = uint32_t(first ? zone.begin() : fod.m_pos), lastPos;
@@ -691,7 +681,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
       f << "[";
       if (fod.m_id >= 0) {
         f << "C"<<fod.m_id << ":";
-        f << m_state->m_fontList[(size_t) fod.m_id].m_font.getDebugString(m_convertissor);
+        f << m_state->m_fontList[(size_t) fod.m_id].m_font.getDebugString(m_parserState->m_fontConverter);
         f << m_state->m_fontList[(size_t) fod.m_id];
       } else f << "C_";
       f << "]";
@@ -700,7 +690,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
         fType = m_state->m_fontList[(size_t) fod.m_id].m_fieldType;
         actFont=m_state->m_fontList[(size_t) fod.m_id].m_font;
       } else actFont=m_state->m_defFont;
-      if (m_listener) m_listener->setFont(actFont);
+      if (listener) listener->setFont(actFont);
     } else if (fod.m_type == DataFOD::ATTR_PARAG) {
 #if DEBUG_PP
       f << "[";
@@ -737,8 +727,8 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
     input->seek(long(actPos), WPX_SEEK_SET);
 
     std::string s;
-    if (fType == MSK4TextInternal::Font::Page && m_listener) {
-      m_listener->insertField(MWAWContentListener::PageNumber);
+    if (fType == MSK4TextInternal::Font::Page && listener) {
+      listener->insertField(MWAWContentListener::PageNumber);
       fType = MSK4TextInternal::Font::None;
     }
     if (len) {
@@ -776,18 +766,18 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
 
       switch (readVal) {
       case 0x09:
-        if (!m_listener) break;
-        m_listener->insertTab();
+        if (!listener) break;
+        listener->insertTab();
         break;
 
       case 0x0D: {
-        if (!m_listener) break;
-        m_listener->insertEOL();
+        if (!listener) break;
+        listener->insertEOL();
         break;
       }
       default: {
-        if (!m_listener) break;
-        uint32_t extra = (uint32_t) m_listener->insertCharacter((unsigned char)readVal, input, input->tell()+i-1);
+        if (!listener) break;
+        uint32_t extra = (uint32_t) listener->insertCharacter((unsigned char)readVal, input, input->tell()+i-1);
         if (extra > i-1) {
           MWAW_DEBUG_MSG(("MSK4Text::readText: warning: extra is too large\n"));
           input->seek(-long(extra+1-i), WPX_SEEK_CUR);
@@ -797,12 +787,12 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
       }
       }
     }
-    if (len && fType == MSK4TextInternal::Font::DTTUnk && m_listener)
+    if (len && fType == MSK4TextInternal::Font::DTTUnk && listener)
       fType = MSK4TextInternal::Font::None;
 
     f << ", '" << s << "'";
-    ascii().addPos(long(actPos));
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(long(actPos));
+    ascFile.addNote(f.str().c_str());
   }
   return true;
 }
@@ -843,6 +833,7 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
   int dataSz = (int) input->readLong(2);
   bool ok = true;
 
+  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f, f2;
 
   MSK4PLCInternal::PLC plcType = m_state->m_knownPLC.get(entry.name());
@@ -904,8 +895,8 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
     if (i != nPLC) fods.push_back(fod);
   }
   f << ")";
-  ascii().addPos(long(page_offset));
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(long(page_offset));
+  ascFile.addNote(f.str().c_str());
 
   listValues.resize(0);
   long pos = input->tell();
@@ -966,8 +957,8 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
     if (printPLC) {
       f2.str("");
       f2 << plc.m_name << "(PLC"<<i<<"):" << plc;
-      ascii().addPos(pos);
-      ascii().addNote(f2.str().c_str());
+      ascFile.addPos(pos);
+      ascFile.addNote(f2.str().c_str());
     }
 
     pos += dataSz;
@@ -979,7 +970,7 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
   if (fods.size())
     m_FODsList = mergeSortedLists(m_FODsList, fods);
 
-  ascii().addPos(input->tell());
+  ascFile.addPos(input->tell());
   if (input->tell() != endPos) {
     static bool first = false;
     if (!first) {
@@ -988,7 +979,7 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
     }
     f.str("");
     f << "###" << entry.name() << "/PLC";
-    ascii().addNote(f.str().c_str());
+    ascFile.addNote(f.str().c_str());
   }
 
   entry.setParsed(true);
@@ -1029,6 +1020,7 @@ bool MSK4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
   input->seek(debPos, WPX_SEEK_SET);
   uint32_t len = (uint32_t) input->readULong(2);
   uint32_t n_fonts = (uint32_t) input->readULong(2);
+  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
 
   f << "N=" << n_fonts;
@@ -1041,8 +1033,8 @@ bool MSK4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
     f << debPos+10+input->readLong(2) << ", ";
   f << "]" << std::dec;
 
-  ascii().addPos(debPos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(debPos);
+  ascFile.addNote(f.str().c_str());
 
   /* read each font in the table */
   while (input->tell() > 0 && (long)(input->tell()+8) < endPos
@@ -1061,14 +1053,14 @@ bool MSK4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
     if (s.empty()) continue;
 
     // fixed the relation id<->name
-    m_convertissor->setCorrespondance(ft.m_id, s);
+    m_parserState->m_fontConverter->setCorrespondance(ft.m_id, s);
     m_state->m_fontNames.push_back(ft);
 
     f.str("");
     f << ft;
 
-    ascii().addPos(debPos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(debPos);
+    ascFile.addNote(f.str().c_str());
   }
 
   if (m_state->m_fontNames.size() != n_fonts) {
@@ -1263,7 +1255,7 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
   m_state->m_fontList.push_back(font);
 
   f.str("");
-  f << font.m_font.getDebugString(m_convertissor);
+  f << font.m_font.getDebugString(m_parserState->m_fontConverter);
   f << font;
   mess = f.str();
 
@@ -1277,8 +1269,8 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
 ////////////////////////////////////////////////////////////
 void MSK4Text::setProperty(MSK4TextInternal::Paragraph const &p)
 {
-  if (!m_listener) return;
-  m_listener->setParagraph(p);
+  if (!m_parserState->m_listener) return;
+  m_parserState->m_listener->setParagraph(p);
   m_state->m_paragraph = p;
 }
 
@@ -1288,6 +1280,7 @@ bool MSK4Text::readParagraph
 {
   MSK4TextInternal::Paragraph parag;
 
+  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
 
   while (input->tell() <  endPos) {
@@ -1425,9 +1418,9 @@ bool MSK4Text::readParagraph
     if (v > 0 && pos+v <= endPos) {
       // very often a FDDP seems to be followed by some <<old?>> FDDP
       f << "oldNextSize=" << v << ",";
-      ascii().addDelimiter(pos-1, '[');
+      ascFile.addDelimiter(pos-1, '[');
       input->seek(v, WPX_SEEK_CUR);
-      ascii().addDelimiter(pos+v, ']');
+      ascFile.addDelimiter(pos+v, ']');
     } else
       input->seek(pos-1, WPX_SEEK_SET);
 
@@ -1559,6 +1552,7 @@ bool MSK4Text::toknDataParser(MWAWInputStreamPtr input, long endPos,
                               long bot, long, int id, std::string &mess)
 {
   mess = "";
+  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
 
   long actPos = input->tell();
@@ -1640,8 +1634,8 @@ bool MSK4Text::toknDataParser(MWAWInputStreamPtr input, long endPos,
   if (actPos != endPos) {
     f.str("");
     f << std::dec << "TOKN(PLC" << id << "):len=" << endPos-actPos<< ",###" << tok ;
-    ascii().addPos(actPos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(actPos);
+    ascFile.addNote(f.str().c_str());
   }
 
   return true;
@@ -1772,6 +1766,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
     return false;
   }
 
+  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
   input->seek(long(page_offset), WPX_SEEK_SET);
   uint16_t cfod = (uint16_t) input->readULong(deplSize);
@@ -1849,9 +1844,9 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
   }
   f << "), lstPos=" << lastReadPos << ", ";
 
-  ascii().addPos(long(page_offset));
-  ascii().addNote(f.str().c_str());
-  ascii().addPos(input->tell());
+  ascFile.addPos(long(page_offset));
+  ascFile.addNote(f.str().c_str());
+  ascFile.addPos(input->tell());
 
   std::map<long,int> mapPtr;
   for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); fods_iter++) {
@@ -1877,8 +1872,8 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
       return false;
     }
 
-    ascii().addPos(endPos);
-    ascii().addPos(pos);
+    ascFile.addPos(endPos);
+    ascFile.addPos(pos);
     int id;
     std::string mess;
     if (parser &&(this->*parser) (input, endPos, id, mess) ) {
@@ -1886,12 +1881,12 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
 
       f.str("");
       f << entry.type()  << std::dec << id <<":" << mess;
-      ascii().addNote(f.str().c_str());
+      ascFile.addNote(f.str().c_str());
       pos = input->tell();
     }
 
     if (pos != endPos) {
-      ascii().addPos(pos);
+      ascFile.addPos(pos);
       f.str("");
       f << entry.type() << "###";
     }

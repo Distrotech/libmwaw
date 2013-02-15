@@ -41,8 +41,8 @@
 #include "MWAWInputStream.hxx"
 
 class MWAWFont;
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace MSK4TextInternal
 {
@@ -52,8 +52,6 @@ struct State;
 }
 
 class MSK4Zone;
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 /** The class which parses text zones in a mac MS Works document v4
  *
@@ -80,18 +78,10 @@ protected:
                                         int &id, std::string &mess);
 public:
   //! constructor
-  MSK4Text(MSK4Zone &parser, MWAWFontConverterPtr &convertissor);
+  MSK4Text(MSK4Zone &parser);
 
   //! destructor
   ~MSK4Text();
-
-  //! reinitializes all data
-  void reset(MSK4Zone &parser, MWAWFontConverterPtr &convertissor);
-
-  //! sets the listener
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
 
   //! sets the default font
   void setDefault(MWAWFont &font);
@@ -227,11 +217,6 @@ protected:
    */
   bool findFDPStructuresByHand(MWAWInputStreamPtr &input, int which);
 
-  //! a DebugFile used to write what we recognize when we parse the document
-  libmwaw::DebugFile &ascii() {
-    return *m_asciiFile;
-  }
-
 protected:
   //! structure which retrieves data information which correspond to a text position
   struct DataFOD {
@@ -260,17 +245,14 @@ private:
   MSK4Text(MSK4Text const &orig);
   MSK4Text &operator=(MSK4Text const &orig);
 protected:
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
+
   //! the main parser
   MSK4Zone *m_mainParser;
 
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
-
   //! an entry which corresponds to the complete text zone
   MWAWEntry m_textPositions;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
 
   //! the internal state
   mutable shared_ptr<MSK4TextInternal::State> m_state;
@@ -282,9 +264,6 @@ protected:
   std::vector<MWAWEntry const *> m_FDPCs;
   //! the list of FDPP entries
   std::vector<MWAWEntry const *> m_FDPPs;
-
-  //! the debug file
-  libmwaw::DebugFile *m_asciiFile;
 };
 
 #endif
