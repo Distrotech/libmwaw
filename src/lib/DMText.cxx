@@ -248,9 +248,8 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-DMText::DMText(MWAWInputStreamPtr ip, DMParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert),
-  m_state(new DMTextInternal::State), m_mainParser(&parser)
+DMText::DMText(DMParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new DMTextInternal::State), m_mainParser(&parser)
 {
 }
 
@@ -260,7 +259,7 @@ DMText::~DMText()
 int DMText::version() const
 {
   if (m_state->m_version < 0)
-    m_state->m_version = m_mainParser->version();
+    m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
@@ -289,14 +288,14 @@ int DMText::numChapters() const
 
 void DMText::sendComment(std::string const &str)
 {
-  if (!m_listener) {
+  if (!m_parserState->m_listener) {
     MWAW_DEBUG_MSG(("DMText::sendComment: called without listener\n"));
     return;
   }
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   shared_ptr<MWAWSubDocument> comment
   (new DMTextInternal::SubDocument(*this, input, str, libmwaw::DOC_COMMENT_ANNOTATION));
-  m_listener->insertComment(comment);
+  m_parserState->m_listener->insertComment(comment);
 }
 
 ////////////////////////////////////////////////////////////
@@ -471,7 +470,8 @@ bool DMText::createZones()
 ////////////////////////////////////////////////////////////
 bool DMText::sendText(DMTextInternal::Zone const &zone)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("DMText::sendText: can not find the listener\n"));
     return false;
   }
@@ -486,10 +486,10 @@ bool DMText::sendText(DMTextInternal::Zone const &zone)
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(TEXT)[" << zone.m_pos.id() << "]:";
-  m_listener->setFont(MWAWFont(3,12));
+  listener->setFont(MWAWFont(3,12));
   MWAWParagraph para;
   para.m_justify=zone.m_justify;
-  m_listener->setParagraph(para);
+  listener->setParagraph(para);
   std::map<long, MWAWFont >::const_iterator fontIt;
   int nPict=0, zId=zone.m_pos.id()-128;
   double w = m_state->m_pageWidth-double(zone.m_margins[0]+zone.m_margins[2])/72.;
@@ -506,7 +506,7 @@ bool DMText::sendText(DMTextInternal::Zone const &zone)
     }
     fontIt=zone.m_posFontMap.find(i);
     if (fontIt != zone.m_posFontMap.end())
-      m_listener->setFont(fontIt->second);
+      listener->setFont(fontIt->second);
     if (c)
       f << c;
     switch(c) {
@@ -514,22 +514,22 @@ bool DMText::sendText(DMTextInternal::Zone const &zone)
       m_mainParser->newPage(++m_state->m_actualPage);
       break;
     case 0x9:
-      m_listener->insertTab();
+      listener->insertTab();
       break;
     case 0xd:
-      m_listener->insertEOL();
+      listener->insertEOL();
       break;
     case 0x11: // command key
-      m_listener->insertUnicode(0x2318);
+      listener->insertUnicode(0x2318);
       break;
     case 0x14: // apple logo: check me
-      m_listener->insertUnicode(0xf8ff);
+      listener->insertUnicode(0xf8ff);
       break;
     case 0xca:
       m_mainParser->sendPicture(zId, ++nPict, w);
       break;
     default:
-      i += m_listener->insertCharacter(c, input, zone.m_pos.end());
+      i += listener->insertCharacter(c, input, zone.m_pos.end());
       break;
     }
   }
@@ -671,7 +671,7 @@ bool DMText::readStyles(MWAWEntry const &entry)
     f.str("");
     f << "Style-" << i << ":" << "cPos=" << std::hex << cPos << std::dec << ",";
 #ifdef DEBUG
-    f << ",font=[" << font.getDebugString(m_convertissor) << "]";
+    f << ",font=[" << font.getDebugString(m_parserState->m_fontConverter) << "]";
 #endif
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -683,7 +683,8 @@ bool DMText::readStyles(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 bool DMText::sendTOC()
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("DMText::sendTOC: can not find the listener\n"));
     return false;
   }
@@ -698,7 +699,7 @@ bool DMText::sendTOC()
   MWAWFont cFont(3,12);
   cFont.setFlags(MWAWFont::boldBit);
   MWAWFont actFont(3,10);
-  m_listener->setFont(actFont);
+  listener->setFont(actFont);
   double w = m_state->m_pageWidth;
   MWAWParagraph para;
   MWAWTabStop tab;
@@ -706,7 +707,7 @@ bool DMText::sendTOC()
   tab.m_leaderCharacter='.';
   tab.m_position = w;
   para.m_tabs->push_back(tab);
-  m_listener->setParagraph(para);
+  listener->setParagraph(para);
 
   std::stringstream ss;
   int prevId=-1;
@@ -717,20 +718,20 @@ bool DMText::sendTOC()
 
     if (zId!=prevId) {
       prevId=zId;
-      m_listener->setFont(cFont);
+      listener->setFont(cFont);
 
-      m_listener->insertUnicodeString(ss.str().c_str());
-      m_listener->insertChar(' ');
+      listener->insertUnicodeString(ss.str().c_str());
+      listener->insertChar(' ');
       std::string str("");
       if (m_state->m_idZoneMap.find(127+zId)!=m_state->m_idZoneMap.end())
         sendString(m_state->m_idZoneMap.find(127+zId)->second.m_name);
-      m_listener->insertEOL();
-      m_listener->setFont(actFont);
+      listener->insertEOL();
+      listener->setFont(actFont);
     }
     sendString(toc.m_textList[i]);
-    m_listener->insertTab();
-    m_listener->insertUnicodeString(ss.str().c_str());
-    m_listener->insertEOL();
+    listener->insertTab();
+    listener->insertUnicodeString(ss.str().c_str());
+    listener->insertEOL();
   }
   return true;
 }
@@ -861,7 +862,8 @@ bool DMText::readWindows(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 bool DMText::sendFooter(int zId)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("DMText::sendFooter: can not find my listener\n"));
     return false;
   }
@@ -874,7 +876,7 @@ bool DMText::sendFooter(int zId)
     MWAW_DEBUG_MSG(("DMText::sendFooter: oops, can not find the zone\n"));
     return false;
   }
-  m_listener->setFont(ft.m_font);
+  listener->setFont(ft.m_font);
 
   DMTextInternal::Zone const &zone=m_state->getZone(zId);
   double w = m_state->m_pageWidth-double(zone.m_margins[0]+zone.m_margins[2])/72.;
@@ -886,7 +888,7 @@ bool DMText::sendFooter(int zId)
   tab.m_alignment = MWAWTabStop::RIGHT;
   tab.m_position = w;
   para.m_tabs->push_back(tab);
-  m_listener->setParagraph(para);
+  listener->setParagraph(para);
 
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   for (int st=0; st<2; st++) {
@@ -896,16 +898,16 @@ bool DMText::sendFooter(int zId)
     for (int f = 0; f < 3; f++, id++) {
       switch (ft.m_items[id]) {
       case 3:
-        m_listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWContentListener::Date);
         break;
       case 4:
-        m_listener->insertField(MWAWContentListener::Time);
+        listener->insertField(MWAWContentListener::Time);
         break;
       case 5:
-        m_listener->insertField(MWAWContentListener::PageNumber);
+        listener->insertField(MWAWContentListener::PageNumber);
         break;
       case 6:
-        m_listener->insertField(MWAWContentListener::Title);
+        listener->insertField(MWAWContentListener::Title);
         break;
       case 7:
         sendString(zone.m_name);
@@ -917,10 +919,10 @@ bool DMText::sendFooter(int zId)
         break;
       }
       if (f!=2)
-        m_listener->insertTab();
+        listener->insertTab();
     }
     if (st==0)
-      m_listener->insertEOL();
+      listener->insertEOL();
   }
   return true;
 }
@@ -972,7 +974,7 @@ bool DMText::readFooter(MWAWEntry const &entry)
   f.str("");
   f << "Entries(Footer)[" << entry.type() << "-" << entry.id() << "]:"<<footer;
 #ifdef DEBUG
-  f << ",font=[" << footer.m_font.getDebugString(m_convertissor) << "]";
+  f << ",font=[" << footer.m_font.getDebugString(m_parserState->m_fontConverter) << "]";
 #endif
 
   if (input->tell()!=entry.end())
@@ -990,15 +992,16 @@ bool DMText::readFooter(MWAWEntry const &entry)
 
 void DMText::sendString(std::string const &str) const
 {
-  if (!m_listener) return;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return;
 
   for (size_t s=0; s < str.size(); s++)
-    m_listener->insertCharacter((unsigned char)str[s]);
+    listener->insertCharacter((unsigned char)str[s]);
 }
 
 bool DMText::sendMainText()
 {
-  if (!m_listener) return true;
+  if (!m_parserState->m_listener) return true;
 
   std::map<int, DMTextInternal::Zone >::const_iterator it = m_state->m_idZoneMap.begin();
   for ( ; it != m_state->m_idZoneMap.end(); it++) {

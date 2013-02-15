@@ -48,14 +48,9 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
 class MWAWEntry;
-
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
-
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 class MWAWPosition;
 
 namespace LWGraphInternal
@@ -76,7 +71,7 @@ class LWGraph
 
 public:
   //! constructor
-  LWGraph(MWAWInputStreamPtr ip, LWParser &parser, MWAWFontConverterPtr &convertissor);
+  LWGraph(LWParser &parser);
   //! destructor
   virtual ~LWGraph();
 
@@ -87,12 +82,6 @@ public:
   int numPages() const;
 
 protected:
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
-
   //! finds the different graphic zones
   bool createZones();
 
@@ -122,11 +111,6 @@ protected:
   //! try to find a JPEG size
   static bool findJPEGSize(WPXBinaryData const &data, Vec2i &sz);
 
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
 private:
   LWGraph(LWGraph const &orig);
   LWGraph &operator=(LWGraph const &orig);
@@ -135,23 +119,14 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<LWGraphInternal::State> m_state;
 
   //! the main parser;
   LWParser *m_mainParser;
-
-  //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

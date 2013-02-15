@@ -80,10 +80,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-CWSpreadsheet::CWSpreadsheet
-(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWSpreadsheetInternal::State),
-  m_mainParser(&parser), m_styleManager(parser.m_styleManager), m_asciiFile(parser.ascii())
+CWSpreadsheet::CWSpreadsheet(CWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new CWSpreadsheetInternal::State),
+  m_mainParser(&parser), m_styleManager(parser.m_styleManager)
 {
 }
 
@@ -92,7 +91,7 @@ CWSpreadsheet::~CWSpreadsheet()
 
 int CWSpreadsheet::version() const
 {
-  return m_mainParser->version();
+  return m_parserState->m_version;
 }
 
 // fixme
@@ -114,15 +113,17 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   if (!entry.valid() || zone.m_fileType != 2 || entry.length() < 256)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
-  m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   shared_ptr<CWSpreadsheetInternal::Spreadsheet>
   spreadsheetZone(new CWSpreadsheetInternal::Spreadsheet(zone));
 
   f << "Entries(SpreadsheetDef):" << *spreadsheetZone << ",";
-  ascii().addDelimiter(m_input->tell(), '|');
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addDelimiter(input->tell(), '|');
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   // read the last part
   long data0Length = zone.m_dataSz;
@@ -130,7 +131,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       MWAW_DEBUG_MSG(("CWSpreadsheet::readSpreadsheetZone: can not find definition size\n"));
-      m_input->seek(entry.end(), WPX_SEEK_SET);
+      input->seek(entry.end(), WPX_SEEK_SET);
       return shared_ptr<CWStruct::DSET>();
     }
 
@@ -158,41 +159,41 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   std::vector<int> colSize;
   if (debColSize) {
     pos = entry.begin()+debColSize;
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     f.str("");
     f << "Entries(SpreadsheetCol):";
     for (int i = 0; i < 256; i++)
-      colSize.push_back((int)m_input->readULong(1));
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+      colSize.push_back((int)input->readULong(1));
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
 
-    ascii().addPos(m_input->tell());
-    ascii().addNote("SpreadsheetDef-A");
+    ascFile.addPos(input->tell());
+    ascFile.addNote("SpreadsheetDef-A");
   }
 
   long dataEnd = entry.end()-N*data0Length;
   int numLast = version()==6 ? 4 : 0;
-  if (long(m_input->tell()) + data0Length + numLast <= dataEnd) {
-    ascii().addPos(dataEnd-data0Length-numLast);
-    ascii().addNote("SpreadsheetDef-_");
+  if (long(input->tell()) + data0Length + numLast <= dataEnd) {
+    ascFile.addPos(dataEnd-data0Length-numLast);
+    ascFile.addNote("SpreadsheetDef-_");
     if (numLast) {
-      ascii().addPos(dataEnd-numLast);
-      ascii().addNote("SpreadsheetDef-extra");
+      ascFile.addPos(dataEnd-numLast);
+      ascFile.addNote("SpreadsheetDef-extra");
     }
   }
-  m_input->seek(dataEnd, WPX_SEEK_SET);
+  input->seek(dataEnd, WPX_SEEK_SET);
 
   for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
+    pos = input->tell();
 
     f.str("");
     f << "SpreadsheetDef-" << i;
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(pos+data0Length, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+data0Length, WPX_SEEK_SET);
   }
 
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), WPX_SEEK_SET);
 
   if (m_state->m_spreadsheetMap.find(spreadsheetZone->m_id) != m_state->m_spreadsheetMap.end()) {
     MWAW_DEBUG_MSG(("CWSpreadsheet::readSpreadsheetZone: zone %d already exists!!!\n", spreadsheetZone->m_id));
@@ -200,30 +201,30 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
     m_state->m_spreadsheetMap[spreadsheetZone->m_id] = spreadsheetZone;
 
   spreadsheetZone->m_otherChilds.push_back(spreadsheetZone->m_id+1);
-  pos = m_input->tell();
+  pos = input->tell();
 
   bool ok = readZone1(*spreadsheetZone);
   if (ok) {
-    pos = m_input->tell();
+    pos = input->tell();
     ok = m_mainParser->readStructZone("SpreadsheetZone2", false);
   }
   if (ok) {
-    pos = m_input->tell();
+    pos = input->tell();
     ok = readContent(*spreadsheetZone);
   }
   if (ok) {
-    pos = m_input->tell();
+    pos = input->tell();
     // Checkme: it is a simple list or a set of list ?
     // sometimes zero or a list of pair of int(pos?, id?)
     ok = m_mainParser->readStructZone("SpreadsheetListUnkn0", false);
   }
 
   if (!ok)
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
 #if 0
   else {
-    ascii().addPos(m_input->tell());
-    ascii().addNote("Entries(UUSpreadSheetNext)");
+    ascFile.addPos(input->tell());
+    ascFile.addNote("Entries(UUSpreadSheetNext)");
   }
 #endif
   return spreadsheetZone;
@@ -236,18 +237,20 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
 ////////////////////////////////////////////////////////////
 bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
 {
-  long pos = m_input->tell();
-  long sz = (long) m_input->readULong(4);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
-    m_input->seek(pos, WPX_SEEK_SET);
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos) {
+    input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWSpreadsheet::readZone1: spreadsheet\n"));
     return false;
   }
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   if (sz == 0) {
-    ascii().addPos(pos);
-    ascii().addNote("Nop");
+    ascFile.addPos(pos);
+    ascFile.addNote("Nop");
     return true;
   }
   int fSize = 0;
@@ -263,89 +266,91 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
     break;
   }
   if (!fSize) {
-    ascii().addPos(pos);
-    ascii().addNote("Entries(SpreadsheetZone1)");
-    m_input->seek(endPos, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote("Entries(SpreadsheetZone1)");
+    input->seek(endPos, WPX_SEEK_SET);
     return true;
   }
   long numElts = sz/fSize;
   if (numElts *fSize != sz) {
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWSpreadsheet::readZone1: unexpected size\n"));
     return false;
   }
 
-  ascii().addPos(pos);
-  ascii().addNote("Entries(SpreadsheetZone1)");
+  ascFile.addPos(pos);
+  ascFile.addNote("Entries(SpreadsheetZone1)");
 
   libmwaw::DebugStream f;
-  m_input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(pos+4, WPX_SEEK_SET);
   for (int i = 0; i < numElts; i++) {
-    pos = m_input->tell();
+    pos = input->tell();
 
     f.str("");
     f << "SpreadsheetZone1-" << i << ":";
-    f << "row?=" << m_input->readLong(2) << ",";
-    f << "col?=" << m_input->readLong(2) << ",";
+    f << "row?=" << input->readLong(2) << ",";
+    f << "col?=" << input->readLong(2) << ",";
     if (fSize == 6) {
-      int val = (int) m_input->readLong(2);
+      int val = (int) input->readLong(2);
       if (val != -1)
         f << "#unkn=" << val << ",";
     }
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(pos+fSize, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+fSize, WPX_SEEK_SET);
   }
   return true;
 }
 
 bool CWSpreadsheet::readContent(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
 {
-  long pos = m_input->tell();
-  long sz = (long) m_input->readULong(4);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
   /** ARGHH: this zone is almost the only zone which count the header in sz ... */
   long endPos = pos+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos || sz < 6) {
-    m_input->seek(pos, WPX_SEEK_SET);
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos || sz < 6) {
+    input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWSpreadsheet::readContent: file is too short\n"));
     return false;
   }
 
-  m_input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(pos+4, WPX_SEEK_SET);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(SpreadsheetContent):";
-  int N = (int) m_input->readULong(2);
+  int N = (int) input->readULong(2);
   f << "N=" << N << ",";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
-  while (long(m_input->tell()) < endPos) {
+  while (long(input->tell()) < endPos) {
     // Normally a list of name field : CTAB (COLM CHNK+)*
-    pos = m_input->tell();
-    sz = (long) m_input->readULong(4);
+    pos = input->tell();
+    sz = (long) input->readULong(4);
     if (pos+4+sz > endPos || (sz && sz < 12)) {
-      m_input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, WPX_SEEK_SET);
       MWAW_DEBUG_MSG(("CWSpreadsheet::readContent: find a odd content field\n"));
       return false;
     }
     if (!sz) {
-      ascii().addPos(pos);
-      ascii().addNote("Nop");
+      ascFile.addPos(pos);
+      ascFile.addNote("Nop");
       continue;
     }
     std::string name("");
     for (int i = 0; i < 4; i++)
-      name+=char(m_input->readULong(1));
+      name+=char(input->readULong(1));
     f.str("");
     f << "SpreadsheetContent-" << name;
 
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(pos+4+sz, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+4+sz, WPX_SEEK_SET);
   }
 
-  m_input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, WPX_SEEK_SET);
   return true;
 }
 

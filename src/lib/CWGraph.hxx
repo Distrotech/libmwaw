@@ -50,13 +50,10 @@
 
 #include "CWStruct.hxx"
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
 class MWAWEntry;
 
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace CWGraphInternal
 {
@@ -83,7 +80,7 @@ class CWGraph
 
 public:
   //! constructor
-  CWGraph(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convertissor);
+  CWGraph(CWParser &parser);
   //! destructor
   virtual ~CWGraph();
 
@@ -118,11 +115,6 @@ public:
   //! return the surface color which corresponds to some ids (if possible)
   bool getSurfaceColor(CWGraphInternal::Style const style, MWAWColor &col) const;
 protected:
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
-
   //! sends the zone data to the listener (if it exists )
   bool sendZone(int number, MWAWPosition pos=MWAWPosition());
 
@@ -198,11 +190,6 @@ protected:
   bool sendBitmap(CWGraphInternal::ZoneBitmap &pict, MWAWPosition pos,
                   WPXPropertyList extras = WPXPropertyList());
 
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
 private:
   CWGraph(CWGraph const &orig);
   CWGraph &operator=(CWGraph const &orig);
@@ -211,14 +198,8 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<CWGraphInternal::State> m_state;
@@ -228,9 +209,6 @@ protected:
 
   //! the style manager
   shared_ptr<CWStyleManager> m_styleManager;
-
-  //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -46,12 +46,9 @@
 class MWAWInputStream;
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
 class MWAWFont;
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace FWTextInternal
 {
@@ -79,7 +76,7 @@ class FWText
   friend class FWParser;
 public:
   //! constructor
-  FWText(MWAWInputStreamPtr ip, FWParser &parser, MWAWFontConverterPtr &convertissor);
+  FWText(FWParser &parser);
   //! destructor
   virtual ~FWText();
 
@@ -90,11 +87,6 @@ public:
   int numPages() const;
 
 protected:
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
@@ -161,21 +153,14 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<FWTextInternal::State> m_state;
 
   //! the main parser;
   FWParser *m_mainParser;
-
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

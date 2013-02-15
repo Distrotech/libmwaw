@@ -185,25 +185,14 @@ void CWParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_styleManager.reset(new CWStyleManager(getInput(), *this, getFontConverter()));
+  m_styleManager.reset(new CWStyleManager(*this));
 
-  m_databaseParser.reset(new CWDatabase(getInput(), *this, getFontConverter()));
-  m_graphParser.reset(new CWGraph(getInput(), *this, getFontConverter()));
-  m_presentationParser.reset(new CWPresentation(getInput(), *this, getFontConverter()));
-  m_spreadsheetParser.reset(new CWSpreadsheet(getInput(), *this, getFontConverter()));
-  m_tableParser.reset(new CWTable(getInput(), *this, getFontConverter()));
-  m_textParser.reset(new CWText(getInput(), *this, getFontConverter()));
-}
-
-void CWParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-  m_databaseParser->setListener(listen);
-  m_graphParser->setListener(listen);
-  m_presentationParser->setListener(listen);
-  m_spreadsheetParser->setListener(listen);
-  m_tableParser->setListener(listen);
-  m_textParser->setListener(listen);
+  m_databaseParser.reset(new CWDatabase(*this));
+  m_graphParser.reset(new CWGraph(*this));
+  m_presentationParser.reset(new CWPresentation(*this));
+  m_spreadsheetParser.reset(new CWSpreadsheet(*this));
+  m_tableParser.reset(new CWTable(*this));
+  m_textParser.reset(new CWText(*this));
 }
 
 ////////////////////////////////////////////////////////////

@@ -47,15 +47,11 @@
 #include "MWAWEntry.hxx"
 
 #include "MWAWDebug.hxx"
-#include "MWAWInputStream.hxx"
 
 #include "MSWTextStyles.hxx"
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace MSWTextInternal
 {
@@ -99,7 +95,7 @@ public:
   };
 public:
   //! constructor
-  MSWText(MWAWInputStreamPtr ip, MSWParser &parser, MWAWFontConverterPtr &convertissor);
+  MSWText(MSWParser &parser);
   //! destructor
   virtual ~MSWText();
 
@@ -115,8 +111,10 @@ public:
   /** returns the footer entry */
   MWAWEntry getFooter() const;
 protected:
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen);
+  //! returns the parser state
+  shared_ptr<MWAWParserState> &getParserState() {
+    return m_parserState;
+  }
 
   //! send a main zone
   bool sendMainText();
@@ -185,11 +183,6 @@ protected:
   //! read a zone which consists in a list of int
   bool readLongZone(MSWEntry &entry, int sz, std::vector<long> &list);
 
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
 private:
   MSWText(MSWText const &orig);
   MSWText &operator=(MSWText const &orig);
@@ -198,14 +191,8 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<MSWTextInternal::State> m_state;
@@ -215,9 +202,6 @@ protected:
 
   //! the main parser;
   MSWParser *m_mainParser;
-
-  //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

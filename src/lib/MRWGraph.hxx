@@ -48,14 +48,9 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
 class MWAWEntry;
-
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
-
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 class MWAWPosition;
 
 namespace MRWGraphInternal
@@ -82,7 +77,7 @@ class MRWGraph
 
 public:
   //! constructor
-  MRWGraph(MWAWInputStreamPtr ip, MRWParser &parser, MWAWFontConverterPtr &convertissor);
+  MRWGraph(MRWParser &parser);
   //! destructor
   virtual ~MRWGraph();
 
@@ -93,12 +88,6 @@ public:
   int numPages() const;
 
 protected:
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
-
   //! try to send the page graphic
   bool sendPageGraphics();
   //! sends the data which have not yet been sent to the listener
@@ -131,15 +120,6 @@ protected:
   //! ask the main parser to send a text zone
   void sendText(int zoneId);
 
-  //
-  // low level
-  //
-
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
 private:
   MRWGraph(MRWGraph const &orig);
   MRWGraph &operator=(MRWGraph const &orig);
@@ -148,23 +128,14 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<MRWGraphInternal::State> m_state;
 
   //! the main parser;
   MRWParser *m_mainParser;
-
-  //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

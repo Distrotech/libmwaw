@@ -1062,14 +1062,14 @@ void Paragraph::insert(Paragraph const &para, bool insertModif)
   m_tableDef.insert(para.m_tableDef);
 }
 
-void Paragraph::print(std::ostream &o, MWAWFontConverterPtr m_convertissor) const
+void Paragraph::print(std::ostream &o, MWAWFontConverterPtr converter) const
 {
   if (m_font2.isSet())
-    o << "font2=[" << m_font2->m_font->getDebugString(m_convertissor) << m_font2.get() << "],";
+    o << "font2=[" << m_font2->m_font->getDebugString(converter) << m_font2.get() << "],";
   if (m_font.isSet())
-    o << "font=[" << m_font->m_font->getDebugString(m_convertissor) << m_font.get() << "],";
+    o << "font=[" << m_font->m_font->getDebugString(converter) << m_font.get() << "],";
   if (m_modFont.isSet())
-    o << "modifFont=[" << m_modFont->m_font->getDebugString(m_convertissor) << m_modFont.get() << "],";
+    o << "modifFont=[" << m_modFont->m_font->getDebugString(converter) << m_modFont.get() << "],";
   o << *this;
 }
 

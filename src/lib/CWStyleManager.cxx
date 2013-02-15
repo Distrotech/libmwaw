@@ -195,8 +195,8 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::Style const &style)
 ////////////////////////////////////////////////////
 // StyleManager function
 ////////////////////////////////////////////////////
-CWStyleManager::CWStyleManager(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_convertissor(convert), m_mainParser(&parser), m_state(), m_asciiFile(parser.ascii())
+CWStyleManager::CWStyleManager(CWParser &parser) :
+  m_parserState(parser.getParserState()), m_mainParser(&parser), m_state()
 {
   m_state.reset(new CWStyleManagerInternal::State);
 }
@@ -207,7 +207,7 @@ CWStyleManager::~CWStyleManager()
 
 int CWStyleManager::version() const
 {
-  if (m_state->m_version <= 0) m_state->m_version = m_mainParser->version();
+  if (m_state->m_version <= 0) m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
@@ -261,93 +261,97 @@ bool CWStyleManager::readStyles(MWAWEntry const &entry)
   if (!entry.valid() || entry.type() != "STYL")
     return false;
   long pos = entry.begin();
-  m_input->seek(pos+4, WPX_SEEK_SET); // skip header
-  long sz = (long) m_input->readULong(4);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos+4, WPX_SEEK_SET); // skip header
+  long sz = (long) input->readULong(4);
   if (sz > entry.length()) {
     MWAW_DEBUG_MSG(("CWStyleManager::readStyles: pb with entry length"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     return false;
   }
 
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(STYL):";
   if (version() <= 3) {
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(entry.end(), WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(entry.end(), WPX_SEEK_SET);
     return true;
   }
   bool limitSet = true;
   if (version() <= 4) {
     // version 4 does not contents total length fields
-    m_input->seek(-4, WPX_SEEK_CUR);
+    input->seek(-4, WPX_SEEK_CUR);
     limitSet = false;
   } else
-    m_input->pushLimit(entry.end());
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+    input->pushLimit(entry.end());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
   int id = 0;
-  while (long(m_input->tell()) < entry.end()) {
-    pos = m_input->tell();
+  while (long(input->tell()) < entry.end()) {
+    pos = input->tell();
     if (!readGenStyle(id)) {
-      m_input->seek(pos, WPX_SEEK_SET);
-      if (limitSet) m_input->popLimit();
+      input->seek(pos, WPX_SEEK_SET);
+      if (limitSet) input->popLimit();
       return false;
     }
     id++;
   }
-  if (limitSet) m_input->popLimit();
+  if (limitSet) input->popLimit();
 
   return true;
 }
 
 bool CWStyleManager::readGenStyle(int id)
 {
-  long pos = m_input->tell();
-  long sz = (long) m_input->readULong(4);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("CWStyleManager::readGenStyle: pb with sub zone: %d", id));
     return false;
   }
-  m_input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(pos+4, WPX_SEEK_SET);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "STYL-" << id << ":";
   if (sz < 16) {
     if (sz) f << "#";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(endPos, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(endPos, WPX_SEEK_SET);
     return true;
   }
 
   std::string name("");
-  int N = (int) m_input->readLong(2);
-  int type = (int) m_input->readLong(2);
-  int val =  (int) m_input->readLong(2);
-  int fSz =  (int) m_input->readLong(2);
+  int N = (int) input->readLong(2);
+  int type = (int) input->readLong(2);
+  int val =  (int) input->readLong(2);
+  int fSz =  (int) input->readLong(2);
   f << "N=" << N << ", type?=" << type <<", fSz=" << fSz << ",";
   if (val) f << "unkn=" << val << ",";
 
   for (int i = 0; i < 2; i++) {
-    val = (int) m_input->readLong(2);
+    val = (int) input->readLong(2);
     if (val)  f << "f" << i << "=" << val << ",";
   }
   for (int i = 0; i < 4; i++)
-    name += char(m_input->readULong(1));
+    name += char(input->readULong(1));
   f << name;
 
-  long actPos = m_input->tell();
+  long actPos = input->tell();
   if (actPos != pos && actPos != endPos - N*fSz)
-    ascii().addDelimiter(m_input->tell(), '|');
+    ascFile.addDelimiter(input->tell(), '|');
 
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   long numRemain = endPos - actPos;
   if (N > 0 && fSz > 0 && numRemain >= N*fSz) {
-    m_input->seek(endPos-N*fSz, WPX_SEEK_SET);
+    input->seek(endPos-N*fSz, WPX_SEEK_SET);
 
     bool ok = false;
     if (name == "CHAR")
@@ -369,19 +373,19 @@ bool CWStyleManager::readGenStyle(int id)
     else if (name == "STYL")
       ok = readStylesDef(N, fSz);
     if (!ok) {
-      m_input->seek(endPos-N*fSz, WPX_SEEK_SET);
+      input->seek(endPos-N*fSz, WPX_SEEK_SET);
       for (int i = 0; i < N; i++) {
-        pos = m_input->tell();
+        pos = input->tell();
         f.str("");
         f << "STYL-" << id << "/" << name << "-" << i << ":";
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
-        m_input->seek(fSz, WPX_SEEK_CUR);
+        ascFile.addPos(pos);
+        ascFile.addNote(f.str().c_str());
+        input->seek(fSz, WPX_SEEK_CUR);
       }
     }
   }
 
-  m_input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, WPX_SEEK_SET);
   return true;
 }
 
@@ -394,53 +398,55 @@ bool CWStyleManager::readStylesDef(int N, int fSz)
     MWAW_DEBUG_MSG(("CWStyleManager::readStylesDef: Find old data size %d\n", fSz));
     return false;
   }
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   int val;
 
   for (int i = 0; i < N; i++) {
-    long pos = m_input->tell();
+    long pos = input->tell();
     Style style;
     f.str("");
-    val = (int) m_input->readLong(2);
+    val = (int) input->readLong(2);
     if (val != -1) f << "f0=" << val << ",";
-    val = (int) m_input->readLong(2);
+    val = (int) input->readLong(2);
     if (val) f << "f1=" << val << ",";
-    f << "used?=" << m_input->readLong(2) << ",";
-    style.m_localStyleId = (int) m_input->readLong(2);
+    f << "used?=" << input->readLong(2) << ",";
+    style.m_localStyleId = (int) input->readLong(2);
     if (i != style.m_localStyleId && style.m_localStyleId != -1) f << "#styleId,";
-    style.m_styleId = (int) m_input->readLong(2);
+    style.m_styleId = (int) input->readLong(2);
     for (int j = 0; j < 2; j++) {
       // unknown : hash, dataId ?
-      f << "g" << j << "=" << m_input->readLong(1) << ",";
+      f << "g" << j << "=" << input->readLong(1) << ",";
     }
     for (int j = 2; j < 4; j++)
-      f << "g" << j << "=" << m_input->readLong(2) << ",";
-    int lookupId2 = (int) m_input->readLong(2);
+      f << "g" << j << "=" << input->readLong(2) << ",";
+    int lookupId2 = (int) input->readLong(2);
     f << "lookupId2=" << lookupId2 << ",";
-    style.m_fontId = (int) m_input->readLong(2);
-    style.m_fontHash = (int) m_input->readLong(2);
-    style.m_graphicId = (int) m_input->readLong(2);
-    style.m_rulerId = (int) m_input->readLong(2);
+    style.m_fontId = (int) input->readLong(2);
+    style.m_fontHash = (int) input->readLong(2);
+    style.m_graphicId = (int) input->readLong(2);
+    style.m_rulerId = (int) input->readLong(2);
     if (fSz >= 30)
-      style.m_ksenId = (int) m_input->readLong(2);
-    style.m_rulerHash = (int) m_input->readLong(2);
+      style.m_ksenId = (int) input->readLong(2);
+    style.m_rulerHash = (int) input->readLong(2);
     style.m_extra = f.str();
     if (m_state->m_stylesMap.find(i)==m_state->m_stylesMap.end())
       m_state->m_stylesMap[i] = style;
     else {
       MWAW_DEBUG_MSG(("CWStyleManager::readStylesDef: style %d already exists\n", i));
     }
-    if (long(m_input->tell()) != pos+fSz)
-      ascii().addDelimiter(m_input->tell(), '|');
+    if (long(input->tell()) != pos+fSz)
+      ascFile.addDelimiter(input->tell(), '|');
 
     f.str("");
     if (!i)
       f << "Entries(Style)-0:" << style;
     else
       f << "Style-" << i << ":" << style;
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(pos+fSz, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+fSz, WPX_SEEK_SET);
   }
   return true;
 }
@@ -450,14 +456,16 @@ bool CWStyleManager::readLookUp(int N, int fSz)
   m_state->m_lookupMap.clear();
 
   if (fSz == 0 || N== 0) return true;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
   for (int i = 0; i < N; i++) {
-    long pos = m_input->tell();
+    long pos = input->tell();
     f.str("");
     if (i == 0) f << "Entries(StylLookUp): StylLookUp-0:";
     else f << "StylLookUp-" << i << ":";
-    int val = (int) m_input->readLong(2);
+    int val = (int) input->readLong(2);
     if (m_state->m_stylesMap.find(val)!=m_state->m_stylesMap.end() &&
         m_state->m_stylesMap.find(val)->second.m_localStyleId != val &&
         m_state->m_stylesMap.find(val)->second.m_localStyleId != -1) {
@@ -467,11 +475,11 @@ bool CWStyleManager::readLookUp(int N, int fSz)
     m_state->m_lookupMap[i] = val;
     f << "styleId=" << val;
     if (fSz != 2) {
-      ascii().addDelimiter(m_input->tell(), '|');
-      m_input->seek(pos+fSz, WPX_SEEK_SET);
+      ascFile.addDelimiter(input->tell(), '|');
+      input->seek(pos+fSz, WPX_SEEK_SET);
     }
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
   }
 
   return true;
@@ -485,17 +493,19 @@ bool CWStyleManager::readFontNames(int N, int fSz)
   if (fSz == 0 || N== 0) return true;
   if (fSz < 16) return false;
 
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   for (int i = 0; i < N; i++) {
-    long pos = m_input->tell();
+    long pos = input->tell();
     f.str("");
     if (i == 0) f << "Entries(FntNames): FntNames-0:";
     else f << "FntNames-" << i << ":";
-    int fontEncoding = (int) m_input->readULong(2);
+    int fontEncoding = (int) input->readULong(2);
     f << "nameEncoding=" << fontEncoding << ",";
-    f << "type?=" << m_input->readLong(2) << ",";
+    f << "type?=" << input->readLong(2) << ",";
 
-    int nChar = (int) m_input->readULong(1);
+    int nChar = (int) input->readULong(1);
     if (5+nChar > fSz) {
       static bool first = true;
       if (first) {
@@ -507,7 +517,7 @@ bool CWStyleManager::readFontNames(int N, int fSz)
       std::string name("");
       bool ok = true;
       for (int c = 0; c < nChar; c++) {
-        char ch = (char) m_input->readULong(1);
+        char ch = (char) input->readULong(1);
         if (ch == '\0') {
           MWAW_DEBUG_MSG(("CWStyleManager::readFontNames: pb with name field %d\n", i));
           ok = false;
@@ -526,16 +536,16 @@ bool CWStyleManager::readFontNames(int N, int fSz)
       f << "'" << name << "'";
       if (name.length() && ok) {
         std::string family = fontEncoding==0x4000 ? "Osaka" : "";
-        m_state->m_localFIdMap[i]=m_convertissor->getId(name, family);
+        m_state->m_localFIdMap[i]=m_parserState->m_fontConverter->getId(name, family);
       }
     }
-    if (long(m_input->tell()) != pos+fSz) {
-      ascii().addDelimiter(m_input->tell(), '|');
-      m_input->seek(pos+fSz, WPX_SEEK_SET);
+    if (long(input->tell()) != pos+fSz) {
+      ascFile.addDelimiter(input->tell(), '|');
+      input->seek(pos+fSz, WPX_SEEK_SET);
     }
 
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
   }
   return true;
 }
@@ -543,15 +553,17 @@ bool CWStyleManager::readFontNames(int N, int fSz)
 bool CWStyleManager::readStyleNames(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   for (int i = 0; i < N; i++) {
-    long pos = m_input->tell();
+    long pos = input->tell();
     f.str("");
     if (i == 0) f << "Entries(StylName): StylName-0:";
     else f << "StylName-" << i << ":";
-    f << "id=" << m_input->readLong(2) << ",";
+    f << "id=" << input->readLong(2) << ",";
     if (fSz > 4) {
-      int nChar = (int) m_input->readULong(1);
+      int nChar = (int) input->readULong(1);
       if (3+nChar > fSz) {
         static bool first = true;
         if (first) {
@@ -562,17 +574,17 @@ bool CWStyleManager::readStyleNames(int N, int fSz)
       } else {
         std::string name("");
         for (int c = 0; c < nChar; c++)
-          name += char(m_input->readULong(1));
+          name += char(input->readULong(1));
         f << "'" << name << "'";
       }
     }
-    if (long(m_input->tell()) != pos+fSz) {
-      ascii().addDelimiter(m_input->tell(), '|');
-      m_input->seek(pos+fSz, WPX_SEEK_SET);
+    if (long(input->tell()) != pos+fSz) {
+      ascFile.addDelimiter(input->tell(), '|');
+      input->seek(pos+fSz, WPX_SEEK_SET);
     }
 
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
   }
   return true;
 }
@@ -584,10 +596,12 @@ bool CWStyleManager::readCellStyles(int N, int fSz)
     MWAW_DEBUG_MSG(("CWStyleManager::readCellStyles: Find old ruler size %d\n", fSz));
     return false;
   }
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   int val;
   for (int i = 0; i < N; i++) {
-    long pos = m_input->tell();
+    long pos = input->tell();
     f.str("");
     if (!i)
       f << "Entries(CellStyle)-0:";
@@ -595,7 +609,7 @@ bool CWStyleManager::readCellStyles(int N, int fSz)
       f << "CellStyle-" << i << ":";
     // 3 int, id or color ?
     for (int j = 0; j < 3; j++) {
-      val = (int) m_input->readLong(2);
+      val = (int) input->readLong(2);
       if (val == -1) continue;
       f << "f" << j << "=" << val << ",";
     }
@@ -604,21 +618,21 @@ bool CWStyleManager::readCellStyles(int N, int fSz)
        g4=0|1|8, g5=0|2, g6=0-3, g7=0-f,
      */
     for (int j = 0; j < 8; j++) {
-      val = (int) m_input->readULong(1);
+      val = (int) input->readULong(1);
       if (val)
         f << "g" << j << "=" << std::hex << val << std::dec << ",";
     }
     // h0=h1=0, h2=h3=0|1
     for (int j = 0; j < 4; j++) {
-      val = (int) m_input->readULong(1);
+      val = (int) input->readULong(1);
       if (val)
         f << "h" << j << "=" << val << ",";
     }
-    if (long(m_input->tell()) != pos+fSz)
-      ascii().addDelimiter(m_input->tell(), '|');
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(pos+fSz, WPX_SEEK_SET);
+    if (long(input->tell()) != pos+fSz)
+      ascFile.addDelimiter(input->tell(), '|');
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+fSz, WPX_SEEK_SET);
   }
   return true;
 }
@@ -631,17 +645,19 @@ bool CWStyleManager::readGraphStyles(int N, int fSz)
     MWAW_DEBUG_MSG(("CWStyleManager::readGraphStyles: Find old ruler size %d\n", fSz));
     return false;
   }
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   int val;
   std::vector<int16_t> values16; // some values can be small or little endian, so...
   std::vector<int32_t> values32;
   for (int i = 0; i < N; i++) {
-    long pos = m_input->tell();
+    long pos = input->tell();
     f.str("");
     Graphic graph;
     // 3 int, id (find either f0=<small number> or f1=0, f2=small number
     for (int j = 0; j < 3; j++) {
-      val = (int) m_input->readLong(2);
+      val = (int) input->readLong(2);
       if (val == -1) continue;
       f << "f" << j << "=" << val << ",";
     }
@@ -650,13 +666,13 @@ bool CWStyleManager::readGraphStyles(int N, int fSz)
     values32.resize(0);
     // 2 two dim
     for (int j = 0; j < 2; j++)
-      values16.push_back((int16_t)m_input->readLong(2));
-    graph.m_lineWidth=(int) m_input->readULong(1);
-    val = (int) m_input->readULong(1); // 0|1|4|80
+      values16.push_back((int16_t)input->readLong(2));
+    graph.m_lineWidth=(int) input->readULong(1);
+    val = (int) input->readULong(1); // 0|1|4|80
     if (val)
       f << "f3=" << std::hex << val << std::dec << ",";
     for (int j = 0; j < 2; j++) {
-      int col = (int) m_input->readULong(1);
+      int col = (int) input->readULong(1);
       MWAWColor color;
       if (m_mainParser->getColor(col, color))
         graph.m_color[j] = color;
@@ -664,7 +680,7 @@ bool CWStyleManager::readGraphStyles(int N, int fSz)
         f << "#col" << j << "=" << col << ",";
     }
     for (int j = 0; j < 3; j++)
-      values16.push_back((int16_t)m_input->readLong(2));
+      values16.push_back((int16_t)input->readLong(2));
 
     m_mainParser->checkOrdering(values16, values32);
     if (values16[0] || values16[1])
@@ -681,9 +697,9 @@ bool CWStyleManager::readGraphStyles(int N, int fSz)
     if (values16[4])
       f << "g0=" << values16[4] << ",";
 
-    val = (int) m_input->readULong(1); // 0|1|2
+    val = (int) input->readULong(1); // 0|1|2
     if (val) f << "g1=" << val << ",";
-    val = (int) m_input->readULong(2); // 0|1
+    val = (int) input->readULong(2); // 0|1
     if (val) f << "g2=" << val << ",";
 
     graph.m_extra = f.str();
@@ -693,11 +709,11 @@ bool CWStyleManager::readGraphStyles(int N, int fSz)
       f << "Entries(GrphStyle)-0:" << graph;
     else
       f << "GrphStyle-" << i << ":" << graph;
-    if (long(m_input->tell()) != pos+fSz)
-      ascii().addDelimiter(m_input->tell(), '|');
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(pos+fSz, WPX_SEEK_SET);
+    if (long(input->tell()) != pos+fSz)
+      ascFile.addDelimiter(input->tell(), '|');
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+fSz, WPX_SEEK_SET);
   }
   return true;
 }
@@ -710,24 +726,26 @@ bool CWStyleManager::readKSEN(int N, int fSz)
   if (fSz != 14) {
     MWAW_DEBUG_MSG(("CWStyleManager::readKSEN: Find odd ksen size %d\n", fSz));
   }
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
   long val;
   for (int i = 0; i < N; i++) {
-    long pos = m_input->tell();
+    long pos = input->tell();
     KSEN ksen;
     f.str("");
-    val = m_input->readLong(2); // always -1
+    val = input->readLong(2); // always -1
     if (val != -1)
       f << "unkn=" << val << ",";
-    val = m_input->readLong(4); // a big number
+    val = input->readLong(4); // a big number
     if (val != -1)
       f << "f0=" << val << ",";
     for (int j = 0; j < 2; j++) { // fl0=[0|1|2|4|8|f]: a pos?, fl1=[0|8|9|b|d|f] ?
-      val = m_input->readLong(2);
+      val = input->readLong(2);
       if (val) f << "fl" << j << "=" << std::hex << val << std::dec << ",";
     }
-    val = m_input->readLong(1); // 0-5
+    val = input->readLong(1); // 0-5
     switch(val) {
     case 0:
       break;
@@ -752,9 +770,9 @@ bool CWStyleManager::readKSEN(int N, int fSz)
       f << "#lineType=" << val << ",";
       break;
     }
-    ksen.m_valign = (int) m_input->readLong(1);
-    ksen.m_lines = (int) m_input->readLong(1);
-    val = m_input->readLong(1); // 0-18
+    ksen.m_valign = (int) input->readLong(1);
+    ksen.m_lines = (int) input->readLong(1);
+    val = input->readLong(1); // 0-18
     if (val) f << "g1=" << val << ",";
     ksen.m_extra = f.str();
     m_state->m_ksenList.push_back(ksen);
@@ -764,10 +782,10 @@ bool CWStyleManager::readKSEN(int N, int fSz)
     else
       f << "Ksen-" << i << ":";
     f << ksen;
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
 
-    m_input->seek(pos+fSz, WPX_SEEK_SET);
+    input->seek(pos+fSz, WPX_SEEK_SET);
   }
   return true;
 }

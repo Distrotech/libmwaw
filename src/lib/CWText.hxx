@@ -52,12 +52,9 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
 class MWAWFont;
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace CWStruct
 {
@@ -86,7 +83,7 @@ class CWText
 
 public:
   //! constructor
-  CWText(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convertissor);
+  CWText(CWParser &parser);
   //! destructor
   virtual ~CWText();
 
@@ -100,12 +97,6 @@ public:
   shared_ptr<CWStruct::DSET> readDSETZone(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
 protected:
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
-
   /** sends a paragraph property to the listener */
   void setProperty(CWTextInternal::Paragraph const &ruler);
 
@@ -159,11 +150,6 @@ protected:
   /** read a STYL Paragraph sequence */
   bool readSTYL_RULR(int N, int fSz);
 
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
 private:
   CWText(CWText const &orig);
   CWText &operator=(CWText const &orig);
@@ -172,14 +158,8 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<CWTextInternal::State> m_state;
@@ -189,9 +169,6 @@ protected:
 
   //! the style manager
   shared_ptr<CWStyleManager> m_styleManager;
-
-  //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

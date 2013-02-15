@@ -80,9 +80,6 @@ protected:
   //! inits all internal variables
   void init();
 
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen);
-
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
 

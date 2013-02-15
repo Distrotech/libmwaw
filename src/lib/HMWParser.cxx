@@ -170,20 +170,13 @@ void HMWParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_graphParser.reset(new HMWGraph(getInput(), *this, getFontConverter()));
-  m_textParser.reset(new HMWText(getInput(), *this, getFontConverter()));
+  m_graphParser.reset(new HMWGraph(*this));
+  m_textParser.reset(new HMWText(*this));
 }
 
 bool HMWParser::isKoreanFile() const
 {
   return m_state->m_isKoreanFile;
-}
-
-void HMWParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-  m_graphParser->setListener(listen);
-  m_textParser->setListener(listen);
 }
 
 bool HMWParser::sendText(long id, long subId)

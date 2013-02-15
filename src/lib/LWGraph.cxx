@@ -73,10 +73,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-LWGraph::LWGraph
-(MWAWInputStreamPtr ip, LWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert), m_state(new LWGraphInternal::State),
-  m_mainParser(&parser), m_asciiFile(parser.ascii())
+LWGraph::LWGraph(LWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new LWGraphInternal::State),
+  m_mainParser(&parser)
 {
 }
 
@@ -85,7 +84,7 @@ LWGraph::~LWGraph()
 
 int LWGraph::version() const
 {
-  return m_mainParser->version();
+  return m_parserState->m_version;
 }
 
 int LWGraph::numPages() const
@@ -144,7 +143,7 @@ bool LWGraph::sendPICT(MWAWEntry const &entry)
   entry.setParsed(true);
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
 
-  if (!m_listener || !rsrcParser) {
+  if (!m_parserState->m_listener || !rsrcParser) {
     MWAW_DEBUG_MSG(("LWGraph::sendPICT: can not find the listener\n"));
     return false;
   }
@@ -169,13 +168,13 @@ bool LWGraph::sendPICT(MWAWEntry const &entry)
   WPXBinaryData pictData;
   std::string type;
   if (pict->getBinary(pictData,type))
-    m_listener->insertPicture(pictPos, data, type);
+    m_parserState->m_listener->insertPicture(pictPos, data, type);
   return true;
 }
 
 bool LWGraph::sendJPEG(MWAWEntry const &entry)
 {
-  if (!m_listener) {
+  if (!m_parserState->m_listener) {
     MWAW_DEBUG_MSG(("LWGraph::sendJPEG: can not find the listener\n"));
     return false;
   }
@@ -204,7 +203,7 @@ bool LWGraph::sendJPEG(MWAWEntry const &entry)
     pictPos.setSize(sz);
     pictPos.setUnit(WPX_POINT);
   }
-  m_listener->insertPicture(pictPos, data, "image/pict");
+  m_parserState->m_listener->insertPicture(pictPos, data, "image/pict");
 
 #ifdef DEBUG_WITH_FILES
   if (!entry.isParsed()) {

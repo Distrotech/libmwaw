@@ -340,12 +340,11 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSWText::MSWText
-(MWAWInputStreamPtr ip, MSWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert), m_state(new MSWTextInternal::State),
-  m_stylesManager(), m_mainParser(&parser), m_asciiFile(parser.ascii())
+MSWText::MSWText(MSWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new MSWTextInternal::State),
+  m_stylesManager(), m_mainParser(&parser)
 {
-  m_stylesManager.reset(new MSWTextStyles(ip, *this, convert));
+  m_stylesManager.reset(new MSWTextStyles(*this));
 }
 
 MSWText::~MSWText()
@@ -354,7 +353,7 @@ MSWText::~MSWText()
 int MSWText::version() const
 {
   if (m_state->m_version < 0)
-    m_state->m_version = m_mainParser->version();
+    m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
@@ -362,12 +361,6 @@ int MSWText::numPages() const
 {
   m_state->m_numPages = int(m_state->m_pageList.size());
   return m_state->m_numPages;
-}
-
-void MSWText::setListener(MWAWContentListenerPtr listen)
-{
-  m_listener = listen;
-  m_stylesManager->setListener(listen);
 }
 
 long MSWText::getMainTextLength() const
@@ -450,12 +443,14 @@ std::ostream &operator<<(std::ostream &o, MSWText::PLC const &plc)
 
 bool MSWText::readHeaderTextLength()
 {
-  long pos = m_input->tell();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
   long endPos = pos+12;
   if (!m_mainParser->isFilePos(endPos))
     return false;
   for (int i = 0; i < 3; i++)
-    m_state->m_textLength[i]= (long) m_input->readULong(4);
+    m_state->m_textLength[i]= (long) input->readULong(4);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "FileHeader(textLength):text="
     << std::hex << m_state->m_textLength[0] << ",";
@@ -463,10 +458,10 @@ bool MSWText::readHeaderTextLength()
     f << "footnote=" << m_state->m_textLength[1] << ",";
   if (m_state->m_textLength[2])
     f << "headerFooter=" << m_state->m_textLength[2] << ",";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  ascii().addPos(endPos);
-  ascii().addNote("_");
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  ascFile.addPos(endPos);
+  ascFile.addNote("_");
   return true;
 }
 
@@ -592,21 +587,23 @@ bool MSWText::readTextStruct(MSWEntry &entry)
   }
   if (!m_stylesManager->readTextStructList(entry))
     return false;
-  long pos = m_input->tell();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  int type = (int) m_input->readLong(1);
+  int type = (int) input->readLong(1);
   if (type != 2) {
     MWAW_DEBUG_MSG(("MSWText::readTextStruct: find odd type %d\n", type));
     return false;
   }
   entry.setParsed(true);
   f << "TextStruct-pos:";
-  int sz = (int) m_input->readULong(2);
+  int sz = (int) input->readULong(2);
   long endPos = pos+3+sz;
   if (endPos > entry.end() || (sz%12) != 4) {
     f << "#";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
     MWAW_DEBUG_MSG(("MSWText::readTextStruct: can not read the position zone\n"));
     return false;
   }
@@ -616,7 +613,7 @@ bool MSWText::readTextStruct(MSWEntry &entry)
   textPos.resize((size_t) N+1);
   f << "pos=[" << std::hex;
   for (size_t i = 0; i <= size_t(N); i++) {
-    textPos[i] = (int) m_input->readULong(4);
+    textPos[i] = (int) input->readULong(4);
     if (i && textPos[i] <= textPos[i-1]) {
       MWAW_DEBUG_MSG(("MSWText::readTextStruct: find backward text pos\n"));
       f << "#" << textPos[i] << ",";
@@ -630,20 +627,20 @@ bool MSWText::readTextStruct(MSWEntry &entry)
     }
   }
   f << std::dec << "],";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
   PLC plc(PLC::TextPosition);
 
   for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
+    pos = input->tell();
     MSWTextInternal::TextEntry tEntry;
     f.str("");
     f<< "TextStruct-pos" << i << ":";
     tEntry.m_pos = (int) textPos[(size_t)i];
-    tEntry.m_type = (int) m_input->readULong(1);
+    tEntry.m_type = (int) input->readULong(1);
     // fN internal...
-    tEntry.m_id = (int) m_input->readULong(1);
-    long ptr = (long) m_input->readULong(4);
+    tEntry.m_id = (int) input->readULong(1);
+    long ptr = (long) input->readULong(4);
     tEntry.setBegin(ptr);
     tEntry.setLength(textPos[(size_t)i+1]-textPos[(size_t)i]);
     tEntry.m_paragraphId = m_stylesManager->readPropertyModifier(tEntry.m_complex, tEntry.m_extra);
@@ -657,18 +654,18 @@ bool MSWText::readTextStruct(MSWEntry &entry)
                                (textPos[(size_t)i],plc));
     }
     f << tEntry;
-    m_input->seek(pos+8, WPX_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    input->seek(pos+8, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
   }
 
-  pos = m_input->tell();
+  pos = input->tell();
   if (pos != entry.end()) {
-    ascii().addPos(pos);
-    ascii().addNote("TextStruct-pos#");
+    ascFile.addPos(pos);
+    ascFile.addNote("TextStruct-pos#");
   }
-  ascii().addPos(entry.end());
-  ascii().addNote("_");
+  ascFile.addPos(entry.end());
+  ascFile.addNote("_");
   return true;
 }
 
@@ -683,49 +680,51 @@ bool MSWText::readFontNames(MSWEntry &entry)
   }
 
   long pos = entry.begin();
-  m_input->seek(pos, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos, WPX_SEEK_SET);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  int N = (int) m_input->readULong(2);
+  int N = (int) input->readULong(2);
   if (N*5+2 > entry.length()) {
     MWAW_DEBUG_MSG(("MSWText::readFontNames: the number of fonts seems bad\n"));
     return false;
   }
   entry.setParsed(true);
   f << "FontNames:" << N;
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
   for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
+    pos = input->tell();
     if (pos+5 > entry.end()) {
-      m_input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, WPX_SEEK_SET);
       MWAW_DEBUG_MSG(("MSWText::readFontNames: the fonts %d seems bad\n", i));
       break;
     }
     f.str("");
     f << "FontNames-" << i << ":";
-    int val = (int) m_input->readLong(2);
+    int val = (int) input->readLong(2);
     if (val) f << "f0=" << val << ",";
-    int fId = (int) m_input->readULong(2);
+    int fId = (int) input->readULong(2);
     f << "fId=" << fId << ",";
-    int fSz = (int) m_input->readULong(1);
+    int fSz = (int) input->readULong(1);
     if (pos +5 > entry.end()) {
-      m_input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, WPX_SEEK_SET);
       MWAW_DEBUG_MSG(("MSWText::readFontNames: the fonts name %d seems bad\n", i));
       break;
     }
     std::string name("");
     for (int j = 0; j < fSz; j++)
-      name += char(m_input->readLong(1));
+      name += char(input->readLong(1));
     if (name.length())
-      m_convertissor->setCorrespondance(fId, name);
+      m_parserState->m_fontConverter->setCorrespondance(fId, name);
     f << name;
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
   }
-  pos = m_input->tell();
+  pos = input->tell();
   if (pos != entry.end()) {
-    ascii().addPos(pos);
-    ascii().addNote("FontNames#");
+    ascFile.addPos(pos);
+    ascFile.addNote("FontNames#");
   }
 
   return true;
@@ -747,7 +746,9 @@ bool MSWText::readZoneInfo(MSWEntry entry)
   entry.setParsed(true);
 
   long pos = entry.begin();
-  m_input->seek(pos, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos, WPX_SEEK_SET);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "ZoneInfo:";
   int N=int(entry.length()/10);
@@ -755,25 +756,25 @@ bool MSWText::readZoneInfo(MSWEntry entry)
   std::vector<long> textPositions;
   f << "[";
   for (int i = 0; i <= N; i++) {
-    long textPos = (long) m_input->readULong(4);
+    long textPos = (long) input->readULong(4);
     textPositions.push_back(textPos);
     f << std::hex << textPos << std::dec << ",";
   }
   f << "],";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   PLC plc(PLC::ZoneInfo);
   for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
+    pos = input->tell();
     f.str("");
     f << "ZoneInfo-Z" << i << ":" << std::hex << textPositions[(size_t) i] << std::dec << ",";
     MSWTextInternal::ZoneInfo zone;
     zone.m_id = i;
-    zone.m_type = (int) m_input->readULong(1); // 0, 20, 40, 60
-    zone.m_paragraphId = (int) m_input->readLong(1); // check me
-    zone.m_dim.setX(float(m_input->readULong(2))/1440.f);
-    zone.m_dim.setY(float(m_input->readLong(2))/72.f);
+    zone.m_type = (int) input->readULong(1); // 0, 20, 40, 60
+    zone.m_paragraphId = (int) input->readLong(1); // check me
+    zone.m_dim.setX(float(input->readULong(2))/1440.f);
+    zone.m_dim.setY(float(input->readLong(2))/72.f);
     f << zone;
     m_state->m_zoneList.push_back(zone);
 
@@ -785,13 +786,13 @@ bool MSWText::readZoneInfo(MSWEntry entry)
       m_state->m_plcMap.insert(std::multimap<long,PLC>::value_type
                                (textPositions[(size_t) i],plc));
     }
-    m_input->seek(pos+6, WPX_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    input->seek(pos+6, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
   }
 
-  ascii().addPos(entry.end());
-  ascii().addNote("_");
+  ascFile.addPos(entry.end());
+  ascFile.addNote("_");
   return true;
 
 }
@@ -809,24 +810,26 @@ bool MSWText::readPageBreak(MSWEntry &entry)
   }
   long pos = entry.begin();
   entry.setParsed(true);
-  m_input->seek(pos, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos, WPX_SEEK_SET);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "PageBreak:";
   int N=int(entry.length()/(fSz+4));
   std::vector<long> textPos; // checkme
   textPos.resize((size_t) N+1);
-  for (int i = 0; i <= N; i++) textPos[(size_t) i] = (long) m_input->readULong(4);
+  for (int i = 0; i <= N; i++) textPos[(size_t) i] = (long) input->readULong(4);
   PLC plc(PLC::Page);
   for (int i = 0; i < N; i++) {
     MSWTextInternal::Page page;
     page.m_id = i;
-    page.m_type = (int) m_input->readULong(1);
-    page.m_values[0] = (int) m_input->readLong(1); // always 0?
+    page.m_type = (int) input->readULong(1);
+    page.m_values[0] = (int) input->readLong(1); // always 0?
     for (int j = 1; j < 3; j++) // always -1, 0
-      page.m_values[j] = (int) m_input->readLong(2);
-    page.m_page = (int) m_input->readLong(2);
+      page.m_values[j] = (int) input->readLong(2);
+    page.m_page = (int) input->readLong(2);
     if (vers > 3)
-      page.m_values[3] = (int) m_input->readLong(2);
+      page.m_values[3] = (int) input->readLong(2);
     m_state->m_pageList.push_back(page);
 
     if (textPos[(size_t)i] > m_state->m_textLength[0]) {
@@ -840,11 +843,11 @@ bool MSWText::readPageBreak(MSWEntry &entry)
     f << std::hex << "[pos?=" << textPos[(size_t)i] << std::dec << "," << page << "],";
   }
   f << "end=" << std::hex << textPos[(size_t)N] << std::dec << ",";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
-  ascii().addPos(entry.end());
-  ascii().addNote("_");
+  ascFile.addPos(entry.end());
+  ascFile.addNote("_");
   return true;
 }
 
@@ -857,6 +860,7 @@ bool MSWText::readFootnotesPos(MSWEntry &entry, std::vector<long> const &noteDef
     MWAW_DEBUG_MSG(("MSWText::readFootnotesPos: the zone size seems odd\n"));
     return false;
   }
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   int N=int(entry.length()/6);
   if (N+2 != int(noteDef.size())) {
@@ -865,13 +869,14 @@ bool MSWText::readFootnotesPos(MSWEntry &entry, std::vector<long> const &noteDef
   }
   long pos = entry.begin();
   entry.setParsed(true);
-  m_input->seek(pos, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos, WPX_SEEK_SET);
   f << "FootnotePos:";
 
   std::vector<long> textPos;
   textPos.resize((size_t)N+1);
   for (int i = 0; i <= N; i++)
-    textPos[(size_t)i]= (long) m_input->readULong(4);
+    textPos[(size_t)i]= (long) input->readULong(4);
   long debFootnote = m_state->m_textLength[0];
   PLC plc(PLC::Footnote);
   PLC defPlc(PLC::FootnoteDef);
@@ -880,7 +885,7 @@ bool MSWText::readFootnotesPos(MSWEntry &entry, std::vector<long> const &noteDef
     note.m_id = i;
     note.m_pos.setBegin(debFootnote+noteDef[(size_t)i]);
     note.m_pos.setEnd(debFootnote+noteDef[(size_t)i+1]);
-    note.m_value = (int) m_input->readLong(2);
+    note.m_value = (int) input->readLong(2);
     m_state->m_footnoteList.push_back(note);
 
     if (textPos[(size_t)i] > m_state->getTotalTextSize()) {
@@ -899,10 +904,10 @@ bool MSWText::readFootnotesPos(MSWEntry &entry, std::vector<long> const &noteDef
     f << std::hex << textPos[(size_t)i] << std::dec << ":" << note << ",";
   }
   f << "end=" << std::hex << textPos[(size_t)N] << std::dec << ",";
-  ascii().addPos(entry.begin());
-  ascii().addNote(f.str().c_str());
-  ascii().addPos(entry.end());
-  ascii().addNote("_");
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
+  ascFile.addPos(entry.end());
+  ascFile.addNote("_");
   return true;
 }
 
@@ -915,17 +920,19 @@ bool MSWText::readFootnotesData(MSWEntry &entry)
     MWAW_DEBUG_MSG(("MSWText::readFootnotesData: the zone size seems odd\n"));
     return false;
   }
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   int N=int(entry.length()/14);
   long pos = entry.begin();
   entry.setParsed(true);
-  m_input->seek(pos, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos, WPX_SEEK_SET);
   f << "FootnoteData[" << N << "/" << m_state->m_footnoteList.size() << "]:";
 
   std::vector<long> textPos; // checkme
   textPos.resize((size_t)N+1);
   for (int i = 0; i <= N; i++)
-    textPos[(size_t)i]= (long) m_input->readULong(4);
+    textPos[(size_t)i]= (long) input->readULong(4);
   for (int i = 0; i < N; i++) {
     if (textPos[(size_t)i] > m_state->m_textLength[1]) {
       MWAW_DEBUG_MSG(("MSWText::readFootnotesData: textPositions seems bad\n"));
@@ -935,7 +942,7 @@ bool MSWText::readFootnotesData(MSWEntry &entry)
     if (textPos[(size_t)i])
       f << "pos=" << std::hex << textPos[(size_t)i] << std::dec << ",";
     for (int j = 0; j < 5; j++) { // always 0|4000, -1, 0, id, 0 ?
-      int val=(int) m_input->readLong(2);
+      int val=(int) input->readLong(2);
       if (val && j == 0)
         f << std::hex << val << std::dec << ",";
       else if (val)
@@ -945,10 +952,10 @@ bool MSWText::readFootnotesData(MSWEntry &entry)
     f << "],";
   }
   f << "end=" << std::hex << textPos[(size_t)N] << std::dec << ",";
-  ascii().addPos(entry.begin());
-  ascii().addNote(f.str().c_str());
-  ascii().addPos(entry.end());
-  ascii().addNote("_");
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
+  ascFile.addPos(entry.end());
+  ascFile.addNote("_");
   return true;
 }
 
@@ -966,27 +973,29 @@ bool MSWText::readFields(MSWEntry &entry, std::vector<long> const &fieldPos)
   }
   N--;
   entry.setParsed(true);
-  m_input->seek(pos, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos, WPX_SEEK_SET);
 
-  long sz = (long) m_input->readULong(2);
+  long sz = (long) input->readULong(2);
   if (entry.length() != sz) {
     MWAW_DEBUG_MSG(("MSWText::readFields: the zone size seems odd\n"));
     return false;
   }
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f, f2;
   f << "FieldName:";
   int const endSize = (version()==5) ? 2 : 1;
   PLC plc(PLC::Field);
   for (int n = 1; n < N; n++) {
-    if (m_input->tell() >= entry.end()) {
+    if (input->tell() >= entry.end()) {
       MWAW_DEBUG_MSG(("MSWText::readFields: can not find all field\n"));
       break;
     }
-    pos = m_input->tell();
-    int fSz = (int) m_input->readULong(1);
+    pos = input->tell();
+    int fSz = (int) input->readULong(1);
     if (pos+1+fSz > entry.end()) {
       MWAW_DEBUG_MSG(("MSWText::readFields: can not read a string\n"));
-      m_input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, WPX_SEEK_SET);
       f << "#";
       break;
     }
@@ -995,17 +1004,17 @@ bool MSWText::readFields(MSWEntry &entry, std::vector<long> const &fieldPos)
     f2.str("");
     std::string text("");
     for (int i = 0; i < fSz-endSz; i++) {
-      char c = (char) m_input->readULong(1);
+      char c = (char) input->readULong(1);
       if (c==0) f2 << '#';
       else text+=c;
     }
     MSWTextInternal::Field field;
     if (!endSz) ;
-    else if (version()>=5 && m_input->readULong(1) != 0xc) {
-      m_input->seek(-1, WPX_SEEK_CUR);
-      for (int i = 0; i < 2; i++) text+=char(m_input->readULong(1));
+    else if (version()>=5 && input->readULong(1) != 0xc) {
+      input->seek(-1, WPX_SEEK_CUR);
+      for (int i = 0; i < 2; i++) text+=char(input->readULong(1));
     } else {
-      int id = (int) m_input->readULong(1);
+      int id = (int) input->readULong(1);
       if (id >= N) {
         if (version()>=5) {
           MWAW_DEBUG_MSG(("MSWText::readFields: find a strange id\n"));
@@ -1029,12 +1038,12 @@ bool MSWText::readFields(MSWEntry &entry, std::vector<long> const &fieldPos)
                                (fieldPos[(size_t)n], plc));
     }
   }
-  if (long(m_input->tell()) != entry.end())
-    ascii().addDelimiter(m_input->tell(), '|');
-  ascii().addPos(entry.begin());
-  ascii().addNote(f.str().c_str());
-  ascii().addPos(entry.end());
-  ascii().addNote("_");
+  if (long(input->tell()) != entry.end())
+    ascFile.addDelimiter(input->tell(), '|');
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
+  ascFile.addPos(entry.end());
+  ascFile.addNote("_");
   return true;
 }
 
@@ -1050,26 +1059,28 @@ bool MSWText::readLongZone(MSWEntry &entry, int sz, std::vector<long> &list)
   }
 
   long pos = entry.begin();
-  m_input->seek(pos, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos, WPX_SEEK_SET);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << entry.type() << ":";
   int N = int(entry.length()/sz);
   for (int i = 0; i < N; i++) {
-    int val = (int) m_input->readLong(sz);
+    int val = (int) input->readLong(sz);
     list.push_back(val);
     f << std::hex << val << std::dec << ",";
   }
 
-  if (long(m_input->tell()) != entry.end())
-    ascii().addDelimiter(m_input->tell(), '|');
+  if (long(input->tell()) != entry.end())
+    ascFile.addDelimiter(input->tell(), '|');
 
   entry.setParsed(true);
 
-  ascii().addPos(entry.begin());
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
 
-  ascii().addPos(entry.end());
-  ascii().addNote("_");
+  ascFile.addPos(entry.end());
+  ascFile.addNote("_");
   return true;
 }
 
@@ -1188,6 +1199,7 @@ void MSWText::prepareData()
     bool m_isLocalPara;
   };
   LocalState actState(vers, *m_stylesManager.get());
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f, f2;
   PLC::ltstr compare;
 
@@ -1296,7 +1308,7 @@ void MSWText::prepareData()
         MSWStruct::Font newChar;
         if (pId >= 0 && m_stylesManager->getFont(MSWTextStyles::TextZone, pId, newChar)) {
 #if defined(DEBUG_WITH_FILES) && DEBUG_FONT
-          f << "F" << pId << "=[" << newChar.m_font->getDebugString(m_convertissor) << newChar << "],";
+          f << "F" << pId << "=[" << newChar.m_font->getDebugString(m_parserState->m_fontConverter) << newChar << "],";
 #endif
         } else {
 #if defined(DEBUG_WITH_FILES) && DEBUG_FONT
@@ -1340,7 +1352,7 @@ void MSWText::prepareData()
         f << "_,";
       else {
         f << paraId << "=[";
-        para.print(f, m_convertissor);
+        para.print(f, m_parserState->m_fontConverter);
         f << "],";
       }
 #endif
@@ -1363,8 +1375,8 @@ void MSWText::prepareData()
     if (f.str().length()) {
       f2.str("");
       f2 << "TextContent["<<cPos<<"]:" << f.str();
-      ascii().addPos(pos);
-      ascii().addNote(f2.str().c_str());
+      ascFile.addPos(pos);
+      ascFile.addNote(f2.str().c_str());
       prop.m_debugPrint = true;
     }
     m_state->m_propertyMap[cPos] = prop;
@@ -1383,6 +1395,8 @@ void MSWText::prepareTables()
 
   std::map<long,MSWTextInternal::Property>::iterator propIt =
     m_state->m_propertyMap.begin();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   while(propIt != m_state->m_propertyMap.end()) {
     long cPos = propIt->first;
     MSWTextInternal::Property &prop = propIt++->second, actProp = prop;
@@ -1396,12 +1410,12 @@ void MSWText::prepareTables()
     listBeginCells.push_back(cPos);
     while (1) {
       long newEndPos = cEnd;
-      m_input->seek(actProp.m_pos, WPX_SEEK_SET);
+      input->seek(actProp.m_pos, WPX_SEEK_SET);
       if (propIt != m_state->m_propertyMap.end())
         newEndPos = propIt->first;
 
       while (cPos++ < newEndPos) {
-        int c = (int) m_input->readULong(1);
+        int c = (int) input->readULong(1);
         if (c!=0x7) continue;
         listBeginCells.push_back(cPos);
       }
@@ -1423,10 +1437,10 @@ void MSWText::prepareTables()
         || !para->m_table->m_columns.isSet()
         || para->m_table->m_columns->size() < 2) {
       MWAW_DEBUG_MSG(("MSWText::prepareTables: can not find table for position %ld pb in %ld\n", listBeginCells[0], cPos));
-      ascii().addPos(m_state->getFilePos(listBeginCells[0]));
-      ascii().addNote("###A");
-      ascii().addPos(m_state->getFilePos(cPos));
-      ascii().addNote("###B");
+      ascFile.addPos(m_state->getFilePos(listBeginCells[0]));
+      ascFile.addNote("###A");
+      ascFile.addPos(m_state->getFilePos(cPos));
+      ascFile.addNote("###B");
       continue;
     }
 
@@ -1445,19 +1459,22 @@ void MSWText::prepareTables()
 bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell)
 {
   if (!textEntry.valid()) return false;
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("MSWText::sendText: can not find a listener!"));
     return true;
   }
   long cPos = textEntry.begin();
   long debPos = m_state->getFilePos(cPos), pos=debPos;
-  m_input->seek(pos, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos, WPX_SEEK_SET);
   long cEnd = textEntry.end();
 
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "TextContent[" << cPos << "]:";
   long pictPos = -1;
-  while (!m_input->atEOS() && cPos < cEnd) {
+  while (!input->atEOS() && cPos < cEnd) {
     bool newTable = false;
     long cEndPos = cEnd;
 
@@ -1472,7 +1489,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       prop = &propIt->second;
       pos = prop->m_pos;
       newTable = !tableCell && prop->isTable();
-      m_input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, WPX_SEEK_SET);
       numPLC = prop->m_plcList.size();
     }
     for (size_t i = 0; i < numPLC; i++) {
@@ -1516,8 +1533,8 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       }
     }
     if ((prop && prop->m_debugPrint)  || newTable) {
-      ascii().addPos(debPos);
-      ascii().addNote(f.str().c_str());
+      ascFile.addPos(debPos);
+      ascFile.addNote(f.str().c_str());
       f.str("");
       f << "TextContent["<<cPos<<"]:";
       debPos = pos;
@@ -1528,7 +1545,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       bool ok = sendTable(*prop);
       cPos = ok ? prop->m_cellsPos.back()+1 : actCPos;
       pos=debPos=m_state->getFilePos(cPos);
-      m_input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, WPX_SEEK_SET);
       if (ok)
         continue;
     }
@@ -1540,7 +1557,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       m_stylesManager->setProperty(font);
     }
     for (long p = cPos; p < cEndPos; p++) {
-      int c = (int) m_input->readULong(1);
+      int c = (int) input->readULong(1);
       cPos++;
       pos++;
       switch (c) {
@@ -1553,66 +1570,66 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
         m_mainParser->sendPicture(pictPos, int(cPos), MWAWPosition::Char);
         break;
       case 0x7: // FIXME: cell end ?
-        m_listener->insertEOL();
+        listener->insertEOL();
         break;
       case 0xc: // end section (ok)
         break;
       case 0x2:
-        m_listener->insertField(MWAWContentListener::PageNumber);
+        listener->insertField(MWAWContentListener::PageNumber);
         break;
       case 0x6:
-        m_listener->insertChar('\\');
+        listener->insertChar('\\');
         break;
       case 0x1e: // unbreaking - ?
-        m_listener->insertChar('-');
+        listener->insertChar('-');
         break;
       case 0x1f: // hyphen
         break;
       case 0x13: // month
       case 0x1a: // month abreviated
       case 0x1b: // checkme month long
-        m_listener->insertDateTimeField("%m");
+        listener->insertDateTimeField("%m");
         break;
       case 0x10: // day
       case 0x16: // checkme: day abbreviated
       case 0x17: // checkme: day long
-        m_listener->insertDateTimeField("%d");
+        listener->insertDateTimeField("%d");
         break;
       case 0x15: // year
-        m_listener->insertDateTimeField("%y");
+        listener->insertDateTimeField("%y");
         break;
       case 0x1d:
-        m_listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWContentListener::Date);
         break;
       case 0x18: // checkme hour
       case 0x19: // checkme hour
-        m_listener->insertDateTimeField("%H");
+        listener->insertDateTimeField("%H");
         break;
       case 0x3: // v3
-        m_listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWContentListener::Date);
         break;
       case 0x4:
-        m_listener->insertField(MWAWContentListener::Time);
+        listener->insertField(MWAWContentListener::Time);
         break;
       case 0x5: // footnote mark (ok)
         break;
       case 0x9:
-        m_listener->insertTab();
+        listener->insertTab();
         break;
       case 0xb: // line break (simple but no a paragraph break ~soft)
-        m_listener->insertEOL(true);
+        listener->insertEOL(true);
         break;
       case 0xd: // line break hard
-        m_listener->insertEOL();
+        listener->insertEOL();
         break;
       case 0x11: // command key in help
-        m_listener->insertUnicode(0x2318);
+        listener->insertUnicode(0x2318);
         break;
       case 0x14: // apple logo ( note only in private zone)
-        m_listener->insertUnicode(0xf8ff);
+        listener->insertUnicode(0xf8ff);
         break;
       default:
-        p+=m_listener->insertCharacter((unsigned char)c, m_input, m_input->tell()+(cEndPos-1-p));
+        p+=listener->insertCharacter((unsigned char)c, input, input->tell()+(cEndPos-1-p));
         break;
       }
       if (c)
@@ -1622,10 +1639,10 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
     }
   }
 
-  ascii().addPos(debPos);
-  ascii().addNote(f.str().c_str());
-  ascii().addPos(m_input->tell());
-  ascii().addNote("_");
+  ascFile.addPos(debPos);
+  ascFile.addNote(f.str().c_str());
+  ascFile.addPos(input->tell());
+  ascFile.addNote("_");
   return true;
 }
 
@@ -1634,7 +1651,8 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
 ////////////////////////////////////////////////////////////
 bool MSWText::sendTable(MSWTextInternal::Property const &prop)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("MSWText::sendTable: can not find a listener!\n"));
     return true;
   }
@@ -1669,11 +1687,11 @@ bool MSWText::sendTable(MSWTextInternal::Property const &prop)
   std::vector<float> width(numCols-1);
   for (size_t c = 0; c < numCols-1; c++)
     width[c]=table.m_columns.get()[c+1]-table.m_columns.get()[c];
-  m_listener->openTable(width, WPX_POINT);
+  listener->openTable(width, WPX_POINT);
 
   size_t numCells = table.m_cells.size();
   for (size_t r = 0; r < numRows; r++) {
-    m_listener->openTableRow(height, WPX_INCH);
+    listener->openTableRow(height, WPX_INCH);
     for (size_t c = 0; c < numCols-1; c++) {
       MWAWCell cell;
       size_t cellPos = r*numCols+c;
@@ -1695,21 +1713,21 @@ bool MSWText::sendTable(MSWTextInternal::Property const &prop)
       cell.position() = Vec2i((int)c,(int)r);
 
       WPXPropertyList extras;
-      m_listener->openTableCell(cell, extras);
+      listener->openTableCell(cell, extras);
 
       MSWEntry textData;
       textData.setBegin(prop.m_cellsPos[cellPos]);
       long cEndPos = prop.m_cellsPos[cellPos+1]-1;
       textData.setEnd(cEndPos);
       if (textData.length()<=0)
-        m_listener->insertChar(' ');
+        listener->insertChar(' ');
       else
         sendText(textData, false, true);
-      m_listener->closeTableCell();
+      listener->closeTableCell();
     }
-    m_listener->closeTableRow();
+    listener->closeTableRow();
   }
-  m_listener->closeTable();
+  listener->closeTable();
   return true;
 }
 
@@ -1724,15 +1742,16 @@ bool MSWText::sendMainText()
 
 bool MSWText::sendFootnote(int id)
 {
-  if (!m_listener) return true;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return true;
   if (id < 0 || id >= int(m_state->m_footnoteList.size())) {
     MWAW_DEBUG_MSG(("MSWText::sendFootnote: can not find footnote %d\n", id));
-    m_listener->insertChar(' ');
+    listener->insertChar(' ');
     return false;
   }
   MSWTextInternal::Footnote &footnote = m_state->m_footnoteList[(size_t) id];
   if (footnote.m_pos.isParsed())
-    m_listener->insertChar(' ');
+    listener->insertChar(' ');
   else
     sendText(footnote.m_pos, false);
   footnote.m_pos.setParsed();
@@ -1741,10 +1760,11 @@ bool MSWText::sendFootnote(int id)
 
 bool MSWText::sendFieldComment(int id)
 {
-  if (!m_listener) return true;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return true;
   if (id < 0 || id >= int(m_state->m_fieldList.size())) {
     MWAW_DEBUG_MSG(("MSWText::sendFieldComment: can not find field %d\n", id));
-    m_listener->insertChar(' ');
+    listener->insertChar(' ');
     return false;
   }
   MSWStruct::Font defFont;
@@ -1752,9 +1772,9 @@ bool MSWText::sendFieldComment(int id)
   m_stylesManager->setProperty(defFont);
   m_stylesManager->sendDefaultParagraph();
   std::string const &text = m_state->m_fieldList[(size_t) id].m_text;
-  if (!text.length()) m_listener->insertChar(' ');
+  if (!text.length()) listener->insertChar(' ');
   for (size_t c = 0; c < text.length(); c++)
-    m_listener->insertCharacter((unsigned char) text[c]);
+    listener->insertCharacter((unsigned char) text[c]);
   return true;
 }
 

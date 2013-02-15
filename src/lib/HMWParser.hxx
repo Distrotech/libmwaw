@@ -202,9 +202,6 @@ protected:
   //! returns true if this is a Korean File
   bool isKoreanFile() const;
 
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen);
-
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
 

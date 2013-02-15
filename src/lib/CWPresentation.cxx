@@ -87,9 +87,9 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 CWPresentation::CWPresentation
-(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWPresentationInternal::State),
-  m_mainParser(&parser), m_styleManager(parser.m_styleManager), m_asciiFile(parser.ascii())
+(CWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new CWPresentationInternal::State),
+  m_mainParser(&parser), m_styleManager(parser.m_styleManager)
 {
 }
 
@@ -98,7 +98,7 @@ CWPresentation::~CWPresentation()
 
 int CWPresentation::version() const
 {
-  return m_mainParser->version();
+  return m_parserState->m_version;
 }
 
 int CWPresentation::numPages() const
@@ -137,15 +137,17 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
   if (!entry.valid() || zone.m_fileType != 5 || entry.length() < 0x40)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
-  m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   shared_ptr<CWPresentationInternal::Presentation>
   presentationZone(new CWPresentationInternal::Presentation(zone));
 
   f << "Entries(PresentationDef):" << *presentationZone << ",";
-  ascii().addDelimiter(m_input->tell(), '|');
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addDelimiter(input->tell(), '|');
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   // read the last part
   long data0Length = zone.m_dataSz;
@@ -153,7 +155,7 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       MWAW_DEBUG_MSG(("CWPresentation::readPresentationZone: can not find definition size\n"));
-      m_input->seek(entry.end(), WPX_SEEK_SET);
+      input->seek(entry.end(), WPX_SEEK_SET);
       return shared_ptr<CWStruct::DSET>();
     }
 
@@ -166,26 +168,26 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
     m_state->m_presentationMap[presentationZone->m_id] = presentationZone;
 
   long dataEnd = entry.end()-N*data0Length;
-  m_input->seek(dataEnd, WPX_SEEK_SET);
+  input->seek(dataEnd, WPX_SEEK_SET);
   for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
+    pos = input->tell();
 
     f.str("");
     f << "PresentationDef-" << i;
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(pos+data0Length, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+data0Length, WPX_SEEK_SET);
   }
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), WPX_SEEK_SET);
 
-  pos = m_input->tell();
+  pos = input->tell();
   bool ok = readZone1(*presentationZone);
   if (ok) {
-    pos = m_input->tell();
+    pos = input->tell();
     ok = readZone2(*presentationZone);
   }
   if (!ok)
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
 
   return presentationZone;
 }
@@ -198,29 +200,31 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
 bool CWPresentation::readZone1(CWPresentationInternal::Presentation &pres)
 {
   long pos, val;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
   for (int st = 0; st < 3; st++) {
-    pos = m_input->tell();
-    long N = (long) m_input->readULong(4);
+    pos = input->tell();
+    long N = (long) input->readULong(4);
     long endPos = pos+16*N+4;
-    m_input->seek(endPos, WPX_SEEK_SET);
-    if (N < 0 || long(m_input->tell()) != endPos) {
-      m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(endPos, WPX_SEEK_SET);
+    if (N < 0 || long(input->tell()) != endPos) {
+      input->seek(pos, WPX_SEEK_SET);
       MWAW_DEBUG_MSG(("CWPresentation::readZone1: zone seems too short\n"));
       return false;
     }
     f.str("");
     f << "Entries(PresentationStr)[" << st << "]" << ":N=" << N << ",";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
 
-    m_input->seek(pos+4, WPX_SEEK_SET);
+    input->seek(pos+4, WPX_SEEK_SET);
     for (int i = 0; i < N; i++) {
       f.str("");
       f << "PresentationStr" << st << "-" << i << ":";
-      pos = m_input->tell();
-      int zoneId = (int) m_input->readLong(4);
+      pos = input->tell();
+      int zoneId = (int) input->readLong(4);
       if (zoneId > 0) {
         if (st == 1)
           pres.m_zoneIdList.push_back(zoneId);
@@ -228,24 +232,24 @@ bool CWPresentation::readZone1(CWPresentationInternal::Presentation &pres)
       } else
         f << "###";
       f << "zId=" << zoneId << ",";
-      f << "f1=" << m_input->readLong(4) << ","; // always 8 ?
-      int sSz = (int) m_input->readLong(4);
-      m_input->seek(pos+16+sSz, WPX_SEEK_SET);
-      if (sSz < 0 || m_input->tell() != pos+16+sSz) {
-        m_input->seek(pos, WPX_SEEK_SET);
+      f << "f1=" << input->readLong(4) << ","; // always 8 ?
+      int sSz = (int) input->readLong(4);
+      input->seek(pos+16+sSz, WPX_SEEK_SET);
+      if (sSz < 0 || input->tell() != pos+16+sSz) {
+        input->seek(pos, WPX_SEEK_SET);
         MWAW_DEBUG_MSG(("CWPresentation::readZone1: can not read string %d\n", i));
         return false;
       }
-      m_input->seek(pos+12, WPX_SEEK_SET);
+      input->seek(pos+12, WPX_SEEK_SET);
       std::string name("");
       for (int s = 0; s < sSz; s++)
-        name += (char) m_input->readULong(1);
+        name += (char) input->readULong(1);
       f << name << ",";
-      val = m_input->readLong(4); // always 0 ?
+      val = input->readLong(4); // always 0 ?
       if (val)
         f << "f2=" << val << ",";
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
     }
   }
 
@@ -254,41 +258,43 @@ bool CWPresentation::readZone1(CWPresentationInternal::Presentation &pres)
 
 bool CWPresentation::readZone2(CWPresentationInternal::Presentation &/*pres*/)
 {
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
-  long pos = m_input->tell();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
   long endPos = pos+16;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
-    m_input->seek(pos, WPX_SEEK_SET);
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos) {
+    input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWPresentation::readZone2: zone seems too short\n"));
     return false;
   }
 
-  m_input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, WPX_SEEK_SET);
   f << "Entries(PresentationTitle):";
   long val;
   // checkme this also be 1 times : [ 0, f2] or 1, str0, f2, or a mixt
   for (int i = 0; i < 3; i++) { // find f0=1, f1=0, f2=[0|1|2|4]
-    val = m_input->readLong(4);
+    val = input->readLong(4);
     if (val)
       f << "f" << i << "=" << val << ",";
   }
-  int sSz = (int) m_input->readLong(4);
-  m_input->seek(pos+16+sSz, WPX_SEEK_SET);
-  if (sSz < 0 || m_input->tell() != pos+16+sSz) {
-    m_input->seek(pos, WPX_SEEK_SET);
+  int sSz = (int) input->readLong(4);
+  input->seek(pos+16+sSz, WPX_SEEK_SET);
+  if (sSz < 0 || input->tell() != pos+16+sSz) {
+    input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWPresentation::readZone2: can not read title\n"));
     return false;
   }
-  m_input->seek(pos+16, WPX_SEEK_SET);
+  input->seek(pos+16, WPX_SEEK_SET);
   std::string title("");
   for (int s = 0; s < sSz; s++)
-    title += (char) m_input->readULong(1);
+    title += (char) input->readULong(1);
   f << title << ",";
 
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
   return true;
 }
 
@@ -305,7 +311,7 @@ bool CWPresentation::sendZone(int number)
   if (iter == m_state->m_presentationMap.end())
     return false;
   shared_ptr<CWPresentationInternal::Presentation> presentation = iter->second;
-  if (!presentation || !m_listener)
+  if (!presentation || !m_parserState->m_listener)
     return true;
   presentation->m_parsed = true;
   if (presentation->okChildId(number+1))
@@ -329,7 +335,7 @@ void CWPresentation::flushExtra()
     shared_ptr<CWPresentationInternal::Presentation> presentation = iter->second;
     if (presentation->m_parsed)
       continue;
-    if (m_listener) m_listener->insertEOL();
+    if (m_parserState->m_listener) m_parserState->m_listener->insertEOL();
     sendZone(iter->first);
   }
 }

@@ -257,15 +257,8 @@ void MRWParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_graphParser.reset(new MRWGraph(getInput(), *this, getFontConverter()));
-  m_textParser.reset(new MRWText(getInput(), *this, getFontConverter()));
-}
-
-void MRWParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-  m_graphParser->setListener(listen);
-  m_textParser->setListener(listen);
+  m_graphParser.reset(new MRWGraph(*this));
+  m_textParser.reset(new MRWText(*this));
 }
 
 ////////////////////////////////////////////////////////////

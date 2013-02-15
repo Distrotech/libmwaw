@@ -476,9 +476,8 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-FWText::FWText
-(MWAWInputStreamPtr ip, FWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert), m_state(new FWTextInternal::State),
+FWText::FWText(FWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new FWTextInternal::State),
   m_mainParser(&parser)
 {
 }
@@ -489,7 +488,7 @@ FWText::~FWText()
 int FWText::version() const
 {
   if (m_state->m_version < 0)
-    m_state->m_version = m_mainParser->version();
+    m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
@@ -525,7 +524,8 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
                   FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler,
                   std::string &str)
 {
-  if (!m_listener) return;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return;
   MWAWInputStreamPtr input = zone->m_zone->m_input;
   long pos = input->tell();
   long endPos = pos+numChar;
@@ -672,7 +672,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       case 0xa7: // fixme appear also as tabs separator
         f << "[tab]";
-        m_listener->insertTab();
+        listener->insertTab();
         break;
       case 0xac: {
         static bool first = true;
@@ -918,7 +918,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       setProperty(ruler);
     }
     if (!fontSet) {
-      m_listener->setFont(font.m_font);
+      listener->setFont(font.m_font);
       fontSet = true;
     }
     fCharSent = true;
@@ -929,7 +929,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0xac: {
         std::string label=font.m_item.label();
         if (label.length())
-          m_listener->insertUnicodeString(label.c_str());
+          listener->insertUnicodeString(label.c_str());
         break;
       }
       case 0xd2:
@@ -958,9 +958,9 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
     if (done)
       continue;
     if (val >= 256)
-      m_listener->insertUnicode((uint32_t) val);
+      listener->insertUnicode((uint32_t) val);
     else {
-      i += m_listener->insertCharacter
+      i += listener->insertCharacter
            ((unsigned char)val, input, input->tell()+(numChar-1-i));
       if (val <= 0x1f)
         f << "#[" << std::hex << val << "]";
@@ -1090,7 +1090,8 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
 
 bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("FWText::send can not find the listener\n"));
     return false;
   }
@@ -1116,7 +1117,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     actBreakPos = listBreaks[size_t(actBreak)];
   }
   int actPage = 0, actCol = 0, numCol=1;
-  m_listener->setParagraph(ruler);
+  listener->setParagraph(ruler);
   while(1) {
     pos = input->tell();
     bool sendData = false;
@@ -1125,7 +1126,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     while (num==actBreakPos) {
       if (num != 1) sendData = true;
       if (actCol < numCol-1 && numCol > 1) {
-        m_listener->insertBreak(MWAWContentListener::ColumnBreak);
+        listener->insertBreak(MWAWContentListener::ColumnBreak);
         actCol++;
       } else if (actPage >= nPages) {
         MWAW_DEBUG_MSG(("FWText::send can not find the page information\n"));
@@ -1135,26 +1136,26 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
           if (zone->m_main)
             m_mainParser->newPage(++m_state->m_actualPage);
           else if (numCol > 1)
-            m_listener->insertBreak(MWAWContentListener::ColumnBreak);
+            listener->insertBreak(MWAWContentListener::ColumnBreak);
         }
         actCol = 0;
 
         if (!actPage || !page.isSimilar(zone->m_pagesInfo[size_t(actPage-1)])) {
           size_t numC = page.m_columns.size();
           libmwaw::SubDocumentType subdocType;
-          if (m_listener->isSubDocumentOpened(subdocType) && numC <=1
+          if (listener->isSubDocumentOpened(subdocType) && numC <=1
               && subdocType != libmwaw::DOC_TEXT_BOX)
             ;
           else {
-            if (m_listener->isSectionOpened())
-              m_listener->closeSection();
+            if (listener->isSectionOpened())
+              listener->closeSection();
 
-            if (numC<=1 && sendData) m_listener->openSection();
+            if (numC<=1 && sendData) listener->openSection();
             else {
               std::vector<int> colSize;
               colSize.resize(numC);
               for (size_t i = 0; i < numC; i++) colSize[i] = page.m_columns[i].m_box.size().x();
-              m_listener->openSection(colSize, WPX_POINT);
+              listener->openSection(colSize, WPX_POINT);
             }
             numCol = int(numC);
           }
@@ -1192,10 +1193,10 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     if (lHeader.m_numChar)
       ascii.addDelimiter(debPos,'|');
     long lastPos = debPos+lHeader.m_numChar;
-    if (m_listener) {
+    if (listener) {
       std::string str;
       send(zone, lHeader.m_numChar, font, ruler, str);
-      m_listener->insertEOL();
+      listener->insertEOL();
       input->seek(lastPos, WPX_SEEK_SET);
       f << str;
     }
@@ -1936,9 +1937,9 @@ bool FWText::readColumns(shared_ptr<FWEntry> zone)
 // send ruler property
 void FWText::setProperty(FWTextInternal::Paragraph const &para)
 {
-  if (!m_listener) return;
+  if (!m_parserState->m_listener) return;
   para.m_isSent = true;
-  m_listener->setParagraph(para);
+  m_parserState->m_listener->setParagraph(para);
 }
 
 ////////////////////////////////////////////////////////////
@@ -1950,7 +1951,7 @@ bool FWText::sendMainText()
     MWAW_DEBUG_MSG(("FWText::sendMainText: can not find main zone\n"));
     return false;
   }
-  if (!m_listener) return true;
+  if (!m_parserState->m_listener) return true;
   for (size_t i = 0; i < numZones; i++) {
     std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it;
     it = m_state->m_entryMap.find(m_state->m_mainZones[i]);

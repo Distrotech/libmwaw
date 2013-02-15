@@ -44,15 +44,10 @@
 class MWAWInputStream;
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
 class MWAWEntry;
-
 class MWAWFont;
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
-
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 class MWAWPageSpan;
 class MWAWSubDocument;
 
@@ -77,7 +72,7 @@ class DMText
   friend class DMParser;
 public:
   //! constructor
-  DMText(MWAWInputStreamPtr ip, DMParser &parser, MWAWFontConverterPtr &convertissor);
+  DMText(DMParser &parser);
   //! destructor
   virtual ~DMText();
 
@@ -94,11 +89,6 @@ public:
   void sendComment(std::string const &str);
 
 protected:
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
 
   //! finds the different text zones
   bool createZones();
@@ -157,14 +147,8 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<DMTextInternal::State> m_state;

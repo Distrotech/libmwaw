@@ -41,15 +41,10 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 class MWAWEntry;
 class MWAWFont;
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 class MWAWParagraph;
 
 namespace LWTextInternal
@@ -70,7 +65,7 @@ class LWText
   friend class LWParser;
 public:
   //! constructor
-  LWText(MWAWInputStreamPtr ip, LWParser &parser, MWAWFontConverterPtr &convertissor);
+  LWText(LWParser &parser);
   //! destructor
   virtual ~LWText();
 
@@ -81,12 +76,6 @@ public:
   int numPages() const;
 
 protected:
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
-
   //! finds the different text zones
   bool createZones();
 
@@ -132,15 +121,6 @@ protected:
   //! read the styl resource
   bool readUnknownStyle(MWAWEntry const &entry);
 
-  //
-  // low level
-  //
-
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
 private:
   LWText(LWText const &orig);
   LWText &operator=(LWText const &orig);
@@ -149,23 +129,14 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<LWTextInternal::State> m_state;
 
   //! the main parser;
   LWParser *m_mainParser;
-
-  //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

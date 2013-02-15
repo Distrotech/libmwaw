@@ -252,7 +252,7 @@ struct Paragraph : public MWAWParagraph {
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind);
 
   //! operator<<
-  void print(std::ostream &o, MWAWFontConverterPtr m_convertissor) const;
+  void print(std::ostream &o, MWAWFontConverterPtr converter) const;
 
   //! the file version
   int m_version;

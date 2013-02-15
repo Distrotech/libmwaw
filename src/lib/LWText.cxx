@@ -244,9 +244,8 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-LWText::LWText(MWAWInputStreamPtr ip, LWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert),
-  m_state(new LWTextInternal::State), m_mainParser(&parser), m_asciiFile(parser.ascii())
+LWText::LWText(LWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new LWTextInternal::State), m_mainParser(&parser)
 {
 }
 
@@ -256,7 +255,7 @@ LWText::~LWText()
 int LWText::version() const
 {
   if (m_state->m_version < 0)
-    m_state->m_version = m_mainParser->version();
+    m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
@@ -366,15 +365,18 @@ bool LWText::createZones()
 
 bool LWText::sendMainText()
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("LWText::sendMainText: can not find a listener\n"));
     return false;
   }
   std::multimap<long, LWTextInternal::PLC>::const_iterator plcIt;
 
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f, f2;
-  long pos=m_input->tell();
-  m_input->seek(0, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=input->tell();
+  input->seek(0, WPX_SEEK_SET);
 
   LWTextInternal::Font font, auxiFont;
 
@@ -383,19 +385,19 @@ bool LWText::sendMainText()
     std::vector<int> width;
     int colWidth = int((72.0*m_mainParser->pageWidth())/numCols);
     width.resize((size_t) numCols, colWidth);
-    m_listener->openSection(width, WPX_POINT);
+    listener->openSection(width, WPX_POINT);
   }
 
   float deltaSpacing=0;
   while (1) {
-    long actPos = m_input->tell();
-    bool done = m_input->atEOS();
-    char c = done ? (char) 0 : (char) m_input->readULong(1);
+    long actPos = input->tell();
+    bool done = input->atEOS();
+    char c = done ? (char) 0 : (char) input->readULong(1);
     if (c==0xd || done) {
       f2.str("");
       f2 << "Entries(TextContent):" << f.str();
-      ascii().addPos(pos);
-      ascii().addNote(f2.str().c_str());
+      ascFile.addPos(pos);
+      ascFile.addNote(f2.str().c_str());
       f.str("");
       pos = actPos+1;
     }
@@ -452,7 +454,7 @@ bool LWText::sendMainText()
       final.merge(auxiFont);
       if (deltaSpacing<0||deltaSpacing>0)
         final.m_font.setDeltaLetterSpacing(deltaSpacing+final.m_font.deltaLetterSpacing());
-      m_listener->setFont(final.m_font);
+      listener->setFont(final.m_font);
       if (final.m_pictId>0) {
         m_mainParser->sendGraphic(final.m_pictId);
         if (c==(char)0xca)
@@ -461,19 +463,19 @@ bool LWText::sendMainText()
     }
     switch (c) {
     case 0x9:
-      m_listener->insertTab();
+      listener->insertTab();
       break;
     case 0xa:
-      m_listener->insertEOL(true);
+      listener->insertEOL(true);
       break;
     case 0xc: // new section (done)
       break;
     case 0xd:
-      m_listener->insertEOL();
+      listener->insertEOL();
       break;
 
     default:
-      m_listener->insertCharacter((unsigned char)c, m_input);
+      listener->insertCharacter((unsigned char)c, input);
       break;
     }
   }
@@ -545,7 +547,7 @@ bool LWText::readFonts(MWAWEntry const &entry)
     font.m_font.m_extra=f.str();
     f.str("");
     f << "Fonts-" << i << ":cPos=" << std::hex << cPos << std::dec << ","
-      << font.m_font.getDebugString(m_convertissor) << font;
+      << font.m_font.getDebugString(m_parserState->m_fontConverter) << font;
 
     m_state->m_fontsList.push_back(font);
     plc.m_id = i;
@@ -733,7 +735,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
 
     f.str("");
     f << "Font2-" << i << ":cPos=" << std::hex << cPos << std::dec << ",Fa" << i << ","
-      << font.m_font.getDebugString(m_convertissor) << font;
+      << font.m_font.getDebugString(m_parserState->m_fontConverter) << font;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(pos+10, WPX_SEEK_SET);
@@ -746,8 +748,8 @@ bool LWText::readFont2(MWAWEntry const &entry)
 //////////////////////////////////////////////
 void LWText::setProperty(MWAWParagraph const &ruler)
 {
-  if (!m_listener) return;
-  m_listener->setParagraph(ruler);
+  if (!m_parserState->m_listener) return;
+  m_parserState->m_listener->setParagraph(ruler);
 }
 
 bool LWText::readRulers(MWAWEntry const &entry)
@@ -895,7 +897,8 @@ bool LWText::readRulers(MWAWEntry const &entry)
 //////////////////////////////////////////////
 bool LWText::sendHeaderFooter(bool header)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("LWText::sendHeaderFooter: can not find the listener\n"));
     return false;
   }
@@ -907,8 +910,8 @@ bool LWText::sendHeaderFooter(bool header)
   }
   MWAWParagraph para;
   para.m_justify=zone.m_justify;
-  m_listener->setParagraph(para);
-  m_listener->setFont(zone.m_font);
+  listener->setParagraph(para);
+  listener->setFont(zone.m_font);
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   input->seek(zone.m_pos.begin(), WPX_SEEK_SET);
 
@@ -928,15 +931,15 @@ bool LWText::sendHeaderFooter(bool header)
       char const *strPtr = &(*it);
       bool done = true;
       if (strncmp(strPtr, "PAGE>", 5)==0)
-        m_listener->insertField(MWAWContentListener::PageNumber);
+        listener->insertField(MWAWContentListener::PageNumber);
       else if (strncmp(strPtr, "DATE>", 5)==0)
-        m_listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWContentListener::Date);
       else if (strncmp(strPtr, "TIME>", 5)==0)
-        m_listener->insertField(MWAWContentListener::Time);
+        listener->insertField(MWAWContentListener::Time);
       else if (strncmp(strPtr, "PMAX>", 5)==0)
-        m_listener->insertField(MWAWContentListener::PageCount);
+        listener->insertField(MWAWContentListener::PageCount);
       else if (strncmp(strPtr, "NAME>", 5)==0)
-        m_listener->insertField(MWAWContentListener::Title);
+        listener->insertField(MWAWContentListener::Title);
       else
         done=false;
       if (done) {
@@ -945,10 +948,10 @@ bool LWText::sendHeaderFooter(bool header)
       }
     }
     if (c == 0xd) {
-      m_listener->insertEOL();
+      listener->insertEOL();
       continue;
     }
-    m_listener->insertCharacter((unsigned char) c);
+    listener->insertCharacter((unsigned char) c);
   }
   return true;
 }
@@ -1019,7 +1022,7 @@ bool LWText::readDocumentHF(MWAWEntry const &entry)
     else
       m_state->m_footer = zone;
     f << (s==0 ? "header" :  "footer") << "=[" << zone  << ","
-      << zone.m_font.getDebugString(m_convertissor) << "],";
+      << zone.m_font.getDebugString(m_parserState->m_fontConverter) << "],";
 
     val = input->readLong(2);
     if (val) {

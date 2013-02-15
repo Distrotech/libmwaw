@@ -143,15 +143,8 @@ void LWParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_graphParser.reset(new LWGraph(getInput(), *this, getFontConverter()));
-  m_textParser.reset(new LWText(getInput(), *this, getFontConverter()));
-}
-
-void LWParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-  m_textParser->setListener(listen);
-  m_graphParser->setListener(listen);
+  m_graphParser.reset(new LWGraph(*this));
+  m_textParser.reset(new LWText(*this));
 }
 
 MWAWInputStreamPtr LWParser::rsrcInput()

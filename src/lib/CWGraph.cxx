@@ -712,10 +712,9 @@ void State::setDefaultWallPaperList(int version)
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-CWGraph::CWGraph
-(MWAWInputStreamPtr ip, CWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert), m_state(new CWGraphInternal::State),
-  m_mainParser(&parser), m_styleManager(parser.m_styleManager), m_asciiFile(parser.ascii())
+CWGraph::CWGraph(CWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new CWGraphInternal::State),
+  m_mainParser(&parser), m_styleManager(parser.m_styleManager)
 {
 }
 
@@ -724,7 +723,7 @@ CWGraph::~CWGraph()
 
 int CWGraph::version() const
 {
-  return m_mainParser->version();
+  return m_parserState->m_version;
 }
 
 // fixme
@@ -813,12 +812,14 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
   if (!entry.valid() || zone.m_fileType != 0)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
-  m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   shared_ptr<CWGraphInternal::Group> group(new CWGraphInternal::Group(zone));
 
   f << "Entries(GroupDef):" << *group << ",";
-  int val = (int) m_input->readLong(2); // a small int between 0 and 3
+  int val = (int) input->readLong(2); // a small int between 0 and 3
   switch (val) {
   case 0:
     break; // normal
@@ -829,12 +830,12 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
     f << "#type?=" << val << ",";
     break;
   }
-  val = (int) m_input->readLong(2); // a small number between 0 and 1e8
+  val = (int) input->readLong(2); // a small number between 0 and 1e8
   if (val) f << "f1=" << val << ",";
 
-  ascii().addDelimiter(m_input->tell(), '|');
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addDelimiter(input->tell(), '|');
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   // read the last part
   long data0Length = zone.m_dataSz;
@@ -842,7 +843,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       MWAW_DEBUG_MSG(("CWGraph::readGroupZone: can not find definition size\n"));
-      m_input->seek(entry.end(), WPX_SEEK_SET);
+      input->seek(entry.end(), WPX_SEEK_SET);
       return shared_ptr<CWStruct::DSET>();
     }
 
@@ -850,20 +851,20 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
   }
 
   long beginDefGroup = entry.end()-N*data0Length;
-  if (long(m_input->tell())+42 <= beginDefGroup) {
-    m_input->seek(beginDefGroup-42, WPX_SEEK_SET);
-    pos = m_input->tell();
+  if (long(input->tell())+42 <= beginDefGroup) {
+    input->seek(beginDefGroup-42, WPX_SEEK_SET);
+    pos = input->tell();
     if (!readGroupUnknown(*group, 42, -1)) {
-      ascii().addPos(pos);
-      ascii().addNote("GroupDef(Head-###)");
+      ascFile.addPos(pos);
+      ascFile.addNote("GroupDef(Head-###)");
     }
   }
 
-  m_input->seek(beginDefGroup, WPX_SEEK_SET);
+  input->seek(beginDefGroup, WPX_SEEK_SET);
 
   group->m_childs.resize(size_t(N));
   for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
+    pos = input->tell();
     MWAWEntry gEntry;
     gEntry.setBegin(pos);
     gEntry.setLength(data0Length);
@@ -875,13 +876,13 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
     else {
       f.str("");
       f << "GroupDef#";
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
     }
-    m_input->seek(gEntry.end(), WPX_SEEK_SET);
+    input->seek(gEntry.end(), WPX_SEEK_SET);
   }
 
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), WPX_SEEK_SET);
 
   if (readGroupData(*group, entry.begin())) {
     // fixme: do something here
@@ -902,47 +903,49 @@ bool CWGraph::readColorList(MWAWEntry const &entry)
 {
   if (!entry.valid()) return false;
   long pos = entry.begin();
-  m_input->seek(pos+4, WPX_SEEK_SET); // avoid header
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos+4, WPX_SEEK_SET); // avoid header
   if (entry.length() == 4) return true;
 
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(ColorList):";
-  int N = (int) m_input->readULong(2);
+  int N = (int) input->readULong(2);
   f << "N=" << N << ",";
   int val;
   for(int i = 0; i < 2; i++) {
-    val = (int) m_input->readLong(2);
+    val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
 
   int const fSz = 16;
   if (pos+10+N*fSz > entry.end()) {
     MWAW_DEBUG_MSG(("CWGraph::readColorList: can not read data\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     return false;
   }
 
-  ascii().addDelimiter(m_input->tell(),'|');
-  m_input->seek(entry.end()-N*fSz, WPX_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addDelimiter(input->tell(),'|');
+  input->seek(entry.end()-N*fSz, WPX_SEEK_SET);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   m_state->m_colorList.resize(size_t(N));
   for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
+    pos = input->tell();
     unsigned char color[3];
-    for (int c=0; c < 3; c++) color[c] = (unsigned char) (m_input->readULong(2)/256);
+    for (int c=0; c < 3; c++) color[c] = (unsigned char) (input->readULong(2)/256);
     m_state->m_colorList[size_t(i)]= MWAWColor(color[0], color[1],color[2]);
 
     f.str("");
     f << "ColorList[" << i << "]:";
-    ascii().addDelimiter(m_input->tell(),'|');
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(pos+fSz, WPX_SEEK_SET);
+    ascFile.addDelimiter(input->tell(),'|');
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+fSz, WPX_SEEK_SET);
   }
 
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
 
@@ -953,25 +956,27 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
   if (!entry.valid() || zone.m_fileType != 4)
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
-  m_input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   shared_ptr<CWGraphInternal::Group>
   graphicZone(new CWGraphInternal::Group(zone));
 
   f << "Entries(BitmapDef):" << *graphicZone << ",";
 
-  ascii().addDelimiter(m_input->tell(), '|');
+  ascFile.addDelimiter(input->tell(), '|');
 
   // read the last part
   long data0Length = zone.m_dataSz;
   long N = zone.m_numData;
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
 
       MWAW_DEBUG_MSG(("CWGraph::readBitmapZone: can not find definition size\n"));
-      m_input->seek(entry.end(), WPX_SEEK_SET);
+      input->seek(entry.end(), WPX_SEEK_SET);
       return shared_ptr<CWStruct::DSET>();
     }
 
@@ -983,36 +988,36 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
   bool sizeSet=false;
   int sizePos = (version() == 1) ? 0: 88;
   if (sizePos && pos+sizePos+4+N*data0Length < entry.end()) {
-    m_input->seek(pos+sizePos, WPX_SEEK_SET);
-    ascii().addDelimiter(pos+sizePos,'[');
+    input->seek(pos+sizePos, WPX_SEEK_SET);
+    ascFile.addDelimiter(pos+sizePos,'[');
     int dim[2]; // ( we must add 2 to add the border )
     for (int j = 0; j < 2; j++)
-      dim[j] = (int) m_input->readLong(2);
+      dim[j] = (int) input->readLong(2);
     f << "sz=" << dim[1] << "x" << dim[0] << ",";
     if (dim[0] > 0 && dim[1] > 0) {
       bitmap->m_size = Vec2i(dim[1]+2, dim[0]+2);
       sizeSet = true;
     }
-    ascii().addDelimiter(m_input->tell(),']');
+    ascFile.addDelimiter(input->tell(),']');
   }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   /** the end of this block is very simillar to a bitmapdef, excepted
       maybe the first integer  .... */
-  if (long(m_input->tell())+(N+1)*data0Length <= entry.end())
+  if (long(input->tell())+(N+1)*data0Length <= entry.end())
     N++;
 
-  m_input->seek(entry.end()-N*data0Length, WPX_SEEK_SET);
+  input->seek(entry.end()-N*data0Length, WPX_SEEK_SET);
 
   for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
+    pos = input->tell();
     MWAWEntry gEntry;
     gEntry.setBegin(pos);
     gEntry.setLength(data0Length);
     f.str("");
     f << "BitmapDef-" << i << ":";
-    long val = (long) m_input->readULong(4);
+    long val = (long) input->readULong(4);
     if (val) {
       if (i == 0)
         f << "unkn=" << val << ",";
@@ -1021,40 +1026,40 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
     }
     // f0 : 0 true color, if not number of bytes
     for (int j = 0; j < 3; j++) {
-      val = (int) m_input->readLong(2);
+      val = (int) input->readLong(2);
       if (val) f << "f" << j << "=" << val << ",";
     }
     int dim[2]; // ( we must add 2 to add the border )
     for (int j = 0; j < 2; j++)
-      dim[j] = (int) m_input->readLong(2);
+      dim[j] = (int) input->readLong(2);
     if (i == N-1 && !sizeSet)
       bitmap->m_size = Vec2i(dim[0]+2, dim[1]+2);
 
     f << "dim?=" << dim[0] << "x" << dim[1] << ",";
     for (int j = 3; j < 6; j++) {
-      val = (int) m_input->readLong(2);
+      val = (int) input->readLong(2);
       if ((j != 5 && val!=1) || (j==5 && val)) // always 1, 1, 0
         f << "f" << j << "=" << val << ",";
     }
-    if (long(m_input->tell()) != gEntry.end())
-      ascii().addDelimiter(m_input->tell(), '|');
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    m_input->seek(gEntry.end(), WPX_SEEK_SET);
+    if (long(input->tell()) != gEntry.end())
+      ascFile.addDelimiter(input->tell(), '|');
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(gEntry.end(), WPX_SEEK_SET);
   }
 
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), WPX_SEEK_SET);
   pos = entry.end();
   bool ok = readBitmapColorMap( bitmap->m_colorMap);
   if (ok) {
-    pos = m_input->tell();
+    pos = input->tell();
     ok = readBitmapData(*bitmap);
   }
   if (ok) {
     graphicZone->m_zones.resize(1);
     graphicZone->m_zones[0] = bitmap;
   } else
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
 
   // fixme: in general followed by another zone
   graphicZone->m_otherChilds.push_back(graphicZone->m_id+1);
@@ -1077,14 +1082,16 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
     }
   }
   long pos = entry.begin();
-  m_input->seek(pos, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos, WPX_SEEK_SET);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "GroupDef:";
 
   CWGraphInternal::Zone zone;
   CWGraphInternal::Style &style = zone.m_style;
 
-  int typeId = (int) m_input->readULong(1);
+  int typeId = (int) input->readULong(1);
   CWGraphInternal::Zone::Type type = CWGraphInternal::Zone::T_Unknown;
 
   switch(version()) {
@@ -1164,46 +1171,46 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
     }
     break;
   }
-  int val = (int) m_input->readULong(1);
+  int val = (int) input->readULong(1);
   style.m_wrapping = (val & 3);
   style.m_surfacePatternType = (val >> 2);
-  style.m_lineFlags = (int) m_input->readULong(1);
-  style.m_flags[0] = (int) m_input->readULong(1);
+  style.m_lineFlags = (int) input->readULong(1);
+  style.m_flags[0] = (int) input->readULong(1);
 
   int dim[4];
   for (int j = 0; j < 4; j++) {
-    val = int(m_input->readLong(4)/256);
+    val = int(input->readLong(4)/256);
     dim[j] = val;
     if (val < -100) f << "##dim?,";
   }
   zone.m_box = Box2i(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
-  style.m_lineWidth = (int) m_input->readLong(1);
-  style.m_flags[1] = (int) m_input->readLong(1);
+  style.m_lineWidth = (int) input->readLong(1);
+  style.m_flags[1] = (int) input->readLong(1);
   for (int j = 0; j < 2; j++)
-    style.m_color[j] = (int) m_input->readULong(1);
+    style.m_color[j] = (int) input->readULong(1);
 
   for (int j = 0; j < 2; j++) {
-    style.m_flags[2+j] =  (int) m_input->readULong(1); // probably also related to surface
-    style.m_pattern[j] = (int) m_input->readULong(1);
+    style.m_flags[2+j] =  (int) input->readULong(1); // probably also related to surface
+    style.m_pattern[j] = (int) input->readULong(1);
   }
 
   if (version() > 1)
-    style.m_id = (int) m_input->readLong(2);
+    style.m_id = (int) input->readLong(2);
 
   switch (type) {
   case CWGraphInternal::Zone::T_Zone: {
     int nFlags = 0;
     CWGraphInternal::ZoneZone *z = new CWGraphInternal::ZoneZone(zone);
     res.reset(z);
-    z->m_flags[nFlags++] = (int) m_input->readLong(2);
-    z->m_id = (int) m_input->readULong(2);
+    z->m_flags[nFlags++] = (int) input->readLong(2);
+    z->m_id = (int) input->readULong(2);
 
-    int numRemains = int(entry.end()-long(m_input->tell()));
+    int numRemains = int(entry.end()-long(input->tell()));
     numRemains/=2;
     // v1-2:3 v4-v5:6 v6:8
     if (numRemains > 8) numRemains = 8;
     for (int j = 0; j < numRemains; j++) {
-      val = (int) m_input->readLong(2);
+      val = (int) input->readLong(2);
       switch(j) {
       case 1:
         z->m_subId = val;
@@ -1254,13 +1261,13 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
 
   f << *res;
 
-  long actPos = m_input->tell();
+  long actPos = input->tell();
   if (actPos != entry.begin() && actPos != entry.end())
-    ascii().addDelimiter(m_input->tell(),'|');
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+    ascFile.addDelimiter(input->tell(),'|');
+  input->seek(entry.end(), WPX_SEEK_SET);
 
-  ascii().addPos(entry.begin());
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
   return res;
 }
 
@@ -1277,7 +1284,9 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
     return false;
   }
 
+  MWAWInputStreamPtr &input= m_parserState->m_input;
 
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   int const vers = version();
   long pos, sz;
@@ -1288,25 +1297,25 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
     int numZoneExpected = z ? z->getNumData() : 0;
 
     if (numZoneExpected) {
-      pos = m_input->tell();
-      sz = (long) m_input->readULong(4);
+      pos = input->tell();
+      sz = (long) input->readULong(4);
       f.str("");
       if (sz == 0) {
         MWAW_DEBUG_MSG(("CWGraph::readGroupData: find a nop zone for type: %d\n",
                         z->getSubType()));
-        ascii().addPos(pos);
-        ascii().addNote("#Nop");
+        ascFile.addPos(pos);
+        ascFile.addNote("#Nop");
         if (!numError++) {
-          ascii().addPos(beginGroupPos);
-          ascii().addNote("###");
+          ascFile.addPos(beginGroupPos);
+          ascFile.addNote("###");
         } else {
           MWAW_DEBUG_MSG(("CWGraph::readGroupData: too many errors, zone parsing STOPS\n"));
           return false;
         }
-        pos = m_input->tell();
-        sz = (long) m_input->readULong(4);
+        pos = input->tell();
+        sz = (long) input->readULong(4);
       }
-      m_input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, WPX_SEEK_SET);
       bool parsed = true;
       switch(z->getSubType()) {
       case CWGraphInternal::Zone::T_QTim:
@@ -1341,9 +1350,9 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
       }
 
       if (!parsed) {
-        m_input->seek(pos+4+sz, WPX_SEEK_SET);
-        if (long(m_input->tell()) != pos+4+sz) {
-          m_input->seek(pos, WPX_SEEK_SET);
+        input->seek(pos+4+sz, WPX_SEEK_SET);
+        if (long(input->tell()) != pos+4+sz) {
+          input->seek(pos, WPX_SEEK_SET);
           MWAW_DEBUG_MSG(("CWGraph::readGroupData: find a odd zone for type: %d\n",
                           z->getSubType()));
           return false;
@@ -1353,47 +1362,47 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
           f << "Entries(ChartData)";
         else
           f << "Entries(UnknownDATA)-" << z->getSubType();
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
-        m_input->seek(pos+4+sz, WPX_SEEK_SET);
+        ascFile.addPos(pos);
+        ascFile.addNote(f.str().c_str());
+        input->seek(pos+4+sz, WPX_SEEK_SET);
         if (numZoneExpected==2) {
-          pos = m_input->tell();
-          sz = (long) m_input->readULong(4);
+          pos = input->tell();
+          sz = (long) input->readULong(4);
           if (sz) {
-            m_input->seek(pos, WPX_SEEK_SET);
+            input->seek(pos, WPX_SEEK_SET);
             MWAW_DEBUG_MSG(("CWGraph::readGroupData: two zones is not implemented for zone: %d\n",
                             z->getSubType()));
             return false;
           }
-          ascii().addPos(pos);
-          ascii().addNote("NOP");
+          ascFile.addPos(pos);
+          ascFile.addNote("NOP");
         }
       }
     }
     if (vers>=6) {
-      pos = m_input->tell();
-      sz = (long) m_input->readULong(4);
+      pos = input->tell();
+      sz = (long) input->readULong(4);
       if (sz == 0) {
-        ascii().addPos(pos);
-        ascii().addNote("Nop");
+        ascFile.addPos(pos);
+        ascFile.addNote("Nop");
         continue;
       }
       MWAW_DEBUG_MSG(("CWGraph::readGroupData: find not null entry for a end of zone: %d\n", z->getSubType()));
-      m_input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, WPX_SEEK_SET);
     }
   }
 
-  if (m_input->atEOS())
+  if (input->atEOS())
     return true;
   // sanity check: normaly no zero except maybe for the last zone
-  pos = m_input->tell();
-  sz = (long) m_input->readULong(4);
-  if (sz == 0 && !m_input->atEOS()) {
+  pos = input->tell();
+  sz = (long) input->readULong(4);
+  if (sz == 0 && !input->atEOS()) {
     MWAW_DEBUG_MSG(("CWGraph::readGroupData: find unexpected nop data at end of zone\n"));
-    ascii().addPos(beginGroupPos);
-    ascii().addNote("###");
+    ascFile.addPos(beginGroupPos);
+    ascFile.addNote("###");
   }
-  m_input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, WPX_SEEK_SET);
   return true;
 }
 
@@ -1405,7 +1414,8 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
 bool CWGraph::readBasicGraphic(MWAWEntry const &entry,
                                CWGraphInternal::ZoneBasic &zone)
 {
-  long actPos = m_input->tell();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long actPos = input->tell();
   int remainBytes = int(entry.end()-actPos);
   if (remainBytes < 0)
     return false;
@@ -1424,7 +1434,7 @@ bool CWGraph::readBasicGraphic(MWAWEntry const &entry,
       return false;
     }
     for (int i = 0; i < 2; i++)
-      zone.m_values[i] = (float) m_input->readLong(2);
+      zone.m_values[i] = (float) input->readLong(2);
     break;
   }
   case CWGraphInternal::Zone::T_RectOval: {
@@ -1433,8 +1443,8 @@ bool CWGraph::readBasicGraphic(MWAWEntry const &entry,
       return false;
     }
     for (int i = 0; i < 2; i++) {
-      zone.m_values[size_t(i)] = float(m_input->readLong(2))/2.0f;
-      zone.m_flags[actFlag++] = (int) m_input->readULong(2);
+      zone.m_values[size_t(i)] = float(input->readLong(2))/2.0f;
+      zone.m_flags[actFlag++] = (int) input->readULong(2);
     }
     break;
   }
@@ -1453,64 +1463,66 @@ bool CWGraph::readBasicGraphic(MWAWEntry const &entry,
     return false;
   }
 
-  int numRemain = int(entry.end()-m_input->tell());
+  int numRemain = int(entry.end()-input->tell());
   numRemain /= 2;
   if (numRemain+actFlag > 8) numRemain = 8-actFlag;
   for (int i = 0; i < numRemain; i++)
-    zone.m_flags[actFlag++] = (int) m_input->readLong(2);
+    zone.m_flags[actFlag++] = (int) input->readLong(2);
 
   return true;
 }
 
 bool CWGraph::readGroupHeader(CWGraphInternal::Group &group)
 {
-  long pos = m_input->tell();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
   // int const vers=version();
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "GroupDef(Header):";
-  long sz = (long) m_input->readULong(4);
+  long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()!=endPos) || (sz && sz < 16)) {
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()!=endPos) || (sz && sz < 16)) {
     MWAW_DEBUG_MSG(("CWGraph::readGroupHeader: zone is too short\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     return false;
   }
   if (sz == 0) {
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
     return true;
   }
 
-  m_input->seek(pos+4, WPX_SEEK_SET);
-  int N = (int) m_input->readULong(2);
+  input->seek(pos+4, WPX_SEEK_SET);
+  int N = (int) input->readULong(2);
   f << "N=" << N << ",";
-  int type = (int) m_input->readLong(2);
+  int type = (int) input->readLong(2);
   if (type != -1)
     f << "#type=" << type << ",";
-  int val = (int) m_input->readLong(2);
+  int val = (int) input->readLong(2);
   if (val) f << "#unkn=" << val << ",";
-  int fSz = (int) m_input->readULong(2);
+  int fSz = (int) input->readULong(2);
   if (!fSz || N *fSz+12 != sz) {
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     return false;
   }
   for (int i = 0; i < 2; i++) { // always 0, 2
-    val = (int) m_input->readLong(2);
+    val = (int) input->readLong(2);
     if (val)
       f << "f" << i << "=" << val;
   }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
-  m_input->seek(pos+4+12, WPX_SEEK_SET);
+  input->seek(pos+4+12, WPX_SEEK_SET);
   for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
+    pos = input->tell();
     if (readGroupUnknown(group, fSz, i))
       continue;
-    ascii().addPos(pos);
-    ascii().addNote("GroupDef(Head-###)");
-    m_input->seek(pos+fSz, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote("GroupDef(Head-###)");
+    input->seek(pos+fSz, WPX_SEEK_SET);
   }
 
   /** a list of int16 : find
@@ -1521,22 +1533,22 @@ bool CWGraph::readGroupHeader(CWGraphInternal::Group &group)
       8002e3ff e0010000 ee02e6ff */
   int numHeader = N+1;//vers >=6 ? N+1 : 2*N;
   for (int i = 0; i < numHeader; i++) {
-    pos = m_input->tell();
+    pos = input->tell();
     std::vector<int> res;
     bool ok = m_mainParser->readStructIntZone("", false, 2, res);
     f.str("");
     f << "[GroupDef(data" << i << ")]";
     if (ok) {
-      if (m_input->tell() != pos+4) {
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
+      if (input->tell() != pos+4) {
+        ascFile.addPos(pos);
+        ascFile.addNote(f.str().c_str());
       }
       continue;
     }
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
     MWAW_DEBUG_MSG(("CWGraph::readGroupHeader: can not find data for %d\n", i));
     return true;
   }
@@ -1546,13 +1558,15 @@ bool CWGraph::readGroupHeader(CWGraphInternal::Group &group)
 
 bool CWGraph::readGroupUnknown(CWGraphInternal::Group &/*group*/, int zoneSz, int id)
 {
-  long pos = m_input->tell();
-  m_input->seek(pos+zoneSz, WPX_SEEK_SET);
-  if (m_input->tell() != pos+zoneSz) {
-    m_input->seek(pos, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  input->seek(pos+zoneSz, WPX_SEEK_SET);
+  if (input->tell() != pos+zoneSz) {
+    input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWGraph::readGroupUnknown: zone is too short\n"));
     return false;
   }
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "GroupDef(Head-";
   if (id >= 0) f << id << "):";
@@ -1560,29 +1574,29 @@ bool CWGraph::readGroupUnknown(CWGraphInternal::Group &/*group*/, int zoneSz, in
   if (zoneSz < 42) {
     MWAW_DEBUG_MSG(("CWGraph::readGroupUnknown: zone is too short\n"));
     f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
     return true;
   }
 
-  m_input->seek(pos, WPX_SEEK_SET);
-  int type = (int) m_input->readLong(2); // find -1, 0, 3
+  input->seek(pos, WPX_SEEK_SET);
+  int type = (int) input->readLong(2); // find -1, 0, 3
   if (type) f << "f0=" << type << ",";
   long val;
   for (int i = 0; i < 6; i++) {
     /** find f1=8|9|f|14|15|2a|40|73|e9, f2=0|d4, f5=0|80, f6=0|33 */
-    val = (long) m_input->readULong(1);
+    val = (long) input->readULong(1);
     if (val) f << "f" << i+1 << "=" << std::hex << val << std::dec << ",";
   }
   std::vector<int16_t> values16; // some values can be small or little endian, so...
   std::vector<int32_t> values32;
   for (int i = 0; i < 2; i++)
-    values32.push_back((int32_t) m_input->readLong(4));
+    values32.push_back((int32_t) input->readLong(4));
   // now two smal number also in big or small endian
   for (int i = 0; i < 2; i++)
-    values16.push_back((int16_t) m_input->readLong(2));
+    values16.push_back((int16_t) input->readLong(2));
   // a very big number
-  values32.push_back((int32_t) m_input->readLong(4));
+  values32.push_back((int32_t) input->readLong(4));
   m_mainParser->checkOrdering(values16, values32);
 
   if (values32[0] || values32[1]) f << "dim=" << values32[0] << "x" << values32[1] << ",";
@@ -1593,12 +1607,12 @@ bool CWGraph::readGroupUnknown(CWGraphInternal::Group &/*group*/, int zoneSz, in
   if (values32[2])
     f << "g2=" << std::hex << values32[2] << std::dec << ",";
 
-  if (m_input->tell() != pos+zoneSz) {
-    ascii().addDelimiter(m_input->tell(), '|');
-    m_input->seek(pos+zoneSz, WPX_SEEK_SET);
+  if (input->tell() != pos+zoneSz) {
+    ascFile.addDelimiter(input->tell(), '|');
+    input->seek(pos+zoneSz, WPX_SEEK_SET);
   }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
   return true;
 }
 
@@ -1611,55 +1625,57 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
     return false;
   CWGraphInternal::ZoneBasic *bZone =
     reinterpret_cast<CWGraphInternal::ZoneBasic *>(zone.get());
-  long pos = m_input->tell();
-  long sz = (long) m_input->readULong(4);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos || sz < 12) {
-    m_input->seek(pos, WPX_SEEK_SET);
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos || sz < 12) {
+    input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWGraph::readPolygonData: file is too short\n"));
     return false;
   }
 
-  m_input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(pos+4, WPX_SEEK_SET);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(PolygonData):";
-  int N = (int) m_input->readULong(2);
+  int N = (int) input->readULong(2);
   f << "N=" << N << ",";
-  int val = (int) m_input->readLong(2);
+  int val = (int) input->readLong(2);
   if (val != -1) f << "f0=" << val << ",";
-  val = (int) m_input->readLong(2);
+  val = (int) input->readLong(2);
   if (val) f << "f1=" << val << ",";
-  int fSz = (int) m_input->readLong(2);
+  int fSz = (int) input->readLong(2);
   if (sz != 12+fSz*N) {
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWGraph::readPolygonData: find odd data size\n"));
     return false;
   }
   for (int i = 2; i < 4; i++) {
-    val = (int) m_input->readLong(2);
+    val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
 
   }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   for (int i = 0; i < N; i++) {
-    pos = m_input->tell();
+    pos = input->tell();
     f.str("");
     f << "PolygonData-" << i << ":";
     float position[2];
     for (int j = 0; j < 2; j++)
-      position[j] = float(m_input->readLong(4))/256.f;
+      position[j] = float(input->readLong(4))/256.f;
     CWGraphInternal::CurvePoint point(Vec2f(position[1], position[0]));
     if (fSz >= 26) {
       for (int cPt = 0; cPt < 2; cPt++) {
         float ctrlPos[2];
         for (int j = 0; j < 2; j++)
-          ctrlPos[j] = float(m_input->readLong(4))/256.f;
+          ctrlPos[j] = float(input->readLong(4))/256.f;
         point.m_controlPoints[cPt] = Vec2f(ctrlPos[1], ctrlPos[0]);
       }
-      int fl = (int) m_input->readULong(2);
+      int fl = (int) input->readULong(2);
       point.m_type = (fl>>14);
       f << point << ",";
       if (fl&0x3FFF)
@@ -1669,12 +1685,12 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
 
     bZone->m_vertices.push_back(point);
 
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
 
-    m_input->seek(pos+fSz, WPX_SEEK_SET);
+    input->seek(pos+fSz, WPX_SEEK_SET);
   }
-  m_input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, WPX_SEEK_SET);
   return true;
 }
 
@@ -1688,34 +1704,36 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
     return false;
   CWGraphInternal::ZonePict *pZone =
     reinterpret_cast<CWGraphInternal::ZonePict *>(zone.get());
-  long pos = m_input->tell();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
   if (!readPICT(*pZone)) {
     MWAW_DEBUG_MSG(("CWGraph::readPictData: find a odd pict\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     return false;
   }
-  pos = m_input->tell();
-  long sz = (long) m_input->readULong(4);
-  m_input->seek(pos+4+sz, WPX_SEEK_SET);
-  if (long(m_input->tell()) != pos+4+sz) {
-    m_input->seek(pos, WPX_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote("###");
+  pos = input->tell();
+  long sz = (long) input->readULong(4);
+  input->seek(pos+4+sz, WPX_SEEK_SET);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  if (long(input->tell()) != pos+4+sz) {
+    input->seek(pos, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote("###");
     MWAW_DEBUG_MSG(("CWGraph::readPictData: find a end zone for graphic\n"));
     return false;
   }
   if (sz == 0) {
-    ascii().addPos(pos);
-    ascii().addNote("Nop");
+    ascFile.addPos(pos);
+    ascFile.addNote("Nop");
     return true;
   }
 
   // fixme: use readPS for a mac file and readOLE for a pc file
-  m_input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, WPX_SEEK_SET);
   if (readPS(*pZone))
     return true;
 
-  m_input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, WPX_SEEK_SET);
   if (readOLE(*pZone))
     return true;
 
@@ -1723,77 +1741,80 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
 #ifdef DEBUG_WITH_FILES
   if (1) {
     WPXBinaryData file;
-    m_input->seek(pos+4, WPX_SEEK_SET);
-    m_input->readDataBlock(sz, file);
+    input->seek(pos+4, WPX_SEEK_SET);
+    input->readDataBlock(sz, file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f;
     f << "DATA-" << ++pictName;
     libmwaw::Debug::dumpFile(file, f.str().c_str());
   }
 #endif
-  ascii().addPos(pos);
+  ascFile.addPos(pos);
   if (zone->getSubType() == CWGraphInternal::Zone::T_Movie)
-    ascii().addNote("Entries(MovieData2):#"); // find filesignature: ALMC...
+    ascFile.addNote("Entries(MovieData2):#"); // find filesignature: ALMC...
   else
-    ascii().addNote("Entries(PictData2):#");
-  ascii().skipZone(pos+4, pos+4+sz-1);
+    ascFile.addNote("Entries(PictData2):#");
+  ascFile.skipZone(pos+4, pos+4+sz-1);
 
-  m_input->seek(pos+4+sz, WPX_SEEK_SET);
+  input->seek(pos+4+sz, WPX_SEEK_SET);
   return true;
 }
 
 bool CWGraph::readPICT(CWGraphInternal::ZonePict &zone)
 {
-  long pos = m_input->tell();
-  long sz = (long) m_input->readULong(4);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
   if (sz < 12) {
     MWAW_DEBUG_MSG(("CWGraph::readPict: file is too short\n"));
     return false;
   }
 
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("CWGraph::readPict: file is too short\n"));
     return false;
   }
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(Graphic):";
 
   Box2f box;
-  m_input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(pos+4, WPX_SEEK_SET);
 
-  MWAWPict::ReadResult res = MWAWPictData::check(m_input, (int)sz, box);
+  MWAWPict::ReadResult res = MWAWPictData::check(input, (int)sz, box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("CWGraph::readPict: can not find the picture\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
 
     return false;
   }
 
   zone.m_entries[0].setBegin(pos+4);
   zone.m_entries[0].setEnd(endPos);
-  m_input->seek(endPos, WPX_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  input->seek(endPos, WPX_SEEK_SET);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   return true;
 }
 
 bool CWGraph::readPS(CWGraphInternal::ZonePict &zone)
 {
-  long pos = m_input->tell();
-  long sz = (long) m_input->readULong(4);
-  long header = (long) m_input->readULong(4);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
+  long header = (long) input->readULong(4);
   if (header != 0x25215053L) {
     return false;
   }
   long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos) {
     return false;
   }
   zone.m_entries[1].setBegin(pos+4);
@@ -1802,8 +1823,8 @@ bool CWGraph::readPS(CWGraphInternal::ZonePict &zone)
 #ifdef DEBUG_WITH_FILES
   if (1) {
     WPXBinaryData file;
-    m_input->seek(pos+4, WPX_SEEK_SET);
-    m_input->readDataBlock(sz, file);
+    input->seek(pos+4, WPX_SEEK_SET);
+    input->readDataBlock(sz, file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f;
     f << "PostScript-" << ++pictName << ".ps";
@@ -1811,34 +1832,37 @@ bool CWGraph::readPS(CWGraphInternal::ZonePict &zone)
   }
 #endif
 
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(PostScript):";
-  m_input->seek(endPos, WPX_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  ascii().skipZone(pos+4, endPos-1);
+  input->seek(endPos, WPX_SEEK_SET);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  ascFile.skipZone(pos+4, endPos-1);
 
   return true;
 }
 
 bool CWGraph::readOLE(CWGraphInternal::ZonePict &zone)
 {
-  long pos = m_input->tell();
-  long sz = (long) m_input->readULong(4);
-  long val = m_input->readLong(4);
-  if (sz <= 24 || val != 0 || m_input->readULong(4) != 0x1000000)
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
+  long val = input->readLong(4);
+  if (sz <= 24 || val != 0 || input->readULong(4) != 0x1000000)
     return false;
   long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos)
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos)
     return false;
-  m_input->seek(pos+12, WPX_SEEK_SET);
+  input->seek(pos+12, WPX_SEEK_SET);
   // now a dim in little endian
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(OLE):";
   int dim[4];
   for (int i = 0; i < 4; i++)
-    dim[i] = (int)(int32_t)MWAWInputStream::readULong(m_input->input().get(), 4, 0, true);
+    dim[i] = (int)(int32_t)MWAWInputStream::readULong(input->input().get(), 4, 0, true);
   if (dim[0] >= dim[2] || dim[1] >= dim[3]) return false;
   f << "dim=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
   zone.m_entries[1].setBegin(pos+28);
@@ -1847,8 +1871,8 @@ bool CWGraph::readOLE(CWGraphInternal::ZonePict &zone)
 #ifdef DEBUG_WITH_FILES
   if (1) {
     WPXBinaryData file;
-    m_input->seek(pos+28, WPX_SEEK_SET);
-    m_input->readDataBlock(sz-24, file);
+    input->seek(pos+28, WPX_SEEK_SET);
+    input->readDataBlock(sz-24, file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f2;
     f2 << "OLE-" << ++pictName;
@@ -1856,10 +1880,10 @@ bool CWGraph::readOLE(CWGraphInternal::ZonePict &zone)
   }
 #endif
 
-  m_input->seek(endPos, WPX_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  ascii().skipZone(pos+28, endPos-1);
+  input->seek(endPos, WPX_SEEK_SET);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  ascFile.skipZone(pos+28, endPos-1);
 
   return true;
 }
@@ -1873,29 +1897,31 @@ bool CWGraph::readQTimeData(shared_ptr<CWGraphInternal::Zone> zone)
     return false;
   CWGraphInternal::ZonePict *pZone =
     reinterpret_cast<CWGraphInternal::ZonePict *>(zone.get());
-  long pos = m_input->tell();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
   bool ok = true;
   std::string name("");
   for (int i = 0; i < 4; i++) {
-    char c = (char) m_input->readULong(1);
+    char c = (char) input->readULong(1);
     if (c == 0) ok = false;
     name += c;
   }
   if (!ok) {
     MWAW_DEBUG_MSG(("CWGraph::readQTimeData: find a odd qtim zone\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     return false;
   }
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(QTIM):"<< name << ":";
-  for (int i = 0; i < 2; i++) f << "f" << i << "=" << m_input->readULong(2) << ",";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  for (int i = 0; i < 2; i++) f << "f" << i << "=" << input->readULong(2) << ",";
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
-  pos = m_input->tell();
+  pos = input->tell();
   if (!readNamedPict(*pZone)) {
     MWAW_DEBUG_MSG(("CWGraph::readQTimeData: find a odd named pict\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     return false;
   }
   return true;
@@ -1904,20 +1930,21 @@ bool CWGraph::readQTimeData(shared_ptr<CWGraphInternal::Zone> zone)
 
 bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
 {
-  long pos = m_input->tell();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
   std::string name("");
   for (int i = 0; i < 4; i++) {
-    char c = (char) m_input->readULong(1);
+    char c = (char) input->readULong(1);
     if (c < ' ' || c > 'z') {
       MWAW_DEBUG_MSG(("CWGraph::readNamedPict: can not find the name\n"));
       return false;
     }
     name+=c;
   }
-  long sz = (long) m_input->readULong(4);
+  long sz = (long) input->readULong(4);
   long endPos = pos+8+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos || !sz) {
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos || !sz) {
     MWAW_DEBUG_MSG(("CWGraph::readNamedPict: file is too short\n"));
     return false;
   }
@@ -1928,8 +1955,8 @@ bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
 #ifdef DEBUG_WITH_FILES
   if (1) {
     WPXBinaryData file;
-    m_input->seek(pos+8, WPX_SEEK_SET);
-    m_input->readDataBlock(sz, file);
+    input->seek(pos+8, WPX_SEEK_SET);
+    input->readDataBlock(sz, file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f;
     f << "PICT2-" << ++pictName << "." << name;
@@ -1937,12 +1964,13 @@ bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
   }
 #endif
 
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(" << name << "):";
-  m_input->seek(endPos, WPX_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  ascii().skipZone(pos+8, endPos-1);
+  input->seek(endPos, WPX_SEEK_SET);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  ascFile.skipZone(pos+8, endPos-1);
 
   return true;
 }
@@ -1953,55 +1981,58 @@ bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
 bool CWGraph::readBitmapColorMap(std::vector<MWAWColor> &cMap)
 {
   cMap.resize(0);
-  long pos = m_input->tell();
-  long sz = (long) m_input->readULong(4);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   if (!sz) {
-    ascii().addPos(pos);
-    ascii().addNote("Nop");
+    ascFile.addPos(pos);
+    ascFile.addNote("Nop");
     return true;
   }
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("CWGraph::readBitmapColorMap: file is too short\n"));
     return false;
   }
 
-  m_input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(pos+4, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(BitmapColor):";
-  f << "unkn=" << m_input->readLong(4) << ",";
-  int maxColor = (int) m_input->readLong(4);
+  f << "unkn=" << input->readLong(4) << ",";
+  int maxColor = (int) input->readLong(4);
   if (sz != 8+8*(maxColor+1)) {
     MWAW_DEBUG_MSG(("CWGraph::readBitmapColorMap: sz is odd\n"));
     return false;
   }
   cMap.resize(size_t(maxColor+1));
   for (int i = 0; i <= maxColor; i++) {
-    int id = (int) m_input->readULong(2);
+    int id = (int) input->readULong(2);
     if (id != i) {
       MWAW_DEBUG_MSG(("CWGraph::readBitmapColorMap: find odd index : %d\n", i));
       return false;
     }
     unsigned char col[3];
-    for (int c = 0; c < 3; c++) col[c] = (unsigned char)(m_input->readULong(2)>>8);
+    for (int c = 0; c < 3; c++) col[c] = (unsigned char)(input->readULong(2)>>8);
     cMap[(size_t)i] = MWAWColor(col[0], col[1], col[2]);
   }
 
-  m_input->seek(endPos, WPX_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  input->seek(endPos, WPX_SEEK_SET);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   return true;
 }
 
 bool CWGraph::readBitmapData(CWGraphInternal::ZoneBitmap &zone)
 {
-  long pos = m_input->tell();
-  long sz = (long) m_input->readULong(4);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
-  if (long(m_input->tell()) != endPos || !sz) {
+  input->seek(endPos, WPX_SEEK_SET);
+  if (long(input->tell()) != endPos || !sz) {
     MWAW_DEBUG_MSG(("CWGraph::readBitmapData: file is too short\n"));
     return false;
   }
@@ -2015,11 +2046,12 @@ bool CWGraph::readBitmapData(CWGraphInternal::ZoneBitmap &zone)
   zone.m_bitmapType = numBytes;
   zone.m_entry.setBegin(pos+4);
   zone.m_entry.setEnd(endPos);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(BitmapData):nBytes=" << numBytes;
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  ascii().skipZone(pos+4, endPos-1);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  ascFile.skipZone(pos+4, endPos-1);
 
   return true;
 }
@@ -2082,7 +2114,8 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group)
 ////////////////////////////////////////////////////////////
 bool CWGraph::sendZone(int number, MWAWPosition position)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("CWGraph::sendZone: can not find the listener\n"));
     return false;
   }
@@ -2095,7 +2128,7 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
 
   bool mainGroup = group->m_type == CWStruct::DSET::T_Main;
   libmwaw::SubDocumentType inDocType;
-  if (!m_listener->isSubDocumentOpened(inDocType))
+  if (!listener->isSubDocumentOpened(inDocType))
     inDocType = libmwaw::DOC_NONE;
   Vec2f leftTop(0,0);
   float pageHeight = 0.0;
@@ -2156,7 +2189,7 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
           pos.m_wrapping =  MWAWPosition::WBackground;
           pos.setOrder(-int(g)-1);
           if (pos.origin()[1]+pos.size()[1] >= pageHeight
-              || m_listener->isSectionOpened()) {
+              || listener->isSectionOpened()) {
             notDone.push_back(toDo[g]);
             continue;
           }
@@ -2252,7 +2285,8 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
 bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
                                MWAWPosition pos, WPXPropertyList extras)
 {
-  if (!m_listener) return true;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return true;
 
   Vec2i pictSz = pict.m_box.size();
   if (pictSz[0] < 0) pictSz.setX(-pictSz[0]);
@@ -2403,7 +2437,7 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
 
   pos.setOrigin(pos.origin()-Vec2f(2,2));
   pos.setSize(pos.size()+Vec2f(4,4));
-  m_listener->insertPicture(pos,data, type, extras);
+  listener->insertPicture(pos,data, type, extras);
   return true;
 }
 
@@ -2413,7 +2447,8 @@ bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap,
   if (!bitmap.m_entry.valid() || !bitmap.m_bitmapType)
     return false;
 
-  if (!m_listener)
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener)
     return true;
   int numColors = int(bitmap.m_colorMap.size());
   shared_ptr<MWAWPictBitmap> bmap;
@@ -2431,10 +2466,11 @@ bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap,
 
   //! let go
   int fSz = bitmap.m_bitmapType;
-  m_input->seek(bitmap.m_entry.begin(), WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(bitmap.m_entry.begin(), WPX_SEEK_SET);
   for (int r = 0; r < bitmap.m_size[1]; r++) {
     for (int c = 0; c < bitmap.m_size[0]; c++) {
-      long val = (long) m_input->readULong(fSz);
+      long val = (long) input->readULong(fSz);
       if (indexed) {
         bmapIndexed->set(c,r,(int)val);
         continue;
@@ -2466,7 +2502,7 @@ bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap,
   if (!bmap->getBinary(data,type)) return false;
   if (pos.size()[0] < 0 || pos.size()[1] < 0)
     pos.setSize(bitmap.m_box.size());
-  m_listener->insertPicture(pos, data, "image/pict", extras);
+  listener->insertPicture(pos, data, "image/pict", extras);
 
   return true;
 }
@@ -2476,23 +2512,25 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
 {
   bool send = false;
   bool posOk = pos.size()[0] > 0 && pos.size()[1] > 0;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
   for (int z = 0; z < 2; z++) {
     MWAWEntry entry = pict.m_entries[z];
     if (!entry.valid())
       continue;
     if (!posOk) pos.setSize(pict.m_box.size());
-    m_input->seek(entry.begin(), WPX_SEEK_SET);
+    input->seek(entry.begin(), WPX_SEEK_SET);
 
     switch(pict.getSubType()) {
     case CWGraphInternal::Zone::T_Movie:
     case CWGraphInternal::Zone::T_Pict: {
-      shared_ptr<MWAWPict> thePict(MWAWPictData::get(m_input, (int)entry.length()));
+      shared_ptr<MWAWPict> thePict(MWAWPictData::get(input, (int)entry.length()));
       if (thePict) {
-        if (!send && m_listener) {
+        if (!send && listener) {
           WPXBinaryData data;
           std::string type;
           if (thePict->getBinary(data,type))
-            m_listener->insertPicture(pos, data, type, extras);
+            listener->insertPicture(pos, data, type, extras);
         }
         send = true;
       }
@@ -2513,21 +2551,21 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
     case CWGraphInternal::Zone::T_Bitmap:
     case CWGraphInternal::Zone::T_QTim:
     default:
-      if (!send && m_listener) {
+      if (!send && listener) {
         WPXBinaryData data;
-        m_input->seek(entry.begin(), WPX_SEEK_SET);
-        m_input->readDataBlock(entry.length(), data);
-        m_listener->insertPicture(pos, data, "image/pict", extras);
+        input->seek(entry.begin(), WPX_SEEK_SET);
+        input->readDataBlock(entry.length(), data);
+        listener->insertPicture(pos, data, "image/pict", extras);
       }
       send = true;
       break;
     }
 
 #ifdef DEBUG_WITH_FILES
-    ascii().skipZone(entry.begin(), entry.end()-1);
+    m_parserState->m_asciiFile.skipZone(entry.begin(), entry.end()-1);
     WPXBinaryData file;
-    m_input->seek(entry.begin(), WPX_SEEK_SET);
-    m_input->readDataBlock(entry.length(), file);
+    input->seek(entry.begin(), WPX_SEEK_SET);
+    input->readDataBlock(entry.length(), file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f;
     f << "PICT-" << ++pictName;
@@ -2545,7 +2583,7 @@ void CWGraph::flushExtra()
     shared_ptr<CWGraphInternal::Group> zone = iter->second;
     if (zone->m_parsed)
       continue;
-    if (m_listener) m_listener->insertEOL();
+    if (m_parserState->m_listener) m_parserState->m_listener->insertEOL();
     MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),WPX_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendZone(iter->first, pos);

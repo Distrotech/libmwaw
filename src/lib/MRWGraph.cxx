@@ -335,10 +335,9 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MRWGraph::MRWGraph
-(MWAWInputStreamPtr ip, MRWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert), m_state(new MRWGraphInternal::State),
-  m_mainParser(&parser), m_asciiFile(parser.ascii())
+MRWGraph::MRWGraph(MRWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new MRWGraphInternal::State),
+  m_mainParser(&parser)
 {
 }
 
@@ -347,7 +346,7 @@ MRWGraph::~MRWGraph()
 
 int MRWGraph::version() const
 {
-  return m_mainParser->version();
+  return m_parserState->m_version;
 }
 
 int MRWGraph::numPages() const
@@ -379,7 +378,8 @@ void MRWGraph::sendText(int zoneId)
 
 void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("MRWGraph::sendToken: can not the listener\n"));
     return;
   }
@@ -400,49 +400,49 @@ void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
     return;
   case 0x17:
     if (token.m_value.length())
-      m_listener->insertUnicodeString(token.m_value.c_str());
+      listener->insertUnicodeString(token.m_value.c_str());
     else
-      m_listener->insertField(MWAWContentListener::Date);
+      listener->insertField(MWAWContentListener::Date);
     return;
   case 0x18:
     if (token.m_value.length())
-      m_listener->insertUnicodeString(token.m_value.c_str());
+      listener->insertUnicodeString(token.m_value.c_str());
     else
-      m_listener->insertField(MWAWContentListener::Time);
+      listener->insertField(MWAWContentListener::Time);
     return;
   case 0x19: // fixme this can also be page count
     switch(token.m_fieldType) {
     case 0:
     case 4: // big roman
     case 6: // small roman
-      m_listener->insertField(MWAWContentListener::PageNumber);
+      listener->insertField(MWAWContentListener::PageNumber);
       break;
     case 1:
     case 5: // big roman
     case 7: // small roman
-      m_listener->insertField(MWAWContentListener::PageCount);
+      listener->insertField(MWAWContentListener::PageCount);
       break;
     case 2:
-      m_listener->insertField(MWAWContentListener::PageNumber);
-      m_listener->insertUnicodeString(" of ");
-      m_listener->insertField(MWAWContentListener::PageCount);
+      listener->insertField(MWAWContentListener::PageNumber);
+      listener->insertUnicodeString(" of ");
+      listener->insertField(MWAWContentListener::PageCount);
       break;
     case 3:
-      m_listener->insertField(MWAWContentListener::PageNumber);
-      m_listener->insertChar('/');
-      m_listener->insertField(MWAWContentListener::PageCount);
+      listener->insertField(MWAWContentListener::PageNumber);
+      listener->insertChar('/');
+      listener->insertField(MWAWContentListener::PageCount);
       break;
     default:
       MWAW_DEBUG_MSG(("MRWGraph::sendToken: find unknown pagenumber style\n"));
-      m_listener->insertField(MWAWContentListener::PageNumber);
+      listener->insertField(MWAWContentListener::PageNumber);
       break;
     }
     return;
   case 0x1e: {
     bool endNote=true;
     int fZoneId = m_mainParser->getZoneId(token.m_refId, endNote);
-    MWAWSubDocumentPtr subdoc(new MRWGraphInternal::SubDocument(*this, m_input, fZoneId));
-    m_listener->insertNote(endNote ? MWAWContentListener::ENDNOTE : MWAWContentListener::FOOTNOTE, subdoc);
+    MWAWSubDocumentPtr subdoc(new MRWGraphInternal::SubDocument(*this, m_parserState->m_input, fZoneId));
+    listener->insertNote(endNote ? MWAWContentListener::ENDNOTE : MWAWContentListener::FOOTNOTE, subdoc);
     return;
   }
   case 0x1f: // footnote content, ok to ignore
@@ -459,6 +459,10 @@ void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
 
 void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actFont)
 {
+  if (!m_parserState->m_listener) {
+    MWAW_DEBUG_MSG(("MRWGraph::sendRule: can not find the listener\n"));
+    return;
+  }
   Vec2i const &sz=tkn.m_dim;
   if (sz[0] < 0 || sz[1] < 0 || (sz[0]==0 && sz[1]==0)) {
     MWAW_DEBUG_MSG(("MRWGraph::sendRule: the rule size seems bad\n"));
@@ -503,7 +507,7 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actF
   int decal=int(w/2.f)+1;
   MWAWPosition pos(Vec2i(-decal,-decal), sz+Vec2i(decal,decal), WPX_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
-  m_listener->insertPicture(pos,data, type);
+  m_parserState->m_listener->insertPicture(pos,data, type);
 }
 
 void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
@@ -513,10 +517,11 @@ void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
     return;
   }
 
-  long pos = m_input->tell();
-  m_input->seek(tkn.m_pictData.begin(), WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  input->seek(tkn.m_pictData.begin(), WPX_SEEK_SET);
   WPXBinaryData data;
-  m_input->readDataBlock(tkn.m_pictData.length(), data);
+  input->readDataBlock(tkn.m_pictData.length(), data);
 
 #ifdef DEBUG_WITH_FILES
   static int volatile pictName = 0;
@@ -524,7 +529,7 @@ void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
   fName << "Pict" << ++pictName << ".pct";
   libmwaw::Debug::dumpFile(data, fName.str().c_str());
 
-  ascii().skipZone(tkn.m_pictData.begin(),tkn.m_pictData.end()-1);
+  m_parserState->m_asciiFile.skipZone(tkn.m_pictData.begin(),tkn.m_pictData.end()-1);
 #endif
   Vec2i dim(tkn.m_dim);
   if (dim[0] <= 0 || dim[1] <= 0) {
@@ -533,9 +538,9 @@ void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
   }
   MWAWPosition posi(Vec2i(0,0),dim,WPX_POINT);
   posi.setRelativePosition(MWAWPosition::Char);
-  if (m_listener)
-    m_listener->insertPicture(posi, data, "image/pict");
-  m_input->seek(pos, WPX_SEEK_SET);
+  if (m_parserState->m_listener)
+    m_parserState->m_listener->insertPicture(posi, data, "image/pict");
+  input->seek(pos, WPX_SEEK_SET);
 }
 
 void MRWGraph::sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const &pos)
@@ -547,10 +552,11 @@ void MRWGraph::sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const
     return;
   }
 
-  long actPos = m_input->tell();
-  m_input->seek(ps.m_pos.begin(), WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long actPos = input->tell();
+  input->seek(ps.m_pos.begin(), WPX_SEEK_SET);
   WPXBinaryData data;
-  m_input->readDataBlock(ps.m_pos.length(), data);
+  input->readDataBlock(ps.m_pos.length(), data);
 
 #ifdef DEBUG_WITH_FILES
   static int volatile pictName = 0;
@@ -558,14 +564,14 @@ void MRWGraph::sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const
   fName << "PS" << ++pictName << ".ps";
   libmwaw::Debug::dumpFile(data, fName.str().c_str());
 
-  ascii().skipZone(ps.m_pos.begin(),ps.m_pos.end()-1);
+  m_parserState->m_asciiFile.skipZone(ps.m_pos.begin(),ps.m_pos.end()-1);
 #endif
   MWAWPosition pictPos(pos);
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pictPos.setSize(Vec2f(100,100));
-  if (m_listener)
-    m_listener->insertPicture(pictPos, data, "image/ps");
-  m_input->seek(actPos, WPX_SEEK_SET);
+  if (m_parserState->m_listener)
+    m_parserState->m_listener->insertPicture(pictPos, data, "image/ps");
+  input->seek(actPos, WPX_SEEK_SET);
 }
 
 ////////////////////////////////////////////////////////////
@@ -580,11 +586,12 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
     MWAW_DEBUG_MSG(("MRWGraph::readToken: data seems to short\n"));
     return false;
   }
-  m_input->seek(entry.begin(), WPX_SEEK_SET);
-  m_input->pushLimit(entry.end());
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList, 100);
-  m_input->popLimit();
+  input->popLimit();
 
   size_t numData = dataList.size();
   if (numData < 16) {
@@ -592,6 +599,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
     return false;
   }
 
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   size_t d = 0;
   long val;
@@ -665,10 +673,10 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
   tkn.m_extra = f.str();
   f.str("");
   f << entry.name() << ":" << tkn;
-  ascii().addPos(entry.begin());
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
 
-  ascii().addPos(dataList[d].m_filePos);
+  ascFile.addPos(dataList[d].m_filePos);
   f.str("");
   f << entry.name() << "(II):type=" << std::hex << tkn.m_type << std::dec << ",";
   for (int i = 0; i < 2; i++) {
@@ -684,9 +692,9 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
       f << "###bl" << i << "=" << data << ",";
     } else {
       f << "bl" << i << "=[";
-      m_input->seek(data.m_pos.begin(), WPX_SEEK_SET);
+      input->seek(data.m_pos.begin(), WPX_SEEK_SET);
       for (int j = 0; j < int(data.m_pos.length()/2); j++) {
-        val = (long) m_input->readULong(2);
+        val = (long) input->readULong(2);
         if (val) f << "f" << j << "=" << std::hex << val << std::dec << ",";
       }
       f << "],";
@@ -704,15 +712,15 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
       }
     }
     zone.m_tokenMap[tkn.m_id[0]] = tkn;
-    ascii().addNote(f.str().c_str());
+    ascFile.addNote(f.str().c_str());
 
-    m_input->seek(entry.end(), WPX_SEEK_SET);
+    input->seek(entry.end(), WPX_SEEK_SET);
     return true;
   }
 
   // ok now read the picture data
-  ascii().addNote(f.str().c_str());
-  ascii().addPos(dataList[d].m_filePos);
+  ascFile.addNote(f.str().c_str());
+  ascFile.addPos(dataList[d].m_filePos);
   f.str("");
   for (int j = 0; j < 15; j++) {
     MRWStruct const &dt = dataList[d++];
@@ -755,9 +763,9 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
 
   std::stringstream f2;
   f2 << entry.name() << "(III):" << f.str();
-  ascii().addNote(f2.str().c_str());
+  ascFile.addNote(f2.str().c_str());
 
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
 
@@ -775,45 +783,46 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
 
   std::stringstream f;
 
+  MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = data.m_pos.begin(), endPos = data.m_pos.end();
-  m_input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, WPX_SEEK_SET);
 
   // fixme: this depends on the token type
   long val;
   int firstExpectedVal= (tkn.m_type==0x14) ? 28 :
                         (tkn.m_type==0x17||tkn.m_type==0x18) ? 6 : 0;
   for (int i = 0; i < firstExpectedVal/2; i++) {
-    val = (long) m_input->readLong(2);
+    val = (long) input->readLong(2);
     if (val) f << "#f" << i << "=" << val << ",";
   }
-  m_input->seek(pos+firstExpectedVal, WPX_SEEK_SET);
+  input->seek(pos+firstExpectedVal, WPX_SEEK_SET);
   std::string fValue("");
   switch (tkn.m_type) {
   case 0x14:
-    tkn.m_valPictId = m_input->readLong(4);
+    tkn.m_valPictId = input->readLong(4);
     if (tkn.m_valPictId) f << "pId=" << std::hex << tkn.m_valPictId << ",";
     break;
   case 0x17:
   case 0x18:
-    val = m_input->readLong(2);
+    val = input->readLong(2);
     if (val) f << "f0=" << val << ","; // fieldType?
   case 0x19:
   case 0x1e:
   case 0x1f:
-    while(!m_input->atEOS()) {
-      if (m_input->tell() >= endPos)
+    while(!input->atEOS()) {
+      if (input->tell() >= endPos)
         break;
-      val = (long) m_input->readULong(1);
+      val = (long) input->readULong(1);
       if (!val) {
-        m_input->seek(-1, WPX_SEEK_CUR);
+        input->seek(-1, WPX_SEEK_CUR);
         break;
       }
       fValue += (char) val;
     }
     break;
   case 0x23:
-    tkn.m_ruleType = (int) m_input->readLong(2);
-    tkn.m_rulePattern = (int) m_input->readLong(2);
+    tkn.m_ruleType = (int) input->readLong(2);
+    tkn.m_rulePattern = (int) input->readLong(2);
     switch(tkn.m_ruleType) {
     case 0:
       break; // no
@@ -852,9 +861,9 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
     tkn.m_value = fValue;
     f << "val=" << fValue << ",";
   }
-  int numRemains = int(endPos-m_input->tell())/2;
+  int numRemains = int(endPos-input->tell())/2;
   for (int i = 0; i < numRemains; i++) { // always 0
-    val = m_input->readLong(2);
+    val = input->readLong(2);
     if (val) f << "#g" << i << "=" << val << ",";
   }
   res = f.str();
@@ -868,17 +877,19 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
     MWAW_DEBUG_MSG(("MRWGraph::readPostscript: data seems to short\n"));
     return false;
   }
-  m_input->seek(entry.begin(), WPX_SEEK_SET);
-  m_input->pushLimit(entry.end());
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList, 1+3);
-  m_input->popLimit();
+  input->popLimit();
 
   if (int(dataList.size()) != 3) {
     MWAW_DEBUG_MSG(("MRWGraph::readPostscript: find unexpected number of data\n"));
     return false;
   }
 
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   size_t d = 0;
   MRWGraphInternal::Zone &zone = m_state->getZone(zoneId);
@@ -903,23 +914,23 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
     psFile.m_pos = data.m_pos;
     zone.m_psZoneMap[psFile.m_id] = psFile;
 #ifdef DEBUG_WITH_FILES
-    m_input->seek(data.m_pos.begin(), WPX_SEEK_SET);
+    input->seek(data.m_pos.begin(), WPX_SEEK_SET);
     WPXBinaryData file;
-    m_input->readDataBlock(data.m_pos.length(), file);
+    input->readDataBlock(data.m_pos.length(), file);
 
     static int volatile psName = 0;
     std::stringstream fName;
     fName << "PS" << ++psName << ".ps";
     libmwaw::Debug::dumpFile(file, fName.str().c_str());
 
-    ascii().skipZone(data.m_pos.begin(),data.m_pos.end()-1);
+    ascFile.skipZone(data.m_pos.begin(),data.m_pos.end()-1);
 #endif
   }
   f.str("");
   f << entry.name() << ":" << psFile;
-  ascii().addPos(entry.begin());
-  ascii().addNote(f.str().c_str());
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
+  input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
 

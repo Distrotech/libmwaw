@@ -65,6 +65,11 @@ public:
   //! destructor
   virtual ~MSKParser();
 
+  //! returns the actual input
+  MWAWInputStreamPtr &getInput() {
+    return m_input;
+  }
+
   //! return the color which correspond to an index
   bool getColor(int id, MWAWColor &col, int vers=-1) const;
 
@@ -84,9 +89,17 @@ public:
   //! returns the page top left point
   virtual Vec2f getPageTopLeft() const = 0;
 
+  //! a DebugFile used to write what we recognize when we parse the document
+  libmwaw::DebugFile &ascii() {
+    return m_asciiFile;
+  }
 protected:
   //! the state
   shared_ptr<MSKParserInternal::State> m_state;
+  //! the input which can be an OLE in MSWorks 4 file
+  MWAWInputStreamPtr m_input;
+  //! the debug file of the actual input
+  libmwaw::DebugFile m_asciiFile;
 };
 
 #endif

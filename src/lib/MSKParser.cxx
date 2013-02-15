@@ -52,7 +52,8 @@ struct State {
 }
 
 MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(new MSKParserInternal::State)
+  MWAWParser(input, rsrcParser, header), m_state(new MSKParserInternal::State),
+  m_input(input), m_asciiFile(input)
 {
 }
 

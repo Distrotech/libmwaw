@@ -359,13 +359,7 @@ void FWParser::init()
   m_pageSpan.setMarginLeft(0.1);
   m_pageSpan.setMarginRight(0.1);
 
-  m_textParser.reset(new FWText(getInput(), *this, getFontConverter()));
-}
-
-void FWParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-  m_textParser->setListener(listen);
+  m_textParser.reset(new FWText(*this));
 }
 
 ////////////////////////////////////////////////////////////

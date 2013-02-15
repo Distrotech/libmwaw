@@ -50,8 +50,8 @@
 #include "MWAWInputStream.hxx"
 
 class MWAWEntry;
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 class CWParser;
 
@@ -69,7 +69,7 @@ public:
   struct Style;
 public:
   //! constructor
-  CWStyleManager(MWAWInputStreamPtr ip, CWParser &mainParser, MWAWFontConverterPtr &convertissor);
+  CWStyleManager(CWParser &mainParser);
   //! destructor
   ~CWStyleManager();
 
@@ -109,22 +109,13 @@ protected:
   /** read a STYL Name sequence */
   bool readStyleNames(int N, int fSz);
 
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
 protected:
-  //! the input
-  MWAWInputStreamPtr m_input;
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
   //! the main parser
   CWParser *m_mainParser;
   //! the state
   shared_ptr<CWStyleManagerInternal::State> m_state;
-  //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
 
 private:
   CWStyleManager(CWStyleManager const &orig);

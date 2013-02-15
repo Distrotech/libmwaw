@@ -46,14 +46,9 @@
 #include "MWAWEntry.hxx"
 #include "MWAWParagraph.hxx"
 
-#include "MWAWDebug.hxx"
-#include "MWAWInputStream.hxx"
-
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 class MWAWFont;
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 class MSWParser;
 class MSWText;
@@ -77,7 +72,7 @@ class MSWTextStyles
 public:
   enum ZoneType { TextZone, TextStructZone, StyleZone, InParagraphDefinition };
   //! constructor
-  MSWTextStyles(MWAWInputStreamPtr ip, MSWText &textParser, MWAWFontConverterPtr &convertissor);
+  MSWTextStyles(MSWText &textParser);
   //! destructor
   virtual ~MSWTextStyles();
 
@@ -85,11 +80,6 @@ public:
   int version() const;
 
 protected:
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
-
   // font:
   //! returns the default font
   MWAWFont const &getDefaultFont() const;
@@ -158,11 +148,6 @@ protected:
   //! try to reorder the styles to find a good order
   std::vector<int> orderStyles(std::vector<int> const &previous);
 
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
 private:
   MSWTextStyles(MSWTextStyles const &orig);
   MSWTextStyles &operator=(MSWTextStyles const &orig);
@@ -171,14 +156,8 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<MSWTextStylesInternal::State> m_state;
@@ -188,9 +167,6 @@ protected:
 
   //! the text parser;
   MSWText *m_textParser;
-
-  //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

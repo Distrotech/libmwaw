@@ -50,8 +50,8 @@
 
 class MWAWEntry;
 
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 class MWAWPosition;
 
@@ -86,7 +86,7 @@ class HMWGraph
 
 public:
   //! constructor
-  HMWGraph(MWAWInputStreamPtr ip, HMWParser &parser, MWAWFontConverterPtr &convertissor);
+  HMWGraph(HMWParser &parser);
   //! destructor
   virtual ~HMWGraph();
 
@@ -97,11 +97,6 @@ public:
   int numPages() const;
 
 protected:
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
 
   //! returns the color associated with a pattern
   bool getColor(int colId, int patternId, MWAWColor &color) const;
@@ -175,11 +170,6 @@ protected:
   /** try to read the textbox data */
   shared_ptr<HMWGraphInternal::TextBox> readTextBox(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header, bool isMemo);
 
-  //! returns the debug file
-  libmwaw::DebugFile &ascii() {
-    return m_asciiFile;
-  }
-
 private:
   HMWGraph(HMWGraph const &orig);
   HMWGraph &operator=(HMWGraph const &orig);
@@ -188,23 +178,14 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<HMWGraphInternal::State> m_state;
 
   //! the main parser;
   HMWParser *m_mainParser;
-
-  //! the debug file
-  libmwaw::DebugFile &m_asciiFile;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

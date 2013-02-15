@@ -214,13 +214,7 @@ void DMParser::init()
 
   m_state.reset(new DMParserInternal::State);
 
-  m_textParser.reset(new DMText(getInput(), *this, getFontConverter()));
-}
-
-void DMParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-  m_textParser->setListener(listen);
+  m_textParser.reset(new DMText(*this));
 }
 
 MWAWInputStreamPtr DMParser::rsrcInput()

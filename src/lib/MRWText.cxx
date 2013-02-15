@@ -469,9 +469,8 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MRWText::MRWText(MWAWInputStreamPtr ip, MRWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert),
-  m_state(new MRWTextInternal::State), m_mainParser(&parser), m_asciiFile(parser.ascii())
+MRWText::MRWText(MRWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new MRWTextInternal::State), m_mainParser(&parser)
 {
 }
 
@@ -482,7 +481,7 @@ MRWText::~MRWText()
 int MRWText::version() const
 {
   if (m_state->m_version < 0)
-    m_state->m_version = m_mainParser->version();
+    m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
@@ -515,11 +514,12 @@ bool MRWText::readZone(MRWEntry const &entry, int zoneId)
     return false;
   }
 
-  m_input->seek(entry.begin(), WPX_SEEK_SET);
-  m_input->pushLimit(entry.end());
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList);
-  m_input->popLimit();
+  input->popLimit();
 
   if (dataList.size() != 1) {
     MWAW_DEBUG_MSG(("MRWText::readZone: can find my data\n"));
@@ -545,30 +545,31 @@ bool MRWText::readZone(MRWEntry const &entry, int zoneId)
     = zone.m_infoList[size_t(zone.m_actZone++)];
   info.m_pos = data.m_pos;
 
-  ascii().addPos(entry.begin());
-  ascii().addNote(f.str().c_str());
+  m_parserState->m_asciiFile.addPos(entry.begin());
+  m_parserState->m_asciiFile.addNote(f.str().c_str());
 
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
 
 int MRWText::computeNumPages(MRWTextInternal::Zone const &zone) const
 {
   int nPages = 0;
-  long pos = m_input->tell();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
   for (size_t z=0; z < zone.m_infoList.size(); z++) {
     MRWTextInternal::Zone::Information const &info=zone.m_infoList[z];
     if (!info.m_pos.valid()) continue;
     if (nPages==0) nPages=1;
-    m_input->seek(info.m_pos.begin(), WPX_SEEK_SET);
+    input->seek(info.m_pos.begin(), WPX_SEEK_SET);
     long numChar = info.m_pos.length();
     while (numChar-- > 0) {
-      if (m_input->readULong(1)==0xc)
+      if (input->readULong(1)==0xc)
         nPages++;
     }
   }
 
-  m_input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, WPX_SEEK_SET);
   return nPages;
 }
 
@@ -578,11 +579,12 @@ bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
     MWAW_DEBUG_MSG(("MRWText::readTextStruct: data seems to short\n"));
     return false;
   }
-  m_input->seek(entry.begin(), WPX_SEEK_SET);
-  m_input->pushLimit(entry.end());
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList, 1+22*entry.m_N);
-  m_input->popLimit();
+  input->popLimit();
 
   if (int(dataList.size()) != 22*entry.m_N) {
     MWAW_DEBUG_MSG(("MRWText::readTextStruct: find unexpected number of data\n"));
@@ -590,11 +592,12 @@ bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
   }
 
   MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   size_t d = 0;
   for (int i = 0; i < entry.m_N; i++) {
     MRWTextInternal::Zone::Information info;
-    ascii().addPos(dataList[d].m_filePos);
+    ascFile.addPos(dataList[d].m_filePos);
 
     int posi[4]= {0,0,0,0};
     int dim[4]= {0,0,0,0}, dim2[4]= {0,0,0,0};
@@ -669,16 +672,16 @@ bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
     zone.m_infoList.push_back(info);
     f.str("");
     f << entry.name() << "-" << i << ":" << info;
-    ascii().addNote(f.str().c_str());
+    ascFile.addNote(f.str().c_str());
   }
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), WPX_SEEK_SET);
 
   return true;
 }
 
 bool MRWText::send(int zoneId)
 {
-  if (!m_listener) {
+  if (!m_parserState->m_listener) {
     MWAW_DEBUG_MSG(("MRWText::send: can not find the listener\n"));
     return false;
   }
@@ -696,13 +699,14 @@ bool MRWText::send(int zoneId)
 
 bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("MRWText::send: can not find the listener\n"));
     return false;
   }
   zone.m_parsed = true;
 
-  m_listener->setFont(MWAWFont());
+  listener->setFont(MWAWFont());
   int actPage = 1;
   int numCols = 1;
   bool isMain=entry.id()==0;
@@ -712,9 +716,9 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
     std::vector<int> width;
     m_mainParser->getColumnInfo(0, numCols, width);
     if (numCols > 1) {
-      if (m_listener->isSectionOpened())
-        m_listener->closeSection();
-      m_listener->openSection(width, WPX_POINT);
+      if (listener->isSectionOpened())
+        listener->closeSection();
+      listener->openSection(width, WPX_POINT);
     }
   }
 
@@ -724,9 +728,11 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("MRWText::send: can not find the beginning of the zone\n"));
     return false;
   }
-  m_input->seek(firstPos, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(firstPos, WPX_SEEK_SET);
 
   long actChar = entry.begin();
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   for (size_t z = firstZ ; z < zone.m_infoList.size(); z++) {
     if (actChar >= entry.end())
       break;
@@ -734,17 +740,17 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
     long endPos = zone.m_infoList[z].m_pos.end();
     if (endPos > pos+entry.end()-actChar)
       endPos = pos+entry.end()-actChar;
-    m_input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, WPX_SEEK_SET);
     firstPos = -1;
 
     libmwaw::DebugStream f;
     f << "Text[" << std::hex << actChar << std::dec << "]:";
     int tokenEndPos = 0;
-    while (!m_input->atEOS()) {
-      long actPos = m_input->tell();
+    while (!input->atEOS()) {
+      long actPos = input->tell();
       if (actPos >= endPos) {
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
+        ascFile.addPos(pos);
+        ascFile.addNote(f.str().c_str());
 
         pos = actPos;
         f.str("");
@@ -766,8 +772,8 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
             } else if (!sendTable(table) || actChar >= table.nextCharPos()) {
               MWAW_DEBUG_MSG(("MRWText::send: can not send a table data\n"));
             } else {
-              ascii().addPos(pos);
-              ascii().addNote(f.str().c_str());
+              ascFile.addPos(pos);
+              ascFile.addNote(f.str().c_str());
 
               f.str("");
               f << "Text:";
@@ -781,7 +787,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
               }
               pos=firstPos;
               if (z == firstZ) {
-                m_input->seek(firstPos, WPX_SEEK_SET);
+                input->seek(firstPos, WPX_SEEK_SET);
                 firstPos = -1;
                 continue;
               } else {
@@ -790,7 +796,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
               }
             }
 
-            m_input->seek(actPos, WPX_SEEK_SET);
+            input->seek(actPos, WPX_SEEK_SET);
           }
           setProperty(para);
         }
@@ -800,7 +806,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
         f << "[F" << id << "]";
         MRWTextInternal::Font font;
         if (zone.getFont(id, font)) {
-          m_listener->setFont(font.m_font);
+          listener->setFont(font.m_font);
           if (font.m_tokenId > 0) {
             m_mainParser->sendToken(zone.m_id, font.m_tokenId, font.m_font);
             tokenEndPos = -2;
@@ -808,7 +814,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
         }
       }
 
-      char c = (char) m_input->readULong(1);
+      char c = (char) input->readULong(1);
       ++actChar;
       if (tokenEndPos) {
         if ((c=='[' && tokenEndPos==-2)||(c==']' && tokenEndPos==-1)) {
@@ -827,29 +833,29 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
           first = false;
         }
         f << "#";
-        m_listener->insertEOL();
+        listener->insertEOL();
         break;
       }
       case 0x7: // fixme end of cell
         f << "#";
-        m_listener->insertChar(' ');
+        listener->insertChar(' ');
         break;
       case 0x9:
-        m_listener->insertTab();
+        listener->insertTab();
         break;
       case 0xa:
-        m_listener->insertEOL(true);
+        listener->insertEOL(true);
         break;
       case 0xc:
         if (isMain)
           m_mainParser->newPage(++actPage);
         break;
       case 0xd:
-        m_listener->insertEOL();
+        listener->insertEOL();
         break;
       case 0xe:
         if (numCols > 1) {
-          m_listener->insertBreak(MWAWContentListener::ColumnBreak);
+          listener->insertBreak(MWAWContentListener::ColumnBreak);
           break;
         }
         MWAW_DEBUG_MSG(("MRWText::sendText: Find unexpected column break\n"));
@@ -860,25 +866,25 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
 
         // some special character
       case 0x11:
-        m_listener->insertUnicode(0x2318);
+        listener->insertUnicode(0x2318);
         break;
       case 0x12:
-        m_listener->insertUnicode(0x2713);
+        listener->insertUnicode(0x2713);
         break;
       case 0x14:
-        m_listener->insertUnicode(0xF8FF);
+        listener->insertUnicode(0xF8FF);
         break;
       case 0x1f: // soft hyphen, ignore
         break;
       default:
-        actChar+=m_listener->insertCharacter((unsigned char) c, m_input, endPos);
+        actChar+=listener->insertCharacter((unsigned char) c, input, endPos);
         break;
       }
 
       f << c;
       if (c==0xa || c==0xd || actPos==endPos) {
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
+        ascFile.addPos(pos);
+        ascFile.addNote(f.str().c_str());
 
         pos = actPos;
         f.str("");
@@ -894,7 +900,8 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
 // table function
 bool MRWText::sendTable(MRWTextInternal::Table &table)
 {
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("MRWText::sendTable: can not find the listener\n"));
     return false;
   }
@@ -914,8 +921,8 @@ bool MRWText::sendTable(MRWTextInternal::Table &table)
     std::vector<float> colWidths(nCells);
     for (size_t c=0; c < nCells; c++)
       colWidths[c]=(float)row.m_cellsList[c].m_width;
-    m_listener->openTable(colWidths, WPX_POINT);
-    m_listener->openTableRow(-float(row.m_height), WPX_POINT);
+    listener->openTable(colWidths, WPX_POINT);
+    listener->openTableRow(-float(row.m_height), WPX_POINT);
 
     WPXPropertyList extras;
     for (size_t c=0; c < nCells; c++) {
@@ -926,20 +933,20 @@ bool MRWText::sendTable(MRWTextInternal::Table &table)
         para.update(m_mainParser->getPatternPercent(para.m_cellFill.m_patternId), fCell);
       fCell.position() = Vec2i((int)c,0);
 
-      m_listener->openTableCell(fCell, extras);
+      listener->openTableCell(fCell, extras);
       MWAWEntry entry(cell.m_entry);
       if (entry.length()<=1)
-        m_listener->insertChar(' ');
+        listener->insertChar(' ');
       else {
         entry.setLength(entry.length()-1);
         send(table.m_zone, entry);
       }
 
-      m_listener->closeTableCell();
+      listener->closeTableCell();
     }
 
-    m_listener->closeTableRow();
-    m_listener->closeTable();
+    listener->closeTableRow();
+    listener->closeTable();
   }
   return true;
 }
@@ -951,7 +958,8 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
   size_t firstZ=0;
   if (!zone.getPosition(entry.begin(), firstPos, firstZ))
     return false;
-  m_input->seek(firstPos, WPX_SEEK_SET);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(firstPos, WPX_SEEK_SET);
 
   int actHeight=0, lastHeight = 0;
   long actChar = entry.begin();
@@ -966,10 +974,10 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
 
     long endPos = zone.m_infoList[z].m_pos.end();
     if (z!=firstZ)
-      m_input->seek(zone.m_infoList[z].m_pos.begin(), WPX_SEEK_SET);
+      input->seek(zone.m_infoList[z].m_pos.begin(), WPX_SEEK_SET);
 
-    while (!m_input->atEOS()) {
-      long actPos = m_input->tell();
+    while (!input->atEOS()) {
+      long actPos = input->tell();
       if (actPos == endPos)
         break;
       if (zone.m_posRulerMap.find(actChar)!=zone.m_posRulerMap.end()) {
@@ -988,7 +996,7 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
       }
 
       firstCellInRow = false;
-      char c = (char) m_input->readULong(1);
+      char c = (char) input->readULong(1);
       actChar++;
       if (c == 0x6) {
         if (!row.m_cellsList.size())
@@ -1023,11 +1031,12 @@ bool MRWText::readPLCZone(MRWEntry const &entry, int zoneId)
     return false;
   }
 
-  m_input->seek(entry.begin(), WPX_SEEK_SET);
-  m_input->pushLimit(entry.end());
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList,1+2*entry.m_N);
-  m_input->popLimit();
+  input->popLimit();
 
   if (int(dataList.size()) != 2*entry.m_N) {
     MWAW_DEBUG_MSG(("MRWText::readPLCZone: find unexpected number of data\n"));
@@ -1037,13 +1046,14 @@ bool MRWText::readPLCZone(MRWEntry const &entry, int zoneId)
   MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
   bool isCharZone = entry.m_fileType==4;
   std::map<long,int> &map = isCharZone ? zone.m_posFontMap : zone.m_posRulerMap;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   long pos = entry.begin();
   for (size_t d=0; d < dataList.size(); d+=2) {
     if (d%40==0) {
       if (d) {
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
+        ascFile.addPos(pos);
+        ascFile.addNote(f.str().c_str());
       }
       f.str("");
       f << entry.name() << ":";
@@ -1058,9 +1068,9 @@ bool MRWText::readPLCZone(MRWEntry const &entry, int zoneId)
     else
       f << "(P" << id << "),"; // id
   }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
 
@@ -1074,11 +1084,12 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
     return false;
   }
 
-  m_input->seek(entry.begin(), WPX_SEEK_SET);
-  m_input->pushLimit(entry.end());
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList,1+19*entry.m_N);
-  m_input->popLimit();
+  input->popLimit();
 
   if (int(dataList.size()) != 19*entry.m_N) {
     MWAW_DEBUG_MSG(("MRWText::readFontNames: find unexpected number of data\n"));
@@ -1086,13 +1097,14 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
   }
 
   MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   size_t d = 0;
   int val;
   for (int i = 0; i < entry.m_N; i++) {
     f.str("");
     f << entry.name() << "-FN" << i << ":";
-    ascii().addPos(dataList[d].m_filePos);
+    ascFile.addPos(dataList[d].m_filePos);
     std::string fontName("");
     for (int j = 0; j < 2; j++, d++) {
       MRWStruct const &data = dataList[d];
@@ -1102,8 +1114,8 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
         continue;
       }
       long pos = data.m_pos.begin();
-      m_input->seek(pos, WPX_SEEK_SET);
-      int fSz = int(m_input->readULong(1));
+      input->seek(pos, WPX_SEEK_SET);
+      int fSz = int(input->readULong(1));
       if (fSz+1 > data.m_pos.length()) {
         MWAW_DEBUG_MSG(("MRWText::readFontNames: field name %d seems bad\n", j));
         f << data << "[###fSz=" << fSz << ",";
@@ -1111,7 +1123,7 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
       }
       std::string name("");
       for (int c = 0; c < fSz; c++)
-        name+=(char) m_input->readULong(1);
+        name+=(char) input->readULong(1);
       if (j == 0) {
         fontName = name;
         f << name << ",";
@@ -1139,12 +1151,12 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
     if (fontName.length()) {
       // checkme:
       std::string family = (fIdAux&0xFF00) ==0x4000 ? "Osaka" : "";
-      m_convertissor->setCorrespondance(fId, fontName, family);
+      m_parserState->m_fontConverter->setCorrespondance(fId, fontName, family);
     }
     zone.m_idFontMap[i] = fId;
-    ascii().addNote(f.str().c_str());
+    ascFile.addNote(f.str().c_str());
   }
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
 
@@ -1155,11 +1167,12 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
     return false;
   }
 
-  m_input->seek(entry.begin(), WPX_SEEK_SET);
-  m_input->pushLimit(entry.end());
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList,1+1+77*entry.m_N);
-  m_input->popLimit();
+  input->popLimit();
 
   if (int(dataList.size()) != 1+77*entry.m_N) {
     MWAW_DEBUG_MSG(("MRWText::readFonts: find unexpected number of data\n"));
@@ -1167,16 +1180,17 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
   }
 
   MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << entry.name() << ":unkn=" << dataList[0].value(0);
-  ascii().addPos(dataList[0].m_filePos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(dataList[0].m_filePos);
+  ascFile.addNote(f.str().c_str());
 
   size_t d = 1;
   for (int i = 0; i < entry.m_N; i++) {
     MRWTextInternal::Font font;
     f.str("");
-    ascii().addPos(dataList[d].m_filePos);
+    ascFile.addPos(dataList[d].m_filePos);
 
     size_t fD = d;
     long val;
@@ -1399,10 +1413,10 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
     font.m_extra = f.str();
     f.str("");
     f << entry.name() << "-F" << i << ":"
-      << font.m_font.getDebugString(m_convertissor) << font;
-    ascii().addNote(f.str().c_str());
+      << font.m_font.getDebugString(m_parserState->m_fontConverter) << font;
+    ascFile.addNote(f.str().c_str());
   }
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
 
@@ -1416,23 +1430,25 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
     return false;
   }
 
-  m_input->seek(entry.begin(), WPX_SEEK_SET);
-  m_input->pushLimit(entry.end());
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList,1+2*entry.m_N);
-  m_input->popLimit();
+  input->popLimit();
 
   if (int(dataList.size()) != 2*entry.m_N) {
     MWAW_DEBUG_MSG(("MRWText::readStyleNames: find unexpected number of data\n"));
     return false;
   }
 
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   size_t d = 0;
   for (int i = 0; i < entry.m_N; i++) {
     f.str("");
     f << entry.name() << "-" << i << ":";
-    ascii().addPos(dataList[d].m_filePos);
+    ascFile.addPos(dataList[d].m_filePos);
     if (!dataList[d].isBasic()) {
       MWAW_DEBUG_MSG(("MRWText::readStyleNames: bad id field for style %d\n", i));
       f << "###" << dataList[d] << ",";
@@ -1447,20 +1463,20 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
       f << "###" << data << ",";
     } else {
       long pos = data.m_pos.begin();
-      m_input->seek(pos, WPX_SEEK_SET);
-      int fSz = int(m_input->readULong(1));
+      input->seek(pos, WPX_SEEK_SET);
+      int fSz = int(input->readULong(1));
       if (fSz+1 > data.m_pos.length()) {
         MWAW_DEBUG_MSG(("MRWText::readStyleNames: field name %d seems bad\n", i));
         f << data << "[###fSz=" << fSz << ",";
       } else {
         for (int c = 0; c < fSz; c++)
-          name+=(char) m_input->readULong(1);
+          name+=(char) input->readULong(1);
         f << name << ",";
       }
     }
-    ascii().addNote(f.str().c_str());
+    ascFile.addNote(f.str().c_str());
   }
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
 
@@ -1469,8 +1485,8 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
 ////////////////////////////////////////////////////////////
 void MRWText::setProperty(MRWTextInternal::Paragraph const &ruler)
 {
-  if (!m_listener) return;
-  m_listener->setParagraph(ruler);
+  if (!m_parserState->m_listener) return;
+  m_parserState->m_listener->setParagraph(ruler);
 }
 
 bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
@@ -1480,11 +1496,12 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
     return false;
   }
 
-  m_input->seek(entry.begin(), WPX_SEEK_SET);
-  m_input->pushLimit(entry.end());
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList,1+3*68*entry.m_N);
-  m_input->popLimit();
+  input->popLimit();
 
   int numDatas = int(dataList.size());
   if (numDatas < 68*entry.m_N) {
@@ -1493,16 +1510,17 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
   }
 
   MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   size_t d = 0;
   for (int i = 0; i < entry.m_N; i++) {
     MRWTextInternal::Paragraph para;
-    ascii().addPos(dataList[d].m_filePos);
+    ascFile.addPos(dataList[d].m_filePos);
 
     if (int(d+68) > numDatas) {
       MWAW_DEBUG_MSG(("MRWText::readRulers: ruler %d is too short\n", i));
       f << "###";
-      ascii().addNote(f.str().c_str());
+      ascFile.addNote(f.str().c_str());
       return true;
     }
     size_t fD = d;
@@ -1694,7 +1712,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       para.m_extra = f.str();
       f.str("");
       f << entry.name() << "-P" << i << ":" << para << "," << "###";
-      ascii().addNote(f.str().c_str());
+      ascFile.addNote(f.str().c_str());
       zone.m_rulerList.push_back(para);
       return true;
     }
@@ -1745,8 +1763,8 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
     for (int j = 0; j < 10; j++, d++) {
       MRWStruct const &dt = dataList[d];
       if (j==1 && dt.m_type==0) { // a block with sz=40
-        m_input->seek(dt.m_pos.begin(), WPX_SEEK_SET);
-        int fSz = (int) m_input->readULong(1);
+        input->seek(dt.m_pos.begin(), WPX_SEEK_SET);
+        int fSz = (int) input->readULong(1);
         if (fSz+1>dt.m_pos.length()) {
           MWAW_DEBUG_MSG(("MRWText::readRulers: can not read paragraph name\n"));
           f << "#name,";
@@ -1755,7 +1773,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         if (fSz == 0) continue;
         std::string name("");
         for (int k = 0; k < fSz; k++)
-          name+=(char) m_input->readULong(1);
+          name+=(char) input->readULong(1);
         f << "name=" << name << ",";
         continue;
       }
@@ -1800,9 +1818,9 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
     zone.m_rulerList.push_back(para);
     f.str("");
     f << entry.name() << "-P" << i << ":" << para << ",";
-    ascii().addNote(f.str().c_str());
+    ascFile.addNote(f.str().c_str());
   }
-  m_input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), WPX_SEEK_SET);
   return true;
 }
 
@@ -1824,7 +1842,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
 
 void MRWText::flushExtra()
 {
-  if (!m_listener) return;
+  if (!m_parserState->m_listener) return;
 #ifdef DEBUG
   std::map<int,MRWTextInternal::Zone>::iterator it =
     m_state->m_textZoneMap.begin();

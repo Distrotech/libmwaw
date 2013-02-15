@@ -210,9 +210,8 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-HMWText::HMWText(MWAWInputStreamPtr ip, HMWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert),
-  m_state(new HMWTextInternal::State), m_mainParser(&parser)
+HMWText::HMWText(HMWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new HMWTextInternal::State), m_mainParser(&parser)
 {
 }
 
@@ -223,7 +222,7 @@ HMWText::~HMWText()
 int HMWText::version() const
 {
   if (m_state->m_version < 0)
-    m_state->m_version = m_mainParser->version();
+    m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
@@ -343,7 +342,8 @@ bool HMWText::sendText(HMWZone &zone)
     MWAW_DEBUG_MSG(("HMWText::sendText: called without any zone\n"));
     return false;
   }
-  if (!m_listener) {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("HMWText::sendText: can not find a listener\n"));
     return false;
   }
@@ -385,7 +385,7 @@ bool HMWText::sendText(HMWZone &zone)
       if (!readFont(zone,font))
         break;
       done = true;
-      m_listener->setFont(font.m_font);
+      listener->setFont(font.m_font);
       break;
     }
     case 2: { // ruler
@@ -470,35 +470,35 @@ bool HMWText::sendText(HMWZone &zone)
       switch(c) {
       case 0x1000:
         f << "[pgNum]";
-        m_listener->insertField(MWAWContentListener::PageNumber);
+        listener->insertField(MWAWContentListener::PageNumber);
         break;
       case 0x1001:
         f << "[pgCount]";
-        m_listener->insertField(MWAWContentListener::PageCount);
+        listener->insertField(MWAWContentListener::PageCount);
         break;
       case 0x1002:
         f << "[date]";
-        m_listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWContentListener::Date);
         break;
       case 0x1003:
         f << "[time]";
-        m_listener->insertField(MWAWContentListener::Time);
+        listener->insertField(MWAWContentListener::Time);
         break;
       case 0x1004:
         f << "[title]";
-        m_listener->insertField(MWAWContentListener::Title);
+        listener->insertField(MWAWContentListener::Title);
         break;
       case 0x1005: {
         std::stringstream s;
         f << "[section]";
         s << actSection;
-        m_listener->insertUnicodeString(s.str().c_str());
+        listener->insertUnicodeString(s.str().c_str());
         break;
       }
       case 2:
         f << "[colBreak]";
         if (actCol < numCol-1 && numCol > 1) {
-          m_listener->insertBreak(MWAWContentListener::ColumnBreak);
+          listener->insertBreak(MWAWContentListener::ColumnBreak);
           actCol++;
         } else {
           actCol = 0;
@@ -511,11 +511,11 @@ bool HMWText::sendText(HMWZone &zone)
         break;
       case 9:
         f << char(c);
-        m_listener->insertTab();
+        listener->insertTab();
         break;
       case 0xd:
         f << char(c);
-        m_listener->insertEOL();
+        listener->insertEOL();
         break;
       default: {
         if (c <= 0x1f || c >= 0x100) {
@@ -524,7 +524,7 @@ bool HMWText::sendText(HMWZone &zone)
           break;
         }
         f << char(c);
-        m_listener->insertCharacter((unsigned char)c, input);
+        listener->insertCharacter((unsigned char)c, input);
         break;
       }
       }
@@ -539,7 +539,7 @@ bool HMWText::sendText(HMWZone &zone)
     }
   }
   // FIXME: remove this when the frame/textbox are sent normally
-  m_listener->insertEOL();
+  listener->insertEOL();
   return true;
 }
 
@@ -662,7 +662,7 @@ bool HMWText::readFont(HMWZone &zone, HMWTextInternal::Font &font)
     first = false;
   } else
     f << "FontDef:";
-  f << font.m_font.getDebugString(m_convertissor) << font << ",";
+  f << font.m_font.getDebugString(m_parserState->m_fontConverter) << font << ",";
 
   zone.ascii().addPos(pos-4);
   zone.ascii().addNote(f.str().c_str());
@@ -745,7 +745,7 @@ bool HMWText::readFontNames(shared_ptr<HMWZone> zone)
       for (int c = 0; c < fSz; c++)
         name += (char) input->readULong(1);
       f << name;
-      m_convertissor->setCorrespondance(fId, name);
+      m_parserState->m_fontConverter->setCorrespondance(fId, name);
     }
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -934,8 +934,8 @@ bool HMWText::readStyles(shared_ptr<HMWZone> zone)
 ////////////////////////////////////////////////////////////
 void HMWText::setProperty(HMWTextInternal::Paragraph const &para, float)
 {
-  if (!m_listener) return;
-  m_listener->setParagraph(para);
+  if (!m_parserState->m_listener) return;
+  m_parserState->m_listener->setParagraph(para);
 }
 
 bool HMWText::readParagraph(HMWZone &zone, HMWTextInternal::Paragraph &para)
@@ -1223,7 +1223,7 @@ bool HMWText::readSections(shared_ptr<HMWZone> zone)
 
 void HMWText::flushExtra()
 {
-  if (!m_listener) return;
+  if (!m_parserState->m_listener) return;
   std::multimap<long, shared_ptr<HMWZone> >::iterator tIt
     =m_state->m_IdTextMaps.begin();
   for ( ; tIt!=m_state->m_IdTextMaps.end(); tIt++) {

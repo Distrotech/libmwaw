@@ -41,14 +41,8 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWParserState;
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 class MWAWSubDocument;
 
@@ -75,7 +69,7 @@ class HMWText
   friend class HMWParser;
 public:
   //! constructor
-  HMWText(MWAWInputStreamPtr ip, HMWParser &parser, MWAWFontConverterPtr &convertissor);
+  HMWText(HMWParser &parser);
   //! destructor
   virtual ~HMWText();
 
@@ -88,12 +82,6 @@ public:
   int numPages() const;
 
 protected:
-
-  //! sets the listener in this class and in the helper classes
-  void setListener(MWAWContentListenerPtr listen) {
-    m_listener = listen;
-  }
-
   //! send a text zone
   bool sendText(long id, long subId=0);
   //! sends the data which have not yet been sent to the listener
@@ -137,14 +125,8 @@ protected:
   //
   // data
   //
-  //! the input
-  MWAWInputStreamPtr m_input;
-
-  //! the listener
-  MWAWContentListenerPtr m_listener;
-
-  //! a convertissor tools
-  MWAWFontConverterPtr m_convertissor;
+  //! the parser state
+  MWAWParserStatePtr m_parserState;
 
   //! the state
   shared_ptr<HMWTextInternal::State> m_state;

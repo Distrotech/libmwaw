@@ -733,10 +733,9 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-HMWGraph::HMWGraph
-(MWAWInputStreamPtr ip, HMWParser &parser, MWAWFontConverterPtr &convert) :
-  m_input(ip), m_listener(), m_convertissor(convert), m_state(new HMWGraphInternal::State),
-  m_mainParser(&parser), m_asciiFile(parser.ascii())
+HMWGraph::HMWGraph(HMWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new HMWGraphInternal::State),
+  m_mainParser(&parser)
 {
 }
 
@@ -745,7 +744,7 @@ HMWGraph::~HMWGraph()
 
 int HMWGraph::version() const
 {
-  return m_mainParser->version();
+  return m_parserState->m_version;
 }
 
 bool HMWGraph::getColor(int colId, int patternId, MWAWColor &color) const
@@ -952,7 +951,7 @@ bool HMWGraph::readPicture(shared_ptr<HMWZone> zone)
 ////////////////////////////////////////////////////////////
 bool HMWGraph::sendPicture(long pictId, MWAWPosition pos, WPXPropertyList extras)
 {
-  if (!m_listener) return true;
+  if (!m_parserState->m_listener) return true;
   std::map<long, shared_ptr<HMWGraphInternal::Picture> >::const_iterator pIt
     = m_state->m_picturesMap.find(pictId);
 
@@ -970,7 +969,7 @@ bool HMWGraph::sendPicture(HMWGraphInternal::Picture const &picture, MWAWPositio
   bool firstTime = picture.m_parsed == false;
 #endif
   picture.m_parsed = true;
-  if (!m_listener) return true;
+  if (!m_parserState->m_listener) return true;
 
   if (!picture.m_zone || picture.m_pos[0] >= picture.m_pos[1]) {
     MWAW_DEBUG_MSG(("HMWGraph::sendPicture: can not find the picture\n"));
@@ -990,14 +989,14 @@ bool HMWGraph::sendPicture(HMWGraphInternal::Picture const &picture, MWAWPositio
     libmwaw::Debug::dumpFile(data, f.str().c_str());
   }
 #endif
-  m_listener->insertPicture(pos, data, "image/pict", extras);
+  m_parserState->m_listener->insertPicture(pos, data, "image/pict", extras);
 
   return true;
 }
 
 bool HMWGraph::sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras)
 {
-  if (!m_listener) return true;
+  if (!m_parserState->m_listener) return true;
   std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::const_iterator fIt=
     m_state->m_framesMap.find(frameId);
   if (fIt == m_state->m_framesMap.end() || !fIt->second) {
@@ -1009,9 +1008,11 @@ bool HMWGraph::sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras)
 
 bool HMWGraph::sendFrame(HMWGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras)
 {
-  if (!m_listener) return true;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return true;
 
   frame.m_parsed = true;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
   switch(frame.m_type) {
   case 4:
   case 10:
@@ -1026,8 +1027,8 @@ bool HMWGraph::sendFrame(HMWGraphInternal::Frame const &frame, MWAWPosition pos,
 
       MWAWSubDocumentPtr subdoc
       (new HMWGraphInternal::SubDocument
-       (*this, m_input, framePos, HMWGraphInternal::SubDocument::EmptyPicture, pict.m_fileId));
-      m_listener->insertTextBox(pos, subdoc, extras);
+       (*this, input, framePos, HMWGraphInternal::SubDocument::EmptyPicture, pict.m_fileId));
+      listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
     return sendPictureFrame(pict, pos, extras);
@@ -1040,8 +1041,8 @@ bool HMWGraph::sendFrame(HMWGraphInternal::Frame const &frame, MWAWPosition pos,
       MWAW_DEBUG_MSG(("HMWGraph::sendFrame: can not find the table structure\n"));
       MWAWSubDocumentPtr subdoc
       (new HMWGraphInternal::SubDocument
-       (*this, m_input, HMWGraphInternal::SubDocument::UnformattedTable, frame.m_fileId));
-      m_listener->insertTextBox(pos, subdoc, extras);
+       (*this, input, HMWGraphInternal::SubDocument::UnformattedTable, frame.m_fileId));
+      listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
     if (pos.m_anchorTo==MWAWPosition::Page ||
@@ -1052,8 +1053,8 @@ bool HMWGraph::sendFrame(HMWGraphInternal::Frame const &frame, MWAWPosition pos,
 
       MWAWSubDocumentPtr subdoc
       (new HMWGraphInternal::SubDocument
-       (*this, m_input, framePos, HMWGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
-      m_listener->insertTextBox(pos, subdoc, extras);
+       (*this, input, framePos, HMWGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
+      listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
     if (pos.m_anchorTo==MWAWPosition::Frame && table.m_hasExtraLines)
@@ -1072,7 +1073,7 @@ bool HMWGraph::sendFrame(HMWGraphInternal::Frame const &frame, MWAWPosition pos,
 
 bool HMWGraph::sendEmptyPicture(MWAWPosition pos)
 {
-  if (!m_listener)
+  if (!m_parserState->m_listener)
     return true;
   Vec2f pictSz = pos.size();
   shared_ptr<MWAWPict> pict;
@@ -1092,14 +1093,14 @@ bool HMWGraph::sendEmptyPicture(MWAWPosition pos)
     std::string type;
     if (!pict->getBinary(data,type)) continue;
 
-    m_listener->insertPicture(pictPos, data, type);
+    m_parserState->m_listener->insertPicture(pictPos, data, type);
   }
   return true;
 }
 
 bool HMWGraph::sendPictureFrame(HMWGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras)
 {
-  if (!m_listener) return true;
+  if (!m_parserState->m_listener) return true;
   Vec2f pictSz = pict.m_pos.size();
   if (pictSz[0] < 0) pictSz.setX(-pictSz[0]);
   if (pictSz[1] < 0) pictSz.setY(-pictSz[1]);
@@ -1113,7 +1114,7 @@ bool HMWGraph::sendPictureFrame(HMWGraphInternal::PictureFrame const &pict, MWAW
 
 bool HMWGraph::sendTextBox(HMWGraphInternal::TextBox const &textbox, MWAWPosition pos, WPXPropertyList extras)
 {
-  if (!m_listener) return true;
+  if (!m_parserState->m_listener) return true;
   Vec2f textboxSz = textbox.m_pos.size();
   if (textboxSz[0] < 0) textboxSz.setX(-textboxSz[0]);
   if (textboxSz[1] < 0) textboxSz.setY(-textboxSz[1]);
@@ -1152,15 +1153,15 @@ bool HMWGraph::sendTextBox(HMWGraphInternal::TextBox const &textbox, MWAWPositio
   if (!surfaceColor.isWhite())
     pList.insert("fo:background-color", surfaceColor.str().c_str());
 
-  MWAWSubDocumentPtr subdoc(new HMWGraphInternal::SubDocument(*this, m_input, HMWGraphInternal::SubDocument::Text, textbox.m_textFileId));
-  m_listener->insertTextBox(pos, subdoc, pList);
+  MWAWSubDocumentPtr subdoc(new HMWGraphInternal::SubDocument(*this, m_parserState->m_input, HMWGraphInternal::SubDocument::Text, textbox.m_textFileId));
+  m_parserState->m_listener->insertTextBox(pos, subdoc, pList);
 
   return true;
 }
 
 bool HMWGraph::sendBasicGraph(HMWGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras)
 {
-  if (!m_listener) return true;
+  if (!m_parserState->m_listener) return true;
   Vec2f pictSz = pict.m_pos.size();
   if (pictSz[0] < 0) pictSz.setX(-pictSz[0]);
   if (pictSz[1] < 0) pictSz.setY(-pictSz[1]);
@@ -1272,7 +1273,7 @@ bool HMWGraph::sendBasicGraph(HMWGraphInternal::BasicGraph const &pict, MWAWPosi
 
   pos.setOrigin(pos.origin()-Vec2f(2,2));
   pos.setSize(pos.size()+Vec2f(4,4));
-  m_listener->insertPicture(pos,data, type, extras);
+  m_parserState->m_listener->insertPicture(pos,data, type, extras);
   return true;
 }
 
@@ -1369,7 +1370,8 @@ bool HMWGraph::updateTable(HMWGraphInternal::Table const &table)
 
 bool HMWGraph::sendTableCell(HMWGraphInternal::TableCell const &cell)
 {
-  if (!m_listener)
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener)
     return true;
 
   WPXPropertyList pList;
@@ -1384,16 +1386,16 @@ bool HMWGraph::sendTableCell(HMWGraphInternal::TableCell const &cell)
   for (size_t b = 0; b < cell.m_borders.size(); b++)
     fCell.setBorders(wh[b], cell.m_borders[b]);
   if (cell.m_flags&1) fCell.setVAlignement(MWAWCell::VALIGN_CENTER);
-  m_listener->openTableCell(fCell, pList);
+  listener->openTableCell(fCell, pList);
   m_mainParser->sendText(cell.m_fileId, cell.m_id);
-  m_listener->closeTableCell();
+  listener->closeTableCell();
 
   return true;
 }
 
 bool HMWGraph::sendPreTableData(HMWGraphInternal::Table const &table)
 {
-  if (!m_listener)
+  if (!m_parserState->m_listener)
     return true;
   if (!updateTable(table) || !table.m_hasExtraLines)
     return false;
@@ -1438,7 +1440,7 @@ bool HMWGraph::sendPreTableData(HMWGraphInternal::Table const &table)
       MWAWPosition pos(box[0], box.size(), WPX_POINT);
       pos.setRelativePosition(MWAWPosition::Frame);
       pos.setOrder(-1);
-      m_listener->insertPicture(pos, data, type);
+      m_parserState->m_listener->insertPicture(pos, data, type);
     }
   }
   return true;
@@ -1446,7 +1448,7 @@ bool HMWGraph::sendPreTableData(HMWGraphInternal::Table const &table)
 
 bool HMWGraph::sendTableUnformatted(long fId)
 {
-  if (!m_listener)
+  if (!m_parserState->m_listener)
     return true;
   std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::const_iterator fIt
     = m_state->m_framesMap.find(fId);
@@ -1465,7 +1467,8 @@ bool HMWGraph::sendTableUnformatted(long fId)
 
 bool HMWGraph::sendTable(HMWGraphInternal::Table const &table)
 {
-  if (!m_listener)
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener)
     return true;
   if (!updateTable(table)) {
     // ok no other choice here
@@ -1476,23 +1479,23 @@ bool HMWGraph::sendTable(HMWGraphInternal::Table const &table)
   int nColumns = table.m_columns;
 
   // ok send the data
-  m_listener->openTable(table.m_columnsDim, WPX_POINT);
+  listener->openTable(table.m_columnsDim, WPX_POINT);
   for (size_t r = 0; r < size_t(nRows); r++) {
-    m_listener->openTableRow(table.m_rowsDim[r], WPX_POINT);
+    listener->openTableRow(table.m_rowsDim[r], WPX_POINT);
     for (size_t c = 0; c < size_t(nColumns); c++) {
       size_t cPos = table.getCellPos(int(r),int(c));
       int id = table.m_cellsId[cPos];
       if (id == -1)
-        m_listener->addEmptyTableCell(Vec2i(int(c), int(r)));
+        listener->addEmptyTableCell(Vec2i(int(c), int(r)));
 
       HMWGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
       if (int(r) != cell.m_row || int(c) != cell.m_col) continue;
 
       sendTableCell(cell);
     }
-    m_listener->closeTableRow();
+    listener->closeTableRow();
   }
-  m_listener->closeTable();
+  listener->closeTable();
 
   return true;
 }
