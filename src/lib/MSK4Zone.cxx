@@ -296,7 +296,7 @@ MWAWContentListenerPtr MSK4Zone::createListener
   // create all the pages + an empty page, if we have some remaining data...
   for (int i = 0; i <= numPages; i++) pageList.push_back(ps);
   m_state->m_numPages=numPages+1;
-  MWAWContentListenerPtr res(new MWAWContentListener(getFontConverter(), pageList, interface));
+  MWAWContentListenerPtr res(new MWAWContentListener(*getParserState(), pageList, interface));
   return res;
 }
 

@@ -482,7 +482,7 @@ void FWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

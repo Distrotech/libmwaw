@@ -437,7 +437,7 @@ void MSW1Parser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

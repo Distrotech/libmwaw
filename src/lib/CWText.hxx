@@ -98,7 +98,7 @@ public:
 
 protected:
   /** sends a paragraph property to the listener */
-  void setProperty(CWTextInternal::Paragraph const &ruler);
+  void setProperty(CWTextInternal::Paragraph const &ruler, int listId=-1);
 
   //! sends the zone data to the listener (if it exists )
   bool sendZone(int number);
@@ -127,6 +127,9 @@ protected:
 
   //! send the text zone to the listener
   bool sendText(CWTextInternal::Zone const &zone);
+
+  //! try to find a list id which corresponds to the list beginning in actPos
+  int findListId(CWTextInternal::Zone const &zone, int actListId, long cPos, long &lastPos);
 
   //! try to read a font
   bool readFont(int id, int &posC, MWAWFont &font);

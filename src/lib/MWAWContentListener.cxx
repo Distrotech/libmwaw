@@ -46,6 +46,7 @@
 #include "MWAWList.hxx"
 #include "MWAWPageSpan.hxx"
 #include "MWAWParagraph.hxx"
+#include "MWAWParser.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
 
@@ -60,7 +61,7 @@ enum { PageBreakBit=0x1, ColumnBreakBit=0x2 };
 struct DocumentState {
   //! constructor
   DocumentState(std::vector<MWAWPageSpan> const &pageList) :
-    m_pageList(pageList), m_metaData(), m_footNoteNumber(0), m_endNoteNumber(0), m_newListId(0),
+    m_pageList(pageList), m_metaData(), m_footNoteNumber(0), m_endNoteNumber(0),
     m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments() {
   }
   //! destructor
@@ -73,7 +74,6 @@ struct DocumentState {
   WPXPropertyList m_metaData;
 
   int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
-  int m_newListId; /** a new free id */
 
   bool m_isDocumentStarted /** a flag to know if the document is open */, m_isHeaderFooterStarted /** a flag to know if the header footer is started */;
   std::vector<MWAWSubDocumentPtr> m_subDocuments; /** list of document actually open */
@@ -198,9 +198,9 @@ State::State() :
 }
 }
 
-MWAWContentListener::MWAWContentListener(shared_ptr<MWAWFontConverter> fontConverter, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface) :
+MWAWContentListener::MWAWContentListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface) :
   m_ds(new MWAWContentListenerInternal::DocumentState(pageList)), m_ps(new MWAWContentListenerInternal::State), m_psStack(),
-  m_fontConverter(fontConverter), m_documentInterface(documentInterface)
+  m_parserState(parserState), m_documentInterface(documentInterface)
 {
 }
 
@@ -225,7 +225,7 @@ void MWAWContentListener::insertChar(uint8_t character)
 
 void MWAWContentListener::insertCharacter(unsigned char c)
 {
-  int unicode = m_fontConverter->unicode (m_ps->m_font.id(), c);
+  int unicode = m_parserState.m_fontConverter->unicode (m_ps->m_font.id(), c);
   if (unicode == -1) {
     if (c < 0x20) {
       MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: Find odd char %x\n", int(c)));
@@ -237,21 +237,22 @@ void MWAWContentListener::insertCharacter(unsigned char c)
 
 int MWAWContentListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &input, long endPos)
 {
-  if (!input || !m_fontConverter) {
+  if (!input || !m_parserState.m_fontConverter) {
     MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: input or font converter does not exist!!!!\n"));
     return 0;
   }
   long debPos=input->tell();
   int fId = m_ps->m_font.id();
-  int unicode = endPos==debPos ? m_fontConverter->unicode (fId, c) :
-                m_fontConverter->unicode (fId, c, input);
+  int unicode = endPos==debPos ?
+                m_parserState.m_fontConverter->unicode (fId, c) :
+                m_parserState.m_fontConverter->unicode (fId, c, input);
 
   long pos=input->tell();
   if (endPos > 0 && pos > endPos) {
     MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: problem reading a character\n"));
     pos = debPos;
     input->seek(pos, WPX_SEEK_SET);
-    unicode = m_fontConverter->unicode (fId, c);
+    unicode = m_parserState.m_fontConverter->unicode (fId, c);
   }
   if (unicode == -1) {
     if (c < 0x20) {
@@ -438,19 +439,6 @@ void MWAWContentListener::setParagraph(MWAWParagraph const &para)
   if (para==m_ps->m_paragraph) return;
 
   m_ps->m_paragraph=para;
-
-  int listIndex=*para.m_listLevelIndex;
-  if (listIndex <= 0) return;
-
-  // FIXME: remove me when the list management is changed
-  MWAWList::Level level = *para.m_listLevel;
-  shared_ptr<MWAWList> list=m_ps->m_list;
-  if (!list) {
-    list.reset(new MWAWList);
-    list->set(listIndex, level);
-    setList(list);
-  } else
-    list->set(listIndex, level);
 }
 
 MWAWParagraph const &MWAWContentListener::getParagraph() const
@@ -464,13 +452,6 @@ MWAWParagraph const &MWAWContentListener::getParagraph() const
 void MWAWContentListener::setList(shared_ptr<MWAWList> list)
 {
   m_ps->m_list=list;
-  if (list && list->getId() <= 0 && list->numLevels())
-    list->setId(++m_ds->m_newListId);
-}
-
-shared_ptr<MWAWList> MWAWContentListener::getList() const
-{
-  return m_ps->m_list;
 }
 
 ///////////////////
@@ -896,6 +877,23 @@ void MWAWContentListener::_closeListElement()
     _closePageSpan();
 }
 
+int MWAWContentListener::_getListId() const
+{
+  size_t newLevel= (size_t) m_ps->m_paragraph.m_listLevelIndex.get();
+  if (newLevel <= 0) return -1;
+  int newListId = m_ps->m_paragraph.m_listId.get();
+  if (newListId > 0) return newListId;
+  static bool first = true;
+  if (first) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::_getListId: the list id is not set, try to find a new one\n"));
+    first = false;
+  }
+  shared_ptr<MWAWList> list=m_parserState.m_listManager->getNewList
+                            (m_ps->m_list, int(newLevel), *m_ps->m_paragraph.m_listLevel);
+  if (!list) return -1;
+  return list->getId();
+}
+
 void MWAWContentListener::_changeList()
 {
   if (m_ps->m_isParagraphOpened)
@@ -904,12 +902,14 @@ void MWAWContentListener::_changeList()
   if (!m_ps->m_isSectionOpened && !m_ps->m_inSubDocument && !m_ps->m_isTableOpened)
     _openSection();
 
-  // FIXME: even if nobody really care, if we close an ordered or an unordered
-  //      elements, we must keep the previous to close this part...
-  size_t actualListLevel = m_ps->m_listOrderedLevels.size();
+  size_t actualLevel = m_ps->m_listOrderedLevels.size();
   size_t newLevel= (size_t) m_ps->m_paragraph.m_listLevelIndex.get();
-  for (size_t i=actualListLevel; i > newLevel; i--) {
-    if (m_ps->m_listOrderedLevels[i-1])
+  int newListId = newLevel>0 ? _getListId() : -1;
+  bool changeList = newLevel &&
+                    (m_ps->m_list && m_ps->m_list->getId()!=newListId);
+  size_t minLevel = changeList ? 0 : newLevel;
+  while (actualLevel > minLevel) {
+    if (m_ps->m_listOrderedLevels[--actualLevel])
       m_documentInterface->closeOrderedListLevel();
     else
       m_documentInterface->closeUnorderedListLevel();
@@ -917,40 +917,31 @@ void MWAWContentListener::_changeList()
 
   WPXPropertyList propList;
   if (newLevel) {
-    if (!m_ps->m_list.get()) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::_handleListChange: can not find any list\n"));
+    shared_ptr<MWAWList> theList;
+    bool isSend = false;
+
+    if (m_ps->m_list && m_ps->m_list->getId()==newListId)
+      theList=m_ps->m_list;
+    else {
+      isSend = m_parserState.m_listManager->send(newListId, *m_documentInterface);
+      theList=m_parserState.m_listManager->getList(newListId);
+    }
+    if (!theList) {
+      MWAW_DEBUG_MSG(("MWAWContentListener::_changeList: can not find any list\n"));
+      m_ps->m_listOrderedLevels.resize(actualLevel);
       return;
     }
+    m_ps->m_list = theList;
     m_ps->m_list->setLevel((int)newLevel);
     m_ps->m_list->openElement();
-
-    if (m_ps->m_list->mustSendLevel((int)newLevel)) {
-      if (actualListLevel == newLevel) {
-        if (m_ps->m_listOrderedLevels[actualListLevel-1])
-          m_documentInterface->closeOrderedListLevel();
-        else
-          m_documentInterface->closeUnorderedListLevel();
-        actualListLevel--;
-      }
-      if (newLevel==1) {
-        // we must change the listID for writerperfect
-        int prevId;
-        if ((prevId=m_ps->m_list->getPreviousId()) > 0)
-          m_ps->m_list->setId(prevId);
-        else
-          m_ps->m_list->setId(++m_ds->m_newListId);
-      }
-      m_ps->m_list->sendTo(*m_documentInterface, (int) newLevel);
-    }
-
     propList.insert("libwpd:id", m_ps->m_list->getId());
     m_ps->m_list->closeElement();
   }
 
-  if (actualListLevel == newLevel) return;
-
   m_ps->m_listOrderedLevels.resize(newLevel, false);
-  for (size_t i=actualListLevel+1; i<= newLevel; i++) {
+  if (actualLevel == newLevel) return;
+
+  for (size_t i=actualLevel+1; i<= newLevel; i++) {
     bool ordered = m_ps->m_list->isNumeric(int(i));
     m_ps->m_listOrderedLevels[i-1] = ordered;
     if (ordered)
@@ -980,7 +971,7 @@ void MWAWContentListener::_openSpan()
   }
 
   WPXPropertyList propList;
-  m_ps->m_font.addTo(propList, m_fontConverter);
+  m_ps->m_font.addTo(propList, m_parserState.m_fontConverter);
 
   m_documentInterface->openSpan(propList);
 

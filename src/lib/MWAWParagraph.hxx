@@ -92,19 +92,8 @@ public:
   /** the line spacing type: fixed or at least */
   enum LineSpacingType { Fixed, AtLeast};
 
-  typedef MWAWList::Level ListLevel;
   //! constructor
-  MWAWParagraph() : m_marginsUnit(WPX_INCH), m_spacingsInterlineUnit(WPX_PERCENT), m_spacingsInterlineType(Fixed),
-    m_tabs(), m_justify(JustificationLeft),
-    m_breakStatus(0), m_listLevelIndex(0), m_listLevel(), m_backgroundColor(MWAWColor::white()),
-    m_borders(), m_extra("") {
-    for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
-    m_spacings[0] = 1.0; // interline normal
-    for(int i = 0; i < 3; i++) {
-      m_margins[i].setSet(false);
-      m_spacings[i].setSet(false);
-    }
-  }
+  MWAWParagraph();
   //! destructor
   virtual ~MWAWParagraph();
   //! operator==
@@ -131,26 +120,7 @@ public:
   void addTabsTo(WPXPropertyListVector &propList, double decalX=0.0) const;
 
   //! insert the set values of para in the actual paragraph
-  void insert(MWAWParagraph const &para) {
-    for(int i = 0; i < 3; i++) {
-      m_margins[i].insert(para.m_margins[i]);
-      m_spacings[i].insert(para.m_spacings[i]);
-    }
-    m_marginsUnit.insert(para.m_marginsUnit);
-    m_spacingsInterlineUnit.insert(para.m_spacingsInterlineUnit);
-    m_spacingsInterlineType.insert(para.m_spacingsInterlineType);
-    m_tabs.insert(para.m_tabs);
-    m_justify.insert(para.m_justify);
-    m_breakStatus.insert(para.m_breakStatus);
-    m_listLevelIndex.insert(para.m_listLevelIndex);
-    m_listLevel.insert(para.m_listLevel);
-    m_backgroundColor.insert(para.m_backgroundColor);
-    if (m_borders.size() < para.m_borders.size())
-      m_borders.resize(para.m_borders.size());
-    for (size_t i = 0; i < para.m_borders.size(); i++)
-      m_borders[i].insert(para.m_borders[i]);
-    m_extra += para.m_extra;
-  }
+  void insert(MWAWParagraph const &para);
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, MWAWParagraph const &ft);
 
@@ -182,8 +152,10 @@ public:
 
   /** the actual level index */
   Variable<int> m_listLevelIndex;
+  /** the list id (if know ) */
+  Variable<int> m_listId;
   /** the actual level */
-  Variable<ListLevel> m_listLevel;
+  Variable<MWAWListLevel> m_listLevel;
 
   //! the background color
   Variable<MWAWColor> m_backgroundColor;

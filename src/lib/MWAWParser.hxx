@@ -50,6 +50,8 @@ class MWAWContentListener;
 typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWListManager;
+typedef shared_ptr<MWAWListManager> MWAWListManagerPtr;
 class MWAWRSRCParser;
 typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
 
@@ -73,6 +75,8 @@ public:
 
   //! the fonct converter
   MWAWFontConverterPtr m_fontConverter;
+  //! the list manager
+  MWAWListManagerPtr m_listManager;
   //! the listener
   MWAWContentListenerPtr m_listener;
 

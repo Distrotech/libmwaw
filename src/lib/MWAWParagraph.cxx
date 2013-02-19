@@ -115,6 +115,19 @@ std::ostream &operator<<(std::ostream &o, MWAWTabStop const &tab)
 ////////////////////////////////////////////////////////////
 // paragraph
 ////////////////////////////////////////////////////////////
+MWAWParagraph::MWAWParagraph() : m_marginsUnit(WPX_INCH), m_spacingsInterlineUnit(WPX_PERCENT), m_spacingsInterlineType(Fixed),
+  m_tabs(), m_justify(JustificationLeft), m_breakStatus(0),
+  m_listLevelIndex(0), m_listId(-1), m_listLevel(), m_backgroundColor(MWAWColor::white()),
+  m_borders(), m_extra("")
+{
+  for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
+  m_spacings[0] = 1.0; // interline normal
+  for(int i = 0; i < 3; i++) {
+    m_margins[i].setSet(false);
+    m_spacings[i].setSet(false);
+  }
+}
+
 MWAWParagraph::~MWAWParagraph()
 {
 }
@@ -140,6 +153,7 @@ bool MWAWParagraph::operator!=(MWAWParagraph const &para) const
   }
   if ((*m_breakStatus) != *(para.m_breakStatus) ||
       *(m_listLevelIndex) != *(para.m_listLevelIndex) ||
+      *(m_listId) != *(para.m_listId) ||
       m_listLevel->cmp(*(para.m_listLevel)) ||
       *(m_backgroundColor) != *(para.m_backgroundColor))
     return true;
@@ -151,6 +165,29 @@ bool MWAWParagraph::operator!=(MWAWParagraph const &para) const
   }
 
   return false;
+}
+
+void MWAWParagraph::insert(MWAWParagraph const &para)
+{
+  for(int i = 0; i < 3; i++) {
+    m_margins[i].insert(para.m_margins[i]);
+    m_spacings[i].insert(para.m_spacings[i]);
+  }
+  m_marginsUnit.insert(para.m_marginsUnit);
+  m_spacingsInterlineUnit.insert(para.m_spacingsInterlineUnit);
+  m_spacingsInterlineType.insert(para.m_spacingsInterlineType);
+  m_tabs.insert(para.m_tabs);
+  m_justify.insert(para.m_justify);
+  m_breakStatus.insert(para.m_breakStatus);
+  m_listLevelIndex.insert(para.m_listLevelIndex);
+  m_listId.insert(para.m_listId);
+  m_listLevel.insert(para.m_listLevel);
+  m_backgroundColor.insert(para.m_backgroundColor);
+  if (m_borders.size() < para.m_borders.size())
+    m_borders.resize(para.m_borders.size());
+  for (size_t i = 0; i < para.m_borders.size(); i++)
+    m_borders[i].insert(para.m_borders[i]);
+  m_extra += para.m_extra;
 }
 
 bool MWAWParagraph::hasBorders() const
@@ -338,6 +375,7 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
   }
   if (!pp.m_backgroundColor.get().isWhite())
     o << "backgroundColor=" << pp.m_backgroundColor.get() << ",";
+  if (*pp.m_listId >= 0) o << "listId=" << *pp.m_listId << ",";
   if (pp.m_listLevelIndex.get() >= 1)
     o << pp.m_listLevel.get() << ":" << pp.m_listLevelIndex.get() <<",";
 

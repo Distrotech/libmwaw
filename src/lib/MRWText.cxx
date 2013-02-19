@@ -445,7 +445,7 @@ struct Table {
 //! Internal: the state of a MRWText
 struct State {
   //! constructor
-  State() : m_version(-1), m_textZoneMap(), m_numPages(-1), m_actualPage(0) {
+  State() : m_version(-1), m_textZoneMap(), m_basicListId(-1), m_numPages(-1), m_actualPage(0) {
   }
 
   //! return a reference to a textzone ( if zone not exists, created it )
@@ -461,6 +461,8 @@ struct State {
   mutable int m_version;
   //! a map id -> textZone
   std::map<int,Zone> m_textZoneMap;
+  //! the basic list id
+  int m_basicListId;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
@@ -1791,12 +1793,23 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         if (!val) break;
         if (val & 0x1000) {
           val &= 0xFFFFEFFF;
-          MWAWList::Level theLevel;
-          theLevel.m_type = MWAWList::Level::BULLET;
-          theLevel.m_labelWidth=0.1;
-          MWAWContentListener::appendUnicode(0x2022, theLevel.m_bullet);
+          if (m_state->m_basicListId <= 0) {
+            // we need to create a basic list
+            MWAWListLevel theLevel;
+            theLevel.m_type = MWAWListLevel::BULLET;
+            theLevel.m_labelWidth=0.1;
+            MWAWContentListener::appendUnicode(0x2022, theLevel.m_bullet);
+            shared_ptr<MWAWList> list;
+            list = m_parserState->m_listManager->getNewList(list, 1, theLevel);
+            if (!list) {
+              MWAW_DEBUG_MSG(("MRWText::readRulers: can create a listn for bullet\n"));
+              f << "###";
+              break;
+            } else
+              m_state->m_basicListId = list->getId();
+          }
           para.m_listLevelIndex = 1;
-          para.m_listLevel=theLevel;
+          para.m_listId=m_state->m_basicListId;
         }
         if (val)
           f << "flag?=" << std::hex << val << std::dec << ",";

@@ -133,61 +133,61 @@ void Paragraph::updateListLevel()
   int lev = m_listLevelIndex.get();
   if (m_labelType) lev++;
   m_listLevelIndex = lev;
-  MWAWList::Level theLevel;
+  MWAWListLevel theLevel;
   switch(m_labelType) {
   case 0:
-    theLevel.m_type = MWAWList::Level::NONE;
+    theLevel.m_type = MWAWListLevel::NONE;
     break;
   case 1: // diamond
-    theLevel.m_type = MWAWList::Level::BULLET;
+    theLevel.m_type = MWAWListLevel::BULLET;
     MWAWContentListener::appendUnicode(0x25c7, theLevel.m_bullet);
     break;
   case 3: // checkbox
-    theLevel.m_type = MWAWList::Level::BULLET;
+    theLevel.m_type = MWAWListLevel::BULLET;
     MWAWContentListener::appendUnicode(0x2610, theLevel.m_bullet);
     break;
   case 4: {
     theLevel.m_suffix = (lev <= 3) ? "." : ")";
-    if (lev == 1) theLevel.m_type = MWAWList::Level::UPPER_ROMAN;
-    else if (lev == 2) theLevel.m_type = MWAWList::Level::UPPER_ALPHA;
-    else if (lev == 3) theLevel.m_type = MWAWList::Level::DECIMAL;
-    else if (lev == 4) theLevel.m_type =  MWAWList::Level::LOWER_ALPHA;
+    if (lev == 1) theLevel.m_type = MWAWListLevel::UPPER_ROMAN;
+    else if (lev == 2) theLevel.m_type = MWAWListLevel::UPPER_ALPHA;
+    else if (lev == 3) theLevel.m_type = MWAWListLevel::DECIMAL;
+    else if (lev == 4) theLevel.m_type =  MWAWListLevel::LOWER_ALPHA;
     else if ((lev%3)==2) {
       theLevel.m_prefix = "(";
-      theLevel.m_type = MWAWList::Level::DECIMAL;
+      theLevel.m_type = MWAWListLevel::DECIMAL;
     } else if ((lev%3)==0) {
       theLevel.m_prefix = "(";
-      theLevel.m_type = MWAWList::Level::LOWER_ALPHA;
+      theLevel.m_type = MWAWListLevel::LOWER_ALPHA;
     } else
-      theLevel.m_type = MWAWList::Level::LOWER_ROMAN;
+      theLevel.m_type = MWAWListLevel::LOWER_ROMAN;
     break;
   }
   case 5: // leader
-    theLevel.m_type = MWAWList::Level::BULLET;
+    theLevel.m_type = MWAWListLevel::BULLET;
     theLevel.m_bullet = "+"; // in fact + + and -
     break;
   case 6: // legal
-    theLevel.m_type = MWAWList::Level::DECIMAL;
+    theLevel.m_type = MWAWListLevel::DECIMAL;
     theLevel.m_suffix = "."; // fixme in fact 1.2.2.
     break;
   case 7:
-    theLevel.m_type = MWAWList::Level::UPPER_ALPHA;
+    theLevel.m_type = MWAWListLevel::UPPER_ALPHA;
     break;
   case 8:
-    theLevel.m_type = MWAWList::Level::LOWER_ALPHA;
+    theLevel.m_type = MWAWListLevel::LOWER_ALPHA;
     break;
   case 9:
-    theLevel.m_type = MWAWList::Level::DECIMAL;
+    theLevel.m_type = MWAWListLevel::DECIMAL;
     break;
   case 10:
-    theLevel.m_type = MWAWList::Level::UPPER_ROMAN;
+    theLevel.m_type = MWAWListLevel::UPPER_ROMAN;
     break;
   case 11:
-    theLevel.m_type = MWAWList::Level::LOWER_ROMAN;
+    theLevel.m_type = MWAWListLevel::LOWER_ROMAN;
     break;
   case 2: // bullet
   default:
-    theLevel.m_type = MWAWList::Level::BULLET;
+    theLevel.m_type = MWAWListLevel::BULLET;
     MWAWContentListener::appendUnicode(0x2022, theLevel.m_bullet);
     break;
   }
@@ -1248,6 +1248,8 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
     nextSection = 0;
     nextSectionPos = zone.m_sectionList[0].m_pos;
   }
+  int actListId=-1;
+  long actListCPos=-1;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   std::multimap<long, CWTextInternal::PLC>::const_iterator plcIt;
@@ -1317,10 +1319,15 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
           }
           listener->setFont(zone.m_fontList[size_t(plc.m_id)]);
           break;
-        case CWTextInternal::P_Ruler:
-          if (plc.m_id >= 0 && plc.m_id < numParagraphs)
-            setProperty(m_state->m_paragraphsList[(size_t) plc.m_id]);
+        case CWTextInternal::P_Ruler: {
+          if (plc.m_id < 0 || plc.m_id >= numParagraphs)
+            break;
+          CWTextInternal::Paragraph const &para = m_state->m_paragraphsList[(size_t) plc.m_id];
+          if (*para.m_listLevelIndex>0 && actC >= actListCPos)
+            actListId=findListId(zone, actListId, actC, actListCPos);
+          setProperty(para, actListId);
           break;
+        }
         case CWTextInternal::P_Token: {
           if (plc.m_id < 0 || plc.m_id >= int(zone.m_tokenList.size())) {
             MWAW_DEBUG_MSG(("CWText::sendText: can not find the token %d\n", plc.m_id));
@@ -1460,6 +1467,43 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
   }
 
   return true;
+}
+
+int CWText::findListId(CWTextInternal::Zone const &zone, int actListId, long actC, long &lastPos)
+{
+  // retrieve the actual list
+  shared_ptr<MWAWList> actList;
+  if (actListId>0)
+    actList = m_parserState->m_listManager->getList(actListId);
+
+  int numParagraphs = int(m_state->m_paragraphsList.size());
+  std::multimap<long, CWTextInternal::PLC>::const_iterator plcIt;
+  plcIt=zone.m_plcMap.find(actC);
+  int listId = -1;
+  int maxLevelSet = -1;
+  // find the last position which can correspond to the actual list
+  while (plcIt!=zone.m_plcMap.end()) {
+    lastPos = plcIt->first;
+    CWTextInternal::PLC const &plc = plcIt++->second;
+    if (plc.m_type != CWTextInternal::P_Ruler)
+      continue;
+    if (plc.m_id < 0 || plc.m_id >= numParagraphs)
+      break;
+    CWTextInternal::Paragraph const &para=m_state->m_paragraphsList[(size_t) plc.m_id];
+    int level = *para.m_listLevelIndex;
+    if (level<=0)
+      continue;
+    shared_ptr<MWAWList> newList =
+      m_parserState->m_listManager->getNewList(actList, level, *para.m_listLevel);
+    if (!newList)
+      break;
+    if (level <= maxLevelSet && newList->getId() != listId)
+      break;
+    if (level > maxLevelSet) maxLevelSet=level;
+    listId = newList->getId();
+    actList = newList;
+  }
+  return listId;
 }
 
 ////////////////////////////////////////////////////////////
@@ -1827,10 +1871,16 @@ bool CWText::readParagraph(int id)
   return true;
 }
 
-void CWText::setProperty(CWTextInternal::Paragraph const &ruler)
+void CWText::setProperty(CWTextInternal::Paragraph const &ruler, int listId)
 {
   if (!m_parserState->m_listener) return;
-  m_parserState->m_listener->setParagraph(ruler);
+  if (listId <= 0) {
+    m_parserState->m_listener->setParagraph(ruler);
+    return;
+  }
+  MWAWParagraph para=ruler;
+  para.m_listId=listId;
+  m_parserState->m_listener->setParagraph(para);
 }
 
 bool CWText::sendZone(int number)

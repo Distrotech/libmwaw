@@ -40,7 +40,10 @@
 
 #include "MWAWList.hxx"
 
-void MWAWList::Level::addTo(WPXPropertyList &propList, int startVal) const
+////////////////////////////////////////////////////////////
+// list level functions
+////////////////////////////////////////////////////////////
+void MWAWListLevel::addTo(WPXPropertyList &propList, int startVal) const
 {
   propList.insert("text:min-label-width", m_labelWidth);
   propList.insert("text:space-before", m_labelBeforeSpace);
@@ -55,7 +58,7 @@ void MWAWList::Level::addTo(WPXPropertyList &propList, int startVal) const
     if (m_bullet.len())
       propList.insert("text:bullet-char", m_bullet.cstr());
     else {
-      MWAW_DEBUG_MSG(("MWAWList::Level::addTo: the bullet char is not defined\n"));
+      MWAW_DEBUG_MSG(("MWAWListLevel::addTo: the bullet char is not defined\n"));
       propList.insert("text:bullet-char", "*");
     }
     break;
@@ -75,13 +78,11 @@ void MWAWList::Level::addTo(WPXPropertyList &propList, int startVal) const
     break;
   case DEFAULT:
   default:
-    MWAW_DEBUG_MSG(("MWAWList::Level::addTo: the level type is not set\n"));
+    MWAW_DEBUG_MSG(("MWAWListLevel::addTo: the level type is not set\n"));
   }
-
-  m_sendToInterface = true;
 }
 
-int MWAWList::Level::cmp(MWAWList::Level const &levl) const
+int MWAWListLevel::cmp(MWAWListLevel const &levl) const
 {
   int diff = int(m_type)-int(levl.m_type);
   if (diff) return diff;
@@ -103,35 +104,35 @@ int MWAWList::Level::cmp(MWAWList::Level const &levl) const
   return 0;
 }
 
-std::ostream &operator<<(std::ostream &o, MWAWList::Level const &ft)
+std::ostream &operator<<(std::ostream &o, MWAWListLevel const &ft)
 {
   o << "ListLevel[";
   switch(ft.m_type) {
-  case MWAWList::Level::BULLET:
+  case MWAWListLevel::BULLET:
     o << "bullet='" << ft.m_bullet.cstr() <<"'";
     break;
-  case MWAWList::Level::DECIMAL:
+  case MWAWListLevel::DECIMAL:
     o << "decimal";
     break;
-  case MWAWList::Level::LOWER_ALPHA:
+  case MWAWListLevel::LOWER_ALPHA:
     o << "alpha";
     break;
-  case MWAWList::Level::UPPER_ALPHA:
+  case MWAWListLevel::UPPER_ALPHA:
     o << "ALPHA";
     break;
-  case MWAWList::Level::LOWER_ROMAN:
+  case MWAWListLevel::LOWER_ROMAN:
     o << "roman";
     break;
-  case MWAWList::Level::UPPER_ROMAN:
+  case MWAWListLevel::UPPER_ROMAN:
     o << "ROMAN";
     break;
-  case MWAWList::Level::NONE:
+  case MWAWListLevel::NONE:
     break;
-  case MWAWList::Level::DEFAULT:
+  case MWAWListLevel::DEFAULT:
   default:
     o << "####";
   }
-  if (ft.m_type != MWAWList::Level::BULLET && ft.m_startValue)
+  if (ft.m_type != MWAWListLevel::BULLET && ft.m_startValue)
     o << ",startVal= " << ft.m_startValue;
   if (ft.m_prefix.len()) o << ", prefix='" << ft.m_prefix.cstr()<<"'";
   if (ft.m_suffix.len()) o << ", suffix='" << ft.m_suffix.cstr()<<"'";
@@ -142,25 +143,63 @@ std::ostream &operator<<(std::ostream &o, MWAWList::Level const &ft)
   return o;
 }
 
-void MWAWList::setId(int newId)
+////////////////////////////////////////////////////////////
+// list functions
+////////////////////////////////////////////////////////////
+void MWAWList::resize(int level)
 {
-  if (m_id == newId) return;
-  m_previousId = m_id;
-  m_id = newId;
-  for (size_t i = 0; i < m_levels.size(); i++)
-    m_levels[i].resetSendToInterface();
+  if (level < 0) {
+    MWAW_DEBUG_MSG(("MWAWList::resize: level %d can not be negatif\n",level));
+    return;
+  }
+  if (level == int(m_levels.size()))
+    return;
+  m_levels.resize(size_t(level));
+  m_actualIndices.resize(size_t(level), 0);
+  m_nextIndices.resize(size_t(level), 1);
+  if (m_actLevel >= level)
+    m_actLevel=level-1;
 }
 
-bool MWAWList::mustSendLevel(int level) const
+void MWAWList::updateIndicesFrom(MWAWList const &list)
 {
-  if (level <= 0 || level > int(m_levels.size()) ||
-      m_levels[size_t(level-1)].isDefault()) {
-    MWAW_DEBUG_MSG(("MWAWList::mustResentLevel: level %d is not defined\n",level));
+  size_t maxLevel=list.m_levels.size();
+  if (maxLevel>m_levels.size())
+    maxLevel=m_levels.size();
+  for (size_t level=0 ; level < maxLevel; level++) {
+    m_actualIndices[level]=list.m_actualIndices[level];
+    m_nextIndices[level]=list.m_nextIndices[level];
+  }
+}
+
+bool MWAWList::isCompatibleWith(int levl, MWAWListLevel const &level) const
+{
+  if (levl < 1) {
+    MWAW_DEBUG_MSG(("MWAWList::isCompatibleWith: level %d must be positive\n",levl));
     return false;
   }
-  return !m_levels[size_t(level-1)].isSendToInterface();
+
+  return levl > int(m_levels.size()) ||
+         level.cmp(m_levels[size_t(levl-1)])==0;
 }
 
+bool MWAWList::isCompatibleWith(MWAWList const &newList) const
+{
+  size_t maxLevel=newList.m_levels.size();
+  if (maxLevel>m_levels.size())
+    maxLevel=m_levels.size();
+  for (size_t level=0 ; level < maxLevel; level++) {
+    if (m_levels[level].cmp(newList.m_levels[level])!=0)
+      return false;
+  }
+  return true;
+}
+
+void MWAWList::setId(int newId) const
+{
+  m_id[0] = newId;
+  m_id[1] = newId+1;
+}
 
 void MWAWList::sendTo(WPXDocumentInterface &docInterface, int level) const
 {
@@ -170,16 +209,14 @@ void MWAWList::sendTo(WPXDocumentInterface &docInterface, int level) const
     return;
   }
 
-  if (m_id==-1) {
+  if (getId()==-1) {
     MWAW_DEBUG_MSG(("MWAWList::sendTo: the list id is not set\n"));
     static int falseId = 1000;
-    m_id = falseId++;
+    setId(falseId+=2);
   }
 
-  if (m_levels[size_t(level-1)].isSendToInterface()) return;
-
   WPXPropertyList propList;
-  propList.insert("libwpd:id", m_id);
+  propList.insert("libwpd:id", getId());
   propList.insert("libwpd:level", level);
   m_levels[size_t(level-1)].addTo(propList, m_actualIndices[size_t(level-1)]);
   if (!m_levels[size_t(level-1)].isNumeric())
@@ -188,17 +225,13 @@ void MWAWList::sendTo(WPXDocumentInterface &docInterface, int level) const
     docInterface.defineOrderedListLevel(propList);
 }
 
-void MWAWList::set(int levl, Level const &level)
+void MWAWList::set(int levl, MWAWListLevel const &level)
 {
   if (levl < 1) {
     MWAW_DEBUG_MSG(("MWAWList::set: can not set level %d\n",levl));
     return;
   }
-  if (levl > int(m_levels.size())) {
-    m_levels.resize(size_t(levl));
-    m_actualIndices.resize(size_t(levl), 0);
-    m_nextIndices.resize(size_t(levl), 1);
-  }
+  if (levl > int(m_levels.size())) resize(levl);
   int needReplace = m_levels[size_t(levl-1)].cmp(level) != 0 ||
                     (level.m_startValue && m_nextIndices[size_t(levl-1)] !=level.getStartValue());
   if (level.m_startValue > 0 || level.m_type != m_levels[size_t(levl-1)].m_type) {
@@ -240,4 +273,92 @@ bool MWAWList::isNumeric(int levl) const
 
   return m_levels[size_t(levl-1)].isNumeric();
 }
+
+////////////////////////////////////////////////////////////
+// list manager function
+////////////////////////////////////////////////////////////
+bool MWAWListManager::send(int index, WPXDocumentInterface &docInterface) const
+{
+  if (index <= 0) return false;
+  if (index >= int(m_sendIdList.size()))
+    m_sendIdList.resize(size_t(index)+1,false);
+#ifndef OLDWRITERPERFECT
+  /** old version of writerperfect do no use libwpd::id when we open a new list,
+      so each time we change to a new list, we must redefine it...
+   */
+  if (m_sendIdList[size_t(index)])
+    return false;
+#endif
+  size_t mainId=size_t(index-1)/2;
+  if (mainId >= m_listList.size()) {
+    MWAW_DEBUG_MSG(("MWAWListManager::send: can not find list %d\n", index));
+    return false;
+  }
+
+  m_sendIdList[size_t(index)]=true;
+  MWAWList const &list=m_listList[mainId];
+  if (list.getId()!=index) list.swapId();
+  for (int l=1; l <= list.numLevels(); l++)
+    list.sendTo(docInterface, l);
+  return true;
+}
+
+void MWAWListManager::resetSend(size_t id) const
+{
+  if (2*id+1>=m_sendIdList.size())
+    return;
+  m_sendIdList[2*id+1]=false;
+  if (2*id+2>=m_sendIdList.size())
+    return;
+  m_sendIdList[2*id+2]=false;
+}
+
+shared_ptr<MWAWList> MWAWListManager::getList(int index) const
+{
+  shared_ptr<MWAWList> res;
+  if (index <= 0) return res;
+  size_t mainId=size_t(index-1)/2;
+  if (mainId < m_listList.size()) {
+    res.reset(new MWAWList(m_listList[mainId]));
+    if (res->getId()!=index)
+      res->swapId();
+  }
+  return res;
+}
+
+shared_ptr<MWAWList> MWAWListManager::getNewList(shared_ptr<MWAWList> actList, int levl, MWAWListLevel const &level)
+{
+  if (actList && actList->isCompatibleWith(levl, level)) {
+    actList->set(levl, level);
+    int index=actList->getId();
+    size_t mainId=size_t(index-1)/2;
+    if (mainId < m_listList.size() && m_listList[mainId].numLevels() < levl) {
+      m_listList[mainId].set(levl, level);
+      resetSend(mainId);
+    }
+    return actList;
+  }
+  MWAWList res;
+  if (actList) {
+    res = *actList;
+    res.resize(levl);
+  }
+  size_t numList=m_listList.size();
+  res.setId(int(2*numList+1));
+  res.set(levl, level);
+  for (size_t l=0; l < numList; l++) {
+    if (!m_listList[l].isCompatibleWith(res))
+      continue;
+    if (m_listList[l].numLevels() < levl) {
+      m_listList[l].set(levl, level);
+      resetSend(l);
+    }
+    shared_ptr<MWAWList> copy(new MWAWList(m_listList[l]));
+    copy->updateIndicesFrom(res);
+    return copy;
+  }
+  m_listList.push_back(res);
+  return shared_ptr<MWAWList>(new MWAWList(res));
+}
+
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

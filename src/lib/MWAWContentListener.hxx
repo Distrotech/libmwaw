@@ -47,11 +47,11 @@ class WPXPropertyListVector;
 
 class MWAWCell;
 class MWAWFont;
-class MWAWFontConverter;
 class MWAWInputStream;
 class MWAWList;
 class MWAWPageSpan;
 class MWAWParagraph;
+class MWAWParserState;
 class MWAWPosition;
 class MWAWSubDocument;
 
@@ -70,7 +70,7 @@ public:
   enum BreakType { PageBreak=0, SoftPageBreak, ColumnBreak };
 
   /** constructor */
-  MWAWContentListener(shared_ptr<MWAWFontConverter> fontConverter, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
+  MWAWContentListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
   /** destructor */
   virtual ~MWAWContentListener();
 
@@ -134,8 +134,6 @@ public:
   // ------ list format -----------
   /** function to set the actual list */
   void setList(shared_ptr<MWAWList> list);
-  /** returns the current list */
-  shared_ptr<MWAWList> getList() const;
 
   // ------- fields ----------------
   /** Defines some basic type for field */
@@ -215,9 +213,17 @@ protected:
   void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
   void _resetParagraphState(const bool isListElement=false);
 
+  /** open a list level */
   void _openListElement();
+  /** close a list level */
   void _closeListElement();
+  /** update the list so that it corresponds to the actual level */
   void _changeList();
+  /** low level: find a list id which corresponds to actual list and a change of level.
+
+  \note called when the list id is not set
+  */
+  int _getListId() const;
 
   void _openSpan();
   void _closeSpan();
@@ -235,10 +241,15 @@ protected:
   void _popParsingState();
 
 protected:
-  shared_ptr<MWAWContentListenerInternal::DocumentState> m_ds; // main parse state
-  shared_ptr<MWAWContentListenerInternal::State> m_ps; // parse state
+  //! the main parse state
+  shared_ptr<MWAWContentListenerInternal::DocumentState> m_ds;
+  //! the actual local parse state
+  shared_ptr<MWAWContentListenerInternal::State> m_ps;
+  //! stack of local state
   std::vector<shared_ptr<MWAWContentListenerInternal::State> > m_psStack;
-  shared_ptr<MWAWFontConverter> m_fontConverter; // the font convertor
+  //! the parser state
+  MWAWParserState &m_parserState;
+  //! the document interface
   WPXDocumentInterface *m_documentInterface;
 
 private:

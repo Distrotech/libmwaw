@@ -294,7 +294,7 @@ void DMParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_numPages = int(pageList.size());
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(getFontConverter(), pageList, documentInterface));
+  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }

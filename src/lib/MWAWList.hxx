@@ -43,95 +43,96 @@
 class WPXPropertyList;
 class WPXDocumentInterface;
 
+/** small structure to keep information about a list level */
+struct MWAWListLevel {
+  /** the type of the level */
+  enum Type { DEFAULT, NONE, BULLET, DECIMAL, LOWER_ALPHA, UPPER_ALPHA,
+              LOWER_ROMAN, UPPER_ROMAN
+            };
+
+  /** basic constructor */
+  MWAWListLevel() : m_type(NONE), m_labelBeforeSpace(0.0), m_labelWidth(0.1), m_labelAfterSpace(0.0), m_startValue(0),
+    m_prefix(""), m_suffix(""), m_bullet("") {
+  }
+  /** destructor */
+  ~MWAWListLevel() {}
+
+  /** returns true if the level type was not set */
+  bool isDefault() const {
+    return m_type ==DEFAULT;
+  }
+  /** returns true if the list is decimal, alpha or roman */
+  bool isNumeric() const {
+    return m_type !=DEFAULT && m_type !=NONE && m_type != BULLET;
+  }
+  /** add the information of this level in the propList */
+  void addTo(WPXPropertyList &propList, int startVal) const;
+
+  /** returns the start value (if set) or 1 */
+  int getStartValue() const {
+    return m_startValue <= 0 ? 1 : m_startValue;
+  }
+
+  /** comparison function ( compare all values excepted m_startValues */
+  int cmp(MWAWListLevel const &levl) const;
+
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, MWAWListLevel const &ft);
+
+  /** the type of the level */
+  Type m_type;
+  double m_labelBeforeSpace /** the extra space between inserting a label */;
+  double m_labelWidth /** the minimum label width */;
+  double m_labelAfterSpace /** the minimum distance between the label and the text */;
+  /** the actual value (if this is an ordered level ) */
+  int m_startValue;
+  WPXString m_prefix /** string which preceedes the number if we have an ordered level*/,
+            m_suffix/** string which follows the number if we have an ordered level*/,
+            m_bullet /** the bullet if we have an bullet level */;
+};
+
 /** a small structure used to store the informations about a list */
 class MWAWList
 {
 public:
-  /** small structure to keep information about a level */
-  struct Level {
-    /** the type of the level */
-    enum Type { DEFAULT, NONE, BULLET, DECIMAL, LOWER_ALPHA, UPPER_ALPHA,
-                LOWER_ROMAN, UPPER_ROMAN
-              };
-
-    /** basic constructor */
-    Level() : m_labelBeforeSpace(0.0), m_labelWidth(0.1), m_labelAfterSpace(0.0), m_startValue(0), m_type(NONE),
-      m_prefix(""), m_suffix(""), m_bullet(""), m_sendToInterface(false) { }
-    ~Level() {}
-
-    /** returns true if the level type was not set */
-    bool isDefault() const {
-      return m_type ==DEFAULT;
-    }
-    /** returns true if the list is decimal, alpha or roman */
-    bool isNumeric() const {
-      return m_type !=DEFAULT && m_type !=NONE && m_type != BULLET;
-    }
-    /** add the information of this level in the propList */
-    void addTo(WPXPropertyList &propList, int startVal) const;
-
-    /** returns true, if addTo has been called */
-    bool isSendToInterface() const {
-      return m_sendToInterface;
-    }
-    /** reset the sendToInterface flag */
-    void resetSendToInterface() const {
-      m_sendToInterface = false;
-    }
-
-    /** returns the start value (if set) or 1 */
-    int getStartValue() const {
-      return m_startValue <= 0 ? 1 : m_startValue;
-    }
-
-    //! comparison function
-    int cmp(Level const &levl) const;
-
-    //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, Level const &ft);
-
-    double m_labelBeforeSpace /** the extra space between inserting a label */;
-    double m_labelWidth /** the minimum label width */;
-    double m_labelAfterSpace /** the minimum distance between the label and the text */;
-    /** the actual value (if this is an ordered level ) */
-    int m_startValue;
-    /** the type of the level */
-    Type m_type;
-    WPXString m_prefix /** string which preceedes the number if we have an ordered level*/,
-              m_suffix/** string which follows the number if we have an ordered level*/,
-              m_bullet /** the bullet if we have an bullet level */;
-
-  protected:
-    /** true if it is already send to WPXDocumentInterface */
-    mutable bool m_sendToInterface;
-  };
-
   /** default constructor */
-  MWAWList() : m_levels(), m_actLevel(-1), m_actualIndices(), m_nextIndices(),
-    m_id(-1), m_previousId (-1) {}
+  MWAWList() : m_levels(), m_actLevel(-1), m_actualIndices(), m_nextIndices() {
+    m_id[0] = m_id[1] = -1;
+  }
 
   /** returns the list id */
   int getId() const {
-    return m_id;
+    return m_id[0];
   }
 
-  /** returns the previous list id
+  /** resize the number of level of the list (keeping only n level) */
+  void resize(int levl);
+  /** returns true if we can add a new level in the list without changing is meaning */
+  bool isCompatibleWith(int levl, MWAWListLevel const &level) const;
+  /** returns true if the list is compatible with the defined level of new list */
+  bool isCompatibleWith(MWAWList const &newList) const;
+  /** update the indices, the actual level from newList */
+  void updateIndicesFrom(MWAWList const &list);
+
+  /** swap the list id
 
   \note a cheat because writerperfect imposes to get a new id if the level 1 changes
   */
-  int getPreviousId() const {
-    return m_previousId;
+  void swapId() const {
+    int tmp = m_id[0];
+    m_id[0] = m_id[1];
+    m_id[1] = tmp;
   }
 
   /** set the list id */
-  void setId(int newId);
+  void setId(int newId) const;
 
   /** returns the number of level */
   int numLevels() const {
     return int(m_levels.size());
   }
   /** sets a level */
-  void set(int levl, Level const &level);
+  void set(int levl, MWAWListLevel const &level);
 
   /** set the list level */
   void setLevel(int levl) const;
@@ -146,16 +147,41 @@ public:
   /** returns true of the level must be send to the document interface */
   bool mustSendLevel(int level) const;
 
-  /** send the list information to the document interface */
+  /** send the list level information to the document interface. */
   void sendTo(WPXDocumentInterface &docInterface, int level) const;
 
 protected:
-  std::vector<Level> m_levels;
+  //! the different levels
+  std::vector<MWAWListLevel> m_levels;
 
+  //! the actual levels
   mutable int m_actLevel;
   mutable std::vector<int> m_actualIndices, m_nextIndices;
-  mutable int m_id, m_previousId;
+  //! the identificator ( actual and auxilliar )
+  mutable int m_id[2];
 };
 
+/** a manager which manages the lists, keeps the different kind of lists, to assure the unicity of each list */
+class MWAWListManager
+{
+public:
+  //! the constructor
+  MWAWListManager() : m_listList(), m_sendIdList() { }
+  //! the destructor
+  ~MWAWListManager() { }
+  /** send the list to the document interface. If this is already done, does nothing and return false. */
+  bool send(int index, WPXDocumentInterface &docInterface) const;
+  //! returns a list with given index ( if found )
+  shared_ptr<MWAWList> getList(int index) const;
+  //! returns a new list corresponding to a list where we have a new level
+  shared_ptr<MWAWList> getNewList(shared_ptr<MWAWList> actList, int levl, MWAWListLevel const &level);
+protected:
+  /** reset the list id corresponding to a list */
+  void resetSend(size_t id) const;
+  //! the list of created list
+  std::vector<MWAWList> m_listList;
+  //! the list of send list to interface
+  mutable std::vector<bool> m_sendIdList;
+};
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
