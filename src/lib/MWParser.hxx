@@ -43,6 +43,8 @@
 
 #include "MWAWParser.hxx"
 
+class WPXBinaryData;
+
 class MWAWEntry;
 
 namespace MWParserInternal
@@ -116,6 +118,9 @@ protected:
 
   //! read a graphics
   bool readGraphic(MWParserInternal::Information const &info);
+  /** test if a graphic is empty. In v5, some empty graphic are added
+      before a page break, so it better to remove them */
+  bool isMagicPic(WPXBinaryData const &dt) const;
 
   //! read a text zone
   bool readText(MWParserInternal::Information const &info, std::vector<int> const &lineHeight);

@@ -488,7 +488,12 @@ void MWParser::createDocument(WPXDocumentInterface *documentInterface)
     ps.setHeaderFooter((i==1) ? MWAWPageSpan::HEADER : MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
   }
 
-  for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
+  int p=0;
+  if (m_state->m_fileHeader.m_hideFirstPageHeaderFooter) {
+    pageList.push_back(m_pageSpan);
+    p++;
+  }
+  for (; p <= m_state->m_numPages; p++) pageList.push_back(ps);
 
   //
   MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
@@ -1460,16 +1465,18 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
     f << "##numTabs=" << numTabs << ",";
     numTabs = 0;
   }
-  int highspacing = (int) input->readLong(1);
-  if (highspacing) {
+  int highspacing = (int) input->readULong(1);
+  if (highspacing==0x80) // 6 by line
+    parag.setInterline(12, WPX_POINT);
+  else if (highspacing) {
+    f << "##highSpacing=" << std::hex << highspacing << std::dec << ",";
     MWAW_DEBUG_MSG(("MWParser::readParagraph: high spacing bit set=%d\n", highspacing));
   }
   int spacing = (int) input->readLong(1);
-  if (spacing < 0) {
+  if (spacing < 0)
     f << "#interline=" << 1.+spacing/2.0 << ",";
-    spacing=0;
-  }
-  parag.setInterline(1.+spacing/2.0, WPX_PERCENT);
+  else if (spacing)
+    parag.setInterline(1.+spacing/2.0, WPX_PERCENT);
   parag.m_margins[0] = float(input->readLong(2))/80.f;
 
   parag.m_tabs->resize((size_t) numTabs);
@@ -1585,6 +1592,7 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
     return false;
   }
 
+
   Vec2f actualSize(float(dim[3]-dim[1]), float(dim[2]-dim[0])), naturalSize(actualSize);
   if (box.size().x() > 0 && box.size().y()  > 0) naturalSize = box.size();
   MWAWPosition pictPos=MWAWPosition(Vec2i(0,0),actualSize, WPX_POINT);
@@ -1604,11 +1612,17 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
 
       WPXBinaryData data;
       std::string type;
-      if (pict->getBinary(data,type))
+      if (pict->getBinary(data,type) && !isMagicPic(data))
         getListener()->insertPicture(pictPos, data, type);
       getListener()->insertEOL();
+#ifdef DEBUG_WITH_FILES
+      static int volatile pictName = 0;
+      libmwaw::DebugStream f2;
+      f2 << "PICT-" << ++pictName;
+      libmwaw::Debug::dumpFile(data, f2.str().c_str());
+      ascii().skipZone(pos+8, entry.end()-1);
+#endif
     }
-    ascii().skipZone(pos+8, entry.end()-1);
   }
 
   ascii().addPos(pos);
@@ -1617,6 +1631,17 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
   return true;
 }
 
+bool MWParser::isMagicPic(WPXBinaryData const &dt) const
+{
+  if (dt.size() != 526)
+    return false;
+  static char const *header="MAGICPIC";
+  unsigned char const *dtBuf = dt.getDataBuffer()+514;
+  for (int i=0; i < 8; i++)
+    if (*(dtBuf++)!=header[i])
+      return false;
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
 // read the free list
