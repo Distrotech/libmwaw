@@ -1051,8 +1051,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     para.m_margins[0] =para.m_margins[0].get()-para.m_margins[1].get();
     wh = int(input->readULong(1));
     switch(wh) {
-    case 0: // auto
-      para.setInterline(1.0, WPX_PERCENT);
+    case 0: // at least
       break;
     case 1:
       para.m_spacingsInterlineType = MWAWParagraph::Fixed;
@@ -1102,14 +1101,21 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
       case 4:
         tab.m_alignment = MWAWTabStop::DECIMAL;
         break;
-      case 6:
+      case 6: // a little old, look simillar to full justification
         f2 << "justify,";
         break;
       default:
         f2 << "#type=" << val << ",";
         break;
       }
-      tab.m_leaderCharacter = (unsigned short)input->readULong(1);
+      unsigned char leader=(unsigned char)input->readULong(1);
+      if (leader) {
+        int unicode= m_parserState->m_fontConverter->unicode(3, leader);
+        if (unicode==-1)
+          tab.m_leaderCharacter =(unsigned short) leader;
+        else
+          tab.m_leaderCharacter =(unsigned short) unicode;
+      }
       val = (long) input->readLong(2); // unused ?
       if (val) f2 << "#unkn0=" << val << ",";
       para.m_tabs->push_back(tab);

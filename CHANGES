@@ -1,5 +1,11 @@
 CHANGES:
 
+02/22/2013:
+- begin to add a new list manager in MWAWList
+- check that eDOC, DOCMaker, LightWay Text, MacWrite, Nisus Writer,
+  SimpleText, Tex-Edit, WriteNow, WriterPlus, Z-Write parsers use all
+  the paragraph properties
+
 02/09/2013:
 - begin to rewrite MWAWParagraph
 - add a SimpleText/TeachText v1.2 parser

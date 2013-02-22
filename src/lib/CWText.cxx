@@ -140,11 +140,11 @@ void Paragraph::updateListLevel()
     break;
   case 1: // diamond
     theLevel.m_type = MWAWListLevel::BULLET;
-    MWAWContentListener::appendUnicode(0x25c7, theLevel.m_bullet);
+    libmwaw::appendUnicode(0x25c7, theLevel.m_bullet);
     break;
   case 3: // checkbox
     theLevel.m_type = MWAWListLevel::BULLET;
-    MWAWContentListener::appendUnicode(0x2610, theLevel.m_bullet);
+    libmwaw::appendUnicode(0x2610, theLevel.m_bullet);
     break;
   case 4: {
     theLevel.m_suffix = (lev <= 3) ? "." : ")";
@@ -188,7 +188,7 @@ void Paragraph::updateListLevel()
   case 2: // bullet
   default:
     theLevel.m_type = MWAWListLevel::BULLET;
-    MWAWContentListener::appendUnicode(0x2022, theLevel.m_bullet);
+    libmwaw::appendUnicode(0x2022, theLevel.m_bullet);
     break;
   }
   m_margins[1]=m_margins[1].get()-0.2;

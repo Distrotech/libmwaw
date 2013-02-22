@@ -272,7 +272,7 @@ void MWAWContentListener::insertUnicode(uint32_t val)
 
   _flushDeferredTabs ();
   if (!m_ps->m_isSpanOpened) _openSpan();
-  appendUnicode(val, m_ps->m_textBuffer);
+  libmwaw::appendUnicode(val, m_ps->m_textBuffer);
 }
 
 void MWAWContentListener::insertUnicodeString(WPXString const &str)
@@ -280,40 +280,6 @@ void MWAWContentListener::insertUnicodeString(WPXString const &str)
   _flushDeferredTabs ();
   if (!m_ps->m_isSpanOpened) _openSpan();
   m_ps->m_textBuffer.append(str);
-}
-
-void MWAWContentListener::appendUnicode(uint32_t val, WPXString &buffer)
-{
-  uint8_t first;
-  int len;
-  if (val < 0x80) {
-    first = 0;
-    len = 1;
-  } else if (val < 0x800) {
-    first = 0xc0;
-    len = 2;
-  } else if (val < 0x10000) {
-    first = 0xe0;
-    len = 3;
-  } else if (val < 0x200000) {
-    first = 0xf0;
-    len = 4;
-  } else if (val < 0x4000000) {
-    first = 0xf8;
-    len = 5;
-  } else {
-    first = 0xfc;
-    len = 6;
-  }
-
-  uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
-  int i;
-  for (i = len - 1; i > 0; --i) {
-    outbuf[i] = uint8_t((val & 0x3f) | 0x80);
-    val >>= 6;
-  }
-  outbuf[0] = uint8_t(val | first);
-  for (i = 0; i < len; i++) buffer.append((char)outbuf[i]);
 }
 
 void MWAWContentListener::insertEOL(bool soft)
@@ -918,12 +884,11 @@ void MWAWContentListener::_changeList()
   WPXPropertyList propList;
   if (newLevel) {
     shared_ptr<MWAWList> theList;
-    bool isSend = false;
 
     if (m_ps->m_list && m_ps->m_list->getId()==newListId)
       theList=m_ps->m_list;
     else {
-      isSend = m_parserState.m_listManager->send(newListId, *m_documentInterface);
+      m_parserState.m_listManager->send(newListId, *m_documentInterface);
       theList=m_parserState.m_listManager->getList(newListId);
     }
     if (!theList) {

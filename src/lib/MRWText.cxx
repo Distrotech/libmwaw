@@ -1798,7 +1798,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
             MWAWListLevel theLevel;
             theLevel.m_type = MWAWListLevel::BULLET;
             theLevel.m_labelWidth=0.1;
-            MWAWContentListener::appendUnicode(0x2022, theLevel.m_bullet);
+            libmwaw::appendUnicode(0x2022, theLevel.m_bullet);
             shared_ptr<MWAWList> list;
             list = m_parserState->m_listManager->getNewList(list, 1, theLevel);
             if (!list) {

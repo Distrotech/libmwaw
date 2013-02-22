@@ -591,7 +591,7 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
     long cPos=(long) input->readULong(4);
     font.m_height = (int) input->readLong(2);
     float sz = (float) input->readLong(2);
-    font.m_font.setId((int) input->readLong(2));
+    font.m_font.setId((int) input->readULong(2));
     int flag = (int) input->readULong(1);
     uint32_t flags = 0;
     if (flag&0x1) flags |= MWAWFont::boldBit;

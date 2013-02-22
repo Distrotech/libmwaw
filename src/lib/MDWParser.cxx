@@ -210,7 +210,7 @@ void ZoneInfo::updateListId(MWAWListManager &listManager)
       break;
     case 3:  // bullet
       theLevel.m_type = MWAWListLevel::BULLET;
-      MWAWContentListener::appendUnicode(0x2022, theLevel.m_bullet);
+      libmwaw::appendUnicode(0x2022, theLevel.m_bullet);
       break;
     default:
       theLevel.m_type = MWAWListLevel::NONE;

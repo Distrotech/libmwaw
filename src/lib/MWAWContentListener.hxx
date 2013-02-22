@@ -107,8 +107,6 @@ public:
   void insertUnicode(uint32_t character);
   //! adds a unicode string
   void insertUnicodeString(WPXString const &str);
-  //! adds an unicode character to a string ( with correct encoding ).
-  static void appendUnicode(uint32_t val, WPXString &buffer);
 
   //! adds a tab
   void insertTab();

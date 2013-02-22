@@ -114,6 +114,8 @@ class WrongPasswordException
 namespace libmwaw
 {
 uint8_t readU8(WPXInputStream *input);
+//! adds an unicode character to a string
+void appendUnicode(uint32_t val, WPXString &buffer);
 }
 
 /* ---------- small enum/class ------------- */

@@ -566,8 +566,11 @@ void KnownConversion::initMaps()
   m_convertMap[std::string("Unknown200")] = &m_unknown200Conv;
 
   m_familyMap["Osaka Tohaba"]="Osaka";
+  m_familyMap["Hei"]="Osaka"; // checkme
   m_familyMap["Heisei Mincho"]="Osaka";
   m_familyMap["Heisei KakuGothic"]="Osaka";
+  m_familyMap["Heiti SC Light"]="Osaka"; // checkme
+  m_familyMap["Heiti SC Medium"]="Osaka"; // checkme
   m_familyMap["Hiragino KakuGothic ProN W3"]="Osaka";
   m_familyMap["Hiragino MaruGo W3"]="Osaka";
   m_familyMap["Hiragino MaruGo W4"]="Osaka";
@@ -575,6 +578,8 @@ void KnownConversion::initMaps()
   m_familyMap["Hiragino Kakugo W3"]="Osaka";
   m_familyMap["Hiragino Kakugo W6"]="Osaka";
   m_familyMap["Hiragino Kakugo W8"]="Osaka";
+  m_familyMap["Hiragino San GB W3"]="Osaka"; // checkme
+  m_familyMap["Hiragino San GB W6"]="Osaka"; // checkme
 }
 
 ConversionData const &KnownConversion::getConversionMaps(std::string fName)
@@ -794,12 +799,17 @@ void State::initMaps()
   m_idNameMap[16700] = "Heisei Mincho";
   m_idNameMap[16701] = "Heisei KakuGothic";
   m_idNameMap[16800] = "Hiragino KakuGothic ProN W3";
+  m_idNameMap[28930] = "Hei";
   m_idNameMap[35934] = "Hiragino MaruGo W4";
-  m_idNameMap[64640] = "Hiragino MaruGo W3";
-  m_idNameMap[64643] = "Hiragino MaruGo W6";
+  m_idNameMap[39129] = "Heiti SC Medium";
   m_idNameMap[48166] = "Hiragino Kakugo W3";
   m_idNameMap[48169] = "Hiragino Kakugo W6";
   m_idNameMap[54024] = "Hiragino Kakugo W8";
+  m_idNameMap[55129] = "Hiragino San GB W6";
+  m_idNameMap[55225] = "Hiragino San GB W3";
+  m_idNameMap[62905] = "Heiti SC Light";
+  m_idNameMap[64640] = "Hiragino MaruGo W3";
+  m_idNameMap[64643] = "Hiragino MaruGo W6";
 
   std::map<int, std::string>::iterator it;
   for(it = m_idNameMap.begin(); it != m_idNameMap.end(); it++)

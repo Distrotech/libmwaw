@@ -59,7 +59,7 @@ void MWAWTabStop::addTo(WPXPropertyListVector &propList, double decalX) const
     tab.insert("style:type", "char");
     if (m_decimalCharacter) {
       WPXString sDecimal;
-      sDecimal.sprintf("%c", m_decimalCharacter);
+      libmwaw::appendUnicode(m_decimalCharacter, sDecimal);
       tab.insert("style:char", sDecimal);
     } else
       tab.insert("style:char", ".");
@@ -73,7 +73,7 @@ void MWAWTabStop::addTo(WPXPropertyListVector &propList, double decalX) const
   // leader character
   if (m_leaderCharacter != 0x0000) {
     WPXString sLeader;
-    sLeader.sprintf("%c", m_leaderCharacter);
+    libmwaw::appendUnicode(m_leaderCharacter, sLeader);
     tab.insert("style:leader-text", sLeader);
     tab.insert("style:leader-style", "solid");
   }
@@ -291,7 +291,9 @@ void MWAWParagraph::addTo(WPXPropertyList &propList, bool inTable) const
     propList.insert("fo:line-height", *(m_spacings[0]), *m_spacingsInterlineUnit);
     break;
   case AtLeast:
-    if (*(m_spacings[0]) <= 0) {
+    if (*(m_spacings[0]) <= 0 && *(m_spacings[0]) >= 0)
+      break;
+    if (*(m_spacings[0]) < 0) {
       static bool first = true;
       if (first) {
         MWAW_DEBUG_MSG(("MWAWParagraph::addTo: interline spacing seems bad\n"));
