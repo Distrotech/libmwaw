@@ -89,9 +89,6 @@ struct Font {
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() : MWAWParagraph() {
-    m_margins[0] = 0;
-    m_margins[1] = 72.0;
-    m_margins[2] = 72.0-28.0;
     m_marginsUnit = WPX_POINT;
     for(int i = 0; i < 8; i++)
       m_values[i] = 0;
@@ -743,6 +740,9 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(TextData)[" << entry.id() << "]:";
+  // print the text zone data
+  f << std::hex << "txtZone=[" << std::hex << entry.m_val[0] << std::dec
+    <<",h=" << entry.m_val[1] << "],";
   long val;
   shared_ptr<WNTextInternal::ContentZones> text;
   if (vers >= 3) {
@@ -760,9 +760,16 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
     text->m_entry = entry;
     text->m_id = entry.id();
 
-    f << std::hex << "fl=" << entry.m_val[0] << std::dec << ",";
-    f << "ptr?=" << std::hex << input->readULong(4) << std::dec << ",";
-    f << "ptr2?=" << std::hex << input->readULong(4) << std::dec << ",";
+    // in 1/3 files, ptr0=begin.pos()+(flag<<15: rev?), but not in other files :-~
+    for (int i=0; i < 2; i++) {
+      val = (long) input->readULong(4);
+      if (!val) continue;
+      f << "ptr" << i << "=" << std::hex << (val&0x7FFF) << std::dec;
+      if (val>>15)
+        f << "[" << std::hex << (val>>15) << std::dec << "],";
+      else
+        f << ",";
+    }
     for (int i = 0; i < 2; i++) {
       val = input->readLong(2);
       f << "f" << i << "=" << val << ",";
@@ -909,6 +916,8 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
   f << "]:";
   long val;
   if (vers > 2) {
+    /* seems very simillar that the 2 "ptr" in parseContent:
+       sometimes ptr0=begin.pos()+some flag, sometimes not :-~ */
     f << "ptr?=" << std::hex << input->readULong(4) << std::dec << ",";
     f << "ptr2?=" << std::hex << input->readULong(4) << std::dec << ",";
     for (int i = 0; i < 2; i++) {
@@ -925,6 +934,8 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
         60 61 64 65 : text ?
         70 74 7c : text + new page ?
         c0 c4 e0 e4 : empty
+
+        header: 86: even, a6 even|odd, c6|odd ?
     */
     f << "fl=" << std::hex << flags << std::dec << ",";
     for (int i = 0; i < 3; i++) {
@@ -946,6 +957,7 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
     zEntry.setType("TextData");
     zEntry.m_fileType = 4;
     zEntry.m_val[0] = flags;
+    zEntry.m_val[1] = (int) input->readLong(lengthSz);
 
     if (zEntry.begin() == 0 && zEntry.length()==0) f << "_" << ",";
     else {
@@ -960,12 +972,10 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
       }
       if (ok) {
         listData.push_back(zEntry);
-        f << "textData[" << std::hex << zEntry.begin() << std::dec << "],";
+        f << "pos=" << std::hex << zEntry.begin() << std::dec << ",";
       }
     }
-    // a small number
-    val = input->readLong(lengthSz);
-    f << std::hex << "unkn=" << val << std::dec << "],";
+    f << "h=" << zEntry.m_val[1] << "],";
   }
 
   entry.setParsed(true);
@@ -1286,12 +1296,12 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
     ruler.m_margins[2] = int(72.0*m_mainParser->pageWidth())-ruler.m_margins[2].get();
   *(ruler.m_margins[2]) -= 28.;
   if (ruler.m_margins[2].get() < 0) ruler.m_margins[2]=0;
-  if (!interlineFixed || height <= 0.0) {
-    if (height)
-      f << "interline>=" << height << "pt,";
-    ruler.setInterline(1.0,WPX_PERCENT);
-  } else
-    ruler.setInterline(height+2,WPX_POINT);
+  if (!interlineFixed && height>=0)
+    ruler.setInterline(height,WPX_POINT,MWAWParagraph::AtLeast);
+  else if (height>0)
+    ruler.setInterline(height,WPX_POINT);
+  else
+    f << "##interline=" << height << "pt,";
   ruler.m_extra = f.str();
   return true;
 }
@@ -1663,7 +1673,8 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   int vers = version();
-  MWAWFont actFont=listener->getFont();
+  MWAWFont actFont(3,12); // default geneva 12pt
+  listener->setFont(actFont);
   int extraDecal = 0; // for v2
   bool rulerSet = false;
   int numLineTabs = 0, actTabs = 0, numFootnote = 0;

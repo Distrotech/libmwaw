@@ -395,7 +395,7 @@ bool WNParser::readDocEntries()
   MWAWInputStreamPtr input = getInput();
 
   std::multimap<std::string, WNEntry const *>::iterator it =
-    m_entryManager->m_typeMap.find("DocTable");
+    m_entryManager->m_typeMap.find("DocEntries");
   if (it == m_entryManager->m_typeMap.end()) {
     MWAW_DEBUG_MSG(("WNParser::readDocEntries: can not find last zone\n"));
     return false;
@@ -414,7 +414,7 @@ bool WNParser::readDocEntries()
   }
   entry.setParsed(true);
   libmwaw::DebugStream f;
-  f << "Entries(DocTable):";
+  f << "Entries(DocEntries):";
 
   long val;
   long expectedVal[] = { 0, 0x80, 0x40000000L};
@@ -456,7 +456,7 @@ bool WNParser::readDocEntries()
     long pos = entry.begin()+376;
     input->seek(pos, WPX_SEEK_SET);
     f.str("");
-    f << "DocTable-II:";
+    f << "DocEntries-II:";
     m_state->m_numColumns = (int) input->readLong(1);
     f << "nCol=" << m_state->m_numColumns << ",";
     val = input->readLong(1);
@@ -482,7 +482,7 @@ bool WNParser::readDocEntries()
 bool WNParser::readDocEntriesV2()
 {
   MWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
+  long pos = input->tell(), debPos=pos;
   libmwaw::DebugStream f;
   std::stringstream s;
   f << "Entries(DocEntries):";
@@ -521,10 +521,35 @@ bool WNParser::readDocEntriesV2()
     input->seek(actPos, WPX_SEEK_SET);
     m_entryManager->add(entry);
   }
-  ascii().addDelimiter(input->tell(),'|');
+  f << "ptr=[";
+  for (int i = 0; i < 5; i++)
+    f << std::hex << input->readULong(4) << std::dec << ",";
+  f << "],";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  ascii().addPos(input->tell()+32);
+  input->seek(debPos+0x6E,WPX_SEEK_SET);
+  pos=input->tell();
+  f.str("");
+  f << "DocEntries-II:";
+
+  long val;
+  if (version()==2) {
+    m_state->m_numColumns = (int) input->readLong(1);
+    f << "nCol=" << m_state->m_numColumns << ",";
+    val = input->readLong(1);
+    if (val != 1) f << "unkn=" << val << ",";
+    m_state->m_columnWidth = (int) input->readLong(2);
+    f << "colWidth=" << m_state->m_columnWidth << ",";
+    ascii().addDelimiter(input->tell(),'|');
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  // another copy (visibly the previous version)
+  ascii().addPos(debPos+0xFc);
+  ascii().addNote("DocEntries[Old]:");
+  ascii().addPos(debPos+0x16a);
+  ascii().addNote("DocEntries-II[Old]:");
+  ascii().addPos(debPos+0x1F8);
   ascii().addNote("_");
   return true;
 }
@@ -1079,7 +1104,7 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
     MWAW_DEBUG_MSG(("WNParser::checkHeader: can not find final zone\n"));
     return false;
   }
-  entry.setType("DocTable");
+  entry.setType("DocEntries");
   m_entryManager->add(entry);
 
   f << "entry=" << std::hex << entry.begin() << ":" << entry.end() << std::dec << ",";

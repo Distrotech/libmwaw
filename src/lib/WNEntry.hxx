@@ -45,7 +45,7 @@
 #include "MWAWEntry.hxx"
 
 struct WNEntry : public MWAWEntry {
-  WNEntry() : MWAWEntry(), m_fileType(-1), m_entryType(-1) {
+  WNEntry() : MWAWEntry(), m_fileType(-1) {
     for (int i = 0; i < 4; i++) m_val[i] = 0;
   }
   //! returns true if this entry store a zone
@@ -77,42 +77,6 @@ struct WNEntry : public MWAWEntry {
     default:
       o << "#type=" << entry.m_fileType << ",";
     }
-    switch(entry.m_entryType) {
-    case -1:
-      break;
-    case 0:
-      o << "docTbl,";
-      break;
-    case 1:
-      o << "textZone,";
-      break;
-    case 2:
-      o << "text,";
-      break;
-    case 3:
-      o << "graphic,";
-      break;
-    case 4:
-      o << "colorMap,";
-      break;
-    case 5:
-      o << "style,";
-      break;
-    case 6:
-      o << "font,";
-      break;
-    case 7:
-      o << "unknZone1,";
-      break;
-    case 13:
-      o << "graphUnkn1,";
-      break;
-    case 15:
-      o << "printInfo,";
-      break;
-    default:
-      o << "#fileType=" << entry.m_entryType << ",";
-    }
     for (int i = 0; i < 4; i++) {
       if (entry.m_val[i]) o << "v" << i << "=" << std::hex << entry.m_val[i] << std::dec << ",";
     }
@@ -121,8 +85,6 @@ struct WNEntry : public MWAWEntry {
   }
   //! the file entry id
   int m_fileType;
-  //! the entry type (if this is a zone : find in the zone)
-  mutable int m_entryType;
   //! other values
   int m_val[4];
 };

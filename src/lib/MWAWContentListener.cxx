@@ -1528,7 +1528,7 @@ void MWAWContentListener::_endSubDocument()
 ///////////////////
 // table
 ///////////////////
-void MWAWContentListener::openTable(std::vector<float> const &colWidth, WPXUnit unit)
+void MWAWContentListener::openTable(std::vector<float> const &colWidth, WPXUnit unit, WPXPropertyList tableExtras)
 {
   if (m_ps->m_isTableOpened) {
     MWAW_DEBUG_MSG(("MWAWContentListener::openTable: called with m_isTableOpened=true\n"));
@@ -1542,9 +1542,11 @@ void MWAWContentListener::openTable(std::vector<float> const &colWidth, WPXUnit 
   _startSubDocument();
   m_ps->m_subDocumentType = libmwaw::DOC_TABLE;
 
-  WPXPropertyList propList;
-  propList.insert("table:align", "left");
-  propList.insert("fo:margin-left", 0.0);
+  WPXPropertyList propList(tableExtras);
+  if (!tableExtras["table:align"])
+    propList.insert("table:align", "left");
+  if (!tableExtras["fo:margin-left"])
+    propList.insert("fo:margin-left", 0.0);
 
   float tableWidth = 0;
   WPXPropertyListVector columns;
@@ -1733,6 +1735,8 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
   default:
     MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: called with unknown halign=%d\n", cell.hAlignement()));
   }
+  // no padding
+  propList.insert("fo:padding", 0, WPX_POINT);
   // alignement
   switch(cell.vAlignement()) {
   case MWAWCell::VALIGN_TOP:

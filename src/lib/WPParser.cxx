@@ -47,6 +47,7 @@
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSubDocument.hxx"
 
 #include "WPParser.hxx"
 
@@ -481,10 +482,10 @@ struct ParagraphData {
     o << "witdh=" << p.m_width << ",";
     if (p.m_indent[0]) o << "indent[left]=" << p.m_indent[0] << ",";
     if (p.m_indent[1] != p.m_indent[0])
-      o << "indent[left2]=" << p.m_indent[1] << ",";
+      o << "indent[firstPos]=" << p.m_indent[1] << ",";
     if (p.m_text.length()) o << "text='" << p.m_text << "',";
     if (p.m_type==5) o << "numData[total]=" << p.m_unknown << ",";
-    else o << "unkn=" << p.m_unknown << ",";
+    else o << "unkn=" << p.m_unknown << ","; /* in text2: often 1, but can be 5|13|25|29 */
     return o;
   }
 
@@ -1231,6 +1232,24 @@ bool WPParser::readPageInfo(int zone)
 ////////////////////////////////////////////////////////////
 // read a windows paragraph info
 ////////////////////////////////////////////////////////////
+MWAWParagraph WPParser::getParagraph(WPParserInternal::ParagraphData const &data)
+{
+  MWAWParagraph para;
+
+  para.m_marginsUnit=WPX_POINT;
+  // decrease a little left indent to avoid some page width pb
+  double left=double(data.m_indent[0])-20.-72.*m_pageSpan.getMarginLeft();
+  if (left > 0)
+    para.m_margins[1]=left;
+  para.m_margins[0]=double(data.m_indent[1]-data.m_indent[0]);
+  if (getListener() && getListener()->getSectionNumColumns() > 1)
+    return para; // too dangerous to set the paragraph width in this case...
+  double right=pageWidth()*72.f-float(data.m_width);
+  if (right > 0)
+    para.m_margins[2]=right;
+  return para;
+}
+
 bool WPParser::readParagraphInfo(int zone)
 {
   assert(zone >= 0 && zone < 3);
@@ -1375,7 +1394,8 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   size_t actFont = 0, numFonts = fonts.size();
   int actLine = 0;
   numLines=int(lines.size());
-  MWAWParagraph para;
+  MWAWParagraph para=getParagraph(data);
+
   if (numLines == 0 && info.m_height > 0) {
     para.setInterline(info.m_height, WPX_POINT);
     getListener()->setParagraph(para);
@@ -1509,7 +1529,12 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
       WPParserInternal::ColumnTableInfo const &cols = columns[(size_t)i];
       colSize[(size_t)i] = float(cols.m_colX[1]-cols.m_colX[0]);
     }
-    getListener()->openTable(colSize, WPX_POINT);
+
+    WPXPropertyList tableExtras;
+    int left=columns[0].m_colX[0]-20-int(72.*m_pageSpan.getMarginLeft());
+    if (left>0)
+      tableExtras.insert("fo:margin-left",left,WPX_POINT);
+    getListener()->openTable(colSize, WPX_POINT, tableExtras);
   }
 
   if (long(input->tell()) != data.m_endPos) {
@@ -1731,9 +1756,9 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
   }
 
   data.m_height = (int) input->readLong(2);
-  data.m_indent[0] = (int) input->readLong(2);
+  data.m_indent[0] = (int) input->readLong(2); // left indent ?
   data.m_width = (int) input->readLong(2);
-  data.m_indent[1] = (int) input->readLong(2);
+  data.m_indent[1] = (int) input->readLong(2); // first pos indent ?
   data.m_unknown = (int) input->readLong(2);
 
   for (int i = 0; i < 2; i++)

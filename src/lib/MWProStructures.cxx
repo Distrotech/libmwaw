@@ -1370,9 +1370,10 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
       break;
     }
     if (ok) {
-      // the interline spacings seems ignored when the dimension is point...
       if (i == 0 && inPoint) {
-        if (spacings[0] < 0 || spacings[0] > 0) f << "interline=" << spacings[0] << ",";
+        if (spacings[0] > 0)
+          para.setInterline(spacings[0], WPX_INCH, MWAWParagraph::AtLeast);
+        else if (spacings[0] < 0) f << "interline=" << spacings[0] << ",";
         continue;
       }
       para.m_spacings[i] = spacings[i];
@@ -1386,7 +1387,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
         f << "=" << spacings[i] << "%,";
         /** seems difficult to set bottom a percentage of the line unit,
             so do the strict minimum... */
-        *(para.m_spacings[i]) *= 7./72.;
+        *(para.m_spacings[i]) *= 10./72.;
       }
     } else
       f << "#spacings" << i << ",";
@@ -1415,7 +1416,11 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
   default:
     break;
   }
-  if (just&0xFC) f << "#justify=" << std::hex << just << std::dec << ",";
+  if (just & 0x40)
+    para.m_breakStatus = MWAWParagraph::NoBreakWithNextBit;
+  if (just & 0x80)
+    para.m_breakStatus = para.m_breakStatus.get()|MWAWParagraph::NoBreakBit;
+  if (just&0x3C) f << "#justify=" << std::hex << (just&0x3C) << std::dec << ",";
   bool emptyTabFound = false;
   for (int i = 0; i < 20; i++) {
     pos = m_input->tell();
@@ -1455,8 +1460,8 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
     }
     newTab.m_position = float(tabPos)/72./65536.-para.m_margins[1].get();
     int decimalChar = (int) m_input->readULong(1);
-    if (decimalChar != '.' && decimalChar != ',')
-      f << "tab" << i << "[decimalChar]=" << char(decimalChar) << ",";
+    if (decimalChar && decimalChar != '.')
+      newTab.m_decimalCharacter=(uint16_t) decimalChar;
     val = (int) m_input->readLong(1); // always 0?
     if (val)
       f << "tab" << i << "[#unkn=" << std::hex << val << std::dec << "],";

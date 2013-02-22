@@ -52,8 +52,8 @@ struct MWAWTabStop {
   //! the tab alignement
   enum Alignment { LEFT, RIGHT, CENTER, DECIMAL, BAR };
   //! constructor
-  MWAWTabStop(double position = 0.0, Alignment alignment = LEFT, uint16_t leaderCharacter='\0', uint8_t leaderNumSpaces = 0)  :
-    m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_leaderNumSpaces(leaderNumSpaces) {
+  MWAWTabStop(double position = 0.0, Alignment alignment = LEFT, uint16_t leaderCharacter='\0', uint16_t decimalCharacter = '.')  :
+    m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_decimalCharacter(decimalCharacter) {
   }
   //! add a tab to the propList
   void addTo(WPXPropertyListVector &propList, double decalX=0.0) const;
@@ -66,7 +66,7 @@ struct MWAWTabStop {
     return m_position < tabs.m_position || m_position > tabs.m_position ||
            m_alignment != tabs.m_alignment ||
            m_leaderCharacter != tabs.m_leaderCharacter ||
-           m_leaderNumSpaces != tabs.m_leaderNumSpaces;
+           m_decimalCharacter != tabs.m_decimalCharacter;
   }
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, MWAWTabStop const &ft);
@@ -76,7 +76,8 @@ struct MWAWTabStop {
   Alignment m_alignment;
   //! the leader char
   uint16_t m_leaderCharacter;
-  uint8_t m_leaderNumSpaces;
+  //! the decimal char
+  uint16_t m_decimalCharacter;
 };
 
 //! class to store the paragraph properties

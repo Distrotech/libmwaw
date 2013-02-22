@@ -57,7 +57,12 @@ void MWAWTabStop::addTo(WPXPropertyListVector &propList, double decalX) const
     break;
   case DECIMAL:
     tab.insert("style:type", "char");
-    tab.insert("style:char", "."); // Assume a decimal point for now
+    if (m_decimalCharacter) {
+      WPXString sDecimal;
+      sDecimal.sprintf("%c", m_decimalCharacter);
+      tab.insert("style:char", sDecimal);
+    } else
+      tab.insert("style:char", ".");
     break;
   case LEFT:
   case BAR: // BAR is not handled in OO
@@ -109,6 +114,8 @@ std::ostream &operator<<(std::ostream &o, MWAWTabStop const &tab)
   }
   if (tab.m_leaderCharacter != '\0')
     o << ":sep='"<< (char) tab.m_leaderCharacter << "'";
+  if (tab.m_decimalCharacter && tab.m_decimalCharacter != '.')
+    o << ":dec='" << tab.m_decimalCharacter << "'";
   return o;
 }
 

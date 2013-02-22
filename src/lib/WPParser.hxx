@@ -45,12 +45,13 @@
 #include "MWAWPageSpan.hxx"
 
 #include "MWAWEntry.hxx"
-#include "MWAWSubDocument.hxx"
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MWAWParser.hxx"
+
+class MWAWParagraph;
 
 namespace WPParserInternal
 {
@@ -147,15 +148,16 @@ protected:
   // low level
   //
 
-  //! read a paragraph data
+  //! reads a paragraph data
   bool readParagraphData(WPParserInternal::ParagraphInfo const &info, bool hasFonts,
                          WPParserInternal::ParagraphData &data);
-
-  //! read a list of font (with position)
+  //! returns a paragraph corresponding to a paragraph data
+  MWAWParagraph getParagraph(WPParserInternal::ParagraphData const &data);
+  //! reads a list of font (with position)
   bool readFonts(int nFonts, int type,
                  std::vector<WPParserInternal::Font> &fonts);
 
-  //! read a list of line (with position)
+  //! reads a list of line (with position)
   bool readLines(WPParserInternal::ParagraphInfo const &info,
                  int nLines, std::vector<WPParserInternal::Line> &lines);
 

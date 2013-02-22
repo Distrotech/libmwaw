@@ -167,7 +167,8 @@ public:
 
   // ------- table -----------------
   /** open a table*/
-  void openTable(std::vector<float> const &colWidth, WPXUnit unit);
+  void openTable(std::vector<float> const &colWidth, WPXUnit unit,
+                 WPXPropertyList tableExtras=WPXPropertyList());
   /** closes this table */
   void closeTable();
   /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
