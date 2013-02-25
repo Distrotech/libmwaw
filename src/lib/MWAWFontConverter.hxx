@@ -96,6 +96,10 @@ public:
   /** converts a character in unicode, if needed can read the next input caracter
      \return -1 if the character is not transformed */
   int unicode(int macId, unsigned char c, MWAWInputStreamPtr &input) const;
+
+  /** converts a character in unicode, if needed can read the next input caracter in str
+     \return -1 if the character is not transformed */
+  int unicode(int macId, unsigned char c, unsigned char const *(&str), int len) const;
 protected:
   /** check if a string is valid, if not, convert it to a valid string */
   static std::string getValidName(std::string const &name);

@@ -660,6 +660,9 @@ public:
      \return -1 if the character is not transformed */
   int unicode(int macId, unsigned char c, MWAWInputStreamPtr &input);
 
+  /** converts a character in unicode, if needed can read the next input caracter in str
+      \return -1 if the character is not transformed */
+  int unicode(int macId, unsigned char c, unsigned char const *(&str), int len);
   /** final font name and a delta which can be used to change the size
   if no name is found, return "Times New Roman" */
   void getOdtInfo(int macId, std::string &nm, int &deltaSize);
@@ -858,6 +861,21 @@ int State::unicode(int macId, unsigned char c, MWAWInputStreamPtr &input)
   return (int) it->second;
 }
 
+int State::unicode(int macId, unsigned char c, unsigned char const *(&str), int len)
+{
+  if (!updateCache(macId))
+    return -1;
+  if (m_unicodeCache.m_conv->m_encoding==MWAWFontConverter::E_SJIS) {
+    if (!m_sjisConverter)
+      m_sjisConverter.reset(new MWAWFontSJISConverter);
+    return m_sjisConverter->unicode(c,str,len);
+  }
+
+  std::map<unsigned char, unsigned long>::const_iterator it = m_unicodeCache.m_conv->m_conversion.find(c);
+  if (it == m_unicodeCache.m_conv->m_conversion.end()) return -1;
+  return (int) it->second;
+}
+
 void State::getOdtInfo(int macId, std::string &nm, int &deltaSize)
 {
   std::string nam = getName(macId);
@@ -936,5 +954,11 @@ int MWAWFontConverter::unicode(int macId, unsigned char c, MWAWInputStreamPtr &i
 {
   if (c < 0x20) return -1;
   return m_manager->unicode(macId,c,input);
+}
+
+int MWAWFontConverter::unicode(int macId, unsigned char c, unsigned char const *(&str), int len) const
+{
+  if (c < 0x20) return -1;
+  return m_manager->unicode(macId,c,str,len);
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

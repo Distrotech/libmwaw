@@ -57,6 +57,8 @@ public:
 
   //! try to return a unicode for a shift jis character ( returns -1 if the character can not be converted )
   int unicode(unsigned char c, MWAWInputStreamPtr &input);
+  //! try to return a unicode for a shift jis character ( returns -1 if the character can not be converted )
+  int unicode(unsigned char c, unsigned char const *(&str), int len);
   //!init the mapping
   void initMap();
 protected:

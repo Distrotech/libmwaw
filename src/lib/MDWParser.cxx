@@ -219,8 +219,8 @@ void ZoneInfo::updateListId(MWAWListManager &listManager)
     if (lastLevelIndex == level && lastListType != line.m_listType &&
         theLevel.m_type == MWAWListLevel::DECIMAL)
       theLevel.m_startValue=1;
-    theLevel.m_labelWidth=0.5;
-    theLevel.m_labelBeforeSpace=0.5*(level-1);
+    theLevel.m_labelWidth=0.2;
+    theLevel.m_labelBeforeSpace=0.2*(level-1);
 
     shared_ptr<MWAWList> newList = listManager.getNewList(actList, level, theLevel);
     if (!newList)
@@ -781,23 +781,24 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo const &line, MWAWParagraph
     return false;
   }
   val = (long) input->readULong(2);
-  para.m_spacingsInterlineUnit = WPX_PERCENT;
-  switch (val) {
+  double factor = 1.0;
+  switch (val & 0x7FFF) {
   case 0:
-    para.m_spacings[0] = 1.;
     break;
   case 1:
-    para.m_spacings[0] = 1.5;
+    factor = 1.5;
     break;
   case 2:
-    para.m_spacings[0] = 2.;
-    break;
-  case 0x8000:
-    f << "6 lines by ldpi,";
+    factor = 2.;
     break;
   default:
-    if (val) f << "#interline=" << std::hex << val << std::dec << ",";
+    if (val) f << "#interline=" << std::hex << (val&0x7FFF) << std::dec << ",";
   }
+  if (val & 0x8000) { // 6 inches by line + potential before space
+    para.m_spacings[1] = (factor-1.)/6;
+    para.setInterline(12, WPX_POINT);
+  } else
+    para.setInterline(factor, WPX_PERCENT);
   para.m_margins[0] = ((double) input->readULong(2))-*(para.m_margins[1]);
   for (int i = 0; i < N; i++) {
     MWAWTabStop tab;

@@ -837,7 +837,6 @@ void MWAWContentListener::_closeListElement()
   }
 
   m_ps->m_isListElementOpened = m_ps->m_isParagraphOpened = false;
-  m_ps->m_paragraph.m_listLevelIndex = 0;
 
   if (!m_ps->m_isTableOpened && m_ps->m_isPageSpanBreakDeferred && !m_ps->m_inSubDocument)
     _closePageSpan();

@@ -49,6 +49,18 @@ void MWAWListLevel::addTo(WPXPropertyList &propList, int startVal) const
   propList.insert("text:space-before", m_labelBeforeSpace);
   if (m_labelAfterSpace > 0)
     propList.insert("text:min-label-distance", m_labelAfterSpace);
+  switch(m_alignment) {
+  case LEFT:
+    break;
+  case CENTER:
+    propList.insert("fo:text-align", "center");
+    break;
+  case RIGHT:
+    propList.insert("fo:text-align", "end");
+    break;
+  default:
+    break;
+  }
 
   switch(m_type) {
   case NONE:
@@ -92,6 +104,8 @@ int MWAWListLevel::cmp(MWAWListLevel const &levl) const
   fDiff = m_labelWidth-levl.m_labelWidth;
   if (fDiff < 0.0) return -1;
   if (fDiff > 0.0) return 1;
+  diff = int(m_alignment)-levl.m_alignment;
+  if (diff) return diff;
   fDiff = m_labelAfterSpace-levl.m_labelAfterSpace;
   if (fDiff < 0.0) return -1;
   if (fDiff > 0.0) return 1;
@@ -104,12 +118,12 @@ int MWAWListLevel::cmp(MWAWListLevel const &levl) const
   return 0;
 }
 
-std::ostream &operator<<(std::ostream &o, MWAWListLevel const &ft)
+std::ostream &operator<<(std::ostream &o, MWAWListLevel const &level)
 {
   o << "ListLevel[";
-  switch(ft.m_type) {
+  switch(level.m_type) {
   case MWAWListLevel::BULLET:
-    o << "bullet='" << ft.m_bullet.cstr() <<"'";
+    o << "bullet='" << level.m_bullet.cstr() <<"'";
     break;
   case MWAWListLevel::DECIMAL:
     o << "decimal";
@@ -130,15 +144,27 @@ std::ostream &operator<<(std::ostream &o, MWAWListLevel const &ft)
     break;
   case MWAWListLevel::DEFAULT:
   default:
-    o << "####";
+    o << "####type";
   }
-  if (ft.m_type != MWAWListLevel::BULLET && ft.m_startValue)
-    o << ",startVal= " << ft.m_startValue;
-  if (ft.m_prefix.len()) o << ", prefix='" << ft.m_prefix.cstr()<<"'";
-  if (ft.m_suffix.len()) o << ", suffix='" << ft.m_suffix.cstr()<<"'";
-  if (ft.m_labelBeforeSpace < 0 || ft.m_labelBeforeSpace > 0) o << ", indent=" << ft.m_labelBeforeSpace;
-  if (ft.m_labelWidth < 0 || ft.m_labelWidth > 0) o << ", width=" << ft.m_labelWidth;
-  if (ft.m_labelAfterSpace > 0) o << ", labelTextW=" << ft.m_labelAfterSpace;
+  switch(level.m_alignment) {
+  case MWAWListLevel::LEFT:
+    break;
+  case MWAWListLevel::CENTER:
+    o << ",center";
+    break;
+  case MWAWListLevel::RIGHT:
+    o << ",right";
+    break;
+  default:
+    o << "###align=" << int(level.m_alignment) << ",";
+  }
+  if (level.m_type != MWAWListLevel::BULLET && level.m_startValue)
+    o << ",startVal= " << level.m_startValue;
+  if (level.m_prefix.len()) o << ", prefix='" << level.m_prefix.cstr()<<"'";
+  if (level.m_suffix.len()) o << ", suffix='" << level.m_suffix.cstr()<<"'";
+  if (level.m_labelBeforeSpace < 0 || level.m_labelBeforeSpace > 0) o << ", indent=" << level.m_labelBeforeSpace;
+  if (level.m_labelWidth < 0 || level.m_labelWidth > 0) o << ", width=" << level.m_labelWidth;
+  if (level.m_labelAfterSpace > 0) o << ", labelTextW=" << level.m_labelAfterSpace;
   o << "]";
   return o;
 }

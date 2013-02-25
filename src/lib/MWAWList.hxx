@@ -49,9 +49,11 @@ struct MWAWListLevel {
   enum Type { DEFAULT, NONE, BULLET, DECIMAL, LOWER_ALPHA, UPPER_ALPHA,
               LOWER_ROMAN, UPPER_ROMAN
             };
+  //! the item alignement
+  enum Alignment { LEFT, RIGHT, CENTER };
 
   /** basic constructor */
-  MWAWListLevel() : m_type(NONE), m_labelBeforeSpace(0.0), m_labelWidth(0.1), m_labelAfterSpace(0.0), m_startValue(0),
+  MWAWListLevel() : m_type(NONE), m_labelBeforeSpace(0.0), m_labelWidth(0.1), m_labelAfterSpace(0.0), m_alignment(LEFT), m_startValue(0),
     m_prefix(""), m_suffix(""), m_bullet("") {
   }
   /** destructor */
@@ -84,6 +86,8 @@ struct MWAWListLevel {
   double m_labelBeforeSpace /** the extra space between inserting a label */;
   double m_labelWidth /** the minimum label width */;
   double m_labelAfterSpace /** the minimum distance between the label and the text */;
+  //! the alignement ( left, center, ...)
+  Alignment m_alignment;
   /** the actual value (if this is an ordered level ) */
   int m_startValue;
   WPXString m_prefix /** string which preceedes the number if we have an ordered level*/,

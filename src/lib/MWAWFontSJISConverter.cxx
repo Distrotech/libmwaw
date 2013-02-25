@@ -1532,4 +1532,19 @@ int MWAWFontSJISConverter::unicode(unsigned char c, MWAWInputStreamPtr &input)
   input->seek(pos, WPX_SEEK_SET);
   return -1;
 }
+
+int  MWAWFontSJISConverter::unicode(unsigned char c, unsigned char const *(&str), int len)
+{
+  uint32_t sjisChar = uint32_t(c);
+  unsigned char const *pos=str;
+  if ((c >= 0x81 && c <= 0x9F) || (c >= 0xE0 && c <= 0xFC)) {
+    if (len <= 0) return -1;
+    sjisChar = (sjisChar<<8)+uint32_t(*(str++));
+  }
+  if (m_sjisUnicodeMap.find(int(sjisChar))!=m_sjisUnicodeMap.end())
+    return m_sjisUnicodeMap.find(int(sjisChar))->second;
+  str=pos;
+  return -1;
+}
+
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -134,6 +134,12 @@ struct Paragraph : public MWAWParagraph {
     bool isDefault() const {
       return !hasBorders() && !hasBackgroundColor();
     }
+    //! reset the background color
+    void resetBackgroundColor() {
+      m_foreColor=MWAWColor::black();
+      m_backColor=MWAWColor::white();
+      m_patternId=0;
+    }
     //! return true if we have a not white background color
     bool hasBackgroundColor() const {
       return !m_foreColor.isBlack()||!m_backColor.isWhite()||m_patternId;
@@ -143,6 +149,11 @@ struct Paragraph : public MWAWParagraph {
       if (percent < 0.0)
         return m_backColor;
       return MWAWColor::barycenter(percent,m_foreColor,1.f-percent,m_backColor);
+    }
+    //! reset the borders
+    void resetBorders() {
+      for (int i=0; i < 4; i++)
+        m_borderTypes[i]=0;
     }
     //! return true if we have border
     bool hasBorders() const {
@@ -445,7 +456,7 @@ struct Table {
 //! Internal: the state of a MRWText
 struct State {
   //! constructor
-  State() : m_version(-1), m_textZoneMap(), m_basicListId(-1), m_numPages(-1), m_actualPage(0) {
+  State() : m_version(-1), m_textZoneMap(), m_numPages(-1), m_actualPage(0) {
   }
 
   //! return a reference to a textzone ( if zone not exists, created it )
@@ -461,8 +472,6 @@ struct State {
   mutable int m_version;
   //! a map id -> textZone
   std::map<int,Zone> m_textZoneMap;
-  //! the basic list id
-  int m_basicListId;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
@@ -1529,6 +1538,8 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
     unsigned char color[3];
     f.str("");
     int nTabs = 0;
+    MWAWFont fontItem(3);
+    MWAWListLevel level;
     for (int j = 0; j < 58; j++, d++) {
       MRWStruct const &dt = dataList[d];
       if (!dt.isBasic()) continue;
@@ -1568,6 +1579,14 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         if (!dt.value(0)) break;
         para.setInterline(double(dt.value(0))/65536., WPX_POINT);
         break;
+      case 9:
+        if (!dt.value(0)) break;
+        if (dt.value(0)<0) {
+          MWAW_DEBUG_MSG(("MRWText::readRulers: find negative interline\n"));
+          f << "#inteline=" << dt.value(0) << "[at least],";
+        } else
+          para.setInterline(double(dt.value(0)), WPX_POINT, MWAWParagraph::AtLeast);
+        break;
       case 10:
         if (!dt.value(0)) break;
         para.m_spacings[1] = float(dt.value(0))/72.f;
@@ -1576,15 +1595,9 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         if (!dt.value(0)) break;
         para.m_spacings[2] = float(dt.value(0))/72.f;
         break;
-      case 30:
-        if (!dt.value(0)!=0x18) break;
-        f << "#f30=" << dt.value(0) << ",";
-        break;
       case 1: // always 0
       case 2: // small number between -15 and 15
       case 7: // always 0
-      case 9: // always 0
-      case 29: // 0|64
         if (dt.value(0))
           f << "f" << j << "=" << dt.value(0) << ",";
         break;
@@ -1596,6 +1609,61 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       case 22: // find 1|2|4
         if (dt.value(0) != 1)
           f << "#f22=" << dt.value(0) << ",";
+        break;
+        //item properties
+      case 27: {
+        if (!dt.value(0))
+          break;
+        int fId = int(uint32_t(dt.value(0)>>16));
+        if (fId) fontItem.setId(fId);
+        int fSz = int(uint32_t(dt.value(0)&0xFFFF));
+        if (fSz) fontItem.setSize(int(uint32_t(dt.value(0)&0xFFFF)));
+        f << "itemFont=[id=" << fId << ", sz=" << fSz << "],";
+        break;
+      }
+      case 28: {
+        if (!dt.value(0))
+          break;
+        uint32_t strNum=(uint32_t)dt.value(0);
+        unsigned char str[4];
+        for (int depl=24, k=0; k < 4; k++, depl-=8)
+          str[k]=(unsigned char)(strNum>>depl);
+        unsigned char const *strPtr=str;
+        int sz=int(*strPtr++);
+        if (sz<=0 || sz>3 || !str[1]) {
+          MWAW_DEBUG_MSG(("MRWText::readRulers: can not read bullet\n"));
+          f << "#bullet=" << std::hex << strNum << std::dec << ",";
+          break;
+        }
+        unsigned char c=*strPtr++;
+        int unicode = m_parserState->m_fontConverter->unicode(3, c, strPtr, sz-1);
+        if (unicode==-1)
+          libmwaw::appendUnicode(c, level.m_bullet);
+        else
+          libmwaw::appendUnicode(uint32_t(unicode), level.m_bullet);
+        break;
+      }
+      case 29: // 0|5|6|30|64
+        if (!dt.value(0))
+          break;
+        switch(dt.value(0)&3) {
+        case 0:
+          break;
+        case 1:
+          level.m_alignment=MWAWListLevel::CENTER;
+          break;
+        case 2:
+          level.m_alignment=MWAWListLevel::RIGHT;
+          break;
+        default:
+          f << "#align[item]=3,";
+          break;
+        }
+        if (dt.value(0)>>2)
+          f << "f29[high]=" << std::hex << (int32_t(dt.value(0))>>2) << std::dec << ",";
+        break;
+      case 30:
+        level.m_labelWidth=dt.value(0)/72.0;
         break;
         // cell properties
       case 40:
@@ -1703,7 +1771,6 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         break;
       }
     }
-    //    para.m_margins[0] = para.m_margins[0].get()+para.m_margins[1].get();
     d = fD;
     for (int j = 0; j < 58; j++, d++) {
       if (!dataList[d].isBasic())
@@ -1750,8 +1817,13 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
             tab.m_position = float(dt.value(0))/72.f;
             break;
           case 2:
-            if (dt.value(0))
-              tab.m_leaderCharacter = uint16_t(dt.value(0));
+            if (dt.value(0)) {
+              int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) dt.value(0));
+              if (unicode==-1)
+                tab.m_leaderCharacter =uint16_t(dt.value(0));
+              else
+                tab.m_leaderCharacter = uint16_t(unicode);
+            }
             break;
           default:
             if (dt.value(0))
@@ -1788,29 +1860,39 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         if (dt.value(0)!=36)
           f << "#g0=" << dt.value(0) << ",";
         break;
-      case 4: { // 0|80|1000
+      case 4: { // find also flag&0x80
         long val = dt.value(0);
-        if (!val) break;
         if (val & 0x1000) {
           val &= 0xFFFFEFFF;
-          if (m_state->m_basicListId <= 0) {
-            // we need to create a basic list
-            MWAWListLevel theLevel;
-            theLevel.m_type = MWAWListLevel::BULLET;
-            theLevel.m_labelWidth=0.1;
-            libmwaw::appendUnicode(0x2022, theLevel.m_bullet);
-            shared_ptr<MWAWList> list;
-            list = m_parserState->m_listManager->getNewList(list, 1, theLevel);
-            if (!list) {
-              MWAW_DEBUG_MSG(("MRWText::readRulers: can create a listn for bullet\n"));
-              f << "###";
-              break;
-            } else
-              m_state->m_basicListId = list->getId();
+
+          level.m_type = MWAWListLevel::BULLET;
+          if (!level.m_bullet.len())
+            libmwaw::appendUnicode(0x2022, level.m_bullet);
+          shared_ptr<MWAWList> list;
+          list = m_parserState->m_listManager->getNewList(list, 1, level);
+          if (!list) {
+            MWAW_DEBUG_MSG(("MRWText::readRulers: can create a listn for bullet\n"));
+            f << "###";
+            break;
           }
+
           para.m_listLevelIndex = 1;
-          para.m_listId=m_state->m_basicListId;
+          para.m_listId=list->getId();
+
+          // we must update the margins:
+          para.m_margins[1]=*para.m_margins[0]+*para.m_margins[1];
+          para.m_margins[0]=0;
         }
+        if (val&0x4000) {
+          val &= 0xFFFFDFFF;
+          f << "hasBackborder,";
+        } else
+          para.m_paraFill.resetBorders();
+        if (val&0x4000) {
+          val &= 0xFFFFBFFF;
+          f << "hasBackground,";
+        } else
+          para.m_paraFill.resetBackgroundColor();
         if (val)
           f << "flag?=" << std::hex << val << std::dec << ",";
         break;
