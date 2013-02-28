@@ -155,6 +155,8 @@ public:
   Variable<int> m_listLevelIndex;
   /** the list id (if know ) */
   Variable<int> m_listId;
+  /** the list start value (if set ) */
+  Variable<int> m_listStartValue;
   /** the actual level */
   Variable<MWAWListLevel> m_listLevel;
 

@@ -193,6 +193,8 @@ bool File::readFileInformation()
     return true;
   if (m_fInfoCreator=="AB65") {
     checkFInfoType("AD65", "Pagemaker6.5") || checkFInfoType("Pagemaker6.5");
+  } else if (m_fInfoCreator=="ACTA") {
+    checkFInfoType("OTLN", "Acta") || checkFInfoType("otln", "Acta") || checkFInfoType("Acta");
   } else if (m_fInfoCreator=="ALB4") {
     checkFInfoType("ALD4", "Pagemaker4") || checkFInfoType("Pagemaker4");
   } else if (m_fInfoCreator=="ALB4") {

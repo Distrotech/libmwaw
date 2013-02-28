@@ -124,7 +124,7 @@ std::ostream &operator<<(std::ostream &o, MWAWTabStop const &tab)
 ////////////////////////////////////////////////////////////
 MWAWParagraph::MWAWParagraph() : m_marginsUnit(WPX_INCH), m_spacingsInterlineUnit(WPX_PERCENT), m_spacingsInterlineType(Fixed),
   m_tabs(), m_justify(JustificationLeft), m_breakStatus(0),
-  m_listLevelIndex(0), m_listId(-1), m_listLevel(), m_backgroundColor(MWAWColor::white()),
+  m_listLevelIndex(0), m_listId(-1), m_listStartValue(-1), m_listLevel(), m_backgroundColor(MWAWColor::white()),
   m_borders(), m_extra("")
 {
   for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
@@ -148,21 +148,19 @@ bool MWAWParagraph::operator!=(MWAWParagraph const &para) const
         *(m_spacings[i]) > *(para.m_spacings[i]))
       return true;
   }
-  if ((*m_justify) != *(para.m_justify) ||
-      (*m_marginsUnit) != *(para.m_marginsUnit) ||
-      (*m_spacingsInterlineUnit) != *(para.m_spacingsInterlineUnit) ||
-      (*m_spacingsInterlineType) != *(para.m_spacingsInterlineType))
+  if (*m_justify != *para.m_justify || *m_marginsUnit != *para.m_marginsUnit ||
+      *m_spacingsInterlineUnit != *para.m_spacingsInterlineUnit ||
+      *m_spacingsInterlineType != *para.m_spacingsInterlineType)
     return true;
   if (m_tabs->size() != para.m_tabs->size()) return true;
   for (size_t i=0; i < m_tabs->size(); i++) {
     if ((*m_tabs)[i] != (*para.m_tabs)[i])
       return true;
   }
-  if ((*m_breakStatus) != *(para.m_breakStatus) ||
-      *(m_listLevelIndex) != *(para.m_listLevelIndex) ||
-      *(m_listId) != *(para.m_listId) ||
-      m_listLevel->cmp(*(para.m_listLevel)) ||
-      *(m_backgroundColor) != *(para.m_backgroundColor))
+  if (*m_breakStatus != *para.m_breakStatus ||
+      *m_listLevelIndex != *para.m_listLevelIndex || *m_listId != *para.m_listId ||
+      *m_listStartValue != *para.m_listStartValue || m_listLevel->cmp(*para.m_listLevel) ||
+      *m_backgroundColor != *para.m_backgroundColor)
     return true;
   if (m_borders.size() != para.m_borders.size()) return true;
   for (size_t i=0; i < m_borders.size(); i++) {
@@ -188,6 +186,7 @@ void MWAWParagraph::insert(MWAWParagraph const &para)
   m_breakStatus.insert(para.m_breakStatus);
   m_listLevelIndex.insert(para.m_listLevelIndex);
   m_listId.insert(para.m_listId);
+  m_listStartValue.insert(m_listStartValue);
   m_listLevel.insert(para.m_listLevel);
   m_backgroundColor.insert(para.m_backgroundColor);
   if (m_borders.size() < para.m_borders.size())

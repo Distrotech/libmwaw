@@ -141,19 +141,19 @@ public:
   }
   //! set the page left margin
   void setMarginLeft(const double marginLeft) {
-    m_marginLeft = marginLeft;
+    m_marginLeft = (marginLeft > 0) ? marginLeft : 0.01;
   }
   //! set the page right margin
   void setMarginRight(const double marginRight) {
-    m_marginRight = marginRight;
+    m_marginRight = (marginRight > 0) ? marginRight : 0.01;
   }
   //! set the page top margin
   void setMarginTop(const double marginTop) {
-    m_marginTop = marginTop;
+    m_marginTop =(marginTop > 0) ? marginTop : 0.01;
   }
   //! set the page bottom margin
   void setMarginBottom(const double marginBottom) {
-    m_marginBottom = marginBottom;
+    m_marginBottom = (marginBottom > 0) ? marginBottom : 0.01;
   }
   //! check if the page margins are consistent with the page dimension, if not update them
   void checkMargins();

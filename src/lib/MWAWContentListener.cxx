@@ -706,6 +706,7 @@ void MWAWContentListener::_closeSection()
 
   if (m_ps->m_isParagraphOpened)
     _closeParagraph();
+  m_ps->m_paragraph.m_listLevelIndex=0;
   _changeList();
 
   m_documentInterface->closeSection();
@@ -807,24 +808,31 @@ void MWAWContentListener::_openListElement()
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
     return;
 
-  if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened) {
-    if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == libmwaw::DOC_TEXT_BOX)) {
-      if (m_ps->m_sectionAttributesChanged)
-        _closeSection();
+  if (m_ps->m_isParagraphOpened || m_ps->m_isListElementOpened)
+    return;
 
-      if (!m_ps->m_isSectionOpened)
-        _openSection();
-    }
+  if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == libmwaw::DOC_TEXT_BOX)) {
+    if (m_ps->m_sectionAttributesChanged)
+      _closeSection();
 
-    WPXPropertyList propList;
-    _appendParagraphProperties(propList, true);
-    WPXPropertyListVector tabStops;
-    m_ps->m_paragraph.addTabsTo(tabStops);
-
-    if (!m_ps->m_isListElementOpened)
-      m_documentInterface->openListElement(propList, tabStops);
-    _resetParagraphState(true);
+    if (!m_ps->m_isSectionOpened)
+      _openSection();
   }
+
+  WPXPropertyList propList;
+  _appendParagraphProperties(propList, true);
+  // check if we must change the start value
+  int startValue=m_ps->m_paragraph.m_listStartValue.get();
+  if (startValue > 0 && m_ps->m_list && m_ps->m_list->getStartValueForNextElement() != startValue) {
+    propList.insert("text:start-value", startValue);
+    m_ps->m_list->setStartValueForNextElement(startValue);
+  }
+  WPXPropertyListVector tabStops;
+  m_ps->m_paragraph.addTabsTo(tabStops);
+
+  if (m_ps->m_list) m_ps->m_list->openElement();
+  m_documentInterface->openListElement(propList, tabStops);
+  _resetParagraphState(true);
 }
 
 void MWAWContentListener::_closeListElement()
@@ -833,6 +841,7 @@ void MWAWContentListener::_closeListElement()
     if (m_ps->m_isSpanOpened)
       _closeSpan();
 
+    if (m_ps->m_list) m_ps->m_list->closeElement();
     m_documentInterface->closeListElement();
   }
 
@@ -880,7 +889,6 @@ void MWAWContentListener::_changeList()
       m_documentInterface->closeUnorderedListLevel();
   }
 
-  WPXPropertyList propList;
   if (newLevel) {
     shared_ptr<MWAWList> theList;
 
@@ -897,14 +905,13 @@ void MWAWContentListener::_changeList()
     }
     m_ps->m_list = theList;
     m_ps->m_list->setLevel((int)newLevel);
-    m_ps->m_list->openElement();
-    propList.insert("libwpd:id", m_ps->m_list->getId());
-    m_ps->m_list->closeElement();
   }
 
   m_ps->m_listOrderedLevels.resize(newLevel, false);
   if (actualLevel == newLevel) return;
 
+  WPXPropertyList propList;
+  propList.insert("libwpd:id", m_ps->m_list->getId());
   for (size_t i=actualLevel+1; i<= newLevel; i++) {
     bool ordered = m_ps->m_list->isNumeric(int(i));
     m_ps->m_listOrderedLevels[i-1] = ordered;

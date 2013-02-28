@@ -99,7 +99,7 @@ protected:
   bool readGraphic(MDWParserInternal::LineInfo const &line);
 
   //! try to read a ruler
-  bool readRuler(MDWParserInternal::LineInfo const &line, MWAWParagraph &para);
+  bool readRuler(MDWParserInternal::LineInfo &line);
 
   //! try to read a compressed text zone
   bool readCompressedText(MDWParserInternal::LineInfo const &line);
@@ -113,9 +113,6 @@ protected:
   //! try to read the fonts
   bool readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts, std::vector<int> &textPos);
 
-  //! update the actual ruler using lineInfo
-  void updateRuler(MDWParserInternal::LineInfo const &line);
-
   //! read the print info zone
   bool readPrintInfo(MWAWEntry &entry);
 
@@ -125,8 +122,16 @@ protected:
   //! read the last zone ( pos + 7fffffff )
   bool readLastZone(MWAWEntry &entry);
 
-  //! read the 12 th zone
+  //! read the 8th zone ( unknown zone)
+  bool readZone8(MWAWEntry &entry);
+  //! read the heading state
+  bool readHeadingStates(MWAWEntry &entry);
+  //! read the 12 th zone ( unknown zone which contains some font definition)
   bool readZone12(MWAWEntry &entry);
+  //! read the heading property zone
+  bool readHeadingProperties(MWAWEntry &entry);
+  //! read the heading custom zone
+  bool readHeadingCustom(MWAWEntry &entry);
 
   /** sends a paragraph property to the listener */
   void setProperty(MWAWParagraph const &para);

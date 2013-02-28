@@ -43,12 +43,14 @@
 ////////////////////////////////////////////////////////////
 // list level functions
 ////////////////////////////////////////////////////////////
-void MWAWListLevel::addTo(WPXPropertyList &propList, int startVal) const
+void MWAWListLevel::addTo(WPXPropertyList &propList) const
 {
   propList.insert("text:min-label-width", m_labelWidth);
   propList.insert("text:space-before", m_labelBeforeSpace);
   if (m_labelAfterSpace > 0)
     propList.insert("text:min-label-distance", m_labelAfterSpace);
+  if (m_numBeforeLabels)
+    propList.insert("text:display-levels", m_numBeforeLabels+1);
   switch(m_alignment) {
   case LEFT:
     break;
@@ -86,7 +88,7 @@ void MWAWListLevel::addTo(WPXPropertyList &propList, int startVal) const
     else if (m_type==UPPER_ALPHA) propList.insert("style:num-format", "A");
     else if (m_type==LOWER_ROMAN) propList.insert("style:num-format", "i");
     else propList.insert("style:num-format", "I");
-    propList.insert("text:start-value", startVal);
+    propList.insert("text:start-value", getStartValue());
     break;
   case DEFAULT:
   default:
@@ -109,6 +111,8 @@ int MWAWListLevel::cmp(MWAWListLevel const &levl) const
   fDiff = m_labelAfterSpace-levl.m_labelAfterSpace;
   if (fDiff < 0.0) return -1;
   if (fDiff > 0.0) return 1;
+  diff = m_numBeforeLabels-levl.m_numBeforeLabels;
+  if (diff) return diff;
   diff = strcmp(m_prefix.cstr(),levl.m_prefix.cstr());
   if (diff) return diff;
   diff = strcmp(m_suffix.cstr(),levl.m_suffix.cstr());
@@ -165,6 +169,7 @@ std::ostream &operator<<(std::ostream &o, MWAWListLevel const &level)
   if (level.m_labelBeforeSpace < 0 || level.m_labelBeforeSpace > 0) o << ", indent=" << level.m_labelBeforeSpace;
   if (level.m_labelWidth < 0 || level.m_labelWidth > 0) o << ", width=" << level.m_labelWidth;
   if (level.m_labelAfterSpace > 0) o << ", labelTextW=" << level.m_labelAfterSpace;
+  if (level.m_numBeforeLabels) o << ", show=" << level.m_numBeforeLabels << "[before]";
   o << "]";
   return o;
 }
@@ -193,7 +198,7 @@ void MWAWList::updateIndicesFrom(MWAWList const &list)
   if (maxLevel>m_levels.size())
     maxLevel=m_levels.size();
   for (size_t level=0 ; level < maxLevel; level++) {
-    m_actualIndices[level]=list.m_actualIndices[level];
+    m_actualIndices[size_t(level)]=m_levels[size_t(level)].getStartValue()-1;
     m_nextIndices[level]=list.m_nextIndices[level];
   }
 }
@@ -244,7 +249,7 @@ void MWAWList::sendTo(WPXDocumentInterface &docInterface, int level) const
   WPXPropertyList propList;
   propList.insert("libwpd:id", getId());
   propList.insert("libwpd:level", level);
-  m_levels[size_t(level-1)].addTo(propList, m_actualIndices[size_t(level-1)]);
+  m_levels[size_t(level-1)].addTo(propList);
   if (!m_levels[size_t(level-1)].isNumeric())
     docInterface.defineUnorderedListLevel(propList);
   else
@@ -278,6 +283,26 @@ void MWAWList::setLevel(int levl) const
       (m_nextIndices[size_t(levl)]=m_levels[size_t(levl)].getStartValue())-1;
 
   m_actLevel=levl-1;
+}
+
+void MWAWList::setStartValueForNextElement(int value)
+{
+  if (m_actLevel < 0 || m_actLevel >= int(m_levels.size())) {
+    MWAW_DEBUG_MSG(("MWAWList::setStartValueForNextElement: can not find level %d\n",m_actLevel));
+    return;
+  }
+  m_nextIndices[size_t(m_actLevel)]=value;
+}
+
+int MWAWList::getStartValueForNextElement() const
+{
+  if (m_actLevel < 0 || m_actLevel >= int(m_levels.size())) {
+    MWAW_DEBUG_MSG(("MWAWList::getStartValueForNextElement: can not find level %d\n",m_actLevel));
+    return -1;
+  }
+  if (!m_levels[size_t(m_actLevel)].isNumeric())
+    return -1;
+  return m_nextIndices[size_t(m_actLevel)];
 }
 
 void MWAWList::openElement() const

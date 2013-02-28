@@ -53,7 +53,7 @@ struct MWAWListLevel {
   enum Alignment { LEFT, RIGHT, CENTER };
 
   /** basic constructor */
-  MWAWListLevel() : m_type(NONE), m_labelBeforeSpace(0.0), m_labelWidth(0.1), m_labelAfterSpace(0.0), m_alignment(LEFT), m_startValue(0),
+  MWAWListLevel() : m_type(NONE), m_labelBeforeSpace(0.0), m_labelWidth(0.1), m_labelAfterSpace(0.0), m_numBeforeLabels(0), m_alignment(LEFT), m_startValue(0),
     m_prefix(""), m_suffix(""), m_bullet("") {
   }
   /** destructor */
@@ -68,7 +68,7 @@ struct MWAWListLevel {
     return m_type !=DEFAULT && m_type !=NONE && m_type != BULLET;
   }
   /** add the information of this level in the propList */
-  void addTo(WPXPropertyList &propList, int startVal) const;
+  void addTo(WPXPropertyList &propList) const;
 
   /** returns the start value (if set) or 1 */
   int getStartValue() const {
@@ -86,6 +86,8 @@ struct MWAWListLevel {
   double m_labelBeforeSpace /** the extra space between inserting a label */;
   double m_labelWidth /** the minimum label width */;
   double m_labelAfterSpace /** the minimum distance between the label and the text */;
+  /** the number of label to show before this */
+  int m_numBeforeLabels;
   //! the alignement ( left, center, ...)
   Alignment m_alignment;
   /** the actual value (if this is an ordered level ) */
@@ -131,6 +133,13 @@ public:
   /** set the list id */
   void setId(int newId) const;
 
+  /** returns a level if it exists */
+  MWAWListLevel getLevel(int levl) const {
+    if (levl >= 0 && levl < int(m_levels.size()))
+      return m_levels[size_t(levl)];
+    MWAW_DEBUG_MSG(("MWAWList::getLevel: can not find level %d\n", levl));
+    return MWAWListLevel();
+  }
   /** returns the number of level */
   int numLevels() const {
     return int(m_levels.size());
@@ -144,12 +153,13 @@ public:
   void openElement() const;
   /** close the list element */
   void closeElement() const {}
+  /** returns the startvalue corresponding to the actual level ( or -1 for an unknown/unordered list) */
+  int getStartValueForNextElement() const;
+  /** set the startvalue corresponding to the actual level*/
+  void setStartValueForNextElement(int value);
 
   /** returns true is a level is numeric */
   bool isNumeric(int levl) const;
-
-  /** returns true of the level must be send to the document interface */
-  bool mustSendLevel(int level) const;
 
   /** send the list level information to the document interface. */
   void sendTo(WPXDocumentInterface &docInterface, int level) const;

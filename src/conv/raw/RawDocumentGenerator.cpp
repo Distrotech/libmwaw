@@ -43,16 +43,23 @@
 #undef _D
 #endif
 
-#define _D(M, L) \
-	m_atLeastOneCallback = true; \
-	if (!m_printCallgraphScore) \
-			__idprintf M; \
-	else \
-	{ \
-		ListenerCallback lc = m_callStack.top(); \
-		if (lc != L) \
-			m_callbackMisses++;	\
-		m_callStack.pop(); \
+#ifdef DEBUG
+#define MWAW_DEBUG_MSG(x) printf x
+#else
+#define MWAW_DEBUG_MSG(x)
+#endif
+#define _D(M, L)  				 		    	\
+	m_atLeastOneCallback = true; 				    	\
+	if (!m_printCallgraphScore)  				    	\
+			__idprintf M;  				    	\
+	else  			       				    	\
+	{  			 			       	    	\
+		ListenerCallback lc = m_callStack.top();       	    	\
+		if (lc != L) { 				       	    	\
+		  MWAW_DEBUG_MSG(("Call missed: %d != %d\n", lc, L));	\
+		  m_callbackMisses++;				    	\
+		}		 			       	    	\
+		m_callStack.pop();			       	    	\
 	}
 
 RawDocumentGenerator::RawDocumentGenerator(bool printCallgraphScore) :
