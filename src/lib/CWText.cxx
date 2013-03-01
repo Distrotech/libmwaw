@@ -78,7 +78,7 @@ std::ostream &operator<<(std::ostream &o, PLC const &plc)
     o << "F";
     break;
   case P_Ruler:
-    o << "P";
+    o << "R";
     break;
   case P_Child:
     o << "C";
@@ -128,12 +128,13 @@ struct Paragraph : public MWAWParagraph {
 
 void Paragraph::updateListLevel()
 {
-  if (m_labelType==0 && (!m_listLevelIndex.isSet() || !m_listLevelIndex.get()))
+  int extraLevel = m_labelType!=0 ? 1 : 0;
+  if (*m_listLevelIndex+extraLevel<=0)
     return;
-  int lev = m_listLevelIndex.get();
-  if (m_labelType) lev++;
+  int lev = *m_listLevelIndex+extraLevel;
   m_listLevelIndex = lev;
   MWAWListLevel theLevel;
+  theLevel.m_labelWidth=0.2;
   switch(m_labelType) {
   case 0:
     theLevel.m_type = MWAWListLevel::NONE;
@@ -168,22 +169,29 @@ void Paragraph::updateListLevel()
     break;
   case 6: // legal
     theLevel.m_type = MWAWListLevel::DECIMAL;
-    theLevel.m_suffix = "."; // fixme in fact 1.2.2.
+    theLevel.m_numBeforeLabels = lev-1;
+    theLevel.m_suffix = ".";
+    theLevel.m_labelWidth = 0.2*lev;
     break;
   case 7:
     theLevel.m_type = MWAWListLevel::UPPER_ALPHA;
+    theLevel.m_suffix = ".";
     break;
   case 8:
     theLevel.m_type = MWAWListLevel::LOWER_ALPHA;
+    theLevel.m_suffix = ".";
     break;
   case 9:
     theLevel.m_type = MWAWListLevel::DECIMAL;
+    theLevel.m_suffix = ".";
     break;
   case 10:
     theLevel.m_type = MWAWListLevel::UPPER_ROMAN;
+    theLevel.m_suffix = ".";
     break;
   case 11:
     theLevel.m_type = MWAWListLevel::LOWER_ROMAN;
+    theLevel.m_suffix = ".";
     break;
   case 2: // bullet
   default:
@@ -191,24 +199,57 @@ void Paragraph::updateListLevel()
     libmwaw::appendUnicode(0x2022, theLevel.m_bullet);
     break;
   }
-  m_margins[1]=m_margins[1].get()-0.2;
-  theLevel.m_labelWidth=0.2;
+  m_margins[1]=m_margins[1].get()-theLevel.m_labelWidth;
   m_listLevel=theLevel;
 }
 
-struct ParagraphInfo {
-  ParagraphInfo() : m_styleId(-1), m_unknown(0), m_extra("") {
+struct ParagraphPLC {
+  ParagraphPLC() : m_rulerId(-1), m_styleId(-1), m_flags(0), m_extra("") {
   }
 
-  friend std::ostream &operator<<(std::ostream &o, ParagraphInfo const &info) {
-    if (info.m_styleId >= 0) o << "style=" << info.m_styleId <<",";
-    if (info.m_unknown) o << "unknown=" << info.m_unknown << ",";
+  friend std::ostream &operator<<(std::ostream &o, ParagraphPLC const &info) {
+    if (info.m_rulerId >= 0) o << "P" << info.m_rulerId <<",";
+    if (info.m_styleId >= 0) o << "LK" << info.m_styleId <<",";
+    switch(info.m_flags&3) {
+    case 0: // normal
+      break;
+    case 1:
+      o << "hidden,";
+      break;
+    case 2:
+      o << "collapsed,";
+      break;
+    default:
+      o<< "hidden/collapsed,";
+      break;
+    }
+    if (info.m_flags&4)
+      o << "flags4,";
+    static char const *(labelNames[]) = {
+      "none", "diamond", "bullet", "checkbox", "hardward", "leader", "legal",
+      "upperalpha", "alpha", "numeric", "upperroman", "roman"
+    };
+
+    int listType=int((info.m_flags>>3)&0xF);
+    if (listType>0 && listType < 12)
+      o << labelNames[listType] << ",";
+    else if (listType)
+      o << "#listType=" << listType << ",";
+    if (info.m_flags&0x80) o << "flags80,";
+    int listLevel=int((info.m_flags>>8)&0xF);
+    if (listLevel) o << "level=" << listLevel+1;
+    if (info.m_flags>>12) o << "flags=" << std::hex << (info.m_flags>>12) << std::dec << ",";
     if (info.m_extra.length()) o << info.m_extra;
     return o;
   }
 
+  /** the ruler id */
+  int m_rulerId;
+  /** the style id ( via the style lookup table )*/
   int m_styleId;
-  int m_unknown;
+  /** some flags */
+  int m_flags;
+  /** extra data */
   std::string m_extra;
 };
 
@@ -363,7 +404,7 @@ struct Zone : public CWStruct::DSET {
   int m_unknown /** an unknown flags */;
 
   std::vector<MWAWFont> m_fontList /** the list of fonts */;
-  std::vector<ParagraphInfo> m_paragraphList /** the list of paragraph */;
+  std::vector<ParagraphPLC> m_paragraphList /** the list of paragraph */;
   std::vector<Section> m_sectionList /** the list of section */;
   std::vector<Token> m_tokenList /** the list of token */;
   std::vector<TextZoneInfo> m_textZoneList /** the list of zone */;
@@ -686,7 +727,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   if (id >= 0)
-    f << "Font-" << id << ":";
+    f << "Font-F" << id << ":";
   else
     f << "Font:";
 
@@ -727,7 +768,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
     */
   }
   if (fontSize >= 12)
-    f << "lookupId=" << input->readLong(2) << ",";
+    f << "LK" << input->readLong(2) << ",";
   if (fontSize >= 14) {
     flag = (int) input->readULong(2);
     if (flag & 0x1)
@@ -937,37 +978,39 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   pos = entry.begin();
   ascFile.addPos(pos);
-  ascFile.addNote("Entries(Paragraph)");
+  ascFile.addNote("Entries(ParaPLC)");
 
   libmwaw::DebugStream f;
-  int numParagraphs = int(m_state->m_paragraphsList.size());
   input->seek(pos+4, WPX_SEEK_SET); // skip header
   CWTextInternal::PLC plc;
   plc.m_type = CWTextInternal::P_Ruler;
   for (int i = 0; i < numElt; i++) {
     pos = input->tell();
-    CWTextInternal::ParagraphInfo info;
+    CWTextInternal::ParagraphPLC info;
 
     long posC = (long) input->readULong(4);
     f.str("");
-    f << "Paragraph-" << i << ": pos=" << posC << ",";
-    info.m_styleId = (int) input->readLong(2);
+    f << "ParaPLC-R" << i << ": pos=" << posC << ",";
+    info.m_rulerId = (int) input->readLong(2);
     if (styleSize >= 8)
-      info.m_unknown = (int) input->readLong(2);
-    f << info;
+      info.m_flags = (int) input->readLong(2);
 
-    int rulerId = info.m_styleId;
+    int rulerId = info.m_rulerId;
     if (vers > 2) {
+      info.m_styleId = info.m_rulerId;
       CWStyleManager::Style style;
       m_styleManager->get(rulerId, style);
-      rulerId = style.m_rulerId;
+      rulerId = info.m_rulerId = style.m_rulerId;
+#if 0
+      f << "[style=" << style << "]";
+#endif
     }
-    if (rulerId >= 0 && rulerId < numParagraphs)
-      f << "ruler"<< rulerId << "[" << m_state->m_paragraphsList[(size_t) rulerId] << "]";
+    f << info;
+
     if (long(input->tell()) != pos+styleSize)
       ascFile.addDelimiter(input->tell(), '|');
     zone.m_paragraphList.push_back(info);
-    plc.m_id = rulerId;
+    plc.m_id = i;
     zone.m_plcMap.insert(std::map<long, CWTextInternal::PLC>::value_type(posC, plc));
     input->seek(pos+styleSize, WPX_SEEK_SET);
     ascFile.addPos(pos);
@@ -1235,6 +1278,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
     listener->insertEOL();
   long actC = 0;
   bool main = zone.m_id == 1;
+  int numParaPLC = int(zone.m_paragraphList.size());
   int numParagraphs = int(m_state->m_paragraphsList.size());
   int actPage = 1;
   size_t numZones = zone.m_zones.size();
@@ -1320,9 +1364,13 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
           listener->setFont(zone.m_fontList[size_t(plc.m_id)]);
           break;
         case CWTextInternal::P_Ruler: {
-          if (plc.m_id < 0 || plc.m_id >= numParagraphs)
+          if (plc.m_id < 0 || plc.m_id >= numParaPLC)
             break;
-          CWTextInternal::Paragraph const &para = m_state->m_paragraphsList[(size_t) plc.m_id];
+          CWTextInternal::ParagraphPLC const &paraPLC = zone.m_paragraphList[(size_t) plc.m_id];
+          f << "[" << paraPLC << "]";
+          if (paraPLC.m_rulerId < 0 || paraPLC.m_rulerId >= numParagraphs)
+            break;
+          CWTextInternal::Paragraph const &para = m_state->m_paragraphsList[(size_t) paraPLC.m_rulerId];
           if (*para.m_listLevelIndex>0 && actC >= actListCPos)
             actListId=findListId(zone, actListId, actC, actListCPos);
           setProperty(para, actListId);
@@ -1476,6 +1524,7 @@ int CWText::findListId(CWTextInternal::Zone const &zone, int actListId, long act
   if (actListId>0)
     actList = m_parserState->m_listManager->getList(actListId);
 
+  int numParaPLC= int(zone.m_paragraphList.size());
   int numParagraphs = int(m_state->m_paragraphsList.size());
   std::multimap<long, CWTextInternal::PLC>::const_iterator plcIt;
   plcIt=zone.m_plcMap.find(actC);
@@ -1487,9 +1536,12 @@ int CWText::findListId(CWTextInternal::Zone const &zone, int actListId, long act
     CWTextInternal::PLC const &plc = plcIt++->second;
     if (plc.m_type != CWTextInternal::P_Ruler)
       continue;
-    if (plc.m_id < 0 || plc.m_id >= numParagraphs)
+    if (plc.m_id < 0 || plc.m_id >= numParaPLC)
       break;
-    CWTextInternal::Paragraph const &para=m_state->m_paragraphsList[(size_t) plc.m_id];
+    CWTextInternal::ParagraphPLC const &paraPLC = zone.m_paragraphList[(size_t) plc.m_id];
+    if (paraPLC.m_rulerId < 0 || paraPLC.m_rulerId >= numParagraphs)
+      break;
+    CWTextInternal::Paragraph const &para=m_state->m_paragraphsList[(size_t) paraPLC.m_rulerId];
     int level = *para.m_listLevelIndex;
     if (level<=0)
       continue;
@@ -1527,9 +1579,9 @@ bool CWText::readSTYL_CHAR(int N, int fSz)
     else {
       f.str("");
       if (!i)
-        f << "Entries(Font)-0:";
+        f << "Entries(Font)-F0:#";
       else
-        f << "Font-" << i << ":#";
+        f << "FontF-" << i << ":#";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
     }
@@ -1552,9 +1604,9 @@ bool CWText::readSTYL_RULR(int N, int fSz)
     if (fSz != 108 || !readParagraph(i)) {
       f.str("");
       if (!i)
-        f << "Entries(RULR)-0:";
+        f << "Entries(RULR)-P0:#";
       else
-        f << "RULR-" << i << ":#";
+        f << "RULR-P" << i << ":#";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
     }
@@ -1838,8 +1890,13 @@ bool CWText::readParagraph(int id)
       break;
     }
     char decimalChar = (char) input->readULong(1);
-    if (decimalChar != ',' && decimalChar != '.')
-      f << "decimalChar=" << decimalChar << ",";
+    if (decimalChar) {
+      int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) decimalChar);
+      if (unicode==-1)
+        tab.m_decimalCharacter = uint16_t(decimalChar);
+      else
+        tab.m_decimalCharacter = uint16_t(unicode);
+    }
     ruler.m_tabs->push_back(tab);
     if (val)
       f << "#unkn[tab" << i << "=" << std::hex << val << std::dec << "],";
@@ -1854,11 +1911,11 @@ bool CWText::readParagraph(int id)
   }
   f.str("");
   if (id == 0)
-    f << "Entries(RULR)-0";
+    f << "Entries(RULR)-P0";
   else if (id < 0)
-    f << "RULR-_";
+    f << "RULR-P_";
   else
-    f << "RULR-" << id;
+    f << "RULR-P" << id;
   f << ":" << ruler;
 
   if (long(input->tell()) != pos+dataSize)

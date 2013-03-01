@@ -463,8 +463,8 @@ bool CWStyleManager::readLookUp(int N, int fSz)
   for (int i = 0; i < N; i++) {
     long pos = input->tell();
     f.str("");
-    if (i == 0) f << "Entries(StylLookUp): StylLookUp-0:";
-    else f << "StylLookUp-" << i << ":";
+    if (i == 0) f << "Entries(StylLookUp): StylLookUp-LK0:";
+    else f << "StylLookUp-LK" << i << ":";
     int val = (int) input->readLong(2);
     if (m_state->m_stylesMap.find(val)!=m_state->m_stylesMap.end() &&
         m_state->m_stylesMap.find(val)->second.m_localStyleId != val &&

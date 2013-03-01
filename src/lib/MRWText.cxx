@@ -1617,7 +1617,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         int fId = int(uint32_t(dt.value(0)>>16));
         if (fId) fontItem.setId(fId);
         int fSz = int(uint32_t(dt.value(0)&0xFFFF));
-        if (fSz) fontItem.setSize(int(uint32_t(dt.value(0)&0xFFFF)));
+        if (fSz) fontItem.setSize(float(uint32_t(dt.value(0)&0xFFFF)));
         f << "itemFont=[id=" << fId << ", sz=" << fSz << "],";
         break;
       }
