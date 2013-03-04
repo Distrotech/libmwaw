@@ -82,9 +82,22 @@ struct DocZoneData {
 //! Internal and low level: a structure used to define the list of zone in Zone 0 data of a FullWrite file
 struct DocZoneStruct {
   //! constructor
-  DocZoneStruct() : m_pos(-1), m_type(-1), m_nextId(0), m_fatherId(-1), m_childList() {}
+  DocZoneStruct() : m_pos(-1), m_structType(0), m_type(-1), m_nextId(0), m_fatherId(-1), m_childList() {}
   //! the operator<<
   friend std::ostream &operator<<(std::ostream &o, DocZoneStruct const &dt) {
+    switch(dt.m_structType) {
+    case 0:
+      o << "empty,";
+      break;
+    case 1: // normal
+      break;
+    case 4: // hidden?
+      o << "hidden,";
+      break;
+    default:
+      o << "#structType=" << dt.m_structType << ",";
+      break;
+    }
     switch(dt.m_type) {
     case -1:
       break;
@@ -150,6 +163,8 @@ struct DocZoneStruct {
   }
   //! the file position
   long m_pos;
+  //! the struct type
+  int m_structType;
   //! the type
   int m_type;
   //! the next id
@@ -599,7 +614,7 @@ bool FWParser::createZones()
       }
     }
   }
-  m_textParser->sortZones();
+  m_textParser->prepareData();
   return true;
 }
 
@@ -1076,7 +1091,7 @@ bool FWParser::readDocZoneData(shared_ptr<FWEntry> zone)
         done = m_textParser->readParagraphTabs(zone, int(z));
         break;
       case 2:
-        done = m_textParser->readItem(zone, int(z));
+        done = m_textParser->readItem(zone, int(z), doc.m_structType==4);
         break;
       case 3: { // 4, 0 + [0|1]
         int sz = int(input->readLong(2));
@@ -1231,6 +1246,11 @@ bool FWParser::readDocZoneData(shared_ptr<FWEntry> zone)
   return true;
 }
 
+int FWParser::getNumDocZoneStruct() const
+{
+  return int(m_state->m_docZoneList.size());
+}
+
 bool FWParser::readDocZoneStruct(shared_ptr<FWEntry> zone)
 {
   MWAWInputStreamPtr input = zone->m_input;
@@ -1247,14 +1267,14 @@ bool FWParser::readDocZoneStruct(shared_ptr<FWEntry> zone)
       return false;
     long v = input->readLong(1);
     if (v==0) continue;
-    if (v!=1) {
+    if (v!=1 && v!=4) {
       if (2*i > N) {
         MWAW_DEBUG_MSG(("FWParser::readDocZoneStruct: find only %d/%d entries\n", i, N));
         break;
       }
       return false;
     }
-    input->seek(5, WPX_SEEK_CUR);
+    input->seek(4+v, WPX_SEEK_CUR);
   }
   if (input->tell() > zone->end())
     return false;
@@ -1275,18 +1295,19 @@ bool FWParser::readDocZoneStruct(shared_ptr<FWEntry> zone)
   zoneList.resize(size_t(N)+1);
   for (int i = 0; i < N-1; i++) {
     pos = input->tell();
-    int v = (int) input->readULong(1);
-    if (v > 1) {
+    int type = (int) input->readULong(1);
+    if (type > 1 && type!=4) {
       asciiFile.addPos(pos);
       asciiFile.addNote("DZoneStruct-###");
       break;
     }
 
     FWParserInternal::DocZoneStruct dt;
+    dt.m_structType = type;
     dt.m_pos = pos;
     f.str("");
     f << "DZoneStruct-" << i+1 << ":";
-    if (v==1) {
+    if (type) {
       dt.m_type = (int) input->readULong(1); // small number between 0 and 1f
       dt.m_nextId = (int) input->readLong(2);
       dt.m_fatherId = (int) input->readLong(2);
@@ -1304,6 +1325,10 @@ bool FWParser::readDocZoneStruct(shared_ptr<FWEntry> zone)
           dt.m_nextId = 0;
         } else
           seenSet.insert(dt.m_nextId);
+      }
+      if (type==4) {
+        asciiFile.addDelimiter(input->tell(),'|');
+        input->seek(3, WPX_SEEK_CUR);
       }
       f << dt;
     }

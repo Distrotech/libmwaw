@@ -131,10 +131,7 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::KSEN const &ksen)
   case MWAWBorder::None:
     o << "lType=none,";
     break;
-  case MWAWBorder::Single:
-    break;
-  case MWAWBorder::Double:
-    o << "double,";
+  case MWAWBorder::Simple:
     break;
   case MWAWBorder::Dot:
     o << "dotted,";
@@ -147,6 +144,19 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::KSEN const &ksen)
     break;
   default:
     o << "lType=#" << int(ksen.m_lineType) << ",";
+    break;
+  }
+  switch(ksen.m_lineRepeat) {
+  case MWAWBorder::Single:
+    break;
+  case MWAWBorder::Double:
+    o << "double,";
+    break;
+  case MWAWBorder::Triple:
+    o << "triple,";
+    break;
+  default:
+    o << "lRepeat=#" << int(ksen.m_lineRepeat) << ",";
     break;
   }
   switch(ksen.m_lines) {
@@ -756,14 +766,14 @@ bool CWStyleManager::readKSEN(int N, int fSz)
       ksen.m_lineType = MWAWBorder::Dot;
       break;
     case 3:
-      ksen.m_lineType = MWAWBorder::Double;
+      ksen.m_lineRepeat = MWAWBorder::Double;
       break;
     case 4:
-      ksen.m_lineType = MWAWBorder::Double;
+      ksen.m_lineRepeat = MWAWBorder::Double;
       f << "w[external]=2,";
       break;
     case 5:
-      ksen.m_lineType = MWAWBorder::Double;
+      ksen.m_lineRepeat = MWAWBorder::Double;
       f << "w[internal]=2,";
       break;
     default:

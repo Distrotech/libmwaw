@@ -52,6 +52,7 @@ typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace FWTextInternal
 {
+struct Border;
 struct Font;
 struct Paragraph;
 
@@ -111,9 +112,19 @@ protected:
   void send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
             FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler,
             std::string &str);
+  //! send a hidden item
+  bool sendHiddenItem(int id, FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler);
+
+  //! prepare the different data (called sortZones and createItemStructures)
+  void prepareData() {
+    sortZones();
+    createItemStructures();
+  }
 
   //! sort the different zones, finding the main zone, ...
   void sortZones();
+  //! create the item structures
+  void createItemStructures();
 
   //
   // low level
@@ -126,7 +137,7 @@ protected:
   bool readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::LineHeader &lHeader);
 
   //! check if the input of the zone points to a item zone in DataStruct Zone
-  bool readItem(shared_ptr<FWEntry> zone, int id=-1);
+  bool readItem(shared_ptr<FWEntry> zone, int id=-1, bool hidden=false);
 
   //! check if the input of the zone points to a paragraph zone in DataStruct Zone
   bool readParagraphTabs(shared_ptr<FWEntry> zone, int id=-1);
@@ -135,6 +146,8 @@ protected:
 
   //! try to read the border definiton (at the end of doc info)
   bool readBorderDocInfo(shared_ptr<FWEntry> zone);
+  //! try to read a border definiton
+  bool readBorder(shared_ptr<FWEntry> zone, FWTextInternal::Border &border, int fSz);
 
   //! try to read the font/paragraph modifier zone (Zone1f)
   bool readDataMod(shared_ptr<FWEntry> zone, int id);

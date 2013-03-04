@@ -202,10 +202,12 @@ int MWAWBorder::compare(MWAWBorder const &orig) const
 {
   int diff = int(m_style)-int(orig.m_style);
   if (diff) return diff;
-  diff = m_width-orig.m_width;
+  diff = int(m_type)-int(orig.m_type);
   if (diff) return diff;
+  if (m_width < orig.m_width) return -1;
+  if (m_width > orig.m_width) return 1;
   if (m_color < orig.m_color) return -1;
-  if (m_color > orig.m_color) return -1;
+  if (m_color > orig.m_color) return 1;
   return 0;
 }
 
@@ -214,23 +216,29 @@ std::string MWAWBorder::getPropertyValue() const
   if (m_style == None) return "";
   std::stringstream stream;
   stream << m_width*0.03 << "cm ";
-  switch (m_style) {
-  case Dot:
-  case LargeDot:
-    stream << "dotted";
-    break;
-  case Dash:
-    stream << "dashed";
-    break;
-  case Single:
-    stream << "solid";
-    break;
-  case Double:
+  if (m_type==MWAWBorder::Double || m_type==MWAWBorder::Triple) {
+    static bool first = true;
+    if (first && m_style!=Simple) {
+      MWAW_DEBUG_MSG(("MWAWBorder::getPropertyValue: find double or tripe border with complex style\n"));
+      first = false;
+    }
     stream << "double";
-    break;
-  case None:
-  default:
-    break;
+  } else {
+    switch (m_style) {
+    case Dot:
+    case LargeDot:
+      stream << "dotted";
+      break;
+    case Dash:
+      stream << "dashed";
+      break;
+    case Simple:
+      stream << "solid";
+      break;
+    case None:
+    default:
+      break;
+    }
   }
   stream << " " << m_color;
   return stream.str();
@@ -242,7 +250,7 @@ std::ostream &operator<< (std::ostream &o, MWAWBorder::Style const &style)
   case MWAWBorder::None:
     o << "none";
     break;
-  case MWAWBorder::Single:
+  case MWAWBorder::Simple:
     break;
   case MWAWBorder::Dot:
     o << "dot";
@@ -252,9 +260,6 @@ std::ostream &operator<< (std::ostream &o, MWAWBorder::Style const &style)
     break;
   case MWAWBorder::Dash:
     o << "dash";
-    break;
-  case MWAWBorder::Double:
-    o << "double";
     break;
   default:
     MWAW_DEBUG_MSG(("MWAWBorder::operator<<: find unknown style\n"));
@@ -267,7 +272,21 @@ std::ostream &operator<< (std::ostream &o, MWAWBorder::Style const &style)
 std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
 {
   o << border.m_style << ":";
-  if (border.m_width > 1) o << "w=" << border.m_width << ":";
+  switch(border.m_type) {
+  case MWAWBorder::Single:
+    break;
+  case MWAWBorder::Double:
+    o << "double:";
+    break;
+  case MWAWBorder::Triple:
+    o << "triple:";
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MWAWBorder::operator<<: find unknown type\n"));
+    o << "#type=" << int(border.m_type);
+    break;
+  }
+  if (border.m_width > 1 || border.m_width < 1) o << "w=" << border.m_width << ":";
   if (!border.m_color.isBlack())
     o << "col=" << border.m_color << ":";
   o << ",";

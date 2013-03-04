@@ -725,7 +725,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
       border.m_width = 2;
       break;
     case 2:
-      border.m_style = MWAWBorder::Double;
+      border.m_type = MWAWBorder::Double;
       break;
     case 3:
       border.m_width = 2;
@@ -1089,7 +1089,7 @@ MWAWBorder getBorder(int val, std::string &extra)
   case 0x40:
     break; // normal
   case 0x49:
-    border.m_style = MWAWBorder::Double;
+    border.m_type = MWAWBorder::Double;
     break;
   case 0x80:
     border.m_width = 2;

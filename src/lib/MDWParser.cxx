@@ -1303,7 +1303,7 @@ bool MDWParser::checkHeader(MWAWHeader *header, bool strict)
   }
   val = input->readLong(2); // always 1 ?
   if (val != 1) f << "g2=" << val << ",";
-  m_state->m_listProperties.m_startListIndex = (long) input->readULong(1)+1;
+  m_state->m_listProperties.m_startListIndex = (int) input->readULong(1)+1;
   if (m_state->m_listProperties.m_startListIndex!=1)
     f << "list[start]=" << m_state->m_listProperties.m_startListIndex << ",";
   val = (long) input->readULong(1);
@@ -1577,7 +1577,7 @@ bool MDWParser::readHeadingCustom(MWAWEntry &entry)
   listPos.push_back(len);
 
   std::string str("");
-  for (int i = 0; i < N; i++) {
+  for (size_t i = 0; i < size_t(N); i++) {
     input->seek(beginPos+(long) listPos[i], WPX_SEEK_SET);
     int sSz=listPos[i+1]-listPos[i];
     if (sSz < 0) {
@@ -1623,18 +1623,18 @@ bool MDWParser::readHeadingCustom(MWAWEntry &entry)
           break;
         default:
           seeIndex=false;
-          unicode = getParserState()->m_fontConverter->unicode(3, c);
+          unicode = getParserState()->m_fontConverter->unicode(3, (unsigned char)c);
           if (unicode==-1)
-            libmwaw::appendUnicode(c, level.m_prefix);
+            libmwaw::appendUnicode((unsigned char)c, level.m_prefix);
           else
             libmwaw::appendUnicode(uint32_t(unicode), level.m_prefix);
           break;
         }
         continue;
       }
-      unicode = getParserState()->m_fontConverter->unicode(3, c);
+      unicode = getParserState()->m_fontConverter->unicode(3, (unsigned char)c);
       if (unicode==-1)
-        libmwaw::appendUnicode(c, level.m_suffix);
+        libmwaw::appendUnicode((unsigned char)c, level.m_suffix);
       else
         libmwaw::appendUnicode(uint32_t(unicode), level.m_suffix);
     }

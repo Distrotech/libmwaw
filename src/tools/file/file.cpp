@@ -244,8 +244,8 @@ bool File::readFileInformation()
     checkFInfoType("MIF3","FrameMaker MIF3.0") || checkFInfoType("MIF ","FrameMaker MIF") ||
     checkFInfoType("FrameMaker");
   } else if (m_fInfoCreator=="FWRT") {
-    checkFInfoType("FWRM","FullWrite 1.0") || checkFInfoType("FWRI","FullWrite 2.0") ||
-    checkFInfoType("FWRI","FullWrite") || checkFInfoType("FullWrite");
+    checkFInfoType("FWRT","FullWrite 1.0") || checkFInfoType("FWRM","FullWrite 1.0") || 
+    checkFInfoType("FWRI","FullWrite 2.0") || checkFInfoType("FullWrite");
   } else if (m_fInfoCreator=="JWrt") {
     checkFInfoType("TEXT","JoliWrite") || checkFInfoType("ttro","JoliWrite[readOnly]") ||
     checkFInfoType("JoliWrite");

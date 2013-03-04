@@ -162,7 +162,8 @@ protected:
 
   //! try to read the zone which stores the structure of zone0, ...  (ie. Zone1)
   bool readDocZoneStruct(shared_ptr<FWEntry> zone);
-
+  //! returns the number of zone struct
+  int getNumDocZoneStruct() const;
   //! check if a zone is a graphic zone, ...
   bool readGraphic(shared_ptr<FWEntry> zone);
 

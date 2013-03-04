@@ -215,8 +215,9 @@ MWAWBorder Paragraph::BorderFill::getBorder(int i) const
     res.m_style = MWAWBorder::None;
     break;
   case 1: // single[w=0.5]
+    res.m_width = 0.5f;
   case 2:
-    res.m_style = MWAWBorder::Single;
+    res.m_style = MWAWBorder::Simple;
     break;
   case 3:
     res.m_style = MWAWBorder::Dot;
@@ -236,10 +237,10 @@ MWAWBorder Paragraph::BorderFill::getBorder(int i) const
   case 8:
   case 10: // 1 then 2
   case 11: // 2 then 1
-    res.m_style = MWAWBorder::Double;
+    res.m_type = MWAWBorder::Double;
     break;
   case 9:
-    res.m_style = MWAWBorder::Double;
+    res.m_type = MWAWBorder::Double;
     res.m_width = 2;
     break;
   default:

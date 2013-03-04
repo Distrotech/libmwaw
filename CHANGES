@@ -1,5 +1,12 @@
 CHANGES:
 
+03/04/2013:
+- check that Claris/AppleWorks, Mariner Write, MindWrite parsers use all
+  the paragraph properties
+- add the management of outline ( normal and hidden ) in FullWrite
+  parser and the management of paragraph borders. Remains some problems,
+  ...
+
 02/22/2013:
 - begin to add a new list manager in MWAWList
 - check that eDOC, DOCMaker, LightWay Text, MacWrite, Nisus Writer,

@@ -1841,21 +1841,20 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
     for (int b = 0; b < 4; b++) { // find _,4000,_,_,1,_, and 1,_,_,_,1,_,
       f2.str("");
       MWAWBorder border;
-      float lineW = float(input->readLong(4))/65536.f;
-      border.m_width=int(lineW+0.999);
+      border.m_width=float(input->readLong(4))/65536.f;
       int type = int(input->readLong(2));
       switch(type) {
       case 0: // solid
         break;
       case 1:
-        border.m_style = MWAWBorder::Double;
+        border.m_type = MWAWBorder::Double;
         break;
       case 2:
-        border.m_style = MWAWBorder::Double;
+        border.m_type = MWAWBorder::Double;
         f2 << "bottom[w=2],";
         break;
       case 3:
-        border.m_style = MWAWBorder::Double;
+        border.m_type = MWAWBorder::Double;
         f2 << "top[w=2],";
         break;
       default:

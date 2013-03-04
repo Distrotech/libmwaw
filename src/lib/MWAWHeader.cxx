@@ -97,7 +97,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     } else if (creator=="FWRT") {
-      if (type=="FWRM") {
+      if (type=="FWRM") { // 1.7 ?
+        res.push_back(MWAWHeader(MWAWDocument::FULLW, 1));
+        return res;
+      }
+      if (type=="FWRT") { // 1.0 ?
         res.push_back(MWAWHeader(MWAWDocument::FULLW, 1));
         return res;
       }

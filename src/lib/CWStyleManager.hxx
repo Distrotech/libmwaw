@@ -154,7 +154,7 @@ public:
   //! the KSEN structure a structure related to paragraph and cell style
   struct KSEN {
     //! constructor
-    KSEN() : m_valign(0), m_lineType(MWAWBorder::Single), m_lines(0), m_extra("") {
+    KSEN() : m_valign(0), m_lineType(MWAWBorder::Simple), m_lineRepeat(MWAWBorder::Single), m_lines(0), m_extra("") {
     }
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, KSEN const &ksen);
@@ -162,6 +162,8 @@ public:
     int m_valign;
     //! the line type
     MWAWBorder::Style m_lineType;
+    //! the line repetition
+    MWAWBorder::Type m_lineRepeat;
     //! an int used to add some oblique line ( or cross )
     int m_lines;
     //! extra data

@@ -345,10 +345,11 @@ void CWTable::updateCell(CWTableInternal::Cell const &cell, MWAWCell &rCell, WPX
       bord.m_style = MWAWBorder::None;
     else {
       bord.m_style = ksen.m_lineType;
-      if (bord.m_style == MWAWBorder::Double)
-        bord.m_width = (graph.m_lineWidth+1)/2;
+      bord.m_type = ksen.m_lineRepeat;
+      if (bord.m_type == MWAWBorder::Double)
+        bord.m_width = 0.5f*float(graph.m_lineWidth);
       else
-        bord.m_width = graph.m_lineWidth;
+        bord.m_width = (float) graph.m_lineWidth;
       bord.m_color = graph.getLineColor();
     }
     static int const wh[] = { MWAWBorder::LeftBit, MWAWBorder::TopBit, MWAWBorder::RightBit, MWAWBorder::BottomBit};

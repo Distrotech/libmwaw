@@ -205,23 +205,26 @@ struct MWAWColumnProperties {
 
 //! a border list
 struct MWAWBorder {
-  enum Style { None, Single, Double, Dot, LargeDot, Dash };
+  /** the line style */
+  enum Style { None, Simple, Dot, LargeDot, Dash };
+  /** the line repetition */
+  enum Type { Single, Double, Triple };
   enum Pos { Left = 0, Right = 1, Top = 2, Bottom = 3, HMiddle = 4, VMiddle = 5 };
   enum { LeftBit = 0x01,  RightBit = 0x02, TopBit=0x4, BottomBit = 0x08, HMiddleBit = 0x10, VMiddleBit = 0x20 };
 
   //! constructor
-  MWAWBorder() : m_style(Single), m_width(1), m_color(MWAWColor::black()) { }
+  MWAWBorder() : m_style(Simple), m_type(Single), m_width(1), m_color(MWAWColor::black()) { }
   //! return the properties
   std::string getPropertyValue() const;
 
   //! operator==
   bool operator==(MWAWBorder const &orig) const {
-    return m_style == orig.m_style && m_width == orig.m_width
-           && m_color == orig.m_color;
+    return !operator!=(orig);
   }
   //! operator!=
   bool operator!=(MWAWBorder const &orig) const {
-    return !operator==(orig);
+    return m_style != orig.m_style || m_type != orig.m_type ||
+           m_width < orig.m_width || m_width > orig.m_width || m_color != orig.m_color;
   }
   //! compare two cell
   int compare(MWAWBorder const &orig) const;
@@ -232,8 +235,10 @@ struct MWAWBorder {
   friend std::ostream &operator<< (std::ostream &o, MWAWBorder::Style const &style);
   //! the border style
   Style m_style;
+  //! the border repetition
+  Type m_type;
   //! the border width
-  int m_width;
+  float m_width;
   //! the border color
   MWAWColor m_color;
 };
