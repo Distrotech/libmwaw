@@ -394,7 +394,7 @@ bool HMWText::sendText(HMWZone &zone)
       if (!readParagraph(zone,para))
         break;
       if (para.m_addPageBreak) {
-        m_mainParser->newPage(actPage++);
+        m_mainParser->newPage(++actPage);
         actCol = 0;
       }
       setProperty(para, width);
@@ -1014,26 +1014,77 @@ bool HMWText::readParagraph(HMWZone &zone, HMWTextInternal::Paragraph &para)
     para.m_spacings[i]= ((spacingsUnit[i]==0xb) ? 12.0 : 1.0)*(para.m_spacings[i].get())/72.0;
 
   val = (int) input->readLong(1);
-  if (val) f << "#f2=" << val << ",";
-  for (int i = 0; i < 17; i++) { // g2=0|1, g4=0|1, g6=0|1|8
-    val = (int) input->readLong(2);
-    if (val) f << "#g" << i << "=" << val << ",";
+  if (val) f << "#f3=" << val << ",";
+  for (int i = 0;  i< 2; i++) { // one time f4=8000
+    val = (int) input->readULong(2);
+    if (val) f << "#f" << i+4 << "=" << std::hex << val << std::dec << ",";
   }
-  for (int i = 0; i < 5; i++) { // h0=h1=h3=1, h4=0|1, h2=1|6
-    val = (int) input->readLong(2);
-    if (val!=1) f << "#h" << i << "=" << val << ",";
+  // the borders
+  char const *(wh[5]) = { "T", "L", "B", "R", "VSep" };
+  MWAWBorder borders[5];
+  for (int d=0; d < 5; d++)
+    borders[d].m_width = double(input->readLong(4))/65536.;
+  for (int d=0; d < 5; d++) {
+    val = (int) input->readULong(1);
+    switch (val) {
+    case 0: // normal
+      break;
+    case 1:
+      borders[d].m_type = MWAWBorder::Double;
+      break;
+    case 2:
+      borders[d].m_type = MWAWBorder::Double;
+      f << "bord" << wh[d] << "[ext=2],";
+      break;
+    case 3:
+      borders[d].m_type = MWAWBorder::Double;
+      f << "bord" << wh[d] << "[int=2],";
+      break;
+    default:
+      f << "#bord" << wh[d] << "[style=" << val << "],";
+      break;
+    }
   }
-  for (int i = 0; i < 8; i++) { // always 0?
-    val = (int) input->readLong(2);
-    if (val) f << "#h" << 5+i << "=" << val << ",";
+  int color[5], pattern[5];
+  for (int d=0; d < 5; d++)
+    color[d] = (int) input->readULong(1);
+  for (int d=0; d < 5; d++)
+    pattern[d] = (int) input->readULong(2);
+  for (int d=0; d < 5; d++) {
+    if (!color[d] && !pattern[d])
+      continue;
+    MWAWColor col;
+    if (m_mainParser->getColor(color[d], pattern[d], col))
+      borders[d].m_color = col;
+    else
+      f << "#bord" << wh[d] << "[col=" << color[d] << ",pat=" << pattern[d] << "],";
   }
-  int nTabs = (int) input->readULong(2);
+  // update the paragraph
+  para.m_borders.resize(6);
+  MWAWBorder::Pos const (which[5]) = {
+    MWAWBorder::Top, MWAWBorder::Left, MWAWBorder::Bottom, MWAWBorder::Right,
+    MWAWBorder::VMiddle
+  };
+  for (int d=0; d < 5; d++) {
+    if (borders[d].m_width <= 0)
+      continue;
+    para.m_borders[which[d]]=borders[d];
+  }
+  val = (int) input->readLong(1);
+  if (val) f << "#f6=" << val << ",";
+  double bMargins[4]= {0,0,0,0};
+  for (int d = 0; d < 4; d++) {
+    bMargins[d] =  double(input->readLong(4))/256./65536./72.;
+    if (bMargins[d] > 0 || bMargins[d] < 0)
+      f << "bordMarg" << wh[d] << "=" << bMargins[d] << ",";
+  }
+  int nTabs = (int) input->readULong(1);
   if (pos+102+nTabs*12 > dataSz) {
     MWAW_DEBUG_MSG(("HMWText::readParagraph: can not read numbers of tab\n"));
     return false;
   }
   val = (int) input->readULong(2); // always 0
-  if (val) f << "#h14=" << val << ",";
+  if (val) f << "#h0=" << val << ",";
   para.m_extra=f.str();
   static bool first=true;
   f.str("");
@@ -1075,9 +1126,21 @@ bool HMWText::readParagraph(HMWZone &zone, HMWTextInternal::Paragraph &para)
     val = (int)input->readULong(1);
     if (val) f << "barType=" << val << ",";
     val = (int)input->readULong(2);
-    if (val) f << "decimalChar=" << char(val) << ",";
-
-    tab.m_leaderCharacter = (uint16_t)input->readULong(2);
+    if (val) {
+      int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) val);
+      if (unicode==-1)
+        tab.m_decimalCharacter = uint16_t(val);
+      else
+        tab.m_decimalCharacter = uint16_t(unicode);
+    }
+    val = (int) input->readULong(2);
+    if (val) {
+      int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) val);
+      if (unicode==-1)
+        tab.m_leaderCharacter = uint16_t(val);
+      else
+        tab.m_leaderCharacter = uint16_t(unicode);
+    }
     val = (int)input->readULong(2); // 0|73|74|a044|f170|f1e0|f590
     if (val) f << "f0=" << std::hex << val << std::dec << ",";
 
