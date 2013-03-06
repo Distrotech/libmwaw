@@ -1023,7 +1023,7 @@ bool HMWText::readParagraph(HMWZone &zone, HMWTextInternal::Paragraph &para)
   char const *(wh[5]) = { "T", "L", "B", "R", "VSep" };
   MWAWBorder borders[5];
   for (int d=0; d < 5; d++)
-    borders[d].m_width = double(input->readLong(4))/65536.;
+    borders[d].m_width = float(input->readLong(4))/65536.f;
   for (int d=0; d < 5; d++) {
     val = (int) input->readULong(1);
     switch (val) {

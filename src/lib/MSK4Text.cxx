@@ -652,6 +652,8 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
   MWAWFont actFont(prevFId != -1 ?
                    m_state->m_fontList[size_t(prevFId)].m_font :
                    m_state->m_defFont);
+  if (actFont.id()<=0)
+    actFont.setId(3);
   if (listener) listener->setFont(actFont);
   if (prevPId != -1) setProperty(m_state->m_paragraphList[size_t(prevPId)]);
   else setProperty(MSK4TextInternal::Paragraph());
@@ -1275,13 +1277,15 @@ void MSK4Text::setProperty(MSK4TextInternal::Paragraph const &p)
 }
 
 // read
-bool MSK4Text::readParagraph
-(MWAWInputStreamPtr &input, long endPos, int &id, std::string &mess)
+bool MSK4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
+                             int &id, std::string &mess)
 {
   MSK4TextInternal::Paragraph parag;
 
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
+
+  bool customSpacing = false;
 
   while (input->tell() <  endPos) {
     int val = (int) input->readLong(1);
@@ -1325,24 +1329,59 @@ bool MSK4Text::readParagraph
       else f << "#pgBreak="<<value<<",";
       break;
     }
+    case 0x22: { // bullet
+      if (pos + 1 > endPos) {
+        ok = false;
+        break;
+      }
+      int value= (int) input->readLong(1);
+      if (value != 1) {
+        f << "#bullet="<<value<<",";
+        break;
+      }
+      MWAWListLevel level;
+      level.m_type = MWAWListLevel::BULLET;
+      level.m_labelWidth = 0.25;
+      libmwaw::appendUnicode(0x2022, level.m_bullet);
+      shared_ptr<MWAWList> list =
+        m_parserState->m_listManager->getNewList(shared_ptr<MWAWList>(), 1, level);
+      if (!list) {
+        f << "#bullet,";
+        MWAW_DEBUG_MSG(("MSK4Text::readParagraph: can not create bullet list\n"));
+        break;
+      }
+      parag.m_listId = list->getId();
+      parag.m_listLevelIndex = 1;
+      break;
+    }
     case 0x23: { // alignement -2 (up space), -3 (large?)
       if (pos + 2 > endPos) {
         ok = false;
         break;
       }
       int value = (int) input->readLong(2);
-      switch(-value) {
-      case 1: // normal
+      if (value > 100) {
+        ok = false;
         break;
-      case 2: // space before
-        parag.m_spacings[1]=0.2;
-        break;
-      case 3: // double
-        parag.m_spacings[1]=0.1;
-        parag.m_spacings[2]=0.1;
-        break;
-      default:
-        f << "#spacing=" << value << ",";
+      }
+      if (value > 0) {
+        customSpacing = true;
+        parag.setInterline(value, WPX_POINT, MWAWParagraph::AtLeast);
+      } else {
+        switch(-value) {
+        case 1: // normal
+          break;
+        case 2:
+          parag.setInterline(1.5, WPX_PERCENT);
+          break;
+          break;
+        case 3: // double
+          parag.setInterline(2.0, WPX_PERCENT);
+          break;
+        default:
+          f << "#spacing=" << value << ",";
+          break;
+        }
         break;
       }
       break;
@@ -1367,12 +1406,12 @@ bool MSK4Text::readParagraph
       break;
     }
     case 0x27: {
-      if (pos + 2 > endPos) {
+      if (pos + 42 > endPos) {
         ok = false;
         break;
       }
       int nbt = (int) input->readLong(2);
-      if (nbt < 0 || pos + 2+2*nbt > endPos) {
+      if (nbt < 0 || nbt > 20) {
         ok = false;
         break;
       }
@@ -1403,6 +1442,19 @@ bool MSK4Text::readParagraph
         (*parag.m_tabs)[i].m_alignment = align;
         (*parag.m_tabs)[i].m_position = value/72.0;
       }
+      input->seek(pos+42, WPX_SEEK_SET);
+      break;
+    }
+    case 0x28: { // alignement: exact or not
+      if (pos + 1 > endPos) {
+        ok = false;
+        break;
+      }
+      int value= (int) input->readLong(1);
+      if (value != 1)
+        f << "#spacingType=" << value << ",";
+      else if (customSpacing)
+        parag.m_spacingsInterlineType = MWAWParagraph::Fixed;
       break;
     }
     default:
@@ -1412,24 +1464,18 @@ bool MSK4Text::readParagraph
 
     if (ok) continue;
 
-
-    input->seek(pos-1, WPX_SEEK_SET);
-    int v = (int) input->readLong(1);
-    if (v > 0 && pos+v <= endPos) {
-      // very often a FDDP seems to be followed by some <<old?>> FDDP
-      f << "oldNextSize=" << v << ",";
-      ascFile.addDelimiter(pos-1, '[');
-      input->seek(v, WPX_SEEK_CUR);
-      ascFile.addDelimiter(pos+v, ']');
-    } else
-      input->seek(pos-1, WPX_SEEK_SET);
-
+    input->seek(pos, WPX_SEEK_SET);
+    ascFile.addDelimiter(pos, '|');
     f << "#end=(";
     while (input->tell() < endPos)
       f << std::hex << (unsigned int)(input->readLong(1)) << ",";
     f << ")";
     break;
   }
+
+  // decrease margins in order to take account of the label width
+  if (*parag.m_listLevelIndex > 0)
+    parag.m_margins[1] = *parag.m_margins[1]-0.25;
 
   parag.m_extra=f.str();
   id = (int) m_state->m_paragraphList.size();
