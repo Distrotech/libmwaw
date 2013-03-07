@@ -453,7 +453,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWGraph.cxx"
+				RelativePath="..\..\src\lib\HMWJGraph.cxx"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -473,7 +473,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWParser.cxx"
+				RelativePath="..\..\src\lib\HMWJParser.cxx"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -493,7 +493,67 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWText.cxx"
+				RelativePath="..\..\src\lib\HMWJText.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWKGraph.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWKParser.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWKText.cxx"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1750,15 +1810,27 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWGraph.hxx"
+				RelativePath="..\..\src\lib\HMWJGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWParser.hxx"
+				RelativePath="..\..\src\lib\HMWJParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWText.hxx"
+				RelativePath="..\..\src\lib\HMWJText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWKGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWKParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWKText.hxx"
 				>
 			</File>
 			<File

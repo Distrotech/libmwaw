@@ -41,7 +41,8 @@
 #include "DMParser.hxx"
 #include "EDParser.hxx"
 #include "FWParser.hxx"
-#include "HMWParser.hxx"
+#include "HMWJParser.hxx"
+#include "HMWKParser.hxx"
 #include "LWParser.hxx"
 #include "MDWParser.hxx"
 #include "MRWParser.hxx"
@@ -146,6 +147,11 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
   case HMAC:
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
+  case HMACJ:
+#ifdef DEBUG
+    confidence = MWAW_CONFIDENCE_GOOD;
+#endif
+    break;
   case LWTEXT:
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
@@ -186,7 +192,6 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     confidence = MWAW_CONFIDENCE_GOOD;
     break;
   case ACT:
-  case HMACJ:
   case UNKNOWN:
   default:
     break;
@@ -243,7 +248,12 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       break;
     }
     case HMAC: {
-      HMWParser parser(ip, rsrcParser, header.get());
+      HMWKParser parser(ip, rsrcParser, header.get());
+      parser.parse(documentInterface);
+      break;
+    }
+    case HMACJ: {
+      HMWJParser parser(ip, rsrcParser, header.get());
       parser.parse(documentInterface);
       break;
     }
@@ -319,7 +329,6 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       break;
     }
     case ACT:
-    case HMACJ:
     case UNKNOWN:
     default:
       break;
@@ -403,7 +412,11 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
       return parser.checkHeader(&header, strict);
     }
     case MWAWDocument::HMAC: {
-      HMWParser parser(input, rsrcParser, &header);
+      HMWKParser parser(input, rsrcParser, &header);
+      return parser.checkHeader(&header, strict);
+    }
+    case MWAWDocument::HMACJ: {
+      HMWJParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);
     }
     case MWAWDocument::LWTEXT: {
@@ -465,7 +478,6 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
       return parser.checkHeader(&header, strict);
     }
     case MWAWDocument::ACT:
-    case MWAWDocument::HMACJ:
     case MWAWDocument::UNKNOWN:
     default:
       break;

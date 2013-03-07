@@ -32,11 +32,11 @@
 */
 
 /*
- * Parser to HanMac Word text document
+ * Parser to HanMac Word-J text document
  *
  */
-#ifndef HMW_TEXT
-#  define HMW_TEXT
+#ifndef HMWJ_TEXT
+#  define HMWJ_TEXT
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
@@ -46,37 +46,32 @@ typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 class MWAWSubDocument;
 
-namespace HMWTextInternal
+namespace HMWJTextInternal
 {
 struct Font;
-struct Paragraph;
-struct Token;
 class SubDocument;
 struct State;
 }
 
-struct HMWZone;
-class HMWParser;
+class HMWJParser;
 
-/** \brief the main class to read the text part of HanMac Word file
+/** \brief the main class to read the text part of HanMac Word-J file
  *
  *
  *
  */
-class HMWText
+class HMWJText
 {
-  friend class HMWTextInternal::SubDocument;
-  friend class HMWParser;
+  friend class HMWJTextInternal::SubDocument;
+  friend class HMWJParser;
 public:
   //! constructor
-  HMWText(HMWParser &parser);
+  HMWJText(HMWJParser &parser);
   //! destructor
-  virtual ~HMWText();
+  virtual ~HMWJText();
 
   /** returns the file version */
   int version() const;
-  //! returns true if this is a Korean File
-  bool isKoreanFile() const;
 
   /** returns the number of pages */
   int numPages() const;
@@ -91,35 +86,18 @@ protected:
   // intermediate level
   //
 
-  /** try to read a text zone (type 1)*/
-  bool readTextZone(shared_ptr<HMWZone> zone);
   /** try to read the fonts name zone (type 5)*/
-  bool readFontNames(shared_ptr<HMWZone> zone);
+  bool readFontNames(MWAWEntry const &entry);
   /** try to read the style zone (type 3) */
-  bool readStyles(shared_ptr<HMWZone> zone);
-  /** try to read a section info zone (type 4)*/
-  bool readSections(shared_ptr<HMWZone> zone);
-
-  /** try to send a text zone (type 1)*/
-  bool sendText(HMWZone &zone);
+  bool readStyles(MWAWEntry const &entry);
 
   //
   // low level
   //
-  /** try to read a font in a text zone */
-  bool readFont(HMWZone &zone, HMWTextInternal::Font &font);
-
-  /** try to read a paragraph in a text zone */
-  bool readParagraph(HMWZone &zone, HMWTextInternal::Paragraph &para);
-  /** send the ruler properties */
-  void setProperty(HMWTextInternal::Paragraph const &para, float width);
-
-  /** try to read an token in a text zone */
-  bool readToken(HMWZone &zone, HMWTextInternal::Token &token);
 
 private:
-  HMWText(HMWText const &orig);
-  HMWText &operator=(HMWText const &orig);
+  HMWJText(HMWJText const &orig);
+  HMWJText &operator=(HMWJText const &orig);
 
 protected:
   //
@@ -129,10 +107,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<HMWTextInternal::State> m_state;
+  shared_ptr<HMWJTextInternal::State> m_state;
 
   //! the main parser;
-  HMWParser *m_mainParser;
+  HMWJParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

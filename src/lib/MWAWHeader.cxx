@@ -111,7 +111,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       }
     } else if (creator=="HMiw") { // japonese
       if (type=="IWDC") {
-        res.push_back(MWAWHeader(MWAWDocument::HMAC,1));
+        res.push_back(MWAWHeader(MWAWDocument::HMACJ,1));
         return res;
       }
     } else if (creator=="HMdr") { // korean
@@ -277,7 +277,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   }
   if (val[0]==0x594c && val[1]==0x5953 && val[2]==0x100) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-J file[no parsing and no output]\n"));
-    res.push_back(MWAWHeader(MWAWDocument::HMAC, 1));
+    res.push_back(MWAWHeader(MWAWDocument::HMACJ, 1));
   }
 
   // magic ole header

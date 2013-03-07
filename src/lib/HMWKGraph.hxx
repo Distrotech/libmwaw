@@ -35,8 +35,8 @@
  * Parser to HanMac Word text document ( graphic part )
  *
  */
-#ifndef HMW_GRAPH
-#  define HMW_GRAPH
+#ifndef HMWK_GRAPH
+#  define HMWK_GRAPH
 
 #include <string>
 #include <vector>
@@ -55,7 +55,7 @@ typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 class MWAWPosition;
 
-namespace HMWGraphInternal
+namespace HMWKGraphInternal
 {
 struct Frame;
 struct BasicGraph;
@@ -71,24 +71,24 @@ struct State;
 class SubDocument;
 }
 
-struct HMWZone;
-class HMWParser;
+struct HMWKZone;
+class HMWKParser;
 
 /** \brief the main class to read the graphic part of a HanMac Word file
  *
  *
  *
  */
-class HMWGraph
+class HMWKGraph
 {
-  friend class HMWParser;
-  friend class HMWGraphInternal::SubDocument;
+  friend class HMWKParser;
+  friend class HMWKGraphInternal::SubDocument;
 
 public:
   //! constructor
-  HMWGraph(HMWParser &parser);
+  HMWKGraph(HMWKParser &parser);
   //! destructor
-  virtual ~HMWGraph();
+  virtual ~HMWKGraph();
 
   /** returns the file version */
   int version() const;
@@ -112,9 +112,9 @@ protected:
   //
 
   /** try to read the frame definition (type 2)*/
-  bool readFrames(shared_ptr<HMWZone> zone);
+  bool readFrames(shared_ptr<HMWKZone> zone);
   /** try to read a picture zone (type d)*/
-  bool readPicture(shared_ptr<HMWZone> zone);
+  bool readPicture(shared_ptr<HMWKZone> zone);
 
 
   // interface with mainParser
@@ -132,47 +132,47 @@ protected:
   //
 
   /** try to send a picture to the listener */
-  bool sendPicture(HMWGraphInternal::Picture const &picture, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
 
   /** try to send a frame to the listener */
-  bool sendFrame(HMWGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
 
   /** try to send a basic picture to the listener */
-  bool sendBasicGraph(HMWGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendBasicGraph(HMWKGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
 
   /** try to send a picture frame */
-  bool sendPictureFrame(HMWGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   /** try to send an empty picture */
   bool sendEmptyPicture(MWAWPosition pos);
 
   /** try to send a textbox to the listener */
-  bool sendTextBox(HMWGraphInternal::TextBox const &textbox, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
 
   /** try to send a table */
-  bool sendTable(HMWGraphInternal::Table const &table);
+  bool sendTable(HMWKGraphInternal::Table const &table);
   /** try to send a table unformatted*/
   bool sendTableUnformatted(long fId);
   /** check if the table is correct and if it can be send to a listener */
-  bool updateTable(HMWGraphInternal::Table const &table);
+  bool updateTable(HMWKGraphInternal::Table const &table);
   /** try to send a table */
-  bool sendPreTableData(HMWGraphInternal::Table const &table);
+  bool sendPreTableData(HMWKGraphInternal::Table const &table);
   /** try to send a cell in a table */
-  bool sendTableCell(HMWGraphInternal::TableCell const &cell);
+  bool sendTableCell(HMWKGraphInternal::TableCell const &cell);
 
   /** try to read the basic graph data */
-  shared_ptr<HMWGraphInternal::BasicGraph> readBasicGraph(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header);
+  shared_ptr<HMWKGraphInternal::BasicGraph> readBasicGraph(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
   /** try to read the group data */
-  shared_ptr<HMWGraphInternal::Group> readGroup(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header);
+  shared_ptr<HMWKGraphInternal::Group> readGroup(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
   /** try to read the picture data */
-  shared_ptr<HMWGraphInternal::PictureFrame> readPictureFrame(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header);
+  shared_ptr<HMWKGraphInternal::PictureFrame> readPictureFrame(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
   /** try to read the table data */
-  shared_ptr<HMWGraphInternal::Table> readTable(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header);
+  shared_ptr<HMWKGraphInternal::Table> readTable(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
   /** try to read the textbox data */
-  shared_ptr<HMWGraphInternal::TextBox> readTextBox(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header, bool isMemo);
+  shared_ptr<HMWKGraphInternal::TextBox> readTextBox(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header, bool isMemo);
 
 private:
-  HMWGraph(HMWGraph const &orig);
-  HMWGraph &operator=(HMWGraph const &orig);
+  HMWKGraph(HMWKGraph const &orig);
+  HMWKGraph &operator=(HMWKGraph const &orig);
 
 protected:
   //
@@ -182,10 +182,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<HMWGraphInternal::State> m_state;
+  shared_ptr<HMWKGraphInternal::State> m_state;
 
   //! the main parser;
-  HMWParser *m_mainParser;
+  HMWKParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

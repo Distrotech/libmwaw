@@ -144,15 +144,27 @@ SOURCE=..\..\src\lib\FWText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWGraph.cxx
+SOURCE=..\..\src\lib\HMWJGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWParser.cxx
+SOURCE=..\..\src\lib\HMWJParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWText.cxx
+SOURCE=..\..\src\lib\HMWJText.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HMWKGraph.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HMWKParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HMWKText.cxx
 # End Source File
 # Begin Source File
 
@@ -452,15 +464,27 @@ SOURCE=..\..\src\lib\FWText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWGraph.hxx
+SOURCE=..\..\src\lib\HMWJGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWParser.hxx
+SOURCE=..\..\src\lib\HMWJParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWText.hxx
+SOURCE=..\..\src\lib\HMWJText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HMWKGraph.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HMWKParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HMWKText.hxx
 # End Source File
 # Begin Source File
 

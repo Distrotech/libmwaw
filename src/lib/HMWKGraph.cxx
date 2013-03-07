@@ -49,15 +49,15 @@
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "HMWParser.hxx"
+#include "HMWKParser.hxx"
 
-#include "HMWGraph.hxx"
+#include "HMWKGraph.hxx"
 
-/** Internal: the structures of a HMWGraph */
-namespace HMWGraphInternal
+/** Internal: the structures of a HMWKGraph */
+namespace HMWKGraphInternal
 {
 ////////////////////////////////////////
-//! Internal: the frame header of a HMWGraph
+//! Internal: the frame header of a HMWKGraph
 struct Frame {
   //! constructor
   Frame() : m_type(-1), m_fileId(-1), m_id(-1), m_page(0),
@@ -165,7 +165,7 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
 }
 
 ////////////////////////////////////////
-//! Internal: the geometrical graph of a HMWGraph
+//! Internal: the geometrical graph of a HMWKGraph
 struct BasicGraph : public Frame {
   //! constructor
   BasicGraph(Frame const &orig) : Frame(orig), m_graphType(-1), m_arrowsFlag(0), m_cornerDim(0), m_listVertices() {
@@ -241,7 +241,7 @@ struct BasicGraph : public Frame {
 };
 
 ////////////////////////////////////////
-//! Internal: the group of a HMWGraph
+//! Internal: the group of a HMWKGraph
 struct Group : public Frame {
   struct Child;
   //! constructor
@@ -260,7 +260,7 @@ struct Group : public Frame {
   std::string print() const;
   //! the list of child
   std::vector<Child> m_childsList;
-  //! struct to store child data in HMWGraphInternal::Group
+  //! struct to store child data in HMWKGraphInternal::Group
   struct Child {
     //! constructor
     Child() : m_fileId(-1) {
@@ -293,7 +293,7 @@ std::string Group::print() const
 }
 
 ////////////////////////////////////////
-//! Internal: the picture of a HMWGraph
+//! Internal: the picture of a HMWKGraph
 struct PictureFrame : public Frame {
   //! constructor
   PictureFrame(Frame const &orig) : Frame(orig), m_type(0), m_dim(0,0), m_borderDim(0,0) {
@@ -333,7 +333,7 @@ struct PictureFrame : public Frame {
 };
 
 ////////////////////////////////////////
-//! a table cell in a table in HMWGraph
+//! a table cell in a table in HMWKGraph
 struct TableCell {
   //! constructor
   TableCell(): m_row(-1), m_col(-1), m_span(1,1), m_dim(), m_backColor(MWAWColor::white()),
@@ -390,7 +390,7 @@ std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 }
 
 ////////////////////////////////////////
-//! Internal: the table of a HMWGraph
+//! Internal: the table of a HMWKGraph
 struct Table : public Frame {
   //! constructor
   Table(Frame const &orig) : Frame(orig), m_rows(0), m_columns(0), m_numCells(0),
@@ -443,7 +443,7 @@ struct Table : public Frame {
 };
 
 ////////////////////////////////////////
-//! Internal: the textbox of a HMWGraph
+//! Internal: the textbox of a HMWKGraph
 struct TextBox : public Frame {
   //! constructor
   TextBox(Frame const &orig, bool isComment) : Frame(orig), m_commentBox(isComment), m_textFileId(-1) {
@@ -492,10 +492,10 @@ struct TextBox : public Frame {
 };
 
 ////////////////////////////////////////
-//! Internal: the picture of a HMWGraph
+//! Internal: the picture of a HMWKGraph
 struct Picture {
   //! constructor
-  Picture(shared_ptr<HMWZone> zone) : m_zone(zone), m_fileId(-1), m_parsed(false), m_extra("") {
+  Picture(shared_ptr<HMWKZone> zone) : m_zone(zone), m_fileId(-1), m_parsed(false), m_extra("") {
     m_pos[0] = m_pos[1] = 0;
   }
   //! destructor
@@ -509,7 +509,7 @@ struct Picture {
     return o;
   }
   //! the main zone
-  shared_ptr<HMWZone> m_zone;
+  shared_ptr<HMWKZone> m_zone;
   //! the first and last position of the picture data in the zone
   long m_pos[2];
   //! the file id
@@ -521,7 +521,7 @@ struct Picture {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a HMWGraph
+//! Internal: the state of a HMWKGraph
 struct State {
   //! constructor
   State() : m_numPages(0), m_framesMap(), m_picturesMap(), m_colorList(), m_patternPercentList() { }
@@ -529,7 +529,7 @@ struct State {
   bool getColor(int id, MWAWColor &col) {
     initColors();
     if (id < 0 || id >= int(m_colorList.size())) {
-      MWAW_DEBUG_MSG(("HMWGraphInternal::State::getColor: can not find color %d\n", id));
+      MWAW_DEBUG_MSG(("HMWKGraphInternal::State::getColor: can not find color %d\n", id));
       return false;
     }
     col = m_colorList[size_t(id)];
@@ -539,7 +539,7 @@ struct State {
   bool getPatternPercent(int id, float &percent) {
     initPatterns();
     if (id < 0 || id >= int(m_patternPercentList.size())) {
-      MWAW_DEBUG_MSG(("HMWGraphInternal::State::getPatternPercent: can not find pattern %d\n", id));
+      MWAW_DEBUG_MSG(("HMWKGraphInternal::State::getPatternPercent: can not find pattern %d\n", id));
       return false;
     }
     percent = m_patternPercentList[size_t(id)];
@@ -640,18 +640,18 @@ bool Frame::getSurfaceColor(MWAWColor &color) const
 }
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a HMWGraph
+//! Internal: the subdocument of a HMWKGraph
 class SubDocument : public MWAWSubDocument
 {
 public:
   //! the document type
   enum Type { Picture, FrameInFrame, Text, UnformattedTable, EmptyPicture };
   //! constructor
-  SubDocument(HMWGraph &pars, MWAWInputStreamPtr input, Type type, long id, long subId=0) :
+  SubDocument(HMWKGraph &pars, MWAWInputStreamPtr input, Type type, long id, long subId=0) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_subId(subId), m_pos() {}
 
   //! constructor
-  SubDocument(HMWGraph &pars, MWAWInputStreamPtr input, MWAWPosition pos, Type type, long id, int subId=0) :
+  SubDocument(HMWKGraph &pars, MWAWInputStreamPtr input, MWAWPosition pos, Type type, long id, int subId=0) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_subId(subId), m_pos(pos) {}
 
   //! destructor
@@ -669,7 +669,7 @@ public:
 
 protected:
   /** the graph parser */
-  HMWGraph *m_graphParser;
+  HMWKGraph *m_graphParser;
   //! the zone type
   Type m_type;
   //! the zone id
@@ -687,7 +687,7 @@ private:
 void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("HMWGraphInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("HMWKGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_graphParser);
@@ -710,7 +710,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     m_graphParser->sendEmptyPicture(m_pos);
     break;
   default:
-    MWAW_DEBUG_MSG(("HMWGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
+    MWAW_DEBUG_MSG(("HMWKGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
     break;
   }
   m_input->seek(pos, WPX_SEEK_SET);
@@ -733,41 +733,41 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-HMWGraph::HMWGraph(HMWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new HMWGraphInternal::State),
+HMWKGraph::HMWKGraph(HMWKParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new HMWKGraphInternal::State),
   m_mainParser(&parser)
 {
 }
 
-HMWGraph::~HMWGraph()
+HMWKGraph::~HMWKGraph()
 { }
 
-int HMWGraph::version() const
+int HMWKGraph::version() const
 {
   return m_parserState->m_version;
 }
 
-bool HMWGraph::getColor(int colId, int patternId, MWAWColor &color) const
+bool HMWKGraph::getColor(int colId, int patternId, MWAWColor &color) const
 {
   if (!m_state->getColor(colId, color) ) {
-    MWAW_DEBUG_MSG(("HMWGraph::getColor: can not find color for id=%d\n", colId));
+    MWAW_DEBUG_MSG(("HMWKGraph::getColor: can not find color for id=%d\n", colId));
     return false;
   }
   float percent = 1.0;
   if (!m_state->getPatternPercent(patternId, percent) ) {
-    MWAW_DEBUG_MSG(("HMWGraph::getColor: can not find pattern for id=%d\n", patternId));
+    MWAW_DEBUG_MSG(("HMWKGraph::getColor: can not find pattern for id=%d\n", patternId));
     return false;
   }
   color = m_state->getColor(color, percent);
   return true;
 }
 
-int HMWGraph::numPages() const
+int HMWKGraph::numPages() const
 {
   if (m_state->m_numPages)
     return m_state->m_numPages;
   int nPages = 0;
-  std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::const_iterator fIt =
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
   for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
     if (!fIt->second) continue;
@@ -780,7 +780,7 @@ int HMWGraph::numPages() const
   return nPages;
 }
 
-bool HMWGraph::sendText(long textId, long id)
+bool HMWKGraph::sendText(long textId, long id)
 {
   return m_mainParser->sendText(textId, id);
 }
@@ -792,16 +792,16 @@ bool HMWGraph::sendText(long textId, long id)
 ////////////////////////////////////////////////////////////
 
 // a small zone: related to frame pos + data?
-bool HMWGraph::readFrames(shared_ptr<HMWZone> zone)
+bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWGraph::readFrames: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readFrames: called without any zone\n"));
     return false;
   }
 
   long dataSz = zone->length();
   if (dataSz < 70) {
-    MWAW_DEBUG_MSG(("HMWGraph::readFrames: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readFrames: the zone seems too short\n"));
     return false;
   }
 
@@ -812,7 +812,7 @@ bool HMWGraph::readFrames(shared_ptr<HMWZone> zone)
   long pos=0;
   input->seek(pos, WPX_SEEK_SET);
   long val;
-  HMWGraphInternal::Frame graph;
+  HMWKGraphInternal::Frame graph;
   graph.m_type = (int) input->readULong(1);
   val = (long) input->readULong(1);
   if (val) f << "#f0=" << std::hex << val << std::dec << ",";
@@ -863,7 +863,7 @@ bool HMWGraph::readFrames(shared_ptr<HMWZone> zone)
   asciiFile.addDelimiter(input->tell(),'|');
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
-  shared_ptr<HMWGraphInternal::Frame> frame;
+  shared_ptr<HMWKGraphInternal::Frame> frame;
   switch(graph.m_type) {
   case 4:
   case 10:
@@ -886,22 +886,22 @@ bool HMWGraph::readFrames(shared_ptr<HMWZone> zone)
   }
   if (frame)
     m_state->m_framesMap.insert
-    (std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::value_type
+    (std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::value_type
      (zone->m_id, frame));
   return true;
 }
 
 // read a picture
-bool HMWGraph::readPicture(shared_ptr<HMWZone> zone)
+bool HMWKGraph::readPicture(shared_ptr<HMWKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWGraph::readPicture: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readPicture: called without any zone\n"));
     return false;
   }
 
   long dataSz = zone->length();
   if (dataSz < 86) {
-    MWAW_DEBUG_MSG(("HMWGraph::readPicture: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readPicture: the zone seems too short\n"));
     return false;
   }
 
@@ -910,7 +910,7 @@ bool HMWGraph::readPicture(shared_ptr<HMWZone> zone)
   libmwaw::DebugStream f;
   zone->m_parsed = true;
 
-  shared_ptr<HMWGraphInternal::Picture> picture(new HMWGraphInternal::Picture(zone));
+  shared_ptr<HMWKGraphInternal::Picture> picture(new HMWKGraphInternal::Picture(zone));
 
   long pos=0;
   input->seek(pos, WPX_SEEK_SET);
@@ -922,7 +922,7 @@ bool HMWGraph::readPicture(shared_ptr<HMWZone> zone)
   }
   long pictSz = (long) input->readULong(4);
   if (pictSz < 0 || pictSz+86 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWGraph::readPicture: problem reading the picture size\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readPicture: problem reading the picture size\n"));
     return false;
   }
   picture->m_pos[0] = input->tell();
@@ -931,7 +931,7 @@ bool HMWGraph::readPicture(shared_ptr<HMWZone> zone)
   long fId = picture->m_fileId;
   if (!fId) fId = zone->m_id;
   if (m_state->m_picturesMap.find(fId) != m_state->m_picturesMap.end())
-    MWAW_DEBUG_MSG(("HMWGraph::readPicture: oops I already find a picture for %lx\n", fId));
+    MWAW_DEBUG_MSG(("HMWKGraph::readPicture: oops I already find a picture for %lx\n", fId));
   else
     m_state->m_picturesMap[fId] = picture;
 
@@ -949,21 +949,21 @@ bool HMWGraph::readPicture(shared_ptr<HMWZone> zone)
 ////////////////////////////////////////////////////////////
 // send data to a listener
 ////////////////////////////////////////////////////////////
-bool HMWGraph::sendPicture(long pictId, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendPicture(long pictId, MWAWPosition pos, WPXPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
-  std::map<long, shared_ptr<HMWGraphInternal::Picture> >::const_iterator pIt
+  std::map<long, shared_ptr<HMWKGraphInternal::Picture> >::const_iterator pIt
     = m_state->m_picturesMap.find(pictId);
 
   if (pIt == m_state->m_picturesMap.end() || !pIt->second) {
-    MWAW_DEBUG_MSG(("HMWGraph::sendPicture: can not find the picture %lx\n", pictId));
+    MWAW_DEBUG_MSG(("HMWKGraph::sendPicture: can not find the picture %lx\n", pictId));
     return false;
   }
   sendPicture(*pIt->second, pos, extras);
   return true;
 }
 
-bool HMWGraph::sendPicture(HMWGraphInternal::Picture const &picture, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosition pos, WPXPropertyList extras)
 {
 #ifdef DEBUG_WITH_FILES
   bool firstTime = picture.m_parsed == false;
@@ -972,7 +972,7 @@ bool HMWGraph::sendPicture(HMWGraphInternal::Picture const &picture, MWAWPositio
   if (!m_parserState->m_listener) return true;
 
   if (!picture.m_zone || picture.m_pos[0] >= picture.m_pos[1]) {
-    MWAW_DEBUG_MSG(("HMWGraph::sendPicture: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::sendPicture: can not find the picture\n"));
     return false;
   }
 
@@ -994,19 +994,19 @@ bool HMWGraph::sendPicture(HMWGraphInternal::Picture const &picture, MWAWPositio
   return true;
 }
 
-bool HMWGraph::sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
-  std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::const_iterator fIt=
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt=
     m_state->m_framesMap.find(frameId);
   if (fIt == m_state->m_framesMap.end() || !fIt->second) {
-    MWAW_DEBUG_MSG(("HMWGraph::sendFrame: can not find frame %lx\n", frameId));
+    MWAW_DEBUG_MSG(("HMWKGraph::sendFrame: can not find frame %lx\n", frameId));
     return false;
   }
   return sendFrame(*fIt->second, pos, extras);
 }
 
-bool HMWGraph::sendFrame(HMWGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener) return true;
@@ -1016,32 +1016,32 @@ bool HMWGraph::sendFrame(HMWGraphInternal::Frame const &frame, MWAWPosition pos,
   switch(frame.m_type) {
   case 4:
   case 10:
-    return sendTextBox(reinterpret_cast<HMWGraphInternal::TextBox const &>(frame), pos, extras);
+    return sendTextBox(reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame), pos, extras);
   case 6: {
-    HMWGraphInternal::PictureFrame const &pict =
-      reinterpret_cast<HMWGraphInternal::PictureFrame const &>(frame);
+    HMWKGraphInternal::PictureFrame const &pict =
+      reinterpret_cast<HMWKGraphInternal::PictureFrame const &>(frame);
     if (pict.m_fileId==0) {
       MWAWPosition framePos(pos);
       framePos.m_anchorTo = MWAWPosition::Frame;
       framePos.setOrigin(Vec2f(0,0));
 
       MWAWSubDocumentPtr subdoc
-      (new HMWGraphInternal::SubDocument
-       (*this, input, framePos, HMWGraphInternal::SubDocument::EmptyPicture, pict.m_fileId));
+      (new HMWKGraphInternal::SubDocument
+       (*this, input, framePos, HMWKGraphInternal::SubDocument::EmptyPicture, pict.m_fileId));
       listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
     return sendPictureFrame(pict, pos, extras);
   }
   case 8:
-    return sendBasicGraph(reinterpret_cast<HMWGraphInternal::BasicGraph const &>(frame), pos, extras);
+    return sendBasicGraph(reinterpret_cast<HMWKGraphInternal::BasicGraph const &>(frame), pos, extras);
   case 9: {
-    HMWGraphInternal::Table const &table = reinterpret_cast<HMWGraphInternal::Table const &>(frame);
+    HMWKGraphInternal::Table const &table = reinterpret_cast<HMWKGraphInternal::Table const &>(frame);
     if (!updateTable(table)) {
-      MWAW_DEBUG_MSG(("HMWGraph::sendFrame: can not find the table structure\n"));
+      MWAW_DEBUG_MSG(("HMWKGraph::sendFrame: can not find the table structure\n"));
       MWAWSubDocumentPtr subdoc
-      (new HMWGraphInternal::SubDocument
-       (*this, input, HMWGraphInternal::SubDocument::UnformattedTable, frame.m_fileId));
+      (new HMWKGraphInternal::SubDocument
+       (*this, input, HMWKGraphInternal::SubDocument::UnformattedTable, frame.m_fileId));
       listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
@@ -1052,8 +1052,8 @@ bool HMWGraph::sendFrame(HMWGraphInternal::Frame const &frame, MWAWPosition pos,
       framePos.setOrigin(Vec2f(0,0));
 
       MWAWSubDocumentPtr subdoc
-      (new HMWGraphInternal::SubDocument
-       (*this, input, framePos, HMWGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
+      (new HMWKGraphInternal::SubDocument
+       (*this, input, framePos, HMWKGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
       listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
@@ -1062,16 +1062,16 @@ bool HMWGraph::sendFrame(HMWGraphInternal::Frame const &frame, MWAWPosition pos,
     return sendTable(table);
   }
   case 11: // group: fixme must be implement for char position...
-    MWAW_DEBUG_MSG(("HMWGraph::sendFrame: sending group is not implemented\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::sendFrame: sending group is not implemented\n"));
     break;
   default:
-    MWAW_DEBUG_MSG(("HMWGraph::sendFrame: sending type %d is not implemented\n", frame.m_type));
+    MWAW_DEBUG_MSG(("HMWKGraph::sendFrame: sending type %d is not implemented\n", frame.m_type));
     break;
   }
   return false;
 }
 
-bool HMWGraph::sendEmptyPicture(MWAWPosition pos)
+bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
 {
   if (!m_parserState->m_listener)
     return true;
@@ -1098,7 +1098,7 @@ bool HMWGraph::sendEmptyPicture(MWAWPosition pos)
   return true;
 }
 
-bool HMWGraph::sendPictureFrame(HMWGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
   Vec2f pictSz = pict.m_pos.size();
@@ -1112,7 +1112,7 @@ bool HMWGraph::sendPictureFrame(HMWGraphInternal::PictureFrame const &pict, MWAW
   return true;
 }
 
-bool HMWGraph::sendTextBox(HMWGraphInternal::TextBox const &textbox, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosition pos, WPXPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
   Vec2f textboxSz = textbox.m_pos.size();
@@ -1153,13 +1153,13 @@ bool HMWGraph::sendTextBox(HMWGraphInternal::TextBox const &textbox, MWAWPositio
   if (!surfaceColor.isWhite())
     pList.insert("fo:background-color", surfaceColor.str().c_str());
 
-  MWAWSubDocumentPtr subdoc(new HMWGraphInternal::SubDocument(*this, m_parserState->m_input, HMWGraphInternal::SubDocument::Text, textbox.m_textFileId));
+  MWAWSubDocumentPtr subdoc(new HMWKGraphInternal::SubDocument(*this, m_parserState->m_input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
   m_parserState->m_listener->insertTextBox(pos, subdoc, pList);
 
   return true;
 }
 
-bool HMWGraph::sendBasicGraph(HMWGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendBasicGraph(HMWKGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
   Vec2f pictSz = pict.m_pos.size();
@@ -1278,7 +1278,7 @@ bool HMWGraph::sendBasicGraph(HMWGraphInternal::BasicGraph const &pict, MWAWPosi
 }
 
 // ----- table
-bool HMWGraph::updateTable(HMWGraphInternal::Table const &table)
+bool HMWKGraph::updateTable(HMWKGraphInternal::Table const &table)
 {
   if (table.m_cellsId.size()) return true;
 
@@ -1286,31 +1286,31 @@ bool HMWGraph::updateTable(HMWGraphInternal::Table const &table)
   int nColumns = table.m_columns;
   size_t nCells = table.m_cellsList.size();
   if (!nRows || !nColumns || !nCells || int(nCells) > nRows*nColumns) {
-    MWAW_DEBUG_MSG(("HMWGraph::updateTable: find an odd table\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::updateTable: find an odd table\n"));
     return false;
   }
   table.m_cellsId.resize(size_t(nRows*nColumns),-1);
   for (size_t i=0; i < nCells; i++) {
-    HMWGraphInternal::TableCell const &cell=table.m_cellsList[i];
+    HMWKGraphInternal::TableCell const &cell=table.m_cellsList[i];
     if (cell.m_row < 0 || cell.m_row >= nRows || cell.m_col < 0 || cell.m_col >= nColumns ||
         cell.m_span[0] < 1 || cell.m_span[1] < 1) {
-      MWAW_DEBUG_MSG(("HMWGraph::updateTable: find a bad cell\n"));
+      MWAW_DEBUG_MSG(("HMWKGraph::updateTable: find a bad cell\n"));
       continue;
     }
     if (cell.m_flags&0xc) table.m_hasExtraLines = true;
     for (int r = cell.m_row; r < cell.m_row + cell.m_span[0]; r++) {
       if (r >= nRows) {
-        MWAW_DEBUG_MSG(("HMWGraph::updateTable: find a bad row cell span\n"));
+        MWAW_DEBUG_MSG(("HMWKGraph::updateTable: find a bad row cell span\n"));
         continue;
       }
       for (int c = cell.m_col; c < cell.m_col + cell.m_span[1]; c++) {
         if (c >= nColumns) {
-          MWAW_DEBUG_MSG(("HMWGraph::updateTable: find a bad col cell span\n"));
+          MWAW_DEBUG_MSG(("HMWKGraph::updateTable: find a bad col cell span\n"));
           continue;
         }
         size_t cPos = table.getCellPos(r,c);
         if (table.m_cellsId[cPos]!=-1) {
-          MWAW_DEBUG_MSG(("HMWGraph::updateTable: oops find some cell in this position\n"));
+          MWAW_DEBUG_MSG(("HMWKGraph::updateTable: oops find some cell in this position\n"));
           table.m_cellsId.resize(0);
           return false;
         }
@@ -1326,14 +1326,14 @@ bool HMWGraph::updateTable(HMWGraphInternal::Table const &table)
     for (int c = 0; c < nColumns; c++) {
       size_t cPos = table.getCellPos(r,c);
       if (table.m_cellsId[cPos]==-1) continue;
-      HMWGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
+      HMWKGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
       if (cell.m_row + cell.m_span[0] != r+1)
         continue;
       rowsLimit[size_t(r)+1] = rowsLimit[size_t(cell.m_row)]+cell.m_dim[1];
       find = true;
     }
     if (!find) {
-      MWAW_DEBUG_MSG(("HMWGraph::updateTable: oops can not find the size of row %d\n", r));
+      MWAW_DEBUG_MSG(("HMWKGraph::updateTable: oops can not find the size of row %d\n", r));
       table.m_cellsId.resize(0);
       return false;
     }
@@ -1349,14 +1349,14 @@ bool HMWGraph::updateTable(HMWGraphInternal::Table const &table)
     for (int r = 0; r < nRows; r++) {
       size_t cPos = table.getCellPos(r,c);
       if (table.m_cellsId[cPos]==-1) continue;
-      HMWGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
+      HMWKGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
       if (cell.m_col + cell.m_span[1] != c+1)
         continue;
       colsLimit[size_t(c)+1] = colsLimit[size_t(cell.m_col)]+cell.m_dim[0];
       find = true;
     }
     if (!find) {
-      MWAW_DEBUG_MSG(("HMWGraph::updateTable: oops can not find the size of cell %d\n", c));
+      MWAW_DEBUG_MSG(("HMWKGraph::updateTable: oops can not find the size of cell %d\n", c));
       table.m_cellsId.resize(0);
       return false;
     }
@@ -1368,7 +1368,7 @@ bool HMWGraph::updateTable(HMWGraphInternal::Table const &table)
   return true;
 }
 
-bool HMWGraph::sendTableCell(HMWGraphInternal::TableCell const &cell)
+bool HMWKGraph::sendTableCell(HMWKGraphInternal::TableCell const &cell)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener)
@@ -1393,7 +1393,7 @@ bool HMWGraph::sendTableCell(HMWGraphInternal::TableCell const &cell)
   return true;
 }
 
-bool HMWGraph::sendPreTableData(HMWGraphInternal::Table const &table)
+bool HMWKGraph::sendPreTableData(HMWKGraphInternal::Table const &table)
 {
   if (!m_parserState->m_listener)
     return true;
@@ -1414,7 +1414,7 @@ bool HMWGraph::sendPreTableData(HMWGraphInternal::Table const &table)
     columnsPos[c+1] = columnsPos[c]+table.m_columnsDim[c];
 
   for (size_t c = 0; c < nCells; c++) {
-    HMWGraphInternal::TableCell const &cell= table.m_cellsList[c];
+    HMWKGraphInternal::TableCell const &cell= table.m_cellsList[c];
     if (!(cell.m_flags&0xc)) continue;
     if (cell.m_row+cell.m_span[0] > nRows ||
         cell.m_col+cell.m_span[1] > nColumns)
@@ -1446,26 +1446,26 @@ bool HMWGraph::sendPreTableData(HMWGraphInternal::Table const &table)
   return true;
 }
 
-bool HMWGraph::sendTableUnformatted(long fId)
+bool HMWKGraph::sendTableUnformatted(long fId)
 {
   if (!m_parserState->m_listener)
     return true;
-  std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::const_iterator fIt
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt
     = m_state->m_framesMap.find(fId);
   if (fIt == m_state->m_framesMap.end() || !fIt->second || !fIt->second->m_type != 9) {
-    MWAW_DEBUG_MSG(("HMWGraph::sendTableUnformatted: can not find table %lx\n", fId));
+    MWAW_DEBUG_MSG(("HMWKGraph::sendTableUnformatted: can not find table %lx\n", fId));
     return false;
   }
-  HMWGraphInternal::Table const &table = reinterpret_cast<HMWGraphInternal::Table const &>(*fIt->second);
+  HMWKGraphInternal::Table const &table = reinterpret_cast<HMWKGraphInternal::Table const &>(*fIt->second);
   for (size_t c = 0; c < table.m_cellsList.size(); c++) {
-    HMWGraphInternal::TableCell const &cell= table.m_cellsList[c];
+    HMWKGraphInternal::TableCell const &cell= table.m_cellsList[c];
     if (cell.m_id < 0) continue;
     m_mainParser->sendText(cell.m_fileId, cell.m_id);
   }
   return true;
 }
 
-bool HMWGraph::sendTable(HMWGraphInternal::Table const &table)
+bool HMWKGraph::sendTable(HMWKGraphInternal::Table const &table)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener)
@@ -1488,7 +1488,7 @@ bool HMWGraph::sendTable(HMWGraphInternal::Table const &table)
       if (id == -1)
         listener->addEmptyTableCell(Vec2i(int(c), int(r)));
 
-      HMWGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
+      HMWKGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
       if (int(r) != cell.m_row || int(c) != cell.m_col) continue;
 
       sendTableCell(cell);
@@ -1505,11 +1505,11 @@ bool HMWGraph::sendTable(HMWGraphInternal::Table const &table)
 ////////////////////////////////////////////////////////////
 
 // try to read a small graphic
-shared_ptr<HMWGraphInternal::BasicGraph> HMWGraph::readBasicGraph(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header)
+shared_ptr<HMWKGraphInternal::BasicGraph> HMWKGraph::readBasicGraph(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header)
 {
-  shared_ptr<HMWGraphInternal::BasicGraph> graph;
+  shared_ptr<HMWKGraphInternal::BasicGraph> graph;
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWGraph::readBasicGraph: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readBasicGraph: called without any zone\n"));
     return graph;
   }
 
@@ -1517,11 +1517,11 @@ shared_ptr<HMWGraphInternal::BasicGraph> HMWGraph::readBasicGraph(shared_ptr<HMW
   long dataSz = zone->length();
   long pos = input->tell();
   if (pos+26 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWGraph::readBasicGraph: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readBasicGraph: the zone seems too short\n"));
     return graph;
   }
 
-  graph.reset(new HMWGraphInternal::BasicGraph(header));
+  graph.reset(new HMWKGraphInternal::BasicGraph(header));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   graph->m_graphType = (int) input->readLong(1);
@@ -1581,7 +1581,7 @@ shared_ptr<HMWGraphInternal::BasicGraph> HMWGraph::readBasicGraph(shared_ptr<HMW
       graph->m_angles[1] = graph->m_angles[0]+90;
     } else {
       f << "#transf=" << transf << ",";
-      MWAW_DEBUG_MSG(("HMWGraph::readBasicGraph: find unexpected transformation for arc\n"));
+      MWAW_DEBUG_MSG(("HMWKGraph::readBasicGraph: find unexpected transformation for arc\n"));
       ok = false;
       break;
     }
@@ -1598,7 +1598,7 @@ shared_ptr<HMWGraphInternal::BasicGraph> HMWGraph::readBasicGraph(shared_ptr<HMW
     }
     int numPt = (int) input->readLong(2);
     if (numPt < 0 || 28+8*numPt > dataSz) {
-      MWAW_DEBUG_MSG(("HMWGraph::readBasicGraph: find unexpected number of points\n"));
+      MWAW_DEBUG_MSG(("HMWKGraph::readBasicGraph: find unexpected number of points\n"));
       f << "#pt=" << numPt << ",";
       ok = false;
       break;
@@ -1616,7 +1616,7 @@ shared_ptr<HMWGraphInternal::BasicGraph> HMWGraph::readBasicGraph(shared_ptr<HMW
     break;
   }
   default:
-    MWAW_DEBUG_MSG(("HMWGraph::readBasicGraph: find unexpected graphic subType\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readBasicGraph: find unexpected graphic subType\n"));
     f << "###";
     ok = false;
     break;
@@ -1637,11 +1637,11 @@ shared_ptr<HMWGraphInternal::BasicGraph> HMWGraph::readBasicGraph(shared_ptr<HMW
 }
 
 // try to read the group data
-shared_ptr<HMWGraphInternal::Group> HMWGraph::readGroup(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header)
+shared_ptr<HMWKGraphInternal::Group> HMWKGraph::readGroup(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header)
 {
-  shared_ptr<HMWGraphInternal::Group> group;
+  shared_ptr<HMWKGraphInternal::Group> group;
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWGraph::readGroup: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readGroup: called without any zone\n"));
     return group;
   }
 
@@ -1649,19 +1649,19 @@ shared_ptr<HMWGraphInternal::Group> HMWGraph::readGroup(shared_ptr<HMWZone> zone
   long dataSz = zone->length();
   long pos = input->tell();
   if (pos+2 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWGraph::readGroup: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readGroup: the zone seems too short\n"));
     return group;
   }
   int N = (int) input->readULong(2);
   if (pos+2+8*N > dataSz) {
-    MWAW_DEBUG_MSG(("HMWGraph::readGroup: can not read N\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readGroup: can not read N\n"));
     return group;
   }
-  group.reset(new HMWGraphInternal::Group(header));
+  group.reset(new HMWKGraphInternal::Group(header));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   for (int i = 0; i < N; i++) {
-    HMWGraphInternal::Group::Child child;
+    HMWKGraphInternal::Group::Child child;
     child.m_fileId = (long) input->readULong(4);
     for (int j = 0; j < 2; j++) // f0=4|6|8, f1=0
       child.m_values[j] = (int) input->readLong(2);
@@ -1675,11 +1675,11 @@ shared_ptr<HMWGraphInternal::Group> HMWGraph::readGroup(shared_ptr<HMWZone> zone
 }
 
 // try to read a picture frame
-shared_ptr<HMWGraphInternal::PictureFrame> HMWGraph::readPictureFrame(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header)
+shared_ptr<HMWKGraphInternal::PictureFrame> HMWKGraph::readPictureFrame(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header)
 {
-  shared_ptr<HMWGraphInternal::PictureFrame> picture;
+  shared_ptr<HMWKGraphInternal::PictureFrame> picture;
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWGraph::readPicture: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readPicture: called without any zone\n"));
     return picture;
   }
 
@@ -1687,11 +1687,11 @@ shared_ptr<HMWGraphInternal::PictureFrame> HMWGraph::readPictureFrame(shared_ptr
   long dataSz = zone->length();
   long pos = input->tell();
   if (pos+32 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWGraph::readPicture: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readPicture: the zone seems too short\n"));
     return picture;
   }
 
-  picture.reset(new HMWGraphInternal::PictureFrame(header));
+  picture.reset(new HMWKGraphInternal::PictureFrame(header));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   picture->m_type = (int) input->readLong(2); // 0 or 4 : or maybe wrapping
@@ -1719,11 +1719,11 @@ shared_ptr<HMWGraphInternal::PictureFrame> HMWGraph::readPictureFrame(shared_ptr
 }
 
 // try to read the textbox data
-shared_ptr<HMWGraphInternal::TextBox> HMWGraph::readTextBox(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header, bool isMemo)
+shared_ptr<HMWKGraphInternal::TextBox> HMWKGraph::readTextBox(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header, bool isMemo)
 {
-  shared_ptr<HMWGraphInternal::TextBox> textbox;
+  shared_ptr<HMWKGraphInternal::TextBox> textbox;
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWGraph::readTextBox: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readTextBox: called without any zone\n"));
     return textbox;
   }
 
@@ -1732,11 +1732,11 @@ shared_ptr<HMWGraphInternal::TextBox> HMWGraph::readTextBox(shared_ptr<HMWZone> 
   long pos = input->tell();
   int expectedSize = isMemo ? 20 : 12;
   if (pos+expectedSize > dataSz) {
-    MWAW_DEBUG_MSG(("HMWGraph::readTextBox: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readTextBox: the zone seems too short\n"));
     return textbox;
   }
 
-  textbox.reset(new HMWGraphInternal::TextBox(header, isMemo));
+  textbox.reset(new HMWKGraphInternal::TextBox(header, isMemo));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   for (int i = 0; i < 2; i++) // 0|1, 0||1
@@ -1757,11 +1757,11 @@ shared_ptr<HMWGraphInternal::TextBox> HMWGraph::readTextBox(shared_ptr<HMWZone> 
 }
 
 // try to read the table data
-shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone, HMWGraphInternal::Frame const &header)
+shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header)
 {
-  shared_ptr<HMWGraphInternal::Table> table;
+  shared_ptr<HMWKGraphInternal::Table> table;
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWGraph::readTable: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readTable: called without any zone\n"));
     return table;
   }
 
@@ -1769,11 +1769,11 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
   long dataSz = zone->length();
   long pos = input->tell();
   if (pos+20 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWGraph::readTable: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readTable: the zone seems too short\n"));
     return table;
   }
 
-  table.reset(new HMWGraphInternal::Table(header));
+  table.reset(new HMWKGraphInternal::Table(header));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f, f2;
   long val;
@@ -1803,13 +1803,13 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
     pos = input->tell();
     f.str("");
     if (pos+80 > dataSz) {
-      MWAW_DEBUG_MSG(("HMWGraph::readTable: can not read cell %d\n", i));
+      MWAW_DEBUG_MSG(("HMWKGraph::readTable: can not read cell %d\n", i));
       f <<  "FrameDef(tableCell-" << i << "):###";
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
       break;
     }
-    HMWGraphInternal::TableCell cell;
+    HMWKGraphInternal::TableCell cell;
     cell.m_row = (int) input->readLong(2);
     cell.m_col = (int) input->readLong(2);
     int span[2];
@@ -1897,13 +1897,13 @@ shared_ptr<HMWGraphInternal::Table> HMWGraph::readTable(shared_ptr<HMWZone> zone
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-bool HMWGraph::sendPageGraphics()
+bool HMWKGraph::sendPageGraphics()
 {
-  std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::const_iterator fIt =
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
   for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
     if (!fIt->second) continue;
-    HMWGraphInternal::Frame const &frame = *fIt->second;
+    HMWKGraphInternal::Frame const &frame = *fIt->second;
     if (frame.m_parsed /*|| frame.m_fileId <= 0*/)
       continue;
     MWAWPosition pos(frame.m_pos[0],frame.m_pos.size(),WPX_POINT);
@@ -1914,23 +1914,23 @@ bool HMWGraph::sendPageGraphics()
   return true;
 }
 
-void HMWGraph::flushExtra()
+void HMWKGraph::flushExtra()
 {
-  std::multimap<long, shared_ptr<HMWGraphInternal::Frame> >::const_iterator fIt =
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
   for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
     if (!fIt->second) continue;
-    HMWGraphInternal::Frame const &frame = *fIt->second;
+    HMWKGraphInternal::Frame const &frame = *fIt->second;
     if (frame.m_parsed)
       continue;
     MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),WPX_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendFrame(frame, pos);
   }
-  std::map<long, shared_ptr<HMWGraphInternal::Picture> >::const_iterator pIt;
+  std::map<long, shared_ptr<HMWKGraphInternal::Picture> >::const_iterator pIt;
   for (pIt = m_state->m_picturesMap.begin(); pIt != m_state->m_picturesMap.end(); pIt++) {
     if (!pIt->second) continue;
-    HMWGraphInternal::Picture const &picture = *pIt->second;
+    HMWKGraphInternal::Picture const &picture = *pIt->second;
     if (picture.m_parsed)
       continue;
     MWAWPosition pos(Vec2f(0,0),Vec2f(100,100),WPX_POINT);
