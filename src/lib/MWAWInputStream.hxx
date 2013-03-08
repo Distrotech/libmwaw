@@ -34,7 +34,6 @@
 #ifndef MWAW_INPUT_STREAM_H
 #define MWAW_INPUT_STREAM_H
 
-#include <stdint.h>
 #include <string>
 #include <vector>
 

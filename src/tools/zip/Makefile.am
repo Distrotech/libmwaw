@@ -1,7 +1,6 @@
 bin_PROGRAMS = mwawZip
 
-AM_CXXFLAGS = $(LIBMWAW_CXXFLAGS) $(DEBUG_CXXFLAGS) $(XATTR_CFLAGS) $(ZLIB_CFLAGS)
-INCLUDES = -I$(srcdir) -I.
+AM_CXXFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/lib/ $(LIBMWAW_CXXFLAGS) $(XATTR_CFLAGS) $(ZLIB_CFLAGS) $(DEBUG_CXXFLAGS)
 
 mwawZip_DEPENDENCIES = @MWAWZIP_WIN32_RESOURCE@
 mwawZip_LDADD = $(ZLIB_LIBS) @MWAWZIP_WIN32_RESOURCE@
@@ -18,7 +17,6 @@ mwawZip_SOURCES = 		\
 	mwawZip.cpp		\
 	xattr.h			\
 	xattr.cpp		\
-	zip_internal.h		\
 	zip.h			\
 	zip.cpp
 

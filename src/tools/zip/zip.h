@@ -34,8 +34,6 @@
 #include <string>
 #include <vector>
 
-#include "zip_internal.h"
-
 struct tm;
 class InputStream;
 

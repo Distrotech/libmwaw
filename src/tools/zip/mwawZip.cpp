@@ -42,7 +42,7 @@
 #include <string>
 #include <vector>
 
-#include "zip_internal.h"
+#include <libmwaw_internal.hxx>
 #include "input.h"
 #include "xattr.h"
 #include "zip.h"

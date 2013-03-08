@@ -27,12 +27,10 @@
 * instead of those above.
 */
 
-#include <stdint.h>
 #include <string.h>
 #include <iostream>
 
-#include "zip_internal.h"
-
+#include <libmwaw_internal.hxx>
 #include "input.h"
 
 namespace libmwaw_zip

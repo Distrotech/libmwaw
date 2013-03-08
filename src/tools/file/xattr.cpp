@@ -26,14 +26,14 @@
 * in which case the provisions of the LGPLv2+ are applicable
 * instead of those above.
 */
-#include <stdint.h>
+
 #include <string.h>
 #include <iostream>
 
 #include <algorithm>
 
+#include <libmwaw_internal.hxx>
 #include "file_internal.h"
-
 #include "input.h"
 #include "xattr.h"
 

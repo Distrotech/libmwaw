@@ -27,14 +27,13 @@
 * instead of those above.
 */
 
-#include <stdint.h>
 #include <iostream>
 #include <sstream>
 #include <string>
 
+#include <libmwaw_internal.hxx>
 #include "file_internal.h"
 #include "input.h"
-
 #include "rsrc.h"
 
 namespace libmwaw_tools
