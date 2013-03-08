@@ -395,8 +395,6 @@ build/win32/Makefile
 libmwaw-0.1.pc
 libmwaw.spec
 libmwaw-zip
-autopackage/Makefile
-autopackage/default.apspec
 ])
 AC_OUTPUT
 
