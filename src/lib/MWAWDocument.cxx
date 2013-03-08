@@ -108,96 +108,108 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
   MWAWConfidence confidence = MWAW_CONFIDENCE_NONE;
   type = UNKNOWN;
   kind = K_UNKNOWN;
-  if (!input) {
+
+  if (!input)
+  {
     MWAW_DEBUG_MSG(("MWAWDocument::isFileFormatSupported(): no input\n"));
     return MWAW_CONFIDENCE_NONE;
   }
 
-  MWAW_DEBUG_MSG(("MWAWDocument::isFileFormatSupported()\n"));
-  MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
-  MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
-  shared_ptr<MWAWRSRCParser> rsrcParser;
-  if (rsrc)
-    rsrcParser.reset(new MWAWRSRCParser(rsrc));
-  shared_ptr<MWAWHeader> header;
+  try
+  {
+    MWAW_DEBUG_MSG(("MWAWDocument::isFileFormatSupported()\n"));
+    MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
+    MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
+    shared_ptr<MWAWRSRCParser> rsrcParser;
+    if (rsrc)
+      rsrcParser.reset(new MWAWRSRCParser(rsrc));
+    shared_ptr<MWAWHeader> header;
 #ifdef OOO
-  header.reset(MWAWDocumentInternal::getHeader(ip, rsrcParser, true));
+    header.reset(MWAWDocumentInternal::getHeader(ip, rsrcParser, true));
 #else
-  header.reset(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
+    header.reset(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
 #endif
 
-  if (!header.get())
-    return MWAW_CONFIDENCE_NONE;
-  type = (MWAWDocument::DocumentType)header->getType();
-  kind = (MWAWDocument::DocumentKind)header->getKind();
+    if (!header.get())
+      return MWAW_CONFIDENCE_NONE;
+    type = (MWAWDocument::DocumentType)header->getType();
+    kind = (MWAWDocument::DocumentKind)header->getKind();
 
-  switch (type) {
-  case CW:
-    confidence = MWAW_CONFIDENCE_EXCELLENT;
-    break;
-  case DM:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case ED:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case FULLW:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case HMAC:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case HMACJ:
+    switch (type)
+    {
+    case CW:
+      confidence = MWAW_CONFIDENCE_EXCELLENT;
+      break;
+    case DM:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case ED:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case FULLW:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case HMAC:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case HMACJ:
 #ifdef DEBUG
-    confidence = MWAW_CONFIDENCE_GOOD;
+      confidence = MWAW_CONFIDENCE_GOOD;
 #endif
-    break;
-  case LWTEXT:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case MARIW:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case MINDW:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case MSWORD:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case MSWORKS:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case MW:
-    confidence = MWAW_CONFIDENCE_EXCELLENT;
-    break;
-  case MWPRO:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case NISUSW:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case TEACH:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case TEDIT:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case WNOW:
-    confidence = MWAW_CONFIDENCE_EXCELLENT;
-    break;
-  case WPLUS:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case ZWRT:
-    confidence = MWAW_CONFIDENCE_GOOD;
-    break;
-  case ACT:
-  case UNKNOWN:
-  default:
-    break;
-  }
+      break;
+    case LWTEXT:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case MARIW:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case MINDW:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case MSWORD:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case MSWORKS:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case MW:
+      confidence = MWAW_CONFIDENCE_EXCELLENT;
+      break;
+    case MWPRO:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case NISUSW:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case TEACH:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case TEDIT:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case WNOW:
+      confidence = MWAW_CONFIDENCE_EXCELLENT;
+      break;
+    case WPLUS:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case ZWRT:
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+    case ACT:
+    case UNKNOWN:
+    default:
+      break;
+    }
 
-  return confidence;
+    return confidence;
+  }
+  catch (...)
+  {
+    type = UNKNOWN;
+    kind = K_UNKNOWN;
+    return MWAW_CONFIDENCE_NONE;
+  }
 }
 
 /**
