@@ -47,7 +47,7 @@
 				AdditionalIncludeDirectories="..\..\src\lib,$(LIBWPD_INCLUDES)"
 				PreprocessorDefinitions="_DEBUG;DEBUG;WIN32;_CONSOLE"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
 				TreatWChar_tAsBuiltInType="false"
 				PrecompiledHeaderFile=".\Debug/mwaw2html.pch"
 				AssemblerListingLocation=".\Debug/"
@@ -137,7 +137,7 @@
 				Optimization="4"
 				AdditionalIncludeDirectories="..\..\src\lib,$(LIBWPD_INCLUDES)"
 				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE"
-				RuntimeLibrary="0"
+				RuntimeLibrary="2"
 				TreatWChar_tAsBuiltInType="false"
 				PrecompiledHeaderFile=".\Release/mwaw2html.pch"
 				AssemblerListingLocation=".\Release/"
@@ -224,50 +224,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\src\conv\html\TableStyle.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\src\conv\html\TextRunStyle.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\src\conv\html\mwaw2html.cpp"
 				>
 				<FileConfiguration
@@ -311,6 +267,50 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath="..\..\src\conv\html\TableStyle.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\conv\html\TextRunStyle.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -321,15 +321,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\conv\html\mwaw2html_internal.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\conv\html\TableStyle.h"
 				>
 			</File>
 			<File
 				RelativePath="..\..\src\conv\html\TextRunStyle.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\conv\html\mwaw2html_internal.h"
 				>
 			</File>
 		</Filter>

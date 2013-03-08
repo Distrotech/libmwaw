@@ -47,7 +47,7 @@
 				AdditionalIncludeDirectories="..\..\src\lib,$(LIBWPD_INCLUDES)"
 				PreprocessorDefinitions="_DEBUG;DEBUG;WIN32;_CONSOLE"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
 				TreatWChar_tAsBuiltInType="false"
 				PrecompiledHeaderFile=".\Debug/mwaw2text.pch"
 				AssemblerListingLocation=".\Debug/"
@@ -137,7 +137,7 @@
 				Optimization="4"
 				AdditionalIncludeDirectories="..\..\src\lib,$(LIBWPD_INCLUDES)"
 				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE"
-				RuntimeLibrary="0"
+				RuntimeLibrary="2"
 				TreatWChar_tAsBuiltInType="false"
 				PrecompiledHeaderFile=".\Release/mwaw2text.pch"
 				AssemblerListingLocation=".\Release/"
@@ -202,10 +202,10 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			>
 			<File
-				RelativePath="..\..\src\conv\text\TextDocumentGenerator.cpp"
+				RelativePath="..\..\src\conv\text\mwaw2text.cpp"
 				>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -214,7 +214,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -224,10 +224,10 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\src\conv\text\mwaw2text.cpp"
+				RelativePath="..\..\src\conv\text\TextDocumentGenerator.cpp"
 				>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -236,7 +236,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
