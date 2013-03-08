@@ -23,6 +23,7 @@ AC_LANG([C++])
 # ===========================
 # Find required base packages
 # ===========================
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 AC_PROG_CC([gcc cc clang])
 AC_PROG_CPP([g++ c++ clang++])
 AC_PROG_CXX([g++ c++ clang++])
@@ -32,15 +33,16 @@ AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AC_LIBTOOL_WIN32_DLL
 PKG_PROG_PKG_CONFIG([0.20])
-m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
 # ====================
 # Find additional apps
 # ====================
-PKG_CHECK_MODULES([LIBMWAW],[
+PKG_CHECK_MODULES([WPD],[
     libwpd-0.9
     libwpd-stream-0.9
 ])
+AC_SUBST(WPD_CFLAGS)
+AC_SUBST(WPD_LIBS)
 
 # =================================
 # Libtool/Version Makefile settings
@@ -214,11 +216,7 @@ AS_IF([test "x$enable_full_debug" = "xyes"],
 		[DEBUG_CXXFLAGS="-DNDEBUG"])
 	]
 )
-
-LIBMWAW_CXXFLAGS="$LIBMWAW_CFLAGS"
-AC_SUBST(LIBMWAW_CXXFLAGS)
 AC_SUBST(DEBUG_CXXFLAGS)
-AC_SUBST(LIBMWAW_LIBS)
 
 # ============
 # Static tools
