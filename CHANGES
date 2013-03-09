@@ -1,5 +1,11 @@
 CHANGES:
 
+08/04/2013:
+- check that HanMac Word-K and Microsoft Works parser use all
+  the paragraph properties
+- refactoring of the windows building by Fridrich Strba + many
+  other improvements...
+
 03/04/2013:
 - check that Claris/AppleWorks, Mariner Write, MindWrite parsers use all
   the paragraph properties
