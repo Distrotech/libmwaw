@@ -189,7 +189,6 @@ if OS_WIN32
 endif
 
 EXTRA_DIST = \
-	makefile.mk \
 	libmwaw.rc.in
 
 # These may be in the builddir too
