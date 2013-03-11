@@ -124,10 +124,10 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     if (rsrc)
       rsrcParser.reset(new MWAWRSRCParser(rsrc));
     shared_ptr<MWAWHeader> header;
-#ifdef OOO
-    header.reset(MWAWDocumentInternal::getHeader(ip, rsrcParser, true));
-#else
+#ifdef DEBUG
     header.reset(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
+#else
+    header.reset(MWAWDocumentInternal::getHeader(ip, rsrcParser, true));
 #endif
 
     if (!header.get())
