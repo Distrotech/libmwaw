@@ -1664,7 +1664,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
           f << "f29[high]=" << std::hex << (int32_t(dt.value(0))>>2) << std::dec << ",";
         break;
       case 30:
-        level.m_labelWidth=dt.value(0)/72.0;
+        level.m_labelWidth=double(dt.value(0))/72.0;
         break;
         // cell properties
       case 40:
