@@ -527,7 +527,7 @@ bool MSW1Parser::prepareTextZones()
     return false;
   }
 
-  std::map<long,MSW1ParserInternal::PLC>::iterator plcIt = m_state->m_plcMap.begin();
+  std::multimap<long,MSW1ParserInternal::PLC>::iterator plcIt = m_state->m_plcMap.begin();
   long pos = 0x80, prevMainPos=pos;
   int actPage = 1;
   int actType = 0;
@@ -1216,7 +1216,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
   libmwaw::DebugStream f;
   f << "TextContent:";
   int actFId=-1, actRId = -1, actPage=0;
-  std::map<long,MSW1ParserInternal::PLC>::iterator plcIt = m_state->m_plcMap.begin();
+  std::multimap<long,MSW1ParserInternal::PLC>::iterator plcIt = m_state->m_plcMap.begin();
   while (plcIt != m_state->m_plcMap.end() && plcIt->first < pos) {
     MSW1ParserInternal::PLC const &plc = plcIt++->second;
     if (plc.m_type == MSW1ParserInternal::FONT)

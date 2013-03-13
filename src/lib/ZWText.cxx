@@ -433,7 +433,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
 
   ZWTextInternal::Font actFont;
   actFont.m_font=MWAWFont(3,12);
-  std::multimap<long, ZWTextInternal::Font>::const_iterator fIt=
+  std::map<long, ZWTextInternal::Font>::const_iterator fIt=
     zone.m_idFontMap.begin();
   long cPos = pos-zone.m_pos.begin();
   while (fIt != zone.m_idFontMap.end() && fIt->first<cPos)

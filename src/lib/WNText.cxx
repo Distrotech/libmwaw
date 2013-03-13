@@ -589,7 +589,7 @@ WNEntry WNText::getFooter() const
 ////////////////////////////////////////////////////////////
 bool WNText::createZones()
 {
-  std::map<std::string, WNEntry const *>::const_iterator iter;
+  std::multimap<std::string, WNEntry const *>::const_iterator iter;
 
   iter = m_entryManager->m_typeMap.find("FontZone");
   if (iter != m_entryManager->m_typeMap.end())

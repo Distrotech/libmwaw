@@ -336,7 +336,7 @@ bool WNParser::createZones()
   } else if (!readDocEntries())
     return false;
 
-  std::map<std::string, WNEntry const *>::const_iterator iter;
+  std::multimap<std::string, WNEntry const *>::const_iterator iter;
 
   // the Color map zone
   iter = m_entryManager->m_typeMap.find("ColMap");

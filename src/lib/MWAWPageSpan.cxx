@@ -236,7 +236,7 @@ void MWAWPageSpan::getPageProperty(WPXPropertyList &propList) const
 
   propList.insert("fo:page-height", getFormLength());
   propList.insert("fo:page-width", getFormWidth());
-  if (getFormOrientation() == MWAWPageSpan::MWAWPageSpan::LANDSCAPE)
+  if (getFormOrientation() == LANDSCAPE)
     propList.insert("style:print-orientation", "landscape");
   else
     propList.insert("style:print-orientation", "portrait");
