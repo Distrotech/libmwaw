@@ -1027,7 +1027,7 @@ void Paragraph::insert(Paragraph const &para, bool insertModif)
       for (size_t j = 0; j < m_tabs->size(); j++) {
         if (m_tabs.get()[j].m_position < val-1e-4 || m_tabs.get()[j].m_position > val+1e-4)
           continue;
-        m_tabs->erase (m_tabs->begin()+ssize_t(j));
+        m_tabs->erase (m_tabs->begin()+j);
         done = true;
         break;
       }

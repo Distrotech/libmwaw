@@ -41,7 +41,12 @@
 #include <map>
 #include <ostream>
 #include <string>
+#include <math.h>
 #include <vector>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 #include <libwpd-stream/libwpd-stream.h>
 #include <libwpd/libwpd.h>

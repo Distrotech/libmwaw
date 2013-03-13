@@ -55,6 +55,8 @@
 
 #include "CWGraph.hxx"
 
+#include "libmwaw_internal.hxx"
+
 /** Internal: the structures of a CWGraph */
 namespace CWGraphInternal
 {

@@ -53,6 +53,8 @@
 
 #include "HMWKGraph.hxx"
 
+#include "libmwaw_internal.hxx"
+
 /** Internal: the structures of a HMWKGraph */
 namespace HMWKGraphInternal
 {

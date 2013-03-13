@@ -756,7 +756,7 @@ private:
 
 bool DeflateStruct::sendDuplicated(int num, int depl)
 {
-  ssize_t readPos=ssize_t(m_circQueuePos)+ssize_t(depl);
+  int64_t readPos=m_circQueuePos+depl;
   while (readPos < 0) readPos+=0x2000;
   while (readPos >= 0x2000) readPos-=0x2000;
 
