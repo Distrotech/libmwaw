@@ -51,6 +51,8 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
+#include "libmwaw_internal.hxx"
+
 #include "EDParser.hxx"
 
 /** Internal: the structures of a EDParser */
