@@ -16,6 +16,8 @@ mwawFile_SOURCES = 		\
 	file.cpp		\
 	input.h			\
 	input.cpp		\
+	ole.h			\
+	ole.cpp			\
 	rsrc.h			\
 	rsrc.cpp		\
 	xattr.h			\

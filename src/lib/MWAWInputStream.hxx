@@ -40,7 +40,7 @@
 #include <libwpd-stream/libwpd-stream.h>
 #include "libmwaw_internal.hxx"
 
-namespace libmwaw
+namespace libmwawOLE
 {
 class Storage;
 }
@@ -222,7 +222,7 @@ protected:
   //! the resource fork
   shared_ptr<MWAWInputStream> m_resourceFork;
   //! the ole storage
-  shared_ptr<libmwaw::Storage> m_storageOLE;
+  shared_ptr<libmwawOLE::Storage> m_storageOLE;
 };
 
 //! a smart point of MWAWInputStream

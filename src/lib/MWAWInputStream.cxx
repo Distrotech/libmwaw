@@ -548,13 +548,13 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
 bool MWAWInputStream::isOLEStream()
 {
   if (!createStorageOLE()) return false;
-  return m_storageOLE->isOLEStream();
+  return m_storageOLE->isStructuredDocument();
 }
 
 std::vector<std::string> MWAWInputStream::getOLENames()
 {
   if (!createStorageOLE()) return std::vector<std::string>();
-  return m_storageOLE->getOLENames();
+  return m_storageOLE->getSubStreamList();
 }
 
 shared_ptr<MWAWInputStream> MWAWInputStream::getDocumentOLEStream(std::string name)
@@ -564,7 +564,7 @@ shared_ptr<MWAWInputStream> MWAWInputStream::getDocumentOLEStream(std::string na
 
   long actPos = tell();
   seek(0, WPX_SEEK_SET);
-  shared_ptr<WPXInputStream> res(m_storageOLE->getDocumentOLEStream(name));
+  shared_ptr<WPXInputStream> res(m_storageOLE->getSubStream(name));
   seek(actPos, WPX_SEEK_SET);
 
   if (!res)
@@ -580,7 +580,7 @@ bool MWAWInputStream::createStorageOLE()
 
   long actPos = tell();
   seek(0, WPX_SEEK_SET);
-  m_storageOLE.reset(new libmwaw::Storage(m_stream.get()));
+  m_storageOLE.reset(new libmwawOLE::Storage(m_stream));
   seek(actPos, WPX_SEEK_SET);
 
   return m_storageOLE;

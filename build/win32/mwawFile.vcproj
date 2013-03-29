@@ -246,6 +246,28 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\tools\file\ole.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\tools\file\rsrc.cpp"
 				>
 				<FileConfiguration
@@ -300,6 +322,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\tools\file\input.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\tools\file\ole.h"
 				>
 			</File>
 			<File

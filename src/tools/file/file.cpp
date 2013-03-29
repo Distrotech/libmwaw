@@ -38,6 +38,7 @@
 
 #include "file_internal.h"
 #include "input.h"
+#include "ole.h"
 #include "rsrc.h"
 #include "xattr.h"
 
@@ -244,7 +245,7 @@ bool File::readFileInformation()
     checkFInfoType("MIF3","FrameMaker MIF3.0") || checkFInfoType("MIF ","FrameMaker MIF") ||
     checkFInfoType("FrameMaker");
   } else if (m_fInfoCreator=="FWRT") {
-    checkFInfoType("FWRT","FullWrite 1.0") || checkFInfoType("FWRM","FullWrite 1.0") || 
+    checkFInfoType("FWRT","FullWrite 1.0") || checkFInfoType("FWRM","FullWrite 1.0") ||
     checkFInfoType("FWRI","FullWrite 2.0") || checkFInfoType("FullWrite");
   } else if (m_fInfoCreator=="JWrt") {
     checkFInfoType("TEXT","JoliWrite") || checkFInfoType("ttro","JoliWrite[readOnly]") ||
@@ -461,7 +462,12 @@ bool File::readDataInformation()
   }
   // ----------- less discriminant ------------------
   if (val[0]==0xd0cf && val[1]==0x11e0 && val[2]==0xa1b1 && val[3]==0x1ae1) {
-    m_dataResult.push_back("OLE file: can be DOC, DOT, PPS, PPT, XLA, XLS, WIZ, WPS(4.0), ...");
+    libmwaw_tools::OLE ole(input);
+    std::string res=ole.getCLSIDType();
+    if (res.length())
+      m_dataResult.push_back(res);
+    else
+      m_dataResult.push_back("OLE file: can be DOC, DOT, PPS, PPT, XLA, XLS, WIZ, WPS(4.0), ...");
     return true;
   }
 

@@ -103,6 +103,10 @@ SOURCE=..\..\src\conv\tools\file\input.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\conv\tools\file\ole.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\conv\tools\file\rsrc.cpp
 # End Source File
 # Begin Source File
@@ -120,6 +124,10 @@ SOURCE=..\..\src\conv\tools\file\file_internal.h
 # Begin Source File
 
 SOURCE=..\..\src\conv\tools\file\input.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\conv\tools\file\ole.h
 # End Source File
 # Begin Source File
 

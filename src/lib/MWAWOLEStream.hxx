@@ -38,12 +38,11 @@
 
 class WPXInputStream;
 
-namespace libmwaw
+/** a namespace used to wrap basic OLE functions */
+namespace libmwawOLE
 {
-
-class StorageIO;
-class Stream;
-class StreamIO;
+class IStorage;
+class IStream;
 
 /** class used to read/parse an OLE file */
 class Storage
@@ -52,13 +51,13 @@ class Storage
 
 public:
 
-  //! the Storage::result enum
-  enum { Ok, OpenFailed, NotOLE, BadOLE, UnknownError };
+  // for Storage::result()
+  enum Result { Ok, OpenFailed, NotOLE, BadOLE, UnknownError };
 
   /**
    * Constructs a storage with data.
    **/
-  Storage( WPXInputStream *is );
+  Storage( shared_ptr<WPXInputStream> is );
 
   /**
    * Destroys the storage.
@@ -68,26 +67,36 @@ public:
   /**
    * Checks whether the storage is OLE2 storage.
    **/
-  bool isOLEStream();
-
-  /**
-   * Returns the error code of last operation.
-   **/
-  int result();
+  bool isStructuredDocument();
 
   /**
    * Returns the list of all ole leaves names
    **/
-  std::vector<std::string> getOLENames();
+  std::vector<std::string> getSubStreamList(std::string dir="/", bool onlyFiles=true);
 
   /**
-   * Returns a WPXInputStream corresponding to a name
+   * Returns true if name corresponds to a sub stream
    **/
-  WPXInputStream *getDocumentOLEStream(const std::string &name);
+  bool isSubStream(const std::string &name);
+
+  /**
+   * Returns true if name corresponds to a directory
+   **/
+  bool isDirectory(const std::string &name);
+
+  /**
+   * Returns a WPXInputStream corresponding to a leaf/directory substream
+   **/
+  shared_ptr<WPXInputStream> getSubStream(const std::string &name);
 
 private:
-  /** the internal IO */
-  StorageIO *io;
+  /**
+   * Returns a WPXInputStream corresponding to a directory substream
+   **/
+  shared_ptr<WPXInputStream> getSubStreamForDirectory(const std::string &name);
+
+  //! the main data storage
+  libmwawOLE::IStorage *m_io;
 
   // no copy or assign
   Storage( const Storage & );
@@ -95,44 +104,7 @@ private:
 
 };
 
-/** a small stream used to retrieve a part in a OLE file */
-class Stream
-{
-  friend class Storage;
-  friend class StorageIO;
-
-public:
-
-  /**
-   * Creates a new stream.
-   */
-  Stream( Storage *storage, const std::string &name );
-
-  /**
-   * Destroys the stream.
-   */
-  ~Stream();
-
-  /**
-   * Returns the stream size.
-   **/
-  unsigned long size();
-
-  /**
-   * Reads a block of data.
-   **/
-  unsigned long read( unsigned char *data, unsigned long maxlen );
-
-private:
-  /** the internal IO */
-  StreamIO *io;
-
-  // no copy or assign
-  Stream( const Stream & );
-  Stream &operator=( const Stream & );
-};
-
-}  // namespace libmwaw
+}  // namespace libmwawOLE
 
 #endif // WPXOLESTREAM_H
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

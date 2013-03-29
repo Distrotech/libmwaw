@@ -191,17 +191,13 @@ bool dumpFile(WPXBinaryData &data, char const *fileName)
 {
   if (!fileName) return false;
   std::string fName = Debug::flattenFileName(fileName);
-  WPXInputStream *tmpStream =
-    const_cast<WPXInputStream *>(data.getDataStream());
-  if (!tmpStream) {
-    MWAW_DEBUG_MSG(("Debug::dumpFile: can not find stream for %s\n", fileName));
+  if (!data.size() || !data.getDataBuffer()) {
+    MWAW_DEBUG_MSG(("Debug::dumpFile: can not find data for %s\n", fileName));
     return false;
   }
   FILE *file = fopen(fName.c_str(), "wb");
   if (!file) return false;
-
-  while (!tmpStream->atEOS())
-    fprintf(file, "%c", libmwaw::readU8(tmpStream));
+  fwrite(data.getDataBuffer(), data.size(), 1, file);
   fclose(file);
   return true;
 }
