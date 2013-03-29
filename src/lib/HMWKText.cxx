@@ -55,26 +55,6 @@
 /** Internal: the structures of a HMWKText */
 namespace HMWKTextInternal
 {
-/** Internal: the fonts of a HMWKText*/
-struct Font {
-  //! the constructor
-  Font(): m_font(-1,-1), m_extra("") { }
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Font const &font);
-
-  //! the font
-  MWAWFont m_font;
-  //! extra data
-  std::string m_extra;
-};
-
-std::ostream &operator<<(std::ostream &o, Font const &font)
-{
-  if (font.m_extra.length())
-    o << font.m_extra << ",";
-  return o;
-}
-
 /** Internal: class to store the paragraph properties of a HMWKText */
 struct Paragraph : public MWAWParagraph {
   //! Constructor
@@ -372,11 +352,11 @@ bool HMWKText::sendText(HMWKZone &zone)
     switch(type) {
     case 1: {
       f << "font,";
-      HMWKTextInternal::Font font;
+      MWAWFont font(-1,-1);
       if (!readFont(zone,font))
         break;
       done = true;
-      listener->setFont(font.m_font);
+      listener->setFont(font);
       break;
     }
     case 2: { // ruler
@@ -539,9 +519,9 @@ bool HMWKText::sendText(HMWKZone &zone)
 ////////////////////////////////////////////////////////////
 
 // a font in the text zone
-bool HMWKText::readFont(HMWKZone &zone, HMWKTextInternal::Font &font)
+bool HMWKText::readFont(HMWKZone &zone, MWAWFont &font)
 {
-  font = HMWKTextInternal::Font();
+  font = MWAWFont(-1,-1);
 
   MWAWInputStreamPtr input = zone.m_input;
   long pos = input->tell();
@@ -556,36 +536,36 @@ bool HMWKText::readFont(HMWKZone &zone, HMWKTextInternal::Font &font)
     MWAW_DEBUG_MSG(("HMWKText::readFont: the data size seems bad\n"));
     f << "##dataSz=" << val << ",";
   }
-  font.m_font.setId((int) input->readLong(2));
+  font.setId((int) input->readLong(2));
   val = (int) input->readLong(2);
   if (val) f << "#f1=" << val << ",";
-  font.m_font.setSize(float(input->readLong(4))/65536.f);
+  font.setSize(float(input->readLong(4))/65536.f);
   float expand = float(input->readLong(4))/65536.f;
   if (expand < 0 || expand > 0)
-    font.m_font.setDeltaLetterSpacing(expand*font.m_font.size());
+    font.setDeltaLetterSpacing(expand*font.size());
   float xScale = float(input->readLong(4))/65536.f;
   if (xScale < 1.0 || xScale > 1.0)
-    font.m_font.setTexteWidthScaling(xScale);
+    font.setTexteWidthScaling(xScale);
 
   int flag =(int) input->readULong(2);
   uint32_t flags=0;
   if (flag&1) {
-    font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
-    font.m_font.setUnderlineType(MWAWFont::Line::Double);
+    font.setUnderlineStyle(MWAWFont::Line::Simple);
+    font.setUnderlineType(MWAWFont::Line::Double);
   }
   if (flag&2)
-    font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
+    font.setUnderlineStyle(MWAWFont::Line::Dot);
   if (flag&4) {
-    font.m_font.setUnderlineStyle(MWAWFont::Line::Dot);
-    font.m_font.setUnderlineWidth(2.0);
+    font.setUnderlineStyle(MWAWFont::Line::Dot);
+    font.setUnderlineWidth(2.0);
   }
   if (flag&8)
-    font.m_font.setUnderlineStyle(MWAWFont::Line::Dash);
+    font.setUnderlineStyle(MWAWFont::Line::Dash);
   if (flag&0x10)
-    font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
+    font.setStrikeOutStyle(MWAWFont::Line::Simple);
   if (flag&0x20) {
-    font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
-    font.m_font.setStrikeOutType(MWAWFont::Line::Double);
+    font.setStrikeOutStyle(MWAWFont::Line::Simple);
+    font.setStrikeOutType(MWAWFont::Line::Double);
   }
   if (flag&0xFFC0)
     f << "#flag0=" << std::hex << (flag&0xFFF2) << std::dec << ",";
@@ -595,44 +575,44 @@ bool HMWKText::readFont(HMWKZone &zone, HMWKTextInternal::Font &font)
   if (flag&0x4) flags |= MWAWFont::outlineBit;
   if (flag&0x8) flags |= MWAWFont::shadowBit;
   if (flag&0x10) flags |= MWAWFont::reverseVideoBit;
-  if (flag&0x20) font.m_font.set(MWAWFont::Script::super100());
-  if (flag&0x40) font.m_font.set(MWAWFont::Script::sub100());
+  if (flag&0x20) font.set(MWAWFont::Script::super100());
+  if (flag&0x40) font.set(MWAWFont::Script::sub100());
   if (flag&0x80) {
     if (flag&0x20)
-      font.m_font.set(MWAWFont::Script(48,WPX_PERCENT,58));
+      font.set(MWAWFont::Script(48,WPX_PERCENT,58));
     else if (flag&0x40)
-      font.m_font.set(MWAWFont::Script(16,WPX_PERCENT,58));
+      font.set(MWAWFont::Script(16,WPX_PERCENT,58));
     else
-      font.m_font.set(MWAWFont::Script::super());
+      font.set(MWAWFont::Script::super());
   }
   if (flag&0x100) {
-    font.m_font.setOverlineStyle(MWAWFont::Line::Dot);
-    font.m_font.setOverlineWidth(2.0);
+    font.setOverlineStyle(MWAWFont::Line::Dot);
+    font.setOverlineWidth(2.0);
   }
   if (flag&0x200) flags |= MWAWFont::boxedBit;
   if (flag&0x400) flags |= MWAWFont::boxedRoundedBit;
   if (flag&0x800) {
-    font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
-    font.m_font.setUnderlineWidth(0.5);
+    font.setUnderlineStyle(MWAWFont::Line::Simple);
+    font.setUnderlineWidth(0.5);
   }
-  if (flag&0x1000) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
+  if (flag&0x1000) font.setUnderlineStyle(MWAWFont::Line::Simple);
   if (flag&0x2000) {
-    font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
-    font.m_font.setUnderlineWidth(2.0);
+    font.setUnderlineStyle(MWAWFont::Line::Simple);
+    font.setUnderlineWidth(2.0);
   }
   if (flag&0x4000) {
-    font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
-    font.m_font.setUnderlineWidth(3.0);
+    font.setUnderlineStyle(MWAWFont::Line::Simple);
+    font.setUnderlineWidth(3.0);
   }
   if (flag&0x8000) {
-    font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
-    font.m_font.setStrikeOutType(MWAWFont::Line::Double);
-    font.m_font.setUnderlineWidth(0.5);
+    font.setStrikeOutStyle(MWAWFont::Line::Simple);
+    font.setStrikeOutType(MWAWFont::Line::Double);
+    font.setUnderlineWidth(0.5);
   }
   int color = (int) input->readLong(2);
   MWAWColor col;
   if (color && m_mainParser->getColor(color, 1, col))
-    font.m_font.setColor(col);
+    font.setColor(col);
   else if (color)
     f << "##fColor=" << color << ",";
   val = (int) input->readLong(2);
@@ -640,10 +620,10 @@ bool HMWKText::readFont(HMWKZone &zone, HMWKTextInternal::Font &font)
   color = (int) input->readLong(2);
   int pattern = (int) input->readLong(2);
   if ((color || pattern) && m_mainParser->getColor(color, pattern, col))
-    font.m_font.setBackgroundColor(col);
+    font.setBackgroundColor(col);
   else if (color || pattern)
     f << "#backColor=" << color << ", #pattern=" << pattern << ",";
-  font.m_font.setFlags(flags);
+  font.setFlags(flags);
   font.m_extra = f.str();
 
   static bool first=true;
@@ -653,7 +633,7 @@ bool HMWKText::readFont(HMWKZone &zone, HMWKTextInternal::Font &font)
     first = false;
   } else
     f << "FontDef:";
-  f << font.m_font.getDebugString(m_parserState->m_fontConverter) << font << ",";
+  f << font.getDebugString(m_parserState->m_fontConverter) << ",";
 
   zone.ascii().addPos(pos-4);
   zone.ascii().addNote(f.str().c_str());

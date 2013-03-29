@@ -268,11 +268,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       res.push_back(MWAWHeader(MWAWDocument::WNOW, 3));
   }
   if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {
-    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Mariner Write file[no parsing]\n"));
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Mariner Write file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MARIW, 1));
   }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
-    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-K file[mininal parsing]\n"));
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-K file\n"));
     res.push_back(MWAWHeader(MWAWDocument::HMAC, 1));
   }
   if (val[0]==0x594c && val[1]==0x5953 && val[2]==0x100) {
@@ -290,7 +290,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     switch (val[1]) {
     case 0:
       if (val[0]==0xfe34) {
-        MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 3.0 file[minimal parsing]\n"));
+        MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 3.0 file\n"));
         vers = 3;
       } else if (val[0]==0xfe32) {
         MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 1.0 file\n"));
@@ -298,11 +298,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       }
       break;
     case 0x1c:
-      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 4.0 file[minimal parsing]\n"));
+      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 4.0 file\n"));
       vers = 4;
       break;
     case 0x23:
-      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 5.0 file[minimal parsing]\n"));
+      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 5.0 file\n"));
       vers = 5;
       break;
     default:

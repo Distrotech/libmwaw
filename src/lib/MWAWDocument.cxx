@@ -109,14 +109,12 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
   type = UNKNOWN;
   kind = K_UNKNOWN;
 
-  if (!input)
-  {
+  if (!input) {
     MWAW_DEBUG_MSG(("MWAWDocument::isFileFormatSupported(): no input\n"));
     return MWAW_CONFIDENCE_NONE;
   }
 
-  try
-  {
+  try {
     MWAW_DEBUG_MSG(("MWAWDocument::isFileFormatSupported()\n"));
     MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
     MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
@@ -135,8 +133,7 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     type = (MWAWDocument::DocumentType)header->getType();
     kind = (MWAWDocument::DocumentKind)header->getKind();
 
-    switch (type)
-    {
+    switch (type) {
     case CW:
       confidence = MWAW_CONFIDENCE_EXCELLENT;
       break;
@@ -203,9 +200,7 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     }
 
     return confidence;
-  }
-  catch (...)
-  {
+  } catch (...) {
     type = UNKNOWN;
     kind = K_UNKNOWN;
     return MWAW_CONFIDENCE_NONE;

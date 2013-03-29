@@ -41,6 +41,7 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
+class MWAWFont;
 class MWAWParserState;
 typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
@@ -48,7 +49,6 @@ class MWAWSubDocument;
 
 namespace HMWKTextInternal
 {
-struct Font;
 struct Paragraph;
 struct Token;
 class SubDocument;
@@ -105,7 +105,7 @@ protected:
   // low level
   //
   /** try to read a font in a text zone */
-  bool readFont(HMWKZone &zone, HMWKTextInternal::Font &font);
+  bool readFont(HMWKZone &zone, MWAWFont &font);
 
   /** try to read a paragraph in a text zone */
   bool readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para);
