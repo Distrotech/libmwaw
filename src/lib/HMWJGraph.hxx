@@ -57,6 +57,7 @@ class MWAWPosition;
 
 namespace HMWJGraphInternal
 {
+struct Frame;
 struct State;
 class SubDocument;
 }
@@ -95,13 +96,17 @@ protected:
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
-
   //
   // Intermediate level
   //
-  /** try to read the frame definition (type 5)*/
+  /** try to read the frames definition (type 3)*/
   bool readFrames(MWAWEntry const &entry);
-
+  /** try to read a frame*/
+  bool readFrame(HMWJGraphInternal::Frame &frame);
+  /** try to read the pictures definition (type 6)*/
+  bool readPicture(MWAWEntry const &entry);
+  /** try to read a table (zone 7)*/
+  bool readTable(MWAWEntry const &entry);
 
   // interface with mainParser
 

@@ -41,6 +41,7 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
+class MWAWFont;
 class MWAWParserState;
 typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
@@ -48,8 +49,9 @@ class MWAWSubDocument;
 
 namespace HMWJTextInternal
 {
-struct Font;
+struct Paragraph;
 class SubDocument;
+struct TextZone;
 struct State;
 }
 
@@ -79,6 +81,8 @@ public:
 protected:
   //! send a text zone
   bool sendText(long id, long subId=0);
+  //! send a text zone
+  bool sendText(HMWJTextInternal::TextZone const &zone);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
@@ -86,10 +90,22 @@ protected:
   // intermediate level
   //
 
-  /** try to read the fonts name zone (type 5)*/
+  /** try to read the fonts name zone (type 15)*/
   bool readFontNames(MWAWEntry const &entry);
-  /** try to read the style zone (type 3) */
+  /** try to read the fonts zone (type 0)*/
+  bool readFonts(MWAWEntry const &entry);
+  /** try to read the font ( reading up to endPos if endPos is defined ) */
+  bool readFont(MWAWFont &font, long endPos=-1);
+  /** try to read the paragraphs zone (type 1)*/
+  bool readParagraphs(MWAWEntry const &entry);
+  /** try to read a paragraph  ( reading up to endPos if endPos is defined ) */
+  bool readParagraph(HMWJTextInternal::Paragraph &para, long endPos=-1);
+  /** try to read the style zone (type 2) */
   bool readStyles(MWAWEntry const &entry);
+  /** try to read a text zone ( type 5 ) */
+  bool readTextZone(MWAWEntry const &entry);
+  /** try to read the token in the text zone */
+  bool readTextToken(long endPos, HMWJTextInternal::TextZone &zone);
 
   //
   // low level

@@ -62,6 +62,44 @@ class SubDocument;
 class HMWJGraph;
 class HMWJText;
 
+/** a class use to store the classic header find before file zone */
+struct HMWJZoneHeader {
+  //! constructor
+  HMWJZoneHeader(bool isMain) : m_length(0), m_n(0), m_fieldSize(0), m_id(0), m_isMain(isMain) {
+    for (int i=0; i < 4; i++) m_values[i] = 0;
+  }
+
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, HMWJZoneHeader const &h) {
+    if (h.m_n) o << "N=" << h.m_n << ",";
+    if (h.m_id) o << "zId=" << std::hex << h.m_id << std::dec << ",";
+    bool toPrint[4]= {true, true, true, true};
+    if (h.m_isMain) {
+      if (h.m_values[0]+h.m_n == h.m_values[1])
+        toPrint[0]=toPrint[1]=false;
+      else if (h.m_values[0]+h.m_n == h.m_values[2])
+        toPrint[0]=toPrint[2]=false;
+      else
+        o << "###N,";
+    }
+    for (int i=0; i < 4; i++)
+      if (toPrint[i] && h.m_values[i]) o << "h" << i << "=" << h.m_values[i] << ",";
+    return o;
+  }
+  //! the zone size
+  long m_length;
+  //! the number of item
+  int m_n;
+  //! the field size
+  int m_fieldSize;
+  //! the zone id
+  long m_id;
+  //! 4 unknown field : freeN?, totalN?, totalN1?, ?
+  int m_values[4];
+  //! true if this is the main header
+  bool m_isMain;
+};
+
 /** \brief the main class to read a HanMac Word-J file
  *
  *
@@ -119,16 +157,42 @@ protected:
   // low level
   //
 
+  /** look in entry.begin() to see if a entry exists at this position,
+      if so fills entry.end(), entry.id(), ...*/
+  bool checkEntry(MWAWEntry &entry);
+
   /** try to read the zones list */
   bool readZonesList();
   /** try to read a generic zone */
   bool readZone(MWAWEntry &entry);
+
+  /** try to read a header of classic zone */
+  bool readClassicHeader(HMWJZoneHeader &header, long endPos=-1);
+  /** try to decode a zone */
+  bool decodeZone(MWAWEntry const &entry, WPXBinaryData &data);
+
   /** try to read a printinfo zone*/
   bool readPrintInfo(MWAWEntry const &entry);
-  /** try to read a unknown zone, just after the header*/
-  bool readZoneb();
-  /** try to read a unknown zone ( zone 4) */
+  /** try to read a unknown zone, just after the header (simillar to HMW Zoneb) */
+  bool readHeaderEnd();
+
+  /** try to read a unknown zones with header data */
+  bool readZoneWithHeader(MWAWEntry const &entry);
+  /** try to read the zone 4 (link to frame definition ?)*/
   bool readZone4(MWAWEntry const &entry);
+  /** try to read the zone 8*/
+  bool readZone8(MWAWEntry const &entry);
+  /** try to read the zone 9 ( a simple list? )*/
+  bool readZone9(MWAWEntry const &entry);
+  /** try to read the zone A ( a big zone containing 5 sub zone ? )*/
+  bool readZoneA(MWAWEntry const &entry);
+  /** try to read the zone B*/
+  bool readZoneB(MWAWEntry const &entry);
+  /** try to read the zone C*/
+  bool readZoneC(MWAWEntry const &entry);
+  /** try to read the zone D*/
+  bool readZoneD(MWAWEntry const &entry);
+
   /** check if an entry is in file */
   bool isFilePos(long pos);
 
