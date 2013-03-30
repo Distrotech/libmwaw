@@ -647,7 +647,6 @@ bool HMWJGraph::readPicture(MWAWEntry const &entry)
   }
 
   MWAWInputStreamPtr input = m_parserState->m_input;
-  libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
@@ -660,6 +659,7 @@ bool HMWJGraph::readPicture(MWAWEntry const &entry)
   }
   f << "pictSz=" << sz;
 #ifdef DEBUG_WITH_FILES
+  libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
   if (1) {
     f.str("");
 

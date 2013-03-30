@@ -605,8 +605,8 @@ bool HMWKText::readFont(HMWKZone &zone, MWAWFont &font)
     font.setUnderlineWidth(3.0);
   }
   if (flag&0x8000) {
-    font.setStrikeOutStyle(MWAWFont::Line::Simple);
-    font.setStrikeOutType(MWAWFont::Line::Double);
+    font.setUnderlineStyle(MWAWFont::Line::Simple);
+    font.setUnderlineType(MWAWFont::Line::Double);
     font.setUnderlineWidth(0.5);
   }
   int color = (int) input->readLong(2);

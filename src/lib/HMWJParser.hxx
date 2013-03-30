@@ -150,6 +150,8 @@ protected:
 
   // interface with the graph parser
 
+  //! send a zone
+  bool sendZone(long zId);
   //! returns the color associated with a pattern
   bool getColor(int colId, int patternId, MWAWColor &color) const;
 
@@ -178,8 +180,6 @@ protected:
 
   /** try to read a unknown zones with header data */
   bool readZoneWithHeader(MWAWEntry const &entry);
-  /** try to read the zone 4 (link to frame definition ?)*/
-  bool readZone4(MWAWEntry const &entry);
   /** try to read the zone 8*/
   bool readZone8(MWAWEntry const &entry);
   /** try to read the zone 9 ( a simple list? )*/
@@ -188,10 +188,6 @@ protected:
   bool readZoneA(MWAWEntry const &entry);
   /** try to read the zone B*/
   bool readZoneB(MWAWEntry const &entry);
-  /** try to read the zone C*/
-  bool readZoneC(MWAWEntry const &entry);
-  /** try to read the zone D*/
-  bool readZoneD(MWAWEntry const &entry);
 
   /** check if an entry is in file */
   bool isFilePos(long pos);

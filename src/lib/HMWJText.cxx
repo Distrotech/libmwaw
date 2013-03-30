@@ -56,7 +56,7 @@
 namespace HMWJTextInternal
 {
 /** different PLC types */
-enum PLCType { TYPE1=0, TYPE2, TYPE3, TOKEN, Unknown};
+enum PLCType { CHAR=0, RULER, LINE, TOKEN, Unknown};
 /** Internal and low level: the PLC different types and their structures of a HMWJText */
 struct PLC {
   //! constructor
@@ -64,14 +64,14 @@ struct PLC {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, PLC const &plc) {
     switch(plc.m_type) {
-    case TYPE1:
-      o << "PA" << plc.m_id << ",";
+    case CHAR:
+      o << "F" << plc.m_id << ",";
       break;
-    case TYPE2:
-      o << "PB" << plc.m_id << ",";
+    case LINE:
+      o << "L" << plc.m_id << ",";
       break;
-    case TYPE3:
-      o << "PC" << plc.m_id << ",";
+    case RULER:
+      o << "R" << plc.m_id << ",";
       break;
     case TOKEN:
       o << "T" << plc.m_id << ",";
@@ -94,7 +94,7 @@ struct PLC {
 /** Internal: class to store a token of a HMWJText */
 struct Token {
   //! constructor
-  Token() : m_type(0), m_id(0), m_extra("") {
+  Token() : m_type(0), m_id(0), m_localId(0), m_bookmark(""), m_length(0), m_extra("") {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Token const &tk) {
@@ -105,6 +105,9 @@ struct Token {
       o << "field,";
       break;
     case 2:
+      o << "footnote,";
+      break;
+    case 8:
       o << "toc,";
       break;
     case 0x20:
@@ -114,8 +117,14 @@ struct Token {
       o << "#type=" << tk.m_type << ",";
       break;
     }
+    if (tk.m_bookmark.length())
+      o << "text[bookmark]=" << tk.m_bookmark << ",";
     if (tk.m_id)
-      o << "id=" << std::hex << tk.m_id << std::dec << ",";
+      o << "zId=" << std::hex << tk.m_id << std::dec << ",";
+    if (tk.m_localId)
+      o << "id=" << tk.m_localId << ",";
+    if (tk.m_length)
+      o << "length=" << tk.m_length << ",";
     o << tk.m_extra;
     return o;
   }
@@ -123,25 +132,87 @@ struct Token {
   int m_type;
   //! the id ( to be send)
   long m_id;
+  //! the local id
+  int m_localId;
+  //! the bookmark string
+  std::string m_bookmark;
+  //! the token length in caller text
+  int m_length;
+  //! extra string string
+  std::string m_extra;
+};
+
+/** Internal: class to store a section of a HMWJText */
+struct Section {
+  //! constructor
+  Section() : m_numCols(1), m_colWidth(), m_colSep(), m_id(0), m_extra("") {
+  }
+  //! returns a vector corresponding to the col width in point
+  std::vector<int> getColumnWidth() const {
+    std::vector<int> res;
+    if (m_colWidth.size()==0) {
+      MWAW_DEBUG_MSG(("HMWJTextInternal::Section: can not find any width\n"));
+      return res;
+    }
+    if (m_colWidth.size()==size_t(m_numCols)) {
+      for (size_t c=0; c < m_colWidth.size(); c++)
+        res.push_back(int(m_colWidth[c]));
+      return res;
+    }
+    if (m_colWidth.size()>1) {
+      MWAW_DEBUG_MSG(("HMWJTextInternal::Section: colWidth is not coherent with numCols\n"));
+    }
+    res.resize(size_t(m_numCols), int(m_colWidth[0]));
+    return res;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Section const &sec) {
+    if (sec.m_numCols!=1)
+      o << "numCols=" << sec.m_numCols << ",";
+    if (sec.m_colWidth.size()) {
+      o << "colWidth=[";
+      for (size_t i = 0; i < sec.m_colWidth.size(); i++)
+        o << sec.m_colWidth[i] << ":" << sec.m_colSep[i] << ",";
+      o << "],";
+    }
+    if (sec.m_id)
+      o << "id=" << std::hex << sec.m_id << std::dec << ",";
+    o << sec.m_extra;
+    return o;
+  }
+  //! the number of column
+  int m_numCols;
+  //! the columns width
+  std::vector<double> m_colWidth;
+  //! the columns separator width
+  std::vector<double> m_colSep;
+  //! the id
+  long m_id;
   //! extra string string
   std::string m_extra;
 };
 
 //! Internal: a struct used to store a text zone
 struct TextZone {
-  TextZone() : m_entry(), m_plcMap(), m_tokenList(), m_parsed(false) {
+  //! enum used to define the zone type
+  enum Type { T_Main, T_Unknown };
+  //! constructor
+  TextZone() : m_type(T_Unknown), m_entry(), m_id(0), m_PLCMap(), m_tokenList(), m_parsed(false) {
   }
 
+  //! the zone type
+  Type m_type;
   //! the main entry
   MWAWEntry m_entry;
-
+  //! the file zone id
+  long m_id;
   //! the plc map
-  std::multimap<long, PLC> m_plcMap;
+  std::multimap<long, PLC> m_PLCMap;
   //! the tokens list
   std::vector<Token> m_tokenList;
 
   //! true if the zone is sended
-  bool m_parsed;
+  mutable bool m_parsed;
 };
 
 
@@ -185,12 +256,21 @@ struct Paragraph : public MWAWParagraph {
 //! Internal: the state of a HMWJText
 struct State {
   //! constructor
-  State() : m_version(-1), m_textZoneList(), m_numPages(-1), m_actualPage(0) {
+  State() : m_version(-1), m_fontList(), m_paragraphList(), m_sectionList(), m_textZoneList(),
+    m_actualTextZone(0), m_numPages(-1), m_actualPage(0) {
   }
   //! the file version
   mutable int m_version;
+  /** the font list */
+  std::vector<MWAWFont> m_fontList;
+  //! the list of paragraph
+  std::vector<Paragraph> m_paragraphList;
+  //! the list of section
+  std::vector<Section> m_sectionList;
   //! the list of text zone
   std::vector<TextZone> m_textZoneList;
+  //! an internal flag, used to know which textzone are read by readTextZone
+  int m_actualTextZone;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
@@ -198,9 +278,19 @@ struct State {
 //! Internal: the subdocument of a HMWJText
 class SubDocument : public MWAWSubDocument
 {
+protected:
+  //! the subdocument type
+  enum Type { S_TextZone, S_String };
 public:
-  SubDocument(HMWJText &pars, MWAWInputStreamPtr input, int id, libmwaw::SubDocumentType type) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_id(id), m_type(type) {}
+  //! constructor to call a textzone
+  SubDocument(HMWJText &pars, MWAWInputStreamPtr input, long id, int lId=0) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_type(S_TextZone),
+    m_textParser(&pars), m_id(id), m_localId(lId), m_bookmark("") {}
+  //! constructor to send a string
+  SubDocument(HMWJText &pars, MWAWInputStreamPtr input, std::string const &text) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_type(S_String),
+    m_textParser(&pars), m_id(0), m_localId(0), m_bookmark(text) {}
+
 
   //! destructor
   virtual ~SubDocument() {}
@@ -216,12 +306,16 @@ public:
   void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
+  /** the subdocument type */
+  Type m_type;
   /** the text parser */
   HMWJText *m_textParser;
   //! the subdocument id
-  int m_id;
-  //! the subdocument type
-  libmwaw::SubDocumentType m_type;
+  long m_id;
+  //! the local zone id
+  int m_localId;
+  //! the bookmark string
+  std::string m_bookmark;
 private:
   SubDocument(SubDocument const &orig);
   SubDocument &operator=(SubDocument const &orig);
@@ -233,8 +327,14 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_textParser);
 
+  if (m_type==S_String) {
+    for (size_t c=0; c < m_bookmark.length(); c++)
+      listener->insertCharacter((unsigned char) m_bookmark[c]);
+    return;
+  }
+  assert(m_textParser);
+  MWAW_DEBUG_MSG(("SubDocument::parse: do not know how to send a textZone\n"));
   long pos = m_input->tell();
   m_input->seek(pos, WPX_SEEK_SET);
 }
@@ -245,8 +345,10 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
   SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
   if (!sDoc) return true;
   if (m_textParser != sDoc->m_textParser) return true;
-  if (m_id != sDoc->m_id) return true;
   if (m_type != sDoc->m_type) return true;
+  if (m_id != sDoc->m_id) return true;
+  if (m_localId != sDoc->m_localId) return true;
+  if (m_bookmark != sDoc->m_bookmark) return true;
   return false;
 }
 }
@@ -293,6 +395,12 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
     MWAW_DEBUG_MSG(("HMWJText::sendText: call without entry\n"));
     return false;
   }
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("HMWJText::sendText: can not find the listener\n"));
+    return false;
+  }
+  zone.m_parsed=true;
   WPXBinaryData data;
   if (!m_mainParser->decodeZone(zone.m_entry, data)) {
     MWAW_DEBUG_MSG(("HMWJText::sendText: can not decode a zone\n"));
@@ -313,17 +421,366 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
   libmwaw::DebugFile asciiFile;
 
 #ifdef DEBUG_WITH_FILES
-  static int tId=0;
-  std::stringstream s;
-  s << "Text" << tId++;
-  asciiFile.setStream(input);
-  asciiFile.open(s.str().c_str());
-  s << ".data";
-  libmwaw::Debug::dumpFile(data, s.str().c_str());
+  if (1) {
+    static int tId=0;
+    std::stringstream s;
+    s << "Text" << tId++;
+    asciiFile.setStream(input);
+    asciiFile.open(s.str().c_str());
+    s << ".data";
+    libmwaw::Debug::dumpFile(data, s.str().c_str());
+  }
 #endif
 
-  asciiFile.addPos(0);
-  asciiFile.addNote("Entries(TextData)");
+  bool isMain = zone.m_type==HMWJTextInternal::TextZone::T_Main;
+
+  long cPos=0, endCPos=-1;
+  int actPage = 1, actCol = 0, numCol=1, actSection = 1;
+
+  if (isMain && !m_state->m_sectionList.size()) {
+    MWAW_DEBUG_MSG(("HMWJText::sendText: can not find section 0\n"));
+  } else if (isMain) {
+    HMWJTextInternal::Section sec = m_state->m_sectionList[0];
+    if (sec.m_numCols >= 1 && sec.m_colWidth.size() > 0) {
+      if (listener->isSectionOpened())
+        listener->closeSection();
+      listener->openSection(sec.getColumnWidth(), WPX_POINT);
+      numCol = sec.m_numCols;
+    }
+  }
+  long pos = 0;
+  libmwaw::DebugStream f;
+  f << "Entries(TextData):";
+
+  std::multimap<long, HMWJTextInternal::PLC>::const_iterator plcIt;
+  while (true) {
+    if (cPos) {
+      asciiFile.addPos(pos);
+      asciiFile.addNote(f.str().c_str());
+      f.str("");
+      f << "TextData:";
+      pos = input->tell();
+    }
+    plcIt=zone.m_PLCMap.find(cPos);
+    int expectedChar=0;
+    if (plcIt != zone.m_PLCMap.end()) {
+      while (plcIt != zone.m_PLCMap.end() && plcIt->first == cPos) {
+        HMWJTextInternal::PLC const &plc = plcIt++->second;
+        f << "[" << plc << "]";
+        switch(plc.m_type) {
+        case HMWJTextInternal::CHAR: {
+          if (plc.m_id < 0 || plc.m_id >= (int) m_state->m_fontList.size()) {
+            MWAW_DEBUG_MSG(("HMWJText::sendText: can not find font\n"));
+            f << "[###font]";
+            break;
+          }
+          listener->setFont(m_state->m_fontList[size_t(plc.m_id)]);
+          break;
+        }
+        case HMWJTextInternal::RULER: {
+          if (plc.m_id < 0 || plc.m_id >= (int) m_state->m_paragraphList.size()) {
+            MWAW_DEBUG_MSG(("HMWJText::sendText: can not find paragraph\n"));
+            f << "[###paragraph]";
+            break;
+          }
+          listener->setParagraph(m_state->m_paragraphList[size_t(plc.m_id)]);
+          break;
+        }
+        case HMWJTextInternal::TOKEN: {
+          if (plc.m_id < 0 || plc.m_id >= (int) zone.m_tokenList.size()) {
+            MWAW_DEBUG_MSG(("HMWJText::sendText: can not find token\n"));
+            f << "[###token]";
+            break;
+          }
+          HMWJTextInternal::Token tkn=zone.m_tokenList[size_t(plc.m_id)];
+          switch (tkn.m_type) {
+          case 1:
+            expectedChar=0x1;
+            m_mainParser->sendZone(tkn.m_id);
+            break;
+          case 2: {
+            expectedChar=0x11;
+            MWAWSubDocumentPtr subdoc(new HMWJTextInternal::SubDocument(*this, input, tkn.m_id, tkn.m_localId));
+            listener->insertNote(MWAWContentListener::FOOTNOTE,subdoc);
+            break;
+          }
+          case 8: // TOC, ok to ignore
+            break;
+          case 0x20: {
+            MWAWSubDocumentPtr subdoc(new HMWJTextInternal::SubDocument(*this, input, tkn.m_bookmark));
+            listener->insertComment(subdoc);
+            break;
+          }
+          default:
+            MWAW_DEBUG_MSG(("HMWJText::sendText: can not send token with type %d\n", tkn.m_type));
+            break;
+          }
+
+          break;
+        }
+        case HMWJTextInternal::LINE:
+        case HMWJTextInternal::Unknown:
+          break;
+        }
+      }
+      endCPos = (plcIt != zone.m_PLCMap.end()) ? plcIt->first : -1;
+    }
+    if (input->atEOS())
+      break;
+    if (expectedChar) {
+      if ((int) input->readULong(1)==expectedChar) {
+        cPos++;
+        input->seek(1, WPX_SEEK_CUR);
+      } else {
+        MWAW_DEBUG_MSG(("HMWJText::sendText: can not find expected char token\n"));
+        input->seek(-1, WPX_SEEK_CUR);
+        f << "###";
+      }
+    }
+    while (endCPos<0 || cPos < endCPos) {
+      cPos++;
+      if (input->atEOS())
+        break;
+      int c = (int) input->readULong(2);
+      if (c==0) {
+        if (input->atEOS())
+          break;
+        f << "#[0]";
+        continue;
+      }
+      switch(c) {
+      case 0x1000:
+        f << "[pgNum]";
+        listener->insertField(MWAWContentListener::PageNumber);
+        break;
+      case 0x1001:
+        f << "[pgCount]";
+        listener->insertField(MWAWContentListener::PageCount);
+        break;
+      case 0x1002:
+        f << "[date]";
+        listener->insertField(MWAWContentListener::Date);
+        break;
+      case 0x1003:
+        f << "[time]";
+        listener->insertField(MWAWContentListener::Time);
+        break;
+      case 0x1004:
+        f << "[title]";
+        listener->insertField(MWAWContentListener::Title);
+        break;
+      case 0x1005: {
+        std::stringstream s;
+        f << "[section]";
+        s << actSection;
+        listener->insertUnicodeString(s.str().c_str());
+        break;
+      }
+      case 2:
+        f << "[colBreak]";
+        if (actCol < numCol-1 && numCol > 1) {
+          listener->insertBreak(MWAWContentListener::ColumnBreak);
+          actCol++;
+        } else {
+          actCol = 0;
+          m_mainParser->newPage(actPage++);
+        }
+        break;
+      case 3:
+        f << "[pageBreak]";
+        m_mainParser->newPage(actPage++);
+        break;
+      case 4:
+        f << "[sectionBreak]";
+        if (!isMain) {
+          MWAW_DEBUG_MSG(("HMWKText::sendText: find section in auxilliary block\n"));
+          break;
+        }
+        if (size_t(actSection) >= m_state->m_sectionList.size()) {
+          MWAW_DEBUG_MSG(("HMWKText::sendText: can not find section %d\n", actSection));
+          break;
+        } else {
+          HMWJTextInternal::Section sec = m_state->m_sectionList[size_t(actSection++)];
+          numCol = sec.m_numCols;
+          actCol = 1;
+          if (listener->isSectionOpened())
+            listener->closeSection();
+          if (numCol >= 1 && sec.m_colWidth.size())
+            listener->openSection(sec.getColumnWidth(), WPX_POINT);
+          else
+            listener->openSection();
+        }
+        break;
+      case 9:
+        f << char(c);
+        listener->insertTab();
+        break;
+      case 0xd:
+        f << char(c);
+        listener->insertEOL();
+        break;
+      default: {
+        if (c >= 0x1100 && c <= 0x11ff) // ok a footnote
+          break;
+        if (c <= 0x1f || c >= 0x100) {
+          f << "#[" << std::hex << c << std::dec << "]";
+          MWAW_DEBUG_MSG(("HMWKText::sendText: find a odd char %x\n", c));
+          break;
+        }
+        f << char(c);
+        listener->insertCharacter((unsigned char)c, input);
+        break;
+      }
+      }
+    }
+  }
+  return true;
+}
+
+bool HMWJText::readTextZonesList(MWAWEntry const &entry)
+{
+  if (!entry.valid()) {
+    MWAW_DEBUG_MSG(("HMWJText::readTextZonesList: called without any entry\n"));
+    return false;
+  }
+  if (entry.length() == 8) {
+    MWAW_DEBUG_MSG(("HMWJText::readTextZonesList: find an empty zone\n"));
+    entry.setParsed(true);
+    return true;
+  }
+  if (entry.length() < 12) {
+    MWAW_DEBUG_MSG(("HMWJText::readTextZonesList: the entry seems too short\n"));
+    return false;
+  }
+  if (m_state->m_textZoneList.size()) {
+    MWAW_DEBUG_MSG(("HMWJText::readTextZonesList: oops the text zone list os ,not empty\n"));
+  }
+  long pos = entry.begin()+8; // skip header
+  long endPos = entry.end();
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  entry.setParsed(true);
+  input->seek(pos, WPX_SEEK_SET);
+  // first read the header
+  f << entry.name() << "[header]:";
+  HMWJZoneHeader mainHeader(true);
+  if (!m_mainParser->readClassicHeader(mainHeader,endPos) || mainHeader.m_fieldSize!=4) {
+    MWAW_DEBUG_MSG(("HMWJText::readTextZonesList: can not read an entry\n"));
+    f << "###sz=" << mainHeader.m_length;
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    return false;
+  }
+  long headerEnd=pos+4+mainHeader.m_length;
+  f << mainHeader;
+  long val;
+  f << "listId=[" << std::hex;
+  std::vector<long> listIds;
+  for (int i = 0; i < mainHeader.m_n; i++) {
+    val = (long) input->readULong(4);
+    listIds.push_back(val);
+    f << val << ",";
+  }
+  f << std::dec << "],";
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+  if (input->tell()!=headerEnd) {
+    asciiFile.addDelimiter(input->tell(),'|');
+    input->seek(headerEnd, WPX_SEEK_SET);
+  }
+  m_state->m_textZoneList.resize(size_t(mainHeader.m_n));
+  if (mainHeader.m_n)
+    m_state->m_textZoneList[0].m_type=HMWJTextInternal::TextZone::T_Main;
+  for (int i = 0; i < mainHeader.m_n; i++) {
+    HMWJTextInternal::TextZone &zone=m_state->m_textZoneList[size_t(i)];
+    zone.m_id = listIds[size_t(i)];
+    // first a field of size 0x26
+    pos = input->tell();
+    f.str("");
+    f << entry.name() << "-A" << i << ":";
+    f << "id=" << std::hex << listIds[size_t(i)] << std::dec << ",";
+
+    long dataSz = (pos+4>endPos) ? 0: (long) input->readULong(4);
+    long zoneEnd=pos+4+dataSz;
+    if (zoneEnd > endPos) {
+      MWAW_DEBUG_MSG(("HMWJText::readTextZonesList: can not read first zone size for id=%d\n",i));
+      f << "###sz=" << dataSz;
+      asciiFile.addPos(pos);
+      asciiFile.addNote(f.str().c_str());
+      return false;
+    }
+    if (dataSz < 38) {
+      MWAW_DEBUG_MSG(("HMWJText::readTextZonesList: first zone size for id=%d seems very short\n",i));
+      f << "###";
+    } else {
+      int sel[3];
+      for (int j = 0; j < 3; j++)
+        sel[j] = (int) input->readLong(4);
+      if (sel[0] || sel[1] || sel[2]) {
+        f << "select=" << sel[1] << "x" << sel[0];
+        if (sel[1] != sel[2])
+          f << "[" << sel[2] << "]";
+        f << ",";
+      }
+      f << "listIds=[" << std::hex; // 5 or 6 id
+      for (int j = 0; j < 6; j++) {
+        val = (long) input->readULong(4);
+        if (val)
+          f << val << ",";
+        else
+          f << "_,";
+      }
+      f << std::dec << "],";
+      int N1 = (int) input->readULong(2); // correspond to next N1
+      f << "N=" << N1 << ",";
+    }
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+
+    input->seek(zoneEnd, WPX_SEEK_SET);
+    f.str("");
+    f << entry.name() << "-B" << i << ":";
+    f << "id=" << std::hex << listIds[size_t(i)] << std::dec << ",";
+
+    pos = input->tell();
+    HMWJZoneHeader header(false);
+    if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=4) {
+      MWAW_DEBUG_MSG(("HMWJText::readTextZonesList: can not read second zone %d\n", i));
+      f << "###" << header;
+      asciiFile.addPos(pos);
+      asciiFile.addNote(f.str().c_str());
+      if (header.m_length<16 || pos+4+header.m_length>endPos)
+        return false;
+      input->seek(pos+4+header.m_length, WPX_SEEK_SET);
+      continue;
+    }
+    zoneEnd=pos+4+header.m_length;
+    f << header;
+    /* h0,h1,h2 seems to correspond to freeBlock, 0, 8[totalblock=8*..], h3=1*/
+    f << "listId?=[" << std::hex;
+    for (int j = 0; j < header.m_n; j++) {
+      val = (long) input->readULong(4);
+      f << val << ",";
+    }
+    f << std::dec << "],";
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    if (input->tell()!=zoneEnd)
+      asciiFile.addDelimiter(input->tell(),'|');
+    input->seek(zoneEnd, WPX_SEEK_SET);
+  }
+
+  pos = input->tell();
+  if (pos!=endPos) {
+    f.str("");
+    f << entry.name() << "[last]:###";
+    MWAW_DEBUG_MSG(("HMWJText::readTextZonesList: find unexpected end of data\n"));
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+  }
+
   return true;
 }
 
@@ -347,51 +804,54 @@ bool HMWJText::readTextZone(MWAWEntry const &entry)
   long endPos = entry.end();
   input->seek(pos, WPX_SEEK_SET);
 
-  HMWJTextInternal::TextZone zone;
+  size_t actZone = size_t(m_state->m_actualTextZone++);
+  if (actZone >= m_state->m_textZoneList.size()) {
+    MWAW_DEBUG_MSG(("HMWJText::readTextZone: find an unexpected zone\n"));
+    m_state->m_textZoneList.resize(actZone+1);
+  }
+  HMWJTextInternal::TextZone &zone = m_state->m_textZoneList[actZone];
   long val;
-  HMWJTextInternal::PLC plc;
-  // probably a list of 3 plc: char?, ruler?, ?
-  for (int i = 0; i < 3; i++) {
-    f.str("");
-    f << entry.name() << "-" << i << ":";
 
-    pos = input->tell();
-    int expectedSz = i<2 ? 8 : 4;
+  // first read the char properties list
+  std::vector<HMWJTextInternal::PLC> cPLCList;
+  std::vector<Vec2i> cPLCPosList; // 0:line, 1:char
 
-    HMWJZoneHeader header(false);
-    if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=expectedSz) {
-      MWAW_DEBUG_MSG(("HMWJText::readTextZone: can not read zone %d\n", i));
-      f << "###";
-      asciiFile.addPos(pos);
-      asciiFile.addNote(f.str().c_str());
-      input->seek(pos, WPX_SEEK_SET);
-      break;
-    }
+  f.str("");
+  f << entry.name() << "-char:";
+
+  pos = input->tell();
+  HMWJZoneHeader header(false);
+  bool ok = true;
+  if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=8) {
+    MWAW_DEBUG_MSG(("HMWJText::readTextZone: can not read zone the char plc list\n"));
+    f << "###";
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    input->seek(pos, WPX_SEEK_SET);
+    ok = false;
+  } else {
     f << header;
     long zoneEnd=pos+4+header.m_length;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
 
-    if (i==0)
-      plc.m_type = HMWJTextInternal::TYPE1;
-    else if (i==1)
-      plc.m_type = HMWJTextInternal::TYPE2;
-    else if (i==2)
-      plc.m_type = HMWJTextInternal::TYPE3;
     for (int j = 0; j < header.m_n; j++) {
       pos = input->tell();
       f.str("");
-      f << entry.name() << "-" << i << "[" << j << "]:";
-      long fPos = input->readLong(2);
-      if (fPos) f << "fPos=" << std::hex << fPos << std::dec << ",";
-      for (int k = 0; k < 3; k++) {
-        val = input->readLong(2);
-        if (val) f << "f" << k << "=" << val << ",";
-        if (4+2*k >= header.m_fieldSize) break;
-      }
-      plc.m_id = j;
-      zone.m_plcMap.insert
-      (std::multimap<long, HMWJTextInternal::PLC>::value_type(fPos, plc));
+      Vec2i cPos;
+      cPos[0] = (int) input->readLong(2);
+      cPos[1] = (int) input->readLong(2);
+      HMWJTextInternal::PLC plc;
+      plc.m_type = HMWJTextInternal::CHAR;
+      plc.m_id = (int) input->readLong(2);
+      val = (long) input->readULong(2); // 0|1|4|5|f|26|2d|42|4e|4f|..|6a|6e|7a|7d
+      if (val) f << "#f0=" << std::hex << val << std::dec << ",";
+      plc.m_extra = f.str();
+      cPLCPosList.push_back(cPos);
+      cPLCList.push_back(plc);
+
+      f.str("");
+      f << entry.name() << "-Char" << j << "]:lcPos=" << cPos << "," << plc;
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
       input->seek(pos+header.m_fieldSize, WPX_SEEK_SET);
@@ -403,8 +863,134 @@ bool HMWJText::readTextZone(MWAWEntry const &entry)
     }
   }
 
+  // second read the ruler list
+  std::map<int,HMWJTextInternal::PLC> rLineRulerMap;
+
+  f.str("");
+  f << entry.name() << "-ruler:";
+
+  pos = input->tell();
+  header=HMWJZoneHeader(false);
+  if (!ok) {
+  } else if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=8) {
+    MWAW_DEBUG_MSG(("HMWJText::readTextZone: can not read zone the ruler plc list\n"));
+    f << "###";
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    input->seek(pos, WPX_SEEK_SET);
+    ok = false;
+  } else {
+    f << header;
+    long zoneEnd=pos+4+header.m_length;
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+
+    for (int j = 0; j < header.m_n; j++) {
+      pos = input->tell();
+      f.str("");
+      int line = (int) input->readLong(2);
+      HMWJTextInternal::PLC plc;
+      plc.m_type = HMWJTextInternal::RULER;
+      plc.m_id = (int) input->readLong(2);
+
+      val = (long) input->readULong(4); // find 0,000008a0, 023ddd20, 0046ddbb, 5808001d, 5808004e
+      if (val) f << "#f0=" << std::hex << val << std::dec << ",";
+      plc.m_extra = f.str();
+      if (rLineRulerMap.find(line) !=  rLineRulerMap.end()) {
+        MWAW_DEBUG_MSG(("HMWJText::readTextZone: already find a ruler for line=%d\n",line));
+        f << "###";
+      } else
+        rLineRulerMap[line]=plc;
+
+      f.str("");
+      f << entry.name() << "-Ruler" << j << "]:line=" << line << "," << plc;
+      asciiFile.addPos(pos);
+      asciiFile.addNote(f.str().c_str());
+      input->seek(pos+header.m_fieldSize, WPX_SEEK_SET);
+    }
+
+    if (input->tell() != zoneEnd) { // junk ?
+      asciiFile.addDelimiter(input->tell(),'|');
+      input->seek(zoneEnd, WPX_SEEK_SET);
+    }
+  }
+
+  // now we can read the line position
+  std::vector<long> linePosList;
+
+  f.str("");
+  f << entry.name() << "-line:";
+  pos = input->tell();
+  header=HMWJZoneHeader(false);
+  if (!ok) {
+  } else if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=4) {
+    MWAW_DEBUG_MSG(("HMWJText::readTextZone: can not read zone the line plc list\n"));
+    f << "###";
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    input->seek(pos, WPX_SEEK_SET);
+    ok = false;
+  } else {
+    f << header;
+    long zoneEnd=pos+4+header.m_length;
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    HMWJTextInternal::PLC plc;
+    plc.m_type = HMWJTextInternal::LINE;
+
+    f << "linePos=[" << std::hex;
+    for (int j = 0; j < header.m_n; j++) {
+      long linePos = input->readLong(4);
+      linePosList.push_back(linePos);
+      plc.m_id = j;
+      zone.m_PLCMap.insert
+      (std::multimap<long, HMWJTextInternal::PLC>::value_type(linePos, plc));
+      f << linePos << ",";
+    }
+    f << std::dec << "],";
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+
+    if (input->tell() != zoneEnd) { // junk ?
+      asciiFile.addDelimiter(input->tell(),'|');
+      input->seek(zoneEnd, WPX_SEEK_SET);
+    }
+  }
+
+  // ok, we can now update the plc
+  if (ok) {
+    int nLines = int(linePosList.size());
+    std::map<int,HMWJTextInternal::PLC>::const_iterator rIt;
+    for (rIt=rLineRulerMap.begin(); rIt!=rLineRulerMap.end(); rIt++) {
+      int line = rIt->first;
+      if (line < 0 || line >= nLines) {
+        MWAW_DEBUG_MSG(("HMWJText::readTextZone: build rule plc, can not find line %d\n", line));
+        continue;
+
+      }
+      zone.m_PLCMap.insert
+      (std::multimap<long, HMWJTextInternal::PLC>::value_type(linePosList[size_t(line)], rIt->second));
+    }
+    size_t numCProp = cPLCPosList.size();
+    if (numCProp != cPLCList.size()) {
+      MWAW_DEBUG_MSG(("HMWJText::readTextZone: cPLCPosList and cPLCList have not the same size\n"));
+      if (numCProp > cPLCList.size())
+        numCProp = cPLCList.size();
+    }
+    for (size_t i = 0; i < numCProp; i++) {
+      int line = cPLCPosList[i][0];
+      if (line < 0 || line >= nLines) {
+        MWAW_DEBUG_MSG(("HMWJText::readTextZone: build char plc, can not find line %d\n", line));
+        continue;
+      }
+      long cPos = linePosList[size_t(line)]+long(cPLCPosList[i][1]);
+      zone.m_PLCMap.insert
+      (std::multimap<long, HMWJTextInternal::PLC>::value_type(cPos, cPLCList[i]));
+    }
+  }
   asciiFile.addPos(endPos);
   asciiFile.addNote("_");
+
   // now potentially a token zone, called with endPos-1 to avoid reading the last text zone
   readTextToken(endPos-1, zone);
 
@@ -448,10 +1034,7 @@ bool HMWJText::readTextZone(MWAWEntry const &entry)
   zone.m_entry.setBegin(pos);
   zone.m_entry.setEnd(endPos);
   zone.m_entry.setName(entry.name());
-  m_state->m_textZoneList.push_back(zone);
 
-  // REMOVEME
-  sendText(zone);
   return true;
 }
 
@@ -466,39 +1049,47 @@ bool HMWJText::readTextToken(long endPos, HMWJTextInternal::TextZone &zone)
 
   f << "Entries(TextToken):";
   HMWJZoneHeader header(false);
-  if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=16) {
+  if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=16 ||
+      16+16*header.m_n+4 > header.m_length ) {
     input->seek(pos, WPX_SEEK_SET);
     return true;
+  }
+  int val;
+  for (int i = 0; i < 2; i++) { // always 0?
+    val = (int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
   }
   f << header;
   long zoneEnd=pos+4+header.m_length;
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
 
-  int val;
   HMWJTextInternal::PLC plc(HMWJTextInternal::TOKEN);
+  std::vector<int> bkmIdList;
   for (int i = 0; i < header.m_n; i++) {
     pos = input->tell();
     f.str("");
     HMWJTextInternal::Token tkn;
-    tkn.m_type=(int)input->readLong(1);
-    for (int j=0; j < 2; j++) { // f0=0, f1=0|1|11
-      val = (int) input->readLong(1);
-      if (val) f << "f" << j << "=" << val << ",";
-    }
-    val = (int) input->readLong(1);
-    if (val) f << "id?=" << val << ",";
     long fPos = input->readLong(4);
 
-    for (int j=0; j < 2; j++) { // g0=0, g1=0|2|5|a|10
-      val = (int) input->readLong(2);
-      if (val) f << "g" << j << "=" << val << ",";
-    }
+    val = (int) input->readLong(2); // always 0 ?
+    if (val) f << "f0=" << val << ",";
+    tkn.m_length=(int) input->readLong(2);;
     tkn.m_id = (long)  input->readULong(4);
+
+    tkn.m_type=(int)input->readLong(1);
+    for (int j=0; j < 2; j++) { // f1=0, f2=0|1[field]|11[footnote]
+      val = (int) input->readLong(1);
+      if (val) f << "f" << j+1 << "=" << val << ",";
+    }
+    tkn.m_localId = (int) input->readLong(1);
     tkn.m_extra = f.str();
     zone.m_tokenList.push_back(tkn);
+    if (tkn.m_type==0x20)
+      bkmIdList.push_back(i);
     plc.m_id = i;
-    zone.m_plcMap.insert(std::multimap<long, HMWJTextInternal::PLC>::value_type(fPos, plc));
+    zone.m_PLCMap.insert(std::multimap<long, HMWJTextInternal::PLC>::value_type(fPos, plc));
+
     f.str("");
     f << "TextToken-" << i << ":";
     if (fPos) f << "fPos=" << std::hex << fPos << std::dec << ",";
@@ -515,16 +1106,17 @@ bool HMWJText::readTextToken(long endPos, HMWJTextInternal::TextZone &zone)
 
   pos = input->tell();
   // next: we can find potential bookmark zone
-  int i = 0;
-  while (!input->atEOS()) {
+  for (size_t i=0; i < bkmIdList.size(); i++) {
     pos = input->tell();
     long dataSz = (long) input->readULong(4);
     zoneEnd = pos+4+dataSz;
-    if (dataSz<0 || zoneEnd >= endPos)
+    if (input->atEOS() || dataSz<0 || zoneEnd >= endPos) {
+      MWAW_DEBUG_MSG(("HMWJText::readTextToken: can not find bookmark text %d\n", int(i)));
       break;
+    }
 
     f.str("");
-    f << "TextToken-data" << i++ << ":";
+    f << "TextToken-data" << i << ":";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     int fSz=(int) input->readULong(1);
@@ -533,11 +1125,16 @@ bool HMWJText::readTextToken(long endPos, HMWJTextInternal::TextZone &zone)
       for (int c=0; c < fSz; c++)
         bkmark+=(char) input->readULong(1);
       f << bkmark;
-    } else
+
+      zone.m_tokenList[size_t(bkmIdList[i])].m_bookmark=bkmark;
+    } else {
+      MWAW_DEBUG_MSG(("HMWJText::readTextToken: can not read bookmark text %d\n", int(i)));
       f << "###";
+    }
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
 
+    pos = zoneEnd;
     input->seek(zoneEnd, WPX_SEEK_SET);
   }
   input->seek(pos, WPX_SEEK_SET);
@@ -641,9 +1238,10 @@ bool HMWJText::readFont(MWAWFont &font, long endPos)
     font.setUnderlineStyle(MWAWFont::Line::Simple);
     font.setUnderlineWidth(3.0);
   }
+
   if (flag&0x8000) {
-    font.setStrikeOutStyle(MWAWFont::Line::Simple);
-    font.setStrikeOutType(MWAWFont::Line::Double);
+    font.setUnderlineStyle(MWAWFont::Line::Simple);
+    font.setUnderlineType(MWAWFont::Line::Double);
     font.setUnderlineWidth(0.5);
   }
   int color = (int) input->readLong(2);
@@ -655,6 +1253,12 @@ bool HMWJText::readFont(MWAWFont &font, long endPos)
   val = (int) input->readLong(2);
   if (val) f << "#unk=" << val << ",";
   if (len >= 28) {
+    for (int i = 0; i < 2; i++) {
+      val = (int) input->readLong(2);
+      if (val) f << "#g" << i << "=" << val << ",";
+    }
+  }
+  if (len >= 36) {
     color = (int) input->readLong(2);
     int pattern = (int) input->readLong(2);
     if ((color || pattern) && m_mainParser->getColor(color, pattern, col))
@@ -681,7 +1285,10 @@ bool HMWJText::readFonts(MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("HMWJText::readFonts: the entry seems too short\n"));
     return false;
   }
-
+  if (m_state->m_fontList.size()) {
+    MWAW_DEBUG_MSG(("HMWJText::readFonts: oops the font list is not empty\n"));
+    m_state->m_fontList.resize(0);
+  }
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
@@ -742,6 +1349,7 @@ bool HMWJText::readFonts(MWAWEntry const &entry)
       return false;
     }
     f << font.getDebugString(m_parserState->m_fontConverter) << ",";
+    m_state->m_fontList.push_back(font);
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
   }
@@ -1207,6 +1815,10 @@ bool HMWJText::readParagraphs(MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("HMWJText::readParagraphs: the entry seems too short\n"));
     return false;
   }
+  if (m_state->m_paragraphList.size()) {
+    MWAW_DEBUG_MSG(("HMWJText::readParagraphs: oops the paragraph list is not empty\n"));
+    m_state->m_paragraphList.resize(0);
+  }
 
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
@@ -1265,6 +1877,7 @@ bool HMWJText::readParagraphs(MWAWEntry const &entry)
       asciiFile.addNote("Ruler###");
       return false;
     }
+    m_state->m_paragraphList.push_back(paragraph);
   }
   asciiFile.addPos(endPos);
   asciiFile.addNote("_");
@@ -1272,13 +1885,201 @@ bool HMWJText::readParagraphs(MWAWEntry const &entry)
 }
 
 ////////////////////////////////////////////////////////////
-//     the token
+//     the sections/footnotes
 ////////////////////////////////////////////////////////////
+bool HMWJText::readSections(MWAWEntry const &entry)
+{
+  if (!entry.valid()) {
+    MWAW_DEBUG_MSG(("HMWJText::readSections: called without any entry\n"));
+    return false;
+  }
+  if (entry.length() < 20) {
+    MWAW_DEBUG_MSG(("HMWJText::readSections: the entry seems too short\n"));
+    return false;
+  }
+  if (m_state->m_sectionList.size()) {
+    MWAW_DEBUG_MSG(("HMWJText::readSections: the list of section is not empty\n"));
+    m_state->m_sectionList.resize(0);
+  }
+  long pos = entry.begin()+8; // skip header
+  long endPos = entry.end();
 
-////////////////////////////////////////////////////////////
-//     the sections
-////////////////////////////////////////////////////////////
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  entry.setParsed(true);
+  input->seek(pos, WPX_SEEK_SET);
+  f << entry.name() << "[header]:";
+  long val;
+  for (int i = 0; i < 2; i++) { // fl0=0|0
+    val = (long) input->readULong(1);
+    if (val) f << "fl" << i << "=" << std::hex << val << std::hex << ",";
+  }
+  for (int i = 0; i < 3; i++) { // f0=1, f1=N, f2=0
+    val = input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
 
+  long dataSz = (long) input->readULong(4);
+  if (!dataSz) return true;
+
+  input->seek(-4, WPX_SEEK_CUR);
+  pos = input->tell();
+  f.str("");
+  f << entry.name() << ":";
+  HMWJZoneHeader header(false);
+  if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=0x5c) {
+    MWAW_DEBUG_MSG(("HMWJText::readSections: can not read second zone\n"));
+    f << "###" << header;
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    return false;
+  }
+  f << header;
+  long zoneEnd=pos+4+header.m_length;
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+
+  for (int i = 0; i < header.m_n; i++) {
+    pos = input->tell();
+    f.str("");
+    HMWJTextInternal::Section sec;
+    sec.m_id= input->readLong(2);
+    val = input->readLong(2); // almost alway=id, but not always
+    if (val != sec.m_id)
+      f << "#id2=" << val << ",";
+    val = input->readLong(2); // 0|1
+    if (val) f << "f0=" << val << ",";
+    val = (long) input->readULong(2);
+    int numCol = int(val >> 12);
+    if (numCol<=0 || numCol > 8) {
+      MWAW_DEBUG_MSG(("HMWJText::readSections: can not determine the num of columns\n"));
+      f << "#numCols=" << numCol << ",";
+    } else
+      sec.m_numCols=numCol;
+    bool differentWidth=(val & 0xFFF) == 0;
+    if (val & 0x7FF)
+      f << "#fl=" << std::hex << (val & 0xFFF) << ",";
+    if (differentWidth) {
+      for (int j = 0; j < numCol; j++) {
+        sec.m_colWidth.push_back(double(input->readLong(4))/65536);
+        sec.m_colSep.push_back(double(input->readLong(4))/65536);
+      }
+    } else {
+      sec.m_colWidth.push_back(double(input->readLong(4))/65536);
+      sec.m_colSep.push_back(double(input->readLong(4))/65536);
+    }
+    sec.m_extra = f.str();
+    m_state->m_sectionList.push_back(sec);
+
+    f.str("");
+    f << entry.name() << "-" << i << ":" << sec;
+
+    asciiFile.addDelimiter(input->tell(), '|');
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    input->seek(pos+0x5c, WPX_SEEK_SET);
+  }
+  input->seek(zoneEnd, WPX_SEEK_SET);
+
+  pos = input->tell();
+  if (pos!=endPos) {
+    MWAW_DEBUG_MSG(("HMWJText::readSections: find unexpected end data\n"));
+    f.str("");
+    f << entry.name() << "###:";
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool HMWJText::readFtnPos(MWAWEntry const &entry)
+{
+  if (!entry.valid()) {
+    MWAW_DEBUG_MSG(("HMWJText::readFtnPos: called without any entry\n"));
+    return false;
+  }
+  if (entry.length() < 16) {
+    MWAW_DEBUG_MSG(("HMWJText::readFtnPos: the entry seems too short\n"));
+    return false;
+  }
+  long pos = entry.begin()+8; // skip header
+  long endPos = entry.end();
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  entry.setParsed(true);
+  input->seek(pos, WPX_SEEK_SET);
+  f << entry.name() << "[header]:";
+  long val = (long) input->readULong(2); // always 0x200
+  if (val!=0x2000)
+    f << "f0=" << std::hex << val << std::dec << ",";
+  val = input->readLong(2); // always 1 ?
+  if (val != 1)
+    f << "f1=" << val << ",";
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+
+  long dataSz = (long) input->readULong(4);
+  if (!dataSz) return true;
+
+  input->seek(-4, WPX_SEEK_CUR);
+  pos = input->tell();
+  f.str("");
+  f << entry.name() << ":";
+  HMWJZoneHeader header(false);
+  if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=20||
+      16+20*header.m_n+28 > header.m_length) {
+    MWAW_DEBUG_MSG(("HMWJText::readFtnPos: can not read second zone\n"));
+    f << "###" << header;
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    return false;
+  }
+  f << header;
+  long zoneEnd=pos+4+header.m_length;
+  asciiFile.addDelimiter(input->tell(),'|');
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+
+  input->seek(28, WPX_SEEK_CUR);
+  for (int i = 0; i < header.m_n; i++) {
+    pos = input->tell();
+    f.str("");
+    f << entry.name() << "-" << i << ":";
+    val = (long) input->readULong(1);
+    if (val!=0x11) {
+      MWAW_DEBUG_MSG(("HMWJText::readFtnPos: find unexpected type\n"));
+      f << "#type=" << std::hex << val << std::dec << ",";
+    }
+    f << "id=" << input->readLong(1) << ",";
+    for (int j = 0; j < 5; j++) { // always 0?
+      val = input->readLong(2);
+      if (val) f << "f" << j << "=" << val << ",";
+    }
+    // the footnote text id
+    f << "zId=" << std::hex << input->readULong(4) << std::dec << ",";
+    // the local footnote id
+    f << "lZId=" << std::hex << input->readULong(4) << std::dec << ",";
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    input->seek(pos+20, WPX_SEEK_SET);
+  }
+  input->seek(zoneEnd, WPX_SEEK_SET);
+
+  pos = input->tell();
+  if (pos!=endPos) {
+    MWAW_DEBUG_MSG(("HMWJText::readFtnPos: find unexpected end data\n"));
+    f.str("");
+    f << entry.name() << "###:";
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+  }
+  return true;
+}
 ////////////////////////////////////////////////////////////
 //
 // Low level
@@ -1290,6 +2091,21 @@ bool HMWJText::readParagraphs(MWAWEntry const &entry)
 void HMWJText::flushExtra()
 {
   if (!m_parserState->m_listener) return;
+
+#ifdef DEBUG
+  for (size_t z = 0; z < m_state->m_textZoneList.size(); z++) {
+    if (m_state->m_textZoneList[z].m_parsed)
+      continue;
+
+    static bool first = true;
+    if (first) {
+      MWAW_DEBUG_MSG(("HMWJText::flushExtra: find some unsent zone\n"));
+      first = false;
+    }
+    sendText(m_state->m_textZoneList[z]);
+    m_parserState->m_listener->insertEOL();
+  }
+#endif
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

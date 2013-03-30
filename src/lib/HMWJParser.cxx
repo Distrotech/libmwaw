@@ -73,8 +73,8 @@ struct State {
   long m_zonesListBegin;
   //! end of file
   long m_eof;
-  //! a map of entry: zoneId->zone
-  std::multimap<long, MWAWEntry> m_zonesMap;
+  //! a map of entry: filepos->zone
+  std::map<long, MWAWEntry> m_zonesMap;
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
   int m_headerHeight /** the header height if known */,
@@ -176,6 +176,13 @@ bool HMWJParser::sendText(long id, long subId)
 {
   return m_textParser->sendText(id, subId);
 }
+
+bool HMWJParser::sendZone(long)
+{
+  MWAW_DEBUG_MSG(("HMWJParser::sendZone: not implemented\n"));
+  return false;
+}
+
 bool HMWJParser::getColor(int colId, int patternId, MWAWColor &color) const
 {
   return m_graphParser->getColor(colId, patternId, color);
@@ -331,18 +338,12 @@ bool HMWJParser::createZones()
     return false;
 
   /* some zones do not seem to appear in this list, so we must track them */
-  std::set<long> begPosList;
-  std::multimap<long,MWAWEntry>::iterator it;
+  std::map<long,MWAWEntry>::iterator it;
+  std::vector<MWAWEntry> newEntriesList;
   for (it = m_state->m_zonesMap.begin()  ; it != m_state->m_zonesMap.end(); it++) {
     MWAWEntry const &entry = it->second;
     if (!entry.valid()) continue;
-    begPosList.insert(entry.begin());
-  }
-  std::vector<MWAWEntry> newEntriesList;
-  for (it = m_state->m_zonesMap.begin() ; it != m_state->m_zonesMap.end(); it++) {
-    MWAWEntry const &entry = it->second;
-    if (!entry.valid()) continue;
-    if (begPosList.find(entry.end()) != begPosList.end())
+    if (m_state->m_zonesMap.find(entry.end()) != m_state->m_zonesMap.end())
       continue;
 
     MWAWEntry newEntry;
@@ -352,7 +353,7 @@ bool HMWJParser::createZones()
       newEntriesList.push_back(newEntry);
 
       long newBeginPos=newEntry.end();
-      if (begPosList.find(newBeginPos) != begPosList.end())
+      if (m_state->m_zonesMap.find(newBeginPos) != m_state->m_zonesMap.end())
         break;
       newEntry=MWAWEntry();
       newEntry.setBegin(newBeginPos);
@@ -363,7 +364,7 @@ bool HMWJParser::createZones()
     if (!zone.valid())
       continue;
     m_state->m_zonesMap.insert
-    (std::multimap<long,MWAWEntry>::value_type(zone.id(),zone));
+    (std::map<long,MWAWEntry>::value_type(zone.begin(),zone));
   }
 
   // now parse the different zones
@@ -384,7 +385,7 @@ bool HMWJParser::createZones()
     ascii().addNote(f.str().c_str());
   }
 
-  return false;
+  return m_state->m_zonesMap.size();
 }
 
 ////////////////////////////////////////////////////////////
@@ -412,9 +413,9 @@ bool HMWJParser::checkEntry(MWAWEntry &entry)
   entry.setLength(length);
 
   static char const *(what[]) = {
-    "FontDef", "Ruler", "Style", "FrameDef", "Zone4",
+    "FontDef", "Ruler", "Style", "FrameDef", "TZoneList",
     "TextZone", "Picture", "Table", "Zone8", "Zone9",
-    "ZoneA", "ZoneB", "ZoneC", "ZoneD", "ZoneE", "FontsName"
+    "ZoneA", "ZoneB", "Section", "FtnDef", "ZoneE", "FontsName"
   };
   if (type <= 15)
     entry.setName(what[type]);
@@ -465,7 +466,7 @@ bool HMWJParser::readZonesList()
       zone.setBegin(ptr);
       if (checkEntry(zone))
         m_state->m_zonesMap.insert
-        (std::multimap<long,MWAWEntry>::value_type(zone.id(),zone));
+        (std::map<long,MWAWEntry>::value_type(zone.begin(),zone));
       else
         f << "###";
     }
@@ -521,8 +522,8 @@ bool HMWJParser::readZone(MWAWEntry &entry)
   case 3:
     done = m_graphParser->readFrames(entry);
     break;
-  case 4: // frame extra?
-    done = readZone4(entry);
+  case 4:
+    done = m_textParser->readTextZonesList(entry);
     break;
   case 5:
     done = m_textParser->readTextZone(entry);
@@ -546,10 +547,10 @@ bool HMWJParser::readZone(MWAWEntry &entry)
     done = readZoneB(entry);
     break;
   case 12:
-    done = readZoneC(entry);
+    done = m_textParser->readSections(entry);
     break;
   case 13:
-    done = readZoneD(entry);
+    done = m_textParser->readFtnPos(entry);
     break;
   case 15:
     done = m_textParser->readFontNames(entry);
@@ -668,145 +669,6 @@ bool HMWJParser::readPrintInfo(MWAWEntry const &entry)
     asciiFile.addDelimiter(input->tell(),'|');
     input->seek(entry.end(), WPX_SEEK_SET);
   }
-  return true;
-}
-
-bool HMWJParser::readZone4(MWAWEntry const &entry)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZone4: called without any entry\n"));
-    return false;
-  }
-  if (entry.length() == 8) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZone4: find an empty zone\n"));
-    entry.setParsed(true);
-    return true;
-  }
-  if (entry.length() < 12) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZone4: the entry seems too short\n"));
-    return false;
-  }
-  long pos = entry.begin()+8; // skip header
-  long endPos = entry.end();
-
-  MWAWInputStreamPtr input = getInput();
-  libmwaw::DebugFile &asciiFile = ascii();
-  libmwaw::DebugStream f;
-  entry.setParsed(true);
-  input->seek(pos, WPX_SEEK_SET);
-  // first read the header
-  f << entry.name() << "[header]:";
-  HMWJZoneHeader mainHeader(true);
-  if (!readClassicHeader(mainHeader,endPos) || mainHeader.m_fieldSize!=4) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZone4: can not read an entry\n"));
-    f << "###sz=" << mainHeader.m_length;
-    asciiFile.addPos(pos);
-    asciiFile.addNote(f.str().c_str());
-    return false;
-  }
-  long headerEnd=pos+4+mainHeader.m_length;
-  f << mainHeader;
-  long val;
-  f << "listId=[" << std::hex;
-  std::vector<long> listIds;
-  for (int i = 0; i < mainHeader.m_n; i++) {
-    val = (long) input->readULong(4);
-    listIds.push_back(val);
-    f << val << ",";
-  }
-  f << std::dec << "],";
-  asciiFile.addPos(pos);
-  asciiFile.addNote(f.str().c_str());
-  if (input->tell()!=headerEnd) {
-    asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(headerEnd, WPX_SEEK_SET);
-  }
-  for (int i = 0; i < mainHeader.m_n; i++) {
-    // first a field of size 0x26
-    pos = input->tell();
-    f.str("");
-    f << entry.name() << "-A" << i << ":";
-    f << "id=" << std::hex << listIds[size_t(i)] << std::dec << ",";
-
-    long dataSz = (pos+4>endPos) ? 0: (long) input->readULong(4);
-    long zoneEnd=pos+4+dataSz;
-    if (zoneEnd > endPos) {
-      MWAW_DEBUG_MSG(("HMWJParser::readZone4: can not read first zone size for id=%d\n",i));
-      f << "###sz=" << dataSz;
-      asciiFile.addPos(pos);
-      asciiFile.addNote(f.str().c_str());
-      return false;
-    }
-    if (dataSz < 38) {
-      MWAW_DEBUG_MSG(("HMWJParser::readZone4: first zone size for id=%d seems very short\n",i));
-      f << "###";
-    } else {
-      int dim[3]; // often dim[0] >= dim[1]=dim[2]
-      for (int j = 0; j < 3; j++)
-        dim[j] = (int) input->readLong(4);
-      if (dim[0] || dim[1] || dim[2]) {
-        f << "dim?=" << dim[1] << "x" << dim[0];
-        if (dim[1] != dim[2])
-          f << "[" << dim[2] << "]";
-        f << ",";
-      }
-      f << "listIds=[" << std::hex; // 5 or 6 id
-      for (int j = 0; j < 6; j++) {
-        val = (long) input->readULong(4);
-        if (val)
-          f << val << ",";
-        else
-          f << "_,";
-      }
-      f << std::dec << "],";
-      int N1 = (int) input->readULong(2); // correspond to next N1
-      f << "N=" << N1 << ",";
-    }
-    asciiFile.addPos(pos);
-    asciiFile.addNote(f.str().c_str());
-
-    input->seek(zoneEnd, WPX_SEEK_SET);
-    f.str("");
-    f << entry.name() << "-B" << i << ":";
-    f << "id=" << std::hex << listIds[size_t(i)] << std::dec << ",";
-
-    pos = input->tell();
-    HMWJZoneHeader header(true);
-    if (!readClassicHeader(header,endPos) || header.m_fieldSize!=4) {
-      MWAW_DEBUG_MSG(("HMWJParser::readZone4: can not read second zone %d\n", i));
-      f << "###" << header;
-      asciiFile.addPos(pos);
-      asciiFile.addNote(f.str().c_str());
-      if (header.m_length<16 || pos+4+header.m_length>endPos)
-        return false;
-      input->seek(pos+4+header.m_length, WPX_SEEK_SET);
-      continue;
-    }
-    zoneEnd=pos+4+header.m_length;
-    f << header;
-
-    f << "listId?=[" << std::hex;
-    for (int j = 0; j < header.m_n; j++) {
-      val = (long) input->readULong(4);
-      f << val << ",";
-    }
-    f << std::dec << "],";
-    asciiFile.addPos(pos);
-    asciiFile.addNote(f.str().c_str());
-    if (input->tell()!=zoneEnd)
-      asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(zoneEnd, WPX_SEEK_SET);
-  }
-
-  pos = input->tell();
-  if (pos!=endPos) {
-    f.str("");
-    f << entry.name() << "[last]:###";
-    MWAW_DEBUG_MSG(("HMWJParser::readZone4: find unexpected end of data\n"));
-    asciiFile.addPos(pos);
-    asciiFile.addNote(f.str().c_str());
-  }
-
   return true;
 }
 
@@ -1102,152 +964,6 @@ bool HMWJParser::readZoneB(MWAWEntry const &entry)
   pos = input->tell();
   if (pos!=endPos) {
     MWAW_DEBUG_MSG(("HMWJParser::readZoneB: find unexpected end data\n"));
-    f.str("");
-    f << entry.name() << "###:";
-    asciiFile.addPos(pos);
-    asciiFile.addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool HMWJParser::readZoneC(MWAWEntry const &entry)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneC: called without any entry\n"));
-    return false;
-  }
-  if (entry.length() < 20) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneC: the entry seems too short\n"));
-    return false;
-  }
-  long pos = entry.begin()+8; // skip header
-  long endPos = entry.end();
-
-  MWAWInputStreamPtr input = getInput();
-  libmwaw::DebugFile &asciiFile = ascii();
-  libmwaw::DebugStream f;
-  entry.setParsed(true);
-  input->seek(pos, WPX_SEEK_SET);
-  f << entry.name() << "[header]:";
-  long val;
-  for (int i = 0; i < 2; i++) { // fl0=0|0
-    val = (long) input->readULong(1);
-    if (val) f << "fl" << i << "=" << std::hex << val << std::hex << ",";
-  }
-  for (int i = 0; i < 3; i++) { // f0=1, f1=N, f2=0
-    val = input->readLong(2);
-    if (val) f << "f" << i << "=" << val << ",";
-  }
-  asciiFile.addPos(pos);
-  asciiFile.addNote(f.str().c_str());
-
-  long dataSz = (long) input->readULong(4);
-  if (!dataSz) return true;
-
-  input->seek(-4, WPX_SEEK_CUR);
-  pos = input->tell();
-  f.str("");
-  f << entry.name() << ":";
-  HMWJZoneHeader header(false);
-  if (!readClassicHeader(header,endPos) || header.m_fieldSize!=0x5c) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneC: can not read second zone\n"));
-    f << "###" << header;
-    asciiFile.addPos(pos);
-    asciiFile.addNote(f.str().c_str());
-    return false;
-  }
-  f << header;
-  long zoneEnd=pos+4+header.m_length;
-  asciiFile.addPos(pos);
-  asciiFile.addNote(f.str().c_str());
-
-  for (int i = 0; i < header.m_n; i++) {
-    pos = input->tell();
-    f.str("");
-    f << entry.name() << "-" << i << ":";
-
-    asciiFile.addPos(pos);
-    asciiFile.addNote(f.str().c_str());
-    input->seek(pos+0x5c, WPX_SEEK_SET);
-  }
-  input->seek(zoneEnd, WPX_SEEK_SET);
-
-  pos = input->tell();
-  if (pos!=endPos) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneC: find unexpected end data\n"));
-    f.str("");
-    f << entry.name() << "###:";
-    asciiFile.addPos(pos);
-    asciiFile.addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool HMWJParser::readZoneD(MWAWEntry const &entry)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneD: called without any entry\n"));
-    return false;
-  }
-  if (entry.length() < 16) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneD: the entry seems too short\n"));
-    return false;
-  }
-  long pos = entry.begin()+8; // skip header
-  long endPos = entry.end();
-
-  MWAWInputStreamPtr input = getInput();
-  libmwaw::DebugFile &asciiFile = ascii();
-  libmwaw::DebugStream f;
-  entry.setParsed(true);
-  input->seek(pos, WPX_SEEK_SET);
-  f << entry.name() << "[header]:";
-  long val = (long) input->readULong(2); // always 0x2000
-  if (val!=0x2000)
-    f << "f0=" << std::hex << val << std::dec << ",";
-  val = input->readLong(2); // always 1 ?
-  if (val != 1)
-    f << "f1=" << val << ",";
-  asciiFile.addPos(pos);
-  asciiFile.addNote(f.str().c_str());
-
-  long dataSz = (long) input->readULong(4);
-  if (!dataSz) return true;
-
-  input->seek(-4, WPX_SEEK_CUR);
-  pos = input->tell();
-  f.str("");
-  f << entry.name() << ":";
-  HMWJZoneHeader header(false);
-  if (!readClassicHeader(header,endPos) || header.m_fieldSize!=20||
-      16+20*header.m_n+28 > header.m_length) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneD: can not read second zone\n"));
-    f << "###" << header;
-    asciiFile.addPos(pos);
-    asciiFile.addNote(f.str().c_str());
-    return false;
-  }
-  f << header;
-  long zoneEnd=pos+4+header.m_length;
-  asciiFile.addDelimiter(input->tell(),'|');
-  asciiFile.addPos(pos);
-  asciiFile.addNote(f.str().c_str());
-
-  input->seek(28, WPX_SEEK_CUR);
-  for (int i = 0; i < header.m_n; i++) {
-    pos = input->tell();
-    f.str("");
-    f << entry.name() << "-" << i << ":";
-
-    asciiFile.addPos(pos);
-    asciiFile.addNote(f.str().c_str());
-    input->seek(pos+20, WPX_SEEK_SET);
-  }
-  input->seek(zoneEnd, WPX_SEEK_SET);
-
-  pos = input->tell();
-  if (pos!=endPos) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneD: find unexpected end data\n"));
     f.str("");
     f << entry.name() << "###:";
     asciiFile.addPos(pos);

@@ -102,10 +102,16 @@ protected:
   bool readParagraph(HMWJTextInternal::Paragraph &para, long endPos=-1);
   /** try to read the style zone (type 2) */
   bool readStyles(MWAWEntry const &entry);
+  /** try to read the list of textzones ( type 4) */
+  bool readTextZonesList(MWAWEntry const &entry);
   /** try to read a text zone ( type 5 ) */
   bool readTextZone(MWAWEntry const &entry);
   /** try to read the token in the text zone */
   bool readTextToken(long endPos, HMWJTextInternal::TextZone &zone);
+  /** try to read the different sections*/
+  bool readSections(MWAWEntry const &entry);
+  /** try to read the footnote position*/
+  bool readFtnPos(MWAWEntry const &entry);
 
   //
   // low level
