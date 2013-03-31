@@ -7,7 +7,8 @@
 - DM* : parser of DOCMaker documents
 - ED* : parser of eDOC documents
 - FW* : parser of FullWrite documents
-- HMW* : parser of HanMac Word documents
+- HMWJ* : parser of HanMac Word-J documents
+- HMWK* : parser of HanMac Word-K documents
 - LW* : parser of LightWay Text documents
 - MDW* : parser of MindWrite documents
 - MRW* : parser of Mariner Write documents

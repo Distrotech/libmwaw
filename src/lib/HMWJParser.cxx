@@ -172,9 +172,9 @@ void HMWJParser::init()
   m_textParser.reset(new HMWJText(*this));
 }
 
-bool HMWJParser::sendText(long id, long subId)
+bool HMWJParser::sendText(long id, long cPos)
 {
-  return m_textParser->sendText(id, subId);
+  return m_textParser->sendText(id, cPos);
 }
 
 bool HMWJParser::sendZone(long)

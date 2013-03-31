@@ -384,7 +384,7 @@ int HMWJText::numPages() const
 ////////////////////////////////////////////////////////////
 //     Text
 ////////////////////////////////////////////////////////////
-bool HMWJText::sendText(long /*id*/, long /*subId*/)
+bool HMWJText::sendText(long /*id*/, long /*cPos*/)
 {
   return false;
 }

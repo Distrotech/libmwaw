@@ -79,8 +79,8 @@ public:
   int numPages() const;
 
 protected:
-  //! send a text zone
-  bool sendText(long id, long subId=0);
+  //! send a text zone (not implemented)
+  bool sendText(long id, long cPos);
   //! send a text zone
   bool sendText(HMWJTextInternal::TextZone const &zone);
   //! sends the data which have not yet been sent to the listener

@@ -57,7 +57,11 @@ class MWAWPosition;
 
 namespace HMWJGraphInternal
 {
+struct CellFormat;
 struct Frame;
+struct Table;
+struct TableCell;
+
 struct State;
 class SubDocument;
 }
@@ -107,6 +111,18 @@ protected:
   bool readPicture(MWAWEntry const &entry);
   /** try to read a table (zone 7)*/
   bool readTable(MWAWEntry const &entry);
+
+  /** try to send a table */
+  bool sendTable(HMWJGraphInternal::Table const &table);
+  /** try to send a table unformatted*/
+  bool sendTableUnformatted(HMWJGraphInternal::Table const &table);
+  /** check if the table is correct and if it can be send to a listener */
+  bool updateTable(HMWJGraphInternal::Table const &table);
+  /** try to send auxilliary table data*/
+  bool sendPreTableData(HMWJGraphInternal::Table const &table);
+  /** try to send a cell in a table */
+  bool sendTableCell(HMWJGraphInternal::TableCell const &cell,
+                     std::vector<HMWJGraphInternal::CellFormat> const &lFormat);
 
   // interface with mainParser
 

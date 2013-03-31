@@ -57,6 +57,120 @@
 namespace HMWJGraphInternal
 {
 ////////////////////////////////////////
+//! a cell format in HMWJGraph
+struct CellFormat {
+public:
+  //! constructor
+  CellFormat(): m_backColor(MWAWColor::white()), m_borders(), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, CellFormat const &frmt) {
+    if (!frmt.m_backColor.isWhite())
+      o << "backColor=" << frmt.m_backColor << ",";
+    char const *(what[]) = {"T", "L", "B", "R"};
+    for (size_t b = 0; b < frmt.m_borders.size(); b++)
+      o << "bord" << what[b] << "=[" << frmt.m_borders[b] << "],";
+    o << frmt.m_extra;
+    return o;
+  }
+  //! the background color
+  MWAWColor m_backColor;
+  //! the border: order defined by MWAWBorder::Pos
+  std::vector<MWAWBorder> m_borders;
+  //! extra data
+  std::string m_extra;
+};
+
+////////////////////////////////////////
+//! a table cell in a table in HMWJGraph
+struct TableCell {
+  //! constructor
+  TableCell(): m_row(-1), m_col(-1), m_span(1,1), m_zId(0), m_cPos(-1), m_formatId(0), m_flags(0), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, TableCell const &cell);
+  //! the row
+  int m_row;
+  //! the column
+  int m_col;
+  //! the span ( numRow x numCol )
+  Vec2i m_span;
+  //! the cell zone id
+  long m_zId;
+  //! the first character position in m_zId
+  long m_cPos;
+  //! the file id
+  long m_fileId;
+  //! the cell format id
+  int m_formatId;
+  //! the cell flags
+  int m_flags;
+  //! extra data
+  std::string m_extra;
+};
+
+std::ostream &operator<<(std::ostream &o, TableCell const &cell)
+{
+  o << "row=" << cell.m_row << ",";
+  o << "col=" << cell.m_col << ",";
+  if (cell.m_span.x() != 1 || cell.m_span.y() != 1)
+    o << "span=" << cell.m_span << ",";
+  if (cell.m_flags&0x80) o << "vAlign=center,";
+  if (cell.m_flags&0x100) o << "justify[full],";
+  if (cell.m_flags&0x200) o << "line[TL->BR],";
+  if (cell.m_flags&0x400) o << "line[BL->TR],";
+  if (cell.m_flags&0x800) o << "lock,";
+  if (cell.m_flags&0x1000) o << "merge,";
+  if (cell.m_flags&0x2000) o << "inactive,";
+  if (cell.m_flags&0xC07F)
+    o << "#linesFlags=" << std::hex << (cell.m_flags&0xC07F) << std::dec << ",";
+  if (cell.m_zId > 0)
+    o << "cellId="  << std::hex << cell.m_zId << std::dec << "[" << cell.m_cPos << "],";
+  if (cell.m_formatId > 0)
+    o << "formatId="  << std::hex << cell.m_formatId << std::dec << ",";
+  o << cell.m_extra;
+  return o;
+}
+
+////////////////////////////////////////
+//! Internal: the table of a HMWJGraph
+struct Table {
+  //! constructor
+  Table() : m_rows(1), m_columns(1), m_height(0),
+    m_cellsList(), m_rowsDim(), m_columnsDim(), m_cellsId(), m_formatsList(), m_hasExtraLines(false), m_parsed(false) {
+  }
+  //! destructor
+  ~Table() {
+  }
+  //! returns a cell position ( before any merge cell )
+  size_t getCellPos(int row, int col) const {
+    return size_t(row*m_columns+col);
+  }
+  //! the number of row
+  int m_rows;
+  //! the number of columns
+  int m_columns;
+  //! the table height
+  int m_height;
+  //! the list of cells
+  std::vector<TableCell> m_cellsList;
+  //! the text file id
+  long m_textFileId;
+  //! the rows dimension ( in points )
+  mutable std::vector<float> m_rowsDim;
+  //! the columns dimension ( in points )
+  mutable std::vector<float> m_columnsDim;
+  //! a list of id for each cells
+  mutable std::vector<int> m_cellsId;
+  //! a list of cell format
+  std::vector<CellFormat> m_formatsList;
+  //! a flag to know if the table has some extra line
+  mutable bool m_hasExtraLines;
+  //! true if sent to the listener
+  mutable bool m_parsed;
+};
+
+////////////////////////////////////////
 //! Internal: the frame header of a HMWJGraph
 struct Frame {
   //! constructor
@@ -169,7 +283,8 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
 //! Internal: the state of a HMWJGraph
 struct State {
   //! constructor
-  State() : m_numPages(0), m_colorList(), m_patternPercentList() { }
+  State() : m_tablesList(),
+    m_numPages(0), m_colorList(), m_patternPercentList() { }
   //! returns a color correspond to an id
   bool getColor(int id, MWAWColor &col) {
     initColors();
@@ -201,6 +316,8 @@ struct State {
   //! init the pattenr list
   void initPatterns();
 
+  /** the list of table */
+  std::vector<Table> m_tablesList;
   int m_numPages /* the number of pages */;
   //! a list colorId -> color
   std::vector<MWAWColor> m_colorList;
@@ -675,7 +792,7 @@ bool HMWJGraph::readPicture(MWAWEntry const &entry)
   return true;
 }
 
-// try to read a table
+// table
 bool HMWJGraph::readTable(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
@@ -696,7 +813,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry)
 
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
-  libmwaw::DebugStream f;
+  libmwaw::DebugStream f, f2;
   entry.setParsed(true);
   input->seek(pos, WPX_SEEK_SET);
   // first read the header
@@ -712,19 +829,18 @@ bool HMWJGraph::readTable(MWAWEntry const &entry)
   }
   long headerEnd=pos+4+mainHeader.m_length;
   f << mainHeader;
+  m_state->m_tablesList.push_back(HMWJGraphInternal::Table());
+  HMWJGraphInternal::Table &table = m_state->m_tablesList.back();
+  table.m_rows = (int) input->readULong(1);
+  table.m_columns = (int) input->readULong(1);
+  f << "dim=" << table.m_rows << "x" << table.m_columns << ",";
   long val;
-  f << "unkn=[";
-  for (int i = 0; i < 3; i++) {
-    f << "[";
-    for (int j=0; j < 2; j++) {
-      val = input->readLong(1);
-      if (val) f << "f" << j << "=" << val << ",";
-    }
-    val = input->readLong(2); // a small number : a dim ? or a number ?
-    if (val) f << "dim?=" << val << ",";
-    f << "],";
+  for (int i = 0; i < 4; i++) { // f0=4|5|7|8|9, f1=1|7|107, f2=3|4|5|6, f3=0
+    val = (long) input->readULong(2);
+    if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
-  f << "],";
+  table.m_height = (int) input->readLong(2);
+  f << "h=" << table.m_height << ",";
   f << "listId=[" << std::hex;
   std::vector<long> listIds;
   for (int i = 0; i < mainHeader.m_n; i++) {
@@ -766,8 +882,26 @@ bool HMWJGraph::readTable(MWAWEntry const &entry)
     for (int j = 0; j < header.m_n; j++) {
       pos = input->tell();
       f.str("");
-      f << entry.name() << "-cell" << i << "x" << j << ":";
-
+      HMWJGraphInternal::TableCell cell;
+      cell.m_row = i;
+      cell.m_col = j;
+      cell.m_cPos = (long) input->readULong(4);
+      cell.m_zId = (long) input->readULong(4);
+      cell.m_flags = (int) input->readULong(2);
+      val = input->readLong(2);
+      if (val) f << "#f0=" << val << ",";
+      cell.m_formatId = (int) input->readLong(2);
+      int dim[2]; // for merge, inactive -> the other limit cell
+      for (int k=0; k < 2; k++)
+        dim[k]=(int)input->readULong(1);
+      if (cell.m_flags & 0x1000) {
+        cell.m_span[0] = dim[0]+1-i;
+        cell.m_span[1] = dim[1]+1-j;
+      }
+      cell.m_extra = f.str();
+      table.m_cellsList.push_back(cell);
+      f.str("");
+      f << entry.name() << "-cell:" << cell;
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
       input->seek(pos+16, WPX_SEEK_SET);
@@ -785,15 +919,12 @@ bool HMWJGraph::readTable(MWAWEntry const &entry)
     return true;
   }
 
-  // normally there remains 3 blocks:
-  for (int i = 0; i < 3; i++) {
-    static char const *(what[])= {"rowY", "colX", "borderType" };
+  for (int i = 0; i < 2; i++) {
     pos = input->tell();
     f.str("");
-    f << entry.name() << "-" << what[i] << ":";
+    f << entry.name() << "-" << (i==0 ? "rowY" : "colX") << ":";
     HMWJZoneHeader header(false);
-    int const expectedFSize = i==2 ? 40 : 4;
-    if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize != expectedFSize) {
+    if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize != 4) {
       MWAW_DEBUG_MSG(("HMWJGraph::readTable: can not read zone %d\n", i));
       f << "###" << header;
       asciiFile.addPos(pos);
@@ -805,26 +936,112 @@ bool HMWJGraph::readTable(MWAWEntry const &entry)
     }
     long zoneEnd=pos+4+header.m_length;
     f << header;
-    if (i<2) {
-      f << "pos=[";
-      for (int j = 0; j < header.m_n; j++)
-        f << double(input->readULong(4))/65536. << ",";
-      f << "],";
+    std::vector<float> &dim = i==0 ? table.m_rowsDim : table.m_columnsDim;
+    f << "pos=[";
+    float prevPos = 0.;
+    for (int j = 0; j < header.m_n; j++) {
+      float cPos = float(input->readULong(4))/65536.f;
+      f << cPos << ",";
+      if (j!=0)
+        dim.push_back(cPos-prevPos);
+      prevPos=cPos;
     }
+    f << "],";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    if (i==2) {
-      for (int j = 0; j < header.m_n; j++) {
-        pos = input->tell();
-        f.str("");
-        f << entry.name() << "-border" << j << ":";
-        asciiFile.addPos(pos);
-        asciiFile.addNote(f.str().c_str());
-        input->seek(pos+40, WPX_SEEK_SET);
-      }
-    }
     input->seek(zoneEnd, WPX_SEEK_SET);
   }
+
+  // finally the format
+  pos = input->tell();
+  f.str("");
+  f << entry.name() << "-format:";
+  HMWJZoneHeader header(false);
+  if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize != 40) {
+    MWAW_DEBUG_MSG(("HMWJGraph::readTable: can not read format\n"));
+    f << "###" << header;
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    return false;
+  }
+  long zoneEnd=pos+4+header.m_length;
+  f << header;
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+  for (int i = 0; i < header.m_n; i++) {
+    HMWJGraphInternal::CellFormat format;
+    pos = input->tell();
+    f.str("");
+    val = input->readLong(2); // always -2
+    if (val != -2)
+      f << "f0=" << val << ",";
+    val = (long) input->readULong(2); // 0|2004|51|1dd4
+    if (val)
+      f << "#f1=" << std::hex << val << std::dec << ",";
+
+    int color, pattern;
+    float patPercent;
+    format.m_borders.resize(4);
+    static char const *(what[]) = {"T", "L", "B", "R"};
+    static size_t const which[] = { MWAWBorder::Top, MWAWBorder::Left, MWAWBorder::Bottom, MWAWBorder::Right };
+    for (int b=0; b < 4; b++) {
+      f2.str("");
+      MWAWBorder border;
+      border.m_width=float(input->readLong(4))/65536.f;
+      int type = int(input->readLong(1));
+      switch(type) {
+      case 0: // solid
+        break;
+      case 1:
+        border.m_type = MWAWBorder::Double;
+        break;
+      case 2:
+        border.m_type = MWAWBorder::Double;
+        f2 << "bottom[w=2],";
+        break;
+      case 3:
+        border.m_type = MWAWBorder::Double;
+        f2 << "top[w=2],";
+        break;
+      default:
+        f2 << "#style=" << type << ",";
+        break;
+      }
+      color = (int) input->readULong(1);
+      MWAWColor col = MWAWColor::black();
+      if (!m_state->getColor(color, col))
+        f2 << "#color=" << color << ",";
+      pattern = (int) input->readULong(1);
+      patPercent = 1.0;
+      if (!m_state->getPatternPercent(pattern, patPercent))
+        f2 << "#pattern=" << pattern << ",";
+      border.m_color = m_state->getColor(col, patPercent);
+      val = (long) input->readULong(1);
+      if (val) f2 << "unkn=" << val << ",";
+
+      format.m_borders[which[b]] = border;
+      if (f2.str().length())
+        f << "bord" << what[b] << "=[" << f2.str() << "],";
+    }
+    color = (int) input->readULong(1);
+    MWAWColor backCol = MWAWColor::white();
+    if (!m_state->getColor(color, backCol))
+      f << "#backcolor=" << color << ",";
+    pattern = (int) input->readULong(1);
+    patPercent = 1.0;
+    if (!m_state->getPatternPercent(pattern, patPercent))
+      f << "#backPattern=" << pattern << ",";
+    format.m_backColor = m_state->getColor(backCol, patPercent);
+    format.m_extra = f.str();
+    table.m_formatsList.push_back(format);
+    f.str("");
+    f << entry.name() << "-format" << i << ":" << format;
+    asciiFile.addDelimiter(input->tell(),'|');
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
+    input->seek(pos+40, WPX_SEEK_SET);
+  }
+  input->seek(zoneEnd, WPX_SEEK_SET);
 
   if (input->tell() != endPos) {
     MWAW_DEBUG_MSG(("HMWJGraph::readTable: find unexpected last block\n"));
@@ -843,6 +1060,198 @@ bool HMWJGraph::readTable(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 
 // ----- table
+bool HMWJGraph::updateTable(HMWJGraphInternal::Table const &table)
+{
+  if (table.m_cellsId.size()) return true;
+
+  int nRows = table.m_rows;
+  int nColumns = table.m_columns;
+  size_t nCells = table.m_cellsList.size();
+  if (!nRows || !nColumns || !nCells || int(nCells) > nRows*nColumns) {
+    MWAW_DEBUG_MSG(("HMWJGraph::updateTable: find an odd table\n"));
+    return false;
+  }
+  if (table.m_rowsDim.size() < size_t(nRows) ||
+      table.m_columnsDim.size() < size_t(nColumns)) {
+    MWAW_DEBUG_MSG(("HMWJGraph::updateTable: can not determine table dimensions\n"));
+    return false;
+  }
+
+  table.m_cellsId.resize(size_t(nRows*nColumns),-1);
+  for (size_t i=0; i < nCells; i++) {
+    HMWJGraphInternal::TableCell const &cell=table.m_cellsList[i];
+    if (cell.m_flags&0x2000)
+      continue;
+    if (cell.m_flags&0x600) table.m_hasExtraLines = true;
+    for (int r = cell.m_row; r < cell.m_row + cell.m_span[0]; r++) {
+      if (r >= nRows) {
+        MWAW_DEBUG_MSG(("HMWJGraph::updateTable: find a bad row cell span\n"));
+        continue;
+      }
+      for (int c = cell.m_col; c < cell.m_col + cell.m_span[1]; c++) {
+        if (c >= nColumns) {
+          MWAW_DEBUG_MSG(("HMWJGraph::updateTable: find a bad col cell span\n"));
+          continue;
+        }
+        size_t cPos = table.getCellPos(r,c);
+        if (table.m_cellsId[cPos]!=-1) {
+          MWAW_DEBUG_MSG(("HMWJGraph::updateTable: oops find some cell in this position\n"));
+          table.m_cellsId.resize(0);
+          return false;
+        }
+        table.m_cellsId[cPos] = int(i);
+      }
+    }
+  }
+  return true;
+}
+
+bool HMWJGraph::sendTableCell(HMWJGraphInternal::TableCell const &cell,
+                              std::vector<HMWJGraphInternal::CellFormat> const &lFormat)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener)
+    return true;
+  if (cell.m_flags&0x2000) {
+    MWAW_DEBUG_MSG(("HMWJGraph::sendTableCell: call on inactive file\n"));
+    return false;
+  }
+
+  WPXPropertyList pList;
+  MWAWCell fCell;
+  fCell.position() = Vec2i(cell.m_col,cell.m_row);
+  Vec2i span = cell.m_span;
+  if (span[0]<1) span[0]=1;
+  if (span[1]<1) span[1]=1;
+  fCell.setNumSpannedCells(Vec2i(span[1],span[0]));
+
+  if (cell.m_flags&0x80) fCell.setVAlignement(MWAWCell::VALIGN_CENTER);
+  if (cell.m_formatId >= 0 && size_t(cell.m_formatId) < lFormat.size()) {
+    HMWJGraphInternal::CellFormat const &format = lFormat[size_t(cell.m_formatId)];
+    fCell.setBackgroundColor(format.m_backColor);
+    static int const (wh[]) = { MWAWBorder::LeftBit,  MWAWBorder::RightBit, MWAWBorder::TopBit, MWAWBorder::BottomBit};
+    for (size_t b = 0; b < format.m_borders.size(); b++)
+      fCell.setBorders(wh[b], format.m_borders[b]);
+  } else {
+    static bool first = true;
+    if (first) {
+      MWAW_DEBUG_MSG(("HMWJGraph::sendTableCell: can not find the format\n"));
+      first = false;
+    }
+  }
+
+  listener->openTableCell(fCell, pList);
+  if (cell.m_zId)
+    m_mainParser->sendText(cell.m_zId, cell.m_cPos);
+  listener->closeTableCell();
+
+  return true;
+}
+
+bool HMWJGraph::sendPreTableData(HMWJGraphInternal::Table const &table)
+{
+  if (!m_parserState->m_listener)
+    return true;
+  if (!updateTable(table) || !table.m_hasExtraLines)
+    return false;
+
+  int nRows = table.m_rows;
+  int nColumns = table.m_columns;
+  size_t nCells = table.m_cellsList.size();
+  std::vector<float> rowsPos, columnsPos;
+  rowsPos.resize(size_t(nRows+1)+1);
+  rowsPos[0] = 0;
+  for (size_t r = 0; r < size_t(nRows); r++)
+    rowsPos[r+1] = rowsPos[r]+table.m_rowsDim[r];
+  columnsPos.resize(size_t(nColumns+1)+1);
+  columnsPos[0] = 0;
+  for (size_t c = 0; c < size_t(nColumns); c++)
+    columnsPos[c+1] = columnsPos[c]+table.m_columnsDim[c];
+
+  for (size_t c = 0; c < nCells; c++) {
+    HMWJGraphInternal::TableCell const &cell= table.m_cellsList[c];
+    if (!(cell.m_flags&0x600)) continue;
+    if (cell.m_row+cell.m_span[0] > nRows ||
+        cell.m_col+cell.m_span[1] > nColumns)
+      continue;
+    Box2f box;
+    box.setMin(Vec2f(columnsPos[size_t(cell.m_col)], rowsPos[size_t(cell.m_row)]));
+    box.setMax(Vec2f(columnsPos[size_t(cell.m_col+cell.m_span[1])],
+                     rowsPos[size_t(cell.m_row+cell.m_span[0])]));
+
+    shared_ptr<MWAWPictLine> lines[2];
+    if (cell.m_flags & 0x200)
+      lines[0].reset(new MWAWPictLine(Vec2f(0,0), box.size()));
+    if (cell.m_flags & 0x400)
+      lines[1].reset(new MWAWPictLine(Vec2f(0,box.size()[1]), Vec2f(box.size()[0], 0)));
+
+    for (int i = 0; i < 2; i++) {
+      if (!lines[i]) continue;
+
+      WPXBinaryData data;
+      std::string type;
+      if (!lines[i]->getBinary(data,type)) continue;
+
+      MWAWPosition pos(box[0], box.size(), WPX_POINT);
+      pos.setRelativePosition(MWAWPosition::Frame);
+      pos.setOrder(-1);
+      m_parserState->m_listener->insertPicture(pos, data, type);
+    }
+  }
+  return true;
+}
+bool HMWJGraph::sendTableUnformatted(HMWJGraphInternal::Table const &table)
+{
+  if (!m_parserState->m_listener)
+    return true;
+  table.m_parsed = true;
+  for (size_t c = 0; c < table.m_cellsList.size(); c++) {
+    HMWJGraphInternal::TableCell const &cell= table.m_cellsList[c];
+    if (cell.m_flags&0x2000)
+      continue;
+    if (cell.m_zId)
+      m_mainParser->sendText(cell.m_zId, cell.m_cPos);
+  }
+  return true;
+}
+
+bool HMWJGraph::sendTable(HMWJGraphInternal::Table const &table)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener)
+    return true;
+  table.m_parsed = true;
+  if (!updateTable(table)) {
+    // ok no other choice here
+    sendTableUnformatted(table);
+    return true;
+  }
+  int nRows = table.m_rows;
+  int nColumns = table.m_columns;
+
+  // ok send the data
+  listener->openTable(table.m_columnsDim, WPX_POINT);
+  for (size_t r = 0; r < size_t(nRows); r++) {
+    listener->openTableRow(table.m_rowsDim[r], WPX_POINT);
+    for (size_t c = 0; c < size_t(nColumns); c++) {
+      size_t cPos = table.getCellPos(int(r),int(c));
+      int id = table.m_cellsId[cPos];
+      if (id == -1) {
+        listener->addEmptyTableCell(Vec2i(int(c), int(r)));
+        continue;
+      }
+
+      HMWJGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
+      if (int(r) != cell.m_row || int(c) != cell.m_col) continue;
+
+      sendTableCell(cell, table.m_formatsList);
+    }
+    listener->closeTableRow();
+  }
+  listener->closeTable();
+
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
 // low level
@@ -859,5 +1268,13 @@ bool HMWJGraph::sendPageGraphics()
 
 void HMWJGraph::flushExtra()
 {
+  if (!m_parserState->m_listener)
+    return;
+  for (size_t t=0; t < m_state->m_tablesList.size(); t++) {
+    HMWJGraphInternal::Table const &table = m_state->m_tablesList[t];
+    if (table.m_parsed)
+      continue;
+    sendTable(table);
+  }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

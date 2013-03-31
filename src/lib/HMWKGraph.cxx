@@ -1487,8 +1487,10 @@ bool HMWKGraph::sendTable(HMWKGraphInternal::Table const &table)
     for (size_t c = 0; c < size_t(nColumns); c++) {
       size_t cPos = table.getCellPos(int(r),int(c));
       int id = table.m_cellsId[cPos];
-      if (id == -1)
+      if (id == -1) {
         listener->addEmptyTableCell(Vec2i(int(c), int(r)));
+        continue;
+      }
 
       HMWKGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
       if (int(r) != cell.m_row || int(c) != cell.m_col) continue;

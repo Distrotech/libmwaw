@@ -145,8 +145,8 @@ protected:
 
   // interface with the text parser
 
-  //! send a text zone (not implemented)
-  bool sendText(long id, long subId=0);
+  //! send a text zone
+  bool sendText(long id, long cPos);
 
   // interface with the graph parser
 
