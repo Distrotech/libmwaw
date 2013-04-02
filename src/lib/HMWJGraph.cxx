@@ -137,7 +137,7 @@ std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 struct Table {
   //! constructor
   Table() : m_rows(1), m_columns(1), m_height(0), m_textFileId(0),
-    m_cellsList(), m_rowsDim(), m_columnsDim(), m_cellsId(), m_formatsList(), m_hasExtraLines(false), m_parsed(false) {
+    m_cellsList(), m_rowsDim(), m_columnsDim(), m_cellsId(), m_formatsList(), m_hasExtraLines(false) {
   }
   //! destructor
   ~Table() {
@@ -166,8 +166,6 @@ struct Table {
   std::vector<CellFormat> m_formatsList;
   //! a flag to know if the table has some extra line
   mutable bool m_hasExtraLines;
-  //! true if sent to the listener
-  mutable bool m_parsed;
 };
 
 ////////////////////////////////////////
@@ -234,7 +232,10 @@ struct Frame {
   //! destructor
   virtual ~Frame() {
   }
-
+  //! returns true if the frame data are read
+  virtual bool valid() const {
+    return false;
+  }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Frame const &grph);
   //! the graph type
@@ -320,11 +321,41 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
 }
 
 ////////////////////////////////////////
+//! Internal: the comment frame of a HMWJGraph
+struct CommentFrame :  public Frame {
+public:
+  //! constructor
+  CommentFrame(Frame const &orig) : Frame(orig), m_width(0), m_cPos(0) {
+  }
+  //! returns true if the frame data are read
+  virtual bool valid() const {
+    return true;
+  }
+  //! print local data
+  std::string print() const {
+    std::stringstream s;
+    if (m_width > 0)
+      s << "width=" << m_width << ",";
+    if (m_cPos)
+      s << "cPos[first]=" << m_cPos << ",";
+    return s.str();
+  }
+  //! the zone width
+  double m_width;
+  //! the first char pos
+  long m_cPos;
+};
+
+////////////////////////////////////////
 //! Internal: a group of a HMWJGraph
 struct GroupFrame :  public Frame {
 public:
   //! constructor
   GroupFrame(Frame const &orig) : Frame(orig), m_zId(0), m_childsList() {
+  }
+  //! returns true if the frame data are read
+  virtual bool valid() const {
+    return true;
   }
   //! the group id
   long m_zId;
@@ -333,11 +364,111 @@ public:
 };
 
 ////////////////////////////////////////
+//! Internal: the picture frame of a HMWJGraph
+struct PictureFrame :  public Frame {
+public:
+  //! constructor
+  PictureFrame(Frame const &orig) : Frame(orig), m_entry(), m_zId(0), m_dim(100,100), m_borderDim(1,1) {
+  }
+  //! returns true if the frame data are read
+  virtual bool valid() const {
+    return true;
+  }
+  //! print local data
+  std::string print() const {
+    std::stringstream s;
+    if (m_zId) s << "zId=" << std::hex << m_zId << std::dec << ",";
+    s << "dim=" << m_dim << ",";
+    s << "dim[border?]=" << m_borderDim << ",";
+    return s.str();
+  }
+  //! the picture entry
+  MWAWEntry m_entry;
+  //! the picture id
+  long m_zId;
+  //! the picture size
+  Vec2i m_dim;
+  //! a small size : border ?
+  Vec2f m_borderDim;
+};
+
+////////////////////////////////////////
+//! Internal: a footnote separator of a HMWJGraph
+struct SeparatorFrame :  public Frame {
+public:
+  //! constructor
+  SeparatorFrame(Frame const &orig) : Frame(orig) {
+  }
+  //! returns true if the frame data are read
+  virtual bool valid() const {
+    return true;
+  }
+};
+
+////////////////////////////////////////
+//! Internal: the table frame (basic, header, footer, footnote) of a HMWJGraph
+struct TableFrame :  public Frame {
+public:
+  //! constructor
+  TableFrame(Frame const &orig) : Frame(orig), m_width(0), m_length(0), m_table() {
+  }
+  //! returns true if the frame data are read
+  virtual bool valid() const {
+    return true;
+  }
+  //! print local data
+  std::string print() const {
+    std::stringstream s;
+    if (m_width > 0)
+      s << "width=" << m_width << ",";
+    if (m_length)
+      s << "length[text?]=" << m_length << ",";
+    return s.str();
+  }
+  //! the zone width
+  double m_width;
+  //! related to text length?
+  long m_length;
+  //! the table
+  shared_ptr<Table> m_table;
+};
+
+////////////////////////////////////////
+//! Internal: the textbox frame of a HMWJGraph
+struct TextboxFrame :  public Frame {
+public:
+  //! constructor
+  TextboxFrame(Frame const &orig) : Frame(orig), m_width(0), m_cPos(0) {
+  }
+  //! returns true if the frame data are read
+  virtual bool valid() const {
+    return true;
+  }
+  //! print local data
+  std::string print() const {
+    std::stringstream s;
+    if (m_width > 0)
+      s << "width=" << m_width << ",";
+    if (m_cPos)
+      s << "cPos[first]=" << m_cPos << ",";
+    return s.str();
+  }
+  //! the zone width
+  double m_width;
+  //! the first char pos
+  long m_cPos;
+};
+
+////////////////////////////////////////
 //! Internal: the text frame (basic, header, footer, footnote) of a HMWJGraph
 struct TextFrame :  public Frame {
 public:
   //! constructor
   TextFrame(Frame const &orig) : Frame(orig), m_width(0), m_cPos(0) {
+  }
+  //! returns true if the frame data are read
+  virtual bool valid() const {
+    return true;
   }
   //! print local data
   std::string print() const {
@@ -363,8 +494,10 @@ struct BasicGraph : public Frame {
     m_angles[0] = 0;
     m_angles[1] = 90;
   }
-  //! destructor
-  ~BasicGraph() {}
+  //! returns true if the frame data are read
+  virtual bool valid() const {
+    return true;
+  }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, BasicGraph const &graph) {
     o << graph.print();
@@ -434,16 +567,18 @@ struct BasicGraph : public Frame {
 //! Internal: the state of a HMWJGraph
 struct State {
   //! constructor
-  State() : m_framesList(), m_tablesList(),
-    m_numPages(0), m_colorList(), m_patternPercentList() { }
+  State() : m_framesList(), m_frameFormatsList(), m_numPages(0), m_colorList(), m_patternPercentList() { }
   //! tries to find the lId the frame of a given type
   shared_ptr<Frame> findFrame(int type, int lId) const {
     int actId = 0;
     for (size_t f = 0; f < m_framesList.size(); f++) {
       if (!m_framesList[f] || m_framesList[f]->m_type != type)
         continue;
-      if (actId++==lId)
+      if (actId++==lId) {
+        if (!m_framesList[f]->valid())
+          break;
         return m_framesList[f];
+      }
     }
     return shared_ptr<Frame>();
   }
@@ -480,8 +615,8 @@ struct State {
 
   /** the list of frames */
   std::vector<shared_ptr<Frame> > m_framesList;
-  /** the list of table */
-  std::vector<Table> m_tablesList;
+  /** the list of frame format */
+  std::vector<FrameFormat> m_frameFormatsList;
   int m_numPages /* the number of pages */;
   //! a list colorId -> color
   std::vector<MWAWColor> m_colorList;
@@ -788,6 +923,7 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
       if (val) f << "g" << j << "=" << val << ",";
     }
     format.m_extra=f.str();
+    m_state->m_frameFormatsList.push_back(format);
     f.str("");
     f << entry.name() << "-F" << i << ":" << format;
     asciiFile.addPos(pos);
@@ -921,8 +1057,20 @@ shared_ptr<HMWJGraphInternal::Frame> HMWJGraph::readFrame(int id)
   case 3: // footnote
     res=readTextData(graph, endPos);
     break;
+  case 4:
+    res=readTextboxData(graph, endPos);
+    break;
+  case 6:
+    res=readPictureData(graph, endPos);
+    break;
   case 8:
     res=readBasicGraph(graph, endPos);
+    break;
+  case 9:
+    res=readTableData(graph, endPos);
+    break;
+  case 10:
+    res=readCommentData(graph, endPos);
     break;
   case 11:
     if (len < 36) {
@@ -936,6 +1084,25 @@ shared_ptr<HMWJGraphInternal::Frame> HMWJGraph::readFrame(int id)
       group->m_zId = (long) input->readULong(4);
       f.str("");
       f << "FrameDef-group:zId=" << std::hex << group->m_zId << std::dec << ",";
+      asciiFile.addPos(pos);
+      asciiFile.addNote(f.str().c_str());
+      break;
+    }
+  case 12:
+    if (len < 52) {
+      MWAW_DEBUG_MSG(("HMWJGraph::readFrame: can not read the footnote[sep] data\n"));
+      break;
+    } else {
+      HMWJGraphInternal::SeparatorFrame *sep = new HMWJGraphInternal::SeparatorFrame(graph);
+      res.reset(sep);
+      pos =input->tell();
+      f.str();
+      f << "FrameDef-footnote[sep];";
+      for (int i = 0; i < 8; i++) { // f0=256,f2=8,f4=2,f6=146
+        val = (int) input->readLong(2);
+        if (val) f << "f" << i << "=" << val << ",";
+      }
+      f << "zId=" << std::hex << (long) input->readULong(4) << std::dec << ",";
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
       break;
@@ -1104,7 +1271,7 @@ bool HMWJGraph::readGraphData(MWAWEntry const &entry, int actZone)
 }
 
 // try to read the picture
-bool HMWJGraph::readPicture(MWAWEntry const &entry, int /*actZone*/)
+bool HMWJGraph::readPicture(MWAWEntry const &entry, int actZone)
 {
   if (!entry.valid()) {
     MWAW_DEBUG_MSG(("HMWJGraph::readPicture: called without any entry\n"));
@@ -1116,6 +1283,7 @@ bool HMWJGraph::readPicture(MWAWEntry const &entry, int /*actZone*/)
   }
 
   MWAWInputStreamPtr input = m_parserState->m_input;
+  libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
@@ -1126,9 +1294,21 @@ bool HMWJGraph::readPicture(MWAWEntry const &entry, int /*actZone*/)
     MWAW_DEBUG_MSG(("HMWJGraph::readPicture: the entry sz seems bad\n"));
     return false;
   }
-  f << "pictSz=" << sz;
+  f << "Picture:pictSz=" << sz;
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+
+  shared_ptr<HMWJGraphInternal::Frame> frame = m_state->findFrame(6, actZone);
+  if (!frame) {
+    MWAW_DEBUG_MSG(("HMWJGraph::readPicture: can not find picture %d\n", actZone));
+  } else {
+    HMWJGraphInternal::PictureFrame *picture =
+      reinterpret_cast<HMWJGraphInternal::PictureFrame *>(frame.get());
+    picture->m_entry.setBegin(pos+12);
+    picture->m_entry.setLength(sz);
+  }
+
 #ifdef DEBUG_WITH_FILES
-  libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
   if (1) {
     f.str("");
 
@@ -1145,7 +1325,7 @@ bool HMWJGraph::readPicture(MWAWEntry const &entry, int /*actZone*/)
 }
 
 // table
-bool HMWJGraph::readTable(MWAWEntry const &entry, int /*actZone*/)
+bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
 {
   if (!entry.valid()) {
     MWAW_DEBUG_MSG(("HMWJGraph::readTable: called without any entry\n"));
@@ -1165,7 +1345,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int /*actZone*/)
 
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
-  libmwaw::DebugStream f, f2;
+  libmwaw::DebugStream f;
   entry.setParsed(true);
   input->seek(pos, WPX_SEEK_SET);
   // first read the header
@@ -1181,18 +1361,17 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int /*actZone*/)
   }
   long headerEnd=pos+4+mainHeader.m_length;
   f << mainHeader;
-  m_state->m_tablesList.push_back(HMWJGraphInternal::Table());
-  HMWJGraphInternal::Table &table = m_state->m_tablesList.back();
-  table.m_rows = (int) input->readULong(1);
-  table.m_columns = (int) input->readULong(1);
-  f << "dim=" << table.m_rows << "x" << table.m_columns << ",";
+  shared_ptr<HMWJGraphInternal::Table> table(new HMWJGraphInternal::Table);
+  table->m_rows = (int) input->readULong(1);
+  table->m_columns = (int) input->readULong(1);
+  f << "dim=" << table->m_rows << "x" << table->m_columns << ",";
   long val;
   for (int i = 0; i < 4; i++) { // f0=4|5|7|8|9, f1=1|7|107, f2=3|4|5|6, f3=0
     val = (long) input->readULong(2);
     if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
-  table.m_height = (int) input->readLong(2);
-  f << "h=" << table.m_height << ",";
+  table->m_height = (int) input->readLong(2);
+  f << "h=" << table->m_height << ",";
   f << "listId=[" << std::hex;
   std::vector<long> listIds;
   for (int i = 0; i < mainHeader.m_n; i++) {
@@ -1251,7 +1430,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int /*actZone*/)
         cell.m_span[1] = dim[1]+1-j;
       }
       cell.m_extra = f.str();
-      table.m_cellsList.push_back(cell);
+      table->m_cellsList.push_back(cell);
       f.str("");
       f << entry.name() << "-cell:" << cell;
       asciiFile.addPos(pos);
@@ -1288,7 +1467,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int /*actZone*/)
     }
     long zoneEnd=pos+4+header.m_length;
     f << header;
-    std::vector<float> &dim = i==0 ? table.m_rowsDim : table.m_columnsDim;
+    std::vector<float> &dim = i==0 ? table->m_rowsDim : table->m_columnsDim;
     f << "pos=[";
     float prevPos = 0.;
     for (int j = 0; j < header.m_n; j++) {
@@ -1305,7 +1484,16 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int /*actZone*/)
   }
 
   // finally the format
-  readTableFormatsList(table, endPos);
+  readTableFormatsList(*table, endPos);
+
+  shared_ptr<HMWJGraphInternal::Frame> frame = m_state->findFrame(9, actZone);
+  if (!frame) {
+    MWAW_DEBUG_MSG(("HMWJTable::readTable: can not find basic table %d\n", actZone));
+  } else {
+    HMWJGraphInternal::TableFrame *tableFrame =
+      reinterpret_cast<HMWJGraphInternal::TableFrame *>(frame.get());
+    tableFrame->m_table = table;
+  }
 
   if (input->tell() != endPos) {
     MWAW_DEBUG_MSG(("HMWJGraph::readTable: find unexpected last block\n"));
@@ -1572,7 +1760,6 @@ bool HMWJGraph::sendTableUnformatted(HMWJGraphInternal::Table const &table)
 {
   if (!m_parserState->m_listener)
     return true;
-  table.m_parsed = true;
   for (size_t c = 0; c < table.m_cellsList.size(); c++) {
     HMWJGraphInternal::TableCell const &cell= table.m_cellsList[c];
     if (cell.m_flags&0x2000)
@@ -1588,7 +1775,6 @@ bool HMWJGraph::sendTable(HMWJGraphInternal::Table const &table)
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener)
     return true;
-  table.m_parsed = true;
   if (!updateTable(table)) {
     // ok no other choice here
     sendTableUnformatted(table);
@@ -1625,6 +1811,185 @@ bool HMWJGraph::sendTable(HMWJGraphInternal::Table const &table)
 // low level
 ////////////////////////////////////////////////////////////
 
+// try to read a basic comment zone
+shared_ptr<HMWJGraphInternal::CommentFrame> HMWJGraph::readCommentData(HMWJGraphInternal::Frame const &header, long endPos)
+{
+  shared_ptr<HMWJGraphInternal::CommentFrame> comment;
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+
+  long pos = input->tell();
+  if (endPos<pos+40) {
+    MWAW_DEBUG_MSG(("HMWJGraph::readCommentData: the zone seems too short\n"));
+    return comment;
+  }
+  comment.reset(new HMWJGraphInternal::CommentFrame(header));
+  comment->m_width = double(input->readLong(4))/65536.;
+  long val = input->readLong(2); // small number between 1 and 0x17
+  if (val!=1)
+    f << "f0=" << val << ",";
+  val = input->readLong(2);// always 0?
+  if (val)
+    f << "f1=" << val << ",";
+  comment->m_cPos = (long) input->readULong(4);
+  for (int i=0; i < 2; i++) {
+    val = (long) input->readULong(4);
+    f << "id" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  for (int i=0; i < 10; i++) { // 0 excepted g4=g6=20 : the header height?
+    val = input->readLong(2);
+    if (val)
+      f << "g" << i << "=" << val << ",";
+  }
+  std::string extra=f.str();
+  comment->m_extra += extra;
+  f.str("");
+  f << "FrameDef(Comment-data):" << comment->print() << extra;
+  if (input->tell() != endPos)
+    asciiFile.addDelimiter(input->tell(),'|');
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+  return comment;
+}
+
+// try to read a basic picture zone
+shared_ptr<HMWJGraphInternal::PictureFrame> HMWJGraph::readPictureData(HMWJGraphInternal::Frame const &header, long endPos)
+{
+  shared_ptr<HMWJGraphInternal::PictureFrame> picture;
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+
+  long pos = input->tell();
+  if (endPos<pos+40) {
+    MWAW_DEBUG_MSG(("HMWJGraph::readPictureData: the zone seems too short\n"));
+    return picture;
+  }
+  picture.reset(new HMWJGraphInternal::PictureFrame(header));
+  long val;
+  for (int i=0; i < 2; i++) { // always 0
+    val = input->readLong(2);
+    if (val)
+      f << "f" << i << "=" << val << ",";
+  }
+  float fDim[2]; // a small size, typically 1x1
+  for (int i = 0; i < 2; i++)
+    fDim[i] = float(input->readLong(4))/65536.f;
+  picture->m_borderDim = Vec2f(fDim[0], fDim[1]);
+  picture->m_zId = (long) input->readULong(4);
+  for (int i = 0; i < 2; i++) { // f2=0, f3=0|-1 : maybe front/back color?
+    val = input->readLong(4);
+    if (val)
+      f << "f" << i << "=" << val << ",";
+  }
+  int dim[2];
+  for (int i = 0; i < 2; i++)
+    dim[i] = int(input->readLong(2));
+  picture->m_dim=Vec2i(dim[0],dim[1]); // checkme: xy
+  for (int i = 0; i < 6; i++) { // g2=8400
+    val = (long) input->readULong(2);
+    if (val)
+      f << "g" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  std::string extra = f.str();
+  picture->m_extra += extra;
+  f.str("");
+  f << "FrameDef(picture-data):" << picture->print() << extra;
+  if (input->tell() != endPos)
+    asciiFile.addDelimiter(input->tell(),'|');
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+  return picture;
+}
+
+// try to read a basic table zone
+shared_ptr<HMWJGraphInternal::TableFrame> HMWJGraph::readTableData(HMWJGraphInternal::Frame const &header, long endPos)
+{
+  shared_ptr<HMWJGraphInternal::TableFrame> table;
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+
+  long pos = input->tell();
+  if (endPos<pos+28) {
+    MWAW_DEBUG_MSG(("HMWJGraph::readTableData: the zone seems too short\n"));
+    return table;
+  }
+  table.reset(new HMWJGraphInternal::TableFrame(header));
+  table->m_width = double(input->readLong(4))/65536.;
+  long val = input->readLong(2); // small number between 1 and 3
+  if (val!=1)
+    f << "f0=" << val << ",";
+  val = input->readLong(2);// always 0?
+  if (val)
+    f << "f1=" << val << ",";
+  table->m_length = (long) input->readULong(4);
+  for (int i=0; i < 2; i++) {
+    val = (long) input->readULong(4);
+    f << "id" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  for (int i = 0; i < 2; i++) {
+    val = input->readLong(2);
+    if (val) f << "f" << i+2 << "=" << val << ",";
+  }
+  val = (long) input->readULong(4);
+  f << "id2=" << std::hex << val << std::dec << ",";
+  std::string extra=f.str();
+  table->m_extra += extra;
+  f.str("");
+  f << "FrameDef(table-data):" << table->print() << extra;
+  if (input->tell() != endPos)
+    asciiFile.addDelimiter(input->tell(),'|');
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+  return table;
+}
+
+// try to read a basic text box zone
+shared_ptr<HMWJGraphInternal::TextboxFrame> HMWJGraph::readTextboxData(HMWJGraphInternal::Frame const &header, long endPos)
+{
+  shared_ptr<HMWJGraphInternal::TextboxFrame> textbox;
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+
+  long pos = input->tell();
+  if (endPos<pos+24) {
+    MWAW_DEBUG_MSG(("HMWJGraph::readTextboxData: the zone seems too short\n"));
+    return textbox;
+  }
+  textbox.reset(new HMWJGraphInternal::TextboxFrame(header));
+  textbox->m_width = double(input->readLong(4))/65536.;
+  long val = input->readLong(2); // small number between 1 and 0x17
+  if (val!=1)
+    f << "f0=" << val << ",";
+  val = input->readLong(2);// always 0?
+  if (val)
+    f << "f1=" << val << ",";
+  textbox->m_cPos = (long) input->readULong(4);
+  for (int i=0; i < 2; i++) {
+    val = (long) input->readULong(4);
+    f << "id" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  float dim = float(input->readLong(4))/65536.f; // a small negative number: 0, -4 or -6.5
+  if (dim < 0 || dim > 0)
+    f << "dim?=" << dim << ",";
+  std::string extra=f.str();
+  textbox->m_extra += extra;
+  f.str("");
+  f << "FrameDef(Textbox-data):" << textbox->print() << extra;
+  if (input->tell() != endPos)
+    asciiFile.addDelimiter(input->tell(),'|');
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+  return textbox;
+}
+
 // try to read a basic text zone
 shared_ptr<HMWJGraphInternal::TextFrame> HMWJGraph::readTextData(HMWJGraphInternal::Frame const &header, long endPos)
 {
@@ -1650,9 +2015,9 @@ shared_ptr<HMWJGraphInternal::TextFrame> HMWJGraph::readTextData(HMWJGraphIntern
   text->m_cPos = (long) input->readULong(4);
   for (int i=0; i < 2; i++) {
     val = (long) input->readULong(4);
-    f << "id" << i << "=" << val << ",";
+    f << "id" << i << "=" << std::hex << val << std::dec << ",";
   }
-  std::string extra;
+  std::string extra=f.str();
   text->m_extra += extra;
   f.str("");
   f << "FrameDef(Text-data):" << text->print() << extra;
@@ -1733,7 +2098,7 @@ shared_ptr<HMWJGraphInternal::BasicGraph> HMWJGraph::readBasicGraph(HMWJGraphInt
     val = input->readLong(2);
     if (val) f << "g" << i << "=" << val << ",";
   }
-  std::string extra;
+  std::string extra = f.str();
   graph->m_extra += extra;
 
   f.str("");
@@ -1760,11 +2125,5 @@ void HMWJGraph::flushExtra()
 {
   if (!m_parserState->m_listener)
     return;
-  for (size_t t=0; t < m_state->m_tablesList.size(); t++) {
-    HMWJGraphInternal::Table const &table = m_state->m_tablesList[t];
-    if (table.m_parsed)
-      continue;
-    sendTable(table);
-  }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

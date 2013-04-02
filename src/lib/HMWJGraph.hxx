@@ -60,6 +60,10 @@ namespace HMWJGraphInternal
 struct CellFormat;
 struct Frame;
 struct BasicGraph;
+struct CommentFrame;
+struct PictureFrame;
+struct TableFrame;
+struct TextboxFrame;
 struct TextFrame;
 struct Table;
 struct TableCell;
@@ -109,10 +113,18 @@ protected:
   bool readFrames(MWAWEntry const &entry);
   /** try to read a frame*/
   shared_ptr<HMWJGraphInternal::Frame> readFrame(int id);
-  /** try to read a text data (text, header/footer, footnote)  */
-  shared_ptr<HMWJGraphInternal::TextFrame> readTextData(HMWJGraphInternal::Frame const &header, long endPos);
   /** try to read the basic graph data */
   shared_ptr<HMWJGraphInternal::BasicGraph> readBasicGraph(HMWJGraphInternal::Frame const &header, long endPos);
+  /** try to read the comment data  */
+  shared_ptr<HMWJGraphInternal::CommentFrame> readCommentData(HMWJGraphInternal::Frame const &header, long endPos);
+  /** try to read the picture data  */
+  shared_ptr<HMWJGraphInternal::PictureFrame> readPictureData(HMWJGraphInternal::Frame const &header, long endPos);
+  /** try to read the table data  */
+  shared_ptr<HMWJGraphInternal::TableFrame> readTableData(HMWJGraphInternal::Frame const &header, long endPos);
+  /** try to read a textbox data */
+  shared_ptr<HMWJGraphInternal::TextboxFrame> readTextboxData(HMWJGraphInternal::Frame const &header, long endPos);
+  /** try to read a text data (text, header/footer, footnote)  */
+  shared_ptr<HMWJGraphInternal::TextFrame> readTextData(HMWJGraphInternal::Frame const &header, long endPos);
   /** try to read the groupd data ( type 9 )*/
   bool readGroupData(MWAWEntry const &entry, int actZone);
   /** try to read the graph data (zone 8)*/
