@@ -257,7 +257,7 @@ struct Paragraph : public MWAWParagraph {
 struct State {
   //! constructor
   State() : m_version(-1), m_fontList(), m_paragraphList(), m_sectionList(), m_textZoneList(),
-    m_actualTextZone(0), m_numPages(-1), m_actualPage(0) {
+    m_numPages(-1), m_actualPage(0) {
   }
   //! the file version
   mutable int m_version;
@@ -269,8 +269,6 @@ struct State {
   std::vector<Section> m_sectionList;
   //! the list of text zone
   std::vector<TextZone> m_textZoneList;
-  //! an internal flag, used to know which textzone are read by readTextZone
-  int m_actualTextZone;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
@@ -520,6 +518,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
         }
         case HMWJTextInternal::LINE:
         case HMWJTextInternal::Unknown:
+        default:
           break;
         }
       }
@@ -593,11 +592,11 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
       case 4:
         f << "[sectionBreak]";
         if (!isMain) {
-          MWAW_DEBUG_MSG(("HMWKText::sendText: find section in auxilliary block\n"));
+          MWAW_DEBUG_MSG(("HMWJText::sendText: find section in auxilliary block\n"));
           break;
         }
         if (size_t(actSection) >= m_state->m_sectionList.size()) {
-          MWAW_DEBUG_MSG(("HMWKText::sendText: can not find section %d\n", actSection));
+          MWAW_DEBUG_MSG(("HMWJText::sendText: can not find section %d\n", actSection));
           break;
         } else {
           HMWJTextInternal::Section sec = m_state->m_sectionList[size_t(actSection++)];
@@ -624,7 +623,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
           break;
         if (c <= 0x1f || c >= 0x100) {
           f << "#[" << std::hex << c << std::dec << "]";
-          MWAW_DEBUG_MSG(("HMWKText::sendText: find a odd char %x\n", c));
+          MWAW_DEBUG_MSG(("HMWJText::sendText: find a odd char %x\n", c));
           break;
         }
         f << char(c);
@@ -784,7 +783,7 @@ bool HMWJText::readTextZonesList(MWAWEntry const &entry)
   return true;
 }
 
-bool HMWJText::readTextZone(MWAWEntry const &entry)
+bool HMWJText::readTextZone(MWAWEntry const &entry, int actZone)
 {
   if (!entry.valid()) {
     MWAW_DEBUG_MSG(("HMWJText::readTextZone: called without any entry\n"));
@@ -804,12 +803,13 @@ bool HMWJText::readTextZone(MWAWEntry const &entry)
   long endPos = entry.end();
   input->seek(pos, WPX_SEEK_SET);
 
-  size_t actZone = size_t(m_state->m_actualTextZone++);
-  if (actZone >= m_state->m_textZoneList.size()) {
+  if (actZone >= (int) m_state->m_textZoneList.size() || actZone < 0) {
     MWAW_DEBUG_MSG(("HMWJText::readTextZone: find an unexpected zone\n"));
-    m_state->m_textZoneList.resize(actZone+1);
+    if (actZone < 0)
+      actZone = (int) m_state->m_textZoneList.size();
+    m_state->m_textZoneList.resize(size_t(actZone)+1);
   }
-  HMWJTextInternal::TextZone &zone = m_state->m_textZoneList[actZone];
+  HMWJTextInternal::TextZone &zone = m_state->m_textZoneList[size_t(actZone)];
   long val;
 
   // first read the char properties list

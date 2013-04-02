@@ -180,10 +180,6 @@ protected:
 
   /** try to read a unknown zones with header data */
   bool readZoneWithHeader(MWAWEntry const &entry);
-  /** try to read the zone 8*/
-  bool readZone8(MWAWEntry const &entry);
-  /** try to read the zone 9 ( a simple list? )*/
-  bool readZone9(MWAWEntry const &entry);
   /** try to read the zone A ( a big zone containing 5 sub zone ? )*/
   bool readZoneA(MWAWEntry const &entry);
   /** try to read the zone B*/

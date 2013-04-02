@@ -59,6 +59,8 @@ namespace HMWJGraphInternal
 {
 struct CellFormat;
 struct Frame;
+struct BasicGraph;
+struct TextFrame;
 struct Table;
 struct TableCell;
 
@@ -106,11 +108,21 @@ protected:
   /** try to read the frames definition (type 3)*/
   bool readFrames(MWAWEntry const &entry);
   /** try to read a frame*/
-  bool readFrame(HMWJGraphInternal::Frame &frame);
+  shared_ptr<HMWJGraphInternal::Frame> readFrame(int id);
+  /** try to read a text data (text, header/footer, footnote)  */
+  shared_ptr<HMWJGraphInternal::TextFrame> readTextData(HMWJGraphInternal::Frame const &header, long endPos);
+  /** try to read the basic graph data */
+  shared_ptr<HMWJGraphInternal::BasicGraph> readBasicGraph(HMWJGraphInternal::Frame const &header, long endPos);
+  /** try to read the groupd data ( type 9 )*/
+  bool readGroupData(MWAWEntry const &entry, int actZone);
+  /** try to read the graph data (zone 8)*/
+  bool readGraphData(MWAWEntry const &entry, int actZone);
   /** try to read the pictures definition (type 6)*/
-  bool readPicture(MWAWEntry const &entry);
+  bool readPicture(MWAWEntry const &entry, int actZone);
   /** try to read a table (zone 7)*/
-  bool readTable(MWAWEntry const &entry);
+  bool readTable(MWAWEntry const &entry, int actZone);
+  /** try to read a list of format */
+  bool readTableFormatsList(HMWJGraphInternal::Table &table, long endPos);
 
   /** try to send a table */
   bool sendTable(HMWJGraphInternal::Table const &table);

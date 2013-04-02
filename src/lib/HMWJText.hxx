@@ -105,7 +105,7 @@ protected:
   /** try to read the list of textzones ( type 4) */
   bool readTextZonesList(MWAWEntry const &entry);
   /** try to read a text zone ( type 5 ) */
-  bool readTextZone(MWAWEntry const &entry);
+  bool readTextZone(MWAWEntry const &entry, int actZone);
   /** try to read the token in the text zone */
   bool readTextToken(long endPos, HMWJTextInternal::TextZone &zone);
   /** try to read the different sections*/
