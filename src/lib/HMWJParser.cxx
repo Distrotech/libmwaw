@@ -179,10 +179,11 @@ bool HMWJParser::sendText(long id, long cPos)
   return m_textParser->sendText(id, cPos);
 }
 
-bool HMWJParser::sendZone(long)
+bool HMWJParser::sendZone(long zId)
 {
-  MWAW_DEBUG_MSG(("HMWJParser::sendZone: not implemented\n"));
-  return false;
+  MWAWPosition pos(Vec2i(0,0), Vec2i(0,0), WPX_POINT);
+  pos.setRelativePosition(MWAWPosition::Char);
+  return m_graphParser->sendFrame(zId, pos);
 }
 
 bool HMWJParser::getColor(int colId, int patternId, MWAWColor &color) const

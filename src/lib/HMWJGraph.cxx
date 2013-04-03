@@ -325,7 +325,7 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
 struct CommentFrame :  public Frame {
 public:
   //! constructor
-  CommentFrame(Frame const &orig) : Frame(orig), m_width(0), m_cPos(0) {
+  CommentFrame(Frame const &orig) : Frame(orig), m_zId(0), m_width(0), m_cPos(0) {
   }
   //! returns true if the frame data are read
   virtual bool valid() const {
@@ -334,12 +334,15 @@ public:
   //! print local data
   std::string print() const {
     std::stringstream s;
+    if (m_zId) s << "zId=" << std::hex << m_zId << std::dec << ",";
     if (m_width > 0)
       s << "width=" << m_width << ",";
     if (m_cPos)
       s << "cPos[first]=" << m_cPos << ",";
     return s.str();
   }
+  //! the text id
+  long m_zId;
   //! the zone width
   double m_width;
   //! the first char pos
@@ -438,7 +441,7 @@ public:
 struct TextboxFrame :  public Frame {
 public:
   //! constructor
-  TextboxFrame(Frame const &orig) : Frame(orig), m_width(0), m_cPos(0) {
+  TextboxFrame(Frame const &orig) : Frame(orig), m_zId(0), m_width(0), m_cPos(0) {
   }
   //! returns true if the frame data are read
   virtual bool valid() const {
@@ -447,12 +450,15 @@ public:
   //! print local data
   std::string print() const {
     std::stringstream s;
+    if (m_zId) s << "zId=" << std::hex << m_zId << std::dec << ",";
     if (m_width > 0)
       s << "width=" << m_width << ",";
     if (m_cPos)
       s << "cPos[first]=" << m_cPos << ",";
     return s.str();
   }
+  //! the text id
+  long m_zId;
   //! the zone width
   double m_width;
   //! the first char pos
@@ -567,7 +573,7 @@ struct BasicGraph : public Frame {
 //! Internal: the state of a HMWJGraph
 struct State {
   //! constructor
-  State() : m_framesList(), m_frameFormatsList(), m_numPages(0), m_colorList(), m_patternPercentList() { }
+  State() : m_framesList(), m_framesMap(), m_frameFormatsList(), m_numPages(0), m_colorList(), m_patternPercentList() { }
   //! tries to find the lId the frame of a given type
   shared_ptr<Frame> findFrame(int type, int lId) const {
     int actId = 0;
@@ -582,7 +588,14 @@ struct State {
     }
     return shared_ptr<Frame>();
   }
-
+  //! returns the frame format corresponding to an id
+  FrameFormat const &getFrameFormat(int id) const {
+    if (id >= 0 && id < (int) m_frameFormatsList.size())
+      return m_frameFormatsList[size_t(id)];
+    static FrameFormat defFormat;
+    MWAW_DEBUG_MSG(("HMWJGraphInternal::State::getFrameFormat: can not find format %d\n", id));
+    return defFormat;
+  }
   //! returns a color correspond to an id
   bool getColor(int id, MWAWColor &col) {
     initColors();
@@ -615,6 +628,8 @@ struct State {
 
   /** the list of frames */
   std::vector<shared_ptr<Frame> > m_framesList;
+  /** a map zId->frame pos in frames list */
+  std::map<long, int> m_framesMap;
   /** the list of frame format */
   std::vector<FrameFormat> m_frameFormatsList;
   int m_numPages /* the number of pages */;
@@ -739,6 +754,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_graphParser);
 
   long pos = m_input->tell();
+  MWAW_DEBUG_MSG(("HMWJGraphInternal::SubDocument::parse: not implemented\n"));
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
@@ -793,6 +809,15 @@ int HMWJGraph::numPages() const
   if (m_state->m_numPages)
     return m_state->m_numPages;
   int nPages = 0;
+  for (size_t f=0 ; f < m_state->m_framesList.size(); f++) {
+    if (!m_state->m_framesList[f]) continue;
+    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
+    if (!frame.valid()) continue;
+    int page = frame.m_page+1;
+    if (page <= nPages) continue;
+    if (page >= nPages+100) continue; // a pb ?
+    nPages = page;
+  }
   m_state->m_numPages = nPages;
   return nPages;
 }
@@ -848,6 +873,7 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
   f << "listIds=[";
   for (int i = 0; i < mainHeader.m_n; i++) {
     val = (long) input->readULong(4);
+    m_state->m_framesMap[val]=i;
     f << std::hex << val << std::dec << ",";
   }
   f << std::dec << "],";
@@ -1142,7 +1168,7 @@ bool HMWJGraph::readGroupData(MWAWEntry const &entry, int actZone)
     MWAW_DEBUG_MSG(("HMWJGraph::readGroupData: can not find group %d\n", actZone));
   } else {
     HMWJGraphInternal::GroupFrame *group =
-      reinterpret_cast<HMWJGraphInternal::GroupFrame *>(frame.get());
+      static_cast<HMWJGraphInternal::GroupFrame *>(frame.get());
     idsList = &group->m_childsList;
   }
 
@@ -1237,7 +1263,7 @@ bool HMWJGraph::readGraphData(MWAWEntry const &entry, int actZone)
     float point[2];
     for (int j = 0; j < 2; j++)
       point[j] = float(input->readLong(4))/65536.f;
-    Vec2f pt(point[0], point[1]);
+    Vec2f pt(point[1], point[0]);
     lVertices[size_t(i)]=pt;
     f << pt << ",";
     input->seek(pos+8, WPX_SEEK_SET);
@@ -1249,7 +1275,7 @@ bool HMWJGraph::readGraphData(MWAWEntry const &entry, int actZone)
     MWAW_DEBUG_MSG(("HMWJGraph::readGraphData: can not find basic graph %d\n", actZone));
   } else {
     HMWJGraphInternal::BasicGraph *graph =
-      reinterpret_cast<HMWJGraphInternal::BasicGraph *>(frame.get());
+      static_cast<HMWJGraphInternal::BasicGraph *>(frame.get());
     if (graph->m_graphType != 6) {
       MWAW_DEBUG_MSG(("HMWJGraph::readGraphData: basic graph %d is not a polygon\n", actZone));
     } else
@@ -1297,30 +1323,18 @@ bool HMWJGraph::readPicture(MWAWEntry const &entry, int actZone)
   f << "Picture:pictSz=" << sz;
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
+  asciiFile.skipZone(entry.begin()+12, entry.end()-1);
 
   shared_ptr<HMWJGraphInternal::Frame> frame = m_state->findFrame(6, actZone);
   if (!frame) {
     MWAW_DEBUG_MSG(("HMWJGraph::readPicture: can not find picture %d\n", actZone));
   } else {
     HMWJGraphInternal::PictureFrame *picture =
-      reinterpret_cast<HMWJGraphInternal::PictureFrame *>(frame.get());
-    picture->m_entry.setBegin(pos+12);
+      static_cast<HMWJGraphInternal::PictureFrame *>(frame.get());
+    picture->m_entry.setBegin(pos+4);
     picture->m_entry.setLength(sz);
   }
 
-#ifdef DEBUG_WITH_FILES
-  if (1) {
-    f.str("");
-
-    WPXBinaryData data;
-    input->readDataBlock(sz, data);
-
-    static int volatile pictName = 0;
-    f << "Pict" << ++pictName << ".pct";
-    libmwaw::Debug::dumpFile(data, f.str().c_str());
-    asciiFile.skipZone(entry.begin()+12, entry.end()-1);
-  }
-#endif
   return true;
 }
 
@@ -1491,7 +1505,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
     MWAW_DEBUG_MSG(("HMWJTable::readTable: can not find basic table %d\n", actZone));
   } else {
     HMWJGraphInternal::TableFrame *tableFrame =
-      reinterpret_cast<HMWJGraphInternal::TableFrame *>(frame.get());
+      static_cast<HMWJGraphInternal::TableFrame *>(frame.get());
     tableFrame->m_table = table;
   }
 
@@ -1614,6 +1628,275 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
 ////////////////////////////////////////////////////////////
 // send data to a listener
 ////////////////////////////////////////////////////////////
+
+bool HMWJGraph::sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras)
+{
+  if (!m_parserState->m_listener) return true;
+
+  std::map<long, int >::const_iterator fIt=
+    m_state->m_framesMap.find(frameId);
+  if (fIt == m_state->m_framesMap.end() || fIt->second < 0 || fIt->second >= int(m_state->m_framesList.size())) {
+    MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: can not find frame %lx\n", frameId));
+    return false;
+  }
+  shared_ptr<HMWJGraphInternal::Frame> frame = m_state->m_framesList[size_t(fIt->second)];
+  if (!frame || !frame->valid()) {
+    MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: frame %lx is not initialized\n", frameId));
+    return false;
+  }
+  return sendFrame(*frame, pos, extras);
+}
+
+// --- basic shape
+bool HMWJGraph::sendBasicGraph(HMWJGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras)
+{
+  if (!m_parserState->m_listener) return true;
+  Vec2f pictSz = pict.m_pos.size();
+  if (pictSz[0] < 0) pictSz.setX(-pictSz[0]);
+  if (pictSz[1] < 0) pictSz.setY(-pictSz[1]);
+  Box2f box(Vec2f(0,0), pictSz);
+
+  if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
+    pos.setSize(pictSz);
+
+  shared_ptr<MWAWPictBasic> pictPtr;
+  switch(pict.m_graphType) {
+  case 0:
+  case 3: {
+    Vec2f minPt(pict.m_extremity[0]);
+    if (minPt[0] > pict.m_extremity[1][0])
+      minPt[0] = pict.m_extremity[1][0];
+    if (minPt[1] > pict.m_extremity[1][1])
+      minPt[1] = pict.m_extremity[1][1];
+    MWAWPictLine *res=new MWAWPictLine(pict.m_extremity[0]-minPt, pict.m_extremity[1]-minPt);
+    pictPtr.reset(res);
+    if (pict.m_arrowsFlag&1) res->setArrow(0, true);
+    if (pict.m_arrowsFlag&2) res->setArrow(1, true);
+    break;
+  }
+  case 1: {
+    MWAWPictRectangle *res=new MWAWPictRectangle(box);
+    pictPtr.reset(res);
+    break;
+  }
+  case 2: {
+    MWAWPictCircle *res=new MWAWPictCircle(box);
+    pictPtr.reset(res);
+    break;
+  }
+  case 4: {
+    MWAWPictRectangle *res=new MWAWPictRectangle(box);
+    int roundValues[2];
+    for (int i = 0; i < 2; i++) {
+      if (2.f*pict.m_cornerDim <= pictSz[i])
+        roundValues[i] = int(pict.m_cornerDim+1);
+      else if (pict.m_cornerDim >= 4.0f)
+        roundValues[i]= (int(pict.m_cornerDim)+1)/2;
+      else
+        roundValues[i]=1;
+    }
+    res->setRoundCornerWidth(roundValues[0], roundValues[1]);
+    pictPtr.reset(res);
+    break;
+  }
+  case 5: {
+    int angle[2] = { int(90-pict.m_angles[1]), int(90-pict.m_angles[0])};
+
+    Vec2f center = box.center();
+    Vec2f axis = 0.5*Vec2f(box.size());
+    // we must compute the real bd box
+    float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
+    int limitAngle[2];
+    for (int i = 0; i < 2; i++)
+      limitAngle[i] = (angle[i] < 0) ? int(angle[i]/90)-1 : int(angle[i]/90);
+    for (int bord = limitAngle[0]; bord <= limitAngle[1]+1; bord++) {
+      float ang = (bord == limitAngle[0]) ? float(angle[0]) :
+                  (bord == limitAngle[1]+1) ? float(angle[1]) : float(90 * bord);
+      ang *= float(M_PI/180.);
+      float actVal[2] = { axis[0] *std::cos(ang), -axis[1] *std::sin(ang)};
+      if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
+      else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
+      if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
+      else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
+    }
+    Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
+                  Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
+    MWAWPictArc *res=new MWAWPictArc(realBox,box, float(angle[0]), float(angle[1]));
+    pictPtr.reset(res);
+
+    break;
+  }
+  case 6: {
+    std::vector<Vec2f> listPts = pict.m_listVertices;
+    size_t numPts = listPts.size();
+    if (!numPts) break;
+    Vec2f minPt(listPts[0]);
+    for (size_t i = 1; i < numPts; i++) {
+      if (minPt[0] > listPts[i][0])
+        minPt[0] = listPts[i][0];
+      if (minPt[1] > listPts[i][1])
+        minPt[1] = listPts[i][1];
+    }
+    for (size_t i = 0; i < numPts; i++)
+      listPts[i] -= minPt;
+    MWAWPictPolygon *res=new MWAWPictPolygon(box, listPts);
+    pictPtr.reset(res);
+    break;
+  }
+  default:
+    return false;
+  }
+
+  if (!pictPtr)
+    return false;
+  HMWJGraphInternal::FrameFormat const &format=
+    m_state->getFrameFormat(pict.m_formatId);
+  pictPtr->setLineWidth((float) format.m_lineWidth);
+  pictPtr->setLineColor(format.m_color[0]);
+  pictPtr->setSurfaceColor(format.m_color[1]);
+
+  WPXBinaryData data;
+  std::string type;
+  if (!pictPtr->getBinary(data,type)) return false;
+
+  pos.setOrigin(pos.origin()-Vec2f(2,2));
+  pos.setSize(pos.size()+Vec2f(4,4));
+  m_parserState->m_listener->insertPicture(pos,data, type, extras);
+  return true;
+}
+
+// picture
+bool HMWJGraph::sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras)
+{
+  if (!m_parserState->m_listener) return true;
+#ifdef DEBUG_WITH_FILES
+  bool firstTime = pict.m_parsed == false;
+#endif
+  pict.m_parsed = true;
+  Vec2f pictSz = pict.m_pos.size();
+  if (pictSz[0] < 0) pictSz.setX(-pictSz[0]);
+  if (pictSz[1] < 0) pictSz.setY(-pictSz[1]);
+
+  if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
+    pos.setSize(pictSz);
+
+  if (!pict.m_entry.valid()) {
+    MWAW_DEBUG_MSG(("HMWJGraph::sendPictureFrame: can not find picture data\n"));
+    sendEmptyPicture(pos);
+    return true;
+  }
+  //fixme: check if we have border
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long fPos = input->tell();
+  input->seek(pict.m_entry.begin(), WPX_SEEK_SET);
+  WPXBinaryData data;
+  input->readDataBlock(pict.m_entry.length(), data);
+  input->seek(fPos, WPX_SEEK_SET);
+
+#ifdef DEBUG_WITH_FILES
+  if (firstTime) {
+    libmwaw::DebugStream f;
+    static int volatile pictName = 0;
+    f << "Pict" << ++pictName << ".pct1";
+    libmwaw::Debug::dumpFile(data, f.str().c_str());
+  }
+#endif
+
+  m_parserState->m_listener->insertPicture(pos, data, "image/pict", extras);
+
+  return true;
+}
+
+bool HMWJGraph::sendEmptyPicture(MWAWPosition pos)
+{
+  if (!m_parserState->m_listener)
+    return true;
+  Vec2f pictSz = pos.size();
+  shared_ptr<MWAWPict> pict;
+  MWAWPosition pictPos(Vec2f(0,0), pictSz, WPX_POINT);
+  pictPos.setRelativePosition(MWAWPosition::Frame);
+  pictPos.setOrder(-1);
+
+  for (int i = 0; i < 3; i++) {
+    if (i==0)
+      pict.reset(new MWAWPictRectangle(Box2f(Vec2f(0,0), pictSz)));
+    else if (i==1)
+      pict.reset(new MWAWPictLine(Vec2f(0,0), pictSz));
+    else
+      pict.reset(new MWAWPictLine(Vec2f(0,pictSz[1]), Vec2f(pictSz[0], 0)));
+    WPXBinaryData data;
+    std::string type;
+    if (!pict->getBinary(data,type)) continue;
+
+    m_parserState->m_listener->insertPicture(pictPos, data, type);
+  }
+  return true;
+}
+
+// ----- comment box
+bool HMWJGraph::sendComment(HMWJGraphInternal::CommentFrame const &comment, MWAWPosition pos, WPXPropertyList extras)
+{
+  if (!m_parserState->m_listener) return true;
+  Vec2f commentSz = comment.m_pos.size();
+  if (commentSz[0] < 0) commentSz.setX(-commentSz[0]);
+  if (commentSz[1] < 0) commentSz.setY(-commentSz[1]);
+
+  if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
+    pos.setSize(commentSz);
+  WPXPropertyList pList(extras);
+
+  HMWJGraphInternal::FrameFormat const &format=
+    m_state->getFrameFormat(comment.m_formatId);
+
+  std::stringstream stream;
+  stream << format.m_lineWidth*0.03 << "cm solid " << format.m_color[0];
+  pList.insert("fo:border-left", stream.str().c_str());
+  pList.insert("fo:border-bottom", stream.str().c_str());
+  pList.insert("fo:border-right", stream.str().c_str());
+
+  stream.str("");
+  stream << 20*format.m_lineWidth*0.03 << "cm solid " << format.m_color[0];
+  pList.insert("fo:border-top", stream.str().c_str());
+
+  if (!format.m_color[1].isWhite())
+    pList.insert("fo:background-color", format.m_color[1].str().c_str());
+
+  MWAWSubDocumentPtr subdoc(new HMWJGraphInternal::SubDocument(*this, m_parserState->m_input, HMWJGraphInternal::SubDocument::Text, comment.m_zId));
+  m_parserState->m_listener->insertTextBox(pos, subdoc, pList);
+
+  return true;
+}
+
+// ----- textbox
+bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, WPXPropertyList extras)
+{
+  if (!m_parserState->m_listener) return true;
+  Vec2f textboxSz = textbox.m_pos.size();
+  if (textboxSz[0] < 0) textboxSz.setX(-textboxSz[0]);
+  if (textboxSz[1] < 0) textboxSz.setY(-textboxSz[1]);
+
+  if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
+    pos.setSize(textboxSz);
+  WPXPropertyList pList(extras);
+
+  HMWJGraphInternal::FrameFormat const &format=
+    m_state->getFrameFormat(textbox.m_formatId);
+
+  if (format.m_lineWidth > 0) {
+    std::stringstream stream;
+    stream << format.m_lineWidth*0.03 << "cm solid " << format.m_color[0];
+    pList.insert("fo:border", stream.str().c_str());
+  }
+
+  if (!format.m_color[1].isWhite())
+    pList.insert("fo:background-color", format.m_color[1].str().c_str());
+
+  MWAWSubDocumentPtr subdoc(new HMWJGraphInternal::SubDocument(*this, m_parserState->m_input, HMWJGraphInternal::SubDocument::Text, textbox.m_zId));
+  m_parserState->m_listener->insertTextBox(pos, subdoc, pList);
+
+  return true;
+}
 
 // ----- table
 bool HMWJGraph::updateTable(HMWJGraphInternal::Table const &table)
@@ -1811,6 +2094,89 @@ bool HMWJGraph::sendTable(HMWJGraphInternal::Table const &table)
 // low level
 ////////////////////////////////////////////////////////////
 
+bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return true;
+
+  if (!frame.valid()) {
+    frame.m_parsed = true;
+    MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: called with invalid frame\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  switch(frame.m_type) {
+  case 4:
+    frame.m_parsed = true;
+    return sendTextbox(static_cast<HMWJGraphInternal::TextboxFrame const &>(frame), pos, extras);
+  case 6: {
+    HMWJGraphInternal::PictureFrame const &pict =
+      static_cast<HMWJGraphInternal::PictureFrame const &>(frame);
+    if (!pict.m_entry.valid()) {
+      frame.m_parsed = true;
+      MWAWPosition framePos(pos);
+      framePos.m_anchorTo = MWAWPosition::Frame;
+      framePos.setOrigin(Vec2f(0,0));
+
+      MWAWSubDocumentPtr subdoc
+      (new HMWJGraphInternal::SubDocument
+       (*this, input, framePos, HMWJGraphInternal::SubDocument::EmptyPicture, 0));
+      listener->insertTextBox(pos, subdoc, extras);
+      return true;
+    }
+    return sendPictureFrame(pict, pos, extras);
+  }
+  case 8:
+    frame.m_parsed = true;
+    return sendBasicGraph(static_cast<HMWJGraphInternal::BasicGraph const &>(frame), pos, extras);
+  case 9: {
+    frame.m_parsed = true;
+    HMWJGraphInternal::TableFrame const &tableFrame = static_cast<HMWJGraphInternal::TableFrame const &>(frame);
+    if (!tableFrame.m_table) {
+      MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: can not find the table\n"));
+      return false;
+    }
+    HMWJGraphInternal::Table const &table = *tableFrame.m_table;
+
+    if (!updateTable(table)) {
+      MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: can not find the table structure\n"));
+      MWAWSubDocumentPtr subdoc
+      (new HMWJGraphInternal::SubDocument
+       (*this, input, HMWJGraphInternal::SubDocument::UnformattedTable, frame.m_fileId));
+      listener->insertTextBox(pos, subdoc, extras);
+      return true;
+    }
+    if (pos.m_anchorTo==MWAWPosition::Page ||
+        (pos.m_anchorTo!=MWAWPosition::Frame && table.m_hasExtraLines)) {
+      MWAWPosition framePos(pos);
+      framePos.m_anchorTo = MWAWPosition::Frame;
+      framePos.setOrigin(Vec2f(0,0));
+
+      MWAWSubDocumentPtr subdoc
+      (new HMWJGraphInternal::SubDocument
+       (*this, input, framePos, HMWJGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
+      listener->insertTextBox(pos, subdoc, extras);
+      return true;
+    }
+    if (pos.m_anchorTo==MWAWPosition::Frame && table.m_hasExtraLines)
+      sendPreTableData(table);
+    return sendTable(table);
+  }
+  case 10:
+    frame.m_parsed = true;
+    return sendComment(static_cast<HMWJGraphInternal::CommentFrame const &>(frame), pos, extras);
+  case 11: // group: fixme must be implement for char position...
+    MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: sending group is not implemented\n"));
+    break;
+  default:
+    MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: sending type %d is not implemented\n", frame.m_type));
+    break;
+  }
+  frame.m_parsed = true;
+  return false;
+}
+
 // try to read a basic comment zone
 shared_ptr<HMWJGraphInternal::CommentFrame> HMWJGraph::readCommentData(HMWJGraphInternal::Frame const &header, long endPos)
 {
@@ -1834,11 +2200,10 @@ shared_ptr<HMWJGraphInternal::CommentFrame> HMWJGraph::readCommentData(HMWJGraph
   if (val)
     f << "f1=" << val << ",";
   comment->m_cPos = (long) input->readULong(4);
-  for (int i=0; i < 2; i++) {
-    val = (long) input->readULong(4);
-    f << "id" << i << "=" << std::hex << val << std::dec << ",";
-  }
-  for (int i=0; i < 10; i++) { // 0 excepted g4=g6=20 : the header height?
+  comment->m_zId = (long) input->readULong(4); // checkMe
+  val = (long) input->readULong(4);
+  f << "id1=" << std::hex << val << std::dec << ",";
+  for (int i=0; i < 10; i++) { // 0 excepted g4=g6=20 : the comment dim?
     val = input->readLong(2);
     if (val)
       f << "g" << i << "=" << val << ",";
@@ -1972,10 +2337,9 @@ shared_ptr<HMWJGraphInternal::TextboxFrame> HMWJGraph::readTextboxData(HMWJGraph
   if (val)
     f << "f1=" << val << ",";
   textbox->m_cPos = (long) input->readULong(4);
-  for (int i=0; i < 2; i++) {
-    val = (long) input->readULong(4);
-    f << "id" << i << "=" << std::hex << val << std::dec << ",";
-  }
+  textbox->m_zId = (long) input->readULong(4); // checkMe
+  val = (long) input->readULong(4);
+  f << "id1=" << std::hex << val << std::dec << ",";
   float dim = float(input->readLong(4))/65536.f; // a small negative number: 0, -4 or -6.5
   if (dim < 0 || dim > 0)
     f << "dim?=" << dim << ",";
@@ -2118,6 +2482,19 @@ shared_ptr<HMWJGraphInternal::BasicGraph> HMWJGraph::readBasicGraph(HMWJGraphInt
 ////////////////////////////////////////////////////////////
 bool HMWJGraph::sendPageGraphics()
 {
+  if (!m_parserState->m_listener)
+    return true;
+  for (size_t f=0; f < m_state->m_framesList.size(); f++) {
+    if (!m_state->m_framesList[f]) continue;
+    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
+    if (!frame.valid() || frame.m_parsed)
+      continue;
+    if (frame.m_type <= 3 || frame.m_type == 12) continue;
+    MWAWPosition pos(frame.m_pos[0],frame.m_pos.size(),WPX_POINT);
+    pos.setRelativePosition(MWAWPosition::Page);
+    pos.setPage(frame.m_page+1);
+    sendFrame(frame, pos);
+  }
   return true;
 }
 
@@ -2125,5 +2502,15 @@ void HMWJGraph::flushExtra()
 {
   if (!m_parserState->m_listener)
     return;
+  for (size_t f=0; f < m_state->m_framesList.size(); f++) {
+    if (!m_state->m_framesList[f]) continue;
+    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
+    if (!frame.valid() || frame.m_parsed)
+      continue;
+    if (frame.m_type <= 3 || frame.m_type == 12) continue;
+    MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),WPX_POINT);
+    pos.setRelativePosition(MWAWPosition::Char);
+    sendFrame(frame, pos);
+  }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

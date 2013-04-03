@@ -136,6 +136,19 @@ protected:
   /** try to read a list of format */
   bool readTableFormatsList(HMWJGraphInternal::Table &table, long endPos);
 
+  /** try to send a frame to the listener */
+  bool sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+
+  /** try to send a basic picture to the listener */
+  bool sendBasicGraph(HMWJGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  /** try to send a comment box to the listener */
+  bool sendComment(HMWJGraphInternal::CommentFrame const &textbox, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  /** try to send a picture frame */
+  bool sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  /** try to send an empty picture */
+  bool sendEmptyPicture(MWAWPosition pos);
+  /** try to send a textbox to the listener */
+  bool sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   /** try to send a table */
   bool sendTable(HMWJGraphInternal::Table const &table);
   /** try to send a table unformatted*/
@@ -150,6 +163,8 @@ protected:
 
   // interface with mainParser
 
+  /** try to send a frame to the listener */
+  bool sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
 
   //
   // low level
