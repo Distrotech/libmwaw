@@ -38,6 +38,9 @@
 #ifndef HMWJ_TEXT
 #  define HMWJ_TEXT
 
+#include <map>
+#include <vector>
+
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
@@ -79,12 +82,19 @@ public:
   int numPages() const;
 
 protected:
+  //! send the main text zone
+  bool sendMainText();
   //! send a text zone (not implemented)
   bool sendText(long id, long cPos);
   //! send a text zone
-  bool sendText(HMWJTextInternal::TextZone const &zone);
+  bool sendText(HMWJTextInternal::TextZone const &zone, long cPos=0);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
+
+  //! returns the list of zoneId which corresponds to the token
+  std::vector<long> getTokenIdList() const;
+  //! update the text zone type with map id->type
+  void updateTextZoneTypes(std::map<long,int> const &idTypeMap);
 
   //
   // intermediate level

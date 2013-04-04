@@ -195,7 +195,9 @@ struct Section {
 //! Internal: a struct used to store a text zone
 struct TextZone {
   //! enum used to define the zone type
-  enum Type { T_Main, T_Unknown };
+  enum Type { T_Main=0, T_Header=1, T_Footer=2, T_Footnote=3, T_Textbox=4,
+              T_Table=9, T_Comment=10, T_Unknown
+            };
   //! constructor
   TextZone() : m_type(T_Unknown), m_entry(), m_id(0), m_PLCMap(), m_tokenList(), m_parsed(false) {
   }
@@ -256,7 +258,7 @@ struct Paragraph : public MWAWParagraph {
 //! Internal: the state of a HMWJText
 struct State {
   //! constructor
-  State() : m_version(-1), m_fontList(), m_paragraphList(), m_sectionList(), m_textZoneList(),
+  State() : m_version(-1), m_fontList(), m_paragraphList(), m_sectionList(), m_textZoneList(), m_idTextZoneMap(),
     m_numPages(-1), m_actualPage(0) {
   }
   //! the file version
@@ -269,6 +271,8 @@ struct State {
   std::vector<Section> m_sectionList;
   //! the list of text zone
   std::vector<TextZone> m_textZoneList;
+  //! a map textId -> id in m_textZoneList
+  std::map<long, int> m_idTextZoneMap;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
@@ -322,7 +326,7 @@ private:
 void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("HMWJTextInternal::SubDocument::parse: no listener\n"));
     return;
   }
 
@@ -332,7 +336,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     return;
   }
   assert(m_textParser);
-  MWAW_DEBUG_MSG(("SubDocument::parse: do not know how to send a textZone\n"));
+  MWAW_DEBUG_MSG(("HMWJTextInternal::SubDocument::parse: do not know how to send a textZone\n"));
   long pos = m_input->tell();
   m_input->seek(pos, WPX_SEEK_SET);
 }
@@ -372,7 +376,22 @@ int HMWJText::version() const
 
 int HMWJText::numPages() const
 {
+  // fixme: compute the number of page
   return m_state->m_numPages;
+}
+
+std::vector<long> HMWJText::getTokenIdList() const
+{
+  std::vector<long> res;
+  for (size_t i=0; i < m_state->m_textZoneList.size(); i++) {
+    HMWJTextInternal::TextZone const &zone = m_state->m_textZoneList[i];
+    for (size_t t=0; t < zone.m_tokenList.size(); t++) {
+      HMWJTextInternal::Token const &token = zone.m_tokenList[t];
+      if (token.m_type==1)
+        res.push_back(token.m_id);
+    }
+  }
+  return res;
 }
 
 ////////////////////////////////////////////////////////////
@@ -382,12 +401,31 @@ int HMWJText::numPages() const
 ////////////////////////////////////////////////////////////
 //     Text
 ////////////////////////////////////////////////////////////
-bool HMWJText::sendText(long /*id*/, long /*cPos*/)
+bool HMWJText::sendText(long id, long cPos)
 {
+  if (m_state->m_idTextZoneMap.find(id)==m_state->m_idTextZoneMap.end()) {
+    MWAW_DEBUG_MSG(("HMWJText::sendText: can not find text zone with id %lx\n", id));
+    return false;
+  }
+  int zId = m_state->m_idTextZoneMap.find(id)->second;
+  if (zId < 0 || zId >= (int) m_state->m_textZoneList.size())
+    return false;
+  return sendText(m_state->m_textZoneList[size_t(zId)], cPos);
+}
+
+bool HMWJText::sendMainText()
+{
+  for (size_t i=0; i < m_state->m_textZoneList.size(); i++) {
+    if (m_state->m_textZoneList[i].m_type != HMWJTextInternal::TextZone::T_Main)
+      continue;
+    sendText(m_state->m_textZoneList[i]);
+    return true;
+  }
+  MWAW_DEBUG_MSG(("HMWJText::sendText: can not find the main zone\n"));
   return false;
 }
 
-bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
+bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
 {
   if (!zone.m_entry.valid()) {
     MWAW_DEBUG_MSG(("HMWJText::sendText: call without entry\n"));
@@ -408,6 +446,10 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
   }
   if (!data.size())
     return true;
+  if (fPos < 0 || 2*fPos > (long) data.size()) {
+    MWAW_DEBUG_MSG(("HMWJText::sendText: first pos %ld is too big zone\n", fPos));
+    return false;
+  }
 
   WPXInputStream *dataInput = const_cast<WPXInputStream *>(data.getDataStream());
   if (!dataInput) {
@@ -419,7 +461,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
   libmwaw::DebugFile asciiFile;
 
 #ifdef DEBUG_WITH_FILES
-  if (1) {
+  if (fPos==0) {
     static int tId=0;
     std::stringstream s;
     s << "Text" << tId++;
@@ -431,10 +473,14 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
 #endif
 
   bool isMain = zone.m_type==HMWJTextInternal::TextZone::T_Main;
+  bool charOneIsEnd = zone.m_type==HMWJTextInternal::TextZone::T_Footnote ||
+                      zone.m_type==HMWJTextInternal::TextZone::T_Table;
 
-  long cPos=0, endCPos=-1;
+  long cPos=fPos, endCPos=-1;
   int actPage = 1, actCol = 0, numCol=1, actSection = 1;
 
+  if (isMain)
+    m_mainParser->newPage(1);
   if (isMain && !m_state->m_sectionList.size()) {
     MWAW_DEBUG_MSG(("HMWJText::sendText: can not find section 0\n"));
   } else if (isMain) {
@@ -446,7 +492,8 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
       numCol = sec.m_numCols;
     }
   }
-  long pos = 0;
+  long pos = 2*fPos;
+  input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(TextData):";
 
@@ -481,7 +528,10 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
             f << "[###paragraph]";
             break;
           }
-          listener->setParagraph(m_state->m_paragraphList[size_t(plc.m_id)]);
+          HMWJTextInternal::Paragraph const &para=m_state->m_paragraphList[size_t(plc.m_id)];
+          if (isMain && para.m_addPageBreak)
+            m_mainParser->newPage(++actPage);
+          listener->setParagraph(para);
           break;
         }
         case HMWJTextInternal::TOKEN: {
@@ -547,6 +597,8 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
         f << "#[0]";
         continue;
       }
+      if (c==1 && charOneIsEnd)
+        return true;
       switch(c) {
       case 0x1000:
         f << "[pgNum]";
@@ -577,17 +629,24 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
       }
       case 2:
         f << "[colBreak]";
+        if (!isMain) {
+          MWAW_DEBUG_MSG(("HMWJText::sendText: find column break in auxilliary block\n"));
+          break;
+        }
         if (actCol < numCol-1 && numCol > 1) {
           listener->insertBreak(MWAWContentListener::ColumnBreak);
           actCol++;
         } else {
           actCol = 0;
-          m_mainParser->newPage(actPage++);
+          m_mainParser->newPage(++actPage);
         }
         break;
       case 3:
         f << "[pageBreak]";
-        m_mainParser->newPage(actPage++);
+        if (isMain) {
+          m_mainParser->newPage(++actPage);
+          actCol = 0;
+        }
         break;
       case 4:
         f << "[sectionBreak]";
@@ -604,6 +663,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
           actCol = 1;
           if (listener->isSectionOpened())
             listener->closeSection();
+          m_mainParser->newPage(++actPage);
           if (numCol >= 1 && sec.m_colWidth.size())
             listener->openSection(sec.getColumnWidth(), WPX_POINT);
           else
@@ -634,6 +694,23 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone)
     }
   }
   return true;
+}
+
+void HMWJText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
+{
+  std::map<long,int>::const_iterator it;
+  int numZones = (int) m_state->m_textZoneList.size();
+  for (it=idTypeMap.begin(); it != idTypeMap.end(); it++) {
+    if (m_state->m_idTextZoneMap.find(it->first)==m_state->m_idTextZoneMap.end()) {
+      MWAW_DEBUG_MSG(("HMWJText::readTextZonesList: can not find text zone with id %lx\n", it->first));
+      continue;
+    }
+    int zId = m_state->m_idTextZoneMap.find(it->first)->second;
+    if (zId < 0 || zId >= numZones)
+      continue;
+    m_state->m_textZoneList[size_t(zId)].m_type=
+      HMWJTextInternal::TextZone::Type(it->second);
+  }
 }
 
 bool HMWJText::readTextZonesList(MWAWEntry const &entry)
@@ -679,6 +756,7 @@ bool HMWJText::readTextZonesList(MWAWEntry const &entry)
   std::vector<long> listIds;
   for (int i = 0; i < mainHeader.m_n; i++) {
     val = (long) input->readULong(4);
+    m_state->m_idTextZoneMap[val]=i;
     listIds.push_back(val);
     f << val << ",";
   }
@@ -2060,10 +2138,10 @@ bool HMWJText::readFtnPos(MWAWEntry const &entry)
       val = input->readLong(2);
       if (val) f << "f" << j << "=" << val << ",";
     }
-    // the footnote text id
-    f << "zId=" << std::hex << input->readULong(4) << std::dec << ",";
-    // the local footnote id
-    f << "lZId=" << std::hex << input->readULong(4) << std::dec << ",";
+    // the text id
+    f << "zId[text]=" << std::hex << input->readULong(4) << std::dec << ",";
+    // the footnote id
+    f << "zId[footnote]=" << std::hex << input->readULong(4) << std::dec << ",";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     input->seek(pos+20, WPX_SEEK_SET);

@@ -38,6 +38,7 @@
 #ifndef HMWJ_GRAPH
 #  define HMWJ_GRAPH
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -102,7 +103,7 @@ protected:
   bool getColor(int colId, int patternId, MWAWColor &color) const;
 
   //! try to send the page graphic
-  bool sendPageGraphics();
+  bool sendPageGraphics(std::vector<long> const &doNotSendIds);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
@@ -136,9 +137,9 @@ protected:
   /** try to read a list of format */
   bool readTableFormatsList(HMWJGraphInternal::Table &table, long endPos);
 
+
   /** try to send a frame to the listener */
   bool sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
-
   /** try to send a basic picture to the listener */
   bool sendBasicGraph(HMWJGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   /** try to send a comment box to the listener */
@@ -153,6 +154,8 @@ protected:
   bool sendTable(HMWJGraphInternal::Table const &table);
   /** try to send a table unformatted*/
   bool sendTableUnformatted(HMWJGraphInternal::Table const &table);
+  /** try to send a table unformatted*/
+  bool sendTableUnformatted(long zId);
   /** check if the table is correct and if it can be send to a listener */
   bool updateTable(HMWJGraphInternal::Table const &table);
   /** try to send auxilliary table data*/
@@ -163,8 +166,13 @@ protected:
 
   // interface with mainParser
 
+  /** return a list textZId -> type which type=0(main), 1(header),
+      2(footer), 3(footnote), 4(textbox), 9(table), 10(comment) */
+  std::map<long,int> getTextFrameInformations() const;
   /** try to send a frame to the listener */
   bool sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  //! ask main parser to send a text zone
+  bool sendText(long textId, long fPos);
 
   //
   // low level

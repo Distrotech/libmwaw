@@ -66,7 +66,8 @@ namespace HMWJParserInternal
 struct State {
   //! constructor
   State() : m_zonesListBegin(-1), m_eof(-1), m_zonesMap(), m_zonesIdList(),
-    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
+    m_headerId(0), m_footerId(0) {
   }
 
   //! the list of zone begin
@@ -81,6 +82,10 @@ struct State {
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
+  /** the header text zone id or 0*/
+  long m_headerId;
+  /** the footer text zone id or 0*/
+  long m_footerId;
 };
 
 ////////////////////////////////////////
@@ -88,7 +93,7 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(HMWJParser &pars, MWAWInputStreamPtr input, int zoneId) :
+  SubDocument(HMWJParser &pars, MWAWInputStreamPtr input, long zoneId) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
 
   //! destructor
@@ -109,11 +114,11 @@ public:
   }
 
   //! returns the subdocument \a id
-  int getId() const {
+  long getId() const {
     return m_id;
   }
   //! sets the subdocument \a id
-  void setId(int vid) {
+  void setId(long vid) {
     m_id = vid;
   }
 
@@ -122,23 +127,23 @@ public:
 
 protected:
   //! the subdocument id
-  int m_id;
+  long m_id;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("HMWJParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  if (m_id != 1 && m_id != 2) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
+  if (type != libmwaw::DOC_HEADER_FOOTER) {
+    MWAW_DEBUG_MSG(("HMWJParserInternal::SubDocument::parse: unexpected document type\n"));
     return;
   }
 
   assert(m_parser);
   long pos = m_input->tell();
-  //reinterpret_cast<HMWJParser *>(m_parser)->sendZone(m_id);
+  reinterpret_cast<HMWJParser *>(m_parser)->sendText(m_id, 0);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 }
@@ -279,7 +284,9 @@ void HMWJParser::parse(WPXDocumentInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
-      m_graphParser->sendPageGraphics();
+      std::vector<long> tokenIds = m_textParser->getTokenIdList();
+      m_graphParser->sendPageGraphics(tokenIds);
+      m_textParser->sendMainText();
 
       m_textParser->flushExtra();
       m_graphParser->flushExtra();
@@ -316,7 +323,14 @@ void HMWJParser::createDocument(WPXDocumentInterface *documentInterface)
   // create the page list
   std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(m_pageSpan);
-
+  if (m_state->m_headerId) {
+    shared_ptr<MWAWSubDocument> subdoc(new HMWJParserInternal::SubDocument(*this, getInput(), m_state->m_headerId));
+    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+  }
+  if (m_state->m_footerId) {
+    shared_ptr<MWAWSubDocument> subdoc(new HMWJParserInternal::SubDocument(*this, getInput(), m_state->m_footerId));
+    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+  }
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
@@ -377,6 +391,16 @@ bool HMWJParser::createZones()
     readZone(it->second);
   }
 
+  // retrieve the text type, look for header/footer and pass information to text parser
+  std::map<long,int> idTypeMap = m_graphParser->getTextFrameInformations();
+  std::map<long,int>::const_iterator typeIt=idTypeMap.begin();
+  for ( ; typeIt!=idTypeMap.end() ; typeIt++) {
+    if (typeIt->second==1)
+      m_state->m_headerId = typeIt->first;
+    else if (typeIt->second==2)
+      m_state->m_footerId = typeIt->first;
+  }
+  m_textParser->updateTextZoneTypes(idTypeMap);
 
   libmwaw::DebugStream f;
   for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); it++) {
