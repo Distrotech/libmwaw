@@ -68,8 +68,8 @@ public:
   -DM: DocMaker (v4)
   -ED: eDOC (v2)
   -FULLW: FullWrite Professional (basic)
-  -HMAC: HanMac Word-K (basic done)
-  -HMACJ: HanMac Word-J ( almost nothing done for J document)
+  -HMAC: HanMac Word-K ( v2.0.5-2.0.6 )
+  -HMACJ: HanMac Word-J ( v2.0.4 )
   -LWTEXT: LightWayText ( only v4.5 Mac format )
   -MARIW: Mariner Write ( only v1.6-v3.5 Mac Classic)
   -MINDW: MindWrite

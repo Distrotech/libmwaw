@@ -258,7 +258,7 @@ struct Paragraph : public MWAWParagraph {
 //! Internal: the state of a HMWJText
 struct State {
   //! constructor
-  State() : m_version(-1), m_fontList(), m_paragraphList(), m_sectionList(), m_textZoneList(), m_idTextZoneMap(),
+  State() : m_version(-1), m_fontList(), m_paragraphList(), m_sectionList(), m_ftnTextId(0), m_ftnFirstPosList(), m_textZoneList(), m_idTextZoneMap(),
     m_numPages(-1), m_actualPage(0) {
   }
   //! the file version
@@ -269,6 +269,10 @@ struct State {
   std::vector<Paragraph> m_paragraphList;
   //! the list of section
   std::vector<Section> m_sectionList;
+  //! the footnote zone id;
+  long m_ftnTextId;
+  //! the footnote begin positions
+  std::vector<long> m_ftnFirstPosList;
   //! the list of text zone
   std::vector<TextZone> m_textZoneList;
   //! a map textId -> id in m_textZoneList
@@ -285,13 +289,13 @@ protected:
   enum Type { S_TextZone, S_String };
 public:
   //! constructor to call a textzone
-  SubDocument(HMWJText &pars, MWAWInputStreamPtr input, long id, int lId=0) :
+  SubDocument(HMWJText &pars, MWAWInputStreamPtr input, long id, long cPos=0) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_type(S_TextZone),
-    m_textParser(&pars), m_id(id), m_localId(lId), m_bookmark("") {}
+    m_textParser(&pars), m_id(id), m_cPos(cPos), m_bookmark("") {}
   //! constructor to send a string
   SubDocument(HMWJText &pars, MWAWInputStreamPtr input, std::string const &text) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_type(S_String),
-    m_textParser(&pars), m_id(0), m_localId(0), m_bookmark(text) {}
+    m_textParser(&pars), m_id(0), m_cPos(0), m_bookmark(text) {}
 
 
   //! destructor
@@ -314,8 +318,8 @@ protected:
   HMWJText *m_textParser;
   //! the subdocument id
   long m_id;
-  //! the local zone id
-  int m_localId;
+  //! the first charecter position
+  long m_cPos;
   //! the bookmark string
   std::string m_bookmark;
 private:
@@ -336,8 +340,8 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     return;
   }
   assert(m_textParser);
-  MWAW_DEBUG_MSG(("HMWJTextInternal::SubDocument::parse: do not know how to send a textZone\n"));
   long pos = m_input->tell();
+  m_textParser->sendText(m_id, m_cPos);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
@@ -349,7 +353,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
   if (m_textParser != sDoc->m_textParser) return true;
   if (m_type != sDoc->m_type) return true;
   if (m_id != sDoc->m_id) return true;
-  if (m_localId != sDoc->m_localId) return true;
+  if (m_cPos != sDoc->m_cPos) return true;
   if (m_bookmark != sDoc->m_bookmark) return true;
   return false;
 }
@@ -467,8 +471,6 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
     s << "Text" << tId++;
     asciiFile.setStream(input);
     asciiFile.open(s.str().c_str());
-    s << ".data";
-    libmwaw::Debug::dumpFile(data, s.str().c_str());
   }
 #endif
 
@@ -499,7 +501,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
 
   std::multimap<long, HMWJTextInternal::PLC>::const_iterator plcIt;
   while (true) {
-    if (cPos) {
+    if (cPos!=fPos) {
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
       f.str("");
@@ -548,7 +550,15 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
             break;
           case 2: {
             expectedChar=0x11;
-            MWAWSubDocumentPtr subdoc(new HMWJTextInternal::SubDocument(*this, input, tkn.m_id, tkn.m_localId));
+            if (tkn.m_localId < 0 && tkn.m_localId >= int(m_state->m_ftnFirstPosList.size())) {
+              MWAW_DEBUG_MSG(("HMWJText::sendText: can not find footnote\n"));
+              f << "[###ftnote]";
+              break;
+            }
+            MWAWSubDocumentPtr subdoc
+            (new HMWJTextInternal::SubDocument
+             (*this, input, m_state->m_ftnTextId,
+              m_state->m_ftnFirstPosList[size_t(tkn.m_localId)]));
             listener->insertNote(MWAWContentListener::FOOTNOTE,subdoc);
             break;
           }
@@ -660,7 +670,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
         } else {
           HMWJTextInternal::Section sec = m_state->m_sectionList[size_t(actSection++)];
           numCol = sec.m_numCols;
-          actCol = 1;
+          actCol = 0;
           if (listener->isSectionOpened())
             listener->closeSection();
           m_mainParser->newPage(++actPage);
@@ -711,6 +721,12 @@ void HMWJText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
     m_state->m_textZoneList[size_t(zId)].m_type=
       HMWJTextInternal::TextZone::Type(it->second);
   }
+}
+
+void HMWJText::updateFootnoteInformations(long const &textZId, std::vector<long> const &fPosList)
+{
+  m_state->m_ftnTextId = textZId;
+  m_state->m_ftnFirstPosList = fPosList;
 }
 
 bool HMWJText::readTextZonesList(MWAWEntry const &entry)

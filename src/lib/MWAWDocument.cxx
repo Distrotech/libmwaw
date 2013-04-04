@@ -150,9 +150,7 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
       confidence = MWAW_CONFIDENCE_GOOD;
       break;
     case HMACJ:
-#ifdef DEBUG
       confidence = MWAW_CONFIDENCE_GOOD;
-#endif
       break;
     case LWTEXT:
       confidence = MWAW_CONFIDENCE_GOOD;

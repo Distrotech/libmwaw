@@ -276,7 +276,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     res.push_back(MWAWHeader(MWAWDocument::HMAC, 1));
   }
   if (val[0]==0x594c && val[1]==0x5953 && val[2]==0x100) {
-    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-J file[no parsing and no output]\n"));
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-J file\n"));
     res.push_back(MWAWHeader(MWAWDocument::HMACJ, 1));
   }
 

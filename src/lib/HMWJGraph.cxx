@@ -894,6 +894,26 @@ std::map<long,int> HMWJGraph::getTextFrameInformations() const
   return mapIdType;
 }
 
+bool HMWJGraph::getFootnoteInformations(long &textZId, std::vector<long> &fPosList) const
+{
+  fPosList.clear();
+  textZId = 0;
+  std::map<long,int> mapIdType;
+  for (size_t f=0; f < m_state->m_framesList.size(); f++) {
+    if (!m_state->m_framesList[f]) continue;
+    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
+    if (!frame.valid() || frame.m_type != 3)
+      continue;
+    HMWJGraphInternal::TextFrame const &text=static_cast<HMWJGraphInternal::TextFrame const &>(frame);
+    if (textZId && text.m_zId != textZId) {
+      MWAW_DEBUG_MSG(("HMWJGraph::readFrames: find different textIds\n"));
+    } else if (!textZId)
+      textZId = text.m_zId;
+    fPosList.push_back(text.m_cPos);
+  }
+  return fPosList.size();
+}
+
 ////////////////////////////////////////////////////////////
 //
 // Intermediate level

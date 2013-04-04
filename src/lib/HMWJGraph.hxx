@@ -169,6 +169,8 @@ protected:
   /** return a list textZId -> type which type=0(main), 1(header),
       2(footer), 3(footnote), 4(textbox), 9(table), 10(comment) */
   std::map<long,int> getTextFrameInformations() const;
+  /** return the footnote text zone id and the list of first char position */
+  bool getFootnoteInformations(long &textZId, std::vector<long> &fPosList) const;
   /** try to send a frame to the listener */
   bool sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   //! ask main parser to send a text zone

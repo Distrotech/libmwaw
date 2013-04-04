@@ -402,6 +402,13 @@ bool HMWJParser::createZones()
   }
   m_textParser->updateTextZoneTypes(idTypeMap);
 
+  // and the footnote
+  long fntTextId;
+  std::vector<long> fntFirstPosList;
+  if (m_graphParser->getFootnoteInformations(fntTextId, fntFirstPosList))
+    m_textParser->updateFootnoteInformations(fntTextId, fntFirstPosList);
+
+
   libmwaw::DebugStream f;
   for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); it++) {
     if (it->second.begin()<=0) continue;

@@ -95,6 +95,8 @@ protected:
   std::vector<long> getTokenIdList() const;
   //! update the text zone type with map id->type
   void updateTextZoneTypes(std::map<long,int> const &idTypeMap);
+  /** update the footnote text zone id and the list of first char position */
+  void updateFootnoteInformations(long const &textZId, std::vector<long> const &fPosList);
 
   //
   // intermediate level
