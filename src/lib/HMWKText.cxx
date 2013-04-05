@@ -46,7 +46,6 @@
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWRSRCParser.hxx"
-#include "MWAWSubDocument.hxx"
 
 #include "HMWKParser.hxx"
 
@@ -91,6 +90,56 @@ struct Paragraph : public MWAWParagraph {
   bool m_addPageBreak;
 };
 
+/** Internal: class to store a section of a HMWKText */
+struct Section {
+  //! constructor
+  Section() : m_numCols(1), m_colWidth(), m_colSep(), m_id(0), m_extra("") {
+  }
+  //! returns a vector corresponding to the col width in point
+  std::vector<int> getColumnWidth() const {
+    std::vector<int> res;
+    if (m_colWidth.size()==0) {
+      MWAW_DEBUG_MSG(("HMWKTextInternal::Section: can not find any width\n"));
+      return res;
+    }
+    if (m_colWidth.size()==size_t(m_numCols)) {
+      for (size_t c=0; c < m_colWidth.size(); c++)
+        res.push_back(int(m_colWidth[c]));
+      return res;
+    }
+    if (m_colWidth.size()>1) {
+      MWAW_DEBUG_MSG(("HMWKTextInternal::Section: colWidth is not coherent with numCols\n"));
+    }
+    res.resize(size_t(m_numCols), int(m_colWidth[0]));
+    return res;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Section const &sec) {
+    if (sec.m_numCols!=1)
+      o << "numCols=" << sec.m_numCols << ",";
+    if (sec.m_colWidth.size()) {
+      o << "colWidth=[";
+      for (size_t i = 0; i < sec.m_colWidth.size(); i++)
+        o << sec.m_colWidth[i] << ":" << sec.m_colSep[i] << ",";
+      o << "],";
+    }
+    if (sec.m_id)
+      o << "id=" << std::hex << sec.m_id << std::dec << ",";
+    o << sec.m_extra;
+    return o;
+  }
+  //! the number of column
+  int m_numCols;
+  //! the columns width
+  std::vector<double> m_colWidth;
+  //! the columns separator width
+  std::vector<double> m_colSep;
+  //! the id
+  long m_id;
+  //! extra string string
+  std::string m_extra;
+};
+
 /** Internal: class to store the token properties of a HMWKText */
 struct Token {
   //! Constructor
@@ -101,7 +150,40 @@ struct Token {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Token const &tkn) {
-    o << "type=" << tkn.m_type << ",";
+    switch(tkn.m_type) {
+    case 0: // main text
+      break;
+    case 1:
+      o << "header,";
+      break;
+    case 2:
+      o << "footer,";
+      break;
+    case 3:
+      o << "footnote[frame],";
+      break;
+    case 4:
+      o << "textbox,";
+      break;
+    case 6:
+      o << "picture,";
+      break;
+    case 8:
+      o << "basicGraphic,";
+      break;
+    case 9:
+      o << "table,";
+      break;
+    case 10:
+      o << "comments,"; // memo
+      break;
+    case 11:
+      o << "group";
+      break;
+    default:
+      o << "#type=" << tkn.m_type << ",";
+      break;
+    }
     o << "id=" << std::hex << tkn.m_id << std::dec << ",";
     o << tkn.m_extra;
     return o;
@@ -118,71 +200,26 @@ struct Token {
 //! Internal: the state of a HMWKText
 struct State {
   //! constructor
-  State() : m_version(-1), m_IdTextMaps(), m_numPages(-1), m_actualPage(0) {
+  State() : m_version(-1), m_IdTextMaps(), m_IdTypeMaps(), m_tokenIdList(), m_sectionList(), m_numPages(-1), m_actualPage(0),
+    m_headerId(0), m_footerId(0) {
   }
 
   //! the file version
   mutable int m_version;
   //! the map of id -> text zone
   std::multimap<long, shared_ptr<HMWKZone> > m_IdTextMaps;
+  //! the zone frame type if known
+  std::map<long,int> m_IdTypeMaps;
+  //! the token id list
+  std::vector<long> m_tokenIdList;
+  //! the list of section
+  std::vector<Section> m_sectionList;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
+  /** the header text zone id or 0*/
+  long m_headerId;
+  /** the footer text zone id or 0*/
+  long m_footerId;
 };
-
-////////////////////////////////////////
-//! Internal: the subdocument of a HMWKText
-class SubDocument : public MWAWSubDocument
-{
-public:
-  SubDocument(HMWKText &pars, MWAWInputStreamPtr input, int id, libmwaw::SubDocumentType type) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_id(id), m_type(type) {}
-
-  //! destructor
-  virtual ~SubDocument() {}
-
-  //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const;
-  //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
-    return !operator!=(doc);
-  }
-
-  //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
-
-protected:
-  /** the text parser */
-  HMWKText *m_textParser;
-  //! the subdocument id
-  int m_id;
-  //! the subdocument type
-  libmwaw::SubDocumentType m_type;
-private:
-  SubDocument(SubDocument const &orig);
-  SubDocument &operator=(SubDocument const &orig);
-};
-
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
-{
-  if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
-    return;
-  }
-  assert(m_textParser);
-
-  long pos = m_input->tell();
-  m_input->seek(pos, WPX_SEEK_SET);
-}
-
-bool SubDocument::operator!=(MWAWSubDocument const &doc) const
-{
-  if (MWAWSubDocument::operator!=(doc)) return true;
-  SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
-  if (!sDoc) return true;
-  if (m_textParser != sDoc->m_textParser) return true;
-  if (m_id != sDoc->m_id) return true;
-  if (m_type != sDoc->m_type) return true;
-  return false;
-}
 }
 
 ////////////////////////////////////////////////////////////
@@ -207,6 +244,37 @@ int HMWKText::version() const
 int HMWKText::numPages() const
 {
   return m_state->m_numPages;
+}
+
+void HMWKText::getHeaderFooterId(long &headerId, long &footerId) const
+{
+  headerId=m_state->m_headerId;
+  footerId=m_state->m_footerId;
+}
+
+std::vector<long> const &HMWKText::getTokenIdList() const
+{
+  return m_state->m_tokenIdList;
+}
+
+void HMWKText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
+{
+  m_state->m_IdTypeMaps=idTypeMap;
+  if (m_state->m_headerId)
+    m_state->m_IdTypeMaps[m_state->m_headerId]=1;
+  if (m_state->m_footerId)
+    m_state->m_IdTypeMaps[m_state->m_footerId]=1;
+  std::multimap<long, shared_ptr<HMWKZone> >::iterator tIt;
+  int numUnkns=0;
+  for (tIt=m_state->m_IdTextMaps.begin(); tIt!=m_state->m_IdTextMaps.end(); tIt++) {
+    if (m_state->m_IdTypeMaps.find(tIt->first)!=m_state->m_IdTypeMaps.end())
+      continue;
+    m_state->m_IdTypeMaps[tIt->first]=0;
+    numUnkns++;
+  }
+  if (numUnkns!=1) {
+    MWAW_DEBUG_MSG(("HMWKText::updateTextZoneTypes: find unexpected number of unknown zone %d\n", numUnkns));
+  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -237,7 +305,7 @@ bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
     if (val != 1 || input->readLong(1) != 0)
       break;
     int type = (int) input->readLong(2);
-    bool done=false;;
+    bool done=false;
     switch(type) {
     case 2: { // ruler
       HMWKTextInternal::Paragraph para;
@@ -246,6 +314,16 @@ bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
         actPage++;
       break;
     }
+    case 3: { // token
+      HMWKTextInternal::Token token;
+      done=readToken(*zone,token);
+      if (done)
+        m_state->m_tokenIdList.push_back(token.m_id);
+      break;
+    }
+    case 4:
+      actPage++;
+      break;
     default:
       break;
     }
@@ -307,6 +385,19 @@ bool HMWKText::sendText(long id, long subId)
   return false;
 }
 
+bool HMWKText::sendMainText()
+{
+  std::multimap<long, int>::iterator tIt=m_state->m_IdTypeMaps.begin();
+  for ( ; tIt!=m_state->m_IdTypeMaps.end(); tIt++) {
+    if (tIt->second != 0)
+      continue;
+    sendText(tIt->first);
+    return true;
+  }
+  MWAW_DEBUG_MSG(("HMWKText::sendText: can not find the main zone\n"));
+  return false;
+}
+
 bool HMWKText::sendText(HMWKZone &zone)
 {
   if (!zone.valid()) {
@@ -331,8 +422,25 @@ bool HMWKText::sendText(HMWKZone &zone)
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
 
+  bool isMain = false;
+  if (m_state->m_IdTypeMaps.find(zone.m_id)!= m_state->m_IdTypeMaps.end())
+    isMain = m_state->m_IdTypeMaps.find(zone.m_id)->second == 0;
   int actPage = 1, actCol = 0, numCol=1, actSection = 1;
   float width = float(72.0*m_mainParser->pageWidth());
+
+  if (isMain)
+    m_mainParser->newPage(1);
+  if (isMain && !m_state->m_sectionList.size()) {
+    MWAW_DEBUG_MSG(("HMWKText::sendText: can not find section 0\n"));
+  } else if (isMain) {
+    HMWKTextInternal::Section sec = m_state->m_sectionList[0];
+    if (sec.m_numCols >= 1 && sec.m_colWidth.size() > 0) {
+      if (listener->isSectionOpened())
+        listener->closeSection();
+      listener->openSection(sec.getColumnWidth(), WPX_POINT);
+      numCol = sec.m_numCols;
+    }
+  }
 
   long val;
   while (!input->atEOS()) {
@@ -348,7 +456,7 @@ bool HMWKText::sendText(HMWKZone &zone)
       break;
     }
     int type = (int) input->readLong(2);
-    bool done=false;;
+    bool done=false;
     switch(type) {
     case 1: {
       f << "font,";
@@ -372,15 +480,49 @@ bool HMWKText::sendText(HMWKZone &zone)
       done=true;
       break;
     }
-    case 3: { // footnote, object?
+    case 3: { // footnote, attachment
       f << "token,";
       HMWKTextInternal::Token token;
       done=readToken(zone,token);
+      if (!done) break;
+      switch(token.m_type) {
+      case 3:
+      case 4:
+      case 6:
+      case 8:
+      case 9:
+      case 10:
+        m_mainParser->sendZone(token.m_id);
+        break;
+      case 11: // group: implement me
+        break;
+      default:
+        MWAW_DEBUG_MSG(("HMWKText::sendText: do not send how to send token with type: %d\n", token.m_type));
+        break;
+      }
       break;
     }
-    case 4: // follow by id?
-      actSection++;
-      f << "section,";
+    case 4:
+      f << "section[new],";
+      if (!isMain) {
+        MWAW_DEBUG_MSG(("HMWKText::sendText: find section in auxilliary block\n"));
+        break;
+      }
+      if (size_t(actSection) >= m_state->m_sectionList.size()) {
+        MWAW_DEBUG_MSG(("HMWKText::sendText: can not find section %d\n", actSection));
+        break;
+      } else {
+        HMWKTextInternal::Section sec = m_state->m_sectionList[size_t(actSection++)];
+        numCol = sec.m_numCols;
+        actCol = 0;
+        if (listener->isSectionOpened())
+          listener->closeSection();
+        m_mainParser->newPage(++actPage);
+        if (numCol >= 1 && sec.m_colWidth.size())
+          listener->openSection(sec.getColumnWidth(), WPX_POINT);
+        else
+          listener->openSection();
+      }
       break;
     case 6: // follow by id?
       f << "toc,";
@@ -468,17 +610,24 @@ bool HMWKText::sendText(HMWKZone &zone)
       }
       case 2:
         f << "[colBreak]";
+        if (!isMain) {
+          MWAW_DEBUG_MSG(("HMWKText::sendText: find column break in auxilliary block\n"));
+          break;
+        }
         if (actCol < numCol-1 && numCol > 1) {
           listener->insertBreak(MWAWContentListener::ColumnBreak);
           actCol++;
         } else {
           actCol = 0;
-          m_mainParser->newPage(actPage++);
+          m_mainParser->newPage(++actPage);
         }
         break;
       case 3:
         f << "[pageBreak]";
-        m_mainParser->newPage(actPage++);
+        if (isMain) {
+          m_mainParser->newPage(++actPage);
+          actCol = 0;
+        }
         break;
       case 9:
         f << char(c);
@@ -1091,7 +1240,7 @@ bool HMWKText::readToken(HMWKZone &zone, HMWKTextInternal::Token &token)
     f << "Entries(Token):";
     first = false;
   } else
-    f << "token:";
+    f << "Token:";
   f << token;
   asciiFile.addPos(pos-4);
   asciiFile.addNote(f.str().c_str());
@@ -1118,52 +1267,74 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
   libmwaw::DebugStream f;
   zone->m_parsed = true;
 
-  f << zone->name() << "(A):PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
+  HMWKTextInternal::Section sec;
   long pos=0;
   input->seek(pos, WPX_SEEK_SET);
   long val = input->readLong(2);
   if (val != 1) // always 1
     f << "f0=" << val << ",";
   int numColumns = (int) input->readLong(2);
-  if (numColumns != 1)
-    f << "nCols=" << numColumns << ",";
-  for (int i= 0; i < 2; i++) { // 1,0
-    val = (long) input->readLong(1);
-    if (val) f << "f" << i+1 << "=" << val << ",";
-  }
+  if (numColumns <= 0 || numColumns > 8) {
+    MWAW_DEBUG_MSG(("HMWKText::readSections: numColumns seems bad\n"));
+    f << "###nCols=" << numColumns << ",";
+    numColumns = 1;
+  } else
+    sec.m_numCols=numColumns;
+  val = (long) input->readLong(1);
+  bool diffWidth=val==0;
+  if (val==1)
+    f << "sameWidth,";
+  else if (val)
+    f << "#width=" << val << ",";
+  val = (long) input->readLong(1); // always 0
+  if (val) f << "f1=" << val << ",";
   for (int i = 0; i < 19; i++) { // always 0
     val = (long) input->readLong(2);
     if (val) f << "g" << i << "=" << val << ",";
   }
 
-  asciiFile.addPos(pos);
-  asciiFile.addNote(f.str().c_str());
-  pos = input->tell();
-  // a small zone which look like similar to some end of printinfo zone(A):
+  if (diffWidth) {
+    for (int i = 0; i < numColumns; i++) {
+      sec.m_colWidth.push_back(double(input->readLong(4))/65536);
+      sec.m_colSep.push_back(double(input->readLong(4))/65536);
+    }
+  } else {
+    sec.m_colWidth.push_back(double(input->readLong(4))/65536);
+    sec.m_colSep.push_back(double(input->readLong(4))/65536);
+  }
+  sec.m_extra = f.str();
+
   f.str("");
-  f << zone->name() << "(B):";
-  float colWidth = float(input->readLong(4))/65536.f;
-  f << "colWidth=" << colWidth << ",";
+  f << zone->name() << "(A):PTR=" << std::hex << zone->fileBeginPos() << std::dec << "," << sec;
+
   asciiFile.addDelimiter(input->tell(),'|');
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
-  input->seek(pos+24, WPX_SEEK_SET);
+  input->seek(pos+0x6c, WPX_SEEK_SET);
 
   pos = input->tell();
   f.str("");
-  f << zone->name() << "(C):";
-  asciiFile.addPos(pos);
-  asciiFile.addNote(f.str().c_str());
-  input->seek(pos+40, WPX_SEEK_SET);
-
-  pos = input->tell();
-  f.str("");
-  f << zone->name() << "(D):";
+  f << zone->name() << "(B):";
   for (int i = 0; i < 4; i++) {
     long id = input->readLong(4);
     if (!id) continue;
-    if (i < 2) f << "headerId=" << std::hex << id << std::dec << ",";
-    else f << "footerId=" << std::hex << id << std::dec << ",";
+    if (i < 2) {
+      if (!m_state->m_headerId)
+        m_state->m_headerId = id;
+      else if (m_state->m_headerId != id) {
+        MWAW_DEBUG_MSG(("HMWKText::readSections: headerid is already defined\n"));
+        f << "###";
+      }
+      f << "headerId=" << std::hex << id << std::dec << ",";
+    } else {
+      if (!m_state->m_footerId)
+        m_state->m_footerId = id;
+      else if (m_state->m_footerId != id) {
+        MWAW_DEBUG_MSG(("HMWKText::readSections: footerid is already defined\n"));
+        f << "###";
+      }
+      f << "footerId=" << std::hex << id << std::dec << ",";
+    }
   }
   for (int i = 0; i < 8; i++) {
     val = input->readLong(2);
@@ -1172,6 +1343,11 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
   asciiFile.addDelimiter(input->tell(),'|');
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
+  if (zone->m_id >= 0) {
+    if (zone->m_id <= int(m_state->m_sectionList.size()))
+      m_state->m_sectionList.resize(size_t(zone->m_id)+1);
+    m_state->m_sectionList[size_t(zone->m_id)]=sec;
+  }
   return true;
 }
 

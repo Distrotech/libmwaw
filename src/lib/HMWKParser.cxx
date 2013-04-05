@@ -86,7 +86,7 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(HMWKParser &pars, MWAWInputStreamPtr input, int zoneId) :
+  SubDocument(HMWKParser &pars, MWAWInputStreamPtr input, long zoneId) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
 
   //! destructor
@@ -106,37 +106,28 @@ public:
     return !operator!=(doc);
   }
 
-  //! returns the subdocument \a id
-  int getId() const {
-    return m_id;
-  }
-  //! sets the subdocument \a id
-  void setId(int vid) {
-    m_id = vid;
-  }
-
   //! the parser function
   void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
-  int m_id;
+  long m_id;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("HMWKParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  if (m_id != 1 && m_id != 2) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
+  if (type != libmwaw::DOC_HEADER_FOOTER) {
+    MWAW_DEBUG_MSG(("HMWKParserInternal::SubDocument::parse: unexpected document type\n"));
     return;
   }
 
   assert(m_parser);
   long pos = m_input->tell();
-  //reinterpret_cast<HMWKParser *>(m_parser)->sendZone(m_id);
+  reinterpret_cast<HMWKParser *>(m_parser)->sendText(m_id, 0);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 }
@@ -176,6 +167,14 @@ bool HMWKParser::sendText(long id, long subId)
 {
   return m_textParser->sendText(id, subId);
 }
+
+bool HMWKParser::sendZone(long zId)
+{
+  MWAWPosition pos(Vec2i(0,0), Vec2i(0,0), WPX_POINT);
+  pos.setRelativePosition(MWAWPosition::Char);
+  return m_graphParser->sendFrame(zId, pos);
+}
+
 bool HMWKParser::getColor(int colId, int patternId, MWAWColor &color) const
 {
   return m_graphParser->getColor(colId, patternId, color);
@@ -248,7 +247,9 @@ void HMWKParser::parse(WPXDocumentInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
-      m_graphParser->sendPageGraphics();
+      std::vector<long> const &tokenIds = m_textParser->getTokenIdList();
+      m_graphParser->sendPageGraphics(tokenIds);
+      m_textParser->sendMainText();
 
       m_textParser->flushExtra();
       m_graphParser->flushExtra();
@@ -286,6 +287,17 @@ void HMWKParser::createDocument(WPXDocumentInterface *documentInterface)
   std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(m_pageSpan);
 
+  long headerId, footerId;
+  m_textParser->getHeaderFooterId(headerId, footerId);
+  if (headerId) {
+    shared_ptr<MWAWSubDocument> subdoc(new HMWKParserInternal::SubDocument(*this, getInput(), headerId));
+    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+  }
+  if (footerId) {
+    shared_ptr<MWAWSubDocument> subdoc(new HMWKParserInternal::SubDocument(*this, getInput(), footerId));
+    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+  }
+
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
   //
@@ -318,6 +330,11 @@ bool HMWKParser::createZones()
     zone->ascii().addPos(0);
     zone->ascii().addNote(f.str().c_str());
   }
+
+  // retrieve the text type and pass information to text parser
+  std::map<long,int> idTypeMap = m_graphParser->getTextFrameInformations();
+  m_textParser->updateTextZoneTypes(idTypeMap);
+
   return true;
 }
 

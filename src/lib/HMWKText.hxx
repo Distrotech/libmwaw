@@ -38,6 +38,8 @@
 #ifndef HMWK_TEXT
 #  define HMWK_TEXT
 
+#include <map>
+
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
@@ -45,13 +47,10 @@ class MWAWFont;
 class MWAWParserState;
 typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
-class MWAWSubDocument;
-
 namespace HMWKTextInternal
 {
 struct Paragraph;
 struct Token;
-class SubDocument;
 struct State;
 }
 
@@ -65,7 +64,6 @@ class HMWKParser;
  */
 class HMWKText
 {
-  friend class HMWKTextInternal::SubDocument;
   friend class HMWKParser;
 public:
   //! constructor
@@ -80,10 +78,18 @@ public:
   int numPages() const;
 
 protected:
+  //! send the main text zone
+  bool sendMainText();
   //! send a text zone
   bool sendText(long id, long subId=0);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
+  //! update the text zone type with map id->type
+  void updateTextZoneTypes(std::map<long,int> const &idTypeMap);
+  //! returns the list of zoneId which corresponds to the token
+  std::vector<long> const &getTokenIdList() const;
+  //! return sthe header/footer id
+  void getHeaderFooterId(long &headerId, long &footerId) const;
 
   //
   // intermediate level

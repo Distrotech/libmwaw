@@ -36,6 +36,7 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <set>
 #include <sstream>
 
 #include <libwpd/libwpd.h>
@@ -110,6 +111,14 @@ struct Frame {
 std::ostream &operator<<(std::ostream &o, Frame const &grph)
 {
   switch(grph.m_type) {
+  case 0: // main text
+    break;
+  case 1:
+    o << "header,";
+    break;
+  case 2:
+    o << "footer,";
+    break;
   case 3:
     o << "footnote[frame],";
     break;
@@ -240,6 +249,35 @@ struct BasicGraph : public Frame {
   float m_cornerDim;
   //! the list of vertices for a polygon
   std::vector<Vec2f> m_listVertices;
+};
+
+////////////////////////////////////////
+//! Internal: the footnote of a HMWKGraph
+struct FootnoteFrame : public Frame {
+  //! constructor
+  FootnoteFrame(Frame const &orig) : Frame(orig), m_textFileId(-1), m_textFileSubId(0) {
+  }
+  //! destructor
+  ~FootnoteFrame() {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, FootnoteFrame const &ftn) {
+    o << ftn.print();
+    o << static_cast<Frame const &>(ftn);
+    return o;
+  }
+  //! print local data
+  std::string print() const {
+    std::stringstream s;
+    if (m_textFileId>0)
+      s << "textFileId=" << std::hex << m_textFileId << "[" << m_textFileSubId << std::dec << "],";
+    return s.str();
+  }
+  //! the text file id
+  long m_textFileId;
+  //! the text file subId
+  long m_textFileSubId;
+
 };
 
 ////////////////////////////////////////
@@ -653,7 +691,7 @@ public:
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_subId(subId), m_pos() {}
 
   //! constructor
-  SubDocument(HMWKGraph &pars, MWAWInputStreamPtr input, MWAWPosition pos, Type type, long id, int subId=0) :
+  SubDocument(HMWKGraph &pars, MWAWInputStreamPtr input, MWAWPosition pos, Type type, long id, long subId=0) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_subId(subId), m_pos(pos) {}
 
   //! destructor
@@ -787,6 +825,47 @@ bool HMWKGraph::sendText(long textId, long id)
   return m_mainParser->sendText(textId, id);
 }
 
+std::map<long,int> HMWKGraph::getTextFrameInformations() const
+{
+  std::map<long,int> mapIdType;
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
+    m_state->m_framesMap.begin();
+  for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
+    if (!fIt->second) continue;
+    HMWKGraphInternal::Frame const &frame = *fIt->second;
+    std::vector<long> listId;
+
+    if (frame.m_type!=3 && frame.m_type!=4 && frame.m_type != 9 && frame.m_type!=10)
+      continue;
+    switch (frame.m_type) {
+    case 3:
+      listId.push_back(static_cast<HMWKGraphInternal::FootnoteFrame const &>(frame).m_textFileId);
+      break;
+    case 4:
+    case 10:
+      listId.push_back(static_cast<HMWKGraphInternal::TextBox const &>(frame).m_textFileId);
+      break;
+    case 9: {
+      HMWKGraphInternal::Table const &table = reinterpret_cast<HMWKGraphInternal::Table const &>(frame);
+      for (size_t c=0; c < table.m_cellsList.size(); c++)
+        listId.push_back(table.m_cellsList[c].m_fileId);
+      break;
+    }
+    default:
+      break;
+    }
+
+    for (size_t i=0; i < listId.size(); i++) {
+      long zId = listId[i];
+      if (mapIdType.find(zId) == mapIdType.end())
+        mapIdType[zId] = frame.m_type;
+      else if (mapIdType.find(zId)->second != frame.m_type) {
+        MWAW_DEBUG_MSG(("HMWKGraph::getTextFrameInformations: id %lx already set\n", zId));
+      }
+    }
+  }
+  return mapIdType;
+}
 ////////////////////////////////////////////////////////////
 //
 // Intermediate level
@@ -867,6 +946,9 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
   asciiFile.addNote(f.str().c_str());
   shared_ptr<HMWKGraphInternal::Frame> frame;
   switch(graph.m_type) {
+  case 3:
+    frame = readFootnoteFrame(zone, graph);
+    break;
   case 4:
   case 10:
     frame = readTextBox(zone, graph,graph.m_type==10);
@@ -1016,6 +1098,15 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
   frame.m_parsed = true;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   switch(frame.m_type) {
+  case 3: {
+    HMWKGraphInternal::FootnoteFrame const &ftnote=
+      reinterpret_cast<HMWKGraphInternal::FootnoteFrame const &>(frame);
+    MWAWSubDocumentPtr subdoc
+    (new HMWKGraphInternal::SubDocument(*this, input, HMWKGraphInternal::SubDocument::Text,
+                                        ftnote.m_textFileId, ftnote.m_textFileSubId));
+    listener->insertNote(MWAWContentListener::FOOTNOTE,subdoc);
+    break;
+  }
   case 4:
   case 10:
     return sendTextBox(reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame), pos, extras);
@@ -1090,7 +1181,6 @@ bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
       pict.reset(new MWAWPictLine(Vec2f(0,0), pictSz));
     else
       pict.reset(new MWAWPictLine(Vec2f(0,pictSz[1]), Vec2f(pictSz[0], 0)));
-
     WPXBinaryData data;
     std::string type;
     if (!pict->getBinary(data,type)) continue;
@@ -1722,6 +1812,43 @@ shared_ptr<HMWKGraphInternal::PictureFrame> HMWKGraph::readPictureFrame(shared_p
   return picture;
 }
 
+// try to read the footnote data
+shared_ptr<HMWKGraphInternal::FootnoteFrame> HMWKGraph::readFootnoteFrame(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header)
+{
+  shared_ptr<HMWKGraphInternal::FootnoteFrame> ftn;
+  if (!zone) {
+    MWAW_DEBUG_MSG(("HMWKGraph::readFootnoteFrame: called without any zone\n"));
+    return ftn;
+  }
+
+  MWAWInputStreamPtr input = zone->m_input;
+  long dataSz = zone->length();
+  long pos = input->tell();
+  if (pos+24 > dataSz) {
+    MWAW_DEBUG_MSG(("HMWKGraph::readFootnoteFrame: the zone seems too short\n"));
+    return ftn;
+  }
+
+  ftn.reset(new HMWKGraphInternal::FootnoteFrame(header));
+  libmwaw::DebugFile &asciiFile = zone->ascii();
+  libmwaw::DebugStream f;
+  long val;
+  for (int i = 0; i < 9; i++) { // always 0?
+    val = input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  ftn->m_textFileSubId = (long) input->readULong(2);
+  ftn->m_textFileId = (long) input->readULong(4);
+  std::string extra = f.str();
+  ftn->m_extra += extra;
+
+  f.str("");
+  f << "FrameDef(footnoteData):" << ftn->print() << extra;
+  asciiFile.addPos(pos);
+  asciiFile.addNote(f.str().c_str());
+  return ftn;
+}
+
 // try to read the textbox data
 shared_ptr<HMWKGraphInternal::TextBox> HMWKGraph::readTextBox(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header, bool isMemo)
 {
@@ -1901,14 +2028,17 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-bool HMWKGraph::sendPageGraphics()
+bool HMWKGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
 {
+  std::set<long> notSend;
+  for (size_t i=0; i < doNotSendIds.size(); i++)
+    notSend.insert(doNotSendIds[i]);
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
   for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
-    if (!fIt->second) continue;
+    if (notSend.find(fIt->first) != notSend.end() || !fIt->second) continue;
     HMWKGraphInternal::Frame const &frame = *fIt->second;
-    if (frame.m_parsed /*|| frame.m_fileId <= 0*/)
+    if (frame.m_parsed || frame.m_type==3)
       continue;
     MWAWPosition pos(frame.m_pos[0],frame.m_pos.size(),WPX_POINT);
     pos.setRelativePosition(MWAWPosition::Page);
@@ -1925,7 +2055,7 @@ void HMWKGraph::flushExtra()
   for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
     if (!fIt->second) continue;
     HMWKGraphInternal::Frame const &frame = *fIt->second;
-    if (frame.m_parsed)
+    if (frame.m_parsed || frame.m_type==3)
       continue;
     MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),WPX_POINT);
     pos.setRelativePosition(MWAWPosition::Char);

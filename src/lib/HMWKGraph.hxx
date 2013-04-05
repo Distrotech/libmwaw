@@ -38,6 +38,7 @@
 #ifndef HMWK_GRAPH
 #  define HMWK_GRAPH
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -59,6 +60,7 @@ namespace HMWKGraphInternal
 {
 struct Frame;
 struct BasicGraph;
+struct FootnoteFrame;
 struct Group;
 struct PictureFrame;
 struct Table;
@@ -102,7 +104,7 @@ protected:
   bool getColor(int colId, int patternId, MWAWColor &color) const;
 
   //! try to send the page graphic
-  bool sendPageGraphics();
+  bool sendPageGraphics(std::vector<long> const &doNotSendIds);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
@@ -126,6 +128,9 @@ protected:
 
   //! ask main parser to send a text zone
   bool sendText(long textId, long id);
+  /** return a list textZId -> type which
+      3(footnote), 4(textbox), 9(table), 10(comment) */
+  std::map<long,int> getTextFrameInformations() const;
 
   //
   // low level
@@ -161,6 +166,8 @@ protected:
 
   /** try to read the basic graph data */
   shared_ptr<HMWKGraphInternal::BasicGraph> readBasicGraph(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
+  /** try to read the footnote data */
+  shared_ptr<HMWKGraphInternal::FootnoteFrame> readFootnoteFrame(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
   /** try to read the group data */
   shared_ptr<HMWKGraphInternal::Group> readGroup(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
   /** try to read the picture data */

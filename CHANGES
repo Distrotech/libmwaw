@@ -1,6 +1,14 @@
 CHANGES:
+04/04/2013:
+- add parser for HanMac Word-J document
+- HanMac Word-K: retrieve header/footer, footnote, section, ...
 
-08/04/2013:
+12/03/2013: ----- version 1.8 ---------
+
+12/03/2013:
+- skip version 1.6 ( to be coherent with tag )
+
+08/03/2013:
 - check that HanMac Word-K and Microsoft Works parser use all
   the paragraph properties
 - refactoring of the windows building by Fridrich Strba + many
@@ -27,7 +35,7 @@ CHANGES:
 02/06/2013:
 - add a parser for eDOC v2.1 document
 
-01/30/2013: ----- version 1.6 ---------
+01/30/2013: ----- version 1.7 ---------
 
 01/30/2013
 - update Mariner Write and Microsoft Word to use new font properties,

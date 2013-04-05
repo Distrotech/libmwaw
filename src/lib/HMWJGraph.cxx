@@ -781,7 +781,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     m_graphParser->sendTableUnformatted(m_id);
     break;
   default:
-    MWAW_DEBUG_MSG(("HMWKGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
+    MWAW_DEBUG_MSG(("HMWJGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
     break;
   }
   m_input->seek(pos, WPX_SEEK_SET);

@@ -220,6 +220,8 @@ protected:
 
   // interface with the graph parser
 
+  //! send a zone
+  bool sendZone(long zId);
   //! returns the color associated with a pattern
   bool getColor(int colId, int patternId, MWAWColor &color) const;
 

@@ -2051,6 +2051,7 @@ bool HMWJText::readSections(MWAWEntry const &entry)
     if (numCol<=0 || numCol > 8) {
       MWAW_DEBUG_MSG(("HMWJText::readSections: can not determine the num of columns\n"));
       f << "#numCols=" << numCol << ",";
+      numCol = 1;
     } else
       sec.m_numCols=numCol;
     bool differentWidth=(val & 0xFFF) == 0;
