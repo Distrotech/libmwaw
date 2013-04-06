@@ -1114,6 +1114,13 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
     HMWKGraphInternal::PictureFrame const &pict =
       reinterpret_cast<HMWKGraphInternal::PictureFrame const &>(frame);
     if (pict.m_fileId==0) {
+      Vec2f sz(pos.size());
+      if (sz[0] <= 0 || sz[1] <= 0)
+        sz=pict.m_pos.size();
+      if (sz[0] < 0) sz.setX(-sz[0]);
+      if (sz[1] < 0) sz.setY(-sz[1]);
+      pos.setSize(sz);
+
       MWAWPosition framePos(pos);
       framePos.m_anchorTo = MWAWPosition::Frame;
       framePos.setOrigin(Vec2f(0,0));

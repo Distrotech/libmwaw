@@ -2235,6 +2235,13 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
     HMWJGraphInternal::PictureFrame const &pict =
       static_cast<HMWJGraphInternal::PictureFrame const &>(frame);
     if (!pict.m_entry.valid()) {
+      Vec2f sz(pos.size());
+      if (sz[0] <= 0 || sz[1] <= 0)
+        sz=pict.m_pos.size();
+      if (sz[0] < 0) sz.setX(-sz[0]);
+      if (sz[1] < 0) sz.setY(-sz[1]);
+      pos.setSize(sz);
+
       frame.m_parsed = true;
       MWAWPosition framePos(pos);
       framePos.m_anchorTo = MWAWPosition::Frame;

@@ -90,6 +90,9 @@ struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() : MWAWParagraph() {
     m_marginsUnit = WPX_POINT;
+    m_margins[0] = 0;
+    m_margins[1] = 72.0;
+    m_margins[2] = 72.0-28.0;
     for(int i = 0; i < 8; i++)
       m_values[i] = 0;
   }

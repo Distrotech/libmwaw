@@ -387,7 +387,7 @@ bool HMWKText::sendText(long id, long subId)
 
 bool HMWKText::sendMainText()
 {
-  std::multimap<long, int>::iterator tIt=m_state->m_IdTypeMaps.begin();
+  std::map<long, int>::iterator tIt=m_state->m_IdTypeMaps.begin();
   for ( ; tIt!=m_state->m_IdTypeMaps.end(); tIt++) {
     if (tIt->second != 0)
       continue;
