@@ -1109,9 +1109,9 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
   }
   // update the paragraph
   para.m_borders.resize(6);
-  MWAWBorder::Pos const (which[5]) = {
-    MWAWBorder::Top, MWAWBorder::Left, MWAWBorder::Bottom, MWAWBorder::Right,
-    MWAWBorder::VMiddle
+  libmwaw::Position const (which[5]) = {
+    libmwaw::Top, libmwaw::Left, libmwaw::Bottom, libmwaw::Right,
+    libmwaw::VMiddle
   };
   for (int d=0; d < 5; d++) {
     if (borders[d].m_width <= 0)

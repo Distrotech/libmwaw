@@ -77,7 +77,7 @@ struct Border {
       res.resize(4,border);
     else {
       res.resize(4);
-      res[MWAWBorder::Bottom]=border;
+      res[libmwaw::Bottom]=border;
     }
     return res;
   }

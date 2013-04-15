@@ -94,7 +94,6 @@ bool HeaderFooter::operator==(shared_ptr<HeaderFooter> const &hF) const
 // ----------------- MWAWPageSpan ------------------------
 MWAWPageSpan::MWAWPageSpan() :
   m_formLength(11.0), m_formWidth(8.5), m_formOrientation(MWAWPageSpan::PORTRAIT),
-  m_marginLeft(1.0), m_marginRight(1.0), m_marginTop(1.0), m_marginBottom(1.0),
   m_backgroundColor(MWAWColor::white()),
   m_pageNumberPosition(None),
   m_pageNumber(-1),
@@ -104,6 +103,7 @@ MWAWPageSpan::MWAWPageSpan() :
   m_headerFooterList(),
   m_pageSpan(1)
 {
+  for (int i = 0; i < 4; i++) m_margins[i] = 1.0;
 }
 
 MWAWPageSpan::~MWAWPageSpan()
@@ -150,13 +150,13 @@ void MWAWPageSpan::setHeaderFooter(const HeaderFooterType type, const HeaderFoot
 
 void MWAWPageSpan::checkMargins()
 {
-  if (m_marginLeft+m_marginRight > 0.95*m_formWidth) {
+  if (m_margins[libmwaw::Left]+m_margins[libmwaw::Right] > 0.95*m_formWidth) {
     MWAW_DEBUG_MSG(("MWAWPageSpan::checkMargins: left/right margins seems bad\n"));
-    m_marginLeft = m_marginRight = 0.05*m_formWidth;
+    m_margins[libmwaw::Left] = m_margins[libmwaw::Right] = 0.05*m_formWidth;
   }
-  if (m_marginTop+m_marginBottom > 0.95*m_formLength) {
+  if (m_margins[libmwaw::Top]+m_margins[libmwaw::Bottom] > 0.95*m_formLength) {
     MWAW_DEBUG_MSG(("MWAWPageSpan::checkMargins: top/bottom margins seems bad\n"));
-    m_marginTop = m_marginBottom = 0.05*m_formLength;
+    m_margins[libmwaw::Top] = m_margins[libmwaw::Bottom] = 0.05*m_formLength;
   }
 }
 

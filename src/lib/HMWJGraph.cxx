@@ -1659,7 +1659,7 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
     float patPercent;
     format.m_borders.resize(4);
     static char const *(what[]) = {"T", "L", "B", "R"};
-    static size_t const which[] = { MWAWBorder::Top, MWAWBorder::Left, MWAWBorder::Bottom, MWAWBorder::Right };
+    static size_t const which[] = { libmwaw::Top, libmwaw::Left, libmwaw::Bottom, libmwaw::Right };
     for (int b=0; b < 4; b++) {
       f2.str("");
       MWAWBorder border;
@@ -2066,7 +2066,7 @@ bool HMWJGraph::sendTableCell(HMWJGraphInternal::TableCell const &cell,
   if (cell.m_formatId >= 0 && size_t(cell.m_formatId) < lFormat.size()) {
     HMWJGraphInternal::CellFormat const &format = lFormat[size_t(cell.m_formatId)];
     fCell.setBackgroundColor(format.m_backColor);
-    static int const (wh[]) = { MWAWBorder::LeftBit,  MWAWBorder::RightBit, MWAWBorder::TopBit, MWAWBorder::BottomBit};
+    static int const (wh[]) = { libmwaw::LeftBit,  libmwaw::RightBit, libmwaw::TopBit, libmwaw::BottomBit};
     for (size_t b = 0; b < format.m_borders.size(); b++)
       fCell.setBorders(wh[b], format.m_borders[b]);
   } else {

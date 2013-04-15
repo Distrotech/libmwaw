@@ -374,8 +374,8 @@ struct Cell : public MWAWTableCell {
   virtual bool send(MWAWContentListenerPtr listener) {
     if (!listener) return true;
     // fixme
-    int const borderPos = MWAWBorder::TopBit | MWAWBorder::RightBit |
-                          MWAWBorder::BottomBit | MWAWBorder::LeftBit;
+    int const borderPos = libmwaw::TopBit | libmwaw::RightBit |
+                          libmwaw::BottomBit | libmwaw::LeftBit;
 
     MWAWCell cell;
     MWAWBorder border;

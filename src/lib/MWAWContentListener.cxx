@@ -122,6 +122,7 @@ struct State {
   bool m_isTableColumnOpened;
   bool m_isTableCellOpened;
 
+  MWAWPageSpan m_pageSpan;
   unsigned m_currentPage;
   int m_numPagesRemainingInSpan;
   int m_currentPageNumber;
@@ -130,15 +131,6 @@ struct State {
   int m_numColumns;
   std::vector < MWAWColumnDefinition > m_textColumns;
   bool m_isTextColumnWithoutParagraph;
-
-  double m_pageFormLength;
-  double m_pageFormWidth;
-  bool m_pageFormOrientationIsPortrait;
-
-  double m_pageMarginLeft;
-  double m_pageMarginRight;
-  double m_pageMarginTop;
-  double m_pageMarginBottom;
 
   std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
 
@@ -173,21 +165,12 @@ State::State() :
   m_isTableOpened(false), m_isTableRowOpened(false), m_isTableColumnOpened(false),
   m_isTableCellOpened(false),
 
-  m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
+  m_pageSpan(), m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
 
   m_sectionAttributesChanged(false),
   m_numColumns(1),
   m_textColumns(),
   m_isTextColumnWithoutParagraph(false),
-
-  m_pageFormLength(11.0),
-  m_pageFormWidth(8.5f),
-  m_pageFormOrientationIsPortrait(true),
-
-  m_pageMarginLeft(1.0),
-  m_pageMarginRight(1.0),
-  m_pageMarginTop(1.0),
-  m_pageMarginBottom(1.0),
 
   m_listOrderedLevels(),
 
@@ -630,15 +613,7 @@ void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
     m_documentInterface->openPageSpan(propList);
 
   m_ps->m_isPageSpanOpened = true;
-
-  m_ps->m_pageFormLength = currentPage.getFormLength();
-  m_ps->m_pageFormWidth = currentPage.getFormWidth();
-  m_ps->m_pageMarginLeft = currentPage.getMarginLeft();
-  m_ps->m_pageMarginRight = currentPage.getMarginRight();
-  m_ps->m_pageFormOrientationIsPortrait =
-    currentPage.getFormOrientation() == MWAWPageSpan::PORTRAIT;
-  m_ps->m_pageMarginTop = currentPage.getMarginTop();
-  m_ps->m_pageMarginBottom = currentPage.getMarginBottom();
+  m_ps->m_pageSpan = currentPage;
 
   // we insert the header footer
   if (sendHeaderFooters)
@@ -1244,8 +1219,7 @@ void MWAWContentListener::_handleFrameParameters
     propList.insert("text:anchor-type", what.c_str());
     propList.insert("style:vertical-rel", what.c_str());
     propList.insert("style:horizontal-rel", what.c_str());
-    double w = m_ps->m_pageFormWidth - m_ps->m_pageMarginLeft
-               - m_ps->m_pageMarginRight - m_ps->m_paragraph.getMarginsWidth();
+    double w = m_ps->m_pageSpan.getPageWidth() - m_ps->m_paragraph.getMarginsWidth();
     w *= inchFactor;
     switch ( pos.m_xPos) {
     case MWAWPosition::XRight:
@@ -1285,8 +1259,8 @@ void MWAWContentListener::_handleFrameParameters
     // Page position seems to do not use the page margin...
     propList.insert("text:anchor-type", "page");
     if (pos.page() > 0) propList.insert("text:anchor-page-number", pos.page());
-    double  w = m_ps->m_pageFormWidth;
-    double h = m_ps->m_pageFormLength;
+    double w = m_ps->m_pageSpan.getFormWidth();
+    double h = m_ps->m_pageSpan.getFormLength();
     w *= inchFactor;
     h *= inchFactor;
 
@@ -1407,8 +1381,7 @@ void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libm
 
   switch(subDocumentType) {
   case libmwaw::DOC_TEXT_BOX:
-    m_ps->m_pageMarginLeft = m_ps->m_pageMarginRight =
-                               m_ps->m_pageMarginTop = m_ps->m_pageMarginBottom = 0.0;
+    m_ps->m_pageSpan.setMargins(0.0);
     m_ps->m_sectionAttributesChanged = true;
     break;
   case libmwaw::DOC_HEADER_FOOTER:
@@ -1667,16 +1640,16 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
     std::string property = borders[c].getPropertyValue();
     if (property.length() == 0) continue;
     switch(c) {
-    case MWAWBorder::Left:
+    case libmwaw::Left:
       propList.insert("fo:border-left", property.c_str());
       break;
-    case MWAWBorder::Right:
+    case libmwaw::Right:
       propList.insert("fo:border-right", property.c_str());
       break;
-    case MWAWBorder::Top:
+    case libmwaw::Top:
       propList.insert("fo:border-top", property.c_str());
       break;
-    case MWAWBorder::Bottom:
+    case libmwaw::Bottom:
       propList.insert("fo:border-bottom", property.c_str());
       break;
     default:
@@ -1758,13 +1731,7 @@ shared_ptr<MWAWContentListenerInternal::State> MWAWContentListener::_pushParsing
   m_ps.reset(new MWAWContentListenerInternal::State);
 
   // BEGIN: copy page properties into the new parsing state
-  m_ps->m_pageFormLength = actual->m_pageFormLength;
-  m_ps->m_pageFormWidth = actual->m_pageFormWidth;
-  m_ps->m_pageFormOrientationIsPortrait =	actual->m_pageFormOrientationIsPortrait;
-  m_ps->m_pageMarginLeft = actual->m_pageMarginLeft;
-  m_ps->m_pageMarginRight = actual->m_pageMarginRight;
-  m_ps->m_pageMarginTop = actual->m_pageMarginTop;
-  m_ps->m_pageMarginBottom = actual->m_pageMarginBottom;
+  m_ps->m_pageSpan = actual->m_pageSpan;
 
   m_ps->m_isNote = actual->m_isNote;
 

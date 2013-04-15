@@ -1704,8 +1704,8 @@ bool MSWText::sendTable(MSWTextInternal::Property const &prop)
       MWAWCell cell;
       size_t cellPos = r*numCols+c;
       if (cellPos < numCells && table.m_cells[cellPos].isSet()) {
-        int const wh[] = { MWAWBorder::TopBit, MWAWBorder::LeftBit,
-                           MWAWBorder::BottomBit, MWAWBorder::RightBit
+        int const wh[] = { libmwaw::TopBit, libmwaw::LeftBit,
+                           libmwaw::BottomBit, libmwaw::RightBit
                          };
         MSWStruct::Table::Cell const &tCell = table.m_cells[cellPos].get();
         for (size_t i = 0; i < 4 && i < tCell.m_borders.size(); i++) {

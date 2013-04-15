@@ -84,19 +84,27 @@ public:
   }
   //! returns the left margin
   double getMarginLeft() const {
-    return m_marginLeft;
+    return m_margins[libmwaw::Left];
   }
   //! returns the right margin
   double getMarginRight() const {
-    return m_marginRight;
+    return m_margins[libmwaw::Right];
   }
   //! returns the top margin
   double getMarginTop() const {
-    return m_marginTop;
+    return m_margins[libmwaw::Top];
   }
   //! returns the bottom margin
   double getMarginBottom() const {
-    return m_marginBottom;
+    return m_margins[libmwaw::Bottom];
+  }
+  //! returns the page length (form width without margin )
+  double getPageLength() const {
+    return m_formLength-m_margins[libmwaw::Top]-m_margins[libmwaw::Bottom];
+  }
+  //! returns the page width (form width without margin )
+  double getPageWidth() const {
+    return m_formWidth-m_margins[libmwaw::Left]-m_margins[libmwaw::Right];
   }
   //! returns the background color
   MWAWColor backgroundColor() const {
@@ -141,19 +149,31 @@ public:
   }
   //! set the page left margin
   void setMarginLeft(const double marginLeft) {
-    m_marginLeft = (marginLeft > 0) ? marginLeft : 0.01;
+    m_margins[libmwaw::Left] = (marginLeft > 0) ? marginLeft : 0.01;
   }
   //! set the page right margin
   void setMarginRight(const double marginRight) {
-    m_marginRight = (marginRight > 0) ? marginRight : 0.01;
+    m_margins[libmwaw::Right] = (marginRight > 0) ? marginRight : 0.01;
   }
   //! set the page top margin
   void setMarginTop(const double marginTop) {
-    m_marginTop =(marginTop > 0) ? marginTop : 0.01;
+    m_margins[libmwaw::Top] =(marginTop > 0) ? marginTop : 0.01;
   }
   //! set the page bottom margin
   void setMarginBottom(const double marginBottom) {
-    m_marginBottom = (marginBottom > 0) ? marginBottom : 0.01;
+    m_margins[libmwaw::Bottom] = (marginBottom > 0) ? marginBottom : 0.01;
+  }
+  //! set all the margins
+  void setMargins(double margin, int wh=libmwaw::LeftBit|libmwaw::RightBit|libmwaw::TopBit|libmwaw::BottomBit) {
+    if (margin < 0.0) margin = 0.0;
+    if (wh&libmwaw::LeftBit)
+      m_margins[libmwaw::Left]=margin;
+    if (wh&libmwaw::RightBit)
+      m_margins[libmwaw::Right]=margin;
+    if (wh&libmwaw::TopBit)
+      m_margins[libmwaw::Top]=margin;
+    if (wh&libmwaw::BottomBit)
+      m_margins[libmwaw::Bottom]=margin;
   }
   //! check if the page margins are consistent with the page dimension, if not update them
   void checkMargins();
@@ -201,9 +221,11 @@ protected:
   void _insertPageNumberParagraph(WPXDocumentInterface *documentInterface);
 private:
   double m_formLength, m_formWidth;
+  /** the form orientation */
   FormOrientation m_formOrientation;
-  double m_marginLeft, m_marginRight;
-  double m_marginTop, m_marginBottom;
+  /** the margins: libmwaw::Left, ... */
+  double m_margins[4];
+  /** the page background color: default white */
   MWAWColor m_backgroundColor;
   PageNumberPosition m_pageNumberPosition;
   int m_pageNumber;

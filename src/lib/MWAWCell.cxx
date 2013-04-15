@@ -42,25 +42,25 @@
 
 void MWAWCellFormat::setBorders(int wh, MWAWBorder const &border)
 {
-  int const allBits = MWAWBorder::LeftBit|MWAWBorder::RightBit|MWAWBorder::TopBit|MWAWBorder::BottomBit|MWAWBorder::HMiddleBit|MWAWBorder::VMiddleBit;
+  int const allBits = libmwaw::LeftBit|libmwaw::RightBit|libmwaw::TopBit|libmwaw::BottomBit|libmwaw::HMiddleBit|libmwaw::VMiddleBit;
   if (wh & (~allBits)) {
     MWAW_DEBUG_MSG(("MWAWCellFormat::setBorders: unknown borders\n"));
     return;
   }
   size_t numData = 4;
-  if (wh & (MWAWBorder::HMiddleBit|MWAWBorder::VMiddleBit))
+  if (wh & (libmwaw::HMiddleBit|libmwaw::VMiddleBit))
     numData=6;
   if (m_bordersList.size() < numData) {
     MWAWBorder emptyBorder;
     emptyBorder.m_style = MWAWBorder::None;
     m_bordersList.resize(numData, emptyBorder);
   }
-  if (wh & MWAWBorder::LeftBit) m_bordersList[MWAWBorder::Left] = border;
-  if (wh & MWAWBorder::RightBit) m_bordersList[MWAWBorder::Right] = border;
-  if (wh & MWAWBorder::TopBit) m_bordersList[MWAWBorder::Top] = border;
-  if (wh & MWAWBorder::BottomBit) m_bordersList[MWAWBorder::Bottom] = border;
-  if (wh & MWAWBorder::HMiddleBit) m_bordersList[MWAWBorder::HMiddle] = border;
-  if (wh & MWAWBorder::VMiddleBit) m_bordersList[MWAWBorder::VMiddle] = border;
+  if (wh & libmwaw::LeftBit) m_bordersList[libmwaw::Left] = border;
+  if (wh & libmwaw::RightBit) m_bordersList[libmwaw::Right] = border;
+  if (wh & libmwaw::TopBit) m_bordersList[libmwaw::Top] = border;
+  if (wh & libmwaw::BottomBit) m_bordersList[libmwaw::Bottom] = border;
+  if (wh & libmwaw::HMiddleBit) m_bordersList[libmwaw::HMiddle] = border;
+  if (wh & libmwaw::VMiddleBit) m_bordersList[libmwaw::VMiddle] = border;
 }
 
 int MWAWCellFormat::compare(MWAWCellFormat const &cell) const

@@ -203,10 +203,10 @@ struct TableData {
   int getBorderList() const {
     int res = 0;
     // checkme : 0, 80 = no border but what about the other bytes ...
-    if (m_flags[0]&0xf) res |= MWAWBorder::TopBit;
-    if (m_flags[1]&0xf) res |= MWAWBorder::RightBit;
-    if (m_flags[2]&0xf) res |= MWAWBorder::BottomBit;
-    if (m_flags[3]&0xf) res |= MWAWBorder::LeftBit;
+    if (m_flags[0]&0xf) res |= libmwaw::TopBit;
+    if (m_flags[1]&0xf) res |= libmwaw::RightBit;
+    if (m_flags[2]&0xf) res |= libmwaw::BottomBit;
+    if (m_flags[3]&0xf) res |= libmwaw::LeftBit;
     return res;
   }
   //! operator<<

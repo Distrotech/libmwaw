@@ -769,14 +769,14 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
       if (m_borders.size() < 4)
         m_borders.resize(4);
       if (val & 0x1)
-        m_borders[MWAWBorder::Top] = m_bordersStyle.get();
+        m_borders[libmwaw::Top] = m_bordersStyle.get();
       if (val & 0x2)
-        m_borders[MWAWBorder::Bottom] = m_bordersStyle.get();
+        m_borders[libmwaw::Bottom] = m_bordersStyle.get();
       // val & 0x4
       if ((val & 0x4) || val==0x10)
-        m_borders[MWAWBorder::Left] = m_bordersStyle.get();
+        m_borders[libmwaw::Left] = m_bordersStyle.get();
       if (val & 0x8)
-        m_borders[MWAWBorder::Right] = m_bordersStyle.get();
+        m_borders[libmwaw::Right] = m_bordersStyle.get();
       return true;
     } else if (val)
       f << "#borders=" << val << ",";
@@ -977,8 +977,8 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     if (bExtra.length())
       f << "bord" << (c-0x1e) << "[" << bExtra << "],";
     if (c < 0x22) {
-      size_t const wh[] = { MWAWBorder::Top, MWAWBorder::Left,
-                            MWAWBorder::Bottom, MWAWBorder::Right
+      size_t const wh[] = { libmwaw::Top, libmwaw::Left,
+                            libmwaw::Bottom, libmwaw::Right
                           };
       size_t p = wh[c-0x1e];
       if (m_borders.size() <= p)
@@ -987,8 +987,8 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     } else {
       if (m_borders.size() < 6)
         m_borders.resize(6);
-      m_borders[MWAWBorder::HMiddle] = border;
-      m_borders[MWAWBorder::VMiddle] = border;
+      m_borders[libmwaw::HMiddle] = border;
+      m_borders[libmwaw::VMiddle] = border;
     }
     break;
   }

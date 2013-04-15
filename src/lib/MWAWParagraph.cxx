@@ -267,16 +267,16 @@ void MWAWParagraph::addTo(WPXPropertyList &propList, bool inTable) const
           break;
         }
         switch(w) {
-        case MWAWBorder::Left:
+        case libmwaw::Left:
           propList.insert("fo:border-left", property.c_str());
           break;
-        case MWAWBorder::Right:
+        case libmwaw::Right:
           propList.insert("fo:border-right", property.c_str());
           break;
-        case MWAWBorder::Top:
+        case libmwaw::Top:
           propList.insert("fo:border-top", property.c_str());
           break;
-        case MWAWBorder::Bottom:
+        case libmwaw::Bottom:
           propList.insert("fo:border-bottom", property.c_str());
           break;
         default:

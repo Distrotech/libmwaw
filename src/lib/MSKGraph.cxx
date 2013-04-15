@@ -2480,8 +2480,8 @@ void MSKGraph::sendTable(int zoneId)
   for (size_t c = 0; c < nCols; c++) colsDims[c] = float(table.m_colsDim[c]);
   listener->openTable(colsDims, WPX_POINT);
 
-  int const borderPos = MWAWBorder::TopBit | MWAWBorder::RightBit |
-                        MWAWBorder::BottomBit | MWAWBorder::LeftBit;
+  int const borderPos = libmwaw::TopBit | libmwaw::RightBit |
+                        libmwaw::BottomBit | libmwaw::LeftBit;
   MWAWBorder border;
   MWAWParagraph para;
   para.m_justify=MWAWParagraph::JustificationCenter;

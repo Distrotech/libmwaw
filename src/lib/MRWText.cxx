@@ -98,7 +98,7 @@ struct Paragraph : public MWAWParagraph {
       m_backgroundColor=m_paraFill.getBackgroundColor(percent);
     if (!m_paraFill.hasBorders())
       return;
-    static int const wh[] = { MWAWBorder::Left, MWAWBorder::Top, MWAWBorder::Right, MWAWBorder::Bottom };
+    static int const wh[] = { libmwaw::Left, libmwaw::Top, libmwaw::Right, libmwaw::Bottom };
     m_borders.resize(4);
     for (int i = 0; i < 4; i++) {
       if (m_paraFill.m_borderTypes[i] <=0)
@@ -112,7 +112,7 @@ struct Paragraph : public MWAWParagraph {
       cell.setBackgroundColor(m_cellFill.getBackgroundColor(percent));
     if (!m_cellFill.hasBorders())
       return;
-    static int const wh[] = { MWAWBorder::LeftBit, MWAWBorder::TopBit, MWAWBorder::RightBit, MWAWBorder::BottomBit };
+    static int const wh[] = { libmwaw::LeftBit, libmwaw::TopBit, libmwaw::RightBit, libmwaw::BottomBit };
     for (int i = 0; i < 4; i++) {
       if (m_cellFill.m_borderTypes[i] <=0)
         continue;

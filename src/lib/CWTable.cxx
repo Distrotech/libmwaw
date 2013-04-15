@@ -352,7 +352,7 @@ void CWTable::updateCell(CWTableInternal::Cell const &cell, MWAWCell &rCell, WPX
         bord.m_width = (float) graph.m_lineWidth;
       bord.m_color = graph.getLineColor();
     }
-    static int const wh[] = { MWAWBorder::LeftBit, MWAWBorder::TopBit, MWAWBorder::RightBit, MWAWBorder::BottomBit};
+    static int const wh[] = { libmwaw::LeftBit, libmwaw::TopBit, libmwaw::RightBit, libmwaw::BottomBit};
     rCell.setBorders(wh[w], bord);
   }
 }

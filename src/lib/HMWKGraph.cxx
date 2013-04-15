@@ -1481,7 +1481,7 @@ bool HMWKGraph::sendTableCell(HMWKGraphInternal::TableCell const &cell)
   if (span[1]<1) span[1]=1;
   fCell.setNumSpannedCells(Vec2i(span[1],span[0]));
   fCell.setBackgroundColor(cell.m_backColor);
-  static int const (wh[]) = { MWAWBorder::LeftBit,  MWAWBorder::RightBit, MWAWBorder::TopBit, MWAWBorder::BottomBit};
+  static int const (wh[]) = { libmwaw::LeftBit,  libmwaw::RightBit, libmwaw::TopBit, libmwaw::BottomBit};
   for (size_t b = 0; b < cell.m_borders.size(); b++)
     fCell.setBorders(wh[b], cell.m_borders[b]);
   if (cell.m_flags&1) fCell.setVAlignement(MWAWCell::VALIGN_CENTER);
@@ -1975,7 +1975,7 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
 
     cell.m_borders.resize(4);
     static char const *(what[]) = {"T", "L", "B", "R"};
-    static size_t const which[] = { MWAWBorder::Top, MWAWBorder::Left, MWAWBorder::Bottom, MWAWBorder::Right };
+    static size_t const which[] = { libmwaw::Top, libmwaw::Left, libmwaw::Bottom, libmwaw::Right };
     for (int b = 0; b < 4; b++) { // find _,4000,_,_,1,_, and 1,_,_,_,1,_,
       f2.str("");
       MWAWBorder border;
