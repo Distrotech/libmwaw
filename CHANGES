@@ -1,14 +1,20 @@
 CHANGES:
+04/14/2013:
+- check that the Microsoft Word parser use all
+  the paragraph properties
+- improve a little the Microsoft Word filter to better manage
+  character and paragraph properties
+
 04/04/2013:
 - add parser for HanMac Word-J document
 - HanMac Word-K: retrieve header/footer, footnote, section, ...
 
-12/03/2013: ----- version 1.8 ---------
+03/12/2013: ----- version 1.8 ---------
 
-12/03/2013:
+03/12/2013:
 - skip version 1.6 ( to be coherent with tag )
 
-08/03/2013:
+03/08/2013:
 - check that HanMac Word-K and Microsoft Works parser use all
   the paragraph properties
 - refactoring of the windows building by Fridrich Strba + many

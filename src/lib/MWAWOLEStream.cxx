@@ -261,7 +261,7 @@ bool Header::valid()
   if( m_threshold != 4096 ) return false;
   if( m_num_bat == 0 ) return false;
   if( (m_num_bat > 109) && (m_num_bat > (m_num_mbat * (m_size_bbat/4-1)) + 109)) return false;
-  if( (m_num_bat < 109) && (m_num_mbat != 0) ) return false;
+  if( (m_num_bat <= 109) && (m_num_mbat != 0) ) return false;
   if( m_shift_sbat > m_shift_bbat ) return false;
   if( m_shift_bbat <= 6 ) return false;
   if( m_shift_bbat >=31 ) return false;
@@ -1419,7 +1419,6 @@ public:
 
 private:
   unsigned long read( unsigned long pos, unsigned char *data, unsigned long maxlen );
-  void updateCache();
 
   // no copy or assign
   IStream( const IStream & );
@@ -1436,10 +1435,6 @@ private:
   //! pointer to the actual position
   unsigned long m_pos;
 
-  // simple cache system to speed-up getch()
-  std::vector<unsigned char> m_cache_data;
-  unsigned long m_cache_size;
-  unsigned long m_cache_pos;
 };
 
 IStream::IStream( IStorage *s, std::string const &name) :
@@ -1447,10 +1442,7 @@ IStream::IStream( IStorage *s, std::string const &name) :
   m_size(0),
   m_name(name),
   m_blocks(),
-  m_pos(0),
-  m_cache_data(),
-  m_cache_size(4096),
-  m_cache_pos(0)
+  m_pos(0)
 {
   if( !name.length() || !s) return;
   DirEntry *e = s->entry( name );
@@ -1460,21 +1452,6 @@ IStream::IStream( IStorage *s, std::string const &name) :
     m_blocks = m_io->bbat().follow( e->m_start );
   else
     m_blocks = m_io->sbat().follow( e->m_start );
-
-  // prepare cache
-  m_cache_data = std::vector<unsigned char>(m_cache_size);
-  updateCache();
-}
-
-void IStream::updateCache()
-{
-  // sanity check
-  if( m_cache_data.empty() ) return;
-
-  m_cache_pos = m_pos - ( m_pos % m_cache_size );
-  unsigned long bytes = m_cache_size;
-  if( m_cache_pos + bytes > m_size ) bytes = m_size - m_cache_pos;
-  m_cache_size = read( m_cache_pos, &m_cache_data[0], bytes );
 }
 
 unsigned long IStream::read( unsigned long pos, unsigned char *data, unsigned long maxlen )

@@ -630,6 +630,30 @@ std::ostream &operator<<(std::ostream &o, Table const &table)
   return o;
 }
 
+// paragraph info
+bool ParagraphInfo::read(MWAWInputStreamPtr &input, long endPos, int vers)
+{
+  long pos = input->tell();
+  if ((vers <= 3 && endPos < pos+2) || (vers > 3 && endPos < pos+6)) {
+    MWAW_DEBUG_MSG(("ParagraphInfo::read: zone is too short\n"));
+    return false;
+  }
+  m_type = (int) input->readULong(1); // 0, 20(then ff), 40, 60(then ff)
+  m_numLines = (int) input->readLong(1);
+  if (vers <= 3)
+    return true;
+  m_dim->setX(float(input->readULong(2))/1440.f);
+  m_dim->setY(float(input->readLong(2))/72.f);
+  return true;
+}
+void ParagraphInfo::insert(ParagraphInfo const &pInfo)
+{
+  m_type.insert(pInfo.m_type);
+  m_dim.insert(pInfo.m_dim);
+  m_numLines.insert(pInfo.m_numLines);
+  m_error += pInfo.m_error;
+}
+
 // paragraph
 bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
 {
@@ -698,12 +722,12 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     val = (int) input->readLong(1);
     switch(c) {
     case 7:
-      f << "keeplineTogether";
+      m_breakStatus = m_breakStatus.get()|MWAWParagraph::NoBreakBit;
       break;
     case 8:
-      f << "keepwithnext";
+      m_breakStatus = m_breakStatus.get()|MWAWParagraph::NoBreakWithNextBit;
       break;
-    case 9:
+    case 9: // normally ok, ...
       f << "pagebreakbefore";
       break;
     default:
@@ -835,12 +859,10 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     else m_margins[2] = val/1440.;
     return true;
   case 0x14: // alignement : 240 normal, 480 : double, ..
-  case 0x15: // spacing before DWIPP
-  case 0x16: // spacing after DWIPP
     if (dSz < 3) return false;
     val = (int) input->readLong(2);
-    m_spacings[c-0x14] = val/1440.;
-    if (c != 0x14) return true;
+    if (!val)
+      return true;
     if (val < -1440 || val > 1440) {
       MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: interline spacing seems odd\n"));
       f << "#interline=" << val << ",";
@@ -848,13 +870,19 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
       break;
     }
     m_spacingsInterlineUnit = WPX_INCH;
-    m_spacingsInterlineType = MWAWParagraph::Fixed;
-    if (val > 0)
+    if (val > 0) {
       m_spacingsInterlineType = MWAWParagraph::AtLeast;
-    else if (val < 0)
-      *(m_spacings[0]) *= -1;
-    else
-      setInterline(1.0, WPX_PERCENT);
+      m_spacings[0] = double(val)/1440.;
+    } else if (val < 0) {
+      m_spacingsInterlineType = MWAWParagraph::Fixed;
+      m_spacings[0] = -double(val)/1440.;
+    }
+    return true;
+  case 0x15: // spacing before DWIPP
+  case 0x16: // spacing after DWIPP
+    if (dSz < 3) return false;
+    val = (int) input->readLong(2);
+    m_spacings[c-0x14] = double(val)/1440.;
     return true;
   case 0x18:
   case 0x19:
@@ -988,8 +1016,8 @@ std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
       o << ind.m_deletedTabs.get()[i] << ",";
     o << "],";
   }
-  if (ind.m_dim.isSet() && (ind.m_dim.get()[0]>0 || ind.m_dim.get()[1]>0))
-    o << "dim=" << ind.m_dim.get() << ",";
+  if (ind.m_info.isSet())
+    o << "dim=[" << *ind.m_info << "],";
   o << reinterpret_cast<MWAWParagraph const &>(ind);
   if (ind.m_bordersStyle.isSet())
     o << "borders[style]=" << ind.m_bordersStyle.get() << ",";
@@ -1037,7 +1065,8 @@ void Paragraph::insert(Paragraph const &para, bool insertModif)
     }
     m_deletedTabs.setSet(false);
   }
-  m_dim.insert(para.m_dim);
+  if (para.m_info.isSet() && para.m_info->isLineSet())
+    m_info.insert(para.m_info);
   if (!m_font.isSet())
     m_font=para.m_font;
   else if (para.m_font.isSet())

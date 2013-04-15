@@ -482,7 +482,7 @@ bool MWAWOLEParser::readOle(MWAWInputStreamPtr ip, std::string const &oleName,
 {
   if (!ip.get()) return false;
 
-  if (strcmp("Ole",oleName.c_str()) != 0) return false;
+  if (oleName!="Ole") return false;
 
   if (ip->seek(20, WPX_SEEK_SET) != 0 || ip->tell() != 20) return false;
 
@@ -513,7 +513,7 @@ bool MWAWOLEParser::readOle(MWAWInputStreamPtr ip, std::string const &oleName,
 bool MWAWOLEParser::readObjInfo(MWAWInputStreamPtr input, std::string const &oleName,
                                 libmwaw::DebugFile &ascii)
 {
-  if (strcmp(oleName.c_str(),"ObjInfo") != 0) return false;
+  if (oleName!="ObjInfo") return false;
 
   input->seek(14, WPX_SEEK_SET);
   if (input->tell() != 6 || !input->atEOS()) return false;
@@ -534,7 +534,7 @@ bool MWAWOLEParser::readObjInfo(MWAWInputStreamPtr input, std::string const &ole
 bool MWAWOLEParser::readMM(MWAWInputStreamPtr input, std::string const &oleName,
                            libmwaw::DebugFile &ascii)
 {
-  if (strcmp(oleName.c_str(),"MM") != 0) return false;
+  if (oleName!="MM") return false;
 
   input->seek(14, WPX_SEEK_SET);
   if (input->tell() != 14 || !input->atEOS()) return false;
@@ -915,7 +915,7 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
                                  libmwaw::DebugFile &ascii)
 {
   pict.clear();
-  if (strcmp(oleName.c_str(),"Contents") != 0) return false;
+  if (oleName!="Contents") return false;
 
   libmwaw::DebugStream f;
   pos = MWAWPosition();
@@ -1014,7 +1014,7 @@ bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
                                  libmwaw::DebugFile &ascii)
 {
   pict.clear();
-  if (strcmp(oleName.c_str(),"CONTENTS") != 0) return false;
+  if (oleName!="CONTENTS") return false;
 
   libmwaw::DebugStream f;
 

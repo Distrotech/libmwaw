@@ -541,9 +541,9 @@ bool MSWParser::createZones()
   if (it != m_entryMap.end())
     readPrinter(it->second);
 
-  bool ok = m_textParser->createZones(m_state->m_bot);
-
   readObjects();
+
+  bool ok = m_textParser->createZones(m_state->m_bot);
 
   it = m_entryMap.find("DocumentInfo");
   if (it != m_entryMap.end())
@@ -627,7 +627,7 @@ bool MSWParser::readZoneList()
       readEntry("PrintInfo");
       break;
     case 14:
-      readEntry(vers <= 3 ? "TextStruct" : "ZoneInfo");
+      readEntry(vers <= 3 ? "TextStruct" : "ParaInfo");
       break;
     case 15:
       readEntry("DocumentInfo");
@@ -1402,12 +1402,20 @@ bool MSWParser::readObjectList(MSWEntry &entry)
   libmwaw::DebugStream f;
   f << "ObjectList[" << entry.id() << "]:";
   int N=int(entry.length()/18);
+
+  std::multimap<long, MSWText::PLC> &plcMap=m_textParser->getTextPLCMap();
+  MSWText::PLC plc(MSWText::PLC::Object);
   std::vector<long> textPos; // checkme
   textPos.resize((size_t)N+1);
   f << "[";
   for (int i = 0; i < N+1; i++) {
-    textPos[(size_t)i] = (long) input->readULong(4);
-    f << std::hex << textPos[(size_t)i] << std::dec << ",";
+    long tPos = (long) input->readULong(4);
+    textPos[(size_t)i] = tPos;
+    f << std::hex << tPos << std::dec << ",";
+    if (i == N)
+      break;
+    plc.m_id = i;
+    plcMap.insert(std::multimap<long, MSWText::PLC>::value_type(tPos,plc));
   }
   f << "],";
   ascii().addPos(pos);
@@ -1420,9 +1428,10 @@ bool MSWParser::readObjectList(MSWEntry &entry)
     pos = input->tell();
     f.str("");
     object.m_id = (int) input->readLong(2);
+    // id0=<small number>:[8|48], id1: <small number>:60->normal, :7c?, 0->annotation ?
     for (int st = 0; st < 2; st++) {
-      object.m_ids[st] = (int) input->readLong(2); // small number -1, 0, 2, 3, 4
-      object.m_idsFlag[st] = (int) input->readULong(1); // 0, 48 .
+      object.m_ids[st] = (int) input->readLong(2);
+      object.m_idsFlag[st] = (int) input->readULong(1);
     }
 
     object.m_pos.setBegin((long) input->readULong(4));
@@ -1492,6 +1501,7 @@ bool MSWParser::readObjectFlags(MSWEntry &entry)
       for (int st = 0; st < 2; st++) listObject[(size_t)i].m_flags[st] = fl[st];
       f << "Obj" << listObject[(size_t)i].m_id << ",";
     }
+    // indentical to ObjectList id0[low] ?
     if (fl[0] != 0x48) f << "fl0="  << std::hex << fl[0] << std::dec << ",";
     if (fl[1]) f << "fl1="  << std::hex << fl[1] << std::dec << ",";
     ascii().addPos(pos);
@@ -1509,7 +1519,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
 
-  long pos = obj.m_pos.begin();
+  long pos = obj.m_pos.begin(), beginPos = pos;
   if (!pos) return false;
 
   input->seek(pos, WPX_SEEK_SET);
@@ -1517,33 +1527,34 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
 
   f << "Entries(ObjectData):Obj" << obj.m_id << ",";
   if (!isFilePos(pos+sz) || sz < 6) {
-    MWAW_DEBUG_MSG(("MSWParser::readObjects: pb finding object data sz\n"));
+    MWAW_DEBUG_MSG(("MSWParser::readObject: pb finding object data sz\n"));
     f << "#";
-    ascii().addPos(pos);
+    ascii().addPos(beginPos);
     ascii().addNote(f.str().c_str());
     return false;
   }
+  obj.m_pos.setLength(sz);
+  long endPos = obj.m_pos.end();
+  ascii().addPos(endPos);
+  ascii().addNote("_");
 
   int fSz = (int) input->readULong(2);
-  if (fSz < 2 || fSz+4 > sz) {
-    MWAW_DEBUG_MSG(("MSWParser::readObjects: pb reading the name\n"));
+  if (fSz < 0 || fSz+6 > sz) {
+    MWAW_DEBUG_MSG(("MSWParser::readObject: pb reading the name\n"));
     f << "#";
-    ascii().addPos(pos);
+    ascii().addPos(beginPos);
     ascii().addNote(f.str().c_str());
     return false;
   }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  obj.m_pos.setLength(sz);
   MSWEntry fileEntry = obj.getEntry();
   fileEntry.setParsed(true);
   m_entryMap.insert
   (std::multimap<std::string, MSWEntry>::value_type
    (fileEntry.type(), fileEntry));
 
-  long endPos = pos+4+fSz;
+  long zoneEnd = pos+6+fSz;
   std::string name(""); // first equation, second "" or Equation Word?
-  while(long(input->tell()) != endPos) {
+  while(long(input->tell()) != zoneEnd) {
     int c = (int) input->readULong(1);
     if (c == 0) {
       if (name.length()) f << name << ",";
@@ -1555,30 +1566,121 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
   if (name.length()) f << name << ",";
 
   pos = input->tell();
-  endPos = obj.m_pos.end();
-  int val;
-  if (pos+2 <= endPos) {
-    val = (int) input->readLong(2);
-    if (val) f << "#unkn=" << val <<",";
-  }
   // Equation Word? : often contains not other data
-  long dataSz = 0;
-  if (pos+9 <= endPos) {
-    for (int i = 0; i < 3; i++) { // always 0
-      val = (int) input->readLong(1);
-      if (val) f << "f" << i << "=" << val <<",";
+  if (pos==endPos) {
+    ascii().addPos(beginPos);
+    ascii().addNote(f.str().c_str());
+    return true;
+  }
+
+  // 0 or a small size c for annotation an equivalent of file type?
+  fSz = (int) input->readULong(1);
+  if (pos+fSz+1 > endPos) {
+    MWAW_DEBUG_MSG(("MSWParser::readObject: pb reading the second field zone\n"));
+    f << "#fSz=" << fSz;
+    ascii().addPos(beginPos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  int val;
+  bool isAnnotation=false;
+  if (fSz==12) { // possible annotation
+    f << "type=[";
+    for (int i = 0; i < 4; i++) { // f0=f1=f2=0, f3=0x100
+      val = (int) input->readLong(2);
+      if (val) f << "g0=" << std::hex << val << std::dec << ",";
     }
-    dataSz = (long) input->readULong(4);
+    std::string type("");
+    for (int i = 0; i < 4; i++)
+      type += (char) input->readULong(1);
+    f << type << "],";
+    isAnnotation=type=="ANOT";
+  } else if (fSz) {
+    f << "##data2[sz]=" << fSz << ",";
+    ascii().addDelimiter(input->tell(),'|');
+    input->seek(pos+fSz+1, WPX_SEEK_SET);
+    ascii().addDelimiter(input->tell(),'|');
+  }
+  if (isAnnotation) {
+    MWAW_DEBUG_MSG(("MSWParser::readObject: find some annotations, not implemented\n"));
   }
   pos = input->tell();
-  if (dataSz && pos+dataSz != endPos) f << "#";
-  ascii().addPos(obj.m_pos.begin());
-  ascii().addNote(f.str().c_str());
-  if (long(input->tell()) != obj.m_pos.end())
-    ascii().addDelimiter(input->tell(), '|');
+  if (pos+2>endPos) {
+    if (pos!= endPos)
+      f << "###";
+    ascii().addPos(beginPos);
+    ascii().addNote(f.str().c_str());
+    return true;
+  }
+  val = (int) input->readLong(2);
+  if (val) f << "#f0=" << val << ",";
 
-  ascii().addPos(obj.m_pos.end());
-  ascii().addNote("_");
+  pos = input->tell();
+  if (pos+4>endPos) {
+    if (pos!= endPos)
+      f << "##";
+    ascii().addPos(beginPos);
+    ascii().addNote(f.str().c_str());
+    return true;
+  }
+  long dataSz = (long) input->readULong(4);
+  pos = input->tell();
+  if (pos+dataSz > endPos) {
+    MWAW_DEBUG_MSG(("MSWParser::readObject: pb reading the last field size zone\n"));
+    f << "#fSz[last]=" << dataSz;
+    ascii().addPos(beginPos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  if (isAnnotation && dataSz>9) {
+    f << "annot=[";
+    for (int i = 0; i < 3; i++) { // h0=1|2, h1,h2: big numbers
+      val = (int) input->readULong(2);
+      if (val)
+        f << "h" << i << "=" << std::hex << val << std::dec << ",";
+    }
+    fSz = (int) input->readULong(1);
+    bool ok=true;
+    if (fSz+7 > dataSz) {
+      MWAW_DEBUG_MSG(("MSWParser::readObject: can not read the annotation string\n"));
+      f << "###";
+      ok = false;
+    } else {
+      std::string annotation("");
+      for (int i = 0; i < fSz; i++)
+        annotation += (char) input->readULong(1);
+      if (annotation.length())
+        f << "annot[inText]=" << annotation << ",";
+    }
+
+    if (ok) {
+      val = (int) input->readULong(1); // always 0
+      if (val)
+        f << "h3=" << std::hex << val << std::dec << ",";
+      fSz = (int) input->readULong(1);
+    }
+    if (!ok) {
+    } else if (fSz+9 > dataSz) {
+      MWAW_DEBUG_MSG(("MSWParser::readObject: can not read the annotation comment\n"));
+      f << "###";
+      ok = false;
+    } else {
+      std::string annotation("");
+      for (int i = 0; i < fSz; i++)
+        annotation += (char) input->readULong(1);
+      if (annotation.length())
+        f << "annot[comment]=" << annotation << ",";
+    }
+  } else if (dataSz)
+    ascii().addDelimiter(pos, '|');
+  input->seek(pos+dataSz, WPX_SEEK_SET);
+
+  pos = input->tell();
+  ascii().addPos(beginPos);
+  ascii().addNote(f.str().c_str());
+  if (long(input->tell()) != endPos)
+    ascii().addDelimiter(input->tell(), '#');
+
   return true;
 }
 

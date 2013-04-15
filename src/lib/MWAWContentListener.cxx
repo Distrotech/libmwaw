@@ -1616,8 +1616,8 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
     std::stringstream f;
     switch (cell.format()) {
     case MWAWCell::F_NUMBER:
-      if (strcmp(extras["office:value-type"]->getStr().cstr(), "float") == 0
-          && cell.subformat()) {
+      if (extras["office:value-type"] &&
+          extras["office:value-type"]->getStr()=="float" && cell.subformat()) {
         f << "Numeric" << cell.subformat();
         propList.insert("style:data-style-name", f.str().c_str());
         switch (cell.subformat()) {
@@ -1636,13 +1636,15 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
       }
       break;
     case MWAWCell::F_DATE:
-      if (strcmp(extras["office:value-type"]->getStr().cstr(), "date") == 0) {
+      if (extras["office:value-type"] &&
+          extras["office:value-type"]->getStr()=="date") {
         f << "Date" << cell.subformat();
         propList.insert("style:data-style-name", f.str().c_str());
       }
       break;
     case MWAWCell::F_TIME:
-      if (strcmp(extras["office:value-type"]->getStr().cstr(), "time") == 0) {
+      if (extras["office:value-type"] &&
+          extras["office:value-type"]->getStr()=="time") {
         f << "Time" << cell.subformat();
         propList.insert("style:data-style-name", f.str().c_str());
       }

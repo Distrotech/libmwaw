@@ -71,7 +71,7 @@ class MSWText
 public:
   //! Internal: the plc
   struct PLC {
-    enum Type { TextPosition, HeaderFooter, Page, Section, ZoneInfo, Paragraph, Font, Footnote, FootnoteDef, Field, Object };
+    enum Type { TextPosition, HeaderFooter, Page, Section, ParagraphInfo, Paragraph, Font, Footnote, FootnoteDef, Field, Object };
     PLC(Type type, int id=0) : m_type(type), m_id(id), m_extra("") {
     }
     //! operator<<
@@ -134,8 +134,8 @@ protected:
   //! read the page limit ?
   bool readPageBreak(MSWEntry &entry);
 
-  //! read the zone info
-  bool readZoneInfo(MSWEntry entry);
+  //! read the paragraph height info
+  bool readParagraphInfo(MSWEntry entry);
 
   //! read the field data
   bool readFields(MSWEntry &entry, std::vector<long> const &fieldPos);

@@ -231,12 +231,56 @@ struct Table {
   };
 };
 
+//! the paragraph information of a Microsoft Word file (PHE)
+struct ParagraphInfo {
+  //! constructor
+  ParagraphInfo() : m_type(0), m_dim(), m_numLines(-1), m_error("") {
+  }
+  //! returns true if num lines is set
+  bool isLineSet() const {
+    return m_numLines.get()!=0;
+  }
+  //! try to read a data
+  bool read(MWAWInputStreamPtr &input, long endPos, int vers);
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, ParagraphInfo const &pInfo) {
+    // find also pInfo.m_type&0x40 : ?
+    if (*pInfo.m_type&0xd0) o << "type?=" << ((*pInfo.m_type&0xd0)>>4) << ",";
+    if (*pInfo.m_type&0x0f) o << "#unkn=" << (*pInfo.m_type&0xf) << ",";
+    if (pInfo.m_dim.isSet()) {
+      if ((*pInfo.m_dim)[0] > 0)
+        o << "width=" << (*pInfo.m_dim)[0] << ",";
+      if ((*pInfo.m_dim)[1] > 0) {
+        o << "height=" << (*pInfo.m_dim)[1];
+        if (*pInfo.m_type&0x20)
+          o << "[total]";
+        o << ",";
+      }
+    }
+    if (pInfo.m_numLines.isSet() && *pInfo.m_numLines!=-1 && *pInfo.m_numLines!=1)
+      o << "nLines=" << *pInfo.m_numLines << ",";
+    if (pInfo.m_error.length()) o << pInfo.m_error << ",";
+    return o;
+  }
+  //! insert the new values
+  void insert(ParagraphInfo const &pInfo);
+  //! the type
+  Variable<int> m_type;
+  //! the zone dimension
+  Variable<Vec2f> m_dim;
+  //! the number of lines
+  Variable<int> m_numLines;
+  /** the errors */
+  std::string m_error;
+};
+
 //! the paragraph structure of a Microsoft Word file
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph(int version) : MWAWParagraph(), m_version(version), m_styleId(-1000),
-    m_deletedTabs(), m_dim(), m_font(), m_font2(), m_modFont(), m_section(),
+    m_deletedTabs(), m_info(), m_font(), m_font2(), m_modFont(), m_section(),
     m_bordersStyle(), m_inCell(false), m_tableDef(false), m_table() {
+    m_tabsRelativeToLeftMargin=false;
   }
   //! insert the new values
   void insert(Paragraph const &para, bool insertModif=true);
@@ -254,6 +298,10 @@ struct Paragraph : public MWAWParagraph {
   //! operator<<
   void print(std::ostream &o, MWAWFontConverterPtr converter) const;
 
+  //! returns the number of line stored in m_info or -1
+  int getNumLines() const {
+    return m_info.get().m_numLines.get();
+  }
   //! the file version
   int m_version;
   //! the style id (if known)
@@ -261,7 +309,7 @@ struct Paragraph : public MWAWParagraph {
   //! the delete tabulation
   Variable<std::vector<float> > m_deletedTabs;
   //! the dimension
-  Variable<Vec2f> m_dim;
+  Variable<ParagraphInfo> m_info;
   //! the font (simplified)
   Variable<Font> m_font, m_font2 /** font ( not simplified )*/, m_modFont /** font (modifier) */;
   //! the section

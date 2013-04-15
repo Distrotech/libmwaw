@@ -772,15 +772,12 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
             } else
               para.m_styleId = stId;
             f2 << "sP" << stId << ",";
-            int val = (int) input->readLong(1);
-            if (val) // some flag: 0, 20 ? hidden ?
-              f2 << "flags=" << std::hex << val << std::dec << ",";
-            val = (int) input->readLong(1);
-            if (val) // a small number ?
-              f2 << "g1=" << val << ",";
-            if (vers > 3) {
-              para.m_dim->setX(float(input->readULong(2))/1440.f);
-              para.m_dim->setY(float(input->readULong(2))/72.f);
+            if (vers > 3 && !para.m_info->read(input, endPos, vers)) {
+              f2 << "###info,";
+              input->seek(dataPos+2+6, WPX_SEEK_SET);
+            } else if (vers <= 3) { // always 0 ?
+              int val = (int) input->readLong(2);
+              if (val) f << "g0=" << val << ",";
             }
             if (sz >= 4) {
               ascFile.addDelimiter(input->tell(),'|');
@@ -996,7 +993,7 @@ bool MSWTextStyles::readSection(MSWEntry &entry)
   for (size_t i = 0; i < N; i++) {
     MSWStruct::Section sec;
     sec.m_type = (int) input->readULong(1);
-    sec.m_flag = (int) input->readULong(1);
+    sec.m_flag = (int) input->readULong(1); // number between 2 and 7
     sec.m_id = int(i);
     unsigned long filePos = input->readULong(4);
     if (textLength && positions[i] > textLength) {
@@ -1359,11 +1356,16 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
           MWAW_DEBUG_MSG(("MSWTextStyles::readStylesParagraph: zone(paragraph) the id seems bad...\n"));
           f << "#id=" << pId << ",";
         }
-        for (int j = 0; j < 3; j++) { // 0, 0|c,0|1
-          int val = (int) input->readLong(2);
-          if (val) f << "g" << j << "=" << val << ",";
-          if (vers <= 3) break;
+        int val = (int) input->readLong(2); // always 0?
+        if (val) f << "g0=" << val << ",";
+
+        if (vers > 3) {
+          for (int j = 1; j < 3; j++) { // 0|90|c0,0|1
+            val = (int) input->readLong(2);
+            if (val) f << "g" << j << "=" << std::hex << val << std::dec << ",";
+          }
         }
+
         if (dataSize[(size_t) id] != minSz && !readParagraph(para, dataSize[(size_t) id]-minSz))
           f << "#";
 #ifdef DEBUG_WITH_FILES

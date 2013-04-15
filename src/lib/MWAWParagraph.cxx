@@ -123,7 +123,7 @@ std::ostream &operator<<(std::ostream &o, MWAWTabStop const &tab)
 // paragraph
 ////////////////////////////////////////////////////////////
 MWAWParagraph::MWAWParagraph() : m_marginsUnit(WPX_INCH), m_spacingsInterlineUnit(WPX_PERCENT), m_spacingsInterlineType(Fixed),
-  m_tabs(), m_justify(JustificationLeft), m_breakStatus(0),
+  m_tabs(), m_tabsRelativeToLeftMargin(true), m_justify(JustificationLeft), m_breakStatus(0),
   m_listLevelIndex(0), m_listId(-1), m_listStartValue(-1), m_listLevel(), m_backgroundColor(MWAWColor::white()),
   m_borders(), m_extra("")
 {
@@ -151,6 +151,8 @@ bool MWAWParagraph::operator!=(MWAWParagraph const &para) const
   if (*m_justify != *para.m_justify || *m_marginsUnit != *para.m_marginsUnit ||
       *m_spacingsInterlineUnit != *para.m_spacingsInterlineUnit ||
       *m_spacingsInterlineType != *para.m_spacingsInterlineType)
+    return true;
+  if (*m_tabsRelativeToLeftMargin != *para.m_tabsRelativeToLeftMargin)
     return true;
   if (m_tabs->size() != para.m_tabs->size()) return true;
   for (size_t i=0; i < m_tabs->size(); i++) {
@@ -182,6 +184,7 @@ void MWAWParagraph::insert(MWAWParagraph const &para)
   m_spacingsInterlineUnit.insert(para.m_spacingsInterlineUnit);
   m_spacingsInterlineType.insert(para.m_spacingsInterlineType);
   m_tabs.insert(para.m_tabs);
+  m_tabsRelativeToLeftMargin.insert(para.m_tabsRelativeToLeftMargin);
   m_justify.insert(para.m_justify);
   m_breakStatus.insert(para.m_breakStatus);
   m_listLevelIndex.insert(para.m_listLevelIndex);
@@ -321,6 +324,11 @@ void MWAWParagraph::addTo(WPXPropertyList &propList, bool inTable) const
 
 void MWAWParagraph::addTabsTo(WPXPropertyListVector &pList, double decalX) const
 {
+  if (!*m_tabsRelativeToLeftMargin) {
+    // tabs are absolute, we must remove left margin
+    double factor = (double) MWAWPosition::getScaleFactor(*m_marginsUnit, WPX_INCH);
+    decalX -= m_margins[1].get()*factor;
+  }
   for (size_t i=0; i<m_tabs->size(); i++)
     m_tabs.get()[i].addTo(pList, decalX);
 }
