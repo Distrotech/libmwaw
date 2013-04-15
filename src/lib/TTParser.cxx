@@ -84,7 +84,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 TTParser::TTParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_pageSpan()
+  MWAWParser(input, rsrcParser, header), m_state()
 {
   init();
 }
@@ -100,10 +100,7 @@ void TTParser::init()
 
   m_state.reset(new TTParserInternal::State);
 
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
+  getPageSpan().setMargins(0.1);
 }
 
 void TTParser::setListener(MWAWContentListenerPtr listen)
@@ -187,7 +184,7 @@ void TTParser::createDocument(WPXDocumentInterface *documentInterface)
   std::vector<MWAWPageSpan> pageList;
   int numPages=computeNumPages();
   m_state->m_numPages = numPages;
-  MWAWPageSpan ps(m_pageSpan);
+  MWAWPageSpan ps(getPageSpan());
   for (int i = 0; i <= numPages; i++)
     pageList.push_back(ps);
 

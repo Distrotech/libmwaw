@@ -259,7 +259,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSW1Parser::MSW1Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_pageSpan()
+  MWAWParser(input, rsrcParser, header), m_state()
 {
   init();
 }
@@ -276,10 +276,7 @@ void MSW1Parser::init()
   m_state.reset(new MSW1ParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
+  getPageSpan().setMargins(0.1);
 }
 
 void MSW1Parser::setListener(MWAWContentListenerPtr listen)
@@ -292,12 +289,12 @@ void MSW1Parser::setListener(MWAWContentListenerPtr listen)
 ////////////////////////////////////////////////////////////
 float MSW1Parser::pageHeight() const
 {
-  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
+  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float MSW1Parser::pageWidth() const
 {
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
+  return float(getPageSpan().getPageWidth());
 }
 
 
@@ -406,7 +403,7 @@ void MSW1Parser::createDocument(WPXDocumentInterface *documentInterface)
   // create the page list
   std::vector<MWAWPageSpan> pageList;
   for (int i = 0; i <= m_state->m_numPages; i++) {
-    MWAWPageSpan ps(m_pageSpan);
+    MWAWPageSpan ps(getPageSpan());
     if (i < int(m_state->m_headersId.size())) {
       int id = m_state->m_headersId[size_t(i)];
       if (id < 0 || id >= int(m_state->m_textZonesList.size()))
@@ -1074,10 +1071,10 @@ bool MSW1Parser::readDocInfo(Vec2i limits)
       pagePos[0][0]>=0 && pagePos[0][1]>=0 && pageDim[0] >= pagePos[0][0]+pagePos[0][1] &&
       pagePos[1][0]>=0 && pagePos[1][1]>=0 && pageDim[1] >= pagePos[1][0]+pagePos[1][1] &&
       pageDim[1] >= float(numCols)*pagePos[1][1]) {
-    m_pageSpan.setMarginTop(pagePos[0][0]);
-    m_pageSpan.setMarginLeft(pagePos[1][0]);
-    m_pageSpan.setFormLength(pageDim[0]);
-    m_pageSpan.setFormWidth(pageDim[1]);
+    getPageSpan().setMarginTop(pagePos[0][0]);
+    getPageSpan().setMarginLeft(pagePos[1][0]);
+    getPageSpan().setFormLength(pageDim[0]);
+    getPageSpan().setFormWidth(pageDim[1]);
     m_state->m_endNote = endNote;
     m_state->m_numColumns = numCols;
     m_state->m_columnsSep = colSep;

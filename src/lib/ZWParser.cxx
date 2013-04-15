@@ -121,8 +121,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 ZWParser::ZWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(),
-  m_pageSpan(), m_textParser()
+  MWAWParser(input, rsrcParser, header), m_state(), m_textParser()
 {
   init();
 }
@@ -139,10 +138,7 @@ void ZWParser::init()
   m_state.reset(new ZWParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
+  getPageSpan().setMargins(0.1);
 
   m_textParser.reset(new ZWText(*this));
 }
@@ -162,18 +158,18 @@ libmwaw::DebugFile &ZWParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 float ZWParser::pageHeight() const
 {
-  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
+  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float ZWParser::pageWidth() const
 {
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
+  return float(getPageSpan().getPageWidth());
 }
 
 Vec2f ZWParser::getPageLeftTop() const
 {
-  return Vec2f(float(m_pageSpan.getMarginLeft()),
-               float(m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
+  return Vec2f(float(getPageSpan().getMarginLeft()),
+               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 ////////////////////////////////////////////////////////////
@@ -252,7 +248,7 @@ void ZWParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_numPages = numPages;
 
   std::vector<MWAWPageSpan> pageList;
-  MWAWPageSpan ps(m_pageSpan);
+  MWAWPageSpan ps(getPageSpan());
   if (m_state->m_headerUsed && m_textParser->hasHeaderFooter(true)) {
     shared_ptr<MWAWSubDocument> subdoc(new ZWParserInternal::SubDocument(*this, getInput(), true));
     ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
@@ -450,10 +446,10 @@ bool ZWParser::readPrintInfo(MWAWEntry const &entry)
       f << "#f" << ff << ",";
   }
   if (marginsOk) {
-    m_pageSpan.setMarginTop(double(margins[0])/72.0);
-    m_pageSpan.setMarginBottom(double(margins[1])/72.0);
-    m_pageSpan.setMarginLeft(double(margins[2])/72.0);
-    m_pageSpan.setMarginRight(double(margins[3])/72.0);
+    getPageSpan().setMarginTop(double(margins[0])/72.0);
+    getPageSpan().setMarginBottom(double(margins[1])/72.0);
+    getPageSpan().setMarginLeft(double(margins[2])/72.0);
+    getPageSpan().setMarginRight(double(margins[3])/72.0);
   }
   f << "margins=(" << margins[2] << "x" << margins[0] << "<->" << margins[3] << "x" << margins[1] << "),";
   ascFile.addPos(pos-4);

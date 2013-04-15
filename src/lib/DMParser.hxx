@@ -41,7 +41,6 @@
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
-#include "MWAWPageSpan.hxx"
 
 #include "MWAWParser.hxx"
 

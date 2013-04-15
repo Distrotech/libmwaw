@@ -49,6 +49,7 @@
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWRSRCParser.hxx"
+#include "MWAWSubDocument.hxx"
 
 #include "FWText.hxx"
 
@@ -347,7 +348,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 FWParser::FWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_pageSpan(), m_textParser()
+  MWAWParser(input, rsrcParser, header), m_state(), m_textParser()
 {
   init();
 }
@@ -369,10 +370,7 @@ void FWParser::init()
   m_state.reset(new FWParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
+  getPageSpan().setMargins(0.1);
 
   m_textParser.reset(new FWText(*this));
 }
@@ -382,12 +380,12 @@ void FWParser::init()
 ////////////////////////////////////////////////////////////
 float FWParser::pageHeight() const
 {
-  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
+  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float FWParser::pageWidth() const
 {
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
+  return float(getPageSpan().getPageWidth());
 }
 
 
@@ -490,7 +488,7 @@ void FWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // create the page list
   std::vector<MWAWPageSpan> pageList;
-  MWAWPageSpan ps(m_pageSpan);
+  MWAWPageSpan ps(getPageSpan());
 
   int numPage = m_textParser->numPages();
   m_state->m_numPages = numPage;
@@ -1032,12 +1030,12 @@ bool FWParser::readPrintInfo(shared_ptr<FWEntry> zone)
   int botMarg = rBotMargin.y() -50;
   if (botMarg < 0) botMarg=0;
 
-  m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
-  m_pageSpan.setMarginBottom(botMarg/72.0);
-  m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
-  m_pageSpan.setMarginRight(rightMarg/72.0);
-  m_pageSpan.setFormLength(paperSize.y()/72.);
-  m_pageSpan.setFormWidth(paperSize.x()/72.);
+  getPageSpan().setMarginTop(lTopMargin.y()/72.0);
+  getPageSpan().setMarginBottom(botMarg/72.0);
+  getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
+  getPageSpan().setMarginRight(rightMarg/72.0);
+  getPageSpan().setFormLength(paperSize.y()/72.);
+  getPageSpan().setFormWidth(paperSize.x()/72.);
 
   if (long(input->tell()) !=endPos) {
     input->seek(endPos, WPX_SEEK_SET);

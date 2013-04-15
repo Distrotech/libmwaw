@@ -41,7 +41,6 @@
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
-#include "MWAWPageSpan.hxx"
 
 #include "MWAWParser.hxx"
 
@@ -158,9 +157,6 @@ protected:
 
   //! the state
   shared_ptr<ZWParserInternal::State> m_state;
-
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
 
   //! the text parser
   shared_ptr<ZWText> m_textParser;

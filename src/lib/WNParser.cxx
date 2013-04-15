@@ -133,8 +133,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 WNParser::WNParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(),
-  m_entryManager(), m_pageSpan(), m_textParser()
+  MWAWParser(input, rsrcParser, header), m_state(), m_entryManager(), m_textParser()
 {
   init();
 }
@@ -152,10 +151,7 @@ void WNParser::init()
   m_entryManager.reset(new WNEntryManager);
 
   // reduce the margin (in case, the page is not defined)
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
+  getPageSpan().setMargins(0.1);
 
   m_textParser.reset(new WNText(*this));
 }
@@ -165,12 +161,12 @@ void WNParser::init()
 ////////////////////////////////////////////////////////////
 float WNParser::pageHeight() const
 {
-  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
+  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float WNParser::pageWidth() const
 {
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
+  return float(getPageSpan().getPageWidth());
 }
 
 void WNParser::getColumnInfo(int &numColumns, int &width) const
@@ -293,7 +289,7 @@ void WNParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // create the page list
   std::vector<MWAWPageSpan> pageList;
-  MWAWPageSpan ps(m_pageSpan);
+  MWAWPageSpan ps(getPageSpan());
 
   WNEntry entry = m_textParser->getHeader();
   if (entry.valid()) {
@@ -885,12 +881,12 @@ bool WNParser::readPrintInfo(WNEntry const &entry)
   int botMarg = rBotMargin.y() -50;
   if (botMarg < 0) botMarg=0;
 
-  m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
-  m_pageSpan.setMarginBottom(botMarg/72.0);
-  m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
-  m_pageSpan.setMarginRight(rightMarg/72.0);
-  m_pageSpan.setFormLength(paperSize.y()/72.);
-  m_pageSpan.setFormWidth(paperSize.x()/72.);
+  getPageSpan().setMarginTop(lTopMargin.y()/72.0);
+  getPageSpan().setMarginBottom(botMarg/72.0);
+  getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
+  getPageSpan().setMarginRight(rightMarg/72.0);
+  getPageSpan().setFormLength(paperSize.y()/72.);
+  getPageSpan().setFormWidth(paperSize.x()/72.);
 
   entry.setParsed(true);
   ascii().addPos(entry.begin());

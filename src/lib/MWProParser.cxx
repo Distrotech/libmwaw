@@ -46,6 +46,7 @@
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSubDocument.hxx"
 
 #include "MWProStructures.hxx"
 
@@ -293,7 +294,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MWProParser::MWProParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_structures(), m_pageSpan()
+  MWAWParser(input, rsrcParser, header), m_state(), m_structures()
 {
   init();
 }
@@ -311,10 +312,7 @@ void MWProParser::init()
   m_structures.reset(new MWProStructures(*this));
 
   // reduce the margin (in case, the page is not defined)
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
+  getPageSpan().setMargins(0.1);
 }
 
 ////////////////////////////////////////////////////////////
@@ -322,12 +320,12 @@ void MWProParser::init()
 ////////////////////////////////////////////////////////////
 float MWProParser::pageHeight() const
 {
-  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
+  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float MWProParser::pageWidth() const
 {
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
+  return float(getPageSpan().getPageWidth());
 }
 
 int MWProParser::numColumns() const
@@ -593,7 +591,7 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
         (new MWProParserInternal::SubDocument(*this, getInput(), footerId));
     }
 
-    MWAWPageSpan ps(m_pageSpan);
+    MWAWPageSpan ps(getPageSpan());
     if (headerSubdoc) {
       shared_ptr<MWAWSubDocument> doc(headerSubdoc);
       ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, doc);
@@ -753,12 +751,12 @@ bool MWProParser::readPrintInfo()
   int botMarg = rBotMargin.y() -50;
   if (botMarg < 0) botMarg=0;
 
-  m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
-  m_pageSpan.setMarginBottom(botMarg/72.0);
-  m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
-  m_pageSpan.setMarginRight(rightMarg/72.0);
-  m_pageSpan.setFormLength(paperSize.y()/72.);
-  m_pageSpan.setFormWidth(paperSize.x()/72.);
+  getPageSpan().setMarginTop(lTopMargin.y()/72.0);
+  getPageSpan().setMarginBottom(botMarg/72.0);
+  getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
+  getPageSpan().setMarginRight(rightMarg/72.0);
+  getPageSpan().setFormLength(paperSize.y()/72.);
+  getPageSpan().setFormWidth(paperSize.x()/72.);
 
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -858,13 +856,13 @@ bool MWProParser::readDocHeader()
   if (ok) ok = dim[0] > dim[2]+dim[3] && dim[1] > dim[4]+dim[5];
 
   if (ok) {
-    m_pageSpan.setMarginTop(dim[2]/72.0);
-    m_pageSpan.setMarginLeft(dim[4]/72.0);
+    getPageSpan().setMarginTop(dim[2]/72.0);
+    getPageSpan().setMarginLeft(dim[4]/72.0);
     /* decrease a little the right/bottom margin to allow fonts discrepancy*/
-    m_pageSpan.setMarginBottom((dim[3]<36.0) ? 0.0 : dim[3]/72.0-0.5);
-    m_pageSpan.setMarginRight((dim[5]<18.0) ? 0.0 : dim[5]/72.0-0.25);
-    m_pageSpan.setFormLength(dim[0]/72.);
-    m_pageSpan.setFormWidth(dim[1]/72.);
+    getPageSpan().setMarginBottom((dim[3]<36.0) ? 0.0 : dim[3]/72.0-0.5);
+    getPageSpan().setMarginRight((dim[5]<18.0) ? 0.0 : dim[5]/72.0-0.25);
+    getPageSpan().setFormLength(dim[0]/72.);
+    getPageSpan().setFormWidth(dim[1]/72.);
   } else {
     MWAW_DEBUG_MSG(("MWProParser::readDocHeader: find odd page dimensions, ignored\n"));
     f << "#";

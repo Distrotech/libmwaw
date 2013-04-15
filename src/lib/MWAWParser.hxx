@@ -43,6 +43,7 @@
 
 #include "MWAWEntry.hxx"
 #include "MWAWHeader.hxx"
+#include "MWAWPageSpan.hxx"
 
 class WPXDocumentInterface;
 
@@ -115,7 +116,7 @@ protected:
   //! constructor (protected)
   MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! constructor using a state
-  MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_asciiName("") { }
+  MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_pageSpan(), m_asciiName("") { }
 
   //! returns the parser state
   MWAWParserStatePtr getParserState() {
@@ -129,13 +130,21 @@ protected:
   MWAWInputStreamPtr &getInput() {
     return m_parserState->m_input;
   }
-  //! returns the rsrc parser
-  MWAWRSRCParserPtr &getRSRCParser() {
-    return m_parserState->m_rsrcParser;
-  }
   //! returns the listener
   MWAWContentListenerPtr &getListener() {
     return m_parserState->m_listener;
+  }
+  //! returns the actual page dimension
+  MWAWPageSpan const &getPageSpan() const {
+    return m_pageSpan;
+  }
+  //! returns the actual page dimension
+  MWAWPageSpan &getPageSpan() {
+    return m_pageSpan;
+  }
+  //! returns the rsrc parser
+  MWAWRSRCParserPtr &getRSRCParser() {
+    return m_parserState->m_rsrcParser;
   }
   //! sets the listener
   void setListener(MWAWContentListenerPtr &listener);
@@ -168,6 +177,8 @@ private:
 
   //! the parser state
   MWAWParserStatePtr m_parserState;
+  //! the actual document size
+  MWAWPageSpan m_pageSpan;
   //! the debug file name
   std::string m_asciiName;
 };

@@ -41,7 +41,6 @@
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
-#include "MWAWPageSpan.hxx"
 
 #include "MWAWParser.hxx"
 
@@ -114,9 +113,6 @@ protected:
   //
   //! the state
   shared_ptr<TTParserInternal::State> m_state;
-
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

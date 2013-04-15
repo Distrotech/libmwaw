@@ -45,6 +45,7 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSubDocument.hxx"
 
 #include "MSKGraph.hxx"
 #include "MSK3Text.hxx"
@@ -183,8 +184,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSK3Parser::MSK3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MSKParser(input, rsrcParser, header), m_state(),
-  m_pageSpan(), m_listZones(), m_graphParser(), m_textParser()
+  MSKParser(input, rsrcParser, header), m_state(), m_listZones(), m_graphParser(), m_textParser()
 {
   init();
 }
@@ -201,10 +201,7 @@ void MSK3Parser::init()
   m_state.reset(new MSK3ParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
+  getPageSpan().setMargins(0.1);
 
   m_graphParser.reset(new MSKGraph(*this));
   m_textParser.reset(new MSK3Text(*this));
@@ -215,18 +212,18 @@ void MSK3Parser::init()
 ////////////////////////////////////////////////////////////
 float MSK3Parser::pageHeight() const
 {
-  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
+  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float MSK3Parser::pageWidth() const
 {
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
+  return float(getPageSpan().getPageWidth());
 }
 
 Vec2f MSK3Parser::getPageTopLeft() const
 {
-  return Vec2f(float(m_pageSpan.getMarginLeft()),
-               float(m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
+  return Vec2f(float(getPageSpan().getMarginLeft()),
+               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 ////////////////////////////////////////////////////////////
@@ -332,7 +329,7 @@ void MSK3Parser::createDocument(WPXDocumentInterface *documentInterface)
 
   // create the page list
   std::vector<MWAWPageSpan> pageList;
-  MWAWPageSpan ps(m_pageSpan);
+  MWAWPageSpan ps(getPageSpan());
   int id = m_textParser->getHeader();
   if (id >= 0) {
     if (vers <= 2) m_state->m_headerHeight = 12;
@@ -994,12 +991,12 @@ bool MSK3Parser::readPrintInfo()
     botMarg=0;
   }
 
-  m_pageSpan.setMarginTop(topMargin/72.0);
-  m_pageSpan.setMarginBottom(botMarg/72.0);
-  m_pageSpan.setMarginLeft(leftMargin/72.0);
-  m_pageSpan.setMarginRight(rightMarg/72.0);
-  m_pageSpan.setFormLength(paperSize.y()/72.);
-  m_pageSpan.setFormWidth(paperSize.x()/72.);
+  getPageSpan().setMarginTop(topMargin/72.0);
+  getPageSpan().setMarginBottom(botMarg/72.0);
+  getPageSpan().setMarginLeft(leftMargin/72.0);
+  getPageSpan().setMarginRight(rightMarg/72.0);
+  getPageSpan().setFormLength(paperSize.y()/72.);
+  getPageSpan().setFormWidth(paperSize.x()/72.);
 
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());

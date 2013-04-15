@@ -111,7 +111,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 EDParser::EDParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_pageSpan()
+  MWAWParser(input, rsrcParser, header), m_state()
 {
   init();
 }
@@ -127,10 +127,7 @@ void EDParser::init()
   m_state.reset(new EDParserInternal::State);
 
   // no margins ( ie. the document is a set of picture corresponding to each page )
-  m_pageSpan.setMarginTop(0.);
-  m_pageSpan.setMarginBottom(0.);
-  m_pageSpan.setMarginLeft(0.);
-  m_pageSpan.setMarginRight(0.);
+  getPageSpan().setMargins(0.);
 }
 
 void EDParser::setListener(MWAWContentListenerPtr listen)
@@ -140,7 +137,7 @@ void EDParser::setListener(MWAWContentListenerPtr listen)
 
 float EDParser::pageWidth() const
 {
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
+  return float(getPageSpan().getPageWidth());
 }
 
 MWAWInputStreamPtr EDParser::rsrcInput()
@@ -220,7 +217,7 @@ void EDParser::createDocument(WPXDocumentInterface *documentInterface)
   if (numPages <= 0) numPages=1;
   m_state->m_numPages=numPages;
 
-  MWAWPageSpan ps(m_pageSpan);
+  MWAWPageSpan ps(getPageSpan());
   for (int i = 0; i <= numPages; i++)
     pageList.push_back(ps);
   //
@@ -663,8 +660,8 @@ bool EDParser::readInfo(MWAWEntry const &entry)
   for (int i = 0; i < 2; i++) dim[i] = (int) input->readLong(2);
   f << "dim?=" << dim[1] << "x" << dim[0] << ",";
   if (dim[1]>100 && dim[1]<2000 && dim[0]>100 && dim[0]< 2000) {
-    m_pageSpan.setFormLength(double(dim[0])/72.);
-    m_pageSpan.setFormWidth(double(dim[1])/72.);
+    getPageSpan().setFormLength(double(dim[0])/72.);
+    getPageSpan().setFormWidth(double(dim[1])/72.);
   } else {
     MWAW_DEBUG_MSG(("EDParser::readInfo: the page dimension seems bad\n"));
     f << "###,";

@@ -42,7 +42,6 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
-#include "MWAWPageSpan.hxx"
 
 #include "NSStruct.hxx"
 
@@ -162,9 +161,6 @@ protected:
   //
   //! the state
   shared_ptr<NSParserInternal::State> m_state;
-
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
 
   //! the graph parser
   shared_ptr<NSGraph> m_graphParser;

@@ -162,8 +162,7 @@ struct State {
 ////////////////////////////////////////////////////////////
 MSK4Zone::MSK4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
                    MSK4Parser &parser, std::string const &oleName) :
-  MSKParser(input, parserState), m_mainParser(&parser), m_state(), m_entryMap(),
-  m_pageSpan(), m_textParser(), m_graphParser()
+  MSKParser(input, parserState), m_mainParser(&parser), m_state(), m_entryMap(), m_textParser(), m_graphParser()
 {
   setAscii(oleName);
   setVersion(4);
@@ -225,18 +224,18 @@ void MSK4Zone::sendOLE(int id, MWAWPosition const &pos, WPXPropertyList frameExt
 ////////////////////////////////////////////////////////////
 float MSK4Zone::pageHeight() const
 {
-  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
+  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float MSK4Zone::pageWidth() const
 {
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
+  return float(getPageSpan().getPageWidth());
 }
 
 Vec2f MSK4Zone::getPageTopLeft() const
 {
-  return Vec2f(float(m_pageSpan.getMarginLeft()),
-               float(m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
+  return Vec2f(float(getPageSpan().getMarginLeft()),
+               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 ////////////////////////////////////////////////////////////
@@ -277,7 +276,7 @@ MWAWContentListenerPtr MSK4Zone::createListener
 (WPXDocumentInterface *interface, MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer)
 {
   std::vector<MWAWPageSpan> pageList;
-  MWAWPageSpan ps(m_pageSpan);
+  MWAWPageSpan ps(getPageSpan());
 
   if (header)
     ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, header);
@@ -499,7 +498,7 @@ bool MSK4Zone::createZones(bool mainOle)
   if (m_entryMap.end() != pos) {
     pos->second.setParsed(true);
     MWAWPageSpan page;
-    if (readPRNT(input, pos->second, page) && mainOle) m_pageSpan = page;
+    if (readPRNT(input, pos->second, page) && mainOle) getPageSpan() = page;
   }
 
   // DOP

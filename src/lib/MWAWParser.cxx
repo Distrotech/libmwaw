@@ -55,7 +55,7 @@ MWAWParserState::~MWAWParserState()
 }
 
 MWAWParser::MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header):
-  m_parserState(), m_asciiName("")
+  m_parserState(), m_pageSpan(), m_asciiName("")
 {
   m_parserState.reset(new MWAWParserState(input, rsrcParser, header));
 }

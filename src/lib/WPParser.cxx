@@ -582,7 +582,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 WPParser::WPParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_pageSpan()
+  MWAWParser(input, rsrcParser, header), m_state()
 {
   init();
 }
@@ -599,10 +599,7 @@ void WPParser::init()
   m_state.reset(new WPParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
+  getPageSpan().setMargins(0.1);
 }
 
 void WPParser::setListener(MWAWContentListenerPtr listen)
@@ -615,12 +612,12 @@ void WPParser::setListener(MWAWContentListenerPtr listen)
 ////////////////////////////////////////////////////////////
 float WPParser::pageHeight() const
 {
-  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
+  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float WPParser::pageWidth() const
 {
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
+  return float(getPageSpan().getPageWidth());
 }
 
 
@@ -691,7 +688,7 @@ void WPParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // create the page list
   std::vector<MWAWPageSpan> pageList;
-  MWAWPageSpan ps(m_pageSpan);
+  MWAWPageSpan ps(getPageSpan());
   for (int i = 1; i < 3; i++) {
     if (m_state->m_windows[i].m_paragraphs.size() == 0)
       continue;
@@ -1238,7 +1235,7 @@ MWAWParagraph WPParser::getParagraph(WPParserInternal::ParagraphData const &data
 
   para.m_marginsUnit=WPX_POINT;
   // decrease a little left indent to avoid some page width pb
-  double left=double(data.m_indent[0])-20.-72.*m_pageSpan.getMarginLeft();
+  double left=double(data.m_indent[0])-20.-72.*getPageSpan().getMarginLeft();
   if (left > 0)
     para.m_margins[1]=left;
   para.m_margins[0]=double(data.m_indent[1]-data.m_indent[0]);
@@ -1531,7 +1528,7 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
     }
 
     WPXPropertyList tableExtras;
-    int left=columns[0].m_colX[0]-20-int(72.*m_pageSpan.getMarginLeft());
+    int left=columns[0].m_colX[0]-20-int(72.*getPageSpan().getMarginLeft());
     if (left>0)
       tableExtras.insert("fo:margin-left",left,WPX_POINT);
     getListener()->openTable(colSize, WPX_POINT, tableExtras);
@@ -1927,12 +1924,12 @@ bool WPParser::readPrintInfo()
   int botMarg = rBotMargin.y() -50;
   if (botMarg < 0) botMarg=0;
 
-  m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
-  m_pageSpan.setMarginBottom(botMarg/72.0);
-  m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
-  m_pageSpan.setMarginRight(rightMarg/72.0);
-  m_pageSpan.setFormLength(paperSize.y()/72.);
-  m_pageSpan.setFormWidth(paperSize.x()/72.);
+  getPageSpan().setMarginTop(lTopMargin.y()/72.0);
+  getPageSpan().setMarginBottom(botMarg/72.0);
+  getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
+  getPageSpan().setMarginRight(rightMarg/72.0);
+  getPageSpan().setFormLength(paperSize.y()/72.);
+  getPageSpan().setFormWidth(paperSize.x()/72.);
 
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());

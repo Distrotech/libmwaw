@@ -47,6 +47,7 @@
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSubDocument.hxx"
 
 #include "MSWParser.hxx"
 
@@ -283,7 +284,7 @@ std::ostream &operator<<(std::ostream &o, MSWEntry const &entry)
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSWParser::MSWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_entryMap(), m_pageSpan(), m_textParser()
+  MWAWParser(input, rsrcParser, header), m_state(), m_entryMap(), m_textParser()
 {
   init();
 }
@@ -300,10 +301,7 @@ void MSWParser::init()
   m_state.reset(new MSWParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
+  getPageSpan().setMargins(0.1);
 
   m_textParser.reset(new MSWText(*this));
 }
@@ -313,12 +311,12 @@ void MSWParser::init()
 ////////////////////////////////////////////////////////////
 float MSWParser::pageHeight() const
 {
-  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
+  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float MSWParser::pageWidth() const
 {
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
+  return float(getPageSpan().getPageWidth());
 }
 
 ////////////////////////////////////////////////////////////
@@ -478,7 +476,7 @@ void MSWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // create the page list
   std::vector<MWAWPageSpan> pageList;
-  MWAWPageSpan ps(m_pageSpan);
+  MWAWPageSpan ps(getPageSpan());
   MWAWEntry entry = m_textParser->getHeader();
   if (entry.valid()) {
     shared_ptr<MWAWSubDocument> subdoc
@@ -886,12 +884,12 @@ bool MSWParser::readHeaderEndV3()
       f << "###";
       MWAW_DEBUG_MSG(("MSWParser::readHeaderEndV3: page dimensions seem bad\n"));
     } else {
-      m_pageSpan.setMarginTop(dim[2]);
-      m_pageSpan.setMarginBottom(dim[4]);
-      m_pageSpan.setMarginLeft(dim[3]);
-      m_pageSpan.setMarginRight(dim[5]);
-      m_pageSpan.setFormLength(dim[0]);
-      m_pageSpan.setFormWidth(dim[1]);
+      getPageSpan().setMarginTop(dim[2]);
+      getPageSpan().setMarginBottom(dim[4]);
+      getPageSpan().setMarginLeft(dim[3]);
+      getPageSpan().setMarginRight(dim[5]);
+      getPageSpan().setFormLength(dim[0]);
+      getPageSpan().setFormWidth(dim[1]);
     }
   } else
     dimOk = false;
@@ -929,7 +927,7 @@ bool MSWParser::readHeaderEndV3()
   if (flags&1) {
     f << "landscape,";
     if (dimOk)
-      m_pageSpan.setFormOrientation(MWAWPageSpan::LANDSCAPE);
+      getPageSpan().setFormOrientation(MWAWPageSpan::LANDSCAPE);
   }
   flags &= 0x38;
   if (flags)
@@ -1054,14 +1052,14 @@ bool MSWParser::readDocumentInfo(MSWEntry &entry)
   f << "],";
 
   if (dim[0] > margin[0]+margin[2] && dim[1] > margin[1]+margin[3]) {
-    m_pageSpan.setMarginTop(margin[0]);
-    m_pageSpan.setMarginLeft(margin[1]);
+    getPageSpan().setMarginTop(margin[0]);
+    getPageSpan().setMarginLeft(margin[1]);
     /* decrease a little the right/bottom margin to allow fonts discrepancy*/
-    m_pageSpan.setMarginBottom((margin[2]< 0.5) ? 0.0 : margin[2]-0.5);
-    m_pageSpan.setMarginRight((margin[3]< 0.5) ? 0.0 : margin[3]-0.5);
+    getPageSpan().setMarginBottom((margin[2]< 0.5) ? 0.0 : margin[2]-0.5);
+    getPageSpan().setMarginRight((margin[3]< 0.5) ? 0.0 : margin[3]-0.5);
 
-    m_pageSpan.setFormLength(dim[0]);
-    m_pageSpan.setFormWidth(dim[1]);
+    getPageSpan().setFormLength(dim[0]);
+    getPageSpan().setFormWidth(dim[1]);
   } else {
     MWAW_DEBUG_MSG(("MSWParser::readDocumentInfo: the page dimensions seems odd\n"));
   }
@@ -1911,13 +1909,13 @@ bool MSWParser::readPrintInfo(MSWEntry &entry)
     botMarg=0;
   }
 
-  m_pageSpan.setFormOrientation(MWAWPageSpan::PORTRAIT);
-  m_pageSpan.setMarginTop(topMargin/72.0);
-  m_pageSpan.setMarginBottom(botMarg/72.0);
-  m_pageSpan.setMarginLeft(leftMargin/72.0);
-  m_pageSpan.setMarginRight(rightMarg/72.0);
-  m_pageSpan.setFormLength(paperSize.y()/72.);
-  m_pageSpan.setFormWidth(paperSize.x()/72.);
+  getPageSpan().setFormOrientation(MWAWPageSpan::PORTRAIT);
+  getPageSpan().setMarginTop(topMargin/72.0);
+  getPageSpan().setMarginBottom(botMarg/72.0);
+  getPageSpan().setMarginLeft(leftMargin/72.0);
+  getPageSpan().setMarginRight(rightMarg/72.0);
+  getPageSpan().setFormLength(paperSize.y()/72.);
+  getPageSpan().setFormWidth(paperSize.x()/72.);
 
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());

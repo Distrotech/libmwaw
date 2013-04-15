@@ -47,8 +47,6 @@
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
-#include "MWAWPageSpan.hxx"
-#include "MWAWSubDocument.hxx"
 
 #include "MWAWParser.hxx"
 
@@ -218,9 +216,6 @@ protected:
   //
   //! the state
   shared_ptr<FWParserInternal::State> m_state;
-
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
 
   //! the text parser
   shared_ptr<FWText> m_textParser;

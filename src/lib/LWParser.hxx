@@ -41,7 +41,6 @@
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
-#include "MWAWPageSpan.hxx"
 
 #include "MWAWParser.hxx"
 
@@ -135,8 +134,6 @@ protected:
   //! the state
   shared_ptr<LWParserInternal::State> m_state;
 
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
   //! a flag to know if page span has been set
   bool m_pageSpanSet;
 

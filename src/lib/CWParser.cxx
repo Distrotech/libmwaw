@@ -162,7 +162,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 ////////////////////////////////////////////////////////////
 CWParser::CWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWParser(input, rsrcParser, header), m_state(),
-  m_pageSpan(), m_pageSpanSet(false), m_databaseParser(), m_graphParser(), m_presentationParser(),
+  m_pageSpanSet(false), m_databaseParser(), m_graphParser(), m_presentationParser(),
   m_spreadsheetParser(), m_styleManager(), m_tableParser(), m_textParser()
 {
   init();
@@ -180,10 +180,7 @@ void CWParser::init()
   m_state.reset(new CWParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
+  getPageSpan().setMargins(0.1);
 
   m_styleManager.reset(new CWStyleManager(*this));
 
@@ -200,18 +197,18 @@ void CWParser::init()
 ////////////////////////////////////////////////////////////
 float CWParser::pageHeight() const
 {
-  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
+  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float CWParser::pageWidth() const
 {
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
+  return float(getPageSpan().getPageWidth());
 }
 
 Vec2f CWParser::getPageLeftTop() const
 {
-  return Vec2f(float(m_pageSpan.getMarginLeft()),
-               float(m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
+  return Vec2f(float(getPageSpan().getMarginLeft()),
+               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 bool CWParser::getColor(int colId, MWAWColor &col) const
@@ -414,7 +411,7 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // create the page list
   std::vector<MWAWPageSpan> pageList;
-  MWAWPageSpan ps(m_pageSpan);
+  MWAWPageSpan ps(getPageSpan());
   int numPage = m_textParser->numPages();
   if (m_databaseParser->numPages() > numPage)
     numPage = m_databaseParser->numPages();
@@ -1631,12 +1628,12 @@ bool CWParser::readDocHeader()
     int botMarg = rBotMargin.y() -50;
     if (botMarg < 0) botMarg=0;
 
-    m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
-    m_pageSpan.setMarginBottom(botMarg/72.0);
-    m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
-    m_pageSpan.setMarginRight(rightMarg/72.0);
-    m_pageSpan.setFormLength(paperSize.y()/72.);
-    m_pageSpan.setFormWidth(paperSize.x()/72.);
+    getPageSpan().setMarginTop(lTopMargin.y()/72.0);
+    getPageSpan().setMarginBottom(botMarg/72.0);
+    getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
+    getPageSpan().setMarginRight(rightMarg/72.0);
+    getPageSpan().setFormLength(paperSize.y()/72.);
+    getPageSpan().setFormWidth(paperSize.x()/72.);
     m_pageSpanSet = true;
   }
   int dim2[2];
@@ -1982,12 +1979,12 @@ bool CWParser::readPrintInfo()
     int botMarg = rBotMargin.y() -50;
     if (botMarg < 0) botMarg=0;
 
-    m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
-    m_pageSpan.setMarginBottom(botMarg/72.0);
-    m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
-    m_pageSpan.setMarginRight(rightMarg/72.0);
-    m_pageSpan.setFormLength(paperSize.y()/72.);
-    m_pageSpan.setFormWidth(paperSize.x()/72.);
+    getPageSpan().setMarginTop(lTopMargin.y()/72.0);
+    getPageSpan().setMarginBottom(botMarg/72.0);
+    getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
+    getPageSpan().setMarginRight(rightMarg/72.0);
+    getPageSpan().setFormLength(paperSize.y()/72.);
+    getPageSpan().setFormWidth(paperSize.x()/72.);
   }
 
   if (long(input->tell()) !=endPos) {

@@ -39,12 +39,8 @@
 #include <string>
 #include <vector>
 
-#include "MWAWPageSpan.hxx"
-
-#include "MWAWEntry.hxx"
-#include "MWAWSubDocument.hxx"
-
 #include "MWAWDebug.hxx"
+#include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MWAWParser.hxx"
@@ -197,9 +193,6 @@ protected:
 
   //! the structures parser
   shared_ptr<MWProStructures> m_structures;
-
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

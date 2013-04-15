@@ -40,7 +40,6 @@
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
-#include "MWAWPageSpan.hxx"
 
 #include "MSKParser.hxx"
 
@@ -199,9 +198,6 @@ protected:
 
   //! the list of entries, name->entry
   std::multimap<std::string, MWAWEntry> m_entryMap;
-
-  //! the document size
-  MWAWPageSpan m_pageSpan;
 
   //! the text parser
   shared_ptr<MSK4Text> m_textParser;

@@ -48,7 +48,6 @@ class WPXBinaryData;
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
-#include "MWAWPageSpan.hxx"
 
 #include "MWAWParser.hxx"
 
@@ -217,9 +216,6 @@ protected:
   //
   //! the state
   shared_ptr<MRWParserInternal::State> m_state;
-
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
 
   //! a flag to know if page margins span are set
   bool  m_pageMarginsSpanSet;

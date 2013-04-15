@@ -38,12 +38,8 @@
 #include <string>
 #include <vector>
 
-#include "MWAWPageSpan.hxx"
-
-#include "MWAWEntry.hxx"
-#include "MWAWSubDocument.hxx"
-
 #include "MWAWDebug.hxx"
+#include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MSKParser.hxx"
@@ -135,9 +131,6 @@ protected:
   //
   //! the state
   shared_ptr<MSK3ParserInternal::State> m_state;
-
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
 
   //! the list of different Zones
   std::vector<MWAWEntry> m_listZones;

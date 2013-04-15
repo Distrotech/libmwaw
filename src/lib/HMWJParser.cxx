@@ -152,8 +152,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor + basic interface ...
 ////////////////////////////////////////////////////////////
 HMWJParser::HMWJParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(),
-  m_pageSpan(), m_graphParser(), m_textParser()
+  MWAWParser(input, rsrcParser, header), m_state(), m_graphParser(), m_textParser()
 {
   init();
 }
@@ -170,10 +169,7 @@ void HMWJParser::init()
   m_state.reset(new HMWJParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
-  m_pageSpan.setMarginTop(0.1);
-  m_pageSpan.setMarginBottom(0.1);
-  m_pageSpan.setMarginLeft(0.1);
-  m_pageSpan.setMarginRight(0.1);
+  getPageSpan().setMargins(0.1);
 
   m_graphParser.reset(new HMWJGraph(*this));
   m_textParser.reset(new HMWJText(*this));
@@ -201,18 +197,18 @@ bool HMWJParser::getColor(int colId, int patternId, MWAWColor &color) const
 ////////////////////////////////////////////////////////////
 float HMWJParser::pageHeight() const
 {
-  return float(m_pageSpan.getFormLength()-m_pageSpan.getMarginTop()-m_pageSpan.getMarginBottom()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
+  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
 }
 
 float HMWJParser::pageWidth() const
 {
-  return float(m_pageSpan.getFormWidth()-m_pageSpan.getMarginLeft()-m_pageSpan.getMarginRight());
+  return float(getPageSpan().getPageWidth());
 }
 
 Vec2f HMWJParser::getPageLeftTop() const
 {
-  return Vec2f(float(m_pageSpan.getMarginLeft()),
-               float(m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
+  return Vec2f(float(getPageSpan().getMarginLeft()),
+               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 ////////////////////////////////////////////////////////////
@@ -322,7 +318,7 @@ void HMWJParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // create the page list
   std::vector<MWAWPageSpan> pageList;
-  MWAWPageSpan ps(m_pageSpan);
+  MWAWPageSpan ps(getPageSpan());
   if (m_state->m_headerId) {
     shared_ptr<MWAWSubDocument> subdoc(new HMWJParserInternal::SubDocument(*this, getInput(), m_state->m_headerId));
     ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
@@ -690,12 +686,12 @@ bool HMWJParser::readPrintInfo(MWAWEntry const &entry)
   if (botMarg < 0) botMarg=0;
 
   if (useDocInfo || usePrintInfo) {
-    m_pageSpan.setMarginTop(lTopMargin.y()/72.0);
-    m_pageSpan.setMarginBottom(botMarg/72.0);
-    m_pageSpan.setMarginLeft(lTopMargin.x()/72.0);
-    m_pageSpan.setMarginRight(rightMarg/72.0);
-    m_pageSpan.setFormLength(paperSize.y()/72.);
-    m_pageSpan.setFormWidth(paperSize.x()/72.);
+    getPageSpan().setMarginTop(lTopMargin.y()/72.0);
+    getPageSpan().setMarginBottom(botMarg/72.0);
+    getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
+    getPageSpan().setMarginRight(rightMarg/72.0);
+    getPageSpan().setFormLength(paperSize.y()/72.);
+    getPageSpan().setFormWidth(paperSize.x()/72.);
 
     f << info;
   } else

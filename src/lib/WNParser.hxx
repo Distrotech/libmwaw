@@ -42,15 +42,10 @@
 #include <string>
 #include <vector>
 
-#include "MWAWPageSpan.hxx"
-
-#include "MWAWPosition.hxx"
-
-#include "MWAWEntry.hxx"
-#include "MWAWSubDocument.hxx"
-
 #include "MWAWDebug.hxx"
+#include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
+#include "MWAWPosition.hxx"
 
 #include "MWAWParser.hxx"
 
@@ -169,9 +164,6 @@ protected:
 
   //! the list of entry
   shared_ptr<WNEntryManager> m_entryManager;
-
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
 
   //! the text parser
   shared_ptr<WNText> m_textParser;
