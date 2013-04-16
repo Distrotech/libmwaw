@@ -195,16 +195,6 @@ bool HMWJParser::getColor(int colId, int patternId, MWAWColor &color) const
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-float HMWJParser::pageHeight() const
-{
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float HMWJParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
-}
-
 Vec2f HMWJParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),

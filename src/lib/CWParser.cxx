@@ -195,14 +195,9 @@ void CWParser::init()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-float CWParser::pageHeight() const
+double CWParser::getTextHeight() const
 {
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float CWParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
+  return getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
 }
 
 Vec2f CWParser::getPageLeftTop() const

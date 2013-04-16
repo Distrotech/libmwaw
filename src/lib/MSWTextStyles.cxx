@@ -1083,7 +1083,7 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
       if (numCols<=1) listener->openSection();
       else {
         // column seems to have equal size
-        int colWidth = int((72.0*m_mainParser->pageWidth())/numCols);
+        int colWidth = int((72.0*m_mainParser->getPageWidth())/numCols);
         std::vector<int> colSize;
         colSize.resize((size_t) numCols);
         for (int i = 0; i < numCols; i++) colSize[(size_t)i] = colWidth;

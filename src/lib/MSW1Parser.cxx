@@ -285,20 +285,6 @@ void MSW1Parser::setListener(MWAWContentListenerPtr listen)
 }
 
 ////////////////////////////////////////////////////////////
-// position and height
-////////////////////////////////////////////////////////////
-float MSW1Parser::pageHeight() const
-{
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float MSW1Parser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
-}
-
-
-////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
 void MSW1Parser::newPage(int number)
@@ -1200,7 +1186,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
   if (isMain) {
     numCols = m_state->m_numColumns;
     if (numCols > 1 && !getListener()->isSectionOpened()) {
-      int colWidth = int((72.0*pageWidth())/numCols);
+      int colWidth = int((72.0*getPageWidth())/numCols);
       std::vector<int> width;
       width.resize((size_t) numCols, colWidth);
       getListener()->openSection(width, WPX_POINT);

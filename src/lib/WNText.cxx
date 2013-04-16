@@ -1296,7 +1296,7 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
     }
   }
   if (version() <= 2) // distance from right
-    ruler.m_margins[2] = int(72.0*m_mainParser->pageWidth())-ruler.m_margins[2].get();
+    ruler.m_margins[2] = int(72.0*m_mainParser->getPageWidth())-ruler.m_margins[2].get();
   *(ruler.m_margins[2]) -= 28.;
   if (ruler.m_margins[2].get() < 0) ruler.m_margins[2]=0;
   if (!interlineFixed && height>=0)
@@ -1961,7 +1961,7 @@ void WNText::sendZone(int id)
     m_mainParser->getColumnInfo(nCol, width);
     if (m_state->m_numColumns > 1) {
       if (width <= 0) // ok, we need to compute the width
-        width = int((72.0*m_mainParser->pageWidth())/m_state->m_numColumns);
+        width = int((72.0*m_mainParser->getPageWidth())/m_state->m_numColumns);
       std::vector<int> colSize;
       colSize.resize((size_t) m_state->m_numColumns, width);
       if (listener->isSectionOpened())

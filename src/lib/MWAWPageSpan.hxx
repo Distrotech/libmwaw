@@ -56,11 +56,14 @@ class MWAWPageSpan
 {
   friend class MWAWContentListener;
 public:
+  /** the page orientation */
   enum FormOrientation { PORTRAIT, LANDSCAPE };
-
+  /** the header/footer type */
   enum HeaderFooterType { HEADER, FOOTER };
+  /** the header/footer occurence in the file */
   enum HeaderFooterOccurence { ODD, EVEN, ALL, NEVER };
 
+  /** a fixed page number position */
   enum PageNumberPosition { None = 0, TopLeft, TopCenter, TopRight, TopLeftAndRight, TopInsideLeftAndRight,
                             BottomLeft, BottomCenter, BottomRight, BottomLeftAndRight, BottomInsideLeftAndRight
                           };
@@ -165,7 +168,7 @@ public:
   }
   //! set all the margins
   void setMargins(double margin, int wh=libmwaw::LeftBit|libmwaw::RightBit|libmwaw::TopBit|libmwaw::BottomBit) {
-    if (margin < 0.0) margin = 0.0;
+    if (margin <= 0.0) margin = 0.01;
     if (wh&libmwaw::LeftBit)
       m_margins[libmwaw::Left]=margin;
     if (wh&libmwaw::RightBit)

@@ -376,20 +376,6 @@ void FWParser::init()
 }
 
 ////////////////////////////////////////////////////////////
-// position and height
-////////////////////////////////////////////////////////////
-float FWParser::pageHeight() const
-{
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float FWParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
-}
-
-
-////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
 void FWParser::newPage(int number)

@@ -1524,7 +1524,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
   NSTextInternal::Zone &zone = m_state->m_zones[zoneId];
   bool isMain = zoneId == NSStruct::Z_Main;
   int nCol = 1;
-  int width = int(72.0*m_mainParser->pageWidth());
+  int width = int(72.0*m_mainParser->getPageWidth());
   if (isMain || zoneId == NSStruct::Z_Footnote) {
     float colSep = 0.5f;
     m_mainParser->getColumnInfo(nCol, colSep);

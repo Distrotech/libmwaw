@@ -307,19 +307,6 @@ void MSWParser::init()
 }
 
 ////////////////////////////////////////////////////////////
-// position and height
-////////////////////////////////////////////////////////////
-float MSWParser::pageHeight() const
-{
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float MSWParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
-}
-
-////////////////////////////////////////////////////////////
 // new page and color
 ////////////////////////////////////////////////////////////
 void MSWParser::newPage(int number)

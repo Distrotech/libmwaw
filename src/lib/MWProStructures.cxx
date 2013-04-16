@@ -2774,7 +2774,7 @@ void MWProStructuresListenerState::sendSection(int nSection)
     if (m_numCols==1) listener->openSection();
     else {
       std::vector<int> colSize;
-      float colWidth =  float(72.*m_structures->m_mainParser.pageWidth()/m_numCols);
+      float colWidth =  float(72.*m_structures->m_mainParser.getPageWidth()/m_numCols);
       colSize.resize(size_t(m_numCols));
       for (size_t i = 0; i < size_t(m_numCols); i++) colSize[i] = int(colWidth);
       listener->openSection(colSize, WPX_POINT);

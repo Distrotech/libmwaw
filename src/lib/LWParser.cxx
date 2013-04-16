@@ -156,16 +156,6 @@ libmwaw::DebugFile &LWParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-float LWParser::pageHeight() const
-{
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float LWParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
-}
-
 Vec2f LWParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),

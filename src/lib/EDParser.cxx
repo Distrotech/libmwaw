@@ -127,17 +127,12 @@ void EDParser::init()
   m_state.reset(new EDParserInternal::State);
 
   // no margins ( ie. the document is a set of picture corresponding to each page )
-  getPageSpan().setMargins(0.);
+  getPageSpan().setMargins(0.01);
 }
 
 void EDParser::setListener(MWAWContentListenerPtr listen)
 {
   MWAWParser::setListener(listen);
-}
-
-float EDParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
 }
 
 MWAWInputStreamPtr EDParser::rsrcInput()
@@ -492,7 +487,7 @@ bool EDParser::sendIndex()
   if (!m_state->m_indexList.size())
     return true;
 
-  double w = pageWidth();
+  double w = getPageWidth();
   MWAWParagraph para;
   MWAWTabStop tab;
   tab.m_alignment = MWAWTabStop::RIGHT;

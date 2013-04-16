@@ -157,10 +157,6 @@ protected:
   //! send a picture
   void sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor=MWAWPosition::Char);
 
-  //! returns the page height, ie. paper size less margin (in inches)
-  float pageHeight() const;
-  //! returns the page width, ie. paper size less margin (in inches)
-  float pageWidth() const;
   //! returns the color corresponding to an id
   bool getColor(int id, MWAWColor &col) const;
 

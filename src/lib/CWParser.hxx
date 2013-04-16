@@ -130,10 +130,8 @@ protected:
       where \a fSz to the int size: 1(int8), 2(int16), 4(int32) */
   bool readStructIntZone(char const *zoneName, bool hasEntete, int fSz, std::vector<int> &res);
 
-  //! returns the page height, ie. paper size less margin (in inches)
-  float pageHeight() const;
-  //! returns the page width, ie. paper size less margin (in inches)
-  float pageWidth() const;
+  //! returns the page height, ie. paper size less margin (in inches) less header/footer size
+  double getTextHeight() const;
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
   //! adds a new page

@@ -103,10 +103,6 @@ protected:
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
 
-  //! returns the page height, ie. paper size less margin (in inches)
-  float pageHeight() const;
-  //! returns the page width, ie. paper size less margin (in inches)
-  float pageWidth() const;
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
   //! adds a new page

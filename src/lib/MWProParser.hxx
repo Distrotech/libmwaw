@@ -128,8 +128,6 @@ protected:
 
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
-  //! returns the page width, ie. paper size less margin (in inches)
-  float pageWidth() const;
   //! returns the document number of columns ( filed in MWII)
   int numColumns() const;
 

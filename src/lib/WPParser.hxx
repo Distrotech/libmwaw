@@ -133,10 +133,8 @@ protected:
   //! read a unknown section
   bool readUnknown(WPParserInternal::ParagraphInfo const &info);
 
-  //! returns the page height, ie. paper size less margin (in inches)
-  float pageHeight() const;
-  //! returns the page width, ie. paper size less margin (in inches)
-  float pageWidth() const;
+  //! returns the page height, ie. paper size less margin (in inches) and header/footer
+  double getTextHeight() const;
 
   //! adds a new page
   void newPage(int number);

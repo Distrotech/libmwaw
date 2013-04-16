@@ -260,16 +260,6 @@ void MRWParser::init()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-float MRWParser::pageHeight() const
-{
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float MRWParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
-}
-
 Vec2f MRWParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
@@ -285,7 +275,7 @@ void MRWParser::getColumnInfo(int zId, int &numColumns, std::vector<int> &width)
     return;
   }
   numColumns = 1;
-  width.resize(1, int(72.0f*MRWParser::pageWidth()));
+  width.resize(1, int(72.0*getPageWidth()));
 }
 
 ////////////////////////////////////////////////////////////

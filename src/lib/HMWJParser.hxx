@@ -132,10 +132,6 @@ protected:
   //! finds the different objects zones in a Hapanese File
   bool createZones();
 
-  //! returns the page height, ie. paper size less margin (in inches)
-  float pageHeight() const;
-  //! returns the page width, ie. paper size less margin (in inches)
-  float pageWidth() const;
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
 

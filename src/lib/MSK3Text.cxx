@@ -318,7 +318,7 @@ void MSK3Text::update(MSK3TextInternal::TextZone &zone)
   size_t numLineZones = zone.m_zonesList.size();
   if (numLineZones == 0) return;
 
-  int textHeight = int(72.*m_mainParser->pageHeight());
+  int textHeight = int(72.*m_mainParser->getTextHeight());
 
   int actH = 0, actualPH = 0;
   zone.m_linesHeight.push_back(0);
@@ -691,7 +691,7 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MSK3TextInternal:
   }
   *(parag.m_margins[0]) -= *(parag.m_margins[1]);
   if (parag.m_margins[2].get() > 0.0)
-    parag.m_margins[2] = m_mainParser->pageWidth()-*(parag.m_margins[2]);
+    parag.m_margins[2] = m_mainParser->getPageWidth()-*(parag.m_margins[2]);
   if (parag.m_margins[2].get() > 56./72.) *(parag.m_margins[2]) -= 28./72.;
   else if (parag.m_margins[2].get() >=0.0) *(parag.m_margins[2]) *= 0.5;
   else parag.m_margins[2] = 0.0;
@@ -700,7 +700,7 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MSK3TextInternal:
   size_t numTabs = 0;
 
   // checkme: in order to avoid x_tabs > textWidth (appears sometimes when i=0)
-  long maxWidth = long(m_mainParser->pageWidth()*72-36);
+  long maxWidth = long(m_mainParser->getPageWidth()*72-36);
   if (dim[1] > maxWidth) maxWidth = dim[1];
 
   for (int i = 0; i < numVal; i++) {

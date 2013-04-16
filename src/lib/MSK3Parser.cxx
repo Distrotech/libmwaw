@@ -210,14 +210,9 @@ void MSK3Parser::init()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-float MSK3Parser::pageHeight() const
+double MSK3Parser::getTextHeight() const
 {
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float MSK3Parser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
+  return getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
 }
 
 Vec2f MSK3Parser::getPageTopLeft() const

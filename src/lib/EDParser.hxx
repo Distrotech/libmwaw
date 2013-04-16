@@ -81,8 +81,6 @@ protected:
 
   //! returns the page height, ie. paper size less margin (in inches)
   float pageHeight() const;
-  //! returns the page width, ie. paper size less margin (in inches)
-  float pageWidth() const;
 
   //! adds a new page
   void newPage(int number);

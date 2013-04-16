@@ -152,10 +152,6 @@ protected:
   /** try to read a zone */
   bool readZone(int &actZone, bool onlyTest=false);
 
-  //! returns the page height, ie. paper size less margin (in inches)
-  float pageHeight() const;
-  //! returns the page width, ie. paper size less margin (in inches)
-  float pageWidth() const;
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
   //! returns the columns information

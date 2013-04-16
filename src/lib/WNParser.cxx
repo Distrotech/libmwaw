@@ -159,16 +159,6 @@ void WNParser::init()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-float WNParser::pageHeight() const
-{
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float WNParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
-}
-
 void WNParser::getColumnInfo(int &numColumns, int &width) const
 {
   numColumns = m_state->m_numColumns;

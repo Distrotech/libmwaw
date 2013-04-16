@@ -2136,7 +2136,7 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
   float pageHeight = 0.0;
   if (mainGroup) {
     leftTop = 72.0f*m_mainParser->getPageLeftTop();
-    pageHeight = 72.0f*m_mainParser->pageHeight();
+    pageHeight = 72.0f*(float)m_mainParser->getTextHeight();
   }
 
   if (group->m_totalNumber > 1 &&

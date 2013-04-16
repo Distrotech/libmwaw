@@ -610,16 +610,10 @@ void WPParser::setListener(MWAWContentListenerPtr listen)
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-float WPParser::pageHeight() const
+double WPParser::getTextHeight() const
 {
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
+  return getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
 }
-
-float WPParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
-}
-
 
 ////////////////////////////////////////////////////////////
 // new page
@@ -1169,7 +1163,7 @@ bool WPParser::findSectionColumns(int zone, Vec2i limits, std::vector<int> &colS
     totalSize += val;
     colSize.push_back(val);
   }
-  if (totalSize >= 72*pageWidth()) {
+  if (totalSize >= int(72.*getPageWidth())) {
     MWAW_DEBUG_MSG(("WPParser::findSectionColumns: total size is too big\n"));
     return false;
   }
@@ -1196,7 +1190,7 @@ bool WPParser::readPageInfo(int zone)
   }
 
   int actNumLine = 0;
-  int maxHeight = int(72.*pageHeight()+20);
+  int maxHeight = int(72.*getTextHeight()+20.);
   if (maxHeight < 1000) maxHeight = 1000;
   int prevTotalHeight = 0;
 
@@ -1241,7 +1235,7 @@ MWAWParagraph WPParser::getParagraph(WPParserInternal::ParagraphData const &data
   para.m_margins[0]=double(data.m_indent[1]-data.m_indent[0]);
   if (getListener() && getListener()->getSectionNumColumns() > 1)
     return para; // too dangerous to set the paragraph width in this case...
-  double right=pageWidth()*72.f-float(data.m_width);
+  double right=getPageWidth()*72.-double(data.m_width);
   if (right > 0)
     para.m_margins[2]=right;
   return para;

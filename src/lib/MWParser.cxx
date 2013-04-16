@@ -386,20 +386,6 @@ void MWParser::setListener(MWAWContentListenerPtr listen)
 }
 
 ////////////////////////////////////////////////////////////
-// position and height
-////////////////////////////////////////////////////////////
-float MWParser::pageHeight() const
-{
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float MWParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
-}
-
-
-////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
 void MWParser::newPage(int number)
@@ -414,8 +400,6 @@ void MWParser::newPage(int number)
     getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
 }
-
-
 
 ////////////////////////////////////////////////////////////
 // the parser
@@ -1489,7 +1473,7 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   }
   *(parag.m_margins[0]) -= parag.m_margins[1].get();
   if (parag.m_margins[2].get() > 0.0)
-    parag.m_margins[2]=pageWidth()-parag.m_margins[2].get()-1.0;
+    parag.m_margins[2]=getPageWidth()-parag.m_margins[2].get()-1.0;
   if (parag.m_margins[2].get() < 0) parag.m_margins[2] = 0;
   f << parag;
 

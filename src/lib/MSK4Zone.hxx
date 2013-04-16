@@ -117,10 +117,8 @@ protected:
   (WPXDocumentInterface *interface,
    MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer);
 
-  //! returns the page height, ie. paper size less margin (in inches)
-  float pageHeight() const;
-  //! returns the page width, ie. paper size less margin (in inches)
-  float pageWidth() const;
+  //! returns the page height, ie. paper size less margin (in inches) less header/footer size
+  double getTextHeight() const;
 
   //! returns the page top left point
   Vec2f getPageTopLeft() const;

@@ -156,16 +156,6 @@ libmwaw::DebugFile &ZWParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-float ZWParser::pageHeight() const
-{
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float ZWParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
-}
-
 Vec2f ZWParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),

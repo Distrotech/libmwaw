@@ -514,20 +514,6 @@ void MDWParser::setListener(MWAWContentListenerPtr listen)
 }
 
 ////////////////////////////////////////////////////////////
-// position and height
-////////////////////////////////////////////////////////////
-float MDWParser::pageHeight() const
-{
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float MDWParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
-}
-
-
-////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
 void MDWParser::newPage(int number)
@@ -935,9 +921,9 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
   MWAWParagraph para;
   para.m_marginsUnit = WPX_POINT;
   para.m_margins[1] = (double) input->readULong(2);
-  para.m_margins[2] = pageWidth()*72.0-(double) input->readULong(2);
+  para.m_margins[2] = getPageWidth()*72.0-(double) input->readULong(2);
   if (*(para.m_margins[2]) < 0) {
-    f << "#rightMargin=" << pageWidth()*72.0-*(para.m_margins[2]);
+    f << "#rightMargin=" << getPageWidth()*72.0-*(para.m_margins[2]);
     para.m_margins[2] = 0.0;
   }
   long val = (long) input->readULong(1);

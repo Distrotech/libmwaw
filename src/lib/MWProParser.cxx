@@ -318,16 +318,6 @@ void MWProParser::init()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-float MWProParser::pageHeight() const
-{
-  return float(getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0);
-}
-
-float MWProParser::pageWidth() const
-{
-  return float(getPageSpan().getPageWidth());
-}
-
 int MWProParser::numColumns() const
 {
   if (m_state->m_col <= 1) return 1;

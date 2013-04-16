@@ -92,11 +92,6 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
-  //! returns the page height, ie. paper size less margin (in inches)
-  float pageHeight() const;
-  //! returns the page width, ie. paper size less margin (in inches)
-  float pageWidth() const;
-
   //! returns the columns information
   void getColumnInfo(int &numColumns, int &width) const;
 

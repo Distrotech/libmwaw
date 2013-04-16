@@ -142,6 +142,14 @@ protected:
   MWAWPageSpan &getPageSpan() {
     return m_pageSpan;
   }
+  //! returns the page length (form width without margin )
+  double getPageLength() const {
+    return m_pageSpan.getPageLength();
+  }
+  //! returns the page width (form width without margin )
+  double getPageWidth() const {
+    return m_pageSpan.getPageWidth();
+  }
   //! returns the rsrc parser
   MWAWRSRCParserPtr &getRSRCParser() {
     return m_parserState->m_rsrcParser;

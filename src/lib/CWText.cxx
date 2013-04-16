@@ -1337,7 +1337,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
           if (numCols<=1) listener->openSection();
           else {
             if (width.size() == 0) {
-              int colWidth = int((72.0*m_mainParser->pageWidth())/numCols);
+              int colWidth = int((72.0*m_mainParser->getPageWidth())/numCols);
               width.resize((size_t) numCols, colWidth);
             }
             listener->openSection(width, WPX_POINT);
