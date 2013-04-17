@@ -273,10 +273,16 @@ MWAWContentListenerPtr MSK4Zone::createListener
   std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(getPageSpan());
 
-  if (header)
-    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, header);
-  if (footer)
-    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, footer);
+  if (header) {
+    MWAWHeaderFooter hF(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    hF.m_subDocument=header;
+    ps.setHeaderFooter(hF);
+  }
+  if (footer) {
+    MWAWHeaderFooter hF(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    hF.m_subDocument=footer;
+    ps.setHeaderFooter(hF);
+  }
 
   int numPages = m_textParser->numPages();
   int graphPages = m_graphParser->numPages(-1);

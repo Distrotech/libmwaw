@@ -137,16 +137,16 @@ struct Paragraph : public MWAWParagraph {
 /** Internal structure: use to store a header */
 struct HeaderFooter {
   //! Constructor
-  HeaderFooter() : m_type(MWAWPageSpan::HEADER), m_occurence(MWAWPageSpan::NEVER),
+  HeaderFooter() : m_type(MWAWHeaderFooter::HEADER), m_occurence(MWAWHeaderFooter::NEVER),
     m_page(0), m_textParagraph(-1), m_unknown(0), m_parsed(false), m_extra("") {
     for (int i = 0; i < 2; i++) m_paragraph[i] = -1;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, HeaderFooter const &hf);
   //! the header type
-  MWAWPageSpan::HeaderFooterType m_type;
+  MWAWHeaderFooter::Type m_type;
   //! the header occurence
-  MWAWPageSpan::HeaderFooterOccurence m_occurence;
+  MWAWHeaderFooter::Occurence m_occurence;
   //! the page
   int m_page;
   //! the paragraph position in the header zone (first and last)
@@ -163,19 +163,19 @@ struct HeaderFooter {
 
 std::ostream &operator<<(std::ostream &o, HeaderFooter const &hf)
 {
-  if (hf.m_type==MWAWPageSpan::HEADER) o << "header,";
+  if (hf.m_type==MWAWHeaderFooter::HEADER) o << "header,";
   else o << "footer,";
   switch(hf.m_occurence) {
-  case MWAWPageSpan::NEVER:
+  case MWAWHeaderFooter::NEVER:
     o << "never,";
     break;
-  case MWAWPageSpan::ODD:
+  case MWAWHeaderFooter::ODD:
     o << "odd,";
     break;
-  case MWAWPageSpan::EVEN:
+  case MWAWHeaderFooter::EVEN:
     o << "even,";
     break;
-  case MWAWPageSpan::ALL:
+  case MWAWHeaderFooter::ALL:
     o << "all,";
     break;
   default:
@@ -509,7 +509,7 @@ void NSText::computePositions()
     NSTextInternal::HeaderFooter &hf = m_state->m_hfList[i];
     int page = 1;
     long textPos = hf.m_textParagraph;
-    if (hf.m_type == MWAWPageSpan::FOOTER && textPos) textPos--;
+    if (hf.m_type == MWAWHeaderFooter::FOOTER && textPos) textPos--;
     for (size_t j = 0; j < firstParagraphInPage.size(); j++) {
       if (textPos < firstParagraphInPage[j])
         break;
@@ -521,18 +521,18 @@ void NSText::computePositions()
       m_state->m_footersId[size_t(p)-1] = (p%2) ? footerId[0] : footerId[1];
     }
     actPage = hf.m_page = page;
-    Vec2i &wh = hf.m_type == MWAWPageSpan::HEADER ? headerId : footerId;
+    Vec2i &wh = hf.m_type == MWAWHeaderFooter::HEADER ? headerId : footerId;
     switch(hf.m_occurence) {
-    case MWAWPageSpan::ODD:
+    case MWAWHeaderFooter::ODD:
       wh[0] = int(i);
       break;
-    case MWAWPageSpan::EVEN:
+    case MWAWHeaderFooter::EVEN:
       wh[1] = int(i);
       break;
-    case MWAWPageSpan::ALL:
+    case MWAWHeaderFooter::ALL:
       wh[0] = wh[1] = int(i);
       break;
-    case MWAWPageSpan::NEVER:
+    case MWAWHeaderFooter::NEVER:
       wh[0] = wh[1] = -1;
       break;
     default:
@@ -1212,10 +1212,10 @@ bool NSText::readHeaderFooter(MWAWEntry const &entry)
     int what = (int) input->readULong(2);
     switch((what>>2)&0x3) {
     case 1:
-      hf.m_type = MWAWPageSpan::HEADER;
+      hf.m_type = MWAWHeaderFooter::HEADER;
       break;
     case 2:
-      hf.m_type = MWAWPageSpan::FOOTER;
+      hf.m_type = MWAWHeaderFooter::FOOTER;
       break;
     default:
       f << "#what=" << ((what>>2)&0x3);
@@ -1223,13 +1223,13 @@ bool NSText::readHeaderFooter(MWAWEntry const &entry)
     }
     switch(what&0x3) {
     case 1:
-      hf.m_occurence = MWAWPageSpan::ODD;
+      hf.m_occurence = MWAWHeaderFooter::ODD;
       break;
     case 2:
-      hf.m_occurence = MWAWPageSpan::EVEN;
+      hf.m_occurence = MWAWHeaderFooter::EVEN;
       break;
     case 3:
-      hf.m_occurence = MWAWPageSpan::ALL;
+      hf.m_occurence = MWAWHeaderFooter::ALL;
       break;
     default:
       f << "[#page],";

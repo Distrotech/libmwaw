@@ -86,6 +86,12 @@ public:
   void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
   /** returns try if a subdocument is open  */
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
+
+  // ------ header/footer --------
+  /** insert a header */
+  bool insertHeader(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras);
+  /** insert a footer */
+  bool insertFooter(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras);
   /** returns true if the header/footer is open */
   bool isHeaderFooterOpened() const;
 
@@ -137,7 +143,7 @@ public:
   /** Defines some basic type for field */
   enum FieldType { None, PageCount, PageNumber, Date, Time, Title, Link, Database };
   //! adds a field type
-  void insertField(FieldType type);
+  void insertField(FieldType type, WPXPropertyList extras=WPXPropertyList());
   //! insert a date/time field with given format (see strftime)
   void insertDateTimeField(char const *format);
 

@@ -310,12 +310,14 @@ void HMWJParser::createDocument(WPXDocumentInterface *documentInterface)
   std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(getPageSpan());
   if (m_state->m_headerId) {
-    shared_ptr<MWAWSubDocument> subdoc(new HMWJParserInternal::SubDocument(*this, getInput(), m_state->m_headerId));
-    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    header.m_subDocument.reset(new HMWJParserInternal::SubDocument(*this, getInput(), m_state->m_headerId));
+    ps.setHeaderFooter(header);
   }
   if (m_state->m_footerId) {
-    shared_ptr<MWAWSubDocument> subdoc(new HMWJParserInternal::SubDocument(*this, getInput(), m_state->m_footerId));
-    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    footer.m_subDocument.reset(new HMWJParserInternal::SubDocument(*this, getInput(), m_state->m_footerId));
+    ps.setHeaderFooter(footer);
   }
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 

@@ -350,9 +350,10 @@ void DMText::updatePageSpanList(std::vector<MWAWPageSpan> &spanList)
       span.setMarginBottom(double(zone.m_margins[3])/72.);
     span.setBackgroundColor(zone.m_backgroundColor);
     if (hasFooter && zone.m_useFooter) {
-      shared_ptr<MWAWSubDocument> footer
+      MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+      footer.m_subDocument.reset
       (new DMTextInternal::SubDocument(*this, input, zId, libmwaw::DOC_HEADER_FOOTER));
-      span.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, footer);
+      span.setHeaderFooter(footer);
     }
     for (int i = 0; i < zone.m_numPages; i++) {
       spanList.push_back(span);

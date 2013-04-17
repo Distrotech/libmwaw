@@ -283,14 +283,16 @@ void WNParser::createDocument(WPXDocumentInterface *documentInterface)
 
   WNEntry entry = m_textParser->getHeader();
   if (entry.valid()) {
-    shared_ptr<MWAWSubDocument> subdoc(new WNParserInternal::SubDocument(*this, getInput(), entry));
-    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    header.m_subDocument.reset(new WNParserInternal::SubDocument(*this, getInput(), entry));
+    ps.setHeaderFooter(header);
   }
 
   entry = m_textParser->getFooter();
   if (entry.valid()) {
-    shared_ptr<MWAWSubDocument> subdoc(new WNParserInternal::SubDocument(*this, getInput(), entry));
-    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    footer.m_subDocument.reset(new WNParserInternal::SubDocument(*this, getInput(), entry));
+    ps.setHeaderFooter(footer);
   }
 
   int numPage = m_textParser->numPages();

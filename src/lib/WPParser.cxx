@@ -686,9 +686,9 @@ void WPParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 1; i < 3; i++) {
     if (m_state->m_windows[i].m_paragraphs.size() == 0)
       continue;
-
-    shared_ptr<MWAWSubDocument> subdoc(new WPParserInternal::SubDocument(*this, getInput(), i));
-    ps.setHeaderFooter((i==1) ? MWAWPageSpan::HEADER : MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+    MWAWHeaderFooter hF((i==1) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    hF.m_subDocument.reset(new WPParserInternal::SubDocument(*this, getInput(), i));
+    ps.setHeaderFooter(hF);
   }
 
   m_state->m_numPages = int(m_state->m_windows[0].m_pages.size());

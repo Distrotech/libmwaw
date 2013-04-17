@@ -279,12 +279,14 @@ void LWParser::createDocument(WPXDocumentInterface *documentInterface)
   MWAWPageSpan ps(getPageSpan());
 
   if (m_textParser->hasHeaderFooter(true)) {
-    shared_ptr<MWAWSubDocument> subdoc(new LWParserInternal::SubDocument(*this, getInput(), true));
-    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    header.m_subDocument.reset(new LWParserInternal::SubDocument(*this, getInput(), true));
+    ps.setHeaderFooter(header);
   }
   if (m_textParser->hasHeaderFooter(false)) {
-    shared_ptr<MWAWSubDocument> subdoc(new LWParserInternal::SubDocument(*this, getInput(), false));
-    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    footer.m_subDocument.reset(new LWParserInternal::SubDocument(*this, getInput(), false));
+    ps.setHeaderFooter(footer);
   }
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);

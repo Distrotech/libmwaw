@@ -279,12 +279,16 @@ void HMWKParser::createDocument(WPXDocumentInterface *documentInterface)
   long headerId, footerId;
   m_textParser->getHeaderFooterId(headerId, footerId);
   if (headerId) {
-    shared_ptr<MWAWSubDocument> subdoc(new HMWKParserInternal::SubDocument(*this, getInput(), headerId));
-    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    header.m_subDocument.reset(new HMWKParserInternal::SubDocument
+                               (*this, getInput(), headerId));
+    ps.setHeaderFooter(header);
   }
   if (footerId) {
-    shared_ptr<MWAWSubDocument> subdoc(new HMWKParserInternal::SubDocument(*this, getInput(), footerId));
-    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    footer.m_subDocument.reset(new HMWKParserInternal::SubDocument
+                               (*this, getInput(), footerId));
+    ps.setHeaderFooter(footer);
   }
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);

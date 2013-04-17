@@ -35,60 +35,114 @@
 
 #include "libmwaw_internal.hxx"
 #include "MWAWContentListener.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MWAWPageSpan.hxx"
 
-/** Low level: namespace used to define/store the data used by MWAWPageSpan */
-namespace MWAWPageSpanInternal
+// ----------------- MWAWHeaderFooter ------------------------
+MWAWHeaderFooter::MWAWHeaderFooter(MWAWHeaderFooter::Type const type, MWAWHeaderFooter::Occurence const occurence) :
+  m_type(type), m_occurence(occurence), m_height(0),
+  m_pageNumberPosition(MWAWHeaderFooter::None), m_pageNumberType(libmwaw::ARABIC),
+  m_pageNumberFont(20,12), m_subDocument()
 {
-// intermediate page representation class: for internal use only (by the high-level content/styles listeners). should not be exported.
-class HeaderFooter
+}
+
+MWAWHeaderFooter::~MWAWHeaderFooter()
 {
-public:
-  HeaderFooter(const MWAWPageSpan::HeaderFooterType headerFooterType, const MWAWPageSpan::HeaderFooterOccurence occurence, MWAWSubDocumentPtr &subDoc)  :
-    m_type(headerFooterType), m_occurence(occurence), m_subDocument(subDoc) {
-  }
+}
 
-  HeaderFooter(const HeaderFooter &headerFooter) :
-    m_type(headerFooter.getType()), m_occurence(headerFooter.getOccurence()), m_subDocument(headerFooter.m_subDocument) {
-  }
-
-  ~HeaderFooter() {
-  }
-
-  MWAWPageSpan::HeaderFooterType getType() const {
-    return m_type;
-  }
-  MWAWPageSpan::HeaderFooterOccurence getOccurence() const {
-    return m_occurence;
-  }
-  MWAWSubDocumentPtr &getSubDocument() {
-    return m_subDocument;
-  }
-  bool operator==(shared_ptr<HeaderFooter> const &headerFooter) const;
-  bool operator!=(shared_ptr<HeaderFooter> const &headerFooter) const {
-    return !operator==(headerFooter);
-  }
-private:
-  MWAWPageSpan::HeaderFooterType m_type;
-  MWAWPageSpan::HeaderFooterOccurence m_occurence;
-  MWAWSubDocumentPtr m_subDocument;
-};
-
-bool HeaderFooter::operator==(shared_ptr<HeaderFooter> const &hF) const
+bool MWAWHeaderFooter::operator==(MWAWHeaderFooter const &hf) const
 {
-  if (!hF) return false;
-  if (m_type != hF.get()->m_type)
+  if (&hf==this) return true;
+  if (m_type != hf.m_type)
     return false;
-  if (m_occurence != hF.get()->m_occurence)
+  if (m_type == UNDEF)
+    return true;
+  if (m_occurence != hf.m_occurence)
+    return false;
+  if (m_height < hf.m_height || m_height > hf.m_height)
+    return false;
+  if (m_pageNumberPosition != hf.m_pageNumberPosition ||
+      m_pageNumberType != hf.m_pageNumberType ||
+      m_pageNumberFont != hf.m_pageNumberFont)
     return false;
   if (!m_subDocument)
-    return !hF.get()->m_subDocument;
-  if (*m_subDocument.get() != hF.get()->m_subDocument)
+    return !hf.m_subDocument;
+  if (*m_subDocument.get() != hf.m_subDocument)
     return false;
   return true;
 }
+
+// send data to the listener
+void MWAWHeaderFooter::send(MWAWContentListener *listener, WPXDocumentInterface *documentInterface) const
+{
+  if (m_type == UNDEF)
+    return;
+  if (!listener || !documentInterface) {
+    MWAW_DEBUG_MSG(("MWAWHeaderFooter::send: called without listener or interface\n"));
+    return;
+  }
+  WPXPropertyList propList;
+  switch (m_occurence) {
+  case ODD:
+    propList.insert("libwpd:occurence", "odd");
+    break;
+  case EVEN:
+    propList.insert("libwpd:occurence", "even");
+    break;
+  case ALL:
+    propList.insert("libwpd:occurence", "all");
+    break;
+  case NEVER:
+  default:
+    break;
+  }
+  bool isHeader = m_type == HEADER;
+  if (isHeader)
+    documentInterface->openHeader(propList);
+  else
+    documentInterface->openFooter(propList);
+  if (m_pageNumberPosition >= TopLeft && m_pageNumberPosition <= TopRight)
+    insertPageNumberParagraph(listener);
+  listener->handleSubDocument(m_subDocument, libmwaw::DOC_HEADER_FOOTER);
+  if (m_pageNumberPosition >= BottomLeft && m_pageNumberPosition <= BottomRight)
+    insertPageNumberParagraph(listener);
+  if (isHeader)
+    documentInterface->closeHeader();
+  else
+    documentInterface->closeFooter();
+}
+
+void MWAWHeaderFooter::insertPageNumberParagraph(MWAWContentListener *listener) const
+{
+  MWAWParagraph para;
+  para.m_justify = MWAWParagraph::JustificationCenter;
+  switch (m_pageNumberPosition) {
+  case TopLeft:
+  case BottomLeft:
+    para.m_justify = MWAWParagraph::JustificationLeft;
+    break;
+  case TopRight:
+  case BottomRight:
+    para.m_justify = MWAWParagraph::JustificationRight;
+    break;
+  case TopCenter:
+  case BottomCenter:
+  case None:
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MWAWHeaderFooter::insertPageNumberParagraph: unexpected value\n"));
+    break;
+  }
+  listener->setParagraph(para);
+  listener->setFont(m_pageNumberFont);
+  if (listener->isParagraphOpened())
+    listener->insertEOL();
+
+  WPXPropertyList pList;
+  pList.insert("style:num-format", libmwaw::numberingTypeToString(m_pageNumberType).c_str());
+  listener->insertField(MWAWContentListener::PageNumber);
 }
 
 // ----------------- MWAWPageSpan ------------------------
@@ -110,41 +164,38 @@ MWAWPageSpan::~MWAWPageSpan()
 {
 }
 
-void MWAWPageSpan::setHeaderFooter(const HeaderFooterType type, const HeaderFooterOccurence occurence,
-                                   MWAWSubDocumentPtr &subDocument)
+void MWAWPageSpan::setHeaderFooter(MWAWHeaderFooter const &hF)
 {
-  MWAWPageSpanInternal::HeaderFooter headerFooter(type, occurence, subDocument);
-  switch (occurence) {
-  case NEVER:
-    _removeHeaderFooter(type, ALL);
-  case ALL:
-    _removeHeaderFooter(type, ODD);
-    _removeHeaderFooter(type, EVEN);
+  MWAWHeaderFooter::Type const type=hF.m_type;
+  switch (hF.m_occurence) {
+  case MWAWHeaderFooter::NEVER:
+    _removeHeaderFooter(type, MWAWHeaderFooter::ALL);
+  case MWAWHeaderFooter::ALL:
+    _removeHeaderFooter(type, MWAWHeaderFooter::ODD);
+    _removeHeaderFooter(type, MWAWHeaderFooter::EVEN);
     break;
-  case ODD:
-    _removeHeaderFooter(type, ALL);
+  case MWAWHeaderFooter::ODD:
+    _removeHeaderFooter(type, MWAWHeaderFooter::ALL);
     break;
-  case EVEN:
-    _removeHeaderFooter(type, ALL);
+  case MWAWHeaderFooter::EVEN:
+    _removeHeaderFooter(type, MWAWHeaderFooter::ALL);
     break;
   default:
     break;
   }
+  _setHeaderFooter(hF);
 
-  _setHeaderFooter(type, occurence, subDocument);
+  bool containsHFLeft = _containsHeaderFooter(type, MWAWHeaderFooter::ODD);
+  bool containsHFRight = _containsHeaderFooter(type, MWAWHeaderFooter::EVEN);
 
-  bool containsHFLeft = _containsHeaderFooter(type, ODD);
-  bool containsHFRight = _containsHeaderFooter(type, EVEN);
-
-  //MWAW_DEBUG_MSG(("Contains HFL: %i HFR: %i\n", containsHFLeft, containsHFRight));
   if (containsHFLeft && !containsHFRight) {
     MWAW_DEBUG_MSG(("Inserting dummy header right\n"));
-    MWAWSubDocumentPtr dummyDoc;
-    _setHeaderFooter(type, EVEN, dummyDoc);
+    MWAWHeaderFooter dummy(type, MWAWHeaderFooter::EVEN);
+    _setHeaderFooter(MWAWHeaderFooter(type, MWAWHeaderFooter::EVEN));
   } else if (!containsHFLeft && containsHFRight) {
     MWAW_DEBUG_MSG(("Inserting dummy header left\n"));
-    MWAWSubDocumentPtr dummyDoc;
-    _setHeaderFooter(type, ODD, dummyDoc);
+    MWAWHeaderFooter dummy(type, MWAWHeaderFooter::ODD);
+    _setHeaderFooter(MWAWHeaderFooter(type, MWAWHeaderFooter::ODD));
   }
 }
 
@@ -170,37 +221,35 @@ void MWAWPageSpan::sendHeaderFooters(MWAWContentListener *listener,
 
   bool pageNumberInserted = false;
   for (size_t i = 0; i < m_headerFooterList.size(); i++) {
-    MWAWPageSpanInternal::HeaderFooterPtr &hf = m_headerFooterList[i];
-    if (!hf) continue;
+    MWAWHeaderFooter const &hf = m_headerFooterList[i];
+    if (!hf.isDefined()) continue;
 
     WPXPropertyList propList;
-    switch (hf->getOccurence()) {
-    case MWAWPageSpan::ODD:
+    switch (hf.m_occurence) {
+    case MWAWHeaderFooter::ODD:
       propList.insert("libwpd:occurence", "odd");
       break;
-    case MWAWPageSpan::EVEN:
+    case MWAWHeaderFooter::EVEN:
       propList.insert("libwpd:occurence", "even");
       break;
-    case MWAWPageSpan::ALL:
+    case MWAWHeaderFooter::ALL:
       propList.insert("libwpd:occurence", "all");
       break;
-    case MWAWPageSpan::NEVER:
+    case MWAWHeaderFooter::NEVER:
     default:
       break;
     }
-    bool isHeader = hf->getType() == MWAWPageSpan::HEADER;
+    bool isHeader = hf.m_type == MWAWHeaderFooter::HEADER;
     if (isHeader)
       documentInterface->openHeader(propList);
     else
       documentInterface->openFooter(propList);
-    if (isHeader && m_pageNumberPosition >= TopLeft &&
-        m_pageNumberPosition <= TopInsideLeftAndRight) {
+    if (isHeader && m_pageNumberPosition >= TopLeft && m_pageNumberPosition <= TopRight) {
       pageNumberInserted = true;
       _insertPageNumberParagraph(documentInterface);
     }
-    listener->handleSubDocument(hf->getSubDocument(), libmwaw::DOC_HEADER_FOOTER);
-    if (!isHeader && m_pageNumberPosition >= BottomLeft &&
-        m_pageNumberPosition <= BottomInsideLeftAndRight) {
+    listener->handleSubDocument(hf.m_subDocument, libmwaw::DOC_HEADER_FOOTER);
+    if (!isHeader && m_pageNumberPosition >= BottomLeft && m_pageNumberPosition <= BottomRight) {
       pageNumberInserted = true;
       _insertPageNumberParagraph(documentInterface);
     }
@@ -210,19 +259,17 @@ void MWAWPageSpan::sendHeaderFooters(MWAWContentListener *listener,
       documentInterface->closeFooter();
 
     MWAW_DEBUG_MSG(("Header Footer Element: type: %i occurence: %i\n",
-                    hf->getType(), hf->getOccurence()));
+                    hf.m_type, hf.m_occurence));
   }
 
   if (!pageNumberInserted) {
     WPXPropertyList propList;
     propList.insert("libwpd:occurence", "all");
-    if (m_pageNumberPosition >= TopLeft &&
-        m_pageNumberPosition <= TopInsideLeftAndRight) {
+    if (m_pageNumberPosition >= TopLeft && m_pageNumberPosition <= TopRight) {
       documentInterface->openHeader(propList);
       _insertPageNumberParagraph(documentInterface);
       documentInterface->closeHeader();
-    } else if (m_pageNumberPosition >= BottomLeft &&
-               m_pageNumberPosition <= BottomInsideLeftAndRight) {
+    } else if (m_pageNumberPosition >= BottomLeft && m_pageNumberPosition <= BottomRight) {
       documentInterface->openFooter(propList);
       _insertPageNumberParagraph(documentInterface);
       documentInterface->closeFooter();
@@ -265,38 +312,31 @@ bool MWAWPageSpan::operator==(shared_ptr<MWAWPageSpan> const &page2) const
   if (backgroundColor() != page2->backgroundColor())
     return false;
 
-  if (getPageNumberPosition() != page2->getPageNumberPosition())
+  if (m_pageNumberPosition != page2->m_pageNumberPosition)
     return false;
   if (getPageNumber() != page2->getPageNumber())
     return false;
-  if (getPageNumberingType() != page2->getPageNumberingType())
+  if (m_pageNumberingType != page2->m_pageNumberingType)
     return false;
 
-  if (getPageNumberingFontName() != page2->getPageNumberingFontName() ||
-      getPageNumberingFontSize() < page2->getPageNumberingFontSize() ||
-      getPageNumberingFontSize() > page2->getPageNumberingFontSize())
+  if (m_pageNumberingFontName != page2->m_pageNumberingFontName ||
+      m_pageNumberingFontSize < page2->m_pageNumberingFontSize ||
+      m_pageNumberingFontSize > page2->m_pageNumberingFontSize)
     return false;
 
   size_t numHF = m_headerFooterList.size();
   size_t numHF2 = page2->m_headerFooterList.size();
   for (size_t i = numHF; i < numHF2; i++) {
-    if (page2->m_headerFooterList[i])
+    if (page2->m_headerFooterList[i].isDefined())
       return false;
   }
   for (size_t i = numHF2; i < numHF; i++) {
-    if (m_headerFooterList[i])
+    if (m_headerFooterList[i].isDefined())
       return false;
   }
   if (numHF2 < numHF) numHF = numHF2;
   for (size_t i = 0; i < numHF; i++) {
-    if (!m_headerFooterList[i]) {
-      if (page2->m_headerFooterList[i])
-        return false;
-      continue;
-    }
-    if (!page2->m_headerFooterList[i])
-      return false;
-    if (*m_headerFooterList[i] != page2->m_headerFooterList[i])
+    if (m_headerFooterList[i] != page2->m_headerFooterList[i])
       return false;
   }
   MWAW_DEBUG_MSG(("WordPerfect: MWAWPageSpan == comparison finished, found no differences\n"));
@@ -323,10 +363,6 @@ void MWAWPageSpan::_insertPageNumberParagraph(WPXDocumentInterface *documentInte
     propList.insert("fo:text-align", "center");
     break;
   default:
-  case TopLeftAndRight:
-  case TopInsideLeftAndRight:
-  case BottomLeftAndRight:
-  case BottomInsideLeftAndRight:
     MWAW_DEBUG_MSG(("MWAWPageSpan::_insertPageNumberParagraph: unexpected value\n"));
     propList.insert("fo:text-align", "center");
     break;
@@ -351,55 +387,56 @@ void MWAWPageSpan::_insertPageNumberParagraph(WPXDocumentInterface *documentInte
 }
 
 // -------------- manage header footer list ------------------
-void MWAWPageSpan::_setHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence, MWAWSubDocumentPtr &doc)
+void MWAWPageSpan::_setHeaderFooter(MWAWHeaderFooter const &hF)
 {
-  if (occurence == NEVER) return;
+  if (!hF.isDefined() || hF.m_occurence == MWAWHeaderFooter::NEVER)
+    return;
 
-  int pos = _getHeaderFooterPosition(type, occurence);
+  int pos = _getHeaderFooterPosition(hF.m_type, hF.m_occurence);
   if (pos == -1) return;
-  m_headerFooterList[size_t(pos)]=MWAWPageSpanInternal::HeaderFooterPtr(new MWAWPageSpanInternal::HeaderFooter(type, occurence, doc));
+  m_headerFooterList[size_t(pos)]=hF;
 }
 
-void MWAWPageSpan::_removeHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence)
+void MWAWPageSpan::_removeHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence)
 {
   int pos = _getHeaderFooterPosition(type, occurence);
   if (pos == -1) return;
-  m_headerFooterList[size_t(pos)].reset();
+  m_headerFooterList[size_t(pos)]=MWAWHeaderFooter();
 }
 
-bool MWAWPageSpan::_containsHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence)
+bool MWAWPageSpan::_containsHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence)
 {
   int pos = _getHeaderFooterPosition(type, occurence);
-  if (pos == -1 || ! m_headerFooterList[size_t(pos)]) return false;
-  if (!m_headerFooterList[size_t(pos)]->getSubDocument()) return false;
+  if (pos == -1 || !m_headerFooterList[size_t(pos)].isDefined()) return false;
   return true;
 }
 
-int MWAWPageSpan::_getHeaderFooterPosition(HeaderFooterType type, HeaderFooterOccurence occurence)
+int MWAWPageSpan::_getHeaderFooterPosition(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence)
 {
   int typePos = 0, occurencePos = 0;
   switch(type) {
-  case HEADER:
+  case MWAWHeaderFooter::HEADER:
     typePos = 0;
     break;
-  case FOOTER:
+  case MWAWHeaderFooter::FOOTER:
     typePos = 1;
     break;
+  case MWAWHeaderFooter::UNDEF:
   default:
     MWAW_DEBUG_MSG(("MWAWPageSpan::getVectorPosition: unknown type\n"));
     return -1;
   }
   switch(occurence) {
-  case ALL:
+  case MWAWHeaderFooter::ALL:
     occurencePos = 0;
     break;
-  case ODD:
+  case MWAWHeaderFooter::ODD:
     occurencePos = 1;
     break;
-  case EVEN:
+  case MWAWHeaderFooter::EVEN:
     occurencePos = 2;
     break;
-  case NEVER:
+  case MWAWHeaderFooter::NEVER:
   default:
     MWAW_DEBUG_MSG(("MWAWPageSpan::getVectorPosition: unknown occurence\n"));
     return -1;

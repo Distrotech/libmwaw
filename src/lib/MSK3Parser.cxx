@@ -328,28 +328,32 @@ void MSK3Parser::createDocument(WPXDocumentInterface *documentInterface)
   int id = m_textParser->getHeader();
   if (id >= 0) {
     if (vers <= 2) m_state->m_headerHeight = 12;
-    shared_ptr<MWAWSubDocument> subdoc
+    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    header.m_subDocument.reset
     (new MSK3ParserInternal::SubDocument
      (*this, getInput(), MSK3ParserInternal::SubDocument::Text, id));
-    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+    ps.setHeaderFooter(header);
   } else if (m_state->get(MSK3ParserInternal::Zone::HEADER).m_zoneId >= 0) {
-    shared_ptr<MWAWSubDocument> subdoc
+    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    header.m_subDocument.reset
     (new MSK3ParserInternal::SubDocument
      (*this, getInput(), MSK3ParserInternal::SubDocument::Zone, int(MSK3ParserInternal::Zone::HEADER)));
-    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+    ps.setHeaderFooter(header);
   }
   id = m_textParser->getFooter();
   if (id >= 0) {
     if (vers <= 2) m_state->m_footerHeight = 12;
-    shared_ptr<MWAWSubDocument> subdoc
+    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    footer.m_subDocument.reset
     (new MSK3ParserInternal::SubDocument
      (*this, getInput(), MSK3ParserInternal::SubDocument::Text, id));
-    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+    ps.setHeaderFooter(footer);
   } else if (m_state->get(MSK3ParserInternal::Zone::FOOTER).m_zoneId >= 0) {
-    shared_ptr<MWAWSubDocument> subdoc
+    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    footer.m_subDocument.reset
     (new MSK3ParserInternal::SubDocument
      (*this, getInput(), MSK3ParserInternal::SubDocument::Zone, int(MSK3ParserInternal::Zone::FOOTER)));
-    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+    ps.setHeaderFooter(footer);
   }
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);

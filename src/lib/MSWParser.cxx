@@ -466,16 +466,17 @@ void MSWParser::createDocument(WPXDocumentInterface *documentInterface)
   MWAWPageSpan ps(getPageSpan());
   MWAWEntry entry = m_textParser->getHeader();
   if (entry.valid()) {
-    shared_ptr<MWAWSubDocument> subdoc
+    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    header.m_subDocument.reset
     (new MSWParserInternal::SubDocument(*this, getInput(), entry, libmwaw::DOC_HEADER_FOOTER));
-    ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+    ps.setHeaderFooter(header);
   }
   entry = m_textParser->getFooter();
   if (entry.valid()) {
-    shared_ptr<MWAWSubDocument> subdoc
+    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    footer.m_subDocument.reset
     (new MSWParserInternal::SubDocument(*this, getInput(), entry, libmwaw::DOC_HEADER_FOOTER));
-    ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
-
+    ps.setHeaderFooter(footer);
   }
   int numPage = 1;
   if (m_textParser->numPages() > numPage)

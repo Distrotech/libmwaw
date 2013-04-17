@@ -234,7 +234,10 @@ void MWAWFont::addTo(WPXPropertyList &pList, shared_ptr<MWAWFontConverter> conve
 {
   int dSize = 0;
   std::string fName("");
-  convert->getOdtInfo(id(), fName, dSize);
+  if (!convert) {
+    MWAW_DEBUG_MSG(("MWAWFont::addTo: called without any font converter\n"));
+  } else
+    convert->getOdtInfo(id(), fName, dSize);
   if (fName.length())
     pList.insert("style:font-name", fName.c_str());
   float fSize = size()+float(dSize);

@@ -424,9 +424,9 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
     int zoneId = i == 0 ? m_state->m_headerId : m_state->m_footerId;
     if (zoneId == 0)
       continue;
-
-    shared_ptr<MWAWSubDocument> subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
-    ps.setHeaderFooter((i==0) ? MWAWPageSpan::HEADER : MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+    MWAWHeaderFooter hF((i==0) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    hF.m_subDocument.reset(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
+    ps.setHeaderFooter(hF);
   }
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);

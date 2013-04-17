@@ -407,7 +407,7 @@ void MWAWContentListener::setList(shared_ptr<MWAWList> list)
 // field :
 ///////////////////
 #include <time.h>
-void MWAWContentListener::insertField(MWAWContentListener::FieldType type)
+void MWAWContentListener::insertField(MWAWContentListener::FieldType type, WPXPropertyList extras)
 {
   switch(type) {
   case None:
@@ -416,8 +416,9 @@ void MWAWContentListener::insertField(MWAWContentListener::FieldType type)
   case PageNumber: {
     _flushText();
     _openSpan();
-    WPXPropertyList propList;
-    propList.insert("style:num-format", libmwaw::numberingTypeToString(libmwaw::ARABIC).c_str());
+    WPXPropertyList propList(extras);
+    if (!propList["style:num-format"])
+      propList.insert("style:num-format", libmwaw::numberingTypeToString(libmwaw::ARABIC).c_str());
     if (type == PageNumber)
       m_documentInterface->insertField(WPXString("text:page-number"), propList);
     else

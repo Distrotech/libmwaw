@@ -421,25 +421,29 @@ void MRWParser::createDocument(WPXDocumentInterface *documentInterface)
   MWAWPageSpan firstPs(ps);
   if (m_state->m_firstPageFooter) {
     if (headerId[3]>0) {
-      shared_ptr<MWAWSubDocument> subdoc(new MRWParserInternal::SubDocument(*this, getInput(), int(headerId[3])));
-      firstPs.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+      MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+      header.m_subDocument.reset(new MRWParserInternal::SubDocument(*this, getInput(), int(headerId[3])));
+      firstPs.setHeaderFooter(header);
     }
     if (footerId[3]>0) {
-      shared_ptr<MWAWSubDocument> subdoc(new MRWParserInternal::SubDocument(*this, getInput(), int(footerId[3])));
-      firstPs.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+      MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+      footer.m_subDocument.reset(new MRWParserInternal::SubDocument(*this, getInput(), int(footerId[3])));
+      firstPs.setHeaderFooter(footer);
     }
   }
   for (int st = 0; st < 2; st++) {
-    MWAWPageSpan::HeaderFooterOccurence what=
-      !m_state->m_hasOddEvenHeaderFooter ? MWAWPageSpan::ALL : st==0 ? MWAWPageSpan::ODD : MWAWPageSpan::EVEN;
+    MWAWHeaderFooter::Occurence what=
+      !m_state->m_hasOddEvenHeaderFooter ? MWAWHeaderFooter::ALL : st==0 ? MWAWHeaderFooter::ODD : MWAWHeaderFooter::EVEN;
     int which= !m_state->m_hasOddEvenHeaderFooter ? 0 : 1+st;
     if (headerId[which]>0) {
-      shared_ptr<MWAWSubDocument> subdoc(new MRWParserInternal::SubDocument(*this, getInput(), int(headerId[which])));
-      ps.setHeaderFooter(MWAWPageSpan::HEADER, what, subdoc);
+      MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, what);
+      header.m_subDocument.reset(new MRWParserInternal::SubDocument(*this, getInput(), int(headerId[which])));
+      ps.setHeaderFooter(header);
     }
     if (footerId[which]>0) {
-      shared_ptr<MWAWSubDocument> subdoc(new MRWParserInternal::SubDocument(*this, getInput(), int(footerId[which])));
-      ps.setHeaderFooter(MWAWPageSpan::FOOTER, what, subdoc);
+      MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, what);
+      footer.m_subDocument.reset(new MRWParserInternal::SubDocument(*this, getInput(), int(footerId[which])));
+      ps.setHeaderFooter(footer);
     }
     if (!m_state->m_hasOddEvenHeaderFooter)
       break;

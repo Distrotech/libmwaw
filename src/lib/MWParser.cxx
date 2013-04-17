@@ -465,8 +465,9 @@ void MWParser::createDocument(WPXDocumentInterface *documentInterface)
 #endif
       continue;
     }
-    shared_ptr<MWAWSubDocument> subdoc(new MWParserInternal::SubDocument(*this, getInput(), i));
-    ps.setHeaderFooter((i==1) ? MWAWPageSpan::HEADER : MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+    MWAWHeaderFooter hF((i==1) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    hF.m_subDocument.reset(new MWParserInternal::SubDocument(*this, getInput(), i));
+    ps.setHeaderFooter(hF);
   }
 
   int p=0;

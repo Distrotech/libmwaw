@@ -583,12 +583,14 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
 
     MWAWPageSpan ps(getPageSpan());
     if (headerSubdoc) {
-      shared_ptr<MWAWSubDocument> doc(headerSubdoc);
-      ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, doc);
+      MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+      header.m_subDocument=headerSubdoc;
+      ps.setHeaderFooter(header);
     }
     if (footerSubdoc) {
-      shared_ptr<MWAWSubDocument> doc(footerSubdoc);
-      ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, doc);
+      MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+      footer.m_subDocument=footerSubdoc;
+      ps.setHeaderFooter(footer);
     }
     pageList.push_back(ps);
   }

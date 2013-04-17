@@ -642,8 +642,9 @@ void MDWParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 1; i <= 2; i++) {
     if (!m_state->m_zones[i].m_linesList.size())
       continue;
-    shared_ptr<MWAWSubDocument> subdoc(new MDWParserInternal::SubDocument(*this, getInput(), i));
-    ps.setHeaderFooter((i==1) ? MWAWPageSpan::HEADER : MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+    MWAWHeaderFooter hF((i==1) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    hF.m_subDocument.reset(new MDWParserInternal::SubDocument(*this, getInput(), i));
+    ps.setHeaderFooter(hF);
   }
 
   for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);

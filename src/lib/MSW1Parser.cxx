@@ -399,9 +399,10 @@ void MSW1Parser::createDocument(WPXDocumentInterface *documentInterface)
       entry.setEnd(m_state->m_textZonesList[size_t(id)][1]);
       removeLastCharIfEOL(entry);
       if (!entry.valid()) continue;
-      shared_ptr<MWAWSubDocument> subdoc
+      MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+      header.m_subDocument.reset
       (new MSW1ParserInternal::SubDocument(*this, getInput(), entry));
-      ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subdoc);
+      ps.setHeaderFooter(header);
     }
     if (i < int(m_state->m_footersId.size())) {
       int id = m_state->m_footersId[size_t(i)];
@@ -412,9 +413,10 @@ void MSW1Parser::createDocument(WPXDocumentInterface *documentInterface)
       entry.setEnd(m_state->m_textZonesList[size_t(id)][1]);
       removeLastCharIfEOL(entry);
       if (!entry.valid()) continue;
-      shared_ptr<MWAWSubDocument> subdoc
+      MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+      footer.m_subDocument.reset
       (new MSW1ParserInternal::SubDocument(*this, getInput(), entry));
-      ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subdoc);
+      ps.setHeaderFooter(footer);
     }
     pageList.push_back(ps);
   }

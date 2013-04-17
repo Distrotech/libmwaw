@@ -558,11 +558,17 @@ void NSParser::createDocument(WPXDocumentInterface *documentInterface)
   for (int i = 0; i <= numPages; i++) {
     MWAWPageSpan ps(getPageSpan());
     subDoc = m_textParser->getHeader(i+1);
-    if (subDoc)
-      ps.setHeaderFooter(MWAWPageSpan::HEADER, MWAWPageSpan::ALL, subDoc);
+    if (subDoc) {
+      MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+      header.m_subDocument=subDoc;
+      ps.setHeaderFooter(header);
+    }
     subDoc = m_textParser->getFooter(i+1);
-    if (subDoc)
-      ps.setHeaderFooter(MWAWPageSpan::FOOTER, MWAWPageSpan::ALL, subDoc);
+    if (subDoc) {
+      MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+      footer.m_subDocument=subDoc;
+      ps.setHeaderFooter(footer);
+    }
     pageList.push_back(ps);
   }
 
