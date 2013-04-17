@@ -582,6 +582,32 @@ void MWAWContentListener::endDocument(bool sendDelayedSubDoc)
 ///////////////////
 // page
 ///////////////////
+bool MWAWContentListener::insertHeader(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras)
+{
+  if (m_ds->m_isHeaderFooterStarted) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertHeader: Oops a header/footer is already opened\n"));
+    return false;
+  }
+  WPXPropertyList propList(extras);
+  m_documentInterface->openHeader(propList);
+  handleSubDocument(subDocument, libmwaw::DOC_HEADER_FOOTER);
+  m_documentInterface->closeHeader();
+  return true;
+}
+
+bool MWAWContentListener::insertFooter(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras)
+{
+  if (m_ds->m_isHeaderFooterStarted) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertFooter: Oops a header/footer is already opened\n"));
+    return false;
+  }
+  WPXPropertyList propList(extras);
+  m_documentInterface->openFooter(propList);
+  handleSubDocument(subDocument, libmwaw::DOC_HEADER_FOOTER);
+  m_documentInterface->closeFooter();
+  return true;
+}
+
 void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
 {
   if (m_ps->m_isPageSpanOpened)
@@ -618,7 +644,7 @@ void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
 
   // we insert the header footer
   if (sendHeaderFooters)
-    currentPage.sendHeaderFooters(this, m_documentInterface);
+    currentPage.sendHeaderFooters(this);
 
   // first paragraph in span (necessary for resetting page number)
   m_ps->m_firstParagraphInPageSpan = true;

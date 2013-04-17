@@ -41,7 +41,6 @@
 #include "MWAWFont.hxx"
 
 class WPXPropertyList;
-class WPXDocumentInterface;
 class WPXDocumentProperty;
 
 class MWAWContentListener;
@@ -69,14 +68,13 @@ public:
     return m_type != UNDEF;
   }
   /** send to header to the listener */
-  void send(MWAWContentListener *listener, WPXDocumentInterface *documentInterface) const;
+  void send(MWAWContentListener *listener) const;
   //! operator==
   bool operator==(MWAWHeaderFooter const &headerFooter) const;
   //! operator!=
   bool operator!=(MWAWHeaderFooter const &headerFooter) const {
     return !operator==(headerFooter);
   }
-protected:
   //! insert a page number
   void insertPageNumberParagraph(MWAWContentListener *listener) const;
 
@@ -207,51 +205,51 @@ public:
   }
   //! check if the page margins are consistent with the page dimension, if not update them
   void checkMargins();
-
   //! set the background color
   void setBackgroundColor(MWAWColor color=MWAWColor::white()) {
     m_backgroundColor=color;
   }
+  //! set the page number
   void setPageNumber(const int pageNumber) {
     m_pageNumber = pageNumber;
   }
+  //! set the page span ( default 1)
   void setPageSpan(const int pageSpan) {
     m_pageSpan = pageSpan;
   }
-
+  //! operator==
   bool operator==(shared_ptr<MWAWPageSpan> const &pageSpan) const;
+  //! operator!=
   bool operator!=(shared_ptr<MWAWPageSpan> const &pageSpan) const {
     return !operator==(pageSpan);
   }
 protected:
   // interface with MWAWContentListener
+  //! add the page properties in pList
   void getPageProperty(WPXPropertyList &pList) const;
-  void sendHeaderFooters(MWAWContentListener *listener,
-                         WPXDocumentInterface *documentInterface);
+  //! send the page's headers/footers if some exists
+  void sendHeaderFooters(MWAWContentListener *listener);
 
 protected:
-
-  int _getHeaderFooterPosition(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence);
-  void _setHeaderFooter(MWAWHeaderFooter const &headerFooter);
-  void _removeHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence);
-  bool _containsHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence);
-
-  void _insertPageNumberParagraph(WPXDocumentInterface *documentInterface);
+  //! return the header footer positions in m_headerFooterList
+  int getHeaderFooterPosition(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence);
+  //! remove a header footer
+  void removeHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence);
+  //! return true if we have a header footer in this position
+  bool containsHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence);
 private:
-  double m_formLength, m_formWidth;
+  double m_formLength/** the form length*/, m_formWidth /** the form width */;
   /** the form orientation */
   FormOrientation m_formOrientation;
   /** the margins: libmwaw::Left, ... */
   double m_margins[4];
   /** the page background color: default white */
   MWAWColor m_backgroundColor;
-  PageNumberPosition m_pageNumberPosition;
+  //! the page number ( or -1)
   int m_pageNumber;
-  libmwaw::NumberingType m_pageNumberingType;
-  WPXString m_pageNumberingFontName;
-  double m_pageNumberingFontSize;
+  //! the list of header
   std::vector<MWAWHeaderFooter> m_headerFooterList;
-
+  //! the number of page
   int m_pageSpan;
 };
 
