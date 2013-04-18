@@ -558,11 +558,11 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
   // create the page list
   std::vector<MWAWPageSpan> pageList;
 
-
   int actHeaderId = 0, actFooterId = 0;
   shared_ptr<MWProParserInternal::SubDocument> headerSubdoc, footerSubdoc;
-  for (int i = 0; i < m_state->m_numPages; i++) {
-    int headerId =  m_structures->getHeaderId(i+1);
+  for (int i = 0; i < m_state->m_numPages; ) {
+    int numSim[2];
+    int headerId =  m_structures->getHeaderId(i+1, numSim[0]);
     if (headerId != actHeaderId) {
       actHeaderId = headerId;
       if (actHeaderId == 0)
@@ -571,7 +571,7 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
         headerSubdoc.reset
         (new MWProParserInternal::SubDocument(*this, getInput(), headerId));
     }
-    int footerId =  m_structures->getFooterId(i+1);
+    int footerId =  m_structures->getFooterId(i+1, numSim[1]);
     if (footerId != actFooterId) {
       actFooterId = footerId;
       if (actFooterId == 0)
@@ -592,6 +592,10 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
       footer.m_subDocument=footerSubdoc;
       ps.setHeaderFooter(footer);
     }
+    if (numSim[1] < numSim[0]) numSim[0]=numSim[1];
+    if (numSim[0] < 1) numSim[0]=1;
+    ps.setPageSpan(numSim[0]);
+    i+=numSim[0];
     pageList.push_back(ps);
   }
 

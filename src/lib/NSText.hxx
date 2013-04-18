@@ -90,9 +90,9 @@ protected:
   bool createZones();
 
   //! return an header subdocument
-  shared_ptr<MWAWSubDocument> getHeader(int page);
+  shared_ptr<MWAWSubDocument> getHeader(int page, int &numSimillar);
   //! return a footer subdocument
-  shared_ptr<MWAWSubDocument> getFooter(int page);
+  shared_ptr<MWAWSubDocument> getFooter(int page, int &numSimillar);
 
   //! send a main zone
   bool sendMainText();

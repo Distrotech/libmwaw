@@ -555,20 +555,25 @@ void NSParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_numPages = numPages;
 
   shared_ptr<MWAWSubDocument> subDoc;
-  for (int i = 0; i <= numPages; i++) {
+  for (int i = 0; i <= numPages; ) {
     MWAWPageSpan ps(getPageSpan());
-    subDoc = m_textParser->getHeader(i+1);
+    int numSim[2];
+    subDoc = m_textParser->getHeader(i+1, numSim[0]);
     if (subDoc) {
       MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
       header.m_subDocument=subDoc;
       ps.setHeaderFooter(header);
     }
-    subDoc = m_textParser->getFooter(i+1);
+    subDoc = m_textParser->getFooter(i+1, numSim[1]);
     if (subDoc) {
       MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
       footer.m_subDocument=subDoc;
       ps.setHeaderFooter(footer);
     }
+    if (numSim[1] < numSim[0]) numSim[0]=numSim[1];
+    if (numSim[0] < 1) numSim[0]=1;
+    ps.setPageSpan(numSim[0]);
+    i+=numSim[0];
     pageList.push_back(ps);
   }
 

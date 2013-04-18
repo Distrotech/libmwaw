@@ -196,9 +196,9 @@ protected:
   bool sendMainZone();
 
   //! return the header blockid ( or 0)
-  int getHeaderId(int page);
+  int getHeaderId(int page, int &numSimillar) const;
   //! return the footer blockid ( or 0)
-  int getFooterId(int page);
+  int getFooterId(int page, int &numSimillar) const;
 
   //! flush not send zones
   void flushExtra();

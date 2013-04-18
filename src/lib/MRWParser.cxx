@@ -401,7 +401,6 @@ void MRWParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_numPages = numPage;
 
   // create the page list
-  std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(getPageSpan());
   if (m_state->m_zonesList.size())
     ps.setBackgroundColor(m_state->m_zonesList[0].m_backgroundColor);
@@ -449,13 +448,14 @@ void MRWParser::createDocument(WPXDocumentInterface *documentInterface)
       break;
   }
 
-  for (int i = 0; i <= m_state->m_numPages; i++) {
-    if (i==0 && m_state->m_firstPageFooter)
-      pageList.push_back(firstPs);
-    else
-      pageList.push_back(ps);
-  }
-
+  std::vector<MWAWPageSpan> pageList;
+  if (m_state->m_firstPageFooter) {
+    pageList.push_back(firstPs);
+    ps.setPageSpan(m_state->m_numPages);
+  } else
+    ps.setPageSpan(m_state->m_numPages+1);
+  if (ps.getPageSpan())
+    pageList.push_back(ps);
   //
   MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
   setListener(listen);

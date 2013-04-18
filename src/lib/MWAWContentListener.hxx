@@ -87,6 +87,14 @@ public:
   /** returns try if a subdocument is open  */
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
 
+  // ------ page --------
+  /** returns true if a page is opened */
+  bool isPageSpanOpened() const;
+  /** returns the current page span
+
+  \note this forces the opening of a new page if no page is opened.*/
+  MWAWPageSpan const &getPageSpan();
+
   // ------ header/footer --------
   /** insert a header */
   bool insertHeader(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras);

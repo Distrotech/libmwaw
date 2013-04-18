@@ -471,15 +471,13 @@ void FWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // update the page
   m_state->m_actPage = 0;
-
-  // create the page list
-  std::vector<MWAWPageSpan> pageList;
-  MWAWPageSpan ps(getPageSpan());
-
   int numPage = m_textParser->numPages();
   m_state->m_numPages = numPage;
-  for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
 
+  // create the page list
+  MWAWPageSpan ps(getPageSpan());
+  ps.setPageSpan(m_state->m_numPages+1);
+  std::vector<MWAWPageSpan> pageList(1,ps);
   //
   MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
   setListener(listen);

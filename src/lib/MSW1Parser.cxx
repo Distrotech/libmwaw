@@ -388,36 +388,55 @@ void MSW1Parser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
   // create the page list
   std::vector<MWAWPageSpan> pageList;
-  for (int i = 0; i <= m_state->m_numPages; i++) {
+  int numHeaders=int(m_state->m_headersId.size());
+  int numFooters=int(m_state->m_footersId.size());
+  for (int i = 0; i <= m_state->m_numPages;) {
+    int numSim[2]= {1,1};
     MWAWPageSpan ps(getPageSpan());
-    if (i < int(m_state->m_headersId.size())) {
+    while (i < numHeaders) {
       int id = m_state->m_headersId[size_t(i)];
       if (id < 0 || id >= int(m_state->m_textZonesList.size()))
-        continue;
+        break;
       MWAWEntry entry;
       entry.setBegin(m_state->m_textZonesList[size_t(id)][0]);
       entry.setEnd(m_state->m_textZonesList[size_t(id)][1]);
       removeLastCharIfEOL(entry);
-      if (!entry.valid()) continue;
+      if (!entry.valid()) break;
       MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
       header.m_subDocument.reset
       (new MSW1ParserInternal::SubDocument(*this, getInput(), entry));
       ps.setHeaderFooter(header);
+      int j = i+1;
+      while (j < numHeaders && m_state->m_headersId[size_t(j)]==id) {
+        numSim[0]++;
+        j++;
+      }
+      break;
     }
-    if (i < int(m_state->m_footersId.size())) {
+    while (i < int(numFooters)) {
       int id = m_state->m_footersId[size_t(i)];
       if (id < 0 || id >= int(m_state->m_textZonesList.size()))
-        continue;
+        break;
       MWAWEntry entry;
       entry.setBegin(m_state->m_textZonesList[size_t(id)][0]);
       entry.setEnd(m_state->m_textZonesList[size_t(id)][1]);
       removeLastCharIfEOL(entry);
-      if (!entry.valid()) continue;
+      if (!entry.valid()) break;
       MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
       footer.m_subDocument.reset
       (new MSW1ParserInternal::SubDocument(*this, getInput(), entry));
       ps.setHeaderFooter(footer);
+      int j = i+1;
+      while (j < numFooters && m_state->m_footersId[size_t(j)]==id) {
+        numSim[1]++;
+        j++;
+      }
+      break;
     }
+    if (numSim[1] < numSim[0]) numSim[0]=numSim[1];
+    if (numSim[0] < 1) numSim[0]=1;
+    ps.setPageSpan(numSim[0]);
+    i+=numSim[0];
     pageList.push_back(ps);
   }
 

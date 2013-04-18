@@ -636,9 +636,7 @@ void MDWParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_numPages = numPage+1;
 
   // create the page list
-  std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(getPageSpan());
-
   for (int i = 1; i <= 2; i++) {
     if (!m_state->m_zones[i].m_linesList.size())
       continue;
@@ -646,9 +644,8 @@ void MDWParser::createDocument(WPXDocumentInterface *documentInterface)
     hF.m_subDocument.reset(new MDWParserInternal::SubDocument(*this, getInput(), i));
     ps.setHeaderFooter(hF);
   }
-
-  for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
-
+  ps.setPageSpan(m_state->m_numPages+1);
+  std::vector<MWAWPageSpan> pageList(1,ps);
   //
   MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
   setListener(listen);

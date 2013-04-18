@@ -460,6 +460,164 @@ void MWAWContentListener::insertDateTimeField(char const *format)
 }
 
 ///////////////////
+// document
+///////////////////
+void MWAWContentListener::setDocumentLanguage(std::string locale)
+{
+  if (!locale.length()) return;
+  m_ds->m_metaData.insert("libwpd:language", locale.c_str());
+}
+
+void MWAWContentListener::startDocument()
+{
+  if (m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::startDocument: the document is already started\n"));
+    return;
+  }
+
+  // FIXME: this is stupid, we should store a property list filled with the relevant metadata
+  // and then pass that directly..
+  m_documentInterface->setDocumentMetaData(m_ds->m_metaData);
+
+  m_documentInterface->startDocument();
+  m_ds->m_isDocumentStarted = true;
+}
+
+void MWAWContentListener::endDocument(bool sendDelayedSubDoc)
+{
+  if (!m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::startDocument: the document is not started\n"));
+    return;
+  }
+
+  if (!m_ps->m_isPageSpanOpened) {
+    // we must call by hand openPageSpan to avoid sending any header/footer documents
+    if (!sendDelayedSubDoc) _openPageSpan(false);
+    _openSpan();
+  }
+
+  if (m_ps->m_isTableOpened)
+    closeTable();
+  if (m_ps->m_isParagraphOpened)
+    _closeParagraph();
+
+  m_ps->m_paragraph.m_listLevelIndex = 0;
+  _changeList(); // flush the list exterior
+
+  // close the document nice and tight
+  _closeSection();
+  _closePageSpan();
+  m_documentInterface->endDocument();
+  m_ds->m_isDocumentStarted = false;
+}
+
+///////////////////
+// page
+///////////////////
+bool MWAWContentListener::isPageSpanOpened() const
+{
+  return m_ps->m_isPageSpanOpened;
+}
+
+MWAWPageSpan const &MWAWContentListener::getPageSpan()
+{
+  if (!m_ps->m_isPageSpanOpened)
+    _openPageSpan();
+  return m_ps->m_pageSpan;
+}
+
+
+void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
+{
+  if (m_ps->m_isPageSpanOpened)
+    return;
+
+  if (!m_ds->m_isDocumentStarted)
+    startDocument();
+
+  if (m_ds->m_pageList.size()==0) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::_openPageSpan: can not find any page\n"));
+    throw libmwaw::ParseException();
+  }
+  unsigned actPage = 0;
+  std::vector<MWAWPageSpan>::iterator it = m_ds->m_pageList.begin();
+  while(actPage < m_ps->m_currentPage) {
+    actPage+=(unsigned)it->getPageSpan();
+    it++;
+    if (it == m_ds->m_pageList.end()) {
+      MWAW_DEBUG_MSG(("MWAWContentListener::_openPageSpan: can not find current page\n"));
+      throw libmwaw::ParseException();
+    }
+  }
+  MWAWPageSpan &currentPage = *it;
+
+  WPXPropertyList propList;
+  currentPage.getPageProperty(propList);
+  propList.insert("libwpd:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
+
+  if (!m_ps->m_isPageSpanOpened)
+    m_documentInterface->openPageSpan(propList);
+
+  m_ps->m_isPageSpanOpened = true;
+  m_ps->m_pageSpan = currentPage;
+
+  // we insert the header footer
+  if (sendHeaderFooters)
+    currentPage.sendHeaderFooters(this);
+
+  // first paragraph in span (necessary for resetting page number)
+  m_ps->m_firstParagraphInPageSpan = true;
+  m_ps->m_numPagesRemainingInSpan = (currentPage.getPageSpan() - 1);
+  m_ps->m_currentPage++;
+}
+
+void MWAWContentListener::_closePageSpan()
+{
+  if (!m_ps->m_isPageSpanOpened)
+    return;
+
+  if (m_ps->m_isSectionOpened)
+    _closeSection();
+
+  m_documentInterface->closePageSpan();
+  m_ps->m_isPageSpanOpened = m_ps->m_isPageSpanBreakDeferred = false;
+}
+
+///////////////////
+// header/footer
+///////////////////
+bool MWAWContentListener::isHeaderFooterOpened() const
+{
+  return m_ds->m_isHeaderFooterStarted;
+}
+
+bool MWAWContentListener::insertHeader(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras)
+{
+  if (m_ds->m_isHeaderFooterStarted) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertHeader: Oops a header/footer is already opened\n"));
+    return false;
+  }
+  WPXPropertyList propList(extras);
+  m_documentInterface->openHeader(propList);
+  handleSubDocument(subDocument, libmwaw::DOC_HEADER_FOOTER);
+  m_documentInterface->closeHeader();
+  return true;
+}
+
+bool MWAWContentListener::insertFooter(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras)
+{
+  if (m_ds->m_isHeaderFooterStarted) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertFooter: Oops a header/footer is already opened\n"));
+    return false;
+  }
+  WPXPropertyList propList(extras);
+  m_documentInterface->openFooter(propList);
+  handleSubDocument(subDocument, libmwaw::DOC_HEADER_FOOTER);
+  m_documentInterface->closeFooter();
+  return true;
+}
+
+///////////////////
 // section
 ///////////////////
 bool MWAWContentListener::isSectionOpened() const
@@ -527,146 +685,6 @@ bool MWAWContentListener::closeSection()
   return true;
 }
 
-///////////////////
-// document
-///////////////////
-void MWAWContentListener::setDocumentLanguage(std::string locale)
-{
-  if (!locale.length()) return;
-  m_ds->m_metaData.insert("libwpd:language", locale.c_str());
-}
-
-void MWAWContentListener::startDocument()
-{
-  if (m_ds->m_isDocumentStarted) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::startDocument: the document is already started\n"));
-    return;
-  }
-
-  // FIXME: this is stupid, we should store a property list filled with the relevant metadata
-  // and then pass that directly..
-  m_documentInterface->setDocumentMetaData(m_ds->m_metaData);
-
-  m_documentInterface->startDocument();
-  m_ds->m_isDocumentStarted = true;
-}
-
-void MWAWContentListener::endDocument(bool sendDelayedSubDoc)
-{
-  if (!m_ds->m_isDocumentStarted) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::startDocument: the document is not started\n"));
-    return;
-  }
-
-  if (!m_ps->m_isPageSpanOpened) {
-    // we must call by hand openPageSpan to avoid sending any header/footer documents
-    if (!sendDelayedSubDoc) _openPageSpan(false);
-    _openSpan();
-  }
-
-  if (m_ps->m_isTableOpened)
-    closeTable();
-  if (m_ps->m_isParagraphOpened)
-    _closeParagraph();
-
-  m_ps->m_paragraph.m_listLevelIndex = 0;
-  _changeList(); // flush the list exterior
-
-  // close the document nice and tight
-  _closeSection();
-  _closePageSpan();
-  m_documentInterface->endDocument();
-  m_ds->m_isDocumentStarted = false;
-}
-
-///////////////////
-// page
-///////////////////
-bool MWAWContentListener::insertHeader(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras)
-{
-  if (m_ds->m_isHeaderFooterStarted) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertHeader: Oops a header/footer is already opened\n"));
-    return false;
-  }
-  WPXPropertyList propList(extras);
-  m_documentInterface->openHeader(propList);
-  handleSubDocument(subDocument, libmwaw::DOC_HEADER_FOOTER);
-  m_documentInterface->closeHeader();
-  return true;
-}
-
-bool MWAWContentListener::insertFooter(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras)
-{
-  if (m_ds->m_isHeaderFooterStarted) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertFooter: Oops a header/footer is already opened\n"));
-    return false;
-  }
-  WPXPropertyList propList(extras);
-  m_documentInterface->openFooter(propList);
-  handleSubDocument(subDocument, libmwaw::DOC_HEADER_FOOTER);
-  m_documentInterface->closeFooter();
-  return true;
-}
-
-void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
-{
-  if (m_ps->m_isPageSpanOpened)
-    return;
-
-  if (!m_ds->m_isDocumentStarted)
-    startDocument();
-
-  if (m_ds->m_pageList.size()==0) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::_openPageSpan: can not find any page\n"));
-    throw libmwaw::ParseException();
-  }
-  unsigned actPage = 0;
-  std::vector<MWAWPageSpan>::iterator it = m_ds->m_pageList.begin();
-  while(actPage < m_ps->m_currentPage) {
-    actPage+=(unsigned)it->getPageSpan();
-    it++;
-    if (it == m_ds->m_pageList.end()) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::_openPageSpan: can not find current page\n"));
-      throw libmwaw::ParseException();
-    }
-  }
-  MWAWPageSpan &currentPage = *it;
-
-  WPXPropertyList propList;
-  currentPage.getPageProperty(propList);
-  propList.insert("libwpd:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
-
-  if (!m_ps->m_isPageSpanOpened)
-    m_documentInterface->openPageSpan(propList);
-
-  m_ps->m_isPageSpanOpened = true;
-  m_ps->m_pageSpan = currentPage;
-
-  // we insert the header footer
-  if (sendHeaderFooters)
-    currentPage.sendHeaderFooters(this);
-
-  // first paragraph in span (necessary for resetting page number)
-  m_ps->m_firstParagraphInPageSpan = true;
-  m_ps->m_numPagesRemainingInSpan = (currentPage.getPageSpan() - 1);
-  m_ps->m_currentPage++;
-}
-
-void MWAWContentListener::_closePageSpan()
-{
-  if (!m_ps->m_isPageSpanOpened)
-    return;
-
-  if (m_ps->m_isSectionOpened)
-    _closeSection();
-
-  m_documentInterface->closePageSpan();
-  m_ps->m_isPageSpanOpened = m_ps->m_isPageSpanBreakDeferred = false;
-}
-
-///////////////////
-// section
-///////////////////
 void MWAWContentListener::_openSection()
 {
   if (m_ps->m_isSectionOpened) {
@@ -784,20 +802,8 @@ void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, 
 {
   m_ps->m_paragraph.addTo(propList,m_ps->m_isTableOpened);
 
-  if (!m_ps->m_inSubDocument && m_ps->m_firstParagraphInPageSpan) {
-    unsigned actPage = 1;
-    std::vector<MWAWPageSpan>::const_iterator it = m_ds->m_pageList.begin();
-    while(actPage < m_ps->m_currentPage) {
-      if (it == m_ds->m_pageList.end())
-        break;
-
-      actPage+=(unsigned)it->getPageSpan();
-      it++;
-    }
-    MWAWPageSpan const &currentPage = *it;
-    if (currentPage.getPageNumber() >= 0)
-      propList.insert("style:page-number", currentPage.getPageNumber());
-  }
+  if (!m_ps->m_inSubDocument && m_ps->m_firstParagraphInPageSpan && m_ps->m_pageSpan.getPageNumber() >= 0)
+    propList.insert("style:page-number", m_ps->m_pageSpan.getPageNumber());
 
   _insertBreakIfNecessary(propList);
 }
@@ -1472,11 +1478,6 @@ bool MWAWContentListener::isSubDocumentOpened(libmwaw::SubDocumentType &subdocTy
     return false;
   subdocType = m_ps->m_subDocumentType;
   return true;
-}
-
-bool MWAWContentListener::isHeaderFooterOpened() const
-{
-  return m_ds->m_isHeaderFooterStarted;
 }
 
 void MWAWContentListener::_startSubDocument()

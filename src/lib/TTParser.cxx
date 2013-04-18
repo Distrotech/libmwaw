@@ -181,13 +181,11 @@ void TTParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::vector<MWAWPageSpan> pageList;
   int numPages=computeNumPages();
   m_state->m_numPages = numPages;
   MWAWPageSpan ps(getPageSpan());
-  for (int i = 0; i <= numPages; i++)
-    pageList.push_back(ps);
-
+  ps.setPageSpan(m_state->m_numPages+1);
+  std::vector<MWAWPageSpan> pageList(1,ps);
   MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();

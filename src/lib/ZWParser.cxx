@@ -237,7 +237,6 @@ void ZWParser::createDocument(WPXDocumentInterface *documentInterface)
     numPages = m_textParser->numPages();
   m_state->m_numPages = numPages;
 
-  std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(getPageSpan());
   if (m_state->m_headerUsed && m_textParser->hasHeaderFooter(true)) {
     MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
@@ -249,9 +248,8 @@ void ZWParser::createDocument(WPXDocumentInterface *documentInterface)
     footer.m_subDocument.reset(new ZWParserInternal::SubDocument(*this, getInput(), false));
     ps.setHeaderFooter(footer);
   }
-
-  for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
-
+  ps.setPageSpan(m_state->m_numPages+1);
+  std::vector<MWAWPageSpan> pageList(1,ps);
   MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();

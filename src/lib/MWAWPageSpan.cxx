@@ -265,7 +265,7 @@ void MWAWPageSpan::checkMargins()
   }
 }
 
-void MWAWPageSpan::sendHeaderFooters(MWAWContentListener *listener)
+void MWAWPageSpan::sendHeaderFooters(MWAWContentListener *listener) const
 {
   if (!listener) {
     MWAW_DEBUG_MSG(("MWAWPageSpan::sendHeaderFooters: no listener\n"));

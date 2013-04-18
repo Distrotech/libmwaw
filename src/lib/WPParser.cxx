@@ -681,7 +681,6 @@ void WPParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(getPageSpan());
   for (int i = 1; i < 3; i++) {
     if (m_state->m_windows[i].m_paragraphs.size() == 0)
@@ -692,8 +691,8 @@ void WPParser::createDocument(WPXDocumentInterface *documentInterface)
   }
 
   m_state->m_numPages = int(m_state->m_windows[0].m_pages.size());
-  for (int i = 0; i <= m_state->m_numPages; i++) pageList.push_back(ps);
-
+  ps.setPageSpan(m_state->m_numPages+1);
+  std::vector<MWAWPageSpan> pageList(1,ps);
   //
   MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
   setListener(listen);

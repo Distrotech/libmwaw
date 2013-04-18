@@ -574,20 +574,30 @@ int MWProStructures::numPages() const
 
 ////////////////////////////////////////////////////////////
 // try to return the header/footer block id
-int MWProStructures::getHeaderId(int page)
+int MWProStructures::getHeaderId(int page, int &numSimillar) const
 {
+  numSimillar = 1;
   if (version()==0) page = 0;
-  if (m_state->m_headersMap.find(page) != m_state->m_headersMap.end())
-    return m_state->m_headersMap.find(page)->second;
-  return 0;
+  std::map<int, int>::const_iterator it=m_state->m_headersMap.find(page);
+  if (it==m_state->m_headersMap.end())
+    return 0;
+  int res = it->second;
+  while (++it!=m_state->m_headersMap.end() && it->second==res)
+    numSimillar++;
+  return res;
 }
 
-int MWProStructures::getFooterId(int page)
+int MWProStructures::getFooterId(int page, int &numSimillar) const
 {
+  numSimillar = 1;
   if (version()==0) page = 0;
-  if (m_state->m_footersMap.find(page) != m_state->m_footersMap.end())
-    return m_state->m_footersMap.find(page)->second;
-  return 0;
+  std::map<int, int>::const_iterator it=m_state->m_footersMap.find(page);
+  if (it==m_state->m_footersMap.end())
+    return 0;
+  int res = it->second;
+  while (++it!=m_state->m_footersMap.end() && it->second==res)
+    numSimillar++;
+  return res;
 }
 
 ////////////////////////////////////////////////////////////

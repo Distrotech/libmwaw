@@ -270,7 +270,6 @@ MWAWEntry MSK4Zone::getTextPosition() const
 MWAWContentListenerPtr MSK4Zone::createListener
 (WPXDocumentInterface *interface, MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer)
 {
-  std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(getPageSpan());
 
   if (header) {
@@ -294,7 +293,8 @@ MWAWContentListenerPtr MSK4Zone::createListener
   m_graphParser->computePositions(-1, linesH, pagesH);
 
   // create all the pages + an empty page, if we have some remaining data...
-  for (int i = 0; i <= numPages; i++) pageList.push_back(ps);
+  ps.setPageSpan(numPages+1);
+  std::vector<MWAWPageSpan> pageList(1,ps);
   m_state->m_numPages=numPages+1;
   MWAWContentListenerPtr res(new MWAWContentListener(*getParserState(), pageList, interface));
   return res;

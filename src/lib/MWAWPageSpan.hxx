@@ -228,7 +228,7 @@ protected:
   //! add the page properties in pList
   void getPageProperty(WPXPropertyList &pList) const;
   //! send the page's headers/footers if some exists
-  void sendHeaderFooters(MWAWContentListener *listener);
+  void sendHeaderFooters(MWAWContentListener *listener) const;
 
 protected:
   //! return the header footer positions in m_headerFooterList
