@@ -1694,6 +1694,7 @@ bool CWText::readParagraph(int id)
   }
 
   CWTextInternal::Paragraph ruler;
+  ruler.m_tabsRelativeToLeftMargin=false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   long endPos = pos+dataSize;

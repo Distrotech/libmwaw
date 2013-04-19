@@ -41,14 +41,13 @@
 #include "MWAWFont.hxx"
 
 class WPXPropertyList;
-class WPXDocumentProperty;
 
 class MWAWContentListener;
 
 class MWAWSubDocument;
 typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
 
-/** a structure used to store the header/footer data */
+/** a class which stores the header/footer data */
 class MWAWHeaderFooter
 {
 public:
@@ -97,7 +96,7 @@ public:
 
 typedef shared_ptr<MWAWHeaderFooter> MWAWHeaderFooterPtr;
 
-/** A structure used to defined the page properties */
+/** A class which defines the page properties */
 class MWAWPageSpan
 {
   friend class MWAWContentListener;

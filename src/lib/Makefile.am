@@ -146,6 +146,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWPropertyHandler.hxx		\
 	MWAWRSRCParser.cxx		\
 	MWAWRSRCParser.hxx		\
+	MWAWSection.cxx			\
+	MWAWSection.hxx			\
 	MWAWSubDocument.cxx		\
 	MWAWSubDocument.hxx		\
 	MWAWTable.cxx			\

@@ -229,12 +229,6 @@ struct MWAWColumnDefinition {
   double m_rightGutter;
 };
 
-struct MWAWColumnProperties {
-  MWAWColumnProperties() : m_attributes(0), m_alignment(0) {}
-  uint32_t m_attributes;
-  uint8_t m_alignment;
-};
-
 //! a border list
 struct MWAWBorder {
   /** the line style */

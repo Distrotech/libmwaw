@@ -701,7 +701,7 @@ void MWAWContentListener::_openSection()
   propList.insert("fo:margin-left", 0.0);
   propList.insert("fo:margin-right", 0.0);
   if (m_ps->m_numColumns > 1)
-    propList.insert("text:dont-balance-text-columns", false);
+    propList.insert("text:dont-balance-text-columns", true);
 
   WPXPropertyListVector columns;
   for (size_t i = 0; i < m_ps->m_textColumns.size(); i++) {
