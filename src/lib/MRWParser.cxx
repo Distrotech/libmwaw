@@ -734,8 +734,6 @@ bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
       if (data.value(0))
         f << "y[bottom+footer?]=" << data.value(0) << ",";
       break;
-      zone.m_RBpos[1] = data.value(0);
-      break;
     case 10:
       zone.m_height = data.value(0);
       break;

@@ -36,7 +36,6 @@
 
 #include <assert.h>
 #include <iostream>
-
 #include <vector>
 
 #include <libwpd/libwpd.h>

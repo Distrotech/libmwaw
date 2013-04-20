@@ -46,6 +46,7 @@
 #include "MWAWParagraph.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWTable.hxx"
 
 #include "WNParser.hxx"
@@ -1962,11 +1963,11 @@ void WNText::sendZone(int id)
     if (m_state->m_numColumns > 1) {
       if (width <= 0) // ok, we need to compute the width
         width = int((72.0*m_mainParser->getPageWidth())/m_state->m_numColumns);
-      std::vector<int> colSize;
-      colSize.resize((size_t) m_state->m_numColumns, width);
       if (listener->isSectionOpened())
         listener->closeSection();
-      listener->openSection(colSize, WPX_POINT);
+      MWAWSection sec;
+      sec.setColumns(m_state->m_numColumns, double(width), WPX_POINT);
+      listener->openSection(sec);
     }
   }
   WNTextInternal::Zone &mZone = m_state->m_mainZones[id];

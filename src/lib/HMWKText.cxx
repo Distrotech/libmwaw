@@ -46,6 +46,7 @@
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWRSRCParser.hxx"
+#include "MWAWSection.hxx"
 
 #include "HMWKParser.hxx"
 
@@ -95,23 +96,33 @@ struct Section {
   //! constructor
   Section() : m_numCols(1), m_colWidth(), m_colSep(), m_id(0), m_extra("") {
   }
-  //! returns a vector corresponding to the col width in point
-  std::vector<int> getColumnWidth() const {
-    std::vector<int> res;
+  //! returns a MWAWSection
+  MWAWSection getSection() const {
+    MWAWSection sec;
     if (m_colWidth.size()==0) {
-      MWAW_DEBUG_MSG(("HMWKTextInternal::Section: can not find any width\n"));
-      return res;
+      MWAW_DEBUG_MSG(("HMWKTextInternal::Section:getSection can not find any width\n"));
+      return sec;
     }
+    if (m_numCols <= 1)
+      return sec;
+    bool hasSep = m_colWidth.size()==m_colSep.size();
+    sec.m_columns.resize(size_t(m_numCols));
     if (m_colWidth.size()==size_t(m_numCols)) {
-      for (size_t c=0; c < m_colWidth.size(); c++)
-        res.push_back(int(m_colWidth[c]));
-      return res;
+      for (size_t c=0; c < size_t(m_numCols); c++) {
+        sec.m_columns[c].m_width = double(m_colWidth[c]);
+        sec.m_columns[c].m_widthUnit = WPX_POINT;
+        if (!hasSep) continue;
+        sec.m_columns[c].m_margins[libmwaw::Left]=
+          sec.m_columns[c].m_margins[libmwaw::Right]=double(m_colSep[c])/2.0/72.;
+      }
+    } else {
+      if (m_colWidth.size()>1) {
+        MWAW_DEBUG_MSG(("HMWKTextInternal::Section:getSection colWidth is not coherent with numCols\n"));
+      }
+      sec.setColumns(m_numCols, double(m_colWidth[0]), WPX_POINT,
+                     hasSep ? double(m_colSep[0])/72.0 : 0);
     }
-    if (m_colWidth.size()>1) {
-      MWAW_DEBUG_MSG(("HMWKTextInternal::Section: colWidth is not coherent with numCols\n"));
-    }
-    res.resize(size_t(m_numCols), int(m_colWidth[0]));
-    return res;
+    return sec;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Section const &sec) {
@@ -437,8 +448,8 @@ bool HMWKText::sendText(HMWKZone &zone)
     if (sec.m_numCols >= 1 && sec.m_colWidth.size() > 0) {
       if (listener->isSectionOpened())
         listener->closeSection();
-      listener->openSection(sec.getColumnWidth(), WPX_POINT);
-      numCol = sec.m_numCols;
+      listener->openSection(sec.getSection());
+      numCol = listener->getSection().numColumns();
     }
   }
 
@@ -513,15 +524,12 @@ bool HMWKText::sendText(HMWKZone &zone)
         break;
       } else {
         HMWKTextInternal::Section sec = m_state->m_sectionList[size_t(actSection++)];
-        numCol = sec.m_numCols;
         actCol = 0;
         if (listener->isSectionOpened())
           listener->closeSection();
         m_mainParser->newPage(++actPage);
-        if (numCol >= 1 && sec.m_colWidth.size())
-          listener->openSection(sec.getColumnWidth(), WPX_POINT);
-        else
-          listener->openSection();
+        listener->openSection(sec.getSection());
+        numCol = listener->getSection().numColumns();
       }
       break;
     case 6: // follow by id?

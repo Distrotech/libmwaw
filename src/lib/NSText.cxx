@@ -47,6 +47,7 @@
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWRSRCParser.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "NSParser.hxx"
@@ -1544,11 +1545,12 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
     if (nCol > 1)
       width /= nCol;
     if (isMain && nCol > 1) {
-      std::vector<int> colSize;
-      colSize.resize((size_t) nCol, width);
       if (listener->isSectionOpened())
         listener->closeSection();
-      listener->openSection(colSize, WPX_POINT);
+
+      MWAWSection sec;
+      sec.setColumns(nCol, double(width), WPX_POINT);
+      listener->openSection(sec);
     }
   }
   MWAWInputStreamPtr input

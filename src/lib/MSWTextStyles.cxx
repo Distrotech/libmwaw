@@ -33,6 +33,7 @@
 #include <map>
 
 #include "MWAWContentListener.hxx"
+#include "MWAWSection.hxx"
 
 #include "MSWParser.hxx"
 #include "MSWStruct.hxx"
@@ -1071,7 +1072,7 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
     MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: can not open a section in header/footer\n"));
   } else {
     int numCols = sec.m_col.get();
-    int actCols = listener->getSectionNumColumns();
+    int actCols = listener->getSection().numColumns();
     if (numCols >= 1 && actCols > 1 && sec.m_colBreak.get()) {
       if (!listener->isSectionOpened()) {
         MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: section is not opened\n"));
@@ -1080,15 +1081,10 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
     } else {
       if (listener->isSectionOpened())
         listener->closeSection();
-      if (numCols<=1) listener->openSection();
-      else {
-        // column seems to have equal size
-        int colWidth = int((72.0*m_mainParser->getPageWidth())/numCols);
-        std::vector<int> colSize;
-        colSize.resize((size_t) numCols);
-        for (int i = 0; i < numCols; i++) colSize[(size_t)i] = colWidth;
-        listener->openSection(colSize, WPX_POINT);
-      }
+      MWAWSection section;
+      if (numCols>1)
+        section.setColumns(numCols, m_mainParser->getPageWidth()/double(numCols), WPX_INCH);
+      listener->openSection(section);
     }
   }
 }

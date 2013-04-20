@@ -49,6 +49,7 @@
 #include "MWAWParser.hxx"
 
 class MWAWParagraph;
+class MWAWSection;
 
 namespace WPParserInternal
 {
@@ -115,8 +116,8 @@ protected:
   //! read the paragraph info zone
   bool readParagraphInfo(int zone);
 
-  //! try to find the column size which correspond to a section
-  bool findSectionColumns(int zone, Vec2i limits, std::vector<int> &colSize);
+  //! try to find the data which correspond to a section ( mainly column )
+  bool findSection(int zone, Vec2i limits, MWAWSection &sec);
 
   //! read a section
   bool readSection(WPParserInternal::ParagraphInfo const &info, bool mainBlock);

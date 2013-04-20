@@ -48,6 +48,7 @@
 #include "MWAWHeader.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWTable.hxx"
 
 #include "MWProStructures.hxx"
@@ -434,6 +435,19 @@ struct Section {
   Section() : m_start(S_Page), m_colsWidth(), m_colsBegin(),
     m_textLength(0), m_extra("") {
     for (int i = 0; i < 2; i++) m_headerIds[i] = m_footerIds[i] = 0;
+  }
+  //! returns a MWAWSection
+  MWAWSection getSection() const {
+    MWAWSection sec;
+    size_t numCols=m_colsWidth.size();
+    if (m_colsWidth.size() <= 1)
+      return sec;
+    sec.m_columns.resize(size_t(numCols));
+    for (size_t c=0; c < size_t(numCols); c++) {
+      sec.m_columns[c].m_width = double(m_colsWidth[c]);
+      sec.m_columns[c].m_widthUnit = WPX_POINT;
+    }
+    return sec;
   }
   //! return the number of columns
   int numColumns() const {
@@ -2482,7 +2496,7 @@ void MWProStructures::flushExtra()
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (listener && listener->isSectionOpened()) {
     listener->closeSection();
-    listener->openSection();
+    listener->openSection(MWAWSection());
   }
   // first send the text
   for (size_t i = 0; i < m_state->m_blocksList.size(); i++) {
@@ -2781,14 +2795,10 @@ void MWProStructuresListenerState::sendSection(int nSection)
       MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendSection: num columns is to big, reset to 1\n"));
       m_numCols = 1;
     }
-    if (m_numCols==1) listener->openSection();
-    else {
-      std::vector<int> colSize;
-      float colWidth =  float(72.*m_structures->m_mainParser.getPageWidth()/m_numCols);
-      colSize.resize(size_t(m_numCols));
-      for (size_t i = 0; i < size_t(m_numCols); i++) colSize[i] = int(colWidth);
-      listener->openSection(colSize, WPX_POINT);
-    }
+    MWAWSection sec;
+    if (m_numCols>1)
+      sec.setColumns(m_numCols, m_structures->m_mainParser.getPageWidth()/double(m_numCols), WPX_INCH);
+    listener->openSection(sec);
     return;
   }
 
@@ -2799,13 +2809,8 @@ void MWProStructuresListenerState::sendSection(int nSection)
   MWProStructuresInternal::Section const &section =
     m_structures->m_state->m_sectionsList[(size_t)nSection];
   if (nSection && section.m_start != section.S_Line) newPage();
-  m_numCols = section.numColumns();
-  if (m_numCols==1) listener->openSection();
-  else {
-    std::vector<int> colSize;
-    colSize.resize(size_t(m_numCols));
-    for (size_t i = 0; i < size_t(m_numCols); i++) colSize[i] = int(section. m_colsWidth[i]);
-    listener->openSection(colSize, WPX_POINT);
-  }
+
+  listener->openSection(section.getSection());
+  m_numCols = listener->getSection().numColumns();
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

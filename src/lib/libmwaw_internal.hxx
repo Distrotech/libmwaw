@@ -222,13 +222,6 @@ protected:
   uint32_t m_value;
 };
 
-struct MWAWColumnDefinition {
-  MWAWColumnDefinition() : m_width(0), m_leftGutter(0), m_rightGutter(0) {}
-  double m_width;
-  double m_leftGutter;
-  double m_rightGutter;
-};
-
 //! a border list
 struct MWAWBorder {
   /** the line style */

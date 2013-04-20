@@ -48,6 +48,7 @@
 #include "MWAWParagraph.hxx"
 #include "MWAWParser.hxx"
 #include "MWAWPosition.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MWAWContentListener.hxx"
@@ -128,9 +129,8 @@ struct State {
   int m_currentPageNumber;
 
   bool m_sectionAttributesChanged;
-  int m_numColumns;
-  std::vector < MWAWColumnDefinition > m_textColumns;
-  bool m_isTextColumnWithoutParagraph;
+  //! the section
+  MWAWSection m_section;
 
   std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
 
@@ -168,9 +168,7 @@ State::State() :
   m_pageSpan(), m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
 
   m_sectionAttributesChanged(false),
-  m_numColumns(1),
-  m_textColumns(),
-  m_isTextColumnWithoutParagraph(false),
+  m_section(),
 
   m_listOrderedLevels(),
 
@@ -302,7 +300,6 @@ void MWAWContentListener::insertBreak(MWAWContentListener::BreakType breakType)
     if (m_ps->m_isParagraphOpened)
       _closeParagraph();
     m_ps->m_paragraphNeedBreak |= MWAWContentListenerInternal::ColumnBreakBit;
-    m_ps->m_isTextColumnWithoutParagraph = true;
     break;
   case PageBreak:
     if (!m_ps->m_isPageSpanOpened && !m_ps->m_inSubDocument)
@@ -344,7 +341,7 @@ void MWAWContentListener::_insertBreakIfNecessary(WPXPropertyList &propList)
     return;
 
   if ((m_ps->m_paragraphNeedBreak&MWAWContentListenerInternal::PageBreakBit) ||
-      m_ps->m_numColumns <= 1) {
+      m_ps->m_section.numColumns() <= 1) {
     if (m_ps->m_inSubDocument) {
       MWAW_DEBUG_MSG(("MWAWContentListener::_insertBreakIfNecessary: can not add page break in subdocument\n"));
     } else
@@ -625,12 +622,12 @@ bool MWAWContentListener::isSectionOpened() const
   return m_ps->m_isSectionOpened;
 }
 
-int MWAWContentListener::getSectionNumColumns() const
+MWAWSection const &MWAWContentListener::getSection() const
 {
-  return m_ps->m_numColumns;
+  return m_ps->m_section;
 }
 
-bool MWAWContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
+bool MWAWContentListener::openSection(MWAWSection const &section)
 {
   if (m_ps->m_isSectionOpened) {
     MWAW_DEBUG_MSG(("MWAWContentListener::openSection: a section is already opened\n"));
@@ -641,31 +638,7 @@ bool MWAWContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
     MWAW_DEBUG_MSG(("MWAWContentListener::openSection: impossible to open a section\n"));
     return false;
   }
-
-  size_t numCols = colsWidth.size();
-  if (numCols <= 1)
-    m_ps->m_textColumns.resize(0);
-  else {
-    float factor = 1.0;
-    switch(unit) {
-    case WPX_POINT:
-    case WPX_TWIP:
-      factor = MWAWPosition::getScaleFactor(unit, WPX_INCH);
-    case WPX_INCH:
-      break;
-    case WPX_PERCENT:
-    case WPX_GENERIC:
-    default:
-      MWAW_DEBUG_MSG(("MWAWContentListener::openSection: unknown unit\n"));
-      return false;
-    }
-    m_ps->m_textColumns.resize(numCols);
-    for (size_t col = 0; col < numCols; col++) {
-      MWAWColumnDefinition column;
-      column.m_width = factor*float(colsWidth[col]);
-      m_ps->m_textColumns[col] = column;
-    }
-  }
+  m_ps->m_section=section;
   _openSection();
   return true;
 }
@@ -695,24 +668,11 @@ void MWAWContentListener::_openSection()
   if (!m_ps->m_isPageSpanOpened)
     _openPageSpan();
 
-  m_ps->m_numColumns = int(m_ps->m_textColumns.size());
-
   WPXPropertyList propList;
-  propList.insert("fo:margin-left", 0.0);
-  propList.insert("fo:margin-right", 0.0);
-  if (m_ps->m_numColumns > 1)
-    propList.insert("text:dont-balance-text-columns", true);
+  m_ps->m_section.addTo(propList);
 
   WPXPropertyListVector columns;
-  for (size_t i = 0; i < m_ps->m_textColumns.size(); i++) {
-    MWAWColumnDefinition const &col = m_ps->m_textColumns[i];
-    WPXPropertyList column;
-    // The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
-    column.insert("style:rel-width", col.m_width * 1440.0, WPX_TWIP);
-    column.insert("fo:start-indent", col.m_leftGutter);
-    column.insert("fo:end-indent", col.m_rightGutter);
-    columns.append(column);
-  }
+  m_ps->m_section.addColumnsTo(columns);
   m_documentInterface->openSection(propList, columns);
 
   m_ps->m_sectionAttributesChanged = false;
@@ -731,7 +691,7 @@ void MWAWContentListener::_closeSection()
 
   m_documentInterface->closeSection();
 
-  m_ps->m_numColumns = 1;
+  m_ps->m_section = MWAWSection();
   m_ps->m_sectionAttributesChanged = false;
   m_ps->m_isSectionOpened = false;
 }
@@ -794,7 +754,6 @@ void MWAWContentListener::_resetParagraphState(const bool isListElement)
   m_ps->m_paragraphNeedBreak = 0;
   m_ps->m_isListElementOpened = isListElement;
   m_ps->m_isParagraphOpened = true;
-  m_ps->m_isTextColumnWithoutParagraph = false;
   m_ps->m_isHeaderFooterWithoutParagraph = false;
 }
 

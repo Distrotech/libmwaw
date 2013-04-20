@@ -48,6 +48,7 @@
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWRSRCParser.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "LWParser.hxx"
@@ -382,10 +383,9 @@ bool LWText::sendMainText()
 
   int numCols, sepWidth;
   if (m_mainParser->getColumnInfo(numCols, sepWidth) && numCols > 1) {
-    std::vector<int> width;
-    int colWidth = int((72.0*m_mainParser->getPageWidth())/numCols);
-    width.resize((size_t) numCols, colWidth);
-    listener->openSection(width, WPX_POINT);
+    MWAWSection sec;
+    sec.setColumns(numCols, m_mainParser->getPageWidth()/double(numCols), WPX_INCH);
+    listener->openSection(sec);
   }
 
   float deltaSpacing=0;

@@ -47,6 +47,7 @@
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "WPParser.hxx"
@@ -1052,21 +1053,23 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
         ok = readText(pInfo);
         break;
       case 1: {
-        std::vector<int> colSize;
+        MWAWSection section;
         bool canCreateSection = sendAll && zone == 0 && actCol == numCols;
-        if (findSectionColumns(zone, Vec2i(i, endParag), colSize)) {
+        if (findSection(zone, Vec2i(i, endParag), section)) {
           if (!canCreateSection) {
-            if (colSize.size()) {
+            if (section.numColumns()>1) {
               MWAW_DEBUG_MSG(("WPParser::readWindowsZone: find a section in auxilliary zone\n"));
             }
           } else {
-            numCols = int(colSize.size());
-            actCol = numCols ? 1 : 0;
             if (getListener()) {
               if (getListener()->isSectionOpened())
                 getListener()->closeSection();
-              getListener()->openSection(colSize, WPX_POINT);
-            }
+              getListener()->openSection(section);
+              numCols = getListener()->getSection().numColumns();
+            } else
+              numCols = section.numColumns();
+            if (numCols<=1) numCols=0;
+            actCol = numCols ? 1 : 0;
             canCreateSection = false;
           }
         }
@@ -1121,12 +1124,12 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
  *
  * Note: complex because we need to read the file in order to find the limit
  */
-bool WPParser::findSectionColumns(int zone, Vec2i limits, std::vector<int> &colSize)
+bool WPParser::findSection(int zone, Vec2i limits, MWAWSection &sec)
 {
   assert(zone >= 0 && zone < 3);
   WPParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
 
-  colSize.resize(0);
+  sec=MWAWSection();
   std::vector<int> listPos;
   if (!wInfo.getColumnLimitsFor(limits[0], listPos))
     return false;
@@ -1135,7 +1138,7 @@ bool WPParser::findSectionColumns(int zone, Vec2i limits, std::vector<int> &colS
   if (!numPos)
     return true;
   if (listPos[numPos-1] >= limits[1]) {
-    MWAW_DEBUG_MSG(("WPParser::findSectionColumns: columns across a page\n"));
+    MWAW_DEBUG_MSG(("WPParser::findSection: columns across a page\n"));
     return false;
   }
 
@@ -1145,25 +1148,30 @@ bool WPParser::findSectionColumns(int zone, Vec2i limits, std::vector<int> &colS
     int line = listPos[j];
     long pos = wInfo.m_paragraphs[(size_t)line].m_pos;
     if (!pos) {
-      MWAW_DEBUG_MSG(("WPParser::findSectionColumns: bad data pos\n"));
+      MWAW_DEBUG_MSG(("WPParser::findSection: bad data pos\n"));
       return false;
     }
     input->seek(pos, WPX_SEEK_SET);
     if (input->readLong(2)) {
-      MWAW_DEBUG_MSG(("WPParser::findSectionColumns: find a text size\n"));
+      MWAW_DEBUG_MSG(("WPParser::findSection: find a text size\n"));
       return false;
     }
     input->seek(8, WPX_SEEK_CUR); // sz2 and type, h, indent
     int val = (int) input->readLong(2);
     if (val <= 0 || long(input->tell()) != pos + 12) {
-      MWAW_DEBUG_MSG(("WPParser::findSectionColumns: file is too short\n"));
+      MWAW_DEBUG_MSG(("WPParser::findSection: file is too short\n"));
       return false;
     }
     totalSize += val;
-    colSize.push_back(val);
+    MWAWSection::Column col;
+    col.m_width=val;
+    col.m_widthUnit=WPX_POINT;
+    sec.m_columns.push_back(col);
   }
+  if (sec.m_columns.size()==1)
+    sec.m_columns.resize(0);
   if (totalSize >= int(72.*getPageWidth())) {
-    MWAW_DEBUG_MSG(("WPParser::findSectionColumns: total size is too big\n"));
+    MWAW_DEBUG_MSG(("WPParser::findSection: total size is too big\n"));
     return false;
   }
   return true;
@@ -1232,7 +1240,7 @@ MWAWParagraph WPParser::getParagraph(WPParserInternal::ParagraphData const &data
   if (left > 0)
     para.m_margins[1]=left;
   para.m_margins[0]=double(data.m_indent[1]-data.m_indent[0]);
-  if (getListener() && getListener()->getSectionNumColumns() > 1)
+  if (getListener() && getListener()->getSection().numColumns() > 1)
     return para; // too dangerous to set the paragraph width in this case...
   double right=getPageWidth()*72.-double(data.m_width);
   if (right > 0)
@@ -1464,7 +1472,7 @@ bool WPParser::readSection(WPParserInternal::ParagraphInfo const &info, bool mai
 
   if (getListener() && mainBlock) {
     if (!getListener()->isSectionOpened())
-      getListener()->openSection();
+      getListener()->openSection(MWAWSection());
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());

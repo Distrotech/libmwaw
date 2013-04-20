@@ -43,6 +43,7 @@
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
+#include "MWAWSection.hxx"
 
 #include "CWParser.hxx"
 #include "CWStruct.hxx"
@@ -262,12 +263,12 @@ struct Section {
   friend std::ostream &operator<<(std::ostream &o, Section const &sec) {
     o << "pos=" << sec.m_pos << ",";
     if (sec.m_numColumns != 1) o << "numCols=" << sec.m_numColumns << ",";
-    o << "colsW=[";
+    o << "col[width]=[";
     for (size_t c = 0; c < sec.m_columnsWidth.size(); c++)
       o << sec.m_columnsWidth[c] << ",";
     o << "],";
     if (sec.m_columnsSep.size()) {
-      o << "colsW=[";
+      o << "col[sepW]=[";
       for (size_t c = 0; c < sec.m_columnsSep.size(); c++)
         o << sec.m_columnsSep[c] << ",";
       o << "],";
@@ -1330,18 +1331,27 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
           nextSectionPos = -1;
           nextSection = -1;
         }
-        int actCols = listener->getSectionNumColumns();
+        int actCols = listener->getSection().numColumns();
         if (numCols > 1  || actCols > 1) {
           if (listener->isSectionOpened())
             listener->closeSection();
-          if (numCols<=1) listener->openSection();
-          else {
-            if (width.size() == 0) {
-              int colWidth = int((72.0*m_mainParser->getPageWidth())/numCols);
-              width.resize((size_t) numCols, colWidth);
+          MWAWSection sec;
+          if (numCols>1 && width.size() != size_t(numCols))
+            sec.setColumns(numCols, m_mainParser->getPageWidth()/double(numCols), WPX_INCH);
+          else if (numCols > 1) {
+            sec.m_columns.resize(size_t(numCols));
+            bool hasSep = sepWidth.size()+1==size_t(numCols);
+            for (size_t c=0; c < size_t(numCols); c++) {
+              sec.m_columns[c].m_width = double(width[c]);
+              sec.m_columns[c].m_widthUnit = WPX_POINT;
+              if (!hasSep) continue;
+              if (c)
+                sec.m_columns[c].m_margins[libmwaw::Left]=double(sepWidth[c-1])/2.0/72.;
+              if (c+1!=size_t(numCols))
+                sec.m_columns[c].m_margins[libmwaw::Right]=double(sepWidth[c])/2.0/72.;
             }
-            listener->openSection(width, WPX_POINT);
           }
+          listener->openSection(sec);
         }
       } else if (numSectionInPage==0)
         numSectionInPage++;

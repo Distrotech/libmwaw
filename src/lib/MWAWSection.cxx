@@ -32,6 +32,7 @@
 #include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
+#include "MWAWPosition.hxx"
 
 #include "MWAWSection.hxx"
 
@@ -49,10 +50,23 @@ std::ostream &operator<<(std::ostream &o, MWAWSection::Column const &col)
   return o;
 }
 
-void MWAWSection::Column::addTo(WPXPropertyList &propList) const
+bool MWAWSection::Column::addTo(WPXPropertyList &propList) const
 {
   // The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
-  propList.insert("style:rel-width", m_width * 1440.0, WPX_TWIP);
+  double factor = 1.0;
+  switch(m_widthUnit) {
+  case WPX_POINT:
+  case WPX_INCH:
+    factor = MWAWPosition::getScaleFactor(m_widthUnit, WPX_TWIP);
+  case WPX_TWIP:
+    break;
+  case WPX_PERCENT:
+  case WPX_GENERIC:
+  default:
+    MWAW_DEBUG_MSG(("MWAWSection::Column::addTo: unknown unit\n"));
+    return false;
+  }
+  propList.insert("style:rel-width", m_width * factor, WPX_TWIP);
   propList.insert("fo:start-indent", m_margins[libmwaw::Left]);
   propList.insert("fo:end-indent", m_margins[libmwaw::Right]);
   static bool first = true;
@@ -60,6 +74,7 @@ void MWAWSection::Column::addTo(WPXPropertyList &propList) const
     first=false;
     MWAW_DEBUG_MSG(("MWAWSection::Column::addTo: sending before/after margins is not implemented\n"));
   }
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -124,8 +139,8 @@ void MWAWSection::addColumnsTo(WPXPropertyListVector &propVec) const
   if (!numCol) return;
   for (size_t c=0; c < numCol; c++) {
     WPXPropertyList propList;
-    m_columns[c].addTo(propList);
-    propVec.append(propList);
+    if (m_columns[c].addTo(propList))
+      propVec.append(propList);
   }
 }
 

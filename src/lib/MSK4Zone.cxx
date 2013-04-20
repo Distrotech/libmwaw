@@ -42,6 +42,7 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MSK4Parser.hxx"
@@ -595,9 +596,9 @@ void MSK4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
   if (mainOle && getListener() && m_state->m_numColumns > 1) {
     if (getListener()->isSectionOpened())
       getListener()->closeSection();
-    int w = int(72.0*getPageWidth()/m_state->m_numColumns);
-    std::vector<int> colSize(size_t(m_state->m_numColumns), w);
-    getListener()->openSection(colSize, WPX_POINT);
+    MWAWSection sec;
+    sec.setColumns(m_state->m_numColumns, getPageWidth()/double(m_state->m_numColumns), WPX_INCH);
+    getListener()->openSection(sec);
   }
 
   MWAWEntry ent(entry);

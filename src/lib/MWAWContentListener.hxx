@@ -53,6 +53,7 @@ class MWAWPageSpan;
 class MWAWParagraph;
 class MWAWParserState;
 class MWAWPosition;
+class MWAWSection;
 class MWAWSubDocument;
 
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
@@ -199,10 +200,10 @@ public:
   // ------- section ---------------
   //! returns true if a section is opened
   bool isSectionOpened() const;
-  //! returns the actual number of columns ( or 1 if no section is opened )
-  int getSectionNumColumns() const;
+  //! returns the actual section
+  MWAWSection const &getSection() const;
   //! open a section if possible
-  bool openSection(std::vector<int> colsWidth=std::vector<int>(), WPXUnit unit=WPX_POINT);
+  bool openSection(MWAWSection const &section);
   //! close a section
   bool closeSection();
 

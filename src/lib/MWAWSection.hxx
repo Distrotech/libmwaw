@@ -108,7 +108,7 @@ public:
         m_margins[i]=0;
     }
     //! add a column to the propList
-    void addTo(WPXPropertyList &propList) const;
+    bool addTo(WPXPropertyList &propList) const;
     //! operator <<
     friend std::ostream &operator<<(std::ostream &o, Column const &column);
     //! operator!=

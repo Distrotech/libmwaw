@@ -47,6 +47,7 @@
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWRSRCParser.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MRWParser.hxx"
@@ -730,7 +731,13 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
     if (numCols > 1) {
       if (listener->isSectionOpened())
         listener->closeSection();
-      listener->openSection(width, WPX_POINT);
+      MWAWSection sec;
+      sec.m_columns.resize(size_t(numCols));
+      for (size_t c=0; c < size_t(numCols); c++) {
+        sec.m_columns[c].m_width = double(width[c]);
+        sec.m_columns[c].m_widthUnit = WPX_POINT;
+      }
+      listener->openSection(sec);
     }
   }
 

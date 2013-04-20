@@ -46,6 +46,7 @@
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MSW1Parser.hxx"
@@ -1207,10 +1208,9 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
   if (isMain) {
     numCols = m_state->m_numColumns;
     if (numCols > 1 && !getListener()->isSectionOpened()) {
-      int colWidth = int((72.0*getPageWidth())/numCols);
-      std::vector<int> width;
-      width.resize((size_t) numCols, colWidth);
-      getListener()->openSection(width, WPX_POINT);
+      MWAWSection sec;
+      sec.setColumns(numCols, getPageWidth()/double(numCols), WPX_INCH);
+      getListener()->openSection(sec);
     }
   }
   long pos = textEntry.begin();

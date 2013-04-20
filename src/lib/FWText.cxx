@@ -44,6 +44,7 @@
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
+#include "MWAWSection.hxx"
 
 #include "FWParser.hxx"
 
@@ -1312,13 +1313,15 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
             if (listener->isSectionOpened())
               listener->closeSection();
 
-            if (numC<=1 && sendData) listener->openSection();
-            else {
-              std::vector<int> colSize;
-              colSize.resize(numC);
-              for (size_t i = 0; i < numC; i++) colSize[i] = page.m_columns[i].m_box.size().x();
-              listener->openSection(colSize, WPX_POINT);
+            MWAWSection sec;
+            if (numC>1) {
+              sec.m_columns.resize(numC);
+              for (size_t c=0; c < numC; c++) {
+                sec.m_columns[c].m_width = double(page.m_columns[c].m_box.size().x());
+                sec.m_columns[c].m_widthUnit = WPX_POINT;
+              }
             }
+            listener->openSection(sec);
             numCol = int(numC);
           }
         }
