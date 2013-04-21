@@ -205,6 +205,7 @@ std::ostream &operator<<(std::ostream &o, Information const &info)
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() {
+    m_tabsRelativeToLeftMargin = false;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
