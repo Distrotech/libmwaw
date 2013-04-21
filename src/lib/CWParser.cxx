@@ -336,7 +336,7 @@ void CWParser::sendFootnote(int zoneId)
   if (!getListener()) return;
 
   MWAWSubDocumentPtr subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
-  getListener()->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+  getListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
 }
 
 void CWParser::sendZoneInFrame(int zoneId, MWAWPosition pos, WPXPropertyList extras, WPXPropertyList frameExtras)

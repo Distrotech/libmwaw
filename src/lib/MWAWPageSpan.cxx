@@ -193,9 +193,9 @@ void MWAWHeaderFooter::insertPageNumberParagraph(MWAWContentListener *listener) 
   if (listener->isParagraphOpened())
     listener->insertEOL();
 
-  WPXPropertyList pList;
-  pList.insert("style:num-format", libmwaw::numberingTypeToString(m_pageNumberType).c_str());
-  listener->insertField(MWAWContentListener::PageNumber);
+  MWAWField field(MWAWField::PageNumber);
+  field.m_numberingType=m_pageNumberType;
+  listener->insertField(field);
 }
 
 // ----------------- MWAWPageSpan ------------------------

@@ -295,7 +295,7 @@ bool MSK3Parser::sendFootNote(int zoneId, int noteId)
   MWAWSubDocumentPtr subdoc
   (new MSK3ParserInternal::SubDocument(*this, getInput(), MSK3ParserInternal::SubDocument::Text, zoneId, noteId));
   if (getListener())
-    getListener()->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+    getListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
   return true;
 }
 

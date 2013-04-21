@@ -931,15 +931,15 @@ bool LWText::sendHeaderFooter(bool header)
       char const *strPtr = &(*it);
       bool done = true;
       if (strncmp(strPtr, "PAGE>", 5)==0)
-        listener->insertField(MWAWContentListener::PageNumber);
+        listener->insertField(MWAWField(MWAWField::PageNumber));
       else if (strncmp(strPtr, "DATE>", 5)==0)
-        listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWField(MWAWField::Date));
       else if (strncmp(strPtr, "TIME>", 5)==0)
-        listener->insertField(MWAWContentListener::Time);
+        listener->insertField(MWAWField(MWAWField::Time));
       else if (strncmp(strPtr, "PMAX>", 5)==0)
-        listener->insertField(MWAWContentListener::PageCount);
+        listener->insertField(MWAWField(MWAWField::PageCount));
       else if (strncmp(strPtr, "NAME>", 5)==0)
-        listener->insertField(MWAWContentListener::Title);
+        listener->insertField(MWAWField(MWAWField::Title));
       else
         done=false;
       if (done) {

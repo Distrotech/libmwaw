@@ -759,19 +759,19 @@ bool ZWText::sendHeaderFooter(bool header)
         bool done = true;
         switch(nextC) {
         case 'd':
-          listener->insertField(MWAWContentListener::Date);
+          listener->insertField(MWAWField(MWAWField::Date));
           break;
         case 'p':
-          listener->insertField(MWAWContentListener::PageNumber);
+          listener->insertField(MWAWField(MWAWField::PageNumber));
           break;
         case 's':
           listener->insertUnicodeString("#section#");
           break;
         case 't':
-          listener->insertField(MWAWContentListener::Time);
+          listener->insertField(MWAWField(MWAWField::Time));
           break;
         case '#':
-          listener->insertField(MWAWContentListener::PageCount);
+          listener->insertField(MWAWField(MWAWField::PageCount));
           break;
         default:
           done=false;

@@ -2433,18 +2433,18 @@ void MSKGraph::sendTextBox(int zoneId)
       listener->insertEOL();
       break;
     case 0x19:
-      listener->insertField(MWAWContentListener::Title);
+      listener->insertField(MWAWField(MWAWField::Title));
       break;
     case 0x18:
-      listener->insertField(MWAWContentListener::PageNumber);
+      listener->insertField(MWAWField(MWAWField::PageNumber));
       break;
     case 0x16:
       MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some time\n"));
-      listener->insertField(MWAWContentListener::Time);
+      listener->insertField(MWAWField(MWAWField::Time));
       break;
     case 0x17:
       MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some date\n"));
-      listener->insertField(MWAWContentListener::Date);
+      listener->insertField(MWAWField(MWAWField::Date));
       break;
     case 0x14: // fixme
       MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: footnote are not implemented\n"));

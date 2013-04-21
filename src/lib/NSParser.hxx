@@ -101,7 +101,7 @@ protected:
 
   //! returns the fieldtype or a string corresponding to a variable
   bool getReferenceData(NSStruct::ZoneType zoneId, int vId,
-                        MWAWContentListener::FieldType &fType,
+                        MWAWField::Type &fType,
                         std::string &content,
                         std::vector<int> &number) const;
 

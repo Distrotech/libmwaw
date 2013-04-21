@@ -692,11 +692,11 @@ bool MWParser::sendWindow(int zone)
   if (getListener() && zone) {
     // FIXME: try to insert field in the good place
     if (info.m_pageNumber.x() >= 0 && info.m_pageNumber.y() >= 0)
-      getListener()->insertField(MWAWContentListener::PageNumber);
+      getListener()->insertField(MWAWField(MWAWField::PageNumber));
     if (info.m_date.x() >= 0 && info.m_date.y() >= 0)
-      getListener()->insertField(MWAWContentListener::Date);
+      getListener()->insertField(MWAWField(MWAWField::Date));
     if (info.m_time.x() >= 0 && info.m_time.y() >= 0)
-      getListener()->insertField(MWAWContentListener::Time);
+      getListener()->insertField(MWAWField(MWAWField::Time));
   }
   return true;
 }

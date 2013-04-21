@@ -195,7 +195,7 @@ void WNParser::sendFootnote(WNEntry const &entry)
   if (!getListener()) return;
 
   MWAWSubDocumentPtr subdoc(new WNParserInternal::SubDocument(*this, getInput(), entry));
-  getListener()->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+  getListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
 }
 
 void WNParser::send(WNEntry const &entry)

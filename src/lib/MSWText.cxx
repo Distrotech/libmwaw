@@ -1583,7 +1583,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       case 0xc: // end section (ok)
         break;
       case 0x2:
-        listener->insertField(MWAWContentListener::PageNumber);
+        listener->insertField(MWAWField(MWAWField::PageNumber));
         break;
       case 0x6:
         listener->insertChar('\\');
@@ -1595,29 +1595,41 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
         break;
       case 0x13: // month
       case 0x1a: // month abreviated
-      case 0x1b: // checkme month long
-        listener->insertDateTimeField("%m");
+      case 0x1b: { // checkme month long
+        MWAWField field(MWAWField::Date);
+        field.m_DTFormat = "%m";
+        listener->insertField(field);
         break;
+      }
       case 0x10: // day
       case 0x16: // checkme: day abbreviated
-      case 0x17: // checkme: day long
-        listener->insertDateTimeField("%d");
+      case 0x17: { // checkme: day long
+        MWAWField field(MWAWField::Date);
+        field.m_DTFormat = "%d";
+        listener->insertField(field);
         break;
-      case 0x15: // year
-        listener->insertDateTimeField("%y");
+      }
+      case 0x15: { // year
+        MWAWField field(MWAWField::Date);
+        field.m_DTFormat = "%y";
+        listener->insertField(field);
         break;
+      }
       case 0x1d:
-        listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWField(MWAWField::Date));
         break;
       case 0x18: // checkme hour
-      case 0x19: // checkme hour
-        listener->insertDateTimeField("%H");
+      case 0x19: { // checkme hour
+        MWAWField field(MWAWField::Time);
+        field.m_DTFormat = "%H";
+        listener->insertField(field);
         break;
+      }
       case 0x3: // v3
-        listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWField(MWAWField::Date));
         break;
       case 0x4:
-        listener->insertField(MWAWContentListener::Time);
+        listener->insertField(MWAWField(MWAWField::Time));
         break;
       case 0x5: // footnote mark (ok)
         break;

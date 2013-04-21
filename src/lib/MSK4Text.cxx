@@ -274,11 +274,11 @@ std::ostream &operator<<(std::ostream &o, Ftnt const &ftnt)
 /** Internal: class to store field definition: TOKN entry*/
 struct Token {
   //! constructor
-  Token() : m_type(MWAWContentListener::None), m_textLength(-1), m_unknown(-1), m_error("") {}
+  Token() : m_type(MWAWField::None), m_textLength(-1), m_unknown(-1), m_error("") {}
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, Token const &tok);
   //! the type
-  MWAWContentListener::FieldType m_type;
+  MWAWField::Type m_type;
   //! the length of the text corresponding to the token
   int m_textLength;
   //! unknown field
@@ -291,28 +291,28 @@ std::ostream &operator<<(std::ostream &o, Token const &tok)
 {
   o << std::dec;
   switch (tok.m_type) {
-  case MWAWContentListener::PageCount:
+  case MWAWField::PageCount:
     o << "field[pageCount],";
     break;
-  case MWAWContentListener::PageNumber:
+  case MWAWField::PageNumber:
     o << "field[page],";
     break;
-  case MWAWContentListener::Date:
+  case MWAWField::Date:
     o << "field[date],";
     break;
-  case MWAWContentListener::Time:
+  case MWAWField::Time:
     o << "field[time],";
     break;
-  case MWAWContentListener::Title:
+  case MWAWField::Title:
     o << "field[title],";
     break;
-  case MWAWContentListener::Database:
+  case MWAWField::Database:
     o << "field[database],";
     break;
-  case MWAWContentListener::Link:
+  case MWAWField::Link:
     o << "field[link],";
     break;
-  case MWAWContentListener::None:
+  case MWAWField::None:
   default:
     o << "##field[unknown]" << ",";
     break;
@@ -730,7 +730,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
 
     std::string s;
     if (fType == MSK4TextInternal::Font::Page && listener) {
-      listener->insertField(MWAWContentListener::PageNumber);
+      listener->insertField(MWAWField(MWAWField::PageNumber));
       fType = MSK4TextInternal::Font::None;
     }
     if (len) {
@@ -1613,25 +1613,25 @@ bool MSK4Text::toknDataParser(MWAWInputStreamPtr input, long endPos,
   int beginType = 0;
   switch(type) {
   case 1:
-    tok.m_type = MWAWContentListener::Date;
+    tok.m_type = MWAWField::Date;
     beginType=1;
     break;
   case 2:
-    tok.m_type = MWAWContentListener::Time;
+    tok.m_type = MWAWField::Time;
     beginType=1;
     break;
   case 4:
-    tok.m_type = MWAWContentListener::PageNumber;
+    tok.m_type = MWAWField::PageNumber;
     beginType = 0;
     break;
     // next int
   case 8:
-    tok.m_type = MWAWContentListener::Title;
+    tok.m_type = MWAWField::Title;
     beginType = 0;
     break;
     // next int
   case 16:
-    tok.m_type = MWAWContentListener::Database;
+    tok.m_type = MWAWField::Database;
     beginType = 2;
     break;
   default:

@@ -180,7 +180,7 @@ protected:
   //
 
   //! try to send a footnote/endnote entry
-  void sendText(int docId, libmwaw::SubDocumentType type, int which=0);
+  void sendText(int docId, libmwaw::SubDocumentType type, MWAWNote::Type which=MWAWNote::FootNote);
   //! try to send a graphic
   void sendGraphic(int docId);
   //! try to send a variable, in pratice do nothing

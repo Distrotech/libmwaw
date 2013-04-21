@@ -1633,7 +1633,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         if (plc.m_id < 0 || plc.m_id >= int(m_state->m_footnoteList.size())) {
           MWAW_DEBUG_MSG(("NSText::sendText: can not find the footnote\n"));
           MWAWSubDocumentPtr subdoc(new NSTextInternal::SubDocument(*this, input, -1, libmwaw::DOC_NOTE));
-          listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+          listener->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
           break;
         }
         MWAWSubDocumentPtr subdoc(new NSTextInternal::SubDocument(*this, input, plc.m_id, libmwaw::DOC_NOTE));
@@ -1641,16 +1641,10 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         noteId++;
         if (fnote.m_number && noteId != fnote.m_number)
           noteId = fnote.m_number;
-        MWAWContentListener::NoteType noteType
-          = ftInfo.endNotes() ? MWAWContentListener::ENDNOTE :
-            MWAWContentListener::FOOTNOTE;
-        listener->resetNoteNumber(noteType, noteId);
-        std::string label = fnote.getTextLabel(noteId);
-        if (label.length())
-          listener->insertLabelNote(noteType, label.c_str(), subdoc);
-        else
-          listener->insertNote(noteType, subdoc);
-
+        MWAWNote note(ftInfo.endNotes() ? MWAWNote::EndNote : MWAWNote::FootNote);
+        note.m_number=noteId;
+        note.m_label=fnote.getTextLabel(noteId).c_str();
+        listener->insertNote(note, subdoc);
         break;
       }
       case NSTextInternal::P_PicturePara: {
@@ -1743,19 +1737,22 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
       break;
     case 0xf: {
       std::string format(m_mainParser->getDateFormat(zoneId, actVar));
+      MWAWField field(MWAWField::Date);
       if (format.length())
-        listener->insertDateTimeField(format.c_str());
-      else {
+        field.m_DTFormat = format;
+      else
         f << "#";
-        listener->insertField(MWAWContentListener::Date);
-      }
+      listener->insertField(field);
       break;
     }
-    case 0x10:
-      listener->insertDateTimeField("%H:%M");
+    case 0x10: {
+      MWAWField field(MWAWField::Time);
+      field.m_DTFormat = "%H:%M";
+      listener->insertField(field);
       break;
+    }
     case 0x11:
-      listener->insertField(MWAWContentListener::Title);
+      listener->insertField(MWAWField(MWAWField::Title));
       break;
     case 0x14: // mark separator ( ok to ignore )
       break;
@@ -1764,14 +1761,14 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         lastCharFootnote = true;
       break;
     case 0x1d: {
-      MWAWContentListener::FieldType fType;
+      MWAWField::Type fType;
       std::string content;
       if (!m_mainParser->getReferenceData(zoneId, actVar, fType, content, varValues)) {
         listener->insertChar(' ');
         f << "#[ref]";
         break;
       }
-      if (fType != MWAWContentListener::None)
+      if (fType != MWAWField::None)
         listener->insertField(fType);
       else if (content.length())
         listener->insertUnicodeString(content.c_str());

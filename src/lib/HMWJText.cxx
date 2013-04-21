@@ -570,7 +570,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
             (new HMWJTextInternal::SubDocument
              (*this, input, m_state->m_ftnTextId,
               m_state->m_ftnFirstPosList[size_t(tkn.m_localId)]));
-            listener->insertNote(MWAWContentListener::FOOTNOTE,subdoc);
+            listener->insertNote(MWAWNote(MWAWNote::FootNote),subdoc);
             break;
           }
           case 8: // TOC, ok to ignore
@@ -623,23 +623,23 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
       switch(c) {
       case 0x1000:
         f << "[pgNum]";
-        listener->insertField(MWAWContentListener::PageNumber);
+        listener->insertField(MWAWField(MWAWField::PageNumber));
         break;
       case 0x1001:
         f << "[pgCount]";
-        listener->insertField(MWAWContentListener::PageCount);
+        listener->insertField(MWAWField(MWAWField::PageCount));
         break;
       case 0x1002:
         f << "[date]";
-        listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWField(MWAWField::Date));
         break;
       case 0x1003:
         f << "[time]";
-        listener->insertField(MWAWContentListener::Time);
+        listener->insertField(MWAWField(MWAWField::Time));
         break;
       case 0x1004:
         f << "[title]";
-        listener->insertField(MWAWContentListener::Title);
+        listener->insertField(MWAWField(MWAWField::Title));
         break;
       case 0x1005: {
         std::stringstream s;

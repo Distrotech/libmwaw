@@ -34,6 +34,7 @@
 #include <cstring>
 #include <iomanip>
 #include <sstream>
+#include <time.h>
 
 #include <libwpd/libwpd.h>
 
@@ -403,57 +404,58 @@ void MWAWContentListener::setList(shared_ptr<MWAWList> list)
 ///////////////////
 // field :
 ///////////////////
-#include <time.h>
-void MWAWContentListener::insertField(MWAWContentListener::FieldType type, WPXPropertyList extras)
+void MWAWContentListener::insertField(MWAWField const &field)
 {
-  switch(type) {
-  case None:
+  switch(field.m_type) {
+  case MWAWField::None:
     break;
-  case PageCount:
-  case PageNumber: {
+  case MWAWField::PageCount:
+  case MWAWField::PageNumber: {
     _flushText();
     _openSpan();
-    WPXPropertyList propList(extras);
-    if (!propList["style:num-format"])
-      propList.insert("style:num-format", libmwaw::numberingTypeToString(libmwaw::ARABIC).c_str());
-    if (type == PageNumber)
+    WPXPropertyList propList;
+    propList.insert("style:num-format", libmwaw::numberingTypeToString(field.m_numberingType).c_str());
+    if (field.m_type == MWAWField::PageNumber)
       m_documentInterface->insertField(WPXString("text:page-number"), propList);
     else
       m_documentInterface->insertField(WPXString("text:page-count"), propList);
     break;
   }
-  case Database: {
-    WPXString tmp("#DATAFIELD#");
+  case MWAWField::Database:
+    if (field.m_data.length())
+      insertUnicodeString(field.m_data.c_str());
+    else
+      insertUnicodeString("#DATAFIELD#");
+    break;
+  case MWAWField::Title:
+    insertUnicodeString("#TITLE#");
+    break;
+  case MWAWField::Date:
+  case MWAWField::Time: {
+    std::string format(field.m_DTFormat);
+    if (format.length()==0) {
+      if (field.m_type==MWAWField::Date)
+        format="%m/%d/%y";
+      else
+        format="%I:%M:%S %p";
+    }
+    time_t now = time ( 0L );
+    struct tm timeinfo = *(localtime ( &now));
+    char buf[256];
+    strftime(buf, 256, format.c_str(), &timeinfo);
+    WPXString tmp(buf);
     insertUnicodeString(tmp);
     break;
   }
-  case Title: {
-    WPXString tmp("#TITLE#");
-    insertUnicodeString(tmp);
-    break;
-  }
-  case Date:
-    insertDateTimeField("%m/%d/%y");
-    break;
-  case Time:
-    insertDateTimeField("%I:%M:%S %p");
-    break;
-  case Link:
+  case MWAWField::Link:
+    if (field.m_data.length()) {
+      insertUnicodeString(field.m_data.c_str());
+      break;
+    }
   default:
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertField: must not be called with type=%d\n", int(type)));
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertField: must not be called with type=%d\n", int(field.m_type)));
     break;
   }
-}
-
-void MWAWContentListener::insertDateTimeField(char const *format)
-
-{
-  time_t now = time ( 0L );
-  struct tm timeinfo = *(localtime ( &now));
-  char buf[256];
-  strftime(buf, 256, format, &timeinfo);
-  WPXString tmp(buf);
-  insertUnicodeString(tmp);
 }
 
 ///////////////////
@@ -978,34 +980,16 @@ void MWAWContentListener::_flushText()
 ///////////////////
 // Note/Comment/picture/textbox
 ///////////////////
-void MWAWContentListener::resetNoteNumber(const NoteType noteType, int number)
-{
-  if (noteType == FOOTNOTE)
-    m_ds->m_footNoteNumber = number-1;
-  else
-    m_ds->m_endNoteNumber = number-1;
-}
-
-void MWAWContentListener::insertNote(const NoteType noteType, MWAWSubDocumentPtr &subDocument)
+void MWAWContentListener::insertNote(MWAWNote const &note, MWAWSubDocumentPtr &subDocument)
 {
   if (m_ps->m_isNote) {
     MWAW_DEBUG_MSG(("MWAWContentListener::insertNote try to insert a note recursively (ignored)\n"));
     return;
   }
-  WPXString label("");
-  insertLabelNote(noteType, label, subDocument);
-}
-
-void MWAWContentListener::insertLabelNote(const NoteType noteType, WPXString const &label, MWAWSubDocumentPtr &subDocument)
-{
-  if (m_ps->m_isNote) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertLabelNote try to insert a note recursively (ignored)\n"));
-    return;
-  }
 
   m_ps->m_isNote = true;
   if (m_ds->m_isHeaderFooterStarted) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertLabelNote try to insert a note in a header/footer\n"));
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertNote try to insert a note in a header/footer\n"));
     /** Must not happen excepted in corrupted document, so we do the minimum.
     	Note that we have no choice, either we begin by closing the paragraph,
     	... or we reprogram handleSubDocument.
@@ -1026,22 +1010,27 @@ void MWAWContentListener::insertLabelNote(const NoteType noteType, WPXString con
     }
 
     WPXPropertyList propList;
-    if (label.len())
-      propList.insert("text:label", label);
-    if (noteType == FOOTNOTE) {
-      propList.insert("libwpd:number", ++(m_ds->m_footNoteNumber));
+    if (note.m_label.len())
+      propList.insert("text:label", note.m_label);
+    if (note.m_type == MWAWNote::FootNote) {
+      if (note.m_number >= 0)
+        m_ds->m_footNoteNumber = note.m_number;
+      else
+        m_ds->m_footNoteNumber++;
+      propList.insert("libwpd:number", m_ds->m_footNoteNumber);
       m_documentInterface->openFootnote(propList);
-    } else {
-      propList.insert("libwpd:number", ++(m_ds->m_endNoteNumber));
-      m_documentInterface->openEndnote(propList);
-    }
-
-    handleSubDocument(subDocument, libmwaw::DOC_NOTE);
-
-    if (noteType == FOOTNOTE)
+      handleSubDocument(subDocument, libmwaw::DOC_NOTE);
       m_documentInterface->closeFootnote();
-    else
+    } else {
+      if (note.m_number >= 0)
+        m_ds->m_endNoteNumber = note.m_number;
+      else
+        m_ds->m_endNoteNumber++;
+      propList.insert("libwpd:number", m_ds->m_endNoteNumber);
+      m_documentInterface->openEndnote(propList);
+      handleSubDocument(subDocument, libmwaw::DOC_NOTE);
       m_documentInterface->closeEndnote();
+    }
   }
   m_ps->m_isNote = false;
 }

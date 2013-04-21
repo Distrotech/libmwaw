@@ -376,7 +376,7 @@ void MSWParser::sendFootnote(int id)
 
   MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_NOTE));
   getListener()->insertNote
-  (m_state->m_endNote ? MWAWContentListener::ENDNOTE : MWAWContentListener::FOOTNOTE, subdoc);
+  (MWAWNote(m_state->m_endNote ? MWAWNote::EndNote : MWAWNote::FootNote), subdoc);
 }
 
 void MSWParser::sendFieldComment(int id)

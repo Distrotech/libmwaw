@@ -75,6 +75,13 @@ These files defined basic structures which must be used by the parsers :
 ## MWAWContentListener.hxx
 	The content listener
 
+## MWAWPageSpan.hxx
+	store the page property and a page span number,
+	  define also MWAWHeaderFooter class to store header/footer property
+
+## MWAWSection.hxx
+	store the section property
+
 ## MWAWFont.hxx 
 	store the font property
 

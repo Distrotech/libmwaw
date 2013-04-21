@@ -402,39 +402,39 @@ void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
     if (token.m_value.length())
       listener->insertUnicodeString(token.m_value.c_str());
     else
-      listener->insertField(MWAWContentListener::Date);
+      listener->insertField(MWAWField(MWAWField::Date));
     return;
   case 0x18:
     if (token.m_value.length())
       listener->insertUnicodeString(token.m_value.c_str());
     else
-      listener->insertField(MWAWContentListener::Time);
+      listener->insertField(MWAWField(MWAWField::Time));
     return;
   case 0x19: // fixme this can also be page count
     switch(token.m_fieldType) {
     case 0:
     case 4: // big roman
     case 6: // small roman
-      listener->insertField(MWAWContentListener::PageNumber);
+      listener->insertField(MWAWField(MWAWField::PageNumber));
       break;
     case 1:
     case 5: // big roman
     case 7: // small roman
-      listener->insertField(MWAWContentListener::PageCount);
+      listener->insertField(MWAWField(MWAWField::PageCount));
       break;
     case 2:
-      listener->insertField(MWAWContentListener::PageNumber);
+      listener->insertField(MWAWField(MWAWField::PageNumber));
       listener->insertUnicodeString(" of ");
-      listener->insertField(MWAWContentListener::PageCount);
+      listener->insertField(MWAWField(MWAWField::PageCount));
       break;
     case 3:
-      listener->insertField(MWAWContentListener::PageNumber);
+      listener->insertField(MWAWField(MWAWField::PageNumber));
       listener->insertChar('/');
-      listener->insertField(MWAWContentListener::PageCount);
+      listener->insertField(MWAWField(MWAWField::PageCount));
       break;
     default:
       MWAW_DEBUG_MSG(("MRWGraph::sendToken: find unknown pagenumber style\n"));
-      listener->insertField(MWAWContentListener::PageNumber);
+      listener->insertField(MWAWField(MWAWField::PageNumber));
       break;
     }
     return;
@@ -442,7 +442,7 @@ void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
     bool endNote=true;
     int fZoneId = m_mainParser->getZoneId(token.m_refId, endNote);
     MWAWSubDocumentPtr subdoc(new MRWGraphInternal::SubDocument(*this, m_parserState->m_input, fZoneId));
-    listener->insertNote(endNote ? MWAWContentListener::ENDNOTE : MWAWContentListener::FOOTNOTE, subdoc);
+    listener->insertNote(MWAWNote(endNote ? MWAWNote::EndNote : MWAWNote::FootNote), subdoc);
     return;
   }
   case 0x1f: // footnote content, ok to ignore

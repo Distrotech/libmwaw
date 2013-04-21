@@ -400,9 +400,9 @@ std::string NSParser::getDateFormat(NSStruct::ZoneType zoneId, int vId) const
 
 bool NSParser::getReferenceData
 (NSStruct::ZoneType zoneId, int vId,
- MWAWContentListener::FieldType &fType, std::string &content, std::vector<int> &values) const
+ MWAWField::Type &fType, std::string &content, std::vector<int> &values) const
 {
-  fType = MWAWContentListener::None;
+  fType = MWAWField::None;
   content = "";
   if (zoneId < 0 || zoneId >= 3) {
     MWAW_DEBUG_MSG(("NSParser::getReferenceData: bad zone %d\n", zoneId));
@@ -420,11 +420,11 @@ bool NSParser::getReferenceData
   }
   // first special case
   if (var.m_type == 1 && var.m_refId == 14) {
-    fType = MWAWContentListener::PageNumber;
+    fType = MWAWField::PageNumber;
     return true;
   }
   if (var.m_type == 2 && var.m_refId == 15) {
-    fType = MWAWContentListener::PageCount;
+    fType = MWAWField::PageCount;
     return true;
   }
   size_t numVar = m_state->m_numberingList.size();

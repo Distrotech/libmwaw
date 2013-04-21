@@ -150,7 +150,13 @@ namespace libmwaw
 enum Position { Left = 0, Right = 1, Top = 2, Bottom = 3, HMiddle = 4, VMiddle = 5 };
 //! basic position enum bits
 enum { LeftBit = 0x01,  RightBit = 0x02, TopBit=0x4, BottomBit = 0x08, HMiddleBit = 0x10, VMiddleBit = 0x20 };
+
+enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
+std::string numberingTypeToString(NumberingType type);
+std::string numberingValueToString(NumberingType type, int value);
+enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION };
 }
+
 //! the class to store a color
 struct MWAWColor {
   //! constructor
@@ -222,7 +228,7 @@ protected:
   uint32_t m_value;
 };
 
-//! a border list
+//! a border
 struct MWAWBorder {
   /** the line style */
   enum Style { None, Simple, Dot, LargeDot, Dash };
@@ -260,13 +266,38 @@ struct MWAWBorder {
   MWAWColor m_color;
 };
 
-namespace libmwaw
-{
-enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
-std::string numberingTypeToString(NumberingType type);
-std::string numberingValueToString(NumberingType type, int value);
-enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION };
-}
+//! a field
+struct MWAWField {
+  /** Defines some basic type for field */
+  enum Type { None, PageCount, PageNumber, Date, Time, Title, Link, Database };
+
+  /** basic constructor */
+  MWAWField(Type type) : m_type(type), m_DTFormat(""), m_numberingType(libmwaw::ARABIC), m_data("") {
+  }
+  //! the type
+  Type m_type;
+  //! the date/time format using strftime format if defined
+  std::string m_DTFormat;
+  //! the number type ( for number field )
+  libmwaw::NumberingType m_numberingType;
+  //! the database/link field ( if defined )
+  std::string m_data;
+};
+
+//! a note
+struct MWAWNote {
+  //! enum to define note type
+  enum Type { FootNote, EndNote };
+  //! constructor
+  MWAWNote(Type type) : m_type(type), m_label(""), m_number(-1) {
+  }
+  //! the note type
+  Type m_type;
+  //! the note label
+  WPXString m_label;
+  //! the note number if defined
+  int m_number;
+};
 
 /** a generic variable template: value + flag to know if the variable is set
 

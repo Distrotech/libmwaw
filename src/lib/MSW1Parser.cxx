@@ -1282,7 +1282,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
         removeLastCharIfEOL(entry);
         shared_ptr<MWAWSubDocument> subdoc
         (new MSW1ParserInternal::SubDocument(*this, getInput(), entry));
-        getListener()->insertNote(m_state->m_endNote ? MWAWContentListener::ENDNOTE : MWAWContentListener::FOOTNOTE, subdoc);
+        getListener()->insertNote(MWAWNote(m_state->m_endNote ? MWAWNote::EndNote : MWAWNote::FootNote), subdoc);
         break;
       }
       case MSW1ParserInternal::ZONE:

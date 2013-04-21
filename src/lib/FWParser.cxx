@@ -2353,7 +2353,7 @@ void FWParser::sendVariable(int id)
 ////////////////////////////////////////////////////////////
 // send a text zone
 ////////////////////////////////////////////////////////////
-void FWParser::sendText(int id, libmwaw::SubDocumentType type, int wh)
+void FWParser::sendText(int id, libmwaw::SubDocumentType type, MWAWNote::Type wh)
 {
   if (!getListener()) return;
 
@@ -2373,7 +2373,7 @@ void FWParser::sendText(int id, libmwaw::SubDocumentType type, int wh)
   MWAWSubDocumentPtr subdoc(new FWParserInternal::SubDocument(*this, getInput(), fId));
   switch(type) {
   case libmwaw::DOC_NOTE:
-    getListener()->insertNote(MWAWContentListener::NoteType(wh), subdoc);
+    getListener()->insertNote(MWAWNote(wh), subdoc);
     break;
   case libmwaw::DOC_COMMENT_ANNOTATION:
     getListener()->insertComment(subdoc);

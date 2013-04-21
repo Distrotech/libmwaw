@@ -1730,13 +1730,13 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     case 0xd:
       switch(zone.m_value) {
       case 0:
-        listener->insertField(MWAWContentListener::PageNumber);
+        listener->insertField(MWAWField(MWAWField::PageNumber));
         break;
       case 1:
-        listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWField(MWAWField::Date));
         break;
       case 2:
-        listener->insertField(MWAWContentListener::Time);
+        listener->insertField(MWAWField(MWAWField::Time));
         break;
       case 3: // note field : ok
       default:

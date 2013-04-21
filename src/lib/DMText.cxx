@@ -899,16 +899,16 @@ bool DMText::sendFooter(int zId)
     for (int f = 0; f < 3; f++, id++) {
       switch (ft.m_items[id]) {
       case 3:
-        listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWField(MWAWField::Date));
         break;
       case 4:
-        listener->insertField(MWAWContentListener::Time);
+        listener->insertField(MWAWField(MWAWField::Time));
         break;
       case 5:
-        listener->insertField(MWAWContentListener::PageNumber);
+        listener->insertField(MWAWField(MWAWField::PageNumber));
         break;
       case 6:
-        listener->insertField(MWAWContentListener::Title);
+        listener->insertField(MWAWField(MWAWField::Title));
         break;
       case 7:
         sendString(zone.m_name);

@@ -374,12 +374,12 @@ void MSK4Parser::sendFootNote(int id)
   if (!parser) {
     MWAW_DEBUG_MSG(("MSK4Parser::sendFootNote: can not find footnote ole\n"));
     MWAWSubDocumentPtr subdoc(new MSK4ParserInternal::SubDocument(0L, MWAWInputStreamPtr(), -1));
-    listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+    listener->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
     return;
   }
 
   MWAWSubDocumentPtr subdoc(new MSK4ParserInternal::SubDocument(parser, parser->getInput(), id));
-  listener->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+  listener->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
 }
 
 void MSK4Parser::sendFrameText(MWAWEntry const &entry, std::string const &frame)

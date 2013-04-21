@@ -1104,7 +1104,7 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
     MWAWSubDocumentPtr subdoc
     (new HMWKGraphInternal::SubDocument(*this, input, HMWKGraphInternal::SubDocument::Text,
                                         ftnote.m_textFileId, ftnote.m_textFileSubId));
-    listener->insertNote(MWAWContentListener::FOOTNOTE,subdoc);
+    listener->insertNote(MWAWNote(MWAWNote::FootNote),subdoc);
     break;
   }
   case 4:

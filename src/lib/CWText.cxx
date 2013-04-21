@@ -1411,11 +1411,11 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
               break;
             }
             case 3:
-              listener->insertField(MWAWContentListener::PageCount);
+              listener->insertField(MWAWField(MWAWField::PageCount));
               break;
             case 0:
             default:
-              listener->insertField(MWAWContentListener::PageNumber);
+              listener->insertField(MWAWField(MWAWField::PageNumber));
             }
             break;
           case CWTextInternal::TKN_GRAPHIC:
@@ -1473,13 +1473,13 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
       case 0x3: // token graphic
         break;
       case 0x4:
-        listener->insertField(MWAWContentListener::Date);
+        listener->insertField(MWAWField(MWAWField::Date));
         break;
       case 0x5:
-        listener->insertField(MWAWContentListener::Time);
+        listener->insertField(MWAWField(MWAWField::Time));
         break;
       case 0x6: // normally already done, but if we do not find the token, ...
-        listener->insertField(MWAWContentListener::PageNumber);
+        listener->insertField(MWAWField(MWAWField::PageNumber));
         break;
       case 0x7: // footnote index (ok to ignore : index of the footnote )
         break;

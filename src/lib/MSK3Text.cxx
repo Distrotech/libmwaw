@@ -470,16 +470,16 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
         if (id) f << "[" << id << "]";
         switch (c) {
         case 0x19:
-          listener->insertField(MWAWContentListener::Title);
+          listener->insertField(MWAWField(MWAWField::Title));
           break;
         case 0x18:
-          listener->insertField(MWAWContentListener::PageNumber);
+          listener->insertField(MWAWField(MWAWField::PageNumber));
           break;
         case 0x16:
-          listener->insertField(MWAWContentListener::Time);
+          listener->insertField(MWAWField(MWAWField::Time));
           break;
         case 0x17: // id = 0 : short date ; id=9 : long date
-          listener->insertField(MWAWContentListener::Date);
+          listener->insertField(MWAWField(MWAWField::Date));
           break;
         case 0x15:
           MWAW_DEBUG_MSG(("MSK3Text::sendText: find unknown field type 0x15\n"));
@@ -527,16 +527,16 @@ bool MSK3Text::sendString(std::string &str)
     case 0x11:
       break;
     case 0x19:
-      listener->insertField(MWAWContentListener::Title);
+      listener->insertField(MWAWField(MWAWField::Title));
       break;
     case 0x18:
-      listener->insertField(MWAWContentListener::PageNumber);
+      listener->insertField(MWAWField(MWAWField::PageNumber));
       break;
     case 0x16:
-      listener->insertField(MWAWContentListener::Time);
+      listener->insertField(MWAWField(MWAWField::Time));
       break;
     case 0x17: // id = 0 : short date ; id=9 : long date
-      listener->insertField(MWAWContentListener::Date);
+      listener->insertField(MWAWField(MWAWField::Date));
       break;
     case 0x15:
       MWAW_DEBUG_MSG(("MSK3Text::sendString: find unknown field type 0x15\n"));

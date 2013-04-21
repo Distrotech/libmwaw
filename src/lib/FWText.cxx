@@ -1097,10 +1097,10 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         m_mainParser->sendText(id, libmwaw::DOC_COMMENT_ANNOTATION);
         break;
       case 0xd3:
-        m_mainParser->sendText(id, libmwaw::DOC_NOTE, MWAWContentListener::FOOTNOTE);
+        m_mainParser->sendText(id, libmwaw::DOC_NOTE, MWAWNote::FootNote);
         break;
       case 0xd5:
-        m_mainParser->sendText(id, libmwaw::DOC_NOTE, MWAWContentListener::ENDNOTE);
+        m_mainParser->sendText(id, libmwaw::DOC_NOTE, MWAWNote::EndNote);
         break;
       case 0xdc:
         m_mainParser->sendGraphic(id);

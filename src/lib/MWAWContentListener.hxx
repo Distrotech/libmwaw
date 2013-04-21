@@ -149,22 +149,12 @@ public:
   void setList(shared_ptr<MWAWList> list);
 
   // ------- fields ----------------
-  /** Defines some basic type for field */
-  enum FieldType { None, PageCount, PageNumber, Date, Time, Title, Link, Database };
   //! adds a field type
-  void insertField(FieldType type, WPXPropertyList extras=WPXPropertyList());
-  //! insert a date/time field with given format (see strftime)
-  void insertDateTimeField(char const *format);
+  void insertField(MWAWField const&field);
 
   // ------- subdocument -----------------
-  /** defines the footnote type */
-  enum NoteType { FOOTNOTE, ENDNOTE };
-  /** adds note */
-  void insertNote(const NoteType noteType, MWAWSubDocumentPtr &subDocument);
-  /** adds a label note */
-  void insertLabelNote(const NoteType noteType, WPXString const &label, MWAWSubDocumentPtr &subDocument);
-  /** set the next note number */
-  void resetNoteNumber(const NoteType noteType, int number);
+  /** insert a note */
+  void insertNote(MWAWNote const &note, MWAWSubDocumentPtr &subDocument);
 
   /** adds comment */
   void insertComment(MWAWSubDocumentPtr &subDocument);

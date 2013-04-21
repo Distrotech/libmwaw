@@ -1516,7 +1516,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       long actPos = input->tell();
       switch (zone->m_tokens[(size_t)data.m_id].m_type) {
       case 1:
-        if (getListener()) getListener()->insertField(MWAWContentListener::PageNumber);
+        if (getListener()) getListener()->insertField(MWAWField(MWAWField::PageNumber));
         break;
       case 2:
         if (vers == 1 && listenerState.isSent(zone->m_tokens[(size_t)data.m_id].m_blockId)) {
@@ -1525,7 +1525,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
           int id = zone->m_tokens[(size_t)data.m_id].m_blockId;
           if (vers == 0) id = -id;
           MWAWSubDocumentPtr subdoc(new MWProParserInternal::SubDocument(*this, getInput(), id));
-          getListener()->insertNote(MWAWContentListener::FOOTNOTE, subdoc);
+          getListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
         }
         break;
       case 3:
@@ -1543,13 +1543,13 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       case 5:
         break; // hyphen ok
       case 6:
-        if (getListener()) getListener()->insertField(MWAWContentListener::Date);
+        if (getListener()) getListener()->insertField(MWAWField(MWAWField::Date));
         break;
       case 7:
-        if (getListener()) getListener()->insertField(MWAWContentListener::Time);
+        if (getListener()) getListener()->insertField(MWAWField(MWAWField::Time));
         break;
       case 8:
-        if (getListener()) getListener()->insertField(MWAWContentListener::Title);
+        if (getListener()) getListener()->insertField(MWAWField(MWAWField::Title));
         break;
       case 9:
         if (getListener()) getListener()->insertUnicodeString("#REVISION#");
