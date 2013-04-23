@@ -88,12 +88,10 @@ struct Font {
 
 /** Internal: class to store the paragraph properties */
 struct Paragraph : public MWAWParagraph {
-  //! Constructor
+  //! Constructor with type
   Paragraph() : MWAWParagraph() {
+    m_tabsRelativeToLeftMargin=false;
     m_marginsUnit = WPX_POINT;
-    m_margins[0] = 0;
-    m_margins[1] = 72.0;
-    m_margins[2] = 72.0-28.0;
     for(int i = 0; i < 8; i++)
       m_values[i] = 0;
   }
@@ -386,7 +384,7 @@ struct ContentZones {
   WNEntry m_entry;
   //! the zone id
   int m_id;
-  //! the zone type : 0 : main, 1 footnote, 2 header/footer
+  //! the zone type : 0 : main, 1 header/footer, 2 footnote,
   int m_type;
   //! the list of zone
   std::vector<ContentZone> m_zonesList;
@@ -484,6 +482,29 @@ struct State {
       return m_styleList[(size_t) rId];
     return Style();
   }
+  //! return a paragraph corresponding to 0:body, 1: header/footer, 2: footnote
+  Paragraph getDefaultParagraph(int type) {
+    int styleId = type == 0 ? 0 : type==1 ? 3 : type==2 ? 2 : -1;
+    if (styleId >= 0 && styleId < int(m_styleList.size()))
+      return m_styleList[(size_t) styleId].m_paragraph;
+    Paragraph res;
+    if (m_version>=0 && m_version <= 2 && type==0) {
+      res.m_margins[1] = 90.0;
+      res.m_margins[2] = 60.0-28.0;
+      static double const (defPos[2])= {1.5,5.5};
+      for (int i=0; i < 2; i++) {
+        MWAWTabStop defTab;
+        defTab.m_position=defPos[i];
+        res.m_tabs->push_back(defTab);
+      }
+    }
+    if (type==1)
+      res.m_justify = MWAWParagraph::JustificationCenter;
+    if (type==2) res.m_margins[0] = 10;
+    return res;
+  }
+
+
   //! return a mac font id corresponding to a local id
   int getFontId(int localId) const {
     if (m_localFIdMap.find(localId)==m_localFIdMap.end())
@@ -512,7 +533,7 @@ struct State {
   std::map<int, int> m_localFIdMap;
   //! the style indirection table
   std::map<int, int> m_styleMap;
-  //! the list of styles
+  //! the list of styles (body, footer, footnote, header, table )
   std::vector<Style> m_styleList;
 
   //! the three main zone ( text, footnote, header/footer)
@@ -1215,7 +1236,6 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   libmwaw::DebugStream f;
   int vers = version();
   ruler = WNTextInternal::Paragraph();
-  for (int i=0; i < 3; i++) ruler.m_margins[i] = 0.0;
   long pos = input.tell();
   int expectedLength = vers <= 2 ? 8 : 16;
   input.seek(expectedLength, WPX_SEEK_CUR);
@@ -1263,7 +1283,7 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
     height=(int) input.readULong(1);
   else
     ruler.m_values[actVal++] = (int) input.readULong(1); // always 0
-
+  ruler.m_tabs->resize(0);
   if (!input.atEOS()) {
     int previousVal = 0;
     int tab = 0;
@@ -1277,7 +1297,7 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
         break;
       }
       previousVal = newVal;
-      newTab.m_position = ((newVal>>2)-ruler.m_margins[1].get())/72.;
+      newTab.m_position = (newVal>>2)/72.;
       switch(newVal & 3) {
       case 0:
         break;
@@ -1650,17 +1670,7 @@ bool WNText::send(WNEntry const &entry)
     MWAW_DEBUG_MSG(("WNText::send: can not find entry\n"));
     return false;
   }
-  WNTextInternal::Paragraph ruler;
-  switch(text->m_type) { // try to set the default
-  case 1:
-    ruler.m_justify = MWAWParagraph::JustificationCenter;
-    break;
-  case 2:
-    for (int i=0; i < 3; i++) ruler.m_margins[i] = 0.0;
-    break;
-  default:
-    break;
-  }
+  WNTextInternal::Paragraph ruler=m_state->getDefaultParagraph(text->m_type);
   text->m_sent = true;
   return send(text->m_zonesList, text->m_footnoteList, ruler);
 }
@@ -1732,12 +1742,18 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       case 0:
         listener->insertField(MWAWField(MWAWField::PageNumber));
         break;
-      case 1:
-        listener->insertField(MWAWField(MWAWField::Date));
+      case 1: {
+        MWAWField date(MWAWField::Date);
+        date.m_DTFormat = "%a, %b %d, %Y";
+        listener->insertField(date);
         break;
-      case 2:
-        listener->insertField(MWAWField(MWAWField::Time));
+      }
+      case 2: {
+        MWAWField time(MWAWField::Time);
+        time.m_DTFormat="%H:%M";
+        listener->insertField(time);
         break;
+      }
       case 3: // note field : ok
       default:
         break;
@@ -1971,11 +1987,13 @@ void WNText::sendZone(int id)
     }
   }
   WNTextInternal::Zone &mZone = m_state->m_mainZones[id];
-  WNTextInternal::Paragraph ruler;
+  WNTextInternal::Paragraph ruler=m_state->getDefaultParagraph(id);
+  if (id==0)
+    listener->setParagraph(ruler);
   for (size_t i = 0; i < mZone.m_zones.size(); i++) {
     if (mZone.m_zones[i]->m_sent) continue;
     if (id == 0 && mZone.m_zones[i]->m_type) continue;
-    if (id) ruler=WNTextInternal::Paragraph();
+    if (id) ruler=m_state->getDefaultParagraph(id);
     send(mZone.m_zones[i]->m_zonesList, mZone.m_zones[i]->m_footnoteList, ruler);
     mZone.m_zones[i]->m_sent = true;
   }

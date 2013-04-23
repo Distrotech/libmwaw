@@ -60,11 +60,13 @@ namespace MWProStructuresInternal
 ////////////////////////////////////////
 //! Internal: the data block
 struct Block {
-  enum Type { UNKNOWN, GRAPHIC, TEXT };
+  enum Type { UNKNOWN, GRAPHIC, TEXT, NOTE };
   //! the constructor
   Block() :m_type(-1), m_contentType(UNKNOWN), m_fileBlock(0), m_id(-1), m_attachment(false), m_page(-1), m_box(),
     m_baseline(0.), m_surfaceColor(MWAWColor::white()), m_lineColor(MWAWColor::black()), m_lineWidth(1.0), m_lineType(1), m_linePattern(2), m_textPos(0), m_isHeader(false), m_row(0), m_col(0), m_textboxCellType(0),
     m_extra(""), m_send(false) {
+    for (int i=0; i < 4; i++)
+      m_borderWList[i]=0;
   }
 
   //! operator<<
@@ -77,6 +79,9 @@ struct Block {
         o << "#type=" << bl.m_type << ",";
       }
       break;
+    case NOTE:
+      o << "note";
+      break;
     case TEXT:
       o << "text";
       switch(bl.m_type) {
@@ -84,7 +89,7 @@ struct Block {
         o << "[table]";
         break;
       case 4:
-        o << "[textbox/cell]";
+        o << "[textbox/cell/note]";
         break;
       case 5:
         if (bl.m_textPos) o << "[pageBreak:" << bl.m_textPos << "]";
@@ -111,10 +116,16 @@ struct Block {
     }
     if (bl.m_id >= 0) o << "id=" << bl.m_id << ",";
     o << "box=" << bl.m_box << ",";
-    for (int i = 0; i < 2; i++) {
-      if ((bl.m_border[i].x() <= 0 || bl.m_border[i].x() > 0) ||
-          (bl.m_border[i].y() <= 0 || bl.m_border[i].y() > 0))
-        o << "bord" << i << "?=" << bl.m_border[i] << ",";
+    if (bl.hasSameBorders()) {
+      if (bl.m_borderWList[0] > 0)
+        o << "bord[width]=" << bl.m_borderWList[0] << ",";
+    } else {
+      for (int i = 0; i < 4; i++) {
+        if (bl.m_borderWList[i] <= 0)
+          continue;
+        static char const *(wh[]) = { "L", "R", "T", "B" };
+        o << "bord" << wh[i] << "[width]=" << bl.m_borderWList[i] << ",";
+      }
     }
     if (bl.m_baseline < 0 || bl.m_baseline >0) o << "baseline=" << bl.m_baseline << ",";
     if (bl.hasSurfaceColor())
@@ -158,38 +169,41 @@ struct Block {
     std::stringstream s, s2;
     if (hasSurfaceColor())
       extra.insert("fo:background-color", m_surfaceColor.str().c_str());
-    if (hasBorderLine()) {
-      s.str("");
-      s2.str("");
+    if (!hasBorders())
+      return;
+    bool setAll = hasSameBorders();
+    for (int w=0; w < 4; w++) {
+      if (w && setAll) break;
+      MWAWBorder border;
+      border.m_color=m_lineColor;
+      border.m_width=m_borderWList[w]; // ok also for setAll
+      if (border.isEmpty())
+        continue;
       switch(m_lineType) {
       case 2:
-        s2 << m_lineWidth << "pt " << m_lineWidth << "pt " << m_lineWidth << "pt";
-        extra.insert("style:border-line-width", s2.str().c_str());
-        s << 3*m_lineWidth << "pt";
-        s << " double";
+        border.m_type=MWAWBorder::Double;
+        border.m_widthsList.resize(3,2.);
+        border.m_widthsList[1]=1.0;
         break;
       case 3:
-        s2 << m_lineWidth << "pt " << m_lineWidth << "pt " << 2*m_lineWidth << "pt";
-        extra.insert("style:border-line-width", s2.str().c_str());
-        s << 4*m_lineWidth << "pt";
-        s << " double";
+        border.m_type=MWAWBorder::Double;
+        border.m_widthsList.resize(3,1.);
+        border.m_widthsList[2]=2.0;
         break;
       case 4:
-        s2 << 2*m_lineWidth << "pt " << m_lineWidth << "pt " << m_lineWidth << "pt";
-        extra.insert("style:border-line-width", s2.str().c_str());
-        s << 4*m_lineWidth << "pt";
-        s << " double";
+        border.m_type=MWAWBorder::Double;
+        border.m_widthsList.resize(3,1.);
+        border.m_widthsList[0]=2.0;
         break;
+      case 1: // solid
       default:
-      case 1:
-        s << m_lineWidth << "pt";
-        s << " solid";
         break;
       }
-      if (hasLineColor())
-        s << " " << m_lineColor;
-      else s << " #000000";
-      extra.insert("fo:border", s.str().c_str());
+      static char const *(wh[]) = { "left", "right", "top", "bottom" };
+      if (setAll)
+        border.addTo(extra);
+      else
+        border.addTo(extra,wh[w]);
     }
   }
 
@@ -197,7 +211,7 @@ struct Block {
     return m_fileBlock > 0 && m_contentType == GRAPHIC;
   }
   bool isText() const {
-    return (m_fileBlock > 0 && m_contentType == TEXT);
+    return m_fileBlock > 0 && (m_contentType == TEXT || m_contentType == NOTE);
   }
   bool isTable() const {
     return m_fileBlock <= 0 && m_type == 3;
@@ -208,8 +222,24 @@ struct Block {
   bool hasLineColor() const {
     return !m_lineColor.isBlack();
   }
-  bool hasBorderLine() const {
-    return (m_lineWidth > 0.0 && m_linePattern!=1);
+  bool hasSameBorders() const {
+    for (int i=1; i < 4; i++) {
+      if (m_borderWList[i] > m_borderWList[0] ||
+          m_borderWList[i] < m_borderWList[0])
+        return false;
+    }
+    return true;
+  }
+  bool hasBorders() const {
+    if (m_linePattern==1)
+      return false;
+    if (m_lineWidth > 0)
+      return true;
+    for (int i=0; i < 4; i++) {
+      if (m_borderWList[i] > 0)
+        return true;
+    }
+    return false;
   }
 
   MWAWPosition getPosition() const {
@@ -221,7 +251,8 @@ struct Block {
       res = MWAWPosition(m_box.min(), m_box.size(), WPX_POINT);
       res.setRelativePosition(MWAWPosition::Page);
       res.setPage(m_page);
-      res.m_wrapping =  MWAWPosition::WDynamic;
+      res.m_wrapping = m_contentType==NOTE ? MWAWPosition::WRunThrough :
+                       MWAWPosition::WDynamic;
     }
     return res;
   }
@@ -267,8 +298,8 @@ struct Block {
   //! the bdbox
   Box2f m_box;
 
-  //! the border or margin?
-  Vec2f m_border[2];
+  //! the borders width
+  double m_borderWList[4];
 
   //! the baseline ( in point 0=bottom aligned)
   float m_baseline;
@@ -349,6 +380,7 @@ struct Font {
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() :  m_value(0) {
+    m_tabsRelativeToLeftMargin=false;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
@@ -432,28 +464,30 @@ struct Section {
   enum StartType { S_Line, S_Page, S_PageLeft, S_PageRight };
 
   //! constructor
-  Section() : m_start(S_Page), m_colsWidth(), m_colsBegin(),
-    m_textLength(0), m_extra("") {
+  Section() : m_start(S_Page), m_colsPos(), m_textLength(0), m_extra("") {
     for (int i = 0; i < 2; i++) m_headerIds[i] = m_footerIds[i] = 0;
   }
   //! returns a MWAWSection
   MWAWSection getSection() const {
     MWAWSection sec;
-    size_t numCols=m_colsWidth.size();
-    if (m_colsWidth.size() <= 1)
+    size_t numCols=m_colsPos.size()/2;
+    if (numCols <= 1)
       return sec;
-    sec.m_columns.resize(size_t(numCols));
-    for (size_t c=0; c < size_t(numCols); c++) {
-      sec.m_columns[c].m_width = double(m_colsWidth[c]);
+    sec.m_columns.resize(numCols);
+    float prevPos=0;
+    for (size_t c=0; c < numCols; c++) {
+      sec.m_columns[c].m_width = double(m_colsPos[2*c+1]-prevPos);
+      prevPos = m_colsPos[2*c+1];
       sec.m_columns[c].m_widthUnit = WPX_POINT;
+      sec.m_columns[c].m_margins[libmwaw::Right] =
+        double(m_colsPos[2*c+1]-m_colsPos[2*c])/72.;
     }
     return sec;
   }
   //! return the number of columns
   int numColumns() const {
-    if (m_colsWidth.size())
-      return int(m_colsWidth.size());
-    return 1;
+    int numCols=int(m_colsPos.size()/2);
+    return numCols ? numCols : 1;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Section const &sec) {
@@ -475,12 +509,9 @@ struct Section {
     size_t numColumns = size_t(sec.numColumns());
     if (numColumns != 1) {
       o << "nCols=" << numColumns << ",";
-      o << "colsW=[";
-      for (size_t i = 0; i < numColumns; i++)
-        o << sec.m_colsWidth[i] << ",";
-      o << "], colsPos=[";
-      for (size_t i = 0; i < numColumns; i++)
-        o << sec.m_colsBegin[i] << ",";
+      o << "colsPos=[";
+      for (size_t i = 0; i < 2*numColumns; i+=2)
+        o << sec.m_colsPos[i] << ":" << sec.m_colsPos[i+1] << ",";
       o << "],";
     }
     if (sec.m_headerIds[0]) o << "sec.headerId=" << sec.m_headerIds[0] << ",";
@@ -493,10 +524,8 @@ struct Section {
   }
   //! the way to start the new section
   StartType m_start;
-  //! the columns size in point
-  std::vector<float> m_colsWidth;
-  //! the columns float pos in point
-  std::vector<float> m_colsBegin;
+  //! the columns position ( series of end columns <-> new column begin)
+  std::vector<float> m_colsPos;
   //! the header block ids
   int m_headerIds[2];
   //! the footerer block ids
@@ -1482,7 +1511,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
       MWAW_DEBUG_MSG(("MWProStructures::readParagraph: empty tab already found\n"));
       f << "tab" << i << "#";
     }
-    newTab.m_position = float(tabPos)/72./65536.-para.m_margins[1].get();
+    newTab.m_position = float(tabPos)/72./65536.;
     int decimalChar = (int) m_input->readULong(1);
     if (decimalChar && decimalChar != '.')
       newTab.m_decimalCharacter=(uint16_t) decimalChar;
@@ -1956,7 +1985,6 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
 
   shared_ptr<MWProStructuresInternal::Block> block(new MWProStructuresInternal::Block);
   long val;
-  /* [4-8]*3 or 271027100003, 277427740004, 2af82af80004 */
   f << "pat?=[" << std::hex;
   for (int i = 0; i < 2; i++)
     f << m_input->readULong(2) << ",";
@@ -1966,12 +1994,11 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   for (int i = 0; i < 4; i++)
     dim[i] = float(m_input->readLong(4))/65536.f;
   block->m_box = Box2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
-  float border[4];
+
+  static int const (wh[4])= { libmwaw::Top, libmwaw::Left, libmwaw::Bottom, libmwaw::Right };
   for (int i = 0; i < 4; i++)
-    border[i]=float(m_input->readLong(4))/65536.f;
-  // check me
-  block->m_border[0] = Vec2f(border[1], border[0]);
-  block->m_border[1] = Vec2f(border[3], border[2]);
+    block->m_borderWList[wh[i]]=float(m_input->readLong(4))/65536.f;
+
   /* 4: pagebreak,
      5: text
      1: floating, 7: none(wrapping/attachment), b: attachment
@@ -1988,7 +2015,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   block->m_id = (int) m_input->readLong(2);
   val = (int) m_input->readLong(2); // almost always 4 ( one time 0)
   if (val!=4)
-    f << "f1=" << val << ",";
+    f << "bordOffset=" << val << ",";
   for (int i = 2; i < 7; i++) {
     /* always 0, except f3=-1 (in one file),
        and in other file f4=1,f5=1,f6=1, */
@@ -2063,6 +2090,66 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
     f << "#contentType=" << contentType << ",";
     break;
   }
+
+
+  bool isNote = false;
+  if (block->m_type==4 && sz == 0xa0) {
+    // this can be a note, let check
+    isNote=true;
+    static double const (expectedWidth[4])= {5,5,19,5};
+    for (int i=0; i < 4; i++) {
+      if (block->m_borderWList[i]<expectedWidth[i] ||
+          block->m_borderWList[i]>expectedWidth[i]) {
+        isNote = false;
+        break;
+      }
+    }
+  }
+  if (isNote) {
+    long actPos = m_input->tell();
+    m_input->seek(pos+116, WPX_SEEK_SET);
+    val = m_input->readLong(2);
+    isNote = val==0 || val==0x100;
+    if (isNote) {
+      float dim2[4];
+      for (int i = 0; i < 4; i++) {
+        dim2[i] = float(m_input->readLong(4))/65536.f;
+        if (!val) {
+          if (dim2[i]<0||dim2[i]>0) {
+            isNote = false;
+            break;
+          }
+          continue;
+        }
+        if (i<2 && (dim2[i] < dim[i] || dim2[i] > dim[i])) {
+          isNote = false;
+          break;
+        }
+      }
+      if (isNote && val) {
+        if (dim2[3]<=dim2[1] || dim2[2]<=dim2[0])
+          isNote = false;
+        else
+          block->m_box.setMax(Vec2f(dim2[3],dim2[2]));
+      }
+    }
+    if (isNote) {
+      block->m_contentType = MWProStructuresInternal::Block::NOTE;
+      // ok reset the border and the line color to gray
+      for (int i = 0; i < 4; i++) {
+        if (i!=libmwaw::Top)
+          block->m_borderWList[i]=1;
+      }
+      block->m_lineColor=MWAWColor(128,128,128);
+
+      if (val)
+        f << "note[closed],";
+      else
+        f << "note,";
+    }
+    m_input->seek(actPos, WPX_SEEK_SET);
+  }
+
   block->m_extra = f.str();
 
   f.str("");
@@ -2238,17 +2325,8 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
         f << "f" << i << "=" << val << ",";
     }
     long actPos = m_input->tell();
-    float prevPos = 0;
-    f << "rightPos=[";
-    for (int c = 0; c < numColumns; c++) {
-      float rightPos = float(m_input->readLong(4))/65536.f;
-      f << rightPos << ",";
-      sec.m_colsBegin.push_back(prevPos);
-      float leftPos = float(m_input->readLong(4))/65536.f;
-      sec.m_colsWidth.push_back(leftPos-prevPos);
-      prevPos = leftPos;
-    }
-    f << "],";
+    for (int c = 0; c < 2*numColumns; c++)
+      sec.m_colsPos.push_back(float(m_input->readLong(4))/65536.f);
     m_input->seek(actPos+20*8+4, WPX_SEEK_SET);
     // 5 flags ( 1+unused?)
     for (int i = 0; i < 6; i++) {

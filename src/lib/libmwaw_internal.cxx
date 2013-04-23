@@ -210,16 +210,14 @@ int MWAWBorder::compare(MWAWBorder const &orig) const
   if (m_color > orig.m_color) return 1;
   return 0;
 }
-
-std::string MWAWBorder::getPropertyValue() const
+bool MWAWBorder::addTo(WPXPropertyList &propList, std::string const which) const
 {
-  if (m_style == None) return "";
-  std::stringstream stream;
-  stream << m_width*0.03 << "cm ";
+  std::stringstream stream, field;
+  stream << m_width << "pt ";
   if (m_type==MWAWBorder::Double || m_type==MWAWBorder::Triple) {
     static bool first = true;
     if (first && m_style!=Simple) {
-      MWAW_DEBUG_MSG(("MWAWBorder::getPropertyValue: find double or tripe border with complex style\n"));
+      MWAW_DEBUG_MSG(("MWAWBorder::addTo: find double or tripe border with complex style\n"));
       first = false;
     }
     stream << "double";
@@ -237,11 +235,46 @@ std::string MWAWBorder::getPropertyValue() const
       break;
     case None:
     default:
+      stream << "none";
       break;
     }
   }
   stream << " " << m_color;
-  return stream.str();
+  field << "fo:border";
+  if (which.length())
+    field << "-" << which;
+  propList.insert(field.str().c_str(), stream.str().c_str());
+  size_t numRelWidth=m_widthsList.size();
+  if (!numRelWidth)
+    return true;
+  if (m_type!=MWAWBorder::Double || numRelWidth!=3) {
+    static bool first = true;
+    if (first) {
+      MWAW_DEBUG_MSG(("MWAWBorder::addTo: relative width is only implemented with double style\n"));
+      first = false;
+    }
+    return true;
+  }
+  double totalWidth=0;
+  for (size_t w=0; w < numRelWidth; w++)
+    totalWidth+=m_widthsList[w];
+  if (totalWidth <= 0) {
+    MWAW_DEBUG_MSG(("MWAWBorder::addTo: can not compute total width\n"));
+    return true;
+  }
+  double factor=m_width/totalWidth;
+  stream.str("");
+  for (size_t w=0; w < numRelWidth; w++) {
+    stream << factor*m_widthsList[w]<< "pt";
+    if (w+1!=numRelWidth)
+      stream << " ";
+  }
+  field.str("");
+  field << "style:border-line-width";
+  if (which.length())
+    field << "-" << which;
+  propList.insert(field.str().c_str(), stream.str().c_str());
+  return true;
 }
 
 std::ostream &operator<< (std::ostream &o, MWAWBorder::Style const &style)
@@ -290,6 +323,13 @@ std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
   if (!border.m_color.isBlack())
     o << "col=" << border.m_color << ":";
   o << ",";
+  size_t numRelWidth=border.m_widthsList.size();
+  if (numRelWidth) {
+    o << "bordW[rel]=[";
+    for (size_t i=0; i < numRelWidth; i++)
+      o << border.m_widthsList[i] << ",";
+    o << "],";
+  }
   return o;
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

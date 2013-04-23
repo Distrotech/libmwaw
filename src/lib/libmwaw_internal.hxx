@@ -236,10 +236,15 @@ struct MWAWBorder {
   enum Type { Single, Double, Triple };
 
   //! constructor
-  MWAWBorder() : m_style(Simple), m_type(Single), m_width(1), m_color(MWAWColor::black()) { }
-  //! return the properties
-  std::string getPropertyValue() const;
+  MWAWBorder() : m_style(Simple), m_type(Single), m_width(1), m_widthsList(), m_color(MWAWColor::black()) { }
+  /** add the border property to proplist (if needed )
 
+  \note if set which must be equal to "left", "top", ... */
+  bool addTo(WPXPropertyList &propList, std::string which="") const;
+  //! returns true if the border is empty
+  bool isEmpty() const {
+    return m_style==None || m_width <= 0;
+  }
   //! operator==
   bool operator==(MWAWBorder const &orig) const {
     return !operator!=(orig);
@@ -260,8 +265,12 @@ struct MWAWBorder {
   Style m_style;
   //! the border repetition
   Type m_type;
-  //! the border width
-  float m_width;
+  //! the border total width in point
+  double m_width;
+  /** the different length used for each line/sep (if defined)
+
+  \note when defined, the size of this list must be equal to 2*Type-1*/
+  std::vector<double> m_widthsList;
   //! the border color
   MWAWColor m_color;
 };

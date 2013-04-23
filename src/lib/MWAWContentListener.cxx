@@ -1458,15 +1458,15 @@ void MWAWContentListener::openTable(std::vector<float> const &colWidth, WPXUnit 
   if (m_ps->m_isParagraphOpened)
     _closeParagraph();
 
-  _pushParsingState();
-  _startSubDocument();
-  m_ps->m_subDocumentType = libmwaw::DOC_TABLE;
-
   WPXPropertyList propList(tableExtras);
   if (!tableExtras["table:align"])
     propList.insert("table:align", "left");
   if (!tableExtras["fo:margin-left"])
-    propList.insert("fo:margin-left", 0.0);
+    propList.insert("fo:margin-left", *m_ps->m_paragraph.m_margins[1], *m_ps->m_paragraph.m_marginsUnit);
+
+  _pushParsingState();
+  _startSubDocument();
+  m_ps->m_subDocumentType = libmwaw::DOC_TABLE;
 
   float tableWidth = 0;
   WPXPropertyListVector columns;
@@ -1613,20 +1613,18 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
 
   std::vector<MWAWBorder> const &borders = cell.borders();
   for (size_t c = 0; c < borders.size(); c++) {
-    std::string property = borders[c].getPropertyValue();
-    if (property.length() == 0) continue;
     switch(c) {
     case libmwaw::Left:
-      propList.insert("fo:border-left", property.c_str());
+      borders[c].addTo(propList, "left");
       break;
     case libmwaw::Right:
-      propList.insert("fo:border-right", property.c_str());
+      borders[c].addTo(propList, "right");
       break;
     case libmwaw::Top:
-      propList.insert("fo:border-top", property.c_str());
+      borders[c].addTo(propList, "top");
       break;
     case libmwaw::Bottom:
-      propList.insert("fo:border-bottom", property.c_str());
+      borders[c].addTo(propList, "bottom");
       break;
     default:
       MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: can not send %d border\n",int(c)));

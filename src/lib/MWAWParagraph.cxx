@@ -257,27 +257,27 @@ void MWAWParagraph::addTo(WPXPropertyList &propList, bool inTable) const
     if (hasBorders()) {
       bool setAll = !hasDifferentBorders();
       for (size_t w = 0; w < m_borders.size() && w < 4; w++) {
-        if (!m_borders[w].isSet())
-          continue;
+        if (w && setAll)
+          break;
         MWAWBorder const &border = *(m_borders[w]);
-        std::string property = border.getPropertyValue();
-        if (property.length() == 0) continue;
-        if (setAll == 0xF) {
-          propList.insert("fo:border", property.c_str());
+        if (border.isEmpty())
+          continue;
+        if (setAll) {
+          border.addTo(propList);
           break;
         }
         switch(w) {
         case libmwaw::Left:
-          propList.insert("fo:border-left", property.c_str());
+          border.addTo(propList,"left");
           break;
         case libmwaw::Right:
-          propList.insert("fo:border-right", property.c_str());
+          border.addTo(propList,"right");
           break;
         case libmwaw::Top:
-          propList.insert("fo:border-top", property.c_str());
+          border.addTo(propList,"top");
           break;
         case libmwaw::Bottom:
-          propList.insert("fo:border-bottom", property.c_str());
+          border.addTo(propList,"bottom");
           break;
         default:
           MWAW_DEBUG_MSG(("MWAWParagraph::addTo: can not send %d border\n",int(w)));
@@ -396,9 +396,11 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
     o << pp.m_listLevel.get() << ":" << pp.m_listLevelIndex.get() <<",";
 
   for (size_t i = 0; i < pp.m_borders.size(); i++) {
-    if (!pp.m_borders[i].isSet() || pp.m_borders[i]->m_style == MWAWBorder::None)
+    if (!pp.m_borders[i].isSet())
       continue;
     MWAWBorder const &border = pp.m_borders[i].get();
+    if (border.isEmpty())
+      continue;
     o << "bord";
     char const *wh[] = { "L", "R", "T", "B", "MiddleH", "MiddleV" };
     if (i < 6) o << wh[i];
