@@ -51,6 +51,8 @@
 
 #include "CWStruct.hxx"
 
+class MWAWSection;
+
 namespace CWParserInternal
 {
 struct State;
@@ -154,8 +156,7 @@ protected:
   void sendFootnote(int zoneId);
 
   //! returns the columns information
-  void getColumnInfo(int &numColumns, std::vector<int> &width,
-                     std::vector<int> &sepWidth) const;
+  MWAWSection getMainSection() const;
 
   //
   // interface with the graph parser

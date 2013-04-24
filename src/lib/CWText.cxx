@@ -259,6 +259,29 @@ struct Section {
   //! the constructor
   Section() : m_pos(0), m_numColumns(1), m_columnsWidth(), m_columnsSep(), m_extra("") {
   }
+  //! returns a section
+  MWAWSection getSection() const {
+    MWAWSection sec;
+    if (m_numColumns <= 1)
+      return sec;
+    size_t numCols = m_columnsWidth.size();
+    if (m_numColumns != int(numCols)) {
+      MWAW_DEBUG_MSG(("CWTextInternal::Section::getSection: unexpected number of columns\n"));
+      return sec;
+    }
+    bool hasSep = numCols==m_columnsSep.size()+1;
+    sec.m_columns.resize(size_t(numCols));
+    for (size_t c=0; c < numCols; c++) {
+      sec.m_columns[c].m_width = double(m_columnsWidth[c]);
+      sec.m_columns[c].m_widthUnit = WPX_POINT;
+      if (!hasSep) continue;
+      if (c)
+        sec.m_columns[c].m_margins[libmwaw::Left]=double(m_columnsSep[c-1])/2.0/72.;
+      if (c+1!=numCols)
+        sec.m_columns[c].m_margins[libmwaw::Right]=double(m_columnsSep[c])/2.0/72.;
+    }
+    return sec;
+  }
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, Section const &sec) {
     o << "pos=" << sec.m_pos << ",";
@@ -1312,14 +1335,11 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
           MWAW_DEBUG_MSG(("CWText::sendText: find a section inside a complex char!!!\n"));
           f << "###";
         }
-        std::vector<int> width, sepWidth;
         numSection++;
         numSectionInPage++;
+        MWAWSection section;
         if (nextSection>=0) {
-          CWTextInternal::Section const &sec = zone.m_sectionList[size_t(nextSection)];
-          numCols = sec.m_numColumns;
-          width = sec.m_columnsWidth;
-          sepWidth = sec.m_columnsSep;
+          section = zone.m_sectionList[size_t(nextSection)].getSection();
           if (size_t(++nextSection) < zone.m_sectionList.size())
             nextSectionPos = zone.m_sectionList[size_t(nextSection)].m_pos;
           else {
@@ -1327,31 +1347,16 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
             nextSection = -1;
           }
         } else {
-          m_mainParser->getColumnInfo(numCols, width, sepWidth);
+          section = m_mainParser->getMainSection();
           nextSectionPos = -1;
           nextSection = -1;
         }
+        numCols = section.numColumns();
         int actCols = listener->getSection().numColumns();
         if (numCols > 1  || actCols > 1) {
           if (listener->isSectionOpened())
             listener->closeSection();
-          MWAWSection sec;
-          if (numCols>1 && width.size() != size_t(numCols))
-            sec.setColumns(numCols, m_mainParser->getPageWidth()/double(numCols), WPX_INCH);
-          else if (numCols > 1) {
-            sec.m_columns.resize(size_t(numCols));
-            bool hasSep = sepWidth.size()+1==size_t(numCols);
-            for (size_t c=0; c < size_t(numCols); c++) {
-              sec.m_columns[c].m_width = double(width[c]);
-              sec.m_columns[c].m_widthUnit = WPX_POINT;
-              if (!hasSep) continue;
-              if (c)
-                sec.m_columns[c].m_margins[libmwaw::Left]=double(sepWidth[c-1])/2.0/72.;
-              if (c+1!=size_t(numCols))
-                sec.m_columns[c].m_margins[libmwaw::Right]=double(sepWidth[c])/2.0/72.;
-            }
-          }
-          listener->openSection(sec);
+          listener->openSection(section);
         }
       } else if (numSectionInPage==0)
         numSectionInPage++;
@@ -1475,9 +1480,12 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
       case 0x4:
         listener->insertField(MWAWField(MWAWField::Date));
         break;
-      case 0x5:
-        listener->insertField(MWAWField(MWAWField::Time));
+      case 0x5: {
+        MWAWField field(MWAWField::Time);
+        field.m_DTFormat="%H:%M";
+        listener->insertField(field);
         break;
+      }
       case 0x6: // normally already done, but if we do not find the token, ...
         listener->insertField(MWAWField(MWAWField::PageNumber));
         break;

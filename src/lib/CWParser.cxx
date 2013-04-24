@@ -48,6 +48,7 @@
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSection.hxx"
 
 #include "CWDatabase.hxx"
 #include "CWGraph.hxx"
@@ -323,12 +324,36 @@ bool CWParser::sendZone(int zoneId, MWAWPosition position)
 ////////////////////////////////////////////////////////////
 // interface with the text parser
 ////////////////////////////////////////////////////////////
-void CWParser::getColumnInfo(int &numColumns, std::vector<int> &width,
-                             std::vector<int> &sep) const
+MWAWSection CWParser::getMainSection() const
 {
-  numColumns = m_state->m_columns;
-  width = m_state->m_columnsWidth;
-  sep = m_state->m_columnsSep;
+  MWAWSection sec;
+  if (m_state->m_columns <= 1)
+    return sec;
+  size_t numCols = size_t(m_state->m_columns);
+  bool hasSep = m_state->m_columnsSep.size()+1==numCols;
+  bool hasWidth = m_state->m_columnsWidth.size()==numCols;
+  double width=0.0;
+  if (!hasWidth) {
+    double totalWidth = 72.0*getPageWidth();
+    for (size_t c=0; c+1 < numCols; c++)
+      totalWidth -= double(m_state->m_columnsSep[c]);
+    width = totalWidth/double(numCols);
+  }
+  sec.m_columns.resize(numCols);
+  for (size_t c=0; c < numCols; c++) {
+    sec.m_columns[c].m_width =
+      hasWidth ? double(m_state->m_columnsWidth[c]) : width;
+    sec.m_columns[c].m_widthUnit = WPX_POINT;
+    if (!hasSep)
+      continue;
+    if (c)
+      sec.m_columns[c].m_margins[libmwaw::Left]=
+        double(m_state->m_columnsSep[c-1])/72./2.;
+    if (c+1!=numCols)
+      sec.m_columns[c].m_margins[libmwaw::Right]=
+        double(m_state->m_columnsSep[c])/72./2.;
+  }
+  return sec;
 }
 
 void CWParser::sendFootnote(int zoneId)
@@ -1899,8 +1924,7 @@ bool CWParser::readDocHeader()
         m_state->m_columns = numCols;
         if (numCols > 1) {
           int colSep = (int) input->readLong(2);
-          for (int i = 0; i < numCols; i++)
-            m_state->m_columnsSep.push_back(colSep);
+          m_state->m_columnsSep.resize(size_t(numCols-1), colSep);
           f << "colSep=" << colSep << ",";
         } else
           input->seek(2, WPX_SEEK_CUR);

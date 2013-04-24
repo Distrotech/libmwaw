@@ -411,6 +411,7 @@ void MWAWContentListener::insertField(MWAWField const &field)
     break;
   case MWAWField::PageCount:
   case MWAWField::PageNumber: {
+    _flushDeferredTabs ();
     _flushText();
     _openSpan();
     WPXPropertyList propList;

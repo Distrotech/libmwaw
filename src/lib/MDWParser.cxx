@@ -59,6 +59,63 @@
 namespace MDWParserInternal
 {
 ////////////////////////////////////////
+//! Internal: a field of a MDWParser
+struct Field {
+  //! constructor
+  Field(MWAWField::Type type=MWAWField::None) : m_type(type), m_pos(0,-1), m_extra("") {
+  }
+  //! return true is the field is defined
+  bool ok() const {
+    return m_type!=MWAWField::None && m_pos[1] > 0;
+  }
+  MWAWField getField() const {
+    MWAWField res(m_type);
+    if (m_type==MWAWField::Date)
+      res.m_DTFormat="%B %d, %Y";
+    else if (m_type==MWAWField::Time)
+      res.m_DTFormat="%H:%M";
+    return res;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Field const &field) {
+    if (!field.ok()) {
+      o << "undef,";
+      return o;
+    }
+    switch(field.m_type) {
+    case MWAWField::Date:
+      o << "date,";
+      break;
+    case MWAWField::Time:
+      o << "time,";
+      break;
+    case MWAWField::PageNumber:
+      o << "pagenumber,";
+      break;
+    case MWAWField::Title:
+      o << "title,";
+      break;
+    case MWAWField::None:
+    case MWAWField::PageCount:
+    case MWAWField::Link:
+    case MWAWField::Database:
+    default:
+      MWAW_DEBUG_MSG(("MDWParserInternal::Field: unexpected field type %d\n", int(field.m_type)));
+      break;
+    }
+    o << "line=" << field.m_pos[1] << ", x=" << field.m_pos[0] << ",";
+    o << field.m_extra;
+    return o;
+  }
+  //! the field type
+  MWAWField::Type m_type;
+  //! the field position: x position in point, y position in line (-1: means no field )
+  Vec2i m_pos;
+  //! extra data
+  std::string m_extra;
+};
+
+////////////////////////////////////////
 //! Internal: the list properties of a MDWParser
 struct ListProperties {
   //! constructor
@@ -397,7 +454,8 @@ void ZoneInfo::updateListId(ListProperties &prop, MWAWListManager &listManager)
 struct State {
   //! constructor
   State() : m_compressCorr(""), m_eof(-1), m_entryMap(), m_listProperties(),
-    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
+    m_headerFieldList(), m_footerFieldList() {
     m_compressCorr = " etnroaisdlhcfp";
     for (int i = 0; i < 3; i++)
       m_numLinesByZone[i] = 0;
@@ -422,6 +480,10 @@ struct State {
   //! the actual list id
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
+  //! the header field list
+  std::vector<Field> m_headerFieldList;
+  //! the footer field list
+  std::vector<Field> m_footerFieldList;
 };
 
 ////////////////////////////////////////
@@ -429,8 +491,8 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(MDWParser &pars, MWAWInputStreamPtr input, int zoneId) :
-    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
+  SubDocument(MDWParser &pars, MWAWInputStreamPtr input, int zoneId, int step) :
+    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId), m_step(step) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -441,6 +503,7 @@ public:
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
     if (m_id != sDoc->m_id) return true;
+    if (m_step != sDoc->m_step) return true;
     return false;
   }
 
@@ -449,37 +512,38 @@ public:
     return !operator!=(doc);
   }
 
-  //! returns the subdocument \a id
-  int getId() const {
-    return m_id;
-  }
-  //! sets the subdocument \a id
-  void setId(int vid) {
-    m_id = vid;
-  }
-
   //! the parser function
   void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
+  //! the current step: 0 mean send header, 1 mean send header fields
+  int m_step;
 };
 
 void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
-  if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+  if (!listener.get() || !m_parser) {
+    MWAW_DEBUG_MSG(("SubDocument::parse: no listener or no parser\n"));
     return;
   }
   if (m_id != 1 && m_id != 2) {
     MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
     return;
   }
+  if (m_step < 0 || m_step > 1) {
+    MWAW_DEBUG_MSG(("SubDocument::parse: unknown step\n"));
+    return;
+  }
 
   assert(m_parser);
   long pos = m_input->tell();
-  reinterpret_cast<MDWParser *>(m_parser)->sendZone(m_id);
+  MDWParser *parser=static_cast<MDWParser *>(m_parser);
+  if (m_step==0)
+    parser->sendHeaderFooter(m_id==1);
+  else
+    parser->sendHeaderFooterFields(m_id==1);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 }
@@ -641,7 +705,7 @@ void MDWParser::createDocument(WPXDocumentInterface *documentInterface)
     if (!m_state->m_zones[i].m_linesList.size())
       continue;
     MWAWHeaderFooter hF((i==1) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    hF.m_subDocument.reset(new MDWParserInternal::SubDocument(*this, getInput(), i));
+    hF.m_subDocument.reset(new MDWParserInternal::SubDocument(*this, getInput(), i, 0));
     ps.setHeaderFooter(hF);
   }
   ps.setPageSpan(m_state->m_numPages+1);
@@ -692,6 +756,9 @@ bool MDWParser::createZones()
     case 10:
       entry.setType("HeadState");
       break;
+    case 12:
+      entry.setType("HeadField");
+      break;
     case 14:
       entry.setType("HeadProp");
       break;
@@ -739,6 +806,9 @@ bool MDWParser::createZones()
   it = m_state->m_entryMap.find("HeadCust");
   if (it != m_state->m_entryMap.end())
     readHeadingCustom(it->second);
+  it = m_state->m_entryMap.find("HeadField");
+  if (it !=  m_state->m_entryMap.end())
+    readHeadingFields(it->second);
   it = m_state->m_entryMap.find("Zone8");
   if (it !=  m_state->m_entryMap.end())
     readZone8(it->second);
@@ -747,9 +817,6 @@ bool MDWParser::createZones()
   it = m_state->m_entryMap.find("LastZone");
   if (it !=  m_state->m_entryMap.end())
     readLastZone(it->second);
-  it = m_state->m_entryMap.find("Zone12");
-  if (it !=  m_state->m_entryMap.end())
-    readZone12(it->second);
 #endif
   m_state->m_listProperties.updateHeadingList();
   // finally, we can read the line info
@@ -855,6 +922,7 @@ bool MDWParser::sendZone(int id)
   }
   return true;
 }
+
 ////////////////////////////////////////////////////////////
 // read a graphic zone
 ////////////////////////////////////////////////////////////
@@ -917,6 +985,7 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
   input->seek(pos, WPX_SEEK_SET);
 
   MWAWParagraph para;
+  para.m_tabsRelativeToLeftMargin = false;
   para.m_marginsUnit = WPX_POINT;
   para.m_margins[1] = (double) input->readULong(2);
   para.m_margins[2] = getPageWidth()*72.0-(double) input->readULong(2);
@@ -973,9 +1042,9 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
     MWAWTabStop tab;
     val = input->readLong(2);
     if (val > 0)
-      tab.m_position = (float(val)-*(para.m_margins[1]))/72.f;
+      tab.m_position = double(val)/72.;
     else {
-      tab.m_position = (-float(val)-*(para.m_margins[1]))/72.f;
+      tab.m_position = -double(val)/72.;
       tab.m_alignment = MWAWTabStop::CENTER;
     }
     para.m_tabs->push_back(tab);
@@ -992,6 +1061,100 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
   return true;
 }
 
+////////////////////////////////////////////////////////////
+// send the header data
+////////////////////////////////////////////////////////////
+void MDWParser::sendHeaderFooter(bool header)
+{
+  MWAWContentListenerPtr listener=getListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("MDWParser::sendHeaderFooter: can note find the listener\n"));
+    return;
+  }
+  int zId=header ? 1 : 2;
+  std::vector<MDWParserInternal::Field> const &fieldList=
+    header ? m_state->m_headerFieldList : m_state->m_footerFieldList;
+  if (fieldList.size()) {
+    /** field are separated from the main text
+        -> we need to use an intermediate frame */
+    MWAWPosition fPos(Vec2f(0,0), Vec2f(float(getPageWidth()),0), WPX_INCH);
+    fPos.m_anchorTo = MWAWPosition::Paragraph;
+    fPos.m_wrapping =  MWAWPosition::WBackground;
+    shared_ptr<MDWParserInternal::SubDocument> subDoc
+    (new MDWParserInternal::SubDocument(*this, getInput(), zId, 1));
+    listener->insertTextBox(fPos, subDoc);
+  }
+  sendZone(zId);
+}
+
+void MDWParser::sendHeaderFooterFields(bool header)
+{
+  MWAWContentListenerPtr listener=getListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("MDWParser::sendHeaderFooterFields: can note find the listener\n"));
+    return;
+  }
+  std::vector<MDWParserInternal::Field> fieldList=
+    header ? m_state->m_headerFieldList : m_state->m_footerFieldList;
+  size_t numFields=fieldList.size();
+  if (!numFields) {
+    MWAW_DEBUG_MSG(("MDWParser::sendHeaderFooterFields: called with empty field list\n"));
+    return;
+  }
+  // sort the field list by position ; at most 4 elements, so...
+  for (size_t i=0; i+1 < numFields; i++) {
+    for (size_t j=i+1; j < numFields; j++) {
+      int diffLine = fieldList[j].m_pos[1]-fieldList[i].m_pos[1];
+      if (diffLine > 0 ||
+          (diffLine==0 && fieldList[j].m_pos[0]>fieldList[i].m_pos[0]))
+        continue;
+      MDWParserInternal::Field tmp=fieldList[j];
+      fieldList[j]=fieldList[i];
+      fieldList[i]=tmp;
+    }
+  }
+  if (fieldList[numFields-1].m_pos[1]>10) {
+    MWAW_DEBUG_MSG(("MDWParser::sendHeaderFooterFields: the line position seems too big\n"));
+    return;
+  }
+  int actLine = 0;
+  MWAWParagraph defPara;
+  defPara.setInterline(16, WPX_POINT);
+  listener->setParagraph(defPara);
+  size_t f=0;
+  while (f < numFields) {
+    while (fieldList[f].m_pos[1]>++actLine)
+      listener->insertEOL();
+    // first prepare the tabs
+    MWAWParagraph newPara(defPara);
+    int actPos=0;
+    for (size_t f1=f; f1 < numFields; f1++) {
+      if (fieldList[f1].m_pos[1]!=actLine)
+        break;
+      if (fieldList[f1].m_pos[0]==actPos)
+        continue;
+      actPos=fieldList[f1].m_pos[0];
+      MWAWTabStop tab;
+      tab.m_position = double(actPos)/72.;
+      newPara.m_tabs->push_back(tab);
+    }
+    listener->setParagraph(newPara);
+
+    actPos=0;
+    while (f < numFields) {
+      if (fieldList[f].m_pos[1]!=actLine)
+        break;
+      if (fieldList[f].m_pos[0]!=actPos) {
+        actPos=fieldList[f].m_pos[0];
+        listener->insertTab();
+      }
+      listener->insertField(fieldList[f].getField());
+      f++;
+    }
+    if (f != numFields)
+      listener->insertEOL();
+  }
+}
 ////////////////////////////////////////////////////////////
 // read the text zone
 ////////////////////////////////////////////////////////////
@@ -1416,10 +1579,9 @@ bool MDWParser::readLastZone(MWAWEntry &entry)
 {
   if (!entry.valid())
     return false;
-  if (entry.length()!=0x8) {
+  if (entry.length()<0x8 || (entry.length())%4!=0) {
     MWAW_DEBUG_MSG(("MDWParser::readLastZone: the size seems odd\n"));
-    if (entry.length() < 0x8)
-      return false;
+    return false;
   }
   if (entry.isParsed()) {
     MWAW_DEBUG_MSG(("MDWParser::readLastZone: entry is already parsed\n"));
@@ -1432,17 +1594,21 @@ bool MDWParser::readLastZone(MWAWEntry &entry)
 
   libmwaw::DebugStream f;
   f << "LastZone:";
-  long val = (long) input->readULong(4);
+  int N=int(entry.length()>>2)-2;
+  long val;
+  for (int i = 0; i < N; i++) { // find one time two value 0x154, 0xc ?
+    val = (long) input->readULong(4);
+    if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  val = (long) input->readULong(4);
   if (val != pos) {
     MWAW_DEBUG_MSG(("MDWParser::readLastZone: the ptr seems odd\n"));
     f << "#ptr=" << std::hex << val << std::dec << ",";
   }
   val = (long) input->readULong(2); // always 0x7fff
-  if (val != 0x7fff) f << "f0=" << std::hex << val << std::dec << ",";
+  if (val != 0x7fff) f << "g0=" << std::hex << val << std::dec << ",";
   val = input->readLong(2); // always -1
-  if (val != -1)  f << "f1=" << val << ",";
-  if (entry.length() != 0x8)
-    ascii().addDelimiter(input->tell(), '|');
+  if (val != -1)  f << "g1=" << val << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   return true;
@@ -1757,18 +1923,18 @@ bool MDWParser::readZone8(MWAWEntry &entry)
 }
 
 ////////////////////////////////////////////////////////////
-// read zone12 ( use ?)
+// header/footer fields position
 ////////////////////////////////////////////////////////////
-bool MDWParser::readZone12(MWAWEntry &entry)
+bool MDWParser::readHeadingFields(MWAWEntry &entry)
 {
   if (!entry.valid())
     return false;
   if (entry.length()%12) {
-    MWAW_DEBUG_MSG(("MDWParser::readZone12: the size seems odd\n"));
+    MWAW_DEBUG_MSG(("MDWParser::readHeadingFields: the size seems odd\n"));
     return false;
   }
   if (entry.isParsed()) {
-    MWAW_DEBUG_MSG(("MDWParser::readZone12: entry is already parsed\n"));
+    MWAW_DEBUG_MSG(("MDWParser::readHeadingFields: entry is already parsed\n"));
     return true;
   }
   entry.setParsed(true);
@@ -1777,22 +1943,37 @@ bool MDWParser::readZone12(MWAWEntry &entry)
   input->seek(pos, WPX_SEEK_SET);
 
   int num = int(entry.length()/12);
+  if (num != 8) {
+    MWAW_DEBUG_MSG(("MDWParser::readHeadingFields: the number of fields seems odd\n"));
+  }
   libmwaw::DebugStream f;
   long val;
-  /* often by block of 4 with pos=a,4a,8a,cc except when f0 is defined...*/
+  static MWAWField::Type const (listType[4])= {
+    MWAWField::Date, MWAWField::Time, MWAWField::PageNumber, MWAWField::Title
+  };
   for (int i = 0; i < num; i++) {
     pos = input->tell();
+    MDWParserInternal::Field field(listType[i%4]);
     f.str("");
-    f << "Zone12[" << i << "]:";
-    val = input->readLong(2); // find -1|2|3
-    if (val!=-1) f << "f0=" << val << ",";
-    val = input->readLong(4); // checkme
-    if (val) f << "pos?=" << std::hex << val << std::dec << ",";
-    int fId = (int) input->readULong(2);
-    if (fId) f << "fId=" << fId << ",";
-    f << "fSz=" << input->readULong(2) << ",";
-    val = (long) input->readULong(2); // always 0
-    if (val) f << "fFlags?=" << std::hex << val << std::dec << ",";
+    int dim[2];
+    for (int j=0; j < 2; j++)
+      dim[j] = (int) input->readLong(j==0 ? 2:4);
+    field.m_pos=Vec2i(dim[1], dim[0]);
+    static int const (expectedVal[3])= {3,12,0};
+    for (int j=0; j < 3; j++) {
+      val = input->readLong(2);
+      if (val!=expectedVal[j])
+        f << "f" << j << "=" << val << ",";
+    }
+    field.m_extra=f.str();
+    f.str("");
+    f << "HeadField[" << i << "]:" << field;
+    if (num==8 && field.ok()) {
+      if (i < 4)
+        m_state->m_headerFieldList.push_back(field);
+      else
+        m_state->m_footerFieldList.push_back(field);
+    }
     input->seek(pos+12, WPX_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());

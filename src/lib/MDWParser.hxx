@@ -107,7 +107,10 @@ protected:
 
   //! try to send the text
   void sendText(std::string const &text, std::vector<MWAWFont> const &fonts, std::vector<int> const &textPos);
-
+  //! try to send the header/footer zone
+  void sendHeaderFooter(bool header);
+  //! try to send the header/footer fields as text (in a textbox)
+  void sendHeaderFooterFields(bool header);
   //! try to read the fonts
   bool readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts, std::vector<int> &textPos);
 
@@ -124,8 +127,8 @@ protected:
   bool readZone8(MWAWEntry &entry);
   //! read the heading state
   bool readHeadingStates(MWAWEntry &entry);
-  //! read the 12 th zone ( unknown zone which contains some font definition)
-  bool readZone12(MWAWEntry &entry);
+  //! read the heading field zone ( zone 12 )
+  bool readHeadingFields(MWAWEntry &entry);
   //! read the heading property zone
   bool readHeadingProperties(MWAWEntry &entry);
   //! read the heading custom zone
