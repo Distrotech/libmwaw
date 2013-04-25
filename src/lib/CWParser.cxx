@@ -431,6 +431,17 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // create the page list
   MWAWPageSpan ps(getPageSpan());
+
+  // decrease right | bottom
+  if (ps.getMarginRight()>50./72.)
+    ps.setMarginRight(ps.getMarginRight()-50./72.);
+  else
+    ps.setMarginRight(ps.getMarginRight()/2.0);
+  if (ps.getMarginBottom()>50./72.)
+    ps.setMarginBottom(ps.getMarginBottom()-50./72.);
+  else
+    ps.setMarginBottom(ps.getMarginBottom()/2.0);
+
   int numPage = m_textParser->numPages();
   if (m_databaseParser->numPages() > numPage)
     numPage = m_databaseParser->numPages();
@@ -849,6 +860,7 @@ bool CWParser::readEndTable()
       readTNAM(entry);
       parsed = true;
     }
+    // WMBT: crypt password ? 0|fieldSz + PString ?
     if (parsed) {
       debPos = input->tell();
       if (debPos == entry.end()) continue;
@@ -1640,16 +1652,10 @@ bool CWParser::readDocHeader()
     Vec2i lTopMargin(margin[1], margin[0]);
     Vec2i rBotMargin(margin[3], margin[2]);
 
-    // decrease right | bottom
-    int rightMarg = rBotMargin.x() -50;
-    if (rightMarg < 0) rightMarg=0;
-    int botMarg = rBotMargin.y() -50;
-    if (botMarg < 0) botMarg=0;
-
     getPageSpan().setMarginTop(lTopMargin.y()/72.0);
-    getPageSpan().setMarginBottom(botMarg/72.0);
+    getPageSpan().setMarginBottom(rBotMargin.y()/72.0);
     getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
-    getPageSpan().setMarginRight(rightMarg/72.0);
+    getPageSpan().setMarginRight(rBotMargin.x()/72.0);
     getPageSpan().setFormLength(paperSize.y()/72.);
     getPageSpan().setFormWidth(paperSize.x()/72.);
     m_pageSpanSet = true;
@@ -1990,16 +1996,10 @@ bool CWParser::readPrintInfo()
     lTopMargin -= Vec2i(decalX, decalY);
     rBotMargin += Vec2i(decalX, decalY);
 
-    // decrease right | bottom
-    int rightMarg = rBotMargin.x() -50;
-    if (rightMarg < 0) rightMarg=0;
-    int botMarg = rBotMargin.y() -50;
-    if (botMarg < 0) botMarg=0;
-
     getPageSpan().setMarginTop(lTopMargin.y()/72.0);
-    getPageSpan().setMarginBottom(botMarg/72.0);
+    getPageSpan().setMarginBottom(rBotMargin.y()/72.0);
     getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
-    getPageSpan().setMarginRight(rightMarg/72.0);
+    getPageSpan().setMarginRight(rBotMargin.x()/72.0);
     getPageSpan().setFormLength(paperSize.y()/72.);
     getPageSpan().setFormWidth(paperSize.x()/72.);
   }

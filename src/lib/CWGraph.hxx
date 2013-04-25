@@ -126,7 +126,7 @@ protected:
   //
 
   //! update the group information to choose how to send the group data
-  void updateInformation(CWGraphInternal::Group &group);
+  void updateInformation(CWGraphInternal::Group &group) const;
   /* read a simple group */
   shared_ptr<CWGraphInternal::Zone> readGroupDef(MWAWEntry const &entry);
 

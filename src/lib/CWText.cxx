@@ -269,16 +269,20 @@ struct Section {
       MWAW_DEBUG_MSG(("CWTextInternal::Section::getSection: unexpected number of columns\n"));
       return sec;
     }
-    bool hasSep = numCols==m_columnsSep.size()+1;
+    bool hasSep = numCols==m_columnsSep.size();
+    if (!hasSep && m_columnsSep.size()) {
+      MWAW_DEBUG_MSG(("CWTextInternal::Section::getSection: can not used column separator\n"));
+      return sec;
+    }
     sec.m_columns.resize(size_t(numCols));
     for (size_t c=0; c < numCols; c++) {
       sec.m_columns[c].m_width = double(m_columnsWidth[c]);
       sec.m_columns[c].m_widthUnit = WPX_POINT;
       if (!hasSep) continue;
-      if (c)
-        sec.m_columns[c].m_margins[libmwaw::Left]=double(m_columnsSep[c-1])/2.0/72.;
+      sec.m_columns[c].m_margins[libmwaw::Left]=
+        double(m_columnsSep[c])/72.*(c==0 ? 1. : 0.5);
       if (c+1!=numCols)
-        sec.m_columns[c].m_margins[libmwaw::Right]=double(m_columnsSep[c])/2.0/72.;
+        sec.m_columns[c].m_margins[libmwaw::Right]=double(m_columnsSep[c+1])/2.0/72.;
     }
     return sec;
   }
@@ -1218,8 +1222,8 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
     }
     for (int c = 0; c < sec.m_numColumns; c++)
       sec.m_columnsWidth.push_back((int)input->readULong(2));
-    input->seek(pos+34, WPX_SEEK_SET);
-    for (int c = 0; c < sec.m_numColumns-1; c++)
+    input->seek(pos+32, WPX_SEEK_SET);
+    for (int c = 0; c < sec.m_numColumns; c++)
       sec.m_columnsSep.push_back((int)input->readLong(2));
     input->seek(pos+52, WPX_SEEK_SET);
     for (int j = 0; j < 4; j++) {
@@ -1232,7 +1236,7 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
     plc.m_id = i;
     zone.m_plcMap.insert(std::map<long, CWTextInternal::PLC>::value_type(sec.m_pos, plc));
     f.str("");
-    f << "TextSection-" << i << ":" << sec;
+    f << "TextSection-S" << i << ":" << sec;
     if (input->tell() != pos+fSz)
       ascFile.addDelimiter(input->tell(), '|');
     ascFile.addPos(pos);

@@ -63,7 +63,7 @@ enum { PageBreakBit=0x1, ColumnBreakBit=0x2 };
 struct DocumentState {
   //! constructor
   DocumentState(std::vector<MWAWPageSpan> const &pageList) :
-    m_pageList(pageList), m_metaData(), m_footNoteNumber(0), m_endNoteNumber(0),
+    m_pageList(pageList), m_metaData(), m_footNoteNumber(0), m_endNoteNumber(0), m_smallPictureNumber(0),
     m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments() {
   }
   //! destructor
@@ -76,7 +76,7 @@ struct DocumentState {
   WPXPropertyList m_metaData;
 
   int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
-
+  int m_smallPictureNumber /** number of small picture */;
   bool m_isDocumentStarted /** a flag to know if the document is open */, m_isHeaderFooterStarted /** a flag to know if the header footer is started */;
   std::vector<MWAWSubDocumentPtr> m_subDocuments; /** list of document actually open */
 
@@ -1077,6 +1077,16 @@ void MWAWContentListener::insertPicture
 (MWAWPosition const &pos, const WPXBinaryData &binaryData, std::string type,
  WPXPropertyList frameExtras)
 {
+  // sanity check: avoid to send to many small pict
+  float factor=pos.getScaleFactor(pos.unit(), WPX_POINT);
+  if (pos.size()[0]*factor <= 8 && pos.size()[1]*factor <= 8 && m_ds->m_smallPictureNumber++ > 200) {
+    static bool first = true;
+    if (first) {
+      first = false;
+      MWAW_DEBUG_MSG(("MWAWContentListener::insertPicture: find too much small pictures, skip them from now\n"));
+    }
+    return;
+  }
   if (!openFrame(pos, frameExtras)) return;
 
   WPXPropertyList propList;

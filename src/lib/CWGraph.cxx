@@ -522,7 +522,7 @@ struct Group : public CWStruct::DSET {
   struct LinkedZones;
   //! constructor
   Group(CWStruct::DSET const dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_zones(), m_hasMainZone(false), m_totalNumber(0),
+    CWStruct::DSET(dset), m_zones(), m_headerDim(0,0), m_hasMainZone(false), m_totalNumber(0),
     m_blockToSendList(), m_idLinkedZonesMap() {
   }
 
@@ -541,6 +541,8 @@ struct Group : public CWStruct::DSET {
   /** the list of child zones */
   std::vector<shared_ptr<Zone> > m_zones;
 
+  //! the header dimension ( if defined )
+  Vec2i m_headerDim;
   //! a flag to know if this zone contains or no the call to zone 1
   bool m_hasMainZone;
   //! the number of zone to send
@@ -602,6 +604,7 @@ struct State {
   //! set the default pattern map
   void setDefaultWallPaperList(int version);
 
+  //! a map zoneId -> group
   std::map<int, shared_ptr<Group> > m_zoneMap;
   //! a list colorId -> color
   std::vector<MWAWColor> m_colorList;
@@ -728,10 +731,28 @@ int CWGraph::version() const
   return m_parserState->m_version;
 }
 
-// fixme
 int CWGraph::numPages() const
 {
-  return 1;
+  int nPages = 1;
+  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
+    = m_state->m_zoneMap.begin();
+
+  for ( ; iter != m_state->m_zoneMap.end() ; iter++) {
+    shared_ptr<CWGraphInternal::Group> group = iter->second;
+    if (!group) continue;
+    if (group->m_type != CWStruct::DSET::T_Main)
+      continue;
+    updateInformation(*group);
+    size_t numBlock = group->m_blockToSendList.size();
+    for (size_t b=0; b < numBlock; b++) {
+      size_t bId=group->m_blockToSendList[b];
+      CWGraphInternal::Zone *child = group->m_zones[bId].get();
+      if (!child) continue;
+      if (child->m_page > nPages)
+        nPages = child->m_page;
+    }
+  }
+  return nPages;
 }
 ////////////////////////////////////////////////////////////
 // Intermediate level
@@ -1558,7 +1579,7 @@ bool CWGraph::readGroupHeader(CWGraphInternal::Group &group)
   return true;
 }
 
-bool CWGraph::readGroupUnknown(CWGraphInternal::Group &/*group*/, int zoneSz, int id)
+bool CWGraph::readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -1601,7 +1622,10 @@ bool CWGraph::readGroupUnknown(CWGraphInternal::Group &/*group*/, int zoneSz, in
   values32.push_back((int32_t) input->readLong(4));
   m_mainParser->checkOrdering(values16, values32);
 
-  if (values32[0] || values32[1]) f << "dim=" << values32[0] << "x" << values32[1] << ",";
+  Vec2i dim((int)values32[0],(int)values32[1]);
+  if (id < 0)
+    group.m_headerDim=dim;
+  if (dim[0] || dim[1]) f << "dim=" << dim << ",";
   for (size_t i = 0; i < 2; i++) {
     if (values16[i])
       f << "g" << int(i) << "=" << values16[i] << ",";
@@ -2061,13 +2085,14 @@ bool CWGraph::readBitmapData(CWGraphInternal::ZoneBitmap &zone)
 ////////////////////////////////////////////////////////////
 // update the group information
 ////////////////////////////////////////////////////////////
-void CWGraph::updateInformation(CWGraphInternal::Group &group)
+void CWGraph::updateInformation(CWGraphInternal::Group &group) const
 {
   if (group.m_blockToSendList.size() || group.m_idLinkedZonesMap.size())
     return;
   std::set<int> forbiddenZone;
 
-  if (group.m_type == CWStruct::DSET::T_Main) {
+  bool mainGroup = group.m_type == CWStruct::DSET::T_Main;
+  if (mainGroup) {
     int headerId=0, footerId=0;
     m_mainParser->getHeaderFooterId(headerId, footerId);
     if (headerId) forbiddenZone.insert(headerId);
@@ -2109,6 +2134,48 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group)
     }
     lZone.m_mapIdChild[childZone.m_subId] = g;
   }
+
+  if (!mainGroup)
+    return;
+
+  // try to fix the page position corresponding to the main zone
+  float textHeight = 0.0;
+  if (double(group.m_headerDim[1])>36.0*m_mainParser->getFormLength() &&
+      double(group.m_headerDim[1])<72.0*m_mainParser->getFormLength())
+    textHeight=float(group.m_headerDim[1]);
+  else
+    textHeight=72.0f*(float)m_mainParser->getTextHeight();
+  if (textHeight <= 0) {
+    MWAW_DEBUG_MSG(("CWGraph::updateInformation: can not retrieve the form length\n"));
+    return;
+  }
+  size_t numBlock = group.m_blockToSendList.size();
+  for (size_t b=0; b < numBlock; b++) {
+    size_t bId=group.m_blockToSendList[b];
+    CWGraphInternal::Zone *child = group.m_zones[bId].get();
+    if (!child) continue;
+    int page=int(child->m_box[1].y()/textHeight);
+    if (page < 0)
+      continue;
+    if (++page > 1) {
+      Vec2f orig = child->m_box[0];
+      Vec2f sz = child->m_box.size();
+      orig[1]-=(page-1)*textHeight;
+      if (orig[1] < 0) { // try to correct small problem
+        if (orig[1] < -textHeight)
+          continue;
+        else if (orig[1] < -0.9*textHeight) {
+          orig[1]  += textHeight;
+          page++;
+        } else if (orig[1] < -0.1*textHeight)
+          continue;
+        else
+          orig[1] = 0;
+      }
+      child->m_box = Box2f(orig, orig+sz);
+    }
+    child->m_page = page;
+  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -2133,10 +2200,10 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
   if (!listener->isSubDocumentOpened(inDocType))
     inDocType = libmwaw::DOC_NONE;
   Vec2f leftTop(0,0);
-  float pageHeight = 0.0;
+  float textHeight = 0.0;
   if (mainGroup) {
     leftTop = 72.0f*m_mainParser->getPageLeftTop();
-    pageHeight = 72.0f*(float)m_mainParser->getTextHeight();
+    textHeight = 72.0f*float(m_mainParser->getFormLength());
   }
 
   if (group->m_totalNumber > 1 &&
@@ -2178,19 +2245,19 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
       CWGraphInternal::Zone *child = group->m_zones[toDo[g]].get();
       if (!child) continue;
 
-      bool posValidSet = child->m_box.size()[0] > 0 && child->m_box.size()[0] > 1;
+      bool posValidSet = child->m_box.size()[0] > 0 && child->m_box.size()[1] > 0;
       MWAWPosition pos(position);
       pos.setOrder(int(g)+1);
       if (pos.m_anchorTo==MWAWPosition::Unknown) {
         pos = MWAWPosition(child->m_box[0], child->m_box.size(), WPX_POINT);
         pos.setRelativePosition(suggestedAnchor);
         if (suggestedAnchor == MWAWPosition::Page) {
-          int pg = child->m_page >= 0 ? child->m_page+1 : 1;
+          int pg = child->m_page > 0 ? child->m_page : 1;
           Vec2f orig = pos.origin()+leftTop;
           pos.setPagePos(pg, orig);
           pos.m_wrapping =  MWAWPosition::WBackground;
           pos.setOrder(-int(g)-1);
-          if (pos.origin()[1]+pos.size()[1] >= pageHeight
+          if (pos.origin()[1]+pos.size()[1] >= textHeight
               || listener->isSectionOpened()) {
             notDone.push_back(toDo[g]);
             continue;

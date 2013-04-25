@@ -142,7 +142,15 @@ protected:
   MWAWPageSpan &getPageSpan() {
     return m_pageSpan;
   }
-  //! returns the page length (form width without margin )
+  //! returns the form length
+  double getFormLength() const {
+    return m_pageSpan.getFormLength();
+  }
+  //! returns the form width
+  double getFormWidth() const {
+    return m_pageSpan.getFormWidth();
+  }
+  //! returns the page length (form length without margin )
   double getPageLength() const {
     return m_pageSpan.getPageLength();
   }
