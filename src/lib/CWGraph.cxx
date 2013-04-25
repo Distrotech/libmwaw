@@ -2306,7 +2306,9 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
         if (!group->needSendFrameContent(zId, childZone.m_subId, extras, textboxExtras))
           fZid = -1;
         if ((type == CWStruct::DSET::T_Frame ||
-             type == CWStruct::DSET::T_Table) && posValidSet)
+             type == CWStruct::DSET::T_Table ||
+             (type == CWStruct::DSET::T_Unknown && pos.m_anchorTo == MWAWPosition::Page))
+            && posValidSet)
           m_mainParser->sendZoneInFrame(fZid, pos, extras, textboxExtras);
         else if (fZid == -1)
           break;
