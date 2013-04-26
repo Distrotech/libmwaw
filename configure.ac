@@ -15,7 +15,7 @@ m4_define([libmwaw_version],[libmwaw_version_major.libmwaw_version_minor.libmwaw
 # =============
 AC_INIT([libmwaw],[libmwaw_version])
 AC_CONFIG_MACRO_DIR([m4])
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([1.10 foreign dist-bzip2])
 #AM_SILENT_RULES([yes])
 AC_LANG([C++])
