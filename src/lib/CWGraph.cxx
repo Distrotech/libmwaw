@@ -2154,13 +2154,13 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
     size_t bId=group.m_blockToSendList[b];
     CWGraphInternal::Zone *child = group.m_zones[bId].get();
     if (!child) continue;
-    int page=int(child->m_box[1].y()/textHeight);
+    int page=int(float(child->m_box[1].y())/textHeight);
     if (page < 0)
       continue;
     if (++page > 1) {
       Vec2f orig = child->m_box[0];
       Vec2f sz = child->m_box.size();
-      orig[1]-=(page-1)*textHeight;
+      orig[1]-=float(page-1)*textHeight;
       if (orig[1] < 0) { // try to correct small problem
         if (orig[1] < -textHeight)
           continue;

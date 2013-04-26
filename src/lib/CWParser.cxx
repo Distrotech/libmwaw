@@ -436,11 +436,11 @@ void CWParser::createDocument(WPXDocumentInterface *documentInterface)
   if (ps.getMarginRight()>50./72.)
     ps.setMarginRight(ps.getMarginRight()-50./72.);
   else
-    ps.setMarginRight(ps.getMarginRight()/2.0);
+    ps.setMarginRight(0);
   if (ps.getMarginBottom()>50./72.)
     ps.setMarginBottom(ps.getMarginBottom()-50./72.);
   else
-    ps.setMarginBottom(ps.getMarginBottom()/2.0);
+    ps.setMarginBottom(0);
 
   int numPage = m_textParser->numPages();
   if (m_databaseParser->numPages() > numPage)

@@ -1,4 +1,18 @@
 CHANGES:
+04/25/2014:
+- rewrite MWAWPageSpan,
+- add classes MWAWField, MWAWNote, MWAWSection to store/manage
+  field, note, section properties,
+- check that the ClarisWorks/AppleWorks, MacWrite, MindWrite,
+  WriteNow use the new properties' classes,
+- improve a little the ClarisWorks/AppleWorks frame position by
+  placing <<correctly>> all page's frames,
+- MWAWContentListener : add a sanity check to insure that at most
+  200 very small pictures are generated.
+
+04/14/2013: ----- version 1.9 ---------
+
+
 04/14/2013:
 - check that the Microsoft Word parser use all
   the paragraph properties
