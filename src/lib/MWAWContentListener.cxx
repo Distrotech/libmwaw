@@ -76,6 +76,7 @@ struct DocumentState {
   WPXPropertyList m_metaData;
 
   int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
+
   int m_smallPictureNumber /** number of small picture */;
   bool m_isDocumentStarted /** a flag to know if the document is open */, m_isHeaderFooterStarted /** a flag to know if the header footer is started */;
   std::vector<MWAWSubDocumentPtr> m_subDocuments; /** list of document actually open */
