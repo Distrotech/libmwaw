@@ -170,11 +170,11 @@ public:
 
   /** returns true if the data fork block exists */
   bool hasDataFork() const {
-    return m_stream;
+    return bool(m_stream);
   }
   /** returns true if the resource fork block exists */
   bool hasResourceFork() const {
-    return m_resourceFork;
+    return bool(m_resourceFork);
   }
   /** returns the resource fork if find */
   shared_ptr<MWAWInputStream> getResourceForkStream() {

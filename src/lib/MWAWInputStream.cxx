@@ -583,7 +583,7 @@ bool MWAWInputStream::createStorageOLE()
   m_storageOLE.reset(new libmwawOLE::Storage(m_stream));
   seek(actPos, WPX_SEEK_SET);
 
-  return m_storageOLE;
+  return bool(m_storageOLE);
 }
 
 ////////////////////////////////////////////////////////////
