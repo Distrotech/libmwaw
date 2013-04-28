@@ -117,7 +117,7 @@ protected:
               - c2.m_cell->box().size()[m_coord];
       if (diffF < 0) return true;
       if (diffF > 0) return false;
-      return long(c1.m_cell) < long(c2.m_cell);
+      return ssize_t(c1.m_cell) < ssize_t(c2.m_cell);
     }
 
     //! the coord to compare

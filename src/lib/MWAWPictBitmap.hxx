@@ -215,7 +215,7 @@ public:
     diff=m_data.size().cmpY(aPict.m_data.size());
     if (diff) return diff;
 
-    long diffL = (long) this -(long) &aPict;
+    ssize_t diffL = (ssize_t) this -(ssize_t) &aPict;
     if (diffL) return (diffL<0) ? -1 : 1;
 
     return 0;
@@ -296,7 +296,7 @@ public:
     diff=int(m_colors.size())-int(aPict.m_colors.size());
     if (diff) return (diff < 0) ? -1 : 1;
 
-    long diffL = (long) this -(long) &aPict;
+    ssize_t diffL = (ssize_t) this -(ssize_t) &aPict;
     if (diffL) return (diffL<0) ? -1 : 1;
 
     return 0;
@@ -382,7 +382,7 @@ public:
     diff=m_data.size().cmpY(aPict.m_data.size());
     if (diff) return diff;
 
-    long diffL = (long) this -(long) &aPict;
+    ssize_t diffL = (ssize_t) this -(ssize_t) &aPict;
     if (diffL) return (diffL<0) ? -1 : 1;
 
     return 0;
