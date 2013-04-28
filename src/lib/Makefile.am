@@ -17,6 +17,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	libmwaw.hxx			\
 	libmwaw_internal.cxx		\
 	libmwaw_internal.hxx		\
+	ACParser.cxx			\
+	ACParser.hxx			\
+	ACText.cxx			\
+	ACText.hxx			\
 	CWDatabase.cxx			\
 	CWDatabase.hxx			\
 	CWGraph.cxx			\

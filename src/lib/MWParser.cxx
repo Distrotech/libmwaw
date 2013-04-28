@@ -711,7 +711,7 @@ bool MWParser::sendWindow(int zone)
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool MWParser::checkHeader(MWAWHeader *header, bool strict)
+bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
   *m_state = MWParserInternal::State();
   MWParserInternal::FileHeader fHeader = m_state->m_fileHeader;
@@ -768,7 +768,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool strict)
     int numParag = (int) input->readLong(2);
     fHeader.m_numParagraphs[i] = numParag;
     if (numParag < 0) {
-      MWAW_DEBUG_MSG(("MWParser::checkHeader: numParagraphs if negative : %d\n",
+      MWAW_DEBUG_MSG(("MWParser::checkHeader: numParagraphs is negative : %d\n",
                       numParag));
       return false;
     }
@@ -794,14 +794,13 @@ bool MWParser::checkHeader(MWAWHeader *header, bool strict)
 
   //
   input->seek(headerSize, WPX_SEEK_SET);
-  if (strict) {
-    if (!readPrintInfo())
-      return false;
-    long testPos = version() <= 3 ? fHeader.m_dataPos : fHeader.m_freeListPos;
-    input->seek(testPos, WPX_SEEK_SET);
-    if (long(input->tell()) != testPos)
-      return false;
-  }
+  if (!readPrintInfo())
+    return false;
+  long testPos = version() <= 3 ? fHeader.m_dataPos : fHeader.m_freeListPos;
+  input->seek(testPos, WPX_SEEK_SET);
+  if (long(input->tell()) != testPos)
+    return false;
+
   input->seek(headerSize, WPX_SEEK_SET);
   m_state->m_fileHeader = fHeader;
 

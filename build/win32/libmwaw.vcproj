@@ -173,6 +173,46 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
+				RelativePath="..\..\src\lib\ACParser.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ACText.cxx"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\CWDatabase.cxx"
 				>
 				<FileConfiguration
@@ -1778,6 +1818,14 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 		</Filter>
+		<File
+			RelativePath="..\..\src\lib\ACParser.hxx"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\lib\ACText.hxx"
+			>
+		</File>
 		<File
 			RelativePath="..\..\src\lib\CWDatabase.hxx"
 			>

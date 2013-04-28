@@ -32,11 +32,11 @@
 */
 
 /*
- * Parser to ZWrite document
+ * Parser to Acta document
  *
  */
-#ifndef ZW_TEXT
-#  define ZW_TEXT
+#ifndef AC_TEXT
+#  define AC_TEXT
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
@@ -46,33 +46,31 @@ typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 
 class MWAWEntry;
 class MWAWFont;
-class MWAWParagraph;
 class MWAWParserState;
 typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
-namespace ZWTextInternal
+namespace ACTextInternal
 {
-struct Section;
 struct State;
 class SubDocument;
 }
 
-class ZWParser;
+class ACParser;
 
-/** \brief the main class to read the text part of ZWrite Text file
+/** \brief the main class to read the text part of Acta Text file
  *
  *
  *
  */
-class ZWText
+class ACText
 {
-  friend class ZWParser;
-  friend class ZWTextInternal::SubDocument;
+  friend class ACParser;
+  friend class ACTextInternal::SubDocument;
 public:
   //! constructor
-  ZWText(ZWParser &parser);
+  ACText(ACParser &parser);
   //! destructor
-  virtual ~ZWText();
+  virtual ~ACText();
 
   /** returns the file version */
   int version() const;
@@ -81,9 +79,6 @@ public:
   int numPages() const;
 
 protected:
-  //! the list of code in the text
-  enum TextCode { None, Center, BookMark, NewPage, Tag, Link };
-
   //! finds the different text zones
   bool createZones();
 
@@ -97,32 +92,12 @@ protected:
   // intermediate level
   //
 
-  /** compute the positions */
-  void computePositions();
-
-  //! try to send a section
-  bool sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entry);
-  //! try to send a section using an id
-  bool sendText(int sectionId, MWAWEntry const &entry);
-  //! check if a character after '<' corresponds to a text code
-  TextCode isTextCode(MWAWInputStreamPtr &input, long endPos, MWAWEntry &dPos);
-
-  //! read the header/footer zone
-  bool readHFZone(MWAWEntry const &entry);
-  //! returns true if there is a header/footer
-  bool hasHeaderFooter(bool header) const;
-  //! try to send the header/footer
-  bool sendHeaderFooter(bool header);
-
-  //! read the styles
-  bool readStyles(MWAWEntry const &entry);
-
-  //! read a section fonts
-  bool readSectionFonts(MWAWEntry const &entry);
+  //! try to read a basic entry (line or graphic)
+  bool readLine(int id);
 
 private:
-  ZWText(ZWText const &orig);
-  ZWText &operator=(ZWText const &orig);
+  ACText(ACText const &orig);
+  ACText &operator=(ACText const &orig);
 
 protected:
   //
@@ -132,10 +107,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<ZWTextInternal::State> m_state;
+  shared_ptr<ACTextInternal::State> m_state;
 
   //! the main parser;
-  ZWParser *m_mainParser;
+  ACParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

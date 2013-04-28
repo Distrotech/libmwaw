@@ -37,6 +37,7 @@
 
 #include "MWAWDocument.hxx"
 
+#include "ACParser.hxx"
 #include "CWParser.hxx"
 #include "DMParser.hxx"
 #include "EDParser.hxx"
@@ -134,6 +135,11 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     kind = (MWAWDocument::DocumentKind)header->getKind();
 
     switch (type) {
+    case ACT:
+#ifdef DEBUG
+      confidence = MWAW_CONFIDENCE_GOOD;
+#endif
+      break;
     case CW:
       confidence = MWAW_CONFIDENCE_EXCELLENT;
       break;
@@ -191,7 +197,6 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     case ZWRT:
       confidence = MWAW_CONFIDENCE_GOOD;
       break;
-    case ACT:
     case UNKNOWN:
     default:
       break;
@@ -232,6 +237,11 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
     if (!header.get()) return MWAW_UNKNOWN_ERROR;
 
     switch (header->getType()) {
+    case ACT: {
+      ACParser parser(ip, rsrcParser, header.get());
+      parser.parse(documentInterface);
+      break;
+    }
     case CW: {
       CWParser parser(ip, rsrcParser, header.get());
       parser.parse(documentInterface);
@@ -333,7 +343,6 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
       parser.parse(documentInterface);
       break;
     }
-    case ACT:
     case UNKNOWN:
     default:
       break;
@@ -400,6 +409,10 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
 {
   try {
     switch(header.getType()) {
+    case MWAWDocument::ACT: {
+      ACParser parser(input, rsrcParser, &header);
+      return parser.checkHeader(&header, strict);
+    }
     case MWAWDocument::CW: {
       CWParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);
@@ -482,7 +495,6 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
       ZWParser parser(input, rsrcParser, &header);
       return parser.checkHeader(&header, strict);
     }
-    case MWAWDocument::ACT:
     case MWAWDocument::UNKNOWN:
     default:
       break;

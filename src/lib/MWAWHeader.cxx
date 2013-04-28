@@ -65,7 +65,15 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   std::string type, creator;
   if (input->getFinderInfo(type, creator)) {
     // set basic version, the correct will be filled by check header
-    if (creator=="BOBO") {
+    if (creator=="ACTA") {
+      if (type=="OTLN") { // at least basic v2
+        res.push_back(MWAWHeader(MWAWDocument::ACT, 1));
+        return res;
+      } else if (type=="otln") { // classic version
+        res.push_back(MWAWHeader(MWAWDocument::ACT, 2));
+        return res;
+      }
+    } else if (creator=="BOBO") {
       if (type=="CWDB" || type=="CWD2" || type=="sWDB") {
         res.push_back(MWAWHeader(MWAWDocument::CW, 1, MWAWDocument::K_DATABASE));
         return res;
@@ -376,13 +384,17 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     if (input->seek(1024, WPX_SEEK_CUR) != 0) break;
   }
   input->seek(-4, WPX_SEEK_CUR);
+  int lVal[2];
   for (int i = 0; i < 2; i++)
-    val[i]=int(input->readULong(2));
-  if (val[0] == 0x4657 && val[1]==0x5254) // FWRT
+    lVal[i]=int(input->readULong(2));
+  if (lVal[0] == 0x4E4C && lVal[1]==0x544F) // NLTO
+    res.push_back(MWAWHeader(MWAWDocument::ACT, 2));
+  else if (lVal[1]==0 && val[0]>0 && val[0]<5 && (val[1]==1||val[1]==2))
+    res.push_back(MWAWHeader(MWAWDocument::ACT, 1));
+  else if (lVal[0] == 0x4657 && lVal[1]==0x5254) // FWRT
     res.push_back(MWAWHeader(MWAWDocument::FULLW, 2));
-  if (val[0] == 0 && val[1]==1) { // not probable, but
+  else if (lVal[0] == 0 && lVal[1]==1) // not probable, but
     res.push_back(MWAWHeader(MWAWDocument::FULLW, 1));
-  }
 
   input->seek(0, WPX_SEEK_SET);
   return res;

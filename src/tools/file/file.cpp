@@ -560,7 +560,11 @@ bool File::readDataInformation()
     lVal[i] = int(input.readU16());
   if (lVal[0] == 0x4657 && lVal[1]==0x5254)
     m_dataResult.push_back("FullWrite 2.0");
-  if (lVal[0] == 0 && lVal[1]==1) { // Maybe a FullWrite 1.0 file, limited check
+  else if (lVal[0] == 0x4E4C && lVal[1]==0x544F)
+    m_dataResult.push_back("Acta Classic");
+  else if (lVal[1]==0 && val[0]>0 && val[0]<5 && (val[1]==1||val[1]==2))
+    m_dataResult.push_back("Acta v2[unsure]");
+  else if (lVal[0] == 0 && lVal[1]==1) { // Maybe a FullWrite 1.0 file, limited check
     input.seek(-38, InputStream::SK_END);
     long eof = input.length();
     bool ok = true;
