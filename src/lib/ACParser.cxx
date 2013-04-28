@@ -265,7 +265,7 @@ bool ACParser::createZones()
   int vers=version();
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   MWAWInputStreamPtr input = getInput();
-  libmwaw::DebugStream f;
+  // libmwaw::DebugStream f;
 
   if (rsrcParser) {
     // STR:0 -> title name, STR:1 custom label
