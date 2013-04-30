@@ -389,7 +389,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     lVal[i]=int(input->readULong(2));
   if (lVal[0] == 0x4E4C && lVal[1]==0x544F) // NLTO
     res.push_back(MWAWHeader(MWAWDocument::ACT, 2));
-  else if (lVal[1]==0 && val[0]>0 && val[0]<5 && (val[1]==1||val[1]==2))
+  else if (lVal[1]==0 && val[0]==1 && (val[1]==1||val[1]==2))
     res.push_back(MWAWHeader(MWAWDocument::ACT, 1));
   else if (lVal[0] == 0x4657 && lVal[1]==0x5254) // FWRT
     res.push_back(MWAWHeader(MWAWDocument::FULLW, 2));

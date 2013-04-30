@@ -42,6 +42,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
+#include "MWAWList.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWRSRCParser.hxx"
@@ -55,12 +56,142 @@
 namespace ACParserInternal
 {
 ////////////////////////////////////////
+//! Internal: class used to store a list type in ACParser
+struct Label {
+  //! constructor
+  Label(int type=0) : m_type(type) { }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Label const &lbl) {
+    switch(lbl.m_type) {
+    case 0:
+      o << "noLabel,";
+      break;
+    case 2:
+      o << "checkbox,";
+      break;
+    case 0xb:
+      o << "decimal,"; // 1.0,
+      break;
+    case 0xc:
+      o << "I A...,";
+      break;
+    case 0xe:
+      o << "custom,";
+      break;
+    default:
+      o << "#labelType=" << lbl.m_type << ",";
+      break;
+    }
+    return o;
+  }
+  //! operator==
+  bool operator==(Label const &lbl) const {
+    return m_type==lbl.m_type;
+  }
+  //! operator=!
+  bool operator!=(Label const &lbl) const {
+    return !operator==(lbl);
+  }
+  //! the label type
+  int m_type;
+};
+
+////////////////////////////////////////
+//! Internal: class used to store the printing preferences in ACParser
+struct Printing {
+  //! constructor
+  Printing() : m_font() {
+    for (int i = 0; i < 2; i++)
+      m_flags[i]=0;
+  }
+  //! returns true if the header is empty
+  bool isEmpty() const {
+    return (m_flags[1]&7)==0;
+  }
+  //! operator==
+  bool operator==(Printing const &print) const {
+    if (m_font != print.m_font)
+      return false;
+    for (int i=0; i<2; i++) {
+      if (m_flags[i]!=print.m_flags[i])
+        return false;
+    }
+    return true;
+  }
+  //! operator=!
+  bool operator!=(Printing const &print) const {
+    return !operator==(print);
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Printing const &print) {
+    if (print.m_flags[0]==1)
+      o << "useFooter,";
+    else if (print.m_flags[0])
+      o << "#fl0=" << print.m_flags[0] << ",";
+    int flag = print.m_flags[1];
+    if (flag&1)
+      o << "title,";
+    if (flag&2)
+      o << "date,";
+    if (flag&4)
+      o << "pagenumber,";
+    flag &= 0xFFF8;
+    if (flag)
+      o << "#flags=" << std::hex << flag << std::dec << ",";
+    return o;
+  }
+  //! the font
+  MWAWFont m_font;
+  //! the flags
+  int m_flags[2];
+};
+
+////////////////////////////////////////
+//! Internal: class used to store the optional preferences in ACParser
+struct Option {
+  //! constructor
+  Option(int flags=0) : m_flags(flags) { }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Option const &opt) {
+    int flag = opt.m_flags;
+    if (flag&0x1000)
+      o << "speaker[dial],";
+    if (flag&0x4)
+      o << "smart['\"],";
+    if (flag&0x8)
+      o << "open[startup],";
+    // flag&0x10: always ?
+    if (flag&0x20)
+      o << "nolabel[picture],";
+    if (flag&0x40)
+      o << "noframe[current],";
+    if (flag&0x80)
+      o << "nolabel[clipboard],";
+
+    flag &= 0xEF13;
+    if (flag) // find also flag&(10|400|4000|8000)
+      o << "option[flags]=" << std::hex << flag << std::dec << ",";
+    return o;
+  }
+  //! the flags
+  int m_flags;
+};
+
+////////////////////////////////////////
 //! Internal: the state of a ACParser
 struct State {
   //! constructor
-  State() : m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_printerPreferences(), m_title(""), m_label(), m_stringLabel(""), m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
 
+  //! the printer preferences
+  Printing m_printerPreferences;
+  //! the title (if defined)
+  std::string m_title;
+  //! the list type
+  Label m_label;
+  //! the custom label (if defined)
+  std::string m_stringLabel;
   //! end of file
   long m_eof;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
@@ -74,8 +205,8 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(ACParser &pars, MWAWInputStreamPtr input, bool header) :
-    MWAWSubDocument(&pars, input, MWAWEntry()), m_isHeader(header) {}
+  SubDocument(ACParser &pars, MWAWInputStreamPtr input) :
+    MWAWSubDocument(&pars, input, MWAWEntry()) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -85,7 +216,6 @@ public:
     if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
-    if (m_isHeader != sDoc->m_isHeader) return true;
     return false;
   }
 
@@ -98,8 +228,6 @@ public:
   void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
-  //! true if we need to send the parser
-  int m_isHeader;
 };
 
 void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
@@ -109,8 +237,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     return;
   }
   assert(m_parser);
-
-  // reinterpret_cast<ACParser *>(m_parser)->sendHeaderFooter(m_isHeader);
+  static_cast<ACParser *>(m_parser)->sendHeaderFooter();
 }
 }
 
@@ -160,13 +287,6 @@ Vec2f ACParser::getPageLeftTop() const
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
-////////////////////////////////////////////////////////////
-// interface with the text parser
-////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////
-// new page
-////////////////////////////////////////////////////////////
 bool ACParser::isFilePos(long pos)
 {
   if (pos <= m_state->m_eof)
@@ -181,6 +301,88 @@ bool ACParser::isFilePos(long pos)
   return ok;
 }
 
+////////////////////////////////////////////////////////////
+// interface with the text parser
+////////////////////////////////////////////////////////////
+
+shared_ptr<MWAWList> ACParser::getMainList()
+{
+  MWAWListLevel level;
+  std::vector<MWAWListLevel> levels;
+  switch (m_state->m_label.m_type) {
+  default:
+  case 0: // none
+    level.m_type=MWAWListLevel::NONE;
+    levels.resize(10, level);
+    break;
+  case 2: // checkbox
+    level.m_type=MWAWListLevel::BULLET;
+    libmwaw::appendUnicode(0x2610, level.m_bullet);
+    levels.resize(10, level);
+    break;
+  case 0xb: // 1.0 1.1 1.1.1 1.1.1.1 1.1.1.1.1 ...
+    level.m_suffix = ".";
+    level.m_type=MWAWListLevel::DECIMAL;
+    for (int i=0; i < 10; i++) {
+      level.m_numBeforeLabels=i;
+      levels.push_back(level);
+    }
+    break;
+  case 0xc: // I. A. 1. a. i. [(a). (1).]*
+    level.m_suffix = ".";
+    level.m_type=MWAWListLevel::UPPER_ROMAN;
+    levels.push_back(level);
+    level.m_type=MWAWListLevel::UPPER_ALPHA;
+    levels.push_back(level);
+    level.m_type=MWAWListLevel::DECIMAL;
+    levels.push_back(level);
+    level.m_type=MWAWListLevel::LOWER_ALPHA;
+    levels.push_back(level);
+    level.m_prefix = "(";
+    level.m_suffix = ").";
+    for (int i=0; i < 4; i++) {
+      level.m_type=MWAWListLevel::LOWER_ROMAN;
+      levels.push_back(level);
+      level.m_type=MWAWListLevel::DECIMAL;
+      levels.push_back(level);
+    }
+    break;
+  case 0xe: {//custom
+    level.m_type=MWAWListLevel::BULLET;
+    libmwaw::appendUnicode(0x2022, level.m_bullet);
+    MWAWFontConverterPtr fontConvert=getFontConverter();
+    if (!fontConvert) {
+      MWAW_DEBUG_MSG(("ACParser::getMainList: can not find the listener\n"));
+    } else {
+      for (size_t c= 0; c < m_state->m_stringLabel.size(); c++) {
+        int unicode=fontConvert->unicode(3, (unsigned char) m_state->m_stringLabel[1]);
+        level.m_bullet="";
+        libmwaw::appendUnicode((unicode > 0) ? uint32_t(unicode):0x2022, level.m_bullet);
+        levels.push_back(level);
+      }
+    }
+    while (levels.size() < 10)
+      levels.push_back(levels.back());
+    break;
+  }
+  }
+  shared_ptr<MWAWList> list;
+  MWAWListManagerPtr listManager=getParserState()->m_listManager;
+  if (!listManager) {
+    MWAW_DEBUG_MSG(("ACParser::getMainList: can not find the list manager\n"));
+    return list;
+  }
+
+  list.reset(new MWAWList);
+  for (size_t s=0; s < levels.size(); s++) {
+    if (!list) break;
+    list = listManager->getNewList(list, int(s+1), levels[s]);
+  }
+  return list;
+}
+////////////////////////////////////////////////////////////
+// new page
+////////////////////////////////////////////////////////////
 void ACParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
@@ -212,9 +414,6 @@ void ACParser::parse(WPXDocumentInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       m_textParser->sendMainText();
-#ifdef DEBUG
-      m_textParser->flushExtra();
-#endif
     }
     ascii().reset();
   } catch (...) {
@@ -248,12 +447,61 @@ void ACParser::createDocument(WPXDocumentInterface *documentInterface)
 
   MWAWPageSpan ps(getPageSpan());
   ps.setPageSpan(m_state->m_numPages+1);
+  if (!m_state->m_printerPreferences.isEmpty()) {
+    MWAWHeaderFooter hF(m_state->m_printerPreferences.m_flags[0]!=1 ?
+                        MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER,
+                        MWAWHeaderFooter::ALL);
+    hF.m_subDocument.reset(new ACParserInternal::SubDocument(*this, getInput()));
+    ps.setHeaderFooter(hF);
+  }
   std::vector<MWAWPageSpan> pageList(1,ps);
   MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
 }
 
+void ACParser::sendHeaderFooter()
+{
+  MWAWContentListenerPtr listener=getListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("ACParser::sendHeaderFooter: can not find the listener\n"));
+    return;
+  }
+  ACParserInternal::Printing const &print=m_state->m_printerPreferences;
+  listener->setFont(print.m_font);
+  bool printDone=false;
+  for (int i=0, wh=1; i < 3; i++, wh*=2) {
+    if ((print.m_flags[1]&wh)==0)
+      continue;
+    if (printDone)
+      listener->insertTab();
+    switch(i) {
+    case 0:
+      if (!m_state->m_title.length()) {
+        listener->insertField(MWAWField::Title);
+        break;
+      }
+      for (size_t s=0; s < m_state->m_title.length(); s++)
+        listener->insertCharacter((unsigned char)m_state->m_title[s]);
+      break;
+    case 1: {
+      MWAWField field(MWAWField::Date);
+      field.m_DTFormat="%b %d, %Y";
+      listener->insertField(field);
+      break;
+    }
+    case 2:
+      listener->insertField(MWAWField::PageNumber);
+      break;
+    default:
+      MWAW_DEBUG_MSG(("ACParser::sendHeaderFooter: unexpected step\n"));
+      break;
+    }
+    printDone=true;
+  }
+  if (!printDone)
+    listener->insertChar(' ');
+}
 
 ////////////////////////////////////////////////////////////
 //
@@ -262,61 +510,205 @@ void ACParser::createDocument(WPXDocumentInterface *documentInterface)
 ////////////////////////////////////////////////////////////
 bool ACParser::createZones()
 {
-  int vers=version();
-  MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   MWAWInputStreamPtr input = getInput();
-  // libmwaw::DebugStream f;
+  readRSRCZones();
+  if (version()>=3) {
+    input->setReadInverted(true);
+    if (!readEndDataV3()) {
+      ascii().addPos(input->tell());
+      ascii().addNote("Entries(Loose)");
+    }
+    input->setReadInverted(false);
+  }
+  return true;
+}
 
-  if (rsrcParser) {
-    // STR:0 -> title name, STR:1 custom label
+bool ACParser::readRSRCZones()
+{
+  MWAWRSRCParserPtr rsrcParser = getRSRCParser();
+  if (!rsrcParser)
+    return true;
+  if (version() < 3) { // never seens so, better ignore
+    MWAW_DEBUG_MSG(("ACParser::readRSRCZones: find a resource fork in v1-v2!!!\n"));
+    return false;
+  }
 
-    std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
-    std::multimap<std::string, MWAWEntry>::iterator it;
 
-    // the 0 zone
-    char const *(zNames[]) = {"PSET", "WSIZ", "LABL", "QOPT", "QHDR"};
-    for (int z = 0; z < 5; z++) {
-      it = entryMap.lower_bound(zNames[z]);
-      while (it != entryMap.end()) {
-        if (it->first != zNames[z])
-          break;
-        MWAWEntry const &entry = it++->second;
-        switch(z) {
-        case 0:
-          readPrintInfo(entry);
-          break;
-        case 1:
-          readWindowPos(entry);
-          break;
-        case 2:
-          readLabel(entry);
-          break;
-        case 3:
-          readOption(entry);
-          break;
-        case 4:
-          readQHDR(entry);
-          break;
-        default:
-          break;
-        }
+  std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
+  std::multimap<std::string, MWAWEntry>::iterator it;
+
+  // STR:0 -> title name, STR:1 custom label
+  it = entryMap.lower_bound("STR ");
+  while (it != entryMap.end()) {
+    if (it->first != "STR ")
+      break;
+    MWAWEntry const &entry = it++->second;
+    entry.setParsed(true);
+    std::string str("");
+    if (!rsrcParser->parseSTR(entry,str) || str.length()==0)
+      continue;
+    switch(entry.id()) {
+    case 0:
+      m_state->m_title=str;
+      break;
+    case 1:
+      m_state->m_stringLabel=str;
+      break;
+    default:
+      MWAW_DEBUG_MSG(("ACParser::readRSRCZones: find unexpected STR:%d\n", entry.id()));
+      break;
+    }
+  }
+  // the 0 zone
+  char const *(zNames[]) = {"PSET", "WSIZ", "LABL", "QOPT", "QHDR"};
+  for (int z = 0; z < 5; z++) {
+    it = entryMap.lower_bound(zNames[z]);
+    while (it != entryMap.end()) {
+      if (it->first != zNames[z])
+        break;
+      MWAWEntry const &entry = it++->second;
+      switch(z) {
+      case 0:
+        readPrintInfo(entry);
+        break;
+      case 1:
+        readWindowPos(entry);
+        break;
+      case 2:
+        readLabel(entry);
+        break;
+      case 3:
+        readOption(entry);
+        break;
+      case 4:
+        readHFProperties(entry);
+        break;
+      default:
+        break;
       }
     }
   }
+  return true;
+}
 
-  input->seek(vers>=3 ? 2 : 0, WPX_SEEK_SET);
-  int line=0;
-  while (!input->atEOS()) {
-    if (!m_textParser->readLine(line++))
-      break;
+bool ACParser::readEndDataV3()
+{
+  if (version()<3)
+    return true;
+  MWAWInputStreamPtr input = getInput();
+  libmwaw::DebugStream f;
+  input->seek(m_state->m_eof-8,WPX_SEEK_SET);
+  long pos=(long) input->readULong(4);
+  if (pos < 18 || !isFilePos(pos)) {
+    MWAW_DEBUG_MSG(("ACParser::readEndDataV3: oops begin of ressource is bad\n"));
+    ascii().addPos(m_state->m_eof-8);
+    ascii().addNote("###");
+    return false;
   }
+  ascii().addPos(m_state->m_eof-8);
+  ascii().addNote("_");
 
-  ascii().addPos(input->tell());
+  input->seek(pos, WPX_SEEK_SET);
+
+  f << "Entries(QOpt):";
+  ACParserInternal::Label lbl((int) input->readLong(1));
+  f << lbl << ",";
+  if (m_state->m_label!=lbl) {
+    if (m_state->m_label.m_type) {
+      MWAW_DEBUG_MSG(("ACParser::readEndDataV3: oops the label seems set and different\n"));
+    } else
+      m_state->m_label = lbl;
+  }
+  int val=(int) input->readLong(1);
+  if (val != 1) // always 1
+    f << "f0=" << val << ",";
+  ACParserInternal::Option opt((int) input->readULong(2));
+  f << opt;
+  // string: name, followed by abbreviation
+  for (int i = 0; i < 2; i++) {
+    long fPos=input->tell();
+    int fSz = (int) input->readULong(1);
+    if (!isFilePos(fPos+fSz+1)) {
+      MWAW_DEBUG_MSG(("ACText::createZones: can not read following string\n"));
+      f << "###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      return true;
+    }
+    if (!fSz) continue;
+    std::string str("");
+    for (int s=0; s < fSz; s++)
+      str+=(char) input->readULong(1);
+    if (!str.length())
+      continue;
+    f << "str" << i << "=" << str << ",";
+    std::string &which=(i==0) ? m_state->m_title : m_state->m_stringLabel;
+    if (which.length()) {
+      if (which != str) {
+        MWAW_DEBUG_MSG(("ACText::createZones: find a different string\n"));
+        f << "###";
+      }
+      continue;
+    }
+    which = str;
+  }
+  val=(int) input->readLong(1);
+  if (val) // always 0 or a another string
+    f << "f1=" << val << ",";
+
+  // from here unknown: maybe related to the printer definition...
+  float dim[2];
+  for (int i = 0; i < 2; i++) // very unsure...
+    dim[i] = float(input->readULong(2))/256.f;
+  f << "dim?=" << dim[1] << "x" << dim[0] << ",";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos = input->tell();
+  f.str("");
+  f << "Entries(Loose):";
+  int type = (int) input->readULong(1);
+  f << "type?=" << std::hex << type << ",";
+  ascii().addPos(pos);
   ascii().addNote("Entries(Loose)");
 
-  if (!m_textParser->createZones())
-    return false;
-  return false;
+  if (type!=255 || !isFilePos(pos+200))
+    return true;
+
+  input->seek(pos+198, WPX_SEEK_SET);
+  pos = input->tell();
+  int N=(int) input->readLong(2);
+  if (N<0 || !isFilePos(pos+2+34*N))
+    return true;
+  f.str("");
+  f << "Entries(Font):N=" << N << ",";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  for (int i= 0; i < N; i++) {
+    pos=input->tell();
+    f.str("");
+    f << "Font-" << i << ":";
+    std::string str("");
+    while (input->tell()<pos+32) {
+      char c=(char) input->readULong(1);
+      if (!c) break;
+      str+=c;
+    }
+    if (str.length())
+      f << str << ",";
+    input->seek(pos+32, WPX_SEEK_SET);
+    for (int j = 0; j < 2; j++) {
+      val = (int) input->readLong(1);
+      if (val) f << "f" << j << "=" << std::hex << val << std::dec << ",";
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+
+  pos = input->tell();
+  ascii().addPos(pos);
+  ascii().addNote("Entries(Loose)[II]");
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -420,37 +812,18 @@ bool ACParser::readLabel(MWAWEntry const &entry)
   input->seek(pos, WPX_SEEK_SET);
   f << "Entries(Label):";
   entry.setParsed(true);
-  int val = (int) input->readLong(2); // a small int 0|2|b|c
-  switch(val) {
-  case 0:
-    f << "noLabel,";
-    break;
-  case 2:
-    f << "checkbox,";
-    break;
-  case 0xb:
-    f << "decimal,"; // 1.0,
-    break;
-  case 0xc:
-    f << "I A...,";
-    break;
-  case 0xe:
-    f << "custom,";
-    break;
-  default:
-    f << "#labelType=" << val << ",";
-    break;
-  }
+  m_state->m_label.m_type=(int) input->readLong(2);
+  f << m_state->m_label;
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
   return true;
 }
 
-// QHDR : 2 flags ?
-bool ACParser::readQHDR(MWAWEntry const &entry)
+// header/footer properties
+bool ACParser::readHFProperties(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 20) {
-    MWAW_DEBUG_MSG(("ACParser::readQHDR: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ACParser::readHFProperties: the entry is bad\n"));
     return false;
   }
 
@@ -462,22 +835,33 @@ bool ACParser::readQHDR(MWAWEntry const &entry)
   input->seek(pos, WPX_SEEK_SET);
   f << "Entries(QHDR):";
   entry.setParsed(true);
-  int val;
-  // f0=2|16|21, f1=12|18, f2=0|3, f3=1[footer?]
-  for (int i = 0; i < 4; i++) {
-    val = (int) input->readLong(2);
-    if (val)
-      f << "f" << i << "=" << val << ",";
-  }
-  for (int i = 0; i < 2; i++) {
-    val = (int) input->readLong(1);
-    if (val)
-      f << "fl" << i << "=" << val << ",";
-  }
-  for (int i = 0; i < 5; i++) {
-    val = (int) input->readLong(2);
-    if (val)
-      f << "g" << i << "=" << val << ",";
+  for (int st = 0; st < 2; st++) {
+    if (st==0)
+      f << "headerFooter=[";
+    else
+      f << "unknown=[";
+    ACParserInternal::Printing print;
+    print.m_font.setId((int) input->readLong(2));
+    print.m_font.setSize((int) input->readLong(2));
+    int flag=(int) input->readLong(2);
+    uint32_t flags = 0;
+    if (flag&0x1) flags |= MWAWFont::boldBit;
+    if (flag&0x2) flags |= MWAWFont::italicBit;
+    if (flag&0x4) print.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
+    if (flag&0x8) flags |= MWAWFont::embossBit;
+    if (flag&0x10) flags |= MWAWFont::shadowBit;
+    print.m_font.setFlags(flags);
+#ifdef DEBUG
+    f << "font=[" << print.m_font.getDebugString(getFontConverter()) << "],";
+#endif
+    flag &= 0xE0;
+    if (flag)
+      f << "#font[flags]=" << std::hex << flags << std::dec << ",";
+    for (int i=0; i < 2; i++)
+      print.m_flags[i] = (int) input->readULong(2);
+    f << print << "],";
+    if (st==0)
+      m_state->m_printerPreferences = print;
   }
 
   ascFile.addPos(pos-4);
@@ -501,26 +885,8 @@ bool ACParser::readOption(MWAWEntry const &entry)
   input->seek(pos, WPX_SEEK_SET);
   f << "Entries(Option):";
   entry.setParsed(true);
-  int fl0=(int) input->readULong(1);
-  if (fl0&0x10)
-    f << "speaker[dial],";
-  fl0 &= 0xEF;
-  if (fl0) // find also fl0&(4|40|80)
-    f << "fl0=" << std::hex << fl0 << std::dec << ",";
-  int fl1=(int) input->readULong(1);
-  if (fl1&0x4)
-    f << "smart['\"],";
-  if (fl1&0x8)
-    f << "open[startup],";
-  if (fl1&0x20)
-    f << "nolabel[picture],";
-  if (fl1&0x40)
-    f << "noframe[current],";
-  if (fl1&0x80)
-    f << "nolabel[clipboard],";
-  fl1 &= 0x13;
-  if (fl1) // always fl1&10 ?
-    f << "fl1=" << std::hex << fl1 << std::dec << ",";
+  ACParserInternal::Option opt((int) input->readULong(2));
+  f << opt;
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
   return true;
@@ -549,6 +915,7 @@ bool ACParser::checkHeader(MWAWHeader *header, bool strict)
   while(!input->atEOS()) {
     if (input->seek(1024, WPX_SEEK_CUR) != 0) break;
   }
+  m_state->m_eof = input->tell();
   input->seek(-4, WPX_SEEK_CUR);
   if (!isFilePos(input->tell()))
     return false;
@@ -577,8 +944,8 @@ bool ACParser::checkHeader(MWAWHeader *header, bool strict)
       MWAW_DEBUG_MSG(("ACParser::checkHeader: find unexpected version: %d\n", val));
     }
   }
-  val = (int) input->readULong(2); // id
-  if (val <= 0 || val > 5)
+  val = (int) input->readULong(2); // depth ( first topic must have depth=1)
+  if (val != 1)
     return false;
   val = (int) input->readULong(2); // type
   if (val != 1 && val !=2)

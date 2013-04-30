@@ -45,6 +45,7 @@
 #include "MWAWParser.hxx"
 
 class MWAWEntry;
+class MWAWList;
 class MWAWPosition;
 
 namespace ACParserInternal
@@ -87,9 +88,21 @@ protected:
 
   // interface with the text parser
 
+  //! returns a list to be used in the text
+  shared_ptr<MWAWList> getMainList();
+
 protected:
   //! finds the different objects zones
   bool createZones();
+
+  //! read the resource fork zone
+  bool readRSRCZones();
+
+  //! read the end file data zones
+  bool readEndDataV3();
+
+  //! sends the header/footer data
+  void sendHeaderFooter();
 
   //! read a PrintInfo block ( PSET resource block )
   bool readPrintInfo(MWAWEntry const &entry);
@@ -100,8 +113,8 @@ protected:
   //! read the label type
   bool readLabel(MWAWEntry const &entry);
 
-  //! read the QHDR resource block
-  bool readQHDR(MWAWEntry const &entry);
+  //! read the Header/Footer property (QHDR block)
+  bool readHFProperties(MWAWEntry const &entry);
 
   //! read the QOPT resource block (small print change )
   bool readOption(MWAWEntry const &entry);

@@ -52,7 +52,6 @@ typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 namespace ACTextInternal
 {
 struct State;
-class SubDocument;
 }
 
 class ACParser;
@@ -65,7 +64,6 @@ class ACParser;
 class ACText
 {
   friend class ACParser;
-  friend class ACTextInternal::SubDocument;
 public:
   //! constructor
   ACText(ACParser &parser);
@@ -79,21 +77,24 @@ public:
   int numPages() const;
 
 protected:
-  //! finds the different text zones
-  bool createZones();
-
   //! send a main zone
   bool sendMainText();
-
-  //! sends the data which have not yet been sent to the listener
-  void flushExtra();
 
   //
   // intermediate level
   //
 
-  //! try to read a basic entry (line or graphic)
-  bool readLine(int id);
+  //! try to read a topic (line or graphic)
+  bool sendTopic();
+
+  //! try to read a text entry
+  bool sendText();
+
+  //! try to read a graphic
+  bool sendGraphic();
+
+  //! try to read a font
+  bool readFont(MWAWFont &font, bool inPLC);
 
 private:
   ACText(ACText const &orig);
