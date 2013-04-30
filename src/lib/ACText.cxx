@@ -337,7 +337,7 @@ bool ACText::readFont(MWAWFont &font, bool inPLC)
       f << "#fl" << i << "=" << std::hex << flag << std::dec << ",";
   }
   font.setFlags(flags);
-  font.setSize((int) input->readLong(2));
+  font.setSize((float) input->readLong(2));
 
   font.m_extra=f.str();
   return true;

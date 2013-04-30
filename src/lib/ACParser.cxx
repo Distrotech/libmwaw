@@ -842,7 +842,7 @@ bool ACParser::readHFProperties(MWAWEntry const &entry)
       f << "unknown=[";
     ACParserInternal::Printing print;
     print.m_font.setId((int) input->readLong(2));
-    print.m_font.setSize((int) input->readLong(2));
+    print.m_font.setSize((float) input->readLong(2));
     int flag=(int) input->readLong(2);
     uint32_t flags = 0;
     if (flag&0x1) flags |= MWAWFont::boldBit;
