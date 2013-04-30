@@ -121,12 +121,14 @@ public:
 
     diff = (int) m_empty - (int) aPict.m_empty;
     if (diff) return (diff < 0) ? -1 : 1;
-    long diffL = (long) m_data.size() - (long) aPict.m_data.size();
-    if (diffL) return  (diff < 0) ? -1 : 1;
-
     // the type
     diff = getSubType() - aPict.getSubType();
     if (diff) return (diff < 0) ? -1 : 1;
+
+    if (m_data.size() < aPict.m_data.size())
+      return 1;
+    if (m_data.size() > aPict.m_data.size())
+      return -1;
 
     return 0;
   }

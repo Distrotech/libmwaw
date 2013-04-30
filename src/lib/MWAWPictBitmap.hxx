@@ -70,6 +70,18 @@ public:
     return (m_data != 0L);
   }
 
+  //! a comparison operator
+  int cmp(MWAWPictBitmapContainer<T> const &orig) const {
+    int diff = m_size.cmpY(orig.m_size);
+    if (diff) return diff;
+    if (!m_data) return orig.m_data ? 1 : 0;
+    if (!orig.m_data) return -1;
+    for (int i=0; i < m_size[0]*m_size[1]; i++) {
+      if (m_data[i] < orig.m_data[i]) return -1;
+      if (m_data[i] > orig.m_data[i]) return 1;
+    }
+    return 0;
+  }
   //! return the array size
   Vec2i const &size() const {
     return m_size;
@@ -130,6 +142,19 @@ class MWAWPictBitmapContainerBool : public MWAWPictBitmapContainer<bool>
 public:
   //! constructor
   MWAWPictBitmapContainerBool(Vec2i const &sz) : MWAWPictBitmapContainer<bool>(sz) {}
+
+  //! a comparison operator
+  int cmp(MWAWPictBitmapContainerBool const &orig) const {
+    int diff = m_size.cmpY(orig.m_size);
+    if (diff) return diff;
+    if (!m_data) return orig.m_data ? 1 : 0;
+    if (!orig.m_data) return -1;
+    for (int i=0; i < m_size[0]*m_size[1]; i++) {
+      if (m_data[i] == orig.m_data[i]) continue;
+      return m_data[i] ? 1 : -1;
+    }
+    return 0;
+  }
 
   //! allows to use packed m_data
   void setRowPacked(int j, unsigned char const *val) {
@@ -212,13 +237,7 @@ public:
     if (diff) return diff;
     MWAWPictBitmapBW const &aPict = static_cast<MWAWPictBitmapBW const &>(a);
 
-    diff=m_data.size().cmpY(aPict.m_data.size());
-    if (diff) return diff;
-
-    ssize_t diffL = (ssize_t) this -(ssize_t) &aPict;
-    if (diffL) return (diffL<0) ? -1 : 1;
-
-    return 0;
+    return m_data.cmp(aPict.m_data);
   }
 
   //! returns true if the picture is valid
@@ -290,16 +309,15 @@ public:
     if (diff) return diff;
     MWAWPictBitmapIndexed const &aPict = static_cast<MWAWPictBitmapIndexed const &>(a);
 
-    diff=m_data.size().cmpY(aPict.m_data.size());
-    if (diff) return diff;
-
     diff=int(m_colors.size())-int(aPict.m_colors.size());
     if (diff) return (diff < 0) ? -1 : 1;
-
-    ssize_t diffL = (ssize_t) this -(ssize_t) &aPict;
-    if (diffL) return (diffL<0) ? -1 : 1;
-
-    return 0;
+    for (size_t c=0; c < m_colors.size(); c++) {
+      if (m_colors[c] < aPict.m_colors[c])
+        return 1;
+      if (m_colors[c] > aPict.m_colors[c])
+        return -1;
+    }
+    return m_data.cmp(aPict.m_data);
   }
 
   //! returns true if the picture is valid
@@ -379,13 +397,7 @@ public:
     if (diff) return diff;
     MWAWPictBitmapColor const &aPict = static_cast<MWAWPictBitmapColor const &>(a);
 
-    diff=m_data.size().cmpY(aPict.m_data.size());
-    if (diff) return diff;
-
-    ssize_t diffL = (ssize_t) this -(ssize_t) &aPict;
-    if (diffL) return (diffL<0) ? -1 : 1;
-
-    return 0;
+    return m_data.cmp(aPict.m_data);
   }
 
   //! returns true if the picture is valid

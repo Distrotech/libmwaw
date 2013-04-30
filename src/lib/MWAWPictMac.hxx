@@ -85,15 +85,13 @@ public:
     if (diff) return diff;
     MWAWPictMac const &aPict = static_cast<MWAWPictMac const &>(a);
 
-    ssize_t diffL = (ssize_t) m_data.size() - (ssize_t) aPict.m_data.size();
-    if (diffL) return  (diff < 0) ? -1 : 1;
     diff = m_version - (int) aPict.m_version;
     if (diff) return (diff < 0) ? -1 : 1;
     diff = m_subVersion - (int) aPict.m_subVersion;
     if (diff) return (diff < 0) ? -1 : 1;
 
     // as we can not compare data, we only compare the pict position
-    diffL = (ssize_t) this - (ssize_t) &aPict;
+    ssize_t diffL = (ssize_t) this - (ssize_t) &aPict;
     if (diffL) return  (diff < 0) ? -1 : 1;
 
     return 0;
