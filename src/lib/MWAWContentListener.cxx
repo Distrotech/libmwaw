@@ -395,14 +395,6 @@ MWAWParagraph const &MWAWContentListener::getParagraph() const
 }
 
 ///////////////////
-// List: Minimal implementation
-///////////////////
-void MWAWContentListener::setList(shared_ptr<MWAWList> list)
-{
-  m_ps->m_list=list;
-}
-
-///////////////////
 // field :
 ///////////////////
 void MWAWContentListener::insertField(MWAWField const &field)

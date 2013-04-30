@@ -144,10 +144,6 @@ public:
   //! returns the actual paragraph
   MWAWParagraph const &getParagraph() const;
 
-  // ------ list format -----------
-  /** function to set the actual list */
-  void setList(shared_ptr<MWAWList> list);
-
   // ------- fields ----------------
   //! adds a field type
   void insertField(MWAWField const&field);
