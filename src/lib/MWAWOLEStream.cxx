@@ -62,108 +62,6 @@
 
 #define DEBUG_OLE 0
 
-////////////////////////////////////////////////////////////
-// internal: small helper WPXInputStream
-////////////////////////////////////////////////////////////
-namespace libmwaw_internal
-{
-/** an internal class used to return the OLE InputStream */
-class MWAWStringStream: public WPXInputStream
-{
-public:
-  MWAWStringStream(const unsigned char *data, const unsigned int dataSize) :
-    buffer(dataSize), offset(0) {
-    memcpy(&buffer[0], data, dataSize);
-  }
-  ~MWAWStringStream() { }
-
-  const unsigned char *read(unsigned long numBytes, unsigned long &numBytesRead);
-  long tell() {
-    return offset;
-  }
-  int seek(long offset, WPX_SEEK_TYPE seekType);
-  bool atEOS() {
-    return ((long)offset >= (long)buffer.size());
-  }
-
-  bool isStructuredDocument() {
-    return false;
-  }
-  WPXInputStream *getSubStream(const char *) {
-    return 0;
-  }
-
-  bool isOLEStream() {
-    return isStructuredDocument();
-  }
-  WPXInputStream *getDocumentOLEStream(const char *name) {
-    return getSubStream(name);
-  }
-#ifdef DEBUG_WITH_FILES
-  bool dumpToFile(char const *fName) const {
-    if (!fName || !buffer.size()) return false;
-    FILE *file = fopen(fName, "wb");
-    if (!file) return false;
-    fwrite(&buffer[0], buffer.size(), 1, file);
-    fclose(file);
-    return true;
-  }
-#else
-  bool dumpToFile(char const *) const {
-    return true;
-  }
-#endif
-private:
-  std::vector<unsigned char> buffer;
-  volatile long offset;
-  MWAWStringStream(const MWAWStringStream &);
-  MWAWStringStream &operator=(const MWAWStringStream &);
-};
-
-int MWAWStringStream::seek(long _offset, WPX_SEEK_TYPE seekType)
-{
-  if (seekType == WPX_SEEK_CUR)
-    offset += _offset;
-  else if (seekType == WPX_SEEK_SET)
-    offset = _offset;
-
-  if (offset < 0) {
-    offset = 0;
-    return 1;
-  }
-  if ((long)offset > (long)buffer.size()) {
-    offset = long(buffer.size());
-    return 1;
-  }
-  return 0;
-}
-
-const unsigned char *MWAWStringStream::read(unsigned long numBytes, unsigned long &numBytesRead)
-{
-  numBytesRead = 0;
-
-  if (numBytes == 0)
-    return 0;
-
-  unsigned long numBytesToRead;
-
-  if (((unsigned long) offset+numBytes) < buffer.size())
-    numBytesToRead = numBytes;
-  else
-    numBytesToRead = (unsigned long)buffer.size() -(unsigned long)offset;
-
-  numBytesRead = numBytesToRead; // about as paranoid as we can be..
-
-  if (numBytesToRead == 0)
-    return 0;
-
-  long oldOffset = offset;
-  offset += numBytesToRead;
-
-  return &buffer[size_t(oldOffset)];
-}
-}
-
 namespace libmwawOLE
 {
 ////////////////////////////////////////////////////////////
@@ -1523,11 +1421,11 @@ public:
 
   //! try to return a stream containing the ole file
   shared_ptr<WPXInputStream> getStream() {
-    shared_ptr<libmwaw_internal::MWAWStringStream> res;
+    shared_ptr<MWAWStringStream> res;
     try {
       if (!updateToSave())
         return res;
-      res.reset(new libmwaw_internal::MWAWStringStream(&m_data[0], (unsigned int) m_data.size()));
+      res.reset(new MWAWStringStream(&m_data[0], (unsigned int) m_data.size()));
     } catch(...) {
       res.reset();
     }
@@ -1865,7 +1763,7 @@ shared_ptr<WPXInputStream> Storage::getSubStream(const std::string &name)
     MWAW_DEBUG_MSG(("libmwawOLE::Storage::getSubStream: tries to use damaged OLE: %s\n", name.c_str()));
   }
 
-  res.reset(new libmwaw_internal::MWAWStringStream(buf, (unsigned int) oleLength));
+  res.reset(new MWAWStringStream(buf, (unsigned int) oleLength));
   delete [] buf;
   return res;
 }

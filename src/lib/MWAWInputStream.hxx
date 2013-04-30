@@ -244,12 +244,19 @@ public:
     return ((long)m_offset >= (long)m_buffer.size());
   }
 
-  bool isOLEStream() {
+  bool isStructuredDocument() {
     return false;
   }
-  WPXInputStream *getDocumentOLEStream(const char *) {
+  WPXInputStream *getSubStream(const char *) {
     return 0;
-  };
+  }
+
+  bool isOLEStream() {
+    return isStructuredDocument();
+  }
+  WPXInputStream *getDocumentOLEStream(const char *name) {
+    return getSubStream(name);
+  }
 
 private:
   std::vector<unsigned char> m_buffer;
