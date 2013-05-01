@@ -43,6 +43,7 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWList.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWRSRCParser.hxx"
@@ -59,7 +60,7 @@ namespace ACParserInternal
 //! Internal: class used to store a list type in ACParser
 struct Label {
   //! constructor
-  Label(int type=0) : m_type(type) { }
+  Label(int type=-1) : m_type(type) { }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Label const &lbl) {
     switch(lbl.m_type) {
@@ -308,9 +309,9 @@ bool ACParser::isFilePos(long pos)
 shared_ptr<MWAWList> ACParser::getMainList()
 {
   MWAWListLevel level;
+  level.m_labelAfterSpace=0.05;
   std::vector<MWAWListLevel> levels;
   switch (m_state->m_label.m_type) {
-  default:
   case 0: // none
     level.m_type=MWAWListLevel::NONE;
     levels.resize(10, level);
@@ -328,7 +329,7 @@ shared_ptr<MWAWList> ACParser::getMainList()
       levels.push_back(level);
     }
     break;
-  case 0xc: // I. A. 1. a. i. [(a). (1).]*
+  case 0xc: // I. A. 1. a. i. [(1). (a). ]*
     level.m_suffix = ".";
     level.m_type=MWAWListLevel::UPPER_ROMAN;
     levels.push_back(level);
@@ -338,15 +339,18 @@ shared_ptr<MWAWList> ACParser::getMainList()
     levels.push_back(level);
     level.m_type=MWAWListLevel::LOWER_ALPHA;
     levels.push_back(level);
+    level.m_type=MWAWListLevel::LOWER_ROMAN;
+    levels.push_back(level);
     level.m_prefix = "(";
     level.m_suffix = ").";
     for (int i=0; i < 4; i++) {
-      level.m_type=MWAWListLevel::LOWER_ROMAN;
-      levels.push_back(level);
       level.m_type=MWAWListLevel::DECIMAL;
+      levels.push_back(level);
+      level.m_type=MWAWListLevel::LOWER_ALPHA;
       levels.push_back(level);
     }
     break;
+  default: // ok, switch to custom or by default bullet
   case 0xe: {//custom
     level.m_type=MWAWListLevel::BULLET;
     libmwaw::appendUnicode(0x2022, level.m_bullet);
@@ -362,7 +366,7 @@ shared_ptr<MWAWList> ACParser::getMainList()
       }
     }
     while (levels.size() < 10)
-      levels.push_back(levels.back());
+      levels.push_back(level);
     break;
   }
   }
@@ -373,10 +377,9 @@ shared_ptr<MWAWList> ACParser::getMainList()
     return list;
   }
 
-  list.reset(new MWAWList);
   for (size_t s=0; s < levels.size(); s++) {
-    if (!list) break;
     list = listManager->getNewList(list, int(s+1), levels[s]);
+    if (!list) break;
   }
   return list;
 }
@@ -468,13 +471,16 @@ void ACParser::sendHeaderFooter()
     return;
   }
   ACParserInternal::Printing const &print=m_state->m_printerPreferences;
+  MWAWParagraph para;
+  para.m_justify=MWAWParagraph::JustificationCenter;
+  listener->setParagraph(para);
   listener->setFont(print.m_font);
   bool printDone=false;
   for (int i=0, wh=1; i < 3; i++, wh*=2) {
     if ((print.m_flags[1]&wh)==0)
       continue;
     if (printDone)
-      listener->insertTab();
+      listener->insertChar(' ');
     switch(i) {
     case 0:
       if (!m_state->m_title.length()) {
@@ -520,7 +526,7 @@ bool ACParser::createZones()
     }
     input->setReadInverted(false);
   }
-  return true;
+  return m_textParser->createZones();
 }
 
 bool ACParser::readRSRCZones()

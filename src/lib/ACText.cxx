@@ -35,6 +35,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <sstream>
 
 #include <libwpd/libwpd.h>
@@ -45,6 +46,7 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWPageSpan.hxx"
 #include "MWAWParagraph.hxx"
+#include "MWAWPictData.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWRSRCParser.hxx"
 
@@ -56,18 +58,95 @@
 namespace ACTextInternal
 {
 ////////////////////////////////////////
+//! Internal: a topic of a ACText
+struct Topic {
+  //! constructor
+  Topic() : m_depth(0), m_type(0), m_hidden(0), m_pageBreak(false), m_font(), m_labelColor(MWAWColor::black()),
+    m_data(), m_fonts(), m_auxi(), m_extra("") {
+  }
+  //! return true if the topic is valid
+  bool valid() const {
+    return m_depth>0 && (m_type==1 || m_type==2);
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Topic const &topic) {
+    if (topic.m_depth > 0)
+      o << "depth=" << topic.m_depth << ",";
+    switch(topic.m_type) {
+    case 1:
+      o << "text,";
+      break;
+    case 2:
+      o << "graphic,";
+      break;
+    default:
+      o << "#type=" << topic.m_type << ",";
+      break;
+    }
+    if (topic.m_pageBreak) o << "pagebreak,";
+    if (topic.m_hidden) o << "hidden[" << topic.m_hidden << "],";
+    if (!topic.m_labelColor.isBlack())
+      o << "labelColor=" << topic.m_labelColor << ",";
+    o << topic.m_extra << ",";
+    return o;
+  }
+  //! the node depth
+  int m_depth;
+  //! the node type: 1=text, 2=graphic
+  int m_type;
+  //! the number of time a topic is hidden by its parents
+  int m_hidden;
+  //! true if a page break exists before the topic
+  bool m_pageBreak;
+  //! the line font
+  MWAWFont m_font;
+  //! the label color
+  MWAWColor m_labelColor;
+  //! the data entries(text or graphic)
+  MWAWEntry m_data;
+  //! the fonts entries(for text)
+  MWAWEntry m_fonts;
+  //! an auxialliary entry(unknown)
+  MWAWEntry m_auxi;
+  //! extra
+  std::string m_extra;
+};
+
+////////////////////////////////////////
 //! Internal: the state of a ACText
 struct State {
   //! constructor
-  State() : m_listId(-1), m_version(-1), m_numPages(-1), m_actualPage(1) {
+  State() : m_topicList(), m_listId(-1), m_colorList(), m_version(-1), m_numPages(-1), m_actualPage(1) {
   }
 
+  //! set the default color map
+  void setDefaultColorList(int version);
+  //! the topic list
+  std::vector<Topic> m_topicList;
   //! the list id
   int  m_listId;
+  //! a list colorId -> color
+  std::vector<MWAWColor> m_colorList;
   //! the file version
   mutable int m_version;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
+
+void State::setDefaultColorList(int version)
+{
+  if (m_colorList.size()) return;
+  if (version==3) {
+    uint32_t const defCol[20] = {
+      0x000000, 0xff0000, 0x00ff00, 0x0000ff, 0x00ffff, 0xff00db, 0xffff00, 0x8d02ff,
+      0xff9200, 0x7f7f7f, 0x994914, 0x000000, 0x484848, 0x880000, 0x008600, 0x838300,
+      0xff9200, 0x7f7f7f, 0x994914, 0xfffff
+    };
+    m_colorList.resize(20);
+    for (size_t i = 0; i < 20; i++)
+      m_colorList[i] = defCol[i];
+    return;
+  }
+}
 }
 
 ////////////////////////////////////////////////////////////
@@ -92,54 +171,79 @@ int ACText::numPages() const
 {
   if (m_state->m_numPages >= 0)
     return m_state->m_numPages;
-  // FIXME: compute the positions here
-  return m_state->m_numPages;
+
+  int nPages=1;
+  for (size_t t=0; t < m_state->m_topicList.size(); t++) {
+    if (m_state->m_topicList[t].m_pageBreak)
+      nPages++;
+  }
+
+  return m_state->m_numPages = nPages;
+}
+
+bool ACText::getColor(int id, MWAWColor &col) const
+{
+  int numColor = (int) m_state->m_colorList.size();
+  if (!numColor) {
+    m_state->setDefaultColorList(version());
+    numColor = int(m_state->m_colorList.size());
+  }
+  if (id < 0 || id >= numColor)
+    return false;
+  col = m_state->m_colorList[size_t(id)];
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
 
-// find the different zones
-bool ACText::sendMainText()
+//
+// find/send the different zones
+//
+bool ACText::createZones()
 {
-  // create the main list
-  shared_ptr<MWAWList> list = m_mainParser->getMainList();
-  if (!list) {
-    MWAW_DEBUG_MSG(("ACText::sendMainText: can create a listt\n"));
-  } else
-    m_state->m_listId = list->getId();
-
   int vers=version();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   input->seek(vers>=3 ? 2 : 0, WPX_SEEK_SET);
   while (!input->atEOS()) {
-    if (!sendTopic())
+    if (!readTopic())
       break;
   }
 
   long pos = input->tell();
   int val=(int) input->readLong(2);
   if (val || (vers<3 && !input->atEOS())) {
-    MWAW_DEBUG_MSG(("ACText::sendMainText: find unexpected end data\n"));
+    MWAW_DEBUG_MSG(("ACText::createZones: find unexpected end data\n"));
     ascFile.addPos(pos);
     ascFile.addNote("Entries(Loose):###");
-    return true;
+  } else {
+    ascFile.addPos(pos);
+    ascFile.addNote("_");
   }
-  ascFile.addPos(pos);
-  ascFile.addNote("_");
+  return m_state->m_topicList.size();
+}
+
+bool ACText::sendMainText()
+{
+  // create the main list
+  shared_ptr<MWAWList> list = m_mainParser->getMainList();
+  if (!list) {
+    MWAW_DEBUG_MSG(("ACText::sendMainText: can retrieve the main list\n"));
+  } else
+    m_state->m_listId = list->getId();
+
+  for (size_t t=0; t < m_state->m_topicList.size(); t++)
+    sendTopic(m_state->m_topicList[t]);
   return true;
 }
 
-bool ACText::sendTopic()
+//
+// read/send a topic
+//
+bool ACText::readTopic()
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
-  if (!listener) {
-    MWAW_DEBUG_MSG(("ACText::sendTopic: can not find a listener\n"));
-    return false;
-  }
-
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
@@ -148,166 +252,282 @@ bool ACText::sendTopic()
   long pos = input->tell();
   if (!m_mainParser->isFilePos(pos+18+4+((vers>=3) ? 4 : 0)))
     return false;
-  f << "Entries(Topic):";
-  int depth=(int) input->readLong(2); // checkme
-  int type=(int) input->readLong(2);
-  if (depth <= 0 || type < 1 || type > 2) {
+  ACTextInternal::Topic topic;
+  topic.m_depth=(int) input->readLong(2); // checkme
+  topic.m_type=(int) input->readLong(2);
+  if (!topic.valid()) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
-  f << "depth=" << depth << ",";
-  if (type==2) f << "graphic,";
   int flag = (int) input->readULong(2); // 0|1|2|c01c|2002|
   if (flag & 0x100)
     f << "current,";
+  if (flag & 0x2000)
+    topic.m_pageBreak=true;
   flag &= 0xFEFF;
   if (flag)
     f << "fl=" << std::hex << flag << std::dec << ",";
-  MWAWFont font;
-  if (!readFont(font, false))
-    f << "###";
-#ifdef DEBUG
-  f << "font=[" << font.getDebugString(m_parserState->m_fontConverter) << "],";
-#endif
+  if (!readFont(topic.m_font, false))
+    f << "foont###,";
+  int color=(int) input->readLong(1);
+  if (color) {
+    MWAWColor fCol;
+    if (getColor(color, fCol))
+      topic.m_labelColor=fCol;
+    else
+      f << "#col="  << color << ",";
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("ACText::readTopic: sending color label is not implemented\n"));
+      first = false;
+    }
+  }
   int val;
-  for (int i = 0; i < 6; i++) { // g0=0|5|9...
+  for (int i = 0; i < 5; i++) {
     val=(int) input->readLong(1);
     if (!val) continue;
-    if (val==1 && i==3) f << "showChild|check,"; // also g3=-1
+    if (val==1 && i==2) f << "showChild|check,"; // also g2=-1
     else f << "g" << i << "=" << val << ",";
   }
-  val=(int) input->readLong(1); // number time hidden
-  if (val==1) f << "hidden,";
-  else if (val) f << "hidden[" << val << "],";
+  topic.m_hidden=(int) input->readLong(1);
+  topic.m_extra=f.str();
+  f.str("");
+  f << "Entries(Topic):" << topic;
+#ifdef DEBUG
+  f << "font=[" << topic.m_font.getDebugString(m_parserState->m_fontConverter) << "],";
+#endif
+
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   input->seek(pos+18, WPX_SEEK_SET);
 
-  // ok, let update the data
-  if (m_state->m_listId >= 0) {
-    MWAWParagraph para = listener->getParagraph();
-    para.m_listLevelIndex=depth;
-    para.m_listId = m_state->m_listId;
-    listener->setParagraph(para);
-  }
-  listener->setFont(font);
-
-  if (type==1) {
-    if (!sendText())
-      return false;
-  } else {
+  int numZones= vers<3 ? 1 : topic.m_type==2 ? 2 : 3;
+  for (int z=0; z < numZones; z++) {
     pos = input->tell();
     long sz=long(input->readULong(4));
     if (sz < 0 || !m_mainParser->isFilePos(pos+4+sz)) {
+      MWAW_DEBUG_MSG(("ACText::readTopic: can not read a topic zone\n"));
+      ascFile.addPos(pos);
+      ascFile.addNote("###");
+
       input->seek(pos, WPX_SEEK_SET);
       return false;
     }
-    f.str("");
-    f << "Entries(Graphic):";
-    input->seek(pos+4+sz, WPX_SEEK_SET);
-
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-
-  if (vers<3) return true;
-
-  pos = input->tell();
-  long sz=long(input->readULong(4));
-  if (sz < 0 || !m_mainParser->isFilePos(pos+4+sz)) {
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-
-  // checkme: find always here a field of size 6 with 3 int=0...
-  f.str("");
-  f << "Entries(Data1):";
-  if (sz!=6) {
-    MWAW_DEBUG_MSG(("ACText::sendTopic: find unexpected size for data1\n"));
-    f << "###";
-  } else {
-    for (int i=0; i<3; i++) {
-      val=(int)input->readLong(2);
-      if (val) f << "#f" << i << "=" << val << ",";
+    if (sz==0) {
+      ascFile.addPos(pos);
+      ascFile.addNote("_");
     }
-  }
-  input->seek(pos+4+sz, WPX_SEEK_SET);
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
 
+    MWAWEntry &entry=(z==0) ? topic.m_data : (z==1&&topic.m_type==1) ? topic.m_fonts : topic.m_auxi;
+    entry.setBegin(pos+4);
+    entry.setLength(sz);
+    input->seek(entry.end(), WPX_SEEK_SET);
+  }
+
+  m_state->m_topicList.push_back(topic);
   return true;
 }
 
-bool ACText::sendText()
+bool ACText::sendTopic(ACTextInternal::Topic const &topic)
 {
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("ACText::sendTopic: can not find a listener\n"));
+    return false;
+  }
+  if (topic.m_pageBreak)
+    m_mainParser->newPage(++m_state->m_actualPage);
+
+  // useme: find always here a field of size 6 with 3 int=0...
+  if (topic.m_auxi.valid()) {
+    MWAWInputStreamPtr &input= m_parserState->m_input;
+    libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+    libmwaw::DebugStream f;
+    input->seek(topic.m_auxi.begin(), WPX_SEEK_SET);
+    f.str("");
+    f << "Entries(Data1):";
+    if (topic.m_auxi.length()!=6) {
+      MWAW_DEBUG_MSG(("ACText::readTopic: find unexpected size for data1\n"));
+      f << "###";
+    } else {
+      for (int i=0; i<3; i++) {
+        int val=(int)input->readLong(2);
+        if (val) f << "#f" << i << "=" << val << ",";
+      }
+    }
+    ascFile.addPos(topic.m_auxi.begin()-4);
+    ascFile.addNote(f.str().c_str());
+  }
+
+  // ok, let update the data
+  MWAWParagraph para = listener->getParagraph();
+  if (m_state->m_listId >= 0) {
+    para.m_listLevelIndex=topic.m_depth;
+    para.m_listId = m_state->m_listId;
+  }
+  para.m_margins[1]=0.2*double(topic.m_depth-1);
+  listener->setParagraph(para);
+  listener->setFont(topic.m_font);
+
+  if (topic.m_data.length()==0) {
+    listener->insertEOL();
+    return true;
+  }
+
+  if (topic.m_type==1)
+    return sendText(topic);
+  else
+    return sendGraphic(topic);
+}
+
+//
+// send the text
+//
+bool ACText::sendText(ACTextInternal::Topic const &topic)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("ACText::sendText: can not find a listener\n"));
+    return false;
+  }
+  if (!topic.m_data.valid()) {
+    MWAW_DEBUG_MSG(("ACText::sendText: can not find my data\n"));
+    listener->insertEOL();
+    return false;
+  }
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
-  int vers=version();
-  long pos = input->tell();
-  long sz=long(input->readULong(4));
-  long endPos = pos+4+sz;
-  if (sz < 0 || !m_mainParser->isFilePos(endPos)) {
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-  if (vers >= 3) {
-    // first read the text properties
-    input->seek(endPos, WPX_SEEK_SET);
-    long pSz=long(input->readULong(4));
-    int n= pSz ? (int) input->readULong(2) : 0;
-    if (pSz && (2+20*n!=pSz || !m_mainParser->isFilePos(endPos+4+pSz))) {
-      input->seek(pos, WPX_SEEK_SET);
-      return false;
-    }
+  // first read the font list if it exists
+  std::map<long,MWAWFont> fontMap;
+  if (topic.m_fonts.valid()) {
+    input->seek(topic.m_fonts.begin(), WPX_SEEK_SET);
+    int n= (int) input->readULong(2);
+
     f.str("");
     f << "Entries(CharPLC):n=" << n << ",";
+    if (2+20*n!=long(topic.m_fonts.length())) {
+      MWAW_DEBUG_MSG(("ACText::sendText: find unexpected number of font\n"));
+      f << "###";
+      ascFile.addPos(topic.m_fonts.begin()-4);
+      ascFile.addNote(f.str().c_str());
+    } else {
+      ascFile.addPos(topic.m_fonts.begin()-4);
+      ascFile.addNote(f.str().c_str());
 
-    ascFile.addPos(endPos);
-    ascFile.addNote(f.str().c_str());
+      for (int i = 0; i < n; i++) {
+        long pPos = input->tell();
+        f.str("");
+        f << "CharPLC-" << i << ":";
 
-    endPos+=4+pSz;
-    for (int i = 0; i < n; i++) {
-      long pPos = input->tell();
-      f.str("");
-      f << "CharPLC-" << i << ":";
+        long cPos = (long) input->readULong(4);
+        if (cPos) f << "cPos=" << cPos << ",";
+        int dim[2];
+        for (int j = 0; j < 2; j++)
+          dim[j]=(int) input->readLong(2);
+        f << "h=" << dim[0] << ","; // checkme, simillar to font.size()+2
+        f << "f0=" << dim[1] << ","; // seems slightly less than font.size()
 
-      long cPos = (long) input->readULong(4);
-      if (cPos) f << "cPos=" << cPos << ",";
-      int dim[2];
-      for (int j = 0; j < 2; j++)
-        dim[j]=(int) input->readLong(2);
-      f << "h=" << dim[0] << ","; // checkme, simillar to font.size()+2
-      f << "f0=" << dim[1] << ","; // seems slightly less than font.size()
-
-      MWAWFont font;
-      if (!readFont(font, true))
-        f << "###";
+        MWAWFont font;
+        if (!readFont(font, true))
+          f << "###";
+        else
+          fontMap[cPos]=font;
 #ifdef DEBUG
-      f << "font=[" << font.getDebugString(m_parserState->m_fontConverter) << "],";
+        f << "font=[" << font.getDebugString(m_parserState->m_fontConverter) << "],";
 #endif
 
-      for (int j = 0; j < 3; j++) { // always 0
-        int val = (int) input->readLong(2);
-        if (val)
-          f << "f" << j+1 << "=" << val << ",";
+        for (int j = 0; j < 3; j++) { // always 0
+          int val = (int) input->readLong(2);
+          if (val)
+            f << "f" << j+1 << "=" << val << ",";
+        }
+        input->seek(pPos+20, WPX_SEEK_SET);
+        ascFile.addPos(pPos);
+        ascFile.addNote(f.str().c_str());
       }
-      input->seek(pPos+20, WPX_SEEK_SET);
-      ascFile.addPos(pPos);
-      ascFile.addNote(f.str().c_str());
     }
   }
 
-  input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(topic.m_data.begin(), WPX_SEEK_SET);
+  long sz=topic.m_data.length();
   f.str("");
   f << "Entries(Text):";
-  for (int i=0; i < sz; i++)
-    f << (char) input->readULong(1);
-  ascFile.addPos(pos);
+  std::map<long,MWAWFont>::const_iterator fIt;
+  for (long i=0; i < sz; i++) {
+    fIt = fontMap.find(i);
+    if (fIt!=fontMap.end())
+      listener->setFont(fIt->second);
+    char c=(char) input->readULong(1);
+    switch(c) {
+    case 0x9:
+      listener->insertTab();
+      break;
+    case 0xd:
+      listener->insertEOL(true);
+      break;
+    default:
+      listener->insertCharacter((unsigned char)c);
+    }
+    f << c;
+  }
+  listener->insertEOL();
+  ascFile.addPos(topic.m_data.begin()-4);
   ascFile.addNote(f.str().c_str());
+  return true;
+}
 
-  input->seek(endPos, WPX_SEEK_SET);
+//
+// send a graphic
+//
+bool ACText::sendGraphic(ACTextInternal::Topic const &topic)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("ACText::sendGraphic: can not find a listener\n"));
+    return false;
+  }
+  if (!topic.m_data.valid()) {
+    MWAW_DEBUG_MSG(("ACText::sendGraphic: can not find my data\n"));
+    listener->insertEOL();
+    return false;
+  }
+  long dataSz=topic.m_data.length();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  long pos = topic.m_data.begin();
+
+  ascFile.addPos(pos-4);
+  ascFile.addNote("Entries(Graphic):");
+  ascFile.skipZone(pos, pos+dataSz-1);
+
+  Box2f box;
+  input->seek(pos, WPX_SEEK_SET);
+  MWAWPict::ReadResult res = MWAWPictData::check(input, (int)dataSz, box);
+  if (res == MWAWPict::MWAW_R_BAD) {
+    MWAW_DEBUG_MSG(("ACText::sendGraphic: can not find the picture\n"));
+    ascFile.addPos(pos);
+    ascFile.addNote("###");
+
+    return true;
+  }
+
+  WPXBinaryData file;
+  input->seek(pos, WPX_SEEK_SET);
+  input->readDataBlock(dataSz, file);
+
+  MWAWPosition posi(Vec2f(0,0), box.size(), WPX_POINT);
+  posi.setRelativePosition(MWAWPosition::Char);
+  listener->insertPicture(posi, file, "image/pict");
+  listener->insertEOL();
+#ifdef DEBUG_WITH_FILES
+  static int volatile pictName = 0;
+  libmwaw::DebugStream f;
+  f << "DATA-" << ++pictName;
+  libmwaw::Debug::dumpFile(file, f.str().c_str());
+#endif
+
   return true;
 }
 

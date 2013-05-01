@@ -51,6 +51,7 @@ typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace ACTextInternal
 {
+struct Topic;
 struct State;
 }
 
@@ -77,6 +78,8 @@ public:
   int numPages() const;
 
 protected:
+  //! try to create the text zones
+  bool createZones();
   //! send a main zone
   bool sendMainText();
 
@@ -84,14 +87,20 @@ protected:
   // intermediate level
   //
 
-  //! try to read a topic (line or graphic)
-  bool sendTopic();
+  //! return the color which corresponds to an id (if possible)
+  bool getColor(int id, MWAWColor &col) const;
+
+  //! try to read the topic definitions (line or graphic)
+  bool readTopic();
+
+  //! try to send a topic
+  bool sendTopic(ACTextInternal::Topic const &topic);
 
   //! try to read a text entry
-  bool sendText();
+  bool sendText(ACTextInternal::Topic const &topic);
 
   //! try to read a graphic
-  bool sendGraphic();
+  bool sendGraphic(ACTextInternal::Topic const &topic);
 
   //! try to read a font
   bool readFont(MWAWFont &font, bool inPLC);

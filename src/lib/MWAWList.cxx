@@ -379,7 +379,7 @@ shared_ptr<MWAWList> MWAWListManager::getList(int index) const
 
 shared_ptr<MWAWList> MWAWListManager::getNewList(shared_ptr<MWAWList> actList, int levl, MWAWListLevel const &level)
 {
-  if (actList && actList->isCompatibleWith(levl, level)) {
+  if (actList && actList->getId()>=0 && actList->isCompatibleWith(levl, level)) {
     actList->set(levl, level);
     int index=actList->getId();
     size_t mainId=size_t(index-1)/2;
