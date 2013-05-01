@@ -1,10 +1,14 @@
 CHANGES:
+04/30/2014:
+- add a parser for Acta v2 and Acta Classic v1,
+- check that the DOCMaker, eDOC, SimpleText, Tex-Edit, Z-Write parsers use the new properties' classes,
+
 04/25/2014:
 - rewrite MWAWPageSpan,
 - add classes MWAWField, MWAWNote, MWAWSection to store/manage
   field, note, section properties,
 - check that the ClarisWorks/AppleWorks, MacWrite, MindWrite,
-  WriteNow use the new properties' classes,
+  WriteNow parsers use the new properties' classes,
 - improve a little the ClarisWorks/AppleWorks frame position by
   placing <<correctly>> all page's frames,
 - MWAWContentListener : add a sanity check to insure that at most

@@ -89,7 +89,7 @@ struct Footer {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Footer const &f) {
     static char const *where[]= {"TL", "TC", "TR", "BL", "BC", "BR" };
-    static char const *what[]= { "nothing", "unkn1", "unkn2", "date", "time",
+    static char const *what[]= { "nothing", "unkn1", "unkn2", "time", "date",
                                  "page", "fileName", "chapName", "userText"
                                };
     if (f.m_chapterResetPage)
@@ -898,13 +898,20 @@ bool DMText::sendFooter(int zId)
       continue;
     for (int f = 0; f < 3; f++, id++) {
       switch (ft.m_items[id]) {
-      case 3:
-        listener->insertField(MWAWField(MWAWField::Date));
+      case 3: {
+        MWAWField field(MWAWField::Time);
+        field.m_DTFormat="%H:%M";
+        listener->insertField(field);
         break;
-      case 4:
-        listener->insertField(MWAWField(MWAWField::Time));
+      }
+      case 4: {
+        MWAWField field(MWAWField::Date);
+        field.m_DTFormat="%a, %b %d, %Y";
+        listener->insertField(field);
         break;
+      }
       case 5:
+        listener->insertUnicodeString("Page ");
         listener->insertField(MWAWField(MWAWField::PageNumber));
         break;
       case 6:
