@@ -90,10 +90,6 @@ public:
     diff = m_subVersion - (int) aPict.m_subVersion;
     if (diff) return (diff < 0) ? -1 : 1;
 
-    // as we can not compare data, we only compare the pict position
-    ssize_t diffL = (ssize_t) this - (ssize_t) &aPict;
-    if (diffL) return  (diff < 0) ? -1 : 1;
-
     return 0;
   }
 

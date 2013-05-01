@@ -129,7 +129,12 @@ public:
       return 1;
     if (m_data.size() > aPict.m_data.size())
       return -1;
-
+    unsigned char const *data=m_data.getDataBuffer();
+    unsigned char const *aData=m_data.getDataBuffer();
+    for (unsigned long c=0; c < m_data.size(); c++, data++, aData++) {
+      if (*data < *aData) return -1;
+      if (*data > *aData) return 1;
+    }
     return 0;
   }
 
