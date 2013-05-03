@@ -61,6 +61,7 @@
 
 namespace MWAWDocumentInternal
 {
+shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
 MWAWHeader *getHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, bool strict);
 bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader &header, bool strict);
 }
@@ -136,62 +137,24 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
 
     switch (type) {
     case ACT:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case CW:
-      confidence = MWAW_CONFIDENCE_EXCELLENT;
-      break;
     case DM:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case ED:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case FULLW:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case HMAC:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case HMACJ:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case LWTEXT:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case MARIW:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case MINDW:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case MSWORD:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case MSWORKS:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case MW:
-      confidence = MWAW_CONFIDENCE_EXCELLENT;
-      break;
     case MWPRO:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case NISUSW:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case TEACH:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case TEDIT:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case WNOW:
-      confidence = MWAW_CONFIDENCE_EXCELLENT;
-      break;
     case WPLUS:
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
     case ZWRT:
       confidence = MWAW_CONFIDENCE_GOOD;
       break;
@@ -234,117 +197,9 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
 
     if (!header.get()) return MWAW_UNKNOWN_ERROR;
 
-    switch (header->getType()) {
-    case ACT: {
-      ACParser parser(ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case CW: {
-      CWParser parser(ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case DM: {
-      DMParser parser(ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case ED: {
-      EDParser parser(ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case FULLW: {
-      FWParser parser(ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case HMAC: {
-      HMWKParser parser(ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case HMACJ: {
-      HMWJParser parser(ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case LWTEXT: {
-      LWParser parser(ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case MARIW: {
-      MRWParser parser (ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case MINDW: {
-      MDWParser parser (ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case MSWORD: {
-      if (header->getMajorVersion()==1) {
-        MSW1Parser parser (ip, rsrcParser, header.get());
-        parser.parse(documentInterface);
-      } else {
-        MSWParser parser (ip, rsrcParser, header.get());
-        parser.parse(documentInterface);
-      }
-      break;
-    }
-    case MSWORKS: {
-      if (header->getMajorVersion() < 100) {
-        MSK3Parser parser (ip, rsrcParser, header.get());
-        parser.parse(documentInterface);
-      } else {
-        MSK4Parser parser (ip, rsrcParser, header.get());
-        parser.parse(documentInterface);
-      }
-      break;
-    }
-    case MW: {
-      MWParser parser (ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case MWPRO: {
-      MWProParser parser (ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case NISUSW: {
-      NSParser parser (ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case TEACH:
-    case TEDIT: {
-      TTParser parser (ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case WNOW: {
-      WNParser parser (ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case WPLUS: {
-      WPParser parser (ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case ZWRT: {
-      ZWParser parser (ip, rsrcParser, header.get());
-      parser.parse(documentInterface);
-      break;
-    }
-    case UNKNOWN:
-    default:
-      break;
-    }
+    shared_ptr<MWAWParser> parser=MWAWDocumentInternal::getParserFromHeader(ip, rsrcParser, header.get());
+    if (!parser) return MWAW_UNKNOWN_ERROR;
+    parser->parse(documentInterface);
   } catch (libmwaw::FileException) {
     MWAW_DEBUG_MSG(("File exception trapped\n"));
     error = MWAW_FILE_ACCESS_ERROR;
@@ -402,101 +257,95 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
   return 0L;
 }
 
-/** Wrapper to check a basic header of a mac file */
-bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader &header, bool strict)
+/** Factory wrapper to construct a parser corresponding to an header */
+shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header)
 {
+  shared_ptr<MWAWParser> parser;
+  if (!header)
+    return parser;
   try {
-    switch(header.getType()) {
-    case MWAWDocument::ACT: {
-      ACParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::CW: {
-      CWParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::DM: {
-      DMParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::ED: {
-      EDParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::FULLW: {
-      FWParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::HMAC: {
-      HMWKParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::HMACJ: {
-      HMWJParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::LWTEXT: {
-      LWParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::MARIW: {
-      MRWParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::MINDW: {
-      MDWParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
+    switch(header->getType()) {
+    case MWAWDocument::ACT:
+      parser.reset(new ACParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::CW:
+      parser.reset(new CWParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::DM:
+      parser.reset(new DMParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::ED:
+      parser.reset(new EDParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::FULLW:
+      parser.reset(new FWParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::HMAC:
+      parser.reset(new HMWKParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::HMACJ:
+      parser.reset(new HMWJParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::LWTEXT:
+      parser.reset(new LWParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MARIW:
+      parser.reset(new MRWParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MINDW:
+      parser.reset(new MDWParser(input, rsrcParser, header));
+      break;
     case MWAWDocument::MSWORD:
-      if (header.getMajorVersion()==1) {
-        MSW1Parser parser (input, rsrcParser, &header);
-        return parser.checkHeader(&header, strict);
-      } else {
-        MSWParser parser(input, rsrcParser, &header);
-        return parser.checkHeader(&header, strict);
-      }
-    case MWAWDocument::MSWORKS: {
-      if (header.getMajorVersion() < 100) {
-        MSK3Parser parser(input, rsrcParser, &header);
-        return parser.checkHeader(&header, strict);
-      } else {
-        MSK4Parser parser(input, rsrcParser, &header);
-        return parser.checkHeader(&header, strict);
-      }
-    }
-    case MWAWDocument::MW: {
-      MWParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::MWPRO: {
-      MWProParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::NISUSW: {
-      NSParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
+      if (header->getMajorVersion()==1)
+        parser.reset(new MSW1Parser(input, rsrcParser, header));
+      else
+        parser.reset(new MSWParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MSWORKS:
+      if (header->getMajorVersion() < 100)
+        parser.reset(new MSK3Parser(input, rsrcParser, header));
+      else
+        parser.reset(new MSK4Parser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MW:
+      parser.reset(new MWParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MWPRO:
+      parser.reset(new MWProParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::NISUSW:
+      parser.reset(new NSParser(input, rsrcParser, header));
+      break;
     case MWAWDocument::TEACH:
-    case MWAWDocument::TEDIT: {
-      TTParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::WNOW: {
-      WNParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::WPLUS: {
-      WPParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
-    case MWAWDocument::ZWRT: {
-      ZWParser parser(input, rsrcParser, &header);
-      return parser.checkHeader(&header, strict);
-    }
+    case MWAWDocument::TEDIT:
+      parser.reset(new TTParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::WNOW:
+      parser.reset(new WNParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::WPLUS:
+      parser.reset(new WPParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::ZWRT:
+      parser.reset(new ZWParser(input, rsrcParser, header));
+      break;
     case MWAWDocument::UNKNOWN:
     default:
       break;
     }
+  } catch(...) {
+  }
+  return parser;
+}
+
+/** Wrapper to check a basic header of a mac file */
+bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader &header, bool strict)
+{
+  try {
+    shared_ptr<MWAWParser> parser=getParserFromHeader(input, rsrcParser, &header);
+    if (!parser)
+      return false;
+    return parser->checkHeader(&header, strict);
   } catch(...) {
   }
 

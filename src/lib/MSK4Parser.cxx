@@ -154,9 +154,8 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSK4Parser::MSK4Parser(MWAWInputStreamPtr inp, MWAWRSRCParserPtr rsrcParser, MWAWHeader *head) : m_parserState(), m_state()
+MSK4Parser::MSK4Parser(MWAWInputStreamPtr inp, MWAWRSRCParserPtr rsrcParser, MWAWHeader *head) : MWAWParser(inp, rsrcParser, head), m_state()
 {
-  m_parserState.reset(new MWAWParserState(inp, rsrcParser, head));
   m_state.reset(new MSK4ParserInternal::State);
 }
 
@@ -169,7 +168,7 @@ MSK4Parser::~MSK4Parser()
 ////////////////////////////////////////////////////////////
 void MSK4Parser::parse(WPXDocumentInterface *interface)
 {
-  assert(m_parserState->m_input.get() != 0);
+  assert(getInput().get() != 0);
 
   bool ok = true;
   try {
@@ -200,7 +199,7 @@ void MSK4Parser::parse(WPXDocumentInterface *interface)
     MWAW_DEBUG_MSG(("MSK4Parser::parse: does not have listener\n"));
     throw(libmwaw::ParseException());
   }
-  m_parserState->m_listener=listener;
+  getParserState()->m_listener=listener;
   listener->startDocument();
   m_state->m_mn0Parser->readContentZones(MWAWEntry(), true);
 
@@ -209,7 +208,7 @@ void MSK4Parser::parse(WPXDocumentInterface *interface)
   } catch (...) { }
 
   if (listener) listener->endDocument();
-  m_parserState->m_listener.reset();
+  getListener().reset();
 }
 
 ////////////////////////////////////////////////////////////
@@ -217,9 +216,9 @@ void MSK4Parser::parse(WPXDocumentInterface *interface)
 ////////////////////////////////////////////////////////////
 bool MSK4Parser::createStructures()
 {
-  MWAWInputStreamPtr &input= m_parserState->m_input;
+  MWAWInputStreamPtr &input= getInput();
   assert(input.get());
-  if (!checkHeader(m_parserState->m_header))
+  if (!checkHeader(getHeader()))
     throw libmwaw::ParseException();
 
   m_state->m_oleParser.reset(new MWAWOLEParser("MN0"));
@@ -268,7 +267,7 @@ bool MSK4Parser::createStructures()
       continue;
     }
 
-    shared_ptr<MSK4Zone> newParser(new MSK4Zone(ole, m_parserState, *this, name));
+    shared_ptr<MSK4Zone> newParser(new MSK4Zone(ole, getParserState(), *this, name));
     try {
       ok = newParser->createZones(mainOle);
     } catch (...) {
@@ -301,7 +300,7 @@ bool MSK4Parser::createStructures()
 ////////////////////////////////////////////////////////////
 void MSK4Parser::flushExtra()
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWContentListenerPtr listener=getListener();
   if (!listener) return;
 
   size_t numUnparsed = m_state->m_unparsedOlesName.size();
@@ -310,13 +309,13 @@ void MSK4Parser::flushExtra()
   bool first = true;
   for (size_t i = 0; i < numUnparsed; i++) {
     std::string const &name = m_state->m_unparsedOlesName[i];
-    MWAWInputStreamPtr ole = m_parserState->m_input->getDocumentOLEStream(name.c_str());
+    MWAWInputStreamPtr ole = getInput()->getDocumentOLEStream(name.c_str());
     if (!ole.get()) {
       MWAW_DEBUG_MSG(("Works4: error: can not find OLE part: \"%s\"\n", name.c_str()));
       continue;
     }
 
-    shared_ptr<MSK4Zone> newParser(new MSK4Zone(ole, m_parserState, *this, name));
+    shared_ptr<MSK4Zone> newParser(new MSK4Zone(ole, getParserState(), *this, name));
     bool ok = true;
     try {
       ok = newParser->createZones(false);
@@ -345,7 +344,7 @@ void MSK4Parser::flushExtra()
 ////////////////////////////////////////////////////////////
 bool MSK4Parser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
-  MWAWInputStreamPtr &input= m_parserState->m_input;
+  MWAWInputStreamPtr &input= getInput();
   if (!input || !input->hasDataFork() || !input->isOLEStream())
     return false;
 
@@ -366,7 +365,7 @@ bool MSK4Parser::checkHeader(MWAWHeader *header, bool /*strict*/)
 ////////////////////////////////////////////////////////////
 void MSK4Parser::sendFootNote(int id)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWContentListenerPtr listener=getListener();
   if (!listener) return;
 
   MSK4Zone *parser = m_state->m_footnoteParser.get();
@@ -384,7 +383,7 @@ void MSK4Parser::sendFootNote(int id)
 
 void MSK4Parser::sendFrameText(MWAWEntry const &entry, std::string const &frame)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWContentListenerPtr listener=getListener();
   if (!listener) return;
 
   if (entry.length()==0) {
@@ -412,7 +411,7 @@ void MSK4Parser::sendFrameText(MWAWEntry const &entry, std::string const &frame)
 
 void MSK4Parser::sendOLE(int id, MWAWPosition const &pictPos, WPXPropertyList extras)
 {
-  if (!m_parserState->m_listener) return;
+  if (!getListener()) return;
 
   WPXBinaryData data;
   MWAWPosition pos;
@@ -421,7 +420,7 @@ void MSK4Parser::sendOLE(int id, MWAWPosition const &pictPos, WPXPropertyList ex
     MWAW_DEBUG_MSG(("MSK4Parser::sendOLE: can not find OLE%d\n", id));
     return;
   }
-  m_parserState->m_listener->insertPicture(pictPos, data, type, extras);
+  getListener()->insertPicture(pictPos, data, type, extras);
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

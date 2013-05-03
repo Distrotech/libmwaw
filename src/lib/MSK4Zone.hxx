@@ -149,6 +149,11 @@ protected:
   void parse(WPXDocumentInterface *) {
     MWAW_DEBUG_MSG(("MSK4Zone::parse: must not be called\n"));
   }
+  //! empty implementation of the checkHeader function ( to make the class not virtual)
+  bool checkHeader(MWAWHeader *, bool) {
+    MWAW_DEBUG_MSG(("MSK4Zone::checkHeader: must not be called\n"));
+    return false;
+  }
 
   //
   // low level

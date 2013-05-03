@@ -102,6 +102,8 @@ public:
   virtual ~MWAWParser();
   //! virtual function used to parse the input
   virtual void parse(WPXDocumentInterface *documentInterface) = 0;
+  //! virtual function used to check if the document header is correct (or not)
+  virtual bool checkHeader(MWAWHeader *header, bool strict=false) = 0;
 
   //! returns the works version
   int version() const {
