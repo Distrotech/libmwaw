@@ -63,7 +63,7 @@ class MWAWDocument
 {
 public:
   /** an enum to define the different type of document
-  -ACT: Acta (nothing done )
+  -ACT: Acta (v2 and Classic v1)
   -CW: ClarisWorks/AppleWorks document (basic)
   -DM: DocMaker (v4)
   -ED: eDOC (v2)

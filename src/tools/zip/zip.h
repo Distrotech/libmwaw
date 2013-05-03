@@ -30,18 +30,17 @@
 #ifndef MWAW_ZIP_H
 #  define MWAW_ZIP_H
 
-#include <ostream>
+#include <zlib.h>
+
+#include <fstream>
+#include <map>
 #include <string>
 #include <vector>
 
-struct tm;
 class InputStream;
 
 namespace libmwaw_zip
 {
-struct DirTree;
-struct FileEntry;
-
 //! interface to zlib.h
 class Zip
 {
@@ -51,52 +50,64 @@ public:
   //! destructor
   ~Zip();
 
-  /** add a new stream  */
-  void addStream(shared_ptr<InputStream> stream, char const *base, char const *path=0);
-
-  /** write the zip file to a file name */
-  bool write(char const * fileName);
+  /** try open filename ( to write data ) */
+  bool open(char const *filename);
+  /** returns true if the output is opened */
+  bool isOpened() const {
+    return m_output;
+  }
+  /** try to close the actual output */
+  bool close();
+  /** try add to a new file  */
+  bool add(shared_ptr<InputStream> stream, char const *base, char const *path=0);
 
 protected:
-  struct FileSorted;
+  struct Directory;
+  struct File;
+  //! the output
+  std::ofstream m_output;
+  //! a map path->directory
+  std::map<std::string, Directory> m_nameDirectoryMap;
 
-  //! try to append a stream in zip file
-  bool appendStream(std::ostream &zip, FileSorted const &file);
-  //! try to append a stream definition in the central directory
-  bool appendInCentralDir(std::ostream &zip, FileSorted const &file);
+  //! small structure used to store a file data
+  struct File {
+    //! constructor
+    File(std::string const &base, std::string const &dir);
 
-  //! try to compress a string
-  bool compressDeflate(char *out, unsigned int *outlen, char const *in,
-                       unsigned int inlen);
-  //! Converts time from struct tm to the DOS format used by zip files.
-  void timeToDos(struct tm *time, short *dosdate, short *dostime);
+    //! try to write the input data in output
+    bool write(shared_ptr<InputStream> input, std::ostream &output);
+    //! try to write the central information in output
+    bool writeCentralInformation(std::ostream &output) const;
+  protected:
+    //! the basename
+    std::string m_base;
+    //! the directory
+    std::string m_dir;
+    //! the uncompressed length
+    uInt m_uncompressedLength;
+    //! the compressed length
+    uInt m_compressedLength;
+    //! true if we called deflate on the data
+    bool m_deflate;
+    //! the crc
+    uLong m_crc32;
+    //! the offset in file of the local file header
+    uLong m_offsetInFile;
+  };
+  //! small structure used to store a directory and its file
+  struct Directory {
+    //! constructor
+    Directory(std::string const &dir);
+    //! try to add a file checking if a file with the same name already exist
+    bool add(shared_ptr<InputStream> input, char const *base, std::ostream &output);
+    /** try to write the central information in output
 
-  //! the list of DirTree
-  std::vector<DirTree> m_dirTrees;
-
-  //! small structure used to sort file
-  struct FileSorted {
-    // constructor
-    FileSorted(FileEntry *theFile, char const *thePath) : m_file(theFile), m_path(thePath) { }
-    FileSorted(FileSorted const &orig) : m_file(orig.m_file), m_path(orig.m_path) { }
-    FileSorted &operator=(const FileSorted &orig) {
-      if (this == &orig) return *this;
-      m_file=orig.m_file;
-      m_path=orig.m_path;
-      return *this;
-    }
-
-    //! sort the data
-    static std::vector<FileSorted> sortFiles(std::vector<DirTree> &trees);
-    //! a comparaison structure
-    struct Cmp {
-      //! compare two data
-      bool operator()(FileSorted const &a, FileSorted const &b) const;
-    };
-    //! the file entry
-    FileEntry *m_file;
-    //! the path in zip file
-    std::string m_path;
+    \note returns the number of central information written */
+    int writeCentralInformation(std::ostream &output) const;
+    //! the directory
+    std::string m_dir;
+    //! a map of filename -> file
+    std::map<std::string, File> m_nameFileMap;
   };
 };
 }

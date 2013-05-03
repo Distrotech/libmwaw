@@ -40,9 +40,9 @@
 ////////////////////////////////////////////////////////////
 void ListStyleManager::List::setLevel(int lvl, WPXPropertyList const &pList, bool ordered)
 {
-	if (lvl < 0)
+	if (lvl < 0 || lvl > 30)
 	{
-		MWAW_DEBUG_MSG(("ListStyleManager::List::setLevel: level is < 0\n"));
+		MWAW_DEBUG_MSG(("ListStyleManager::List::setLevel: level is %d\n", lvl));
 		return;
 	}
 	if (size_t(lvl) >= m_contentsList.size())

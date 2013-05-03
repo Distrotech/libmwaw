@@ -85,8 +85,7 @@ int __cdecl main (int argc, char **argv)
 
   // check if it is a regular file
   struct stat status;
-  stat(argv[optind], &status );
-  if (!S_ISREG(status.st_mode) ) {
+  if (stat(argv[optind], &status ) || !S_ISREG(status.st_mode) ) {
     std::cerr << argv[0] << ": the file " << argv[optind] << " is a not a regular file\n";
     return 1;
   }
@@ -142,6 +141,7 @@ int __cdecl main (int argc, char **argv)
 
   libmwaw_zip::Zip zip;
   shared_ptr<libmwaw_zip::FileStream> fStream, fAuxiStream;
+  shared_ptr<libmwaw_zip::InputStream> auxiStream;
   try {
     //! the main data fork
     fStream.reset(new libmwaw_zip::FileStream(originalFile.c_str()));
@@ -149,39 +149,34 @@ int __cdecl main (int argc, char **argv)
       fprintf(stderr, "Failed to create stream for %s\n", originalFile.c_str());
       return 1;
     }
-    zip.addStream(fStream, file.c_str(), folder.c_str());
-
+    //! the attributes
     libmwaw_zip::XAttr xattr(originalFile.c_str());
-    shared_ptr<libmwaw_zip::InputStream> attrStream = xattr.getStream();
-    std::string name;
-    if (attrStream) {
-      name="._"+file;
-      zip.addStream(attrStream, name.c_str(), folder.c_str());
-    } else {
-      bool hasAuxi=false;
+    auxiStream = xattr.getStream();
+    if (!auxiStream) {
       // look for a resource file
-      name=folder+"._"+file;
-      stat(name.c_str(), &status );
-      if (S_ISREG(status.st_mode) )
-        hasAuxi=true;
-      else {
+      std::string name=folder+"._"+file;
+      if (stat(name.c_str(), &status ) || !S_ISREG(status.st_mode) ) {
         name=folder+"__MACOSX/._"+file;
-        stat(name.c_str(), &status );
-        if (S_ISREG(status.st_mode) )
-          hasAuxi=true;
+        if (stat(name.c_str(), &status ) || !S_ISREG(status.st_mode) )
+          name = "";
       }
-      if (hasAuxi) {
+      if (name.length()) {
         fAuxiStream.reset(new libmwaw_zip::FileStream(name.c_str()));
-        if (fAuxiStream->ok()) {
-          name="._"+file;
-          zip.addStream(fAuxiStream, name.c_str(), folder.c_str());
-        }
+        if (fAuxiStream->ok())
+          auxiStream = fAuxiStream;
       }
-      else if (doNotCompressSimpleFile)
-        return 2;
     }
-    if (!zip.write(argv[optind+1]))
+
+    if (!auxiStream && doNotCompressSimpleFile)
+      return 2;
+    if (!zip.open(argv[optind+1]))
       return 1;
+    zip.add(fStream, file.c_str());
+    if (auxiStream) {
+      std::string name="._"+file;
+      zip.add(auxiStream, name.c_str());
+    }
+    zip.close();
   } catch(...) {
     std::cerr << argv[0] << ": error when zipping file " << argv[optind] << "\n";
     return -1;

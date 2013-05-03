@@ -34,35 +34,48 @@
 
 namespace libmwaw_zip
 {
+/** virtual class used to define an Input Stream */
 class InputStream
 {
 protected:
+  //! constructor
   InputStream() : m_offset(0) {}
 public:
+  //! destructor
   virtual ~InputStream() { }
-
+  //! returns the file length
   virtual long length() = 0;
+  //! enum to define the seek type: SK_SET, SK_CUR, SK_END
   enum SeekType { SK_SET, SK_CUR, SK_END };
-
+  //! try to read numBytes
   virtual unsigned char const *read(unsigned long numBytes, unsigned long &numBytesRead) = 0;
-
+  //! read a unsigned char
   unsigned char readU8();
+  //! read a unsigned short (big endian)
   unsigned short readU16();
+  //! read a unsigned int (big endian)
   unsigned int readU32();
+  //! read a char
   char read8();
+  //! read a short (big endian)
   short read16();
+  //! read a unsigned int (big endian)
   int read32();
+  //! try to go to a position. Returns 0 if ok
   int seek(long offset, SeekType seekType);
+  //! return the actual position
   long tell() {
     return m_offset;
   }
-
+  //! return true if we are at the end of the file
   bool atEOS() {
     return m_offset >= length();
   }
 
 protected:
+  //! the actual position in the file
   volatile long m_offset;
+private:
   InputStream(const InputStream &);
   InputStream &operator=(const InputStream &);
 };
@@ -96,7 +109,6 @@ public:
 private:
   FILE *m_file;
   bool m_isOk;
-
   std::vector<unsigned char> m_buffer;
   long m_bufferPos;
 

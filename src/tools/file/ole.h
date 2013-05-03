@@ -66,7 +66,7 @@ protected:
   bool init();
   //! try to initialized the bigbat/smallbat table
   bool initAllocTables();
-  
+
   //! returns a string correspond to the clsid or ""
   static std::string getCLSIDType(unsigned const (&clsid)[4]);
   //! try to load a ole sub file
@@ -106,7 +106,7 @@ protected:
       return (unsigned long)(block+1)*(unsigned long)m_sizeBats[BigBat];
     }
     //! the number of big bat, small bat, meta bat
-    unsigned m_numBats[5]; 
+    unsigned m_numBats[5];
     //! the start of the different zone
     unsigned m_startBats[5];
     //! the big and small block size ( default 0x40, 0x200)
@@ -132,7 +132,7 @@ protected:
     unsigned long operator[](unsigned long index ) const {
       return m_data[size_t(index)];
     }
-     //! accessor to the index value ( no bound check)
+    //! accessor to the index value ( no bound check)
     unsigned long &operator[](unsigned long index )  {
       return m_data[size_t(index)];
     }
@@ -150,13 +150,12 @@ protected:
   };
 
   //! a struct used to store a DirEntry
-  struct DirEntry
-  {
+  struct DirEntry {
   public:
     enum { End= 0xffffffff };
     //! constructor
     DirEntry() : m_valid(false), m_macRootEntry(false), m_type(0), m_size(0), m_start(0),
-                 m_right(End), m_left(End), m_child(End), m_name("") {
+      m_right(End), m_left(End), m_child(End), m_name("") {
       for (int i=0; i < 4; i++) m_clsid[i] = 0;
     }
     //! returns true for a directory
