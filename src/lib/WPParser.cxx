@@ -1529,8 +1529,9 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
     }
 
     WPXPropertyList tableExtras;
+    // use the same function than getParagraph to respect alignement
     int left=columns[0].m_colX[0]-20-int(72.*getPageSpan().getMarginLeft());
-    if (left>0)
+    if (left)
       tableExtras.insert("fo:margin-left",left,WPX_POINT);
     getListener()->openTable(colSize, WPX_POINT, tableExtras);
   }
