@@ -59,6 +59,7 @@ namespace HMWKTextInternal
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() : MWAWParagraph(), m_type(0), m_addPageBreak(false) {
+    m_tabsRelativeToLeftMargin=false;
   }
   //! destructor
   ~Paragraph() {

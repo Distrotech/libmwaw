@@ -221,6 +221,7 @@ std::ostream &operator<<(std::ostream &o, Font const &ft)
 struct Paragraph : public MWAWParagraph {
   //! constructor
   Paragraph(): MWAWParagraph(), m_pageBreak(false) {
+    m_tabsRelativeToLeftMargin=false;
   }
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind);
@@ -1341,7 +1342,7 @@ bool MSK4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
       }
       MWAWListLevel level;
       level.m_type = MWAWListLevel::BULLET;
-      level.m_labelWidth = 0.25;
+      level.m_labelWidth = 0.1;
       libmwaw::appendUnicode(0x2022, level.m_bullet);
       shared_ptr<MWAWList> list =
         m_parserState->m_listManager->getNewList(shared_ptr<MWAWList>(), 1, level);
@@ -1472,10 +1473,8 @@ bool MSK4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
     f << ")";
     break;
   }
-
-  // decrease margins in order to take account of the label width
-  if (*parag.m_listLevelIndex > 0)
-    parag.m_margins[1] = *parag.m_margins[1]-0.25;
+  // absolute first indent -> relative
+  parag.m_margins[0] = *parag.m_margins[0]-*parag.m_margins[1];
 
   parag.m_extra=f.str();
   id = (int) m_state->m_paragraphList.size();

@@ -133,7 +133,7 @@ std::ostream &operator<<(std::ostream &o, Frame const &ft)
 //!Internal: the state of a MSK4Zone
 struct State {
   //! constructor
-  State() : m_mainOle(false), m_numColumns(1), m_parsed(false),
+  State() : m_mainOle(false), m_numColumns(1), m_hasColumnSep(false), m_parsed(false),
     m_actPage(0), m_numPages(0), m_defFont(20,12), m_framesList(),
     m_headerHeight(0), m_footerHeight(0) { }
 
@@ -142,7 +142,8 @@ struct State {
 
   //! the number of column
   int m_numColumns;
-
+  //! true if a line is added to separated the column
+  bool m_hasColumnSep;
   //! a flag to known if the ole is already parsed
   bool m_parsed;
 
@@ -496,20 +497,17 @@ bool MSK4Zone::createZones(bool mainOle)
 
   std::multimap<std::string, MWAWEntry>::iterator pos;
 
+  // DOP, PRNT
   pos = m_entryMap.find("PRNT");
   if (m_entryMap.end() != pos) {
     pos->second.setParsed(true);
     MWAWPageSpan page;
     if (readPRNT(input, pos->second, page) && mainOle) getPageSpan() = page;
   }
-
-  // DOP
   pos = m_entryMap.find("DOP ");
   if (m_entryMap.end() != pos) {
     MWAWPageSpan page;
-    if (readDOP(input, pos->second, page)) {
-      /* do we need to save the page ? */
-    }
+    if (readDOP(input, pos->second, page) && mainOle) getPageSpan() = page;
   }
 
   // RLRB
@@ -598,6 +596,8 @@ void MSK4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
       getListener()->closeSection();
     MWAWSection sec;
     sec.setColumns(m_state->m_numColumns, getPageWidth()/double(m_state->m_numColumns), WPX_INCH);
+    if (m_state->m_hasColumnSep)
+      sec.m_columnSeparator=MWAWBorder();
     getListener()->openSection(sec);
   }
 
@@ -681,7 +681,7 @@ bool MSK4Zone::readPRNT(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPa
       page.setFormOrientation(MWAWPageSpan::LANDSCAPE);
 
     libmwaw::DebugStream f;
-    f << std::dec << info;
+    f << info;
 
     ascii().addPos(debPos);
     ascii().addNote(f.str().c_str());
@@ -748,7 +748,20 @@ bool MSK4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPag
       if (v) f2 << "cols=" << m_state->m_numColumns << ",";
       break;
     }
+    case 0x4f: {
+      if (debPos+1 > endPage) {
+        ok = false;
+        break;
+      }
+      int v = (int) input->readLong(1);
+      if (v==1) {
+        m_state->m_hasColumnSep=true;
+        f2 << "hasColSep,";
+      } else if (v)
+        f2 << "#hasColSeps=" <<  v << ",";
+      break;
 
+    }
     case 0x60: // always 1 ?
     case 0x61: {
       if (debPos+2 > endPage) {
@@ -796,7 +809,6 @@ bool MSK4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPag
       break;
     }
 
-    case 0x4f: // 1
     case 0x6a: { // 1
       if (debPos+1 > endPage) {
         ok = false;
@@ -835,7 +847,21 @@ bool MSK4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPag
       break;
     }
   }
-
+  bool dimOk=dim[1]>2.*(dim[2]+dim[4]) && dim[0]>2.*(dim[3]+dim[5]);
+  for (int i = 2; i < 6; i++)
+    dimOk = dimOk && dim[i]>=0;
+  if (dimOk) {
+    if (dim[1] > dim[0])
+      page.setFormOrientation(MWAWPageSpan::PORTRAIT);
+    else
+      page.setFormOrientation(MWAWPageSpan::LANDSCAPE);
+    page.setFormLength(dim[1]);
+    page.setFormWidth(dim[0]);
+    page.setMarginTop(dim[2]);
+    page.setMarginBottom(dim[4]);
+    page.setMarginLeft(dim[3]);
+    page.setMarginRight(dim[5]);
+  }
   if (dim[0] > 0. || dim[1] > 0.)
     f << "sz=" << dim[0] << "x" << dim[1] << ",";
   bool hasMargin = false;
@@ -857,7 +883,7 @@ bool MSK4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPag
   ascii().addPos(debPage);
   ascii().addNote(f.str().c_str());
 
-  return ok;
+  return dimOk;
 }
 
 // the position in the page ? Constant size 0x28c ?

@@ -202,7 +202,9 @@ void MWAWParagraph::insert(MWAWParagraph const &para)
 bool MWAWParagraph::hasBorders() const
 {
   for (size_t i = 0; i < m_borders.size() && i < 4; i++) {
-    if (m_borders[i]->m_style != MWAWBorder::None)
+    if (!m_borders[i].isSet())
+      continue;
+    if (!m_borders[i]->isEmpty())
       return true;
   }
   return false;
@@ -213,6 +215,8 @@ bool MWAWParagraph::hasDifferentBorders() const
   if (!hasBorders()) return false;
   if (m_borders.size() < 4) return true;
   for (size_t i = 1; i < m_borders.size(); i++) {
+    if (m_borders[i].isSet() != m_borders[0].isSet())
+      return true;
     if (*(m_borders[i]) != *(m_borders[0]))
       return true;
   }
@@ -259,6 +263,8 @@ void MWAWParagraph::addTo(WPXPropertyList &propList, bool inTable) const
       for (size_t w = 0; w < m_borders.size() && w < 4; w++) {
         if (w && setAll)
           break;
+        if (!m_borders[w].isSet())
+          continue;
         MWAWBorder const &border = *(m_borders[w]);
         if (border.isEmpty())
           continue;

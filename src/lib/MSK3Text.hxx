@@ -46,13 +46,13 @@
 
 #include "MWAWEntry.hxx"
 
+class MWAWParagraph;
 class MWAWParserState;
 typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace MSK3TextInternal
 {
 struct Font;
-struct Paragraph;
 struct LineZone;
 struct TextZone;
 struct State;
@@ -131,10 +131,7 @@ protected:
   bool readFont(MSK3TextInternal::Font &font, long endPos);
 
   //! tries to read a paragraph
-  bool readParagraph(MSK3TextInternal::LineZone &zone, MSK3TextInternal::Paragraph &parag);
-
-  //! send the paragraph properties
-  void setProperty(MSK3TextInternal::Paragraph const &para);
+  bool readParagraph(MSK3TextInternal::LineZone &zone, MWAWParagraph &parag);
 
   //! tries to send a text zone
   bool sendText(MSK3TextInternal::LineZone &zone, int zoneId);

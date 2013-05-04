@@ -133,18 +133,6 @@ struct Font {
   std::string m_extra;
 };
 
-/** Internal: class to store the paragraph properties */
-struct Paragraph : public MWAWParagraph {
-  //! Constructor
-  Paragraph() : MWAWParagraph() {
-  }
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
-    o << reinterpret_cast<MWAWParagraph const &>(ind);
-    return o;
-  }
-};
-
 ////////////////////////////////////////
 //! Internal: the text zone
 struct TextZone {
@@ -617,14 +605,15 @@ bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
 ////////////////////////////////////////////////////////////
 // the tabulations:
 ////////////////////////////////////////////////////////////
-bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MSK3TextInternal::Paragraph &parag)
+bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MWAWParagraph &parag)
 {
   int dataSize = int(zone.m_pos.length())-6;
   if (dataSize < 15) return false;
   MWAWInputStreamPtr input=m_mainParser->getInput();
   input->seek(zone.m_pos.begin()+6, WPX_SEEK_SET);
 
-  parag = MSK3TextInternal::Paragraph();
+  parag = MWAWParagraph();
+  parag.m_tabsRelativeToLeftMargin = false;
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
 
@@ -743,12 +732,6 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MSK3TextInternal:
   return true;
 }
 
-void MSK3Text::setProperty(MSK3TextInternal::Paragraph const &para)
-{
-  if (!m_parserState->m_listener) return;
-  m_parserState->m_listener->setParagraph(para);
-}
-
 ////////////////////////////////////////////////////////////
 // read v1-v2 header/footer string
 ////////////////////////////////////////////////////////////
@@ -843,9 +826,9 @@ void MSK3Text::send(MSK3TextInternal::TextZone &zone, Vec2i limit)
       m_mainParser->newPage(++m_state->m_actualPage, zone.m_pagesPosition[i]);
     MSK3TextInternal::LineZone &z = zone.m_zonesList[(size_t)i];
     if (z.m_type & 0x80) {
-      MSK3TextInternal::Paragraph parag;
-      if (readParagraph(z, parag))
-        setProperty(parag);
+      MWAWParagraph parag;
+      if (readParagraph(z, parag) && m_parserState->m_listener)
+        m_parserState->m_listener->setParagraph(parag);
     } else
       sendText(z, zone.m_id);
   }
