@@ -2151,7 +2151,7 @@ bool HMWJGraph::sendTableUnformatted(long fId)
   if (id < 0 || id >= (int) m_state->m_framesList.size())
     return false;
   HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[size_t(id)];
-  if (!frame.valid() || !frame.m_type != 9) {
+  if (!frame.valid() || frame.m_type != 9) {
     MWAW_DEBUG_MSG(("HMWJGraph::sendTableUnformatted: can not find table %lx(II)\n", fId));
     return false;
   }
