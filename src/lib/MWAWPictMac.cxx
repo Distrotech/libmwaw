@@ -1762,7 +1762,10 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
   unsigned char *res = new unsigned char [size_t(2*pictSize+50)], *resPtr = res;
   if (!res) return false;
   WPXInputStream *dataStream = const_cast<WPXInputStream *>(orig.getDataStream());
-  if (!dataStream) return false;
+  if (!dataStream) {
+    delete [] res;
+    return false;
+  }
   MWAWInputStream input(dataStream, false);
 
   input.seek(0, WPX_SEEK_SET);
