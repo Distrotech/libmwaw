@@ -1551,7 +1551,7 @@ bool HMWKGraph::sendTableUnformatted(long fId)
     return true;
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt
     = m_state->m_framesMap.find(fId);
-  if (fIt == m_state->m_framesMap.end() || !fIt->second || !fIt->second->m_type != 9) {
+  if (fIt == m_state->m_framesMap.end() || !fIt->second || fIt->second->m_type != 9) {
     MWAW_DEBUG_MSG(("HMWKGraph::sendTableUnformatted: can not find table %lx\n", fId));
     return false;
   }
