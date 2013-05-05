@@ -598,14 +598,20 @@ bool HMWKText::sendText(HMWKZone &zone)
         f << "[pgCount]";
         listener->insertField(MWAWField(MWAWField::PageCount));
         break;
-      case 0x1002:
+      case 0x1002: {
         f << "[date]";
-        listener->insertField(MWAWField(MWAWField::Date));
+        MWAWField field(MWAWField::Date);
+        field.m_DTFormat="%A, %b %d, %Y";
+        listener->insertField(field);
         break;
-      case 0x1003:
+      }
+      case 0x1003: {
         f << "[time]";
-        listener->insertField(MWAWField(MWAWField::Time));
+        MWAWField field(MWAWField::Time);
+        field.m_DTFormat="%I:%M %p";
+        listener->insertField(field);
         break;
+      }
       case 0x1004:
         f << "[title]";
         listener->insertField(MWAWField(MWAWField::Title));
@@ -1054,7 +1060,7 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
   for (int i = 0; i < 3; i++)
     dim[i] = float(input->readLong(4))/65536.0f;
   para.m_marginsUnit = WPX_POINT;
-  para.m_margins[0]=dim[0]+dim[1];
+  para.m_margins[0]=dim[1];
   para.m_margins[1]=dim[0];
   para.m_margins[2]=dim[2]; // ie. distance to rigth border - ...
 
@@ -1117,7 +1123,7 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
       f << "#bord" << wh[d] << "[col=" << color[d] << ",pat=" << pattern[d] << "],";
   }
   // update the paragraph
-  para.m_borders.resize(6);
+  para.resizeBorders(6);
   libmwaw::Position const (which[5]) = {
     libmwaw::Top, libmwaw::Left, libmwaw::Bottom, libmwaw::Right,
     libmwaw::VMiddle

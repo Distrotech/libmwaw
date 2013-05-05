@@ -233,6 +233,7 @@ struct TextZone {
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() : MWAWParagraph(), m_type(0), m_addPageBreak(false) {
+    m_tabsRelativeToLeftMargin=false;
   }
   //! destructor
   ~Paragraph() {
@@ -391,8 +392,15 @@ int HMWJText::version() const
 
 int HMWJText::numPages() const
 {
+  int nPages = 1;
+  for (size_t i=0; i < m_state->m_textZoneList.size(); i++) {
+    if (m_state->m_textZoneList[i].m_type != HMWJTextInternal::TextZone::T_Main)
+      continue;
+    nPages = const_cast<HMWJText *>(this)->computeNumPages(m_state->m_textZoneList[i]);
+  }
   // fixme: compute the number of page
-  return m_state->m_numPages;
+  m_state->m_numPages = nPages;
+  return nPages;
 }
 
 std::vector<long> HMWJText::getTokenIdList() const
@@ -629,14 +637,20 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
         f << "[pgCount]";
         listener->insertField(MWAWField(MWAWField::PageCount));
         break;
-      case 0x1002:
+      case 0x1002: {
         f << "[date]";
-        listener->insertField(MWAWField(MWAWField::Date));
+        MWAWField field(MWAWField::Date);
+        field.m_DTFormat="%A, %b %d, %Y";
+        listener->insertField(field);
         break;
-      case 0x1003:
+      }
+      case 0x1003: {
         f << "[time]";
-        listener->insertField(MWAWField(MWAWField::Time));
+        MWAWField field(MWAWField::Time);
+        field.m_DTFormat="%I:%M %p";
+        listener->insertField(field);
         break;
+      }
       case 0x1004:
         f << "[title]";
         listener->insertField(MWAWField(MWAWField::Title));
@@ -679,7 +693,8 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
           MWAW_DEBUG_MSG(("HMWJText::sendText: can not find section %d\n", actSection));
           break;
         } else {
-          HMWJTextInternal::Section sec = m_state->m_sectionList[size_t(actSection++)];
+          HMWJTextInternal::Section const &sec =
+            m_state->m_sectionList[size_t(actSection++)];
           actCol = 0;
           if (listener->isSectionOpened())
             listener->closeSection();
@@ -712,6 +727,60 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
     }
   }
   return true;
+}
+
+int HMWJText::computeNumPages(HMWJTextInternal::TextZone const &zone)
+{
+  if (zone.m_type!=HMWJTextInternal::TextZone::T_Main)
+    return 1;
+  if (!zone.m_entry.valid())
+    return 0;
+  WPXBinaryData data;
+  if (!m_mainParser->decodeZone(zone.m_entry, data) || !data.size())
+    return 0;
+
+  WPXInputStream *dataInput = const_cast<WPXInputStream *>(data.getDataStream());
+  if (!dataInput)
+    return 0;
+  MWAWInputStreamPtr input(new MWAWInputStream(dataInput, false));
+  int nPages = 1, actCol = 0, numCol=1, actSection = 1;
+
+  if (m_state->m_sectionList.size()) {
+    HMWJTextInternal::Section const &sec = m_state->m_sectionList[0];
+    if (sec.m_numCols >= 1)
+      numCol = sec.m_numCols;
+  }
+  input->seek(0, WPX_SEEK_SET);
+  while (!input->atEOS()) {
+    int c = (int) input->readULong(2);
+    switch(c) {
+    case 2:
+      if (actCol < numCol-1 && numCol > 1)
+        actCol++;
+      else {
+        actCol = 0;
+        nPages++;
+      }
+      break;
+    case 3:
+      actCol = 0;
+      nPages++;
+      break;
+    case 4: {
+      if (size_t(actSection) >= m_state->m_sectionList.size())
+        break;
+      actCol = 0;
+      nPages++;
+      HMWJTextInternal::Section const &sec =
+        m_state->m_sectionList[size_t(actSection++)];
+      numCol = sec.m_numCols >= 1 ? sec.m_numCols : 1;
+      break;
+    }
+    default:
+      break;
+    }
+  }
+  return nPages;
 }
 
 void HMWJText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
@@ -1750,7 +1819,7 @@ bool HMWJText::readParagraph(HMWJTextInternal::Paragraph &para, long endPos)
   for (int i = 0; i < 3; i++)
     dim[i] = float(input->readLong(4))/65536.0f;
   para.m_marginsUnit = WPX_POINT;
-  para.m_margins[0]=dim[0]+dim[1];
+  para.m_margins[0]=dim[1];
   para.m_margins[1]=dim[0];
   para.m_margins[2]=dim[2]; // ie. distance to rigth border - ...
 
@@ -1813,7 +1882,7 @@ bool HMWJText::readParagraph(HMWJTextInternal::Paragraph &para, long endPos)
       f << "#bord" << wh[d] << "[col=" << color[d] << ",pat=" << pattern[d] << "],";
   }
   // update the paragraph
-  para.m_borders.resize(6);
+  para.resizeBorders(6);
   libmwaw::Position const (which[5]) = {
     libmwaw::Top, libmwaw::Left, libmwaw::Bottom, libmwaw::Right,
     libmwaw::VMiddle

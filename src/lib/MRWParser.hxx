@@ -54,6 +54,7 @@ class WPXBinaryData;
 class MWAWEntry;
 class MWAWFont;
 class MWAWParagraph;
+class MWAWSection;
 
 namespace MRWParserInternal
 {
@@ -154,8 +155,8 @@ protected:
 
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
-  //! returns the columns information
-  void getColumnInfo(int zoneId, int &numColumns, std::vector<int> &width) const;
+  //! returns the section information corresponding to a zone
+  MWAWSection getSection(int zoneId) const;
 
   //! adds a new page
   void newPage(int number);

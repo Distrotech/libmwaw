@@ -156,6 +156,7 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() : MWAWParagraph(), m_deltaSpacing(0) {
+    m_tabsRelativeToLeftMargin=false;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
@@ -373,12 +374,26 @@ bool LWText::sendMainText()
   }
   std::multimap<long, LWTextInternal::PLC>::const_iterator plcIt;
 
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  bool useDataFork=m_mainParser->textInDataFork();
+  libmwaw::DebugFile &ascFile =
+    useDataFork ? m_parserState->m_asciiFile : m_mainParser->rsrcAscii();
   libmwaw::DebugStream f, f2;
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  long pos=input->tell();
-  input->seek(0, WPX_SEEK_SET);
+  MWAWInputStreamPtr input=
+    useDataFork ? m_parserState->m_input :  m_mainParser->rsrcInput();
 
+  long beginPos=0, endPos=-1;
+  if (!useDataFork) {
+    MWAWEntry entry = m_mainParser->getRSRCParser()->getEntry("TEXT", 128);
+    if (!entry.valid()) {
+      MWAW_DEBUG_MSG(("LWText::sendMainText: can not find text entry\n"));
+      return false;
+    }
+    beginPos=entry.begin();
+    endPos=entry.end();
+  }
+
+  long pos = beginPos;
+  input->seek(pos, WPX_SEEK_SET);
   LWTextInternal::Font font, auxiFont;
 
   int numCols, sepWidth;
@@ -391,7 +406,7 @@ bool LWText::sendMainText()
   float deltaSpacing=0;
   while (1) {
     long actPos = input->tell();
-    bool done = input->atEOS();
+    bool done =  input->atEOS() || (endPos>=0&&actPos>=endPos);
     char c = done ? (char) 0 : (char) input->readULong(1);
     if (c==0xd || done) {
       f2.str("");
@@ -403,9 +418,10 @@ bool LWText::sendMainText()
     }
     if (done) break;
 
-    plcIt = m_state->m_plcMap.find(actPos);
+    long actC=actPos-beginPos;
+    plcIt = m_state->m_plcMap.find(actC);
     bool fontChanged = false;
-    while (plcIt != m_state->m_plcMap.end() && plcIt->first<=actPos) {
+    while (plcIt != m_state->m_plcMap.end() && plcIt->first<=actC) {
       LWTextInternal::PLC const &plc = plcIt++->second;
       f << "[" << plc << "]";
       switch(plc.m_type) {

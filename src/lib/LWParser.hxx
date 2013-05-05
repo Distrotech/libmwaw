@@ -88,6 +88,8 @@ protected:
   bool getColumnInfo(int &numCols, int &colSep) const;
   //! adds a new page
   void newPage(int number);
+  //! returns true if the main text is in data fork
+  bool textInDataFork() const;
 
   // interface with the graph parser
 

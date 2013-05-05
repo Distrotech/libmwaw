@@ -53,6 +53,7 @@
 #include "MWAWPosition.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MRWGraph.hxx"
@@ -70,7 +71,7 @@ struct Zone {
   enum Type { Z_Main, Z_Footnote, Z_Header, Z_Footer, Z_Unknown };
   //! constructor
   Zone() : m_id(-1), m_fileId(0), m_type(Z_Unknown), m_endNote(false), m_height(0), m_RBpos(0,0), m_dim(),
-    m_pageDim(), m_pageTextDim(), m_columnsWidth(), m_backgroundColor(MWAWColor::white()), m_extra("") {
+    m_pageDim(), m_pageTextDim(), m_section(), m_backgroundColor(MWAWColor::white()), m_extra("") {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &zone);
@@ -92,8 +93,8 @@ struct Zone {
   Box2i m_pageDim;
   //! the zone of text dimension ( ie page less margins)
   Box2i m_pageTextDim;
-  //! the columns widths in point
-  std::vector<int> m_columnsWidth;
+  //! the section
+  MWAWSection m_section;
   //! the background color
   MWAWColor m_backgroundColor;
   //! extra data
@@ -200,15 +201,6 @@ public:
     return !operator!=(doc);
   }
 
-  //! returns the subdocument \a id
-  int getId() const {
-    return m_id;
-  }
-  //! sets the subdocument \a id
-  void setId(int vid) {
-    m_id = vid;
-  }
-
   //! the parser function
   void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
@@ -266,16 +258,11 @@ Vec2f MRWParser::getPageLeftTop() const
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
-void MRWParser::getColumnInfo(int zId, int &numColumns, std::vector<int> &width) const
+MWAWSection MRWParser::getSection(int zId) const
 {
-  if (zId >= 0 && zId < int(m_state->m_zonesList.size()) &&
-      m_state->m_zonesList[size_t(zId)].m_columnsWidth.size() > 1) {
-    width=m_state->m_zonesList[size_t(zId)].m_columnsWidth;
-    numColumns = int(width.size());
-    return;
-  }
-  numColumns = 1;
-  width.resize(1, int(72.0*getPageWidth()));
+  if (zId >= 0 && zId < int(m_state->m_zonesList.size()))
+    return m_state->m_zonesList[size_t(zId)].m_section;
+  return MWAWSection();
 }
 
 ////////////////////////////////////////////////////////////
@@ -867,7 +854,7 @@ bool MRWParser::readZoneDim(MRWEntry const &entry, int zoneId)
 
   libmwaw::DebugStream f;
   size_t d = 0;
-  std::vector<int> colWidth;
+  std::vector<int> colPos;
   for (int i = 0; i < entry.m_N; i++) {
     f.str("");
     f << entry.name() << "-" << i << ":";
@@ -896,13 +883,32 @@ bool MRWParser::readZoneDim(MRWEntry const &entry, int zoneId)
       else {
         MWAW_DEBUG_MSG(("MRWParser::readZoneDim: unknown zone type\n"));
       }
-    } else if (i && dimOk)
-      colWidth.push_back(dim[3]-dim[1]);
+    } else if (i && dimOk) {
+      if (!colPos.size() || colPos.back() <= dim[1]) {
+        colPos.push_back(dim[1]);
+        colPos.push_back(dim[3]);
+      } else
+        f << "###";
+    }
     ascii().addNote(f.str().c_str());
   }
   if (entry.m_fileType == 0xa && zoneId >= 0 &&
-      zoneId < int(m_state->m_zonesList.size()))
-    m_state->m_zonesList[size_t(zoneId)].m_columnsWidth=colWidth;
+      zoneId < int(m_state->m_zonesList.size()) &&
+      colPos.size() > 2 && int(colPos.size())==2*(entry.m_N-1)) {
+    size_t numCols=size_t(entry.m_N-1);
+    MWAWSection &sec=m_state->m_zonesList[size_t(zoneId)].m_section;
+    sec.m_columns.resize(numCols);
+    for (size_t c=0; c < numCols; c++) {
+      MWAWSection::Column &col = sec.m_columns[c];
+      int prevPos= c==0 ? 0 : (colPos[2*c-1]+colPos[2*c])/2;
+      int nextPos= c+1==numCols ? colPos[2*c+1] :
+                   (colPos[2*c+1]+colPos[2*c+2])/2;
+      col.m_width=double(nextPos-prevPos);
+      col.m_widthUnit=WPX_POINT;
+      col.m_margins[libmwaw::Left]=double(colPos[2*c]-prevPos)/72.;
+      col.m_margins[libmwaw::Right]=double(nextPos-colPos[2*c+1])/72.;
+    }
+  }
   input->seek(entry.end(), WPX_SEEK_SET);
 
   return true;
@@ -952,6 +958,14 @@ bool MRWParser::readDocInfo(MRWEntry const &entry, int zoneId)
           m_state->m_hasOddEvenHeaderFooter=true;
         f << "hasOddEven[header/footer],";
         val &= ~uint32_t(0x4000);
+      }
+      if (val&0x20000) {
+        if (zoneId==0 && m_state->m_zonesList.size()) {
+          MWAWSection &sec=m_state->m_zonesList[0].m_section;
+          sec.m_columnSeparator = MWAWBorder();
+        }
+        f << "colSep,";
+        val &= ~uint32_t(0x20000);
       }
       if (val)
         f << "f0=" << std::hex << val << std::dec << ",";

@@ -91,6 +91,8 @@ protected:
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
+  //! compute the number of pages present in a zone
+  int computeNumPages(HMWJTextInternal::TextZone const &zone);
   //! returns the list of zoneId which corresponds to the token
   std::vector<long> getTokenIdList() const;
   //! update the text zone type with map id->type

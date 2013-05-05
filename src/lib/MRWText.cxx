@@ -92,6 +92,7 @@ struct Paragraph : public MWAWParagraph {
   //! constructor
   Paragraph() : MWAWParagraph(), m_paraFill(),
     m_cellWidth(0), m_cellHeight(0), m_cellSep(0), m_cellFill() {
+    m_tabsRelativeToLeftMargin=false;
   }
   //! updates the paragraph knowing the paragraph pattern percent
   void update(float percent) {
@@ -100,7 +101,7 @@ struct Paragraph : public MWAWParagraph {
     if (!m_paraFill.hasBorders())
       return;
     static int const wh[] = { libmwaw::Left, libmwaw::Top, libmwaw::Right, libmwaw::Bottom };
-    m_borders.resize(4);
+    resizeBorders(4);
     for (int i = 0; i < 4; i++) {
       if (m_paraFill.m_borderTypes[i] <=0)
         continue;
@@ -726,17 +727,11 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
 
   if (isMain) {
     m_mainParser->newPage(actPage);
-    std::vector<int> width;
-    m_mainParser->getColumnInfo(0, numCols, width);
+    MWAWSection sec=m_mainParser->getSection(0);
+    numCols=sec.numColumns();
     if (numCols > 1) {
       if (listener->isSectionOpened())
         listener->closeSection();
-      MWAWSection sec;
-      sec.m_columns.resize(size_t(numCols));
-      for (size_t c=0; c < size_t(numCols); c++) {
-        sec.m_columns[c].m_width = double(width[c]);
-        sec.m_columns[c].m_widthUnit = WPX_POINT;
-      }
       listener->openSection(sec);
     }
   }

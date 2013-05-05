@@ -108,6 +108,12 @@ public:
   bool hasBorders() const;
   //! check if the paragraph has different borders
   bool hasDifferentBorders() const;
+  //! a function used to resize the borders list ( adding empty borders if needed )
+  void resizeBorders(size_t newSize) {
+    MWAWBorder empty;
+    empty.m_style=MWAWBorder::None;
+    m_borders.resize(newSize, empty);
+  }
   //! set the interline
   void setInterline(double value, WPXUnit unit, LineSpacingType type=Fixed) {
     m_spacings[0]=value;

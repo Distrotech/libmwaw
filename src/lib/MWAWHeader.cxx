@@ -128,7 +128,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     } else if (creator=="LWTE") {
-      if (type=="TEXT") {
+      if (type=="TEXT" || type=="ttro") {
+        res.push_back(MWAWHeader(MWAWDocument::LWTEXT,1));
+        return res;
+      }
+    } else if (creator=="LWTR") {
+      if (type=="APPL") {
         res.push_back(MWAWHeader(MWAWDocument::LWTEXT,1));
         return res;
       }

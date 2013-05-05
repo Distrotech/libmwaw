@@ -59,9 +59,11 @@ namespace LWParserInternal
 //! Internal: the state of a LWParser
 struct State {
   //! constructor
-  State() : m_actPage(0), m_numPages(0), m_numCol(1), m_colSep(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_isApplication(false), m_actPage(0), m_numPages(0), m_numCol(1), m_colSep(0), m_headerHeight(0), m_footerHeight(0) {
   }
 
+  /** true if we are parsing a application document */
+  bool m_isApplication;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_numCol /** the number of columns */,
@@ -151,6 +153,11 @@ MWAWInputStreamPtr LWParser::rsrcInput()
 libmwaw::DebugFile &LWParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
+}
+
+bool LWParser::textInDataFork() const
+{
+  return !m_state->m_isApplication;
 }
 
 ////////////////////////////////////////////////////////////
@@ -786,10 +793,22 @@ bool LWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
   *m_state = LWParserInternal::State();
   MWAWInputStreamPtr input = getInput();
-  if (!input || !input->hasDataFork() || !getRSRCParser())
+  if (!input || !getRSRCParser())
     return false;
+  std::string type, creator;
+  if (input->getFinderInfo(type, creator) && type == "APPL")
+    m_state->m_isApplication=true;
+  MWAWEntry entry;
+  if (!m_state->m_isApplication) {
+    if (!input->hasDataFork())
+      return false;
+  } else {
+    entry = getRSRCParser()->getEntry("TEXT", 128);
+    if (!entry.valid())
+      return false;
+  }
   // check if the LWSR string exists
-  MWAWEntry entry = getRSRCParser()->getEntry("LWSR", 1000);
+  entry = getRSRCParser()->getEntry("LWSR", 1000);
   if (!entry.valid()) {
     MWAW_DEBUG_MSG(("LWParser::checkHeader: can not find the LWSR[1000] resource, not a Mac File!!!\n"));
     return false;

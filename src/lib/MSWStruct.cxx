@@ -767,7 +767,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     val = (int) input->readULong(1);
     if (val && val <= 0x10) {
       if (m_borders.size() < 4)
-        m_borders.resize(4);
+        resizeBorders(4);
       if (val & 0x1)
         m_borders[libmwaw::Top] = m_bordersStyle.get();
       if (val & 0x2)
@@ -982,11 +982,11 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
                           };
       size_t p = wh[c-0x1e];
       if (m_borders.size() <= p)
-        m_borders.resize(p+1);
+        resizeBorders(p+1);
       m_borders[p] = border;
     } else {
       if (m_borders.size() < 6)
-        m_borders.resize(6);
+        resizeBorders(6);
       m_borders[libmwaw::HMiddle] = border;
       m_borders[libmwaw::VMiddle] = border;
     }
