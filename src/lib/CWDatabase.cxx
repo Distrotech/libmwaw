@@ -174,7 +174,7 @@ struct Field {
 ////////////////////////////////////////
 
 struct Database : public CWStruct::DSET {
-  Database(CWStruct::DSET const dset = CWStruct::DSET()) :
+  Database(CWStruct::DSET const &dset = CWStruct::DSET()) :
     CWStruct::DSET(dset), m_fields() {
   }
 

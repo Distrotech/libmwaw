@@ -55,7 +55,7 @@ namespace CWSpreadsheetInternal
 //! Internal the spreadsheet
 struct Spreadsheet : public CWStruct::DSET {
   // constructor
-  Spreadsheet(CWStruct::DSET const dset = CWStruct::DSET()) :
+  Spreadsheet(CWStruct::DSET const &dset = CWStruct::DSET()) :
     CWStruct::DSET(dset) {
   }
 

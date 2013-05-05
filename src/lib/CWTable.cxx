@@ -130,7 +130,7 @@ private:
 struct Table : public CWStruct::DSET, public MWAWTable {
   friend struct Cell;
   //! constructor
-  Table(CWStruct::DSET const dset, CWTable &parser) :
+  Table(CWStruct::DSET const &dset, CWTable &parser) :
     CWStruct::DSET(dset),MWAWTable(), m_parser(&parser), m_bordersList(), m_hasSomeLinesCell(false), m_mainPtr(-1) {
   }
 

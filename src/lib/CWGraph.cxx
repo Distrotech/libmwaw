@@ -521,7 +521,7 @@ struct ZoneUnknown : public Zone {
 struct Group : public CWStruct::DSET {
   struct LinkedZones;
   //! constructor
-  Group(CWStruct::DSET const dset = CWStruct::DSET()) :
+  Group(CWStruct::DSET const &dset = CWStruct::DSET()) :
     CWStruct::DSET(dset), m_zones(), m_headerDim(0,0), m_hasMainZone(false), m_totalNumber(0),
     m_blockToSendList(), m_idLinkedZonesMap() {
   }

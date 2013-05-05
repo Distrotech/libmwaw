@@ -58,7 +58,7 @@ namespace CWPresentationInternal
 //! Internal the presentation
 struct Presentation : public CWStruct::DSET {
   // constructor
-  Presentation(CWStruct::DSET const dset = CWStruct::DSET()) :
+  Presentation(CWStruct::DSET const &dset = CWStruct::DSET()) :
     CWStruct::DSET(dset), m_zoneIdList() {
   }
 

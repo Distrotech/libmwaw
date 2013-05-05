@@ -405,7 +405,7 @@ std::ostream &operator<<(std::ostream &o, Token const &tok)
 }
 
 struct Zone : public CWStruct::DSET {
-  Zone(CWStruct::DSET const dset = CWStruct::DSET()) :
+  Zone(CWStruct::DSET const &dset = CWStruct::DSET()) :
     CWStruct::DSET(dset), m_zones(), m_numChar(0), m_numTextZone(0), m_numParagInfo(0),
     m_numFont(0), m_fatherId(0), m_unknown(0), m_fontList(), m_paragraphList(),
     m_sectionList(), m_tokenList(), m_textZoneList(), m_plcMap() {
