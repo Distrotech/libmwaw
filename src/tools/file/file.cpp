@@ -62,7 +62,11 @@ struct File {
     }
     // check if it is a regular file
     struct stat status;
-    stat( path, &status );
+    if ( stat( path, &status ) == -1 )
+    {
+      std::cerr << "File::File: the file " << m_fName << " cannot be read\n";
+      throw libmwaw_tools::Exception();
+    }
     if ( !S_ISREG(status.st_mode) ) {
       std::cerr << "File::File: the file " << m_fName << " is a not a regular file\n";
       throw libmwaw_tools::Exception();
