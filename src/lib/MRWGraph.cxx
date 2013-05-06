@@ -207,7 +207,7 @@ struct PSZone {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, PSZone const &file) {
     if (file.m_type) o << "type=" << file.m_type << ",";
-    if (file.m_id > 0) o << "id=" << std::dec << file.m_type << std::hex << ",";
+    if (file.m_id > 0) o << "id=" << std::hex << file.m_type << std::dec << ",";
     o << file.m_extra;
     return o;
   }
