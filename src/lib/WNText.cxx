@@ -1297,6 +1297,7 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
         break;
       }
       previousVal = newVal;
+      ++tab;
       newTab.m_position = (newVal>>2)/72.;
       switch(newVal & 3) {
       case 0:
