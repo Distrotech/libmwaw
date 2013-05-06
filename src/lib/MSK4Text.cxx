@@ -845,7 +845,8 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
                     entry.name().c_str(), entry.type().c_str()));
   }
 
-  if (4*nPLC+10 + dataSz *nPLC != length) {
+  long nPLC_ = static_cast<long>(static_cast<unsigned long>(nPLC));
+  if (4*nPLC_+10 + dataSz *nPLC_ != length) {
     MWAW_DEBUG_MSG(("MSK4Text::readPLC: error: odd dataSize: nPLC = %i, pSize=%ld\n",
                     nPLC, length));
     dataSz=0;
