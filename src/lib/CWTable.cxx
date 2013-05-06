@@ -334,16 +334,18 @@ void CWTable::updateCell(CWTableInternal::Cell const &cell, MWAWCell &rCell, WPX
       continue;
     border.m_isSent = true;
     CWStyleManager::Graphic graph;
+    bool haveGraph = false;
     if (bStyle.m_graphicId >= 0)
-      m_styleManager->get(bStyle.m_graphicId, graph);
+      haveGraph = m_styleManager->get(bStyle.m_graphicId, graph);
     CWStyleManager::KSEN ksen;
+    bool haveKSEN = false;
     if (bStyle.m_ksenId >= 0)
-      m_styleManager->get(bStyle.m_ksenId, ksen);
+      haveKSEN = m_styleManager->get(bStyle.m_ksenId, ksen);
 
     MWAWBorder bord;
-    if (graph.m_lineWidth==0)
+    if (haveGraph && graph.m_lineWidth==0)
       bord.m_style = MWAWBorder::None;
-    else {
+    else if (haveKSEN) {
       bord.m_style = ksen.m_lineType;
       bord.m_type = ksen.m_lineRepeat;
       if (bord.m_type == MWAWBorder::Double)
