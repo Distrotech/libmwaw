@@ -683,8 +683,8 @@ bool ZWText::readStyles(MWAWEntry const &entry)
         break;
       color[ff-2]=(unsigned char) intVal;
       while (ff < 4) {
-        fields[++ff].getInt(input, intVal);
-        color[ff-2]=(unsigned char) intVal;
+        if (fields[++ff].getInt(input, intVal))
+          color[ff-2]=(unsigned char) intVal;
       }
       if (color[0]||color[1]||color[2])
         f << "col=" << MWAWColor(color[0],color[1],color[2]) << ",";
