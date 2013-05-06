@@ -33,6 +33,7 @@
 
 /* This header contains code specific to a pict mac file
  */
+#include <cstring>
 #include <map>
 #include <sstream>
 #include <string>
@@ -470,7 +471,9 @@ struct Pixmap {
     m_packSize(0), m_pixelType(0), m_pixelSize(0), m_compCount(0),
     m_compSize(0), m_planeBytes(0), m_colorTable(), m_src(), m_dst(),
     m_region(), m_indices(), m_colors(), m_mode(0)
-  {}
+  {
+    m_Res[0] = m_Res[1] = 0;
+  }
   //! tries to read a pixmap
   bool read (MWAWInputStream &input, bool packed, bool colorTable, bool hasRectsMode, bool hasRegion) {
     if (!colorTable) input.readULong(4); // skip the base address
@@ -837,7 +840,10 @@ struct Pixmap {
 
 //! Internal and low level: a class used to read pack/unpack color pixmap (version 2)
 struct Pixpattern {
-  Pixpattern() : m_color(), m_pixmap() {}
+  Pixpattern() : m_color(), m_pixmap()
+  {
+    std::memset(m_pat, 0, sizeof(m_pat));
+  }
   //! tries to read a pixpat
   bool read (MWAWInputStream &input) {
     int type = (int)input.readULong(2);
@@ -886,7 +892,10 @@ struct Pixpattern {
 //! Internal and low level: a class used to read and store all possible value
 struct Value {
   Value() : m_type(), m_int(0), m_rgb(MWAWColor::white()), m_text(""), m_point(), m_box(), m_listPoint(),
-    m_region(), m_bitmap(), m_pixmap(), m_pixpattern() {}
+    m_region(), m_bitmap(), m_pixmap(), m_pixpattern()
+  {
+    std::memset(m_pat, 0, sizeof(m_pat));
+  }
   virtual ~Value() {}
 
   /** the stored type of the data
