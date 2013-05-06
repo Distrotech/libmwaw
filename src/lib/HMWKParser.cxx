@@ -1198,8 +1198,8 @@ HMWKZone::~HMWKZone()
 std::ostream &operator<<(std::ostream &o, HMWKZone const &zone)
 {
   o << zone.name();
-  if (zone.m_id > 0) o << "[" << std::hex << zone.m_id << "]";
-  if (zone.m_subId > 0) o << "[subId=" << std::hex << zone.m_subId << "]";
+  if (zone.m_id > 0) o << "[" << std::hex << zone.m_id << std::dec << "]";
+  if (zone.m_subId > 0) o << "[subId=" << std::hex << zone.m_subId << std::dec << "]";
   if (zone.m_extra.length()) o << "," << zone.m_extra;
   return o;
 }
