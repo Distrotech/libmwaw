@@ -367,11 +367,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       break;
     }
     if (vers > 0) {
-      if (vers <= 3) {
-        MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Microsoft Works %d.0 file\n", vers));
-      } else {
-        MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Microsoft Works %d.0 file\n", vers));
-      }
+      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Microsoft Works %d.0 file\n", vers));
       res.push_back(MWAWHeader(MWAWDocument::MSWORKS, vers));
     }
   }
