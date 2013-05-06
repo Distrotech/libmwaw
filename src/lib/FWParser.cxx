@@ -1095,7 +1095,7 @@ bool FWParser::readDocZoneData(shared_ptr<FWEntry> zone)
         int numOk = 0;
         for (int j = 0; j < 2; j++) { // always 0|0
           val = int(input->readLong(2));
-          if (val >= -2 || val <= 0) numOk++;
+          if (val >= -2 && val <= 0) numOk++;
           if (val) f << "f" << j << "=" << val << ",";
         }
         if (!numOk) break;
