@@ -259,7 +259,7 @@ bool File::readFileInformation()
     checkFInfoType("pref","LightWayText[Preferences]") ||
     checkFInfoType("ttro","LightWayText[Tutorial]") || checkFInfoType("LightWayText");
   } else if (m_fInfoCreator=="LWTR") {
-    checkFInfoType("APPL","LightWayText[appli]")
+    checkFInfoType("APPL","LightWayText[appli]");
   } else if (m_fInfoCreator=="MACA") {
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   } else if (m_fInfoCreator=="MACD") { // checkme
