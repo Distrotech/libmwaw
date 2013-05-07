@@ -185,8 +185,13 @@ MWAWColor MWAWColor::barycenter(float alpha, MWAWColor const colA,
 
 std::ostream &operator<< (std::ostream &o, MWAWColor const &c)
 {
+  const std::streamsize width = o.width();
+  const char fill = o.fill();
   o << "#" << std::hex << std::setfill('0') << std::setw(6)
-    << (c.m_value&0xFFFFFF) << std::dec;
+    << (c.m_value&0xFFFFFF)
+    // std::ios::width() takes/returns std::streamsize (long), but
+    // std::setw() takes int. Go figure...
+    << std::dec << std::setfill(fill) << std::setw(static_cast<int>(width));
   return o;
 }
 
