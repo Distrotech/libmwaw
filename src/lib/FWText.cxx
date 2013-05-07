@@ -40,6 +40,7 @@
 
 #include <libwpd/libwpd.h>
 
+#include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -334,7 +335,12 @@ void Font::update()
 /** Internal: class to store the LineHeader */
 struct LineHeader {
   /** Constructor */
-  LineHeader() : m_numChar(0), m_font(), m_fontSet(false), m_height(-1.0), m_textIndent(0), m_extra("") {
+  LineHeader() : m_numChar(0), m_font(), m_fontSet(false), m_height(-1.0), m_prevHeight(-1.0), m_textIndent(0), m_extra("") {
+  }
+  //! try to find the line height using m_height or m_prevHeight
+  float height() const {
+    if (m_height > 0) return m_height;
+    return m_prevHeight;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, LineHeader const &line) {
@@ -355,6 +361,8 @@ struct LineHeader {
   bool m_fontSet;
   /** the line height in point ( if known) */
   float m_height;
+  /** the previous line height in point ( if known) */
+  float m_prevHeight;
   /** the text indent in inches ( if known) */
   Variable<double> m_textIndent;
   /** extra data */
@@ -398,6 +406,26 @@ struct PageInfo {
     return true;
   }
 
+  //! return a section
+  MWAWSection getSection() const {
+    MWAWSection sec;
+    size_t numC = m_columns.size();
+    if (numC <= 1)
+      return sec;
+    sec.m_columns.resize(numC);
+    for (size_t c=0; c < numC; c++) {
+      MWAWSection::Column &col=sec.m_columns[c];
+      int prevPos= c ? (m_columns[c].m_box[0].x()+m_columns[c-1].m_box[1].x())/2 :
+                   m_columns[c].m_box[0].x();
+      int nextPos= c+1!=numC ? (m_columns[c+1].m_box[0].x()+m_columns[c].m_box[1].x())/2 :
+                   m_columns[c].m_box[1].x();
+      col.m_width = double(nextPos-prevPos);
+      col.m_widthUnit = WPX_POINT;
+      col.m_margins[libmwaw::Left]=double(m_columns[c].m_box[0].x()-prevPos)/72.;
+      col.m_margins[libmwaw::Right]=double(nextPos-m_columns[c].m_box[1].x())/72.;
+    }
+    return sec;
+  }
   //! the pages
   int m_page;
   //! the columns
@@ -488,14 +516,16 @@ struct Zone {
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() : MWAWParagraph(), m_align(0), m_interSpacing(1.), m_interSpacingUnit(WPX_PERCENT),
-    m_border(), m_isTable(false), m_isSent(false) {
+    m_dim(0,0), m_border(), m_isTable(false), m_tableFlags(), m_actCol(-1), m_isSent(false) {
     m_befAftSpacings[0]=m_befAftSpacings[1]=0;
+    m_tabsRelativeToLeftMargin=false;
   }
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
     if (ind.m_isTable) o << "table,";
     if (ind.m_align) o << "align=" << ind.m_align << ",";
+    if (ind.m_dim[0]>0 || ind.m_dim[1]>0) o << "dim=" << ind.m_dim << ",";
     o << reinterpret_cast<MWAWParagraph const &>(ind);
     return o;
   }
@@ -531,37 +561,96 @@ struct Paragraph : public MWAWParagraph {
   void updateFromRuler(Paragraph const &ruler) {
     MWAWParagraph::operator=(ruler);
     m_isTable = ruler.m_isTable;
+    m_tableFlags = ruler.m_tableFlags;
+    m_dim = ruler.m_dim;
     m_isSent = false;
   }
+  //! returns the table dimension in inches
+  bool getTableDimensions(std::vector<float> &dim) const {
+    size_t numTabs = m_tabs->size();
+    if ((numTabs%2) != 1 || numTabs != m_tableFlags.size()) {
+      MWAW_DEBUG_MSG(("FWTextInternal::Paragraph:getTableDimensions: unexpected number of tabs\n"));
+      return false;
+    }
+    if (m_dim[0] <= 0) {
+      MWAW_DEBUG_MSG(("FWTextInternal::Paragraph:getTableDimensions: can not determine line width\n"));
+      return false;
+    }
+    std::vector<double> limits;
+    limits.push_back(*m_margins[1]);
+    for (size_t i=1; i < numTabs; i+=2) {
+      if (m_tableFlags[i] != 4) {
+        MWAW_DEBUG_MSG(("FWTextInternal::Paragraph:getTableDimensions: find unexpected tables flags\n"));
+        return false;
+      }
+      limits.push_back((*m_tabs)[i].m_position);
+    }
+    limits.push_back(double(m_dim[0])-*m_margins[2]);
+    dim.resize(limits.size()-1);
+    for (size_t i=0; i < dim.size(); i++)
+      dim[i] = float(limits[i+1]-limits[i]);
+    return true;
+  }
   //! update the paragraph data to be sent to a listener
-  void update() {
+  MWAWParagraph updateToSent() const {
+    m_isSent = true;
+    MWAWParagraph res = *this;
     if ( m_interSpacing>0)
-      setInterline(m_interSpacing, m_interSpacingUnit);
+      res.setInterline(m_interSpacing, m_interSpacingUnit);
     for (int i = 0; i < 2; i++) {
       if (m_befAftSpacings[i] <= 0)
-        m_spacings[i+1]=(-m_befAftSpacings[i])/72.0;
+        res.m_spacings[i+1]=(-m_befAftSpacings[i])/72.0;
       else // ok suppose line of height 9
-        m_spacings[i+1]=(m_befAftSpacings[i])*9.0/72.0;
+        res.m_spacings[i+1]=(m_befAftSpacings[i])*9.0/72.0;
+    }
+    if (!m_border.m_backColor.isWhite())
+      res.m_backgroundColor = m_border.m_backColor;
+
+    if (m_isTable && m_actCol >= 0) {
+      if (2*m_actCol < int(m_tableFlags.size())) {
+        switch(m_tableFlags[size_t(2*m_actCol)]) {
+        case 0:
+          res.m_justify = MWAWParagraph::JustificationLeft;
+          break;
+        case 1:
+          res.m_justify = MWAWParagraph::JustificationCenter;
+          break;
+        case 2:
+        case 5:
+          res.m_justify = MWAWParagraph::JustificationFull;
+          break;
+        case 3:
+          res.m_justify = MWAWParagraph::JustificationRight;
+          break;
+        case 6:
+          res.m_justify = MWAWParagraph::JustificationFullAllLines;
+          break;
+        default:
+          break;
+        }
+      }
+      res.m_tabs->resize(0);
+      m_actCol=-1;
+      return res;
     }
     switch(m_align) {
     case 0:
-      m_justify = MWAWParagraph::JustificationLeft;
+      res.m_justify = MWAWParagraph::JustificationLeft;
       break;
     case 1:
-      m_justify = MWAWParagraph::JustificationCenter;
+      res.m_justify = MWAWParagraph::JustificationCenter;
       break;
     case 2:
-      m_justify = MWAWParagraph::JustificationFull;
+      res.m_justify = MWAWParagraph::JustificationFull;
       break;
     case 3:
-      m_justify = MWAWParagraph::JustificationRight;
+      res.m_justify = MWAWParagraph::JustificationRight;
       break;
     default:
       break;
     }
-    if (!m_border.m_backColor.isWhite())
-      m_backgroundColor = m_border.m_backColor;
-    m_borders = m_border.getParagraphBorders();
+    res.m_borders = m_border.getParagraphBorders();
+    return res;
   }
 
   //! the align value
@@ -572,10 +661,16 @@ struct Paragraph : public MWAWParagraph {
   WPXUnit m_interSpacingUnit;
   //! the before/after spacing ( negative in point, positive in percent)
   double m_befAftSpacings[2];
+  //! the zone dimension
+  Vec2f m_dim;
   //! the actual border
   Border m_border;
   //! a flag to know if this is a table
   bool m_isTable;
+  //! the list of table limit
+  std::vector<int> m_tableFlags;
+  //! the index of the actual column to send
+  mutable int m_actCol;
   //! a flag to know if the parser is send or not
   mutable bool m_isSent;
 };
@@ -956,11 +1051,10 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
           done = false;
         }
         break;
-      case 0x98: // in table?
-        f << "[" << onString << "98]";
-        val=' ';
+      case 0x98: // soft break
+        f << "\\n";
         done = false;
-        break; // fixme in a table ?
+        break;
       case 0x96: // field end
         f << "[FEnd]";
         break;
@@ -994,7 +1088,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
           break;
         }
         id = int(input->readULong(2));
-        f << "[rulerId=" << id << "]";
+        f << "[P" << id << "]";
 
         std::map<int,FWTextInternal::Paragraph>::iterator it=
           m_state->m_paragraphMap.find(id);
@@ -1069,10 +1163,8 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
     if (done)
       continue;
 
-    if (!fCharSent && !ruler.m_isSent) {
-      ruler.update();
-      setProperty(ruler);
-    }
+    if (!fCharSent && !ruler.m_isSent)
+      listener->setParagraph(ruler.updateToSent());
     if (!fontSet) {
       listener->setFont(font.m_font);
       fontSet = true;
@@ -1080,9 +1172,12 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
     fCharSent = true;
     lastEOL = false;
     // now, we can try to send the data
-    if (id >= 0 || val==0xa8 || val==0xac) {
+    if (id >= 0 || val==0xa8 || val==0x98 || val==0xac) {
       done = true;
       switch(val) {
+      case 0x98:
+        listener->insertEOL(true);
+        break;
       case 0xa8:
         lastEOL = true;
         listener->insertEOL();
@@ -1129,13 +1224,96 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         f << char(val);
     }
   }
-  if (!fCharSent && !ruler.m_isSent) {
-    ruler.update();
-    setProperty(ruler);
-  }
+  if (!fCharSent && !ruler.m_isSent)
+    listener->setParagraph(ruler.updateToSent());
   if (!lastEOL)
     listener->insertEOL(false);
   str=f.str();
+}
+
+bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::LineHeader const &lHeader,
+                       FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler, std::string &str)
+{
+  std::vector<float> dim;
+  if (!ruler.getTableDimensions(dim))
+    return false;
+  float height=lHeader.height();
+  if (height <= 0) {
+    MWAW_DEBUG_MSG(("FWText::sendTable: can not find table height\n"));
+    return false;
+  }
+
+  size_t numCols = dim.size();
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return false;
+
+  MWAWInputStreamPtr input = zone->m_zone->m_input;
+  long pos = input->tell();
+  long endPos=pos+lHeader.m_numChar;
+  std::vector<long> cellPos;
+  cellPos.push_back(pos);
+  for (int i = 0; i < lHeader.m_numChar; i++) {
+    long actPos = input->tell();
+    if (input->atEOS())
+      break;
+    int c = (int)input->readULong(1);
+    if (c==0xa7) {
+      cellPos.push_back(actPos);
+      cellPos.push_back(actPos+1);
+    }
+    // special case: an item implies a column shift
+    if (c==0xac) {
+      cellPos.push_back(actPos+1);
+      cellPos.push_back(actPos+1);
+    }
+  }
+  cellPos.push_back(endPos);
+
+  size_t numFind=cellPos.size()/2;
+  if (numCols < numFind) {
+    if (numCols+1==numFind) {
+      // happens one type at the end of file: bug or normal end table?
+      MWAW_DEBUG_MSG(("FWText::sendTable: find a spurious column break in last line position\n"));
+      cellPos.resize(2*numCols);
+    } else {
+      MWAW_DEBUG_MSG(("FWText::sendTable: find too many columns\n"));
+      return false;
+    }
+  }
+
+  // ok, we have the limit of the text, let works...
+  libmwaw::DebugStream f;
+  listener->openTable(dim, WPX_INCH);
+
+  listener->openTableRow(-height, WPX_POINT);
+  for (size_t col = 0; col < numCols; col++) {
+    WPXPropertyList emptyList;
+    MWAWCell cell;
+    Vec2i cellPosition(Vec2i((int)0,(int)col));
+    cell.setPosition(cellPosition);
+    // fixme: set the real border here
+    cell.setBorders(0xf, MWAWBorder());
+    listener->openTableCell(cell, emptyList);
+
+    if (col < numFind) {
+      if (cellPos[2*col+1]>cellPos[2*col]) {
+        std::string string;
+        input->seek(cellPos[2*col], WPX_SEEK_SET);
+        ruler.m_actCol=int(col);
+        ruler.m_isSent=false;
+        send(zone, int(cellPos[2*col+1]-cellPos[2*col]), font, ruler, string);
+        f << string;
+      }
+    }
+    if (col+1 != numCols)
+      f << "[col]";
+    listener->closeTableCell();
+  }
+  listener->closeTableRow();
+  listener->closeTable();
+  input->seek(endPos, WPX_SEEK_SET);
+  str=f.str();
+  return true;
 }
 
 bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::LineHeader &lHeader)
@@ -1167,7 +1345,9 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
     else if (val) f << "unkn2=" << val << ",";
     val = (int)input->readLong(2); // small number between 20 and -20?
     if (val) f << "N1=" << float(val)/256.0f << ",";
-    lHeader.m_textIndent = (double)input->readLong(2)/72.;
+    val = (int)input->readLong(2);
+    if (val)
+      lHeader.m_textIndent = (double)val/72.;
     f << "w=" << (int)input->readLong(2) << ",";
     f << "],";
   }
@@ -1281,6 +1461,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
   }
   int actPage = 0, actCol = 0, numCol=1;
   listener->setParagraph(ruler);
+  float prevHeight = -1;
   while(1) {
     pos = input->tell();
     bool sendData = false;
@@ -1304,8 +1485,9 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
         actCol = 0;
 
         if (!actPage || !page.isSimilar(zone->m_pagesInfo[size_t(actPage-1)])) {
-          size_t numC = page.m_columns.size();
+          MWAWSection section = page.getSection();
           libmwaw::SubDocumentType subdocType;
+          int numC = section.numColumns();
           if (listener->isSubDocumentOpened(subdocType) && numC <=1
               && subdocType != libmwaw::DOC_TEXT_BOX)
             ;
@@ -1313,16 +1495,8 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
             if (listener->isSectionOpened())
               listener->closeSection();
 
-            MWAWSection sec;
-            if (numC>1) {
-              sec.m_columns.resize(numC);
-              for (size_t c=0; c < numC; c++) {
-                sec.m_columns[c].m_width = double(page.m_columns[c].m_box.size().x());
-                sec.m_columns[c].m_widthUnit = WPX_POINT;
-              }
-            }
-            listener->openSection(sec);
-            numCol = int(numC);
+            listener->openSection(section);
+            numCol = numC;
           }
         }
 
@@ -1344,6 +1518,10 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
       break;
     }
     f << lHeader;
+    // update prevHeight
+    lHeader.m_prevHeight = prevHeight;
+    prevHeight = lHeader.height();
+
     if (lHeader.m_fontSet) {
       font.m_font.setId(lHeader.m_font.id());
       font.m_font.setSize(lHeader.m_font.size());
@@ -1351,7 +1529,10 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     double prevTextIndent = ruler.m_margins[0].get();
     bool modIdent = false;
     double newIdent=prevTextIndent;
-    if (lHeader.m_textIndent.isSet()) {
+    /** sometimes, textIndent can correspond to the distance to page
+        margins, so we can not rely on this if there is multiple
+        column... */
+    if (actCol==0 && lHeader.m_textIndent.isSet()) {
       newIdent=*lHeader.m_textIndent;
       modIdent=true;
     }
@@ -1370,10 +1551,14 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
     long lastPos = debPos+lHeader.m_numChar;
     if (listener) {
       std::string str;
-      send(zone, lHeader.m_numChar, font, ruler, str);
-      input->seek(lastPos, WPX_SEEK_SET);
+      if (!ruler.isTable() || !sendTable(zone, lHeader, font, ruler, str)) {
+        str="";
+        input->seek(debPos, WPX_SEEK_SET);
+        send(zone, lHeader.m_numChar, font, ruler, str);
+      }
       f << str;
     }
+    input->seek(lastPos, WPX_SEEK_SET);
     if (modIdent && 0) {
       ruler.m_margins[0] = prevTextIndent;
       ruler.m_isSent = false;
@@ -1509,7 +1694,10 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
       val = (int)input->readULong(1);
       if (val>1) ok=false;
     }
-    val = ok ? (int)input->readLong(2) : 0;
+    val = ok ? (int)input->readLong(1) : 0;
+    if (val && !knownZone)
+      ok=false;
+    val = ok ? (int)input->readLong(1) : 0;
     if (val < 1 || val > 20)
       ok=false;
     if (!ok) { // force to try as attachment
@@ -1567,8 +1755,10 @@ bool FWText::readTextData(shared_ptr<FWEntry> zone)
     if (text->m_flags[i])
       f << "fl" << i << "=" << text->m_flags[i] << ",";
   }
-  val = (int)input->readLong(2); // small number 1/2
-  if (val!=1) f << "f4=" << val << ",";
+  for (int i=0; i < 2; i++) { // f4=0|27, f5=small number 1/2/f
+    val = (int)input->readLong(1);
+    if (val!=1) f << "f" << i+4 << "=" << val << ",";
+  }
 
   // between 1 and 202 ( very similar to dim[2]
   int dimUnk = (int)input->readLong(2);
@@ -1901,7 +2091,8 @@ bool FWText::readParagraphTabs(shared_ptr<FWEntry> zone, int id)
   }
 
   f.str("");
-  f << "Entries(Tabs):";
+  f << "Entries(Ruler):";
+  if (id >= 0) f << "P" << id << ",";
   int val;
   for (int i = 0; i < 2; i++) { // find f0 in 0 c0, f1=0|2
     val = (int)input->readULong(1);
@@ -1911,18 +2102,18 @@ bool FWText::readParagraphTabs(shared_ptr<FWEntry> zone, int id)
     val = (int)input->readULong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
+  FWTextInternal::Paragraph para;
   float dim[2];
   for (int i = 0; i < 2; i++) // dim0: height?, dim1:width
     dim[i] = (float)(input->readULong(2))/72.f;
-  f << "dim?=" << dim[1] << "x" << dim[0] << ",";
-  float margins[3];
+  para.m_dim=Vec2f(dim[1],dim[0]);
+  double margins[3];
   char const *(margNames[]) = { "left", "right", "first" };
   for (int i = 0; i < 3; i++) {
-    margins[i] = (float)(input->readLong(4))/65536.f/72.0f;
+    margins[i] = double(input->readLong(4))/65536./72.0;
     if (margins[i] < 0 || margins[i] > 0)
       f << "margins[" << margNames[i] << "]=" << margins[i] << ",";
   }
-  FWTextInternal::Paragraph para;
   para.m_margins[0] = margins[2]-margins[0];
   para.m_margins[1] = margins[0];
   if (margins[1] < dim[1])
@@ -1943,7 +2134,7 @@ bool FWText::readParagraphTabs(shared_ptr<FWEntry> zone, int id)
     }
     if (input->readULong(4)) {
       para.m_isTable = true;
-      f << "isTable,";
+      f << "table,";
     }
     input->seek(pos+4+30, WPX_SEEK_SET);
   }
@@ -1952,10 +2143,10 @@ bool FWText::readParagraphTabs(shared_ptr<FWEntry> zone, int id)
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     f.str("");
-    f << "Tabs-" << i << ":";
+    f << "Ruler:Tabs-" << i << ":";
     MWAWTabStop tab;
     val = (int)input->readULong(1);
-    switch((val>>5) & 3) {
+    switch(val>>5) {
     case 0:
       break;
     case 1:
@@ -1966,24 +2157,41 @@ bool FWText::readParagraphTabs(shared_ptr<FWEntry> zone, int id)
       break;
     case 3:
       tab.m_alignment = MWAWTabStop::DECIMAL;
+      break;
+    case 4:
+      f << "end[table],";
+      break;
+    case 5:
+      f << "justify[table],";
+      break;
+    case 6:
+      f << "justifyAll[table],";
+      break;
+      // 4: tableend, 5: justify(begintable), 6: justifyall(begin table)
     default:
+      f << "##tab[type]=" << (val>>5) << ",";
       break;
     }
-    if (val & 0x80) f << "tableLimit,";
-    // if (val & 0x1F) f << "#type=" << std::hex << (val & 0x1F) << std::dec << ",";
+    para.m_tableFlags.push_back(val>>5);
+    if (val & 0x1F) f << "#type=" << std::hex << (val & 0x1F) << std::dec << ",";
     val = (int)input->readULong(1);
-    if (val != 0x2e) f << "#f0=" <<  std::hex << val << std::dec << ",";
-    tab.m_position = float(input->readLong(4))/65536.f/72.f;
+    if (val) {
+      int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) val);
+      if (unicode==-1)
+        tab.m_decimalCharacter = uint16_t(val);
+      else
+        tab.m_decimalCharacter = uint16_t(unicode);
+    }
+    tab.m_position = double(input->readLong(4))/65536./72.;
     val = (int)input->readLong(2);
     if (val) f << "repeat=" << val/256.;
 
     val = (int)input->readULong(1);
     switch(val) {
-    case 0x20:
-      break;
     case 0x1: // fixme: . or dotted
       tab.m_leaderCharacter = '.';
       break;
+    case 0x20: // space, ie. none
     case 0:
       break;
     default: {
@@ -2009,7 +2217,7 @@ bool FWText::readParagraphTabs(shared_ptr<FWEntry> zone, int id)
     if (sz==0x24 && pos+4+sz <= zone->end()) {
       input->seek(0x24, WPX_SEEK_CUR);
       ascii.addPos(pos);
-      ascii.addNote("Tabs-end");
+      ascii.addNote("Ruler[Table:end]");
     } else {
       MWAW_DEBUG_MSG(("FWText::readParagraphTabs: can not find table data\n"));
       input->seek(pos, WPX_SEEK_SET);
@@ -2288,15 +2496,6 @@ bool FWText::readColumns(shared_ptr<FWEntry> zone)
     input->seek(pos+10, WPX_SEEK_SET);
   }
   return true;
-}
-
-////////////////////////////////////////////////////////////
-// send ruler property
-void FWText::setProperty(FWTextInternal::Paragraph const &para)
-{
-  if (!m_parserState->m_listener) return;
-  para.m_isSent = true;
-  m_parserState->m_listener->setParagraph(para);
 }
 
 ////////////////////////////////////////////////////////////

@@ -115,7 +115,7 @@ std::ostream &operator<<(std::ostream &o, MWAWTabStop const &tab)
   if (tab.m_leaderCharacter != '\0')
     o << ":sep='"<< (char) tab.m_leaderCharacter << "'";
   if (tab.m_decimalCharacter && tab.m_decimalCharacter != '.')
-    o << ":dec='" << tab.m_decimalCharacter << "'";
+    o << ":dec='" << (char) tab.m_decimalCharacter << "'";
   return o;
 }
 

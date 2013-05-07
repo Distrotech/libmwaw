@@ -112,6 +112,12 @@ protected:
   void send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
             FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler,
             std::string &str);
+
+  //! try send a table row
+  bool sendTable(shared_ptr<FWTextInternal::Zone> zone,
+                 FWTextInternal::LineHeader const &lHeader,
+                 FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler,
+                 std::string &str);
   //! send a hidden item
   bool sendHiddenItem(int id, FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler);
 
@@ -129,9 +135,6 @@ protected:
   //
   // low level
   //
-
-  /** send the ruler properties */
-  void setProperty(FWTextInternal::Paragraph const &para);
 
   //! try to read the header of a line
   bool readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::LineHeader &lHeader);

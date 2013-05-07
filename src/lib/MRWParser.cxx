@@ -900,7 +900,7 @@ bool MRWParser::readZoneDim(MRWEntry const &entry, int zoneId)
     sec.m_columns.resize(numCols);
     for (size_t c=0; c < numCols; c++) {
       MWAWSection::Column &col = sec.m_columns[c];
-      int prevPos= c==0 ? 0 : (colPos[2*c-1]+colPos[2*c])/2;
+      int prevPos= c==0 ? colPos[0] : (colPos[2*c-1]+colPos[2*c])/2;
       int nextPos= c+1==numCols ? colPos[2*c+1] :
                    (colPos[2*c+1]+colPos[2*c+2])/2;
       col.m_width=double(nextPos-prevPos);

@@ -256,7 +256,10 @@ bool File::readFileInformation()
     checkFInfoType("DRD2","HanMac Word-K") || checkFInfoType("HanMac Word-K");
   } else if (m_fInfoCreator=="LWTE") {
     checkFInfoType("TEXT","LightWayText") || checkFInfoType("MACR","LightWayText[MACR]") ||
-    checkFInfoType("pref","LightWayText[Preferences]") || checkFInfoType("LightWayText");
+    checkFInfoType("pref","LightWayText[Preferences]") ||
+    checkFInfoType("ttro","LightWayText[Tutorial]") || checkFInfoType("LightWayText");
+  } else if (m_fInfoCreator=="LWTR") {
+    checkFInfoType("APPL","LightWayText[appli]")
   } else if (m_fInfoCreator=="MACA") {
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   } else if (m_fInfoCreator=="MACD") { // checkme

@@ -149,7 +149,7 @@ public:
   void resetBorders() {
     m_bordersList.resize(0);
   }
-  //! sets the cell border: wh=MWAWBorder::LeftBit|...
+  //! sets the cell border: wh=libmwaw::Left|...
   void setBorders(int wh, MWAWBorder const &border);
 
   //! returns the background color

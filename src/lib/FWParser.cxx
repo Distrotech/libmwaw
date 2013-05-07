@@ -425,17 +425,18 @@ void FWParser::parse(WPXDocumentInterface *docInterface)
     for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); it++) {
       shared_ptr<FWEntry> &zone = it->second;
       if (!zone || !zone->valid() || zone->isParsed()) continue;
-      if (zone->hasType("Biblio")) {
-        MWAW_DEBUG_MSG(("FWParser::parse: find some biblio zone unparsed!!!\n"));
-      } else if (first) {
-        first = false;
-        MWAW_DEBUG_MSG(("FWParser::parse: find some unparsed zone!!!\n"));
-      }
       f.str("");
       if (zone->hasType("UnknownZone"))
         f << "Entries(NotParsed)";
       else
         f << "Entries(" << zone->type() << ")";
+      if (zone->hasType("Biblio")) {
+        MWAW_DEBUG_MSG(("FWParser::parse: find some biblio zone unparsed!!!\n"));
+      } else if (first) {
+        f << "###";
+        first = false;
+        MWAW_DEBUG_MSG(("FWParser::parse: find some unparsed zone!!!\n"));
+      }
       if (zone->m_nextId != -2) f << "[" << zone->m_nextId << "]";
       f << "|" << *zone << ":";
       libmwaw::DebugFile &asciiFile = zone->getAsciiFile();
