@@ -52,16 +52,15 @@ class Exception
 
 struct File {
   //! the constructor
-  File(char const *path) : m_fName(),
+  File(char const *path) : m_fName(path ? path : ""),
     m_fInfoCreator(""), m_fInfoType(""), m_fInfoResult(""),
     m_fileVersion(), m_appliVersion(), m_rsrcMissingMessage(""), m_rsrcResult(""),
     m_dataResult(), m_printFileName(false) {
-    if (!path || !m_fName.length()) {
+    if (!m_fName.length()) {
       std::cerr << "File::File: call without path\n";
       throw libmwaw_tools::Exception();
     }
 
-    m_fName.assign(path);
     // check if it is a regular file
     struct stat status;
     if ( stat( path, &status ) == -1 ) {
