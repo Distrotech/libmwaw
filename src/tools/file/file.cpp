@@ -64,8 +64,7 @@ struct File {
     m_fName.assign(path);
     // check if it is a regular file
     struct stat status;
-    if ( stat( path, &status ) == -1 )
-    {
+    if ( stat( path, &status ) == -1 ) {
       std::cerr << "File::File: the file " << m_fName << " cannot be read\n";
       throw libmwaw_tools::Exception();
     }

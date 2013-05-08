@@ -1027,8 +1027,7 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     if (vers > 2) {
       info.m_styleId = info.m_rulerId;
       CWStyleManager::Style style;
-      if (m_styleManager->get(rulerId, style))
-      {
+      if (m_styleManager->get(rulerId, style)) {
         rulerId = info.m_rulerId = style.m_rulerId;
 #if 0
         f << "[style=" << style << "]";

@@ -102,13 +102,12 @@ InputStream *XAttr::getAuxillarInput() const
   std::string name=folder+"._"+file;
 
   struct stat status;
-  stat(name.c_str(), &status );
-  if (S_ISREG(status.st_mode) )
+  if (stat(name.c_str(), &status )==0 && S_ISREG(status.st_mode) )
     ;
   else {
     name=folder+"__MACOSX/._"+file;
     stat(name.c_str(), &status );
-    if (!S_ISREG(status.st_mode) )
+    if (stat(name.c_str(), &status ) || !S_ISREG(status.st_mode) )
       return 0;
   }
 

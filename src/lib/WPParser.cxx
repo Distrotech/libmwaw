@@ -58,10 +58,9 @@ namespace WPParserInternal
 {
 //! Page informations
 struct PageInfo {
-  PageInfo() : m_firstLine(0), m_height(0), m_heightFromBegin(0)
-  {
+  PageInfo() : m_firstLine(0), m_height(0), m_heightFromBegin(0) {
     std::memset(m_unknown, 0, sizeof(m_unknown));
-   }
+  }
   friend std::ostream &operator<<(std::ostream &o, PageInfo const &p) {
     o << "firstLine=" << p.m_firstLine
       << ", height=" << p.m_height
@@ -78,8 +77,7 @@ struct PageInfo {
 
 //! Column informations
 struct ColumnInfo {
-  ColumnInfo() : m_firstLine(0), m_height(0), m_col(0), m_numCol(1)
-  {
+  ColumnInfo() : m_firstLine(0), m_height(0), m_col(0), m_numCol(1) {
     std::memset(m_unknown, 0, sizeof(m_unknown));
   }
   friend std::ostream &operator<<(std::ostream &o, ColumnInfo const &c) {

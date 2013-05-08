@@ -1,11 +1,19 @@
 CHANGES:
+05/07/2013:
+- check that the remaining parsers (excepted Microsoft Word) use the
+  new properties' classes,
+- add table generation in FullWrite parser,
+- rewrite from scratch zip.cpp (to avoid using different license),
+- + many code corrections done by David Tardon.
+
 05/03/2013:
 - check that the WriterPlus parsers use the new properties' classes,
 - simplify a little the code of MWAWDocument
 
 04/30/2013:
 - add a parser for Acta v2 and Acta Classic v1,
-- check that the DOCMaker, eDOC, SimpleText, Tex-Edit, Z-Write parsers use the new properties' classes,
+- check that the DOCMaker, eDOC, SimpleText, Tex-Edit, Z-Write parsers
+  use the new properties' classes,
 
 04/25/2013:
 - rewrite MWAWPageSpan,
@@ -18,8 +26,7 @@ CHANGES:
 - MWAWContentListener : add a sanity check to insure that at most
   200 very small pictures are generated.
 
-04/14/2013: ----- version 1.9 ---------
-
+04/14/2013: ----- version 1.9 (start) ---------
 
 04/14/2013:
 - check that the Microsoft Word parser use all
@@ -31,7 +38,7 @@ CHANGES:
 - add parser for HanMac Word-J document
 - HanMac Word-K: retrieve header/footer, footnote, section, ...
 
-03/12/2013: ----- version 1.8 ---------
+03/12/2013: ----- version 1.8 (start) ---------
 
 03/12/2013:
 - skip version 1.6 ( to be coherent with tag )
@@ -63,7 +70,7 @@ CHANGES:
 02/06/2013:
 - add a parser for eDOC v2.1 document
 
-01/30/2013: ----- version 1.7 ---------
+01/30/2013: ----- version 1.7 (start) ---------
 
 01/30/2013
 - update Mariner Write and Microsoft Word to use new font properties,
@@ -94,7 +101,7 @@ CHANGES:
   but not to the second parser ( ie. the SJIS-encoding is not even detected in
   my 2 Japanese's files :-~ )
 
-01/01/2013: ----- version 1.5 ---------
+01/01/2013: ----- version 1.5 (start) ---------
 
 12/30/2012
 - add a first parser for Z-Write 1.3.
@@ -113,7 +120,7 @@ CHANGES:
   in debug mode, the HanMac Word-J (2.0.4) are also recognised and a few
   zones are parsed but no output is generated...
 
-11/12/2012: ----- version 1.4 ---------
+11/12/2012: ----- version 1.4 (start) ---------
 
 11/12/2012
 - try to improve a little the claris/appleworks parser
@@ -135,7 +142,7 @@ CHANGES:
   ( understand better two of the three main structures + begin to
     send rulers, some anchor picture and some variable picture )
 
-09/30/2012: ----- version 1.3 ---------
+09/30/2012: ----- version 1.3 (start) ---------
 
 10/09/2012:
 - add a Microsoft Word parser for v1 and v3 (incomplete)
@@ -152,7 +159,7 @@ CHANGES:
 - try to sign the libraries and the executable:
     lib[mwaw|wpd|wpg]*.dylib and mwaw2odt
 
-07/31/2012: ----- version 1.2 ---------
+07/31/2012: ----- version 1.2 (start) ---------
 
 07/30/2012:
 - retrieve tables and pictures in Microsoft Word 4-5
@@ -163,12 +170,12 @@ CHANGES:
 06/28/2012:
 - add MindWrite 2.1 parser
 
-06/28/2012: ----- version 1.1 ---------
+06/28/2012: ----- version 1.1 (start) ---------
 
 05/28/2012:
 - add a Microsoft Works 3.0 parser
 
-05/20/2012: ----- version 1.0 ---------
+05/20/2012: ----- version 1.0 (start) ---------
 - rename all the files to simplify the hierarchy,
   which implies a major version bump:-~,
 

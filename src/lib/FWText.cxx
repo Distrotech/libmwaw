@@ -1606,7 +1606,7 @@ bool FWText::sendHiddenItem(int id, FWTextInternal::Font &font, FWTextInternal::
 
   f << "ItemData[Collapsed]:";
   int val = (int) input->readULong(1); // alway 40 ?
-  if (!(val & 0x40))
+  if (val != 0x40)
     f << "#type=" << val << ",";
   val = (int) input->readULong(1); // find number between 3 and 7, a unique id ?
   if (val) f << "id=" << val << ",";

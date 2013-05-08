@@ -102,10 +102,12 @@ Mwaw2odt
 ===============
 If we want to compile mwaw2odt ( which is a part of writerperfect), you
 must first download the last version of libwpg in http://sourceforge.net/projects/libwpg/
-and then download the lastest git version :
-  git clone git://libwpd.git.sourceforge.net/gitroot/libwpd/writerperfect
-and finally, execute autogen.sh and configure with the options corresponding
-to you computer and launch make to recompile. 
+and then download the lastest git version of odfgen and writerperfect:
+  git clone git://git.code.sf.net/p/libwpd/libodfgen libwpd-libodfgen
+  git clone git://git.code.sf.net/p/libwpd/writerperfect libwpd-writerperfect
+and finally, in each directories, execute autogen.sh and configure
+with the options corresponding to you computer and launch make to
+recompile.
 
 That's all folks! While no mailing exists, for more information, ask
 questions directly to osnola@users.sourceforge.net. Remember that Uncle Google can

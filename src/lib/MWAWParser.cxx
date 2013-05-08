@@ -49,16 +49,20 @@ MWAWParserState::MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsr
 MWAWParserState::~MWAWParserState()
 {
   if (m_listener.get()) try {
-    MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: the listener is not closed, call enddocument without any subdoc\n"));
-    m_listener->endDocument(false);
-  }
-  catch (const libmwaw::ParseException&)
-  {
-		// If it failed, it failed. But we cannot let the exception
-		// propagate, because letting a destructor throw is really bad idea.
-		// If that is a problem, the code should be refactored, so
-		// endDocument() is called explicitly.
-  }
+      /* must never happen, only sanity check....
+
+      Ie. the parser which creates a listener, must delete it.
+      */
+      MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: the listener is NOT closed, call enddocument without any subdoc\n"));
+      m_listener->endDocument(false);
+    } catch (const libmwaw::ParseException&) {
+      MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: endDocument FAILS\n"));
+      /* must never happen too...
+
+      Ie. the different parsers are responsable to create enough pages,
+      if we have exception here, this will indicate a second error in code
+      */
+    }
 }
 
 MWAWParser::MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header):
