@@ -44,6 +44,7 @@
 #endif
 
 #include <cstring>
+#include <cctype>
 #include <iostream>
 #include <list>
 #include <set>
