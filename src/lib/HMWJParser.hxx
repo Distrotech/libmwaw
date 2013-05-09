@@ -172,9 +172,10 @@ protected:
   bool readPrintInfo(MWAWEntry const &entry);
   /** try to read a unknown zone, just after the header (simillar to HMW Zoneb) */
   bool readHeaderEnd();
-
+#ifdef DEBUG
   /** try to read a unknown zones with header data */
   bool readZoneWithHeader(MWAWEntry const &entry);
+#endif
   /** try to read the zone A ( a big zone containing 5 sub zone ? )*/
   bool readZoneA(MWAWEntry const &entry);
   /** try to read the zone B*/

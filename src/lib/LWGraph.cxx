@@ -286,12 +286,12 @@ void LWGraph::flushExtra()
 {
 #ifdef DEBUG
   std::map<int, MWAWEntry>::const_iterator it;
-  for (it = m_state->m_idPictMap.begin() ; it != m_state->m_idPictMap.end(); it++) {
+  for (it = m_state->m_idPictMap.begin() ; it != m_state->m_idPictMap.end(); ++it) {
     MWAWEntry const &entry = it->second;
     if (entry.isParsed()) continue;
     sendPICT(entry);
   }
-  for (it = m_state->m_idJPEGMap.begin() ; it != m_state->m_idJPEGMap.end(); it++) {
+  for (it = m_state->m_idJPEGMap.begin() ; it != m_state->m_idJPEGMap.end(); ++it) {
     MWAWEntry const &entry = it->second;
     if (entry.isParsed()) continue;
     sendJPEG(entry);

@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 		HtmlDocumentGenerator documentGenerator(output);
 		error = MWAWDocument::parse(&input, &documentGenerator);
 	}
-	catch(MWAWResult err)
+	catch(MWAWResult &err)
 	{
 		error=err;
 	}

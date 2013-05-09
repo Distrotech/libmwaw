@@ -353,7 +353,7 @@ bool WNParser::createZones()
   // fixme: we must continue....
   libmwaw::DebugStream f;
   iter = m_entryManager->m_typeMap.begin();
-  for (; iter != m_entryManager->m_typeMap.end(); iter++) {
+  for (; iter != m_entryManager->m_typeMap.end(); ++iter) {
     WNEntry ent = *iter->second;
     if (ent.isParsed()) continue;
     ascii().addPos(ent.begin());

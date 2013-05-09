@@ -119,13 +119,13 @@ void TableStyleManager::send(std::ostream &out)
 	while (it != m_cellContentNameMap.end())
 	{
 		out << "." << it->second << " " << it->first << "\n";
-		it++;
+		++it;
 	}
 	it=m_rowContentNameMap.begin();
 	while (it != m_rowContentNameMap.end())
 	{
 		out << "." << it->second << " " << it->first << "\n";
-		it++;
+		++it;
 	}
 }
 

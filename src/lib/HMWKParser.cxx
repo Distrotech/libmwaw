@@ -310,9 +310,9 @@ bool HMWKParser::createZones()
 
   libmwaw::DebugStream f;
   std::multimap<long,shared_ptr<HMWKZone> >::iterator it;
-  for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); it++)
+  for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); ++it)
     readZone(it->second);
-  for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); it++) {
+  for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); ++it) {
     shared_ptr<HMWKZone> &zone = it->second;
     if (!zone || !zone->valid() || zone->m_parsed)
       continue;
@@ -1029,10 +1029,10 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
 
     /* now splay tree about leaf a */
     do {    /* walk up the tree semi-rotating pairs of nodes */
-      short b,c,d;
+      short c;
       if ((c = up[a]) != root) {      /* a pair remains */
-        d = up[c];
-        b = left[d];
+        short d = up[c];
+        short b = left[d];
         if (c == b) {
           b = right[d];
           right[d] = a;

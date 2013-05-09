@@ -171,8 +171,8 @@ std::string numberingValueToString(NumberingType type, int value)
 }
 
 // color function
-MWAWColor MWAWColor::barycenter(float alpha, MWAWColor const colA,
-                                float beta, MWAWColor const colB)
+MWAWColor MWAWColor::barycenter(float alpha, MWAWColor const &colA,
+                                float beta, MWAWColor const &colB)
 {
   uint32_t res = 0;
   for (int i=0, depl=0; i<4; i++, depl+=8) {

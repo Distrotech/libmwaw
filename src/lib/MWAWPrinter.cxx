@@ -53,11 +53,10 @@ namespace libmwaw
 //
 bool PrinterRect::read(MWAWInputStreamPtr input, Vec2i const &res)
 {
-  int x,y;
   for (int st = 0; st < 2; st++) {
-    y = int(input->readLong(2));
+    int y = int(input->readLong(2));
     y = int(float(y)*72./float(res.y()));
-    x = int(input->readLong(2));
+    int x = int(input->readLong(2));
     x = int(float(x)*72./float(res.x()));
     m_pos[st].set(x,y);
   }

@@ -583,7 +583,7 @@ bool Group::needSendFrameContent(int id, int subId, WPXPropertyList &frameList,
     frameList.insert("libwpd:frame-name",fName);
     res = false;
   }
-  it++;
+  ++it;
   if (it != lZones.m_mapIdChild.end()) {
     WPXString fName;
     fName.sprintf("Frame%d-%d", id, it->first);
@@ -737,7 +737,7 @@ int CWGraph::numPages() const
   std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
     = m_state->m_zoneMap.begin();
 
-  for ( ; iter != m_state->m_zoneMap.end() ; iter++) {
+  for ( ; iter != m_state->m_zoneMap.end() ; ++iter) {
     shared_ptr<CWGraphInternal::Group> group = iter->second;
     if (!group) continue;
     if (group->m_type != CWStruct::DSET::T_Main)
@@ -2650,7 +2650,7 @@ void CWGraph::flushExtra()
 {
   std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
     = m_state->m_zoneMap.begin();
-  for ( ; iter !=  m_state->m_zoneMap.end(); iter++) {
+  for ( ; iter !=  m_state->m_zoneMap.end(); ++iter) {
     shared_ptr<CWGraphInternal::Group> zone = iter->second;
     if (zone->m_parsed)
       continue;

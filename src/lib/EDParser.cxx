@@ -303,7 +303,7 @@ bool EDParser::findContents()
       map[entry.id()]= entry;
       seens.insert(entry.id());
     }
-    if (!seens.size() || m_state->m_maxPictId)
+    if (seens.empty() || m_state->m_maxPictId)
       continue;
     std::set<int>::iterator sIt=seens.lower_bound(1);
     if (sIt==seens.end()|| *sIt>10)
@@ -402,13 +402,13 @@ void EDParser::flushExtra()
 {
 #ifdef DEBUG
   std::map<int, MWAWEntry>::const_iterator rIt = m_state->m_idCPICMap.begin();
-  for ( ; rIt != m_state->m_idCPICMap.end(); rIt++) {
+  for ( ; rIt != m_state->m_idCPICMap.end(); ++rIt) {
     MWAWEntry const &entry = rIt->second;
     if (entry.isParsed()) continue;
     sendPicture(entry.id(), true);
   }
   rIt = m_state->m_idPICTMap.begin();
-  for ( ; rIt != m_state->m_idPICTMap.end(); rIt++) {
+  for ( ; rIt != m_state->m_idPICTMap.end(); ++rIt) {
     MWAWEntry const &entry = rIt->second;
     if (entry.isParsed()) continue;
     sendPicture(entry.id(), false);
@@ -865,7 +865,7 @@ bool EDParser::decodeZone(MWAWEntry const &entry, WPXBinaryData &data)
       vectors32K[st].resize(0x8000,0);
       int writePos=0;
       std::multimap<int,int>::const_iterator it;
-      for (it=mapData.begin(); it != mapData.end(); it++) {
+      for (it=mapData.begin(); it != mapData.end(); ++it) {
         int n=0x8000>>(it->first);
         if (writePos+n>0x8000) {
           MWAW_DEBUG_MSG(("EDParser::decodeZone: find unexpected value writePos=%x for zone %d\n",writePos+n, st));

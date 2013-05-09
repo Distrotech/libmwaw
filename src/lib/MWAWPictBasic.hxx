@@ -90,12 +90,12 @@ public:
   }
   /** sets the line color. default values : black
    */
-  void setLineColor(MWAWColor const col) {
+  void setLineColor(MWAWColor const &col) {
     m_lineColor = col;
   }
 
   /** sets the surface color. default value white */
-  void setSurfaceColor(MWAWColor const col, bool hasColor = true) {
+  void setSurfaceColor(MWAWColor const &col, bool hasColor = true) {
     m_surfaceColor = col;
     m_surfaceHasColor = hasColor;
   }

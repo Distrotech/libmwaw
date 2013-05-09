@@ -181,8 +181,8 @@ struct MWAWColor {
   }
 
   //! return alpha*colA+beta*colB
-  static MWAWColor barycenter(float alpha, MWAWColor const colA,
-                              float beta, MWAWColor const colB);
+  static MWAWColor barycenter(float alpha, MWAWColor const &colA,
+                              float beta, MWAWColor const &colB);
   //! return the rgba value
   uint32_t value() const {
     return m_value;

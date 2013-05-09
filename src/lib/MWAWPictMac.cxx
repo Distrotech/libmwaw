@@ -268,7 +268,7 @@ struct Bitmap {
       return false;
     }
     m_mode = (int) input.readLong(2); // mode: I find 0,1 and 3
-    if (m_mode < 0 && m_mode > 64) {
+    if (m_mode < 0 || m_mode > 64) {
       MWAW_DEBUG_MSG(("Pict1:Bitmap: unknown mode: %d \n", m_mode));
       return false;
     }
@@ -1698,7 +1698,6 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
 {
   libmwaw::DebugStream s;
   long actPos = 0L;
-  bool ok = true;
 
   input->seek(0, WPX_SEEK_SET);
   int sz = (int) input->readULong(2);
@@ -1709,7 +1708,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
   actPos = 2;
 
   Box2i box;
-  ok = OpCode::readRect(*input, WP_RECT, box);
+  bool ok = OpCode::readRect(*input, WP_RECT, box);
   if (ok) {
     s.str("");
     s << "PictBox=" << box;
@@ -1780,7 +1779,6 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
     delete [] res;
     return false;
   }
-  pictSize = sz;
 
   ADD_DATA_SHORT(resPtr,0); // size, we must fill it latter
   long dim[4];
@@ -1962,7 +1960,6 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
 {
   libmwaw::DebugStream s;
   long actPos = 0L;
-  bool ok = true;
 
   input->seek(0, WPX_SEEK_SET);
   int sz = (int) input->readULong(2);
@@ -1973,7 +1970,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
   actPos = 2;
 
   Box2i box;
-  ok = OpCode::readRect(*input, WP_RECT, box);
+  bool ok = OpCode::readRect(*input, WP_RECT, box);
   if (ok) {
     s.str("");
     s << "PictBox=" << box;

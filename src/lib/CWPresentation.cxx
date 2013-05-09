@@ -331,7 +331,7 @@ void CWPresentation::flushExtra()
 {
   std::map<int, shared_ptr<CWPresentationInternal::Presentation> >::iterator iter
     = m_state->m_presentationMap.begin();
-  for ( ; iter !=  m_state->m_presentationMap.end(); iter++) {
+  for ( ; iter !=  m_state->m_presentationMap.end(); ++iter) {
     shared_ptr<CWPresentationInternal::Presentation> presentation = iter->second;
     if (presentation->m_parsed)
       continue;

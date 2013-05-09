@@ -97,7 +97,7 @@ void ListStyleManager::send(std::ostream &out)
 	while (it != m_levelNameMap.end())
 	{
 		out << "." << it->second << " {\n" << it->first << "}\n";
-		it++;
+		++it;
 	}
 }
 
@@ -194,7 +194,7 @@ void ParagraphStyleManager::send(std::ostream &out)
 	while (it != m_contentNameMap.end())
 	{
 		out << "." << it->second << " {\n" << it->first << "}\n";
-		it++;
+		++it;
 	}
 }
 
@@ -301,7 +301,7 @@ void SpanStyleManager::send(std::ostream &out)
 	while (it != m_contentNameMap.end())
 	{
 		out << "." << it->second << " " << it->first << "\n";
-		it++;
+		++it;
 	}
 }
 
@@ -396,7 +396,6 @@ void SpanStyleManager::parseTextPosition(char const *value, std::ostream &out) c
 	// first try to retrieve the position
 	std::stringstream s("");
 	double pos=0;
-	char c;
 	if (strncmp(value,"super", 5)==0)
 	{
 		pos=33;
@@ -416,8 +415,10 @@ void SpanStyleManager::parseTextPosition(char const *value, std::ostream &out) c
 			MWAW_DEBUG_MSG(("SpanStyleManager::parseTextPosition: can not read %s\n", value));
 			return;
 		}
-		if (s.peek()=='%')
+		if (s.peek()=='%') {
+			char c;
 			s >> c;
+		}
 	}
 	double percent;
 	s >> percent;

@@ -545,7 +545,7 @@ bool MSWParser::createZones()
     readPicture(entry);
   }
 
-  for (it=m_entryMap.begin(); it!=m_entryMap.end(); it++) {
+  for (it=m_entryMap.begin(); it!=m_entryMap.end(); ++it) {
     MSWEntry const &entry = it->second;
     if (entry.isParsed()) continue;
     ascii().addPos(entry.begin());
@@ -1648,7 +1648,6 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
     } else if (fSz+9 > dataSz) {
       MWAW_DEBUG_MSG(("MSWParser::readObject: can not read the annotation comment\n"));
       f << "###";
-      ok = false;
     } else {
       std::string annotation("");
       for (int i = 0; i < fSz; i++)
@@ -1663,8 +1662,8 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
   pos = input->tell();
   ascii().addPos(beginPos);
   ascii().addNote(f.str().c_str());
-  if (long(input->tell()) != endPos)
-    ascii().addDelimiter(input->tell(), '#');
+  if (pos != endPos)
+    ascii().addDelimiter(pos, '#');
 
   return true;
 }

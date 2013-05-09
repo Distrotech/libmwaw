@@ -166,7 +166,6 @@ struct Block {
     return o;
   }
   void fillFramePropertyList(WPXPropertyList &extra) const {
-    std::stringstream s, s2;
     if (hasSurfaceColor())
       extra.insert("fo:background-color", m_surfaceColor.str().c_str());
     if (!hasBorders())
@@ -400,7 +399,7 @@ struct Cell : public MWAWTableCell {
     m_blockId(0), m_color(MWAWColor::white()) {
   }
   //! set the background color
-  void setBackColor(MWAWColor const col) {
+  void setBackColor(MWAWColor const &col) {
     m_color = col;
   }
   //! send the content
@@ -894,10 +893,8 @@ bool MWProStructures::createZonesV2()
     shared_ptr<MWProStructuresInternal::Block> block;
     while (1) {
       block = readBlockV2(id++);
-      if (!block) {
-        ok = false;
+      if (!block)
         break;
-      }
       // temporary fixme...
       block->m_contentType = MWProStructuresInternal::Block::TEXT;
       block->m_id=id;

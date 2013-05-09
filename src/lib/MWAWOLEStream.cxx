@@ -44,7 +44,6 @@
 #endif
 
 #include <cstring>
-#include <cctype>
 #include <iostream>
 #include <list>
 #include <set>
@@ -803,7 +802,7 @@ void DirTree::print_all_siblings(unsigned ind, std::ostream &o, std::set<unsigne
   o << "OLE(SIBLINGS):";
   print_siblings(p->m_child, o, child);
   o << "\n";
-  for (std::set<unsigned>::iterator it = child.begin(); it != child.end(); it++)
+  for (std::set<unsigned>::iterator it = child.begin(); it != child.end(); ++it)
     print_all_siblings(*it, o, seen);
 }
 

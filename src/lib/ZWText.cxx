@@ -656,7 +656,6 @@ bool ZWText::readStyles(MWAWEntry const &entry)
   std::string strVal;
   int intVal;
   bool boolVal;
-  std::vector<int> intList;
   for (size_t ff = 0; ff < numFields; ff++) {
     ZWField const &field = fields[ff];
     bool done = false;

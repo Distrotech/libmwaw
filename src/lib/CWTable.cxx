@@ -507,7 +507,7 @@ void CWTable::flushExtra()
 {
   std::map<int, shared_ptr<CWTableInternal::Table> >::iterator iter
     = m_state->m_tableMap.begin();
-  for ( ; iter !=  m_state->m_tableMap.end(); iter++) {
+  for ( ; iter !=  m_state->m_tableMap.end(); ++iter) {
     shared_ptr<CWTableInternal::Table> table = iter->second;
     if (table->m_parsed)
       continue;

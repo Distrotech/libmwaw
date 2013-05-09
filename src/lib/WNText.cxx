@@ -472,16 +472,6 @@ struct State {
     m_localFIdMap(), m_styleMap(), m_styleList(), m_contentMap() {
   }
 
-  //! return a style correspondint to an id
-  Style getStyle(int id) const {
-    std::map<int, int>::const_iterator it = m_styleMap.find(id);
-    if (it == m_styleMap.end())
-      return Style();
-    int rId = it->second;
-    if (rId < int(m_styleList.size()))
-      return m_styleList[(size_t) rId];
-    return Style();
-  }
   //! return a paragraph corresponding to 0:body, 1: header/footer, 2: footnote
   Paragraph getDefaultParagraph(int type) {
     int styleId = type == 0 ? 0 : type==1 ? 3 : type==2 ? 2 : -1;
@@ -634,11 +624,11 @@ bool WNText::createZones()
     int id = iter->second->id();
     if (id < 0 || id > 2) {
       MWAW_DEBUG_MSG(("WNText::createZones: find odd zone type:%d\n",id));
-      iter++;
+      ++iter;
       continue;
     }
     parseZone(*iter->second, listData[id]);
-    iter++;
+    ++iter;
   }
 
   // update the number of columns
@@ -817,11 +807,10 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
   ascFile.addPos(entry.begin());
   ascFile.addNote(f.str().c_str());
 
-  int c;
   while (long(input->tell()) < entry.end()) {
     long pos = input->tell();
     WNTextInternal::ContentZone zone;
-    c = (int) input->readULong(1);
+    int c = (int) input->readULong(1);
     if (c == 0xf0) {
       MWAW_DEBUG_MSG(("WNText::parseContent: find 0xf0 entry\n"));
       ascFile.addPos(pos);
@@ -1973,12 +1962,11 @@ void WNText::sendZone(int id)
     MWAW_DEBUG_MSG(("WNText::sendZone: called with id=%d\n",id));
     return;
   }
-  int width= 0;
   if (id == 0) {
-    int nCol;
+    int nCol, width=0;
     m_mainParser->getColumnInfo(nCol, width);
     if (m_state->m_numColumns > 1) {
-      if (width <= 0) // ok, we need to compute the width
+      if (width <= 0)
         width = int((72.0*m_mainParser->getPageWidth())/m_state->m_numColumns);
       if (listener->isSectionOpened())
         listener->closeSection();

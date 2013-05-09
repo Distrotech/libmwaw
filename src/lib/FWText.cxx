@@ -2536,7 +2536,7 @@ bool FWText::send(int zId)
 void FWText::flushExtra()
 {
   std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it;
-  for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); it++) {
+  for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); ++it) {
     shared_ptr<FWTextInternal::Zone> zone = it->second;
     if (!zone || !zone->m_zone || zone->m_zone->isParsed())
       continue;
@@ -2549,7 +2549,7 @@ void FWText::sortZones()
   std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it;
   int numZones = 0, totalNumPages = 0;
   std::vector<int> pagesLimits;
-  for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); it++) {
+  for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); ++it) {
     shared_ptr<FWTextInternal::Zone> zone = it->second;
     if (!zone || !zone->m_zone || zone->m_zoneType != FWTextInternal::Zone::Main)
       continue;
@@ -2590,7 +2590,7 @@ void FWText::sortZones()
 void FWText::createItemStructures()
 {
   std::map<int, FWTextInternal::Item>::iterator it=m_state->m_itemMap.begin(), it2;
-  for (; it != m_state->m_itemMap.end(); it++) {
+  for (; it != m_state->m_itemMap.end(); ++it) {
     FWTextInternal::Item &item = it->second;
     int childId=item.m_structId[FWTextInternal::Item::Child];
     int id=item.m_structId[FWTextInternal::Item::Main];

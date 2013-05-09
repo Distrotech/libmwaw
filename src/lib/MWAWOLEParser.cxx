@@ -360,8 +360,7 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
 
     while (pos != listsById.end()) {
       MWAWOLEParserInternal::OleDef const &dOle = pos->second;
-      if (pos->first != id) break;
-      pos++;
+      if (pos++->first != id) break;
 
       MWAWInputStreamPtr ole = file->getDocumentOLEStream(dOle.m_name);
       if (!ole.get()) {

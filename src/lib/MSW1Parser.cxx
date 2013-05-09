@@ -1203,13 +1203,11 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
     MWAW_DEBUG_MSG(("MSW1Parser::sendText: can not find a listener!"));
     return true;
   }
-  int numCols = 1;
-
   if (isMain) {
-    numCols = m_state->m_numColumns;
+    int numCols = m_state->m_numColumns;
     if (numCols > 1 && !getListener()->isSectionOpened()) {
       MWAWSection sec;
-      sec.setColumns(numCols, getPageWidth()/double(numCols), WPX_INCH);
+      sec.setColumns(numCols, getPageWidth()/double(numCols), WPX_INCH, m_state->m_columnsSep);
       getListener()->openSection(sec);
     }
   }

@@ -1463,7 +1463,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
   cPos = 0;
   std::set<MWProParserInternal::DataPosition,
       MWProParserInternal::DataPosition::Compare>::const_iterator it;
-  for (it = set.begin(); it != set.end(); it++) {
+  for (it = set.begin(); it != set.end(); ++it) {
     MWProParserInternal::DataPosition const &data = *it;
     long oldPos = pos;
     if (data.m_pos < cPos) {

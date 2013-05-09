@@ -272,7 +272,7 @@ int DMText::numPages() const
   int nPages = 0;
   std::map<int, DMTextInternal::Zone >::const_iterator it =
     m_state->m_idZoneMap.begin();
-  for ( ; it != m_state->m_idZoneMap.end(); it++) {
+  for ( ; it != m_state->m_idZoneMap.end(); ++it) {
     DMTextInternal::Zone const &zone= it->second;
     computeNumPages(zone);
     nPages += zone.m_numPages;
@@ -332,7 +332,7 @@ void DMText::updatePageSpanList(std::vector<MWAWPageSpan> &spanList)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   std::map<int, DMTextInternal::Zone >::const_iterator it =
     m_state->m_idZoneMap.begin();
-  for ( ; it != m_state->m_idZoneMap.end(); it++) {
+  for ( ; it != m_state->m_idZoneMap.end(); ++it) {
     int zId = it->first;
     DMTextInternal::Zone const &zone= it->second;
     if (zone.m_numPages <= 0)
@@ -723,7 +723,6 @@ bool DMText::sendTOC()
 
       listener->insertUnicodeString(ss.str().c_str());
       listener->insertChar(' ');
-      std::string str("");
       if (m_state->m_idZoneMap.find(127+zId)!=m_state->m_idZoneMap.end())
         sendString(m_state->m_idZoneMap.find(127+zId)->second.m_name);
       listener->insertEOL();
@@ -1012,7 +1011,7 @@ bool DMText::sendMainText()
   if (!m_parserState->m_listener) return true;
 
   std::map<int, DMTextInternal::Zone >::const_iterator it = m_state->m_idZoneMap.begin();
-  for ( ; it != m_state->m_idZoneMap.end(); it++) {
+  for ( ; it != m_state->m_idZoneMap.end(); ++it) {
     DMTextInternal::Zone const &zone= it->second;
     if (zone.m_parsed)
       continue;

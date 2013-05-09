@@ -1538,10 +1538,10 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
   }
   NSTextInternal::Zone &zone = m_state->m_zones[zoneId];
   bool isMain = zoneId == NSStruct::Z_Main;
-  int nCol = 1;
   int width = int(72.0*m_mainParser->getPageWidth());
   if (isMain || zoneId == NSStruct::Z_Footnote) {
     float colSep = 0.5f;
+    int nCol = 1;
     m_mainParser->getColumnInfo(nCol, colSep);
     if (nCol > 1)
       width /= nCol;
@@ -1566,9 +1566,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
   std::string str("");
   NSStruct::Position actPos(firstPos);
   NSTextInternal::Zone::PLCMap::iterator it = zone.m_plcMap.begin();
-  while (it != zone.m_plcMap.end() && it->first.cmp(actPos) < 0) {
-    it++;
-    continue;
+  while (it != zone.m_plcMap.end() && it++->first.cmp(actPos) < 0) {
   }
 
   NSTextInternal::Font actFont;

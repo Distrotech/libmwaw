@@ -200,8 +200,8 @@ bool File::readFileInformation()
     checkFInfoType("AD65", "Pagemaker6.5") || checkFInfoType("Pagemaker6.5");
   } else if (m_fInfoCreator=="ACTA") {
     checkFInfoType("OTLN", "Acta") || checkFInfoType("otln", "Acta") || checkFInfoType("Acta");
-  } else if (m_fInfoCreator=="ALB4") {
-    checkFInfoType("ALD4", "Pagemaker4") || checkFInfoType("Pagemaker4");
+  } else if (m_fInfoCreator=="ALB3") {
+    checkFInfoType("ALD3", "Pagemaker3") || checkFInfoType("Pagemaker3");
   } else if (m_fInfoCreator=="ALB4") {
     checkFInfoType("ALD4", "Pagemaker4") || checkFInfoType("Pagemaker4");
   } else if (m_fInfoCreator=="ALB5") {

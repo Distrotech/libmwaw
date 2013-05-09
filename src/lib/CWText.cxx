@@ -1980,7 +1980,7 @@ void CWText::flushExtra()
 {
   std::map<int, shared_ptr<CWTextInternal::Zone> >::iterator iter
     = m_state->m_zoneMap.begin();
-  for ( ; iter !=  m_state->m_zoneMap.end(); iter++) {
+  for ( ; iter !=  m_state->m_zoneMap.end(); ++iter) {
     shared_ptr<CWTextInternal::Zone> zone = iter->second;
     if (zone->m_parsed)
       continue;

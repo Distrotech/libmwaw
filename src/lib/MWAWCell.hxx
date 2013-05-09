@@ -222,7 +222,7 @@ public:
   }
 
   //! sets the text value
-  void setText(std::string const val) {
+  void setText(std::string const &val) {
     m_textValue = val;
     m_textValueSet = true;
   }
@@ -240,7 +240,7 @@ public:
   }
 
   //! sets the formula value
-  void setFormula(std::string const val) {
+  void setFormula(std::string const &val) {
     m_formulaValue = val;
   }
   //! returns the formula value

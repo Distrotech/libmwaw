@@ -374,7 +374,6 @@ bool MSK4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
 
   f << ", offset=" << std::hex << hie.begin() << ", length=" << hie.length();
 
-  std::string mess;
   if (cch != 0x18) {
     ascii().addDelimiter(pos+0x18, '|');
     f << ",#extraData";
@@ -513,8 +512,7 @@ bool MSK4Zone::createZones(bool mainOle)
   // RLRB
   pos = m_entryMap.lower_bound("RLRB");
   while (pos != m_entryMap.end()) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("RLRB")) break;
     if (!entry.hasType("RLRB")) continue;
 
@@ -524,8 +522,7 @@ bool MSK4Zone::createZones(bool mainOle)
   // SELN
   pos = m_entryMap.lower_bound("SELN");
   while (m_entryMap.end() != pos) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("SELN")) break;
     if (!entry.hasType("SELN")) continue;
     readSELN(input, entry);
@@ -535,8 +532,7 @@ bool MSK4Zone::createZones(bool mainOle)
   m_state->m_framesList.resize(0);
   pos = m_entryMap.lower_bound("FRAM");
   while (m_entryMap.end() != pos) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("FRAM")) break;
     if (!entry.hasType("FRAM")) continue;
     readFRAM(input, entry);
@@ -545,8 +541,7 @@ bool MSK4Zone::createZones(bool mainOle)
   /* Graph data */
   pos = m_entryMap.lower_bound("RBDR");
   while (pos != m_entryMap.end()) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("RBDR")) break;
     if (!entry.hasType("RBDR")) continue;
 
@@ -554,8 +549,7 @@ bool MSK4Zone::createZones(bool mainOle)
   }
   pos = m_entryMap.lower_bound("RBIL");
   while (pos != m_entryMap.end()) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("RBIL")) break;
     if (!entry.hasType("RBIL")) continue;
 
@@ -568,8 +562,7 @@ bool MSK4Zone::createZones(bool mainOle)
   // In the others block, maybe there can be interesting, so, we read them
   pos = m_entryMap.lower_bound("PICT");
   while (pos != m_entryMap.end()) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("PICT")) break;
     m_graphParser->readPictureV4(input, entry);
   }
@@ -627,8 +620,7 @@ void MSK4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
 
   pos = m_entryMap.begin();
   while (m_entryMap.end() != pos) {
-    MWAWEntry const &zone = pos->second;
-    pos++;
+    MWAWEntry const &zone = pos++->second;
     if (zone.isParsed() ||
         zone.hasName("TEXT") || // TEXT entries are managed directly by MSK4Text
         zone.hasName("INK ")) // INK Zone are ignored: always = 2*99

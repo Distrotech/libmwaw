@@ -346,7 +346,7 @@ bool HMWJParser::createZones()
   /* some zones do not seem to appear in this list, so we must track them */
   std::map<long,MWAWEntry>::iterator it;
   std::vector<MWAWEntry> newEntriesList;
-  for (it = m_state->m_zonesMap.begin()  ; it != m_state->m_zonesMap.end(); it++) {
+  for (it = m_state->m_zonesMap.begin()  ; it != m_state->m_zonesMap.end(); ++it) {
     MWAWEntry const &entry = it->second;
     if (!entry.valid()) continue;
     if (m_state->m_zonesMap.find(entry.end()) != m_state->m_zonesMap.end())
@@ -374,7 +374,7 @@ bool HMWJParser::createZones()
   }
 
   // now parse the different zones
-  for (it =  m_state->m_zonesMap.begin(); it != m_state->m_zonesMap.end(); it++) {
+  for (it =  m_state->m_zonesMap.begin(); it != m_state->m_zonesMap.end(); ++it) {
     if (it->second.begin()<=0) continue;
     readZone(it->second);
   }
@@ -382,7 +382,7 @@ bool HMWJParser::createZones()
   // retrieve the text type, look for header/footer and pass information to text parser
   std::map<long,int> idTypeMap = m_graphParser->getTextFrameInformations();
   std::map<long,int>::const_iterator typeIt=idTypeMap.begin();
-  for ( ; typeIt!=idTypeMap.end() ; typeIt++) {
+  for ( ; typeIt!=idTypeMap.end() ; ++typeIt) {
     if (typeIt->second==1)
       m_state->m_headerId = typeIt->first;
     else if (typeIt->second==2)
@@ -398,7 +398,7 @@ bool HMWJParser::createZones()
 
 
   libmwaw::DebugStream f;
-  for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); it++) {
+  for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); ++it) {
     if (it->second.begin()<=0) continue;
     MWAWEntry const &zone = it->second;
     if (zone.isParsed()) continue;
@@ -930,7 +930,7 @@ bool HMWJParser::readHeaderEnd()
   return true;
 }
 
-
+#ifdef DEBUG
 bool HMWJParser::readZoneWithHeader(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
@@ -1026,6 +1026,7 @@ bool HMWJParser::readZoneWithHeader(MWAWEntry const &entry)
   }
   return true;
 }
+#endif
 
 ////////////////////////////////////////////////////////////
 // read the header
@@ -1223,10 +1224,10 @@ bool HMWJParser::decodeZone(MWAWEntry const &entry, WPXBinaryData &dt)
 
     /* now splay tree about leaf a */
     do {    /* walk up the tree semi-rotating pairs of nodes */
-      short b,c,d;
+      short c;
       if ((c = up[a]) != root) {      /* a pair remains */
-        d = up[c];
-        b = left[d];
+        short d = up[c];
+        short b = left[d];
         if (c == b) {
           b = right[d];
           right[d] = a;

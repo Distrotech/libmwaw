@@ -504,7 +504,7 @@ int MRWText::numPages() const
   if (m_state->m_numPages <= 0) {
     int nPages = 0;
     std::map<int,MRWTextInternal::Zone>::const_iterator it = m_state->m_textZoneMap.begin();
-    for ( ; it != m_state->m_textZoneMap.end(); it++) {
+    for ( ; it != m_state->m_textZoneMap.end(); ++it) {
       nPages = computeNumPages(it->second);
       if (nPages)
         break;
@@ -1944,7 +1944,7 @@ void MRWText::flushExtra()
 #ifdef DEBUG
   std::map<int,MRWTextInternal::Zone>::iterator it =
     m_state->m_textZoneMap.begin();
-  for ( ; it != m_state->m_textZoneMap.end(); it++) {
+  for ( ; it != m_state->m_textZoneMap.end(); ++it) {
     if (it->second.m_parsed)
       continue;
     send(it->first);

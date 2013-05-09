@@ -522,7 +522,7 @@ bool NSGraph::sendPageGraphics()
 void NSGraph::flushExtra()
 {
   for (std::map<int, MWAWEntry>::iterator it = m_state->m_idPictMap.begin();
-       it != m_state->m_idPictMap.end(); it++) {
+       it != m_state->m_idPictMap.end(); ++it) {
     MWAWEntry &entry = it->second;
     if (entry.isParsed()) continue;
     MWAW_DEBUG_MSG(("NSGraph::sendPicture: picture unparsed: %d\n", entry.id()));
@@ -531,7 +531,7 @@ void NSGraph::flushExtra()
     sendPicture(entry.id(), true, pictPos);
   }
   for (std::map<int, MWAWEntry>::iterator it = m_state->m_idRssoMap.begin();
-       it != m_state->m_idRssoMap.end(); it++) {
+       it != m_state->m_idRssoMap.end(); ++it) {
     MWAWEntry &entry = it->second;
     if (entry.isParsed()) continue;
     MWAW_DEBUG_MSG(("NSGraph::sendPicture: rsso picture unparsed: %d\n", entry.id()));

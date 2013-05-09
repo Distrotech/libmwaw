@@ -742,7 +742,7 @@ struct Table : public Zone {
   }
 
   //! try to find a cell
-  Cell const *getCell(Vec2i const pos) const {
+  Cell const *getCell(Vec2i const &pos) const {
     for (size_t i = 0; i < m_cellsList.size(); i++) {
       if (m_cellsList[i].m_pos == pos)
         return &m_cellsList[i];
@@ -1865,7 +1865,7 @@ void MSKGraph::checkTextBoxLinks(int zId)
   }
   size_t numLinks = nextLinks.size();
   for (std::map<long,long>::const_iterator link=nextLinks.begin();
-       link!=nextLinks.end(); link++) {
+       link!=nextLinks.end(); ++link) {
     if (prevLinks.find(link->second)==prevLinks.end() ||
         prevLinks.find(link->second)->second!=link->first) {
       MWAW_DEBUG_MSG(("MSKGraph::checkTextBoxLinks: can not find prevLinks: %lX<->%lX already exists\n", link->first, link->second));
@@ -1952,11 +1952,10 @@ shared_ptr<MSKGraphInternal::GroupZone> MSKGraph::readGroup(MSKGraphInternal::Zo
 
   input->seek(header.m_pos.end()-2, WPX_SEEK_SET);
   int N = (int) input->readULong(2);
-  MWAWEntry childZone;
-  int childId;
   for (int i = 0; i < N; i++) {
     long pos = input->tell();
-    childId = getEntryPicture(header.m_zoneId, childZone);
+    MWAWEntry childZone;
+    int childId = getEntryPicture(header.m_zoneId, childZone);
     if (childId < 0) {
       MWAW_DEBUG_MSG(("MSKGraph::readGroup: can not find child\n"));
       input->seek(pos, WPX_SEEK_SET);
@@ -2086,10 +2085,9 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
         chaine += (char) c;
       }
 
-      if (!ok) {
+      if (!ok)
         input->seek(pos+4,WPX_SEEK_SET);
-        ok = true;
-      } else {
+      else {
         textBox.m_text = chaine;
         f << "=" << chaine;
         ascFile.addPos(pos);
@@ -2318,11 +2316,10 @@ bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
   input->seek(2428, WPX_SEEK_CUR);
 
   // three textbox
-  MWAWEntry childZone;
-  int childId;
   for (int i = 0; i < 3; i++) {
     pos = input->tell();
-    childId = getEntryPicture(zone.m_zoneId, childZone);
+    MWAWEntry childZone;
+    int childId = getEntryPicture(zone.m_zoneId, childZone);
     if (childId < 0) {
       MWAW_DEBUG_MSG(("MSKGraph::readChart: can not find textbox\n"));
       input->seek(pos, WPX_SEEK_SET);
@@ -2387,7 +2384,6 @@ bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
     }
     input->seek(pos+4+dataSz, WPX_SEEK_SET);
   }
-  pos = input->tell();
   return true;
 }
 

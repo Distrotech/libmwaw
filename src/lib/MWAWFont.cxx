@@ -89,7 +89,7 @@ std::ostream &operator<<(std::ostream &o, MWAWFont::Line const &line)
   return o;
 }
 
-void MWAWFont::Line::addTo(WPXPropertyList &propList, std::string const type) const
+void MWAWFont::Line::addTo(WPXPropertyList &propList, std::string const &type) const
 {
   if (!isSet()) return;
 

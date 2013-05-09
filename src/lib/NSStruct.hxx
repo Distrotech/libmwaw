@@ -140,7 +140,11 @@ struct RecursifData {
   }
   //! copy operator
   RecursifData &operator=(RecursifData const &orig) {
-    if (this != &orig) m_info = orig.m_info;
+    if (this != &orig) {
+      m_info = orig.m_info;
+      m_level = -1;
+      m_childList.resize(0);
+    }
     return *this;
   }
   //! read the data

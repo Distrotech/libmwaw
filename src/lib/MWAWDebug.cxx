@@ -103,7 +103,7 @@ void DebugFile::sort()
   for (i = 0; i < numSkip; i++) sMap[m_skipZones[i]] = 0;
 
   i = 0;
-  for (Vec2i::MapX::iterator it = sMap.begin(); it != sMap.end(); it++)
+  for (Vec2i::MapX::iterator it = sMap.begin(); it != sMap.end(); ++it)
     m_skipZones[i++] = it->first;
   if (i < numSkip) m_skipZones.resize(i);
 }
@@ -122,7 +122,7 @@ void DebugFile::write()
   while(noteIter != m_notes.end() && noteIter->m_pos < 0) {
     if (!noteIter->m_text.empty())
       std::cerr << "DebugFile::write: skipped: " << noteIter->m_text << std::endl;
-    noteIter++;
+    ++noteIter;
   }
 
   long actualPos = 0;
@@ -149,21 +149,21 @@ void DebugFile::write()
     while(noteIter != m_notes.end() && noteIter->m_pos < actualPos) {
       if (!noteIter->m_text.empty())
         m_file << "Skipped: " << noteIter->m_text << std::endl;
-      noteIter++;
+      ++noteIter;
     }
     bool printNote = noteIter != m_notes.end() && noteIter->m_pos == actualPos;
     if (printAdr || (printNote && noteIter->m_breaking))
       m_file << "\n" << std::setw(6) << actualPos << " ";
     while(noteIter != m_notes.end() && noteIter->m_pos == actualPos) {
       if (noteIter->m_text.empty()) {
-        noteIter++;
+        ++noteIter;
         continue;
       }
       if (noteIter->m_breaking)
         m_file << "[" << noteIter->m_text << "]";
       else
         m_file << noteIter->m_text;
-      noteIter++;
+      ++noteIter;
     }
 
     long ch = (long) m_input->readULong(1);

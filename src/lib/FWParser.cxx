@@ -236,16 +236,6 @@ struct State {
     }
     return it->second;
   }
-  //! return the doc zone id ( if found or -1)
-  int getDocZoneId(int fileId) const {
-    std::map<int,int>::const_iterator it = m_fileDocIdMap.find(fileId);
-    if (it == m_fileDocIdMap.end()) {
-      MWAW_DEBUG_MSG(("FWParserInternal::State::getDocZoneId can not find %d\n", fileId));
-      return -1;
-    }
-    return it->second;
-  }
-
   //! the last file position
   long m_eof;
 
@@ -356,7 +346,7 @@ FWParser::FWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWH
 FWParser::~FWParser()
 {
   std::multimap<int, shared_ptr<FWEntry> >::iterator it;
-  for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); it++) {
+  for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); ++it) {
     shared_ptr<FWEntry> zone = it->second;
     if (zone) zone->closeDebugFile();
   }
@@ -422,7 +412,7 @@ void FWParser::parse(WPXDocumentInterface *docInterface)
     bool first = true;
     std::multimap<int, shared_ptr<FWEntry> >::iterator it;
     libmwaw::DebugStream f;
-    for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); it++) {
+    for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); ++it) {
       shared_ptr<FWEntry> &zone = it->second;
       if (!zone || !zone->valid() || zone->isParsed()) continue;
       f.str("");
@@ -507,7 +497,7 @@ bool FWParser::createFileZones()
   // finally, remapped the enry by fId
   std::multimap<int, shared_ptr<FWEntry> >::iterator it;
   std::vector<shared_ptr<FWEntry> > listZones;
-  for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); it++)
+  for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); ++it)
     listZones.push_back(it->second);
   m_state->m_entryMap.clear();
   for (size_t z = 0; z < listZones.size(); z++) {
@@ -532,7 +522,7 @@ bool FWParser::createZones()
   // first treat the main zones
   std::vector<shared_ptr<FWEntry> > mainZones;
   mainZones.resize(3);
-  for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); it++) {
+  for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); ++it) {
     shared_ptr<FWEntry> &zone = it->second;
     if (!zone || !zone->valid() || zone->isParsed()) continue;
     if (zone->m_typeId != -1 || zone->id() < 0 || zone->id() >= 3)
@@ -555,7 +545,7 @@ bool FWParser::createZones()
   }
 
   // now treat the other zones
-  for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); it++) {
+  for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); ++it) {
     shared_ptr<FWEntry> &zone = it->second;
     if (!zone || !zone->valid() || zone->isParsed()) continue;
     if (zone->m_typeId >= 0) {
@@ -1770,7 +1760,7 @@ bool FWParser::readReferenceData(shared_ptr<FWEntry> zone)
   f << "Entries(RefData):";
   long val = int(input->readULong(2));
   int numOk = 0;
-  if (val != 0xa || val != 0xc) numOk++;
+  if (val == 0xa || val == 0xc) numOk++;
   f << "type?=" << val << ",";
 
   f << "unkn=["; // 3 small number and 0, f0 or f2 is probably an Id, f1=0|1|2
@@ -2143,8 +2133,7 @@ bool FWParser::readFileZonePos(shared_ptr<FWEntry> zone)
       MWAW_DEBUG_MSG(("FWParser::readFileZonePos: can not find my entry\n"));
       continue;
     }
-    it++;
-    if (it == filePositions.end()) {
+    if (++it == filePositions.end()) {
       MWAW_DEBUG_MSG(("FWParser::readFileZonePos: can not find my entry\n"));
       continue;
     }
@@ -2404,7 +2393,7 @@ void FWParser::flushExtra()
 {
   m_textParser->flushExtra();
   std::multimap<int, shared_ptr<FWEntry> >::iterator it;
-  for (it = m_state->m_graphicMap.begin(); it != m_state->m_graphicMap.end(); it++) {
+  for (it = m_state->m_graphicMap.begin(); it != m_state->m_graphicMap.end(); ++it) {
     shared_ptr<FWEntry> zone = it->second;
     if (!zone || zone->isParsed())
       continue;

@@ -539,8 +539,7 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
   //
   pos = entryMap.lower_bound("FTNT");
   while (pos != entryMap.end()) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("FTNT")) break;
     if (!entry.hasType("PLC ")) continue;
 
@@ -549,8 +548,7 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
   }
   pos = entryMap.lower_bound("TOKN");
   while (pos != entryMap.end()) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("TOKN")) break;
     if (!entry.hasType("PLC ")) continue;
 
@@ -563,8 +561,7 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
   */
   pos = entryMap.lower_bound("EOBJ");
   while (pos != entryMap.end()) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("EOBJ")) break;
     if (!entry.hasType("PLC ")) continue;
 
@@ -573,8 +570,7 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
   }
   pos = entryMap.lower_bound("PGD ");
   while (pos != entryMap.end()) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("PGD ")) break;
     if (!entry.hasType("PLC ")) continue;
 
@@ -641,7 +637,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
   std::vector<DataFOD>::iterator FODs_iter = m_FODsList.begin();
   // update the property to correspond to the text
   int prevFId = -1, prevPId = -1;
-  for ( ; FODs_iter!= m_FODsList.end(); FODs_iter++) {
+  for ( ; FODs_iter!= m_FODsList.end(); ++FODs_iter) {
     DataFOD const &fod = *(FODs_iter);
     if (fod.m_pos >= zone.begin()) break;
 
@@ -664,7 +660,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
   bool pageBreak = false;
   int page=1;
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
-  for ( ; FODs_iter!= m_FODsList.end(); FODs_iter++) {
+  for ( ; FODs_iter!= m_FODsList.end(); ++FODs_iter) {
     DataFOD const &fod = *(FODs_iter);
     uint32_t actPos = uint32_t(first ? zone.begin() : fod.m_pos), lastPos;
     if (long(actPos) >= zone.end()) break;
@@ -676,7 +672,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
 
     if (++FODs_iter!= m_FODsList.end()) lastPos = uint32_t((*FODs_iter).m_pos);
     else lastPos = uint32_t(zone.end());
-    FODs_iter--;
+    --FODs_iter;
     int len = int(lastPos-actPos);
 
     if (fod.m_type == DataFOD::ATTR_TEXT) {
@@ -933,7 +929,6 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
         printPLC = false;
         break;
       }
-      std::string error;
       if (parser) {
         std::string mess;
         if (!(this->*parser)
@@ -1376,7 +1371,6 @@ bool MSK4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
         case 2:
           parag.setInterline(1.5, WPX_PERCENT);
           break;
-          break;
         case 3: // double
           parag.setInterline(2.0, WPX_PERCENT);
           break;
@@ -1702,8 +1696,7 @@ bool MSK4Text::findFDPStructures(MWAWInputStreamPtr &input, int which)
     mainParser()->m_entryMap.lower_bound(indexName);
   std::vector<MWAWEntry const *> listIndexed;
   while (pos != mainParser()->m_entryMap.end()) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName(indexName)) break;
     if (!entry.hasType("PLC ")) continue;
     listIndexed.push_back(&entry);
@@ -1713,9 +1706,8 @@ bool MSK4Text::findFDPStructures(MWAWInputStreamPtr &input, int which)
   if (nFind==0) return false;
 
   // can nFind be > 1 ?
-  bool ok = true;
   for (size_t i = 0; i < nFind-1; i++) {
-    ok = true;
+    bool ok = true;
     for (size_t j = 0; j < nFind-1-i; j++) {
       if (listIndexed[j]->id() <= listIndexed[j+1]->id()) continue;
       MWAWEntry const *tmp = listIndexed[j];
@@ -1734,8 +1726,7 @@ bool MSK4Text::findFDPStructures(MWAWInputStreamPtr &input, int which)
   std::map<long, MWAWEntry const *>::iterator offsIt;
   pos = mainParser()->m_entryMap.lower_bound(sIndexName);
   while (pos != mainParser()->m_entryMap.end()) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName(sIndexName)) break;
     offsetMap.insert(std::map<long, MWAWEntry const *>::value_type
                      (entry.begin(), &entry));
@@ -1776,8 +1767,7 @@ bool MSK4Text::findFDPStructuresByHand(MWAWInputStreamPtr &/*input*/, int which)
 
   std::multimap<std::string, MWAWEntry>::iterator pos = mainParser()->m_entryMap.lower_bound(indexName);
   while (pos != mainParser()->m_entryMap.end()) {
-    MWAWEntry const &entry = pos->second;
-    pos++;
+    MWAWEntry const &entry = pos++->second;
     if (!entry.hasName(indexName)) break;
     if (!entry.hasType(indexName)) continue;
 
@@ -1871,7 +1861,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
   /* Read array of bfprop of FODs.  The bfprop is the offset where
      the FPROP is located. */
   f << ", Tpos:defP=(" << std::hex;
-  for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); fods_iter++) {
+  for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); ++fods_iter) {
     int depl = (int) input->readULong(deplSize);
     /* check size of bfprop  */
     if ((depl < headerSize+(4+deplSize)*cfod && depl > 0) ||
@@ -1895,7 +1885,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
   ascFile.addPos(input->tell());
 
   std::map<long,int> mapPtr;
-  for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); fods_iter++) {
+  for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); ++fods_iter) {
     long pos = (*fods_iter).m_defPos;
     if (pos == 0) continue;
 

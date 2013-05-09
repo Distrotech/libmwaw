@@ -898,7 +898,6 @@ bool HMWJGraph::getFootnoteInformations(long &textZId, std::vector<long> &fPosLi
 {
   fPosList.clear();
   textZId = 0;
-  std::map<long,int> mapIdType;
   for (size_t f=0; f < m_state->m_framesList.size(); f++) {
     if (!m_state->m_framesList[f]) continue;
     HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
@@ -2626,7 +2625,7 @@ bool HMWJGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
     notSend.insert(doNotSendIds[i]);
   std::map<long, int >::const_iterator fIt= m_state->m_framesMap.begin();
   int numFrames = int(m_state->m_framesList.size());
-  for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
+  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
     int id = fIt->second;
     if (notSend.find(fIt->first) != notSend.end() || id < 0 || id >= numFrames ||
         !m_state->m_framesList[size_t(id)])

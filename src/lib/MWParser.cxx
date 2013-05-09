@@ -271,11 +271,8 @@ std::ostream &operator<<(std::ostream &o, WindowsInfo const &w)
 //! Internal: the state of a MWParser
 struct State {
   //! constructor
-  State() : m_compressCorr(""), m_actPage(0), m_numPages(0), m_fileHeader(),
-    m_headerHeight(0), m_footerHeight(0)
-
-  {
-    m_compressCorr = " etnroaisdlhcfp";
+  State() : m_compressCorr(" etnroaisdlhcfp"), m_actPage(0), m_numPages(0), m_fileHeader(),
+    m_headerHeight(0), m_footerHeight(0) {
   }
 
   //! the correspondance between int compressed and char : must be 15 character

@@ -535,8 +535,7 @@ void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
   unsigned actPage = 0;
   std::vector<MWAWPageSpan>::iterator it = m_ds->m_pageList.begin();
   while(actPage < m_ps->m_currentPage) {
-    actPage+=(unsigned)it->getPageSpan();
-    it++;
+    actPage+=(unsigned)it++->getPageSpan();
     if (it == m_ds->m_pageList.end()) {
       MWAW_DEBUG_MSG(("MWAWContentListener::_openPageSpan: can not find current page\n"));
       throw libmwaw::ParseException();

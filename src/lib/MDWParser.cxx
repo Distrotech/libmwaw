@@ -453,10 +453,9 @@ void ZoneInfo::updateListId(ListProperties &prop, MWAWListManager &listManager)
 //! Internal: the state of a MDWParser
 struct State {
   //! constructor
-  State() : m_compressCorr(""), m_eof(-1), m_entryMap(), m_listProperties(),
+  State() : m_compressCorr(" etnroaisdlhcfp"), m_eof(-1), m_entryMap(), m_listProperties(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
     m_headerFieldList(), m_footerFieldList() {
-    m_compressCorr = " etnroaisdlhcfp";
     for (int i = 0; i < 3; i++)
       m_numLinesByZone[i] = 0;
   }
@@ -821,10 +820,8 @@ bool MDWParser::createZones()
   m_state->m_listProperties.updateHeadingList();
   // finally, we can read the line info
   it = m_state->m_entryMap.find("LineInfo");
-  while (it !=  m_state->m_entryMap.end() && it->first == "LineInfo") {
-    readLinesInfo(it->second);
-    it++;
-  }
+  while (it !=  m_state->m_entryMap.end() && it->first == "LineInfo")
+    readLinesInfo(it++->second);
 
   for (int i = 0; i < 3; i++)
     if (m_state->m_zones[i].m_linesList.size())
@@ -1732,7 +1729,6 @@ bool MDWParser::readHeadingCustom(MWAWEntry &entry)
       ascii().addNote(f.str().c_str());
       return false;
     }
-    std::string field("");
     MWAWListLevel level;
     bool seeIndex=false;
     for (int s = 0; s < sSz; s++) {

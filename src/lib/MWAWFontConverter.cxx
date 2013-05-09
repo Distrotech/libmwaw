@@ -815,7 +815,7 @@ void State::initMaps()
   m_idNameMap[64643] = "Hiragino MaruGo W6";
 
   std::map<int, std::string>::iterator it;
-  for(it = m_idNameMap.begin(); it != m_idNameMap.end(); it++)
+  for(it = m_idNameMap.begin(); it != m_idNameMap.end(); ++it)
     m_nameIdMap[it->second] = it->first;
 }
 

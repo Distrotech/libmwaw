@@ -174,11 +174,11 @@ struct State {
 
 void State::findPictInfoUnit(int nZones)
 {
-  if (!m_idPictInfoMap.size())
+  if (m_idPictInfoMap.empty())
     return;
   bool is100=true, is1000=true;
   std::map<int,PictInfo>::const_iterator it=m_idPictInfoMap.begin();
-  for ( ; it != m_idPictInfoMap.end(); it++) {
+  for ( ; it != m_idPictInfoMap.end(); ++it) {
     int id=it->first;
     if (id > (nZones+3)*100 || id < 200)
       is100=false;
@@ -308,7 +308,6 @@ void DMParser::createDocument(WPXDocumentInterface *documentInterface)
 bool DMParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
-  std::string type, creator;
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
   std::multimap<std::string, MWAWEntry>::iterator it;
@@ -404,7 +403,7 @@ void DMParser::flushExtra()
 {
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   std::map<int,MWAWEntry>::const_iterator it = m_state->m_idPictEntryMap.begin();
-  for ( ; it != m_state->m_idPictEntryMap.end(); it++) {
+  for ( ; it != m_state->m_idPictEntryMap.end(); ++it) {
     MWAWEntry const &entry=it->second;
     if (entry.isParsed()) continue;
     WPXBinaryData data;

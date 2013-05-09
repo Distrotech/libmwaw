@@ -234,15 +234,6 @@ bool MSK3Text::getLinesPagesHeight
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
-int MSK3Text::getMainZone() const
-{
-  for (size_t i = 0; i < m_state->m_zones.size(); i++)
-    if (m_state->m_zones[i].m_type != MSK3TextInternal::TextZone::Header &&
-        m_state->m_zones[i].m_type != MSK3TextInternal::TextZone::Footer)
-      return int(i);
-  return -1;
-}
-
 int MSK3Text::getHeader() const
 {
   for (size_t i = 0; i < m_state->m_zones.size(); i++)
@@ -805,7 +796,7 @@ void MSK3Text::send(MSK3TextInternal::TextZone &zone, Vec2i limit)
     isMain = zone.isMain();
     // find the notes in the text zones
     std::map<int, Vec2i>::const_iterator noteIt;
-    for (noteIt=zone.m_footnoteMap.begin(); noteIt != zone.m_footnoteMap.end(); noteIt++) {
+    for (noteIt=zone.m_footnoteMap.begin(); noteIt != zone.m_footnoteMap.end(); ++noteIt) {
       if (notePos[0]==-1) {
         notePos = noteIt->second;
         continue;

@@ -69,7 +69,7 @@ std::ostream &operator<< (std::ostream &o, RSRC::Version const &vers)
 
 bool RSRC::createMapEntries()
 {
-  if (m_typeMapEntryMap.size()) return true;
+  if (!m_typeMapEntryMap.empty()) return true;
 
   long eof = m_input.length();
   if (eof < 16) return false;
@@ -103,7 +103,6 @@ bool RSRC::createMapEntries()
     return false;
   }
   for (int i = 0; i <= numTypes; i++) {
-    pos = m_input.tell();
     MapEntry entry;
     std::string type("");
     for (int c = 0; c < 4; c++)

@@ -61,7 +61,6 @@ void MWAWPictBasic::startODG(MWAWPropertyHandlerEncoder &doc) const
   Box2f bdbox = getBdBox();
   Vec2f size=bdbox.size();
   WPXPropertyList list;
-  std::stringstream s;
 
   list.clear();
   list.insert("w",getStringPt(size.x()).c_str());
@@ -222,7 +221,6 @@ bool MWAWPictArc::getODGBinary(WPXBinaryData &res) const
   Box2f bdbox = getBdBox();
 
   MWAWPropertyHandlerEncoder doc;
-  std::stringstream s;
   startODG(doc);
 
   WPXPropertyList list;
@@ -262,7 +260,6 @@ bool MWAWPictPath::getODGBinary(WPXBinaryData &res) const
   Box2f bdbox = getBdBox();
 
   MWAWPropertyHandlerEncoder doc;
-  std::stringstream s;
   startODG(doc);
 
   WPXPropertyList list;

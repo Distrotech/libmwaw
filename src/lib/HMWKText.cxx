@@ -278,7 +278,7 @@ void HMWKText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
     m_state->m_IdTypeMaps[m_state->m_footerId]=1;
   std::multimap<long, shared_ptr<HMWKZone> >::iterator tIt;
   int numUnkns=0;
-  for (tIt=m_state->m_IdTextMaps.begin(); tIt!=m_state->m_IdTextMaps.end(); tIt++) {
+  for (tIt=m_state->m_IdTextMaps.begin(); tIt!=m_state->m_IdTextMaps.end(); ++tIt) {
     if (m_state->m_IdTypeMaps.find(tIt->first)!=m_state->m_IdTypeMaps.end())
       continue;
     m_state->m_IdTypeMaps[tIt->first]=0;
@@ -400,7 +400,7 @@ bool HMWKText::sendText(long id, long subId)
 bool HMWKText::sendMainText()
 {
   std::map<long, int>::iterator tIt=m_state->m_IdTypeMaps.begin();
-  for ( ; tIt!=m_state->m_IdTypeMaps.end(); tIt++) {
+  for ( ; tIt!=m_state->m_IdTypeMaps.end(); ++tIt) {
     if (tIt->second != 0)
       continue;
     sendText(tIt->first);
@@ -1379,7 +1379,7 @@ void HMWKText::flushExtra()
   if (!m_parserState->m_listener) return;
   std::multimap<long, shared_ptr<HMWKZone> >::iterator tIt
     =m_state->m_IdTextMaps.begin();
-  for ( ; tIt!=m_state->m_IdTextMaps.end(); tIt++) {
+  for ( ; tIt!=m_state->m_IdTextMaps.end(); ++tIt) {
     if (!tIt->second) continue;
     HMWKZone &zone = *tIt->second;
     if (zone.m_parsed) continue;

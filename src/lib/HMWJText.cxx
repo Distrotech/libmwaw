@@ -787,7 +787,7 @@ void HMWJText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
 {
   std::map<long,int>::const_iterator it;
   int numZones = (int) m_state->m_textZoneList.size();
-  for (it=idTypeMap.begin(); it != idTypeMap.end(); it++) {
+  for (it=idTypeMap.begin(); it != idTypeMap.end(); ++it) {
     if (m_state->m_idTextZoneMap.find(it->first)==m_state->m_idTextZoneMap.end()) {
       MWAW_DEBUG_MSG(("HMWJText::readTextZonesList: can not find text zone with id %lx\n", it->first));
       continue;
@@ -1132,7 +1132,7 @@ bool HMWJText::readTextZone(MWAWEntry const &entry, int actZone)
   if (ok) {
     int nLines = int(linePosList.size());
     std::map<int,HMWJTextInternal::PLC>::const_iterator rIt;
-    for (rIt=rLineRulerMap.begin(); rIt!=rLineRulerMap.end(); rIt++) {
+    for (rIt=rLineRulerMap.begin(); rIt!=rLineRulerMap.end(); ++rIt) {
       int line = rIt->first;
       if (line < 0 || line >= nLines) {
         MWAW_DEBUG_MSG(("HMWJText::readTextZone: build rule plc, can not find line %d\n", line));

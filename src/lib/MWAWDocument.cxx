@@ -107,7 +107,6 @@ the input stream can be parsed
 */
 MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWDocument::DocumentType &type, DocumentKind &kind)
 {
-  MWAWConfidence confidence = MWAW_CONFIDENCE_NONE;
   type = UNKNOWN;
   kind = K_UNKNOWN;
 
@@ -134,6 +133,7 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
       return MWAW_CONFIDENCE_NONE;
     type = (MWAWDocument::DocumentType)header->getType();
     kind = (MWAWDocument::DocumentKind)header->getKind();
+    MWAWConfidence confidence = MWAW_CONFIDENCE_NONE;
 
     switch (type) {
     case ACT:

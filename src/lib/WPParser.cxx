@@ -441,13 +441,6 @@ struct ParagraphData {
     m_text(""), m_fonts(), m_endPos(0) {
     for (int i = 0; i < 2; i++) m_indent[i] = m_numData[i] = 0;
   }
-  bool isTextData() const {
-    return m_type == 0 || m_type == 2;
-  }
-  bool isGraphicsData() const {
-    return m_type == 4;
-  }
-
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, ParagraphData const &p) {
     switch(p.m_type) {
@@ -1811,7 +1804,6 @@ bool WPParser::readFonts
     break;
   }
   int actPos = 0;
-  std::vector<WPParserInternal::Font> lFonts;
   libmwaw::DebugStream f;
   int val;
   for (int i = 0; i < nFonts; i++) {
@@ -1875,7 +1867,6 @@ bool WPParser::readLines
   MWAWInputStreamPtr input = getInput();
 
   int actPos = 0;
-  std::vector<WPParserInternal::Line> lLines;
   for (int i = 0; i < nLines; i++) {
     WPParserInternal::Line lInfo;
     lInfo.m_height = (int) input->readLong(2);

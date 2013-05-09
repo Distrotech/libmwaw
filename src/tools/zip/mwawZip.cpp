@@ -74,11 +74,11 @@ int __cdecl main (int argc, char **argv)
       doNotCompressSimpleFile=true;
       break;
     default:
-      verbose=-1;
+      verbose=true;
       break;
     }
   }
-  if (argc != 2+optind || verbose < 0) {
+  if (argc != 2+optind || verbose) {
     usage(argv[0]);
     return 1;
   }

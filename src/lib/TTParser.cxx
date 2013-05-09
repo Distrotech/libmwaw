@@ -200,7 +200,6 @@ void TTParser::createDocument(WPXDocumentInterface *documentInterface)
 bool TTParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
-  std::string type, creator;
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
   std::multimap<std::string, MWAWEntry>::iterator it;
@@ -240,7 +239,7 @@ void TTParser::flushExtra()
 #ifdef DEBUG
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   std::map<int,MWAWEntry>::const_iterator it = m_state->m_idPictEntryMap.begin();
-  for ( ; it != m_state->m_idPictEntryMap.end(); it++) {
+  for ( ; it != m_state->m_idPictEntryMap.end(); ++it) {
     MWAWEntry const &entry=it->second;
     if (entry.isParsed()) continue;
     sendPicture(entry.id());

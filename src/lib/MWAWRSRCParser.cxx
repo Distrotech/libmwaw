@@ -89,7 +89,7 @@ MWAWEntry MWAWRSRCParser::getEntry(std::string type, int id) const
 bool MWAWRSRCParser::parse()
 {
   if (m_parsed)
-    return m_entryMap.size() != 0;
+    return !m_entryMap.empty();
   m_parsed = true;
   if (!m_input) return false;
 

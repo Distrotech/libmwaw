@@ -61,7 +61,7 @@ public:
       return m_style != None && m_width>0;
     }
     //! add a line to the propList knowing the type (line-through, underline, overline )
-    void addTo(WPXPropertyList &propList, std::string const type) const;
+    void addTo(WPXPropertyList &propList, std::string const &type) const;
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, Line const &line);
     //! operator==

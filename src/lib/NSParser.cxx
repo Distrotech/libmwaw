@@ -100,10 +100,6 @@ struct Variable {
     }
     return "";
   }
-  //! returns true if this is a number field
-  bool isNumbering() const {
-    return m_type == 1 || m_type == 2;
-  }
   //! the main type
   int m_type;
   //! the container type

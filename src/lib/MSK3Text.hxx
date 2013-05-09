@@ -96,9 +96,6 @@ protected:
   //! send a note
   void sendNote(int zoneId, int noteId);
 
-  //! returns a main zone id
-  int getMainZone() const;
-
   //! returns a header zone id ( or -1 )
   int getHeader() const;
 

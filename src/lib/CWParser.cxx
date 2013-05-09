@@ -642,7 +642,7 @@ int CWParser::typeMainZonesRec(int zId, CWStruct::DSET::Type type, int maxHeight
 
   int res = zId;
   for (std::set<int>::iterator it = node->m_fathersList.begin();
-       it != node->m_fathersList.end(); it++) {
+       it != node->m_fathersList.end(); ++it) {
     int fId = typeMainZonesRec(*it, type, maxHeight-1);
     if (fId) res = fId;
   }
@@ -657,7 +657,7 @@ bool CWParser::exploreZonesGraph()
   std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter, iter2;
   // first create the list of fathers
   iter = m_state->m_zonesMap.begin();
-  for ( ; iter != m_state->m_zonesMap.end(); iter++) {
+  for ( ; iter != m_state->m_zonesMap.end(); ++iter) {
     shared_ptr<CWStruct::DSET> zone = iter->second;
     if (!zone) continue;
 
@@ -689,7 +689,7 @@ bool CWParser::exploreZonesGraph()
   std::vector<int> rootList;
   std::set<int> notDoneList;
   iter = m_state->m_zonesMap.begin();
-  for ( ; iter != m_state->m_zonesMap.end(); iter++) {
+  for ( ; iter != m_state->m_zonesMap.end(); ++iter) {
     shared_ptr<CWStruct::DSET> zone = iter->second;
     if (!zone) continue;
     zone->m_internal = 0;
@@ -699,9 +699,9 @@ bool CWParser::exploreZonesGraph()
   }
 
   std::set<int> toDoList(rootList.begin(), rootList.end());
-  while(notDoneList.size()) {
+  while(!notDoneList.empty()) {
     int id;
-    if (toDoList.size()) {
+    if (!toDoList.empty()) {
       id = *toDoList.begin();
       toDoList.erase(id);
     } else {
@@ -724,7 +724,7 @@ bool CWParser::exploreZonesGraph()
   for (size_t i = 0; i < numMain; i++)
     std::cerr << rootList[i] << ",";
   std::cerr << "\n";
-  for ( ; iter != m_state->m_zonesMap.end(); iter++) {
+  for ( ; iter != m_state->m_zonesMap.end(); ++iter) {
     shared_ptr<CWStruct::DSET> zone = iter->second;
     std::cerr << *zone << "\n";
   }
@@ -922,10 +922,11 @@ bool CWParser::readZone()
   long actPos = input->tell();
   input->seek(sz, WPX_SEEK_CUR);
   if (long(input->tell()) != actPos+sz) return false;
-  bool parsed = false, complete;
+  bool parsed = false;
   if (name.length()) {
     if (name == "DSET") {
       input->seek(pos, WPX_SEEK_SET);
+      bool complete;
       if (readDSET(complete))
         return true;
     }

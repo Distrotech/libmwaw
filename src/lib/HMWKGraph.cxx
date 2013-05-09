@@ -809,7 +809,7 @@ int HMWKGraph::numPages() const
   int nPages = 0;
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
-  for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
+  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (!fIt->second) continue;
     int page = fIt->second->m_page+1;
     if (page <= nPages) continue;
@@ -830,7 +830,7 @@ std::map<long,int> HMWKGraph::getTextFrameInformations() const
   std::map<long,int> mapIdType;
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
-  for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
+  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (!fIt->second) continue;
     HMWKGraphInternal::Frame const &frame = *fIt->second;
     std::vector<long> listId;
@@ -2042,7 +2042,7 @@ bool HMWKGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
     notSend.insert(doNotSendIds[i]);
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
-  for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
+  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (notSend.find(fIt->first) != notSend.end() || !fIt->second) continue;
     HMWKGraphInternal::Frame const &frame = *fIt->second;
     if (frame.m_parsed || frame.m_type==3)
@@ -2059,7 +2059,7 @@ void HMWKGraph::flushExtra()
 {
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
-  for ( ; fIt != m_state->m_framesMap.end(); fIt++) {
+  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (!fIt->second) continue;
     HMWKGraphInternal::Frame const &frame = *fIt->second;
     if (frame.m_parsed || frame.m_type==3)
@@ -2069,7 +2069,7 @@ void HMWKGraph::flushExtra()
     sendFrame(frame, pos);
   }
   std::map<long, shared_ptr<HMWKGraphInternal::Picture> >::const_iterator pIt;
-  for (pIt = m_state->m_picturesMap.begin(); pIt != m_state->m_picturesMap.end(); pIt++) {
+  for (pIt = m_state->m_picturesMap.begin(); pIt != m_state->m_picturesMap.end(); ++pIt) {
     if (!pIt->second) continue;
     HMWKGraphInternal::Picture const &picture = *pIt->second;
     if (picture.m_parsed)
