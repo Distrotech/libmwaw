@@ -43,6 +43,7 @@
 #  include <stdio.h>
 #endif
 
+#include <cctype>
 #include <cstring>
 #include <iostream>
 #include <list>
