@@ -528,7 +528,7 @@ struct Pixmap {
         else m_dst = box;
       }
       m_mode = (int) input.readLong(2); // mode: I find 0,1 and 3
-      if (m_mode < 0 && m_mode > 64) {
+      if (m_mode < 0 || m_mode > 64) {
         MWAW_DEBUG_MSG(("Pict1:Pixmap: unknown mode: %d \n", m_mode));
         return false;
       }
@@ -634,7 +634,7 @@ struct Pixmap {
   }
 
   //! creates the pixmap from the packdata
-  bool unpackedData(unsigned char const *pData, int sz, int byteSz, int nSize, std::vector<unsigned char> &res) {
+  bool unpackedData(unsigned char const *pData, int sz, int byteSz, int nSize, std::vector<unsigned char> &res) const {
     assert(byteSz >= 1 && byteSz <= 4);
     int rPos = 0, wPos = 0, maxW = m_rowBytes+24;
     while (rPos < sz) {

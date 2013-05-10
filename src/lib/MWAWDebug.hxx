@@ -184,10 +184,10 @@ public:
     return *this;
   }
 
-  std::string str() const {
+  static std::string str() {
     return std::string("");
   }
-  void str(std::string const &) { }
+  static void str(std::string const &) { }
 };
 
 class DebugFile
@@ -195,21 +195,21 @@ class DebugFile
 public:
   DebugFile(MWAWInputStreamPtr) {}
   DebugFile() {}
-  void setStream(MWAWInputStreamPtr) {  }
+  static void setStream(MWAWInputStreamPtr) {  }
   ~DebugFile() { }
 
-  bool open(std::string const &) {
+  static bool open(std::string const &) {
     return true;
   }
 
-  void addPos(long ) {}
-  void addNote(char const *) {}
-  void addDelimiter(long, char) {}
+  static void addPos(long ) {}
+  static void addNote(char const *) {}
+  static void addDelimiter(long, char) {}
 
-  void write() {}
-  void reset() { }
+  static void write() {}
+  static void reset() { }
 
-  void skipZone(long , long ) {}
+  static void skipZone(long , long ) {}
 };
 }
 #  endif

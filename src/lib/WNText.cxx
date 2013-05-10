@@ -473,7 +473,7 @@ struct State {
   }
 
   //! return a paragraph corresponding to 0:body, 1: header/footer, 2: footnote
-  Paragraph getDefaultParagraph(int type) {
+  Paragraph getDefaultParagraph(int type) const {
     int styleId = type == 0 ? 0 : type==1 ? 3 : type==2 ? 2 : -1;
     if (styleId >= 0 && styleId < int(m_styleList.size()))
       return m_styleList[(size_t) styleId].m_paragraph;

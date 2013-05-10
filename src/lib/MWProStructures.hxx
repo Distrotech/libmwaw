@@ -259,7 +259,7 @@ protected:
   bool readStructB();
 
   //! try to read a string
-  bool readString(MWAWInputStreamPtr input, std::string &res);
+  static bool readString(MWAWInputStreamPtr input, std::string &res);
 
   //! try to return the color corresponding to colId
   bool getColor(int colId, MWAWColor &color) const;

@@ -816,7 +816,7 @@ void MWAWContentListener::_closeListElement()
 int MWAWContentListener::_getListId() const
 {
   size_t newLevel= (size_t) m_ps->m_paragraph.m_listLevelIndex.get();
-  if (newLevel <= 0) return -1;
+  if (newLevel == 0) return -1;
   int newListId = m_ps->m_paragraph.m_listId.get();
   if (newListId > 0) return newListId;
   static bool first = true;
@@ -1184,7 +1184,6 @@ void MWAWContentListener::_handleFrameParameters
       <<  RBClip[1] << "pt " << TLClip[0] << "pt)";
     propList.insert("fo:clip", s.str().c_str());
   }
-  double newPosition;
 
   if ( pos.m_wrapping ==  MWAWPosition::WDynamic)
     propList.insert( "style:wrap", "dynamic" );
@@ -1250,7 +1249,8 @@ void MWAWContentListener::_handleFrameParameters
 
     propList.insert("style:vertical-rel", "page" );
     propList.insert("style:horizontal-rel", "page" );
-    switch ( pos.m_yPos) {
+    double newPosition;
+    switch (pos.m_yPos) {
     case MWAWPosition::YFull:
       propList.insert("svg:height", double(h), unit);
     case MWAWPosition::YTop:

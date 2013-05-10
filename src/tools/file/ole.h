@@ -224,7 +224,7 @@ protected:
       return entry(index(name));
     }
     /** given a fullname (e.g "/ObjectPool/_1020961869"), find the entry */
-    unsigned index( const std::string &name);
+    unsigned index( const std::string &name) const;
     /** tries to find a child of ind with a given name */
     unsigned find_child( unsigned ind, const std::string &name ) const;
   protected:

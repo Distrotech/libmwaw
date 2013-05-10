@@ -142,8 +142,8 @@ struct RecursifData {
   RecursifData &operator=(RecursifData const &orig) {
     if (this != &orig) {
       m_info = orig.m_info;
-      m_level = -1;
-      m_childList.resize(0);
+      m_level = orig.m_level;
+      m_childList = orig.m_childList;
     }
     return *this;
   }

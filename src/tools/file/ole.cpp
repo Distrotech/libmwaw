@@ -165,7 +165,7 @@ void OLE::DirTree::DirTree::clear()
   m_entries[0].m_type = 5;
 }
 
-unsigned OLE::DirTree::index( const std::string &name)
+unsigned OLE::DirTree::index( const std::string &name) const
 {
 
   if( name.length()==0 ) return DirEntry::End;

@@ -64,7 +64,7 @@ public:
   //! try to go to a position. Returns 0 if ok
   int seek(long offset, SeekType seekType);
   //! return the actual position
-  long tell() {
+  long tell() const {
     return m_offset;
   }
   //! return true if we are at the end of the file

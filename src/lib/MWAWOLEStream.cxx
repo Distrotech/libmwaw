@@ -797,7 +797,7 @@ void DirTree::print_all_siblings(unsigned ind, std::ostream &o, std::set<unsigne
   if (!p || !p->m_valid || !p->is_dir())
     return;
 
-  if (p->m_child <= 0 || p->m_child > cnt)
+  if (p->m_child == 0 || p->m_child > cnt)
     return;
   std::set<unsigned> child;
   o << "OLE(SIBLINGS):";
@@ -887,7 +887,7 @@ unsigned DirTree::setInRBTForm(std::vector<unsigned> const &childs,
   DirEntry *p = entry( ind );
   if (!p) {
     MWAW_DEBUG_MSG(("DirTree::setInRBTForm: OOPS can not find tree to modified\n"));
-    libmwaw::GenericException();
+    throw libmwaw::GenericException();
   }
   unsigned newH = height==0 ? 0 : height-1;
   if (height==0) {
@@ -1468,7 +1468,7 @@ protected:
     return size >= m_header.m_threshold;
   }
   //! returns the maximum size of a big/small block
-  unsigned long getMaximumSize(bool isBig) const {
+  static unsigned long getMaximumSize(bool isBig) {
     return isBig ? 512 : 64;
   }
   //! returns the address of a big/small block

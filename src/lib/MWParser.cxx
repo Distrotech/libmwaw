@@ -1610,7 +1610,7 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
   return true;
 }
 
-bool MWParser::isMagicPic(WPXBinaryData const &dt) const
+bool MWParser::isMagicPic(WPXBinaryData const &dt)
 {
   if (dt.size() != 526)
     return false;

@@ -132,29 +132,29 @@ public:
 protected:
 
   //!  the "Ole" small structure : unknown contain
-  bool readOle(MWAWInputStreamPtr ip, std::string const &oleName,
-               libmwaw::DebugFile &ascii);
+  static bool readOle(MWAWInputStreamPtr ip, std::string const &oleName,
+                      libmwaw::DebugFile &ascii);
   //!  the "MM" small structure : seems to contain the file versions
-  bool readMM(MWAWInputStreamPtr input, std::string const &oleName,
-              libmwaw::DebugFile &ascii);
+  static bool readMM(MWAWInputStreamPtr input, std::string const &oleName,
+                     libmwaw::DebugFile &ascii);
   //!  the "ObjInfo" small structure : seems to contain 3 ints=0,3,4
-  bool readObjInfo(MWAWInputStreamPtr input, std::string const &oleName,
-                   libmwaw::DebugFile &ascii);
+  static bool readObjInfo(MWAWInputStreamPtr input, std::string const &oleName,
+                          libmwaw::DebugFile &ascii);
   //!  the "CompObj" contains : UserType,ClipName,ProgIdName
   bool readCompObj(MWAWInputStreamPtr ip, std::string const &oleName,
                    libmwaw::DebugFile &ascii);
 
   /** the OlePres001 seems to contain standart picture file and size */
-  bool isOlePres(MWAWInputStreamPtr ip, std::string const &oleName);
+  static  bool isOlePres(MWAWInputStreamPtr ip, std::string const &oleName);
   /** extracts the picture of OlePres001 if it is possible */
-  bool readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWAWPosition &pos,
-                   libmwaw::DebugFile &ascii);
+  static bool readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWAWPosition &pos,
+                          libmwaw::DebugFile &ascii);
 
   //! theOle10Native : basic Windows© picture, with no size
-  bool isOle10Native(MWAWInputStreamPtr ip, std::string const &oleName);
+  static bool isOle10Native(MWAWInputStreamPtr ip, std::string const &oleName);
   /** extracts the picture if it is possible */
-  bool readOle10Native(MWAWInputStreamPtr ip, WPXBinaryData &data,
-                       libmwaw::DebugFile &ascii);
+  static bool readOle10Native(MWAWInputStreamPtr ip, WPXBinaryData &data,
+                              libmwaw::DebugFile &ascii);
 
   /** \brief the Contents : in general a picture : a PNG, an JPEG, a basic metafile,
    * I find also a Word art picture, which are not sucefull read

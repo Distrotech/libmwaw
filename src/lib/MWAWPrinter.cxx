@@ -189,11 +189,6 @@ PrinterInfo::PrinterInfo() : m_data(new PrinterInfoData) {}
 PrinterInfo::~PrinterInfo()
 {
 }
-PrinterInfo &PrinterInfo::operator=(PrinterInfo const &)
-{
-  MWAW_DEBUG_MSG(("PrinterInfo::operator: MUST NOT BE CALLED\n"));
-  return *this;
-}
 
 PrinterRect PrinterInfo::page() const
 {

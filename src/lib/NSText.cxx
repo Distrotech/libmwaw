@@ -1567,7 +1567,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
   NSStruct::Position actPos(firstPos);
   NSTextInternal::Zone::PLCMap::iterator it = zone.m_plcMap.begin();
   while (it != zone.m_plcMap.end() && it->first.cmp(actPos) < 0)
-    it++;
+    ++it;
 
   NSTextInternal::Font actFont;
   actFont.m_font = MWAWFont(3,12);

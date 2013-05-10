@@ -53,7 +53,7 @@ public:
   short read16();
   int read32();
   int seek(long offset, SeekType seekType);
-  long tell() {
+  long tell() const {
     return m_offset;
   }
 

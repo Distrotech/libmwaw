@@ -255,7 +255,7 @@ protected:
   }
 
   //! low level: reads an integer value
-  bool readInteger(WPXInputStream &input, int &val) {
+  static bool readInteger(WPXInputStream &input, int &val) {
     unsigned long numRead = 0;
     const unsigned char *dt = input.read(4, numRead);
     if (dt == 0L || numRead != 4) {
