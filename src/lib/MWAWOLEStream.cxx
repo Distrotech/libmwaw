@@ -1230,20 +1230,26 @@ void IStorage::load()
   // load directory tree
   blocks.clear();
   blocks = m_bbat.follow( m_header.m_start_dirent );
-  std::vector<unsigned char> buffer(blocks.size()*m_bbat.m_blockSize);
-  loadBigBlocks( blocks, &buffer[0], buffer.size() );
-  m_dirtree.load( &buffer[0], (unsigned int) buffer.size() );
-  unsigned sb_start = (unsigned) readU32( &buffer[0x74] );
-  addDebugInfo(blocks);
+	if (blocks.size()*m_bbat.m_blockSize)
+  {
+    std::vector<unsigned char> buffer(blocks.size()*m_bbat.m_blockSize);
+    loadBigBlocks( blocks, &buffer[0], buffer.size() );
+    m_dirtree.load( &buffer[0], (unsigned int) buffer.size() );
+    if (buffer.size() >= 0x74 + 4)
+    {
+      unsigned sb_start = (unsigned) readU32( &buffer[0x74] );
+      addDebugInfo(blocks);
 
-  // fetch block chain as data for small-files
-  m_sb_blocks = m_bbat.follow( sb_start ); // small files
+      // fetch block chain as data for small-files
+      m_sb_blocks = m_bbat.follow( sb_start ); // small files
 
-  // so far so good
-  m_result = Storage::Ok;
+      // so far so good
+      m_result = Storage::Ok;
+    }
 #if defined(DEBUG) && DEBUG_OLE
-  m_dirtree.print_all_siblings(std::cout);
+    m_dirtree.print_all_siblings(std::cout);
 #endif
+  }
 }
 
 void IStorage::markDebug(std::vector<unsigned long> const &blocks, char const *msg)
