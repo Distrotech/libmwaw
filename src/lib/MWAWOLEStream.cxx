@@ -36,7 +36,7 @@
 */
 
 /*
- This file taken from libwpd WPXOLEStream.cpp
+ This file is inspired from libwpd WPXOLEStream.cpp
 */
 
 #ifdef DEBUG_WITH_FILES
@@ -1230,13 +1230,11 @@ void IStorage::load()
   // load directory tree
   blocks.clear();
   blocks = m_bbat.follow( m_header.m_start_dirent );
-	if (blocks.size()*m_bbat.m_blockSize)
-  {
+  if (blocks.size()*m_bbat.m_blockSize) {
     std::vector<unsigned char> buffer(blocks.size()*m_bbat.m_blockSize);
     loadBigBlocks( blocks, &buffer[0], buffer.size() );
     m_dirtree.load( &buffer[0], (unsigned int) buffer.size() );
-    if (buffer.size() >= 0x74 + 4)
-    {
+    if (buffer.size() >= 0x74 + 4) {
       unsigned sb_start = (unsigned) readU32( &buffer[0x74] );
       addDebugInfo(blocks);
 
@@ -1245,10 +1243,14 @@ void IStorage::load()
 
       // so far so good
       m_result = Storage::Ok;
-    }
 #if defined(DEBUG) && DEBUG_OLE
-    m_dirtree.print_all_siblings(std::cout);
+      m_dirtree.print_all_siblings(std::cout);
 #endif
+    } else {
+      MWAW_DEBUG_MSG(("IStorage::load: can not find small block entry\n"));
+    }
+  } else {
+    MWAW_DEBUG_MSG(("IStorage::load: can not find dirent block\n"));
   }
 }
 

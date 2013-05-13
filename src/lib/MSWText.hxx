@@ -176,6 +176,8 @@ protected:
 
   //! prepare the data to be send
   void prepareData();
+  //! update the list of beginning cPos of each paragraph, cell, and each id...
+  bool findParaPosAndStyles(std::map<long, int> &posStyleMap);
 
   //! prepare the table to be send
   void prepareTables();

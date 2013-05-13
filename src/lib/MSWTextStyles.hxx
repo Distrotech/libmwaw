@@ -146,7 +146,7 @@ protected:
   bool readStylesParagraph(MSWEntry &zone, int N, std::vector<int> const &previous,
                            std::vector<int> const &order);
   //! try to reorder the styles to find a good order
-  std::vector<int> orderStyles(std::vector<int> const &previous);
+  static std::vector<int> orderStyles(std::vector<int> const &previous);
 
 private:
   MSWTextStyles(MSWTextStyles const &orig);

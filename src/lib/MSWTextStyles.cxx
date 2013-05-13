@@ -606,20 +606,6 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
   }
   para.m_extra += f.str();
 
-  if (para.m_styleId.isSet()) {
-    int stId=para.m_styleId.get();
-    if (m_state->m_styleParagraphMap.find(stId) != m_state->m_styleParagraphMap.end()) {
-      MSWStruct::Paragraph const &style=
-        m_state->m_styleParagraphMap.find(stId)->second;
-      MSWStruct::Paragraph res(style);
-      MSWStruct::Font const *styleFont=0;
-      if (m_state->m_styleFontMap.find(stId) != m_state->m_styleFontMap.end())
-        styleFont = &m_state->m_styleFontMap.find(stId)->second;
-      res.insert(para,styleFont);
-      para=res;
-    }
-  }
-
   return true;
 }
 
@@ -773,10 +759,13 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
             } else
               para.m_styleId = stId;
             f2 << "sP" << stId << ",";
-            if (vers > 3 && !para.m_info->read(input, endPos, vers)) {
-              f2 << "###info,";
-              input->seek(dataPos+2+6, WPX_SEEK_SET);
-            } else if (vers <= 3) { // always 0 ?
+            if (vers > 3) {
+              if (!para.m_info->read(input, endPos, vers)) {
+                f2 << "###info,";
+                input->seek(dataPos+2+6, WPX_SEEK_SET);
+              }
+              // do we need to check here if the paragraph is empty ?
+            } else { // always 0 ?
               int val = (int) input->readLong(2);
               if (val) f << "g0=" << val << ",";
             }
@@ -1081,10 +1070,7 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
     } else {
       if (listener->isSectionOpened())
         listener->closeSection();
-      MWAWSection section;
-      if (numCols>1)
-        section.setColumns(numCols, m_mainParser->getPageWidth()/double(numCols), WPX_INCH);
-      listener->openSection(section);
+      listener->openSection(sec.getSection(m_mainParser->getPageWidth()));
     }
   }
 }

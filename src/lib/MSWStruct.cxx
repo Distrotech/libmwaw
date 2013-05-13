@@ -34,6 +34,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWInputStream.hxx"
+#include "MWAWSection.hxx"
 
 #include "MSWStruct.hxx"
 
@@ -146,6 +147,23 @@ void Font::updateFontToFinalState(Font const *styleFont)
 }
 
 // ------ section -------------
+MWAWSection Section::getSection(double pageWidth) const
+{
+  MWAWSection sec;
+  int numCols = *m_col;
+  if (numCols <= 1)
+    return sec;
+  MWAWSection::Column col;
+  col.m_width=pageWidth/double(numCols);
+  col.m_widthUnit=WPX_INCH;
+  col.m_margins[libmwaw::Left] = col.m_margins[libmwaw::Right] = *m_colSep/2.;
+  sec.m_columns.resize(size_t(numCols), col);
+  sec.m_columns[0].m_margins[libmwaw::Left] = 0;
+  sec.m_columns[size_t(numCols-1)].m_margins[libmwaw::Right] = 0;
+  sec.m_balanceText = true;
+  return sec;
+}
+
 bool Section::read(MWAWInputStreamPtr &input, long endPos)
 {
   long pos = input->tell();
@@ -861,8 +879,10 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
   case 0x14: // alignement : 240 normal, 480 : double, ..
     if (dSz < 3) return false;
     val = (int) input->readLong(2);
-    if (!val)
+    if (!val) {
+      setInterline(1.0, WPX_PERCENT, MWAWParagraph::AtLeast);
       return true;
+    }
     if (val < -1440 || val > 1440) {
       MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: interline spacing seems odd\n"));
       f << "#interline=" << val << ",";
@@ -1049,8 +1069,11 @@ void Paragraph::insert(Paragraph const &para, bool insertModif)
   MWAWParagraph::insert(para);
   m_styleId.insert(para.m_styleId);
   if (m_deletedTabs.isSet() && m_tabs.isSet()) {
-    for (size_t i = 0; i < m_deletedTabs->size(); i++) {
-      float val = m_deletedTabs.get()[i];
+    std::vector<float> deletedTabs=*m_deletedTabs;
+    m_deletedTabs->resize(0);
+    m_deletedTabs.setSet(false);
+    for (size_t i = 0; i < deletedTabs.size(); i++) {
+      float val = deletedTabs[i];
       bool done = false;
       for (size_t j = 0; j < m_tabs->size(); j++) {
         if (m_tabs.get()[j].m_position < val-1e-4 || m_tabs.get()[j].m_position > val+1e-4)
@@ -1059,11 +1082,9 @@ void Paragraph::insert(Paragraph const &para, bool insertModif)
         done = true;
         break;
       }
-      if (!done) {
-        MWAW_DEBUG_MSG(("Paragraph::insert: can not delete a tabs\n"));
-      }
+      if (!done)
+        m_deletedTabs->push_back(val);
     }
-    m_deletedTabs.setSet(false);
   }
   if (para.m_info.isSet() && para.m_info->isLineSet())
     m_info.insert(para.m_info);

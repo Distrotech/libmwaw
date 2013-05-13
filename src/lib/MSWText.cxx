@@ -72,7 +72,7 @@ struct TextEntry : public MWAWEntry {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TextEntry const &entry) {
     if (entry.m_pos>=0) o << "textPos=" << entry.m_pos << ",";
-    o << "id?=" << entry.m_id << ",";
+    o << "styleId?=" << entry.m_id << ",";
     if (entry.m_complex) o << "complex,";
     if (entry.m_paragraphId >= 0) o << "tP" << entry.m_paragraphId << ",";
     // checkme
@@ -1054,6 +1054,78 @@ bool MSWText::readLongZone(MSWEntry &entry, int sz, std::vector<long> &list)
 ////////////////////////////////////////////////////////////
 // sort/prepare data
 ////////////////////////////////////////////////////////////
+bool MSWText::findParaPosAndStyles(std::map<long, int> &posStyleMap)
+{
+  posStyleMap.clear();
+
+  int vers = version();
+  long cPos = 0;
+  long cEnd = 0;
+  for (int i = 0; i < 3; i++) cEnd+=m_state->m_textLength[i];
+  if (cEnd <= 0) return false;
+
+  long debPos = m_state->getFilePos(cPos), pos=debPos;
+  int textposSize = int(m_state->m_textposList.size());
+
+  // first build the paragraph limit
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos, WPX_SEEK_SET);
+
+  int actStyle=-1;
+  long lastCPos=0;
+  posStyleMap[lastCPos]=actStyle;
+  while (!input->atEOS() && cPos < cEnd) {
+    std::multimap<long, MSWText::PLC>::const_iterator plcIt =
+      m_state->m_plcMap.lower_bound(cPos);
+
+    enum { Paragraph=0, TextStruct, NumEnums=TextStruct+1 };
+    int modIdList[NumEnums]= {-2,-2};
+
+    while (plcIt != m_state->m_plcMap.end() && plcIt->first==cPos) {
+      MSWText::PLC const &plc = plcIt++->second;
+      if (plc.m_type == PLC::Paragraph)
+        modIdList[Paragraph]=plc.m_id;
+      if (plc.m_type != PLC::TextPosition)
+        continue;
+      if (plc.m_id < 0 || plc.m_id >= textposSize)
+        continue;
+      MSWTextInternal::TextEntry const &textEntry=
+        m_state->m_textposList[(size_t) plc.m_id];
+      modIdList[TextStruct]=textEntry.getParagraphId();
+      pos =textEntry.begin();
+      input->seek(pos, WPX_SEEK_SET);
+    }
+    pos = input->tell();
+    plcIt = m_state->m_filePlcMap.lower_bound(pos);
+    while (plcIt != m_state->m_plcMap.end() && plcIt->first==pos) {
+      MSWText::PLC const &plc = plcIt++->second;
+      if (plc.m_type == PLC::Paragraph)
+        modIdList[Paragraph]=plc.m_id;
+    }
+
+    for (int i = 0; i < NumEnums; i++) {
+      if (modIdList[i] < 0)
+        continue;
+      MSWStruct::Paragraph para(vers);
+      m_stylesManager->getParagraph
+      ((i==TextStruct) ? MSWTextStyles::TextStructZone : MSWTextStyles::TextZone, modIdList[i], para);
+      if (para.m_styleId.isSet() && *para.m_styleId>-100) {
+        actStyle = *para.m_styleId;
+        posStyleMap[lastCPos]=actStyle;
+      }
+    }
+
+    int c=int(input->readLong(1));
+    if (c==0xd || c==0x7) {
+      lastCPos = cPos+1;
+      posStyleMap[lastCPos]=actStyle;
+    }
+    cPos++;
+  }
+
+  return true;
+}
+
 void MSWText::prepareData()
 {
   long cPos = 0;
@@ -1068,44 +1140,36 @@ void MSWText::prepareData()
   int textposSize = int(m_state->m_textposList.size());
 
   // first build the paragraph limit
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos, WPX_SEEK_SET);
-  std::set<long> limitParaPos;
-  limitParaPos.insert(cPos);
-  while (!input->atEOS() && cPos < cEnd) {
-    std::multimap<long, MSWText::PLC>::const_iterator plcIt =
-      m_state->m_plcMap.lower_bound(cPos);
-    while (plcIt != m_state->m_plcMap.end() && plcIt->first==cPos) {
-      MSWText::PLC const &plc = plcIt++->second;
-      if (plc.m_type != PLC::TextPosition)
-        continue;
-      if (plc.m_id < 0 || plc.m_id >= textposSize)
-        continue;
-      pos =m_state->m_textposList[(size_t) plc.m_id].begin();
-      input->seek(pos, WPX_SEEK_SET);
-    }
-    if (input->readLong(1)==0xd)
-      limitParaPos.insert(cPos+1);
-    cPos++;
-  }
+  std::map<long, int> posStyleMap;
+  if (!findParaPosAndStyles(posStyleMap))
+    return;
 
   struct LocalState {
     //! constructor
     LocalState(int versi, MSWTextStyles &styleManager) :
-      m_version(versi), m_styleManager(styleManager),
-      m_actualFont(), m_actualPara(versi), m_previousFont(),
-      m_paraFont(), m_styleFont(), m_isLocalFont(false) {
+      m_version(versi), m_styleManager(styleManager), m_actualStyle(-1),
+      m_actualFont(), m_actualPara(versi), m_paraFont(), m_previousFont(),
+      m_stylePara(versi), m_styleFont(), m_isLocalFont(false) {
     }
 
-    //! update the style
-    void updateStyleFont() {
-      if (m_actualPara.m_styleId.isSet() &&
-          m_styleManager.getFont(MSWTextStyles::StyleZone,m_actualPara.m_styleId.get(), m_styleFont))
-        return;
+    //! set the current style
+    bool setStyle(int style) {
+      if (style==m_actualStyle)
+        return false;
+      m_stylePara=MSWStruct::Paragraph(m_version);
+      m_styleManager.getParagraph(MSWTextStyles::StyleZone,style, m_stylePara);
       m_styleFont=MSWStruct::Font();
+      m_styleManager.getFont(MSWTextStyles::StyleZone, style, m_styleFont);
+      m_actualStyle=style;
+
+      m_actualPara=m_stylePara;
+      m_actualPara.getFont(m_paraFont);
+      m_previousFont=m_actualFont=m_paraFont;
+      m_isLocalFont = false;
+      return true;
     }
     //! update the character font
-    void setCharacter(MSWStruct::Font const &charFont, bool isLocal) {
+    void updateFont(MSWStruct::Font const &charFont, bool isLocal) {
       m_actualFont = m_paraFont;
       m_actualFont.insert(charFont, &m_styleFont);
       m_isLocalFont=isLocal;
@@ -1114,58 +1178,61 @@ void MSWText::prepareData()
     }
     //! update the paragraph
     void setParagraph(MSWStruct::Paragraph const &para) {
-      m_actualPara = para;
-      m_actualFont=MSWStruct::Font();
-      m_actualPara.getFont(m_actualFont);
-      m_previousFont=m_paraFont=m_actualFont;
-      updateStyleFont();
+      if (para.m_styleId.isSet() && *para.m_styleId!=m_actualStyle) {
+        m_previousFont=m_paraFont;
+        m_isLocalFont = true;
+        return;
+      }
+      m_actualPara = m_stylePara;
+      m_actualPara.insert(para);
+
+      m_paraFont=MSWStruct::Font();
+      m_actualPara.getFont(m_paraFont);
+      m_previousFont=m_paraFont;
+      m_isLocalFont = true;
     }
     //! modify a paragraph
-    void addModifier(MSWStruct::Paragraph const &modifier) {
-      m_actualPara.insert(modifier, &m_styleFont);
-      updateStyleFont();
-
+    void addModifier(MSWStruct::Paragraph const &modifier, bool isLocal) {
+      m_actualPara.insert(modifier);
       MSWStruct::Font modifierFont;
       if (modifier.getFont(modifierFont))
         m_actualFont.insert(modifierFont, &m_styleFont);
+      if (!isLocal)
+        m_previousFont=m_actualFont;
     }
     //! modify a paraghaph info
     void addModifier(MSWStruct::ParagraphInfo const &info) {
       m_actualPara.m_info.insert(info);
     }
 
-    //! pop to actual state (if needed)
-    bool resetLocalState() {
-      bool res=false;
-      if (m_isLocalFont) {
+    //! update the state to new state, returns true if we do some change
+    bool updateState(bool local) {
+      bool res=m_isLocalFont;
+      if (m_isLocalFont)
         m_actualFont=m_previousFont;
-        res = true;
-        m_isLocalFont=false;
-      }
+      m_isLocalFont = local;
+      if (m_isLocalFont)
+        m_previousFont=m_actualFont;
       return res;
     }
-    //! update the state to new state
-    void updateState(bool local) {
-      resetLocalState();
-      m_isLocalFont = local;
-      if (!local) return;
-      m_previousFont=m_actualFont;
-    }
-
     //! the actual version
     int m_version;
     //! the style manager
     MSWTextStyles &m_styleManager;
 
+    //! the actual style
+    int m_actualStyle;
     //! the actual font
     MSWStruct::Font m_actualFont;
     //! the actual paragraph
     MSWStruct::Paragraph m_actualPara;
+    //! the paragraph font
+    MSWStruct::Font m_paraFont;
     //! the previous font (before a push)
     MSWStruct::Font m_previousFont;
 
-    //! the paragraph font
-    MSWStruct::Font m_paraFont;
+    //! the style paragraph
+    MSWStruct::Paragraph m_stylePara;
     //! the actual style font
     MSWStruct::Font m_styleFont;
     //! a local font
@@ -1180,7 +1247,6 @@ void MSWText::prepareData()
   cPos = 0;
   pos=debPos;
   long paraPos = cPos;
-  int keepParaPosNum=0;
   while (cPos < cEnd) {
     f.str("");
     // first find the list of the plc
@@ -1263,32 +1329,20 @@ void MSWText::prepareData()
     MSWTextInternal::Property prop;
     prop.m_pos = pos;
     prop.m_plcList=std::vector<PLC>(sortedPLC.begin(), sortedPLC.end());
-    // first reset para if we begin a new line
-    keepParaPosNum=0; /* does not works, so force it to be 0 */
-    bool newLine = limitParaPos.find(cPos)!=limitParaPos.end();
-    if (newLine) --keepParaPosNum;
-    /*  checkme: probably better to do something like :
-        if (newLine)
-          paraChanged=actState.resetLocalState();
 
-        if ((modIdList[ParagraphInfo]!=-2||(newLine&&modIdList[Paragraph]!=-2))&&
-             keepParaPosNum<=0)
-          paraPos = cPos;
-        and then consider the paragraphs which do not appear at the beginning of a line
-          as modifier
-    */
-    if (newLine&& keepParaPosNum<=0) {
+    std::map<long,int>::iterator pIt=posStyleMap.find(cPos);
+    bool newLine = pIt!=posStyleMap.end();
+    if (newLine) {
       paraPos = cPos;
-      paraChanged=actState.resetLocalState();
+      paraChanged=actState.setStyle(pIt->second);
     }
     // update the paragraph list
     for (size_t i = 0; i < NumEnums; i++) {
       if (i==1 && modIdList[TextStruct]!=-2) {
-        fontChanged |= actState.resetLocalState();
-        /**FIXME: normally, must depend on some textEntry data,
-           I tested with entry.m_type&0x80
+        /**FIXME: normally, must depend on some textEntry data flags,
+           I tested with textEntry.m_type&0x80
            but in average, the results seem slightly worse :-~ */
-        actState.updateState(true);
+        fontChanged |= actState.updateState(true);
       }
       int pId = modIdList[i];
       if (pId == -2) continue;
@@ -1304,8 +1358,6 @@ void MSWText::prepareData()
         break;
       }
       case Paragraph:
-        if (keepParaPosNum <= 0)
-          paraPos = cPos;
         paraId=pId;
         break;
       case Font: {
@@ -1317,23 +1369,18 @@ void MSWText::prepareData()
           f << "F_,";
 #endif
         }
-        actState.setCharacter(newChar, modIdList[TextStruct]!=-2);
+        actState.updateFont(newChar, modIdList[TextStruct]!=-2);
         fontChanged=true;
         break;
       }
       case ParagraphInfo:
-        paraPos=cPos;
         if (pId >= 0 && pId < int(m_state->m_paraInfoList.size())) {
           MSWStruct::ParagraphInfo info=m_state->m_paraInfoList[(size_t) pId];
-          if (info.m_numLines.get() > 0)
-            keepParaPosNum = info.m_numLines.get();
           actState.addModifier(info);
-          paraChanged = true;
 #if defined(DEBUG_WITH_FILES) && DEBUG_PARAGRAPHINFO
           f << "Pi" << pId  << "=[" << info << "],";
 #endif
         } else {
-          keepParaPosNum = 0;
 #if defined(DEBUG_WITH_FILES) && DEBUG_PARAGRAPHINFO
           f << "Pi_,";
 #endif
@@ -1361,12 +1408,10 @@ void MSWText::prepareData()
       }
 #endif
 
-      if (i==Paragraph) {
-        if (para.getNumLines() > 0)
-          keepParaPosNum = para.getNumLines();
+      if (i==Paragraph)
         actState.setParagraph(para);
-      } else
-        actState.addModifier(para);
+      else
+        actState.addModifier(para, true);
       paraChanged = true;
     }
 
@@ -1374,7 +1419,8 @@ void MSWText::prepareData()
       if (m_state->m_paragraphMap.find(paraPos)!=m_state->m_paragraphMap.end())
         m_state->m_paragraphMap.erase(paraPos);
       m_state->m_paragraphMap.insert
-      (std::map<long, MSWStruct::Paragraph>::value_type(paraPos,actState.m_actualPara));
+      (std::map<long, MSWStruct::Paragraph>::value_type
+       (paraPos,actState.m_actualPara));
       fontChanged=true;
     }
 
@@ -1554,6 +1600,8 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       cPos = ok ? prop->m_cellsPos.back()+1 : actCPos;
       pos=debPos=m_state->getFilePos(cPos);
       input->seek(pos, WPX_SEEK_SET);
+      f.str("");
+      f << "TextContent["<<cPos<<"]:";
       if (ok)
         continue;
     }
@@ -1615,9 +1663,12 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
         listener->insertField(field);
         break;
       }
-      case 0x1d:
-        listener->insertField(MWAWField(MWAWField::Date));
+      case 0x1d: {
+        MWAWField field(MWAWField::Date);
+        field.m_DTFormat = "%b %d, %Y";
+        listener->insertField(field);
         break;
+      }
       case 0x18: // checkme hour
       case 0x19: { // checkme hour
         MWAWField field(MWAWField::Time);

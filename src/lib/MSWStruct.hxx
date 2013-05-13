@@ -51,6 +51,7 @@ class MWAWInputStream;
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+class MWAWSection;
 
 /** namespace to store the main structure which appears in a Microsoft Word 3.0-5.0 file */
 namespace MSWStruct
@@ -116,6 +117,9 @@ struct Section {
   Section() : m_id(-1), m_type(0), m_paragraphId(-9999), m_col(1),
     m_colSep(0.5), m_colBreak(false), m_flag(0), m_extra("") {
   }
+  //! returns a section
+  MWAWSection getSection(double pageWidth) const;
+
   //! insert the new values
   void insert(Section const &sec) {
     m_id.insert(sec.m_id);
@@ -238,7 +242,14 @@ struct ParagraphInfo {
   }
   //! returns true if num lines is set
   bool isLineSet() const {
-    return m_numLines.get()!=0;
+    return *m_numLines!=0;
+  }
+  //! returns true if no data are been set
+  bool isEmpty() const {
+    if (*m_numLines || *m_type) return false;
+    if (!m_dim.isSet()) return true;
+    if ((*m_dim)[0] > 0 || (*m_dim)[1] > 0) return false;
+    return true;
   }
   //! try to read a data
   bool read(MWAWInputStreamPtr &input, long endPos, int vers);
