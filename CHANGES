@@ -1,4 +1,9 @@
 CHANGES:
+
+05/13/2013:
+- improve a little the Microsoft Word filter to better manage
+  character and paragraph properties
+
 05/07/2013:
 - check that the remaining parsers (excepted Microsoft Word) use the
   new properties' classes,
