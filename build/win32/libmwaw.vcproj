@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="$(LIBWPD_INCLUDE_DIR),$(BOOST_INCLUDE_DIR),$(ZLIB_INCLUDE_DIR)"
+				AdditionalIncludeDirectories="..\..\inc,$(LIBWPD_INCLUDE_DIR),$(BOOST_INCLUDE_DIR),$(ZLIB_INCLUDE_DIR)"
 				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -116,7 +116,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(LIBWPD_INCLUDE_DIR),$(BOOST_INCLUDE_DIR),$(ZLIB_INCLUDE_DIR)"
+				AdditionalIncludeDirectories="..\..\inc,$(LIBWPD_INCLUDE_DIR),$(BOOST_INCLUDE_DIR),$(ZLIB_INCLUDE_DIR)"
 				PreprocessorDefinitions="_DEBUG;DEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -175,1997 +175,685 @@
 			<File
 				RelativePath="..\..\src\lib\ACParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\ACText.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\CWDatabase.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\CWGraph.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\CWParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\CWPresentation.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\CWSpreadsheet.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\CWStruct.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\CWStyleManager.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\CWTable.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\CWText.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\DMParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\DMText.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\EDParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\FWParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\FWText.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\HMWJGraph.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\HMWJParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\HMWJText.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\HMWKGraph.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\HMWKParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\HMWKText.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\libmwaw_internal.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\LWGraph.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\LWParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\LWText.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MDWParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MRWGraph.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MRWParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MRWText.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSK3Parser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSK3Text.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSK4Parser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSK4Text.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSK4Zone.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSKGraph.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSKParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSW1Parser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSWParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSWStruct.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSWText.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSWTextStyles.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWCell.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWContentListener.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWDebug.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWDocument.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWFont.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWFontConverter.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWFontSJISConverter.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWHeader.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWInputStream.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWList.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWOLEParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWOLEStream.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWPageSpan.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWParagraph.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWPictBasic.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWPictBitmap.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWPictData.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWPictMac.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWPictOLEContainer.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWPrinter.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWPropertyHandler.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWRSRCParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWSection.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWSubDocument.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWTable.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWZipStream.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWProParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWProStructures.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\NSGraph.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\NSParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\NSStruct.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\NSText.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\TTParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\WNParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\WNText.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\WPParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\ZWParser.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\ZWText.cxx"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
+			<File
+				RelativePath="..\..\src\lib\ACParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ACText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\CWDatabase.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\CWGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\CWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\CWPresentation.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\CWSpreadsheet.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\CWStruct.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\CWStyleManager.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\CWTable.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\CWText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\DMParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\DMText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\EDParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\FWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\FWText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWJGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWJParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWJText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWKGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWKParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HMWKText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\inc\libmwaw\libmwaw.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\libmwaw_internal.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\LWGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\LWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\LWText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MDWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MRWGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MRWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MRWText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSK3Parser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSK3Text.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSK4Parser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSK4Text.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSK4Zone.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSKGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSKParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSW1Parser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSWStruct.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSWText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSWTextStyles.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWCell.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWContentListener.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWDebug.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\inc\libmwaw\MWAWDocument.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWEntry.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWFont.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWFontConverter.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWFontSJISConverter.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWHeader.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWInputStream.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWList.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWOLEParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWOLEStream.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWPageSpan.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWParagraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWPict.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWPictBasic.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWPictBitmap.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWPictData.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWPictMac.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWPictOLEContainer.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWPosition.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWPrinter.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\inc\libmwaw\MWAWPropertyHandler.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWRSRCParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWSection.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWSubDocument.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWTable.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWZipStream.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWProParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWProStructures.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\NSGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\NSParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\NSStruct.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\NSText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\TTParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WNEntry.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WNParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WNText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WPParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ZWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ZWText.hxx"
+				>
+			</File>
 		</Filter>
-		<File
-			RelativePath="..\..\src\lib\ACParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\ACText.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\CWDatabase.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\CWGraph.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\CWParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\CWPresentation.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\CWSpreadsheet.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\CWStruct.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\CWStyleManager.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\CWTable.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\CWText.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\DMParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\DMText.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\EDParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\FWParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\FWText.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\HMWJGraph.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\HMWJParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\HMWJText.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\HMWKGraph.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\HMWKParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\HMWKText.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\libmwaw.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\libmwaw_internal.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\LWGraph.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\LWParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\LWText.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MDWParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MRWGraph.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MRWParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MRWText.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MSK3Parser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MSK3Text.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MSK4Parser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MSK4Text.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MSK4Zone.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MSKGraph.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MSKParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MSW1Parser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MSWParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MSWStruct.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MSWText.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MSWTextStyles.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWCell.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWContentListener.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWDebug.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWDocument.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWEntry.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWFont.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWFontConverter.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWFontSJISConverter.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWHeader.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWInputStream.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWList.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWOLEParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWOLEStream.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWPageSpan.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWParagraph.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWPict.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWPictBasic.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWPictBitmap.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWPictData.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWPictMac.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWPictOLEContainer.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWPosition.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWPrinter.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWPropertyHandler.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWRSRCParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWSection.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWSubDocument.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWTable.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWAWZipStream.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWProParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\MWProStructures.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\NSGraph.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\NSParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\NSStruct.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\NSText.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\TTParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\WNEntry.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\WNParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\WNText.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\WPParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\ZWParser.hxx"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\ZWText.hxx"
-			>
-		</File>
 	</Files>
 	<Globals>
 	</Globals>
