@@ -1,6 +1,6 @@
 bin_PROGRAMS = mwaw2text
 
-AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/inc/ $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
 
 mwaw2text_DEPENDENCIES = @MWAW2TEXT_WIN32_RESOURCE@
 

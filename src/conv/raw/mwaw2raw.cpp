@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <libwpd-stream/libwpd-stream.h>
-#include "libmwaw.hxx"
+#include <libmwaw/libmwaw.hxx>
 #include "RawDocumentGenerator.h"
 
 int printUsage()

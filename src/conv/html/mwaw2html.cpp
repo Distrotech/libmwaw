@@ -32,7 +32,7 @@
 #include <cstring>
 
 #include <libwpd-stream/libwpd-stream.h>
-#include "MWAWDocument.hxx"
+#include <libmwaw/libmwaw.hxx>
 #include "HtmlDocumentGenerator.h"
 
 int printUsage()

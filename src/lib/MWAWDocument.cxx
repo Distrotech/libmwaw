@@ -35,7 +35,7 @@
 #include "MWAWParser.hxx"
 #include "MWAWRSRCParser.hxx"
 
-#include "MWAWDocument.hxx"
+#include <libmwaw/libmwaw.hxx>
 
 #include "ACParser.hxx"
 #include "CWParser.hxx"

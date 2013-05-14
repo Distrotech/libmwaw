@@ -41,9 +41,9 @@
 #include <string>
 
 #include <libwpd/libwpd.h>
+#include <libmwaw/libmwaw.hxx>
 
 #include "libmwaw_internal.hxx"
-#include "MWAWPropertyHandler.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MWAWPictBasic.hxx"

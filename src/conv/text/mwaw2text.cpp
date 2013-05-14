@@ -28,7 +28,7 @@
 #include <string.h>
 
 #include <libwpd-stream/libwpd-stream.h>
-#include "libmwaw.hxx"
+#include <libmwaw/libmwaw.hxx>
 
 #include "TextDocumentGenerator.h"
 

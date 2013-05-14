@@ -35,7 +35,7 @@
 #include "TableStyle.h"
 #include "TextRunStyle.h"
 
-#include "MWAWDocument.hxx"
+#include <libmwaw/libmwaw.hxx>
 
 namespace HtmlDocumentGeneratorInternal
 {

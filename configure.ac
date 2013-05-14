@@ -391,7 +391,9 @@ docs/Makefile
 docs/doxygen/Makefile
 build/Makefile
 build/win32/Makefile
-libmwaw-0.1.pc
+inc/Makefile
+inc/libmwaw/Makefile
+libmwaw-$MWAW_MAJOR_VERSION.$MWAW_MINOR_VERSION.pc:libmwaw.pc.in
 libmwaw.spec
 libmwaw-zip
 ])

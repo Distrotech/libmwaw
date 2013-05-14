@@ -1,6 +1,6 @@
 bin_PROGRAMS = mwaw2html
 
-AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/inc/ $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
 
 mwaw2html_DEPENDENCIES = @MWAW2HTML_WIN32_RESOURCE@
 

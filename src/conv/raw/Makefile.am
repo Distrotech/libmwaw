@@ -1,6 +1,6 @@
 bin_PROGRAMS = mwaw2raw
 
-AM_CXXFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/lib/ $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir) -I$(top_srcdir)/inc/ $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
 
 mwaw2raw_DEPENDENCIES = @MWAW2RAW_WIN32_RESOURCE@
 

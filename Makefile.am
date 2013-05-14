@@ -4,13 +4,13 @@ pkgconfdir = $(libdir)/pkgconfig
 
 pkgconf_DATA = libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.pc
 
-SUBDIRS = src build docs
+SUBDIRS = src build docs inc
 
 EXTRA_DIST = \
 	autogen.sh \
 	libmwaw.spec \
 	libmwaw.spec.in \
-	libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.pc.in \
+	libmwaw.pc.in \
 	libmwaw-zip.in \
 	CHANGES \
 	COPYING.LGPL \
@@ -21,7 +21,7 @@ EXTRA_DIST = \
 	README
 
 distclean-local:
-	rm -rf *.cache *~
+	rm -rf *.cache *~ *.pc
 
 rpm: dist
 	rpmbuild -ta $(PACKAGE)-$(VERSION).tar.gz

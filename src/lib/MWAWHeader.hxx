@@ -38,7 +38,7 @@
 
 #include <libwpd-stream/libwpd-stream.h>
 
-#include "MWAWDocument.hxx"
+#include <libmwaw/libmwaw.hxx>
 #include "MWAWInputStream.hxx"
 
 class MWAWRSRCParser;
