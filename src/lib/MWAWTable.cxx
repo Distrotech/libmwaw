@@ -71,6 +71,14 @@ bool MWAWTable::buildStructures()
 
   size_t nCells = m_cellsList.size();
   std::vector<float> listPositions[2];
+  // initialize the cell local id
+  for (size_t c = 0; c < nCells; c++) {
+    if (!m_cellsList[c]) {
+      MWAW_DEBUG_MSG(("MWAWTable::buildStructures: Oops, the list of cell contains emty cell\n"));
+      return false;
+    }
+    m_cellsList[c]->setId(int(c));
+  }
   for (int dim = 0; dim < 2; dim++) {
     MWAWTableCell::Compare compareFunction(dim);
     std::set<MWAWTableCell::Compare::Point,

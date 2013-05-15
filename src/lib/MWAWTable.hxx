@@ -57,7 +57,7 @@ class MWAWTableCell
   friend class MWAWTable;
 public:
   //! constructor
-  MWAWTableCell() : m_box(), m_position(-1,-1), m_numberCellSpanned() {
+  MWAWTableCell() : m_box(), m_position(-1,-1), m_numberCellSpanned(), m_id(-1) {
   }
   //! destructor
   virtual ~MWAWTableCell() { }
@@ -69,7 +69,14 @@ public:
   Box2f const &box() const {
     return m_box;
   }
-
+  //! set the local id
+  void setId(int newId) const {
+    m_id = newId;
+  }
+  //! return the local id
+  int id() const {
+    return m_id;
+  }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, MWAWTableCell const &cell) {
     if (cell.m_position.x() >= 0) {
@@ -99,10 +106,13 @@ protected:
           return m_cell->box().max()[coord];
         return m_cell->box().min()[coord];
       }
+      /** returns the cells size */
       float getSize(int coord) const {
         return m_cell->box().size()[coord];
       }
+      /** the position of the point in the cell (0: LT, 1: RB) */
       int m_which;
+      /** the cell */
       MWAWTableCell const *m_cell;
     };
 
@@ -117,11 +127,7 @@ protected:
               - c2.m_cell->box().size()[m_coord];
       if (diffF < 0) return true;
       if (diffF > 0) return false;
-#ifdef _WIN64
-      return __int64(c1.m_cell) < __int64(c2.m_cell);
-#else
-      return long(c1.m_cell) < long(c2.m_cell);
-#endif
+      return c1.m_cell->id() < c2.m_cell->id();
     }
 
     //! the coord to compare
@@ -134,6 +140,8 @@ protected:
 
   /** the final position in the table */
   Vec2i m_position, m_numberCellSpanned /** the number of cell span */;
+  /** a local id (used by compare )*/
+  mutable int m_id;
 };
 
 class MWAWTable
@@ -147,6 +155,10 @@ public:
 
   //! add a new cells
   void add(shared_ptr<MWAWTableCell> cell) {
+    if (!cell) {
+      MWAW_DEBUG_MSG(("MWAWTable::add: must be called with a cell\n"));
+      return;
+    }
     m_cellsList.push_back(cell);
   }
 
