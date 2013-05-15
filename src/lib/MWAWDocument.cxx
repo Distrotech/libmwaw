@@ -158,6 +158,23 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     case ZWRT:
       confidence = MWAW_CONFIDENCE_GOOD;
       break;
+    case FRM:
+    case GW:
+    case MORE:
+    case PAGEMK:
+    case RSG:
+    case RGTIME:
+    case XP:
+    case WPW:
+    case RESERVED1:
+    case RESERVED2:
+    case RESERVED3:
+    case RESERVED4:
+    case RESERVED5:
+    case RESERVED6:
+    case RESERVED7:
+    case RESERVED8:
+    case RESERVED9:
     case UNKNOWN:
     default:
       break;
@@ -329,6 +346,25 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
     case MWAWDocument::ZWRT:
       parser.reset(new ZWParser(input, rsrcParser, header));
       break;
+
+    case MWAWDocument::FRM:
+    case MWAWDocument::GW:
+    case MWAWDocument::MORE:
+    case MWAWDocument::PAGEMK:
+    case MWAWDocument::RSG:
+    case MWAWDocument::RGTIME:
+    case MWAWDocument::XP:
+    case MWAWDocument::WPW:
+
+    case MWAWDocument::RESERVED1:
+    case MWAWDocument::RESERVED2:
+    case MWAWDocument::RESERVED3:
+    case MWAWDocument::RESERVED4:
+    case MWAWDocument::RESERVED5:
+    case MWAWDocument::RESERVED6:
+    case MWAWDocument::RESERVED7:
+    case MWAWDocument::RESERVED8:
+    case MWAWDocument::RESERVED9:
     case MWAWDocument::UNKNOWN:
     default:
       break;

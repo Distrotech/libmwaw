@@ -67,24 +67,39 @@ public:
   -CW: ClarisWorks/AppleWorks document (basic)
   -DM: DocMaker (v4)
   -ED: eDOC (v2)
+  -FRM: Frame Maker (nothing done)
   -FULLW: FullWrite Professional (basic)
-  -HMAC: HanMac Word-K ( v2.0.5-2.0.6 )
+  -GW: GreatWorks (nothing done )
   -HMACJ: HanMac Word-J ( v2.0.4 )
+  -HMAC: HanMac Word-K ( v2.0.5-2.0.6 ) -> MUST BE rename in HMACK 
   -LWTEXT: LightWayText ( only v4.5 Mac format )
   -MARIW: Mariner Write ( only v1.6-v3.5 Mac Classic)
   -MINDW: MindWrite
+  -MORE: More (nothing done )
   -MW: MacWrite document
   -MWPRO: MacWriteII or MacWritePro document
   -MSWORD: MSWord document (v4 v5: basic done)
   -MSWORKS: MSWorks document (v1 v2)
   -NISUSW: Nisus Writer document: v3.4-v6.5
+  -PAGEMK: Page Maker ( nothing done)
+  -RSG: Ready Set Go (nothing done)
+  -RGTIME: RagTime (nothing done)
   -TEACH: TeachText or SimpleText: v1
   -TEDIT: Tex-Edit v2
   -WNOW: WriteNow
   -WPLUS: writerplus document
+  -WPW: WordPerfect Works (nothing done)
+  -XP: XPress (nothing done )
   -ZWRT: Z-Write : v1.3
+
+  -RESERVED1-9: reserved to future use (TASTE? )
   */
-  enum DocumentType { UNKNOWN, CW, FULLW, MINDW, MSWORD, MSWORKS, MW, MWPRO, NISUSW, WNOW, WPLUS, HMAC, LWTEXT, MARIW, ZWRT, DM, ACT, ED, HMACJ, TEACH, TEDIT };
+  enum DocumentType {
+    UNKNOWN, ACT, CW, DM, ED, FRM, FULLW, GW, HMACJ, HMAC, LWTEXT, MARIW, MINDW, MORE, MSWORD,
+    MSWORKS, MW, MWPRO, NISUSW, PAGEMK, RGTIME, RSG, TEACH, TEDIT, WNOW, WPLUS, WPW, XP, ZWRT,
+    RESERVED1, RESERVED2, RESERVED3, RESERVED4, RESERVED5, RESERVED6, RESERVED7, RESERVED8,
+    RESERVED9
+  };
 
   /** an enum to define the kind of document */
   enum DocumentKind { K_UNKNOWN, K_TEXT, K_DRAW,
