@@ -50,7 +50,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"Release\lib\libmwaw-0.1.lib"
+# ADD LIB32 /nologo /out:"Release\lib\libmwaw-0.2.lib"
 
 !ELSEIF  "$(CFG)" == "libmwaw - Win32 Debug"
 
@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"Debug\lib\libmwaw-0.1.lib"
+# ADD LIB32 /nologo /out:"Debug\lib\libmwaw-0.2.lib"
 
 !ENDIF 
 
@@ -192,6 +192,14 @@ SOURCE=..\..\src\lib\LWText.cxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MDWParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MORParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MORText.cxx
 # End Source File
 # Begin Source File
 
@@ -528,6 +536,14 @@ SOURCE=..\..\src\lib\LWText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MDWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MORParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MORText.hxx
 # End Source File
 # Begin Source File
 

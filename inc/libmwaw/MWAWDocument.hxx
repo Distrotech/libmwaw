@@ -73,8 +73,10 @@ public:
   -HMACJ: HanMac Word-J ( v2.0.4 )
   -HMAC: HanMac Word-K ( v2.0.5-2.0.6 ) -> MUST BE rename in HMACK 
   -LWTEXT: LightWayText ( only v4.5 Mac format )
+  -MACD: MacDoc (nothing done )
   -MARIW: Mariner Write ( only v1.6-v3.5 Mac Classic)
   -MINDW: MindWrite
+  -MOCKP: MockPackage (nothing done )
   -MORE: More (nothing done )
   -MW: MacWrite document
   -MWPRO: MacWriteII or MacWritePro document
@@ -92,10 +94,10 @@ public:
   -XP: XPress (nothing done )
   -ZWRT: Z-Write : v1.3
 
-  -RESERVED1-9: reserved to future use (TASTE? )
+  -RESERVED1-9: reserved to future use (BeagleWorks, DreamWeaver?, Canvas?, InDesign?, Taste? )
   */
   enum DocumentType {
-    UNKNOWN, ACT, CW, DM, ED, FRM, FULLW, GW, HMACJ, HMAC, LWTEXT, MARIW, MINDW, MORE, MSWORD,
+    UNKNOWN, ACT, CW, DM, ED, FRM, FULLW, GW, HMACJ, HMAC, LWTEXT, MACD, MARIW, MINDW, MOCKP, MORE, MSWORD,
     MSWORKS, MW, MWPRO, NISUSW, PAGEMK, RGTIME, RSG, TEACH, TEDIT, WNOW, WPLUS, WPW, XP, ZWRT,
     RESERVED1, RESERVED2, RESERVED3, RESERVED4, RESERVED5, RESERVED6, RESERVED7, RESERVED8,
     RESERVED9

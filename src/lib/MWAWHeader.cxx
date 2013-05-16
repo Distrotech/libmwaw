@@ -147,6 +147,20 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MARIW, 1));
         return res;
       }
+    } else if (creator=="MORE") {
+      if (type=="MORE") {
+        res.push_back(MWAWHeader(MWAWDocument::MORE, 1));
+        return res;
+      }
+    } else if (creator=="MOR2") {
+      if (type=="MOR2") {
+        res.push_back(MWAWHeader(MWAWDocument::MORE, 2));
+        return res;
+      }
+      if (type=="MOR3") {
+        res.push_back(MWAWHeader(MWAWDocument::MORE, 3));
+        return res;
+      }
     } else if (creator=="MWII") { // MacWriteII
       if (type=="MW2D") {
         res.push_back(MWAWHeader(MWAWDocument::MWPRO, 0));
@@ -262,6 +276,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   if (val[2] == 0x424F && val[3] == 0x424F && (val[0]>>8) < 8) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Claris Works file[Limited parsing]\n"));
     res.push_back(MWAWHeader(MWAWDocument::CW, (val[0]) >> 8));
+    return res;
   }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77) {
     input->seek(8, WPX_SEEK_SET);
@@ -277,20 +292,33 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     bool ok = version == 2;
 #endif
 
-    if (ok)
+    if (ok) {
       res.push_back(MWAWHeader(MWAWDocument::WNOW, 3));
+      return res;
+    }
   }
   if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Mariner Write file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MARIW, 1));
+    return res;
   }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-K file\n"));
     res.push_back(MWAWHeader(MWAWDocument::HMAC, 1));
+    return res;
   }
   if (val[0]==0x594c && val[1]==0x5953 && val[2]==0x100) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-J file\n"));
     res.push_back(MWAWHeader(MWAWDocument::HMACJ, 1));
+    return res;
+  }
+  if (val[0]==3 && val[1]==0x4d52 && val[2]==0x4949 && val[3]==0x80) { // MRII
+    res.push_back(MWAWHeader(MWAWDocument::MORE, 2));
+    return res;
+  }
+  if (val[0]==6 && val[1]==0x4d4f && val[2]==0x5233 && val[3]==0x80) { // MOR3
+    res.push_back(MWAWHeader(MWAWDocument::MORE, 3));
+    return res;
   }
 
   // magic ole header

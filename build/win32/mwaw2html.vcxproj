@@ -69,7 +69,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>libmwaw-0.1.lib;libwpd-stream-0.9.lib;libwpd-0.9.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libmwaw-0.2.lib;libwpd-stream-0.9.lib;libwpd-0.9.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>Debug\bin\mwaw2html.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>Debug\lib;$(LIBWPD_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -111,7 +111,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>libwpd-stream-0.9.lib;libmwaw-0.1.lib;libwpd-0.9.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libwpd-stream-0.9.lib;libmwaw-0.2.lib;libwpd-0.9.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>Release\bin\mwaw2html.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>Release\lib;$(LIBWPD_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
