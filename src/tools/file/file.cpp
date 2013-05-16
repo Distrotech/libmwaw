@@ -274,6 +274,11 @@ bool File::readFileInformation()
     checkFInfoType("DRWG","MacDraw") || checkFInfoType("MacDraw");
   } else if (m_fInfoCreator=="MDPL") {
     checkFInfoType("DRWG","MacDraw II") || checkFInfoType("MacDraw II");
+  } else if (m_fInfoCreator=="MORE") {
+    checkFInfoType("MORE","More") || checkFInfoType("More");
+  } else if (m_fInfoCreator=="MOR2") {
+    checkFInfoType("MOR2","More 2") || checkFInfoType("MOR3","More 3") ||
+    checkFInfoType("More 2-3");
   } else if (m_fInfoCreator=="MPNT") {
     checkFInfoType("PNTG","MacPaint") || checkFInfoType("MacPaint");
   } else if (m_fInfoCreator=="MWII") {
@@ -398,6 +403,14 @@ bool File::readDataInformation()
   }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77 && val[4]==2) {
     m_dataResult.push_back("WriteNow 3-4");
+    return true;
+  }
+  if (val[0]==3 && val[1]==0x4d52 && val[2]==0x4949 && val[3]==0x80) {
+    m_dataResult.push_back("More 2");
+    return true;
+  }
+  if (val[0]==6 && val[1]==0x4d4f && val[2]==0x5233 && val[3]==0x80) {
+    m_dataResult.push_back("More 3");
     return true;
   }
   if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {
