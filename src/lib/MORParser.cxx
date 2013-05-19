@@ -34,6 +34,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <set>
 #include <sstream>
 
@@ -59,9 +60,11 @@ namespace MORParserInternal
 //! Internal: the state of a MORParser
 struct State {
   //! constructor
-  State() : m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_typeEntryMap(), m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
 
+  //! a map type -> entry
+  std::multimap<std::string, MWAWEntry> m_typeEntryMap;
   //! end of file
   long m_eof;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
@@ -171,6 +174,20 @@ bool MORParser::isFilePos(long pos)
   return ok;
 }
 
+bool MORParser::checkAndStore(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.begin() < 0x80 || !isFilePos(entry.end()))
+    return false;
+  if (entry.type().empty()) {
+    MWAW_DEBUG_MSG(("MORParser::checkAndStore: entry type is not set\n"));
+    return false;
+  }
+
+  m_state->m_typeEntryMap.insert
+  (std::multimap<std::string, MWAWEntry>::value_type(entry.type(),entry));
+  return true;
+}
+
 ////////////////////////////////////////////////////////////
 // interface with the text parser
 ////////////////////////////////////////////////////////////
@@ -262,11 +279,68 @@ bool MORParser::createZones()
     MWAW_DEBUG_MSG(("MORParser::createZones: do not know how to createZone for v1\n"));
     return false;
   }
-  long pos=8;
+  if (!readZonesList())
+    return false;
+
+  std::multimap<std::string, MWAWEntry>::const_iterator it;
+  it = m_state->m_typeEntryMap.find("PrintInfo");
+  if (it != m_state->m_typeEntryMap.end())
+    readPrintInfo(it->second);
+
+  bool ok=false;
+  it = m_state->m_typeEntryMap.find("Topic");
+  if (it != m_state->m_typeEntryMap.end())
+    ok=m_textParser->readTopic(it->second);
+  if (!ok) // no need to continue if we can not read the text position
+    return false;
+
+  it = m_state->m_typeEntryMap.find("Comment");
+  if (it != m_state->m_typeEntryMap.end())
+    m_textParser->readComment(it->second);
+
+  it = m_state->m_typeEntryMap.find("Fonts");
+  if (it != m_state->m_typeEntryMap.end())
+    m_textParser->readFonts(it->second);
+
+  it = m_state->m_typeEntryMap.find("Unknown5");
+  if (it != m_state->m_typeEntryMap.end())
+    m_textParser->readUnknown5(it->second);
+
+  it = m_state->m_typeEntryMap.find("Unknown6");
+  if (it != m_state->m_typeEntryMap.end())
+    m_textParser->readUnknown6(it->second);
+
+  it = m_state->m_typeEntryMap.find("Unknown9");
+  if (it != m_state->m_typeEntryMap.end())
+    readUnknown9(it->second);
+
+  it = m_state->m_typeEntryMap.begin();
+  while (it != m_state->m_typeEntryMap.end()) {
+    MWAWEntry const &entry=(it++)->second;
+    if (entry.isParsed())
+      continue;
+    libmwaw::DebugStream f;
+    f << "Entries(" << entry.type() << "):";
+    ascii().addPos(entry.begin());
+    ascii().addNote(f.str().c_str());
+    ascii().addPos(entry.end());
+    ascii().addNote("_");
+  }
+
+  return m_textParser->createZones();
+}
+
+bool MORParser::readZonesList()
+{
+  int vers=version();
+  if (vers<2)
+    return false;
   if (!isFilePos(0x80)) {
-    MWAW_DEBUG_MSG(("MORParser::createZones: file is too short\n"));
+    MWAW_DEBUG_MSG(("MORParser::readZonesList: file is too short\n"));
     return false;
   }
+  MWAWInputStreamPtr input = getInput();
+  long pos=8;
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(Zones):";
@@ -278,76 +352,50 @@ bool MORParser::createZones()
     MWAWEntry entry;
     entry.setBegin((long) input->readULong(4));
     entry.setLength((long) input->readULong(4));
-    std::string name("");
-    switch(i) {
-    case 0:
-      name="Printer";
-      break;
-    default: {
-      std::stringstream s;
-      s << "Unknown" << i;
-      name=s.str();
-    }
-    break;
-    }
-    entry.setType(name);
+    static char const *(names[])= {
+      "PrintInfo", "Unknown1", "Unknown2", "Topic",
+      "Comment", "Unknown5", "Unknown6", "Unknown7"
+    };
+    entry.setType(names[i]);
     if (!entry.length())
       continue;
-    f << name << "(" << std::hex << entry.begin() << "<->" << entry.end()
+    f << names[i] << "(" << std::hex << entry.begin() << "<->" << entry.end()
       << std::dec <<  "), ";
-    if (!isFilePos(entry.end())) {
-      MWAW_DEBUG_MSG(("MORParser::createZones: can not read entry %d\n", i));
+    if (!checkAndStore(entry)) {
+      MWAW_DEBUG_MSG(("MORParser::readZonesList: can not read entry %d\n", i));
       f << "###";
-      continue;
     }
-
-    libmwaw::DebugStream f2;
-    f2 << "Entries(" << entry.type() << "):";
-    ascii().addPos(entry.begin());
-    ascii().addNote(f2.str().c_str());
-    ascii().addPos(entry.end());
-    ascii().addNote("_");
   }
   long unkn=(long) input->readULong(4);
   if (!isFilePos(unkn)) {
-    MWAW_DEBUG_MSG(("MORParser::createZones: can not read unkn limit\n"));
+    MWAW_DEBUG_MSG(("MORParser::readZonesList: can not read unkn limit\n"));
     f << "###";
   }
   if (unkn) f << "unkn=" << std::hex << unkn << std::dec << ",";
-  // checkme, only find UnknA1 and UnknA2 other 0 so?
+  /* checkme: another list probably begins here, but as only find Fonts and Unknown9 sets,
+     the beginning and ending are not sure :-~ */
   for (int i=0; i < 6; i++) {
+    static char const *(names[])=
+    {"Unknown8", "Unknown9", "Fonts", "UnknownB","UnknownC", "UnknownD" };
     MWAWEntry entry;
     entry.setBegin((long) input->readULong(4));
     entry.setLength((long) input->readULong(4));
-    std::string name("");
-    std::stringstream s;
-    s << "UnknA" << i;
-    name=s.str();
-
-    entry.setType(name);
+    entry.setType(names[i]);
     if (!entry.length())
       continue;
-    f << name << "(" << std::hex << entry.begin() << "<->" << entry.end()
+    f << names[i] << "(" << std::hex << entry.begin() << "<->" << entry.end()
       << std::dec <<  "), ";
-    if (!isFilePos(entry.end())) {
-      MWAW_DEBUG_MSG(("MORParser::createZones: can not read entryA %d\n", i));
+    if (!checkAndStore(entry)) {
+      MWAW_DEBUG_MSG(("MORParser::readZonesList: can not read entry %d\n", i));
       f << "###";
-      continue;
     }
-
-    libmwaw::DebugStream f2;
-    f2 << "Entries(" << entry.type() << "):";
-    ascii().addPos(entry.begin());
-    ascii().addNote(f2.str().c_str());
-    ascii().addPos(entry.end());
-    ascii().addNote("_");
   }
   unkn=(long) input->readULong(4); // always 0?
   if (unkn) f << "unkn2=" << std::hex << unkn << std::dec << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  ascii().addDelimiter(input->tell(),'|');
-  return m_textParser->createZones();
+
+  return !m_state->m_typeEntryMap.empty();
 }
 
 ////////////////////////////////////////////////////////////
@@ -355,6 +403,59 @@ bool MORParser::createZones()
 // Low level
 //
 ////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////
+// read the print info
+////////////////////////////////////////////////////////////
+bool MORParser::readPrintInfo(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.length() != 120) {
+    MWAW_DEBUG_MSG(("MORParser::readPrintInfo: the entry is bad\n"));
+    return false;
+  }
+
+  long pos = entry.begin();
+  MWAWInputStreamPtr input = getInput();
+  libmwaw::DebugStream f;
+
+  input->seek(pos, WPX_SEEK_SET);
+  libmwaw::PrinterInfo info;
+  if (!info.read(input)) return false;
+  f << "Entries(PrintInfo):"<< info;
+  entry.setParsed(true);
+
+  Vec2i paperSize = info.paper().size();
+  Vec2i pageSize = info.page().size();
+  if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
+      paperSize.x() <= 0 || paperSize.y() <= 0) return false;
+
+  // define margin from print info
+  Vec2i lTopMargin= -1 * info.paper().pos(0);
+  Vec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
+
+  // move margin left | top
+  int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
+  int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
+  lTopMargin -= Vec2i(decalX, decalY);
+  rBotMargin += Vec2i(decalX, decalY);
+
+  // decrease right | bottom
+  int rightMarg = rBotMargin.x() -10;
+  if (rightMarg < 0) rightMarg=0;
+  int botMarg = rBotMargin.y() -50;
+  if (botMarg < 0) botMarg=0;
+
+  getPageSpan().setMarginTop(lTopMargin.y()/72.0);
+  getPageSpan().setMarginBottom(botMarg/72.0);
+  getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
+  getPageSpan().setMarginRight(rightMarg/72.0);
+  getPageSpan().setFormLength(paperSize.y()/72.);
+  getPageSpan().setFormWidth(paperSize.x()/72.);
+
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
 // read the header
@@ -399,6 +500,336 @@ bool MORParser::checkHeader(MWAWHeader *header, bool strict)
   return true;
 }
 
+////////////////////////////////////////////////////////////
+// read some unknow zone
+////////////////////////////////////////////////////////////
 
+// checkme: not sure...
+bool MORParser::readUnknown9(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.length() < 26) {
+    MWAW_DEBUG_MSG(("MORParser::readUnknown9: the entry is bad\n"));
+    return false;
+  }
 
+  long pos = entry.begin();
+  long endPos = entry.end();
+  MWAWInputStreamPtr input = getInput();
+  libmwaw::DebugStream f;
+  entry.setParsed(true);
+
+  input->seek(pos, WPX_SEEK_SET);
+  f << "Entries(Unknown9):";
+  int N=(int) input->readLong(4);
+  f << "N=" << N << ",";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos=input->tell();
+  for (int n=0; n<N; n++) {
+    pos=input->tell();
+    if (pos+6>endPos)
+      break;
+    if (n==0) {
+      if (readColors(endPos))
+        continue;
+      input->seek(pos, WPX_SEEK_SET);
+    }
+    int type=(int) input->readULong(2); // find 1: color 2:?
+    if (type > 10) break;
+    long dataSz = (long) input->readULong(4);
+    if (dataSz<= 0 || pos+6+dataSz > endPos) {
+      input->seek(pos, WPX_SEEK_SET);
+      break;
+    }
+
+    bool ok=false;
+    long endFPos = pos+6+dataSz;
+
+    f.str("");
+    f << "Unknown9-" << n << ":type=" << type << ",";
+    if (type==2) {
+      MORStruct::Pattern pattern;
+      ok=readPattern(endFPos, pattern);
+      if (ok)
+        f << pattern << ",";
+      if (!ok) {
+        std::string mess("");
+        input->seek(pos+6, WPX_SEEK_SET);
+        ok = readBackside(endFPos, mess);
+        if (ok)
+          f << "backside," << mess;
+      }
+      if (!ok) {
+        input->seek(pos+6, WPX_SEEK_SET);
+        ok = readUnkn9Sub(endFPos);
+        if (ok)
+          f << "Unkn9A,";
+      }
+    }
+    if (!ok) {
+      MWAW_DEBUG_MSG(("MORParser::readUnknown9: find some unknown structure\n"));
+      f << "###";
+    } else if (endFPos!=input->tell()) {
+      MWAW_DEBUG_MSG(("MORParser::readUnknown9: find some extra data\n"));
+      f << "###";
+      ascii().addDelimiter(input->tell(),'|');
+    }
+    input->seek(endFPos, WPX_SEEK_SET);
+
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    ascii().addPos(endFPos);
+    ascii().addNote("_");
+  }
+  pos=input->tell();
+  if (pos!=endPos) {
+    MWAW_DEBUG_MSG(("MORParser::readUnknown9: the parsing stopped before end\n"));
+    ascii().addPos(pos);
+    ascii().addNote("Unknown9(II)");
+  }
+  return true;
+}
+
+// a list of colors ( the first zone of block9)
+bool MORParser::readColors(long endPos)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  if (pos+22 > endPos)
+    return false;
+  if (input->readLong(2)!=1)
+    return false;
+
+  libmwaw::DebugStream f;
+  f << "Entries(ColorL):";
+  long dataSz=(long) input->readULong(4);
+  if (pos+6+dataSz > endPos)
+    return false;
+  long val= input->readLong(4); // 3ff or 413 a size ?
+  if (val) f << "f0=" << val << ",";
+  val= input->readLong(2); // always 0
+  if (val) f << "f1=" << val << ",";
+  int maxCols=(int)input->readLong(2);
+  f << "nCol=" << maxCols << ",";
+  if (maxCols<0 || 16+8*maxCols != dataSz)
+    return false;
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  for (int i=0; i <= maxCols; i++) {
+    pos=input->tell();
+    f.str("");
+    f << "ColorL" << i << ",";
+    int id=(int) input->readLong(2);
+    if (id!=i) f << "#id=" << id << ",";
+    unsigned char rgb[3];
+    for (int c=0; c<3; c++)
+      rgb[c]=(unsigned char)(input->readULong(2)>>8);
+    MWAWColor col(rgb[0], rgb[1], rgb[2]);
+    f << "col=" << col << ",";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
+// a backside definition? ( the last zones of block9)
+bool MORParser::readBackside(long endPos, std::string &extra)
+{
+  extra="";
+
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  if (pos+0x2e > endPos)
+    return false;
+
+  std::string name("");
+  for (int i=0; i < 8; i++)
+    name += char(input->readULong(1));
+  if (name != "BACKSIDE")
+    return false;
+
+  libmwaw::DebugStream f;
+  int val=(int) input->readULong(1); // small number between 1 and 8
+  f << "f0=" << val << ",";
+  val=(int) input->readLong(1); // always 0 ?
+  if (val) f << "f1=" << val << ",";
+  for (int i=0; i < 4; i++) { // always 0?
+    val = (int) input->readLong(2);
+    if (val) f << "f" << i+2 << "=" << val << ",";
+  }
+  int center[2]; // checkme: xy
+  for (int i=0; i < 2; i++)
+    center[i]=(int) input->readLong(2);
+  if (center[0]!=500 || center[1]!=500)
+    f << "center=" << center[0] << "x" << center[1] << ",";
+  int dim[4];
+  for (int i=0; i < 4; i++)
+    dim[i]=(int) input->readLong(2);
+  if (dim[0] || dim[1] || dim[2]!=1000 || dim[3]!=1000)
+    f << "dim=" << dim[0] << "x" << dim[1] << "<->" << dim[2] << "x" << dim[3] << ",";
+  for (int i=0; i < 2; i++) { // g0: small number between 1 and a, g1:16*small number
+    val = (int) input->readLong(2);
+    if (val) f << "g" << i << "=" << val << ",";
+  }
+  unsigned char rgb[3];
+  for (int c=0; c<3; c++)
+    rgb[c]=(unsigned char)(input->readULong(2)>>8);
+  f << "col0=" << MWAWColor(rgb[0], rgb[1], rgb[2]) << ",";
+  for (int c=0; c<3; c++)
+    rgb[c]=(unsigned char)(input->readULong(2)>>8);
+  f << "col1=" << MWAWColor(rgb[0], rgb[1], rgb[2]) << ",";
+  extra=f.str();
+  return true;
+}
+
+// a pattern ( the zones of block9 which follow color)
+bool MORParser::readPattern(long endPos, MORStruct::Pattern &pattern)
+{
+  pattern = MORStruct::Pattern();
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  if (pos+0x1c > endPos)
+    return false;
+
+  std::string name("");
+  for (int i=0; i < 8; i++)
+    name += char(input->readULong(1));
+  if (name != "BACKPTRN")
+    return false;
+
+  for (int i=0; i < 8; i++)
+    pattern.m_pattern[i] = (unsigned char) input->readULong(1);
+
+  // checkme: in general frontColor=backColor, but not always...
+  unsigned char rgb[3];
+  for (int c=0; c<3; c++)
+    rgb[c]=(unsigned char)(input->readULong(2)>>8);
+  pattern.m_frontColor=MWAWColor(rgb[0], rgb[1], rgb[2]);
+  for (int c=0; c<3; c++)
+    rgb[c]=(unsigned char)(input->readULong(2)>>8);
+  pattern.m_backColor=MWAWColor(rgb[0], rgb[1], rgb[2]);
+  return true;
+}
+
+/* a ? ( the middle zone of block9). checkme: structure */
+bool MORParser::readUnkn9Sub(long endPos)
+{
+  MWAWInputStreamPtr input = getInput();
+  long debPos = input->tell();
+  if (debPos+118 > endPos)
+    return false;
+
+  long pos = debPos;
+  libmwaw::DebugStream f;
+  f << "Entries(Unkn9A):";
+  long val=input->readLong(2); // always 1?
+  if (val!=1) f << "f0=" << val << ",";
+  val=input->readLong(4); // always 1c
+  if (val!=0x1c) f << "f1=" << val << ",";
+  val=input->readLong(4); // always 4e
+  if (val!=0x4e) f << "f2=" << val << ",";
+  for (int i=0; i < 5; i++) { // 0 excepted f5=-1
+    val=input->readLong(2);
+    if (val) f << "f" << i+3 << "=" << val << ",";
+  }
+  /* find [0,2,2,2,2,2,7e,0] or [0,0,0,0,0,0,ff,0,] or [db,6d,b6,db,6d,b6,db,6d,]:
+     maybe a pattern */
+  f << "pattern?=[";
+  for (int i=0; i < 8; i++)
+    f << std::hex << input->readULong(1) << std::dec << ",";
+  f << "],";
+
+  static int const expectedVal[]= {0, 0, 0x8004, 0, 0, 8, 8 };
+  for (int i=0; i < 7; i++) {
+    val=(long) input->readULong(2);
+    if (val!=expectedVal[i]) f << "g" << i << "=" << val << ",";
+  }
+  for (int i=0; i < 9; i++) {
+    val=input->readLong(2);
+    int expected=(i==4||i==6) ? 0x48:0;
+    if (val != expected) f << "h" << i << "=" << val << ",";
+  }
+
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos=debPos+60;
+  input->seek(pos, WPX_SEEK_SET);
+  f.str("");
+  f << "Unkn9A-II:";
+  for (int i=0; i < 9; i++) {
+    val=input->readLong(2);
+    int expected= i==1 ? 1 : i<3 ? 4 : i==6 ? 0x6e : 0;
+    if (val != expected) f << "f" << i << "=" << val << ",";
+  }
+  /* now 8 uint32_t zones:
+     Z1,Z2,..,Z5: always similar, Z7: often 0
+     note: I only find in 0..3 in the 8 uint4_t which compose a uint32_t
+   */
+  f << "unkn=[";
+  for (int i=0; i < 8; i++) {
+    val=(long) input->readULong(4);
+    if (val)
+      f << std::hex << val << std::dec << ",";
+    else
+      f << "_,";
+  }
+  f << "],";
+  for (int i=0; i < 3; i++) { // always 0?
+    val=input->readLong(2);
+    if (val)
+      f << "g=" << val << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos=debPos+116;
+  input->seek(pos, WPX_SEEK_SET);
+  int N=(int) input->readLong(2);
+  f.str("");
+  f << "Unkn9A-III:N=" << N << ",";
+  if (pos+2+(N+1)*8 > endPos) {
+    MWAW_DEBUG_MSG(("MORParser::readUnkn9Sub: can not read end of zone\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  for (int n=0; n <= N; n++) {
+    pos = input->tell();
+    f.str("");
+    f << "Unkn9A-III[" << n << "]:";
+    val = input->readLong(2);
+    if (int(val) != n) f << "#id=" << val << ",";
+
+    ascii().addDelimiter(input->tell(),'|');
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+8, WPX_SEEK_SET);
+  }
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// MORStruct implementation
+////////////////////////////////////////////////////////////
+
+namespace MORStruct
+{
+std::ostream &operator<<(std::ostream &o, Pattern const &pat)
+{
+  o << "pat=[" << std::hex;
+  for (int i=0; i<8; i++)
+    o << int(pat.m_pattern[i]) << ",";
+  o << std::dec << "],";
+  if (!pat.m_frontColor.isBlack())
+    o << "frontColor=" << pat.m_frontColor << ",";
+  if (!pat.m_backColor.isWhite())
+    o << "backColor=" << pat.m_backColor << ",";
+  return o;
+}
+}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

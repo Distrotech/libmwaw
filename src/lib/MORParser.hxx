@@ -56,6 +56,26 @@ struct State;
 
 class MORText;
 
+/** \brief a namespace used to define basic structures in a More file
+ */
+namespace MORStruct
+{
+struct Pattern {
+  //!constructor
+  Pattern() : m_frontColor(MWAWColor::black()), m_backColor(MWAWColor::white()) {
+    for (int i=0; i<8; i++) m_pattern[i]=0;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Pattern const &pat);
+  //! the pattern
+  unsigned char m_pattern[8];
+  //! the front color
+  MWAWColor m_frontColor;
+  //! the back color
+  MWAWColor m_backColor;
+};
+}
+
 /** \brief the main class to read a More file
  */
 class MORParser : public MWAWParser
@@ -92,12 +112,36 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
+  //! read the list of zones ( v2-3) : first 0x80 bytes
+  bool readZonesList();
+
+  //! read a PrintInfo zone ( first block )
+  bool readPrintInfo(MWAWEntry const &entry);
+
+  //! read a unknown zone ( block 9 )
+  bool readUnknown9(MWAWEntry const &entry);
+
+  //! read a color zone ( beginning of block 9 )
+  bool readColors(long endPos);
+
+  //! read a pattern ( some sub zone of block 9)
+  bool readPattern(long endPos, MORStruct::Pattern &pattern);
+
+  //! read a backside ( some sub zone of block 9)
+  bool readBackside(long endPos, std::string &extra);
+
+  //! read the last subzone find in a block 9 ( unknown meaning)
+  bool readUnkn9Sub(long endPos);
+
   //
   // low level
   //
 
   /** check if an entry is in file */
   bool isFilePos(long pos);
+
+  //! check if the entry is valid, if so store it in the list of entry
+  bool checkAndStore(MWAWEntry const &entry);
 
   //! return the input input
   MWAWInputStreamPtr rsrcInput();

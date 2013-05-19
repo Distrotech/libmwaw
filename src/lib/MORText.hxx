@@ -86,6 +86,35 @@ protected:
   // intermediate level
   //
 
+  //! read the list of topic positions
+  bool readTopic(MWAWEntry const &entry);
+
+  //! read the list of comment zones
+  bool readComment(MWAWEntry const &entry);
+
+  //! read a text entry
+  bool readText(MWAWEntry const &entry);
+
+  //! read the list of fonts
+  bool readFonts(MWAWEntry const &entry);
+
+  //! read the list of ???
+  bool readUnknown5(MWAWEntry const &entry);
+
+  //! read the data of zone 5
+  bool readUnknown5Data(MWAWEntry const &entry);
+
+  //! read the list of ???
+  bool readUnknown6(MWAWEntry const &entry);
+
+  //! read the data of zone 6
+  bool readUnknown6Data(MWAWEntry const &entry);
+
+  //! try to read either a font, a fontname, a pattern, a int
+  bool readValue(MWAWEntry const &entry, long fDecal);
+
+  //! check if the entry is valid ie. the begin points to a zone: <dataSz> data
+  bool check(MWAWEntry &entry);
   //! return the color which corresponds to an id (if possible)
   bool getColor(int id, MWAWColor &col) const;
 
