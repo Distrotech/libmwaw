@@ -982,7 +982,6 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
   input->seek(pos, WPX_SEEK_SET);
 
   MWAWParagraph para;
-  para.m_tabsRelativeToLeftMargin = false;
   para.m_marginsUnit = WPX_POINT;
   para.m_margins[1] = (double) input->readULong(2);
   para.m_margins[2] = getPageWidth()*72.0-(double) input->readULong(2);

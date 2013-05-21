@@ -49,7 +49,6 @@ namespace MWParserInternal
 {
 struct State;
 struct Information;
-struct Paragraph;
 class SubDocument;
 }
 

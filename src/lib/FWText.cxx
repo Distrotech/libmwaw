@@ -518,7 +518,6 @@ struct Paragraph : public MWAWParagraph {
   Paragraph() : MWAWParagraph(), m_align(0), m_interSpacing(1.), m_interSpacingUnit(WPX_PERCENT),
     m_dim(0,0), m_border(), m_isTable(false), m_tableFlags(), m_actCol(-1), m_isSent(false) {
     m_befAftSpacings[0]=m_befAftSpacings[1]=0;
-    m_tabsRelativeToLeftMargin=false;
   }
 
   //! operator<<

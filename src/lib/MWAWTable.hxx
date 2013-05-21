@@ -37,8 +37,8 @@
  *
  */
 
-#ifndef MWAW_TABLE_HELPER
-#  define MWAW_TABLE_HELPER
+#ifndef MWAW_TABLE
+#  define MWAW_TABLE
 
 #include <iostream>
 #include <vector>
@@ -57,7 +57,7 @@ class MWAWTableCell
   friend class MWAWTable;
 public:
   //! constructor
-  MWAWTableCell() : m_box(), m_position(-1,-1), m_numberCellSpanned(), m_id(-1) {
+  MWAWTableCell() : m_box(), m_position(-1,-1), m_numberCellSpanned() {
   }
   //! destructor
   virtual ~MWAWTableCell() { }
@@ -68,14 +68,6 @@ public:
   //! return the bounding box
   Box2f const &box() const {
     return m_box;
-  }
-  //! set the local id
-  void setId(int newId) const {
-    m_id = newId;
-  }
-  //! return the local id
-  int id() const {
-    return m_id;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, MWAWTableCell const &cell) {
@@ -100,7 +92,7 @@ protected:
     Compare(int dim) : m_coord(dim) {}
     //! small structure to define a cell point
     struct Point {
-      Point(int wh, MWAWTableCell const *cell) : m_which(wh), m_cell(cell) {}
+      Point(int wh, MWAWTableCell const *cell, int cellId) : m_which(wh), m_cell(cell), m_cellId(cellId) {}
       float getPos(int coord) const {
         if (m_which)
           return m_cell->box().max()[coord];
@@ -114,6 +106,8 @@ protected:
       int m_which;
       /** the cell */
       MWAWTableCell const *m_cell;
+      //! the cell id ( used by compare)
+      int m_cellId;
     };
 
     //! comparaison function
@@ -127,7 +121,7 @@ protected:
               - c2.m_cell->box().size()[m_coord];
       if (diffF < 0) return true;
       if (diffF > 0) return false;
-      return c1.m_cell->id() < c2.m_cell->id();
+      return c1.m_cellId < c2.m_cellId;
     }
 
     //! the coord to compare
@@ -140,8 +134,6 @@ protected:
 
   /** the final position in the table */
   Vec2i m_position, m_numberCellSpanned /** the number of cell span */;
-  /** a local id (used by compare )*/
-  mutable int m_id;
 };
 
 class MWAWTable

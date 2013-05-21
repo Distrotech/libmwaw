@@ -201,20 +201,6 @@ std::ostream &operator<<(std::ostream &o, Information const &info)
 }
 
 ////////////////////////////////////////
-/** Internal: class to store the paragraph properties */
-struct Paragraph : public MWAWParagraph {
-  //! Constructor
-  Paragraph() {
-    m_tabsRelativeToLeftMargin = false;
-  }
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
-    o << reinterpret_cast<MWAWParagraph const &>(ind);
-    return o;
-  }
-};
-
-////////////////////////////////////////
 //! the windows structure
 struct WindowsInfo {
   WindowsInfo() : m_startSel(), m_endSel(), m_posTopY(0),
@@ -1404,7 +1390,7 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
     return false;
   }
 
-  MWParserInternal::Paragraph parag;
+  MWAWParagraph parag;
   MWAWInputStreamPtr input = getInput();
 
   input->seek(entry.end()-1, WPX_SEEK_SET);
@@ -1495,7 +1481,7 @@ bool MWParser::readPageBreak(MWParserInternal::Information const &info)
     return false;
   }
 
-  MWParserInternal::Paragraph parag;
+  MWAWParagraph parag;
   MWAWInputStreamPtr input = getInput();
 
   input->seek(entry.end()-1, WPX_SEEK_SET);

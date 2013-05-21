@@ -90,7 +90,6 @@ struct Font {
 struct Paragraph : public MWAWParagraph {
   //! Constructor with type
   Paragraph() : MWAWParagraph() {
-    m_tabsRelativeToLeftMargin=false;
     m_marginsUnit = WPX_POINT;
     for(int i = 0; i < 8; i++)
       m_values[i] = 0;
