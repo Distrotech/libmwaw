@@ -60,11 +60,15 @@ namespace MORParserInternal
 //! Internal: the state of a MORParser
 struct State {
   //! constructor
-  State() : m_typeEntryMap(), m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_typeEntryMap(), m_colorList(), m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
 
   //! a map type -> entry
   std::multimap<std::string, MWAWEntry> m_typeEntryMap;
+  //! set the default color map
+  void setDefaultColorList(int version);
+  //! a list colorId -> color
+  std::vector<MWAWColor> m_colorList;
   //! end of file
   long m_eof;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
@@ -72,6 +76,23 @@ struct State {
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
 };
+
+void State::setDefaultColorList(int version)
+{
+  if (m_colorList.size()) return;
+  if (version==3) {
+    uint32_t const defCol[32] = {
+      0x000000,0x333333,0x555555,0x7f7f7f,0x999999,0xbbbbbb,0xdddddd,0xffffff,
+      0xfcf305,0xf20884,0xdd0806,0x02abea,0x008011,0x0000d4,0x7f007f,0x7f3f00,
+      0xffff80,0xff80ff,0xff8080,0x80ffff,0x80ff80,0x8080ff,0x008080,0x006699,
+      0xffcccc,0xcccccc,0xcc9999,0xcc9966,0xcc6633,0xcccc99,0x999966,0x666633
+    };
+    m_colorList.resize(32);
+    for (size_t i = 0; i < 32; i++)
+      m_colorList[i] = defCol[i];
+    return;
+  }
+}
 
 ////////////////////////////////////////
 //! Internal: the subdocument of a MORParser
@@ -188,6 +209,18 @@ bool MORParser::checkAndStore(MWAWEntry const &entry)
   return true;
 }
 
+bool MORParser::checkAndFindSize(MWAWEntry &entry)
+{
+  if (entry.begin()<0 || !isFilePos(entry.begin()+4))
+    return false;
+  MWAWInputStreamPtr &input= getInput();
+  long actPos=input->tell();
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  entry.setLength(4+(long) input->readULong(4));
+  input->seek(actPos,WPX_SEEK_SET);
+  return isFilePos(entry.end());
+}
+
 ////////////////////////////////////////////////////////////
 // interface with the text parser
 ////////////////////////////////////////////////////////////
@@ -206,6 +239,19 @@ void MORParser::newPage(int number)
       continue;
     getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
+}
+
+bool MORParser::getColor(int id, MWAWColor &col) const
+{
+  int numColor = (int) m_state->m_colorList.size();
+  if (!numColor) {
+    m_state->setDefaultColorList(version());
+    numColor = int(m_state->m_colorList.size());
+  }
+  if (id < 0 || id >= numColor)
+    return false;
+  col = m_state->m_colorList[size_t(id)];
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -302,13 +348,17 @@ bool MORParser::createZones()
   if (it != m_state->m_typeEntryMap.end())
     m_textParser->readFonts(it->second);
 
-  it = m_state->m_typeEntryMap.find("Unknown5");
+  it = m_state->m_typeEntryMap.find("Slide");
   if (it != m_state->m_typeEntryMap.end())
-    m_textParser->readUnknown5(it->second);
+    readSlideList(it->second);
 
-  it = m_state->m_typeEntryMap.find("Unknown6");
+  it = m_state->m_typeEntryMap.find("Outline");
   if (it != m_state->m_typeEntryMap.end())
-    m_textParser->readUnknown6(it->second);
+    m_textParser->readOutlineList(it->second);
+
+  it = m_state->m_typeEntryMap.find("FreePos");
+  if (it != m_state->m_typeEntryMap.end())
+    readFreePos(it->second);
 
   it = m_state->m_typeEntryMap.find("Unknown9");
   if (it != m_state->m_typeEntryMap.end())
@@ -354,7 +404,7 @@ bool MORParser::readZonesList()
     entry.setLength((long) input->readULong(4));
     static char const *(names[])= {
       "PrintInfo", "Unknown1", "Unknown2", "Topic",
-      "Comment", "Unknown5", "Unknown6", "Unknown7"
+      "Comment", "Slide", "Outline", "FreePos"
     };
     entry.setType(names[i]);
     if (!entry.length())
@@ -458,6 +508,83 @@ bool MORParser::readPrintInfo(MWAWEntry const &entry)
 }
 
 ////////////////////////////////////////////////////////////
+// read the list of free position
+////////////////////////////////////////////////////////////
+bool MORParser::readFreePos(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.length()<4) {
+    MWAW_DEBUG_MSG(("MORParser::readFreePos: the entry is bad\n"));
+    return false;
+  }
+
+  long pos = entry.begin();
+  MWAWInputStreamPtr &input= getInput();
+  libmwaw::DebugStream f;
+  entry.setParsed(true);
+
+  input->seek(pos, WPX_SEEK_SET);
+  int N=(int) input->readULong(4);
+  f << "Entries(FreePos):N=" << N;
+  if (4+N*8 > entry.length()) {
+    MWAW_DEBUG_MSG(("MORParser::readFreePos: the number of entry seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  int val;
+  std::vector<MWAWEntry> filePositions;
+  for (int i=0; i < N; i++) {
+    pos = input->tell();
+    long fPos = input->readLong(4);
+    f.str("");
+    f << "FreePos-" << i << ":";
+    f << std::hex << fPos << std::dec << ",";
+    MWAWEntry tEntry;
+    tEntry.setBegin(fPos);
+    int what=(int) input->readULong(2);
+    if (what==0) {
+      tEntry.setLength((int) input->readULong(2));
+      f << "length=" << tEntry.length() << ",";
+    } else {
+      if (what!=0x7FFF) // 0x7FFF: last entry, fPos correspond to eof position
+        f << "#wh=" << std::hex << what << std::dec << ",";
+      val = (int) input->readULong(2); // probably junk
+      if (val) f << "f0=" << std::hex << val << std::dec << ",";
+    }
+    if (tEntry.valid()) {
+      if (!isFilePos(tEntry.end())) {
+        MWAW_DEBUG_MSG(("MORParser::readFreePos: the entry does not seems valid\n"));
+        f << "###";
+      } else
+        filePositions.push_back(tEntry);
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+
+  if (input->tell()!=entry.end()) { // end can be junk field
+    ascii().addPos(input->tell());
+    ascii().addNote("FreePos-#");
+  }
+  ascii().addPos(entry.end());
+  ascii().addNote("_");
+
+  for (size_t i=0; i < filePositions.size(); i++) {
+    MWAWEntry const &tEntry=filePositions[i];
+    ascii().addPos(tEntry.begin());
+    ascii().addNote("FreePos-data:");
+    ascii().addPos(tEntry.end());
+    ascii().addNote("_");
+  }
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
 bool MORParser::checkHeader(MWAWHeader *header, bool strict)
@@ -497,6 +624,151 @@ bool MORParser::checkHeader(MWAWHeader *header, bool strict)
     header->reset(MWAWDocument::MORE, vers);
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
+  return true;
+}
+
+//////////////////////////////////////////////
+// slide
+//////////////////////////////////////////////
+bool MORParser::readSlideList(MWAWEntry const &entry)
+{
+  if (!entry.valid() || (entry.length()%8)) {
+    MWAW_DEBUG_MSG(("MORParser::readSlideList: the entry is bad\n"));
+    return false;
+  }
+
+  long pos = entry.begin();
+  MWAWInputStreamPtr &input= getInput();
+  libmwaw::DebugStream f;
+
+  input->seek(pos, WPX_SEEK_SET);
+  entry.setParsed(true);
+
+  ascii().addPos(pos);
+  ascii().addNote("Entries(Slide)");
+
+  int N=int(entry.length()/8);
+  int val;
+  std::vector<MWAWEntry> filePositions;
+  for (int i=0; i < N; i++) {
+    pos=input->tell();
+
+    f.str("");
+    f << "Slide-" << i << ":";
+    long fPos = input->readLong(4);
+    f << "pos=" << std::hex << fPos << std::dec << ",";
+    MWAWEntry tEntry;
+    tEntry.setBegin(fPos);
+    if (fPos==0x50) // checkme: default or related to filePosition 0x50 ?
+      ;
+    else if (!checkAndFindSize(tEntry)) {
+      MWAW_DEBUG_MSG(("MORParser::readSlideList: can not read a file position\n"));
+      f << "###";
+    } else
+      filePositions.push_back(tEntry);
+    val = (int) input->readLong(2); // always -1 ?
+    if (val != -1)
+      f << "f0=" << val << ",";
+    val = (int) input->readLong(2); // always 0 ?
+    if (val)
+      f << "f1=" << val << ",";
+
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+8, WPX_SEEK_SET);
+  }
+  for (size_t i=0; i < filePositions.size(); i++) {
+    MWAWEntry const &tEntry=filePositions[i];
+    if (readSlide(tEntry))
+      continue;
+    f.str("");
+    f << "Slide-###" << i << "[data]:";
+    ascii().addPos(tEntry.begin());
+    ascii().addNote(f.str().c_str());
+    ascii().addPos(tEntry.end());
+    ascii().addNote("_");
+  }
+  return true;
+}
+
+bool MORParser::readSlide(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.length()<16) {
+    MWAW_DEBUG_MSG(("MORParser::readSlide: the entry is bad\n"));
+    return false;
+  }
+  long pos = entry.begin();
+  long endPos = entry.end();
+  MWAWInputStreamPtr &input= getInput();
+  libmwaw::DebugStream f;
+
+  input->seek(pos+4, WPX_SEEK_SET); // skip size
+  entry.setParsed(true);
+
+  f << "Slide[data]:";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(pos+16, WPX_SEEK_SET);
+
+  int n=0;
+  while(1) {
+    pos = input->tell();
+    if (pos+2 > endPos)
+      break;
+    int type=(int) input->readLong(2);
+    int dataSz=0;
+    if (type & 0x1)
+      dataSz=4;
+    else {
+      switch(type) {
+      case 0x66: // group: arg num group
+      case 0x68: // group of num 6a,70* ?
+      case 0x72: // group of num 74* ?
+      case 0x74: // [ id : val ]
+        dataSz=4;
+        break;
+      case 0x6a: // pattern?, text, id, ...
+      case 0x70: // size=0x4a ?
+        dataSz=4+(int) input->readULong(4);
+        break;
+      default:
+        MWAW_DEBUG_MSG(("MORParser::readSlide: argh... find unexpected type %d\n", type));
+        break;
+      }
+    }
+    if (!dataSz || pos+2+dataSz > endPos) {
+      input->seek(pos, WPX_SEEK_SET);
+      break;
+    }
+
+    f.str("");
+    f << "Slide-" << n++ << "[data]:";
+    f << "type=" << std::hex << (type&0xFFFE) << std::dec;
+    if (type&1) f << "*";
+    f << ",";
+    if (dataSz==4)
+      f << "N=" << input->readLong(4) << ",";
+    if (type==0x6a) {
+      MWAWEntry dEntry;
+      dEntry.setBegin(pos+2+4);
+      dEntry.setLength(dataSz-4);
+      // can also be some text and ?
+      if (!m_textParser->readValue(dEntry,-6))
+        f << "#";
+    }
+    input->seek(pos+2+dataSz, WPX_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  pos = input->tell();
+  if (pos!=endPos) {
+    ascii().addPos(pos);
+    ascii().addNote("Slide-###[data]:");
+  }
+
+  ascii().addPos(endPos);
+  ascii().addNote("_");
+
   return true;
 }
 

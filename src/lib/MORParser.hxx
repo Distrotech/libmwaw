@@ -105,6 +105,8 @@ protected:
   Vec2f getPageLeftTop() const;
   //! adds a new page
   void newPage(int number);
+  //! return the color which corresponds to an id (if possible)
+  bool getColor(int id, MWAWColor &col) const;
 
   // interface with the text parser
 
@@ -118,6 +120,12 @@ protected:
   //! read a PrintInfo zone ( first block )
   bool readPrintInfo(MWAWEntry const &entry);
 
+  //! read the list of slide definitions
+  bool readSlideList(MWAWEntry const &entry);
+
+  //! read a slide definitions
+  bool readSlide(MWAWEntry const &entry);
+
   //! read a unknown zone ( block 9 )
   bool readUnknown9(MWAWEntry const &entry);
 
@@ -129,6 +137,9 @@ protected:
 
   //! read a backside ( some sub zone of block 9)
   bool readBackside(long endPos, std::string &extra);
+
+  //! read the list of free file position
+  bool readFreePos(MWAWEntry const &entry);
 
   //! read the last subzone find in a block 9 ( unknown meaning)
   bool readUnkn9Sub(long endPos);
@@ -142,6 +153,9 @@ protected:
 
   //! check if the entry is valid, if so store it in the list of entry
   bool checkAndStore(MWAWEntry const &entry);
+
+  //! check if the entry is valid defined by the begin pos points to a zone: <dataSz> data
+  bool checkAndFindSize(MWAWEntry &entry);
 
   //! return the input input
   MWAWInputStreamPtr rsrcInput();

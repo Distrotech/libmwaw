@@ -58,36 +58,99 @@
 namespace MORTextInternal
 {
 ////////////////////////////////////////
+//! Internal: the paragraph of a MORText
+struct Paragraph : public MWAWParagraph {
+  //! constructor
+  Paragraph() {
+    m_tabsRelativeToLeftMargin = false;
+  }
+};
+
+////////////////////////////////////////
+//! Internal: the outline header of a MORText
+struct OutlineHeader {
+  //! constructor
+  OutlineHeader(): m_type(-1), m_entry(), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, OutlineHeader const &head) {
+    switch(head.m_type) {
+    case 0x301:
+      o << "font,";
+      break;
+    case 0x402:
+      o << "fSize,";
+      break;
+    case 0x603:
+      o << "fFlags,";
+      break;
+    case 0x804:
+      o << "fColor,";
+      break;
+    case 0xa05:
+      o << "interline,";
+      break;
+    case 0xc0f:
+      o << "firstIndent,";
+      break;
+    case 0xf07:
+      o << "tabs,";
+      break;
+    case 0x1006:
+      o << "justify,";
+      break;
+    case 0x1208:
+      o << "bef/afterspace,";
+      break;
+    case 0x1409:
+      o << "lMargin,";
+      break;
+    case 0x160a:
+      o << "rMargin,";
+      break;
+    case 0x190b:
+      o << "list[type],";
+      break;
+    case 0x1a0c:
+      o << "break,";
+      break;
+    case 0x1c0d:
+      o << "keepline,";
+      break;
+    case 0x1e0e:
+      o << "keep[outline],";
+      break;
+    case -1:
+      break;
+    default:
+      // 2914|2b15|3319|3b1c|6532|6934|7137|773a|7b3c -> backside|backpattern
+      o << "type=" << std::hex << head.m_type << std::dec << ",";
+      break;
+    }
+    if (head.m_entry.valid())
+      o << std::hex << head.m_entry.begin() << "<->" << head.m_entry.end() << std::dec << ",";
+    o << head.m_extra;
+    return o;
+  }
+  //! the type
+  int m_type;
+  //! the data entry
+  MWAWEntry m_entry;
+  //! extra data
+  std::string m_extra;
+};
+////////////////////////////////////////
 //! Internal: the state of a MORText
 struct State {
   //! constructor
-  State() : m_colorList(), m_version(-1), m_numPages(-1), m_actualPage(1) {
+  State() : m_version(-1), m_numPages(-1), m_actualPage(1) {
   }
 
-  //! set the default color map
-  void setDefaultColorList(int version);
-  //! a list colorId -> color
-  std::vector<MWAWColor> m_colorList;
   //! the file version
   mutable int m_version;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
-void State::setDefaultColorList(int version)
-{
-  if (m_colorList.size()) return;
-  if (version==3) {
-    uint32_t const defCol[20] = {
-      0x000000, 0xff0000, 0x00ff00, 0x0000ff, 0x00ffff, 0xff00db, 0xffff00, 0x8d02ff,
-      0xff9200, 0x7f7f7f, 0x994914, 0x000000, 0x484848, 0x880000, 0x008600, 0x838300,
-      0xff9200, 0x7f7f7f, 0x994914, 0xfffff
-    };
-    m_colorList.resize(20);
-    for (size_t i = 0; i < 20; i++)
-      m_colorList[i] = defCol[i];
-    return;
-  }
-}
 }
 
 ////////////////////////////////////////////////////////////
@@ -116,31 +179,6 @@ int MORText::numPages() const
   int nPages=1;
   // fixme
   return m_state->m_numPages = nPages;
-}
-
-bool MORText::getColor(int id, MWAWColor &col) const
-{
-  int numColor = (int) m_state->m_colorList.size();
-  if (!numColor) {
-    m_state->setDefaultColorList(version());
-    numColor = int(m_state->m_colorList.size());
-  }
-  if (id < 0 || id >= numColor)
-    return false;
-  col = m_state->m_colorList[size_t(id)];
-  return true;
-}
-
-bool MORText::check(MWAWEntry &entry)
-{
-  if (entry.begin()<0 || !m_mainParser->isFilePos(entry.begin()+4))
-    return false;
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  long actPos=input->tell();
-  input->seek(entry.begin(), WPX_SEEK_SET);
-  entry.setLength(4+(long) input->readULong(4));
-  input->seek(actPos,WPX_SEEK_SET);
-  return m_mainParser->isFilePos(entry.end());
 }
 
 ////////////////////////////////////////////////////////////
@@ -190,32 +228,174 @@ bool MORText::readText(MWAWEntry const &entry)
       MWAW_DEBUG_MSG(("MORText::readText: text end by 0x1b\n"));
       continue;
     }
-    int nextC=(int)input->readULong(1);
-    if (nextC!=0xb9) {
-      // find @[55]@[42]path@[75]@[62]
-      f << "@[" << std::hex << nextC << std::dec << "]";
-      continue;
+    int fld=(int)input->readULong(1);
+    switch(fld) {
+    case 0x9:
+      f << "\t";
+      break;
+    case 0xd: // EOL in header/footer
+      f << (char) 0xd;
+      break;
+    case 0x2d: // geneva
+      f << "@[fId=def]";
+      break;
+    case 0x2e: // 12
+      f << "@[fSz=def]";
+      break;
+    case 0x2f: // black
+      f << "@[fCol=def]";
+      break;
+    case 0x30: // font
+      if (actPos+4+2 > endPos) {
+        f << "@[#fId]";
+        MWAW_DEBUG_MSG(("MORText::readText: field font seems too short\n"));
+        break;
+      }
+      val = (int) input->readULong(2);
+      if (!val&0x8000) {
+        MWAW_DEBUG_MSG(("MORText::readText: field fId: unexpected id\n"));
+        f << "@[#fId]";
+        input->seek(-2, WPX_SEEK_CUR);
+        break;
+      }
+      f << "@[fId=" << (val&0x7FFF) << "]";
+      val = (int) input->readULong(2);
+      if (val!=0x1b30) {
+        MWAW_DEBUG_MSG(("MORText::readText: field fId: unexpected end field\n"));
+        f << "###";
+        input->seek(-2, WPX_SEEK_CUR);
+        break;
+      }
+      break;
+    case 0x31:
+      if (actPos+4+2 > endPos) {
+        f << "@[#fSz]";
+        MWAW_DEBUG_MSG(("MORText::readText: field fSz seems too short\n"));
+        break;
+      }
+      val = (int) input->readLong(2);
+      f << "@[fSz=" << val << "]";
+      if (val <= 0) {
+        MWAW_DEBUG_MSG(("MORText::readText: field fSz seems bad\n"));
+        f << "###";
+      }
+      val = (int) input->readULong(2);
+      if (val!=0x1b31) {
+        MWAW_DEBUG_MSG(("MORText::readText: field fSz: unexpected end field\n"));
+        f << "###";
+        input->seek(-2, WPX_SEEK_CUR);
+        break;
+      }
+      break;
+    case 0x38:
+      if (actPos+4+10 > endPos) {
+        f << "@[#fCol]";
+        MWAW_DEBUG_MSG(("MORText::readText: field fCol seems too short\n"));
+        break;
+      }
+      // fixme: format e, red, green, blue, e
+      f << "@[fCol=";
+      for (int i=0; i < 5; i++) {
+        val=(int)input->readULong(2);
+        if (val)
+          f << std::hex << val << std::dec << ",";
+        else
+          f << ",";
+      }
+      f << "]";
+      val = (int) input->readULong(2);
+      if (val!=0x1b38) {
+        MWAW_DEBUG_MSG(("MORText::readText: field fCol: unexpected end field\n"));
+        f << "###";
+        input->seek(-2, WPX_SEEK_CUR);
+        break;
+      }
+      break;
+    case 0x41:
+      f << "@[supersc]";
+      break;
+    case 0x42: // in fact, (line boldà^bold
+      f << "@[b]";
+      break;
+    case 0x49: // in fact, (line italic)^italic
+      f << "@[it]";
+      break;
+    case 0x4c:
+      f << "@[subsc]";
+      break;
+    case 0x4f:
+      f << "@[outline]";
+      break;
+    case 0x53:
+      f << "@[shadow]";
+      break;
+    case 0x55:
+      f << "@[underl]";
+      break;
+    case 0x61:
+      f << "@[script=def]";
+      break;
+    case 0x62:
+      f << "@[/b]";
+      break;
+    case 0x69:
+      f << "@[/it]";
+      break;
+    case 0x6f:
+      f << "@[/outline]";
+      break;
+    case 0x73:
+      f << "@[/shadow]";
+      break;
+    case 0x75:
+      f << "@[/underl]";
+      break;
+    case 0xb9:
+      if (actPos+4+8 > endPos) {
+        f << "@[#b9]";
+        MWAW_DEBUG_MSG(("MORText::readText: field b9 seems too short\n"));
+        break;
+      }
+      f << "@[b9:";
+      /* c f0f1 c with f0f1
+         - 30000: filename, 40000: foldername
+         - 5000a: pagenumber, c000a: page count
+         - 80200: date,90200: date[lastmodif]
+         - 60001: time,70001: time[lastmodif]
+      */
+      for (int i=0; i < 4; i++) { // c ? ? c
+        val=(int)input->readLong(2);
+        if (val)
+          f << std::hex << val << std::dec << ",";
+        else
+          f << ",";
+      }
+      f << "]";
+      val = (int) input->readULong(2);
+      if (val!=0x1bb9) {
+        MWAW_DEBUG_MSG(("MORText::readText: field b9: unexpected end field\n"));
+        f << "###";
+        input->seek(-2, WPX_SEEK_CUR);
+        break;
+      }
+      break;
+    default: {
+      int sz=(int) input->readULong(2);
+      if (sz>4 && actPos+sz<=endPos) {
+        input->seek(actPos+sz-4, WPX_SEEK_SET);
+        if ((int) input->readULong(2)==sz &&
+            (int) input->readULong(2)==int(0x1b00|fld)) {
+          MWAW_DEBUG_MSG(("MORText::readText: find a complex unknown field\n"));
+          f << "@[#" << std::hex << fld << std::dec << ":" << sz << "]";
+          break;
+        }
+        input->seek(actPos+2, WPX_SEEK_SET);
+      }
+      MWAW_DEBUG_MSG(("MORText::readText: find a unknown field\n"));
+      f << "@[#" << std::hex << fld << std::dec << "]";
+      break;
     }
-    // field?
-    if (actPos+11 >= endPos) {
-      f << "@[#b9]";
-      MWAW_DEBUG_MSG(("MORText::readText: field b9 seems too short\n"));
-      continue;
     }
-    f << "@[b9:";
-    for (int i=0; i < 4; i++) {
-      val=(int)input->readLong(2);
-      if (val)
-        f << std::hex << val << std::dec << ",";
-      else
-        f << ",";
-    }
-    val=(int)input->readLong(2);
-    if (val!=0x1bb9) {
-      MWAW_DEBUG_MSG(("MORText::readText: field b9 seems odds\n"));
-      f << "###" << std::hex << val << std::dec;
-    }
-    f << "@]";
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
@@ -248,15 +428,20 @@ bool MORText::readTopic(MWAWEntry const &entry)
     pos=input->tell();
     f.str("");
     f << "Topic-" << i << ":";
-    val = (int) input->readLong(2); // a small number betwen -1 and 3
-    f << "f0=" << val << ",";
-    val = (int) input->readULong(2); // some flag ?
-    if (val) f << "fl=" << std::hex << val << std::dec << ",";
+    val = (int) input->readLong(2);
+    f << "level=" << val << ",";
+    int flag = (int) input->readULong(2); // some flag ?
+    if ((flag&1)==0) f << "hidden,";
+    if (flag&0x8000) f << "hasOutline,";
+    if (flag&0x4000) f << "hasComment,";
+    // find only bits: e688
+    flag &= 0x3FFE;
+    if (flag) f << "fl=" << std::hex << flag << std::dec << ",";
     long fPos = input->readLong(4);
     f << "pos=" << std::hex << fPos << std::dec << ",";
     MWAWEntry tEntry;
     tEntry.setBegin(fPos);
-    if (!check(tEntry)) {
+    if (!m_mainParser->checkAndFindSize(tEntry)) {
       MWAW_DEBUG_MSG(("MORText::readTopic: can not read a text position\n"));
       f << "###";
     } else
@@ -313,7 +498,7 @@ bool MORText::readComment(MWAWEntry const &entry)
     f << "pos=" << std::hex << fPos << std::dec << ",";
     MWAWEntry tEntry;
     tEntry.setBegin(fPos);
-    if (!check(tEntry)) {
+    if (!m_mainParser->checkAndFindSize(tEntry)) {
       MWAW_DEBUG_MSG(("MORText::readComment: can not read a file position\n"));
       f << "###";
     } else
@@ -411,156 +596,12 @@ bool MORText::readFonts(MWAWEntry const &entry)
 }
 
 //////////////////////////////////////////////
-// unknown
+// outline
 //////////////////////////////////////////////
-bool MORText::readUnknown5(MWAWEntry const &entry)
-{
-  if (!entry.valid() || (entry.length()%8)) {
-    MWAW_DEBUG_MSG(("MORText::readUnknown5: the entry is bad\n"));
-    return false;
-  }
-
-  long pos = entry.begin();
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  libmwaw::DebugStream f;
-
-  input->seek(pos, WPX_SEEK_SET);
-  entry.setParsed(true);
-
-  ascFile.addPos(pos);
-  ascFile.addNote("Entries(Unknown5)");
-
-  int N=int(entry.length()/8);
-  int val;
-  std::vector<MWAWEntry> filePositions;
-  for (int i=0; i < N; i++) {
-    pos=input->tell();
-
-    f.str("");
-    f << "Unknown5-" << i << ":";
-    long fPos = input->readLong(4);
-    f << "pos=" << std::hex << fPos << std::dec << ",";
-    MWAWEntry tEntry;
-    tEntry.setBegin(fPos);
-    if (fPos==0x50) // checkme: default or related to filePosition 0x50 ?
-      ;
-    else if (!check(tEntry)) {
-      MWAW_DEBUG_MSG(("MORText::readUnknown5: can not read a file position\n"));
-      f << "###";
-    } else
-      filePositions.push_back(tEntry);
-    val = (int) input->readLong(2); // always -1 ?
-    if (val != -1)
-      f << "f0=" << val << ",";
-    val = (int) input->readLong(2); // always 0 ?
-    if (val)
-      f << "f1=" << val << ",";
-
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-    input->seek(pos+8, WPX_SEEK_SET);
-  }
-  for (size_t i=0; i < filePositions.size(); i++) {
-    MWAWEntry const &tEntry=filePositions[i];
-    if (readUnknown5Data(tEntry))
-      continue;
-    f.str("");
-    f << "Unknown5-###" << i << "[data]:";
-    ascFile.addPos(tEntry.begin());
-    ascFile.addNote(f.str().c_str());
-    ascFile.addPos(tEntry.end());
-    ascFile.addNote("_");
-  }
-  return true;
-}
-
-bool MORText::readUnknown5Data(MWAWEntry const &entry)
-{
-  if (!entry.valid() || entry.length()<16) {
-    MWAW_DEBUG_MSG(("MORText::readUnknown5Data: the entry is bad\n"));
-    return false;
-  }
-  long pos = entry.begin();
-  long endPos = entry.end();
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  libmwaw::DebugStream f;
-
-  input->seek(pos+4, WPX_SEEK_SET); // skip size
-  entry.setParsed(true);
-
-  f << "Unknown5[data]:";
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-  input->seek(pos+16, WPX_SEEK_SET);
-
-  int n=0;
-  while(1) {
-    pos = input->tell();
-    if (pos+2 > endPos)
-      break;
-    int type=(int) input->readLong(2);
-    int dataSz=0;
-    if (type & 0x1)
-      dataSz=4;
-    else {
-      switch(type) {
-      case 0x66: // group: arg num group
-      case 0x68: // group of num 6a,70* ?
-      case 0x72: // group of num 74* ?
-      case 0x74: // [ id : val ]
-        dataSz=4;
-        break;
-      case 0x6a: // pattern?, text, id, ...
-      case 0x70: // size=0x4a ?
-        dataSz=4+(int) input->readULong(4);
-        break;
-      default:
-        MWAW_DEBUG_MSG(("MORText::readUnknown5Data: argh... find unexpected type %d\n", type));
-        break;
-      }
-    }
-    if (!dataSz || pos+2+dataSz > endPos) {
-      input->seek(pos, WPX_SEEK_SET);
-      break;
-    }
-
-    f.str("");
-    f << "Unknown5-" << n++ << "[data]:";
-    f << "type=" << std::hex << (type&0xFFFE) << std::dec;
-    if (type&1) f << "*";
-    f << ",";
-    if (dataSz==4)
-      f << "N=" << input->readLong(4) << ",";
-    if (type==0x6a) {
-      MWAWEntry dEntry;
-      dEntry.setBegin(pos+2+4);
-      dEntry.setLength(dataSz-4);
-      // can also be some text and ?
-      if (!readValue(dEntry,-6))
-        f << "#";
-    }
-    input->seek(pos+2+dataSz, WPX_SEEK_SET);
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  pos = input->tell();
-  if (pos!=endPos) {
-    ascFile.addPos(pos);
-    ascFile.addNote("Unknown5-###[data]:");
-  }
-
-  ascFile.addPos(endPos);
-  ascFile.addNote("_");
-
-  return true;
-}
-
-bool MORText::readUnknown6(MWAWEntry const &entry)
+bool MORText::readOutlineList(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%4)) {
-    MWAW_DEBUG_MSG(("MORText::readUnknown6: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MORText::readOutlineList: the entry is bad\n"));
     return false;
   }
 
@@ -572,40 +613,42 @@ bool MORText::readUnknown6(MWAWEntry const &entry)
   input->seek(pos, WPX_SEEK_SET);
   entry.setParsed(true);
 
-  f << "Entries(Unknown6):";
+  f << "Entries(Outline):";
   int N=int(entry.length()/4);
-  std::vector<MWAWEntry> filePositions;
+  std::vector<MWAWEntry> posList;
   for (int i=0; i < N; i++) {
-    long fPos = input->readLong(4);
-    f << std::hex << fPos << std::dec << ",";
     MWAWEntry tEntry;
-    tEntry.setBegin(fPos);
-    if (!check(tEntry)) {
-      MWAW_DEBUG_MSG(("MORText::readUnknown6: can not read a file position\n"));
-      f << "###";
+    tEntry.setBegin(input->readLong(4));
+    tEntry.setId(int(i));
+    if (!m_mainParser->checkAndFindSize(tEntry)) {
+      MWAW_DEBUG_MSG(("MORText::readOutlineList: can not read a file position\n"));
+      f << "###,";
     } else
-      filePositions.push_back(tEntry);
+      f << std::hex << tEntry.begin() << "<->" << tEntry.end() << ",";
+    posList.push_back(tEntry);
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
-  for (size_t i=0; i < filePositions.size(); i++) {
-    MWAWEntry const &tEntry=filePositions[i];
-    if (readUnknown6Data(tEntry))
+  for (size_t i=0; i < posList.size(); i++) {
+    MWAWEntry const &tEntry=posList[i];
+    if (!tEntry.valid())
+      continue;
+    if (readOutline(tEntry))
       continue;
 
     ascFile.addPos(tEntry.begin());
-    ascFile.addNote("Unknown6-data:###");
+    ascFile.addNote("Outline-data:###");
     ascFile.addPos(tEntry.end());
     ascFile.addNote("_");
   }
   return true;
 }
 
-bool MORText::readUnknown6Data(MWAWEntry const &entry)
+bool MORText::readOutline(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<8) {
-    MWAW_DEBUG_MSG(("MORText::readUnknown6Data: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MORText::readOutline: the entry is bad\n"));
     return false;
   }
   int vers = version();
@@ -616,29 +659,32 @@ bool MORText::readUnknown6Data(MWAWEntry const &entry)
   libmwaw::DebugStream f;
 
   input->seek(pos+4, WPX_SEEK_SET); // skip size
-  entry.setParsed(true);
 
-  f << "Unknown6[data]:";
+  f << "Outline[data" << entry.id() << "]:";
   int val=(int) input->readULong(2);
   if (val!=6*(vers-1)) {
-    MWAW_DEBUG_MSG(("MORText::readUnknown6Data: find unexpected type\n"));
+    MWAW_DEBUG_MSG(("MORText::readOutline: find unexpected type\n"));
     f << "#f0=" << val << ",";
   }
   int N=(int) input->readULong(2);
   f << "N=" << N << ",";
   long lastListPos = pos+8+N*16;
   if (lastListPos > endPos) {
-    MWAW_DEBUG_MSG(("MORText::readUnknown6Data: can not read length\n"));
+    MWAW_DEBUG_MSG(("MORText::readOutline: can not read length\n"));
     return false;
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
-  std::vector<MWAWEntry> listDataEntries;
+  MORTextInternal::Paragraph para;
+  MWAWFont font(12,3);
+  std::vector<MORTextInternal::OutlineHeader> outlineList;
+  uint32_t fFlags=font.flags();
   for (int n=0; n<N; n++) {
     pos = input->tell();
     f.str("");
-    f << "Unknown6[data-" << n << "]:";
+
+    MORTextInternal::OutlineHeader outline;
     val=int(input->readLong(1));
     if (val!=6*(vers-1))
       f << "#f0=" << val << ",";
@@ -650,47 +696,358 @@ bool MORText::readUnknown6Data(MWAWEntry const &entry)
       if (val)
         f << "f" << i+1 << "=" << val << ",";
     }
-    for (int i=0; i<2; i++) { // number or flag?
-      val=int(input->readULong(2));
-      if (val)
-        f << "g" << i << "=" << std::hex << val << std::dec << ",";
+    outline.m_type=int(input->readULong(2));
+    int values[4];
+    for (int i=0; i < 4; i++)
+      values[i] = (int) input->readULong(2);
+    bool haveExtra=false;
+    switch(outline.m_type) {
+    case 0x301: // font name
+    case 0xf07: // left indent+tabs
+      haveExtra=true;
+      break;
+    case 0x402:
+      font.setSize(values[0]);
+      f << "sz=" << values[0] << ",";
+      break;
+    case 0x603: {
+      uint32_t bit=0;
+      switch(values[0]) {
+      case 0:
+        fFlags=0;
+        f << "plain";
+        break;
+      case 1:
+        bit = MWAWFont::boldBit;
+        f << "b";
+        break;
+      case 2:
+        bit = MWAWFont::italicBit;
+        f << "it";
+        break;
+      case 3:
+        if (values[1]==1)
+          font.setUnderlineStyle(MWAWFont::Line::Simple);
+        f << "underl";
+        break;
+      case 4:
+        bit = MWAWFont::outlineBit;
+        f << "outline";
+        break;
+      case 5:
+        bit = MWAWFont::shadowBit;
+        f << "shadow";
+        break;
+      default:
+        f << "##fl=" << std::hex << values[0] << std::dec;
+        break;
+      }
+      if (values[1]==0) {
+        if (bit) fFlags = fFlags & (~bit);
+        f << "[of]";
+      } else if (values[1]!=1)
+        f << "=##" << values[1] << ",";
+      else {
+        fFlags |= bit;
+        values[1]=0;
+      }
+      break;
     }
-    // FIXME: from here, experimental: a dim, some flags ?
-    int unkn=(int) input->readLong(2);
-    if (unkn) f << "unkn=" << unkn << ",";
-    int values[2];
-    for (int i=0; i < 2; i++)
-      values[i] = (int) input->readLong(2);
-    if (unkn==0 && values[1]>0 && values[0]>=0 &&
-        lastListPos+values[0]+values[1] <= endPos) {
-      MWAWEntry dEntry;
-      dEntry.setBegin(lastListPos+values[0]);
-      dEntry.setLength(values[1]);
-      listDataEntries.push_back(dEntry);
-      f << "ptr=" << std::hex << dEntry.begin() << "<->" << dEntry.end() << std::dec << ",";
+    case 0x804: {
+      MWAWColor col(((uint16_t)values[0])>>8, ((uint16_t)values[1])>>8, ((uint16_t)values[2])>>8);
+      font.setColor(col);
+      f << col << ",";
+      values[1]=values[2]=0;
+      break;
+    }
+    case 0xa05:
+      if (values[0]&0x8000) {
+        para.setInterline(double(values[0]&0x7FFF)/20., WPX_POINT, MWAWParagraph::AtLeast);
+        f << "interline=" << *para.m_spacings[0] << "pt,";
+      } else {
+        para.setInterline(double(values[0])/double(0x1000), WPX_PERCENT);
+        f << "interline=" << 100* *para.m_spacings[0] << "%,";
+      }
+      break;
+    case 0xc0f: // firstIndent
+      para.m_margins[0] = double(values[0])/1440.;
+      f << "indent=" << *para.m_margins[0] << ",";
+      break;
+    case 0x1006:
+      switch(values[0]) {
+      case 0:
+        para.m_justify = MWAWParagraph::JustificationLeft;
+        f << "left,";
+        break;
+      case 1:
+        para.m_justify = MWAWParagraph::JustificationCenter;
+        f << "center,";
+        break;
+      case 2:
+        para.m_justify = MWAWParagraph::JustificationRight;
+        f << "right,";
+        break;
+      case 3:
+        para.m_justify = MWAWParagraph::JustificationFull;
+        f << "full,";
+        break;
+      default:
+        f << "##justify=" << values[0] << ",";
+        break;
+      }
+      break;
+    case 0x1208:
+      if (values[0] & 0x8000)
+        f << "bef=" << double(values[0]&0x7FFF)/20. << "pt,";
+      else if (values[0])
+        f << "bef=" << 100.*double(values[0])/double(0x1000) << "%,";
+
+      if (values[1] & 0x8000)
+        f << "aft=" << double(values[1]&0x7FFF)/20. << "pt,";
+      else if (values[1])
+        f << "aft=" << 100.*double(values[1])/double(0x1000) << "%,";
+      values[1]=0;
+      break;
+    case 0x1409: // lMargin in TWIP
+      if (values[0]&0x8000)
+        f << "indent=" << double(values[0]&0x7FFF)/1440. << ",";
+      else // checkme
+        f << "indent=" << double(values[0])/1440. << "[fromParent],";
+      break;
+    case 0x160a: // rMargin in TWIP
+      if (values[0]&0x8000)
+        f << "indent=" << double(values[0]&0x7FFF)/1440. << ",";
+      else // checkme
+        f << "indent=" << double(values[0])/1440. << "[fromParent],";
+      break;
+    case 0x1a0c:
+      if(values[0]==0x100)
+        f << "pagebreak,";
+      else
+        f << "##break=" << std::hex << values[0] << std::dec << ",";
+      break;
+    case 0x1c0d:
+      if(values[0]==0x100)
+        f << "together,";
+      else if (values[0]==0)
+        f << "no,";
+      else
+        f << "#keepLine=" << std::hex << values[0] << std::dec << ",";
+      break;
+    case 0x1e0e:
+      if(values[0]==0x100)
+        f << "together,";
+      else if (values[0]==0)
+        f << "no,";
+      else
+        f << "#keepOutline=" << std::hex << values[0] << std::dec << ",";
+      break;
+    case 0x190b:
+      switch(values[0]) {
+      case 0:
+        f << "no,";
+        break;
+      case 1:
+        f << "leader,";
+        break;
+      case 2:
+        f << "hardward,";
+        break;
+      case 3:
+        f << "numeric,";
+        break;
+      case 4:
+        f << "legal,";
+        break;
+      case 5:
+        f << "bullets,";
+        break;
+      case 0xb:
+        /* data: ffffffff0001002a17e0002a0100010102d0000b03616263 */
+        f << "custom,";
+        haveExtra=true;
+        break;
+      default:
+        f << "##bullet=" << values[0] << ",";
+        break;
+      }
+      break;
+    default:
+      if (values[0])
+        f << "f2=" << std::hex << values[0] << std::dec << ",";
+      // use heuristic to define extra data
+      if (values[0]>0x2800)
+        haveExtra = (values[0] & 0x0100);
+      else
+        haveExtra=values[1]==0;
+      break;
+    }
+    font.setFlags(fFlags);
+    if (values[1]) f << "g0=" << std::hex << values[1] << std::dec << ",";
+
+    if (haveExtra && values[3]>0 &&
+        lastListPos+values[2]+values[3] <= endPos) {
+      outline.m_entry.setBegin(lastListPos+values[2]);
+      outline.m_entry.setLength(values[3]);
+      outline.m_entry.setId(n);
     } else {
-      for (int i=0; i < 2; i++) {
+      for (int i=2; i < 4; i++) {
         if (values[i])
-          f << "g" << i+2 << "=" << std::hex << values[i] << std::dec << ",";
+          f << "g" << i-1 << "=" << std::hex << values[i] << std::dec << ",";
       }
     }
+    outline.m_extra=f.str();
+    f.str("");
+    f << "Outline[data" << entry.id() << "-" << n << "]:" << outline;
+    outlineList.push_back(outline);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(pos+16, WPX_SEEK_SET);
   }
 
-  // I find here a pattern or a font name or a font name+id or 0 followed by 360|720|-720 (a dim?)
-  for (size_t n=0; n < listDataEntries.size(); n++) {
-    MWAWEntry const &dEntry=listDataEntries[n];
+  for (size_t n=0; n < outlineList.size(); n++) {
+    MORTextInternal::OutlineHeader const &outline=outlineList[n];
+    if (!outline.m_entry.valid())
+      continue;
     f.str("");
-    f << "Unknown6[dataA-" << n << "]:";
-    if (!readValue(dEntry, 0))
-      f << "###";
-    ascFile.addPos(dEntry.begin());
+    f << "Outline[dataA-" << n << "]:";
+    bool ok=false;
+    switch (outline.m_type) {
+    case 0x301: {
+      std::string fName;
+      int fId;
+      ok = readFont(outline.m_entry, fName,fId);
+      if (!ok) break;
+      f << "font=[";
+      f << "name=" << fName;
+      if (fId>=0) f << ":" << fId;
+      f << "],";
+      break;
+    }
+    case 0xf07: {
+      std::string mess;
+      ok = readTabs(outline.m_entry, para, mess);
+      if (!ok) break;
+      f << "tabs=[" << mess << "],";
+      break;
+    }
+    default:
+      break;
+    }
+    // can be also pattern or backside or custom header
+    if (!ok) {
+      f << "[" << outline << "]";
+      if (!readValue(outline.m_entry, 0))
+        f << "###";
+    }
+    ascFile.addPos(outline.m_entry.begin());
     ascFile.addNote(f.str().c_str());
   }
   ascFile.addPos(endPos);
   ascFile.addNote("_");
+  return true;
+}
+
+//////////////////////////////////////////////
+// small structure
+//////////////////////////////////////////////
+bool MORText::readFont(MWAWEntry const &entry, std::string &fName, int &fId)
+{
+  fName="";
+  fId=-1;
+  if (entry.length() < 2)
+    return false;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = entry.begin();
+  input->seek(pos, WPX_SEEK_SET);
+
+  int fSz=(int) input->readULong(1);
+  long remain=entry.length()-long(1+fSz);
+  if (fSz==0 || remain<0 || remain==1)
+    return false;
+  if (remain>=2 && remain!=2+(1-(fSz%2)))
+    return false;
+  for (int i=0; i < fSz; i++) {
+    char c=(char) input->readULong(1);
+    if (c==0) return false;
+    fName+=c;
+  }
+  if (remain==0)
+    return true;
+  if ((fSz%2)==0) input->seek(1,WPX_SEEK_CUR);
+  fId=(int) input->readULong(2);
+  return true;
+}
+
+bool MORText::readTabs(MWAWEntry const &entry, MORTextInternal::Paragraph &para,
+                       std::string &mess)
+{
+  mess="";
+  if (entry.length() < 4)
+    return false;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugStream f;
+
+  long pos = entry.begin();
+  input->seek(pos, WPX_SEEK_SET);
+
+  int nTabs=(int) input->readULong(2);
+  if (entry.length()!=4+4*nTabs)
+    return false;
+  int repeat=(int) input->readLong(2);
+  if (uint16_t(repeat)==0x8000) // special case
+    f << "def[center,right],";
+  else
+    f << "repeat=" << double(repeat)/1440. << ",";
+  para.m_tabs->resize(0);
+  for (int i=0; i < nTabs; i++) {
+    libmwaw::DebugStream f2;
+    MWAWTabStop tab;
+    tab.m_position = double(input->readULong(2))/1440.;
+    int val=(int) input->readULong(1);
+    switch(val&0xF) {
+    case 1: // left
+      break;
+    case 2:
+      tab.m_alignment=MWAWTabStop::CENTER;
+      break;
+    case 3:
+      tab.m_alignment=MWAWTabStop::RIGHT;
+      break;
+    case 4:
+      tab.m_alignment=MWAWTabStop::DECIMAL;
+      break;
+    default:
+      f2 << "#align=" << (val&0xF) << ",";
+      break;
+    }
+    switch(val>>4) {
+    case 0: // none
+      break;
+    case 1:
+      tab.m_leaderCharacter = '_';
+      break;
+    case 3: // more large space
+      f2 << "dot[large],";
+    case 2:
+      tab.m_leaderCharacter = '.';
+      break;
+    default:
+      f2 << "#leader=" << (val>>4) << ",";
+      break;
+    }
+    char decimalChar = (char) input->readULong(1);
+    if (decimalChar) {
+      int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) decimalChar);
+      if (unicode==-1)
+        tab.m_decimalCharacter = uint16_t(decimalChar);
+      else
+        tab.m_decimalCharacter = uint16_t(unicode);
+    }
+    f << "tab" << i << "=[" << tab << "," << f2.str() << "],";
+    para.m_tabs->push_back(tab);
+  }
+  mess=f.str();
   return true;
 }
 
@@ -723,28 +1080,22 @@ bool MORText::readValue(MWAWEntry const &entry, long fDecal)
     return true;
   }
 
-  input->seek(pos, WPX_SEEK_SET);
-  int c=(int) input->readULong(1);
-  if (c==0 && entry.length()==4 && input->readULong(1)==0) {
-    f << "val=" << input->readLong(2) << ",";
+  std::string mess;
+  MORTextInternal::Paragraph para;
+  if (readTabs(entry, para, mess)) {
+    f << "tabs=[" << mess << "],";
     ascFile.addPos(pos+fDecal);
     ascFile.addNote(f.str().c_str());
     return true;
   }
-  long strLength=long(1+c+(1-(c%2)));
-  if (c > 0 && (strLength == entry.length()||strLength+2 == entry.length())) {
-    input->seek(pos+1, WPX_SEEK_SET);
-    std::string name("");
-    for (int i=0; i < c; i++)
-      name +=(char) input->readULong(1);
-    if ((c%2)==0) input->seek(1,WPX_SEEK_CUR);
-    f << "name=" << name << ",";
-    if (input->tell()!=entry.end()) {
-      if (input->tell()+2==entry.end())
-        f << "id=" << input->readULong(2) << ",";
-      else
-        ascFile.addDelimiter(input->tell(),'|');
-    }
+
+  std::string fName;
+  int fId;
+  if (readFont(entry, fName,fId)) {
+    f << "font=[";
+    f << "name=" << fName;
+    if (fId>=0) f << ":" << fId;
+    f << "],";
     ascFile.addPos(pos+fDecal);
     ascFile.addNote(f.str().c_str());
     return true;

@@ -51,6 +51,7 @@ typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace MORTextInternal
 {
+struct Paragraph;
 struct State;
 }
 
@@ -89,7 +90,7 @@ protected:
   //! read the list of topic positions
   bool readTopic(MWAWEntry const &entry);
 
-  //! read the list of comment zones
+  //! read the list of comment/header/footer zones
   bool readComment(MWAWEntry const &entry);
 
   //! read a text entry
@@ -98,25 +99,21 @@ protected:
   //! read the list of fonts
   bool readFonts(MWAWEntry const &entry);
 
-  //! read the list of ???
-  bool readUnknown5(MWAWEntry const &entry);
+  //! read the list of outlines
+  bool readOutlineList(MWAWEntry const &entry);
 
-  //! read the data of zone 5
-  bool readUnknown5Data(MWAWEntry const &entry);
+  //! read a outline
+  bool readOutline(MWAWEntry const &entry);
 
-  //! read the list of ???
-  bool readUnknown6(MWAWEntry const &entry);
+  /** try to read a fontname
 
-  //! read the data of zone 6
-  bool readUnknown6Data(MWAWEntry const &entry);
-
+  \note: fId is set to -1 is the field contains only a fontname
+   */
+  bool readFont(MWAWEntry const &entry, std::string &fName, int &fId);
+  /** try to read some tabs */
+  bool readTabs(MWAWEntry const &entry, MORTextInternal::Paragraph &para, std::string &mess);
   //! try to read either a font, a fontname, a pattern, a int
   bool readValue(MWAWEntry const &entry, long fDecal);
-
-  //! check if the entry is valid ie. the begin points to a zone: <dataSz> data
-  bool check(MWAWEntry &entry);
-  //! return the color which corresponds to an id (if possible)
-  bool getColor(int id, MWAWColor &col) const;
 
 private:
   MORText(MORText const &orig);
