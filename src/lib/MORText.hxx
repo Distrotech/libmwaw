@@ -44,6 +44,7 @@
 class MWAWInputStream;
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 
+struct MWAWListLevel;
 class MWAWEntry;
 class MWAWFont;
 class MWAWParserState;
@@ -51,6 +52,7 @@ typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace MORTextInternal
 {
+struct Outline;
 struct Paragraph;
 struct State;
 }
@@ -93,6 +95,9 @@ protected:
   //! read the list of comment/header/footer zones
   bool readComment(MWAWEntry const &entry);
 
+  //! read the list of speaker note
+  bool readSpeakerNote(MWAWEntry const &entry);
+
   //! read a text entry
   bool readText(MWAWEntry const &entry);
 
@@ -103,17 +108,20 @@ protected:
   bool readOutlineList(MWAWEntry const &entry);
 
   //! read a outline
-  bool readOutline(MWAWEntry const &entry);
+  bool readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outline);
 
   /** try to read a fontname
 
-  \note: fId is set to -1 is the field contains only a fontname
+  \note: fId is set to -1 is the field contains only a fontname and can not find the associated id
    */
   bool readFont(MWAWEntry const &entry, std::string &fName, int &fId);
   /** try to read some tabs */
   bool readTabs(MWAWEntry const &entry, MORTextInternal::Paragraph &para, std::string &mess);
+  /** read a custom list level */
+  bool readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level);
+
   //! try to read either a font, a fontname, a pattern, a int
-  bool readValue(MWAWEntry const &entry, long fDecal);
+  bool parseUnknown(MWAWEntry const &entry, long fDecal);
 
 private:
   MORText(MORText const &orig);

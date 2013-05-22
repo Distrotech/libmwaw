@@ -44,6 +44,7 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWParagraph.hxx"
+#include "MWAWPictData.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWRSRCParser.hxx"
@@ -333,6 +334,10 @@ bool MORParser::createZones()
   if (it != m_state->m_typeEntryMap.end())
     readPrintInfo(it->second);
 
+  it = m_state->m_typeEntryMap.find("Fonts");
+  if (it != m_state->m_typeEntryMap.end())
+    m_textParser->readFonts(it->second);
+
   bool ok=false;
   it = m_state->m_typeEntryMap.find("Topic");
   if (it != m_state->m_typeEntryMap.end())
@@ -344,9 +349,9 @@ bool MORParser::createZones()
   if (it != m_state->m_typeEntryMap.end())
     m_textParser->readComment(it->second);
 
-  it = m_state->m_typeEntryMap.find("Fonts");
+  it = m_state->m_typeEntryMap.find("SpeakerNote");
   if (it != m_state->m_typeEntryMap.end())
-    m_textParser->readFonts(it->second);
+    m_textParser->readSpeakerNote(it->second);
 
   it = m_state->m_typeEntryMap.find("Slide");
   if (it != m_state->m_typeEntryMap.end())
@@ -394,17 +399,13 @@ bool MORParser::readZonesList()
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(Zones):";
-  for (int i=0; i < 8; i++) {
-    /* 0: printer
-       4: list of pointer + ?
-       6: list of pointer
-     */
+  for (int i=0; i < 9; i++) {
     MWAWEntry entry;
     entry.setBegin((long) input->readULong(4));
     entry.setLength((long) input->readULong(4));
     static char const *(names[])= {
       "PrintInfo", "Unknown1", "Unknown2", "Topic",
-      "Comment", "Slide", "Outline", "FreePos"
+      "Comment", "Slide", "Outline", "FreePos", "SpeakerNote"
     };
     entry.setType(names[i]);
     if (!entry.length())
@@ -417,16 +418,11 @@ bool MORParser::readZonesList()
     }
   }
   long unkn=(long) input->readULong(4);
-  if (!isFilePos(unkn)) {
-    MWAW_DEBUG_MSG(("MORParser::readZonesList: can not read unkn limit\n"));
-    f << "###";
-  }
-  if (unkn) f << "unkn=" << std::hex << unkn << std::dec << ",";
-  /* checkme: another list probably begins here, but as only find Fonts and Unknown9 sets,
-     the beginning and ending are not sure :-~ */
-  for (int i=0; i < 6; i++) {
+  if (unkn) f << "unkn=" << unkn << ",";
+  /* checkme: another list begins here, but I am not sure of its length :-~ */
+  for (int i=0; i < 5; i++) {
     static char const *(names[])=
-    {"Unknown8", "Unknown9", "Fonts", "UnknownB","UnknownC", "UnknownD" };
+    { "Unknown9", "Fonts", "UnknownB","UnknownC", "UnknownD" };
     MWAWEntry entry;
     entry.setBegin((long) input->readULong(4));
     entry.setLength((long) input->readULong(4));
@@ -753,7 +749,11 @@ bool MORParser::readSlide(MWAWEntry const &entry)
       dEntry.setBegin(pos+2+4);
       dEntry.setLength(dataSz-4);
       // can also be some text and ?
-      if (!m_textParser->readValue(dEntry,-6))
+      if (m_textParser->parseUnknown(dEntry,-6))
+        ;
+      else if (readGraphic(dEntry))
+        f << "graphic,";
+      else
         f << "#";
     }
     input->seek(pos+2+dataSz, WPX_SEEK_SET);
@@ -769,6 +769,56 @@ bool MORParser::readSlide(MWAWEntry const &entry)
   ascii().addPos(endPos);
   ascii().addNote("_");
 
+  return true;
+}
+
+bool MORParser::readGraphic(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.length()<0xd)
+    return false;
+
+  long pos = entry.begin();
+  MWAWInputStreamPtr input = getInput();
+  input->seek(pos, WPX_SEEK_SET);
+
+  // first check
+  int readSize = int(input->readULong(2));
+  long dim[4];
+  for (int i = 0; i < 4; i++) dim[i] = input->readLong(2);
+  long lastFlag = input->readLong(2);
+  switch(lastFlag) {
+  case 0x1101: {
+    if (readSize+2 != entry.length() && readSize+3 != entry.length())
+      return false;
+    break;
+  }
+  case 0x0011: {
+    if (entry.length() < 42) return false;
+    if (input->readULong(2) != 0x2ff) return false;
+    if (input->readULong(2) != 0xC00) return false;
+    break;
+  }
+  default:
+    return false;
+  }
+
+  input->seek(pos, WPX_SEEK_SET);
+
+  Box2f box;
+  if (MWAWPictData::check(input, (int)entry.length(), box)==MWAWPict::MWAW_R_BAD)
+    return false;
+#ifdef DEBUG_WITH_FILES
+  if (1) {
+    WPXBinaryData file;
+    input->seek(pos, WPX_SEEK_SET);
+    input->readDataBlock(entry.length(), file);
+    static int volatile pictName = 0;
+    libmwaw::DebugStream f;
+    f << "Pict-" << ++pictName << ".pct";
+    libmwaw::Debug::dumpFile(file, f.str().c_str());
+  }
+#endif
+  ascii().skipZone(pos, entry.end()-1);
   return true;
 }
 

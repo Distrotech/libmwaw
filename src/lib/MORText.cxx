@@ -44,6 +44,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWList.hxx"
 #include "MWAWPageSpan.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPictData.hxx"
@@ -61,19 +62,63 @@ namespace MORTextInternal
 //! Internal: the paragraph of a MORText
 struct Paragraph : public MWAWParagraph {
   //! constructor
-  Paragraph() {
-    m_tabsRelativeToLeftMargin = false;
+  Paragraph(): MWAWParagraph(), m_listType(0), m_listLevel(),
+    m_pageBreak(false), m_keepOutlineTogether(false) {
+    for (int i=0; i < 2; i++)
+      m_marginsFromParent[i]=0;
   }
+  //! set the left margin in inch
+  void setLeftMargin(double margin, bool fromParent) {
+    if (fromParent) {
+      m_marginsFromParent[0]=margin;
+      m_margins[1]=0;
+    } else {
+      m_marginsFromParent[0]=0;
+      m_margins[1]=margin;
+    }
+  }
+  //! set the right margin in inch
+  void setRightMargin(double margin, bool fromParent) {
+    if (fromParent) {
+      m_marginsFromParent[1]=margin;
+      m_margins[2]=0;
+    } else {
+      m_marginsFromParent[1]=0;
+      m_margins[2]=margin;
+    }
+  }
+  //! the left and right margins from parent in inches
+  double m_marginsFromParent[2];
+  //! the list type (0: none, 1: leader, ...)
+  int m_listType;
+  //! a custom list level ( only defined if m_listType>=0xb)
+  MWAWListLevel m_listLevel;
+  //! true if we need to add a page break before
+  bool m_pageBreak;
+  //! true if we need to keep outline together
+  bool m_keepOutlineTogether;
 };
 
 ////////////////////////////////////////
-//! Internal: the outline header of a MORText
-struct OutlineHeader {
+//! Internal: the outline data of a MORText
+struct Outline {
   //! constructor
-  OutlineHeader(): m_type(-1), m_entry(), m_extra("") {
+  Outline() : m_paragraph(), m_font(3,12, MWAWFont::boldBit) {
+  }
+  //! the paragraph
+  Paragraph m_paragraph;
+  //! the font
+  MWAWFont m_font;
+};
+
+////////////////////////////////////////
+//! Internal and low level: the outline modifier header of a MORText
+struct OutlineMod {
+  //! constructor
+  OutlineMod(): m_type(-1), m_entry(), m_extra("") {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, OutlineHeader const &head) {
+  friend std::ostream &operator<<(std::ostream &o, OutlineMod const &head) {
     switch(head.m_type) {
     case 0x301:
       o << "font,";
@@ -139,15 +184,83 @@ struct OutlineHeader {
   //! extra data
   std::string m_extra;
 };
+
+////////////////////////////////////////
+//! Internal: the comment data of a MORText
+struct Comment {
+  //! constructor
+  Comment() : m_entry(), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Comment const &comment) {
+    o << comment.m_extra;
+    return o;
+  }
+  //! the text entry
+  MWAWEntry m_entry;
+  //! extra data
+  std::string m_extra;
+};
+
+////////////////////////////////////////
+//! Internal: the topic data of a MORText
+struct Topic {
+  //! constructor
+  Topic() : m_entry(), m_level(0), m_hasOutline(false), m_hasComment(false),
+    m_hasSpeakerNote(false), m_isCloned(false), m_cloneId(0), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Topic const &topic) {
+    if (topic.m_level>0)
+      o << "level=" << topic.m_level << ",";
+    if (topic.m_hasOutline)
+      o << "outline,";
+    if (topic.m_hasComment)
+      o << "comment,";
+    if (topic.m_hasSpeakerNote)
+      o << "speakerNote,";
+    if (topic.m_isCloned)
+      o << "cloned,";
+    if (topic.m_cloneId)
+      o << "cloneId=" << topic.m_cloneId << ",";
+    o << topic.m_extra;
+    return o;
+  }
+  //! the text entry
+  MWAWEntry m_entry;
+  //! the topic level
+  int m_level;
+  //! true if the topic has a outline data
+  bool m_hasOutline;
+  //! true if the topic has a comment data
+  bool m_hasComment;
+  //! true if the topic has a speaker note
+  bool m_hasSpeakerNote;
+  //! true if the entry is cloned
+  bool m_isCloned;
+  //! if not 0, indicate that we must cloned the cloneId^th clone
+  int m_cloneId;
+  //! extra data
+  std::string m_extra;
+};
+
 ////////////////////////////////////////
 //! Internal: the state of a MORText
 struct State {
   //! constructor
-  State() : m_version(-1), m_numPages(-1), m_actualPage(1) {
+  State() : m_version(-1), m_topicList(), m_commentList(), m_speakerList(), m_outlineList(), m_numPages(-1), m_actualPage(1) {
   }
 
   //! the file version
   mutable int m_version;
+  //! the topic list
+  std::vector<Topic> m_topicList;
+  //! the header/footer/comment list
+  std::vector<Comment> m_commentList;
+  //! the speaker note list
+  std::vector<MWAWEntry> m_speakerList;
+  //! the outline list
+  std::vector<Outline> m_outlineList;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
@@ -409,7 +522,7 @@ bool MORText::readTopic(MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("MORText::readTopic: the entry is bad\n"));
     return false;
   }
-
+  // topic 0-2: ?, header,footer, topic 3: title, after document
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -423,39 +536,52 @@ bool MORText::readTopic(MWAWEntry const &entry)
 
   int N=int(entry.length()/10);
   int val;
-  std::vector<MWAWEntry> textPositions;
   for (int i=0; i < N; i++) {
     pos=input->tell();
+    MORTextInternal::Topic topic;
     f.str("");
-    f << "Topic-" << i << ":";
-    val = (int) input->readLong(2);
-    f << "level=" << val << ",";
+    topic.m_level = (int) input->readLong(2);
+    bool isAClone=false;
     int flag = (int) input->readULong(2); // some flag ?
     if ((flag&1)==0) f << "hidden,";
-    if (flag&0x8000) f << "hasOutline,";
-    if (flag&0x4000) f << "hasComment,";
-    // find only bits: e688
-    flag &= 0x3FFE;
+    if (flag&4) f << "marked,";
+    if (flag&0x10) topic.m_isCloned=true;
+    if (flag&0x20) isAClone=true;
+    if (flag&0x40) topic.m_hasSpeakerNote=true;
+    if (flag&0x80) topic.m_hasComment=true;
+    if (flag&0x400) f << "showComment,";
+    if (flag&0x8000) topic.m_hasOutline=true;
+    // find only bits: 7208
+    flag &= 0x7B4A;
     if (flag) f << "fl=" << std::hex << flag << std::dec << ",";
     long fPos = input->readLong(4);
-    f << "pos=" << std::hex << fPos << std::dec << ",";
-    MWAWEntry tEntry;
-    tEntry.setBegin(fPos);
-    if (!m_mainParser->checkAndFindSize(tEntry)) {
-      MWAW_DEBUG_MSG(("MORText::readTopic: can not read a text position\n"));
-      f << "###";
-    } else
-      textPositions.push_back(tEntry);
+    if (isAClone)
+      topic.m_cloneId=(int) fPos;
+    else {
+      f << "pos=" << std::hex << fPos << std::dec << ",";
+      topic.m_entry.setBegin(fPos);
+      if (!m_mainParser->checkAndFindSize(topic.m_entry)) {
+        MWAW_DEBUG_MSG(("MORText::readTopic: can not read a text position\n"));
+        f << "###";
+        topic.m_entry = MWAWEntry();
+      }
+    }
     val = (int) input->readLong(2); // a small number 1 or 2
     if (val)
       f << "f1=" << val << ",";
+    topic.m_extra=f.str();
+    m_state->m_topicList.push_back(topic);
 
+    f.str("");
+    f << "Topic-" << i << ":" << topic;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(pos+10, WPX_SEEK_SET);
   }
-  for (size_t i=0; i < textPositions.size(); i++) {
-    MWAWEntry const &tEntry=textPositions[i];
+  for (size_t i=0; i < m_state->m_topicList.size(); i++) {
+    MWAWEntry const &tEntry=m_state->m_topicList[i].m_entry;
+    if (!tEntry.valid())
+      continue;
     ascFile.addPos(tEntry.end());
     ascFile.addNote("_");
     if (readText(tEntry))
@@ -474,7 +600,7 @@ bool MORText::readComment(MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("MORText::readComment: the entry is bad\n"));
     return false;
   }
-
+  // comment0? comment1: header, comment2: footer
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -488,39 +614,89 @@ bool MORText::readComment(MWAWEntry const &entry)
 
   int N=int(entry.length()/8);
   int val;
-  std::vector<MWAWEntry> filePositions;
   for (int i=0; i < N; i++) {
     pos=input->tell();
-
+    MORTextInternal::Comment comment;
     f.str("");
-    f << "Comment-" << i << ":";
     long fPos = input->readLong(4);
     f << "pos=" << std::hex << fPos << std::dec << ",";
-    MWAWEntry tEntry;
-    tEntry.setBegin(fPos);
-    if (!m_mainParser->checkAndFindSize(tEntry)) {
+    comment.m_entry.setBegin(fPos);
+    if (!m_mainParser->checkAndFindSize(comment.m_entry)) {
       MWAW_DEBUG_MSG(("MORText::readComment: can not read a file position\n"));
       f << "###";
-    } else
-      filePositions.push_back(tEntry);
+      comment.m_entry.setLength(0);
+    }
     val = (int) input->readLong(2); // always 4 ?
     if (val != 4)
       f << "f0=" << val << ",";
     val = (int) input->readULong(2); // some flag ? find 0x3333 0x200d ...
     if (val) f << "fl=" << std::hex << val << std::dec << ",";
 
+    comment.m_extra=f.str();
+    m_state->m_commentList.push_back(comment);
+    f.str("");
+    f << "Comment-" << i << ":" << comment;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(pos+8, WPX_SEEK_SET);
   }
-  for (size_t i=0; i < filePositions.size(); i++) {
-    MWAWEntry const &tEntry=filePositions[i];
+  for (size_t i=0; i < m_state->m_commentList.size(); i++) {
+    MWAWEntry const &tEntry=m_state->m_commentList[i].m_entry;
+    if (!tEntry.valid())
+      continue;
     ascFile.addPos(tEntry.end());
     ascFile.addNote("_");
     if (readText(tEntry))
       continue;
     f.str("");
     f << "Comment-" << i << "[data]:";
+    ascFile.addPos(tEntry.begin());
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool MORText::readSpeakerNote(MWAWEntry const &entry)
+{
+  if (!entry.valid() || (entry.length()%4)) {
+    MWAW_DEBUG_MSG(("MORText::readSpeakerNote: the entry is bad\n"));
+    return false;
+  }
+
+  long pos = entry.begin();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+
+  input->seek(pos, WPX_SEEK_SET);
+  entry.setParsed(true);
+
+  f << "Entries(SpeakerNote):";
+  int N=int(entry.length()/4);
+  for (int i=0; i < N; i++) {
+    long fPos = input->readLong(4);
+    f << "pos=" << std::hex << fPos << std::dec << ",";
+    MWAWEntry tEntry;
+    tEntry.setBegin(fPos);
+    if (!m_mainParser->checkAndFindSize(tEntry)) {
+      MWAW_DEBUG_MSG(("MORText::readSpeakerNote: can not read a file position\n"));
+      f << "###";
+      tEntry.setLength(0);
+    }
+    m_state->m_speakerList.push_back(tEntry);
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  for (size_t i=0; i < m_state->m_speakerList.size(); i++) {
+    MWAWEntry const &tEntry=m_state->m_speakerList[i];
+    if (!tEntry.valid())
+      continue;
+    ascFile.addPos(tEntry.end());
+    ascFile.addNote("_");
+    if (readText(tEntry))
+      continue;
+    f.str("");
+    f << "SpeakerNote-" << i << "[data]:";
     ascFile.addPos(tEntry.begin());
     ascFile.addNote(f.str().c_str());
   }
@@ -634,9 +810,12 @@ bool MORText::readOutlineList(MWAWEntry const &entry)
     MWAWEntry const &tEntry=posList[i];
     if (!tEntry.valid())
       continue;
-    if (readOutline(tEntry))
+    MORTextInternal::Outline outline;
+    if (readOutline(tEntry, outline)) {
+      m_state->m_outlineList.push_back(outline);
       continue;
-
+    }
+    m_state->m_outlineList.push_back(MORTextInternal::Outline());
     ascFile.addPos(tEntry.begin());
     ascFile.addNote("Outline-data:###");
     ascFile.addPos(tEntry.end());
@@ -645,7 +824,7 @@ bool MORText::readOutlineList(MWAWEntry const &entry)
   return true;
 }
 
-bool MORText::readOutline(MWAWEntry const &entry)
+bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outline)
 {
   if (!entry.valid() || entry.length()<8) {
     MWAW_DEBUG_MSG(("MORText::readOutline: the entry is bad\n"));
@@ -676,15 +855,14 @@ bool MORText::readOutline(MWAWEntry const &entry)
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
-  MORTextInternal::Paragraph para;
-  MWAWFont font(12,3);
-  std::vector<MORTextInternal::OutlineHeader> outlineList;
-  uint32_t fFlags=font.flags();
+  MORTextInternal::Paragraph &para = outline.m_paragraph;
+  std::vector<MORTextInternal::OutlineMod> outlineModList;
+  uint32_t fFlags=outline.m_font.flags();
   for (int n=0; n<N; n++) {
     pos = input->tell();
     f.str("");
 
-    MORTextInternal::OutlineHeader outline;
+    MORTextInternal::OutlineMod outlineMod;
     val=int(input->readLong(1));
     if (val!=6*(vers-1))
       f << "#f0=" << val << ",";
@@ -696,19 +874,25 @@ bool MORText::readOutline(MWAWEntry const &entry)
       if (val)
         f << "f" << i+1 << "=" << val << ",";
     }
-    outline.m_type=int(input->readULong(2));
+    outlineMod.m_type=int(input->readULong(2));
     int values[4];
     for (int i=0; i < 4; i++)
       values[i] = (int) input->readULong(2);
     bool haveExtra=false;
-    switch(outline.m_type) {
+    switch(outlineMod.m_type) {
     case 0x301: // font name
     case 0xf07: // left indent+tabs
       haveExtra=true;
       break;
     case 0x402:
-      font.setSize(values[0]);
-      f << "sz=" << values[0] << ",";
+      // size can be very big, force it to be smallest than 100
+      if (values[0]>0 && values[0] <= 100) {
+        outline.m_font.setSize(values[0]);
+        f << "sz=" << values[0] << ",";
+      } else {
+        MWAW_DEBUG_MSG(("MORText::readOutline: the font size seems bad\n"));
+        f << "##sz=" << values[0] << ",";
+      }
       break;
     case 0x603: {
       uint32_t bit=0;
@@ -727,7 +911,7 @@ bool MORText::readOutline(MWAWEntry const &entry)
         break;
       case 3:
         if (values[1]==1)
-          font.setUnderlineStyle(MWAWFont::Line::Simple);
+          outline.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
         f << "underl";
         break;
       case 4:
@@ -755,7 +939,7 @@ bool MORText::readOutline(MWAWEntry const &entry)
     }
     case 0x804: {
       MWAWColor col(((uint16_t)values[0])>>8, ((uint16_t)values[1])>>8, ((uint16_t)values[2])>>8);
-      font.setColor(col);
+      outline.m_font.setColor(col);
       f << col << ",";
       values[1]=values[2]=0;
       break;
@@ -797,44 +981,61 @@ bool MORText::readOutline(MWAWEntry const &entry)
       }
       break;
     case 0x1208:
-      if (values[0] & 0x8000)
+      if (values[0] & 0x8000) {
+        para.m_spacings[1]=double(values[0]&0x7FFF)/1440.;
         f << "bef=" << double(values[0]&0x7FFF)/20. << "pt,";
-      else if (values[0])
-        f << "bef=" << 100.*double(values[0])/double(0x1000) << "%,";
+      } else {
+        // assume 12pt
+        para.m_spacings[1]=double(values[0])/double(0x1000)*12./720.;
+        if (values[0])
+          f << "bef=" << 100.*double(values[0])/double(0x1000) << "%,";
+      }
 
-      if (values[1] & 0x8000)
+      if (values[1] & 0x8000) {
+        para.m_spacings[2]=double(values[1]&0x7FFF)/1440.;
         f << "aft=" << double(values[1]&0x7FFF)/20. << "pt,";
-      else if (values[1])
-        f << "aft=" << 100.*double(values[1])/double(0x1000) << "%,";
+      } else {
+        para.m_spacings[2]=double(values[1])/double(0x1000)*12./720.;
+        if (values[1])
+          f << "aft=" << 100.*double(values[1])/double(0x1000) << "%,";
+      }
       values[1]=0;
       break;
     case 0x1409: // lMargin in TWIP
+      para.setLeftMargin(double(values[0]&0x7FFF)/1440., (values[0]&0x8000)==0);
       if (values[0]&0x8000)
         f << "indent=" << double(values[0]&0x7FFF)/1440. << ",";
       else // checkme
         f << "indent=" << double(values[0])/1440. << "[fromParent],";
       break;
     case 0x160a: // rMargin in TWIP
+      para.setRightMargin(double(values[0]&0x7FFF)/1440., (values[0]&0x8000)==0);
       if (values[0]&0x8000)
         f << "indent=" << double(values[0]&0x7FFF)/1440. << ",";
       else // checkme
         f << "indent=" << double(values[0])/1440. << "[fromParent],";
       break;
     case 0x1a0c:
+      para.m_pageBreak=(values[0]==0x100);
       if(values[0]==0x100)
         f << "pagebreak,";
+      else if (values[0]==0)
+        f << "no,";
       else
         f << "##break=" << std::hex << values[0] << std::dec << ",";
       break;
     case 0x1c0d:
-      if(values[0]==0x100)
+      if(values[0]==0x100) {
+        para.m_breakStatus = (*para.m_breakStatus)|MWAWParagraph::NoBreakWithNextBit;
         f << "together,";
-      else if (values[0]==0)
+      } else if (values[0]==0) {
+        para.m_breakStatus = (*para.m_breakStatus)|int(~MWAWParagraph::NoBreakWithNextBit);
         f << "no,";
-      else
+      } else
         f << "#keepLine=" << std::hex << values[0] << std::dec << ",";
       break;
     case 0x1e0e:
+      para.m_keepOutlineTogether = (values[0]==0x100);
       if(values[0]==0x100)
         f << "together,";
       else if (values[0]==0)
@@ -843,6 +1044,7 @@ bool MORText::readOutline(MWAWEntry const &entry)
         f << "#keepOutline=" << std::hex << values[0] << std::dec << ",";
       break;
     case 0x190b:
+      para.m_listType = values[0];
       switch(values[0]) {
       case 0:
         f << "no,";
@@ -862,12 +1064,12 @@ bool MORText::readOutline(MWAWEntry const &entry)
       case 5:
         f << "bullets,";
         break;
-      case 0xb:
-        /* data: ffffffff0001002a17e0002a0100010102d0000b03616263 */
-        f << "custom,";
-        haveExtra=true;
-        break;
       default:
+        if (values[0]>=11) {
+          f << "custom[" << values[0] << "],";
+          haveExtra=true;
+          break;
+        }
         f << "##bullet=" << values[0] << ",";
         break;
       }
@@ -882,53 +1084,62 @@ bool MORText::readOutline(MWAWEntry const &entry)
         haveExtra=values[1]==0;
       break;
     }
-    font.setFlags(fFlags);
+    outline.m_font.setFlags(fFlags);
     if (values[1]) f << "g0=" << std::hex << values[1] << std::dec << ",";
 
     if (haveExtra && values[3]>0 &&
         lastListPos+values[2]+values[3] <= endPos) {
-      outline.m_entry.setBegin(lastListPos+values[2]);
-      outline.m_entry.setLength(values[3]);
-      outline.m_entry.setId(n);
+      outlineMod.m_entry.setBegin(lastListPos+values[2]);
+      outlineMod.m_entry.setLength(values[3]);
+      outlineMod.m_entry.setId(n);
     } else {
       for (int i=2; i < 4; i++) {
         if (values[i])
           f << "g" << i-1 << "=" << std::hex << values[i] << std::dec << ",";
       }
     }
-    outline.m_extra=f.str();
+    outlineMod.m_extra=f.str();
     f.str("");
-    f << "Outline[data" << entry.id() << "-" << n << "]:" << outline;
-    outlineList.push_back(outline);
+    f << "Outline[data" << entry.id() << "-" << n << "]:" << outlineMod;
+    outlineModList.push_back(outlineMod);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(pos+16, WPX_SEEK_SET);
   }
 
-  for (size_t n=0; n < outlineList.size(); n++) {
-    MORTextInternal::OutlineHeader const &outline=outlineList[n];
-    if (!outline.m_entry.valid())
+  for (size_t n=0; n < outlineModList.size(); n++) {
+    MORTextInternal::OutlineMod const &outlineMod=outlineModList[n];
+    if (!outlineMod.m_entry.valid())
       continue;
     f.str("");
     f << "Outline[dataA-" << n << "]:";
     bool ok=false;
-    switch (outline.m_type) {
+    switch (outlineMod.m_type) {
     case 0x301: {
       std::string fName;
       int fId;
-      ok = readFont(outline.m_entry, fName,fId);
+      ok = readFont(outlineMod.m_entry, fName,fId);
       if (!ok) break;
       f << "font=[";
       f << "name=" << fName;
-      if (fId>=0) f << ":" << fId;
+      if (fId>=0) {
+        f << ":" << fId;
+        outline.m_font.setId(fId);
+      }
       f << "],";
       break;
     }
     case 0xf07: {
       std::string mess;
-      ok = readTabs(outline.m_entry, para, mess);
+      ok = readTabs(outlineMod.m_entry, para, mess);
       if (!ok) break;
       f << "tabs=[" << mess << "],";
+      break;
+    }
+    case 0x190b: {
+      ok = readCustomListLevel(outlineMod.m_entry, para.m_listLevel);
+      if (!ok) break;
+      f << para.m_listLevel << ",";
       break;
     }
     default:
@@ -936,11 +1147,11 @@ bool MORText::readOutline(MWAWEntry const &entry)
     }
     // can be also pattern or backside or custom header
     if (!ok) {
-      f << "[" << outline << "]";
-      if (!readValue(outline.m_entry, 0))
+      f << "[" << outlineMod << "]";
+      if (!parseUnknown(outlineMod.m_entry, 0))
         f << "###";
     }
-    ascFile.addPos(outline.m_entry.begin());
+    ascFile.addPos(outlineMod.m_entry.begin());
     ascFile.addNote(f.str().c_str());
   }
   ascFile.addPos(endPos);
@@ -972,10 +1183,133 @@ bool MORText::readFont(MWAWEntry const &entry, std::string &fName, int &fId)
     if (c==0) return false;
     fName+=c;
   }
-  if (remain==0)
+  if (remain==0) { // let try to retrieve the font id
+    fId=m_parserState->m_fontConverter->getId(fName);
     return true;
+  }
   if ((fSz%2)==0) input->seek(1,WPX_SEEK_CUR);
   fId=(int) input->readULong(2);
+  return true;
+}
+
+bool MORText::readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level)
+{
+  level=MWAWListLevel();
+  if (entry.length()<22)
+    return false;
+
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugStream f;
+  long pos = entry.begin();
+  input->seek(pos, WPX_SEEK_SET);
+  MWAWFont font;
+  int fId=(int) input->readULong(2);
+  if (fId==0xFFFF) // default
+    ;
+  else if (fId&0x8000) {
+    f << "fId=" << (fId&0x7FFF) << ",";
+    font.setId(fId&0x7FFF);
+  } else
+    f << "#fId=" << std::hex << fId << std::dec << ",";
+  int fSz = (int) input->readLong(2);
+  if (fSz != -1) {
+    font.setSize(fSz);
+    f << "fSz=" << fSz << ",";
+  }
+  int fFlags=(int) input->readULong(1);
+  uint32_t flags=0;
+  if (fFlags&1) flags |= MWAWFont::boldBit;
+  if (fFlags&2) flags |= MWAWFont::italicBit;
+  if (fFlags&4) font.setUnderlineStyle(MWAWFont::Line::Simple);
+  if (fFlags&8) flags |= MWAWFont::outlineBit;
+  if (fFlags&0x10) flags |= MWAWFont::shadowBit;
+  if (fFlags&0xE0)
+    f << "#fFlags=" << std::hex << (fFlags&0xE0) << std::dec << ",";
+  font.setFlags(flags);
+
+  int fColor = (int) input->readLong(1);
+  if (fColor==1)
+    input->seek(6, WPX_SEEK_CUR);
+  else if (fColor==3) {
+    unsigned char color[3];
+    for (int i=0; i < 3; i++)
+      color[i]=(unsigned char) (input->readULong(2)>>8);
+    font.setColor(MWAWColor(color[0], color[1], color[2]));
+  } else {
+    f << "#fCol=" << fColor << ",";
+    input->seek(6, WPX_SEEK_CUR);
+  }
+#if defined(DEBUG_WITH_FILES)
+  f << "font=[" << font.getDebugString(m_parserState->m_fontConverter) << "],";
+#endif
+
+  // now 4 bool
+  bool bVal[4]= {false, false, false, false };
+  long val;
+  for (int i=0; i < 4; i++) {
+    val = input->readLong(1);
+    if (!val) continue;
+    if (val!=1) {
+      f << "#g" << i << "=" << val << ",";
+      continue;
+    }
+    bVal[i]=true;
+  }
+  for (int i=0; i<2; i++) { // g1: field left ident modify?
+    if (bVal[i])
+      f << "g" << i << "=true,";
+  }
+  if (bVal[2]) // or flush left at
+    f << "flushRight,";
+  if (!bVal[3])
+    f << "useFirstlineIdent,";
+  val = input->readLong(2);
+  if (val!=0x2d0) // default 0.5"
+    f << "leftIdent=" << double(val)/1440. << ",";
+  val = input->readLong(2);
+  if (val != 0xb)
+    f << "f6=" << val << ",";
+  if (fId!=0xFFFF) { // maybe the font name
+    int fontSz=(int) input->readULong(1);
+    if (!fontSz || input->tell()+fontSz >= entry.end())
+      input->seek(-1,WPX_SEEK_CUR);
+    else {
+      std::string fName("");
+      for (int i=0; i<fontSz; i++)
+        fName+=(char) input->readULong(1);
+      f << "fName=" << fName << ",";
+      int newId=m_parserState->m_fontConverter->getId(fName);
+      if (newId > 0)
+        font.setId(fId=newId);
+    }
+  }
+
+  int labelSz = (int) input->readULong(1);
+  if (input->tell()+labelSz != entry.end())
+    return false;
+
+  f << "label=";
+  if (fId == 0xFFFF)
+    fId=3;
+  for (int c=0; c < labelSz; c++) {
+    unsigned char ch=(unsigned char) input->readULong(1);
+    f << ch;
+    int unicode = m_parserState->m_fontConverter->unicode(fId, (unsigned char)ch);
+    if (unicode!=-1)
+      libmwaw::appendUnicode(uint32_t(unicode), level.m_bullet);
+    else if (ch==0x9 || ch > 0x1f)
+      libmwaw::appendUnicode((uint32_t)c, level.m_bullet);
+    else {
+      f << "##";
+      MWAW_DEBUG_MSG(("MORText::readCustomListLevel: label char seems bad\n"));
+      libmwaw::appendUnicode('#', level.m_bullet);
+    }
+  }
+  f << ",";
+  level.m_type=MWAWListLevel::BULLET;
+  level.m_extra=f.str();
+  if (input->tell()!=entry.end())
+    m_parserState->m_asciiFile.addDelimiter(input->tell(),'|');
   return true;
 }
 
@@ -1051,7 +1385,10 @@ bool MORText::readTabs(MWAWEntry const &entry, MORTextInternal::Paragraph &para,
   return true;
 }
 
-bool MORText::readValue(MWAWEntry const &entry, long fDecal)
+//////////////////////////////////////////////
+// unknown structure
+//////////////////////////////////////////////
+bool MORText::parseUnknown(MWAWEntry const &entry, long fDecal)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;

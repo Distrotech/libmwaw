@@ -126,6 +126,9 @@ protected:
   //! read a slide definitions
   bool readSlide(MWAWEntry const &entry);
 
+  //! read a graphic ( in a slide )
+  bool readGraphic(MWAWEntry const &entry);
+
   //! read a unknown zone ( block 9 )
   bool readUnknown9(MWAWEntry const &entry);
 
