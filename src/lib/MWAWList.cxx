@@ -171,6 +171,7 @@ std::ostream &operator<<(std::ostream &o, MWAWListLevel const &level)
   if (level.m_labelAfterSpace > 0) o << ", labelTextW=" << level.m_labelAfterSpace;
   if (level.m_numBeforeLabels) o << ", show=" << level.m_numBeforeLabels << "[before]";
   o << "]";
+  if (level.m_extra.length()) o << ", " << level.m_extra;
   return o;
 }
 

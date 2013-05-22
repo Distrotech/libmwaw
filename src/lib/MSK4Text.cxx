@@ -221,7 +221,6 @@ std::ostream &operator<<(std::ostream &o, Font const &ft)
 struct Paragraph : public MWAWParagraph {
   //! constructor
   Paragraph(): MWAWParagraph(), m_pageBreak(false) {
-    m_tabsRelativeToLeftMargin=false;
   }
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind);

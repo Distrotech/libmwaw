@@ -604,7 +604,6 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MWAWParagraph &pa
   input->seek(zone.m_pos.begin()+6, WPX_SEEK_SET);
 
   parag = MWAWParagraph();
-  parag.m_tabsRelativeToLeftMargin = false;
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
 

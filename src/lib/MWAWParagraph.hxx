@@ -150,7 +150,7 @@ public:
   Variable<LineSpacingType> m_spacingsInterlineType;
   //! the tabulations
   Variable<std::vector<MWAWTabStop> > m_tabs;
-  //! true if the tabs are relative to left margin (default)
+  //! true if the tabs are relative to left margin, false if there are relative to the page margin (default)
   Variable<bool> m_tabsRelativeToLeftMargin;
 
   /** the justification */

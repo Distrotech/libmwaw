@@ -92,7 +92,6 @@ struct Paragraph : public MWAWParagraph {
   //! constructor
   Paragraph() : MWAWParagraph(), m_paraFill(),
     m_cellWidth(0), m_cellHeight(0), m_cellSep(0), m_cellFill() {
-    m_tabsRelativeToLeftMargin=false;
   }
   //! updates the paragraph knowing the paragraph pattern percent
   void update(float percent) {

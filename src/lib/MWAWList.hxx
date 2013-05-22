@@ -54,7 +54,7 @@ struct MWAWListLevel {
 
   /** basic constructor */
   MWAWListLevel() : m_type(NONE), m_labelBeforeSpace(0.0), m_labelWidth(0.1), m_labelAfterSpace(0.0), m_numBeforeLabels(0), m_alignment(LEFT), m_startValue(0),
-    m_prefix(""), m_suffix(""), m_bullet("") {
+    m_prefix(""), m_suffix(""), m_bullet(""), m_extra("") {
   }
   /** destructor */
   ~MWAWListLevel() {}
@@ -95,6 +95,8 @@ struct MWAWListLevel {
   WPXString m_prefix /** string which preceedes the number if we have an ordered level*/,
             m_suffix/** string which follows the number if we have an ordered level*/,
             m_bullet /** the bullet if we have an bullet level */;
+  //! extra data
+  std::string m_extra;
 };
 
 /** a small structure used to store the informations about a list */

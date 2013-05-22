@@ -123,7 +123,7 @@ std::ostream &operator<<(std::ostream &o, MWAWTabStop const &tab)
 // paragraph
 ////////////////////////////////////////////////////////////
 MWAWParagraph::MWAWParagraph() : m_marginsUnit(WPX_INCH), m_spacingsInterlineUnit(WPX_PERCENT), m_spacingsInterlineType(Fixed),
-  m_tabs(), m_tabsRelativeToLeftMargin(true), m_justify(JustificationLeft), m_breakStatus(0),
+  m_tabs(), m_tabsRelativeToLeftMargin(false), m_justify(JustificationLeft), m_breakStatus(0),
   m_listLevelIndex(0), m_listId(-1), m_listStartValue(-1), m_listLevel(), m_backgroundColor(MWAWColor::white()),
   m_borders(), m_extra("")
 {

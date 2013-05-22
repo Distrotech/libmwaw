@@ -379,7 +379,6 @@ struct Font {
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() :  m_value(0) {
-    m_tabsRelativeToLeftMargin=false;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
