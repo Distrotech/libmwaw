@@ -1811,7 +1811,7 @@ bool MDWParser::readHeadingProperties(MWAWEntry &entry)
   m_state->m_listProperties.m_headingStyle=(int) input->readULong(1);
   switch(m_state->m_listProperties.m_headingStyle) {
   case 1:
-    f << "list[type]=Harward,"; // I. A. 1. a) i)
+    f << "list[type]=Hardvard,"; // I. A. 1. a) i)
     break;
   case 2:
     f << "list[type]=Chicago,"; // I. A. 1. a) (1), (a), i)
