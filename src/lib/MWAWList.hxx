@@ -47,14 +47,14 @@ class WPXDocumentInterface;
 struct MWAWListLevel {
   /** the type of the level */
   enum Type { DEFAULT, NONE, BULLET, DECIMAL, LOWER_ALPHA, UPPER_ALPHA,
-              LOWER_ROMAN, UPPER_ROMAN
+              LOWER_ROMAN, UPPER_ROMAN, LABEL
             };
   //! the item alignement
   enum Alignment { LEFT, RIGHT, CENTER };
 
   /** basic constructor */
   MWAWListLevel() : m_type(NONE), m_labelBeforeSpace(0.0), m_labelWidth(0.1), m_labelAfterSpace(0.0), m_numBeforeLabels(0), m_alignment(LEFT), m_startValue(0),
-    m_prefix(""), m_suffix(""), m_bullet(""), m_extra("") {
+    m_label(""), m_prefix(""), m_suffix(""), m_bullet(""), m_extra("") {
   }
   /** destructor */
   ~MWAWListLevel() {}
@@ -92,7 +92,8 @@ struct MWAWListLevel {
   Alignment m_alignment;
   /** the actual value (if this is an ordered level ) */
   int m_startValue;
-  WPXString m_prefix /** string which preceedes the number if we have an ordered level*/,
+  WPXString m_label /** the text label */,
+	    m_prefix /** string which preceedes the number if we have an ordered level*/,
             m_suffix/** string which follows the number if we have an ordered level*/,
             m_bullet /** the bullet if we have an bullet level */;
   //! extra data

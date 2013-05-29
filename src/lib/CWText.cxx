@@ -112,7 +112,7 @@ struct Paragraph : public MWAWParagraph {
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
     o << reinterpret_cast<MWAWParagraph const &>(ind) << ",";
     static char const *(labelNames[]) = {
-      "none", "diamond", "bullet", "checkbox", "hardward", "leader", "legal",
+      "none", "diamond", "bullet", "checkbox", "hardvard", "leader", "legal",
       "upperalpha", "alpha", "numeric", "upperroman", "roman"
     };
     if (ind.m_labelType > 0 && ind.m_labelType < 12)
@@ -227,7 +227,7 @@ struct ParagraphPLC {
     if (info.m_flags&4)
       o << "flags4,";
     static char const *(labelNames[]) = {
-      "none", "diamond", "bullet", "checkbox", "hardward", "leader", "legal",
+      "none", "diamond", "bullet", "checkbox", "hardvard", "leader", "legal",
       "upperalpha", "alpha", "numeric", "upperroman", "roman"
     };
 

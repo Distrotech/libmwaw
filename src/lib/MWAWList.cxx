@@ -77,6 +77,7 @@ void MWAWListLevel::addTo(WPXPropertyList &propList) const
     }
     break;
   case DECIMAL:
+  case LABEL:
   case LOWER_ALPHA:
   case UPPER_ALPHA:
   case LOWER_ROMAN:
@@ -84,6 +85,7 @@ void MWAWListLevel::addTo(WPXPropertyList &propList) const
     if (m_prefix.len()) propList.insert("style:num-prefix",m_prefix);
     if (m_suffix.len()) propList.insert("style:num-suffix", m_suffix);
     if (m_type==DECIMAL) propList.insert("style:num-format", "1");
+    else if (m_type==LABEL) propList.insert("style:num-format", "");
     else if (m_type==LOWER_ALPHA) propList.insert("style:num-format", "a");
     else if (m_type==UPPER_ALPHA) propList.insert("style:num-format", "A");
     else if (m_type==LOWER_ROMAN) propList.insert("style:num-format", "i");
@@ -113,6 +115,8 @@ int MWAWListLevel::cmp(MWAWListLevel const &levl) const
   if (fDiff > 0.0) return 1;
   diff = m_numBeforeLabels-levl.m_numBeforeLabels;
   if (diff) return diff;
+  diff = strcmp(m_label.cstr(),levl.m_label.cstr());
+  if (diff) return diff;
   diff = strcmp(m_prefix.cstr(),levl.m_prefix.cstr());
   if (diff) return diff;
   diff = strcmp(m_suffix.cstr(),levl.m_suffix.cstr());
@@ -128,6 +132,9 @@ std::ostream &operator<<(std::ostream &o, MWAWListLevel const &level)
   switch(level.m_type) {
   case MWAWListLevel::BULLET:
     o << "bullet='" << level.m_bullet.cstr() <<"'";
+    break;
+  case MWAWListLevel::LABEL:
+    o << "text='" << level.m_label.cstr() << "'";
     break;
   case MWAWListLevel::DECIMAL:
     o << "decimal";
@@ -334,13 +341,8 @@ bool MWAWListManager::send(int index, WPXDocumentInterface &docInterface) const
   if (index <= 0) return false;
   if (index >= int(m_sendIdList.size()))
     m_sendIdList.resize(size_t(index)+1,false);
-#ifndef OLDWRITERPERFECT
-  /** old version of writerperfect do no use libwpd::id when we open a new list,
-      so each time we change to a new list, we must redefine it...
-   */
   if (m_sendIdList[size_t(index)])
     return false;
-#endif
   size_t mainId=size_t(index-1)/2;
   if (mainId >= m_listList.size()) {
     MWAW_DEBUG_MSG(("MWAWListManager::send: can not find list %d\n", index));
