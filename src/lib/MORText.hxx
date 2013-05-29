@@ -38,6 +38,8 @@
 #ifndef MOR_TEXT
 #  define MOR_TEXT
 
+#include <set>
+
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
@@ -47,14 +49,18 @@ typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 struct MWAWListLevel;
 class MWAWEntry;
 class MWAWFont;
+class MWAWParagraph;
 class MWAWParserState;
 typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
+class MWAWSubDocument;
 
 namespace MORTextInternal
 {
 struct Outline;
 struct Paragraph;
 struct State;
+
+class SubDocument;
 }
 
 class MORParser;
@@ -67,6 +73,7 @@ class MORParser;
 class MORText
 {
   friend class MORParser;
+  friend class MORTextInternal::SubDocument;
 public:
   //! constructor
   MORText(MORParser &parser);
@@ -80,10 +87,13 @@ public:
   int numPages() const;
 
 protected:
-  //! try to create the text zones
+  //! try to create the text zones using read data
   bool createZones();
   //! send a main zone
   bool sendMainText();
+
+  //! returns a subdocument to send the header or the footer
+  shared_ptr<MWAWSubDocument> getHeaderFooter(bool header);
 
   //
   // intermediate level
@@ -92,14 +102,30 @@ protected:
   //! read the list of topic positions
   bool readTopic(MWAWEntry const &entry);
 
+  //! returns the last sub topic id corresponding to a topic and its child
+  int getLastTopicChildId(int tId) const;
+
+  /** check that the topic and its child does not loop (if so, cut some edge),
+      return the number of breakpages in the sublist */
+  int checkTopicList(size_t tId, std::set<size_t> &parent);
+
   //! read the list of comment/header/footer zones
   bool readComment(MWAWEntry const &entry);
 
   //! read the list of speaker note
   bool readSpeakerNote(MWAWEntry const &entry);
 
-  //! read a text entry
-  bool readText(MWAWEntry const &entry);
+  //! send a text entry
+  bool sendText(MWAWEntry const &entry, MWAWFont const &font);
+
+  //! try to send a comment knowing the comment id
+  bool sendComment(int cId);
+
+  //! try to send a speakernote knowing the note id
+  bool sendSpeakerNote(int nId);
+
+  //! try to send a topic knowing the topic id
+  bool sendTopic(int tId, int dLevel, std::vector<MWAWParagraph> &paraStack);
 
   //! read the list of fonts
   bool readFonts(MWAWEntry const &entry);

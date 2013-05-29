@@ -307,6 +307,19 @@ void MORParser::createDocument(WPXDocumentInterface *documentInterface)
   MWAWPageSpan ps(getPageSpan());
   ps.setPageSpan(m_state->m_numPages+1);
 
+  MWAWSubDocumentPtr doc=m_textParser->getHeaderFooter(true);
+  if (doc) {
+    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    header.m_subDocument=doc;
+    ps.setHeaderFooter(header);
+  }
+  doc=m_textParser->getHeaderFooter(false);
+  if (doc) {
+    MWAWHeaderFooter header(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    header.m_subDocument=doc;
+    ps.setHeaderFooter(header);
+  }
+
   std::vector<MWAWPageSpan> pageList(1,ps);
   MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
   setListener(listen);
@@ -615,6 +628,17 @@ bool MORParser::checkHeader(MWAWHeader *header, bool strict)
     if (strict)
       return false;
     f << "f0=" << std::hex << val << std::dec << ",";
+  }
+  if (strict) {
+    for (int i=0; i < 8; i++) {
+      MWAWEntry entry;
+      entry.setBegin((long) input->readULong(4));
+      entry.setLength((long) input->readULong(4));
+      if (!entry.length())
+        continue;
+      if (!isFilePos(entry.end()-1))
+        return false;
+    }
   }
   if (header)
     header->reset(MWAWDocument::MORE, vers);

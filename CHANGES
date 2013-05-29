@@ -1,5 +1,11 @@
 CHANGES:
 
+05/28/2013:
+- add a parser for More 2.0 and 3.0, retrieve the organization
+  part but not the slide/tree parts ( one days in a Library
+  to retrieve slides ? )
+
+-------- interlude pre v0.2.0 -------------
 05/13/2013:
 - improve a little the Microsoft Word filter to better manage
   character and paragraph properties

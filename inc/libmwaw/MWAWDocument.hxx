@@ -77,7 +77,7 @@ public:
   -MARIW: Mariner Write ( only v1.6-v3.5 Mac Classic)
   -MINDW: MindWrite
   -MOCKP: MockPackage (nothing done )
-  -MORE: More (nothing done )
+  -MORE: More ( v2-3: retrieve the organization part but not the slide/tree parts)
   -MW: MacWrite document
   -MWPRO: MacWriteII or MacWritePro document
   -MSWORD: MSWord document (v4 v5: basic done)
