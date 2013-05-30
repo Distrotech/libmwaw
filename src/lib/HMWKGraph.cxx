@@ -1377,7 +1377,7 @@ bool HMWKGraph::sendBasicGraph(HMWKGraphInternal::BasicGraph const &pict, MWAWPo
 }
 
 // ----- table
-bool HMWKGraph::updateTable(HMWKGraphInternal::Table const &table)
+bool HMWKGraph::updateTable(HMWKGraphInternal::Table const &table) const
 {
   if (table.m_cellsId.size()) return true;
 

@@ -93,7 +93,7 @@ struct MWAWListLevel {
   /** the actual value (if this is an ordered level ) */
   int m_startValue;
   WPXString m_label /** the text label */,
-	    m_prefix /** string which preceedes the number if we have an ordered level*/,
+            m_prefix /** string which preceedes the number if we have an ordered level*/,
             m_suffix/** string which follows the number if we have an ordered level*/,
             m_bullet /** the bullet if we have an bullet level */;
   //! extra data

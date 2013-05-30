@@ -351,7 +351,7 @@ bool ZWText::createZones()
 }
 
 ZWText::TextCode ZWText::isTextCode
-(MWAWInputStreamPtr &input, long endPos, MWAWEntry &dPos)
+(MWAWInputStreamPtr &input, long endPos, MWAWEntry &dPos) const
 {
   dPos=MWAWEntry();
   long pos = input->tell();

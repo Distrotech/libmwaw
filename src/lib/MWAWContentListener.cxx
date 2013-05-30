@@ -854,12 +854,9 @@ void MWAWContentListener::_changeList()
   if (newLevel) {
     shared_ptr<MWAWList> theList;
 
-    if (m_ps->m_list && m_ps->m_list->getId()==newListId)
-      theList=m_ps->m_list;
-    else {
-      m_parserState.m_listManager->send(newListId, *m_documentInterface);
-      theList=m_parserState.m_listManager->getList(newListId);
-    }
+    m_parserState.m_listManager->send(newListId, *m_documentInterface);
+    theList=m_parserState.m_listManager->getList(newListId);
+
     if (!theList) {
       MWAW_DEBUG_MSG(("MWAWContentListener::_changeList: can not find any list\n"));
       m_ps->m_listOrderedLevels.resize(actualLevel);

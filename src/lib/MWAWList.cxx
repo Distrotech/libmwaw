@@ -76,8 +76,11 @@ void MWAWListLevel::addTo(WPXPropertyList &propList) const
       propList.insert("text:bullet-char", "*");
     }
     break;
-  case DECIMAL:
   case LABEL:
+    if (m_label.len()) propList.insert("style:num-suffix", m_label);
+    propList.insert("style:num-format", "");
+    break;
+  case DECIMAL:
   case LOWER_ALPHA:
   case UPPER_ALPHA:
   case LOWER_ROMAN:
@@ -85,7 +88,6 @@ void MWAWListLevel::addTo(WPXPropertyList &propList) const
     if (m_prefix.len()) propList.insert("style:num-prefix",m_prefix);
     if (m_suffix.len()) propList.insert("style:num-suffix", m_suffix);
     if (m_type==DECIMAL) propList.insert("style:num-format", "1");
-    else if (m_type==LABEL) propList.insert("style:num-format", "");
     else if (m_type==LOWER_ALPHA) propList.insert("style:num-format", "a");
     else if (m_type==UPPER_ALPHA) propList.insert("style:num-format", "A");
     else if (m_type==LOWER_ROMAN) propList.insert("style:num-format", "i");
