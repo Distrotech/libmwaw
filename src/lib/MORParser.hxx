@@ -120,6 +120,9 @@ protected:
   //! read a PrintInfo zone ( first block )
   bool readPrintInfo(MWAWEntry const &entry);
 
+  //! read a docinfo zone ( second block )
+  bool readDocumentInfo(MWAWEntry const &entry);
+
   //! read the list of slide definitions
   bool readSlideList(MWAWEntry const &entry);
 

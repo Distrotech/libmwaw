@@ -371,7 +371,8 @@ struct Topic {
 //! Internal: the state of a MORText
 struct State {
   //! constructor
-  State() : m_version(-1), m_topicList(), m_commentList(), m_speakerList(), m_outlineList(), m_numPages(-1), m_actualPage(1) {
+  State() : m_version(-1), m_topicList(), m_commentList(), m_speakerList(), m_outlineList(),
+    m_actualComment(0), m_actualSpeaker(0), m_actualOutline(0), m_numPages(-1), m_actualPage(1) {
   }
   //! the file version
   mutable int m_version;
@@ -383,6 +384,12 @@ struct State {
   std::vector<MWAWEntry> m_speakerList;
   //! the outline list
   std::vector<Outline> m_outlineList;
+  //! the actual comment
+  int m_actualComment;
+  //! the actual speaker note
+  int m_actualSpeaker;
+  //! the actual outline
+  int m_actualOutline;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
@@ -675,11 +682,20 @@ bool MORText::readTopic(MWAWEntry const &entry)
     if (flag&4) f << "marked,";
     if (flag&0x10) topic.m_isCloned=true;
     if (flag&0x20) isAClone=true;
-    if (flag&0x40) topic.m_hasList[MORTextInternal::Topic::ASpeakerNote]=true;
-    if (flag&0x80) topic.m_hasList[MORTextInternal::Topic::AComment]=true;
+    if (flag&0x40) {
+      topic.m_hasList[MORTextInternal::Topic::ASpeakerNote]=true;
+      f << "S" << m_state->m_actualSpeaker++ << ",";
+    }
+    if (flag&0x80) {
+      topic.m_hasList[MORTextInternal::Topic::AComment]=true;
+      f << "C" << m_state->m_actualComment++ << ",";
+    }
     if (flag&0x400) f << "showComment,";
     if (flag&0x2000) topic.m_isStartSlide=true;
-    if (flag&0x8000) topic.m_hasList[MORTextInternal::Topic::AOutline]=true;
+    if (flag&0x8000) {
+      topic.m_hasList[MORTextInternal::Topic::AOutline]=true;
+      f << "O" << m_state->m_actualOutline++ << ",";
+    }
     // find only bits: 5208
     flag &= 0x5B4A;
     if (flag) f << "fl=" << std::hex << flag << std::dec << ",";
@@ -751,7 +767,7 @@ bool MORText::readComment(MWAWEntry const &entry)
     comment.m_extra=f.str();
     m_state->m_commentList.push_back(comment);
     f.str("");
-    f << "Comment-" << i << ":" << comment;
+    f << "Comment-C" << i << ":" << comment;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(pos+8, WPX_SEEK_SET);
@@ -778,7 +794,7 @@ bool MORText::readSpeakerNote(MWAWEntry const &entry)
   int N=int(entry.length()/4);
   for (int i=0; i < N; i++) {
     long fPos = input->readLong(4);
-    f << "pos=" << std::hex << fPos << std::dec << ",";
+    f << "S" << i << ":pos=" << std::hex << fPos << std::dec << ",";
     MWAWEntry tEntry;
     tEntry.setBegin(fPos);
     if (!m_mainParser->checkAndFindSize(tEntry)) {
@@ -899,18 +915,14 @@ bool MORText::sendTopic(int tId, int dLevel, std::vector<MWAWParagraph> &paraSta
       m_mainParser->newPage(++m_state->m_actualPage);
     para=outline.m_paragraphs[0];
     font = outline.m_fonts[0];
-  } else if (tId>=4)
+  } else if (tId>=4) {
+    /* default: leader is default for a paragraph
+
+    note: sometimes, some small level are bold by default, I do not understand why ? */
     para.m_listType=1;
+  }
   if (tId==1||tId==2) // force no list in header footer
     para.m_listType=0;
-  else if (tId>=4 && level==1) {
-    uint32_t flags=font.flags();
-    if (flags&MWAWFont::boldBit)
-      flags &= uint32_t(~MWAWFont::boldBit);
-    else
-      flags |= MWAWFont::boldBit;
-    font.setFlags(flags);
-  }
   if (level >= int(paraStack.size()))
     paraStack.resize(size_t(level+1));
   if (level>0)
@@ -1027,7 +1039,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
         break;
       }
       val = (int) input->readULong(2);
-      if (!val&0x8000) {
+      if (!(val&0x8000)) {
         MWAW_DEBUG_MSG(("MORText::sendText: field fId: unexpected id\n"));
         f << "@[#fId]";
         input->seek(-2, WPX_SEEK_CUR);
@@ -1142,6 +1154,8 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       f << "@[underl]";
       break;
     case 0x61:
+      ft.set(MWAWFont::Script());
+      sendFont = false;
       f << "@[script=def]";
       break;
     case 0x62:
@@ -1252,7 +1266,6 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
         MWAW_DEBUG_MSG(("MORText::sendText: field b9: unexpected end field\n"));
         f << "###";
         input->seek(-2, WPX_SEEK_CUR);
-        break;
       }
       break;
     }
@@ -1411,7 +1424,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
 
   input->seek(pos+4, WPX_SEEK_SET); // skip size
 
-  f << "Outline[data" << entry.id() << "]:";
+  f << "Outline[O" << entry.id() << "]:";
   int val=(int) input->readULong(2);
   if (val!=6*(vers-1)) {
     MWAW_DEBUG_MSG(("MORText::readOutline: find unexpected type\n"));
@@ -1556,7 +1569,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
         f << "bef=" << double(values[0]&0x7FFF)/20. << "pt,";
       } else {
         // assume 12pt
-        para.m_spacings[1]=double(values[0])/double(0x1000)*12./720.;
+        para.m_spacings[1]=double(values[0])/double(0x1000)*12./72.;
         if (values[0])
           f << "bef=" << 100.*double(values[0])/double(0x1000) << "%,";
       }
@@ -1565,7 +1578,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
         para.m_spacings[2]=double(values[1]&0x7FFF)/1440.;
         f << "aft=" << double(values[1]&0x7FFF)/20. << "pt,";
       } else {
-        para.m_spacings[2]=double(values[1])/double(0x1000)*12./720.;
+        para.m_spacings[2]=double(values[1])/double(0x1000)*12./72.;
         if (values[1])
           f << "aft=" << 100.*double(values[1])/double(0x1000) << "%,";
       }
@@ -1670,7 +1683,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
     }
     outlineMod.m_extra=f.str();
     f.str("");
-    f << "Outline[data" << entry.id() << "-" << n << "]:" << outlineMod;
+    f << "Outline[O" << entry.id() << "-" << n << "]:" << outlineMod;
     outlineModList.push_back(outlineMod);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -1682,7 +1695,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
     if (!outlineMod.m_entry.valid())
       continue;
     f.str("");
-    f << "Outline[dataA-" << n << "]:";
+    f << "Outline[O" << entry.id() << "-A" << n << "]:";
     bool ok=false;
 
     MORTextInternal::Paragraph &para = outline.m_paragraphs[outlineMod.getModId()];

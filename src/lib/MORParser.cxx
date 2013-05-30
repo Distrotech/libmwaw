@@ -61,13 +61,15 @@ namespace MORParserInternal
 //! Internal: the state of a MORParser
 struct State {
   //! constructor
-  State() : m_typeEntryMap(), m_colorList(), m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_typeEntryMap(), m_backgroundColor(MWAWColor::white()), m_colorList(), m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
+  //! set the default color map
+  void setDefaultColorList(int version);
 
   //! a map type -> entry
   std::multimap<std::string, MWAWEntry> m_typeEntryMap;
-  //! set the default color map
-  void setDefaultColorList(int version);
+  //! the organization back page color
+  MWAWColor m_backgroundColor;
   //! a list colorId -> color
   std::vector<MWAWColor> m_colorList;
   //! end of file
@@ -306,7 +308,7 @@ void MORParser::createDocument(WPXDocumentInterface *documentInterface)
 
   MWAWPageSpan ps(getPageSpan());
   ps.setPageSpan(m_state->m_numPages+1);
-
+  ps.setBackgroundColor(m_state->m_backgroundColor);
   MWAWSubDocumentPtr doc=m_textParser->getHeaderFooter(true);
   if (doc) {
     MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
@@ -346,6 +348,10 @@ bool MORParser::createZones()
   it = m_state->m_typeEntryMap.find("PrintInfo");
   if (it != m_state->m_typeEntryMap.end())
     readPrintInfo(it->second);
+
+  it = m_state->m_typeEntryMap.find("DocInfo");
+  if (it != m_state->m_typeEntryMap.end())
+    readDocumentInfo(it->second);
 
   it = m_state->m_typeEntryMap.find("Fonts");
   if (it != m_state->m_typeEntryMap.end())
@@ -417,7 +423,7 @@ bool MORParser::readZonesList()
     entry.setBegin((long) input->readULong(4));
     entry.setLength((long) input->readULong(4));
     static char const *(names[])= {
-      "PrintInfo", "Unknown1", "Unknown2", "Topic",
+      "PrintInfo", "DocInfo", "Unknown2", "Topic",
       "Comment", "Slide", "Outline", "FreePos", "SpeakerNote"
     };
     entry.setType(names[i]);
@@ -511,6 +517,121 @@ bool MORParser::readPrintInfo(MWAWEntry const &entry)
   getPageSpan().setFormLength(paperSize.y()/72.);
   getPageSpan().setFormWidth(paperSize.x()/72.);
 
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// read the document info
+////////////////////////////////////////////////////////////
+bool MORParser::readDocumentInfo(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.length() != 436) {
+    MWAW_DEBUG_MSG(("MORParser::readDocumentInfo: the entry is bad\n"));
+    return false;
+  }
+
+  long pos = entry.begin();
+  MWAWInputStreamPtr input = getInput();
+  libmwaw::DebugStream f;
+
+  input->seek(pos, WPX_SEEK_SET);
+  f << "Entries(DocInfo):";
+  entry.setParsed(true);
+  double margins[4]; // LR TB
+  for (int i=0; i < 4; i++)
+    margins[i]=double(input->readULong(2))/1440.;
+  f << "margins=" << margins[0] << "x" << margins[2]
+    << "<->" << margins[1] << "x" << margins[3] << ",";
+  int val;
+  for (int i=0; i < 2; i++) { // always 1: related to header/footer?
+    val=(int) input->readLong(1);
+    if (val!=1) f << "fl" << i << "=" << val << ",";
+  }
+  double dim[3];
+  for (int i=0; i < 3; i++)
+    dim[i]=double(input->readULong(2))/72.;
+  f << "dim=" << dim[0] << "x" << dim[1];
+  if (dim[1]<dim[2]||dim[1]>dim[2])
+    f << "[" << dim[2] << "],";
+  else
+    f << ",";
+  if (dim[0]>0 && dim[1]>0 &&
+      margins[0]>=0 && margins[1]>=0 && margins[2]>=0 && margins[3]>=0 &&
+      2.*(margins[0]+margins[1])<dim[0] && 2.*(margins[2]+margins[3])<dim[1]) {
+    getPageSpan().setMarginLeft(margins[0]);
+    getPageSpan().setMarginRight(margins[1]);
+    getPageSpan().setMarginTop(margins[2]);
+    getPageSpan().setMarginBottom(margins[3]);
+    // has we do not know how to retrieve the page orientation
+    if ((dim[0]>=dim[1]) ==
+        (getPageSpan().getFormWidth()>=getPageSpan().getFormLength())) {
+      getPageSpan().setFormWidth(dim[0]);
+      getPageSpan().setFormLength(dim[1]);
+    }
+  } else {
+    MWAW_DEBUG_MSG(("MORParser::readDocumentInfo: can not read the page dimension\n"));
+    f << "###";
+  }
+  static int const expectedVal[4]= {0,3,1,0}; // unknown
+  for (int i=0; i < 4; i++) {
+    val=(int) input->readLong(2);
+    if (val!=expectedVal[i])
+      f << "f" << i << "=" << val << ",";
+  }
+  val=(int) input->readLong(2);
+  if (val!=3) f << "fId?=" << val << ",";
+  val=(int) input->readLong(2);
+  if (val!=12) f << "fSz?=" << val << ",";
+  for (int i=0; i < 2; i++) { // always 1: related to font flag
+    val=(int) input->readLong(1);
+    if (val!=1) f << "fl" << i+2 << "=" << val << ",";
+  }
+
+  ascii().addDelimiter(input->tell(),'|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos=entry.begin()+160;
+  input->seek(pos,WPX_SEEK_SET);
+  f.str("");
+  f << "DocInfo-II:";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos=entry.begin()+268;
+  input->seek(pos,WPX_SEEK_SET);
+  f.str("");
+  f << "DocInfo-III:";
+  for (int st=0; st <7; st++) {
+    // normal white,white,black,white,black,background=white,white
+    unsigned char color[3];
+    for (int i=0; i < 3; i++)
+      color[i]=(unsigned char) (input->readULong(2)>>8);
+    MWAWColor col(color[0], color[1], color[2]);
+    if (st==2 || st==4) {
+      if (col.isBlack())
+        continue;
+    } else if (col.isWhite())
+      continue;
+    if (st==5) {
+      m_state->m_backgroundColor=col;
+      f << "backColor=" << col << ",";
+    } else
+      f << "color" << st << "?=" << col << ",";
+  }
+  for (int i=0; i < 60; i++) { // always 0 excepted f57=0|1 ?
+    val=(int) input->readLong(2);
+    if (val)
+      f << "f" << i << "=" << val << ",";
+  }
+  for (int i=0; i < 3; i++) { // always 5,5,-1 ?
+    val=(int) input->readLong(2);
+    int expVal=i==2?-1:5;
+    if (val!=expVal)
+      f << "g" << i << "=" << val << ",";
+  }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   return true;
@@ -807,8 +928,7 @@ bool MORParser::readGraphic(MWAWEntry const &entry)
 
   // first check
   int readSize = int(input->readULong(2));
-  long dim[4];
-  for (int i = 0; i < 4; i++) dim[i] = input->readLong(2);
+  input->seek(8, WPX_SEEK_CUR); // skip dim
   long lastFlag = input->readLong(2);
   switch(lastFlag) {
   case 0x1101: {
