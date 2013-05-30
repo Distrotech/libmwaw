@@ -1996,7 +1996,7 @@ bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAW
 }
 
 // ----- table
-bool HMWJGraph::updateTable(HMWJGraphInternal::Table const &table)
+bool HMWJGraph::updateTable(HMWJGraphInternal::Table const &table) const
 {
   if (table.m_cellsId.size()) return true;
 

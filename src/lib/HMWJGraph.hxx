@@ -157,7 +157,7 @@ protected:
   /** try to send a table unformatted*/
   bool sendTableUnformatted(long zId);
   /** check if the table is correct and if it can be send to a listener */
-  bool updateTable(HMWJGraphInternal::Table const &table);
+  bool updateTable(HMWJGraphInternal::Table const &table) const;
   /** try to send auxilliary table data*/
   bool sendPreTableData(HMWJGraphInternal::Table const &table);
   /** try to send a cell in a table */

@@ -106,7 +106,7 @@ public:
 		return m_mainStream;
 	}
 	//! send the data to the zone
-	void sendMain(std::ostream &out)
+	void sendMain(std::ostream &out) const
 	{
 		out << m_mainStream.str() << "\n";
 	}

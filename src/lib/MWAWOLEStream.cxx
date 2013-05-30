@@ -560,7 +560,7 @@ public:
   void load( unsigned char *buffer, unsigned len );
 
   /** returns the list of ind substream */
-  std::vector<std::string> getSubStreamList(unsigned ind=0, bool retrieveAll=false) {
+  std::vector<std::string> getSubStreamList(unsigned ind=0, bool retrieveAll=false) const {
     std::vector<std::string> res;
     std::set<unsigned> seens;
     getSubStreamList(ind, retrieveAll, "", res, seens, true);

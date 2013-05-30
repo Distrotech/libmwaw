@@ -105,7 +105,7 @@ protected:
   //! try to send a section using an id
   bool sendText(int sectionId, MWAWEntry const &entry);
   //! check if a character after '<' corresponds to a text code
-  TextCode isTextCode(MWAWInputStreamPtr &input, long endPos, MWAWEntry &dPos);
+  TextCode isTextCode(MWAWInputStreamPtr &input, long endPos, MWAWEntry &dPos) const;
 
   //! read the header/footer zone
   bool readHFZone(MWAWEntry const &entry);

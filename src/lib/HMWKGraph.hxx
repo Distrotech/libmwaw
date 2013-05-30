@@ -158,7 +158,7 @@ protected:
   /** try to send a table unformatted*/
   bool sendTableUnformatted(long fId);
   /** check if the table is correct and if it can be send to a listener */
-  bool updateTable(HMWKGraphInternal::Table const &table);
+  bool updateTable(HMWKGraphInternal::Table const &table) const;
   /** try to send auxilliary table data*/
   bool sendPreTableData(HMWKGraphInternal::Table const &table);
   /** try to send a cell in a table */
