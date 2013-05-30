@@ -444,8 +444,8 @@ protected:
   void initMaps();
 
   //! Internal and Low level: initializes a map with a vector of \a numElt elements (char, unicode)
-  static void initAMap(int const *arr, int numElt, std::map<unsigned char, unsigned long> &map) {
-    for (size_t i = 0; i < size_t(numElt); i++) {
+  static void initAMap(int const *arr, size_t numElt, std::map<unsigned char, unsigned long> &map) {
+    for (size_t i = 0; i < numElt; i++) {
       unsigned char c = (unsigned char)arr[2*i];
       unsigned long unicode = (unsigned long)arr[2*i+1];
       map[c] = unicode;
@@ -527,8 +527,8 @@ protected:
 //! Internal and Low level: initializes all the conversion maps
 void KnownConversion::initMaps()
 {
-  int numRoman = sizeof(s_romanUnicode)/(2*sizeof(int));
-  for (size_t i = 0; i < size_t(numRoman); i++) {
+  size_t numRoman = sizeof(s_romanUnicode)/(2*sizeof(int));
+  for (size_t i = 0; i < numRoman; i++) {
     unsigned char c = (unsigned char)s_romanUnicode[2*i];
     unsigned long unicode = (unsigned long)s_romanUnicode[2*i+1];
     m_romanMap[c] = m_turkishMap[c] = unicode;
