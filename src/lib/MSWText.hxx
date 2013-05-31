@@ -50,9 +50,6 @@
 
 #include "MSWTextStyles.hxx"
 
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-
 namespace MSWTextInternal
 {
 struct Property;

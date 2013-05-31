@@ -51,8 +51,6 @@
 #include "NSStruct.hxx"
 
 class MWAWEntry;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 class MWAWPosition;
 
 namespace NSGraphInternal

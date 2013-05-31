@@ -1510,12 +1510,12 @@ MWAWFontSJISConverter::~MWAWFontSJISConverter()
 
 void MWAWFontSJISConverter::initMap()
 {
-  int numData=sizeof(libmwaw::s_SJIS_encoding)/sizeof(uint32_t);
-  for (int i = 0; i+1 < numData; i+=2)
+  size_t numData=sizeof(libmwaw::s_SJIS_encoding)/sizeof(uint32_t);
+  for (size_t i = 0; i+1 < numData; i+=2)
     m_sjisUnicodeMap[int(libmwaw::s_SJIS_encoding[i])]=int(libmwaw::s_SJIS_encoding[i+1]);
   // fixme do differently
   numData=sizeof(libmwaw::s_SJIS_encoding2)/sizeof(uint32_t);
-  for (int i = 0; i+2 < numData; i+=3)
+  for (size_t i = 0; i+2 < numData; i+=3)
     m_sjisUnicodeMap[int(libmwaw::s_SJIS_encoding2[i])]=int(libmwaw::s_SJIS_encoding2[i+1]);
 }
 

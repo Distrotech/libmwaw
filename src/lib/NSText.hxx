@@ -43,16 +43,7 @@
 
 #include "NSStruct.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-
 class MWAWEntry;
-
-class MWAWFont;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-
-class MWAWSubDocument;
 
 namespace NSTextInternal
 {

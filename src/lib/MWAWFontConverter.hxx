@@ -44,9 +44,6 @@
 
 #  include "libmwaw_internal.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-
 namespace MWAWFontConverterInternal
 {
 class State;

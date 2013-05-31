@@ -46,10 +46,6 @@
 
 #include "MWAWEntry.hxx"
 
-class MWAWParagraph;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-
 namespace MSK3TextInternal
 {
 struct Font;

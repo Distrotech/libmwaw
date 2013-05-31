@@ -52,9 +52,6 @@
 
 #include "CWStruct.hxx"
 
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-
 namespace CWSpreadsheetInternal
 {
 struct Spreadsheet;

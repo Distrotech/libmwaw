@@ -308,6 +308,26 @@ struct MWAWNote {
   int m_number;
 };
 
+// definition of basic classes and smart pointer to basic classes
+class MWAWFont;
+class MWAWParagraph;
+
+class MWAWContentListener;
+class MWAWInputStream;
+class MWAWParserState;
+class MWAWRSRCParser;
+class MWAWSubDocument;
+//! a smart pointer of MWAWContentListener
+typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
+//! a smart pointer of MWAWInputStream
+typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
+//! a smart pointer of MWAWRSRCParser
+typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
+//! a smart pointer of MWAWParserState
+typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
+//! a smart pointer of MWAWSubDocument
+typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
+
 /** a generic variable template: value + flag to know if the variable is set
 
 \note the variable is considered set as soon a new value is set or

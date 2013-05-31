@@ -225,9 +225,6 @@ protected:
   shared_ptr<libmwawOLE::Storage> m_storageOLE;
 };
 
-//! a smart point of MWAWInputStream
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-
 /** an internal class used to return the OLE/Zip InputStream */
 class MWAWStringStream: public WPXInputStream
 {

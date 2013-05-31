@@ -52,9 +52,6 @@
 
 class MWAWEntry;
 
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-
 namespace CWGraphInternal
 {
 struct Group;

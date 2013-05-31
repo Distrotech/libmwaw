@@ -47,8 +47,6 @@
 #  include "MWAWPict.hxx"
 
 class WPXBinaryData;
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 
 /** \brief an abstract class which defines a simple container to store ole data */
 class MWAWPictOLEContainer : public MWAWPict

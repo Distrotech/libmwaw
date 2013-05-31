@@ -45,10 +45,6 @@
 
 #include "libmwaw_internal.hxx"
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
-
 class MWAWTable;
 
 /** a virtual structure used to store/send a cell to a listener */

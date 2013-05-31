@@ -48,7 +48,6 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWParagraph;
 class MWAWSection;
 
 namespace WPParserInternal

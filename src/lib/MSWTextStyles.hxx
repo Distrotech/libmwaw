@@ -46,10 +46,6 @@
 #include "MWAWEntry.hxx"
 #include "MWAWParagraph.hxx"
 
-class MWAWFont;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-
 class MSWParser;
 class MSWText;
 

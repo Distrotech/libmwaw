@@ -46,18 +46,10 @@ class WPXString;
 class WPXPropertyListVector;
 
 class MWAWCell;
-class MWAWFont;
-class MWAWInputStream;
 class MWAWList;
 class MWAWPageSpan;
-class MWAWParagraph;
-class MWAWParserState;
 class MWAWPosition;
 class MWAWSection;
-class MWAWSubDocument;
-
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
 
 namespace MWAWContentListenerInternal
 {
@@ -256,8 +248,6 @@ private:
   MWAWContentListener(const MWAWContentListener &);
   MWAWContentListener &operator=(const MWAWContentListener &);
 };
-
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -52,10 +52,6 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWFont;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-
 namespace CWStruct
 {
 struct DSET;

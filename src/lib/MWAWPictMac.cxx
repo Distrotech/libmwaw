@@ -1668,8 +1668,8 @@ class PictParser
 public:
   //! the constructor
   PictParser() : m_mapIdOp() {
-    int numCodes = sizeof(s_listCodes)/sizeof(OpCode);
-    for (int i = 0; i < numCodes; i++)
+    size_t numCodes = sizeof(s_listCodes)/sizeof(OpCode);
+    for (size_t i = 0; i < numCodes; i++)
       m_mapIdOp[s_listCodes[i].m_id] = &(s_listCodes[i]);
   }
   /** internal and low level: parses a picture and stores the parsing in dFile
@@ -1930,11 +1930,11 @@ class PictParser
 public:
   //! the constructor
   PictParser() : m_mapIdOp() {
-    int numCodes = sizeof(libmwaw_applepict1::s_listCodes)/sizeof(libmwaw_applepict1::OpCode);
-    for (int i = 0; i < numCodes; i++)
+    size_t numCodes = sizeof(libmwaw_applepict1::s_listCodes)/sizeof(libmwaw_applepict1::OpCode);
+    for (size_t i = 0; i < numCodes; i++)
       m_mapIdOp[libmwaw_applepict1::s_listCodes[i].m_id] = static_cast<OpCode const *>(&(libmwaw_applepict1::s_listCodes[i]));
     numCodes = sizeof(s_listCodes)/sizeof(OpCode);
-    for (int i = 0; i < numCodes; i++)
+    for (size_t i = 0; i < numCodes; i++)
       m_mapIdOp[s_listCodes[i].m_id] = &(s_listCodes[i]);
   }
   /** internal and low level: parses a picture and stores the parsing in dFile

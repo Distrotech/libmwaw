@@ -40,10 +40,6 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-class MWAWFont;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-
 namespace MSK4TextInternal
 {
 struct Font;
