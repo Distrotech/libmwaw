@@ -43,16 +43,8 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-
 struct MWAWListLevel;
 class MWAWEntry;
-class MWAWFont;
-class MWAWParagraph;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-class MWAWSubDocument;
 
 namespace MORTextInternal
 {
