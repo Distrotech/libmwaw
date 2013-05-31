@@ -74,7 +74,6 @@
 #include "MWAWDebug.hxx"
 
 class WPXBinaryData;
-class MWAWPosition;
 
 namespace MWAWOLEParserInternal
 {

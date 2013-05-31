@@ -47,11 +47,6 @@
 
 class WPXDocumentInterface;
 
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
-class MWAWListManager;
-typedef shared_ptr<MWAWListManager> MWAWListManagerPtr;
-
 /** a class to define the parser state */
 class MWAWParserState
 {

@@ -41,9 +41,6 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-class MWAWEntry;
-class MWAWPageSpan;
-
 namespace DMTextInternal
 {
 struct Zone;

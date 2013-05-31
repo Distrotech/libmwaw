@@ -43,8 +43,6 @@
 
 #include "NSStruct.hxx"
 
-class MWAWEntry;
-
 namespace NSTextInternal
 {
 class SubDocument;

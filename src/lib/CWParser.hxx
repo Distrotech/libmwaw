@@ -51,8 +51,6 @@
 
 #include "CWStruct.hxx"
 
-class MWAWSection;
-
 namespace CWParserInternal
 {
 struct State;

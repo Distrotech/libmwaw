@@ -43,8 +43,6 @@
 
 class WPXBinaryData;
 
-class MWAWEntry;
-
 namespace MWParserInternal
 {
 struct State;

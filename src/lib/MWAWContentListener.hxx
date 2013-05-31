@@ -46,10 +46,6 @@ class WPXString;
 class WPXPropertyListVector;
 
 class MWAWCell;
-class MWAWList;
-class MWAWPageSpan;
-class MWAWPosition;
-class MWAWSection;
 
 namespace MWAWContentListenerInternal
 {

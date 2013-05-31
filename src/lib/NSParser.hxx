@@ -47,9 +47,6 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWEntry;
-class MWAWPosition;
-
 namespace NSParserInternal
 {
 struct State;

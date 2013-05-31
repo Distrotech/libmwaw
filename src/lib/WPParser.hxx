@@ -48,8 +48,6 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWSection;
-
 namespace WPParserInternal
 {
 struct State;

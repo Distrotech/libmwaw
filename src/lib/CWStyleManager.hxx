@@ -49,8 +49,6 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-class MWAWEntry;
-
 class CWParser;
 
 namespace CWStyleManagerInternal

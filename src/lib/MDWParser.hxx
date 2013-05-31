@@ -45,8 +45,6 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWEntry;
-
 namespace MDWParserInternal
 {
 struct LineInfo;

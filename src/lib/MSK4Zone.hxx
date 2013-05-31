@@ -43,8 +43,6 @@
 
 #include "MSKParser.hxx"
 
-class MWAWHeader;
-
 class MSK4Parser;
 class MSK4Text;
 class MSKGraph;

@@ -44,8 +44,6 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-class MWAWFont;
-
 namespace HMWJTextInternal
 {
 struct Paragraph;
