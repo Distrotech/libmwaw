@@ -44,8 +44,6 @@
 #include "MSKParser.hxx"
 
 class MWAWHeader;
-class MWAWSubDocument;
-typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
 
 class MSK4Parser;
 class MSK4Text;

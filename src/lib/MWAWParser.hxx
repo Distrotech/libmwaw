@@ -47,14 +47,10 @@
 
 class WPXDocumentInterface;
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 class MWAWListManager;
 typedef shared_ptr<MWAWListManager> MWAWListManagerPtr;
-class MWAWRSRCParser;
-typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
 
 /** a class to define the parser state */
 class MWAWParserState
@@ -88,8 +84,6 @@ private:
   MWAWParserState(MWAWParserState const &orig);
   MWAWParserState &operator=(MWAWParserState const &orig);
 };
-
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 /** virtual class which defines the ancestor of all main zone parser
  *

@@ -44,8 +44,6 @@
 class WPXBinaryData;
 
 class MWAWEntry;
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 
 /** \brief the main class to read a Mac resource fork
  */
@@ -151,8 +149,6 @@ public:
   };
 
 };
-
-typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
 
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

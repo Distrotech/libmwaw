@@ -47,8 +47,6 @@
 #include "MWAWFont.hxx"
 #include "MWAWParagraph.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 class MWAWFontConverter;
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 class MWAWSection;

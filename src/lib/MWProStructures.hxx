@@ -47,10 +47,6 @@
 
 class WPXBinaryData;
 
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 class MWProParser;
 
 namespace MWProParserInternal

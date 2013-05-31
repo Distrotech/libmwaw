@@ -38,11 +38,6 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWEntry.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-class MWAWContentListener;
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
-
 class MWAWParser;
 
 /** abstract class used to store a subdocument (with a comparison function) */
@@ -84,9 +79,6 @@ protected:
   //! if valid the zone to parse
   MWAWEntry m_zone;
 };
-
-//! a smartptr of MWAWSubDocument
-typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
 
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

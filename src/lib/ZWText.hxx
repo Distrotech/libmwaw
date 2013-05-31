@@ -41,14 +41,7 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-
 class MWAWEntry;
-class MWAWFont;
-class MWAWParagraph;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 
 namespace ZWTextInternal
 {

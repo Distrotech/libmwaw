@@ -46,8 +46,6 @@
 #include "MWAWParser.hxx"
 
 class MWAWEntry;
-class MWAWFont;
-class MWAWParagraph;
 
 namespace MDWParserInternal
 {

@@ -43,13 +43,6 @@
 
 #include "MWAWDebug.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-
-class MWAWFont;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-
 namespace FWTextInternal
 {
 struct Border;

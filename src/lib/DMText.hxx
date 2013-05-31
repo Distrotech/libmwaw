@@ -41,15 +41,8 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-
 class MWAWEntry;
-class MWAWFont;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
 class MWAWPageSpan;
-class MWAWSubDocument;
 
 namespace DMTextInternal
 {

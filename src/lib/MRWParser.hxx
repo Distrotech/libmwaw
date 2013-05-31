@@ -52,8 +52,6 @@ class WPXBinaryData;
 #include "MWAWParser.hxx"
 
 class MWAWEntry;
-class MWAWFont;
-class MWAWParagraph;
 class MWAWSection;
 
 namespace MRWParserInternal

@@ -47,9 +47,6 @@
 #include "MWAWEntry.hxx"
 #include "MWAWParser.hxx"
 
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-
 namespace MSKGraphInternal
 {
 struct Font;

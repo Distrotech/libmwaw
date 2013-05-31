@@ -42,10 +42,6 @@
 #include "MWAWDebug.hxx"
 
 class MWAWEntry;
-class MWAWFont;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-class MWAWParagraph;
 
 namespace LWTextInternal
 {

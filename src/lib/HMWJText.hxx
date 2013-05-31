@@ -45,10 +45,6 @@
 #include "MWAWDebug.hxx"
 
 class MWAWFont;
-class MWAWParserState;
-typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
-
-class MWAWSubDocument;
 
 namespace HMWJTextInternal
 {

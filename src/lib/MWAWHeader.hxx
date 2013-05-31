@@ -41,8 +41,6 @@
 #include <libmwaw/libmwaw.hxx>
 #include "MWAWInputStream.hxx"
 
-class MWAWRSRCParser;
-
 /** \brief a function used by MWAWDocument to store the version of document and the input
  *
  * This class is mainly used to maintain a symetry with the libwpd library */

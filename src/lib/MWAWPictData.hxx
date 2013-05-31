@@ -50,8 +50,6 @@
 #  include "MWAWPict.hxx"
 
 class WPXBinaryData;
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 
 /** \brief an abstract class which defines basic formated picture ( Apple© Pict, DB3, ...) */
 class MWAWPictData : public MWAWPict

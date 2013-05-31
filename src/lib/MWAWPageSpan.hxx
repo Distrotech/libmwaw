@@ -42,11 +42,6 @@
 
 class WPXPropertyList;
 
-class MWAWContentListener;
-
-class MWAWSubDocument;
-typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
-
 /** a class which stores the header/footer data */
 class MWAWHeaderFooter
 {
