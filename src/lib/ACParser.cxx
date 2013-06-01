@@ -635,7 +635,7 @@ bool ACParser::readEndDataV3()
     long fPos=input->tell();
     int fSz = (int) input->readULong(1);
     if (!isFilePos(fPos+fSz+1)) {
-      MWAW_DEBUG_MSG(("ACText::createZones: can not read following string\n"));
+      MWAW_DEBUG_MSG(("ACText::readEndDataV3: can not read following string\n"));
       f << "###";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -651,7 +651,7 @@ bool ACParser::readEndDataV3()
     std::string &which=(i==0) ? m_state->m_title : m_state->m_stringLabel;
     if (which.length()) {
       if (which != str) {
-        MWAW_DEBUG_MSG(("ACText::createZones: find a different string\n"));
+        MWAW_DEBUG_MSG(("ACText::readEndDataV3: find a different string\n"));
         f << "###";
       }
       continue;
