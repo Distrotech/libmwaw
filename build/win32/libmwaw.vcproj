@@ -237,6 +237,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\GWParser.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\GWText.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\HMWJGraph.cxx"
 				>
 			</File>
@@ -575,6 +583,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\FWText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\GWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\GWText.hxx"
 				>
 			</File>
 			<File

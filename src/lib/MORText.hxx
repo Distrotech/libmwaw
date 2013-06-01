@@ -44,7 +44,6 @@
 #include "MWAWDebug.hxx"
 
 struct MWAWListLevel;
-class MWAWEntry;
 
 namespace MORTextInternal
 {

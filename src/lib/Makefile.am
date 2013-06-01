@@ -51,6 +51,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	FWParser.hxx			\
 	FWText.cxx			\
 	FWText.hxx			\
+	GWParser.cxx			\
+	GWParser.hxx			\
+	GWText.cxx			\
+	GWText.hxx			\
 	HMWJGraph.cxx			\
 	HMWJGraph.hxx			\
 	HMWJParser.cxx			\

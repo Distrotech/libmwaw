@@ -224,6 +224,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::TEDIT, 1));
         return res;
       }
+    } else if (creator=="ZEBR") {
+      if (type=="ZWRT") {
+        res.push_back(MWAWHeader(MWAWDocument::GW, 1));
+        return res;
+      }
+      // can we treat also ZOLN ?
     } else if (creator=="ZWRT") {
       if (type=="Zart") {
         res.push_back(MWAWHeader(MWAWDocument::ZWRT, 1));
@@ -321,6 +327,13 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     return res;
   }
 
+  if (val[0]==0x100 || val[0]==0x200) {
+    if (val[1]==0x5a57 && val[2]==0x5254) {
+      res.push_back(MWAWHeader(MWAWDocument::GW, val[0]==0x100 ? 1 : 2));
+      return res;
+    }
+    // maybe we can also add outline: if (val[1]==0x5a4f && val[2]==0x4c4e)
+  }
   // magic ole header
   if (val[0]==0xd0cf && val[1]==0x11e0 && val[2]==0xa1b1 && val[3]==0x1ae1)
     res.push_back(MWAWHeader(MWAWDocument::MSWORKS, 104));

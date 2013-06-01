@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MOR_PARSER
-#  define MOR_PARSER
+#ifndef GW_PARSER
+#  define GW_PARSER
 
 #include <string>
 #include <vector>
@@ -44,45 +44,25 @@
 
 #include "MWAWParser.hxx"
 
-namespace MORParserInternal
+namespace GWParserInternal
 {
 class SubDocument;
 struct State;
 }
 
-class MORText;
+class GWText;
 
-/** \brief a namespace used to define basic structures in a More file
+/** \brief the main class to read a GreatWorks text file
  */
-namespace MORStruct
+class GWParser : public MWAWParser
 {
-struct Pattern {
-  //!constructor
-  Pattern() : m_frontColor(MWAWColor::black()), m_backColor(MWAWColor::white()) {
-    for (int i=0; i<8; i++) m_pattern[i]=0;
-  }
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Pattern const &pat);
-  //! the pattern
-  unsigned char m_pattern[8];
-  //! the front color
-  MWAWColor m_frontColor;
-  //! the back color
-  MWAWColor m_backColor;
-};
-}
-
-/** \brief the main class to read a More file
- */
-class MORParser : public MWAWParser
-{
-  friend class MORParserInternal::SubDocument;
-  friend class MORText;
+  friend class GWParserInternal::SubDocument;
+  friend class GWText;
 public:
   //! constructor
-  MORParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  GWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MORParser();
+  virtual ~GWParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -101,8 +81,6 @@ protected:
   Vec2f getPageLeftTop() const;
   //! adds a new page
   void newPage(int number);
-  //! return the color which corresponds to an id (if possible)
-  bool getColor(int id, MWAWColor &col) const;
 
   // interface with the text parser
 
@@ -110,54 +88,36 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
-  //! read the list of zones ( v2-3) : first 0x80 bytes
-  bool readZonesList();
-
-  //! read a PrintInfo zone ( first block )
-  bool readPrintInfo(MWAWEntry const &entry);
-
-  //! read a docinfo zone ( second block )
-  bool readDocumentInfo(MWAWEntry const &entry);
-
-  //! read the list of slide definitions
-  bool readSlideList(MWAWEntry const &entry);
-
-  //! read a slide definitions
-  bool readSlide(MWAWEntry const &entry);
-
-  //! read a graphic ( in a slide )
-  bool readGraphic(MWAWEntry const &entry);
-
-  //! read a unknown zone ( block 9 )
-  bool readUnknown9(MWAWEntry const &entry);
-
-  //! read a color zone ( beginning of block 9 )
-  bool readColors(long endPos);
-
-  //! read a pattern ( some sub zone of block 9)
-  bool readPattern(long endPos, MORStruct::Pattern &pattern);
-
-  //! read a backside ( some sub zone of block 9)
-  bool readBackside(long endPos, std::string &extra);
-
-  //! read the list of free file position
-  bool readFreePos(MWAWEntry const &entry);
-
-  //! read the last subzone find in a block 9 ( unknown meaning)
-  bool readUnkn9Sub(long endPos);
+  //! read the resource fork zone
+  bool readRSRCZones();
 
   //
   // low level
   //
 
+  //! read a pattern list block ( PAT# resource block )
+  bool readPatterns(MWAWEntry const &entry);
+
+  //! read a list of color and maybe patterns ( PlTT resource block: v2 )
+  bool readColorsAndPats(MWAWEntry const &entry);
+
+  //! read a PrintInfo block ( PRNT resource block )
+  bool readPrintInfo(MWAWEntry const &entry);
+
+  //! read the windows positions ( WPSN resource block )
+  bool readWPSN(MWAWEntry const &entry);
+
+  //! read a unknown zone ( ARRs resource block: v2 )
+  bool readARRs(MWAWEntry const &entry);
+  //! read a unknown zone ( DaHS resource block: v2 )
+  bool readDaHS(MWAWEntry const &entry);
+  //! read a unknown zone ( GrDS resource block: v2 )
+  bool readGrDS(MWAWEntry const &entry);
+  //! read a unknown zone ( NxED resource block: v2 )
+  bool readNxEd(MWAWEntry const &entry);
+
   /** check if an entry is in file */
   bool isFilePos(long pos);
-
-  //! check if the entry is valid, if so store it in the list of entry
-  bool checkAndStore(MWAWEntry const &entry);
-
-  //! check if the entry is valid defined by the begin pos points to a zone: <dataSz> data
-  bool checkAndFindSize(MWAWEntry &entry);
 
   //! return the input input
   MWAWInputStreamPtr rsrcInput();
@@ -170,10 +130,10 @@ protected:
   //
 
   //! the state
-  shared_ptr<MORParserInternal::State> m_state;
+  shared_ptr<GWParserInternal::State> m_state;
 
   //! the text parser
-  shared_ptr<MORText> m_textParser;
+  shared_ptr<GWText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

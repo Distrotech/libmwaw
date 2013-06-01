@@ -42,6 +42,7 @@
 #include "DMParser.hxx"
 #include "EDParser.hxx"
 #include "FWParser.hxx"
+#include "GWParser.hxx"
 #include "HMWJParser.hxx"
 #include "HMWKParser.hxx"
 #include "LWParser.hxx"
@@ -160,8 +161,12 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     case ZWRT:
       confidence = MWAW_CONFIDENCE_GOOD;
       break;
-    case FRM:
     case GW:
+#ifdef DEBUG
+      confidence = MWAW_CONFIDENCE_GOOD;
+      break;
+#endif
+    case FRM:
     case MACD:
     case MOCKP:
     case PAGEMK:
@@ -300,6 +305,9 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
     case MWAWDocument::FULLW:
       parser.reset(new FWParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::GW:
+      parser.reset(new GWParser(input, rsrcParser, header));
+      break;
     case MWAWDocument::HMAC:
       parser.reset(new HMWKParser(input, rsrcParser, header));
       break;
@@ -354,7 +362,6 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
       break;
 
     case MWAWDocument::FRM:
-    case MWAWDocument::GW:
     case MWAWDocument::MACD:
     case MWAWDocument::MOCKP:
     case MWAWDocument::PAGEMK:
