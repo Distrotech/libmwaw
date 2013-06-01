@@ -48,9 +48,6 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-class MWAWEntry;
-class MWAWPosition;
-
 namespace LWGraphInternal
 {
 struct State;

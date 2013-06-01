@@ -40,7 +40,6 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWPosition;
 class WPXPropertyList;
 
 class MSKGraph;

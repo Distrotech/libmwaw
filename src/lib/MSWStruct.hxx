@@ -47,10 +47,6 @@
 #include "MWAWFont.hxx"
 #include "MWAWParagraph.hxx"
 
-class MWAWFontConverter;
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
-class MWAWSection;
-
 /** namespace to store the main structure which appears in a Microsoft Word 3.0-5.0 file */
 namespace MSWStruct
 {

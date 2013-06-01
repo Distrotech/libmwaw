@@ -41,8 +41,6 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-class MWAWEntry;
-
 namespace ZWTextInternal
 {
 struct Section;

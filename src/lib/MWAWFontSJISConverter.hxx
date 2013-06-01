@@ -42,9 +42,6 @@
 
 #include "libmwaw_internal.hxx"
 
-class MWAWInputStream;
-typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
-
 /*! \brief a namespace used to convert Mac SJIS font characters in unicode
  */
 class MWAWFontSJISConverter

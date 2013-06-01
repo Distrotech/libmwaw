@@ -44,9 +44,6 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWEntry;
-class MWAWPosition;
-
 namespace LWParserInternal
 {
 class SubDocument;

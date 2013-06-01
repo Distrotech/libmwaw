@@ -50,8 +50,6 @@
 
 #include "CWStruct.hxx"
 
-class MWAWEntry;
-
 namespace CWGraphInternal
 {
 struct Group;

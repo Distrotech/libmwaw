@@ -51,9 +51,6 @@ class WPXBinaryData;
 
 #include "MWAWParser.hxx"
 
-class MWAWEntry;
-class MWAWSection;
-
 namespace MRWParserInternal
 {
 struct State;

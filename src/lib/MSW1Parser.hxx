@@ -41,8 +41,6 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWEntry;
-
 namespace MSW1ParserInternal
 {
 struct Font;

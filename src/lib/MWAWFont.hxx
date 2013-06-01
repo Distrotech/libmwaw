@@ -40,7 +40,6 @@
 
 #include "libmwaw_internal.hxx"
 
-class MWAWFontConverter;
 class WPXPropertyList;
 
 //! Class to store font

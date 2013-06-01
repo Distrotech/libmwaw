@@ -308,19 +308,32 @@ struct MWAWNote {
   int m_number;
 };
 
-// definition of basic classes and smart pointer to basic classes
+// forward declarations of basic classes and smart pointers
+class MWAWEntry;
 class MWAWFont;
+class MWAWHeader;
+class MWAWList;
+class MWAWPageSpan;
 class MWAWParagraph;
+class MWAWParser;
+class MWAWPosition;
+class MWAWSection;
 
 class MWAWContentListener;
+class MWAWFontConverter;
 class MWAWInputStream;
+class MWAWListManager;
 class MWAWParserState;
 class MWAWRSRCParser;
 class MWAWSubDocument;
 //! a smart pointer of MWAWContentListener
 typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
+//! a smart pointer of MWAWFontConverter
+typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 //! a smart pointer of MWAWInputStream
 typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
+//! a smart pointer of MWAWListManager
+typedef shared_ptr<MWAWListManager> MWAWListManagerPtr;
 //! a smart pointer of MWAWRSRCParser
 typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
 //! a smart pointer of MWAWParserState

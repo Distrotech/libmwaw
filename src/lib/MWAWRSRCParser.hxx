@@ -43,8 +43,6 @@
 
 class WPXBinaryData;
 
-class MWAWEntry;
-
 /** \brief the main class to read a Mac resource fork
  */
 class MWAWRSRCParser

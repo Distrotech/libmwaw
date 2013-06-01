@@ -50,9 +50,6 @@
 
 #include "NSStruct.hxx"
 
-class MWAWEntry;
-class MWAWPosition;
-
 namespace NSGraphInternal
 {
 struct RSSOEntry;

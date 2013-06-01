@@ -35,10 +35,7 @@
 #define MWAW_SUBDOCUMENT_HXX
 
 #include "libmwaw_internal.hxx"
-#include "libmwaw_internal.hxx"
 #include "MWAWEntry.hxx"
-
-class MWAWParser;
 
 /** abstract class used to store a subdocument (with a comparison function) */
 class MWAWSubDocument

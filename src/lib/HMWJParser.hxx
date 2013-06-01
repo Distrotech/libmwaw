@@ -47,8 +47,6 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWEntry;
-
 namespace HMWJParserInternal
 {
 struct State;

@@ -44,10 +44,6 @@
 
 #include "MWAWParser.hxx"
 
-class MWAWEntry;
-class MWAWList;
-class MWAWPosition;
-
 namespace ACParserInternal
 {
 class SubDocument;

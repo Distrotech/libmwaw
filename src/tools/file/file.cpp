@@ -338,6 +338,12 @@ bool File::readFileInformation()
     checkFInfoType("Microsoft Excel");
   } else if (m_fInfoCreator=="XPR3") {
     checkFInfoType("XDOC","QuarkXPress") || checkFInfoType("QuarkXPress");
+  } else if (m_fInfoCreator=="ZEBR") {
+    checkFInfoType("ZWRT","GreatWorks") || checkFInfoType("ZTRM","GreatWorks[comm]") ||
+    checkFInfoType("ZDBS","GreatWorks[database]") || checkFInfoType("ZCAL","GreatWorks[cal]") ||
+    checkFInfoType("ZOLN","GreatWorks[outline]") || checkFInfoType("PNTG","GreatWorks[paint]") ||
+    checkFInfoType("ZOBJ","GreatWorks[draw]") || checkFInfoType("ZCHT","GreatWorks[spreadsheet]") ||
+    checkFInfoType("GreatWorks");
   } else if (m_fInfoCreator=="ZWRT") {
     checkFInfoType("Zart","Z-Write") || checkFInfoType("Z-Write");
   } else if (m_fInfoCreator=="dPro") {
@@ -493,7 +499,32 @@ bool File::readDataInformation()
     m_dataResult.push_back("OLE file: can be DOC, DOT, PPS, PPT, XLA, XLS, WIZ, WPS(4.0), ...");
     return true;
   }
-
+  if (val[0]==0x100 || val[0]==0x200) {
+    if (val[1]==0x5a57 && val[2]==0x5254) {
+      m_dataResult.push_back("GreatWorks");
+      return true;
+    }
+    if (val[1]==0x5a4f && val[2]==0x4c4e) {
+      m_dataResult.push_back("GreatWorks[outline]");
+      return true;
+    }
+    if (val[1]==0x5a44 && val[2]==0x4253) {
+      m_dataResult.push_back("GreatWorks[database]");
+      return true;
+    }
+    if (val[1]==0x5a43 && val[2]==0x414c) {
+      m_dataResult.push_back("GreatWorks[cal]");
+      return true;
+    }
+    if (val[1]==0x5a4f && val[2]==0x424a) {
+      m_dataResult.push_back("GreatWorks[draw]");
+      return true;
+    }
+    if (val[1]==0x5a43 && val[2]==0x4854) {
+      m_dataResult.push_back("GreatWorks[spreadsheet]");
+      return true;
+    }
+  }
   // less discriminant
   if ((val[0]==0xfe32 && val[1]==0) || (val[0]==0xfe34 && val[1]==0) ||
       (val[0] == 0xfe37 && (val[1] == 0x23 || val[1] == 0x1c))) {
