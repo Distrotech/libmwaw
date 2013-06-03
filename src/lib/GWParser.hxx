@@ -99,7 +99,7 @@ protected:
   bool readPatterns(MWAWEntry const &entry);
 
   //! read a list of color and maybe patterns ( PlTT resource block: v2 )
-  bool readColorsAndPats(MWAWEntry const &entry);
+  bool readPalettes(MWAWEntry const &entry);
 
   //! read a PrintInfo block ( PRNT resource block )
   bool readPrintInfo(MWAWEntry const &entry);
@@ -107,6 +107,8 @@ protected:
   //! read the windows positions ( WPSN resource block )
   bool readWPSN(MWAWEntry const &entry);
 
+  //! a unknown list of data at the beginning of the data fork
+  bool readZoneA();
   //! read a unknown zone ( ARRs resource block: v2 )
   bool readARRs(MWAWEntry const &entry);
   //! read a unknown zone ( DaHS resource block: v2 )

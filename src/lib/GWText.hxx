@@ -80,7 +80,21 @@ protected:
   // intermediate level
   //
 
+  //! try to read the font names zone
+  bool readFontNames();
+  //! try to read a zone ( textheader+fonts+rulers)
+  bool readZone();
+  //! try to read a font
+  bool readFont();
+  //! try to read a ruler
+  bool readRuler();
+  //! try to read a list of graphic
+  bool readGraphicList();
+  //! try to read a graphic
+  bool readGraphic();
 
+  //! heuristic function used to find the next zone
+  bool findNextZone();
 private:
   GWText(GWText const &orig);
   GWText &operator=(GWText const &orig);

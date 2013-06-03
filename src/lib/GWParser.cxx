@@ -217,9 +217,31 @@ void GWParser::createDocument(WPXDocumentInterface *documentInterface)
 ////////////////////////////////////////////////////////////
 bool GWParser::createZones()
 {
-  MWAWInputStreamPtr input = getInput();
+  int const vers=version();
   readRSRCZones();
-  return m_textParser->createZones();
+  MWAWInputStreamPtr input = getInput();
+  long pos=vers==1 ? 94 : 100;
+  input->seek(pos, WPX_SEEK_SET);
+  if (!readZoneA()) {
+    ascii().addPos(pos);
+    ascii().addNote("Entries(ZoneA):###");
+    return false;
+  }
+  pos = input->tell();
+  ascii().addPos(pos);
+  ascii().addNote("ZoneC-A:");
+  pos = pos+68;
+  input->seek(pos, WPX_SEEK_SET);
+  bool ok = m_textParser->createZones();
+  if (!input->atEOS()) {
+    pos = input->tell();
+    ascii().addPos(pos);
+    ascii().addNote("ZoneC-End:");
+    ascii().addPos(pos+200);
+    ascii().addNote("_");
+  }
+
+  return ok;
 }
 
 bool GWParser::readRSRCZones()
@@ -231,8 +253,8 @@ bool GWParser::readRSRCZones()
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
   std::multimap<std::string, MWAWEntry>::iterator it;
   // the 1 zone
-  char const *(zNames[]) = {"PRNT", "PAT#", "WPSN", "PlTT", "ARRs", "GrDS", "NxEd" };
-  for (int z = 0; z < 7; z++) {
+  char const *(zNames[]) = {"PRNT", "PAT#", "WPSN", "PlTT", "ARRs", "DaHS", "GrDS", "NxEd" };
+  for (int z = 0; z < 8; z++) {
     it = entryMap.lower_bound(zNames[z]);
     while (it != entryMap.end()) {
       if (it->first != zNames[z])
@@ -249,15 +271,18 @@ bool GWParser::readRSRCZones()
         readWPSN(entry);
         break;
       case 3: // only in v2
-        readColorsAndPats(entry);
+        readPalettes(entry);
         break;
       case 4: // only in v2?
         readARRs(entry);
         break;
       case 5: // only in v2?
-        readGrDS(entry);
+        readDaHS(entry);
         break;
       case 6: // only in v2?
+        readGrDS(entry);
+        break;
+      case 7: // only in v2?
         readNxEd(entry);
         break;
       default:
@@ -317,10 +342,10 @@ bool GWParser::readPatterns(MWAWEntry const &entry)
   return true;
 }
 
-bool GWParser::readColorsAndPats(MWAWEntry const &entry)
+bool GWParser::readPalettes(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 0x664) {
-    MWAW_DEBUG_MSG(("GWParser::readColorsAndPats: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("GWParser::readPalettes: the entry is bad\n"));
     return false;
   }
 
@@ -331,7 +356,7 @@ bool GWParser::readColorsAndPats(MWAWEntry const &entry)
   entry.setParsed(true);
 
   input->seek(pos, WPX_SEEK_SET);
-  f << "Entries(PlTT):";
+  f << "Entries(Palette):";
   int val=(int) input->readLong(2);
   if (val!=2)
     f << "#f0=" << val << ",";
@@ -345,7 +370,7 @@ bool GWParser::readColorsAndPats(MWAWEntry const &entry)
   for (int i=0; i < 16; i++) {
     pos = input->tell();
     f.str("");
-    f << "PlTT-" << i << ":";
+    f << "Palette-" << i << ":";
     for (int j=0; j < 3; j++)
       f << std::hex << input->readULong(2) << std::dec << ",";
     input->seek(pos+6, WPX_SEEK_SET);
@@ -481,7 +506,7 @@ bool GWParser::readPrintInfo(MWAWEntry const &entry)
 }
 
 ////////////////////////////////////////////////////////////
-// read some unknown zone
+// read some unknown zone in rsrc fork
 ////////////////////////////////////////////////////////////
 bool GWParser::readARRs(MWAWEntry const &entry)
 {
@@ -507,6 +532,47 @@ bool GWParser::readARRs(MWAWEntry const &entry)
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
+  return true;
+}
+
+bool GWParser::readDaHS(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.length() < 44 || (entry.length()%12) != 8) {
+    MWAW_DEBUG_MSG(("GWParser::readDaHS: the entry is bad\n"));
+    return false;
+  }
+
+  long pos = entry.begin();
+  MWAWInputStreamPtr input = rsrcInput();
+  libmwaw::DebugFile &ascFile = rsrcAscii();
+  libmwaw::DebugStream f;
+  entry.setParsed(true);
+
+  input->seek(pos, WPX_SEEK_SET);
+  f << "Entries(DaHS):";
+  int val=(int) input->readLong(2);
+  if (val!=2)
+    f << "#f0=" << val << ",";
+  val=(int) input->readLong(2);
+  if (val!=9)
+    f << "#f1=" << val << ",";
+  ascFile.addDelimiter(input->tell(), '|');
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+
+  pos=entry.begin()+44;
+  input->seek(pos, WPX_SEEK_SET);
+  int N=int((entry.length()-44))/12;
+
+  for (int i=0; i < N; i++) {
+    pos = input->tell();
+    f.str("");
+    f << "DaHS-" << i << ":";
+    input->seek(pos+12, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+
   return true;
 }
 
@@ -552,16 +618,57 @@ bool GWParser::readGrDS(MWAWEntry const &entry)
 
 bool GWParser::readNxEd(MWAWEntry const &entry)
 {
-  if (entry.length()) {
+  if (!entry.valid() || entry.length()<4 ) {
+    MWAW_DEBUG_MSG(("GWParser::readNxEd: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.length()!=4) {
     MWAW_DEBUG_MSG(("GWParser::readNxEd: OHHHH the entry is filled\n"));
   }
 
   long pos = entry.begin();
+  MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
   entry.setParsed(true);
+
+  input->seek(pos, WPX_SEEK_SET);
+  f << "Entries(NxED):";
+  for (int i = 0; i < 2; i++) { // always 0
+    int val=(int) input->readLong(2);
+    if (val)
+      f << "f" << i << "=" << val << ",";
+  }
   ascFile.addPos(pos-4);
   ascFile.addNote("Entries(NxED):");
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// read some unknown zone in data fork
+////////////////////////////////////////////////////////////
+bool GWParser::readZoneA()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  if (!isFilePos(pos+38*16)) {
+    MWAW_DEBUG_MSG(("GWParser::readZoneA: the zone is too short\n"));
+    return false;
+  }
+  libmwaw::DebugStream f;
+  f << "Entries(ZoneA):";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  for (int i=0; i < 38; i++) {
+    pos = input->tell();
+    f.str("");
+    f << "ZoneA-" << i << ":";
+
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+16, WPX_SEEK_SET);
+  }
   return true;
 }
 
@@ -594,23 +701,9 @@ bool GWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
+  ascii().addPos(30);
+  ascii().addNote("Entries(ZoneC)");
 
-  long pos=vers==1 ? 94 : 100;
-  input->seek(pos, WPX_SEEK_SET);
-  for (int i=0; i < 38; i++) {
-    pos = input->tell();
-    f.str("");
-    f << "FileHeader(II-" << i << "):";
-
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    input->seek(pos+16, WPX_SEEK_SET);
-  }
-  pos = input->tell();
-  ascii().addPos(pos);
-  ascii().addNote("Entries(Loose)");
-  ascii().addPos(pos+100);
-  ascii().addNote("_");
   if (header)
     header->reset(MWAWDocument::GW, vers);
   return true;
