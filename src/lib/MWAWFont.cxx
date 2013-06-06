@@ -43,9 +43,8 @@
 
 #include "MWAWFont.hxx"
 
-////////////////////////////////////////////////////////////
 // line function
-////////////////////////////////////////////////////////////
+
 std::ostream &operator<<(std::ostream &o, MWAWFont::Line const &line)
 {
   if (!line.isSet())
@@ -137,9 +136,8 @@ void MWAWFont::Line::addTo(WPXPropertyList &propList, std::string const &type) c
     propList.insert(s.str().c_str(), "thick");
 }
 
-////////////////////////////////////////////////////////////
 // script function
-////////////////////////////////////////////////////////////
+
 std::string MWAWFont::Script::str(float fSize) const
 {
   if (!isSet() || ((m_delta<=0&&m_delta>=0) && m_scale==100))
@@ -171,9 +169,8 @@ std::string MWAWFont::Script::str(float fSize) const
   return o.str();
 }
 
-////////////////////////////////////////////////////////////
 // font function
-////////////////////////////////////////////////////////////
+
 std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) const
 {
   std::stringstream o;
