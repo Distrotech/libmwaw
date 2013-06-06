@@ -232,15 +232,15 @@ public:
   float deltaLetterSpacing() const {
     return m_deltaSpacing.get();
   }
-  //! set the letter spacing ( delta value in point )
+  //! sets the letter spacing ( delta value in point )
   void setDeltaLetterSpacing(float d) {
     m_deltaSpacing=d;
   }
-  //! returns the texte width scaling
+  //! returns the text width scaling
   float texteWidthScaling() const {
     return m_texteWidthScaling.get();
   }
-  //! set the texte width scaling
+  //! sets the text width scaling
   void setTexteWidthScaling(float scale=1.0) {
     m_texteWidthScaling = scale;
   }
@@ -398,7 +398,7 @@ public:
     m_underline->m_color = color;
   }
 
-  //! return the language
+  //! returns the language
   std::string const &language() const {
     return m_language.get();
   }
@@ -453,7 +453,7 @@ public:
 protected:
   Variable<int> m_id /** font identificator*/;
   Variable<float> m_size /** font size */;
-  Variable<float> m_deltaSpacing /** expand(>0), condensed(<0) depl in point*/;
+  Variable<float> m_deltaSpacing /** expand(&gt; 0), condensed(&lt; 0) depl in point*/;
   Variable<float> m_texteWidthScaling /** the texte width scaling */;
   Variable<Script> m_scriptPosition /** the sub/super script definition */;
   Variable<uint32_t> m_flags /** font attributes */;

@@ -105,7 +105,5 @@ protected:
   mutable shared_ptr<MWAWFontConverterInternal::State> m_manager;
 };
 
-typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
-
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
