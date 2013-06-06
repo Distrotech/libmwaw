@@ -49,6 +49,7 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
+#include "GWGraph.hxx"
 #include "GWText.hxx"
 
 #include "GWParser.hxx"
@@ -61,9 +62,11 @@ namespace GWParserInternal
 //! Internal: the state of a GWParser
 struct State {
   //! constructor
-  State() : m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_docType(GWParser::TEXT), m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
 
+  //! the document type
+  GWParser::DocType m_docType;
   //! end of file
   long m_eof;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
@@ -77,7 +80,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 GWParser::GWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_textParser()
+  MWAWParser(input, rsrcParser, header), m_state(), m_graphParser(), m_textParser()
 {
   init();
 }
@@ -96,6 +99,7 @@ void GWParser::init()
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
+  m_graphParser.reset(new GWGraph(*this));
   m_textParser.reset(new GWText(*this));
 }
 
@@ -118,6 +122,11 @@ Vec2f GWParser::getPageLeftTop() const
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
+GWParser::DocType GWParser::getDocumentType() const
+{
+  return m_state->m_docType;
+}
+
 bool GWParser::isFilePos(long pos)
 {
   if (pos <= m_state->m_eof)
@@ -135,6 +144,23 @@ bool GWParser::isFilePos(long pos)
 ////////////////////////////////////////////////////////////
 // interface with the text parser
 ////////////////////////////////////////////////////////////
+bool GWParser::readTextZone()
+{
+  return m_textParser->readZone();
+}
+
+bool GWParser::readSimpleTextZone()
+{
+  return m_textParser->readSimpleTextbox();
+}
+
+////////////////////////////////////////////////////////////
+// interface with the graph parser
+////////////////////////////////////////////////////////////
+bool GWParser::readPictureList(int nPict)
+{
+  return m_graphParser->readPictureList(nPict);
+}
 
 ////////////////////////////////////////////////////////////
 // new page
@@ -166,9 +192,10 @@ void GWParser::parse(WPXDocumentInterface *docInterface)
     ascii().open(asciiName());
 
     checkHeader(0L);
-    ok = createZones();
+    ok = createZones() && false;
     if (ok) {
       createDocument(docInterface);
+      m_graphParser->sendPageGraphics();
       m_textParser->sendMainText();
     }
     ascii().reset();
@@ -197,6 +224,8 @@ void GWParser::createDocument(WPXDocumentInterface *documentInterface)
 
   // create the page list
   int numPages = 1;
+  if (m_graphParser->numPages() > numPages)
+    numPages = m_graphParser->numPages();
   if (m_textParser->numPages() > numPages)
     numPages = m_textParser->numPages();
   m_state->m_numPages = numPages;
@@ -219,6 +248,9 @@ bool GWParser::createZones()
 {
   int const vers=version();
   readRSRCZones();
+  if (getDocumentType()==DRAW)
+    return createDrawZones();
+
   MWAWInputStreamPtr input = getInput();
   long pos=vers==1 ? 94 : 100;
   input->seek(pos, WPX_SEEK_SET);
@@ -227,20 +259,49 @@ bool GWParser::createZones()
     ascii().addNote("Entries(ZoneA):###");
     return false;
   }
+
+  bool ok=m_textParser->createZones();
+  if (input->atEOS()) // v1 file end here
+    return ok;
+
   pos = input->tell();
-  ascii().addPos(pos);
-  ascii().addNote("ZoneC-A:");
-  pos = pos+68;
-  input->seek(pos, WPX_SEEK_SET);
-  bool ok = m_textParser->createZones();
+  if (!m_graphParser->readGraphicZone())
+    input->seek(pos, WPX_SEEK_SET);
   if (!input->atEOS()) {
     pos = input->tell();
+    MWAW_DEBUG_MSG(("GWParser::createZones: find some extra data\n"));
     ascii().addPos(pos);
-    ascii().addNote("ZoneC-End:");
+    ascii().addNote("Entries(Loose):");
     ascii().addPos(pos+200);
     ascii().addNote("_");
   }
 
+  return ok;
+}
+
+bool GWParser::createDrawZones()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos;
+  ascii().addPos(40);
+  ascii().addNote("Entries(GZoneHeader)");
+  ascii().addDelimiter(68,'|');
+  pos = 74;
+  input->seek(74, WPX_SEEK_SET);
+  if (!m_textParser->readFontNames())
+    input->seek(pos, WPX_SEEK_SET);
+  else
+    pos = input->tell();
+
+  bool ok=m_graphParser->readGraphicZone();
+  if (!input->atEOS()) {
+    pos = input->tell();
+    MWAW_DEBUG_MSG(("GWParser::createZones: find some extra data\n"));
+    ascii().addPos(pos);
+    ascii().addNote("Entries(Loose):");
+    ascii().addPos(pos+200);
+    ascii().addNote("_");
+  }
   return ok;
 }
 
@@ -265,13 +326,13 @@ bool GWParser::readRSRCZones()
         readPrintInfo(entry);
         break;
       case 1:
-        readPatterns(entry);
+        m_graphParser->readPatterns(entry);
         break;
       case 2:
         readWPSN(entry);
         break;
       case 3: // only in v2
-        readPalettes(entry);
+        m_graphParser->readPalettes(entry);
         break;
       case 4: // only in v2?
         readARRs(entry);
@@ -299,101 +360,6 @@ bool GWParser::readRSRCZones()
 // Low level
 //
 ////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////
-// read the patterns list
-////////////////////////////////////////////////////////////
-bool GWParser::readPatterns(MWAWEntry const &entry)
-{
-  if (!entry.valid() || (entry.length()%8) != 2) {
-    MWAW_DEBUG_MSG(("GWParser::readPatterns: the entry is bad\n"));
-    return false;
-  }
-
-  long pos = entry.begin();
-  MWAWInputStreamPtr input = rsrcInput();
-  libmwaw::DebugFile &ascFile = rsrcAscii();
-  libmwaw::DebugStream f;
-  entry.setParsed(true);
-
-  input->seek(pos, WPX_SEEK_SET);
-  f << "Entries(Pattern):";
-  int N=(int) input->readLong(2);
-  f << "N=" << N << ",";
-  if (2+8*N!=int(entry.length())) {
-    f << "###";
-    MWAW_DEBUG_MSG(("GWParser::readPatterns: the number of entries seems bad\n"));
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-    return true;
-  }
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-  for (int i=0; i < N; i++) {
-    pos = input->tell();
-    f.str("");
-    f << "Pattern-" << i << ":";
-    for (int j=0; j < 8; j++)
-      f << std::hex << input->readULong(2) << std::dec << ",";
-    input->seek(pos+8, WPX_SEEK_SET);
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool GWParser::readPalettes(MWAWEntry const &entry)
-{
-  if (!entry.valid() || entry.length() != 0x664) {
-    MWAW_DEBUG_MSG(("GWParser::readPalettes: the entry is bad\n"));
-    return false;
-  }
-
-  long pos = entry.begin();
-  MWAWInputStreamPtr input = rsrcInput();
-  libmwaw::DebugFile &ascFile = rsrcAscii();
-  libmwaw::DebugStream f;
-  entry.setParsed(true);
-
-  input->seek(pos, WPX_SEEK_SET);
-  f << "Entries(Palette):";
-  int val=(int) input->readLong(2);
-  if (val!=2)
-    f << "#f0=" << val << ",";
-  val=(int) input->readLong(2);
-  if (val!=8)
-    f << "#f1=" << val << ",";
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-
-  // 16 sets: a1a1, a2a2, a3a3: what is that
-  for (int i=0; i < 16; i++) {
-    pos = input->tell();
-    f.str("");
-    f << "Palette-" << i << ":";
-    for (int j=0; j < 3; j++)
-      f << std::hex << input->readULong(2) << std::dec << ",";
-    input->seek(pos+6, WPX_SEEK_SET);
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-
-  for (int i=0; i < 128; i++) {
-    pos = input->tell();
-    f.str("");
-    if (i==0) f << "Entries(Colors)-0:";
-    else f << "Colors-" << i << ":";
-    unsigned char col[3];
-    for (int j=0; j < 3; j++)
-      col[j]=(unsigned char)(input->readULong(2)>>8);
-    f << MWAWColor(col[0], col[1], col[2]) << ",";
-    input->seek(pos+6, WPX_SEEK_SET);
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-
-  return true;
-}
 
 ////////////////////////////////////////////////////////////
 // read the windows position blocks
@@ -695,14 +661,16 @@ bool GWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   std::string type("");
   for (int i=0; i < 4; i++)
     type+=(char) input->readLong(1);
-  if (type!="ZWRT")
+  if (type=="ZOBJ") {
+    m_state->m_docType=GWParser::DRAW;
+    MWAW_DEBUG_MSG(("GWParser::checkHeader: find a draw file\n"));
+  } else if (type!="ZWRT")
     return false;
 
-  ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
-  ascii().addPos(30);
-  ascii().addNote("Entries(ZoneC)");
+  ascii().addPos(6);
+  ascii().addNote("FileHeader-II:");
 
   if (header)
     header->reset(MWAWDocument::GW, vers);

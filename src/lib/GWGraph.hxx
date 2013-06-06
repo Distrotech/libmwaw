@@ -32,36 +32,48 @@
 */
 
 /*
- * Parser to GreatWorks document
+ * Parser to GreatWorks text document ( graphic part )
  *
  */
-#ifndef GW_TEXT
-#  define GW_TEXT
+#ifndef GW_GRAPH
+#  define GW_GRAPH
+
+#include <set>
+#include <string>
+#include <vector>
+
+#include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
-#include "MWAWDebug.hxx"
 
-namespace GWTextInternal
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
+
+namespace GWGraphInternal
 {
+struct Frame;
+
 struct State;
-struct Zone;
+class SubDocument;
 }
 
 class GWParser;
 
-/** \brief the main class to read the text part of GreatWorks Text file
+/** \brief the main class to read the graphic part of a HanMac Word-J file
  *
  *
  *
  */
-class GWText
+class GWGraph
 {
   friend class GWParser;
+  friend class GWGraphInternal::SubDocument;
+
 public:
   //! constructor
-  GWText(GWParser &parser);
+  GWGraph(GWParser &parser);
   //! destructor
-  virtual ~GWText();
+  virtual ~GWGraph();
 
   /** returns the file version */
   int version() const;
@@ -70,36 +82,55 @@ public:
   int numPages() const;
 
 protected:
-  //! finds the different objects zones
-  bool createZones();
-  //! send a main zone
-  bool sendMainText();
+  //! try to send the page graphic
+  bool sendPageGraphics();
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
-  //! try to read a zone ( changeme)
-  bool readZone();
 
   //
-  // intermediate level
+  // Intermediate level
   //
 
-  //! try to read the font names zone
-  bool readFontNames();
-  //! try to read a zone ( textheader+fonts+rulers)
-  bool readZone(GWTextInternal::Zone &zone);
-  //! try to read a simplified textbox zone
-  bool readSimpleTextbox();
-  //! try to read a font
-  bool readFont();
-  //! try to read a ruler
-  bool readRuler();
+  // RSRC
+  //! read a pattern list block ( PAT# resource block )
+  bool readPatterns(MWAWEntry const &entry);
+  //! read a list of color and maybe patterns ( PlTT resource block: v2 )
+  bool readPalettes(MWAWEntry const &entry);
 
-  //! heuristic function used to find the next zone
-  bool findNextZone();
+  // DataFork: pict
+  //! try to read a picture list
+  bool readPictureList(int nPict);
+  //! try to read a picture list
+  bool readPicture();
+
+  // DataFork: graphic zone
+
+  //! try to read the graphic zone ( draw file or end of v2 text file)
+  bool readGraphicZone();
+  //! return true if this corresponds to a graphic zone
+  bool isGraphicZone();
+  //! try to find the beginning of the next graphic zone
+  bool findGraphicZone();
+
+  //! check if a zone is or not a page frame zone
+  bool isPageFrames();
+  //! try to read a list of page frame ( picture, texture or basic )
+  bool readPageFrames();
+  //! try to read a basic frame header
+  bool readFrameHeader(GWGraphInternal::Frame &zone);
+
+  // interface with mainParser
+
+  //
+  // low level
+  //
+  //! reconstruct the order to used for reading the frame data
+  static void buildFrameDataReadOrderFromTree
+  (std::vector<std::vector<int> > const &tree, int id, std::vector<int> &order, std::set<int> &seen);
 
 private:
-  GWText(GWText const &orig);
-  GWText &operator=(GWText const &orig);
+  GWGraph(GWGraph const &orig);
+  GWGraph &operator=(GWGraph const &orig);
 
 protected:
   //
@@ -109,7 +140,7 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<GWTextInternal::State> m_state;
+  shared_ptr<GWGraphInternal::State> m_state;
 
   //! the main parser;
   GWParser *m_mainParser;

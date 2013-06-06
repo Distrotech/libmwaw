@@ -151,6 +151,10 @@ SOURCE=..\..\src\lib\FWText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\GWGraph.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\GWParser.cxx
 # End Source File
 # Begin Source File
@@ -496,6 +500,10 @@ SOURCE=..\..\src\lib\FWParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\FWText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\GWGraph.hxx
 # End Source File
 # Begin Source File
 

@@ -229,6 +229,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::GW, 1));
         return res;
       }
+      if (type=="ZOBJ") {
+        res.push_back(MWAWHeader(MWAWDocument::GW, 1, MWAWDocument::K_DRAW));
+        return res;
+      }
       // can we treat also ZOLN ?
     } else if (creator=="ZWRT") {
       if (type=="Zart") {
@@ -330,6 +334,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   if (val[0]==0x100 || val[0]==0x200) {
     if (val[1]==0x5a57 && val[2]==0x5254) {
       res.push_back(MWAWHeader(MWAWDocument::GW, val[0]==0x100 ? 1 : 2));
+      return res;
+    }
+    if (val[1]==0x5a4f && val[2]==0x424a) {
+      res.push_back(MWAWHeader(MWAWDocument::GW, val[0]==0x100 ? 1 : 2, MWAWDocument::K_DRAW));
       return res;
     }
     // maybe we can also add outline: if (val[1]==0x5a4f && val[2]==0x4c4e)

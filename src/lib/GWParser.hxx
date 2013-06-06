@@ -40,25 +40,26 @@
 #include <libwpd/libwpd.h>
 
 #include "MWAWDebug.hxx"
-#include "MWAWInputStream.hxx"
 
 #include "MWAWParser.hxx"
 
 namespace GWParserInternal
 {
-class SubDocument;
 struct State;
 }
 
+class GWGraph;
 class GWText;
 
 /** \brief the main class to read a GreatWorks text file
  */
 class GWParser : public MWAWParser
 {
-  friend class GWParserInternal::SubDocument;
+  friend class GWGraph;
   friend class GWText;
 public:
+  //! an enum used to defined the document type
+  enum DocType { DRAW, TEXT, UNKNOWN };
   //! constructor
   GWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
@@ -84,9 +85,24 @@ protected:
 
   // interface with the text parser
 
+  //! try to read a zone ( textheader+fonts+rulers)
+  bool readTextZone();
+  //! try to read a simplified textbox zone
+  bool readSimpleTextZone();
+
+  // interface with the graph parser
+
+  //! try to read a picture list
+  bool readPictureList(int nPict);
+
+  // general interface
+  DocType getDocumentType() const;
+
 protected:
   //! finds the different objects zones
   bool createZones();
+  //! finds the different objects zones ( for a draw file)
+  bool createDrawZones();
 
   //! read the resource fork zone
   bool readRSRCZones();
@@ -94,12 +110,6 @@ protected:
   //
   // low level
   //
-
-  //! read a pattern list block ( PAT# resource block )
-  bool readPatterns(MWAWEntry const &entry);
-
-  //! read a list of color and maybe patterns ( PlTT resource block: v2 )
-  bool readPalettes(MWAWEntry const &entry);
 
   //! read a PrintInfo block ( PRNT resource block )
   bool readPrintInfo(MWAWEntry const &entry);
@@ -134,6 +144,8 @@ protected:
   //! the state
   shared_ptr<GWParserInternal::State> m_state;
 
+  //! the graph parser
+  shared_ptr<GWGraph> m_graphParser;
   //! the text parser
   shared_ptr<GWText> m_textParser;
 };
