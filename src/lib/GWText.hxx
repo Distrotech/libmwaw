@@ -44,6 +44,7 @@
 namespace GWTextInternal
 {
 struct State;
+struct Token;
 struct Zone;
 }
 
@@ -87,12 +88,18 @@ protected:
   bool readFontNames();
   //! try to read a zone ( textheader+fonts+rulers)
   bool readZone(GWTextInternal::Zone &zone);
+  //! try to read the end of a zone ( line + frame position )
+  bool readZonePositions(GWTextInternal::Zone &zone);
+  //! try to send a zone
+  bool sendZone(GWTextInternal::Zone const &zone);
   //! try to read a simplified textbox zone
   bool readSimpleTextbox();
   //! try to read a font
-  bool readFont();
+  bool readFont(MWAWFont &font);
   //! try to read a ruler
-  bool readRuler();
+  bool readRuler(MWAWParagraph &para);
+  //! try to read a token
+  bool readToken(GWTextInternal::Token &token, long &nChar);
 
   //! heuristic function used to find the next zone
   bool findNextZone();

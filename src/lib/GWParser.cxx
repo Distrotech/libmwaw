@@ -192,11 +192,14 @@ void GWParser::parse(WPXDocumentInterface *docInterface)
     ascii().open(asciiName());
 
     checkHeader(0L);
-    ok = createZones() && false;
+    ok = createZones();
     if (ok) {
       createDocument(docInterface);
       m_graphParser->sendPageGraphics();
       m_textParser->sendMainText();
+#ifdef DEBUG
+      m_textParser->flushExtra();
+#endif
     }
     ascii().reset();
   } catch (...) {
@@ -315,7 +318,7 @@ bool GWParser::readRSRCZones()
   std::multimap<std::string, MWAWEntry>::iterator it;
   // the 1 zone
   char const *(zNames[]) = {"PRNT", "PAT#", "WPSN", "PlTT", "ARRs", "DaHS", "GrDS", "NxEd" };
-  for (int z = 0; z < 8; z++) {
+  for (int z = 0; z < 8; ++z) {
     it = entryMap.lower_bound(zNames[z]);
     while (it != entryMap.end()) {
       if (it->first != zNames[z])
@@ -390,21 +393,21 @@ bool GWParser::readWPSN(MWAWEntry const &entry)
   }
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
-  for (int i=0; i < N; i++) {
+  for (int i=0; i < N; ++i) {
     pos = input->tell();
     f.str("");
     f << "Windows-" << i << ":";
     int width[2];
-    for (int j=0; j < 2; j++)
+    for (int j=0; j < 2; ++j)
       width[j]=(int) input->readLong(2);
     f << "w=" << width[1] << "x" << width[0] << ",";
     int LT[2];
-    for (int j=0; j < 2; j++)
+    for (int j=0; j < 2; ++j)
       LT[j]=(int) input->readLong(2);
     f << "LT=" << LT[1] << "x" << LT[0] << ",";
-    for (int st=0; st < 2; st++) {
+    for (int st=0; st < 2; ++st) {
       int dim[4];
-      for (int j=0; j < 4; j++)
+      for (int j=0; j < 4; ++j)
         dim[j]=(int) input->readLong(2);
       if (dim[0]!=LT[0] || dim[1]!=LT[1] || dim[2]!=LT[0]+width[0])
         f << "dim" << st << "=" << dim[1] << "x" << dim[0] << "<->"
@@ -490,7 +493,7 @@ bool GWParser::readARRs(MWAWEntry const &entry)
   ascFile.addPos(pos-4);
   ascFile.addNote("Entries(ARRs)");
   int N=int(entry.length()/32);
-  for (int i=0; i < N; i++) {
+  for (int i=0; i < N; ++i) {
     pos = input->tell();
     f.str("");
     f << "ARRs-" << i << ":";
@@ -530,7 +533,7 @@ bool GWParser::readDaHS(MWAWEntry const &entry)
   input->seek(pos, WPX_SEEK_SET);
   int N=int((entry.length()-44))/12;
 
-  for (int i=0; i < N; i++) {
+  for (int i=0; i < N; ++i) {
     pos = input->tell();
     f.str("");
     f << "DaHS-" << i << ":";
@@ -558,15 +561,15 @@ bool GWParser::readGrDS(MWAWEntry const &entry)
   ascFile.addPos(pos-4);
   ascFile.addNote("Entries(GrDS)");
   int N=int(entry.length()/16);
-  for (int i=0; i < N; i++) {
+  for (int i=0; i < N; ++i) {
     pos = input->tell();
     f.str("");
     f << "GrDS-" << i << ":";
     int val=(int)input->readLong(2); // 1,2,3
     f << "unkn=" << val << ",";
-    for (int st=0; st < 2; st++) {
+    for (int st=0; st < 2; ++st) {
       unsigned char col[3];
-      for (int j=0; j < 3; j++)
+      for (int j=0; j < 3; ++j)
         col[j]=(unsigned char)(input->readULong(2)>>8);
       MWAWColor color(col[0], col[1], col[2]);
       if (st==0) {
@@ -601,7 +604,7 @@ bool GWParser::readNxEd(MWAWEntry const &entry)
 
   input->seek(pos, WPX_SEEK_SET);
   f << "Entries(NxED):";
-  for (int i = 0; i < 2; i++) { // always 0
+  for (int i = 0; i < 2; ++i) { // always 0
     int val=(int) input->readLong(2);
     if (val)
       f << "f" << i << "=" << val << ",";
@@ -626,7 +629,7 @@ bool GWParser::readZoneA()
   f << "Entries(ZoneA):";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  for (int i=0; i < 38; i++) {
+  for (int i=0; i < 38; ++i) {
     pos = input->tell();
     f.str("");
     f << "ZoneA-" << i << ":";
@@ -659,7 +662,7 @@ bool GWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
     return false;
   setVersion(vers);
   std::string type("");
-  for (int i=0; i < 4; i++)
+  for (int i=0; i < 4; ++i)
     type+=(char) input->readLong(1);
   if (type=="ZOBJ") {
     m_state->m_docType=GWParser::DRAW;

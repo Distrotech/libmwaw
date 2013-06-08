@@ -329,29 +329,127 @@ bool GWGraph::readPalettes(MWAWEntry const &entry)
 }
 
 ////////////////////////////////////////////////////////////
-// graphic zone
+// graphic zone ( main header )
 ////////////////////////////////////////////////////////////
+bool GWGraph::isGraphicZone()
+{
+  int const vers=version();
+  bool isDraw=m_mainParser->getDocumentType()==GWParser::DRAW;
+  if (vers == 1 && !isDraw)
+    return false;
+  int headerSize;
+  if (vers==1)
+    headerSize= 0x1c+0x38+0x1e +0x1a;
+  else
+    headerSize= 0x1c+0xaa+0x30;
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos = input->tell();
+  if (!m_mainParser->isFilePos(pos+headerSize))
+    return false;
+
+  int dim[4];
+  for (int st=0; st<2; ++st) {
+    for (int i=0; i<4; ++i)
+      dim[i]=(int) input->readLong(2);
+    if (dim[0]>=dim[2] || dim[1]>=dim[3] || dim[2]<=0 || dim[3]<=0) {
+      input->seek(pos, WPX_SEEK_SET);
+      return false;
+    }
+  }
+
+  input->seek(pos+headerSize, WPX_SEEK_SET);
+  int pageHeaderSize=vers==1 ? 16 : isDraw ? 12 : 22;
+  if (!m_mainParser->isFilePos(pos+headerSize+pageHeaderSize)) {
+    bool ok=input->atEOS();
+    input->seek(pos, WPX_SEEK_SET);
+    return ok;
+  }
+  bool ok=isPageFrames();
+  input->seek(pos, WPX_SEEK_SET);
+  return ok;
+}
+
 bool GWGraph::readGraphicZone()
 {
   int const vers=version();
   bool isDraw=m_mainParser->getDocumentType()==GWParser::DRAW;
   if (vers == 1 && !isDraw)
     return false;
-  bool hasIdOrder=vers==2 && !isDraw;
-  int const gZoneSize=vers==2 ? 0x1c : 0x1c+0x38;
-  int const headerSize=hasIdOrder ? 22 : vers==2 ? 12 : 16;
-  int const gDataSize=vers==2 ? 0xaa : 0x1e;
-  int const gDatBSize=vers==2 ? 0x30 : 0x1a;
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long beginPos = input->tell();
+  if (!isGraphicZone() && !findGraphicZone()) {
+    input->seek(beginPos, WPX_SEEK_SET);
+    return false;
+  }
+  long pos = input->tell();
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  if (pos!=beginPos) {
+    ascFile.addPos(beginPos);
+    ascFile.addNote("Entries(Unknown):");
+  }
+  libmwaw::DebugStream f;
+  f << "Entries(GZoneHeader):";
+  for (int st=0; st<2; ++st) {
+    int dim[4];
+    for (int i=0; i<4; ++i)
+      dim[i]=(int) input->readLong(2);
+    f << "dim" << st << "=" << dim[1] << "x" << dim[0]
+      << "<->"<< dim[3] << "x" << dim[2] << ",";
+  }
+  ascFile.addDelimiter(input->tell(),'|');
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  pos += 0x1c;
+  if (vers==1) {
+    ascFile.addPos(pos);
+    ascFile.addNote("GZoneHeader-II");
+    pos += 0x38;
+
+    ascFile.addPos(pos);
+    ascFile.addNote("Entries(GDatB)[_]:");
+    pos += 0x1e;
+  } else {
+    ascFile.addPos(pos);
+    ascFile.addNote("Entries(GData)[_]:");
+    pos += 0xaa;
+
+    ascFile.addPos(pos);
+    ascFile.addNote("Entries(GDatC)[_]:");
+    pos += 0x16;
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote("Entries(GDatD)[_]:");
+  pos += 0x1a;
+
+  input->seek(pos, WPX_SEEK_SET);
+  while(!input->atEOS() && readPageFrames())
+    pos=input->tell();
+  input->seek(pos, WPX_SEEK_SET);
+  return true;
+}
+
+bool GWGraph::findGraphicZone()
+{
+  int const vers=version();
+  bool isDraw=m_mainParser->getDocumentType()==GWParser::DRAW;
+  if (vers == 1 && !isDraw)
+    return false;
+  int headerSize;
+  if (vers==1)
+    headerSize= 0x1c+0x38+0x1e +0x1a;
+  else
+    headerSize= 0x1c+0xaa+0x30;
+  int pageHeaderSize=vers==1 ? 16 : isDraw ? 12 : 22;
+
   MWAWInputStreamPtr input = m_parserState->m_input;
   long pos = input->tell();
-  long beginPos=input->tell();
-  GWGraphInternal::Frame zone;
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  input->seek(pos+headerSize+pageHeaderSize, WPX_SEEK_SET);
   while(!input->atEOS()) {
-    pos = input->tell();
+    long actPos = input->tell();
     unsigned long value= input->readULong(4);
     int decal=-1;
-    // first tabs
+    // if we find some tabs, we have a problem
     if (value==0x20FFFF)
       decal = 0;
     else if (value==0x20FFFFFF)
@@ -361,14 +459,13 @@ bool GWGraph::readGraphicZone()
     else if (value==0xFFFFFF2E)
       decal = 3;
     if (decal>=0) {
-      input->seek(pos-decal, WPX_SEEK_SET);
+      input->seek(actPos-decal, WPX_SEEK_SET);
       if (input->readULong(4)==0x20FFFF && input->readULong(4)==0xFFFF2E00)
         break;
-      input->seek(pos+4, WPX_SEEK_SET);
+      input->seek(actPos+4, WPX_SEEK_SET);
       continue;
     }
-    if (pos<beginPos+gZoneSize+gDataSize+gDatBSize+headerSize)
-      continue;
+
     // graphic size
     if ((value>>24)==0x36)
       decal = 3;
@@ -381,45 +478,21 @@ bool GWGraph::readGraphicZone()
     if (decal==-1)
       continue;
 
-    input->seek(pos-decal, WPX_SEEK_SET);
+    input->seek(actPos-decal, WPX_SEEK_SET);
     int N=(int) input->readULong(2);
-    if (input->readLong(2)!=0x36 || !m_mainParser->isFilePos(pos-decal+4+0x36*N)) {
-      input->seek(pos+4, WPX_SEEK_SET);
+    if (input->readLong(2)!=0x36 || !m_mainParser->isFilePos(actPos-decal+4+0x36*N)) {
+      input->seek(actPos+4, WPX_SEEK_SET);
       continue;
     }
-    input->seek(pos-decal-headerSize, WPX_SEEK_SET);
-    if (!isPageFrames()) {
-      input->seek(pos+4, WPX_SEEK_SET);
+    input->seek(actPos-decal-pageHeaderSize-headerSize, WPX_SEEK_SET);
+    if (!isGraphicZone()) {
+      input->seek(actPos+4, WPX_SEEK_SET);
       continue;
     }
-
-    pos = pos-decal-headerSize-gZoneSize-gDataSize-gDatBSize;
-    if (pos!=beginPos) {
-      libmwaw::DebugStream f;
-      f << "Entries(Unknown):";
-      ascFile.addPos(beginPos);
-      ascFile.addNote(f.str().c_str());
-    }
-    if (gZoneSize) {
-      ascFile.addPos(pos);
-      ascFile.addNote("Entries(GZoneHeader)");
-      pos += gZoneSize;
-    }
-
-    ascFile.addPos(pos);
-    ascFile.addNote(vers==1 ? "GDatC:" : "GData:");
-    pos+=gDataSize;
-    ascFile.addPos(pos);
-    ascFile.addNote("GDatB:");
-    pos+=gDatBSize;
-    input->seek(pos, WPX_SEEK_SET);
-    while(readPageFrames())
-      pos=input->tell();
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(actPos-decal-pageHeaderSize-headerSize, WPX_SEEK_SET);
     return true;
   }
-
-  input->seek(beginPos, WPX_SEEK_SET);
+  input->seek(pos, WPX_SEEK_SET);
   return false;
 }
 
@@ -576,22 +649,22 @@ bool GWGraph::readPageFrames()
     nData=(int) input->readLong(2);
     input->seek(2, WPX_SEEK_CUR);
     f.str("");
-    f << "Entries(GDatC): N=" << nData << ",";
+    f << "Entries(GDatB): N=" << nData << ",";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    int const gDatCSize= 0x1e;
+    int const gDatBSize= 0x1e;
     for (int i=0; i < nData; ++i) {
       pos = input->tell();
       f.str("");
-      f << "GDatC-" << i << ",";
+      f << "GDatB-" << i << ",";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
-      input->seek(pos+gDatCSize, WPX_SEEK_SET);
+      input->seek(pos+gDatBSize, WPX_SEEK_SET);
     }
     pos=input->tell();
     if (pos!=zoneEnd) {
       ascFile.addPos(pos);
-      ascFile.addNote("GDatC-end:###");
+      ascFile.addNote("GDatB-end:###");
       input->seek(zoneEnd, WPX_SEEK_SET);
     }
   }
@@ -665,7 +738,7 @@ bool GWGraph::readPageFrames()
     }
   } else {
     order.resize(size_t(nFrames));
-    for (size_t i=0; i < size_t(nFrames); i++)
+    for (size_t i=0; i < size_t(nFrames); ++i)
       order[i]=nFrames-int(i);
   }
   // extra data

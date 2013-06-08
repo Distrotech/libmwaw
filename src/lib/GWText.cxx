@@ -44,10 +44,9 @@
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
-#include "MWAWPageSpan.hxx"
 #include "MWAWParagraph.hxx"
-#include "MWAWPictData.hxx"
 #include "MWAWPosition.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWRSRCParser.hxx"
 
 #include "GWParser.hxx"
@@ -57,30 +56,284 @@
 /** Internal: the structures of a GWText */
 namespace GWTextInternal
 {
+/** the different plc type */
+enum PLCType { P_Font, P_Page,  P_Ruler, P_Token, P_Unknown};
+
+/** Internal : a PLC: used to store change of properties in GWTextInternal::Zone */
+struct PLC {
+  /// the constructor
+  PLC() : m_type(P_Unknown), m_id(-1), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, PLC const &plc);
+  /** the PLC types */
+  PLCType m_type;
+  /** the id */
+  int m_id;
+  /** extra data */
+  std::string m_extra;
+};
+std::ostream &operator<<(std::ostream &o, PLC const &plc)
+{
+  switch(plc.m_type) {
+  case P_Font:
+    o << "F";
+    break;
+  case P_Page:
+    o << "Pg";
+    break;
+  case P_Ruler:
+    o << "R";
+    break;
+  case P_Token:
+    o << "Tn";
+    break;
+  case P_Unknown:
+  default:
+    o << "#Unkn";
+    break;
+  }
+  if (plc.m_id >= 0) o << plc.m_id;
+  else o << "_";
+  if (plc.m_extra.length()) o << ":" << plc.m_extra;
+  return o;
+}
+
+////////////////////////////////////////
+//! Internal and low level: structure which stores a token for GWText
+struct Token {
+  //! constructor
+  Token() : m_type(-1), m_format(0), m_dataSize(0), m_dim(0,0), m_date(0xFFFFFFFF), m_extra("") {
+  }
+  //! returns a field format
+  std::string getDTFormat() const;
+  //! try to send the token to the listener
+  bool sendTo(MWAWContentListener &listener) const;
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Token const &tkn);
+  //! the token type
+  int m_type;
+  //! the token format
+  int m_format;
+  //! the picture data size
+  long m_dataSize;
+  //! the picture dimension
+  Vec2f m_dim;
+  //! the token date (0xFFFFFFFF means actual date)
+  uint32_t m_date;
+  //! extra data
+  std::string m_extra;
+};
+
+bool Token::sendTo(MWAWContentListener &listener) const
+{
+  switch(m_type) {
+  case 2:
+    switch(m_format) {
+    case 1:
+    case 3: // must be roman
+      listener.insertField(MWAWField(MWAWField::PageNumber));
+      break;
+    case 2:
+    case 4: // must be roman
+      listener.insertField(MWAWField(MWAWField::PageNumber));
+      listener.insertUnicodeString(" of ");
+      listener.insertField(MWAWField(MWAWField::PageCount));
+      break;
+    default:
+      listener.insertField(MWAWField(MWAWField::PageNumber));
+      break;
+    }
+    return true;
+  case 0x15:
+  case 0x16: {
+    MWAWField field(m_type==0x15 ? MWAWField::Date : MWAWField::Time);
+    field.m_DTFormat=getDTFormat();
+    listener.insertField(field);
+    return true;
+  }
+  default:
+    break;
+  }
+  return false;
+}
+
+std::string Token::getDTFormat() const
+{
+  switch(m_type) {
+  case 0x15:
+    switch(m_format) {
+    case 0xa:
+      return "%m/%d/%y";
+    case 0xb:
+      return "%b %d, %Y";
+    case 0xc:
+      return "%b %Y";
+    case 0xd:
+      return "%b %d";
+    case 0xe:
+      return "%B %d, %Y";
+    case 0xf:
+      return "%B %Y";
+    case 0x10:
+      return "%B %d";
+    case 0x11:
+      return "%a, %b %d, %Y";
+    case 0x12:
+      return "%A, %B %d, %Y";
+    default:
+      break;
+    }
+    break;
+  case 0x16:
+    switch(m_format) {
+    case 0x14:
+      return "%I:%M %p";
+    case 0x15:
+      return "%I:%M:%S %p";
+    case 0x16:
+      return "%I:%M";
+    case 0x17:
+      return "%I:%M:%S";
+    case 0x18:
+      return "%H:%M";
+    case 0x19:
+      return "%H:%M:%S";
+    default:
+      break;
+    }
+    break;
+  default:
+    break;
+  }
+  return "";
+}
+
+std::ostream &operator<<(std::ostream &o, Token const &token)
+{
+  switch(token.m_type) {
+  case 0: // none
+    break;
+  case 2:
+    switch(token.m_format) {
+    case 0:
+      o << "page,";
+      break;
+    case 1:
+      o << "page/pagecount,";
+      break;
+    case 2:
+      o << "page[roman],";
+      break;
+    case 3:
+      o << "page/pagecount[roman],";
+      break;
+    default:
+      o << "page[#m_format=" << token.m_format << "],";
+      break;
+    }
+    break;
+  case 4:
+    o << "pict,dim="<< token.m_dim << ",sz=" << std::hex << token.m_dataSize << std::dec << ",";
+    break;
+  case 0x15:
+  case 0x16: {
+    o << (token.m_type==0x15 ? "date" : "time");
+    std::string format=token.getDTFormat();
+    if (!format.empty())
+      o << "[" << format << "]";
+    else
+      o << "[#format=" << token.m_format << "]";
+    if (token.m_date != 0xFFFFFFFF)
+      o << ":val=" << std::hex << token.m_date << std::dec;
+    o << ",";
+    break;
+  }
+  default:
+    MWAW_DEBUG_MSG(("GWTextInternal::Token: unknown type=%d\n", token.m_type));
+    o << "#type=" << token.m_type << ",";
+    if (token.m_format)
+      o << "#format=" << token.m_format << ",";
+  }
+  o << token.m_extra;
+  return o;
+}
+////////////////////////////////////////
+//! Internal and low level: structure which stores a text position for GWText
+struct Frame {
+  //! constructor
+  Frame() : m_pos(), m_page(0), m_extra("") {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Frame const &frm) {
+    o << "dim=" << frm.m_pos << ",";
+    if (frm.m_page) o << "page=" << frm.m_page << ",";
+    o << frm.m_extra;
+    return o;
+  }
+
+  //! the frame position
+  Box2f m_pos;
+  //! the page
+  int m_page;
+  //! extra data
+  std::string m_extra;
+};
 ////////////////////////////////////////
 //! Internal and low level: structure which stores a text zone header for GWText
 struct Zone {
   //! constructor
-  Zone(): m_type(-1), m_subType(-1), m_numFonts(0), m_numRulers(0), m_numChar(0),
-    m_numCharPLC(0), m_numPLC1(0), m_numPLC2(0), m_numPLC3(0), m_extra("") {
+  Zone(): m_type(-1), m_subType(-1), m_numFonts(0), m_numRulers(0), m_numLines(0),
+    m_numTokens(0), m_numChar(0), m_numCharPLC(0), m_numFrames(0),
+    m_fontList(), m_rulerList(), m_tokenList(), m_frameList(),
+    m_textEntry(), m_posPLCMap(), m_parsed(false), m_extra("") {
   }
   //! returns true if this is the main zone
   bool isMain() const {
     return m_type==1 && m_subType==3;
   }
+  //! returns a section corresponding to this zone
+  MWAWSection getSection() const {
+    MWAWSection sec;
+    if (!isMain())
+      return sec;
+    std::vector<float> dims;
+    for (size_t f=0; f<m_frameList.size(); f++) {
+      Frame const &frame=m_frameList[f];
+      if (!dims.empty() && dims.back() > frame.m_pos.min()[0])
+        break;
+      dims.push_back(frame.m_pos.min()[0]);
+      dims.push_back(frame.m_pos.max()[0]);
+    }
+    size_t numCols=dims.size()/2;
+    if (dims.size() <= 1)
+      return sec;
+    sec.m_columns.resize(numCols);
+    for (size_t c=0; c < numCols; c++) {
+      sec.m_columns[c].m_width = double(dims[2*c+1]-dims[2*c]);
+      sec.m_columns[c].m_widthUnit = WPX_POINT;
+      if (c)
+        sec.m_columns[c].m_margins[libmwaw::Left]=
+          double(dims[2*c]-dims[2*c-1])/72./2.;
+      if (c+1!=numCols)
+        sec.m_columns[c].m_margins[libmwaw::Right]=
+          double(dims[2*c+2]-dims[2*c+1])/72./2.;
+    }
+    return sec;
+  }
   //! check if the data read are or not ok
   bool ok() const {
     if (m_type<0 || m_type > 1 || m_subType < 0 || m_subType > 100)
       return false;
-    if (m_numFonts<=0 || m_numRulers<=0 || m_numChar<0 ||
-        m_numCharPLC<=0 || m_numPLC1<=0 || m_numPLC2<0 || m_numPLC3<0)
+    if (m_numFonts<=0 || m_numRulers<=0 || m_numLines<0 || m_numTokens<=0 || m_numChar<0 ||
+        m_numCharPLC<=0 || m_numFrames<0)
       return false;
     return true;
   }
   //! returns the data size
   long size() const {
     return 22*m_numFonts+192*m_numRulers+6*m_numCharPLC
-           +18*m_numPLC1+14*m_numPLC2+22*m_numPLC3+m_numChar;
+           +18*m_numTokens+14*m_numLines+22*m_numFrames+m_numChar;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &fr) {
@@ -108,12 +361,12 @@ struct Zone {
       o << "length[text]=" << fr.m_numChar << ",";
     if (fr.m_numCharPLC)
       o << "char[plc]=" << fr.m_numCharPLC << ",";
-    if (fr.m_numPLC1)
-      o << "unkn1[plc]=" << fr.m_numPLC1 << ",";
-    if (fr.m_numPLC2)
-      o << "unkn2[plc]=" << fr.m_numPLC2 << ",";
-    if (fr.m_numPLC3)
-      o << "unkn3[plc]=" << fr.m_numPLC3 << ",";
+    if (fr.m_numLines)
+      o << "nLines=" << fr.m_numLines << ",";
+    if (fr.m_numTokens)
+      o << "nTokens=" << fr.m_numTokens << ",";
+    if (fr.m_numFrames)
+      o << "nFrames=" << fr.m_numFrames << ",";
     o << fr.m_extra;
     return o;
   }
@@ -125,16 +378,30 @@ struct Zone {
   int m_numFonts;
   //! the number of rulers
   int m_numRulers;
+  //! the number of lines
+  int m_numLines;
+  //! the number of token
+  int m_numTokens;
   //! the number of character
   long m_numChar;
   //! the number of char plc
   int m_numCharPLC;
-  //! the number of unknown plc
-  int m_numPLC1;
-  //! the number of unknown plc
-  int m_numPLC2;
-  //! the number of unknown plc
-  int m_numPLC3;
+  //! the number of frames (ie. one by column and one by pages )
+  int m_numFrames;
+  //! the list of font
+  std::vector<MWAWFont> m_fontList;
+  //! the list of ruler
+  std::vector<MWAWParagraph> m_rulerList;
+  //! the list of token
+  std::vector<Token> m_tokenList;
+  //! the list of frame token
+  std::vector<Frame> m_frameList;
+  //! the text entry list
+  MWAWEntry m_textEntry;
+  //! a map text pos -> PLC
+  std::multimap<long,PLC> m_posPLCMap;
+  //! a bool to know if the data are send to the listener
+  mutable bool m_parsed;
   //! extra data
   std::string m_extra;
 };
@@ -143,12 +410,21 @@ struct Zone {
 //! Internal: the state of a GWText
 struct State {
   //! constructor
-  State() : m_version(-1), m_numPages(-1), m_actualPage(1) {
+  State() : m_fileIdFontIdMap(), m_zonesList(), m_version(-1), m_numPages(-1) {
   }
-
+  //! returns the font id corresponding to a fId
+  int getFId(int fileId) const {
+    if (m_fileIdFontIdMap.find(fileId)==m_fileIdFontIdMap.end())
+      return fileId;
+    return m_fileIdFontIdMap.find(fileId)->second;
+  }
+  //! a global map file font id-> fontconverter id
+  std::map<int,int> m_fileIdFontIdMap;
+  //! a list of text zone
+  std::vector<Zone> m_zonesList;
   //! the file version
   mutable int m_version;
-  int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
+  int m_numPages /* the number of pages */;
 };
 }
 
@@ -176,6 +452,14 @@ int GWText::numPages() const
     return m_state->m_numPages;
 
   int nPages=1;
+  for (size_t i=0; i < m_state->m_zonesList.size(); ++i) {
+    GWTextInternal::Zone const &zone=m_state->m_zonesList[i];
+    if (!zone.isMain() || zone.m_frameList.empty())
+      continue;
+    if (zone.m_frameList.back().m_page>1)
+      nPages = zone.m_frameList.back().m_page;
+    break;
+  }
 
   return m_state->m_numPages = nPages;
 }
@@ -193,10 +477,21 @@ bool GWText::createZones()
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
 
   long pos = input->tell();
+  f << "Entries(TZoneHeader):";
+  int val=(int) input->readULong(2);
+  if (val)
+    f << "numPages=" << val << ",";
+  val=(int) input->readULong(2);
+  if (val) // 1 or 2
+    f << "f0=" << val << ",";
+  f << "height[total]=" << input->readLong(4) << ","; // checkme
+  ascFile.addDelimiter(input->tell(),'|');
   ascFile.addPos(pos);
-  ascFile.addNote("Entries(TZoneHeader):");
+  ascFile.addNote(f.str().c_str());
+
   pos += 68;
   input->seek(pos, WPX_SEEK_SET);
 
@@ -341,9 +636,9 @@ bool GWText::readSimpleTextbox()
   return true;
 }
 
-bool GWText::readZone(GWTextInternal::Zone &header)
+bool GWText::readZone(GWTextInternal::Zone &zone)
 {
-  header=GWTextInternal::Zone();
+  zone=GWTextInternal::Zone();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+24;
@@ -357,98 +652,199 @@ bool GWText::readZone(GWTextInternal::Zone &header)
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
-  header.m_type=(int) input->readLong(2); // 0, 1
-  header.m_subType=(int) input->readLong(2);
+  zone.m_type=(int) input->readLong(2); // 0, 1
+  zone.m_subType=(int) input->readLong(2);
   if (input->readLong(1)) { // simple|complex field
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
-  header.m_numFonts=(int) input->readULong(2);
-  header.m_numRulers=(int) input->readULong(2);
-  header.m_numCharPLC=(int) input->readULong(2);
-  header.m_numPLC1=(int) input->readULong(2); // a PLC ?
-  header.m_numPLC2=(int) input->readULong(2);
-  header.m_numPLC3=(int) input->readULong(2);
-  header.m_numChar=(long) input->readULong(4);
-  if (!header.ok() || !m_mainParser->isFilePos(endPos+header.size())) {
+  zone.m_numFonts=(int) input->readULong(2);
+  zone.m_numRulers=(int) input->readULong(2);
+  zone.m_numCharPLC=(int) input->readULong(2);
+  zone.m_numTokens=(int) input->readULong(2);
+  zone.m_numLines=(int) input->readULong(2);
+  zone.m_numFrames=(int) input->readULong(2);
+  zone.m_numChar=(long) input->readULong(4);
+  if (!zone.ok() || !m_mainParser->isFilePos(endPos+zone.size())) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
-  header.m_extra=f.str();
+  zone.m_extra=f.str();
   f.str("");
-  f << "Entries(HeaderText):" << header;
+  f << "Entries(HeaderText):" << zone;
   if (input->tell()!=endPos) {
     ascFile.addDelimiter(input->tell(),'|');
     input->seek(endPos, WPX_SEEK_SET);
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
-  for (int i=0; i<header.m_numFonts; i++) {
-    if (!readFont())
-      return false;
-  }
-  for (int i=0; i<header.m_numRulers; i++) {
-    if (!readRuler())
-      return false;
-  }
-  for (int i=0; i < header.m_numCharPLC; i++) {
-    pos=input->tell();
+
+  for (int i=0; i<zone.m_numFonts; ++i) {
+    pos = input->tell();
     f.str("");
-    f << "Entries(CharPLC)-" << i << ":";
-    input->seek(pos+6, WPX_SEEK_SET);
+    f << "Entries(FontDef)-F" << i << ":";
+
+    MWAWFont font;
+    if (!readFont(font)) {
+      f << "###";
+      font = MWAWFont();
+      input->seek(pos+22, WPX_SEEK_SET);
+    }
+    zone.m_fontList.push_back(font);
+    f << font.getDebugString(m_parserState->m_fontConverter) << ",";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
-  for (int i=0; i < header.m_numPLC1; i++) {
-    pos=input->tell();
+  MWAWParagraph para;
+  for (int i=0; i<zone.m_numRulers; ++i) {
+    pos = input->tell();
     f.str("");
-    f << "Entries(PLC1)-" << i << ":";
+    f << "Entries(RulerDef)-R" << i << ":";
+    if (!readRuler(para)) {
+      f << "###";
+      para = MWAWParagraph();
+      input->seek(pos+192, WPX_SEEK_SET);
+    }
+    zone.m_rulerList.push_back(para);
+    f << para;
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+
+  pos=input->tell();
+  f.str("");
+  f << "Entries(CharPLC):";
+  GWTextInternal::PLC plc;
+  plc.m_type = GWTextInternal::P_Font;
+  long textPos = 0;
+  for (int i=0; i < zone.m_numCharPLC; ++i) {
+    plc.m_id=(int) input->readULong(2);
+    zone.m_posPLCMap.insert
+    (std::multimap<long,GWTextInternal::PLC>::value_type(textPos, plc));
+    f << "F" << plc.m_id << ":" << std::hex << textPos << std::dec << ",";
+    textPos+= (int) input->readULong(4);
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  // the token
+  plc.m_type = GWTextInternal::P_Token;
+  textPos = 0;
+  for (int i=0; i < zone.m_numTokens; ++i) {
+    pos = input->tell();
+    f.str("");
+    plc.m_id=i;
+    f << "Entries(Token)-Tn" << i << ":";
+    GWTextInternal::Token tkn;
+    long numC;
+    if (!readToken(tkn,numC)) {
+      f << "###";
+      tkn = GWTextInternal::Token();
+      input->seek(pos+2, WPX_SEEK_SET);
+      numC=input->readLong(2);
+    }
+    zone.m_posPLCMap.insert
+    (std::multimap<long,GWTextInternal::PLC>::value_type(textPos, plc));
+    zone.m_tokenList.push_back(tkn);
+    f << tkn << ",pos=" << std::hex << textPos << std::dec;
+    textPos+= numC;
     input->seek(pos+18, WPX_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
-  for (int i=0; i < header.m_numPLC2; i++) {
-    pos=input->tell();
-    f.str("");
-    f << "Entries(PLC2)-" << i << ":";
-    input->seek(pos+14, WPX_SEEK_SET);
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  for (int i=0; i < header.m_numPLC3; i++) {
-    pos=input->tell();
-    f.str("");
-    f << "Entries(PLC3)-" << i << ":";
-    input->seek(pos+22, WPX_SEEK_SET);
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
+  if (!readZonePositions(zone))
+    return false;
+  // fill the text entry
+  zone.m_textEntry.setBegin(input->tell());
+  zone.m_textEntry.setLength(zone.m_numChar);
+  // finally parse the text to find the number picture and there positions
   int nPictures=0;
-  if (header.m_numChar) {
+  if (zone.m_numChar) {
     pos=input->tell();
     f.str("");
     f << "Entries(Text):";
-    for (int i=0; i < header.m_numChar; i++) {
+    for (int i=0; i < zone.m_numChar; ++i) {
       char c=(char)input->readULong(1);
       if (c==0x4)
         nPictures++;
     }
-    input->seek(pos+header.m_numChar, WPX_SEEK_SET);
+    input->seek(pos+zone.m_numChar, WPX_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
   if (nPictures)
     m_mainParser->readPictureList(nPictures);
+
+  m_state->m_zonesList.push_back(zone);
   return true;
 }
 
-bool GWText::sendMainText()
+bool GWText::readZonePositions(GWTextInternal::Zone &zone)
 {
-  return false;
-}
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=input->tell();
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
 
-void GWText::flushExtra()
-{
+  // the line
+  GWTextInternal::PLC plc;
+  plc.m_type = GWTextInternal::P_Ruler;
+  long textPos = 0;
+  std::vector<long> linesPos;
+  linesPos.push_back(0);
+  for (int i=0; i < zone.m_numLines; ++i) {
+    pos=input->tell();
+    f.str("");
+    plc.m_id=(int) input->readULong(2);
+    long numC = (long) input->readULong(4);
+    f << "y=" << double(input->readLong(4))/65536.;
+    f << "->" << double(input->readLong(4))/65536.;
+    plc.m_extra=f.str();
+    zone.m_posPLCMap.insert
+    (std::multimap<long,GWTextInternal::PLC>::value_type(textPos, plc));
+    f.str("");
+    f << "Entries(Line)-L" << i << ":" << plc <<  ":"
+      << std::hex << textPos << std::dec;
+    textPos+=numC;
+    linesPos.push_back(textPos);
+    input->seek(pos+14, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  // the page dimension
+  plc.m_type = GWTextInternal::P_Page;
+  for (int i=0; i < zone.m_numFrames; ++i) {
+    GWTextInternal::Frame frame;
+    pos=input->tell();
+    plc.m_id=i;
+    f.str("");
+    float dim[4];
+    for (int j=0; j<4; ++j)
+      dim[j]=float(input->readLong(4))/65536.f;
+    frame.m_pos=Box2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
+    int val=(int) input->readLong(2); // always 0
+    if (val) f << "#unkn=" << val << ",";
+    frame.m_page=(int) input->readLong(2);
+    int line=(int) input->readLong(2);
+    plc.m_extra=f.str();
+    if (line >= 0 && line < int(linesPos.size())) {
+      textPos=linesPos[size_t(line)];
+      zone.m_posPLCMap.insert
+      (std::multimap<long,GWTextInternal::PLC>::value_type(textPos, plc));
+      if (textPos)
+        f << "pos=" << std::hex << textPos << std::dec;
+    } else {
+      MWAW_DEBUG_MSG(("GWText::readZone: can not find begin pos for page %d\n",line));
+      f << "##pos[line]=" << line << ",";
+    }
+    frame.m_extra=f.str();
+    zone.m_frameList.push_back(frame);
+    f.str("");
+    f << "Entries(TFrames)-" << i << ":" << frame;
+    input->seek(pos+22, WPX_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
 }
 
 //////////////////////////////////////////////
@@ -481,7 +877,7 @@ bool GWText::readFontNames()
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
-  for (int i=0; i < N; i++) {
+  for (int i=0; i < N; ++i) {
     pos = input->tell();
     f.str("");
     f << "FontNames-" << i << ":";
@@ -500,10 +896,13 @@ bool GWText::readFontNames()
       return i>0;
     }
     std::string name("");
-    for (int c=0; c < fSz; c++)
+    for (int c=0; c < fSz; ++c)
       name+=(char) input->readULong(1);
+    if (!name.empty())
+      m_state->m_fileIdFontIdMap[fId]=m_parserState->m_fontConverter->getId(name);
     if ((fSz%2)==0)
       input->seek(1, WPX_SEEK_CUR);
+
     f << "\"" << name << "\",";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -518,51 +917,369 @@ bool GWText::readFontNames()
   return true;
 }
 
-bool GWText::readFont()
+bool GWText::readFont(MWAWFont &font)
 {
+  font=MWAWFont();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+22;
   if (!m_mainParser->isFilePos(endPos))
     return false;
 
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  f << "Entries(FontDef):";
   input->seek(pos, WPX_SEEK_SET);
+  int val=(int) input->readLong(2); // small number between 0 and 5
+  if (val==0) f << "unused,";
+  else if (val!=1) f << "nbUsed=" << val << ",";
+  // some dim dim[0]>dim[1]: minH, maxH ?
+  int dim[2];
+  for (int i=0; i < 2; ++i)
+    dim[i]=(int) input->readLong(2);
+  f << "dim?=" << dim[1] << "x" << dim[0] << ",";
+
+  for (int i=0; i < 2; ++i) { // f0=0|4(with italic), f1=0
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  font.setId(m_state->getFId((int) input->readULong(2)));
+  int flag =(int) input->readULong(2);
+  uint32_t flags=0;
+  if (flag&0x1) flags |= MWAWFont::boldBit;
+  if (flag&0x2) flags |= MWAWFont::italicBit;
+  if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
+  if (flag&0x8) flags |= MWAWFont::embossBit;
+  if (flag&0x10) flags |= MWAWFont::shadowBit;
+  if (flag&0x20) font.setDeltaLetterSpacing(-1);
+  if (flag&0x40) font.setDeltaLetterSpacing(1);
+  if (flag&0x100) font.set(MWAWFont::Script::super100());
+  if (flag&0x200) font.set(MWAWFont::Script::sub100());
+  if (flag&0x800) font.setStrikeOutStyle(MWAWFont::Line::Simple);
+  if (flag&0x2000) {
+    font.setUnderlineStyle(MWAWFont::Line::Simple);
+    font.setUnderlineType(MWAWFont::Line::Double);
+  }
+  flag &=0xD480;
+  if (flag) f << "#fl=" << std::hex << flag << std::dec << ",";
+  font.setFlags(flags);
+  font.setSize((int) input->readULong(2));
+  unsigned char color[3];
+  for (int c=0; c<3; ++c)
+    color[c] = (unsigned char) (input->readULong(2)>>8);
+  font.setColor(MWAWColor(color[0],color[1],color[2]));
+  font.m_extra=f.str();
 
   input->seek(endPos, WPX_SEEK_SET);
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
   return true;
 }
 //////////////////////////////////////////////
 // Ruler
 //////////////////////////////////////////////
-bool GWText::readRuler()
+bool GWText::readRuler(MWAWParagraph &para)
 {
+  para = MWAWParagraph();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+192;
   if (!m_mainParser->isFilePos(endPos))
     return false;
 
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  f << "Entries(Ruler):";
   input->seek(pos, WPX_SEEK_SET);
-
-  // OSNOLA: remove me when all is ok
-  input->seek(endPos-2, WPX_SEEK_SET);
-  char c=(char) input->readULong(1); // last tabs separator
-  if (c!='.' && c!=',') {
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
+  int val=(int) input->readLong(2);
+  if (val==0) f << "unused,";
+  else if (val!=1) f << "nbUsed=" << val << ",";
+  val=(int) input->readLong(2);
+  switch(val) {
+  case 0:
+    break;
+  case 1:
+    para.m_justify = MWAWParagraph::JustificationCenter;
+    break;
+  case 2:
+    para.m_justify = MWAWParagraph::JustificationRight ;
+    break;
+  case 3:
+    para.m_justify = MWAWParagraph::JustificationFull;
+    break;
+  default:
+    f << "#align" << val << ",";
+    break;
   }
+  para.m_marginsUnit=WPX_POINT;
+  for (int i=0; i < 3; ++i)
+    para.m_margins[i] = double(input->readLong(4))/65536.;
+  para.m_margins[0]=*para.m_margins[0]-*para.m_margins[1];
+  double spacing[3];
+  for (int i=0; i < 3; ++i)
+    spacing[i] = double(input->readLong(4))/65536.;
+  int unit[3];
+  for (int i=0; i < 3; ++i)
+    unit[i] = (int) input->readLong(1);
+  switch(unit[0]) {
+  case 1:
+  case 2:
+  case 3:
+  case 4:
+  case 5:
+    para.setInterline(spacing[0], WPX_POINT);
+    break;
+  case 6:
+    para.setInterline(spacing[0], WPX_PERCENT);
+    break;
+  default:
+    f << "#interline=" << spacing[0] << "[unit=" << unit[0] << "],";
+  }
+  for (int w=1; w < 3; ++w) {
+    if (unit[w]==6)
+      para.m_spacings[w]=spacing[w]*12./72.;
+    else if (unit[w]>0 && unit[w]<6)
+      para.m_spacings[w]=spacing[w]/72.;
+    else
+      f << "#spac" << w << "=" << spacing[w] << "[unit=" << unit[w] << "],";
+  }
+  val = (int) input->readLong(1);
+  if (val) f << "#f0=" << val << ",";
+
+  for (int i=0; i < 20; ++i) {
+    MWAWTabStop tab;
+    val = (int) input->readLong(1);
+    switch(val) {
+    case 0: // left
+      break;
+    case 1:
+      tab.m_alignment = MWAWTabStop::CENTER;
+      break;
+    case 2:
+      tab.m_alignment = MWAWTabStop::RIGHT;
+      break;
+    case 3:
+      tab.m_alignment = MWAWTabStop::DECIMAL;
+      break;
+    default:
+      f << "#tab" << i << "[align]=" << val << ",";
+      break;
+    }
+    char leaderChar = (char) input->readULong(1);
+    if (leaderChar) {
+      int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) leaderChar);
+      if (unicode==-1)
+        tab.m_leaderCharacter = uint16_t(leaderChar);
+      else
+        tab.m_leaderCharacter = uint16_t(unicode);
+    }
+    long tPos=input->readLong(4);
+    if (tPos==-1) {
+      input->seek(2, WPX_SEEK_CUR);
+      continue;
+    }
+    tab.m_position=double(tPos)/72./65536.;
+    char decimalChar = (char) input->readULong(1);
+    if (decimalChar) {
+      int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) decimalChar);
+      if (unicode==-1)
+        tab.m_decimalCharacter = uint16_t(decimalChar);
+      else
+        tab.m_decimalCharacter = uint16_t(unicode);
+    }
+    val = (int) input->readLong(1);
+    if (val) f << "#tab" << i << "[f0=" << val << ",";
+    para.m_tabs->push_back(tab);
+  }
+  para.m_extra=f.str();
+
   input->seek(endPos, WPX_SEEK_SET);
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
   return true;
 }
 
+//////////////////////////////////////////////
+// Token
+//////////////////////////////////////////////
+bool GWText::readToken(GWTextInternal::Token &token, long &nChar)
+{
+  token = GWTextInternal::Token();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=input->tell();
+  long endPos=pos+18;
+  if (!m_mainParser->isFilePos(endPos))
+    return false;
+
+  libmwaw::DebugStream f;
+  token.m_type=(int) input->readULong(1);
+  token.m_format=(int) input->readULong(1);
+  nChar=input->readLong(4);
+  if (token.m_type==0x15||token.m_type==0x16)
+    token.m_date=(uint32_t) input->readULong(4);
+  else if (token.m_type==4) {
+    token.m_dataSize = input->readLong(4);
+    float dim[2];
+    for (int i=0; i < 2; i++)
+      dim[i] = float(input->readLong(4))/65536.f;
+    token.m_dim=Vec2f(dim[0],dim[1]); // checkme
+  }
+  int nUnread=int(endPos-input->tell())/2;
+  for (int i=0; i < nUnread; i++) {
+    int val=(int)input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  token.m_extra=f.str();
+
+  input->seek(endPos, WPX_SEEK_SET);
+  return true;
+}
+
+//////////////////////////////////////////////
+// send data
+//////////////////////////////////////////////
+bool GWText::sendMainText()
+{
+  for (size_t i=0; i < m_state->m_zonesList.size(); ++i) {
+    GWTextInternal::Zone const &zone=m_state->m_zonesList[i];
+    if (!zone.isMain())
+      continue;
+    return sendZone(zone);
+  }
+  return false;
+}
+
+void GWText::flushExtra()
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("GWText::flushExtra: can not find a listener\n"));
+    return;
+  }
+  for (size_t i=0; i < m_state->m_zonesList.size(); ++i) {
+    GWTextInternal::Zone const &zone=m_state->m_zonesList[i];
+    if (zone.m_parsed)
+      continue;
+    sendZone(zone);
+  }
+}
+
+bool GWText::sendZone(GWTextInternal::Zone const &zone)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("GWText::sendZone: can not find a listener\n"));
+    return false;
+  }
+  bool isMain = zone.isMain();
+  int actPage = 1, actCol = 0, numCol=1;
+  if (isMain) {
+    m_mainParser->newPage(1);
+    MWAWSection sec=zone.getSection();
+    numCol = sec.numColumns();
+    if (numCol>1) {
+      if (listener->isSectionOpened())
+        listener->closeSection();
+      listener->openSection(sec);
+    }
+  }
+  if (!zone.m_textEntry.valid())
+    return true;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(Text):";
+  zone.m_parsed=true;
+  long pos = zone.m_textEntry.begin(), endPos = zone.m_textEntry.end();
+  input->seek(pos, WPX_SEEK_SET);
+
+  long cPos=0;
+  while (1) {
+    long actPos = input->tell();
+    bool done = input->atEOS() || actPos==endPos;
+
+    char c = done ? (char) 0 : (char) input->readULong(1);
+    if (pos!=actPos && (c==0xd || done)) {
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      f.str("");
+      f << "Text:";
+      pos = actPos+1;
+    }
+    if (done) break;
+
+    std::map<long, GWTextInternal::PLC>::const_iterator pIt=
+      zone.m_posPLCMap.find(cPos);
+    GWTextInternal::Token token;
+    while (pIt!=zone.m_posPLCMap.end() && pIt->first==cPos) {
+      GWTextInternal::PLC const &plc=(pIt++)->second;
+      f << "[" << plc << "]";
+      switch(plc.m_type) {
+      case GWTextInternal::P_Font:
+        if (plc.m_id < 0 || plc.m_id >= (int) zone.m_fontList.size()) {
+          MWAW_DEBUG_MSG(("GWText::sendZone: can not find font %d\n", plc.m_id));
+          break;
+        }
+        listener->setFont(zone.m_fontList[size_t(plc.m_id)]);
+        break;
+      case GWTextInternal::P_Ruler:
+        if (plc.m_id < 0 || plc.m_id >= (int) zone.m_rulerList.size()) {
+          MWAW_DEBUG_MSG(("GWText::sendZone: can not find ruler %d\n", plc.m_id));
+          break;
+        }
+        listener->setParagraph(zone.m_rulerList[size_t(plc.m_id)]);
+        break;
+      case GWTextInternal::P_Token:
+        if (plc.m_id < 0 || plc.m_id >= (int) zone.m_tokenList.size()) {
+          MWAW_DEBUG_MSG(("GWText::sendZone: can not find token %d\n", plc.m_id));
+          break;
+        }
+        token=zone.m_tokenList[size_t(plc.m_id)];
+        break;
+      case GWTextInternal::P_Page:
+      case GWTextInternal::P_Unknown:
+      default:
+        break;
+      }
+    }
+    if (c!=0xd) f << c;
+    switch(c) {
+    case 0x9:
+      listener->insertTab();
+      break;
+    case 0xb:
+      f << "[colbreak]";
+      if (!isMain) {
+        MWAW_DEBUG_MSG(("GWText::sendZone: find column break in auxilliary block\n"));
+        break;
+      }
+      if (actCol < numCol-1 && numCol > 1) {
+        listener->insertBreak(MWAWContentListener::ColumnBreak);
+        actCol++;
+      } else {
+        actCol = 0;
+        m_mainParser->newPage(++actPage);
+      }
+      break;
+    case 0xc:
+      f << "[pagebreak]";
+      if (!isMain) {
+        f << "###";
+        MWAW_DEBUG_MSG(("GWText::sendZone: find page break in auxilliary zone\n"));
+        break;
+      }
+      m_mainParser->newPage(++actPage);
+      actCol = 0;
+      break;
+    case 0xd:
+      listener->insertEOL();
+      break;
+    case 2: // page number
+    case 0x15: // date
+    case 0x16: // time
+      if (token.sendTo(*listener))
+        break;
+      f << "###";
+      MWAW_DEBUG_MSG(("GWText::sendZone: can not send token\n"));
+      break;
+    default:
+      listener->insertCharacter((unsigned char) c);
+      break;
+    }
+    cPos++;
+  }
+  return true;
+}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
