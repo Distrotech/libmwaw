@@ -103,7 +103,7 @@ std::ostream &operator<<(std::ostream &o, PLC const &plc)
 //! Internal and low level: structure which stores a token for GWText
 struct Token {
   //! constructor
-  Token() : m_type(-1), m_format(0), m_dataSize(0), m_dim(0,0), m_date(0xFFFFFFFF), m_extra("") {
+  Token() : m_type(-1), m_format(0), m_pictEntry(), m_dataSize(0), m_dim(0,0), m_date(0xFFFFFFFF), m_extra("") {
   }
   //! returns a field format
   std::string getDTFormat() const;
@@ -115,6 +115,8 @@ struct Token {
   int m_type;
   //! the token format
   int m_format;
+  //! the picture entry
+  MWAWEntry m_pictEntry;
   //! the picture data size
   long m_dataSize;
   //! the picture dimension
@@ -283,47 +285,18 @@ struct Frame {
 //! Internal and low level: structure which stores a text zone header for GWText
 struct Zone {
   //! constructor
-  Zone(): m_type(-1), m_subType(-1), m_numFonts(0), m_numRulers(0), m_numLines(0),
+  Zone(): m_type(-1), m_numFonts(0), m_numRulers(0), m_numLines(0),
     m_numTokens(0), m_numChar(0), m_numCharPLC(0), m_numFrames(0),
     m_fontList(), m_rulerList(), m_tokenList(), m_frameList(),
     m_textEntry(), m_posPLCMap(), m_parsed(false), m_extra("") {
   }
   //! returns true if this is the main zone
   bool isMain() const {
-    return m_type==1 && m_subType==3;
-  }
-  //! returns a section corresponding to this zone
-  MWAWSection getSection() const {
-    MWAWSection sec;
-    if (!isMain())
-      return sec;
-    std::vector<float> dims;
-    for (size_t f=0; f<m_frameList.size(); f++) {
-      Frame const &frame=m_frameList[f];
-      if (!dims.empty() && dims.back() > frame.m_pos.min()[0])
-        break;
-      dims.push_back(frame.m_pos.min()[0]);
-      dims.push_back(frame.m_pos.max()[0]);
-    }
-    size_t numCols=dims.size()/2;
-    if (dims.size() <= 1)
-      return sec;
-    sec.m_columns.resize(numCols);
-    for (size_t c=0; c < numCols; c++) {
-      sec.m_columns[c].m_width = double(dims[2*c+1]-dims[2*c]);
-      sec.m_columns[c].m_widthUnit = WPX_POINT;
-      if (c)
-        sec.m_columns[c].m_margins[libmwaw::Left]=
-          double(dims[2*c]-dims[2*c-1])/72./2.;
-      if (c+1!=numCols)
-        sec.m_columns[c].m_margins[libmwaw::Right]=
-          double(dims[2*c+2]-dims[2*c+1])/72./2.;
-    }
-    return sec;
+    return m_type==3;
   }
   //! check if the data read are or not ok
   bool ok() const {
-    if (m_type<0 || m_type > 1 || m_subType < 0 || m_subType > 100)
+    if (m_type<0 || m_type > 5)
       return false;
     if (m_numFonts<=0 || m_numRulers<=0 || m_numLines<0 || m_numTokens<=0 || m_numChar<0 ||
         m_numCharPLC<=0 || m_numFrames<0)
@@ -337,21 +310,19 @@ struct Zone {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &fr) {
-    if (fr.m_type==1) {
-      if (fr.m_subType==1)
-        o << "header/footer,";
-      else if (fr.m_subType==3)
-        o << "main,";
-      else
-        o << "#subType=" << fr.m_subType << ",";
-    } else {
-      if (fr.m_type==0)
-        o << "textbox,";
-      else
-        o << "#type=" << fr.m_type << ",";
-      if (fr.m_subType < 1 || fr.m_subType>2) // 1 or 2
-        o << "#";
-      o << "subType=" << fr.m_subType << ",";
+    switch(fr.m_type) {
+    case 1: // in draw=textbox
+      o << "header/footer,";
+      break;
+    case 2:
+      o << "textbox,";
+      break;
+    case 3:
+      o << "main,";
+      break;
+    default:
+      o << "#type=" << fr.m_type << ",";
+      break;
     }
     if (fr.m_numFonts)
       o << "nFonts=" << fr.m_numFonts << ",";
@@ -370,10 +341,8 @@ struct Zone {
     o << fr.m_extra;
     return o;
   }
-  //! the main type: 0=main, 1=textbox
+  //! the main type: 1=auxi, 3=main
   int m_type;
-  //! the type: 1: header/footer, 3: main, 2: unknown
-  int m_subType;
   //! the number of fonts
   int m_numFonts;
   //! the number of rulers
@@ -464,16 +433,42 @@ int GWText::numPages() const
   return m_state->m_numPages = nPages;
 }
 
-bool GWText::readZone()
+int GWText::numHFZones() const
 {
-  GWTextInternal::Zone zone;
-  return readZone(zone);
+  int nHF=0;
+  for (size_t i=0; i < m_state->m_zonesList.size(); ++i) {
+    GWTextInternal::Zone const &zone=m_state->m_zonesList[i];
+    if (zone.isMain())
+      break;
+    nHF++;
+  }
+  return nHF;
 }
+
+bool GWText::sendTextbox(MWAWEntry const &entry)
+{
+  if (!m_parserState->m_listener) {
+    MWAW_DEBUG_MSG(("GWText::sendTextbox: can not find a listener\n"));
+    return false;
+  }
+  if (!entry.valid())
+    return false;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  GWTextInternal::Zone zone;
+  if (readZone(zone)) {
+    sendZone(zone);
+    return true;
+  }
+
+  return sendSimpleTextbox(entry);
+}
+
 
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
-bool GWText::createZones()
+bool GWText::createZones(int expectedHF)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -485,7 +480,7 @@ bool GWText::createZones()
   if (val)
     f << "numPages=" << val << ",";
   val=(int) input->readULong(2);
-  if (val) // 1 or 2
+  if (val) // related to number of header/footer?
     f << "f0=" << val << ",";
   f << "height[total]=" << input->readLong(4) << ","; // checkme
   ascFile.addDelimiter(input->tell(),'|');
@@ -501,6 +496,7 @@ bool GWText::createZones()
   }
 
   bool findMainZone=false;
+  int nAuxi=0;
   while (!input->atEOS()) {
     pos=input->tell();
     GWTextInternal::Zone zone;
@@ -514,8 +510,14 @@ bool GWText::createZones()
         break;
       }
     }
+    m_state->m_zonesList.push_back(zone);
     if (zone.isMain())
       findMainZone=true;
+    else
+      nAuxi++;
+  }
+  if (nAuxi!=expectedHF) {
+    MWAW_DEBUG_MSG(("GWText::createZones: unexpected HF zones: %d/%d\n", nAuxi, expectedHF));
   }
   return findMainZone;
 }
@@ -571,8 +573,9 @@ bool GWText::findNextZone()
     input->seek(pos-hSize, WPX_SEEK_SET);
     if (input->readLong(4))
       continue;
-    int val=(int)input->readLong(2);
-    if (val!=0&&val!=0x100) continue;
+    int val=(int)input->readULong(2);
+    if (val & 0xFEFE)
+      continue;
     input->seek(2,WPX_SEEK_CUR);
     if (input->readLong(2)!=nFonts)
       continue;
@@ -588,54 +591,6 @@ bool GWText::findNextZone()
   return false;
 }
 
-bool GWText::readSimpleTextbox()
-{
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  long pos=input->tell();
-  long endPos=pos+51;
-  if (!m_mainParser->isFilePos(endPos))
-    return false;
-
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  libmwaw::DebugStream f;
-  f << "Entries(Texbox):";
-  input->seek(pos, WPX_SEEK_SET);
-  if (input->readLong(2)||input->readLong(1)) {
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-  long val=input->readLong(2); // 0, 1
-  if (val!=0 && val!=1) {
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-  if (val!=0x1) f << "f0=0,";
-  val= input->readLong(2); // 1, 2
-  if (val<0 || val > 100) {
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-  f << "f1=" << val << ",";
-  if (input->readLong(1)!=1) {
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-  input->seek(pos+50, WPX_SEEK_SET);
-  int fSz=(int) input->readULong(1);
-  if (!m_mainParser->isFilePos(endPos+fSz)) {
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-
-  input->seek(endPos+fSz, WPX_SEEK_SET);
-  ascFile.addPos(endPos);
-  ascFile.addNote("Entries(Text)");
-  return true;
-}
-
 bool GWText::readZone(GWTextInternal::Zone &zone)
 {
   zone=GWTextInternal::Zone();
@@ -648,12 +603,21 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   input->seek(pos, WPX_SEEK_SET);
-  if (input->readLong(2)||input->readLong(1)) {
+  if (input->readLong(4)) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
-  zone.m_type=(int) input->readLong(2); // 0, 1
-  zone.m_subType=(int) input->readLong(2);
+  for (int i=0; i < 2; ++i) {
+    int val=(int) input->readLong(1);
+    if (val==0) continue;
+    if (val!=1)
+      return false;
+    if (i==0)
+      f << "smartquote,";
+    else
+      f << "hidepict,";
+  }
+  zone.m_type=(int) input->readLong(1);
   if (input->readLong(1)) { // simple|complex field
     input->seek(pos, WPX_SEEK_SET);
     return false;
@@ -754,27 +718,28 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
   if (!readZonePositions(zone))
     return false;
   // fill the text entry
-  zone.m_textEntry.setBegin(input->tell());
+  pos=input->tell();
+  zone.m_textEntry.setBegin(pos);
   zone.m_textEntry.setLength(zone.m_numChar);
-  // finally parse the text to find the number picture and there positions
-  int nPictures=0;
-  if (zone.m_numChar) {
-    pos=input->tell();
-    f.str("");
-    f << "Entries(Text):";
-    for (int i=0; i < zone.m_numChar; ++i) {
-      char c=(char)input->readULong(1);
-      if (c==0x4)
-        nPictures++;
-    }
-    input->seek(pos+zone.m_numChar, WPX_SEEK_SET);
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  if (nPictures)
-    m_mainParser->readPictureList(nPictures);
+  ascFile.addPos(pos);
+  ascFile.addNote("_");
+  pos += zone.m_numChar;
+  ascFile.addPos(pos);
+  ascFile.addNote("_");
 
-  m_state->m_zonesList.push_back(zone);
+  for (size_t i=0; i < zone.m_tokenList.size(); ++i) {
+    GWTextInternal::Token &tkn=zone.m_tokenList[i];
+    if (tkn.m_type != 4)
+      continue;
+    if (tkn.m_dataSize <= 0 || !m_mainParser->isFilePos(pos+tkn.m_dataSize)) {
+      MWAW_DEBUG_MSG(("GWText::readZone: can not determine the picture size\n"));
+      break;
+    }
+    tkn.m_pictEntry.setBegin(pos);
+    tkn.m_pictEntry.setLength(tkn.m_dataSize);
+    pos+=tkn.m_dataSize;
+  }
+  input->seek(pos, WPX_SEEK_SET);
   return true;
 }
 
@@ -1141,6 +1106,19 @@ bool GWText::sendMainText()
   return false;
 }
 
+bool GWText::sendHF(int id)
+{
+  for (size_t i=0; i < m_state->m_zonesList.size(); ++i) {
+    GWTextInternal::Zone const &zone=m_state->m_zonesList[i];
+    if (zone.isMain())
+      continue;
+    if (id--==0)
+      return sendZone(zone);
+  }
+  MWAW_DEBUG_MSG(("GWText::sendHF: can not find a header/footer\n"));
+  return false;
+}
+
 void GWText::flushExtra()
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
@@ -1156,6 +1134,158 @@ void GWText::flushExtra()
   }
 }
 
+bool GWText::sendSimpleTextbox(MWAWEntry const &entry)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("GWText::sendSimpleTextbox: can not find a listener\n"));
+    return false;
+  }
+  if (entry.length()<51) {
+    MWAW_DEBUG_MSG(("GWText::sendSimpleTextbox: the entry seems to short\n"));
+    return false;
+  }
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=entry.begin();
+  input->seek(pos, WPX_SEEK_SET);
+
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(Texbox):";
+  bool ok = input->readLong(4)==0;
+  for (int i=0; ok && i < 2; ++i) {
+    int val=(int) input->readLong(1);
+    if (val==0) continue;
+    if (val!=1) {
+      f << "#fl" << i << "=" << val << ",";
+      ok = false;
+      break;
+    }
+    if (i==0)
+      f << "smartquote,";
+    else
+      f << "hidepict,";
+  }
+  int type=(int) input->readLong(1);
+  if (ok) {
+    if (type<0 || type>5) {
+      f << "#type=" << type << ",";
+      ok = false;
+    } else  if (type==1)
+      f << "textbox[draw],";
+    else if (type!=2)
+      f << "type=" << type << ",";
+  }
+  if (ok) ok=input->readLong(1)==1;
+
+  if (!ok) {
+    MWAW_DEBUG_MSG(("GWText::sendSimpleTextbox: the header seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+  MWAWFont font;
+  font.setId(m_state->getFId((int) input->readULong(2)));
+  int flag =(int) input->readULong(2);
+  uint32_t flags=0;
+  if (flag&0x1) flags |= MWAWFont::boldBit;
+  if (flag&0x2) flags |= MWAWFont::italicBit;
+  if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
+  if (flag&0x8) flags |= MWAWFont::embossBit;
+  if (flag&0x10) flags |= MWAWFont::shadowBit;
+  if (flag&0x20) font.setDeltaLetterSpacing(-1);
+  if (flag&0x40) font.setDeltaLetterSpacing(1);
+  if (flag&0x100) font.set(MWAWFont::Script::super100());
+  if (flag&0x200) font.set(MWAWFont::Script::sub100());
+  if (flag&0x800) font.setStrikeOutStyle(MWAWFont::Line::Simple);
+  if (flag&0x2000) {
+    font.setUnderlineStyle(MWAWFont::Line::Simple);
+    font.setUnderlineType(MWAWFont::Line::Double);
+  }
+  flag &=0xD480;
+  if (flag) f << "font[#fl]=" << std::hex << flag << std::dec << ",";
+  font.setFlags(flags);
+  font.setSize((int) input->readULong(2));
+  unsigned char color[3];
+  for (int c=0; c<3; ++c)
+    color[c] = (unsigned char) (input->readULong(2)>>8);
+  font.setColor(MWAWColor(color[0],color[1],color[2]));
+  f << "font=[" << font.getDebugString(m_parserState->m_fontConverter) << "],";
+  listener->setFont(font);
+
+  int val;
+  f << "unkn=[" << std::hex;
+  for (int i=0; i<6; i++) { // junk ?
+    val=(int) input->readULong(2);
+    if (val)
+      f << val << ",";
+    else
+      f << "_,";
+  }
+  f << std::dec << "],";
+  MWAWParagraph para;
+  val=(int) input->readLong(2);
+  switch(val) {
+  case 0:
+    break;
+  case 1:
+    para.m_justify = MWAWParagraph::JustificationCenter;
+    break;
+  case 2:
+    para.m_justify = MWAWParagraph::JustificationRight ;
+    break;
+  case 3:
+    para.m_justify = MWAWParagraph::JustificationFull;
+    break;
+  default:
+    f << "#align" << val << ",";
+    break;
+  }
+  f << para <<",";
+  listener->setParagraph(para);
+  double dim[4];
+  for (int i=0; i<4; ++i)
+    dim[i]=double(input->readLong(4))/65536.;
+  f << "dim=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << "," ;
+  int fSz=(int) input->readULong(1);
+  if (50+fSz > entry.length()) {
+    MWAW_DEBUG_MSG(("GWText::sendSimpleTextbox: the text size seems too big\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  pos=input->tell();
+  f.str("");
+  f << "Entries(Text):";
+  for (int i=0; i < fSz; ++i) {
+    char c = (char) input->readULong(1);
+    f << c;
+    switch(c) {
+    case 0x9:
+      listener->insertTab();
+      break;
+    case 0xd:
+      listener->insertEOL();
+      break;
+    default:
+      listener->insertCharacter((unsigned char) c);
+      break;
+    }
+  }
+  input->seek(entry.end(), WPX_SEEK_SET);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
+
 bool GWText::sendZone(GWTextInternal::Zone const &zone)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
@@ -1167,7 +1297,7 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone)
   int actPage = 1, actCol = 0, numCol=1;
   if (isMain) {
     m_mainParser->newPage(1);
-    MWAWSection sec=zone.getSection();
+    MWAWSection sec=m_mainParser->getMainSection();
     numCol = sec.numColumns();
     if (numCol>1) {
       if (listener->isSectionOpened())
@@ -1236,6 +1366,18 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone)
     }
     if (c!=0xd) f << c;
     switch(c) {
+    case 0x4: {
+      f << "[pict]";
+      if (token.m_type!=4 || !token.m_pictEntry.valid()) {
+        MWAW_DEBUG_MSG(("GWText::sendZone: can not find a picture\n"));
+        f << "###";
+        break;
+      }
+      MWAWPosition pictPos(Vec2f(0,0), token.m_dim, WPX_POINT);
+      pictPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
+      m_mainParser->sendPicture(token.m_pictEntry, pictPos);
+      break;
+    }
     case 0x9:
       listener->insertTab();
       break;

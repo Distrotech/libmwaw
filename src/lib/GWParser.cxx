@@ -40,12 +40,11 @@
 #include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
-#include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
-#include "MWAWList.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
@@ -62,18 +61,109 @@ namespace GWParserInternal
 //! Internal: the state of a GWParser
 struct State {
   //! constructor
-  State() : m_docType(GWParser::TEXT), m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_docType(GWParser::TEXT), m_eof(-1), m_columnsWidth(), m_hasColSep(false), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+    for (int i=0; i<4; ++i)
+      m_hfFlags[i]=false;
+  }
+  //! returns the number of expected header/footer zones
+  int numHeaderFooters() const {
+    int num=0;
+    if (m_hfFlags[2]) num++; // header
+    if (m_hfFlags[3]) num++; // footer
+    if (m_hfFlags[1]) num*=2; // lf page
+    return num;
+  }
+
+  //! returns a section
+  MWAWSection getSection() const {
+    MWAWSection sec;
+    size_t numCols = m_columnsWidth.size()/2;
+    if (numCols <= 1)
+      return sec;
+    sec.m_columns.resize(size_t(numCols));
+    if (m_hasColSep)
+      sec.m_columnSeparator=MWAWBorder();
+    for (size_t c=0; c < numCols; c++) {
+      sec.m_columns[c].m_width = double(m_columnsWidth[2*c+1]-m_columnsWidth[2*c+1]);
+      sec.m_columns[c].m_widthUnit = WPX_POINT;
+      if (c)
+        sec.m_columns[c].m_margins[libmwaw::Left]=
+          double(m_columnsWidth[2*c]-m_columnsWidth[2*c-1])/72./2.;
+      if (c+1!=numCols)
+        sec.m_columns[c].m_margins[libmwaw::Right]=
+          double(m_columnsWidth[2*c+2]-m_columnsWidth[2*c+1])/72./2.;
+    }
+    return sec;
   }
 
   //! the document type
   GWParser::DocType m_docType;
   //! end of file
   long m_eof;
+  //! the columns dimension
+  std::vector<double> m_columnsWidth;
+  //! flags to define header/footer (titlePage, l/rPage, header, footer)
+  bool m_hfFlags[4];
+  //! true if columns have columns separator
+  bool m_hasColSep;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
 };
+
+////////////////////////////////////////
+//! Internal: the subdocument of a GWParser
+class SubDocument : public MWAWSubDocument
+{
+public:
+  SubDocument(GWParser &pars, MWAWInputStreamPtr input, int zoneId) :
+    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
+
+  //! destructor
+  virtual ~SubDocument() {}
+
+  //! operator!=
+  virtual bool operator!=(MWAWSubDocument const &doc) const;
+  //! operator!==
+  virtual bool operator==(MWAWSubDocument const &doc) const {
+    return !operator!=(doc);
+  }
+
+  //! the parser function
+  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+
+protected:
+  //! the subdocument id
+  int m_id;
+};
+
+void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type)
+{
+  if (!listener.get()) {
+    MWAW_DEBUG_MSG(("GWParserInternal::SubDocument::parse: no listener\n"));
+    return;
+  }
+  if (type!=libmwaw::DOC_HEADER_FOOTER) {
+    MWAW_DEBUG_MSG(("GWParserInternal::SubDocument::parse: unknown type\n"));
+    return;
+  }
+
+  assert(m_parser);
+
+  long pos = m_input->tell();
+  reinterpret_cast<GWParser *>(m_parser)->sendHF(m_id);
+  m_input->seek(pos, WPX_SEEK_SET);
+}
+
+bool SubDocument::operator!=(MWAWSubDocument const &doc) const
+{
+  if (MWAWSubDocument::operator!=(doc)) return true;
+  SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
+  if (!sDoc) return true;
+  if (m_id != sDoc->m_id) return true;
+  return false;
+}
 }
 
 ////////////////////////////////////////////////////////////
@@ -144,22 +234,35 @@ bool GWParser::isFilePos(long pos)
 ////////////////////////////////////////////////////////////
 // interface with the text parser
 ////////////////////////////////////////////////////////////
-bool GWParser::readTextZone()
+MWAWSection GWParser::getMainSection() const
 {
-  return m_textParser->readZone();
+  return m_state->getSection();
 }
 
-bool GWParser::readSimpleTextZone()
+bool GWParser::sendHF(int id)
 {
-  return m_textParser->readSimpleTextbox();
+  return m_textParser->sendHF(id);
+}
+
+bool GWParser::sendTextbox(MWAWEntry const &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long actPos = input->tell();
+  bool ok=m_textParser->sendTextbox(entry);
+  input->seek(actPos, WPX_SEEK_SET);
+  return ok;
 }
 
 ////////////////////////////////////////////////////////////
 // interface with the graph parser
 ////////////////////////////////////////////////////////////
-bool GWParser::readPictureList(int nPict)
+bool GWParser::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 {
-  return m_graphParser->readPictureList(nPict);
+  MWAWInputStreamPtr input = getInput();
+  long actPos = input->tell();
+  bool ok=m_graphParser->sendPicture(entry, pos);
+  input->seek(actPos, WPX_SEEK_SET);
+  return ok;
 }
 
 ////////////////////////////////////////////////////////////
@@ -234,9 +337,40 @@ void GWParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_numPages = numPages;
 
   MWAWPageSpan ps(getPageSpan());
-  ps.setPageSpan(m_state->m_numPages+1);
-
-  std::vector<MWAWPageSpan> pageList(1,ps);
+  int numHF=m_state->numHeaderFooters();
+  if (numHF!=m_textParser->numHFZones()) {
+    MWAW_DEBUG_MSG(("GWParser::createDocument: header/footer will be ignored\n"));
+    numHF=0;
+  }
+  std::vector<MWAWPageSpan> pageList;
+  if (numHF && m_state->m_hfFlags[0]) // title page have no header/footer
+    pageList.push_back(ps);
+  else
+    numPages++;
+  if (numHF) {
+    int id=0;
+    for (int w=0; w<2; ++w) {
+      if (!m_state->m_hfFlags[w+2])
+        continue;
+      MWAWHeaderFooter::Type type=
+        w==0 ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER;
+      MWAWHeaderFooter hF;
+      if (m_state->m_hfFlags[1]==false) {
+        hF=MWAWHeaderFooter(type, MWAWHeaderFooter::ALL);
+        hF.m_subDocument.reset(new GWParserInternal::SubDocument(*this, getInput(), id++));
+        ps.setHeaderFooter(hF);
+        continue;
+      }
+      hF=MWAWHeaderFooter(type, MWAWHeaderFooter::ODD);
+      hF.m_subDocument.reset(new GWParserInternal::SubDocument(*this, getInput(), id++));
+      ps.setHeaderFooter(hF);
+      hF=MWAWHeaderFooter(type, MWAWHeaderFooter::EVEN);
+      hF.m_subDocument.reset(new GWParserInternal::SubDocument(*this, getInput(), id++));
+      ps.setHeaderFooter(hF);
+    }
+  }
+  ps.setPageSpan(numPages);
+  pageList.push_back(ps);
   MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
   setListener(listen);
   listen->startDocument();
@@ -249,21 +383,20 @@ void GWParser::createDocument(WPXDocumentInterface *documentInterface)
 ////////////////////////////////////////////////////////////
 bool GWParser::createZones()
 {
-  int const vers=version();
   readRSRCZones();
   if (getDocumentType()==DRAW)
     return createDrawZones();
 
   MWAWInputStreamPtr input = getInput();
-  long pos=vers==1 ? 94 : 100;
+  long pos=36;
   input->seek(pos, WPX_SEEK_SET);
-  if (!readZoneA()) {
+  if (!readDocInfo()) {
     ascii().addPos(pos);
-    ascii().addNote("Entries(ZoneA):###");
+    ascii().addNote("Entries(DocInfo):###");
     return false;
   }
 
-  bool ok=m_textParser->createZones();
+  bool ok=m_textParser->createZones(m_state->numHeaderFooters());
   if (input->atEOS()) // v1 file end here
     return ok;
 
@@ -617,27 +750,126 @@ bool GWParser::readNxEd(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read some unknown zone in data fork
 ////////////////////////////////////////////////////////////
-bool GWParser::readZoneA()
+bool GWParser::readDocInfo()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  if (!isFilePos(pos+38*16)) {
-    MWAW_DEBUG_MSG(("GWParser::readZoneA: the zone is too short\n"));
+  int const vers=version();
+  if (!isFilePos(pos+46+(vers==2?6:0)+12+38*16)) {
+    MWAW_DEBUG_MSG(("GWParser::readDocInfo: the zone is too short\n"));
     return false;
   }
   libmwaw::DebugStream f;
-  f << "Entries(ZoneA):";
+  f << "Entries(DocInfo):";
+  int val;
+  for (int i=0; i < 4; ++i) {
+    static char const *(wh[])= {"fl0", "fl1", "smartquote","hidepict"};
+    val =(int) input->readLong(1);
+    if (!val) continue;
+    if (val==1) f << wh[i] << ",";
+    else f << "#" << wh[i] << "=" << val << ",";
+  }
+  val =(int) input->readLong(2);
+  if (val!=1) f << "first[page]=" << val << ",";
+  for (int i=0; i < 19; ++i) { // always 0
+    val =(int) input->readLong(2);
+    if (val)
+      f << "f" << i+1 << "=" << val << ",";
+  }
+  ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  for (int i=0; i < 38; ++i) {
+
+  pos+=46+(vers==2?6:0);
+  input->seek(pos, WPX_SEEK_SET);
+  f.str("");
+  f << "DocInfo-II:";
+  for (int i=0; i < 4; ++i) {
+    val=(int) input->readLong(1);
+    if (!val) continue;
+    static char const *(wh[])= {"titlePage", "left/rightPage", "header","footer"};
+    if (val!=1) {
+      f << "#" << wh[i] << "=" << val << ",";
+      continue;
+    }
+    f << wh[i] << ",";
+    m_state->m_hfFlags[i]=true;
+  }
+
+  val=(int) input->readLong(2); // f1=1|2
+  if (val)
+    f << "f0=" << val << ",";
+  f << "colSep[w]=" << float(input->readLong(4))/65536.f << ",";
+  val=(int) input->readLong(1);
+  if (val==1) f << "same[colW]?,";
+  else if (val) f << "#same[colW]=" << val << ",";
+  val=(int) input->readLong(1);
+  if (val==1) {
+    f << "hasColSep,";
+    m_state->m_hasColSep = true;
+  } else if (val) f << "#hasColSep=" << val << ",";
+  input->seek(pos+12, WPX_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  for (int i=0; i < 14; ++i) {
+    static char const *wh[]= {"margins", "header/footer", "1", "pageDim" };
     pos = input->tell();
     f.str("");
-    f << "ZoneA-" << i << ":";
+    if (i<4)
+      f << "DocInfo[" << wh[i] << "]:";
+    else
+      f << "DocInfo[" << i << "]:";
 
+    double dim[4];
+    for (int j=0; j<4; ++j)
+      dim[j]=double(input->readLong(4))/65536.;
+    if (dim[0]>0 || dim[1]>0||dim[2]>0||dim[3]>0) {
+      f << "dim=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
+      if (i==0) {
+        getPageSpan().setMarginTop(dim[0]/72.0);
+        getPageSpan().setMarginBottom(dim[2]/72.0);
+        getPageSpan().setMarginLeft(dim[1]/72.0);
+        getPageSpan().setMarginRight(dim[3]/72.0);
+      }
+    }
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     input->seek(pos+16, WPX_SEEK_SET);
   }
+  for (int st=0; st < 2; ++st) {
+    pos=input->tell();
+    f.str("");
+    if (st==0)
+      f << "DocInfo[leftPage]:";
+    else
+      f << "DocInfo[rightPage]:";
+    for (int i=0; i < 12; ++i) {
+      double dim[4];
+      for (int j=0; j<4; ++j)
+        dim[j]=double(input->readLong(4))/65536.;
+      if (dim[0]>0 || dim[1]>0||dim[2]>0||dim[3]>0) {
+        switch(i) {
+        case 0:
+          f << "header=";
+          break;
+        case 11:
+          f << "footer=";
+          break;
+        default:
+          f << "col" << i-1 << "=";
+          if (st==1)
+            continue;
+          m_state->m_columnsWidth.push_back(dim[1]);
+          m_state->m_columnsWidth.push_back(dim[3]);
+          break;
+        }
+        f << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
+      }
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+
   return true;
 }
 

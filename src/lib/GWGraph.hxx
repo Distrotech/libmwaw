@@ -86,6 +86,8 @@ protected:
   bool sendPageGraphics();
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
+  //! try to send a frame
+  bool sendFrame(shared_ptr<GWGraphInternal::Frame> frame, int order);
 
   //
   // Intermediate level
@@ -98,10 +100,10 @@ protected:
   bool readPalettes(MWAWEntry const &entry);
 
   // DataFork: pict
-  //! try to read a picture list
-  bool readPictureList(int nPict);
-  //! try to read a picture list
-  bool readPicture();
+  //! try to send the textbox text
+  bool sendTextbox(MWAWEntry const &entry);
+  //! try to send a picture
+  bool sendPicture(MWAWEntry const &entry, MWAWPosition pos);
 
   // DataFork: graphic zone
 
@@ -117,7 +119,7 @@ protected:
   //! try to read a list of page frame ( picture, texture or basic )
   bool readPageFrames();
   //! try to read a basic frame header
-  bool readFrameHeader(GWGraphInternal::Frame &zone);
+  shared_ptr<GWGraphInternal::Frame> readFrameHeader();
 
   // interface with mainParser
 

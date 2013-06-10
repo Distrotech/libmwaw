@@ -46,6 +46,7 @@
 namespace GWParserInternal
 {
 struct State;
+class SubDocument;
 }
 
 class GWGraph;
@@ -55,6 +56,7 @@ class GWText;
  */
 class GWParser : public MWAWParser
 {
+  friend class GWParserInternal::SubDocument;
   friend class GWGraph;
   friend class GWText;
 public:
@@ -85,15 +87,17 @@ protected:
 
   // interface with the text parser
 
-  //! try to read a zone ( textheader+fonts+rulers)
-  bool readTextZone();
-  //! try to read a simplified textbox zone
-  bool readSimpleTextZone();
+  //! return the main section
+  MWAWSection getMainSection() const;
+  //! try to send the i^th header/footer
+  bool sendHF(int id);
+  //! try to  textbox's text
+  bool sendTextbox(MWAWEntry const &entry);
 
   // interface with the graph parser
 
-  //! try to read a picture list
-  bool readPictureList(int nPict);
+  //! try to send a picture
+  bool sendPicture(MWAWEntry const &entry, MWAWPosition pos);
 
   // general interface
   DocType getDocumentType() const;
@@ -117,8 +121,8 @@ protected:
   //! read the windows positions ( WPSN resource block )
   bool readWPSN(MWAWEntry const &entry);
 
-  //! a unknown list of data at the beginning of the data fork
-  bool readZoneA();
+  //! read the DocInfo block ( many unknown data )
+  bool readDocInfo();
   //! read a unknown zone ( ARRs resource block: v2 )
   bool readARRs(MWAWEntry const &entry);
   //! read a unknown zone ( DaHS resource block: v2 )

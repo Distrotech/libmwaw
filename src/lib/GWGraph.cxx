@@ -58,8 +58,17 @@ namespace GWGraphInternal
 ////////////////////////////////////////
 //! Internal: the graphic zone of a GWGraph
 struct Frame {
+  //! the frame type
+  enum Type { T_BAD, T_BASIC, T_GROUP, T_PICTURE, T_TEXT, T_UNSET };
   //! constructor
-  Frame() : m_type(-1), m_layout(-1), m_parent(0), m_order(-1), m_numChild(0), m_dataSize(0), m_box(), m_extra("") {
+  Frame() : m_type(-1), m_layout(-1), m_parent(0), m_order(-1), m_dataSize(0), m_box(), m_page(-1), m_extra(""), m_parsed(false) {
+  }
+  //! destructor
+  virtual ~Frame() {
+  }
+  //! return the frame type
+  virtual Type getType() const {
+    return T_UNSET;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream & o, Frame const &zone) {
@@ -107,11 +116,11 @@ struct Frame {
       o << "order=" << zone.m_order << ",";
     if (zone.m_parent > 0)
       o << "F" << zone.m_parent << "[parent],";
-    if (zone.m_numChild > 0)
-      o << "numChild=" << zone.m_numChild << ",";
     if (zone.m_dataSize > 0)
       o << "dataSize=" << zone.m_dataSize << ",";
     o << "box=" << zone.m_box << ",";
+    if (zone.m_page>0)
+      o << "page=" << zone.m_page << ",";
     o << zone.m_extra;
     return o;
   }
@@ -123,21 +132,135 @@ struct Frame {
   int m_parent;
   //! the z order
   int m_order;
-  //! the number of child ( for group)
-  int m_numChild;
   //! the data size ( if know)
   long m_dataSize;
   //! the zone bdbox
   Box2f m_box;
+  //! the page
+  int m_page;
   //! extra data
   std::string m_extra;
+  //! true if the frame is send
+  mutable bool m_parsed;
+};
+
+////////////////////////////////////////
+//! Internal: a unknown zone of a GWGraph
+struct FrameBad : public Frame {
+  //! constructor
+  FrameBad() : Frame() {
+  }
+  //! return the frame type
+  virtual Type getType() const {
+    return T_BAD;
+  }
+};
+
+////////////////////////////////////////
+//! Internal: the basic graphic of a GWGraph
+struct FrameBasic : public Frame {
+  //! constructor
+  FrameBasic() : Frame(), m_vertices() {
+    for (int i=0; i < 2; ++i)
+      m_values[i]=0;
+  }
+  //! return the frame type
+  virtual Type getType() const {
+    return T_BASIC;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream & o, FrameBasic const &grph) {
+    o << static_cast<Frame const &>(grph);
+    if (grph.m_type==4)
+      o << "cornerDim=" << grph.m_values[0]<< "x" << grph.m_values[1] << ",";
+    else if (grph.m_type==6)
+      o << "angles=" << grph.m_values[0]<< "x" << grph.m_values[1] << ",";
+    if (grph.m_vertices.size()) {
+      o << "vertices=[";
+      for (size_t i = 0; i < grph.m_vertices.size(); i++)
+        o << grph.m_vertices[i] << ",";
+      o << "],";
+    }
+
+    return o;
+  }
+  //! arc : the angles, rectoval : the corner dimension
+  float m_values[2];
+  //! the polygon vertices
+  std::vector<Vec2f> m_vertices;
+};
+////////////////////////////////////////
+//! Internal: the group zone of a GWGraph
+struct FrameGroup : public Frame {
+  //! constructor
+  FrameGroup(Frame const &frame) : Frame(frame), m_numChild(0), m_childList() {
+  }
+  //! return the frame type
+  virtual Type getType() const {
+    return T_GROUP;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream & o, FrameGroup const &grp) {
+    o << static_cast<Frame const &>(grp);
+    if (grp.m_numChild)
+      o << "nChild=" << grp.m_numChild << ",";
+    return o;
+  }
+  //! the number of child
+  int m_numChild;
+  //! the list of child
+  std::vector<int> m_childList;
+};
+
+////////////////////////////////////////
+//! Internal: the picture zone of a GWGraph
+struct FramePicture : public Frame {
+  //! constructor
+  FramePicture(Frame const &frame) : Frame(frame), m_entry() {
+  }
+  //! return the frame type
+  virtual Type getType() const {
+    return T_PICTURE;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream & o, FramePicture const &pic) {
+    o << static_cast<Frame const &>(pic);
+    if (pic.m_entry.valid())
+      o << "pos=" << std::hex << pic.m_entry.begin() << "->" << pic.m_entry.end() << std::dec << ",";
+    return o;
+  }
+  //! the picture entry
+  MWAWEntry m_entry;
+};
+
+////////////////////////////////////////
+//! Internal: the text zone of a GWGraph
+struct FrameText : public Frame {
+  //! constructor
+  FrameText(Frame const &frame) : Frame(frame), m_entry() {
+  }
+  //! return the frame type
+  virtual Type getType() const {
+    return T_TEXT;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream & o, FrameText const &text) {
+    o << static_cast<Frame const &>(text);
+    if (text.m_entry.valid())
+      o << "pos=" << std::hex << text.m_entry.begin() << "->" << text.m_entry.end() << std::dec << ",";
+    return o;
+  }
+  //! the text entry
+  MWAWEntry m_entry;
 };
 
 ////////////////////////////////////////
 //! Internal: the state of a GWGraph
 struct State {
   //! constructor
-  State() : m_numPages(0) { }
+  State() : m_frameList(), m_numPages(0) { }
+  //! the list of frame
+  std::vector<shared_ptr<Frame> > m_frameList;
   int m_numPages /* the number of pages */;
 };
 
@@ -148,8 +271,8 @@ class SubDocument : public MWAWSubDocument
 {
 public:
   //! constructor
-  SubDocument(GWGraph &pars, MWAWInputStreamPtr input, int id) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(id) {}
+  SubDocument(GWGraph &pars, MWAWInputStreamPtr input, MWAWEntry entry) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry(entry)), m_graphParser(&pars) {}
 
 
   //! destructor
@@ -168,8 +291,6 @@ public:
 protected:
   /** the graph parser */
   GWGraph *m_graphParser;
-  //! the zone id
-  int m_id;
 
 private:
   SubDocument(SubDocument const &orig);
@@ -185,6 +306,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_graphParser);
 
   long pos = m_input->tell();
+  m_graphParser->sendTextbox(m_zone);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
@@ -194,7 +316,6 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
   SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
   if (!sDoc) return true;
   if (m_graphParser != sDoc->m_graphParser) return true;
-  if (m_id != sDoc->m_id) return true;
   return false;
 }
 }
@@ -226,6 +347,10 @@ int GWGraph::numPages() const
   return nPages;
 }
 
+bool GWGraph::sendTextbox(MWAWEntry const &entry)
+{
+  return m_mainParser->sendTextbox(entry);
+}
 
 ////////////////////////////////////////////////////////////
 //
@@ -595,19 +720,19 @@ bool GWGraph::readPageFrames()
   f << "nFrames=" << nFrames << ",";
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
-  std::vector<GWGraphInternal::Frame> frames;
+  std::vector<shared_ptr<GWGraphInternal::Frame> > frames;
   for (int i=0; i < nFrames; ++i) {
     pos = input->tell();
     f.str("");
     f << "GFrame[head]-F" << i+1 << ":";
-    GWGraphInternal::Frame zone;
-    if (!readFrameHeader(zone)) {
+    shared_ptr<GWGraphInternal::Frame> zone=readFrameHeader();
+    if (!zone) {
       MWAW_DEBUG_MSG(("GWGraph::readPageFrames: oops graphic detection is probably bad\n"));
       f << "###";
       input->seek(pos+0x36, WPX_SEEK_SET);
-      zone=GWGraphInternal::Frame();
+      zone.reset(new GWGraphInternal::FrameBad());
     } else
-      f << zone;
+      f << *zone;
     frames.push_back(zone);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -707,7 +832,7 @@ bool GWGraph::readPageFrames()
         MWAW_DEBUG_MSG(("GWGraph::readPageFrames: can not find order for frame %d\n",id));
         continue;
       }
-      int ord=frames[size_t(id-1)].m_order;
+      int ord=frames[size_t(id-1)]->m_order;
       if (rootOrderMap.find(ord)!=rootOrderMap.end()) {
         MWAW_DEBUG_MSG(("GWGraph::readPageFrames: oops order %d already exist\n",ord));
         continue;
@@ -722,7 +847,7 @@ bool GWGraph::readPageFrames()
     std::vector<std::vector<int> > childs(size_t(nFrames+1));
     childs[0]=rootList;
     for (size_t i=0; i<size_t(nFrames); ++i) {
-      GWGraphInternal::Frame &frame=frames[size_t(i)];
+      GWGraphInternal::Frame &frame=*(frames[size_t(i)]);
       if (frame.m_parent<=0) continue;
       if (frame.m_parent>nFrames) {
         MWAW_DEBUG_MSG(("GWGraph::readPageFrames: find unknown parent with id=%d\n",frame.m_parent));
@@ -752,20 +877,33 @@ bool GWGraph::readPageFrames()
       continue;
     }
     bool ok=true;
-    GWGraphInternal::Frame &zone=frames[size_t(id)];
+    shared_ptr<GWGraphInternal::Frame> zone=frames[size_t(id)];
+    if (!zone) continue;
+    m_state->m_frameList.push_back(zone);
     f.str("");
-    f << "GFrame-data:F" << id+1 << "[" << zone << "]:";
-    switch(zone.m_type) {
+    f << "GFrame-data:F" << id+1 << "[" << *zone << "]:";
+    switch(zone->m_type) {
     case 0:
       MWAW_DEBUG_MSG(("GWGraph::readPageFrames: find group with type=0\n"));
       break;
-    case 1:
-      // can a textbox zone be followed by a picture list ?
-      if (m_mainParser->readTextZone())
+    case 1: {
+      ok=false;
+      if (zone->getType()!=GWGraphInternal::Frame::T_TEXT) {
+        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: unexpected type for text\n"));
         break;
-      input->seek(pos, WPX_SEEK_SET);
-      ok = m_mainParser->readSimpleTextZone();
+      }
+      GWGraphInternal::FrameText &text=
+        static_cast<GWGraphInternal::FrameText &>(*zone);
+      if (!m_mainParser->isFilePos(pos+text.m_dataSize)) {
+        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: text size seems bad\n"));
+        break;
+      }
+      text.m_entry.setBegin(pos);
+      text.m_entry.setLength(text.m_dataSize);
+      input->seek(pos+text.m_dataSize, WPX_SEEK_SET);
+      ok=true;
       break;
+    }
     case 2:
     case 3:
     case 4:
@@ -776,10 +914,10 @@ bool GWGraph::readPageFrames()
     case 7: // regular poly followed by some flags ?
     case 12: { // spline
       int nPt=(int) input->readLong(2);
-      if (zone.m_type==12) nPt+=3;
+      if (zone->m_type==12) nPt+=3;
       long endData=pos+10+8*nPt;
-      if (pos+zone.m_dataSize > endData)
-        endData=pos+zone.m_dataSize;
+      if (pos+zone->m_dataSize > endData)
+        endData=pos+zone->m_dataSize;
       if (nPt<0 || (endPos>0 && endData>endPos) ||
           (endPos<0 && !m_mainParser->isFilePos(endData))) {
         ok=false;
@@ -806,9 +944,24 @@ bool GWGraph::readPageFrames()
       ascFile.addNote(f.str().c_str());
       break;
     }
-    case 11:
-      ok=readPicture();
+    case 11: {
+      ok=false;
+      if (zone->getType()!=GWGraphInternal::Frame::T_PICTURE) {
+        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: unexpected type for picture\n"));
+        break;
+      }
+      GWGraphInternal::FramePicture &pict=
+        static_cast<GWGraphInternal::FramePicture &>(*zone);
+      if (!m_mainParser->isFilePos(pos+pict.m_dataSize)) {
+        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: picture size seems bad\n"));
+        break;
+      }
+      pict.m_entry.setBegin(pos);
+      pict.m_entry.setLength(pict.m_dataSize);
+      input->seek(pos+pict.m_dataSize, WPX_SEEK_SET);
+      ok=true;
       break;
+    }
     case 15: {
       int nGrp=(int) input->readLong(2);
       if (nGrp<0 || (endPos>0 && pos+4+2*nGrp>endPos) ||
@@ -816,12 +969,26 @@ bool GWGraph::readPageFrames()
         ok=false;
         break;
       }
+
+      if (zone->getType()!=GWGraphInternal::Frame::T_GROUP) {
+        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: unexpected type for group\n"));
+        input->seek(pos+4+2*nGrp, WPX_SEEK_SET);
+        f << "###[internal]";
+        break;
+      }
+      GWGraphInternal::FrameGroup &group=
+        static_cast<GWGraphInternal::FrameGroup &>(*zone);
+
+      if (nGrp != group.m_numChild) {
+        f << "###[N=" << group.m_numChild << "]";
+        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: unexpected number of group child\n"));
+      }
       val=(int) input->readLong(2); // always 2
       if (val!=2) f << "f0=" << val << ",";
       f << "grpId=[";
       for (int j=0; j < nGrp; ++j) {
         val = (int) input->readLong(2);
-        rootList.push_back(j);
+        group.m_childList.push_back(val);
         f << val << ",";
       }
       f << "],";
@@ -833,8 +1000,8 @@ bool GWGraph::readPageFrames()
       ok = false;
       break;
     }
-    if (zone.m_dataSize>0 && input->tell()!=pos+zone.m_dataSize) {
-      if (input->tell()>pos+zone.m_dataSize || !m_mainParser->isFilePos(pos+zone.m_dataSize)) {
+    if (zone->m_dataSize>0 && input->tell()!=pos+zone->m_dataSize) {
+      if (input->tell()>pos+zone->m_dataSize || !m_mainParser->isFilePos(pos+zone->m_dataSize)) {
         MWAW_DEBUG_MSG(("GWGraph::readPageFrames: must stop, file position seems bad\n"));
         ascFile.addPos(pos);
         ascFile.addNote("GFrame###");
@@ -847,7 +1014,7 @@ bool GWGraph::readPageFrames()
         ascFile.addPos(pos);
         ascFile.addNote(f.str().c_str());
       }
-      input->seek(pos+zone.m_dataSize, WPX_SEEK_SET);
+      input->seek(pos+zone->m_dataSize, WPX_SEEK_SET);
       continue;
     }
 
@@ -870,103 +1037,108 @@ bool GWGraph::readPageFrames()
   return true;
 }
 
-bool GWGraph::readFrameHeader(GWGraphInternal::Frame &zone)
+shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
 {
-  zone=GWGraphInternal::Frame();
+  GWGraphInternal::Frame zone;
+  shared_ptr<GWGraphInternal::Frame> res;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+54;
   if (!m_mainParser->isFilePos(endPos))
-    return false;
+    return res;
 
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   zone.m_type=(int) input->readLong(1);
   if (zone.m_type<0||zone.m_type>16||input->readLong(1)) {
     input->seek(pos, WPX_SEEK_SET);
-    return false;
+    return res;
   }
   float dim[4];
   for (int i=0; i<4; ++i)
     dim[i]=float(input->readLong(4))/65536.f;
   if (dim[2]<dim[0] || dim[3]<dim[1]) {
     input->seek(pos, WPX_SEEK_SET);
-    return false;
+    return res;
   }
   zone.m_box=Box2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
   zone.m_layout=(int) input->readULong(2);
   zone.m_parent=(int) input->readULong(2);
   zone.m_order=(int) input->readULong(2);
   switch(zone.m_type) {
-  case 0xF:
-    zone.m_numChild=(int) input->readULong(2);
-    break;
   case 1:
+    res.reset(new GWGraphInternal::FrameText(zone));
+    res->m_dataSize=(long) input->readULong(4);
+    break;
+  case 11:
+    res.reset(new GWGraphInternal::FramePicture(zone));
+    res->m_dataSize=(long) input->readULong(4);
+    break;
+  case 15: {
+    GWGraphInternal::FrameGroup *grp=new GWGraphInternal::FrameGroup(zone);
+    res.reset(grp);
+    grp->m_numChild=(int) input->readULong(2);
+    break;
+  }
   case 7:
   case 8:
-  case 11:
   case 12:
     zone.m_dataSize=(long) input->readULong(4);
     break;
   default:
     break;
   }
-  zone.m_extra=f.str();
+  if (!res)
+    res.reset(new GWGraphInternal::Frame(zone));
+  res->m_extra=f.str();
   ascFile.addDelimiter(input->tell(),'|');
   input->seek(endPos, WPX_SEEK_SET);
-  return true;
+  return res;
 }
 
 ////////////////////////////////////////////////////////////
 // picture
 ////////////////////////////////////////////////////////////
-bool GWGraph::readPictureList(int nPict)
+bool GWGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 {
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  for (int p=0; p<nPict; ++p) {
-    long pos = input->tell();
-    if (!readPicture()) {
-      MWAW_DEBUG_MSG(("GWGraph::readPictureList: can not find picture %d\n", p));
-      input->seek(pos, WPX_SEEK_SET);
-      break;
-    }
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("GWGraph::sendPicture: can not find the listener\n"));
+    return true;
   }
-  return true;
-}
-
-bool GWGraph::readPicture()
-{
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  libmwaw::DebugStream f;
-  long pos = input->tell();
-  long fSz=(long) input->readULong(2);
-  long endPos = pos+fSz;
-  if (fSz<2 || !m_mainParser->isFilePos(endPos)) {
-    MWAW_DEBUG_MSG(("GWGraph::readPicture: can not find picture\n"));
-    input->seek(pos,WPX_SEEK_SET);
+  if (!entry.valid()) {
+    MWAW_DEBUG_MSG(("GWGraph::sendPicture: can not find the entry\n"));
     return false;
   }
-  f.str("");
-  f << "Entries(Pictures):";
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
+  entry.setParsed(true);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long actPos = input->tell();
+
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  shared_ptr<MWAWPict> thePict(MWAWPictData::get(input, (int)entry.length()));
+  if (thePict) {
+    WPXBinaryData data;
+    std::string type;
+    if (thePict->getBinary(data,type))
+      listener->insertPicture(pos, data, type);
+  }
+
 #ifdef DEBUG_WITH_FILES
-  ascFile.skipZone(pos+2, endPos-1);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  ascFile.skipZone(entry.begin(), entry.end()-1);
   WPXBinaryData file;
-  input->seek(pos,WPX_SEEK_SET);
-  input->readDataBlock(fSz, file);
+  input->seek(entry.begin(),WPX_SEEK_SET);
+  input->readDataBlock(entry.length(), file);
 
   static int volatile pictName = 0;
-  libmwaw::DebugStream f2;
-  f2 << "DATA-" << ++pictName << ".pct";
-  libmwaw::Debug::dumpFile(file, f2.str().c_str());
+  libmwaw::DebugStream f;
+  f << "DATA-" << ++pictName << ".pct";
+  libmwaw::Debug::dumpFile(file, f.str().c_str());
 #endif
 
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(actPos, WPX_SEEK_SET);
   return true;
 }
-
 
 ////////////////////////////////////////////////////////////
 // send data to a listener
@@ -1005,16 +1177,78 @@ void GWGraph::buildFrameDataReadOrderFromTree
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
+bool GWGraph::sendFrame(shared_ptr<GWGraphInternal::Frame> frame, int order)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener || !frame) {
+    MWAW_DEBUG_MSG(("GWGraph::sendFrame: can not find a listener\n"));
+    return false;
+  }
+  frame->m_parsed=true;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=input->tell();
+  Vec2f pageLT=72.f*m_mainParser->getPageLeftTop();
+  MWAWPosition fPos(frame->m_box[0]+pageLT,frame->m_box.size(),WPX_POINT);
+  fPos.setRelativePosition(MWAWPosition::Page);
+  fPos.setPage(frame->m_page<0 ? 1: frame->m_page);
+  if (order>=0)
+    fPos.setOrder(order);
+  fPos.m_wrapping = MWAWPosition::WBackground;
+  bool ok=true;
+  switch (frame->getType()) {
+  case GWGraphInternal::Frame::T_BASIC: // DOME
+    break;
+  case GWGraphInternal::Frame::T_PICTURE:
+    ok = sendPicture(static_cast<GWGraphInternal::FramePicture const &>(*frame).m_entry, fPos);
+    break;
+  case GWGraphInternal::Frame::T_GROUP: // ok to ignore
+    break;
+  case GWGraphInternal::Frame::T_TEXT: {
+    GWGraphInternal::FrameText const & text=
+      static_cast<GWGraphInternal::FrameText const &>(*frame);
+    shared_ptr<MWAWSubDocument> doc(new GWGraphInternal::SubDocument(*this, input, text.m_entry));
+    Vec2f fSz=fPos.size();
+    // increase slightly x and set y to atleast
+    fPos.setSize(Vec2f(fSz[0]+3,-fSz[1]));
+    listener->insertTextBox(fPos, doc);
+    break;
+  }
+  case GWGraphInternal::Frame::T_BAD:
+  case GWGraphInternal::Frame::T_UNSET:
+  default:
+    ok=false;
+  }
+  input->seek(pos, WPX_SEEK_SET);
+  return ok;
+}
+
 bool GWGraph::sendPageGraphics()
 {
-  if (!m_parserState->m_listener)
-    return true;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("GWGraph::sendPageGraphics: can not find a listener\n"));
+    return false;
+  }
+  int order=0;
+  for (size_t f=0; f < m_state->m_frameList.size(); ++f) {
+    if (!m_state->m_frameList[f] || m_state->m_frameList[f]->m_parsed)
+      continue;
+    sendFrame(m_state->m_frameList[f],++order);
+  }
   return true;
 }
 
 void GWGraph::flushExtra()
 {
-  if (!m_parserState->m_listener)
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("GWGraph::flushExtra: can not find a listener\n"));
     return;
+  }
+  for (size_t f=0; f < m_state->m_frameList.size(); ++f) {
+    if (!m_state->m_frameList[f] || m_state->m_frameList[f]->m_parsed)
+      continue;
+    sendFrame(m_state->m_frameList[f],-1);
+  }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

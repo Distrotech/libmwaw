@@ -72,13 +72,17 @@ public:
 
 protected:
   //! finds the different objects zones
-  bool createZones();
+  bool createZones(int expectedHF);
   //! send a main zone
   bool sendMainText();
+  //! return the number of header/footer zones
+  int numHFZones() const;
+  //! try to send the i^th header/footer
+  bool sendHF(int id);
+  //! try to send the textbox text
+  bool sendTextbox(MWAWEntry const &entry);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
-  //! try to read a zone ( changeme)
-  bool readZone();
 
   //
   // intermediate level
@@ -92,8 +96,8 @@ protected:
   bool readZonePositions(GWTextInternal::Zone &zone);
   //! try to send a zone
   bool sendZone(GWTextInternal::Zone const &zone);
-  //! try to read a simplified textbox zone
-  bool readSimpleTextbox();
+  //! try to send simplified textbox zone
+  bool sendSimpleTextbox(MWAWEntry const &entry);
   //! try to read a font
   bool readFont(MWAWFont &font);
   //! try to read a ruler
