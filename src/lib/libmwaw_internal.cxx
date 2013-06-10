@@ -42,7 +42,6 @@
 
 #include "libmwaw_internal.hxx"
 
-// OSNOLA
 /** namespace used to regroup all libwpd functions, enumerations which we have redefined for internal usage */
 namespace libmwaw
 {
