@@ -294,15 +294,6 @@ public:
     return !operator!=(doc);
   }
 
-  //! returns the subdocument \a id
-  int getId() const {
-    return m_id;
-  }
-  //! sets the subdocument \a id
-  void setId(int vid) {
-    m_id = vid;
-  }
-
   //! the parser function
   void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
@@ -314,11 +305,11 @@ protected:
 void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MWParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   if (m_id != 1 && m_id != 2) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
+    MWAW_DEBUG_MSG(("MWParserInternal::SubDocument::parse: unknown zone\n"));
     return;
   }
 

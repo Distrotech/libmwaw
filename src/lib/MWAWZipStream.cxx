@@ -260,8 +260,10 @@ static bool findCentralDirectoryEnd(WPXInputStream *input)
 {
   input->seek(0, WPX_SEEK_SET);
   try {
-    while (!input->atEOS())
-      input->seek(1024, WPX_SEEK_CUR);
+    while (!input->atEOS()) {
+      if (input->seek(1024, WPX_SEEK_CUR))
+        break;
+    }
     input->seek(-1024, WPX_SEEK_CUR);
     while (!input->atEOS()) {
       unsigned signature = getInt(input);
