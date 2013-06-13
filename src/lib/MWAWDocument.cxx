@@ -143,6 +143,7 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     case DM:
     case ED:
     case FULLW:
+    case GW:
     case HMAC:
     case HMACJ:
     case LWTEXT:
@@ -161,11 +162,6 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     case ZWRT:
       confidence = MWAW_CONFIDENCE_GOOD;
       break;
-    case GW:
-#ifdef DEBUG
-      confidence = MWAW_CONFIDENCE_GOOD;
-      break;
-#endif
     case FRM:
     case MACD:
     case MOCKP:

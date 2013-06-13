@@ -8,15 +8,6 @@ libwpd in order to build libmwaw. You can get libwpd from:
 
 - libwpd <http://libwpd.sourceforge.net/download.html>
 
-Warning
-=======
-This branch is a working repository used to prepare future changes in libmwaw-0.2:
-- add new filters,
-- change the external interface to export more complex graphics.
-
-You are free to use it, however while libmwaw-0.2 is not released, the external
-API is subjected to change without any warnings...
-
 Unix/Linux/Darwin
 ==========
 
@@ -116,8 +107,6 @@ and then download the lastest git version of odfgen and writerperfect:
 and finally, in each directories, execute autogen.sh and configure
 with the options corresponding to you computer and launch make to
 recompile.
-
-As this is a pre2.0 version, you will need to modify writerperfect/configure.ac in order to search for libmwaw-0.2 and not libmwaw-0.1 ( before compiling writerperfect ).
 
 That's all folks! While no mailing exists, for more information, ask
 questions directly to osnola@users.sourceforge.net. Remember that Uncle Google can

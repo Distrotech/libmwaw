@@ -84,14 +84,16 @@ struct State {
     if (m_hasColSep)
       sec.m_columnSeparator=MWAWBorder();
     for (size_t c=0; c < numCols; c++) {
-      sec.m_columns[c].m_width = double(m_columnsWidth[2*c+1]-m_columnsWidth[2*c+1]);
-      sec.m_columns[c].m_widthUnit = WPX_POINT;
+      double wSep=0;
       if (c)
-        sec.m_columns[c].m_margins[libmwaw::Left]=
-          double(m_columnsWidth[2*c]-m_columnsWidth[2*c-1])/72./2.;
+        wSep += sec.m_columns[c].m_margins[libmwaw::Left]=
+                  double(m_columnsWidth[2*c]-m_columnsWidth[2*c-1])/72./2.;
       if (c+1!=numCols)
-        sec.m_columns[c].m_margins[libmwaw::Right]=
-          double(m_columnsWidth[2*c+2]-m_columnsWidth[2*c+1])/72./2.;
+        wSep+=sec.m_columns[c].m_margins[libmwaw::Right]=
+                double(m_columnsWidth[2*c+2]-m_columnsWidth[2*c+1])/72./2.;
+      sec.m_columns[c].m_width =
+        double(m_columnsWidth[2*c+1]-m_columnsWidth[2*c])+72.*wSep;
+      sec.m_columns[c].m_widthUnit = WPX_POINT;
     }
     return sec;
   }

@@ -926,7 +926,7 @@ bool GWText::readFont(MWAWFont &font)
   flag &=0xD480;
   if (flag) f << "#fl=" << std::hex << flag << std::dec << ",";
   font.setFlags(flags);
-  font.setSize((int) input->readULong(2));
+  font.setSize((float) input->readULong(2));
   unsigned char color[3];
   for (int c=0; c<3; ++c)
     color[c] = (unsigned char) (input->readULong(2)>>8);
@@ -1207,7 +1207,7 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry)
   flag &=0xD480;
   if (flag) f << "font[#fl]=" << std::hex << flag << std::dec << ",";
   font.setFlags(flags);
-  font.setSize((int) input->readULong(2));
+  font.setSize((float) input->readULong(2));
   unsigned char color[3];
   for (int c=0; c<3; ++c)
     color[c] = (unsigned char) (input->readULong(2)>>8);

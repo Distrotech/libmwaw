@@ -69,9 +69,9 @@ public:
   -ED: eDOC (v2)
   -FRM: Frame Maker (nothing done)
   -FULLW: FullWrite Professional (basic)
-  -GW: GreatWorks (only parsing, not functional )
+  -GW: GreatWorks ( v1-v2, text and drawing document)
   -HMACJ: HanMac Word-J ( v2.0.4 )
-  -HMAC: HanMac Word-K ( v2.0.5-2.0.6 ) -> MUST BE rename in HMACK 
+  -HMAC: HanMac Word-K ( v2.0.5-2.0.6 )
   -LWTEXT: LightWayText ( only v4.5 Mac format )
   -MACD: MacDoc (nothing done )
   -MARIW: Mariner Write ( only v1.6-v3.5 Mac Classic)

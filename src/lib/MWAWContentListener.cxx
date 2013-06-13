@@ -1164,8 +1164,12 @@ void MWAWContentListener::_handleFrameParameters
 
   if (pos.size()[0]>0)
     propList.insert("svg:width", double(pos.size()[0]), unit);
+  else if (pos.size()[0]<0)
+    propList.insert("fo:min-width", double(-pos.size()[0]), unit);
   if (pos.size()[1]>0)
     propList.insert("svg:height", double(pos.size()[1]), unit);
+  else if (pos.size()[1]<0)
+    propList.insert("fo:min-height", double(-pos.size()[1]), unit);
   if (pos.order() > 0)
     propList.insert("draw:z-index", pos.order());
   if (pos.naturalSize().x() > 4*pointFactor && pos.naturalSize().y() > 4*pointFactor) {

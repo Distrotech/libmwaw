@@ -1068,7 +1068,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
         MWAW_DEBUG_MSG(("MORText::sendText: field fSz seems bad\n"));
         f << "###";
       } else {
-        ft.setSize(val);
+        ft.setSize((float) val);
         sendFont = false;
       }
       val = (int) input->readULong(2);
@@ -1092,7 +1092,9 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
         MWAW_DEBUG_MSG(("MORText::sendText: field fCol: color sep seems bad\n"));
         f << "@[fCol###]";
       } else {
-        MWAWColor col(values[1]>>8, values[2]>>8,values[3]>>8);
+        MWAWColor col((unsigned char)(values[1]>>8),
+                      (unsigned char)(values[2]>>8),
+                      (unsigned char)(values[3]>>8));
         ft.setColor(col);
         sendFont = false;
         f << "@[fCol=" << col << "]";
@@ -1470,7 +1472,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
     case 0x402:
       // size can be very big, force it to be smallest than 100
       if (values[0]>0 && values[0] <= 100) {
-        font.setSize(values[0]);
+        font.setSize((float) values[0]);
         f << "sz=" << values[0] << ",";
       } else {
         MWAW_DEBUG_MSG(("MORText::readOutline: the font size seems bad\n"));
@@ -1521,7 +1523,9 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
       break;
     }
     case 0x804: {
-      MWAWColor col(((uint16_t)values[0])>>8, ((uint16_t)values[1])>>8, ((uint16_t)values[2])>>8);
+      MWAWColor col((unsigned char)(((uint16_t)values[0])>>8),
+                    (unsigned char)(((uint16_t)values[1])>>8),
+                    (unsigned char)(((uint16_t)values[2])>>8));
       font.setColor(col);
       f << col << ",";
       values[1]=values[2]=0;
@@ -1799,7 +1803,7 @@ bool MORText::readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level)
     f << "#fId=" << std::hex << fId << std::dec << ",";
   int fSz = (int) input->readLong(2);
   if (fSz != -1) {
-    font.setSize(fSz);
+    font.setSize((float) fSz);
     f << "fSz=" << fSz << ",";
   }
   int fFlags=(int) input->readULong(1);

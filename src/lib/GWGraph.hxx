@@ -52,6 +52,9 @@
 namespace GWGraphInternal
 {
 struct Frame;
+struct FrameBasic;
+struct Style;
+struct Zone;
 
 struct State;
 class SubDocument;
@@ -86,8 +89,6 @@ protected:
   bool sendPageGraphics();
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
-  //! try to send a frame
-  bool sendFrame(shared_ptr<GWGraphInternal::Frame> frame, int order);
 
   //
   // Intermediate level
@@ -100,10 +101,16 @@ protected:
   bool readPalettes(MWAWEntry const &entry);
 
   // DataFork: pict
+  //! try to send all data corresponding to a zone
+  bool sendPageFrames(GWGraphInternal::Zone const &zone);
+  //! try to send a frame
+  bool sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInternal::Zone const &zone, int order);
   //! try to send the textbox text
   bool sendTextbox(MWAWEntry const &entry);
   //! try to send a picture
   bool sendPicture(MWAWEntry const &entry, MWAWPosition pos);
+  //! try to send a basic picture
+  bool sendBasic(GWGraphInternal::FrameBasic const &graph, GWGraphInternal::Zone const &zone, MWAWPosition pos);
 
   // DataFork: graphic zone
 
@@ -120,6 +127,10 @@ protected:
   bool readPageFrames();
   //! try to read a basic frame header
   shared_ptr<GWGraphInternal::Frame> readFrameHeader();
+  //! try to read a zone style
+  bool readStyle(GWGraphInternal::Style &style);
+  //! try to read a line format style? in v1
+  bool readLineFormat(std::string &extra);
 
   // interface with mainParser
 

@@ -368,6 +368,11 @@ void CWParser::sendZoneInFrame(int zoneId, MWAWPosition pos, WPXPropertyList ext
 {
   if (!getListener()) return;
 
+  // for textbox, use min-height for Y
+  if (pos.size()[1]>0 &&
+      m_state->m_zonesMap.find(zoneId) != m_state->m_zonesMap.end() &&
+      m_state->m_zonesMap[zoneId]->m_fileType == 1 )
+    pos.setSize(Vec2f(pos.size()[0],-pos.size()[1]));
   MWAWSubDocumentPtr subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
   getListener()->insertTextBox(pos, subdoc, extras, frameExtras);
 }

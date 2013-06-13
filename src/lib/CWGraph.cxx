@@ -2308,9 +2308,9 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
         if ((type == CWStruct::DSET::T_Frame ||
              type == CWStruct::DSET::T_Table ||
              (type == CWStruct::DSET::T_Unknown && pos.m_anchorTo == MWAWPosition::Page))
-            && posValidSet)
+            && posValidSet) {
           m_mainParser->sendZoneInFrame(fZid, pos, extras, textboxExtras);
-        else if (fZid == -1)
+        } else if (fZid == -1)
           break;
         else if (pos.m_anchorTo == MWAWPosition::Page)
           notDone.push_back(toDo[g]);
@@ -2589,7 +2589,13 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
     MWAWEntry entry = pict.m_entries[z];
     if (!entry.valid())
       continue;
-    if (!posOk) pos.setSize(pict.m_box.size());
+    if (!posOk) {
+      Vec2f sz=pict.m_box.size();
+      // recheck that all is ok now
+      if (sz[0]<0) sz[0]=0;
+      if (sz[1]<0) sz[1]=0;
+      pos.setSize(sz);
+    }
     input->seek(entry.begin(), WPX_SEEK_SET);
 
     switch(pict.getSubType()) {

@@ -156,7 +156,7 @@ protected:
   //! check if the entry is valid, if so store it in the list of entry
   bool checkAndStore(MWAWEntry const &entry);
 
-  //! check if the entry is valid defined by the begin pos points to a zone: <dataSz> data
+  //! check if the entry is valid defined by the begin pos points to a zone: dataSz data
   bool checkAndFindSize(MWAWEntry &entry);
 
   //! return the input input
