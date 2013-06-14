@@ -769,7 +769,7 @@ bool GWGraph::isGraphicZone()
     headerSize= 0x1c+0xaa+0x30;
   MWAWInputStreamPtr input = m_parserState->m_input;
   long pos = input->tell();
-  if (!m_mainParser->isFilePos(pos+headerSize))
+  if (!input->checkPosition(pos+headerSize))
     return false;
 
   int dim[4];
@@ -784,7 +784,7 @@ bool GWGraph::isGraphicZone()
 
   input->seek(pos+headerSize, WPX_SEEK_SET);
   int pageHeaderSize=vers==1 ? 16 : isDraw ? 12 : 22;
-  if (!m_mainParser->isFilePos(pos+headerSize+pageHeaderSize)) {
+  if (!input->checkPosition(pos+headerSize+pageHeaderSize)) {
     bool ok=input->atEOS();
     input->seek(pos, WPX_SEEK_SET);
     return ok;
@@ -922,7 +922,7 @@ bool GWGraph::findGraphicZone()
 
     input->seek(actPos-decal, WPX_SEEK_SET);
     int N=(int) input->readULong(2);
-    if (input->readLong(2)!=0x36 || !m_mainParser->isFilePos(actPos-decal+4+0x36*N)) {
+    if (input->readLong(2)!=0x36 || !input->checkPosition(actPos-decal+4+0x36*N)) {
       input->seek(actPos+4, WPX_SEEK_SET);
       continue;
     }
@@ -950,7 +950,7 @@ bool GWGraph::isPageFrames()
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+headerSize+4*nZones;
-  if (!m_mainParser->isFilePos(endPos))
+  if (!input->checkPosition(endPos))
     return false;
   long sz=-1;
   input->seek(pos, WPX_SEEK_SET);
@@ -964,7 +964,7 @@ bool GWGraph::isPageFrames()
     zoneSz[i]=(long) input->readULong(4);
   if (hasPageUnknown &&
       (6+sz<headerSize+4*nZones || zoneSz[0]+zoneSz[1]+zoneSz[2]>sz ||
-       !m_mainParser->isFilePos(endPos))) {
+       !input->checkPosition(endPos))) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
@@ -1009,7 +1009,7 @@ bool GWGraph::readStyle(GWGraphInternal::Style &style)
 
   long pos=input->tell();
   long endPos=pos+gDataSize;
-  if (!m_mainParser->isFilePos(endPos))
+  if (!input->checkPosition(endPos))
     return false;
 
   int val=(int) input->readLong(2);
@@ -1175,7 +1175,7 @@ bool GWGraph::readLineFormat(std::string &extra)
   libmwaw::DebugStream f;
   int const gDataSize=0x1e;
   long pos=input->tell();
-  if (!m_mainParser->isFilePos(pos+gDataSize))
+  if (!input->checkPosition(pos+gDataSize))
     return false;
 
   // find: f0=1, f1=0, f2=9|c f3=3|5, f5=c|f, f0+a dim?
@@ -1413,7 +1413,7 @@ bool GWGraph::readPageFrames()
       }
       GWGraphInternal::FrameText &text=
         static_cast<GWGraphInternal::FrameText &>(*zone);
-      if (!m_mainParser->isFilePos(pos+text.m_dataSize)) {
+      if (!input->checkPosition(pos+text.m_dataSize)) {
         MWAW_DEBUG_MSG(("GWGraph::readPageFrames: text size seems bad\n"));
         break;
       }
@@ -1442,7 +1442,7 @@ bool GWGraph::readPageFrames()
       if (pos+zone->m_dataSize > endData)
         endData=pos+zone->m_dataSize;
       if (nPt<0 || (endPos>0 && endData>endPos) ||
-          (endPos<0 && !m_mainParser->isFilePos(endData)))
+          (endPos<0 && !input->checkPosition(endData)))
         break;
       float dim[4];
       for (int j=0; j<4; ++j)
@@ -1478,7 +1478,7 @@ bool GWGraph::readPageFrames()
       }
       GWGraphInternal::FramePicture &pict=
         static_cast<GWGraphInternal::FramePicture &>(*zone);
-      if (!m_mainParser->isFilePos(pos+pict.m_dataSize)) {
+      if (!input->checkPosition(pos+pict.m_dataSize)) {
         MWAW_DEBUG_MSG(("GWGraph::readPageFrames: picture size seems bad\n"));
         break;
       }
@@ -1491,7 +1491,7 @@ bool GWGraph::readPageFrames()
     case 15: {
       int nGrp=(int) input->readLong(2);
       if (nGrp<0 || (endPos>0 && pos+4+2*nGrp>endPos) ||
-          (endPos<0 && !m_mainParser->isFilePos(pos+4+2*nGrp))) {
+          (endPos<0 && !input->checkPosition(pos+4+2*nGrp))) {
         ok=false;
         break;
       }
@@ -1527,7 +1527,7 @@ bool GWGraph::readPageFrames()
       break;
     }
     if (zone->m_dataSize>0 && input->tell()!=pos+zone->m_dataSize) {
-      if (input->tell()>pos+zone->m_dataSize || !m_mainParser->isFilePos(pos+zone->m_dataSize)) {
+      if (input->tell()>pos+zone->m_dataSize || !input->checkPosition(pos+zone->m_dataSize)) {
         MWAW_DEBUG_MSG(("GWGraph::readPageFrames: must stop, file position seems bad\n"));
         ascFile.addPos(pos);
         ascFile.addNote("GFrame###");
@@ -1580,7 +1580,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+54;
-  if (!m_mainParser->isFilePos(endPos))
+  if (!input->checkPosition(endPos))
     return res;
 
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;

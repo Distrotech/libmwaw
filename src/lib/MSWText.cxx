@@ -415,7 +415,7 @@ bool MSWText::readHeaderTextLength()
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   long endPos = pos+12;
-  if (!m_mainParser->isFilePos(endPos))
+  if (!input->checkPosition(endPos))
     return false;
   for (int i = 0; i < 3; i++)
     m_state->m_textLength[i]= (long) input->readULong(4);
@@ -614,7 +614,7 @@ bool MSWText::readTextStruct(MSWEntry &entry)
     tEntry.setLength(textPos[(size_t)i+1]-textPos[(size_t)i]);
     tEntry.m_paragraphId = m_stylesManager->readPropertyModifier(tEntry.m_complex, tEntry.m_extra);
     m_state->m_textposList.push_back(tEntry);
-    if (!m_mainParser->isFilePos(ptr)) {
+    if (!input->checkPosition(ptr)) {
       MWAW_DEBUG_MSG(("MSWText::readTextStruct: find a bad file position \n"));
       f << "#";
     } else {

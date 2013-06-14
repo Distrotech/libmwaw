@@ -96,6 +96,16 @@ public:
   int seek(long offset, WPX_SEEK_TYPE seekType);
   //! returns actual offset position
   long tell();
+  //! returns the stream size
+  long size() const {
+    return m_streamSize;
+  }
+  //! checks if a position is or not a valid file position
+  bool checkPosition(long pos) const {
+    if (pos < 0) return false;
+    if (m_readLimit > 0 && pos > m_readLimit) return false;
+    return pos<=m_streamSize;
+  }
   //! returns true if we are at the end of the section/file
   bool atEOS();
 
@@ -104,7 +114,7 @@ public:
    */
   void pushLimit(long newLimit) {
     m_prevLimits.push_back(m_readLimit);
-    m_readLimit = newLimit;
+    m_readLimit = newLimit > m_streamSize ? m_streamSize : newLimit;
   }
   //! pops a section defined by pushLimit
   void popLimit() {
@@ -183,6 +193,8 @@ public:
 
 
 protected:
+  //! update the stream size ( must be called in the constructor )
+  void updateStreamSize();
   //! internal function used to read a byte
   static uint8_t readU8(WPXInputStream *stream);
 
@@ -207,6 +219,9 @@ private:
 protected:
   //! the initial input
   shared_ptr<WPXInputStream> m_stream;
+  //! the stream size
+  long m_streamSize;
+
   //! big or normal endian
   bool m_inverseRead;
 
@@ -229,35 +244,65 @@ protected:
 class MWAWStringStream: public WPXInputStream
 {
 public:
+  //! constructor
   MWAWStringStream(const unsigned char *data, const unsigned long dataSize);
+  //! destructor
   ~MWAWStringStream() { }
 
+  /**! reads numbytes data, WITHOUT using any endian or section consideration
+   * \return a pointer to the read elements
+   */
   const unsigned char *read(unsigned long numBytes, unsigned long &numBytesRead);
+  //! returns actual offset position
   long tell() {
     return m_offset;
   }
+  /*! \brief seeks to a offset position, from actual or beginning position
+   * \return 0 if ok
+   * \sa pushLimit popLimit
+   */
   int seek(long offset, WPX_SEEK_TYPE seekType);
+  //! returns true if we are at the end of the section/file
   bool atEOS() {
     return ((long)m_offset >= (long)m_buffer.size());
   }
 
+  /**
+     Analyses the content of the input stream to see whether it is an Zip/OLE2 storage.
+     \return return false
+  */
   bool isStructuredDocument() {
     return false;
   }
+  /**
+     Tries to extract a stream from a structured document.
+     \note not implemented
+  */
   WPXInputStream *getSubStream(const char *) {
     return 0;
   }
 
+  /**
+     Analyses the content of the input stream to see whether it is an Zip/OLE2 storage.
+     \return return false
+  */
   bool isOLEStream() {
     return isStructuredDocument();
   }
+  /**
+     Tries to extract a stream from a structured document.
+     \note not implemented
+  */
   WPXInputStream *getDocumentOLEStream(const char *name) {
     return getSubStream(name);
   }
 
 private:
+  /** a buffer which contains the data */
   std::vector<unsigned char> m_buffer;
+  /** the actual offset in the buffer */
   volatile long m_offset;
+
   MWAWStringStream(const MWAWStringStream &);
   MWAWStringStream &operator=(const MWAWStringStream &);
 };

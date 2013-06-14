@@ -157,12 +157,10 @@ std::ostream &operator<<(std::ostream &o, Zone const &zone)
 //! Internal: the state of a MRWParser
 struct State {
   //! constructor
-  State() : m_eof(-1), m_zonesList(), m_fileToZoneMap(),
+  State() : m_zonesList(), m_fileToZoneMap(),
     m_actPage(0), m_numPages(0), m_firstPageFooter(false), m_hasOddEvenHeaderFooter(false), m_headerHeight(0), m_footerHeight(0) {
   }
 
-  //! end of file
-  long m_eof;
   //! the list of zone
   std::vector<Zone> m_zonesList;
   //! a map fileZoneId -> localZoneId
@@ -279,20 +277,6 @@ void MRWParser::newPage(int number)
       continue;
     getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
-}
-
-bool MRWParser::isFilePos(long pos)
-{
-  if (pos <= m_state->m_eof)
-    return true;
-
-  MWAWInputStreamPtr input = getInput();
-  long actPos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
-  bool ok = long(input->tell()) == pos;
-  if (ok) m_state->m_eof = pos;
-  input->seek(actPos, WPX_SEEK_SET);
-  return ok;
 }
 
 ////////////////////////////////////////////////////////////
@@ -1342,7 +1326,7 @@ bool MRWParser::readEntryHeader(MRWEntry &entry)
     return false;
   }
   long length = (dataList[1]<<16)+dataList[2];
-  if (length < 0 || !isFilePos(input->tell()+length)) {
+  if (length < 0 || !input->checkPosition(input->tell()+length)) {
     MWAW_DEBUG_MSG(("MRWParser::readEntryHeader: the header data seems to short\n"));
     input->seek(pos, WPX_SEEK_SET);
     return false;
@@ -1463,7 +1447,7 @@ bool MRWParser::decodeZone(std::vector<MRWStruct> &dataList, long numData)
         break;
       data.m_pos.setBegin(input->tell());
       data.m_pos.setLength(numbers[0]);
-      if (!isFilePos(data.m_pos.end()))
+      if (!input->checkPosition(data.m_pos.end()))
         break;
       input->seek(data.m_pos.end(), WPX_SEEK_SET);
       numbers.resize(0);
@@ -1487,7 +1471,7 @@ bool MRWParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
 
   long const headerSize=0x2e;
-  if (!isFilePos(headerSize)) {
+  if (!input->checkPosition(headerSize)) {
     MWAW_DEBUG_MSG(("MRWParser::checkHeader: file is too short\n"));
     return false;
   }

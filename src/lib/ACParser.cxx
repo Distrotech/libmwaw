@@ -182,7 +182,7 @@ struct Option {
 //! Internal: the state of a ACParser
 struct State {
   //! constructor
-  State() : m_printerPreferences(), m_title(""), m_label(), m_stringLabel(""), m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_printerPreferences(), m_title(""), m_label(), m_stringLabel(""), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
 
   //! the printer preferences
@@ -193,8 +193,6 @@ struct State {
   Label m_label;
   //! the custom label (if defined)
   std::string m_stringLabel;
-  //! end of file
-  long m_eof;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
@@ -286,20 +284,6 @@ Vec2f ACParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
-}
-
-bool ACParser::isFilePos(long pos)
-{
-  if (pos <= m_state->m_eof)
-    return true;
-
-  MWAWInputStreamPtr input = getInput();
-  long actPos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
-  bool ok = long(input->tell()) == pos;
-  if (ok) m_state->m_eof = pos;
-  input->seek(actPos, WPX_SEEK_SET);
-  return ok;
 }
 
 ////////////////////////////////////////////////////////////
@@ -603,15 +587,14 @@ bool ACParser::readEndDataV3()
     return true;
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
-  input->seek(m_state->m_eof-8,WPX_SEEK_SET);
+  input->seek(-8, WPX_SEEK_END);
+  ascii().addPos(input->tell());
   long pos=(long) input->readULong(4);
-  if (pos < 18 || !isFilePos(pos)) {
+  if (pos < 18 || !input->checkPosition(pos)) {
     MWAW_DEBUG_MSG(("ACParser::readEndDataV3: oops begin of ressource is bad\n"));
-    ascii().addPos(m_state->m_eof-8);
     ascii().addNote("###");
     return false;
   }
-  ascii().addPos(m_state->m_eof-8);
   ascii().addNote("_");
 
   input->seek(pos, WPX_SEEK_SET);
@@ -634,7 +617,7 @@ bool ACParser::readEndDataV3()
   for (int i = 0; i < 2; i++) {
     long fPos=input->tell();
     int fSz = (int) input->readULong(1);
-    if (!isFilePos(fPos+fSz+1)) {
+    if (!input->checkPosition(fPos+fSz+1)) {
       MWAW_DEBUG_MSG(("ACText::readEndDataV3: can not read following string\n"));
       f << "###";
       ascii().addPos(pos);
@@ -678,13 +661,13 @@ bool ACParser::readEndDataV3()
   ascii().addPos(pos);
   ascii().addNote("Entries(Loose)");
 
-  if (type!=255 || !isFilePos(pos+200))
+  if (type!=255 || !input->checkPosition(pos+200))
     return true;
 
   input->seek(pos+198, WPX_SEEK_SET);
   pos = input->tell();
   int N=(int) input->readLong(2);
-  if (N<0 || !isFilePos(pos+2+34*N))
+  if (N<0 || !input->checkPosition(pos+2+34*N))
     return true;
   f.str("");
   f << "Entries(Font):N=" << N << ",";
@@ -910,21 +893,14 @@ bool ACParser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = ACParserInternal::State();
   MWAWInputStreamPtr input = getInput();
-  if (!input || !input->hasDataFork() || !isFilePos(22))
+  if (!input || !input->hasDataFork() || !input->checkPosition(22))
     return false;
 
   libmwaw::DebugStream f;
   f << "FileHeader:";
 
   // first check end of file
-  input->seek(0,WPX_SEEK_SET);
-  while(!input->atEOS()) {
-    if (input->seek(1024, WPX_SEEK_CUR) != 0) break;
-  }
-  m_state->m_eof = input->tell();
-  input->seek(-4, WPX_SEEK_CUR);
-  if (!isFilePos(input->tell()))
-    return false;
+  input->seek(-4,WPX_SEEK_END);
   int last[2];
   for (int i = 0; i < 2; i++)
     last[i]=(int) input->readLong(2);
@@ -960,7 +936,7 @@ bool ACParser::checkHeader(MWAWHeader *header, bool strict)
   // check that the first text size is valid
   input->seek(vers==1 ? 18 : 20, WPX_SEEK_SET);
   long sz=(long) input->readULong(4);
-  if (!isFilePos(input->tell()+sz))
+  if (!input->checkPosition(input->tell()+sz))
     return false;
 
   if (header)

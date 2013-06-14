@@ -65,14 +65,12 @@ namespace HMWKParserInternal
 //! Internal: the state of a HMWKParser
 struct State {
   //! constructor
-  State() : m_zonesListBegin(-1), m_eof(-1), m_zonesMap(),
+  State() : m_zonesListBegin(-1), m_zonesMap(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
 
   //! the list of zone begin
   long m_zonesListBegin;
-  //! end of file
-  long m_eof;
   //! a map of entry: zoneId->zone
   std::multimap<long,shared_ptr<HMWKZone> > m_zonesMap;
 
@@ -204,20 +202,6 @@ void HMWKParser::newPage(int number)
   }
 }
 
-bool HMWKParser::isFilePos(long pos)
-{
-  if (pos <= m_state->m_eof)
-    return true;
-
-  MWAWInputStreamPtr input = getInput();
-  long actPos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
-  bool ok = long(input->tell()) == pos;
-  if (ok) m_state->m_eof = pos;
-  input->seek(actPos, WPX_SEEK_SET);
-  return ok;
-}
-
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
@@ -336,11 +320,11 @@ bool HMWKParser::createZones()
 ////////////////////////////////////////////////////////////
 bool HMWKParser::readZonesList()
 {
-  if (m_state->m_zonesListBegin <= 0 || !isFilePos(m_state->m_zonesListBegin)) {
+  MWAWInputStreamPtr input = getInput();
+  if (m_state->m_zonesListBegin <= 0 || !input->checkPosition(m_state->m_zonesListBegin)) {
     MWAW_DEBUG_MSG(("HMWKParser::readZonesList: the list entry is not set \n"));
     return false;
   }
-  MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
 
   long debZone = m_state->m_zonesListBegin;
@@ -357,7 +341,7 @@ bool HMWKParser::readZonesList()
     f.str("");
     f << "Entries(Zones):";
     f << "N=" << numZones << ",";
-    if (!numZones || !isFilePos(pos+16*(numZones+1))) {
+    if (!numZones || !input->checkPosition(pos+16*(numZones+1))) {
       MWAW_DEBUG_MSG(("HMWKParser::readZonesList: can not read the number of zones\n"));
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -379,7 +363,7 @@ bool HMWKParser::readZonesList()
     long nextPtr = long(input->readULong(4));
     if (nextPtr) {
       f << "nextPtr=" << std::hex << nextPtr << std::dec;
-      if (!isFilePos(nextPtr)) {
+      if (!input->checkPosition(nextPtr)) {
         MWAW_DEBUG_MSG(("HMWKParser::readZonesList: can not read the next zone begin ptr\n"));
         nextPtr = 0;
         f << "###";
@@ -407,7 +391,7 @@ bool HMWKParser::readZonesList()
       zone->m_extra = f.str();
       f.str("");
       f << "Zones-" << i << ":" << *zone;
-      if (!isFilePos(ptr)) {
+      if (!input->checkPosition(ptr)) {
         MWAW_DEBUG_MSG(("HMWKParser::readZonesList: can not read the %d zone address\n", i));
         f << ",#Ptr";
       } else
@@ -446,7 +430,7 @@ bool HMWKParser::readZone(shared_ptr<HMWKZone> zone)
 
   long totalSz = (long) input->readULong(4);
   long dataSz = (long) input->readULong(4);
-  if (totalSz != dataSz+12 || !isFilePos(pos+totalSz)) {
+  if (totalSz != dataSz+12 || !input->checkPosition(pos+totalSz)) {
     MWAW_DEBUG_MSG(("HMWKParser::readZone: can not read the zone size\n"));
     f << "###";
     ascii().addPos(pos);
@@ -533,7 +517,7 @@ bool HMWKParser::readPrintInfo(HMWKZone &zone)
   libmwaw::DebugFile &asciiFile = zone.ascii();
   long pos = zone.begin();
 
-  if (dataSz < 192 || !isFilePos(zone.end())) {
+  if (dataSz < 192 || !input->checkPosition(zone.end())) {
     MWAW_DEBUG_MSG(("HMWKParser::readPrintInfo: the zone seems too short\n"));
     return false;
   }
@@ -835,7 +819,7 @@ bool HMWKParser::readZoneb(HMWKZone &zone)
   libmwaw::DebugFile &asciiFile = zone.ascii();
   long pos=zone.begin();
 
-  if (dataSz < 34 || !isFilePos(zone.end())) {
+  if (dataSz < 34 || !input->checkPosition(zone.end())) {
     MWAW_DEBUG_MSG(("HMWKParser::readZoneb: the zone seems too short\n"));
     return false;
   }
@@ -1088,7 +1072,7 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
   libmwaw::DebugStream f;
   f << "FileHeader:";
   long const headerSize=0x33c;
-  if (!isFilePos(headerSize)) {
+  if (!input->checkPosition(headerSize)) {
     MWAW_DEBUG_MSG(("HMWKParser::checkHeader: file is too short\n"));
     return false;
   }
@@ -1111,7 +1095,7 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
   }
 
   m_state->m_zonesListBegin = (int) input->readULong(4); // always 0x042c ?
-  if (m_state->m_zonesListBegin<0x14 || !isFilePos(m_state->m_zonesListBegin))
+  if (m_state->m_zonesListBegin<0x14 || !input->checkPosition(m_state->m_zonesListBegin))
     return false;
   if (m_state->m_zonesListBegin < 0x33c) {
     MWAW_DEBUG_MSG(("HMWKParser::checkHeader: the header size seems short\n"));
@@ -1120,8 +1104,8 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
   long fLength = long(input->readULong(4));
   if (fLength < m_state->m_zonesListBegin)
     return false;
-  if (!isFilePos(fLength)) {
-    if (!isFilePos(fLength/2)) return false;
+  if (!input->checkPosition(fLength)) {
+    if (!input->checkPosition(fLength/2)) return false;
     MWAW_DEBUG_MSG(("HMWKParser::checkHeader: file seems incomplete, try to continue\n"));
     f << "#len=" << std::hex << fLength << std::dec << ",";
   }

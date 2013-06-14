@@ -167,13 +167,11 @@ struct Picture {
 //! Internal: the state of a MSWParser
 struct State {
   //! constructor
-  State() : m_eof(-1), m_bot(-1), m_eot(-1), m_endNote(false),
+  State() : m_bot(-1), m_eot(-1), m_endNote(false),
     m_picturesMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
     m_headersId(), m_footersId() {
   }
 
-  //! end of file
-  long m_eof;
   //! the begin of the text
   long m_bot;
   //! end of the text
@@ -354,20 +352,6 @@ bool MSWParser::getColor(int id, MWAWColor &col) const
     return false;
   }
   return true;
-}
-
-bool MSWParser::isFilePos(long pos)
-{
-  if (pos <= m_state->m_eof)
-    return true;
-
-  MWAWInputStreamPtr input = getInput();
-  long actPos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
-  bool ok = long(input->tell()) == pos;
-  if (ok) m_state->m_eof = pos;
-  input->seek(actPos, WPX_SEEK_SET);
-  return ok;
 }
 
 void MSWParser::sendFootnote(int id)
@@ -702,7 +686,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
 
   libmwaw::DebugStream f;
   int headerSize=64;
-  if (!isFilePos(0x88)) {
+  if (!input->checkPosition(0x88)) {
     MWAW_DEBUG_MSG(("MSWParser::checkHeader: file is too short\n"));
     return false;
   }
@@ -791,7 +775,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
 
   long endOfData = (long) input->readULong(4);
   f << "eof=" << std::hex << endOfData << std::dec << ",";
-  if (endOfData < 100 || !isFilePos(endOfData)) {
+  if (endOfData < 100 || !input->checkPosition(endOfData)) {
     MWAW_DEBUG_MSG(("MSWParser::checkHeader: end of file pos is too small\n"));
     if (endOfData < m_state->m_eot || strict)
       return false;
@@ -834,9 +818,9 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 bool MSWParser::readHeaderEndV3()
 {
-  if (!isFilePos(0xb8))
-    return false;
   MWAWInputStreamPtr input = getInput();
+  if (!input->checkPosition(0xb8))
+    return false;
   libmwaw::DebugStream f;
   input->seek(0x78, WPX_SEEK_SET);
   long pos = input->tell();
@@ -989,7 +973,7 @@ MSWEntry MSWParser::readEntry(std::string type, int id)
     ascii().addNote("_");
     return entry;
   }
-  if (!isFilePos(debPos+sz)) {
+  if (!input->checkPosition(debPos+sz)) {
     MWAW_DEBUG_MSG(("MSWParser::readEntry: problem reading entry: %s\n", type.c_str()));
     f << "#";
     ascii().addPos(pos);
@@ -1425,7 +1409,7 @@ bool MSWParser::readObjectList(MSWEntry &entry)
     object.m_extra = f.str();
     f.str("");
     f << "ObjectList-" << i << ":" << object;
-    if (!isFilePos(object.m_pos.begin())) {
+    if (!input->checkPosition(object.m_pos.begin())) {
       MWAW_DEBUG_MSG(("MSWParser::readObjectList: pb with ptr\n"));
       f << "#ptr=" << std::hex << object.m_pos.begin() << std::dec << ",";
       object.m_pos.setBegin(0);
@@ -1511,7 +1495,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
   int sz = (int) input->readULong(4);
 
   f << "Entries(ObjectData):Obj" << obj.m_id << ",";
-  if (!isFilePos(pos+sz) || sz < 6) {
+  if (!input->checkPosition(pos+sz) || sz < 6) {
     MWAW_DEBUG_MSG(("MSWParser::readObject: pb finding object data sz\n"));
     f << "#";
     ascii().addPos(beginPos);
@@ -1673,14 +1657,14 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
 ////////////////////////////////////////////////////////////
 bool MSWParser::checkPicturePos(long pos, int type)
 {
-  if (pos < 0x100 || !isFilePos(pos))
+  MWAWInputStreamPtr input = getInput();
+  if (pos < 0x100 || !input->checkPosition(pos))
     return false;
 
-  MWAWInputStreamPtr input = getInput();
   input->seek(pos, WPX_SEEK_SET);
   long sz = (long) input->readULong(4);
   long endPos = pos+sz;
-  if (sz < 14 || !isFilePos(sz+pos)) return false;
+  if (sz < 14 || !input->checkPosition(sz+pos)) return false;
   int num = (int) input->readLong(1);
   if (num < 0 || num > 4) return false;
   input->seek(pos+14, WPX_SEEK_SET);

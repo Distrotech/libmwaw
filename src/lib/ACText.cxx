@@ -250,7 +250,7 @@ bool ACText::readTopic()
 
   int vers=version();
   long pos = input->tell();
-  if (!m_mainParser->isFilePos(pos+18+4+((vers>=3) ? 4 : 0)))
+  if (!input->checkPosition(pos+18+4+((vers>=3) ? 4 : 0)))
     return false;
   ACTextInternal::Topic topic;
   topic.m_depth=(int) input->readLong(2); // checkme
@@ -305,7 +305,7 @@ bool ACText::readTopic()
   for (int z=0; z < numZones; z++) {
     pos = input->tell();
     long sz=long(input->readULong(4));
-    if (sz < 0 || !m_mainParser->isFilePos(pos+4+sz)) {
+    if (sz < 0 || !input->checkPosition(pos+4+sz)) {
       MWAW_DEBUG_MSG(("ACText::readTopic: can not read a topic zone\n"));
       ascFile.addPos(pos);
       ascFile.addNote("###");

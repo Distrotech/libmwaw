@@ -528,7 +528,7 @@ bool GWText::findNextZone()
 
   long searchPos=input->tell(), pos=searchPos;
   int const headerSize=24+22+184;
-  if (!m_mainParser->isFilePos(pos+headerSize))
+  if (!input->checkPosition(pos+headerSize))
     return false;
 
   // first look for ruler
@@ -597,7 +597,7 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+24;
-  if (!m_mainParser->isFilePos(endPos))
+  if (!input->checkPosition(endPos))
     return false;
 
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -629,7 +629,7 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
   zone.m_numLines=(int) input->readULong(2);
   zone.m_numFrames=(int) input->readULong(2);
   zone.m_numChar=(long) input->readULong(4);
-  if (!zone.ok() || !m_mainParser->isFilePos(endPos+zone.size())) {
+  if (!zone.ok() || !input->checkPosition(endPos+zone.size())) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
@@ -731,7 +731,7 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
     GWTextInternal::Token &tkn=zone.m_tokenList[i];
     if (tkn.m_type != 4)
       continue;
-    if (tkn.m_dataSize <= 0 || !m_mainParser->isFilePos(pos+tkn.m_dataSize)) {
+    if (tkn.m_dataSize <= 0 || !input->checkPosition(pos+tkn.m_dataSize)) {
       MWAW_DEBUG_MSG(("GWText::readZone: can not determine the picture size\n"));
       break;
     }
@@ -824,7 +824,7 @@ bool GWText::readFontNames()
   f << "Entries(FontNames):";
   long sz= (long) input->readULong(4);
   long endPos = input->tell()+sz;
-  if (sz < 2 || !m_mainParser->isFilePos(endPos)) {
+  if (sz < 2 || !input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("GWText::readFontNames: can not read field size\n"));
     f << "###";
     ascFile.addPos(pos);
@@ -888,7 +888,7 @@ bool GWText::readFont(MWAWFont &font)
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+22;
-  if (!m_mainParser->isFilePos(endPos))
+  if (!input->checkPosition(endPos))
     return false;
 
   libmwaw::DebugStream f;
@@ -945,7 +945,7 @@ bool GWText::readRuler(MWAWParagraph &para)
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+192;
-  if (!m_mainParser->isFilePos(endPos))
+  if (!input->checkPosition(endPos))
     return false;
 
   libmwaw::DebugStream f;
@@ -1065,7 +1065,7 @@ bool GWText::readToken(GWTextInternal::Token &token, long &nChar)
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+18;
-  if (!m_mainParser->isFilePos(endPos))
+  if (!input->checkPosition(endPos))
     return false;
 
   libmwaw::DebugStream f;

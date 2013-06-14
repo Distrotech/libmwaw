@@ -119,9 +119,6 @@ protected:
   // low level
   //
 
-  /** check if an entry is in file */
-  bool isFilePos(long pos);
-
   //! return the input input
   MWAWInputStreamPtr rsrcInput();
 

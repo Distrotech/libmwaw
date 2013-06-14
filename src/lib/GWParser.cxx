@@ -61,7 +61,7 @@ namespace GWParserInternal
 //! Internal: the state of a GWParser
 struct State {
   //! constructor
-  State() : m_docType(GWParser::TEXT), m_eof(-1), m_columnsWidth(), m_hasColSep(false), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_docType(GWParser::TEXT), m_columnsWidth(), m_hasColSep(false), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
     for (int i=0; i<4; ++i)
       m_hfFlags[i]=false;
   }
@@ -100,8 +100,6 @@ struct State {
 
   //! the document type
   GWParser::DocType m_docType;
-  //! end of file
-  long m_eof;
   //! the columns dimension
   std::vector<double> m_columnsWidth;
   //! flags to define header/footer (titlePage, l/rPage, header, footer)
@@ -217,20 +215,6 @@ Vec2f GWParser::getPageLeftTop() const
 GWParser::DocType GWParser::getDocumentType() const
 {
   return m_state->m_docType;
-}
-
-bool GWParser::isFilePos(long pos)
-{
-  if (pos <= m_state->m_eof)
-    return true;
-
-  MWAWInputStreamPtr input = getInput();
-  long actPos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
-  bool ok = long(input->tell()) == pos;
-  if (ok) m_state->m_eof = pos;
-  input->seek(actPos, WPX_SEEK_SET);
-  return ok;
 }
 
 ////////////////////////////////////////////////////////////
@@ -757,7 +741,7 @@ bool GWParser::readDocInfo()
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   int const vers=version();
-  if (!isFilePos(pos+46+(vers==2?6:0)+12+38*16)) {
+  if (!input->checkPosition(pos+46+(vers==2?6:0)+12+38*16)) {
     MWAW_DEBUG_MSG(("GWParser::readDocInfo: the zone is too short\n"));
     return false;
   }
@@ -882,7 +866,7 @@ bool GWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
   *m_state = GWParserInternal::State();
   MWAWInputStreamPtr input = getInput();
-  if (!input || !input->hasDataFork() || !isFilePos(22))
+  if (!input || !input->hasDataFork() || !input->checkPosition(22))
     return false;
 
   libmwaw::DebugStream f;

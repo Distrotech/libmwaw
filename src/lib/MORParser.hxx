@@ -150,9 +150,6 @@ protected:
   // low level
   //
 
-  /** check if an entry is in file */
-  bool isFilePos(long pos);
-
   //! check if the entry is valid, if so store it in the list of entry
   bool checkAndStore(MWAWEntry const &entry);
 

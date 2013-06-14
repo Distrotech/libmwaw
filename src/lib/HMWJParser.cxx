@@ -65,15 +65,13 @@ namespace HMWJParserInternal
 //! Internal: the state of a HMWJParser
 struct State {
   //! constructor
-  State() : m_zonesListBegin(-1), m_eof(-1), m_zonesMap(), m_zonesIdList(),
+  State() : m_zonesListBegin(-1), m_zonesMap(), m_zonesIdList(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
     m_headerId(0), m_footerId(0) {
   }
 
   //! the list of zone begin
   long m_zonesListBegin;
-  //! end of file
-  long m_eof;
   //! a map of entry: filepos->zone
   std::map<long, MWAWEntry> m_zonesMap;
   //! an internal flag, used to know the actual id of a zone
@@ -217,20 +215,6 @@ void HMWJParser::newPage(int number)
   }
 }
 
-bool HMWJParser::isFilePos(long pos)
-{
-  if (pos <= m_state->m_eof)
-    return true;
-
-  MWAWInputStreamPtr input = getInput();
-  long actPos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
-  bool ok = long(input->tell()) == pos;
-  if (ok) m_state->m_eof = pos;
-  input->seek(actPos, WPX_SEEK_SET);
-  return ok;
-}
-
 bool HMWJParser::readClassicHeader(HMWJZoneHeader &header, long endPos)
 {
   header=HMWJZoneHeader(header.m_isMain);
@@ -239,7 +223,7 @@ bool HMWJParser::readClassicHeader(HMWJZoneHeader &header, long endPos)
   header.m_length = (long) input->readULong(4);
   long headerEnd=pos+4+header.m_length;
 
-  if ((endPos>0&&headerEnd>endPos) || (endPos<0&&!isFilePos(headerEnd)))
+  if ((endPos>0&&headerEnd>endPos) || (endPos<0&&!input->checkPosition(headerEnd)))
     return false;
   header.m_n = (int) input->readLong(2);
   header.m_values[0]=(int) input->readLong(2);
@@ -418,16 +402,16 @@ bool HMWJParser::createZones()
 ////////////////////////////////////////////////////////////
 bool HMWJParser::checkEntry(MWAWEntry &entry)
 {
-  if (entry.begin()<=0 || !isFilePos(entry.begin()))
-    return false;
   MWAWInputStreamPtr input = getInput();
+  if (entry.begin()<=0 || !input->checkPosition(entry.begin()))
+    return false;
   long pos = input->tell();
   input->seek(entry.begin(), WPX_SEEK_SET);
 
   int type = (int) input->readULong(2);
   long val = input->readLong(2); // always 0?
   long length = (long) input->readULong(4);
-  if (type >= 32 || length < 8 || !isFilePos(entry.begin()+length)) {
+  if (type >= 32 || length < 8 || !input->checkPosition(entry.begin()+length)) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
   }
@@ -461,7 +445,7 @@ bool HMWJParser::readZonesList()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  if (!isFilePos(pos+82))
+  if (!input->checkPosition(pos+82))
     return false;
 
   libmwaw::DebugStream f;
@@ -482,7 +466,7 @@ bool HMWJParser::readZonesList()
     // sure up to Zonesb=FontNames Zones19=EOF
     long ptr = (long) input->readULong(4);
     if (!ptr) continue;
-    if (!isFilePos(ptr))
+    if (!input->checkPosition(ptr))
       f << "###";
     else if (i != 19) { // i==19: is end of file
       MWAWEntry zone;
@@ -525,7 +509,7 @@ bool HMWJParser::readZone(MWAWEntry &entry)
   long val = input->readLong(2);
   if (val) f << "f0=" << val << ",";
   entry.setLength((long) input->readULong(4));
-  if (entry.length() < 12 || !isFilePos(entry.end())) {
+  if (entry.length() < 12 || !input->checkPosition(entry.end())) {
     MWAW_DEBUG_MSG(("HMWJParser::readZone: header seems to short\n"));
     return false;
   }
@@ -603,7 +587,7 @@ bool HMWJParser::readPrintInfo(MWAWEntry const &entry)
   libmwaw::DebugFile &asciiFile = ascii();
   long pos = entry.begin();
 
-  if (!isFilePos(entry.end())) {
+  if (!input->checkPosition(entry.end())) {
     MWAW_DEBUG_MSG(("HMWJParser::readPrintInfo: the zone seems too short\n"));
     return false;
   }
@@ -887,7 +871,7 @@ bool HMWJParser::readHeaderEnd()
   long pos=input->tell();
   long endPos=pos+34;
 
-  if (!isFilePos(endPos)) {
+  if (!input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("HMWJParser::readHeaderEnd: the zone seems too short\n"));
     return false;
   }
@@ -1041,7 +1025,7 @@ bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
   libmwaw::DebugStream f;
   f << "FileHeader:";
   long const headerSize=0x33c;
-  if (!isFilePos(headerSize)) {
+  if (!input->checkPosition(headerSize)) {
     MWAW_DEBUG_MSG(("HMWJParser::checkHeader: file is too short\n"));
     return false;
   }

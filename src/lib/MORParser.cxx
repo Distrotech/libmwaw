@@ -61,7 +61,7 @@ namespace MORParserInternal
 //! Internal: the state of a MORParser
 struct State {
   //! constructor
-  State() : m_typeEntryMap(), m_backgroundColor(MWAWColor::white()), m_colorList(), m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_typeEntryMap(), m_backgroundColor(MWAWColor::white()), m_colorList(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
   //! set the default color map
   void setDefaultColorList(int version);
@@ -72,8 +72,6 @@ struct State {
   MWAWColor m_backgroundColor;
   //! a list colorId -> color
   std::vector<MWAWColor> m_colorList;
-  //! end of file
-  long m_eof;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
@@ -184,23 +182,9 @@ Vec2f MORParser::getPageLeftTop() const
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
-bool MORParser::isFilePos(long pos)
-{
-  if (pos <= m_state->m_eof)
-    return true;
-
-  MWAWInputStreamPtr input = getInput();
-  long actPos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
-  bool ok = long(input->tell()) == pos;
-  if (ok) m_state->m_eof = pos;
-  input->seek(actPos, WPX_SEEK_SET);
-  return ok;
-}
-
 bool MORParser::checkAndStore(MWAWEntry const &entry)
 {
-  if (!entry.valid() || entry.begin() < 0x80 || !isFilePos(entry.end()))
+  if (!entry.valid() || entry.begin() < 0x80 || !getInput()->checkPosition(entry.end()))
     return false;
   if (entry.type().empty()) {
     MWAW_DEBUG_MSG(("MORParser::checkAndStore: entry type is not set\n"));
@@ -214,14 +198,14 @@ bool MORParser::checkAndStore(MWAWEntry const &entry)
 
 bool MORParser::checkAndFindSize(MWAWEntry &entry)
 {
-  if (entry.begin()<0 || !isFilePos(entry.begin()+4))
-    return false;
   MWAWInputStreamPtr &input= getInput();
+  if (entry.begin()<0 || !input->checkPosition(entry.begin()+4))
+    return false;
   long actPos=input->tell();
   input->seek(entry.begin(), WPX_SEEK_SET);
   entry.setLength(4+(long) input->readULong(4));
   input->seek(actPos,WPX_SEEK_SET);
-  return isFilePos(entry.end());
+  return input->checkPosition(entry.end());
 }
 
 ////////////////////////////////////////////////////////////
@@ -409,11 +393,11 @@ bool MORParser::readZonesList()
   int vers=version();
   if (vers<2)
     return false;
-  if (!isFilePos(0x80)) {
+  MWAWInputStreamPtr input = getInput();
+  if (!input->checkPosition(0x80)) {
     MWAW_DEBUG_MSG(("MORParser::readZonesList: file is too short\n"));
     return false;
   }
-  MWAWInputStreamPtr input = getInput();
   long pos=8;
   input->seek(pos, WPX_SEEK_SET);
   libmwaw::DebugStream f;
@@ -686,7 +670,7 @@ bool MORParser::readFreePos(MWAWEntry const &entry)
       if (val) f << "f0=" << std::hex << val << std::dec << ",";
     }
     if (tEntry.valid()) {
-      if (!isFilePos(tEntry.end())) {
+      if (!input->checkPosition(tEntry.end())) {
         MWAW_DEBUG_MSG(("MORParser::readFreePos: the entry does not seems valid\n"));
         f << "###";
       } else
@@ -721,7 +705,7 @@ bool MORParser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = MORParserInternal::State();
   MWAWInputStreamPtr input = getInput();
-  if (!input || !input->hasDataFork() || !isFilePos(0x80))
+  if (!input || !input->hasDataFork() || !input->checkPosition(0x80))
     return false;
 
   libmwaw::DebugStream f;
@@ -757,7 +741,7 @@ bool MORParser::checkHeader(MWAWHeader *header, bool strict)
       entry.setLength((long) input->readULong(4));
       if (!entry.length())
         continue;
-      if (!isFilePos(entry.end()-1))
+      if (!input->checkPosition(entry.end()-1))
         return false;
     }
   }

@@ -202,7 +202,7 @@ struct ReferenceCalledData {
 //! Internal: the state of a FWParser
 struct State {
   //! constructor
-  State() : m_eof(-1), m_fileZoneList(), m_fileZoneFlagsList(), m_docZoneList(), m_docFileIdMap(), m_fileDocIdMap(),
+  State() : m_fileZoneList(), m_fileZoneFlagsList(), m_docZoneList(), m_docFileIdMap(), m_fileDocIdMap(),
     m_biblioId(-1), m_entryMap(), m_graphicMap(), m_variableRedirectMap(), m_referenceRedirectMap(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
     for (int i=0; i < 3; i++) m_zoneFlagsId[i] = -1;
@@ -236,8 +236,6 @@ struct State {
     }
     return it->second;
   }
-  //! the last file position
-  long m_eof;
 
   //! the list of main zone flags id
   int m_zoneFlagsId[3];
@@ -2195,18 +2193,12 @@ bool FWParser::readFileZonePos(shared_ptr<FWEntry> zone)
 bool FWParser::readDocPosition()
 {
   MWAWInputStreamPtr input = getInput();
-  if (m_state->m_eof < 0) {
-    // find eof
-    while (!input->atEOS())
-      input->seek(1000, WPX_SEEK_CUR);
-    m_state->m_eof = input->tell();
-  }
-  if (m_state->m_eof < 48)
+  if (!input->checkPosition(48))
     return false;
 
   libmwaw::DebugStream f;
-  long pos = m_state->m_eof-48;
-  input->seek(m_state->m_eof-48, WPX_SEEK_SET);
+  input->seek(-48, WPX_SEEK_END);
+  long pos = input->tell();
   f << "Entries(DocPosition):";
 
   long val;
@@ -2224,7 +2216,7 @@ bool FWParser::readDocPosition()
                         (&ascii(), MWAW_shared_ptr_noop_deleter<libmwaw::DebugFile>());
     zone->setBegin((long)input->readULong(4));
     zone->setLength((sz[i]=(long)input->readULong(4)));
-    if (zone->end() > m_state->m_eof || !zone->valid())
+    if (!input->checkPosition(zone->end()) || !zone->valid())
       return false;
     if (i == 1) m_state->m_fileZoneList = zone;
     else m_state->m_fileZoneFlagsList = zone;

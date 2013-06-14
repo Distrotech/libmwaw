@@ -43,11 +43,8 @@ namespace MSKParserInternal
 //! Internal: the state of a MSK3Parser
 struct State {
   //! constructor
-  State() : m_eof(-1) {
+  State() {
   }
-
-  //! the last known file position
-  long m_eof;
 };
 }
 
@@ -77,20 +74,6 @@ void MSKParser::sendFrameText(MWAWEntry const &, std::string const &)
 void MSKParser::sendOLE(int, MWAWPosition const &, WPXPropertyList)
 {
   MWAW_DEBUG_MSG(("MSKParser::sendOLE: must not be called\n"));
-}
-
-bool MSKParser::checkIfPositionValid(long pos)
-{
-  if (pos <= m_state->m_eof)
-    return true;
-  MWAWInputStreamPtr input = getInput();
-  long actPos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
-  bool ok = long(input->tell())==pos;
-  if (ok) m_state->m_eof = pos;
-
-  input->seek(actPos, WPX_SEEK_SET);
-  return ok;
 }
 
 std::vector<MWAWColor> const &MSKParser::getPalette(int vers)

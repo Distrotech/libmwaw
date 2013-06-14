@@ -1136,7 +1136,7 @@ shared_ptr<HMWJGraphInternal::Frame> HMWJGraph::readFrame(int id)
   long pos = input->tell();
   long len = (long) input->readULong(4);
   long endPos = pos+4+len;
-  if (len < 32 || !m_mainParser->isFilePos(endPos)) {
+  if (len < 32 || !input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("HMWJGraph::readFrame: can not read the frame length\n"));
     input->seek(pos, WPX_SEEK_SET);
     return res;

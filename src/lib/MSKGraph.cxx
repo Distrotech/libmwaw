@@ -1213,7 +1213,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     int pSize = (int) input->readULong(2);
     if (pSize == 0) return zId;
     dataSize = 0xa9+pSize;
-    if (!m_mainParser->checkIfPositionValid(debData+dataSize))
+    if (!input->checkPosition(debData+dataSize))
       return zId;
 
     input->seek(debData+dataSize, WPX_SEEK_SET);
@@ -1250,7 +1250,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
   }
 
   pict.m_pos.setEnd(debData+dataSize+versSize);
-  if (!m_mainParser->checkIfPositionValid(pict.m_pos.end()))
+  if (!input->checkPosition(pict.m_pos.end()))
     return zId;
 
   input->seek(debData, WPX_SEEK_SET);
@@ -1677,7 +1677,7 @@ int MSKGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone)
   pict->m_pos.setBegin(pos);
   pict->m_pos.setLength(size);
   // check if we can go to the next zone
-  if (!m_mainParser->checkIfPositionValid(pict->m_pos.end())) return zId;
+  if (!input->checkPosition(pict->m_pos.end())) return zId;
 
   if (ptr) f << std::hex << "ptr0=" << ptr << ",";
   if (flag) f << std::hex << "fl=" << flag << ",";
@@ -1979,7 +1979,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
   f << "Entries(SmallText):";
   MWAWInputStreamPtr input=m_mainParser->getInput();
   long pos = input->tell();
-  if (!m_mainParser->checkIfPositionValid(pos+4*(textBox.m_numPositions+1))) return false;
+  if (!input->checkPosition(pos+4*(textBox.m_numPositions+1))) return false;
 
   // first read the set of (positions, font)
   f << "pos=[";
@@ -2244,7 +2244,7 @@ bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
   long pos = input->tell();
   if (version() <= 3)
     return false;
-  if (!m_mainParser->checkIfPositionValid(pos+306))
+  if (!input->checkPosition(pos+306))
     return false;
 
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
@@ -2530,7 +2530,7 @@ bool MSKGraph::readFont(MSKGraphInternal::Font &font)
   MWAWInputStreamPtr input=m_mainParser->getInput();
   long pos = input->tell();
   libmwaw::DebugStream f;
-  if (!m_mainParser->checkIfPositionValid(pos+18))
+  if (!input->checkPosition(pos+18))
     return false;
   font = MSKGraphInternal::Font();
   for (int i = 0; i < 3; i++)

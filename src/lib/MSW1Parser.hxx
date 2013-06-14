@@ -117,8 +117,6 @@ protected:
   // low level
   //
 
-  /** check if an entry is in file */
-  bool isFilePos(long pos);
   /** shorten an entry if the last character is EOL */
   void removeLastCharIfEOL(MWAWEntry &entry);
   /** read the two first zones (char and paragraph) */

@@ -365,7 +365,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
   long endPos = pos+sz;
 
   if (sz == 0) return true;
-  if (!m_mainParser->isFilePos(endPos)) return false;
+  if (!input->checkPosition(endPos)) return false;
 
   int const vers = version();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -640,7 +640,7 @@ bool MSWTextStyles::readPLCList(MSWEntry &entry)
   for (int i = 0; i <= N; i++) textPos[(size_t)i] = (long) input->readULong(4);
   int const expectedSize = (version() <= 3) ? 0x80 : 0x200;
   for (int i = 0; i < N; i++) {
-    if (!m_mainParser->isFilePos(textPos[(size_t)i])) f << "#";
+    if (!input->checkPosition(textPos[(size_t)i])) f << "#";
 
     long defPos = (long) input->readULong(2);
     f << std::hex << "[filePos?=" << textPos[(size_t)i] << ",dPos=" << defPos << std::dec << ",";
@@ -651,7 +651,7 @@ bool MSWTextStyles::readPLCList(MSWEntry &entry)
     plc.setId(i);
     plc.setBegin(defPos*expectedSize);
     plc.setLength(expectedSize);
-    if (!m_mainParser->isFilePos(plc.end())) {
+    if (!input->checkPosition(plc.end())) {
       f << "#PLC,";
       MWAW_DEBUG_MSG(("MSWTextStyles::readPLCList: plc def is outside the file\n"));
     } else {
@@ -1014,12 +1014,12 @@ bool MSWTextStyles::readSection(MSWEntry &entry)
 
 bool MSWTextStyles::readSection(MSWStruct::Section &sec, long debPos)
 {
-  if (!m_mainParser->isFilePos(debPos)) {
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  if (!input->checkPosition(debPos)) {
     MWAW_DEBUG_MSG(("MSWTextStyles::readSection: can not find section data...\n"));
     return false;
   }
   int const vers = version();
-  MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(debPos, WPX_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;

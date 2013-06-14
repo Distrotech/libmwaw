@@ -173,8 +173,6 @@ protected:
   // low level
   //
 
-  /** check if an entry is in file */
-  bool isFilePos(long pos);
   /** try to read an entry header */
   bool readEntryHeader(MRWEntry &entry);
   /** try to decode a zone */

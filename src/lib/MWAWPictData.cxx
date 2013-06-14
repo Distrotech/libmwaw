@@ -62,9 +62,8 @@ MWAWPictData::ReadResult MWAWPictData::checkOrGet
 
   // we can not read the data, ...
   long actualPos = input->tell();
-  if (input->seek(size,WPX_SEEK_CUR) || input->atEOS()) {
-    if (input->tell() != actualPos+size) return MWAW_R_BAD;
-  }
+  if (!input->checkPosition(actualPos+size))
+    return MWAW_R_BAD;
   MWAWPictData::ReadResult ok = MWAW_R_BAD;
   if (ok == MWAW_R_BAD) {
     input->seek(actualPos,WPX_SEEK_SET);
