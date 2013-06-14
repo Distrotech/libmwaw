@@ -453,7 +453,7 @@ void ZoneInfo::updateListId(ListProperties &prop, MWAWListManager &listManager)
 //! Internal: the state of a MDWParser
 struct State {
   //! constructor
-  State() : m_compressCorr(" etnroaisdlhcfp"), m_eof(-1), m_entryMap(), m_listProperties(),
+  State() : m_compressCorr(" etnroaisdlhcfp"), m_entryMap(), m_listProperties(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
     m_headerFieldList(), m_footerFieldList() {
     for (int i = 0; i < 3; i++)
@@ -467,8 +467,6 @@ struct State {
   int m_numLinesByZone[3];
   //! the zones
   ZoneInfo m_zones[3];
-  //! end of file
-  long m_eof;
 
   //! the zones map
   std::multimap<std::string, MWAWEntry> m_entryMap;
@@ -592,27 +590,13 @@ void MDWParser::newPage(int number)
   }
 }
 
-bool MDWParser::isFilePos(long pos)
-{
-  if (pos <= m_state->m_eof)
-    return true;
-
-  MWAWInputStreamPtr input = getInput();
-  long actPos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
-  bool ok = long(input->tell()) == pos;
-  if (ok) m_state->m_eof = pos;
-  input->seek(actPos, WPX_SEEK_SET);
-  return ok;
-}
-
 MWAWEntry MDWParser::readEntry()
 {
   MWAWEntry res;
   MWAWInputStreamPtr input = getInput();
   res.setBegin((long) input->readULong(4));
   res.setLength((long) input->readULong(4));
-  if (res.length() && !isFilePos(res.end())) {
+  if (res.length() && !input->checkPosition(res.end())) {
     MWAW_DEBUG_MSG(("MDWParser::readEntry: find an invalid entry\n"));
     res.setLength(0);
   }
@@ -726,7 +710,7 @@ bool MDWParser::createZones()
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
   long pos = input->tell();
-  if (!isFilePos(pos+128+56)) {
+  if (!input->checkPosition(pos+128+56)) {
     MWAW_DEBUG_MSG(("MDWParser::createZones: zones Zone is too short\n"));
     return false;
   }
@@ -1392,7 +1376,7 @@ bool MDWParser::checkHeader(MWAWHeader *header, bool strict)
   libmwaw::DebugStream f;
 
   int const headerSize=0x50;
-  if (!isFilePos(headerSize)) {
+  if (!input->checkPosition(headerSize)) {
     MWAW_DEBUG_MSG(("MDWParser::checkHeader: file is too short\n"));
     return false;
   }

@@ -237,6 +237,18 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\GWGraph.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\GWParser.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\GWText.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\HMWJGraph.cxx"
 				>
 			</File>
@@ -278,6 +290,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MDWParser.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MORParser.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MORText.cxx"
 				>
 			</File>
 			<File
@@ -570,6 +590,18 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\GWGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\GWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\GWText.hxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\HMWJGraph.hxx"
 				>
 			</File>
@@ -615,6 +647,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MDWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MORParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MORText.hxx"
 				>
 			</File>
 			<File

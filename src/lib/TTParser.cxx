@@ -60,7 +60,7 @@ namespace TTParserInternal
 struct State {
   //! constructor
   State() : m_type(MWAWDocument::UNKNOWN), m_posFontMap(), m_idPictEntryMap(), m_numberSpacesForTab(0),
-    m_eof(-1), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
   //! the file type
   MWAWDocument::DocumentType m_type;
@@ -70,8 +70,6 @@ struct State {
   std::map<int,MWAWEntry> m_idPictEntryMap;
   //! number of space to used to replace tab (0: means keep tabs )
   int m_numberSpacesForTab;
-  //! the last datafork position
-  long m_eof;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
@@ -258,7 +256,6 @@ int TTParser::computeNumPages() const
     if (input->readLong(1)==pageBreakChar)
       nPages++;
   }
-  m_state->m_eof=input->tell();
   return nPages;
 }
 
@@ -281,14 +278,15 @@ bool TTParser::sendText()
   unsigned char pageBreakChar=(m_state->m_type==MWAWDocument::TEDIT) ? 0xc : 0;
 
   int actPage=1;
-  for (long i=0; i < m_state->m_eof; i++) {
-    bool endPos = input->atEOS();
-    unsigned char c=endPos ? (unsigned char)0 : (unsigned char) input->readULong(1);
-    if (endPos || c==0xd || c==pageBreakChar) {
+  long endPos = input->size();
+  for (long i=0; i < endPos; i++) {
+    bool isEnd = input->atEOS();
+    unsigned char c=isEnd ? (unsigned char)0 : (unsigned char) input->readULong(1);
+    if (isEnd || c==0xd || c==pageBreakChar) {
       ascii().addPos(debPos);
       ascii().addNote(f.str().c_str());
       debPos = input->tell();
-      if (endPos) break;
+      if (isEnd) break;
       f.str("");
       f << "TEXT:";
     }
@@ -303,7 +301,7 @@ bool TTParser::sendText()
       newPage(++actPage);
       continue;
     }
-    if (c==0 && m_state->m_type==MWAWDocument::TEDIT && !endPos) {
+    if (c==0 && m_state->m_type==MWAWDocument::TEDIT && !isEnd) {
       // tex-edit accept control character, ...
       unsigned char nextC=(unsigned char) input->readULong(1);
       if (nextC < 0x20) {
@@ -336,7 +334,7 @@ bool TTParser::sendText()
       break;
     default:
       if (c < 0x20) f  << "##[" << std::hex << int(c) << std::dec << "]";
-      i += getListener()->insertCharacter(c, input, m_state->m_eof);
+      i += getListener()->insertCharacter(c, input, endPos);
       break;
     }
   }

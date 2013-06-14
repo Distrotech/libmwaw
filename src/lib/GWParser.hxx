@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef AC_PARSER
-#  define AC_PARSER
+#ifndef GW_PARSER
+#  define GW_PARSER
 
 #include <string>
 #include <vector>
@@ -40,29 +40,32 @@
 #include <libwpd/libwpd.h>
 
 #include "MWAWDebug.hxx"
-#include "MWAWInputStream.hxx"
 
 #include "MWAWParser.hxx"
 
-namespace ACParserInternal
+namespace GWParserInternal
 {
-class SubDocument;
 struct State;
+class SubDocument;
 }
 
-class ACText;
+class GWGraph;
+class GWText;
 
-/** \brief the main class to read a Acta file
+/** \brief the main class to read a GreatWorks text file
  */
-class ACParser : public MWAWParser
+class GWParser : public MWAWParser
 {
-  friend class ACParserInternal::SubDocument;
-  friend class ACText;
+  friend class GWParserInternal::SubDocument;
+  friend class GWGraph;
+  friend class GWText;
 public:
+  //! an enum used to defined the document type
+  enum DocType { DRAW, TEXT, UNKNOWN };
   //! constructor
-  ACParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  GWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~ACParser();
+  virtual ~GWParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -84,40 +87,50 @@ protected:
 
   // interface with the text parser
 
-  //! returns a list to be used in the text
-  shared_ptr<MWAWList> getMainList();
+  //! return the main section
+  MWAWSection getMainSection() const;
+  //! try to send the i^th header/footer
+  bool sendHF(int id);
+  //! try to  textbox's text
+  bool sendTextbox(MWAWEntry const &entry);
+
+  // interface with the graph parser
+
+  //! try to send a picture
+  bool sendPicture(MWAWEntry const &entry, MWAWPosition pos);
+
+  // general interface
+  DocType getDocumentType() const;
 
 protected:
   //! finds the different objects zones
   bool createZones();
+  //! finds the different objects zones ( for a draw file)
+  bool createDrawZones();
 
   //! read the resource fork zone
   bool readRSRCZones();
 
-  //! read the end file data zones
-  bool readEndDataV3();
-
-  //! sends the header/footer data
-  void sendHeaderFooter();
-
-  //! read a PrintInfo block ( PSET resource block )
-  bool readPrintInfo(MWAWEntry const &entry);
-
-  //! read the window position ( WSIZ resource block )
-  bool readWindowPos(MWAWEntry const &entry);
-
-  //! read the label type
-  bool readLabel(MWAWEntry const &entry);
-
-  //! read the Header/Footer property (QHDR block)
-  bool readHFProperties(MWAWEntry const &entry);
-
-  //! read the QOPT resource block (small print change )
-  bool readOption(MWAWEntry const &entry);
-
   //
   // low level
   //
+
+  //! read a PrintInfo block ( PRNT resource block )
+  bool readPrintInfo(MWAWEntry const &entry);
+
+  //! read the windows positions ( WPSN resource block )
+  bool readWPSN(MWAWEntry const &entry);
+
+  //! read the DocInfo block ( many unknown data )
+  bool readDocInfo();
+  //! read a unknown zone ( ARRs resource block: v2 )
+  bool readARRs(MWAWEntry const &entry);
+  //! read a unknown zone ( DaHS resource block: v2 )
+  bool readDaHS(MWAWEntry const &entry);
+  //! read a unknown zone ( GrDS resource block: v2 )
+  bool readGrDS(MWAWEntry const &entry);
+  //! read a unknown zone ( NxED resource block: v2 )
+  bool readNxEd(MWAWEntry const &entry);
 
   //! return the input input
   MWAWInputStreamPtr rsrcInput();
@@ -130,10 +143,12 @@ protected:
   //
 
   //! the state
-  shared_ptr<ACParserInternal::State> m_state;
+  shared_ptr<GWParserInternal::State> m_state;
 
+  //! the graph parser
+  shared_ptr<GWGraph> m_graphParser;
   //! the text parser
-  shared_ptr<ACText> m_textParser;
+  shared_ptr<GWText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

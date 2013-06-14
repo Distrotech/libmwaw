@@ -176,9 +176,6 @@ protected:
   /** try to read the zone B*/
   bool readZoneB(MWAWEntry const &entry);
 
-  /** check if an entry is in file */
-  bool isFilePos(long pos);
-
 protected:
   //
   // data

@@ -656,7 +656,7 @@ bool MSK3Parser::readDocumentInfo()
   int flag = (int) input->readULong(1);
   long sz = (long) input->readULong(2);
   long endPos = pos+6+sz;
-  if (!checkIfPositionValid(endPos))
+  if (!input->checkPosition(endPos))
     return false;
 
   int expectedSz = vers<=2 ? 0x15e : 0x9a;
@@ -780,8 +780,8 @@ bool MSK3Parser::readGroup(MSK3ParserInternal::Zone &zone, MWAWEntry &entry, int
   entry.setLength(size);
   entry.setType("GroupHeader");
 
-  if (!checkIfPositionValid(entry.end())) {
-    if (!checkIfPositionValid(pos+blockSize)) {
+  if (!input->checkPosition(entry.end())) {
+    if (!input->checkPosition(pos+blockSize)) {
       MWAW_DEBUG_MSG(("MSK3Parser::readGroup: can not determine group %d size \n", docId));
       return false;
     }
@@ -871,7 +871,7 @@ bool MSK3Parser::readGroupHeaderInfo(bool header, int check)
     f << "[footer]";
   f << ": size=" << std::hex << size << std::dec << " BTXT";
 
-  if (!checkIfPositionValid(debPos+size)) return false;
+  if (!input->checkPosition(debPos+size)) return false;
 
   input->seek(debPos+6, WPX_SEEK_SET);
   int N=(int) input->readLong(2);
@@ -946,7 +946,7 @@ bool MSK3Parser::readPrintInfo()
   libmwaw::DebugStream f;
   // print info
   libmwaw::PrinterInfo info;
-  if (!checkIfPositionValid(pos+0x78+8) || !info.read(input)) return false;
+  if (!input->checkPosition(pos+0x78+8) || !info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
 
   Vec2i paperSize = info.paper().size();

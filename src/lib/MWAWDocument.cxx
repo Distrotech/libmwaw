@@ -42,10 +42,12 @@
 #include "DMParser.hxx"
 #include "EDParser.hxx"
 #include "FWParser.hxx"
+#include "GWParser.hxx"
 #include "HMWJParser.hxx"
 #include "HMWKParser.hxx"
 #include "LWParser.hxx"
 #include "MDWParser.hxx"
+#include "MORParser.hxx"
 #include "MRWParser.hxx"
 #include "MWParser.hxx"
 #include "MWProParser.hxx"
@@ -141,11 +143,13 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     case DM:
     case ED:
     case FULLW:
+    case GW:
     case HMAC:
     case HMACJ:
     case LWTEXT:
     case MARIW:
     case MINDW:
+    case MORE:
     case MSWORD:
     case MSWORKS:
     case MW:
@@ -158,6 +162,23 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     case ZWRT:
       confidence = MWAW_CONFIDENCE_GOOD;
       break;
+    case FRM:
+    case MACD:
+    case MOCKP:
+    case PAGEMK:
+    case RSG:
+    case RGTIME:
+    case XP:
+    case WPW:
+    case RESERVED1:
+    case RESERVED2:
+    case RESERVED3:
+    case RESERVED4:
+    case RESERVED5:
+    case RESERVED6:
+    case RESERVED7:
+    case RESERVED8:
+    case RESERVED9:
     case UNKNOWN:
     default:
       break;
@@ -280,6 +301,9 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
     case MWAWDocument::FULLW:
       parser.reset(new FWParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::GW:
+      parser.reset(new GWParser(input, rsrcParser, header));
+      break;
     case MWAWDocument::HMAC:
       parser.reset(new HMWKParser(input, rsrcParser, header));
       break;
@@ -294,6 +318,9 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
       break;
     case MWAWDocument::MINDW:
       parser.reset(new MDWParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MORE:
+      parser.reset(new MORParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MSWORD:
       if (header->getMajorVersion()==1)
@@ -329,6 +356,25 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
     case MWAWDocument::ZWRT:
       parser.reset(new ZWParser(input, rsrcParser, header));
       break;
+
+    case MWAWDocument::FRM:
+    case MWAWDocument::MACD:
+    case MWAWDocument::MOCKP:
+    case MWAWDocument::PAGEMK:
+    case MWAWDocument::RSG:
+    case MWAWDocument::RGTIME:
+    case MWAWDocument::XP:
+    case MWAWDocument::WPW:
+
+    case MWAWDocument::RESERVED1:
+    case MWAWDocument::RESERVED2:
+    case MWAWDocument::RESERVED3:
+    case MWAWDocument::RESERVED4:
+    case MWAWDocument::RESERVED5:
+    case MWAWDocument::RESERVED6:
+    case MWAWDocument::RESERVED7:
+    case MWAWDocument::RESERVED8:
+    case MWAWDocument::RESERVED9:
     case MWAWDocument::UNKNOWN:
     default:
       break;

@@ -143,9 +143,6 @@ protected:
   //! read a file entry
   MWAWEntry readEntry();
 
-  /** check if an entry is in file */
-  bool isFilePos(long pos);
-
 protected:
   //
   // data

@@ -8,7 +8,6 @@ libwpd in order to build libmwaw. You can get libwpd from:
 
 - libwpd <http://libwpd.sourceforge.net/download.html>
 
-
 Unix/Linux/Darwin
 ==========
 
@@ -25,7 +24,7 @@ Windows
 =========================================
 Beta tester needed to test the compilation and report problems
 
-Windows - Microsoft(tm) Visual Studio/C++ ( can not test, so probably broken : HELP NEEDED... )
+Windows - Microsoft(tm) Visual Studio/C++
 =========================================
 
 A workspace for MSVC6 can be found in the ./build/win32/ directory.

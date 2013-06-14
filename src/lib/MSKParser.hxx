@@ -77,9 +77,6 @@ public:
   //! return a list of color corresponding to a version
   static std::vector<MWAWColor> const &getPalette(int vers);
 
-  //! check if a position is inside the file
-  bool checkIfPositionValid(long pos);
-
   //! virtual function used to send the text of a frame (v4)
   virtual void sendFrameText(MWAWEntry const &entry, std::string const &frame);
 

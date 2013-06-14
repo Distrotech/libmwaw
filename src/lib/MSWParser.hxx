@@ -181,9 +181,6 @@ protected:
   // low level
   //
 
-  /** check if an entry is in file */
-  bool isFilePos(long pos);
-
   //! read a file entry
   MSWEntry readEntry(std::string type, int id=-1);
 

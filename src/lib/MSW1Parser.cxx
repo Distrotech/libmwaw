@@ -169,7 +169,7 @@ std::ostream &operator<<(std::ostream &o, Paragraph const &para)
 //! Internal: the state of a MSW1Parser
 struct State {
   //! constructor
-  State() : m_eot(-1), m_eof(-1), m_numColumns(1), m_columnsSep(0), m_textZonesList(), m_mainTextZonesList(),
+  State() : m_eot(-1), m_numColumns(1), m_columnsSep(0), m_textZonesList(), m_mainTextZonesList(),
     m_fontsList(), m_paragraphsList(), m_endNote(false), m_footnotesList(), m_plcMap(),
     m_actPage(0), m_numPages(1), m_headerHeight(0), m_footerHeight(0), m_headersId(), m_footersId() {
     for (int i = 0; i < 7; i++)
@@ -178,8 +178,6 @@ struct State {
 
   //! end of text
   long m_eot;
-  //! end of file
-  long m_eof;
   //! the number of columns
   int m_numColumns;
   //! the column separator
@@ -299,20 +297,6 @@ void MSW1Parser::newPage(int number)
       continue;
     getListener()->insertBreak(MWAWContentListener::PageBreak);
   }
-}
-
-bool MSW1Parser::isFilePos(long pos)
-{
-  if (pos <= m_state->m_eof)
-    return true;
-
-  MWAWInputStreamPtr input = getInput();
-  long actPos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
-  bool ok = long(input->tell()) == pos;
-  if (ok) m_state->m_eof = pos;
-  input->seek(actPos, WPX_SEEK_SET);
-  return ok;
 }
 
 void MSW1Parser::removeLastCharIfEOL(MWAWEntry &entry)
@@ -464,10 +448,11 @@ bool MSW1Parser::createZones()
   ascii().addPos(m_state->m_eot);
   ascii().addNote("_");
 
+  MWAWInputStreamPtr input = getInput();
   for (int z = 5; z >= 0; z--) {
     if (m_state->m_fileZonesLimit[z] == m_state->m_fileZonesLimit[z+1])
       continue;
-    if (!isFilePos(m_state->m_fileZonesLimit[z+1]*0x80)) {
+    if (!input->checkPosition(m_state->m_fileZonesLimit[z+1]*0x80)) {
       f.str("");
       f << "Entries(Zone" << z << "):###";
       MWAW_DEBUG_MSG(("MSW1Parser::createZones: zone %d is too long\n",z));
@@ -619,7 +604,7 @@ bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
   MWAWInputStreamPtr input = getInput();
   input->seek(fPos, WPX_SEEK_SET);
   int sz = (int) input->readLong(1);
-  if (sz < 1 || sz > 0x7f || !isFilePos(fPos+1+sz)) {
+  if (sz < 1 || sz > 0x7f || !input->checkPosition(fPos+1+sz)) {
     MWAW_DEBUG_MSG(("MSW1Parser::readFont: the zone size seems bad\n"));
     return false;
   }
@@ -683,7 +668,7 @@ bool MSW1Parser::readParagraph(long fPos, MSW1ParserInternal::Paragraph &para)
   MWAWInputStreamPtr input = getInput();
   input->seek(fPos, WPX_SEEK_SET);
   int sz = (int) input->readLong(1);
-  if (sz < 1 || sz > 0x7f || !isFilePos(fPos+1+sz)) {
+  if (sz < 1 || sz > 0x7f || !input->checkPosition(fPos+1+sz)) {
     MWAW_DEBUG_MSG(("MSW1Parser::readParagraph: the zone size seems bad\n"));
     return false;
   }
@@ -809,12 +794,12 @@ bool MSW1Parser::readParagraph(long fPos, MSW1ParserInternal::Paragraph &para)
 /* read the page break separation */
 bool MSW1Parser::readPageBreak(Vec2i limits)
 {
-  if (limits[1] <= limits[0] || !isFilePos(limits[1]*0x80)) {
+  MWAWInputStreamPtr input = getInput();
+  if (limits[1] <= limits[0] || !input->checkPosition(limits[1]*0x80)) {
     MWAW_DEBUG_MSG(("MSW1Parser::readPageBreak: the zone is not well defined\n"));
     return false;
   }
   libmwaw::DebugStream f;
-  MWAWInputStreamPtr input = getInput();
   long pos = limits[0]*0x80;
   input->seek(pos, WPX_SEEK_SET);
   f << "Entries(PageBreak):";
@@ -853,12 +838,12 @@ bool MSW1Parser::readPageBreak(Vec2i limits)
 /* read the footnote zone */
 bool MSW1Parser::readFootnoteCorrespondance(Vec2i limits)
 {
-  if (limits[1] <= limits[0] || !isFilePos(limits[1]*0x80)) {
+  MWAWInputStreamPtr input = getInput();
+  if (limits[1] <= limits[0] || !input->checkPosition(limits[1]*0x80)) {
     MWAW_DEBUG_MSG(("MSW1Parser::readFootnoteCorrespondance: the zone is not well defined\n"));
     return false;
   }
   libmwaw::DebugStream f;
-  MWAWInputStreamPtr input = getInput();
 
   long textEnd = m_state->m_eot;
   MSW1ParserInternal::PLC plc(MSW1ParserInternal::FOOTNOTE);
@@ -915,12 +900,12 @@ bool MSW1Parser::readFootnoteCorrespondance(Vec2i limits)
 /* read the zone4: a list of main zone ( headers, footers ) ? */
 bool MSW1Parser::readZones(Vec2i limits)
 {
-  if (limits[1] <= limits[0] || !isFilePos(limits[1]*0x80)) {
+  MWAWInputStreamPtr input = getInput();
+  if (limits[1] <= limits[0] || !input->checkPosition(limits[1]*0x80)) {
     MWAW_DEBUG_MSG(("MSW1Parser::readZones: the zone is not well defined\n"));
     return false;
   }
   libmwaw::DebugStream f;
-  MWAWInputStreamPtr input = getInput();
 
   MSW1ParserInternal::PLC plc(MSW1ParserInternal::ZONE);
   long pos = limits[0]*0x80;
@@ -962,13 +947,13 @@ bool MSW1Parser::readZones(Vec2i limits)
 /* read the document information */
 bool MSW1Parser::readDocInfo(Vec2i limits)
 {
-  if (limits[1] != limits[0]+1 || !isFilePos(limits[1]*0x80)) {
+  MWAWInputStreamPtr input = getInput();
+  if (limits[1] != limits[0]+1 || !input->checkPosition(limits[1]*0x80)) {
     MWAW_DEBUG_MSG(("MSW1Parser::readDocInfo: the zone is not well defined\n"));
     return false;
   }
 
   libmwaw::DebugStream f;
-  MWAWInputStreamPtr input = getInput();
   long pos = limits[0]*0x80;
   input->seek(pos, WPX_SEEK_SET);
   f << "Entries(DocInfo):";
@@ -1100,12 +1085,12 @@ bool MSW1Parser::readDocInfo(Vec2i limits)
 // read a plc zone (char or paragraph properties )
 bool MSW1Parser::readPLC(Vec2i limits, int wh)
 {
-  if (limits[1] <= limits[0] || !isFilePos(limits[1]*0x80)) {
+  MWAWInputStreamPtr input = getInput();
+  if (limits[1] <= limits[0] || !input->checkPosition(limits[1]*0x80)) {
     MWAW_DEBUG_MSG(("MSW1Parser::readPLC: the zone is not well defined\n"));
     return false;
   }
   libmwaw::DebugStream f, f2;
-  MWAWInputStreamPtr input = getInput();
 
   std::map<long, int> posIdMap;
   MSW1ParserInternal::PLC plc(wh==0 ? MSW1ParserInternal::FONT :
@@ -1343,7 +1328,7 @@ bool MSW1Parser::checkHeader(MWAWHeader *header, bool strict)
     return false;
 
   libmwaw::DebugStream f;
-  if (!isFilePos(0x80)) {
+  if (!input->checkPosition(0x80)) {
     MWAW_DEBUG_MSG(("MSW1Parser::checkHeader: file is too short\n"));
     return false;
   }
@@ -1378,7 +1363,7 @@ bool MSW1Parser::checkHeader(MWAWHeader *header, bool strict)
 
   m_state->m_eot = (long) input->readULong(4);
   f << "text=" << std::hex << 0x80 << "<->" << m_state->m_eot << ",";
-  if (0x80 > m_state->m_eot || !isFilePos(m_state->m_eot)) {
+  if (0x80 > m_state->m_eot || !input->checkPosition(m_state->m_eot)) {
     MWAW_DEBUG_MSG(("MSW1Parser::checkHeader: problem with text position must stop\n"));
     return false;
   }
@@ -1422,7 +1407,7 @@ bool MSW1Parser::checkHeader(MWAWHeader *header, bool strict)
     if (strict) return false;
     f << "##textSize=" << std::hex << textSize[0] << ":" << textSize[1] << std::dec << ",";
     if (textSize[1] > textSize[0]) textSize[0] = textSize[1];
-    if (0x80+textSize[0] > m_state->m_eot && isFilePos(0x80+textSize[0]))
+    if (0x80+textSize[0] > m_state->m_eot && input->checkPosition(0x80+textSize[0]))
       m_state->m_eot = 0x80+textSize[0];
   }
   pos=input->tell();

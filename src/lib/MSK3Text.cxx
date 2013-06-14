@@ -384,7 +384,7 @@ bool MSK3Text::readZoneHeader(MSK3TextInternal::LineZone &zone) const
   zone = MSK3TextInternal::LineZone();
   MWAWInputStreamPtr input=m_mainParser->getInput();
   long pos = input->tell();
-  if (!m_mainParser->checkIfPositionValid(pos+6)) return false;
+  if (!input->checkPosition(pos+6)) return false;
   zone.m_pos.setBegin(pos);
   zone.m_type = (int) input->readULong(1);
   if (zone.m_type & 0x17) return false;
@@ -392,7 +392,7 @@ bool MSK3Text::readZoneHeader(MSK3TextInternal::LineZone &zone) const
   zone.m_flags = (int) input->readULong(1);
   zone.m_height = (int) input->readULong(1);
   zone.m_pos.setLength(6+(long)input->readULong(2));
-  if (!m_mainParser->checkIfPositionValid(zone.m_pos.end())) return false;
+  if (!input->checkPosition(zone.m_pos.end())) return false;
   return true;
 }
 

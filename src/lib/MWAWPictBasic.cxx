@@ -233,8 +233,13 @@ bool MWAWPictArc::getODGBinary(WPXBinaryData &res) const
   list.insert("h",getStringPt(pt.y()).c_str());
   list.insert("angle0", m_angle[0], WPX_GENERIC);
   list.insert("angle1", m_angle[1], WPX_GENERIC);
-  doc.startElement("libmwaw:drawArc", list);
-  doc.endElement("libmwaw:drawArc");
+  if (!hasSurfaceColor()) {
+    doc.startElement("libmwaw:drawArc", list);
+    doc.endElement("libmwaw:drawArc");
+  } else {
+    doc.startElement("libmwaw:drawSection", list);
+    doc.endElement("libmwaw:drawSection");
+  }
 
   endODG(doc);
 
@@ -243,7 +248,10 @@ bool MWAWPictArc::getODGBinary(WPXBinaryData &res) const
 
 void MWAWPictArc::getGraphicStyleProperty(WPXPropertyList &list) const
 {
-  MWAWPictBasic::getStyle1DProperty(list);
+  if (!hasSurfaceColor())
+    MWAWPictBasic::getStyle1DProperty(list);
+  else
+    MWAWPictBasic::getStyle2DProperty(list);
 }
 
 ////////////////////////////////////////////////////////////

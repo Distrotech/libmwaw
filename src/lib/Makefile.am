@@ -51,6 +51,12 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	FWParser.hxx			\
 	FWText.cxx			\
 	FWText.hxx			\
+	GWGraph.cxx			\
+	GWGraph.hxx			\
+	GWParser.cxx			\
+	GWParser.hxx			\
+	GWText.cxx			\
+	GWText.hxx			\
 	HMWJGraph.cxx			\
 	HMWJGraph.hxx			\
 	HMWJParser.cxx			\
@@ -71,6 +77,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	LWText.hxx			\
 	MDWParser.cxx			\
 	MDWParser.hxx			\
+	MORParser.cxx			\
+	MORParser.hxx			\
+	MORText.cxx			\
+	MORText.hxx			\
 	MRWGraph.cxx			\
 	MRWGraph.hxx			\
 	MRWParser.cxx			\

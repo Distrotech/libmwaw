@@ -1326,7 +1326,7 @@ bool HMWJText::readFont(MWAWFont &font, long endPos)
     long dataSz=(long) input->readULong(4);
     pos+=4;
     endPos=pos+dataSz;
-    if (!m_mainParser->isFilePos(endPos)) {
+    if (!input->checkPosition(endPos)) {
       MWAW_DEBUG_MSG(("HMWJText::readFont: pb reading font size\n"));
       input->seek(debPos, WPX_SEEK_SET);
       return false;
@@ -1763,7 +1763,7 @@ bool HMWJText::readParagraph(HMWJTextInternal::Paragraph &para, long endPos)
     long dataSz=(long) input->readULong(4);
     pos+=4;
     endPos=pos+dataSz;
-    if (!m_mainParser->isFilePos(endPos)) {
+    if (!input->checkPosition(endPos)) {
       MWAW_DEBUG_MSG(("HMWJText::readParagraph: pb reading para size\n"));
       input->seek(debPos, WPX_SEEK_SET);
       return false;

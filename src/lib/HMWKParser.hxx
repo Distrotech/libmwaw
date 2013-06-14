@@ -240,8 +240,6 @@ protected:
   bool readZoneb(HMWKZone &zone);
   /** try to read a unknown zone of type c*/
   bool readZonec(shared_ptr<HMWKZone> zone);
-  /** check if an entry is in file */
-  bool isFilePos(long pos);
 
 protected:
   //

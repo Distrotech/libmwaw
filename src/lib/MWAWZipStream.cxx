@@ -258,12 +258,10 @@ static bool areHeadersConsistent(const LocalFileHeader &header, const CentralDir
 
 static bool findCentralDirectoryEnd(WPXInputStream *input)
 {
-  input->seek(0, WPX_SEEK_SET);
+  if (!input) return false;
   try {
-    while (!input->atEOS()) {
-      if (input->seek(1024, WPX_SEEK_CUR))
-        break;
-    }
+    if (!input->seek(0,WPX_SEEK_END))
+      input->seek(0, WPX_SEEK_SET);
     input->seek(-1024, WPX_SEEK_CUR);
     while (!input->atEOS()) {
       unsigned signature = getInt(input);

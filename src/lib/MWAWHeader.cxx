@@ -147,6 +147,20 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MARIW, 1));
         return res;
       }
+    } else if (creator=="MORE") {
+      if (type=="MORE") {
+        res.push_back(MWAWHeader(MWAWDocument::MORE, 1));
+        return res;
+      }
+    } else if (creator=="MOR2") {
+      if (type=="MOR2") {
+        res.push_back(MWAWHeader(MWAWDocument::MORE, 2));
+        return res;
+      }
+      if (type=="MOR3") {
+        res.push_back(MWAWHeader(MWAWDocument::MORE, 3));
+        return res;
+      }
     } else if (creator=="MWII") { // MacWriteII
       if (type=="MW2D") {
         res.push_back(MWAWHeader(MWAWDocument::MWPRO, 0));
@@ -210,6 +224,16 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::TEDIT, 1));
         return res;
       }
+    } else if (creator=="ZEBR") {
+      if (type=="ZWRT") {
+        res.push_back(MWAWHeader(MWAWDocument::GW, 1));
+        return res;
+      }
+      if (type=="ZOBJ") {
+        res.push_back(MWAWHeader(MWAWDocument::GW, 1, MWAWDocument::K_DRAW));
+        return res;
+      }
+      // can we treat also ZOLN ?
     } else if (creator=="ZWRT") {
       if (type=="Zart") {
         res.push_back(MWAWHeader(MWAWDocument::ZWRT, 1));
@@ -262,6 +286,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   if (val[2] == 0x424F && val[3] == 0x424F && (val[0]>>8) < 8) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Claris Works file[Limited parsing]\n"));
     res.push_back(MWAWHeader(MWAWDocument::CW, (val[0]) >> 8));
+    return res;
   }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77) {
     input->seek(8, WPX_SEEK_SET);
@@ -277,22 +302,46 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     bool ok = version == 2;
 #endif
 
-    if (ok)
+    if (ok) {
       res.push_back(MWAWHeader(MWAWDocument::WNOW, 3));
+      return res;
+    }
   }
   if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Mariner Write file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MARIW, 1));
+    return res;
   }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-K file\n"));
     res.push_back(MWAWHeader(MWAWDocument::HMAC, 1));
+    return res;
   }
   if (val[0]==0x594c && val[1]==0x5953 && val[2]==0x100) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-J file\n"));
     res.push_back(MWAWHeader(MWAWDocument::HMACJ, 1));
+    return res;
+  }
+  if (val[0]==3 && val[1]==0x4d52 && val[2]==0x4949 && val[3]==0x80) { // MRII
+    res.push_back(MWAWHeader(MWAWDocument::MORE, 2));
+    return res;
+  }
+  if (val[0]==6 && val[1]==0x4d4f && val[2]==0x5233 && val[3]==0x80) { // MOR3
+    res.push_back(MWAWHeader(MWAWDocument::MORE, 3));
+    return res;
   }
 
+  if (val[0]==0x100 || val[0]==0x200) {
+    if (val[1]==0x5a57 && val[2]==0x5254) {
+      res.push_back(MWAWHeader(MWAWDocument::GW, val[0]==0x100 ? 1 : 2));
+      return res;
+    }
+    if (val[1]==0x5a4f && val[2]==0x424a) {
+      res.push_back(MWAWHeader(MWAWDocument::GW, val[0]==0x100 ? 1 : 2, MWAWDocument::K_DRAW));
+      return res;
+    }
+    // maybe we can also add outline: if (val[1]==0x5a4f && val[2]==0x4c4e)
+  }
   // magic ole header
   if (val[0]==0xd0cf && val[1]==0x11e0 && val[2]==0xa1b1 && val[3]==0x1ae1)
     res.push_back(MWAWHeader(MWAWDocument::MSWORKS, 104));
@@ -380,11 +429,8 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     res.push_back(MWAWHeader(MWAWDocument::WPLUS, 1));
   }
   //ok now look at the end of file
-  input->seek(0, WPX_SEEK_SET);
-  while(!input->atEOS()) {
-    if (input->seek(1024, WPX_SEEK_CUR) != 0) break;
-  }
-  input->seek(-4, WPX_SEEK_CUR);
+  if (input->seek(-4, WPX_SEEK_END))
+    return res;
   int lVal[2];
   for (int i = 0; i < 2; i++)
     lVal[i]=int(input->readULong(2));

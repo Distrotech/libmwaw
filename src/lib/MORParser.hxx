@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef AC_PARSER
-#  define AC_PARSER
+#ifndef MOR_PARSER
+#  define MOR_PARSER
 
 #include <string>
 #include <vector>
@@ -44,25 +44,45 @@
 
 #include "MWAWParser.hxx"
 
-namespace ACParserInternal
+namespace MORParserInternal
 {
 class SubDocument;
 struct State;
 }
 
-class ACText;
+class MORText;
 
-/** \brief the main class to read a Acta file
+/** \brief a namespace used to define basic structures in a More file
  */
-class ACParser : public MWAWParser
+namespace MORStruct
 {
-  friend class ACParserInternal::SubDocument;
-  friend class ACText;
+struct Pattern {
+  //!constructor
+  Pattern() : m_frontColor(MWAWColor::black()), m_backColor(MWAWColor::white()) {
+    for (int i=0; i<8; i++) m_pattern[i]=0;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Pattern const &pat);
+  //! the pattern
+  unsigned char m_pattern[8];
+  //! the front color
+  MWAWColor m_frontColor;
+  //! the back color
+  MWAWColor m_backColor;
+};
+}
+
+/** \brief the main class to read a More file
+ */
+class MORParser : public MWAWParser
+{
+  friend class MORParserInternal::SubDocument;
+  friend class MORText;
 public:
   //! constructor
-  ACParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MORParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~ACParser();
+  virtual ~MORParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -81,43 +101,60 @@ protected:
   Vec2f getPageLeftTop() const;
   //! adds a new page
   void newPage(int number);
+  //! return the color which corresponds to an id (if possible)
+  bool getColor(int id, MWAWColor &col) const;
 
   // interface with the text parser
-
-  //! returns a list to be used in the text
-  shared_ptr<MWAWList> getMainList();
 
 protected:
   //! finds the different objects zones
   bool createZones();
 
-  //! read the resource fork zone
-  bool readRSRCZones();
+  //! read the list of zones ( v2-3) : first 0x80 bytes
+  bool readZonesList();
 
-  //! read the end file data zones
-  bool readEndDataV3();
-
-  //! sends the header/footer data
-  void sendHeaderFooter();
-
-  //! read a PrintInfo block ( PSET resource block )
+  //! read a PrintInfo zone ( first block )
   bool readPrintInfo(MWAWEntry const &entry);
 
-  //! read the window position ( WSIZ resource block )
-  bool readWindowPos(MWAWEntry const &entry);
+  //! read a docinfo zone ( second block )
+  bool readDocumentInfo(MWAWEntry const &entry);
 
-  //! read the label type
-  bool readLabel(MWAWEntry const &entry);
+  //! read the list of slide definitions
+  bool readSlideList(MWAWEntry const &entry);
 
-  //! read the Header/Footer property (QHDR block)
-  bool readHFProperties(MWAWEntry const &entry);
+  //! read a slide definitions
+  bool readSlide(MWAWEntry const &entry);
 
-  //! read the QOPT resource block (small print change )
-  bool readOption(MWAWEntry const &entry);
+  //! read a graphic ( in a slide )
+  bool readGraphic(MWAWEntry const &entry);
+
+  //! read a unknown zone ( block 9 )
+  bool readUnknown9(MWAWEntry const &entry);
+
+  //! read a color zone ( beginning of block 9 )
+  bool readColors(long endPos);
+
+  //! read a pattern ( some sub zone of block 9)
+  bool readPattern(long endPos, MORStruct::Pattern &pattern);
+
+  //! read a backside ( some sub zone of block 9)
+  bool readBackside(long endPos, std::string &extra);
+
+  //! read the list of free file position
+  bool readFreePos(MWAWEntry const &entry);
+
+  //! read the last subzone find in a block 9 ( unknown meaning)
+  bool readUnkn9Sub(long endPos);
 
   //
   // low level
   //
+
+  //! check if the entry is valid, if so store it in the list of entry
+  bool checkAndStore(MWAWEntry const &entry);
+
+  //! check if the entry is valid defined by the begin pos points to a zone: dataSz data
+  bool checkAndFindSize(MWAWEntry &entry);
 
   //! return the input input
   MWAWInputStreamPtr rsrcInput();
@@ -130,10 +167,10 @@ protected:
   //
 
   //! the state
-  shared_ptr<ACParserInternal::State> m_state;
+  shared_ptr<MORParserInternal::State> m_state;
 
   //! the text parser
-  shared_ptr<ACText> m_textParser;
+  shared_ptr<MORText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

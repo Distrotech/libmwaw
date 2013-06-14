@@ -151,6 +151,18 @@ SOURCE=..\..\src\lib\FWText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\GWGraph.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\GWParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\GWText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\HMWJGraph.cxx
 # End Source File
 # Begin Source File
@@ -192,6 +204,14 @@ SOURCE=..\..\src\lib\LWText.cxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MDWParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MORParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MORText.cxx
 # End Source File
 # Begin Source File
 
@@ -483,6 +503,18 @@ SOURCE=..\..\src\lib\FWText.hxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\GWGraph.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\GWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\GWText.hxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\HMWJGraph.hxx
 # End Source File
 # Begin Source File
@@ -528,6 +560,14 @@ SOURCE=..\..\src\lib\LWText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MDWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MORParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MORText.hxx
 # End Source File
 # Begin Source File
 
