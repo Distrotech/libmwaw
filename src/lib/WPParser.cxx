@@ -1805,11 +1805,10 @@ bool WPParser::readFonts
   }
   int actPos = 0;
   libmwaw::DebugStream f;
-  int val;
   for (int i = 0; i < nFonts; i++) {
     WPParserInternal::Font fInfo;
     f.str("");
-    val = (int) input->readLong(2); // 65|315
+    int val = (int) input->readLong(2); // 65|315
     if (val) f << "dim?=" << val << ",";
     for (int j = 0; j < 3; j++) { // always 0: a color ?
       val = (int) input->readLong(1);

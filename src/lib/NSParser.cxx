@@ -1966,7 +1966,6 @@ bool NSParser::readFTA2(MWAWEntry const &entry)
 
   libmwaw::DebugStream f;
   int numElt = int(entry.length()/12);
-  int val;
   for (int n = 0; n < numElt; n++) {
     pos = input->tell();
     f.str("");
@@ -1978,7 +1977,7 @@ bool NSParser::readFTA2(MWAWEntry const &entry)
     } else
       f << "FTA2";
     f << "[" << n << "]:";
-    val = int(input->readLong(1)); // 0|ff
+    int val = int(input->readLong(1)); // 0|ff
     if (val==-1) f << "f0,";
     else if (val) f << "f0=" << val << ",";
     val = int(input->readLong(1)); // 0|6|7|f ( maybe f1=0 if f0=ff )

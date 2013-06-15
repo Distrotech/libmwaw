@@ -270,11 +270,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
 
   // ----------- now check resource fork ------------
   // ----------- now check data fork ------------
-  if (!input->hasDataFork())
-    return res;
-
-  input->seek(8, WPX_SEEK_SET);
-  if (input->atEOS() || input->tell() != 8)
+  if (!input->hasDataFork() || input->size() < 8)
     return res;
 
   input->seek(0, WPX_SEEK_SET);

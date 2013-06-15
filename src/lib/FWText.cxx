@@ -763,14 +763,13 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
   long endPos = pos+numChar;
   bool nextIsChar = false;
   bool fCharSent = false, lastEOL=false, fontSet = false, checkModifier = false;
-  int val;
 
   libmwaw::DebugStream f;
   for (int i = 0; i < numChar; i++) {
     long actPos = input->tell();
     if (actPos >= endPos)
       break;
-    val = (int)input->readULong(1);
+    int val = (int)input->readULong(1);
     bool done = false;
     int id=-1;
     if (nextIsChar)
@@ -2476,14 +2475,13 @@ bool FWText::readColumns(shared_ptr<FWEntry> zone)
   ascii.addPos(pos);
   ascii.addNote(f.str().c_str());
   input->seek(pos+4+24, WPX_SEEK_SET);
-  long val;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     f.str("");
     f << "Columns-" << i << ":";
     int dim[2];
     dim[0] = (int) input->readLong(2);
-    val = (long) input->readULong(2);
+    long val = (long) input->readULong(2);
     if (val) f << "f0=" << std::hex << val << std::dec << ",";
     dim[1] = (int) input->readLong(2);
     f << "pos=" << dim[0] << "<->" << dim[1] << ",";

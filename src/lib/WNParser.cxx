@@ -518,11 +518,10 @@ bool WNParser::readDocEntriesV2()
   f.str("");
   f << "DocEntries-II:";
 
-  long val;
   if (version()==2) {
     m_state->m_numColumns = (int) input->readLong(1);
     f << "nCol=" << m_state->m_numColumns << ",";
-    val = input->readLong(1);
+    long val = input->readLong(1);
     if (val != 1) f << "unkn=" << val << ",";
     m_state->m_columnWidth = (int) input->readLong(2);
     f << "colWidth=" << m_state->m_columnWidth << ",";

@@ -1285,11 +1285,10 @@ bool HMWJGraph::readGroupData(MWAWEntry const &entry, int actZone)
   }
   long headerEnd=pos+4+mainHeader.m_length;
   f << mainHeader;
-  long val;
   f << "listId=[" << std::hex;
   idsList->resize(size_t(mainHeader.m_n), 0);
   for (int i = 0; i < mainHeader.m_n; i++) {
-    val = (long) input->readULong(4);
+    long val = (long) input->readULong(4);
     (*idsList)[size_t(i)]=val;
     f << val << ",";
   }
@@ -1641,13 +1640,12 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
   f << header;
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
-  long val;
   table.m_formatsList.resize(size_t(header.m_n));
   for (int i = 0; i < header.m_n; i++) {
     HMWJGraphInternal::CellFormat format;
     pos = input->tell();
     f.str("");
-    val = input->readLong(2); // always -2
+    long val = input->readLong(2); // always -2
     if (val != -2)
       f << "f0=" << val << ",";
     val = (long) input->readULong(2); // 0|2004|51|1dd4

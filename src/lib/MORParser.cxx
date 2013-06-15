@@ -773,7 +773,6 @@ bool MORParser::readSlideList(MWAWEntry const &entry)
   ascii().addNote("Entries(Slide)");
 
   int N=int(entry.length()/8);
-  int val;
   std::vector<MWAWEntry> filePositions;
   for (int i=0; i < N; i++) {
     pos=input->tell();
@@ -791,7 +790,7 @@ bool MORParser::readSlideList(MWAWEntry const &entry)
       f << "###";
     } else
       filePositions.push_back(tEntry);
-    val = (int) input->readLong(2); // always -1 ?
+    int val = (int) input->readLong(2); // always -1 ?
     if (val != -1)
       f << "f0=" << val << ",";
     val = (int) input->readLong(2); // always 0 ?

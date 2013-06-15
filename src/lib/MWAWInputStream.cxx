@@ -291,13 +291,14 @@ bool MWAWInputStream::unBinHex()
     MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: find repetif character in the last position\n"));
     return false;
   }
-  if (content.size() < 27) {
+  long contentSize=(long) content.size();
+  if (contentSize < 27) {
     MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: the content file is too small\n"));
     return false;
   }
   WPXInputStream *contentInput=const_cast<WPXInputStream *>(content.getDataStream());
   int fileLength = (int)  readU8(contentInput);
-  if (fileLength < 1 || fileLength > 64) {
+  if (fileLength < 1 || fileLength > 64 || long(fileLength+21) > contentSize) {
     MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: the file name size seems odd\n"));
     return false;
   }
@@ -324,9 +325,8 @@ bool MWAWInputStream::unBinHex()
   long dataLength = (long) readULong(contentInput,4,0,false);
   long rsrcLength = (long) readULong(contentInput,4,0,false);
   long pos = contentInput->tell()+2; // skip CRC
-  contentInput->seek(pos+dataLength+rsrcLength+4, WPX_SEEK_SET);
-  if (contentInput->tell() != pos+dataLength+rsrcLength+4
-      || dataLength<0 || rsrcLength < 0 || (dataLength==0 && rsrcLength==0)) {
+  if (dataLength<0 || rsrcLength < 0 || (dataLength==0 && rsrcLength==0) ||
+      pos+dataLength+rsrcLength+4 > contentSize) {
     MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: the data/rsrc fork size seems odd\n"));
     return false;
   }
@@ -460,7 +460,7 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
 {
   dataInput.reset();
   rsrcInput.reset();
-  if (!inp || !inp->hasDataFork()) return false;
+  if (!inp || !inp->hasDataFork() || inp->size()<26) return false;
 
   try {
     inp->seek(0, WPX_SEEK_SET);

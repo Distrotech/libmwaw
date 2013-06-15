@@ -766,9 +766,8 @@ bool MDWParser::createZones()
   pos = input->tell();
   f.str("");
   f << "Entries(ZoneDef):";
-  long val;
   for (int i = 0; i < 24; i++) { // always 0 ?
-    val = input->readLong(2);
+    long val = input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   ascii().addPos(pos);
@@ -1497,7 +1496,6 @@ bool MDWParser::readLinesInfo(MWAWEntry &entry)
   int N = int(entry.length())/32;
 
   libmwaw::DebugStream f;
-  long val;
   MDWParserInternal::ZoneInfo &textZone = m_state->m_zones[entry.id()];
   textZone.m_linesList.clear();
   for (int n = 0; n < N; n++) {
@@ -1509,7 +1507,7 @@ bool MDWParser::readLinesInfo(MWAWEntry &entry)
     line.m_height = (int) input->readULong(1);
     line.m_y = (int) input->readLong(2);
     line.m_page = (int)input->readULong(1); // check me
-    val = input->readLong(2); // -1 or between 5d7-5de
+    long val = input->readLong(2); // -1 or between 5d7-5de
     f << "f0=" << std::hex << val << std::dec << ",";
     for (int i=0; i < 2; i++)
       line.m_flags[i] = (int) input->readULong(1);

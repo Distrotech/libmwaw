@@ -922,12 +922,11 @@ bool MSW1Parser::readZones(Vec2i limits)
     ascii().addNote(f.str().c_str());
     return false;
   }
-  int val;
   for (int i = 0; i < N; i++) {
     long textPos = long(input->readULong(4))+0x80;
     f << std::hex << textPos << std::dec;
     f << ":f0=" << input->readLong(2); // find 1|2|3
-    val = (int) input->readLong(4); // find -1, 0x900, 0xa00
+    int val = (int) input->readLong(4); // find -1, 0x900, 0xa00
     if (val!=-1) f << ":f1=" << std::hex << val << std::dec;
     if (textPos < m_state->m_eot) {
       plc.m_id = i;

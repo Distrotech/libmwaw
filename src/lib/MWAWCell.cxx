@@ -238,9 +238,10 @@ std::ostream &operator<<(std::ostream &o, MWAWCellFormat const &cell)
     if (cell.m_bordersList[i].m_style == MWAWBorder::None)
       continue;
     o << "bord";
-    char const *wh[] = { "L", "R", "T", "B", "MiddleH", "MiddleV" };
-    if (i < 6) o << wh[i];
-    else o << "[#wh=" << i << "]";
+    if (i < 6) {
+      static char const *wh[] = { "L", "R", "T", "B", "MiddleH", "MiddleV" };
+      o << wh[i];
+    } else o << "[#wh=" << i << "]";
     o << "=" << cell.m_bordersList[i] << ",";
   }
   return o;

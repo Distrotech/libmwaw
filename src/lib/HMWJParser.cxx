@@ -450,9 +450,8 @@ bool HMWJParser::readZonesList()
 
   libmwaw::DebugStream f;
   f << "Entries(Zones):";
-  long val;
   for (int i = 0; i < 7; i++) { // f0=a000
-    val = (long) input->readULong(2);
+    long val = (long) input->readULong(2);
     if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
   ascii().addPos(pos);
@@ -723,11 +722,10 @@ bool HMWJParser::readZoneA(MWAWEntry const &entry)
   }
   long headerEnd=pos+4+mainHeader.m_length;
   f << mainHeader;
-  long val;
   f << "listId=[" << std::hex;
   std::vector<long> listIds;
   for (int i = 0; i < mainHeader.m_n; i++) {
-    val = (long) input->readULong(4);
+    long val = (long) input->readULong(4);
     listIds.push_back(val);
     f << val << ",";
   }

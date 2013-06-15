@@ -199,13 +199,13 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
 ////////////////////////////////////////////////////////////
 bool CWPresentation::readZone1(CWPresentationInternal::Presentation &pres)
 {
-  long pos, val;
+  long val;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
   for (int st = 0; st < 3; st++) {
-    pos = input->tell();
+    long pos = input->tell();
     long N = (long) input->readULong(4);
     long endPos = pos+16*N+4;
     input->seek(endPos, WPX_SEEK_SET);
@@ -273,10 +273,9 @@ bool CWPresentation::readZone2(CWPresentationInternal::Presentation &/*pres*/)
 
   input->seek(pos, WPX_SEEK_SET);
   f << "Entries(PresentationTitle):";
-  long val;
   // checkme this also be 1 times : [ 0, f2] or 1, str0, f2, or a mixt
   for (int i = 0; i < 3; i++) { // find f0=1, f1=0, f2=[0|1|2|4]
-    val = input->readLong(4);
+    long val = input->readLong(4);
     if (val)
       f << "f" << i << "=" << val << ",";
   }

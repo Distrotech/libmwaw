@@ -1330,7 +1330,7 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone)
     }
     if (done) break;
 
-    std::map<long, GWTextInternal::PLC>::const_iterator pIt=
+    std::multimap<long, GWTextInternal::PLC>::const_iterator pIt=
       zone.m_posPLCMap.find(cPos);
     GWTextInternal::Token token;
     while (pIt!=zone.m_posPLCMap.end() && pIt->first==cPos) {

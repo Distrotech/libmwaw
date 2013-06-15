@@ -1480,11 +1480,10 @@ bool HMWJText::readFonts(MWAWEntry const &entry)
   }
   long headerEnd=pos+4+mainHeader.m_length;
   f << mainHeader;
-  long val;
   f << "unk=[";
   for (int i = 0; i < mainHeader.m_n; i++) {
     f << "[";
-    val = input->readLong(2); // always -2 ?
+    long val = input->readLong(2); // always -2 ?
     if (val!=-2)
       f << val << ",";
     else
@@ -1650,7 +1649,6 @@ bool HMWJText::readStyles(MWAWEntry const &entry)
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
 
-  int val;
   for (int i = 0; i < mainHeader.m_n; i++) {
     f.str("");
     f << entry.name() << "-" << i << ":";
@@ -1664,7 +1662,7 @@ bool HMWJText::readStyles(MWAWEntry const &entry)
       MWAW_DEBUG_MSG(("HMWJText::readStyles: can not read field %d\n", i));
       return true;
     }
-    val = (int) input->readULong(1);
+    int val = (int) input->readULong(1);
     if (val != i) f << "#id=" << val << ",";
 
     // f0=c2|c6, f2=0|44, f3=1|14|15|16: fontId?
@@ -2012,11 +2010,10 @@ bool HMWJText::readParagraphs(MWAWEntry const &entry)
   long headerEnd=pos+4+mainHeader.m_length;
   f << mainHeader;
 
-  long val;
   f << "unk=[";
   for (int i = 0; i < mainHeader.m_n; i++) {
     f << "[";
-    val = input->readLong(2); // always -2 ?
+    long val = input->readLong(2); // always -2 ?
     if (val!=-2)
       f << "unkn0=" << val << ",";
     val = (long) input->readULong(2); // 0|1|2|5

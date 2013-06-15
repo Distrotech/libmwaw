@@ -798,12 +798,12 @@ bool GWParser::readDocInfo()
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   for (int i=0; i < 14; ++i) {
-    static char const *wh[]= {"margins", "header/footer", "1", "pageDim" };
     pos = input->tell();
     f.str("");
-    if (i<4)
+    if (i<4) {
+      static char const *wh[]= {"margins", "header/footer", "1", "pageDim" };
       f << "DocInfo[" << wh[i] << "]:";
-    else
+    } else
       f << "DocInfo[" << i << "]:";
 
     double dim[4];
@@ -862,11 +862,11 @@ bool GWParser::readDocInfo()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool GWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
+bool GWParser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = GWParserInternal::State();
   MWAWInputStreamPtr input = getInput();
-  if (!input || !input->hasDataFork() || !input->checkPosition(22))
+  if (!input || !input->hasDataFork() || !input->checkPosition(0x4c))
     return false;
 
   libmwaw::DebugStream f;
@@ -888,6 +888,16 @@ bool GWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   } else if (type!="ZWRT")
     return false;
 
+  if (strict) {
+    // check that the fonts table is in expected position
+    long fontPos=vers==1 ? 0x302 : 0x308;
+    if (m_state->m_docType==GWParser::DRAW)
+      fontPos = 0x4a;
+    if (input->seek(fontPos, WPX_SEEK_SET) || !m_textParser->readFontNames()) {
+      MWAW_DEBUG_MSG(("GWParser::checkHeader: can not find fonts table\n"));
+      return false;
+    }
+  }
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
   ascii().addPos(6);

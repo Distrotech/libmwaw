@@ -1740,10 +1740,9 @@ void MWProParser::saveOriginal(MWAWInputStreamPtr input)
     if (long(input->tell()) != pos)
       break;
     f.str("");
-    long val = 0;
     if (bl) {
       input->seek(-ptSz, WPX_SEEK_CUR);
-      val = input->readLong(ptSz);
+      long val = input->readLong(ptSz);
       long next = val > 0 ? val : -val;
       if (next > 0 && next < 0x1000) {
         f << "next=" << std::hex << (next-1)*0x100 << std::dec << ",";

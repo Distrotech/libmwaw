@@ -529,7 +529,6 @@ bool LWText::readFonts(MWAWEntry const &entry)
 
   LWTextInternal::PLC plc;
   plc.m_type = LWTextInternal::P_Font;
-  long val;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     LWTextInternal::Font font;
@@ -548,7 +547,7 @@ bool LWText::readFonts(MWAWEntry const &entry)
     if (flag&0x20) font.m_font.setDeltaLetterSpacing(-1);
     if (flag&0x40) font.m_font.setDeltaLetterSpacing(1);
     if (flag&0x80) f << "#fl80,";
-    val = (int) input->readULong(1); // always 0?
+    int val = (int) input->readULong(1); // always 0?
     if (val) f << "#f0=" << val << ",";
     font.m_font.setFlags(flags);
     font.m_font.setSize((float) input->readLong(2));
@@ -604,7 +603,6 @@ bool LWText::readFont2(MWAWEntry const &entry)
 
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
-  long val;
   LWTextInternal::PLC plc;
   plc.m_type = LWTextInternal::P_Font2;
   for (int i = 0; i < N; i++) {
@@ -701,7 +699,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
     flag &= 0x0004;
     if (flag) f << "flags=#" << std::hex << flag << std::dec << ",";
     /* fl0=0|2|b|40|42|..|a0 */
-    val = (long) input->readULong(1);
+    long val = (long) input->readULong(1);
     MWAWColor backColor(MWAWColor::black());
     if ((val & 0xf0) && !getColor(int(val>>4), backColor))
       f << "#backColorId=" << (val>>4) << ",";
@@ -795,7 +793,6 @@ bool LWText::readRulers(MWAWEntry const &entry)
 
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
-  long val;
   LWTextInternal::PLC plc;
   plc.m_type = LWTextInternal::P_Ruler;
   for (int i = 0; i < N; i++) {
@@ -810,7 +807,7 @@ bool LWText::readRulers(MWAWEntry const &entry)
     para.m_margins[2] = (int) input->readLong(2);
     para.m_margins[0] = para.m_margins[0].get()-para.m_margins[1].get();
 
-    val = (int) input->readLong(2);
+    long val = (int) input->readLong(2);
     if (val)
       para.m_spacings[1]=para.m_spacings[2]=float(val)/72.f;
     para.m_deltaSpacing = (float) input->readLong(2);
@@ -987,7 +984,6 @@ bool LWText::readDocumentHF(MWAWEntry const &entry)
     return false;
   }
 
-  long val;
   for (int s=0; s < 2; s++) {
     LWTextInternal::HFZone zone;
     zone.m_height = (int) input->readLong(2);
@@ -1028,7 +1024,7 @@ bool LWText::readDocumentHF(MWAWEntry const &entry)
       col[j] = (unsigned char) (input->readULong(2)>>8);
     if (col[0] || col[1] || col[2])
       zone.m_font.setColor(MWAWColor(col[0],col[1],col[2]));
-    val = input->readLong(2); // can be 0x200
+    long val = input->readLong(2); // can be 0x200
     if (val) f2 << "f0=" << std::hex << val << std::dec << ",";
     zone.m_extra = f2.str();
 
@@ -1103,7 +1099,6 @@ bool LWText::readStyleU(MWAWEntry const &entry)
 
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
-  long val;
   LWTextInternal::PLC plc;
   plc.m_type = LWTextInternal::P_StyleU;
   for (int i = 0; i < N; i++) {
@@ -1113,7 +1108,7 @@ bool LWText::readStyleU(MWAWEntry const &entry)
     long flag = (long) input->readULong(2); // 2022
     if (flag)
       f << "flag=" << std::hex << flag << std::dec << ",";
-    val = input->readLong(2); // always 0
+    long val = input->readLong(2); // always 0
     if (val) f << "f0=" << val << ",";
     plc.m_id = i;
     plc.m_extra = f.str();

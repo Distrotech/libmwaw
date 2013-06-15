@@ -757,7 +757,6 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
   // print the text zone data
   f << std::hex << "txtZone=[" << std::hex << entry.m_val[0] << std::dec
     <<",h=" << entry.m_val[1] << "],";
-  long val;
   shared_ptr<WNTextInternal::ContentZones> text;
   if (vers >= 3) {
     if (entry.length() < 16) {
@@ -775,6 +774,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
     text->m_id = entry.id();
 
     // in 1/3 files, ptr0=begin.pos()+(flag<<15: rev?), but not in other files :-~
+    long val;
     for (int i=0; i < 2; i++) {
       val = (long) input->readULong(4);
       if (!val) continue;

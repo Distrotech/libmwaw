@@ -670,7 +670,6 @@ bool MORText::readTopic(MWAWEntry const &entry)
   ascFile.addNote("Entries(Topic)");
 
   int N=int(entry.length()/10);
-  int val;
   for (int i=0; i < N; i++) {
     pos=input->tell();
     MORTextInternal::Topic topic;
@@ -711,7 +710,7 @@ bool MORText::readTopic(MWAWEntry const &entry)
         topic.m_entry = MWAWEntry();
       }
     }
-    val = (int) input->readLong(2); // a small number 1 or 2
+    int val = (int) input->readLong(2); // a small number 1 or 2
     if (val)
       f << "f1=" << val << ",";
     topic.m_extra=f.str();
@@ -745,7 +744,6 @@ bool MORText::readComment(MWAWEntry const &entry)
   ascFile.addNote("Entries(Comment)");
 
   int N=int(entry.length()/8);
-  int val;
   for (int i=0; i < N; i++) {
     pos=input->tell();
     MORTextInternal::Comment comment;
@@ -758,7 +756,7 @@ bool MORText::readComment(MWAWEntry const &entry)
       f << "###";
       comment.m_entry.setLength(0);
     }
-    val = (int) input->readLong(2); // always 4 ?
+    int val = (int) input->readLong(2); // always 4 ?
     if (val != 4)
       f << "f0=" << val << ",";
     val = (int) input->readULong(2); // some flag ? find 0x3333 0x200d ...

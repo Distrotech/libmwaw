@@ -1346,11 +1346,10 @@ bool MWProStructures::readParagraphs()
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  int val;
   m_state->m_paragraphsList.resize(0);
   for (int n = 0; n < N; n++) {
     pos = m_input->tell();
-    val = (int) m_input->readLong(2);
+    int val = (int) m_input->readLong(2);
     f.str("");
     f << "Entries(Paragraph)[" << n << "]:";
     if (val) f << "numChar?="<<val <<",";
@@ -2264,13 +2263,12 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  long val;
   for (int n = 0; n < N; n++) {
     MWProStructuresInternal::Section sec;
     pos = m_input->tell();
     f.str("");
     sec.m_textLength = (long)m_input->readULong(4);
-    val =  m_input->readLong(4); // almost always 0 or a dim?
+    long val =  m_input->readLong(4); // almost always 0 or a dim?
     if (val) f << "dim?=" << float(val)/65536.f << ",";
     int startWay = (int) m_input->readLong(2);
     switch(startWay) {

@@ -580,7 +580,6 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
     return shared_ptr<CWStruct::DSET>();
   }
 
-  int val;
   input->seek(entry.end()-N*data0Length, WPX_SEEK_SET);
   CWTextInternal::PLC plc;
   plc.m_type = CWTextInternal::P_Child;
@@ -606,7 +605,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
       f << "f0=" << input->readLong(2) << ","; // a small number : number of line ?
       f << "y[real]=" << input->readLong(2) << ",";
       for (int j = 1; j < 4; j++) {
-        val = (int) input->readLong(2);
+        int val = (int) input->readLong(2);
         if (val)
           f << "f" << j << "=" << val << ",";
       }

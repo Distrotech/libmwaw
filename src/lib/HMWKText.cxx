@@ -308,10 +308,9 @@ bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
   input->seek(zone->begin(), WPX_SEEK_SET);
 
   int actPage = 1, actCol = 0, numCol=1;
-  long val, pos;
   while (!input->atEOS()) {
-    pos = input->tell();
-    val = (long) input->readULong(1);
+    long pos = input->tell();
+    long val = (long) input->readULong(1);
     if (val == 0 && input->atEOS()) break;
     if (val != 1 || input->readLong(1) != 0)
       break;
@@ -453,12 +452,11 @@ bool HMWKText::sendText(HMWKZone &zone)
     }
   }
 
-  long val;
   while (!input->atEOS()) {
     pos = input->tell();
     f.str("");
     f << zone.name()<< ":";
-    val = (long) input->readULong(1);
+    long val = (long) input->readULong(1);
     if (val == 0 && input->atEOS()) break;
     if (val != 1 || input->readLong(1) != 0) {
       f << "###";
@@ -826,7 +824,6 @@ bool HMWKText::readFontNames(shared_ptr<HMWKZone> zone)
 
   long pos = zone->begin();
   input->seek(pos, WPX_SEEK_SET);
-  int val;
   int N = (int) input->readLong(2);
   f << "N=" << N << ",";
   long expectedSz = N*68+2;
@@ -843,7 +840,7 @@ bool HMWKText::readFontNames(shared_ptr<HMWKZone> zone)
     f << zone->name() << "-" << i << ":";
     int fId = (int) input->readLong(2);
     f << "fId=" << fId << ",";
-    val = (int) input->readLong(2);
+    int val = (int) input->readLong(2);
     if (val != fId)
       f << "#fId2=" << val << ",";
     int fSz = (int) input->readULong(1);
@@ -888,7 +885,6 @@ bool HMWKText::readStyles(shared_ptr<HMWKZone> zone)
 
   long pos = zone->begin();
   input->seek(pos, WPX_SEEK_SET);
-  int val;
   long fieldSz = 636;
   int N = (int) input->readULong(2);
   f << "N=" << N << ",";
@@ -904,7 +900,7 @@ bool HMWKText::readStyles(shared_ptr<HMWKZone> zone)
     f.str("");
     f << zone->name() << "-" << i << ":";
     pos = input->tell();
-    val = (int) input->readULong(2);
+    int val = (int) input->readULong(2);
     if (val != i) f << "#id=" << val << ",";
 
     // f0=c2|c6, f2=0|44, f3=1|14|15|16: fontId?

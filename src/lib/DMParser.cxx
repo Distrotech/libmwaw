@@ -660,9 +660,8 @@ bool DMParser::readXtr2(MWAWEntry const &entry)
     N = entry.length()>20 ? 20 : int(entry.length());
   }
   // f0=79|a8|b9|99
-  int val;
   for (int i=0; i < N; i++) {
-    val =(int) input->readULong(1);
+    int val =(int) input->readULong(1);
     if (val)
       f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }

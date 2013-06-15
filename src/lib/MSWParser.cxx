@@ -1389,7 +1389,6 @@ bool MSWParser::readObjectList(MSWEntry &entry)
   f << "],";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  int val;
 
   for (int i = 0; i < N; i++) {
     MSWParserInternal::Object object;
@@ -1404,7 +1403,7 @@ bool MSWParser::readObjectList(MSWEntry &entry)
     }
 
     object.m_pos.setBegin((long) input->readULong(4));
-    val = (int) input->readLong(2); // always 0 ?
+    int val = (int) input->readLong(2); // always 0 ?
     if (val) f << "#f1=" << val << ",";
     object.m_extra = f.str();
     f.str("");

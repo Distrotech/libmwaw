@@ -250,12 +250,11 @@ bool NSGraph::readPLAC(MWAWEntry const &entry)
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
 
-  long val;
   for (int i = 0; i < numElt; i++) {
     pos = input->tell();
     f.str("");
     f << "PLAC" << i << ":";
-    val = (int) input->readULong(2);
+    int val = (int) input->readULong(2);
     f << "pictId=" << val;
     ascFile.addDelimiter(input->tell(),'|');
     ascFile.addPos(pos);

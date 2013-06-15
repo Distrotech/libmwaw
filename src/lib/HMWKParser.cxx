@@ -649,9 +649,8 @@ bool HMWKParser::readFramesUnkn(shared_ptr<HMWKZone> zone)
   asciiFile.addPos(0);
   asciiFile.addNote(f.str().c_str());
 
-  long pos;
   for (int i = 0; i < N; i++) {
-    pos = input->tell();
+    long pos = input->tell();
     f.str("");
     f << zone->name() << "-" << i << ":";
     long id = input->readLong(4);
@@ -753,10 +752,9 @@ bool HMWKParser::readZone8(shared_ptr<HMWKZone> zone)
 
   f << zone->name() << ":PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
   input->seek(0, WPX_SEEK_SET);
-  long val;
   // find f0=1 (N?), f3=1, f20=8, f22=6, f24=2, f26=144, f28=1, f30=1
   for (int i = 0; i < 39; i++) {
-    val = input->readLong(2);
+    long val = input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
 

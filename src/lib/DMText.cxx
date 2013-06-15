@@ -559,7 +559,6 @@ bool DMText::readFontNames(MWAWEntry const &entry)
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
 
-  int val;
   for (int i = 0; i < N; i++) {
     f.str("");
     f << "FontName-" << i << ":";
@@ -588,7 +587,7 @@ bool DMText::readFontNames(MWAWEntry const &entry)
       str += (char) input->readULong(1);
     f << str << ",";
 
-    val=(int) input->readULong(1);
+    int val=(int) input->readULong(1);
     if (val) f << "unkn=" << val << ",";
     int N1=(int) input->readULong(1);
     if (pos+1+sz+2+N1 > endPos) {
@@ -950,9 +949,8 @@ bool DMText::readFooter(MWAWEntry const &entry)
   DMTextInternal::Footer &footer=m_state->m_footer;
   for (int i=0; i < 6; i++)
     footer.m_items[i]=(int) input->readLong(2);
-  int val;
   for (int i = 0; i < 6; i++) {
-    val =(int) input->readLong(1);
+    int val =(int) input->readLong(1);
     if (!val) continue;
     if (val!=1) {
       f << "#fl" << i << "=" << val << ",";

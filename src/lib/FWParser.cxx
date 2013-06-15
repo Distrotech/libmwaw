@@ -833,15 +833,13 @@ bool FWParser::readEndDocInfo(shared_ptr<FWEntry> zone)
   libmwaw::DebugFile &asciiFile = zone->getAsciiFile();
   libmwaw::DebugStream f;
 
-  long pos;
-  int val;
   // at least 4 possible zones, maybe more...
   for (int i = 0; i < 5; i++) {
-    pos = input->tell();
+    long pos = input->tell();
     bool ok = true;
     std::string name("");
     for (int j = 0; j < 4; j++) {
-      val=int(input->readULong(1));
+      int val=int(input->readULong(1));
       if (val < 9) {
         ok = false;
         break;
@@ -1678,7 +1676,6 @@ bool FWParser::readGraphicData(shared_ptr<FWEntry> zone, FWParserInternal::DocZo
   libmwaw::DebugFile &asciiFile = zone->getAsciiFile();
   libmwaw::DebugStream f;
 
-  int val;
   if (input->tell()+(vers==2?14:2) > zone->end()) {
     input->seek(pos, WPX_SEEK_SET);
     return false;
@@ -1701,7 +1698,7 @@ bool FWParser::readGraphicData(shared_ptr<FWEntry> zone, FWParserInternal::DocZo
       dim[i] = int(input->readLong(2));
     f << "box=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
     for (int i = 0; i < 2; i++) { // always 0 ?
-      val = int(input->readLong(2));
+      int val = int(input->readLong(2));
       if (val)
         f << "f" << i << "=" << val << "c";
     }

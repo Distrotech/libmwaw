@@ -382,11 +382,10 @@ bool LWParser::readDocInfo(MWAWEntry const &entry)
   input->seek(entry.begin(), WPX_SEEK_SET);
   entry.setParsed(true);
 
-  long pos;
   int N=int(entry.length()/0x40);
   libmwaw::DebugStream f;
   for (int n = 0; n < N; n++) {
-    pos = input->tell();
+    long pos = input->tell();
     f.str("");
     if (n==0)
       f << "Entries(DocInfo):";
@@ -526,9 +525,8 @@ bool LWParser::readTOCPage(MWAWEntry const &entry)
     dim[i] = (int) input->readLong(4);
   f << "dim?=" << dim[0] << "x" << dim[1]
     << "<->"  << dim[2] << "x" << dim[3] << ",";
-  int val;
   for (int i = 0; i < 9; i++) { // f5=1|2|21, f8=256
-    val = (int) input->readLong(2);
+    int val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   int N = (int) input->readLong(2);

@@ -999,9 +999,8 @@ bool HMWKGraph::readPicture(shared_ptr<HMWKZone> zone)
   long pos=0;
   input->seek(pos, WPX_SEEK_SET);
   picture->m_fileId = (long) input->readULong(4);
-  long val;
   for (int i=0; i < 39; i++) {
-    val = input->readLong(2);
+    long val = input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   long pictSz = (long) input->readULong(4);
@@ -1839,9 +1838,8 @@ shared_ptr<HMWKGraphInternal::FootnoteFrame> HMWKGraph::readFootnoteFrame(shared
   ftn.reset(new HMWKGraphInternal::FootnoteFrame(header));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
-  long val;
   for (int i = 0; i < 9; i++) { // always 0?
-    val = input->readLong(2);
+    long val = input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   ftn->m_textFileSubId = (long) input->readULong(2);

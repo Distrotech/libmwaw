@@ -935,9 +935,8 @@ bool CWGraph::readColorList(MWAWEntry const &entry)
   f << "Entries(ColorList):";
   int N = (int) input->readULong(2);
   f << "N=" << N << ",";
-  int val;
   for(int i = 0; i < 2; i++) {
-    val = (int) input->readLong(2);
+    int val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
 
@@ -1605,10 +1604,9 @@ bool CWGraph::readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id
   input->seek(pos, WPX_SEEK_SET);
   int type = (int) input->readLong(2); // find -1, 0, 3
   if (type) f << "f0=" << type << ",";
-  long val;
   for (int i = 0; i < 6; i++) {
     /** find f1=8|9|f|14|15|2a|40|73|e9, f2=0|d4, f5=0|80, f6=0|33 */
-    val = (long) input->readULong(1);
+    long val = (long) input->readULong(1);
     if (val) f << "f" << i+1 << "=" << std::hex << val << std::dec << ",";
   }
   std::vector<int16_t> values16; // some values can be small or little endian, so...

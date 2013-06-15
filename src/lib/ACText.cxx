@@ -282,9 +282,8 @@ bool ACText::readTopic()
       first = false;
     }
   }
-  int val;
   for (int i = 0; i < 5; i++) {
-    val=(int) input->readLong(1);
+    int val=(int) input->readLong(1);
     if (!val) continue;
     if (val==1 && i==2) f << "showChild|check,"; // also g2=-1
     else f << "g" << i << "=" << val << ",";

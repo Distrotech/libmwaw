@@ -411,13 +411,12 @@ bool CWStyleManager::readStylesDef(int N, int fSz)
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  int val;
 
   for (int i = 0; i < N; i++) {
     long pos = input->tell();
     Style style;
     f.str("");
-    val = (int) input->readLong(2);
+    int val = (int) input->readLong(2);
     if (val != -1) f << "f0=" << val << ",";
     val = (int) input->readLong(2);
     if (val) f << "f1=" << val << ",";
@@ -740,12 +739,11 @@ bool CWStyleManager::readKSEN(int N, int fSz)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
-  long val;
   for (int i = 0; i < N; i++) {
     long pos = input->tell();
     KSEN ksen;
     f.str("");
-    val = input->readLong(2); // always -1
+    long val = input->readLong(2); // always -1
     if (val != -1)
       f << "unkn=" << val << ",";
     val = input->readLong(4); // a big number

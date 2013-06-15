@@ -247,11 +247,11 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
   std::vector<MWAWHeader> listHeaders;
 
   try {
-    /** avoid very short file */
     if (!ip.get()) return 0L;
 
     if (ip->hasDataFork()) {
-      if (ip->seek(10, WPX_SEEK_SET) != 0) return 0L;
+      /** avoid very short file */
+      if (ip->size() < 10) return 0L;
 
       ip->seek(0, WPX_SEEK_SET);
       ip->setReadInverted(false);

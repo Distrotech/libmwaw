@@ -775,7 +775,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
       }
       default: {
         if (!listener) break;
-        uint32_t extra = (uint32_t) listener->insertCharacter((unsigned char)readVal, input, input->tell()+i-1);
+        uint32_t extra = (uint32_t) listener->insertCharacter((unsigned char)readVal, input, input->tell()+long(i)-1);
         if (extra > i-1) {
           MWAW_DEBUG_MSG(("MSK4Text::readText: warning: extra is too large\n"));
           input->seek(-long(extra+1-i), WPX_SEEK_CUR);

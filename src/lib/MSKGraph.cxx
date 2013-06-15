@@ -1944,9 +1944,8 @@ shared_ptr<MSKGraphInternal::GroupZone> MSKGraph::readGroup(MSKGraphInternal::Zo
   f << "ptr0=" << std::hex << ptr[0] << std::dec << ",";
   if (ptr[0] != ptr[1])
     f << "ptr1=" << std::hex << ptr[1] << std::dec << ",";
-  int val;
   if (version() >= 3) {
-    val = (int) input->readULong(4);
+    int val = (int) input->readULong(4);
     if (val) f << "g1=" << val << ",";
   }
 

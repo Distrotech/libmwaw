@@ -408,9 +408,10 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
     if (border.isEmpty())
       continue;
     o << "bord";
-    char const *wh[] = { "L", "R", "T", "B", "MiddleH", "MiddleV" };
-    if (i < 6) o << wh[i];
-    else o << "[#wh=" << i << "]";
+    if (i < 6) {
+      static char const *wh[] = { "L", "R", "T", "B", "MiddleH", "MiddleV" };
+      o << wh[i];
+    } else o << "[#wh=" << i << "]";
     o << "=" << border << ",";
   }
 
