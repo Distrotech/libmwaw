@@ -64,6 +64,7 @@ class MWAWDocument
 public:
   /** an enum to define the different type of document
   -ACT: Acta (v2 and Classic v1)
+  -BW: BeagleWorks (nothing done)
   -CW: ClarisWorks/AppleWorks document (basic)
   -DM: DocMaker (v4)
   -ED: eDOC (v2)
@@ -94,13 +95,13 @@ public:
   -XP: XPress (nothing done )
   -ZWRT: Z-Write : v1.3
 
-  -RESERVED1-9: reserved to future use (BeagleWorks, DreamWeaver?, Canvas?, InDesign?, Taste? )
+  -RESERVED1-9: reserved to future use (DreamWeaver?, Canvas?, InDesign?, Taste? )
   */
-  enum DocumentType { 
+  enum DocumentType {
     UNKNOWN, CW, FULLW, MINDW, MSWORD, MSWORKS, MW, MWPRO, NISUSW, WNOW, WPLUS,
     HMAC, LWTEXT, MARIW, ZWRT, DM, ACT, ED, HMACJ, TEACH, TEDIT,
     // added in 1.10 ...
-    FRM, GW, MACD, MOCKP, MORE, PAGEMK, RGTIME, RSG, WPW, XP,
+    BW, FRM, GW, MACD, MOCKP, MORE, PAGEMK, RGTIME, RSG, WPW, XP,
     RESERVED1, RESERVED2, RESERVED3, RESERVED4, RESERVED5, RESERVED6, RESERVED7, RESERVED8,
     RESERVED9
   };

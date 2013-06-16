@@ -162,6 +162,7 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     case ZWRT:
       confidence = MWAW_CONFIDENCE_GOOD;
       break;
+    case BW:
     case FRM:
     case MACD:
     case MOCKP:
@@ -357,6 +358,7 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
       parser.reset(new ZWParser(input, rsrcParser, header));
       break;
 
+    case MWAWDocument::BW:
     case MWAWDocument::FRM:
     case MWAWDocument::MACD:
     case MWAWDocument::MOCKP:

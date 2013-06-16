@@ -1,5 +1,8 @@
 CHANGES:
 
+06/14/2013:
+- modify the code to use WPX_SEEK_END when possible
+
 06/12/2013:
 - add a parser for GreatWorks v1-v2 to read text and draw document
 
@@ -9,6 +12,7 @@ CHANGES:
   to retrieve slides ? )
 
 -------- version 1.10 (start)  -------------
+
 05/13/2013:
 - improve a little the Microsoft Word filter to better manage
   character and paragraph properties
