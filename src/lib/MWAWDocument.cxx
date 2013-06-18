@@ -170,7 +170,6 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     case RSG:
     case RGTIME:
     case XP:
-    case WPW:
     case RESERVED1:
     case RESERVED2:
     case RESERVED3:
@@ -366,7 +365,6 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
     case MWAWDocument::RSG:
     case MWAWDocument::RGTIME:
     case MWAWDocument::XP:
-    case MWAWDocument::WPW:
 
     case MWAWDocument::RESERVED1:
     case MWAWDocument::RESERVED2:
