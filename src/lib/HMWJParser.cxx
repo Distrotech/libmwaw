@@ -1034,14 +1034,14 @@ bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
   if (head[0] != 0x594c || head[1] != 0x5953 || head[2] != 0x100)
     return false;
   int val = (int) input->readLong(1);
-  if (val) {
+  if (val==1) f << "hasPassword,";
+  else if (val) {
     if (strict) return false;
-    if (val==1) f << "hasPassword,";
-    else f << "#hasPassword=" << val << ",";
+    f << "#hasPassword=" << val << ",";
   }
   val = (int) input->readLong(1);
   if (val) {
-    if (strict) return false;
+    if (strict && (val<0||val>2)) return false;
     f << "f0=" << val << ",";
   }
 

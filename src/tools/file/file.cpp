@@ -228,6 +228,13 @@ bool File::readFileInformation()
     checkFInfoType("CWW2","ClarisWorks/AppleWorks 2.0-3.0")||
     checkFInfoType("sWWP","ClarisWorks/AppleWorks 2.0-3.0")||
     checkFInfoType("ClarisWorks/AppleWorks");
+  } else if (m_fInfoCreator=="BWks") {
+    checkFInfoType("BWwp","BeagleWorks/WordPerfect Works") ||
+    checkFInfoType("BWdb","BeagleWorks/WordPerfect Works[Database]") ||
+    checkFInfoType("BWss","BeagleWorks/WordPerfect Works[SpreadSheet]") ||
+    checkFInfoType("BWpt","BeagleWorks/WordPerfect Works[Presentation]") ||
+    checkFInfoType("BWdr","BeagleWorks/WordPerfect Works[Draw]") ||
+    checkFInfoType("BeagleWorks/WordPerfect Works");
   } else if (m_fInfoCreator=="CARO") {
     checkFInfoType("PDF ", "Acrobat PDF");
   } else if (m_fInfoCreator=="CDrw") {
@@ -405,6 +412,21 @@ bool File::readDataInformation()
   // ----------- clearly discriminant ------------------
   if (val[2] == 0x424F && val[3] == 0x424F && (val[0]>>8) < 8) {
     m_dataResult.push_back("ClarisWorks/AppleWorks");
+    return true;
+  }
+  if (val[0]==0x4257 && val[1]==0x6b73 && val[2]==0x4257 && val[4]==0x4257) {
+    if (val[3]==0x6462)
+      m_dataResult.push_back("BeagleWorks/WordPerfect Works[Database]");
+    else if (val[3]==0x6472)
+      m_dataResult.push_back("BeagleWorks/WordPerfect Works[Draw]");
+    else if (val[3]==0x7074)
+      m_dataResult.push_back("BeagleWorks/WordPerfect Works[Presentation]");
+    else if (val[3]==0x7373)
+      m_dataResult.push_back("BeagleWorks/WordPerfect Works[Spreadsheet]");
+    else if (val[3]==0x7770)
+      m_dataResult.push_back("BeagleWorks/WordPerfect Works");
+    else
+      m_dataResult.push_back("BeagleWorks/WordPerfect Works[Unknown]");
     return true;
   }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77 && val[4]==2) {

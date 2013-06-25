@@ -569,11 +569,6 @@ void MDWParser::init()
   getPageSpan().setMargins(0.1);
 }
 
-void MDWParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-}
-
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////

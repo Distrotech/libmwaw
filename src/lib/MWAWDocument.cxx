@@ -38,6 +38,7 @@
 #include <libmwaw/libmwaw.hxx>
 
 #include "ACParser.hxx"
+#include "BWParser.hxx"
 #include "CWParser.hxx"
 #include "DMParser.hxx"
 #include "EDParser.hxx"
@@ -139,6 +140,7 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
 
     switch (type) {
     case ACT:
+    case BW:
     case CW:
     case DM:
     case ED:
@@ -162,7 +164,6 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
     case ZWRT:
       confidence = MWAW_CONFIDENCE_GOOD;
       break;
-    case BW:
     case FRM:
     case MACD:
     case MOCKP:
@@ -289,6 +290,9 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
     case MWAWDocument::ACT:
       parser.reset(new ACParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::BW:
+      parser.reset(new BWParser(input, rsrcParser, header));
+      break;
     case MWAWDocument::CW:
       parser.reset(new CWParser(input, rsrcParser, header));
       break;
@@ -357,7 +361,6 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
       parser.reset(new ZWParser(input, rsrcParser, header));
       break;
 
-    case MWAWDocument::BW:
     case MWAWDocument::FRM:
     case MWAWDocument::MACD:
     case MWAWDocument::MOCKP:

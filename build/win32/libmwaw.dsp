@@ -95,6 +95,14 @@ SOURCE=..\..\src\lib\ACText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\BWParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\BWText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\CWDatabase.cxx
 # End Source File
 # Begin Source File
@@ -444,6 +452,14 @@ SOURCE=..\..\src\lib\ACParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\ACText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\BWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\BWText.hxx
 # End Source File
 # Begin Source File
 

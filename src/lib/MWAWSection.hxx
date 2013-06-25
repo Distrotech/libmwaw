@@ -50,6 +50,9 @@ public:
   MWAWSection() : m_columns(), m_width(0), m_columnSeparator(), m_balanceText(false), m_backgroundColor(MWAWColor::white()) {
     m_columnSeparator.m_style=MWAWBorder::None;
   }
+  //! destructor
+  virtual ~MWAWSection() {
+  }
   /** a function which sets n uniform columns
 
   \note: this erases previous columns and border if there are some

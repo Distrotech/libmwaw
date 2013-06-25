@@ -130,11 +130,6 @@ void EDParser::init()
   getPageSpan().setMargins(0.01);
 }
 
-void EDParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-}
-
 MWAWInputStreamPtr EDParser::rsrcInput()
 {
   return getRSRCParser()->getInput();

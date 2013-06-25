@@ -94,6 +94,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::CW, 1, MWAWDocument::K_PRESENTATION));
         return res;
       }
+    } else if (creator=="BWks") {
+      if (type=="BWwp") {
+        res.push_back(MWAWHeader(MWAWDocument::BW, 1));
+        return res;
+      }
     } else if (creator=="Dk@P") {
       if (type=="APPL") {
         res.push_back(MWAWHeader(MWAWDocument::DM, 1));
@@ -306,6 +311,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Mariner Write file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MARIW, 1));
+    return res;
+  }
+  if (val[0]==0x4257 && val[1]==0x6b73 && val[2]==0x4257 && val[3]==0x7770) {
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a BeagleWorks file\n"));
+    res.push_back(MWAWHeader(MWAWDocument::BW, 1));
     return res;
   }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {

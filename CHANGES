@@ -1,5 +1,9 @@
 CHANGES:
 
+06/24/2013:
+- add a parser for BeagleWorks v1.0 and WordPerfect Works v1.2
+- optimize a little the detection of a hqx/zip Document
+
 06/14/2013:
 - modify the code to use WPX_SEEK_END when possible
 

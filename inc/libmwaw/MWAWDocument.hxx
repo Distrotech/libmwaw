@@ -64,7 +64,7 @@ class MWAWDocument
 public:
   /** an enum to define the different type of document
   -ACT: Acta (v2 and Classic v1)
-  -BW: BeagleWorks/WordPerfect Works (nothing done)
+  -BW: BeagleWorks (v1.0)/WordPerfect Works (v1.2)
   -CW: ClarisWorks/AppleWorks document (basic)
   -DM: DocMaker (v4)
   -ED: eDOC (v2)

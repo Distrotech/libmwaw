@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef TT_PARSER
-#  define TT_PARSER
+#ifndef BW_PARSER
+#  define BW_PARSER
 
 #include <string>
 #include <vector>
@@ -44,21 +44,24 @@
 
 #include "MWAWParser.hxx"
 
-namespace TTParserInternal
+namespace BWParserInternal
 {
+struct Frame;
 struct State;
 }
 
-/** \brief the main class to read a SimpleText/TeachText/Tex-Edit file
+class BWText;
+
+/** \brief the main class to read a BeagleWorks file
  */
-class TTParser : public MWAWParser
+class BWParser : public MWAWParser
 {
-  friend class TTText;
+  friend class BWText;
 public:
   //! constructor
-  TTParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  BWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~TTParser();
+  virtual ~BWParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -73,40 +76,67 @@ protected:
   //! creates the listener which will be associated to the document
   void createDocument(WPXDocumentInterface *documentInterface);
 
+  //! returns the page left top point ( in inches)
+  Vec2f getPageLeftTop() const;
   //! adds a new page
   void newPage(int number);
+
+  // interface with the text parser
+
+  //! try to insert the pId picture (as char)
+  bool sendFrame(int pId);
 
 protected:
   //! finds the different objects zones
   bool createZones();
-  //! try to read the styles ( resource styl : SimpleText,id=128, Tex-Edit,id=1000 )
-  bool readStyles(MWAWEntry const &entry);
 
-  //! try to read the unknown wrct structure ( only in TexEdit,id=1000 )
-  bool readWRCT(MWAWEntry const &entry);
+  //! read the resource fork zone
+  bool readRSRCZones();
 
-  // Intermediate level
+  //! try to send the page graphic
+  bool sendPageFrames();
 
-  /** compute the number of page of a zone*/
-  int computeNumPages() const;
+  //! try to send a frame
+  bool sendFrame(BWParserInternal::Frame const &frame);
 
-  /** try to send the main text*/
-  bool sendText();
-  //! try to send a picture knowing the id
-  bool sendPicture(int id);
-  //! sends the data which have not yet been sent to the listener
-  void flushExtra();
+  //! try to send a picture
+  bool sendPicture(int pId, MWAWPosition const &pos,
+                   WPXPropertyList frameExtras=WPXPropertyList());
+  //
+  // low level
+  //
+
+  // data fork
+
+  //! read the print info zone
+  bool readPrintInfo();
+  //! read a frame zone
+  bool readFrame(MWAWEntry const &entry);
+  //! read the last zone
+  bool readLastZone();
+
+  // resource fork
+
+  //! read the windows positions ( wPos 1001 resource block )
+  bool readwPos(MWAWEntry const &entry);
+  //! read the font style ressource
+  bool readFontStyle(MWAWEntry const &entry);
 
   //! return the input input
   MWAWInputStreamPtr rsrcInput();
+
   //! a DebugFile used to write what we recognize when we parse the document in rsrc
   libmwaw::DebugFile &rsrcAscii();
 
   //
   // data
   //
+
   //! the state
-  shared_ptr<TTParserInternal::State> m_state;
+  shared_ptr<BWParserInternal::State> m_state;
+
+  //! the text parser
+  shared_ptr<BWText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

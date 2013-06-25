@@ -278,11 +278,6 @@ void MSW1Parser::init()
   getPageSpan().setMargins(0.1);
 }
 
-void MSW1Parser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-}
-
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////

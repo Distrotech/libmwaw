@@ -542,7 +542,6 @@ void NSParser::createDocument(WPXDocumentInterface *documentInterface)
   m_state->m_actPage = 0;
 
   // create the page list
-  std::vector<MWAWPageSpan> pageList;
   int numPages = 1;
   if (m_graphParser->numPages() > numPages)
     numPages = m_graphParser->numPages();
@@ -550,6 +549,7 @@ void NSParser::createDocument(WPXDocumentInterface *documentInterface)
     numPages = m_textParser->numPages();
   m_state->m_numPages = numPages;
 
+  std::vector<MWAWPageSpan> pageList;
   shared_ptr<MWAWSubDocument> subDoc;
   for (int i = 0; i <= numPages; ) {
     MWAWPageSpan ps(getPageSpan());

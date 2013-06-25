@@ -101,11 +101,6 @@ void TTParser::init()
   getPageSpan().setMargins(0.1);
 }
 
-void TTParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-}
-
 MWAWInputStreamPtr TTParser::rsrcInput()
 {
   return getRSRCParser()->getInput();

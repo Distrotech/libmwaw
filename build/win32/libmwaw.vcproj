@@ -179,6 +179,14 @@
 			<File
 				RelativePath="..\..\src\lib\ACText.cxx"
 				>
+			<File
+				RelativePath="..\..\src\lib\BWParser.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\BWText.cxx"
+				>
+			</File>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\CWDatabase.cxx"
@@ -531,6 +539,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\ACText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\BWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\BWText.hxx"
 				>
 			</File>
 			<File

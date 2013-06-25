@@ -209,7 +209,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("ZWTextInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_textParser);

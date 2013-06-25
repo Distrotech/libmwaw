@@ -33,6 +33,8 @@
 
 #include <string.h>
 
+#include <cstring>
+
 #include <libwpd-stream/libwpd-stream.h>
 #include <libwpd/libwpd.h>
 
@@ -148,8 +150,30 @@ unsigned long MWAWInputStream::readULong(WPXInputStream *stream, int num, unsign
     unsigned long val = readU8(stream);
     return val + (readULong(stream, num-1,0, inverseRead) << 8);
   }
-
-  return readULong(stream, num-1,(a<<8) + (unsigned long)readU8(stream), inverseRead);
+  switch(num) {
+  case 4:
+  case 2:
+  case 1: {
+    unsigned long numBytesRead;
+    uint8_t const *p = stream->read((unsigned long) num, numBytesRead);
+    if (!p || int(numBytesRead) != num)
+      return 0;
+    switch(num) {
+    case 4:
+      return (unsigned long)p[3]|((unsigned long)p[2]<<8)|
+             ((unsigned long)p[1]<<16)|((unsigned long)p[0]<<24)|((a<<16)<<16);
+    case 2:
+      return ((unsigned long)p[1])|((unsigned long)p[0]<<8)|(a<<16);
+    case 1:
+      return ((unsigned long)p[0])|(a<<8);
+    default:
+      break;
+    }
+  }
+  default:
+    return readULong(stream, num-1,(a<<8) + (unsigned long)readU8(stream), inverseRead);
+  }
+  return 0;
 }
 
 long MWAWInputStream::readLong(int num)
@@ -194,14 +218,10 @@ bool MWAWInputStream::unBinHex()
     return false;
   // check header
   seek(0, WPX_SEEK_SET);
-  std::string str("");
-  for (int i = 0; i < 45; i++) {
-    char c = (char) readLong(1);
-    if (c == 0)
-      return false;
-    str += c;
-  }
-  if (str != "(This file must be converted with BinHex 4.0)")
+  unsigned long nRead;
+  char const *str=(char const *) read(45,nRead);
+  if (str==0 || nRead!=45
+      || strncmp(str, "(This file must be converted with BinHex 4.0)",45))
     return false;
   int numEOL = 0;
   while (!atEOS()) {

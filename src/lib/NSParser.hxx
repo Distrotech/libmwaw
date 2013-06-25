@@ -39,7 +39,6 @@
 
 #include <libwpd/libwpd.h>
 
-#include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 

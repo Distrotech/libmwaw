@@ -23,6 +23,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	ACParser.hxx			\
 	ACText.cxx			\
 	ACText.hxx			\
+	BWParser.cxx			\
+	BWParser.hxx			\
+	BWText.cxx			\
+	BWText.hxx			\
 	CWDatabase.cxx			\
 	CWDatabase.hxx			\
 	CWGraph.cxx			\

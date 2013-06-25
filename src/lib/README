@@ -4,6 +4,7 @@
 - MWAW*, libmwaw* : internal core part of libmwaw (ie. classes used by all the parser )
 
 - AC* : parser of Acta documents
+- BW* : parser of BeagleWorks and WordPerfect Works documents
 - CW* : parser of ClarisWorks and AppleWorks documents
 - DM* : parser of DOCMaker documents
 - ED* : parser of eDOC documents
@@ -104,7 +105,7 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------
----           AC/CW/DM/ED/FW/GW/LW/                      ---
+---           AC/BW/CW/DM/ED/FW/GW/LW/                   ---
 ---           MDW/MOR/MRW/MSK/MSW/MW/NS/TT/WN/WP/ZW      ---
 ------------------------------------------------------------
 
@@ -114,6 +115,9 @@ Specific files which depends on the type of file which is converted
 
 ACParser: parser of Acta : v2 and Classic v1
 -   ACText : class which reads the text
+
+BWParser: parser of BeagleWorks v1.0 and WordPerfect Works v1.2
+-   BWText : class which reads the text
 
 CWParser : parser of ClarisWorks/AppleWorks document
 -   CWGraph : class which reads the graphics and zone dispositions ...

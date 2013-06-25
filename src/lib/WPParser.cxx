@@ -601,11 +601,6 @@ void WPParser::init()
   getPageSpan().setMargins(0.1);
 }
 
-void WPParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
-}
-
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
