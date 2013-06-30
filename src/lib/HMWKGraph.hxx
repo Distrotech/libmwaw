@@ -78,6 +78,7 @@ class HMWKGraph
 {
   friend class HMWKParser;
   friend class HMWKGraphInternal::SubDocument;
+  friend struct HMWKGraphInternal::Table;
 
 public:
   //! constructor
@@ -147,15 +148,13 @@ protected:
   bool sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
 
   /** try to send a table */
-  bool sendTable(HMWKGraphInternal::Table const &table);
+  bool sendTable(HMWKGraphInternal::Table &table);
   /** try to send a table unformatted*/
   bool sendTableUnformatted(long fId);
   /** check if the table is correct and if it can be send to a listener */
   bool updateTable(HMWKGraphInternal::Table const &table) const;
   /** try to send auxilliary table data*/
   bool sendPreTableData(HMWKGraphInternal::Table const &table);
-  /** try to send a cell in a table */
-  bool sendTableCell(HMWKGraphInternal::TableCell const &cell);
 
   /** try to read the basic graph data */
   shared_ptr<HMWKGraphInternal::BasicGraph> readBasicGraph(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);

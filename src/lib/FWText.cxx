@@ -1285,13 +1285,12 @@ bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::Li
 
   listener->openTableRow(-height, WPX_POINT);
   for (size_t col = 0; col < numCols; col++) {
-    WPXPropertyList emptyList;
     MWAWCell cell;
     Vec2i cellPosition(Vec2i((int)0,(int)col));
     cell.setPosition(cellPosition);
     // fixme: set the real border here
     cell.setBorders(0xf, MWAWBorder());
-    listener->openTableCell(cell, emptyList);
+    listener->openTableCell(cell);
 
     if (col < numFind) {
       if (cellPos[2*col+1]>cellPos[2*col]) {

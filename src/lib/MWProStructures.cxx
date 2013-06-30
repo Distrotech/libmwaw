@@ -402,7 +402,7 @@ struct Cell : public MWAWTableCell {
     m_color = col;
   }
   //! send the content
-  virtual bool send(MWAWContentListenerPtr listener) {
+  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table) {
     if (!listener) return true;
     // fixme
     int const borderPos = libmwaw::TopBit | libmwaw::RightBit |
@@ -415,15 +415,14 @@ struct Cell : public MWAWTableCell {
     cell.setNumSpannedCells(m_numberCellSpanned);
     cell.setBackgroundColor(m_color);
 
-    WPXPropertyList propList;
-    listener->openTableCell(cell, propList);
-    sendContent(listener);
+    listener->openTableCell(cell);
+    sendContent(listener, table);
     listener->closeTableCell();
     return true;
   }
 
   //! send the content
-  bool sendContent(MWAWContentListenerPtr listener) {
+  bool sendContent(MWAWContentListenerPtr listener, MWAWTable &) {
     if (m_blockId > 0)
       m_parser.send(m_blockId);
     else if (listener) // try to avoid empty cell
@@ -1084,9 +1083,8 @@ void MWProStructures::buildTableStructures()
     for (size_t k = 0; k < numCells; k++) {
       blockList[k]->m_send = true;
       blockList[k]->m_attachment = true;
-      Box2f box(blockList[k]->m_box.min(), blockList[k]->m_box.max()-Vec2f(1,1));
       shared_ptr<MWProStructuresInternal::Cell> newCell(new MWProStructuresInternal::Cell(*this));
-      newCell->setBox(box);
+      newCell->m_box=Box2f(blockList[k]->m_box.min(), blockList[k]->m_box.max()-Vec2f(1,1));
       newCell->setBackColor(blockList[k]->m_surfaceColor);
       newCell->m_blockId = blockList[k]->m_id;
       blockList[k]->m_textboxCellType=1;

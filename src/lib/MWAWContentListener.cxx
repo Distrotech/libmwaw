@@ -1552,7 +1552,7 @@ void MWAWContentListener::addEmptyTableCell(Vec2i const &pos, Vec2i span)
   m_documentInterface->closeTableCell();
 }
 
-void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList const &extras)
+void MWAWContentListener::openTableCell(MWAWCell const &cell)
 {
   if (!m_ps->m_isTableRowOpened) {
     MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: called with m_isTableRowOpened=false\n"));
@@ -1563,121 +1563,8 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell, WPXPropertyList co
     closeTableCell();
   }
 
-  WPXPropertyList propList(extras);
-
-  if (extras["office:value-type"]) {
-    std::stringstream f;
-    switch (cell.format()) {
-    case MWAWCell::F_NUMBER:
-      if (extras["office:value-type"] &&
-          extras["office:value-type"]->getStr()=="float" && cell.subformat()) {
-        f << "Numeric" << cell.subformat();
-        propList.insert("style:data-style-name", f.str().c_str());
-        switch (cell.subformat()) {
-        case 3:
-        case 6:
-          propList.insert("office:value-type", "percentage");
-          break;
-        case 4:
-        case 7:
-          propList.insert("office:value-type", "currency");
-          propList.insert("office:currency","USD"); // fixme set dollars
-          break;
-        default:
-          break;
-        }
-      }
-      break;
-    case MWAWCell::F_DATE:
-      if (extras["office:value-type"] &&
-          extras["office:value-type"]->getStr()=="date") {
-        f << "Date" << cell.subformat();
-        propList.insert("style:data-style-name", f.str().c_str());
-      }
-      break;
-    case MWAWCell::F_TIME:
-      if (extras["office:value-type"] &&
-          extras["office:value-type"]->getStr()=="time") {
-        f << "Time" << cell.subformat();
-        propList.insert("style:data-style-name", f.str().c_str());
-      }
-      break;
-    case MWAWCell::F_TEXT:
-    case MWAWCell::F_UNKNOWN:
-    default:
-      break;
-    }
-  }
-
-  propList.insert("libwpd:column", cell.position()[0]);
-  propList.insert("libwpd:row", cell.position()[1]);
-
-  propList.insert("table:number-columns-spanned", cell.numSpannedCells()[0]);
-  propList.insert("table:number-rows-spanned", cell.numSpannedCells()[1]);
-
-  std::vector<MWAWBorder> const &borders = cell.borders();
-  for (size_t c = 0; c < borders.size(); c++) {
-    switch(c) {
-    case libmwaw::Left:
-      borders[c].addTo(propList, "left");
-      break;
-    case libmwaw::Right:
-      borders[c].addTo(propList, "right");
-      break;
-    case libmwaw::Top:
-      borders[c].addTo(propList, "top");
-      break;
-    case libmwaw::Bottom:
-      borders[c].addTo(propList, "bottom");
-      break;
-    default:
-      MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: can not send %d border\n",int(c)));
-      break;
-    }
-  }
-  if (!cell.backgroundColor().isWhite())
-    propList.insert("fo:background-color", cell.backgroundColor().str().c_str());
-  if (cell.isProtected())
-    propList.insert("style:cell-protect","protected");
-  // alignement
-  switch(cell.hAlignement()) {
-  case MWAWCell::HALIGN_LEFT:
-    propList.insert("fo:text-align", "first");
-    propList.insert("style:text-align-source", "fix");
-    break;
-  case MWAWCell::HALIGN_CENTER:
-    propList.insert("fo:text-align", "center");
-    propList.insert("style:text-align-source", "fix");
-    break;
-  case MWAWCell::HALIGN_RIGHT:
-    propList.insert("fo:text-align", "end");
-    propList.insert("style:text-align-source", "fix");
-    break;
-  case MWAWCell::HALIGN_DEFAULT:
-    break; // default
-  case MWAWCell::HALIGN_FULL:
-  default:
-    MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: called with unknown halign=%d\n", cell.hAlignement()));
-  }
-  // no padding
-  propList.insert("fo:padding", 0, WPX_POINT);
-  // alignement
-  switch(cell.vAlignement()) {
-  case MWAWCell::VALIGN_TOP:
-    propList.insert("style:vertical-align", "top");
-    break;
-  case MWAWCell::VALIGN_CENTER:
-    propList.insert("style:vertical-align", "middle");
-    break;
-  case MWAWCell::VALIGN_BOTTOM:
-    propList.insert("style:vertical-align", "bottom");
-    break;
-  case MWAWCell::VALIGN_DEFAULT:
-    break; // default
-  default:
-    MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: called with unknown valign=%d\n", cell.vAlignement()));
-  }
-
+  WPXPropertyList propList;
+  cell.addTo(propList);
   m_ps->m_isTableCellOpened = true;
   m_documentInterface->openTableCell(propList);
 }

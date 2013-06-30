@@ -1783,8 +1783,7 @@ bool MSWText::sendTable(MSWTextInternal::Property const &prop)
       }
       cell.position() = Vec2i((int)c,(int)r);
 
-      WPXPropertyList extras;
-      listener->openTableCell(cell, extras);
+      listener->openTableCell(cell);
 
       MSWEntry textData;
       textData.setBegin(prop.m_cellsPos[cellPos]);

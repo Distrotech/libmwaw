@@ -1109,6 +1109,8 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
   }
   long tLength = long(input->readULong(4));
   f << "textLength=" << tLength << ",";
+  ascii().addPos(0);
+  ascii().addNote(f.str().c_str());
 
   long pos;
   // title, subject, author, revision, remark, [2 documents tags], mail:

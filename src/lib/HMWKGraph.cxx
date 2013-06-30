@@ -49,6 +49,7 @@
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
+#include "MWAWTable.hxx"
 
 #include "HMWKParser.hxx"
 
@@ -374,19 +375,17 @@ struct PictureFrame : public Frame {
 
 ////////////////////////////////////////
 //! a table cell in a table in HMWKGraph
-struct TableCell {
+struct TableCell : public MWAWTableCell {
   //! constructor
-  TableCell(): m_row(-1), m_col(-1), m_span(1,1), m_dim(), m_backColor(MWAWColor::white()),
+  TableCell(): m_dim(), m_backColor(MWAWColor::white()),
     m_borders(), m_id(-1), m_fileId(-1), m_flags(0), m_extra("") {
   }
+  //! call when a cell must be send
+  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table);
+  //! call when the content of a cell must be send
+  virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table);
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TableCell const &cell);
-  //! the row
-  int m_row;
-  //! the column
-  int m_col;
-  //! the span ( numRow x numCol )
-  Vec2i m_span;
   //! the dimension
   Vec2f m_dim;
   //! the background color
@@ -405,10 +404,7 @@ struct TableCell {
 
 std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 {
-  o << "row=" << cell.m_row << ",";
-  o << "col=" << cell.m_col << ",";
-  if (cell.m_span.x() != 1 || cell.m_span.y() != 1)
-    o << "span=" << cell.m_span << ",";
+  o << static_cast<MWAWTableCell const &>(cell);
   o << "dim=" << cell.m_dim << ",";
   if (!cell.m_backColor.isWhite())
     o << "backColor=" << cell.m_backColor << ",";
@@ -431,13 +427,17 @@ std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 
 ////////////////////////////////////////
 //! Internal: the table of a HMWKGraph
-struct Table : public Frame {
+struct Table : public Frame, public MWAWTable {
   //! constructor
-  Table(Frame const &orig) : Frame(orig), m_rows(0), m_columns(0), m_numCells(0),
+  Table(Frame const &orig, HMWKGraph &parser) : Frame(orig), MWAWTable(), m_parser(&parser), m_rows(0), m_columns(0), m_numCells(0),
     m_cellsList(), m_textFileId(-1), m_rowsDim(), m_columnsDim(), m_cellsId(), m_hasExtraLines(false) {
   }
   //! destructor
   ~Table() {
+  }
+  //! send a text zone
+  bool sendText(long textId, long id) const {
+    return m_parser->sendText(textId, id);
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Table const &table) {
@@ -459,9 +459,11 @@ struct Table : public Frame {
     return s.str();
   }
   //! returns a cell position ( before any merge cell )
-  size_t getCellPos(int row, int col) const {
+  size_t getCellPos(int col, int row) const {
     return size_t(row*m_columns+col);
   }
+  //! the graph parser
+  HMWKGraph *m_parser;
   //! the number of row
   int m_rows;
   //! the number of columns
@@ -530,6 +532,35 @@ struct TextBox : public Frame {
   //! two auxilliary dim for memo textbox
   float m_dim[2];
 };
+
+bool TableCell::send(MWAWContentListenerPtr listener, MWAWTable &table)
+{
+  if (!listener)
+    return true;
+  MWAWCell cell;
+  cell.position() = m_position;
+  Vec2i span = m_numberCellSpanned;
+  if (span[0]<1) span[0]=1;
+  if (span[1]<1) span[1]=1;
+  cell.setNumSpannedCells(span);
+  cell.setBackgroundColor(m_backColor);
+  static int const (wh[]) = { libmwaw::LeftBit,  libmwaw::RightBit, libmwaw::TopBit, libmwaw::BottomBit};
+  for (size_t b = 0; b < m_borders.size(); b++)
+    cell.setBorders(wh[b], m_borders[b]);
+  if (m_flags&1) cell.setVAlignement(MWAWCell::VALIGN_CENTER);
+
+  listener->openTableCell(cell);
+  sendContent(listener, table);
+  listener->closeTableCell();
+  return true;
+}
+
+bool TableCell::sendContent(MWAWContentListenerPtr, MWAWTable &table)
+{
+  if (m_id < 0)
+    return true;
+  return static_cast<Table &>(table).sendText(m_fileId, m_id);
+}
 
 ////////////////////////////////////////
 //! Internal: the picture of a HMWKGraph
@@ -1135,7 +1166,9 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
   case 8:
     return sendBasicGraph(reinterpret_cast<HMWKGraphInternal::BasicGraph const &>(frame), pos, extras);
   case 9: {
-    HMWKGraphInternal::Table const &table = reinterpret_cast<HMWKGraphInternal::Table const &>(frame);
+    HMWKGraphInternal::Table &table =
+      const_cast<HMWKGraphInternal::Table &>
+      (static_cast<HMWKGraphInternal::Table const &>(frame));
     if (!updateTable(table)) {
       MWAW_DEBUG_MSG(("HMWKGraph::sendFrame: can not find the table structure\n"));
       MWAWSubDocumentPtr subdoc
@@ -1390,23 +1423,24 @@ bool HMWKGraph::updateTable(HMWKGraphInternal::Table const &table) const
   table.m_cellsId.resize(size_t(nRows*nColumns),-1);
   for (size_t i=0; i < nCells; i++) {
     HMWKGraphInternal::TableCell const &cell=table.m_cellsList[i];
-    if (cell.m_row < 0 || cell.m_row >= nRows || cell.m_col < 0 || cell.m_col >= nColumns ||
-        cell.m_span[0] < 1 || cell.m_span[1] < 1) {
+    Vec2i const &pos=cell.m_position;
+    if (pos[1] < 0 || pos[1] >= nRows || pos[0] < 0 || pos[0] >= nColumns ||
+        cell.m_numberCellSpanned[0] < 1 || cell.m_numberCellSpanned[1] < 1) {
       MWAW_DEBUG_MSG(("HMWKGraph::updateTable: find a bad cell\n"));
       continue;
     }
     if (cell.m_flags&0xc) table.m_hasExtraLines = true;
-    for (int r = cell.m_row; r < cell.m_row + cell.m_span[0]; r++) {
+    for (int r = pos[1]; r < pos[1] + cell.m_numberCellSpanned[1]; r++) {
       if (r >= nRows) {
         MWAW_DEBUG_MSG(("HMWKGraph::updateTable: find a bad row cell span\n"));
         continue;
       }
-      for (int c = cell.m_col; c < cell.m_col + cell.m_span[1]; c++) {
+      for (int c = pos[0]; c < pos[0] + cell.m_numberCellSpanned[0]; c++) {
         if (c >= nColumns) {
           MWAW_DEBUG_MSG(("HMWKGraph::updateTable: find a bad col cell span\n"));
           continue;
         }
-        size_t cPos = table.getCellPos(r,c);
+        size_t cPos = table.getCellPos(c,r);
         if (table.m_cellsId[cPos]!=-1) {
           MWAW_DEBUG_MSG(("HMWKGraph::updateTable: oops find some cell in this position\n"));
           table.m_cellsId.resize(0);
@@ -1422,12 +1456,12 @@ bool HMWKGraph::updateTable(HMWKGraphInternal::Table const &table) const
   for (int r = 0; r < nRows; r++) {
     bool find = false;
     for (int c = 0; c < nColumns; c++) {
-      size_t cPos = table.getCellPos(r,c);
+      size_t cPos = table.getCellPos(c,r);
       if (table.m_cellsId[cPos]==-1) continue;
       HMWKGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
-      if (cell.m_row + cell.m_span[0] != r+1)
+      if (cell.m_position[1] + cell.m_numberCellSpanned[1] != r+1)
         continue;
-      rowsLimit[size_t(r)+1] = rowsLimit[size_t(cell.m_row)]+cell.m_dim[1];
+      rowsLimit[size_t(r)+1] = rowsLimit[size_t(cell.m_position[1])]+cell.m_dim[1];
       find = true;
     }
     if (!find) {
@@ -1445,12 +1479,12 @@ bool HMWKGraph::updateTable(HMWKGraphInternal::Table const &table) const
   for (int c = 0; c < nColumns; c++) {
     bool find = false;
     for (int r = 0; r < nRows; r++) {
-      size_t cPos = table.getCellPos(r,c);
+      size_t cPos = table.getCellPos(c,r);
       if (table.m_cellsId[cPos]==-1) continue;
       HMWKGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
-      if (cell.m_col + cell.m_span[1] != c+1)
+      if (cell.m_position[0] + cell.m_numberCellSpanned[0] != c+1)
         continue;
-      colsLimit[size_t(c)+1] = colsLimit[size_t(cell.m_col)]+cell.m_dim[0];
+      colsLimit[size_t(c)+1] = colsLimit[size_t(cell.m_position[0])]+cell.m_dim[0];
       find = true;
     }
     if (!find) {
@@ -1462,31 +1496,6 @@ bool HMWKGraph::updateTable(HMWKGraphInternal::Table const &table) const
   table.m_columnsDim.resize(size_t(nColumns));
   for (size_t c = 0; c < size_t(nColumns); c++)
     table.m_columnsDim[c] = colsLimit[c+1]-colsLimit[c];
-
-  return true;
-}
-
-bool HMWKGraph::sendTableCell(HMWKGraphInternal::TableCell const &cell)
-{
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
-  if (!listener)
-    return true;
-
-  WPXPropertyList pList;
-  MWAWCell fCell;
-  fCell.position() = Vec2i(cell.m_col,cell.m_row);
-  Vec2i span = cell.m_span;
-  if (span[0]<1) span[0]=1;
-  if (span[1]<1) span[1]=1;
-  fCell.setNumSpannedCells(Vec2i(span[1],span[0]));
-  fCell.setBackgroundColor(cell.m_backColor);
-  static int const (wh[]) = { libmwaw::LeftBit,  libmwaw::RightBit, libmwaw::TopBit, libmwaw::BottomBit};
-  for (size_t b = 0; b < cell.m_borders.size(); b++)
-    fCell.setBorders(wh[b], cell.m_borders[b]);
-  if (cell.m_flags&1) fCell.setVAlignement(MWAWCell::VALIGN_CENTER);
-  listener->openTableCell(fCell, pList);
-  m_mainParser->sendText(cell.m_fileId, cell.m_id);
-  listener->closeTableCell();
 
   return true;
 }
@@ -1514,13 +1523,12 @@ bool HMWKGraph::sendPreTableData(HMWKGraphInternal::Table const &table)
   for (size_t c = 0; c < nCells; c++) {
     HMWKGraphInternal::TableCell const &cell= table.m_cellsList[c];
     if (!(cell.m_flags&0xc)) continue;
-    if (cell.m_row+cell.m_span[0] > nRows ||
-        cell.m_col+cell.m_span[1] > nColumns)
+    Vec2i lastPos=cell.m_position+cell.m_numberCellSpanned;
+    if (lastPos[1] > nRows || lastPos[0] > nColumns)
       continue;
     Box2f box;
-    box.setMin(Vec2f(columnsPos[size_t(cell.m_col)], rowsPos[size_t(cell.m_row)]));
-    box.setMax(Vec2f(columnsPos[size_t(cell.m_col+cell.m_span[1])],
-                     rowsPos[size_t(cell.m_row+cell.m_span[0])]));
+    box.setMin(Vec2f(columnsPos[size_t(cell.m_position[0])], rowsPos[size_t(cell.m_position[1])]));
+    box.setMax(Vec2f(columnsPos[size_t(lastPos[0])], rowsPos[size_t(lastPos[1])]));
 
     shared_ptr<MWAWPictLine> lines[2];
     if (cell.m_flags & 4)
@@ -1548,22 +1556,19 @@ bool HMWKGraph::sendTableUnformatted(long fId)
 {
   if (!m_parserState->m_listener)
     return true;
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::iterator fIt
     = m_state->m_framesMap.find(fId);
   if (fIt == m_state->m_framesMap.end() || !fIt->second || fIt->second->m_type != 9) {
     MWAW_DEBUG_MSG(("HMWKGraph::sendTableUnformatted: can not find table %lx\n", fId));
     return false;
   }
-  HMWKGraphInternal::Table const &table = reinterpret_cast<HMWKGraphInternal::Table const &>(*fIt->second);
-  for (size_t c = 0; c < table.m_cellsList.size(); c++) {
-    HMWKGraphInternal::TableCell const &cell= table.m_cellsList[c];
-    if (cell.m_id < 0) continue;
-    m_mainParser->sendText(cell.m_fileId, cell.m_id);
-  }
+  HMWKGraphInternal::Table &table = reinterpret_cast<HMWKGraphInternal::Table &>(*fIt->second);
+  for (size_t c = 0; c < table.m_cellsList.size(); c++)
+    table.m_cellsList[c].sendContent(m_parserState->m_listener, table);
   return true;
 }
 
-bool HMWKGraph::sendTable(HMWKGraphInternal::Table const &table)
+bool HMWKGraph::sendTable(HMWKGraphInternal::Table &table)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener)
@@ -1581,17 +1586,17 @@ bool HMWKGraph::sendTable(HMWKGraphInternal::Table const &table)
   for (size_t r = 0; r < size_t(nRows); r++) {
     listener->openTableRow(table.m_rowsDim[r], WPX_POINT);
     for (size_t c = 0; c < size_t(nColumns); c++) {
-      size_t cPos = table.getCellPos(int(r),int(c));
+      size_t cPos = table.getCellPos(int(c), int(r));
       int id = table.m_cellsId[cPos];
       if (id == -1) {
         listener->addEmptyTableCell(Vec2i(int(c), int(r)));
         continue;
       }
 
-      HMWKGraphInternal::TableCell const &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
-      if (int(r) != cell.m_row || int(c) != cell.m_col) continue;
+      HMWKGraphInternal::TableCell &cell=table.m_cellsList[size_t(table.m_cellsId[cPos])];
+      if (int(r) != cell.m_position[1] || int(c) != cell.m_position[0]) continue;
 
-      sendTableCell(cell);
+      cell.send(listener, table);
     }
     listener->closeTableRow();
   }
@@ -1909,7 +1914,7 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
     return table;
   }
 
-  table.reset(new HMWKGraphInternal::Table(header));
+  table.reset(new HMWKGraphInternal::Table(header, *this));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f, f2;
   long val;
@@ -1946,12 +1951,14 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
       break;
     }
     HMWKGraphInternal::TableCell cell;
-    cell.m_row = (int) input->readLong(2);
-    cell.m_col = (int) input->readLong(2);
+    int posi[2];
+    for (int j = 0; j < 2; j++)
+      posi[j] =  (int) input->readLong(2);
+    cell.m_position = Vec2i(posi[1],posi[0]);
     int span[2];
     for (int j = 0; j < 2; j++)
       span[j] =  (int) input->readLong(2);
-    cell.m_span = Vec2i(span[0], span[1]);
+    cell.m_numberCellSpanned = Vec2i(span[1], span[0]);
     float dim[2];
     for (int j = 0; j < 2; j++)
       dim[j] = float(input->readLong(4))/65536.f;

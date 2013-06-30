@@ -405,7 +405,7 @@ struct Cell : public MWAWTableCell {
     m_zonesList(), m_footnoteList() {}
 
   //! send the content
-  virtual bool send(MWAWContentListenerPtr listener) {
+  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table) {
     if (!listener) return true;
     MWAWCell cell;
     MWAWBorder border;
@@ -414,15 +414,14 @@ struct Cell : public MWAWTableCell {
     cell.setNumSpannedCells(m_numberCellSpanned);
     if (!m_color.isWhite())
       cell.setBackgroundColor(m_color);
-    WPXPropertyList propList;
-    listener->openTableCell(cell, propList);
-    sendContent(listener);
+    listener->openTableCell(cell);
+    sendContent(listener, table);
     listener->closeTableCell();
     return true;
   }
 
   //! send the content
-  bool sendContent(MWAWContentListenerPtr);
+  bool sendContent(MWAWContentListenerPtr, MWAWTable &);
   //! the text parser
   WNText &m_parser;
   //! the background color
@@ -532,7 +531,7 @@ struct State {
   std::map<long, shared_ptr<ContentZones> > m_contentMap;
 };
 
-bool Cell::sendContent(MWAWContentListenerPtr)
+bool Cell::sendContent(MWAWContentListenerPtr, MWAWTable &)
 {
   /** as a cell can be arbitrary cutted in small part,
       we must retrieve the last ruler */
@@ -1871,8 +1870,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
         if (needCreateCell) {
           cell.reset(new WNTextInternal::Cell(*this));
           // as the cells can overlap a little, we build a new box
-          Box2i box(tableData.m_box.min(), tableData.m_box.max()-Vec2i(1,1));
-          cell->setBox(box);
+          cell->m_box=Box2i(tableData.m_box.min(), tableData.m_box.max()-Vec2i(1,1));
           cell->m_color = tableData.m_color;
           cell->m_borderList = tableData.getBorderList();
           table->add(cell);

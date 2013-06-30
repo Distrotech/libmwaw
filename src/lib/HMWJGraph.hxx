@@ -76,6 +76,7 @@ class HMWJParser;
 class HMWJGraph
 {
   friend class HMWJParser;
+  friend struct HMWJGraphInternal::Table;
   friend class HMWJGraphInternal::SubDocument;
 
 public:
@@ -144,7 +145,7 @@ protected:
   /** try to send a textbox to the listener */
   bool sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   /** try to send a table */
-  bool sendTable(HMWJGraphInternal::Table const &table);
+  bool sendTable(HMWJGraphInternal::Table &table);
   /** try to send a table unformatted*/
   bool sendTableUnformatted(HMWJGraphInternal::Table const &table);
   /** try to send a table unformatted*/
@@ -153,9 +154,6 @@ protected:
   bool updateTable(HMWJGraphInternal::Table const &table) const;
   /** try to send auxilliary table data*/
   bool sendPreTableData(HMWJGraphInternal::Table const &table);
-  /** try to send a cell in a table */
-  bool sendTableCell(HMWJGraphInternal::TableCell const &cell,
-                     std::vector<HMWJGraphInternal::CellFormat> const &lFormat);
 
   // interface with mainParser
 

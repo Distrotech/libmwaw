@@ -40,11 +40,6 @@
 
 #include "libmwaw_internal.hxx"
 
-class WPXBinaryData;
-class WPXDocumentInterface;
-class WPXString;
-class WPXPropertyListVector;
-
 class MWAWCell;
 
 namespace MWAWContentListenerInternal
@@ -158,17 +153,15 @@ public:
                  WPXPropertyList tableExtras=WPXPropertyList());
   /** closes this table */
   void closeTable();
-  /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
+  /** opens a row with given height ( if h < 0.0, set min-row-height = -h )*/
   void openTableRow(float h, WPXUnit unit, bool headerRow=false);
-  /** closes this row */
+  /** closes the last table's row */
   void closeTableRow();
-  /** low level function to define a cell.
-  	\param cell the cell position, alignement, ...
-  	\param extras to be used to pass extra data, for instance spreadsheet data*/
-  void openTableCell(MWAWCell const &cell, WPXPropertyList const &extras);
-  /** close a cell */
+  /** opens a table's cell */
+  void openTableCell(MWAWCell const &cell);
+  /** closes a table's cell */
   void closeTableCell();
-  /** add empty cell */
+  /** adds an empty table's cell */
   void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1));
 
   // ------- section ---------------

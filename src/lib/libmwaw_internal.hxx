@@ -257,7 +257,7 @@ struct MWAWBorder {
   //! compare two cell
   int compare(MWAWBorder const &orig) const;
 
-  //! operator<<: prints data in form "XxY"
+  //! operator<<
   friend std::ostream &operator<< (std::ostream &o, MWAWBorder const &border);
   //! operator<<: prints data in form "none|dot|..."
   friend std::ostream &operator<< (std::ostream &o, MWAWBorder::Style const &style);

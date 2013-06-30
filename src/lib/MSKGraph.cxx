@@ -2484,14 +2484,13 @@ void MSKGraph::sendTable(int zoneId)
     listener->openTableRow(float(table.m_rowsDim[row]), WPX_POINT);
 
     for (size_t col = 0; col < nCols; col++) {
-      WPXPropertyList emptyList;
       MWAWCell cell;
       Vec2i cellPosition(Vec2i((int)row,(int)col));
       cell.setPosition(cellPosition);
       cell.setBorders(borderPos, border);
       // fixme setBackgroundColor
       listener->setParagraph(para);
-      listener->openTableCell(cell, emptyList);
+      listener->openTableCell(cell);
 
       MSKGraphInternal::Table::Cell const *tCell=table.getCell(cellPosition);
       if (tCell) {

@@ -48,8 +48,6 @@
 #  include "libmwaw_internal.hxx"
 #  include "MWAWPict.hxx"
 
-class WPXBinaryData;
-class WPXPropertyList;
 class MWAWPropertyHandlerEncoder;
 
 /*

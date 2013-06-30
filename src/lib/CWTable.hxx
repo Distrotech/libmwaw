@@ -89,9 +89,6 @@ public:
   shared_ptr<CWStruct::DSET> readTableZone
   (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
-  //! update the cell
-  void updateCell(CWTableInternal::Cell const &cell, MWAWCell &rCell, WPXPropertyList &pList);
-
 protected:
   //! sends the zone data to the listener (if it exists )
   bool sendZone(int number);

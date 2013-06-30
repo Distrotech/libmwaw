@@ -937,7 +937,6 @@ bool MRWText::sendTable(MRWTextInternal::Table &table)
     listener->openTable(colWidths, WPX_POINT);
     listener->openTableRow(-float(row.m_height), WPX_POINT);
 
-    WPXPropertyList extras;
     for (size_t c=0; c < nCells; c++) {
       MRWTextInternal::Table::Cell const &cell=row.m_cellsList[c];
       MWAWCell fCell;
@@ -946,7 +945,7 @@ bool MRWText::sendTable(MRWTextInternal::Table &table)
         para.update(m_mainParser->getPatternPercent(para.m_cellFill.m_patternId), fCell);
       fCell.position() = Vec2i((int)c,0);
 
-      listener->openTableCell(fCell, extras);
+      listener->openTableCell(fCell);
       MWAWEntry entry(cell.m_entry);
       if (entry.length()<=1)
         listener->insertChar(' ');

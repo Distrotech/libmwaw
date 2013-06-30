@@ -49,8 +49,6 @@
 
 #  include "libmwaw_internal.hxx"
 
-class WPXBinaryData;
-
 /** \brief Generic function used to define/store a picture */
 class MWAWPict
 {

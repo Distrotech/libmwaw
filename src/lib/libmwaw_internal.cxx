@@ -320,7 +320,7 @@ std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
     break;
   default:
     MWAW_DEBUG_MSG(("MWAWBorder::operator<<: find unknown type\n"));
-    o << "#type=" << int(border.m_type);
+    o << "#type=" << int(border.m_type) << ":";
     break;
   }
   if (border.m_width > 1 || border.m_width < 1) o << "w=" << border.m_width << ":";
@@ -332,7 +332,7 @@ std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
     o << "bordW[rel]=[";
     for (size_t i=0; i < numRelWidth; i++)
       o << border.m_widthsList[i] << ",";
-    o << "],";
+    o << "]:";
   }
   return o;
 }

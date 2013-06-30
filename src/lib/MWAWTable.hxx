@@ -47,40 +47,37 @@
 
 class MWAWTable;
 
-/** a virtual structure used to store/send a cell to a listener */
+/** a virtual structure used to store in a MWAWTable */
 class MWAWTableCell
 {
   friend class MWAWTable;
 public:
+  //! an enum to defined potential internal line: E_Line1=TL to RB, E_Line2=BL to RT
+  enum ExtraLine { E_None, E_Line1, E_Line2, E_Cross };
   //! constructor
-  MWAWTableCell() : m_box(), m_position(-1,-1), m_numberCellSpanned() {
+  MWAWTableCell() : m_box(), m_size(), m_position(-1,-1), m_numberCellSpanned(1,1), m_extraLine(E_None), m_extraLineType() {
   }
   //! destructor
   virtual ~MWAWTableCell() { }
-  //! set the bounding box (units in point)
-  void setBox(Box2f const &dim) {
-    m_box = dim;
-  }
-  //! return the bounding box
-  Box2f const &box() const {
-    return m_box;
-  }
+
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, MWAWTableCell const &cell) {
-    if (cell.m_position.x() >= 0) {
-      o << "pos=" << cell.m_position << ",";
-      if (cell.m_numberCellSpanned[0]!=1 || cell.m_numberCellSpanned[1]!=1)
-        o << "span=" << cell.m_position << ",";
-    }
-    o << "box=" << cell.m_box << ",";
-    return o;
-  }
+  friend std::ostream &operator<<(std::ostream &o, MWAWTableCell const &cell);
 
   //! call when a cell must be send
-  virtual bool send(MWAWContentListenerPtr listener) = 0;
-
+  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table) = 0;
   //! call when the content of a cell must be send
-  virtual bool sendContent(MWAWContentListenerPtr listener) = 0;
+  virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table) = 0;
+
+  /** the cell bounding box (unit in point)*/
+  Box2f m_box;
+  /** the cell size : unit WPX_POINT */
+  Vec2f m_size;
+  /** the final position in the table */
+  Vec2i m_position, m_numberCellSpanned /** the number of cell span */;
+  /** extra line */
+  ExtraLine m_extraLine;
+  /** extra line type */
+  MWAWBorder m_extraLineType;
 
 protected:
   //! a comparaison structure used retrieve the rows and the columns
@@ -91,12 +88,12 @@ protected:
       Point(int wh, MWAWTableCell const *cell, int cellId) : m_which(wh), m_cell(cell), m_cellId(cellId) {}
       float getPos(int coord) const {
         if (m_which)
-          return m_cell->box().max()[coord];
-        return m_cell->box().min()[coord];
+          return m_cell->m_box.max()[coord];
+        return m_cell->m_box.min()[coord];
       }
       /** returns the cells size */
       float getSize(int coord) const {
-        return m_cell->box().size()[coord];
+        return m_cell->m_box.size()[coord];
       }
       /** the position of the point in the cell (0: LT, 1: RB) */
       int m_which;
@@ -113,8 +110,8 @@ protected:
       if (diffF > 0) return false;
       int diff = c2.m_which - c1.m_which;
       if (diff) return (diff < 0);
-      diffF = c1.m_cell->box().size()[m_coord]
-              - c2.m_cell->box().size()[m_coord];
+      diffF = c1.m_cell->m_box.size()[m_coord]
+              - c2.m_cell->m_box.size()[m_coord];
       if (diffF < 0) return true;
       if (diffF > 0) return false;
       return c1.m_cellId < c2.m_cellId;
@@ -123,20 +120,20 @@ protected:
     //! the coord to compare
     int m_coord;
   };
-
-protected:
-  /** the cell bounding box (unit in point)*/
-  Box2f m_box;
-
-  /** the final position in the table */
-  Vec2i m_position, m_numberCellSpanned /** the number of cell span */;
 };
 
+/** a class used to recreate the table structure using cell informations, .... */
 class MWAWTable
 {
 public:
+  //! an enum used to indicate what the list of entries which are filled
+  enum DataSet {
+    CellPositionBit=1, BoxBit=2, SizeBit=4, TableDimBit=8, TablePosToCellBit=0x10
+  };
   //! the constructor
-  MWAWTable() : m_cellsList(), m_rowsSize(), m_colsSize() {}
+  MWAWTable(uint32_t givenData=BoxBit) :
+    m_rowsSize(), m_colsSize(), m_givenData(givenData), m_setData(givenData),
+    m_cellsList(), m_numRows(0), m_numCols(0), m_posToCellId() {}
 
   //! the destructor
   virtual ~MWAWTable();
@@ -154,6 +151,15 @@ public:
   int numCells() const {
     return int(m_cellsList.size());
   }
+  /** define the row size (in point) */
+  void setRowsSize(std::vector<float> const &rSize) {
+    m_rowsSize=rSize;
+  }
+  /** define the columns size (in point) */
+  void setColsSize(std::vector<float> const &cSize) {
+    m_colsSize=cSize;
+  }
+
   //! returns the i^th cell
   shared_ptr<MWAWTableCell> get(int id);
 
@@ -163,22 +169,45 @@ public:
    */
   bool sendTable(MWAWContentListenerPtr listener);
 
-  /** a function called just before calling listener->openTable(),
-      to insert extra data
-   */
-  virtual void sendPreTableData(MWAWContentListenerPtr ) {}
-
   /** try to send the table as basic text */
   bool sendAsText(MWAWContentListenerPtr listener);
 
 protected:
+  //! convert a cell position in a posToCellId's position
+  int getCellIdPos(int col, int row) const {
+    if (col<0||col>=int(m_numCols))
+      return -1;
+    if (row<0||row>=int(m_numRows))
+      return -1;
+    return col*int(m_numRows)+row;
+  }
   //! create the correspondance list, ...
   bool buildStructures();
+  /** compute the rows and the cells size */
+  bool buildDims();
+  /** a function which fills to posToCellId vector using the cell position */
+  bool buildPosToCellId();
+  //! send extra line
+  void sendExtraLines(MWAWContentListenerPtr listener) const;
 
+public:
+  /** the final row  size (in point) */
+  std::vector<float> m_rowsSize;
+  /** the final col size (in point) */
+  std::vector<float> m_colsSize;
+protected:
+  /** a int to indicate what data are given in entries*/
+  uint32_t m_givenData;
+  /** a int to indicate what data are been reconstruct*/
+  uint32_t m_setData;
   /** the list of cells */
   std::vector<shared_ptr<MWAWTableCell> > m_cellsList;
-  /** the final row and col size (in point) */
-  std::vector<float> m_rowsSize, m_colsSize;
+  /** the number of rows ( set by buildPosToCellId ) */
+  size_t m_numRows;
+  /** the number of cols ( set by buildPosToCellId ) */
+  size_t m_numCols;
+  /** a vector used to store an id corresponding to each cell */
+  std::vector<int> m_posToCellId;
 };
 
 #endif

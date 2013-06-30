@@ -44,8 +44,8 @@
 
 class WPXPropertyList;
 
-/** a structure used to defined the cell format */
-class MWAWCellFormat
+/** a structure used to define a cell and its format */
+class MWAWCell
 {
 public:
   /** the default horizontal alignement.
@@ -59,60 +59,56 @@ public:
   \note actually mainly used for table/spreadsheet cell,  not yet implemented */
   enum VerticalAlignment { VALIGN_TOP, VALIGN_CENTER, VALIGN_BOTTOM, VALIGN_DEFAULT };
 
-  /** the different types of cell's field */
-  enum Format { F_TEXT, F_NUMBER, F_DATE, F_TIME, F_UNKNOWN };
-
-  /*   subformat:
-            NUMBER             DATE                 TIME       TEXT
-    0 :    default           default               default    default
-    1 :    decimal            3/2/00             10:03:00 AM  -------
-    2 :   exponential      3 Feb, 2000            10:03 AM    -------
-    3 :   percent             3, Feb              10:03:00    -------
-    4 :    money             Feb, 2000              10:03     -------
-    5 :    thousand       Thu, 3 Feb, 2000         -------    -------
-    6 :  percent/thou     3 February 2000          -------    -------
-    7 :   money/thou  Thursday, February 3, 2000   -------    -------
-
-   */
   //! constructor
-  MWAWCellFormat() : m_format(F_UNKNOWN), m_subFormat(0), m_digits(0),
+  MWAWCell() : m_position(0,0), m_numberCellSpanned(1,1),
     m_hAlign(HALIGN_DEFAULT), m_vAlign(VALIGN_DEFAULT), m_bordersList(),
     m_backgroundColor(MWAWColor::white()), m_protected(false) { }
 
-  virtual ~MWAWCellFormat() {}
+  //! destructor
+  virtual ~MWAWCell() {}
 
-  //! returns the format type
-  Format format() const {
-    return m_format;
+  /** adds to the propList*/
+  void addTo(WPXPropertyList &propList) const;
+
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, MWAWCell const &cell);
+
+  // position
+
+  //! position  accessor
+  Vec2i &position() {
+    return m_position;
   }
-  //! returns the subformat type
-  int subformat() const {
-    return m_subFormat;
+  //! position  accessor
+  Vec2i const &position() const {
+    return m_position;
   }
-  //! sets the format type
-  void setFormat(Format form, int subform=0) {
-    m_format = form;
-    m_subFormat = subform;
-  }
-  //! sets the subformat
-  void setSubformat(int subFormat) {
-    m_subFormat = subFormat;
+  //! set the cell positions :  0,0 -> A1, 0,1 -> A2
+  void setPosition(Vec2i posi) {
+    m_position = posi;
   }
 
-  //! returns the number of digits ( for a number)
-  int digits() const {
-    return m_digits;
+  //! returns the number of spanned cells
+  Vec2i const &numSpannedCells() const {
+    return m_numberCellSpanned;
   }
-  //! set the number of digits ( for a number)
-  void setDigits(int newDigit) {
-    m_digits = newDigit;
+  //! sets the number of spanned cells : Vec2i(1,1) means 1 cellule
+  void setNumSpannedCells(Vec2i numSpanned) {
+    m_numberCellSpanned=numSpanned;
   }
+
+  //! return the name of a cell (given row and column) : 0,0 -> A1, 0,1 -> A2
+  static std::string getCellName(Vec2i const &pos, Vec2b const &absolute);
+
+  //! return the column name
+  static std::string getColumnName(int col);
+
+  // format
 
   //! returns true if the cell is protected
   bool isProtected() const {
     return m_protected;
   }
-
   //! returns true if the cell is protected
   void setProtected(bool fl) {
     m_protected = fl;
@@ -161,19 +157,12 @@ public:
     m_backgroundColor = color;
   }
 
-  //! a comparison  function
-  int compare(MWAWCellFormat const &cell) const;
-
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, MWAWCellFormat const &cell);
-
 protected:
-  //! the cell format : by default unknown
-  Format m_format;
-  //! the sub format
-  int m_subFormat;
-  //! the number of digits
-  int m_digits;
+  //! the cell row and column : 0,0 -> A1, 0,1 -> A2
+  Vec2i m_position;
+  //! the cell spanned : by default (1,1)
+  Vec2i m_numberCellSpanned;
+
   //! the cell alignement : by default nothing
   HorizontalAlignment m_hAlign;
   //! the vertical cell alignement : by default nothing
@@ -184,156 +173,6 @@ protected:
   MWAWColor m_backgroundColor;
   //! cell protected
   bool m_protected;
-};
-
-/** a structure used to defined the cell content */
-class MWAWCellContent
-{
-public:
-  /** the different types of cell's field */
-  enum Content { C_NONE, C_TEXT, C_NUMBER, C_FORMULA, C_UNKNOWN };
-
-  //! the constructor
-  MWAWCellContent() : m_contentType(C_UNKNOWN), m_value(0.0), m_valueSet(false),
-    m_textValue(""), m_textValueSet(false), m_formulaValue("") { }
-  virtual ~MWAWCellContent() {}
-
-  //! returns the content type
-  Content content() const {
-    return m_contentType;
-  }
-  //! set the content type
-  void setContent(Content type) {
-    m_contentType = type;
-  }
-
-  //! sets the double value
-  void setValue(double val) {
-    m_value = val;
-    m_valueSet = true;
-  }
-  //! return the double value
-  double value() const {
-    return m_value;
-  }
-  //! returns true if the value has been setted
-  bool isValueSet() const {
-    return m_valueSet;
-  }
-
-  //! sets the text value
-  void setText(std::string const &val) {
-    m_textValue = val;
-    m_textValueSet = true;
-  }
-  //! returns the text value
-  std::string const &text() const {
-    return m_textValue;
-  }
-  //! returns true if the text is set
-  bool hasText() const {
-    return m_textValue.size() != 0;
-  }
-  //! returns true if the text has been setted
-  bool isTextSet() const {
-    return m_textValueSet;
-  }
-
-  //! sets the formula value
-  void setFormula(std::string const &val) {
-    m_formulaValue = val;
-  }
-  //! returns the formula value
-  std::string const &formula() const {
-    return m_formulaValue;
-  }
-
-  //! returns true if the cell has no content
-  bool empty() const {
-    if (m_contentType == C_NUMBER) return false;
-    if (m_contentType == C_TEXT && m_textValue.size()) return false;
-    if (m_contentType == C_FORMULA && (m_formulaValue.size() || isValueSet())) return false;
-    return true;
-  }
-
-  /** If the content is a data cell, filled property and returns in text, a string
-      which can be used as text.
-
-      \note - if not, property and text will be empty.
-            - if ok, adds in property office:value-type, office:[|date-|time-]value
-         and table:formula if neeed
-   */
-  bool getDataCellProperty(MWAWCellFormat::Format format, WPXPropertyList &property,
-                           std::string &text) const;
-
-  /** conversion beetween double days since 1900 and date */
-  static bool double2Date(double val, int &Y, int &M, int &D);
-  /** conversion beetween double: second since 0:00 and time */
-  static bool double2Time(double val, int &H, int &M, int &S);
-
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, MWAWCellContent const &cell);
-
-protected:
-  //! the content type ( by default unknown )
-  Content m_contentType;
-
-  //! the cell value
-  double m_value;
-  //! true if the value has been set
-  bool m_valueSet;
-
-  //! the cell string
-  std::string m_textValue;
-  //! true if the text value has been set
-  bool m_textValueSet;
-  //! the formula string
-  std::string m_formulaValue;
-};
-
-/** a structure used to defined the cell position, and a format */
-class MWAWCell : public MWAWCellFormat
-{
-public:
-  //! constructor
-  MWAWCell() : m_position(0,0), m_numberCellSpanned(1,1) {}
-
-  //! position  accessor
-  Vec2i &position() {
-    return m_position;
-  }
-  //! position  accessor
-  Vec2i const &position() const {
-    return m_position;
-  }
-  //! set the cell positions :  0,0 -> A1, 0,1 -> A2
-  void setPosition(Vec2i posi) {
-    m_position = posi;
-  }
-
-  //! returns the number of spanned cells
-  Vec2i const &numSpannedCells() const {
-    return m_numberCellSpanned;
-  }
-  //! sets the number of spanned cells : Vec2i(1,1) means 1 cellule
-  void setNumSpannedCells(Vec2i numSpanned) {
-    m_numberCellSpanned=numSpanned;
-  }
-
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, MWAWCell const &cell);
-
-  //! return the name of a cell (given row and column) : 0,0 -> A1, 0,1 -> A2
-  static std::string getCellName(Vec2i const &pos, Vec2b const &absolute);
-
-  //! return the column name
-  static std::string getColumnName(int col);
-
-protected:
-  //! the cell row and column : 0,0 -> A1, 0,1 -> A2
-  Vec2i m_position;
-  //! the cell spanned : by default (1,1)
-  Vec2i m_numberCellSpanned;
 };
 
 #endif
