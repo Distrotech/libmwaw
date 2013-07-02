@@ -49,7 +49,6 @@ InputStream *XAttr::getStream(const char *attr) const
 {
   if (m_fName.length()==0 || !attr)
     return 0;
-  InputStream *res=0;
 #if WITH_EXTENDED_FS==1
 #  define MWAW_EXTENDED_FS , 0, XATTR_SHOWCOMPRESSION
 #else
@@ -70,7 +69,7 @@ InputStream *XAttr::getStream(const char *attr) const
       return 0;
     }
 
-    res=new StringStream((unsigned char *)buffer,(unsigned long) sz);
+    InputStream *res=new StringStream((unsigned char *)buffer,(unsigned long) sz);
     delete [] buffer;
     return res;
   }
@@ -78,10 +77,12 @@ InputStream *XAttr::getStream(const char *attr) const
 
   InputStream *auxi=getAuxillarInput();
   if (auxi) {
-    res = unMacMIME(auxi, attr);
+    InputStream *res = unMacMIME(auxi, attr);
     delete auxi;
+    return res;
   }
-  return res;
+
+  return getUsingFinderDat(attr);
 }
 
 InputStream *XAttr::getAuxillarInput() const
@@ -117,6 +118,101 @@ InputStream *XAttr::getAuxillarInput() const
     return res;
   }
   delete res;
+  return 0;
+}
+
+/* os9 way to save resource on a Fat,... disk */
+InputStream *XAttr::getUsingFinderDat(char const *what) const
+{
+  if (m_fName.length()==0)
+    return 0;
+
+  bool lookForResourceFork=true;
+  if (strcmp("com.apple.FinderInfo",what)==0)
+    lookForResourceFork=false;
+  else if (strcmp("com.apple.ResourceFork",what))
+    return 0;
+
+  /** look for file FINDER.DAT */
+  size_t sPos=m_fName.rfind('/');
+  std::string folder(""), file("");
+  if (sPos==std::string::npos)
+    file = m_fName;
+  else {
+    folder=m_fName.substr(0,sPos+1);
+    file=m_fName.substr(sPos+1);
+  }
+  std::string name=folder+"FINDER.DAT";
+  struct stat status;
+  if (stat(name.c_str(), &status )!=0 || !S_ISREG(status.st_mode) )
+    return false;
+
+  FileStream *input= new FileStream(name.c_str());
+  if (!input || !input->ok()) {
+    if (!input) delete input;
+    return 0;
+  }
+
+  input->seek(0, InputStream::SK_SET);
+  try {
+    while (!input->atEOS()) {
+      long pos=input->tell();
+      if (input->seek(pos+92, InputStream::SK_SET))
+        break;
+      input->seek(pos, InputStream::SK_SET);
+      int nSz=(int) input->readU8();
+      if (nSz<=0 || nSz>31) {
+        MWAW_DEBUG_MSG(("XAttr::readFinderDat: file size seems bad %d\n", nSz));
+        input->seek(pos+92, InputStream::SK_SET);
+        continue;
+      }
+      std::string fName("");
+      for (int i=0; i<nSz; ++i)
+        fName+=(char) input->readU8();
+      if (fName!=file) {
+        input->seek(pos+92, InputStream::SK_SET);
+        continue;
+      }
+      // fInfo or fInfo
+      if (!lookForResourceFork) {
+        input->seek(pos+32, InputStream::SK_SET);
+        unsigned long numBytesRead = 0;
+        const unsigned char *data = input->read(16, numBytesRead);
+        if (numBytesRead != 16 || !data) {
+          MWAW_DEBUG_MSG(("XAttr::readFinderDat: can not read fileinfo\n"));
+          break;
+        }
+        delete input;
+        input=0;
+        return new StringStream(data,(unsigned long) 16);
+      }
+
+      input->seek(pos+80, InputStream::SK_SET);
+      std::string rsrcName("");
+      for (int i=0; i<8; ++i) {
+        char c=(char) input->readU8();
+        if (!c) break;
+        rsrcName += c;
+      }
+      for (int i=0; i <3; ++i) { // extension
+        char c=(char) input->readU8();
+        if (!c) break;
+        if (i==0) rsrcName += '.';
+        rsrcName += c;
+      }
+      name=folder+"RESOURCE.FRK/"+rsrcName;
+      if (stat(name.c_str(), &status )!=0 || !S_ISREG(status.st_mode) )
+        break;
+      delete input;
+      input=0;
+      input=new FileStream(name.c_str());
+      if (!input || !input->ok())
+        break;
+      return input;
+    }
+  } catch (...) {
+  }
+  if (input) delete input;
   return 0;
 }
 

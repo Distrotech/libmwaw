@@ -151,7 +151,10 @@ int __cdecl main (int argc, char **argv)
     }
     //! the attributes
     libmwaw_zip::XAttr xattr(originalFile.c_str());
-    auxiStream = xattr.getStream();
+    // check first the classic attributes (which are no longer reconstructed)
+    auxiStream = xattr.getClassicStream();
+    if (!auxiStream)
+      auxiStream = xattr.getStream();
     if (!auxiStream) {
       // look for a resource file
       std::string name=folder+"._"+file;
@@ -166,7 +169,6 @@ int __cdecl main (int argc, char **argv)
           auxiStream = fAuxiStream;
       }
     }
-
     if (!auxiStream && doNotCompressSimpleFile)
       return 2;
     if (!zip.open(argv[optind+1]))

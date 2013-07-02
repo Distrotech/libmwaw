@@ -144,16 +144,8 @@ protected:
   bool sendEmptyPicture(MWAWPosition pos);
   /** try to send a textbox to the listener */
   bool sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
-  /** try to send a table */
-  bool sendTable(HMWJGraphInternal::Table &table);
-  /** try to send a table unformatted*/
-  bool sendTableUnformatted(HMWJGraphInternal::Table const &table);
   /** try to send a table unformatted*/
   bool sendTableUnformatted(long zId);
-  /** check if the table is correct and if it can be send to a listener */
-  bool updateTable(HMWJGraphInternal::Table const &table) const;
-  /** try to send auxilliary table data*/
-  bool sendPreTableData(HMWJGraphInternal::Table const &table);
 
   // interface with mainParser
 

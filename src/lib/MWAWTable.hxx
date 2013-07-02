@@ -133,7 +133,7 @@ public:
   //! the constructor
   MWAWTable(uint32_t givenData=BoxBit) :
     m_rowsSize(), m_colsSize(), m_givenData(givenData), m_setData(givenData),
-    m_cellsList(), m_numRows(0), m_numCols(0), m_posToCellId() {}
+    m_cellsList(), m_numRows(0), m_numCols(0), m_posToCellId(), m_hasExtraLines(false) {}
 
   //! the destructor
   virtual ~MWAWTable();
@@ -163,11 +163,18 @@ public:
   //! returns the i^th cell
   shared_ptr<MWAWTableCell> get(int id);
 
+  /** try to build the table structures */
+  bool updateTable();
+  /** returns true if the table has extralines */
+  bool hasExtraLines() {
+    if (!updateTable()) return false;
+    return m_hasExtraLines;
+  }
   /** try to send the table
 
   Note: either send the table ( and returns true ) or do nothing.
    */
-  bool sendTable(MWAWContentListenerPtr listener);
+  bool sendTable(MWAWContentListenerPtr listener, bool inFrame=true);
 
   /** try to send the table as basic text */
   bool sendAsText(MWAWContentListenerPtr listener);
@@ -208,6 +215,8 @@ protected:
   size_t m_numCols;
   /** a vector used to store an id corresponding to each cell */
   std::vector<int> m_posToCellId;
+  /** true if we need to send extra lines */
+  bool m_hasExtraLines;
 };
 
 #endif

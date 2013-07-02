@@ -44,6 +44,8 @@ public:
   XAttr(char const *path) : m_fName("") {
     if (path) m_fName=path;
   }
+  /** return a inputstream corresponding to the MacClassic OS attributes (if possible) */
+  shared_ptr<InputStream> getClassicStream() const;
   /** return a inputstream corresponding to the attributes (if possible) */
   shared_ptr<InputStream> getStream() const;
 protected:

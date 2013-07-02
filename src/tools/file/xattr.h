@@ -50,6 +50,9 @@ public:
   \note if not 0, the caller is responsible of it (ie. must remove it)*/
   InputStream *getStream(const char *attr) const;
 protected:
+  /** try to find a FINDER.DAT file and returns the fileInformation/ressource fork data
+  \note OS9 method to store a file in a FAT disk */
+  InputStream *getUsingFinderDat(char const *what) const;
   /** try to look for a possible file containing fileInfo/resource */
   InputStream *getAuxillarInput() const;
   /** try to find a possible fork in a stream */

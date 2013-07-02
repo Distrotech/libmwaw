@@ -153,15 +153,15 @@ public:
                  WPXPropertyList tableExtras=WPXPropertyList());
   /** closes this table */
   void closeTable();
-  /** opens a row with given height ( if h < 0.0, set min-row-height = -h )*/
+  /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
   void openTableRow(float h, WPXUnit unit, bool headerRow=false);
-  /** closes the last table's row */
+  /** closes this row */
   void closeTableRow();
-  /** opens a table's cell */
+  /** open a cell */
   void openTableCell(MWAWCell const &cell);
-  /** closes a table's cell */
+  /** close a cell */
   void closeTableCell();
-  /** adds an empty table's cell */
+  /** add empty cell */
   void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1));
 
   // ------- section ---------------

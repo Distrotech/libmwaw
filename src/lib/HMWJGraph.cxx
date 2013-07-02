@@ -117,8 +117,6 @@ std::ostream &operator<<(std::ostream &o, TableCell const &cell)
   o << static_cast<MWAWTableCell const &>(cell);
   if (cell.m_flags&0x80) o << "vAlign=center,";
   if (cell.m_flags&0x100) o << "justify[full],";
-  if (cell.m_flags&0x200) o << "line[TL->BR],";
-  if (cell.m_flags&0x400) o << "line[BL->TR],";
   if (cell.m_flags&0x800) o << "lock,";
   if (cell.m_flags&0x1000) o << "merge,";
   if (cell.m_flags&0x2000) o << "inactive,";
@@ -136,11 +134,18 @@ std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 //! Internal: the table of a HMWJGraph
 struct Table: public MWAWTable {
   //! constructor
-  Table(HMWJGraph &parser) : MWAWTable(), m_parser(&parser), m_rows(1), m_columns(1), m_height(0), m_textFileId(0),
-    m_cellsList(), m_rowsDim(), m_columnsDim(), m_cellsId(), m_formatsList(), m_hasExtraLines(false) {
+  Table(HMWJGraph &parser) : MWAWTable(MWAWTable::CellPositionBit|MWAWTable::TableDimBit), m_parser(&parser),
+    m_rows(1), m_columns(1), m_height(0), m_textFileId(0), m_cellsId(), m_formatsList() {
   }
   //! destructor
   ~Table() {
+  }
+  //! return the i^th table cell
+  TableCell *get(int i) {
+    shared_ptr<MWAWTableCell> cell=MWAWTable::get(i);
+    if (!cell)
+      return 0;
+    return static_cast<TableCell *>(cell.get());
   }
   //! send a text zone
   bool sendText(long id, long cPos) const {
@@ -160,23 +165,19 @@ struct Table: public MWAWTable {
   int m_height;
   //! the text file id
   long m_textFileId;
-  //! the list of cells
-  std::vector<TableCell> m_cellsList;
-  //! the rows dimension ( in points )
-  mutable std::vector<float> m_rowsDim;
-  //! the columns dimension ( in points )
-  mutable std::vector<float> m_columnsDim;
   //! a list of id for each cells
   mutable std::vector<int> m_cellsId;
   //! a list of cell format
   std::vector<CellFormat> m_formatsList;
-  //! a flag to know if the table has some extra line
-  mutable bool m_hasExtraLines;
+
+private:
+  Table(Table const &orig);
+  Table &operator=(Table const &orig);
 };
 
 bool TableCell::send(MWAWContentListenerPtr listener, MWAWTable &table)
 {
-  if (!listener || m_flags&0x2000)
+  if (!listener)
     return true;
   MWAWCell cell;
   cell.position() = m_position;
@@ -209,8 +210,6 @@ bool TableCell::send(MWAWContentListenerPtr listener, MWAWTable &table)
 
 bool TableCell::sendContent(MWAWContentListenerPtr, MWAWTable &table)
 {
-  if (m_flags&0x2000)
-    return true;
   if (m_tId)
     return static_cast<Table &>(table).sendText(m_tId, m_cPos);
   return true;
@@ -1576,21 +1575,37 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
     for (int j = 0; j < header.m_n; j++) {
       pos = input->tell();
       f.str("");
-      HMWJGraphInternal::TableCell cell(textId);
-      cell.m_position=Vec2i(j,i);
-      cell.m_cPos = (long) input->readULong(4);
-      cell.m_zId = (long) input->readULong(4);
-      cell.m_flags = (int) input->readULong(2);
+      shared_ptr<HMWJGraphInternal::TableCell> cell(new HMWJGraphInternal::TableCell(textId));
+      cell->m_position=Vec2i(j,i);
+      cell->m_cPos = (long) input->readULong(4);
+      cell->m_zId = (long) input->readULong(4);
+      cell->m_flags = (int) input->readULong(2);
+      switch ((cell->m_flags>>9)&3) {
+      case 1:
+        cell->m_extraLine=MWAWTableCell::E_Line1;
+        break;
+      case 2:
+        cell->m_extraLine=MWAWTableCell::E_Line2;
+        break;
+      case 3:
+        cell->m_extraLine=MWAWTableCell::E_Cross;
+        break;
+      case 0: // none
+      default:
+        break;
+      }
       val = input->readLong(2);
       if (val) f << "#f0=" << val << ",";
-      cell.m_formatId = (int) input->readLong(2);
+      cell->m_formatId = (int) input->readLong(2);
       int dim[2]; // for merge, inactive -> the other limit cell
       for (int k=0; k < 2; k++)
         dim[k]=(int)input->readULong(1);
-      if (cell.m_flags & 0x1000)
-        cell.m_numberCellSpanned=Vec2i(dim[1]+1-j,dim[0]+1-i);
-      cell.m_extra = f.str();
-      table->m_cellsList.push_back(cell);
+      if (cell->m_flags & 0x1000)
+        cell->m_numberCellSpanned=Vec2i(dim[1]+1-j,dim[0]+1-i);
+      cell->m_extra = f.str();
+      // do not push the ignore cell
+      if ((cell->m_flags&0x2000)==0)
+        table->add(cell);
       f.str("");
       f << entry.name() << "-cell:" << cell;
       asciiFile.addPos(pos);
@@ -1627,7 +1642,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
     }
     long zoneEnd=pos+4+header.m_length;
     f << header;
-    std::vector<float> &dim = i==0 ? table->m_rowsDim : table->m_columnsDim;
+    std::vector<float> &dim = i==0 ? table->m_rowsSize : table->m_colsSize;
     f << "pos=[";
     float prevPos = 0.;
     for (int j = 0; j < header.m_n; j++) {
@@ -2036,104 +2051,6 @@ bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAW
 }
 
 // ----- table
-bool HMWJGraph::updateTable(HMWJGraphInternal::Table const &table) const
-{
-  if (table.m_cellsId.size()) return true;
-
-  int nRows = table.m_rows;
-  int nColumns = table.m_columns;
-  size_t nCells = table.m_cellsList.size();
-  if (!nRows || !nColumns || !nCells || int(nCells) > nRows*nColumns) {
-    MWAW_DEBUG_MSG(("HMWJGraph::updateTable: find an odd table\n"));
-    return false;
-  }
-  if (table.m_rowsDim.size() < size_t(nRows) ||
-      table.m_columnsDim.size() < size_t(nColumns)) {
-    MWAW_DEBUG_MSG(("HMWJGraph::updateTable: can not determine table dimensions\n"));
-    return false;
-  }
-
-  table.m_cellsId.resize(size_t(nRows*nColumns),-1);
-  for (size_t i=0; i < nCells; i++) {
-    HMWJGraphInternal::TableCell const &cell=table.m_cellsList[i];
-    if (cell.m_flags&0x2000)
-      continue;
-    if (cell.m_flags&0x600) table.m_hasExtraLines = true;
-    for (int r = cell.m_position[1]; r < cell.m_position[1] + cell.m_numberCellSpanned[1]; r++) {
-      if (r >= nRows) {
-        MWAW_DEBUG_MSG(("HMWJGraph::updateTable: find a bad row cell span\n"));
-        continue;
-      }
-      for (int c = cell.m_position[0]; c < cell.m_position[0] + cell.m_numberCellSpanned[0]; c++) {
-        if (c >= nColumns) {
-          MWAW_DEBUG_MSG(("HMWJGraph::updateTable: find a bad col cell span\n"));
-          continue;
-        }
-        size_t cPos = table.getCellPos(c,r);
-        if (table.m_cellsId[cPos]!=-1) {
-          MWAW_DEBUG_MSG(("HMWJGraph::updateTable: oops find some cell in this position\n"));
-          table.m_cellsId.resize(0);
-          return false;
-        }
-        table.m_cellsId[cPos] = int(i);
-      }
-    }
-  }
-  return true;
-}
-
-bool HMWJGraph::sendPreTableData(HMWJGraphInternal::Table const &table)
-{
-  if (!m_parserState->m_listener)
-    return true;
-  if (!updateTable(table) || !table.m_hasExtraLines)
-    return false;
-
-  int nRows = table.m_rows;
-  int nColumns = table.m_columns;
-  size_t nCells = table.m_cellsList.size();
-  std::vector<float> rowsPos, columnsPos;
-  rowsPos.resize(size_t(nRows+1)+1);
-  rowsPos[0] = 0;
-  for (size_t r = 0; r < size_t(nRows); r++)
-    rowsPos[r+1] = rowsPos[r]+table.m_rowsDim[r];
-  columnsPos.resize(size_t(nColumns+1)+1);
-  columnsPos[0] = 0;
-  for (size_t c = 0; c < size_t(nColumns); c++)
-    columnsPos[c+1] = columnsPos[c]+table.m_columnsDim[c];
-
-  for (size_t c = 0; c < nCells; c++) {
-    HMWJGraphInternal::TableCell const &cell= table.m_cellsList[c];
-    if (!(cell.m_flags&0x600)) continue;
-    Vec2i lastPos=cell.m_position+cell.m_numberCellSpanned;
-    if (lastPos[1] > nRows || lastPos[0] > nColumns)
-      continue;
-    Box2f box;
-    box.setMin(Vec2f(columnsPos[size_t(cell.m_position[0])], rowsPos[size_t(cell.m_position[1])]));
-    box.setMax(Vec2f(columnsPos[size_t(lastPos[0])],rowsPos[size_t(lastPos[1])]));
-
-    shared_ptr<MWAWPictLine> lines[2];
-    if (cell.m_flags & 0x200)
-      lines[0].reset(new MWAWPictLine(Vec2f(0,0), box.size()));
-    if (cell.m_flags & 0x400)
-      lines[1].reset(new MWAWPictLine(Vec2f(0,box.size()[1]), Vec2f(box.size()[0], 0)));
-
-    for (int i = 0; i < 2; i++) {
-      if (!lines[i]) continue;
-
-      WPXBinaryData data;
-      std::string type;
-      if (!lines[i]->getBinary(data,type)) continue;
-
-      MWAWPosition pos(box[0], box.size(), WPX_POINT);
-      pos.setRelativePosition(MWAWPosition::Frame);
-      pos.setOrder(-1);
-      m_parserState->m_listener->insertPicture(pos, data, type);
-    }
-  }
-  return true;
-}
-
 bool HMWJGraph::sendTableUnformatted(long fId)
 {
   if (!m_parserState->m_listener)
@@ -2146,64 +2063,13 @@ bool HMWJGraph::sendTableUnformatted(long fId)
   int id = fIt->second;
   if (id < 0 || id >= (int) m_state->m_framesList.size())
     return false;
-  HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[size_t(id)];
+  HMWJGraphInternal::Frame &frame = *m_state->m_framesList[size_t(id)];
   if (!frame.valid() || frame.m_type != 9) {
     MWAW_DEBUG_MSG(("HMWJGraph::sendTableUnformatted: can not find table %lx(II)\n", fId));
     return false;
   }
-  HMWJGraphInternal::Table const &table = reinterpret_cast<HMWJGraphInternal::Table const &>(frame);
-  sendTableUnformatted(table);
-  return true;
-}
-
-bool HMWJGraph::sendTableUnformatted(HMWJGraphInternal::Table const &table)
-{
-  if (!m_parserState->m_listener)
-    return true;
-  for (size_t c = 0; c < table.m_cellsList.size(); c++) {
-    HMWJGraphInternal::TableCell const &cell= table.m_cellsList[c];
-    if (cell.m_flags&0x2000)
-      continue;
-    if (cell.m_tId)
-      m_mainParser->sendText(cell.m_tId, cell.m_cPos);
-  }
-  return true;
-}
-
-bool HMWJGraph::sendTable(HMWJGraphInternal::Table &table)
-{
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
-  if (!listener)
-    return true;
-  if (!updateTable(table)) {
-    // ok no other choice here
-    sendTableUnformatted(table);
-    return true;
-  }
-  int nRows = table.m_rows;
-  int nColumns = table.m_columns;
-
-  // ok send the data
-  listener->openTable(table.m_columnsDim, WPX_POINT);
-  for (size_t r = 0; r < size_t(nRows); r++) {
-    listener->openTableRow(table.m_rowsDim[r], WPX_POINT);
-    for (size_t c = 0; c < size_t(nColumns); c++) {
-      size_t cPos = table.getCellPos(int(c),int(r));
-      int id = table.m_cellsId[cPos];
-      if (id == -1) {
-        listener->addEmptyTableCell(Vec2i(int(c), int(r)));
-        continue;
-      }
-
-      HMWJGraphInternal::TableCell &cell=
-        table.m_cellsList[size_t(table.m_cellsId[cPos])];
-      if (int(r) != cell.m_position[1] || int(c) != cell.m_position[0]) continue;
-      cell.send(listener,table);
-    }
-    listener->closeTableRow();
-  }
-  listener->closeTable();
-
+  HMWJGraphInternal::Table &table = reinterpret_cast<HMWJGraphInternal::Table &>(frame);
+  table.sendAsText(m_parserState->m_listener);
   return true;
 }
 
@@ -2263,7 +2129,7 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
     }
     HMWJGraphInternal::Table &table = *tableFrame.m_table;
 
-    if (!updateTable(table)) {
+    if (!table.updateTable()) {
       MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: can not find the table structure\n"));
       MWAWSubDocumentPtr subdoc
       (new HMWJGraphInternal::SubDocument
@@ -2272,7 +2138,7 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
       return true;
     }
     if (pos.m_anchorTo==MWAWPosition::Page ||
-        (pos.m_anchorTo!=MWAWPosition::Frame && table.m_hasExtraLines)) {
+        (pos.m_anchorTo!=MWAWPosition::Frame && table.hasExtraLines())) {
       MWAWPosition framePos(pos);
       framePos.m_anchorTo = MWAWPosition::Frame;
       framePos.setOrigin(Vec2f(0,0));
@@ -2283,9 +2149,9 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
       listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
-    if (pos.m_anchorTo==MWAWPosition::Frame && table.m_hasExtraLines)
-      sendPreTableData(table);
-    return sendTable(table);
+    if (table.sendTable(listener, pos.m_anchorTo==MWAWPosition::Frame))
+      return true;
+    return table.sendAsText(listener);
   }
   case 10:
     frame.m_parsed = true;

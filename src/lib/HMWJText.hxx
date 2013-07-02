@@ -78,7 +78,7 @@ public:
 protected:
   //! send the main text zone
   bool sendMainText();
-  //! send a text zone
+  //! send a text zone (not implemented)
   bool sendText(long id, long cPos);
   //! send a text zone
   bool sendText(HMWJTextInternal::TextZone const &zone, long cPos=0);

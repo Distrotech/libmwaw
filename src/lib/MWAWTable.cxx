@@ -265,9 +265,9 @@ bool MWAWTable::buildPosToCellId()
   m_posToCellId.resize(0);
 
   size_t nCells = m_cellsList.size();
-  m_numRows=(m_setData|TableDimBit) ? m_rowsSize.size() : 0;
-  m_numCols=(m_setData|TableDimBit) ? m_colsSize.size() : 0;
-  if ((m_setData|TableDimBit)==0) {
+  m_numRows=(m_setData&TableDimBit) ? m_rowsSize.size() : 0;
+  m_numCols=(m_setData&TableDimBit) ? m_colsSize.size() : 0;
+  if ((m_setData&TableDimBit)==0) {
     // m_numCols, m_numRows is not updated, we must compute it
     m_numCols = 0;
     m_numRows = 0;
@@ -284,11 +284,14 @@ bool MWAWTable::buildPosToCellId()
   m_posToCellId.resize(m_numCols*m_numRows, -1);
   for (size_t c = 0; c < nCells; ++c) {
     if (!m_cellsList[c]) continue;
-    Vec2i const &pos=m_cellsList[c]->m_position;
-    Vec2i const &span=m_cellsList[c]->m_numberCellSpanned;
+    if (m_cellsList[c]->m_extraLine!=MWAWTableCell::E_None &&
+        !m_cellsList[c]->m_extraLineType.isEmpty())
+      m_hasExtraLines=true;
 
-    for (int x = pos[0]; x < pos[0]+span[0]; x++) {
-      for (int y = pos[1]; y < pos[1]+span[1]; y++) {
+    Vec2i const &pos=m_cellsList[c]->m_position;
+    Vec2i lastPos=pos+m_cellsList[c]->m_numberCellSpanned;
+    for (int x = pos[0]; x < lastPos[0]; x++) {
+      for (int y = pos[1]; y < lastPos[1]; y++) {
         int tablePos = getCellIdPos(x,y);
         if (tablePos<0) {
           MWAW_DEBUG_MSG(("MWAWTable::buildPosToCellId: the position is bad!!!\n"));
@@ -380,7 +383,7 @@ bool MWAWTable::buildDims()
 
 ////////////////////////////////////////////////////////////
 // try to send the table
-bool MWAWTable::sendTable(MWAWContentListenerPtr listener)
+bool MWAWTable::updateTable()
 {
   if ((m_setData&CellPositionBit)==0 && !buildStructures())
     return false;
@@ -390,10 +393,17 @@ bool MWAWTable::sendTable(MWAWContentListenerPtr listener)
     return false;
   if ((m_givenData&TableDimBit)==0 && !buildDims())
     return false;
+  return true;
+}
+
+bool MWAWTable::sendTable(MWAWContentListenerPtr listener, bool inFrame)
+{
+  if (!updateTable())
+    return false;
   if (!listener)
     return true;
-
-  sendExtraLines(listener);
+  if (inFrame && m_hasExtraLines)
+    sendExtraLines(listener);
   listener->openTable(m_colsSize, WPX_POINT);
   for (size_t r = 0; r < m_numRows; ++r) {
     listener->openTableRow(m_rowsSize[r], WPX_POINT);

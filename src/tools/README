@@ -10,7 +10,8 @@ tools :-)
 
    Note: it first uses attributes to find finder information and
      resource data ; if it finds none, it looks for a file ._filename
-     or __MACOSX/._filename
+     or __MACOSX/._filename ; if not, it looks for a file FINDER.DAT
+     and a RESOURCE.FRK directory.
 
 - mwawZip:
    a small tool which tries to zip a file and it attributes to obtain
@@ -18,9 +19,9 @@ tools :-)
    equivalent of the Finder compress function.
 
    More precisely, when zipping a file <<filename>>, it includes the
-   file datafork and looks for attributes ( either using getxattr or
-   in a file ._filename or __MACOSX/._filename ). If so, it includes
-   them in the result file.
+   file datafork and looks for attributes ( either using
+   FINDER.DAT/RESOURCE.FRK or getxattr or in a file ._filename or
+   __MACOSX/._filename ). If so, it includes them in the result file.
 
    Notes:
 	- in order to avoid mistakes, it stops if the resulting zip
