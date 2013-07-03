@@ -89,8 +89,8 @@ struct TableCell : public MWAWTableCell {
   //! constructor
   TableCell(long tId): MWAWTableCell(), m_zId(0), m_tId(tId), m_cPos(-1), m_fileId(0), m_formatId(0), m_flags(0), m_extra("") {
   }
-  //! call when a cell must be send
-  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table);
+  //! use cell format to finish updating cell
+  void update(CellFormat const &format);
   //! call when the content of a cell must be send
   virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table);
   //! operator<<
@@ -112,10 +112,17 @@ struct TableCell : public MWAWTableCell {
 
 };
 
+void TableCell::update(CellFormat const &format)
+{
+  setBackgroundColor(format.m_backColor);
+  static int const (wh[]) = { libmwaw::LeftBit,  libmwaw::RightBit, libmwaw::TopBit, libmwaw::BottomBit};
+  for (size_t b = 0; b < format.m_borders.size(); b++)
+    setBorders(wh[b], format.m_borders[b]);
+}
+
 std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 {
   o << static_cast<MWAWTableCell const &>(cell);
-  if (cell.m_flags&0x80) o << "vAlign=center,";
   if (cell.m_flags&0x100) o << "justify[full],";
   if (cell.m_flags&0x800) o << "lock,";
   if (cell.m_flags&0x1000) o << "merge,";
@@ -135,25 +142,16 @@ std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 struct Table: public MWAWTable {
   //! constructor
   Table(HMWJGraph &parser) : MWAWTable(MWAWTable::CellPositionBit|MWAWTable::TableDimBit), m_parser(&parser),
-    m_rows(1), m_columns(1), m_height(0), m_textFileId(0), m_cellsId(), m_formatsList() {
+    m_rows(1), m_columns(1), m_height(0), m_textFileId(0), m_formatsList() {
   }
   //! destructor
   ~Table() {
   }
-  //! return the i^th table cell
-  TableCell *get(int i) {
-    shared_ptr<MWAWTableCell> cell=MWAWTable::get(i);
-    if (!cell)
-      return 0;
-    return static_cast<TableCell *>(cell.get());
-  }
+  //! update all cells using the formats list
+  void updateCells();
   //! send a text zone
   bool sendText(long id, long cPos) const {
     return m_parser->sendText(id, cPos);
-  }
-  //! returns a cell position ( before any merge cell )
-  size_t getCellPos(int col, int row) const {
-    return size_t(row*m_columns+col);
   }
   //! the graph parser
   HMWJGraph *m_parser;
@@ -165,8 +163,6 @@ struct Table: public MWAWTable {
   int m_height;
   //! the text file id
   long m_textFileId;
-  //! a list of id for each cells
-  mutable std::vector<int> m_cellsId;
   //! a list of cell format
   std::vector<CellFormat> m_formatsList;
 
@@ -175,44 +171,29 @@ private:
   Table &operator=(Table const &orig);
 };
 
-bool TableCell::send(MWAWContentListenerPtr listener, MWAWTable &table)
-{
-  if (!listener)
-    return true;
-  MWAWCell cell;
-  cell.position() = m_position;
-  Vec2i span = m_numberCellSpanned;
-  if (span[0]<1) span[0]=1;
-  if (span[1]<1) span[1]=1;
-  cell.setNumSpannedCells(span);
-
-  if (m_flags&0x80) cell.setVAlignement(MWAWCell::VALIGN_CENTER);
-  std::vector<CellFormat> const &lFormat=static_cast<Table &>(table).m_formatsList;
-  if (m_formatId >= 0 && size_t(m_formatId) < lFormat.size()) {
-    HMWJGraphInternal::CellFormat const &format = lFormat[size_t(m_formatId)];
-    cell.setBackgroundColor(format.m_backColor);
-    static int const (wh[]) = { libmwaw::LeftBit,  libmwaw::RightBit, libmwaw::TopBit, libmwaw::BottomBit};
-    for (size_t b = 0; b < format.m_borders.size(); b++)
-      cell.setBorders(wh[b], format.m_borders[b]);
-  } else {
-    static bool first = true;
-    if (first) {
-      MWAW_DEBUG_MSG(("HMWJGraphInternal::TableCell::send: can not find the format\n"));
-      first = false;
-    }
-  }
-
-  listener->openTableCell(cell);
-  sendContent(listener, table);
-  listener->closeTableCell();
-  return true;
-}
-
 bool TableCell::sendContent(MWAWContentListenerPtr, MWAWTable &table)
 {
   if (m_tId)
     return static_cast<Table &>(table).sendText(m_tId, m_cPos);
   return true;
+}
+
+void Table::updateCells()
+{
+  int numFormats=(int) m_formatsList.size();
+  for (int c=0; c<numCells(); ++c) {
+    if (!get(c)) continue;
+    TableCell &cell=static_cast<TableCell &>(*get(c));
+    if (cell.m_formatId < 0 || cell.m_formatId>=numFormats) {
+      static bool first = true;
+      if (first) {
+        MWAW_DEBUG_MSG(("HMWJGraphInternal::Table::updateCells: can not find the format\n"));
+        first = false;
+      }
+      continue;
+    }
+    cell.update(m_formatsList[size_t(cell.m_formatId)]);
+  }
 }
 
 ////////////////////////////////////////
@@ -1576,19 +1557,21 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
       pos = input->tell();
       f.str("");
       shared_ptr<HMWJGraphInternal::TableCell> cell(new HMWJGraphInternal::TableCell(textId));
-      cell->m_position=Vec2i(j,i);
+      cell->setPosition(Vec2i(j,i));
       cell->m_cPos = (long) input->readULong(4);
       cell->m_zId = (long) input->readULong(4);
       cell->m_flags = (int) input->readULong(2);
+      if (cell->m_flags&0x80)
+        cell->setVAlignement(MWAWCell::VALIGN_CENTER);
       switch ((cell->m_flags>>9)&3) {
       case 1:
-        cell->m_extraLine=MWAWTableCell::E_Line1;
+        cell->setExtraLine(MWAWCell::E_Line1);
         break;
       case 2:
-        cell->m_extraLine=MWAWTableCell::E_Line2;
+        cell->setExtraLine(MWAWCell::E_Line2);
         break;
       case 3:
-        cell->m_extraLine=MWAWTableCell::E_Cross;
+        cell->setExtraLine(MWAWCell::E_Cross);
         break;
       case 0: // none
       default:
@@ -1600,8 +1583,18 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
       int dim[2]; // for merge, inactive -> the other limit cell
       for (int k=0; k < 2; k++)
         dim[k]=(int)input->readULong(1);
-      if (cell->m_flags & 0x1000)
-        cell->m_numberCellSpanned=Vec2i(dim[1]+1-j,dim[0]+1-i);
+      if (cell->m_flags & 0x1000) {
+        if (dim[1]>=j&&dim[0]>=i)
+          cell->setNumSpannedCells(Vec2i(dim[1]+1-j,dim[0]+1-i));
+        else {
+          static bool first = true;
+          if (first) {
+            MWAW_DEBUG_MSG(("HMWJGraph::readTable: can not determine the span\n"));
+            first = false;
+          }
+          f << "##span=" << dim[1]+1-j << "x" << dim[0]+1-i << ",";
+        }
+      }
       cell->m_extra = f.str();
       // do not push the ignore cell
       if ((cell->m_flags&0x2000)==0)
@@ -1660,6 +1653,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
 
   // finally the format
   readTableFormatsList(*table, endPos);
+  table->updateCells();
 
   if (input->tell() != endPos) {
     MWAW_DEBUG_MSG(("HMWJGraph::readTable: find unexpected last block\n"));

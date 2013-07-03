@@ -982,7 +982,7 @@ bool MSWTextStyles::readSection(MSWEntry &entry)
   long textLength = m_textParser->getMainTextLength();
   for (size_t i = 0; i < N; i++) {
     MSWStruct::Section sec;
-    sec.m_type = (int) input->readULong(1);
+    sec.m_type = (int) input->readULong(1); // 0|40|80|C0
     sec.m_flag = (int) input->readULong(1); // number between 2 and 7
     sec.m_id = int(i);
     unsigned long filePos = input->readULong(4);

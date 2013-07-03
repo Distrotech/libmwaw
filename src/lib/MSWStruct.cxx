@@ -405,7 +405,7 @@ bool Section::readV3(MWAWInputStreamPtr &input, long endPos)
 
 std::ostream &operator<<(std::ostream &o, Section const &section)
 {
-  if (section.m_type.get())
+  if (section.m_type.get()) // 0|0x40|0x80|0xc0
     o << "type=" << std::hex << section.m_type.get() << std::dec << ",";
   if (section.m_paragraphId.isSet() && section.m_paragraphId.get() > -9999)
     o << "sP=" << section.m_paragraphId.get() << ",";

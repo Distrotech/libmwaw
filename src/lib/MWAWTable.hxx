@@ -45,17 +45,16 @@
 
 #include "libmwaw_internal.hxx"
 
+#include "MWAWCell.hxx"
+
 class MWAWTable;
 
 /** a virtual structure used to store in a MWAWTable */
-class MWAWTableCell
+class MWAWTableCell : public MWAWCell
 {
-  friend class MWAWTable;
 public:
-  //! an enum to defined potential internal line: E_Line1=TL to RB, E_Line2=BL to RT
-  enum ExtraLine { E_None, E_Line1, E_Line2, E_Cross };
   //! constructor
-  MWAWTableCell() : m_box(), m_size(), m_position(-1,-1), m_numberCellSpanned(1,1), m_extraLine(E_None), m_extraLineType() {
+  MWAWTableCell() : MWAWCell(), m_box(), m_size() {
   }
   //! destructor
   virtual ~MWAWTableCell() { }
@@ -63,8 +62,10 @@ public:
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, MWAWTableCell const &cell);
 
-  //! call when a cell must be send
-  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table) = 0;
+  /** call when a cell must be send.
+
+  \note default: openTableCell(*this), call sendContent and closeTableCell() */
+  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table);
   //! call when the content of a cell must be send
   virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table) = 0;
 
@@ -72,14 +73,8 @@ public:
   Box2f m_box;
   /** the cell size : unit WPX_POINT */
   Vec2f m_size;
-  /** the final position in the table */
-  Vec2i m_position, m_numberCellSpanned /** the number of cell span */;
-  /** extra line */
-  ExtraLine m_extraLine;
-  /** extra line type */
-  MWAWBorder m_extraLineType;
 
-protected:
+public:
   //! a comparaison structure used retrieve the rows and the columns
   struct Compare {
     Compare(int dim) : m_coord(dim) {}

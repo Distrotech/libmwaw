@@ -170,7 +170,7 @@ private:
 MWAWCell Cell::get(Table const &table) const
 {
   MWAWCell cell;
-  cell.position() = m_position;
+  cell.setPosition(m_position);
   cell.setNumSpannedCells(m_numberCellSpanned);
   CWStyleManager *styleManager = table.m_styleManager;
   if (!styleManager) {
@@ -620,13 +620,13 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
         hasExtraLines=(ksen.m_lines & 3);
         switch(ksen.m_lines & 3) {
         case 1: // TL->BR
-          cell->m_extraLine=MWAWTableCell::E_Line1;
+          cell->setExtraLine(MWAWCell::E_Line1);
           break;
         case 2: // BL->TR
-          cell->m_extraLine=MWAWTableCell::E_Line2;
+          cell->setExtraLine(MWAWCell::E_Line2);
           break;
         case 3:
-          cell->m_extraLine=MWAWTableCell::E_Cross;
+          cell->setExtraLine(MWAWCell::E_Cross);
           break;
         default:
         case 0: // None
@@ -637,8 +637,10 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
       CWStyleManager::Graphic graph;
       if (style.m_graphicId >= 0 && m_styleManager->get(style.m_graphicId, graph)) {
         if (hasExtraLines) {
-          cell->m_extraLineType.m_width=(float)graph.m_lineWidth;
-          cell->m_extraLineType.m_color=graph.getLineColor();
+          MWAWBorder border;
+          border.m_width=(float)graph.m_lineWidth;
+          border.m_color=graph.getLineColor();
+          cell->setExtraLine(cell->extraLine(), border);
         }
         f << "graph=[" << graph << "],";
       }

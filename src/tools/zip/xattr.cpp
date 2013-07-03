@@ -162,7 +162,13 @@ shared_ptr<InputStream> XAttr::getClassicStream() const
     return res;
   input->seek(0, InputStream::SK_SET);
   try {
+    int num=0;
     while (!input->atEOS()) {
+      if (++num==23) { // must realign read on 2048
+        if (input->seek(24, InputStream::SK_CUR))
+          break;
+        num=0;
+      }
       long pos=input->tell();
       if (input->seek(pos+92, InputStream::SK_SET))
         break;
@@ -248,13 +254,13 @@ shared_ptr<InputStream> XAttr::getClassicStream() const
           return res;
         }
         numBytesRead = 0;
-        data = input->read(long(sz[1]), numBytesRead);
+        data = input->read((unsigned long)sz[1], numBytesRead);
         if (numBytesRead != (unsigned long) sz[1] || !data) {
           MWAW_DEBUG_MSG(("XAttr::getClassicStream::readFinderDat: can not read resource fork\n"));
           delete [] buffer;
           return res;
         }
-        memcpy(bufferPtr, &data[0], sz[1]);
+        memcpy(bufferPtr, &data[0], (size_t)sz[1]);
         bufferPtr+=sz[1];
       }
 

@@ -54,34 +54,22 @@
 ////////////////////////////////////////////////////////////
 // MWAWTableCell
 ////////////////////////////////////////////////////////////
+bool MWAWTableCell::send(MWAWContentListenerPtr listener, MWAWTable &table)
+{
+  if (!listener) return true;
+  listener->openTableCell(*this);
+  sendContent(listener, table);
+  listener->closeTableCell();
+  return true;
+}
+
 std::ostream &operator<<(std::ostream &o, MWAWTableCell const &cell)
 {
-  if (cell.m_position.x() >= 0) {
-    o << "pos=" << cell.m_position << ",";
-    if (cell.m_numberCellSpanned[0]!=1 || cell.m_numberCellSpanned[1]!=1)
-      o << "span=" << cell.m_numberCellSpanned << ",";
-  }
+  o << static_cast<MWAWCell const &>(cell);
   if (cell.m_box.size()[0]>0 || cell.m_box.size()[1]>0)
     o << "box=" << cell.m_box << ",";
   if (cell.m_size[0]>0 || cell.m_size[1]>0)
     o << "size=" << cell.m_size << ",";
-  switch (cell.m_extraLine) {
-  case MWAWTableCell::E_None:
-    break;
-  case MWAWTableCell::E_Line1:
-    o << "line[TL->RB]";
-    break;
-  case MWAWTableCell::E_Line2:
-    o << "line[BL->RT]";
-    break;
-  case MWAWTableCell::E_Cross:
-    o << "line[cross]";
-    break;
-  default:
-    break;
-  }
-  if (cell.m_extraLine!=MWAWTableCell::E_None)
-    o << cell.m_extraLineType << ",";
   return o;
 }
 
@@ -126,10 +114,10 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
   for (size_t c = 0; c < m_cellsList.size(); ++c) {
     if (!m_cellsList[c]) continue;
     MWAWTableCell const &cell=*(m_cellsList[c]);
-    if (cell.m_extraLine==MWAWTableCell::E_None || cell.m_extraLineType.isEmpty())
+    if (!cell.hasExtraLine())
       continue;
-    Vec2i const &pos=m_cellsList[c]->m_position;
-    Vec2i const &span=m_cellsList[c]->m_numberCellSpanned;
+    Vec2i const &pos=m_cellsList[c]->position();
+    Vec2i const &span=m_cellsList[c]->numSpannedCells();
     if (span[0] <= 0 || span[1] <= 0 || pos[0]+span[0] > (int)nColumns ||
         pos[1]+span[1] >  (int) nRows)
       continue;
@@ -139,19 +127,18 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
                      rowsPos[size_t(pos[1]+span[1])]));
 
     shared_ptr<MWAWPictLine> lines[2];
-    if (cell.m_extraLine==MWAWTableCell::E_Cross ||
-        cell.m_extraLine==MWAWTableCell::E_Line1)
+    if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line1)
       lines[0].reset(new MWAWPictLine(Vec2f(0,0), box.size()));
-    if (cell.m_extraLine==MWAWTableCell::E_Cross ||
-        cell.m_extraLine==MWAWTableCell::E_Line2)
+    if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line2)
       lines[1].reset(new MWAWPictLine(Vec2f(0,box.size()[1]), Vec2f(box.size()[0], 0)));
 
     for (int i = 0; i < 2; i++) {
       if (!lines[i]) continue;
       WPXBinaryData data;
       std::string type;
-      lines[i]->setLineWidth((float)cell.m_extraLineType.m_width);
-      lines[i]->setLineColor(cell.m_extraLineType.m_color);
+      MWAWBorder const&border=cell.extraLineType();
+      lines[i]->setLineWidth((float)border.m_width);
+      lines[i]->setLineColor(border.m_color);
       if (!lines[i]->getBinary(data,type)) continue;
 
       MWAWPosition lPos(box[0], box.size(), WPX_POINT);
@@ -235,8 +222,8 @@ bool MWAWTable::buildStructures()
         cellPos[dim]++;
       }
     }
-    m_cellsList[c]->m_position = Vec2i(cellPos[0], cellPos[1]);
-    m_cellsList[c]->m_numberCellSpanned = Vec2i(spanCell[0], spanCell[1]);
+    m_cellsList[c]->setPosition(Vec2i(cellPos[0], cellPos[1]));
+    m_cellsList[c]->setNumSpannedCells(Vec2i(spanCell[0], spanCell[1]));
   }
   m_setData |= CellPositionBit;
   // finally update the row/col size
@@ -273,8 +260,8 @@ bool MWAWTable::buildPosToCellId()
     m_numRows = 0;
     for (size_t c = 0; c < nCells; ++c) {
       if (!m_cellsList[c]) continue;
-      Vec2i const &lastPos=m_cellsList[c]->m_position +
-                           m_cellsList[c]->m_numberCellSpanned;
+      Vec2i const &lastPos=m_cellsList[c]->position() +
+                           m_cellsList[c]->numSpannedCells();
       if (lastPos[0]>int(m_numCols)) m_numCols=size_t(lastPos[0]);
       if (lastPos[1]>int(m_numRows)) m_numRows=size_t(lastPos[1]);
     }
@@ -284,12 +271,11 @@ bool MWAWTable::buildPosToCellId()
   m_posToCellId.resize(m_numCols*m_numRows, -1);
   for (size_t c = 0; c < nCells; ++c) {
     if (!m_cellsList[c]) continue;
-    if (m_cellsList[c]->m_extraLine!=MWAWTableCell::E_None &&
-        !m_cellsList[c]->m_extraLineType.isEmpty())
+    if (m_cellsList[c]->hasExtraLine())
       m_hasExtraLines=true;
 
-    Vec2i const &pos=m_cellsList[c]->m_position;
-    Vec2i lastPos=pos+m_cellsList[c]->m_numberCellSpanned;
+    Vec2i const &pos=m_cellsList[c]->position();
+    Vec2i lastPos=pos+m_cellsList[c]->numSpannedCells();
     for (int x = pos[0]; x < lastPos[0]; x++) {
       for (int y = pos[1]; y < lastPos[1]; y++) {
         int tablePos = getCellIdPos(x,y);
@@ -335,8 +321,8 @@ bool MWAWTable::buildDims()
       if (cPos<0 || m_posToCellId[size_t(cPos)]<0) continue;
       shared_ptr<MWAWTableCell> cell=m_cellsList[size_t(m_posToCellId[size_t(cPos)])];
       if (!cell) continue;
-      Vec2i const &pos=cell->m_position;
-      Vec2i lastPos=pos+cell->m_numberCellSpanned;
+      Vec2i const &pos=cell->position();
+      Vec2i lastPos=pos+cell->numSpannedCells();
       if (m_setData&BoxBit) {
         colLimit[size_t(pos[0])] = cell->m_box[0][0];
         colLimit[size_t(lastPos[0])] = cell->m_box[1][0];
@@ -360,8 +346,8 @@ bool MWAWTable::buildDims()
       if (cPos<0 || m_posToCellId[size_t(cPos)]<0) continue;
       shared_ptr<MWAWTableCell> cell=m_cellsList[size_t(m_posToCellId[size_t(cPos)])];
       if (!cell) continue;
-      Vec2i const &pos=cell->m_position;
-      Vec2i lastPos=pos+cell->m_numberCellSpanned;
+      Vec2i const &pos=cell->position();
+      Vec2i lastPos=pos+cell->numSpannedCells();
       if (m_setData&BoxBit) {
         rowLimit[size_t(pos[1])] = cell->m_box[0][1];
         rowLimit[size_t(lastPos[1])] = cell->m_box[1][1];

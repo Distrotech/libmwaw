@@ -145,7 +145,7 @@ InputStream *XAttr::getUsingFinderDat(char const *what) const
   std::string name=folder+"FINDER.DAT";
   struct stat status;
   if (stat(name.c_str(), &status )!=0 || !S_ISREG(status.st_mode) )
-    return false;
+    return 0;
 
   FileStream *input= new FileStream(name.c_str());
   if (!input || !input->ok()) {
@@ -155,7 +155,13 @@ InputStream *XAttr::getUsingFinderDat(char const *what) const
 
   input->seek(0, InputStream::SK_SET);
   try {
+    int num=0;
     while (!input->atEOS()) {
+      if (++num==23) { // must realign read on 2048
+        if (input->seek(24, InputStream::SK_CUR))
+          break;
+        num=0;
+      }
       long pos=input->tell();
       if (input->seek(pos+92, InputStream::SK_SET))
         break;

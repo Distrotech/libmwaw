@@ -209,6 +209,23 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
     } else o << "[#wh=" << i << "]";
     o << "=" << cell.m_bordersList[i] << ",";
   }
+  switch (cell.m_extraLine) {
+  case MWAWCell::E_None:
+    break;
+  case MWAWCell::E_Line1:
+    o << "line[TL->RB]";
+    break;
+  case MWAWCell::E_Line2:
+    o << "line[BL->RT]";
+    break;
+  case MWAWCell::E_Cross:
+    o << "line[cross]";
+    break;
+  default:
+    break;
+  }
+  if (cell.m_extraLine!=MWAWCell::E_None)
+    o << cell.m_extraLineType << ",";
   return o;
 }
 

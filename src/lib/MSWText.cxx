@@ -1781,7 +1781,7 @@ bool MSWText::sendTable(MSWTextInternal::Property const &prop)
           cell.setBackgroundColor(MWAWColor(col,col,col));
         }
       }
-      cell.position() = Vec2i((int)c,(int)r);
+      cell.setPosition(Vec2i((int)c,(int)r));
 
       listener->openTableCell(cell);
 

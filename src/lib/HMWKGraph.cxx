@@ -377,19 +377,12 @@ struct PictureFrame : public Frame {
 //! a table cell in a table in HMWKGraph
 struct TableCell : public MWAWTableCell {
   //! constructor
-  TableCell(): m_backColor(MWAWColor::white()),
-    m_borders(), m_id(-1), m_fileId(-1), m_flags(0), m_extra("") {
+  TableCell(): MWAWTableCell(), m_id(-1), m_fileId(-1), m_flags(0), m_extra("") {
   }
-  //! call when a cell must be send
-  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table);
   //! call when the content of a cell must be send
   virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table);
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TableCell const &cell);
-  //! the background color
-  MWAWColor m_backColor;
-  //! the border: order defined by MWAWBorder::Pos
-  std::vector<MWAWBorder> m_borders;
   //! the cell id ( corresponding to the last data in the main zones list )
   long m_id;
   //! the file id
@@ -403,12 +396,6 @@ struct TableCell : public MWAWTableCell {
 std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 {
   o << static_cast<MWAWTableCell const &>(cell);
-  if (!cell.m_backColor.isWhite())
-    o << "backColor=" << cell.m_backColor << ",";
-  char const *(what[]) = {"T", "L", "B", "R"};
-  for (size_t b = 0; b < cell.m_borders.size(); ++b)
-    o << "bord" << what[b] << "=[" << cell.m_borders[b] << "],";
-  if (cell.m_flags&1) o << "vAlign=center,";
   if (cell.m_flags&0x10) o << "lock,";
   if (cell.m_flags&0xFFE2)
     o << "linesFlags=" << std::hex << (cell.m_flags&0xFFE2) << std::dec << ",";
@@ -460,10 +447,6 @@ struct Table : public Frame, public MWAWTable {
     if (m_textFileId>0)
       s << "textFileId=" << std::hex << m_textFileId << std::dec << ",";
     return s.str();
-  }
-  //! returns a cell position ( before any merge cell )
-  int getCellPos(int col, int row) const {
-    return row*m_columns+col;
   }
   //! the graph parser
   HMWKGraph *m_parser;
@@ -528,28 +511,6 @@ struct TextBox : public Frame {
   //! two auxilliary dim for memo textbox
   float m_dim[2];
 };
-
-bool TableCell::send(MWAWContentListenerPtr listener, MWAWTable &table)
-{
-  if (!listener)
-    return true;
-  MWAWCell cell;
-  cell.position() = m_position;
-  Vec2i span = m_numberCellSpanned;
-  if (span[0]<1) span[0]=1;
-  if (span[1]<1) span[1]=1;
-  cell.setNumSpannedCells(span);
-  cell.setBackgroundColor(m_backColor);
-  static int const (wh[]) = { libmwaw::LeftBit,  libmwaw::RightBit, libmwaw::TopBit, libmwaw::BottomBit};
-  for (size_t b = 0; b < m_borders.size(); ++b)
-    cell.setBorders(wh[b], m_borders[b]);
-  if (m_flags&1) cell.setVAlignement(MWAWCell::VALIGN_CENTER);
-
-  listener->openTableCell(cell);
-  sendContent(listener, table);
-  listener->closeTableCell();
-  return true;
-}
 
 bool TableCell::sendContent(MWAWContentListenerPtr, MWAWTable &table)
 {
@@ -1772,11 +1733,16 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
     int posi[2];
     for (int j = 0; j < 2; ++j)
       posi[j] =  (int) input->readLong(2);
-    cell->m_position = Vec2i(posi[1],posi[0]);
+    cell->setPosition(Vec2i(posi[1],posi[0]));
     int span[2];
     for (int j = 0; j < 2; ++j)
       span[j] =  (int) input->readLong(2);
-    cell->m_numberCellSpanned = Vec2i(span[1], span[0]);
+    if (span[0]>=1 && span[1]>=1)
+      cell->setNumSpannedCells(Vec2i(span[1], span[0]));
+    else {
+      MWAW_DEBUG_MSG(("HMWKGraph::readTable: can not read cell span\n"));
+      f << "##span=" << span[1] << "x" << span[0] << ",";
+    }
     float dim[2];
     for (int j = 0; j < 2; ++j)
       dim[j] = float(input->readLong(4))/65536.f;
@@ -1790,18 +1756,19 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
     float patPercent = 1.0;
     if (!m_state->getPatternPercent(pattern, patPercent))
       f << "#backPattern=" << pattern << ",";
-    cell->m_backColor = m_state->getColor(backCol, patPercent);
+    cell->setBackgroundColor(m_state->getColor(backCol, patPercent));
 
     cell->m_flags = (int) input->readULong(2);
+    if (cell->m_flags&1) cell->setVAlignement(MWAWCell::VALIGN_CENTER);
     switch ((cell->m_flags>>2) & 3) {
     case 1:
-      cell->m_extraLine=MWAWTableCell::E_Line1;
+      cell->setExtraLine(MWAWCell::E_Line1);
       break;
     case 2:
-      cell->m_extraLine=MWAWTableCell::E_Line2;
+      cell->setExtraLine(MWAWCell::E_Line2);
       break;
     case 3:
-      cell->m_extraLine=MWAWTableCell::E_Cross;
+      cell->setExtraLine(MWAWCell::E_Cross);
       break;
     case 0: // none
     default:
@@ -1810,9 +1777,8 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
     val = input->readLong(2);
     if (val) f << "f2=" << val << ",";
 
-    cell->m_borders.resize(4);
     static char const *(what[]) = {"T", "L", "B", "R"};
-    static size_t const which[] = { libmwaw::Top, libmwaw::Left, libmwaw::Bottom, libmwaw::Right };
+    static int const which[] = { libmwaw::TopBit, libmwaw::LeftBit, libmwaw::BottomBit, libmwaw::RightBit };
     for (int b = 0; b < 4; ++b) { // find _,4000,_,_,1,_, and 1,_,_,_,1,_,
       f2.str("");
       MWAWBorder border;
@@ -1848,7 +1814,7 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
       val = (long) input->readULong(2);
       if (val) f2 << "unkn=" << val << ",";
 
-      cell->m_borders[which[b]] = border;
+      cell->setBorders(which[b],border);
       if (f2.str().length())
         f << "bord" << what[b] << "=[" << f2.str() << "],";
     }

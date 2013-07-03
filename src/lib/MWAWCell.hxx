@@ -59,10 +59,14 @@ public:
   \note actually mainly used for table/spreadsheet cell,  not yet implemented */
   enum VerticalAlignment { VALIGN_TOP, VALIGN_CENTER, VALIGN_BOTTOM, VALIGN_DEFAULT };
 
+  //! an enum to defined potential internal line: E_Line1=TL to RB, E_Line2=BL to RT
+  enum ExtraLine { E_None, E_Line1, E_Line2, E_Cross };
+
   //! constructor
   MWAWCell() : m_position(0,0), m_numberCellSpanned(1,1),
     m_hAlign(HALIGN_DEFAULT), m_vAlign(VALIGN_DEFAULT), m_bordersList(),
-    m_backgroundColor(MWAWColor::white()), m_protected(false) { }
+    m_backgroundColor(MWAWColor::white()), m_protected(false),
+    m_extraLine(E_None), m_extraLineType() { }
 
   //! destructor
   virtual ~MWAWCell() {}
@@ -75,10 +79,6 @@ public:
 
   // position
 
-  //! position  accessor
-  Vec2i &position() {
-    return m_position;
-  }
   //! position  accessor
   Vec2i const &position() const {
     return m_position;
@@ -152,11 +152,27 @@ public:
   MWAWColor backgroundColor() const {
     return m_backgroundColor;
   }
-  //! set the background color
+  //! sets the background color
   void setBackgroundColor(MWAWColor color) {
     m_backgroundColor = color;
   }
-
+  //! returns true if we have some extra lines
+  bool hasExtraLine() const {
+    return m_extraLine!=E_None && !m_extraLineType.isEmpty();
+  }
+  //! returns the extra lines
+  ExtraLine extraLine() const {
+    return m_extraLine;
+  }
+  //! returns the extra line border
+  MWAWBorder const& extraLineType() const {
+    return m_extraLineType;
+  }
+  //! sets the extraline
+  void setExtraLine(ExtraLine extrLine, MWAWBorder const &type=MWAWBorder()) {
+    m_extraLine = extrLine;
+    m_extraLineType=type;
+  }
 protected:
   //! the cell row and column : 0,0 -> A1, 0,1 -> A2
   Vec2i m_position;
@@ -173,6 +189,10 @@ protected:
   MWAWColor m_backgroundColor;
   //! cell protected
   bool m_protected;
+  /** extra line */
+  ExtraLine m_extraLine;
+  /** extra line type */
+  MWAWBorder m_extraLineType;
 };
 
 #endif

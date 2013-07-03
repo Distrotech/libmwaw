@@ -943,7 +943,7 @@ bool MRWText::sendTable(MRWTextInternal::Table &table)
       MRWTextInternal::Paragraph para;
       if (table.m_zone.getRuler(cell.m_rulerId, para))
         para.update(m_mainParser->getPatternPercent(para.m_cellFill.m_patternId), fCell);
-      fCell.position() = Vec2i((int)c,0);
+      fCell.setPosition(Vec2i((int)c,0));
 
       listener->openTableCell(fCell);
       MWAWEntry entry(cell.m_entry);

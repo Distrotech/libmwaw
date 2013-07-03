@@ -401,33 +401,12 @@ struct ContentZones {
 struct Cell : public MWAWTableCell {
   //! constructor
   Cell(WNText &parser) : MWAWTableCell(), m_parser(parser),
-    m_color(MWAWColor::white()), m_borderList(0),
     m_zonesList(), m_footnoteList() {}
-
-  //! send the content
-  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table) {
-    if (!listener) return true;
-    MWAWCell cell;
-    MWAWBorder border;
-    cell.position() = m_position;
-    cell.setBorders(m_borderList, border);
-    cell.setNumSpannedCells(m_numberCellSpanned);
-    if (!m_color.isWhite())
-      cell.setBackgroundColor(m_color);
-    listener->openTableCell(cell);
-    sendContent(listener, table);
-    listener->closeTableCell();
-    return true;
-  }
 
   //! send the content
   bool sendContent(MWAWContentListenerPtr, MWAWTable &);
   //! the text parser
   WNText &m_parser;
-  //! the background color
-  MWAWColor m_color;
-  //! the border list : libmwaw::LeftBorderBit | ...
-  int m_borderList;
   //! the list of zone
   std::vector<ContentZone> m_zonesList;
   //! a list to retrieve the footnote content
@@ -1871,8 +1850,8 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
           cell.reset(new WNTextInternal::Cell(*this));
           // as the cells can overlap a little, we build a new box
           cell->m_box=Box2i(tableData.m_box.min(), tableData.m_box.max()-Vec2i(1,1));
-          cell->m_color = tableData.m_color;
-          cell->m_borderList = tableData.getBorderList();
+          cell->setBackgroundColor(tableData.m_color);
+          cell->setBorders(tableData.getBorderList(), MWAWBorder());
           table->add(cell);
         }
       } else

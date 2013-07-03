@@ -395,30 +395,11 @@ struct Paragraph : public MWAWParagraph {
 struct Cell : public MWAWTableCell {
   //! constructor
   Cell(MWProStructures &parser) : MWAWTableCell(), m_parser(parser),
-    m_blockId(0), m_color(MWAWColor::white()) {
-  }
-  //! set the background color
-  void setBackColor(MWAWColor const &col) {
-    m_color = col;
-  }
-  //! send the content
-  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table) {
-    if (!listener) return true;
+    m_blockId(0) {
     // fixme
     int const borderPos = libmwaw::TopBit | libmwaw::RightBit |
                           libmwaw::BottomBit | libmwaw::LeftBit;
-
-    MWAWCell cell;
-    MWAWBorder border;
-    cell.position() = m_position;
-    cell.setBorders(borderPos, border);
-    cell.setNumSpannedCells(m_numberCellSpanned);
-    cell.setBackgroundColor(m_color);
-
-    listener->openTableCell(cell);
-    sendContent(listener, table);
-    listener->closeTableCell();
-    return true;
+    setBorders(borderPos, MWAWBorder());
   }
 
   //! send the content
@@ -434,8 +415,6 @@ struct Cell : public MWAWTableCell {
   MWProStructures &m_parser;
   //! the block id
   int m_blockId;
-  //! the background color
-  MWAWColor m_color;
 };
 
 ////////////////////////////////////////
@@ -1085,7 +1064,7 @@ void MWProStructures::buildTableStructures()
       blockList[k]->m_attachment = true;
       shared_ptr<MWProStructuresInternal::Cell> newCell(new MWProStructuresInternal::Cell(*this));
       newCell->m_box=Box2f(blockList[k]->m_box.min(), blockList[k]->m_box.max()-Vec2f(1,1));
-      newCell->setBackColor(blockList[k]->m_surfaceColor);
+      newCell->setBackgroundColor(blockList[k]->m_surfaceColor);
       newCell->m_blockId = blockList[k]->m_id;
       blockList[k]->m_textboxCellType=1;
       newTable->add(newCell);
