@@ -1546,6 +1546,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       input->seek(pos, WPX_SEEK_SET);
       numPLC = prop->m_plcList.size();
     }
+    int newSectionId=-1, textStructId=-1;
     for (size_t i = 0; i < numPLC; i++) {
       PLC const &plc = prop->m_plcList[i];
       if (newTable && int(plc.m_type) >= int(PLC::ParagraphInfo)) continue;
@@ -1556,7 +1557,8 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
         MSWTextInternal::TextEntry const &entry=m_state->m_textposList[(size_t) plc.m_id];
         if (pos != entry.begin()) {
           MWAW_DEBUG_MSG(("MSWText::sendText: the file position seems bad\n"));
-        }
+        } else
+          textStructId=entry.getParagraphId();
         break;
       }
       case PLC::Page: {
@@ -1566,7 +1568,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       }
       case PLC::Section:
         if (tableCell) break;
-        m_stylesManager->sendSection(plc.m_id);
+        newSectionId=plc.m_id;
         break;
       case PLC::Field: // some fields ?
 #ifdef DEBUG
@@ -1586,6 +1588,8 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
         break;
       }
     }
+    if (newSectionId >= 0)
+      m_stylesManager->sendSection(newSectionId, textStructId);
     if ((prop && prop->m_debugPrint)  || newTable) {
       ascFile.addPos(debPos);
       ascFile.addNote(f.str().c_str());

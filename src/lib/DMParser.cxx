@@ -107,14 +107,14 @@ std::ostream &operator<<(std::ostream &o, PictInfo const &info)
     o << "#align=" << info.m_align << ",";
     break;
   }
-  static char const *wh[]= {
-    "", "goTo", "aboutDialog", "print", "quit", "launch", "sound", "QMOV",
-    "note", "export[asText]", "last[chapter]", "TOC[show]", "find", "appleEvent",
-    "next[chapter]", "prev[chapter]", "script"
-  };
-  if (info.m_action >= 0 && info.m_action <= 16)
+  if (info.m_action >= 0 && info.m_action <= 16) {
+    static char const *wh[]= {
+      "", "goTo", "aboutDialog", "print", "quit", "launch", "sound", "QMOV",
+      "note", "export[asText]", "last[chapter]", "TOC[show]", "find", "appleEvent",
+      "next[chapter]", "prev[chapter]", "script"
+    };
     o << wh[info.m_action];
-  else
+  } else
     o << "#action=" << info.m_action << ",";
   switch(info.m_action) {
   case 1:

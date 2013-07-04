@@ -51,10 +51,54 @@
 
 #include "MWAWTable.hxx"
 
+/** Internal: the structures of a MWAWTable */
+namespace MWAWTableInternal
+{
+//! a comparaison structure used retrieve the rows and the columns
+struct Compare {
+  Compare(int dim) : m_coord(dim) {}
+  //! small structure to define a cell point
+  struct Point {
+    Point(int wh, MWAWTable::Cell const *cell, int cellId) : m_which(wh), m_cell(cell), m_cellId(cellId) {}
+    float getPos(int coord) const {
+      if (m_which)
+        return m_cell->m_box.max()[coord];
+      return m_cell->m_box.min()[coord];
+    }
+    /** returns the cells size */
+    float getSize(int coord) const {
+      return m_cell->m_box.size()[coord];
+    }
+    /** the position of the point in the cell (0: LT, 1: RB) */
+    int m_which;
+    /** the cell */
+    MWAWTable::Cell const *m_cell;
+    //! the cell id ( used by compare)
+    int m_cellId;
+  };
+
+  //! comparaison function
+  bool operator()(Point const &c1, Point const &c2) const {
+    float diffF = c1.getPos(m_coord)-c2.getPos(m_coord);
+    if (diffF < 0) return true;
+    if (diffF > 0) return false;
+    int diff = c2.m_which - c1.m_which;
+    if (diff) return (diff < 0);
+    diffF = c1.m_cell->m_box.size()[m_coord]
+            - c2.m_cell->m_box.size()[m_coord];
+    if (diffF < 0) return true;
+    if (diffF > 0) return false;
+    return c1.m_cellId < c2.m_cellId;
+  }
+
+  //! the coord to compare
+  int m_coord;
+};
+}
 ////////////////////////////////////////////////////////////
-// MWAWTableCell
+// MWAWTable::Cell
 ////////////////////////////////////////////////////////////
-bool MWAWTableCell::send(MWAWContentListenerPtr listener, MWAWTable &table)
+bool MWAWTable::Cell::send(MWAWContentListenerPtr listener, MWAWTable &table)
 {
   if (!listener) return true;
   listener->openTableCell(*this);
@@ -63,7 +107,7 @@ bool MWAWTableCell::send(MWAWContentListenerPtr listener, MWAWTable &table)
   return true;
 }
 
-std::ostream &operator<<(std::ostream &o, MWAWTableCell const &cell)
+std::ostream &operator<<(std::ostream &o, MWAWTable::Cell const &cell)
 {
   o << static_cast<MWAWCell const &>(cell);
   if (cell.m_box.size()[0]>0 || cell.m_box.size()[1]>0)
@@ -82,11 +126,11 @@ MWAWTable::~MWAWTable()
 {
 }
 
-shared_ptr<MWAWTableCell> MWAWTable::get(int id)
+shared_ptr<MWAWTable::Cell> MWAWTable::get(int id)
 {
   if (id < 0 || id >= int(m_cellsList.size())) {
     MWAW_DEBUG_MSG(("MWAWTable::get: cell %d does not exists\n",id));
-    return shared_ptr<MWAWTableCell>();
+    return shared_ptr<Cell>();
   }
   return m_cellsList[size_t(id)];
 }
@@ -113,7 +157,7 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
 
   for (size_t c = 0; c < m_cellsList.size(); ++c) {
     if (!m_cellsList[c]) continue;
-    MWAWTableCell const &cell=*(m_cellsList[c]);
+    Cell const &cell=*(m_cellsList[c]);
     if (!cell.hasExtraLine())
       continue;
     Vec2i const &pos=m_cellsList[c]->position();
@@ -163,17 +207,17 @@ bool MWAWTable::buildStructures()
   size_t nCells = m_cellsList.size();
   std::vector<float> listPositions[2];
   for (int dim = 0; dim < 2; dim++) {
-    MWAWTableCell::Compare compareFunction(dim);
-    std::set<MWAWTableCell::Compare::Point,
-        MWAWTableCell::Compare> set(compareFunction);
+    MWAWTableInternal::Compare compareFunction(dim);
+    std::set<MWAWTableInternal::Compare::Point,
+        MWAWTableInternal::Compare> set(compareFunction);
     for (size_t c = 0; c < nCells; ++c) {
-      set.insert(MWAWTableCell::Compare::Point(0, m_cellsList[c].get(), int(c)));
-      set.insert(MWAWTableCell::Compare::Point(1, m_cellsList[c].get(), int(c)));
+      set.insert(MWAWTableInternal::Compare::Point(0, m_cellsList[c].get(), int(c)));
+      set.insert(MWAWTableInternal::Compare::Point(1, m_cellsList[c].get(), int(c)));
     }
 
     std::vector<float> positions;
-    std::set<MWAWTableCell::Compare::Point,
-        MWAWTableCell::Compare>::iterator it = set.begin();
+    std::set<MWAWTableInternal::Compare::Point,
+        MWAWTableInternal::Compare>::iterator it = set.begin();
     float maxPosiblePos=0;
     int actCell = -1;
     for ( ; it != set.end(); ++it) {
@@ -319,7 +363,7 @@ bool MWAWTable::buildDims()
     for (int r = 0; r < int(m_numRows); ++r) {
       int cPos = getCellIdPos(c, r);
       if (cPos<0 || m_posToCellId[size_t(cPos)]<0) continue;
-      shared_ptr<MWAWTableCell> cell=m_cellsList[size_t(m_posToCellId[size_t(cPos)])];
+      shared_ptr<Cell> cell=m_cellsList[size_t(m_posToCellId[size_t(cPos)])];
       if (!cell) continue;
       Vec2i const &pos=cell->position();
       Vec2i lastPos=pos+cell->numSpannedCells();
@@ -344,7 +388,7 @@ bool MWAWTable::buildDims()
     for (int c = 0; c < int(m_numCols); ++c) {
       int cPos = getCellIdPos(c, r);
       if (cPos<0 || m_posToCellId[size_t(cPos)]<0) continue;
-      shared_ptr<MWAWTableCell> cell=m_cellsList[size_t(m_posToCellId[size_t(cPos)])];
+      shared_ptr<Cell> cell=m_cellsList[size_t(m_posToCellId[size_t(cPos)])];
       if (!cell) continue;
       Vec2i const &pos=cell->position();
       Vec2i lastPos=pos+cell->numSpannedCells();

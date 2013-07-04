@@ -85,22 +85,19 @@ struct Border {
 
 struct Table;
 /** Internal: a cell inside a CWTable */
-struct Cell : public MWAWTableCell {
+struct TableCell : public MWAWTable::Cell {
   //! constructor
-  Cell() : MWAWTableCell(), m_zoneId(0), m_styleId(-1) {
+  TableCell() : MWAWTable::Cell(), m_zoneId(0), m_styleId(-1) {
   }
-  //! return the MWAWCell corresponding to this
-  MWAWCell get(Table const &table) const;
-
-  //! send the cell to a listener
-  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table);
+  //! use table to finish updating cell
+  void update(Table const &table);
 
   //! send the cell content to a listener
   virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table);
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Cell const &cell) {
-    o << reinterpret_cast<MWAWTableCell const &>(cell);
+  friend std::ostream &operator<<(std::ostream &o, TableCell const &cell) {
+    o << reinterpret_cast<MWAWTable::Cell const &>(cell);
     if (cell.m_zoneId) o << "zone=" << cell.m_zoneId << ",";
     if (cell.m_styleId >= 0)o << "style=" << cell.m_styleId << ",";
     return o;
@@ -117,20 +114,28 @@ struct Cell : public MWAWTableCell {
   int m_styleId;
 
 private:
-  Cell(Cell const &orig);
-  Cell &operator=(Cell const &orig);
+  TableCell(TableCell const &orig);
+  TableCell &operator=(TableCell const &orig);
 };
 
 ////////////////////////////////////////
 ////////////////////////////////////////
 /** the struct which stores the Table */
 struct Table : public CWStruct::DSET, public MWAWTable {
-  friend struct Cell;
+  friend struct TableCell;
   //! constructor
   Table(CWStruct::DSET const &dset, CWTable &parser) :
     CWStruct::DSET(dset),MWAWTable(), m_parser(&parser), m_styleManager(parser.m_styleManager.get()), m_bordersList(), m_mainPtr(-1) {
   }
 
+  //! return a cell corresponding to id
+  TableCell *get(int id) {
+    if (id < 0 || id >= numCells()) {
+      MWAW_DEBUG_MSG(("CWTableInteral::Table::get: cell %d does not exists\n",id));
+      return 0;
+    }
+    return reinterpret_cast<TableCell *>(MWAWTable::get(id).get());
+  }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Table const &doc) {
     o << static_cast<CWStruct::DSET const &>(doc);
@@ -139,19 +144,22 @@ struct Table : public CWStruct::DSET, public MWAWTable {
   //! check that each child zone are valid
   void checkChildZones() {
     for (size_t i = 0; i < m_cellsList.size(); i++) {
-      Cell *cell = reinterpret_cast<Cell *>(m_cellsList[i].get());
+      TableCell *cell = reinterpret_cast<TableCell *>(m_cellsList[i].get());
       if (!cell) continue;
       if (cell->m_zoneId > 0 && !okChildId(cell->m_zoneId))
         cell->m_zoneId = 0;
     }
   }
-  //! return a cell corresponding to id
-  Cell *get(int id) {
-    if (id < 0 || id >= numCells()) {
-      MWAW_DEBUG_MSG(("CWTableInteral::Table::get: cell %d does not exists\n",id));
-      return 0;
+  //! finish updating all cells
+  void updateCells() {
+    for (int c=0; c<numCells(); ++c) {
+      if (!get(c)) continue;
+      get(c)->update(*this);
     }
-    return reinterpret_cast<Cell *>(MWAWTable::get(id).get());
+  }
+  //! ask the main parser to send a zone
+  bool askMainToSendZone(int number) {
+    return m_parser->askMainToSendZone(number);
   }
 
   /** the main parser */
@@ -167,37 +175,12 @@ private:
   Table &operator=(Table const &orig);
 };
 
-MWAWCell Cell::get(Table const &table) const
+void TableCell::update(Table const &table)
 {
-  MWAWCell cell;
-  cell.setPosition(m_position);
-  cell.setNumSpannedCells(m_numberCellSpanned);
   CWStyleManager *styleManager = table.m_styleManager;
   if (!styleManager) {
-    MWAW_DEBUG_MSG(("CWTableInternal::Table::Cell::get: style manager is not defined\n"));
-    return cell;
-  }
-  CWStyleManager::Style style;
-  if (m_styleId >= 0 && styleManager->get(m_styleId, style)) {
-    CWStyleManager::Graphic graph;
-    if (style.m_graphicId >= 0 && styleManager->get(style.m_graphicId, graph)) {
-      MWAWColor sColor = graph.getSurfaceColor();
-      if (!sColor.isWhite())
-        cell.setBackgroundColor(sColor);
-    }
-    CWStyleManager::KSEN ksen;
-    if (style.m_ksenId >= 0 && styleManager->get(style.m_ksenId, ksen)) {
-      switch(ksen.m_valign) {
-      case 1:
-        cell.setVAlignement(MWAWCell::VALIGN_CENTER);
-        break;
-      case 2:
-        cell.setVAlignement(MWAWCell::VALIGN_BOTTOM);
-        break;
-      default:
-        break;
-      }
-    }
+    MWAW_DEBUG_MSG(("CWTableInternal::TableCell::update: style manager is not defined\n"));
+    return;
   }
 
   int numTableBorders = (int) table.m_bordersList.size();
@@ -217,7 +200,7 @@ MWAWCell Cell::get(Table const &table) const
     /** fixme: check that the opposite has a border, if not print the first border */
     if (!sameBorders) continue;
     if (bId < 0 || bId >= numTableBorders) {
-      MWAW_DEBUG_MSG(("CWTableInternal::Table::Cellget: can not find the border definition\n"));
+      MWAW_DEBUG_MSG(("CWTableInternal::TableCell::get: can not find the border definition\n"));
       continue;
     }
     Border const &border = table.m_bordersList[size_t(bId)];
@@ -247,27 +230,17 @@ MWAWCell Cell::get(Table const &table) const
       bord.m_color = graph.getLineColor();
     }
     static int const wh[] = { libmwaw::LeftBit, libmwaw::TopBit, libmwaw::RightBit, libmwaw::BottomBit};
-    cell.setBorders(wh[w], bord);
+    setBorders(wh[w], bord);
   }
-  return cell;
-}
-bool Cell::send(MWAWContentListenerPtr listener, MWAWTable &tble)
-{
-  if (!listener) return true;
-  Table &table=static_cast<Table &>(tble);
-  listener->openTableCell(get(table));
-  sendContent(listener, table);
-  listener->closeTableCell();
-  return true;
 }
 
-bool Cell::sendContent(MWAWContentListenerPtr listener, MWAWTable &table)
+bool TableCell::sendContent(MWAWContentListenerPtr listener, MWAWTable &table)
 {
   if (!listener) return true;
   if (m_zoneId <= 0)
     listener->insertChar(' ');
   else
-    static_cast<Table &>(table).m_parser->askMainToSendZone(m_zoneId);
+    static_cast<Table &>(table).askMainToSendZone(m_zoneId);
   return true;
 }
 
@@ -428,6 +401,7 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
   if (!ok)
     input->seek(pos, WPX_SEEK_SET);
 
+  tableZone->updateCells();
   if (m_state->m_tableMap.find(tableZone->m_id) != m_state->m_tableMap.end()) {
     MWAW_DEBUG_MSG(("CWTable::readTableZone: zone %d already exists!!!\n", tableZone->m_id));
   } else
@@ -593,7 +567,7 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
 
   for (int i = 0; i < N; i++) {
     pos = input->tell();
-    shared_ptr<CWTableInternal::Cell> cell(new CWTableInternal::Cell());
+    shared_ptr<CWTableInternal::TableCell> cell(new CWTableInternal::TableCell());
     float posi[6];
     for (int j = 0; j < 6; j++) posi[j] = float(input->readLong(4))/256.f;
     cell->m_box=Box2f(Vec2f(posi[1], posi[0]), Vec2f(posi[3], posi[2]));
@@ -617,6 +591,16 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
       CWStyleManager::KSEN ksen;
       bool hasExtraLines=false;
       if (style.m_ksenId >= 0 && m_styleManager->get(style.m_ksenId, ksen)) {
+        switch(ksen.m_valign) {
+        case 1:
+          cell->setVAlignement(MWAWCell::VALIGN_CENTER);
+          break;
+        case 2:
+          cell->setVAlignement(MWAWCell::VALIGN_BOTTOM);
+          break;
+        default:
+          break;
+        }
         hasExtraLines=(ksen.m_lines & 3);
         switch(ksen.m_lines & 3) {
         case 1: // TL->BR
@@ -636,6 +620,7 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
       }
       CWStyleManager::Graphic graph;
       if (style.m_graphicId >= 0 && m_styleManager->get(style.m_graphicId, graph)) {
+        cell->setBackgroundColor(graph.getSurfaceColor());
         if (hasExtraLines) {
           MWAWBorder border;
           border.m_width=(float)graph.m_lineWidth;
@@ -666,7 +651,7 @@ bool CWTable::readTableBordersId(CWTableInternal::Table &table)
   int numBorders = int(table.m_bordersList.size());
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   for (int i = 0; i < 4*numCells; i++) {
-    CWTableInternal::Cell *cell = table.get(i/4);
+    CWTableInternal::TableCell *cell = table.get(i/4);
     long pos = input->tell();
     long sz = (long) input->readULong(4);
     long endPos = pos+4+sz;

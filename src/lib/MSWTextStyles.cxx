@@ -1075,7 +1075,7 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
   }
 }
 
-bool MSWTextStyles::sendSection(int id)
+bool MSWTextStyles::sendSection(int id, int textStructId)
 {
   if (!m_parserState->m_listener) return true;
 
@@ -1083,7 +1083,14 @@ bool MSWTextStyles::sendSection(int id)
     MWAW_DEBUG_MSG(("MSWTextStyles::sendText: can not find new section\n"));
     return false;
   }
-  setProperty(m_state->m_sectionList[(size_t) id]);
+  MSWStruct::Section section=m_state->m_sectionList[(size_t) id];
+  MSWStruct::Paragraph para(version());
+  if (textStructId >= 0 &&
+      getParagraph(MSWTextStyles::TextStructZone, textStructId, para) &&
+      para.m_section.isSet()) {
+    section.insert(*para.m_section);
+  }
+  setProperty(section);
   return true;
 }
 

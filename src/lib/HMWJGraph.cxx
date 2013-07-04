@@ -85,9 +85,9 @@ public:
 
 ////////////////////////////////////////
 //! a table cell in a table in HMWJGraph
-struct TableCell : public MWAWTableCell {
+struct TableCell : public MWAWTable::Cell {
   //! constructor
-  TableCell(long tId): MWAWTableCell(), m_zId(0), m_tId(tId), m_cPos(-1), m_fileId(0), m_formatId(0), m_flags(0), m_extra("") {
+  TableCell(long tId): MWAWTable::Cell(), m_zId(0), m_tId(tId), m_cPos(-1), m_fileId(0), m_formatId(0), m_flags(0), m_extra("") {
   }
   //! use cell format to finish updating cell
   void update(CellFormat const &format);
@@ -122,7 +122,7 @@ void TableCell::update(CellFormat const &format)
 
 std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 {
-  o << static_cast<MWAWTableCell const &>(cell);
+  o << static_cast<MWAWTable::Cell const &>(cell);
   if (cell.m_flags&0x100) o << "justify[full],";
   if (cell.m_flags&0x800) o << "lock,";
   if (cell.m_flags&0x1000) o << "merge,";

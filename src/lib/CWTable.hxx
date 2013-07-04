@@ -54,7 +54,6 @@
 
 namespace CWTableInternal
 {
-struct Cell;
 struct Table;
 struct State;
 }
@@ -70,7 +69,6 @@ class CWStyleManager;
 class CWTable
 {
   friend class CWParser;
-  friend struct CWTableInternal::Cell;
   friend struct CWTableInternal::Table;
 
 public:

@@ -122,7 +122,7 @@ protected:
   //! read the text section
   bool readSection(MSWEntry &entry);
   //! try to send a section
-  bool sendSection(int id);
+  bool sendSection(int id, int textStructId);
 
   //! try to read the section data
   bool readSection(MSWStruct::Section &section, long pos);

@@ -49,78 +49,12 @@
 
 class MWAWTable;
 
-/** a virtual structure used to store in a MWAWTable */
-class MWAWTableCell : public MWAWCell
-{
-public:
-  //! constructor
-  MWAWTableCell() : MWAWCell(), m_box(), m_size() {
-  }
-  //! destructor
-  virtual ~MWAWTableCell() { }
-
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, MWAWTableCell const &cell);
-
-  /** call when a cell must be send.
-
-  \note default: openTableCell(*this), call sendContent and closeTableCell() */
-  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table);
-  //! call when the content of a cell must be send
-  virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table) = 0;
-
-  /** the cell bounding box (unit in point)*/
-  Box2f m_box;
-  /** the cell size : unit WPX_POINT */
-  Vec2f m_size;
-
-public:
-  //! a comparaison structure used retrieve the rows and the columns
-  struct Compare {
-    Compare(int dim) : m_coord(dim) {}
-    //! small structure to define a cell point
-    struct Point {
-      Point(int wh, MWAWTableCell const *cell, int cellId) : m_which(wh), m_cell(cell), m_cellId(cellId) {}
-      float getPos(int coord) const {
-        if (m_which)
-          return m_cell->m_box.max()[coord];
-        return m_cell->m_box.min()[coord];
-      }
-      /** returns the cells size */
-      float getSize(int coord) const {
-        return m_cell->m_box.size()[coord];
-      }
-      /** the position of the point in the cell (0: LT, 1: RB) */
-      int m_which;
-      /** the cell */
-      MWAWTableCell const *m_cell;
-      //! the cell id ( used by compare)
-      int m_cellId;
-    };
-
-    //! comparaison function
-    bool operator()(Point const &c1, Point const &c2) const {
-      float diffF = c1.getPos(m_coord)-c2.getPos(m_coord);
-      if (diffF < 0) return true;
-      if (diffF > 0) return false;
-      int diff = c2.m_which - c1.m_which;
-      if (diff) return (diff < 0);
-      diffF = c1.m_cell->m_box.size()[m_coord]
-              - c2.m_cell->m_box.size()[m_coord];
-      if (diffF < 0) return true;
-      if (diffF > 0) return false;
-      return c1.m_cellId < c2.m_cellId;
-    }
-
-    //! the coord to compare
-    int m_coord;
-  };
-};
-
 /** a class used to recreate the table structure using cell informations, .... */
 class MWAWTable
 {
 public:
+  class Cell;
+
   //! an enum used to indicate what the list of entries which are filled
   enum DataSet {
     CellPositionBit=1, BoxBit=2, SizeBit=4, TableDimBit=8, TablePosToCellBit=0x10
@@ -134,7 +68,7 @@ public:
   virtual ~MWAWTable();
 
   //! add a new cells
-  void add(shared_ptr<MWAWTableCell> cell) {
+  void add(shared_ptr<Cell> cell) {
     if (!cell) {
       MWAW_DEBUG_MSG(("MWAWTable::add: must be called with a cell\n"));
       return;
@@ -156,7 +90,7 @@ public:
   }
 
   //! returns the i^th cell
-  shared_ptr<MWAWTableCell> get(int id);
+  shared_ptr<Cell> get(int id);
 
   /** try to build the table structures */
   bool updateTable();
@@ -203,7 +137,7 @@ protected:
   /** a int to indicate what data are been reconstruct*/
   uint32_t m_setData;
   /** the list of cells */
-  std::vector<shared_ptr<MWAWTableCell> > m_cellsList;
+  std::vector<shared_ptr<Cell> > m_cellsList;
   /** the number of rows ( set by buildPosToCellId ) */
   size_t m_numRows;
   /** the number of cols ( set by buildPosToCellId ) */
@@ -212,6 +146,34 @@ protected:
   std::vector<int> m_posToCellId;
   /** true if we need to send extra lines */
   bool m_hasExtraLines;
+
+public:
+  /** a virtual structure used to a cell */
+  class Cell : public MWAWCell
+  {
+  public:
+    //! constructor
+    Cell() : MWAWCell(), m_box(), m_size() {
+    }
+    //! destructor
+    virtual ~Cell() { }
+
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
+
+    /** call when a cell must be send.
+
+    \note default: openTableCell(*this), call sendContent and closeTableCell() */
+    virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table);
+    //! call when the content of a cell must be send
+    virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table) = 0;
+
+    /** the cell bounding box (unit in point)*/
+    Box2f m_box;
+    /** the cell size : unit WPX_POINT */
+    Vec2f m_size;
+  };
+
 };
 
 #endif

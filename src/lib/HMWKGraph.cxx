@@ -375,9 +375,9 @@ struct PictureFrame : public Frame {
 
 ////////////////////////////////////////
 //! a table cell in a table in HMWKGraph
-struct TableCell : public MWAWTableCell {
+struct TableCell : public MWAWTable::Cell {
   //! constructor
-  TableCell(): MWAWTableCell(), m_id(-1), m_fileId(-1), m_flags(0), m_extra("") {
+  TableCell(): MWAWTable::Cell(), m_id(-1), m_fileId(-1), m_flags(0), m_extra("") {
   }
   //! call when the content of a cell must be send
   virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table);
@@ -395,7 +395,7 @@ struct TableCell : public MWAWTableCell {
 
 std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 {
-  o << static_cast<MWAWTableCell const &>(cell);
+  o << static_cast<MWAWTable::Cell const &>(cell);
   if (cell.m_flags&0x10) o << "lock,";
   if (cell.m_flags&0xFFE2)
     o << "linesFlags=" << std::hex << (cell.m_flags&0xFFE2) << std::dec << ",";
@@ -420,7 +420,7 @@ struct Table : public Frame, public MWAWTable {
   }
   //! return the i^th table cell
   TableCell *get(int i) {
-    shared_ptr<MWAWTableCell> cell=MWAWTable::get(i);
+    shared_ptr<MWAWTable::Cell> cell=MWAWTable::get(i);
     if (!cell)
       return 0;
     return static_cast<TableCell *>(cell.get());

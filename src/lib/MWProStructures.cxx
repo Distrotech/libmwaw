@@ -392,9 +392,9 @@ struct Paragraph : public MWAWParagraph {
 
 ////////////////////////////////////////
 //! Internal: the cell of a WNProStructure
-struct Cell : public MWAWTableCell {
+struct Cell : public MWAWTable::Cell {
   //! constructor
-  Cell(MWProStructures &parser) : MWAWTableCell(), m_parser(parser),
+  Cell(MWProStructures &parser) : MWAWTable::Cell(), m_parser(parser),
     m_blockId(0) {
     // fixme
     int const borderPos = libmwaw::TopBit | libmwaw::RightBit |

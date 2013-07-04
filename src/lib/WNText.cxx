@@ -398,9 +398,9 @@ struct ContentZones {
 
 ////////////////////////////////////////
 //! Internal: the cell of a WNText
-struct Cell : public MWAWTableCell {
+struct Cell : public MWAWTable::Cell {
   //! constructor
-  Cell(WNText &parser) : MWAWTableCell(), m_parser(parser),
+  Cell(WNText &parser) : MWAWTable::Cell(), m_parser(parser),
     m_zonesList(), m_footnoteList() {}
 
   //! send the content
