@@ -236,7 +236,7 @@ struct MWAWBorder {
   enum Type { Single, Double, Triple };
 
   //! constructor
-  MWAWBorder() : m_style(Simple), m_type(Single), m_width(1), m_widthsList(), m_color(MWAWColor::black()) { }
+  MWAWBorder() : m_style(Simple), m_type(Single), m_width(1), m_widthsList(), m_color(MWAWColor::black()), m_extra("") { }
   /** add the border property to proplist (if needed )
 
   \note if set which must be equal to "left", "top", ... */
@@ -273,6 +273,8 @@ struct MWAWBorder {
   std::vector<double> m_widthsList;
   //! the border color
   MWAWColor m_color;
+  //! extra data ( if needed)
+  std::string m_extra;
 };
 
 //! a field

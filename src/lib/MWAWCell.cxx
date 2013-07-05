@@ -163,20 +163,20 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
   if (cell.numSpannedCells()[0] != 1 || cell.numSpannedCells()[1] != 1)
     o << "span=[" << cell.numSpannedCells()[0] << "," << cell.numSpannedCells()[1] << "],";
 
-  if (cell.m_protected) o << ",protected";
+  if (cell.m_protected) o << "protected,";
 
   switch(cell.m_hAlign) {
   case MWAWCell::HALIGN_LEFT:
-    o << ",left";
+    o << "left,";
     break;
   case MWAWCell::HALIGN_CENTER:
-    o << ",centered";
+    o << "centered,";
     break;
   case MWAWCell::HALIGN_RIGHT:
-    o << ",right";
+    o << "right,";
     break;
   case MWAWCell::HALIGN_FULL:
-    o << ",full";
+    o << "full,";
     break;
   case MWAWCell::HALIGN_DEFAULT:
   default:
@@ -184,13 +184,13 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
   }
   switch(cell.m_vAlign) {
   case MWAWCell::VALIGN_TOP:
-    o << ",top";
+    o << "top,";
     break;
   case MWAWCell::VALIGN_CENTER:
-    o << ",centered[y]";
+    o << "centered[y],";
     break;
   case MWAWCell::VALIGN_BOTTOM:
-    o << ",bottom";
+    o << "bottom,";
     break;
   case MWAWCell::VALIGN_DEFAULT:
   default:
@@ -198,7 +198,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
   }
 
   if (!cell.m_backgroundColor.isWhite())
-    o << ",backColor=" << cell.m_backgroundColor << ",";
+    o << "backColor=" << cell.m_backgroundColor << ",";
   for (size_t i = 0; i < cell.m_bordersList.size(); i++) {
     if (cell.m_bordersList[i].m_style == MWAWBorder::None)
       continue;
@@ -213,13 +213,13 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
   case MWAWCell::E_None:
     break;
   case MWAWCell::E_Line1:
-    o << "line[TL->RB]";
+    o << "line[TL->RB],";
     break;
   case MWAWCell::E_Line2:
-    o << "line[BL->RT]";
+    o << "line[BL->RT],";
     break;
   case MWAWCell::E_Cross:
-    o << "line[cross]";
+    o << "line[cross],";
     break;
   default:
     break;

@@ -260,6 +260,12 @@ protected:
   //! try to return the color corresponding to colId
   bool getColor(int colId, MWAWColor &color) const;
 
+  //! try to return the pattern corresponding to patId
+  bool getPattern(int patId, float &patternPercent) const;
+
+  //! try to return the color corresponding to colId and patId
+  bool getColor(int colId, int patId, MWAWColor &color) const;
+
   //! returns true if the block is already sent ( or does not exists)
   bool isSent(int blockId);
 

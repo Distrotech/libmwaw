@@ -334,6 +334,7 @@ std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
       o << border.m_widthsList[i] << ",";
     o << "]:";
   }
+  o << border.m_extra;
   return o;
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
