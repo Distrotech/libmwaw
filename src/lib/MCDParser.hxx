@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef ED_PARSER
-#  define ED_PARSER
+#ifndef MCD_PARSER
+#  define MCD_PARSER
 
 #include <string>
 #include <vector>
@@ -44,21 +44,21 @@
 
 #include "MWAWParser.hxx"
 
-namespace EDParserInternal
+namespace MCDParserInternal
 {
 struct State;
 }
 
-/** \brief the main class to read a eDOC file
+/** \brief the main class to read a MacDoc file
  */
-class EDParser : public MWAWParser
+class MCDParser : public MWAWParser
 {
-  friend class EDText;
+  friend class MCDText;
 public:
   //! constructor
-  EDParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MCDParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~EDParser();
+  virtual ~MCDParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -82,31 +82,26 @@ protected:
 
   //! try to send the contents
   bool sendContents();
-  //! try to send the index
-  bool sendIndex();
 
   // Intermediate level
 
   //! try to send a picture
-  bool sendPicture(int pictId, bool compressed);
-
-  //! parse the fonts name eDcF
-  bool readFontsName(MWAWEntry const &entry);
-
-  //! parse the index zone
+  bool sendPicture(MWAWEntry const &entry);
+  //! try to read a font index entry
+  bool readFont(MWAWEntry const &entry);
+  //! try to read an index entry
   bool readIndex(MWAWEntry const &entry);
+  //! try to set the index level and return the next index value (or -1)
+  int updateIndex(int actIndex, int actLevel);
+  //! try to read a bookmark entry
+  bool readBookmark(MWAWEntry const &entry);
+  //! try to read a file entry
+  bool readFile(MWAWEntry const &entry);
+  //! try to read a MDwp entry (window pos?)
+  bool readWP(MWAWEntry const &entry);
 
-  //! parse the Info zone
-  bool readInfo(MWAWEntry const &entry);
-
-  //! try to find the content zone
-  bool findContents();
-
-  //! try to decode a compress zone
-  bool decodeZone(MWAWEntry const &entry, WPXBinaryData &dt);
-
-  //! sends the data which have not yet been sent to the listener
-  void flushExtra();
+  //! try to send the index
+  bool sendIndex();
 
   //! return the input input
   MWAWInputStreamPtr rsrcInput();
@@ -118,7 +113,7 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<EDParserInternal::State> m_state;
+  shared_ptr<MCDParserInternal::State> m_state;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

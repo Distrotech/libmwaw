@@ -147,6 +147,16 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MW, 1));
         return res;
       }
+    } else if (creator=="MDsr") {
+      if (type=="APPL") { // auto content
+        res.push_back(MWAWHeader(MWAWDocument::MACD, 1));
+        return res;
+      }
+    } else if (creator=="MDvr") {
+      if (type=="MDdc") {
+        res.push_back(MWAWHeader(MWAWDocument::MACD, 1));
+        return res;
+      }
     } else if (creator=="MMBB") {
       if (type=="MBBT") {
         res.push_back(MWAWHeader(MWAWDocument::MARIW, 1));

@@ -211,6 +211,10 @@ SOURCE=..\..\src\lib\LWText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MCDParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MDWParser.cxx
 # End Source File
 # Begin Source File
@@ -572,6 +576,10 @@ SOURCE=..\..\src\lib\LWParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\LWText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MCDParser.hxx
 # End Source File
 # Begin Source File
 

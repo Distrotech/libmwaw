@@ -2063,23 +2063,15 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
       float dim2[4];
       for (int i = 0; i < 4; ++i) {
         dim2[i] = float(m_input->readLong(4))/65536.f;
-        if (!val) {
-          if (dim2[i]<0||dim2[i]>0) {
-            isNote = false;
-            break;
-          }
-          continue;
-        }
-        if (i<2 && (dim2[i] < dim[i] || dim2[i] > dim[i])) {
+        if (!val && (dim2[i]<0||dim2[i]>0)) {
           isNote = false;
           break;
         }
       }
       if (isNote && val) {
-        if (dim2[3]<=dim2[1] || dim2[2]<=dim2[0])
-          isNote = false;
-        else
-          block->m_box.setMax(Vec2f(dim2[3],dim2[2]));
+        // ok, reset the box only if it is bigger
+        if (dim2[3]-dim2[1]>dim[3]-dim[1] && dim2[2]-dim2[0]>dim[2]-dim[0])
+          block->m_box=Box2f(Vec2f(dim2[1],dim2[0]),Vec2f(dim2[3],dim2[2]));
       }
     }
     if (isNote) {
@@ -2089,6 +2081,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
         if (i!=libmwaw::Top)
           block->m_borderWList[i]=1;
       }
+      block->m_lineBorder=MWAWBorder();
       block->m_lineBorder.m_color=MWAWColor(128,128,128);
 
       if (val)

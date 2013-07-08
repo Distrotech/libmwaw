@@ -297,6 +297,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MCDParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MDWParser.cxx"
 				>
 			</File>
@@ -659,6 +663,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\LWText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MCDParser.hxx"
 				>
 			</File>
 			<File

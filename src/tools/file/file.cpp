@@ -275,12 +275,16 @@ bool File::readFileInformation()
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   } else if (m_fInfoCreator=="MACD") { // checkme
     checkFInfoType("DRWG","MacDraw[unsure]");
-  } else if (m_fInfoCreator=="MMBB") {
-    checkFInfoType("MBBT","Mariner Write") || checkFInfoType("Mariner Write");
+  } else if (m_fInfoCreator=="MDsr") {
+    checkFInfoType("APPL","MacDoc(appli)");
+  } else if (m_fInfoCreator=="MDvr") {
+    checkFInfoType("MDdc","MacDoc") || checkFInfoType("MacDoc");
   } else if (m_fInfoCreator=="MDRW") {
     checkFInfoType("DRWG","MacDraw") || checkFInfoType("MacDraw");
   } else if (m_fInfoCreator=="MDPL") {
     checkFInfoType("DRWG","MacDraw II") || checkFInfoType("MacDraw II");
+  } else if (m_fInfoCreator=="MMBB") {
+    checkFInfoType("MBBT","Mariner Write") || checkFInfoType("Mariner Write");
   } else if (m_fInfoCreator=="MORE") {
     checkFInfoType("MORE","More") || checkFInfoType("More");
   } else if (m_fInfoCreator=="MOR2") {

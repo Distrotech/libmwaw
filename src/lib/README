@@ -13,6 +13,7 @@
 - HMWJ* : parser of HanMac Word-J documents
 - HMWK* : parser of HanMac Word-K documents
 - LW* : parser of LightWay Text documents
+- MCD* : parser of MacDoc documents
 - MDW* : parser of MindWrite documents
 - MOR* : parser of More documents (organization part)
 - MRW* : parser of Mariner Write documents
@@ -105,7 +106,7 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------
----           AC/BW/CW/DM/ED/FW/GW/LW/                   ---
+---           AC/BW/CW/DM/ED/FW/GW/LW/MCD                ---
 ---           MDW/MOR/MRW/MSK/MSW/MW/NS/TT/WN/WP/ZW      ---
 ------------------------------------------------------------
 
@@ -152,6 +153,8 @@ HMWKParser : parser of HanMac Word-K 2.0.5-2.0.6
 LWParser : parser of LightWay Text v4.5
 -   LWGraph : class which reads the picture/graph/frame
 -   LWText : class which reads the text
+
+MCDParser : parser of MacDoc document: v1.3
 
 MDWParser : parser of MindWrite document: v2.1
 

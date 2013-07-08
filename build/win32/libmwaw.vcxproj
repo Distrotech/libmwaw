@@ -222,6 +222,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\MCDParser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\MDWParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -493,6 +497,7 @@
     <ClInclude Include="..\..\src\lib\LWGraph.hxx" />
     <ClInclude Include="..\..\src\lib\LWParser.hxx" />
     <ClInclude Include="..\..\src\lib\LWText.hxx" />
+    <ClInclude Include="..\..\src\lib\MCDParser.hxx" />
     <ClInclude Include="..\..\src\lib\MDWParser.hxx" />
     <ClInclude Include="..\..\src\lib\MORParser.hxx" />
     <ClInclude Include="..\..\src\lib\MORText.hxx" />

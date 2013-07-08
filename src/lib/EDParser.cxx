@@ -342,27 +342,9 @@ bool EDParser::sendPicture(int pictId, bool compressed)
       return false;
   } else {
     it = m_state->m_idPICTMap.find(pictId);
-    if (it==m_state->m_idPICTMap.end())
+    if (it==m_state->m_idPICTMap.end() ||
+        !getRSRCParser()->parsePICT(it->second, data))
       return false;
-
-    MWAWEntry const &entry = it->second;
-
-    entry.setParsed(true);
-    MWAWInputStreamPtr input = rsrcInput();
-    input->seek(entry.begin(), WPX_SEEK_SET);
-    input->readDataBlock(entry.length(), data);
-#ifdef DEBUG_WITH_FILES
-    libmwaw::DebugFile &ascFile = rsrcAscii();
-
-    static int volatile pictName = 0;
-    libmwaw::DebugStream f;
-    f << "PICT" << ++pictName << ".pct";
-    libmwaw::Debug::dumpFile(data, f.str().c_str());
-
-    ascFile.addPos(entry.begin()-4);
-    ascFile.addNote(f.str().c_str());
-    ascFile.skipZone(entry.begin(),entry.end()-1);
-#endif
   }
 
   int dataSz=int(data.size());
@@ -475,7 +457,7 @@ bool EDParser::readFontsName(MWAWEntry const &entry)
 bool EDParser::sendIndex()
 {
   if (!getListener()) {
-    MWAW_DEBUG_MSG(("EDParser::sendPicture: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("EDParser::sendIndex: can not find the listener\n"));
     return false;
   }
   if (!m_state->m_indexList.size())

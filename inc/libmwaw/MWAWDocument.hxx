@@ -65,7 +65,7 @@ public:
   /** an enum to define the different type of document
   -ACT: Acta (v2 and Classic v1)
   -BW: BeagleWorks (v1.0)/WordPerfect Works (v1.2)
-  -CW: ClarisWorks/AppleWorks document (basic)
+  -CW: ClarisWorks/AppleWorks document ( all versions, open text files + some draw files )
   -DM: DocMaker (v4)
   -ED: eDOC (v2)
   -FRM: Frame Maker (nothing done)
@@ -74,7 +74,7 @@ public:
   -HMACJ: HanMac Word-J ( v2.0.4 )
   -HMAC: HanMac Word-K ( v2.0.5-2.0.6 )
   -LWTEXT: LightWayText ( only v4.5 Mac format )
-  -MACD: MacDoc (nothing done )
+  -MACD: MacDoc ( v1.3 )
   -MARIW: Mariner Write ( only v1.6-v3.5 Mac Classic)
   -MINDW: MindWrite
   -MOCKP: MockPackage (nothing done )

@@ -79,6 +79,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	LWParser.hxx			\
 	LWText.cxx			\
 	LWText.hxx			\
+	MCDParser.cxx			\
+	MCDParser.hxx			\
 	MDWParser.cxx			\
 	MDWParser.hxx			\
 	MORParser.cxx			\

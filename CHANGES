@@ -1,5 +1,22 @@
 CHANGES:
 
+07/07/2013:
+- add a parser for MacDoc v1.3 document and self-reading document
+
+07/05/2013:
+- MWAWZip and MWAWFile: look also in FINDER.DAT and RESOURCE.FRK to retrieve
+  resource fork
+- MacWrite II/Pro: use patterns to define the final color + retrieve
+  table's cells properties
+- WriteNow: retrieve table's cells properties
+- check that AppleWorks/ClarisWorks, DOCMaker, eDoc, MacWrite, MindWrite,
+  More, SimpleText, Tex-Edit, WriteNow use the new properties' classes,
+
+07/02/2013:
+- refactor the MWAWCell and MWAWTable classes
+
+-------- version 1.11 (start)  -------------
+
 06/24/2013:
 - add a parser for BeagleWorks v1.0 and WordPerfect Works v1.2
 - optimize a little the detection of a hqx/zip Document

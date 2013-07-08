@@ -193,19 +193,45 @@ struct Token {
 ////////////////////////////////////////
 //! Internal: the table of a WNText
 struct TableData {
+  //! constructor
   TableData() : m_type(-1), m_box(), m_color(MWAWColor::white()), m_error("") {
-    for (int i = 0; i < 4; i++) m_flags[i] = 0;
+    for (int i = 0; i < 4; i++) m_flags[i] = 1;
     for (int i = 0; i < 10; i++) m_values[i] = 0;
   }
 
-  int getBorderList() const {
-    int res = 0;
-    // checkme : 0, 80 = no border but what about the other bytes ...
-    if (m_flags[0]&0xf) res |= libmwaw::TopBit;
-    if (m_flags[1]&0xf) res |= libmwaw::RightBit;
-    if (m_flags[2]&0xf) res |= libmwaw::BottomBit;
-    if (m_flags[3]&0xf) res |= libmwaw::LeftBit;
-    return res;
+  //! update a cell
+  void updateCell(MWAWTable::Cell &cell) const {
+    // as the cells can overlap a little, we build a new box
+    cell.m_box=Box2i(m_box.min(), m_box.max()-Vec2i(1,1));
+    cell.setBackgroundColor(m_color);
+    for (int i=0; i<4; i++) {
+      MWAWBorder border;
+      switch(m_flags[i]&0x7f) {
+      case 1:
+        break;
+      case 3:
+        border.m_width=2;
+        break;
+      case 5:
+        border.m_type=MWAWBorder::Double;
+        break;
+      case 0x11:
+        border.m_style=MWAWBorder::Dot;
+        break;
+        // 21: ?
+      case 0x61:
+        border.m_width=0.5;
+        break;
+      case 0:
+      default:
+        border.m_width=0;
+        break;
+      }
+
+      static int const wh[4]= { libmwaw::TopBit, libmwaw::RightBit, libmwaw::BottomBit, libmwaw::LeftBit };
+      if (!border.isEmpty())
+        cell.setBorders(wh[i], border);
+    }
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TableData const &table) {
@@ -230,10 +256,38 @@ struct TableData {
     if (!table.m_color.isWhite())
       o << "color=" << table.m_color << ",";
     for (int i = 0; i < 4; i++) {
-      if (table.m_flags[i])
-        o << "bFlags" << i << "=" << std::hex << table.m_flags[i] << std::dec << ",";
+      static char const *(wh[4])= {"T", "R", "B", "L"};
+      if (table.m_flags[i]&0xFF00)
+        o << "#bFlags" << wh[i] << "[high]=" << (table.m_flags[i]>>8) << ",";
+      // flags&0x80 : duplicated?
+      int fl=table.m_flags[i]&0x7F;
+      if (fl==1) continue; // normal
+      o << "bFlags" << wh[i] << "=";
+      switch(fl) {
+      case 0:
+        o << "none,";
+        break;
+      case 3:
+        o << "w=2,";
+        break;
+      case 5:
+        o << "double,";
+        break;
+      case 0x11:
+        o << "dots,";
+        break;
+        // 21: ?
+      case 0x61: // in fact always 0xe1?
+        o << "w=0.5,";
+        break;
+      default:
+        o << "#" << std::hex << fl << std::dec << ",";
+        break;
+      }
     }
-    for (int i = 0; i < 10; i++) {
+    if (table.m_values[0]==1) o << "selected,";
+    else if (table.m_values[0]) o << "#selected=" << table.m_values[0] << ",";
+    for (int i = 1; i < 10; i++) {
       if (!table.m_values[i]) continue;
       o << "f" << i << "=" << table.m_values[i] << ",";
     }
@@ -1848,10 +1902,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
         }
         if (needCreateCell) {
           cell.reset(new WNTextInternal::Cell(*this));
-          // as the cells can overlap a little, we build a new box
-          cell->m_box=Box2i(tableData.m_box.min(), tableData.m_box.max()-Vec2i(1,1));
-          cell->setBackgroundColor(tableData.m_color);
-          cell->setBorders(tableData.getBorderList(), MWAWBorder());
+          tableData.updateCell(*cell);
           table->add(cell);
         }
       } else

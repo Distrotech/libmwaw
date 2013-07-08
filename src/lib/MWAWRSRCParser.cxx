@@ -513,7 +513,7 @@ bool MWAWRSRCParser::parsePICT(MWAWEntry const &entry, WPXBinaryData &pict)
   if (!entry.isParsed()) {
     ascii().skipZone(entry.begin(), entry.end()-1);
     libmwaw::DebugStream f2;
-    f2 << "RSRC-" << entry.type() << ":" << entry.id() << ".pct";
+    f2 << "RSRC-" << entry.type() << "_" << entry.id() << ".pct";
     libmwaw::Debug::dumpFile(pict, f2.str().c_str());
   }
 #endif
