@@ -39,8 +39,9 @@
 #if WITH_EXTENDED_FS
 #  include <sys/types.h>
 #  include <sys/xattr.h>
+#endif
 
-#  ifndef __BIG_ENDIAN__
+#ifndef __BIG_ENDIAN__
 static void addShort(unsigned short x, char *&buff)
 {
   *(buff++)=char(x>>8);
@@ -53,7 +54,7 @@ static void addLong(unsigned int x, char *&buff)
   *(buff++)=char((x>>8)&0xFF);
   *(buff++)=char(x&0xFF);
 }
-#  else
+#else
 static void addShort(unsigned short x, char *&buff)
 {
   *(buff++)=char(x&0xFF);
@@ -66,7 +67,6 @@ static void addLong(unsigned int x, char *&buff)
   *(buff++)=char((x>>16)&0xFF);
   *(buff++)=char((x>>24)&0xFF);
 }
-#  endif
 #endif
 
 namespace libmwaw_zip
