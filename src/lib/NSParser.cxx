@@ -773,7 +773,7 @@ bool NSParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
   *m_state = NSParserInternal::State();
   /** no data fork, may be ok, but this means
-      that the file contains no text, so... */
+      that the file contains no text and no picture, so... */
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork() || !getRSRCParser())
     return false;

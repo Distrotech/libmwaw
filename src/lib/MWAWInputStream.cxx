@@ -379,7 +379,7 @@ bool MWAWInputStream::unBinHex()
     m_stream.reset(new MWAWStringStream(data, numBytesRead));
   }
 
-  return false;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////

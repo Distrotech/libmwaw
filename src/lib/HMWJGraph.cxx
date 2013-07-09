@@ -2140,6 +2140,7 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
       MWAWSubDocumentPtr subdoc
       (new HMWJGraphInternal::SubDocument
        (*this, input, framePos, HMWJGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
+      pos.setSize(Vec2f(-0.01f,-0.01f)); // autosize
       listener->insertTextBox(pos, subdoc, extras);
       return true;
     }

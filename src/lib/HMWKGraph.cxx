@@ -1147,6 +1147,7 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
       MWAWSubDocumentPtr subdoc
       (new HMWKGraphInternal::SubDocument
        (*this, input, framePos, HMWKGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
+      pos.setSize(Vec2f(-0.01f,-0.01f)); // autosize
       listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
@@ -1792,11 +1793,13 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
         break;
       case 2:
         border.m_type = MWAWBorder::Double;
-        f2 << "bottom[w=2],";
+        border.m_widthsList.resize(3,1.);
+        border.m_widthsList[0]=2.0;
         break;
       case 3:
         border.m_type = MWAWBorder::Double;
-        f2 << "top[w=2],";
+        border.m_widthsList.resize(3,1.);
+        border.m_widthsList[2]=2.0;
         break;
       default:
         f2 << "#style=" << type << ",";
@@ -1815,6 +1818,13 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
       if (val) f2 << "unkn=" << val << ",";
 
       cell->setBorders(which[b],border);
+      if (cell->hasExtraLine() && b==3) {
+        // extra line border seems to correspond to the right border
+        MWAWBorder extraL;
+        extraL.m_width=border.m_width;
+        extraL.m_color=border.m_color;
+        cell->setExtraLine(cell->extraLine(), extraL);
+      }
       if (f2.str().length())
         f << "bord" << what[b] << "=[" << f2.str() << "],";
     }

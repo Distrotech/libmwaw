@@ -62,7 +62,7 @@ public:
   //! the constructor
   MWAWTable(uint32_t givenData=BoxBit) :
     m_rowsSize(), m_colsSize(), m_givenData(givenData), m_setData(givenData),
-    m_cellsList(), m_numRows(0), m_numCols(0), m_posToCellId(), m_hasExtraLines(false) {}
+    m_mergeBorders(true), m_cellsList(), m_numRows(0), m_numCols(0), m_posToCellId(), m_hasExtraLines(false) {}
 
   //! the destructor
   virtual ~MWAWTable();
@@ -75,7 +75,14 @@ public:
     }
     m_cellsList.push_back(cell);
   }
-
+  //! returns true if we need to merge borders
+  bool mergeBorders() const {
+    return m_mergeBorders;
+  }
+  //! sets the merge borders' value
+  bool setMergeBorders(bool val) {
+    return m_mergeBorders=val;
+  }
   //! returns the number of cell
   int numCells() const {
     return int(m_cellsList.size());
@@ -136,6 +143,8 @@ protected:
   uint32_t m_givenData;
   /** a int to indicate what data are been reconstruct*/
   uint32_t m_setData;
+  /** do we need to merge cell borders ( default yes) */
+  bool m_mergeBorders;
   /** the list of cells */
   std::vector<shared_ptr<Cell> > m_cellsList;
   /** the number of rows ( set by buildPosToCellId ) */

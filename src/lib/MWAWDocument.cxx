@@ -253,7 +253,7 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
 
     if (ip->hasDataFork()) {
       /** avoid very short file */
-      if (ip->size() < 10) return 0L;
+      if (!ip->hasResourceFork() && ip->size() < 10) return 0L;
 
       ip->seek(0, WPX_SEEK_SET);
       ip->setReadInverted(false);

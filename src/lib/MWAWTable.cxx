@@ -434,7 +434,10 @@ bool MWAWTable::sendTable(MWAWContentListenerPtr listener, bool inFrame)
     return true;
   if (inFrame && m_hasExtraLines)
     sendExtraLines(listener);
-  listener->openTable(m_colsSize, WPX_POINT);
+  WPXPropertyList propList;
+  if (mergeBorders())
+    propList.insert("table:border-model","collapsing");
+  listener->openTable(m_colsSize, WPX_POINT, propList);
   for (size_t r = 0; r < m_numRows; ++r) {
     listener->openTableRow(m_rowsSize[r], WPX_POINT);
     for (size_t c = 0; c < m_numCols; ++c) {
