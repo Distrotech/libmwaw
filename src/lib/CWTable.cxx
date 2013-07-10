@@ -85,9 +85,9 @@ struct Border {
 
 struct Table;
 /** Internal: a cell inside a CWTable */
-struct TableCell : public MWAWTable::Cell {
+struct TableCell : public MWAWCell {
   //! constructor
-  TableCell() : MWAWTable::Cell(), m_zoneId(0), m_styleId(-1) {
+  TableCell() : MWAWCell(), m_zoneId(0), m_styleId(-1) {
   }
   //! use table to finish updating cell
   void update(Table const &table);
@@ -97,7 +97,7 @@ struct TableCell : public MWAWTable::Cell {
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TableCell const &cell) {
-    o << reinterpret_cast<MWAWTable::Cell const &>(cell);
+    o << static_cast<MWAWCell const &>(cell);
     if (cell.m_zoneId) o << "zone=" << cell.m_zoneId << ",";
     if (cell.m_styleId >= 0)o << "style=" << cell.m_styleId << ",";
     return o;
@@ -570,8 +570,8 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
     shared_ptr<CWTableInternal::TableCell> cell(new CWTableInternal::TableCell());
     float posi[6];
     for (int j = 0; j < 6; j++) posi[j] = float(input->readLong(4))/256.f;
-    cell->m_box=Box2f(Vec2f(posi[1], posi[0]), Vec2f(posi[3], posi[2]));
-    cell->m_size = Vec2f(float(posi[5]), float(posi[4]));
+    cell->setBdBox(Box2f(Vec2f(posi[1], posi[0]), Vec2f(posi[3], posi[2])));
+    cell->setBdSize(Vec2f(float(posi[5]), float(posi[4])));
     cell->m_zoneId = (int) input->readULong(4);
     val = (int) input->readLong(2);
     if (val) // find one time a number here, another id?...

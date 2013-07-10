@@ -200,9 +200,9 @@ struct TableData {
   }
 
   //! update a cell
-  void updateCell(MWAWTable::Cell &cell) const {
+  void updateCell(MWAWCell &cell) const {
     // as the cells can overlap a little, we build a new box
-    cell.m_box=Box2i(m_box.min(), m_box.max()-Vec2i(1,1));
+    cell.setBdBox(Box2f(m_box.min(), m_box.max()-Vec2i(1,1)));
     cell.setBackgroundColor(m_color);
     for (int i=0; i<4; i++) {
       MWAWBorder border;
@@ -452,9 +452,9 @@ struct ContentZones {
 
 ////////////////////////////////////////
 //! Internal: the cell of a WNText
-struct Cell : public MWAWTable::Cell {
+struct Cell : public MWAWCell {
   //! constructor
-  Cell(WNText &parser) : MWAWTable::Cell(), m_parser(parser),
+  Cell(WNText &parser) : MWAWCell(), m_parser(parser),
     m_zonesList(), m_footnoteList() {}
 
   //! send the content

@@ -375,9 +375,9 @@ struct PictureFrame : public Frame {
 
 ////////////////////////////////////////
 //! a table cell in a table in HMWKGraph
-struct TableCell : public MWAWTable::Cell {
+struct TableCell : public MWAWCell {
   //! constructor
-  TableCell(): MWAWTable::Cell(), m_id(-1), m_fileId(-1), m_flags(0), m_extra("") {
+  TableCell(): MWAWCell(), m_id(-1), m_fileId(-1), m_flags(0), m_extra("") {
   }
   //! call when the content of a cell must be send
   virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table);
@@ -395,7 +395,7 @@ struct TableCell : public MWAWTable::Cell {
 
 std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 {
-  o << static_cast<MWAWTable::Cell const &>(cell);
+  o << static_cast<MWAWCell const &>(cell);
   if (cell.m_flags&0x10) o << "lock,";
   if (cell.m_flags&0xFFE2)
     o << "linesFlags=" << std::hex << (cell.m_flags&0xFFE2) << std::dec << ",";
@@ -420,7 +420,7 @@ struct Table : public Frame, public MWAWTable {
   }
   //! return the i^th table cell
   TableCell *get(int i) {
-    shared_ptr<MWAWTable::Cell> cell=MWAWTable::get(i);
+    shared_ptr<MWAWCell> cell=MWAWTable::get(i);
     if (!cell)
       return 0;
     return static_cast<TableCell *>(cell.get());
@@ -1747,7 +1747,7 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
     float dim[2];
     for (int j = 0; j < 2; ++j)
       dim[j] = float(input->readLong(4))/65536.f;
-    cell->m_size = Vec2f(dim[0], dim[1]);
+    cell->setBdSize(Vec2f(dim[0], dim[1]));
 
     int color = (int) input->readULong(2);
     MWAWColor backCol = MWAWColor::white();

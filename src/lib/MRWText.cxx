@@ -842,7 +842,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
       case 0x6: { // end of line
         static bool first = true;
         if (first) {
-          MWAW_DEBUG_MSG(("MRWText::send: find some table: unimplemented\n"));
+          MWAW_DEBUG_MSG(("MRWText::send: oops find some table end of row\n"));
           first = false;
         }
         f << "#";

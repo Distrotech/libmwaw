@@ -335,12 +335,11 @@ struct Paragraph : public MWAWParagraph {
 
 ////////////////////////////////////////
 //! Internal: the cell of a WNProStructure
-struct Cell : public MWAWTable::Cell {
+struct Cell : public MWAWCell {
   //! constructor
-  Cell(MWProStructures &parser, Block *block) : MWAWTable::Cell(), m_parser(parser),
-    m_blockId(0) {
+  Cell(MWProStructures &parser, Block *block) : MWAWCell(), m_parser(parser), m_blockId(0) {
     if (!block) return;
-    m_box=Box2f(block->m_box.min(), block->m_box.max()-Vec2f(1,1));
+    setBdBox(Box2f(block->m_box.min(), block->m_box.max()-Vec2f(1,1)));
     setBackgroundColor(block->m_surfaceColor);
     m_blockId = block->m_id;
     for (int b=0; b<4; ++b) {

@@ -50,6 +50,7 @@
 #include "MWAWPrinter.hxx"
 #include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
+#include "MWAWTable.hxx"
 
 #include "WPParser.hxx"
 
@@ -985,6 +986,11 @@ bool WPParser::readWindowsZone(int zone)
 ////////////////////////////////////////////////////////////
 bool WPParser::sendWindow(int zone, Vec2i limits)
 {
+  MWAWContentListenerPtr listener=getListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("WPParser::readWindowsZone: can not find a listener\n"));
+    return false;
+  }
   assert(zone >= 0 && zone < 3);
   WPParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
 
@@ -1038,7 +1044,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
             MWAW_DEBUG_MSG(("WPParser::readWindowsZone: pb with col break\n"));
           } else {
             actCol++;
-            if (getListener()) getListener()->insertBreak(MWAWContentListener::ColumnBreak);
+            listener->insertBreak(MWAWContentListener::ColumnBreak);
           }
         }
       case 0:
@@ -1054,13 +1060,10 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
               MWAW_DEBUG_MSG(("WPParser::readWindowsZone: find a section in auxilliary zone\n"));
             }
           } else {
-            if (getListener()) {
-              if (getListener()->isSectionOpened())
-                getListener()->closeSection();
-              getListener()->openSection(section);
-              numCols = getListener()->getSection().numColumns();
-            } else
-              numCols = section.numColumns();
+            if (listener->isSectionOpened())
+              listener->closeSection();
+            listener->openSection(section);
+            numCols = listener->getSection().numColumns();
             if (numCols<=1) numCols=0;
             actCol = numCols ? 1 : 0;
             canCreateSection = false;
@@ -1075,21 +1078,21 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
         break;
       case 5:
         if (pInfo.m_numLines + i <= endParag) {
-          if ((ok = readTable(pInfo)) && getListener()) {
-            getListener()->openTableRow((float)pInfo.m_height, WPX_POINT);
+          if ((ok = readTable(pInfo))) {
+            listener->openTableRow((float)pInfo.m_height, WPX_POINT);
 
             for (size_t j = 0; j < pInfo.m_linesHeight.size(); j++) {
               int numData = pInfo.m_linesHeight[j];
               MWAWCell cell;
               cell.setPosition(Vec2i(int(j), 0));
-              getListener()->openTableCell(cell);
+              listener->openTableCell(cell);
               sendWindow(zone, Vec2i(i+1, i+1+numData));
               i += numData;
-              getListener()->closeTableCell();
+              listener->closeTableCell();
             }
 
-            getListener()->closeTableRow();
-            getListener()->closeTable();
+            listener->closeTableRow();
+            listener->closeTable();
           }
         } else {
           MWAW_DEBUG_MSG(("WPParser::readWindowsZone: table across a page\n"));
@@ -1520,13 +1523,13 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
       WPParserInternal::ColumnTableInfo const &cols = columns[(size_t)i];
       colSize[(size_t)i] = float(cols.m_colX[1]-cols.m_colX[0]);
     }
-
-    WPXPropertyList tableExtras;
+    MWAWTable table(MWAWTable::TableDimBit);
+    table.setColsSize(colSize);
     // use the same function than getParagraph to respect alignement
     int left=columns[0].m_colX[0]-20-int(72.*getPageSpan().getMarginLeft());
     if (left)
-      tableExtras.insert("fo:margin-left",left,WPX_POINT);
-    getListener()->openTable(colSize, WPX_POINT, tableExtras);
+      table.setAlignment(MWAWTable::Left, left);
+    getListener()->openTable(table);
   }
 
   if (long(input->tell()) != data.m_endPos) {

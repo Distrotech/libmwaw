@@ -85,9 +85,9 @@ public:
 
 ////////////////////////////////////////
 //! a table cell in a table in HMWJGraph
-struct TableCell : public MWAWTable::Cell {
+struct TableCell : public MWAWCell {
   //! constructor
-  TableCell(long tId): MWAWTable::Cell(), m_zId(0), m_tId(tId), m_cPos(-1), m_fileId(0), m_formatId(0), m_flags(0), m_extra("") {
+  TableCell(long tId): MWAWCell(), m_zId(0), m_tId(tId), m_cPos(-1), m_fileId(0), m_formatId(0), m_flags(0), m_extra("") {
   }
   //! use cell format to finish updating cell
   void update(CellFormat const &format);
@@ -118,11 +118,17 @@ void TableCell::update(CellFormat const &format)
   static int const (wh[]) = { libmwaw::LeftBit,  libmwaw::RightBit, libmwaw::TopBit, libmwaw::BottomBit};
   for (size_t b = 0; b < format.m_borders.size(); b++)
     setBorders(wh[b], format.m_borders[b]);
+  if (hasExtraLine() && format.m_borders.size()>=2) {
+    MWAWBorder extraL;
+    extraL.m_width=format.m_borders[1].m_width;
+    extraL.m_color=format.m_borders[1].m_color;
+    setExtraLine(extraLine(), extraL);
+  }
 }
 
 std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 {
-  o << static_cast<MWAWTable::Cell const &>(cell);
+  o << static_cast<MWAWCell const &>(cell);
   if (cell.m_flags&0x100) o << "justify[full],";
   if (cell.m_flags&0x800) o << "lock,";
   if (cell.m_flags&0x1000) o << "merge,";
@@ -1635,9 +1641,10 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
     }
     long zoneEnd=pos+4+header.m_length;
     f << header;
-    std::vector<float> &dim = i==0 ? table->m_rowsSize : table->m_colsSize;
+
     f << "pos=[";
     float prevPos = 0.;
+    std::vector<float> dim;
     for (int j = 0; j < header.m_n; j++) {
       float cPos = float(input->readULong(4))/65536.f;
       f << cPos << ",";
@@ -1646,6 +1653,10 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
       prevPos=cPos;
     }
     f << "],";
+    if (i==0)
+      table->setRowsSize(dim);
+    else
+      table->setColsSize(dim);
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     input->seek(zoneEnd, WPX_SEEK_SET);
@@ -1721,11 +1732,13 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
         break;
       case 2:
         border.m_type = MWAWBorder::Double;
-        f2 << "bottom[w=2],";
+        border.m_widthsList.resize(3,1.);
+        border.m_widthsList[0]=2.0;
         break;
       case 3:
         border.m_type = MWAWBorder::Double;
-        f2 << "top[w=2],";
+        border.m_widthsList.resize(3,1.);
+        border.m_widthsList[2]=2.0;
         break;
       default:
         f2 << "#style=" << type << ",";

@@ -53,22 +53,27 @@ class MWAWTable;
 class MWAWTable
 {
 public:
-  class Cell;
-
   //! an enum used to indicate what the list of entries which are filled
   enum DataSet {
     CellPositionBit=1, BoxBit=2, SizeBit=4, TableDimBit=8, TablePosToCellBit=0x10
   };
+  /** an enum do define the table alignement.
+
+  \note Paragraph means using the default alignment, left page alignment and use left margin */
+  enum Alignment {
+    Paragraph, Left, Center, Right
+  };
   //! the constructor
   MWAWTable(uint32_t givenData=BoxBit) :
-    m_rowsSize(), m_colsSize(), m_givenData(givenData), m_setData(givenData),
-    m_mergeBorders(true), m_cellsList(), m_numRows(0), m_numCols(0), m_posToCellId(), m_hasExtraLines(false) {}
+    m_givenData(givenData), m_setData(givenData), m_mergeBorders(true), m_cellsList(),
+    m_numRows(0), m_numCols(0), m_rowsSize(), m_colsSize(), m_alignment(Paragraph), m_leftMargin(0), m_rightMargin(0),
+    m_posToCellId(), m_hasExtraLines(false) {}
 
   //! the destructor
   virtual ~MWAWTable();
 
   //! add a new cells
-  void add(shared_ptr<Cell> cell) {
+  void add(shared_ptr<MWAWCell> cell) {
     if (!cell) {
       MWAW_DEBUG_MSG(("MWAWTable::add: must be called with a cell\n"));
       return;
@@ -82,6 +87,13 @@ public:
   //! sets the merge borders' value
   bool setMergeBorders(bool val) {
     return m_mergeBorders=val;
+  }
+  /** defines the current alignment
+      \note: leftMargin,rightMargin are given in Points */
+  void setAlignment(Alignment align, float leftMargin=0, float rightMargin=0) {
+    m_alignment = align;
+    m_leftMargin = leftMargin;
+    m_rightMargin = rightMargin;
   }
   //! returns the number of cell
   int numCells() const {
@@ -97,7 +109,7 @@ public:
   }
 
   //! returns the i^th cell
-  shared_ptr<Cell> get(int id);
+  shared_ptr<MWAWCell> get(int id);
 
   /** try to build the table structures */
   bool updateTable();
@@ -106,6 +118,7 @@ public:
     if (!updateTable()) return false;
     return m_hasExtraLines;
   }
+
   /** try to send the table
 
   Note: either send the table ( and returns true ) or do nothing.
@@ -114,6 +127,11 @@ public:
 
   /** try to send the table as basic text */
   bool sendAsText(MWAWContentListenerPtr listener);
+
+  // interface with the content listener
+
+  //! adds the table properties to propList
+  void addTablePropertiesTo(WPXPropertyList &propList, WPXPropertyListVector &columns) const;
 
 protected:
   //! convert a cell position in a posToCellId's position
@@ -133,11 +151,6 @@ protected:
   //! send extra line
   void sendExtraLines(MWAWContentListenerPtr listener) const;
 
-public:
-  /** the final row  size (in point) */
-  std::vector<float> m_rowsSize;
-  /** the final col size (in point) */
-  std::vector<float> m_colsSize;
 protected:
   /** a int to indicate what data are given in entries*/
   uint32_t m_givenData;
@@ -146,43 +159,26 @@ protected:
   /** do we need to merge cell borders ( default yes) */
   bool m_mergeBorders;
   /** the list of cells */
-  std::vector<shared_ptr<Cell> > m_cellsList;
+  std::vector<shared_ptr<MWAWCell> > m_cellsList;
   /** the number of rows ( set by buildPosToCellId ) */
   size_t m_numRows;
   /** the number of cols ( set by buildPosToCellId ) */
   size_t m_numCols;
+  /** the final row  size (in point) */
+  std::vector<float> m_rowsSize;
+  /** the final col size (in point) */
+  std::vector<float> m_colsSize;
+  /** the table alignment */
+  Alignment m_alignment;
+  /** the left margin in point */
+  float m_leftMargin;
+  /** the right margin in point */
+  float m_rightMargin;
+
   /** a vector used to store an id corresponding to each cell */
   std::vector<int> m_posToCellId;
   /** true if we need to send extra lines */
   bool m_hasExtraLines;
-
-public:
-  /** a virtual structure used to a cell */
-  class Cell : public MWAWCell
-  {
-  public:
-    //! constructor
-    Cell() : MWAWCell(), m_box(), m_size() {
-    }
-    //! destructor
-    virtual ~Cell() { }
-
-    //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
-
-    /** call when a cell must be send.
-
-    \note default: openTableCell(*this), call sendContent and closeTableCell() */
-    virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table);
-    //! call when the content of a cell must be send
-    virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table) = 0;
-
-    /** the cell bounding box (unit in point)*/
-    Box2f m_box;
-    /** the cell size : unit WPX_POINT */
-    Vec2f m_size;
-  };
-
 };
 
 #endif

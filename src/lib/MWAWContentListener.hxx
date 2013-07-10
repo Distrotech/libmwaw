@@ -41,6 +41,7 @@
 #include "libmwaw_internal.hxx"
 
 class MWAWCell;
+class MWAWTable;
 
 namespace MWAWContentListenerInternal
 {
@@ -149,8 +150,9 @@ public:
 
   // ------- table -----------------
   /** open a table*/
-  void openTable(std::vector<float> const &colWidth, WPXUnit unit,
-                 WPXPropertyList tableExtras=WPXPropertyList());
+  void openTable(MWAWTable const &table);
+  /** open a table*/
+  void openTable(std::vector<float> const &colWidth, WPXUnit unit);
   /** closes this table */
   void closeTable();
   /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/

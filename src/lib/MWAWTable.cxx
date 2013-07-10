@@ -45,6 +45,7 @@
 
 #include <libwpd/libwpd.h>
 
+#include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPosition.hxx"
@@ -59,20 +60,20 @@ struct Compare {
   Compare(int dim) : m_coord(dim) {}
   //! small structure to define a cell point
   struct Point {
-    Point(int wh, MWAWTable::Cell const *cell, int cellId) : m_which(wh), m_cell(cell), m_cellId(cellId) {}
+    Point(int wh, MWAWCell const *cell, int cellId) : m_which(wh), m_cell(cell), m_cellId(cellId) {}
     float getPos(int coord) const {
       if (m_which)
-        return m_cell->m_box.max()[coord];
-      return m_cell->m_box.min()[coord];
+        return m_cell->bdBox().max()[coord];
+      return m_cell->bdBox().min()[coord];
     }
     /** returns the cells size */
     float getSize(int coord) const {
-      return m_cell->m_box.size()[coord];
+      return m_cell->bdBox().size()[coord];
     }
     /** the position of the point in the cell (0: LT, 1: RB) */
     int m_which;
     /** the cell */
-    MWAWTable::Cell const *m_cell;
+    MWAWCell const *m_cell;
     //! the cell id ( used by compare)
     int m_cellId;
   };
@@ -84,8 +85,8 @@ struct Compare {
     if (diffF > 0) return false;
     int diff = c2.m_which - c1.m_which;
     if (diff) return (diff < 0);
-    diffF = c1.m_cell->m_box.size()[m_coord]
-            - c2.m_cell->m_box.size()[m_coord];
+    diffF = c1.m_cell->bdBox().size()[m_coord]
+            - c2.m_cell->bdBox().size()[m_coord];
     if (diffF < 0) return true;
     if (diffF > 0) return false;
     return c1.m_cellId < c2.m_cellId;
@@ -94,27 +95,6 @@ struct Compare {
   //! the coord to compare
   int m_coord;
 };
-}
-////////////////////////////////////////////////////////////
-// MWAWTable::Cell
-////////////////////////////////////////////////////////////
-bool MWAWTable::Cell::send(MWAWContentListenerPtr listener, MWAWTable &table)
-{
-  if (!listener) return true;
-  listener->openTableCell(*this);
-  sendContent(listener, table);
-  listener->closeTableCell();
-  return true;
-}
-
-std::ostream &operator<<(std::ostream &o, MWAWTable::Cell const &cell)
-{
-  o << static_cast<MWAWCell const &>(cell);
-  if (cell.m_box.size()[0]>0 || cell.m_box.size()[1]>0)
-    o << "box=" << cell.m_box << ",";
-  if (cell.m_size[0]>0 || cell.m_size[1]>0)
-    o << "size=" << cell.m_size << ",";
-  return o;
 }
 
 ////////////////////////////////////////////////////////////
@@ -126,13 +106,45 @@ MWAWTable::~MWAWTable()
 {
 }
 
-shared_ptr<MWAWTable::Cell> MWAWTable::get(int id)
+shared_ptr<MWAWCell> MWAWTable::get(int id)
 {
   if (id < 0 || id >= int(m_cellsList.size())) {
     MWAW_DEBUG_MSG(("MWAWTable::get: cell %d does not exists\n",id));
-    return shared_ptr<Cell>();
+    return shared_ptr<MWAWCell>();
   }
   return m_cellsList[size_t(id)];
+}
+
+void MWAWTable::addTablePropertiesTo(WPXPropertyList &propList, WPXPropertyListVector &columns) const
+{
+  switch(m_alignment) {
+  case Paragraph:
+    break;
+  case Left:
+    propList.insert("table:align", "left");
+    propList.insert("fo:margin-left",  m_leftMargin, WPX_POINT);
+    break;
+  case Center:
+    propList.insert("table:align", "center");
+    break;
+  case Right:
+    propList.insert("table:align", "right");
+    break;
+  default:
+    break;
+  }
+  if (mergeBorders())
+    propList.insert("table:border-model","collapsing");
+
+  size_t nCols = m_colsSize.size();
+  float tableWidth = 0;
+  for (size_t c = 0; c < nCols; ++c) {
+    WPXPropertyList column;
+    column.insert("style:column-width", m_colsSize[c], WPX_POINT);
+    columns.append(column);
+    tableWidth += m_colsSize[c];
+  }
+  propList.insert("style:width", tableWidth, WPX_POINT);
 }
 
 ////////////////////////////////////////////////////////////
@@ -148,16 +160,18 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
   rowsPos.resize(nRows+1);
   rowsPos[0] = 0;
   for (size_t r = 0; r < nRows; ++r)
-    rowsPos[r+1] = rowsPos[r]+(float)m_rowsSize[r];
+    rowsPos[r+1] = rowsPos[r]+
+                   (float)(m_rowsSize[r]<0?-m_rowsSize[r]:m_rowsSize[r]);
   size_t nColumns = m_colsSize.size();
   columnsPos.resize(nColumns+1);
   columnsPos[0] = 0;
   for (size_t c = 0; c < nColumns; ++c)
-    columnsPos[c+1] = columnsPos[c]+(float)m_colsSize[c];
+    columnsPos[c+1] = columnsPos[c]+
+                      (float)(m_colsSize[c]<0?-m_colsSize[c]:m_colsSize[c]);
 
   for (size_t c = 0; c < m_cellsList.size(); ++c) {
     if (!m_cellsList[c]) continue;
-    Cell const &cell=*(m_cellsList[c]);
+    MWAWCell const &cell=*(m_cellsList[c]);
     if (!cell.hasExtraLine())
       continue;
     Vec2i const &pos=m_cellsList[c]->position();
@@ -235,8 +249,8 @@ bool MWAWTable::buildStructures()
   for (size_t c = 0; c < nCells; ++c) {
     int cellPos[2], spanCell[2];
     for (int dim = 0; dim < 2; dim++) {
-      float pt[2] = { m_cellsList[c]->m_box.min()[dim],
-                      m_cellsList[c]->m_box.max()[dim]
+      float pt[2] = { m_cellsList[c]->bdBox().min()[dim],
+                      m_cellsList[c]->bdBox().max()[dim]
                     };
       std::vector<float> &pos = listPositions[dim];
       size_t numPos = pos.size();
@@ -256,7 +270,7 @@ bool MWAWTable::buildStructures()
         i++;
       spanCell[dim] = int(i)-cellPos[dim];
       if (spanCell[dim]==0 &&
-          (m_cellsList[c]->m_box.size()[dim] < 0 || m_cellsList[c]->m_box.size()[dim] > 0)) {
+          (m_cellsList[c]->bdBox().size()[dim] < 0 || m_cellsList[c]->bdBox().size()[dim] > 0)) {
         MWAW_DEBUG_MSG(("MWAWTable::buildStructures: impossible to find span number !!!\n"));
         return false;
       }
@@ -359,20 +373,23 @@ bool MWAWTable::buildDims()
   }
 
   std::vector<float> colLimit(m_numCols+1,0);
+  std::vector<bool> isFixed(m_numCols+1, (m_setData&BoxBit));
   for (int c = 0; c < int(m_numCols); ++c) {
     for (int r = 0; r < int(m_numRows); ++r) {
       int cPos = getCellIdPos(c, r);
       if (cPos<0 || m_posToCellId[size_t(cPos)]<0) continue;
-      shared_ptr<Cell> cell=m_cellsList[size_t(m_posToCellId[size_t(cPos)])];
+      shared_ptr<MWAWCell> cell=m_cellsList[size_t(m_posToCellId[size_t(cPos)])];
       if (!cell) continue;
       Vec2i const &pos=cell->position();
       Vec2i lastPos=pos+cell->numSpannedCells();
       if (m_setData&BoxBit) {
-        colLimit[size_t(pos[0])] = cell->m_box[0][0];
-        colLimit[size_t(lastPos[0])] = cell->m_box[1][0];
-      } else
-        colLimit[size_t(lastPos[0])] =
-          colLimit[size_t(pos[0])]+cell->m_size[0];
+        colLimit[size_t(pos[0])] = cell->bdBox()[0][0];
+        colLimit[size_t(lastPos[0])] = cell->bdBox()[1][0];
+      } else if (cell->bdSize()[0]>=0) {
+        colLimit[size_t(lastPos[0])] = colLimit[size_t(pos[0])]+cell->bdSize()[0];
+        isFixed[size_t(lastPos[0])]=true;
+      } else if (!isFixed[size_t(lastPos[0])])
+        colLimit[size_t(lastPos[0])] = colLimit[size_t(pos[0])]-cell->bdSize()[0];
     }
     if (colLimit[size_t(c)+1]<=colLimit[size_t(c)]) {
       MWAW_DEBUG_MSG(("MWAWTable::buildDims: oops can not find the size of col %d\n", c));
@@ -380,24 +397,32 @@ bool MWAWTable::buildDims()
     }
   }
   m_colsSize.resize(m_numCols);
-  for (size_t c = 0; c < m_numCols; ++c)
-    m_colsSize[c]=colLimit[c+1]-colLimit[c];
+  for (size_t c = 0; c < m_numCols; ++c) {
+    if (isFixed[c+1])
+      m_colsSize[c]=colLimit[c+1]-colLimit[c];
+    else
+      m_colsSize[c]=colLimit[c]-colLimit[c+1];
+  }
 
   std::vector<float> rowLimit(m_numRows+1,0);
+  isFixed.resize(0);
+  isFixed.resize(m_numRows+1,(m_setData&BoxBit));
   for (int r = 0; r < int(m_numRows); ++r) {
     for (int c = 0; c < int(m_numCols); ++c) {
       int cPos = getCellIdPos(c, r);
       if (cPos<0 || m_posToCellId[size_t(cPos)]<0) continue;
-      shared_ptr<Cell> cell=m_cellsList[size_t(m_posToCellId[size_t(cPos)])];
+      shared_ptr<MWAWCell> cell=m_cellsList[size_t(m_posToCellId[size_t(cPos)])];
       if (!cell) continue;
       Vec2i const &pos=cell->position();
       Vec2i lastPos=pos+cell->numSpannedCells();
       if (m_setData&BoxBit) {
-        rowLimit[size_t(pos[1])] = cell->m_box[0][1];
-        rowLimit[size_t(lastPos[1])] = cell->m_box[1][1];
-      } else
-        rowLimit[size_t(lastPos[1])] =
-          rowLimit[size_t(pos[1])]+cell->m_size[1];
+        rowLimit[size_t(pos[1])] = cell->bdBox()[0][1];
+        rowLimit[size_t(lastPos[1])] = cell->bdBox()[1][1];
+      } else if (cell->bdSize()[1]>=0) {
+        rowLimit[size_t(lastPos[1])] = rowLimit[size_t(pos[1])]+cell->bdSize()[1];
+        isFixed[size_t(lastPos[1])]=true;
+      } else if (!isFixed[size_t(lastPos[1])])
+        rowLimit[size_t(lastPos[1])] = rowLimit[size_t(pos[1])]-cell->bdSize()[1];
     }
     if (rowLimit[size_t(r)+1]<=rowLimit[size_t(r)]) {
       MWAW_DEBUG_MSG(("MWAWTable::buildDims: oops can not find the size of row %d\n", r));
@@ -405,8 +430,12 @@ bool MWAWTable::buildDims()
     }
   }
   m_rowsSize.resize(m_numRows);
-  for (size_t r = 0; r < m_numRows; ++r)
-    m_rowsSize[r]=rowLimit[r+1]-rowLimit[r];
+  for (size_t r = 0; r < m_numRows; ++r) {
+    if (isFixed[r+1])
+      m_rowsSize[r]=rowLimit[r+1]-rowLimit[r];
+    else
+      m_rowsSize[r]=rowLimit[r]-rowLimit[r+1];
+  }
   m_setData |= TableDimBit;
   return true;
 }
@@ -434,10 +463,7 @@ bool MWAWTable::sendTable(MWAWContentListenerPtr listener, bool inFrame)
     return true;
   if (inFrame && m_hasExtraLines)
     sendExtraLines(listener);
-  WPXPropertyList propList;
-  if (mergeBorders())
-    propList.insert("table:border-model","collapsing");
-  listener->openTable(m_colsSize, WPX_POINT, propList);
+  listener->openTable(*this);
   for (size_t r = 0; r < m_numRows; ++r) {
     listener->openTableRow(m_rowsSize[r], WPX_POINT);
     for (size_t c = 0; c < m_numCols; ++c) {

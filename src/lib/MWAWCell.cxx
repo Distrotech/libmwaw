@@ -38,6 +38,8 @@
 
 #include <libwpd/libwpd.h>
 
+#include "MWAWContentListener.hxx"
+
 #include "MWAWCell.hxx"
 
 void MWAWCell::addTo(WPXPropertyList &propList) const
@@ -164,6 +166,10 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
     o << "span=[" << cell.numSpannedCells()[0] << "," << cell.numSpannedCells()[1] << "],";
 
   if (cell.m_protected) o << "protected,";
+  if (cell.m_bdBox.size()[0]>0 || cell.m_bdBox.size()[1]>0)
+    o << "bdBox=" << cell.m_bdBox << ",";
+  if (cell.m_bdSize[0]>0 || cell.m_bdSize[1]>0)
+    o << "bdSize=" << cell.m_bdSize << ",";
 
   switch(cell.m_hAlign) {
   case MWAWCell::HALIGN_LEFT:
@@ -227,6 +233,22 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
   if (cell.m_extraLine!=MWAWCell::E_None)
     o << cell.m_extraLineType << ",";
   return o;
+}
+
+// send data to listener
+bool MWAWCell::send(MWAWContentListenerPtr listener, MWAWTable &table)
+{
+  if (!listener) return true;
+  listener->openTableCell(*this);
+  bool ok=sendContent(listener, table);
+  listener->closeTableCell();
+  return ok;
+}
+
+bool MWAWCell::sendContent(MWAWContentListenerPtr, MWAWTable &)
+{
+  MWAW_DEBUG_MSG(("MWAWCell::sendContent: must not be called!!!\n"));
+  return false;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -51,6 +51,7 @@
 #include "MWAWPosition.hxx"
 #include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
+#include "MWAWTable.hxx"
 
 #include "MWAWContentListener.hxx"
 
@@ -1452,7 +1453,7 @@ void MWAWContentListener::_endSubDocument()
 ///////////////////
 // table
 ///////////////////
-void MWAWContentListener::openTable(std::vector<float> const &colWidth, WPXUnit unit, WPXPropertyList tableExtras)
+void MWAWContentListener::openTable(MWAWTable const &table)
 {
   if (m_ps->m_isTableOpened) {
     MWAW_DEBUG_MSG(("MWAWContentListener::openTable: called with m_isTableOpened=true\n"));
@@ -1462,11 +1463,34 @@ void MWAWContentListener::openTable(std::vector<float> const &colWidth, WPXUnit 
   if (m_ps->m_isParagraphOpened)
     _closeParagraph();
 
-  WPXPropertyList propList(tableExtras);
-  if (!tableExtras["table:align"])
-    propList.insert("table:align", "left");
-  if (!tableExtras["fo:margin-left"])
-    propList.insert("fo:margin-left", *m_ps->m_paragraph.m_margins[1], *m_ps->m_paragraph.m_marginsUnit);
+  // default value: which can be redefined by table
+  WPXPropertyList propList;
+  propList.insert("table:align", "left");
+  propList.insert("fo:margin-left", *m_ps->m_paragraph.m_margins[1], *m_ps->m_paragraph.m_marginsUnit);
+
+  _pushParsingState();
+  _startSubDocument();
+  m_ps->m_subDocumentType = libmwaw::DOC_TABLE;
+
+  WPXPropertyListVector columns;
+  table.addTablePropertiesTo(propList, columns);
+  m_documentInterface->openTable(propList, columns);
+  m_ps->m_isTableOpened = true;
+}
+
+void MWAWContentListener::openTable(std::vector<float> const &colWidth, WPXUnit unit)
+{
+  if (m_ps->m_isTableOpened) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::openTable: called with m_isTableOpened=true\n"));
+    return;
+  }
+
+  if (m_ps->m_isParagraphOpened)
+    _closeParagraph();
+
+  WPXPropertyList propList;
+  propList.insert("table:align", "left");
+  propList.insert("fo:margin-left", *m_ps->m_paragraph.m_margins[1], *m_ps->m_paragraph.m_marginsUnit);
 
   _pushParsingState();
   _startSubDocument();

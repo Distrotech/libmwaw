@@ -44,6 +44,8 @@
 
 class WPXPropertyList;
 
+class MWAWTable;
+
 /** a structure used to define a cell and its format */
 class MWAWCell
 {
@@ -63,7 +65,7 @@ public:
   enum ExtraLine { E_None, E_Line1, E_Line2, E_Cross };
 
   //! constructor
-  MWAWCell() : m_position(0,0), m_numberCellSpanned(1,1),
+  MWAWCell() : m_position(0,0), m_numberCellSpanned(1,1), m_bdBox(),  m_bdSize(),
     m_hAlign(HALIGN_DEFAULT), m_vAlign(VALIGN_DEFAULT), m_bordersList(),
     m_backgroundColor(MWAWColor::white()), m_protected(false),
     m_extraLine(E_None), m_extraLineType() { }
@@ -76,6 +78,19 @@ public:
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, MWAWCell const &cell);
+
+  // interface with MWAWTable:
+
+  /** function called when a cell is send by MWAWTable to send a cell to a
+      listener.
+
+      By default: calls openTableCell(*this), sendContent and then closeTableCell() */
+  virtual bool send(MWAWContentListenerPtr listener, MWAWTable &table);
+  /** function called when the content of a cell must be send to the listener,
+      ie. when MWAWTable::sendTable or MWAWTable::sendAsText is called.
+
+      \note default behavior: does nothing and prints an error in debug mode.*/
+  virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table);
 
   // position
 
@@ -95,6 +110,24 @@ public:
   //! sets the number of spanned cells : Vec2i(1,1) means 1 cellule
   void setNumSpannedCells(Vec2i numSpanned) {
     m_numberCellSpanned=numSpanned;
+  }
+
+  //! bdbox  accessor
+  Box2f const &bdBox() const {
+    return m_bdBox;
+  }
+  //! set the bdbox (unit point)
+  void setBdBox(Box2f box) {
+    m_bdBox = box;
+  }
+
+  //! bdbox size accessor
+  Vec2f const &bdSize() const {
+    return m_bdSize;
+  }
+  //! set the bdbox size(unit point)
+  void setBdSize(Vec2f sz) {
+    m_bdSize = sz;
   }
 
   //! return the name of a cell (given row and column) : 0,0 -> A1, 0,1 -> A2
@@ -178,6 +211,12 @@ protected:
   Vec2i m_position;
   //! the cell spanned : by default (1,1)
   Vec2i m_numberCellSpanned;
+
+  /** the cell bounding box (unit in point)*/
+  Box2f m_bdBox;
+
+  /** the cell bounding size : unit point */
+  Vec2f m_bdSize;
 
   //! the cell alignement : by default nothing
   HorizontalAlignment m_hAlign;
