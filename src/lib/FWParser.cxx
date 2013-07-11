@@ -111,6 +111,9 @@ struct DocZoneStruct {
     case 2:
       o << "item,";
       break;
+    case 3:
+      o << "style,";
+      break;
     case 0xa:
       o << "main,";
       break;
@@ -1067,7 +1070,7 @@ bool FWParser::readDocZoneData(shared_ptr<FWEntry> zone)
         if (sz <= 0 || sz >= 0x100) break;
         if (pos+st+2+sz> zone->end()) break;
         f.str("");
-        f << "Entries(DZone3):" << doc;
+        f << "Entries(Style):" << doc;
         asciiFile.addPos(pos+st);
         asciiFile.addNote(f.str().c_str());
         input->seek(pos+st+2+sz, WPX_SEEK_SET);
@@ -1101,7 +1104,7 @@ bool FWParser::readDocZoneData(shared_ptr<FWEntry> zone)
         done = true;
         break;
       case 0x13:
-      case 0x14:
+      case 0x14: // sidebar ?
         done=readDoc1314Data(zone, docData);
         break;
       case 0x15:

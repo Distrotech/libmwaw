@@ -46,6 +46,7 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWSection.hxx"
+#include "MWAWTable.hxx"
 
 #include "FWParser.hxx"
 
@@ -59,7 +60,7 @@ struct Border {
   //! constructor
   Border() :m_frontColor(MWAWColor::black()), m_backColor(MWAWColor::white()),
     m_width(0), m_isDouble(0), m_flags(0), m_extra("") {
-    for (int w=0; w < 2; w++) m_type[w]=0;
+    for (int w=0; w < 3; w++) m_type[w]=0;
   }
 
   //! returns the list of border order MWAWBorder::Pos
@@ -71,9 +72,9 @@ struct Border {
     if (wh == -1)
       return res;
     Variable<MWAWBorder> border;
-    if ((m_type[wh]%2)==1)
+    if ((m_type[wh]%2)==0)
       border->m_type=MWAWBorder::Double;
-    border->m_width=0.5f*float(m_type[wh]);
+    border->m_width=float(m_type[wh]/2);
     border->m_color=m_color[wh];
     if (wh==0)
       res.resize(4,border);
@@ -89,12 +90,14 @@ struct Border {
       o << "frontColor=" << p.m_frontColor << ",";
     if (!p.m_backColor.isWhite())
       o << "backColor=" << p.m_backColor << ",";
-    for (int w=0; w < 2; w++) {
+    for (int w=0; w < 3; w++) {
       if (!p.m_type[w]) continue;
       if (w==0)
         o << "border=";
+      else if (w==1)
+        o << "sep[H]=";
       else
-        o << "sep=";
+        o << "sep[V]=";
       switch(p.m_type[w]) {
       case 0: // none
         break;
@@ -119,7 +122,7 @@ struct Border {
       default:
         o << "#type[" << p.m_type[w] << "]:";
       }
-      if (!p.m_color[w].isBlack())
+      if (w!=2 && !p.m_color[w].isBlack())
         o << "col=" << p.m_color[w] << ",";
       else
         o << ",";
@@ -139,8 +142,8 @@ struct Border {
     o << p.m_extra;
     return o;
   }
-  //! the type (border, separator)
-  int m_type[2];
+  //! the type (border, separators)
+  int m_type[3];
   //! the front color (used for layout )
   MWAWColor m_frontColor;
   //! the back color (used for layout )
@@ -516,13 +519,14 @@ struct Zone {
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() : MWAWParagraph(), m_align(0), m_interSpacing(1.), m_interSpacingUnit(WPX_PERCENT),
-    m_dim(0,0), m_border(), m_isTable(false), m_tableFlags(), m_actCol(-1), m_isSent(false) {
+    m_dim(0,0), m_border(), m_isTable(false), m_tableBorderId(0), m_tableFlags(), m_actCol(-1), m_isSent(false) {
     m_befAftSpacings[0]=m_befAftSpacings[1]=0;
   }
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
     if (ind.m_isTable) o << "table,";
+    if (ind.m_tableBorderId) o << "borderId[table]=" << ind.m_tableBorderId << ",";
     if (ind.m_align) o << "align=" << ind.m_align << ",";
     if (ind.m_dim[0]>0 || ind.m_dim[1]>0) o << "dim=" << ind.m_dim << ",";
     o << reinterpret_cast<MWAWParagraph const &>(ind);
@@ -560,11 +564,12 @@ struct Paragraph : public MWAWParagraph {
   void updateFromRuler(Paragraph const &ruler) {
     MWAWParagraph::operator=(ruler);
     m_isTable = ruler.m_isTable;
+    m_tableBorderId = ruler.m_tableBorderId;
     m_tableFlags = ruler.m_tableFlags;
     m_dim = ruler.m_dim;
     m_isSent = false;
   }
-  //! returns the table dimension in inches
+  //! returns the table dimension in points
   bool getTableDimensions(std::vector<float> &dim) const {
     size_t numTabs = m_tabs->size();
     if ((numTabs%2) != 1 || numTabs != m_tableFlags.size()) {
@@ -587,7 +592,7 @@ struct Paragraph : public MWAWParagraph {
     limits.push_back(double(m_dim[0])-*m_margins[2]);
     dim.resize(limits.size()-1);
     for (size_t i=0; i < dim.size(); i++)
-      dim[i] = float(limits[i+1]-limits[i]);
+      dim[i] = 72.f*float(limits[i+1]-limits[i]);
     return true;
   }
   //! update the paragraph data to be sent to a listener
@@ -666,6 +671,8 @@ struct Paragraph : public MWAWParagraph {
   Border m_border;
   //! a flag to know if this is a table
   bool m_isTable;
+  //! the table border id
+  int m_tableBorderId;
   //! the list of table limit
   std::vector<int> m_tableFlags;
   //! the index of the actual column to send
@@ -1281,15 +1288,39 @@ bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::Li
 
   // ok, we have the limit of the text, let works...
   libmwaw::DebugStream f;
-  listener->openTable(dim, WPX_INCH);
-
+  MWAWTable table(MWAWTable::TableDimBit);
+  table.setColsSize(dim);
+  listener->openTable(table);
   listener->openTableRow(-height, WPX_POINT);
+
+  MWAWBorder outBorder, vBorder;
+  if (ruler.m_tableBorderId>=0&&
+      ruler.m_tableBorderId<int(m_state->m_borderList.size())) {
+    FWTextInternal::Border const &border=
+      m_state->m_borderList[size_t(ruler.m_tableBorderId)];
+    if ((border.m_type[0]%2)==0)
+      outBorder.m_type=MWAWBorder::Double;
+    outBorder.m_width=float(border.m_type[0]/2);
+    outBorder.m_color=border.m_color[0];
+    if ((border.m_type[2]%2)==0)
+      vBorder.m_type=MWAWBorder::Double;
+    vBorder.m_width=float(border.m_type[2]/2);
+    vBorder.m_color=border.m_color[0];
+  } else {
+    MWAW_DEBUG_MSG(("FWText::sendTable: can not find border=%d\n",ruler.m_tableBorderId));
+    outBorder.m_width=vBorder.m_width=0;
+  }
   for (size_t col = 0; col < numCols; col++) {
     MWAWCell cell;
     Vec2i cellPosition(Vec2i((int)0,(int)col));
     cell.setPosition(cellPosition);
-    // fixme: set the real border here
-    cell.setBorders(0xf, MWAWBorder());
+    if (ruler.m_tableBorderId) {
+      cell.setBorders(0xf, outBorder);
+      if (col > 0)
+        cell.setBorders(libmwaw::LeftBit, vBorder);
+      if (col+1 < numCols)
+        cell.setBorders(libmwaw::RightBit, vBorder);
+    }
     listener->openTableCell(cell);
 
     if (col < numFind) {
@@ -1377,8 +1408,10 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
     f << "f7=" << (int)input->readLong(2) << ",";
   }
   if (type & 0x40) {
-    // small int between 0 and 0xcf : link to rulerid?
-    f << "f8=" << (int)input->readLong(2) << ",";
+    // small int between 0 and 0xcf : link to rulerid in data struct?
+    val = (int)input->readLong(2);
+    if (val)
+      f << "P" << val << ",";
   }
   if (type & 0x20) {
     /* first small number:
@@ -1422,7 +1455,7 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
   }
   if (type & 0x1) { // small number between 1 and 1b
     val = (int)input->readLong(2);
-    f << "fc=" << val << ",";
+    f << "nRows?=" << val << ",";
   }
   lHeader.m_extra = f.str();
   return true;
@@ -2211,14 +2244,26 @@ bool FWText::readParagraphTabs(shared_ptr<FWEntry> zone, int id)
   if (para.m_isTable) {
     pos = input->tell();
     sz = input->readLong(4);
+    f.str("");
+    f << "Ruler[Table:end]:";
     if (sz==0x24 && pos+4+sz <= zone->end()) {
-      input->seek(0x24, WPX_SEEK_CUR);
-      ascii.addPos(pos);
-      ascii.addNote("Ruler[Table:end]");
+      for (int i=0; i<11; ++i) { // always 0
+        val=(int)input->readLong(2);
+        if (val)
+          f << "f" << i << "=" << val << ",";
+      }
+      para.m_tableBorderId=(int)input->readLong(2);
+      if (para.m_tableBorderId)
+        f << "B" << para.m_tableBorderId-1 << ",";
+      ascii.addDelimiter(input->tell(), '|');
+      input->seek(pos+4+0x24, WPX_SEEK_SET);
     } else {
       MWAW_DEBUG_MSG(("FWText::readParagraphTabs: can not find table data\n"));
+      f << "###";
       input->seek(pos, WPX_SEEK_SET);
     }
+    ascii.addPos(pos);
+    ascii.addNote(f.str().c_str());
   }
   if (id < 0) ;
   else if (m_state->m_paragraphMap.find(id) == m_state->m_paragraphMap.end())
@@ -2372,7 +2417,7 @@ bool FWText::readBorderDocInfo(shared_ptr<FWEntry> zone)
     pos = input->tell();
     FWTextInternal::Border mod;
     f.str("");
-    f << "Border-" << i << ":";
+    f << "Border-B" << i << ":";
     if (!readBorder(zone, mod, fSz))
       f << "###";
     else
@@ -2437,10 +2482,8 @@ bool FWText::readBorder(shared_ptr<FWEntry> zone, FWTextInternal::Border &border
     val = (int) input->readLong(1);
     if (val) f << "g" << j << "=" << val << ",";
   }
-  border.m_type[1] = (int) input->readLong(1);
-  val = (int) input->readLong(1);
-  if (val != border.m_type[0])
-    f << "#type[bord]=" << val << ",";
+  border.m_type[1] = (int) input->readLong(1); // sepH
+  border.m_type[2] = (int) input->readLong(1); // sepV
   border.m_flags = (int) input->readULong(2);
   border.m_extra = f.str();
   input->seek(pos+fSz, WPX_SEEK_SET);

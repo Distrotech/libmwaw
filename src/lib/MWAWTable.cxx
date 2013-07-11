@@ -122,13 +122,14 @@ void MWAWTable::addTablePropertiesTo(WPXPropertyList &propList, WPXPropertyListV
     break;
   case Left:
     propList.insert("table:align", "left");
-    propList.insert("fo:margin-left",  m_leftMargin, WPX_POINT);
+    propList.insert("fo:margin-left", m_leftMargin, WPX_POINT);
     break;
   case Center:
     propList.insert("table:align", "center");
     break;
   case Right:
     propList.insert("table:align", "right");
+    propList.insert("fo:margin-right", m_rightMargin, WPX_POINT);
     break;
   default:
     break;
