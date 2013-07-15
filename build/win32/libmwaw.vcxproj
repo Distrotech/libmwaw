@@ -166,7 +166,15 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\FWGraph.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\FWParser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\lib\FWStruct.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -483,7 +491,9 @@
     <ClInclude Include="..\..\src\lib\DMParser.hxx" />
     <ClInclude Include="..\..\src\lib\DMText.hxx" />
     <ClInclude Include="..\..\src\lib\EDParser.hxx" />
+    <ClInclude Include="..\..\src\lib\FWGraph.hxx" />
     <ClInclude Include="..\..\src\lib\FWParser.hxx" />
+    <ClInclude Include="..\..\src\lib\FWStruct.hxx" />
     <ClInclude Include="..\..\src\lib\FWText.hxx" />
     <ClInclude Include="..\..\src\lib\GWGraph.hxx" />
     <ClInclude Include="..\..\src\lib\GWParser.hxx" />

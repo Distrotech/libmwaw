@@ -85,7 +85,7 @@ public:
                        WPXPropertyList frameExtras);
 
   //! returns the page top left point
-  virtual Vec2f getPageTopLeft() const = 0;
+  virtual Vec2f getPageLeftTop() const = 0;
 
   //! a DebugFile used to write what we recognize when we parse the document
   libmwaw::DebugFile &ascii() {

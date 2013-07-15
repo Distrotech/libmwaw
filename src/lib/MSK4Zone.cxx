@@ -229,7 +229,7 @@ double MSK4Zone::getTextHeight() const
   return getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
 }
 
-Vec2f MSK4Zone::getPageTopLeft() const
+Vec2f MSK4Zone::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));

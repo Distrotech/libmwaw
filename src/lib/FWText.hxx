@@ -43,9 +43,10 @@
 
 #include "MWAWDebug.hxx"
 
+#include "FWStruct.hxx"
+
 namespace FWTextInternal
 {
-struct Border;
 struct Font;
 struct Paragraph;
 
@@ -54,9 +55,6 @@ struct Zone;
 
 struct State;
 }
-
-struct FWEntry;
-struct FWEntryManager;
 
 class FWParser;
 
@@ -96,7 +94,7 @@ protected:
   //
 
   //! check if a zone is a text zone, if so read it...
-  bool readTextData(shared_ptr<FWEntry> zone);
+  bool readTextData(FWStruct::EntryPtr zone);
 
   //! send the text
   bool send(shared_ptr<FWTextInternal::Zone> zone);
@@ -133,26 +131,21 @@ protected:
   bool readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::LineHeader &lHeader);
 
   //! check if the input of the zone points to a item zone in DataStruct Zone
-  bool readItem(shared_ptr<FWEntry> zone, int id=-1, bool hidden=false);
+  bool readItem(FWStruct::EntryPtr zone, int id=-1, bool hidden=false);
 
   //! check if the input of the zone points to a paragraph zone in DataStruct Zone
-  bool readParagraphTabs(shared_ptr<FWEntry> zone, int id=-1);
+  bool readParagraphTabs(FWStruct::EntryPtr zone, int id=-1);
   //! try to read the paragraph modifier (at the end of doc info)
-  bool readParaModDocInfo(shared_ptr<FWEntry> zone);
+  bool readParaModDocInfo(FWStruct::EntryPtr zone);
 
-  //! try to read the border definiton (at the end of doc info)
-  bool readBorderDocInfo(shared_ptr<FWEntry> zone);
-  //! try to read a border definiton
-  bool readBorder(shared_ptr<FWEntry> zone, FWTextInternal::Border &border, int fSz);
+  //! try to read a style
+  bool readStyle(FWStruct::EntryPtr zone);
 
   //! try to read the font/paragraph modifier zone (Zone1f)
-  bool readDataMod(shared_ptr<FWEntry> zone, int id);
+  bool readDataMod(FWStruct::EntryPtr zone, int id);
 
   //! check if the input of the zone points to the columns definition, ...
-  bool readColumns(shared_ptr<FWEntry> zone);
-
-  //! try to convert a file data to a color
-  bool getColor(int color, MWAWColor &col) const;
+  bool readColumns(FWStruct::EntryPtr zone);
 
 private:
   FWText(FWText const &orig);

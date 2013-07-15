@@ -44,60 +44,18 @@
 
 #include <libwpd/libwpd.h>
 
-#include "MWAWDebug.hxx"
-#include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
 
+#include "FWStruct.hxx"
 #include "MWAWParser.hxx"
-
-/** the definition of a zone in the file */
-struct FWEntry : public MWAWEntry {
-  FWEntry(MWAWInputStreamPtr input);
-  ~FWEntry();
-
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, FWEntry const &entry);
-
-  //! create a inputstream, ... if needed
-  void update();
-  //! write the debug file, ...
-  void closeDebugFile();
-
-  //! returns a reference to the ascii file
-  libmwaw::DebugFile &getAsciiFile();
-  //! basic operator==
-  bool operator==(const FWEntry &a) const;
-  //! basic operator!=
-  bool operator!=(const FWEntry &a) const {
-    return !operator==(a);
-  }
-
-  //! the input
-  MWAWInputStreamPtr m_input;
-  //! the next entry id
-  int m_nextId;
-  //! the zone type id find in DStruct
-  int m_type;
-  //! the type id (find in FZoneFlags)
-  int m_typeId;
-  //! some unknown values
-  int m_values[3];
-  //! the main data ( if the entry comes from several zone )
-  WPXBinaryData m_data;
-  //! the debug file
-  shared_ptr<libmwaw::DebugFile> m_asciiFile;
-private:
-  FWEntry(FWEntry const &);
-  FWEntry &operator=(FWEntry const &);
-};
 
 namespace FWParserInternal
 {
-struct DocZoneData;
 struct State;
 class SubDocument;
 }
 
+class FWGraph;
 class FWText;
 
 /** \brief the main class to read a FullWrite file
@@ -107,6 +65,7 @@ class FWText;
  */
 class FWParser : public MWAWParser
 {
+  friend class FWGraph;
   friend class FWText;
   friend class FWParserInternal::SubDocument;
 
@@ -135,9 +94,6 @@ protected:
   //! create the file zone ( first step of create zones)
   bool createFileZones();
 
-  //! sends the data which have not yet been sent to the listener
-  void flushExtra();
-
   //! adds a new page
   void newPage(int number);
 
@@ -145,35 +101,37 @@ protected:
   bool readDocPosition();
 
   //! try to read the file zones main flags
-  bool readFileZoneFlags(shared_ptr<FWEntry> zone);
+  bool readFileZoneFlags(FWStruct::EntryPtr zone);
 
   //! try to read the file zones position
-  bool readFileZonePos(shared_ptr<FWEntry> zone);
+  bool readFileZonePos(FWStruct::EntryPtr zone);
 
   //! try to read the zone containing the data of each doc zone (ie. Zone0)
-  bool readDocZoneData(shared_ptr<FWEntry> zone);
+  bool readDocZoneData(FWStruct::EntryPtr zone);
 
   //! try to read the zone which stores the structure of zone0, ...  (ie. Zone1)
-  bool readDocZoneStruct(shared_ptr<FWEntry> zone);
-  //! returns the number of zone struct
-  int getNumDocZoneStruct() const;
-  //! check if a zone is a graphic zone, ...
-  bool readGraphic(shared_ptr<FWEntry> zone);
-
-  //! send a graphic to a listener (if it exists)
-  bool sendGraphic(shared_ptr<FWEntry> zone);
+  bool readDocZoneStruct(FWStruct::EntryPtr zone);
 
   //! try to read zone2, a zone which stores the document information zone, ...
-  bool readDocInfo(shared_ptr<FWEntry> zone);
+  bool readDocInfo(FWStruct::EntryPtr zone);
 
   //! try to read the end of zone2 (only v2) ?
-  bool readEndDocInfo(shared_ptr<FWEntry> zone);
+  bool readEndDocInfo(FWStruct::EntryPtr zone);
 
   //! try to read the list of citation (at the end of doc info)
-  bool readCitationDocInfo(shared_ptr<FWEntry> zone);
+  bool readCitationDocInfo(FWStruct::EntryPtr zone);
 
   //! try read the print info zone
-  bool readPrintInfo(shared_ptr<FWEntry> zone);
+  bool readPrintInfo(FWStruct::EntryPtr zone);
+
+  //
+  // interface to the graph parser
+  //
+
+  //! returns the page left top point ( in inches)
+  Vec2f getPageLeftTop() const;
+  //! try to return a border corresponding to an id
+  bool getBorder(int bId, FWStruct::Border &border) const;
 
   //
   // interface to the text parser
@@ -191,19 +149,22 @@ protected:
   bool send(int fileId);
 
   //
+  // interface ( mainly debugging function)
+  //
+
+  //! returns the number of zone struct
+  int getNumDocZoneStruct() const;
+  /** returns a the type of a document zone ( mainly used for debugging) */
+  std::string getDocumentTypeName(int zId) const;
+
+  //
   // low level
   //
 
-  //! try to read the data of zone 13 or 14 (unknown zone)
-  bool readDoc1314Data(shared_ptr<FWEntry> zone, FWParserInternal::DocZoneData &doc);
-  //! try to read the graphic data
-  bool readGraphicData(shared_ptr<FWEntry> zone, FWParserInternal::DocZoneData &doc);
   //! try to read the reference data
-  bool readReferenceData(shared_ptr<FWEntry> zone);
-  //! try to read the data header of a classical zone
-  bool readDocDataHeader(shared_ptr<FWEntry> zone, FWParserInternal::DocZoneData &doc);
+  bool readReferenceData(FWStruct::EntryPtr zone);
   //! try to read the data of a zone which begins with a generic header
-  bool readGenericDocData(shared_ptr<FWEntry> zone, FWParserInternal::DocZoneData &doc);
+  bool readGenericDocData(FWStruct::EntryPtr zone, FWStruct::ZoneHeader &doc);
 
 protected:
   //
@@ -212,6 +173,8 @@ protected:
   //! the state
   shared_ptr<FWParserInternal::State> m_state;
 
+  //! the graph parser
+  shared_ptr<FWGraph> m_graphParser;
   //! the text parser
   shared_ptr<FWText> m_textParser;
 };

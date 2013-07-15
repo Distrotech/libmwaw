@@ -136,6 +136,8 @@ DMParser: parser of DOCMaker : v4
 EDParser: parser of eDOC : v2
 
 FWParser: parser of FullWrite : v1.0 v2.0
+-   FWGraph : class which reads the graph/sidebar
+-   FWStruct : class which the shared structures
 -   FWText : class which reads the text
 
 GWParser : parser of GreatWorks : v1-v2

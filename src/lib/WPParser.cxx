@@ -1528,7 +1528,7 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
     // use the same function than getParagraph to respect alignement
     int left=columns[0].m_colX[0]-20-int(72.*getPageSpan().getMarginLeft());
     if (left)
-      table.setAlignment(MWAWTable::Left, left);
+      table.setAlignment(MWAWTable::Left, float(left));
     getListener()->openTable(table);
   }
 

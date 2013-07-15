@@ -117,7 +117,7 @@ protected:
   double getTextHeight() const;
 
   //! returns the page top left point
-  Vec2f getPageTopLeft() const;
+  Vec2f getPageLeftTop() const;
 
   //! adds a new page
   void newPage(int number);

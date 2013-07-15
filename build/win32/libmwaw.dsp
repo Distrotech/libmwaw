@@ -151,7 +151,15 @@ SOURCE=..\..\src\lib\EDParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\FWGraph.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\FWParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\FWStruct.cxx
 # End Source File
 # Begin Source File
 
@@ -515,7 +523,15 @@ SOURCE=..\..\src\lib\EDParser.hxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\FWGraph.hxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\FWParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\FWStruct.hxx
 # End Source File
 # Begin Source File
 

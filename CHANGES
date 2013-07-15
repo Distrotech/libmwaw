@@ -1,5 +1,14 @@
 CHANGES:
 
+15/09/2013:
+- check that FullWrite use the new properties' classes,
+- begin to retrieve the sidebar and their content,
+
+07/09/2013:
+- check that Acta, BeagleWorks/WordPerfect Works, GreatWorks, HanMac Word-J, HanMac Word-K, Nisus Writer, Z-Write use the new properties' classes,
+- HanMac Word-J, HanMac Word-K: retrieve the extra line's style in a table's cell,
+
+
 07/07/2013:
 - add a parser for MacDoc v1.3 document and self-reading document
 

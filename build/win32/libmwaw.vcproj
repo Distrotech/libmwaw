@@ -237,7 +237,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\FWGraph.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\FWParser.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\FWStruct.cxx"
 				>
 			</File>
 			<File
@@ -602,7 +610,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\FWGraph.hxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\FWParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\FWStruct.hxx"
 				>
 			</File>
 			<File

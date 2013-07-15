@@ -2580,7 +2580,7 @@ void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
 
   MWAWPosition pictPos = zone->getPosition(anchor);
   if (anchor == MWAWPosition::Page)
-    pictPos.setOrigin(pictPos.origin()+72.*m_mainParser->getPageTopLeft());
+    pictPos.setOrigin(pictPos.origin()+72.*m_mainParser->getPageLeftTop());
   WPXPropertyList extras;
   zone->fillFramePropertyList(extras);
 
