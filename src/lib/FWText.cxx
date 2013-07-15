@@ -673,6 +673,9 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0x81:
         f << "[" << onString << "81]";
         break; // often found by pair around a " " a ","...
+      case 0x82:
+        f << "[" << onString << "82]";
+        break; // find one time around a first capital letter I
       case 0x83:
         f << "[" << onString << "b]";
         fFlags ^= MWAWFont::boldBit;

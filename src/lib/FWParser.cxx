@@ -143,7 +143,7 @@ struct ReferenceCalledData {
 //! Internal: the state of a FWParser
 struct State {
   //! constructor
-  State() : m_fileZoneList(), m_fileZoneFlagsList(), m_docZoneList(), m_docFileIdMap(), m_fileDocIdMap(),
+  State() : m_pageSpanSet(false), m_fileZoneList(), m_fileZoneFlagsList(), m_docZoneList(), m_docFileIdMap(), m_fileDocIdMap(),
     m_biblioId(-1), m_entryMap(), m_variableRedirectMap(), m_referenceRedirectMap(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
     for (int i=0; i < 3; i++) m_zoneFlagsId[i] = -1;
@@ -177,7 +177,8 @@ struct State {
     }
     return it->second;
   }
-
+  //! a flag to know if the page span has been filled
+  bool m_pageSpanSet;
   //! the list of main zone flags id
   int m_zoneFlagsId[3];
 
@@ -764,9 +765,48 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
   }
 
   if (ok) {
-    // the following is quite simillar in v1 and v2 ( except maybe the first 2 bytes )
-    asciiFile.addPos(input->tell());
-    asciiFile.addNote("DocInfo-G");
+    pos=input->tell();
+    f.str("");
+    f << "DocInfo-G:";
+    int type=(int) input->readULong(2);
+    f << "f0=" << std::hex << type << std::dec << ",";
+    int dim[4];
+    for (int i=0; i < 4; ++i)
+      dim[i]=(int) input->readLong(2);
+    f << "dim=" << dim[1] << "x" << dim[0] << "<->"
+      << dim[3] << "x" << dim[2] << ",";
+    // checkme: 3: followed by 2 int, 6-b: followed by 3 int, e-f: by 4, other?
+    int num=(type&0xF000)>=0xE000 ? 4:(type&0xF000)>0x3000 ? 3:2;
+    for (int i=0; i< num; ++i) { // f1=0x100, f3=3
+      val=(int) input->readLong(2);
+      if (val) f << "f" << i+1 << "=" << val << ",";
+    }
+    for (int st=0; st<2; ++st) { // probably left/right page
+      int margins[4];
+      for (int i=0; i < 4; ++i)
+        margins[i]=(int) input->readLong(2);
+      f << "pageDim" << st << "=" << margins[1] << "x" << margins[0] << "<->"
+        << margins[3] << "x" << margins[2] << ",";
+      if (st==1)
+        break;
+      if (margins[0]<margins[2] && margins[2]<dim[2] && 2*(margins[2]-margins[0]) > dim[2] &&
+          margins[1]<margins[3] && margins[3]<dim[3] && 2*(margins[3]-margins[1]) > dim[3] &&
+          dim[2]>100 && dim[2]<2000 && dim[3]>100 && dim[3]<2000) {
+        getPageSpan().setMarginTop(double(margins[0])/72.0);
+        getPageSpan().setMarginBottom(double(dim[2]-margins[2])/72.0);
+        getPageSpan().setMarginLeft(double(margins[1])/72.0);
+        getPageSpan().setMarginRight(double(dim[3]-margins[3])/72.0);
+        getPageSpan().setFormLength(double(dim[2])/72.);
+        getPageSpan().setFormWidth(double(dim[3])/72.);
+        m_state->m_pageSpanSet=true;
+      } else {
+        MWAW_DEBUG_MSG(("FWParser::readDocInfo:can not read document margins!\n"));
+      }
+    }
+    asciiFile.addDelimiter(input->tell(),'|');
+
+    asciiFile.addPos(pos);
+    asciiFile.addNote(f.str().c_str());
     /* seems to end with
        00000009000043686f6f73657200
        000000100000436f6e74726f6c2050616e656c7300
@@ -967,29 +1007,30 @@ bool FWParser::readPrintInfo(FWStruct::EntryPtr zone)
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
-  // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().size() - info.page().size();
+  if (!m_state->m_pageSpanSet) {
+    // define margin from print info
+    Vec2i lTopMargin= -1 * info.paper().pos(0);
+    Vec2i rBotMargin=info.paper().size() - info.page().size();
 
-  // move margin left | top
-  int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
-  int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+    // move margin left | top
+    int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
+    int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
+    lTopMargin -= Vec2i(decalX, decalY);
+    rBotMargin += Vec2i(decalX, decalY);
 
-  // decrease right | bottom
-  int rightMarg = rBotMargin.x() -50;
-  if (rightMarg < 0) rightMarg=0;
-  int botMarg = rBotMargin.y() -50;
-  if (botMarg < 0) botMarg=0;
+    // decrease right | bottom
+    int rightMarg = rBotMargin.x() -50;
+    if (rightMarg < 0) rightMarg=0;
+    int botMarg = rBotMargin.y() -50;
+    if (botMarg < 0) botMarg=0;
 
-  getPageSpan().setMarginTop(lTopMargin.y()/72.0);
-  getPageSpan().setMarginBottom(botMarg/72.0);
-  getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
-  getPageSpan().setMarginRight(rightMarg/72.0);
-  getPageSpan().setFormLength(paperSize.y()/72.);
-  getPageSpan().setFormWidth(paperSize.x()/72.);
-
+    getPageSpan().setMarginTop(lTopMargin.y()/72.0);
+    getPageSpan().setMarginBottom(botMarg/72.0);
+    getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
+    getPageSpan().setMarginRight(rightMarg/72.0);
+    getPageSpan().setFormLength(paperSize.y()/72.);
+    getPageSpan().setFormWidth(paperSize.x()/72.);
+  }
   if (long(input->tell()) !=endPos) {
     input->seek(endPos, WPX_SEEK_SET);
     f << ", #endPos";
