@@ -51,6 +51,7 @@
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
+#include "MWAWTable.hxx"
 
 #include "MSKGraph.hxx"
 
@@ -1091,15 +1092,19 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
       int patId = (int) input->readULong(2);
       if (patId) f << patId << ",";
       else f << "_,";
-      val = (int) input->readULong(1);
-      if (val) f << "unkn=" << std::hex << val << std::dec << ",";
+      int type = (int) input->readULong(1); // find 0:percent,30:?,f:?(related to shadow),ff:?
+      if (type) f << "#type=" << std::hex << type << std::dec << ",";
       val = (int) input->readULong(1);
       if (val >= 0 && val <= 100) {
         MSKGraphInternal::Pattern pat(patId ? MSKGraphInternal::Pattern::P_Percent : MSKGraphInternal::Pattern::P_None, float(val/100.));
         if (i) pict.m_surfacePattern = pat;
         else pict.m_linePattern = pat;
-      } else
+      } else {
+        MWAW_DEBUG_MSG(("MSKGraph::readPictHeader:find odd pattern\n"));
+        if (i && type && vers==3) // unknown so let use the surface color
+          pict.m_surfacePattern = MSKGraphInternal::Pattern(MSKGraphInternal::Pattern::P_Percent,1);
         f << "##";
+      }
       f << val << "%,";
       f << "],";
     }
@@ -2188,9 +2193,6 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
     v = (int) input->readLong(2);
     if (v) f << "f1=" << v << ", ";
     int fColors = (int) input->readLong(2);
-    if (fColors != 255)
-      f2 << std::dec << "fColorId=" << fColors << ", "; // indexed
-    // 0 : invisible, b9: a red, ff : black
     v = (int) input->readLong(2);
     if (v) f << "f2=" << v << ", ";
     int bgColors = (int) input->readLong(2);
@@ -2219,8 +2221,11 @@ bool MSKGraph::readTable(MSKGraphInternal::Table &table)
     cell.m_font.setFlags(flags);
 
     if (fColors != 0xFF) {
-      MWAWColor col(0xD0, 0xD0, 0xD0); // see how to do that
-      cell.m_font.setColor(col);
+      MWAWColor col;
+      if (m_mainParser->getColor(fColors,col,3))
+        cell.m_font.setColor(col);
+      else
+        f << "#colId=" << fColors << ",";
     }
     f << "[" << cell.m_font.getDebugString(m_parserState->m_fontConverter) << "," << f2.str()<< "],";
     // check what happens, if the size of text is greater than 4
@@ -2473,11 +2478,15 @@ void MSKGraph::sendTable(int zoneId)
   }
   std::vector<float> colsDims(nCols);
   for (size_t c = 0; c < nCols; c++) colsDims[c] = float(table.m_colsDim[c]);
-  listener->openTable(colsDims, WPX_POINT);
+  MWAWTable theTable(MWAWTable::TableDimBit);
+  theTable.setColsSize(colsDims);
+  listener->openTable(theTable);
 
   int const borderPos = libmwaw::TopBit | libmwaw::RightBit |
                         libmwaw::BottomBit | libmwaw::LeftBit;
-  MWAWBorder border;
+  MWAWBorder border, internBorder;
+  internBorder.m_width=0.5;
+  internBorder.m_color=MWAWColor(0xC0,0xC0,0xC0);
   MWAWParagraph para;
   para.m_justify=MWAWParagraph::JustificationCenter;
   for (size_t row = 0; row < nRows; row++) {
@@ -2485,10 +2494,17 @@ void MSKGraph::sendTable(int zoneId)
 
     for (size_t col = 0; col < nCols; col++) {
       MWAWCell cell;
-      Vec2i cellPosition(Vec2i((int)row,(int)col));
+      Vec2i cellPosition(Vec2i((int)col,(int)row));
       cell.setPosition(cellPosition);
       cell.setBorders(borderPos, border);
-      // fixme setBackgroundColor
+      int internWhat=0;
+      if (col!=0) internWhat|=libmwaw::LeftBit;
+      if (col+1!=nCols) internWhat|=libmwaw::RightBit;
+      if (row!=0) internWhat|=libmwaw::TopBit;
+      if (row+1!=nRows) internWhat|=libmwaw::BottomBit;
+      cell.setBorders(internWhat, internBorder);
+      if (!table.m_surfaceColor.isWhite())
+        cell.setBackgroundColor(table.m_surfaceColor);
       listener->setParagraph(para);
       listener->openTableCell(cell);
 
