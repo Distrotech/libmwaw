@@ -145,6 +145,11 @@ std::ostream &operator<<(std::ostream &o, Token const &tkn)
     if (tkn.m_highType!=1) o << "[" << tkn.m_highType << "]";
     o << ",";
     break;
+  case 0x24:
+    o << "field[formula]";
+    if (tkn.m_highType!=9) o << "[" << tkn.m_highType << "]";
+    o << ",";
+    break;
   default:
     o << "#type=" << tkn.m_type << "[" << tkn.m_highType << "],";
   }
@@ -399,15 +404,17 @@ void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
     sendPicture(token);
     return;
   case 0x17:
-    if (token.m_value.length())
-      listener->insertUnicodeString(token.m_value.c_str());
-    else
+    if (token.m_value.length()) {
+      for (size_t c=0; c < token.m_value.length(); ++c)
+        listener->insertCharacter(token.m_value[c]);
+    } else
       listener->insertField(MWAWField(MWAWField::Date));
     return;
   case 0x18:
-    if (token.m_value.length())
-      listener->insertUnicodeString(token.m_value.c_str());
-    else
+    if (token.m_value.length()) {
+      for (size_t c=0; c < token.m_value.length(); ++c)
+        listener->insertCharacter(token.m_value[c]);
+    } else
       listener->insertField(MWAWField(MWAWField::Time));
     return;
   case 0x19: // fixme this can also be page count
@@ -449,6 +456,15 @@ void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
     return;
   case 0x23:
     sendRule(token, actFont);
+    return;
+  case 0x24: // field
+    listener->insertChar('[');
+    if (token.m_value.length()) {
+      for (size_t c=0; c < token.m_value.length(); ++c)
+        listener->insertCharacter(token.m_value[c]);
+    } else
+      listener->insertUnicodeString("Merge Field");
+    listener->insertChar(']');
     return;
   default:
     break;
@@ -700,7 +716,13 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
       f << "],";
     }
   }
-
+  if (tkn.m_type==0x24 && d < numData && tkn.m_value.empty()) {
+    std::string str;
+    if (readTokenBlock0(dataList[d], tkn, str)) {
+      d++;
+      f << str;
+    }
+  }
   if (tkn.m_type != 0x14 || numData < 32) {
     for ( ; d < numData; d++) {
       MRWStruct const &data = dataList[d];
@@ -708,7 +730,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
       static bool first = true;
       if (first) {
         first = false;
-        MWAW_DEBUG_MSG(("MRWGraph::readToken: find some extra data \n"));
+        MWAW_DEBUG_MSG(("MRWGraph::readToken(II): find some extra data \n"));
       }
     }
     zone.m_tokenMap[tkn.m_id[0]] = tkn;
@@ -786,7 +808,6 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = data.m_pos.begin(), endPos = data.m_pos.end();
   input->seek(pos, WPX_SEEK_SET);
-
   // fixme: this depends on the token type
   long val;
   int firstExpectedVal= (tkn.m_type==0x14) ? 28 :
@@ -809,6 +830,7 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
   case 0x19:
   case 0x1e:
   case 0x1f:
+  case 0x24:
     while(!input->atEOS()) {
       if (input->tell() >= endPos)
         break;

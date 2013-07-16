@@ -49,6 +49,7 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
+#include "MWAWTable.hxx"
 
 #include "MRWParser.hxx"
 
@@ -236,9 +237,17 @@ MWAWBorder Paragraph::BorderFill::getBorder(int i) const
     res.m_width = 6;
     break;
   case 8:
-  case 10: // 1 then 2
-  case 11: // 2 then 1
     res.m_type = MWAWBorder::Double;
+    break;
+  case 10:
+    res.m_type = MWAWBorder::Double;
+    res.m_widthsList.resize(3,1.);
+    res.m_widthsList[0]=2.0;
+    break;
+  case 11:
+    res.m_type = MWAWBorder::Double;
+    res.m_widthsList.resize(3,1.);
+    res.m_widthsList[2]=2.0;
     break;
   case 9:
     res.m_type = MWAWBorder::Double;
@@ -934,7 +943,10 @@ bool MRWText::sendTable(MRWTextInternal::Table &table)
     std::vector<float> colWidths(nCells);
     for (size_t c=0; c < nCells; c++)
       colWidths[c]=(float)row.m_cellsList[c].m_width;
-    listener->openTable(colWidths, WPX_POINT);
+    MWAWTable theTable(MWAWTable::TableDimBit);
+    theTable.setColsSize(colWidths);
+    theTable.setMergeBorders(false);
+    listener->openTable(theTable);
     listener->openTableRow(-float(row.m_height), WPX_POINT);
 
     for (size_t c=0; c < nCells; c++) {
