@@ -1070,6 +1070,7 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
     } else
       f << "#col" << i << "=" << rId << ",";
   }
+  bool hasSurfPatFunction=false;
   if (vers <= 2) {
     for (int i = 0; i < 2; i++) {
       int pId = (int) input->readLong(2);
@@ -1087,11 +1088,15 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
       else f << "line";
       f << "Pattern=[";
       val =  (int) input->readULong(2);
-      if (val != 0xFA3) f << std::hex << val << ",";
-      else f << "_,";
       int patId = (int) input->readULong(2);
-      if (patId) f << patId << ",";
-      else f << "_,";
+      if (vers==4 && i==1 && val==0xFFFF && val==0xFFFF)
+        hasSurfPatFunction=true;
+      else {
+        if (val != 0xFA3) f << std::hex << val << std::dec << ",";
+        else f << "_,";
+        if (patId) f << patId << ",";
+        else f << "_,";
+      }
       int type = (int) input->readULong(1); // find 0:percent,30:?,f:?(related to shadow),ff:?
       if (type) f << "#type=" << std::hex << type << std::dec << ",";
       val = (int) input->readULong(1);
@@ -1138,16 +1143,27 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
   pict.m_box=Box2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
 
   int flags = (int) input->readLong(1);
-  if (vers >= 4 && flags==2) {
-    // 2: rotations, 0: nothing, other ?
-    f << ", Rot=[";
-    f << input->readLong(2) << ",";
-    for (int i = 0; i < 31; i++)
+  // 2: rotations, 1:lock ?, 0: nothing, other ?
+  if (vers >= 4 && (flags&1)) {
+    f << "locked,";
+    flags &= 0xFE;
+  }
+  if (vers >= 4 && (flags&2)) {
+    f << "Rot=[";
+    for (int i = 0; i < 32; i++)
       f << input->readLong(2) << ",";
-    f << "]";
-  } else if (flags) f << "fl0=" << flags << ",";
+    f << "],";
+    flags &= 0xFC;
+  }
+  if (flags) f << "fl0=" << flags << ",";
   pict.m_lineFlags = (int) input->readULong(1);
   if (vers >= 3) pict.m_ids[0] = (long) input->readULong(4);
+  if (vers >= 4 && hasSurfPatFunction) {
+    f << "Pat[Funct]=[";
+    for (int i = 0; i < 11; i++)
+      f << std::hex << input->readULong(2) << std::dec << ",";
+    f << "],";
+  }
   pict.m_extra = f.str();
   pict.m_dataPos = input->tell();
   return true;
@@ -1812,6 +1828,7 @@ bool MSKGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
     int pictId = getEntryPicture(0, pict);
     if (pictId < 0 || input->tell() <= debPos) {
       f.str("");
+      MWAW_DEBUG_MSG(("MSKGraph::readRB: oops can not read end of file\n"));
       f << "###" << entry.name();
       ascFile.addPos(debPos);
       ascFile.addNote(f.str().c_str());

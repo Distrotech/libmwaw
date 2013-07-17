@@ -307,6 +307,7 @@ bool File::readFileInformation()
   } else if (m_fInfoCreator=="MSWK") {
     checkFInfoType("AWWP","Microsoft Works 3") ||
     checkFInfoType("RLRB","Microsoft Works 4") ||
+    checkFInfoType("sWRB","Microsoft Works 4[template]") ||
     checkFInfoType("Microsoft Works 3-4");
   } else if (m_fInfoCreator=="NISI") {
     checkFInfoType("TEXT","Nisus") || checkFInfoType("GLOS","Nisus[glossary]") ||

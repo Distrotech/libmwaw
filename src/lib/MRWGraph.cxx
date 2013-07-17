@@ -406,14 +406,14 @@ void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
   case 0x17:
     if (token.m_value.length()) {
       for (size_t c=0; c < token.m_value.length(); ++c)
-        listener->insertCharacter(token.m_value[c]);
+        listener->insertCharacter((unsigned char) token.m_value[c]);
     } else
       listener->insertField(MWAWField(MWAWField::Date));
     return;
   case 0x18:
     if (token.m_value.length()) {
       for (size_t c=0; c < token.m_value.length(); ++c)
-        listener->insertCharacter(token.m_value[c]);
+        listener->insertCharacter((unsigned char) token.m_value[c]);
     } else
       listener->insertField(MWAWField(MWAWField::Time));
     return;
@@ -461,7 +461,7 @@ void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
     listener->insertChar('[');
     if (token.m_value.length()) {
       for (size_t c=0; c < token.m_value.length(); ++c)
-        listener->insertCharacter(token.m_value[c]);
+        listener->insertCharacter((unsigned char) token.m_value[c]);
     } else
       listener->insertUnicodeString("Merge Field");
     listener->insertChar(']');

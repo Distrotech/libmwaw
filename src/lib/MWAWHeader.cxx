@@ -205,7 +205,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MSWORKS, 3));
         return res;
       }
-      if (type=="RLRB") {
+      if (type=="RLRB" || type=="sWRB") {
         res.push_back(MWAWHeader(MWAWDocument::MSWORKS, 104));
         return res;
       }

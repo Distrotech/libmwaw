@@ -1,12 +1,20 @@
 CHANGES:
 
-15/09/2013:
+07/16/2013:
+- check that LightWay Text, Mariner Write, Microsoft Works, WriterPlus
+  use the new properties' classes,
+- Microsoft Works parser: retrieve the cell background and font colors +
+  try to recognize functions patterns,
+
+07/15/2013:
 - check that FullWrite use the new properties' classes,
-- begin to retrieve the sidebar and their content,
+- try to retrieve the pages' margins, the sidebar and their content,
 
 07/09/2013:
-- check that Acta, BeagleWorks/WordPerfect Works, GreatWorks, HanMac Word-J, HanMac Word-K, Nisus Writer, Z-Write use the new properties' classes,
-- HanMac Word-J, HanMac Word-K: retrieve the extra line's style in a table's cell,
+- check that Acta, BeagleWorks/WordPerfect Works, GreatWorks, HanMac Word-J,
+  HanMac Word-K, Nisus Writer, Z-Write use the new properties' classes,
+- HanMac Word-J, HanMac Word-K: retrieve the extra line's style in a table's
+  cell,
 
 
 07/07/2013:
