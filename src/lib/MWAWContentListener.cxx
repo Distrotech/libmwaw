@@ -1478,40 +1478,6 @@ void MWAWContentListener::openTable(MWAWTable const &table)
   m_ps->m_isTableOpened = true;
 }
 
-void MWAWContentListener::openTable(std::vector<float> const &colWidth, WPXUnit unit)
-{
-  if (m_ps->m_isTableOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openTable: called with m_isTableOpened=true\n"));
-    return;
-  }
-
-  if (m_ps->m_isParagraphOpened)
-    _closeParagraph();
-
-  WPXPropertyList propList;
-  propList.insert("table:align", "left");
-  propList.insert("fo:margin-left", *m_ps->m_paragraph.m_margins[1], *m_ps->m_paragraph.m_marginsUnit);
-
-  _pushParsingState();
-  _startSubDocument();
-  m_ps->m_subDocumentType = libmwaw::DOC_TABLE;
-
-  float tableWidth = 0;
-  WPXPropertyListVector columns;
-
-  size_t nCols = colWidth.size();
-  for (size_t c = 0; c < nCols; c++) {
-    WPXPropertyList column;
-    column.insert("style:column-width", colWidth[c], unit);
-    columns.append(column);
-
-    tableWidth += colWidth[c];
-  }
-  propList.insert("style:width", tableWidth, unit);
-  m_documentInterface->openTable(propList, columns);
-  m_ps->m_isTableOpened = true;
-}
-
 void MWAWContentListener::closeTable()
 {
   if (!m_ps->m_isTableOpened) {

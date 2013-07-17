@@ -155,7 +155,7 @@ struct Section {
 struct Table {
   struct Cell;
   //! constructor
-  Table() : m_height(0), m_justify(MWAWParagraph::JustificationLeft), m_indent(0),
+  Table() : m_height(0), m_justify(MWAWParagraph::JustificationLeft), m_indent(0), m_backColor(),
     m_columns(), m_cells(), m_extra("") {
   }
   //! insert the new values
@@ -163,6 +163,7 @@ struct Table {
     m_height.insert(table.m_height);
     m_justify.insert(table.m_justify);
     m_indent.insert(table.m_indent);
+    m_backColor.insert(table.m_backColor);
     m_columns.insert(table.m_columns);
     size_t tNumCells = table.m_cells.size();
     if (tNumCells > m_cells.size())
@@ -189,6 +190,8 @@ struct Table {
   Variable<MWAWParagraph::Justification> m_justify;
   //! the indent
   Variable<float> m_indent;
+  /** the table background gray color */
+  Variable<float> m_backColor;
   //! the table columns
   Variable<std::vector<float> > m_columns;
   //! the table cells

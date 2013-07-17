@@ -517,10 +517,23 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
     if (dSz < 3) return false;
     m_height = float(input->readLong(2))/1440.f;
     return true;
+  case 0x9a: { // the table shading
+    if (dSz < 2) return false;
+    int sz = (int) input->readULong(1);
+    if (2+sz > dSz || (sz%2)) return false;
+    f << "tableShadings=[";
+    for (int i = 0; i < sz/2; i++) {
+      float gray=1.f-float(input->readULong(2))/10000.f;
+      if (i==0) m_backColor=gray;
+      f << gray << ",";
+    }
+    f << "],";
+    break;
+  }
   case 0x9d: { // table cell shading
     if (dSz < 6) return false;
     val = (int) input->readLong(1); // a small number often 4
-    if (val) f << "backColorUnk=" << val << ",";
+    if (val) f << "backColor[unkn?]=" << val << ",";
     int firstCol = (int) input->readLong(1);
     int lastCol = (int) input->readLong(1);
     if (firstCol < 0 || lastCol < 0 || firstCol+1 > lastCol) {
@@ -529,7 +542,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
       f << "###backRange=" << firstCol << "<->" << lastCol-1 << ",";
       break;
     }
-    float backColor = float(1.-double(input->readULong(2))/10000.);
+    float backColor = 1.f-float(input->readULong(2))/10000.f;
     for (int i = firstCol; i < lastCol; i++)
       getCell(i)->m_backColor = backColor;
     break;
@@ -632,6 +645,7 @@ std::ostream &operator<<(std::ostream &o, Table const &table)
     }
   }
   if (table.m_indent.isSet()) o << "indent=" << table.m_indent.get() << ",";
+  if (table.m_backColor.isSet()) o << "backColor=" << *table.m_backColor << ",";
   if (table.m_columns->size()) {
     o << "cols=[";
     for (size_t i = 0; i < table.m_columns->size(); i++)

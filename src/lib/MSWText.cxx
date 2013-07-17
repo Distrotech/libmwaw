@@ -47,6 +47,7 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
+#include "MWAWTable.hxx"
 
 #include "MSWParser.hxx"
 #include "MSWStruct.hxx"
@@ -1762,7 +1763,9 @@ bool MSWText::sendTable(MSWTextInternal::Property const &prop)
   std::vector<float> width(numCols-1);
   for (size_t c = 0; c < numCols-1; c++)
     width[c]=table.m_columns.get()[c+1]-table.m_columns.get()[c];
-  listener->openTable(width, WPX_POINT);
+  MWAWTable theTable(MWAWTable::TableDimBit);
+  theTable.setColsSize(width);
+  listener->openTable(theTable);
 
   size_t numCells = table.m_cells.size();
   for (size_t r = 0; r < numRows; r++) {
@@ -1782,6 +1785,9 @@ bool MSWText::sendTable(MSWTextInternal::Property const &prop)
         }
         if (tCell.m_backColor.isSet()) {
           unsigned char col = (unsigned char)(tCell.m_backColor.get()*255.f);
+          cell.setBackgroundColor(MWAWColor(col,col,col));
+        } else if (table.m_backColor.isSet()) {
+          unsigned char col = (unsigned char)(table.m_backColor.get()*255.f);
           cell.setBackgroundColor(MWAWColor(col,col,col));
         }
       }

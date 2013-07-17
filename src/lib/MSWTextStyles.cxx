@@ -478,21 +478,6 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       val = (int) input->readLong(2);
       f << "f" << std::hex << wh << std::dec << "=" << val << ",";
       break;
-    case 0x9a: { // a size and 2 number ?
-      if (dSz < 2) break;
-      sz = (int) input->readULong(1);
-      if (2+sz > dSz || (sz%2)) {
-        done = false;
-        f << "#";
-        break;
-      }
-      done = true;
-      f << "f" << std::hex << wh << "=[";
-      for (int i = 0; i < sz/2; i++)
-        f << input->readULong(2) << ",";
-      f << std::dec << "],";
-      break;
-    }
     case 0x9f: // two small number: table range?
       if (dSz < 3) break;
       done = true;
@@ -584,7 +569,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       if (dSz < 3) break;
       done = true;
       val = (int) input->readLong(2);
-      f << "colsSep?=" << 2*val/1440. << ",";
+      f << "colSep[table]=" << 2*val/1440. << ",";
       break;
     default:
       break;
