@@ -39,6 +39,7 @@
 #  define MSW_TEXT_STYLES
 
 #include <iostream>
+#include <map>
 #include <string>
 
 #include "libmwaw_internal.hxx"
@@ -81,8 +82,6 @@ protected:
   MWAWFont const &getDefaultFont() const;
   //! return a font corresponding to an index
   bool getFont(ZoneType type, int id, MSWStruct::Font &actFont);
-  /* try to send a font. If so, update the font */
-  bool sendFont(ZoneType type, int id, MSWStruct::Font &actFont);
 
   /* send a font */
   void setProperty(MSWStruct::Font const &font);
@@ -120,7 +119,7 @@ protected:
   //! return a font corresponding to the section
   bool getSectionFont(ZoneType type, int id, MSWStruct::Font &font);
   //! read the text section
-  bool readSection(MSWEntry &entry);
+  bool readSection(MSWEntry &entry, std::vector<long> &cLimits);
   //! try to send a section
   bool sendSection(int id, int textStructId);
 
@@ -129,10 +128,11 @@ protected:
   //! send section properties
   void setProperty(MSWStruct::Section const &sec);
 
+  // style
   //! try to read the styles zone
   bool readStyles(MSWEntry &entry);
   //! try to read the styles hierachy
-  bool readStylesHierarchy(MSWEntry &entry, int N, std::vector<int> &previous);
+  bool readStylesHierarchy(MSWEntry &entry, int N, std::vector<int> &orig);
   //! try to read the styles names and fill the number of "named" styles...
   bool readStylesNames(MSWEntry const &zone, int N, int &Nnamed);
   //! try to read the styles fonts
@@ -141,6 +141,8 @@ protected:
   //! try to read the styles fonts
   bool readStylesParagraph(MSWEntry &zone, int N, std::vector<int> const &previous,
                            std::vector<int> const &order);
+  //! returns the style id to next style id map
+  std::map<int,int> const &getNextStyleMap() const;
   //! try to reorder the styles to find a good order
   static std::vector<int> orderStyles(std::vector<int> const &previous);
 

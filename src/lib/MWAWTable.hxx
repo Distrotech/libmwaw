@@ -99,9 +99,17 @@ public:
   int numCells() const {
     return int(m_cellsList.size());
   }
+  /** returns the row size if defined (in point) */
+  std::vector<float> const &getRowsSize() const {
+    return m_rowsSize;
+  }
   /** define the row size (in point) */
   void setRowsSize(std::vector<float> const &rSize) {
     m_rowsSize=rSize;
+  }
+  /** returns the columns size if defined (in point) */
+  std::vector<float> const &getColsSize() const {
+    return m_colsSize;
   }
   /** define the columns size (in point) */
   void setColsSize(std::vector<float> const &cSize) {

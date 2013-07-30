@@ -52,8 +52,8 @@
 
 namespace MSWTextInternal
 {
-struct Property;
 struct State;
+struct Table;
 }
 
 struct MSWEntry;
@@ -118,7 +118,8 @@ protected:
 
   //! send a text zone
   bool sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell=false);
-
+  //! try to open a section
+  bool sendSection(int sectionId);
   //! reads the three different zone size
   bool readHeaderTextLength();
 
@@ -156,7 +157,7 @@ protected:
   void flushExtra();
 
   //! try to send a table.
-  bool sendTable(MSWTextInternal::Property const &prop);
+  bool sendTable(MSWTextInternal::Table const &table);
 
   // interface with MSWTextStyles
 
@@ -173,8 +174,15 @@ protected:
 
   //! prepare the data to be send
   void prepareData();
-  //! update the list of beginning cPos of each paragraph, cell, and each id...
-  bool findParaPosAndStyles(std::map<long, int> &posStyleMap);
+
+  //! convert the file position in character position and compute the paragraph limit
+  void convertFilePLCPos();
+  //! cut the text in line/cell pos
+  void prepareLines();
+  //! retrieve the paragraph properties
+  void prepareParagraphProperties();
+  //! retrieve the font properties
+  void prepareFontProperties();
 
   //! prepare the table to be send
   void prepareTables();

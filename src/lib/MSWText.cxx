@@ -39,6 +39,10 @@
 #include <set>
 #include <sstream>
 
+#if defined(DEBUG_WITH_FILES)
+# include <fstream>
+#endif
+
 #include <libwpd/libwpd.h>
 
 #include "MWAWCell.hxx"
@@ -64,14 +68,23 @@
 /** Internal: the structures of a MSWText */
 namespace MSWTextInternal
 {
+#if defined(DEBUG_WITH_FILES)
+// use cut -c13- main-2.data|sort -n to retrieve the data
+//! internal and low level: defined a second debug file
+static std::fstream &debugFile2()
+{
+  static std::fstream s_file("main-2.data", std::ios_base::out | std::ios_base::trunc);
+  return s_file;
+}
+#endif
 
 ////////////////////////////////////////
 //! Internal: the entry of MSWParser
-struct TextEntry : public MWAWEntry {
-  TextEntry() : MWAWEntry(), m_pos(-1), m_id(0), m_type(0), m_paragraphId(-1), m_complex(false), m_extra("") {
+struct TextStruct : public MWAWEntry {
+  TextStruct() : MWAWEntry(), m_pos(-1), m_id(0), m_type(0), m_paragraphId(-1), m_complex(false), m_extra("") {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, TextEntry const &entry) {
+  friend std::ostream &operator<<(std::ostream &o, TextStruct const &entry) {
     if (entry.m_pos>=0) o << "textPos=" << entry.m_pos << ",";
     o << "styleId?=" << entry.m_id << ",";
     if (entry.m_complex) o << "complex,";
@@ -83,10 +96,11 @@ struct TextEntry : public MWAWEntry {
       o << "paphNil,";
     if (entry.m_type&4)
       o << "dirty,";
-    switch(entry.m_type&0xF8) {
-    case 0x80: // reset font ?
-    case 0: // keep font ?
-      o << "type=" << std::hex << entry.m_type << std::dec << ",";
+    switch(entry.m_type&0xF8) { // fNoParaLast
+    case 0x80: // sameline
+      break;
+    case 0:
+      o << "newline,";
       break;
     default:
       o << "#type=" << std::hex << entry.m_type << std::dec << ",";
@@ -106,7 +120,7 @@ struct TextEntry : public MWAWEntry {
   //! a struct used to compare file textpos
   struct CompareFilePos {
     //! comparaison function
-    bool operator()(TextEntry const *t1, TextEntry const *t2) const {
+    bool operator()(TextStruct const *t1, TextStruct const *t2) const {
       long diff = t1->begin()-t2->begin();
       return (diff < 0);
     }
@@ -214,18 +228,47 @@ struct Field {
 ////////////////////////////////////////
 //! Internal: a list of plc
 struct Property {
-  Property() : m_pos(-1), m_plcList(), m_debugPrint(false), m_cellsPos() {}
-  bool isTable() const {
-    return m_cellsPos.size();
-  }
-  //! the character position
-  long m_pos;
+  Property() : m_fPos(-1), m_plcList(), m_debugPrint(false) {}
+  //! the character position in the file
+  long m_fPos;
   //! the list of plc
   std::vector<MSWText::PLC> m_plcList;
   //! a flag to know if we have print data
   bool m_debugPrint;
-  //! the list of beginning of cell positions for the table and the def position
-  std::vector<long> m_cellsPos;
+};
+
+////////////////////////////////////////
+//! Internal and low level: a structure to store a line or a cell of a MSWText
+struct Line {
+  //! an enum used to differentiate line and cell
+  enum Type { L_Line, L_Cell, L_LastLineCell, L_LastRowCell };
+  //! constructor
+  Line() : m_type(L_Line), m_cPos(), m_fPos(), m_textStructId(-1) {
+  }
+  //! the line type
+  Type m_type;
+  //! the caracter position
+  Vec2l m_cPos;
+  //! the file position
+  Vec2l m_fPos;
+  //! the textstruct id ( or -1 )
+  int m_textStructId;
+};
+
+////////////////////////////////////////
+//! Internal and low level: a structure to store a table of a MSWText
+struct Table : public MWAWTable {
+  //! constructor
+  Table() : MWAWTable(MWAWTable::TableDimBit), m_cellPos(), m_height(0), m_backgroundColor(MWAWColor::white()), m_cells() {
+  }
+  //! the list of cPos corresponding to cells limits
+  std::vector<long> m_cellPos;
+  //! the row height
+  float m_height;
+  //! the background color
+  MWAWColor m_backgroundColor;
+  //! the table cells
+  std::vector<Variable<MSWStruct::Table::Cell> > m_cells;
 };
 
 ////////////////////////////////////////
@@ -233,7 +276,8 @@ struct Property {
 struct State {
   //! constructor
   State() : m_version(-1), m_bot(0x100), m_headerFooterZones(), m_textposList(),
-    m_plcMap(), m_filePlcMap(), m_fontMap(), m_paragraphMap(), m_propertyMap(),
+    m_plcMap(), m_filePlcMap(), m_lineList(), m_paragraphLimitMap(), m_sectionLimitList(),
+    m_fontMap(), m_paragraphMap(), m_propertyMap(), m_tableMap(),
     m_paraInfoList(), m_pageList(), m_fieldList(), m_footnoteList(), m_actPage(0), m_numPages(-1) {
     for (int i = 0; i < 3; i++) m_textLength[i] = 0;
   }
@@ -243,23 +287,29 @@ struct State {
     for (int i = 0; i < 3; i++) res+=m_textLength[i];
     return res;
   }
-  //! returns the file position corresponding to a text entry
-  long getFilePos(long textPos) const {
-    if (!m_textposList.size() || textPos < m_textposList[0].m_pos)
-      return m_bot+textPos;
+  //! returns the id of textpos corresponding to a cPos or -1
+  int getTextStructId(long textPos) const {
+    if (m_textposList.empty() || textPos < m_textposList[0].m_pos)
+      return -1;
     int minVal = 0, maxVal = int(m_textposList.size())-1;
     while (minVal != maxVal) {
       int mid = (minVal+1+maxVal)/2;
       if (m_textposList[(size_t)mid].m_pos == textPos)
-        return m_textposList[(size_t)mid].begin();
+        return mid;
       if (m_textposList[(size_t)mid].m_pos > textPos)
         maxVal = mid-1;
       else
         minVal = mid;
     }
-    return m_textposList[(size_t)minVal].begin() + (textPos-m_textposList[(size_t)minVal].m_pos);
+    return minVal;
   }
-
+  //! returns the file position corresponding to a text entry
+  long getFilePos(long textPos) const {
+    int tId=getTextStructId(textPos);
+    if (tId==-1)
+      return m_bot+textPos;
+    return m_textposList[(size_t)tId].begin() + (textPos-m_textposList[(size_t)tId].m_pos);
+  }
   //! the file version
   int m_version;
 
@@ -273,7 +323,7 @@ struct State {
   std::vector<MWAWEntry> m_headerFooterZones;
 
   //! the text positions
-  std::vector<TextEntry> m_textposList;
+  std::vector<TextStruct> m_textposList;
 
   //! the text correspondance zone ( textpos, plc )
   std::multimap<long, MSWText::PLC> m_plcMap;
@@ -281,6 +331,12 @@ struct State {
   //! the file correspondance zone ( filepos, plc )
   std::multimap<long, MSWText::PLC> m_filePlcMap;
 
+  //! the list of lines
+  std::vector<Line> m_lineList;
+  //! the paragraph limit -> textposition (or -1)
+  std::map<long, int> m_paragraphLimitMap;
+  //! the section cPos limit
+  std::vector<long> m_sectionLimitList;
   //! the final correspondance font zone ( textpos, font)
   std::map<long, MSWStruct::Font> m_fontMap;
 
@@ -289,6 +345,9 @@ struct State {
 
   //! the position where we have new data ( textpos -> [ we have done debug printing ])
   std::map<long, Property> m_propertyMap;
+
+  //! the final correspondance table zone ( textpos, font)
+  std::map<long, Table> m_tableMap;
 
   //! the list of paragraph info modifier
   std::vector<MSWStruct::ParagraphInfo> m_paraInfoList;
@@ -483,8 +542,9 @@ bool MSWText::createZones(long bot)
   if (it != entryMap.end())
     readParagraphInfo(it->second);
   it = entryMap.find("Section");
-  if (it != entryMap.end())
-    m_stylesManager->readSection(it->second);
+  if (it != entryMap.end() &&
+      !m_stylesManager->readSection(it->second, m_state->m_sectionLimitList))
+    m_state->m_sectionLimitList.resize(0);
 
   //! read the header footer limit
   it = entryMap.find("HeaderFooter");
@@ -603,7 +663,7 @@ bool MSWText::readTextStruct(MSWEntry &entry)
 
   for (int i = 0; i < N; i++) {
     pos = input->tell();
-    MSWTextInternal::TextEntry tEntry;
+    MSWTextInternal::TextStruct tEntry;
     f.str("");
     f<< "TextStruct-pos" << i << ":";
     tEntry.m_pos = (int) textPos[(size_t)i];
@@ -627,6 +687,11 @@ bool MSWText::readTextStruct(MSWEntry &entry)
     input->seek(pos+8, WPX_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
+#if defined(DEBUG_WITH_FILES)
+    f.str("");
+    f<< "TextContent[" << tEntry.m_pos << "]:" << tEntry << ",";
+    MSWTextInternal::debugFile2() << f.str() << "\n";
+#endif
   }
 
   pos = input->tell();
@@ -1055,456 +1120,514 @@ bool MSWText::readLongZone(MSWEntry &entry, int sz, std::vector<long> &list)
 ////////////////////////////////////////////////////////////
 // sort/prepare data
 ////////////////////////////////////////////////////////////
-bool MSWText::findParaPosAndStyles(std::map<long, int> &posStyleMap)
+void MSWText::convertFilePLCPos()
 {
-  posStyleMap.clear();
+  size_t numTextPos = m_state->m_textposList.size();
+  std::multimap<long, MSWText::PLC>::const_iterator it;
+  std::multimap<long, MSWText::PLC> &cMap=m_state->m_plcMap;
 
-  int vers = version();
-  long cPos = 0;
-  long cEnd = 0;
-  for (int i = 0; i < 3; i++) cEnd+=m_state->m_textLength[i];
-  if (cEnd <= 0) return false;
+  // simplest case
+  if (!numTextPos) {
+    long const bottom = m_state->m_bot;
+    long pPos=bottom;
+    it= m_state->m_filePlcMap.begin();
+    while (it != m_state->m_filePlcMap.end()) {
+      long pos=it->first, prevPos=0;
+      MSWText::PLC const &plc=it++->second;
+      if (plc.m_type==PLC::Paragraph) {
+        prevPos=pPos;
+        pPos=pos;
+        m_state->m_paragraphLimitMap[prevPos-bottom]=-1;
+      } else if (plc.m_type==PLC::Font)
+        prevPos=pos;
+      else {
+        MWAW_DEBUG_MSG(("MSWText::convertFilePLCPos: unexpected plc type: %d\n", plc.m_type));
+        continue;
+      }
+      cMap.insert(std::map<long, MSWText::PLC>::value_type(prevPos-bottom, plc));
+    }
+    return;
+  }
 
-  long debPos = m_state->getFilePos(cPos), pos=debPos;
-  int textposSize = int(m_state->m_textposList.size());
+  long cPos=0, pPos=0;
+  int fontId=-1;
+  for (size_t i=0; i < numTextPos; ++i) {
+    MSWTextInternal::TextStruct const &tPos=m_state->m_textposList[i];
+    long const begPos= tPos.begin();
+    long const endPos=tPos.end();
+    it=m_state->m_filePlcMap.lower_bound(begPos);
+    bool fontCheck=false;
+    while(it!=m_state->m_filePlcMap.end()) {
+      long pos=it->first;
+      if (!fontCheck && pos!=begPos) {
+        // time to check if the font has changed
+        std::multimap<long, MSWText::PLC>::const_iterator fIt=
+          m_state->m_filePlcMap.lower_bound(begPos);
+        while (fIt!=m_state->m_filePlcMap.begin()) {
+          if (fIt==m_state->m_filePlcMap.end()||fIt->first>=begPos)
+            --fIt;
+          else
+            break;
+        }
+        while (fIt!=m_state->m_filePlcMap.end()) {
+          if (fIt->first >= begPos)
+            break;
+          MSWText::PLC const &plc=fIt->second;
+          if (plc.m_type==PLC::Font) {
+            if (fontId!=plc.m_id) {
+              fontId=plc.m_id;
+              cMap.insert(std::map<long, MSWText::PLC>::value_type(cPos, plc));
+            }
+            break;
+          }
+          if (fIt==m_state->m_filePlcMap.begin())
+            break;
+          --fIt;
+        }
+        fontCheck=true;
+      }
+      if (pos>endPos)
+        break;
+      MSWText::PLC const &plc=it++->second;
+      long newCPos=cPos+(pos-begPos), prevPos=0;
+      if (plc.m_type==PLC::Paragraph) {
+        if (pos==begPos)
+          continue;
+        prevPos=pPos;
+        pPos=newCPos;
+        m_state->m_paragraphLimitMap[prevPos]=int(i);
+      } else if (plc.m_type==PLC::Font) {
+        if (pos==endPos)
+          continue;
+        fontCheck=true;
+        fontId=plc.m_id;
+        prevPos=newCPos;
+      } else {
+        MWAW_DEBUG_MSG(("MSWText::convertFilePLCPos: unexpected plc type: %d\n", plc.m_type));
+        continue;
+      }
+      cMap.insert(std::map<long, MSWText::PLC>::value_type(prevPos, plc));
+    }
+    cPos+=tPos.length();
+  }
+}
 
-  // first build the paragraph limit
+void MSWText::prepareLines()
+{
+  long cPos = 0, cEnd = m_state->getTotalTextSize();
+  if (cEnd <= 0) return;
+
+  m_state->m_lineList.clear();
+
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos, WPX_SEEK_SET);
-
-  int actStyle=-1;
-  long lastCPos=0;
-  posStyleMap[lastCPos]=actStyle;
+  input->seek(m_state->getFilePos(cPos), WPX_SEEK_SET);
+  MSWTextInternal::Line line;
+  int textposSize = int(m_state->m_textposList.size());
+  bool lineBeginSet=false;
+  int textId=-1;
   while (!input->atEOS() && cPos < cEnd) {
     std::multimap<long, MSWText::PLC>::const_iterator plcIt =
       m_state->m_plcMap.lower_bound(cPos);
-
-    enum { Paragraph=0, TextStruct, NumEnums=TextStruct+1 };
-    int modIdList[NumEnums]= {-2,-2};
-
     while (plcIt != m_state->m_plcMap.end() && plcIt->first==cPos) {
       MSWText::PLC const &plc = plcIt++->second;
-      if (plc.m_type == PLC::Paragraph)
-        modIdList[Paragraph]=plc.m_id;
       if (plc.m_type != PLC::TextPosition)
         continue;
       if (plc.m_id < 0 || plc.m_id >= textposSize)
         continue;
-      MSWTextInternal::TextEntry const &textEntry=
+      textId=plc.m_id;
+      MSWTextInternal::TextStruct const &textEntry=
         m_state->m_textposList[(size_t) plc.m_id];
-      modIdList[TextStruct]=textEntry.getParagraphId();
-      pos =textEntry.begin();
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(textEntry.begin(), WPX_SEEK_SET);
     }
-    pos = input->tell();
-    plcIt = m_state->m_filePlcMap.lower_bound(pos);
-    while (plcIt != m_state->m_plcMap.end() && plcIt->first==pos) {
-      MSWText::PLC const &plc = plcIt++->second;
-      if (plc.m_type == PLC::Paragraph)
-        modIdList[Paragraph]=plc.m_id;
+    if (!lineBeginSet)
+      line.m_fPos[0]=input->tell();
+    line.m_cPos[1]=cPos;
+    line.m_fPos[1]=input->tell();
+    line.m_textStructId=textId;
+    int c=int(input->readLong(1));
+    lineBeginSet=false;
+    // prepareParagraphProperties will fill more precisely the type
+    if (c==0x7) // end of cell/table
+      line.m_type=MSWTextInternal::Line::L_LastLineCell;
+    else if (c==0xc||c==0xd||cPos+1==cEnd) // end of section, line or last char
+      line.m_type=MSWTextInternal::Line::L_Line;
+    else
+      lineBeginSet=true;
+    ++cPos;
+    if (!lineBeginSet) {
+      m_state->m_lineList.push_back(line);
+      line.m_cPos[0]=cPos;
+      line.m_fPos[0]=input->tell();
+    }
+  }
+}
+
+void MSWText::prepareParagraphProperties()
+{
+  int const vers=version();
+  size_t numLines=m_state->m_lineList.size();
+  int textposSize = int(m_state->m_textposList.size());
+  MSWTextInternal::Line::Type lineType=MSWTextInternal::Line::L_Line;
+  MSWStruct::Paragraph paragraph(vers), modifier(vers);
+  for (size_t i=0; i<numLines; ++i) {
+    MSWTextInternal::Line &line = m_state->m_lineList[i];
+
+    std::map<long, int>::const_iterator pIt;
+    long cPos=line.m_cPos[0];
+    pIt=m_state->m_paragraphLimitMap.lower_bound(cPos);
+    if (pIt!=m_state->m_paragraphLimitMap.end() && pIt->first==cPos) {
+      // first retrieve the paragraph
+      int textId=pIt->second;
+      std::multimap<long, MSWText::PLC>::const_iterator plcIt;
+      plcIt=m_state->m_plcMap.lower_bound(cPos);
+      while (plcIt != m_state->m_plcMap.end() && plcIt->first==cPos) {
+        MSWText::PLC const &plc = plcIt++->second;
+        if (plc.m_type != PLC::Paragraph)
+          continue;
+        if (plc.m_id>=0)
+          m_stylesManager->getParagraph(MSWTextStyles::TextZone,
+                                        plc.m_id, paragraph);
+        else
+          paragraph=MSWStruct::Paragraph(vers);
+        if (paragraph.m_styleId.isSet()) {
+          MSWStruct::Paragraph style=MSWStruct::Paragraph(vers);
+          m_stylesManager->getParagraph(MSWTextStyles::StyleZone,*paragraph.m_styleId, style);
+          style.insert(paragraph);
+          paragraph=style;
+        }
+      }
+      if (textId>=0 && textId < textposSize) {
+        MSWTextInternal::TextStruct const &textEntry=
+          m_state->m_textposList[(size_t) textId];
+        int id=textEntry.getParagraphId();
+        if (id>=0) {
+          m_stylesManager->getParagraph(MSWTextStyles::TextStructZone,
+                                        id, modifier);
+          paragraph.insert(modifier);
+        }
+      }
+      m_state->m_paragraphMap.insert
+      (std::map<long, MSWStruct::Paragraph>::value_type(cPos,paragraph));
+      // finally, finish updating the line type
+      if (line.m_type==MSWTextInternal::Line::L_LastLineCell) {
+        // checkme: sanety check line.m_cPos[1]==line.m_cPos[0] usefull?
+        if (*paragraph.m_tableDef && line.m_cPos[1]==line.m_cPos[0])
+          line.m_type=MSWTextInternal::Line::L_LastRowCell;
+      } else if (paragraph.inTable())
+        line.m_type=MSWTextInternal::Line::L_Cell;
+      lineType=line.m_type;
+    } else
+      line.m_type=lineType;
+  }
+}
+
+void MSWText::prepareFontProperties()
+{
+  int const vers = version();
+  long cPos = 0, cEnd = m_state->getTotalTextSize();
+  if (cEnd <= 0) return;
+
+  std::multimap<long, PLC>::iterator plcIt;
+  std::multimap<long, MSWText::PLC> &map = m_state->m_plcMap;
+  int textposSize = int(m_state->m_textposList.size());
+  MSWTextInternal::TextStruct textEntry;
+  MSWStruct::Font font, modifier, paraFont, styleFont;
+  int actStyle=-1;
+  while (cPos < cEnd) {
+    bool fontChanged=false;
+    if (m_state->m_paragraphMap.find(cPos)!=m_state->m_paragraphMap.end()) {
+      MSWStruct::Paragraph const &para= m_state->m_paragraphMap.find(cPos)->second;
+      if (para.m_styleId.isSet() && actStyle!=*para.m_styleId) {
+        actStyle=*para.m_styleId;
+        styleFont=MSWStruct::Font();
+        m_stylesManager->getFont(MSWTextStyles::StyleZone, *para.m_styleId, styleFont);
+      }
+      para.getFont(paraFont);
+      fontChanged=true; // force a font change (even if no needed)
     }
 
-    for (int i = 0; i < NumEnums; i++) {
-      if (modIdList[i] < 0)
-        continue;
-      MSWStruct::Paragraph para(vers);
-      m_stylesManager->getParagraph
-      ((i==TextStruct) ? MSWTextStyles::TextStructZone : MSWTextStyles::TextZone, modIdList[i], para);
-      if (para.m_styleId.isSet() && *para.m_styleId>-100) {
-        actStyle = *para.m_styleId;
-        posStyleMap[lastCPos]=actStyle;
+    long cNextPos = cEnd;
+    plcIt = map.lower_bound(cPos);
+    int textPId=-2;
+    while (plcIt != map.end() ) {
+      if (plcIt->first != cPos) {
+        cNextPos=plcIt->first;
+        break;
+      }
+      PLC const &plc = plcIt++->second;
+      int pId = plc.m_id;
+      switch(plc.m_type) {
+      case PLC::TextPosition:
+        if (pId < 0 || pId > textposSize) {
+          MWAW_DEBUG_MSG(("MSWText::prepareFontProperties: oops can not find textstruct!!!!\n"));
+          break;
+        }
+        textEntry=m_state->m_textposList[(size_t) pId];
+        textPId=textEntry.getParagraphId();
+        break;
+      case PLC::Font:
+        fontChanged=true;
+        font=MSWStruct::Font();
+        if (pId >= 0)
+          m_stylesManager->getFont(MSWTextStyles::TextZone, pId, font);
+        break;
+      case PLC::Field:
+      case PLC::Footnote:
+      case PLC::FootnoteDef:
+      case PLC::HeaderFooter:
+      case PLC::Object:
+      case PLC::Page:
+      case PLC::Paragraph:
+      case PLC::ParagraphInfo:
+      case PLC::Section:
+      default:
+        break;
       }
     }
-
-    int c=int(input->readLong(1));
-    if (c==0xd || c==0x7) {
-      lastCPos = cPos+1;
-      posStyleMap[lastCPos]=actStyle;
+    if (textPId>=0) {
+      MSWStruct::Paragraph para(vers);
+      m_stylesManager->getParagraph(MSWTextStyles::TextStructZone, textPId, para);
+      para.getFont(modifier);
+      fontChanged=true;
+    } else if (textPId==-1) {
+      modifier=MSWStruct::Font();
+      fontChanged=true;
     }
-    cPos++;
+    if (fontChanged) {
+      MSWStruct::Font final(paraFont); // or stylefont
+      final.insert(font, &styleFont);
+      final.insert(modifier, &styleFont);
+      m_state->m_fontMap[cPos] = final;
+    }
+    cPos = cNextPos;
   }
+}
 
-  return true;
+void MSWText::prepareTables()
+{
+  size_t numLines=m_state->m_lineList.size();
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  for (size_t i=0; i<numLines; ++i) {
+    MSWTextInternal::Line line = m_state->m_lineList[i];
+    if (line.m_type==MSWTextInternal::Line::L_Line)
+      continue;
+    if (line.m_type==MSWTextInternal::Line::L_LastRowCell) {
+      MWAW_DEBUG_MSG(("MSWText::prepareTables: find isolated row cell for position %ld\n", line.m_cPos[0]));
+#if defined(DEBUG_WITH_FILES)
+      MSWTextInternal::debugFile2() << "TextContent["<<line.m_cPos[0]<<"]:###table[end]\n";
+#endif
+      continue;
+    }
+
+    std::vector<long> listBeginCells;
+    listBeginCells.push_back(line.m_cPos[0]);
+    int numErrors=0;
+    for (size_t j=i; j<numLines; ++j) {
+      line=m_state->m_lineList[j];
+      if (line.m_type==MSWTextInternal::Line::L_Line) {
+        MWAW_DEBUG_MSG(("MSWText::prepareTables: find another type of line for position %ld\n", line.m_cPos[0]));
+        ascFile.addPos(m_state->getFilePos(line.m_cPos[0]));
+        ascFile.addNote("###table");
+#if defined(DEBUG_WITH_FILES)
+        MSWTextInternal::debugFile2() << "TextContent["<<line.m_cPos[0]<<"]:###table\n";
+#endif
+        if (numErrors++)
+          break;
+        continue;
+      }
+      numErrors=0;
+      if (line.m_type==MSWTextInternal::Line::L_Cell)
+        continue;
+      if (line.m_type==MSWTextInternal::Line::L_LastLineCell) {
+        listBeginCells.push_back(line.m_cPos[1]+1);
+        continue;
+      }
+      if (m_state->m_paragraphMap.find(line.m_cPos[0]) == m_state->m_paragraphMap.end()) {
+        MWAW_DEBUG_MSG(("MSWText::prepareTables: can not find final raw paragraph %ld\n", line.m_cPos[0]));
+        break;
+      }
+      MSWStruct::Paragraph const *para = &m_state->m_paragraphMap.find(line.m_cPos[0])->second;
+      if (!para->m_tableDef.get() || !para->m_table.isSet()
+          || !para->m_table->m_columns.isSet()) {
+        MWAW_DEBUG_MSG(("MSWText::prepareTables: can not find table definition for position %ld\n", line.m_cPos[0]));
+        break;
+      }
+      MSWStruct::Table const &table = para->m_table.get();
+      size_t numCols=table.m_columns->size();
+      if (!numCols || (listBeginCells.size()%numCols)!=0) {
+        MWAW_DEBUG_MSG(("MSWText::prepareTables: can not find the number of row for position %ld(%d,%d)\n", line.m_cPos[0], int(listBeginCells.size()), (int) numCols));
+        break;
+      }
+      listBeginCells.push_back(line.m_cPos[0]);
+
+      MSWTextInternal::Table finalTable;
+      finalTable.m_cellPos = listBeginCells;
+      finalTable.m_cells = table.m_cells;
+      if (table.m_height.isSet())
+        finalTable.m_height=*table.m_height;
+      if (table.m_backColor.isSet()) {
+        unsigned char col = (unsigned char)(table.m_backColor.get()*255.f);
+        finalTable.m_backgroundColor=MWAWColor(col,col,col);
+      }
+      std::vector<float> width(numCols-1);
+      for (size_t c = 0; c < numCols-1; c++)
+        width[c]=table.m_columns.get()[c+1]-table.m_columns.get()[c];
+      finalTable.setColsSize(width);
+      m_state->m_tableMap[listBeginCells[0]]=finalTable;
+      i=j;
+      listBeginCells.clear();
+      break;
+    }
+    for (size_t j=0; j<listBeginCells.size(); ++j) {
+      ascFile.addPos(m_state->getFilePos(listBeginCells[j]));
+      ascFile.addNote("###table");
+    }
+  }
 }
 
 void MSWText::prepareData()
 {
-  long cPos = 0;
-  long cEnd = 0;
+#if defined(DEBUG_WITH_FILES) && DEBUG_PARAGRAPH
   int const vers = version();
-  for (int i = 0; i < 3; i++) cEnd+=m_state->m_textLength[i];
+#endif
+  long cPos = 0, cEnd = m_state->getTotalTextSize();
   if (cEnd <= 0) return;
+  convertFilePLCPos();
+  prepareLines();
+  prepareParagraphProperties();
+  prepareFontProperties();
+  prepareTables();
 
   MSWStruct::Font defaultFont;
-
   long debPos = m_state->getFilePos(cPos), pos=debPos;
   int textposSize = int(m_state->m_textposList.size());
 
-  // first build the paragraph limit
-  std::map<long, int> posStyleMap;
-  if (!findParaPosAndStyles(posStyleMap))
-    return;
-
-  struct LocalState {
-    //! constructor
-    LocalState(int versi, MSWTextStyles &styleManager) :
-      m_version(versi), m_styleManager(styleManager), m_actualStyle(-1),
-      m_actualFont(), m_actualPara(versi), m_paraFont(), m_previousFont(),
-      m_stylePara(versi), m_styleFont(), m_isLocalFont(false) {
-    }
-
-    //! set the current style
-    bool setStyle(int style) {
-      if (style==m_actualStyle)
-        return false;
-      m_stylePara=MSWStruct::Paragraph(m_version);
-      m_styleManager.getParagraph(MSWTextStyles::StyleZone,style, m_stylePara);
-      m_styleFont=MSWStruct::Font();
-      m_styleManager.getFont(MSWTextStyles::StyleZone, style, m_styleFont);
-      m_actualStyle=style;
-
-      m_actualPara=m_stylePara;
-      m_actualPara.getFont(m_paraFont);
-      m_previousFont=m_actualFont=m_paraFont;
-      m_isLocalFont = false;
-      return true;
-    }
-    //! update the character font
-    void updateFont(MSWStruct::Font const &charFont, bool isLocal) {
-      m_actualFont = m_paraFont;
-      m_actualFont.insert(charFont, &m_styleFont);
-      m_isLocalFont=isLocal;
-      if (!isLocal)
-        m_previousFont=m_actualFont;
-    }
-    //! update the paragraph
-    void setParagraph(MSWStruct::Paragraph const &para) {
-      if (para.m_styleId.isSet() && *para.m_styleId!=m_actualStyle) {
-        m_previousFont=m_paraFont;
-        m_isLocalFont = true;
-        return;
-      }
-      m_actualPara = m_stylePara;
-      m_actualPara.insert(para);
-
-      m_paraFont=MSWStruct::Font();
-      m_actualPara.getFont(m_paraFont);
-      m_previousFont=m_paraFont;
-      m_isLocalFont = true;
-    }
-    //! modify a paragraph
-    void addModifier(MSWStruct::Paragraph const &modifier, bool isLocal) {
-      m_actualPara.insert(modifier);
-      MSWStruct::Font modifierFont;
-      if (modifier.getFont(modifierFont))
-        m_actualFont.insert(modifierFont, &m_styleFont);
-      if (!isLocal)
-        m_previousFont=m_actualFont;
-    }
-    //! modify a paraghaph info
-    void addModifier(MSWStruct::ParagraphInfo const &info) {
-      m_actualPara.m_info.insert(info);
-    }
-
-    //! update the state to new state, returns true if we do some change
-    bool updateState(bool local) {
-      bool res=m_isLocalFont;
-      if (m_isLocalFont)
-        m_actualFont=m_previousFont;
-      m_isLocalFont = local;
-      if (m_isLocalFont)
-        m_previousFont=m_actualFont;
-      return res;
-    }
-    //! the actual version
-    int m_version;
-    //! the style manager
-    MSWTextStyles &m_styleManager;
-
-    //! the actual style
-    int m_actualStyle;
-    //! the actual font
-    MSWStruct::Font m_actualFont;
-    //! the actual paragraph
-    MSWStruct::Paragraph m_actualPara;
-    //! the paragraph font
-    MSWStruct::Font m_paraFont;
-    //! the previous font (before a push)
-    MSWStruct::Font m_previousFont;
-
-    //! the style paragraph
-    MSWStruct::Paragraph m_stylePara;
-    //! the actual style font
-    MSWStruct::Font m_styleFont;
-    //! a local font
-    bool m_isLocalFont;
-  };
-  LocalState actState(vers, *m_stylesManager.get());
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f, f2;
   PLC::ltstr compare;
 
+  std::multimap<long, PLC> &map = m_state->m_plcMap;
   std::multimap<long, PLC>::iterator plcIt;
   cPos = 0;
   pos=debPos;
-  long paraPos = cPos;
   while (cPos < cEnd) {
     f.str("");
     // first find the list of the plc
     long cNextPos = cEnd;
-    bool fontChanged=false, paraChanged=false;
-    enum { Paragraph=0, Font, ParagraphInfo, TextStruct, NumEnums=TextStruct+1 };
-    int modIdList[NumEnums]= {-2,-2,-2,-2};
-    MSWTextInternal::TextEntry textEntry;
 
     std::set<PLC, PLC::ltstr> sortedPLC(compare);
-    for (int st = 0; st < 2; st++) {
-      std::multimap<long, MSWText::PLC> &map = st==0 ? m_state->m_plcMap : m_state->m_filePlcMap;
-      long wPos = st==0 ? cPos : pos;
-      plcIt = map.upper_bound(wPos);
-      if (plcIt != map.end() && plcIt->first != wPos) {
-        long sz = plcIt->first-wPos;
-        if (sz>0 && cPos+sz < cNextPos) cNextPos = cPos+sz;
+    plcIt = map.lower_bound(cPos);
+    while (plcIt != map.end() ) {
+      if (plcIt->first != cPos) {
+        cNextPos=plcIt->first;
+        break;
       }
-      plcIt = map.lower_bound(wPos);
-      while (plcIt != map.end() ) {
-        if (plcIt->first != wPos) break;
-        PLC const &plc = plcIt++->second;
-        if (st==0) sortedPLC.insert(plc);
+      PLC const &plc = plcIt++->second;
+      if (plc.m_type!=PLC::Paragraph&&plc.m_type!=PLC::Font)
+        sortedPLC.insert(plc);
 #if DEBUG_PLC
-        if (plc.m_type != PLC::TextPosition)
-          f << "[" << plc << "],";
+      if (plc.m_type != PLC::TextPosition)
+        f << "[" << plc << "],";
 #endif
 
-        int pId = plc.m_id;
-        switch(plc.m_type) {
-        case PLC::TextPosition:
-          modIdList[TextStruct] = pId < 0 ? -1 : pId;
-          if (pId < 0 || pId > textposSize) {
-            MWAW_DEBUG_MSG(("MSWText::prepareData: oops can not find textstruct!!!!\n"));
-            modIdList[TextStruct] = -2;
-            f << "[###tP" << pId << "]";
-          } else {
-            textEntry=m_state->m_textposList[(size_t) pId];
-            pos = textEntry.begin();
-          }
-          break;
-        case PLC::Section:
-#if defined(DEBUG_WITH_FILES) && DEBUG_SECTION
-          if (pId >= 0) {
-            MSWStruct::Section sec;
-            m_stylesManager->getSection(MSWTextStyles::TextZone, pId, sec);
-            f << "S" << pId << "=[" << sec << "],";
-          } else
-            f << "S_,";
-#endif
-          break;
-        case PLC::ParagraphInfo:
-          modIdList[ParagraphInfo] = pId < 0 ? -1 : pId;
-          break;
-        case PLC::Page:
-#if defined(DEBUG_WITH_FILES) && DEBUG_PAGE
-          if (pId  >= 0 && pId < int(m_state->m_pageList.size()))
-            f << "Pg" << pId << "=[" << m_state->m_pageList[(size_t) pId] << "],";
-          else
-            f << "Pg_,";
-#endif
-          break;
-        case PLC::Paragraph:
-          modIdList[Paragraph] = pId < 0 ? -1 : pId;
-          break;
-        case PLC::Font:
-          modIdList[Font] = pId < 0 ? -1 : pId;
-          break;
-        case PLC::Field:
-        case PLC::Footnote:
-        case PLC::FootnoteDef:
-        case PLC::HeaderFooter:
-        case PLC::Object:
-        default:
-          break;
-        }
-      }
-    }
-
-    MSWTextInternal::Property prop;
-    prop.m_pos = pos;
-    prop.m_plcList=std::vector<PLC>(sortedPLC.begin(), sortedPLC.end());
-
-    std::map<long,int>::iterator pIt=posStyleMap.find(cPos);
-    bool newLine = pIt!=posStyleMap.end();
-    if (newLine) {
-      paraPos = cPos;
-      paraChanged=actState.setStyle(pIt->second);
-    }
-    // update the paragraph list
-    for (size_t i = 0; i < NumEnums; i++) {
-      if (i==1 && modIdList[TextStruct]!=-2) {
-        /**FIXME: normally, must depend on some textEntry data flags,
-           I tested with textEntry.m_type&0x80
-           but in average, the results seem slightly worse :-~ */
-        fontChanged |= actState.updateState(true);
-      }
-      int pId = modIdList[i];
-      if (pId == -2) continue;
-
-      int paraId=-2;
-      switch(i) {
-      case TextStruct: {
-        if (pId < 0 || pId >= textposSize) {
-          MWAW_DEBUG_MSG(("MSWText::prepareData: oops can not find textstruct\n"));
-          break;
-        }
-        paraId=textEntry.getParagraphId();
-        break;
-      }
-      case Paragraph:
-        paraId=pId;
-        break;
-      case Font: {
-        MSWStruct::Font newChar;
-        if (pId >= 0 && m_stylesManager->getFont(MSWTextStyles::TextZone, pId, newChar)) {
-#if defined(DEBUG_WITH_FILES) && DEBUG_FONT
-          f << "F" << pId << "=[" << newChar.m_font->getDebugString(m_parserState->m_fontConverter) << newChar << "],";
+      int pId = plc.m_id;
+      switch(plc.m_type) {
+      case PLC::TextPosition:
+        if (pId < 0 || pId > textposSize) {
+          MWAW_DEBUG_MSG(("MSWText::prepareData: oops can not find textstruct!!!!\n"));
+          f << "[###tP" << pId << "]";
         } else {
-          f << "F_,";
+          MSWTextInternal::TextStruct const &textEntry=m_state->m_textposList[(size_t) pId];
+          pos = textEntry.begin();
+#if defined(DEBUG_WITH_FILES) && DEBUG_PARAGRAPH
+          int paraId=textEntry.getParagraphId();
+          if (paraId < 0)
+            f << "tP_,";
+          else {
+            MSWStruct::Paragraph para(vers);
+            m_stylesManager->getParagraph(MSWTextStyles::TextStructZone, paraId, para);
+            f << "tP" << paraId << "=[";
+            para.print(f, m_parserState->m_fontConverter);
+            f << "],";
+          }
 #endif
         }
-        actState.updateFont(newChar, modIdList[TextStruct]!=-2);
-        fontChanged=true;
         break;
-      }
-      case ParagraphInfo:
+      case PLC::Section:
+#if defined(DEBUG_WITH_FILES) && DEBUG_SECTION
+        if (pId >= 0) {
+          MSWStruct::Section sec;
+          m_stylesManager->getSection(MSWTextStyles::TextZone, pId, sec);
+          f << "S" << pId << "=[" << sec << "],";
+        } else
+          f << "S_,";
+#endif
+        break;
+      case PLC::ParagraphInfo:
+#if defined(DEBUG_WITH_FILES) && DEBUG_PARAGRAPHINFO
         if (pId >= 0 && pId < int(m_state->m_paraInfoList.size())) {
           MSWStruct::ParagraphInfo info=m_state->m_paraInfoList[(size_t) pId];
-          actState.addModifier(info);
-#if defined(DEBUG_WITH_FILES) && DEBUG_PARAGRAPHINFO
           f << "Pi" << pId  << "=[" << info << "],";
-#endif
-        } else {
-#if defined(DEBUG_WITH_FILES) && DEBUG_PARAGRAPHINFO
+        } else
           f << "Pi_,";
 #endif
-        }
         break;
+      case PLC::Page:
+#if defined(DEBUG_WITH_FILES) && DEBUG_PAGE
+        if (pId  >= 0 && pId < int(m_state->m_pageList.size()))
+          f << "Pg" << pId << "=[" << m_state->m_pageList[(size_t) pId] << "],";
+        else
+          f << "Pg_,";
+#endif
+        break;
+      case PLC::Paragraph:
+#if defined(DEBUG_WITH_FILES) && DEBUG_PARAGRAPH
+        if (pId >= 0) {
+          MSWStruct::Paragraph para(vers);
+          m_stylesManager->getParagraph(MSWTextStyles::TextZone, pId, para);
+          f << "P" << pId << "=[";
+          para.print(f, m_parserState->m_fontConverter);
+          f << "],";
+        } else f << "P_,";
+#endif
+        break;
+      case PLC::Font: {
+#if defined(DEBUG_WITH_FILES) && DEBUG_FONT
+        if (pId >= 0) {
+          MSWStruct::Font font;
+          m_stylesManager->getFont(MSWTextStyles::TextZone, pId, font);
+          f << "F" << pId << "=[" << font.m_font->getDebugString(m_parserState->m_fontConverter) << font << "],";
+        } else
+          f << "F_,";
+#endif
+        break;
+      }
+      case PLC::Field:
+      case PLC::Footnote:
+      case PLC::FootnoteDef:
+      case PLC::HeaderFooter:
+      case PLC::Object:
       default:
         break;
       }
-      if (paraId==-2)
-        continue;
-
-      MSWStruct::Paragraph para(vers);
-      if (paraId >= 0)
-        m_stylesManager->getParagraph
-        ((i==TextStruct) ? MSWTextStyles::TextStructZone : MSWTextStyles::TextZone, paraId, para);
-#if defined(DEBUG_WITH_FILES) && DEBUG_PARAGRAPH
-      if (i==TextStruct) f << "tP";
-      else f << "P";
-      if (paraId < 0)
-        f << "_,";
-      else {
-        f << paraId << "=[";
-        para.print(f, m_parserState->m_fontConverter);
-        f << "],";
-      }
-#endif
-
-      if (i==Paragraph)
-        actState.setParagraph(para);
-      else
-        actState.addModifier(para, true);
-      paraChanged = true;
     }
+    MSWTextInternal::Property prop;
+    prop.m_fPos = pos;
+    prop.m_plcList=std::vector<PLC>(sortedPLC.begin(), sortedPLC.end());
 
-    if (paraChanged) {
-      if (m_state->m_paragraphMap.find(paraPos)!=m_state->m_paragraphMap.end())
-        m_state->m_paragraphMap.erase(paraPos);
-      m_state->m_paragraphMap.insert
-      (std::map<long, MSWStruct::Paragraph>::value_type
-       (paraPos,actState.m_actualPara));
-      fontChanged=true;
-    }
-
-    if (fontChanged)
-      m_state->m_fontMap[cPos] = actState.m_actualFont;
     if (f.str().length()) {
       f2.str("");
       f2 << "TextContent["<<cPos<<"]:" << f.str();
       ascFile.addPos(pos);
       ascFile.addNote(f2.str().c_str());
+#if defined(DEBUG_WITH_FILES)
+      MSWTextInternal::debugFile2() << f2.str() << "\n";
+#endif
       prop.m_debugPrint = true;
     }
     m_state->m_propertyMap[cPos] = prop;
     pos+=(cNextPos-cPos);
     cPos = cNextPos;
-  }
-
-  prepareTables();
-}
-
-void MSWText::prepareTables()
-{
-  long cEnd = 0;
-  for (int i = 0; i < 3; i++) cEnd+=m_state->m_textLength[i];
-  if (cEnd <= 0) return;
-
-  std::map<long,MSWTextInternal::Property>::iterator propIt =
-    m_state->m_propertyMap.begin();
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  while(propIt != m_state->m_propertyMap.end()) {
-    long cPos = propIt->first;
-    MSWTextInternal::Property &prop = propIt++->second, actProp = prop;
-
-    if (m_state->m_paragraphMap.find(cPos) == m_state->m_paragraphMap.end())
-      continue;
-    MSWStruct::Paragraph const *para = &m_state->m_paragraphMap.find(cPos)->second;
-    if (!para->inTable() || para->m_tableDef.get()) continue;
-
-    std::vector<long> listBeginCells;
-    listBeginCells.push_back(cPos);
-    while (1) {
-      long newEndPos = cEnd;
-      input->seek(actProp.m_pos, WPX_SEEK_SET);
-      if (propIt != m_state->m_propertyMap.end())
-        newEndPos = propIt->first;
-
-      while (cPos++ < newEndPos) {
-        int c = (int) input->readULong(1);
-        if (c!=0x7) continue;
-        listBeginCells.push_back(cPos);
-      }
-
-      if (propIt == m_state->m_propertyMap.end()) break;
-
-      cPos = propIt->first;
-      actProp = propIt++->second;
-      if (m_state->m_paragraphMap.find(cPos) == m_state->m_paragraphMap.end())
-        continue;
-      para = &m_state->m_paragraphMap.find(cPos)->second;
-      if (!para->inTable()) break;
-      if (para->m_tableDef.get()) {
-        listBeginCells.push_back(cPos);
-        break;
-      }
-    }
-    if (!para->m_tableDef.get() || !para->m_table.isSet()
-        || !para->m_table->m_columns.isSet()
-        || para->m_table->m_columns->size() < 2) {
-      MWAW_DEBUG_MSG(("MSWText::prepareTables: can not find table for position %ld pb in %ld\n", listBeginCells[0], cPos));
-      ascFile.addPos(m_state->getFilePos(listBeginCells[0]));
-      ascFile.addNote("###A");
-      ascFile.addPos(m_state->getFilePos(cPos));
-      ascFile.addNote("###B");
-      continue;
-    }
-
-    size_t nTableCells=para->m_table->m_columns->size();
-    if (((listBeginCells.size()+nTableCells)%nTableCells) != 1) {
-      MWAW_DEBUG_MSG(("MSWText::prepareTables: table num cells is bad for position %ld<->%ld\n", listBeginCells[0], cPos));
-      continue;
-    }
-    prop.m_cellsPos = listBeginCells;
   }
 }
 
@@ -1542,26 +1665,17 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
     propIt = m_state->m_propertyMap.find(cPos);
     if (propIt != m_state->m_propertyMap.end()) {
       prop = &propIt->second;
-      pos = prop->m_pos;
-      newTable = !tableCell && prop->isTable();
+      pos = prop->m_fPos;
+      newTable = !tableCell &&
+                 m_state->m_tableMap.find(cPos)!= m_state->m_tableMap.end();
       input->seek(pos, WPX_SEEK_SET);
       numPLC = prop->m_plcList.size();
     }
-    int newSectionId=-1, textStructId=-1;
+    int newSectionId=-1;
     for (size_t i = 0; i < numPLC; i++) {
       PLC const &plc = prop->m_plcList[i];
       if (newTable && int(plc.m_type) >= int(PLC::ParagraphInfo)) continue;
       switch(plc.m_type) {
-      case PLC::TextPosition: {
-        if (plc.m_id < 0 || plc.m_id >= int(m_state->m_textposList.size()))
-          break;
-        MSWTextInternal::TextEntry const &entry=m_state->m_textposList[(size_t) plc.m_id];
-        if (pos != entry.begin()) {
-          MWAW_DEBUG_MSG(("MSWText::sendText: the file position seems bad\n"));
-        } else
-          textStructId=entry.getParagraphId();
-        break;
-      }
       case PLC::Page: {
         if (tableCell) break;
         if (mainZone) m_mainParser->newPage(++m_state->m_actPage);
@@ -1579,6 +1693,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       case PLC::Footnote:
         m_mainParser->sendFootnote(plc.m_id);
         break;
+      case PLC::TextPosition:
       case PLC::Font:
       case PLC::FootnoteDef:
       case PLC::HeaderFooter:
@@ -1590,19 +1705,23 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
       }
     }
     if (newSectionId >= 0)
-      m_stylesManager->sendSection(newSectionId, textStructId);
+      sendSection(newSectionId);
     if ((prop && prop->m_debugPrint)  || newTable) {
       ascFile.addPos(debPos);
       ascFile.addNote(f.str().c_str());
+#if defined(DEBUG_WITH_FILES)
+      MSWTextInternal::debugFile2() << f.str() << "\n";
+#endif
       f.str("");
       f << "TextContent["<<cPos<<"]:";
       debPos = pos;
     }
     // time to send the table
-    if (newTable) {
+    if (newTable && m_state->m_tableMap.find(cPos) !=m_state->m_tableMap.end()) {
       long actCPos = cPos;
-      bool ok = sendTable(*prop);
-      cPos = ok ? prop->m_cellsPos.back()+1 : actCPos;
+      MSWTextInternal::Table const &table = m_state->m_tableMap.find(cPos)->second;
+      bool ok = sendTable(table);
+      cPos = ok ? table.m_cellPos.back()+1 : actCPos;
       pos=debPos=m_state->getFilePos(cPos);
       input->seek(pos, WPX_SEEK_SET);
       f.str("");
@@ -1722,51 +1841,43 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
   return true;
 }
 
+bool MSWText::sendSection(int secId)
+{
+  int textStructId=-1;
+  if (!m_state->m_textposList.empty() &&
+      secId>=0 && secId+1<(int)m_state->m_sectionLimitList.size()) {
+    int tId=m_state->getTextStructId
+            (m_state->m_sectionLimitList[(size_t)secId+1]-1);
+    if (tId>=0 && tId<(int)m_state->m_textposList.size())
+      textStructId=m_state->m_textposList[(size_t)tId].getParagraphId();
+  }
+  return m_stylesManager->sendSection(secId, textStructId);
+}
+
 ////////////////////////////////////////////////////////////
 // try to read a table
 ////////////////////////////////////////////////////////////
-bool MSWText::sendTable(MSWTextInternal::Property const &prop)
+bool MSWText::sendTable(MSWTextInternal::Table const &table)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MSWText::sendTable: can not find a listener!\n"));
     return true;
   }
-  size_t nCells = prop.m_cellsPos.size();
-  if (nCells <= 1 ||
-      m_state->m_paragraphMap.find(prop.m_cellsPos.back())
-      == m_state->m_paragraphMap.end()) {
+  size_t nCells = table.m_cellPos.size();
+  if (nCells <= 1) {
     MWAW_DEBUG_MSG(("MSWText::sendTable: numcols pos is bad\n"));
     return true;
   }
   nCells--;
 
-  MSWStruct::Paragraph &para =
-    m_state->m_paragraphMap.find(prop.m_cellsPos[nCells])->second;
-  if (!para.m_table.isSet()) {
-    MWAW_DEBUG_MSG(("MSWText::sendTable: can not find the table\n"));
-    return false;
-  }
-  MSWStruct::Table const &table = para.m_table.get();
-  if (!table.m_columns.isSet() || table.m_columns->size()==0 ||
-      (nCells%table.m_columns->size())) {
-    MWAW_DEBUG_MSG(("MSWText::sendTable: numcols para is bad\n"));
-    return false;
-  }
-
-  size_t numCols = table.m_columns->size();
+  size_t numCols = table.getColsSize().size()+1;
   size_t numRows = nCells/numCols;
 
-  float height = 0;
-  if (table.m_height.isSet()) height=-table.m_height.get();
+  float height = table.m_height;
+  if (height > 0) height*=-1;
 
-  std::vector<float> width(numCols-1);
-  for (size_t c = 0; c < numCols-1; c++)
-    width[c]=table.m_columns.get()[c+1]-table.m_columns.get()[c];
-  MWAWTable theTable(MWAWTable::TableDimBit);
-  theTable.setColsSize(width);
-  listener->openTable(theTable);
-
+  listener->openTable(table);
   size_t numCells = table.m_cells.size();
   for (size_t r = 0; r < numRows; r++) {
     listener->openTableRow(height, WPX_INCH);
@@ -1786,23 +1897,24 @@ bool MSWText::sendTable(MSWTextInternal::Property const &prop)
         if (tCell.m_backColor.isSet()) {
           unsigned char col = (unsigned char)(tCell.m_backColor.get()*255.f);
           cell.setBackgroundColor(MWAWColor(col,col,col));
-        } else if (table.m_backColor.isSet()) {
-          unsigned char col = (unsigned char)(table.m_backColor.get()*255.f);
-          cell.setBackgroundColor(MWAWColor(col,col,col));
-        }
+        } else if (!table.m_backgroundColor.isWhite())
+          cell.setBackgroundColor(table.m_backgroundColor);
       }
       cell.setPosition(Vec2i((int)c,(int)r));
 
       listener->openTableCell(cell);
 
       MSWEntry textData;
-      textData.setBegin(prop.m_cellsPos[cellPos]);
-      long cEndPos = prop.m_cellsPos[cellPos+1]-1;
+      textData.setBegin(table.m_cellPos[cellPos]);
+      long cEndPos = table.m_cellPos[cellPos+1]-1;
       textData.setEnd(cEndPos);
       if (textData.length()<=0)
         listener->insertChar(' ');
       else
         sendText(textData, false, true);
+#if defined(DEBUG_WITH_FILES)
+      MSWTextInternal::debugFile2() << "TextContent["<<cEndPos<<"]:" << char(7) << "\n";
+#endif
       listener->closeTableCell();
     }
     listener->closeTableRow();

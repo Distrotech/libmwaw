@@ -286,7 +286,7 @@ struct ParagraphInfo {
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph(int version) : MWAWParagraph(), m_version(version), m_styleId(-1000),
-    m_deletedTabs(), m_info(), m_font(), m_font2(), m_modFont(), m_section(),
+    m_deletedTabs(), m_info(), m_font(), m_modFont(), m_section(),
     m_bordersStyle(), m_inCell(false), m_tableDef(false), m_table() {
     m_tabsRelativeToLeftMargin=false;
   }
@@ -318,8 +318,8 @@ struct Paragraph : public MWAWParagraph {
   Variable<std::vector<float> > m_deletedTabs;
   //! the dimension
   Variable<ParagraphInfo> m_info;
-  //! the font (simplified)
-  Variable<Font> m_font, m_font2 /** font ( not simplified )*/, m_modFont /** font (modifier) */;
+  //! the font
+  Variable<Font> m_font, m_modFont /** font (modifier) */;
   //! the section
   Variable<Section> m_section;
   //! the border style ( old v3)

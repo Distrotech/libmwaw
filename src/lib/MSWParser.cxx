@@ -544,7 +544,7 @@ bool MSWParser::createZones()
 }
 
 ////////////////////////////////////////////////////////////
-// read the zone list
+// read the zone list ( FIB )
 ////////////////////////////////////////////////////////////
 bool MSWParser::readZoneList()
 {
@@ -556,55 +556,55 @@ bool MSWParser::readZoneList()
   for (int i = 0; i < numData; i++) {
     switch(i) {
       // the first two zone are often simillar : even/odd header/footer ?
-    case 0:
+    case 0: // original styles zone, often invalid
       readEntry("Styles", 0);
-      break; // checkme: size is often invalid
-    case 1:
+      break;
+    case 1: // STSH
       readEntry("Styles", 1);
       break;
-    case 2:
+    case 2: // FFNDRef
       readEntry("FootnotePos");
       break;
-    case 3:
+    case 3: // FFNDText
       readEntry("FootnoteDef");
       break;
-    case 4:
+    case 4: // SED
       readEntry("Section");
       break;
-    case 5:
+    case 5: //
       readEntry("PageBreak");
       break;
-    case 6:
+    case 6: // fandRef
       readEntry("FieldName");
       break;
-    case 7:
+    case 7: // fandText
       readEntry("FieldPos");
       break;
-    case 8:
+    case 8: // Hdd
       readEntry("HeaderFooter");
       break;
-    case 9:
+    case 9: // BteChpx
       readEntry("CharList", 0);
       break;
-    case 10:
+    case 10: // BtePapx
       readEntry("ParagList", 1);
       break;
-    case 12:
+    case 12: // SttbfFfn
       readEntry("FontIds");
       break;
-    case 13: // checkme: is it ok also for v3 file ?
+    case 13: // PrDrvr: checkme: is it ok also for v3 file ?
       readEntry("PrintInfo");
       break;
-    case 14:
+    case 14: // Clx/Phe
       readEntry(vers <= 3 ? "TextStruct" : "ParaInfo");
       break;
-    case 15:
+    case 15: // Dop?
       readEntry("DocumentInfo");
       break;
     case 16:
       readEntry("Printer");
       break;
-    case 18:
+    case 18: // Clx (ie. a list of Pcd )
       readEntry("TextStruct");
       break;
     case 19:
@@ -1791,7 +1791,6 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
     getListener()->insertTextBox(pictPos, subdoc);
     return;
   }
-  long actPos = input->tell();
   MWAWPosition basicPos(Vec2f(0.,0.), Vec2f(100.,100.), WPX_POINT);
   if (anchor != MWAWPosition::Page && anchor != MWAWPosition::Frame) {
     basicPos.setRelativePosition(anchor, MWAWPosition::XLeft, MWAWPosition::YCenter);
@@ -1799,7 +1798,7 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
   } else
     basicPos.setRelativePosition(anchor);
 
-
+  long actPos = input->tell();
   std::string pictType;
   WPXBinaryData data;
   Box2f naturalBox;

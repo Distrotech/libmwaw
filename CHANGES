@@ -1,5 +1,10 @@
 CHANGES:
 
+07/29/2013:
+- check that the Microsoft Word use the new properties' classes,
+- Microsoft Word parser: understand where the different properties
+  are exactly stored,
+
 07/16/2013:
 - check that LightWay Text, Mariner Write, Microsoft Works, WriterPlus
   use the new properties' classes,

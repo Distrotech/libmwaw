@@ -778,7 +778,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
     font.setUnderlineStyle(MWAWFont::Line::Simple);
     font.setUnderlineType(MWAWFont::Line::Double);
   }
-  font.setSize((float) input->readLong(1));
+  font.setSize((float) input->readULong(1));
 
   int colId = (int) input->readULong(1);
   MWAWColor color(MWAWColor::black());
@@ -866,7 +866,7 @@ bool CWText::readChar(int id, int fontSize, MWAWFont &font)
     font.setUnderlineStyle(MWAWFont::Line::Simple);
     font.setUnderlineType(MWAWFont::Line::Double);
   }
-  font.setSize((float) input->readLong(1));
+  font.setSize((float) input->readULong(1));
 
   int colId = (int) input->readULong(1);
   MWAWColor color(MWAWColor::black());

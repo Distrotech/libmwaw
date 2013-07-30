@@ -58,7 +58,7 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
       o << "=no";
       break;
     case 0x81:
-      o << "=noSyle";
+      o << "=noStyle";
     case 1:
       break;
     default:
@@ -750,14 +750,23 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
   case 0x7:
   case 0x8:
   case 0x9:
+  case 0xe: // a small number always 0 ?
     if (dSz < 2) return false;
     val = (int) input->readLong(1);
     switch(c) {
     case 7:
-      m_breakStatus = m_breakStatus.get()|MWAWParagraph::NoBreakBit;
+      if (val==0)
+        m_breakStatus = m_breakStatus.get()&(~MWAWParagraph::NoBreakBit);
+      else
+        m_breakStatus = m_breakStatus.get()|MWAWParagraph::NoBreakBit;
+      f << "noBreak";
       break;
     case 8:
-      m_breakStatus = m_breakStatus.get()|MWAWParagraph::NoBreakWithNextBit;
+      if (val==0)
+        m_breakStatus = m_breakStatus.get()&(~MWAWParagraph::NoBreakWithNextBit);
+      else
+        m_breakStatus = m_breakStatus.get()|MWAWParagraph::NoBreakWithNextBit;
+      f << "noBreakWithNext";
       break;
     case 9: // normally ok, ...
       f << "pagebreakbefore";
@@ -1000,7 +1009,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     if (val&4) f << "Yrel=page,"; // def margin
     if (val&0xF8) f << "#rel=" << (val>>3) << ",";
     break;
-  case 0x1e:
+  case 0x1e: // checkme: find one time in v3 (text struct file) with data 0x80
   case 0x1f:
   case 0x20:
   case 0x21:
@@ -1065,9 +1074,7 @@ std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
 bool Paragraph::getFont(Font &font, Font const *styleFont) const
 {
   bool res = true;
-  if (m_font2.isSet())
-    font = m_font2.get();
-  else if (m_font.isSet())
+  if (m_font.isSet())
     font = m_font.get();
   else
     res = false;
@@ -1106,10 +1113,6 @@ void Paragraph::insert(Paragraph const &para, bool insertModif)
     m_font=para.m_font;
   else if (para.m_font.isSet())
     m_font->insert(*para.m_font);
-  if (!m_font2.isSet())
-    m_font2 = para.m_font2;
-  else if (para.m_font2.isSet())
-    m_font2->insert(*para.m_font2);
   if (insertModif)
     m_modFont->insert(*para.m_modFont);
   if (!m_section.isSet())
@@ -1128,8 +1131,6 @@ void Paragraph::insert(Paragraph const &para, bool insertModif)
 
 void Paragraph::print(std::ostream &o, MWAWFontConverterPtr converter) const
 {
-  if (m_font2.isSet())
-    o << "font2=[" << m_font2->m_font->getDebugString(converter) << m_font2.get() << "],";
   if (m_font.isSet())
     o << "font=[" << m_font->m_font->getDebugString(converter) << m_font.get() << "],";
   if (m_modFont.isSet())
