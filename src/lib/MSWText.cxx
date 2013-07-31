@@ -1499,7 +1499,7 @@ void MSWText::prepareData()
   prepareTables();
 
   MSWStruct::Font defaultFont;
-  long debPos = m_state->getFilePos(cPos), pos=debPos;
+  long pos = m_state->getFilePos(cPos);
   int textposSize = int(m_state->m_textposList.size());
 
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1508,8 +1508,6 @@ void MSWText::prepareData()
 
   std::multimap<long, PLC> &map = m_state->m_plcMap;
   std::multimap<long, PLC>::iterator plcIt;
-  cPos = 0;
-  pos=debPos;
   while (cPos < cEnd) {
     f.str("");
     // first find the list of the plc
