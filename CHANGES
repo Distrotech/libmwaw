@@ -1,5 +1,8 @@
 CHANGES:
 
+07/31/2013:
+- recognize more WriteNow 1.0 files
+
 07/29/2013:
 - check that the Microsoft Word use the new properties' classes,
 - Microsoft Word parser: understand where the different properties

@@ -406,7 +406,8 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   // ----------- other ------------------
   if (val[0]==0 && val[1]==0 && val[2]==0 && val[3]==0) {
     input->seek(8, WPX_SEEK_SET);
-    if (input->readULong(1) == 0x4) {
+    int value=(int) input->readULong(1);
+    if (value==0x4 || value==0x44) {
       MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a WriteNow 1.0 or 2.0 file\n"));
       res.push_back(MWAWHeader(MWAWDocument::WNOW, 2));
     }

@@ -572,7 +572,8 @@ bool File::readDataInformation()
       break;
     }
   }
-  if (val[0]==0 && val[1]==0 && val[2]==0 && val[3]==0 && (val[4]>>8)==4)
+  if (val[0]==0 && val[1]==0 && val[2]==0 && val[3]==0 &&
+      ((val[4]>>8)==4 || (val[4]>>8)==0x44))
     m_dataResult.push_back("WriteNow 1-2");
   if (val[0] == 0x2e && val[1] == 0x2e)
     m_dataResult.push_back("MacWrite II");

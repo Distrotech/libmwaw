@@ -473,7 +473,8 @@ bool WNParser::readDocEntriesV2()
   std::stringstream s;
   f << "Entries(DocEntries):";
   for (int i = 0; i < 5; i++) {
-    if (input->readLong(1) != 4) {
+    int val=(int) input->readLong(1);
+    if (val != 4 && val != 0x44) {
       MWAW_DEBUG_MSG(("WNParser::readDocEntriesV2: can not find entries header:%d\n",i));
       return false;
     }
@@ -1048,8 +1049,12 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
 
   if (vers < 3) {
     if (strict) {
-      if (input->readLong(1)!=4) return false;
-      input->seek(-1, WPX_SEEK_CUR);
+      for (int i=0; i < 4; ++i) {
+        val = long(input->readLong(1));
+        if (val!=4 && val!=0x44) return false;
+        input->seek(3, WPX_SEEK_CUR);
+      }
+      input->seek(8, WPX_SEEK_SET);
     }
 
     ascii().addPos(0);
