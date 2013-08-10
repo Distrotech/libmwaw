@@ -462,7 +462,7 @@ std::ostream &operator<<(std::ostream &o, MSWText::PLC const &plc)
     o << "textPos";
     break;
   default:
-    o << "#type" + char('a'+int(plc.m_type));
+    o << "#type" << char('a'+int(plc.m_type));
   }
   if (plc.m_id < 0) o << "_";
   else o << plc.m_id;
