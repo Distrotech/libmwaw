@@ -450,7 +450,8 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
     WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
     if (dataStream) {
       MWAWInputStreamPtr dataInput(new MWAWInputStream(dataStream, false));
-      listRSSO=findRSSOEntry(dataInput);
+      if (dataInput->size()>=(long) data.size())
+        listRSSO=findRSSOEntry(dataInput);
     }
   }
 
@@ -503,6 +504,8 @@ bool NSGraph::sendPageGraphics()
     if (!dataStream)
       continue;
     MWAWInputStreamPtr dataInput(new MWAWInputStream(dataStream, false));
+    if (dataInput->size()<(long) data.size())
+      continue;
     dataInput->seek(0, WPX_SEEK_SET);
     Box2f box;
     if (MWAWPictData::check(dataInput, (int)data.size(), box) == MWAWPict::MWAW_R_BAD) {

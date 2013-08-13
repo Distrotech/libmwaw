@@ -1046,6 +1046,11 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
   }
 
   zone->m_input.reset(new MWAWInputStream(dataInput, false));
+  if (zone->m_input->size()<(long) zone->getBinaryData().size()) {
+    MWAW_DEBUG_MSG(("HMWKParser::decodeZone: build input has unexpected size\n"));
+    zone.reset();
+    return zone;
+  }
   zone->m_input->seek(0,WPX_SEEK_SET);
   zone->ascii().setStream(zone->m_input);
   static int fId = 0;

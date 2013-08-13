@@ -938,11 +938,6 @@ bool CWText::readFonts(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     long newC = (long) input->readULong(4);
     if (newC < actC) return false;
     actC = newC;
-    bool ok = input->readULong(1)==0;
-    input->seek(3, WPX_SEEK_CUR);
-    // FIXME: remove this when we have another way to find font
-    if (!ok && input->readULong(1) > 32)
-      return false;
     input->seek(pos+fontSize, WPX_SEEK_SET);
   }
 

@@ -969,6 +969,10 @@ bool MWProParser::parseDataZone(int blockId, int type)
   }
 
   zone->m_input.reset(new MWAWInputStream(dataInput, false));
+  if (zone->m_input->size()<(long) zone->m_data.size()) {
+    MWAW_DEBUG_MSG(("MWProParser::parseDataZone: input length seems bad\n"));
+    return false;
+  }
 
   zone->m_asciiFile.setStream(zone->m_input);
   std::stringstream s;
@@ -1671,6 +1675,10 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
         return false;
       }
       MWAWInputStreamPtr pictInput(new MWAWInputStream(dataInput, false));
+      if (pictInput->size() < (long) data.size()) {
+        MWAW_DEBUG_MSG(("MWProParser::sendPicture: oops unexpected input size...\n"));
+        return false;
+      }
 
       pictInput->seek(4, WPX_SEEK_SET);
       pict.reset(MWAWPictData::get(pictInput, (int)pictSize));

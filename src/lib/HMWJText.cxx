@@ -480,6 +480,10 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
   }
 
   MWAWInputStreamPtr input(new MWAWInputStream(dataInput, false));
+  if (input->size()<(long) data.size()) {
+    MWAW_DEBUG_MSG(("HMWJText::sendText: build input has bad length\n"));
+    return false;
+  }
   libmwaw::DebugFile asciiFile;
 
 #ifdef DEBUG_WITH_FILES
@@ -742,6 +746,8 @@ int HMWJText::computeNumPages(HMWJTextInternal::TextZone const &zone)
   if (!dataInput)
     return 0;
   MWAWInputStreamPtr input(new MWAWInputStream(dataInput, false));
+  if (input->size()<(long) data.size())
+    return false;
   int nPages = 1, actCol = 0, numCol=1, actSection = 1;
 
   if (m_state->m_sectionList.size()) {

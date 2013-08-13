@@ -98,6 +98,8 @@ struct Entry : public MWAWEntry {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Entry const &entry);
 
+  //! returns true if the entry and the input is valid
+  bool valid() const;
   //! create a inputstream, ... if needed
   void update();
   //! write the debug file, ...

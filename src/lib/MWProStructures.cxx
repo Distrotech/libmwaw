@@ -708,7 +708,10 @@ bool MWProStructures::createZones()
     return false;
   }
   m_input.reset(new MWAWInputStream(dataInput, false));
-
+  if (m_input->size()<(long)m_state->m_inputData.size()) {
+    MWAW_DEBUG_MSG(("MWProStructures::createZones: unexpected input size\n"));
+    return false;
+  }
   ascii().setStream(m_input);
   ascii().open(asciiName());
 

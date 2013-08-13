@@ -301,6 +301,11 @@ std::ostream &operator<<(std::ostream &o, Entry const &entry)
   return o;
 }
 
+bool Entry::valid() const
+{
+  return m_input && MWAWEntry::valid();
+}
+
 void Entry::update()
 {
   if (!m_data.size()) return;
@@ -314,7 +319,11 @@ void Entry::update()
     return;
   }
   m_input.reset(new MWAWInputStream(dataInput, false));
-
+  if (m_input->size() < (long)m_data.size()) {
+    MWAW_DEBUG_MSG(("Entry::update: problem the input size is bad!!!\n"));
+    m_input.reset();
+    return;
+  }
   m_asciiFile.reset(new libmwaw::DebugFile(m_input));
   std::stringstream s;
   if (m_typeId == -1)
