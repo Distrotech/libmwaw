@@ -442,23 +442,40 @@ shared_ptr<MWAWPictBasic> FrameBasic::getPicture(Style const &style) const
       MWAW_DEBUG_MSG(("FrameBasic::getPicture: the spline number of points seems bad\n"));
       break;
     }
-    std::stringstream s;
-    s << "M " << m_vertices[0][0] << " " << m_vertices[0][1];
+    WPXPropertyListVector path;
+    WPXPropertyList list;
+    list.insert("libwpg:path-action", "M");
+    list.insert("svg:x", m_vertices[0][0], WPX_POINT);
+    list.insert("svg:y", m_vertices[0][1], WPX_POINT);
+    path.append(list);
+
     for (size_t pt=1; pt < nbPt; pt+=3) {
+      list.clear();
       bool hasFirstC=m_vertices[pt-1]!=m_vertices[pt];
       bool hasSecondC=m_vertices[pt+1]!=m_vertices[pt+2];
-      s << " ";
       if (!hasFirstC && !hasSecondC)
-        s << "L";
-      else if (hasFirstC)
-        s << "C" << m_vertices[pt][0] << " " << m_vertices[pt][1]
-          << " " << m_vertices[pt+1][0] << " " << m_vertices[pt+1][1];
-      else if (hasSecondC)
-        s << "S" << m_vertices[pt+1][0] << " " << m_vertices[pt+1][1];
-      s << " " << m_vertices[pt+2][0] << " " << m_vertices[pt+2][1];
+        list.insert("libwpg:path-action", "L");
+      else if (hasFirstC) {
+        list.insert("libwpg:path-action", "C");
+        list.insert("svg:x1", m_vertices[pt][0], WPX_POINT);
+        list.insert("svg:y1", m_vertices[pt][1], WPX_POINT);
+        list.insert("svg:x2", m_vertices[pt+1][0], WPX_POINT);
+        list.insert("svg:y2", m_vertices[pt+1][1], WPX_POINT);
+      } else if (hasSecondC) {
+        list.insert("libwpg:path-action", "S");
+        list.insert("svg:x1", m_vertices[pt+1][0], WPX_POINT);
+        list.insert("svg:y1", m_vertices[pt+1][1], WPX_POINT);
+      }
+      list.insert("svg:x", m_vertices[pt+2][0], WPX_POINT);
+      list.insert("svg:y", m_vertices[pt+2][1], WPX_POINT);
+
+      path.append(list);
     }
-    s << " Z";
-    res.reset(new MWAWPictPath(box, s.str()));
+    list.clear();
+    list.insert("libwpg:path-action", "Z");
+    path.append(list);
+
+    res.reset(new MWAWPictPath(box, path));
   }
   default:
     break;

@@ -45,6 +45,7 @@
 #  include <string>
 #  include <vector>
 
+#  include "libwpd/libwpd.h"
 #  include "libmwaw_internal.hxx"
 #  include "MWAWPict.hxx"
 
@@ -104,7 +105,7 @@ public:
   /** returns the final representation in encoded odg (if possible) */
   virtual bool getBinary(WPXBinaryData &data, std::string &s) const {
     if (!getODGBinary(data)) return false;
-    s = "image/mwaw-odg";
+    s = "image/mwaw-odg2";
     return true;
   }
   /** virtual function which tries to convert the picture in ODG and put the result in a WPXBinaryData */
@@ -384,7 +385,7 @@ class MWAWPictPath : public MWAWPictBasic
 {
 public:
   /** \brief constructor: bdbox followed by the path definition */
-  MWAWPictPath(Box2f bdBox, std::string path) : MWAWPictBasic(), m_path(path) {
+  MWAWPictPath(Box2f bdBox, WPXPropertyListVector const &path) : MWAWPictBasic(), m_path(path) {
     setBdBox(bdBox);
   }
   //! virtual destructor
@@ -401,18 +402,10 @@ protected:
   //! returns the graphics style
   virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
   //! comparison function
-  virtual int cmp(MWAWPict const &a) const {
-    int diff = MWAWPictBasic::cmp(a);
-    if (diff) return diff;
-    MWAWPictPath const &aPath = static_cast<MWAWPictPath const &>(a);
-    // first check the bdbox
-    diff = m_path.compare(aPath.m_path);
-    if (diff) return diff;
-    return 0;
-  }
+  virtual int cmp(MWAWPict const &a) const;
 
   //! the string represented the path (in svg)
-  std::string m_path;
+  WPXPropertyListVector m_path;
 };
 
 //! \brief a class used to define a polygon
