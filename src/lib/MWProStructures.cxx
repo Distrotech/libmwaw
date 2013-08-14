@@ -701,17 +701,9 @@ bool MWProStructures::createZones()
   // first we need to create the input
   if (!m_mainParser.getZoneData(m_state->m_inputData, 3))
     return false;
-  WPXInputStream *dataInput =
-    const_cast<WPXInputStream *>(m_state->m_inputData.getDataStream());
-  if (!dataInput) {
-    MWAW_DEBUG_MSG(("MWProStructures::createZones: can not find my input\n"));
+  m_input=MWAWInputStream::get(m_state->m_inputData,false);
+  if (!m_input)
     return false;
-  }
-  m_input.reset(new MWAWInputStream(dataInput, false));
-  if (m_input->size()<(long)m_state->m_inputData.size()) {
-    MWAW_DEBUG_MSG(("MWProStructures::createZones: unexpected input size\n"));
-    return false;
-  }
   ascii().setStream(m_input);
   ascii().open(asciiName());
 
@@ -830,13 +822,9 @@ bool MWProStructures::createZonesV2()
     return false;
 
   libmwaw::DebugStream f;
-  WPXInputStream *dataInput =
-    const_cast<WPXInputStream *>(m_state->m_inputData.getDataStream());
-  if (!dataInput) {
-    MWAW_DEBUG_MSG(("MWProStructures::createZonesV2: can not find my input\n"));
+  m_input=MWAWInputStream::get(m_state->m_inputData,false);
+  if (!m_input)
     return false;
-  }
-  m_input.reset(new MWAWInputStream(dataInput, false));
 
   ascii().setStream(m_input);
   ascii().open(asciiName());

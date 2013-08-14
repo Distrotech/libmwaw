@@ -961,18 +961,9 @@ bool MWProParser::parseDataZone(int blockId, int type)
 
   if (!getZoneData(zone->m_data, blockId))
     return false;
-  WPXInputStream *dataInput =
-    const_cast<WPXInputStream *>(zone->m_data.getDataStream());
-  if (!dataInput) {
-    MWAW_DEBUG_MSG(("MWProParser::parseDataZone: can not find my input\n"));
+  zone->m_input=MWAWInputStream::get(zone->m_data, false);
+  if (!zone->m_input)
     return false;
-  }
-
-  zone->m_input.reset(new MWAWInputStream(dataInput, false));
-  if (zone->m_input->size()<(long) zone->m_data.size()) {
-    MWAW_DEBUG_MSG(("MWProParser::parseDataZone: input length seems bad\n"));
-    return false;
-  }
 
   zone->m_asciiFile.setStream(zone->m_input);
   std::stringstream s;
@@ -1668,15 +1659,9 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
       dataPtr[4]=dataPtr[2];
       dataPtr[5]=dataPtr[3];
 
-      WPXInputStream *dataInput =
-        const_cast<WPXInputStream *>(data.getDataStream());
-      if (!dataInput) {
+      MWAWInputStreamPtr pictInput=MWAWInputStream::get(data, false);
+      if (!pictInput) {
         MWAW_DEBUG_MSG(("MWProParser::sendPicture: oops where is the picture input...\n"));
-        return false;
-      }
-      MWAWInputStreamPtr pictInput(new MWAWInputStream(dataInput, false));
-      if (pictInput->size() < (long) data.size()) {
-        MWAW_DEBUG_MSG(("MWProParser::sendPicture: oops unexpected input size...\n"));
         return false;
       }
 

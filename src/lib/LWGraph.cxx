@@ -150,13 +150,11 @@ bool LWGraph::sendPICT(MWAWEntry const &entry)
   WPXBinaryData data;
   rsrcParser->parsePICT(entry, data);
 
-  WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
-  if (!dataStream) {
+  MWAWInputStreamPtr input=MWAWInputStream::get(data, false);
+  if (!input) {
     MWAW_DEBUG_MSG(("LWGraph::sendPICT: can not find the stream\n"));
     return false;
   }
-
-  MWAWInputStreamPtr input(new MWAWInputStream(dataStream, false));
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, int(entry.length())));
   if (!pict)
     return false;
@@ -221,12 +219,12 @@ bool LWGraph::sendJPEG(MWAWEntry const &entry)
 bool LWGraph::findJPEGSize(WPXBinaryData const &data, Vec2i &sz)
 {
   sz = Vec2i(100,100);
-  WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
-  if (!dataStream) {
+  MWAWInputStreamPtr input=MWAWInputStream::get(data, false);
+  if (!input) {
     MWAW_DEBUG_MSG(("LWGraph::findJPEGSize: can not find the stream\n"));
     return false;
   }
-  MWAWInputStreamPtr input(new MWAWInputStream(dataStream, false));
+
   if (input->readULong(4)!=0xFFD8FFE0) {
     MWAW_DEBUG_MSG(("LWGraph::findJPEGSize: invalid header\n"));
     return false;

@@ -257,10 +257,9 @@ bool MCDParser::createZones()
       WPXBinaryData data;
       if (!getRSRCParser()->parsePICT(entry, data))
         continue;
-      WPXInputStream *dataInput = const_cast<WPXInputStream *>(data.getDataStream());
-      if (!dataInput)
+      MWAWInputStreamPtr pictInput=MWAWInputStream::get(data, false);
+      if (!pictInput)
         continue;
-      MWAWInputStreamPtr pictInput(new MWAWInputStream(dataInput, false));
       Box2f box;
       MWAWPict::ReadResult res = MWAWPictData::check(pictInput,(int) data.size(), box);
       if (res != MWAWPict::MWAW_R_BAD && box.size()[0]>0 && box.size()[1]>0) {
@@ -571,19 +570,18 @@ bool MCDParser::sendPicture(MWAWEntry const &entry)
   int dataSz=int(data.size());
   if (!dataSz)
     return false;
-  WPXInputStream *dataInput = const_cast<WPXInputStream *>(data.getDataStream());
-  if (!dataInput) {
+  MWAWInputStreamPtr pictInput=MWAWInputStream::get(data, false);
+  if (!pictInput) {
     MWAW_DEBUG_MSG(("MCDParser::sendPicture: oops can not find an input\n"));
     return false;
   }
-  MWAWInputStreamPtr pictInput(new MWAWInputStream(dataInput, false));
   Box2f box;
   MWAWPict::ReadResult res = MWAWPictData::check(pictInput, dataSz,box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("MCDParser::sendPicture: can not find the picture\n"));
     return false;
   }
-  dataInput->seek(0,WPX_SEEK_SET);
+  pictInput->seek(0,WPX_SEEK_SET);
   shared_ptr<MWAWPict> thePict(MWAWPictData::get(pictInput, dataSz));
   MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), WPX_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);

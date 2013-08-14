@@ -1089,7 +1089,7 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
       f << "Pattern=[";
       val =  (int) input->readULong(2);
       int patId = (int) input->readULong(2);
-      if (vers==4 && i==1 && val==0xFFFF && val==0xFFFF)
+      if (vers==4 && i==1 && val==0xFFFF && patId==0xFFFF)
         hasSurfPatFunction=true;
       else {
         if (val != 0xFA3) f << std::hex << val << std::dec << ",";

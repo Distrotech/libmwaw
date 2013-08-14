@@ -414,14 +414,15 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
 
       /** first check if this is a mac pict as other oles
           may not be understand by openOffice, ... */
-      WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
-      if (dataStream && data.size()) {
-        MWAWInputStreamPtr dataInput(new MWAWInputStream(dataStream, false));
-        dataInput->seek(0, WPX_SEEK_SET);
-        Box2f box;
-        if (MWAWPictData::check(dataInput, (int)data.size(), box) != MWAWPict::MWAW_R_BAD) {
-          isPict = true;
-          newConfidence = 100;
+      if (data.size()) {
+        MWAWInputStreamPtr dataInput=MWAWInputStream::get(data, false);
+        if (dataInput) {
+          dataInput->seek(0, WPX_SEEK_SET);
+          Box2f box;
+          if (MWAWPictData::check(dataInput, (int)data.size(), box) != MWAWPict::MWAW_R_BAD) {
+            isPict = true;
+            newConfidence = 100;
+          }
         }
       }
 

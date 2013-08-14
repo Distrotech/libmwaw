@@ -1766,15 +1766,15 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
 
   unsigned char *res = new unsigned char [size_t(2*pictSize+50)], *resPtr = res;
   if (!res) return false;
-  WPXInputStream *dataStream = const_cast<WPXInputStream *>(orig.getDataStream());
-  if (!dataStream) {
+
+  MWAWInputStreamPtr input=MWAWInputStream::get(orig, false);
+  if (!input) {
     delete [] res;
     return false;
   }
-  MWAWInputStream input(dataStream, false);
 
-  input.seek(0, WPX_SEEK_SET);
-  int sz = (int) input.readULong(2);
+  input->seek(0, WPX_SEEK_SET);
+  int sz = (int) input->readULong(2);
   if (pictSize != sz && pictSize != sz+1) {
     delete [] res;
     return false;
@@ -1783,10 +1783,10 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
   ADD_DATA_SHORT(resPtr,0); // size, we must fill it latter
   long dim[4];
   for (int i = 0; i < 4; i++) { // read the rectangle
-    dim[i] = input.readLong(2);
+    dim[i] = input->readLong(2);
     ADD_DATA_SHORT(resPtr,dim[i]);
   }
-  if (input.readLong(2) != 0x1101) {
+  if (input->readLong(2) != 0x1101) {
     delete [] res;
     return false;
   }
@@ -1805,9 +1805,9 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
 #  undef ADD_DATA_SHORT
 
   bool findEnd = false;
-  while (!findEnd && !input.atEOS()) {
-    long actPos = input.tell();
-    int code = (int) input.readULong(1);
+  while (!findEnd && !input->atEOS()) {
+    long actPos = input->tell();
+    int code = (int) input->readULong(1);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
     if (it == m_mapIdOp.end() || it->second == 0L) {
       MWAW_DEBUG_MSG(("Pict1:convertToPict2 can not find opCode 0x%x\n", code));
@@ -1817,7 +1817,7 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
 
     OpCode const &opCode = *(it->second);
     sz = 0;
-    if (!opCode.computeSize(input, sz)) {
+    if (!opCode.computeSize(*input, sz)) {
       MWAW_DEBUG_MSG(("Pict1:convertToPict2 can not compute size for opCode 0x%x\n", code));
       delete [] res;
       return false;
@@ -1828,20 +1828,20 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
     if (!skip) {
       *(resPtr++) = 0;
       *(resPtr++) = (unsigned char) code;
-      input.seek(actPos+1, WPX_SEEK_SET);
+      input->seek(actPos+1, WPX_SEEK_SET);
       for (int i = 0; i < sz; i++)
-        *(resPtr++) = (unsigned char) input.readULong(1);
+        *(resPtr++) = (unsigned char) input->readULong(1);
       if ((sz%2)==1) *(resPtr++) = 0;
     }
-    input.seek(actPos+1+sz, WPX_SEEK_SET);
+    input->seek(actPos+1+sz, WPX_SEEK_SET);
   }
 
   bool endOk = false;
   if (findEnd) {
-    if (input.atEOS()) endOk = true;
+    if (input->atEOS()) endOk = true;
     else { // allows a final caracter for alignment
-      input.seek(1, WPX_SEEK_CUR);
-      endOk = input.atEOS();
+      input->seek(1, WPX_SEEK_CUR);
+      endOk = input->atEOS();
     }
   }
   if (!endOk) {
@@ -2087,10 +2087,8 @@ static PictParser s_parser;
 
 void MWAWPictMac::parsePict1(WPXBinaryData const &pict, std::string const &fname)
 {
-  WPXInputStream *dataStream = const_cast<WPXInputStream *>(pict.getDataStream());
-  if (!dataStream) return;
-
-  MWAWInputStreamPtr ip( new MWAWInputStream(dataStream, false));
+  MWAWInputStreamPtr ip=MWAWInputStream::get(pict, false);
+  if (!ip) return;
 
   libmwaw::DebugFile dFile(ip);
   dFile.open(fname);
@@ -2099,10 +2097,8 @@ void MWAWPictMac::parsePict1(WPXBinaryData const &pict, std::string const &fname
 
 void MWAWPictMac::parsePict2(WPXBinaryData const &pict, std::string const &fname)
 {
-  WPXInputStream *dataStream = const_cast<WPXInputStream *>(pict.getDataStream());
-  if (!dataStream) return;
-
-  MWAWInputStreamPtr ip(new MWAWInputStream(dataStream, false));
+  MWAWInputStreamPtr ip=MWAWInputStream::get(pict, false);
+  if (!ip) return;
 
   libmwaw::DebugFile dFile(ip);
   dFile.open(fname);
