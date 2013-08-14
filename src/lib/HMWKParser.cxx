@@ -1037,20 +1037,13 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
     return zone;
   }
 
-  WPXInputStream *dataInput =
-    const_cast<WPXInputStream *>(zone->getBinaryData().getDataStream());
-  if (!dataInput) {
+  zone->m_input=MWAWInputStream::get(zone->getBinaryData(), false);
+  if (!zone->m_input) {
     MWAW_DEBUG_MSG(("HMWKParser::decodeZone: can not find my input\n"));
     zone.reset();
     return zone;
   }
 
-  zone->m_input.reset(new MWAWInputStream(dataInput, false));
-  if (zone->m_input->size()<(long) zone->getBinaryData().size()) {
-    MWAW_DEBUG_MSG(("HMWKParser::decodeZone: build input has unexpected size\n"));
-    zone.reset();
-    return zone;
-  }
   zone->m_input->seek(0,WPX_SEEK_SET);
   zone->ascii().setStream(zone->m_input);
   static int fId = 0;

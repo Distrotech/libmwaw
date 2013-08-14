@@ -473,15 +473,9 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
     return false;
   }
 
-  WPXInputStream *dataInput = const_cast<WPXInputStream *>(data.getDataStream());
-  if (!dataInput) {
+  MWAWInputStreamPtr input=MWAWInputStream::get(data, false);
+  if (!input) {
     MWAW_DEBUG_MSG(("HMWJText::sendText: can not find my input\n"));
-    return false;
-  }
-
-  MWAWInputStreamPtr input(new MWAWInputStream(dataInput, false));
-  if (input->size()<(long) data.size()) {
-    MWAW_DEBUG_MSG(("HMWJText::sendText: build input has bad length\n"));
     return false;
   }
   libmwaw::DebugFile asciiFile;
@@ -742,12 +736,9 @@ int HMWJText::computeNumPages(HMWJTextInternal::TextZone const &zone)
   if (!m_mainParser->decodeZone(zone.m_entry, data) || !data.size())
     return 0;
 
-  WPXInputStream *dataInput = const_cast<WPXInputStream *>(data.getDataStream());
-  if (!dataInput)
+  MWAWInputStreamPtr input=MWAWInputStream::get(data, false);
+  if (!input)
     return 0;
-  MWAWInputStreamPtr input(new MWAWInputStream(dataInput, false));
-  if (input->size()<(long) data.size())
-    return false;
   int nPages = 1, actCol = 0, numCol=1, actSection = 1;
 
   if (m_state->m_sectionList.size()) {

@@ -83,6 +83,26 @@ MWAWInputStream::~MWAWInputStream()
 {
 }
 
+shared_ptr<MWAWInputStream> MWAWInputStream::get(WPXBinaryData const &data, bool inverted)
+{
+  shared_ptr<MWAWInputStream> res;
+  if (!data.size())
+    return res;
+  WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
+  if (!dataStream) {
+    MWAW_DEBUG_MSG(("MWAWInputStream::get: can not retrieve a WPXInputStream\n"));
+    return res;
+  }
+  res.reset(new MWAWInputStream(dataStream, inverted));
+  if (res && res->size()>=(long) data.size()) {
+    res->seek(0, WPX_SEEK_SET);
+    return res;
+  }
+  MWAW_DEBUG_MSG(("MWAWInputStream::get: the final stream seems bad\n"));
+  res.reset();
+  return res;
+}
+
 void MWAWInputStream::updateStreamSize()
 {
   if (!m_stream)

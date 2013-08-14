@@ -350,19 +350,18 @@ bool EDParser::sendPicture(int pictId, bool compressed)
   int dataSz=int(data.size());
   if (!dataSz)
     return false;
-  WPXInputStream *dataInput = const_cast<WPXInputStream *>(data.getDataStream());
-  if (!dataInput) {
+  MWAWInputStreamPtr pictInput=MWAWInputStream::get(data, false);
+  if (!pictInput) {
     MWAW_DEBUG_MSG(("EDParser::sendPicture: oops can not find an input\n"));
     return false;
   }
-  MWAWInputStreamPtr pictInput(new MWAWInputStream(dataInput, false));
   Box2f box;
   MWAWPict::ReadResult res = MWAWPictData::check(pictInput, dataSz,box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("EDParser::sendPicture: can not find the picture\n"));
     return false;
   }
-  dataInput->seek(0,WPX_SEEK_SET);
+  pictInput->seek(0,WPX_SEEK_SET);
   shared_ptr<MWAWPict> thePict(MWAWPictData::get(pictInput, dataSz));
   MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), WPX_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);

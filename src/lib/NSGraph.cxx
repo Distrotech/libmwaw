@@ -447,12 +447,9 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
   std::vector<NSGraphInternal::RSSOEntry> listRSSO;
   if (inPictRsrc) {
     // we must first look for RSSO entry
-    WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
-    if (dataStream) {
-      MWAWInputStreamPtr dataInput(new MWAWInputStream(dataStream, false));
-      if (dataInput->size()>=(long) data.size())
-        listRSSO=findRSSOEntry(dataInput);
-    }
+    MWAWInputStreamPtr dataInput=MWAWInputStream::get(data,false);
+    if (dataInput)
+      listRSSO=findRSSOEntry(dataInput);
   }
 
   if (listRSSO.size() && (pictPos.m_anchorTo == MWAWPosition::Char ||
@@ -500,12 +497,8 @@ bool NSGraph::sendPageGraphics()
       MWAW_DEBUG_MSG(("NSGraph::sendPageGraphics: can not read the file picture\n"));
       continue;
     }
-    WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
-    if (!dataStream)
-      continue;
-    MWAWInputStreamPtr dataInput(new MWAWInputStream(dataStream, false));
-    if (dataInput->size()<(long) data.size())
-      continue;
+    MWAWInputStreamPtr dataInput=MWAWInputStream::get(data, false);
+    if (!dataInput) continue;
     dataInput->seek(0, WPX_SEEK_SET);
     Box2f box;
     if (MWAWPictData::check(dataInput, (int)data.size(), box) == MWAWPict::MWAW_R_BAD) {

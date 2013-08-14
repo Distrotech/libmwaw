@@ -312,16 +312,9 @@ void Entry::update()
 
   setBegin(0);
   setLength((long)m_data.size());
-  WPXInputStream *dataInput =
-    const_cast<WPXInputStream *>(m_data.getDataStream());
-  if (!dataInput) {
-    MWAW_DEBUG_MSG(("Entry::update: can not create entry\n"));
-    return;
-  }
-  m_input.reset(new MWAWInputStream(dataInput, false));
-  if (m_input->size() < (long)m_data.size()) {
+  m_input=MWAWInputStream::get(m_data, false);
+  if (!m_input) {
     MWAW_DEBUG_MSG(("Entry::update: problem the input size is bad!!!\n"));
-    m_input.reset();
     return;
   }
   m_asciiFile.reset(new libmwaw::DebugFile(m_input));

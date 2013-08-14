@@ -37,6 +37,7 @@
 #include <string>
 #include <vector>
 
+#include <libwpd/libwpd.h>
 #include <libwpd-stream/libwpd-stream.h>
 #include "libmwaw_internal.hxx"
 
@@ -77,6 +78,9 @@ public:
   shared_ptr<WPXInputStream> input() {
     return m_stream;
   }
+  //! returns a new input stream corresponding to a WPXBinaryData
+  static shared_ptr<MWAWInputStream> get(WPXBinaryData const &data, bool inverted);
+
   //! returns the endian mode (see constructor)
   bool readInverted() const {
     return m_inverseRead;
