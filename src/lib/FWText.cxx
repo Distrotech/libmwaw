@@ -1680,6 +1680,10 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
     pos = input->tell();
     if (pos+2 >= zone->end()) break;
     int type = (int)input->readULong(2);
+    if (input->atEOS()) {
+      MWAW_DEBUG_MSG(("FWText::readTextData: internal problem, unexpected EOS!!!\n"));
+      return false;
+    }
     int lengthSz = 1;
     if (type & 0x8000)
       lengthSz = 2;
