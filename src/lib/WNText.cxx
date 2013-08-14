@@ -228,9 +228,10 @@ struct TableData {
         break;
       }
 
-      static int const wh[4]= { libmwaw::TopBit, libmwaw::RightBit, libmwaw::BottomBit, libmwaw::LeftBit };
-      if (!border.isEmpty())
+      if (!border.isEmpty()) {
+        static int const wh[4]= { libmwaw::TopBit, libmwaw::RightBit, libmwaw::BottomBit, libmwaw::LeftBit };
         cell.setBorders(wh[i], border);
+      }
     }
   }
   //! operator<<
@@ -1846,8 +1847,9 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       ascFile.addNote(f.str().c_str());
       continue;
     }
-    WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
-    MWAWInputStream dataInput(dataStream, false);
+    MWAWInputStreamPtr dataInput;
+    if (data.size())
+      dataInput=MWAWInputStream::get(data, false);
     switch(zone.m_type) {
     case 0x9: { // only in v2
       extraDecal = zone.m_value;
@@ -1858,9 +1860,9 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       break;
     }
     case 0xa: {  // only in writenow 4.0 : related to a table ?
-      if (!dataStream) break;
+      if (!dataInput) break;
       WNTextInternal::TableData tableData;
-      if (readTable(dataInput, tableData)) {
+      if (readTable(*dataInput, tableData)) {
         f << tableData;
 
         bool needSendTable = false;
@@ -1918,9 +1920,9 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       break;
     }
     case 0xc: {
-      if (!dataStream) break;
+      if (!dataInput) break;
       WNTextInternal::Paragraph newParagraph;
-      if (readParagraph(dataInput, newParagraph)) {
+      if (readParagraph(*dataInput, newParagraph)) {
         ruler = newParagraph;
         numLineTabs = int(ruler.m_tabs->size());
         setProperty(ruler);
@@ -1931,16 +1933,16 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       break;
     }
     case 0xe: {
-      if (!dataStream) break;
+      if (!dataInput) break;
       WNTextInternal::Token token;
       if (vers >= 3) {
-        if (readToken(dataInput, token)) {
+        if (readToken(*dataInput, token)) {
           m_mainParser->sendGraphic(token.m_graphicZone, token.m_box);
           f << token;
         } else
           f << "#";
       } else {
-        if (readTokenV2(dataInput, token))
+        if (readTokenV2(*dataInput, token))
           f << token;
         else
           f << "#";
@@ -1948,9 +1950,9 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       break;
     }
     case 0xf: {
-      if (!dataStream) break;
+      if (!dataInput) break;
       WNTextInternal::Font font;
-      if (readFont(dataInput, false, font)) {
+      if (readFont(*dataInput, false, font)) {
         actFont=font.m_font;
         f << font.m_font.getDebugString(m_parserState->m_fontConverter) << font;
         if (extraDecal > 0) font.m_font.set(MWAWFont::Script::super100());
