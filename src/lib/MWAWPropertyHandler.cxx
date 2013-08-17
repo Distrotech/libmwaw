@@ -357,8 +357,8 @@ protected:
       std::istringstream iss(val);
       double res = 0.0;
       iss >> res;
-      if (!iss.fail() && !iss.eof()) {
-        if (iss.peek() == std::char_traits<wchar_t>::eof()) {
+      if (!iss.fail()) {
+        if (iss.eof() || iss.peek() == std::char_traits<wchar_t>::eof()) {
           list.insert(key.c_str(), res);
           return true;
         }

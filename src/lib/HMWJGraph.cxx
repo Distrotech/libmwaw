@@ -1818,6 +1818,7 @@ bool HMWJGraph::sendBasicGraph(HMWJGraphInternal::BasicGraph const &pict, MWAWPo
     pos.setSize(pictSz);
 
   shared_ptr<MWAWPictBasic> pictPtr;
+  MWAWPictBasic::Style pStyle;
   switch(pict.m_graphType) {
   case 0:
   case 3: {
@@ -1828,8 +1829,8 @@ bool HMWJGraph::sendBasicGraph(HMWJGraphInternal::BasicGraph const &pict, MWAWPo
       minPt[1] = pict.m_extremity[1][1];
     MWAWPictLine *res=new MWAWPictLine(pict.m_extremity[0]-minPt, pict.m_extremity[1]-minPt);
     pictPtr.reset(res);
-    if (pict.m_arrowsFlag&1) res->setArrow(0, true);
-    if (pict.m_arrowsFlag&2) res->setArrow(1, true);
+    if (pict.m_arrowsFlag&1) pStyle.m_arrows[0]=true;
+    if (pict.m_arrowsFlag&2) pStyle.m_arrows[1]=true;
     break;
   }
   case 1: {
@@ -1909,9 +1910,11 @@ bool HMWJGraph::sendBasicGraph(HMWJGraphInternal::BasicGraph const &pict, MWAWPo
     return false;
   HMWJGraphInternal::FrameFormat const &format=
     m_state->getFrameFormat(pict.m_formatId);
-  pictPtr->setLineWidth((float) format.m_lineWidth);
-  pictPtr->setLineColor(format.m_color[0]);
-  pictPtr->setSurfaceColor(format.m_color[1]);
+
+  pStyle.m_lineWidth=(float) format.m_lineWidth;
+  pStyle.m_lineColor=format.m_color[0];
+  pStyle.setSurfaceColor(format.m_color[1]);
+  pictPtr->setStyle(pStyle);
 
   WPXBinaryData data;
   std::string type;

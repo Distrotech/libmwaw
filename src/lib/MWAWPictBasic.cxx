@@ -49,6 +49,16 @@
 
 #include "MWAWPictBasic.hxx"
 
+bool MWAWPictBasic::getODGBinary(WPXBinaryData &res) const
+{
+  MWAWPropertyHandlerEncoder doc;
+  startODG(doc);
+  if (!getODGBinary(doc, getBdBox()[0]))
+    return false;
+  endODG(doc);
+  return doc.getData(res);
+}
+
 void MWAWPictBasic::startODG(MWAWPropertyHandlerEncoder &doc) const
 {
   Box2f bdbox = getBdBox();
@@ -73,24 +83,39 @@ void MWAWPictBasic::endODG(MWAWPropertyHandlerEncoder &doc) const
 void MWAWPictBasic::getStyle1DProperty(WPXPropertyList &list) const
 {
   list.clear();
-  if (m_lineWidth <= 0) {
+  if (m_style.m_lineWidth <= 0) {
     list.insert("draw:stroke", "none");
     list.insert("svg:stroke-width", 1, WPX_POINT);
-    return;
+  } else {
+    list.insert("draw:stroke", "solid");
+    list.insert("svg:stroke-color", m_style.m_lineColor.str().c_str());
+    list.insert("svg:stroke-width", m_style.m_lineWidth,WPX_POINT);
   }
-  list.insert("draw:stroke", "solid");
-  list.insert("svg:stroke-color", m_lineColor.str().c_str());
-  list.insert("svg:stroke-width", m_lineWidth,WPX_POINT);
+
+  if (m_style.m_arrows[0]) {
+    list.insert("draw:marker-start-path", "m10 0-10 30h20z");
+    list.insert("draw:marker-start-viewbox", "0 0 20 30");
+    list.insert("draw:marker-start-center", "false");
+    list.insert("draw:marker-start-width", "5pt");
+  }
+  if (m_style.m_arrows[1]) {
+    list.insert("draw:marker-end-path", "m10 0-10 30h20z");
+    list.insert("draw:marker-end-viewbox", "0 0 20 30");
+    list.insert("draw:marker-end-center", "false");
+    list.insert("draw:marker-end-width", "5pt");
+  }
+
+  list.insert("draw:fill", "none");
 }
 
 void MWAWPictBasic::getStyle2DProperty(WPXPropertyList &list) const
 {
   MWAWPictBasic::getStyle1DProperty(list);
-  if (!m_surfaceHasColor)
+  if (!m_style.hasSurfaceColor())
     list.insert("draw:fill", "none");
   else
     list.insert("draw:fill", "solid");
-  list.insert("draw:fill-color", m_surfaceColor.str().c_str());
+  list.insert("draw:fill-color", m_style.m_surfaceColor.str().c_str());
 }
 
 
@@ -99,47 +124,27 @@ void MWAWPictBasic::getStyle2DProperty(WPXPropertyList &list) const
 //    MWAWPictLine
 //
 ////////////////////////////////////////////////////////////
-bool MWAWPictLine::getODGBinary(WPXBinaryData &res) const
+bool MWAWPictLine::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
 {
-  Box2f bdbox = getBdBox();
-
-  MWAWPropertyHandlerEncoder doc;
-  startODG(doc);
-
   WPXPropertyList list;
   WPXPropertyListVector vect;
   list.clear();
-  Vec2f pt=m_extremity[0]-bdbox[0];
+  Vec2f pt=m_extremity[0]-orig;
   list.insert("svg:x",pt.x(), WPX_POINT);
   list.insert("svg:y",pt.y(), WPX_POINT);
   vect.append(list);
-  pt=m_extremity[1]-bdbox[0];
+  pt=m_extremity[1]-orig;
   list.insert("svg:x",pt.x(), WPX_POINT);
   list.insert("svg:y",pt.y(), WPX_POINT);
   vect.append(list);
   doc.startElement("Polyline", WPXPropertyList(), vect);
   doc.endElement("Polyline");
-
-  endODG(doc);
-
-  return doc.getData(res);
+  return true;
 }
 
 void MWAWPictLine::getGraphicStyleProperty(WPXPropertyList &list) const
 {
   MWAWPictBasic::getStyle1DProperty(list);
-  if (m_arrows[0]) {
-    list.insert("draw:marker-start-path", "m10 0-10 30h20z");
-    list.insert("draw:marker-start-viewbox", "0 0 20 30");
-    list.insert("draw:marker-start-center", "false");
-    list.insert("draw:marker-start-width", "5pt");
-  }
-  if (m_arrows[1]) {
-    list.insert("draw:marker-end-path", "m10 0-10 30h20z");
-    list.insert("draw:marker-end-viewbox", "0 0 20 30");
-    list.insert("draw:marker-end-center", "false");
-    list.insert("draw:marker-end-width", "5pt");
-  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -148,16 +153,11 @@ void MWAWPictLine::getGraphicStyleProperty(WPXPropertyList &list) const
 //
 ////////////////////////////////////////////////////////////
 // to do: see how to manage the round corner
-bool MWAWPictRectangle::getODGBinary(WPXBinaryData &res) const
+bool MWAWPictRectangle::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
 {
-  Box2f bdbox = getBdBox();
-
-  MWAWPropertyHandlerEncoder doc;
-  startODG(doc);
-
   WPXPropertyList list;
   list.clear();
-  Vec2f pt=m_rectBox[0]-bdbox[0];
+  Vec2f pt=m_rectBox[0]-orig;
   list.insert("svg:x",pt.x(), WPX_POINT);
   list.insert("svg:y",pt.y(), WPX_POINT);
   pt=m_rectBox[1]-m_rectBox[0];
@@ -170,9 +170,7 @@ bool MWAWPictRectangle::getODGBinary(WPXBinaryData &res) const
   doc.startElement("Rectangle", list);
   doc.endElement("Rectangle");
 
-  endODG(doc);
-
-  return doc.getData(res);
+  return true;
 }
 
 void MWAWPictRectangle::getGraphicStyleProperty(WPXPropertyList &list) const
@@ -185,16 +183,11 @@ void MWAWPictRectangle::getGraphicStyleProperty(WPXPropertyList &list) const
 //    MWAWPictCircle
 //
 ////////////////////////////////////////////////////////////
-bool MWAWPictCircle::getODGBinary(WPXBinaryData &res) const
+bool MWAWPictCircle::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
 {
-  Box2f bdbox = getBdBox();
-
-  MWAWPropertyHandlerEncoder doc;
-  startODG(doc);
-
   WPXPropertyList list;
   list.clear();
-  Vec2f pt=0.5*(m_circleBox[0]+m_circleBox[1])-bdbox[0];
+  Vec2f pt=0.5*(m_circleBox[0]+m_circleBox[1])-orig;
   list.insert("svg:cx",pt.x(), WPX_POINT);
   list.insert("svg:cy",pt.y(), WPX_POINT);
   pt=0.5*(m_circleBox[1]-m_circleBox[0]);
@@ -203,9 +196,7 @@ bool MWAWPictCircle::getODGBinary(WPXBinaryData &res) const
   doc.startElement("Ellipse", list);
   doc.endElement("Ellipse");
 
-  endODG(doc);
-
-  return doc.getData(res);
+  return true;
 }
 
 void MWAWPictCircle::getGraphicStyleProperty(WPXPropertyList &list) const
@@ -218,21 +209,21 @@ void MWAWPictCircle::getGraphicStyleProperty(WPXPropertyList &list) const
 //    MWAWPictArc
 //
 ////////////////////////////////////////////////////////////
-bool MWAWPictArc::getODGBinary(WPXBinaryData &res) const
+bool MWAWPictArc::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
 {
-  Box2f bdbox = getBdBox();
-
-  MWAWPropertyHandlerEncoder doc;
-  startODG(doc);
-
-  Vec2f center=0.5*(m_circleBox[0]+m_circleBox[1])-bdbox[0];
+  Vec2f center=0.5*(m_circleBox[0]+m_circleBox[1])-orig;
   Vec2f rad=0.5*(m_circleBox[1]-m_circleBox[0]);
+  float angl0=m_angle[0];
   float angl1=m_angle[1];
-  if (angl1-m_angle[0]>=180.f && angl1-m_angle[0]<=180.f)
+  while (angl1<angl0)
+    angl1+=360.f;
+  while (angl1>angl0+360.f)
+    angl1-=360.f;
+  if (angl1-angl0>=180.f && angl1-angl0<=180.f)
     angl1+=0.01;
   WPXPropertyListVector vect;
   WPXPropertyList list;
-  float angl=m_angle[0]*float(M_PI/180.);
+  float angl=angl0*float(M_PI/180.);
   Vec2f pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
   list.insert("libwpg:path-action", "M");
   list.insert("svg:x",pt.x(), WPX_POINT);
@@ -243,7 +234,7 @@ bool MWAWPictArc::getODGBinary(WPXBinaryData &res) const
   angl=angl1*float(M_PI/180.);
   pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
   list.insert("libwpg:path-action", "A");
-  list.insert("libwpg:large-arc", (angl1-m_angle[0]<180.f)?1:0);
+  list.insert("libwpg:large-arc", (angl1-angl0<180.f)?0:1);
   list.insert("libwpg:sweep", 0);
   list.insert("svg:rx",rad.x(), WPX_POINT);
   list.insert("svg:ry",rad.y(), WPX_POINT);
@@ -253,14 +244,12 @@ bool MWAWPictArc::getODGBinary(WPXBinaryData &res) const
   doc.startElement("Path", WPXPropertyList(), vect);
   doc.endElement("Path");
 
-  endODG(doc);
-
-  return doc.getData(res);
+  return true;
 }
 
 void MWAWPictArc::getGraphicStyleProperty(WPXPropertyList &list) const
 {
-  if (!hasSurfaceColor())
+  if (!m_style.hasSurfaceColor())
     MWAWPictBasic::getStyle1DProperty(list);
   else
     MWAWPictBasic::getStyle2DProperty(list);
@@ -299,26 +288,22 @@ int MWAWPictPath::cmp(MWAWPict const &a) const
   return 0;
 }
 
-bool MWAWPictPath::getODGBinary(WPXBinaryData &res) const
+bool MWAWPictPath::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &) const
 {
   if (!m_path.count()) {
     MWAW_DEBUG_MSG(("MWAWPictPath::getODGBinary: the path is not defined\n"));
     return false;
   }
-  MWAWPropertyHandlerEncoder doc;
-  startODG(doc);
 
   doc.startElement("Path", WPXPropertyList(), m_path);
   doc.endElement("Path");
 
-  endODG(doc);
-
-  return doc.getData(res);
+  return true;
 }
 
 void MWAWPictPath::getGraphicStyleProperty(WPXPropertyList &list) const
 {
-  if (!hasSurfaceColor())
+  if (!m_style.hasSurfaceColor())
     MWAWPictBasic::getStyle1DProperty(list);
   else
     MWAWPictBasic::getStyle2DProperty(list);
@@ -329,7 +314,7 @@ void MWAWPictPath::getGraphicStyleProperty(WPXPropertyList &list) const
 //    MWAWPictPolygon
 //
 ////////////////////////////////////////////////////////////
-bool MWAWPictPolygon::getODGBinary(WPXBinaryData &res) const
+bool MWAWPictPolygon::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
 {
   size_t numPt = m_verticesList.size();
   if (numPt < 2) {
@@ -337,36 +322,75 @@ bool MWAWPictPolygon::getODGBinary(WPXBinaryData &res) const
     return false;
   }
 
-  Box2f bdbox = getBdBox();
-
-  MWAWPropertyHandlerEncoder doc;
-  startODG(doc);
-
   WPXPropertyListVector vect;
   for (size_t i = 0; i < numPt; i++) {
     WPXPropertyList list;
-    Vec2f pt=m_verticesList[i]-bdbox[0];
+    Vec2f pt=m_verticesList[i]-orig;
     list.insert("svg:x", pt.x()/72., WPX_INCH);
     list.insert("svg:y", pt.y()/72., WPX_INCH);
     vect.append(list);
   }
-  if (!hasSurfaceColor()) {
+  if (!m_style.hasSurfaceColor()) {
     doc.startElement("Polyline", WPXPropertyList(), vect);
     doc.endElement("Polyline");
   } else {
     doc.startElement("Polygon", WPXPropertyList(), vect);
     doc.endElement("Polygon");
   }
-  endODG(doc);
-
-  return doc.getData(res);
+  return true;
 }
 
 void MWAWPictPolygon::getGraphicStyleProperty(WPXPropertyList &list) const
 {
-  if (!hasSurfaceColor())
+  if (!m_style.hasSurfaceColor())
     MWAWPictBasic::getStyle1DProperty(list);
   else
     MWAWPictBasic::getStyle2DProperty(list);
 }
+
+////////////////////////////////////////////////////////////
+//
+//    MWAWPictGroup
+//
+////////////////////////////////////////////////////////////
+void MWAWPictGroup::addChild(shared_ptr<MWAWPictBasic> child)
+{
+  if (!child) {
+    MWAW_DEBUG_MSG(("MWAWPictGroup::addChild: called without child\n"));
+    return;
+  }
+  Box2f cBDBox=child->getBdBox();
+  if (m_child.empty())
+    setBdBox(cBDBox);
+  else {
+    Box2f bdbox=getBdBox();
+    Vec2f pt=bdbox[0];
+    if (cBDBox[0][0]<pt[0]) pt[0]=cBDBox[0][0];
+    if (cBDBox[0][1]<pt[1]) pt[1]=cBDBox[0][1];
+    bdbox.setMin(pt);
+
+    pt=bdbox[1];
+    if (cBDBox[1][0]>pt[0]) pt[0]=cBDBox[1][0];
+    if (cBDBox[1][1]>pt[1]) pt[1]=cBDBox[1][1];
+    bdbox.setMax(pt);
+    setBdBox(bdbox);
+  }
+  m_child.push_back(child);
+}
+
+void MWAWPictGroup::getGraphicStyleProperty(WPXPropertyList &) const
+{
+}
+
+bool MWAWPictGroup::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
+{
+  if (m_child.empty())
+    return false;
+  for (size_t c=0; c < m_child.size(); ++c) {
+    if (!m_child[c]) continue;
+    m_child[c]->getODGBinary(doc, orig);
+  }
+  return true;
+}
+
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

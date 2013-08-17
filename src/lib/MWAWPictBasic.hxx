@@ -51,30 +51,17 @@
 
 class MWAWPropertyHandlerEncoder;
 
-/*
-   libmwaw:document w="..pt" h="..pt"
-   libmwaw:graphicStyle lineColor="#......" lineWidth="..pt" lineFill="solid/none"
-           surfaceColor="#......" surfaceFill="solid/none"
-           startArrow="true/false" startArrowWidth="..pt"
-           endArrow="true/false" endArrowWidth="..pt" /
-   libmwaw:drawLine x0=".." y0=".." x1=".." y1=".." /
-   libmwaw:drawRectangle x0=".." y0=".."  w=".." h=".." [ rw=".." rh=".." ] /
-   libmwaw:drawCircle x0=".." y0=".." w=".." h=".." /
-   libmwaw:drawArc x0=".." y0=".." w=".." h=".." angle0=".." angle1=".." /
-   libmwaw:drawPolygon x0=".." y0=".." ... x{N-1}=".." y{N-1}=".."  w=".." h=".." /
-   libmwaw:drawPath path=".." w=".." h=".." /
-   /libmwaw:document
-*/
-
 /** \brief an abstract class which defines basic picture (a line, a rectangle, ...) */
 class MWAWPictBasic: public MWAWPict
 {
 public:
+  struct Style;
+
   //! virtual destructor
   virtual ~MWAWPictBasic() {}
 
   //! the picture subtype ( line, rectangle, polygon, circle, arc)
-  enum SubType { Line, Rectangle, Polygon, Circle, Arc, Path };
+  enum SubType { Arc, Circle, Group, Line, Path, Polygon, Rectangle };
   //! returns the picture type
   virtual Type getType() const {
     return Basic;
@@ -82,24 +69,17 @@ public:
   //! returns the picture subtype
   virtual SubType getSubType() const = 0;
 
-  //! sets the line width (by default 1.0)
-  void setLineWidth(float w) {
-    m_lineWidth = w;
-    extendBDBox(m_lineWidth, 0);
-  }
-  /** sets the line color. default values : black
-   */
-  void setLineColor(MWAWColor const &col) {
-    m_lineColor = col;
-  }
+  //! returns a ODG (encoded)
+  virtual bool getODGBinary(WPXBinaryData &res) const;
 
-  /** sets the surface color. default value white */
-  void setSurfaceColor(MWAWColor const &col, bool hasColor = true) {
-    m_surfaceColor = col;
-    m_surfaceHasColor = hasColor;
+  //! returns the current style
+  Style const &getStyle() const {
+    return m_style;
   }
-  bool hasSurfaceColor() const {
-    return m_surfaceHasColor;
+  //! set the current style
+  void setStyle(Style const &style) {
+    m_style = style;
+    updateBdBox();
   }
 
   /** returns the final representation in encoded odg (if possible) */
@@ -108,10 +88,8 @@ public:
     s = "image/mwaw-odg2";
     return true;
   }
-  /** virtual function which tries to convert the picture in ODG and put the result in a WPXBinaryData */
-  virtual bool getODGBinary(WPXBinaryData &) const {
-    return false;
-  }
+  //! returns a ODG (low level)
+  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const=0;
 
   /** a virtual function used to obtain a strict order.
    * -  must be redefined in the subs class
@@ -124,25 +102,23 @@ public:
     // the type
     diff = getSubType() - aPict.getSubType();
     if (diff) return (diff < 0) ? -1 : 1;
-
-    float diffF = m_lineWidth - aPict.m_lineWidth;
-    if (diffF < 0) return -1;
-    if (diffF > 0) return 1;
-
-    if (m_lineColor < aPict.m_lineColor) return -1;
-    if (m_lineColor > aPict.m_lineColor) return 1;
-    if (m_surfaceColor < aPict.m_surfaceColor) return -1;
-    if (m_surfaceColor > aPict.m_surfaceColor) return 1;
+    diff = m_style.cmp(aPict.m_style);
+    if (diff) return diff;
     for (int c = 0; c < 2; c++) {
-      diffF = m_extend[c]-aPict.m_extend[c];
+      float diffF = m_extend[c]-aPict.m_extend[c];
       if (diffF < 0) return -1;
       if (diffF > 0) return 1;
     }
-    if (m_surfaceHasColor != aPict.m_surfaceHasColor)
-      return m_surfaceHasColor;
     return 0;
   }
+
 protected:
+  //! update the bdbox if needed, must be called if lineWidth or arrows change
+  void updateBdBox() {
+    extendBDBox(m_style.m_lineWidth, 0);
+    extendBDBox((m_style.m_arrows[0] || m_style.m_arrows[1]) ? 5 : 0, 1);
+  }
+
   //! function to implement in subclass in order to get the graphics style
   virtual void getGraphicStyleProperty(WPXPropertyList &list) const = 0;
 
@@ -152,9 +128,9 @@ protected:
   void getStyle2DProperty(WPXPropertyList &list) const;
 
   //! adds the odg header knowing the minPt and the maxPt
-  void startODG(MWAWPropertyHandlerEncoder &doc) const;
+  virtual void startODG(MWAWPropertyHandlerEncoder &doc) const;
   //! adds the odg footer
-  void endODG(MWAWPropertyHandlerEncoder &doc) const;
+  virtual void endODG(MWAWPropertyHandlerEncoder &doc) const;
 
   //! a function to extend the bdbox
   // - \param id=0 corresponds to linewidth
@@ -166,35 +142,71 @@ protected:
   }
 
   //! protected constructor must not be called directly
-  MWAWPictBasic() : m_lineWidth(1.0), m_lineColor(MWAWColor::black()), m_surfaceColor(MWAWColor::white()), m_surfaceHasColor(false) {
+  MWAWPictBasic() : MWAWPict(), m_style() {
     for (int c = 0; c < 2; c++) m_extend[c]=0;
-    setLineWidth(1.0);
+    updateBdBox();
   }
   //! protected constructor must not be called directly
-  MWAWPictBasic(MWAWPictBasic const &p) : MWAWPict(), m_lineWidth(1.0), m_lineColor(MWAWColor::black()), m_surfaceColor(MWAWColor::white()), m_surfaceHasColor(false) {
+  MWAWPictBasic(MWAWPictBasic const &p) : MWAWPict(), m_style() {
     *this=p;
   }
   //! protected= must not be called directly
   MWAWPictBasic &operator=(MWAWPictBasic const &p) {
     if (&p == this) return *this;
     MWAWPict::operator=(p);
-    m_lineWidth = p.m_lineWidth;
-    m_lineColor = p.m_lineColor;
-    m_surfaceColor = p.m_surfaceColor;
+    m_style = p.m_style;
     for (int c=0; c < 2; c++) m_extend[c] = p.m_extend[c];
-    m_surfaceHasColor = p.m_surfaceHasColor;
     return *this;
   }
 
+public:
+  //! a structure used to defined a picture style
+  struct Style {
+    //! constructor
+    Style() :  m_lineWidth(1), m_lineColor(MWAWColor::black()), m_surfaceColor(MWAWColor::white()), m_surfaceHasColor(false) {
+      m_arrows[0]=m_arrows[1]=false;
+    }
+    //! set the surface color
+    void setSurfaceColor(MWAWColor const &col, bool hasColor = true) {
+      m_surfaceColor = col;
+      m_surfaceHasColor = hasColor;
+    }
+    //! returns true if the surface is defined
+    bool hasSurfaceColor() const {
+      return m_surfaceHasColor;
+    }
+
+    /** compare two styles */
+    virtual int cmp(Style const &a) const {
+      if (m_lineWidth < a.m_lineWidth) return -1;
+      if (m_lineWidth > a.m_lineWidth) return 1;
+      if (m_lineColor < a.m_lineColor) return -1;
+      if (m_lineColor > a.m_lineColor) return 1;
+      if (m_surfaceColor < a.m_surfaceColor) return -1;
+      if (m_surfaceColor > a.m_surfaceColor) return 1;
+      if (m_surfaceHasColor != a.m_surfaceHasColor)
+        return m_surfaceHasColor ? 1 : -1;
+      for (int i=0; i<2; ++i) {
+        if (m_arrows[i]!=a.m_arrows[i])
+          return m_arrows[i] ? 1 : -1;
+      }
+      return 0;
+    }
+    //! the linewidth
+    float m_lineWidth;
+    //! the line color
+    MWAWColor m_lineColor;
+    //! the surface color
+    MWAWColor m_surfaceColor;
+    //! true if the surface has some color
+    bool m_surfaceHasColor;
+    //! two bool to indicated if extremity has arrow or not
+    bool m_arrows[2];
+  };
+protected:
+  //! the data style
+  Style m_style;
 private:
-  //! the linewidth
-  float m_lineWidth;
-  //! the line color
-  MWAWColor m_lineColor;
-  //! the line color
-  MWAWColor m_surfaceColor;
-  //! true if the surface has some color
-  bool m_surfaceHasColor;
   //! m_extend[0]: from lineWidth, m_extend[1]: came from extra data
   float m_extend[2];
 };
@@ -207,20 +219,13 @@ public:
   MWAWPictLine(Vec2f orig, Vec2f end) : MWAWPictBasic() {
     m_extremity[0] = orig;
     m_extremity[1] = end;
-    m_arrows[0] = m_arrows[1] = false;
     setBdBox(getBdBox(2,m_extremity));
   }
   //! virtual destructor
   virtual ~MWAWPictLine() {}
-  //! sets the arrow: orig(v=0), end(v=1)
-  void setArrow(int v, bool val) {
-    assert(v>=0 && v<=1);
-    m_arrows[v]=val;
-    extendBDBox ((m_arrows[0] || m_arrows[1]) ? 5 : 0, 1);
-  }
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(WPXBinaryData &res) const;
+  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
 protected:
   //! returns the class type
@@ -238,18 +243,12 @@ protected:
       diff = m_extremity[c].cmpY(aLine.m_extremity[c]);
       if (diff) return diff;
     }
-    for (int c = 0; c < 2; c++) {
-      diff = m_arrows[c]-aLine.m_arrows[c];
-      if (diff) return (diff < 0) ? -1 : 1;
-    }
     return 0;
   }
 
 
   //! the extremity coordinate
   Vec2f m_extremity[2];
-  //! two bool to indicated if extremity has arrow or not
-  bool m_arrows[2];
 };
 
 //! \brief a class to define a rectangle (or a rectangle with round corner)
@@ -276,7 +275,7 @@ public:
   }
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(WPXBinaryData &res) const;
+  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
 protected:
   //! returns the class type
@@ -315,7 +314,7 @@ public:
   virtual ~MWAWPictCircle() {}
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(WPXBinaryData &res) const;
+  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
 protected:
   //! returns the class type
@@ -348,7 +347,7 @@ public:
   virtual ~MWAWPictArc() {}
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(WPXBinaryData &res) const;
+  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
 protected:
   //! returns the class type
@@ -392,7 +391,7 @@ public:
   virtual ~MWAWPictPath() {}
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(WPXBinaryData &res) const;
+  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
 protected:
   //! returns the class type
@@ -412,8 +411,7 @@ protected:
 class MWAWPictPolygon : public MWAWPictBasic
 {
 public:
-  /** constructor: bdbox followed by the bdbox of the circle
-  and 2 angl exprimed in degree */
+  /** constructor: bdbox followed by the set of vertices */
   MWAWPictPolygon(Box2f bdBox, std::vector<Vec2f> const &lVect) : MWAWPictBasic(), m_verticesList(lVect) {
     setBdBox(bdBox);
   }
@@ -421,7 +419,7 @@ public:
   virtual ~MWAWPictPolygon() {}
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(WPXBinaryData &res) const;
+  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
 protected:
   //! returns the class type
@@ -450,6 +448,55 @@ protected:
 
   //! the vertices list
   std::vector<Vec2f> m_verticesList;
+};
+
+//! \brief a class used to define a polygon
+class MWAWPictGroup : public MWAWPictBasic
+{
+public:
+  /** constructor: */
+  MWAWPictGroup() : MWAWPictBasic(), m_child() {
+  }
+  //! virtual destructor
+  virtual ~MWAWPictGroup() {}
+
+  //! returns a ODG (encoded)
+  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
+
+  //! add a new child
+  void addChild(shared_ptr<MWAWPictBasic> child);
+protected:
+  //! returns the class type
+  virtual SubType getSubType() const {
+    return Group;
+  }
+  //! returns the graphics style
+  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  //! comparison function
+  virtual int cmp(MWAWPict const &a) const {
+    int diff = MWAWPictBasic::cmp(a);
+    if (diff) return diff;
+    MWAWPictGroup const &aGroup = static_cast<MWAWPictGroup const &>(a);
+    if (m_child.size()<aGroup.m_child.size())
+      return -1;
+    if (m_child.size()>aGroup.m_child.size())
+      return 1;
+
+    // check the vertices
+    for (size_t c = 0; c < m_child.size(); c++) {
+      if (!m_child[c]) {
+        if (aGroup.m_child[c]) return -1;
+        continue;
+      }
+      if (!aGroup.m_child[c]) return 1;
+      diff = m_child[c]->cmp(*aGroup.m_child[c]);
+      if (diff) return diff;
+    }
+    return 0;
+  }
+
+  //! the vertices list
+  std::vector<shared_ptr<MWAWPictBasic> > m_child;
 };
 
 #endif

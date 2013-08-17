@@ -348,6 +348,7 @@ shared_ptr<MWAWPictBasic> FrameBasic::getPicture(Style const &style) const
   shared_ptr<MWAWPictBasic> res;
   Box2f box(Vec2f(0,0), m_box.size());
 
+  MWAWPictBasic::Style pStyle;
   switch(m_type) {
   case 2: {
     if (m_vertices.size()<2) {
@@ -358,14 +359,13 @@ shared_ptr<MWAWPictBasic> FrameBasic::getPicture(Style const &style) const
     int arrow=(m_lineArrow<=1) ? style.m_lineArrow : m_lineArrow;
     switch(arrow) {
     case 2:
-      pict->setArrow(1, true);
+      pStyle.m_arrows[1]=true;
       break;
     case 3:
-      pict->setArrow(0, true);
+      pStyle.m_arrows[0]=true;
       break;
     case 4:
-      pict->setArrow(0, true);
-      pict->setArrow(1, true);
+      pStyle.m_arrows[0]=pStyle.m_arrows[1]=true;
       break;
     default:
       break;
@@ -482,9 +482,10 @@ shared_ptr<MWAWPictBasic> FrameBasic::getPicture(Style const &style) const
   }
   if (!res)
     return res;
-  res->setLineWidth(style.lineWidth());
-  res->setLineColor(style.getColor(true));
-  res->setSurfaceColor(style.getColor(false), style.hasSurfaceColor());
+  pStyle.m_lineWidth=style.lineWidth();
+  pStyle.m_lineColor=style.getColor(true);
+  pStyle.setSurfaceColor(style.getColor(false), style.hasSurfaceColor());
+  res->setStyle(pStyle);
   return res;
 }
 

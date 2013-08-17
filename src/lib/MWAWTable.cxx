@@ -191,13 +191,17 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
     if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line2)
       lines[1].reset(new MWAWPictLine(Vec2f(0,box.size()[1]), Vec2f(box.size()[0], 0)));
 
+    MWAWBorder const&border=cell.extraLineType();
+    MWAWPictBasic::Style pStyle;
+    pStyle.m_lineWidth=(float)border.m_width;
+    pStyle.m_lineColor=border.m_color;
+
     for (int i = 0; i < 2; i++) {
       if (!lines[i]) continue;
+      lines[i]->setStyle(pStyle);
+
       WPXBinaryData data;
       std::string type;
-      MWAWBorder const&border=cell.extraLineType();
-      lines[i]->setLineWidth((float)border.m_width);
-      lines[i]->setLineColor(border.m_color);
       if (!lines[i]->getBinary(data,type)) continue;
 
       MWAWPosition lPos(box[0], box.size(), WPX_POINT);

@@ -513,8 +513,10 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actF
   actFont.getColor(col);
   if (percent > 0.0)
     col=MWAWColor::barycenter(percent,col,1.f-percent,MWAWColor::white());
-  line.setLineColor(col);
-  line.setLineWidth(w);
+  MWAWPictBasic::Style pStyle;
+  pStyle.m_lineWidth=w;
+  pStyle.m_lineColor=col;
+  line.setStyle(pStyle);
 
   WPXBinaryData data;
   std::string type;

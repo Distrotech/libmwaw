@@ -484,7 +484,7 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
 {
   data.clear();
   pictType="";
-  shared_ptr<MWAWPict> pict;
+  shared_ptr<MWAWPictBasic> pict;
   float lineW = 1.0;
   switch(m_lineType) {
   case 0: // fixme dotted
@@ -503,42 +503,33 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
   default:
     break;
   }
-  MWAWColor lineColor=MWAWColor::black();
-  bool hasLineColor = false;
-  if (m_linePattern.hasPattern()) {
-    lineColor = MWAWColor::barycenter(m_linePattern.m_filled, m_lineColor, 1.f-m_linePattern.m_filled, m_surfaceColor);
-    hasLineColor = true;
-  } else if (m_linePattern.m_type == MSKGraphInternal::Pattern::P_None)
-    lineW = 0.;
-  bool hasSurfaceColor = false;
-  MWAWColor surfaceColor=MWAWColor::white();
-  if (m_surfacePattern.hasPattern()) {
-    surfaceColor = MWAWColor::barycenter(m_surfacePattern.m_filled, m_surfaceColor, 1.f-m_surfacePattern.m_filled, m_lineColor);
-    hasSurfaceColor = true;
-  }
+
+  MWAWPictBasic::Style pStyle;
+  pStyle.m_lineWidth = lineW;
+  if (m_linePattern.hasPattern())
+    pStyle.m_lineColor = MWAWColor::barycenter(m_linePattern.m_filled, m_lineColor, 1.f-m_linePattern.m_filled, m_surfaceColor);
+  else if (m_linePattern.m_type == MSKGraphInternal::Pattern::P_None)
+    pStyle.m_lineWidth = 0.;
+  if (m_surfacePattern.hasPattern())
+    pStyle.setSurfaceColor(MWAWColor::barycenter(m_surfacePattern.m_filled, m_surfaceColor, 1.f-m_surfacePattern.m_filled, m_lineColor));
 
   switch(m_subType) {
   case 0: {
     MWAWPictLine *pct=new MWAWPictLine(m_box.min(), m_box.max());
     switch(m_lineFlags&3) {
     case 2:
-      pct->setArrow(0, true);
+      pStyle.m_arrows[0]=true;
     case 1:
-      pct->setArrow(1, true);
+      pStyle.m_arrows[1]=true;
       break;
     default:
       break;
     }
-    pct->setLineWidth(lineW);
-    if (hasLineColor) pct->setLineColor(lineColor);
     pict.reset(pct);
     break;
   }
   case 1: {
     MWAWPictRectangle *pct=new MWAWPictRectangle(m_box);
-    pct->setLineWidth(lineW);
-    if (hasLineColor) pct->setLineColor(lineColor);
-    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor);
     pict.reset(pct);
     break;
   }
@@ -550,34 +541,22 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
     if (m_box.size().y() > 0 && m_box.size().y() < 2*sz)
       sz = int(m_box.size().y())/2;
     pct->setRoundCornerWidth(sz);
-    pct->setLineWidth(lineW);
-    if (hasLineColor) pct->setLineColor(lineColor);
-    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor);
     pict.reset(pct);
     break;
   }
   case 3: {
     MWAWPictCircle *pct=new MWAWPictCircle(m_box);
-    pct->setLineWidth(lineW);
-    if (hasLineColor) pct->setLineColor(lineColor);
-    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor);
     pict.reset(pct);
     break;
   }
   case 4: {
     int angl2 = m_angle+((m_deltaAngle>0) ? m_deltaAngle : -m_deltaAngle);
     MWAWPictArc *pct=new MWAWPictArc(m_box, m_formBox, float(450-angl2), float(450-m_angle));
-    pct->setLineWidth(lineW);
-    if (hasLineColor) pct->setLineColor(lineColor);
-    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor);
     pict.reset(pct);
     break;
   }
   case 5: {
     MWAWPictPolygon *pct = new MWAWPictPolygon(m_box, m_vertices);
-    pct->setLineWidth(lineW);
-    if (hasLineColor) pct->setLineColor(lineColor);
-    if (hasSurfaceColor) pct->setSurfaceColor(surfaceColor);
     pict.reset(pct);
     break;
   }
@@ -586,7 +565,7 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
     break;
   }
   if (!pict) return false;
-
+  pict->setStyle(pStyle);
   return pict->getBinary(data,pictType);
 }
 

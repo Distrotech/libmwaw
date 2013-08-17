@@ -2366,12 +2366,13 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
     pos.setSize(pictSz);
 
   shared_ptr<MWAWPictBasic> pictPtr;
+  MWAWPictBasic::Style pStyle;
   switch(pict.getSubType()) {
   case CWGraphInternal::Zone::T_Line: {
     MWAWPictLine *res=new MWAWPictLine(Vec2i(0,0), pict.m_box.size());
     pictPtr.reset(res);
-    if (pict.m_style.m_lineFlags & 0x40) res->setArrow(0, true);
-    if (pict.m_style.m_lineFlags & 0x80) res->setArrow(1, true);
+    if (pict.m_style.m_lineFlags & 0x40) pStyle.m_arrows[0]=true;
+    if (pict.m_style.m_lineFlags & 0x80) pStyle.m_arrows[1]=true;
     break;
   }
   case CWGraphInternal::Zone::T_Rect: {
@@ -2504,16 +2505,18 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
 
   if (!pictPtr)
     return false;
+
   CWGraphInternal::Style const &style = pict.m_style;
-  pictPtr->setLineWidth((float)style.m_lineWidth);
+  pStyle.m_lineWidth=(float)style.m_lineWidth;
   MWAWColor color;
   if (getLineColor(style, color))
-    pictPtr->setLineColor(color);
+    pStyle.m_lineColor=color;
   if (getSurfaceColor(style, color))
-    pictPtr->setSurfaceColor(color);
+    pStyle.setSurfaceColor(color);
+  pictPtr->setStyle(pStyle);
+
   WPXBinaryData data;
   std::string type;
-
   if (!pictPtr->getBinary(data,type)) return false;
 
   pos.setOrigin(pos.origin()-Vec2f(2,2));
