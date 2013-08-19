@@ -1139,7 +1139,30 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
   if (vers >= 3) pict.m_ids[0] = (long) input->readULong(4);
   if (vers >= 4 && hasSurfPatFunction) {
     f << "Pat[Funct]=[";
-    for (int i = 0; i < 11; i++)
+    /* type, 0, 800, 0|100, angle, 3600|ff00, 180f, fid00,0
+       3,0,800,100,0,0,5900,3600,180f,f800,0,
+       2,0,800,0,0,5a00,ff00,0,180f,f500,0, : hori
+       1,0,800,0,0,0,ff00,0,180f,f000,0,
+       1,0,800,0,0,e100,ff00,0,180f,f200,0,
+       1,0,800,0,1,3b00,ff00,0,180f,f300,0,
+       2,0,800,0,0,0,ff00,0,180f,f400,0, : veri
+     */
+    int type=(int) input->readLong(2);
+    switch(type) {
+    case 1:
+      f << "linear,";
+      break;
+    case 2:
+      f << "linear[bi],";
+      break;
+    case 3:
+      f << "square,";
+      break;
+    default:
+      f << "#type=" << type << ",";
+      break;
+    }
+    for (int i = 0; i < 10; i++)
       f << std::hex << input->readULong(2) << std::dec << ",";
     f << "],";
   }

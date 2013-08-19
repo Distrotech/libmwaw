@@ -122,11 +122,6 @@ protected:
   //! function to implement in subclass in order to get the graphics style
   virtual void getGraphicStyleProperty(WPXPropertyList &list) const = 0;
 
-  //! returns the basic style property for 1D form (line, ...)
-  void getStyle1DProperty(WPXPropertyList &list) const;
-  //! returns the basic style property for 2D form (line, ...)
-  void getStyle2DProperty(WPXPropertyList &list) const;
-
   //! adds the odg header knowing the minPt and the maxPt
   virtual void startODG(MWAWPropertyHandlerEncoder &doc) const;
   //! adds the odg footer
@@ -160,46 +155,98 @@ protected:
   }
 
 public:
-  //! a structure used to defined a picture style
+  //! a structure used to define a picture style
   struct Style {
+    //! an enum used to define the basic line cap
+    enum LineCap { C_Butt, C_Square, C_Round };
+    //! an enum used to define the basic line join
+    enum LineJoin { J_Miter, J_Round, J_Bevel };
+    //! an enum used to define the gradient type
+    enum GradientType { G_None, G_Axial, G_Linear, G_Radial, G_Rectangular, G_Square, G_Ellipsoid };
+
     //! constructor
-    Style() :  m_lineWidth(1), m_lineColor(MWAWColor::black()), m_surfaceColor(MWAWColor::white()), m_surfaceHasColor(false) {
+    Style() :  m_lineWidth(1), m_lineDashWidth(), m_lineCap(C_Butt), m_lineJoin(J_Miter), m_lineOpacity(1), m_lineColor(MWAWColor::black()),
+      m_fillRuleEvenOdd(false), m_surfaceColor(MWAWColor::white()), m_surfaceOpacity(0),
+      m_shadowColor(MWAWColor::black()), m_shadowOpacity(0), m_shadowOffset(1,1),
+      m_gradientType(G_None), m_gradientBorder(0), m_gradientPercentCenter(0.5f,0.5f), m_gradientRadius(0) {
       m_arrows[0]=m_arrows[1]=false;
+      for (int i=0; i<2; ++i) {
+        m_gradientColor[i]=MWAWColor::black();
+        m_gradientOpacity[i]=1;
+      }
+    }
+    //! returns true if the border is defined
+    bool hasLine() const {
+      return m_lineWidth>0 && m_lineOpacity>0;
     }
     //! set the surface color
-    void setSurfaceColor(MWAWColor const &col, bool hasColor = true) {
+    void setSurfaceColor(MWAWColor const &col, float opacity = 1) {
       m_surfaceColor = col;
-      m_surfaceHasColor = hasColor;
+      m_surfaceOpacity = opacity;
     }
     //! returns true if the surface is defined
-    bool hasSurfaceColor() const {
-      return m_surfaceHasColor;
+    bool hasSurface() const {
+      return m_surfaceOpacity > 0;
     }
+    //! set the shadow color
+    void setShadowColor(MWAWColor const &col, float opacity = 1) {
+      m_shadowColor = col;
+      m_shadowOpacity = opacity;
+    }
+    //! returns true if the shadow is defined
+    bool hasShadow() const {
+      return m_shadowOpacity > 0;
+    }
+    //! returns true if the gradient is defined
+    bool hasGradient() const {
+      return m_gradientType != G_None;
+    }
+    //! a print operator
+    friend std::ostream &operator<<(std::ostream &o, Style const st);
+    //! add to propList
+    void addTo(WPXPropertyList &pList, bool only1d=false) const;
 
     /** compare two styles */
-    virtual int cmp(Style const &a) const {
-      if (m_lineWidth < a.m_lineWidth) return -1;
-      if (m_lineWidth > a.m_lineWidth) return 1;
-      if (m_lineColor < a.m_lineColor) return -1;
-      if (m_lineColor > a.m_lineColor) return 1;
-      if (m_surfaceColor < a.m_surfaceColor) return -1;
-      if (m_surfaceColor > a.m_surfaceColor) return 1;
-      if (m_surfaceHasColor != a.m_surfaceHasColor)
-        return m_surfaceHasColor ? 1 : -1;
-      for (int i=0; i<2; ++i) {
-        if (m_arrows[i]!=a.m_arrows[i])
-          return m_arrows[i] ? 1 : -1;
-      }
-      return 0;
-    }
+    int cmp(Style const &a) const;
+
     //! the linewidth
     float m_lineWidth;
+    //! the dash array: a sequence of (fullsize, emptysize)
+    std::vector<float> m_lineDashWidth;
+    //! the line cap
+    LineCap m_lineCap;
+    //! the line join
+    LineJoin m_lineJoin;
+    //! the line opacity: 0=transparent
+    float m_lineOpacity;
     //! the line color
     MWAWColor m_lineColor;
+    //! true if the fill rule is evenod
+    bool m_fillRuleEvenOdd;
     //! the surface color
     MWAWColor m_surfaceColor;
     //! true if the surface has some color
-    bool m_surfaceHasColor;
+    float m_surfaceOpacity;
+
+    //! the shadow color
+    MWAWColor m_shadowColor;
+    //! true if the shadow has some color
+    float m_shadowOpacity;
+    //! the shadow offset
+    Vec2f m_shadowOffset;
+
+    //! the gradient type
+    GradientType m_gradientType;
+    //! the gradient start/stop color
+    MWAWColor m_gradientColor[2];
+    //! the gradient start/stop color
+    float m_gradientOpacity[2];
+    //! the gradient border opacity
+    float m_gradientBorder;
+    //! the gradient center
+    Vec2f m_gradientPercentCenter;
+    //! the gradient radius
+    float m_gradientRadius;
     //! two bool to indicated if extremity has arrow or not
     bool m_arrows[2];
   };

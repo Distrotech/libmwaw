@@ -484,7 +484,7 @@ shared_ptr<MWAWPictBasic> FrameBasic::getPicture(Style const &style) const
     return res;
   pStyle.m_lineWidth=style.lineWidth();
   pStyle.m_lineColor=style.getColor(true);
-  pStyle.setSurfaceColor(style.getColor(false), style.hasSurfaceColor());
+  pStyle.setSurfaceColor(style.getColor(false), style.hasSurfaceColor() ? 1.f : 0.f);
   res->setStyle(pStyle);
   return res;
 }
