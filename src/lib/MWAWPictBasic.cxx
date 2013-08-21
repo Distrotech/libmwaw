@@ -52,7 +52,7 @@
 ////////////////////////////////////////////////////////////
 // style
 ////////////////////////////////////////////////////////////
-void MWAWPictBasic::Style::addTo(WPXPropertyList &list, bool only1D) const
+void MWAWPictBasic::Style::addTo(WPXPropertyList &list, WPXPropertyListVector &gradient, bool only1D) const
 {
   list.clear();
   if (!hasLine())
@@ -160,11 +160,23 @@ void MWAWPictBasic::Style::addTo(WPXPropertyList &list, bool only1D) const
       list.insert("draw:style", "linear");
       break;
     }
-    list.insert("draw:start-color", m_gradientColor[0].str().c_str());
-    list.insert("libwpg:start-opacity", m_gradientOpacity[0], WPX_PERCENT);
-    list.insert("draw:end-color", m_gradientColor[1].str().c_str());
-    list.insert("libwpg:end-opacity", m_gradientOpacity[1], WPX_PERCENT);
-
+    if (m_gradientStopList.size()==2 && m_gradientStopList[0].m_offset <= 0 &&
+        m_gradientStopList[1].m_offset >=1) {
+      size_t first=(m_gradientType==G_Linear || m_gradientType==G_Axial) ? 0 : 1;
+      list.insert("draw:start-color", m_gradientStopList[first].m_color.str().c_str());
+      list.insert("libwpg:start-opacity", m_gradientStopList[first].m_opacity, WPX_PERCENT);
+      list.insert("draw:end-color", m_gradientStopList[1-first].m_color.str().c_str());
+      list.insert("libwpg:end-opacity", m_gradientStopList[1-first].m_opacity, WPX_PERCENT);
+    } else {
+      for (size_t s=0; s < m_gradientStopList.size(); ++s) {
+        WPXPropertyList grad;
+        grad.insert("svg:offset", m_gradientStopList[s].m_offset, WPX_PERCENT);
+        grad.insert("svg:stop-color", m_gradientStopList[s].m_color.str().c_str());
+        grad.insert("svg:stop-opacity", m_gradientStopList[s].m_opacity, WPX_PERCENT);
+        gradient.append(grad);
+      }
+    }
+    list.insert("draw:angle", m_gradientAngle);
     list.insert("draw:border", m_gradientBorder, WPX_PERCENT);
     if (m_gradientType != G_Linear) {
       list.insert("svg:cx", m_gradientPercentCenter[0], WPX_PERCENT);
@@ -227,11 +239,13 @@ int MWAWPictBasic::Style::cmp(MWAWPictBasic::Style const &a) const
 
   if (m_gradientType < a.m_gradientType) return -1;
   if (m_gradientType > a.m_gradientType) return 1;
-  for (int i=0; i<2; ++i) {
-    if (m_gradientColor[i] < a.m_gradientColor[i]) return -1;
-    if (m_gradientColor[i] > a.m_gradientColor[i]) return 1;
-    if (m_gradientOpacity[i] < a.m_gradientOpacity[i]) return -1;
-    if (m_gradientOpacity[i] > a.m_gradientOpacity[i]) return 1;
+  if (m_gradientAngle < a.m_gradientAngle) return -1;
+  if (m_gradientAngle > a.m_gradientAngle) return 1;
+  if (m_gradientStopList.size() < a.m_gradientStopList.size()) return 1;
+  if (m_gradientStopList.size() > a.m_gradientStopList.size()) return -1;
+  for (size_t c=0; c < m_gradientStopList.size(); ++c) {
+    diff = m_gradientStopList[c].cmp(m_gradientStopList[c]);
+    if (diff) return diff;
   }
   if (m_gradientBorder < a.m_gradientBorder) return -1;
   if (m_gradientBorder > a.m_gradientBorder) return 1;
@@ -242,7 +256,7 @@ int MWAWPictBasic::Style::cmp(MWAWPictBasic::Style const &a) const
   return 0;
 }
 
-std::ostream &operator<<(std::ostream &o, MWAWPictBasic::Style const st)
+std::ostream &operator<<(std::ostream &o, MWAWPictBasic::Style const &st)
 {
   o << "line=[";
   if (st.m_lineWidth<1 || st.m_lineWidth>1)
@@ -317,11 +331,16 @@ std::ostream &operator<<(std::ostream &o, MWAWPictBasic::Style const st)
     default:
       break;
     }
-    for (int i=0; i<2; ++i)
-      o << "col" << i << st.m_gradientColor[i] << "[" << st.m_gradientOpacity[i]*100 << "%],";
+    if (st.m_gradientAngle>0 || st.m_gradientAngle<0) o << "angle=" << st.m_gradientAngle << ",";
+    if (st.m_gradientStopList.size() >= 2) {
+      o << "stops=[";
+      for (size_t s=0; s < st.m_gradientStopList.size(); ++s)
+        o << "[" << st.m_gradientStopList[s] << "],";
+      o << "],";
+    }
     if (st.m_gradientBorder>0) o << "border=" << st.m_gradientBorder*100 << "%,";
     if (st.m_gradientPercentCenter != Vec2f(0.5f,0.5f)) o << "center=" << st.m_gradientPercentCenter << ",";
-    if (st.m_gradientRadius>0) o << "radius=" << st.m_gradientRadius << ",";
+    if (st.m_gradientRadius<1) o << "radius=" << st.m_gradientRadius << ",";
     o << "],";
   }
   if (st.hasShadow()) {
@@ -362,9 +381,11 @@ void MWAWPictBasic::startODG(MWAWPropertyHandlerEncoder &doc) const
   list.insert("svg:height",size.y(), WPX_POINT);
   list.insert("libwpg:enforce-frame",1);
   doc.startElement("Graphics", list);
+
+  WPXPropertyListVector gradient;
   list.clear();
-  getGraphicStyleProperty(list);
-  doc.startElement("SetStyle", list, WPXPropertyListVector());
+  getGraphicStyleProperty(list, gradient);
+  doc.startElement("SetStyle", list, gradient);
   doc.endElement("SetStyle");
 }
 void MWAWPictBasic::endODG(MWAWPropertyHandlerEncoder &doc) const
@@ -395,9 +416,9 @@ bool MWAWPictLine::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &or
   return true;
 }
 
-void MWAWPictLine::getGraphicStyleProperty(WPXPropertyList &list) const
+void MWAWPictLine::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
-  m_style.addTo(list, true);
+  m_style.addTo(list, gradient, true);
 }
 
 ////////////////////////////////////////////////////////////
@@ -426,9 +447,9 @@ bool MWAWPictRectangle::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f cons
   return true;
 }
 
-void MWAWPictRectangle::getGraphicStyleProperty(WPXPropertyList &list) const
+void MWAWPictRectangle::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
-  m_style.addTo(list);
+  m_style.addTo(list, gradient);
 }
 
 ////////////////////////////////////////////////////////////
@@ -452,9 +473,9 @@ bool MWAWPictCircle::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &
   return true;
 }
 
-void MWAWPictCircle::getGraphicStyleProperty(WPXPropertyList &list) const
+void MWAWPictCircle::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
-  m_style.addTo(list);
+  m_style.addTo(list, gradient);
 }
 
 ////////////////////////////////////////////////////////////
@@ -508,9 +529,9 @@ bool MWAWPictArc::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &ori
   return true;
 }
 
-void MWAWPictArc::getGraphicStyleProperty(WPXPropertyList &list) const
+void MWAWPictArc::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
-  m_style.addTo(list);
+  m_style.addTo(list, gradient);
 }
 
 ////////////////////////////////////////////////////////////
@@ -548,20 +569,32 @@ int MWAWPictPath::cmp(MWAWPict const &a) const
 
 bool MWAWPictPath::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &) const
 {
-  if (!m_path.count()) {
+  unsigned long n=m_path.count();
+  if (!n) {
     MWAW_DEBUG_MSG(("MWAWPictPath::getODGBinary: the path is not defined\n"));
     return false;
   }
 
-  doc.startElement("Path", WPXPropertyList(), m_path);
-  doc.endElement("Path");
+  if ((m_style.hasGradient() || m_style.hasSurface()) &&
+      (!m_path[n-1]["libwpg:path-action"] || m_path[n-1]["libwpg:path-action"]->getStr() != "Z")) {
+    // odg need a closed path to draw surface, so ...
+    WPXPropertyListVector path(m_path);
+    WPXPropertyList list;
+    list.insert("libwpg:path-action", "Z");
+    path.append(list);
+    doc.startElement("Path", WPXPropertyList(), path);
+    doc.endElement("Path");
+  } else {
+    doc.startElement("Path", WPXPropertyList(), m_path);
+    doc.endElement("Path");
+  }
 
   return true;
 }
 
-void MWAWPictPath::getGraphicStyleProperty(WPXPropertyList &list) const
+void MWAWPictPath::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
-  m_style.addTo(list);
+  m_style.addTo(list, gradient);
 }
 
 ////////////////////////////////////////////////////////////
@@ -585,7 +618,7 @@ bool MWAWPictPolygon::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const 
     list.insert("svg:y", pt.y()/72., WPX_INCH);
     vect.append(list);
   }
-  if (!m_style.hasSurface()) {
+  if (!m_style.hasSurface() && !m_style.hasGradient()) {
     doc.startElement("Polyline", WPXPropertyList(), vect);
     doc.endElement("Polyline");
   } else {
@@ -595,9 +628,9 @@ bool MWAWPictPolygon::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const 
   return true;
 }
 
-void MWAWPictPolygon::getGraphicStyleProperty(WPXPropertyList &list) const
+void MWAWPictPolygon::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
-  m_style.addTo(list);
+  m_style.addTo(list, gradient);
 }
 
 ////////////////////////////////////////////////////////////
@@ -630,7 +663,7 @@ void MWAWPictGroup::addChild(shared_ptr<MWAWPictBasic> child)
   m_child.push_back(child);
 }
 
-void MWAWPictGroup::getGraphicStyleProperty(WPXPropertyList &) const
+void MWAWPictGroup::getGraphicStyleProperty(WPXPropertyList &, WPXPropertyListVector &) const
 {
 }
 

@@ -81,7 +81,14 @@ public:
     m_style = style;
     updateBdBox();
   }
-
+  //! return the layer
+  int getLayer() const {
+    return m_layer;
+  }
+  //! set the layer
+  void setLayer(int layer) {
+    m_layer=layer;
+  }
   /** returns the final representation in encoded odg (if possible) */
   virtual bool getBinary(WPXBinaryData &data, std::string &s) const {
     if (!getODGBinary(data)) return false;
@@ -99,6 +106,9 @@ public:
     if (diff) return diff;
 
     MWAWPictBasic const &aPict = static_cast<MWAWPictBasic const &>(a);
+    if (m_layer < aPict.m_layer) return -1;
+    if (m_layer > aPict.m_layer) return 1;
+
     // the type
     diff = getSubType() - aPict.getSubType();
     if (diff) return (diff < 0) ? -1 : 1;
@@ -120,7 +130,7 @@ protected:
   }
 
   //! function to implement in subclass in order to get the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const = 0;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const = 0;
 
   //! adds the odg header knowing the minPt and the maxPt
   virtual void startODG(MWAWPropertyHandlerEncoder &doc) const;
@@ -137,24 +147,56 @@ protected:
   }
 
   //! protected constructor must not be called directly
-  MWAWPictBasic() : MWAWPict(), m_style() {
+  MWAWPictBasic() : MWAWPict(), m_layer(-1000), m_style() {
     for (int c = 0; c < 2; c++) m_extend[c]=0;
     updateBdBox();
   }
   //! protected constructor must not be called directly
-  MWAWPictBasic(MWAWPictBasic const &p) : MWAWPict(), m_style() {
+  MWAWPictBasic(MWAWPictBasic const &p) : MWAWPict(), m_layer(-1000), m_style() {
     *this=p;
   }
   //! protected= must not be called directly
   MWAWPictBasic &operator=(MWAWPictBasic const &p) {
     if (&p == this) return *this;
     MWAWPict::operator=(p);
+    m_layer = p.m_layer;
     m_style = p.m_style;
     for (int c=0; c < 2; c++) m_extend[c] = p.m_extend[c];
     return *this;
   }
 
 public:
+  //! a structure used to define the gradient limit
+  struct GradientStop {
+    //! constructor
+    GradientStop(float offset=0.0, MWAWColor const &col=MWAWColor::black(), float opacity=1.0) :
+      m_offset(offset), m_color(col), m_opacity(opacity) {
+    }
+    /** compare two styles */
+    int cmp(GradientStop const &a) const {
+      if (m_offset < a.m_offset) return -1;
+      if (m_offset > a.m_offset) return 1;
+      if (m_color < a.m_color) return -1;
+      if (m_color > a.m_color) return 1;
+      if (m_opacity < a.m_opacity) return -1;
+      if (m_opacity > a.m_opacity) return 1;
+      return 0;
+    }
+    //! a print operator
+    friend std::ostream &operator<<(std::ostream &o, GradientStop const &st) {
+      o << "offset=" << st.m_offset << ",";
+      o << "color=" << st.m_color << ",";
+      if (st.m_opacity<1.0)
+        o << "opacity=" << st.m_opacity*100.f << "%,";
+      return o;
+    }
+    //! the offset
+    float m_offset;
+    //! the color
+    MWAWColor m_color;
+    //! the opacity
+    float m_opacity;
+  };
   //! a structure used to define a picture style
   struct Style {
     //! an enum used to define the basic line cap
@@ -168,12 +210,10 @@ public:
     Style() :  m_lineWidth(1), m_lineDashWidth(), m_lineCap(C_Butt), m_lineJoin(J_Miter), m_lineOpacity(1), m_lineColor(MWAWColor::black()),
       m_fillRuleEvenOdd(false), m_surfaceColor(MWAWColor::white()), m_surfaceOpacity(0),
       m_shadowColor(MWAWColor::black()), m_shadowOpacity(0), m_shadowOffset(1,1),
-      m_gradientType(G_None), m_gradientBorder(0), m_gradientPercentCenter(0.5f,0.5f), m_gradientRadius(0) {
+      m_gradientType(G_None), m_gradientStopList(), m_gradientAngle(0), m_gradientBorder(0), m_gradientPercentCenter(0.5f,0.5f), m_gradientRadius(1) {
       m_arrows[0]=m_arrows[1]=false;
-      for (int i=0; i<2; ++i) {
-        m_gradientColor[i]=MWAWColor::black();
-        m_gradientOpacity[i]=1;
-      }
+      m_gradientStopList.push_back(GradientStop(0.0, MWAWColor::white()));
+      m_gradientStopList.push_back(GradientStop(1.0, MWAWColor::black()));
     }
     //! returns true if the border is defined
     bool hasLine() const {
@@ -199,12 +239,12 @@ public:
     }
     //! returns true if the gradient is defined
     bool hasGradient() const {
-      return m_gradientType != G_None;
+      return m_gradientType != G_None && m_gradientStopList.size() >= 2;
     }
     //! a print operator
-    friend std::ostream &operator<<(std::ostream &o, Style const st);
+    friend std::ostream &operator<<(std::ostream &o, Style const &st);
     //! add to propList
-    void addTo(WPXPropertyList &pList, bool only1d=false) const;
+    void addTo(WPXPropertyList &pList, WPXPropertyListVector &gradient, bool only1d=false) const;
 
     /** compare two styles */
     int cmp(Style const &a) const;
@@ -237,10 +277,10 @@ public:
 
     //! the gradient type
     GradientType m_gradientType;
-    //! the gradient start/stop color
-    MWAWColor m_gradientColor[2];
-    //! the gradient start/stop color
-    float m_gradientOpacity[2];
+    //! the list of gradient limits
+    std::vector<GradientStop> m_gradientStopList;
+    //! the gradient angle
+    float m_gradientAngle;
     //! the gradient border opacity
     float m_gradientBorder;
     //! the gradient center
@@ -251,6 +291,8 @@ public:
     bool m_arrows[2];
   };
 protected:
+  //! the layer number if know
+  int m_layer;
   //! the data style
   Style m_style;
 private:
@@ -280,7 +322,7 @@ protected:
     return Line;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const {
     int diff = MWAWPictBasic::cmp(a);
@@ -330,7 +372,7 @@ protected:
     return Rectangle;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const {
     int diff = MWAWPictBasic::cmp(a);
@@ -369,7 +411,7 @@ protected:
     return Circle;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const {
     return MWAWPictBasic::cmp(a);
@@ -402,7 +444,7 @@ protected:
     return Arc;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const {
     int diff = MWAWPictBasic::cmp(a);
@@ -446,7 +488,7 @@ protected:
     return Path;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const;
 
@@ -474,7 +516,7 @@ protected:
     return Polygon;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const {
     int diff = MWAWPictBasic::cmp(a);
@@ -518,7 +560,7 @@ protected:
     return Group;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const {
     int diff = MWAWPictBasic::cmp(a);

@@ -159,7 +159,8 @@ struct Zone {
   //! constructor
   Zone() : m_subType(-1), m_zoneId(-1), m_pos(), m_dataPos(-1), m_fileId(-1), m_page(-1), m_decal(), m_box(), m_line(-1),
     m_lineType(2), m_lineWidth(-1), m_lineColor(MWAWColor::black()), m_linePattern(Pattern::P_Percent, 1.0), m_lineFlags(0),
-    m_surfaceColor(MWAWColor::white()), m_surfacePattern(Pattern::P_None),m_order(0), m_extra(""), m_isSent(false) {
+    m_surfaceColor(MWAWColor::white()), m_surfacePattern(Pattern::P_None),
+    m_gradientType(0), m_gradientSubType(0), m_gradientAngle(0), m_order(0), m_extra(""), m_isSent(false) {
     for (int i = 0; i < 3; i++) m_ids[i] = 0;
   }
   //! destructor
@@ -268,6 +269,12 @@ struct Zone {
   MWAWColor m_surfaceColor;
   //! the line pattern
   Pattern m_surfacePattern;
+  //! the gradient type
+  int m_gradientType;
+  //! the gradient sub type
+  int m_gradientSubType;
+  //! the gradient angle
+  int m_gradientAngle;
   //! the picture order
   int m_order;
   //! extra data
@@ -383,9 +390,6 @@ void Zone::print(std::ostream &o) const
     o << "surfaceColor=" << m_surfaceColor << ",";
   if (m_surfacePattern.hasPattern())
     o << "surfacePattern=[" << m_surfacePattern << "],";
-  /* linePattern: 38: none, 19: white, 25: diagonal(gray),
-     0: black, 13: ~gray10, 26: horizontal
-  */
   if (m_line >= 0) o << "line=" << m_line << ",";
   switch(m_lineFlags&3) {
   case 0:
@@ -402,6 +406,29 @@ void Zone::print(std::ostream &o) const
   }
   if (m_lineFlags& 0xFC)
     o << "#lineFlags=" << std::hex << int(m_lineFlags&0xFC) << std::dec << ",";
+  if (m_gradientType>0) {
+    o << "gradient=[";
+    switch(m_gradientType) {
+    case 1: // subType: 0->3
+      o << "linear";
+      break;
+    case 2: // subType: 4->7
+      o << "axial";
+      break;
+    case 3: // subType: 8->13
+      o << "square";
+      break;
+    case 7: // subType: 14,15
+      o << "radial";
+      break;
+    default:
+      o << "#type=" << m_gradientType;
+      break;
+    }
+    o << "[" << m_gradientSubType << "],";
+    if (m_gradientAngle) o << "angle=" << m_gradientAngle << ",";
+    o << "],";
+  }
   if (m_extra.length()) o << m_extra;
 }
 ////////////////////////////////////////
@@ -433,7 +460,7 @@ struct GroupZone : public Zone {
 struct BasicForm : public Zone {
   //! constructor
   BasicForm(Zone const &z) : Zone(z), m_formBox(), m_angle(0), m_deltaAngle(0),
-    m_vertices() {
+    m_vertices(), m_smooth(false) {
   }
 
   //! return the type
@@ -451,6 +478,8 @@ struct BasicForm : public Zone {
         o << m_vertices[i] << ",";
       o << "],";
     }
+    if (m_smooth)
+      o << "smooth,";
   }
 
   virtual float needExtraBorderWidth() const {
@@ -477,6 +506,8 @@ struct BasicForm : public Zone {
   int m_angle, m_deltaAngle /** the delta angle */;
   //! the list of vertices ( used by polygon)
   std::vector<Vec2f> m_vertices;
+  //! a flag to know if a polygon is a smooth polygon or a line polygon
+  bool m_smooth;
 };
 
 bool BasicForm::getBinaryData(MWAWInputStreamPtr,
@@ -510,8 +541,52 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
     pStyle.m_lineColor = MWAWColor::barycenter(m_linePattern.m_filled, m_lineColor, 1.f-m_linePattern.m_filled, m_surfaceColor);
   else if (m_linePattern.m_type == MSKGraphInternal::Pattern::P_None)
     pStyle.m_lineWidth = 0.;
+  pStyle.m_fillRuleEvenOdd = true;
   if (m_surfacePattern.hasPattern())
     pStyle.setSurfaceColor(MWAWColor::barycenter(m_surfacePattern.m_filled, m_surfaceColor, 1.f-m_surfacePattern.m_filled, m_lineColor));
+  if (m_gradientType==1) {
+    pStyle.m_gradientStopList.resize(2);
+    pStyle.m_gradientStopList[0]=MWAWPictBasic::GradientStop(0.0, m_surfaceColor);
+    pStyle.m_gradientStopList[1]=MWAWPictBasic::GradientStop(1.0, m_lineColor);
+    pStyle.m_gradientAngle = float(90+m_gradientAngle);
+    pStyle.m_gradientType = MWAWPictBasic::Style::G_Linear;
+  } else if (m_gradientType==2) {
+    pStyle.m_gradientStopList.resize(2);
+    pStyle.m_gradientStopList[0]=MWAWPictBasic::GradientStop(0.0, m_surfaceColor);
+    pStyle.m_gradientStopList[1]=MWAWPictBasic::GradientStop(1.0, m_lineColor);
+    pStyle.m_gradientAngle = float(90+m_gradientAngle);
+    pStyle.m_gradientType = MWAWPictBasic::Style::G_Axial;
+  } else if (m_gradientType==3) {
+    pStyle.m_gradientStopList.resize(2);
+    pStyle.m_gradientStopList[0]=MWAWPictBasic::GradientStop(0.0, m_surfaceColor);
+    pStyle.m_gradientStopList[1]=MWAWPictBasic::GradientStop(1.0, m_lineColor);
+    switch (m_gradientSubType) {
+    case 9:
+      pStyle.m_gradientPercentCenter=Vec2f(0.25f,0.25f);
+      break;
+    case 10:
+      pStyle.m_gradientPercentCenter=Vec2f(0.25f,0.75f);
+      break;
+    case 11:
+      pStyle.m_gradientPercentCenter=Vec2f(0.75f,0.75f);
+      break;
+    case 12:
+      pStyle.m_gradientPercentCenter=Vec2f(1.f,1.f);
+      break;
+    case 13:
+      pStyle.m_gradientPercentCenter=Vec2f(0.f,0.f);
+      break;
+    case 8: // centered
+    default:
+      break;
+    }
+    pStyle.m_gradientType = MWAWPictBasic::Style::G_Rectangular;
+  } else if (m_gradientType==7) {
+    pStyle.m_gradientStopList.resize(2);
+    pStyle.m_gradientStopList[0]=MWAWPictBasic::GradientStop(0.0, m_surfaceColor);
+    pStyle.m_gradientStopList[1]=MWAWPictBasic::GradientStop(1.0, m_lineColor);
+    pStyle.m_gradientType = MWAWPictBasic::Style::G_Radial;
+  }
 
   switch(m_subType) {
   case 0: {
@@ -556,8 +631,50 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
     break;
   }
   case 5: {
-    MWAWPictPolygon *pct = new MWAWPictPolygon(m_box, m_vertices);
-    pict.reset(pct);
+    size_t nbPt=m_vertices.size();
+    if (!m_smooth || nbPt <= 2) {
+      MWAWPictPolygon *pct = new MWAWPictPolygon(m_box, m_vertices);
+      pict.reset(pct);
+      break;
+    }
+    // changme: when the polygon is closed, this does not smooth the start/end domain
+    Vec2f orig=m_box[0];
+    WPXPropertyListVector path;
+    WPXPropertyList list;
+    Vec2f vertex=m_vertices[0]-orig;
+    list.insert("libwpg:path-action", "M");
+    list.insert("svg:x", vertex[0], WPX_POINT);
+    list.insert("svg:y", vertex[1], WPX_POINT);
+    path.append(list);
+    Vec2f middle=0.5f*(m_vertices[1]+m_vertices[0])-orig;
+    list.clear();
+    list.insert("libwpg:path-action", "L");
+    list.insert("svg:x", middle[0], WPX_POINT);
+    list.insert("svg:y", middle[1], WPX_POINT);
+    path.append(list);
+    for (size_t pt=1; pt+1 < nbPt; ++pt) {
+      middle=0.5f*(m_vertices[pt+1]+m_vertices[pt])-orig;
+      vertex=m_vertices[pt]-orig;
+      list.clear();
+      list.insert("libwpg:path-action", "Q");
+      list.insert("svg:x", middle[0], WPX_POINT);
+      list.insert("svg:y", middle[1], WPX_POINT);
+      list.insert("svg:x1", vertex[0], WPX_POINT);
+      list.insert("svg:y1", vertex[1], WPX_POINT);
+      path.append(list);
+    }
+    vertex=m_vertices[nbPt-1]-orig;
+    list.clear();
+    list.insert("libwpg:path-action", "L");
+    list.insert("svg:x", vertex[0], WPX_POINT);
+    list.insert("svg:y", vertex[1], WPX_POINT);
+    path.append(list);
+    if (m_vertices[0]==m_vertices[nbPt-1]) {
+      list.clear();
+      list.insert("libwpg:path-action", "Z");
+      path.append(list);
+    }
+    pict.reset(new MWAWPictPath(m_box, path));
     break;
   }
   default:
@@ -1080,7 +1197,7 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
       if (type) f << "#type=" << std::hex << type << std::dec << ",";
       val = (int) input->readULong(1);
       if (val >= 0 && val <= 100) {
-        MSKGraphInternal::Pattern pat(patId ? MSKGraphInternal::Pattern::P_Percent : MSKGraphInternal::Pattern::P_None, float(val/100.));
+        MSKGraphInternal::Pattern pat((i==0||val!=100) ? MSKGraphInternal::Pattern::P_Percent : MSKGraphInternal::Pattern::P_None, i ? 1.f-float(val/100.) : float(val/100.));
         if (i) pict.m_surfacePattern = pat;
         else pict.m_linePattern = pat;
       } else {
@@ -1138,32 +1255,32 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
   pict.m_lineFlags = (int) input->readULong(1);
   if (vers >= 3) pict.m_ids[0] = (long) input->readULong(4);
   if (vers >= 4 && hasSurfPatFunction) {
-    f << "Pat[Funct]=[";
-    /* type, 0, 800, 0|100, angle, 3600|ff00, 180f, fid00,0
-       3,0,800,100,0,0,5900,3600,180f,f800,0,
-       2,0,800,0,0,5a00,ff00,0,180f,f500,0, : hori
-       1,0,800,0,0,0,ff00,0,180f,f000,0,
-       1,0,800,0,0,e100,ff00,0,180f,f200,0,
-       1,0,800,0,1,3b00,ff00,0,180f,f300,0,
-       2,0,800,0,0,0,ff00,0,180f,f400,0, : veri
-     */
-    int type=(int) input->readLong(2);
-    switch(type) {
-    case 1:
-      f << "linear,";
-      break;
-    case 2:
-      f << "linear[bi],";
-      break;
-    case 3:
-      f << "square,";
-      break;
-    default:
-      f << "#type=" << type << ",";
-      break;
-    }
-    for (int i = 0; i < 10; i++)
-      f << std::hex << input->readULong(2) << std::dec << ",";
+    f << "gradient[unknown]=[";
+    pict.m_gradientType=(int) input->readLong(2);
+    val=(int) input->readLong(2); // always 0?
+    if (val) f << "f0=" << val << ",";
+    val=(int) input->readLong(1); // always 8?
+    if (val!=8) f << "f1=" << val << ",";
+    val=(int) input->readLong(2); // find 1 in square
+    if (val) f << "f2=" << val << ",";
+    val=(int) input->readULong(2); // always 0 ?
+    if (val) f << "f3=" << std::hex << val << std::dec << ",";
+    pict.m_gradientAngle=(int) input->readLong(2);
+    val=(int) input->readLong(2); // 89[square]|156[square:linearbi]|255
+    if (val!=0xff) f << "f4=" << val << ",";
+    val=(int) input->readLong(2); // 54[square]|0
+    if (val) f << "f5=" << val << ",";
+    val=(int) input->readLong(2); // 18
+    if (val!=0x18) f << "f6=" << val << ",";
+    val=(int) input->readULong(2);
+    pict.m_gradientSubType = (val&0xf);
+    val = (val>>4);
+    if (val!=0xFF)
+      f << "sType[high]=" << std::hex << val << std::dec << ",";
+    val=(int) input->readLong(2); // 0
+    if (val) f << "f7=" << val << ",";
+    val=(int) input->readLong(1); // 0
+    if (val) f << "f8=" << val << ",";
     f << "],";
   }
   pict.m_extra = f.str();
@@ -1329,7 +1446,9 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     MSKGraphInternal::BasicForm *form  = new MSKGraphInternal::BasicForm(pict);
     res.reset(form);
     val = (int) input->readULong(2);
-    if (val) f << "g1=" << val << ",";
+    if (val==1)
+      form->m_smooth=true;
+    else if (val) f << "#smooth=" << val << ",";
     int numPt = (int) input->readLong(2);
     long ptr = (long) input->readULong(4);
     f << std::hex << "ptr2=" << ptr << std::dec << ",";
