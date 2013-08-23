@@ -44,6 +44,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictBitmap.hxx"
 #include "MWAWPictMac.hxx"
@@ -2366,7 +2367,7 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
     pos.setSize(pictSz);
 
   shared_ptr<MWAWPictBasic> pictPtr;
-  MWAWPictBasic::Style pStyle;
+  MWAWGraphicStyle pStyle;
   switch(pict.getSubType()) {
   case CWGraphInternal::Zone::T_Line: {
     MWAWPictLine *res=new MWAWPictLine(Vec2i(0,0), pict.m_box.size());

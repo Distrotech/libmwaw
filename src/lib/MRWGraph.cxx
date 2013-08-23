@@ -44,6 +44,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
@@ -513,7 +514,7 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actF
   actFont.getColor(col);
   if (percent > 0.0)
     col=MWAWColor::barycenter(percent,col,1.f-percent,MWAWColor::white());
-  MWAWPictBasic::Style pStyle;
+  MWAWGraphicStyle pStyle;
   pStyle.m_lineWidth=w;
   pStyle.m_lineColor=col;
   line.setStyle(pStyle);

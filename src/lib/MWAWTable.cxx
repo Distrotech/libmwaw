@@ -47,6 +47,7 @@
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPosition.hxx"
 
@@ -192,7 +193,7 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
       lines[1].reset(new MWAWPictLine(Vec2f(0,box.size()[1]), Vec2f(box.size()[0], 0)));
 
     MWAWBorder const&border=cell.extraLineType();
-    MWAWPictBasic::Style pStyle;
+    MWAWGraphicStyle pStyle;
     pStyle.m_lineWidth=(float)border.m_width;
     pStyle.m_lineColor=border.m_color;
 

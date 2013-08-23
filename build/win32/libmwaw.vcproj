@@ -409,6 +409,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWGraphicStyle.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWHeader.cxx"
 				>
 			</File>
@@ -787,6 +791,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWFontSJISConverter.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWGraphicStyle.hxx"
 				>
 			</File>
 			<File

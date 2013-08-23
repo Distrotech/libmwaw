@@ -47,6 +47,8 @@
 
 #  include "libwpd/libwpd.h"
 #  include "libmwaw_internal.hxx"
+
+#  include "MWAWGraphicStyle.hxx"
 #  include "MWAWPict.hxx"
 
 class MWAWPropertyHandlerEncoder;
@@ -55,8 +57,6 @@ class MWAWPropertyHandlerEncoder;
 class MWAWPictBasic: public MWAWPict
 {
 public:
-  struct Style;
-
   //! virtual destructor
   virtual ~MWAWPictBasic() {}
 
@@ -73,15 +73,22 @@ public:
   virtual bool getODGBinary(WPXBinaryData &res) const;
 
   //! returns the current style
-  Style const &getStyle() const {
+  MWAWGraphicStyle const &getStyle() const {
     return m_style;
   }
   //! set the current style
-  void setStyle(Style const &style) {
+  void setStyle(MWAWGraphicStyle const &style) {
     m_style = style;
     updateBdBox();
   }
-
+  //! return the layer
+  int getLayer() const {
+    return m_layer;
+  }
+  //! set the layer
+  void setLayer(int layer) {
+    m_layer=layer;
+  }
   /** returns the final representation in encoded odg (if possible) */
   virtual bool getBinary(WPXBinaryData &data, std::string &s) const {
     if (!getODGBinary(data)) return false;
@@ -99,6 +106,9 @@ public:
     if (diff) return diff;
 
     MWAWPictBasic const &aPict = static_cast<MWAWPictBasic const &>(a);
+    if (m_layer < aPict.m_layer) return -1;
+    if (m_layer > aPict.m_layer) return 1;
+
     // the type
     diff = getSubType() - aPict.getSubType();
     if (diff) return (diff < 0) ? -1 : 1;
@@ -120,12 +130,7 @@ protected:
   }
 
   //! function to implement in subclass in order to get the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const = 0;
-
-  //! returns the basic style property for 1D form (line, ...)
-  void getStyle1DProperty(WPXPropertyList &list) const;
-  //! returns the basic style property for 2D form (line, ...)
-  void getStyle2DProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const = 0;
 
   //! adds the odg header knowing the minPt and the maxPt
   virtual void startODG(MWAWPropertyHandlerEncoder &doc) const;
@@ -142,70 +147,29 @@ protected:
   }
 
   //! protected constructor must not be called directly
-  MWAWPictBasic() : MWAWPict(), m_style() {
+  MWAWPictBasic() : MWAWPict(), m_layer(-1000), m_style() {
     for (int c = 0; c < 2; c++) m_extend[c]=0;
     updateBdBox();
   }
   //! protected constructor must not be called directly
-  MWAWPictBasic(MWAWPictBasic const &p) : MWAWPict(), m_style() {
+  MWAWPictBasic(MWAWPictBasic const &p) : MWAWPict(), m_layer(-1000), m_style() {
     *this=p;
   }
   //! protected= must not be called directly
   MWAWPictBasic &operator=(MWAWPictBasic const &p) {
     if (&p == this) return *this;
     MWAWPict::operator=(p);
+    m_layer = p.m_layer;
     m_style = p.m_style;
     for (int c=0; c < 2; c++) m_extend[c] = p.m_extend[c];
     return *this;
   }
 
-public:
-  //! a structure used to defined a picture style
-  struct Style {
-    //! constructor
-    Style() :  m_lineWidth(1), m_lineColor(MWAWColor::black()), m_surfaceColor(MWAWColor::white()), m_surfaceHasColor(false) {
-      m_arrows[0]=m_arrows[1]=false;
-    }
-    //! set the surface color
-    void setSurfaceColor(MWAWColor const &col, bool hasColor = true) {
-      m_surfaceColor = col;
-      m_surfaceHasColor = hasColor;
-    }
-    //! returns true if the surface is defined
-    bool hasSurfaceColor() const {
-      return m_surfaceHasColor;
-    }
-
-    /** compare two styles */
-    virtual int cmp(Style const &a) const {
-      if (m_lineWidth < a.m_lineWidth) return -1;
-      if (m_lineWidth > a.m_lineWidth) return 1;
-      if (m_lineColor < a.m_lineColor) return -1;
-      if (m_lineColor > a.m_lineColor) return 1;
-      if (m_surfaceColor < a.m_surfaceColor) return -1;
-      if (m_surfaceColor > a.m_surfaceColor) return 1;
-      if (m_surfaceHasColor != a.m_surfaceHasColor)
-        return m_surfaceHasColor ? 1 : -1;
-      for (int i=0; i<2; ++i) {
-        if (m_arrows[i]!=a.m_arrows[i])
-          return m_arrows[i] ? 1 : -1;
-      }
-      return 0;
-    }
-    //! the linewidth
-    float m_lineWidth;
-    //! the line color
-    MWAWColor m_lineColor;
-    //! the surface color
-    MWAWColor m_surfaceColor;
-    //! true if the surface has some color
-    bool m_surfaceHasColor;
-    //! two bool to indicated if extremity has arrow or not
-    bool m_arrows[2];
-  };
 protected:
+  //! the layer number if know
+  int m_layer;
   //! the data style
-  Style m_style;
+  MWAWGraphicStyle m_style;
 private:
   //! m_extend[0]: from lineWidth, m_extend[1]: came from extra data
   float m_extend[2];
@@ -233,7 +197,7 @@ protected:
     return Line;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const {
     int diff = MWAWPictBasic::cmp(a);
@@ -283,7 +247,7 @@ protected:
     return Rectangle;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const {
     int diff = MWAWPictBasic::cmp(a);
@@ -322,7 +286,7 @@ protected:
     return Circle;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const {
     return MWAWPictBasic::cmp(a);
@@ -355,7 +319,7 @@ protected:
     return Arc;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const {
     int diff = MWAWPictBasic::cmp(a);
@@ -399,7 +363,7 @@ protected:
     return Path;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const;
 
@@ -427,7 +391,7 @@ protected:
     return Polygon;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const {
     int diff = MWAWPictBasic::cmp(a);
@@ -471,7 +435,7 @@ protected:
     return Group;
   }
   //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list) const;
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
   //! comparison function
   virtual int cmp(MWAWPict const &a) const {
     int diff = MWAWPictBasic::cmp(a);

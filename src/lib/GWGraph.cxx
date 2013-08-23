@@ -43,6 +43,7 @@
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
@@ -348,7 +349,7 @@ shared_ptr<MWAWPictBasic> FrameBasic::getPicture(Style const &style) const
   shared_ptr<MWAWPictBasic> res;
   Box2f box(Vec2f(0,0), m_box.size());
 
-  MWAWPictBasic::Style pStyle;
+  MWAWGraphicStyle pStyle;
   switch(m_type) {
   case 2: {
     if (m_vertices.size()<2) {
@@ -484,7 +485,7 @@ shared_ptr<MWAWPictBasic> FrameBasic::getPicture(Style const &style) const
     return res;
   pStyle.m_lineWidth=style.lineWidth();
   pStyle.m_lineColor=style.getColor(true);
-  pStyle.setSurfaceColor(style.getColor(false), style.hasSurfaceColor());
+  pStyle.setSurfaceColor(style.getColor(false), style.hasSurfaceColor() ? 1.f : 0.f);
   res->setStyle(pStyle);
   return res;
 }

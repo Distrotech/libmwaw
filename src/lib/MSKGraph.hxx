@@ -49,7 +49,6 @@
 
 namespace MSKGraphInternal
 {
-struct Font;
 struct Zone;
 struct DataPict;
 struct Table;
@@ -91,9 +90,11 @@ public:
   /** send all the picture corresponding to a zone */
   void sendAll(int zoneId, bool mainZone);
 
+  //! small struct used which picture need to be send
   struct SendData {
-    // constructor
-    SendData();
+    //! constructor
+    SendData() : m_type(RBDR), m_id(-1), m_anchor(MWAWPosition::Char), m_page(-1), m_size() {
+    }
     /** the type */
     enum Type { RBDR, RBIL, ALL } m_type;
     /** the rbil id */
@@ -166,7 +167,7 @@ protected:
   shared_ptr<MSKGraphInternal::GroupZone> readGroup(MSKGraphInternal::Zone &group);
 
   //! reads the textbox font
-  bool readFont(MSKGraphInternal::Font &font);
+  bool readFont(MWAWFont &font);
 
 private:
   MSKGraph(MSKGraph const &orig);

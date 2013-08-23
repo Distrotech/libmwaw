@@ -37,6 +37,7 @@
 
 #include <cmath>
 #include <iomanip>
+#include <map>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -49,6 +50,9 @@
 
 #include "MWAWPictBasic.hxx"
 
+////////////////////////////////////////////////////////////
+// virtual class
+////////////////////////////////////////////////////////////
 bool MWAWPictBasic::getODGBinary(WPXBinaryData &res) const
 {
   MWAWPropertyHandlerEncoder doc;
@@ -70,54 +74,19 @@ void MWAWPictBasic::startODG(MWAWPropertyHandlerEncoder &doc) const
   list.insert("svg:y",0, WPX_POINT);
   list.insert("svg:width",size.x(), WPX_POINT);
   list.insert("svg:height",size.y(), WPX_POINT);
+  list.insert("libwpg:enforce-frame",1);
   doc.startElement("Graphics", list);
+
+  WPXPropertyListVector gradient;
   list.clear();
-  getGraphicStyleProperty(list);
-  doc.startElement("SetStyle", list, WPXPropertyListVector());
+  getGraphicStyleProperty(list, gradient);
+  doc.startElement("SetStyle", list, gradient);
   doc.endElement("SetStyle");
 }
 void MWAWPictBasic::endODG(MWAWPropertyHandlerEncoder &doc) const
 {
   doc.endElement("Graphics");
 }
-void MWAWPictBasic::getStyle1DProperty(WPXPropertyList &list) const
-{
-  list.clear();
-  if (m_style.m_lineWidth <= 0) {
-    list.insert("draw:stroke", "none");
-    list.insert("svg:stroke-width", 1, WPX_POINT);
-  } else {
-    list.insert("draw:stroke", "solid");
-    list.insert("svg:stroke-color", m_style.m_lineColor.str().c_str());
-    list.insert("svg:stroke-width", m_style.m_lineWidth,WPX_POINT);
-  }
-
-  if (m_style.m_arrows[0]) {
-    list.insert("draw:marker-start-path", "m10 0-10 30h20z");
-    list.insert("draw:marker-start-viewbox", "0 0 20 30");
-    list.insert("draw:marker-start-center", "false");
-    list.insert("draw:marker-start-width", "5pt");
-  }
-  if (m_style.m_arrows[1]) {
-    list.insert("draw:marker-end-path", "m10 0-10 30h20z");
-    list.insert("draw:marker-end-viewbox", "0 0 20 30");
-    list.insert("draw:marker-end-center", "false");
-    list.insert("draw:marker-end-width", "5pt");
-  }
-
-  list.insert("draw:fill", "none");
-}
-
-void MWAWPictBasic::getStyle2DProperty(WPXPropertyList &list) const
-{
-  MWAWPictBasic::getStyle1DProperty(list);
-  if (!m_style.hasSurfaceColor())
-    list.insert("draw:fill", "none");
-  else
-    list.insert("draw:fill", "solid");
-  list.insert("draw:fill-color", m_style.m_surfaceColor.str().c_str());
-}
-
 
 ////////////////////////////////////////////////////////////
 //
@@ -142,9 +111,9 @@ bool MWAWPictLine::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &or
   return true;
 }
 
-void MWAWPictLine::getGraphicStyleProperty(WPXPropertyList &list) const
+void MWAWPictLine::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
-  MWAWPictBasic::getStyle1DProperty(list);
+  m_style.addTo(list, gradient, true);
 }
 
 ////////////////////////////////////////////////////////////
@@ -173,9 +142,9 @@ bool MWAWPictRectangle::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f cons
   return true;
 }
 
-void MWAWPictRectangle::getGraphicStyleProperty(WPXPropertyList &list) const
+void MWAWPictRectangle::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
-  MWAWPictBasic::getStyle2DProperty(list);
+  m_style.addTo(list, gradient);
 }
 
 ////////////////////////////////////////////////////////////
@@ -199,9 +168,9 @@ bool MWAWPictCircle::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &
   return true;
 }
 
-void MWAWPictCircle::getGraphicStyleProperty(WPXPropertyList &list) const
+void MWAWPictCircle::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
-  MWAWPictBasic::getStyle2DProperty(list);
+  m_style.addTo(list, gradient);
 }
 
 ////////////////////////////////////////////////////////////
@@ -215,6 +184,14 @@ bool MWAWPictArc::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &ori
   Vec2f rad=0.5*(m_circleBox[1]-m_circleBox[0]);
   float angl0=m_angle[0];
   float angl1=m_angle[1];
+  if (rad[1]<0) {
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("MWAWPictArc::getODGBinary: oops radiusY is negative, inverse it\n"));
+      first=false;
+    }
+    rad[1]=-rad[1];
+  }
   while (angl1<angl0)
     angl1+=360.f;
   while (angl1>angl0+360.f)
@@ -247,12 +224,9 @@ bool MWAWPictArc::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &ori
   return true;
 }
 
-void MWAWPictArc::getGraphicStyleProperty(WPXPropertyList &list) const
+void MWAWPictArc::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
-  if (!m_style.hasSurfaceColor())
-    MWAWPictBasic::getStyle1DProperty(list);
-  else
-    MWAWPictBasic::getStyle2DProperty(list);
+  m_style.addTo(list, gradient);
 }
 
 ////////////////////////////////////////////////////////////
@@ -290,23 +264,32 @@ int MWAWPictPath::cmp(MWAWPict const &a) const
 
 bool MWAWPictPath::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &) const
 {
-  if (!m_path.count()) {
+  unsigned long n=m_path.count();
+  if (!n) {
     MWAW_DEBUG_MSG(("MWAWPictPath::getODGBinary: the path is not defined\n"));
     return false;
   }
 
-  doc.startElement("Path", WPXPropertyList(), m_path);
-  doc.endElement("Path");
+  if ((m_style.hasGradient() || m_style.hasSurface()) &&
+      (!m_path[n-1]["libwpg:path-action"] || m_path[n-1]["libwpg:path-action"]->getStr() != "Z")) {
+    // odg need a closed path to draw surface, so ...
+    WPXPropertyListVector path(m_path);
+    WPXPropertyList list;
+    list.insert("libwpg:path-action", "Z");
+    path.append(list);
+    doc.startElement("Path", WPXPropertyList(), path);
+    doc.endElement("Path");
+  } else {
+    doc.startElement("Path", WPXPropertyList(), m_path);
+    doc.endElement("Path");
+  }
 
   return true;
 }
 
-void MWAWPictPath::getGraphicStyleProperty(WPXPropertyList &list) const
+void MWAWPictPath::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
-  if (!m_style.hasSurfaceColor())
-    MWAWPictBasic::getStyle1DProperty(list);
-  else
-    MWAWPictBasic::getStyle2DProperty(list);
+  m_style.addTo(list, gradient);
 }
 
 ////////////////////////////////////////////////////////////
@@ -330,7 +313,7 @@ bool MWAWPictPolygon::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const 
     list.insert("svg:y", pt.y()/72., WPX_INCH);
     vect.append(list);
   }
-  if (!m_style.hasSurfaceColor()) {
+  if (!m_style.hasSurface() && !m_style.hasGradient()) {
     doc.startElement("Polyline", WPXPropertyList(), vect);
     doc.endElement("Polyline");
   } else {
@@ -340,12 +323,9 @@ bool MWAWPictPolygon::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const 
   return true;
 }
 
-void MWAWPictPolygon::getGraphicStyleProperty(WPXPropertyList &list) const
+void MWAWPictPolygon::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
-  if (!m_style.hasSurfaceColor())
-    MWAWPictBasic::getStyle1DProperty(list);
-  else
-    MWAWPictBasic::getStyle2DProperty(list);
+  m_style.addTo(list, gradient);
 }
 
 ////////////////////////////////////////////////////////////
@@ -378,7 +358,7 @@ void MWAWPictGroup::addChild(shared_ptr<MWAWPictBasic> child)
   m_child.push_back(child);
 }
 
-void MWAWPictGroup::getGraphicStyleProperty(WPXPropertyList &) const
+void MWAWPictGroup::getGraphicStyleProperty(WPXPropertyList &, WPXPropertyListVector &) const
 {
 }
 
@@ -386,9 +366,28 @@ bool MWAWPictGroup::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &o
 {
   if (m_child.empty())
     return false;
+  // first check if we need to use different layer
+  std::multimap<int,size_t> idByLayerMap;
   for (size_t c=0; c < m_child.size(); ++c) {
     if (!m_child[c]) continue;
-    m_child[c]->getODGBinary(doc, orig);
+    idByLayerMap.insert(std::multimap<int,size_t>::value_type(m_child[c]->getLayer(), c));
+  }
+  if (idByLayerMap.size() <= 1) {
+    for (size_t c=0; c < m_child.size(); ++c) {
+      if (!m_child[c]) continue;
+      m_child[c]->getODGBinary(doc, orig);
+    }
+    return true;
+  }
+  std::multimap<int,size_t>::const_iterator it=idByLayerMap.begin();
+  while(it != idByLayerMap.end()) {
+    int layer=it->first;
+    WPXPropertyList list;
+    list.insert("svg:id", layer);
+    doc.startElement("Layer", list);
+    while (it != idByLayerMap.end() && it->first==layer)
+      m_child[it++->second]->getODGBinary(doc,orig);
+    doc.endElement("Layer");
   }
   return true;
 }

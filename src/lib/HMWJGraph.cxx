@@ -45,6 +45,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
@@ -1818,7 +1819,7 @@ bool HMWJGraph::sendBasicGraph(HMWJGraphInternal::BasicGraph const &pict, MWAWPo
     pos.setSize(pictSz);
 
   shared_ptr<MWAWPictBasic> pictPtr;
-  MWAWPictBasic::Style pStyle;
+  MWAWGraphicStyle pStyle;
   switch(pict.m_graphType) {
   case 0:
   case 3: {

@@ -374,7 +374,7 @@ protected:
             return true;
           }
           if (remain=="%") {
-            list.insert(key.c_str(), res, WPX_PERCENT);
+            list.insert(key.c_str(), res/100., WPX_PERCENT);
             return true;
           }
           if (remain=="*") {
