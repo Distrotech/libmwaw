@@ -286,6 +286,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\MSKTable.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\MSW1Parser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -525,6 +529,7 @@
     <ClInclude Include="..\..\src\lib\MSK4Zone.hxx" />
     <ClInclude Include="..\..\src\lib\MSKGraph.hxx" />
     <ClInclude Include="..\..\src\lib\MSKParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MSKTable.hxx" />
     <ClInclude Include="..\..\src\lib\MSW1Parser.hxx" />
     <ClInclude Include="..\..\src\lib\MSWParser.hxx" />
     <ClInclude Include="..\..\src\lib\MSWStruct.hxx" />

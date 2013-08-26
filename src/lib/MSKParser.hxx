@@ -43,6 +43,7 @@
 class WPXPropertyList;
 
 class MSKGraph;
+class MSKTable;
 
 namespace MSKParserInternal
 {
@@ -57,6 +58,7 @@ struct State;
 class MSKParser : public MWAWParser
 {
   friend class MSKGraph;
+  friend class MSKTable;
 public:
   //! constructor
   MSKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);

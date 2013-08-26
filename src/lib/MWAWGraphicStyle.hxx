@@ -87,7 +87,8 @@ public:
   MWAWGraphicStyle() :  m_lineWidth(1), m_lineDashWidth(), m_lineCap(C_Butt), m_lineJoin(J_Miter), m_lineOpacity(1), m_lineColor(MWAWColor::black()),
     m_fillRuleEvenOdd(false), m_surfaceColor(MWAWColor::white()), m_surfaceOpacity(0),
     m_shadowColor(MWAWColor::black()), m_shadowOpacity(0), m_shadowOffset(1,1),
-    m_gradientType(G_None), m_gradientStopList(), m_gradientAngle(0), m_gradientBorder(0), m_gradientPercentCenter(0.5f,0.5f), m_gradientRadius(1) {
+    m_gradientType(G_None), m_gradientStopList(), m_gradientAngle(0), m_gradientBorder(0), m_gradientPercentCenter(0.5f,0.5f), m_gradientRadius(1),
+    m_extra("") {
     m_arrows[0]=m_arrows[1]=false;
     m_gradientStopList.push_back(GradientStop(0.0, MWAWColor::white()));
     m_gradientStopList.push_back(GradientStop(1.0, MWAWColor::black()));
@@ -168,6 +169,8 @@ public:
   float m_gradientRadius;
   //! two bool to indicated if extremity has arrow or not
   bool m_arrows[2];
+  //! extra data
+  std::string m_extra;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

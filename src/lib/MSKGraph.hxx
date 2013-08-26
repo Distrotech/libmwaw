@@ -45,34 +45,34 @@
 #include "MWAWPosition.hxx"
 
 #include "MWAWEntry.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWParser.hxx"
 
 namespace MSKGraphInternal
 {
-struct Zone;
 struct DataPict;
-struct Table;
 struct GroupZone;
-struct TextBox;
 struct State;
+struct Table;
+struct TextBox;
+struct Zone;
 class SubDocument;
 }
 
 class MSKParser;
 class MSK3Parser;
 class MSK4Zone;
+class MSKTable;
 
-/** \brief the main class to read the text part of Claris Works file
- *
- *
- *
- */
+/** \brief the main class to read the graphic of a Microsoft Works file */
 class MSKGraph
 {
   friend class MSK3Parser;
   friend class MSK4Zone;
+  friend class MSKTable;
   friend class MSKGraphInternal::SubDocument;
 public:
+  struct Style;
   //! constructor
   MSKGraph(MSKParser &parser);
   //! destructor
@@ -122,7 +122,8 @@ protected:
 
   //! read the picture header
   bool readPictHeader(MSKGraphInternal::Zone &pict);
-
+  //! read the gradient structure ( v4)
+  bool readGradient(Style &style);
   /** checks if the next zone is a v1 picture and returns a zone
       id. If not, returns -1.
    */
@@ -131,7 +132,7 @@ protected:
   /** checks if the next zone is a v2 picture and returns a zone
       id. If not, returns -1.
    */
-  int getEntryPicture(int zoneId, MWAWEntry &zone);
+  int getEntryPicture(int zoneId, MWAWEntry &zone, int order=-1000);
 
   // version 4 file
 
@@ -152,8 +153,6 @@ protected:
   //! ask m_mainParser to send a frame text(v4)
   void sendFrameText(MWAWEntry const &entry, std::string const &frame);
 
-  //! try to read a table zone
-  bool readTable(MSKGraphInternal::Table &table);
   //! try to  a table zone
   void sendTable(int id);
 
@@ -168,6 +167,30 @@ protected:
 
   //! reads the textbox font
   bool readFont(MWAWFont &font);
+
+public:
+  //! Internal: the graphic style of MSKGraph
+  struct Style : public MWAWGraphicStyle {
+    //! constructor
+    Style() : MWAWGraphicStyle(), m_baseLineColor(MWAWColor::black()), m_baseSurfaceColor(MWAWColor::white()) {
+      m_fillRuleEvenOdd=true;
+    }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, Style const &st) {
+      o << static_cast<MWAWGraphicStyle const &>(st);
+      if (st.m_baseLineColor != st.m_lineColor)
+        o << "lineColor[base]=" << st.m_baseLineColor << ",";
+      if (st.m_baseSurfaceColor != st.m_surfaceColor)
+        o << "surfaceColor[base]=" << st.m_baseSurfaceColor << ",";
+
+      return o;
+    }
+
+    //! the line color
+    MWAWColor m_baseLineColor;
+    //! the 2D surface color
+    MWAWColor m_baseSurfaceColor;
+  };
 
 private:
   MSKGraph(MSKGraph const &orig);
@@ -185,6 +208,9 @@ protected:
 
   //! the main parser;
   MSKParser *m_mainParser;
+
+  //! the table manager
+  shared_ptr<MSKTable> m_tableParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -260,7 +260,7 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st)
     o << "width=" << st.m_lineWidth << ",";
   if (!st.m_lineDashWidth.empty()) {
     o << "dash=[";
-    for (size_t d=0; st.m_lineDashWidth.size(); ++d)
+    for (size_t d=0; d < st.m_lineDashWidth.size(); ++d)
       o << st.m_lineDashWidth[d] << ",";
     o << "],";
   }
@@ -349,6 +349,7 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st)
     o << "offset=" << st.m_shadowOffset << ",";
     o << "],";
   }
+  o << st.m_extra;
   return o;
 }
 

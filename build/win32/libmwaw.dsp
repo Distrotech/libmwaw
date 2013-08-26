@@ -275,6 +275,10 @@ SOURCE=..\..\src\lib\MSKParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MSKTable.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MSW1Parser.cxx
 # End Source File
 # Begin Source File
@@ -652,6 +656,10 @@ SOURCE=..\..\src\lib\MSKGraph.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MSKParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSKTable.hxx
 # End Source File
 # Begin Source File
 

@@ -41,7 +41,6 @@
 
 #include <libwpd/libwpd.h>
 
-#include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -52,59 +51,28 @@
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
-#include "MWAWTable.hxx"
-
-#include "MSKGraph.hxx"
 
 #include "MSKParser.hxx"
+#include "MSKTable.hxx"
+
+#include "MSKGraph.hxx"
 
 /** Internal: the structures of a MSKGraph */
 namespace MSKGraphInternal
 {
-/** Internal: the pattern */
-struct Pattern {
-  enum Type { P_Unknown, P_None, P_Percent };
-  //! constructor
-  Pattern(Type type=P_Unknown, float perc=1.0) : m_type(type), m_filled(perc) {}
-
-  static float getPercentV2(int id) {
-    float const (values[39]) = {
-      1.0f, 0.9f, 0.7f, 0.5f, 0.7f, 0.5f, 0.7f, 0.3f, 0.7f, 0.5f,
-      0.4f, 0.3f, 0.1f, 0.25f, 0.25f, 0.5f, 0.5f, 0.2f, 0.5f, 0.f /* empty */,
-      0.1f, 0.2f, 0.4f, 0.3f, 0.5f, 0.3f, 0.3f, 0.25f, 0.25f, 0.25f,
-      0.2f, 0.3f, 0.2f, 0.3f, 0.3f, 0.3f, 0.6f, 0.4f, 0.f /* no */
-    };
-    if (id >= 0 && id < 39) return values[id];
-    MWAW_DEBUG_MSG(("MSKGraphInternal::Pattern::getPercentV2 find unknown id %d\n",id));
-    return 1.0;
-  }
-
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Pattern const &pat) {
-    switch(pat.m_type) {
-    case P_Unknown:
-      break;
-    case P_None:
-      o << "none,";
-      break;
-    case P_Percent:
-      o << "percent=" << pat.m_filled << ",";
-      break;
-    default:
-      o << "#type=" << int(pat.m_type) << ",";
-    }
-    return o;
-  }
-
-  //! return true if this correspond to a pattern
-  bool hasPattern() const {
-    return m_type == P_Percent;
-  }
-  //! the pattern type
-  Type m_type;
-  //! the approximated filled factor
-  float m_filled;
-};
+/** return the percent corresponding to a pattern (in v2) */
+static float getPatternPercentV2(int id)
+{
+  float const (values[39]) = {
+    1.0f, 0.9f, 0.7f, 0.5f, 0.7f, 0.5f, 0.7f, 0.3f, 0.7f, 0.5f,
+    0.4f, 0.3f, 0.1f, 0.25f, 0.25f, 0.5f, 0.5f, 0.2f, 0.5f, 0.f /* empty */,
+    0.1f, 0.2f, 0.4f, 0.3f, 0.5f, 0.3f, 0.3f, 0.25f, 0.25f, 0.25f,
+    0.2f, 0.3f, 0.2f, 0.3f, 0.3f, 0.3f, 0.6f, 0.4f, 0.0f /* no */
+  };
+  if (id >= 0 && id < 39) return values[id];
+  MWAW_DEBUG_MSG(("MSKGraphInternal::Pattern::getPercentV2 find unknown id %d\n",id));
+  return 1.0;
+}
 
 ////////////////////////////////////////
 //! Internal: a list of zones ( for v4)
@@ -130,9 +98,7 @@ struct Zone {
   enum Type { Unknown, Basic, Group, Pict, Text, Textv4, Bitmap, TableZone, OLE};
   //! constructor
   Zone() : m_subType(-1), m_zoneId(-1), m_pos(), m_dataPos(-1), m_fileId(-1), m_page(-1), m_decal(), m_box(), m_line(-1),
-    m_lineType(2), m_lineWidth(-1), m_lineColor(MWAWColor::black()), m_linePattern(Pattern::P_Percent, 1.0), m_lineFlags(0),
-    m_surfaceColor(MWAWColor::white()), m_surfacePattern(Pattern::P_None),
-    m_gradientType(0), m_gradientSubType(0), m_gradientAngle(0), m_order(0), m_extra(""), m_isSent(false) {
+    m_style(), m_order(0), m_extra(""), m_isSent(false) {
     for (int i = 0; i < 3; i++) m_ids[i] = 0;
   }
   //! destructor
@@ -227,26 +193,8 @@ struct Zone {
   Box2f m_box;
   //! the line position(v1)
   int m_line;
-  //! the line type (v2) : 0= dotted, 1=half, 2=1, 3=2pt?, 4:4pt
-  int m_lineType;
-  //! the line width (v3, ...)
-  int m_lineWidth;
-  //! the line color
-  MWAWColor m_lineColor;
-  //! the line pattern
-  Pattern m_linePattern;
-  //! the line flag
-  int m_lineFlags;
-  //! the 2D surface color
-  MWAWColor m_surfaceColor;
-  //! the line pattern
-  Pattern m_surfacePattern;
-  //! the gradient type
-  int m_gradientType;
-  //! the gradient sub type
-  int m_gradientSubType;
-  //! the gradient angle
-  int m_gradientAngle;
+  //! the style
+  MSKGraph::Style m_style;
   //! the picture order
   int m_order;
   //! extra data
@@ -333,74 +281,8 @@ void Zone::print(std::ostream &o) const
   if (m_decal.x() < 0 || m_decal.x() > 0 || m_decal.y() < 0 || m_decal.y() > 0)
     o << "pos=" << m_decal << ",";
   o << "bdbox=" << m_box << ",";
-  switch(m_lineType) {
-  case 0:
-    o << "line=dotted,";
-    break;
-  case 1:
-    o << "lineWidth=1/2pt,";
-    break;
-  case 2:
-    if (m_lineWidth >= 0) o << "lineWidth=" << m_lineWidth << "pt,";
-    break;
-  case 3:
-    o << "lineWidth=2pt,";
-    break;
-  case 4:
-    o << "lineWidth=4pt,";
-    break;
-  default:
-    o << "#lineType=" << m_lineType << ",";
-    break;
-  }
-  if (m_linePattern.m_type != Pattern::P_Percent ||
-      m_linePattern.m_filled < 1.0 || m_linePattern.m_filled > 1.0)
-    o << "linePattern=[" << m_linePattern << "],";
-  if (!m_lineColor.isBlack())
-    o << "lineColor=" << m_lineColor << ",";
-  if (!m_surfaceColor.isWhite())
-    o << "surfaceColor=" << m_surfaceColor << ",";
-  if (m_surfacePattern.hasPattern())
-    o << "surfacePattern=[" << m_surfacePattern << "],";
+  o << "style=[" << m_style << "],";
   if (m_line >= 0) o << "line=" << m_line << ",";
-  switch(m_lineFlags&3) {
-  case 0:
-    break;
-  case 1:
-    o << "endArrow,";
-    break;
-  case 2:
-    o << "doubleArrow,";
-    break;
-  default:
-    o << "#arrow=3,";
-    break;
-  }
-  if (m_lineFlags& 0xFC)
-    o << "#lineFlags=" << std::hex << int(m_lineFlags&0xFC) << std::dec << ",";
-  if (m_gradientType>0) {
-    o << "gradient=[";
-    switch(m_gradientType) {
-    case 1: // subType: 0->3
-      o << "linear";
-      break;
-    case 2: // subType: 4->7
-      o << "axial";
-      break;
-    case 3: // subType: 8->13
-      o << "square";
-      break;
-    case 7: // subType: 14,15
-      o << "radial";
-      break;
-    default:
-      o << "#type=" << m_gradientType;
-      break;
-    }
-    o << "[" << m_gradientSubType << "],";
-    if (m_gradientAngle) o << "angle=" << m_gradientAngle << ",";
-    o << "],";
-  }
   if (m_extra.length()) o << m_extra;
 }
 ////////////////////////////////////////
@@ -455,17 +337,7 @@ struct BasicForm : public Zone {
   }
 
   virtual float needExtraBorderWidth() const {
-    switch(m_lineType) {
-    case 2:
-      if (m_lineWidth >= 0) return float(0.5*(1+m_lineWidth));
-      return 1.0;
-    case 3:
-      return 1.5;
-    case 4:
-      return 2.5;
-    default:
-      return 0.0;
-    }
+    return 0.5f*m_style.m_lineWidth;
   }
 
   virtual bool getBinaryData(MWAWInputStreamPtr,
@@ -488,90 +360,14 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
   data.clear();
   pictType="";
   shared_ptr<MWAWPictBasic> pict;
-  float lineW = 1.0;
-  switch(m_lineType) {
-  case 0: // fixme dotted
-  case 1:
-    lineW = 0.5;
-    break;
-  case 2:
-    if (m_lineWidth >= 0) lineW = float(m_lineWidth);
-    break;
-  case 3:
-    lineW = 2.0;
-    break;
-  case 4:
-    lineW = 4.0;
-    break;
-  default:
-    break;
-  }
 
-  MWAWGraphicStyle pStyle;
-  pStyle.m_lineWidth = lineW;
-  if (m_linePattern.hasPattern())
-    pStyle.m_lineColor = MWAWColor::barycenter(m_linePattern.m_filled, m_lineColor, 1.f-m_linePattern.m_filled, m_surfaceColor);
-  else if (m_linePattern.m_type == MSKGraphInternal::Pattern::P_None)
-    pStyle.m_lineWidth = 0.;
-  pStyle.m_fillRuleEvenOdd = true;
-  if (m_surfacePattern.hasPattern())
-    pStyle.setSurfaceColor(MWAWColor::barycenter(m_surfacePattern.m_filled, m_surfaceColor, 1.f-m_surfacePattern.m_filled, m_lineColor));
-  if (m_gradientType==1) {
-    pStyle.m_gradientStopList.resize(2);
-    pStyle.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, m_surfaceColor);
-    pStyle.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, m_lineColor);
-    pStyle.m_gradientAngle = float(90+m_gradientAngle);
-    pStyle.m_gradientType = MWAWGraphicStyle::G_Linear;
-  } else if (m_gradientType==2) {
-    pStyle.m_gradientStopList.resize(2);
-    pStyle.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, m_surfaceColor);
-    pStyle.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, m_lineColor);
-    pStyle.m_gradientAngle = float(90+m_gradientAngle);
-    pStyle.m_gradientType = MWAWGraphicStyle::G_Axial;
-  } else if (m_gradientType==3) {
-    pStyle.m_gradientStopList.resize(2);
-    pStyle.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, m_surfaceColor);
-    pStyle.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, m_lineColor);
-    switch (m_gradientSubType) {
-    case 9:
-      pStyle.m_gradientPercentCenter=Vec2f(0.25f,0.25f);
-      break;
-    case 10:
-      pStyle.m_gradientPercentCenter=Vec2f(0.25f,0.75f);
-      break;
-    case 11:
-      pStyle.m_gradientPercentCenter=Vec2f(0.75f,0.75f);
-      break;
-    case 12:
-      pStyle.m_gradientPercentCenter=Vec2f(1.f,1.f);
-      break;
-    case 13:
-      pStyle.m_gradientPercentCenter=Vec2f(0.f,0.f);
-      break;
-    case 8: // centered
-    default:
-      break;
-    }
-    pStyle.m_gradientType = MWAWGraphicStyle::G_Rectangular;
-  } else if (m_gradientType==7) {
-    pStyle.m_gradientStopList.resize(2);
-    pStyle.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, m_surfaceColor);
-    pStyle.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, m_lineColor);
-    pStyle.m_gradientType = MWAWGraphicStyle::G_Radial;
-  }
+  MWAWGraphicStyle pStyle(m_style);
+  if (m_subType!=0)
+    pStyle.m_arrows[0] = pStyle.m_arrows[1]=false;
 
   switch(m_subType) {
   case 0: {
     MWAWPictLine *pct=new MWAWPictLine(m_box.min(), m_box.max());
-    switch(m_lineFlags&3) {
-    case 2:
-      pStyle.m_arrows[0]=true;
-    case 1:
-      pStyle.m_arrows[1]=true;
-      break;
-    default:
-      break;
-    }
     pict.reset(pct);
     break;
   }
@@ -788,49 +584,17 @@ bool DataBitmap::getPictureData
 ////////////////////////////////////////
 //! Internal: the table of a MSKGraph
 struct Table : public Zone {
-  //! the cell content
-  struct Cell {
-    Cell():m_pos(-1,-1), m_font(), m_text("") {}
-    //! the cell position
-    Vec2i m_pos;
-    //! the font
-    MWAWFont m_font;
-    //! the text
-    std::string m_text;
-  };
   //! constructor
-  Table(Zone const &z) : Zone(z), m_numRows(0), m_numCols(0),
-    m_rowsDim(), m_colsDim(), m_font(), m_cellsList() { }
+  Table(Zone const &z) : Zone(z), m_tableId(0) { }
   //! empty constructor
-  Table() : Zone(), m_numRows(0), m_numCols(0),  m_rowsDim(), m_colsDim(),
-    m_font(), m_cellsList() { }
+  Table() : Zone(), m_tableId(0) { }
 
   //! return the type
   virtual Type type() const {
     return TableZone;
   }
-
-  //! try to find a cell
-  Cell const *getCell(Vec2i const &pos) const {
-    for (size_t i = 0; i < m_cellsList.size(); i++) {
-      if (m_cellsList[i].m_pos == pos)
-        return &m_cellsList[i];
-    }
-    return 0;
-  }
-  //! operator<<
-  virtual void print(std::ostream &o) const {
-    o << "nRows=" << m_numRows << ",";
-    o << "nCols=" << m_numCols << ",";
-    Zone::print(o);
-  }
-
-  int m_numRows /** the number of rows*/, m_numCols/** the number of columns*/;
-  std::vector<int> m_rowsDim/**the rows dimensions*/, m_colsDim/*the columns dimensions*/;
-  //! the default font
-  MWAWFont m_font;
-  //! the list of cell
-  std::vector<Cell> m_cellsList;
+  //! the table id
+  int m_tableId;
 };
 
 ////////////////////////////////////////
@@ -870,8 +634,8 @@ struct TextBox : public Zone {
 
   //! add frame parameters to propList (if needed )
   virtual void fillFramePropertyList(WPXPropertyList &extras) const {
-    if (!m_surfaceColor.isWhite())
-      extras.insert("fo:background-color", m_surfaceColor.str().c_str());
+    if (!m_style.m_baseSurfaceColor.isWhite())
+      extras.insert("fo:background-color", m_style.m_baseSurfaceColor.str().c_str());
   }
 
   //! the number of positions
@@ -931,8 +695,8 @@ struct TextBoxv4 : public Zone {
 
   //! add frame parameters to propList (if needed )
   virtual void fillFramePropertyList(WPXPropertyList &extras) const {
-    if (!m_surfaceColor.isWhite())
-      extras.insert("fo:background-color", m_surfaceColor.str().c_str());
+    if (!m_style.m_baseSurfaceColor.isWhite())
+      extras.insert("fo:background-color", m_style.m_baseSurfaceColor.str().c_str());
   }
 
   //! the text of positions (0-0: means no text)
@@ -945,7 +709,7 @@ struct TextBoxv4 : public Zone {
 //! Internal: the state of a MSKGraph
 struct State {
   //! constructor
-  State() : m_version(-1), m_zonesList(), m_RBsMap(), m_font(20,12), m_numPages(0) { }
+  State() : m_version(-1), m_zonesList(), m_RBsMap(), m_font(20,12), m_tableId(0), m_numPages(0) { }
 
   //! the version
   int m_version;
@@ -958,6 +722,9 @@ struct State {
 
   //! the actual font
   MWAWFont m_font;
+
+  //! an index used to store page
+  int m_tableId;
 
   //! the number of pages
   int m_numPages;
@@ -1065,8 +832,9 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 MSKGraph::MSKGraph(MSKParser &parser) :
   m_parserState(parser.getParserState()), m_state(new MSKGraphInternal::State),
-  m_mainParser(&parser)
+  m_mainParser(&parser), m_tableParser()
 {
+  m_tableParser.reset(new MSKTable(parser, *this));
 }
 
 MSKGraph::~MSKGraph()
@@ -1128,13 +896,14 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
       f << "f0=" << val << ",";
   }
   // color
+  Style &style=pict.m_style;
   for (int i = 0; i < 2; i++) {
     int rId = (int) input->readLong(2);
     int cId = (vers <= 2) ? rId+1 : rId;
     MWAWColor col;
     if (m_mainParser->getColor(cId,col,vers <= 3 ? vers : 3)) {
-      if (i) pict.m_surfaceColor = col;
-      else pict.m_lineColor = col;
+      if (i) style.m_baseSurfaceColor = col;
+      else style.m_baseLineColor = col;
     } else
       f << "#col" << i << "=" << rId << ",";
   }
@@ -1142,57 +911,116 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
   if (vers <= 2) {
     for (int i = 0; i < 2; i++) {
       int pId = (int) input->readLong(2);
-      float percent = MSKGraphInternal::Pattern::getPercentV2(pId);
-      MSKGraphInternal::Pattern::Type type = pId == 38 ?
-                                             MSKGraphInternal::Pattern::P_None :
-                                             MSKGraphInternal::Pattern::P_Percent;
-      if (i) pict.m_surfacePattern = MSKGraphInternal::Pattern(type, percent);
-      else pict.m_linePattern = MSKGraphInternal::Pattern(type, percent);
+      float percent = MSKGraphInternal::getPatternPercentV2(pId);
+      if (pId==38) { // empty
+        if (i==0)
+          style.m_lineWidth=0;
+        continue;
+      }
+      if (i==0)
+        style.m_lineColor=MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor);
+      else
+        style.setSurfaceColor(MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor));
     }
-    pict.m_lineType=(int) input->readLong(2);
+    int lineType=(int) input->readLong(2);
+    if (style.m_lineWidth>0) {
+      switch(lineType) {
+      case 0:
+        style.m_lineWidth=0.;
+        break;
+      case 1:
+        style.m_lineWidth=0.5;
+        break;
+      case 2: // lineW=1
+        break;
+      case 3:
+        style.m_lineWidth=2;
+        break;
+      case 4:
+        style.m_lineWidth=4;
+        break;
+      default:
+        f << "#lineType=" << lineType << ",";
+        break;
+      }
+    }
   } else {
+    style.m_lineColor=style.m_baseLineColor;
+    style.m_surfaceColor=style.m_baseSurfaceColor;
     for (int i = 0; i < 2; i++) {
       if (i) f << "surface";
       else f << "line";
       f << "Pattern=[";
-      val =  (int) input->readULong(2);
-      int patId = (int) input->readULong(2);
-      if (vers==4 && i==1 && val==0xFFFF && patId==0xFFFF)
-        hasSurfPatFunction=true;
-      else {
-        if (val != 0xFA3) f << std::hex << val << std::dec << ",";
+      int kind =  (int) input->readULong(2);
+      if (kind==0)
+        f << "noColor,";
+      else if (kind != 0xFA3)
+        f << std::hex << kind << std::dec << ",";
+      else
+        f << "_,";
+      int patId, kind2=0;
+      if (vers==3) {
+        val = (int) input->readULong(1);
+        if (val) f << val << ",";
         else f << "_,";
-        if (patId) f << patId << ",";
+        patId = (int) input->readULong(1);
+        kind2 = (int) input->readULong(1);
+        if (kind2) f << std::hex << kind2 << std::dec << ",";
         else f << "_,";
-      }
-      int type = (int) input->readULong(1); // find 0:percent,30:?,f:?(related to shadow),ff:?
-      if (type) f << "#type=" << std::hex << type << std::dec << ",";
-      val = (int) input->readULong(1);
-      if (val >= 0 && val <= 100) {
-        MSKGraphInternal::Pattern pat((i==0||val!=100) ? MSKGraphInternal::Pattern::P_Percent : MSKGraphInternal::Pattern::P_None, i ? 1.f-float(val/100.) : float(val/100.));
-        if (i) pict.m_surfacePattern = pat;
-        else pict.m_linePattern = pat;
       } else {
+        val = (int) input->readULong(2);
+        if (i==1 && kind==0xFFFF && val==0xFFFF) {
+          hasSurfPatFunction=true;
+          f << "grad,";
+        } else if (val)
+          f << val << ",";
+        else
+          f << "_,";
+        patId=(int) input->readULong(1);
+      }
+      int per = (int) input->readULong(1);
+      f << per << "%,";
+      if (patId)
+        f << patId << ",";
+      else
+        f << "_";
+      if (kind==0) {
+        if (i==0)
+          style.m_lineWidth=0.;
+      } else if (patId < 39 || (per >= 0 && per <= 100)) {
+        float percent=1.0;
+        if (kind2==0 && (per >= 0 && per < 100))
+          percent = float(per)/100.f;
+        else if (patId < 39)
+          percent = MSKGraphInternal::getPatternPercentV2(patId);
+        if (i==0) {
+          if (vers==3)
+            percent = 1.f-percent;
+          style.m_lineColor=MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor);
+        } else
+          style.setSurfaceColor(MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor));
+      } else {
+        if (i==1 && per && vers==3 && !style.m_baseSurfaceColor.isWhite())
+          style.setSurfaceColor(style.m_baseSurfaceColor);
         MWAW_DEBUG_MSG(("MSKGraph::readPictHeader:find odd pattern\n"));
-        if (i && type && vers==3) // unknown so let use the surface color
-          pict.m_surfacePattern = MSKGraphInternal::Pattern(MSKGraphInternal::Pattern::P_Percent,1);
         f << "##";
       }
-      f << val << "%,";
       f << "],";
     }
     int penSize[2];
     for (int i = 0; i < 2; i++)
       penSize[i] = (int) input->readLong(2);
-    if (penSize[0]==penSize[1])
-      pict.m_lineWidth=penSize[0];
+    if (style.m_lineWidth<=0)
+      f << "pen=" << penSize[0] << "x" << penSize[1] << ",";
+    else if (penSize[0]==penSize[1])
+      style.m_lineWidth=(float) penSize[0];
     else {
       f << "pen=" << penSize[0] << "x" << penSize[1] << ",";
-      pict.m_lineWidth=(penSize[0]+penSize[1]+1)/2;
+      style.m_lineWidth=0.5f*float(penSize[0]+penSize[1]);
     }
-    if (pict.m_lineWidth < 0 || pict.m_lineWidth > 10) {
-      f << "##penSize=" << pict.m_lineWidth << ",";
-      pict.m_lineWidth = 1;
+    if (style.m_lineWidth < 0 || style.m_lineWidth > 10) {
+      f << "##penSize=" << style.m_lineWidth << ",";
+      style.m_lineWidth = 1;
     }
     val =  (int) input->readLong(2);
     if (val)
@@ -1224,43 +1052,132 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
     flags &= 0xFC;
   }
   if (flags) f << "fl0=" << flags << ",";
-  pict.m_lineFlags = (int) input->readULong(1);
+  int lineFlags = (int) input->readULong(1);
+  switch(lineFlags&3) {
+  case 2:
+    style.m_arrows[0]=true;
+  case 1:
+    style.m_arrows[1]=true;
+    break;
+  default:
+    f << "#arrow=3,";
+  case 0:
+    break;
+  }
+  if (lineFlags&0xFC) f << "#lineFlags=" << std::hex << (lineFlags&0xFC) << std::dec << ",";
   if (vers >= 3) pict.m_ids[0] = (long) input->readULong(4);
   if (vers >= 4 && hasSurfPatFunction) {
-    f << "gradient[unknown]=[";
-    pict.m_gradientType=(int) input->readLong(2);
-    val=(int) input->readLong(2); // always 0?
-    if (val) f << "f0=" << val << ",";
-    val=(int) input->readLong(1); // always 8?
-    if (val!=8) f << "f1=" << val << ",";
-    val=(int) input->readLong(2); // find 1 in square
-    if (val) f << "f2=" << val << ",";
-    val=(int) input->readULong(2); // always 0 ?
-    if (val) f << "f3=" << std::hex << val << std::dec << ",";
-    pict.m_gradientAngle=(int) input->readLong(2);
-    val=(int) input->readLong(2); // 89[square]|156[square:linearbi]|255
-    if (val!=0xff) f << "f4=" << val << ",";
-    val=(int) input->readLong(2); // 54[square]|0
-    if (val) f << "f5=" << val << ",";
-    val=(int) input->readLong(2); // 18
-    if (val!=0x18) f << "f6=" << val << ",";
-    val=(int) input->readULong(2);
-    pict.m_gradientSubType = (val&0xf);
-    val = (val>>4);
-    if (val!=0xFF)
-      f << "sType[high]=" << std::hex << val << std::dec << ",";
-    val=(int) input->readLong(2); // 0
-    if (val) f << "f7=" << val << ",";
-    val=(int) input->readLong(1); // 0
-    if (val) f << "f8=" << val << ",";
-    f << "],";
+    long pos = input->tell();
+    if (!readGradient(style)) {
+      f << "##gradient,";
+      input->seek(pos, WPX_SEEK_SET);
+    }
   }
   pict.m_extra = f.str();
   pict.m_dataPos = input->tell();
   return true;
 }
 
-int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
+bool MSKGraph::readGradient(MSKGraph::Style &style)
+{
+  MWAWInputStreamPtr input=m_mainParser->getInput();
+  long pos = input->tell();
+
+  if (!input->checkPosition(pos+22))
+    return false;
+
+  libmwaw::DebugStream f;
+  f << "gradient[unknown]=[";
+  int type=(int) input->readLong(2);
+  int val=(int) input->readLong(2); // always 0?
+  if (val) f << "f0=" << val << ",";
+  val=(int) input->readLong(1); // always 8?
+  if (val!=8) f << "f1=" << val << ",";
+  val=(int) input->readLong(2); // find 1 in square
+  if (val) f << "f2=" << val << ",";
+  val=(int) input->readULong(2); // always 0 ?
+  if (val) f << "f3=" << std::hex << val << std::dec << ",";
+  int angle =(int) input->readLong(2);
+  val=(int) input->readLong(2); // 89[square]|156[square:linearbi]|255
+  if (val!=0xff) f << "f4=" << val << ",";
+  val=(int) input->readLong(2); // 54[square]|0
+  if (val) f << "f5=" << val << ",";
+  val=(int) input->readLong(2); // 18
+  if (val!=0x18) f << "f6=" << val << ",";
+  val=(int) input->readULong(2);
+  int subType = (val&0xf);
+  val = (val>>4);
+  if (val!=0xFF)
+    f << "sType[high]=" << std::hex << val << std::dec << ",";
+  val=(int) input->readLong(2); // 0
+  if (val) f << "f7=" << val << ",";
+  val=(int) input->readLong(1); // 0
+  if (val) f << "f8=" << val << ",";
+  f << "],";
+  switch(type) {
+  case 1:
+    style.m_gradientStopList.resize(2);
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, style.m_baseSurfaceColor);
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, style.m_baseLineColor);
+    style.m_gradientAngle = float(90+angle);
+    style.m_gradientType = MWAWGraphicStyle::G_Linear;
+    angle=type=0;
+    break;
+  case 2:
+    style.m_gradientStopList.resize(2);
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, style.m_baseSurfaceColor);
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, style.m_baseLineColor);
+    style.m_gradientAngle = float(90+angle);
+    style.m_gradientType = MWAWGraphicStyle::G_Axial;
+    angle=type=0;
+    break;
+  case 3:
+    style.m_gradientStopList.resize(2);
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, style.m_baseSurfaceColor);
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, style.m_baseLineColor);
+    switch (subType) {
+    case 9:
+      style.m_gradientPercentCenter=Vec2f(0.25f,0.25f);
+      break;
+    case 10:
+      style.m_gradientPercentCenter=Vec2f(0.25f,0.75f);
+      break;
+    case 11:
+      style.m_gradientPercentCenter=Vec2f(0.75f,0.75f);
+      break;
+    case 12:
+      style.m_gradientPercentCenter=Vec2f(1.f,1.f);
+      break;
+    case 13:
+      style.m_gradientPercentCenter=Vec2f(0.f,0.f);
+      break;
+    default:
+      f << "#subType=" << subType << ",";
+    case 8: // centered
+      break;
+    }
+    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
+    angle=type=0;
+    break;
+  case 7:
+    style.m_gradientStopList.resize(2);
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, style.m_baseSurfaceColor);
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, style.m_baseLineColor);
+    style.m_gradientType = MWAWGraphicStyle::G_Radial;
+    type = 0;
+    break;
+  default:
+    break;
+  }
+  if (type) f << "#type=" << type << ",";
+  if (angle) f << "#angle=" << angle << ",";
+  f << "subType=" << subType << ",";
+  f << "],";
+  style.m_extra = f.str();
+  return true;
+}
+
+int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
 {
   int zId = -1;
   MSKGraphInternal::Zone pict;
@@ -1704,11 +1621,13 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
     input->seek(actPos+4+dSize, WPX_SEEK_SET);
 
     // the table
-    MSKGraphInternal::Table *table  = new MSKGraphInternal::Table(pict);
-    table->m_numRows = nRow;
-    table->m_numCols = nCol;
-    if (readTable(*table))
-      res.reset(table);
+    f << "numRows=" << nRow << ",nCols=" << nCol << ",";
+    shared_ptr<MSKGraphInternal::Table> table(new MSKGraphInternal::Table(pict));
+    int tableId = m_state->m_tableId++;
+    if (m_tableParser->readTable(nCol, nRow, tableId, table->m_style)) {
+      table->m_tableId = tableId;
+      res=table;
+    }
     break;
   }
   default:
@@ -1722,6 +1641,8 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone)
 
   zId = int(m_state->m_zonesList.size());
   res->m_fileId = zId;
+  if (order > -1000)
+    res->m_order = order;
   m_state->m_zonesList.push_back(res);
 
   f.str("");
@@ -2231,127 +2152,6 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
   return true;
 }
 
-bool MSKGraph::readTable(MSKGraphInternal::Table &table)
-{
-  int vers=version();
-  MWAWInputStreamPtr input=m_mainParser->getInput();
-  long actPos = input->tell();
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
-  libmwaw::DebugStream f, f2;
-  f << "Entries(Table): ";
-
-  // first we read the dim
-  for (int i = 0; i < 2; i++) {
-    std::vector<int> &dim = i==0 ? table.m_rowsDim : table.m_colsDim;
-    dim.resize(0);
-    int sz = (int) input->readLong(4);
-    if (i == 0 && sz != 2*table.m_numRows) return false;
-    if (i == 1 && sz != 2*table.m_numCols) return false;
-
-    if (i == 0) f << "rowS=(";
-    else f << "colS=(";
-
-    for (int j = 0; j < sz/2; j++) {
-      int val = (int) input->readLong(2);
-
-      if (val < -10) return false;
-
-      dim.push_back(val);
-      f << val << ",";
-    }
-    f << "), ";
-  }
-
-  long sz = input->readLong(4);
-  f << "szOfCells=" << sz;
-  ascFile.addPos(actPos);
-  ascFile.addNote(f.str().c_str());
-
-  actPos = input->tell();
-  long endPos = actPos+sz;
-  // now we read the data for each size
-  while (input->tell() != endPos) {
-    f.str("");
-    actPos = input->tell();
-    MSKGraphInternal::Table::Cell cell;
-    int y = (int) input->readLong(2);
-    int x = (int) input->readLong(2);
-    cell.m_pos = Vec2i(x,y);
-    if (x < 0 || y < 0 ||
-        x >= table.m_numCols || y >= table.m_numRows) return false;
-
-    f << "Table:("<< cell.m_pos << "):";
-    int nbChar = (int) input->readLong(1);
-    if (nbChar < 0 || actPos+5+nbChar > endPos) return false;
-
-    std::string fName("");
-    for (int c = 0; c < nbChar; c++)
-      fName +=(char) input->readLong(1);
-
-    input->seek(actPos+34, WPX_SEEK_SET);
-    f << std::hex << "unk=" << input->readLong(2) << ", "; // 0|827
-    int v = (int) input->readLong(2);
-    if (v) f << "f0=" << v << ", ";
-    int fSize = (int) input->readLong(2);
-    v = (int) input->readLong(2);
-    if (v) f2 << "unkn0=" << v << ", ";
-    int fFlags = (int) input->readLong(2);
-
-    nbChar = (int) input->readLong(4);
-    if (nbChar <= 0 || input->tell()+nbChar > endPos) return false;
-
-    v = (int) input->readLong(2);
-    if (v) f << "f1=" << v << ", ";
-    int fColors = (int) input->readLong(2);
-    v = (int) input->readLong(2);
-    if (v) f << "f2=" << v << ", ";
-    int bgColors = (int) input->readLong(2);
-    if (bgColors)
-      f2 << std::dec << "bgColorId(?)=" << bgColors << ", "; // indexed
-
-    cell.m_font=MWAWFont(m_parserState->m_fontConverter->getId(fName), float(fSize));
-    uint32_t flags = 0;
-    if (fFlags & 0x1) flags |= MWAWFont::boldBit;
-    if (fFlags & 0x2) flags |= MWAWFont::italicBit;
-    if (fFlags & 0x4) cell.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
-    if (fFlags & 0x8) flags |= MWAWFont::embossBit;
-    if (fFlags & 0x10) flags |= MWAWFont::shadowBit;
-    if (fFlags & 0x20) {
-      if (vers==1)
-        cell.m_font.set(MWAWFont::Script(20,WPX_PERCENT,80));
-      else
-        cell.m_font.set(MWAWFont::Script::super100());
-    }
-    if (fFlags & 0x40) {
-      if (vers==1)
-        cell.m_font.set(MWAWFont::Script(-20,WPX_PERCENT,80));
-      else
-        cell.m_font.set(MWAWFont::Script::sub100());
-    }
-    cell.m_font.setFlags(flags);
-
-    if (fColors != 0xFF) {
-      MWAWColor col;
-      if (m_mainParser->getColor(fColors,col,3))
-        cell.m_font.setColor(col);
-      else
-        f << "#colId=" << fColors << ",";
-    }
-    f << "[" << cell.m_font.getDebugString(m_parserState->m_fontConverter) << "," << f2.str()<< "],";
-    // check what happens, if the size of text is greater than 4
-    for (int c = 0; c < nbChar; c++)
-      cell.m_text+=(char) input->readLong(1);
-    f << cell.m_text;
-
-    table.m_cellsList.push_back(cell);
-
-    ascFile.addPos(actPos);
-    ascFile.addNote(f.str().c_str());
-  }
-
-  return true;
-}
-
 bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
 {
   MWAWInputStreamPtr input=m_mainParser->getInput();
@@ -2433,14 +2233,12 @@ bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
   for (int i = 0; i < 3; i++) {
     pos = input->tell();
     MWAWEntry childZone;
-    int childId = getEntryPicture(zone.m_zoneId, childZone);
+    int childId = getEntryPicture(zone.m_zoneId, childZone, i+2);
     if (childId < 0) {
       MWAW_DEBUG_MSG(("MSKGraph::readChart: can not find textbox\n"));
       input->seek(pos, WPX_SEEK_SET);
       return false;
     }
-    if (childId < int(m_state->m_zonesList.size()))
-      m_state->m_zonesList[size_t(childId)]->m_order = i+2;
   }
   // the background picture
   pos = input->tell();
@@ -2567,84 +2365,7 @@ void MSKGraph::sendTextBox(int zoneId)
 
 void MSKGraph::sendTable(int zoneId)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
-  if (!listener) return;
-
-  if (zoneId < 0 || zoneId >= int(m_state->m_zonesList.size())) {
-    MWAW_DEBUG_MSG(("MSKGraph::sendTable: can not find textbox %d\n", zoneId));
-    return;
-  }
-  shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[(size_t)zoneId];
-  if (!zone) return;
-  MSKGraphInternal::Table &table = reinterpret_cast<MSKGraphInternal::Table &>(*zone);
-
-  // open the table
-  size_t nCols = table.m_colsDim.size();
-  size_t nRows = table.m_rowsDim.size();
-  if (!nCols || !nRows) {
-    MWAW_DEBUG_MSG(("MSKGraph::sendTable: problem with dimensions\n"));
-    return;
-  }
-  std::vector<float> colsDims(nCols);
-  for (size_t c = 0; c < nCols; c++) colsDims[c] = float(table.m_colsDim[c]);
-  MWAWTable theTable(MWAWTable::TableDimBit);
-  theTable.setColsSize(colsDims);
-  listener->openTable(theTable);
-
-  int const borderPos = libmwaw::TopBit | libmwaw::RightBit |
-                        libmwaw::BottomBit | libmwaw::LeftBit;
-  MWAWBorder border, internBorder;
-  internBorder.m_width=0.5;
-  internBorder.m_color=MWAWColor(0xC0,0xC0,0xC0);
-  MWAWParagraph para;
-  para.m_justify=MWAWParagraph::JustificationCenter;
-  for (size_t row = 0; row < nRows; row++) {
-    listener->openTableRow(float(table.m_rowsDim[row]), WPX_POINT);
-
-    for (size_t col = 0; col < nCols; col++) {
-      MWAWCell cell;
-      Vec2i cellPosition(Vec2i((int)col,(int)row));
-      cell.setPosition(cellPosition);
-      cell.setBorders(borderPos, border);
-      int internWhat=0;
-      if (col!=0) internWhat|=libmwaw::LeftBit;
-      if (col+1!=nCols) internWhat|=libmwaw::RightBit;
-      if (row!=0) internWhat|=libmwaw::TopBit;
-      if (row+1!=nRows) internWhat|=libmwaw::BottomBit;
-      cell.setBorders(internWhat, internBorder);
-      if (!table.m_surfaceColor.isWhite())
-        cell.setBackgroundColor(table.m_surfaceColor);
-      listener->setParagraph(para);
-      listener->openTableCell(cell);
-
-      MSKGraphInternal::Table::Cell const *tCell=table.getCell(cellPosition);
-      if (tCell) {
-        listener->setFont(tCell->m_font);
-        size_t nChar = tCell->m_text.size();
-        for (size_t ch = 0; ch < nChar; ch++) {
-          unsigned char c = (unsigned char) tCell->m_text[ch];
-          switch(c) {
-          case 0x9:
-            MWAW_DEBUG_MSG(("MSKGraph::sendTable: find a tab\n"));
-            listener->insertChar(' ');
-            break;
-          case 0xd:
-            listener->insertEOL();
-            break;
-          default:
-            listener->insertCharacter(c);
-            break;
-          }
-        }
-      }
-
-      listener->closeTableCell();
-    }
-    listener->closeTableRow();
-  }
-
-  // close the table
-  listener->closeTable();
+  return m_tableParser->sendTable(zoneId);
 }
 
 bool MSKGraph::readFont(MWAWFont &font)
@@ -2721,8 +2442,9 @@ void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
     return;
   }
   case MSKGraphInternal::Zone::TableZone: {
+    MSKGraphInternal::Table &table = reinterpret_cast<MSKGraphInternal::Table &>(*zone);
     shared_ptr<MSKGraphInternal::SubDocument> subdoc
-    (new MSKGraphInternal::SubDocument(*this, input, MSKGraphInternal::SubDocument::Table, id));
+    (new MSKGraphInternal::SubDocument(*this, input, MSKGraphInternal::SubDocument::Table, table.m_tableId));
     listener->insertTextBox(pictPos, subdoc, extras);
     return;
   }

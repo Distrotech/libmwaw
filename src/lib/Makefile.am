@@ -101,6 +101,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MSKGraph.hxx			\
 	MSKParser.cxx			\
 	MSKParser.hxx			\
+	MSKTable.cxx			\
+	MSKTable.hxx			\
 	MSK3Parser.cxx			\
 	MSK3Parser.hxx			\
 	MSK3Text.cxx			\

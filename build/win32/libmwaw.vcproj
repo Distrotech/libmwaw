@@ -361,6 +361,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MSKTable.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MSW1Parser.cxx"
 				>
 			</File>
@@ -739,6 +743,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MSKParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSKTable.hxx"
 				>
 			</File>
 			<File
