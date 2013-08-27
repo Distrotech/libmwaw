@@ -420,7 +420,8 @@ void SpanStyleManager::parseTextPosition(char const *value, std::ostream &out) c
 			MWAW_DEBUG_MSG(("SpanStyleManager::parseTextPosition: can not read %s\n", value));
 			return;
 		}
-		if (s.peek()=='%') {
+		if (s.peek()=='%')
+		{
 			char c;
 			s >> c;
 		}
