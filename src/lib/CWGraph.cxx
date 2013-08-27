@@ -2452,7 +2452,9 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
       MWAWPictPolygon *res=new MWAWPictPolygon(box, listVertices);
       pictPtr.reset(res);
     } else {
-      WPXPropertyListVector path;
+      MWAWPictPath *res=new MWAWPictPath(box);
+      pictPtr.reset(res);
+
       Vec2f prevPoint, pt1;
       bool hasPrevPoint = false;
       for (size_t i = 0; i < numPts; i++) {
@@ -2460,33 +2462,12 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
         CWGraphInternal::CurvePoint const &pt = pict.m_vertices[i];
         if (pt.m_type >= 2) pt1 = pt.m_controlPoints[0];
         else pt1 = pt.m_pos;
-        if (hasPrevPoint) {
-          list.insert("libwpg:path-action", "C");
-          list.insert("svg:x1", prevPoint[0], WPX_POINT);
-          list.insert("svg:y1", prevPoint[1], WPX_POINT);
-          list.insert("svg:x2", pt1[0], WPX_POINT);
-          list.insert("svg:y2", pt1[1], WPX_POINT);
-        } else if (i==0)
-          list.insert("libwpg:path-action", "M");
-        else if (pt.m_type < 2)
-          list.insert("libwpg:path-action", "L");
-        else {
-          list.insert("libwpg:path-action", "S");
-          list.insert("svg:x1", pt1[0], WPX_POINT);
-          list.insert("svg:y1", pt1[1], WPX_POINT);
-        }
-        list.insert("svg:x", pt.m_pos[0], WPX_POINT);
-        list.insert("svg:y", pt.m_pos[1], WPX_POINT);
-        path.append(list);
+        char type = hasPrevPoint ? 'C' : i==0 ? 'M' : pt.m_type<2 ? 'L' : 'S';
+        res->add(MWAWPictPath::Command(type, pt.m_pos, hasPrevPoint ? prevPoint : pt1, pt1));
         hasPrevPoint = pt.m_type >= 2;
         if (hasPrevPoint) prevPoint =  pt.m_controlPoints[1];
       }
-      WPXPropertyList list;
-      list.insert("libwpg:path-action", "Z");
-      path.append(list);
-
-      MWAWPictPath *res=new MWAWPictPath(box, path);
-      pictPtr.reset(res);
+      res->add(MWAWPictPath::Command('Z'));
     }
     break;
   }

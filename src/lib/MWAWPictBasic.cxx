@@ -234,56 +234,109 @@ void MWAWPictArc::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyList
 //    MWAWPictPath
 //
 ////////////////////////////////////////////////////////////
+bool MWAWPictPath::Command::get(WPXPropertyList &list) const
+{
+  list.clear();
+  std::string type("");
+  type += m_type;
+  list.insert("libwpg:path-action", type.c_str());
+  if (m_type=='Z')
+    return true;
+  if (m_type=='H') {
+    list.insert("svg:x",m_x[0], WPX_POINT);
+    return true;
+  }
+  if (m_type=='V') {
+    list.insert("svg:y",m_x[1], WPX_POINT);
+    return true;
+  }
+  list.insert("svg:x",m_x[0], WPX_POINT);
+  list.insert("svg:y",m_x[1], WPX_POINT);
+  if (m_type=='M' || m_type=='L' || m_type=='T')
+    return true;
+  if (m_type=='A') {
+    list.insert("svg:rx",m_r[0], WPX_POINT);
+    list.insert("svg:ry",m_r[1], WPX_POINT);
+    list.insert("libwpg:large-arc", m_largeAngle ? 1 : 0);
+    list.insert("libwpg:sweep", m_sweep ? 1 : 0);
+    list.insert("libwpg:rotate", m_rotate);
+    return true;
+  }
+  list.insert("svg:x1",m_x1[0], WPX_POINT);
+  list.insert("svg:y1",m_x1[1], WPX_POINT);
+  if (m_type=='Q' || m_type=='S')
+    return true;
+  list.insert("svg:x2",m_x2[0], WPX_POINT);
+  list.insert("svg:y2",m_x2[1], WPX_POINT);
+  if (m_type=='C')
+    return true;
+  MWAW_DEBUG_MSG(("MWAWPictPath::Command::get: unknown command %c\n", m_type));
+  list.clear();
+  return false;
+}
+
+int MWAWPictPath::Command::cmp(MWAWPictPath::Command::Command const &a) const
+{
+  if (m_type < a.m_type) return 1;
+  if (m_type > a.m_type) return 1;
+  int diff = m_x.cmp(a.m_x);
+  if (diff) return diff;
+  diff = m_x1.cmp(a.m_x1);
+  if (diff) return diff;
+  diff = m_x2.cmp(a.m_x2);
+  if (diff) return diff;
+  diff = m_r.cmp(a.m_r);
+  if (diff) return diff;
+  if (m_rotate < a.m_rotate) return 1;
+  if (m_rotate > a.m_rotate) return -1;
+  if (m_largeAngle != a.m_largeAngle)
+    return m_largeAngle ? 1 : -1;
+  if (m_sweep != a.m_sweep)
+    return m_sweep ? 1 : -1;
+  return 0;
+}
+
+void MWAWPictPath::add(MWAWPictPath::Command const &command)
+{
+  m_path.push_back(command);
+}
+
 int MWAWPictPath::cmp(MWAWPict const &a) const
 {
   int diff = MWAWPictBasic::cmp(a);
   if (diff) return diff;
   MWAWPictPath const &aPath = static_cast<MWAWPictPath const &>(a);
-  if (m_path.count() != aPath.m_path.count())
-    return m_path.count()<aPath.m_path.count() ? -1 : 1;
-  for (unsigned long c=0; c < m_path.count(); c++) {
-    WPXPropertyList::Iter it1(m_path[c]);
-    it1.rewind();
-    WPXPropertyList::Iter it2(aPath.m_path[c]);
-    it2.rewind();
-    while(1) {
-      if (!it1.next()) {
-        if (it2.next()) return 1;
-        break;
-      }
-      if (!it2.next())
-        return -1;
-      diff=strcmp(it1.key(),it2.key());
-      if (diff) return diff;
-      diff=strcmp(it1()->getStr().cstr(),it2()->getStr().cstr());
-      if (diff) return diff;
-    }
+  if (m_path.size() != aPath.m_path.size())
+    return m_path.size()<aPath.m_path.size() ? -1 : 1;
+  for (size_t c=0; c < m_path.size(); ++c) {
+    diff = m_path[c].cmp(aPath.m_path[c]);
+    if (diff) return diff;
   }
   return 0;
 }
 
 bool MWAWPictPath::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &) const
 {
-  unsigned long n=m_path.count();
+  size_t n=m_path.size();
   if (!n) {
     MWAW_DEBUG_MSG(("MWAWPictPath::getODGBinary: the path is not defined\n"));
     return false;
   }
 
-  if ((m_style.hasGradient() || m_style.hasSurface()) &&
-      (!m_path[n-1]["libwpg:path-action"] || m_path[n-1]["libwpg:path-action"]->getStr() != "Z")) {
+  WPXPropertyListVector path;
+  for (size_t c=0; c < m_path.size(); ++c) {
+    WPXPropertyList list;
+    if (m_path[c].get(list))
+      path.append(list);
+  }
+  if ((m_style.hasGradient() || m_style.hasSurface()) && m_path[n-1].m_type != 'Z') {
     // odg need a closed path to draw surface, so ...
-    WPXPropertyListVector path(m_path);
     WPXPropertyList list;
     list.insert("libwpg:path-action", "Z");
     path.append(list);
-    doc.startElement("Path", WPXPropertyList(), path);
-    doc.endElement("Path");
-  } else {
-    doc.startElement("Path", WPXPropertyList(), m_path);
-    doc.endElement("Path");
   }
-
+  doc.startElement("Path", WPXPropertyList(), path);
+  doc.endElement("Path");
   return true;
 }
 

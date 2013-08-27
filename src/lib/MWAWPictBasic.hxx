@@ -347,10 +347,13 @@ protected:
 class MWAWPictPath : public MWAWPictBasic
 {
 public:
+  struct Command;
   /** \brief constructor: bdbox followed by the path definition */
-  MWAWPictPath(Box2f bdBox, WPXPropertyListVector const &path) : MWAWPictBasic(), m_path(path) {
+  MWAWPictPath(Box2f bdBox) : MWAWPictBasic(), m_path() {
     setBdBox(bdBox);
   }
+  //! add a new command to the path
+  void add(Command const &command);
   //! virtual destructor
   virtual ~MWAWPictPath() {}
 
@@ -367,8 +370,37 @@ protected:
   //! comparison function
   virtual int cmp(MWAWPict const &a) const;
 
-  //! the string represented the path (in svg)
-  WPXPropertyListVector m_path;
+public:
+  //! a simple command
+  struct Command {
+    //! constructor
+    Command(char type, Vec2f const &x=Vec2f(), Vec2f const &x1=Vec2f(), Vec2f const &x2=Vec2f()):
+      m_type(type), m_x(x), m_x1(x1), m_x2(x2), m_r(), m_rotate(0), m_largeAngle(false), m_sweep(false) {
+    }
+    //! update the property list to correspond to a command
+    bool get(WPXPropertyList &pList) const;
+    //! comparison function
+    int cmp(Command const &a) const;
+    //! the type: M, L, ...
+    char m_type;
+    //! the main x value
+    Vec2f m_x;
+    //! x1 value
+    Vec2f m_x1;
+    //! x2 value
+    Vec2f m_x2;
+    //! the radius ( A command)
+    Vec2f m_r;
+    //! the rotate ( A command)
+    float m_rotate;
+    //! large angle ( A command)
+    bool m_largeAngle;
+    //! sweep value ( A command)
+    bool m_sweep;
+  };
+protected:
+  //! the list of command
+  std::vector<Command> m_path;
 };
 
 //! \brief a class used to define a polygon

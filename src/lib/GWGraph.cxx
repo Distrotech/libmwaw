@@ -443,40 +443,22 @@ shared_ptr<MWAWPictBasic> FrameBasic::getPicture(Style const &style) const
       MWAW_DEBUG_MSG(("FrameBasic::getPicture: the spline number of points seems bad\n"));
       break;
     }
-    WPXPropertyListVector path;
-    WPXPropertyList list;
-    list.insert("libwpg:path-action", "M");
-    list.insert("svg:x", m_vertices[0][0], WPX_POINT);
-    list.insert("svg:y", m_vertices[0][1], WPX_POINT);
-    path.append(list);
+    MWAWPictPath *path=new MWAWPictPath(box);
+    res.reset(path);
+    path->add(MWAWPictPath::Command('M', m_vertices[0]));
 
     for (size_t pt=1; pt < nbPt; pt+=3) {
-      list.clear();
       bool hasFirstC=m_vertices[pt-1]!=m_vertices[pt];
       bool hasSecondC=m_vertices[pt+1]!=m_vertices[pt+2];
       if (!hasFirstC && !hasSecondC)
-        list.insert("libwpg:path-action", "L");
-      else if (hasFirstC) {
-        list.insert("libwpg:path-action", "C");
-        list.insert("svg:x1", m_vertices[pt][0], WPX_POINT);
-        list.insert("svg:y1", m_vertices[pt][1], WPX_POINT);
-        list.insert("svg:x2", m_vertices[pt+1][0], WPX_POINT);
-        list.insert("svg:y2", m_vertices[pt+1][1], WPX_POINT);
-      } else if (hasSecondC) {
-        list.insert("libwpg:path-action", "S");
-        list.insert("svg:x1", m_vertices[pt+1][0], WPX_POINT);
-        list.insert("svg:y1", m_vertices[pt+1][1], WPX_POINT);
-      }
-      list.insert("svg:x", m_vertices[pt+2][0], WPX_POINT);
-      list.insert("svg:y", m_vertices[pt+2][1], WPX_POINT);
-
-      path.append(list);
+        path->add(MWAWPictPath::Command('L', m_vertices[pt+2]));
+      else if (hasFirstC)
+        path->add(MWAWPictPath::Command('C', m_vertices[pt+2], m_vertices[pt+1], m_vertices[pt+1]));
+      else
+        path->add(MWAWPictPath::Command('S', m_vertices[pt+2], m_vertices[pt+1]));
     }
-    list.clear();
-    list.insert("libwpg:path-action", "Z");
-    path.append(list);
-
-    res.reset(new MWAWPictPath(box, path));
+    path->add(MWAWPictPath::Command('Z'));
+    break;
   }
   default:
     break;

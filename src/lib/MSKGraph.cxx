@@ -407,42 +407,23 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
     }
     // changme: when the polygon is closed, this does not smooth the start/end domain
     Vec2f orig=m_box[0];
-    WPXPropertyListVector path;
-    WPXPropertyList list;
+
+    MWAWPictPath *path=new MWAWPictPath(m_box);
+    pict.reset(path);
     Vec2f vertex=m_vertices[0]-orig;
-    list.insert("libwpg:path-action", "M");
-    list.insert("svg:x", vertex[0], WPX_POINT);
-    list.insert("svg:y", vertex[1], WPX_POINT);
-    path.append(list);
+    path->add(MWAWPictPath::Command('M', vertex));
+
     Vec2f middle=0.5f*(m_vertices[1]+m_vertices[0])-orig;
-    list.clear();
-    list.insert("libwpg:path-action", "L");
-    list.insert("svg:x", middle[0], WPX_POINT);
-    list.insert("svg:y", middle[1], WPX_POINT);
-    path.append(list);
+    path->add(MWAWPictPath::Command('L', middle));
     for (size_t pt=1; pt+1 < nbPt; ++pt) {
       middle=0.5f*(m_vertices[pt+1]+m_vertices[pt])-orig;
       vertex=m_vertices[pt]-orig;
-      list.clear();
-      list.insert("libwpg:path-action", "Q");
-      list.insert("svg:x", middle[0], WPX_POINT);
-      list.insert("svg:y", middle[1], WPX_POINT);
-      list.insert("svg:x1", vertex[0], WPX_POINT);
-      list.insert("svg:y1", vertex[1], WPX_POINT);
-      path.append(list);
+      path->add(MWAWPictPath::Command('Q', middle, vertex));
     }
     vertex=m_vertices[nbPt-1]-orig;
-    list.clear();
-    list.insert("libwpg:path-action", "L");
-    list.insert("svg:x", vertex[0], WPX_POINT);
-    list.insert("svg:y", vertex[1], WPX_POINT);
-    path.append(list);
-    if (m_vertices[0]==m_vertices[nbPt-1]) {
-      list.clear();
-      list.insert("libwpg:path-action", "Z");
-      path.append(list);
-    }
-    pict.reset(new MWAWPictPath(m_box, path));
+    path->add(MWAWPictPath::Command('L',vertex));
+    if (m_vertices[0]==m_vertices[nbPt-1])
+      path->add(MWAWPictPath::Command('Z'));
     break;
   }
   default:
