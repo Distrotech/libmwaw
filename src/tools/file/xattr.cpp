@@ -210,7 +210,6 @@ InputStream *XAttr::getUsingFinderDat(char const *what) const
       if (stat(name.c_str(), &status )!=0 || !S_ISREG(status.st_mode) )
         break;
       delete input;
-      input=0;
       input=new FileStream(name.c_str());
       if (!input || !input->ok())
         break;
