@@ -423,15 +423,26 @@ void HtmlDocumentGenerator::setDocumentMetaData(const WPXPropertyList &propList)
 {
 	m_state->push(HtmlDocumentGeneratorInternal::Z_MetaData);
 	std::ostream &meta=m_state->output();
-	static char const *metaFields[]= { "author", "subject", "publisher", "keywords", "language",
-	                                   "abstract", "descriptive-name", "descriptive-type"
-	                                 };
-	for (int i = 0; i < 8; i++)
+	static char const *wpdMetaFields[9]=
 	{
-		if (!propList[metaFields[i]])
+		"meta:initial-creator", "dc:creator", "dc:subject", "dc:publisher", "meta:keywords",
+		"dc:language", "dc:description", "libwpd:descriptive-name", "libwpd:descriptive-type"
+	};
+	static char const *metaFields[9]=
+	{
+		"author", "typist", "subject", "publisher", "keywords",
+		"language", "abstract", "descriptive-name", "descriptive-type"
+	};
+	for (int i = 0; i < 9; i++)
+	{
+		if (!propList[wpdMetaFields[i]])
 			continue;
-		meta << "<meta name=\"" << metaFields[i] << "\" content=\"" << propList[metaFields[i]]->getStr().cstr() << "\">" << std::endl;
+		meta << "<meta name=\"" << metaFields[i] << "\" content=\"" << propList[wpdMetaFields[i]]->getStr().cstr() << "\">" << std::endl;
 	}
+	if (propList["libwpd:descriptive-name"])
+		meta << "<title>" << propList["libwpd:descriptive-name"]->getStr().cstr() << "</title>" << std::endl;
+	else
+		meta << "<title></title>" << std::endl;
 	m_state->pop();
 }
 
@@ -452,7 +463,6 @@ void HtmlDocumentGenerator::endDocument()
 	m_state->spanManager().send(*m_output);
 	m_state->tableManager().send(*m_output);
 	*m_output << "</style>" << std::endl;
-	*m_output << "<title></title>" << std::endl;
 	*m_output << "</head>" << std::endl;
 	*m_output << "<body>" << std::endl;
 	m_state->flushUnsent(*m_output);
