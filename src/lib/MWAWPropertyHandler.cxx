@@ -74,6 +74,22 @@ void MWAWPropertyHandlerEncoder::startElement
     writePropertyList(vect[i]);
 }
 
+void MWAWPropertyHandlerEncoder::startElement
+(const char *psName, const WPXPropertyList &xPropList, const WPXBinaryData &data)
+{
+  m_f << 'B';
+  writeString(psName);
+  writePropertyList(xPropList);
+  long size=(long) data.size();
+  if (size<0) {
+    MWAW_DEBUG_MSG(("MWAWPropertyHandlerEncoder::startElement: oops, probably the binary data is too big!!!\n"));
+    size=0;
+  }
+  writeLong(size);
+  if (size>0)
+    m_f.write((const char *)data.getDataBuffer(), size);
+}
+
 void MWAWPropertyHandlerEncoder::endElement(const char *psName)
 {
   m_f << 'E';
@@ -103,7 +119,7 @@ void MWAWPropertyHandlerEncoder::writeString(const char *name)
   if (sz) m_f.write(name, sz);
 }
 
-void MWAWPropertyHandlerEncoder::writeInteger(int val)
+void MWAWPropertyHandlerEncoder::writeLong(long val)
 {
   int32_t value=(int32_t) val;
   unsigned char const allValue[]= {(unsigned char)(value&0xFF), (unsigned char)((value>>8)&0xFF), (unsigned char)((value>>16)&0xFF), (unsigned char)((value>>24)&0xFF)};
@@ -147,10 +163,13 @@ bool MWAWPropertyHandlerEncoder::getData(WPXBinaryData &data)
  *  - [property:p]: a string value p.getStr()
  *  - [propertyList:pList]: a int: #pList followed by pList[0].key(),pList[0], pList[1].key(),pList[1], ...
  *  - [propertyListVector:v]: a int: #v followed by v[0], v[1], ...
+ *  - [binaryData:d]: a int32 d.size() followed by the data content
  *
  *  - [startElement:name proplist:prop]: char 'S', [string] name, prop
  *  - [startElement2:name proplist:prop proplistvector:vector]:
  *          char 'V', [string] name, prop, vector
+ *  - [startElement3:name proplist:prop binarydata:data]:
+ *          char 'B', [string] name, prop, data
  *  - [insertElement:name]: char 'I', [string] name
  *  - [endElement:name ]: char 'E', [string] name
  *  - [characters:s ]: char 'T', [string] s
@@ -179,6 +198,9 @@ public:
           return false;
         }
         switch(*c) {
+        case 'B':
+          if (!readStartElementWithBinary(*inp)) return false;
+          break;
         case 'V':
           if (!readStartElementWithVector(*inp)) return false;
           break;
@@ -232,19 +254,19 @@ protected:
     std::string s;
     if (!readString(input, s)) return false;
     if (s.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElement: can not read tag name\n"));
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithVector: can not read tag name\n"));
       return false;
     }
 
     WPXPropertyList lists;
     if (!readPropertyList(input, lists)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElement: can not read propertyList for tag %s\n",
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithVector: can not read propertyList for tag %s\n",
                       s.c_str()));
       return false;
     }
     WPXPropertyListVector vect;
     if (!readPropertyListVector(input, vect)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElement: can not read propertyVector for tag %s\n",
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithVector: can not read propertyVector for tag %s\n",
                       s.c_str()));
       return false;
     }
@@ -252,6 +274,43 @@ protected:
     m_openTag.push(s);
 
     if (m_handler) m_handler->startElement(s.c_str(), lists, vect);
+    return true;
+  }
+  //! reads an startElement
+  bool readStartElementWithBinary(WPXInputStream &input) {
+    std::string s;
+    if (!readString(input, s)) return false;
+    if (s.empty()) {
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithBinary: can not read tag name\n"));
+      return false;
+    }
+
+    WPXPropertyList lists;
+    if (!readPropertyList(input, lists)) {
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithBinary: can not read propertyList for tag %s\n",
+                      s.c_str()));
+      return false;
+    }
+    long sz;
+    if (!readLong(input,sz) || sz<0) {
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartWithBinary: can not read binray size for tag %s\n",
+                      s.c_str()));
+      return false;
+    }
+
+    WPXBinaryData data;
+    if (sz) {
+      unsigned long read;
+      unsigned char const *dt=input.read((unsigned long) sz, read);
+      if (!dt || sz!=(long) read) {
+        MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartWithBinary: can not read binray data for tag %s\n",
+                        s.c_str()));
+        return false;
+      }
+      data.append(dt, (unsigned long)read);
+    }
+    m_openTag.push(s);
+    if (m_handler) m_handler->startElement(s.c_str(), lists, data);
     return true;
   }
 
@@ -408,13 +467,21 @@ protected:
 
   //! low level: reads an integer value
   static bool readInteger(WPXInputStream &input, int &val) {
+    long res;
+    if (!readLong(input, res))
+      return false;
+    val=int(res);
+    return true;
+  }
+  //! low level: reads an long value
+  static bool readLong(WPXInputStream &input, long &val) {
     unsigned long numRead = 0;
     const unsigned char *dt = input.read(4, numRead);
     if (dt == 0L || numRead != 4) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInteger: can not read int\n"));
       return false;
     }
-    val = int((dt[3]<<16)|(dt[2]<<16)|(dt[1]<<8)|dt[0]);
+    val = long((dt[3]<<24)|(dt[2]<<16)|(dt[1]<<8)|dt[0]);
     return true;
   }
 private:
@@ -454,6 +521,12 @@ void MWAWPropertyHandler::insertElement(const char *)
 void MWAWPropertyHandler::startElement(const char *, const WPXPropertyList &,
                                        const WPXPropertyListVector &)
 {
-  MWAW_DEBUG_MSG(("MWAWPropertyHandler::startElement: must be reimplement in subclass\n"));
+  MWAW_DEBUG_MSG(("MWAWPropertyHandler::startElement: with a propertyListVector must be reimplement in subclass\n"));
+}
+
+void MWAWPropertyHandler::startElement(const char *, const WPXPropertyList &,
+                                       const WPXBinaryData &)
+{
+  MWAW_DEBUG_MSG(("MWAWPropertyHandler::startElement: with a WPXBinaryData must be reimplement in subclass\n"));
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

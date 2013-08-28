@@ -197,7 +197,7 @@ bool MWAWPictArc::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &ori
   while (angl1>angl0+360.f)
     angl1-=360.f;
   if (angl1-angl0>=180.f && angl1-angl0<=180.f)
-    angl1+=0.01;
+    angl1+=0.01f;
   WPXPropertyListVector vect;
   WPXPropertyList list;
   float angl=angl0*float(M_PI/180.);
@@ -275,7 +275,7 @@ bool MWAWPictPath::Command::get(WPXPropertyList &list) const
   return false;
 }
 
-int MWAWPictPath::Command::cmp(MWAWPictPath::Command::Command const &a) const
+int MWAWPictPath::Command::cmp(MWAWPictPath::Command const &a) const
 {
   if (m_type < a.m_type) return 1;
   if (m_type > a.m_type) return 1;

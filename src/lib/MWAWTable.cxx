@@ -188,9 +188,9 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
 
     shared_ptr<MWAWPictLine> lines[2];
     if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line1)
-      lines[0].reset(new MWAWPictLine(Vec2f(0,0), box.size()));
+      lines[0].reset(new MWAWPictLine(listener->getGraphicStyleManager(), Vec2f(0,0), box.size()));
     if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line2)
-      lines[1].reset(new MWAWPictLine(Vec2f(0,box.size()[1]), Vec2f(box.size()[0], 0)));
+      lines[1].reset(new MWAWPictLine(listener->getGraphicStyleManager(), Vec2f(0,box.size()[1]), Vec2f(box.size()[0], 0)));
 
     MWAWBorder const&border=cell.extraLineType();
     MWAWGraphicStyle pStyle;

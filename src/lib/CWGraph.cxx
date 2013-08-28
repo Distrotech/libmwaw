@@ -2368,21 +2368,22 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
 
   shared_ptr<MWAWPictBasic> pictPtr;
   MWAWGraphicStyle pStyle;
+  MWAWGraphicStyleManager &graphicManager= *m_parserState->m_graphicStyleManager;
   switch(pict.getSubType()) {
   case CWGraphInternal::Zone::T_Line: {
-    MWAWPictLine *res=new MWAWPictLine(Vec2i(0,0), pict.m_box.size());
+    MWAWPictLine *res=new MWAWPictLine(graphicManager, Vec2i(0,0), pict.m_box.size());
     pictPtr.reset(res);
     if (pict.m_style.m_lineFlags & 0x40) pStyle.m_arrows[0]=true;
     if (pict.m_style.m_lineFlags & 0x80) pStyle.m_arrows[1]=true;
     break;
   }
   case CWGraphInternal::Zone::T_Rect: {
-    MWAWPictRectangle *res=new MWAWPictRectangle(box);
+    MWAWPictRectangle *res=new MWAWPictRectangle(graphicManager, box);
     pictPtr.reset(res);
     break;
   }
   case CWGraphInternal::Zone::T_RectOval: {
-    MWAWPictRectangle *res=new MWAWPictRectangle(box);
+    MWAWPictRectangle *res=new MWAWPictRectangle(graphicManager, box);
     int roundValues[2];
     for (int i = 0; i < 2; i++) {
       if (2*pict.m_values[i] <= pictSz[i])
@@ -2397,7 +2398,7 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
     break;
   }
   case CWGraphInternal::Zone::T_Oval: {
-    MWAWPictCircle *res=new MWAWPictCircle(box);
+    MWAWPictCircle *res=new MWAWPictCircle(graphicManager, box);
     pictPtr.reset(res);
     break;
   }
@@ -2432,7 +2433,7 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
     }
     Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
                   Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
-    MWAWPictArc *res=new MWAWPictArc(realBox,box, float(angle[0]), float(angle[1]));
+    MWAWPictArc *res=new MWAWPictArc(graphicManager, realBox,box, float(angle[0]), float(angle[1]));
     pictPtr.reset(res);
     break;
   }
@@ -2449,10 +2450,10 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
     }
     if (!isSpline) {
       // if (pict.m_style.m_lineFlags & 1) : we must close the polygon ?
-      MWAWPictPolygon *res=new MWAWPictPolygon(box, listVertices);
+      MWAWPictPolygon *res=new MWAWPictPolygon(graphicManager, box, listVertices);
       pictPtr.reset(res);
     } else {
-      MWAWPictPath *res=new MWAWPictPath(box);
+      MWAWPictPath *res=new MWAWPictPath(graphicManager, box);
       pictPtr.reset(res);
 
       Vec2f prevPoint, pt1;

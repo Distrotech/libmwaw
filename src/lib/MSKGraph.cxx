@@ -313,7 +313,8 @@ struct GroupZone : public Zone {
 //! Internal: the simple form of a MSKGraph ( line, rect, ...)
 struct BasicForm : public Zone {
   //! constructor
-  BasicForm(Zone const &z) : Zone(z), m_formBox(), m_angle(0), m_deltaAngle(0),
+  BasicForm(Zone const &z, MWAWGraphicStyleManager &graphicManager) :
+    Zone(z), m_graphicManager(&graphicManager), m_formBox(), m_angle(0), m_deltaAngle(0),
     m_vertices(), m_smooth(false) {
   }
 
@@ -343,6 +344,8 @@ struct BasicForm : public Zone {
   virtual bool getBinaryData(MWAWInputStreamPtr,
                              WPXBinaryData &res, std::string &type) const;
 
+  //! a pointer to the graphic style manager
+  MWAWGraphicStyleManager *m_graphicManager;
   //! the form bdbox ( used by arc )
   Box2i m_formBox;
 
@@ -367,17 +370,17 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
 
   switch(m_subType) {
   case 0: {
-    MWAWPictLine *pct=new MWAWPictLine(m_box.min(), m_box.max());
+    MWAWPictLine *pct=new MWAWPictLine(*m_graphicManager, m_box.min(), m_box.max());
     pict.reset(pct);
     break;
   }
   case 1: {
-    MWAWPictRectangle *pct=new MWAWPictRectangle(m_box);
+    MWAWPictRectangle *pct=new MWAWPictRectangle(*m_graphicManager, m_box);
     pict.reset(pct);
     break;
   }
   case 2: {
-    MWAWPictRectangle *pct=new MWAWPictRectangle(m_box);
+    MWAWPictRectangle *pct=new MWAWPictRectangle(*m_graphicManager, m_box);
     int sz = 10;
     if (m_box.size().x() > 0 && m_box.size().x() < 2*sz)
       sz = int(m_box.size().x())/2;
@@ -388,27 +391,27 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
     break;
   }
   case 3: {
-    MWAWPictCircle *pct=new MWAWPictCircle(m_box);
+    MWAWPictCircle *pct=new MWAWPictCircle(*m_graphicManager, m_box);
     pict.reset(pct);
     break;
   }
   case 4: {
     int angl2 = m_angle+((m_deltaAngle>0) ? m_deltaAngle : -m_deltaAngle);
-    MWAWPictArc *pct=new MWAWPictArc(m_box, m_formBox, float(450-angl2), float(450-m_angle));
+    MWAWPictArc *pct=new MWAWPictArc(*m_graphicManager, m_box, m_formBox, float(450-angl2), float(450-m_angle));
     pict.reset(pct);
     break;
   }
   case 5: {
     size_t nbPt=m_vertices.size();
     if (!m_smooth || nbPt <= 2) {
-      MWAWPictPolygon *pct = new MWAWPictPolygon(m_box, m_vertices);
+      MWAWPictPolygon *pct = new MWAWPictPolygon(*m_graphicManager, m_box, m_vertices);
       pict.reset(pct);
       break;
     }
     // changme: when the polygon is closed, this does not smooth the start/end domain
     Vec2f orig=m_box[0];
 
-    MWAWPictPath *path=new MWAWPictPath(m_box);
+    MWAWPictPath *path=new MWAWPictPath(*m_graphicManager, m_box);
     pict.reset(path);
     Vec2f vertex=m_vertices[0]-orig;
     path->add(MWAWPictPath::Command('M', vertex));
@@ -1298,10 +1301,10 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
   case 1:
   case 2:
   case 3:
-    res.reset(new MSKGraphInternal::BasicForm(pict));
+    res.reset(new MSKGraphInternal::BasicForm(pict, *m_parserState->m_graphicStyleManager));
     break;
   case 4: {
-    MSKGraphInternal::BasicForm *form  = new MSKGraphInternal::BasicForm(pict);
+    MSKGraphInternal::BasicForm *form  = new MSKGraphInternal::BasicForm(pict, *m_parserState->m_graphicStyleManager);
     res.reset(form);
     form->m_angle = (int) input->readLong(2);
     form->m_deltaAngle = (int) input->readLong(2);
@@ -1313,7 +1316,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     break;
   }
   case 5: {
-    MSKGraphInternal::BasicForm *form  = new MSKGraphInternal::BasicForm(pict);
+    MSKGraphInternal::BasicForm *form  = new MSKGraphInternal::BasicForm(pict, *m_parserState->m_graphicStyleManager);
     res.reset(form);
     val = (int) input->readULong(2);
     if (val==1)

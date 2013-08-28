@@ -45,7 +45,28 @@
 
 #include "libmwaw_internal.hxx"
 
+#include "MWAWFontConverter.hxx"
+#include "MWAWPictBitmap.hxx"
+
 #include "MWAWGraphicStyle.hxx"
+
+////////////////////////////////////////////////////////////
+// pattern
+////////////////////////////////////////////////////////////
+bool MWAWGraphicStyle::Pattern::getBinary(WPXBinaryData &data, std::string &type) const
+{
+  if (empty()) {
+    MWAW_DEBUG_MSG(("MWAWGraphicStyle::Pattern::getBinary: called on invalid pattern\n"));
+    return false;
+  }
+  MWAWPictBitmapBW bitmap(m_dim);
+  int numBytesByLines = m_dim[0]/8;
+  unsigned char const *ptr = &m_data[0];
+  for (int h=0; h < m_dim[1]; ++h, ptr+=numBytesByLines)
+    bitmap.setRowPacked(h, ptr);
+  return bitmap.getBinary(data,type);
+}
+
 ////////////////////////////////////////////////////////////
 // style
 ////////////////////////////////////////////////////////////
@@ -234,6 +255,9 @@ int MWAWGraphicStyle::cmp(MWAWGraphicStyle const &a) const
   int diff=m_shadowOffset.cmp(a.m_shadowOffset);
   if (diff) return diff;
 
+  diff = m_pattern.cmp(a.m_pattern);
+  if (diff) return diff;
+
   if (m_gradientType < a.m_gradientType) return -1;
   if (m_gradientType > a.m_gradientType) return 1;
   if (m_gradientAngle < a.m_gradientAngle) return -1;
@@ -303,6 +327,8 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st)
     if (st.m_fillRuleEvenOdd)
       o << "fill[evenOdd],";
   }
+  if (st.hasPattern())
+    o << "pattern=[" << st.m_pattern << "],";
   if (st.hasGradient()) {
     o << "grad=[";
     switch (st.m_gradientType) {
@@ -351,6 +377,24 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st)
   }
   o << st.m_extra;
   return o;
+}
+
+////////////////////////////////////////////////////////////
+// manager
+////////////////////////////////////////////////////////////
+
+MWAWGraphicStyleManager::MWAWGraphicStyleManager(shared_ptr<MWAWFontConverter> &fontConverter) :
+  m_fontConverter(fontConverter), m_numLayer(0), m_numGraphicObject(0)
+{
+}
+
+MWAWGraphicStyleManager::~MWAWGraphicStyleManager()
+{
+}
+
+MWAWFontConverter &MWAWGraphicStyleManager::getFontConverter()
+{
+  return *m_fontConverter;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

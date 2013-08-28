@@ -174,6 +174,9 @@ public:
   //! close a section
   bool closeSection();
 
+  // -------- helper, diverse -------
+  //! access to the GraphicStyleManager
+  MWAWGraphicStyleManager &getGraphicStyleManager() const;
 protected:
   void _openSection();
   void _closeSection();

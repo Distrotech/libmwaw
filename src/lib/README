@@ -49,6 +49,8 @@ These files defined basic tools which must be used by the parsers :
 
 ## MWAWOLEStream.hxx :
    	internal function used to store/read OLE, retrieve the list of OLE, ..
+## MWAWZipStream.hxx :
+   	internal function used to store/read a zip file
 
 ## generic tools
 
@@ -87,14 +89,14 @@ These files defined basic structures which must be used by the parsers :
 ## MWAWSection.hxx
 	store the section property
 
-## MWAWFont.hxx 
+## MWAWFont.hxx
 	store the font property
 
 ## MWAWParagraph.hxx 
 	store the paragraph property
 
-## MWAWEntry.hxx
-	store an file entry as begin/end offset with the name of the entry
+## MWAWGraphicStyle.hxx
+	store the graphic style's properties
 
 ## MWAWList.hxx
 	store a simple list definition 
@@ -169,6 +171,7 @@ MRWParser : parser of Mariner Write 1.6
 
 MSKParser: generic parser of Microsoft Works parser
 - MSKGraph : class which reads the picture/graph 
+- MSKTable : class which reads a table
 - MSK3Parser : parser of Microsoft Works document : v1.0-3.0
 -   MSK3Text : class which reads the text
 - MSK4Parser : parser of Microsoft Works document : v4.0

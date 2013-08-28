@@ -43,6 +43,7 @@
 #include "MWAWCell.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWInputStream.hxx"
 #include "MWAWList.hxx"
 #include "MWAWPageSpan.hxx"
@@ -192,7 +193,10 @@ MWAWContentListener::~MWAWContentListener()
 {
 }
 
-
+MWAWGraphicStyleManager &MWAWContentListener::getGraphicStyleManager() const
+{
+  return *m_parserState.m_graphicStyleManager;
+}
 ///////////////////
 // text data
 ///////////////////

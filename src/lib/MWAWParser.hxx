@@ -65,8 +65,10 @@ public:
   //! the resource parser
   MWAWRSRCParserPtr m_rsrcParser;
 
-  //! the fonct converter
+  //! the font converter
   MWAWFontConverterPtr m_fontConverter;
+  //! the graphic style manager
+  MWAWGraphicStyleManagerPtr m_graphicStyleManager;
   //! the list manager
   MWAWListManagerPtr m_listManager;
   //! the listener

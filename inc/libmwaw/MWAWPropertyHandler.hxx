@@ -58,7 +58,10 @@ public:
   virtual void startElement(const char *psName, const WPXPropertyList &xPropList) = 0;
   //! starts an element ( given a vector list )
   virtual void startElement(const char *psName, const WPXPropertyList &xPropList,
-			    const WPXPropertyListVector &vect);
+                            const WPXPropertyListVector &vect);
+  //! starts an element ( given a binary data )
+  virtual void startElement(const char *psName, const WPXPropertyList &xPropList,
+                            const WPXBinaryData &data);
   //! ends an element
   virtual void endElement(const char *psName) = 0;
   //! inserts a simple element ( note: endElement must not be called )
@@ -80,10 +83,13 @@ public:
  *  - [property:p]: a string value p.getStr()
  *  - [propertyList:pList]: a int: #pList followed by pList[0].key(),pList[0], pList[1].key(),pList[1], ...
  *  - [propertyListVector:v]: a int: #v followed by v[0], v[1], ...
+ *  - [binaryData:d]: a int32 d.size() followed by the data content
  *
  *  - [startElement:name proplist:prop]: char 'S', [string] name, prop
  *  - [startElement2:name proplist:prop proplistvector:vector]:
  *          char 'V', [string] name, prop, vector
+ *  - [startElement3:name proplist:prop binarydata:data]:
+ *          char 'B', [string] name, prop, data
  *  - [insertElement:name]: char 'I', [string] name
  *  - [endElement:name ]: char 'E', [string] name
  *  - [characters:s ]: char 'T', [string] s
@@ -98,9 +104,12 @@ public:
 
   //! starts an element
   void startElement(const char *psName, const WPXPropertyList &xPropList);
-  //! starts an element (added in libmwaw-0.1.12)
+  //! starts an element given a property list vector
   void startElement(const char *psName, const WPXPropertyList &xPropList,
-		    const WPXPropertyListVector &vect);
+                    const WPXPropertyListVector &vect);
+  //! starts an element given a binary data
+  void startElement(const char *psName, const WPXPropertyList &xPropList,
+                    const WPXBinaryData &data);
   //! ends an element
   void endElement(const char *psName);
   //! insert a simple element
@@ -112,7 +121,11 @@ public:
 
 protected:
   //! adds an integer value in f
-  void writeInteger(int val);
+  void writeInteger(int val) {
+    writeLong(long(val));
+  }
+  //! adds a long value if f
+  void writeLong(long val);
   //! adds a string: size and string
   void writeString(const char *name);
   //! adds a property: a string key, a char:b,d,i,s,I,P,%,T type, a string corresponding to value

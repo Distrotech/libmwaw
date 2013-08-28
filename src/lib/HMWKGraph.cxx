@@ -1176,13 +1176,14 @@ bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
   pictPos.setRelativePosition(MWAWPosition::Frame);
   pictPos.setOrder(-1);
 
+  MWAWGraphicStyleManager &graphicManager= *m_parserState->m_graphicStyleManager;
   for (int i = 0; i < 3; ++i) {
     if (i==0)
-      pict.reset(new MWAWPictRectangle(Box2f(Vec2f(0,0), pictSz)));
+      pict.reset(new MWAWPictRectangle(graphicManager, Box2f(Vec2f(0,0), pictSz)));
     else if (i==1)
-      pict.reset(new MWAWPictLine(Vec2f(0,0), pictSz));
+      pict.reset(new MWAWPictLine(graphicManager, Vec2f(0,0), pictSz));
     else
-      pict.reset(new MWAWPictLine(Vec2f(0,pictSz[1]), Vec2f(pictSz[0], 0)));
+      pict.reset(new MWAWPictLine(graphicManager, Vec2f(0,pictSz[1]), Vec2f(pictSz[0], 0)));
     WPXBinaryData data;
     std::string type;
     if (!pict->getBinary(data,type)) continue;
@@ -1266,6 +1267,7 @@ bool HMWKGraph::sendBasicGraph(HMWKGraphInternal::BasicGraph const &pict, MWAWPo
 
   shared_ptr<MWAWPictBasic> pictPtr;
   MWAWGraphicStyle pStyle;
+  MWAWGraphicStyleManager &graphicManager= *m_parserState->m_graphicStyleManager;
   switch(pict.m_graphType) {
   case 0:
   case 3: {
@@ -1274,24 +1276,24 @@ bool HMWKGraph::sendBasicGraph(HMWKGraphInternal::BasicGraph const &pict, MWAWPo
       minPt[0] = pict.m_extremity[1][0];
     if (minPt[1] > pict.m_extremity[1][1])
       minPt[1] = pict.m_extremity[1][1];
-    MWAWPictLine *res=new MWAWPictLine(pict.m_extremity[0]-minPt, pict.m_extremity[1]-minPt);
+    MWAWPictLine *res=new MWAWPictLine(graphicManager, pict.m_extremity[0]-minPt, pict.m_extremity[1]-minPt);
     pictPtr.reset(res);
     if (pict.m_arrowsFlag&1) pStyle.m_arrows[0]=true;
     if (pict.m_arrowsFlag&2) pStyle.m_arrows[1]=true;
     break;
   }
   case 1: {
-    MWAWPictRectangle *res=new MWAWPictRectangle(box);
+    MWAWPictRectangle *res=new MWAWPictRectangle(graphicManager, box);
     pictPtr.reset(res);
     break;
   }
   case 2: {
-    MWAWPictCircle *res=new MWAWPictCircle(box);
+    MWAWPictCircle *res=new MWAWPictCircle(graphicManager, box);
     pictPtr.reset(res);
     break;
   }
   case 4: {
-    MWAWPictRectangle *res=new MWAWPictRectangle(box);
+    MWAWPictRectangle *res=new MWAWPictRectangle(graphicManager, box);
     int roundValues[2];
     for (int i = 0; i < 2; ++i) {
       if (2.f*pict.m_cornerDim <= pictSz[i])
@@ -1327,7 +1329,7 @@ bool HMWKGraph::sendBasicGraph(HMWKGraphInternal::BasicGraph const &pict, MWAWPo
     }
     Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
                   Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
-    MWAWPictArc *res=new MWAWPictArc(realBox,box, float(angle[0]), float(angle[1]));
+    MWAWPictArc *res=new MWAWPictArc(graphicManager, realBox,box, float(angle[0]), float(angle[1]));
     pictPtr.reset(res);
 
     break;
@@ -1345,7 +1347,7 @@ bool HMWKGraph::sendBasicGraph(HMWKGraphInternal::BasicGraph const &pict, MWAWPo
     }
     for (size_t i = 0; i < numPts; ++i)
       listPts[i] -= minPt;
-    MWAWPictPolygon *res=new MWAWPictPolygon(box, listPts);
+    MWAWPictPolygon *res=new MWAWPictPolygon(graphicManager, box, listPts);
     pictPtr.reset(res);
     break;
   }

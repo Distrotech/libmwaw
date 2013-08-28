@@ -40,6 +40,33 @@
 #  include "libwpd/libwpd.h"
 #  include "libmwaw_internal.hxx"
 
+//! a small class used to manage graphics
+class MWAWGraphicStyleManager
+{
+public:
+  //! constructor
+  MWAWGraphicStyleManager(shared_ptr<MWAWFontConverter> &fontConverter);
+  //! destructor
+  ~MWAWGraphicStyleManager();
+  //! returns the font converter
+  MWAWFontConverter &getFontConverter();
+  //! returns a new id for a layer
+  int getNewLayerId() const {
+    return ++m_numLayer;
+  }
+  //! returns a new id for a graphic object
+  int getNewGraphicObjectId() const {
+    return ++m_numGraphicObject;
+  }
+protected:
+  //! the font converter
+  shared_ptr<MWAWFontConverter> &m_fontConverter;
+  //! the number of layer
+  mutable int m_numLayer;
+  //! the number of graphic object
+  mutable int m_numGraphicObject;
+};
+
 //! a structure used to define a picture style
 class MWAWGraphicStyle
 {
@@ -57,7 +84,7 @@ public:
     GradientStop(float offset=0.0, MWAWColor const &col=MWAWColor::black(), float opacity=1.0) :
       m_offset(offset), m_color(col), m_opacity(opacity) {
     }
-    /** compare two styles */
+    /** compare two gradient */
     int cmp(GradientStop const &a) const {
       if (m_offset < a.m_offset) return -1;
       if (m_offset > a.m_offset) return 1;
@@ -82,11 +109,50 @@ public:
     //! the opacity
     float m_opacity;
   };
+  //! a basic pattern 8x8, 16x16, 32x32 use in a MWAWGraphicStyle
+  struct Pattern {
+    //! constructor
+    Pattern() : m_dim(0,0), m_data() {
+    }
+    //! return true if we does not have a pattern
+    bool empty() const {
+      if (m_dim[0]!=8 && m_dim[0]!=16 && m_dim[0]!=32) return true;
+      return m_dim[1]==0 || m_data.size()!=size_t((m_dim[0]/8)*m_dim[1]);
+    }
+    /** tries to convert the picture in a binary data ( ppm) */
+    bool getBinary(WPXBinaryData &data, std::string &type) const;
 
+    /** compare two patterns */
+    int cmp(Pattern const &a) const {
+      int diff = m_dim.cmp(a.m_dim);
+      if (diff) return diff;
+      if (m_data.size() < a.m_data.size()) return -1;
+      if (m_data.size() > a.m_data.size()) return 1;
+      for (size_t h=0; h < m_data.size(); ++h) {
+        if (m_data[h]<a.m_data[h]) return 1;
+        if (m_data[h]>a.m_data[h]) return -1;
+      }
+      return 0;
+    }
+    //! a print operator
+    friend std::ostream &operator<<(std::ostream &o, Pattern const &pat) {
+      o << "dim=" << pat.m_dim << ",";
+      o << "[";
+      for (size_t h=0; h < pat.m_data.size(); ++h)
+        o << std::hex << pat.m_data[h] << std::dec << ",";
+      o << "],";
+      return o;
+    }
+    //! the dimension width x height
+    Vec2i m_dim;
+    //! the pattern data: a sequence of data: p[0..7,0],p[8..15,0]...p[0..7,1],p[8..15,1], ...
+    std::vector<unsigned char> m_data;
+  };
   //! constructor
   MWAWGraphicStyle() :  m_lineWidth(1), m_lineDashWidth(), m_lineCap(C_Butt), m_lineJoin(J_Miter), m_lineOpacity(1), m_lineColor(MWAWColor::black()),
     m_fillRuleEvenOdd(false), m_surfaceColor(MWAWColor::white()), m_surfaceOpacity(0),
     m_shadowColor(MWAWColor::black()), m_shadowOpacity(0), m_shadowOffset(1,1),
+    m_pattern(),
     m_gradientType(G_None), m_gradientStopList(), m_gradientAngle(0), m_gradientBorder(0), m_gradientPercentCenter(0.5f,0.5f), m_gradientRadius(1),
     m_extra("") {
     m_arrows[0]=m_arrows[1]=false;
@@ -116,6 +182,10 @@ public:
   //! returns true if the shadow is defined
   bool hasShadow() const {
     return m_shadowOpacity > 0;
+  }
+  //! returns true if the pattern is defined
+  bool hasPattern() const {
+    return !m_pattern.empty();
   }
   //! returns true if the gradient is defined
   bool hasGradient() const {
@@ -154,6 +224,9 @@ public:
   float m_shadowOpacity;
   //! the shadow offset
   Vec2f m_shadowOffset;
+
+  //! the pattern if it exists
+  Pattern m_pattern;
 
   //! the gradient type
   GradientType m_gradientType;

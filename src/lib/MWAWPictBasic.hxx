@@ -147,7 +147,7 @@ protected:
   }
 
   //! protected constructor must not be called directly
-  MWAWPictBasic() : MWAWPict(), m_layer(-1000), m_style() {
+  MWAWPictBasic(MWAWGraphicStyleManager &) : MWAWPict(), m_layer(-1000), m_style() {
     for (int c = 0; c < 2; c++) m_extend[c]=0;
     updateBdBox();
   }
@@ -180,7 +180,7 @@ class MWAWPictLine : public MWAWPictBasic
 {
 public:
   //! constructor
-  MWAWPictLine(Vec2f orig, Vec2f end) : MWAWPictBasic() {
+  MWAWPictLine(MWAWGraphicStyleManager &graphicManager, Vec2f orig, Vec2f end) : MWAWPictBasic(graphicManager) {
     m_extremity[0] = orig;
     m_extremity[1] = end;
     setBdBox(getBdBox(2,m_extremity));
@@ -220,7 +220,7 @@ class MWAWPictRectangle : public MWAWPictBasic
 {
 public:
   //! constructor
-  MWAWPictRectangle(Box2f box) : MWAWPictBasic(), m_rectBox(box) {
+  MWAWPictRectangle(MWAWGraphicStyleManager &graphicManager, Box2f box) : MWAWPictBasic(graphicManager), m_rectBox(box) {
     setBdBox(box);
     for (int i = 0; i < 2; i++) m_cornerWidth[i] = 0;
   }
@@ -271,7 +271,7 @@ class MWAWPictCircle : public MWAWPictBasic
 {
 public:
   //! constructor
-  MWAWPictCircle(Box2f box) : MWAWPictBasic(), m_circleBox(box) {
+  MWAWPictCircle(MWAWGraphicStyleManager &graphicManager, Box2f box) : MWAWPictBasic(graphicManager), m_circleBox(box) {
     setBdBox(box);
   }
   //! virtual destructor
@@ -302,7 +302,8 @@ class MWAWPictArc : public MWAWPictBasic
 public:
   /** \brief constructor:
   bdbox followed by the bdbox of the circle and 2 angles exprimed in degree */
-  MWAWPictArc(Box2f box, Box2f ellBox, float ang1, float ang2) : MWAWPictBasic(), m_circleBox(ellBox) {
+  MWAWPictArc(MWAWGraphicStyleManager &graphicManager, Box2f box, Box2f ellBox, float ang1, float ang2) :
+    MWAWPictBasic(graphicManager), m_circleBox(ellBox) {
     setBdBox(box);
     m_angle[0] = ang1;
     m_angle[1] = ang2;
@@ -349,7 +350,7 @@ class MWAWPictPath : public MWAWPictBasic
 public:
   struct Command;
   /** \brief constructor: bdbox followed by the path definition */
-  MWAWPictPath(Box2f bdBox) : MWAWPictBasic(), m_path() {
+  MWAWPictPath(MWAWGraphicStyleManager &graphicManager, Box2f bdBox) : MWAWPictBasic(graphicManager), m_path() {
     setBdBox(bdBox);
   }
   //! add a new command to the path
@@ -408,7 +409,8 @@ class MWAWPictPolygon : public MWAWPictBasic
 {
 public:
   /** constructor: bdbox followed by the set of vertices */
-  MWAWPictPolygon(Box2f bdBox, std::vector<Vec2f> const &lVect) : MWAWPictBasic(), m_verticesList(lVect) {
+  MWAWPictPolygon(MWAWGraphicStyleManager &graphicManager, Box2f bdBox, std::vector<Vec2f> const &lVect) :
+    MWAWPictBasic(graphicManager), m_verticesList(lVect) {
     setBdBox(bdBox);
   }
   //! virtual destructor
@@ -451,7 +453,7 @@ class MWAWPictGroup : public MWAWPictBasic
 {
 public:
   /** constructor: */
-  MWAWPictGroup() : MWAWPictBasic(), m_child() {
+  MWAWPictGroup(MWAWGraphicStyleManager &graphicManager) : MWAWPictBasic(graphicManager), m_child() {
   }
   //! virtual destructor
   virtual ~MWAWPictGroup() {}
