@@ -32,7 +32,6 @@
 */
 #ifndef MWAW_GRAPHIC_STYLE
 #  define MWAW_GRAPHIC_STYLE
-
 #  include <ostream>
 #  include <string>
 #  include <vector>
@@ -67,7 +66,11 @@ protected:
   mutable int m_numGraphicObject;
 };
 
-//! a structure used to define a picture style
+/** a structure used to define a picture style
+
+ \note in order to define the internal surface style, first it looks for
+ a gradient, if so it uses it. Then it looks for a pattern. Finally if
+ it found nothing, it uses surfaceColor and surfaceOpacity.*/
 class MWAWGraphicStyle
 {
 public:
@@ -113,12 +116,16 @@ public:
   struct Pattern {
     //! constructor
     Pattern() : m_dim(0,0), m_data() {
+      m_colors[0]=MWAWColor::black();
+      m_colors[1]=MWAWColor::white();
     }
     //! return true if we does not have a pattern
     bool empty() const {
       if (m_dim[0]!=8 && m_dim[0]!=16 && m_dim[0]!=32) return true;
       return m_dim[1]==0 || m_data.size()!=size_t((m_dim[0]/8)*m_dim[1]);
     }
+    //! check if the pattern has only one color; if so returns true...
+    bool getUniqueColor(MWAWColor &col) const;
     /** tries to convert the picture in a binary data ( ppm) */
     bool getBinary(WPXBinaryData &data, std::string &type) const;
 
@@ -132,19 +139,27 @@ public:
         if (m_data[h]<a.m_data[h]) return 1;
         if (m_data[h]>a.m_data[h]) return -1;
       }
+      for (int i=0; i<2; ++i) {
+        if (m_colors[i] < a.m_colors[i]) return 1;
+        if (m_colors[i] > a.m_colors[i]) return -1;
+      }
       return 0;
     }
     //! a print operator
     friend std::ostream &operator<<(std::ostream &o, Pattern const &pat) {
       o << "dim=" << pat.m_dim << ",";
+      if (!pat.m_colors[0].isBlack()) o << "col0=" << pat.m_colors[0] << ",";
+      if (!pat.m_colors[1].isWhite()) o << "col1=" << pat.m_colors[1] << ",";
       o << "[";
       for (size_t h=0; h < pat.m_data.size(); ++h)
-        o << std::hex << pat.m_data[h] << std::dec << ",";
+        o << std::hex << (int) pat.m_data[h] << std::dec << ",";
       o << "],";
       return o;
     }
     //! the dimension width x height
     Vec2i m_dim;
+    //! the two indexed colors
+    MWAWColor m_colors[2];
     //! the pattern data: a sequence of data: p[0..7,0],p[8..15,0]...p[0..7,1],p[8..15,1], ...
     std::vector<unsigned char> m_data;
   };
@@ -171,8 +186,24 @@ public:
     m_surfaceOpacity = opacity;
   }
   //! returns true if the surface is defined
-  bool hasSurface() const {
+  bool hasSurfaceColor() const {
     return m_surfaceOpacity > 0;
+  }
+  //! set the pattern
+  void setPattern(Pattern const &pat) {
+    m_pattern=pat;
+  }
+  //! returns true if the pattern is defined
+  bool hasPattern() const {
+    return !m_pattern.empty();
+  }
+  //! returns true if the gradient is defined
+  bool hasGradient() const {
+    return m_gradientType != G_None && m_gradientStopList.size() >= 2;
+  }
+  //! returns true if the interior surface is defined
+  bool hasSurface() const {
+    return hasSurfaceColor() || hasPattern() || hasGradient();
   }
   //! set the shadow color
   void setShadowColor(MWAWColor const &col, float opacity = 1) {
@@ -182,14 +213,6 @@ public:
   //! returns true if the shadow is defined
   bool hasShadow() const {
     return m_shadowOpacity > 0;
-  }
-  //! returns true if the pattern is defined
-  bool hasPattern() const {
-    return !m_pattern.empty();
-  }
-  //! returns true if the gradient is defined
-  bool hasGradient() const {
-    return m_gradientType != G_None && m_gradientStopList.size() >= 2;
   }
   //! a print operator
   friend std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st);

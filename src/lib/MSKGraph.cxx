@@ -60,20 +60,6 @@
 /** Internal: the structures of a MSKGraph */
 namespace MSKGraphInternal
 {
-/** return the percent corresponding to a pattern (in v2) */
-static float getPatternPercentV2(int id)
-{
-  float const (values[39]) = {
-    1.0f, 0.9f, 0.7f, 0.5f, 0.7f, 0.5f, 0.7f, 0.3f, 0.7f, 0.5f,
-    0.4f, 0.3f, 0.1f, 0.25f, 0.25f, 0.5f, 0.5f, 0.2f, 0.5f, 0.f /* empty */,
-    0.1f, 0.2f, 0.4f, 0.3f, 0.5f, 0.3f, 0.3f, 0.25f, 0.25f, 0.25f,
-    0.2f, 0.3f, 0.2f, 0.3f, 0.3f, 0.3f, 0.6f, 0.4f, 0.0f /* no */
-  };
-  if (id >= 0 && id < 39) return values[id];
-  MWAW_DEBUG_MSG(("MSKGraphInternal::Pattern::getPercentV2 find unknown id %d\n",id));
-  return 1.0;
-}
-
 ////////////////////////////////////////
 //! Internal: a list of zones ( for v4)
 struct RBZone {
@@ -689,30 +675,173 @@ struct TextBoxv4 : public Zone {
   std::string m_frame;
 };
 
+//! Internal the pattern ressource of a MSKGraph
+struct Patterns {
+  //! constructor ( 4 int by patterns )
+  Patterns(int num, uint16_t const *data) : m_num(num), m_valuesList(), m_percentList() {
+    if (m_num<=0) return;
+    m_valuesList.resize(size_t(m_num)*8);
+    for (size_t i=0; i < size_t(m_num)*4; ++i) {
+      uint16_t val=data[i];
+      m_valuesList[2*i]=(unsigned char) (val>>8);
+      m_valuesList[2*i+1]=(unsigned char) (val&0xFF);
+    }
+    size_t pat=0;
+    for (size_t i=0; i < size_t(num); ++i) {
+      int numOnes=0;
+      for (int j=0; j < 8; ++j) {
+        uint8_t val=m_valuesList[pat++];
+        for (int b=0; b < 8; b++) {
+          if (val&1) ++numOnes;
+          val >>= 1;
+        }
+      }
+      m_percentList.push_back(float(numOnes)/64.f);
+    }
+  }
+  //! return the pattern corresponding to an id
+  bool get(int id, MWAWGraphicStyle::Pattern &pat) {
+    if (id < 0 || id > m_num) {
+      MWAW_DEBUG_MSG(("MSKGraphInternal::Patterns::get: can not find pattern %d\n", id));
+      return false;
+    }
+    pat.m_dim=Vec2i(8,8);
+    unsigned char const *ptr=&m_valuesList[8*size_t(id)];
+    pat.m_data.resize(8);
+    for (size_t i=0; i < 8; i++)
+      pat.m_data[i]=*(ptr++);
+    return true;
+  }
+  //! return the percentage corresponding to a pattern
+  float getPercent(int id) {
+    if (id < 0 || id > m_num) {
+      MWAW_DEBUG_MSG(("MSKGraphInternal::Patterns::getPatternPercent: can not find pattern %d\n", id));
+      return 1.0;
+    }
+    return m_percentList[size_t(id)];
+  }
+
+  //! the number of patterns
+  int m_num;
+  //! the pattern values (8 data by pattern)
+  std::vector<unsigned char> m_valuesList;
+  //! the pattern percent values
+  std::vector<float> m_percentList;
+};
 ////////////////////////////////////////
 //! Internal: the state of a MSKGraph
 struct State {
   //! constructor
-  State() : m_version(-1), m_zonesList(), m_RBsMap(), m_font(20,12), m_tableId(0), m_numPages(0) { }
-
+  State() : m_version(-1), m_zonesList(), m_RBsMap(), m_font(20,12), m_tableId(0), m_numPages(0), m_rsrcPatternsMap() { }
+  //! return the pattern corresponding to an id
+  bool getPattern(MWAWGraphicStyle::Pattern &pat, int id, long rsid=-1);
+  //! return the percentage corresponding to a pattern
+  float getPatternPercent(int id, long rsid=-1);
+  //! init the pattern value
+  void initPatterns(int vers);
   //! the version
   int m_version;
-
   //! the list of zone
   std::vector<shared_ptr<Zone> > m_zonesList;
-
   //! the RBIL zone id->list id
   std::map<int, RBZone> m_RBsMap;
-
   //! the actual font
   MWAWFont m_font;
-
   //! an index used to store page
   int m_tableId;
-
   //! the number of pages
   int m_numPages;
+  //! a map ressource id -> patterns
+  std::map<long, Patterns> m_rsrcPatternsMap;
 };
+
+void State::initPatterns(int vers)
+{
+  if (!m_rsrcPatternsMap.empty()) return;
+  if (vers <= 2) {
+    static uint16_t const (valuesV2[]) = {
+      0xffff, 0xffff, 0xffff, 0xffff,  0xddff, 0x77ff, 0xddff, 0x77ff,  0xdd77, 0xdd77, 0xdd77, 0xdd77,  0xaa55, 0xaa55, 0xaa55, 0xaa55,
+      0x55ff, 0x55ff, 0x55ff, 0x55ff,  0xaaaa, 0xaaaa, 0xaaaa, 0xaaaa,  0xeedd, 0xbb77, 0xeedd, 0xbb77,  0x8888, 0x8888, 0x8888, 0x8888,
+      0xb130, 0x031b, 0xd8c0, 0x0c8d,  0x8010, 0x0220, 0x0108, 0x4004,  0xff88, 0x8888, 0xff88, 0x8888,  0xff80, 0x8080, 0xff08, 0x0808,
+      0x0000, 0x0002, 0x0000, 0x0002,  0x8040, 0x2000, 0x0204, 0x0800,  0x8244, 0x3944, 0x8201, 0x0101,  0xf874, 0x2247, 0x8f17, 0x2271,
+      0x55a0, 0x4040, 0x550a, 0x0404,  0x2050, 0x8888, 0x8888, 0x0502,  0xbf00, 0xbfbf, 0xb0b0, 0xb0b0,  0x0000, 0x0000, 0x0000, 0x0000,
+      0x8000, 0x0800, 0x8000, 0x0800,  0x8800, 0x2200, 0x8800, 0x2200,  0x8822, 0x8822, 0x8822, 0x8822,  0xaa00, 0xaa00, 0xaa00, 0xaa00,
+      0x00ff, 0x00ff, 0x00ff, 0x00ff,  0x1122, 0x4488, 0x1122, 0x4488,  0x8040, 0x2000, 0x0204, 0x0800,  0x0102, 0x0408, 0x1020, 0x4080,
+      0xaa00, 0x8000, 0x8800, 0x8000,  0xff80, 0x8080, 0x8080, 0x8080,  0x0814, 0x2241, 0x8001, 0x0204,  0x8814, 0x2241, 0x8800, 0xaa00,
+      0x40a0, 0x0000, 0x040a, 0x0000,  0x0384, 0x4830, 0x0c02, 0x0101,  0x8080, 0x413e, 0x0808, 0x14e3,  0x1020, 0x54aa, 0xff02, 0x0408,
+      0x7789, 0x8f8f, 0x7798, 0xf8f8,  0x0008, 0x142a, 0x552a, 0x1408,  0x0000, 0x0000, 0x0000, 0x0000,
+    };
+    m_rsrcPatternsMap.insert(std::map<long, Patterns>::value_type(-1,Patterns(39, valuesV2)));
+  }
+  static uint16_t const (values4002[]) = {
+    0xffff, 0xffff, 0xffff, 0xffff,  0x7fff, 0xffff, 0xf7ff, 0xffff,  0x7fff, 0xf7ff, 0x7fff, 0xf7ff,  0x77ff, 0xddff, 0x77ff, 0xddff,
+    0x55ff, 0xddff, 0x55ff, 0xddff,  0x55ff, 0xeeff, 0x55ff, 0xbbff,  0x55ff, 0x55ff, 0x55ff, 0x55ff,  0x77dd, 0x77dd, 0x77dd, 0x77dd,
+    0x55bf, 0x55ff, 0x55fb, 0x55ff,  0x55bb, 0x55ff, 0x55bb, 0x55ff,  0x55bf, 0x55ee, 0x55fb, 0x55ee,  0x55bb, 0x55ee, 0x55bb, 0x55ee,
+    0x55bb, 0x55ea, 0x55bb, 0x55ae,  0x55ba, 0x55ab, 0x55ba, 0x55ab,  0x55ea, 0x55aa, 0x55ae, 0x55aa,  0xaa55, 0xaa55, 0xaa55, 0xaa55,
+    0xaa15, 0xaa55, 0xaa51, 0xaa55,  0xaa45, 0xaa54, 0xaa45, 0xaa54,  0xaa44, 0xaa15, 0xaa44, 0xaa51,  0xaa44, 0xaa11, 0xaa44, 0xaa11,
+    0xaa40, 0xaa11, 0xaa04, 0xaa11,  0xaa44, 0xaa00, 0xaa44, 0xaa00,  0xaa40, 0xaa00, 0xaa04, 0xaa00,  0x8822, 0x8822, 0x8822, 0x8822,
+    0xaa00, 0xaa00, 0xaa00, 0xaa00,  0xaa00, 0x1100, 0xaa00, 0x4400,  0xaa00, 0x2200, 0xaa00, 0x2200,  0x8800, 0x2200, 0x8800, 0x2200,
+    0x8800, 0x2000, 0x8800, 0x0200,  0x8000, 0x0800, 0x8000, 0x0800,  0x8000, 0x0000, 0x0800, 0x0000,  0x0000, 0x0000, 0x0000, 0x0000
+  };
+  m_rsrcPatternsMap.insert(std::map<long, Patterns>::value_type(4002,Patterns(32, values4002)));
+  static uint16_t const (values4003[]) = {
+    0x0000, 0x0000, 0x0000, 0x0000,  0x8000, 0x0000, 0x0800, 0x0000,  0x8000, 0x0800, 0x8000, 0x0800,  0x8800, 0x2000, 0x8800, 0x0200,
+    0x8800, 0x2200, 0x8800, 0x2200,  0xaa00, 0x2200, 0xaa00, 0x2200,  0xaa00, 0x1100, 0xaa00, 0x4400,  0xaa00, 0xaa00, 0xaa00, 0xaa00,
+    0x8822, 0x8822, 0x8822, 0x8822,  0xaa44, 0xaa11, 0xaa44, 0xaa11,  0xaa45, 0xaa54, 0xaa45, 0xaa54,  0xaa55, 0xaa55, 0xaa55, 0xaa55,
+    0x55ea, 0x55aa, 0x55ae, 0x55aa,  0x55ba, 0x55ab, 0x55ba, 0x55ab,  0x55bb, 0x55ee, 0x55bb, 0x55ee,  0x77dd, 0x77dd, 0x77dd, 0x77dd,
+    0x55ff, 0x55ff, 0x55ff, 0x55ff,  0x55ff, 0xeeff, 0x55ff, 0xbbff,  0x77ff, 0xddff, 0x77ff, 0xddff,  0x7fff, 0xf7ff, 0x7fff, 0xf7ff,
+    0x7fff, 0xffff, 0xf7ff, 0xffff,  0xffff, 0xffff, 0xffff, 0xffff
+  };
+  m_rsrcPatternsMap.insert(std::map<long, Patterns>::value_type(4003,Patterns(28, values4003)));
+  static uint16_t const (values4004[]) = {
+    0xf0f0, 0xf0f0, 0x0f0f, 0x0f0f,  0xcccc, 0x3333, 0xcccc, 0x3333,  0x3333, 0xcccc, 0x3333, 0xcccc
+  };
+  m_rsrcPatternsMap.insert(std::map<long, Patterns>::value_type(4004,Patterns(3, values4004)));
+  static uint16_t const (values7000[]) = {
+    0x0101, 0x1010, 0x0101, 0x1010,  0xcc00, 0x0000, 0x3300, 0x0000,  0x1122, 0x4400, 0x1122, 0x4400,  0x4422, 0x0088, 0x4422, 0x0088,
+    0xf0f0, 0xf0f0, 0x0f0f, 0x0f0f,  0x9966, 0x6699, 0x9966, 0x6699,  0x0008, 0x1c3e, 0x7f3e, 0x1c08,  0x0008, 0x142a, 0x552a, 0x1408,
+    0xb130, 0x031b, 0xd8c0, 0x0c8d,  0x8010, 0x0220, 0x0108, 0x4004,  0x0814, 0x2241, 0x8001, 0x0204,  0x80c0, 0x2112, 0x0c04, 0x0201,
+    0xff80, 0x8080, 0xff08, 0x0808,  0x007f, 0x7f7f, 0x00f7, 0xf7f7,  0x8040, 0x2000, 0x0204, 0x0800,  0x8244, 0x3944, 0x8201, 0x0101,
+    0xf078, 0x2442, 0x870f, 0x1221,  0x1020, 0x54aa, 0xff02, 0x0408,  0xf874, 0x2247, 0x8f17, 0x2271,  0xbfa0, 0xbfbd, 0xbdfd, 0x05fd,
+    0x2050, 0x8888, 0x8888, 0x0502,  0x55a0, 0x4040, 0x550a, 0x0404,  0x8844, 0x2211, 0x1122, 0x4488,  0x8142, 0x2418, 0x8142, 0x2418,
+    0xaa00, 0x8000, 0x8800, 0x8000,  0x0384, 0x4830, 0x0c02, 0x0101,  0x8080, 0x413e, 0x0808, 0x14e3,  0xaf5f, 0xaf5f, 0x0d0b, 0x0d0b,
+    0x7789, 0x8f8f, 0x7798, 0xf8f8,  0x8814, 0x2241, 0x8800, 0xaa00,  0x40a0, 0x0000, 0x040a, 0x0000,  0xbf00, 0xbfbf, 0xb0b0, 0xb0b0
+  };
+  m_rsrcPatternsMap.insert(std::map<long, Patterns>::value_type(7000,Patterns(32, values7000)));
+  static uint16_t const (values14001[]) = {
+    0x8844, 0x2211, 0x8844, 0x2211,  0x77bb, 0xddee, 0x77bb, 0xddee,  0x1122, 0x4488, 0x1122, 0x4488,  0xeedd, 0xbb77, 0xeedd, 0xbb77,
+    0x8040, 0x2010, 0x0804, 0x0201,  0x7fbf, 0xdfef, 0xf7fb, 0xfdfe,  0x0102, 0x0408, 0x1020, 0x4080,  0xfefd, 0xfbf7, 0xefdf, 0xbf7f,
+    0xe070, 0x381c, 0x0e07, 0x83c1,  0x99cc, 0x6633, 0x99cc, 0x6633,  0x8307, 0x0e1c, 0x3870, 0xe0c1,  0x3366, 0xcc99, 0x3366, 0xcc99,
+    0x8142, 0x2418, 0x1824, 0x4281,  0x7ebd, 0xdbe7, 0xe7db, 0xbd7e,  0x8244, 0x2810, 0x2844, 0x8201,  0x7dbb, 0xd7ef, 0xd7bb, 0x7dfe,
+    0xaaaa, 0xaaaa, 0xaaaa, 0xaaaa,  0x00ff, 0x00ff, 0x00ff, 0x00ff,  0x8888, 0x8888, 0x8888, 0x8888,  0x7777, 0x7777, 0x7777, 0x7777,
+    0xff00, 0x0000, 0xff00, 0x0000,  0x00ff, 0xffff, 0x00ff, 0xffff,  0x8080, 0x8080, 0x8080, 0x8080,  0x7f7f, 0x7f7f, 0x7f7f, 0x7f7f,
+    0xff00, 0x0000, 0x0000, 0x0000,  0x00ff, 0xffff, 0xffff, 0xffff,  0xcccc, 0xcccc, 0xcccc, 0xcccc,  0xffff, 0x0000, 0xffff, 0x0000,
+    0xff88, 0x8888, 0xff88, 0x8888,  0x0077, 0x7777, 0x0077, 0x7777,  0xff80, 0x8080, 0x8080, 0x8080,  0x007f, 0x7f7f, 0x7f7f, 0x7f7f
+  };
+  m_rsrcPatternsMap.insert(std::map<long, Patterns>::value_type(14001,Patterns(32, values14001)));
+}
+
+float State::getPatternPercent(int id, long rsid)
+{
+  if (m_rsrcPatternsMap.empty())
+    initPatterns(m_version);
+  if (m_rsrcPatternsMap.find(rsid)==m_rsrcPatternsMap.end()) {
+    MWAW_DEBUG_MSG(("MSKGraphInternal::State::getPatternPercent unknown map for rsdid=%ld\n",rsid));
+    return 1.0;
+  }
+  return m_rsrcPatternsMap.find(rsid)->second.getPercent(id);
+}
+
+bool State::getPattern(MWAWGraphicStyle::Pattern &pat, int id, long rsid)
+{
+  if (m_rsrcPatternsMap.empty())
+    initPatterns(m_version);
+  if (m_rsrcPatternsMap.find(rsid)==m_rsrcPatternsMap.end()) {
+    MWAW_DEBUG_MSG(("MSKGraphInternal::State::getPattern unknown map for rsdid=%ld\n",rsid));
+    return false;
+  }
+  return m_rsrcPatternsMap.find(rsid)->second.get(id, pat);
+}
 
 ////////////////////////////////////////
 //! Internal: the subdocument of a MSKGraph
@@ -895,15 +1024,20 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
   if (vers <= 2) {
     for (int i = 0; i < 2; i++) {
       int pId = (int) input->readLong(2);
-      float percent = MSKGraphInternal::getPatternPercentV2(pId);
       if (pId==38) { // empty
         if (i==0)
           style.m_lineWidth=0;
         continue;
       }
+      float percent = m_state->getPatternPercent(pId);
+      MWAWGraphicStyle::Pattern pattern;
       if (i==0)
         style.m_lineColor=MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor);
-      else
+      else if (m_state->getPattern(pattern, pId)) {
+        style.m_pattern=pattern;
+        style.m_pattern.m_colors[0] = style.m_baseSurfaceColor;
+        style.m_pattern.m_colors[1] = style.m_baseLineColor;
+      } else
         style.setSurfaceColor(MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor));
     }
     int lineType=(int) input->readLong(2);
@@ -935,59 +1069,45 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
       if (i) f << "surface";
       else f << "line";
       f << "Pattern=[";
-      int kind =  (int) input->readULong(2);
-      if (kind==0)
-        f << "noColor,";
-      else if (kind != 0xFA3)
-        f << std::hex << kind << std::dec << ",";
-      else
-        f << "_,";
-      int patId, kind2=0;
-      if (vers==3) {
-        val = (int) input->readULong(1);
-        if (val) f << val << ",";
-        else f << "_,";
-        patId = (int) input->readULong(1);
-        kind2 = (int) input->readULong(1);
-        if (kind2) f << std::hex << kind2 << std::dec << ",";
-        else f << "_,";
-      } else {
-        val = (int) input->readULong(2);
-        if (i==1 && kind==0xFFFF && val==0xFFFF) {
-          hasSurfPatFunction=true;
-          f << "grad,";
-        } else if (val)
-          f << val << ",";
-        else
-          f << "_,";
-        patId=(int) input->readULong(1);
-      }
+      long rsid= input->readLong(2);
+      if (rsid==0) f << "noColor,";
+      else if (rsid==-1) f << "grad,";
+      else f << "rsid=" << rsid << ",";
+      int patId = (int) input->readULong(2);
+      if (patId) f << "pat=" << patId << ",";
+      else f << "_";
+      if (vers==4 && rsid==-1 && patId==0xFFFF)
+        hasSurfPatFunction=true;
+      val = (int) input->readLong(1);
+      if (val) f << "unkn=" << val << ",";
       int per = (int) input->readULong(1);
       f << per << "%,";
-      if (patId)
-        f << patId << ",";
-      else
-        f << "_";
-      if (kind==0) {
-        if (i==0)
+      if (rsid<=0) {
+        if (i==0 && rsid==0)
           style.m_lineWidth=0.;
-      } else if (patId < 39 || (per >= 0 && per <= 100)) {
-        float percent=1.0;
-        if (kind2==0 && (per >= 0 && per < 100))
-          percent = float(per)/100.f;
-        else if (patId < 39)
-          percent = MSKGraphInternal::getPatternPercentV2(patId);
-        if (i==0) {
-          if (vers==3)
-            percent = 1.f-percent;
-          style.m_lineColor=MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor);
-        } else
-          style.setSurfaceColor(MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor));
       } else {
-        if (i==1 && per && vers==3 && !style.m_baseSurfaceColor.isWhite())
-          style.setSurfaceColor(style.m_baseSurfaceColor);
-        MWAW_DEBUG_MSG(("MSKGraph::readPictHeader:find odd pattern\n"));
-        f << "##";
+        float percent=1.0;
+        bool done=false;
+        MWAWGraphicStyle::Pattern pattern;
+        if (per >= 0 && per < 100)
+          percent = float(per)/100.f;
+        else if (m_state->getPattern(pattern, patId, rsid)) {
+          percent = m_state->getPatternPercent(patId, rsid);
+          if (i) {
+            style.m_pattern=pattern;
+            style.m_pattern.m_colors[0] = style.m_baseSurfaceColor;
+            style.m_pattern.m_colors[1] = style.m_baseLineColor;
+            done = true;
+          }
+        } else {
+          MWAW_DEBUG_MSG(("MSKGraph::readPictHeader:find odd pattern\n"));
+          f << "##";
+        }
+        if (done) {
+        } else if (i==0)
+          style.m_lineColor=MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor);
+        else
+          style.setSurfaceColor(MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor));
       }
       f << "],";
     }

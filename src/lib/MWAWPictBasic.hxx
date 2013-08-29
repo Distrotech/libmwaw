@@ -134,6 +134,8 @@ protected:
 
   //! adds the odg header knowing the minPt and the maxPt
   virtual void startODG(MWAWPropertyHandlerEncoder &doc) const;
+  //! adds the current style
+  virtual void sendStyle(MWAWPropertyHandlerEncoder &doc) const;
   //! adds the odg footer
   virtual void endODG(MWAWPropertyHandlerEncoder &doc) const;
 
@@ -147,12 +149,12 @@ protected:
   }
 
   //! protected constructor must not be called directly
-  MWAWPictBasic(MWAWGraphicStyleManager &) : MWAWPict(), m_layer(-1000), m_style() {
+  MWAWPictBasic(MWAWGraphicStyleManager &graphicManager) : MWAWPict(), m_graphicManager(graphicManager), m_layer(-1000), m_style() {
     for (int c = 0; c < 2; c++) m_extend[c]=0;
     updateBdBox();
   }
   //! protected constructor must not be called directly
-  MWAWPictBasic(MWAWPictBasic const &p) : MWAWPict(), m_layer(-1000), m_style() {
+  MWAWPictBasic(MWAWPictBasic const &p) : MWAWPict(), m_graphicManager(p.m_graphicManager), m_layer(-1000), m_style() {
     *this=p;
   }
   //! protected= must not be called directly
@@ -166,6 +168,8 @@ protected:
   }
 
 protected:
+  //! the graphic style manager
+  MWAWGraphicStyleManager &m_graphicManager;
   //! the layer number if know
   int m_layer;
   //! the data style

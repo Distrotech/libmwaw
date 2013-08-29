@@ -53,17 +53,51 @@
 ////////////////////////////////////////////////////////////
 // pattern
 ////////////////////////////////////////////////////////////
+bool MWAWGraphicStyle::Pattern::getUniqueColor(MWAWColor &col) const
+{
+  if (empty() || m_data.empty()) return false;
+  if (m_colors[0]==m_colors[1]) {
+    col = m_colors[0];
+    return true;
+  }
+  unsigned char def=m_data[0];
+  if (def!=0 && def!=0xFF) return false;
+  for (size_t c=1; c < m_data.size(); ++c)
+    if (m_data[c]!=def) return false;
+  col = m_colors[def ? 1 : 0];
+  return true;
+}
+
 bool MWAWGraphicStyle::Pattern::getBinary(WPXBinaryData &data, std::string &type) const
 {
   if (empty()) {
     MWAW_DEBUG_MSG(("MWAWGraphicStyle::Pattern::getBinary: called on invalid pattern\n"));
     return false;
   }
-  MWAWPictBitmapBW bitmap(m_dim);
+  /* We create a indexed bitmap to obtain a final binary data.
+
+     But it will probably better to recode that differently
+   */
+  MWAWPictBitmapIndexed bitmap(m_dim);
+  std::vector<MWAWColor> colors;
+  for (int i=0; i < 2; ++i)
+    colors.push_back(m_colors[i]);
+  bitmap.setColors(colors);
   int numBytesByLines = m_dim[0]/8;
   unsigned char const *ptr = &m_data[0];
-  for (int h=0; h < m_dim[1]; ++h, ptr+=numBytesByLines)
-    bitmap.setRowPacked(h, ptr);
+  std::vector<int> rowValues((size_t)m_dim[0]);
+  for (int h=0; h < m_dim[1]; ++h) {
+    size_t i=0;
+    for (int b=0; b < numBytesByLines; ++b) {
+      unsigned char c=*(ptr++);
+      unsigned char depl=0x80;
+      for (int byt=0; byt<8; ++byt) {
+        rowValues[i++] = (c&depl) ? 1 : 0;
+        depl>>=1;
+      }
+    }
+    bitmap.setRow(h, &rowValues[0]);
+  }
   return bitmap.getBinary(data,type);
 }
 
@@ -149,7 +183,7 @@ void MWAWGraphicStyle::addTo(WPXPropertyList &list, WPXPropertyListVector &gradi
     list.insert("draw:marker-end-width", "5pt");
   }
 
-  if (only1D || (!hasSurface()&&!hasGradient())) {
+  if (only1D || !hasSurface()) {
     list.insert("draw:fill", "none");
     return;
   }
@@ -203,9 +237,35 @@ void MWAWGraphicStyle::addTo(WPXPropertyList &list, WPXPropertyListVector &gradi
     if (m_gradientType == G_Radial)
       list.insert("svg:r", m_gradientRadius, WPX_PERCENT); // checkme
   } else {
-    list.insert("draw:fill", "solid");
-    list.insert("draw:fill-color", m_surfaceColor.str().c_str());
-    list.insert("draw:opacity", m_surfaceOpacity, WPX_PERCENT);
+    bool done = false;
+    MWAWColor surfaceColor=m_surfaceColor;
+    float surfaceOpacity = m_surfaceOpacity;
+    if (hasPattern()) {
+      MWAWColor col;
+      if (m_pattern.getUniqueColor(col)) {
+        // no need to create a uniform pattern
+        surfaceColor = col;
+        surfaceOpacity = 1;
+      } else {
+        WPXBinaryData data;
+        std::string mimeType;
+        if (m_pattern.getBinary(data, mimeType)) {
+          list.insert("draw:fill", "bitmap");
+          list.insert("draw:fill-image", data.getBase64Data());
+          list.insert("libwpg:mime-type", mimeType.c_str());
+          list.insert("svg:x",0, WPX_POINT);
+          list.insert("svg:y",0, WPX_POINT);
+          list.insert("svg:width", m_pattern.m_dim[0], WPX_POINT);
+          list.insert("svg:height", m_pattern.m_dim[1], WPX_POINT);
+          done = true;
+        }
+      }
+    }
+    if (!done) {
+      list.insert("draw:fill", "solid");
+      list.insert("draw:fill-color", surfaceColor.str().c_str());
+      list.insert("draw:opacity", surfaceOpacity, WPX_PERCENT);
+    }
   }
   if (hasShadow()) {
     list.insert("draw:shadow", "vsible");
@@ -317,7 +377,7 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st)
   if (st.m_arrows[0]) o << "arrow[start],";
   if (st.m_arrows[1]) o << "arrow[end],";
   o << "],";
-  if (st.hasSurface()) {
+  if (st.hasSurfaceColor()) {
     o << "surf=[";
     if (!st.m_surfaceColor.isWhite())
       o << "color=" << st.m_surfaceColor << ",";

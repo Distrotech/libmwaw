@@ -68,24 +68,26 @@ void MWAWPictBasic::startODG(MWAWPropertyHandlerEncoder &doc) const
   Box2f bdbox = getBdBox();
   Vec2f size=bdbox.size();
   WPXPropertyList list;
-
-  list.clear();
   list.insert("svg:x",0, WPX_POINT);
   list.insert("svg:y",0, WPX_POINT);
   list.insert("svg:width",size.x(), WPX_POINT);
   list.insert("svg:height",size.y(), WPX_POINT);
   list.insert("libwpg:enforce-frame",1);
   doc.startElement("Graphics", list);
-
-  WPXPropertyListVector gradient;
-  list.clear();
-  getGraphicStyleProperty(list, gradient);
-  doc.startElement("SetStyle", list, gradient);
-  doc.endElement("SetStyle");
 }
+
 void MWAWPictBasic::endODG(MWAWPropertyHandlerEncoder &doc) const
 {
   doc.endElement("Graphics");
+}
+
+void MWAWPictBasic::sendStyle(MWAWPropertyHandlerEncoder &doc) const
+{
+  WPXPropertyListVector gradient;
+  WPXPropertyList list;
+  getGraphicStyleProperty(list, gradient);
+  doc.startElement("SetStyle", list, gradient);
+  doc.endElement("SetStyle");
 }
 
 ////////////////////////////////////////////////////////////
@@ -95,6 +97,8 @@ void MWAWPictBasic::endODG(MWAWPropertyHandlerEncoder &doc) const
 ////////////////////////////////////////////////////////////
 bool MWAWPictLine::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
 {
+  sendStyle(doc);
+
   WPXPropertyList list;
   WPXPropertyListVector vect;
   list.clear();
@@ -124,8 +128,9 @@ void MWAWPictLine::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyLis
 // to do: see how to manage the round corner
 bool MWAWPictRectangle::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
 {
+  sendStyle(doc);
+
   WPXPropertyList list;
-  list.clear();
   Vec2f pt=m_rectBox[0]-orig;
   list.insert("svg:x",pt.x(), WPX_POINT);
   list.insert("svg:y",pt.y(), WPX_POINT);
@@ -154,8 +159,9 @@ void MWAWPictRectangle::getGraphicStyleProperty(WPXPropertyList &list, WPXProper
 ////////////////////////////////////////////////////////////
 bool MWAWPictCircle::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
 {
+  sendStyle(doc);
+
   WPXPropertyList list;
-  list.clear();
   Vec2f pt=0.5*(m_circleBox[0]+m_circleBox[1])-orig;
   list.insert("svg:cx",pt.x(), WPX_POINT);
   list.insert("svg:cy",pt.y(), WPX_POINT);
@@ -180,6 +186,8 @@ void MWAWPictCircle::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyL
 ////////////////////////////////////////////////////////////
 bool MWAWPictArc::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
 {
+  sendStyle(doc);
+
   Vec2f center=0.5*(m_circleBox[0]+m_circleBox[1])-orig;
   Vec2f rad=0.5*(m_circleBox[1]-m_circleBox[0]);
   float angl0=m_angle[0];
@@ -323,6 +331,8 @@ bool MWAWPictPath::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &) 
     return false;
   }
 
+  sendStyle(doc);
+
   WPXPropertyListVector path;
   for (size_t c=0; c < m_path.size(); ++c) {
     WPXPropertyList list;
@@ -357,6 +367,8 @@ bool MWAWPictPolygon::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const 
     MWAW_DEBUG_MSG(("MWAWPictPolygon::getODGBinary: can not draw a polygon with %ld vertices\n", long(numPt)));
     return false;
   }
+
+  sendStyle(doc);
 
   WPXPropertyListVector vect;
   for (size_t i = 0; i < numPt; i++) {
@@ -419,6 +431,9 @@ bool MWAWPictGroup::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &o
 {
   if (m_child.empty())
     return false;
+
+  sendStyle(doc);
+
   // first check if we need to use different layer
   std::multimap<int,size_t> idByLayerMap;
   for (size_t c=0; c < m_child.size(); ++c) {
@@ -436,7 +451,7 @@ bool MWAWPictGroup::getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &o
   while(it != idByLayerMap.end()) {
     int layer=it->first;
     WPXPropertyList list;
-    list.insert("svg:id", layer);
+    list.insert("svg:id", m_graphicManager.getNewLayerId());
     doc.startElement("Layer", list);
     while (it != idByLayerMap.end() && it->first==layer)
       m_child[it++->second]->getODGBinary(doc,orig);
