@@ -130,7 +130,7 @@ public:
 
   // ------- fields ----------------
   //! adds a field type
-  void insertField(MWAWField const&field);
+  void insertField(MWAWField const &field);
 
   // ------- subdocument -----------------
   /** insert a note */

@@ -379,10 +379,6 @@ SOURCE=..\..\src\lib\MWAWPictMac.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWPictOLEContainer.cxx
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\MWAWPrinter.cxx
 # End Source File
 # Begin Source File
@@ -768,10 +764,6 @@ SOURCE=..\..\src\lib\MWAWPictData.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWPictMac.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWPictOLEContainer.hxx
 # End Source File
 # Begin Source File
 

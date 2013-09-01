@@ -322,11 +322,11 @@ struct BasicForm : public Zone {
     if (m_smooth)
       o << "smooth,";
   }
-
+  //! return the extra border size
   virtual float needExtraBorderWidth() const {
     return 0.5f*m_style.m_lineWidth;
   }
-
+  //! return a binary data (if known)
   virtual bool getBinaryData(MWAWInputStreamPtr,
                              WPXBinaryData &res, std::string &type) const;
 
@@ -436,6 +436,7 @@ struct DataPict : public Zone {
   virtual Type type() const {
     return Pict;
   }
+  //! return a binary data (if known)
   virtual bool getBinaryData(MWAWInputStreamPtr ip,
                              WPXBinaryData &res, std::string &type) const;
 
@@ -502,6 +503,7 @@ struct DataBitmap : public Zone {
   virtual Type type() const {
     return Bitmap;
   }
+  //! return a binary data (if known)
   bool getPictureData(MWAWInputStreamPtr ip, WPXBinaryData &res,
                       std::string &type, std::vector<MWAWColor> const &palette) const;
 
@@ -601,6 +603,9 @@ struct TextBox : public Zone {
       break;
     }
   }
+  //! return a binary data using a MWAWPictSimpleText
+  bool getSimpleBinaryData(MWAWGraphicStyleManager &manager,
+                           WPXBinaryData &res, std::string &type) const;
 
   //! add frame parameters to propList (if needed )
   virtual void fillFramePropertyList(WPXPropertyList &extras) const {
@@ -621,6 +626,74 @@ struct TextBox : public Zone {
   //! the paragraph alignement
   MWAWParagraph::Justification m_justify;
 };
+
+bool TextBox::getSimpleBinaryData(MWAWGraphicStyleManager &manager,
+                                  WPXBinaryData &res, std::string &type) const
+{
+  size_t numPositions = m_positions.size();
+  if (m_formats.size() < numPositions) {
+    MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getSimpleBinaryData: formats size seems bad\n"));
+    numPositions = m_formats.size();
+  }
+  shared_ptr<MWAWPictSimpleText> pict(new MWAWPictSimpleText(manager, m_box));
+  MWAWParagraph para;
+  para.m_justify = m_justify;
+  pict->setParagraph(para);
+  MWAWFont actFont(20,12);
+  pict->setFont(actFont);
+  int charPos=0, numChar=(int) m_text.length();
+  size_t pos=0;
+  while (charPos < numChar) {
+    if (pos<numPositions && m_positions[pos]==charPos) {
+      int format=m_formats[pos++];
+      if (format >= 0 && format < (int) m_fontsList.size()) {
+        actFont=m_fontsList[size_t(format)];
+        pict->setFont(actFont);
+      }
+    }
+    int lCharPos = pos<numPositions ? m_positions[pos] : numChar;
+    if (lCharPos>numChar) lCharPos=numChar;
+    WPXString text("");
+    while (charPos < lCharPos) {
+      unsigned char c=(unsigned char)m_text[(size_t) charPos++];
+      switch(c) {
+      case 0x9:
+        MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getSimpleBinaryData: find some tabs\n"));
+        pict->insertCharacter(' ');
+        break;
+      case 0xd:
+        if (charPos!=numChar)
+          pict->insertEOL();
+        break;
+      case 0x19:
+        pict->insertField(MWAWField(MWAWField::Title));
+        break;
+      case 0x18:
+        pict->insertField(MWAWField(MWAWField::PageNumber));
+        break;
+      case 0x16:
+        MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getSimpleBinaryData: find some time\n"));
+        pict->insertField(MWAWField(MWAWField::Time));
+        break;
+      case 0x17:
+        MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getSimpleBinaryData: find some date\n"));
+        pict->insertField(MWAWField(MWAWField::Date));
+        break;
+      case 0x14: // fixme
+        MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getSimpleBinaryData: footnote are not implemented\n"));
+        break;
+      default:
+        pict->insertCharacter(c);
+        break;
+      }
+    }
+  }
+  // a textbox can not have border
+  MWAWGraphicStyle style(m_style);
+  style.m_lineWidth=0;
+  pict->setStyle(style);
+  return pict->getBinary(res,type);
+}
 
 ////////////////////////////////////////
 //! Internal: the ole zone of a MSKGraph ( v4)
@@ -848,7 +921,7 @@ bool State::getPattern(MWAWGraphicStyle::Pattern &pat, int id, long rsid)
 class SubDocument : public MWAWSubDocument
 {
 public:
-  enum Type { RBILZone, Table, TextBox, TextBoxv4 };
+  enum Type { RBILZone, Table, Empty, TextBoxv4 };
   SubDocument(MSKGraph &pars, MWAWInputStreamPtr input, Type type,
               int zoneId) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(zoneId), m_frame("") {}
@@ -864,15 +937,6 @@ public:
   //! operator!==
   virtual bool operator==(MWAWSubDocument const &doc) const {
     return !operator!=(doc);
-  }
-
-  //! returns the subdocument \a id
-  int getId() const {
-    return m_id;
-  }
-  //! sets the subdocument \a id
-  void setId(int vid) {
-    m_id = vid;
   }
 
   //! the parser function
@@ -902,11 +966,10 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   long pos = m_input->tell();
   switch(m_type) {
+  case Empty:
+    break;
   case Table:
     m_graphParser->sendTable(m_id);
-    break;
-  case TextBox:
-    m_graphParser->sendTextBox(m_id);
     break;
   case TextBoxv4:
     m_graphParser->sendFrameText(m_zone, m_frame);
@@ -2403,70 +2466,6 @@ bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
   return true;
 }
 
-void MSKGraph::sendTextBox(int zoneId)
-{
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
-  if (!listener) return;
-  if (zoneId < 0 || zoneId >= int(m_state->m_zonesList.size())) {
-    MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: can not find textbox %d\n", zoneId));
-    return;
-  }
-  shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[(size_t)zoneId];
-  if (!zone) return;
-  MSKGraphInternal::TextBox &textBox = reinterpret_cast<MSKGraphInternal::TextBox &>(*zone);
-  listener->setFont(MWAWFont(20,12));
-  MWAWParagraph para;
-  para.m_justify=textBox.m_justify;
-  listener->setParagraph(para);
-  int numFonts = int(textBox.m_fontsList.size());
-  int actFormatPos = 0;
-  int numFormats = int(textBox.m_formats.size());
-  if (numFormats != int(textBox.m_positions.size())) {
-    MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: positions and formats have different length\n"));
-    if (numFormats > int(textBox.m_positions.size()))
-      numFormats = int(textBox.m_positions.size());
-  }
-  for (size_t i = 0; i < textBox.m_text.length(); i++) {
-    if (actFormatPos < numFormats && textBox.m_positions[(size_t)actFormatPos]==int(i)) {
-      int id = textBox.m_formats[(size_t)actFormatPos++];
-      if (id < 0 || id >= numFonts) {
-        MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: can not find a font\n"));
-      } else
-        listener->setFont(textBox.m_fontsList[(size_t)id]);
-    }
-    unsigned char c = (unsigned char) textBox.m_text[i];
-    switch(c) {
-    case 0x9:
-      MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some tab\n"));
-      listener->insertChar(' ');
-      break;
-    case 0xd:
-      listener->insertEOL();
-      break;
-    case 0x19:
-      listener->insertField(MWAWField(MWAWField::Title));
-      break;
-    case 0x18:
-      listener->insertField(MWAWField(MWAWField::PageNumber));
-      break;
-    case 0x16:
-      MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some time\n"));
-      listener->insertField(MWAWField(MWAWField::Time));
-      break;
-    case 0x17:
-      MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some date\n"));
-      listener->insertField(MWAWField(MWAWField::Date));
-      break;
-    case 0x14: // fixme
-      MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: footnote are not implemented\n"));
-      break;
-    default:
-      listener->insertCharacter(c);
-      break;
-    }
-  }
-}
-
 void MSKGraph::sendTable(int zoneId)
 {
   return m_tableParser->sendTable(zoneId);
@@ -2540,8 +2539,15 @@ void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
   MWAWInputStreamPtr input=m_mainParser->getInput();
   switch (zone->type()) {
   case MSKGraphInternal::Zone::Text: {
+    MSKGraphInternal::TextBox &textbox = reinterpret_cast<MSKGraphInternal::TextBox &>(*zone);
+    WPXBinaryData data;
+    std::string type;
+    if (textbox.getSimpleBinaryData(*m_parserState->m_graphicStyleManager, data, type)) {
+      listener->insertPicture(pictPos, data, type, extras);
+      return;
+    }
     shared_ptr<MSKGraphInternal::SubDocument> subdoc
-    (new MSKGraphInternal::SubDocument(*this, input, MSKGraphInternal::SubDocument::TextBox, id));
+    (new MSKGraphInternal::SubDocument(*this, input, MSKGraphInternal::SubDocument::Empty, id));
     listener->insertTextBox(pictPos, subdoc, extras);
     return;
   }

@@ -164,11 +164,11 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
   if (!grph.m_colors[0].isBlack())
     o << "lineColor=" << grph.m_colors[0] << ",";
   if (grph.m_patterns[0]<1.)
-    o << "linePattern=" << 100.f*grph.m_patterns[0] << "%,";
+    o << "linePattern=" << 100.f *grph.m_patterns[0] << "%,";
   if (!grph.m_colors[1].isWhite())
     o << "surfColor=" << grph.m_colors[1] << ",";
   if (grph.m_patterns[1]<1.)
-    o << "surfPattern=" << 100.f*grph.m_patterns[1] << "%,";
+    o << "surfPattern=" << 100.f *grph.m_patterns[1] << "%,";
   for (int i = 0; i < 4; ++i) {
     if (grph.m_borders[i].x() > 0 || grph.m_borders[i].y() > 0)
       o << "border" << i << "=" << grph.m_borders[i] << ",";
@@ -1296,7 +1296,7 @@ bool HMWKGraph::sendBasicGraph(HMWKGraphInternal::BasicGraph const &pict, MWAWPo
     MWAWPictRectangle *res=new MWAWPictRectangle(graphicManager, box);
     int roundValues[2];
     for (int i = 0; i < 2; ++i) {
-      if (2.f*pict.m_cornerDim <= pictSz[i])
+      if (2.f *pict.m_cornerDim <= pictSz[i])
         roundValues[i] = int(pict.m_cornerDim+1);
       else if (pict.m_cornerDim >= 4.0f)
         roundValues[i]= (int(pict.m_cornerDim)+1)/2;

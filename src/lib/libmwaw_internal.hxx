@@ -254,7 +254,7 @@ struct MWAWBorder {
     return m_style != orig.m_style || m_type != orig.m_type ||
            m_width < orig.m_width || m_width > orig.m_width || m_color != orig.m_color;
   }
-  //! compare two cell
+  //! compare two borders
   int compare(MWAWBorder const &orig) const;
 
   //! operator<<

@@ -41,7 +41,10 @@
 #  define MWAW_PICT_BASIC
 
 #  include <assert.h>
+#  include <cstring>
+#  include <map>
 #  include <ostream>
+#  include <set>
 #  include <string>
 #  include <vector>
 
@@ -61,7 +64,7 @@ public:
   virtual ~MWAWPictBasic() {}
 
   //! the picture subtype ( line, rectangle, polygon, circle, arc)
-  enum SubType { Arc, Circle, Group, Line, Path, Polygon, Rectangle };
+  enum SubType { Arc, Circle, Group, Line, Path, Polygon, Rectangle, Text };
   //! returns the picture type
   virtual Type getType() const {
     return Basic;
@@ -96,7 +99,7 @@ public:
     return true;
   }
   //! returns a ODG (low level)
-  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const=0;
+  virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const=0;
 
   /** a virtual function used to obtain a strict order.
    * -  must be redefined in the subs class
@@ -193,7 +196,7 @@ public:
   virtual ~MWAWPictLine() {}
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
+  virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
 protected:
   //! returns the class type
@@ -243,7 +246,7 @@ public:
   }
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
+  virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
 protected:
   //! returns the class type
@@ -282,7 +285,7 @@ public:
   virtual ~MWAWPictCircle() {}
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
+  virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
 protected:
   //! returns the class type
@@ -316,7 +319,7 @@ public:
   virtual ~MWAWPictArc() {}
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
+  virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
 protected:
   //! returns the class type
@@ -363,7 +366,7 @@ public:
   virtual ~MWAWPictPath() {}
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
+  virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
 protected:
   //! returns the class type
@@ -421,7 +424,7 @@ public:
   virtual ~MWAWPictPolygon() {}
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
+  virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
 protected:
   //! returns the class type
@@ -452,6 +455,64 @@ protected:
   std::vector<Vec2f> m_verticesList;
 };
 
+/** a class used to define a small text zone
+
+\note: it is limited to class which contains with different character properties
+ */
+class MWAWPictSimpleText : public MWAWPictBasic
+{
+public:
+  /** constructor: bdbox followed by the set of vertices */
+  MWAWPictSimpleText(MWAWGraphicStyleManager &graphicManager, Box2f bdBox);
+  //! virtual destructor
+  virtual ~MWAWPictSimpleText();
+
+  // -- text data
+  /** insert a character using the font converter to find the utf8
+      character */
+  void insertCharacter(unsigned char c);
+  //! adds a unicode string
+  void insertUnicodeString(WPXString const &str);
+
+  //! insert a tab
+  void insertTab();
+  //! insert a eol
+  void insertEOL();
+
+  // ------- fields ----------------
+  //! adds a field type
+  void insertField(MWAWField const &field);
+
+  // ------- font and paragraph ----
+  //! set the font
+  void setFont(MWAWFont const &font);
+  //! set the paragraph
+  void setParagraph(MWAWParagraph const &paragraph);
+
+  //! returns a ODG (encoded)
+  virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
+protected:
+  //! returns the class type
+  virtual SubType getSubType() const {
+    return Text;
+  }
+  //! returns the graphics style
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
+  //! comparison function
+  virtual int cmp(MWAWPict const &a) const;
+
+  //! the text buffer
+  WPXString m_textBuffer;
+  //! the position where a line break happens
+  std::set<int> m_lineBreakSet;
+  //! the actual font id
+  int m_fontId;
+  //! a map pos to font
+  std::map<int,MWAWFont> m_posFontMap;
+  //! a map pos to paragraph
+  std::map<int,MWAWParagraph> m_posParagraphMap;
+};
+
 //! \brief a class used to define a polygon
 class MWAWPictGroup : public MWAWPictBasic
 {
@@ -463,7 +524,7 @@ public:
   virtual ~MWAWPictGroup() {}
 
   //! returns a ODG (encoded)
-  virtual bool getODGBinary(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
+  virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 
   //! add a new child
   void addChild(shared_ptr<MWAWPictBasic> child);

@@ -271,7 +271,7 @@ bool MWAWBorder::addTo(WPXPropertyList &propList, std::string const which) const
   double factor=m_width/totalWidth;
   stream.str("");
   for (size_t w=0; w < numRelWidth; w++) {
-    stream << factor*m_widthsList[w]<< "pt";
+    stream << factor *m_widthsList[w]<< "pt";
     if (w+1!=numRelWidth)
       stream << " ";
   }

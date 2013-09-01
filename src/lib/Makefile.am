@@ -164,8 +164,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWPictData.hxx		\
 	MWAWPictMac.cxx			\
 	MWAWPictMac.hxx			\
-	MWAWPictOLEContainer.cxx	\
-	MWAWPictOLEContainer.hxx	\
 	MWAWPosition.hxx		\
 	MWAWPrinter.cxx			\
 	MWAWPrinter.hxx			\

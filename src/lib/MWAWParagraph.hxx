@@ -58,17 +58,16 @@ struct MWAWTabStop {
   void addTo(WPXPropertyListVector &propList, double decalX=0.0) const;
   //! operator==
   bool operator==(MWAWTabStop const &tabs) const {
-    return !operator!=(tabs);
+    return cmp(tabs)==0;
   }
   //! operator!=
   bool operator!=(MWAWTabStop const &tabs) const {
-    return m_position < tabs.m_position || m_position > tabs.m_position ||
-           m_alignment != tabs.m_alignment ||
-           m_leaderCharacter != tabs.m_leaderCharacter ||
-           m_decimalCharacter != tabs.m_decimalCharacter;
+    return cmp(tabs)!=0;
   }
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, MWAWTabStop const &ft);
+  //! a comparison function
+  int cmp(MWAWTabStop const &tabs) const;
   //! the tab position
   double m_position;
   //! the alignement ( left, center, ...)
@@ -98,10 +97,14 @@ public:
   virtual ~MWAWParagraph();
   //! operator==
   bool operator==(MWAWParagraph const &p) const {
-    return !operator!=(p);
+    return cmp(p)==0;
   }
   //! operator!=
-  bool operator!=(MWAWParagraph const &p) const;
+  bool operator!=(MWAWParagraph const &p) const {
+    return cmp(p)!=0;
+  }
+  //! a comparison function
+  int cmp(MWAWParagraph const &p) const;
   //! return the paragraph margin width (in inches)
   double getMarginsWidth() const;
   //! check if the paragraph has some borders

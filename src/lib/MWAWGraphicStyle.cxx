@@ -252,11 +252,11 @@ void MWAWGraphicStyle::addTo(WPXPropertyList &list, WPXPropertyListVector &gradi
         if (m_pattern.getBinary(data, mimeType)) {
           list.insert("draw:fill", "bitmap");
           list.insert("draw:fill-image", data.getBase64Data());
+          list.insert("draw:fill-image-width", m_pattern.m_dim[0], WPX_POINT);
+          list.insert("draw:fill-image-height", m_pattern.m_dim[1], WPX_POINT);
+          list.insert("draw:fill-image-ref-point-x",0, WPX_POINT);
+          list.insert("draw:fill-image-ref-point-y",0, WPX_POINT);
           list.insert("libwpg:mime-type", mimeType.c_str());
-          list.insert("svg:x",0, WPX_POINT);
-          list.insert("svg:y",0, WPX_POINT);
-          list.insert("svg:width", m_pattern.m_dim[0], WPX_POINT);
-          list.insert("svg:height", m_pattern.m_dim[1], WPX_POINT);
           done = true;
         }
       }
@@ -452,9 +452,9 @@ MWAWGraphicStyleManager::~MWAWGraphicStyleManager()
 {
 }
 
-MWAWFontConverter &MWAWGraphicStyleManager::getFontConverter()
+shared_ptr<MWAWFontConverter> MWAWGraphicStyleManager::getFontConverter() const
 {
-  return *m_fontConverter;
+  return m_fontConverter;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -145,8 +145,6 @@ protected:
 
   //! try to read a text zone
   bool readText(MSKGraphInternal::TextBox &textBox);
-  /** send a textbox to the listener */
-  void sendTextBox(int id);
   /** check the text box link */
   void checkTextBoxLinks(int zId);
 

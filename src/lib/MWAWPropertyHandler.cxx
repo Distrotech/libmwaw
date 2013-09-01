@@ -90,26 +90,23 @@ void MWAWPropertyHandlerEncoder::startElement
     m_f.write((const char *)data.getDataBuffer(), size);
 }
 
-void MWAWPropertyHandlerEncoder::endElement(const char *psName)
-{
-  m_f << 'E';
-  writeString(psName);
-}
-
 void MWAWPropertyHandlerEncoder::insertElement(const char *psName)
 {
   m_f << 'I';
   writeString(psName);
 }
 
-void MWAWPropertyHandlerEncoder::characters(std::string const &sCharacters)
+void MWAWPropertyHandlerEncoder::endElement(const char *psName)
 {
-  if (sCharacters.length()==0) return;
-  WPXString str(sCharacters.c_str());
-  WPXString escaped(str,true);
-  if (escaped.len() == 0) return;
+  m_f << 'E';
+  writeString(psName);
+}
+
+void MWAWPropertyHandlerEncoder::characters(WPXString const &sCharacters)
+{
+  if (sCharacters.len()==0) return;
   m_f << 'T';
-  writeString(sCharacters.c_str());
+  writeString(sCharacters.cstr());
 }
 
 void MWAWPropertyHandlerEncoder::writeString(const char *name)
@@ -207,11 +204,11 @@ public:
         case 'S':
           if (!readStartElement(*inp)) return false;
           break;
-        case 'E':
-          if (!readEndElement(*inp)) return false;
-          break;
         case 'I':
           if (!readInsertElement(*inp)) return false;
+          break;
+        case 'E':
+          if (!readEndElement(*inp)) return false;
           break;
         case 'T':
           if (!readCharacters(*inp)) return false;
@@ -314,6 +311,19 @@ protected:
     return true;
   }
 
+  //! reads an simple element
+  bool readInsertElement(WPXInputStream &input) {
+    std::string s;
+    if (!readString(input, s)) return false;
+
+    if (s.empty()) {
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElement find empty tag\n"));
+      return false;
+    }
+    if (m_handler) m_handler->insertElement(s.c_str());
+    return true;
+  }
+
   //! reads an endElement
   bool readEndElement(WPXInputStream &input) {
     std::string s;
@@ -336,19 +346,6 @@ protected:
     }
     m_openTag.pop();
     if (m_handler) m_handler->endElement(s.c_str());
-    return true;
-  }
-
-  //! reads an simple element
-  bool readInsertElement(WPXInputStream &input) {
-    std::string s;
-    if (!readString(input, s)) return false;
-
-    if (s.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElement find empty tag\n"));
-      return false;
-    }
-    if (m_handler) m_handler->insertElement(s.c_str());
     return true;
   }
 
@@ -513,11 +510,6 @@ bool MWAWPropertyHandler::readData(WPXBinaryData const &encoded)
   return decod.readData(encoded);
 }
 
-void MWAWPropertyHandler::insertElement(const char *)
-{
-  MWAW_DEBUG_MSG(("MWAWPropertyHandler::insertElement: must be reimplement in subclass\n"));
-}
-
 void MWAWPropertyHandler::startElement(const char *, const WPXPropertyList &,
                                        const WPXPropertyListVector &)
 {
@@ -529,4 +521,10 @@ void MWAWPropertyHandler::startElement(const char *, const WPXPropertyList &,
 {
   MWAW_DEBUG_MSG(("MWAWPropertyHandler::startElement: with a WPXBinaryData must be reimplement in subclass\n"));
 }
+
+void MWAWPropertyHandler::insertElement(const char *)
+{
+  MWAW_DEBUG_MSG(("MWAWPropertyHandler::insertElement: must be reimplement in subclass\n"));
+}
+
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

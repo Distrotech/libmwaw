@@ -86,7 +86,7 @@ struct Style {
     return m_surfaceColor.m_hasPattern || m_shadeColor.m_hasPattern;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream & o, Style const &style) {
+  friend std::ostream &operator<<(std::ostream &o, Style const &style) {
     if (style.m_lineWidth != Vec2f(1,1))
       o << "line[w]=" << style.m_lineWidth << ",";
     if (style.m_linePatternPercent<1)
@@ -135,7 +135,7 @@ struct Style {
       return MWAWColor::barycenter(m_patternPercent,m_color[0],1.f-m_patternPercent,m_color[1]);
     }
     //! operator<<
-    friend std::ostream &operator<<(std::ostream & o, Color const &color) {
+    friend std::ostream &operator<<(std::ostream &o, Color const &color) {
       if (!color.m_hasPattern) {
         o << "none,";
         return o;
@@ -191,12 +191,12 @@ struct Frame {
     return T_UNSET;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream & o, Frame const &zone) {
+  friend std::ostream &operator<<(std::ostream &o, Frame const &zone) {
     zone.print(o);
     return o;
   }
   //! a virtual print function
-  virtual void print(std::ostream & o) const {
+  virtual void print(std::ostream &o) const {
     switch(m_type) {
     case 1:
       o << "text,";
@@ -296,7 +296,7 @@ struct FrameBasic : public Frame {
     return T_BASIC;
   }
   //! print function
-  virtual void print(std::ostream & o) const {
+  virtual void print(std::ostream &o) const {
     Frame::print(o);
     if (m_type==4) {
       if (m_values[0]==1)
@@ -486,7 +486,7 @@ struct FrameGroup : public Frame {
     return T_GROUP;
   }
   //! print funtion
-  virtual void print(std::ostream & o) const {
+  virtual void print(std::ostream &o) const {
     Frame::print(o);
     if (m_numChild)
       o << "nChild=" << m_numChild << ",";
@@ -508,7 +508,7 @@ struct FramePicture : public Frame {
     return T_PICTURE;
   }
   //! print funtion
-  virtual void print(std::ostream & o) const {
+  virtual void print(std::ostream &o) const {
     Frame::print(o);
     if (m_entry.valid())
       o << "pos=" << std::hex << m_entry.begin() << "->" << m_entry.end() << std::dec << ",";
@@ -528,7 +528,7 @@ struct FrameText : public Frame {
     return T_TEXT;
   }
   //! print funtion
-  virtual void print(std::ostream & o) const {
+  virtual void print(std::ostream &o) const {
     Frame::print(o);
     if (m_entry.valid())
       o << "pos=" << std::hex << m_entry.begin() << "->" << m_entry.end() << std::dec << ",";
@@ -990,7 +990,7 @@ bool GWGraph::isPageFrames()
       input->seek(pos, WPX_SEEK_SET);
       return false;
     }
-    if (i!=nZones-1 && nData*fSz+4!=zoneSz[i]) {
+    if (i!=nZones-1 && nData *fSz+4!=zoneSz[i]) {
       MWAW_DEBUG_MSG(("GWGraph::isPageFrames: find a diff of %ld for data %d\n", zoneSz[i]-nData*fSz-4, i));
       if ((2*nData+4)*fSz+4 < zoneSz[i]) {
         input->seek(pos, WPX_SEEK_SET);
@@ -1653,7 +1653,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     break;
   }
   case 3: // rect: no data
-  case 5: {// oval no data
+  case 5: { // oval no data
     GWGraphInternal::FrameBasic *graph=new GWGraphInternal::FrameBasic(zone, *m_parserState->m_graphicStyleManager);
     res.reset(graph);
     break;
@@ -1813,7 +1813,7 @@ bool GWGraph::sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInterna
   case GWGraphInternal::Frame::T_GROUP: // ok to ignore
     break;
   case GWGraphInternal::Frame::T_TEXT: {
-    GWGraphInternal::FrameText const & text=
+    GWGraphInternal::FrameText const &text=
       static_cast<GWGraphInternal::FrameText const &>(*frame);
     shared_ptr<MWAWSubDocument> doc(new GWGraphInternal::SubDocument(*this, input, text.m_entry));
     Vec2f fSz=fPos.size();

@@ -390,10 +390,6 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MWAWPictOLEContainer.cxx">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
     <ClCompile Include="..\..\src\lib\MWAWPrinter.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -556,7 +552,6 @@
     <ClInclude Include="..\..\src\lib\MWAWPictBitmap.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWPictData.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWPictMac.hxx" />
-    <ClInclude Include="..\..\src\lib\MWAWPictOLEContainer.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWPosition.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWPrinter.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWRSRCParser.hxx" />

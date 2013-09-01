@@ -61,10 +61,9 @@ public:
    *      - basic: line, rectangle,
    *      - pictData: a classic format of file (Apple© Pict, ...)
    *      - bitmap: a image
-   *      - OleContainer: simple container to an ole object
    *      - ...
    */
-  enum Type { Basic, PictData, Bitmap, OleContainer, Unknown };
+  enum Type { Basic, PictData, Bitmap, Unknown };
   //! returns the picture type
   virtual Type getType() const = 0;
 

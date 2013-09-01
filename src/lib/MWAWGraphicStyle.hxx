@@ -48,7 +48,7 @@ public:
   //! destructor
   ~MWAWGraphicStyleManager();
   //! returns the font converter
-  MWAWFontConverter &getFontConverter();
+  shared_ptr<MWAWFontConverter> getFontConverter() const;
   //! returns a new id for a layer
   int getNewLayerId() const {
     return ++m_numLayer;

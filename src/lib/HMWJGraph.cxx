@@ -1849,7 +1849,7 @@ bool HMWJGraph::sendBasicGraph(HMWJGraphInternal::BasicGraph const &pict, MWAWPo
     MWAWPictRectangle *res=new MWAWPictRectangle(graphicManager, box);
     int roundValues[2];
     for (int i = 0; i < 2; i++) {
-      if (2.f*pict.m_cornerDim <= pictSz[i])
+      if (2.f *pict.m_cornerDim <= pictSz[i])
         roundValues[i] = int(pict.m_cornerDim+1);
       else if (pict.m_cornerDim >= 4.0f)
         roundValues[i]= (int(pict.m_cornerDim)+1)/2;

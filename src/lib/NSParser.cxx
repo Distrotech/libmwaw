@@ -1671,7 +1671,7 @@ bool NSParser::readPageLimit(MWAWEntry const &entry)
   int numColumns = (int) input->readLong(2)+1;
   int colSeps = (int) input->readLong(2);
   if (!dimOk) ;
-  else if (numColumns <= 0 || numColumns > 8 || colSeps < 0 || colSeps*numColumns >= pageDim[0]) {
+  else if (numColumns <= 0 || numColumns > 8 || colSeps < 0 || colSeps *numColumns >= pageDim[0]) {
     MWAW_DEBUG_MSG(("NSParser::readPageLimit: the columns definition seems odd\n"));
     f << "###";
   } else {

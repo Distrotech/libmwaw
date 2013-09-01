@@ -64,7 +64,7 @@ public:
                             const WPXBinaryData &data);
   //! ends an element
   virtual void endElement(const char *psName) = 0;
-  //! inserts a simple element ( note: endElement must not be called )
+  //! inserts a simple element ( note: maybe used one day to code insertEOL, insertTab...)
   virtual void insertElement(const char *psName);
   //! writes a list of characters
   virtual void characters(WPXString const &sCharacters) = 0;
@@ -110,12 +110,12 @@ public:
   //! starts an element given a binary data
   void startElement(const char *psName, const WPXPropertyList &xPropList,
                     const WPXBinaryData &data);
-  //! ends an element
-  void endElement(const char *psName);
   //! insert a simple element
   void insertElement(const char *psName);
+  //! ends an element
+  void endElement(const char *psName);
   //! writes a list of characters
-  void characters(std::string const &sCharacters);
+  void characters(WPXString const &sCharacters);
   //! retrieves the data
   bool getData(WPXBinaryData &data);
 

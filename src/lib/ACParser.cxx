@@ -335,7 +335,7 @@ shared_ptr<MWAWList> ACParser::getMainList()
     }
     break;
   default: // ok, switch to custom or by default bullet
-  case 0xe: {//custom
+  case 0xe: { //custom
     level.m_type=MWAWListLevel::BULLET;
     libmwaw::appendUnicode(0x2022, level.m_bullet);
     MWAWFontConverterPtr fontConvert=getFontConverter();

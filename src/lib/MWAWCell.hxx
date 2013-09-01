@@ -198,7 +198,7 @@ public:
     return m_extraLine;
   }
   //! returns the extra line border
-  MWAWBorder const& extraLineType() const {
+  MWAWBorder const &extraLineType() const {
     return m_extraLineType;
   }
   //! sets the extraline

@@ -57,7 +57,7 @@ MWAWParserState::~MWAWParserState()
       */
       MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: the listener is NOT closed, call enddocument without any subdoc\n"));
       m_listener->endDocument(false);
-    } catch (const libmwaw::ParseException&) {
+    } catch (const libmwaw::ParseException &) {
       MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: endDocument FAILS\n"));
       /* must never happen too...
 

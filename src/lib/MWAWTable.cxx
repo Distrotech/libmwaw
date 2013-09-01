@@ -192,7 +192,7 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
     if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line2)
       lines[1].reset(new MWAWPictLine(listener->getGraphicStyleManager(), Vec2f(0,box.size()[1]), Vec2f(box.size()[0], 0)));
 
-    MWAWBorder const&border=cell.extraLineType();
+    MWAWBorder const &border=cell.extraLineType();
     MWAWGraphicStyle pStyle;
     pStyle.m_lineWidth=(float)border.m_width;
     pStyle.m_lineColor=border.m_color;
