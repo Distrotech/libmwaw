@@ -64,7 +64,7 @@ public:
   virtual ~MWAWPictBasic() {}
 
   //! the picture subtype ( line, rectangle, polygon, circle, arc)
-  enum SubType { Arc, Circle, Group, Line, Path, Polygon, Rectangle, Text };
+  enum SubType { Arc, Circle, GraphicObject, Group, Line, Path, Polygon, Rectangle, Text };
   //! returns the picture type
   virtual Type getType() const {
     return Basic;
@@ -455,10 +455,7 @@ protected:
   std::vector<Vec2f> m_verticesList;
 };
 
-/** a class used to define a small text zone
-
-\note: it is limited to class which contains with different character properties
- */
+/** a class used to define a small text zone */
 class MWAWPictSimpleText : public MWAWPictBasic
 {
 public:
@@ -489,6 +486,11 @@ public:
   //! set the paragraph
   void setParagraph(MWAWParagraph const &paragraph);
 
+  //! set the text padding
+  void setPadding(Vec2f const &LT, Vec2f const &RB) {
+    m_LTPadding = LT;
+    m_RBPadding = RB;
+  }
   //! returns a ODG (encoded)
   virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
 protected:
@@ -501,6 +503,10 @@ protected:
   //! comparison function
   virtual int cmp(MWAWPict const &a) const;
 
+  //! the left top padding
+  Vec2f m_LTPadding;
+  //! the right bottom padding
+  Vec2f m_RBPadding;
   //! the text buffer
   WPXString m_textBuffer;
   //! the position where a line break happens
@@ -511,6 +517,37 @@ protected:
   std::map<int,MWAWFont> m_posFontMap;
   //! a map pos to paragraph
   std::map<int,MWAWParagraph> m_posParagraphMap;
+};
+
+//! a class used to define a graphicObject or an ellipse
+class MWAWPictGraphicObject : public MWAWPictBasic
+{
+public:
+  //! constructor
+  MWAWPictGraphicObject(MWAWGraphicStyleManager &graphicManager, Box2f box, WPXBinaryData const &data, std::string mimeType) :
+    MWAWPictBasic(graphicManager), m_data(data), m_mimeType(mimeType) {
+    setBdBox(box);
+  }
+  //! virtual destructor
+  virtual ~MWAWPictGraphicObject() {}
+
+  //! returns a ODG (encoded)
+  virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
+
+protected:
+  //! returns the class type
+  virtual SubType getSubType() const {
+    return GraphicObject;
+  }
+  //! returns the graphics style
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
+  //! comparison function
+  virtual int cmp(MWAWPict const &a) const;
+
+  // the binary data
+  WPXBinaryData m_data;
+  // the mime type
+  std::string m_mimeType;
 };
 
 //! \brief a class used to define a polygon

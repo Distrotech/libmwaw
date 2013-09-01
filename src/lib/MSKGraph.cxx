@@ -428,9 +428,9 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
 //! Internal: the picture of a MSKGraph
 struct DataPict : public Zone {
   //! constructor
-  DataPict(Zone const &z) : Zone(z), m_dataEndPos(-1), m_naturalBox() { }
+  DataPict(Zone const &z, MWAWGraphicStyleManager &graphicManager) : Zone(z), m_graphicManager(graphicManager), m_dataEndPos(-1), m_naturalBox() { }
   //! empty constructor
-  DataPict() : Zone(), m_dataEndPos(-1), m_naturalBox() { }
+  DataPict(MWAWGraphicStyleManager &graphicManager) : Zone(), m_graphicManager(graphicManager), m_dataEndPos(-1), m_naturalBox() { }
 
   //! return the type
   virtual Type type() const {
@@ -444,6 +444,8 @@ struct DataPict : public Zone {
   virtual void print(std::ostream &o) const {
     Zone::print(o);
   }
+  //! the graphic style manager
+  MWAWGraphicStyleManager m_graphicManager;
   //! the end of data (only defined when different to m_pos.end())
   long m_dataEndPos;
   //! the pict box (if known )
@@ -484,10 +486,15 @@ bool DataPict::getBinaryData(MWAWInputStreamPtr ip,
   ip->seek(m_dataPos, WPX_SEEK_SET);
   shared_ptr<MWAWPict> pict(MWAWPictData::get(ip, (int)pictSize));
 
-  if (!pict)
+  if (!pict || !pict->getBinary(data,pictType))
     return false;
-
-  return pict->getBinary(data,pictType);
+  Box2f bdbox=Box2f(Vec2f(0,0),getLocalBox().size());
+  if ((!m_style.hasLine() && !m_style.hasSurface()) || bdbox.size()[0]<=0 || bdbox.size()[1]<=0)
+    return true;
+  shared_ptr<MWAWPictGraphicObject> object
+  (new MWAWPictGraphicObject(const_cast<MWAWGraphicStyleManager &>(m_graphicManager), bdbox, data, pictType));
+  object->setStyle(m_style);
+  return object->getBinary(data,pictType);
 }
 
 ////////////////////////////////////////
@@ -1479,15 +1486,16 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
   }
 
   shared_ptr<MSKGraphInternal::Zone> res;
+  MWAWGraphicStyleManager &graphicManager=*m_parserState->m_graphicStyleManager;
   switch (pict.m_subType) {
   case 0:
   case 1:
   case 2:
   case 3:
-    res.reset(new MSKGraphInternal::BasicForm(pict, *m_parserState->m_graphicStyleManager));
+    res.reset(new MSKGraphInternal::BasicForm(pict, graphicManager));
     break;
   case 4: {
-    MSKGraphInternal::BasicForm *form  = new MSKGraphInternal::BasicForm(pict, *m_parserState->m_graphicStyleManager);
+    MSKGraphInternal::BasicForm *form  = new MSKGraphInternal::BasicForm(pict, graphicManager);
     res.reset(form);
     form->m_angle = (int) input->readLong(2);
     form->m_deltaAngle = (int) input->readLong(2);
@@ -1499,7 +1507,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     break;
   }
   case 5: {
-    MSKGraphInternal::BasicForm *form  = new MSKGraphInternal::BasicForm(pict, *m_parserState->m_graphicStyleManager);
+    MSKGraphInternal::BasicForm *form  = new MSKGraphInternal::BasicForm(pict, graphicManager);
     res.reset(form);
     val = (int) input->readULong(2);
     if (val==1)
@@ -1520,7 +1528,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     if (val) f << "g1=" << val << ",";
     // skip size (already read)
     pict.m_dataPos = input->tell()+2;
-    MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict);
+    MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict, graphicManager);
     res.reset(pct);
     ascFile.skipZone(pct->m_dataPos, pct->m_pos.end()-1);
     break;
@@ -1679,7 +1687,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     if (dSize < 0) return zId;
     pict.m_dataPos = actPos+4;
 
-    MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict);
+    MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict, graphicManager);
     pct->m_dataEndPos = actPos+4+dSize;
     res.reset(pct);
     ascFile.skipZone(pct->m_dataPos, pct->m_dataEndPos-1);
@@ -1781,7 +1789,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     if (dSize < 0) return zId;
     pict.m_dataPos = actPos+4;
 
-    MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict);
+    MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict, graphicManager);
     pct->m_dataEndPos = actPos+4+dSize;
     res.reset(pct);
     ascFile.skipZone(pct->m_dataPos, pct->m_dataEndPos-1);
@@ -1873,7 +1881,7 @@ int MSKGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone)
   long size = (long) input->readULong(2)+6;
   if (size < 22) return zId;
 
-  shared_ptr<MSKGraphInternal::DataPict> pict(new MSKGraphInternal::DataPict);
+  shared_ptr<MSKGraphInternal::DataPict> pict(new MSKGraphInternal::DataPict(*m_parserState->m_graphicStyleManager));
   pict->m_zoneId = zoneId;
   pict->m_subType = 0x100;
   pict->m_pos.setBegin(pos);
@@ -2114,7 +2122,7 @@ bool MSKGraph::readPictureV4(MWAWInputStreamPtr /*input*/, MWAWEntry const &entr
   pict.m_page = -2;
   pict.m_zoneId = -1;
 
-  MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict);
+  MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict, *m_parserState->m_graphicStyleManager);
   shared_ptr<MSKGraphInternal::Zone>res(pct);
   m_mainParser->ascii().skipZone(entry.begin(), entry.end()-1);
 
@@ -2417,7 +2425,7 @@ bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
     return false;
   }
 
-  MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(zone);
+  MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(zone, *m_parserState->m_graphicStyleManager);
   shared_ptr<MSKGraphInternal::Zone> res(pct);
   pct->m_dataPos = pos+4;
   pct->m_pos.setEnd(pos+4+dataSz);

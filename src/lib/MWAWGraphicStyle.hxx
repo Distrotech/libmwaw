@@ -198,8 +198,8 @@ public:
     return !m_pattern.empty();
   }
   //! returns true if the gradient is defined
-  bool hasGradient() const {
-    return m_gradientType != G_None && m_gradientStopList.size() >= 2;
+  bool hasGradient(bool complex=false) const {
+    return m_gradientType != G_None && m_gradientStopList.size() >= (complex ? 3 : 2);
   }
   //! returns true if the interior surface is defined
   bool hasSurface() const {
