@@ -32,7 +32,7 @@
 */
 
 /*
- * Parser to Microsoft Works text document ( table part )
+ * Parser to Microsoft Works text document ( table and chart )
  */
 #ifndef MSK_MWAW_TABLE
 #  define MSK_MWAW_TABLE
@@ -54,7 +54,7 @@ struct State;
 
 class MSKParser;
 
-/** \brief the main class to read the table of a Microsoft Works file */
+/** \brief the main class to read the table ( or a chart ) of a Microsoft Works file */
 class MSKTable
 {
   friend class MSKGraph;
@@ -66,10 +66,18 @@ public:
 
   /** returns the file version */
   int version() const;
+
   //! try to read a table zone
   bool readTable(int numCol, int numRow, int zoneId, MSKGraph::Style const &style);
   //! try to  a table zone
-  void sendTable(int zoneId);
+  bool sendTable(int zoneId);
+
+  //! try to read a chart zone
+  bool readChart(int chartId, MSKGraph::Style const &style);
+  //! fix the correspondance between a chart and the zone id
+  void setChartZoneId(int chartId, int zoneId);
+  //! try to  a chart zone
+  bool sendChart(int chartId);
 
 private:
   MSKTable(MSKTable const &orig);
@@ -90,6 +98,7 @@ protected:
   //! the graph parser;
   MSKGraph *m_graphParser;
 };
+
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
 

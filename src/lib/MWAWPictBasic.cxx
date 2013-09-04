@@ -715,21 +715,18 @@ void MWAWPictGroup::addChild(shared_ptr<MWAWPictBasic> child)
     return;
   }
   Box2f cBDBox=child->getBdBox();
-  if (m_child.empty())
-    setBdBox(cBDBox);
-  else {
-    Box2f bdbox=getBdBox();
-    Vec2f pt=bdbox[0];
-    if (cBDBox[0][0]<pt[0]) pt[0]=cBDBox[0][0];
-    if (cBDBox[0][1]<pt[1]) pt[1]=cBDBox[0][1];
-    bdbox.setMin(pt);
+  Box2f bdbox=getBdBox();
+  Vec2f pt=bdbox[0];
+  if (cBDBox[0][0]<pt[0]) pt[0]=cBDBox[0][0];
+  if (cBDBox[0][1]<pt[1]) pt[1]=cBDBox[0][1];
+  bdbox.setMin(pt);
 
-    pt=bdbox[1];
-    if (cBDBox[1][0]>pt[0]) pt[0]=cBDBox[1][0];
-    if (cBDBox[1][1]>pt[1]) pt[1]=cBDBox[1][1];
-    bdbox.setMax(pt);
-    setBdBox(bdbox);
-  }
+  pt=bdbox[1];
+  if (cBDBox[1][0]>pt[0]) pt[0]=cBDBox[1][0];
+  if (cBDBox[1][1]>pt[1]) pt[1]=cBDBox[1][1];
+  bdbox.setMax(pt);
+  setBdBox(bdbox);
+
   m_child.push_back(child);
 }
 

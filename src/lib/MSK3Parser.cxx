@@ -436,16 +436,14 @@ bool MSK3Parser::readZone(MSK3ParserInternal::Zone &zone)
   input->seek(-1, WPX_SEEK_CUR);
   switch(val) {
   case 0: {
-    int pictId = m_graphParser->getEntryPicture(zone.m_zoneId, pict);
-    if (pictId >= 0) {
+    if (m_graphParser->getEntryPicture(zone.m_zoneId, pict)>=0) {
       input->seek(pict.end(), WPX_SEEK_SET);
       return true;
     }
     break;
   }
   case 1: {
-    int pictId = m_graphParser->getEntryPictureV1(zone.m_zoneId, pict);
-    if (pictId >= 0) {
+    if (m_graphParser->getEntryPictureV1(zone.m_zoneId, pict)>=0) {
       input->seek(pict.end(), WPX_SEEK_SET);
       return true;
     }
@@ -824,7 +822,7 @@ bool MSK3Parser::readGroup(MSK3ParserInternal::Zone &zone, MWAWEntry &entry, int
   MWAWEntry pictZone;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
-    if (m_graphParser->getEntryPicture(zone.m_zoneId, pictZone) >= 0)
+    if (m_graphParser->getEntryPicture(zone.m_zoneId, pictZone)>=0)
       continue;
     MWAW_DEBUG_MSG(("MSK3Parser::readGroup: can not find the end of group \n"));
     input->seek(pos, WPX_SEEK_SET);

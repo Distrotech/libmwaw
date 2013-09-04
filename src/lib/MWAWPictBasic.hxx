@@ -555,7 +555,8 @@ class MWAWPictGroup : public MWAWPictBasic
 {
 public:
   /** constructor: */
-  MWAWPictGroup(MWAWGraphicStyleManager &graphicManager) : MWAWPictBasic(graphicManager), m_child() {
+  MWAWPictGroup(MWAWGraphicStyleManager &graphicManager, Box2f box) : MWAWPictBasic(graphicManager), m_child() {
+    setBdBox(box);
   }
   //! virtual destructor
   virtual ~MWAWPictGroup() {}

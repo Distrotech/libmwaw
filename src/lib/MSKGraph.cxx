@@ -81,10 +81,10 @@ struct RBZone {
 ////////////////////////////////////////
 //! Internal: the generic pict
 struct Zone {
-  enum Type { Unknown, Basic, Group, Pict, Text, Textv4, Bitmap, TableZone, OLE};
+  enum Type { Unknown, Basic, ChartZone, Group, Pict, Text, Textv4, Bitmap, TableZone, OLE};
   //! constructor
   Zone() : m_subType(-1), m_zoneId(-1), m_pos(), m_dataPos(-1), m_fileId(-1), m_page(-1), m_decal(), m_box(), m_line(-1),
-    m_style(), m_order(0), m_extra(""), m_isSent(false) {
+    m_style(), m_order(0), m_extra(""), m_doNotSend(false), m_isSent(false) {
     for (int i = 0; i < 3; i++) m_ids[i] = 0;
   }
   //! destructor
@@ -100,6 +100,10 @@ struct Zone {
     return Unknown;
   }
 
+  //! return a picture if possible
+  virtual shared_ptr<MWAWPictBasic> getBasicPicture(MWAWInputStreamPtr) const {
+    return shared_ptr<MWAWPictBasic>();
+  }
   //! return a binary data (if known)
   virtual bool getBinaryData(MWAWInputStreamPtr,
                              WPXBinaryData &res, std::string &pictType) const {
@@ -185,6 +189,8 @@ struct Zone {
   int m_order;
   //! extra data
   std::string m_extra;
+  //! a flag used to know if we need to send the data ( or if this is the part of a sub group)
+  bool m_doNotSend;
   //! true if the zone is send
   bool m_isSent;
 };
@@ -326,6 +332,9 @@ struct BasicForm : public Zone {
   virtual float needExtraBorderWidth() const {
     return 0.5f*m_style.m_lineWidth;
   }
+  //! return a picture if possible
+  virtual shared_ptr<MWAWPictBasic> getBasicPicture(MWAWInputStreamPtr) const;
+
   //! return a binary data (if known)
   virtual bool getBinaryData(MWAWInputStreamPtr,
                              WPXBinaryData &res, std::string &type) const;
@@ -343,13 +352,9 @@ struct BasicForm : public Zone {
   bool m_smooth;
 };
 
-bool BasicForm::getBinaryData(MWAWInputStreamPtr,
-                              WPXBinaryData &data, std::string &pictType) const
+shared_ptr<MWAWPictBasic> BasicForm::getBasicPicture(MWAWInputStreamPtr) const
 {
-  data.clear();
-  pictType="";
   shared_ptr<MWAWPictBasic> pict;
-
   MWAWGraphicStyle pStyle(m_style);
   if (m_subType!=0)
     pStyle.m_arrows[0] = pStyle.m_arrows[1]=false;
@@ -416,13 +421,38 @@ bool BasicForm::getBinaryData(MWAWInputStreamPtr,
     break;
   }
   default:
-    MWAW_DEBUG_MSG(("MSKGraphInternal::FormPict::getBinaryData: find unknown type\n"));
+    MWAW_DEBUG_MSG(("MSKGraphInternal::BasicForm::getBasicPict: find unknown type\n"));
     break;
   }
-  if (!pict) return false;
-  pict->setStyle(pStyle);
-  return pict->getBinary(data,pictType);
+  if (pict)
+    pict->setStyle(pStyle);
+  return pict;
 }
+
+bool BasicForm::getBinaryData(MWAWInputStreamPtr input,
+                              WPXBinaryData &data, std::string &pictType) const
+{
+  data.clear();
+  pictType="";
+  shared_ptr<MWAWPictBasic> pict = getBasicPicture(input);
+  return pict && pict->getBinary(data,pictType);
+}
+
+////////////////////////////////////////
+//! Internal: the table of a MSKGraph
+struct Chart : public Zone {
+  //! constructor
+  Chart(Zone const &z) : Zone(z), m_chartId(0) { }
+  //! empty constructor
+  Chart() : Zone(), m_chartId(0) { }
+
+  //! return the type
+  virtual Type type() const {
+    return ChartZone;
+  }
+  //! the chart id
+  int m_chartId;
+};
 
 ////////////////////////////////////////
 //! Internal: the picture of a MSKGraph
@@ -486,6 +516,12 @@ bool DataPict::getBinaryData(MWAWInputStreamPtr ip,
   ip->seek(m_dataPos, WPX_SEEK_SET);
   shared_ptr<MWAWPict> pict(MWAWPictData::get(ip, (int)pictSize));
 
+#if 1
+  return pict && pict->getBinary(data,pictType);
+#else
+  /** I tried to use a MWAWPictGraphicObject here, this does work with
+      mwaw2odt but this does not seem to work in LibreOffice, so
+      ... */
   if (!pict || !pict->getBinary(data,pictType))
     return false;
   Box2f bdbox=Box2f(Vec2f(0,0),getLocalBox().size());
@@ -495,6 +531,7 @@ bool DataPict::getBinaryData(MWAWInputStreamPtr ip,
   (new MWAWPictGraphicObject(const_cast<MWAWGraphicStyleManager &>(m_graphicManager), bdbox, data, pictType));
   object->setStyle(m_style);
   return object->getBinary(data,pictType);
+#endif
 }
 
 ////////////////////////////////////////
@@ -580,7 +617,8 @@ struct Table : public Zone {
 //! Internal: the textbox of a MSKGraph ( v2-v3)
 struct TextBox : public Zone {
   //! constructor
-  TextBox(Zone const &z) : Zone(z), m_numPositions(-1), m_fontsList(), m_positions(), m_formats(), m_text(""), m_justify(MWAWParagraph::JustificationLeft)
+  TextBox(Zone const &z, MWAWGraphicStyleManager &graphicManager) :
+    Zone(z), m_graphicManager(&graphicManager), m_numPositions(-1), m_fontsList(), m_positions(), m_formats(), m_text(""), m_justify(MWAWParagraph::JustificationLeft)
   { }
 
   //! return the type
@@ -610,9 +648,10 @@ struct TextBox : public Zone {
       break;
     }
   }
+  //! return a picture if possible
+  virtual shared_ptr<MWAWPictBasic> getBasicPicture(MWAWInputStreamPtr) const;
   //! return a binary data using a MWAWPictSimpleText
-  bool getSimpleBinaryData(MWAWGraphicStyleManager &manager,
-                           WPXBinaryData &res, std::string &type) const;
+  bool getBinaryData(MWAWInputStreamPtr input,WPXBinaryData &res, std::string &type) const;
 
   //! add frame parameters to propList (if needed )
   virtual void fillFramePropertyList(WPXPropertyList &extras) const {
@@ -620,6 +659,8 @@ struct TextBox : public Zone {
       extras.insert("fo:background-color", m_style.m_baseSurfaceColor.str().c_str());
   }
 
+  //! a pointer to the graphic style manager
+  MWAWGraphicStyleManager *m_graphicManager;
   //! the number of positions
   int m_numPositions;
   //! the list of fonts
@@ -634,15 +675,15 @@ struct TextBox : public Zone {
   MWAWParagraph::Justification m_justify;
 };
 
-bool TextBox::getSimpleBinaryData(MWAWGraphicStyleManager &manager,
-                                  WPXBinaryData &res, std::string &type) const
+shared_ptr<MWAWPictBasic> TextBox::getBasicPicture(MWAWInputStreamPtr) const
 {
+  shared_ptr<MWAWPictSimpleText> pict;
   size_t numPositions = m_positions.size();
   if (m_formats.size() < numPositions) {
-    MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getSimpleBinaryData: formats size seems bad\n"));
+    MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getBasicPicture: formats size seems bad\n"));
     numPositions = m_formats.size();
   }
-  shared_ptr<MWAWPictSimpleText> pict(new MWAWPictSimpleText(manager, m_box));
+  pict.reset(new MWAWPictSimpleText(*m_graphicManager, m_box));
   MWAWParagraph para;
   para.m_justify = m_justify;
   pict->setParagraph(para);
@@ -665,7 +706,7 @@ bool TextBox::getSimpleBinaryData(MWAWGraphicStyleManager &manager,
       unsigned char c=(unsigned char)m_text[(size_t) charPos++];
       switch(c) {
       case 0x9:
-        MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getSimpleBinaryData: find some tabs\n"));
+        MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getBasicPicture: find some tabs\n"));
         pict->insertCharacter(' ');
         break;
       case 0xd:
@@ -679,15 +720,15 @@ bool TextBox::getSimpleBinaryData(MWAWGraphicStyleManager &manager,
         pict->insertField(MWAWField(MWAWField::PageNumber));
         break;
       case 0x16:
-        MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getSimpleBinaryData: find some time\n"));
+        MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getBasicPicture: find some time\n"));
         pict->insertField(MWAWField(MWAWField::Time));
         break;
       case 0x17:
-        MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getSimpleBinaryData: find some date\n"));
+        MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getBasicPicture: find some date\n"));
         pict->insertField(MWAWField(MWAWField::Date));
         break;
       case 0x14: // fixme
-        MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getSimpleBinaryData: footnote are not implemented\n"));
+        MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getBasicPicture: footnote are not implemented\n"));
         break;
       default:
         pict->insertCharacter(c);
@@ -699,7 +740,13 @@ bool TextBox::getSimpleBinaryData(MWAWGraphicStyleManager &manager,
   MWAWGraphicStyle style(m_style);
   style.m_lineWidth=0;
   pict->setStyle(style);
-  return pict->getBinary(res,type);
+  return pict;
+}
+
+bool TextBox::getBinaryData(MWAWInputStreamPtr input, WPXBinaryData &res, std::string &type) const
+{
+  shared_ptr<MWAWPict> pict=getBasicPicture(input);
+  return pict && pict->getBinary(res,type);
 }
 
 ////////////////////////////////////////
@@ -812,7 +859,7 @@ struct Patterns {
 //! Internal: the state of a MSKGraph
 struct State {
   //! constructor
-  State() : m_version(-1), m_zonesList(), m_RBsMap(), m_font(20,12), m_tableId(0), m_numPages(0), m_rsrcPatternsMap() { }
+  State() : m_version(-1), m_zonesList(), m_RBsMap(), m_font(20,12), m_chartId(0), m_tableId(0), m_numPages(0), m_rsrcPatternsMap() { }
   //! return the pattern corresponding to an id
   bool getPattern(MWAWGraphicStyle::Pattern &pat, int id, long rsid=-1);
   //! return the percentage corresponding to a pattern
@@ -827,7 +874,9 @@ struct State {
   std::map<int, RBZone> m_RBsMap;
   //! the actual font
   MWAWFont m_font;
-  //! an index used to store page
+  //! an index used to store chart
+  int m_chartId;
+  //! an index used to store table
   int m_tableId;
   //! the number of pages
   int m_numPages;
@@ -928,7 +977,7 @@ bool State::getPattern(MWAWGraphicStyle::Pattern &pat, int id, long rsid)
 class SubDocument : public MWAWSubDocument
 {
 public:
-  enum Type { RBILZone, Table, Empty, TextBoxv4 };
+  enum Type { RBILZone, Chart, Table, Empty, TextBoxv4 };
   SubDocument(MSKGraph &pars, MWAWInputStreamPtr input, Type type,
               int zoneId) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(zoneId), m_frame("") {}
@@ -974,6 +1023,9 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   long pos = m_input->tell();
   switch(m_type) {
   case Empty:
+    break;
+  case Chart:
+    m_graphParser->sendChart(m_id);
     break;
   case Table:
     m_graphParser->sendTable(m_id);
@@ -1052,11 +1104,41 @@ void MSKGraph::sendFrameText(MWAWEntry const &entry, std::string const &frame)
   m_mainParser->sendFrameText(entry, frame);
 }
 
+void MSKGraph::sendChart(int zoneId)
+{
+  m_tableParser->sendChart(zoneId);
+}
+
+void MSKGraph::sendTable(int zoneId)
+{
+  m_tableParser->sendTable(zoneId);
+}
+
 ////////////////////////////////////////////////////////////
 //
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
+bool MSKGraph::getZoneGraphicStyle(int id, MWAWGraphicStyle &style) const
+{
+  if (id<0 || id>=int(m_state->m_zonesList.size()) || !m_state->m_zonesList[size_t(id)]) {
+    MWAW_DEBUG_MSG(("MSKGraph::getZoneGraphicStyle: unknown zone %d\n", id));
+    return false;
+  }
+  style = m_state->m_zonesList[size_t(id)]->m_style;
+  return true;
+}
+
+bool MSKGraph::getZonePosition(int id, MWAWPosition::AnchorTo anchor, MWAWPosition &pos) const
+{
+  if (id<0 || id>=int(m_state->m_zonesList.size()) || !m_state->m_zonesList[size_t(id)]) {
+    MWAW_DEBUG_MSG(("MSKGraph::getZoneGraphicStyle: unknown zone %d\n", id));
+    return false;
+  }
+  pos = m_state->m_zonesList[size_t(id)]->getPosition(anchor);
+  return true;
+}
+
 bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
 {
   MWAWInputStreamPtr input=m_mainParser->getInput();
@@ -1351,15 +1433,14 @@ bool MSKGraph::readGradient(MSKGraph::Style &style)
   return true;
 }
 
-int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
+int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int order)
 {
-  int zId = -1;
   MSKGraphInternal::Zone pict;
   MWAWInputStreamPtr input=m_mainParser->getInput();
   long pos = input->tell();
 
   if (!readPictHeader(pict))
-    return zId;
+    return -1;
   pict.m_zoneId = zoneId;
   pict.m_pos.setBegin(pos);
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
@@ -1414,15 +1495,15 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
   case 0xe: { // spreadsheet v4
     input->seek(debData+0xa7, WPX_SEEK_SET);
     int pSize = (int) input->readULong(2);
-    if (pSize == 0) return zId;
+    if (pSize == 0) return -1;
     dataSize = 0xa9+pSize;
     if (!input->checkPosition(debData+dataSize))
-      return zId;
+      return -1;
 
     input->seek(debData+dataSize, WPX_SEEK_SET);
     for (int i = 0; i < 2; i++) {
       long sz = (long) input->readULong(4);
-      if (sz<0 || (sz>>28)) return zId;
+      if (sz<0 || (sz>>28)) return -1;
       dataSize += 4 + sz;
       input->seek(sz, WPX_SEEK_CUR);
     }
@@ -1440,7 +1521,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
 
     for (int i = 0; i < 3; i++) {
       long sz = (long) input->readULong(4);
-      if (sz<0 || ((sz>>28))) return zId;
+      if (sz<0 || ((sz>>28))) return -1;
       dataSize += 4 + sz;
       input->seek(sz, WPX_SEEK_CUR);
     }
@@ -1449,12 +1530,12 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
   }
   default:
     MWAW_DEBUG_MSG(("MSKGraph::getEntryPicture: type %d is not umplemented\n", pict.m_subType));
-    return zId;
+    return -1;
   }
 
   pict.m_pos.setEnd(debData+dataSize+versSize);
   if (!input->checkPosition(pict.m_pos.end()))
-    return zId;
+    return -1;
 
   input->seek(debData, WPX_SEEK_SET);
   if (versSize) {
@@ -1571,7 +1652,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     }
     f << "],";
     int numPos = (int) input->readLong(2);
-    if (numPos < 0) return zId;
+    if (numPos < 0) return -1;
     f << "numFonts=" << input->readLong(2);
 
     long off[4];
@@ -1581,27 +1662,24 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
       << ", " << std::dec << long(off[1]-off[0])
       << ", "	<< std::dec << long(off[3]-off[0]) << "]";
 
-    MSKGraphInternal::TextBox *text  = new MSKGraphInternal::TextBox(pict);
+    MSKGraphInternal::TextBox *text  = new MSKGraphInternal::TextBox(pict, graphicManager);
     text->m_justify = justify;
     text->m_numPositions = numPos;
     res.reset(text);
-    if (!readText(*text)) return zId;
+    if (!readText(*text)) return -1;
     res->m_pos.setEnd(input->tell());
     break;
   }
   case 0xa: { // chart
-    size_t actualZone = m_state->m_zonesList.size();
-    if (!readChart(pict)) {
-      m_state->m_zonesList.resize(actualZone);
-      return zId;
-    }
-
-    f.str("");
-    f << "Entries(Grapha):" << pict;
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-
-    return int(m_state->m_zonesList.size())-1;
+    MSKGraphInternal::Chart *chart  = new MSKGraphInternal::Chart(pict);
+    int chartId = m_state->m_chartId++;
+    if (!m_tableParser->readChart(chartId, chart->m_style))
+      return -1;
+    m_tableParser->setChartZoneId(chartId, int(m_state->m_zonesList.size()));
+    chart->m_chartId = chartId;
+    res.reset(chart);
+    res->m_pos.setEnd(input->tell());
+    break;
   }
   case 0xc: { // equation
     MSKGraphInternal::OLEZone *ole  = new MSKGraphInternal::OLEZone(pict);
@@ -1627,7 +1705,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     f2 << "), ";
     int nCol = (int) input->readLong(2);
     int nRow = (int) input->readLong(2);
-    if (nRow <= 0 || nCol <= 0) return zId;
+    if (nRow <= 0 || nCol <= 0) return -1;
 
     f2 << "nRow=" << nRow << ", " << "nCol=" << nCol << ", ";
 
@@ -1648,7 +1726,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
       // sometimes, another row is added: only for big picture?
       if (bitmapSize>0 && (bitmapSize%(nRow+1)) == 0) nRow++;
       else if (bitmapSize < nCol*nRow || bitmapSize > 2*nCol*nRow)
-        return zId;
+        return -1;
       else { // maybe a not implemented case
         MWAW_DEBUG_MSG(("MSKGraph::getEntryPicture: bitmap size is a little odd\n"));
         f2 << "###";
@@ -1660,7 +1738,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     }
 
     int szCol = int(bitmapSize/nRow);
-    if (szCol < nCol) return zId;
+    if (szCol < nCol) return -1;
 
     ascFile.addPos(actPos);
     ascFile.addNote(f2.str().c_str());
@@ -1684,7 +1762,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     ascFile.addPos(actPos);
     ascFile.addNote("Graphe(pict)");
     long dSize = (long) input->readLong(4);
-    if (dSize < 0) return zId;
+    if (dSize < 0) return -1;
     pict.m_dataPos = actPos+4;
 
     MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict, graphicManager);
@@ -1696,7 +1774,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     // now the spreadsheet ( a classic WKS file )
     actPos = input->tell();
     dSize = (long) input->readULong(4);
-    if (dSize < 0) return zId;
+    if (dSize < 0) return -1;
     ascFile.addPos(actPos);
     ascFile.addNote("Graphe(sheet)");
     ascFile.skipZone(actPos+4, actPos+3+dSize);
@@ -1719,7 +1797,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     break;
   }
   case 0xf: { // new text box v4 (a picture is stored)
-    if (vers < 4) return false;
+    if (vers < 4) return -1;
     MSKGraphInternal::TextBoxv4 *textbox = new MSKGraphInternal::TextBoxv4(pict);
     res.reset(textbox);
     textbox->m_ids[1] = (long) input->readULong(4);
@@ -1767,7 +1845,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
 
     // basic name font
     int nbChar = (int) input->readULong(1);
-    if (nbChar > 31) return false;
+    if (nbChar > 31) return -1;
     std::string fName;
     for (int c = 0; c < nbChar; c++)
       fName+=(char) input->readLong(1);
@@ -1786,7 +1864,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     ascFile.addPos(actPos);
     ascFile.addNote("Graph10(pict)");
     long dSize = (long) input->readLong(4);
-    if (dSize < 0) return zId;
+    if (dSize < 0) return -1;
     pict.m_dataPos = actPos+4;
 
     MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(pict, graphicManager);
@@ -1814,10 +1892,11 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
     res.reset(new MSKGraphInternal::Zone(pict));
   res->m_extra += f.str();
 
-  zId = int(m_state->m_zonesList.size());
-  res->m_fileId = zId;
   if (order > -1000)
     res->m_order = order;
+  if (!autoSend)
+    res->m_doNotSend = true;
+  res->m_fileId = int(m_state->m_zonesList.size());
   m_state->m_zonesList.push_back(res);
 
   f.str("");
@@ -1829,7 +1908,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, int order)
   zone.setType("Graphic");
   input->seek(res->m_pos.end(), WPX_SEEK_SET);
 
-  return zId;
+  return res->m_fileId;
 }
 
 void MSKGraph::computePositions(int zoneId, std::vector<int> &linesH, std::vector<int> &pagesH)
@@ -1865,29 +1944,28 @@ void MSKGraph::computePositions(int zoneId, std::vector<int> &linesH, std::vecto
   }
 }
 
-int MSKGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone)
+int MSKGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone, bool autoSend)
 {
-  int zId = -1;
   MWAWInputStreamPtr input=m_mainParser->getInput();
-  if (input->atEOS()) return zId;
+  if (input->atEOS()) return -1;
 
   long pos = input->tell();
-  if (input->readULong(1) != 1) return zId;
+  if (input->readULong(1) != 1) return -1;
 
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
   long ptr = (long) input->readULong(2);
   int flag = (int) input->readULong(1);
   long size = (long) input->readULong(2)+6;
-  if (size < 22) return zId;
+  if (size < 22) return -1;
 
+  // check if we can go to the next zone
+  if (!input->checkPosition(pos+size)) return -1;
   shared_ptr<MSKGraphInternal::DataPict> pict(new MSKGraphInternal::DataPict(*m_parserState->m_graphicStyleManager));
   pict->m_zoneId = zoneId;
   pict->m_subType = 0x100;
   pict->m_pos.setBegin(pos);
   pict->m_pos.setLength(size);
-  // check if we can go to the next zone
-  if (!input->checkPosition(pict->m_pos.end())) return zId;
 
   if (ptr) f << std::hex << "ptr0=" << ptr << ",";
   if (flag) f << std::hex << "fl=" << flag << ",";
@@ -1905,20 +1983,20 @@ int MSKGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone)
   pict->m_box = Box2f(Vec2f(float(dim[1]), float(dim[0])), Vec2f(float(dim[3]),float(dim[2])));
 
   Vec2i pictMin = pict->m_box.min(), pictSize = pict->m_box.size();
-  if (pictSize.x() < 0 || pictSize.y() < 0) return zId;
+  if (pictSize.x() < 0 || pictSize.y() < 0) return -1;
 
   if (pictSize.x() > 3000 || pictSize.y() > 3000 ||
-      pictMin.x() < -200 || pictMin.y() < -200) return zId;
+      pictMin.x() < -200 || pictMin.y() < -200) return -1;
   pict->m_dataPos = input->tell();
 
   zone = pict->m_pos;
   zone.setType("GraphEntry");
 
   pict->m_extra = f.str();
-  zId = int(m_state->m_zonesList.size());
-  pict->m_fileId = zId;
+  if (!autoSend)
+    pict->m_doNotSend=true;
+  pict->m_fileId = int(m_state->m_zonesList.size());
   m_state->m_zonesList.push_back(pict);
-
   f.str("");
   f << "Entries(GraphEntry):" << *pict;
 
@@ -1927,8 +2005,7 @@ int MSKGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone)
   ascFile.addNote(f.str().c_str());
 
   input->seek(pict->m_pos.end(), WPX_SEEK_SET);
-  return zId;
-
+  return pict->m_fileId;
 }
 
 // a list of picture
@@ -2014,8 +2091,7 @@ bool MSKGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
     long debPos = input->tell();
     size_t actId = m_state->m_zonesList.size();
     MWAWEntry pict;
-    int pictId = getEntryPicture(0, pict);
-    if (pictId < 0 || input->tell() <= debPos) {
+    if (getEntryPicture(0, pict)<0 || input->tell() <= debPos) {
       f.str("");
       MWAW_DEBUG_MSG(("MSKGraph::readRB: oops can not read end of file\n"));
       f << "###" << entry.name();
@@ -2024,9 +2100,9 @@ bool MSKGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
       break;
     }
     for (size_t z = actId; z < m_state->m_zonesList.size(); z++) {
+      shared_ptr<MSKGraphInternal::Zone> pictZone = m_state->m_zonesList[z];
+      if (!pictZone) continue;
       zone.m_idList.push_back(int(z));
-      shared_ptr<MSKGraphInternal::Zone> pictZone =
-        m_state->m_zonesList[z];
       if (!zone.m_isMain)
         pictZone->m_page = -2;
     }
@@ -2046,20 +2122,23 @@ bool MSKGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
 
 void MSKGraph::checkTextBoxLinks(int zId)
 {
-  std::map<int, MSKGraphInternal::RBZone>::const_iterator rbIt
-    = m_state->m_RBsMap.find(zId);
+  std::map<int, MSKGraphInternal::RBZone>::iterator rbIt = m_state->m_RBsMap.find(zId);
   if (rbIt==m_state->m_RBsMap.end())
     return;
-  std::vector<int> const &listIds = rbIt->second.m_idList;
-  std::string const &fName = rbIt->second.m_frame;
+  MSKGraphInternal::RBZone &rbZone=rbIt->second;
+  std::vector<int> listIds = rbZone.m_idList;
+  std::string const &fName = rbZone.m_frame;
   int numZones = int(m_state->m_zonesList.size());
   std::set<long> textIds;
   std::map<long,long> prevLinks, nextLinks;
   bool ok = true;
+  std::vector<int> toSendListIds;
   for (size_t z = 0; z < listIds.size(); z++) {
     int id = listIds[z];
     if (id < 0 || id >= numZones) continue;
     shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[size_t(id)];
+    if (!zone->m_doNotSend)
+      toSendListIds.push_back(id);
     if (zone->type() != MSKGraphInternal::Zone::Textv4)
       continue;
     reinterpret_cast<MSKGraphInternal::TextBoxv4 &>(*zone).m_frame = fName;
@@ -2074,6 +2153,7 @@ void MSKGraph::checkTextBoxLinks(int zId)
     if (zone->m_ids[2]>0)
       nextLinks.insert(std::map<long,long>::value_type(zone->m_ids[0],zone->m_ids[2]));
   }
+  rbZone.m_idList=toSendListIds;
   size_t numLinks = nextLinks.size();
   for (std::map<long,long>::const_iterator link=nextLinks.begin();
        link!=nextLinks.end(); ++link) {
@@ -2327,158 +2407,6 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
   return true;
 }
 
-bool MSKGraph::readChart(MSKGraphInternal::Zone &zone)
-{
-  MWAWInputStreamPtr input=m_mainParser->getInput();
-  long pos = input->tell();
-  if (version() <= 3)
-    return false;
-  if (!input->checkPosition(pos+306))
-    return false;
-
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(Chart):";
-
-  int val = (int) input->readLong(2);
-  switch(val) {
-  case 1:
-    f << "bar,";
-    break;
-  case 2:
-    f << "stacked,";
-    break;
-  case 3:
-    f << "line,";
-    break; // checkme
-  case 4:
-    f << "combo,";
-    break; // checkme
-  case 5:
-    f << "pie,";
-    break; // checkme
-  case 6:
-    f << "hi-lo-choose,";
-    break; // checkme
-  default:
-    f << "#type=val";
-    break;
-  }
-  for (int i = 0; i < 4; i++) {
-    val = (int) input->readLong(2);
-    if (val) f << "col" << i << "=" << val << ",";
-  }
-  f << "rows=";
-  for (int i = 0; i < 2; i++) {
-    val = (int) input->readLong(2);
-    f << val;
-    if (i==0) f << "-";
-    else f << ",";
-  }
-  val =  (int) input->readLong(2);
-  if (val) f << "colLabels=" << val << ",";
-  val =  (int) input->readLong(2);
-  if (val) f << "rowLabels=" << val << ",";
-  std::string name("");
-  int sz = (int) input->readULong(1);
-  if (sz > 31) {
-    MWAW_DEBUG_MSG(("MSKGraph::readChart: string size is too long\n"));
-    return false;
-  }
-  for (int i = 0; i < sz; i++) {
-    char c = (char) input->readLong(1);
-    if (!c) break;
-    name+=c;
-  }
-  f << name << ",";
-  input->seek(pos+50, WPX_SEEK_SET);
-  for (int i = 0; i < 128; i++) { // always 0 ?
-    val =  (int) input->readLong(2);
-    if (val) f << "g" << i << "=" << val << std::dec << ",";
-  }
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-
-  pos = input->tell();
-  ascFile.addPos(pos);
-  ascFile.addNote("Chart(II)");
-  input->seek(2428, WPX_SEEK_CUR);
-
-  // three textbox
-  for (int i = 0; i < 3; i++) {
-    pos = input->tell();
-    MWAWEntry childZone;
-    int childId = getEntryPicture(zone.m_zoneId, childZone, i+2);
-    if (childId < 0) {
-      MWAW_DEBUG_MSG(("MSKGraph::readChart: can not find textbox\n"));
-      input->seek(pos, WPX_SEEK_SET);
-      return false;
-    }
-  }
-  // the background picture
-  pos = input->tell();
-  long dataSz = (long) input->readULong(4);
-  long smDataSz = (long) input->readULong(2);
-  if (!dataSz || (dataSz&0xFFFF) != smDataSz) {
-    MWAW_DEBUG_MSG(("MSKGraph::readChart: last pict size seems odd\n"));
-    input->seek(pos, WPX_SEEK_SET);
-    return false;
-  }
-
-  MSKGraphInternal::DataPict *pct  = new MSKGraphInternal::DataPict(zone, *m_parserState->m_graphicStyleManager);
-  shared_ptr<MSKGraphInternal::Zone> res(pct);
-  pct->m_dataPos = pos+4;
-  pct->m_pos.setEnd(pos+4+dataSz);
-  ascFile.skipZone(pct->m_dataPos, pct->m_pos.end()-1);
-
-  int zId = int(m_state->m_zonesList.size());
-  pct->m_fileId = zId;
-  pct->m_order = 1;
-  m_state->m_zonesList.push_back(res);
-
-  ascFile.addPos(pos);
-  ascFile.addNote("Chart(picture)");
-#ifdef DEBUG_WITH_FILES
-  WPXBinaryData file;
-  input->seek(pos+4, WPX_SEEK_SET);
-  input->readDataBlock(dataSz, file);
-  static int volatile chartName = 0;
-  libmwaw::DebugStream f2;
-  f2 << "Chart-" << ++chartName << ".pct";
-  libmwaw::Debug::dumpFile(file, f2.str().c_str());
-#endif
-  input->seek(pos+4+dataSz, WPX_SEEK_SET);
-
-  // last the value ( by columns ? )
-  for (int i = 0; i < 4; i++) {
-    pos = input->tell();
-    dataSz = (long) input->readULong(4);
-    if (dataSz%0x10) {
-      MWAW_DEBUG_MSG(("MSKGraph::readChart: can not read end last zone\n"));
-      input->seek(pos, WPX_SEEK_SET);
-      return false;
-    }
-    f.str("");
-    f << "Chart(A" << i << ")";
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-    int numLine = int(dataSz/0x10);
-    for (int l = 0; l < numLine; l++) {
-      f.str("");
-      f << "Chart(A" << i << "-" << l << ")";
-      ascFile.addPos(pos+4+0x10*l);
-      ascFile.addNote(f.str().c_str());
-    }
-    input->seek(pos+4+dataSz, WPX_SEEK_SET);
-  }
-  return true;
-}
-
-void MSKGraph::sendTable(int zoneId)
-{
-  return m_tableParser->sendTable(zoneId);
-}
-
 bool MSKGraph::readFont(MWAWFont &font)
 {
   int vers = version();
@@ -2527,7 +2455,7 @@ bool MSKGraph::readFont(MWAWFont &font)
   return true;
 }
 
-void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
+void MSKGraph::send(int id, MWAWPosition const &pos)
 {
   if (id < 0 || id >= int(m_state->m_zonesList.size())) {
     MWAW_DEBUG_MSG(("MSKGraph::send: can not find zone %d\n", id));
@@ -2538,8 +2466,10 @@ void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
   shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[(size_t)id];
   zone->m_isSent = true;
 
-  MWAWPosition pictPos = zone->getPosition(anchor);
-  if (anchor == MWAWPosition::Page)
+  MWAWPosition pictPos(pos);
+  if (pos.size()[0]<=0 || pos.size()[1]<=0)
+    pictPos = zone->getPosition(pos.m_anchorTo);
+  if (pictPos.m_anchorTo == MWAWPosition::Page)
     pictPos.setOrigin(pictPos.origin()+72.*m_mainParser->getPageLeftTop());
   WPXPropertyList extras;
   zone->fillFramePropertyList(extras);
@@ -2550,7 +2480,7 @@ void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
     MSKGraphInternal::TextBox &textbox = reinterpret_cast<MSKGraphInternal::TextBox &>(*zone);
     WPXBinaryData data;
     std::string type;
-    if (textbox.getSimpleBinaryData(*m_parserState->m_graphicStyleManager, data, type)) {
+    if (textbox.getBinaryData(input, data, type)) {
       listener->insertPicture(pictPos, data, type, extras);
       return;
     }
@@ -2563,6 +2493,13 @@ void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
     MSKGraphInternal::Table &table = reinterpret_cast<MSKGraphInternal::Table &>(*zone);
     shared_ptr<MSKGraphInternal::SubDocument> subdoc
     (new MSKGraphInternal::SubDocument(*this, input, MSKGraphInternal::SubDocument::Table, table.m_tableId));
+    listener->insertTextBox(pictPos, subdoc, extras);
+    return;
+  }
+  case MSKGraphInternal::Zone::ChartZone: {
+    MSKGraphInternal::Chart &chart = reinterpret_cast<MSKGraphInternal::Chart &>(*zone);
+    shared_ptr<MSKGraphInternal::SubDocument> subdoc
+    (new MSKGraphInternal::SubDocument(*this, input, MSKGraphInternal::SubDocument::Chart, chart.m_chartId));
     listener->insertTextBox(pictPos, subdoc, extras);
     return;
   }
@@ -2620,13 +2557,15 @@ void MSKGraph::send(int id, MWAWPosition::AnchorTo anchor)
 
 void MSKGraph::sendAll(int zoneId, bool mainZone)
 {
+  MWAWPosition undefPos;
   for (size_t i = 0; i < m_state->m_zonesList.size(); i++) {
     shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[i];
     if (zoneId >= 0 && zoneId!=zone->m_zoneId)
       continue;
     if (zone->m_isSent && mainZone)
       continue;
-    send(int(i), mainZone ? MWAWPosition::Page : MWAWPosition::Paragraph);
+    undefPos.m_anchorTo = mainZone ? MWAWPosition::Page : MWAWPosition::Paragraph;
+    send(int(i), undefPos);
   }
 }
 
@@ -2679,10 +2618,14 @@ void MSKGraph::sendObjects(MSKGraph::SendData what)
       }
     }
   }
+  MWAWPosition undefPos;
+  undefPos.m_anchorTo = what.m_anchor;
   for (size_t i = 0; i < listIds.size(); i++) {
     int id = listIds[i];
     if (id < 0 || id >= numZones) continue;
     shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[size_t(id)];
+    if (!zone || zone->m_doNotSend)
+      continue;
     if (zone->m_isSent) {
       if (what.m_type == MSKGraph::SendData::ALL ||
           what.m_anchor == MWAWPosition::Page) continue;
@@ -2699,17 +2642,19 @@ void MSKGraph::sendObjects(MSKGraph::SendData what)
       if (what.m_anchor == MWAWPosition::Page && (!listener->isSectionOpened() && !listener->isParagraphOpened()))
         listener->insertChar(' ');
     }
-    send(int(id), what.m_anchor);
+    send(int(id), undefPos);
     zone->m_page = oldPage;
   }
 }
 
 void MSKGraph::flushExtra()
 {
+  MWAWPosition undefPos;
+  undefPos.m_anchorTo=MWAWPosition::Char;
   for (size_t i = 0; i < m_state->m_zonesList.size(); i++) {
     shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[i];
     if (zone->m_isSent) continue;
-    send(int(i), MWAWPosition::Char);
+    send(int(i), undefPos);
   }
 }
 

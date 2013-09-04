@@ -50,12 +50,15 @@
 
 namespace MSKGraphInternal
 {
+struct Chart;
 struct DataPict;
 struct GroupZone;
-struct State;
 struct Table;
 struct TextBox;
 struct Zone;
+
+struct State;
+
 class SubDocument;
 }
 
@@ -84,8 +87,11 @@ public:
   /** returns the number of pages */
   int numPages(int zoneId) const;
 
-  /** send a zone (textbox, ...) */
-  void send(int id, MWAWPosition::AnchorTo anchor);
+  /** send a zone (textbox, ...).
+
+   \note if pos.size() is not defined, this function will retrieve the
+   position, .. using the corresponding zone's data */
+  void send(int id, MWAWPosition const &pos);
 
   /** send all the picture corresponding to a zone */
   void sendAll(int zoneId, bool mainZone);
@@ -124,15 +130,11 @@ protected:
   bool readPictHeader(MSKGraphInternal::Zone &pict);
   //! read the gradient structure ( v4)
   bool readGradient(Style &style);
-  /** checks if the next zone is a v1 picture and returns a zone
-      id. If not, returns -1.
-   */
-  int getEntryPictureV1(int zoneId, MWAWEntry &zone);
+  /** checks if the next zone is a v1 picture and returns a zone id ( or -1).*/
+  int getEntryPictureV1(int zoneId, MWAWEntry &zone, bool autoSend=true);
 
-  /** checks if the next zone is a v2 picture and returns a zone
-      id. If not, returns -1.
-   */
-  int getEntryPicture(int zoneId, MWAWEntry &zone, int order=-1000);
+  /** checks if the next zone is a v2 picture and returns a zone id ( or -1) */
+  int getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend=true, int order=-1000);
 
   // version 4 file
 
@@ -148,14 +150,21 @@ protected:
   /** check the text box link */
   void checkTextBoxLinks(int zId);
 
+  // interface function
+
+  /** returns the graphic style of the zone defined by zoneId */
+  bool getZoneGraphicStyle(int zoneId, MWAWGraphicStyle &style) const;
+  /** returns the position of the zone defined by zoneId */
+  bool getZonePosition(int zoneId, MWAWPosition::AnchorTo anchor, MWAWPosition &pos) const;
+
   //! ask m_mainParser to send a frame text(v4)
   void sendFrameText(MWAWEntry const &entry, std::string const &frame);
 
   //! try to  a table zone
   void sendTable(int id);
 
-  //! try to read a chart (very incomplete)
-  bool readChart(MSKGraphInternal::Zone &zone);
+  //! try to send a chart
+  void sendChart(int zoneId);
 
   //
   // low level
