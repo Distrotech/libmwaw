@@ -177,7 +177,6 @@ protected:
   int m_layer;
   //! the data style
   MWAWGraphicStyle m_style;
-private:
   //! m_extend[0]: from lineWidth, m_extend[1]: came from extra data
   float m_extend[2];
 };

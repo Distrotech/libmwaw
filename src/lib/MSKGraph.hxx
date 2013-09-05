@@ -50,10 +50,7 @@
 
 namespace MSKGraphInternal
 {
-struct Chart;
-struct DataPict;
 struct GroupZone;
-struct Table;
 struct TextBox;
 struct Zone;
 
@@ -61,6 +58,8 @@ struct State;
 
 class SubDocument;
 }
+
+class MWAWPictBasic;
 
 class MSKParser;
 class MSK3Parser;
@@ -171,7 +170,12 @@ protected:
   //
   /** try to read the group data*/
   shared_ptr<MSKGraphInternal::GroupZone> readGroup(MSKGraphInternal::Zone &group);
-
+  /** try to send a group */
+  void sendGroup(int zoneId, MWAWPosition const &pos);
+  /** try to send a group elements by elemenys*/
+  void sendGroupChild(int zoneId, MWAWPosition const &pos);
+  /** try to convert a group in basic picture */
+  shared_ptr<MWAWPictBasic> convertGroup(MSKGraphInternal::GroupZone const &group);
   //! reads the textbox font
   bool readFont(MWAWFont &font);
 

@@ -519,16 +519,18 @@ void MWAWPictSimpleText::setParagraph(MWAWParagraph const &paragraph)
     m_posParagraphMap[(int) strlen(m_textBuffer.cstr())]=paragraph;
 }
 
-bool MWAWPictSimpleText::send(MWAWPropertyHandlerEncoder &doc, Vec2f const &) const
+bool MWAWPictSimpleText::send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
 {
   WPXPropertyList list;
-  Vec2f size=getBdBox().size();
+  Box2f const &bdbox=getBdBox();
+  Vec2f size=bdbox.size();
+  Vec2f pt=bdbox[0]-orig;
   if (m_style.hasGradient(true)) {
     // ok, first send a background rectangle
     sendStyle(doc);
 
-    list.insert("svg:x",0, WPX_POINT);
-    list.insert("svg:y",0, WPX_POINT);
+    list.insert("svg:x",pt[0], WPX_POINT);
+    list.insert("svg:y",pt[1], WPX_POINT);
     list.insert("svg:width",size.x(), WPX_POINT);
     list.insert("svg:height",size.y(), WPX_POINT);
     doc.startElement("Rectangle", list);
@@ -541,8 +543,8 @@ bool MWAWPictSimpleText::send(MWAWPropertyHandlerEncoder &doc, Vec2f const &) co
     WPXPropertyListVector grad;
     getGraphicStyleProperty(list, grad);
   }
-  list.insert("svg:x",0, WPX_POINT);
-  list.insert("svg:y",0, WPX_POINT);
+  list.insert("svg:x",pt[0], WPX_POINT);
+  list.insert("svg:y",pt[1], WPX_POINT);
   list.insert("svg:width",size.x(), WPX_POINT);
   list.insert("svg:height",size.y(), WPX_POINT);
   list.insert("fo:padding-top",m_LTPadding[1], WPX_POINT);
@@ -714,6 +716,7 @@ void MWAWPictGroup::addChild(shared_ptr<MWAWPictBasic> child)
     MWAW_DEBUG_MSG(("MWAWPictGroup::addChild: called without child\n"));
     return;
   }
+  MWAWPict::extendBDBox(0);
   Box2f cBDBox=child->getBdBox();
   Box2f bdbox=getBdBox();
   Vec2f pt=bdbox[0];
@@ -726,7 +729,7 @@ void MWAWPictGroup::addChild(shared_ptr<MWAWPictBasic> child)
   if (cBDBox[1][1]>pt[1]) pt[1]=cBDBox[1][1];
   bdbox.setMax(pt);
   setBdBox(bdbox);
-
+  MWAWPict::extendBDBox(m_extend[0]+m_extend[1]);
   m_child.push_back(child);
 }
 

@@ -83,7 +83,7 @@ struct RBZone {
 struct Zone {
   enum Type { Unknown, Basic, ChartZone, Group, Pict, Text, Textv4, Bitmap, TableZone, OLE};
   //! constructor
-  Zone() : m_subType(-1), m_zoneId(-1), m_pos(), m_dataPos(-1), m_fileId(-1), m_page(-1), m_decal(), m_box(), m_line(-1),
+  Zone() : m_subType(-1), m_zoneId(-1), m_pos(), m_dataPos(-1), m_fileId(-1), m_page(-1), m_decal(), m_finalDecal(), m_box(), m_line(-1),
     m_style(), m_order(0), m_extra(""), m_doNotSend(false), m_isSent(false) {
     for (int i = 0; i < 3; i++) m_ids[i] = 0;
   }
@@ -142,16 +142,16 @@ struct Zone {
     MWAWPosition res;
     Box2f box = getLocalBox();
     if (rel==MWAWPosition::Paragraph || rel==MWAWPosition::Frame) {
-      res = MWAWPosition(box.min()+m_decal, box.size(), WPX_POINT);
+      res = MWAWPosition(box.min()+m_finalDecal, box.size(), WPX_POINT);
       res.setRelativePosition(rel);
       if (rel==MWAWPosition::Paragraph)
-        res.m_wrapping =  MWAWPosition::WBackground;
+        res.m_wrapping = MWAWPosition::WBackground;
     } else if (rel!=MWAWPosition::Page || m_page < 0) {
       res = MWAWPosition(Vec2f(0,0), box.size(), WPX_POINT);
       res.setRelativePosition(MWAWPosition::Char,
                               MWAWPosition::XLeft, MWAWPosition::YTop);
     } else {
-      res = MWAWPosition(box.min()+m_decal, box.size(), WPX_POINT);
+      res = MWAWPosition(box.min()+m_finalDecal, box.size(), WPX_POINT);
       res.setRelativePosition(MWAWPosition::Page);
       res.setPage(m_page+1);
       res.m_wrapping =  MWAWPosition::WBackground;
@@ -178,7 +178,9 @@ struct Zone {
   //! the page
   int m_page;
   //! the local position
-  Vec2f m_decal;
+  Box2f m_decal;
+  //! the final local position
+  Vec2f m_finalDecal;
   //! local bdbox
   Box2f m_box;
   //! the line position(v1)
@@ -270,7 +272,7 @@ void Zone::print(std::ostream &o) const
     o << "#type=" << m_subType << ",";
   }
   if (m_page>=0) o << "page=" << m_page << ",";
-  if (m_decal.x() < 0 || m_decal.x() > 0 || m_decal.y() < 0 || m_decal.y() > 0)
+  if (m_decal!=Box2f())
     o << "pos=" << m_decal << ",";
   o << "bdbox=" << m_box << ",";
   o << "style=[" << m_style << "],";
@@ -281,8 +283,7 @@ void Zone::print(std::ostream &o) const
 //! Internal: the group of a MSKGraph
 struct GroupZone : public Zone {
   // constructor
-  GroupZone(Zone const &z) :
-    Zone(z), m_childs() { }
+  GroupZone(Zone const &z) : Zone(z), m_childs() { }
 
   //! return the type
   virtual Type type() const {
@@ -296,8 +297,7 @@ struct GroupZone : public Zone {
       o << "P" << m_childs[i] << ",";
     o << "],";
   }
-
-  // list of child id
+  //! list of child id
   std::vector<int> m_childs;
 };
 
@@ -358,51 +358,56 @@ shared_ptr<MWAWPictBasic> BasicForm::getBasicPicture(MWAWInputStreamPtr) const
   MWAWGraphicStyle pStyle(m_style);
   if (m_subType!=0)
     pStyle.m_arrows[0] = pStyle.m_arrows[1]=false;
-
+  Vec2f decal=m_decal[0]+m_decal[1];
+  Box2f bdbox=Box2f(m_box[0]+decal, m_box[1]+decal);
   switch(m_subType) {
   case 0: {
-    MWAWPictLine *pct=new MWAWPictLine(*m_graphicManager, m_box.min(), m_box.max());
+    MWAWPictLine *pct=new MWAWPictLine(*m_graphicManager, bdbox.min(), bdbox.max());
     pict.reset(pct);
     break;
   }
   case 1: {
-    MWAWPictRectangle *pct=new MWAWPictRectangle(*m_graphicManager, m_box);
+    MWAWPictRectangle *pct=new MWAWPictRectangle(*m_graphicManager, bdbox);
     pict.reset(pct);
     break;
   }
   case 2: {
-    MWAWPictRectangle *pct=new MWAWPictRectangle(*m_graphicManager, m_box);
+    MWAWPictRectangle *pct=new MWAWPictRectangle(*m_graphicManager, bdbox);
     int sz = 10;
-    if (m_box.size().x() > 0 && m_box.size().x() < 2*sz)
-      sz = int(m_box.size().x())/2;
-    if (m_box.size().y() > 0 && m_box.size().y() < 2*sz)
-      sz = int(m_box.size().y())/2;
+    if (bdbox.size().x() > 0 && bdbox.size().x() < 2*sz)
+      sz = int(bdbox.size().x())/2;
+    if (bdbox.size().y() > 0 && bdbox.size().y() < 2*sz)
+      sz = int(bdbox.size().y())/2;
     pct->setRoundCornerWidth(sz);
     pict.reset(pct);
     break;
   }
   case 3: {
-    MWAWPictCircle *pct=new MWAWPictCircle(*m_graphicManager, m_box);
+    MWAWPictCircle *pct=new MWAWPictCircle(*m_graphicManager, bdbox);
     pict.reset(pct);
     break;
   }
   case 4: {
     int angl2 = m_angle+((m_deltaAngle>0) ? m_deltaAngle : -m_deltaAngle);
-    MWAWPictArc *pct=new MWAWPictArc(*m_graphicManager, m_box, m_formBox, float(450-angl2), float(450-m_angle));
+    Box2f formBox(Vec2f(m_formBox[0])+decal,Vec2f(m_formBox[1])+decal);
+    MWAWPictArc *pct=new MWAWPictArc(*m_graphicManager, bdbox, formBox, float(450-angl2), float(450-m_angle));
     pict.reset(pct);
     break;
   }
   case 5: {
     size_t nbPt=m_vertices.size();
     if (!m_smooth || nbPt <= 2) {
-      MWAWPictPolygon *pct = new MWAWPictPolygon(*m_graphicManager, m_box, m_vertices);
+      std::vector<Vec2f> vertices(nbPt);
+      for (size_t pt=0; pt<nbPt; ++pt)
+        vertices[pt]=m_vertices[pt]+decal;
+      MWAWPictPolygon *pct = new MWAWPictPolygon(*m_graphicManager, bdbox, vertices);
       pict.reset(pct);
       break;
     }
     // changme: when the polygon is closed, this does not smooth the start/end domain
     Vec2f orig=m_box[0];
 
-    MWAWPictPath *path=new MWAWPictPath(*m_graphicManager, m_box);
+    MWAWPictPath *path=new MWAWPictPath(*m_graphicManager, bdbox);
     pict.reset(path);
     Vec2f vertex=m_vertices[0]-orig;
     path->add(MWAWPictPath::Command('M', vertex));
@@ -683,7 +688,9 @@ shared_ptr<MWAWPictBasic> TextBox::getBasicPicture(MWAWInputStreamPtr) const
     MWAW_DEBUG_MSG(("MSKGraphInternal::TextBox::getBasicPicture: formats size seems bad\n"));
     numPositions = m_formats.size();
   }
-  pict.reset(new MWAWPictSimpleText(*m_graphicManager, m_box));
+  Vec2f decal=m_decal[0]+m_decal[1];
+  Box2f bdbox=Box2f(m_box[0]+decal, m_box[1]+decal);
+  pict.reset(new MWAWPictSimpleText(*m_graphicManager, bdbox));
   MWAWParagraph para;
   para.m_justify = m_justify;
   pict->setParagraph(para);
@@ -977,7 +984,7 @@ bool State::getPattern(MWAWGraphicStyle::Pattern &pat, int id, long rsid)
 class SubDocument : public MWAWSubDocument
 {
 public:
-  enum Type { RBILZone, Chart, Table, Empty, TextBoxv4 };
+  enum Type { RBILZone, Chart, Empty, Group, Table, TextBoxv4 };
   SubDocument(MSKGraph &pars, MWAWInputStreamPtr input, Type type,
               int zoneId) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(zoneId), m_frame("") {}
@@ -1027,6 +1034,13 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   case Chart:
     m_graphParser->sendChart(m_id);
     break;
+  case Group: {
+    MWAWPosition gPos;
+    gPos.setRelativePosition(MWAWPosition::Frame,
+                             MWAWPosition::XLeft, MWAWPosition::YTop);
+    m_graphParser->sendGroupChild(m_id, gPos);
+    break;
+  }
   case Table:
     m_graphParser->sendTable(m_id);
     break;
@@ -1156,7 +1170,7 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
   if (vers >= 3) {
     val = (int) input->readLong(2);
     if (vers == 4)
-      pict.m_page = val;
+      pict.m_page = val==0 ? -2 : val-1;
     else if (val)
       f << "f0=" << val << ",";
   }
@@ -1283,10 +1297,11 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
       f << "f1=" << val << ",";
   }
 
-  int offset[4];
+  float offset[4];
   for (int i = 0; i < 4; i++)
-    offset[i] = (int) input->readLong(2);
-  pict.m_decal = Vec2f(float(offset[0]+offset[3]), float(offset[1]+offset[2]));
+    offset[i] = (float) input->readLong(2);
+  pict.m_decal = Box2f(Vec2f(offset[0],offset[1]), Vec2f(offset[3],offset[2]));
+  pict.m_finalDecal = Vec2f(float(offset[0]+offset[3]), float(offset[1]+offset[2]));
 
   // the two point which allows to create the form ( in general the bdbox)
   float dim[4];
@@ -1616,6 +1631,8 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
   }
   case 8:
     res = readGroup(pict);
+    if (!res)
+      return -1;
     break;
   case 9: { // textbox normal
     MWAWParagraph::Justification justify = MWAWParagraph::JustificationLeft;
@@ -1927,10 +1944,10 @@ void MSKGraph::computePositions(int zoneId, std::vector<int> &linesH, std::vecto
           h = linesH[(size_t) numLines-1];
       } else
         h = linesH[(size_t) zone->m_line];
-      zone->m_decal = Vec2f(0, float(h));
+      zone->m_finalDecal = Vec2f(0, float(h));
     }
     if (zone->m_page < 0 && zone->m_page != -2) {
-      float h = zone->m_decal.y();
+      float h = zone->m_finalDecal.y();
       float middleH=zone->m_box.center().y();
       h+=middleH;
       int p = 0;
@@ -1939,7 +1956,7 @@ void MSKGraph::computePositions(int zoneId, std::vector<int> &linesH, std::vecto
         h -= float(pagesH[(size_t) p++]);
       }
       zone->m_page = p;
-      zone->m_decal.setY(h-middleH);
+      zone->m_finalDecal.setY(h-middleH);
     }
   }
 }
@@ -2132,13 +2149,10 @@ void MSKGraph::checkTextBoxLinks(int zId)
   std::set<long> textIds;
   std::map<long,long> prevLinks, nextLinks;
   bool ok = true;
-  std::vector<int> toSendListIds;
   for (size_t z = 0; z < listIds.size(); z++) {
     int id = listIds[z];
     if (id < 0 || id >= numZones) continue;
     shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[size_t(id)];
-    if (!zone->m_doNotSend)
-      toSendListIds.push_back(id);
     if (zone->type() != MSKGraphInternal::Zone::Textv4)
       continue;
     reinterpret_cast<MSKGraphInternal::TextBoxv4 &>(*zone).m_frame = fName;
@@ -2153,7 +2167,6 @@ void MSKGraph::checkTextBoxLinks(int zId)
     if (zone->m_ids[2]>0)
       nextLinks.insert(std::map<long,long>::value_type(zone->m_ids[0],zone->m_ids[2]));
   }
-  rbZone.m_idList=toSendListIds;
   size_t numLinks = nextLinks.size();
   for (std::map<long,long>::const_iterator link=nextLinks.begin();
        link!=nextLinks.end(); ++link) {
@@ -2219,16 +2232,113 @@ bool MSKGraph::readPictureV4(MWAWInputStreamPtr /*input*/, MWAWEntry const &entr
 //
 ////////////////////////////////////////////////////////////
 
-// read a group
+// read/send a group
+void MSKGraph::sendGroupChild(int id, MWAWPosition const &pos)
+{
+  if (id<0 || id>=int(m_state->m_zonesList.size()) || !m_state->m_zonesList[size_t(id)] ||
+      m_state->m_zonesList[size_t(id)]->type()!=MSKGraphInternal::Zone::Group) {
+    MWAW_DEBUG_MSG(("MSKGraph::sendGroup: can not find group %d\n", id));
+    return;
+  }
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return;
+  MSKGraphInternal::GroupZone &group=
+    reinterpret_cast<MSKGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
+  group.m_isSent = true;
+  for (size_t c=0; c < group.m_childs.size(); ++c)
+    send(group.m_childs[c],pos);
+}
+
+void MSKGraph::sendGroup(int id, MWAWPosition const &pos)
+{
+  if (id<0 || id>=int(m_state->m_zonesList.size()) || !m_state->m_zonesList[size_t(id)] ||
+      m_state->m_zonesList[size_t(id)]->type()!=MSKGraphInternal::Zone::Group) {
+    MWAW_DEBUG_MSG(("MSKGraph::sendGroup: can not find group %d\n", id));
+    return;
+  }
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return;
+  MSKGraphInternal::GroupZone &group=
+    reinterpret_cast<MSKGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
+  group.m_isSent = true;
+
+  shared_ptr<MWAWPictBasic> pict=convertGroup(group);
+  WPXBinaryData data;
+  std::string type;
+  if (pict && pict->getBinary(data,type)) {
+    listener->insertPicture(pos, data, type);
+    return;
+  }
+  if (pos.m_anchorTo == MWAWPosition::Char || pos.m_anchorTo == MWAWPosition::CharBaseLine) {
+    shared_ptr<MSKGraphInternal::SubDocument> subdoc
+    (new MSKGraphInternal::SubDocument(*this, m_mainParser->getInput(), MSKGraphInternal::SubDocument::Group, id));
+    listener->insertTextBox(pos, subdoc);
+    return;
+  }
+  MWAWPosition childPos(pos);
+  childPos.setSize(Vec2f(0,0));
+  sendGroupChild(id, childPos);
+}
+
+shared_ptr<MWAWPictBasic> MSKGraph::convertGroup(MSKGraphInternal::GroupZone const &group)
+{
+  shared_ptr<MWAWPictGroup> res;
+  int numZones = int(m_state->m_zonesList.size());
+  for (size_t c=0; c < group.m_childs.size(); ++c) {
+    int cId = group.m_childs[c];
+    if (cId < 0 || cId >= numZones || !m_state->m_zonesList[size_t(cId)])
+      continue;
+    MSKGraphInternal::Zone const &child=*(m_state->m_zonesList[size_t(cId)]);
+    switch (child.type()) {
+    case MSKGraphInternal::Zone::Bitmap:
+    case MSKGraphInternal::Zone::ChartZone:
+    case MSKGraphInternal::Zone::OLE:
+    case MSKGraphInternal::Zone::Pict:
+    case MSKGraphInternal::Zone::TableZone:
+    case MSKGraphInternal::Zone::Textv4:
+    case MSKGraphInternal::Zone::Unknown:
+    default:
+      return res;
+    case MSKGraphInternal::Zone::Basic:
+    case MSKGraphInternal::Zone::Group: // maybe
+    case MSKGraphInternal::Zone::Text:
+      if (child.m_page!=group.m_page)
+        return res;
+      break;
+    }
+  }
+  res.reset(new MWAWPictGroup(*m_parserState->m_graphicStyleManager, group.m_box));
+  MWAWInputStreamPtr input=m_mainParser->getInput();
+  for (size_t c=0; c < group.m_childs.size(); ++c) {
+    int cId = group.m_childs[c];
+    if (cId < 0 || cId >= numZones || !m_state->m_zonesList[size_t(cId)])
+      continue;
+    MSKGraphInternal::Zone const &child=*(m_state->m_zonesList[size_t(cId)]);
+    shared_ptr<MWAWPictBasic> childPict;
+    if (child.type()==MSKGraphInternal::Zone::Group)
+      childPict=convertGroup(reinterpret_cast<MSKGraphInternal::GroupZone const &>(child));
+    else
+      childPict=child.getBasicPicture(input);
+    if (!childPict) {
+      res.reset();
+      return res;
+    }
+    res->addChild(childPict);
+  }
+  res->setStyle(group.m_style);
+  return res;
+}
+
 shared_ptr<MSKGraphInternal::GroupZone> MSKGraph::readGroup(MSKGraphInternal::Zone &header)
 {
   shared_ptr<MSKGraphInternal::GroupZone> group(new MSKGraphInternal::GroupZone(header));
   libmwaw::DebugStream f;
   MWAWInputStreamPtr input=m_mainParser->getInput();
   input->seek(header.m_dataPos, WPX_SEEK_SET);
-  long dim[4];
-  for (int i = 0; i < 4; i++) dim[i] = input->readLong(4);
-  f << "groupDim=" << dim[0] << "x" << dim[1] << "<->" << dim[2] << "x" << dim[3] << ",";
+  float dim[4];
+  for (int i = 0; i < 4; i++) dim[i] = (float) input->readLong(4);
+  group->m_box=Box2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3]));
+  group->m_finalDecal=Vec2f(0,0);
   long ptr[2];
   for (int i = 0; i < 2; i++)
     ptr[i] = (long) input->readULong(4);
@@ -2245,7 +2355,7 @@ shared_ptr<MSKGraphInternal::GroupZone> MSKGraph::readGroup(MSKGraphInternal::Zo
   for (int i = 0; i < N; i++) {
     long pos = input->tell();
     MWAWEntry childZone;
-    int childId = getEntryPicture(header.m_zoneId, childZone);
+    int childId = getEntryPicture(header.m_zoneId, childZone, false);
     if (childId < 0) {
       MWAW_DEBUG_MSG(("MSKGraph::readGroup: can not find child\n"));
       input->seek(pos, WPX_SEEK_SET);
@@ -2504,6 +2614,7 @@ void MSKGraph::send(int id, MWAWPosition const &pos)
     return;
   }
   case MSKGraphInternal::Zone::Group:
+    sendGroup(id, pictPos);
     return;
   case MSKGraphInternal::Zone::Bitmap: {
     MSKGraphInternal::DataBitmap &bmap = reinterpret_cast<MSKGraphInternal::DataBitmap &>(*zone);
@@ -2562,7 +2673,7 @@ void MSKGraph::sendAll(int zoneId, bool mainZone)
     shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[i];
     if (zoneId >= 0 && zoneId!=zone->m_zoneId)
       continue;
-    if (zone->m_isSent && mainZone)
+    if (zone->m_doNotSend || (zone->m_isSent && mainZone))
       continue;
     undefPos.m_anchorTo = mainZone ? MWAWPosition::Page : MWAWPosition::Paragraph;
     send(int(i), undefPos);
@@ -2609,7 +2720,7 @@ void MSKGraph::sendObjects(MSKGraph::SendData what)
           what.m_anchor == MWAWPosition::CharBaseLine) {
         shared_ptr<MSKGraphInternal::SubDocument> subdoc
         (new MSKGraphInternal::SubDocument(*this, m_mainParser->getInput(), MSKGraphInternal::SubDocument::RBILZone, what.m_id));
-        MWAWPosition pictPos(Vec2f(0,0), what.m_size, WPX_POINT);;
+        MWAWPosition pictPos(Vec2f(0,0), what.m_size, WPX_POINT);
         pictPos.setRelativePosition(MWAWPosition::Char,
                                     MWAWPosition::XLeft, MWAWPosition::YTop);
         pictPos.m_wrapping =  MWAWPosition::WBackground;
@@ -2624,26 +2735,22 @@ void MSKGraph::sendObjects(MSKGraph::SendData what)
     int id = listIds[i];
     if (id < 0 || id >= numZones) continue;
     shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[size_t(id)];
-    if (!zone || zone->m_doNotSend)
-      continue;
+    if (!zone || zone->m_doNotSend) continue;
     if (zone->m_isSent) {
       if (what.m_type == MSKGraph::SendData::ALL ||
           what.m_anchor == MWAWPosition::Page) continue;
     }
     if (what.m_anchor == MWAWPosition::Page) {
-      if (what.m_page > 0 && zone->m_page != what.m_page) continue;
-      else if (what.m_page==0 && zone->m_page <= 0) continue;
+      if (what.m_page > 0 && zone->m_page+1 != what.m_page) continue;
+      else if (what.m_page==0 && zone->m_page < 0) continue;
     }
 
-    int oldPage = zone->m_page;
-    if (zone->m_page > 0) zone->m_page--;
     if (first) {
       first = false;
       if (what.m_anchor == MWAWPosition::Page && (!listener->isSectionOpened() && !listener->isParagraphOpened()))
         listener->insertChar(' ');
     }
     send(int(id), undefPos);
-    zone->m_page = oldPage;
   }
 }
 
@@ -2653,7 +2760,7 @@ void MSKGraph::flushExtra()
   undefPos.m_anchorTo=MWAWPosition::Char;
   for (size_t i = 0; i < m_state->m_zonesList.size(); i++) {
     shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[i];
-    if (zone->m_isSent) continue;
+    if (!zone || zone->m_isSent || zone->m_doNotSend) continue;
     send(int(i), undefPos);
   }
 }
