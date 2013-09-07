@@ -2233,22 +2233,6 @@ bool MSKGraph::readPictureV4(MWAWInputStreamPtr /*input*/, MWAWEntry const &entr
 ////////////////////////////////////////////////////////////
 
 // read/send a group
-void MSKGraph::sendGroupChild(int id, MWAWPosition const &pos)
-{
-  if (id<0 || id>=int(m_state->m_zonesList.size()) || !m_state->m_zonesList[size_t(id)] ||
-      m_state->m_zonesList[size_t(id)]->type()!=MSKGraphInternal::Zone::Group) {
-    MWAW_DEBUG_MSG(("MSKGraph::sendGroup: can not find group %d\n", id));
-    return;
-  }
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
-  if (!listener) return;
-  MSKGraphInternal::GroupZone &group=
-    reinterpret_cast<MSKGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
-  group.m_isSent = true;
-  for (size_t c=0; c < group.m_childs.size(); ++c)
-    send(group.m_childs[c],pos);
-}
-
 void MSKGraph::sendGroup(int id, MWAWPosition const &pos)
 {
   if (id<0 || id>=int(m_state->m_zonesList.size()) || !m_state->m_zonesList[size_t(id)] ||
@@ -2278,6 +2262,66 @@ void MSKGraph::sendGroup(int id, MWAWPosition const &pos)
   MWAWPosition childPos(pos);
   childPos.setSize(Vec2f(0,0));
   sendGroupChild(id, childPos);
+}
+
+void MSKGraph::sendGroupChild(int id, MWAWPosition const &pos)
+{
+  if (id<0 || id>=int(m_state->m_zonesList.size()) || !m_state->m_zonesList[size_t(id)] ||
+      m_state->m_zonesList[size_t(id)]->type()!=MSKGraphInternal::Zone::Group) {
+    MWAW_DEBUG_MSG(("MSKGraph::sendGroupChild: can not find group %d\n", id));
+    return;
+  }
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) return;
+  MSKGraphInternal::GroupZone &group=
+    reinterpret_cast<MSKGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
+  group.m_isSent = true;
+
+  MWAWInputStreamPtr input=m_mainParser->getInput();
+  size_t numZones=m_state->m_zonesList.size();
+  size_t numChild=group.m_childs.size(), childNotSent=0;
+  int numDataInGroup=0;
+  shared_ptr<MWAWPictGroup> partialGroup;
+  MWAWPosition partialPos(pos);
+  MWAWGraphicStyle partialGroupStyle;
+  partialGroupStyle.m_lineWidth=0;
+  for (size_t c=0; c < numChild; ++c) {
+    int cId = group.m_childs[c];
+    if (cId < 0 || cId >= int(numZones) || !m_state->m_zonesList[size_t(cId)])
+      continue;
+    MSKGraphInternal::Zone const &child=*(m_state->m_zonesList[size_t(cId)]);
+    bool isLast=false;
+    if (child.type()==MSKGraphInternal::Zone::Basic || child.type()==MSKGraphInternal::Zone::Text) {
+      if (!partialGroup) {
+        partialGroup.reset(new MWAWPictGroup(*m_parserState->m_graphicStyleManager));
+        partialGroup->setStyle(partialGroupStyle);
+        numDataInGroup=0;
+      }
+      partialGroup->addChild(child.getBasicPicture(input));
+      ++numDataInGroup;
+      if (c+1 < numChild)
+        continue;
+      isLast=true;
+    }
+
+    WPXBinaryData data;
+    std::string type;
+    if (numDataInGroup>1 && partialGroup && partialGroup->getBinary(data,type)) {
+      Box2f partialBdBox=partialGroup->getBdBox();
+      partialPos.setOrigin(pos.origin()+partialBdBox[0]-group.m_box[0]);
+      partialPos.setSize(partialBdBox.size());
+      listener->insertPicture(partialPos, data, type);
+      if (isLast)
+        break;
+      partialGroup.reset();
+      childNotSent=c;
+    }
+    partialGroup.reset();
+
+    // time to send back the data
+    for ( ; childNotSent <= c; ++childNotSent)
+      send(group.m_childs[childNotSent],pos);
+  }
 }
 
 shared_ptr<MWAWPictBasic> MSKGraph::convertGroup(MSKGraphInternal::GroupZone const &group)

@@ -1,5 +1,21 @@
 CHANGES:
 
+09/07/2013:
+- More Parser: recognize basic picture in the main data text
+- check that DOCMaker, eDoc, More, SimpleText use the new properties' classes,
+
+09/06/2013:
+- refactor the graphic generation: add classes to define complex graphic
+  styles and modify the basic shapes, text box and group classes to create
+  more complex pictures. 
+  This will probably imply to introduce a GraphicContentList in some near future,
+  but not now...
+- modify Microsoft Works parser to use these classes to generate ( when possible)
+  graphics with pattern, gradient background and to render a group of simple
+  shapes and text in one graphic (when possible)
+
+-------- version 1.12 (start)  -------------
+
 07/31/2013:
 - recognize more WriteNow 1.0 files
 
@@ -23,7 +39,6 @@ CHANGES:
   HanMac Word-K, Nisus Writer, Z-Write use the new properties' classes,
 - HanMac Word-J, HanMac Word-K: retrieve the extra line's style in a table's
   cell,
-
 
 07/07/2013:
 - add a parser for MacDoc v1.3 document and self-reading document

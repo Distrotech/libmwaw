@@ -554,8 +554,11 @@ class MWAWPictGroup : public MWAWPictBasic
 {
 public:
   /** constructor: */
-  MWAWPictGroup(MWAWGraphicStyleManager &graphicManager, Box2f box) : MWAWPictBasic(graphicManager), m_child() {
+  MWAWPictGroup(MWAWGraphicStyleManager &graphicManager, Box2f box) : MWAWPictBasic(graphicManager), m_autoBdBox(false), m_child() {
     setBdBox(box);
+  }
+  /** constructor: with automatic box computation*/
+  MWAWPictGroup(MWAWGraphicStyleManager &graphicManager) : MWAWPictBasic(graphicManager), m_autoBdBox(true), m_child() {
   }
   //! virtual destructor
   virtual ~MWAWPictGroup() {}
@@ -594,7 +597,8 @@ protected:
     }
     return 0;
   }
-
+  //! compute automatically the bdbox
+  bool m_autoBdBox;
   //! the vertices list
   std::vector<shared_ptr<MWAWPictBasic> > m_child;
 };

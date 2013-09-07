@@ -716,8 +716,15 @@ void MWAWPictGroup::addChild(shared_ptr<MWAWPictBasic> child)
     MWAW_DEBUG_MSG(("MWAWPictGroup::addChild: called without child\n"));
     return;
   }
-  MWAWPict::extendBDBox(0);
+  m_child.push_back(child);
+  if (!m_autoBdBox)
+    return;
   Box2f cBDBox=child->getBdBox();
+  if (m_child.size()==1) {
+    setBdBox(cBDBox);
+    return;
+  }
+  MWAWPict::extendBDBox(0);
   Box2f bdbox=getBdBox();
   Vec2f pt=bdbox[0];
   if (cBDBox[0][0]<pt[0]) pt[0]=cBDBox[0][0];
@@ -730,7 +737,6 @@ void MWAWPictGroup::addChild(shared_ptr<MWAWPictBasic> child)
   bdbox.setMax(pt);
   setBdBox(bdbox);
   MWAWPict::extendBDBox(m_extend[0]+m_extend[1]);
-  m_child.push_back(child);
 }
 
 void MWAWPictGroup::getGraphicStyleProperty(WPXPropertyList &, WPXPropertyListVector &) const

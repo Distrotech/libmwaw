@@ -1269,13 +1269,69 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       }
       break;
     }
+    case 0xf9: {
+      if (actPos+22 > endPos) {
+        f << "@[#picture]";
+        MWAW_DEBUG_MSG(("MORText::sendText: field f9 seems too short\n"));
+        break;
+      }
+      long sz=(long) input->readULong(4);
+      if (sz<22 || actPos+sz>=endPos) {
+        MWAW_DEBUG_MSG(("MORText::sendText: field f9: bad field size\n"));
+        f << "###";
+        input->seek(actPos+2, WPX_SEEK_CUR);
+        break;
+      }
+      input->seek(actPos+sz-6, WPX_SEEK_SET);
+      if ((int) input->readULong(4)!=sz &&
+          (int) input->readULong(2)!=int(0x1b00|fld)) {
+        MWAW_DEBUG_MSG(("MORText::sendText: find a unknown picture end field\n"));
+        f << "@[#" << std::hex << fld << std::dec << ":" << sz << "]";
+        input->seek(actPos+2, WPX_SEEK_SET);
+        break;
+      }
+      input->seek(actPos+6, WPX_SEEK_SET);
+      f << "[picture:";
+      val = (int) input->readLong(2);
+      if (val!=0x100)
+        f << "type=" << std::hex << val << std::dec << ",";
+      float dim[4];
+      for (int i=0; i < 4; ++i)
+        dim[i] = float(input->readLong(2));
+      Box2f bdbox(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+      f << "bdbox=" << bdbox << ",";
+      if (sz>22) {
+        shared_ptr<MWAWPict> pict(MWAWPictData::get(input, (int)sz-22));
+        WPXBinaryData data;
+        std::string type;
+        if (pict && pict->getBinary(data,type)) {
+          MWAWPosition pictPos(Vec2f(0,0), bdbox.size(), WPX_POINT);
+          pictPos.m_anchorTo = MWAWPosition::Char;
+          listener->insertPicture(pictPos, data, type);
+        }
+#ifdef DEBUG_WITH_FILES
+        if (1) {
+          WPXBinaryData file;
+          input->seek(actPos+16, WPX_SEEK_SET);
+          input->readDataBlock(sz-22, file);
+          static int volatile pictName = 0;
+          libmwaw::DebugStream f2;
+          f2 << "Pict-" << ++pictName << ".pct";
+          libmwaw::Debug::dumpFile(file, f2.str().c_str());
+          ascFile.skipZone(actPos+16, actPos+sz-7);
+        }
+#endif
+      }
+      input->seek(actPos+sz, WPX_SEEK_SET);
+      break;
+    }
     default: {
       int sz=(int) input->readULong(2);
       if (sz>4 && actPos+sz<=endPos) {
         input->seek(actPos+sz-4, WPX_SEEK_SET);
         if ((int) input->readULong(2)==sz &&
             (int) input->readULong(2)==int(0x1b00|fld)) {
-          MWAW_DEBUG_MSG(("MORText::sendText: find a complex unknown field\n"));
+          MWAW_DEBUG_MSG(("MORText::sendText: find a unknown field, but can infer size\n"));
           f << "@[#" << std::hex << fld << std::dec << ":" << sz << "]";
           break;
         }

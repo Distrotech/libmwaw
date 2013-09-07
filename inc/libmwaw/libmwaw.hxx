@@ -34,7 +34,7 @@
 #ifndef LIBMWAW_H
 #define LIBMWAW_H
 
-#define MWAW_GRAPHIC_EXPORT 1
+#define MWAW_GRAPHIC_EXPORT 2
 
 #include "MWAWDocument.hxx"
 #include "MWAWPropertyHandler.hxx"

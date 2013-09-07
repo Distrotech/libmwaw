@@ -75,7 +75,7 @@ struct State {
   //! constructor
   State() : m_docType(MWAWDocument::K_TEXT), m_zoneMap(), m_actPage(0), m_numPages(0),
     m_headerText(""), m_footerText(""), m_hasHeader(false), m_hasFooter(false),
-    m_headerHeight(0), m_footerHeight(0) {
+    m_pageLength(-1), m_headerHeight(0), m_footerHeight(0) {
   }
 
   //! return a zone
@@ -93,11 +93,12 @@ struct State {
   MWAWDocument::DocumentKind m_docType;
   //! the list of zone
   std::map<int, Zone> m_zoneMap;
-
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   std::string m_headerText /**header string v1-2*/, m_footerText /**footer string v1-2*/;
   bool m_hasHeader /** true if there is a header v3*/, m_hasFooter /** true if there is a footer v3*/;
+  //! the page length in point (if known)
+  int m_pageLength;
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
 };
@@ -212,6 +213,8 @@ void MSK3Parser::init()
 ////////////////////////////////////////////////////////////
 double MSK3Parser::getTextHeight() const
 {
+  if (m_state->m_pageLength > 0)
+    return (m_state->m_pageLength-m_state->m_headerHeight-m_state->m_footerHeight)/72.0;
   return getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
 }
 
@@ -964,7 +967,7 @@ bool MSK3Parser::readPrintInfo()
   }
   f << ")";
 
-
+  // fixme: compute the real page length here...
   // define margin from print info
   Vec2i lTopMargin(margin[0],margin[1]), rBotMargin(margin[2],margin[3]);
   lTopMargin += paperSize - pageSize;
@@ -972,14 +975,14 @@ bool MSK3Parser::readPrintInfo()
   int leftMargin = lTopMargin.x();
   int topMargin = lTopMargin.y();
 
-  // decrease right | bottom
-  int rightMarg = rBotMargin.x() -50;
+  // decrease a little right and bottom margins Margin
+  int rightMarg = rBotMargin.x()-50;
   if (rightMarg < 0) {
     leftMargin -= (-rightMarg);
     if (leftMargin < 0) leftMargin=0;
     rightMarg=0;
   }
-  int botMarg = rBotMargin.y() -50;
+  int botMarg = rBotMargin.y()-50;
   if (botMarg < 0) {
     topMargin -= (-botMarg);
     if (topMargin < 0) topMargin=0;
