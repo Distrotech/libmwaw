@@ -93,7 +93,7 @@ bool MWAWGraphicStyle::Pattern::getBinary(WPXBinaryData &data, std::string &type
       unsigned char depl=0x80;
       for (int byt=0; byt<8; ++byt) {
         rowValues[i++] = (c&depl) ? 1 : 0;
-        depl>>=1;
+        depl=(unsigned char) (depl>>1);
       }
     }
     bitmap.setRow(h, &rowValues[0]);

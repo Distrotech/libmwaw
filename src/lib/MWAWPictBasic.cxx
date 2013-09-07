@@ -567,7 +567,7 @@ bool MWAWPictSimpleText::send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig
   do {
     bool firstIsLineBreak=false;
     if (it3 != m_lineBreakSet.end() && *it3==actPos) {
-      it3++;
+      ++it3;
       firstIsLineBreak=true;
       if (lineOpened)
         doc.endElement("TextLine");
