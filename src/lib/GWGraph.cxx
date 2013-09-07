@@ -345,6 +345,9 @@ struct FrameBasic : public Frame {
   int m_lineArrow;
   //! the line format?
   int m_lineFormat;
+private:
+  FrameBasic(FrameBasic const &);
+  FrameBasic &operator=(FrameBasic const &);
 };
 
 shared_ptr<MWAWPictBasic> FrameBasic::getPicture(Style const &style) const

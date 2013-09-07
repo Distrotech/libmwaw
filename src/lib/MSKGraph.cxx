@@ -350,6 +350,9 @@ struct BasicForm : public Zone {
   std::vector<Vec2f> m_vertices;
   //! a flag to know if a polygon is a smooth polygon or a line polygon
   bool m_smooth;
+private:
+  BasicForm(BasicForm const &);
+  BasicForm &operator=(BasicForm const &);
 };
 
 shared_ptr<MWAWPictBasic> BasicForm::getBasicPicture(MWAWInputStreamPtr) const
@@ -389,7 +392,7 @@ shared_ptr<MWAWPictBasic> BasicForm::getBasicPicture(MWAWInputStreamPtr) const
   }
   case 4: {
     int angl2 = m_angle+((m_deltaAngle>0) ? m_deltaAngle : -m_deltaAngle);
-    Box2f formBox(Vec2f(m_formBox[0])+decal,Vec2f(m_formBox[1])+decal);
+    Box2f formBox(Vec2f(m_formBox.min())+decal,Vec2f(m_formBox.max())+decal);
     MWAWPictArc *pct=new MWAWPictArc(*m_graphicManager, bdbox, formBox, float(450-angl2), float(450-m_angle));
     pict.reset(pct);
     break;
@@ -678,6 +681,9 @@ struct TextBox : public Zone {
   std::string m_text;
   //! the paragraph alignement
   MWAWParagraph::Justification m_justify;
+private:
+  TextBox(TextBox const &);
+  TextBox &operator=(TextBox const &);
 };
 
 shared_ptr<MWAWPictBasic> TextBox::getBasicPicture(MWAWInputStreamPtr) const
@@ -750,10 +756,10 @@ shared_ptr<MWAWPictBasic> TextBox::getBasicPicture(MWAWInputStreamPtr) const
   return pict;
 }
 
-bool TextBox::getBinaryData(MWAWInputStreamPtr input, WPXBinaryData &res, std::string &type) const
+bool TextBox::getBinaryData(MWAWInputStreamPtr input, WPXBinaryData &res, std::string &pictType) const
 {
   shared_ptr<MWAWPict> pict=getBasicPicture(input);
-  return pict && pict->getBinary(res,type);
+  return pict && pict->getBinary(res,pictType);
 }
 
 ////////////////////////////////////////
@@ -827,7 +833,7 @@ struct Patterns {
         uint8_t val=m_valuesList[pat++];
         for (int b=0; b < 8; b++) {
           if (val&1) ++numOnes;
-          val >>= 1;
+          val = uint8_t(val>>1);
         }
       }
       m_percentList.push_back(float(numOnes)/64.f);
