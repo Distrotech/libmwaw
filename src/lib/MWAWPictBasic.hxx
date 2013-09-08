@@ -95,7 +95,7 @@ public:
   /** returns the final representation in encoded odg (if possible) */
   virtual bool getBinary(WPXBinaryData &data, std::string &s) const {
     if (!getODGBinary(data)) return false;
-    s = "image/mwaw-odg2";
+    s = "image/mwaw-odg";
     return true;
   }
   //! returns a ODG (low level)
