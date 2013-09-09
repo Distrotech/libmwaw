@@ -77,7 +77,7 @@ public:
   -MACD: MacDoc ( v1.3 )
   -MARIW: Mariner Write ( only v1.6-v3.5 Mac Classic)
   -MINDW: MindWrite
-  -MOCKP: MockPackage (nothing done )
+  -MOCKP: MockPackage ( creates basic text files -> nothing to do, this enum will be removed in 0.2.0 )
   -MORE: More (v2-3: retrieve the organization part but not the slide/tree parts)
   -MW: MacWrite document
   -MWPRO: MacWriteII or MacWritePro document

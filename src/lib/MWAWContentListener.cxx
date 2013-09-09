@@ -44,6 +44,7 @@
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicStyle.hxx"
+#include "MWAWGraphicShape.hxx"
 #include "MWAWInputStream.hxx"
 #include "MWAWList.hxx"
 #include "MWAWPageSpan.hxx"
@@ -1064,6 +1065,44 @@ void MWAWContentListener::insertTextBox
   handleSubDocument(subDocument, libmwaw::DOC_TEXT_BOX);
   m_documentInterface->closeTextBox();
 
+  closeFrame();
+}
+
+void MWAWContentListener::insertPicture
+(MWAWPosition const &pos, MWAWGraphicShape const &shape, MWAWGraphicStyle const &style)
+{
+  // sanity check: avoid to send to many small pict
+  float factor=pos.getScaleFactor(pos.unit(), WPX_POINT);
+  if (pos.size()[0]*factor <= 8 && pos.size()[1]*factor <= 8 && m_ds->m_smallPictureNumber++ > 200) {
+    static bool first = true;
+    if (first) {
+      first = false;
+      MWAW_DEBUG_MSG(("MWAWContentListener::insertPicture: find too much small pictures, skip them from now\n"));
+    }
+    return;
+  }
+
+  // first create the picture
+  MWAWPropertyHandlerEncoder doc;
+  Box2f bdbox = shape.getBdBox(style);
+  Vec2f size=bdbox.size();
+  WPXPropertyList list;
+  list.insert("svg:x",0, WPX_POINT);
+  list.insert("svg:y",0, WPX_POINT);
+  list.insert("svg:width",size.x(), WPX_POINT);
+  list.insert("svg:height",size.y(), WPX_POINT);
+  list.insert("libwpg:enforce-frame",1);
+  doc.startElement("Graphics", list);
+  if (!shape.send(doc, style, bdbox[0])) return;
+  doc.endElement("Graphics");
+
+  WPXBinaryData data;
+  if (!doc.getData(data))
+    return;
+  if (!openFrame(pos)) return;
+  WPXPropertyList propList;
+  propList.insert("libwpd:mimetype", "image/mwaw-odg");
+  m_documentInterface->insertBinaryObject(propList, data);
   closeFrame();
 }
 

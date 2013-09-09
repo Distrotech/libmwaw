@@ -128,9 +128,9 @@ protected:
   void writeLong(long val);
   //! adds a string: size and string
   void writeString(const char *name);
-  //! adds a property: a string key, a char:b,d,i,s,I,P,%,T type, a string corresponding to value
+  //! adds a property: a string key, a string corresponding to value
   void writeProperty(const char *key, const WPXProperty &prop);
-  //! adds a property list: int \#prop, 2\#prop*[string]
+  //! adds a property list: int \#prop, \#prop*WPXProperty
   void writePropertyList(const WPXPropertyList &prop);
 
   //! the streamfile

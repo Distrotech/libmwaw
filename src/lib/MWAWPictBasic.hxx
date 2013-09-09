@@ -51,7 +51,9 @@
 #  include "libwpd/libwpd.h"
 #  include "libmwaw_internal.hxx"
 
+#  include "MWAWGraphicShape.hxx"
 #  include "MWAWGraphicStyle.hxx"
+
 #  include "MWAWPict.hxx"
 
 class MWAWPropertyHandlerEncoder;
@@ -64,7 +66,7 @@ public:
   virtual ~MWAWPictBasic() {}
 
   //! the picture subtype ( line, rectangle, polygon, circle, arc)
-  enum SubType { Arc, Circle, GraphicObject, Group, Line, Path, Polygon, Rectangle, Text };
+  enum SubType { Arc, Circle, GraphicObject, Group, Line, Path, Polygon, Rectangle, Shape, Text };
   //! returns the picture type
   virtual Type getType() const {
     return Basic;
@@ -179,6 +181,33 @@ protected:
   MWAWGraphicStyle m_style;
   //! m_extend[0]: from lineWidth, m_extend[1]: came from extra data
   float m_extend[2];
+};
+
+
+//! a class used to a pict based on a MWAWGraphicShape
+class MWAWPictShape : public MWAWPictBasic
+{
+public:
+  //! constructor
+  MWAWPictShape(MWAWGraphicStyleManager &graphicManager, MWAWGraphicShape const &shape,  MWAWGraphicStyle const &style);
+  //! virtual destructor
+  virtual ~MWAWPictShape() {}
+
+  //! returns a ODG (encoded)
+  virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
+
+protected:
+  //! returns the class type
+  virtual SubType getSubType() const {
+    return Shape;
+  }
+  //! returns the graphics style
+  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
+  //! comparison function
+  virtual int cmp(MWAWPict const &a) const;
+
+  // the shape
+  MWAWGraphicShape m_shape;
 };
 
 /** \brief a class to store a simple line */

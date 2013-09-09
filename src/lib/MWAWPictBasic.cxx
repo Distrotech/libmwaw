@@ -94,6 +94,37 @@ void MWAWPictBasic::sendStyle(MWAWPropertyHandlerEncoder &doc) const
   doc.endElement("SetStyle");
 }
 
+
+////////////////////////////////////////////////////////////
+//
+//    MWAWPictShape
+//
+////////////////////////////////////////////////////////////
+MWAWPictShape::MWAWPictShape(MWAWGraphicStyleManager &graphicManager, MWAWGraphicShape const &shape,  MWAWGraphicStyle const &style) :
+  MWAWPictBasic(graphicManager), m_shape(shape)
+{
+  setBdBox(shape.getBdBox(style));
+  m_style=style;
+}
+
+int MWAWPictShape::cmp(MWAWPict const &a) const
+{
+  int diff = MWAWPictBasic::cmp(a);
+  if (diff) return diff;
+  MWAWPictShape const &aShape=reinterpret_cast<MWAWPictShape const &>(a);
+  return m_shape.cmp(aShape.m_shape);
+}
+
+bool MWAWPictShape::send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
+{
+  return m_shape.send(doc, m_style, orig);
+}
+
+void MWAWPictShape::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
+{
+  m_style.addTo(list, gradient, m_shape.m_type==MWAWGraphicShape::Line);
+}
+
 ////////////////////////////////////////////////////////////
 //
 //    MWAWPictLine

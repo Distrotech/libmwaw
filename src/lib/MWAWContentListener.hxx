@@ -41,6 +41,8 @@
 #include "libmwaw_internal.hxx"
 
 class MWAWCell;
+class MWAWGraphicStyle;
+class MWAWGraphicShape;
 class MWAWTable;
 
 namespace MWAWContentListenerInternal
@@ -143,6 +145,9 @@ public:
   void insertPicture(MWAWPosition const &pos, const WPXBinaryData &binaryData,
                      std::string type="image/pict",
                      WPXPropertyList frameExtras=WPXPropertyList());
+  /** adds a shape picture in given position */
+  void insertPicture(MWAWPosition const &pos, MWAWGraphicShape const &shape,
+                     MWAWGraphicStyle const &style);
   /** adds a textbox in given position */
   void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument,
                      WPXPropertyList frameExtras=WPXPropertyList(),

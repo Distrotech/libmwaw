@@ -47,8 +47,8 @@
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
+#include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
-#include "MWAWPictBasic.hxx"
 #include "MWAWPosition.hxx"
 
 #include "MWAWTable.hxx"
@@ -186,30 +186,18 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
     box.setMax(Vec2f(columnsPos[size_t(pos[0]+span[0])],
                      rowsPos[size_t(pos[1]+span[1])]));
 
-    shared_ptr<MWAWPictLine> lines[2];
-    if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line1)
-      lines[0].reset(new MWAWPictLine(listener->getGraphicStyleManager(), Vec2f(0,0), box.size()));
-    if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line2)
-      lines[1].reset(new MWAWPictLine(listener->getGraphicStyleManager(), Vec2f(0,box.size()[1]), Vec2f(box.size()[0], 0)));
-
     MWAWBorder const &border=cell.extraLineType();
     MWAWGraphicStyle pStyle;
     pStyle.m_lineWidth=(float)border.m_width;
     pStyle.m_lineColor=border.m_color;
 
-    for (int i = 0; i < 2; i++) {
-      if (!lines[i]) continue;
-      lines[i]->setStyle(pStyle);
-
-      WPXBinaryData data;
-      std::string type;
-      if (!lines[i]->getBinary(data,type)) continue;
-
-      MWAWPosition lPos(box[0], box.size(), WPX_POINT);
-      lPos.setRelativePosition(MWAWPosition::Frame);
-      lPos.setOrder(-1);
-      listener->insertPicture(lPos, data, type);
-    }
+    MWAWPosition lPos(box[0], box.size(), WPX_POINT);
+    lPos.setRelativePosition(MWAWPosition::Frame);
+    lPos.setOrder(-1);
+    if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line1)
+      listener->insertPicture(lPos, MWAWGraphicShape::line(Vec2f(0,0), box.size()), pStyle);
+    if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line2)
+      listener->insertPicture(lPos, MWAWGraphicShape::line(Vec2f(0,box.size()[1]), Vec2f(box.size()[0], 0)), pStyle);
   }
 }
 

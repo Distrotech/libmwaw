@@ -44,8 +44,8 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
-#include "MWAWPictBasic.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
@@ -485,7 +485,6 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actF
     MWAW_DEBUG_MSG(("MRWGraph::sendRule: the rule size seems bad\n"));
     return;
   }
-  MWAWPictLine line(*m_parserState->m_graphicStyleManager, Vec2i(0,0), sz);
   float w=1.0f;
   switch(tkn.m_ruleType) {
   case 0: // no width
@@ -517,16 +516,11 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actF
   MWAWGraphicStyle pStyle;
   pStyle.m_lineWidth=w;
   pStyle.m_lineColor=col;
-  line.setStyle(pStyle);
-
-  WPXBinaryData data;
-  std::string type;
-  if (!line.getBinary(data,type)) return;
 
   int decal=int(w/2.f)+1;
   MWAWPosition pos(Vec2i(-decal,-decal), sz+Vec2i(decal,decal), WPX_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
-  m_parserState->m_listener->insertPicture(pos,data, type);
+  m_parserState->m_listener->insertPicture(pos,MWAWGraphicShape::line(Vec2f(0,0), Vec2f(sz)), pStyle);
 }
 
 void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
