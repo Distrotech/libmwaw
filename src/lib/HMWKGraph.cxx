@@ -45,6 +45,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictMac.hxx"
@@ -179,78 +180,31 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
 
 ////////////////////////////////////////
 //! Internal: the geometrical graph of a HMWKGraph
-struct BasicGraph : public Frame {
+struct ShapeGraph : public Frame {
   //! constructor
-  BasicGraph(Frame const &orig) : Frame(orig), m_graphType(-1), m_arrowsFlag(0), m_cornerDim(0), m_listVertices() {
-    m_extremity[0] = m_extremity[1] = Vec2f(0,0);
-    m_angles[0] = 0;
-    m_angles[1] = 90;
+  ShapeGraph(Frame const &orig) : Frame(orig), m_shape(), m_arrowsFlag(0) {
   }
   //! destructor
-  ~BasicGraph() {}
+  ~ShapeGraph() {}
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, BasicGraph const &graph) {
-    o << graph.print();
+  friend std::ostream &operator<<(std::ostream &o, ShapeGraph const &graph) {
+    o << graph.print() << ",";
     o << static_cast<Frame const &>(graph);
     return o;
   }
   //! print local data
   std::string print() const {
     std::stringstream s;
-    switch(m_graphType) {
-    case 0:
-      s << "line,";
-      break;
-    case 1:
-      s << "rect,";
-      break;
-    case 2:
-      s << "circle,";
-      break;
-    case 3:
-      s << "line[axisaligned],";
-      break;
-    case 4:
-      s << "rectOval,";
-      break;
-    case 5:
-      s << "arc,";
-      break;
-    case 6:
-      s << "poly,";
-      break;
-    default:
-      s << "#type=" << m_graphType << ",";
-      break;
-    }
+    s << m_shape;
     if (m_arrowsFlag&1) s << "startArrow,";
     if (m_arrowsFlag&2) s << "endArrow,";
-    if (m_graphType==5) s << "angl=" << m_angles[0] << "<->" << m_angles[1] << ",";
-    if (m_cornerDim > 0) s << "cornerDim=" << m_cornerDim << ",";
-    if (m_arrowsFlag&0xfc) s << "#arrowFlags=" << std::hex << (m_arrowsFlag&0xfc) << std::dec << ",";
-    if (m_extremity[0] != Vec2f(0,0) || m_extremity[1] != Vec2f(0,0))
-      s << "extremity=" << m_extremity[0] << "<->" << m_extremity[1] << ",";
-    if (m_listVertices.size()) {
-      s << "pts=[";
-      for (size_t pt = 0; pt < m_listVertices.size(); ++pt)
-        s << m_listVertices[pt] << ",";
-      s << "],";
-    }
     return s.str();
   }
 
-  //! the graphic type: line, rectangle, ...
-  int m_graphType;
+  //! the shape m_shape
+  MWAWGraphicShape m_shape;
   //! the lines arrow flag
   int m_arrowsFlag;
-  //! the two extremities for a line
-  Vec2f m_extremity[2];
-  //! the arc angles in degrees
-  int m_angles[2];
-  //! the rectOval corner dimension
-  float m_cornerDim;
-  //! the list of vertices for a polygon
-  std::vector<Vec2f> m_listVertices;
 };
 
 ////////////////////////////////////////
@@ -950,7 +904,7 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
     frame = readPictureFrame(zone, graph);
     break;
   case 8:
-    frame = readBasicGraph(zone, graph);
+    frame = readShapeGraph(zone, graph);
     break;
   case 9:
     frame = readTable(zone, graph);
@@ -1126,7 +1080,7 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
     return sendPictureFrame(pict, pos, extras);
   }
   case 8:
-    return sendBasicGraph(reinterpret_cast<HMWKGraphInternal::BasicGraph const &>(frame), pos, extras);
+    return sendShapeGraph(reinterpret_cast<HMWKGraphInternal::ShapeGraph const &>(frame), pos, extras);
   case 9: {
     HMWKGraphInternal::Table &table =
       const_cast<HMWKGraphInternal::Table &>
@@ -1177,19 +1131,19 @@ bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
   pictPos.setOrder(-1);
 
   MWAWGraphicStyleManager &graphicManager= *m_parserState->m_graphicStyleManager;
-  for (int i = 0; i < 3; ++i) {
-    if (i==0)
-      pict.reset(new MWAWPictRectangle(graphicManager, Box2f(Vec2f(0,0), pictSz)));
-    else if (i==1)
-      pict.reset(new MWAWPictLine(graphicManager, Vec2f(0,0), pictSz));
-    else
-      pict.reset(new MWAWPictLine(graphicManager, Vec2f(0,pictSz[1]), Vec2f(pictSz[0], 0)));
-    WPXBinaryData data;
-    std::string type;
-    if (!pict->getBinary(data,type)) continue;
+  MWAWPictGroup group(graphicManager, Box2f(Vec2f(0,0), pictSz));
+  MWAWGraphicStyle defStyle;
+  shared_ptr<MWAWPictShape> child(new MWAWPictShape(graphicManager, MWAWGraphicShape::rectangle(Box2f(Vec2f(0,0), pictSz)), defStyle));
+  group.addChild(child);
+  child.reset(new MWAWPictShape(graphicManager, MWAWGraphicShape::line(Vec2f(0,0), pictSz), defStyle));
+  group.addChild(child);
+  child.reset(new MWAWPictShape(graphicManager, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],1)), defStyle));
+  group.addChild(child);
 
-    m_parserState->m_listener->insertPicture(pictPos, data, type);
-  }
+  WPXBinaryData data;
+  std::string type;
+  if (!group.getBinary(data,type)) return false;
+  m_parserState->m_listener->insertPicture(pictPos, data, type);
   return true;
 }
 
@@ -1254,7 +1208,7 @@ bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosit
   return true;
 }
 
-bool HMWKGraph::sendBasicGraph(HMWKGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendShapeGraph(HMWKGraphInternal::ShapeGraph const &pict, MWAWPosition pos, WPXPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
   Vec2f pictSz = pict.m_pos.size();
@@ -1268,108 +1222,23 @@ bool HMWKGraph::sendBasicGraph(HMWKGraphInternal::BasicGraph const &pict, MWAWPo
   shared_ptr<MWAWPictBasic> pictPtr;
   MWAWGraphicStyle pStyle;
   MWAWGraphicStyleManager &graphicManager= *m_parserState->m_graphicStyleManager;
-  switch(pict.m_graphType) {
-  case 0:
-  case 3: {
-    Vec2f minPt(pict.m_extremity[0]);
-    if (minPt[0] > pict.m_extremity[1][0])
-      minPt[0] = pict.m_extremity[1][0];
-    if (minPt[1] > pict.m_extremity[1][1])
-      minPt[1] = pict.m_extremity[1][1];
-    MWAWPictLine *res=new MWAWPictLine(graphicManager, pict.m_extremity[0]-minPt, pict.m_extremity[1]-minPt);
-    pictPtr.reset(res);
+  if (pict.m_shape.m_type==MWAWGraphicShape::Line) {
     if (pict.m_arrowsFlag&1) pStyle.m_arrows[0]=true;
     if (pict.m_arrowsFlag&2) pStyle.m_arrows[1]=true;
-    break;
   }
-  case 1: {
-    MWAWPictRectangle *res=new MWAWPictRectangle(graphicManager, box);
-    pictPtr.reset(res);
-    break;
-  }
-  case 2: {
-    MWAWPictCircle *res=new MWAWPictCircle(graphicManager, box);
-    pictPtr.reset(res);
-    break;
-  }
-  case 4: {
-    MWAWPictRectangle *res=new MWAWPictRectangle(graphicManager, box);
-    int roundValues[2];
-    for (int i = 0; i < 2; ++i) {
-      if (2.f *pict.m_cornerDim <= pictSz[i])
-        roundValues[i] = int(pict.m_cornerDim+1);
-      else if (pict.m_cornerDim >= 4.0f)
-        roundValues[i]= (int(pict.m_cornerDim)+1)/2;
-      else
-        roundValues[i]=1;
-    }
-    res->setRoundCornerWidth(roundValues[0], roundValues[1]);
-    pictPtr.reset(res);
-    break;
-  }
-  case 5: {
-    int angle[2] = { int(90-pict.m_angles[1]), int(90-pict.m_angles[0])};
-
-    Vec2f center = box.center();
-    Vec2f axis = 0.5*Vec2f(box.size());
-    // we must compute the real bd box
-    float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
-    int limitAngle[2];
-    for (int i = 0; i < 2; ++i)
-      limitAngle[i] = (angle[i] < 0) ? int(angle[i]/90)-1 : int(angle[i]/90);
-    for (int bord = limitAngle[0]; bord <= limitAngle[1]+1; ++bord) {
-      float ang = (bord == limitAngle[0]) ? float(angle[0]) :
-                  (bord == limitAngle[1]+1) ? float(angle[1]) : float(90 * bord);
-      ang *= float(M_PI/180.);
-      float actVal[2] = { axis[0] *std::cos(ang), -axis[1] *std::sin(ang)};
-      if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
-      else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
-      if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
-      else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
-    }
-    Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
-                  Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
-    MWAWPictArc *res=new MWAWPictArc(graphicManager, realBox,box, float(angle[0]), float(angle[1]));
-    pictPtr.reset(res);
-
-    break;
-  }
-  case 6: {
-    std::vector<Vec2f> listPts = pict.m_listVertices;
-    size_t numPts = listPts.size();
-    if (!numPts) break;
-    Vec2f minPt(listPts[0]);
-    for (size_t i = 1; i < numPts; ++i) {
-      if (minPt[0] > listPts[i][0])
-        minPt[0] = listPts[i][0];
-      if (minPt[1] > listPts[i][1])
-        minPt[1] = listPts[i][1];
-    }
-    for (size_t i = 0; i < numPts; ++i)
-      listPts[i] -= minPt;
-    MWAWPictPolygon *res=new MWAWPictPolygon(graphicManager, box, listPts);
-    pictPtr.reset(res);
-    break;
-  }
-  default:
-    return false;
-  }
-
-  if (!pictPtr)
-    return false;
   pStyle.m_lineWidth=pict.m_lineWidth;
   MWAWColor color;
   if (pict.getLineColor(color))
     pStyle.m_lineColor=color;
   if (pict.getSurfaceColor(color))
     pStyle.setSurfaceColor(color);
-  pictPtr->setStyle(pStyle);
 
+  MWAWPictShape pictShape(graphicManager,pict.m_shape,pStyle);
   WPXBinaryData data;
   std::string type;
-  if (!pictPtr->getBinary(data,type)) return false;
+  if (!pictShape.getBinary(data,type)) return false;
 
-  pos.setOrigin(pos.origin()-Vec2f(2,2));
+  pos.setOrigin(pos.origin());
   pos.setSize(pos.size()+Vec2f(4,4));
   m_parserState->m_listener->insertPicture(pos,data, type, extras);
   return true;
@@ -1395,11 +1264,11 @@ bool HMWKGraph::sendTableUnformatted(long fId)
 ////////////////////////////////////////////////////////////
 
 // try to read a small graphic
-shared_ptr<HMWKGraphInternal::BasicGraph> HMWKGraph::readBasicGraph(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header)
+shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header)
 {
-  shared_ptr<HMWKGraphInternal::BasicGraph> graph;
+  shared_ptr<HMWKGraphInternal::ShapeGraph> graph;
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readBasicGraph: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readShapeGraph: called without any zone\n"));
     return graph;
   }
 
@@ -1407,17 +1276,21 @@ shared_ptr<HMWKGraphInternal::BasicGraph> HMWKGraph::readBasicGraph(shared_ptr<H
   long dataSz = zone->length();
   long pos = input->tell();
   if (pos+26 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readBasicGraph: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HMWKGraph::readShapeGraph: the zone seems too short\n"));
     return graph;
   }
 
-  graph.reset(new HMWKGraphInternal::BasicGraph(header));
+  graph.reset(new HMWKGraphInternal::ShapeGraph(header));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
-  graph->m_graphType = (int) input->readLong(1);
+  int graphType = (int) input->readLong(1);
   long val;
   bool ok = true;
-  switch(graph->m_graphType) {
+  Box2f bdbox=graph->m_pos;
+  MWAWGraphicShape &shape=graph->m_shape;
+  shape = MWAWGraphicShape();
+  shape.m_bdBox = shape.m_formBox = bdbox;
+  switch(graphType) {
   case 0:
   case 3: { // lines
     if (pos+28 > dataSz) {
@@ -1425,27 +1298,43 @@ shared_ptr<HMWKGraphInternal::BasicGraph> HMWKGraph::readBasicGraph(shared_ptr<H
       ok = false;
       break;
     }
+    shape.m_type=MWAWGraphicShape::Line;
     graph->m_arrowsFlag = (int) input->readLong(1);
     for (int i = 0; i < 5; ++i) { // always 0
       val = input->readLong(2);
       if (val) f << "f" << i << "=" << val << ",";
     }
+    Vec2f minPt;
     float coord[2];
     for (int pt = 0; pt < 2; ++pt) {
       for (int i = 0; i < 2; ++i)
         coord[i] = float(input->readLong(4))/65536.f;
-      graph->m_extremity[pt] = Vec2f(coord[1],coord[0]);
+      Vec2f vertex=Vec2f(coord[1],coord[0]);
+      shape.m_vertices.push_back(vertex);
+      if (pt==0) {
+        minPt=vertex;
+        continue;
+      }
+      for (int c=0; c < 2; ++c) {
+        if (vertex[c]<minPt[c])
+          minPt[c]=vertex[c];
+      }
     }
+    minPt -= bdbox[0];
+    shape.m_vertices[0] -= minPt;
+    shape.m_vertices[1] -= minPt;
     break;
   }
   case 1: // rectangle
   case 2: // circle
+    shape.m_type = graphType==1?
+                   MWAWGraphicShape::Rectangle : MWAWGraphicShape::Circle;
     for (int i = 0; i < 13; ++i) { // always 0
       val = input->readLong(2);
       if (val) f << "f" << i << "=" << val << ",";
     }
     break;
-  case 4: // rectOval
+  case 4: { // rectOval
     if (pos+28 > dataSz) {
       f << "###";
       ok = false;
@@ -1455,26 +1344,57 @@ shared_ptr<HMWKGraphInternal::BasicGraph> HMWKGraph::readBasicGraph(shared_ptr<H
       val = input->readLong(i ? 2 : 1);
       if (val) f << "f" << i << "=" << val << ",";
     }
-    graph->m_cornerDim = float(input->readLong(4))/65536.f;
+    shape.m_type=MWAWGraphicShape::Rectangle;
+    float cornerDim = float(input->readLong(4))/65536.f;
+    for (int c=0; c < 2; ++c) {
+      if (2.f*cornerDim <= bdbox.size()[c])
+        shape.m_cornerWidth[c]=cornerDim;
+      else
+        shape.m_cornerWidth[c]=bdbox.size()[c]/2.0f;
+    }
     for (int i = 0; i < 8; ++i) {
       val = input->readLong(i);
       if (val) f << "g" << i << "=" << val << ",";
     }
     break;
+  }
   case 5: { // arc
     val = input->readLong(2);
     if (val) f << "f0=" << val << ",";
     int transf = (int) input->readULong(1);
+    float angles[2];
     if (transf>=0 && transf <= 3) {
       int decal = (transf%2) ? 4-transf : transf;
-      graph->m_angles[0] = decal*90;
-      graph->m_angles[1] = graph->m_angles[0]+90;
+      angles[0] = float(-90*decal);
+      angles[1] = float(90-90*decal);
     } else {
       f << "#transf=" << transf << ",";
-      MWAW_DEBUG_MSG(("HMWKGraph::readBasicGraph: find unexpected transformation for arc\n"));
+      MWAW_DEBUG_MSG(("HMWKGraph::readShapeGraph: find unexpected transformation for arc\n"));
       ok = false;
       break;
     }
+
+    Vec2f center = bdbox.center();
+    Vec2f axis = 0.5*Vec2f(bdbox.size());
+    // we must compute the real bd box
+    float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
+    int limitAngle[2];
+    for (int i = 0; i < 2; ++i)
+      limitAngle[i] = (angles[i] < 0) ? int(angles[i]/90.f)-1 : int(angles[i]/90.f);
+    for (int bord = limitAngle[0]; bord <= limitAngle[1]+1; ++bord) {
+      float ang = (bord == limitAngle[0]) ? float(angles[0]) :
+                  (bord == limitAngle[1]+1) ? float(angles[1]) : float(90 * bord);
+      ang *= float(M_PI/180.);
+      float actVal[2] = { axis[0] *std::cos(ang), -axis[1] *std::sin(ang)};
+      if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
+      else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
+      if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
+      else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
+    }
+    shape.m_type=MWAWGraphicShape::Arc;
+    shape.m_bdBox=Box2f(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
+                        Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
+    shape.m_arcAngles=Vec2f(angles[0],angles[1]);
     for (int i = 0; i < 12; ++i) { // always 0
       val = input->readLong(2);
       if (val) f << "f" << i+1 << "=" << val << ",";
@@ -1488,7 +1408,7 @@ shared_ptr<HMWKGraphInternal::BasicGraph> HMWKGraph::readBasicGraph(shared_ptr<H
     }
     int numPt = (int) input->readLong(2);
     if (numPt < 0 || 28+8*numPt > dataSz) {
-      MWAW_DEBUG_MSG(("HMWKGraph::readBasicGraph: find unexpected number of points\n"));
+      MWAW_DEBUG_MSG(("HMWKGraph::readShapeGraph: find unexpected number of points\n"));
       f << "#pt=" << numPt << ",";
       ok = false;
       break;
@@ -1497,17 +1417,31 @@ shared_ptr<HMWKGraphInternal::BasicGraph> HMWKGraph::readBasicGraph(shared_ptr<H
       val = input->readLong(2);
       if (val) f << "g" << i << "=" << val << ",";
     }
+    shape.m_type=MWAWGraphicShape::Polygon;
+    Vec2f minPt(0,0);
     for (int i = 0; i < numPt; ++i) {
       float dim[2];
       for (int c=0; c < 2; ++c)
         dim[c] = float(input->readLong(4))/65536.f;
-      graph->m_listVertices.push_back(Vec2f(dim[1], dim[0]));
+      Vec2f vertex=Vec2f(dim[1], dim[0]);
+      shape.m_vertices.push_back(vertex);
+      if (i==0) {
+        minPt=vertex;
+        continue;
+      }
+      for (int c=0; c < 2; ++c) {
+        if (minPt[c]>vertex[c])
+          minPt=vertex[c];
+      }
     }
+    minPt-=bdbox[0];
+    for (size_t i = 0; i < size_t(numPt); ++i)
+      shape.m_vertices[i] -= minPt;
     break;
   }
   default:
-    MWAW_DEBUG_MSG(("HMWKGraph::readBasicGraph: find unexpected graphic subType\n"));
-    f << "###";
+    MWAW_DEBUG_MSG(("HMWKGraph::readShapeGraph: find unexpected graphic subType\n"));
+    f << "###type=" << graphType << ",";
     ok = false;
     break;
   }

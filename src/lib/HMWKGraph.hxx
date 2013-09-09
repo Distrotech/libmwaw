@@ -52,7 +52,7 @@
 namespace HMWKGraphInternal
 {
 struct Frame;
-struct BasicGraph;
+struct ShapeGraph;
 struct FootnoteFrame;
 struct Group;
 struct PictureFrame;
@@ -137,7 +137,7 @@ protected:
   bool sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
 
   /** try to send a basic picture to the listener */
-  bool sendBasicGraph(HMWKGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendShapeGraph(HMWKGraphInternal::ShapeGraph const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
 
   /** try to send a picture frame */
   bool sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
@@ -151,7 +151,7 @@ protected:
   bool sendTableUnformatted(long fId);
 
   /** try to read the basic graph data */
-  shared_ptr<HMWKGraphInternal::BasicGraph> readBasicGraph(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
+  shared_ptr<HMWKGraphInternal::ShapeGraph> readShapeGraph(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
   /** try to read the footnote data */
   shared_ptr<HMWKGraphInternal::FootnoteFrame> readFootnoteFrame(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
   /** try to read the group data */

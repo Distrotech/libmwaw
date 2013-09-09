@@ -55,6 +55,8 @@ public:
     PathData(char type, Vec2f const &x=Vec2f(), Vec2f const &x1=Vec2f(), Vec2f const &x2=Vec2f()):
       m_type(type), m_x(x), m_x1(x1), m_x2(x2), m_r(), m_rotate(0), m_largeAngle(false), m_sweep(false) {
     }
+    //! translate all the coordinate by delta
+    void translate(Vec2f const &delta);
     //! update the property list to correspond to a command
     bool get(WPXPropertyList &pList, Vec2f const &orig) const;
     //! a print operator
@@ -125,6 +127,9 @@ public:
     res.m_bdBox=box;
     return res;
   }
+
+  //! translate all the coordinate by delta
+  void translate(Vec2f const &delta);
   //! returns the bdbox corresponding to a style
   Box2f getBdBox(MWAWGraphicStyle const &style) const;
   //! add shape to a handler encoder

@@ -87,6 +87,19 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicShape::PathData const &path
   return o;
 }
 
+void MWAWGraphicShape::PathData::translate(Vec2f const &decal)
+{
+  if (m_type=='Z')
+    return;
+  m_x += decal;
+  if (m_type=='H' || m_type=='V' || m_type=='M' || m_type=='L' || m_type=='T' || m_type=='A')
+    return;
+  m_x1 += decal;
+  if (m_type=='Q' || m_type=='S')
+    return;
+  m_x2 += decal;
+}
+
 bool MWAWGraphicShape::PathData::get(WPXPropertyList &list, Vec2f const &orig) const
 {
   list.clear();
@@ -257,6 +270,18 @@ Box2f MWAWGraphicShape::getBdBox(MWAWGraphicStyle const &style) const
   return bdBox;
 }
 
+void MWAWGraphicShape::translate(Vec2f const &decal)
+{
+  if (decal==Vec2f(0,0))
+    return;
+  m_bdBox=Box2f(m_bdBox.min()+decal, m_bdBox.max()+decal);
+  m_formBox=Box2f(m_formBox.min()+decal, m_formBox.max()+decal);
+  for (size_t pt=0; pt<m_vertices.size(); ++pt)
+    m_vertices[pt]+=decal;
+  for (size_t pt=0; pt<m_path.size(); ++pt)
+    m_path[pt].translate(decal);
+}
+
 bool MWAWGraphicShape::send(MWAWPropertyHandlerEncoder &doc, MWAWGraphicStyle const &style, Vec2f const &orig) const
 {
   Vec2f pt;
@@ -287,20 +312,24 @@ bool MWAWGraphicShape::send(MWAWPropertyHandlerEncoder &doc, MWAWGraphicStyle co
       list.insert("svg:rx",double(m_cornerWidth[0]), WPX_POINT);
       list.insert("svg:ry",double(m_cornerWidth[1]), WPX_POINT);
     }
-  case Circle:
     pt=m_formBox[0]-orig;
     list.insert("svg:x",pt.x(), WPX_POINT);
     list.insert("svg:y",pt.y(), WPX_POINT);
     pt=m_formBox.size();
     list.insert("svg:width",pt.x(), WPX_POINT);
     list.insert("svg:height",pt.y(), WPX_POINT);
-    if (m_type==Rectangle) {
-      doc.startElement("Rectangle", list);
-      doc.endElement("Rectangle");
-    } else {
-      doc.startElement("Ellipse", list);
-      doc.endElement("Ellipse");
-    }
+    doc.startElement("Rectangle", list);
+    doc.endElement("Rectangle");
+    return true;
+  case Circle:
+    pt=0.5*(m_formBox[0]+m_formBox[1])-orig;
+    list.insert("svg:cx",pt.x(), WPX_POINT);
+    list.insert("svg:cy",pt.y(), WPX_POINT);
+    pt=0.5*(m_formBox[1]-m_formBox[0]);
+    list.insert("svg:rx",pt.x(), WPX_POINT);
+    list.insert("svg:ry",pt.y(), WPX_POINT);
+    doc.startElement("Ellipse", list);
+    doc.endElement("Ellipse");
     return true;
   case Arc: {
     Vec2f center=0.5*(m_formBox[0]+m_formBox[1])-orig;

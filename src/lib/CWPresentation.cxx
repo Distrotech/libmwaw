@@ -43,8 +43,6 @@
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
-#include "MWAWPictBasic.hxx"
-#include "MWAWPictMac.hxx"
 
 #include "CWParser.hxx"
 #include "CWStruct.hxx"

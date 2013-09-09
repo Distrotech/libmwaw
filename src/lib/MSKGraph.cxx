@@ -44,6 +44,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPictBasic.hxx"
@@ -303,13 +304,11 @@ struct GroupZone : public Zone {
 
 ////////////////////////////////////////
 //! Internal: the simple form of a MSKGraph ( line, rect, ...)
-struct BasicForm : public Zone {
+struct BasicShape : public Zone {
   //! constructor
-  BasicForm(Zone const &z, MWAWGraphicStyleManager &graphicManager) :
-    Zone(z), m_graphicManager(&graphicManager), m_formBox(), m_angle(0), m_deltaAngle(0),
-    m_vertices(), m_smooth(false) {
+  BasicShape(Zone const &z, MWAWGraphicStyleManager &graphicManager) :
+    Zone(z), m_shape(), m_graphicManager(&graphicManager) {
   }
-
   //! return the type
   virtual Type type() const {
     return Basic;
@@ -317,16 +316,7 @@ struct BasicForm : public Zone {
   //! operator<<
   virtual void print(std::ostream &o) const {
     Zone::print(o);
-    if (m_formBox.size().x() > 0) o << "realBox=" << m_formBox << ",";
-    if (m_subType == 4) o << "angl=" << m_angle << "[" << m_deltaAngle << "],";
-    if (m_vertices.size()) {
-      o << "pts=[";
-      for (size_t i = 0; i < m_vertices.size(); i++)
-        o << m_vertices[i] << ",";
-      o << "],";
-    }
-    if (m_smooth)
-      o << "smooth,";
+    o << m_shape << ",";
   }
   //! return the extra border size
   virtual float needExtraBorderWidth() const {
@@ -338,107 +328,31 @@ struct BasicForm : public Zone {
   //! return a binary data (if known)
   virtual bool getBinaryData(MWAWInputStreamPtr,
                              WPXBinaryData &res, std::string &type) const;
-
+  //! the basic shape
+  MWAWGraphicShape m_shape;
   //! a pointer to the graphic style manager
   MWAWGraphicStyleManager *m_graphicManager;
-  //! the form bdbox ( used by arc )
-  Box2i m_formBox;
-
-  //! the angle ( used by arc )
-  int m_angle, m_deltaAngle /** the delta angle */;
-  //! the list of vertices ( used by polygon)
-  std::vector<Vec2f> m_vertices;
-  //! a flag to know if a polygon is a smooth polygon or a line polygon
-  bool m_smooth;
 private:
-  BasicForm(BasicForm const &);
-  BasicForm &operator=(BasicForm const &);
+  BasicShape(BasicShape const &);
+  BasicShape &operator=(BasicShape const &);
 };
 
-shared_ptr<MWAWPictBasic> BasicForm::getBasicPicture(MWAWInputStreamPtr) const
+shared_ptr<MWAWPictBasic> BasicShape::getBasicPicture(MWAWInputStreamPtr) const
 {
-  shared_ptr<MWAWPictBasic> pict;
   MWAWGraphicStyle pStyle(m_style);
   if (m_subType!=0)
     pStyle.m_arrows[0] = pStyle.m_arrows[1]=false;
   Vec2f decal=m_decal[0]+m_decal[1];
-  Box2f bdbox=Box2f(m_box[0]+decal, m_box[1]+decal);
-  switch(m_subType) {
-  case 0: {
-    MWAWPictLine *pct=new MWAWPictLine(*m_graphicManager, bdbox.min(), bdbox.max());
-    pict.reset(pct);
-    break;
-  }
-  case 1: {
-    MWAWPictRectangle *pct=new MWAWPictRectangle(*m_graphicManager, bdbox);
-    pict.reset(pct);
-    break;
-  }
-  case 2: {
-    MWAWPictRectangle *pct=new MWAWPictRectangle(*m_graphicManager, bdbox);
-    int sz = 10;
-    if (bdbox.size().x() > 0 && bdbox.size().x() < 2*sz)
-      sz = int(bdbox.size().x())/2;
-    if (bdbox.size().y() > 0 && bdbox.size().y() < 2*sz)
-      sz = int(bdbox.size().y())/2;
-    pct->setRoundCornerWidth(sz);
-    pict.reset(pct);
-    break;
-  }
-  case 3: {
-    MWAWPictCircle *pct=new MWAWPictCircle(*m_graphicManager, bdbox);
-    pict.reset(pct);
-    break;
-  }
-  case 4: {
-    int angl2 = m_angle+((m_deltaAngle>0) ? m_deltaAngle : -m_deltaAngle);
-    Box2f formBox(Vec2f(m_formBox.min())+decal,Vec2f(m_formBox.max())+decal);
-    MWAWPictArc *pct=new MWAWPictArc(*m_graphicManager, bdbox, formBox, float(450-angl2), float(450-m_angle));
-    pict.reset(pct);
-    break;
-  }
-  case 5: {
-    size_t nbPt=m_vertices.size();
-    if (!m_smooth || nbPt <= 2) {
-      std::vector<Vec2f> vertices(nbPt);
-      for (size_t pt=0; pt<nbPt; ++pt)
-        vertices[pt]=m_vertices[pt]+decal;
-      MWAWPictPolygon *pct = new MWAWPictPolygon(*m_graphicManager, bdbox, vertices);
-      pict.reset(pct);
-      break;
-    }
-    // changme: when the polygon is closed, this does not smooth the start/end domain
-    Vec2f orig=m_box[0];
-
-    MWAWPictPath *path=new MWAWPictPath(*m_graphicManager, bdbox);
-    pict.reset(path);
-    Vec2f vertex=m_vertices[0]-orig;
-    path->add(MWAWPictPath::Command('M', vertex));
-
-    Vec2f middle=0.5f*(m_vertices[1]+m_vertices[0])-orig;
-    path->add(MWAWPictPath::Command('L', middle));
-    for (size_t pt=1; pt+1 < nbPt; ++pt) {
-      middle=0.5f*(m_vertices[pt+1]+m_vertices[pt])-orig;
-      vertex=m_vertices[pt]-orig;
-      path->add(MWAWPictPath::Command('Q', middle, vertex));
-    }
-    vertex=m_vertices[nbPt-1]-orig;
-    path->add(MWAWPictPath::Command('L',vertex));
-    if (m_vertices[0]==m_vertices[nbPt-1])
-      path->add(MWAWPictPath::Command('Z'));
-    break;
-  }
-  default:
-    MWAW_DEBUG_MSG(("MSKGraphInternal::BasicForm::getBasicPict: find unknown type\n"));
-    break;
-  }
+  MWAWGraphicShape shape(m_shape);
+  shape.translate(decal);
+  shared_ptr<MWAWPictBasic> pict(new MWAWPictShape(*m_graphicManager, shape, pStyle));
   if (pict)
     pict->setStyle(pStyle);
   return pict;
 }
 
-bool BasicForm::getBinaryData(MWAWInputStreamPtr input,
-                              WPXBinaryData &data, std::string &pictType) const
+bool BasicShape::getBinaryData(MWAWInputStreamPtr input,
+                               WPXBinaryData &data, std::string &pictType) const
 {
   data.clear();
   pictType="";
@@ -1590,39 +1504,79 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
   shared_ptr<MSKGraphInternal::Zone> res;
   MWAWGraphicStyleManager &graphicManager=*m_parserState->m_graphicStyleManager;
   switch (pict.m_subType) {
-  case 0:
-  case 1:
-  case 2:
-  case 3:
-    res.reset(new MSKGraphInternal::BasicForm(pict, graphicManager));
-    break;
-  case 4: {
-    MSKGraphInternal::BasicForm *form  = new MSKGraphInternal::BasicForm(pict, graphicManager);
+  case 0: { // line
+    MSKGraphInternal::BasicShape *form = new MSKGraphInternal::BasicShape(pict, graphicManager);
     res.reset(form);
-    form->m_angle = (int) input->readLong(2);
-    form->m_deltaAngle = (int) input->readLong(2);
-    int dim[4]; // real Bdbox
+    form->m_shape = MWAWGraphicShape::line(pict.m_box.min(), pict.m_box.max());
+    break;
+  }
+  case 1: // rect
+  case 2: // rectoval
+  case 3: { // circle
+    Box2f bdbox = pict.m_box;
+    MSKGraphInternal::BasicShape *form = new MSKGraphInternal::BasicShape(pict, graphicManager);
+    res.reset(form);
+    form->m_shape.m_bdBox = form->m_shape.m_formBox = bdbox;
+    form->m_shape.m_type = (pict.m_subType==3) ? MWAWGraphicShape::Circle :
+                           MWAWGraphicShape::Rectangle;
+    if (pict.m_subType==2) {
+      float sz=10;
+      if (bdbox.size().x() > 0 && bdbox.size().x() < 2*sz)
+        sz = int(bdbox.size().x())/2;
+      if (bdbox.size().y() > 0 && bdbox.size().y() < 2*sz)
+        sz = int(bdbox.size().y())/2;
+      form->m_shape.m_cornerWidth=Vec2f(sz,sz);
+    }
+    break;
+  }
+  case 4: {
+    MSKGraphInternal::BasicShape *form  = new MSKGraphInternal::BasicShape(pict, graphicManager);
+    res.reset(form);
+    float angle = (float) input->readLong(2);
+    float deltaAngle = (float) input->readLong(2);
+    float angl2 = angle+((deltaAngle>0) ? deltaAngle : -deltaAngle);
+    float dim[4]; // real Bdbox
     for (int i = 0; i < 4; i++)
-      dim[i] = (int) input->readLong(2);
-    form->m_formBox = form->m_box;
-    form->m_box = Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+      dim[i] = (float) input->readLong(2);
+    Box2f realBox(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+    form->m_shape=MWAWGraphicShape::arc(realBox,pict.m_box,Vec2f(450.f-angl2,450.f-angle));
+    form->m_box = realBox;
     break;
   }
   case 5: {
-    MSKGraphInternal::BasicForm *form  = new MSKGraphInternal::BasicForm(pict, graphicManager);
+    MSKGraphInternal::BasicShape *form  = new MSKGraphInternal::BasicShape(pict, graphicManager);
     res.reset(form);
     val = (int) input->readULong(2);
+    bool smooth=false;
     if (val==1)
-      form->m_smooth=true;
+      smooth=true;
     else if (val) f << "#smooth=" << val << ",";
     int numPt = (int) input->readLong(2);
     long ptr = (long) input->readULong(4);
     f << std::hex << "ptr2=" << ptr << std::dec << ",";
+    std::vector<Vec2f> vertices;
     for (int i = 0; i < numPt; i++) {
       float x = float(input->readLong(4))/65336.f;
       float y = float(input->readLong(4))/65336.f;
-      form->m_vertices.push_back(Vec2f(x,y));
+      vertices.push_back(Vec2f(x,y));
     }
+    if (!smooth || numPt <= 2) {
+      form->m_shape=MWAWGraphicShape::polygon(pict.m_box);
+      form->m_shape.m_vertices = vertices;
+      break;
+    }
+    form->m_shape=MWAWGraphicShape::path(pict.m_box);
+    form->m_shape.m_path.push_back(MWAWGraphicShape::PathData('M', vertices[0]));
+
+    Vec2f middle=0.5f*(vertices[1]+vertices[0]);
+    form->m_shape.m_path.push_back(MWAWGraphicShape::PathData('L', middle));
+    for (size_t pt=1; pt+1 < size_t(numPt); ++pt) {
+      middle=0.5f*(vertices[pt+1]+vertices[pt]);
+      form->m_shape.m_path.push_back(MWAWGraphicShape::PathData('Q', middle, vertices[pt]));
+    }
+    form->m_shape.m_path.push_back(MWAWGraphicShape::PathData('L',vertices[size_t(numPt-1)]));
+    if (vertices[0]==vertices[size_t(numPt)-1])
+      form->m_shape.m_path.push_back(MWAWGraphicShape::PathData('Z'));
     break;
   }
   case 7: {

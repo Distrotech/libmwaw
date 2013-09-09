@@ -53,7 +53,7 @@ namespace HMWJGraphInternal
 {
 struct CellFormat;
 struct Frame;
-struct BasicGraph;
+struct ShapeGraph;
 struct CommentFrame;
 struct PictureFrame;
 struct TableFrame;
@@ -109,7 +109,7 @@ protected:
   /** try to read a frame*/
   shared_ptr<HMWJGraphInternal::Frame> readFrame(int id);
   /** try to read the basic graph data */
-  shared_ptr<HMWJGraphInternal::BasicGraph> readBasicGraph(HMWJGraphInternal::Frame const &header, long endPos);
+  shared_ptr<HMWJGraphInternal::ShapeGraph> readShapeGraph(HMWJGraphInternal::Frame const &header, long endPos);
   /** try to read the comment data  */
   shared_ptr<HMWJGraphInternal::CommentFrame> readCommentData(HMWJGraphInternal::Frame const &header, long endPos);
   /** try to read the picture data  */
@@ -135,7 +135,7 @@ protected:
   /** try to send a frame to the listener */
   bool sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   /** try to send a basic picture to the listener */
-  bool sendBasicGraph(HMWJGraphInternal::BasicGraph const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   /** try to send a comment box to the listener */
   bool sendComment(HMWJGraphInternal::CommentFrame const &textbox, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   /** try to send a picture frame */
