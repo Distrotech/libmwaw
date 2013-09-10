@@ -1522,9 +1522,9 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
     if (pict.m_subType==2) {
       float sz=10;
       if (bdbox.size().x() > 0 && bdbox.size().x() < 2*sz)
-        sz = int(bdbox.size().x())/2;
+        sz = bdbox.size().x()/2.f;
       if (bdbox.size().y() > 0 && bdbox.size().y() < 2*sz)
-        sz = int(bdbox.size().y())/2;
+        sz = bdbox.size().y()/2.f;
       form->m_shape.m_cornerWidth=Vec2f(sz,sz);
     }
     break;

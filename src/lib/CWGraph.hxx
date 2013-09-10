@@ -56,7 +56,7 @@ struct Group;
 struct State;
 struct Style;
 struct Zone;
-struct ZoneBasic;
+struct ZoneShape;
 struct ZoneBitmap;
 struct ZonePict;
 }
@@ -126,8 +126,8 @@ protected:
   shared_ptr<CWGraphInternal::Zone> readGroupDef(MWAWEntry const &entry);
 
   /* read a simple graphic zone */
-  bool readBasicGraphic(MWAWEntry const &entry,
-                        CWGraphInternal::ZoneBasic &zone);
+  bool readShape(MWAWEntry const &entry,
+                 CWGraphInternal::ZoneShape &zone);
 
   /* read the group data.
 
@@ -178,8 +178,8 @@ protected:
                    WPXPropertyList extras = WPXPropertyList());
 
   //! sends a basic graphic zone
-  bool sendBasicPicture(CWGraphInternal::ZoneBasic &pict, MWAWPosition pos,
-                        WPXPropertyList extras = WPXPropertyList());
+  bool sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos,
+                 WPXPropertyList extras = WPXPropertyList());
 
   //! sends a bitmap graphic zone
   bool sendBitmap(CWGraphInternal::ZoneBitmap &pict, MWAWPosition pos,

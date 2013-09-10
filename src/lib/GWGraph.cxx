@@ -43,6 +43,7 @@
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
+#include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictMac.hxx"
@@ -281,13 +282,11 @@ struct FrameBad : public Frame {
 };
 
 ////////////////////////////////////////
-//! Internal: the basic graphic of a GWGraph
-struct FrameBasic : public Frame {
+//! Internal: the basic shape of a GWGraph
+struct FrameShape : public Frame {
   //! constructor
-  FrameBasic(Frame const &frame, MWAWGraphicStyleManager &graphicManager) :
-    Frame(frame), m_graphicManager(&graphicManager), m_vertices(), m_lineArrow(0), m_lineFormat(0) {
-    for (int i=0; i < 3; ++i)
-      m_values[i]=0;
+  FrameShape(Frame const &frame, MWAWGraphicStyleManager &graphicManager) :
+    Frame(frame), m_graphicManager(&graphicManager), m_shape(), m_lineArrow(0), m_lineFormat(0) {
   }
   //! returns a picture corresponding to the frame
   shared_ptr<MWAWPictBasic> getPicture(Style const &style) const;
@@ -298,24 +297,6 @@ struct FrameBasic : public Frame {
   //! print function
   virtual void print(std::ostream &o) const {
     Frame::print(o);
-    if (m_type==4) {
-      if (m_values[0]==1)
-        o << "cornerDim=" << m_values[1] << ",";
-      else if (m_values[0]==2)
-        o << "cornerDim=minLength/2,";
-      else
-        o << "#type[corner]=" << m_values[0] << ",";
-    } else if (m_type==6) {
-      o << "angles=" << m_values[0]<< "x" << m_values[1] << ",";
-      if (m_values[2]==1) o << "closed,";
-      else if (m_values[2]) o << "#type[angle]=" << m_values[2] << ",";
-    }
-    if (m_vertices.size()) {
-      o << "vertices=[";
-      for (size_t i = 0; i < m_vertices.size(); ++i)
-        o << m_vertices[i] << ",";
-      o << "],";
-    }
     switch(m_lineArrow) {
     case 0: // unset
     case 1: // none
@@ -337,32 +318,24 @@ struct FrameBasic : public Frame {
   }
   //! the graphic style manager
   MWAWGraphicStyleManager *m_graphicManager;
-  //! arc : the angles, open/close, rectoval : type, the corner dimension
-  int m_values[3];
-  //! the polygon vertices
-  std::vector<Vec2f> m_vertices;
+  //! the shape
+  MWAWGraphicShape m_shape;
   //! the line arrow style (in v1)
   int m_lineArrow;
   //! the line format?
   int m_lineFormat;
 private:
-  FrameBasic(FrameBasic const &);
-  FrameBasic &operator=(FrameBasic const &);
+  FrameShape(FrameShape const &);
+  FrameShape &operator=(FrameShape const &);
 };
 
-shared_ptr<MWAWPictBasic> FrameBasic::getPicture(Style const &style) const
+shared_ptr<MWAWPictBasic> FrameShape::getPicture(Style const &style) const
 {
   shared_ptr<MWAWPictBasic> res;
   Box2f box(Vec2f(0,0), m_box.size());
 
   MWAWGraphicStyle pStyle;
-  switch(m_type) {
-  case 2: {
-    if (m_vertices.size()<2) {
-      MWAW_DEBUG_MSG(("FrameBasic::getPicture: can not find line points\n"));
-      break;
-    }
-    MWAWPictLine *pict=new MWAWPictLine(*m_graphicManager, m_vertices[0],m_vertices[1]);
+  if (m_shape.m_type==MWAWGraphicShape::Line) {
     int arrow=(m_lineArrow<=1) ? style.m_lineArrow : m_lineArrow;
     switch(arrow) {
     case 2:
@@ -377,104 +350,11 @@ shared_ptr<MWAWPictBasic> FrameBasic::getPicture(Style const &style) const
     default:
       break;
     }
-    res.reset(pict);
-    break;
   }
-  case 3:
-    res.reset(new MWAWPictRectangle(*m_graphicManager, box));
-    break;
-  case 4: {
-    int width=m_values[1];
-    if (m_values[0]==2)
-      width=m_box.size()[1]>m_box.size()[0] ?
-            int(m_box.size()[0]) : int(m_box.size()[1]);
-    MWAWPictRectangle *rect=new MWAWPictRectangle(*m_graphicManager, box);
-    res.reset(rect);
-    rect->setRoundCornerWidth((width+1)/2);
-    break;
-  }
-  case 5:
-    res.reset(new MWAWPictCircle(*m_graphicManager, box));
-    break;
-  case 6: {
-    int angle[2] = { int(90-m_values[0]-m_values[1]),
-                     int(90-m_values[0])
-                   };
-    if (m_values[1]<0) {
-      angle[0]=int(90-m_values[0]);
-      angle[1]=int(90-m_values[0]-m_values[1]);
-    } else if (m_values[1]==360)
-      angle[0]=int(90-m_values[0]-359);
-    while (angle[1] > 360) {
-      angle[0]-=360;
-      angle[1]-=360;
-    }
-    while (angle[0] < -360) {
-      angle[0]+=360;
-      angle[1]+=360;
-    }
-    Vec2f center = box.center();
-    Vec2f axis = 0.5*Vec2f(box.size());
-    // we must compute the real bd box
-    float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
-    int limitAngle[2];
-    for (int i = 0; i < 2; ++i)
-      limitAngle[i] = (angle[i] < 0) ? int(angle[i]/90)-1 : int(angle[i]/90);
-    for (int bord = limitAngle[0]; bord <= limitAngle[1]+1; ++bord) {
-      float ang = (bord == limitAngle[0]) ? float(angle[0]) :
-                  (bord == limitAngle[1]+1) ? float(angle[1]) : float(90 * bord);
-      ang *= float(M_PI/180.);
-      float actVal[2] = { axis[0] *std::cos(ang), -axis[1] *std::sin(ang)};
-      if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
-      else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
-      if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
-      else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
-    }
-    Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
-                  Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
-    res.reset(new MWAWPictArc(*m_graphicManager, realBox,box, float(angle[0]), float(angle[1])));
-    break;
-  }
-  case 7:
-  case 8:
-    if (m_vertices.size()<2) {
-      MWAW_DEBUG_MSG(("FrameBasic::getPicture: can not find polygon points\n"));
-      break;
-    }
-    res.reset(new MWAWPictPolygon(*m_graphicManager, box, m_vertices));
-    break;
-  case 12: {
-    size_t nbPt=m_vertices.size();
-    if (nbPt<4 || (nbPt%3)!=1) {
-      MWAW_DEBUG_MSG(("FrameBasic::getPicture: the spline number of points seems bad\n"));
-      break;
-    }
-    MWAWPictPath *path=new MWAWPictPath(*m_graphicManager, box);
-    res.reset(path);
-    path->add(MWAWPictPath::Command('M', m_vertices[0]));
-
-    for (size_t pt=1; pt < nbPt; pt+=3) {
-      bool hasFirstC=m_vertices[pt-1]!=m_vertices[pt];
-      bool hasSecondC=m_vertices[pt+1]!=m_vertices[pt+2];
-      if (!hasFirstC && !hasSecondC)
-        path->add(MWAWPictPath::Command('L', m_vertices[pt+2]));
-      else if (hasFirstC)
-        path->add(MWAWPictPath::Command('C', m_vertices[pt+2], m_vertices[pt+1], m_vertices[pt+1]));
-      else
-        path->add(MWAWPictPath::Command('S', m_vertices[pt+2], m_vertices[pt+1]));
-    }
-    path->add(MWAWPictPath::Command('Z'));
-    break;
-  }
-  default:
-    break;
-  }
-  if (!res)
-    return res;
   pStyle.m_lineWidth=style.lineWidth();
   pStyle.m_lineColor=style.getColor(true);
   pStyle.setSurfaceColor(style.getColor(false), style.hasSurfaceColor() ? 1.f : 0.f);
-  res->setStyle(pStyle);
+  res.reset(new MWAWPictShape(*m_graphicManager, m_shape, pStyle));
   return res;
 }
 
@@ -1457,17 +1337,43 @@ bool GWGraph::readPageFrames()
       f << "dim=" << dim[1] << "x" << dim[0] << "<->"
         << dim[3] << "x" << dim[2] << ",";
       f << "pt=[";
-      GWGraphInternal::FrameBasic &graph=
-        static_cast<GWGraphInternal::FrameBasic &>(*zone);
+      GWGraphInternal::FrameShape &graph=
+        static_cast<GWGraphInternal::FrameShape &>(*zone);
       float pt[2];
-      Vec2f orig=graph.m_box[0];
+      std::vector<Vec2f> vertices;
       for (int p=0; p<nPt; ++p) {
         pt[0]=float(input->readLong(4))/65536.f;
         pt[1]=float(input->readLong(4))/65536.f;
-        graph.m_vertices.push_back(Vec2f(pt[1],pt[0])-orig);
+        vertices.push_back(Vec2f(pt[1],pt[0]));
         f << pt[1] << "x" << pt[0] << ",";
       }
       f << "],";
+      if (graph.m_shape.m_type == MWAWGraphicShape::Polygon)
+        graph.m_shape.m_vertices = vertices;
+      else if (graph.m_shape.m_type == MWAWGraphicShape::Path) {
+        if (nPt<4 || (nPt%3)!=1) {
+          MWAW_DEBUG_MSG(("GWGraph::readPageFrames: the spline number of points seems bad\n"));
+          f << "###";
+        } else {
+          std::vector<MWAWGraphicShape::PathData> &path=graph.m_shape.m_path;
+          path.push_back(MWAWGraphicShape::PathData('M', vertices[0]));
+
+          for (size_t p=1; p < size_t(nPt); p+=3) {
+            bool hasFirstC=vertices[p-1]!=vertices[p];
+            bool hasSecondC=vertices[p+1]!=vertices[p+2];
+            if (!hasFirstC && !hasSecondC)
+              path.push_back(MWAWGraphicShape::PathData('L', vertices[p+2]));
+            else if (hasFirstC)
+              path.push_back(MWAWGraphicShape::PathData('C', vertices[p+2], vertices[p+1], vertices[p+1]));
+            else
+              path.push_back(MWAWGraphicShape::PathData('S', vertices[p+2], vertices[p+1]));
+          }
+          path.push_back(MWAWGraphicShape::PathData('Z'));
+        }
+      } else {
+        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: find unexpected vertices\n"));
+        f << "###";
+      }
       if (input->tell()!=endData) {
         ascFile.addDelimiter(input->tell(),'|');
         input->seek(endData,WPX_SEEK_SET);
@@ -1626,7 +1532,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     break;
   }
   case 2: {
-    GWGraphInternal::FrameBasic *graph=new GWGraphInternal::FrameBasic(zone, *m_parserState->m_graphicStyleManager);
+    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone, *m_parserState->m_graphicStyleManager);
     res.reset(graph);
     if (vers==1) {
       graph->m_lineArrow=(int) input->readLong(2);
@@ -1635,37 +1541,92 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     float points[4];
     for (int i=0; i<4; ++i)
       points[i]=float(input->readLong(4))/65536;
-    Vec2f orig(dim[1],dim[0]);
-    graph->m_vertices.push_back(Vec2f(points[1],points[0])-orig);
-    graph->m_vertices.push_back(Vec2f(points[3],points[2])-orig);
+    graph->m_shape=MWAWGraphicShape::line(Vec2f(points[1],points[0]), Vec2f(points[3],points[2]));
     break;
   }
   case 4: {
-    GWGraphInternal::FrameBasic *graph=new GWGraphInternal::FrameBasic(zone, *m_parserState->m_graphicStyleManager);
+    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone, *m_parserState->m_graphicStyleManager);
     res.reset(graph);
-    graph->m_values[0]=(int) input->readLong(2); // type
-    graph->m_values[1]=(int) input->readLong(2); // corner dimension
+    int roundType = (int) input->readLong(2);
+    float cornerDim = (float) input->readLong(2);
+    graph->m_shape = MWAWGraphicShape::rectangle(zone.m_box);
+    switch(roundType) {
+    case 1: // normal
+      graph->m_shape.m_cornerWidth[0]=cornerDim > zone.m_box.size()[0] ? zone.m_box.size()[0]/2.f : cornerDim/2.f;
+      graph->m_shape.m_cornerWidth[1]=cornerDim > zone.m_box.size()[1] ? zone.m_box.size()[1]/2.f : cornerDim/2.f;
+      break;
+    case 2:
+      f << "cornerDim[minWidth/2],";
+      cornerDim = zone.m_box.size()[0] < zone.m_box.size()[1] ? zone.m_box.size()[0] : zone.m_box.size()[1];
+      graph->m_shape.m_cornerWidth[0]=graph->m_shape.m_cornerWidth[1]=0.5f*cornerDim;
+      break;
+    default:
+      f << "#type[corner]=" << roundType << "[" << cornerDim << "],";
+      break;
+    }
     break;
   }
   case 6: {
-    GWGraphInternal::FrameBasic *graph=new GWGraphInternal::FrameBasic(zone, *m_parserState->m_graphicStyleManager);
+    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone, *m_parserState->m_graphicStyleManager);
     res.reset(graph);
+    int fileAngle[2];
     for (int i=0; i < 2; ++i) // angles
-      graph->m_values[i]=(int) input->readLong(2);
-    graph->m_values[2]=(int) input->readLong(1); // 0:open, 1: close
+      fileAngle[i]=(int) input->readLong(2);
+    int type=(int) input->readLong(1); // 0:open, 1: close
+    if (type==1) f << "closed,";
+    else if (type) f << "#type=" << type << ",";
+
+    int angle[2] = { int(90-fileAngle[0]-fileAngle[1]), int(90-fileAngle[0]) };
+    if (fileAngle[1]<0) {
+      angle[0]=int(90-fileAngle[0]);
+      angle[1]=int(90-fileAngle[0]-fileAngle[1]);
+    } else if (fileAngle[1]==360)
+      angle[0]=int(90-fileAngle[0]-359);
+    while (angle[1] > 360) {
+      angle[0]-=360;
+      angle[1]-=360;
+    }
+    while (angle[0] < -360) {
+      angle[0]+=360;
+      angle[1]+=360;
+    }
+    Vec2f center = zone.m_box.center();
+    Vec2f axis = 0.5*Vec2f(zone.m_box.size());
+    // we must compute the real bd box
+    float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
+    int limitAngle[2];
+    for (int i = 0; i < 2; ++i)
+      limitAngle[i] = (angle[i] < 0) ? int(angle[i]/90)-1 : int(angle[i]/90);
+    for (int bord = limitAngle[0]; bord <= limitAngle[1]+1; ++bord) {
+      float ang = (bord == limitAngle[0]) ? float(angle[0]) :
+                  (bord == limitAngle[1]+1) ? float(angle[1]) : float(90 * bord);
+      ang *= float(M_PI/180.);
+      float actVal[2] = { axis[0] *std::cos(ang), -axis[1] *std::sin(ang)};
+      if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
+      else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
+      if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
+      else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
+    }
+    Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
+                  Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
+    graph->m_shape = MWAWGraphicShape::arc(realBox, zone.m_box, Vec2f(float(angle[0]), float(angle[1])));
     break;
   }
   case 3: // rect: no data
   case 5: { // oval no data
-    GWGraphInternal::FrameBasic *graph=new GWGraphInternal::FrameBasic(zone, *m_parserState->m_graphicStyleManager);
+    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone, *m_parserState->m_graphicStyleManager);
+    MWAWGraphicShape &shape = graph->m_shape;
     res.reset(graph);
+    shape.m_bdBox = shape.m_formBox = zone.m_box;
+    shape.m_type = zone.m_type==3 ? MWAWGraphicShape::Rectangle : MWAWGraphicShape::Circle;
     break;
   }
   case 7:
   case 8:
   case 12: {
-    GWGraphInternal::FrameBasic *graph=new GWGraphInternal::FrameBasic(zone, *m_parserState->m_graphicStyleManager);
+    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone, *m_parserState->m_graphicStyleManager);
     res.reset(graph);
+    graph->m_shape = zone.m_type==12 ? MWAWGraphicShape::path(zone.m_box) : MWAWGraphicShape::polygon(zone.m_box);
     graph->m_dataSize=(long) input->readULong(4);
     break;
   }
@@ -1761,11 +1722,11 @@ void GWGraph::buildFrameDataReadOrderFromTree
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-bool GWGraph::sendBasic(GWGraphInternal::FrameBasic const &graph, GWGraphInternal::Zone const &zone, MWAWPosition pos)
+bool GWGraph::sendShape(GWGraphInternal::FrameShape const &graph, GWGraphInternal::Zone const &zone, MWAWPosition pos)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("GWGraph::sendBasic: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("GWGraph::sendShape: can not find a listener\n"));
     return false;
   }
   GWGraphInternal::Style style;
@@ -1808,7 +1769,7 @@ bool GWGraph::sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInterna
   bool ok=true;
   switch (frame->getType()) {
   case GWGraphInternal::Frame::T_BASIC:
-    ok = sendBasic(static_cast<GWGraphInternal::FrameBasic const &>(*frame), zone, fPos);
+    ok = sendShape(static_cast<GWGraphInternal::FrameShape const &>(*frame), zone, fPos);
     break;
   case GWGraphInternal::Frame::T_PICTURE:
     ok = sendPicture(static_cast<GWGraphInternal::FramePicture const &>(*frame).m_entry, fPos);

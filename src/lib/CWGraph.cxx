@@ -44,6 +44,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWPictBasic.hxx"
 #include "MWAWPictBitmap.hxx"
@@ -176,7 +177,7 @@ struct Style {
 //! Internal: the generic structure used to store a zone of a CWGraph
 struct Zone {
   //! the list of types
-  enum Type { T_Zone, T_Basic, T_Picture, T_Chart, T_DataBox, T_Unknown,
+  enum Type { T_Zone, T_Shape, T_Picture, T_Chart, T_DataBox, T_Unknown,
               /* basic subtype */
               T_Line, T_Rect, T_RectOval, T_Oval, T_Arc, T_Poly,
               /* picture subtype */
@@ -225,19 +226,17 @@ struct Zone {
 };
 
 //! Internal: small class to store a basic graphic zone of a CWGraph
-struct ZoneBasic : public Zone {
+struct ZoneShape : public Zone {
   //! constructor
-  ZoneBasic(Zone const &z, Type type) : Zone(z), m_type(type), m_vertices() {
-    for (int i = 0; i < 2; i++)
-      m_values[i] = 0;
-    for (int i = 0; i < 8; i++)
-      m_flags[i] = 0;
+  ZoneShape(Zone const &z, Type type) : Zone(z), m_type(type), m_shape() {
   }
   //! print the data
-  virtual void print(std::ostream &o) const;
+  virtual void print(std::ostream &o) const {
+    o << m_shape;
+  }
   //! return the main type
   virtual Type getType() const {
-    return T_Basic;
+    return T_Shape;
   }
   //! return the sub type
   virtual Type getSubType() const {
@@ -245,7 +244,7 @@ struct ZoneBasic : public Zone {
   }
   //! return the number of data
   virtual int getNumData() const {
-    if (m_type == T_Poly) return 1;
+    if (m_shape.m_type == MWAWGraphicShape::Polygon) return 1;
     return 0;
   }
   //! return a child corresponding to this zone
@@ -258,58 +257,9 @@ struct ZoneBasic : public Zone {
 
   //! the sub type
   Type m_type;
-  //! arc : the angles, rectoval : the corner dimension
-  float m_values[2];
-  //! some unknown value
-  int m_flags[8];
-  //! the polygon vertices
-  std::vector<CurvePoint> m_vertices;
+  //! the shape
+  MWAWGraphicShape m_shape;
 };
-
-void ZoneBasic::print(std::ostream &o) const
-{
-  switch (m_type) {
-  case T_Line:
-    o << "LINE,";
-    break;
-  case T_Rect:
-    o << "RECT,";
-    break;
-  case T_RectOval:
-    o << "RECTOVAL, cornerDim=" << m_values[0]<< "x" << m_values[1] << ",";
-    break;
-  case T_Oval:
-    o << "OVAL,";
-    break;
-  case T_Arc:
-    o << "ARC, angles=" << m_values[0]<< "x" << m_values[1] << ",";
-    break;
-  case T_Poly:
-    o << "POLY,";
-    break;
-  case T_Zone:
-  case T_Basic:
-  case T_Picture:
-  case T_Chart:
-  case T_DataBox:
-  case T_Unknown:
-  case T_Pict:
-  case T_QTim:
-  case T_Movie:
-  case T_Bitmap:
-  default:
-    o << "##type=" << m_type << ",";
-    break;
-  }
-  if (m_vertices.size()) {
-    o << "vertices=[";
-    for (size_t i = 0; i < m_vertices.size(); i++)
-      o << m_vertices[i] << ",";
-    o << "],";
-  }
-  for (int i = 0; i < 8; i++)
-    if (m_flags[i]) o << "fl" << i << "=" << m_flags[i] << ",";
-}
 
 //! Internal: the structure used to store a PICT or a MOVIE
 struct ZonePict : public Zone {
@@ -329,7 +279,7 @@ struct ZonePict : public Zone {
       o << "MOVIE,";
       break;
     case T_Zone:
-    case T_Basic:
+    case T_Shape:
     case T_Picture:
     case T_Chart:
     case T_DataBox:
@@ -473,7 +423,7 @@ struct ZoneUnknown : public Zone {
       o << "CHART,";
       break;
     case T_Zone:
-    case T_Basic:
+    case T_Shape:
     case T_Picture:
     case T_Line:
     case T_Rect:
@@ -1262,14 +1212,14 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
   case CWGraphInternal::Zone::T_Oval:
   case CWGraphInternal::Zone::T_Arc:
   case CWGraphInternal::Zone::T_Poly: {
-    CWGraphInternal::ZoneBasic *z = new CWGraphInternal::ZoneBasic(zone, type);
+    CWGraphInternal::ZoneShape *z = new CWGraphInternal::ZoneShape(zone, type);
     res.reset(z);
-    readBasicGraphic(entry, *z);
+    readShape(entry, *z);
     break;
   }
   case CWGraphInternal::Zone::T_DataBox:
   case CWGraphInternal::Zone::T_Chart:
-  case CWGraphInternal::Zone::T_Basic:
+  case CWGraphInternal::Zone::T_Shape:
   case CWGraphInternal::Zone::T_Picture:
   case CWGraphInternal::Zone::T_Unknown:
   case CWGraphInternal::Zone::T_Bitmap:
@@ -1352,7 +1302,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
           return false;
         break;
       case CWGraphInternal::Zone::T_Poly:
-        if (!readPolygonData(z))
+        if (z->getNumData() && !readPolygonData(z))
           return false;
         break;
       case CWGraphInternal::Zone::T_Line:
@@ -1361,7 +1311,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
       case CWGraphInternal::Zone::T_Oval:
       case CWGraphInternal::Zone::T_Arc:
       case CWGraphInternal::Zone::T_Zone:
-      case CWGraphInternal::Zone::T_Basic:
+      case CWGraphInternal::Zone::T_Shape:
       case CWGraphInternal::Zone::T_Picture:
       case CWGraphInternal::Zone::T_Chart:
       case CWGraphInternal::Zone::T_DataBox:
@@ -1434,8 +1384,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
 // Low level
 //
 ////////////////////////////////////////////////////////////
-bool CWGraph::readBasicGraphic(MWAWEntry const &entry,
-                               CWGraphInternal::ZoneBasic &zone)
+bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long actPos = input->tell();
@@ -1443,36 +1392,81 @@ bool CWGraph::readBasicGraphic(MWAWEntry const &entry,
   if (remainBytes < 0)
     return false;
 
-  int actFlag = 0;
+  Vec2f pictSz = zone.m_box.size();
+  if (pictSz[0] < 0) pictSz.setX(-pictSz[0]);
+  if (pictSz[1] < 0) pictSz.setY(-pictSz[1]);
+  Box2i box(Vec2f(0,0), pictSz);
+  MWAWGraphicShape &shape=zone.m_shape;
+  shape.m_bdBox=shape.m_formBox=box;
+  libmwaw::DebugStream f;
   switch(zone.getSubType()) {
   case CWGraphInternal::Zone::T_Line:
+    shape = MWAWGraphicShape::line(zone.m_box[0],zone.m_box[1]);
+    break;
   case CWGraphInternal::Zone::T_Rect:
+    shape.m_type = MWAWGraphicShape::Rectangle;
+    break;
   case CWGraphInternal::Zone::T_Oval:
+    shape.m_type = MWAWGraphicShape::Circle;
     break;
   case CWGraphInternal::Zone::T_Poly:
+    shape.m_type = MWAWGraphicShape::Polygon;
     break; // value are defined in next zone
   case CWGraphInternal::Zone::T_Arc: {
     if (remainBytes < 4) {
       MWAW_DEBUG_MSG(("CWGraph::readSimpleGraphicZone: arc zone is too short\n"));
       return false;
     }
+    int fileAngle[2];
     for (int i = 0; i < 2; i++)
-      zone.m_values[i] = (float) input->readLong(2);
+      fileAngle[i] = (int) input->readLong(2);
+    int angle[2] = { 90-fileAngle[0]-fileAngle[1], 90-fileAngle[0] };
+    while (angle[1] > 360) {
+      angle[0]-=360;
+      angle[1]-=360;
+    }
+    while (angle[0] < -360) {
+      angle[0]+=360;
+      angle[1]+=360;
+    }
+    Vec2f center = box.center();
+    Vec2f axis = 0.5*Vec2f(box.size());
+    // we must compute the real bd box
+    float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
+    int limitAngle[2];
+    for (int i = 0; i < 2; i++)
+      limitAngle[i] = (angle[i] < 0) ? int(angle[i]/90)-1 : int(angle[i]/90);
+    for (int bord = limitAngle[0]; bord <= limitAngle[1]+1; bord++) {
+      float ang = (bord == limitAngle[0]) ? float(angle[0]) :
+                  (bord == limitAngle[1]+1) ? float(angle[1]) : float(90 * bord);
+      ang *= float(M_PI/180.);
+      float actVal[2] = { axis[0] *std::cos(ang), -axis[1] *std::sin(ang)};
+      if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
+      else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
+      if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
+      else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
+    }
+    Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
+                  Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
+    shape = MWAWGraphicShape::arc(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
     break;
   }
   case CWGraphInternal::Zone::T_RectOval: {
+    shape.m_type = MWAWGraphicShape::Rectangle;
     if (remainBytes < 8) {
       MWAW_DEBUG_MSG(("CWGraph::readSimpleGraphicZone: arc zone is too short\n"));
       return false;
     }
     for (int i = 0; i < 2; i++) {
-      zone.m_values[size_t(i)] = float(input->readLong(2))/2.0f;
-      zone.m_flags[actFlag++] = (int) input->readULong(2);
+      float dim=float(input->readLong(2))/2.0f;
+      shape.m_cornerWidth[i]=(2*dim <= pictSz[i]) ? dim : pictSz[i]/2.f;
+      int val = (int) input->readULong(2);
+      if (val) f << "rRect" << i << "=" << val << ",";
     }
     break;
   }
   case CWGraphInternal::Zone::T_Zone:
-  case CWGraphInternal::Zone::T_Basic:
+  case CWGraphInternal::Zone::T_Shape:
   case CWGraphInternal::Zone::T_Picture:
   case CWGraphInternal::Zone::T_Chart:
   case CWGraphInternal::Zone::T_DataBox:
@@ -1488,10 +1482,11 @@ bool CWGraph::readBasicGraphic(MWAWEntry const &entry,
 
   int numRemain = int(entry.end()-input->tell());
   numRemain /= 2;
-  if (numRemain+actFlag > 8) numRemain = 8-actFlag;
-  for (int i = 0; i < numRemain; i++)
-    zone.m_flags[actFlag++] = (int) input->readLong(2);
-
+  for (int i = 0; i < numRemain; i++) {
+    int val = (int) input->readLong(2);
+    if (val) f << "g" << i << "=" << val << ",";
+  }
+  shape.m_extra=f.str();
   return true;
 }
 
@@ -1646,10 +1641,13 @@ bool CWGraph::readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id
 ////////////////////////////////////////////////////////////
 bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
 {
-  if (!zone || zone->getSubType() != CWGraphInternal::Zone::T_Poly)
+  if (!zone || zone->getType() != CWGraphInternal::Zone::T_Shape)
     return false;
-  CWGraphInternal::ZoneBasic *bZone =
-    reinterpret_cast<CWGraphInternal::ZoneBasic *>(zone.get());
+  CWGraphInternal::ZoneShape *bZone =
+    reinterpret_cast<CWGraphInternal::ZoneShape *>(zone.get());
+  MWAWGraphicShape &shape = bZone->m_shape;
+  if (shape.m_type!=MWAWGraphicShape::Polygon)
+    return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   long sz = (long) input->readULong(4);
@@ -1685,6 +1683,8 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
+  bool isSpline=false;
+  std::vector<CWGraphInternal::CurvePoint> vertices;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     f.str("");
@@ -1707,8 +1707,8 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
         f << "unkn=" << std::hex << int(fl&0x3FFF) << std::dec << ",";
     } else
       f << point << ",";
-
-    bZone->m_vertices.push_back(point);
+    if (point.m_type >= 2) isSpline=true;
+    vertices.push_back(point);
 
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -1716,6 +1716,26 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
     input->seek(pos+fSz, WPX_SEEK_SET);
   }
   input->seek(endPos, WPX_SEEK_SET);
+  if (!isSpline) {
+    // if (m_style.m_lineFlags & 1) : we must close the polygon ?
+    for (size_t i = 0; i < size_t(N); ++i)
+      shape.m_vertices.push_back(vertices[i].m_pos);
+    return true;
+  }
+  shape.m_type = MWAWGraphicShape::Path;
+  Vec2f prevPoint, pt1;
+  bool hasPrevPoint = false;
+  for (size_t i = 0; i < size_t(N); ++i) {
+    CWGraphInternal::CurvePoint const &pt = vertices[i];
+    if (pt.m_type >= 2) pt1 = pt.m_controlPoints[0];
+    else pt1 = pt.m_pos;
+    char type = hasPrevPoint ? 'C' : i==0 ? 'M' : pt.m_type<2 ? 'L' : 'S';
+    shape.m_path.push_back(MWAWGraphicShape::PathData(type, pt.m_pos, hasPrevPoint ? prevPoint : pt1, pt1));
+    hasPrevPoint = pt.m_type >= 2;
+    if (hasPrevPoint) prevPoint =  pt.m_controlPoints[1];
+  }
+  shape.m_path.push_back(MWAWGraphicShape::PathData('Z'));
+
   return true;
 }
 
@@ -2321,9 +2341,9 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
         sendPicture
         (reinterpret_cast<CWGraphInternal::ZonePict &>(*child), pos);
         break;
-      case CWGraphInternal::Zone::T_Basic:
-        sendBasicPicture
-        (reinterpret_cast<CWGraphInternal::ZoneBasic &>(*child), pos);
+      case CWGraphInternal::Zone::T_Shape:
+        sendShape
+        (reinterpret_cast<CWGraphInternal::ZoneShape &>(*child), pos);
         break;
       case CWGraphInternal::Zone::T_Bitmap:
         sendBitmap
@@ -2352,8 +2372,8 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
   return true;
 }
 
-bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
-                               MWAWPosition pos, WPXPropertyList extras)
+bool CWGraph::sendShape(CWGraphInternal::ZoneShape &pict,
+                        MWAWPosition pos, WPXPropertyList extras)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener) return true;
@@ -2368,127 +2388,6 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
 
   shared_ptr<MWAWPictBasic> pictPtr;
   MWAWGraphicStyle pStyle;
-  MWAWGraphicStyleManager &graphicManager= *m_parserState->m_graphicStyleManager;
-  switch(pict.getSubType()) {
-  case CWGraphInternal::Zone::T_Line: {
-    MWAWPictLine *res=new MWAWPictLine(graphicManager, Vec2i(0,0), pict.m_box.size());
-    pictPtr.reset(res);
-    if (pict.m_style.m_lineFlags & 0x40) pStyle.m_arrows[0]=true;
-    if (pict.m_style.m_lineFlags & 0x80) pStyle.m_arrows[1]=true;
-    break;
-  }
-  case CWGraphInternal::Zone::T_Rect: {
-    MWAWPictRectangle *res=new MWAWPictRectangle(graphicManager, box);
-    pictPtr.reset(res);
-    break;
-  }
-  case CWGraphInternal::Zone::T_RectOval: {
-    MWAWPictRectangle *res=new MWAWPictRectangle(graphicManager, box);
-    int roundValues[2];
-    for (int i = 0; i < 2; i++) {
-      if (2*pict.m_values[i] <= pictSz[i])
-        roundValues[i] = int(pict.m_values[i]);
-      else if (pictSz[i] >= 4.0)
-        roundValues[i]= int(pictSz[i])/2-1;
-      else
-        roundValues[i]=1;
-    }
-    res->setRoundCornerWidth(roundValues[0], roundValues[1]);
-    pictPtr.reset(res);
-    break;
-  }
-  case CWGraphInternal::Zone::T_Oval: {
-    MWAWPictCircle *res=new MWAWPictCircle(graphicManager, box);
-    pictPtr.reset(res);
-    break;
-  }
-  case CWGraphInternal::Zone::T_Arc: {
-    int angle[2] = { int(90-pict.m_values[0]-pict.m_values[1]),
-                     int(90-pict.m_values[0])
-                   };
-    while (angle[1] > 360) {
-      angle[0]-=360;
-      angle[1]-=360;
-    }
-    while (angle[0] < -360) {
-      angle[0]+=360;
-      angle[1]+=360;
-    }
-    Vec2f center = box.center();
-    Vec2f axis = 0.5*Vec2f(box.size());
-    // we must compute the real bd box
-    float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
-    int limitAngle[2];
-    for (int i = 0; i < 2; i++)
-      limitAngle[i] = (angle[i] < 0) ? int(angle[i]/90)-1 : int(angle[i]/90);
-    for (int bord = limitAngle[0]; bord <= limitAngle[1]+1; bord++) {
-      float ang = (bord == limitAngle[0]) ? float(angle[0]) :
-                  (bord == limitAngle[1]+1) ? float(angle[1]) : float(90 * bord);
-      ang *= float(M_PI/180.);
-      float actVal[2] = { axis[0] *std::cos(ang), -axis[1] *std::sin(ang)};
-      if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
-      else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
-      if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
-      else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
-    }
-    Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
-                  Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
-    MWAWPictArc *res=new MWAWPictArc(graphicManager, realBox,box, float(angle[0]), float(angle[1]));
-    pictPtr.reset(res);
-    break;
-  }
-  case CWGraphInternal::Zone::T_Poly: {
-    size_t numPts = pict.m_vertices.size();
-    if (!numPts) break;
-    std::vector<Vec2f> listVertices;
-    listVertices.resize(numPts);
-    bool isSpline = false;
-    for (size_t i = 0; i < numPts; i++) {
-      listVertices[i] = pict.m_vertices[i].m_pos;
-      if (pict.m_vertices[i].m_type >= 2)
-        isSpline = true;
-    }
-    if (!isSpline) {
-      // if (pict.m_style.m_lineFlags & 1) : we must close the polygon ?
-      MWAWPictPolygon *res=new MWAWPictPolygon(graphicManager, box, listVertices);
-      pictPtr.reset(res);
-    } else {
-      MWAWPictPath *res=new MWAWPictPath(graphicManager, box);
-      pictPtr.reset(res);
-
-      Vec2f prevPoint, pt1;
-      bool hasPrevPoint = false;
-      for (size_t i = 0; i < numPts; i++) {
-        WPXPropertyList list;
-        CWGraphInternal::CurvePoint const &pt = pict.m_vertices[i];
-        if (pt.m_type >= 2) pt1 = pt.m_controlPoints[0];
-        else pt1 = pt.m_pos;
-        char type = hasPrevPoint ? 'C' : i==0 ? 'M' : pt.m_type<2 ? 'L' : 'S';
-        res->add(MWAWPictPath::Command(type, pt.m_pos, hasPrevPoint ? prevPoint : pt1, pt1));
-        hasPrevPoint = pt.m_type >= 2;
-        if (hasPrevPoint) prevPoint =  pt.m_controlPoints[1];
-      }
-      res->add(MWAWPictPath::Command('Z'));
-    }
-    break;
-  }
-  case CWGraphInternal::Zone::T_Zone:
-  case CWGraphInternal::Zone::T_Basic:
-  case CWGraphInternal::Zone::T_Picture:
-  case CWGraphInternal::Zone::T_Chart:
-  case CWGraphInternal::Zone::T_DataBox:
-  case CWGraphInternal::Zone::T_Unknown:
-  case CWGraphInternal::Zone::T_Bitmap:
-  case CWGraphInternal::Zone::T_Pict:
-  case CWGraphInternal::Zone::T_QTim:
-  case CWGraphInternal::Zone::T_Movie:
-  default:
-    break;
-  }
-
-  if (!pictPtr)
-    return false;
-
   CWGraphInternal::Style const &style = pict.m_style;
   pStyle.m_lineWidth=(float)style.m_lineWidth;
   MWAWColor color;
@@ -2496,11 +2395,15 @@ bool CWGraph::sendBasicPicture(CWGraphInternal::ZoneBasic &pict,
     pStyle.m_lineColor=color;
   if (getSurfaceColor(style, color))
     pStyle.setSurfaceColor(color);
-  pictPtr->setStyle(pStyle);
+  if (pict.m_shape.m_type==MWAWGraphicShape::Line) {
+    if (pict.m_style.m_lineFlags & 0x40) pStyle.m_arrows[0]=true;
+    if (pict.m_style.m_lineFlags & 0x80) pStyle.m_arrows[1]=true;
+  }
 
+  MWAWPictShape shape(*m_parserState->m_graphicStyleManager, pict.m_shape, pStyle);
   WPXBinaryData data;
   std::string type;
-  if (!pictPtr->getBinary(data,type)) return false;
+  if (!shape.getBinary(data,type)) return false;
 
   pos.setOrigin(pos.origin()-Vec2f(2,2));
   pos.setSize(pos.size()+Vec2f(4,4));
@@ -2616,7 +2519,7 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
     case CWGraphInternal::Zone::T_Arc:
     case CWGraphInternal::Zone::T_Poly:
     case CWGraphInternal::Zone::T_Zone:
-    case CWGraphInternal::Zone::T_Basic:
+    case CWGraphInternal::Zone::T_Shape:
     case CWGraphInternal::Zone::T_Picture:
     case CWGraphInternal::Zone::T_Chart:
     case CWGraphInternal::Zone::T_DataBox:

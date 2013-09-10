@@ -1,5 +1,8 @@
 CHANGES:
 
+09/10/2013:
+- add a class MWAWGraphicShape to define basic shapes,
+
 09/07/2013:
 - More Parser: recognize basic picture in the main data text
 - check that DOCMaker, eDoc, More, MindWrite, SimpleText, Tex-Edit, WriteNow

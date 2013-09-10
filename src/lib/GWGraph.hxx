@@ -52,7 +52,7 @@
 namespace GWGraphInternal
 {
 struct Frame;
-struct FrameBasic;
+struct FrameShape;
 struct Style;
 struct Zone;
 
@@ -110,7 +110,7 @@ protected:
   //! try to send a picture
   bool sendPicture(MWAWEntry const &entry, MWAWPosition pos);
   //! try to send a basic picture
-  bool sendBasic(GWGraphInternal::FrameBasic const &graph, GWGraphInternal::Zone const &zone, MWAWPosition pos);
+  bool sendShape(GWGraphInternal::FrameShape const &graph, GWGraphInternal::Zone const &zone, MWAWPosition pos);
 
   // DataFork: graphic zone
 
