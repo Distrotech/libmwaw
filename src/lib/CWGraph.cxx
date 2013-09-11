@@ -46,7 +46,6 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
-#include "MWAWPictBasic.hxx"
 #include "MWAWPictBitmap.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
@@ -1609,7 +1608,7 @@ bool CWGraph::readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id
   std::vector<int32_t> values32;
   for (int i = 0; i < 2; i++)
     values32.push_back((int32_t) input->readLong(4));
-  // now two smal number also in big or small endian
+  // now two small number also in big or small endian
   for (int i = 0; i < 2; i++)
     values16.push_back((int16_t) input->readLong(2));
   // a very big number
@@ -2372,8 +2371,7 @@ bool CWGraph::sendZone(int number, MWAWPosition position)
   return true;
 }
 
-bool CWGraph::sendShape(CWGraphInternal::ZoneShape &pict,
-                        MWAWPosition pos, WPXPropertyList extras)
+bool CWGraph::sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener) return true;
@@ -2386,7 +2384,6 @@ bool CWGraph::sendShape(CWGraphInternal::ZoneShape &pict,
   if (pos.size()[0] < 0 || pos.size()[1] < 0)
     pos.setSize(pictSz);
 
-  shared_ptr<MWAWPictBasic> pictPtr;
   MWAWGraphicStyle pStyle;
   CWGraphInternal::Style const &style = pict.m_style;
   pStyle.m_lineWidth=(float)style.m_lineWidth;
@@ -2400,14 +2397,9 @@ bool CWGraph::sendShape(CWGraphInternal::ZoneShape &pict,
     if (pict.m_style.m_lineFlags & 0x80) pStyle.m_arrows[1]=true;
   }
 
-  MWAWPictShape shape(*m_parserState->m_graphicStyleManager, pict.m_shape, pStyle);
-  WPXBinaryData data;
-  std::string type;
-  if (!shape.getBinary(data,type)) return false;
-
   pos.setOrigin(pos.origin()-Vec2f(2,2));
   pos.setSize(pos.size()+Vec2f(4,4));
-  listener->insertPicture(pos,data, type, extras);
+  listener->insertPicture(pos, pict.m_shape, pStyle);
   return true;
 }
 

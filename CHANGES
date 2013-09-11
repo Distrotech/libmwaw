@@ -2,6 +2,7 @@ CHANGES:
 
 09/10/2013:
 - add a class MWAWGraphicShape to define basic shapes,
+- check that Acta, LightWay, Nisus, WriterPlus use the new properties' classes
 
 09/07/2013:
 - More Parser: recognize basic picture in the main data text

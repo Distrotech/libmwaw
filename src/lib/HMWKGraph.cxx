@@ -1080,7 +1080,7 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
     return sendPictureFrame(pict, pos, extras);
   }
   case 8:
-    return sendShapeGraph(reinterpret_cast<HMWKGraphInternal::ShapeGraph const &>(frame), pos, extras);
+    return sendShapeGraph(reinterpret_cast<HMWKGraphInternal::ShapeGraph const &>(frame), pos);
   case 9: {
     HMWKGraphInternal::Table &table =
       const_cast<HMWKGraphInternal::Table &>
@@ -1208,7 +1208,7 @@ bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosit
   return true;
 }
 
-bool HMWKGraph::sendShapeGraph(HMWKGraphInternal::ShapeGraph const &pict, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendShapeGraph(HMWKGraphInternal::ShapeGraph const &pict, MWAWPosition pos)
 {
   if (!m_parserState->m_listener) return true;
   Vec2f pictSz = pict.m_pos.size();
@@ -1219,9 +1219,7 @@ bool HMWKGraph::sendShapeGraph(HMWKGraphInternal::ShapeGraph const &pict, MWAWPo
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(pictSz);
 
-  shared_ptr<MWAWPictBasic> pictPtr;
   MWAWGraphicStyle pStyle;
-  MWAWGraphicStyleManager &graphicManager= *m_parserState->m_graphicStyleManager;
   if (pict.m_shape.m_type==MWAWGraphicShape::Line) {
     if (pict.m_arrowsFlag&1) pStyle.m_arrows[0]=true;
     if (pict.m_arrowsFlag&2) pStyle.m_arrows[1]=true;
@@ -1233,14 +1231,9 @@ bool HMWKGraph::sendShapeGraph(HMWKGraphInternal::ShapeGraph const &pict, MWAWPo
   if (pict.getSurfaceColor(color))
     pStyle.setSurfaceColor(color);
 
-  MWAWPictShape pictShape(graphicManager,pict.m_shape,pStyle);
-  WPXBinaryData data;
-  std::string type;
-  if (!pictShape.getBinary(data,type)) return false;
-
   pos.setOrigin(pos.origin());
   pos.setSize(pos.size()+Vec2f(4,4));
-  m_parserState->m_listener->insertPicture(pos,data, type, extras);
+  m_parserState->m_listener->insertPicture(pos,pict.m_shape,pStyle);
   return true;
 }
 

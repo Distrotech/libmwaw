@@ -178,8 +178,7 @@ protected:
                    WPXPropertyList extras = WPXPropertyList());
 
   //! sends a basic graphic zone
-  bool sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos,
-                 WPXPropertyList extras = WPXPropertyList());
+  bool sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos);
 
   //! sends a bitmap graphic zone
   bool sendBitmap(CWGraphInternal::ZoneBitmap &pict, MWAWPosition pos,

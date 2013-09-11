@@ -1774,7 +1774,7 @@ bool HMWJGraph::sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras
 }
 
 // --- basic shape
-bool HMWJGraph::sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPosition pos, WPXPropertyList extras)
+bool HMWJGraph::sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPosition pos)
 {
   if (!m_parserState->m_listener) return true;
   Vec2f pictSz = pict.m_pos.size();
@@ -1785,8 +1785,6 @@ bool HMWJGraph::sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPo
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(pictSz);
 
-  shared_ptr<MWAWPictBasic> pictPtr;
-  MWAWGraphicStyleManager &graphicManager= *m_parserState->m_graphicStyleManager;
   HMWJGraphInternal::FrameFormat const &format=
     m_state->getFrameFormat(pict.m_formatId);
 
@@ -1799,14 +1797,9 @@ bool HMWJGraph::sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPo
     if (pict.m_arrowsFlag&2) pStyle.m_arrows[1]=true;
   }
 
-  MWAWPictShape pictShape(graphicManager,pict.m_shape,pStyle);
-  WPXBinaryData data;
-  std::string type;
-  if (!pictShape.getBinary(data,type)) return false;
-
   pos.setOrigin(pos.origin());
   pos.setSize(pos.size()+Vec2f(4,4));
-  m_parserState->m_listener->insertPicture(pos,data, type, extras);
+  m_parserState->m_listener->insertPicture(pos,pict.m_shape,pStyle);
   return true;
 }
 
@@ -2013,7 +2006,7 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
   }
   case 8:
     frame.m_parsed = true;
-    return sendShapeGraph(static_cast<HMWJGraphInternal::ShapeGraph const &>(frame), pos, extras);
+    return sendShapeGraph(static_cast<HMWJGraphInternal::ShapeGraph const &>(frame), pos);
   case 9: {
     frame.m_parsed = true;
     HMWJGraphInternal::TableFrame const &tableFrame = static_cast<HMWJGraphInternal::TableFrame const &>(frame);

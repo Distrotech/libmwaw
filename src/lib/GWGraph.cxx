@@ -45,7 +45,6 @@
 #include "MWAWFont.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
-#include "MWAWPictBasic.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
@@ -285,11 +284,8 @@ struct FrameBad : public Frame {
 //! Internal: the basic shape of a GWGraph
 struct FrameShape : public Frame {
   //! constructor
-  FrameShape(Frame const &frame, MWAWGraphicStyleManager &graphicManager) :
-    Frame(frame), m_graphicManager(&graphicManager), m_shape(), m_lineArrow(0), m_lineFormat(0) {
+  FrameShape(Frame const &frame) : Frame(frame), m_shape(), m_lineArrow(0), m_lineFormat(0) {
   }
-  //! returns a picture corresponding to the frame
-  shared_ptr<MWAWPictBasic> getPicture(Style const &style) const;
   //! return the frame type
   virtual Type getType() const {
     return T_BASIC;
@@ -316,8 +312,6 @@ struct FrameShape : public Frame {
     if (m_lineFormat)
       o << "L" << m_lineFormat << ",";
   }
-  //! the graphic style manager
-  MWAWGraphicStyleManager *m_graphicManager;
   //! the shape
   MWAWGraphicShape m_shape;
   //! the line arrow style (in v1)
@@ -328,35 +322,6 @@ private:
   FrameShape(FrameShape const &);
   FrameShape &operator=(FrameShape const &);
 };
-
-shared_ptr<MWAWPictBasic> FrameShape::getPicture(Style const &style) const
-{
-  shared_ptr<MWAWPictBasic> res;
-  Box2f box(Vec2f(0,0), m_box.size());
-
-  MWAWGraphicStyle pStyle;
-  if (m_shape.m_type==MWAWGraphicShape::Line) {
-    int arrow=(m_lineArrow<=1) ? style.m_lineArrow : m_lineArrow;
-    switch(arrow) {
-    case 2:
-      pStyle.m_arrows[1]=true;
-      break;
-    case 3:
-      pStyle.m_arrows[0]=true;
-      break;
-    case 4:
-      pStyle.m_arrows[0]=pStyle.m_arrows[1]=true;
-      break;
-    default:
-      break;
-    }
-  }
-  pStyle.m_lineWidth=style.lineWidth();
-  pStyle.m_lineColor=style.getColor(true);
-  pStyle.setSurfaceColor(style.getColor(false), style.hasSurfaceColor() ? 1.f : 0.f);
-  res.reset(new MWAWPictShape(*m_graphicManager, m_shape, pStyle));
-  return res;
-}
 
 ////////////////////////////////////////
 //! Internal: the group zone of a GWGraph
@@ -1532,7 +1497,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     break;
   }
   case 2: {
-    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone, *m_parserState->m_graphicStyleManager);
+    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone);
     res.reset(graph);
     if (vers==1) {
       graph->m_lineArrow=(int) input->readLong(2);
@@ -1545,7 +1510,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     break;
   }
   case 4: {
-    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone, *m_parserState->m_graphicStyleManager);
+    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone);
     res.reset(graph);
     int roundType = (int) input->readLong(2);
     float cornerDim = (float) input->readLong(2);
@@ -1567,7 +1532,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     break;
   }
   case 6: {
-    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone, *m_parserState->m_graphicStyleManager);
+    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone);
     res.reset(graph);
     int fileAngle[2];
     for (int i=0; i < 2; ++i) // angles
@@ -1614,7 +1579,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
   }
   case 3: // rect: no data
   case 5: { // oval no data
-    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone, *m_parserState->m_graphicStyleManager);
+    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone);
     MWAWGraphicShape &shape = graph->m_shape;
     res.reset(graph);
     shape.m_bdBox = shape.m_formBox = zone.m_box;
@@ -1624,7 +1589,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
   case 7:
   case 8:
   case 12: {
-    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone, *m_parserState->m_graphicStyleManager);
+    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone);
     res.reset(graph);
     graph->m_shape = zone.m_type==12 ? MWAWGraphicShape::path(zone.m_box) : MWAWGraphicShape::polygon(zone.m_box);
     graph->m_dataSize=(long) input->readULong(4);
@@ -1732,18 +1697,30 @@ bool GWGraph::sendShape(GWGraphInternal::FrameShape const &graph, GWGraphInterna
   GWGraphInternal::Style style;
   if (graph.m_style>=1 && graph.m_style <= int(zone.m_styleList.size()))
     style = zone.m_styleList[size_t(graph.m_style-1)];
-  shared_ptr<MWAWPictBasic> pict=graph.getPicture(style);
-  if (!pict)
-    return false;
-
-  WPXBinaryData data;
-  std::string type;
-  if (!pict->getBinary(data,type))
-    return false;
+  MWAWGraphicStyle pStyle;
+  if (graph.m_shape.m_type==MWAWGraphicShape::Line) {
+    int arrow=(graph.m_lineArrow<=1) ? style.m_lineArrow : graph.m_lineArrow;
+    switch(arrow) {
+    case 2:
+      pStyle.m_arrows[1]=true;
+      break;
+    case 3:
+      pStyle.m_arrows[0]=true;
+      break;
+    case 4:
+      pStyle.m_arrows[0]=pStyle.m_arrows[1]=true;
+      break;
+    default:
+      break;
+    }
+  }
+  pStyle.m_lineWidth=style.lineWidth();
+  pStyle.m_lineColor=style.getColor(true);
+  pStyle.setSurfaceColor(style.getColor(false), style.hasSurfaceColor() ? 1.f : 0.f);
 
   pos.setOrigin(pos.origin()-Vec2f(2,2));
   pos.setSize(pos.size()+Vec2f(4,4));
-  listener->insertPicture(pos,data, type);
+  listener->insertPicture(pos,graph.m_shape, pStyle);
   return true;
 }
 

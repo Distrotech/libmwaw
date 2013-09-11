@@ -135,7 +135,7 @@ protected:
   /** try to send a frame to the listener */
   bool sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   /** try to send a basic picture to the listener */
-  bool sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPosition pos);
   /** try to send a comment box to the listener */
   bool sendComment(HMWJGraphInternal::CommentFrame const &textbox, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   /** try to send a picture frame */
