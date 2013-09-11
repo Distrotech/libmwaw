@@ -58,13 +58,101 @@
 namespace MRWGraphInternal
 {
 ////////////////////////////////////////
+//! Internal: the struct use to store a pattern in MRWGraph
+struct Pattern {
+  //! constructor with default pattern
+  Pattern() : m_uniform(true), m_pattern(), m_percent(1) {
+  }
+  //! constructor ( 4 uint16_t by pattern )
+  Pattern(uint16_t const *pat, bool uniform) : m_uniform(uniform), m_pattern(), m_percent(1) {
+    m_pattern.m_dim=Vec2i(8,8);
+    m_pattern.m_colors[0]=MWAWColor::white();
+    m_pattern.m_colors[1]=MWAWColor::black();
+    for (size_t i=0; i < 4; ++i) {
+      uint16_t val=pat[i];
+      m_pattern.m_data.push_back((unsigned char) (val>>8));
+      m_pattern.m_data.push_back((unsigned char) (val&0xFF));
+    }
+    int numOnes=0;
+    for (size_t j=0; j < 8; ++j) {
+      uint8_t val=m_pattern.m_data[j];
+      for (int b=0; b < 8; b++) {
+        if (val&1) ++numOnes;
+        val = uint8_t(val>>1);
+      }
+    }
+    m_percent=float(numOnes)/64.f;
+  }
+  //! a flag to know if the pattern is uniform or not
+  bool m_uniform;
+  //! the graphic style pattern
+  MWAWGraphicStyle::Pattern m_pattern;
+  //! the percent color
+  float m_percent;
+};
+
+////////////////////////////////////////
 //! Internal: the struct use to store a token entry
 struct Token {
   //! constructor
   Token() : m_type(-1), m_highType(-1), m_dim(0,0), m_refType(0), m_refId(0), m_fieldType(0), m_value(""),
-    m_pictData(), m_pictId(0), m_valPictId(0), m_ruleType(0), m_rulePattern(0), m_parsed(true), m_extra("") {
-    for (int i = 0; i < 2; i++)
+    m_pictData(), m_pictId(0), m_valPictId(0), m_pictBorderColor(MWAWColor::black()),
+    m_ruleType(0), m_rulePattern(0), m_parsed(true), m_extra("") {
+    for (int i = 0; i < 2; ++i)
       m_id[i] = 0;
+    for (int i = 0; i < 4; ++i)
+      m_pictBorderType[i] = 0;
+  }
+  //! return true if the picture has some border
+  bool hasPictBorders() const {
+    for (int i = 0; i < 4; ++i)
+      if (m_pictBorderType[i]) return true;
+    return false;
+  }
+  //! add border properties
+  void addPictBorderProperties(WPXPropertyList &pList) const {
+    if (!hasPictBorders()) return;
+    bool sameBorders=true;
+    for (int i=0; i < 3; ++i) {
+      if (m_pictBorderType[i]==m_pictBorderType[i+1])
+        continue;
+      sameBorders=false;
+      break;
+    }
+    for (int i = 0; i < 4; i++) {
+      if (m_pictBorderType[i] <=0)
+        continue;
+      MWAWBorder border;
+      border.m_color=m_pictBorderColor;
+      switch(m_pictBorderType[i]) {
+      case 1: // single[w=0.5]
+        border.m_width = 0.5f;
+        break;
+      case 6:
+        border.m_type = MWAWBorder::Double;
+      case 2:
+        break;
+      case 7:
+        border.m_type = MWAWBorder::Double;
+      case 3:
+        border.m_width = 2.0f;
+        break;
+      case 4:
+        border.m_width = 3.0f;
+        break;
+      case 5:
+        border.m_width = 4.0f;
+        break;
+      default:
+        break;
+      }
+      if (sameBorders) {
+        border.addTo(pList);
+        break;
+      }
+      static char const *(wh[]) = { "left", "top", "right", "bottom"};
+      border.addTo(pList, wh[i]);
+    }
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Token const &tkn);
@@ -93,6 +181,10 @@ struct Token {
   long m_pictId;
   //! a optional picture id
   long m_valPictId;
+  //! the pict border color
+  MWAWColor m_pictBorderColor;
+  //! the pict border type
+  int m_pictBorderType[4];
   // for rule
   //! the rule type
   int m_ruleType;
@@ -164,6 +256,14 @@ std::ostream &operator<<(std::ostream &o, Token const &tkn)
     o << "pictId=" << std::hex << tkn.m_pictId << std::dec << ",";
   if (tkn.m_valPictId && tkn.m_valPictId != tkn.m_pictId)
     o << "pictId[inValue]=" << std::hex << tkn.m_valPictId << std::dec << ",";
+  if (!tkn.m_pictBorderColor.isBlack())
+    o << "pict[color]=" << tkn.m_pictBorderColor << ",";
+  if (tkn.hasPictBorders()) {
+    o << "pict[borders]=[";
+    for (int i=0; i < 4; ++i)
+      o << tkn.m_pictBorderType[i] << ",";
+    o << "],";
+  }
   if (tkn.m_refId) {
     o << "zone[ref]=";
     if (tkn.m_refType==0xe)
@@ -262,23 +362,41 @@ struct State {
   //! a map id -> textZone
   std::map<int,Zone> m_zoneMap;
   //! a list patternId -> percent
-  std::vector<float> m_patternList;
+  std::vector<Pattern> m_patternList;
 
   int m_numPages /* the number of pages */;
 };
 
-void State::setDefaultPatternList(int)
+void State::setDefaultPatternList(int version)
 {
   if (m_patternList.size()) return;
-  static float const defPercentPattern[29] = {
-    0., 0.09375, 0.125, 0.1875, 0.25, 0.28125, 0.375, 0.375,
-    0.5, 0.5625, 0.625, 0.6875, 0.75, 0.8125, 0.875, 0.90625,
-    1., 0.5, 0.5, 0.5, 0.5, 0.5, 0.75, 0.25,
-    0.25, 0.25, 0.25, 0.4375, 0.375
+  /* v1: 29 values, 17 percent + 12 real pattern
+     v2: 28 values, same than in v1, excepted that pat[0] is replaced pat[16] which disapears
+   */
+  static uint16_t const (dataV1[4*29])= {
+    0x0000,0x0000,0x0000,0x0000,0x8800,0x0200,0x8800,0x2000,
+    0x8800,0x2200,0x8800,0x2200,0x8800,0xaa00,0x8800,0xaa00,
+    0x8822,0x8822,0x8822,0x8822,0x10aa,0x00aa,0x01aa,0x00aa,
+    0xaa11,0xaa44,0xaa11,0xaa44,0xaa11,0xaa44,0xaa11,0xaa44,
+    0xaa55,0xaa55,0xaa55,0xaa55,0x55aa,0x55bb,0x55aa,0x55bb,
+    0x55ee,0x55bb,0x55ee,0x55bb,0x55ee,0x55ff,0x55ee,0x55ff,
+    0xdd77,0xdd77,0xdd77,0xdd77,0xdd7f,0xddf7,0xdd7f,0xddf7,
+    0xddff,0x77ff,0xddff,0x77ff,0xf7ff,0xddff,0x7fff,0xddff,
+    0xffff,0xffff,0xffff,0xffff, // became pat[0] in v2 and is not replaced
+    0xffff,0x0000,0xffff,0x0000,0xcccc,0xcccc,0xcccc,0xcccc,
+    0xcc66,0x3399,0xcc66,0x3399,0x9933,0x66cc,0x9933,0x66cc,
+    0xcccc,0x3333,0xcccc,0x3333,0x33ff,0xccff,0x33ff,0xccff,
+    0xff00,0x0000,0xff00,0x0000,0x8888,0x8888,0x8888,0x8888,
+    0x8844,0x2211,0x8844,0x2211,0x1122,0x4488,0x1122,0x4488,
+    0xff88,0x8888,0xff88,0x8888,0x5522,0x5588,0x5522,0x5588
   };
-  m_patternList.resize(29);
-  for (size_t i = 0; i < 29; i++)
-    m_patternList[i]=defPercentPattern[i];
+  for (size_t i=0; i < 29; ++i) {
+    Pattern pat(dataV1+4*i, i<17);
+    if (version >= 2 && i==16)
+      m_patternList[0]=pat;
+    else
+      m_patternList.push_back(pat);
+  }
 }
 
 ////////////////////////////////////////
@@ -373,7 +491,7 @@ float MRWGraph::getPatternPercent(int id) const
   }
   if (id < 0 || id >= numPattern)
     return -1.;
-  return m_state->m_patternList[size_t(id)];
+  return m_state->m_patternList[size_t(id)].m_percent;
 }
 
 void MRWGraph::sendText(int zoneId)
@@ -508,19 +626,31 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actF
   default:
     break;
   }
-  float percent=getPatternPercent(tkn.m_rulePattern);
+  float decal=w/2.0f;
+  MWAWPosition pos(Vec2f(-decal,-decal), Vec2f(sz)+Vec2f(decal,decal), WPX_POINT);
+  pos.setRelativePosition(MWAWPosition::Char);
+
+  MRWGraphInternal::Pattern pat;
+  if (tkn.m_rulePattern >= 0 && tkn.m_rulePattern < (int) m_state->m_patternList.size())
+    pat = m_state->m_patternList[size_t(tkn.m_rulePattern)];
+  else {
+    MWAW_DEBUG_MSG(("MRWGraph::sendRule: can not find pattern\n"));
+  }
+  MWAWGraphicStyle pStyle;
   MWAWColor col;
   actFont.getColor(col);
-  if (percent > 0.0)
-    col=MWAWColor::barycenter(percent,col,1.f-percent,MWAWColor::white());
-  MWAWGraphicStyle pStyle;
-  pStyle.m_lineWidth=w;
-  pStyle.m_lineColor=col;
-
-  int decal=int(w/2.f)+1;
-  MWAWPosition pos(Vec2i(-decal,-decal), sz+Vec2i(decal,decal), WPX_POINT);
-  pos.setRelativePosition(MWAWPosition::Char);
-  m_parserState->m_listener->insertPicture(pos,MWAWGraphicShape::line(Vec2f(0,0), Vec2f(sz)), pStyle);
+  if (pat.m_uniform) {
+    col=MWAWColor::barycenter(pat.m_percent,col,1.f-pat.m_percent,MWAWColor::white());
+    pStyle.m_lineWidth=w;
+    pStyle.m_lineColor=col;
+    m_parserState->m_listener->insertPicture(pos,MWAWGraphicShape::line(Vec2f(0,0), Vec2f(sz)), pStyle);
+  } else {
+    pStyle.m_lineWidth=0;
+    pat.m_pattern.m_colors[1]=col;
+    pStyle.setPattern(pat.m_pattern);
+    m_parserState->m_listener->insertPicture
+    (pos,MWAWGraphicShape::rectangle(Box2f(Vec2f(0,0), Vec2f(float(sz[0]),w))), pStyle);
+  }
 }
 
 void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
@@ -551,8 +681,10 @@ void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
   }
   MWAWPosition posi(Vec2i(0,0),dim,WPX_POINT);
   posi.setRelativePosition(MWAWPosition::Char);
+  WPXPropertyList extras;
+  tkn.addPictBorderProperties(extras);
   if (m_parserState->m_listener)
-    m_parserState->m_listener->insertPicture(posi, data, "image/pict");
+    m_parserState->m_listener->insertPicture(posi, data, "image/pict", extras);
   input->seek(pos, WPX_SEEK_SET);
 }
 
@@ -630,7 +762,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
       }
       continue;
     }
-    int dim[2], border[4];
+    int dim[2];
     switch(j) {
     case 0:
       tkn.m_id[0] = dt.value(0);
@@ -669,13 +801,9 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
     case 11:
     case 12:
     case 13: // 0 or 1 for graph : link to border ?
-      border[0]=border[1]=border[2]=border[3]=0;
-      border[j-10]=(int) dt.value(0);
+      tkn.m_pictBorderType[j-10]=(int) dt.value(0);
       while(j!=13)
-        border[++j-10]=(int) dataList[d++].value(0);
-      if (border[0]||border[1]||border[2]||border[3])
-        f << "bord?=[" << border[0] << "," <<border[1]
-          << "," << border[2] << "," << border[3] << "],";
+        tkn.m_pictBorderType[++j-10]=(int) dataList[d++].value(0);
       break;
     default:
       if (dt.value(0))
@@ -707,6 +835,15 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
       f << "bl" << i << "=[";
       input->seek(data.m_pos.begin(), WPX_SEEK_SET);
       for (int j = 0; j < int(data.m_pos.length()/2); j++) {
+        if (i==1 && j == 3 && data.m_pos.length() >= 12) {
+          // checkme: only for picture or always ?
+          unsigned char col[]= {0,0,0};
+          for (int c=0; c<3; ++c, ++j)
+            col[c]=(unsigned char) (input->readULong(2)>>8);
+          tkn.m_pictBorderColor = MWAWColor(col[0],col[1],col[2]);
+          if (!tkn.m_pictBorderColor.isBlack()) f << "bordColor=" << tkn.m_pictBorderColor << ",";
+          continue;
+        }
         val = (long) input->readULong(2);
         if (val) f << "f" << j << "=" << std::hex << val << std::dec << ",";
       }
@@ -840,8 +977,11 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
     }
     break;
   case 0x23:
-    tkn.m_ruleType = (int) input->readLong(2);
-    tkn.m_rulePattern = (int) input->readLong(2);
+    // either big or small endian
+    tkn.m_ruleType = (int) input->readULong(2);
+    if ((tkn.m_ruleType&0xFF)==0) tkn.m_ruleType>>=8;
+    tkn.m_rulePattern = (int) input->readULong(2);
+    if ((tkn.m_rulePattern&0xFF)==0) tkn.m_rulePattern>>=8;
     switch(tkn.m_ruleType) {
     case 0:
       break; // no

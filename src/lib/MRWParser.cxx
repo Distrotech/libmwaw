@@ -650,7 +650,10 @@ bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
     unsigned char color[3];
     switch(j) {
     case 0: // version?
-      f << "vers?=" << (data.value(0)>>16) << "[" << (data.value(0)&0xFFFF) << "],";
+      val = data.value(0);
+      if ((val>>16)==1) // checkme v1.6 -> 1[29] while v3.5->1[33]
+        setVersion((val&0xFFFF)<30 ? 1 : 2);
+      f << "vers?=" << (val>>16) << "[" << (val&0xFFFF) << "],";
       break;
     case 1:
       val = data.value(0);
