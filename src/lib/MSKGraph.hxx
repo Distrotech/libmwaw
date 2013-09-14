@@ -146,7 +146,9 @@ protected:
 
   //! try to read a text zone
   bool readText(MSKGraphInternal::TextBox &textBox);
-  /** check the text box link */
+  //! try to send a text box zone v1-3
+  void sendTextBox(int zId);
+  /** check the text box link v4 */
   void checkTextBoxLinks(int zId);
 
   // interface function
@@ -174,8 +176,10 @@ protected:
   void sendGroup(int zoneId, MWAWPosition const &pos);
   /** try to send a group elements by elemenys*/
   void sendGroupChild(int zoneId, MWAWPosition const &pos);
-  /** try to convert a group in basic picture */
-  shared_ptr<MWAWPictBasic> convertGroup(MSKGraphInternal::GroupZone const &group);
+  /** returns true if we can create a graphic for the whole group */
+  bool canCreateGraphic(MSKGraphInternal::GroupZone const &group) const;
+  /** send the group as a graphic zone */
+  void sendGroup(MSKGraphInternal::GroupZone const &group, MWAWGraphicListenerPtr &listener) const;
   //! reads the textbox font
   bool readFont(MWAWFont &font);
 

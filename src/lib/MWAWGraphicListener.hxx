@@ -75,13 +75,14 @@ public:
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
 
   // ------ graphic --------
-  /** returns true if a graphi is opened */
+  /** returns true if a graphic is opened */
   bool isGraphicOpened() const;
+  /** returns true if a text zone is opened */
+  bool isTextZoneOpened() const;
   /** returns the graphic bdbox.*/
-  Box2f const &getBdBox();
+  Box2f const &getGraphicBdBox();
 
   // ------ text data -----------
-
   //! adds a basic character, ..
   void insertChar(uint8_t character);
   /** insert a character using the font converter to find the utf8

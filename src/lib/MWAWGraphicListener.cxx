@@ -61,15 +61,19 @@ namespace MWAWGraphicListenerInternal
 /** the global graphic state of MWAWGraphicListener */
 struct GraphicState {
   //! constructor
-  GraphicState() : m_sentListMarkers(), m_subDocuments() {
+  GraphicState() : m_box(), m_sentListMarkers(), m_subDocuments(), m_interface() {
   }
   //! destructor
   ~GraphicState() {
   }
+  /** the graphic bdbox */
+  Box2f m_box;
   /// the list of marker corresponding to sent list
   std::vector<int> m_sentListMarkers;
   //! the list of actual subdocument
   std::vector<MWAWSubDocumentPtr> m_subDocuments;
+  /// the property handler
+  shared_ptr<MWAWGraphicInterface> m_interface;
 };
 
 /** the state of a MWAWGraphicListener */
@@ -99,17 +103,12 @@ struct State {
 
   bool m_firstParagraphInPageSpan;
 
-  /** the graphic bdbox */
-  Box2f m_box;
-
   std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
 
   bool m_inSubDocument;
 
   libmwaw::SubDocumentType m_subDocumentType;
 
-  /// the property handler
-  shared_ptr<MWAWGraphicInterface> m_interface;
 private:
   State(const State &);
   State &operator=(const State &);
@@ -119,9 +118,8 @@ State::State() :
   m_textBuffer(""), m_font(20,12)/* default time 12 */, m_paragraph(), m_list(),
   m_isGraphicStarted(false), m_isTextZoneOpened(false), m_isFrameOpened(false),
   m_isSpanOpened(false), m_isParagraphOpened(false), m_isListElementOpened(false),
-  m_firstParagraphInPageSpan(true),
-  m_box(), m_listOrderedLevels(),
-  m_inSubDocument(false), m_subDocumentType(libmwaw::DOC_NONE), m_interface()
+  m_firstParagraphInPageSpan(true), m_listOrderedLevels(),
+  m_inSubDocument(false), m_subDocumentType(libmwaw::DOC_NONE)
 {
 }
 }
@@ -235,7 +233,7 @@ void MWAWGraphicListener::insertEOL(bool soft)
     _openSpan();
   if (soft) {
     _flushText();
-    m_ps->m_interface->insertLineBreak();
+    m_gs->m_interface->insertLineBreak();
   } else if (m_ps->m_isParagraphOpened)
     _closeParagraph();
 
@@ -251,7 +249,7 @@ void MWAWGraphicListener::insertTab()
   }
   if (!m_ps->m_isSpanOpened) _openSpan();
   _flushText();
-  m_ps->m_interface->insertTab();
+  m_gs->m_interface->insertTab();
 }
 
 ///////////////////
@@ -322,13 +320,13 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
     _openSpan();
     WPXPropertyList propList;
     if (field.m_type==MWAWField::Title)
-      m_ps->m_interface->insertField(WPXString("text:title"), propList);
+      m_gs->m_interface->insertField(WPXString("text:title"), propList);
     else {
       propList.insert("style:num-format", libmwaw::numberingTypeToString(field.m_numberingType).c_str());
       if (field.m_type == MWAWField::PageNumber)
-        m_ps->m_interface->insertField(WPXString("text:page-number"), propList);
+        m_gs->m_interface->insertField(WPXString("text:page-number"), propList);
       else
-        m_ps->m_interface->insertField(WPXString("text:page-count"), propList);
+        m_gs->m_interface->insertField(WPXString("text:page-count"), propList);
     }
     break;
   }
@@ -376,9 +374,9 @@ void MWAWGraphicListener::startGraphic(Box2f const &bdbox)
     return;
   }
   m_gs.reset(new MWAWGraphicListenerInternal::GraphicState);
-  m_ps->m_interface.reset(new MWAWGraphicInterface);
+  m_gs->m_interface.reset(new MWAWGraphicInterface);
   m_ps->m_isGraphicStarted = true;
-  m_ps->m_box=bdbox;
+  m_gs->m_box=bdbox;
 
   WPXPropertyList list;
   list.insert("svg:x",bdbox[0].x(), WPX_POINT);
@@ -386,7 +384,7 @@ void MWAWGraphicListener::startGraphic(Box2f const &bdbox)
   list.insert("svg:width",bdbox.size().x(), WPX_POINT);
   list.insert("svg:height",bdbox.size().y(), WPX_POINT);
   list.insert("libwpg:enforce-frame",1);
-  m_ps->m_interface->startDocument(list);
+  m_gs->m_interface->startDocument(list);
 }
 
 bool MWAWGraphicListener::endGraphic(WPXBinaryData &data, std::string &mimeType)
@@ -400,15 +398,16 @@ bool MWAWGraphicListener::endGraphic(WPXBinaryData &data, std::string &mimeType)
     return false;
   }
 
-  if (m_ps->m_isParagraphOpened)
-    _closeParagraph();
-
-  m_ps->m_paragraph.m_listLevelIndex = 0;
-  _changeList(); // flush the list exterior
-
-  m_ps->m_interface->endDocument();
-  bool ok=m_ps->m_interface->getBinaryResult(data, mimeType);
-  m_ps->m_interface.reset();
+  if (m_ps->m_isTextZoneOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: we are in a text zone\n"));
+    if (m_ps->m_isParagraphOpened)
+      _closeParagraph();
+    m_ps->m_paragraph.m_listLevelIndex = 0;
+    _changeList(); // flush the list exterior
+  }
+  m_gs->m_interface->endDocument();
+  bool ok=m_gs->m_interface->getBinaryResult(data, mimeType);
+  m_gs->m_interface.reset();
   m_ps->m_isGraphicStarted = false;
   m_gs.reset();
   return ok;
@@ -422,9 +421,14 @@ bool MWAWGraphicListener::isGraphicOpened() const
   return m_ps->m_isGraphicStarted;
 }
 
-Box2f const &MWAWGraphicListener::getBdBox()
+bool MWAWGraphicListener::isTextZoneOpened() const
 {
-  return m_ps->m_box;
+  return m_ps->m_isTextZoneOpened;
+}
+
+Box2f const &MWAWGraphicListener::getGraphicBdBox()
+{
+  return m_gs->m_box;
 }
 
 ///////////////////
@@ -445,7 +449,7 @@ void MWAWGraphicListener::_openParagraph()
   m_ps->m_paragraph.addTo(propList, false);
   WPXPropertyListVector tabStops;
   m_ps->m_paragraph.addTabsTo(tabStops);
-  m_ps->m_interface->openParagraph(propList, tabStops);
+  m_gs->m_interface->openParagraph(propList, tabStops);
 
   _resetParagraphState();
   m_ps->m_firstParagraphInPageSpan = false;
@@ -465,7 +469,7 @@ void MWAWGraphicListener::_closeParagraph()
   if (m_ps->m_isParagraphOpened) {
     if (m_ps->m_isSpanOpened)
       _closeSpan();
-    m_ps->m_interface->closeParagraph();
+    m_gs->m_interface->closeParagraph();
   }
 
   m_ps->m_isParagraphOpened = false;
@@ -503,7 +507,7 @@ void MWAWGraphicListener::_openListElement()
   }
 
   if (m_ps->m_list) m_ps->m_list->openElement();
-  m_ps->m_interface->openListElement(propList, tabStops);
+  m_gs->m_interface->openListElement(propList, tabStops);
   _resetParagraphState(true);
 }
 
@@ -514,7 +518,7 @@ void MWAWGraphicListener::_closeListElement()
       _closeSpan();
 
     if (m_ps->m_list) m_ps->m_list->closeElement();
-    m_ps->m_interface->closeListElement();
+    m_gs->m_interface->closeListElement();
   }
 
   m_ps->m_isListElementOpened = m_ps->m_isParagraphOpened = false;
@@ -554,9 +558,9 @@ void MWAWGraphicListener::_changeList()
   size_t minLevel = changeList ? 0 : newLevel;
   while (actualLevel > minLevel) {
     if (m_ps->m_listOrderedLevels[--actualLevel])
-      m_ps->m_interface->closeOrderedListLevel();
+      m_gs->m_interface->closeOrderedListLevel();
     else
-      m_ps->m_interface->closeUnorderedListLevel();
+      m_gs->m_interface->closeUnorderedListLevel();
   }
 
   if (newLevel) {
@@ -574,9 +578,9 @@ void MWAWGraphicListener::_changeList()
         if (!theList->addTo(l, level))
           continue;
         if (!theList->isNumeric(l))
-          m_ps->m_interface->defineUnorderedListLevel(level);
+          m_gs->m_interface->defineUnorderedListLevel(level);
         else
-          m_ps->m_interface->defineOrderedListLevel(level);
+          m_gs->m_interface->defineOrderedListLevel(level);
       }
     }
 
@@ -593,9 +597,9 @@ void MWAWGraphicListener::_changeList()
     bool ordered = m_ps->m_list->isNumeric(int(i));
     m_ps->m_listOrderedLevels[i-1] = ordered;
     if (ordered)
-      m_ps->m_interface->openOrderedListLevel(propList);
+      m_gs->m_interface->openOrderedListLevel(propList);
     else
-      m_ps->m_interface->openUnorderedListLevel(propList);
+      m_gs->m_interface->openUnorderedListLevel(propList);
   }
 }
 
@@ -622,7 +626,7 @@ void MWAWGraphicListener::_openSpan()
   WPXPropertyList propList;
   m_ps->m_font.addTo(propList, m_parserState.m_fontConverter);
 
-  m_ps->m_interface->openSpan(propList);
+  m_gs->m_interface->openSpan(propList);
 
   m_ps->m_isSpanOpened = true;
 }
@@ -637,7 +641,7 @@ void MWAWGraphicListener::_closeSpan()
     return;
 
   _flushText();
-  m_ps->m_interface->closeSpan();
+  m_gs->m_interface->closeSpan();
   m_ps->m_isSpanOpened = false;
 }
 
@@ -660,14 +664,14 @@ void MWAWGraphicListener::_flushText()
 
     if (numConsecutiveSpaces > 1) {
       if (tmpText.len() > 0) {
-        m_ps->m_interface->insertText(tmpText);
+        m_gs->m_interface->insertText(tmpText);
         tmpText.clear();
       }
-      m_ps->m_interface->insertSpace();
+      m_gs->m_interface->insertSpace();
     } else
       tmpText.append(i());
   }
-  m_ps->m_interface->insertText(tmpText);
+  m_gs->m_interface->insertText(tmpText);
   m_ps->m_textBuffer.clear();
 }
 
@@ -686,7 +690,7 @@ void MWAWGraphicListener::insertPicture
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: a frame is already open\n"));
     return;
   }
-  shape.send(*m_ps->m_interface, style, bdbox[0]);
+  shape.send(*m_gs->m_interface, style, bdbox[0]-m_gs->m_box[0]);
 }
 
 void MWAWGraphicListener::insertPicture
@@ -703,17 +707,17 @@ void MWAWGraphicListener::insertPicture
   WPXPropertyList list;
   WPXPropertyListVector gradient;
   style.addTo(list, gradient);
-  m_ps->m_interface->setStyle(list, gradient);
+  m_gs->m_interface->setStyle(list, gradient);
 
   list.clear();
-  Vec2f pt=bdbox[0];
+  Vec2f pt=bdbox[0]-m_gs->m_box[0];
   list.insert("svg:x",pt.x(), WPX_POINT);
   list.insert("svg:y",pt.y(), WPX_POINT);
   pt=bdbox.size();
   list.insert("svg:width",pt.x(), WPX_POINT);
   list.insert("svg:height",pt.y(), WPX_POINT);
   list.insert("libwpg:mime-type", type.c_str());
-  m_ps->m_interface->drawGraphicObject(list,binaryData);
+  m_gs->m_interface->drawGraphicObject(list,binaryData);
 }
 
 void MWAWGraphicListener::insertTextBox
@@ -727,9 +731,9 @@ void MWAWGraphicListener::insertTextBox
     return;
   WPXPropertyList propList;
   _handleFrameParameters(propList, bdbox, style);
-  m_ps->m_interface->startTextObject(propList, WPXPropertyListVector());
+  m_gs->m_interface->startTextObject(propList, WPXPropertyListVector());
   handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_TEXT_BOX);
-  m_ps->m_interface->endTextObject();
+  m_gs->m_interface->endTextObject();
   closeFrame();
 }
 
@@ -767,19 +771,19 @@ void MWAWGraphicListener::_handleFrameParameters(WPXPropertyList &list, Box2f co
     return;
 
   Vec2f size=bdbox.size();
-  Vec2f pt=bdbox[0];
+  Vec2f pt=bdbox[0]-m_gs->m_box[0];
   WPXPropertyListVector grad;
   if (style.hasGradient(true)) {
     // ok, first send a background rectangle
     WPXPropertyList rectList;
     style.addTo(rectList,grad);
-    m_ps->m_interface->setStyle(rectList,grad);
+    m_gs->m_interface->setStyle(rectList,grad);
     rectList.clear();
     rectList.insert("svg:x",pt[0], WPX_POINT);
     rectList.insert("svg:y",pt[1], WPX_POINT);
     rectList.insert("svg:width",size.x(), WPX_POINT);
     rectList.insert("svg:height",size.y(), WPX_POINT);
-    m_ps->m_interface->drawRectangle(list);
+    m_gs->m_interface->drawRectangle(list);
 
     list.insert("draw:stroke", "none");
     list.insert("draw:fill", "none");
@@ -806,6 +810,7 @@ void MWAWGraphicListener::handleSubDocument(Vec2f const &, MWAWSubDocumentPtr su
     return;
   }
   _pushParsingState();
+  m_ps->m_isGraphicStarted=true;
   _startSubDocument();
   m_ps->m_subDocumentType = subDocumentType;
 

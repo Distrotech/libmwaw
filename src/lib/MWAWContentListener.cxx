@@ -1098,7 +1098,7 @@ void MWAWContentListener::insertPicture
   }
   // first create the picture, reset origin (if it is bad)
   Box2f bdbox = shape.getBdBox(style,true);
-  graphicListener->startGraphic(bdbox);
+  graphicListener->startGraphic(Box2f(Vec2f(0,0),bdbox.size()));
   graphicListener->insertPicture(Box2f(-1*bdbox[0],-1*bdbox[0]+bdbox.size()), shape, style);
 
   WPXBinaryData data;

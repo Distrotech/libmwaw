@@ -44,6 +44,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWParagraph.hxx"
@@ -82,7 +83,7 @@ struct RBZone {
 ////////////////////////////////////////
 //! Internal: the generic pict
 struct Zone {
-  enum Type { Unknown, Basic, ChartZone, Group, Pict, Text, Textv4, Bitmap, TableZone, OLE};
+  enum Type { Unknown, Shape, ChartZone, Group, Pict, Text, Textv4, Bitmap, TableZone, OLE};
   //! constructor
   Zone() : m_subType(-1), m_zoneId(-1), m_pos(), m_dataPos(-1), m_fileId(-1), m_page(-1), m_decal(), m_finalDecal(), m_box(), m_line(-1),
     m_style(), m_order(0), m_extra(""), m_doNotSend(false), m_isSent(false) {
@@ -311,7 +312,7 @@ struct BasicShape : public Zone {
   }
   //! return the type
   virtual Type type() const {
-    return Basic;
+    return Shape;
   }
   //! operator<<
   virtual void print(std::ostream &o) const {
@@ -322,12 +323,16 @@ struct BasicShape : public Zone {
   virtual float needExtraBorderWidth() const {
     return 0.5f*m_style.m_lineWidth;
   }
+  //! return the shape type
+  MWAWGraphicStyle getStyle() const {
+    MWAWGraphicStyle style(m_style);
+    if (m_subType!=0)
+      style.m_arrows[0] = style.m_arrows[1]=false;
+    return style;
+  }
   //! return a picture if possible
   virtual shared_ptr<MWAWPictBasic> getBasicPicture(MWAWInputStreamPtr) const;
 
-  //! return a binary data (if known)
-  virtual bool getBinaryData(MWAWInputStreamPtr,
-                             WPXBinaryData &res, std::string &type) const;
   //! the basic shape
   MWAWGraphicShape m_shape;
   //! a pointer to the graphic style manager
@@ -349,15 +354,6 @@ shared_ptr<MWAWPictBasic> BasicShape::getBasicPicture(MWAWInputStreamPtr) const
   if (pict)
     pict->setStyle(pStyle);
   return pict;
-}
-
-bool BasicShape::getBinaryData(MWAWInputStreamPtr input,
-                               WPXBinaryData &data, std::string &pictType) const
-{
-  data.clear();
-  pictType="";
-  shared_ptr<MWAWPictBasic> pict = getBasicPicture(input);
-  return pict && pict->getBinary(data,pictType);
 }
 
 ////////////////////////////////////////
@@ -572,8 +568,6 @@ struct TextBox : public Zone {
   }
   //! return a picture if possible
   virtual shared_ptr<MWAWPictBasic> getBasicPicture(MWAWInputStreamPtr) const;
-  //! return a binary data using a MWAWPictSimpleText
-  bool getBinaryData(MWAWInputStreamPtr input,WPXBinaryData &res, std::string &type) const;
 
   //! add frame parameters to propList (if needed )
   virtual void fillFramePropertyList(WPXPropertyList &extras) const {
@@ -668,12 +662,6 @@ shared_ptr<MWAWPictBasic> TextBox::getBasicPicture(MWAWInputStreamPtr) const
   style.m_lineWidth=0;
   pict->setStyle(style);
   return pict;
-}
-
-bool TextBox::getBinaryData(MWAWInputStreamPtr input, WPXBinaryData &res, std::string &pictType) const
-{
-  shared_ptr<MWAWPict> pict=getBasicPicture(input);
-  return pict && pict->getBinary(res,pictType);
 }
 
 ////////////////////////////////////////
@@ -904,7 +892,7 @@ bool State::getPattern(MWAWGraphicStyle::Pattern &pat, int id, long rsid)
 class SubDocument : public MWAWSubDocument
 {
 public:
-  enum Type { RBILZone, Chart, Empty, Group, Table, TextBoxv4 };
+  enum Type { RBILZone, Chart, Empty, Group, Table, TextBox, TextBoxv4 };
   SubDocument(MSKGraph &pars, MWAWInputStreamPtr input, Type type,
               int zoneId) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(zoneId), m_frame("") {}
@@ -924,6 +912,8 @@ public:
 
   //! the parser function
   void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  //! the graphic parser function
+  void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType type);
 private:
   SubDocument(SubDocument const &orig);
   SubDocument &operator=(SubDocument const &orig);
@@ -975,10 +965,28 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     m_graphParser->sendObjects(sendData);
     break;
   }
+  case TextBox:
   default:
     MWAW_DEBUG_MSG(("MSKGraph::SubDocument::parse: unexpected zone type\n"));
     break;
   }
+  m_input->seek(pos, WPX_SEEK_SET);
+}
+
+void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+{
+  if (!listener.get()) {
+    MWAW_DEBUG_MSG(("MSKParser::SubDocument::parse: no listener\n"));
+    return;
+  }
+  if (m_type != TextBox) {
+    MWAW_DEBUG_MSG(("MSKGraph::SubDocument::parseGraphic: unexpected zone type\n"));
+    return;
+  }
+  assert(m_graphParser);
+
+  long pos = m_input->tell();
+  m_graphParser->sendTextBox(m_id);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
@@ -2206,22 +2214,32 @@ void MSKGraph::sendGroup(int id, MWAWPosition const &pos)
     reinterpret_cast<MSKGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
   group.m_isSent = true;
 
-  shared_ptr<MWAWPictBasic> pict=convertGroup(group);
+  MWAWGraphicListenerPtr graphicListener = m_parserState->m_graphicListener;
+  if (!graphicListener || graphicListener->isGraphicOpened()) {
+    MWAW_DEBUG_MSG(("MSKGraph::sendGroup: can not use the graphic listener\n"));
+    MWAWPosition undefPos(pos);
+    undefPos.setSize(Vec2f(0,0));
+    for (size_t c=0; c < group.m_childs.size(); ++c)
+      send(group.m_childs[c], undefPos);
+    return;
+  }
+  if (!canCreateGraphic(group)) {
+    if (pos.m_anchorTo == MWAWPosition::Char || pos.m_anchorTo == MWAWPosition::CharBaseLine) {
+      shared_ptr<MSKGraphInternal::SubDocument> subdoc
+      (new MSKGraphInternal::SubDocument(*this, m_mainParser->getInput(), MSKGraphInternal::SubDocument::Group, id));
+      listener->insertTextBox(pos, subdoc);
+      return;
+    }
+    MWAWPosition childPos(pos);
+    childPos.setSize(Vec2f(0,0));
+    sendGroupChild(id, childPos);
+  }
+  graphicListener->startGraphic(group.m_box);
+  sendGroup(group, graphicListener);
   WPXBinaryData data;
   std::string type;
-  if (pict && pict->getBinary(data,type)) {
+  if (graphicListener->endGraphic(data,type))
     listener->insertPicture(pos, data, type);
-    return;
-  }
-  if (pos.m_anchorTo == MWAWPosition::Char || pos.m_anchorTo == MWAWPosition::CharBaseLine) {
-    shared_ptr<MSKGraphInternal::SubDocument> subdoc
-    (new MSKGraphInternal::SubDocument(*this, m_mainParser->getInput(), MSKGraphInternal::SubDocument::Group, id));
-    listener->insertTextBox(pos, subdoc);
-    return;
-  }
-  MWAWPosition childPos(pos);
-  childPos.setSize(Vec2f(0,0));
-  sendGroupChild(id, childPos);
 }
 
 void MSKGraph::sendGroupChild(int id, MWAWPosition const &pos)
@@ -2251,7 +2269,7 @@ void MSKGraph::sendGroupChild(int id, MWAWPosition const &pos)
       continue;
     MSKGraphInternal::Zone const &child=*(m_state->m_zonesList[size_t(cId)]);
     bool isLast=false;
-    if (child.type()==MSKGraphInternal::Zone::Basic || child.type()==MSKGraphInternal::Zone::Text) {
+    if (child.type()==MSKGraphInternal::Zone::Shape || child.type()==MSKGraphInternal::Zone::Text) {
       if (!partialGroup) {
         partialGroup.reset(new MWAWPictGroup(*m_parserState->m_graphicStyleManager));
         partialGroup->setStyle(partialGroupStyle);
@@ -2284,16 +2302,24 @@ void MSKGraph::sendGroupChild(int id, MWAWPosition const &pos)
   }
 }
 
-shared_ptr<MWAWPictBasic> MSKGraph::convertGroup(MSKGraphInternal::GroupZone const &group)
+bool MSKGraph::canCreateGraphic(MSKGraphInternal::GroupZone const &group) const
 {
-  shared_ptr<MWAWPictGroup> res;
   int numZones = int(m_state->m_zonesList.size());
   for (size_t c=0; c < group.m_childs.size(); ++c) {
     int cId = group.m_childs[c];
     if (cId < 0 || cId >= numZones || !m_state->m_zonesList[size_t(cId)])
       continue;
     MSKGraphInternal::Zone const &child=*(m_state->m_zonesList[size_t(cId)]);
+    if (child.m_page!=group.m_page)
+      return false;
     switch (child.type()) {
+    case MSKGraphInternal::Zone::Shape:
+    case MSKGraphInternal::Zone::Text:
+      break;
+    case MSKGraphInternal::Zone::Group:
+      if (!canCreateGraphic(reinterpret_cast<MSKGraphInternal::GroupZone const &>(child)))
+        return false;
+      break;
     case MSKGraphInternal::Zone::Bitmap:
     case MSKGraphInternal::Zone::ChartZone:
     case MSKGraphInternal::Zone::OLE:
@@ -2302,35 +2328,44 @@ shared_ptr<MWAWPictBasic> MSKGraph::convertGroup(MSKGraphInternal::GroupZone con
     case MSKGraphInternal::Zone::Textv4:
     case MSKGraphInternal::Zone::Unknown:
     default:
-      return res;
-    case MSKGraphInternal::Zone::Basic:
-    case MSKGraphInternal::Zone::Group: // maybe
-    case MSKGraphInternal::Zone::Text:
-      if (child.m_page!=group.m_page)
-        return res;
-      break;
+      return false;
     }
   }
-  res.reset(new MWAWPictGroup(*m_parserState->m_graphicStyleManager, group.m_box));
+  return true;
+}
+
+void MSKGraph::sendGroup(MSKGraphInternal::GroupZone const &group, MWAWGraphicListenerPtr &listener) const
+{
+  if (!listener || !listener->isGraphicOpened()) {
+    MWAW_DEBUG_MSG(("MSKGraph::sendGroup: the listener is bad\n"));
+    return;
+  }
+  int numZones = int(m_state->m_zonesList.size());
   MWAWInputStreamPtr input=m_mainParser->getInput();
   for (size_t c=0; c < group.m_childs.size(); ++c) {
     int cId = group.m_childs[c];
     if (cId < 0 || cId >= numZones || !m_state->m_zonesList[size_t(cId)])
       continue;
     MSKGraphInternal::Zone const &child=*(m_state->m_zonesList[size_t(cId)]);
-    shared_ptr<MWAWPictBasic> childPict;
+    Vec2f decal=child.m_decal[0]+child.m_decal[1];
+    Box2f box(child.m_box[0]+decal,child.m_box[1]+decal);
+
     if (child.type()==MSKGraphInternal::Zone::Group)
-      childPict=convertGroup(reinterpret_cast<MSKGraphInternal::GroupZone const &>(child));
-    else
-      childPict=child.getBasicPicture(input);
-    if (!childPict) {
-      res.reset();
-      return res;
+      sendGroup(reinterpret_cast<MSKGraphInternal::GroupZone const &>(child), listener);
+    else if (child.type()==MSKGraphInternal::Zone::Shape) {
+      MSKGraphInternal::BasicShape const &shape=reinterpret_cast<MSKGraphInternal::BasicShape const &>(child);
+      listener->insertPicture(box, shape.m_shape, shape.getStyle());
+    } else if (child.type()==MSKGraphInternal::Zone::Text) {
+      shared_ptr<MSKGraphInternal::SubDocument> subdoc
+      (new MSKGraphInternal::SubDocument(const_cast<MSKGraph&>(*this), input, MSKGraphInternal::SubDocument::TextBox, cId));
+      // a textbox can not have border
+      MWAWGraphicStyle style(child.m_style);
+      style.m_lineWidth=0;
+      listener->insertTextBox(box, subdoc, style);
+    } else {
+      MWAW_DEBUG_MSG(("MSKGraph::sendGroup: find some unexpected child\n"));
     }
-    res->addChild(childPict);
   }
-  res->setStyle(group.m_style);
-  return res;
 }
 
 shared_ptr<MSKGraphInternal::GroupZone> MSKGraph::readGroup(MSKGraphInternal::Zone &header)
@@ -2373,7 +2408,7 @@ shared_ptr<MSKGraphInternal::GroupZone> MSKGraph::readGroup(MSKGraphInternal::Zo
   return group;
 }
 
-// read a textbox zone
+// read/send a textbox zone
 bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
 {
   if (textBox.m_numPositions < 0) return false; // can an empty text exist
@@ -2569,6 +2604,74 @@ bool MSKGraph::readFont(MWAWFont &font)
   return true;
 }
 
+void MSKGraph::sendTextBox(int zoneId)
+{
+  MWAWGraphicListenerPtr listener=m_parserState->m_graphicListener;
+  if (!listener || !listener->isGraphicOpened() || !listener->isTextZoneOpened()) {
+    MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: can not find get access to the graphicListener\n"));
+    return;
+  }
+  if (zoneId < 0 || zoneId >= int(m_state->m_zonesList.size())) {
+    MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: can not find textbox %d\n", zoneId));
+    return;
+  }
+  shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[(size_t)zoneId];
+  if (!zone) return;
+  MSKGraphInternal::TextBox &textBox = reinterpret_cast<MSKGraphInternal::TextBox &>(*zone);
+  listener->setFont(MWAWFont(20,12));
+  MWAWParagraph para;
+  para.m_justify=textBox.m_justify;
+  listener->setParagraph(para);
+  int numFonts = int(textBox.m_fontsList.size());
+  int actFormatPos = 0;
+  int numFormats = int(textBox.m_formats.size());
+  if (numFormats != int(textBox.m_positions.size())) {
+    MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: positions and formats have different length\n"));
+    if (numFormats > int(textBox.m_positions.size()))
+      numFormats = int(textBox.m_positions.size());
+  }
+  for (size_t i = 0; i < textBox.m_text.length(); i++) {
+    if (actFormatPos < numFormats && textBox.m_positions[(size_t)actFormatPos]==int(i)) {
+      int id = textBox.m_formats[(size_t)actFormatPos++];
+      if (id < 0 || id >= numFonts) {
+        MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: can not find a font\n"));
+      } else
+        listener->setFont(textBox.m_fontsList[(size_t)id]);
+    }
+    unsigned char c = (unsigned char) textBox.m_text[i];
+    switch(c) {
+    case 0x9:
+      MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some tab\n"));
+      listener->insertChar(' ');
+      break;
+    case 0xd:
+      if (i+1 != textBox.m_text.length())
+        listener->insertEOL();
+      break;
+    case 0x19:
+      listener->insertField(MWAWField(MWAWField::Title));
+      break;
+    case 0x18:
+      listener->insertField(MWAWField(MWAWField::PageNumber));
+      break;
+    case 0x16:
+      MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some time\n"));
+      listener->insertField(MWAWField(MWAWField::Time));
+      break;
+    case 0x17:
+      MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some date\n"));
+      listener->insertField(MWAWField(MWAWField::Date));
+      break;
+    case 0x14: // fixme
+      MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: footnote are not implemented\n"));
+      break;
+    default:
+      listener->insertCharacter(c);
+      break;
+    }
+  }
+}
+
 void MSKGraph::send(int id, MWAWPosition const &pos)
 {
   if (id < 0 || id >= int(m_state->m_zonesList.size())) {
@@ -2589,18 +2692,30 @@ void MSKGraph::send(int id, MWAWPosition const &pos)
   zone->fillFramePropertyList(extras);
 
   MWAWInputStreamPtr input=m_mainParser->getInput();
-  switch (zone->type()) {
-  case MSKGraphInternal::Zone::Text: {
-    MSKGraphInternal::TextBox &textbox = reinterpret_cast<MSKGraphInternal::TextBox &>(*zone);
-    WPXBinaryData data;
-    std::string type;
-    if (textbox.getBinaryData(input, data, type)) {
-      listener->insertPicture(pictPos, data, type, extras);
-      return;
-    }
+  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+  if ((zone->type()==MSKGraphInternal::Zone::Shape || zone->type()==MSKGraphInternal::Zone::Text) &&
+      (!graphicListener || graphicListener->isGraphicOpened())) {
+    MWAW_DEBUG_MSG(("MSKGraph::send: can not use the graphic listener for zone %d\n", id));
     shared_ptr<MSKGraphInternal::SubDocument> subdoc
     (new MSKGraphInternal::SubDocument(*this, input, MSKGraphInternal::SubDocument::Empty, id));
     listener->insertTextBox(pictPos, subdoc, extras);
+    return;
+  }
+  switch (zone->type()) {
+  case MSKGraphInternal::Zone::Text: {
+    MSKGraphInternal::TextBox &textbox = reinterpret_cast<MSKGraphInternal::TextBox &>(*zone);
+    Box2f box(Vec2f(0,0),textbox.m_box.size());
+    graphicListener->startGraphic(box);
+    shared_ptr<MSKGraphInternal::SubDocument> subdoc
+    (new MSKGraphInternal::SubDocument(*this, input, MSKGraphInternal::SubDocument::TextBox, id));
+    // a textbox can not have border
+    MWAWGraphicStyle style(textbox.m_style);
+    style.m_lineWidth=0;
+    graphicListener->insertTextBox(box, subdoc, style);
+    WPXBinaryData data;
+    std::string type;
+    if (graphicListener->endGraphic(data, type))
+      listener->insertPicture(pictPos, data, type);
     return;
   }
   case MSKGraphInternal::Zone::TableZone: {
@@ -2630,7 +2745,11 @@ void MSKGraph::send(int id, MWAWPosition const &pos)
     listener->insertPicture(pictPos, data, type, extras);
     return;
   }
-  case MSKGraphInternal::Zone::Basic:
+  case MSKGraphInternal::Zone::Shape: {
+    MSKGraphInternal::BasicShape &shape = reinterpret_cast<MSKGraphInternal::BasicShape &>(*zone);
+    listener->insertPicture(pictPos, shape.m_shape, shape.getStyle());
+    return;
+  }
   case MSKGraphInternal::Zone::Pict: {
     WPXBinaryData data;
     std::string type;
