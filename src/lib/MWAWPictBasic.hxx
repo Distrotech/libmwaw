@@ -274,37 +274,6 @@ protected:
   std::map<int,MWAWParagraph> m_posParagraphMap;
 };
 
-//! a class used to define a graphicObject or an ellipse
-class MWAWPictGraphicObject : public MWAWPictBasic
-{
-public:
-  //! constructor
-  MWAWPictGraphicObject(MWAWGraphicStyleManager &graphicManager, Box2f box, WPXBinaryData const &data, std::string mimeType) :
-    MWAWPictBasic(graphicManager), m_data(data), m_mimeType(mimeType) {
-    setBdBox(box);
-  }
-  //! virtual destructor
-  virtual ~MWAWPictGraphicObject() {}
-
-  //! returns a ODG (encoded)
-  virtual bool send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const;
-
-protected:
-  //! returns the class type
-  virtual SubType getSubType() const {
-    return GraphicObject;
-  }
-  //! returns the graphics style
-  virtual void getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const;
-  //! comparison function
-  virtual int cmp(MWAWPict const &a) const;
-
-  // the binary data
-  WPXBinaryData m_data;
-  // the mime type
-  std::string m_mimeType;
-};
-
 //! \brief a class used to define a polygon
 class MWAWPictGroup : public MWAWPictBasic
 {

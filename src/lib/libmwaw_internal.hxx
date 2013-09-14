@@ -313,6 +313,8 @@ struct MWAWNote {
 // forward declarations of basic classes and smart pointers
 class MWAWEntry;
 class MWAWFont;
+class MWAWGraphicInterface;
+class MWAWGraphicShape;
 class MWAWGraphicStyle;
 class MWAWHeader;
 class MWAWList;
@@ -324,6 +326,7 @@ class MWAWSection;
 
 class MWAWContentListener;
 class MWAWFontConverter;
+class MWAWGraphicListener;
 class MWAWGraphicStyleManager;
 class MWAWInputStream;
 class MWAWListManager;
@@ -334,6 +337,8 @@ class MWAWSubDocument;
 typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
 //! a smart pointer of MWAWFontConverter
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
+//! a smart pointer of MWAWGraphicListener
+typedef shared_ptr<MWAWGraphicListener> MWAWGraphicListenerPtr;
 //! a smart pointer of MWAWGraphicStyleManager
 typedef shared_ptr<MWAWGraphicStyleManager> MWAWGraphicStyleManagerPtr;
 //! a smart pointer of MWAWInputStream
@@ -828,6 +833,24 @@ public:
     m_pt[1] += Vec2<T>(val-(val/2),val-(val/2));
   }
 
+  //! returns the union between this and box
+  Box2<T> getUnion(Box2<T> const &box) const {
+    Box2<T> res;
+    res.m_pt[0]=Vec2<T>(m_pt[0][0]<box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
+                        m_pt[0][1]<box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
+    res.m_pt[1]=Vec2<T>(m_pt[1][0]>box.m_pt[1][0]?m_pt[1][0] : box.m_pt[1][0],
+                        m_pt[1][1]>box.m_pt[1][1]?m_pt[1][1] : box.m_pt[1][1]);
+    return res;
+  }
+  //! returns the intersection between this and box
+  Box2<T> getIntersection(Box2<T> const &box) const {
+    Box2<T> res;
+    res.m_pt[0]=Vec2<T>(m_pt[0][0]>box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
+                        m_pt[0][1]>box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
+    res.m_pt[1]=Vec2<T>(m_pt[1][0]<box.m_pt[1][0]?m_pt[1][0] : box.m_pt[1][0],
+                        m_pt[1][1]<box.m_pt[1][1]?m_pt[1][1] : box.m_pt[1][1]);
+    return res;
+  }
   //! comparison operator==
   bool operator==(Box2<T> const &p) const {
     return cmp(p) == 0;

@@ -31,8 +31,6 @@
 * instead of those above.
 */
 
-/* This header contains code specific to a pict mac file
- */
 #include <string.h>
 
 #include <cmath>
@@ -377,58 +375,6 @@ int MWAWPictSimpleText::cmp(MWAWPict const &a) const
 }
 
 void MWAWPictSimpleText::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
-{
-  m_style.addTo(list, gradient);
-}
-
-////////////////////////////////////////////////////////////
-//
-//    MWAWPictGraphicObject
-//
-////////////////////////////////////////////////////////////
-int MWAWPictGraphicObject::cmp(MWAWPict const &a) const
-{
-  int diff = MWAWPictBasic::cmp(a);
-  if (diff) return diff;
-  MWAWPictGraphicObject const &aObject = static_cast<MWAWPictGraphicObject const &>(a);
-  if (m_mimeType<aObject.m_mimeType) return 1;
-  if (m_mimeType>aObject.m_mimeType) return -1;
-  if (m_data.size()<aObject.m_data.size()) return 1;
-  if (m_data.size()>aObject.m_data.size()) return -1;
-  unsigned char const *buf1=m_data.getDataBuffer();
-  unsigned char const *buf2=aObject.m_data.getDataBuffer();
-  for (unsigned long l=0; l<m_data.size(); ++l, ++buf1, ++buf2) {
-    if (*buf1 < *buf2) return 1;
-    if (*buf1 > *buf2) return -1;
-  }
-  return 0;
-}
-
-bool MWAWPictGraphicObject::send(MWAWPropertyHandlerEncoder &doc, Vec2f const &orig) const
-{
-  if (!m_data.size() || m_mimeType.empty()) {
-    MWAW_DEBUG_MSG(("MWAWPictGraphicObject::send: can not find the data\n"));
-    return false;
-  }
-
-  sendStyle(doc);
-
-  WPXPropertyList list;
-  Box2f bdbox=getBdBox();
-  Vec2f pt=bdbox[0]-orig;
-  list.insert("svg:x",pt.x(), WPX_POINT);
-  list.insert("svg:y",pt.y(), WPX_POINT);
-  pt=bdbox.size();
-  list.insert("svg:width",pt.x(), WPX_POINT);
-  list.insert("svg:height",pt.y(), WPX_POINT);
-  list.insert("libwpg:mime-type", m_mimeType.c_str());
-  doc.startElement("GraphicObject", list, m_data);
-  doc.endElement("GraphicObject");
-
-  return true;
-}
-
-void MWAWPictGraphicObject::getGraphicStyleProperty(WPXPropertyList &list, WPXPropertyListVector &gradient) const
 {
   m_style.addTo(list, gradient);
 }

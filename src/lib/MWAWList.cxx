@@ -200,6 +200,7 @@ void MWAWList::resize(int level)
   m_nextIndices.resize(size_t(level), 1);
   if (m_actLevel >= level)
     m_actLevel=level-1;
+  m_modifyMarker++;
 }
 
 void MWAWList::updateIndicesFrom(MWAWList const &list)
@@ -211,6 +212,7 @@ void MWAWList::updateIndicesFrom(MWAWList const &list)
     m_actualIndices[size_t(level)]=m_levels[size_t(level)].getStartValue()-1;
     m_nextIndices[level]=list.m_nextIndices[level];
   }
+  m_modifyMarker++;
 }
 
 bool MWAWList::isCompatibleWith(int levl, MWAWListLevel const &level) const
@@ -242,28 +244,23 @@ void MWAWList::setId(int newId) const
   m_id[1] = newId+1;
 }
 
-void MWAWList::sendTo(WPXDocumentInterface &docInterface, int level) const
+bool MWAWList::addTo(int level, WPXPropertyList &pList) const
 {
   if (level <= 0 || level > int(m_levels.size()) ||
       m_levels[size_t(level-1)].isDefault()) {
-    MWAW_DEBUG_MSG(("MWAWList::sendTo: level %d is not defined\n",level));
-    return;
+    MWAW_DEBUG_MSG(("MWAWList::addTo: level %d is not defined\n",level));
+    return false;
   }
 
   if (getId()==-1) {
-    MWAW_DEBUG_MSG(("MWAWList::sendTo: the list id is not set\n"));
+    MWAW_DEBUG_MSG(("MWAWList::addTo: the list id is not set\n"));
     static int falseId = 1000;
     setId(falseId+=2);
   }
-
-  WPXPropertyList propList;
-  propList.insert("libwpd:id", getId());
-  propList.insert("libwpd:level", level);
-  m_levels[size_t(level-1)].addTo(propList);
-  if (!m_levels[size_t(level-1)].isNumeric())
-    docInterface.defineUnorderedListLevel(propList);
-  else
-    docInterface.defineOrderedListLevel(propList);
+  pList.insert("libwpd:id", getId());
+  pList.insert("libwpd:level", level);
+  m_levels[size_t(level-1)].addTo(pList);
+  return true;
 }
 
 void MWAWList::set(int levl, MWAWListLevel const &level)
@@ -277,8 +274,12 @@ void MWAWList::set(int levl, MWAWListLevel const &level)
                     (level.m_startValue && m_nextIndices[size_t(levl-1)] !=level.getStartValue());
   if (level.m_startValue > 0 || level.m_type != m_levels[size_t(levl-1)].m_type) {
     m_nextIndices[size_t(levl-1)]=level.getStartValue();
+    m_modifyMarker++;
   }
-  if (needReplace) m_levels[size_t(levl-1)] = level;
+  if (needReplace) {
+    m_levels[size_t(levl-1)] = level;
+    m_modifyMarker++;
+  }
 }
 
 void MWAWList::setLevel(int levl) const
@@ -301,7 +302,10 @@ void MWAWList::setStartValueForNextElement(int value)
     MWAW_DEBUG_MSG(("MWAWList::setStartValueForNextElement: can not find level %d\n",m_actLevel));
     return;
   }
+  if (m_nextIndices[size_t(m_actLevel)]==value)
+    return;
   m_nextIndices[size_t(m_actLevel)]=value;
+  m_modifyMarker++;
 }
 
 int MWAWList::getStartValueForNextElement() const
@@ -338,35 +342,22 @@ bool MWAWList::isNumeric(int levl) const
 ////////////////////////////////////////////////////////////
 // list manager function
 ////////////////////////////////////////////////////////////
-bool MWAWListManager::send(int index, WPXDocumentInterface &docInterface) const
+bool MWAWListManager::needToSend(int index, std::vector<int> &idMarkerList) const
 {
   if (index <= 0) return false;
-  if (index >= int(m_sendIdList.size()))
-    m_sendIdList.resize(size_t(index)+1,false);
-  if (m_sendIdList[size_t(index)])
-    return false;
+  if (index >= int(idMarkerList.size()))
+    idMarkerList.resize(size_t(index)+1,0);
   size_t mainId=size_t(index-1)/2;
   if (mainId >= m_listList.size()) {
-    MWAW_DEBUG_MSG(("MWAWListManager::send: can not find list %d\n", index));
+    MWAW_DEBUG_MSG(("MWAWListManager::needToSend: can not find list %d\n", index));
     return false;
   }
-
-  m_sendIdList[size_t(index)]=true;
   MWAWList const &list=m_listList[mainId];
+  if (idMarkerList[size_t(index)] == list.getMarker())
+    return false;
+  idMarkerList[size_t(index)]=list.getMarker();
   if (list.getId()!=index) list.swapId();
-  for (int l=1; l <= list.numLevels(); l++)
-    list.sendTo(docInterface, l);
   return true;
-}
-
-void MWAWListManager::resetSend(size_t id) const
-{
-  if (2*id+1>=m_sendIdList.size())
-    return;
-  m_sendIdList[2*id+1]=false;
-  if (2*id+2>=m_sendIdList.size())
-    return;
-  m_sendIdList[2*id+2]=false;
 }
 
 shared_ptr<MWAWList> MWAWListManager::getList(int index) const
@@ -388,10 +379,8 @@ shared_ptr<MWAWList> MWAWListManager::getNewList(shared_ptr<MWAWList> actList, i
     actList->set(levl, level);
     int index=actList->getId();
     size_t mainId=size_t(index-1)/2;
-    if (mainId < m_listList.size() && m_listList[mainId].numLevels() < levl) {
+    if (mainId < m_listList.size() && m_listList[mainId].numLevels() < levl)
       m_listList[mainId].set(levl, level);
-      resetSend(mainId);
-    }
     return actList;
   }
   MWAWList res;
@@ -405,10 +394,8 @@ shared_ptr<MWAWList> MWAWListManager::getNewList(shared_ptr<MWAWList> actList, i
   for (size_t l=0; l < numList; l++) {
     if (!m_listList[l].isCompatibleWith(res))
       continue;
-    if (m_listList[l].numLevels() < levl) {
+    if (m_listList[l].numLevels() < levl)
       m_listList[l].set(levl, level);
-      resetSend(l);
-    }
     shared_ptr<MWAWList> copy(new MWAWList(m_listList[l]));
     copy->updateIndicesFrom(res);
     return copy;

@@ -1,8 +1,16 @@
 CHANGES:
 
-09/10/2013:
+09/13/2013:
+- add MWAWGraphicListener: a listener to create complex picture; first try, must be improved...
+- add MWAWGraphicInterface: an internal graphic interface a la libwpg-0.3.0 ( which contains
+  functions to output in libwpg-0.2.0 format )
+- begin to remove the calls to the previous classes in MWAWPictBasic...
+
+09/11/2013:
 - add a class MWAWGraphicShape to define basic shapes,
-- check that Acta, LightWay, Nisus, WriterPlus use the new properties' classes
+- begin to remove call to MWAWPictBasic to prepare the creation of a MWAWGraphicListener
+- check that Acta, BeagleWorks/WordPerfect Work, LightWay Text, MacDoc, MacWrite,
+  Mariner Write, Nisus Writer, WriterPlus, Z-Write use the new properties' classes
 
 09/07/2013:
 - More Parser: recognize basic picture in the main data text
@@ -13,7 +21,7 @@ CHANGES:
 - refactor the graphic generation: add classes to define complex graphic
   styles and modify the basic shapes, text box and group classes to create
   more complex pictures. 
-  This will probably imply to introduce a GraphicContentList in some near future,
+  This will probably imply to introduce a GraphicListener in some near future,
   but not now...
 - modify Microsoft Works parser to use these classes to generate ( when possible)
   graphics with pattern, gradient background and to render a group of simple

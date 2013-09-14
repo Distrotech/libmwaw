@@ -45,9 +45,9 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
-#include "MWAWPictBasic.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
@@ -1130,19 +1130,20 @@ bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
   pictPos.setRelativePosition(MWAWPosition::Frame);
   pictPos.setOrder(-1);
 
-  MWAWGraphicStyleManager &graphicManager= *m_parserState->m_graphicStyleManager;
-  MWAWPictGroup group(graphicManager, Box2f(Vec2f(0,0), pictSz));
+  MWAWGraphicListenerPtr graphicListener = m_parserState->m_graphicListener;
+  if (!graphicListener || graphicListener->isGraphicOpened()) {
+    MWAW_DEBUG_MSG(("HMWKGraph::sendEmptyPicture: can not use the graphic listener\n"));
+    return false;
+  }
+  Box2f box=Box2f(Vec2f(0,0),pictSz);
+  graphicListener->startGraphic(box);
   MWAWGraphicStyle defStyle;
-  shared_ptr<MWAWPictShape> child(new MWAWPictShape(graphicManager, MWAWGraphicShape::rectangle(Box2f(Vec2f(0,0), pictSz)), defStyle));
-  group.addChild(child);
-  child.reset(new MWAWPictShape(graphicManager, MWAWGraphicShape::line(Vec2f(0,0), pictSz), defStyle));
-  group.addChild(child);
-  child.reset(new MWAWPictShape(graphicManager, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],1)), defStyle));
-  group.addChild(child);
-
+  graphicListener->insertPicture(box, MWAWGraphicShape::rectangle(box), defStyle);
+  graphicListener->insertPicture(box, MWAWGraphicShape::line(box[0],box[1]), defStyle);
+  graphicListener->insertPicture(box, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],0)), defStyle);
   WPXBinaryData data;
   std::string type;
-  if (!group.getBinary(data,type)) return false;
+  if (!graphicListener->endGraphic(data,type)) return false;
   m_parserState->m_listener->insertPicture(pictPos, data, type);
   return true;
 }

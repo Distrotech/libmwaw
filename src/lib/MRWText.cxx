@@ -830,7 +830,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
         if (zone.getFont(id, font)) {
           listener->setFont(font.m_font);
           if (font.m_tokenId > 0) {
-            m_mainParser->sendToken(zone.m_id, font.m_tokenId, font.m_font);
+            m_mainParser->sendToken(zone.m_id, font.m_tokenId);
             tokenEndPos = -2;
           }
         }

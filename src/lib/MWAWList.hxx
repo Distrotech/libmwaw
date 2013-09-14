@@ -41,7 +41,6 @@
 #include <libwpd/libwpd.h>
 
 class WPXPropertyList;
-class WPXDocumentInterface;
 
 /** small structure to keep information about a list level */
 struct MWAWListLevel {
@@ -105,7 +104,7 @@ class MWAWList
 {
 public:
   /** default constructor */
-  MWAWList() : m_levels(), m_actLevel(-1), m_actualIndices(), m_nextIndices() {
+  MWAWList() : m_levels(), m_actLevel(-1), m_actualIndices(), m_nextIndices(), m_modifyMarker(1) {
     m_id[0] = m_id[1] = -1;
   }
 
@@ -114,6 +113,10 @@ public:
     return m_id[0];
   }
 
+  /** returns the actual modify marker */
+  int getMarker() const {
+    return m_modifyMarker;
+  }
   /** resize the number of level of the list (keeping only n level) */
   void resize(int levl);
   /** returns true if we can add a new level in the list without changing is meaning */
@@ -164,8 +167,8 @@ public:
   /** returns true is a level is numeric */
   bool isNumeric(int levl) const;
 
-  /** send the list level information to the document interface. */
-  void sendTo(WPXDocumentInterface &docInterface, int level) const;
+  /// retrieve the list level property
+  bool addTo(int level, WPXPropertyList &pList) const;
 
 protected:
   //! the different levels
@@ -176,6 +179,8 @@ protected:
   mutable std::vector<int> m_actualIndices, m_nextIndices;
   //! the identificator ( actual and auxilliar )
   mutable int m_id[2];
+  //! a modification marker ( can be used to check if a list has been send to a interface )
+  mutable int m_modifyMarker;
 };
 
 /** a manager which manages the lists, keeps the different kind of lists, to assure the unicity of each list */
@@ -183,22 +188,20 @@ class MWAWListManager
 {
 public:
   //! the constructor
-  MWAWListManager() : m_listList(), m_sendIdList() { }
+  MWAWListManager() : m_listList(), m_sendIdMarkerList() { }
   //! the destructor
   ~MWAWListManager() { }
-  /** send the list to the document interface. If this is already done, does nothing and return false. */
-  bool send(int index, WPXDocumentInterface &docInterface) const;
+  /** check if a list need to be send/resend to the interface */
+  bool needToSend(int index, std::vector<int> &idMarkerList) const;
   //! returns a list with given index ( if found )
   shared_ptr<MWAWList> getList(int index) const;
   //! returns a new list corresponding to a list where we have a new level
   shared_ptr<MWAWList> getNewList(shared_ptr<MWAWList> actList, int levl, MWAWListLevel const &level);
 protected:
-  /** reset the list id corresponding to a list */
-  void resetSend(size_t id) const;
   //! the list of created list
   std::vector<MWAWList> m_listList;
   //! the list of send list to interface
-  mutable std::vector<bool> m_sendIdList;
+  mutable std::vector<int> m_sendIdMarkerList;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

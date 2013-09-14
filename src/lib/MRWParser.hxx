@@ -167,7 +167,7 @@ protected:
   //! return the pattern percent which corresponds to an id (or -1)
   float getPatternPercent(int id) const;
   //! ask the graph parser to send a token
-  void sendToken(int zoneId, long tokenId, MWAWFont const &actFont);
+  void sendToken(int zoneId, long tokenId);
 
   //
   // low level

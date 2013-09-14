@@ -83,14 +83,11 @@ WPXDocumentInterface class are the only three classes that will be of
 interest for the application programmer using libmwaw.
 
 - The class MWAWPropertyHandler is a small class which can decode the
-internal encoded format used to export odg's data.
-
-- libmwaw can add some non-standart properties in some property list of WPXDocumentInterface,
-  these properties can be ignored or used:
-  - Properties "fo:border", "fo:border-left", "fo:border-right", "fo:border-top", "fo:border-bottom"
-    can appear in the property list of OpenParagraph.
-  - Encoded object with "libwpd:mimetype"="image/mwaw-odg" can be given to insertBinaryObject.
-  In this case, MWAWPropertyHandler can be used to decode the data which is an encoded odg picture.
+ internal encoded format used to export odg's data. Then the encoded object
+ is send via WPXDocumentInterface::insertBinaryObject with
+ "libwpd:mimetype"="image/mwaw-odg" ( or "libwpd:mimetype"="image/mwaw-odg2", ...)
+ In this case, MWAWPropertyHandler can be used to decode the data which is an encoded
+ odg picture.
 
 \section lib_docs libmwaw documentation
 If you are interrested in the structure of libmwaw itself, this whole document

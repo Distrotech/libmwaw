@@ -308,11 +308,11 @@ float MRWParser::getPatternPercent(int id) const
   return m_graphParser->getPatternPercent(id);
 }
 
-void MRWParser::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
+void MRWParser::sendToken(int zoneId, long tokenId)
 {
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
-  m_graphParser->sendToken(zoneId, tokenId, actFont);
+  m_graphParser->sendToken(zoneId, tokenId);
   input->seek(actPos, WPX_SEEK_SET);
 }
 

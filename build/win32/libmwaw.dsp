@@ -327,6 +327,14 @@ SOURCE=..\..\src\lib\MWAWFontSJISConverter.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWGraphicInterface.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWGraphicListener.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWGraphicShape.cxx
 # End Source File
 # Begin Source File
@@ -712,6 +720,14 @@ SOURCE=..\..\src\lib\MWAWFontConverter.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWFontSJISConverter.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWGraphicInterface.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWGraphicListener.hxx
 # End Source File
 # Begin Source File
 

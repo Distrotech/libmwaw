@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MWAW_CONTENT_LISTENER_H
-#define MWAW_CONTENT_LISTENER_H
+#ifndef MWAW_GRAPHIC_LISTENER_H
+#define MWAW_GRAPHIC_LISTENER_H
 
 #include <vector>
 
@@ -40,57 +40,45 @@
 
 #include "libmwaw_internal.hxx"
 
+#include "MWAWGraphicStyle.hxx"
+
 class MWAWCell;
-class MWAWGraphicStyle;
 class MWAWGraphicShape;
 class MWAWTable;
 
-namespace MWAWContentListenerInternal
+namespace MWAWGraphicListenerInternal
 {
-struct DocumentState;
+struct GraphicState;
 struct State;
 }
 
-/** This class contents the main functions needed to create a Writer Document */
-class MWAWContentListener
+/** This class contains the minimal code to create basic ODG picture via a MWAWPropertyHandlerEcoder.
+
+    \note it will be probably be enhanced in some near/far futur...
+ */
+class MWAWGraphicListener
 {
 public:
-  /** the different break type */
-  enum BreakType { PageBreak=0, SoftPageBreak, ColumnBreak };
-
   /** constructor */
-  MWAWContentListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
+  MWAWGraphicListener(MWAWParserState &parserState);
   /** destructor */
-  virtual ~MWAWContentListener();
+  virtual ~MWAWGraphicListener();
 
-  /** sets the documents language */
-  void setDocumentLanguage(std::string locale);
-
-  /** starts the document */
-  void startDocument();
-  /** ends the document */
-  void endDocument(bool sendDelayedSubDoc=true);
+  /** starts a new graphic */
+  void startGraphic(Box2f const &bdbox);
+  /** ends the actual graphic and fill the final WPXBinaryData, ... */
+  bool endGraphic(WPXBinaryData &data, std::string &mimeType);
 
   /** function called to add a subdocument */
-  void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
+  void handleSubDocument(Vec2f const &orig, MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
   /** returns try if a subdocument is open  */
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
 
-  // ------ page --------
-  /** returns true if a page is opened */
-  bool isPageSpanOpened() const;
-  /** returns the current page span
-
-  \note this forces the opening of a new page if no page is opened.*/
-  MWAWPageSpan const &getPageSpan();
-
-  // ------ header/footer --------
-  /** insert a header */
-  bool insertHeader(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras);
-  /** insert a footer */
-  bool insertFooter(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras);
-  /** returns true if the header/footer is open */
-  bool isHeaderFooterOpened() const;
+  // ------ graphic --------
+  /** returns true if a graphi is opened */
+  bool isGraphicOpened() const;
+  /** returns the graphic bdbox.*/
+  Box2f const &getBdBox();
 
   // ------ text data -----------
 
@@ -115,8 +103,6 @@ public:
   void insertTab();
   //! adds an end of line ( by default an hard one)
   void insertEOL(bool softBreak=false);
-  //! inserts a break type: ColumBreak, PageBreak, ..
-  void insertBreak(BreakType breakType);
 
   // ------ text format -----------
   //! sets the font
@@ -137,68 +123,27 @@ public:
   void insertField(MWAWField const &field);
 
   // ------- subdocument -----------------
-  /** insert a note */
-  void insertNote(MWAWNote const &note, MWAWSubDocumentPtr &subDocument);
-
-  /** adds comment */
-  void insertComment(MWAWSubDocumentPtr &subDocument);
-
   /** adds a picture in given position */
-  void insertPicture(MWAWPosition const &pos, const WPXBinaryData &binaryData,
-                     std::string type="image/pict",
-                     WPXPropertyList frameExtras=WPXPropertyList());
+  void insertPicture(Box2f const &bdbox, MWAWGraphicStyle const &style,
+                     const WPXBinaryData &binaryData, std::string type="image/pict");
   /** adds a shape picture in given position */
-  void insertPicture(MWAWPosition const &pos, MWAWGraphicShape const &shape,
+  void insertPicture(Box2f const &bdbox, MWAWGraphicShape const &shape,
                      MWAWGraphicStyle const &style);
   /** adds a textbox in given position */
-  void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument,
-                     WPXPropertyList frameExtras=WPXPropertyList(),
-                     WPXPropertyList textboxExtras=WPXPropertyList());
+  void insertTextBox(Box2f const &bdbox, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &style);
 
-  // ------- table -----------------
-  /** open a table*/
-  void openTable(MWAWTable const &table);
-  /** closes this table */
-  void closeTable();
-  /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
-  void openTableRow(float h, WPXUnit unit, bool headerRow=false);
-  /** closes this row */
-  void closeTableRow();
-  /** open a cell */
-  void openTableCell(MWAWCell const &cell);
-  /** close a cell */
-  void closeTableCell();
-  /** add empty cell */
-  void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1));
-
-  // ------- section ---------------
-  //! returns true if a section is opened
-  bool isSectionOpened() const;
-  //! returns the actual section
-  MWAWSection const &getSection() const;
-  //! open a section if possible
-  bool openSection(MWAWSection const &section);
-  //! close a section
-  bool closeSection();
 
 protected:
-  void _openSection();
-  void _closeSection();
-
-  void _openPageSpan(bool sendHeaderFooters=true);
-  void _closePageSpan();
-
   void _startSubDocument();
   void _endSubDocument();
 
-  void _handleFrameParameters( WPXPropertyList &propList, MWAWPosition const &pos);
-  bool openFrame(MWAWPosition const &pos, WPXPropertyList extras=WPXPropertyList());
+  void _handleFrameParameters(WPXPropertyList &propList, Box2f const &pos, MWAWGraphicStyle const &style);
+  bool openFrame();
   void closeFrame();
 
 
   void _openParagraph();
   void _closeParagraph();
-  void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
   void _resetParagraphState(const bool isListElement=false);
 
   /** open a list level */
@@ -217,32 +162,27 @@ protected:
   void _closeSpan();
 
   void _flushText();
-  void _flushDeferredTabs();
-
-  void _insertBreakIfNecessary(WPXPropertyList &propList);
 
   /** creates a new parsing state (copy of the actual state)
    *
    * \return the old one */
-  shared_ptr<MWAWContentListenerInternal::State> _pushParsingState();
+  shared_ptr<MWAWGraphicListenerInternal::State> _pushParsingState();
   //! resets the previous parsing state
   void _popParsingState();
 
 protected:
-  //! the main parse state
-  shared_ptr<MWAWContentListenerInternal::DocumentState> m_ds;
+  //! the actual global state
+  shared_ptr<MWAWGraphicListenerInternal::GraphicState> m_gs;
   //! the actual local parse state
-  shared_ptr<MWAWContentListenerInternal::State> m_ps;
+  shared_ptr<MWAWGraphicListenerInternal::State> m_ps;
   //! stack of local state
-  std::vector<shared_ptr<MWAWContentListenerInternal::State> > m_psStack;
+  std::vector<shared_ptr<MWAWGraphicListenerInternal::State> > m_psStack;
   //! the parser state
   MWAWParserState &m_parserState;
-  //! the document interface
-  WPXDocumentInterface *m_documentInterface;
 
 private:
-  MWAWContentListener(const MWAWContentListener &);
-  MWAWContentListener &operator=(const MWAWContentListener &);
+  MWAWGraphicListener(const MWAWGraphicListener &);
+  MWAWGraphicListener &operator=(const MWAWGraphicListener &);
 };
 
 #endif

@@ -104,14 +104,14 @@ protected:
   /** try to send a picture token as char */
   void sendPicture(MRWGraphInternal::Token const &tkn);
   /** try to send a rule */
-  void sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actFont);
+  void sendRule(MRWGraphInternal::Token const &tkn);
   /** try to send a ps picture as pos */
   void sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const &pos);
 
   // interface with mainParser
 
   //! try to send a token
-  void sendToken(int zoneId, long tokenId, MWAWFont const &actFont);
+  void sendToken(int zoneId, long tokenId);
   //! ask the main parser to send a text zone
   void sendText(int zoneId);
 

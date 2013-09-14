@@ -95,8 +95,11 @@ These files defined basic structures which must be used by the parsers :
 ## MWAWParagraph.hxx 
 	store the paragraph property
 
-## MWAWGraphicStyle.hxx
-	store the graphic style's properties
+## MWAWGraphicListener
+	The graphic listener (used to create odg picture) with
+  - MWAWGraphicInterface.hxx to define a generic interface to create ODG file à la libwpg-0.3
+  - MWAWGraphicShape.hxx to define basic graphic shape
+  - MWAWGraphicStyle.hxx to store the graphic style's properties
 
 ## MWAWList.hxx
 	store a simple list definition 

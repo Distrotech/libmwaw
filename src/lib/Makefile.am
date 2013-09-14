@@ -137,6 +137,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWFontConverter.hxx		\
 	MWAWFontSJISConverter.cxx	\
 	MWAWFontSJISConverter.hxx	\
+	MWAWGraphicInterface.cxx	\
+	MWAWGraphicInterface.hxx	\
+	MWAWGraphicListener.cxx		\
+	MWAWGraphicListener.hxx		\
 	MWAWGraphicShape.cxx		\
 	MWAWGraphicShape.hxx		\
 	MWAWGraphicStyle.cxx		\

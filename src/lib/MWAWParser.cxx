@@ -33,6 +33,7 @@
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWList.hxx"
 
@@ -40,12 +41,13 @@
 
 MWAWParserState::MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   m_version(0), m_input(input), m_header(header),
-  m_rsrcParser(rsrcParser), m_fontConverter(), m_graphicStyleManager(), m_listManager(), m_listener(), m_asciiFile(input)
+  m_rsrcParser(rsrcParser), m_fontConverter(), m_graphicListener(), m_graphicStyleManager(), m_listManager(), m_listener(), m_asciiFile(input)
 {
   if (header) m_version=header->getMajorVersion();
   m_fontConverter.reset(new MWAWFontConverter);
   m_graphicStyleManager.reset(new MWAWGraphicStyleManager(m_fontConverter));
   m_listManager.reset(new MWAWListManager);
+  m_graphicListener.reset(new MWAWGraphicListener(*this));
 }
 
 MWAWParserState::~MWAWParserState()

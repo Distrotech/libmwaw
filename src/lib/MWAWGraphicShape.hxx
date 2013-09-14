@@ -131,7 +131,9 @@ public:
   //! translate all the coordinate by delta
   void translate(Vec2f const &delta);
   //! returns the bdbox corresponding to a style
-  Box2f getBdBox(MWAWGraphicStyle const &style) const;
+  Box2f getBdBox(MWAWGraphicStyle const &style, bool moveToO=false) const;
+  //! add shape to a graphic listener
+  bool send(MWAWGraphicInterface &interface, MWAWGraphicStyle const &style, Vec2f const &orig) const;
   //! add shape to a handler encoder
   bool send(MWAWPropertyHandlerEncoder &doc, MWAWGraphicStyle const &style, Vec2f const &orig) const;
   //! a print operator

@@ -67,6 +67,8 @@ public:
 
   //! the font converter
   MWAWFontConverterPtr m_fontConverter;
+  //! the graphic listener
+  MWAWGraphicListenerPtr m_graphicListener;
   //! the graphic style manager
   MWAWGraphicStyleManagerPtr m_graphicStyleManager;
   //! the list manager
@@ -122,6 +124,10 @@ protected:
   //! returns the actual input
   MWAWInputStreamPtr &getInput() {
     return m_parserState->m_input;
+  }
+  //! returns the graphic listener
+  MWAWGraphicListenerPtr &getGraphicListener() {
+    return m_parserState->m_graphicListener;
   }
   //! returns the listener
   MWAWContentListenerPtr &getListener() {

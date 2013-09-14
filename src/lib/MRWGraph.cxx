@@ -44,6 +44,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWPictMac.hxx"
@@ -100,8 +101,10 @@ struct Token {
     m_ruleType(0), m_rulePattern(0), m_parsed(true), m_extra("") {
     for (int i = 0; i < 2; ++i)
       m_id[i] = 0;
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 4; ++i) {
       m_pictBorderType[i] = 0;
+      m_pictBorderWidth[i] = 0;
+    }
   }
   //! return true if the picture has some border
   bool hasPictBorders() const {
@@ -127,23 +130,43 @@ struct Token {
       switch(m_pictBorderType[i]) {
       case 1: // single[w=0.5]
         border.m_width = 0.5f;
-        break;
-      case 6:
-        border.m_type = MWAWBorder::Double;
       case 2:
+        border.m_style = MWAWBorder::Simple;
         break;
-      case 7:
-        border.m_type = MWAWBorder::Double;
       case 3:
-        border.m_width = 2.0f;
+        border.m_style = MWAWBorder::Dot;
         break;
       case 4:
-        border.m_width = 3.0f;
+        border.m_style = MWAWBorder::Dash;
         break;
       case 5:
-        border.m_width = 4.0f;
+        border.m_width = 2;
+        break;
+      case 6:
+        border.m_width = 3;
+        break;
+      case 7:
+        border.m_width = 6;
+        break;
+      case 8:
+        border.m_type = MWAWBorder::Double;
+        break;
+      case 10:
+        border.m_type = MWAWBorder::Double;
+        border.m_widthsList.resize(3,1.);
+        border.m_widthsList[0]=2.0;
+        break;
+      case 11:
+        border.m_type = MWAWBorder::Double;
+        border.m_widthsList.resize(3,1.);
+        border.m_widthsList[2]=2.0;
+        break;
+      case 9:
+        border.m_type = MWAWBorder::Double;
+        border.m_width = 2;
         break;
       default:
+        border.m_style = MWAWBorder::None;
         break;
       }
       if (sameBorders) {
@@ -185,6 +208,8 @@ struct Token {
   MWAWColor m_pictBorderColor;
   //! the pict border type
   int m_pictBorderType[4];
+  //! the pict border width
+  float m_pictBorderWidth[4];
   // for rule
   //! the rule type
   int m_ruleType;
@@ -261,7 +286,7 @@ std::ostream &operator<<(std::ostream &o, Token const &tkn)
   if (tkn.hasPictBorders()) {
     o << "pict[borders]=[";
     for (int i=0; i < 4; ++i)
-      o << tkn.m_pictBorderType[i] << ",";
+      o << tkn.m_pictBorderType[i] << ":" << tkn.m_pictBorderWidth[i] << ",";
     o << "],";
   }
   if (tkn.m_refId) {
@@ -500,7 +525,7 @@ void MRWGraph::sendText(int zoneId)
     m_mainParser->sendText(zoneId);
 }
 
-void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
+void MRWGraph::sendToken(int zoneId, long tokenId)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener) {
@@ -574,7 +599,7 @@ void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
   case 0x1f: // footnote content, ok to ignore
     return;
   case 0x23:
-    sendRule(token, actFont);
+    sendRule(token);
     return;
   case 0x24: // field
     listener->insertChar('[');
@@ -592,7 +617,7 @@ void MRWGraph::sendToken(int zoneId, long tokenId, MWAWFont const &actFont)
   MWAW_DEBUG_MSG(("MRWGraph::sendToken: sending type %x is not unplemented\n", token.m_type));
 }
 
-void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actFont)
+void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
 {
   if (!m_parserState->m_listener) {
     MWAW_DEBUG_MSG(("MRWGraph::sendRule: can not find the listener\n"));
@@ -603,32 +628,33 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actF
     MWAW_DEBUG_MSG(("MRWGraph::sendRule: the rule size seems bad\n"));
     return;
   }
-  float w=1.0f;
+  std::vector<float> listW;
   switch(tkn.m_ruleType) {
   case 0: // no width
     return;
   case 1:
-    w = 0.5f;
-    break;
-  case 2:
-  case 6: // fixme double
-    break;
-  case 3:
-  case 7: // fixme double
-    w = 2.0f;
-    break;
-  case 4:
-    w = 3.0f;
-    break;
-  case 5:
-    w = 4.0f;
+    listW.resize(1,0.5f);
     break;
   default:
+  case 2:
+    listW.resize(1,1);
+    break;
+  case 6:
+    listW.resize(3,1);
+    break;
+  case 3:
+    listW.resize(1,2);
+    break;
+  case 7:
+    listW.resize(3,2);
+    break;
+  case 4:
+    listW.resize(1,3);
+    break;
+  case 5:
+    listW.resize(1,4);
     break;
   }
-  float decal=w/2.0f;
-  MWAWPosition pos(Vec2f(-decal,-decal), Vec2f(sz)+Vec2f(decal,decal), WPX_POINT);
-  pos.setRelativePosition(MWAWPosition::Char);
 
   MRWGraphInternal::Pattern pat;
   if (tkn.m_rulePattern >= 0 && tkn.m_rulePattern < (int) m_state->m_patternList.size())
@@ -636,20 +662,47 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn, MWAWFont const &actF
   else {
     MWAW_DEBUG_MSG(("MRWGraph::sendRule: can not find pattern\n"));
   }
-  MWAWGraphicStyle pStyle;
+  // retrieve the actual font to get the ruler color + a basic estimation of the line height
+  MWAWFont actFont=m_parserState->m_listener->getFont();
   MWAWColor col;
   actFont.getColor(col);
+  float lineH = actFont.size() > 0 ? actFont.size() : 12.f;
+  float totalWidth=0;
+  for (size_t l=0; l < listW.size(); ++l) totalWidth += listW[l];
+  if (lineH<totalWidth) lineH=totalWidth;
+  Box2f box(Vec2f(0,-lineH/2.f), Vec2f(sz)+Vec2f(0,lineH/2.f));
+  MWAWPosition pos(box[0], box[1], WPX_POINT);
+  pos.setRelativePosition(MWAWPosition::Char);
+  MWAWGraphicStyle pStyle;
+  MWAWGraphicShape shape;
   if (pat.m_uniform) {
-    col=MWAWColor::barycenter(pat.m_percent,col,1.f-pat.m_percent,MWAWColor::white());
-    pStyle.m_lineWidth=w;
-    pStyle.m_lineColor=col;
-    m_parserState->m_listener->insertPicture(pos,MWAWGraphicShape::line(Vec2f(0,0), Vec2f(sz)), pStyle);
+    pStyle.m_lineWidth=listW[0];
+    pStyle.m_lineColor=MWAWColor::barycenter(pat.m_percent,col,1.f-pat.m_percent,MWAWColor::white());
+    shape=MWAWGraphicShape::line(Vec2f(0,0), Vec2f(sz));
   } else {
     pStyle.m_lineWidth=0;
     pat.m_pattern.m_colors[1]=col;
     pStyle.setPattern(pat.m_pattern);
-    m_parserState->m_listener->insertPicture
-    (pos,MWAWGraphicShape::rectangle(Box2f(Vec2f(0,0), Vec2f(float(sz[0]),w))), pStyle);
+    shape=MWAWGraphicShape::rectangle(Box2f(Vec2f(0,0), Vec2f(float(sz[0]),listW[0])));
+  }
+  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+
+  if (listW.size()==1 || !graphicListener || graphicListener->isGraphicOpened()) {
+    shape.m_bdBox=box;
+    m_parserState->m_listener->insertPicture(pos,shape, pStyle);
+  } else {
+    WPXBinaryData data;
+    std::string mime;
+    graphicListener->startGraphic(Box2f(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH)));
+    float actH = (lineH-totalWidth)/2.f;
+    for (size_t l=0; l < listW.size(); ++l) {
+      if ((l%2)==0)
+        graphicListener->insertPicture(Box2f(Vec2f(0,actH), Vec2f(sz)+Vec2f(0,actH+listW[l])),
+                                       shape, pStyle);
+      actH += listW[l];
+    }
+    if (graphicListener->endGraphic(data,mime))
+      m_parserState->m_listener->insertPicture(pos,data,mime);
   }
 }
 
@@ -801,9 +854,9 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
     case 11:
     case 12:
     case 13: // 0 or 1 for graph : link to border ?
-      tkn.m_pictBorderType[j-10]=(int) dt.value(0);
+      tkn.m_pictBorderWidth[j-10]=(float) dt.value(0);
       while(j!=13)
-        tkn.m_pictBorderType[++j-10]=(int) dataList[d++].value(0);
+        tkn.m_pictBorderWidth[++j-10]=(float) dataList[d++].value(0);
       break;
     default:
       if (dt.value(0))
@@ -835,7 +888,10 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
       f << "bl" << i << "=[";
       input->seek(data.m_pos.begin(), WPX_SEEK_SET);
       for (int j = 0; j < int(data.m_pos.length()/2); j++) {
-        if (i==1 && j == 3 && data.m_pos.length() >= 12) {
+        if (i==1 && j == 1 && data.m_pos.length() >= 12) {
+          for (int c=0; c<4; ++c)
+            tkn.m_pictBorderType[c]=(int) input->readULong(1);
+          j+=2;
           // checkme: only for picture or always ?
           unsigned char col[]= {0,0,0};
           for (int c=0; c<3; ++c, ++j)
@@ -1127,7 +1183,7 @@ void MRWGraph::flushExtra()
       long tId = it->first;
       MRWGraphInternal::Token const &tkn = tIt++->second;
       if (tkn.m_parsed) continue;
-      sendToken(zId, tId, MWAWFont());
+      sendToken(zId, tId);
     }
     psIt = zone.m_psZoneMap.begin();
     while (psIt != zone.m_psZoneMap.end()) {

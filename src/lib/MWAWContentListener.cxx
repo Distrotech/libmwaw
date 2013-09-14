@@ -43,6 +43,7 @@
 #include "MWAWCell.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWInputStream.hxx"
@@ -67,7 +68,7 @@ struct DocumentState {
   //! constructor
   DocumentState(std::vector<MWAWPageSpan> const &pageList) :
     m_pageList(pageList), m_metaData(), m_footNoteNumber(0), m_endNoteNumber(0), m_smallPictureNumber(0),
-    m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments() {
+    m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_sentListMarkers(), m_subDocuments() {
   }
   //! destructor
   ~DocumentState() {
@@ -82,6 +83,8 @@ struct DocumentState {
 
   int m_smallPictureNumber /** number of small picture */;
   bool m_isDocumentStarted /** a flag to know if the document is open */, m_isHeaderFooterStarted /** a flag to know if the header footer is started */;
+  /// the list of marker corresponding to sent list
+  std::vector<int> m_sentListMarkers;
   std::vector<MWAWSubDocumentPtr> m_subDocuments; /** list of document actually open */
 
 private:
@@ -194,10 +197,6 @@ MWAWContentListener::~MWAWContentListener()
 {
 }
 
-MWAWGraphicStyleManager &MWAWContentListener::getGraphicStyleManager() const
-{
-  return *m_parserState.m_graphicStyleManager;
-}
 ///////////////////
 // text data
 ///////////////////
@@ -409,16 +408,21 @@ void MWAWContentListener::insertField(MWAWField const &field)
   case MWAWField::None:
     break;
   case MWAWField::PageCount:
-  case MWAWField::PageNumber: {
+  case MWAWField::PageNumber:
+  case MWAWField::Title: {
     _flushDeferredTabs ();
     _flushText();
     _openSpan();
     WPXPropertyList propList;
-    propList.insert("style:num-format", libmwaw::numberingTypeToString(field.m_numberingType).c_str());
-    if (field.m_type == MWAWField::PageNumber)
-      m_documentInterface->insertField(WPXString("text:page-number"), propList);
-    else
-      m_documentInterface->insertField(WPXString("text:page-count"), propList);
+    if (field.m_type==MWAWField::Title)
+      m_documentInterface->insertField(WPXString("text:title"), propList);
+    else {
+      propList.insert("style:num-format", libmwaw::numberingTypeToString(field.m_numberingType).c_str());
+      if (field.m_type == MWAWField::PageNumber)
+        m_documentInterface->insertField(WPXString("text:page-number"), propList);
+      else
+        m_documentInterface->insertField(WPXString("text:page-count"), propList);
+    }
     break;
   }
   case MWAWField::Database:
@@ -426,9 +430,6 @@ void MWAWContentListener::insertField(MWAWField const &field)
       insertUnicodeString(field.m_data.c_str());
     else
       insertUnicodeString("#DATAFIELD#");
-    break;
-  case MWAWField::Title:
-    insertUnicodeString("#TITLE#");
     break;
   case MWAWField::Date:
   case MWAWField::Time: {
@@ -485,7 +486,7 @@ void MWAWContentListener::startDocument()
 void MWAWContentListener::endDocument(bool sendDelayedSubDoc)
 {
   if (!m_ds->m_isDocumentStarted) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::startDocument: the document is not started\n"));
+    MWAW_DEBUG_MSG(("MWAWContentListener::endDocument: the document is not started\n"));
     return;
   }
 
@@ -860,13 +861,22 @@ void MWAWContentListener::_changeList()
   if (newLevel) {
     shared_ptr<MWAWList> theList;
 
-    m_parserState.m_listManager->send(newListId, *m_documentInterface);
     theList=m_parserState.m_listManager->getList(newListId);
-
     if (!theList) {
       MWAW_DEBUG_MSG(("MWAWContentListener::_changeList: can not find any list\n"));
       m_ps->m_listOrderedLevels.resize(actualLevel);
       return;
+    }
+    if (m_parserState.m_listManager->needToSend(newListId, m_ds->m_sentListMarkers)) {
+      for (int l=1; l <= theList->numLevels(); l++) {
+        WPXPropertyList level;
+        if (!theList->addTo(l, level))
+          continue;
+        if (!theList->isNumeric(l))
+          m_documentInterface->defineUnorderedListLevel(level);
+        else
+          m_documentInterface->defineOrderedListLevel(level);
+      }
     }
     m_ps->m_list = theList;
     m_ps->m_list->setLevel((int)newLevel);
@@ -1081,27 +1091,23 @@ void MWAWContentListener::insertPicture
     }
     return;
   }
-
-  // first create the picture
-  MWAWPropertyHandlerEncoder doc;
-  Box2f bdbox = shape.getBdBox(style);
-  Vec2f size=bdbox.size();
-  WPXPropertyList list;
-  list.insert("svg:x",0, WPX_POINT);
-  list.insert("svg:y",0, WPX_POINT);
-  list.insert("svg:width",size.x(), WPX_POINT);
-  list.insert("svg:height",size.y(), WPX_POINT);
-  list.insert("libwpg:enforce-frame",1);
-  doc.startElement("Graphics", list);
-  if (!shape.send(doc, style, bdbox[0])) return;
-  doc.endElement("Graphics");
+  MWAWGraphicListenerPtr graphicListener=m_parserState.m_graphicListener;
+  if (!graphicListener || graphicListener->isGraphicOpened()) {
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertPicture: can not use the graphic listener\n"));
+    return;
+  }
+  // first create the picture, reset origin (if it is bad)
+  Box2f bdbox = shape.getBdBox(style,true);
+  graphicListener->startGraphic(bdbox);
+  graphicListener->insertPicture(Box2f(-1*bdbox[0],-1*bdbox[0]+bdbox.size()), shape, style);
 
   WPXBinaryData data;
-  if (!doc.getData(data))
+  std::string mime;
+  if (!graphicListener->endGraphic(data,mime))
     return;
   if (!openFrame(pos)) return;
   WPXPropertyList propList;
-  propList.insert("libwpd:mimetype", "image/mwaw-odg");
+  propList.insert("libwpd:mimetype", mime.c_str());
   m_documentInterface->insertBinaryObject(propList, data);
   closeFrame();
 }

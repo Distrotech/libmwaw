@@ -47,6 +47,7 @@
 
 #include "libmwaw_internal.hxx"
 
+#include "MWAWGraphicInterface.hxx"
 #include "MWAWGraphicStyle.hxx"
 
 #include "MWAWGraphicShape.hxx"
@@ -257,9 +258,11 @@ int MWAWGraphicShape::cmp(MWAWGraphicShape const &a) const
   return 0;
 }
 
-Box2f MWAWGraphicShape::getBdBox(MWAWGraphicStyle const &style) const
+Box2f MWAWGraphicShape::getBdBox(MWAWGraphicStyle const &style, bool moveToO) const
 {
   Box2f bdBox=m_bdBox;
+  if (moveToO)
+    bdBox=Box2f(Vec2f(0,0),m_bdBox.size());
   if (style.hasLine())
     bdBox.extend(style.m_lineWidth/2.f);
   if (m_type==Line) {
@@ -280,6 +283,133 @@ void MWAWGraphicShape::translate(Vec2f const &decal)
     m_vertices[pt]+=decal;
   for (size_t pt=0; pt<m_path.size(); ++pt)
     m_path[pt].translate(decal);
+}
+
+bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle const &style, Vec2f const &orig) const
+{
+  Vec2f pt;
+  WPXPropertyList list;
+  WPXPropertyListVector vect;
+  style.addTo(list, vect, m_type==Line);
+  interface.setStyle(list, vect);
+
+  list.clear();
+  vect=WPXPropertyListVector();
+  Vec2f decal=orig-m_bdBox[0];
+  switch(m_type) {
+  case Line:
+    if (m_vertices.size()!=2) break;
+    pt=m_vertices[0]+decal;
+    list.insert("svg:x",pt.x(), WPX_POINT);
+    list.insert("svg:y",pt.y(), WPX_POINT);
+    vect.append(list);
+    pt=m_vertices[1]+decal;
+    list.insert("svg:x",pt.x(), WPX_POINT);
+    list.insert("svg:y",pt.y(), WPX_POINT);
+    vect.append(list);
+    interface.drawPolyline(vect);
+    return true;
+  case Rectangle:
+    if (m_cornerWidth[0] > 0 && m_cornerWidth[1] > 0) {
+      list.insert("svg:rx",double(m_cornerWidth[0]), WPX_POINT);
+      list.insert("svg:ry",double(m_cornerWidth[1]), WPX_POINT);
+    }
+    pt=m_formBox[0]+decal;
+    list.insert("svg:x",pt.x(), WPX_POINT);
+    list.insert("svg:y",pt.y(), WPX_POINT);
+    pt=m_formBox.size();
+    list.insert("svg:width",pt.x(), WPX_POINT);
+    list.insert("svg:height",pt.y(), WPX_POINT);
+    interface.drawRectangle(list);
+    return true;
+  case Circle:
+    pt=0.5*(m_formBox[0]+m_formBox[1])+decal;
+    list.insert("svg:cx",pt.x(), WPX_POINT);
+    list.insert("svg:cy",pt.y(), WPX_POINT);
+    pt=0.5*(m_formBox[1]-m_formBox[0]);
+    list.insert("svg:rx",pt.x(), WPX_POINT);
+    list.insert("svg:ry",pt.y(), WPX_POINT);
+    interface.drawEllipse(list);
+    return true;
+  case Arc: {
+    Vec2f center=0.5*(m_formBox[0]+m_formBox[1])+decal;
+    Vec2f rad=0.5*(m_formBox[1]-m_formBox[0]);
+    float angl0=m_arcAngles[0];
+    float angl1=m_arcAngles[1];
+    if (rad[1]<0) {
+      static bool first=true;
+      if (first) {
+        MWAW_DEBUG_MSG(("MWAWGraphicShape::send: oops radiusY for arc is negative, inverse it\n"));
+        first=false;
+      }
+      rad[1]=-rad[1];
+    }
+    while (angl1<angl0)
+      angl1+=360.f;
+    while (angl1>angl0+360.f)
+      angl1-=360.f;
+    if (angl1-angl0>=180.f && angl1-angl0<=180.f)
+      angl1+=0.01f;
+    float angl=angl0*float(M_PI/180.);
+    pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
+    list.insert("libwpg:path-action", "M");
+    list.insert("svg:x",pt.x(), WPX_POINT);
+    list.insert("svg:y",pt.y(), WPX_POINT);
+    vect.append(list);
+
+    list.clear();
+    angl=angl1*float(M_PI/180.);
+    pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
+    list.insert("libwpg:path-action", "A");
+    list.insert("libwpg:large-arc", (angl1-angl0<180.f)?0:1);
+    list.insert("libwpg:sweep", 0);
+    list.insert("svg:rx",rad.x(), WPX_POINT);
+    list.insert("svg:ry",rad.y(), WPX_POINT);
+    list.insert("svg:x",pt.x(), WPX_POINT);
+    list.insert("svg:y",pt.y(), WPX_POINT);
+    vect.append(list);
+    interface.drawPath(vect);
+    return true;
+  }
+  case Polygon: {
+    size_t n=m_vertices.size();
+    if (n<2) break;
+    for (size_t i = 0; i < n; ++i) {
+      list.clear();
+      pt=m_vertices[i]+decal;
+      list.insert("svg:x", pt.x(), WPX_POINT);
+      list.insert("svg:y", pt.y(), WPX_POINT);
+      vect.append(list);
+    }
+    if (!style.hasSurface())
+      interface.drawPolyline(vect);
+    else
+      interface.drawPolygon(vect);
+    return true;
+  }
+  case Path: {
+    size_t n=m_path.size();
+    if (!n) break;
+    for (size_t c=0; c < n; ++c) {
+      list.clear();
+      if (m_path[c].get(list, -1.0f*decal))
+        vect.append(list);
+    }
+    if (style.hasSurface() && m_path[n-1].m_type != 'Z') {
+      // odg need a closed path to draw surface, so ...
+      list.clear();
+      list.insert("libwpg:path-action", "Z");
+      vect.append(list);
+    }
+    interface.drawPath(vect);
+    return true;
+  }
+  case ShapeUnknown:
+  default:
+    break;
+  }
+  MWAW_DEBUG_MSG(("MWAWGraphicShape::send: can not send a shape with type=%d\n", int(m_type)));
+  return false;
 }
 
 bool MWAWGraphicShape::send(MWAWPropertyHandlerEncoder &doc, MWAWGraphicStyle const &style, Vec2f const &orig) const
