@@ -439,22 +439,4 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st)
   return o;
 }
 
-////////////////////////////////////////////////////////////
-// manager
-////////////////////////////////////////////////////////////
-
-MWAWGraphicStyleManager::MWAWGraphicStyleManager(shared_ptr<MWAWFontConverter> &fontConverter) :
-  m_fontConverter(fontConverter), m_numLayer(0), m_numGraphicObject(0)
-{
-}
-
-MWAWGraphicStyleManager::~MWAWGraphicStyleManager()
-{
-}
-
-shared_ptr<MWAWFontConverter> MWAWGraphicStyleManager::getFontConverter() const
-{
-  return m_fontConverter;
-}
-
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

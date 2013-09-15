@@ -461,10 +461,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWAWPictBasic.cxx"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\lib\MWAWPictBitmap.cxx"
 				>
 			</File>
@@ -859,10 +855,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWPict.hxx"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\MWAWPictBasic.hxx"
 				>
 			</File>
 			<File

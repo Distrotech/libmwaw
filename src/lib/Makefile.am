@@ -162,8 +162,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWParser.cxx			\
 	MWAWParser.hxx			\
 	MWAWPict.hxx			\
-	MWAWPictBasic.cxx		\
-	MWAWPictBasic.hxx		\
 	MWAWPictBitmap.cxx		\
 	MWAWPictBitmap.hxx		\
 	MWAWPictData.cxx		\

@@ -69,8 +69,6 @@ public:
   MWAWFontConverterPtr m_fontConverter;
   //! the graphic listener
   MWAWGraphicListenerPtr m_graphicListener;
-  //! the graphic style manager
-  MWAWGraphicStyleManagerPtr m_graphicStyleManager;
   //! the list manager
   MWAWListManagerPtr m_listManager;
   //! the listener

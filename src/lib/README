@@ -62,9 +62,8 @@ These files defined basic tools which must be used by the parsers :
 - MWAWPropertyHandler.hxx : some classes which keep a list of tag and WPXPropertyList,
 	store/unstore then in order to be reread by writerperfect 
 
-## tool for graphics:
+## specific tool for graphics:
 - MWAWPict.hxx : generic pict
-- MWAWPictBasic.hxx : simple pict (line, rectangle, oval, ..)
 - MWAWPictBitmap.hxx : a class to keep basic bitmap(ie. a 2D array of some type) and transforms them in PBM, PPM
 - MWAWPictData.hxx : basic class to manage a pict form by a chunck of classic data ( included MWAWPicMac)
 - MWAWPictMac.hxx : check macintosh Pict1.0, Pict2.0, 2.1 and convert Pict1.0 in Pict2

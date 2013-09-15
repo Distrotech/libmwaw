@@ -41,7 +41,6 @@
 
 class WPXPropertyList;
 class MWAWGraphicStyle;
-class MWAWPropertyHandlerEncoder;
 
 /** a structure used to define a picture shape */
 class MWAWGraphicShape
@@ -134,8 +133,6 @@ public:
   Box2f getBdBox(MWAWGraphicStyle const &style, bool moveToO=false) const;
   //! add shape to a graphic listener
   bool send(MWAWGraphicInterface &interface, MWAWGraphicStyle const &style, Vec2f const &orig) const;
-  //! add shape to a handler encoder
-  bool send(MWAWPropertyHandlerEncoder &doc, MWAWGraphicStyle const &style, Vec2f const &orig) const;
   //! a print operator
   friend std::ostream &operator<<(std::ostream &o, MWAWGraphicShape const &sh);
   /** compare two shapes */

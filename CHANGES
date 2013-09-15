@@ -1,5 +1,8 @@
 CHANGES:
 
+09/15/2013:
+- make MWAWPictBasic disappear
+
 09/13/2013:
 - add MWAWGraphicListener: a listener to create complex picture; first try, must be improved...
 - add MWAWGraphicInterface: an internal graphic interface a la libwpg-0.3.0 ( which contains

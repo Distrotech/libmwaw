@@ -375,10 +375,6 @@ SOURCE=..\..\src\lib\MWAWParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWPictBasic.cxx
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\MWAWPictBitmap.cxx
 # End Source File
 # Begin Source File
@@ -772,10 +768,6 @@ SOURCE=..\..\src\lib\MWAWParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWPict.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWPictBasic.hxx
 # End Source File
 # Begin Source File
 

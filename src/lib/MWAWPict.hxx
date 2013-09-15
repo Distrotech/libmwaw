@@ -35,7 +35,6 @@
  * This header contains code specific to manage basic picture (line, rectangle, ...)
  *
  * Note: generic class for all sort of pict
- *      - PictBasic: regroup basic pict shape (line, circle, ...)
  *      - PictBitmap: regroup some classes used to store bitmap
  *      - PictData: regroup the data which can be read via a WPXBinaryData
  */
@@ -58,12 +57,11 @@ public:
 
   /*! \enum Type
    * \brief the different picture types:
-   *      - basic: line, rectangle,
    *      - pictData: a classic format of file (Apple© Pict, ...)
    *      - bitmap: a image
    *      - ...
    */
-  enum Type { Basic, PictData, Bitmap, Unknown };
+  enum Type { PictData, Bitmap, Unknown };
   //! returns the picture type
   virtual Type getType() const = 0;
 

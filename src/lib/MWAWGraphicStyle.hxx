@@ -39,33 +39,6 @@
 #  include "libwpd/libwpd.h"
 #  include "libmwaw_internal.hxx"
 
-//! a small class used to manage graphics
-class MWAWGraphicStyleManager
-{
-public:
-  //! constructor
-  MWAWGraphicStyleManager(shared_ptr<MWAWFontConverter> &fontConverter);
-  //! destructor
-  ~MWAWGraphicStyleManager();
-  //! returns the font converter
-  shared_ptr<MWAWFontConverter> getFontConverter() const;
-  //! returns a new id for a layer
-  int getNewLayerId() const {
-    return ++m_numLayer;
-  }
-  //! returns a new id for a graphic object
-  int getNewGraphicObjectId() const {
-    return ++m_numGraphicObject;
-  }
-protected:
-  //! the font converter
-  shared_ptr<MWAWFontConverter> &m_fontConverter;
-  //! the number of layer
-  mutable int m_numLayer;
-  //! the number of graphic object
-  mutable int m_numGraphicObject;
-};
-
 /** a structure used to define a picture style
 
  \note in order to define the internal surface style, first it looks for
