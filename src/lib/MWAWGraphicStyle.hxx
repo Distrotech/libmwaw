@@ -97,6 +97,8 @@ public:
       if (m_dim[0]!=8 && m_dim[0]!=16 && m_dim[0]!=32) return true;
       return m_dim[1]==0 || m_data.size()!=size_t((m_dim[0]/8)*m_dim[1]);
     }
+    //! return the average color
+    bool getAverageColor(MWAWColor &col) const;
     //! check if the pattern has only one color; if so returns true...
     bool getUniqueColor(MWAWColor &col) const;
     /** tries to convert the picture in a binary data ( ppm) */

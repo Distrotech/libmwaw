@@ -42,9 +42,9 @@
 
 #include "MWAWGraphicStyle.hxx"
 
-class MWAWCell;
+#include "MWAWListener.hxx"
+
 class MWAWGraphicShape;
-class MWAWTable;
 
 namespace MWAWGraphicListenerInternal
 {
@@ -52,11 +52,12 @@ struct GraphicState;
 struct State;
 }
 
-/** This class contains the minimal code to create basic ODG picture via a MWAWPropertyHandlerEcoder.
+/** This class contains the minimal code needed to write a Graphic sub document.
 
     \note it will be probably be enhanced in some near/far futur...
+    All units are specicified in WPX_POINT
  */
-class MWAWGraphicListener
+class MWAWGraphicListener : public MWAWListener
 {
 public:
   /** constructor */

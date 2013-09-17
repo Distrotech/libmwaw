@@ -747,6 +747,10 @@ SOURCE=..\..\src\lib\MWAWList.hxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWListener.hxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWOLEParser.hxx
 # End Source File
 # Begin Source File

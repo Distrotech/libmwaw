@@ -151,6 +151,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWInputStream.hxx		\
 	MWAWList.cxx			\
 	MWAWList.hxx			\
+	MWAWListener.hxx		\
 	MWAWOLEParser.cxx		\
 	MWAWOLEParser.hxx		\
 	MWAWOLEStream.cxx		\

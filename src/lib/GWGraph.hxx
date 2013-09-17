@@ -53,7 +53,6 @@ namespace GWGraphInternal
 {
 struct Frame;
 struct FrameShape;
-struct Style;
 struct Zone;
 
 struct State;
@@ -127,8 +126,11 @@ protected:
   bool readPageFrames();
   //! try to read a basic frame header
   shared_ptr<GWGraphInternal::Frame> readFrameHeader();
+  //! try to read a frame extra data zone
+  bool readFrameExtraData(GWGraphInternal::Frame &frame, int id, long endPos=-1);
+
   //! try to read a zone style
-  bool readStyle(GWGraphInternal::Style &style);
+  bool readStyle(MWAWGraphicStyle &style);
   //! try to read a line format style? in v1
   bool readLineFormat(std::string &extra);
 
@@ -137,9 +139,8 @@ protected:
   //
   // low level
   //
-  //! reconstruct the order to used for reading the frame data
-  static void buildFrameDataReadOrderFromTree
-  (std::vector<std::vector<int> > const &tree, int id, std::vector<int> &order, std::set<int> &seen);
+  //! try to read a frame extra data zone recursively ( draw method)
+  bool readFrameExtraDataRec(GWGraphInternal::Zone &zone, int id, std::set<int> &seens, long endPos=-1);
 
 private:
   GWGraph(GWGraph const &orig);

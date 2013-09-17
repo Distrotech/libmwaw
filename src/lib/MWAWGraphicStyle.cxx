@@ -68,6 +68,28 @@ bool MWAWGraphicStyle::Pattern::getUniqueColor(MWAWColor &col) const
   return true;
 }
 
+bool MWAWGraphicStyle::Pattern::getAverageColor(MWAWColor &color) const
+{
+  if (empty() || m_data.empty()) return false;
+  if (m_colors[0]==m_colors[1]) {
+    color = m_colors[0];
+    return true;
+  }
+  int numOne=0, numZero=0;
+  for (size_t c=0; c < m_data.size(); ++c) {
+    for (int depl=1, b=0; b < 8; ++b, depl*=2) {
+      if (m_data[c] & depl)
+        numOne++;
+      else
+        numZero++;
+    }
+  }
+  if (!numOne && !numZero) return false;
+  float percent=float(numOne)/float(numOne+numZero);
+  color = MWAWColor::barycenter(1.f-percent,m_colors[0],percent,m_colors[1]);
+  return true;
+}
+
 bool MWAWGraphicStyle::Pattern::getBinary(WPXBinaryData &data, std::string &type) const
 {
   if (empty()) {

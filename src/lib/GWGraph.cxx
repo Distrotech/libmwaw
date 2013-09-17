@@ -57,131 +57,12 @@
 namespace GWGraphInternal
 {
 ////////////////////////////////////////
-//! Internal: the graphic style of a GWGraph
-struct Style {
-  //! constructor
-  Style() : m_lineWidth(1,1), m_linePatternPercent(1), m_lineArrow(0), m_lineColor(), m_surfaceColor(), m_shadeColor(), m_extra("") {
-    m_lineColor.m_patternPercent=1;
-    m_shadeColor.m_hasPattern=false;
-  }
-  //! return the line width
-  float lineWidth() const {
-    return (m_lineWidth[0]+m_lineWidth[1])/2.f;
-  }
-  //! return the color for a line or a surface
-  MWAWColor getColor(bool line) const {
-    if (!line) {
-      if (m_shadeColor.m_hasPattern)
-        return m_shadeColor.getColor();
-      return m_surfaceColor.getColor();
-    }
-    MWAWColor res=m_lineColor.getColor();
-    if (m_linePatternPercent<0||m_linePatternPercent>1)
-      return res;
-    return MWAWColor::barycenter
-           (m_linePatternPercent,res,1-m_linePatternPercent,MWAWColor::white());
-  }
-  //! return true if we have a surface color
-  bool hasSurfaceColor() const {
-    return m_surfaceColor.m_hasPattern || m_shadeColor.m_hasPattern;
-  }
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Style const &style) {
-    if (style.m_lineWidth != Vec2f(1,1))
-      o << "line[w]=" << style.m_lineWidth << ",";
-    if (style.m_linePatternPercent<1)
-      o << "linePercent=" << style.m_linePatternPercent << ",";
-    if (!style.m_lineColor.isDefault())
-      o << "line[col]=[" << style.m_lineColor << "]" << ",";
-    if (!style.m_surfaceColor.isDefault())
-      o << "surf[col]=[" << style.m_surfaceColor << "]" << ",";
-    if (style.m_shadeColor.m_hasPattern)
-      o << "shade[col]=[" << style.m_shadeColor << "]" << ",";
-    switch(style.m_lineArrow) {
-    case 0: // unset
-    case 1: // none
-      break;
-    case 2:
-      o << "arrow=\'>\',";
-      break;
-    case 3:
-      o << "arrow=\'<\',";
-      break;
-    case 4:
-      o << "arrow=\'<>\',";
-      break;
-    default:
-      o<< "#arrow=" << style.m_lineArrow << ",";
-    }
-    o << style.m_extra << ",";
-    return o;
-  }
-
-  //! struct used to defined a color in a GWGraphInternal::Style
-  struct Color {
-    //! constructor
-    Color() : m_hasPattern(true), m_patternPercent(0), m_extra("") {
-      m_color[0]=MWAWColor::black();
-      m_color[1]=MWAWColor::white();
-    }
-    //! returns true if the field is unchanged
-    bool isDefault() const {
-      return m_hasPattern && m_patternPercent<=0 && m_color[0].isBlack() && m_color[1].isWhite();
-    }
-    //! return the final color
-    MWAWColor getColor() const {
-      if (!m_hasPattern)
-        return MWAWColor::white();
-      return MWAWColor::barycenter(m_patternPercent,m_color[0],1.f-m_patternPercent,m_color[1]);
-    }
-    //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, Color const &color) {
-      if (!color.m_hasPattern) {
-        o << "none,";
-        return o;
-      }
-      if (!color.m_color[0].isBlack())
-        o << "front=" << color.m_color[0] << ",";
-      if (!color.m_color[1].isWhite())
-        o << "back=" << color.m_color[1] << ",";
-      if (color.m_patternPercent>0)
-        o << "pattern=" << color.m_patternPercent << ",";
-      o << color.m_extra;
-      return o;
-    }
-    //! true if we have a pattern
-    bool m_hasPattern;
-    //! front and back color
-    MWAWColor m_color[2];
-    //! the percent pattern
-    float m_patternPercent;
-    //! extra data
-    std::string m_extra;
-  };
-
-  //! the line dimension ( width, height)
-  Vec2f m_lineWidth;
-  //! the line pattern filled percent
-  float m_linePatternPercent;
-  //! the line arrow type (v2)
-  int m_lineArrow;
-  //! the line color
-  Color m_lineColor;
-  //! the surface color
-  Color m_surfaceColor;
-  //! the shade color
-  Color m_shadeColor;
-  //! extra data
-  std::string m_extra;
-};
-
-////////////////////////////////////////
 //! Internal: the graphic zone of a GWGraph
 struct Frame {
   //! the frame type
   enum Type { T_BAD, T_BASIC, T_GROUP, T_PICTURE, T_TEXT, T_UNSET };
   //! constructor
-  Frame() : m_type(-1), m_style(-1), m_parent(0), m_order(-1), m_dataSize(0), m_box(), m_page(-1), m_extra(""), m_parsed(false) {
+  Frame() : m_type(-1), m_styleId(-1), m_parent(0), m_order(-1), m_dataSize(0), m_box(), m_page(-1), m_extra(""), m_parsed(false) {
   }
   //! destructor
   virtual ~Frame() {
@@ -235,8 +116,8 @@ struct Frame {
       o << "type=" << m_type << ",";
       break;
     }
-    if (m_style >= 0)
-      o << "S" << m_style << ",";
+    if (m_styleId >= 0)
+      o << "S" << m_styleId << ",";
     if (m_order >= 0)
       o << "order=" << m_order << ",";
     if (m_parent > 0)
@@ -251,7 +132,7 @@ struct Frame {
   //! the zone type
   int m_type;
   //! the style identifier
-  int m_style;
+  int m_styleId;
   //! the parent identifier
   int m_parent;
   //! the z order
@@ -389,14 +270,16 @@ struct FrameText : public Frame {
 //! Internal: a list of graphic corresponding to a page
 struct Zone {
   //! constructor
-  Zone() : m_page(-1), m_frameList(), m_styleList(), m_parsed(false) {
+  Zone() : m_page(-1), m_frameList(), m_frameOrderList(), m_styleList(), m_parsed(false) {
   }
   //! the page number (if known)
   int m_page;
   //! the list of frame
   std::vector<shared_ptr<Frame> > m_frameList;
+  //! the list of id list of frame to send
+  std::vector<int> m_frameOrderList;
   //! the list of style
-  std::vector<Style> m_styleList;
+  std::vector<MWAWGraphicStyle> m_styleList;
   //! true if we have send the data
   mutable bool m_parsed;
 };
@@ -543,8 +426,12 @@ bool GWGraph::readPatterns(MWAWEntry const &entry)
     pos = input->tell();
     f.str("");
     f << "Pattern-" << i << ":";
-    for (int j=0; j < 8; ++j)
-      f << std::hex << input->readULong(2) << std::dec << ",";
+    MWAWGraphicStyle::Pattern pat;
+    pat.m_dim=Vec2i(8,8);
+    pat.m_data.resize(8);
+    for (size_t j=0; j < 8; ++j)
+      pat.m_data[j]=(unsigned char) input->readLong(1);
+    f << pat;
     input->seek(pos+8, WPX_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -576,7 +463,7 @@ bool GWGraph::readPalettes(MWAWEntry const &entry)
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
 
-  // 16 sets: a1a1, a2a2, a3a3: what is that
+  // 16 sets like: ffff, 6464, 0202 : maybe some color
   for (int i=0; i < 16; ++i) {
     pos = input->tell();
     f.str("");
@@ -696,7 +583,7 @@ bool GWGraph::readGraphicZone()
     pos += 0x1e;
   } else {
     input->seek(pos, WPX_SEEK_SET);
-    GWGraphInternal::Style style;
+    MWAWGraphicStyle style;
     f.str("");
     f << "Entries(GStyle):";
     if (!readStyle(style))
@@ -851,9 +738,9 @@ bool GWGraph::isPageFrames()
   return true;
 }
 
-bool GWGraph::readStyle(GWGraphInternal::Style &style)
+bool GWGraph::readStyle(MWAWGraphicStyle &style)
 {
-  style=GWGraphInternal::Style();
+  style=MWAWGraphicStyle();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugStream f;
   int const vers=version();
@@ -869,137 +756,227 @@ bool GWGraph::readStyle(GWGraphInternal::Style &style)
   float dim[2];
   for (int i=0; i <2; ++i)
     dim[i]=float(input->readLong(4))/65536.f;
-  style.m_lineWidth=Vec2f(dim[1],dim[0]);
+  if (dim[0]<dim[1] || dim[0]>dim[1]) f << "lineWidth[real]=" << Vec2f(dim[1],dim[0]) << ",";
+  style.m_lineWidth=(dim[1]+dim[0])/2.f;
   if  (vers==1) {
     for (int i=0; i < 2; ++i) { // two flags 0|1
       val=(int) input->readULong(1);
-      if (val==1) continue;
-      if (val)
+      if (val==0 || val==1) {
+        if (i==0)
+          style.m_lineOpacity=float(val);
+        else
+          style.m_surfaceOpacity=float(val);
+      } else
         f << "#hasPat" << i << "=" << val << ",";
-      else if (i==0)
-        style.m_lineColor.m_hasPattern=false;
-      else
-        style.m_surfaceColor.m_hasPattern=false;
     }
+    MWAWGraphicStyle::Pattern patterns[2];
     for (int i=0; i < 2; ++i) {
-      int nBytes=0;
-      for (int j=0; j < 8; ++j) {
-        val=(int) input->readULong(1);
-        for (int depl=1, b=0; b < 8; ++b, depl*=2) {
-          if (val & depl)
-            nBytes++;
-        }
-      }
-      if (i==0)
-        style.m_lineColor.m_patternPercent=float(nBytes)/64.f;
-      else
-        style.m_surfaceColor.m_patternPercent=float(nBytes)/64.f;
+      patterns[i].m_dim=Vec2i(8,8);
+      patterns[i].m_data.resize(8);
+      for (size_t j=0; j < 8; ++j)
+        patterns[i].m_data[j]=(unsigned char) input->readULong(1);
     }
     for (int i=0; i < 4; ++i) {
       unsigned char col[3];
       for (int j=0; j < 3; ++j)
         col[j]=(unsigned char)(input->readULong(2)>>8);
-      switch(i) {
-      case 0:
-      case 1:
-        style.m_lineColor.m_color[i]=MWAWColor(col[0], col[1], col[2]);
-        break;
-      case 2:
-      case 3:
-        style.m_surfaceColor.m_color[i-2]=MWAWColor(col[0], col[1], col[2]);
-      default:
-        break;
-      }
+      patterns[i/2].m_colors[1-i%2]=MWAWColor(col[0], col[1], col[2]);
     }
+    if (!patterns[0].getUniqueColor(style.m_lineColor)) {
+      f << "linePattern=[" << patterns[0] << "],";
+      patterns[0].getAverageColor(style.m_lineColor);
+    }
+    if (!patterns[1].getUniqueColor(style.m_surfaceColor)) {
+      if (style.m_surfaceOpacity<=0)
+        f << "surfPattern=[" << patterns[1] << "],";
+      else
+        style.setPattern(patterns[1]);
+    }
+
     style.m_extra=f.str();
     input->seek(endPos, WPX_SEEK_SET);
     return true;
   }
-
+  MWAWGraphicStyle::Pattern patterns[2];
   for (int i=0; i < 4; ++i) {
     val=(int) input->readULong(2);
     if (val) f << "col" << i << "=" << std::hex << val << std::dec << ",";
     unsigned char col[3];
     for (int j=0; j < 3; ++j)
       col[j]=(unsigned char)(input->readULong(2)>>8);
-
-    switch(i) {
-    case 0:
-    case 1:
-      style.m_lineColor.m_color[i]=MWAWColor(col[0], col[1], col[2]);
-      break;
-    case 2:
-    case 3:
-      style.m_surfaceColor.m_color[i-2]=MWAWColor(col[0], col[1], col[2]);
-    default:
-      break;
-    }
+    patterns[i/2].m_colors[1-i%2]=MWAWColor(col[0], col[1], col[2]);
   }
   val=(int) input->readULong(2);
   if (val) f << "col4=" << std::hex << val << std::dec << ",";
   for (int i=0; i < 2; ++i) {
     val=(int) input->readULong(2); // small number
-    if (val) f << "pat" << i << "=" << val << ",";
-    else if (i==0)
-      style.m_lineColor.m_hasPattern=false;
-    else
-      style.m_surfaceColor.m_hasPattern=false;
-    int nBytes=0;
-    for (int j=0; j < 8; ++j) {
-      val=(int) input->readULong(1);
-      for (int depl=1, b=0; b < 8; ++b, depl*=2) {
-        if (val & depl)
-          nBytes++;
-      }
-    }
     if (i==0)
-      style.m_lineColor.m_patternPercent=float(nBytes)/64.f;
+      style.m_lineOpacity=val ? 1.0 : 0.0;
     else
-      style.m_surfaceColor.m_patternPercent=float(nBytes)/64.f;
+      style.m_surfaceOpacity=val ? 1.0 : 0.0;
+    if (val>1)
+      f << "pat" << i << "=" << val << ",";
+    patterns[i].m_dim=Vec2i(8,8);
+    patterns[i].m_data.resize(8);
+    for (size_t j=0; j < 8; ++j)
+      patterns[i].m_data[j]=(unsigned char) input->readULong(1);
   }
+  if (!patterns[0].getUniqueColor(style.m_lineColor)) {
+    f << "linePattern=[" << patterns[0] << "],";
+    patterns[0].getAverageColor(style.m_lineColor);
+  }
+  if (!patterns[1].getUniqueColor(style.m_surfaceColor)) {
+    if (style.m_surfaceOpacity<=0)
+      f << "surfPattern=[" << patterns[1] << "],";
+    else
+      style.setPattern(patterns[1]);
+  }
+
   val=(int) input->readULong(2);
   if (val!=1) f << "patId=" << val << ",";
-  int nPattern=val==1 ? 1 : (int)input->readULong(2);
-  if (nPattern<0||nPattern>6) {
-    MWAW_DEBUG_MSG(("GWGraph::readStyle: can not read number of line pattern\n"));
-    f << "#nPattern=" << nPattern << ",";
+
+  int nDash=val==1 ? 1 : (int)input->readULong(2);
+  if (nDash<0||nDash>6) {
+    MWAW_DEBUG_MSG(("GWGraph::readStyle: can not read number of line dash\n"));
+    f << "#nDash=" << nDash << ",";
   } else {
-    f << "pat=[";
-    float fill=0, empty=0;
-    for (int i=0; i < nPattern; ++i) {
+    for (int i=0; i < nDash; ++i) {
       float w=float(input->readLong(4))/65536.f;
-      if (i%2)
-        empty+=w;
-      else
-        fill+=w;
-      f << w << ",";
+      if (w<=0) {
+        if (i==0 && nDash==1)
+          break;
+        MWAW_DEBUG_MSG(("GWGraph::readStyle: the line dash seems bad\n"));
+        f << "###dash" << i << ":w=" << w << ",";
+        style.m_lineDashWidth.resize(0);
+        break;
+      }
+      style.m_lineDashWidth.push_back(w);
     }
-    f << "],";
-    if (empty > 0 && fill>=0)
-      style.m_linePatternPercent = fill/(fill+empty);
   }
   input->seek(pos+116, WPX_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   ascFile.addDelimiter(pos+92,'|'); // some data?
   ascFile.addDelimiter(input->tell(),'|');
-  int shadeId=(int) input->readLong(2);
-  if (shadeId) f << "shaderId=" << shadeId << ",";
-  val=(int) input->readLong(2);
-  if (shadeId>=1 && shadeId<=16 && val==1) {
-    style.m_shadeColor.m_hasPattern=true;
-    if (shadeId==4||shadeId==6||shadeId>=12)
-      style.m_shadeColor.m_patternPercent=0.75f;
-    else
-      style.m_shadeColor.m_patternPercent=0.2f;
+  int gradId=(int) input->readLong(2);
+  if (gradId) f << "gradientId=" << gradId << ",";
+  int gradType=(int) input->readLong(2);
+  if (gradId>=1 && gradId<=16 && (gradType>=1&&gradType<=3)) {
+    style.m_gradientStopList.resize(2);
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::white());
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::black());
+    style.m_gradientType = MWAWGraphicStyle::G_Linear;
+    switch(gradId) {
+    case 1:
+      if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientAngle = -90;
+      break;
+    case 2:
+      if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientAngle = -45;
+      break;
+    case 3:
+      if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
+      break;
+    case 4:
+      if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::black());
+      style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
+      style.m_gradientType=MWAWGraphicStyle::G_Axial;
+      style.m_gradientAngle = -45;
+      break;
+    case 5:
+      if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientAngle = 90;
+      break;
+    case 6:
+      if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::black());
+      style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
+      style.m_gradientType=MWAWGraphicStyle::G_Axial;
+      style.m_gradientAngle = 45;
+      break;
+    case 7:
+      if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientAngle = 180;
+      break;
+    case 8:
+      if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientAngle = -135;
+      break;
+    case 9:
+      if (gradType!=3) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientPercentCenter=Vec2f(.5f,.5f);
+      style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::black());
+      style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
+      style.m_gradientType=MWAWGraphicStyle::G_Square;
+      break;
+    case 10:
+      if (gradType!=3) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientPercentCenter=Vec2f(.5f,.5f);
+      style.m_gradientType=MWAWGraphicStyle::G_Square;
+      break;
+    case 11:
+    case 12:
+      if (gradType!=2) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::black());
+      style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
+      style.m_gradientType=MWAWGraphicStyle::G_Radial;
+      break;
+    case 13:
+      if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0x88,0,0));
+      style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0xee,0,0));
+      style.m_gradientAngle = 90;
+      break;
+    case 14:
+      if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0,0x55,0));
+      style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0,0xee,0));
+      style.m_gradientAngle = 90;
+      break;
+    case 15:
+      if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0,0,0x88));
+      style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0,0,0xff));
+      style.m_gradientAngle = 90;
+      break;
+    case 16:
+      if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
+      style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xff,0xff,0));
+      style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0xff,0xff,0xcc));
+      style.m_gradientAngle = 90;
+      break;
+    default:
+      break;
+    }
+    if (style.m_gradientType==MWAWGraphicStyle::G_None) {
+      MWAW_DEBUG_MSG(("GWGraph::readStyle: find odd gradient\n"));
+      f << "grad[##type]=" << gradType << ",";
+    }
   }
-  for (int i=0; i < 2; ++i) {
+  for (size_t i=0; i < 2; ++i) {
     unsigned char col[3];
     for (int j=0; j < 3; ++j)
       col[j]=(unsigned char)(input->readULong(2)>>8);
-    style.m_shadeColor.m_color[i]=MWAWColor(col[0], col[1], col[2]);
+    f << "grad[col" << i << "]=" << MWAWColor(col[0], col[1], col[2]) << ",";
   }
   input->seek(2, WPX_SEEK_CUR); // junk ?
-  style.m_lineArrow=(int) input->readLong(2);
+  val=(int) input->readLong(2);
+  switch(val) {
+  case 1: // none
+    break;
+  case 2:
+    style.m_arrows[1]=true;
+    break;
+  case 3:
+    style.m_arrows[0]=true;
+    break;
+  case 4:
+    style.m_arrows[0]=style.m_arrows[1]=true;
+    break;
+  default:
+    f << "#lineArrows=" << val << ",";
+  }
   val=(int) input->readLong(2);
   if (val!=1)
     f << "#lineArrow[unset],";
@@ -1017,7 +994,6 @@ bool GWGraph::readStyle(GWGraphInternal::Style &style)
   ascFile.addNote(f.str().c_str());
   ascFile.addDelimiter(input->tell(),'|');
   input->seek(endPos, WPX_SEEK_SET);
-
   return true;
 }
 
@@ -1082,7 +1058,7 @@ bool GWGraph::readPageFrames()
   f << "nFrames=" << nFrames << ",";
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
-  std::vector<shared_ptr<GWGraphInternal::Frame> > frames;
+  std::vector<shared_ptr<GWGraphInternal::Frame> > &frames=pageZone.m_frameList;
   for (int i=0; i < nFrames; ++i) {
     pos = input->tell();
     f.str("");
@@ -1120,7 +1096,7 @@ bool GWGraph::readPageFrames()
     pos = input->tell();
     f.str("");
     f << "GStyle-S" << i+1 << ":";
-    GWGraphInternal::Style style;
+    MWAWGraphicStyle style;
     if (!readStyle(style))
       f << "###";
     else
@@ -1192,14 +1168,10 @@ bool GWGraph::readPageFrames()
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
-  std::vector<int> order;
-  /* checkme:
-     in text document, we must go through the last frame to the first frame to retrieve data
-     in draw document, we must sequence the frames recursively ...
-  */
   if (isDraw) {
+    // in draw document, we must sequence the frames recursively ...
     // sort rootList using m_order
-    std::map<int,int> rootOrderMap;
+    std::map<int,int> orderMap;
     for (size_t i=0; i < rootList.size(); ++i) {
       int id=rootList[i];
       if (id<=0 || id>nFrames) {
@@ -1207,218 +1179,55 @@ bool GWGraph::readPageFrames()
         continue;
       }
       int ord=frames[size_t(id-1)]->m_order;
-      if (rootOrderMap.find(ord)!=rootOrderMap.end()) {
+      if (orderMap.find(ord)!=orderMap.end()) {
         MWAW_DEBUG_MSG(("GWGraph::readPageFrames: oops order %d already exist\n",ord));
         continue;
       }
-      rootOrderMap[ord]=id;
+      orderMap[ord]=id;
     }
     rootList.resize(0);
-    for (std::map<int,int>::iterator it=rootOrderMap.begin(); it!=rootOrderMap.end(); ++it)
+    for (std::map<int,int>::iterator it=orderMap.begin(); it!=orderMap.end(); ++it)
       rootList.push_back(it->second);
 
-    // we need now to reconstruct the tree structure
-    std::vector<std::vector<int> > childs(size_t(nFrames+1));
-    childs[0]=rootList;
-    for (size_t i=0; i<size_t(nFrames); ++i) {
-      GWGraphInternal::Frame &frame=*(frames[size_t(i)]);
-      if (frame.m_parent<=0) continue;
-      if (frame.m_parent>nFrames) {
-        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: find unknown parent with id=%d\n",frame.m_parent));
-        continue;
-      }
-      childs[size_t(frame.m_parent)].push_back(int(i+1));
-    }
-
     std::set<int> seens;
-    buildFrameDataReadOrderFromTree(childs, 0, order, seens);
-    if ((int) seens.size()!=nFrames+1 || (int) order.size()!=nFrames) {
-      MWAW_DEBUG_MSG(("GWGraph::readPageFrames: do not find some child\n"));
+    for (size_t c=rootList.size(); c > 0; ) {
+      if (!readFrameExtraDataRec(pageZone, rootList[--c]-1, seens, endPos)) {
+        if (endPos>0)
+          input->seek(endPos, WPX_SEEK_SET);
+        return false;
+      }
     }
-  } else {
-    order.resize(size_t(nFrames));
-    for (size_t i=0; i < size_t(nFrames); ++i)
-      order[i]=nFrames-int(i);
+    m_state->m_zoneList.push_back(pageZone);
+    return true;
   }
-  // extra data
-  for (size_t i=0; i < order.size(); ++i) {
-    int id=order[i]-1;
+
+  // in text document, we must go through the last frame to the first frame to retrieve data
+  for (int id=nFrames-1; id >= 0; --id) {
     if (id<0|| id>=nFrames) {
       MWAW_DEBUG_MSG(("GWGraph::readPageFrames: can not find frame with id=%d\n",id));
       continue;
     }
-    bool ok=true;
     shared_ptr<GWGraphInternal::Frame> zone=frames[size_t(id)];
     if (!zone) continue;
+    pos=input->tell();
+    bool ok = readFrameExtraData(*zone, id, endPos);
     f.str("");
     f << "GFrame-data:F" << id+1 << "[" << *zone << "]:";
-    pos=input->tell();
-    switch(zone->m_type) {
-    case 0:
-      MWAW_DEBUG_MSG(("GWGraph::readPageFrames: find group with type=0\n"));
-      break;
-    case 1: {
-      ok=false;
-      if (zone->getType()!=GWGraphInternal::Frame::T_TEXT) {
-        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: unexpected type for text\n"));
-        break;
-      }
-      GWGraphInternal::FrameText &text=
-        static_cast<GWGraphInternal::FrameText &>(*zone);
-      if (!input->checkPosition(pos+text.m_dataSize)) {
-        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: text size seems bad\n"));
-        break;
-      }
-      text.m_entry.setBegin(pos);
-      text.m_entry.setLength(text.m_dataSize);
-      input->seek(pos+text.m_dataSize, WPX_SEEK_SET);
-      ok=true;
-      break;
-    }
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-    case 6:
-      break;
-    case 8: // poly normal
-    case 7: // regular poly
-    case 12: { // spline
-      ok=false;
-      if (zone->getType()!=GWGraphInternal::Frame::T_BASIC) {
-        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: unexpected type for basic graph\n"));
-        break;
-      }
-      int nPt=(int) input->readLong(2);
-      long endData=pos+10+8*nPt;
-      if (pos+zone->m_dataSize > endData)
-        endData=pos+zone->m_dataSize;
-      if (nPt<0 || (endPos>0 && endData>endPos) ||
-          (endPos<0 && !input->checkPosition(endData)))
-        break;
-      float dim[4];
-      for (int j=0; j<4; ++j)
-        dim[j]=float(input->readLong(4))/65536.f;
-      f << "dim=" << dim[1] << "x" << dim[0] << "<->"
-        << dim[3] << "x" << dim[2] << ",";
-      f << "pt=[";
-      GWGraphInternal::FrameShape &graph=
-        static_cast<GWGraphInternal::FrameShape &>(*zone);
-      float pt[2];
-      std::vector<Vec2f> vertices;
-      for (int p=0; p<nPt; ++p) {
-        pt[0]=float(input->readLong(4))/65536.f;
-        pt[1]=float(input->readLong(4))/65536.f;
-        vertices.push_back(Vec2f(pt[1],pt[0]));
-        f << pt[1] << "x" << pt[0] << ",";
-      }
-      f << "],";
-      if (graph.m_shape.m_type == MWAWGraphicShape::Polygon)
-        graph.m_shape.m_vertices = vertices;
-      else if (graph.m_shape.m_type == MWAWGraphicShape::Path) {
-        if (nPt<4 || (nPt%3)!=1) {
-          MWAW_DEBUG_MSG(("GWGraph::readPageFrames: the spline number of points seems bad\n"));
-          f << "###";
-        } else {
-          std::vector<MWAWGraphicShape::PathData> &path=graph.m_shape.m_path;
-          path.push_back(MWAWGraphicShape::PathData('M', vertices[0]));
-
-          for (size_t p=1; p < size_t(nPt); p+=3) {
-            bool hasFirstC=vertices[p-1]!=vertices[p];
-            bool hasSecondC=vertices[p+1]!=vertices[p+2];
-            if (!hasFirstC && !hasSecondC)
-              path.push_back(MWAWGraphicShape::PathData('L', vertices[p+2]));
-            else if (hasFirstC)
-              path.push_back(MWAWGraphicShape::PathData('C', vertices[p+2], vertices[p+1], vertices[p+1]));
-            else
-              path.push_back(MWAWGraphicShape::PathData('S', vertices[p+2], vertices[p+1]));
-          }
-          path.push_back(MWAWGraphicShape::PathData('Z'));
-        }
-      } else {
-        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: find unexpected vertices\n"));
-        f << "###";
-      }
-      if (input->tell()!=endData) {
-        ascFile.addDelimiter(input->tell(),'|');
-        input->seek(endData,WPX_SEEK_SET);
-      }
-      ok = true;
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
-      break;
-    }
-    case 11: {
-      ok=false;
-      if (zone->getType()!=GWGraphInternal::Frame::T_PICTURE) {
-        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: unexpected type for picture\n"));
-        break;
-      }
-      GWGraphInternal::FramePicture &pict=
-        static_cast<GWGraphInternal::FramePicture &>(*zone);
-      if (!input->checkPosition(pos+pict.m_dataSize)) {
-        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: picture size seems bad\n"));
-        break;
-      }
-      pict.m_entry.setBegin(pos);
-      pict.m_entry.setLength(pict.m_dataSize);
-      input->seek(pos+pict.m_dataSize, WPX_SEEK_SET);
-      ok=true;
-      break;
-    }
-    case 15: {
-      int nGrp=(int) input->readLong(2);
-      if (nGrp<0 || (endPos>0 && pos+4+2*nGrp>endPos) ||
-          (endPos<0 && !input->checkPosition(pos+4+2*nGrp))) {
-        ok=false;
-        break;
-      }
-
-      if (zone->getType()!=GWGraphInternal::Frame::T_GROUP) {
-        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: unexpected type for group\n"));
-        input->seek(pos+4+2*nGrp, WPX_SEEK_SET);
-        f << "###[internal]";
-        break;
-      }
-      GWGraphInternal::FrameGroup &group=
-        static_cast<GWGraphInternal::FrameGroup &>(*zone);
-
-      if (nGrp != group.m_numChild) {
-        f << "###[N=" << group.m_numChild << "]";
-        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: unexpected number of group child\n"));
-      }
-      val=(int) input->readLong(2); // always 2
-      if (val!=2) f << "f0=" << val << ",";
-      f << "grpId=[";
-      for (int j=0; j < nGrp; ++j) {
-        val = (int) input->readLong(2);
-        group.m_childList.push_back(val);
-        f << val << ",";
-      }
-      f << "],";
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
-      break;
-    }
-    default:
-      ok = false;
-      break;
-    }
     if (zone->m_dataSize>0 && input->tell()!=pos+zone->m_dataSize) {
       if (input->tell()>pos+zone->m_dataSize || !input->checkPosition(pos+zone->m_dataSize)) {
         MWAW_DEBUG_MSG(("GWGraph::readPageFrames: must stop, file position seems bad\n"));
+        f << "###";
         ascFile.addPos(pos);
-        ascFile.addNote("GFrame###");
+        ascFile.addNote(f.str().c_str());
         if (endPos>0) {
           input->seek(endPos, WPX_SEEK_SET);
           return true;
         }
         return false;
       }
-      if (ok) {
-        ascFile.addPos(pos);
-        ascFile.addNote("_");
-      } else {
+      if (ok)
+        pageZone.m_frameOrderList.push_back(id);
+      else {
         f << "[##unparsed]";
         ascFile.addPos(pos);
         ascFile.addNote(f.str().c_str());
@@ -1426,15 +1235,14 @@ bool GWGraph::readPageFrames()
       input->seek(pos+zone->m_dataSize, WPX_SEEK_SET);
       continue;
     }
-
     if (ok) {
-      pageZone.m_frameList.push_back(zone);
+      pageZone.m_frameOrderList.push_back(id);
       continue;
     }
     MWAW_DEBUG_MSG(("GWGraph::readPageFrames: must stop parsing graphic data\n"));
-    f << "###";
     if (endPos>0)
       input->seek(endPos, WPX_SEEK_SET);
+    f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     return true;
@@ -1447,6 +1255,47 @@ bool GWGraph::readPageFrames()
     ascFile.addNote("GFrame-end:###");
   }
   m_state->m_zoneList.push_back(pageZone);
+  return true;
+}
+
+bool GWGraph::readFrameExtraDataRec(GWGraphInternal::Zone &zone, int id, std::set<int> &seens, long endPos)
+{
+  if (seens.find(id)!=seens.end()) {
+    MWAW_DEBUG_MSG(("GWGraph::readPageFrames: index %d is already read\n", id));
+    return false;
+  }
+  if (id < 0 || id >= int(zone.m_frameList.size())) {
+    MWAW_DEBUG_MSG(("GWGraph::readFrameExtraDataRec: can not find zone %d\n", id));
+    return false;
+  }
+  seens.insert(id);
+  shared_ptr<GWGraphInternal::Frame> frame=zone.m_frameList[size_t(id)];
+  if (!frame) return true;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=input->tell();
+  if (!readFrameExtraData(*frame, id, endPos)) return false;
+  if (frame->m_dataSize>0 && input->tell()!=pos+frame->m_dataSize) {
+    if (input->tell()>pos+frame->m_dataSize || !input->checkPosition(pos+frame->m_dataSize)) {
+      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraDataRec: must stop, file position seems bad\n"));
+      libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+      ascFile.addPos(pos);
+      ascFile.addNote("GFrame-Data###");
+      if (endPos>0)
+        input->seek(endPos, WPX_SEEK_SET);
+      return false;
+    }
+    input->seek(pos+frame->m_dataSize, WPX_SEEK_SET);
+  }
+  zone.m_frameOrderList.push_back(id);
+  if (frame->getType()!=GWGraphInternal::Frame::T_GROUP)
+    return true;
+  GWGraphInternal::FrameGroup &group=reinterpret_cast<GWGraphInternal::FrameGroup &>(*frame);
+  for (size_t c=0; c < group.m_childList.size(); ++c) {
+    if (!readFrameExtraDataRec(zone, group.m_childList[c]-1, seens, endPos)) {
+      group.m_childList.resize(c);
+      return false;
+    }
+  }
   return true;
 }
 
@@ -1478,7 +1327,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     return res;
   }
   zone.m_box=Box2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
-  zone.m_style=(int) input->readULong(2);
+  zone.m_styleId=(int) input->readULong(2);
   zone.m_parent=(int) input->readULong(2);
   zone.m_order=(int) input->readULong(2);
   switch(zone.m_type) {
@@ -1606,6 +1455,157 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
   return res;
 }
 
+bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long endPos)
+{
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "GFrame-data:F" << id+1 << "[" << frame << "]:";
+  long pos=input->tell();
+  int val;
+  switch(frame.m_type) {
+  case 0:
+    MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: find group with type=0\n"));
+    return false;
+  case 1: {
+    if (frame.getType()!=GWGraphInternal::Frame::T_TEXT) {
+      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected type for text\n"));
+      return false;
+    }
+    GWGraphInternal::FrameText &text=reinterpret_cast<GWGraphInternal::FrameText &>(frame);
+    if (!input->checkPosition(pos+text.m_dataSize)) {
+      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: text size seems bad\n"));
+      return false;
+    }
+    text.m_entry.setBegin(pos);
+    text.m_entry.setLength(text.m_dataSize);
+    input->seek(pos+text.m_dataSize, WPX_SEEK_SET);
+    return true;
+  }
+  case 2:
+  case 3:
+  case 4:
+  case 5:
+  case 6:
+    return true;
+  case 8: // poly normal
+  case 7: // regular poly
+  case 12: { // spline
+    if (frame.getType()!=GWGraphInternal::Frame::T_BASIC) {
+      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected type for basic graph\n"));
+      return false;
+    }
+    int nPt=(int) input->readLong(2);
+    long endData=pos+10+8*nPt;
+    if (pos+frame.m_dataSize > endData)
+      endData=pos+frame.m_dataSize;
+    if (nPt<0 || (endPos>0 && endData>endPos) ||
+        (endPos<0 && !input->checkPosition(endData)))
+      return false;
+    float dim[4];
+    for (int j=0; j<4; ++j)
+      dim[j]=float(input->readLong(4))/65536.f;
+    f << "dim=" << dim[1] << "x" << dim[0] << "<->"
+      << dim[3] << "x" << dim[2] << ",";
+    f << "pt=[";
+    GWGraphInternal::FrameShape &graph=reinterpret_cast<GWGraphInternal::FrameShape &>(frame);
+    float pt[2];
+    std::vector<Vec2f> vertices;
+    for (int p=0; p<nPt; ++p) {
+      pt[0]=float(input->readLong(4))/65536.f;
+      pt[1]=float(input->readLong(4))/65536.f;
+      vertices.push_back(Vec2f(pt[1],pt[0]));
+      f << pt[1] << "x" << pt[0] << ",";
+    }
+    f << "],";
+    if (graph.m_shape.m_type == MWAWGraphicShape::Polygon)
+      graph.m_shape.m_vertices = vertices;
+    else if (graph.m_shape.m_type == MWAWGraphicShape::Path) {
+      if (nPt<4 || (nPt%3)!=1) {
+        MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: the spline number of points seems bad\n"));
+        f << "###";
+      } else {
+        std::vector<MWAWGraphicShape::PathData> &path=graph.m_shape.m_path;
+        path.push_back(MWAWGraphicShape::PathData('M', vertices[0]));
+
+        for (size_t p=1; p < size_t(nPt); p+=3) {
+          bool hasFirstC=vertices[p-1]!=vertices[p];
+          bool hasSecondC=vertices[p+1]!=vertices[p+2];
+          if (!hasFirstC && !hasSecondC)
+            path.push_back(MWAWGraphicShape::PathData('L', vertices[p+2]));
+          else if (hasFirstC)
+            path.push_back(MWAWGraphicShape::PathData('C', vertices[p+2], vertices[p+1], vertices[p+1]));
+          else
+            path.push_back(MWAWGraphicShape::PathData('S', vertices[p+2], vertices[p+1]));
+        }
+        path.push_back(MWAWGraphicShape::PathData('Z'));
+      }
+    } else {
+      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: find unexpected vertices\n"));
+      f << "###";
+    }
+    if (input->tell()!=endData) {
+      ascFile.addDelimiter(input->tell(),'|');
+      input->seek(endData,WPX_SEEK_SET);
+    }
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  case 11: {
+    if (frame.getType()!=GWGraphInternal::Frame::T_PICTURE) {
+      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected type for picture\n"));
+      return false;
+    }
+    GWGraphInternal::FramePicture &pict=reinterpret_cast<GWGraphInternal::FramePicture &>(frame);
+    if (!input->checkPosition(pos+pict.m_dataSize)) {
+      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: picture size seems bad\n"));
+      return false;
+    }
+    pict.m_entry.setBegin(pos);
+    pict.m_entry.setLength(pict.m_dataSize);
+    input->seek(pos+pict.m_dataSize, WPX_SEEK_SET);
+    return true;
+  }
+  case 15: {
+    int nGrp=(int) input->readLong(2);
+    if (nGrp<0 || (endPos>0 && pos+4+2*nGrp>endPos) ||
+        (endPos<0 && !input->checkPosition(pos+4+2*nGrp))) {
+      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected number of group\n"));
+      return false;
+    }
+
+    if (frame.getType()!=GWGraphInternal::Frame::T_GROUP) {
+      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected type for group\n"));
+      input->seek(pos+4+2*nGrp, WPX_SEEK_SET);
+      f << "###[internal]";
+      return false;
+    }
+    GWGraphInternal::FrameGroup &group=reinterpret_cast<GWGraphInternal::FrameGroup &>(frame);
+    if (nGrp != group.m_numChild) {
+      f << "###[N=" << group.m_numChild << "]";
+      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected number of group child\n"));
+    }
+    val=(int) input->readLong(2); // always 2
+    if (val!=2) f << "f0=" << val << ",";
+    f << "grpId=[";
+    for (int j=0; j < nGrp; ++j) {
+      val = (int) input->readLong(2);
+      group.m_childList.push_back(val);
+      f << val << ",";
+    }
+    f << "],";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  default:
+    break;
+  }
+  MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected type\n"));
+  return false;
+}
+
 ////////////////////////////////////////////////////////////
 // picture
 ////////////////////////////////////////////////////////////
@@ -1653,36 +1653,6 @@ bool GWGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 ////////////////////////////////////////////////////////////
 // send data to a listener
 ////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-// low level
-////////////////////////////////////////////////////////////
-void GWGraph::buildFrameDataReadOrderFromTree
-(std::vector<std::vector<int> > const &tree, int id, std::vector<int> &order, std::set<int> &seen)
-{
-  if (seen.find(id)!=seen.end()) {
-    MWAW_DEBUG_MSG(("GWGraph::buildFrameDataReadOrderFromTree: id %d is already visited\n", id));
-    return;
-  }
-  if (id < 0 || id >= int(tree.size())) {
-    MWAW_DEBUG_MSG(("GWGraph::buildFrameDataReadOrderFromTree: the id %d seens bad\n", id));
-    return;
-  }
-  seen.insert(id);
-  std::vector<int> const &childs=tree[size_t(id)];
-  if (id)
-    order.push_back(id);
-
-  bool isIdPushed=true;
-  for (size_t c=childs.size(); c > 0; c--) {
-    if (!isIdPushed && id > childs[c-1]) {
-      order.push_back(id);
-      isIdPushed=true;
-    }
-    buildFrameDataReadOrderFromTree(tree, childs[c-1], order, seen);
-  }
-  if (!isIdPushed && id)
-    order.push_back(id);
-}
 
 ////////////////////////////////////////////////////////////
 // send data
@@ -1694,33 +1664,31 @@ bool GWGraph::sendShape(GWGraphInternal::FrameShape const &graph, GWGraphInterna
     MWAW_DEBUG_MSG(("GWGraph::sendShape: can not find a listener\n"));
     return false;
   }
-  GWGraphInternal::Style style;
-  if (graph.m_style>=1 && graph.m_style <= int(zone.m_styleList.size()))
-    style = zone.m_styleList[size_t(graph.m_style-1)];
-  MWAWGraphicStyle pStyle;
-  if (graph.m_shape.m_type==MWAWGraphicShape::Line) {
-    int arrow=(graph.m_lineArrow<=1) ? style.m_lineArrow : graph.m_lineArrow;
-    switch(arrow) {
+  MWAWGraphicStyle style;
+  if (graph.m_styleId>=1 && graph.m_styleId <= int(zone.m_styleList.size()))
+    style = zone.m_styleList[size_t(graph.m_styleId-1)];
+  if (graph.m_shape.m_type!=MWAWGraphicShape::Line) {
+    style.m_arrows[0]=style.m_arrows[1]=false;
+    style.m_lineDashWidth.resize(0);
+  } else if (graph.m_lineArrow > 1) {
+    switch(graph.m_lineArrow) {
     case 2:
-      pStyle.m_arrows[1]=true;
+      style.m_arrows[1]=true;
       break;
     case 3:
-      pStyle.m_arrows[0]=true;
+      style.m_arrows[0]=true;
       break;
     case 4:
-      pStyle.m_arrows[0]=pStyle.m_arrows[1]=true;
+      style.m_arrows[0]=style.m_arrows[1]=true;
       break;
     default:
       break;
     }
   }
-  pStyle.m_lineWidth=style.lineWidth();
-  pStyle.m_lineColor=style.getColor(true);
-  pStyle.setSurfaceColor(style.getColor(false), style.hasSurfaceColor() ? 1.f : 0.f);
 
   pos.setOrigin(pos.origin()-Vec2f(2,2));
   pos.setSize(pos.size()+Vec2f(4,4));
-  listener->insertPicture(pos,graph.m_shape, pStyle);
+  listener->insertPicture(pos,graph.m_shape, style);
   return true;
 }
 
@@ -1746,16 +1714,16 @@ bool GWGraph::sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInterna
   bool ok=true;
   switch (frame->getType()) {
   case GWGraphInternal::Frame::T_BASIC:
-    ok = sendShape(static_cast<GWGraphInternal::FrameShape const &>(*frame), zone, fPos);
+    ok = sendShape(reinterpret_cast<GWGraphInternal::FrameShape const &>(*frame), zone, fPos);
     break;
   case GWGraphInternal::Frame::T_PICTURE:
-    ok = sendPicture(static_cast<GWGraphInternal::FramePicture const &>(*frame).m_entry, fPos);
+    ok = sendPicture(reinterpret_cast<GWGraphInternal::FramePicture const &>(*frame).m_entry, fPos);
     break;
   case GWGraphInternal::Frame::T_GROUP: // ok to ignore
     break;
   case GWGraphInternal::Frame::T_TEXT: {
     GWGraphInternal::FrameText const &text=
-      static_cast<GWGraphInternal::FrameText const &>(*frame);
+      reinterpret_cast<GWGraphInternal::FrameText const &>(*frame);
     shared_ptr<MWAWSubDocument> doc(new GWGraphInternal::SubDocument(*this, input, text.m_entry));
     Vec2f fSz=fPos.size();
     // increase slightly x and set y to atleast
@@ -1781,11 +1749,12 @@ bool GWGraph::sendPageFrames(GWGraphInternal::Zone const &zone)
   }
   bool isDraw = m_mainParser->getDocumentType()==GWParser::DRAW;
   zone.m_parsed=true;
-  int order=int(zone.m_frameList.size());
-  for (size_t f=0; f < zone.m_frameList.size(); ++f) {
-    if (!zone.m_frameList[f])
+  int order=int(zone.m_frameOrderList.size());
+  for (size_t f=0; f < zone.m_frameOrderList.size(); ++f) {
+    size_t id=(size_t) zone.m_frameOrderList[f];
+    if (!zone.m_frameList[id])
       continue;
-    shared_ptr<GWGraphInternal::Frame> frame=zone.m_frameList[f];
+    shared_ptr<GWGraphInternal::Frame> frame=zone.m_frameList[id];
     if (frame->m_parsed)
       continue;
     sendFrame(frame,zone,isDraw ? --order : frame->m_order);

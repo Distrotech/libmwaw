@@ -553,6 +553,7 @@
     <ClInclude Include="..\..\src\lib\MWAWHeader.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWInputStream.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWList.hxx" />
+    <ClInclude Include="..\..\src\lib\MWAWListener.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWOLEParser.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWOLEStream.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWPageSpan.hxx" />

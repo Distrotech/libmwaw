@@ -143,7 +143,7 @@ void MWAWGraphicListener::insertChar(uint8_t character)
     return;
   }
   if (character >= 0x80) {
-    insertUnicode(character);
+    MWAWGraphicListener::insertUnicode(character);
     return;
   }
   if (!m_ps->m_isSpanOpened) _openSpan();
@@ -161,9 +161,9 @@ void MWAWGraphicListener::insertCharacter(unsigned char c)
     if (c < 0x20) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: Find odd char %x\n", int(c)));
     } else
-      insertChar((uint8_t) c);
+      MWAWGraphicListener::insertChar((uint8_t) c);
   } else
-    insertUnicode((uint32_t) unicode);
+    MWAWGraphicListener::insertUnicode((uint32_t) unicode);
 }
 
 int MWAWGraphicListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &input, long endPos)
@@ -193,9 +193,9 @@ int MWAWGraphicListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &in
     if (c < 0x20) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::sendText: Find odd char %x\n", int(c)));
     } else
-      insertChar((uint8_t) c);
+      MWAWGraphicListener::insertChar((uint8_t) c);
   } else
-    insertUnicode((uint32_t) unicode);
+    MWAWGraphicListener::insertUnicode((uint32_t) unicode);
 
   return int(pos-debPos);
 }
@@ -332,9 +332,9 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
   }
   case MWAWField::Database:
     if (field.m_data.length())
-      insertUnicodeString(field.m_data.c_str());
+      MWAWGraphicListener::insertUnicodeString(field.m_data.c_str());
     else
-      insertUnicodeString("#DATAFIELD#");
+      MWAWGraphicListener::insertUnicodeString("#DATAFIELD#");
     break;
   case MWAWField::Date:
   case MWAWField::Time: {
@@ -350,12 +350,12 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
     char buf[256];
     strftime(buf, 256, format.c_str(), &timeinfo);
     WPXString tmp(buf);
-    insertUnicodeString(tmp);
+    MWAWGraphicListener::insertUnicodeString(tmp);
     break;
   }
   case MWAWField::Link:
     if (field.m_data.length()) {
-      insertUnicodeString(field.m_data.c_str());
+      MWAWGraphicListener::insertUnicodeString(field.m_data.c_str());
       break;
     }
   default:

@@ -59,8 +59,6 @@ struct State;
 class SubDocument;
 }
 
-class MWAWPictBasic;
-
 class MSKParser;
 class MSK3Parser;
 class MSK4Zone;

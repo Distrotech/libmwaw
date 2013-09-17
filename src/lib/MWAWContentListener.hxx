@@ -40,6 +40,8 @@
 
 #include "libmwaw_internal.hxx"
 
+#include "MWAWListener.hxx"
+
 class MWAWCell;
 class MWAWGraphicStyle;
 class MWAWGraphicShape;
@@ -52,7 +54,7 @@ struct State;
 }
 
 /** This class contents the main functions needed to create a Writer Document */
-class MWAWContentListener
+class MWAWContentListener : public MWAWListener
 {
 public:
   /** the different break type */

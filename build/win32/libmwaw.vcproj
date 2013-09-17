@@ -834,6 +834,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWListener.hxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWOLEParser.hxx"
 				>
 			</File>
