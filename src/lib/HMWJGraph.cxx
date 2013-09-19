@@ -1857,7 +1857,7 @@ bool HMWJGraph::sendEmptyPicture(MWAWPosition pos)
   pictPos.setOrder(-1);
 
   MWAWGraphicListenerPtr graphicListener = m_parserState->m_graphicListener;
-  if (!graphicListener || graphicListener->isGraphicOpened()) {
+  if (!graphicListener || graphicListener->isDocumentStarted()) {
     MWAW_DEBUG_MSG(("HMWJGraph::sendEmptyPicture: can not use the graphic listener\n"));
     return false;
   }

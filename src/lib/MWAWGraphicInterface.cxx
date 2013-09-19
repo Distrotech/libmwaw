@@ -233,7 +233,7 @@ void MWAWGraphicInterface::insertField(const WPXString &type, const WPXPropertyL
 {
   if (type=="text:title")
     insertText("#TITLE#");
-  else if (type=="text-page-number")
+  else if (type=="text:page-number")
     insertText("#P#");
   else if (type=="text-page-count")
     insertText("#C#");

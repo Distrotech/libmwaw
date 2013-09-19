@@ -44,6 +44,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicListener.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSection.hxx"
@@ -108,7 +109,7 @@ struct Token {
   //! returns a field format
   std::string getDTFormat() const;
   //! try to send the token to the listener
-  bool sendTo(MWAWContentListener &listener) const;
+  bool sendTo(MWAWListener &listener) const;
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Token const &tkn);
   //! the token type
@@ -127,7 +128,7 @@ struct Token {
   std::string m_extra;
 };
 
-bool Token::sendTo(MWAWContentListener &listener) const
+bool Token::sendTo(MWAWListener &listener) const
 {
   switch(m_type) {
   case 2:
@@ -308,6 +309,14 @@ struct Zone {
     return 22*m_numFonts+192*m_numRulers+6*m_numCharPLC
            +18*m_numTokens+14*m_numLines+22*m_numFrames+m_numChar;
   }
+  //! returns true if the data has graphic
+  bool hasGraphics() const {
+    for (size_t t=0; t < m_tokenList.size(); ++t) {
+      if (m_tokenList[t].m_type==4)
+        return true;
+    }
+    return false;
+  }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &fr) {
     switch(fr.m_type) {
@@ -445,7 +454,20 @@ int GWText::numHFZones() const
   return nHF;
 }
 
-bool GWText::sendTextbox(MWAWEntry const &entry)
+bool GWText::canSendTextBoxAsGraphic(MWAWEntry const &entry)
+{
+  if (!entry.valid())
+    return false;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=input->tell();
+  input->seek(entry.begin(), WPX_SEEK_SET);
+  GWTextInternal::Zone zone;
+  bool ok=!readZone(zone) ||!zone.hasGraphics();
+  input->seek(pos, WPX_SEEK_SET);
+  return ok;
+}
+
+bool GWText::sendTextbox(MWAWEntry const &entry, bool inGraphic)
 {
   if (!m_parserState->m_listener) {
     MWAW_DEBUG_MSG(("GWText::sendTextbox: can not find a listener\n"));
@@ -457,11 +479,11 @@ bool GWText::sendTextbox(MWAWEntry const &entry)
   input->seek(entry.begin(), WPX_SEEK_SET);
   GWTextInternal::Zone zone;
   if (readZone(zone)) {
-    sendZone(zone);
+    sendZone(zone, inGraphic);
     return true;
   }
 
-  return sendSimpleTextbox(entry);
+  return sendSimpleTextbox(entry, inGraphic);
 }
 
 
@@ -1134,10 +1156,14 @@ void GWText::flushExtra()
   }
 }
 
-bool GWText::sendSimpleTextbox(MWAWEntry const &entry)
+bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
-  if (!listener) {
+  MWAWListenerPtr listener;
+  if (inGraphic)
+    listener=m_parserState->m_graphicListener;
+  else
+    listener=m_parserState->m_listener;
+  if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("GWText::sendSimpleTextbox: can not find a listener\n"));
     return false;
   }
@@ -1286,16 +1312,23 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry)
   return true;
 }
 
-bool GWText::sendZone(GWTextInternal::Zone const &zone)
+bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
-  if (!listener) {
+  MWAWListenerPtr listener;
+  if (inGraphic)
+    listener=m_parserState->m_graphicListener;
+  else
+    listener=m_parserState->m_listener;
+  if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("GWText::sendZone: can not find a listener\n"));
     return false;
   }
   bool isMain = zone.isMain();
   int actPage = 1, actCol = 0, numCol=1;
-  if (isMain) {
+  if (isMain && !listener->canOpenSectionAddBreak()) {
+    MWAW_DEBUG_MSG(("GWText::sendZone: in a main zone, but can not open section\n"));
+    isMain = false;
+  } else if (isMain) {
     m_mainParser->newPage(1);
     MWAWSection sec=m_mainParser->getMainSection();
     numCol = sec.numColumns();
@@ -1373,6 +1406,10 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone)
         f << "###";
         break;
       }
+      if (inGraphic) {
+        MWAW_DEBUG_MSG(("GWText::sendZone: oops, can not send a picture in a graphic zone\n"));
+        break;
+      }
       MWAWPosition pictPos(Vec2f(0,0), token.m_dim, WPX_POINT);
       pictPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
       m_mainParser->sendPicture(token.m_pictEntry, pictPos);
@@ -1388,7 +1425,7 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone)
         break;
       }
       if (actCol < numCol-1 && numCol > 1) {
-        listener->insertBreak(MWAWContentListener::ColumnBreak);
+        listener->insertBreak(MWAWListener::ColumnBreak);
         actCol++;
       } else {
         actCol = 0;

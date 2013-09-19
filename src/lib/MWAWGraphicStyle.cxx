@@ -321,6 +321,8 @@ int MWAWGraphicStyle::cmp(MWAWGraphicStyle const &a) const
   for (int i=0; i<2; ++i) {
     if (m_arrows[i]!=a.m_arrows[i])
       return m_arrows[i] ? 1 : -1;
+    if (m_flip[i]!=a.m_flip[i])
+      return m_flip[i] ? 1 : -1;
   }
 
   if (m_fillRuleEvenOdd != a.m_fillRuleEvenOdd) return m_fillRuleEvenOdd ? 1: -1;
@@ -356,11 +358,17 @@ int MWAWGraphicStyle::cmp(MWAWGraphicStyle const &a) const
   if (diff) return diff;
   if (m_gradientRadius < a.m_gradientRadius) return -1;
   if (m_gradientRadius > a.m_gradientRadius) return 1;
+  if (m_rotate < a.m_rotate) return -1;
+  if (m_rotate > a.m_rotate) return 1;
   return 0;
 }
 
 std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st)
 {
+  if (st.m_rotate<0 || st.m_rotate>0)
+    o << "rot=" << st.m_rotate << ",";
+  if (st.m_flip[0]) o << "flipX,";
+  if (st.m_flip[1]) o << "flipY,";
   o << "line=[";
   if (st.m_lineWidth<1 || st.m_lineWidth>1)
     o << "width=" << st.m_lineWidth << ",";

@@ -230,11 +230,20 @@ bool GWParser::sendHF(int id)
   return m_textParser->sendHF(id);
 }
 
-bool GWParser::sendTextbox(MWAWEntry const &entry)
+bool GWParser::sendTextbox(MWAWEntry const &entry, bool inGraphic)
 {
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
-  bool ok=m_textParser->sendTextbox(entry);
+  bool ok=m_textParser->sendTextbox(entry, inGraphic);
+  input->seek(actPos, WPX_SEEK_SET);
+  return ok;
+}
+
+bool GWParser::canSendTextBoxAsGraphic(MWAWEntry const &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long actPos = input->tell();
+  bool ok=m_textParser->canSendTextBoxAsGraphic(entry);
   input->seek(actPos, WPX_SEEK_SET);
   return ok;
 }

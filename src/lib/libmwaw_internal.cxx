@@ -31,6 +31,7 @@
 * instead of those above.
 */
 
+#include <cmath>
 #include <iomanip>
 #include <string>
 #include <sstream>
@@ -339,4 +340,33 @@ std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
   o << border.m_extra;
   return o;
 }
+
+// a little geometry
+namespace libmwaw
+{
+Box2f rotateBoxFromCenter(Box2f const &box, float angle)
+{
+  Vec2f center=box.center();
+  float angl=float(M_PI/180.)*angle;
+  Vec2f minPt, maxPt;
+  for (int p=0; p<4; ++p) {
+    Vec2f pt(box[p<2?0:1][0],box[(p%2)?0:1][1]);
+    pt -= center;
+    pt = center + Vec2f(std::cos(angl)*pt[0]-std::sin(angl)*pt[1],
+                        std::sin(angl)*pt[0]+std::cos(angl)*pt[1]);
+    if (p==0) {
+      minPt=maxPt=pt;
+      continue;
+    }
+    for (int c=0; c<2; ++c) {
+      if (pt[c]<minPt[c])
+        minPt[c]=pt[c];
+      else if (pt[c]>maxPt[c])
+        maxPt[c]=pt[c];
+    }
+  }
+  return Box2f(minPt,maxPt);
+}
+}
+
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

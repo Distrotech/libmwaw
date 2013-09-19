@@ -79,8 +79,10 @@ protected:
   int numHFZones() const;
   //! try to send the i^th header/footer
   bool sendHF(int id);
+  //! check if a textbox can be send in a graphic zone, ie. does not contains any graphic
+  bool canSendTextBoxAsGraphic(MWAWEntry const &entry);
   //! try to send the textbox text
-  bool sendTextbox(MWAWEntry const &entry);
+  bool sendTextbox(MWAWEntry const &entry, bool inGraphic);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
@@ -95,9 +97,9 @@ protected:
   //! try to read the end of a zone ( line + frame position )
   bool readZonePositions(GWTextInternal::Zone &zone);
   //! try to send a zone
-  bool sendZone(GWTextInternal::Zone const &zone);
+  bool sendZone(GWTextInternal::Zone const &zone, bool inGraphic=false);
   //! try to send simplified textbox zone
-  bool sendSimpleTextbox(MWAWEntry const &entry);
+  bool sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic=false);
   //! try to read a font
   bool readFont(MWAWFont &font);
   //! try to read a ruler

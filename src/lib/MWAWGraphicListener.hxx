@@ -69,17 +69,17 @@ public:
   void startGraphic(Box2f const &bdbox);
   /** ends the actual graphic and fill the final WPXBinaryData, ... */
   bool endGraphic(WPXBinaryData &data, std::string &mimeType);
+  /** returns true if a document is opened */
+  bool isDocumentStarted() const;
 
   /** function called to add a subdocument */
   void handleSubDocument(Vec2f const &orig, MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
   /** returns try if a subdocument is open  */
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
 
-  // ------ graphic --------
-  /** returns true if a graphic is opened */
-  bool isGraphicOpened() const;
+  // ------ general information --------
   /** returns true if a text zone is opened */
-  bool isTextZoneOpened() const;
+  bool canWriteText() const;
   /** returns the graphic bdbox.*/
   Box2f const &getGraphicBdBox();
 
@@ -134,6 +134,25 @@ public:
   /** adds a textbox in given position */
   void insertTextBox(Box2f const &bdbox, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &style);
 
+  // ------- section ---------------
+  /** returns true if we can add open a section, add page break, ... */
+  bool canOpenSectionAddBreak() const {
+    return false;
+  }
+  //! returns true if a section is opened
+  bool isSectionOpened() const {
+    return false;
+  }
+  //! returns the actual section
+  MWAWSection const &getSection() const;
+  //! open a section if possible
+  bool openSection(MWAWSection const &section);
+  //! close a section
+  bool closeSection() {
+    return false;
+  }
+  //! inserts a break type: ColumBreak, PageBreak, ..
+  void insertBreak(BreakType breakType);
 
 protected:
   void _startSubDocument();

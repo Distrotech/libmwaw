@@ -367,6 +367,11 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
     list.insert("svg:x",pt.x(), WPX_POINT);
     list.insert("svg:y",pt.y(), WPX_POINT);
     vect.append(list);
+    if (style.hasSurface()) {
+      list.clear();
+      list.insert("libwpg:path-action", "Z");
+      vect.append(list);
+    }
     interface.drawPath(vect);
     return true;
   }

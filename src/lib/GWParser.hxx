@@ -91,8 +91,10 @@ protected:
   MWAWSection getMainSection() const;
   //! try to send the i^th header/footer
   bool sendHF(int id);
+  //! check if a textbox can be send in a graphic zone, ie. does not contains any graphic
+  bool canSendTextBoxAsGraphic(MWAWEntry const &entry);
   //! try to  textbox's text
-  bool sendTextbox(MWAWEntry const &entry);
+  bool sendTextbox(MWAWEntry const &entry, bool inGraphic);
 
   // interface with the graph parser
 

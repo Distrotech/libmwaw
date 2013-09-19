@@ -687,7 +687,7 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
   }
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
 
-  if (listW.size()==1 || !graphicListener || graphicListener->isGraphicOpened()) {
+  if (listW.size()==1 || !graphicListener || graphicListener->isDocumentStarted()) {
     shape.m_bdBox=box;
     m_parserState->m_listener->insertPicture(pos,shape, pStyle);
   } else {

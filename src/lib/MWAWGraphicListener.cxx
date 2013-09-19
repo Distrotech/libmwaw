@@ -51,6 +51,7 @@
 #include "MWAWParagraph.hxx"
 #include "MWAWParser.hxx"
 #include "MWAWPosition.hxx"
+#include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MWAWGraphicListener.hxx"
@@ -124,7 +125,7 @@ State::State() :
 }
 }
 
-MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState) :
+MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState) : MWAWListener(),
   m_gs(), m_ps(new MWAWGraphicListenerInternal::State), m_psStack(), m_parserState(parserState)
 {
 }
@@ -191,7 +192,7 @@ int MWAWGraphicListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &in
   }
   if (unicode == -1) {
     if (c < 0x20) {
-      MWAW_DEBUG_MSG(("MWAWGraphicListener::sendText: Find odd char %x\n", int(c)));
+      MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: Find odd char %x\n", int(c)));
     } else
       MWAWGraphicListener::insertChar((uint8_t) c);
   } else
@@ -358,6 +359,7 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
       MWAWGraphicListener::insertUnicodeString(field.m_data.c_str());
       break;
     }
+    break;
   default:
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertField: must not be called with type=%d\n", int(field.m_type)));
     break;
@@ -416,14 +418,14 @@ bool MWAWGraphicListener::endGraphic(WPXBinaryData &data, std::string &mimeType)
 ///////////////////
 // document
 ///////////////////
-bool MWAWGraphicListener::isGraphicOpened() const
+bool MWAWGraphicListener::isDocumentStarted() const
 {
   return m_ps->m_isGraphicStarted;
 }
 
-bool MWAWGraphicListener::isTextZoneOpened() const
+bool MWAWGraphicListener::canWriteText() const
 {
-  return m_ps->m_isTextZoneOpened;
+  return m_ps->m_isGraphicStarted && m_ps->m_isTextZoneOpened;
 }
 
 Box2f const &MWAWGraphicListener::getGraphicBdBox()
@@ -676,6 +678,27 @@ void MWAWGraphicListener::_flushText()
 }
 
 ///////////////////
+// section
+///////////////////
+MWAWSection const &MWAWGraphicListener::getSection() const
+{
+  MWAW_DEBUG_MSG(("MWAWGraphicListener::getSection: must not be called\n"));
+  static MWAWSection s_section;
+  return s_section;
+}
+
+bool MWAWGraphicListener::openSection(MWAWSection const &)
+{
+  MWAW_DEBUG_MSG(("MWAWGraphicListener::openSection: must not be called\n"));
+  return false;
+}
+
+void MWAWGraphicListener::insertBreak(BreakType)
+{
+  MWAW_DEBUG_MSG(("MWAWGraphicListener::insertBreak: must not be called\n"));
+}
+
+///////////////////
 // picture/textbox
 ///////////////////
 
@@ -731,6 +754,11 @@ void MWAWGraphicListener::insertTextBox
     return;
   WPXPropertyList propList;
   _handleFrameParameters(propList, bdbox, style);
+  float rotate = style.m_rotate;
+  // flip does not works on text, so we ignore it...
+  if (style.m_flip[0]&&style.m_flip[1]) rotate += 180.f;
+  if (rotate<0||rotate>0)
+    propList.insert("libwpg:rotate", rotate);
   m_gs->m_interface->startTextObject(propList, WPXPropertyListVector());
   handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_TEXT_BOX);
   m_gs->m_interface->endTextObject();
@@ -781,8 +809,8 @@ void MWAWGraphicListener::_handleFrameParameters(WPXPropertyList &list, Box2f co
     rectList.clear();
     rectList.insert("svg:x",pt[0], WPX_POINT);
     rectList.insert("svg:y",pt[1], WPX_POINT);
-    rectList.insert("svg:width",size.x(), WPX_POINT);
-    rectList.insert("svg:height",size.y(), WPX_POINT);
+    rectList.insert("svg:width",size.x()>0 ? size.x() : -size.x(), WPX_POINT);
+    rectList.insert("svg:height",size.y()>0 ? size.y() : -size.y(), WPX_POINT);
     m_gs->m_interface->drawRectangle(list);
 
     list.insert("draw:stroke", "none");
@@ -792,8 +820,14 @@ void MWAWGraphicListener::_handleFrameParameters(WPXPropertyList &list, Box2f co
 
   list.insert("svg:x",pt[0], WPX_POINT);
   list.insert("svg:y",pt[1], WPX_POINT);
-  list.insert("svg:width",size.x(), WPX_POINT);
-  list.insert("svg:height",size.y(), WPX_POINT);
+  if (size.x()>0)
+    list.insert("svg:width",size.x(), WPX_POINT);
+  else if (size.x()<0)
+    list.insert("fo:min-width",-size.x(), WPX_POINT);
+  if (size.y()>0)
+    list.insert("svg:height",size.y(), WPX_POINT);
+  else if (size.y()<0)
+    list.insert("fo:min-height",-size.y(), WPX_POINT);
   list.insert("fo:padding-top",0, WPX_POINT);
   list.insert("fo:padding-bottom",0, WPX_POINT);
   list.insert("fo:padding-left",0, WPX_POINT);

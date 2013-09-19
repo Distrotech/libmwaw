@@ -187,7 +187,7 @@ State::State() :
 }
 }
 
-MWAWContentListener::MWAWContentListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface) :
+MWAWContentListener::MWAWContentListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface) : MWAWListener(),
   m_ds(new MWAWContentListenerInternal::DocumentState(pageList)), m_ps(new MWAWContentListenerInternal::State), m_psStack(),
   m_parserState(parserState), m_documentInterface(documentInterface)
 {
@@ -244,7 +244,7 @@ int MWAWContentListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &in
   }
   if (unicode == -1) {
     if (c < 0x20) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::sendText: Find odd char %x\n", int(c)));
+      MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: Find odd char %x\n", int(c)));
     } else
       MWAWContentListener::insertChar((uint8_t) c);
   } else
@@ -468,6 +468,11 @@ void MWAWContentListener::setDocumentLanguage(std::string locale)
   m_ds->m_metaData.insert("libwpd:language", locale.c_str());
 }
 
+bool MWAWContentListener::isDocumentStarted() const
+{
+  return m_ds->m_isDocumentStarted;
+}
+
 void MWAWContentListener::startDocument()
 {
   if (m_ds->m_isDocumentStarted) {
@@ -627,6 +632,11 @@ bool MWAWContentListener::isSectionOpened() const
 MWAWSection const &MWAWContentListener::getSection() const
 {
   return m_ps->m_section;
+}
+
+bool MWAWContentListener::canOpenSectionAddBreak() const
+{
+  return !m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == libmwaw::DOC_TEXT_BOX);
 }
 
 bool MWAWContentListener::openSection(MWAWSection const &section)
@@ -1092,7 +1102,7 @@ void MWAWContentListener::insertPicture
     return;
   }
   MWAWGraphicListenerPtr graphicListener=m_parserState.m_graphicListener;
-  if (!graphicListener || graphicListener->isGraphicOpened()) {
+  if (!graphicListener || graphicListener->isDocumentStarted()) {
     MWAW_DEBUG_MSG(("MWAWContentListener::insertPicture: can not use the graphic listener\n"));
     return;
   }

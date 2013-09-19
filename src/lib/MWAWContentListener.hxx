@@ -57,9 +57,6 @@ struct State;
 class MWAWContentListener : public MWAWListener
 {
 public:
-  /** the different break type */
-  enum BreakType { PageBreak=0, SoftPageBreak, ColumnBreak };
-
   /** constructor */
   MWAWContentListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
   /** destructor */
@@ -72,11 +69,18 @@ public:
   void startDocument();
   /** ends the document */
   void endDocument(bool sendDelayedSubDoc=true);
+  /** returns true if a document is opened */
+  bool isDocumentStarted() const;
 
   /** function called to add a subdocument */
   void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
   /** returns try if a subdocument is open  */
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
+
+  /** returns true if we can add text data */
+  bool canWriteText() const {
+    return MWAWContentListener::isDocumentStarted();
+  }
 
   // ------ page --------
   /** returns true if a page is opened */
@@ -117,8 +121,6 @@ public:
   void insertTab();
   //! adds an end of line ( by default an hard one)
   void insertEOL(bool softBreak=false);
-  //! inserts a break type: ColumBreak, PageBreak, ..
-  void insertBreak(BreakType breakType);
 
   // ------ text format -----------
   //! sets the font
@@ -174,6 +176,8 @@ public:
   void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1));
 
   // ------- section ---------------
+  /** returns true if we can add open a section, add page break, ... */
+  bool canOpenSectionAddBreak() const;
   //! returns true if a section is opened
   bool isSectionOpened() const;
   //! returns the actual section
@@ -182,6 +186,8 @@ public:
   bool openSection(MWAWSection const &section);
   //! close a section
   bool closeSection();
+  //! inserts a break type: ColumBreak, PageBreak, ..
+  void insertBreak(BreakType breakType);
 
 protected:
   void _openSection();

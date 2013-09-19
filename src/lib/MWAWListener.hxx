@@ -46,7 +46,14 @@
 class MWAWListener
 {
 public:
-  /** returns try if a subdocument is open  */
+  /** the different break type */
+  enum BreakType { PageBreak=0, SoftPageBreak, ColumnBreak };
+
+  /** returns true if a document is opened */
+  virtual bool isDocumentStarted() const =0;
+  /** returns true if we can add text data */
+  virtual bool canWriteText() const =0;
+  /** returns true if a subdocument is open  */
   virtual bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const = 0;
 
   // ------ text data -----------
@@ -89,6 +96,21 @@ public:
   // ------- fields ----------------
   //! adds a field type
   virtual void insertField(MWAWField const &field)=0;
+
+  // ------- section ---------------
+  /** returns true if we can add open a section, add page break, ... */
+  virtual bool canOpenSectionAddBreak() const =0;
+  //! returns true if a section is opened
+  virtual bool isSectionOpened() const=0;
+  //! returns the actual section
+  virtual MWAWSection const &getSection() const=0;
+  //! open a section if possible
+  virtual bool openSection(MWAWSection const &section)=0;
+  //! close a section
+  virtual bool closeSection()=0;
+  //! inserts a break type: ColumBreak, PageBreak, ..
+  virtual void insertBreak(BreakType breakType)=0;
+
 };
 
 #endif

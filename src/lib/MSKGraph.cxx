@@ -2106,7 +2106,7 @@ void MSKGraph::sendGroup(int id, MWAWPosition const &pos)
   group.m_isSent = true;
 
   MWAWGraphicListenerPtr graphicListener = m_parserState->m_graphicListener;
-  if (!graphicListener || graphicListener->isGraphicOpened()) {
+  if (!graphicListener || graphicListener->isDocumentStarted()) {
     MWAW_DEBUG_MSG(("MSKGraph::sendGroup: can not use the graphic listener\n"));
     MWAWPosition undefPos(pos);
     undefPos.setSize(Vec2f(0,0));
@@ -2143,7 +2143,7 @@ void MSKGraph::sendGroupChild(int id, MWAWPosition const &pos)
   }
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   MWAWGraphicListenerPtr graphicListener = m_parserState->m_graphicListener;
-  if (!listener || !graphicListener || graphicListener->isGraphicOpened()) return;
+  if (!listener || !graphicListener || graphicListener->isDocumentStarted()) return;
   MSKGraphInternal::GroupZone &group=
     reinterpret_cast<MSKGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
   group.m_isSent = true;
@@ -2262,7 +2262,7 @@ bool MSKGraph::canCreateGraphic(MSKGraphInternal::GroupZone const &group) const
 
 void MSKGraph::sendGroup(MSKGraphInternal::GroupZone const &group, MWAWGraphicListenerPtr &listener) const
 {
-  if (!listener || !listener->isGraphicOpened()) {
+  if (!listener || !listener->isDocumentStarted()) {
     MWAW_DEBUG_MSG(("MSKGraph::sendGroup: the listener is bad\n"));
     return;
   }
@@ -2533,7 +2533,7 @@ bool MSKGraph::readFont(MWAWFont &font)
 void MSKGraph::sendTextBox(int zoneId)
 {
   MWAWGraphicListenerPtr listener=m_parserState->m_graphicListener;
-  if (!listener || !listener->isGraphicOpened() || !listener->isTextZoneOpened()) {
+  if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: can not find get access to the graphicListener\n"));
     return;
   }
@@ -2620,7 +2620,7 @@ void MSKGraph::send(int id, MWAWPosition const &pos)
   MWAWInputStreamPtr input=m_mainParser->getInput();
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if ((zone->type()==MSKGraphInternal::Zone::Shape || zone->type()==MSKGraphInternal::Zone::Text) &&
-      (!graphicListener || graphicListener->isGraphicOpened())) {
+      (!graphicListener || graphicListener->isDocumentStarted())) {
     MWAW_DEBUG_MSG(("MSKGraph::send: can not use the graphic listener for zone %d\n", id));
     shared_ptr<MSKGraphInternal::SubDocument> subdoc
     (new MSKGraphInternal::SubDocument(*this, input, MSKGraphInternal::SubDocument::Empty, id));

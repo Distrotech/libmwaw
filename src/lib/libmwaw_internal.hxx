@@ -905,5 +905,11 @@ typedef Box2<float> Box2f;
 /*! \brief Box2 of long */
 typedef Box2<long> Box2l;
 
+// some geometrical function
+namespace libmwaw
+{
+//! rotate a bdox and returns the final bdbox
+Box2f rotateBoxFromCenter(Box2f const &box, float angle);
+}
 #endif /* LIBMWAW_INTERNAL_H */
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

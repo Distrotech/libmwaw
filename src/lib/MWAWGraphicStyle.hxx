@@ -144,8 +144,9 @@ public:
     m_shadowColor(MWAWColor::black()), m_shadowOpacity(0), m_shadowOffset(1,1),
     m_pattern(),
     m_gradientType(G_None), m_gradientStopList(), m_gradientAngle(0), m_gradientBorder(0), m_gradientPercentCenter(0.5f,0.5f), m_gradientRadius(1),
-    m_extra("") {
+    m_rotate(0), m_extra("") {
     m_arrows[0]=m_arrows[1]=false;
+    m_flip[0]=m_flip[1]=false;
     m_gradientStopList.push_back(GradientStop(0.0, MWAWColor::white()));
     m_gradientStopList.push_back(GradientStop(1.0, MWAWColor::black()));
   }
@@ -238,8 +239,17 @@ public:
   Vec2f m_gradientPercentCenter;
   //! the gradient radius
   float m_gradientRadius;
+
   //! two bool to indicated if extremity has arrow or not
   bool m_arrows[2];
+
+  // some transformation: must probably be somewhere else
+
+  //! the rotation
+  float m_rotate;
+  //! two bool to indicated we need to flip the shape or not
+  bool m_flip[2];
+
   //! extra data
   std::string m_extra;
 };

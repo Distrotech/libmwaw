@@ -52,7 +52,9 @@
 namespace GWGraphInternal
 {
 struct Frame;
+struct FrameGroup;
 struct FrameShape;
+struct FrameText;
 struct Zone;
 
 struct State;
@@ -103,13 +105,28 @@ protected:
   //! try to send all data corresponding to a zone
   bool sendPageFrames(GWGraphInternal::Zone const &zone);
   //! try to send a frame
-  bool sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInternal::Zone const &zone, int order);
-  //! try to send the textbox text
-  bool sendTextbox(MWAWEntry const &entry);
+  bool sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInternal::Zone const &zone);
+
+  //! try to send a group
+  bool sendGroup(GWGraphInternal::FrameGroup const &group, GWGraphInternal::Zone const &zone, MWAWPosition const &pos);
+  /** try to send a group elements by elemenys*/
+  void sendGroupChild(GWGraphInternal::FrameGroup const &group, GWGraphInternal::Zone const &zone, MWAWPosition const &pos);
+  //! check if we can send a group as graphic
+  bool canCreateGraphic(GWGraphInternal::FrameGroup const &group, GWGraphInternal::Zone const &zone);
+  /** send the group as a graphic zone */
+  void sendGroup(GWGraphInternal::FrameGroup const &group, GWGraphInternal::Zone const &zone, MWAWGraphicListenerPtr &listener);
+
+  //! try to send a textbox
+  bool sendTextbox(GWGraphInternal::FrameText const &text, GWGraphInternal::Zone const &zone, MWAWPosition const &pos);
+  //! try to send a textbox via a graphiclistener
+  bool sendTextboxAsGraphic(Box2f const &box, GWGraphInternal::FrameText const &text, MWAWGraphicStyle const &style);
+  //! try to send the textbox text (via the mainParser)
+  bool sendTextbox(MWAWEntry const &entry, bool inGraphic);
+
   //! try to send a picture
   bool sendPicture(MWAWEntry const &entry, MWAWPosition pos);
   //! try to send a basic picture
-  bool sendShape(GWGraphInternal::FrameShape const &graph, GWGraphInternal::Zone const &zone, MWAWPosition pos);
+  bool sendShape(GWGraphInternal::FrameShape const &graph, GWGraphInternal::Zone const &zone, MWAWPosition const &pos);
 
   // DataFork: graphic zone
 
@@ -141,6 +158,8 @@ protected:
   //
   //! try to read a frame extra data zone recursively ( draw method)
   bool readFrameExtraDataRec(GWGraphInternal::Zone &zone, int id, std::set<int> &seens, long endPos=-1);
+  //! check if the graph of zones is ok (ie. does not form loop)
+  bool checkGraph(GWGraphInternal::Zone &zone, int id, std::set<int> &seens);
 
 private:
   GWGraph(GWGraph const &orig);
