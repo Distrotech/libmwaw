@@ -414,13 +414,13 @@ protected:
       double res = 0.0;
       iss >> res;
       if (!iss.fail()) {
-        if (iss.eof() || iss.peek() == std::char_traits<wchar_t>::eof()) {
+        if (iss.eof() || iss.peek() == std::char_traits<char>::eof()) {
           list.insert(key.c_str(), res);
           return true;
         }
         std::string remain;
         iss >> remain;
-        if (iss.peek() == std::char_traits<wchar_t>::eof()) {
+        if (iss.peek() == std::char_traits<char>::eof()) {
           if (remain=="pt") {
             list.insert(key.c_str(), res/72., WPX_INCH);
             return true;
