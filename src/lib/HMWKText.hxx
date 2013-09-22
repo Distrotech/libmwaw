@@ -77,7 +77,9 @@ protected:
   //! send the main text zone
   bool sendMainText();
   //! send a text zone
-  bool sendText(long id, long subId=0);
+  bool sendText(long id, long subId, bool asGraphic=false);
+  //! check if we can send a textzone has graphic
+  bool canSendTextAsGraphic(long id, long subId);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
   //! update the text zone type with map id->type
@@ -101,7 +103,9 @@ protected:
   bool readSections(shared_ptr<HMWKZone> zone);
 
   /** try to send a text zone (type 1)*/
-  bool sendText(HMWKZone &zone);
+  bool sendText(HMWKZone &zone, bool asGraphic=false);
+  /** check if we can send a textzone has graphic */
+  bool canSendTextAsGraphic(HMWKZone &zone);
 
   //
   // low level

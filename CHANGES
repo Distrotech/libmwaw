@@ -1,5 +1,11 @@
 CHANGES:
 
+09/18/2013:
+- add some functions to MWAWGraphicListener: to make it more similar to
+  MWAWContentListener
+- GreatWorks parser: add pattern+gradient, begin to generate pictures
+  which regroup many shapes, remain some problem with z-index
+
 09/15/2013:
 - make MWAWPictBasic disappear
 

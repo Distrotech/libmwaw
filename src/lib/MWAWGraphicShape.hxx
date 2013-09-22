@@ -47,7 +47,7 @@ class MWAWGraphicShape
 {
 public:
   //! an enum used to define the shape type
-  enum Type { Arc, Circle, Line, Rectangle, Path, Polygon, ShapeUnknown };
+  enum Type { Arc, Circle, Line, Rectangle, Path, Pie, Polygon, ShapeUnknown };
   //! a simple path component
   struct PathData {
     //! constructor
@@ -107,6 +107,15 @@ public:
   static MWAWGraphicShape arc(Box2f const &box, Box2f const &circleBox, Vec2f const &angles) {
     MWAWGraphicShape res;
     res.m_type=Arc;
+    res.m_bdBox=box;
+    res.m_formBox=circleBox;
+    res.m_arcAngles=angles;
+    return res;
+  }
+  //! static constructor to create a pie
+  static MWAWGraphicShape pie(Box2f const &box, Box2f const &circleBox, Vec2f const &angles) {
+    MWAWGraphicShape res;
+    res.m_type=Pie;
     res.m_bdBox=box;
     res.m_formBox=circleBox;
     res.m_arcAngles=angles;

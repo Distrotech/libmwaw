@@ -111,7 +111,8 @@ protected:
   bool readFrames(shared_ptr<HMWKZone> zone);
   /** try to read a picture zone (type d)*/
   bool readPicture(shared_ptr<HMWKZone> zone);
-
+  /** check the group structures */
+  void checkGroupStructures();
 
   // interface with mainParser
 
@@ -121,7 +122,7 @@ protected:
   bool sendPicture(long pictId, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
 
   //! ask main parser to send a text zone
-  bool sendText(long textId, long id);
+  bool sendText(long textId, long id, bool asGraphic=false);
   /** return a list textZId -> type which
       3(footnote), 4(textbox), 9(table), 10(comment) */
   std::map<long,int> getTextFrameInformations() const;
@@ -130,25 +131,34 @@ protected:
   // low level
   //
 
+  /** check the graph structures: ie. the group children */
+  bool checkGroupStructures(long fileId, long fileSubId, std::multimap<long, long> &seens, bool inGroup);
+
   /** try to send a picture to the listener */
   bool sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
-
   /** try to send a frame to the listener */
   bool sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
-
   /** try to send a basic picture to the listener */
-  bool sendShapeGraph(HMWKGraphInternal::ShapeGraph const &pict, MWAWPosition pos);
-
+  bool sendShapeGraph(HMWKGraphInternal::ShapeGraph const &shape, MWAWPosition pos);
   /** try to send a picture frame */
   bool sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   /** try to send an empty picture */
   bool sendEmptyPicture(MWAWPosition pos);
-
   /** try to send a textbox to the listener */
   bool sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
-
   /** try to send a table unformatted*/
   bool sendTableUnformatted(long fId);
+
+  /** try to send a group to the listener */
+  bool sendGroup(long fId, MWAWPosition pos);
+  /** try to send a group to the listener */
+  bool sendGroup(HMWKGraphInternal::Group const &group, MWAWPosition pos);
+  //! check if we can send a group as graphic
+  bool canCreateGraphic(HMWKGraphInternal::Group const &group);
+  /** try to send a group elements by elements */
+  void sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPosition const &pos);
+  /** send the group as a graphic zone */
+  void sendGroup(HMWKGraphInternal::Group const &group, MWAWGraphicListenerPtr &listener);
 
   /** try to read the basic graph data */
   shared_ptr<HMWKGraphInternal::ShapeGraph> readShapeGraph(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);

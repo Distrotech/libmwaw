@@ -828,10 +828,11 @@ void MWAWGraphicListener::_handleFrameParameters(WPXPropertyList &list, Box2f co
     list.insert("svg:height",size.y(), WPX_POINT);
   else if (size.y()<0)
     list.insert("fo:min-height",-size.y(), WPX_POINT);
-  list.insert("fo:padding-top",0, WPX_POINT);
-  list.insert("fo:padding-bottom",0, WPX_POINT);
-  list.insert("fo:padding-left",0, WPX_POINT);
-  list.insert("fo:padding-right",0, WPX_POINT);
+  float const padding = 0; // fillme
+  list.insert("fo:padding-top",padding, WPX_POINT);
+  list.insert("fo:padding-bottom",padding, WPX_POINT);
+  list.insert("fo:padding-left",padding, WPX_POINT);
+  list.insert("fo:padding-right",padding, WPX_POINT);
 }
 
 ///////////////////

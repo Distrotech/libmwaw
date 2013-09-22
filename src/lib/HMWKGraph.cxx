@@ -66,27 +66,31 @@ namespace HMWKGraphInternal
 //! Internal: the frame header of a HMWKGraph
 struct Frame {
   //! constructor
-  Frame() : m_type(-1), m_fileId(-1), m_id(-1), m_page(0),
-    m_pos(), m_baseline(0.f), m_posFlags(0), m_lineWidth(0), m_parsed(false), m_extra("") {
-    m_colors[0]=MWAWColor::black();
-    m_colors[1]=MWAWColor::white();
-    m_patterns[0] = m_patterns[1] = 1.f;
+  Frame() : m_type(-1), m_fileId(-1), m_fileSubId(-1), m_id(-1), m_page(0),
+    m_pos(), m_baseline(0.f), m_posFlags(0), m_style(), m_borderType(0), m_inGroup(false), m_parsed(false), m_extra("") {
   }
   //! destructor
   virtual ~Frame() {
   }
-
-  //! returns the line colors
-  bool getLineColor(MWAWColor &color) const;
-  //! returns the surface colors
-  bool getSurfaceColor(MWAWColor &color) const;
-
+  //! return the frame bdbox
+  Box2f getBdBox() const {
+    Vec2f minPt(m_pos[0][0], m_pos[0][1]);
+    Vec2f maxPt(m_pos[1][0], m_pos[1][1]);
+    for (int c=0; c<2; ++c) {
+      if (m_pos.size()[c]>=0) continue;
+      minPt[c]=m_pos[1][c];
+      maxPt[c]=m_pos[0][c];
+    }
+    return Box2f(minPt,maxPt);
+  }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Frame const &grph);
   //! the graph type
   int m_type;
   //! the file id
   long m_fileId;
+  //! the file sub id
+  long m_fileSubId;
   //! the local id
   int m_id;
   //! the page
@@ -97,14 +101,14 @@ struct Frame {
   float m_baseline;
   //! the graph anchor flags
   int m_posFlags;
+  //! the style
+  MWAWGraphicStyle m_style;
+  //! the border type
+  int m_borderType;
   //! the border default size (before using width), 0 means Top, other unknown
   Vec2f m_borders[4];
-  //! the line width
-  float m_lineWidth;
-  //! the line/surface colors
-  MWAWColor m_colors[2];
-  //! the line/surface percent pattern
-  float m_patterns[2];
+  //! true if the frame is a child of a group
+  bool m_inGroup;
   //! true if we have send the data
   mutable bool m_parsed;
   //! an extra string
@@ -155,21 +159,14 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
   if (grph.m_page) o << "page=" << grph.m_page+1  << ",";
   o << "pos=" << grph.m_pos << ",";
   if (grph.m_baseline < 0 || grph.m_baseline>0) o << "baseline=" << grph.m_baseline << ",";
+  if (grph.m_inGroup) o <<  "inGroup,";
   int flag = grph.m_posFlags;
-  if (flag & 2) o << "inGroup,";
   if (flag & 4) o << "wrap=around,"; // else overlap
   if (flag & 0x40) o << "lock,";
   if (!(flag & 0x80)) o << "transparent,"; // else opaque
   if (flag & 0x39) o << "posFlags=" << std::hex << (flag & 0x39) << std::dec << ",";
-  o << "lineW=" << grph.m_lineWidth << ",";
-  if (!grph.m_colors[0].isBlack())
-    o << "lineColor=" << grph.m_colors[0] << ",";
-  if (grph.m_patterns[0]<1.)
-    o << "linePattern=" << 100.f *grph.m_patterns[0] << "%,";
-  if (!grph.m_colors[1].isWhite())
-    o << "surfColor=" << grph.m_colors[1] << ",";
-  if (grph.m_patterns[1]<1.)
-    o << "surfPattern=" << 100.f *grph.m_patterns[1] << "%,";
+  o << "style=[" << grph.m_style << "],";
+  if (grph.m_borderType) o << "bord[type]=" << grph.m_borderType << ",";
   for (int i = 0; i < 4; ++i) {
     if (grph.m_borders[i].x() > 0 || grph.m_borders[i].y() > 0)
       o << "border" << i << "=" << grph.m_borders[i] << ",";
@@ -182,7 +179,7 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
 //! Internal: the geometrical graph of a HMWKGraph
 struct ShapeGraph : public Frame {
   //! constructor
-  ShapeGraph(Frame const &orig) : Frame(orig), m_shape(), m_arrowsFlag(0) {
+  ShapeGraph(Frame const &orig) : Frame(orig), m_shape() {
   }
   //! destructor
   ~ShapeGraph() {}
@@ -192,19 +189,22 @@ struct ShapeGraph : public Frame {
     o << static_cast<Frame const &>(graph);
     return o;
   }
+  //! return the current style
+  MWAWGraphicStyle getStyle() const {
+    MWAWGraphicStyle style(m_style);
+    if (m_shape.m_type!=MWAWGraphicShape::Line)
+      style.m_arrows[0]=style.m_arrows[1]=false;
+    return style;
+  }
   //! print local data
   std::string print() const {
     std::stringstream s;
     s << m_shape;
-    if (m_arrowsFlag&1) s << "startArrow,";
-    if (m_arrowsFlag&2) s << "endArrow,";
     return s.str();
   }
 
   //! the shape m_shape
   MWAWGraphicShape m_shape;
-  //! the lines arrow flag
-  int m_arrowsFlag;
 };
 
 ////////////////////////////////////////
@@ -430,6 +430,26 @@ struct TextBox : public Frame {
   //! destructor
   ~TextBox() {
   }
+  //! add property to frame extra values
+  void addTo(WPXPropertyList &frames) const {
+    if (m_type == 10) {
+      std::stringstream stream;
+      stream << m_style.m_lineWidth*0.03 << "cm solid " << m_style.m_lineColor;
+      frames.insert("fo:border-left", stream.str().c_str());
+      frames.insert("fo:border-bottom", stream.str().c_str());
+      frames.insert("fo:border-right", stream.str().c_str());
+
+      stream.str("");
+      stream << m_borders[0][1]*m_style.m_lineWidth*0.03 << "cm solid " << m_style.m_lineColor;
+      frames.insert("fo:border-top", stream.str().c_str());
+    } else if (m_style.m_lineWidth > 0 && m_style.m_lineOpacity>0) {
+      std::stringstream stream;
+      stream << m_style.m_lineWidth*0.03 << "cm solid " << m_style.m_lineColor;
+      frames.insert("fo:border", stream.str().c_str());
+    }
+    if (m_style.hasSurfaceColor())
+      frames.insert("fo:background-color", m_style.m_surfaceColor.str().c_str());
+  }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TextBox const &textbox) {
     o << textbox.print();
@@ -478,7 +498,7 @@ bool TableCell::sendContent(MWAWContentListenerPtr, MWAWTable &table)
 //! Internal: the picture of a HMWKGraph
 struct Picture {
   //! constructor
-  Picture(shared_ptr<HMWKZone> zone) : m_zone(zone), m_fileId(-1), m_parsed(false), m_extra("") {
+  Picture(shared_ptr<HMWKZone> zone) : m_zone(zone), m_fileId(-1), m_fileSubId(-1), m_parsed(false), m_extra("") {
     m_pos[0] = m_pos[1] = 0;
   }
   //! destructor
@@ -497,6 +517,8 @@ struct Picture {
   long m_pos[2];
   //! the file id
   long m_fileId;
+  //! the file subid
+  long m_fileSubId;
   //! a flag to know if the picture was send to the receiver
   mutable bool m_parsed;
   //! extra data
@@ -504,10 +526,39 @@ struct Picture {
 };
 
 ////////////////////////////////////////
+//! Internal: the pattern of a HMWKGraph
+struct Pattern : public MWAWGraphicStyle::Pattern {
+  //! constructor ( 4 int by patterns )
+  Pattern(uint16_t const *pat=0) : MWAWGraphicStyle::Pattern(), m_percent(0) {
+    if (!pat) return;
+    m_colors[0]=MWAWColor::white();
+    m_colors[1]=MWAWColor::black();
+    m_dim=Vec2i(8,8);
+    m_data.resize(8);
+    for (size_t i=0; i < 4; ++i) {
+      uint16_t val=pat[i];
+      m_data[2*i]=(unsigned char) (val>>8);
+      m_data[2*i+1]=(unsigned char) (val&0xFF);
+    }
+    int numOnes=0;
+    for (size_t j=0; j < 8; ++j) {
+      uint8_t val=(uint8_t) m_data[j];
+      for (int b=0; b < 8; b++) {
+        if (val&1) ++numOnes;
+        val = uint8_t(val>>1);
+      }
+    }
+    m_percent=float(numOnes)/64.f;
+  }
+  //! the percentage
+  float m_percent;
+};
+
+////////////////////////////////////////
 //! Internal: the state of a HMWKGraph
 struct State {
   //! constructor
-  State() : m_numPages(0), m_framesMap(), m_picturesMap(), m_colorList(), m_patternPercentList() { }
+  State() : m_numPages(0), m_framesMap(), m_picturesMap(), m_colorList(), m_patternList() { }
   //! returns a color correspond to an id
   bool getColor(int id, MWAWColor &col) {
     initColors();
@@ -519,13 +570,13 @@ struct State {
     return true;
   }
   //! returns a pattern correspond to an id
-  bool getPatternPercent(int id, float &percent) {
+  bool getPattern(int id, Pattern &pattern) {
     initPatterns();
-    if (id < 0 || id >= int(m_patternPercentList.size())) {
-      MWAW_DEBUG_MSG(("HMWKGraphInternal::State::getPatternPercent: can not find pattern %d\n", id));
+    if (id < 0 || id >= int(m_patternList.size())) {
+      MWAW_DEBUG_MSG(("HMWKGraphInternal::State::getPattern: can not find pattern %d\n", id));
       return false;
     }
-    percent = m_patternPercentList[size_t(id)];
+    pattern = m_patternList[size_t(id)];
     return true;
   }
 
@@ -546,26 +597,35 @@ struct State {
   std::map<long, shared_ptr<Picture> > m_picturesMap;
   //! a list colorId -> color
   std::vector<MWAWColor> m_colorList;
-  //! a list patternId -> percent
-  std::vector<float> m_patternPercentList;
+  //! the patterns list
+  std::vector<Pattern> m_patternList;
 };
 
 void State::initPatterns()
 {
-  if (m_patternPercentList.size()) return;
-  float const patterns[64] = {
-    0.f, 1.f, 0.96875f, 0.9375f, 0.875f, 0.75f, 0.5f, 0.25f,
-    0.25f, 0.1875f, 0.1875f, 0.125f, 0.0625f, 0.0625f, 0.03125f, 0.015625f,
-    0.75f, 0.5f, 0.25f, 0.375f, 0.25f, 0.125f, 0.25f, 0.125f,
-    0.75f, 0.5f, 0.25f, 0.375f, 0.25f, 0.125f, 0.25f, 0.125f,
-    0.75f, 0.5f, 0.5f, 0.5f, 0.5f, 0.25f, 0.25f, 0.234375f,
-    0.625f, 0.375f, 0.125f, 0.25f, 0.21875f, 0.21875f, 0.125f, 0.09375f,
-    0.5f, 0.5625f, 0.4375f, 0.375f, 0.21875f, 0.28125f, 0.1875f, 0.09375f,
-    0.59375f, 0.5625f, 0.515625f, 0.34375f, 0.3125f, 0.25f, 0.25f, 0.234375f
+  if (m_patternList.size()) return;
+  static uint16_t const (s_pattern[4*64]) = {
+    0x0000, 0x0000, 0x0000, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0x7fff, 0xffff, 0xf7ff, 0xffff, 0x7fff, 0xf7ff, 0x7fff, 0xf7ff,
+    0xffee, 0xffbb, 0xffee, 0xffbb, 0x77dd, 0x77dd, 0x77dd, 0x77dd, 0xaa55, 0xaa55, 0xaa55, 0xaa55, 0x8822, 0x8822, 0x8822, 0x8822,
+    0xaa00, 0xaa00, 0xaa00, 0xaa00, 0xaa00, 0x4400, 0xaa00, 0x1100, 0x8800, 0xaa00, 0x8800, 0xaa00, 0x8800, 0x2200, 0x8800, 0x2200,
+    0x8000, 0x0800, 0x8000, 0x0800, 0x8800, 0x0000, 0x8800, 0x0000, 0x8000, 0x0000, 0x0800, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001,
+    0xeedd, 0xbb77, 0xeedd, 0xbb77, 0x3366, 0xcc99, 0x3366, 0xcc99, 0x1122, 0x4488, 0x1122, 0x4488, 0x8307, 0x0e1c, 0x3870, 0xe0c1,
+    0x0306, 0x0c18, 0x3060, 0xc081, 0x0102, 0x0408, 0x1020, 0x4080, 0xffff, 0x0000, 0x0000, 0x0000, 0xff00, 0x0000, 0x0000, 0x0000,
+    0x77bb, 0xddee, 0x77bb, 0xddee, 0x99cc, 0x6633, 0x99cc, 0x6633, 0x8844, 0x2211, 0x8844, 0x2211, 0xe070, 0x381c, 0x0e07, 0x83c1,
+    0xc060, 0x3018, 0x0c06, 0x0381, 0x8040, 0x2010, 0x0804, 0x0201, 0xc0c0, 0xc0c0, 0xc0c0, 0xc0c0, 0x8080, 0x8080, 0x8080, 0x8080,
+    0xffaa, 0xffaa, 0xffaa, 0xffaa, 0xe4e4, 0xe4e4, 0xe4e4, 0xe4e4, 0xffff, 0xff00, 0x00ff, 0x0000, 0xaaaa, 0xaaaa, 0xaaaa, 0xaaaa,
+    0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0x0000, 0xff00, 0x0000, 0x8888, 0x8888, 0x8888, 0x8888, 0xff80, 0x8080, 0x8080, 0x8080,
+    0x4ecf, 0xfce4, 0x473f, 0xf372, 0x6006, 0x36b1, 0x8118, 0x1b63, 0x2004, 0x4002, 0x1080, 0x0801, 0x9060, 0x0609, 0x9060, 0x0609,
+    0x8814, 0x2241, 0x8800, 0xaa00, 0x2050, 0x8888, 0x8888, 0x0502, 0xaa00, 0x8000, 0x8800, 0x8000, 0x2040, 0x8000, 0x0804, 0x0200,
+    0xf0f0, 0xf0f0, 0x0f0f, 0x0f0f, 0x0077, 0x7777, 0x0077, 0x7777, 0xff88, 0x8888, 0xff88, 0x8888, 0xaa44, 0xaa11, 0xaa44, 0xaa11,
+    0x8244, 0x2810, 0x2844, 0x8201, 0x8080, 0x413e, 0x0808, 0x14e3, 0x8142, 0x2418, 0x1020, 0x4080, 0x40a0, 0x0000, 0x040a, 0x0000,
+    0x7789, 0x8f8f, 0x7798, 0xf8f8, 0xf1f8, 0x6cc6, 0x8f1f, 0x3663, 0xbf00, 0xbfbf, 0xb0b0, 0xb0b0, 0xff80, 0x8080, 0xff08, 0x0808,
+    0x1020, 0x54aa, 0xff02, 0x0408, 0x0008, 0x142a, 0x552a, 0x1408, 0x55a0, 0x4040, 0x550a, 0x0404, 0x8244, 0x3944, 0x8201, 0x0101
   };
-  m_patternPercentList.resize(64);
+
+  m_patternList.resize(64);
   for (size_t i=0; i < 64; ++i)
-    m_patternPercentList[i] = patterns[i];
+    m_patternList[i] = Pattern(&s_pattern[i*4]);
 }
 
 void State::initColors()
@@ -610,25 +670,13 @@ void State::initColors()
     m_colorList[i] = defCol[i];
 }
 
-bool Frame::getLineColor(MWAWColor &color) const
-{
-  color = State::getColor(m_colors[0], m_patterns[0]);
-  return true;
-}
-
-bool Frame::getSurfaceColor(MWAWColor &color) const
-{
-  color = State::getColor(m_colors[1], m_patterns[1]);
-  return true;
-}
-
 ////////////////////////////////////////
 //! Internal: the subdocument of a HMWKGraph
 class SubDocument : public MWAWSubDocument
 {
 public:
   //! the document type
-  enum Type { Picture, FrameInFrame, Text, UnformattedTable, EmptyPicture };
+  enum Type { Picture, FrameInFrame, Group, Text, UnformattedTable, EmptyPicture };
   //! constructor
   SubDocument(HMWKGraph &pars, MWAWInputStreamPtr input, Type type, long id, long subId=0) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_subId(subId), m_pos() {}
@@ -649,6 +697,8 @@ public:
 
   //! the parser function
   void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  //! the graphic parser function
+  void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   /** the graph parser */
@@ -680,6 +730,9 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   case FrameInFrame:
     m_graphParser->sendFrame(m_id, m_pos);
     break;
+  case Group:
+    m_graphParser->sendGroup(m_id, m_pos);
+    break;
   case Picture:
     m_graphParser->sendPicture(m_id, m_pos);
     break;
@@ -696,6 +749,21 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("HMWKGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
     break;
   }
+  m_input->seek(pos, WPX_SEEK_SET);
+}
+void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+{
+  if (!listener.get()) {
+    MWAW_DEBUG_MSG(("HMWKGraphInternal::SubDocument::parse: no listener\n"));
+    return;
+  }
+  assert(m_graphParser);
+  if (m_type!=Text) {
+    MWAW_DEBUG_MSG(("HMWKGraphInternal::SubDocument::parse: unexpected type\n"));
+    return;
+  }
+  long pos = m_input->tell();
+  m_graphParser->sendText(m_id, m_subId,true);
   m_input->seek(pos, WPX_SEEK_SET);
 }
 
@@ -732,16 +800,18 @@ int HMWKGraph::version() const
 
 bool HMWKGraph::getColor(int colId, int patternId, MWAWColor &color) const
 {
+  if (patternId==0) // ie. the empty pattern
+    return false;
   if (!m_state->getColor(colId, color) ) {
     MWAW_DEBUG_MSG(("HMWKGraph::getColor: can not find color for id=%d\n", colId));
     return false;
   }
-  float percent = 1.0;
-  if (!m_state->getPatternPercent(patternId, percent) ) {
+  HMWKGraphInternal::Pattern pattern;
+  if (!m_state->getPattern(patternId, pattern) ) {
     MWAW_DEBUG_MSG(("HMWKGraph::getColor: can not find pattern for id=%d\n", patternId));
     return false;
   }
-  color = m_state->getColor(color, percent);
+  color = m_state->getColor(color, pattern.m_percent);
   return true;
 }
 
@@ -763,9 +833,9 @@ int HMWKGraph::numPages() const
   return nPages;
 }
 
-bool HMWKGraph::sendText(long textId, long id)
+bool HMWKGraph::sendText(long textId, long id, bool asGraphic)
 {
-  return m_mainParser->sendText(textId, id);
+  return m_mainParser->sendText(textId, id, asGraphic);
 }
 
 std::map<long,int> HMWKGraph::getTextFrameInformations() const
@@ -845,6 +915,7 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
   val = (long) input->readULong(1);
   if (val) f << "#f0=" << std::hex << val << std::dec << ",";
   graph.m_posFlags = (int) input->readULong(1);
+  if (graph.m_posFlags&2) graph.m_inGroup=true;
   val = (long) input->readULong(1);
   if (val) f << "#f1=" << std::hex << val << std::dec << ",";
   graph.m_page  = (int) input->readLong(2);
@@ -859,22 +930,39 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
       bd[j] = float(input->readLong(4))/65536.f;
     graph.m_borders[i] = Vec2f(bd[0],bd[1]);
   }
-  graph.m_lineWidth = float(input->readLong(4))/65536.f;
-  val = (long) input->readULong(2);
-  if (val) f << "#g0=" << val << ",";
+  MWAWGraphicStyle &style = graph.m_style;
+  style.m_lineWidth = float(input->readLong(4))/65536.f;
+  graph.m_borderType= (int) input->readULong(2);
+  if (val) f << "#g0=" << val << ","; // border type?
   for (int i = 0; i < 2; ++i) {
     int color = (int) input->readULong(2);
     MWAWColor col;
-    if (m_state->getColor(color, col))
-      graph.m_colors[i] = col;
-    else
-      f << "#color[" << i << "]=" << color << ",";
+    if (!m_state->getColor(color, col)) {
+      f << "#color[" << i << "]=" << color << ", pat="<<input->readULong(2) << ",";
+      continue;
+    }
     int pattern = (int) input->readULong(2);
-    float patPercent;
-    if (m_state->getPatternPercent(pattern, patPercent))
-      graph.m_patterns[i] = patPercent;
-    else
+    if (pattern==0) {
+      if (i==0)
+        style.m_lineOpacity=0;
+      else
+        style.m_surfaceOpacity=0;
+      continue;
+    }
+    HMWKGraphInternal::Pattern pat;
+    if (m_state->getPattern(pattern, pat)) {
+      pat.m_colors[1]=col;
+      if (!pat.getUniqueColor(col)) {
+        pat.getAverageColor(col);
+        if (i) style.m_pattern=pat;
+      }
+    } else
       f << "#pattern[" << i << "]=" << pattern << ",";
+    if (i==0)
+      style.m_lineColor=col;
+    else
+      style.setSurfaceColor(col,1);
+
   }
   graph.m_id=(int) input->readLong(2);
   graph.m_baseline = float(input->readLong(4))/65536.f;
@@ -887,6 +975,7 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
   f.str("");
   f << zone->name() << "(A):PTR=" << std::hex << zone->fileBeginPos() << std::dec << "," << graph;
   graph.m_fileId = zone->m_id;
+  graph.m_fileSubId = zone->m_subId;
 
   asciiFile.addDelimiter(input->tell(),'|');
   asciiFile.addPos(pos);
@@ -960,6 +1049,7 @@ bool HMWKGraph::readPicture(shared_ptr<HMWKZone> zone)
   picture->m_extra = f.str();
   long fId = picture->m_fileId;
   if (!fId) fId = zone->m_id;
+  picture->m_fileSubId = zone->m_subId;
   if (m_state->m_picturesMap.find(fId) != m_state->m_picturesMap.end())
     MWAW_DEBUG_MSG(("HMWKGraph::readPicture: oops I already find a picture for %lx\n", fId));
   else
@@ -1033,6 +1123,8 @@ bool HMWKGraph::sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras
     MWAW_DEBUG_MSG(("HMWKGraph::sendFrame: can not find frame %lx\n", frameId));
     return false;
   }
+  if (pos.size()[0]<=0 || pos.size()[0]<=0)
+    pos.setSize(fIt->second->m_pos.size());
   return sendFrame(*fIt->second, pos, extras);
 }
 
@@ -1054,18 +1146,35 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
     break;
   }
   case 4:
+    // fixme: check also for border
+    if (frame.m_style.hasPattern()) {
+      HMWKGraphInternal::TextBox const &textbox=
+        reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame);
+      MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+      if (m_mainParser->canSendTextAsGraphic(textbox.m_textFileId,0) &&
+          graphicListener && !graphicListener->isDocumentStarted()) {
+        textbox.m_parsed=true;
+        MWAWSubDocumentPtr subdoc
+        (new HMWKGraphInternal::SubDocument(*this, input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
+        Box2f box(Vec2f(0,0),pos.size());
+        graphicListener->startGraphic(box);
+        WPXBinaryData data;
+        std::string type;
+        graphicListener->insertTextBox(box, subdoc, textbox.m_style);
+        if (!graphicListener->endGraphic(data, type))
+          return false;
+        listener->insertPicture(pos, data, type, extras);
+        return true;
+      }
+    }
   case 10:
     return sendTextBox(reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame), pos, extras);
   case 6: {
     HMWKGraphInternal::PictureFrame const &pict =
       reinterpret_cast<HMWKGraphInternal::PictureFrame const &>(frame);
     if (pict.m_fileId==0) {
-      Vec2f sz(pos.size());
-      if (sz[0] <= 0 || sz[1] <= 0)
-        sz=pict.m_pos.size();
-      if (sz[0] < 0) sz.setX(-sz[0]);
-      if (sz[1] < 0) sz.setY(-sz[1]);
-      pos.setSize(sz);
+      if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
+        pos.setSize(pict.getBdBox().size());
 
       MWAWPosition framePos(pos);
       framePos.m_anchorTo = MWAWPosition::Frame;
@@ -1110,9 +1219,23 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
       return true;
     return table.sendAsText(listener);
   }
-  case 11: // group: fixme must be implement for char position...
-    MWAW_DEBUG_MSG(("HMWKGraph::sendFrame: sending group is not implemented\n"));
+  case 11: {
+    HMWKGraphInternal::Group const &group=reinterpret_cast<HMWKGraphInternal::Group const &>(frame);
+    MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+    if ((pos.m_anchorTo==MWAWPosition::Char || pos.m_anchorTo==MWAWPosition::CharBaseLine) &&
+        (!graphicListener || graphicListener->isDocumentStarted() || !canCreateGraphic(group))) {
+      MWAWPosition framePos(pos);
+      framePos.m_anchorTo = MWAWPosition::Frame;
+      framePos.setOrigin(Vec2f(0,0));
+      MWAWSubDocumentPtr subdoc
+      (new HMWKGraphInternal::SubDocument
+       (*this, input, framePos, HMWKGraphInternal::SubDocument::Group, frame.m_fileId));
+      listener->insertTextBox(pos, subdoc, extras);
+      return true;
+    }
+    sendGroup(group, pos);
     break;
+  }
   default:
     MWAW_DEBUG_MSG(("HMWKGraph::sendFrame: sending type %d is not implemented\n", frame.m_type));
     break;
@@ -1151,12 +1274,8 @@ bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
 bool HMWKGraph::sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
-  Vec2f pictSz = pict.m_pos.size();
-  if (pictSz[0] < 0) pictSz.setX(-pictSz[0]);
-  if (pictSz[1] < 0) pictSz.setY(-pictSz[1]);
-
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
-    pos.setSize(pictSz);
+    pos.setSize(pict.getBdBox().size());
   //fixme: check if we have border
   sendPicture(pict.m_fileId, pos, extras);
   return true;
@@ -1165,44 +1284,17 @@ bool HMWKGraph::sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MW
 bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosition pos, WPXPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
-  Vec2f textboxSz = textbox.m_pos.size();
-  if (textboxSz[0] < 0) textboxSz.setX(-textboxSz[0]);
-  if (textboxSz[1] < 0) textboxSz.setY(-textboxSz[1]);
-
+  Vec2f textboxSz = textbox.getBdBox().size();
   if (textbox.m_type==10) {
     if (textbox.m_dim[0] > textboxSz[0]) textboxSz[0]=textbox.m_dim[0];
     if (textbox.m_dim[1] > textboxSz[1]) textboxSz[1]=textbox.m_dim[1];
     pos.setSize(textboxSz);
+    pos.setOrder(100); // put note in front
   } else if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(textboxSz);
+
   WPXPropertyList pList(extras);
-
-  MWAWColor color;
-  MWAWColor lineColor=MWAWColor::black(), surfaceColor=MWAWColor::white();
-  if (textbox.getLineColor(color))
-    lineColor = color;
-  if (textbox.getSurfaceColor(color))
-    surfaceColor = color;
-
-  if (textbox.m_type == 10) {
-    std::stringstream stream;
-    stream << textbox.m_lineWidth*0.03 << "cm solid " << lineColor;
-    pList.insert("fo:border-left", stream.str().c_str());
-    pList.insert("fo:border-bottom", stream.str().c_str());
-    pList.insert("fo:border-right", stream.str().c_str());
-
-    stream.str("");
-    stream << textbox.m_borders[0][1]*textbox.m_lineWidth*0.03 << "cm solid " << lineColor;
-    pList.insert("fo:border-top", stream.str().c_str());
-  } else if (textbox.m_lineWidth > 0) {
-    std::stringstream stream;
-    stream << textbox.m_lineWidth*0.03 << "cm solid " << lineColor;
-    pList.insert("fo:border", stream.str().c_str());
-  }
-
-  if (!surfaceColor.isWhite())
-    pList.insert("fo:background-color", surfaceColor.str().c_str());
-
+  textbox.addTo(pList);
   MWAWSubDocumentPtr subdoc(new HMWKGraphInternal::SubDocument(*this, m_parserState->m_input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
   m_parserState->m_listener->insertTextBox(pos, subdoc, pList);
 
@@ -1212,29 +1304,11 @@ bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosit
 bool HMWKGraph::sendShapeGraph(HMWKGraphInternal::ShapeGraph const &pict, MWAWPosition pos)
 {
   if (!m_parserState->m_listener) return true;
-  Vec2f pictSz = pict.m_pos.size();
-  if (pictSz[0] < 0) pictSz.setX(-pictSz[0]);
-  if (pictSz[1] < 0) pictSz.setY(-pictSz[1]);
-  Box2f box(Vec2f(0,0), pictSz);
-
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
-    pos.setSize(pictSz);
-
-  MWAWGraphicStyle pStyle;
-  if (pict.m_shape.m_type==MWAWGraphicShape::Line) {
-    if (pict.m_arrowsFlag&1) pStyle.m_arrows[0]=true;
-    if (pict.m_arrowsFlag&2) pStyle.m_arrows[1]=true;
-  }
-  pStyle.m_lineWidth=pict.m_lineWidth;
-  MWAWColor color;
-  if (pict.getLineColor(color))
-    pStyle.m_lineColor=color;
-  if (pict.getSurfaceColor(color))
-    pStyle.setSurfaceColor(color);
-
+    pos.setSize(pict.getBdBox().size());
   pos.setOrigin(pos.origin());
   pos.setSize(pos.size()+Vec2f(4,4));
-  m_parserState->m_listener->insertPicture(pos,pict.m_shape,pStyle);
+  m_parserState->m_listener->insertPicture(pos,pict.m_shape,pict.getStyle());
   return true;
 }
 
@@ -1293,30 +1367,21 @@ shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<H
       break;
     }
     shape.m_type=MWAWGraphicShape::Line;
-    graph->m_arrowsFlag = (int) input->readLong(1);
+    int arrowFlags=(int) input->readULong(1);
+    if (arrowFlags&1) graph->m_style.m_arrows[0]=true;
+    if (arrowFlags&2) graph->m_style.m_arrows[1]=true;
+    if (arrowFlags&0xFC) f << "#arrowsFl=" << (arrowFlags & 0xFC) << ",";
     for (int i = 0; i < 5; ++i) { // always 0
       val = input->readLong(2);
       if (val) f << "f" << i << "=" << val << ",";
     }
-    Vec2f minPt;
     float coord[2];
     for (int pt = 0; pt < 2; ++pt) {
       for (int i = 0; i < 2; ++i)
         coord[i] = float(input->readLong(4))/65536.f;
       Vec2f vertex=Vec2f(coord[1],coord[0]);
       shape.m_vertices.push_back(vertex);
-      if (pt==0) {
-        minPt=vertex;
-        continue;
-      }
-      for (int c=0; c < 2; ++c) {
-        if (vertex[c]<minPt[c])
-          minPt[c]=vertex[c];
-      }
     }
-    minPt -= bdbox[0];
-    shape.m_vertices[0] -= minPt;
-    shape.m_vertices[1] -= minPt;
     break;
   }
   case 1: // rectangle
@@ -1368,9 +1433,7 @@ shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<H
       break;
     }
 
-    Vec2f center = bdbox.center();
-    Vec2f axis = 0.5*Vec2f(bdbox.size());
-    // we must compute the real bd box
+    // we must compute the real bd box: first the box on the unit circle
     float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
     int limitAngle[2];
     for (int i = 0; i < 2; ++i)
@@ -1379,15 +1442,19 @@ shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<H
       float ang = (bord == limitAngle[0]) ? float(angles[0]) :
                   (bord == limitAngle[1]+1) ? float(angles[1]) : float(90 * bord);
       ang *= float(M_PI/180.);
-      float actVal[2] = { axis[0] *std::cos(ang), -axis[1] *std::sin(ang)};
+      float actVal[2] = { std::cos(ang), -std::sin(ang)};
       if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
       else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
       if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
       else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
     }
-    shape.m_type=MWAWGraphicShape::Arc;
-    shape.m_bdBox=Box2f(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
-                        Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
+    float factor[2]= {bdbox.size()[0]/(maxVal[0]>minVal[0]?maxVal[0]-minVal[0]:0.f),
+                      bdbox.size()[1]/(maxVal[1]>minVal[1]?maxVal[1]-minVal[1]:0.f)
+                     };
+    float delta[2]= {bdbox[0][0]-minVal[0]*factor[0],bdbox[0][1]-minVal[1]*factor[1]};
+    shape.m_formBox=Box2f(Vec2f(delta[0]-factor[0],delta[1]-factor[1]),
+                          Vec2f(delta[0]+factor[0],delta[1]+factor[1]));
+    shape.m_type=MWAWGraphicShape::Pie;
     shape.m_arcAngles=Vec2f(angles[0],angles[1]);
     for (int i = 0; i < 12; ++i) { // always 0
       val = input->readLong(2);
@@ -1417,20 +1484,9 @@ shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<H
       float dim[2];
       for (int c=0; c < 2; ++c)
         dim[c] = float(input->readLong(4))/65536.f;
-      Vec2f vertex=Vec2f(dim[1], dim[0]);
+      Vec2f vertex=Vec2f(dim[1], dim[0])+bdbox[0];
       shape.m_vertices.push_back(vertex);
-      if (i==0) {
-        minPt=vertex;
-        continue;
-      }
-      for (int c=0; c < 2; ++c) {
-        if (minPt[c]>vertex[c])
-          minPt=vertex[c];
-      }
     }
-    minPt-=bdbox[0];
-    for (size_t i = 0; i < size_t(numPt); ++i)
-      shape.m_vertices[i] -= minPt;
     break;
   }
   default:
@@ -1687,10 +1743,11 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
     if (!m_state->getColor(color, backCol))
       f << "#backcolor=" << color << ",";
     int pattern = (int) input->readULong(2);
-    float patPercent = 1.0;
-    if (!m_state->getPatternPercent(pattern, patPercent))
+    HMWKGraphInternal::Pattern pat;
+    if (pattern && m_state->getPattern(pattern, pat))
+      cell->setBackgroundColor(m_state->getColor(backCol, pat.m_percent));
+    else if (pattern)
       f << "#backPattern=" << pattern << ",";
-    cell->setBackgroundColor(m_state->getColor(backCol, patPercent));
 
     cell->m_flags = (int) input->readULong(2);
     if (cell->m_flags&1) cell->setVAlignement(MWAWCell::VALIGN_CENTER);
@@ -1743,10 +1800,14 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
       if (!m_state->getColor(color, col))
         f2 << "#color=" << color << ",";
       pattern = (int) input->readULong(2);
-      patPercent = 1.0;
-      if (!m_state->getPatternPercent(pattern, patPercent))
-        f2 << "#pattern=" << pattern << ",";
-      border.m_color = m_state->getColor(col, patPercent);
+      if (pattern==0) border.m_style=MWAWBorder::None;
+      else {
+        if (!m_state->getPattern(pattern, pat)) {
+          f2 << "#pattern=" << pattern << ",";
+          border.m_color = col;
+        } else
+          border.m_color = m_state->getColor(col, pat.m_percent);
+      }
       val = (long) input->readULong(2);
       if (val) f2 << "unkn=" << val << ",";
 
@@ -1779,6 +1840,293 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
 }
 
 ////////////////////////////////////////////////////////////
+// group
+////////////////////////////////////////////////////////////
+bool HMWKGraph::sendGroup(long groupId, MWAWPosition pos)
+{
+  if (!m_parserState->m_listener) return true;
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt=
+    m_state->m_framesMap.find(groupId);
+  if (fIt == m_state->m_framesMap.end()) {
+    MWAW_DEBUG_MSG(("HMWKGraph::sendGroup: can not find group %lx\n", groupId));
+    return false;
+  }
+  shared_ptr<HMWKGraphInternal::Frame> frame=fIt->second;
+  if (!frame || frame->m_type!=11) {
+    MWAW_DEBUG_MSG(("HMWKGraph::sendGroup: %lx seems bad\n", groupId));
+    return false;
+  }
+  return sendGroup(reinterpret_cast<HMWKGraphInternal::Group const&>(*frame), pos);
+}
+
+bool HMWKGraph::sendGroup(HMWKGraphInternal::Group const &group, MWAWPosition pos)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("HMWKGraph::sendGroup: can not find the listener\n"));
+    return true;
+  }
+  group.m_parsed=true;
+  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+  if (graphicListener && !graphicListener->isDocumentStarted()) {
+    sendGroupChild(group,pos);
+    return true;
+  }
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt;
+  for (size_t c=0; c<group.m_childsList.size(); ++c) {
+    long fId=group.m_childsList[c].m_fileId;
+    fIt=m_state->m_framesMap.find(fId);
+    if (fIt != m_state->m_framesMap.end() && fIt->first==fId && fIt->second) {
+      HMWKGraphInternal::Frame const &frame=*fIt->second;
+      MWAWPosition fPos(pos);
+      fPos.setOrigin(frame.m_pos[0]-group.m_pos[0]+pos.origin());
+      fPos.setSize(frame.m_pos.size());
+      sendFrame(frame, fPos);
+      continue;
+    }
+    MWAW_DEBUG_MSG(("HMWKGraph::sendGroup: can not find child %lx\n", fId));
+  }
+  return true;
+}
+
+bool HMWKGraph::canCreateGraphic(HMWKGraphInternal::Group const &group)
+{
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt;
+  int page = group.m_page;
+  for (size_t c=0; c<group.m_childsList.size(); ++c) {
+    long fId=group.m_childsList[c].m_fileId;
+    fIt=m_state->m_framesMap.find(fId);
+    if (fIt == m_state->m_framesMap.end() || fIt->first!=fId || !fIt->second)
+      continue;
+    HMWKGraphInternal::Frame const &frame=*fIt->second;
+    if (frame.m_page!=page) return false;
+    switch(frame.m_type) {
+    case 4:
+      if (!m_mainParser->canSendTextAsGraphic
+          (reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame).m_textFileId,0))
+        return false;
+      break;
+    case 8: // shape
+      break;
+    case 11:
+      if (!canCreateGraphic(reinterpret_cast<HMWKGraphInternal::Group const &>(frame)))
+        return false;
+      break;
+    default:
+      return false;
+    }
+  }
+  return true;
+}
+
+void HMWKGraph::sendGroup(HMWKGraphInternal::Group const &group, MWAWGraphicListenerPtr &listener)
+{
+  if (!listener) return;
+  group.m_parsed=true;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt;
+  for (size_t c=0; c<group.m_childsList.size(); ++c) {
+    long fId=group.m_childsList[c].m_fileId;
+    fIt=m_state->m_framesMap.find(fId);
+    if (fIt == m_state->m_framesMap.end() || fIt->first!=fId || !fIt->second)
+      continue;
+    HMWKGraphInternal::Frame const &frame=*fIt->second;
+    Box2f box=frame.getBdBox();
+    switch(frame.m_type) {
+    case 4: {
+      frame.m_parsed=true;
+      HMWKGraphInternal::TextBox const &textbox=
+        reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame);
+      MWAWSubDocumentPtr subdoc
+      (new HMWKGraphInternal::SubDocument(*this, input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
+      listener->insertTextBox(box, subdoc, textbox.m_style);
+      break;
+    }
+    case 8: {
+      frame.m_parsed=true;
+      HMWKGraphInternal::ShapeGraph const &shape=
+        reinterpret_cast<HMWKGraphInternal::ShapeGraph const &>(frame);
+      listener->insertPicture(box, shape.m_shape, shape.getStyle());
+      break;
+    }
+    case 11:
+      sendGroup(reinterpret_cast<HMWKGraphInternal::Group const &>(frame), listener);
+      break;
+    default:
+      MWAW_DEBUG_MSG(("HMWKGraph::sendGroup: unexpected type %d\n", frame.m_type));
+      break;
+    }
+  }
+}
+
+void HMWKGraph::sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPosition const &pos)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+  if (!listener || !graphicListener || graphicListener->isDocumentStarted()) {
+    MWAW_DEBUG_MSG(("HMWKGraph::sendGroupChild: can not find the listeners\n"));
+    return;
+  }
+  size_t numChilds=group.m_childsList.size(), childNotSent=0;
+  if (!numChilds) return;
+
+  int numDataToMerge=0;
+  Box2f partialBdBox;
+  MWAWPosition partialPos(pos);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt;
+  for (size_t c=0; c<numChilds; ++c) {
+    long fId=group.m_childsList[c].m_fileId;
+    fIt=m_state->m_framesMap.find(fId);
+    if (fIt == m_state->m_framesMap.end() || fIt->first!=fId || !fIt->second) {
+      MWAW_DEBUG_MSG(("HMWKGraph::sendGroupChild: can not find child %lx\n", fId));
+      continue;
+    }
+    HMWKGraphInternal::Frame const &frame=*fIt->second;
+    bool canMerge=false;
+    if (frame.m_page==group.m_page) {
+      switch (frame.m_type) {
+      case 4:
+        canMerge = m_mainParser->canSendTextAsGraphic
+                   (reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame).m_textFileId,0);
+        break;
+      case 8: // shape
+        canMerge = true;
+        break;
+      case 11:
+        canMerge = canCreateGraphic(reinterpret_cast<HMWKGraphInternal::Group const &>(frame));
+        break;
+      default:
+        break;
+      }
+    }
+    bool isLast=false;
+    if (canMerge) {
+      Box2f box=frame.getBdBox();
+      if (numDataToMerge == 0)
+        partialBdBox=box;
+      else
+        partialBdBox=partialBdBox.getUnion(box);
+      ++numDataToMerge;
+      if (c+1 < numChilds)
+        continue;
+      isLast=true;
+    }
+
+    if (numDataToMerge>1) {
+      partialBdBox.extend(3);
+      graphicListener->startGraphic(partialBdBox);
+      size_t lastChild = isLast ? c : c-1;
+      for (size_t ch=childNotSent; ch <= lastChild; ++ch) {
+        long localFId=group.m_childsList[ch].m_fileId;
+        fIt=m_state->m_framesMap.find(localFId);
+        if (fIt == m_state->m_framesMap.end() || fIt->first!=localFId || !fIt->second)
+          continue;
+        HMWKGraphInternal::Frame const &child=*fIt->second;
+        Box2f box=child.getBdBox();
+        switch(child.m_type) {
+        case 4: {
+          child.m_parsed=true;
+          HMWKGraphInternal::TextBox const &textbox=
+            reinterpret_cast<HMWKGraphInternal::TextBox const &>(child);
+          MWAWSubDocumentPtr subdoc
+          (new HMWKGraphInternal::SubDocument(*this, input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
+          graphicListener->insertTextBox(box, subdoc, textbox.m_style);
+          break;
+        }
+        case 8: {
+          child.m_parsed=true;
+          HMWKGraphInternal::ShapeGraph const &shape=
+            reinterpret_cast<HMWKGraphInternal::ShapeGraph const &>(child);
+          graphicListener->insertPicture(box, shape.m_shape, shape.getStyle());
+          break;
+        }
+        case 11:
+          sendGroup(reinterpret_cast<HMWKGraphInternal::Group const &>(child), graphicListener);
+          break;
+        default:
+          MWAW_DEBUG_MSG(("HMWKGraph::sendGroupChild: unexpected type %d\n", child.m_type));
+          break;
+        }
+      }
+      WPXBinaryData data;
+      std::string type;
+      if (graphicListener->endGraphic(data,type)) {
+        partialPos.setOrigin(pos.origin()+partialBdBox[0]-group.m_pos[0]);
+        partialPos.setSize(partialBdBox.size());
+        listener->insertPicture(partialPos, data, type);
+        if (isLast)
+          break;
+        childNotSent=c;
+      }
+    }
+
+    // time to send back the data
+    for ( ; childNotSent <= c; ++childNotSent) {
+      long localFId=group.m_childsList[childNotSent].m_fileId;
+      fIt=m_state->m_framesMap.find(localFId);
+      if (fIt != m_state->m_framesMap.end() && fIt->first==localFId && fIt->second) {
+        HMWKGraphInternal::Frame const &childFrame=*fIt->second;
+        MWAWPosition fPos(pos);
+        fPos.setOrigin(childFrame.m_pos[0]-group.m_pos[0]+pos.origin());
+        fPos.setSize(childFrame.m_pos.size());
+        sendFrame(childFrame, fPos);
+        continue;
+      }
+      MWAW_DEBUG_MSG(("HMWKGraph::sendGroupChild: can not find child %lx\n", localFId));
+    }
+    numDataToMerge=0;
+  }
+}
+
+void HMWKGraph::checkGroupStructures()
+{
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
+    m_state->m_framesMap.begin();
+  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
+    if (!fIt->second) continue;
+    HMWKGraphInternal::Frame const &frame = *fIt->second;
+    if (frame.m_parsed || frame.m_type!=11 || frame.m_inGroup)
+      continue;
+    std::multimap<long, long> seens;
+    checkGroupStructures(fIt->first, frame.m_fileSubId, seens, false);
+  }
+}
+
+bool HMWKGraph::checkGroupStructures(long fileId, long fileSubId, std::multimap<long, long> &seens, bool inGroup)
+{
+  std::multimap<long, long>::const_iterator it=seens.lower_bound(fileId);
+  while (it!=seens.end() && it->first==fileId) {
+    if (it->second != fileSubId)
+      continue;
+    MWAW_DEBUG_MSG(("HMWKGraph::checkGroupStructures: zone %ld[%ld] already find\n", fileId, fileSubId));
+    return false;
+  }
+  seens.insert(std::multimap<long, long>::value_type(fileId, fileSubId));
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::iterator fIt =
+    m_state->m_framesMap.lower_bound(fileId);
+  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
+    if (fIt->first!=fileId) break;
+    if (!fIt->second) continue;
+    HMWKGraphInternal::Frame &frame = *fIt->second;
+    frame.m_inGroup=inGroup;
+    if (frame.m_fileSubId != fileSubId) continue;
+    if (frame.m_type==11) {
+      HMWKGraphInternal::Group &group=reinterpret_cast<HMWKGraphInternal::Group &>(frame);
+      for (size_t c=0; c < group.m_childsList.size(); ++c) {
+        if (checkGroupStructures(group.m_childsList[c].m_fileId, 0, seens, true))
+          continue;
+        group.m_childsList.resize(c);
+        break;
+      }
+    }
+    return true;
+  }
+  MWAW_DEBUG_MSG(("HMWKGraph::checkGroupStructures: can not find zone %ld[%ld]\n", fileId, fileSubId));
+  return true;
+}
+
+////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
 bool HMWKGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
@@ -1791,7 +2139,7 @@ bool HMWKGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
   for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (notSend.find(fIt->first) != notSend.end() || !fIt->second) continue;
     HMWKGraphInternal::Frame const &frame = *fIt->second;
-    if (frame.m_parsed || frame.m_type==3)
+    if (frame.m_parsed || frame.m_type==3 || frame.m_inGroup)
       continue;
     MWAWPosition pos(frame.m_pos[0],frame.m_pos.size(),WPX_POINT);
     pos.setRelativePosition(MWAWPosition::Page);

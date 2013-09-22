@@ -43,6 +43,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicListener.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWRSRCParser.hxx"
@@ -377,7 +378,21 @@ bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
   return true;
 }
 
-bool HMWKText::sendText(long id, long subId)
+bool HMWKText::canSendTextAsGraphic(long id, long subId)
+{
+  std::multimap<long, shared_ptr<HMWKZone> >::iterator tIt
+    =m_state->m_IdTextMaps.lower_bound(id);
+  if (tIt == m_state->m_IdTextMaps.end() || tIt->first != id)
+    return false;
+  while (tIt != m_state->m_IdTextMaps.end() && tIt->first == id) {
+    shared_ptr<HMWKZone> zone = (tIt++)->second;
+    if (!zone || zone->m_subId != subId) continue;
+    return canSendTextAsGraphic(*zone);
+  }
+  return false;
+}
+
+bool HMWKText::sendText(long id, long subId, bool asGraphic)
 {
   std::multimap<long, shared_ptr<HMWKZone> >::iterator tIt
     =m_state->m_IdTextMaps.lower_bound(id);
@@ -388,7 +403,7 @@ bool HMWKText::sendText(long id, long subId)
   while (tIt != m_state->m_IdTextMaps.end() && tIt->first == id) {
     shared_ptr<HMWKZone> zone = (tIt++)->second;
     if (!zone || zone->m_subId != subId) continue;
-    sendText(*zone);
+    sendText(*zone, asGraphic);
     return true;
   }
   MWAW_DEBUG_MSG(("HMWKText::sendText: can not find the text zone\n"));
@@ -401,20 +416,85 @@ bool HMWKText::sendMainText()
   for ( ; tIt!=m_state->m_IdTypeMaps.end(); ++tIt) {
     if (tIt->second != 0)
       continue;
-    sendText(tIt->first);
+    sendText(tIt->first, 0);
     return true;
   }
   MWAW_DEBUG_MSG(("HMWKText::sendText: can not find the main zone\n"));
   return false;
 }
 
-bool HMWKText::sendText(HMWKZone &zone)
+bool HMWKText::canSendTextAsGraphic(HMWKZone &zone)
+{
+  if (!zone.valid()) return false;
+
+  long dataSz = zone.length();
+  MWAWInputStreamPtr input = zone.m_input;
+  long pos = zone.begin();
+  input->seek(pos, WPX_SEEK_SET);
+  if (m_state->m_IdTypeMaps.find(zone.m_id)!= m_state->m_IdTypeMaps.end()
+      && m_state->m_IdTypeMaps.find(zone.m_id)->second == 0) // isMain
+    return false;
+  MWAWFont font;
+  while (!input->atEOS()) {
+    pos = input->tell();
+    long val = (long) input->readULong(1);
+    if (val == 0 && input->atEOS()) break;
+    if (val != 1 || input->readLong(1) != 0)
+      return false;
+    int type = (int) input->readLong(2);
+    bool done=false;
+    switch(type) {
+    case 1:
+      if (!readFont(zone,font))
+        return false;
+      done = true;
+      break;
+    case 2: { // ruler
+      HMWKTextInternal::Paragraph para;
+      if (!readParagraph(zone,para))
+        return false;
+      done = true;
+      break;
+    }
+    case 3: // footnote, attachment
+    case 4: // section
+      return false;
+    default:
+      break;
+    }
+
+    if (!done) {
+      input->seek(pos+4, WPX_SEEK_SET);
+      long sz = (long) input->readULong(2);
+      if (pos+6+sz > dataSz) return false;
+    }
+
+    pos = input->tell();
+    while (!input->atEOS()) {
+      int c=(int) input->readULong(2);
+      if (c==0x100) {
+        input->seek(-2, WPX_SEEK_CUR);
+        break;
+      }
+      if (c==0 && input->atEOS())
+        break;
+      if (c==0) return false;
+    }
+  }
+  return true;
+}
+
+bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
 {
   if (!zone.valid()) {
     MWAW_DEBUG_MSG(("HMWKText::sendText: called without any zone\n"));
     return false;
   }
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWListenerPtr listener;
+  if (asGraphic)
+    listener=m_parserState->m_graphicListener;
+  else
+    listener=m_parserState->m_listener;
   if (!listener) {
     MWAW_DEBUG_MSG(("HMWKText::sendText: can not find a listener\n"));
     return false;
@@ -435,6 +515,10 @@ bool HMWKText::sendText(HMWKZone &zone)
   bool isMain = false;
   if (m_state->m_IdTypeMaps.find(zone.m_id)!= m_state->m_IdTypeMaps.end())
     isMain = m_state->m_IdTypeMaps.find(zone.m_id)->second == 0;
+  if (isMain && asGraphic) {
+    MWAW_DEBUG_MSG(("HMWKText::sendText: can not send main zone has graphic\n"));
+    isMain=true;
+  }
   int actPage = 1, actCol = 0, numCol=1, actSection = 1;
   float width = float(72.0*m_mainParser->getPageWidth());
 
@@ -501,9 +585,8 @@ bool HMWKText::sendText(HMWKZone &zone)
       case 8:
       case 9:
       case 10:
+      case 11:
         m_mainParser->sendZone(token.m_id);
-        break;
-      case 11: // group: implement me
         break;
       default:
         MWAW_DEBUG_MSG(("HMWKText::sendText: do not send how to send token with type: %d\n", token.m_type));
@@ -1109,6 +1192,10 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
   for (int d=0; d < 5; d++)
     pattern[d] = (int) input->readULong(2);
   for (int d=0; d < 5; d++) {
+    if (!pattern[d]) {
+      borders[d].m_style=MWAWBorder::None;
+      continue;
+    }
     if (!color[d] && !pattern[d])
       continue;
     MWAWColor col;
@@ -1361,14 +1448,7 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
   return true;
 }
 
-////////////////////////////////////////////////////////////
-//
-// Low level
-//
-////////////////////////////////////////////////////////////
-
 //! send data to the listener
-
 void HMWKText::flushExtra()
 {
   if (!m_parserState->m_listener) return;

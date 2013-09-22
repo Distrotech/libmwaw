@@ -185,7 +185,7 @@ MWAWGraphicShape MWAWGraphicShape::line(Vec2f const &orig, Vec2f const &dest)
 
 std::ostream &operator<<(std::ostream &o, MWAWGraphicShape const &sh)
 {
-  o << "box=" << o << sh.m_bdBox << ",";
+  o << "box=" << sh.m_bdBox << ",";
   switch(sh.m_type) {
   case MWAWGraphicShape::Line:
     o << "line,";
@@ -205,7 +205,8 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicShape const &sh)
     o << "circle,";
     break;
   case MWAWGraphicShape::Arc:
-    o << "arc,";
+  case MWAWGraphicShape::Pie:
+    o << (sh.m_type == MWAWGraphicShape::Arc ? "arc," : "pie,");
     o << "box[ellipse]=" << sh.m_formBox << ",";
     o << "angle=" << sh.m_arcAngles << ",";
     break;
@@ -330,7 +331,8 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
     list.insert("svg:ry",pt.y(), WPX_POINT);
     interface.drawEllipse(list);
     return true;
-  case Arc: {
+  case Arc:
+  case Pie: {
     Vec2f center=0.5*(m_formBox[0]+m_formBox[1])+decal;
     Vec2f rad=0.5*(m_formBox[1]-m_formBox[0]);
     float angl0=m_arcAngles[0];
@@ -350,8 +352,17 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
     if (angl1-angl0>=180.f && angl1-angl0<=180.f)
       angl1+=0.01f;
     float angl=angl0*float(M_PI/180.);
+    bool addCenter=m_type==Pie && style.hasSurface();
+    if (addCenter) {
+      pt=center;
+      list.insert("libwpg:path-action", "M");
+      list.insert("svg:x",pt.x(), WPX_POINT);
+      list.insert("svg:y",pt.y(), WPX_POINT);
+      vect.append(list);
+    }
+    list.clear();
     pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
-    list.insert("libwpg:path-action", "M");
+    list.insert("libwpg:path-action", addCenter ? "L" : "M");
     list.insert("svg:x",pt.x(), WPX_POINT);
     list.insert("svg:y",pt.y(), WPX_POINT);
     vect.append(list);

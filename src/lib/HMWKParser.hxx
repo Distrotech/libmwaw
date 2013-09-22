@@ -206,8 +206,11 @@ protected:
 
   // interface with the text parser
 
-  //! send a text zone (not implemented)
-  bool sendText(long id, long subId=0);
+  //! send a text zone
+  bool sendText(long id, long subId, bool asGraphic=false);
+
+  //! check if we can send a textzone has graphic
+  bool canSendTextAsGraphic(long id, long subId);
 
   // interface with the graph parser
 
