@@ -1,10 +1,16 @@
 CHANGES:
 
+09/23/2013:
+- HanMac Word-K: retrieve the patterns, the textboxes borders and links,
+  try to reconstruct a single picture for a group of shape, ...
+
 09/18/2013:
 - add some functions to MWAWGraphicListener: to make it more similar to
   MWAWContentListener
-- GreatWorks parser: add pattern+gradient, begin to generate pictures
-  which regroup many shapes, remain some problem with z-index
+- create a virtual parent class MWAWListener which regroups the similar
+  function in MWAWGraphicListener and MWAWContentListner,
+- GreatWorks parser: add pattern+gradient, generate pictures which
+  regroup many shapes, remain some problem with z-index
 
 09/15/2013:
 - make MWAWPictBasic disappear

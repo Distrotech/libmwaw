@@ -422,16 +422,18 @@ private:
 //! Internal: the textbox of a HMWKGraph
 struct TextBox : public Frame {
   //! constructor
-  TextBox(Frame const &orig, bool isComment) : Frame(orig), m_commentBox(isComment), m_textFileId(-1) {
-    for (int i = 0; i < 4; ++i) m_values[i] = 0;
-    for (int i = 0; i < 2; ++i) m_flags[i] = 0;
+  TextBox(Frame const &orig, bool isComment) : Frame(orig), m_commentBox(isComment), m_textFileId(-1), m_linkedIdList(), m_isLinked(false), m_extra("") {
     for (int i = 0; i < 2; ++i) m_dim[i] = 0;
   }
   //! destructor
   ~TextBox() {
   }
+  //! returns true if the box is linked to other textbox
+  bool isLinked() const {
+    return !m_linkedIdList.empty() || m_isLinked;
+  }
   //! add property to frame extra values
-  void addTo(WPXPropertyList &frames) const {
+  void addTo(WPXPropertyList &frames, WPXPropertyList &tbExtra) const {
     if (m_type == 10) {
       std::stringstream stream;
       stream << m_style.m_lineWidth*0.03 << "cm solid " << m_style.m_lineColor;
@@ -443,9 +445,41 @@ struct TextBox : public Frame {
       stream << m_borders[0][1]*m_style.m_lineWidth*0.03 << "cm solid " << m_style.m_lineColor;
       frames.insert("fo:border-top", stream.str().c_str());
     } else if (m_style.m_lineWidth > 0 && m_style.m_lineOpacity>0) {
-      std::stringstream stream;
-      stream << m_style.m_lineWidth*0.03 << "cm solid " << m_style.m_lineColor;
-      frames.insert("fo:border", stream.str().c_str());
+      MWAWBorder border;
+      border.m_width=m_style.m_lineWidth;
+      border.m_color=m_style.m_lineColor;
+      switch(m_borderType) {
+      case 0: // solid
+        break;
+      case 1:
+        border.m_type = MWAWBorder::Double;
+        break;
+      case 2:
+        border.m_type = MWAWBorder::Double;
+        border.m_widthsList.resize(3,1.);
+        border.m_widthsList[0]=2.0;
+        break;
+      case 3:
+        border.m_type = MWAWBorder::Double;
+        border.m_widthsList.resize(3,1.);
+        border.m_widthsList[2]=2.0;
+        break;
+      default:
+        MWAW_DEBUG_MSG(("HMWKGraphInternal::TextBox::addTo: unexpected type\n"));
+        break;
+      }
+      border.addTo(frames, "");
+    }
+    // now the link
+    if (m_type==4 && m_isLinked) {
+      WPXString fName;
+      fName.sprintf("Frame%ld", m_fileId);
+      frames.insert("libwpd:frame-name",fName);
+    }
+    if (m_type==4 && !m_linkedIdList.empty()) {
+      WPXString fName;
+      fName.sprintf("Frame%ld", m_linkedIdList[0]);
+      tbExtra.insert("libwpd:next-frame-name",fName);
     }
     if (m_style.hasSurfaceColor())
       frames.insert("fo:background-color", m_style.m_surfaceColor.str().c_str());
@@ -459,19 +493,17 @@ struct TextBox : public Frame {
   //! print local data
   std::string print() const {
     std::stringstream s;
-    for (int i = 0; i < 4; ++i) { // 0|1, 0, 0, 0
-      if (m_values[i])
-        s << "f" << i << "=" << m_values[i] << ",";
-    }
-    for (int i = 0; i < 2; ++i) { // 0|1, 0|1
-      if (m_flags[i])
-        s << "fl" << i << "=" << m_flags[i] << ",";
-    }
     if (m_dim[0] > 0 || m_dim[1] > 0)
       s << "commentsDim2=" << m_dim[0] << "x" << m_dim[1] << ",";
     if (m_textFileId>0)
       s << "textFileId=" << std::hex << m_textFileId << std::dec << ",";
-
+    if (!m_linkedIdList.empty()) {
+      s << "link[to]=[";
+      for (size_t l=0; l < m_linkedIdList.size(); ++l)
+        s << std::hex << m_linkedIdList[l] << std::dec << ",";
+      s << "],";
+    }
+    s << m_extra;
     return s.str();
   }
 
@@ -479,12 +511,14 @@ struct TextBox : public Frame {
   bool m_commentBox;
   //! the text file id
   long m_textFileId;
-  //! four unknown value
-  int m_values[4];
-  //! two unknown flag
-  int m_flags[2];
   //! two auxilliary dim for memo textbox
   float m_dim[2];
+  //! the list of linked remaining textbox id
+  std::vector<long> m_linkedIdList;
+  //! a flag to know if this textbox is linked to a previous box
+  bool m_isLinked;
+  //! extra data
+  std::string m_extra;
 };
 
 bool TableCell::sendContent(MWAWContentListenerPtr, MWAWTable &table)
@@ -1151,7 +1185,7 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
       HMWKGraphInternal::TextBox const &textbox=
         reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame);
       MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
-      if (m_mainParser->canSendTextAsGraphic(textbox.m_textFileId,0) &&
+      if (!textbox.isLinked() && m_mainParser->canSendTextAsGraphic(textbox.m_textFileId,0) &&
           graphicListener && !graphicListener->isDocumentStarted()) {
         textbox.m_parsed=true;
         MWAWSubDocumentPtr subdoc
@@ -1293,10 +1327,12 @@ bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosit
   } else if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(textboxSz);
 
-  WPXPropertyList pList(extras);
-  textbox.addTo(pList);
-  MWAWSubDocumentPtr subdoc(new HMWKGraphInternal::SubDocument(*this, m_parserState->m_input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
-  m_parserState->m_listener->insertTextBox(pos, subdoc, pList);
+  WPXPropertyList pList(extras), tbExtra;
+  textbox.addTo(pList, tbExtra);
+  MWAWSubDocumentPtr subdoc;
+  if (!textbox.m_isLinked)
+    subdoc.reset(new HMWKGraphInternal::SubDocument(*this, m_parserState->m_input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
+  m_parserState->m_listener->insertTextBox(pos, subdoc, pList, tbExtra);
 
   return true;
 }
@@ -1649,15 +1685,24 @@ shared_ptr<HMWKGraphInternal::TextBox> HMWKGraph::readTextBox(shared_ptr<HMWKZon
   textbox.reset(new HMWKGraphInternal::TextBox(header, isMemo));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
-  for (int i = 0; i < 2; ++i) // 0|1, 0||1
-    textbox->m_flags[i] = (int) input->readULong(1);
-  for (int i = 0; i < 3; ++i) // 0|1, 0, 0
-    textbox->m_values[i] = (int) input->readLong(2);
+  long val;
+  for (int i = 0; i < 3; ++i) { // 0|1,0|1,0|1,numtextbox linked
+    val = (int) input->readLong(1);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  int numLinks=(int) input->readLong(1);
+  if (numLinks!=(isMemo ? 0 : 1)) f << "numLinks=" << numLinks << ",";
+  long fChar=(long) input->readULong(4);
+  if (fChar) f << "first[char]=" << fChar << ",";
   textbox->m_textFileId = (long) input->readULong(4);
   if (isMemo) { // checkme
     for (int i = 0; i < 2; ++i)
       textbox->m_dim[1-i] = float(input->readLong(4))/65536.f;
+  } else if (numLinks>1 && pos+12+4*(numLinks-1) <= dataSz) {
+    for (int l=1; l<numLinks; ++l)
+      textbox->m_linkedIdList.push_back(input->readLong(4));
   }
+  textbox->m_extra=f.str();
   f.str("");
   f << "FrameDef(textboxData):";
   f << "fId=" << std::hex << textbox->m_textFileId << std::dec << "," << textbox->print();
@@ -1901,11 +1946,12 @@ bool HMWKGraph::canCreateGraphic(HMWKGraphInternal::Group const &group)
     HMWKGraphInternal::Frame const &frame=*fIt->second;
     if (frame.m_page!=page) return false;
     switch(frame.m_type) {
-    case 4:
-      if (!m_mainParser->canSendTextAsGraphic
-          (reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame).m_textFileId,0))
+    case 4: {
+      HMWKGraphInternal::TextBox const &text=reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame);
+      if (text.isLinked() || !m_mainParser->canSendTextAsGraphic(text.m_textFileId,0))
         return false;
       break;
+    }
     case 8: // shape
       break;
     case 11:
@@ -1986,10 +2032,11 @@ void HMWKGraph::sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPositi
     bool canMerge=false;
     if (frame.m_page==group.m_page) {
       switch (frame.m_type) {
-      case 4:
-        canMerge = m_mainParser->canSendTextAsGraphic
-                   (reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame).m_textFileId,0);
+      case 4: {
+        HMWKGraphInternal::TextBox const &text=reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame);
+        canMerge=!text.isLinked()&&m_mainParser->canSendTextAsGraphic(text.m_textFileId,0);
         break;
+      }
       case 8: // shape
         canMerge = true;
         break;
@@ -2079,17 +2126,33 @@ void HMWKGraph::sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPositi
   }
 }
 
-void HMWKGraph::checkGroupStructures()
+void HMWKGraph::prepareStructures()
 {
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
-    m_state->m_framesMap.begin();
+  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::iterator fIt =
+    m_state->m_framesMap.begin(), fIt2;
   for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (!fIt->second) continue;
-    HMWKGraphInternal::Frame const &frame = *fIt->second;
-    if (frame.m_parsed || frame.m_type!=11 || frame.m_inGroup)
-      continue;
-    std::multimap<long, long> seens;
-    checkGroupStructures(fIt->first, frame.m_fileSubId, seens, false);
+    HMWKGraphInternal::Frame &frame = *fIt->second;
+    if (frame.m_type==11 && !frame.m_inGroup) {
+      std::multimap<long, long> seens;
+      checkGroupStructures(fIt->first, frame.m_fileSubId, seens, false);
+    }
+    if (frame.m_type==4) {
+      HMWKGraphInternal::TextBox &text=reinterpret_cast<HMWKGraphInternal::TextBox &>(frame);
+      size_t numLink=text.m_linkedIdList.size();
+      for (size_t l=0; l < numLink; ++l) {
+        fIt2=m_state->m_framesMap.find(text.m_linkedIdList[l]);
+        if (fIt2==m_state->m_framesMap.end() || fIt2->first!=text.m_linkedIdList[l] || !fIt2->second || fIt2->second->m_type!=4) {
+          MWAW_DEBUG_MSG(("HMWKGraph::prepareStructures: can not find frame %lx\n", text.m_linkedIdList[l]));
+          text.m_linkedIdList.resize(l);
+          break;
+        }
+        HMWKGraphInternal::TextBox &follow=reinterpret_cast<HMWKGraphInternal::TextBox &>(*fIt2->second);
+        follow.m_isLinked=true;
+        if (l+1!=numLink)
+          follow.m_linkedIdList.push_back(text.m_linkedIdList[l+1]);
+      }
+    }
   }
 }
 

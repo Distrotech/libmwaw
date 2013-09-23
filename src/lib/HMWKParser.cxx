@@ -314,7 +314,7 @@ bool HMWKParser::createZones()
   }
 
   // retrieve the text type and pass information to text parser
-  m_graphParser->checkGroupStructures();
+  m_graphParser->prepareStructures();
   std::map<long,int> idTypeMap = m_graphParser->getTextFrameInformations();
   m_textParser->updateTextZoneTypes(idTypeMap);
 

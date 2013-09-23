@@ -111,8 +111,8 @@ protected:
   bool readFrames(shared_ptr<HMWKZone> zone);
   /** try to read a picture zone (type d)*/
   bool readPicture(shared_ptr<HMWKZone> zone);
-  /** check the group structures */
-  void checkGroupStructures();
+  /** check the group structures, the linked textbox */
+  void prepareStructures();
 
   // interface with mainParser
 
