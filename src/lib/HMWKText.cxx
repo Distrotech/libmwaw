@@ -517,7 +517,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
     isMain = m_state->m_IdTypeMaps.find(zone.m_id)->second == 0;
   if (isMain && asGraphic) {
     MWAW_DEBUG_MSG(("HMWKText::sendText: can not send main zone has graphic\n"));
-    isMain=true;
+    isMain=false;
   }
   int actPage = 1, actCol = 0, numCol=1, actSection = 1;
   float width = float(72.0*m_mainParser->getPageWidth());

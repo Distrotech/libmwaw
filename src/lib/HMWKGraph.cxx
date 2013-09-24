@@ -444,7 +444,7 @@ struct TextBox : public Frame {
       stream.str("");
       stream << m_borders[0][1]*m_style.m_lineWidth*0.03 << "cm solid " << m_style.m_lineColor;
       frames.insert("fo:border-top", stream.str().c_str());
-    } else if (m_style.m_lineWidth > 0 && m_style.m_lineOpacity>0) {
+    } else if (m_style.hasLine()) {
       MWAWBorder border;
       border.m_width=m_style.m_lineWidth;
       border.m_color=m_style.m_lineColor;
@@ -996,7 +996,6 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
       style.m_lineColor=col;
     else
       style.setSurfaceColor(col,1);
-
   }
   graph.m_id=(int) input->readLong(2);
   graph.m_baseline = float(input->readLong(4))/65536.f;

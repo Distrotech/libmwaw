@@ -78,10 +78,14 @@ public:
 protected:
   //! send the main text zone
   bool sendMainText();
-  //! send a text zone (not implemented)
-  bool sendText(long id, long cPos);
   //! send a text zone
-  bool sendText(HMWJTextInternal::TextZone const &zone, long cPos=0);
+  bool sendText(long id, long cPos, bool asGraphic=false);
+  //! check if we can send a textzone has graphic
+  bool canSendTextAsGraphic(long id, long cPos);
+  //! send a text zone
+  bool sendText(HMWJTextInternal::TextZone const &zone, long cPos, bool asGraphic);
+  //! check if we can send a textzone has graphic
+  bool canSendTextAsGraphic(HMWJTextInternal::TextZone const &zone, long cPos);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 

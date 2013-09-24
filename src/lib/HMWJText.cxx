@@ -43,6 +43,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicListener.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWRSRCParser.hxx"
@@ -423,7 +424,46 @@ std::vector<long> HMWJText::getTokenIdList() const
 ////////////////////////////////////////////////////////////
 //     Text
 ////////////////////////////////////////////////////////////
-bool HMWJText::sendText(long id, long cPos)
+bool HMWJText::canSendTextAsGraphic(long id, long cPos)
+{
+  if (m_state->m_idTextZoneMap.find(id)==m_state->m_idTextZoneMap.end()) {
+    MWAW_DEBUG_MSG(("HMWJText::canSendTextAsGraphic: can not find text zone with id %lx\n", id));
+    return false;
+  }
+  int zId = m_state->m_idTextZoneMap.find(id)->second;
+  if (zId < 0 || zId >= (int) m_state->m_textZoneList.size())
+    return false;
+  return canSendTextAsGraphic(m_state->m_textZoneList[size_t(zId)], cPos);
+}
+
+bool HMWJText::canSendTextAsGraphic(HMWJTextInternal::TextZone const &zone, long cPos)
+{
+  if (!zone.m_entry.valid())
+    return false;
+
+  std::multimap<long, HMWJTextInternal::PLC>::const_iterator plcIt=
+    zone.m_PLCMap.find(cPos);
+  while (plcIt != zone.m_PLCMap.end() && plcIt->first < cPos)
+    ++plcIt;
+  while (plcIt != zone.m_PLCMap.end()) {
+    HMWJTextInternal::PLC const &plc = plcIt++->second;
+    if (plc.m_type!=HMWJTextInternal::TOKEN) continue;
+    if (plc.m_id < 0 || plc.m_id >= (int) zone.m_tokenList.size())
+      continue;
+    HMWJTextInternal::Token tkn=zone.m_tokenList[size_t(plc.m_id)];
+    switch (tkn.m_type) {
+    case 1:
+    case 2:
+    case 0x20:
+      return false;
+    default:
+      break;
+    }
+  }
+  return true;
+}
+
+bool HMWJText::sendText(long id, long cPos, bool asGraphic)
 {
   if (m_state->m_idTextZoneMap.find(id)==m_state->m_idTextZoneMap.end()) {
     MWAW_DEBUG_MSG(("HMWJText::sendText: can not find text zone with id %lx\n", id));
@@ -432,7 +472,7 @@ bool HMWJText::sendText(long id, long cPos)
   int zId = m_state->m_idTextZoneMap.find(id)->second;
   if (zId < 0 || zId >= (int) m_state->m_textZoneList.size())
     return false;
-  return sendText(m_state->m_textZoneList[size_t(zId)], cPos);
+  return sendText(m_state->m_textZoneList[size_t(zId)], cPos, asGraphic);
 }
 
 bool HMWJText::sendMainText()
@@ -440,24 +480,30 @@ bool HMWJText::sendMainText()
   for (size_t i=0; i < m_state->m_textZoneList.size(); i++) {
     if (m_state->m_textZoneList[i].m_type != HMWJTextInternal::TextZone::T_Main)
       continue;
-    sendText(m_state->m_textZoneList[i]);
+    sendText(m_state->m_textZoneList[i],0,false);
     return true;
   }
   MWAW_DEBUG_MSG(("HMWJText::sendText: can not find the main zone\n"));
   return false;
 }
 
-bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
+
+bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos, bool asGraphic)
 {
   if (!zone.m_entry.valid()) {
     MWAW_DEBUG_MSG(("HMWJText::sendText: call without entry\n"));
     return false;
   }
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWListenerPtr listener;
+  if (asGraphic)
+    listener=m_parserState->m_graphicListener;
+  else
+    listener=m_parserState->m_listener;
   if (!listener) {
     MWAW_DEBUG_MSG(("HMWJText::sendText: can not find the listener\n"));
     return false;
   }
+
   zone.m_parsed=true;
   WPXBinaryData data;
   if (!m_mainParser->decodeZone(zone.m_entry, data)) {
@@ -497,6 +543,10 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
   long cPos=fPos, endCPos=-1;
   int actPage = 1, actCol = 0, numCol=1, actSection = 1;
 
+  if (isMain && asGraphic) {
+    MWAW_DEBUG_MSG(("HMWJText::sendText: can not send main zone has graphic\n"));
+    isMain=false;
+  }
   if (isMain)
     m_mainParser->newPage(1);
   if (isMain && !m_state->m_sectionList.size()) {
@@ -562,10 +612,18 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
           switch (tkn.m_type) {
           case 1:
             expectedChar=0x1;
+            if (asGraphic) {
+              MWAW_DEBUG_MSG(("HMWJText::sendText: unexpected token type=1 in graphic\n"));
+              break;
+            }
             m_mainParser->sendZone(tkn.m_id);
             break;
           case 2: {
             expectedChar=0x11;
+            if (asGraphic) {
+              MWAW_DEBUG_MSG(("HMWJText::sendText: can not insert footnote in graphic\n"));
+              break;
+            }
             if (tkn.m_localId < 0 && tkn.m_localId >= int(m_state->m_ftnFirstPosList.size())) {
               MWAW_DEBUG_MSG(("HMWJText::sendText: can not find footnote\n"));
               f << "[###ftnote]";
@@ -575,16 +633,20 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos)
             (new HMWJTextInternal::SubDocument
              (*this, input, m_state->m_ftnTextId,
               m_state->m_ftnFirstPosList[size_t(tkn.m_localId)]));
-            listener->insertNote(MWAWNote(MWAWNote::FootNote),subdoc);
+            m_parserState->m_listener->insertNote(MWAWNote(MWAWNote::FootNote),subdoc);
             break;
           }
           case 8: // TOC, ok to ignore
             break;
-          case 0x20: {
-            MWAWSubDocumentPtr subdoc(new HMWJTextInternal::SubDocument(*this, input, tkn.m_bookmark));
-            listener->insertComment(subdoc);
-            break;
-          }
+          case 0x20:
+            if (asGraphic) {
+              MWAW_DEBUG_MSG(("HMWJText::sendText: can not insert bookmark in graphic\n"));
+              break;
+            } else {
+              MWAWSubDocumentPtr subdoc(new HMWJTextInternal::SubDocument(*this, input, tkn.m_bookmark));
+              m_parserState->m_listener->insertComment(subdoc);
+              break;
+            }
           default:
             MWAW_DEBUG_MSG(("HMWJText::sendText: can not send token with type %d\n", tkn.m_type));
             break;
@@ -785,7 +847,7 @@ void HMWJText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
   int numZones = (int) m_state->m_textZoneList.size();
   for (it=idTypeMap.begin(); it != idTypeMap.end(); ++it) {
     if (m_state->m_idTextZoneMap.find(it->first)==m_state->m_idTextZoneMap.end()) {
-      MWAW_DEBUG_MSG(("HMWJText::readTextZonesList: can not find text zone with id %lx\n", it->first));
+      MWAW_DEBUG_MSG(("HMWJText::updateTextZoneTypes: can not find text zone with id %lx\n", it->first));
       continue;
     }
     int zId = m_state->m_idTextZoneMap.find(it->first)->second;
@@ -2267,7 +2329,7 @@ void HMWJText::flushExtra()
       MWAW_DEBUG_MSG(("HMWJText::flushExtra: find some unsent zone\n"));
       first = false;
     }
-    sendText(m_state->m_textZoneList[z]);
+    sendText(m_state->m_textZoneList[z],0,false);
     m_parserState->m_listener->insertEOL();
   }
 #endif

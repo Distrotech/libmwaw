@@ -136,7 +136,9 @@ protected:
   // interface with the text parser
 
   //! send a text zone
-  bool sendText(long id, long cPos);
+  bool sendText(long id, long cPos, bool asGraphic=false);
+  //! check if we can send a textzone has graphic
+  bool canSendTextAsGraphic(long id, long cPos);
 
   // interface with the graph parser
 

@@ -173,9 +173,14 @@ void HMWJParser::init()
   m_textParser.reset(new HMWJText(*this));
 }
 
-bool HMWJParser::sendText(long id, long cPos)
+bool HMWJParser::sendText(long id, long cPos, bool asGraphic)
 {
-  return m_textParser->sendText(id, cPos);
+  return m_textParser->sendText(id, cPos, asGraphic);
+}
+
+bool HMWJParser::canSendTextAsGraphic(long id, long cPos)
+{
+  return m_textParser->canSendTextAsGraphic(id, cPos);
 }
 
 bool HMWJParser::sendZone(long zId)
