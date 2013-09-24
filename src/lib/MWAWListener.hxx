@@ -46,6 +46,8 @@
 class MWAWListener
 {
 public:
+  virtual ~MWAWListener() {}
+
   /** the different break type */
   enum BreakType { PageBreak=0, SoftPageBreak, ColumnBreak };
 

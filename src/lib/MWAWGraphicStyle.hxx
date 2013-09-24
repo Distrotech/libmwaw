@@ -92,6 +92,8 @@ public:
       m_colors[0]=MWAWColor::black();
       m_colors[1]=MWAWColor::white();
     }
+    //! virtual destructor
+    virtual ~Pattern() {}
     //! return true if we does not have a pattern
     bool empty() const {
       if (m_dim[0]!=8 && m_dim[0]!=16 && m_dim[0]!=32) return true;
