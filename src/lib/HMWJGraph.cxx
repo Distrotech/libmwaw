@@ -237,7 +237,7 @@ public:
         border.m_widthsList[2]=2.0;
         break;
       default:
-        MWAW_DEBUG_MSG(("HMWKGraphInternal::TextBox::addTo: unexpected type\n"));
+        MWAW_DEBUG_MSG(("HMWJGraphInternal::FrameFormat::addTo: unexpected type\n"));
         break;
       }
       border.addTo(frames, "");
@@ -520,11 +520,15 @@ public:
 struct TextboxFrame :  public Frame {
 public:
   //! constructor
-  TextboxFrame(Frame const &orig) : Frame(orig), m_zId(0), m_width(0), m_cPos(0) {
+  TextboxFrame(Frame const &orig) : Frame(orig), m_zId(0), m_width(0), m_cPos(0), m_linkToFId(0), m_isLinked(false) {
   }
   //! returns true if the frame data are read
   virtual bool valid() const {
     return true;
+  }
+  //! returns true if the box is linked to other textbox
+  bool isLinked() const {
+    return m_linkToFId || m_isLinked;
   }
   //! print local data
   std::string print() const {
@@ -542,6 +546,10 @@ public:
   double m_width;
   //! the first char pos
   long m_cPos;
+  //! the next link zone
+  long m_linkToFId;
+  //! true if this zone is linked
+  bool m_isLinked;
 };
 
 ////////////////////////////////////////
@@ -801,6 +809,9 @@ public:
   //! the parser function
   void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
+  //! the parser function
+  void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType type);
+
 protected:
   /** the graph parser */
   HMWJGraph *m_graphParser;
@@ -843,6 +854,23 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   default:
     MWAW_DEBUG_MSG(("HMWJGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
     break;
+  }
+  m_input->seek(pos, WPX_SEEK_SET);
+}
+
+void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+{
+  if (!listener.get()) {
+    MWAW_DEBUG_MSG(("HMWJGraphInternal::SubDocument::parseGraphic: no listener\n"));
+    return;
+  }
+  assert(m_graphParser);
+
+  long pos = m_input->tell();
+  if (m_type==Text)
+    m_graphParser->sendText(m_id, m_firstChar, true);
+  else {
+    MWAW_DEBUG_MSG(("HMWJGraphInternal::SubDocument::parseGraphic: send type %d is not implemented\n", m_type));
   }
   m_input->seek(pos, WPX_SEEK_SET);
 }
@@ -911,9 +939,9 @@ int HMWJGraph::numPages() const
   return nPages;
 }
 
-bool HMWJGraph::sendText(long textId, long fPos)
+bool HMWJGraph::sendText(long textId, long fPos, bool asGraphic)
 {
-  return m_mainParser->sendText(textId, fPos);
+  return m_mainParser->sendText(textId, fPos, asGraphic);
 }
 
 std::map<long,int> HMWJGraph::getTextFrameInformations() const
@@ -1983,13 +2011,25 @@ bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAW
   if (!m_parserState->m_listener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(textbox.getBdBox().size());
-  WPXPropertyList pList(extras);
+  WPXPropertyList pList(extras), tbExtras;
 
   HMWJGraphInternal::FrameFormat const &format=
     m_state->getFrameFormat(textbox.m_formatId);
   format.addTo(pList);
-  MWAWSubDocumentPtr subdoc(new HMWJGraphInternal::SubDocument(*this, m_parserState->m_input, HMWJGraphInternal::SubDocument::Text, textbox.m_zId));
-  m_parserState->m_listener->insertTextBox(pos, subdoc, pList);
+  MWAWSubDocumentPtr subdoc;
+  if (!textbox.m_isLinked)
+    subdoc.reset(new HMWJGraphInternal::SubDocument(*this, m_parserState->m_input, HMWJGraphInternal::SubDocument::Text, textbox.m_zId));
+  else {
+    WPXString fName;
+    fName.sprintf("Frame%ld", textbox.m_fileId);
+    pList.insert("libwpd:frame-name",fName);
+  }
+  if (textbox.m_linkToFId) {
+    WPXString fName;
+    fName.sprintf("Frame%ld", textbox.m_linkToFId);
+    tbExtras.insert("libwpd:next-frame-name",fName);
+  }
+  m_parserState->m_listener->insertTextBox(pos, subdoc, pList, tbExtras);
 
   return true;
 }
@@ -2020,7 +2060,6 @@ bool HMWJGraph::sendTableUnformatted(long fId)
 ////////////////////////////////////////////////////////////
 // low level
 ////////////////////////////////////////////////////////////
-
 bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
@@ -2034,9 +2073,30 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   switch(frame.m_type) {
-  case 4:
+  case 4: {
     frame.m_parsed = true;
+    HMWJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(frame.m_formatId);
+    if (format.m_style.hasPattern()) {
+      HMWJGraphInternal::TextboxFrame const &textbox=
+        reinterpret_cast<HMWJGraphInternal::TextboxFrame const &>(frame);
+      MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+      if (!textbox.isLinked() && m_mainParser->canSendTextAsGraphic(textbox.m_zId,0) &&
+          graphicListener && !graphicListener->isDocumentStarted()) {
+        MWAWSubDocumentPtr subdoc
+        (new HMWJGraphInternal::SubDocument(*this, input, HMWJGraphInternal::SubDocument::Text, textbox.m_zId));
+        Box2f box(Vec2f(0,0),pos.size());
+        graphicListener->startGraphic(box);
+        WPXBinaryData data;
+        std::string type;
+        graphicListener->insertTextBox(box, subdoc, format.m_style);
+        if (!graphicListener->endGraphic(data, type))
+          return false;
+        listener->insertPicture(pos, data, type, extras);
+        return true;
+      }
+    }
     return sendTextbox(static_cast<HMWJGraphInternal::TextboxFrame const &>(frame), pos, extras);
+  }
   case 6: {
     HMWJGraphInternal::PictureFrame const &pict =
       static_cast<HMWJGraphInternal::PictureFrame const &>(frame);
@@ -2476,6 +2536,53 @@ shared_ptr<HMWJGraphInternal::ShapeGraph> HMWJGraph::readShapeGraph(HMWJGraphInt
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
+void HMWJGraph::prepareStructures()
+{
+  std::map<long, int >::const_iterator fIt= m_state->m_framesMap.begin();
+  std::multimap<long,size_t> textZoneFrameMap;
+  int numFrames = int(m_state->m_framesList.size());
+  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
+    int id = fIt->second;
+    if (id < 0 || id >= numFrames || !m_state->m_framesList[size_t(id)])
+      continue;
+    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[size_t(id)];
+    if (!frame.valid() || frame.m_type!=4)
+      continue;
+    HMWJGraphInternal::TextboxFrame const &text = reinterpret_cast<HMWJGraphInternal::TextboxFrame const &>(frame);
+    if (!text.m_zId) continue;
+    textZoneFrameMap.insert(std::multimap<long,size_t>::value_type(text.m_zId, size_t(id)));
+  }
+  std::multimap<long,size_t>::iterator tbIt=textZoneFrameMap.begin();
+  while (tbIt!=textZoneFrameMap.end()) {
+    long textId=tbIt->first;
+    std::map<long, HMWJGraphInternal::TextboxFrame *> nCharTextMap;
+    bool ok=true;
+    while (tbIt!=textZoneFrameMap.end() && tbIt->first==textId) {
+      size_t id=tbIt++->second;
+      HMWJGraphInternal::TextboxFrame &text =
+        reinterpret_cast<HMWJGraphInternal::TextboxFrame &>(*m_state->m_framesList[size_t(id)]);
+      if (nCharTextMap.find(text.m_cPos)!=nCharTextMap.end()) {
+        MWAW_DEBUG_MSG(("HMWJGraph::prepareStructures: pos %ld already exist for textZone %lx\n",
+                        text.m_cPos, textId));
+        ok=false;
+      } else
+        nCharTextMap[text.m_cPos]=&text;
+    }
+    size_t numIds=nCharTextMap.size();
+    if (!ok || numIds<=1) continue;
+    std::map<long, HMWJGraphInternal::TextboxFrame *>::iterator ctIt=nCharTextMap.begin();
+    HMWJGraphInternal::TextboxFrame *prevText=0;
+    for ( ; ctIt != nCharTextMap.end() ; ++ctIt) {
+      HMWJGraphInternal::TextboxFrame *newText=ctIt->second;
+      if (prevText) {
+        prevText->m_linkToFId=newText->m_fileId;
+        newText->m_isLinked=true;
+      }
+      prevText=newText;
+    }
+  }
+}
+
 bool HMWJGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
 {
   if (!m_parserState->m_listener)

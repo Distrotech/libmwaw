@@ -1095,7 +1095,6 @@ bool GWGraph::readPageFrames()
     f << "page=" << pageZone.m_page << ",";
     endPos=pos+6+(long)input->readULong(4);
   }
-  int val;
   static char const *(wh[])= {"head", "gstyle", "root", "unknown"};
   long zoneSz[4]= {0,0,0,0};
   for (int i=0; i < nZones; ++i) {
@@ -1204,7 +1203,7 @@ bool GWGraph::readPageFrames()
   f.str("");
   f << "GFrame[roots]: N=" << nRoots << ",roots=[";
   for (int i=0; i < nRoots; ++i) {
-    val = (int) input->readLong(2);
+    int val = (int) input->readLong(2);
     if (val==0) {
       f << "_,";
       continue;
@@ -1551,7 +1550,6 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
   libmwaw::DebugStream f;
   f << "GFrame[data]-F" << id+1 << ":";
   long pos=input->tell();
-  int val;
   switch(frame.m_type) {
   case 0:
     MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: find group with type=0\n"));
@@ -1677,7 +1675,7 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
       f << "###[N=" << group.m_numChild << "]";
       MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected number of group child\n"));
     }
-    val=(int) input->readLong(2); // always 2
+    int val=(int) input->readLong(2); // always 2
     if (val!=2) f << "f0=" << val << ",";
     f << "grpId=[";
     for (int j=0; j < nGrp; ++j) {

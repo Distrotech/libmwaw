@@ -78,7 +78,7 @@ void State::addListElement(WPXPropertyList const &list)
       m_listIdToPropertyMap.erase(it);
       break;
     }
-    it++;
+    ++it;
   }
   m_listIdToPropertyMap.insert(std::multimap<int, WPXPropertyList>::value_type(id,list));
 }
@@ -91,7 +91,7 @@ bool State::retrieveListElement(int id, int level, WPXPropertyList &list) const
       list = it->second;
       return true;
     }
-    it++;
+    ++it;
   }
   MWAW_DEBUG_MSG(("MWAWGraphicInterfaceInternal::retrieveListElement: can not find the id=%d or the level=%d\n", id, level));
   return false;

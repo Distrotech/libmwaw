@@ -634,7 +634,7 @@ struct Patterns {
     }
   }
   //! return the pattern corresponding to an id
-  bool get(int id, MWAWGraphicStyle::Pattern &pat) {
+  bool get(int id, MWAWGraphicStyle::Pattern &pat) const {
     if (id < 0 || id > m_num) {
       MWAW_DEBUG_MSG(("MSKGraphInternal::Patterns::get: can not find pattern %d\n", id));
       return false;
@@ -647,7 +647,7 @@ struct Patterns {
     return true;
   }
   //! return the percentage corresponding to a pattern
-  float getPercent(int id) {
+  float getPercent(int id) const {
     if (id < 0 || id > m_num) {
       MWAW_DEBUG_MSG(("MSKGraphInternal::Patterns::getPatternPercent: can not find pattern %d\n", id));
       return 1.0;

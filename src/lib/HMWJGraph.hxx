@@ -96,6 +96,8 @@ protected:
   //! returns the color associated with a pattern
   bool getColor(int colId, int patternId, MWAWColor &color) const;
 
+  /** check the group structures, the linked textbox */
+  void prepareStructures();
   //! try to send the page graphic
   bool sendPageGraphics(std::vector<long> const &doNotSendIds);
   //! sends the data which have not yet been sent to the listener
@@ -157,7 +159,7 @@ protected:
   /** try to send a frame to the listener */
   bool sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
   //! ask main parser to send a text zone
-  bool sendText(long textId, long fPos);
+  bool sendText(long textId, long fPos, bool asGraphic=false);
 
   //
   // low level

@@ -385,6 +385,8 @@ bool HMWJParser::createZones()
   if (m_graphParser->getFootnoteInformations(fntTextId, fntFirstPosList))
     m_textParser->updateFootnoteInformations(fntTextId, fntFirstPosList);
 
+  // finish graphparser preparation
+  m_graphParser->prepareStructures();
 
   libmwaw::DebugStream f;
   for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); ++it) {

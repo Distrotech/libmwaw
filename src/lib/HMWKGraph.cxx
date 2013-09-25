@@ -1156,7 +1156,7 @@ bool HMWKGraph::sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras
     MWAW_DEBUG_MSG(("HMWKGraph::sendFrame: can not find frame %lx\n", frameId));
     return false;
   }
-  if (pos.size()[0]<=0 || pos.size()[0]<=0)
+  if (pos.size()[0]<=0 || pos.size()[1]<=0)
     pos.setSize(fIt->second->m_pos.size());
   return sendFrame(*fIt->second, pos, extras);
 }
@@ -1684,9 +1684,8 @@ shared_ptr<HMWKGraphInternal::TextBox> HMWKGraph::readTextBox(shared_ptr<HMWKZon
   textbox.reset(new HMWKGraphInternal::TextBox(header, isMemo));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
-  long val;
   for (int i = 0; i < 3; ++i) { // 0|1,0|1,0|1,numtextbox linked
-    val = (int) input->readLong(1);
+    int val = (int) input->readLong(1);
     if (val) f << "f" << i << "=" << val << ",";
   }
   int numLinks=(int) input->readLong(1);
