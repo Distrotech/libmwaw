@@ -262,9 +262,10 @@ void HMWJParser::parse(WPXDocumentInterface *docInterface)
       std::vector<long> tokenIds = m_textParser->getTokenIdList();
       m_graphParser->sendPageGraphics(tokenIds);
       m_textParser->sendMainText();
-
+#ifdef DEBUG
       m_textParser->flushExtra();
       m_graphParser->flushExtra();
+#endif
     }
     ascii().reset();
   } catch (...) {

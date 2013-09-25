@@ -288,7 +288,7 @@ public:
 struct Frame {
   //! constructor
   Frame() : m_type(-1), m_fileId(-1), m_id(-1), m_formatId(0), m_page(0),
-    m_pos(), m_baseline(0.f), m_posFlags(0), m_parsed(false), m_extra("") {
+    m_pos(), m_baseline(0.f), m_inGroup(false), m_parsed(false), m_extra("") {
   }
   //! return the frame bdbox
   Box2f getBdBox() const {
@@ -324,8 +324,8 @@ struct Frame {
   Box2f m_pos;
   //! the baseline
   float m_baseline;
-  //! the graph anchor flags
-  int m_posFlags;
+  //! true if this node is a group's child
+  bool m_inGroup;
   //! true if we have send the data
   mutable bool m_parsed;
   //! an extra string
@@ -382,12 +382,6 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
   if (grph.m_page) o << "page=" << grph.m_page+1  << ",";
   o << "pos=" << grph.m_pos << ",";
   if (grph.m_baseline < 0 || grph.m_baseline>0) o << "baseline=" << grph.m_baseline << ",";
-  int flag = grph.m_posFlags;
-  if (flag & 2) o << "inGroup,";
-  if (flag & 4) o << "wrap=around,"; // else overlap
-  if (flag & 0x40) o << "lock,";
-  if (!(flag & 0x80)) o << "transparent,"; // else opaque
-  if (flag & 0x39) o << "posFlags=" << std::hex << (flag & 0x39) << std::dec << ",";
   o << grph.m_extra;
   return o;
 }
@@ -427,10 +421,10 @@ public:
 
 ////////////////////////////////////////
 //! Internal: a group of a HMWJGraph
-struct GroupFrame :  public Frame {
+struct Group :  public Frame {
 public:
   //! constructor
-  GroupFrame(Frame const &orig) : Frame(orig), m_zId(0), m_childsList() {
+  Group(Frame const &orig) : Frame(orig), m_zId(0), m_childsList() {
   }
   //! returns true if the frame data are read
   virtual bool valid() const {
@@ -787,7 +781,7 @@ class SubDocument : public MWAWSubDocument
 {
 public:
   //! the document type
-  enum Type { FrameInFrame, Text, UnformattedTable, EmptyPicture };
+  enum Type { FrameInFrame, Group, Text, UnformattedTable, EmptyPicture };
   //! constructor
   SubDocument(HMWJGraph &pars, MWAWInputStreamPtr input, Type type, long id, long firstChar=0) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_firstChar(firstChar), m_pos() {}
@@ -841,6 +835,9 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   switch(m_type) {
   case EmptyPicture:
     m_graphParser->sendEmptyPicture(m_pos);
+    break;
+  case Group:
+    m_graphParser->sendGroup(m_id, m_pos);
     break;
   case FrameInFrame:
     m_graphParser->sendFrame(m_id, m_pos);
@@ -914,7 +911,7 @@ bool HMWJGraph::getColor(int colId, int patternId, MWAWColor &color) const
   }
   HMWJGraphInternal::Pattern pattern;
   if (!m_state->getPattern(patternId, pattern) ) {
-    MWAW_DEBUG_MSG(("HMWKGraph::getColor: can not find pattern for id=%d\n", patternId));
+    MWAW_DEBUG_MSG(("HMWJGraph::getColor: can not find pattern for id=%d\n", patternId));
     return false;
   }
   color = m_state->getColor(color, pattern.m_percent);
@@ -1298,8 +1295,8 @@ shared_ptr<HMWJGraphInternal::Frame> HMWJGraph::readFrame(int id)
       MWAW_DEBUG_MSG(("HMWJGraph::readFrame: can not read the group id\n"));
       break;
     } else {
-      HMWJGraphInternal::GroupFrame *group =
-        new HMWJGraphInternal::GroupFrame(graph);
+      HMWJGraphInternal::Group *group =
+        new HMWJGraphInternal::Group(graph);
       res.reset(group);
       pos =input->tell();
       group->m_zId = (long) input->readULong(4);
@@ -1362,8 +1359,8 @@ bool HMWJGraph::readGroupData(MWAWEntry const &entry, int actZone)
   if (!frame) {
     MWAW_DEBUG_MSG(("HMWJGraph::readGroupData: can not find group %d\n", actZone));
   } else {
-    HMWJGraphInternal::GroupFrame *group =
-      static_cast<HMWJGraphInternal::GroupFrame *>(frame.get());
+    HMWJGraphInternal::Group *group =
+      static_cast<HMWJGraphInternal::Group *>(frame.get());
     idsList = &group->m_childsList;
   }
 
@@ -2156,9 +2153,24 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
   case 10:
     frame.m_parsed = true;
     return sendComment(static_cast<HMWJGraphInternal::CommentFrame const &>(frame), pos, extras);
-  case 11: // group: fixme must be implement for char position...
-    MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: sending group is not implemented\n"));
+  case 11: {
+    HMWJGraphInternal::Group const &group=reinterpret_cast<HMWJGraphInternal::Group const &>(frame);
+    MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+    if ((pos.m_anchorTo==MWAWPosition::Char || pos.m_anchorTo==MWAWPosition::CharBaseLine) &&
+        (!graphicListener || graphicListener->isDocumentStarted() || !canCreateGraphic(group))) {
+      MWAWPosition framePos(pos);
+      framePos.m_anchorTo = MWAWPosition::Frame;
+      framePos.setOrigin(Vec2f(0,0));
+      pos.setSize(group.getBdBox().size());
+      MWAWSubDocumentPtr subdoc
+      (new HMWJGraphInternal::SubDocument
+       (*this, input, framePos, HMWJGraphInternal::SubDocument::Group, group.m_fileId));
+      listener->insertTextBox(pos, subdoc, extras);
+      return true;
+    }
+    sendGroup(group, pos);
     break;
+  }
   default:
     MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: sending type %d is not implemented\n", frame.m_type));
     break;
@@ -2534,7 +2546,7 @@ shared_ptr<HMWJGraphInternal::ShapeGraph> HMWJGraph::readShapeGraph(HMWJGraphInt
 }
 
 ////////////////////////////////////////////////////////////
-// send data
+// prepare data
 ////////////////////////////////////////////////////////////
 void HMWJGraph::prepareStructures()
 {
@@ -2581,8 +2593,316 @@ void HMWJGraph::prepareStructures()
       prevText=newText;
     }
   }
+  // now check that there is no loop
+  fIt= m_state->m_framesMap.begin();
+  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
+    int id = fIt->second;
+    if (id < 0 || id >= numFrames || !m_state->m_framesList[size_t(id)])
+      continue;
+    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[size_t(id)];
+    if (!frame.valid() || frame.m_inGroup || frame.m_type!=11)
+      continue;
+    std::set<long> seens;
+    checkGroupStructures(fIt->first, seens, false);
+  }
 }
 
+bool HMWJGraph::checkGroupStructures(long zId, std::set<long> &seens, bool inGroup)
+{
+  while (seens.find(zId)!=seens.end()) {
+    MWAW_DEBUG_MSG(("HMWJGraph::checkGroupStructures: zone %ld already find\n", zId));
+    return false;
+  }
+  seens.insert(zId);
+  std::map<long, int >::iterator fIt= m_state->m_framesMap.find(zId);
+  if (fIt==m_state->m_framesMap.end() || fIt->second < 0 ||
+      fIt->second >= (int) m_state->m_framesList.size() || !m_state->m_framesList[size_t(fIt->second)]) {
+    MWAW_DEBUG_MSG(("HMWJGraph::checkGroupStructures: can not find zone %ld\n", zId));
+    return false;
+  }
+  HMWJGraphInternal::Frame &frame = *m_state->m_framesList[size_t(fIt->second)];
+  frame.m_inGroup=inGroup;
+  if (!frame.valid() || frame.m_type!=11)
+    return true;
+  HMWJGraphInternal::Group &group = reinterpret_cast<HMWJGraphInternal::Group&>(frame);
+  for (size_t c=0; c < group.m_childsList.size(); ++c) {
+    if (checkGroupStructures(group.m_childsList[c], seens, true))
+      continue;
+    group.m_childsList.resize(c);
+    break;
+  }
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// send group
+////////////////////////////////////////////////////////////
+bool HMWJGraph::sendGroup(long fId, MWAWPosition pos)
+{
+  if (!m_parserState->m_listener)
+    return true;
+  std::map<long, int>::const_iterator fIt = m_state->m_framesMap.find(fId);
+  if (fIt == m_state->m_framesMap.end()) {
+    MWAW_DEBUG_MSG(("HMWJGraph::sendGroup: can not find table %lx\n", fId));
+    return false;
+  }
+  int id = fIt->second;
+  if (id < 0 || id >= (int) m_state->m_framesList.size())
+    return false;
+  HMWJGraphInternal::Frame &frame = *m_state->m_framesList[size_t(id)];
+  if (!frame.valid() || frame.m_type != 11) {
+    MWAW_DEBUG_MSG(("HMWJGraph::sendGroup: can not find table %lx(II)\n", fId));
+    return false;
+  }
+  return sendGroup(reinterpret_cast<HMWJGraphInternal::Group &>(frame), pos);
+}
+
+bool HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWPosition pos)
+{
+  if (!m_parserState->m_listener)
+    return true;
+  group.m_parsed=true;
+  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+  if (graphicListener && !graphicListener->isDocumentStarted()) {
+    sendGroupChild(group,pos);
+    return true;
+  }
+
+  std::multimap<long, int>::const_iterator fIt;
+  int numFrames = int(m_state->m_framesList.size());
+  for (size_t c=0; c<group.m_childsList.size(); ++c) {
+    long fId=group.m_childsList[c];
+    fIt=m_state->m_framesMap.find(fId);
+    if (fIt == m_state->m_framesMap.end() || fIt->second < 0 || fIt->second >= numFrames ||
+        !m_state->m_framesList[size_t(fIt->second)]) {
+      MWAW_DEBUG_MSG(("HMWJGraph::sendGroup: can not find child %lx\n", fId));
+      continue;
+    }
+    HMWJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
+    MWAWPosition fPos(pos);
+    fPos.setOrigin(frame.m_pos[0]-group.m_pos[0]+pos.origin());
+    fPos.setSize(frame.m_pos.size());
+    sendFrame(frame, fPos);
+  }
+
+  return true;
+}
+
+bool HMWJGraph::canCreateGraphic(HMWJGraphInternal::Group const &group)
+{
+  std::multimap<long, int>::const_iterator fIt;
+  int page = group.m_page;
+  int numFrames = int(m_state->m_framesList.size());
+  for (size_t c=0; c<group.m_childsList.size(); ++c) {
+    long fId=group.m_childsList[c];
+    fIt=m_state->m_framesMap.find(fId);
+    if (fIt == m_state->m_framesMap.end() || fIt->second < 0 || fIt->second >= numFrames ||
+        !m_state->m_framesList[size_t(fIt->second)])
+      continue;
+    HMWJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
+    if (frame.m_page!=page) return false;
+    switch(frame.m_type) {
+    case 4: {
+      HMWJGraphInternal::TextboxFrame const &text=reinterpret_cast<HMWJGraphInternal::TextboxFrame const &>(frame);
+      if (text.isLinked() || !m_mainParser->canSendTextAsGraphic(text.m_zId,0))
+        return false;
+      break;
+    }
+    case 8: // shape
+      break;
+    case 11:
+      if (!canCreateGraphic(reinterpret_cast<HMWJGraphInternal::Group const &>(frame)))
+        return false;
+      break;
+    default:
+      return false;
+    }
+  }
+  return true;
+}
+
+void HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWGraphicListenerPtr &listener)
+{
+  if (!listener) return;
+  group.m_parsed=true;
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  std::multimap<long, int>::const_iterator fIt;
+  int numFrames = int(m_state->m_framesList.size());
+  for (size_t c=0; c<group.m_childsList.size(); ++c) {
+    long fId=group.m_childsList[c];
+    fIt=m_state->m_framesMap.find(fId);
+    if (fIt == m_state->m_framesMap.end()  || fIt->second < 0 || fIt->second >= numFrames ||
+        !m_state->m_framesList[size_t(fIt->second)])
+      continue;
+    HMWJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
+    Box2f box=frame.getBdBox();
+    HMWJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(frame.m_formatId);
+    switch(frame.m_type) {
+    case 4: {
+      frame.m_parsed=true;
+      HMWJGraphInternal::TextboxFrame const &textbox=
+        reinterpret_cast<HMWJGraphInternal::TextboxFrame const &>(frame);
+      MWAWSubDocumentPtr subdoc
+      (new HMWJGraphInternal::SubDocument(*this, input, HMWJGraphInternal::SubDocument::Text, textbox.m_zId));
+      listener->insertTextBox(box, subdoc, format.m_style);
+      break;
+    }
+    case 8: {
+      frame.m_parsed=true;
+      HMWJGraphInternal::ShapeGraph const &shape=
+        reinterpret_cast<HMWJGraphInternal::ShapeGraph const &>(frame);
+      MWAWGraphicStyle style(format.m_style);;
+      if (shape.m_shape.m_type==MWAWGraphicShape::Line) {
+        if (shape.m_arrowsFlag&1) style.m_arrows[0]=true;
+        if (shape.m_arrowsFlag&2) style.m_arrows[1]=true;
+      }
+      listener->insertPicture(box, shape.m_shape, style);
+      break;
+    }
+    case 11:
+      sendGroup(reinterpret_cast<HMWJGraphInternal::Group const &>(frame), listener);
+      break;
+    default:
+      MWAW_DEBUG_MSG(("HMWJGraph::sendGroup: unexpected type %d\n", frame.m_type));
+      break;
+    }
+  }
+}
+
+void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPosition const &pos)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+  if (!listener || !graphicListener || graphicListener->isDocumentStarted()) {
+    MWAW_DEBUG_MSG(("HMWJGraph::sendGroupChild: can not find the listeners\n"));
+    return;
+  }
+  size_t numChilds=group.m_childsList.size(), childNotSent=0;
+  if (!numChilds) return;
+
+  int numDataToMerge=0;
+  Box2f partialBdBox;
+  MWAWPosition partialPos(pos);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  std::multimap<long, int>::const_iterator fIt;
+  int numFrames = int(m_state->m_framesList.size());
+  for (size_t c=0; c<numChilds; ++c) {
+    long fId=group.m_childsList[c];
+    fIt=m_state->m_framesMap.find(fId);
+    if (fIt == m_state->m_framesMap.end()  || fIt->second < 0 || fIt->second >= numFrames ||
+        !m_state->m_framesList[size_t(fIt->second)]) {
+      MWAW_DEBUG_MSG(("HMWJGraph::sendGroupChild: can not find child %lx\n", fId));
+      continue;
+    }
+    HMWJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
+    bool canMerge=false;
+    if (frame.m_page==group.m_page) {
+      switch (frame.m_type) {
+      case 4: {
+        HMWJGraphInternal::TextboxFrame const &text=reinterpret_cast<HMWJGraphInternal::TextboxFrame const &>(frame);
+        canMerge=!text.isLinked()&&m_mainParser->canSendTextAsGraphic(text.m_zId,0);
+        break;
+      }
+      case 8: // shape
+        canMerge = true;
+        break;
+      case 11:
+        canMerge = canCreateGraphic(reinterpret_cast<HMWJGraphInternal::Group const &>(frame));
+        break;
+      default:
+        break;
+      }
+    }
+    bool isLast=false;
+    if (canMerge) {
+      Box2f box=frame.getBdBox();
+      if (numDataToMerge == 0)
+        partialBdBox=box;
+      else
+        partialBdBox=partialBdBox.getUnion(box);
+      ++numDataToMerge;
+      if (c+1 < numChilds)
+        continue;
+      isLast=true;
+    }
+
+    if (numDataToMerge>1) {
+      partialBdBox.extend(3);
+      graphicListener->startGraphic(partialBdBox);
+      size_t lastChild = isLast ? c : c-1;
+      for (size_t ch=childNotSent; ch <= lastChild; ++ch) {
+        long localFId=group.m_childsList[ch];
+        fIt=m_state->m_framesMap.find(localFId);
+        if (fIt == m_state->m_framesMap.end() || fIt->second < 0 || fIt->second >= numFrames ||
+            !m_state->m_framesList[size_t(fIt->second)])
+          continue;
+        HMWJGraphInternal::Frame const &child=*m_state->m_framesList[size_t(fIt->second)];
+        Box2f box=child.getBdBox();
+        HMWJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(child.m_formatId);
+        switch(child.m_type) {
+        case 4: {
+          child.m_parsed=true;
+          HMWJGraphInternal::TextboxFrame const &textbox=
+            reinterpret_cast<HMWJGraphInternal::TextboxFrame const &>(child);
+          MWAWSubDocumentPtr subdoc
+          (new HMWJGraphInternal::SubDocument(*this, input, HMWJGraphInternal::SubDocument::Text, textbox.m_zId));
+          graphicListener->insertTextBox(box, subdoc, format.m_style);
+          break;
+        }
+        case 8: {
+          child.m_parsed=true;
+          HMWJGraphInternal::ShapeGraph const &shape=
+            reinterpret_cast<HMWJGraphInternal::ShapeGraph const &>(child);
+          MWAWGraphicStyle style(format.m_style);;
+          if (shape.m_shape.m_type==MWAWGraphicShape::Line) {
+            if (shape.m_arrowsFlag&1) style.m_arrows[0]=true;
+            if (shape.m_arrowsFlag&2) style.m_arrows[1]=true;
+          }
+          graphicListener->insertPicture(box, shape.m_shape, style);
+          break;
+        }
+        case 11:
+          sendGroup(reinterpret_cast<HMWJGraphInternal::Group const &>(child), graphicListener);
+          break;
+        default:
+          MWAW_DEBUG_MSG(("HMWJGraph::sendGroupChild: unexpected type %d\n", child.m_type));
+          break;
+        }
+      }
+      WPXBinaryData data;
+      std::string type;
+      if (graphicListener->endGraphic(data,type)) {
+        partialPos.setOrigin(pos.origin()+partialBdBox[0]-group.m_pos[0]);
+        partialPos.setSize(partialBdBox.size());
+        listener->insertPicture(partialPos, data, type);
+        if (isLast)
+          break;
+        childNotSent=c;
+      }
+    }
+
+    // time to send back the data
+    for ( ; childNotSent <= c; ++childNotSent) {
+      long localFId=group.m_childsList[childNotSent];
+      fIt=m_state->m_framesMap.find(localFId);
+      if (fIt == m_state->m_framesMap.end() || fIt->second < 0 || fIt->second >= numFrames ||
+          !m_state->m_framesList[size_t(fIt->second)]) {
+        MWAW_DEBUG_MSG(("HMWJGraph::sendGroup: can not find child %lx\n", localFId));
+        continue;
+      }
+      HMWJGraphInternal::Frame const &childFrame=*m_state->m_framesList[size_t(fIt->second)];
+      MWAWPosition fPos(pos);
+      fPos.setOrigin(childFrame.m_pos[0]-group.m_pos[0]+pos.origin());
+      fPos.setSize(childFrame.m_pos.size());
+      sendFrame(childFrame, fPos);
+    }
+    numDataToMerge=0;
+  }
+}
+
+////////////////////////////////////////////////////////////
+// send data
+////////////////////////////////////////////////////////////
 bool HMWJGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
 {
   if (!m_parserState->m_listener)
@@ -2598,7 +2918,7 @@ bool HMWJGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
         !m_state->m_framesList[size_t(id)])
       continue;
     HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[size_t(id)];
-    if (!frame.valid() || frame.m_parsed)
+    if (!frame.valid() || frame.m_parsed || frame.m_inGroup)
       continue;
     if (frame.m_type <= 3 || frame.m_type == 12) continue;
     MWAWPosition pos(frame.m_pos[0],frame.m_pos.size(),WPX_POINT);

@@ -39,6 +39,7 @@
 #  define HMWJ_GRAPH
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -53,9 +54,10 @@ namespace HMWJGraphInternal
 {
 struct CellFormat;
 struct Frame;
-struct ShapeGraph;
 struct CommentFrame;
+struct Group;
 struct PictureFrame;
+struct ShapeGraph;
 struct TableFrame;
 struct TextboxFrame;
 struct TextFrame;
@@ -149,6 +151,17 @@ protected:
   /** try to send a table unformatted*/
   bool sendTableUnformatted(long zId);
 
+  /** try to send a group to the listener */
+  bool sendGroup(long zId, MWAWPosition pos);
+  /** try to send a group to the listener */
+  bool sendGroup(HMWJGraphInternal::Group const &group, MWAWPosition pos);
+  //! check if we can send a group as graphic
+  bool canCreateGraphic(HMWJGraphInternal::Group const &group);
+  /** try to send a group elements by elements */
+  void sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPosition const &pos);
+  /** send the group as a graphic zone */
+  void sendGroup(HMWJGraphInternal::Group const &group, MWAWGraphicListenerPtr &listener);
+
   // interface with mainParser
 
   /** return a list textZId -> type which type=0(main), 1(header),
@@ -164,6 +177,8 @@ protected:
   //
   // low level
   //
+  /** check the graph structures: ie. the group children */
+  bool checkGroupStructures(long zId, std::set<long> &seens, bool inGroup);
 
 
 private:
