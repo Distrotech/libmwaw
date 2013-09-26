@@ -757,8 +757,15 @@ void MWAWGraphicListener::insertTextBox
   float rotate = style.m_rotate;
   // flip does not works on text, so we ignore it...
   if (style.m_flip[0]&&style.m_flip[1]) rotate += 180.f;
-  if (rotate<0||rotate>0)
+  if (rotate<0||rotate>0) {
     propList.insert("libwpg:rotate", rotate);
+    Vec2f size=bdbox.size();
+    if (size[0]<0) size[0]=-size[0];
+    if (size[1]<0) size[1]=-size[1];
+    Vec2f center=bdbox[0]-m_gs->m_box[0]+0.5f*size;
+    propList.insert("libwpg:rotate-cx",center[0], WPX_POINT);
+    propList.insert("libwpg:rotate-cy",center[1], WPX_POINT);
+  }
   m_gs->m_interface->startTextObject(propList, WPXPropertyListVector());
   handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_TEXT_BOX);
   m_gs->m_interface->endTextObject();
