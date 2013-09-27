@@ -59,31 +59,40 @@ std::string getTypeName(int type);
 /** Internal: class to store a border which appear in docInfo */
 struct Border {
   //! constructor
-  Border() :m_frontColor(MWAWColor::black()), m_backColor(MWAWColor::white()),
-    m_width(0), m_isDouble(0), m_flags(0), m_extra("") {
+  Border() :m_frameBorder(), m_frontColor(MWAWColor::black()), m_backColor(MWAWColor::white()),
+    m_shadowColor(MWAWColor::black()), m_shadowDepl(0,0), m_flags(0), m_extra("") {
+    m_frameBorder.m_style=MWAWBorder::None;
     for (int w=0; w < 3; w++) m_type[w]=0;
   }
-
   //! return a border corresponding to a type
   static MWAWBorder getBorder(int type);
+  //! add to frame properties
+  void addToFrame(WPXPropertyList &pList) const;
+  //! return true if we have a shadow
+  bool hasShadow() const {
+    return m_shadowDepl[0]||m_shadowDepl[1];
+  }
   //! try to read a border definiton
   bool read(shared_ptr<FWStruct::Entry> zone, int fSz);
   //! returns the list of border order MWAWBorder::Pos
   std::vector<Variable<MWAWBorder> > getParagraphBorders() const;
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Border const &p);
+
   //! the type (border, horizontal and vertical separators)
   int m_type[3];
+  //! the frame border
+  MWAWBorder m_frameBorder;
   //! the front color (used for layout )
   MWAWColor m_frontColor;
   //! the back color (used for layout )
   MWAWColor m_backColor;
+  //! the shadow color
+  MWAWColor m_shadowColor;
+  //! the shadow depl ( if shadow)
+  Vec2i m_shadowDepl;
   //! the colors line + ?
   MWAWColor m_color[2];
-  //! the width
-  int m_width;
-  //! the f1 value: isDouble ?
-  int m_isDouble;
   //! the flags
   int m_flags;
   //! some extra data

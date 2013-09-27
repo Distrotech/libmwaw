@@ -85,9 +85,11 @@ protected:
 
   //! send a main zone
   bool sendMainText();
+  //! return the header/footer blockid ( or -1)
+  int getHeaderFooterId(bool header, int page, int &numSimillar) const;
 
   //! send a id zone
-  bool send(int zId);
+  bool send(int zId, MWAWColor fontColor=MWAWColor::black());
 
   //
   // intermediate level
@@ -97,7 +99,7 @@ protected:
   bool readTextData(FWStruct::EntryPtr zone);
 
   //! send the text
-  bool send(shared_ptr<FWTextInternal::Zone> zone);
+  bool send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor=MWAWColor::black());
 
   //! send a simple line
   void send(shared_ptr<FWTextInternal::Zone> zone, int numChar,

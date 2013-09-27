@@ -1330,7 +1330,7 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
   return true;
 }
 
-bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
+bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener) {
@@ -1348,7 +1348,10 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone)
   int num=1;
   FWTextInternal::Font font;
   font.m_font=MWAWFont(3,12);
+  font.m_font.setColor(fontColor);
   FWTextInternal::Paragraph ruler;
+  if (zone->m_zone->m_type==0x11 || zone->m_zone->m_type==0x12)
+    ruler.setAlign(1);
 
   std::vector<int> listBreaks = zone->getBreaksPosition();
   int numBreaks = int(listBreaks.size());
@@ -1664,8 +1667,6 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
   text->m_extra  = f.str();
   f.str("");
   f << "Entries(TextData):";
-  if (zone->m_type >= 0)
-    f << "zType=" << std::hex << zone->m_type << std::dec << ",";
   f << *text;
   ascii.addPos(pos);
   ascii.addNote(f.str().c_str());
@@ -2350,7 +2351,35 @@ bool FWText::sendMainText()
   return true;
 }
 
-bool FWText::send(int zId)
+int FWText::getHeaderFooterId(bool header, int page, int &numSimillar) const
+{
+  int type=header ? 0x11 : 0x12;
+  size_t numZones = m_state->m_mainZones.size();
+  if (!numZones) return -1;
+  std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it =
+    m_state->m_entryMap.begin();
+  int nextPage=-1;
+  int res=-1;
+  while (it!=m_state->m_entryMap.end()) {
+    int id=it->first;
+    shared_ptr<FWTextInternal::Zone> zone=it++->second;
+    if (!zone || !zone->m_zone || zone->m_zone->m_type!=type ||
+        zone->m_pages[0]<page)
+      continue;
+    if (zone->m_pages[1]>=page)
+      res = id;
+    else if (nextPage==-1 || zone->m_pages[0]<nextPage)
+      nextPage=zone->m_pages[0];
+  }
+  if (res<0)
+    return res;
+  if (nextPage==-1) nextPage=m_state->m_numPages+1;
+  numSimillar=nextPage-page;
+  if (numSimillar<=0) numSimillar=1;
+  return res;
+}
+
+bool FWText::send(int zId, MWAWColor fontColor)
 {
   std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it;
   it = m_state->m_entryMap.find(zId);
@@ -2358,7 +2387,7 @@ bool FWText::send(int zId)
     MWAW_DEBUG_MSG(("FWText::send: can not find zone: %d\n", zId));
     return false;
   }
-  send(it->second);
+  send(it->second, fontColor);
   return true;
 }
 

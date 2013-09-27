@@ -122,6 +122,23 @@ MWAWBorder Border::getBorder(int type)
   return res;
 }
 
+void Border::addToFrame(WPXPropertyList &pList) const
+{
+  if (!m_backColor.isWhite())
+    pList.insert("fo:background-color", m_backColor.str().c_str());
+  if (hasShadow()) {
+    std::stringstream s;
+    s << m_shadowColor.str() << " " << 0.03527f*float(m_shadowDepl[0]) << "cm "
+      << 0.03527f*float(m_shadowDepl[1]) << "cm";
+    pList.insert("style:shadow", s.str().c_str());
+  }
+  if (m_frameBorder.isEmpty())
+    return;
+  MWAWBorder bord=m_frameBorder;
+  bord.m_color = m_color[0];
+  bord.addTo(pList,"");
+}
+
 bool Border::read(shared_ptr<FWStruct::Entry> zone, int fSz)
 {
   *this=FWStruct::Border();
@@ -133,14 +150,30 @@ bool Border::read(shared_ptr<FWStruct::Entry> zone, int fSz)
   libmwaw::DebugStream f;
   long pos = input->tell();
 
-  int val = (int) input->readLong(1);
-  if (val) f << "f0=" << val << ","; // 0|1|2 second width ?
-  m_isDouble = (int) input->readLong(1);
-  m_width=(int) input->readLong(1);
-  for (int j = 0; j < 2; j++) { // related to round, .. border ?
-    val = (int) input->readLong(1);
-    if (val) f << "f" << j+1 << "=" << val << ",";
+  int width[3];
+  int totalW = 0;
+  for (int i=0; i < 3; ++i) totalW += (width[i]=(int) input->readLong(1));
+  if (width[0]&&width[2]) {
+    m_frameBorder.m_style=MWAWBorder::Simple;
+    m_frameBorder.m_type=MWAWBorder::Double;
+    m_frameBorder.m_width=0.5*double(totalW);
+    m_frameBorder.m_widthsList.resize(3);
+    for (size_t i=0; i < 3; ++i)
+      m_frameBorder.m_widthsList[i]=0.5*(double) width[i];
+  } else if (!width[0] && !width[1] && width[2]) {
+    m_frameBorder.m_style=MWAWBorder::Simple;
+    m_frameBorder.m_width=0.5*double(totalW);
+  } else if (totalW) {
+    MWAW_DEBUG_MSG(("FWStruct::Border::read: frame border width seems odd\n"));
+    f << "###frame[w]=[";
+    for (int i=0; i < 3; ++i) f << width[i] << ",";
+    f << "],";
   }
+  int val = (int) input->readLong(1);
+  if (val)
+    m_shadowDepl=Vec2i(val,val);
+  val = (int) input->readLong(1);
+  if (val) f << "frame[rectCorner]=" << val << ",";
   m_type[0] = (int) input->readLong(1);
   MWAWColor col;
   for (int j = 0; j < 7; j++) {
@@ -149,6 +182,9 @@ bool Border::read(shared_ptr<FWStruct::Entry> zone, int fSz)
       switch(j) {
       case 1: // border
         m_color[0] = col;
+        break;
+      case 2:
+        m_shadowColor=col;
         break;
       case 3: // separator
         m_color[1] = col;
@@ -207,6 +243,8 @@ std::ostream &operator<<(std::ostream &o, Border const &p)
     o << "frontColor=" << p.m_frontColor << ",";
   if (!p.m_backColor.isWhite())
     o << "backColor=" << p.m_backColor << ",";
+  if (p.hasShadow())
+    o << "shadow=" << p.m_shadowDepl << "[" << p.m_shadowColor << "],";
   for (int w=0; w < 3; w++) {
     if (!p.m_type[w]) continue;
     if (w==0)
@@ -244,12 +282,8 @@ std::ostream &operator<<(std::ostream &o, Border const &p)
     else
       o << ",";
   }
-  if (p.m_width)
-    o << "width=" << p.m_width << ",";
-  if (p.m_isDouble==2 && (p.m_type[0]%2))
-    o << "#isDouble,";
-  else if (p.m_isDouble && p.m_isDouble!=2)
-    o << "#isDouble=" << p.m_isDouble<<",";
+  if (!p.m_frameBorder.isEmpty())
+    o << "border[frame]=" << p.m_frameBorder << ",";
   if (p.m_flags & 0x4000)
     o << "setBorder,";
   if (p.m_flags & 0x8000)
@@ -282,8 +316,24 @@ std::ostream &operator<<(std::ostream &o, Entry const &entry)
   if (entry.m_id != -1) {
     o << "fId=" << entry.m_id << ",";
   }
-  if (entry.m_type != -1)
+  switch(entry.m_type) {
+  case -1:
+    break;
+  case 0xa:
+    o << "main,";
+    break;
+  case 0x11:
+    o << "header,";
+    break;
+  case 0x12:
+    o << "footer,";
+    break;
+  case 0x13:
+    o << "textbox,";
+    break;
+  default:
     o << "zType=" << std::hex << entry.m_type << std::dec << ",";
+  }
   if (entry.m_typeId != -3) {
     if (entry.m_typeId >= 0) o << "text/graphic,";
     else if (entry.m_typeId == -2)

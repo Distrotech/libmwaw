@@ -41,7 +41,7 @@
 #include <libwpd/libwpd.h>
 
 #include "MWAWContentListener.hxx"
-#include "MWAWPictMac.hxx"
+#include "MWAWPictData.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
 
@@ -92,8 +92,8 @@ class SubDocument : public MWAWSubDocument
 {
 public:
   //! constructor
-  SubDocument(FWGraph &pars, int id) :
-    MWAWSubDocument(pars.m_mainParser, MWAWInputStreamPtr(), MWAWEntry()), m_graphParser(&pars), m_id(id) {}
+  SubDocument(FWGraph &pars, int id, MWAWColor fontColor) :
+    MWAWSubDocument(pars.m_mainParser, MWAWInputStreamPtr(), MWAWEntry()), m_graphParser(&pars), m_id(id), m_fontColor(fontColor) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -113,6 +113,8 @@ protected:
   FWGraph *m_graphParser;
   //! the zone file id
   int m_id;
+  //! the default font color
+  MWAWColor m_fontColor;
 
 private:
   SubDocument(SubDocument const &orig);
@@ -126,7 +128,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     return;
   }
   assert(m_graphParser);
-  m_graphParser->send(m_id);
+  m_graphParser->send(m_id, m_fontColor);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -136,6 +138,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
   if (!sDoc) return true;
   if (m_graphParser != sDoc->m_graphParser) return true;
   if (m_id != sDoc->m_id) return true;
+  if (m_fontColor != sDoc->m_fontColor) return true;
   return false;
 }
 }
@@ -185,9 +188,9 @@ bool FWGraph::getBorder(int bId, FWStruct::Border &border) const
   return true;
 }
 
-bool FWGraph::send(int fileId)
+bool FWGraph::send(int fileId, MWAWColor const &fontColor)
 {
-  return m_mainParser->send(fileId);
+  return m_mainParser->send(fileId, fontColor);
 }
 
 ////////////////////////////////////////////////////////////
@@ -525,15 +528,9 @@ bool FWGraph::sendSideBar(FWGraphInternal::SideBar const &frame)
                  MWAWPosition::WBackground : MWAWPosition::WDynamic;
   FWStruct::Border border;
   WPXPropertyList pList;
-  if (frame.m_borderId && getBorder(frame.m_borderId, border)) {
-    if (!border.m_backColor.isWhite())
-      pList.insert("fo:background-color", border.m_backColor.str().c_str());
-    MWAWBorder bord=FWStruct::Border::getBorder(border.m_type[0]);
-    bord.m_color = border.m_color[0];
-    if (!bord.isEmpty())
-      bord.addTo(pList,"");
-  }
-  MWAWSubDocumentPtr doc(new FWGraphInternal::SubDocument(*this,frame.m_fileId));
+  if (frame.m_borderId && getBorder(frame.m_borderId, border))
+    border.addToFrame(pList);
+  MWAWSubDocumentPtr doc(new FWGraphInternal::SubDocument(*this,frame.m_fileId,border.m_frontColor));
   listener->insertTextBox(pos, doc, pList);
   return true;
 }

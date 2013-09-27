@@ -98,7 +98,7 @@ protected:
   // interface with main parser
 
   //! try to send the child of a zone
-  bool send(int fileId);
+  bool send(int fileId, MWAWColor const &fontColor);
 
   //
   // low level

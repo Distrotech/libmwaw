@@ -146,7 +146,7 @@ protected:
   //! try to send a reference, in pratice do nothing
   void sendReference(int docId);
   //! ask the text parser to send a zone
-  bool send(int fileId);
+  bool send(int fileId, MWAWColor fontColor=MWAWColor::black());
 
   //
   // interface ( mainly debugging function)
