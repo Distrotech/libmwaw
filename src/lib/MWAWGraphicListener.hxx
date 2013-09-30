@@ -133,7 +133,8 @@ public:
                      MWAWGraphicStyle const &style);
   /** adds a textbox in given position */
   void insertTextBox(Box2f const &bdbox, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &style);
-
+  /** adds a group: ie. next insertion will be done relative to this bdbox[0] position */
+  void insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument);
   // ------- section ---------------
   /** returns true if we can add open a section, add page break, ... */
   bool canOpenSectionAddBreak() const {

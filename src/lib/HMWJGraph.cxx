@@ -2853,7 +2853,7 @@ void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPositi
           child.m_parsed=true;
           HMWJGraphInternal::ShapeGraph const &shape=
             reinterpret_cast<HMWJGraphInternal::ShapeGraph const &>(child);
-          MWAWGraphicStyle style(format.m_style);;
+          MWAWGraphicStyle style(format.m_style);
           if (shape.m_shape.m_type==MWAWGraphicShape::Line) {
             if (shape.m_arrowsFlag&1) style.m_arrows[0]=true;
             if (shape.m_arrowsFlag&2) style.m_arrows[1]=true;

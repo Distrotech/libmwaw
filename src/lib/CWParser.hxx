@@ -103,8 +103,8 @@ protected:
   //! finds the different objects zones
   bool createZones();
 
-  //! try to return the type of a zone
-  CWStruct::DSET::Type getZoneType(int zId) const;
+  //! return the zone corresponding to an id ( low level)
+  shared_ptr<CWStruct::DSET> getZone(int zId) const;
 
   /** try to find the zone dags structure... */
   bool exploreZonesGraph();
@@ -141,8 +141,10 @@ protected:
   // interface with the text parser
   //
 
+  //! check if we can send a zone as a graphic
+  bool canSendZoneAsGraphic(int number) const;
   //! send a zone
-  bool sendZone(int zoneId, MWAWPosition pos=MWAWPosition());
+  bool sendZone(int zoneId, bool asGraphic, MWAWPosition pos=MWAWPosition());
   //! send a zone in a frame
   void sendZoneInFrame(int zoneId, MWAWPosition pos,
                        WPXPropertyList extras = WPXPropertyList(),
@@ -159,12 +161,6 @@ protected:
   //
   // interface with the graph parser
   //
-
-  //! returns the color corresponding to colId (if possible)
-  bool getColor(int colId, MWAWColor &col) const;
-
-  //! return the pattern percent which corresponds to an id (or -1)
-  float getPatternPercent(int id) const;
 
   //! returns the header/footer id
   void getHeaderFooterId(int &headerId, int &footerId) const;

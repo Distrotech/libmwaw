@@ -84,6 +84,8 @@ struct State {
   //! destructor
   ~State() { }
 
+  //! the origin position
+  Vec2f m_origin;
   //! a buffer to stored the text
   WPXString m_textBuffer;
 
@@ -115,7 +117,7 @@ private:
   State &operator=(const State &);
 };
 
-State::State() :
+State::State() : m_origin(0,0),
   m_textBuffer(""), m_font(20,12)/* default time 12 */, m_paragraph(), m_list(),
   m_isGraphicStarted(false), m_isTextZoneOpened(false), m_isFrameOpened(false),
   m_isSpanOpened(false), m_isParagraphOpened(false), m_isListElementOpened(false),
@@ -377,8 +379,9 @@ void MWAWGraphicListener::startGraphic(Box2f const &bdbox)
   }
   m_gs.reset(new MWAWGraphicListenerInternal::GraphicState);
   m_gs->m_interface.reset(new MWAWGraphicInterface);
-  m_ps->m_isGraphicStarted = true;
   m_gs->m_box=bdbox;
+  m_ps->m_isGraphicStarted = true;
+  m_ps->m_origin=bdbox[0];
 
   WPXPropertyList list;
   list.insert("svg:x",bdbox[0].x(), WPX_POINT);
@@ -713,7 +716,7 @@ void MWAWGraphicListener::insertPicture
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: a frame is already open\n"));
     return;
   }
-  shape.send(*m_gs->m_interface, style, bdbox[0]-m_gs->m_box[0]);
+  shape.send(*m_gs->m_interface, style, bdbox[0]-m_ps->m_origin);
 }
 
 void MWAWGraphicListener::insertPicture
@@ -733,7 +736,7 @@ void MWAWGraphicListener::insertPicture
   m_gs->m_interface->setStyle(list, gradient);
 
   list.clear();
-  Vec2f pt=bdbox[0]-m_gs->m_box[0];
+  Vec2f pt=bdbox[0]-m_ps->m_origin;
   list.insert("svg:x",pt.x(), WPX_POINT);
   list.insert("svg:y",pt.y(), WPX_POINT);
   pt=bdbox.size();
@@ -762,7 +765,7 @@ void MWAWGraphicListener::insertTextBox
     Vec2f size=bdbox.size();
     if (size[0]<0) size[0]=-size[0];
     if (size[1]<0) size[1]=-size[1];
-    Vec2f center=bdbox[0]-m_gs->m_box[0]+0.5f*size;
+    Vec2f center=bdbox[0]-m_ps->m_origin+0.5f*size;
     propList.insert("libwpg:rotate-cx",center[0], WPX_POINT);
     propList.insert("libwpg:rotate-cy",center[1], WPX_POINT);
   }
@@ -770,6 +773,15 @@ void MWAWGraphicListener::insertTextBox
   handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_TEXT_BOX);
   m_gs->m_interface->endTextObject();
   closeFrame();
+}
+
+void MWAWGraphicListener::insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument)
+{
+  if (!m_ps->m_isGraphicStarted || m_ps->m_isTextZoneOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertGroup: can not insert a group\n"));
+    return;
+  }
+  handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_GRAPHIC_GROUP);
 }
 
 ///////////////////
@@ -806,7 +818,7 @@ void MWAWGraphicListener::_handleFrameParameters(WPXPropertyList &list, Box2f co
     return;
 
   Vec2f size=bdbox.size();
-  Vec2f pt=bdbox[0]-m_gs->m_box[0];
+  Vec2f pt=bdbox[0]-m_ps->m_origin;
   WPXPropertyListVector grad;
   if (style.hasGradient(true)) {
     // ok, first send a background rectangle
@@ -845,14 +857,16 @@ void MWAWGraphicListener::_handleFrameParameters(WPXPropertyList &list, Box2f co
 ///////////////////
 // subdocument
 ///////////////////
-void MWAWGraphicListener::handleSubDocument(Vec2f const &, MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType)
+void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType)
 {
   if (!m_ps->m_isGraphicStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::handleSubDocument: the graphic is not started\n"));
     return;
   }
+  Vec2f actOrigin=m_ps->m_origin;
   _pushParsingState();
   m_ps->m_isGraphicStarted=true;
+  m_ps->m_origin=actOrigin-orig;
   _startSubDocument();
   m_ps->m_subDocumentType = subDocumentType;
 
@@ -904,7 +918,7 @@ void MWAWGraphicListener::_startSubDocument()
 
 void MWAWGraphicListener::_endSubDocument()
 {
-  if (!m_ps->m_isGraphicStarted) return;
+  if (!m_ps->m_isGraphicStarted || !m_ps->m_isTextZoneOpened) return;
   if (m_ps->m_isParagraphOpened)
     _closeParagraph();
   m_ps->m_paragraph.m_listLevelIndex=0;
@@ -921,7 +935,6 @@ shared_ptr<MWAWGraphicListenerInternal::State> MWAWGraphicListener::_pushParsing
   shared_ptr<MWAWGraphicListenerInternal::State> actual = m_ps;
   m_psStack.push_back(actual);
   m_ps.reset(new MWAWGraphicListenerInternal::State);
-
   return actual;
 }
 

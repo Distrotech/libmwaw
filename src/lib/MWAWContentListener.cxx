@@ -1437,6 +1437,7 @@ void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libm
   case libmwaw::DOC_NOTE:
   case libmwaw::DOC_TABLE:
   case libmwaw::DOC_COMMENT_ANNOTATION:
+  case libmwaw::DOC_GRAPHIC_GROUP:
   default:
     break;
   }
@@ -1477,6 +1478,7 @@ void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libm
   case libmwaw::DOC_NOTE:
   case libmwaw::DOC_TABLE:
   case libmwaw::DOC_COMMENT_ANNOTATION:
+  case libmwaw::DOC_GRAPHIC_GROUP:
   default:
     break;
   }

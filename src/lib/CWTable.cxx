@@ -207,7 +207,7 @@ void TableCell::update(Table const &table)
     if (border.m_isSent || border.m_styleId < 0 || !styleManager->get(border.m_styleId, bStyle))
       continue;
     border.m_isSent = true;
-    CWStyleManager::Graphic graph;
+    MWAWGraphicStyle graph;
     bool haveGraph = false;
     if (bStyle.m_graphicId >= 0)
       haveGraph = styleManager->get(bStyle.m_graphicId, graph);
@@ -217,7 +217,7 @@ void TableCell::update(Table const &table)
       haveKSEN = styleManager->get(bStyle.m_ksenId, ksen);
 
     MWAWBorder bord;
-    if (haveGraph && graph.m_lineWidth==0)
+    if (haveGraph && !graph.hasLine())
       bord.m_style = MWAWBorder::None;
     else if (haveKSEN) {
       bord.m_style = ksen.m_lineType;
@@ -226,7 +226,7 @@ void TableCell::update(Table const &table)
         bord.m_width = 0.5f*float(graph.m_lineWidth);
       else
         bord.m_width = (float) graph.m_lineWidth;
-      bord.m_color = graph.getLineColor();
+      bord.m_color = graph.m_lineColor;
     }
     static int const wh[] = { libmwaw::LeftBit, libmwaw::TopBit, libmwaw::RightBit, libmwaw::BottomBit};
     setBorders(wh[w], bord);
@@ -274,7 +274,7 @@ int CWTable::version() const
 
 bool CWTable::askMainToSendZone(int number)
 {
-  return m_mainParser->sendZone(number);
+  return m_mainParser->sendZone(number, false);
 }
 
 // fixme
@@ -509,7 +509,7 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
       if (style.m_ksenId >= 0 && m_styleManager->get(style.m_ksenId, ksen)) {
         f << "ksen=[" << ksen << "],";
       }
-      CWStyleManager::Graphic graph;
+      MWAWGraphicStyle graph;
       if (style.m_graphicId >= 0 && m_styleManager->get(style.m_graphicId, graph)) {
         f << "graph=[" << graph << "],";
       }
@@ -617,13 +617,14 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
         }
         f << "ksen=[" << ksen << "],";
       }
-      CWStyleManager::Graphic graph;
+      MWAWGraphicStyle graph;
       if (style.m_graphicId >= 0 && m_styleManager->get(style.m_graphicId, graph)) {
-        cell->setBackgroundColor(graph.getSurfaceColor());
+        if (graph.hasSurfaceColor())
+          cell->setBackgroundColor(graph.m_surfaceColor);
         if (hasExtraLines) {
           MWAWBorder border;
           border.m_width=(float)graph.m_lineWidth;
-          border.m_color=graph.getLineColor();
+          border.m_color=graph.m_lineColor;
           cell->setExtraLine(cell->extraLine(), border);
         }
         f << "graph=[" << graph << "],";

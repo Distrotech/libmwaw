@@ -209,7 +209,7 @@ protected:
   //! send a text zone
   bool sendText(long id, long subId, bool asGraphic=false);
 
-  //! check if we can send a textzone has graphic
+  //! check if we can send a textzone as graphic
   bool canSendTextAsGraphic(long id, long subId);
 
   // interface with the graph parser

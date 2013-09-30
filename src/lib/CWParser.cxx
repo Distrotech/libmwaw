@@ -119,16 +119,6 @@ public:
   virtual bool operator==(MWAWSubDocument const &doc) const {
     return !operator!=(doc);
   }
-
-  //! returns the subdocument \a id
-  int getId() const {
-    return m_id;
-  }
-  //! sets the subdocument \a id
-  void setId(int vid) {
-    m_id = vid;
-  }
-
   //! the parser function
   void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
 
@@ -154,7 +144,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   assert(m_parser);
 
-  reinterpret_cast<CWParser *>(m_parser)->sendZone(m_id);
+  reinterpret_cast<CWParser *>(m_parser)->sendZone(m_id, false);
 }
 }
 
@@ -207,23 +197,13 @@ Vec2f CWParser::getPageLeftTop() const
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
-bool CWParser::getColor(int colId, MWAWColor &col) const
-{
-  return m_graphParser->getColor(colId, col);
-}
-
-float CWParser::getPatternPercent(int id) const
-{
-  return m_graphParser->getPatternPercent(id);
-}
-
-CWStruct::DSET::Type CWParser::getZoneType(int zId) const
+shared_ptr<CWStruct::DSET> CWParser::getZone(int zId) const
 {
   std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter
     = m_state->m_zonesMap.find(zId);
-  if (iter == m_state->m_zonesMap.end() || !iter->second)
-    return CWStruct::DSET::T_Unknown;
-  return iter->second->m_type;
+  if (iter != m_state->m_zonesMap.end())
+    return iter->second;
+  return shared_ptr<CWStruct::DSET>();
 }
 
 void CWParser::getHeaderFooterId(int &headerId, int &footerId) const
@@ -282,7 +262,24 @@ void CWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // interface with the different parser
 ////////////////////////////////////////////////////////////
-bool CWParser::sendZone(int zoneId, MWAWPosition position)
+bool CWParser::canSendZoneAsGraphic(int zoneId) const
+{
+  if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
+    return false;
+  shared_ptr<CWStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
+  switch (zMap->m_fileType) {
+  case 0:
+  case 4:
+    return m_graphParser->canSendZoneAsGraphic(zoneId);
+  case 1:
+    return m_textParser->canSendTextAsGraphic(zoneId);
+  default:
+    break;
+  }
+  return false;
+}
+
+bool CWParser::sendZone(int zoneId, bool asGraphic, MWAWPosition position)
 {
   if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
     return false;
@@ -293,10 +290,10 @@ bool CWParser::sendZone(int zoneId, MWAWPosition position)
   switch(zMap->m_fileType) {
   case 0: // group
   case 4: // bitmap
-    res = m_graphParser->sendZone(zoneId, position);
+    res = m_graphParser->sendZone(zoneId, asGraphic, position);
     break;
   case 1:
-    res = m_textParser->sendZone(zoneId);
+    res = m_textParser->sendZone(zoneId, asGraphic);
     break;
   case 5:
     res = m_presentationParser->sendZone(zoneId);
@@ -404,7 +401,7 @@ void CWParser::parse(WPXDocumentInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       for (size_t i = 0; i < m_state->m_mainZonesList.size(); i++)
-        sendZone(m_state->m_mainZonesList[i]);
+        sendZone(m_state->m_mainZonesList[i], false);
       m_presentationParser->flushExtra();
       m_graphParser->flushExtra();
       m_tableParser->flushExtra();
@@ -1883,7 +1880,7 @@ bool CWParser::readDocHeader()
         ascii().addNote("DocUnkn2");
         break;
       case 1:
-        if (!m_graphParser->readColorList(entry)) {
+        if (!m_styleManager->readColorList(entry)) {
           input->seek(pos, WPX_SEEK_SET);
           return false;
         }

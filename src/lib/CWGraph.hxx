@@ -59,6 +59,8 @@ struct Zone;
 struct ZoneShape;
 struct ZoneBitmap;
 struct ZonePict;
+
+class SubDocument;
 }
 
 class CWParser;
@@ -71,6 +73,7 @@ class CWStyleManager;
  */
 class CWGraph
 {
+  friend class CWGraphInternal::SubDocument;
   friend class CWParser;
 
 public:
@@ -93,28 +96,23 @@ public:
   shared_ptr<CWStruct::DSET> readBitmapZone
   (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
-  //! reads a color map zone ( v4-v6)
-  bool readColorList(MWAWEntry const &entry);
-
-  //! return the color which corresponds to an id (if possible)
-  bool getColor(int id, MWAWColor &col) const;
-
-  //! return the pattern percent which corresponds to an id (or -1)
-  float getPatternPercent(int id) const;
-
   //! return the wall paper color which corresponds to an id (if possible)
   bool getWallPaperColor(int id, MWAWColor &col) const;
-
-  //! return the line color which corresponds to some ids (if possible)
-  bool getLineColor(CWGraphInternal::Style const style, MWAWColor &col) const;
   //! return the surface color which corresponds to some ids (if possible)
   bool getSurfaceColor(CWGraphInternal::Style const style, MWAWColor &col) const;
 protected:
+  //! check if we can send a group as graphic
+  bool canSendZoneAsGraphic(int number) const;
   //! sends the zone data to the listener (if it exists )
-  bool sendZone(int number, MWAWPosition pos=MWAWPosition());
+  bool sendZone(int number, bool asGraphic, MWAWPosition pos=MWAWPosition());
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
+
+  // interface with main parser
+
+  //! ask the main parser to send a zone
+  void askToSend(int number, bool asGraphic);
 
   //
   // Intermediate level
@@ -122,6 +120,10 @@ protected:
 
   //! update the group information to choose how to send the group data
   void updateInformation(CWGraphInternal::Group &group) const;
+  //! check if we can send a group as graphic
+  bool canSendAsGraphic(CWGraphInternal::Group &group) const;
+  //! send a group as graphic
+  bool sendGroup(CWGraphInternal::Group &group, MWAWGraphicListener &listener);
   /* read a simple group */
   shared_ptr<CWGraphInternal::Zone> readGroupDef(MWAWEntry const &entry);
 
@@ -150,7 +152,7 @@ protected:
   /* read a ole document zone */
   bool readOLE(CWGraphInternal::ZonePict &zone);
 
-/////////////
+  /////////////
   /* try to read the qtime data zone */
   bool readQTimeData(shared_ptr<CWGraphInternal::Zone> zone);
 

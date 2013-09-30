@@ -1976,18 +1976,11 @@ void FWParser::sendText(int id, libmwaw::SubDocumentType type, MWAWNote::Type wh
   }
   int fId = m_state->getFileZoneId(id);
   MWAWSubDocumentPtr subdoc(new FWParserInternal::SubDocument(*this, getInput(), fId));
-  switch(type) {
-  case libmwaw::DOC_NOTE:
+  if (type==libmwaw::DOC_NOTE)
     getListener()->insertNote(MWAWNote(wh), subdoc);
-    break;
-  case libmwaw::DOC_COMMENT_ANNOTATION:
+  else if (type==libmwaw::DOC_COMMENT_ANNOTATION)
     getListener()->insertComment(subdoc);
-    break;
-  case libmwaw::DOC_HEADER_FOOTER:
-  case libmwaw::DOC_TABLE:
-  case libmwaw::DOC_TEXT_BOX:
-  case libmwaw::DOC_NONE:
-  default:
+  else {
     MWAW_DEBUG_MSG(("FWParser::sendText: unexpected type\n"));
   }
 }

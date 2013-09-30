@@ -39,14 +39,13 @@
 #  define CW_STYLE_MANAGER
 
 #include <iostream>
-#include <map>
-#include <set>
 #include <string>
 #include <vector>
 
 #include "libmwaw_internal.hxx"
 
 #include "MWAWDebug.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWInputStream.hxx"
 
 class CWParser;
@@ -60,7 +59,6 @@ struct State;
 class CWStyleManager
 {
 public:
-  struct Graphic;
   struct KSEN;
   struct Style;
 public:
@@ -69,18 +67,26 @@ public:
   //! destructor
   ~CWStyleManager();
 
-  /* try to read the styles definition (in v4-6) */
+  //! reads a color map zone ( v4-v6)
+  bool readColorList(MWAWEntry const &entry);
+  /** try to read the styles definition (in v4-6) */
   bool readStyles(MWAWEntry const &entry);
+  //! update a style using a gradiant id
+  bool updateGradient(int grad, MWAWGraphicStyle &style) const;
 
   //! return a mac font id corresponding to a local id
   int getFontId(int localId) const;
+  //! return the color which corresponds to an id (if possible)
+  bool getColor(int id, MWAWColor &col) const;
+  //! return the pattern which corresponds to an id.
+  bool getPattern(int id, MWAWGraphicStyle::Pattern &pattern, float &percent) const;
 
   //! return the style corresponding to a styleId
   bool get(int styleId, Style &style) const;
   //! return the ksen style corresponding to a ksenId
   bool get(int ksenId, KSEN &ksen) const;
   //! return the graphic style corresponding to a graphicId
-  bool get(int graphId, Graphic &graph) const;
+  bool get(int graphId, MWAWGraphicStyle &graph) const;
 
 protected:
   //! return the file version
@@ -98,7 +104,7 @@ protected:
   bool readCellStyles(int N, int fSz);
   /** read the font name style zone */
   bool readFontNames(int N, int fSz);
-  /** read a Graphic sequence */
+  /** read a GraphicStyle sequence */
   bool readGraphStyles(int N, int fSz);
   //! read a KSEN sequence
   bool readKSEN(int N, int fSz);
@@ -118,35 +124,6 @@ private:
   CWStyleManager &operator=(CWStyleManager const &orig);
 
 public:
-  //! the Graphic structure in a CWStyleManager
-  struct Graphic {
-    //! constructor
-    Graphic() : m_lineWidth(1), m_extra("") {
-      for (int i = 0; i < 2; i++) {
-        m_pattern[i] = -1;
-        m_patternPercent[i] = 1;
-      }
-      m_color[0] = MWAWColor::black();
-      m_color[1] = MWAWColor::white();
-    }
-    //! returns the line color
-    MWAWColor getLineColor() const;
-    //! returns the surface color
-    MWAWColor getSurfaceColor() const;
-    //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, Graphic const &graph);
-    //! the line width
-    int m_lineWidth;
-    //! the line and surface color
-    MWAWColor m_color[2];
-    //! the line an surface pattern id
-    int m_pattern[2];
-    //! the line an surface pattern percent
-    float m_patternPercent[2];
-    //! extra data
-    std::string m_extra;
-  };
-
   //! the KSEN structure a structure related to paragraph and cell style
   struct KSEN {
     //! constructor

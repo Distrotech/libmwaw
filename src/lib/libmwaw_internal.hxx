@@ -154,7 +154,7 @@ enum { LeftBit = 0x01,  RightBit = 0x02, TopBit=0x4, BottomBit = 0x08, HMiddleBi
 enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
 std::string numberingTypeToString(NumberingType type);
 std::string numberingValueToString(NumberingType type, int value);
-enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION };
+enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION, DOC_GRAPHIC_GROUP };
 }
 
 //! the class to store a color

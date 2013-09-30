@@ -319,7 +319,7 @@ bool CWPresentation::sendZone(int number)
     if (main) m_mainParser->newPage(actPage++);
     int id = presentation->m_zoneIdList[p];
     if (id > 0 && presentation->okChildId(id))
-      m_mainParser->sendZone(id);
+      m_mainParser->sendZone(id, false);
   }
   return true;
 }

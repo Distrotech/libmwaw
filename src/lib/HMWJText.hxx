@@ -80,7 +80,7 @@ protected:
   bool sendMainText();
   //! send a text zone
   bool sendText(long id, long cPos, bool asGraphic=false);
-  //! check if we can send a textzone has graphic
+  //! check if we can send a textzone as graphic
   bool canSendTextAsGraphic(long id, long cPos);
   //! send a text zone
   bool sendText(HMWJTextInternal::TextZone const &zone, long cPos, bool asGraphic);

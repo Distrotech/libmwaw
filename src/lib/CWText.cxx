@@ -42,6 +42,7 @@
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicListener.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWSection.hxx"
 
@@ -784,7 +785,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   MWAWColor color(MWAWColor::black());
   if (colId!=1) {
     MWAWColor col;
-    if (m_mainParser->getColor(colId, col))
+    if (m_styleManager->getColor(colId, col))
       color = col;
     else if (vers != 1) {
       MWAW_DEBUG_MSG(("CWText::readFont: unknown color %d\n", colId));
@@ -1289,10 +1290,29 @@ bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone
   return true;
 }
 
-bool CWText::sendText(CWTextInternal::Zone const &zone)
+bool CWText::canSendTextAsGraphic(CWTextInternal::Zone const &zone) const
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
-  if (!listener) {
+  size_t numSection=zone.m_sectionList.size();
+  if (numSection>1) return false;
+  if (numSection==1 && zone.m_sectionList[0].m_numColumns>1)
+    return false;
+  for (size_t t=0; t < zone.m_tokenList.size(); ++t) {
+    CWTextInternal::Token const &tok=zone.m_tokenList[t];
+    if (tok.m_type!=CWTextInternal::TKN_UNKNOWN &&
+        tok.m_type!=CWTextInternal::TKN_PAGENUMBER)
+      return false;
+  }
+  return true;
+}
+
+bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
+{
+  MWAWListenerPtr listener;
+  if (asGraphic)
+    listener=m_parserState->m_graphicListener;
+  else
+    listener=m_parserState->m_listener;
+  if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("CWText::sendText: can not find a listener\n"));
     return false;
   }
@@ -1305,8 +1325,14 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
   int numParagraphs = int(m_state->m_paragraphsList.size());
   int actPage = 1;
   size_t numZones = zone.m_zones.size();
-  if (main)
-    m_mainParser->newPage(actPage);
+  if (main) {
+    if (!asGraphic)
+      m_mainParser->newPage(actPage);
+    else {
+      MWAW_DEBUG_MSG(("CWText::sendText: try to send main zone as graphic\n"));
+      main=false;
+    }
+  }
   int numCols = 1;
   int numSection = 0, numSectionInPage=0;
   int nextSection = -1;
@@ -1351,7 +1377,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
           nextSection = -1;
         }
         numCols = section.numColumns();
-        int actCols = listener->getSection().numColumns();
+        int actCols = asGraphic ? 1 : listener->getSection().numColumns();
         if (numCols > 1  || actCols > 1) {
           if (listener->isSectionOpened())
             listener->closeSection();
@@ -1425,12 +1451,12 @@ bool CWText::sendText(CWTextInternal::Zone const &zone)
           case CWTextInternal::TKN_GRAPHIC:
             if (zone.okChildId(token.m_zoneId)) {
               // fixme
+              MWAWPosition tPos;
               if (token.m_descent != 0) {
-                MWAWPosition tPos(Vec2f(0,float(token.m_descent)), Vec2f(), WPX_POINT);
+                tPos=MWAWPosition(Vec2f(0,float(token.m_descent)), Vec2f(), WPX_POINT);
                 tPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
-                m_mainParser->sendZone(token.m_zoneId, tPos);
-              } else
-                m_mainParser->sendZone(token.m_zoneId);
+              }
+              m_mainParser->sendZone(token.m_zoneId, false, tPos);
             } else
               f << "###";
             break;
@@ -1957,14 +1983,23 @@ void CWText::setProperty(CWTextInternal::Paragraph const &ruler, int listId)
   m_parserState->m_listener->setParagraph(para);
 }
 
-bool CWText::sendZone(int number)
+bool CWText::canSendTextAsGraphic(int number) const
+{
+  std::map<int, shared_ptr<CWTextInternal::Zone> >::const_iterator iter
+    = m_state->m_zoneMap.find(number);
+  if (iter == m_state->m_zoneMap.end() || !iter->second)
+    return false;
+  return canSendTextAsGraphic(*iter->second);
+}
+
+bool CWText::sendZone(int number, bool asGraphic)
 {
   std::map<int, shared_ptr<CWTextInternal::Zone> >::iterator iter
     = m_state->m_zoneMap.find(number);
   if (iter == m_state->m_zoneMap.end())
     return false;
   shared_ptr<CWTextInternal::Zone> zone = iter->second;
-  sendText(*zone);
+  sendText(*zone, asGraphic);
   zone->m_parsed = true;
   return true;
 }
@@ -1978,7 +2013,7 @@ void CWText::flushExtra()
     if (zone->m_parsed)
       continue;
     if (m_parserState->m_listener) m_parserState->m_listener->insertEOL();
-    sendText(*zone);
+    sendText(*zone, false);
     zone->m_parsed = true;
   }
 }

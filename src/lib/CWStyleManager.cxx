@@ -50,10 +50,45 @@
 /** Internal: the structures of a CWStyleManagerInternal */
 namespace CWStyleManagerInternal
 {
+////////////////////////////////////////
+//! Internal: the pattern of a CWStyleManager
+struct Pattern : public MWAWGraphicStyle::Pattern {
+  //! constructor ( 4 int by patterns )
+  Pattern(uint16_t const *pat=0) : MWAWGraphicStyle::Pattern(), m_percent(0) {
+    if (!pat) return;
+    m_colors[0]=MWAWColor::white();
+    m_colors[1]=MWAWColor::black();
+    m_dim=Vec2i(8,8);
+    m_data.resize(8);
+    for (size_t i=0; i < 4; ++i) {
+      uint16_t val=pat[i];
+      m_data[2*i]=(unsigned char) (val>>8);
+      m_data[2*i+1]=(unsigned char) (val&0xFF);
+    }
+    int numOnes=0;
+    for (size_t j=0; j < 8; ++j) {
+      uint8_t val=(uint8_t) m_data[j];
+      for (int b=0; b < 8; b++) {
+        if (val&1) ++numOnes;
+        val = uint8_t(val>>1);
+      }
+    }
+    m_percent=float(numOnes)/64.f;
+  }
+  //! the percentage
+  float m_percent;
+};
+
+//! Internal: the state of a CWStyleManager
 struct State {
   //! constructor
-  State() : m_version(-1), m_localFIdMap(), m_stylesMap(), m_lookupMap(), m_graphList(), m_ksenList() {
+  State() : m_version(-1), m_localFIdMap(), m_stylesMap(), m_lookupMap(), m_graphList(), m_ksenList(),
+    m_colorList(), m_patternList() {
   }
+  //! set the default color map
+  void setDefaultColorList(int version);
+  //! set the default pattern map
+  void setDefaultPatternList(int version);
   //! return a mac font id corresponding to a local id
   int getFontId(int localId) const {
     if (m_localFIdMap.find(localId)==m_localFIdMap.end())
@@ -70,43 +105,104 @@ struct State {
   //! the style lookupMap
   std::map<int, int> m_lookupMap;
   //! the Graphic list
-  std::vector<CWStyleManager::Graphic> m_graphList;
+  std::vector<MWAWGraphicStyle> m_graphList;
   //! the KSEN list
   std::vector<CWStyleManager::KSEN> m_ksenList;
+
+  //! a list colorId -> color
+  std::vector<MWAWColor> m_colorList;
+  //! a list patternId -> percent
+  std::vector<Pattern> m_patternList;
 };
+
+
+void State::setDefaultColorList(int version)
+{
+  if (m_colorList.size()) return;
+  if (version==1) {
+    uint32_t const defCol[81] = {
+      0xffffff,0x000000,0x222222,0x444444,0x555555,0x888888,0xbbbbbb,0xdddddd,
+      0xeeeeee,0x440000,0x663300,0x996600,0x002200,0x003333,0x003399,0x000055,
+      0x330066,0x660066,0x770000,0x993300,0xcc9900,0x004400,0x336666,0x0033ff,
+      0x000077,0x660099,0x990066,0xaa0000,0xcc3300,0xffcc00,0x006600,0x006666,
+      0x0066ff,0x0000aa,0x663399,0xcc0099,0xdd0000,0xff3300,0xffff00,0x008800,
+      0x009999,0x0099ff,0x0000dd,0x9900cc,0xff0099,0xff3333,0xff6600,0xffff33,
+      0x00ee00,0x00cccc,0x00ccff,0x3366ff,0x9933ff,0xff33cc,0xff6666,0xff6633,
+      0xffff66,0x66ff66,0x66cccc,0x66ffff,0x3399ff,0x9966ff,0xff66ff,0xff9999,
+      0xff9966,0xffff99,0x99ff99,0x66ffcc,0x99ffff,0x66ccff,0x9999ff,0xff99ff,
+      0xffcccc,0xffcc99,0xffffcc,0xccffcc,0x99ffcc,0xccffff,0x99ccff,0xccccff,
+      0xffccff
+    };
+    m_colorList.resize(81);
+    for (size_t i = 0; i < 81; i++)
+      m_colorList[i] = defCol[i];
+  } else {
+    uint32_t const defCol[256] = {
+      0xffffff,0x0,0x777777,0x555555,0xffff00,0xff6600,0xdd0000,0xff0099,
+      0x660099,0xdd,0x99ff,0xee00,0x6600,0x663300,0x996633,0xbbbbbb,
+      0xffffcc,0xffff99,0xffff66,0xffff33,0xffccff,0xffcccc,0xffcc99,0xffcc66,
+      0xffcc33,0xffcc00,0xff99ff,0xff99cc,0xff9999,0xff9966,0xff9933,0xff9900,
+      0xff66ff,0xff66cc,0xff6699,0xff6666,0xff6633,0xff33ff,0xff33cc,0xff3399,
+      0xff3366,0xff3333,0xff3300,0xff00ff,0xff00cc,0xff0066,0xff0033,0xff0000,
+      0xccffff,0xccffcc,0xccff99,0xccff66,0xccff33,0xccff00,0xccccff,0xcccccc,
+      0xcccc99,0xcccc66,0xcccc33,0xcccc00,0xcc99ff,0xcc99cc,0xcc9999,0xcc9966,
+      0xcc9933,0xcc9900,0xcc66ff,0xcc66cc,0xcc6699,0xcc6666,0xcc6633,0xcc6600,
+      0xcc33ff,0xcc33cc,0xcc3399,0xcc3366,0xcc3333,0xcc3300,0xcc00ff,0xcc00cc,
+      0xcc0099,0xcc0066,0xcc0033,0xcc0000,0x99ffff,0x99ffcc,0x99ff99,0x99ff66,
+      0x99ff33,0x99ff00,0x99ccff,0x99cccc,0x99cc99,0x99cc66,0x99cc33,0x99cc00,
+      0x9999ff,0x9999cc,0x999999,0x999966,0x999933,0x999900,0x9966ff,0x9966cc,
+      0x996699,0x996666,0x996600,0x9933ff,0x9933cc,0x993399,0x993366,0x993333,
+      0x993300,0x9900ff,0x9900cc,0x990099,0x990066,0x990033,0x990000,0x66ffff,
+      0x66ffcc,0x66ff99,0x66ff66,0x66ff33,0x66ff00,0x66ccff,0x66cccc,0x66cc99,
+      0x66cc66,0x66cc33,0x66cc00,0x6699ff,0x6699cc,0x669999,0x669966,0x669933,
+      0x669900,0x6666ff,0x6666cc,0x666699,0x666666,0x666633,0x666600,0x6633ff,
+      0x6633cc,0x663399,0x663366,0x663333,0x6600ff,0x6600cc,0x660066,0x660033,
+      0x660000,0x33ffff,0x33ffcc,0x33ff99,0x33ff66,0x33ff33,0x33ff00,0x33ccff,
+      0x33cccc,0x33cc99,0x33cc66,0x33cc33,0x33cc00,0x3399ff,0x3399cc,0x339999,
+      0x339966,0x339933,0x339900,0x3366ff,0x3366cc,0x336699,0x336666,0x336633,
+      0x336600,0x3333ff,0x3333cc,0x333399,0x333366,0x333333,0x333300,0x3300ff,
+      0x3300cc,0x330099,0x330066,0x330033,0x330000,0xffff,0xffcc,0xff99,
+      0xff66,0xff33,0xff00,0xccff,0xcccc,0xcc99,0xcc66,0xcc33,
+      0xcc00,0x99cc,0x9999,0x9966,0x9933,0x9900,0x66ff,0x66cc,
+      0x6699,0x6666,0x6633,0x33ff,0x33cc,0x3399,0x3366,0x3333,
+      0x3300,0xff,0xcc,0x99,0x66,0x33,0xdd0000,0xbb0000,
+      0xaa0000,0x880000,0x770000,0x550000,0x440000,0x220000,0x110000,0xdd00,
+      0xbb00,0xaa00,0x8800,0x7700,0x5500,0x4400,0x2200,0x1100,
+      0xee,0xbb,0xaa,0x88,0x77,0x55,0x44,0x22,
+      0x11,0xeeeeee,0xdddddd,0xaaaaaa,0x888888,0x444444,0x222222,0x111111,
+    };
+    m_colorList.resize(256);
+    for (size_t i = 0; i < 256; i++)
+      m_colorList[i] = defCol[i];
+  }
 }
 
-////////////////////////////////////////////////////
-// Graphic function
-////////////////////////////////////////////////////
-std::ostream &operator<<(std::ostream &o, CWStyleManager::Graphic const &graph)
+void State::setDefaultPatternList(int)
 {
-  if (graph.m_lineWidth && graph.m_lineWidth != 1)
-    o << "lineW=" << graph.m_lineWidth << ",";
-  if (!graph.m_color[0].isBlack())
-    o << "lineColor=" << graph.m_color[0] << ",";
-  if (!graph.m_color[1].isWhite())
-    o << "surfColor=" << graph.m_color[1] << ",";
-  if (graph.m_pattern[0] != -1 && graph.m_pattern[0] != 2)
-    o << "linePattern=" << graph.m_pattern[0] << "[" << graph.m_patternPercent[0] << "],";
-  if (graph.m_pattern[1] != -1 && graph.m_pattern[1] != 2)
-    o << "surfPattern=" << graph.m_pattern[1] << "[" << graph.m_patternPercent[1] << "],";
-  o << graph.m_extra;
-  return o;
+  if (m_patternList.size()) return;
+  static uint16_t const (s_pattern[4*64]) = {
+    0x0000, 0x0000, 0x0000, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0x7fff, 0xffff, 0xf7ff, 0xffff, 0x7fff, 0xf7ff, 0x7fff, 0xf7ff,
+    0xffee, 0xffbb, 0xffee, 0xffbb, 0x77dd, 0x77dd, 0x77dd, 0x77dd, 0xaa55, 0xaa55, 0xaa55, 0xaa55, 0x8822, 0x8822, 0x8822, 0x8822,
+    0xaa00, 0xaa00, 0xaa00, 0xaa00, 0xaa00, 0x4400, 0xaa00, 0x1100, 0x8800, 0xaa00, 0x8800, 0xaa00, 0x8800, 0x2200, 0x8800, 0x2200,
+    0x8000, 0x0800, 0x8000, 0x0800, 0x8800, 0x0000, 0x8800, 0x0000, 0x8000, 0x0000, 0x0800, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001,
+    0xeedd, 0xbb77, 0xeedd, 0xbb77, 0x3366, 0xcc99, 0x3366, 0xcc99, 0x1122, 0x4488, 0x1122, 0x4488, 0x8307, 0x0e1c, 0x3870, 0xe0c1,
+    0x0306, 0x0c18, 0x3060, 0xc081, 0x0102, 0x0408, 0x1020, 0x4080, 0xffff, 0x0000, 0x0000, 0x0000, 0xff00, 0x0000, 0x0000, 0x0000,
+    0x77bb, 0xddee, 0x77bb, 0xddee, 0x99cc, 0x6633, 0x99cc, 0x6633, 0x8844, 0x2211, 0x8844, 0x2211, 0xe070, 0x381c, 0x0e07, 0x83c1,
+    0xc060, 0x3018, 0x0c06, 0x0381, 0x8040, 0x2010, 0x0804, 0x0201, 0xc0c0, 0xc0c0, 0xc0c0, 0xc0c0, 0x8080, 0x8080, 0x8080, 0x8080,
+    0xffaa, 0xffaa, 0xffaa, 0xffaa, 0xe4e4, 0xe4e4, 0xe4e4, 0xe4e4, 0xffff, 0xff00, 0x00ff, 0x0000, 0xaaaa, 0xaaaa, 0xaaaa, 0xaaaa,
+    0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0x0000, 0xff00, 0x0000, 0x8888, 0x8888, 0x8888, 0x8888, 0xff80, 0x8080, 0x8080, 0x8080,
+    0x4ecf, 0xfce4, 0x273f, 0xf372, 0x6006, 0x36b1, 0x8118, 0x1b63, 0x2004, 0x4002, 0x1080, 0x0801, 0x9060, 0x0609, 0x9060, 0x0609,
+    0x8814, 0x2241, 0x8800, 0xaa00, 0x2050, 0x8888, 0x8888, 0x0502, 0xaa00, 0x8000, 0x8800, 0x8000, 0x2040, 0x8000, 0x0804, 0x0200,
+    0xf0f0, 0xf0f0, 0x0f0f, 0x0f0f, 0x0077, 0x7777, 0x0077, 0x7777, 0xff88, 0x8888, 0xff88, 0x8888, 0xaa44, 0xaa11, 0xaa44, 0xaa11,
+    0x8244, 0x2810, 0x2844, 0x8201, 0x8080, 0x413e, 0x0808, 0x14e3, 0x8142, 0x2418, 0x1020, 0x4080, 0x40a0, 0x0000, 0x040a, 0x0000,
+    0x7789, 0x8f8f, 0x7798, 0xf8f8, 0xf1f8, 0x6cc6, 0x8f1f, 0x3663, 0xbf00, 0xbfbf, 0xb0b0, 0xb0b0, 0xff80, 0x8080, 0xff08, 0x0808,
+    0x1020, 0x54aa, 0xff02, 0x0408, 0x0008, 0x142a, 0x552a, 0x1408, 0x55a0, 0x4040, 0x550a, 0x0404, 0x8244, 0x3944, 0x8201, 0x0101
+  };
+  m_patternList.resize(64);
+  for (size_t i = 0; i < 64; i++)
+    m_patternList[i]=Pattern(&s_pattern[i*4]);
 }
 
-MWAWColor CWStyleManager::Graphic::getLineColor() const
-{
-  if (m_patternPercent[0] >= 1.0 || m_patternPercent[0] < 0)
-    return m_color[0];
-  return MWAWColor::barycenter(m_patternPercent[0], m_color[0], 1.f-m_patternPercent[0], MWAWColor::white());
-}
-
-MWAWColor CWStyleManager::Graphic::getSurfaceColor() const
-{
-  if (m_patternPercent[1] >= 1.0 || m_patternPercent[1] < 0)
-    return m_color[1];
-  return MWAWColor::barycenter(m_patternPercent[1], m_color[1], 1.f-m_patternPercent[1], MWAWColor::white());
 }
 
 ////////////////////////////////////////////////////
@@ -221,6 +317,31 @@ int CWStyleManager::version() const
   return m_state->m_version;
 }
 
+bool CWStyleManager::getColor(int id, MWAWColor &col) const
+{
+  int numColor = (int) m_state->m_colorList.size();
+  if (!numColor) {
+    m_state->setDefaultColorList(version());
+    numColor = int(m_state->m_colorList.size());
+  }
+  if (id < 0 || id >= numColor)
+    return false;
+  col = m_state->m_colorList[size_t(id)];
+  return true;
+}
+
+bool CWStyleManager::getPattern(int id, MWAWGraphicStyle::Pattern &pattern, float &percent) const
+{
+  if (m_state->m_patternList.empty())
+    m_state->setDefaultPatternList(version());
+  if (id <= 0 || id > int(m_state->m_patternList.size()))
+    return false;
+  CWStyleManagerInternal::Pattern const &pat=m_state->m_patternList[size_t(id-1)];
+  pattern = pat;
+  percent = pat.m_percent;
+  return true;
+}
+
 // accessor
 int CWStyleManager::getFontId(int localId) const
 {
@@ -251,9 +372,9 @@ bool CWStyleManager::get(int ksenId, CWStyleManager::KSEN &ksen) const
   return true;
 }
 
-bool CWStyleManager::get(int graphId, CWStyleManager::Graphic &graph) const
+bool CWStyleManager::get(int graphId, MWAWGraphicStyle &graph) const
 {
-  graph = Graphic();
+  graph = MWAWGraphicStyle();
   if (graphId < 0) return false;
   if (graphId >= int(m_state->m_graphList.size())) {
     MWAW_DEBUG_MSG(("CWStyleManager::get: can not find graph %d\n", graphId));
@@ -263,9 +384,217 @@ bool CWStyleManager::get(int graphId, CWStyleManager::Graphic &graph) const
   return true;
 }
 
+bool CWStyleManager::updateGradient(int id, MWAWGraphicStyle &style) const
+{
+  if (id < 0 || id>=32) {
+    MWAW_DEBUG_MSG(("CWStyleManager::updateGradiant: called with id=%d\n", id));
+    return false;
+  }
+  style.m_gradientStopList.resize(2);
+  style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::white());
+  style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::black());
+  style.m_gradientType = MWAWGraphicStyle::G_Linear;
+  switch(id) {
+  case 0:
+    style.m_gradientAngle=-90;
+    break;
+  case 1:
+    style.m_gradientAngle=90;
+    break;
+  case 8:
+    break;
+  case 9:
+    style.m_gradientAngle=180;
+    break;
+  case 11:
+    style.m_gradientAngle=-45;
+    break;
+  case 17:
+    style.m_gradientAngle=90;
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0,0));
+    break;
+  case 20:
+    style.m_gradientAngle=180;
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0x80,0x80,0xFF));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0,0,0xFF));
+    break;
+  case 22:
+    style.m_gradientAngle=180;
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0x80,0x80,0xFF));
+    break;
+  case 24:
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0xFF,0));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0xFF,0,0));
+    break;
+  case 26:
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0,0x80));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0,0,0xFF));
+    style.m_gradientAngle=-45;
+    break;
+  case 27:
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0,0));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0,0,0xFF));
+    style.m_gradientAngle=90;
+    break;
+  case 28:
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0x80,0x80,0xFF));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0xFF,0,0));
+    break;
+  case 29:
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0x80,0x80,0xFF));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0xFF,0x80,0));
+    break;
+  case 30:
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0xFF,0));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0xFF,0x80,0));
+    style.m_gradientAngle=-45;
+    break;
+  case 2:
+    style.m_gradientType = MWAWGraphicStyle::G_Axial;
+    break;
+  case 3:
+    style.m_gradientType = MWAWGraphicStyle::G_Axial;
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::black());
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
+    style.m_gradientAngle=45;
+    break;
+  case 10:
+    style.m_gradientType = MWAWGraphicStyle::G_Axial;
+    style.m_gradientAngle=90;
+    break;
+  case 12:
+    style.m_gradientType = MWAWGraphicStyle::G_Axial;
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::black());
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
+    style.m_gradientAngle=-45;
+    break;
+  case 18:
+    style.m_gradientType = MWAWGraphicStyle::G_Axial;
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0,0,0xFF));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
+    style.m_gradientAngle=45;
+    break;
+  case 21:
+    style.m_gradientType = MWAWGraphicStyle::G_Axial;
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0x80,0x80,0x80));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0,0,0xFF));
+    break;
+  case 25:
+    style.m_gradientType = MWAWGraphicStyle::G_Axial;
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0,0));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
+    style.m_gradientAngle=45;
+    break;
+  case 4:
+    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::black());
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
+    style.m_gradientPercentCenter=Vec2f(.5f,.5f);
+    break;
+  case 5:
+    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
+    style.m_gradientPercentCenter=Vec2f(.75f,.75f);
+    break;
+  case 6:
+    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
+    style.m_gradientPercentCenter=Vec2f(.25f,.75f);
+    break;
+  case 7:
+    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
+    style.m_gradientPercentCenter=Vec2f(.5f,.5f);
+    break;
+  case 13:
+    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
+    style.m_gradientPercentCenter=Vec2f(.75f,.25f);
+    break;
+  case 14:
+    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
+    style.m_gradientPercentCenter=Vec2f(.25f,.25f);
+    break;
+  case 16:
+    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
+    style.m_gradientPercentCenter=Vec2f(.25f,.75f);
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xff,0,0));
+    break;
+  case 19:
+    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0,0));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0,0,0xFF));
+    style.m_gradientPercentCenter=Vec2f(.75f,.75f);
+    break;
+  case 23:
+    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
+    style.m_gradientPercentCenter=Vec2f(.5f,.5f);
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0x80,0x80,0xFF));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
+    break;
+  case 31:
+    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
+    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0xFF,0));
+    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
+    style.m_gradientPercentCenter=Vec2f(.5f,.75f);
+    break;
+  case 15:
+    style.m_gradientType = MWAWGraphicStyle::G_Radial;
+    break;
+  default:
+    break;
+  }
+  return true;
+}
+
 ////////////////////////////////////////////////////////////
 // read file main structure
 ////////////////////////////////////////////////////////////
+bool CWStyleManager::readColorList(MWAWEntry const &entry)
+{
+  if (!entry.valid()) return false;
+  long pos = entry.begin();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(pos+4, WPX_SEEK_SET); // avoid header
+  if (entry.length() == 4) return true;
+
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(ColorList):";
+  int N = (int) input->readULong(2);
+  f << "N=" << N << ",";
+  for(int i = 0; i < 2; i++) {
+    int val = (int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+
+  int const fSz = 16;
+  if (pos+10+N*fSz > entry.end()) {
+    MWAW_DEBUG_MSG(("CWStyleManager::readColorList: can not read data\n"));
+    input->seek(pos, WPX_SEEK_SET);
+    return false;
+  }
+
+  ascFile.addDelimiter(input->tell(),'|');
+  input->seek(entry.end()-N*fSz, WPX_SEEK_SET);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  m_state->m_colorList.resize(size_t(N));
+  for (int i = 0; i < N; i++) {
+    pos = input->tell();
+    unsigned char color[3];
+    for (int c=0; c < 3; c++) color[c] = (unsigned char) (input->readULong(2)/256);
+    m_state->m_colorList[size_t(i)]= MWAWColor(color[0], color[1],color[2]);
+
+    f.str("");
+    f << "ColorList[" << i << "]:";
+    ascFile.addDelimiter(input->tell(),'|');
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+fSz, WPX_SEEK_SET);
+  }
+
+  input->seek(entry.end(), WPX_SEEK_SET);
+  return true;
+}
+
 bool CWStyleManager::readStyles(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.type() != "STYL")
@@ -663,7 +992,7 @@ bool CWStyleManager::readGraphStyles(int N, int fSz)
   for (int i = 0; i < N; i++) {
     long pos = input->tell();
     f.str("");
-    Graphic graph;
+    MWAWGraphicStyle graph;
     // 3 int, id (find either f0=<small number> or f1=0, f2=small number
     for (int j = 0; j < 3; j++) {
       val = (int) input->readLong(2);
@@ -680,28 +1009,39 @@ bool CWStyleManager::readGraphStyles(int N, int fSz)
     val = (int) input->readULong(1); // 0|1|4|80
     if (val)
       f << "f3=" << std::hex << val << std::dec << ",";
-    for (int j = 0; j < 2; j++) {
-      int col = (int) input->readULong(1);
-      MWAWColor color;
-      if (m_mainParser->getColor(col, color))
-        graph.m_color[j] = color;
-      else
-        f << "#col" << j << "=" << col << ",";
-    }
+    int col[2];
+    for (int j = 0; j < 2; j++)
+      col[j] = (int) input->readULong(1);
     for (int j = 0; j < 3; j++)
       values16.push_back((int16_t)input->readLong(2));
 
     m_mainParser->checkOrdering(values16, values32);
     if (values16[0] || values16[1])
       f << "dim=" << values16[0] << "x" << values16[1] << ",";
-    graph.m_pattern[0] = values16[2];
-    graph.m_pattern[1] = values16[3];
-    for (int j = 0; j < 2; j++) {
-      graph.m_patternPercent[j] = m_mainParser->getPatternPercent(graph.m_pattern[j]);
-      if (graph.m_patternPercent[j] < 0) {
-        f << "#pId" << j << ",";
-        graph.m_patternPercent[j] = 1.0;
+    for (size_t j = 0; j < 2; ++j) {
+      if (values16[j+2]==1) {
+        if (j==0) graph.m_lineOpacity=0;
+        else graph.m_surfaceOpacity=0;
+        continue;
       }
+      MWAWColor color;
+      if (!getColor(col[j], color)) {
+        f << "#col" << j << "=" << col << ",";
+        continue;
+      }
+      MWAWGraphicStyle::Pattern pattern;
+      float percent;
+      if (values16[j+2] && getPattern(values16[j+2], pattern, percent)) {
+        pattern.m_colors[1]=color;
+        if (!pattern.getUniqueColor(color)) {
+          if (j) graph.m_pattern=pattern;
+          pattern.getAverageColor(color);
+        }
+      } else if (values16[j+2])
+        f << "###pat" << j << "=" << values16[j+2];
+
+      if (j==0) graph.m_lineColor = color;
+      else graph.setSurfaceColor(color);
     }
     if (values16[4])
       f << "g0=" << values16[4] << ",";

@@ -97,7 +97,9 @@ protected:
   void setProperty(CWTextInternal::Paragraph const &ruler, int listId=-1);
 
   //! sends the zone data to the listener (if it exists )
-  bool sendZone(int number);
+  bool sendZone(int number, bool asGraphic=false);
+  //! check if we can send a textzone as graphic
+  bool canSendTextAsGraphic(int number) const;
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
@@ -122,7 +124,9 @@ protected:
   bool readTextSection(CWTextInternal::Zone &zone);
 
   //! send the text zone to the listener
-  bool sendText(CWTextInternal::Zone const &zone);
+  bool sendText(CWTextInternal::Zone const &zone, bool asGraphic);
+  //! check if we can send a textzone has graphic
+  bool canSendTextAsGraphic(CWTextInternal::Zone const &zone) const;
 
   //! try to find a list id which corresponds to the list beginning in actPos
   int findListId(CWTextInternal::Zone const &zone, int actListId, long cPos, long &lastPos);
