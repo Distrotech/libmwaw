@@ -145,10 +145,6 @@ protected:
   bool canSendZoneAsGraphic(int number) const;
   //! send a zone
   bool sendZone(int zoneId, bool asGraphic, MWAWPosition pos=MWAWPosition());
-  //! send a zone in a frame
-  void sendZoneInFrame(int zoneId, MWAWPosition pos,
-                       WPXPropertyList extras = WPXPropertyList(),
-                       WPXPropertyList frameExtras = WPXPropertyList());
   //! indicate that a zone is already parsed
   void forceParsed(int zoneId);
 

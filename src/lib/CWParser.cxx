@@ -100,8 +100,8 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(CWParser &pars, MWAWInputStreamPtr input, int zoneId) :
-    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
+  SubDocument(CWParser &pars, MWAWInputStreamPtr input, int zoneId, MWAWPosition const &pos=MWAWPosition()) :
+    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId), m_position(pos) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -125,9 +125,11 @@ public:
 protected:
   //! the subdocument id
   int m_id;
+  //! the subdocument position if defined
+  MWAWPosition m_position;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("CWParserInternal::SubDocument::parse: no listener\n"));
@@ -143,8 +145,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   }
 
   assert(m_parser);
-
-  reinterpret_cast<CWParser *>(m_parser)->sendZone(m_id, false);
+  reinterpret_cast<CWParser *>(m_parser)->sendZone(m_id, false,m_position);
 }
 }
 
@@ -361,19 +362,6 @@ void CWParser::sendFootnote(int zoneId)
   getListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
 }
 
-void CWParser::sendZoneInFrame(int zoneId, MWAWPosition pos, WPXPropertyList extras, WPXPropertyList frameExtras)
-{
-  if (!getListener()) return;
-
-  // for textbox, use min-height for Y
-  if (pos.size()[1]>0 &&
-      m_state->m_zonesMap.find(zoneId) != m_state->m_zonesMap.end() &&
-      m_state->m_zonesMap[zoneId]->m_fileType == 1 )
-    pos.setSize(Vec2f(pos.size()[0],-pos.size()[1]));
-  MWAWSubDocumentPtr subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
-  getListener()->insertTextBox(pos, subdoc, extras, frameExtras);
-}
-
 void CWParser::forceParsed(int zoneId)
 {
   if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
@@ -400,8 +388,10 @@ void CWParser::parse(WPXDocumentInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
+      MWAWPosition pos;
+      //pos.m_anchorTo=MWAWPosition::Page;
       for (size_t i = 0; i < m_state->m_mainZonesList.size(); i++)
-        sendZone(m_state->m_mainZonesList[i], false);
+        sendZone(m_state->m_mainZonesList[i], false, pos);
       m_presentationParser->flushExtra();
       m_graphParser->flushExtra();
       m_tableParser->flushExtra();

@@ -568,8 +568,8 @@ void State::setDefaultWallPaperList(int version)
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(CWGraph &pars, MWAWInputStreamPtr input, int zoneId) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(zoneId) {}
+  SubDocument(CWGraph &pars, MWAWInputStreamPtr input, int zoneId, MWAWPosition pos=MWAWPosition()) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(zoneId), m_position(pos) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -589,35 +589,41 @@ public:
     return !operator!=(doc);
   }
   //! the parser function
-  void parse(MWAWContentListenerPtr &, libmwaw::SubDocumentType) {
-    MWAW_DEBUG_MSG(("CWGraphInternal::SubDocument::Parse: must not be called\n"));
+  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type) {
+    parse(listener, type, false);
   }
   //! the graphic parser function
-  void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType);
+  void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType type) {
+    parse(listener, type, true);
+  }
+  //! the main parser function
+  void parse(MWAWListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic);
   /** the graph parser */
   CWGraph *m_graphParser;
 
 protected:
   //! the subdocument id
   int m_id;
+  //! the position if known
+  MWAWPosition m_position;
 private:
   SubDocument(SubDocument const &orig);
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType type)
+void SubDocument::parse(MWAWListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic)
 {
   if (!listener || (type==libmwaw::DOC_TEXT_BOX&&!listener->canWriteText())) {
-    MWAW_DEBUG_MSG(("CWGraphInternal::SubDocument::parseGraphic: no listener\n"));
+    MWAW_DEBUG_MSG(("CWGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_graphParser);
-
   long pos = m_input->tell();
-  if (type==libmwaw::DOC_TEXT_BOX || type==libmwaw::DOC_GRAPHIC_GROUP)
-    m_graphParser->askToSend(m_id,true);
+  if ((asGraphic && (type==libmwaw::DOC_TEXT_BOX || type==libmwaw::DOC_GRAPHIC_GROUP))
+      || (!asGraphic && type==libmwaw::DOC_TEXT_BOX))
+    m_graphParser->askToSend(m_id,asGraphic,m_position);
   else {
-    MWAW_DEBUG_MSG(("CWGraphInternal::SubDocument::parseGraphic: find unexpected type\n"));
+    MWAW_DEBUG_MSG(("CWGraphInternal::SubDocument::parse: find unexpected type\n"));
   }
   m_input->seek(pos, WPX_SEEK_SET);
 }
@@ -665,9 +671,9 @@ int CWGraph::numPages() const
   return nPages;
 }
 
-void CWGraph::askToSend(int number, bool asGraphic)
+void CWGraph::askToSend(int number, bool asGraphic, MWAWPosition const& pos)
 {
-  m_mainParser->sendZone(number, asGraphic);
+  m_mainParser->sendZone(number, asGraphic, pos);
 }
 
 ////////////////////////////////////////////////////////////
@@ -2140,6 +2146,30 @@ bool CWGraph::canSendZoneAsGraphic(int number) const
   return canSendAsGraphic(*iter->second);
 }
 
+bool CWGraph::sendZone(int number, bool asGraphic, MWAWPosition const &position)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("CWGraph::sendZone: can not find the listener\n"));
+    return false;
+  }
+  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
+    = m_state->m_zoneMap.find(number);
+  if (iter == m_state->m_zoneMap.end() || !iter->second)
+    return false;
+  shared_ptr<CWGraphInternal::Group> group = iter->second;
+  group->m_parsed=true;
+  if (asGraphic) {
+    MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+    if (!graphicListener) {
+      MWAW_DEBUG_MSG(("CWGraph::sendZone: can not find the graphiclistener\n"));
+      return false;
+    }
+    return sendGroup(*group, *graphicListener);
+  }
+  return sendGroup(*group, position);
+}
+
 bool CWGraph::canSendAsGraphic(CWGraphInternal::Group &group) const
 {
   updateInformation(group);
@@ -2201,7 +2231,6 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWGraphicListener &list
         listener.insertTextBox(box, doc, zone.m_style);
       else
         listener.insertGroup(box, doc);
-      //m_mainParser->sendZone(zone.m_id, true);
       break;
     }
     case CWGraphInternal::Zone::T_Shape: {
@@ -2235,23 +2264,15 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWGraphicListener &list
   return true;
 }
 
-bool CWGraph::sendZone(int number, bool asGraphic, MWAWPosition position)
+bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &position)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
-  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("CWGraph::sendZone: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("CWGraph::sendGroup: can not find the listener\n"));
     return false;
   }
-  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
-    = m_state->m_zoneMap.find(number);
-  if (iter == m_state->m_zoneMap.end() || !iter->second)
-    return false;
-  shared_ptr<CWGraphInternal::Group> group = iter->second;
-  if (asGraphic && graphicListener)
-    return sendGroup(*group, *graphicListener);
-  updateInformation(*group);
-  bool mainGroup = group->m_type == CWStruct::DSET::T_Main;
+  updateInformation(group);
+  bool mainGroup = group.m_type == CWStruct::DSET::T_Main;
   Vec2f leftTop(0,0);
   float textHeight = 0.0;
   if (mainGroup) {
@@ -2283,58 +2304,88 @@ bool CWGraph::sendZone(int number, bool asGraphic, MWAWPosition position)
     suggestedAnchor= mainGroup ? MWAWPosition::Page : MWAWPosition::Char;
     break;
   }
-
-  if (graphicListener && !graphicListener->isDocumentStarted() && canSendAsGraphic(*group)) {
-    Box2f box=group->m_box;
+  if (position.m_anchorTo==MWAWPosition::Unknown) {
+    MWAW_DEBUG_MSG(("CWGraph::sendGroup: position is not set\n"));
+  }
+  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+  bool canUseGraphic=graphicListener && !graphicListener->isDocumentStarted();
+  if (canUseGraphic && canSendAsGraphic(group)) {
+    Box2f box=group.m_box;
     graphicListener->startGraphic(box);
-    sendGroup(*group, *graphicListener);
+    sendGroup(group, *graphicListener);
     WPXBinaryData data;
     std::string type;
     if (graphicListener->endGraphic(data,type)) {
       MWAWPosition pos(position);
+      //pos.setOrigin(box[0]);
+      if (pos.size()[0]<=0 || pos.size()[1]<=0)
+        pos.setSize(box.size());
       if (pos.m_anchorTo==MWAWPosition::Unknown) {
-        pos = MWAWPosition(box[0], box.size(), WPX_POINT);
+        pos=MWAWPosition(box[0], box.size(), WPX_POINT);
         pos.setRelativePosition(suggestedAnchor);
         if (suggestedAnchor == MWAWPosition::Page) {
-          int pg = group->m_page > 0 ? group->m_page : 1;
+          int pg = group.m_page > 0 ? group.m_page : 1;
           Vec2f orig = pos.origin()+leftTop;
           pos.setPagePos(pg, orig);
           pos.m_wrapping =  MWAWPosition::WBackground;
         } else if (suggestedAnchor == MWAWPosition::Char)
           pos.setOrigin(Vec2f(0,0));
       }
-      if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
-        pos.setSize(box.size());
       listener->insertPicture(pos, data, type);
     }
     return true;
   }
-  if (group->m_totalNumber > 1 &&
+  if (group.m_totalNumber > 1 &&
       (position.m_anchorTo==MWAWPosition::Char ||
        position.m_anchorTo==MWAWPosition::CharBaseLine)) {
     // we need to a frame, ...
-    m_mainParser->sendZoneInFrame(number, position);
+    MWAWPosition lPos;
+    lPos.m_anchorTo=MWAWPosition::Frame;
+    MWAWSubDocumentPtr doc(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, group.m_id, lPos));
+    listener->insertTextBox(position, doc);
     return true;
   }
 
-  std::vector<size_t> notDone;
+  // first sort the jobs
+  std::vector<size_t> listJobs[2];
+  for (size_t g = 0; g < group.m_blockToSendList.size(); g++) {
+    CWGraphInternal::Zone *child = group.m_zones[g].get();
+    if (!child) continue;
+    if (position.m_anchorTo==MWAWPosition::Unknown && suggestedAnchor == MWAWPosition::Page) {
+      Vec2f RB = Vec2f(child->m_box[1])+leftTop;
+      if (RB[1] >= textHeight || listener->isSectionOpened()) {
+        listJobs[1].push_back(g);
+        continue;
+      }
+    }
+    if (child->getType() == CWGraphInternal::Zone::T_Zone) {
+      CWGraphInternal::ZoneZone const &childZone =
+        reinterpret_cast<CWGraphInternal::ZoneZone &>(*child);
+      int zId = childZone.m_id;
+      shared_ptr<CWStruct::DSET> dset=m_mainParser->getZone(zId);
+      if (dset && dset->m_type==CWStruct::DSET::T_Main) {
+        listJobs[1].push_back(g);
+        continue;
+      }
+    }
+    listJobs[0].push_back(g);
+  }
   for (int st = 0; st < 2; st++) {
-    std::vector<size_t> const &toDo = st==0 ? group->m_blockToSendList : notDone;
     if (st == 1) {
       suggestedAnchor = MWAWPosition::Char;
-      if (group->m_hasMainZone)
+      if (group.m_hasMainZone)
         m_mainParser->sendZone(1, false);
     }
-    size_t numZones = toDo.size();
-    for (size_t g = 0; g < numZones; g++) {
-      CWGraphInternal::Zone *child = group->m_zones[toDo[g]].get();
+    for (size_t g = 0; g < listJobs[st].size(); g++) {
+      CWGraphInternal::Zone *child = group.m_zones[listJobs[st][g]].get();
       if (!child) continue;
 
-      bool posValidSet = child->m_box.size()[0] > 0 && child->m_box.size()[1] > 0;
       MWAWPosition pos(position);
       pos.setOrder(int(g)+1);
+      pos.setOrigin(child->m_box[0]);
+      pos.setSize(child->m_box.size());
       if (pos.m_anchorTo==MWAWPosition::Unknown) {
-        pos = MWAWPosition(child->m_box[0], child->m_box.size(), WPX_POINT);
+        pos=MWAWPosition(child->m_box[0], child->m_box.size(), WPX_POINT);
         pos.setRelativePosition(suggestedAnchor);
         if (suggestedAnchor == MWAWPosition::Page) {
           int pg = child->m_page > 0 ? child->m_page : 1;
@@ -2342,16 +2393,9 @@ bool CWGraph::sendZone(int number, bool asGraphic, MWAWPosition position)
           pos.setPagePos(pg, orig);
           pos.m_wrapping =  MWAWPosition::WBackground;
           pos.setOrder(-int(g)-1);
-          if (pos.origin()[1]+pos.size()[1] >= textHeight
-              || listener->isSectionOpened()) {
-            notDone.push_back(toDo[g]);
-            continue;
-          }
         } else if (st==1 || suggestedAnchor == MWAWPosition::Char)
           pos.setOrigin(Vec2f(0,0));
       }
-      if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
-        pos.setSize(child->m_box.size());
       switch (child->getType()) {
       case CWGraphInternal::Zone::T_Zone: {
         CWGraphInternal::ZoneZone const &childZone =
@@ -2371,12 +2415,10 @@ bool CWGraph::sendZone(int number, bool asGraphic, MWAWPosition position)
           break;
         }
         // if this is a group, try to send it as a picture
-        bool isLinked=group->isLinked(zId);
+        bool isLinked=group.isLinked(zId);
         bool isGroup = dset && dset->m_fileType==0;
-        if (!isLinked && isGroup &&
-            graphicListener && !graphicListener->isDocumentStarted() &&
-            m_mainParser->canSendZoneAsGraphic(zId)) {
-          m_mainParser->sendZone(zId, false, pos);
+        if (!isLinked && isGroup && canUseGraphic && canSendZoneAsGraphic(zId)) {
+          sendZone(zId, false, pos);
           break;
         }
         // now check if we need to create a frame
@@ -2384,7 +2426,6 @@ bool CWGraph::sendZone(int number, bool asGraphic, MWAWPosition position)
         bool createFrame=
           type == CWStruct::DSET::T_Frame || type == CWStruct::DSET::T_Table ||
           (type == CWStruct::DSET::T_Unknown && pos.m_anchorTo == MWAWPosition::Page);
-        if (!posValidSet) createFrame=false;
         if (!isLinked && childZone.m_subId) {
           MWAW_DEBUG_MSG(("find old subs zone\n"));
           break;
@@ -2409,18 +2450,20 @@ bool CWGraph::sendZone(int number, bool asGraphic, MWAWPosition position)
         }
         if (createFrame) {
           WPXPropertyList textboxExtras;
-          group->addFrameName(zId, childZone.m_subId, extras, textboxExtras);
-          if (isLinked && childZone.m_subId) {
-            shared_ptr<MWAWSubDocument> empty;
-            listener->insertTextBox(pos, empty, extras, textboxExtras);
-          } else
-            m_mainParser->sendZoneInFrame(zId, pos, extras, textboxExtras);
+          group.addFrameName(zId, childZone.m_subId, extras, textboxExtras);
+          shared_ptr<MWAWSubDocument> doc;
+          if (!isLinked || childZone.m_subId==0) {
+            MWAWPosition lPos;
+            if (0 && (type == CWStruct::DSET::T_Frame || type == CWStruct::DSET::T_Table))
+              lPos.m_anchorTo=MWAWPosition::Frame;
+            doc.reset(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, zId, lPos));
+          }
+          if (!isLinked && dset && dset->m_fileType==1 && pos.size()[1]>0) // use min-height for text
+            pos.setSize(Vec2f(pos.size()[0],-pos.size()[1]));
+          listener->insertTextBox(pos, doc, extras, textboxExtras);
           break;
         }
-        if (pos.m_anchorTo == MWAWPosition::Page)
-          notDone.push_back(toDo[g]);
-        else
-          m_mainParser->sendZone(zId, false, position);
+        m_mainParser->sendZone(zId, false, position);
         break;
       }
       case CWGraphInternal::Zone::T_Picture:
@@ -2449,12 +2492,11 @@ bool CWGraph::sendZone(int number, bool asGraphic, MWAWPosition position)
       case CWGraphInternal::Zone::T_Arc:
       case CWGraphInternal::Zone::T_Poly:
       default:
-        MWAW_DEBUG_MSG(("CWGraph::sendZone: find unknown zone\n"));
+        MWAW_DEBUG_MSG(("CWGraph::sendGroup: find unknown zone\n"));
         break;
       }
     }
   }
-  group->m_parsed = true;
   return true;
 }
 
