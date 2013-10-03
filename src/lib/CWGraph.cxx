@@ -103,7 +103,7 @@ struct CurvePoint {
 //! Internal: the structure used to store a style of a CWGraph
 struct Style : public MWAWGraphicStyle {
   //! constructor
-  Style(): MWAWGraphicStyle(), m_id(-1), m_wallpaperId(-1), m_wrapping(0), m_lineFlags(0), m_surfacePatternType(0) {
+  Style(): MWAWGraphicStyle(), m_id(-1), m_wrapping(0), m_lineFlags(0), m_surfacePatternType(0) {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Style const &st) {
@@ -127,7 +127,7 @@ struct Style : public MWAWGraphicStyle {
     case 0:
       break; // pattern
     case 1:
-      o << "wallPattern[" << st.m_wallpaperId << "],";
+      o << "wallPattern,";
       break;
     default:
       o << "pattType=" << st.m_surfacePatternType << ",";
@@ -140,8 +140,6 @@ struct Style : public MWAWGraphicStyle {
   }
   //! the identificator
   int m_id;
-  //! the gradient id
-  int m_wallpaperId;
   //! the wrap type
   int m_wrapping;
   //! the line flags
@@ -539,33 +537,14 @@ struct Group : public CWStruct::DSET {
 //! Internal: the state of a CWGraph
 struct State {
   //! constructor
-  State() : m_zoneMap(), m_wallpaperList(), m_frameId(0) { }
-  //! set the default pattern map
-  void setDefaultWallPaperList(int version);
+  State() : m_zoneMap(), m_frameId(0) { }
 
   //! a map zoneId -> group
   std::map<int, shared_ptr<Group> > m_zoneMap;
-  //! a list wallPaperId -> color
-  std::vector<MWAWColor> m_wallpaperList;
   //! a int used to defined linked frame
   int m_frameId;
 };
 
-void State::setDefaultWallPaperList(int version)
-{
-  if (version <= 2 || m_wallpaperList.size())
-    return;
-  // checkme: does ClarisWork v4 version has wallpaper?
-  uint32_t const defCol[20] = {
-    0xdcdcdc, 0x0000cd, 0xeeeeee, 0xeedd8e, 0xc71585,
-    0xc9c9c9, 0xcd853f, 0x696969, 0xfa8072, 0x6495ed,
-    0x4682b4, 0xdaa520, 0xcd5c5c, 0xb22222, 0x8b8682,
-    0xb03060, 0xeeeee0, 0x4682b4, 0xfa8072, 0x505050
-  };
-  m_wallpaperList.resize(20);
-  for (size_t i = 0; i < 20; i++)
-    m_wallpaperList[i] = defCol[i];
-}
 ////////////////////////////////////////
 //! Internal: the subdocument of a CWGraph
 class SubDocument : public MWAWSubDocument
@@ -682,23 +661,8 @@ void CWGraph::askToSend(int number, bool asGraphic, MWAWPosition const& pos)
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
-bool CWGraph::getWallPaperColor(int id, MWAWColor &col) const
-{
-  int numWallpaper = (int) m_state->m_wallpaperList.size();
-  if (!numWallpaper) {
-    m_state->setDefaultWallPaperList(version());
-    numWallpaper = int(m_state->m_wallpaperList.size());
-  }
-  if (id < 0 || id >= numWallpaper)
-    return false;
-  col = m_state->m_wallpaperList[size_t(id)];
-  return true;
-}
-
 bool CWGraph::getSurfaceColor(CWGraphInternal::Style const style, MWAWColor &col) const
 {
-  if (style.m_surfacePatternType==1)
-    return getWallPaperColor(style.m_wallpaperId, col);
   if (!style.hasSurfaceColor())
     return false;
   col = style.m_surfaceColor;
@@ -1057,36 +1021,36 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
       style.setSurfaceColor(color);
   }
 
-  int pat[2];
   for (int j = 0; j < 2; j++) {
     if (vers > 1) {
       val =  (int) input->readULong(1); // probably also related to surface
       if (val) f << "pat" << j << "[high]=" << val << ",";
     }
-    pat[j] = (int) input->readULong(1);
+    int pat = (int) input->readULong(1);
     if (j==1 && style.m_surfacePatternType) {
-      if (style.m_surfacePatternType==1) // wall paper
-        style.m_wallpaperId=pat[j];
-      else {
+      if (style.m_surfacePatternType==1) { // wall paper
+        if (!m_styleManager->updateWallPaper(pat, style))
+          f << "##wallId=" << pat << ",";
+      } else {
         f << "###surfaceType=" << style.m_surfacePatternType << ",";
         MWAW_DEBUG_MSG(("CWGraph::readGroupDef: unknown surface type!!!\n"));
       }
       continue;
     }
     if (j==1 && (style.m_lineFlags & 0x10)) {
-      m_styleManager->updateGradient(pat[1], style);
+      m_styleManager->updateGradient(pat, style);
       continue;
     }
-    if (pat[j]==1) {
+    if (pat==1) {
       if (j==0) style.m_lineOpacity=0;
       else style.m_surfaceOpacity=0;
       continue;
     }
     MWAWGraphicStyle::Pattern pattern;
     float percent;
-    if (!m_styleManager->getPattern(pat[j],pattern,percent)) {
+    if (!m_styleManager->getPattern(pat,pattern,percent)) {
       MWAW_DEBUG_MSG(("CWGraph::readGroupDef: unknown pattern!!!\n"));
-      f << "###pat" << j << "=" << pat[j] << ",";
+      f << "###pat" << j << "=" << pat << ",";
     }
     pattern.m_colors[1]=j==0 ? style.m_lineColor : style.m_surfaceColor;
     MWAWColor color;
@@ -1428,7 +1392,11 @@ bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone
     input->seek(nextToRead, WPX_SEEK_SET);
     zone.m_rotate=(int) input->readLong(2);
     if (zone.m_rotate) {
-      MWAW_DEBUG_MSG(("CWGraph::readSimpleGraphicZone: Arghs find some rotation\n"));
+      shape=shape.rotate(float(-zone.m_rotate), shape.m_bdBox.center());
+      Vec2f orig=zone.m_box[0]+shape.m_bdBox[0];
+      shape.translate(-1.f*shape.m_bdBox[0]);
+      zone.m_box=Box2f(orig, orig+shape.m_bdBox.size());
+      MWAW_DEBUG_MSG(("CWGraph::readSimpleGraphicZone: find some rotation, experimental code\n"));
     }
     if (vers==6) {
       for (int i=0; i < 2; i++) { // always 0
@@ -2423,108 +2391,115 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
         } else if (st==1 || suggestedAnchor == MWAWPosition::Char)
           pos.setOrigin(Vec2f(0,0));
       }
-      switch (child->getType()) {
-      case CWGraphInternal::Zone::T_Zone: {
-        CWGraphInternal::ZoneZone const &childZone =
-          reinterpret_cast<CWGraphInternal::ZoneZone &>(*child);
-        int zId = childZone.m_id;
-        shared_ptr<CWStruct::DSET> dset=m_mainParser->getZone(zId);
-        CWGraphInternal::Style const cStyle = childZone.m_style;
-        switch (cStyle.m_wrapping&3) {
-        case 0:
-          pos.m_wrapping = MWAWPosition::WRunThrough;
-          break;
-        case 1:
-        case 2:
-          pos.m_wrapping = MWAWPosition::WDynamic;
-          break;
-        default:
-          break;
-        }
-        // if this is a group, try to send it as a picture
-        bool isLinked=group.isLinked(zId);
-        bool isGroup = dset && dset->m_fileType==0;
-        if (!isLinked && isGroup && canUseGraphic && canSendZoneAsGraphic(zId)) {
-          sendZone(zId, false, pos);
-          break;
-        }
-        // now check if we need to create a frame
-        CWStruct::DSET::Type type=dset ? dset->m_type : CWStruct::DSET::T_Unknown;
-        bool createFrame=
-          type == CWStruct::DSET::T_Frame || type == CWStruct::DSET::T_Table ||
-          (type == CWStruct::DSET::T_Unknown && pos.m_anchorTo == MWAWPosition::Page);
-        if (!isLinked && childZone.m_subId) {
-          MWAW_DEBUG_MSG(("find old subs zone\n"));
-          break;
-        }
-        WPXPropertyList extras;
-        if (!isGroup) {
-          MWAWColor color;
-          if (cStyle.hasSurfaceColor() && getSurfaceColor(cStyle, color))
-            extras.insert("fo:background-color", color.str().c_str());
-          else
-            extras.insert("style:background-transparency", "100%");
-          if (cStyle.hasLine()) {
-            std::stringstream stream;
-            stream << cStyle.m_lineWidth*0.03 << "cm solid "
-                   << cStyle.m_lineColor.str();
-            extras.insert("fo:border", stream.str().c_str());
-            // extend the frame to add border
-            float extend = float(cStyle.m_lineWidth*0.85);
-            pos.setOrigin(pos.origin()-Vec2f(extend,extend));
-            pos.setSize(pos.size()+2.0*Vec2f(extend,extend));
-          }
-        }
-        if (createFrame) {
-          WPXPropertyList textboxExtras;
-          group.addFrameName(zId, childZone.m_subId, extras, textboxExtras);
-          shared_ptr<MWAWSubDocument> doc;
-          if (!isLinked || childZone.m_subId==0) {
-            MWAWPosition lPos;
-            if (0 && (type == CWStruct::DSET::T_Frame || type == CWStruct::DSET::T_Table))
-              lPos.m_anchorTo=MWAWPosition::Frame;
-            doc.reset(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, zId, lPos));
-          }
-          if (!isLinked && dset && dset->m_fileType==1 && pos.size()[1]>0) // use min-height for text
-            pos.setSize(Vec2f(pos.size()[0],-pos.size()[1]));
-          listener->insertTextBox(pos, doc, extras, textboxExtras);
-          break;
-        }
-        m_mainParser->sendZone(zId, false, position);
-        break;
-      }
-      case CWGraphInternal::Zone::T_Picture:
-        sendPicture
-        (reinterpret_cast<CWGraphInternal::ZonePict &>(*child), pos);
-        break;
-      case CWGraphInternal::Zone::T_Shape:
-        sendShape
-        (reinterpret_cast<CWGraphInternal::ZoneShape &>(*child), pos);
-        break;
-      case CWGraphInternal::Zone::T_Bitmap:
-        sendBitmap
-        (reinterpret_cast<CWGraphInternal::ZoneBitmap &>(*child), pos);
-        break;
-      case CWGraphInternal::Zone::T_DataBox:
-      case CWGraphInternal::Zone::T_Chart:
-      case CWGraphInternal::Zone::T_Unknown:
-        break;
-      case CWGraphInternal::Zone::T_Pict:
-      case CWGraphInternal::Zone::T_QTim:
-      case CWGraphInternal::Zone::T_Movie:
-      case CWGraphInternal::Zone::T_Line:
-      case CWGraphInternal::Zone::T_Rect:
-      case CWGraphInternal::Zone::T_RectOval:
-      case CWGraphInternal::Zone::T_Oval:
-      case CWGraphInternal::Zone::T_Arc:
-      case CWGraphInternal::Zone::T_Poly:
-      default:
-        MWAW_DEBUG_MSG(("CWGraph::sendGroup: find unknown zone\n"));
-        break;
-      }
+      sendGroupChild(group, cId, pos);
     }
   }
   return true;
+}
+
+bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosition pos)
+{
+  CWGraphInternal::Zone *child = group.m_zones[cId].get();
+  if (!child) return false;
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("CWGraph::sendGroupChild: can not find the listener\n"));
+    return false;
+  }
+  CWGraphInternal::Zone::Type type = child->getType();
+  if (type==CWGraphInternal::Zone::T_Picture)
+    return sendPicture(reinterpret_cast<CWGraphInternal::ZonePict &>(*child), pos);
+  if (type==CWGraphInternal::Zone::T_Shape)
+    return sendShape(reinterpret_cast<CWGraphInternal::ZoneShape &>(*child), pos);
+  if (type==CWGraphInternal::Zone::T_Bitmap)
+    return sendBitmap(reinterpret_cast<CWGraphInternal::ZoneBitmap &>(*child), pos);
+  if (type==CWGraphInternal::Zone::T_DataBox || type==CWGraphInternal::Zone::T_Chart ||
+      type==CWGraphInternal::Zone::T_Unknown)
+    return true;
+  if (type!=CWGraphInternal::Zone::T_Zone) {
+    MWAW_DEBUG_MSG(("CWGraph::sendGroupChild: find unknown zone\n"));
+    return false;
+  }
+
+  CWGraphInternal::ZoneZone const &childZone = reinterpret_cast<CWGraphInternal::ZoneZone &>(*child);
+  int zId = childZone.m_id;
+  shared_ptr<CWStruct::DSET> dset=m_mainParser->getZone(zId);
+  CWGraphInternal::Style const cStyle = childZone.m_style;
+  switch (cStyle.m_wrapping&3) {
+  case 0:
+    pos.m_wrapping = MWAWPosition::WRunThrough;
+    break;
+  case 1:
+  case 2:
+    pos.m_wrapping = MWAWPosition::WDynamic;
+    break;
+  default:
+    break;
+  }
+  // if this is a group, try to send it as a picture
+  bool isLinked=group.isLinked(zId);
+  bool isGroup = dset && dset->m_fileType==0;
+  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
+  bool canUseGraphic=graphicListener && !graphicListener->isDocumentStarted();
+  if (!isLinked && isGroup && canUseGraphic && canSendZoneAsGraphic(zId))
+    return sendZone(zId, false, pos);
+  if (!isLinked && (cStyle.hasPattern() || cStyle.hasGradient()) && canUseGraphic &&
+      (dset && dset->m_fileType==1) && m_mainParser->canSendZoneAsGraphic(zId)) {
+    Box2f box=Box2f(Vec2f(0,0), childZone.m_box.size());
+    graphicListener->startGraphic(box);
+    shared_ptr<MWAWSubDocument> doc(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, zId));
+    graphicListener->insertTextBox(box, doc, cStyle);
+    WPXBinaryData data;
+    std::string mime;
+    if (graphicListener->endGraphic(data,mime))
+      listener->insertPicture(pos, data, mime);
+    return true;
+  }
+  // now check if we need to create a frame
+  CWStruct::DSET::Type cType=dset ? dset->m_type : CWStruct::DSET::T_Unknown;
+  bool createFrame=
+    cType == CWStruct::DSET::T_Frame || cType == CWStruct::DSET::T_Table ||
+    (cType == CWStruct::DSET::T_Unknown && pos.m_anchorTo == MWAWPosition::Page);
+  if (!isLinked && childZone.m_subId) {
+    MWAW_DEBUG_MSG(("find old subs zone\n"));
+    return false;
+  }
+  WPXPropertyList extras;
+  if (!isGroup) {
+    MWAWColor color;
+    if (cStyle.hasSurfaceColor() && getSurfaceColor(cStyle, color))
+      extras.insert("fo:background-color", color.str().c_str());
+    else
+      extras.insert("style:background-transparency", "100%");
+    if (cStyle.hasLine()) {
+      std::stringstream stream;
+      stream << cStyle.m_lineWidth*0.03 << "cm solid "
+             << cStyle.m_lineColor.str();
+      extras.insert("fo:border", stream.str().c_str());
+      // extend the frame to add border
+      float extend = float(cStyle.m_lineWidth*0.85);
+      pos.setOrigin(pos.origin()-Vec2f(extend,extend));
+      pos.setSize(pos.size()+2.0*Vec2f(extend,extend));
+    }
+  }
+  if (createFrame) {
+    WPXPropertyList textboxExtras;
+    group.addFrameName(zId, childZone.m_subId, extras, textboxExtras);
+    shared_ptr<MWAWSubDocument> doc;
+    if (!isLinked || childZone.m_subId==0) {
+      MWAWPosition lPos;
+      if (0 && (cType == CWStruct::DSET::T_Frame || cType == CWStruct::DSET::T_Table))
+        lPos.m_anchorTo=MWAWPosition::Frame;
+      doc.reset(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, zId, lPos));
+    }
+    if (!isLinked && dset && dset->m_fileType==1 && pos.size()[1]>0) // use min-height for text
+      pos.setSize(Vec2f(pos.size()[0],-pos.size()[1]));
+    listener->insertTextBox(pos, doc, extras, textboxExtras);
+    return true;
+  }
+  if (0)
+    return m_mainParser->sendZone(zId, false, pos);
+  return m_mainParser->sendZone(zId, false);
 }
 
 bool CWGraph::sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos)

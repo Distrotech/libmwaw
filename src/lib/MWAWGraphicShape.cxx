@@ -100,6 +100,27 @@ void MWAWGraphicShape::PathData::translate(Vec2f const &decal)
   m_x2 += decal;
 }
 
+void MWAWGraphicShape::PathData::rotate(float angle, Vec2f const &decal)
+{
+  if (m_type=='Z')
+    return;
+  float angl=angle*float(M_PI/180.);
+  m_x = Vec2f(std::cos(angl)*m_x[0]-std::sin(angl)*m_x[1],
+              std::sin(angl)*m_x[0]+std::cos(angl)*m_x[1])+decal;
+  if (m_type=='A') {
+    m_rotate += angle;
+    return;
+  }
+  if (m_type=='H' || m_type=='V' || m_type=='M' || m_type=='L' || m_type=='T')
+    return;
+  m_x1 = Vec2f(std::cos(angl)*m_x1[0]-std::sin(angl)*m_x1[1],
+               std::sin(angl)*m_x1[0]+std::cos(angl)*m_x1[1])+decal;
+  if (m_type=='Q' || m_type=='S')
+    return;
+  m_x2 = Vec2f(std::cos(angl)*m_x2[0]-std::sin(angl)*m_x2[1],
+               std::sin(angl)*m_x2[0]+std::cos(angl)*m_x2[1])+decal;
+}
+
 bool MWAWGraphicShape::PathData::get(WPXPropertyList &list, Vec2f const &orig) const
 {
   list.clear();
@@ -285,6 +306,29 @@ void MWAWGraphicShape::translate(Vec2f const &decal)
     m_path[pt].translate(decal);
 }
 
+MWAWGraphicShape MWAWGraphicShape::rotate(float angle, Vec2f const &center) const
+{
+  while (angle >= 360) angle -= 360;
+  while (angle <= -360) angle += 360;
+  if (angle >= -1e-3 && angle <= 1e-3) return *this;
+  float angl=angle*float(M_PI/180.);
+  Vec2f decal=center-Vec2f(std::cos(angl)*center[0]-std::sin(angl)*center[1],
+                           std::sin(angl)*center[0]+std::cos(angl)*center[1]);
+  Box2f fBox;
+  for (int i=0; i < 4; ++i) {
+    Vec2f pt=Vec2f(m_bdBox[i%2][0],m_bdBox[i/2][1]);
+    pt = Vec2f(std::cos(angl)*pt[0]-std::sin(angl)*pt[1],
+               std::sin(angl)*pt[0]+std::cos(angl)*pt[1])+decal;
+    if (i==0) fBox=Box2f(pt,pt);
+    else fBox=fBox.getUnion(Box2f(pt,pt));
+  }
+  MWAWGraphicShape res = path(fBox);
+  res.m_path=getPath();
+  for (size_t p=0; p < res.m_path.size(); p++)
+    res.m_path[p].rotate(angle, decal);
+  return res;
+}
+
 bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle const &style, Vec2f const &orig) const
 {
   Vec2f pt;
@@ -427,5 +471,98 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
   return false;
 }
 
+std::vector<MWAWGraphicShape::PathData> MWAWGraphicShape::getPath() const
+{
+  std::vector<MWAWGraphicShape::PathData> res;
+  switch(m_type) {
+  case Line:
+  case Polygon: {
+    size_t n=m_vertices.size();
+    if (n<2) break;
+    res.push_back(PathData('M',m_vertices[0]));
+    for (size_t i = 1; i < n; ++i)
+      res.push_back(PathData('L', m_vertices[i]));
+    break;
+  }
+  case Rectangle:
+    if (m_cornerWidth[0] > 0 && m_cornerWidth[1] > 0) {
+      Box2f box=m_formBox;
+      Vec2f c=m_cornerWidth;
+      res.push_back(PathData('M',Vec2f(box[1][0]-c[0],box[0][1])));
+      PathData data('A',Vec2f(box[1][0],box[0][1]+c[1]));
+      data.m_r=c;
+      data.m_sweep=true;
+      res.push_back(data);
+      res.push_back(PathData('L',Vec2f(box[1][0],box[1][1]-c[1])));
+      data.m_x=Vec2f(box[1][0]-c[0],box[1][1]);
+      res.push_back(data);
+      res.push_back(PathData('L',Vec2f(box[0][0]+c[0],box[1][1])));
+      data.m_x=Vec2f(box[0][0],box[1][1]-c[1]);
+      res.push_back(data);
+      res.push_back(PathData('L',Vec2f(box[0][0],box[0][1]+c[1])));
+      data.m_x=Vec2f(box[0][0]+c[0],box[0][1]);
+      res.push_back(data);
+      res.push_back(PathData('Z'));
+      break;
+    }
+    res.push_back(PathData('M',m_formBox[0]));
+    res.push_back(PathData('L',Vec2f(m_formBox[0][0],m_formBox[1][1])));
+    res.push_back(PathData('L',m_formBox[1]));
+    res.push_back(PathData('L',Vec2f(m_formBox[1][0],m_formBox[0][1])));
+    res.push_back(PathData('Z'));
+    break;
+  case Circle: {
+    Vec2f pt = m_formBox[0];
+    pt[1]+=0.5*m_formBox.size()[1];
+    res.push_back(PathData('M',pt));
+    PathData data('A',pt);
+    data.m_r=0.5*(m_formBox[1]-m_formBox[0]);
+    data.m_largeAngle=true;
+    res.push_back(data);
+    break;
+  }
+  case Arc:
+  case Pie: {
+    Vec2f center=0.5*(m_formBox[0]+m_formBox[1]);
+    Vec2f rad=0.5*(m_formBox[1]-m_formBox[0]);
+    float angl0=m_arcAngles[0];
+    float angl1=m_arcAngles[1];
+    if (rad[1]<0) {
+      static bool first=true;
+      if (first) {
+        MWAW_DEBUG_MSG(("MWAWGraphicShape::getPath: oops radiusY for arc is negative, inverse it\n"));
+        first=false;
+      }
+      rad[1]=-rad[1];
+    }
+    while (angl1<angl0)
+      angl1+=360.f;
+    while (angl1>angl0+360.f)
+      angl1-=360.f;
+    if (angl1-angl0>=180.f && angl1-angl0<=180.f)
+      angl1+=0.01f;
+    float angl=angl0*float(M_PI/180.);
+    bool addCenter=m_type==Pie;
+    if (addCenter)
+      res.push_back(PathData('M', center));
+    Vec2f pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
+    res.push_back(PathData(addCenter ? 'L' : 'M', pt));
+    angl=angl1*float(M_PI/180.);
+    pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
+    PathData data('A',pt);
+    data.m_largeAngle=(angl1-angl0>=180.f);
+    data.m_r=rad;
+    res.push_back(data);
+    break;
+  }
+  case Path:
+    return m_path;
+  case ShapeUnknown:
+  default:
+    MWAW_DEBUG_MSG(("MWAWGraphicShape::getPath: unexpected type\n"));
+    break;
+  }
+  return res;
+}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
 

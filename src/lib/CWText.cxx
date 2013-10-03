@@ -368,7 +368,7 @@ std::ostream &operator<<(std::ostream &o, Token const &tok)
     o << "footnoote,";
     break;
   case TKN_FIELD:
-    o << "field,";
+    o << "field[linked],";
     break;
   case TKN_PAGENUMBER:
     switch(tok.m_unknown[0]) {
@@ -1447,7 +1447,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
           CWTextInternal::Paragraph const &para = m_state->m_paragraphsList[(size_t) paraPLC.m_rulerId];
           if (*para.m_listLevelIndex>0 && actC >= actListCPos)
             actListId=findListId(zone, actListId, actC, actListCPos);
-          setProperty(para, actListId);
+          setProperty(*listener, para, actListId);
           break;
         }
         case CWTextInternal::P_Token: {
@@ -2021,16 +2021,15 @@ bool CWText::readParagraph(int id)
   return true;
 }
 
-void CWText::setProperty(CWTextInternal::Paragraph const &ruler, int listId)
+void CWText::setProperty(MWAWListener &listener, CWTextInternal::Paragraph const &ruler, int listId)
 {
-  if (!m_parserState->m_listener) return;
   if (listId <= 0) {
-    m_parserState->m_listener->setParagraph(ruler);
+    listener.setParagraph(ruler);
     return;
   }
   MWAWParagraph para=ruler;
   para.m_listId=listId;
-  m_parserState->m_listener->setParagraph(para);
+  listener.setParagraph(para);
 }
 
 bool CWText::canSendTextAsGraphic(int number) const

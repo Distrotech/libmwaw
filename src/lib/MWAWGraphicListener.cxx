@@ -821,6 +821,9 @@ void MWAWGraphicListener::_handleFrameParameters(WPXPropertyList &list, Box2f co
   Vec2f pt=bdbox[0]-m_ps->m_origin;
   WPXPropertyListVector grad;
   if (style.hasGradient(true)) {
+    if (style.m_rotate<0 || style.m_rotate>0) {
+      MWAW_DEBUG_MSG(("MWAWGraphicListener::_handleFrameParameters: rotation is not implemented\n"));
+    }
     // ok, first send a background rectangle
     WPXPropertyList rectList;
     style.addTo(rectList,grad);
@@ -830,7 +833,7 @@ void MWAWGraphicListener::_handleFrameParameters(WPXPropertyList &list, Box2f co
     rectList.insert("svg:y",pt[1], WPX_POINT);
     rectList.insert("svg:width",size.x()>0 ? size.x() : -size.x(), WPX_POINT);
     rectList.insert("svg:height",size.y()>0 ? size.y() : -size.y(), WPX_POINT);
-    m_gs->m_interface->drawRectangle(list);
+    m_gs->m_interface->drawRectangle(rectList);
 
     list.insert("draw:stroke", "none");
     list.insert("draw:fill", "none");

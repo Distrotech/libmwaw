@@ -56,6 +56,8 @@ public:
     }
     //! translate all the coordinate by delta
     void translate(Vec2f const &delta);
+    //! rotate all the coordinate by angle (origin rotation) then translate coordinate
+    void rotate(float angle, Vec2f const &delta);
     //! update the property list to correspond to a command
     bool get(WPXPropertyList &pList, Vec2f const &orig) const;
     //! a print operator
@@ -138,6 +140,10 @@ public:
 
   //! translate all the coordinate by delta
   void translate(Vec2f const &delta);
+  /** return a new shape corresponding to a rotation from center.
+
+   \note the final bdbox is not tight */
+  MWAWGraphicShape rotate(float angle, Vec2f const &center) const;
   //! returns the bdbox corresponding to a style
   Box2f getBdBox(MWAWGraphicStyle const &style, bool moveToO=false) const;
   //! add shape to a graphic listener
@@ -146,7 +152,10 @@ public:
   friend std::ostream &operator<<(std::ostream &o, MWAWGraphicShape const &sh);
   /** compare two shapes */
   int cmp(MWAWGraphicShape const &a) const;
-
+protected:
+  //! return a path corresponding to the shape
+  std::vector<PathData> getPath() const;
+public:
   //! the type
   Type m_type;
   //! the shape bdbox

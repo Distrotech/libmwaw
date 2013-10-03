@@ -181,7 +181,7 @@ bool Gradient::update(MWAWGraphicStyle &style) const
 struct State {
   //! constructor
   State() : m_version(-1), m_localFIdMap(), m_stylesMap(), m_lookupMap(), m_graphList(), m_ksenList(),
-    m_colorList(), m_patternList(), m_gradientList() {
+    m_colorList(), m_patternList(), m_gradientList(), m_wallpaperList() {
   }
   //! set the default color map
   void setDefaultColorList(int version);
@@ -189,6 +189,8 @@ struct State {
   void setDefaultPatternList(int version);
   //! set the default pattern map
   void setDefaultGradientList(int version);
+  //! set the default pattern map
+  void setDefaultWallPaperList(int version);
   //! return a mac font id corresponding to a local id
   int getFontId(int localId) const {
     if (m_localFIdMap.find(localId)==m_localFIdMap.end())
@@ -215,6 +217,8 @@ struct State {
   std::vector<Pattern> m_patternList;
   //! a list gradientId -> gradient
   std::vector<Gradient> m_gradientList;
+  //! a list wallPaperId -> color
+  std::vector<MWAWColor> m_wallpaperList;
 };
 
 
@@ -462,8 +466,24 @@ void State::setDefaultGradientList(int)
   grad.m_colors[2]=MWAWColor(0xffff66);
   grad.m_colors[3]=MWAWColor(0xffcc00);
   m_gradientList.push_back(grad);
-
 }
+
+void State::setDefaultWallPaperList(int version)
+{
+  if (version <= 2 || m_wallpaperList.size())
+    return;
+  // checkme: does ClarisWork v4 version has wallpaper?
+  uint32_t const defCol[20] = {
+    0xdcdcdc, 0x0000cd, 0xeeeeee, 0xeedd8e, 0xc71585,
+    0xc9c9c9, 0xcd853f, 0x696969, 0xfa8072, 0x6495ed,
+    0x4682b4, 0xdaa520, 0xcd5c5c, 0xb22222, 0x8b8682,
+    0xb03060, 0xeeeee0, 0x4682b4, 0xfa8072, 0x505050
+  };
+  m_wallpaperList.resize(20);
+  for (size_t i = 0; i < 20; i++)
+    m_wallpaperList[i] = defCol[i];
+}
+
 }
 
 ////////////////////////////////////////////////////
@@ -662,6 +682,21 @@ bool CWStyleManager::updateGradient(int id, MWAWGraphicStyle &style) const
   for (size_t c=2; c<numColors; c++)
     col=MWAWColor::barycenter(1,col,f,style.m_gradientStopList[c].m_color);
   style.setSurfaceColor(col);
+  return true;
+}
+
+bool CWStyleManager::updateWallPaper(int id, MWAWGraphicStyle &style) const
+{
+  int numWallpaper = (int) m_state->m_wallpaperList.size();
+  if (!numWallpaper) {
+    m_state->setDefaultWallPaperList(version());
+    numWallpaper = int(m_state->m_wallpaperList.size());
+  }
+  if (id < 0 || id >= numWallpaper) {
+    MWAW_DEBUG_MSG(("CWStyleManager::updateWallPaper: can not find wall paper %d\n", int(id)));
+    return false;
+  }
+  style.setSurfaceColor(m_state->m_wallpaperList[size_t(id)]);
   return true;
 }
 

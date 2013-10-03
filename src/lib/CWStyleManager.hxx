@@ -77,6 +77,8 @@ public:
   bool readStyles(MWAWEntry const &entry);
   //! update a style using a gradiant id
   bool updateGradient(int grad, MWAWGraphicStyle &style) const;
+  //! update a style using a wall paper id
+  bool updateWallPaper(int wall, MWAWGraphicStyle &style) const;
 
   //! return a mac font id corresponding to a local id
   int getFontId(int localId) const;

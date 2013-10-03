@@ -47,6 +47,7 @@
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
+#include "MWAWPosition.hxx"
 
 #include "CWStruct.hxx"
 
@@ -96,8 +97,6 @@ public:
   shared_ptr<CWStruct::DSET> readBitmapZone
   (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
-  //! return the wall paper color which corresponds to an id (if possible)
-  bool getWallPaperColor(int id, MWAWColor &col) const;
   //! return the surface color which corresponds to some ids (if possible)
   bool getSurfaceColor(CWGraphInternal::Style const style, MWAWColor &col) const;
 protected:
@@ -126,6 +125,8 @@ protected:
   bool sendGroup(CWGraphInternal::Group &group, MWAWPosition const &position);
   //! send a group as graphic
   bool sendGroup(CWGraphInternal::Group &group, MWAWGraphicListener &listener);
+  //! send a group child
+  bool sendGroupChild(CWGraphInternal::Group &group, size_t child, MWAWPosition position);
   /* read a simple group */
   shared_ptr<CWGraphInternal::Zone> readGroupDef(MWAWEntry const &entry);
 
