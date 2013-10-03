@@ -69,6 +69,10 @@ public:
 
   //! reads a color map zone ( v4-v6)
   bool readColorList(MWAWEntry const &entry);
+  //! reads a pattern map zone ( v2)
+  bool readPatternList(long endPos=-1);
+  //! reads a gradient map zone ( v2)
+  bool readGradientList(long endPos=-1);
   /** try to read the styles definition (in v4-6) */
   bool readStyles(MWAWEntry const &entry);
   //! update a style using a gradiant id

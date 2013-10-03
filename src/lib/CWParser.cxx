@@ -706,7 +706,7 @@ bool CWParser::exploreZonesGraph()
 
   m_state->m_mainZonesList = rootList;
   size_t numMain = rootList.size();
-  if (numMain == 1)
+  if (1 && numMain == 1)
     return true;
 #ifdef DEBUG
   // we have do not have find the root note : probably a database...
@@ -1588,7 +1588,7 @@ bool CWParser::readDocHeader()
   case 2:
     zone0Length = 116;
     zone1Length=112;
-    zoneFinalLength = 428;
+    zoneFinalLength = 420;
     break;
   case 3:
     zone0Length = 116;
@@ -1887,55 +1887,65 @@ bool CWParser::readDocHeader()
       input->seek(entry.end(), WPX_SEEK_SET);
     }
   }
-  if (zoneFinalLength) {
+  if (!zoneFinalLength) return false;
+  if (version()==2) {
     pos = input->tell();
+    long endPos=pos+zoneFinalLength+8;
+    if (!m_styleManager->readPatternList(endPos) ||
+        !m_styleManager->readGradientList(endPos)) {
+      input->seek(endPos, WPX_SEEK_SET);
+      return true;
+    }
+  }
+  pos = input->tell();
+  long endPos=pos+zoneFinalLength;
+  if (version()<=2) {
+    pos=input->tell();
     f.str("");
     f << "Entries(HeaderEnd):";
-    if (version()<=2) {
-      if (version()==2) {
-        input->seek(56, WPX_SEEK_CUR);
-        ascii().addDelimiter(input->tell(), '|');
-      }
-      f << "ptr=" << std::hex << input->readULong(4) << std::dec << ",";
-      for (int i = 0; i < 6; i++) {
-        val = (int) input->readULong(2);
-        if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
-      }
-      m_state->m_headerId = (int) input->readLong(2);
-      if (m_state->m_headerId) f << "headerId=" << m_state->m_headerId << ",";
-      val = (int) input->readLong(2);
-      if (val) f << "unkn=" << val << ",";
-      m_state->m_footerId = (int) input->readLong(2);
-      if (m_state->m_footerId) f << "footerId=" << m_state->m_footerId << ",";
-      if (version()==1) {
-        ascii().addDelimiter(input->tell(), '|');
-        input->seek(20, WPX_SEEK_CUR);
-        ascii().addDelimiter(input->tell(), '|');
-
-        int numCols = (int) input->readLong(2);
-        if (numCols < 1 || numCols > 9) {
-          MWAW_DEBUG_MSG(("CWParser::readDocHeader: pb reading number of columns\n"));
-          f << "###numCols=" << numCols;
-          numCols = 1;
-        }
-        if (numCols != 1)
-          f << "numCols=" << numCols << ",";
-        m_state->m_columns = numCols;
-        if (numCols > 1) {
-          int colSep = (int) input->readLong(2);
-          m_state->m_columnsSep.resize(size_t(numCols-1), colSep);
-          f << "colSep=" << colSep << ",";
-        } else
-          input->seek(2, WPX_SEEK_CUR);
-      }
-    }
-    if (int(input->tell()) != pos)
+    if (version()==2) {
+      input->seek(48, WPX_SEEK_CUR);
       ascii().addDelimiter(input->tell(), '|');
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    input->seek(pos+zoneFinalLength, WPX_SEEK_SET);
+    }
+    f << "ptr=" << std::hex << input->readULong(4) << std::dec << ",";
+    for (int i = 0; i < 6; i++) {
+      val = (int) input->readULong(2);
+      if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
+    }
+    m_state->m_headerId = (int) input->readLong(2);
+    if (m_state->m_headerId) f << "headerId=" << m_state->m_headerId << ",";
+    val = (int) input->readLong(2);
+    if (val) f << "unkn=" << val << ",";
+    m_state->m_footerId = (int) input->readLong(2);
+    if (m_state->m_footerId) f << "footerId=" << m_state->m_footerId << ",";
+    if (version()==1) {
+      ascii().addDelimiter(input->tell(), '|');
+      input->seek(20, WPX_SEEK_CUR);
+      ascii().addDelimiter(input->tell(), '|');
+
+      int numCols = (int) input->readLong(2);
+      if (numCols < 1 || numCols > 9) {
+        MWAW_DEBUG_MSG(("CWParser::readDocHeader: pb reading number of columns\n"));
+        f << "###numCols=" << numCols;
+        numCols = 1;
+      }
+      if (numCols != 1)
+        f << "numCols=" << numCols << ",";
+      m_state->m_columns = numCols;
+      if (numCols > 1) {
+        int colSep = (int) input->readLong(2);
+        m_state->m_columnsSep.resize(size_t(numCols-1), colSep);
+        f << "colSep=" << colSep << ",";
+      } else
+        input->seek(2, WPX_SEEK_CUR);
+    }
   }
-  return zoneFinalLength != 0;
+  if (int(input->tell()) != pos)
+    ascii().addDelimiter(input->tell(), '|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(endPos, WPX_SEEK_SET);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////

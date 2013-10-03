@@ -79,16 +79,116 @@ struct Pattern : public MWAWGraphicStyle::Pattern {
   float m_percent;
 };
 
+////////////////////////////////////////
+//! Internal: the gradient of a CWStyleManager
+struct Gradient {
+  //! construtor
+  Gradient(int type=0, int nColor=0, int angle=0, float decal=0) :
+    m_type(type), m_numColors(nColor), m_angle(angle), m_decal(decal), m_box() {
+    m_colors[0]=MWAWColor::black();
+    m_colors[1]=MWAWColor::white();
+  }
+  //! check if the gradient is valid
+  bool ok() const {
+    return m_type>=0 && m_type<=2 && m_numColors>=2 && m_numColors<=4;
+  }
+  //! update the style
+  bool update(MWAWGraphicStyle &style) const;
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Gradient const &gr) {
+    switch(gr.m_type) {
+    case 0:
+      o << "linear,";
+      break;
+    case 1:
+      o << "radial,";
+      break;
+    case 2:
+      o << "rectangle,";
+      break;
+    default:
+      o << "#type=" << gr.m_type << ",";
+      break;
+    }
+    if (gr.m_angle)
+      o << "angle=" << gr.m_angle << ",";
+    if (gr.m_decal>0)
+      o << "decal=" << gr.m_decal << ",";
+    o << "col=[";
+    for (int c=0; c < gr.m_numColors; ++c) {
+      if (c>=4) break;
+      o << gr.m_colors[c] << ",";
+    }
+    o << "],";
+    if (gr.m_box!=Box2i(Vec2i(0,0),Vec2i(0,0)))
+      o << "center=" << gr.m_box << ",";
+    return o;
+  }
+  //! the type
+  int m_type;
+  //! the number of color
+  int m_numColors;
+  //! the color
+  MWAWColor m_colors[4];
+  //! the angle
+  int m_angle;
+  //! the decal
+  float m_decal;
+  //! the center bdbox
+  Box2i m_box;
+};
+
+bool Gradient::update(MWAWGraphicStyle &style) const
+{
+  if (!ok()) return false;
+  style.m_gradientStopList.resize(0);
+  if (m_type==1 || m_type==2) {
+    style.m_gradientType=m_type==1 ? MWAWGraphicStyle::G_Radial : MWAWGraphicStyle::G_Rectangular;
+    for (int c=0; c < m_numColors; ++c)
+      style.m_gradientStopList.push_back(MWAWGraphicStyle::GradientStop(float(c)/float(m_numColors-1), m_colors[m_numColors-1-c]));
+    style.m_gradientPercentCenter=Vec2f(float(m_box.center()[1])/100.f, float(m_box.center()[0])/100.f);
+    return true;
+  }
+  style.m_gradientAngle=float(m_angle+90);
+  if (m_decal<=0.05f) {
+    style.m_gradientType= MWAWGraphicStyle::G_Axial;
+    for (int c=0; c < m_numColors; ++c)
+      style.m_gradientStopList.push_back(MWAWGraphicStyle::GradientStop(float(c)/float(m_numColors-1), m_colors[m_numColors-1-c]));
+    return true;
+  }
+  style.m_gradientType= MWAWGraphicStyle::G_Linear;
+  if (m_decal >=0.95f)  {
+    for (int c=0; c < m_numColors; ++c)
+      style.m_gradientStopList.push_back(MWAWGraphicStyle::GradientStop(float(c)/float(m_numColors-1), m_colors[c]));
+    return true;
+  }
+  for (int c=-m_numColors+1; c<m_numColors; ++c) {
+    // checkme: look almost good
+    float pos=float(c)/float(m_numColors-1)+(1-m_decal)/2.f;
+    if (pos < 0) {
+      if (c!=m_numColors-1 && float(c+1)/float(m_numColors-1)+(1-m_decal)/2.f>=0)
+        continue;
+      pos=0;
+    }
+    style.m_gradientStopList.push_back(MWAWGraphicStyle::GradientStop(pos>1?1:pos, m_colors[c<0?-c:c]));
+    if (pos>=1)
+      break;
+  }
+  return true;
+}
+
 //! Internal: the state of a CWStyleManager
 struct State {
   //! constructor
   State() : m_version(-1), m_localFIdMap(), m_stylesMap(), m_lookupMap(), m_graphList(), m_ksenList(),
-    m_colorList(), m_patternList() {
+    m_colorList(), m_patternList(), m_gradientList() {
   }
   //! set the default color map
   void setDefaultColorList(int version);
   //! set the default pattern map
   void setDefaultPatternList(int version);
+  //! set the default pattern map
+  void setDefaultGradientList(int version);
   //! return a mac font id corresponding to a local id
   int getFontId(int localId) const {
     if (m_localFIdMap.find(localId)==m_localFIdMap.end())
@@ -111,8 +211,10 @@ struct State {
 
   //! a list colorId -> color
   std::vector<MWAWColor> m_colorList;
-  //! a list patternId -> percent
+  //! a list patternId -> pattern
   std::vector<Pattern> m_patternList;
+  //! a list gradientId -> gradient
+  std::vector<Gradient> m_gradientList;
 };
 
 
@@ -203,6 +305,165 @@ void State::setDefaultPatternList(int)
     m_patternList[i]=Pattern(&s_pattern[i*4]);
 }
 
+void State::setDefaultGradientList(int)
+{
+  if (!m_gradientList.empty()) return;
+  Gradient grad;
+  // grad0
+  grad=Gradient(0,2,0,1);
+  m_gradientList.push_back(grad);
+  // grad1
+  grad=Gradient(0,2,180,1);
+  m_gradientList.push_back(grad);
+  // grad2
+  grad=Gradient(0,2,90,0);
+  m_gradientList.push_back(grad);
+  // grad3
+  grad=Gradient(0,2,315,1);
+  m_gradientList.push_back(grad);
+  // grad4
+  grad=Gradient(0,2,225,1);
+  m_gradientList.push_back(grad);
+  // grad5
+  grad=Gradient(2,2,0,0);
+  grad.m_box=Box2i(Vec2i(79,80),Vec2i(79,80));
+  m_gradientList.push_back(grad);
+  // grad6
+  grad=Gradient(2,2,0,0);
+  grad.m_box=Box2i(Vec2i(81,20),Vec2i(81,20));
+  m_gradientList.push_back(grad);
+  // grad7
+  grad=Gradient(2,2,0,0);
+  grad.m_box=Box2i(Vec2i(50,50),Vec2i(50,50));
+  m_gradientList.push_back(grad);
+  // grad8
+  grad=Gradient(0,2,90,1);
+  m_gradientList.push_back(grad);
+  // grad9
+  grad=Gradient(0,2,270,0.979172f);
+  m_gradientList.push_back(grad);
+  // grad10
+  grad=Gradient(0,2,0,0);
+  m_gradientList.push_back(grad);
+  // grad11
+  grad=Gradient(0,2,45,1);
+  m_gradientList.push_back(grad);
+  // grad12
+  grad=Gradient(0,2,135,1);
+  m_gradientList.push_back(grad);
+  // grad13
+  grad=Gradient(2,2,0,0);
+  grad.m_box=Box2i(Vec2i(22,77),Vec2i(23,77));
+  m_gradientList.push_back(grad);
+  // grad14
+  grad=Gradient(2,2,0,0);
+  grad.m_box=Box2i(Vec2i(22,22),Vec2i(22,22));
+  m_gradientList.push_back(grad);
+  // grad15
+  grad=Gradient(1,2,0,0);
+  grad.m_box=Box2i(Vec2i(51,50),Vec2i(51,50));
+  m_gradientList.push_back(grad);
+  // grad16
+  grad=Gradient(2,3,0,0);
+  grad.m_box=Box2i(Vec2i(79,15),Vec2i(86,22));
+  grad.m_colors[1]=MWAWColor(0xaa0000);
+  grad.m_colors[2]=MWAWColor(0xcc3300);
+  m_gradientList.push_back(grad);
+  // grad17
+  grad=Gradient(0,4,0,1);
+  grad.m_colors[0]=MWAWColor(0xff33cc);
+  grad.m_colors[1]=MWAWColor(0xdd0000);
+  grad.m_colors[2]=MWAWColor(0xdd0000);
+  grad.m_colors[3]=MWAWColor(0x000000);
+  m_gradientList.push_back(grad);
+  // grad18
+  grad=Gradient(0,3,112,0.80835f);
+  grad.m_colors[0]=MWAWColor(0x0000dd);
+  grad.m_colors[1]=MWAWColor(0x000077);
+  grad.m_colors[2]=MWAWColor(0xff3333);
+  m_gradientList.push_back(grad);
+  // grad19
+  grad=Gradient(1,4,332,0);
+  grad.m_box=Box2i(Vec2i(77,71),Vec2i(77,71));
+  grad.m_colors[0]=MWAWColor(0xffff00);
+  grad.m_colors[1]=MWAWColor(0xff3300);
+  grad.m_colors[2]=MWAWColor(0x9900cc);
+  grad.m_colors[3]=MWAWColor(0x0000dd);
+  m_gradientList.push_back(grad);
+  // grad20
+  grad=Gradient(0,3,270,0.625f);
+  grad.m_colors[1]=MWAWColor(0x0000dd);
+  grad.m_colors[2]=MWAWColor(0x00cccc);
+  m_gradientList.push_back(grad);
+  // grad21
+  grad=Gradient(0,2,270,0.229172f);
+  grad.m_colors[0]=MWAWColor(0x0000aa);
+  grad.m_colors[1]=MWAWColor(0xdddddd);
+  m_gradientList.push_back(grad);
+  // grad22
+  grad=Gradient(0,3,90,0.729172f);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[2]=MWAWColor(0x9999ff);
+  m_gradientList.push_back(grad);
+  // grad23
+  grad=Gradient(2,4,0,0);
+  grad.m_box=Box2i(Vec2i(41,40),Vec2i(62,62));
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0xccffff);
+  grad.m_colors[2]=MWAWColor(0x99ffff);
+  grad.m_colors[3]=MWAWColor(0x66ffff);
+  m_gradientList.push_back(grad);
+  // grad24
+  grad=Gradient(0,3,90,0.854172f);
+  grad.m_colors[1]=MWAWColor(0xdd0000);
+  grad.m_colors[2]=MWAWColor(0xffcc00);
+  m_gradientList.push_back(grad);
+  // grad25
+  grad=Gradient(0,4,315,0.633453f);
+  grad.m_colors[0]=MWAWColor(0xcc3300);
+  grad.m_colors[1]=MWAWColor(0xff6600);
+  grad.m_colors[2]=MWAWColor(0xffcc00);
+  grad.m_colors[3]=MWAWColor(0xffff00);
+  m_gradientList.push_back(grad);
+  // grad26
+  grad=Gradient(0,3,45,0.721832f);
+  grad.m_colors[1]=MWAWColor(0x0000dd);
+  grad.m_colors[2]=MWAWColor(0xff0099);
+  m_gradientList.push_back(grad);
+  // grad27
+  grad=Gradient(0,3,180,1);
+  grad.m_colors[1]=MWAWColor(0x0000dd);
+  grad.m_colors[2]=MWAWColor(0x9900cc);
+  m_gradientList.push_back(grad);
+  // grad28
+  grad=Gradient(0,4,90,0.81987f);
+  grad.m_colors[1]=MWAWColor(0x9900cc);
+  grad.m_colors[2]=MWAWColor(0x9933ff);
+  grad.m_colors[3]=MWAWColor(0x66ffff);
+  m_gradientList.push_back(grad);
+  // grad29
+  grad=Gradient(0,4,270,0.916672f);
+  grad.m_colors[0]=MWAWColor(0x0066ff);
+  grad.m_colors[1]=MWAWColor(0x00ccff);
+  grad.m_colors[2]=MWAWColor(0xffffcc);
+  grad.m_colors[3]=MWAWColor(0xff6633);
+  m_gradientList.push_back(grad);
+  // grad30
+  grad=Gradient(2,2,0,0);
+  grad.m_box=Box2i(Vec2i(0,88),Vec2i(12,100));
+  grad.m_colors[0]=MWAWColor(0xff6600);
+  grad.m_colors[1]=MWAWColor(0xffff00);
+  m_gradientList.push_back(grad);
+  // grad31
+  grad=Gradient(2,4,0,0);
+  grad.m_box=Box2i(Vec2i(99,52),Vec2i(100,54));
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0xffffcc);
+  grad.m_colors[2]=MWAWColor(0xffff66);
+  grad.m_colors[3]=MWAWColor(0xffcc00);
+  m_gradientList.push_back(grad);
+
+}
 }
 
 ////////////////////////////////////////////////////
@@ -386,166 +647,173 @@ bool CWStyleManager::get(int graphId, MWAWGraphicStyle &graph) const
 
 bool CWStyleManager::updateGradient(int id, MWAWGraphicStyle &style) const
 {
-  if (id < 0 || id>=32) {
+  if (m_state->m_gradientList.empty())
+    m_state->setDefaultGradientList(version());
+  if (id < 0 || id>=int(m_state->m_gradientList.size())) {
     MWAW_DEBUG_MSG(("CWStyleManager::updateGradiant: called with id=%d\n", id));
     return false;
   }
-  style.m_gradientStopList.resize(2);
-  style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::white());
-  style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::black());
-  style.m_gradientType = MWAWGraphicStyle::G_Linear;
-  switch(id) {
-  case 0:
-    style.m_gradientAngle=-90;
-    break;
-  case 1:
-    style.m_gradientAngle=90;
-    break;
-  case 8:
-    break;
-  case 9:
-    style.m_gradientAngle=180;
-    break;
-  case 11:
-    style.m_gradientAngle=-45;
-    break;
-  case 17:
-    style.m_gradientAngle=90;
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0,0));
-    break;
-  case 20:
-    style.m_gradientAngle=180;
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0x80,0x80,0xFF));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0,0,0xFF));
-    break;
-  case 22:
-    style.m_gradientAngle=180;
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0x80,0x80,0xFF));
-    break;
-  case 24:
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0xFF,0));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0xFF,0,0));
-    break;
-  case 26:
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0,0x80));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0,0,0xFF));
-    style.m_gradientAngle=-45;
-    break;
-  case 27:
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0,0));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0,0,0xFF));
-    style.m_gradientAngle=90;
-    break;
-  case 28:
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0x80,0x80,0xFF));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0xFF,0,0));
-    break;
-  case 29:
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0x80,0x80,0xFF));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0xFF,0x80,0));
-    break;
-  case 30:
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0xFF,0));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0xFF,0x80,0));
-    style.m_gradientAngle=-45;
-    break;
-  case 2:
-    style.m_gradientType = MWAWGraphicStyle::G_Axial;
-    break;
-  case 3:
-    style.m_gradientType = MWAWGraphicStyle::G_Axial;
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::black());
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
-    style.m_gradientAngle=45;
-    break;
-  case 10:
-    style.m_gradientType = MWAWGraphicStyle::G_Axial;
-    style.m_gradientAngle=90;
-    break;
-  case 12:
-    style.m_gradientType = MWAWGraphicStyle::G_Axial;
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::black());
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
-    style.m_gradientAngle=-45;
-    break;
-  case 18:
-    style.m_gradientType = MWAWGraphicStyle::G_Axial;
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0,0,0xFF));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
-    style.m_gradientAngle=45;
-    break;
-  case 21:
-    style.m_gradientType = MWAWGraphicStyle::G_Axial;
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0x80,0x80,0x80));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0,0,0xFF));
-    break;
-  case 25:
-    style.m_gradientType = MWAWGraphicStyle::G_Axial;
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0,0));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
-    style.m_gradientAngle=45;
-    break;
-  case 4:
-    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::black());
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
-    style.m_gradientPercentCenter=Vec2f(.5f,.5f);
-    break;
-  case 5:
-    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
-    style.m_gradientPercentCenter=Vec2f(.75f,.75f);
-    break;
-  case 6:
-    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
-    style.m_gradientPercentCenter=Vec2f(.25f,.75f);
-    break;
-  case 7:
-    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
-    style.m_gradientPercentCenter=Vec2f(.5f,.5f);
-    break;
-  case 13:
-    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
-    style.m_gradientPercentCenter=Vec2f(.75f,.25f);
-    break;
-  case 14:
-    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
-    style.m_gradientPercentCenter=Vec2f(.25f,.25f);
-    break;
-  case 16:
-    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
-    style.m_gradientPercentCenter=Vec2f(.25f,.75f);
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xff,0,0));
-    break;
-  case 19:
-    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0,0));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor(0,0,0xFF));
-    style.m_gradientPercentCenter=Vec2f(.75f,.75f);
-    break;
-  case 23:
-    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
-    style.m_gradientPercentCenter=Vec2f(.5f,.5f);
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0x80,0x80,0xFF));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
-    break;
-  case 31:
-    style.m_gradientType = MWAWGraphicStyle::G_Rectangular;
-    style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor(0xFF,0xFF,0));
-    style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
-    style.m_gradientPercentCenter=Vec2f(.5f,.75f);
-    break;
-  case 15:
-    style.m_gradientType = MWAWGraphicStyle::G_Radial;
-    break;
-  default:
-    break;
-  }
+  if (!m_state->m_gradientList[size_t(id)].update(style)) return false;
+  // try to update the color list
+  size_t numColors=style.m_gradientStopList.size();
+  if (numColors<=1) return true;
+  float f=1.f/float(numColors);
+  MWAWColor col=MWAWColor::barycenter(f,style.m_gradientStopList[0].m_color,f,style.m_gradientStopList[1].m_color);
+  for (size_t c=2; c<numColors; c++)
+    col=MWAWColor::barycenter(1,col,f,style.m_gradientStopList[c].m_color);
+  style.setSurfaceColor(col);
   return true;
 }
 
 ////////////////////////////////////////////////////////////
 // read file main structure
 ////////////////////////////////////////////////////////////
+bool CWStyleManager::readPatternList(long endPos)
+{
+  int vers=version();
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=input->tell();
+  long sz=(long) input->readULong(4);
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(PatternList):";
+  if (sz<0 ||  (sz && sz < 140) || (endPos>0 && pos+sz+4>endPos) ||
+      (endPos<=0 && !input->checkPosition(pos+sz+4))) {
+    f << "###";
+    MWAW_DEBUG_MSG(("CWStyleManager::readPatternList: can read pattern size\n"));
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos,WPX_SEEK_SET);
+    return false;
+  }
+  if (sz==0) {
+    ascFile.addPos(pos);
+    ascFile.addNote("_");
+    return true;
+  }
+  int N=(int) input->readLong(2);
+  f << "N=" << N << ",";
+  long val;
+  static long const expectedVal[]= {-1,0,8,0x80,1}; // type, ?, fSz, ?, ?
+  for (int i=0; i<5; ++i) {
+    val= input->readLong(2);
+    if (i==2 && val!=8) {
+      input->seek(pos,WPX_SEEK_SET);
+      return false;
+    }
+    if (val!=expectedVal[i]) f << "f" << i << "=" << val << ",";
+  }
+  for (int i=0; i < 64; ++i) {
+    val= input->readLong(2);
+    if (val!=i) f << "pat" << i << "=" << val << ",";
+  }
+  if (140+8*N!=sz) {
+    f << "###";
+    MWAW_DEBUG_MSG(("CWStyleManager::readPatternList: unexpected pattern size\n"));
+    ascFile.addDelimiter(input->tell(),'|');
+  } else {
+    m_state->setDefaultPatternList(vers);
+    for (int i=0; i < N; ++i) {
+      uint16_t pat[4];
+      for (int j=0; j<4; ++j) pat[j]=(uint16_t) input->readULong(2);
+      CWStyleManagerInternal::Pattern pattern(pat);
+      m_state->m_patternList.push_back(pattern);
+      f << "pat" << i+64 << "=[" << pattern << "],";
+    }
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  input->seek(pos+4+sz,WPX_SEEK_SET);
+  return true;
+}
+
+bool CWStyleManager::readGradientList(long endPos)
+{
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=input->tell();
+  long sz=(long) input->readULong(4);
+  long finalPos=pos+sz+4;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(GradientList):";
+  if (sz<0 || (sz && sz < 76) || (endPos>0 && finalPos>endPos) ||
+      (endPos<0 && !input->checkPosition(finalPos))) {
+    f << "###";
+    MWAW_DEBUG_MSG(("CWStyleManager::readGradientList: can read pattern size\n"));
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos,WPX_SEEK_SET);
+    return false;
+  }
+  if (sz==0) {
+    ascFile.addPos(pos);
+    ascFile.addNote("_");
+    return true;
+  }
+  int N=(int) input->readLong(2);
+  f << "N=" << N << ",";
+  long val;
+  static long const expectedVal[]= {-1,0,0x28,0x40,1}; // type, ?, fSz, ?, ?
+  for (int i=0; i<5; ++i) {
+    val= input->readLong(2);
+    if (i==2 && val!=0x28) {
+      input->seek(pos,WPX_SEEK_SET);
+      return false;
+    }
+    if (val!=expectedVal[i]) f << "f" << i << "=" << val << ",";
+  }
+  for (int i=0; i < 32; ++i) {
+    val= input->readLong(2);
+    if (val!=i) f << "grad" << i << "=" << val << ",";
+  }
+  if (76+40*N!=sz) {
+    f << "###";
+    MWAW_DEBUG_MSG(("CWStyleManager::readGradientList: unexpected pattern size\n"));
+    ascFile.addDelimiter(input->tell(),'|');
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(finalPos,WPX_SEEK_SET);
+    return true;
+  }
+
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  m_state->setDefaultGradientList(version());
+  for (int i=0; i < N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "GradientList-" << 32+i << ":";
+    CWStyleManagerInternal::Gradient grad;
+    for (int j=0; j<4; ++j) {
+      unsigned char color[3];
+      for (int c=0; c < 3; c++) color[c] = (unsigned char) (input->readULong(2)/256);
+      grad.m_colors[j]= MWAWColor(color[0], color[1],color[2]);
+    }
+    grad.m_numColors=(int) input->readLong(1);
+    grad.m_type=(int) input->readLong(1);
+    grad.m_angle=(int)input->readLong(2);
+    grad.m_decal=float(input->readLong(4))/65536.f;
+    int dim[4];
+    for (int j=0; j<4; ++j) dim[j]=(int)input->readLong(2);
+    grad.m_box=Box2i(Vec2i(dim[0],dim[1]),Vec2i(dim[2],dim[3]));
+    f << grad;
+    if (!grad.ok()) {
+      f << "##";
+      MWAW_DEBUG_MSG(("CWStyleManager::readGradientList: can read the number of color or type\n"));
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      input->seek(finalPos,WPX_SEEK_SET);
+      return true;
+    }
+    m_state->m_gradientList.push_back(grad);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+40, WPX_SEEK_SET);
+  }
+  input->seek(finalPos,WPX_SEEK_SET);
+  return true;
+}
+
 bool CWStyleManager::readColorList(MWAWEntry const &entry)
 {
   if (!entry.valid()) return false;
@@ -599,6 +867,7 @@ bool CWStyleManager::readStyles(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.type() != "STYL")
     return false;
+  int vers=version();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(pos+4, WPX_SEEK_SET); // skip header
@@ -612,14 +881,14 @@ bool CWStyleManager::readStyles(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(STYL):";
-  if (version() <= 3) {
+  if (vers <= 3) {
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(entry.end(), WPX_SEEK_SET);
     return true;
   }
   bool limitSet = true;
-  if (version() <= 4) {
+  if (vers <= 4) {
     // version 4 does not contents total length fields
     input->seek(-4, WPX_SEEK_CUR);
     limitSet = false;
@@ -648,12 +917,10 @@ bool CWStyleManager::readGenStyle(int id)
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos, WPX_SEEK_SET);
-  if (long(input->tell()) != endPos) {
+  if (!input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("CWStyleManager::readGenStyle: pb with sub zone: %d", id));
     return false;
   }
-  input->seek(pos+4, WPX_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "STYL-" << id << ":";
@@ -672,10 +939,16 @@ bool CWStyleManager::readGenStyle(int id)
   int fSz =  (int) input->readLong(2);
   f << "N=" << N << ", type?=" << type <<", fSz=" << fSz << ",";
   if (val) f << "unkn=" << val << ",";
-
+  int unkn[2];
   for (int i = 0; i < 2; i++) {
-    val = (int) input->readLong(2);
-    if (val)  f << "f" << i << "=" << val << ",";
+    unkn[i] = (int) input->readLong(2);
+    if (unkn[i])  f << "f" << i << "=" << val << ",";
+  }
+  // check here for gradient definition...
+  if (version()>4 && type==-1 && val==0 && fSz==0x28 && unkn[0]==0x40 && unkn[1]==1) {
+    input->seek(pos, WPX_SEEK_SET);
+    if (readGradientList(endPos)) return true;
+    input->seek(pos+16, WPX_SEEK_SET);
   }
   for (int i = 0; i < 4; i++)
     name += char(input->readULong(1));
@@ -725,6 +998,19 @@ bool CWStyleManager::readGenStyle(int id)
   }
 
   input->seek(endPos, WPX_SEEK_SET);
+  if (name=="NAME") {
+    if (!readPatternList()) {
+      MWAW_DEBUG_MSG(("CWStyleManager::readGenStyle: can not find the pattern list\n"));
+      input->seek(endPos, WPX_SEEK_SET);
+    } else if (version()==4) {
+      endPos=input->tell();
+      if (!readGradientList()) {
+        MWAW_DEBUG_MSG(("CWStyleManager::readGenStyle: can not find the gradient list\n"));
+        input->seek(endPos, WPX_SEEK_SET);
+      }
+    }
+  }
+
   return true;
 }
 
@@ -905,7 +1191,7 @@ bool CWStyleManager::readStyleNames(int N, int fSz)
       if (3+nChar > fSz) {
         static bool first = true;
         if (first) {
-          MWAW_DEBUG_MSG(("CWStyleManager::readStyleNames: pb with name field %d", i));
+          MWAW_DEBUG_MSG(("CWStyleManager::readStyleNames: pb with name field %d\n", i));
           first = false;
         }
         f << "#";

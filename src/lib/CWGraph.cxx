@@ -175,8 +175,8 @@ struct Zone {
   virtual ~Zone() {}
   //! return the zone bdbox
   Box2f getBdBox() const {
-    Vec2f minPt((float)m_box[0][0], (float)m_box[0][1]);
-    Vec2f maxPt((float)m_box[1][0], (float)m_box[1][1]);
+    Vec2f minPt(m_box[0][0], m_box[0][1]);
+    Vec2f maxPt(m_box[1][0], m_box[1][1]);
     for (int c=0; c<2; ++c) {
       if (m_box.size()[c]>=0) continue;
       minPt[c]=m_box[1][c];
@@ -207,7 +207,7 @@ struct Zone {
   //! the page (checkme: or frame linked )
   int m_page;
   //! the bdbox
-  Box2i m_box;
+  Box2f m_box;
   //! the style
   Style m_style;
 };
@@ -215,11 +215,12 @@ struct Zone {
 //! Internal: small class to store a basic graphic zone of a CWGraph
 struct ZoneShape : public Zone {
   //! constructor
-  ZoneShape(Zone const &z, Type type) : Zone(z), m_type(type), m_shape() {
+  ZoneShape(Zone const &z, Type type) : Zone(z), m_type(type), m_shape(), m_rotate(0) {
   }
   //! print the data
   virtual void print(std::ostream &o) const {
     o << m_shape;
+    if (m_rotate) o << "rot=" << m_rotate << ",";
   }
   //! return the main type
   virtual Type getType() const {
@@ -246,6 +247,8 @@ struct ZoneShape : public Zone {
   Type m_type;
   //! the shape
   MWAWGraphicShape m_shape;
+  //! the rotation
+  int m_rotate;
 };
 
 //! Internal: the structure used to store a PICT or a MOVIE
@@ -943,8 +946,8 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
 
   int typeId = (int) input->readULong(1);
   CWGraphInternal::Zone::Type type = CWGraphInternal::Zone::T_Unknown;
-
-  switch(version()) {
+  int const vers=version();
+  switch(vers) {
   case 1:
     switch(typeId) {
     case 1:
@@ -1023,20 +1026,22 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
   }
   int val = (int) input->readULong(1);
   style.m_wrapping = (val & 3);
-  style.m_surfacePatternType = (val >> 2);
+  if (vers > 1)
+    style.m_surfacePatternType = (val >> 2);
+  else if (val>>2)
+    f << "g0=" << (val>>2) << ",";
   style.m_lineFlags = (int) input->readULong(1);
   if (style.m_lineFlags & 0x40) style.m_arrows[0]=true;
   if (style.m_lineFlags & 0x80) style.m_arrows[1]=true;
   val = (int) input->readULong(1);
   if (val) f << "f0=" << val << ",";
 
-  int dim[4];
+  float dim[4];
   for (int j = 0; j < 4; j++) {
-    val = int(input->readLong(4)/256);
-    dim[j] = val;
-    if (val < -100) f << "##dim?,";
+    dim[j] = float(input->readLong(4))/256.f;
+    if (dim[j] < -100) f << "##dim?,";
   }
-  zone.m_box = Box2i(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
+  zone.m_box = Box2f(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
   style.m_lineWidth = (float) input->readLong(1);
   val = (int) input->readULong(1);
   if (val) f << "f1=" << val << ",";
@@ -1054,8 +1059,10 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
 
   int pat[2];
   for (int j = 0; j < 2; j++) {
-    val =  (int) input->readULong(1); // probably also related to surface
-    if (val) f << "pat" << j << "[high]=" << val << ",";
+    if (vers > 1) {
+      val =  (int) input->readULong(1); // probably also related to surface
+      if (val) f << "pat" << j << "[high]=" << val << ",";
+    }
     pat[j] = (int) input->readULong(1);
     if (j==1 && style.m_surfacePatternType) {
       if (style.m_surfacePatternType==1) // wall paper
@@ -1092,8 +1099,7 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
     else
       style.m_surfaceColor=color;
   }
-  if (version() > 1)
-    style.m_id = (int) input->readLong(2);
+  style.m_id = (int) input->readLong(2);
 
   switch (type) {
   case CWGraphInternal::Zone::T_Zone: {
@@ -1346,6 +1352,9 @@ bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone
     int fileAngle[2];
     for (int i = 0; i < 2; i++)
       fileAngle[i] = (int) input->readLong(2);
+    int val=(int) input->readLong(1);
+    if (val==1) f<< "show[axis],";
+    else if (val) f << "#show[axis]=" << val << ",";
     int angle[2] = { 90-fileAngle[0]-fileAngle[1], 90-fileAngle[0] };
     while (angle[1] > 360) {
       angle[0]-=360;
@@ -1372,8 +1381,9 @@ bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone
       if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
       else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
     }
-    Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
-                  Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
+    Box2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
+                  Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
+    zone.m_box=Box2f(Vec2f(zone.m_box[0])+realBox[0],Vec2f(zone.m_box[0])+realBox[1]);
     shape = MWAWGraphicShape::pie(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
     break;
   }
@@ -1406,11 +1416,26 @@ bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone
     return false;
   }
 
-  int numRemain = int(entry.end()-input->tell());
+  int const vers=version();
+  long nextToRead = entry.end()+(vers==6 ? -6 : vers>=4 ? -2 : 0);
+  int numRemain = int(nextToRead-input->tell());
   numRemain /= 2;
   for (int i = 0; i < numRemain; i++) {
     int val = (int) input->readLong(2);
     if (val) f << "g" << i << "=" << val << ",";
+  }
+  if (vers>=4 && input->tell() <= nextToRead) {
+    input->seek(nextToRead, WPX_SEEK_SET);
+    zone.m_rotate=(int) input->readLong(2);
+    if (zone.m_rotate) {
+      MWAW_DEBUG_MSG(("CWGraph::readSimpleGraphicZone: Arghs find some rotation\n"));
+    }
+    if (vers==6) {
+      for (int i=0; i < 2; i++) { // always 0
+        int val = (int) input->readLong(2);
+        if (val) f << "h" << i << "=" << val << ",";
+      }
+    }
   }
   shape.m_extra=f.str();
   return true;
@@ -2242,9 +2267,10 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWGraphicListener &list
       listener.insertPicture(box, shape.m_shape, style);
       break;
     }
+    case CWGraphInternal::Zone::T_DataBox:
+      break;
     case CWGraphInternal::Zone::T_Bitmap:
     case CWGraphInternal::Zone::T_Picture:
-    case CWGraphInternal::Zone::T_DataBox:
     case CWGraphInternal::Zone::T_Chart:
     case CWGraphInternal::Zone::T_Unknown:
     case CWGraphInternal::Zone::T_Pict:
@@ -2304,7 +2330,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
     suggestedAnchor= mainGroup ? MWAWPosition::Page : MWAWPosition::Char;
     break;
   }
-  if (position.m_anchorTo==MWAWPosition::Unknown) {
+  if (0 && position.m_anchorTo==MWAWPosition::Unknown) {
     MWAW_DEBUG_MSG(("CWGraph::sendGroup: position is not set\n"));
   }
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
@@ -2346,7 +2372,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
     return true;
   }
 
-  // first sort the jobs
+  /* first sort the different zone: ie. we must first send the page block, then the main zone */
   std::vector<size_t> listJobs[2];
   for (size_t g = 0; g < group.m_blockToSendList.size(); g++) {
     CWGraphInternal::Zone *child = group.m_zones[g].get();
@@ -2377,11 +2403,12 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
         m_mainParser->sendZone(1, false);
     }
     for (size_t g = 0; g < listJobs[st].size(); g++) {
-      CWGraphInternal::Zone *child = group.m_zones[listJobs[st][g]].get();
+      size_t cId=listJobs[st][g];
+      CWGraphInternal::Zone *child = group.m_zones[cId].get();
       if (!child) continue;
 
       MWAWPosition pos(position);
-      pos.setOrder(int(g)+1);
+      pos.setOrder(int(cId)+1);
       pos.setOrigin(child->m_box[0]);
       pos.setSize(child->m_box.size());
       if (pos.m_anchorTo==MWAWPosition::Unknown) {
@@ -2392,7 +2419,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
           Vec2f orig = pos.origin()+leftTop;
           pos.setPagePos(pg, orig);
           pos.m_wrapping =  MWAWPosition::WBackground;
-          pos.setOrder(-int(g)-1);
+          pos.setOrder(-int(cId)-1);
         } else if (st==1 || suggestedAnchor == MWAWPosition::Char)
           pos.setOrigin(Vec2f(0,0));
       }
@@ -2510,7 +2537,6 @@ bool CWGraph::sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos)
   MWAWGraphicStyle pStyle(pict.m_style);
   if (pict.m_shape.m_type!=MWAWGraphicShape::Line)
     pStyle.m_arrows[0]=pStyle.m_arrows[1]=false;
-
   pos.setOrigin(pos.origin()-Vec2f(2,2));
   pos.setSize(pos.size()+Vec2f(4,4));
   listener->insertPicture(pos, pict.m_shape, pStyle);
