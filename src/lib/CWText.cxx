@@ -332,12 +332,12 @@ struct TextZoneInfo {
   std::string m_extra;
 };
 
-enum TokenType { TKN_UNKNOWN, TKN_FOOTNOTE, TKN_PAGENUMBER, TKN_GRAPHIC };
+enum TokenType { TKN_UNKNOWN, TKN_FOOTNOTE, TKN_PAGENUMBER, TKN_GRAPHIC, TKN_FIELD };
 
 /** Internal: class to store field definition: TOKN entry*/
 struct Token {
   //! constructor
-  Token() : m_type(TKN_UNKNOWN), m_zoneId(-1), m_page(-1), m_descent(0), m_extra("") {
+  Token() : m_type(TKN_UNKNOWN), m_zoneId(-1), m_page(-1), m_descent(0), m_fieldEntry(), m_extra("") {
     for (int i = 0; i < 3; i++) m_unknown[i] = 0;
     for (int i = 0; i < 2; i++) m_size[i] = 0;
   }
@@ -353,6 +353,8 @@ struct Token {
   int m_size[2];
   //! the descent
   int m_descent;
+  //! the field name entry
+  MWAWEntry m_fieldEntry;
   //! the unknown zone
   int m_unknown[3];
   //! a string used to store the parsing errors
@@ -364,6 +366,9 @@ std::ostream &operator<<(std::ostream &o, Token const &tok)
   switch (tok.m_type) {
   case TKN_FOOTNOTE:
     o << "footnoote,";
+    break;
+  case TKN_FIELD:
+    o << "field,";
     break;
   case TKN_PAGENUMBER:
     switch(tok.m_unknown[0]) {
@@ -686,7 +691,8 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
     }
-    input->seek(zEntry.end(), WPX_SEEK_SET);
+    if (input->tell() < zEntry.end() || !ok)
+      input->seek(zEntry.end(), WPX_SEEK_SET);
   }
 
   if (ok && vers >= 2) {
@@ -1086,6 +1092,7 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   CWTextInternal::PLC plc;
   plc.m_type = CWTextInternal::P_Token;
   int val;
+  std::vector<int> fieldList;
   for (int i = 0; i < numElt; i++) {
     pos = input->tell();
 
@@ -1104,6 +1111,10 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     case 2:
       /* find in v4-v6, does not seem to exist in v1-v2 */
       token.m_type = CWTextInternal::TKN_PAGENUMBER;
+      break;
+    case 3:
+      token.m_type = CWTextInternal::TKN_FIELD;
+      fieldList.push_back(i);
       break;
     default:
       f << "#type=" << type << ",";
@@ -1141,6 +1152,27 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   }
 
   input->seek(entry.end(), WPX_SEEK_SET);
+  for (size_t i=0; i < fieldList.size(); ++i) {
+    pos=input->tell();
+    long sz=(long) input->readULong(4);
+    f.str("");
+    f << "Token[field-" << i << "]:";
+    if (!input->checkPosition(pos+sz+4) || long(input->readULong(1))+1!=sz) {
+      MWAW_DEBUG_MSG(("CWText::readTokens: can find token field name %d\n", int(i)));
+      input->seek(pos, WPX_SEEK_SET);
+      f << "###";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      return false;
+    }
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    MWAWEntry fieldEntry;
+    fieldEntry.setBegin(input->tell());
+    fieldEntry.setEnd(pos+sz+4);
+    zone.m_tokenList[size_t(fieldList[i])].m_fieldEntry=fieldEntry;
+    input->seek(fieldEntry.end(), WPX_SEEK_SET);
+  }
   return true;
 }
 
@@ -1299,7 +1331,8 @@ bool CWText::canSendTextAsGraphic(CWTextInternal::Zone const &zone) const
   for (size_t t=0; t < zone.m_tokenList.size(); ++t) {
     CWTextInternal::Token const &tok=zone.m_tokenList[t];
     if (tok.m_type!=CWTextInternal::TKN_UNKNOWN &&
-        tok.m_type!=CWTextInternal::TKN_PAGENUMBER)
+        tok.m_type!=CWTextInternal::TKN_PAGENUMBER &&
+        tok.m_type!=CWTextInternal::TKN_FIELD)
       return false;
   }
   return true;
@@ -1460,6 +1493,22 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
               m_mainParser->sendZone(token.m_zoneId, false, tPos);
             } else
               f << "###";
+            break;
+          case CWTextInternal::TKN_FIELD:
+            listener->insertUnicode(0xab);
+            if (token.m_fieldEntry.valid() &&
+                input->checkPosition(token.m_fieldEntry.end())) {
+              long actPos=input->tell();
+              input->seek(token.m_fieldEntry.begin(), WPX_SEEK_SET);
+              long endFPos=token.m_fieldEntry.end();
+              while (!input->atEOS() && input->tell() < token.m_fieldEntry.end())
+                listener->insertCharacter((unsigned char)input->readULong(1), input, endFPos);
+              input->seek(actPos, WPX_SEEK_SET);
+            } else {
+              MWAW_DEBUG_MSG(("CWText::sendText: can not find field token data\n"));
+              listener->insertCharacter(' ');
+            }
+            listener->insertUnicode(0xbb);
             break;
           case CWTextInternal::TKN_UNKNOWN:
           default:

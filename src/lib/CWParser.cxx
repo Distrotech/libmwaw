@@ -1564,12 +1564,13 @@ bool CWParser::readCPRT(MWAWEntry const &entry)
 bool CWParser::readDocHeader()
 {
   MWAWInputStreamPtr input = getInput();
+  int const vers=version();
   long debPos = input->tell();
   libmwaw::DebugStream f;
   f << "Entries(DocHeader):";
 
   int val;
-  if (version() >= 6) {
+  if (vers >= 6) {
     f << "unkn=[";
     for (int i = 0; i < 4; i++) {
       val = (int) input->readLong(1);
@@ -1584,20 +1585,17 @@ bool CWParser::readDocHeader()
   }
   long pos = input->tell();
   int zone0Length = 52, zone1Length=0, zoneFinalLength = 0;
-  switch(version()) {
+  switch(vers) {
   case 1:
     zone0Length = 114;
     zone1Length=50;
     zoneFinalLength = 352;
     break;
   case 2:
+  case 3: // checkme: never see a v3 file
     zone0Length = 116;
     zone1Length=112;
     zoneFinalLength = 372;
-    break;
-  case 3:
-    zone0Length = 116;
-    zone1Length=112; // check me
     break;
   case 4:
     zone0Length = 120;
@@ -1692,7 +1690,7 @@ bool CWParser::readDocHeader()
   pos = input->tell();
   f.str("");
   f << "DocHeader:zone?=" << input->readULong(2) << ",";
-  if (version() >= 4) f << "unkn=" << input->readULong(2) << ",";
+  if (vers >= 4) f << "unkn=" << input->readULong(2) << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   MWAWFont font;
@@ -1715,13 +1713,13 @@ bool CWParser::readDocHeader()
   if (type != val) f << "#unkn=" << val << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  if (version() <= 2) {
+  if (vers <= 2) {
     // the document font ?
     if (!m_textParser->readFont(-1, posChar, font))
       return false;
     ascii().addPos(input->tell());
     ascii().addNote("DocHeader-2");
-    if (version()==2) {
+    if (vers==2) {
       input->seek(46, WPX_SEEK_CUR);
       long actPos = input->tell();
       f.str("");
@@ -1765,7 +1763,7 @@ bool CWParser::readDocHeader()
     MWAW_DEBUG_MSG(("CWParser::readDocHeader: file is too short\n"));
     return false;
   }
-  switch (version()) {
+  switch (vers) {
   case 1:
   case 2: {
     pos = input->tell();
@@ -1776,6 +1774,35 @@ bool CWParser::readDocHeader()
       MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not find print info\n"));
       input->seek(pos, WPX_SEEK_SET);
       return false;
+    }
+    if (vers==1)
+      break;
+    pos = input->tell();
+    if (!m_styleManager->readPatternList() ||
+        !m_styleManager->readGradientList()) {
+      input->seek(pos+zoneFinalLength+8, WPX_SEEK_SET);
+      return true;
+    }
+    pos=input->tell();
+    ascii().addPos(pos);
+    ascii().addNote("Entries(DocUnkn0)");
+    input->seek(12, WPX_SEEK_CUR);
+    if (!readStructZone("DocH0", false)) {
+      input->seek(pos+12, WPX_SEEK_SET);
+      return false;
+    }
+    pos=input->tell();
+    f.str("");
+    f << "Entries(DocUnkn1):";
+    long sz=input->readLong(4);
+    if (sz) {
+      MWAW_DEBUG_MSG(("CWParser::readDocHeader: oops find a size for DocUnkn2, we may have a problem\n"));
+      f << sz << "###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+    } else {
+      ascii().addPos(pos);
+      ascii().addNote("_");
     }
     break;
   }
@@ -1795,18 +1822,16 @@ bool CWParser::readDocHeader()
       ascii().addNote("Nop");
     } else {
       long endPos = pos+4+sz;
-      input->seek(endPos, WPX_SEEK_SET);
-      if (long(input->tell()) != endPos) {
-        input->seek(pos, WPX_SEEK_SET);
-        MWAW_DEBUG_MSG(("CWParser::readDocHeader: unexpected DocUnkn0 size\n"));
+      if (!input->checkPosition(endPos)) {
+        MWAW_DEBUG_MSG(("CWParser::readDocHeader: unexpected LinkInfo size\n"));
         return false;
       }
       ascii().addPos(pos);
-      ascii().addNote("Entries(DocUnkn0)");
+      ascii().addNote("Entries(LinkInfo)");
       input->seek(endPos, WPX_SEEK_SET);
     }
 
-    if (version() > 4) {
+    if (vers > 4) {
       val = (int) input->readULong(4);
       if (val != long(input->tell())) {
         input->seek(pos, WPX_SEEK_SET);
@@ -1816,16 +1841,16 @@ bool CWParser::readDocHeader()
 
         return false;
       }
-      pos = input->tell();
+      pos = input->tell(); // series of data with size 42 or 46
       if (!readStructZone("DocUnkn1", false)) {
         input->seek(pos,WPX_SEEK_SET);
         return false;
       }
     }
 
-    pos = input->tell();
+    pos = input->tell(); // series of data with size 42 or 46
     int expectedSize = 0;
-    switch (version()) {
+    switch (vers) {
     case 5:
       expectedSize=34;
       break;
@@ -1847,39 +1872,19 @@ bool CWParser::readDocHeader()
       return false;
     }
 
-    break;
-  }
-  default:
-    break;
-  }
-  if (version()==2) {
-    pos = input->tell();
-    long endPos=pos+zoneFinalLength+8;
-    if (!m_styleManager->readPatternList(endPos) ||
-        !m_styleManager->readGradientList(endPos)) {
-      input->seek(endPos, WPX_SEEK_SET);
-      return true;
-    }
-    pos=input->tell();
-    ascii().addPos(pos);
-    ascii().addNote("Entries(Unkn0)");
-    input->seek(48, WPX_SEEK_CUR);
-  } else if (version() >= 4) {
-    for (int z = 0; z < 3; z++) { // zone0, zone1 : color palette, zone2 (val:2, id:2)
+    for (int z = 0; z < 4; z++) { // zone0, zone1 : color palette, zone2 (val:2, id:2)
+      if (z==3 && vers!=4) break;
       pos = input->tell();
-      long sz = (long) input->readULong(4);
+      sz = (long) input->readULong(4);
       if (!sz) {
         ascii().addPos(pos);
         ascii().addNote("Nop");
         continue;
       }
-      MWAWEntry entry;
       entry.setBegin(pos);
       entry.setLength(4+sz);
-      input->seek(entry.end(), WPX_SEEK_SET);
-      if (long(input->tell()) != entry.end()) {
+      if (!input->checkPosition(entry.end())) {
         MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not read final zones\n"));
-        input->seek(pos, WPX_SEEK_SET);
         return false;
       }
       input->seek(pos, WPX_SEEK_SET);
@@ -1894,31 +1899,25 @@ bool CWParser::readDocHeader()
           return false;
         }
         break;
-      case 2:
-        if (!readStructZone("DocUnkn3", false)) {
+      case 2: // a serie of id? num
+        if (!readStructZone("DocH0", false)) {
           input->seek(pos, WPX_SEEK_SET);
           return false;
         }
+        break;
+      case 3: // checkme
+        ascii().addPos(pos);
+        ascii().addNote("DocUnkn4");
         break;
       default:
         break;
       }
       input->seek(entry.end(), WPX_SEEK_SET);
     }
-    if (version()==4) { // another potiential zone?
-      pos = input->tell();
-      long sz=input->readLong(4);
-      if (sz) {
-        MWAW_DEBUG_MSG(("CWParser::readDocHeader: find unexpected size\n"));
-        f.str("");
-        f << "Entries(DocUnkn4):" << sz;
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
-      } else {
-        ascii().addPos(pos);
-        ascii().addNote("_");
-      }
-    }
+    break;
+  }
+  default:
+    break;
   }
   pos = input->tell();
   long endPos=pos+zoneFinalLength;
@@ -1937,7 +1936,7 @@ bool CWParser::readDocHeader()
   if (val) f << "unkn=" << val << ",";
   m_state->m_footerId = (int) input->readLong(2);
   if (m_state->m_footerId) f << "footerId=" << m_state->m_footerId << ",";
-  if (version()==1) {
+  if (vers==1) {
     ascii().addDelimiter(input->tell(), '|');
     input->seek(20, WPX_SEEK_CUR);
     ascii().addDelimiter(input->tell(), '|');
