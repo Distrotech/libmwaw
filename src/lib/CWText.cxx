@@ -1308,6 +1308,7 @@ bool CWText::canSendTextAsGraphic(CWTextInternal::Zone const &zone) const
 bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
 {
   MWAWListenerPtr listener;
+  zone.m_parsed=true;
   if (asGraphic)
     listener=m_parserState->m_graphicListener;
   else
@@ -2000,21 +2001,22 @@ bool CWText::sendZone(int number, bool asGraphic)
     return false;
   shared_ptr<CWTextInternal::Zone> zone = iter->second;
   sendText(*zone, asGraphic);
-  zone->m_parsed = true;
   return true;
 }
 
 void CWText::flushExtra()
 {
+  if (!m_parserState->m_listener) return;
   std::map<int, shared_ptr<CWTextInternal::Zone> >::iterator iter
     = m_state->m_zoneMap.begin();
   for ( ; iter !=  m_state->m_zoneMap.end(); ++iter) {
     shared_ptr<CWTextInternal::Zone> zone = iter->second;
-    if (zone->m_parsed)
+    if (!zone || zone->m_parsed)
       continue;
-    if (m_parserState->m_listener) m_parserState->m_listener->insertEOL();
+    m_parserState->m_listener->insertEOL();
+    if (zone->m_parsed) // can be a header/footer in draw zone
+      continue;
     sendText(*zone, false);
-    zone->m_parsed = true;
   }
 }
 

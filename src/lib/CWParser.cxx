@@ -390,8 +390,13 @@ void CWParser::parse(WPXDocumentInterface *docInterface)
       createDocument(docInterface);
       MWAWPosition pos;
       //pos.m_anchorTo=MWAWPosition::Page;
-      for (size_t i = 0; i < m_state->m_mainZonesList.size(); i++)
+      for (size_t i = 0; i < m_state->m_mainZonesList.size(); i++) {
+        // can happens if mainZonesList is not fully reconstruct
+        if (m_state->m_mainZonesList[i]==m_state->m_headerId ||
+            m_state->m_mainZonesList[i]==m_state->m_footerId)
+          continue;
         sendZone(m_state->m_mainZonesList[i], false, pos);
+      }
       m_presentationParser->flushExtra();
       m_graphParser->flushExtra();
       m_tableParser->flushExtra();
@@ -562,11 +567,11 @@ bool CWParser::createZones()
 ////////////////////////////////////////////////////////////
 void CWParser::typeMainZones()
 {
-  // first (ype the main zone and its father
+  // first type the main zone and its father
   typeMainZonesRec(1, CWStruct::DSET::T_Main, 100);
 
   std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter;
-  // finally the slid
+  // then type the slides
   std::vector<int> slidesList = m_presentationParser->getSlidesList();
   for (size_t slide = 0; slide < slidesList.size(); slide++) {
     iter = m_state->m_zonesMap.find(slidesList[slide]);
@@ -755,10 +760,11 @@ bool CWParser::exploreZonesGraphRec(int zId, std::set<int> &notDoneList)
           MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: can not find zone %d\n", cId));
         } else if (iter2->second->m_internal==1) {
           MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: find a cycle: for child : %d(<-%d)\n", cId, zId));
-        } else
+        } else if (cId != m_state->m_headerId && cId != m_state->m_footerId)
           zone->m_validedChildList.insert(cId);
       } else {
-        zone->m_validedChildList.insert(cId);
+        if (cId != m_state->m_headerId && cId != m_state->m_footerId)
+          zone->m_validedChildList.insert(cId);
         exploreZonesGraphRec(cId, notDoneList);
       }
     }
@@ -1264,7 +1270,6 @@ bool CWParser::readStructZone(char const *zoneName, bool hasEntete)
   ascii().addPos(hasEntete ? pos-4 : pos);
   ascii().addNote(f.str().c_str());
 
-
   long debPos = endPos-N*fSz;
   for (int i = 0; i < N; i++) {
     input->seek(debPos, WPX_SEEK_SET);
@@ -1588,7 +1593,7 @@ bool CWParser::readDocHeader()
   case 2:
     zone0Length = 116;
     zone1Length=112;
-    zoneFinalLength = 420;
+    zoneFinalLength = 372;
     break;
   case 3:
     zone0Length = 116;
@@ -1597,15 +1602,17 @@ bool CWParser::readDocHeader()
   case 4:
     zone0Length = 120;
     zone1Length=92;
-    zoneFinalLength = 376;//408;
+    zoneFinalLength = 372;
     break;
   case 5:
     zone0Length = 132;
     zone1Length = 92;
+    zoneFinalLength = 372;
     break;
   case 6:
     zone0Length = 124;
     zone1Length = 1126;
+    zoneFinalLength = 374;
     break;
   default:
     break;
@@ -1845,7 +1852,19 @@ bool CWParser::readDocHeader()
   default:
     break;
   }
-  if (version() >= 4) {
+  if (version()==2) {
+    pos = input->tell();
+    long endPos=pos+zoneFinalLength+8;
+    if (!m_styleManager->readPatternList(endPos) ||
+        !m_styleManager->readGradientList(endPos)) {
+      input->seek(endPos, WPX_SEEK_SET);
+      return true;
+    }
+    pos=input->tell();
+    ascii().addPos(pos);
+    ascii().addNote("Entries(Unkn0)");
+    input->seek(48, WPX_SEEK_CUR);
+  } else if (version() >= 4) {
     for (int z = 0; z < 3; z++) { // zone0, zone1 : color palette, zone2 (val:2, id:2)
       pos = input->tell();
       long sz = (long) input->readULong(4);
@@ -1886,62 +1905,60 @@ bool CWParser::readDocHeader()
       }
       input->seek(entry.end(), WPX_SEEK_SET);
     }
-  }
-  if (!zoneFinalLength) return false;
-  if (version()==2) {
-    pos = input->tell();
-    long endPos=pos+zoneFinalLength+8;
-    if (!m_styleManager->readPatternList(endPos) ||
-        !m_styleManager->readGradientList(endPos)) {
-      input->seek(endPos, WPX_SEEK_SET);
-      return true;
+    if (version()==4) { // another potiential zone?
+      pos = input->tell();
+      long sz=input->readLong(4);
+      if (sz) {
+        MWAW_DEBUG_MSG(("CWParser::readDocHeader: find unexpected size\n"));
+        f.str("");
+        f << "Entries(DocUnkn4):" << sz;
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+      } else {
+        ascii().addPos(pos);
+        ascii().addNote("_");
+      }
     }
   }
   pos = input->tell();
   long endPos=pos+zoneFinalLength;
-  if (version()<=2) {
-    pos=input->tell();
-    f.str("");
-    f << "Entries(HeaderEnd):";
-    if (version()==2) {
-      input->seek(48, WPX_SEEK_CUR);
-      ascii().addDelimiter(input->tell(), '|');
-    }
-    f << "ptr=" << std::hex << input->readULong(4) << std::dec << ",";
-    for (int i = 0; i < 6; i++) {
-      val = (int) input->readULong(2);
-      if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
-    }
-    m_state->m_headerId = (int) input->readLong(2);
-    if (m_state->m_headerId) f << "headerId=" << m_state->m_headerId << ",";
-    val = (int) input->readLong(2);
-    if (val) f << "unkn=" << val << ",";
-    m_state->m_footerId = (int) input->readLong(2);
-    if (m_state->m_footerId) f << "footerId=" << m_state->m_footerId << ",";
-    if (version()==1) {
-      ascii().addDelimiter(input->tell(), '|');
-      input->seek(20, WPX_SEEK_CUR);
-      ascii().addDelimiter(input->tell(), '|');
-
-      int numCols = (int) input->readLong(2);
-      if (numCols < 1 || numCols > 9) {
-        MWAW_DEBUG_MSG(("CWParser::readDocHeader: pb reading number of columns\n"));
-        f << "###numCols=" << numCols;
-        numCols = 1;
-      }
-      if (numCols != 1)
-        f << "numCols=" << numCols << ",";
-      m_state->m_columns = numCols;
-      if (numCols > 1) {
-        int colSep = (int) input->readLong(2);
-        m_state->m_columnsSep.resize(size_t(numCols-1), colSep);
-        f << "colSep=" << colSep << ",";
-      } else
-        input->seek(2, WPX_SEEK_CUR);
-    }
+  if (!zoneFinalLength || !input->checkPosition(endPos)) return false;
+  pos=input->tell();
+  f.str("");
+  f << "Entries(HeaderEnd):";
+  f << "ptr=" << std::hex << input->readULong(4) << std::dec << ",";
+  for (int i = 0; i < 6; i++) {
+    val = (int) input->readULong(2);
+    if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
-  if (int(input->tell()) != pos)
+  m_state->m_headerId = (int) input->readLong(2);
+  if (m_state->m_headerId) f << "headerId=" << m_state->m_headerId << ",";
+  val = (int) input->readLong(2);
+  if (val) f << "unkn=" << val << ",";
+  m_state->m_footerId = (int) input->readLong(2);
+  if (m_state->m_footerId) f << "footerId=" << m_state->m_footerId << ",";
+  if (version()==1) {
     ascii().addDelimiter(input->tell(), '|');
+    input->seek(20, WPX_SEEK_CUR);
+    ascii().addDelimiter(input->tell(), '|');
+
+    int numCols = (int) input->readLong(2);
+    if (numCols < 1 || numCols > 9) {
+      MWAW_DEBUG_MSG(("CWParser::readDocHeader: pb reading number of columns\n"));
+      f << "###numCols=" << numCols;
+      numCols = 1;
+    }
+    if (numCols != 1)
+      f << "numCols=" << numCols << ",";
+    m_state->m_columns = numCols;
+    if (numCols > 1) {
+      int colSep = (int) input->readLong(2);
+      m_state->m_columnsSep.resize(size_t(numCols-1), colSep);
+      f << "colSep=" << colSep << ",";
+    } else
+      input->seek(2, WPX_SEEK_CUR);
+  }
+  ascii().addDelimiter(input->tell(), '|');
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   input->seek(endPos, WPX_SEEK_SET);
