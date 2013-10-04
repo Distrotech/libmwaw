@@ -692,11 +692,11 @@ bool CWStyleManager::updateWallPaper(int id, MWAWGraphicStyle &style) const
     m_state->setDefaultWallPaperList(version());
     numWallpaper = int(m_state->m_wallpaperList.size());
   }
-  if (id < 0 || id >= numWallpaper) {
+  if (id <= 0 || id > numWallpaper) {
     MWAW_DEBUG_MSG(("CWStyleManager::updateWallPaper: can not find wall paper %d\n", int(id)));
     return false;
   }
-  style.setSurfaceColor(m_state->m_wallpaperList[size_t(id)]);
+  style.setSurfaceColor(m_state->m_wallpaperList[size_t(id-1)]);
   return true;
 }
 

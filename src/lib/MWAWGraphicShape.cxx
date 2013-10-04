@@ -512,12 +512,14 @@ std::vector<MWAWGraphicShape::PathData> MWAWGraphicShape::getPath() const
     res.push_back(PathData('Z'));
     break;
   case Circle: {
-    Vec2f pt = m_formBox[0];
-    pt[1]+=0.5*m_formBox.size()[1];
-    res.push_back(PathData('M',pt));
-    PathData data('A',pt);
+    Vec2f pt0 = Vec2f(m_formBox[0][0],0.5f*(m_formBox[0][1]+m_formBox[1][1]));
+    Vec2f pt1 = Vec2f(m_formBox[1][0],pt0[1]);
+    res.push_back(PathData('M',pt0));
+    PathData data('A',pt1);
     data.m_r=0.5*(m_formBox[1]-m_formBox[0]);
     data.m_largeAngle=true;
+    res.push_back(data);
+    data.m_x=pt0;
     res.push_back(data);
     break;
   }

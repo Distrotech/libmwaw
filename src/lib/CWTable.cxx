@@ -619,6 +619,7 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
       }
       MWAWGraphicStyle graph;
       if (style.m_graphicId >= 0 && m_styleManager->get(style.m_graphicId, graph)) {
+        // checkme: no always there
         if (graph.hasSurfaceColor())
           cell->setBackgroundColor(graph.m_surfaceColor);
         if (hasExtraLines) {

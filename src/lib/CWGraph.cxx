@@ -1539,12 +1539,10 @@ bool CWGraph::readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id
   if (id < 0)
     group.m_headerDim=dim;
   if (dim[0] || dim[1]) f << "dim=" << dim << ",";
-  for (size_t i = 0; i < 2; i++) {
-    if (values16[i])
-      f << "g" << int(i) << "=" << values16[i] << ",";
-  }
+  if (values16[0]!=1 || values16[1]!=1)
+    f << "pages[num]=" << values16[0] << "x" << values16[1] << ",";
   if (values32[2])
-    f << "g2=" << std::hex << values32[2] << std::dec << ",";
+    f << "g0=" << std::hex << values32[2] << std::dec << ",";
 
   if (input->tell() != pos+zoneSz) {
     ascFile.addDelimiter(input->tell(), '|');
@@ -2336,7 +2334,9 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
     MWAWPosition lPos;
     lPos.m_anchorTo=MWAWPosition::Frame;
     MWAWSubDocumentPtr doc(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, group.m_id, lPos));
-    listener->insertTextBox(position, doc);
+    WPXPropertyList extras;
+    extras.insert("style:background-transparency", "100%");
+    listener->insertTextBox(position, doc, extras);
     return true;
   }
 
@@ -2465,7 +2465,7 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
     return false;
   }
   WPXPropertyList extras;
-  if (!isGroup) {
+  if (dset && dset->m_fileType==1) { // checkme: use style for textbox
     MWAWColor color;
     if (cStyle.hasSurfaceColor() && getSurfaceColor(cStyle, color))
       extras.insert("fo:background-color", color.str().c_str());
@@ -2481,7 +2481,8 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
       pos.setOrigin(pos.origin()-Vec2f(extend,extend));
       pos.setSize(pos.size()+2.0*Vec2f(extend,extend));
     }
-  }
+  } else
+    extras.insert("style:background-transparency", "100%");
   if (createFrame) {
     WPXPropertyList textboxExtras;
     group.addFrameName(zId, childZone.m_subId, extras, textboxExtras);
