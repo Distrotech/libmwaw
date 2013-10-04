@@ -126,7 +126,7 @@ protected:
   //! send a group
   bool sendGroup(CWGraphInternal::Group &group, MWAWPosition const &position);
   //! send a group as graphic
-  bool sendGroup(CWGraphInternal::Group &group, MWAWGraphicListener &listener);
+  bool sendGroup(CWGraphInternal::Group &group, std::vector<size_t> const &lChild, MWAWGraphicListener &listener);
   //! send a group child
   bool sendGroupChild(CWGraphInternal::Group &group, size_t child, MWAWPosition position);
   /* read a simple group */

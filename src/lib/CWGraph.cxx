@@ -2219,7 +2219,7 @@ bool CWGraph::sendZone(int number, bool asGraphic, MWAWPosition const &position)
       MWAW_DEBUG_MSG(("CWGraph::sendZone: can not find the graphiclistener\n"));
       return false;
     }
-    return sendGroup(*group, *graphicListener);
+    return sendGroup(*group, group->m_blockToSendList, *graphicListener);
   }
   return sendGroup(*group, position);
 }
@@ -2234,49 +2234,32 @@ bool CWGraph::canSendAsGraphic(CWGraphInternal::Group &group) const
   for (size_t g = 0; g < numZones; g++) {
     CWGraphInternal::Zone const *child = group.m_zones[group.m_blockToSendList[g]].get();
     if (!child) continue;
-    switch (child->getType()) {
-    case CWGraphInternal::Zone::T_Zone: {
+    CWGraphInternal::Zone::Type type=child->getType();
+    if (type==CWGraphInternal::Zone::T_Zone) {
       CWGraphInternal::ZoneZone const &childZone =
         reinterpret_cast<CWGraphInternal::ZoneZone const &>(*child);
       if (group.isLinked(childZone.m_id) || !m_mainParser->canSendZoneAsGraphic(childZone.m_id))
         return false;
-      break;
+      continue;
     }
-    case CWGraphInternal::Zone::T_Shape:
-      break;
-    case CWGraphInternal::Zone::T_Bitmap:
-    case CWGraphInternal::Zone::T_Picture:
-      return false;
-    case CWGraphInternal::Zone::T_DataBox:
-    case CWGraphInternal::Zone::T_Chart:
-    case CWGraphInternal::Zone::T_Unknown:
-      break;
-    case CWGraphInternal::Zone::T_Pict:
-    case CWGraphInternal::Zone::T_QTim:
-    case CWGraphInternal::Zone::T_Movie:
-    case CWGraphInternal::Zone::T_Line:
-    case CWGraphInternal::Zone::T_Rect:
-    case CWGraphInternal::Zone::T_RectOval:
-    case CWGraphInternal::Zone::T_Oval:
-    case CWGraphInternal::Zone::T_Arc:
-    case CWGraphInternal::Zone::T_Poly:
-    default: // anormal, but ...
-      break;
-    }
+    if (type==CWGraphInternal::Zone::T_Shape || type==CWGraphInternal::Zone::T_DataBox ||
+        type==CWGraphInternal::Zone::T_Chart || type==CWGraphInternal::Zone::T_Unknown)
+      continue;
+    return false;
   }
   return true;
 }
 
-bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWGraphicListener &listener)
+bool CWGraph::sendGroup(CWGraphInternal::Group &group, std::vector<size_t> const &lChild, MWAWGraphicListener &listener)
 {
   group.m_parsed=true;
-  size_t numZones = group.m_blockToSendList.size();
+  size_t numZones = lChild.size();
   for (size_t g = 0; g < numZones; g++) {
-    CWGraphInternal::Zone const *child = group.m_zones[group.m_blockToSendList[g]].get();
+    CWGraphInternal::Zone const *child = group.m_zones[lChild[g]].get();
     if (!child) continue;
     Box2f box=child->getBdBox();
-    switch (child->getType()) {
-    case CWGraphInternal::Zone::T_Zone: {
+    CWGraphInternal::Zone::Type type=child->getType();
+    if (type==CWGraphInternal::Zone::T_Zone) {
       CWGraphInternal::ZoneZone const &zone=
         reinterpret_cast<CWGraphInternal::ZoneZone const &>(*child);
       shared_ptr<CWStruct::DSET> dset=m_mainParser->getZone(zone.m_id);
@@ -2285,35 +2268,15 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWGraphicListener &list
         listener.insertTextBox(box, doc, zone.m_style);
       else
         listener.insertGroup(box, doc);
-      break;
-    }
-    case CWGraphInternal::Zone::T_Shape: {
+    } else if (type==CWGraphInternal::Zone::T_Shape) {
       CWGraphInternal::ZoneShape const &shape=
         reinterpret_cast<CWGraphInternal::ZoneShape const &>(*child);
       MWAWGraphicStyle style(shape.m_style);
       if (shape.m_shape.m_type!=MWAWGraphicShape::Line)
         style.m_arrows[0]=style.m_arrows[1]=false;
       listener.insertPicture(box, shape.m_shape, style);
-      break;
-    }
-    case CWGraphInternal::Zone::T_DataBox:
-      break;
-    case CWGraphInternal::Zone::T_Bitmap:
-    case CWGraphInternal::Zone::T_Picture:
-    case CWGraphInternal::Zone::T_Chart:
-    case CWGraphInternal::Zone::T_Unknown:
-    case CWGraphInternal::Zone::T_Pict:
-    case CWGraphInternal::Zone::T_QTim:
-    case CWGraphInternal::Zone::T_Movie:
-    case CWGraphInternal::Zone::T_Line:
-    case CWGraphInternal::Zone::T_Rect:
-    case CWGraphInternal::Zone::T_RectOval:
-    case CWGraphInternal::Zone::T_Oval:
-    case CWGraphInternal::Zone::T_Arc:
-    case CWGraphInternal::Zone::T_Poly:
-    default: // anormal, but ...
+    } else if (type!=CWGraphInternal::Zone::T_DataBox) {
       MWAW_DEBUG_MSG(("CWGraph::sendGroup: find unexpected type!!!\n"));
-      break;
     }
   }
   return true;
@@ -2367,7 +2330,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
   if (canUseGraphic && canSendAsGraphic(group)) {
     Box2f box=group.m_box;
     graphicListener->startGraphic(box);
-    sendGroup(group, *graphicListener);
+    sendGroup(group, group.m_blockToSendList, *graphicListener);
     WPXBinaryData data;
     std::string type;
     if (graphicListener->endGraphic(data,type)) {
@@ -2433,20 +2396,59 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
       if (group.m_hasMainZone)
         m_mainParser->sendZone(1, false);
     }
-    for (size_t g = 0; g < listJobs[st].size(); g++) {
-      size_t cId=listJobs[st][g];
-      CWGraphInternal::Zone *child = group.m_zones[cId].get();
-      if (!child) continue;
+    size_t numJobs=listJobs[st].size();
+    for (size_t g = 0; g < numJobs; g++) {
+      size_t cId;
+      Box2f box;
+      std::vector<size_t> groupList;
+      int page;
+      size_t lastOk=g;
 
+      if (st==0 && !mainGroup && canUseGraphic) {
+        for (size_t h = g; h < numJobs; ++h) {
+          cId=listJobs[st][h];
+          CWGraphInternal::Zone *child = group.m_zones[cId].get();
+          if (!child) continue;
+          CWGraphInternal::Zone::Type type=child->getType();
+          if (groupList.empty()) page=child->m_page;
+          else if (page != child->m_page) break;
+          if (type==CWGraphInternal::Zone::T_Zone) {
+            CWGraphInternal::ZoneZone const &childZone =
+              reinterpret_cast<CWGraphInternal::ZoneZone const &>(*child);
+            if (group.isLinked(childZone.m_id) ||
+                !m_mainParser->canSendZoneAsGraphic(childZone.m_id))
+              break;
+          } else if (type==CWGraphInternal::Zone::T_DataBox ||
+                     type==CWGraphInternal::Zone::T_Chart ||
+                     type==CWGraphInternal::Zone::T_Unknown)
+            continue;
+          else if (type!=CWGraphInternal::Zone::T_Shape)
+            break;
+          if (groupList.empty())
+            box=child->m_box;
+          else
+            box=box.getUnion(child->m_box);
+          groupList.push_back(cId);
+          lastOk=h;
+        }
+      }
+
+      if (groupList.size() <= 1) {
+        cId=listJobs[st][g];
+        CWGraphInternal::Zone *child = group.m_zones[cId].get();
+        if (!child) continue;
+        box = child->m_box;
+        page = child->m_page;
+      }
       MWAWPosition pos(position);
       pos.setOrder(int(cId)+1);
-      pos.setOrigin(child->m_box[0]);
-      pos.setSize(child->m_box.size());
+      pos.setOrigin(box[0]);
+      pos.setSize(box.size());
       if (pos.m_anchorTo==MWAWPosition::Unknown) {
-        pos=MWAWPosition(child->m_box[0], child->m_box.size(), WPX_POINT);
+        pos=MWAWPosition(box[0], box.size(), WPX_POINT);
         pos.setRelativePosition(suggestedAnchor);
         if (suggestedAnchor == MWAWPosition::Page) {
-          int pg = child->m_page > 0 ? child->m_page : 1;
+          int pg = page > 0 ? page : 1;
           Vec2f orig = pos.origin()+leftTop;
           pos.setPagePos(pg, orig);
           pos.m_wrapping =  MWAWPosition::WBackground;
@@ -2454,7 +2456,20 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
         } else if (st==1 || suggestedAnchor == MWAWPosition::Char)
           pos.setOrigin(Vec2f(0,0));
       }
-      sendGroupChild(group, cId, pos);
+      if (groupList.size() <= 1) {
+        sendGroupChild(group, cId, pos);
+        continue;
+      }
+      graphicListener->startGraphic(box);
+      sendGroup(group, groupList, *graphicListener);
+      WPXBinaryData data;
+      std::string type;
+      if (graphicListener->endGraphic(data,type)) {
+        WPXPropertyList extras;
+        extras.insert("style:background-transparency", "100%");
+        listener->insertPicture(pos, data, type, extras);
+      }
+      g=lastOk;
     }
   }
   return true;
