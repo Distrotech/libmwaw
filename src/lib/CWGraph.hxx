@@ -117,6 +117,8 @@ protected:
   // Intermediate level
   //
 
+  //! check the number of accross page ( for draw document )
+  void checkNumberAccrossPages(CWGraphInternal::Group &group) const;
   //! update the group information to choose how to send the group data
   void updateInformation(CWGraphInternal::Group &group) const;
   //! check if we can send a group as graphic

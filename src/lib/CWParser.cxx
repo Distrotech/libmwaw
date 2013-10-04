@@ -1054,33 +1054,33 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
   if (long(input->tell()) != typePos)
     return false;
   int type = (int) input->readULong(1);
+  switch (type) {
+  case 0:
+    m_state->m_kind=MWAWDocument::K_DRAW;
+    break;
+  case 1:
+    m_state->m_kind=MWAWDocument::K_TEXT;
+    break;
+  case 2:
+    m_state->m_kind=MWAWDocument::K_SPREADSHEET;
+    break;
+  case 3:
+    m_state->m_kind=MWAWDocument::K_DATABASE;
+    break;
+  case 4:
+    m_state->m_kind=MWAWDocument::K_PAINT;
+    break;
+  case 5:
+    m_state->m_kind=MWAWDocument::K_PRESENTATION;
+    break;
+  default:
+    MWAW_DEBUG_MSG(("CWParser::checkHeader: unknown type=%d\n", type));
+    m_state->m_kind=MWAWDocument::K_UNKNOWN;
+    break;
+  }
   if (header) {
     header->reset(MWAWDocument::CW, version());
-    switch (type) {
-    case 0:
-      header->setKind(MWAWDocument::K_DRAW);
-      break;
-    case 1:
-      header->setKind(MWAWDocument::K_TEXT);
-      break;
-    case 2:
-      header->setKind(MWAWDocument::K_SPREADSHEET);
-      break;
-    case 3:
-      header->setKind(MWAWDocument::K_DATABASE);
-      break;
-    case 4:
-      header->setKind(MWAWDocument::K_PAINT);
-      break;
-    case 5:
-      header->setKind(MWAWDocument::K_PRESENTATION);
-      break;
-    default:
-      MWAW_DEBUG_MSG(("CWParser::checkHeader: unknown type=%d\n", type));
-      header->setKind(MWAWDocument::K_UNKNOWN);
-      break;
-    }
-    m_state->m_kind = header->getKind();
+    header->setKind(m_state->m_kind);
 #ifdef DEBUG
     if (type >= 0 && type < 5)
       header->setKind(MWAWDocument::K_TEXT);
@@ -1959,7 +1959,7 @@ bool CWParser::readDocInfo()
   for (int i=0; i < 2; ++i)
     pages[i]=(int) input->readLong(2);
   if (pages[1]>=1 && pages[1] < 1000 &&
-      (pages[0]==1 || (pages[0]>1 && pages[0]<100 && m_state->m_kind != MWAWDocument::K_DRAW)))
+      (pages[0]==1 || (pages[0]>1 && pages[0]<100 && m_state->m_kind == MWAWDocument::K_DRAW)))
     m_state->m_pages=Vec2i(pages[0],pages[1]);
   else {
     MWAW_DEBUG_MSG(("CWParser::readDocInfo: the number of pages seems bad\n"));

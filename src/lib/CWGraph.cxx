@@ -537,8 +537,10 @@ struct Group : public CWStruct::DSET {
 //! Internal: the state of a CWGraph
 struct State {
   //! constructor
-  State() : m_zoneMap(), m_frameId(0) { }
+  State() : m_numAccrossPages(-1), m_zoneMap(), m_frameId(0) { }
 
+  //! the number of accross pages ( draw document)
+  int m_numAccrossPages;
   //! a map zoneId -> group
   std::map<int, shared_ptr<Group> > m_zoneMap;
   //! a int used to defined linked frame
@@ -632,10 +634,25 @@ int CWGraph::version() const
 int CWGraph::numPages() const
 {
   int nPages = 1;
-  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
-    = m_state->m_zoneMap.begin();
+  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter;
 
-  for ( ; iter != m_state->m_zoneMap.end() ; ++iter) {
+  if (m_state->m_numAccrossPages<=0) {
+    m_state->m_numAccrossPages=1;
+    if (m_mainParser->getHeader() &&
+        m_mainParser->getHeader()->getKind()==MWAWDocument::K_DRAW) {
+      m_state->m_numAccrossPages=m_mainParser->getDocumentPages()[0];
+      if (m_state->m_numAccrossPages<=1) {
+        // info not always fill so we must check it
+        for (iter=m_state->m_zoneMap.begin() ; iter != m_state->m_zoneMap.end() ; ++iter) {
+          shared_ptr<CWGraphInternal::Group> group = iter->second;
+          if (!group || group->m_type != CWStruct::DSET::T_Main)
+            continue;
+          checkNumberAccrossPages(*group);
+        }
+      }
+    }
+  }
+  for (iter=m_state->m_zoneMap.begin() ; iter != m_state->m_zoneMap.end() ; ++iter) {
     shared_ptr<CWGraphInternal::Group> group = iter->second;
     if (!group) continue;
     if (group->m_type != CWStruct::DSET::T_Main)
@@ -2020,6 +2037,23 @@ bool CWGraph::readBitmapData(CWGraphInternal::ZoneBitmap &zone)
 ////////////////////////////////////////////////////////////
 // update the group information
 ////////////////////////////////////////////////////////////
+void CWGraph::checkNumberAccrossPages(CWGraphInternal::Group &group) const
+{
+  m_state->m_numAccrossPages=1;
+  float textWidth=72.0f*(float)m_mainParser->getPageWidth();
+  for (size_t b=0; b < group.m_zones.size(); b++) {
+    CWGraphInternal::Zone *child = group.m_zones[b].get();
+    if (!child) continue;
+    if (child->m_box[1].y() >= 2000) // a little to suspicious
+      continue;
+    int page=int(child->m_box[1].x()/textWidth-0.2)+1;
+    if (page > m_state->m_numAccrossPages && page < 100) {
+      MWAW_DEBUG_MSG(("CWGraph::checkNumberAccrossPages: increase num page accross to %d\n", page));
+      m_state->m_numAccrossPages = page;
+    }
+  }
+}
+
 void CWGraph::updateInformation(CWGraphInternal::Group &group) const
 {
   if (group.m_blockToSendList.size() || group.m_idLinkedZonesMap.size())
@@ -2071,6 +2105,12 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
   }
 
   // try to fix the page position corresponding to the main zone
+  int numPagesAccross=m_state->m_numAccrossPages;
+  if (numPagesAccross <= 0) {
+    MWAW_DEBUG_MSG(("CWGraph::updateInformation: the number of accross pages is not set\n"));
+    numPagesAccross=1;
+  }
+  float textWidth=72.0f*(float)m_mainParser->getPageWidth();
   float textHeight = 0.0;
   if (double(group.m_headerDim[1])>36.0*m_mainParser->getFormLength() &&
       double(group.m_headerDim[1])<72.0*m_mainParser->getFormLength())
@@ -2089,26 +2129,49 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
     size_t bId=group.m_blockToSendList[b];
     CWGraphInternal::Zone *child = group.m_zones[bId].get();
     if (!child) continue;
-    int page=int(float(child->m_box[1].y())/textHeight);
-    if (page < 0)
+    int pageY=int(float(child->m_box[1].y())/textHeight);
+    if (pageY < 0)
       continue;
-    if (++page > 1) {
+    if (++pageY > 1) {
       Vec2f orig = child->m_box[0];
       Vec2f sz = child->m_box.size();
-      orig[1]-=float(page-1)*textHeight;
-      if (orig[1] < 0) { // try to correct small problem
-        if (orig[1] < -textHeight)
+      orig[1]-=float(pageY-1)*textHeight;
+      if (orig[1] < 0) {
+        if (orig[1]>=-textHeight*0.1f)
+          orig[1]=0;
+        else if (orig[1]>-1.1*textHeight) {
+          orig[1]+=textHeight;
+          if (orig[1]<0) orig[1]=0;
+          pageY--;
+        } else {
+          MWAW_DEBUG_MSG(("CWGraph::updateInformation: can not find the page\n"));
           continue;
-        else if (orig[1] < -0.9*textHeight) {
-          orig[1]  += textHeight;
-          page++;
-        } else if (orig[1] < -0.1*textHeight)
-          continue;
-        else
-          orig[1] = 0;
+        }
       }
       child->m_box = Box2f(orig, orig+sz);
     }
+    int pageX=1;
+    if (numPagesAccross>1) {
+      pageX=int(float(child->m_box[1].x())/textWidth);
+      Vec2f orig = child->m_box[0];
+      Vec2f sz = child->m_box.size();
+      orig[0]-=float(pageX)*textWidth;
+      if (orig[0] < 0) {
+        if (orig[0]>=-textWidth*0.1f)
+          orig[0]=0;
+        else if (orig[0]>-1.1*textWidth) {
+          orig[0]+=textWidth;
+          if (orig[0]<0) orig[0]=0;
+          pageX--;
+        } else {
+          MWAW_DEBUG_MSG(("CWGraph::updateInformation: can not find the horizontal page\n"));
+          continue;
+        }
+      }
+      child->m_box = Box2f(orig, orig+sz);
+      pageX++;
+    }
+    int page=pageX+(pageY-1)*numPagesAccross;
     if (!firstGroupFound) {
       groupPage=page;
       groupBox=child->getBdBox();
