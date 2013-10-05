@@ -155,9 +155,7 @@ struct Zone {
               /* basic subtype */
               T_Line, T_Rect, T_RectOval, T_Oval, T_Arc, T_Poly,
               /* picture subtype */
-              T_Pict, T_QTim, T_Movie,
-              /* bitmap type */
-              T_Bitmap
+              T_Pict, T_QTim, T_Movie
             };
   //! constructor
   Zone() : m_page(-1), m_box(), m_style() {}
@@ -278,7 +276,6 @@ struct ZonePict : public Zone {
     case T_Arc:
     case T_Poly:
     case T_Unknown:
-    case T_Bitmap:
     default:
       o << "##type=" << m_type << ",";
       break;
@@ -311,36 +308,21 @@ struct ZonePict : public Zone {
 };
 
 //! Internal: structure to store a bitmap of a CWGraph
-struct ZoneBitmap : public Zone {
+struct Bitmap : public CWStruct::DSET {
   //! constructor
-  ZoneBitmap() : m_bitmapType(-1), m_size(0,0), m_entry(), m_colorMap() {
+  Bitmap(CWStruct::DSET const &dset = CWStruct::DSET()) :
+    DSET(dset), m_bitmapType(-1), m_size(0,0), m_entry(), m_colorMap() {
   }
 
-  //! print the zone
-  virtual void print(std::ostream &o) const {
-    o << "BITMAP:" << m_size << ",";
-    if (m_bitmapType >= 0) o << "type=" << m_bitmapType << ",";
-  }
-  //! return the main type (Bitmap)
-  virtual Type getType() const {
-    return T_Bitmap;
-  }
-  //! return the subtype (Bitmap)
-  virtual Type getSubType() const {
-    return  T_Bitmap;
-  }
-
-  //! return a child corresponding to this zone
-  virtual CWStruct::DSET::Child getChild() const {
-    CWStruct::DSET::Child child;
-    child.m_box = m_box;
-    child.m_type = CWStruct::DSET::Child::GRAPHIC;
-    return child;
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Bitmap const &bt) {
+    o << static_cast<CWStruct::DSET const &>(bt);
+    if (bt.m_bitmapType >= 0) o << "type=" << bt.m_bitmapType << ",";
+    return o;
   }
 
   //! the bitmap type
   int m_bitmapType;
-
   //! the bitmap size
   Vec2i m_size;
   //! the bitmap entry
@@ -423,7 +405,6 @@ struct ZoneUnknown : public Zone {
     case T_Pict:
     case T_QTim:
     case T_Movie:
-    case T_Bitmap:
     default:
       o << "##type=" << m_typeId << ",";
       break;
@@ -537,12 +518,14 @@ struct Group : public CWStruct::DSET {
 //! Internal: the state of a CWGraph
 struct State {
   //! constructor
-  State() : m_numAccrossPages(-1), m_zoneMap(), m_frameId(0) { }
+  State() : m_numAccrossPages(-1), m_groupMap(), m_bitmapMap(), m_frameId(0) { }
 
   //! the number of accross pages ( draw document)
   int m_numAccrossPages;
   //! a map zoneId -> group
-  std::map<int, shared_ptr<Group> > m_zoneMap;
+  std::map<int, shared_ptr<Group> > m_groupMap;
+  //! a map zoneId -> group
+  std::map<int, shared_ptr<Bitmap> > m_bitmapMap;
   //! a int used to defined linked frame
   int m_frameId;
 };
@@ -643,7 +626,7 @@ int CWGraph::numPages() const
       m_state->m_numAccrossPages=m_mainParser->getDocumentPages()[0];
       if (m_state->m_numAccrossPages<=1) {
         // info not always fill so we must check it
-        for (iter=m_state->m_zoneMap.begin() ; iter != m_state->m_zoneMap.end() ; ++iter) {
+        for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
           shared_ptr<CWGraphInternal::Group> group = iter->second;
           if (!group || group->m_type != CWStruct::DSET::T_Main)
             continue;
@@ -652,7 +635,7 @@ int CWGraph::numPages() const
       }
     }
   }
-  for (iter=m_state->m_zoneMap.begin() ; iter != m_state->m_zoneMap.end() ; ++iter) {
+  for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
     shared_ptr<CWGraphInternal::Group> group = iter->second;
     if (!group) continue;
     if (group->m_type != CWStruct::DSET::T_Main)
@@ -772,10 +755,10 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
     // fixme: do something here
   }
 
-  if (m_state->m_zoneMap.find(group->m_id) != m_state->m_zoneMap.end()) {
+  if (m_state->m_groupMap.find(group->m_id) != m_state->m_groupMap.end()) {
     MWAW_DEBUG_MSG(("CWGraph::readGroupZone: zone %d already exists!!!\n", group->m_id));
   } else
-    m_state->m_zoneMap[group->m_id] = group;
+    m_state->m_groupMap[group->m_id] = group;
 
   return group;
 }
@@ -794,10 +777,9 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
   input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  shared_ptr<CWGraphInternal::Group>
-  graphicZone(new CWGraphInternal::Group(zone));
+  shared_ptr<CWGraphInternal::Bitmap> bitmap(new CWGraphInternal::Bitmap(zone));
 
-  f << "Entries(BitmapDef):" << *graphicZone << ",";
+  f << "Entries(BitmapDef):" << *bitmap << ",";
 
   ascFile.addDelimiter(input->tell(), '|');
 
@@ -816,8 +798,6 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
 
     MWAW_DEBUG_MSG(("CWGraph::readBitmapZone: unexpected size for zone definition, try to continue\n"));
   }
-
-  shared_ptr<CWGraphInternal::ZoneBitmap> bitmap(new CWGraphInternal::ZoneBitmap());
 
   bool sizeSet=false;
   int sizePos = (version() == 1) ? 0: 88;
@@ -889,21 +869,18 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
     pos = input->tell();
     ok = readBitmapData(*bitmap);
   }
-  if (ok) {
-    graphicZone->m_zones.resize(1);
-    graphicZone->m_zones[0] = bitmap;
-  } else
+  if (!ok)
     input->seek(pos, WPX_SEEK_SET);
 
   // fixme: in general followed by another zone
-  graphicZone->m_otherChilds.push_back(graphicZone->m_id+1);
+  bitmap->m_otherChilds.push_back(bitmap->m_id+1);
 
-  if (m_state->m_zoneMap.find(graphicZone->m_id) != m_state->m_zoneMap.end()) {
-    MWAW_DEBUG_MSG(("CWGraph::readGroupZone: zone %d already exists!!!\n", graphicZone->m_id));
+  if (m_state->m_bitmapMap.find(bitmap->m_id) != m_state->m_bitmapMap.end()) {
+    MWAW_DEBUG_MSG(("CWGraph::readGroupZone: zone %d already exists!!!\n", bitmap->m_id));
   } else
-    m_state->m_zoneMap[graphicZone->m_id] = graphicZone;
+    m_state->m_bitmapMap[bitmap->m_id] = bitmap;
 
-  return graphicZone;
+  return bitmap;
 }
 
 shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
@@ -1134,7 +1111,6 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
   case CWGraphInternal::Zone::T_Shape:
   case CWGraphInternal::Zone::T_Picture:
   case CWGraphInternal::Zone::T_Unknown:
-  case CWGraphInternal::Zone::T_Bitmap:
   default: {
     CWGraphInternal::ZoneUnknown *z = new CWGraphInternal::ZoneUnknown(zone);
     res.reset(z);
@@ -1228,7 +1204,6 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
       case CWGraphInternal::Zone::T_Chart:
       case CWGraphInternal::Zone::T_DataBox:
       case CWGraphInternal::Zone::T_Unknown:
-      case CWGraphInternal::Zone::T_Bitmap:
       default:
         parsed = false;
         break;
@@ -1391,7 +1366,6 @@ bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone
   case CWGraphInternal::Zone::T_Pict:
   case CWGraphInternal::Zone::T_QTim:
   case CWGraphInternal::Zone::T_Movie:
-  case CWGraphInternal::Zone::T_Bitmap:
   default:
     MWAW_DEBUG_MSG(("CWGraph::readSimpleGraphicZone: unknown type\n"));
     return false;
@@ -2003,7 +1977,7 @@ bool CWGraph::readBitmapColorMap(std::vector<MWAWColor> &cMap)
   return true;
 }
 
-bool CWGraph::readBitmapData(CWGraphInternal::ZoneBitmap &zone)
+bool CWGraph::readBitmapData(CWGraphInternal::Bitmap &zone)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -2191,32 +2165,32 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
 ////////////////////////////////////////////////////////////
 // send data to the listener
 ////////////////////////////////////////////////////////////
-bool CWGraph::canSendZoneAsGraphic(int number) const
+bool CWGraph::canSendGroupAsGraphic(int number) const
 {
   std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
-    = m_state->m_zoneMap.find(number);
-  if (iter == m_state->m_zoneMap.end() || !iter->second)
+    = m_state->m_groupMap.find(number);
+  if (iter == m_state->m_groupMap.end() || !iter->second)
     return false;
   return canSendAsGraphic(*iter->second);
 }
 
-bool CWGraph::sendZone(int number, bool asGraphic, MWAWPosition const &position)
+bool CWGraph::sendGroup(int number, bool asGraphic, MWAWPosition const &position)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("CWGraph::sendZone: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("CWGraph::sendGroup: can not find the listener\n"));
     return false;
   }
   std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
-    = m_state->m_zoneMap.find(number);
-  if (iter == m_state->m_zoneMap.end() || !iter->second)
+    = m_state->m_groupMap.find(number);
+  if (iter == m_state->m_groupMap.end() || !iter->second)
     return false;
   shared_ptr<CWGraphInternal::Group> group = iter->second;
   group->m_parsed=true;
   if (asGraphic) {
     MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
     if (!graphicListener) {
-      MWAW_DEBUG_MSG(("CWGraph::sendZone: can not find the graphiclistener\n"));
+      MWAW_DEBUG_MSG(("CWGraph::sendGroup: can not find the graphiclistener\n"));
       return false;
     }
     return sendGroup(*group, group->m_blockToSendList, *graphicListener);
@@ -2263,6 +2237,11 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, std::vector<size_t> const
       CWGraphInternal::ZoneZone const &zone=
         reinterpret_cast<CWGraphInternal::ZoneZone const &>(*child);
       shared_ptr<CWStruct::DSET> dset=m_mainParser->getZone(zone.m_id);
+      if (dset && dset->m_fileType==4) {
+        MWAWPosition pos(box[0], box.size(), WPX_POINT);
+        sendBitmap(zone.m_id, true, pos);
+        continue;
+      }
       shared_ptr<MWAWSubDocument> doc(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, zone.m_id));
       if (dset && dset->m_fileType==1)
         listener.insertTextBox(box, doc, zone.m_style);
@@ -2489,8 +2468,6 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
     return sendPicture(reinterpret_cast<CWGraphInternal::ZonePict &>(*child), pos);
   if (type==CWGraphInternal::Zone::T_Shape)
     return sendShape(reinterpret_cast<CWGraphInternal::ZoneShape &>(*child), pos);
-  if (type==CWGraphInternal::Zone::T_Bitmap)
-    return sendBitmap(reinterpret_cast<CWGraphInternal::ZoneBitmap &>(*child), pos);
   if (type==CWGraphInternal::Zone::T_DataBox || type==CWGraphInternal::Zone::T_Chart ||
       type==CWGraphInternal::Zone::T_Unknown)
     return true;
@@ -2519,8 +2496,10 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
   bool isGroup = dset && dset->m_fileType==0;
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   bool canUseGraphic=graphicListener && !graphicListener->isDocumentStarted();
-  if (!isLinked && isGroup && canUseGraphic && canSendZoneAsGraphic(zId))
-    return sendZone(zId, false, pos);
+  if (!isLinked && isGroup && canUseGraphic && canSendGroupAsGraphic(zId))
+    return sendGroup(zId, false, pos);
+  if (!isLinked && dset && dset->m_fileType==4)
+    return sendBitmap(zId, false, pos);
   if (!isLinked && (cStyle.hasPattern() || cStyle.hasGradient()) && canUseGraphic &&
       (dset && dset->m_fileType==1) && m_mainParser->canSendZoneAsGraphic(zId)) {
     Box2f box=Box2f(Vec2f(0,0), childZone.m_box.size());
@@ -2597,14 +2576,40 @@ bool CWGraph::sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos)
   return true;
 }
 
-bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap,
-                         MWAWPosition pos, WPXPropertyList extras)
+bool CWGraph::canSendBitmapAsGraphic(int number) const
+{
+  std::map<int, shared_ptr<CWGraphInternal::Bitmap> >::iterator iter
+    = m_state->m_bitmapMap.find(number);
+  if (iter == m_state->m_bitmapMap.end() || !iter->second) {
+    MWAW_DEBUG_MSG(("CWGraph::canSendBitmapAsGraphic: can not find bitmap %d\n", number));
+    return false;
+  }
+  return true;
+}
+
+bool CWGraph::sendBitmap(int number, bool asGraphic, MWAWPosition const &pos)
+{
+  std::map<int, shared_ptr<CWGraphInternal::Bitmap> >::iterator iter
+    = m_state->m_bitmapMap.find(number);
+  if (iter == m_state->m_bitmapMap.end() || !iter->second) {
+    MWAW_DEBUG_MSG(("CWGraph::sendBitmap: can not find bitmap %d\n", number));
+    return false;
+  }
+  return sendBitmap(*iter->second, asGraphic, pos);
+}
+
+bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPosition pos)
 {
   if (!bitmap.m_entry.valid() || !bitmap.m_bitmapType)
     return false;
 
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
-  if (!listener)
+  if (asGraphic) {
+    if  (!m_parserState->m_graphicListener ||
+         !m_parserState->m_graphicListener->isDocumentStarted()) {
+      MWAW_DEBUG_MSG(("CWGraph::sendBitmap: can not access to the graphic listener\n"));
+      return true;
+    }
+  } else if (!m_parserState->m_listener)
     return true;
   int numColors = int(bitmap.m_colorMap.size());
   shared_ptr<MWAWPictBitmap> bmap;
@@ -2656,9 +2661,16 @@ bool CWGraph::sendBitmap(CWGraphInternal::ZoneBitmap &bitmap,
   WPXBinaryData data;
   std::string type;
   if (!bmap->getBinary(data,type)) return false;
-  if (pos.size()[0] < 0 || pos.size()[1] < 0)
-    pos.setSize(bitmap.m_box.size());
-  listener->insertPicture(pos, data, "image/pict", extras);
+  if (pos.size()[0] <= 0 || pos.size()[1] <= 0) {
+    MWAW_DEBUG_MSG(("CWGraph::sendBitmap: can not find bitmap size\n"));
+    pos.setSize(Vec2f(0,0));
+  }
+  if (asGraphic) {
+    MWAWGraphicStyle style;
+    style.m_lineWidth=0;
+    m_parserState->m_graphicListener->insertPicture(Box2f(pos.origin(),pos.origin()+pos.size()), style, data, "image/pict");
+  } else
+    m_parserState->m_listener->insertPicture(pos, data, "image/pict");
 
   return true;
 }
@@ -2710,7 +2722,6 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
     case CWGraphInternal::Zone::T_Chart:
     case CWGraphInternal::Zone::T_DataBox:
     case CWGraphInternal::Zone::T_Unknown:
-    case CWGraphInternal::Zone::T_Bitmap:
     case CWGraphInternal::Zone::T_QTim:
     default:
       if (!send && listener) {
@@ -2740,15 +2751,15 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
 void CWGraph::flushExtra()
 {
   std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
-    = m_state->m_zoneMap.begin();
-  for ( ; iter !=  m_state->m_zoneMap.end(); ++iter) {
+    = m_state->m_groupMap.begin();
+  for ( ; iter !=  m_state->m_groupMap.end(); ++iter) {
     shared_ptr<CWGraphInternal::Group> zone = iter->second;
     if (zone->m_parsed)
       continue;
     if (m_parserState->m_listener) m_parserState->m_listener->insertEOL();
     MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),WPX_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
-    sendZone(iter->first, false, pos);
+    sendGroup(iter->first, false, pos);
   }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

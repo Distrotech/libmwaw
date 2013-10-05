@@ -279,8 +279,9 @@ bool CWParser::canSendZoneAsGraphic(int zoneId) const
   shared_ptr<CWStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
   switch (zMap->m_fileType) {
   case 0:
+    return m_graphParser->canSendGroupAsGraphic(zoneId);
   case 4:
-    return m_graphParser->canSendZoneAsGraphic(zoneId);
+    return m_graphParser->canSendBitmapAsGraphic(zoneId);
   case 1:
     return m_textParser->canSendTextAsGraphic(zoneId);
   default:
@@ -298,12 +299,14 @@ bool CWParser::sendZone(int zoneId, bool asGraphic, MWAWPosition position)
   long pos = input->tell();
   bool res = false;
   switch(zMap->m_fileType) {
-  case 0: // group
-  case 4: // bitmap
-    res = m_graphParser->sendZone(zoneId, asGraphic, position);
+  case 0:
+    res = m_graphParser->sendGroup(zoneId, asGraphic, position);
     break;
   case 1:
     res = m_textParser->sendZone(zoneId, asGraphic);
+    break;
+  case 4:
+    res = m_graphParser->sendBitmap(zoneId, asGraphic, position);
     break;
   case 5:
     res = m_presentationParser->sendZone(zoneId);

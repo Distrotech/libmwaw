@@ -58,7 +58,7 @@ struct State;
 struct Style;
 struct Zone;
 struct ZoneShape;
-struct ZoneBitmap;
+struct Bitmap;
 struct ZonePict;
 
 class SubDocument;
@@ -101,9 +101,13 @@ public:
   bool getSurfaceColor(CWGraphInternal::Style const style, MWAWColor &col) const;
 protected:
   //! check if we can send a group as graphic
-  bool canSendZoneAsGraphic(int number) const;
+  bool canSendGroupAsGraphic(int number) const;
   //! sends the zone data to the listener (if it exists )
-  bool sendZone(int number, bool asGraphic, MWAWPosition const &pos=MWAWPosition());
+  bool sendGroup(int number, bool asGraphic, MWAWPosition const &pos=MWAWPosition());
+  //! check if we can send a group as graphic
+  bool canSendBitmapAsGraphic(int number) const;
+  //! sends the bitmap data to the listener (if it exists )
+  bool sendBitmap(int number, bool asGraphic, MWAWPosition const &pos=MWAWPosition());
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
@@ -169,7 +173,7 @@ protected:
   bool readBitmapColorMap(std::vector<MWAWColor> &cMap);
 
   /* try to read the bitmap  */
-  bool readBitmapData(CWGraphInternal::ZoneBitmap &zone);
+  bool readBitmapData(CWGraphInternal::Bitmap &zone);
   //
   // low level
   //
@@ -188,8 +192,7 @@ protected:
   bool sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos);
 
   //! sends a bitmap graphic zone
-  bool sendBitmap(CWGraphInternal::ZoneBitmap &pict, MWAWPosition pos,
-                  WPXPropertyList extras = WPXPropertyList());
+  bool sendBitmap(CWGraphInternal::Bitmap &pict, bool asGraphic, MWAWPosition pos);
 
 private:
   CWGraph(CWGraph const &orig);
