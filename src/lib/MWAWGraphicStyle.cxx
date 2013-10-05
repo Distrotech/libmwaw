@@ -55,7 +55,7 @@
 ////////////////////////////////////////////////////////////
 bool MWAWGraphicStyle::Pattern::getUniqueColor(MWAWColor &col) const
 {
-  if (empty() || m_data.empty()) return false;
+  if (empty() || m_picture.size() || m_data.empty()) return false;
   if (m_colors[0]==m_colors[1]) {
     col = m_colors[0];
     return true;
@@ -70,7 +70,12 @@ bool MWAWGraphicStyle::Pattern::getUniqueColor(MWAWColor &col) const
 
 bool MWAWGraphicStyle::Pattern::getAverageColor(MWAWColor &color) const
 {
-  if (empty() || m_data.empty()) return false;
+  if (empty()) return false;
+  if (m_picture.size()) {
+    color=m_pictureAverageColor;
+    return true;
+  }
+  if (m_data.empty()) return false;
   if (m_colors[0]==m_colors[1]) {
     color = m_colors[0];
     return true;
@@ -95,6 +100,11 @@ bool MWAWGraphicStyle::Pattern::getBinary(WPXBinaryData &data, std::string &type
   if (empty()) {
     MWAW_DEBUG_MSG(("MWAWGraphicStyle::Pattern::getBinary: called on invalid pattern\n"));
     return false;
+  }
+  if (m_picture.size()) {
+    data=m_picture;
+    type=m_pictureMime;
+    return true;
   }
   /* We create a indexed bitmap to obtain a final binary data.
 

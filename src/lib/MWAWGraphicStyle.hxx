@@ -85,10 +85,19 @@ public:
     //! the opacity
     float m_opacity;
   };
-  //! a basic pattern 8x8, 16x16, 32x32 use in a MWAWGraphicStyle
+  /** a basic pattern used in a MWAWGraphicStyle:
+      - either given a list of 8x8, 16x16, 32x32 bytes with two colors
+      - or with a picture ( and an average color)
+   */
   struct Pattern {
     //! constructor
-    Pattern() : m_dim(0,0), m_data() {
+    Pattern() : m_dim(0,0), m_data(), m_picture(), m_pictureMime(""), m_pictureAverageColor(MWAWColor::white()) {
+      m_colors[0]=MWAWColor::black();
+      m_colors[1]=MWAWColor::white();
+    }
+    //!  constructor from a binary data
+    Pattern(Vec2i dim, WPXBinaryData const &picture, std::string const &mime, MWAWColor const &avColor) :
+      m_dim(dim), m_data(), m_picture(picture), m_pictureMime(mime), m_pictureAverageColor(avColor) {
       m_colors[0]=MWAWColor::black();
       m_colors[1]=MWAWColor::white();
     }
@@ -96,8 +105,10 @@ public:
     virtual ~Pattern() {}
     //! return true if we does not have a pattern
     bool empty() const {
+      if (m_dim[0]==0 || m_dim[1]==0) return true;
+      if (m_picture.size()) return false;
       if (m_dim[0]!=8 && m_dim[0]!=16 && m_dim[0]!=32) return true;
-      return m_dim[1]==0 || m_data.size()!=size_t((m_dim[0]/8)*m_dim[1]);
+      return m_data.size()!=size_t((m_dim[0]/8)*m_dim[1]);
     }
     //! return the average color
     bool getAverageColor(MWAWColor &col) const;
@@ -120,25 +131,50 @@ public:
         if (m_colors[i] < a.m_colors[i]) return 1;
         if (m_colors[i] > a.m_colors[i]) return -1;
       }
+      if (m_pictureAverageColor < a.m_pictureAverageColor) return 1;
+      if (m_pictureAverageColor > a.m_pictureAverageColor) return -1;
+      if (m_pictureMime < a.m_pictureMime) return 1;
+      if (m_pictureMime > a.m_pictureMime) return -1;
+      if (m_picture.size() < a.m_picture.size()) return 1;
+      if (m_picture.size() > a.m_picture.size()) return -1;
+      const unsigned char *ptr=m_picture.getDataBuffer();
+      const unsigned char *aPtr=a.m_picture.getDataBuffer();
+      for (unsigned long h=0; h < m_picture.size(); ++h, ++ptr, ++aPtr) {
+        if (*ptr < *aPtr) return 1;
+        if (*ptr > *aPtr) return -1;
+      }
       return 0;
     }
     //! a print operator
     friend std::ostream &operator<<(std::ostream &o, Pattern const &pat) {
       o << "dim=" << pat.m_dim << ",";
-      if (!pat.m_colors[0].isBlack()) o << "col0=" << pat.m_colors[0] << ",";
-      if (!pat.m_colors[1].isWhite()) o << "col1=" << pat.m_colors[1] << ",";
-      o << "[";
-      for (size_t h=0; h < pat.m_data.size(); ++h)
-        o << std::hex << (int) pat.m_data[h] << std::dec << ",";
-      o << "],";
+      if (pat.m_picture.size()) {
+        o << "type=" << pat.m_pictureMime << ",";
+        o << "col[average]=" << pat.m_pictureAverageColor << ",";
+      } else {
+        if (!pat.m_colors[0].isBlack()) o << "col0=" << pat.m_colors[0] << ",";
+        if (!pat.m_colors[1].isWhite()) o << "col1=" << pat.m_colors[1] << ",";
+        o << "[";
+        for (size_t h=0; h < pat.m_data.size(); ++h)
+          o << std::hex << (int) pat.m_data[h] << std::dec << ",";
+        o << "],";
+      }
       return o;
     }
     //! the dimension width x height
     Vec2i m_dim;
+
     //! the two indexed colors
     MWAWColor m_colors[2];
     //! the pattern data: a sequence of data: p[0..7,0],p[8..15,0]...p[0..7,1],p[8..15,1], ...
     std::vector<unsigned char> m_data;
+  protected:
+    //! a picture
+    WPXBinaryData m_picture;
+    //! the picture type
+    std::string m_pictureMime;
+    //! the picture average color
+    MWAWColor m_pictureAverageColor;
   };
   //! constructor
   MWAWGraphicStyle() :  m_lineWidth(1), m_lineDashWidth(), m_lineCap(C_Butt), m_lineJoin(J_Miter), m_lineOpacity(1), m_lineColor(MWAWColor::black()),
