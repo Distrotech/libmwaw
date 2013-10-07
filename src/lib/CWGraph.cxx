@@ -638,6 +638,11 @@ int CWGraph::numPages() const
   for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
     shared_ptr<CWGraphInternal::Group> group = iter->second;
     if (!group) continue;
+    if (group->m_type == CWStruct::DSET::T_Slide) {
+      if (group->m_page > nPages)
+        nPages = group->m_page;
+      continue;
+    }
     if (group->m_type != CWStruct::DSET::T_Main)
       continue;
     updateInformation(*group);
@@ -1387,7 +1392,6 @@ bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone
       Vec2f orig=zone.m_box[0]+shape.m_bdBox[0];
       shape.translate(-1.f*shape.m_bdBox[0]);
       zone.m_box=Box2f(orig, orig+shape.m_bdBox.size());
-      MWAW_DEBUG_MSG(("CWGraph::readSimpleGraphicZone: find some rotation, experimental code\n"));
     }
     if (vers==6) {
       for (int i=0; i < 2; i++) { // always 0
@@ -2034,8 +2038,7 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
     return;
   std::set<int> forbiddenZone;
 
-  bool mainGroup = group.m_type == CWStruct::DSET::T_Main;
-  if (mainGroup) {
+  if (group.m_type == CWStruct::DSET::T_Main || group.m_type == CWStruct::DSET::T_Slide) {
     int headerId=0, footerId=0;
     m_mainParser->getHeaderFooterId(headerId, footerId);
     if (headerId) forbiddenZone.insert(headerId);
@@ -2270,12 +2273,12 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
   }
   updateInformation(group);
   bool mainGroup = group.m_type == CWStruct::DSET::T_Main;
+  bool isSlide = group.m_type == CWStruct::DSET::T_Slide;
   Vec2f leftTop(0,0);
   float textHeight = 0.0;
-  if (mainGroup) {
+  if (mainGroup)
     leftTop = 72.0f*m_mainParser->getPageLeftTop();
-    textHeight = 72.0f*float(m_mainParser->getFormLength());
-  }
+  textHeight = 72.0f*float(m_mainParser->getFormLength());
 
   libmwaw::SubDocumentType inDocType;
   if (!listener->isSubDocumentOpened(inDocType))
@@ -2298,7 +2301,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
     break;
   default:
   case libmwaw::DOC_NONE:
-    suggestedAnchor= mainGroup ? MWAWPosition::Page : MWAWPosition::Char;
+    suggestedAnchor= (mainGroup || isSlide) ? MWAWPosition::Page : MWAWPosition::Char;
     break;
   }
   if (0 && position.m_anchorTo==MWAWPosition::Unknown) {
@@ -2306,7 +2309,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
   }
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   bool canUseGraphic=graphicListener && !graphicListener->isDocumentStarted();
-  if (canUseGraphic && canSendAsGraphic(group)) {
+  if (!mainGroup && canUseGraphic && canSendAsGraphic(group)) {
     Box2f box=group.m_box;
     graphicListener->startGraphic(box);
     sendGroup(group, group.m_blockToSendList, *graphicListener);
@@ -2321,7 +2324,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
         pos=MWAWPosition(box[0], box.size(), WPX_POINT);
         pos.setRelativePosition(suggestedAnchor);
         if (suggestedAnchor == MWAWPosition::Page) {
-          int pg = group.m_page > 0 ? group.m_page : 1;
+          int pg = isSlide ? 0 : group.m_page > 0 ? group.m_page : 1;
           Vec2f orig = pos.origin()+leftTop;
           pos.setPagePos(pg, orig);
           pos.m_wrapping =  MWAWPosition::WBackground;
@@ -2555,8 +2558,6 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
     listener->insertTextBox(pos, doc, extras, textboxExtras);
     return true;
   }
-  if (0)
-    return m_mainParser->sendZone(zId, false, pos);
   return m_mainParser->sendZone(zId, false);
 }
 
@@ -2760,6 +2761,19 @@ void CWGraph::flushExtra()
     MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),WPX_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendGroup(iter->first, false, pos);
+  }
+}
+
+void CWGraph::setSlideList(std::vector<int> const &slideList)
+{
+  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter;
+  for (size_t s=0; s < slideList.size(); s++) {
+    iter = m_state->m_groupMap.find(slideList[s]);
+    if (iter==m_state->m_groupMap.end() || !iter->second) {
+      MWAW_DEBUG_MSG(("CWGraph::setSlideList: can find group %d\n", slideList[s]));
+      continue;
+    }
+    iter->second->m_page=int(s+1);
   }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

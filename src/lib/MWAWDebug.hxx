@@ -42,7 +42,6 @@ class WPXBinaryData;
 
 #  if defined(DEBUG_WITH_FILES)
 #include <fstream>
-#include <map>
 #include <sstream>
 #include <vector>
 //! some  basic tools
@@ -146,10 +145,6 @@ protected:
         return s1 < s2;
       }
     };
-    /*! \typedef Map
-     *  \brief map of notes
-     */
-    typedef std::map<NotePos, int,struct NotePosLt> Map;
   };
 
   //! the actual offset (used to store note)

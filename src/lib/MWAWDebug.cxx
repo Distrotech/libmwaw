@@ -30,6 +30,7 @@
 * in which case the provisions of the LGPLv2+ are applicable
 * instead of those above.
 */
+#include <set>
 
 #include <libwpd/libwpd.h>
 #include <libwpd-stream/libwpd-stream.h>
@@ -67,7 +68,6 @@ void DebugFile::addNote(char const *note)
     m_notes.push_back(NotePos(m_actOffset, empty));
     numNotes++;
   }
-
   m_notes[numNotes-1].m_text += std::string(note);
 }
 
@@ -90,12 +90,14 @@ void DebugFile::sort()
     numNotes++;
   }
 
-  NotePos::Map map;
-  for (size_t i = 0; i < numNotes; i++) map[m_notes[i]] = 0;
+  std::set<NotePos, NotePos::NotePosLt> set;
+  for (size_t i = 0; i < numNotes; i++)
+    set.insert(m_notes[i]);
 
   size_t i = 0;
-  for (NotePos::Map::iterator it = map.begin(); it != map.end(); i++, it++)
-    m_notes[i] = it->first;
+  for (std::set<NotePos, NotePos::NotePosLt>::const_iterator it = set.begin();
+       it != set.end(); ++i)
+    m_notes[i] = *(it++);
   if (i != numNotes) m_notes.resize(i);
 
   Vec2i::MapX sMap;

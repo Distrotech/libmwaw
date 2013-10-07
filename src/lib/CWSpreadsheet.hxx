@@ -98,6 +98,15 @@ protected:
   //! try to read the record structure
   bool readContent(CWSpreadsheetInternal::Spreadsheet &sheet);
 
+  //
+  // low level
+  //
+
+  //! try to read the COLM structure: a list of id
+  bool readCOLM(CWSpreadsheetInternal::Spreadsheet &sheet, long endPos);
+  //! try to read the CTAB structure: a list of id
+  bool readCTAB(CWSpreadsheetInternal::Spreadsheet &sheet, long endPos);
+
 private:
   CWSpreadsheet(CWSpreadsheet const &orig);
   CWSpreadsheet &operator=(CWSpreadsheet const &orig);

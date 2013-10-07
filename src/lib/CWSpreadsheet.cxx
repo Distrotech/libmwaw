@@ -161,9 +161,13 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
     pos = entry.begin()+debColSize;
     input->seek(pos, WPX_SEEK_SET);
     f.str("");
-    f << "Entries(SpreadsheetCol):";
-    for (int i = 0; i < 256; i++)
-      colSize.push_back((int)input->readULong(1));
+    f << "Entries(SpreadsheetCol):width,";
+    for (int i = 0; i < 256; i++) {
+      int w=(int)input->readULong(1);
+      if (w!=36) // default
+        f << "w" << i+1 << "=" << w << ",";
+      colSize.push_back(w);
+    }
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
 
@@ -302,7 +306,7 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
   return true;
 }
 
-bool CWSpreadsheet::readContent(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
+bool CWSpreadsheet::readContent(CWSpreadsheetInternal::Spreadsheet &sheet)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -329,7 +333,8 @@ bool CWSpreadsheet::readContent(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
     // Normally a list of name field : CTAB (COLM CHNK+)*
     pos = input->tell();
     sz = (long) input->readULong(4);
-    if (pos+4+sz > endPos || (sz && sz < 12)) {
+    long zoneEnd=pos+4+sz;
+    if (zoneEnd > endPos || (sz && sz < 12)) {
       input->seek(pos, WPX_SEEK_SET);
       MWAW_DEBUG_MSG(("CWSpreadsheet::readContent: find a odd content field\n"));
       return false;
@@ -343,11 +348,20 @@ bool CWSpreadsheet::readContent(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
     for (int i = 0; i < 4; i++)
       name+=char(input->readULong(1));
     f.str("");
-    f << "SpreadsheetContent-" << name;
-
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-    input->seek(pos+4+sz, WPX_SEEK_SET);
+    if (name=="COLM")
+      readCOLM(sheet, zoneEnd);
+    else if (name=="CTAB")
+      readCTAB(sheet, zoneEnd);
+    else if (name=="CHNK")
+      CWStruct::readCHNKZone(*m_parserState, zoneEnd);
+    else {
+      MWAW_DEBUG_MSG(("CWSpreadsheet::readContent: find unexpected content field\n"));
+      f << "SpreadsheetContent-" << name;
+      ascFile.addDelimiter(input->tell(),'|');
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+    }
+    input->seek(zoneEnd, WPX_SEEK_SET);
   }
 
   input->seek(endPos, WPX_SEEK_SET);
@@ -359,6 +373,93 @@ bool CWSpreadsheet::readContent(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
 // Low level
 //
 ////////////////////////////////////////////////////////////
+bool CWSpreadsheet::readCOLM(CWSpreadsheetInternal::Spreadsheet &, long endPos)
+{
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=input->tell();
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(SpreadCOLM):";
+  if (pos+8 > endPos) {
+    MWAW_DEBUG_MSG(("CWSpreadsheet:readCOLM: the entries size seems bad\n"));
+    f << "####";
+    ascFile.addPos(pos-8);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  int cPos[2];
+  for (int i=0; i < 2; ++i)
+    cPos[i]=(int) input->readLong(2);
+  f << "ptr[" << cPos[0] << "<=>" << cPos[1] << "]";
+  if (pos+8+4*(cPos[1]-cPos[0]) != endPos) {
+    MWAW_DEBUG_MSG(("CWSpreadsheet:readCOLM: the entries number of elements seems bad\n"));
+    f << "####";
+    ascFile.addPos(pos-8);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  f << "=[";
+  for (int i=cPos[0]; i <= cPos[1]; i++) {
+    long ptr=(long) input->readULong(4);
+    if (ptr)
+      f << std::hex << ptr << std::dec << ",";
+    else
+      f << "_,";
+  }
+  f << "],";
+  ascFile.addPos(pos-8);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
 
+bool CWSpreadsheet::readCTAB(CWSpreadsheetInternal::Spreadsheet &, long endPos)
+{
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=input->tell();
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(SpreadCTAB):";
+  if (pos+1028 > endPos) {
+    MWAW_DEBUG_MSG(("CWSpreadsheet:readCTAB: the entries size seems bad\n"));
+    f << "####";
+    ascFile.addPos(pos-8);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  int N=(int) input->readLong(2);
+  if (N) f << "N=" << N << ",";
+  int val=(int) input->readLong(2); // a small number between 0 and 0xff
+  if (val) f << "f0=" << val << ",";
+  if (N<0 || N>255) {
+    MWAW_DEBUG_MSG(("CWSpreadsheet:readCTAB: the entries number of elements seems bad\n"));
+    f << "####";
+    ascFile.addPos(pos-8);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  f << "ptr=[";
+  long ptr;
+  for (int i=0; i <= N; i++) {
+    ptr=(long) input->readULong(4);
+    if (ptr)
+      f << std::hex << ptr << std::dec << ",";
+    else
+      f << "_,";
+  }
+  f << "],";
+  for (int i=N+1; i<256; i++) { // always 0
+    ptr=(long) input->readULong(4);
+    if (!ptr) continue;
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("CWSpreadsheet:readCTAB: find some extra values\n"));
+      first=false;
+    }
+    f << "#g" << i << "=" << ptr << ",";
+  }
+  ascFile.addPos(pos-8);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

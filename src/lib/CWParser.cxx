@@ -587,6 +587,7 @@ void CWParser::typeMainZones()
   std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter;
   // then type the slides
   std::vector<int> slidesList = m_presentationParser->getSlidesList();
+  m_graphParser->setSlideList(slidesList);
   for (size_t slide = 0; slide < slidesList.size(); slide++) {
     iter = m_state->m_zonesMap.find(slidesList[slide]);
     if (iter != m_state->m_zonesMap.end() && iter->second)

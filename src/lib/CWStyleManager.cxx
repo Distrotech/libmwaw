@@ -481,7 +481,7 @@ void State::setDefaultWallPaperList(int version)
     0x4682b4, 0xdaa520, 0xcd5c5c, 0xb22222, 0x8b8682,
     0xb03060, 0xeeeee0, 0x4682b4, 0xfa8072, 0x505050
   };
-
+  // 20 ppm contents corresponding to the default wallpaper ( after reducing each image by 50% in h and v )
   static unsigned char wall0[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,232,229,200,228,227,202,231,231,211,236,236,211,233,233,221,234,234,214,223,
     223,208,219,225,204,235,229,208,234,234,217,233,233,222,215,215,204,227,227,204,238,238,219,233,233,213,232,232,213,230,229,206,
@@ -2286,7 +2286,7 @@ bool CWStyleManager::readGraphStyles(int N, int fSz)
     // 2 two dim
     for (int j = 0; j < 2; j++)
       values16.push_back((int16_t)input->readLong(2));
-    graph.m_lineWidth=(int) input->readULong(1);
+    graph.m_lineWidth=(float) input->readULong(1);
     val = (int) input->readULong(1); // 0|1|4|80
     if (val)
       f << "f3=" << std::hex << val << std::dec << ",";

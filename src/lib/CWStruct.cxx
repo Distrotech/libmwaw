@@ -39,6 +39,8 @@
 
 #include <libwpd/libwpd.h>
 
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
 
 #include "CWParser.hxx"
 
@@ -140,6 +142,94 @@ std::ostream &operator<<(std::ostream &o, DSET const &doc)
   for (size_t i = 0; i < doc.m_otherChilds.size(); i++)
     o << "otherChild" << i << "=" << doc.m_otherChilds[i] << ",";
   return o;
+}
+
+//
+// remove me
+//
+bool readCHNKZone(MWAWParserState &state, long endPos)
+{
+  MWAWInputStreamPtr &input= state.m_input;
+  long pos=input->tell();
+  libmwaw::DebugFile &ascFile = state.m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(CHNK):";
+  long sz=endPos-pos;
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (N > 0x40 || 2+4+N*2 > sz) {
+    MWAW_DEBUG_MSG(("CWStruct::readCHNKZone: the number of position seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-8);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  int type=(int) input->readULong(2); // often 400, 800...
+  f << "type=" << std::hex << type << std::dec << ",";
+  int dim[2]; // checkme
+  for (int i=0; i<2; i++) dim[i]=(int) input->readLong(2);
+  f << "dim=" << dim[0] << "x" << dim[1] << ",";
+
+  f << "depl=[";
+  std::vector<long> ptrLists(64,0);
+  int find=0;
+  for (size_t i=0; i < 64; ++i) {
+    long depl=(long) input->readLong(2);
+    if (depl==0) {
+      f << "_,";
+      continue;
+    }
+    find++;
+    long fPos=pos-4+depl;
+    if (fPos > endPos) {
+      MWAW_DEBUG_MSG(("CWStruct::readCHNKZone: the %d ptr seems bad\n", (int) i));
+      f << "###";
+      ascFile.addPos(pos-8);
+      ascFile.addNote(f.str().c_str());
+      return false;
+    }
+    f << std::hex << depl << std::dec << ",";
+    ptrLists[i]=fPos;
+  }
+  f << "],";
+  if (find!=N) {
+    MWAW_DEBUG_MSG(("CWStruct::readCHNKZone: the number of find data seems bad\n"));
+    f << "###find=" << find << "!=" << N << ",";
+  }
+  ascFile.addPos(pos-8);
+  ascFile.addNote(f.str().c_str());
+
+  for (size_t i=0; i<64; ++i) {
+    if (!ptrLists[i]) continue;
+    f.str("");
+    f << "CHNK" << i << ":";
+    input->seek(ptrLists[i], WPX_SEEK_SET);
+    int type=(int) input->readULong(1);
+    if (type) { // v1-v3: find type=30|80
+      f << "type=" << std::hex << type << std::dec << ",";
+      ascFile.addPos(ptrLists[i]);
+      ascFile.addNote(f.str().c_str());
+      continue;
+    }
+    int fSz=(int) input->readULong(1);
+    if (ptrLists[i]+fSz+2>endPos) {
+      MWAW_DEBUG_MSG(("CWStruct::readCHNKZone: the %d ptr seems bad\n", (int) i));
+      f << "###";
+    } else if (fSz >= 2) {
+      int sSz=(int) input->readULong(2);
+      if (sSz+2==fSz || sSz+3==fSz) {
+        std::string string("");
+        for (int s=0; s < sSz; ++s)
+          string+=(char) input->readULong(1);
+        f << string;
+      }
+    }
+    ascFile.addPos(ptrLists[i]);
+    ascFile.addNote(f.str().c_str());
+  }
+
+  input->seek(endPos, WPX_SEEK_SET);
+  return true;
 }
 
 }

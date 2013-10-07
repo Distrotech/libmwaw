@@ -100,6 +100,8 @@ public:
   //! return the surface color which corresponds to some ids (if possible)
   bool getSurfaceColor(CWGraphInternal::Style const style, MWAWColor &col) const;
 protected:
+  //! set the slide list ( for presentation )
+  void setSlideList(std::vector<int> const &slideList);
   //! check if we can send a group as graphic
   bool canSendGroupAsGraphic(int number) const;
   //! sends the zone data to the listener (if it exists )
