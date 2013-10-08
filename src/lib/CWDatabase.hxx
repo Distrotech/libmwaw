@@ -98,17 +98,9 @@ protected:
   //! try to read the default structure
   bool readDefaults(CWDatabaseInternal::Database &dBase);
 
-  //! try to read the record structure
-  bool readContent(CWDatabaseInternal::Database &dBase);
-
   //
   // low level
   //
-
-  //! try to read the COLM structure: a list of id
-  bool readCOLM(CWDatabaseInternal::Database &dBase, long endPos);
-  //! try to read the CTAB structure: a list of id
-  bool readCTAB(CWDatabaseInternal::Database &dBase, long endPos);
 
 private:
   CWDatabase(CWDatabase const &orig);

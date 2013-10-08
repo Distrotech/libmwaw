@@ -138,6 +138,8 @@ public:
   }
   //! return a int8, int16, int32 readed from actualPos
   long readLong(int num);
+  //! try to read a double (ppc)
+  bool readDouble(double &res);
 
   /**! reads numbytes data, WITHOUT using any endian or section consideration
    * \return a pointer to the read elements

@@ -29,6 +29,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	BWText.hxx			\
 	CWDatabase.cxx			\
 	CWDatabase.hxx			\
+	CWDbaseContent.cxx		\
+	CWDbaseContent.hxx		\
 	CWGraph.cxx			\
 	CWGraph.hxx			\
 	CWParser.cxx			\

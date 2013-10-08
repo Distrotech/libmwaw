@@ -134,9 +134,6 @@ protected:
   //! try to read a font
   bool readFont(int id, int &posC, MWAWFont &font);
 
-  //! try to read a named font
-  bool readChar(int id, int fontSize, MWAWFont &font);
-
   /** read the rulers block which is present at the beginning of the text in the first version of Claris Works : v1-2 */
   bool readParagraphs();
 
@@ -146,9 +143,6 @@ protected:
   bool readParagraph(int id=-1);
 
   // THE NAMED ENTRY
-
-  /** read a STYL Font sequence */
-  bool readSTYL_CHAR(int N, int fSz);
 
   /** read a STYL Paragraph sequence */
   bool readSTYL_RULR(int N, int fSz);

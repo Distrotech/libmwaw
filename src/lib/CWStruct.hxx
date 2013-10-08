@@ -174,13 +174,7 @@ struct DSET {
     Box2i m_box;
   };
 };
-
-//
-// remove me
-//
-
-//! small function used to test parsing of a database/spreadsheet CHNK block
-bool readCHNKZone(MWAWParserState &state, long endPos);
 }
 
 #endif
+// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

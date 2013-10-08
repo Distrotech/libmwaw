@@ -1,5 +1,15 @@
 CHANGES:
 
+10/07/2013:
+- AppleWorks/ClarisWorks parser : retrieve the patterns, the wallpaper;
+  send the reconstructed bitmaps with the good size; retrieve the accross
+  pages in a drawing document; try to reconstruct a single picture for a
+  group of shape, ...
+
+09/27/2013:
+- FullWrite parser: retrieve the header/footer + better reconstruction of
+  frame's borders
+
 09/25/2013:
 - HanMac Word-J: retrieve the patterns, the textboxes borders and links,
   try to reconstruct a single picture for a group of shape, ...

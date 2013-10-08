@@ -86,6 +86,12 @@ public:
   //! reads the zone Text DSET
   shared_ptr<CWStruct::DSET> readSpreadsheetZone
   (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
+  //! check if we can send a spreadsheet as graphic
+  bool canSendSpreadsheetAsGraphic(int) const {
+    return false;
+  }
+  //! sends the zone data to the listener (if it exists )
+  bool sendSpreadsheet(int number);
 
 protected:
   //
@@ -94,18 +100,12 @@ protected:
 
   /** try to read the first spreadsheet zone */
   bool readZone1(CWSpreadsheetInternal::Spreadsheet &sheet);
-
-  //! try to read the record structure
-  bool readContent(CWSpreadsheetInternal::Spreadsheet &sheet);
+  /** try to read the row height zone */
+  bool readRowHeightZone(CWSpreadsheetInternal::Spreadsheet &sheet);
 
   //
   // low level
   //
-
-  //! try to read the COLM structure: a list of id
-  bool readCOLM(CWSpreadsheetInternal::Spreadsheet &sheet, long endPos);
-  //! try to read the CTAB structure: a list of id
-  bool readCTAB(CWSpreadsheetInternal::Spreadsheet &sheet, long endPos);
 
 private:
   CWSpreadsheet(CWSpreadsheet const &orig);

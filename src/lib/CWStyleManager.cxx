@@ -180,7 +180,8 @@ bool Gradient::update(MWAWGraphicStyle &style) const
 //! Internal: the state of a CWStyleManager
 struct State {
   //! constructor
-  State() : m_version(-1), m_localFIdMap(), m_stylesMap(), m_lookupMap(), m_graphList(), m_ksenList(),
+  State() : m_version(-1), m_localFIdMap(), m_stylesMap(), m_lookupMap(),
+    m_fontList(), m_graphList(), m_ksenList(),
     m_colorList(), m_patternList(), m_gradientList(), m_wallpaperList() {
   }
   //! set the default color map
@@ -206,6 +207,8 @@ struct State {
   std::map<int, CWStyleManager::Style> m_stylesMap;
   //! the style lookupMap
   std::map<int, int> m_lookupMap;
+  //! the list of fonts
+  std::vector<MWAWFont> m_fontList;
   //! the Graphic list
   std::vector<MWAWGraphicStyle> m_graphList;
   //! the KSEN list
@@ -1554,6 +1557,16 @@ int CWStyleManager::version() const
   return m_state->m_version;
 }
 
+bool CWStyleManager::get(int id, MWAWFont &ft) const
+{
+  if (id < 0 || id >= int(m_state->m_fontList.size())) {
+    MWAW_DEBUG_MSG(("CWStyleManager::get: can not find font %d\n", id));
+    return false;
+  }
+  ft=m_state->m_fontList[size_t(id)];
+  return true;
+}
+
 bool CWStyleManager::getColor(int id, MWAWColor &col) const
 {
   int numColor = (int) m_state->m_colorList.size();
@@ -1962,7 +1975,7 @@ bool CWStyleManager::readGenStyle(int id)
 
     bool ok = false;
     if (name == "CHAR")
-      ok = m_mainParser->m_textParser->readSTYL_CHAR(N, fSz);
+      ok = readStyleFonts(N, fSz);
     else if (name == "CELL")
       ok = readCellStyles(N, fSz);
     else if (name == "FNTM")
@@ -2165,6 +2178,111 @@ bool CWStyleManager::readFontNames(int N, int fSz)
 
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool CWStyleManager::readFont(int id, int fontSize, MWAWFont &font)
+{
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+
+  input->seek(pos, WPX_SEEK_SET);
+  font = MWAWFont();
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  if (id == 0)
+    f << "Entries(CHAR)-0:";
+  else
+    f << "CHAR-" << id << ":";
+
+  int val = (int) input->readLong(2);
+  if (val != -1) f << "f0=" << val << ",";
+  f << "flags=[";
+  for (int i = 0; i < 6; i++) {
+    val  = (int) input->readLong(2);
+    if (val) {
+      if (i == 3)
+        f << "f" << i << "=" << std::hex << val << std::dec << ",";
+      else
+        f << "f" << i << "=" << val << ",";
+    }
+  }
+  font.setId(getFontId((int) input->readULong(2)));
+  int flag =(int) input->readULong(2);
+  uint32_t flags=0;
+  if (flag&0x1) flags |= MWAWFont::boldBit;
+  if (flag&0x2) flags |= MWAWFont::italicBit;
+  if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
+  if (flag&0x8) flags |= MWAWFont::embossBit;
+  if (flag&0x10) flags |= MWAWFont::shadowBit;
+  if (flag&0x20) font.setDeltaLetterSpacing(-1);
+  if (flag&0x40) font.setDeltaLetterSpacing(1);
+  if (flag&0x80) font.setStrikeOutStyle(MWAWFont::Line::Simple);
+  if (flag&0x100) font.set(MWAWFont::Script::super100());
+  if (flag&0x200) font.set(MWAWFont::Script::sub100());
+  if (flag&0x400) font.set(MWAWFont::Script::super());
+  if (flag&0x800) font.set(MWAWFont::Script::sub());
+  if (flag&0x2000) {
+    font.setUnderlineStyle(MWAWFont::Line::Simple);
+    font.setUnderlineType(MWAWFont::Line::Double);
+  }
+  font.setSize((float) input->readULong(1));
+
+  int colId = (int) input->readULong(1);
+  MWAWColor color(MWAWColor::black());
+  if (colId!=1 && !getColor(colId, color))
+    f << "#col=" << std::hex << colId << std::dec << ",";
+  font.setColor(color);
+  if (fontSize >= 12 && version()==6) {
+    flag = (int) input->readULong(2);
+    if (flag & 0x1)
+      font.setUnderlineStyle(MWAWFont::Line::Simple);
+    if (flag & 0x2) {
+      font.setUnderlineStyle(MWAWFont::Line::Simple);
+      font.setUnderlineType(MWAWFont::Line::Double);
+    }
+    if (flag & 0x20)
+      font.setStrikeOutStyle(MWAWFont::Line::Simple);
+    flag &= 0xFFDC;
+    if (flag)
+      f << "#flag2=" << std::hex << flag << std::dec << ",";
+  }
+  font.setFlags(flags);
+  f << font.getDebugString(m_parserState->m_fontConverter);
+  if (long(input->tell()) != pos+fontSize)
+    ascFile.addDelimiter(input->tell(), '|');
+  input->seek(pos+fontSize, WPX_SEEK_SET);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
+
+bool CWStyleManager::readStyleFonts(int N, int fSz)
+{
+  if (fSz == 0 || N== 0) return true;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  if (m_state->m_fontList.size()) {
+    MWAW_DEBUG_MSG(("CWText::readStyleFonts: font list already exists!!!\n"));
+  }
+  m_state->m_fontList.resize((size_t)N);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  for (int i = 0; i < N; i++) {
+    long pos = input->tell();
+    MWAWFont font;
+    if (readFont(i, fSz, font))
+      m_state->m_fontList[(size_t) i] = font;
+    else {
+      f.str("");
+      if (!i)
+        f << "Entries(Font)-F0:#";
+      else
+        f << "FontF-" << i << ":#";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+    }
+    input->seek(pos+fSz, WPX_SEEK_SET);
   }
   return true;
 }

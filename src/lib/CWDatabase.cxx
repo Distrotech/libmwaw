@@ -43,6 +43,7 @@
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 
+#include "CWDbaseContent.hxx"
 #include "CWParser.hxx"
 #include "CWStruct.hxx"
 #include "CWStyleManager.hxx"
@@ -327,7 +328,8 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
   }
   if (ok) {
     pos = input->tell();
-    ok = readContent(*databaseZone);
+    CWDbaseContent dataParser(m_parserState, m_styleManager, false);
+    ok = dataParser.readContent();
   }
   if (ok) {
     pos = input->tell();
@@ -615,157 +617,10 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
   return true;
 }
 
-bool CWDatabase::readContent(CWDatabaseInternal::Database &dBase)
-{
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  long pos = input->tell();
-  long sz = (long) input->readULong(4);
-  /** ARGHH: this zone is almost the only zone which count the header in sz ... */
-  long endPos = pos+sz;
-  input->seek(endPos, WPX_SEEK_SET);
-  if (long(input->tell()) != endPos || sz < 6) {
-    input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWDatabase::readContent: file is too short\n"));
-    return false;
-  }
-
-  input->seek(pos+4, WPX_SEEK_SET);
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  libmwaw::DebugStream f;
-  f << "Entries(DatabaseContent):";
-  int N = (int) input->readULong(2);
-  f << "N=" << N << ",";
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-
-  while (long(input->tell()) < endPos) {
-    pos = input->tell();
-    sz = (long) input->readULong(4);
-    long zoneEnd=pos+4+sz;
-    if (zoneEnd > endPos || (sz && sz < 12)) {
-      input->seek(pos, WPX_SEEK_SET);
-      MWAW_DEBUG_MSG(("CWDatabase::readContent: find a odd content field\n"));
-      return false;
-    }
-    if (!sz) {
-      ascFile.addPos(pos);
-      ascFile.addNote("Nop");
-      continue;
-    }
-    std::string name("");
-    for (int i = 0; i < 4; i++)
-      name+=char(input->readULong(1));
-    if (name=="COLM")
-      readCOLM(dBase, zoneEnd);
-    else if (name=="CTAB")
-      readCTAB(dBase, zoneEnd);
-    else if (name=="CHNK")
-      CWStruct::readCHNKZone(*m_parserState, zoneEnd);
-    else {
-      MWAW_DEBUG_MSG(("CWDatabase::readContent: find unexpected content field\n"));
-      f << "DatabaseContent-" << name;
-      ascFile.addDelimiter(input->tell(),'|');
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
-    }
-    input->seek(zoneEnd, WPX_SEEK_SET);
-  }
-  return true;
-}
-
 ////////////////////////////////////////////////////////////
 //
 // Low level
 //
 ////////////////////////////////////////////////////////////
-bool CWDatabase::readCOLM(CWDatabaseInternal::Database &, long endPos)
-{
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  long pos=input->tell();
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  libmwaw::DebugStream f;
-  f << "Entries(DatabCOLM):";
-  if (pos+8 > endPos) {
-    MWAW_DEBUG_MSG(("CWDatabase:readCOLM: the entries size seems bad\n"));
-    f << "####";
-    ascFile.addPos(pos-8);
-    ascFile.addNote(f.str().c_str());
-    return false;
-  }
-  int cPos[2];
-  for (int i=0; i < 2; ++i)
-    cPos[i]=(int) input->readLong(2);
-  f << "ptr[" << cPos[0] << "<=>" << cPos[1] << "]";
-  if (pos+8+4*(cPos[1]-cPos[0]) != endPos) {
-    MWAW_DEBUG_MSG(("CWDatabase:readCOLM: the entries number of elements seems bad\n"));
-    f << "####";
-    ascFile.addPos(pos-8);
-    ascFile.addNote(f.str().c_str());
-    return false;
-  }
-  f << "=[";
-  for (int i=cPos[0]; i <= cPos[1]; i++) {
-    long ptr=(long) input->readULong(4);
-    if (ptr)
-      f << std::hex << ptr << std::dec << ",";
-    else
-      f << "_,";
-  }
-  f << "],";
-  ascFile.addPos(pos-8);
-  ascFile.addNote(f.str().c_str());
-  return true;
-}
-
-bool CWDatabase::readCTAB(CWDatabaseInternal::Database &, long endPos)
-{
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  long pos=input->tell();
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  libmwaw::DebugStream f;
-  f << "Entries(DatabCTAB):";
-  if (pos+1028 > endPos) {
-    MWAW_DEBUG_MSG(("CWDatabase:readCTAB: the entries size seems bad\n"));
-    f << "####";
-    ascFile.addPos(pos-8);
-    ascFile.addNote(f.str().c_str());
-    return false;
-  }
-  int N=(int) input->readLong(2);
-  if (N) f << "N=" << N << ",";
-  int val=(int) input->readLong(2); // a small number between 0 and 0xff and 0x18b8?
-  if (val) f << "f0=" << val << ",";
-  if (N<0 || N>255) {
-    MWAW_DEBUG_MSG(("CWDatabase:readCTAB: the entries number of elements seems bad\n"));
-    f << "####";
-    ascFile.addPos(pos-8);
-    ascFile.addNote(f.str().c_str());
-    return false;
-  }
-  f << "ptr=[";
-  long ptr;
-  for (int i=0; i <= N; i++) {
-    ptr=(long) input->readULong(4);
-    if (ptr)
-      f << std::hex << ptr << std::dec << ",";
-    else
-      f << "_,";
-  }
-  f << "],";
-  for (int i=N+1; i<256; i++) { // always 0
-    ptr=(long) input->readULong(4);
-    if (!ptr) continue;
-    static bool first=true;
-    if (first) {
-      MWAW_DEBUG_MSG(("CWDatabase:readCTAB: find some extra values\n"));
-      first=false;
-    }
-    f << "#g" << i << "=" << ptr << ",";
-  }
-  ascFile.addPos(pos-8);
-  ascFile.addNote(f.str().c_str());
-  return true;
-}
-
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

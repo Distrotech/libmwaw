@@ -107,6 +107,10 @@ SOURCE=..\..\src\lib\CWDatabase.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\CWDbaseContent.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\CWGraph.cxx
 # End Source File
 # Begin Source File
@@ -488,6 +492,10 @@ SOURCE=..\..\src\lib\BWText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\CWDatabase.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\CWDbaseContent.hxx
 # End Source File
 # Begin Source File
 

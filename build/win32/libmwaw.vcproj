@@ -187,9 +187,12 @@
 				RelativePath="..\..\src\lib\BWText.cxx"
 				>
 			</File>
-			</File>
 			<File
 				RelativePath="..\..\src\lib\CWDatabase.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\CWDbaseContent.cxx"
 				>
 			</File>
 			<File
@@ -575,6 +578,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\CWDatabase.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\CWDbaseContent.hxx"
 				>
 			</File>
 			<File

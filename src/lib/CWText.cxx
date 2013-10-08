@@ -448,13 +448,11 @@ struct Zone : public CWStruct::DSET {
 //! Internal: the state of a CWText
 struct State {
   //! constructor
-  State() : m_version(-1), m_fontsList(), m_paragraphsList(), m_zoneMap() {
+  State() : m_version(-1), m_paragraphsList(), m_zoneMap() {
   }
 
   //! the file version
   mutable int m_version;
-  //! the list of fonts
-  std::vector<MWAWFont> m_fontsList;
   //! the list of paragraph
   std::vector<Paragraph> m_paragraphsList;
   //! the list of text zone
@@ -819,83 +817,6 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   }
   font.setFlags(flags);
   font.setColor(color);
-  f << font.getDebugString(m_parserState->m_fontConverter);
-  if (long(input->tell()) != pos+fontSize)
-    ascFile.addDelimiter(input->tell(), '|');
-  input->seek(pos+fontSize, WPX_SEEK_SET);
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-  return true;
-}
-
-bool CWText::readChar(int id, int fontSize, MWAWFont &font)
-{
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  long pos = input->tell();
-
-  input->seek(pos, WPX_SEEK_SET);
-  font = MWAWFont();
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  libmwaw::DebugStream f;
-  if (id == 0)
-    f << "Entries(CHAR)-0:";
-  else
-    f << "CHAR-" << id << ":";
-
-  int val = (int) input->readLong(2);
-  if (val != -1) f << "f0=" << val << ",";
-  f << "flags=[";
-  for (int i = 0; i < 6; i++) {
-    val  = (int) input->readLong(2);
-    if (val) {
-      if (i == 3)
-        f << "f" << i << "=" << std::hex << val << std::dec << ",";
-      else
-        f << "f" << i << "=" << val << ",";
-    }
-  }
-  font.setId(m_styleManager->getFontId((int) input->readULong(2)));
-  int flag =(int) input->readULong(2);
-  uint32_t flags=0;
-  if (flag&0x1) flags |= MWAWFont::boldBit;
-  if (flag&0x2) flags |= MWAWFont::italicBit;
-  if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
-  if (flag&0x8) flags |= MWAWFont::embossBit;
-  if (flag&0x10) flags |= MWAWFont::shadowBit;
-  if (flag&0x20) font.setDeltaLetterSpacing(-1);
-  if (flag&0x40) font.setDeltaLetterSpacing(1);
-  if (flag&0x80) font.setStrikeOutStyle(MWAWFont::Line::Simple);
-  if (flag&0x100) font.set(MWAWFont::Script::super100());
-  if (flag&0x200) font.set(MWAWFont::Script::sub100());
-  if (flag&0x400) font.set(MWAWFont::Script::super());
-  if (flag&0x800) font.set(MWAWFont::Script::sub());
-  if (flag&0x2000) {
-    font.setUnderlineStyle(MWAWFont::Line::Simple);
-    font.setUnderlineType(MWAWFont::Line::Double);
-  }
-  font.setSize((float) input->readULong(1));
-
-  int colId = (int) input->readULong(1);
-  MWAWColor color(MWAWColor::black());
-  if (colId!=1) {
-    f << "#col=" << std::hex << colId << std::dec << ",";
-  }
-  font.setColor(color);
-  if (fontSize >= 12 && version()==6) {
-    flag = (int) input->readULong(2);
-    if (flag & 0x1)
-      font.setUnderlineStyle(MWAWFont::Line::Simple);
-    if (flag & 0x2) {
-      font.setUnderlineStyle(MWAWFont::Line::Simple);
-      font.setUnderlineType(MWAWFont::Line::Double);
-    }
-    if (flag & 0x20)
-      font.setStrikeOutStyle(MWAWFont::Line::Simple);
-    flag &= 0xFFDC;
-    if (flag)
-      f << "#flag2=" << std::hex << flag << std::dec << ",";
-  }
-  font.setFlags(flags);
   f << font.getDebugString(m_parserState->m_fontConverter);
   if (long(input->tell()) != pos+fontSize)
     ascFile.addDelimiter(input->tell(), '|');
@@ -1654,34 +1575,6 @@ int CWText::findListId(CWTextInternal::Zone const &zone, int actListId, long act
 ////////////////////////////////////////////////////////////
 // the style definition?
 ////////////////////////////////////////////////////////////
-bool CWText::readSTYL_CHAR(int N, int fSz)
-{
-  if (fSz == 0 || N== 0) return true;
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  libmwaw::DebugStream f;
-  if (m_state->m_fontsList.size()) {
-    MWAW_DEBUG_MSG(("CWText::readSTYL_CHAR: font list already exists!!!\n"));
-  }
-  m_state->m_fontsList.resize((size_t)N);
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  for (int i = 0; i < N; i++) {
-    long pos = input->tell();
-    MWAWFont font;
-    if (readChar(i, fSz, font))
-      m_state->m_fontsList[(size_t) i] = font;
-    else {
-      f.str("");
-      if (!i)
-        f << "Entries(Font)-F0:#";
-      else
-        f << "FontF-" << i << ":#";
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
-    }
-    input->seek(pos+fSz, WPX_SEEK_SET);
-  }
-  return true;
-}
 
 bool CWText::readSTYL_RULR(int N, int fSz)
 {

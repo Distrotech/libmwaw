@@ -150,9 +150,9 @@ struct TextZone {
   int m_id;
   //! the list of zones
   std::vector<LineZone> m_zonesList;
-  //! the line heigth
+  //! the line height
   std::vector<int> m_linesHeight;
-  //! the pages heigth
+  //! the pages height
   std::vector<int> m_pagesHeight;
   //! the zone id -> hard break
   std::map<int, bool> m_pagesPosition;

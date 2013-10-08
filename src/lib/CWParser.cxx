@@ -280,10 +280,12 @@ bool CWParser::canSendZoneAsGraphic(int zoneId) const
   switch (zMap->m_fileType) {
   case 0:
     return m_graphParser->canSendGroupAsGraphic(zoneId);
-  case 4:
-    return m_graphParser->canSendBitmapAsGraphic(zoneId);
   case 1:
     return m_textParser->canSendTextAsGraphic(zoneId);
+  case 2:
+    return m_spreadsheetParser->canSendSpreadsheetAsGraphic(zoneId);
+  case 4:
+    return m_graphParser->canSendBitmapAsGraphic(zoneId);
   default:
     break;
   }
@@ -315,8 +317,7 @@ bool CWParser::sendZone(int zoneId, bool asGraphic, MWAWPosition position)
     res = m_tableParser->sendZone(zoneId);
     break;
   case 2:
-    // res = m_spreadsheetParser->sendZone(zoneId);
-    MWAW_DEBUG_MSG(("CWParser::sendZone: sending a spreadsheet is not implemented\n"));
+    res = m_spreadsheetParser->sendSpreadsheet(zoneId);
     break;
   case 3:
     // res=m_databaseParser->sendZone(zoneId);
@@ -1245,8 +1246,7 @@ bool CWParser::readStructZone(char const *zoneName, bool hasEntete)
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos,WPX_SEEK_SET);
-  if (long(input->tell()) != endPos) {
+  if (!input->checkPosition(endPos)) {
     input->seek(pos, WPX_SEEK_SET);
     MWAW_DEBUG_MSG(("CWParser::readStructZone: unexpected size for %s\n", zoneName));
     return false;
@@ -1265,7 +1265,6 @@ bool CWParser::readStructZone(char const *zoneName, bool hasEntete)
     return true;
   }
 
-  input->seek(pos+4, WPX_SEEK_SET);
   int N = (int) input->readLong(2);
   f << "N=" << N << ",";
   int type = (int) input->readLong(2);

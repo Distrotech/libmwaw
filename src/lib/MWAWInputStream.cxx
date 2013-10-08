@@ -33,6 +33,7 @@
 
 #include <string.h>
 
+#include <cmath>
 #include <cstring>
 
 #include <libwpd-stream/libwpd-stream.h>
@@ -225,6 +226,40 @@ uint8_t MWAWInputStream::readU8(WPXInputStream *stream)
     return 0;
 
   return *(uint8_t const *)(p);
+}
+
+bool MWAWInputStream::readDouble(double &res)
+{
+  if (!m_stream) return false;
+  long pos=tell();
+  if (m_readLimit > 0 && pos+10 > m_readLimit) return false;
+  if (pos+10 > m_streamSize) return false;
+
+  int exp = (int) readULong(2);
+  int sign = 1;
+  if (exp & 0x8000) {
+    exp &= 0x7fff;
+    sign = -1;
+  }
+  exp -= 0x3fff;
+
+  unsigned long mantisse = (unsigned long) readULong(4);
+  if ((mantisse & 0x80000000) == 0) {
+    if (readULong(4) != 0) return false;
+
+    if (exp == -0x3fff && mantisse == 0) return true; // ok zero
+    if (exp == 0x4000 && (mantisse & 0xFFFFFFL)==0) { // ok Nan
+      res=std::numeric_limits<double>::quiet_NaN();
+      return true;
+    }
+    return false;
+  }
+  res = std::ldexp(double(mantisse)/double(0x80000000), exp);
+  if (sign == -1) {
+    res *= -1.;
+  }
+  seek(4, WPX_SEEK_CUR);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////

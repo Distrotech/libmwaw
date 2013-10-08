@@ -89,10 +89,15 @@ public:
 
   //! return the style corresponding to a styleId
   bool get(int styleId, Style &style) const;
+  //! return the font corresponding to a fontId
+  bool get(int fontId, MWAWFont &font) const;
   //! return the ksen style corresponding to a ksenId
   bool get(int ksenId, KSEN &ksen) const;
   //! return the graphic style corresponding to a graphicId
   bool get(int graphId, MWAWGraphicStyle &graph) const;
+
+  //! try to read a named font
+  bool readFont(int id, int fontSize, MWAWFont &font);
 
 protected:
   //! return the file version
@@ -116,6 +121,8 @@ protected:
   bool readKSEN(int N, int fSz);
   /** read a STYL Name sequence */
   bool readStyleNames(int N, int fSz);
+  /** read a STYL_CHAR Font sequence */
+  bool readStyleFonts(int N, int fSz);
 
 protected:
   //! the parser state
