@@ -567,29 +567,43 @@ int MWProStructures::numPages() const
 
 ////////////////////////////////////////////////////////////
 // try to return the header/footer block id
-int MWProStructures::getHeaderId(int page, int &numSimillar) const
+int MWProStructures::getHeaderId(int page, int &numSimilar) const
 {
-  numSimillar = 1;
+  numSimilar = 1;
   if (version()==0) page = 0;
-  std::map<int, int>::const_iterator it=m_state->m_headersMap.find(page);
-  if (it==m_state->m_headersMap.end())
+  std::map<int, int>::const_iterator it=m_state->m_headersMap.lower_bound(page);
+  if (it==m_state->m_headersMap.end()) {
+    if (m_state->m_numPages>page)
+      numSimilar=m_state->m_numPages-page+1;
     return 0;
+  }
+  if (it->first!=page) {
+    numSimilar=it->first-page;
+    return 0;
+  }
   int res = it->second;
   while (++it!=m_state->m_headersMap.end() && it->second==res)
-    numSimillar++;
+    numSimilar++;
   return res;
 }
 
-int MWProStructures::getFooterId(int page, int &numSimillar) const
+int MWProStructures::getFooterId(int page, int &numSimilar) const
 {
-  numSimillar = 1;
+  numSimilar = 1;
   if (version()==0) page = 0;
-  std::map<int, int>::const_iterator it=m_state->m_footersMap.find(page);
-  if (it==m_state->m_footersMap.end())
+  std::map<int, int>::const_iterator it=m_state->m_footersMap.lower_bound(page);
+  if (it==m_state->m_footersMap.end()) {
+    if (m_state->m_numPages>page)
+      numSimilar=m_state->m_numPages-page+1;
     return 0;
+  }
+  if (it->first!=page) {
+    numSimilar=it->first-page;
+    return 0;
+  }
   int res = it->second;
   while (++it!=m_state->m_footersMap.end() && it->second==res)
-    numSimillar++;
+    numSimilar++;
   return res;
 }
 

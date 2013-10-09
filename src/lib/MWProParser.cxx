@@ -561,7 +561,7 @@ void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
   int actHeaderId = 0, actFooterId = 0;
   shared_ptr<MWProParserInternal::SubDocument> headerSubdoc, footerSubdoc;
   for (int i = 0; i < m_state->m_numPages; ) {
-    int numSim[2];
+    int numSim[2]= {1,1};
     int headerId =  m_structures->getHeaderId(i+1, numSim[0]);
     if (headerId != actHeaderId) {
       actHeaderId = headerId;

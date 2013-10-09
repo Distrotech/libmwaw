@@ -454,36 +454,42 @@ int NSText::numPages() const
   return m_state->m_numPages;
 }
 
-shared_ptr<MWAWSubDocument> NSText::getHeader(int page, int &numSimillar)
+shared_ptr<MWAWSubDocument> NSText::getHeader(int page, int &numSimilar)
 {
-  numSimillar=1;
+  numSimilar=1;
   shared_ptr<MWAWSubDocument> res;
   int numHeaders = int(m_state->m_headersId.size());
-  if (page < 1 || page-1 >= numHeaders)
+  if (page < 1 || page-1 >= numHeaders) {
+    if (m_state->m_numPages>page)
+      numSimilar=m_state->m_numPages-page+1;
     return res;
+  }
   int hId = m_state->m_headersId[size_t(page-1)];
   if (hId >= 0)
     res.reset(new NSTextInternal::SubDocument(*this, m_mainParser->rsrcInput(), hId, libmwaw::DOC_HEADER_FOOTER));
   while (page < numHeaders && m_state->m_headersId[size_t(page)]==hId) {
     page++;
-    numSimillar++;
+    numSimilar++;
   }
   return res;
 }
 
-shared_ptr<MWAWSubDocument> NSText::getFooter(int page, int &numSimillar)
+shared_ptr<MWAWSubDocument> NSText::getFooter(int page, int &numSimilar)
 {
-  numSimillar=1;
+  numSimilar=1;
   shared_ptr<MWAWSubDocument> res;
   int numFooters = int(m_state->m_footersId.size());
-  if (page < 1 || page-1 >= numFooters)
+  if (page < 1 || page-1 >= numFooters) {
+    if (m_state->m_numPages>page)
+      numSimilar=m_state->m_numPages-page+1;
     return res;
+  }
   int fId = m_state->m_footersId[size_t(page-1)];
   if (fId >= 0)
     res.reset(new NSTextInternal::SubDocument(*this, m_mainParser->rsrcInput(), fId, libmwaw::DOC_HEADER_FOOTER));
   while (page < numFooters && m_state->m_footersId[size_t(page)]==fId) {
     page++;
-    numSimillar++;
+    numSimilar++;
   }
 
   return res;

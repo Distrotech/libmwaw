@@ -354,9 +354,9 @@ int BWText::numPages() const
   return m_state->m_numPages;
 }
 
-shared_ptr<MWAWSubDocument> BWText::getHeader(int page, int &numSimillar)
+shared_ptr<MWAWSubDocument> BWText::getHeader(int page, int &numSimilar)
 {
-  numSimillar=1;
+  numSimilar=1;
   shared_ptr<MWAWSubDocument> res;
   int actPage=0, newSectionPage=0;
   size_t s=0;
@@ -366,21 +366,24 @@ shared_ptr<MWAWSubDocument> BWText::getHeader(int page, int &numSimillar)
       break;
     actPage=newSectionPage;
   }
-  if (s >= m_state->m_sectionList.size())
+  if (s >= m_state->m_sectionList.size()) {
+    if (m_state->m_numPages>page)
+      numSimilar=m_state->m_numPages-page+1;
     return res;
+  }
   BWTextInternal::Section const &sec=m_state->m_sectionList[s];
   bool useFPage=page==actPage && sec.m_hasFirstPage;
   if (!useFPage)
-    numSimillar=newSectionPage-page;
+    numSimilar=newSectionPage-page;
   if (sec.getHeaderEntry(useFPage).valid())
     res.reset(new BWTextInternal::SubDocument
               (*this, m_parserState->m_input, useFPage?0:2, int(s)));
   return res;
 }
 
-shared_ptr<MWAWSubDocument> BWText::getFooter(int page, int &numSimillar)
+shared_ptr<MWAWSubDocument> BWText::getFooter(int page, int &numSimilar)
 {
-  numSimillar=1;
+  numSimilar=1;
   shared_ptr<MWAWSubDocument> res;
   int actPage=0, newSectionPage=0;
   size_t s=0;
@@ -390,12 +393,15 @@ shared_ptr<MWAWSubDocument> BWText::getFooter(int page, int &numSimillar)
       break;
     actPage=newSectionPage;
   }
-  if (s >= m_state->m_sectionList.size())
+  if (s >= m_state->m_sectionList.size()) {
+    if (m_state->m_numPages>page)
+      numSimilar=m_state->m_numPages-page+1;
     return res;
+  }
   BWTextInternal::Section const &sec=m_state->m_sectionList[s];
   bool useFPage=page==actPage && sec.m_hasFirstPage;
   if (!useFPage)
-    numSimillar=newSectionPage-page;
+    numSimilar=newSectionPage-page;
   if (sec.getFooterEntry(useFPage).valid())
     res.reset(new BWTextInternal::SubDocument
               (*this, m_parserState->m_input, useFPage?1:3, int(s)));

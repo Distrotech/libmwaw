@@ -2355,7 +2355,12 @@ int FWText::getHeaderFooterId(bool header, int page, int &numSimilar) const
 {
   int type=header ? 0x11 : 0x12;
   size_t numZones = m_state->m_mainZones.size();
-  if (!numZones) return -1;
+  if (!numZones) {
+    numSimilar=1;
+    if (m_state->m_numPages>page)
+      numSimilar=m_state->m_numPages-page+1;
+    return -1;
+  }
   std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it =
     m_state->m_entryMap.begin();
   int nextPage=-1;
