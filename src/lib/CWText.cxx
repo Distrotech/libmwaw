@@ -746,14 +746,11 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   if (fontSize == 0)
     return false;
 
-  input->seek(fontSize, WPX_SEEK_CUR);
-  if (long(input->tell()) != pos+fontSize) {
+  input->seek(pos, WPX_SEEK_SET);
+  if (!input->checkPosition(pos+fontSize)) {
     MWAW_DEBUG_MSG(("CWText::readFont: file is too short"));
-    input->seek(pos, WPX_SEEK_SET);
     return false;
   }
-
-  input->seek(pos, WPX_SEEK_SET);
   posC = int(input->readULong(4));
   font = MWAWFont();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;

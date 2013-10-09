@@ -404,10 +404,10 @@ bool CWSpreadsheet::sendSpreadsheet(int zId)
     MWAW_DEBUG_MSG(("CWSpreadsheet::sendSpreadsheet: can not find content\n"));
     return false;
   }
-  std::vector<float> colSize((size_t)(maxData[0]-minData[0]+1),36);
+  std::vector<float> colSize((size_t)(maxData[0]-minData[0]+1),72);
   for (int c=minData[0], fC=0; c <= maxData[0]; ++c, ++fC) {
     if (c>=0 && c < int(sheet.m_colWidths.size()))
-      colSize[size_t(fC)]=(float) sheet.m_colWidths[size_t(c)];
+      colSize[size_t(fC)]=2.0f*(float) sheet.m_colWidths[size_t(c)];
   }
   MWAWTable table(MWAWTable::TableDimBit);
   table.setColsSize(colSize);
@@ -416,10 +416,11 @@ bool CWSpreadsheet::sendSpreadsheet(int zId)
     if (sheet.m_rowHeightMap.find(r)!=sheet.m_rowHeightMap.end())
       listener->openTableRow((float)sheet.m_rowHeightMap.find(r)->second, WPX_POINT);
     else
-      listener->openTableRow((float)12, WPX_POINT);
+      listener->openTableRow((float)14, WPX_POINT);
     for (int c=minData[0], fC=0; c <= maxData[0]; ++c, ++fC) {
       MWAWCell cell;
       cell.setPosition(Vec2i(fC,fR));
+      cell.setVAlignement(MWAWCell::VALIGN_BOTTOM); // always ?
       listener->openTableCell(cell);
       sheet.m_content->send(Vec2i(c, r));
       listener->closeTableCell();

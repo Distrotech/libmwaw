@@ -59,6 +59,7 @@ struct State;
 class CWStyleManager
 {
 public:
+  struct CellFormat;
   struct KSEN;
   struct Style;
 public:
@@ -91,6 +92,8 @@ public:
   bool get(int styleId, Style &style) const;
   //! return the font corresponding to a fontId
   bool get(int fontId, MWAWFont &font) const;
+  //! return the cell format corresponding to a cellFormatId
+  bool get(int formatId, CellFormat &format) const;
   //! return the ksen style corresponding to a ksenId
   bool get(int ksenId, KSEN &ksen) const;
   //! return the graphic style corresponding to a graphicId
@@ -137,6 +140,29 @@ private:
   CWStyleManager &operator=(CWStyleManager const &orig);
 
 public:
+  //! the CELL structure a structure related to number/date format
+  struct CellFormat {
+    //! constructor
+    CellFormat() : m_justify(0), m_format(-1), m_numDigits(2), m_separateThousand(false), m_parentheseNegatif(false), m_wrap(false), m_extra("") {
+    }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, CellFormat const &form);
+    //! the justification: 0:default, 1: left, 2: center, 3: right
+    int m_justify;
+    //! the field format: number, string, currency, ..
+    int m_format;
+    //! the number of digit after the commat
+    int m_numDigits;
+    //! true if we need to add separator for thousand
+    bool m_separateThousand;
+    //! true if negatif number are printed with parentheses
+    bool m_parentheseNegatif;
+    //! true if the cell content is wrapped
+    bool m_wrap;
+    //! extra data
+    std::string m_extra;
+  };
+
   //! the KSEN structure a structure related to paragraph and cell style
   struct KSEN {
     //! constructor
@@ -159,7 +185,7 @@ public:
   //! the structure to store the style in a CWStyleManager
   struct Style {
     //! constructor
-    Style() : m_fontId(-1), m_fontHash(-1), m_rulerId(-1), m_rulerHash(-1), m_ksenId(-1), m_graphicId(-1), m_localStyleId(-1), m_styleId(-1), m_extra("") {
+    Style() : m_fontId(-1), m_cellFormatId(-1), m_rulerId(-1), m_rulerHash(-1), m_ksenId(-1), m_graphicId(-1), m_localStyleId(-1), m_styleId(-1), m_extra("") {
     }
 
     //! operator<<
@@ -167,8 +193,8 @@ public:
 
     //! the char
     int m_fontId;
-    //! the fontHash id
-    int m_fontHash;
+    //! the formatId
+    int m_cellFormatId;
     //! the ruler
     int m_rulerId;
     //! the rulerHash id

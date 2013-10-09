@@ -33,6 +33,7 @@
 
 #include <string.h>
 
+#include <limits>
 #include <cmath>
 #include <cstring>
 

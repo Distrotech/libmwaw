@@ -45,6 +45,10 @@
 #include "libmwaw_internal.hxx"
 
 #include "MWAWEntry.hxx"
+#include "MWAWFont.hxx"
+
+// remove me
+#include "CWStyleManager.hxx"
 
 class CWStyleManager;
 
@@ -72,8 +76,9 @@ protected:
     //! different result type
     enum Type { R_Unknown, R_Long, R_Double, R_String };
     //! contructor
-    Record() : m_style(-1), m_resType(R_Unknown), m_resLong(0), m_resDouble(0), m_resString() {
+    Record() : m_style(-1), m_resType(R_Unknown), m_resLong(0), m_resDouble(0), m_resString(), m_format(0), m_font(3,9), m_justify(0), m_borders(0) {
     }
+
     //! the style if known
     int m_style;
     //! the result type
@@ -84,6 +89,14 @@ protected:
     double m_resDouble;
     //! the result entry if string
     MWAWEntry m_resString;
+    //! the format ( in a v1-3 spreadsheet)
+    int m_format;
+    //! the font ( in v1-3 spreadsheet)
+    MWAWFont m_font;
+    //! cell justify in v1-3 spreadsheet
+    int m_justify;
+    //! the border in v1-3 spreadsheet
+    int m_borders;
   };
   /** struct which stores a column in CWDbaseContent */
   struct Column {
@@ -106,6 +119,9 @@ protected:
   bool readRecordSSV1(Vec2i const &where, long pos, Record &record);
   //! try to read a database record
   bool readRecordDB(Vec2i const &where, long pos, Record &record);
+
+  //! send a double with a corresponding cell format
+  void send(double val, CWStyleManager::CellFormat const &format);
 
   //! the file version
   int m_version;

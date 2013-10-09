@@ -451,7 +451,7 @@ void FWParser::createDocument(WPXDocumentInterface *documentInterface)
   shared_ptr<FWParserInternal::SubDocument> headerSubdoc, footerSubdoc;
   std::vector<MWAWPageSpan> pageList;
   for (int i = 0; i < m_state->m_numPages; ) {
-    int numSim[2];
+    int numSim[2]={0,0};
     int headerId =  m_textParser->getHeaderFooterId(true,i+1, numSim[0]);
     if (headerId != actHeaderId) {
       actHeaderId = headerId;

@@ -2351,7 +2351,7 @@ bool FWText::sendMainText()
   return true;
 }
 
-int FWText::getHeaderFooterId(bool header, int page, int &numSimillar) const
+int FWText::getHeaderFooterId(bool header, int page, int &numSimilar) const
 {
   int type=header ? 0x11 : 0x12;
   size_t numZones = m_state->m_mainZones.size();
@@ -2371,11 +2371,9 @@ int FWText::getHeaderFooterId(bool header, int page, int &numSimillar) const
     else if (nextPage==-1 || zone->m_pages[0]<nextPage)
       nextPage=zone->m_pages[0];
   }
-  if (res<0)
-    return res;
   if (nextPage==-1) nextPage=m_state->m_numPages+1;
-  numSimillar=nextPage-page;
-  if (numSimillar<=0) numSimillar=1;
+  numSimilar=nextPage-page;
+  if (numSimilar<=0) numSimilar=1;
   return res;
 }
 

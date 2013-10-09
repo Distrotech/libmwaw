@@ -192,8 +192,8 @@ void Header::load( const unsigned char *buffer, unsigned long size )
 
 void Header::save( unsigned char *buffer )
 {
-  memset( buffer, 0, 0x4c );
-  memcpy( buffer, s_ole_magic, 8 );        // ole signature
+  std::memset( buffer, 0, 0x4c );
+  std::memcpy( buffer, s_ole_magic, 8 );        // ole signature
   writeU32( buffer + 8, 0 );              // unknown
   writeU32( buffer + 12, 0 );             // unknown
   writeU32( buffer + 16, 0 );             // unknown
@@ -1096,7 +1096,7 @@ unsigned long IStorage::loadBigBlocks
     m_input->seek(long(pos), WPX_SEEK_SET);
     unsigned long numBytesRead = 0;
     const unsigned char *buf = m_input->read(p, numBytesRead);
-    memcpy(data+bytes, buf, numBytesRead);
+    std::memcpy(data+bytes, buf, numBytesRead);
     bytes += numBytesRead;
   }
 
@@ -1130,7 +1130,7 @@ unsigned long IStorage::loadSmallBlocks
     unsigned offset = unsigned(pos % m_bbat.m_blockSize);
     unsigned long p = (maxlen-bytes < m_bbat.m_blockSize-offset ) ? maxlen-bytes :  m_bbat.m_blockSize-offset;
     p = (m_sbat.m_blockSize<p ) ? m_sbat.m_blockSize : p;
-    memcpy( data + bytes, &tmpBuf[offset], p );
+    std::memcpy( data + bytes, &tmpBuf[offset], p );
     bytes += p;
 
     f << "OLE(SmallBock" << block << "-" << i << ")[" << m_debugMessage << "]:";
@@ -1383,7 +1383,7 @@ unsigned long IStream::read( unsigned long pos, unsigned char *data, unsigned lo
       m_io->loadSmallBlock( m_blocks[index], &buf[0], m_io->bbat().m_blockSize );
       unsigned long count = sBlockSize - offset;
       if( count > maxlen-totalbytes ) count = maxlen-totalbytes;
-      memcpy( data+totalbytes, &buf[offset], count );
+      std::memcpy( data+totalbytes, &buf[offset], count );
       totalbytes += count;
       offset = 0;
       index++;
@@ -1405,7 +1405,7 @@ unsigned long IStream::read( unsigned long pos, unsigned char *data, unsigned lo
       m_io->loadBigBlock( m_blocks[index], &buf[0], bBlockSize );
       unsigned long count = bBlockSize - offset;
       if( count > maxlen-totalbytes ) count = maxlen-totalbytes;
-      memcpy( data+totalbytes, &buf[offset], count );
+      std::memcpy( data+totalbytes, &buf[offset], count );
       totalbytes += count;
       index++;
       offset = 0;
@@ -1671,7 +1671,7 @@ unsigned OStorage::insertData(unsigned char const *buffer, unsigned long len, bo
     chain.push_back(block);
     size_t wPos = getDataAddress(block, useBigBlock);
     unsigned long wSize = len > bSize ? bSize : len;
-    memcpy(&m_data[wPos], &buffer[0], wSize);
+    std::memcpy(&m_data[wPos], &buffer[0], wSize);
     buffer += bSize;
     len -= wSize;
   }

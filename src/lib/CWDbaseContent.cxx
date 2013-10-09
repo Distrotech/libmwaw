@@ -31,6 +31,11 @@
 * instead of those above.
 */
 
+#include <time.h>
+
+#include <cmath>
+#include <cstring>
+#include <ctime>
 #include <iomanip>
 #include <iostream>
 #include <set>
@@ -42,6 +47,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWInputStream.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWParser.hxx"
 
 #include "CWStyleManager.hxx"
@@ -266,7 +272,8 @@ bool CWDbaseContent::readColumn(int c)
   else
     f << "Entries(DBCOLM)[dbase]:";
   f << "ptr[" << cPos[0] << "<=>" << cPos[1] << "]=[";
-  std::vector<long> listIds(size_t(cPos[0]),0);
+  std::vector<long> listIds;
+  listIds.resize(size_t(cPos[0]),0);
   for (int i=cPos[0]; i <= cPos[1]; i++) {
     long ptr=(long) input->readULong(4);
     listIds.push_back(ptr);
@@ -384,32 +391,93 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
   input->seek(pos, WPX_SEEK_SET);
   int val=(int) input->readULong(1);
   int type=(val>>4);
-  val &=0xF;
-  if (val) f << "unkn=" << val << ",";
-  bool ok=false;
-  while (!input->atEOS()) {
-    long actPos=input->tell();
-    int ord=(int) input->readULong(1);
-    if (ord==0x21) {
-      if (!input->checkPosition(actPos+7)) {
-        MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: can not read format\n"));
-        f << "###";
+  record.m_format=(val&0xF);
+  if (record.m_format) f << "format=" << record.m_format << ",";
+  bool ok=true;
+
+  int ord=(int) input->readULong(1);
+  if (ord&8) {
+    f << "commas[thousand],";
+    ord &= 0xF7;
+  }
+  if (ord&4) {
+    f << "parenthese[negative],";
+    ord &= 0xFB;
+  }
+  if (ord&2) {
+    f << "lock,";
+    ord &= 0xFD;
+  }
+  if (ord&1) {
+    if (!input->checkPosition(pos+8)) {
+      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: can not read format\n"));
+      f << "###";
+      ok = false;
+    } else {
+      MWAWFont &font = record.m_font;
+      font = MWAWFont();
+      int fId= (int) input->readULong(2);
+      if (fId!=0xFFFF)
+        font.setId(m_styleManager->getFontId((int)fId));
+      font.setSize((float) input->readULong(1));
+      int flag =(int) input->readULong(1);
+      uint32_t flags=0;
+      if (flag&0x1) flags |= MWAWFont::boldBit;
+      if (flag&0x2) flags |= MWAWFont::italicBit;
+      if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
+      if (flag&0x8) flags |= MWAWFont::embossBit;
+      if (flag&0x10) flags |= MWAWFont::shadowBit;
+      if (flag&0x20) font.setDeltaLetterSpacing(-1);
+      if (flag&0x40) font.setDeltaLetterSpacing(1);
+      if (flag&0x80) font.setStrikeOutStyle(MWAWFont::Line::Simple);
+      font.setFlags(flags);
+      int colId = (int) input->readULong(1);
+      if (colId!=1) {
+        MWAWColor col;
+        if (m_styleManager->getColor(colId, col))
+          font.setColor(col);
+        else {
+          MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: unknown color %d\n", colId));
+        }
+      }
+      f << "font=[" << font.getDebugString(m_parserState->m_fontConverter) << "],";
+      val=(int) input->readULong(1);
+      record.m_borders = (val>>4);
+      if (record.m_borders) {
+        f << "border=";
+        if (record.m_borders&1) f << "L";
+        if (record.m_borders&2) f << "T";
+        if (record.m_borders&4) f << "R";
+        if (record.m_borders&8) f << "B";
+        f << ",";
+      }
+      val &=0xF;
+      record.m_justify = (val>>2);
+      switch(record.m_justify) {
+      case 1:
+        f << "left,";
+        break;
+      case 2:
+        f << "center,";
+        break;
+      case 3:
+        f << "right,";
+        break;
+      default:
         break;
       }
-      ascFile.addDelimiter(actPos+1,'|');
-      input->seek(actPos+7, WPX_SEEK_SET);
-      f << "format,";
-      ascFile.addDelimiter(actPos+7,'|');
-      ok=true;
-      break;
+      val &=0x3;
+      if (val) f << "#unk=" << val << ",";
+      ascFile.addDelimiter(pos+2,'|');
+      input->seek(pos+8, WPX_SEEK_SET);
+      ascFile.addDelimiter(pos+8,'|');
+      ord &= 0xFE;
     }
-    if (ord!=0x20) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: find unexpected order\n"));
-      f << "###ord=" << std::hex << ord << std::dec;
-      break;
-    }
-    ok=true;
-    break;
+  }
+  if (ok && ord!=0x20) {
+    MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: find unexpected order\n"));
+    f << "###ord=" << std::hex << ord << std::dec;
+    ok = false;
   }
   if (ok) {
     long actPos=input->tell();
@@ -501,15 +569,9 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
         MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: can not formula res\n"));
         f << "###float[res],";
         break;
-#if 0
       case 3: {
-        if (remainSz<1) {
-          MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: the res string seems bad\n"));
-          f << "###string[res]";
-          break;
-        }
         int fSz = (int) input->readULong(1);
-        if (fSz+1>remainSz) {
+        if (!input->checkPosition(resPos+fSz+1)) {
           MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: the res string(II) seems bad\n"));
           f << "###string[res]";
           break;
@@ -522,10 +584,9 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
         f << "=" << data << ",";
         break;
       }
-#endif
       default:
         f << "##type=" << rType << "[res],";
-        input->seek(20,WPX_SEEK_CUR);
+        ok = false;
         break;
       }
       break;
@@ -571,7 +632,12 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
   int val= (int) input->readULong(1); // 0-46
   if (val) f << "format=" << std::hex << val << std::dec << ",";
   record.m_style=(int) input->readLong(2);
-  if (val) f << "style" << record.m_style << ",";
+  if (record.m_style) f << "style" << record.m_style << ",";
+  CWStyleManager::Style style;
+  CWStyleManager::CellFormat format;
+  if (m_styleManager->get(record.m_style, style) &&
+      m_styleManager->get(style.m_cellFormatId, format))
+    f << format << ",";
   switch(type) {
   case 0:
   case 1:
@@ -690,7 +756,14 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
     }
     break;
   }
-  case 7: // some move ?
+  case 7: // link/anchor/goto
+    if (sz!=4) {
+      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: the mark size seems bad\n"));
+      f << "###mark";
+      break;
+    }
+    f << "mark,";
+    break;
   case 8:
   case 9:
     f << "type" << type << ",";
@@ -795,21 +868,43 @@ bool CWDbaseContent::send(Vec2i const &pos)
   if (rIt==col.m_idRecordMap.end()) return true;
 
   Record const &record=rIt->second;
-  CWStyleManager::Style style;
-  MWAWFont font;
-  if (record.m_style>=0 && m_styleManager->get(record.m_style, style) &&
-      style.m_fontId>=0 && m_styleManager->get(style.m_fontId, font))
-    listener->setFont(font);
+  int justify=0;
+  CWStyleManager::CellFormat format;
+  if (m_version <= 3) {
+    listener->setFont(record.m_font);
+    justify=record.m_justify;
+    format.m_format=record.m_format;
+  } else {
+    MWAWFont font;
+    CWStyleManager::Style style;
+    if (record.m_style>=0)
+      m_styleManager->get(record.m_style, style);
+    if (style.m_fontId>=0 && m_styleManager->get(style.m_fontId, font))
+      listener->setFont(font);
+    if (style.m_cellFormatId>=0 && m_styleManager->get(style.m_cellFormatId, format))
+      justify=format.m_justify;
+  }
+  MWAWParagraph para;
+  para.m_justify =
+    justify==1 ? MWAWParagraph::JustificationLeft :
+    justify==2 ? MWAWParagraph::JustificationCenter :
+    justify==3 ? MWAWParagraph::JustificationRight :
+    record.m_resType==Record::R_String ? MWAWParagraph::JustificationLeft :
+    MWAWParagraph::JustificationRight;
+  listener->setParagraph(para);
 
-  std::stringstream s;
   switch(record.m_resType) {
   case Record::R_Long:
-    s << record.m_resLong;
-    listener->insertUnicodeString(s.str().c_str());
+    if (format.m_format)
+      send(double(record.m_resLong), format);
+    else {
+      std::stringstream s;
+      s << record.m_resLong;
+      listener->insertUnicodeString(s.str().c_str());
+    }
     break;
   case Record::R_Double:
-    s << record.m_resDouble;
-    listener->insertUnicodeString(s.str().c_str());
+    send(record.m_resDouble, format);
     break;
   case Record::R_String:
     if (record.m_resString.valid()) {
@@ -830,4 +925,81 @@ bool CWDbaseContent::send(Vec2i const &pos)
   }
   return true;
 }
+
+void CWDbaseContent::send(double val, CWStyleManager::CellFormat const &format)
+{
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener)
+    return;
+  std::stringstream s;
+  int type=format.m_format;
+  if (m_version<=3) {
+    if (type>=10&&type<=11) type += 4;
+    else if (type>=14) type=16;
+  }
+  if (type <= 0 || type >=16 || type==10 || type==11 || !std::isfinite(val)) {
+    s << val;
+    listener->insertUnicodeString(s.str().c_str());
+    return;
+  }
+  switch(type) {
+  case 1: // currency
+    s << std::fixed << std::setprecision(format.m_numDigits) << val << "$";
+    break;
+  case 2: // percent
+    s << std::fixed << std::setprecision(format.m_numDigits) << 100*val << "%";
+    break;
+  case 3: // scientific
+    s << std::scientific << std::setprecision(format.m_numDigits) << val;
+    break;
+  case 4: // fixed
+    s << std::fixed << std::setprecision(format.m_numDigits) << val;
+    break;
+  case 5:
+  case 6:
+  case 7:
+  case 8:
+  case 9: { // number of second since 1904
+    time_t date= time_t((val-24107+0.4)*24.*3600);
+    struct tm *dateTm = gmtime(&date);
+    if (!dateTm) {
+      MWAW_DEBUG_MSG(("CWDbaseContent::send: can not convert a date\n"));
+      s << "###" << val;
+      break;
+    }
+    struct tm timeinfo(*dateTm);
+    char buf[256];
+    static char const *(wh[])= {"%m/%d/%y", "%b %d, %y", "%B %d, %Y", "%a, %b %d, %Y", "%A, %B %d, %Y"};
+    strftime(buf, 256, wh[type-5], &timeinfo);
+    s << buf;
+    break;
+  }
+  case 12:
+  case 13:
+  case 14:
+  case 15: { // time: value between 0 and 1
+    struct tm timeinfo;
+    std::memset(&timeinfo, 0, sizeof(timeinfo));
+    if (val<0 || val>=1)
+      val=std::fmod(val,1.);
+    val *= 24.;
+    val -= double(timeinfo.tm_hour=int(std::floor(val)+0.5));
+    val *= 60.;
+    val -= double(timeinfo.tm_min=int(std::floor(val)+0.5));
+    val *= 60.;
+    timeinfo.tm_sec=int(std::floor(val)+0.5);
+    char buf[256];
+    static char const *(wh[])= {"%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"};
+    strftime(buf, 256, wh[type-12], &timeinfo);
+    s << buf;
+    break;
+  }
+  default:
+    MWAW_DEBUG_MSG(("CWDbaseContent::send: unknown format %d\n", type));
+    s << val;
+    break;
+  }
+  listener->insertUnicodeString(s.str().c_str());
+}
+
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

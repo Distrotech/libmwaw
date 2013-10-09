@@ -181,7 +181,7 @@ bool Gradient::update(MWAWGraphicStyle &style) const
 struct State {
   //! constructor
   State() : m_version(-1), m_localFIdMap(), m_stylesMap(), m_lookupMap(),
-    m_fontList(), m_graphList(), m_ksenList(),
+    m_fontList(), m_cellFormatList(), m_graphList(), m_ksenList(),
     m_colorList(), m_patternList(), m_gradientList(), m_wallpaperList() {
   }
   //! set the default color map
@@ -209,6 +209,8 @@ struct State {
   std::map<int, int> m_lookupMap;
   //! the list of fonts
   std::vector<MWAWFont> m_fontList;
+  //! the list of format
+  std::vector<CWStyleManager::CellFormat> m_cellFormatList;
   //! the Graphic list
   std::vector<MWAWGraphicStyle> m_graphList;
   //! the KSEN list
@@ -1527,7 +1529,9 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::Style const &style)
     o << "],";
   }
   if (style.m_fontId != -1)
-    o << "font=[" << style.m_fontId << ",hash=" << style.m_fontHash << "],";
+    o << "font=" << style.m_fontId << ",";
+  if (style.m_cellFormatId != -1)
+    o << "cellStyle=" << style.m_cellFormatId << "],";
   if (style.m_rulerId != -1)
     o << "ruler=[" << style.m_rulerId << ",hash=" << style.m_rulerHash << "],";
   if (style.m_ksenId != -1)
@@ -1607,6 +1611,17 @@ bool CWStyleManager::get(int styleId, CWStyleManager::Style &style) const
   if (id < 0 ||m_state-> m_stylesMap.find(id) ==m_state-> m_stylesMap.end())
     return false;
   style =m_state-> m_stylesMap.find(id)->second;
+  return true;
+}
+
+bool CWStyleManager::get(int formatId, CWStyleManager::CellFormat &format) const
+{
+  format = CellFormat();
+  if (formatId<0||formatId>=int(m_state->m_cellFormatList.size())) {
+    MWAW_DEBUG_MSG(("CWStyleManager::get: can not find format %d\n", formatId));
+    return false;
+  }
+  format = m_state->m_cellFormatList[size_t(formatId)];
   return true;
 }
 
@@ -2056,7 +2071,7 @@ bool CWStyleManager::readStylesDef(int N, int fSz)
     int lookupId2 = (int) input->readLong(2);
     f << "lookupId2=" << lookupId2 << ",";
     style.m_fontId = (int) input->readLong(2);
-    style.m_fontHash = (int) input->readLong(2);
+    style.m_cellFormatId = (int) input->readLong(2);
     style.m_graphicId = (int) input->readLong(2);
     style.m_rulerId = (int) input->readLong(2);
     if (fSz >= 30)
@@ -2339,11 +2354,8 @@ bool CWStyleManager::readCellStyles(int N, int fSz)
   int val;
   for (int i = 0; i < N; i++) {
     long pos = input->tell();
+    CellFormat format;
     f.str("");
-    if (!i)
-      f << "Entries(CellStyle)-0:";
-    else
-      f << "CellStyle-" << i << ":";
     // 3 int, id or color ?
     for (int j = 0; j < 3; j++) {
       val = (int) input->readLong(2);
@@ -2352,19 +2364,37 @@ bool CWStyleManager::readCellStyles(int N, int fSz)
     }
     /* g0=0|4|8|c|1f, g1:number which frequently with 8|c|d
        g2=0|4|c|13|17|1f, g3:number which frequently with 8|c|d
-       g4=0|1|8, g5=0|2, g6=0-3, g7=0-f,
      */
-    for (int j = 0; j < 8; j++) {
+    for (int j = 0; j < 4; j++) {
       val = (int) input->readULong(1);
       if (val)
         f << "g" << j << "=" << std::hex << val << std::dec << ",";
     }
-    // h0=h1=0, h2=h3=0|1
-    for (int j = 0; j < 4; j++) {
-      val = (int) input->readULong(1);
-      if (val)
-        f << "h" << j << "=" << val << ",";
-    }
+    format.m_format=(int) input->readULong(1);
+    format.m_numDigits=(int) input->readULong(1);
+    format.m_justify=(int) input->readULong(1);
+    val=(int) input->readULong(1); // 0-f
+    if (val) f << "h0=" << val << ",";
+    val = (int) input->readULong(1);
+    if (val==1) format.m_separateThousand=true;
+    else if (val) f << "#separateThousand=" << val << ",";
+    val = (int) input->readULong(1);
+    if (val==1) format.m_parentheseNegatif=true;
+    else if (val) f << "#parentheseNegatif=" << val << ",";
+    val = (int) input->readULong(1);
+    if (val==1) format.m_wrap=true;
+    else if (val) f << "#wrap=" << val << ",";
+    val = (int) input->readULong(1);
+    if (val==1) f << "lock,";
+    else if (val) f << "#lock=" << val << ",";
+    format.m_extra=f.str();
+    m_state->m_cellFormatList.push_back(format);
+
+    f.str("");
+    if (!i)
+      f << "Entries(CellStyle)-0:"<<format;
+    else
+      f << "CellStyle-" << i << ":"<<format;
     if (long(input->tell()) != pos+fSz)
       ascFile.addDelimiter(input->tell(), '|');
     ascFile.addPos(pos);
@@ -2536,4 +2566,41 @@ bool CWStyleManager::readKSEN(int N, int fSz)
   }
   return true;
 }
+
+std::ostream &operator<<(std::ostream &o, CWStyleManager::CellFormat const &form)
+{
+  switch(form.m_justify) {
+  case 0:
+    break;
+  case 1:
+    o<<"left,";
+    break;
+  case 2:
+    o<<"center,";
+    break;
+  case 3:
+    o<<"right,";
+    break;
+  default:
+    o<<"#justify=" << form.m_justify << ",";
+    break;
+  }
+  if (form.m_format >= 0 && form.m_format < 16) {
+    static char const *(wh[16])= {
+      "general", "currency", "percent", "scientific", "fixed",
+      "date[m/d/y]", "date[d B y]", "date[B d Y]", "date[a, b d Y]", "date[A, B d Y]",
+      "form10", "form11",
+      "time[H:M]", "time[H:M:S]", "time[I:M p]", "time[I:M:S p]"
+    };
+    o << wh[form.m_format] << ",";
+  } else if (form.m_format > 0)
+    o << "#format=" << form.m_format << ",";
+  if (form.m_numDigits!=2) o << "num[digits]=" << form.m_numDigits << ",";
+  if (form.m_separateThousand) o << "thousand[sep],";
+  if (form.m_parentheseNegatif) o << "negatif[parenthese],";
+  if (form.m_wrap) o << "wrap[content],";
+  o << form.m_extra;
+  return o;
+}
+
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
