@@ -86,6 +86,12 @@ public:
   //! reads the zone Text DSET
   shared_ptr<CWStruct::DSET> readDatabaseZone
   (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
+  //! check if we can send a database as graphic
+  bool canSendDatabaseAsGraphic(int) const {
+    return false;
+  }
+  //! sends the zone data to the listener (if it exists )
+  bool sendDatabase(int number);
 
 protected:
 

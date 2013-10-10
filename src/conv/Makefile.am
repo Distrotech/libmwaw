@@ -1,1 +1,1 @@
-SUBDIRS = raw html text
+SUBDIRS = csv html raw text

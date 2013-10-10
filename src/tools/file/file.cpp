@@ -220,7 +220,7 @@ bool File::readFileInformation()
     checkFInfoType("sWDB","ClarisWorks/AppleWorks 2.0-3.0[Database]")||
     checkFInfoType("CWGR","ClarisWorks/AppleWorks[Draw]")||
     checkFInfoType("sWGR","ClarisWorks/AppleWorks 2.0-3.0[Draw]")||
-    checkFInfoType("CWSS","ClarisWorks/AppleWorks 1.0[SpreadSheet]")||
+    checkFInfoType("CWSS","ClarisWorks/AppleWorks[SpreadSheet]")||
     checkFInfoType("CWS2","ClarisWorks/AppleWorks 2.0-3.0[SpreadSheet]")||
     checkFInfoType("sWSS","ClarisWorks/AppleWorks 2.0-3.0[SpreadSheet]")||
     checkFInfoType("CWPR","ClarisWorks/AppleWorks[Presentation]")||

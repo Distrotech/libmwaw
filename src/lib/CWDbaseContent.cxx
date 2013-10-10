@@ -54,7 +54,8 @@
 
 #include "CWDbaseContent.hxx"
 
-CWDbaseContent::CWDbaseContent(MWAWParserStatePtr parserState, shared_ptr<CWStyleManager> styleManager, bool spreadsheet) : m_version(0), m_isSpreadsheet(spreadsheet), m_parserState(parserState), m_styleManager(styleManager), m_idColumnMap()
+CWDbaseContent::CWDbaseContent(MWAWParserStatePtr parserState, shared_ptr<CWStyleManager> styleManager, bool spreadsheet) :
+  m_version(0), m_isSpreadsheet(spreadsheet), m_parserState(parserState), m_styleManager(styleManager), m_idColumnMap(), m_dbFormatList()
 {
   if (!m_parserState || !m_parserState->m_header) {
     MWAW_DEBUG_MSG(("CWDbaseContent::CWDbaseContent: can not find the file header\n"));
@@ -65,6 +66,15 @@ CWDbaseContent::CWDbaseContent(MWAWParserStatePtr parserState, shared_ptr<CWStyl
 
 CWDbaseContent::~CWDbaseContent()
 {
+}
+
+void CWDbaseContent::setDatabaseFormats(std::vector<CWStyleManager::CellFormat> const &format)
+{
+  if (m_isSpreadsheet) {
+    MWAW_DEBUG_MSG(("CWDbaseContent::setDatabaseFormats: called with spreadsheet\n"));
+    return;
+  }
+  m_dbFormatList=format;
 }
 
 bool CWDbaseContent::getExtrema(Vec2i &min, Vec2i &max) const
@@ -824,6 +834,17 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
     f << data << ",";
     break;
   }
+  case 4:
+    if (val) f << "unkn=" << std::hex << val << std::dec << ",";
+    f << "int,";
+    if ((m_version<=3&&!input->checkPosition(pos+2)) || (m_version>3 && sz!=2)) {
+      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordDB: unexpected size for a int\n"));
+      f << "###";
+      break;
+    }
+    record.m_resType=Record::R_Long;
+    record.m_resLong=(int) input->readLong(1);
+    break;
   case 8:
   case 9:
     if (val) f << "unkn=" << std::hex << val << std::dec << ",";
@@ -870,7 +891,15 @@ bool CWDbaseContent::send(Vec2i const &pos)
   Record const &record=rIt->second;
   int justify=0;
   CWStyleManager::CellFormat format;
-  if (m_version <= 3) {
+  if (!m_isSpreadsheet) {
+    static bool first=true;
+    if (pos[0]>=0&&pos[0]<int(m_dbFormatList.size()))
+      format=m_dbFormatList[size_t(pos[0])];
+    else if (first) {
+      MWAW_DEBUG_MSG(("CWDBaseContent::send: can not find format for field %d\n", pos[0]));
+      first=false;
+    }
+  } else if (m_version <= 3) {
     listener->setFont(record.m_font);
     justify=record.m_justify;
     format.m_format=record.m_format;
@@ -933,7 +962,7 @@ void CWDbaseContent::send(double val, CWStyleManager::CellFormat const &format)
     return;
   std::stringstream s;
   int type=format.m_format;
-  if (m_version<=3) {
+  if (m_isSpreadsheet && m_version<=3) {
     if (type>=10&&type<=11) type += 4;
     else if (type>=14) type=16;
   }

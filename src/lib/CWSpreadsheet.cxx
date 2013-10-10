@@ -395,7 +395,7 @@ bool CWSpreadsheet::sendSpreadsheet(int zId)
   std::map<int, shared_ptr<CWSpreadsheetInternal::Spreadsheet> >::iterator it=
     m_state->m_spreadsheetMap.find(zId);
   if (it == m_state->m_spreadsheetMap.end() || !it->second) {
-    MWAW_DEBUG_MSG(("CWSpreadsheet::readSpreadsheetZone: can not find zone %d!!!\n", zId));
+    MWAW_DEBUG_MSG(("CWSpreadsheet::sendSpreadsheet: can not find zone %d!!!\n", zId));
     return false;
   }
   CWSpreadsheetInternal::Spreadsheet &sheet=*it->second;
@@ -409,9 +409,13 @@ bool CWSpreadsheet::sendSpreadsheet(int zId)
     if (c>=0 && c < int(sheet.m_colWidths.size()))
       colSize[size_t(fC)]=2.0f*(float) sheet.m_colWidths[size_t(c)];
   }
+  WPXPropertyList extras;
+  if (zId==1 && m_mainParser->getHeader() &&
+      m_mainParser->getHeader()->getKind()==MWAWDocument::K_SPREADSHEET)
+    extras.insert("libmwaw:main_spreadsheet", 1);
   MWAWTable table(MWAWTable::TableDimBit);
   table.setColsSize(colSize);
-  listener->openTable(table);
+  listener->openTable(table, extras);
   for (int r=minData[1], fR=0; r <= maxData[1]; ++r, ++fR) {
     if (sheet.m_rowHeightMap.find(r)!=sheet.m_rowHeightMap.end())
       listener->openTableRow((float)sheet.m_rowHeightMap.find(r)->second, WPX_POINT);

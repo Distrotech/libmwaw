@@ -70,6 +70,8 @@ public:
 
   //! try to send a cell content to the listener
   bool send(Vec2i const &pos);
+  //! set the field format ( for database )
+  void setDatabaseFormats(std::vector<CWStyleManager::CellFormat> const &format);
 protected:
   /** struct which stores a record in CWDbaseContent */
   struct Record {
@@ -135,6 +137,8 @@ protected:
 
   //! a map col id to column
   std::map<int, Column> m_idColumnMap;
+  //! the databse format
+  std::vector<CWStyleManager::CellFormat> m_dbFormatList;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

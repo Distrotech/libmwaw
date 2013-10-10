@@ -1514,7 +1514,7 @@ void MWAWContentListener::_endSubDocument()
 ///////////////////
 // table
 ///////////////////
-void MWAWContentListener::openTable(MWAWTable const &table)
+void MWAWContentListener::openTable(MWAWTable const &table, WPXPropertyList tableExtras)
 {
   if (m_ps->m_isTableOpened) {
     MWAW_DEBUG_MSG(("MWAWContentListener::openTable: called with m_isTableOpened=true\n"));
@@ -1525,7 +1525,7 @@ void MWAWContentListener::openTable(MWAWTable const &table)
     _closeParagraph();
 
   // default value: which can be redefined by table
-  WPXPropertyList propList;
+  WPXPropertyList propList(tableExtras);
   propList.insert("table:align", "left");
   propList.insert("fo:margin-left", *m_ps->m_paragraph.m_margins[1], *m_ps->m_paragraph.m_marginsUnit);
 

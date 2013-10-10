@@ -39,9 +39,10 @@
 
 #include <libwpd/libwpd.h>
 
+#include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
-#include "MWAWFontConverter.hxx"
+#include "MWAWTable.hxx"
 
 #include "CWDbaseContent.hxx"
 #include "CWParser.hxx"
@@ -60,7 +61,7 @@ struct Field {
               F_Checkbox, F_PopupMenu, F_RadioButton, F_ValueList,
               F_Multimedia
             };
-  Field() : m_type(F_Unknown), m_defType(-1), m_name(""), m_default("") {
+  Field() : m_type(F_Unknown), m_defType(-1), m_resType(0), m_name(""), m_default("") {
   }
 
   //! operator<<
@@ -102,6 +103,23 @@ struct Field {
     case F_Unknown :
     default:
       o << "type=#unknown,";
+      break;
+    }
+    switch(field.m_resType) {
+    case 0:
+      o << "text[format],";
+      break;
+    case 1:
+      o << "number[format],";
+      break;
+    case 2:
+      o << "date[format],";
+      break;
+    case 3:
+      o << "time[format],";
+      break;
+    default:
+      o << "##res[format]=" << field.m_resType << ",";
       break;
     }
     o << "'" << field.m_name << "',";
@@ -167,16 +185,24 @@ struct Field {
   }
 
   Type m_type;
+  /** the local definition type */
   int m_defType;
-  std::string m_name, m_default;
+  /** the result type */
+  int m_resType;
+  /** the field name */
+  std::string m_name;
+  /** the default value */
+  std::string m_default;
 };
 
 ////////////////////////////////////////
 ////////////////////////////////////////
 
+//! Internal: the database of a CWDatabase
 struct Database : public CWStruct::DSET {
+  //! constructor
   Database(CWStruct::DSET const &dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_fields() {
+    CWStruct::DSET(dset), m_fields(), m_content() {
   }
 
   //! operator<<
@@ -184,8 +210,10 @@ struct Database : public CWStruct::DSET {
     o << static_cast<CWStruct::DSET const &>(doc);
     return o;
   }
-
+  //! the list of field
   std::vector<Field> m_fields;
+  //! the data
+  shared_ptr<CWDbaseContent> m_content;
 };
 
 ////////////////////////////////////////
@@ -328,8 +356,9 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
   }
   if (ok) {
     pos = input->tell();
-    CWDbaseContent dataParser(m_parserState, m_styleManager, false);
-    ok = dataParser.readContent();
+    shared_ptr<CWDbaseContent> content(new CWDbaseContent(m_parserState, m_styleManager, false));
+    ok = content->readContent();
+    if (ok) databaseZone->m_content=content;
   }
   if (ok) {
     pos = input->tell();
@@ -477,8 +506,9 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
     unsigned long ptr = input->readULong(4);
     if (ptr) // set for formula
       f << "ptr=" << std::hex << ptr << std::dec << ",";
+    field.m_resType=(int) input->readLong(1);
     f << "fl?=[" << std::hex;
-    f << input->readULong(2) << ",";
+    f << input->readULong(1) << ",";
     f << input->readULong(1) << ",";
     for (int j = 0; j < 6; j++) {
       // some int which seems constant on the database...
@@ -619,8 +649,74 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
 
 ////////////////////////////////////////////////////////////
 //
-// Low level
+// send data
 //
 ////////////////////////////////////////////////////////////
+bool CWDatabase::sendDatabase(int zId)
+{
+  if (zId!=1 || !m_mainParser->getHeader() ||
+      m_mainParser->getHeader()->getKind()!=MWAWDocument::K_DATABASE) {
+    MWAW_DEBUG_MSG(("CWDatabase::sendDatabase: sending a database is not implemented\n"));
+    return false;
+  }
 
+  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  if (!listener) {
+    MWAW_DEBUG_MSG(("CWDatabase::sendDatabase: called without any listener\n"));
+    return false;
+  }
+  std::map<int, shared_ptr<CWDatabaseInternal::Database> >::iterator it=
+    m_state->m_databaseMap.find(zId);
+  if (it == m_state->m_databaseMap.end() || !it->second) {
+    MWAW_DEBUG_MSG(("CWDatabase::sendDatabase: can not find zone %d!!!\n", zId));
+    return false;
+  }
+  CWDatabaseInternal::Database &dbase=*it->second;
+  Vec2i minData, maxData;
+  std::vector<int> recordsPos;
+  if (!dbase.m_content || !dbase.m_content->getExtrema(minData,maxData) ||
+      !dbase.m_content->getRecordList(recordsPos)) {
+    MWAW_DEBUG_MSG(("CWDatabase::sendDatabase: can not find content\n"));
+    return false;
+  }
+
+  int numFields = maxData[0]+1>int(dbase.m_fields.size()) ?
+                  maxData[0]+1 : int(dbase.m_fields.size());
+  std::vector<CWStyleManager::CellFormat> formats;
+  formats.resize(size_t(numFields), CWStyleManager::CellFormat());
+  for (size_t f=0; f < dbase.m_fields.size(); ++f) {
+    CWDatabaseInternal::Field const &field=dbase.m_fields[f];
+    // changme
+    if (field.m_type==CWDatabaseInternal::Field::F_Date)
+      formats[f].m_format=5;
+    else if (field.m_type==CWDatabaseInternal::Field::F_Time)
+      formats[f].m_format=12;
+    else if (field.m_resType==2)
+      formats[f].m_format=5;
+    else if (field.m_resType==3)
+      formats[f].m_format=12;
+  }
+  dbase.m_content->setDatabaseFormats(formats);
+
+  std::vector<float> colSize(numFields,72);
+  WPXPropertyList extras;
+  extras.insert("libmwaw:main_database", 1);
+
+  MWAWTable table(MWAWTable::TableDimBit);
+  table.setColsSize(colSize);
+  listener->openTable(table, extras);
+  for (size_t r=0; r < recordsPos.size(); ++r) {
+    listener->openTableRow((float)14, WPX_POINT);
+    for (int c=0; c < numFields; ++c) {
+      MWAWCell cell;
+      cell.setPosition(Vec2i(c,int(r)));
+      listener->openTableCell(cell);
+      dbase.m_content->send(Vec2i(c, recordsPos[r]));
+      listener->closeTableCell();
+    }
+    listener->closeTableRow();
+  }
+  listener->closeTable();
+  return true;
+}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

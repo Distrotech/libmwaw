@@ -284,6 +284,8 @@ bool CWParser::canSendZoneAsGraphic(int zoneId) const
     return m_textParser->canSendTextAsGraphic(zoneId);
   case 2:
     return m_spreadsheetParser->canSendSpreadsheetAsGraphic(zoneId);
+  case 3:
+    return m_databaseParser->canSendDatabaseAsGraphic(zoneId);
   case 4:
     return m_graphParser->canSendBitmapAsGraphic(zoneId);
   default:
@@ -320,8 +322,7 @@ bool CWParser::sendZone(int zoneId, bool asGraphic, MWAWPosition position)
     res = m_spreadsheetParser->sendSpreadsheet(zoneId);
     break;
   case 3:
-    // res=m_databaseParser->sendZone(zoneId);
-    MWAW_DEBUG_MSG(("CWParser::sendZone: sending a database is not implemented\n"));
+    res = m_databaseParser->sendDatabase(zoneId);
     break;
   default:
     MWAW_DEBUG_MSG(("CWParser::sendZone: can not send zone: %d\n", zoneId));
