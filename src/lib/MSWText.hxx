@@ -175,17 +175,19 @@ protected:
   //! prepare the data to be send
   void prepareData();
 
-  //! convert the file position in character position and compute the paragraph limit
-  void convertFilePLCPos();
   //! cut the text in line/cell pos
   void prepareLines();
+  //! convert the file position in character position and compute the paragraph limit
+  void convertFilePLCPos();
   //! retrieve the paragraph properties
   void prepareParagraphProperties();
   //! retrieve the font properties
   void prepareFontProperties();
 
-  //! prepare the table to be send
-  void prepareTables();
+  //! find the table end position knowing the end cell/pos delimiter
+  void prepareTableLimits();
+  //! try to find a table which begin at position cPos, if so, update its data...
+  bool updateTableBeginnningAt(long cPos, long &nextCPos);
 
   //! read a zone which consists in a list of int
   bool readLongZone(MSWEntry &entry, int sz, std::vector<long> &list);

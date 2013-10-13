@@ -1159,7 +1159,7 @@ MWAWBorder getBorder(int val, std::string &extra)
   case 0x80:
     border.m_width = 2;
     break;
-  case 0x180:
+  case 0x180: // checkme: hairline?
     border.m_style = MWAWBorder::Dot;
     break;
   case 0x1c0:
