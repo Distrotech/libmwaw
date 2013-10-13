@@ -6,6 +6,6 @@
 *.rc
 Makefile
 Makefile.in
-mwaw2cvs
-mwaw2cvs.exe
+mwaw2csv
+mwaw2csv.exe
 *.rc
