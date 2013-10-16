@@ -2383,7 +2383,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
       size_t cId;
       Box2f box;
       std::vector<size_t> groupList;
-      int page;
+      int page = 0;
       size_t lastOk=g;
 
       if (st==0 && !mainGroup && canUseGraphic) {
