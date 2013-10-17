@@ -1158,12 +1158,10 @@ void Paragraph::insert(Paragraph const &para, bool insertModif)
       std::vector<float> const &deletedTabs=st==0?para.m_deletedTabs:m_deletedTabs;
       for (size_t i = 0; i < deletedTabs.size(); ++i) {
         float val = deletedTabs[i];
-        bool done = false;
         for (size_t j = 0; j < m_tabs->size(); j++) {
           if (m_tabs.get()[j].m_position < val-1e-3 || m_tabs.get()[j].m_position > val+1e-3)
             continue;
           m_tabs->erase(m_tabs->begin()+int(j));
-          done = true;
           break;
         }
       }
@@ -1240,3 +1238,4 @@ MWAWBorder getBorder(int val, std::string &extra)
 }
 
 }
+// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -98,11 +98,13 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	MWAWResult error=MWAW_OK;
-	try {
+	try
+	{
 		CSVGenerator documentGenerator(output);
 		error = MWAWDocument::parse(&input, &documentGenerator);
 	}
-	catch(...) {
+	catch(...)
+	{
 		fprintf(stderr,"ERROR: exception catched!\n");
 		return 1;
 	}
