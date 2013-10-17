@@ -97,10 +97,15 @@ int main(int argc, char *argv[])
 		fprintf(stderr,"ERROR: not a database/spreadsheet!\n");
 		return 1;
 	}
-
-	CSVGenerator documentGenerator(output);
-	MWAWResult error = MWAWDocument::parse(&input, &documentGenerator);
-
+	MWAWResult error=MWAW_OK;
+	try {
+		CSVGenerator documentGenerator(output);
+		error = MWAWDocument::parse(&input, &documentGenerator);
+	}
+	catch(...) {
+		fprintf(stderr,"ERROR: exception catched!\n");
+		return 1;
+	}
 	if (error == MWAW_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
 	else if (error == MWAW_PARSE_ERROR)

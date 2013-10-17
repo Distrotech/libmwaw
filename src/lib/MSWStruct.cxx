@@ -52,13 +52,13 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
     o << what[i];
     switch(font.m_flags[i].get()) {
     case 0x80:
-      o << "=style";
+      o << "=noStyle";
       break;
     case 0:
       o << "=no";
       break;
     case 0x81:
-      o << "=noStyle";
+      o << "=style";
     case 1:
       break;
     default:
@@ -109,7 +109,7 @@ void Font::updateFontToFinalState(Font const *styleFont)
     int action = m_flags[i].get();
     if (action&0xFF7E) continue;
     bool on = (action&1);
-    if (action&0x80 && styleFont) {
+    if ((action&0x80) && styleFont) {
       bool prev=false;
       if (i==2)
         prev = styleFont->m_font->getStrikeOut().isSet();
@@ -117,7 +117,7 @@ void Font::updateFontToFinalState(Font const *styleFont)
         prev = styleFont->m_font->getUnderline().isSet();
       else
         prev = styleFont->m_font->flags()&fl[i];
-      if (action==0x80)
+      if (action==0x81)
         on = prev;
       else
         on = !prev;
@@ -521,19 +521,16 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
     if (dSz < 2) return false;
     int sz = (int) input->readULong(1);
     if (2+sz > dSz || (sz%2)) return false;
-    f << "tableShadings=[";
     for (int i = 0; i < sz/2; i++) {
-      float gray=1.f-float(input->readULong(2))/10000.f;
-      if (i==0) m_backColor=gray;
-      f << gray << ",";
+      float backColor=1.f-float(input->readULong(2))/10000.f;
+      getCell(i)->m_backColor = backColor;
     }
-    f << "],";
     break;
   }
   case 0x9d: { // table cell shading
     if (dSz < 6) return false;
     val = (int) input->readLong(1); // a small number often 4
-    if (val) f << "backColor[unkn?]=" << val << ",";
+    if (val!=4) f << "backColor[unkn?]=" << val << ",";
     int firstCol = (int) input->readLong(1);
     int lastCol = (int) input->readLong(1);
     if (firstCol < 0 || lastCol < 0 || firstCol+1 > lastCol) {
@@ -547,14 +544,15 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
       getCell(i)->m_backColor = backColor;
     break;
   }
-  case 0xa0: { // mod table dim ?
+  case 0xa0: { // table dimension modifier
     if (dSz < 5) return false;
-    f << "unkn0=[";
-    int firstCol = (int) input->readLong(1);
-    int lastCol = (int) input->readLong(1);
-    if (lastCol < firstCol+1) f << "#";
-    f << "cells=" << firstCol << "<->" << lastCol-1 << ",";
-    f << std::hex << input->readULong(2) << std::dec << "],";
+    int firstCol = (int) input->readULong(1);
+    int lastCol = (int) input->readULong(1);
+    float dim=float(input->readLong(2))/20.0f;
+    f << "col[widthMod" << firstCol << "<->" << lastCol-1 << "]=" << dim<< ",";
+    if (m_columnsWidthMod->size()<=size_t(firstCol))
+      m_columnsWidthMod->resize(size_t(firstCol)+1,-1);
+    (*m_columnsWidthMod)[size_t(firstCol)]=dim;
     break;
   }
   case 0xa3: {
@@ -594,6 +592,38 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
   }
   m_extra += f.str();
   return true;
+}
+
+void Table::insert(Table const &table)
+{
+  m_height.insert(table.m_height);
+  m_justify.insert(table.m_justify);
+  m_indent.insert(table.m_indent);
+  m_columns.insert(table.m_columns);
+  if (table.m_columnsWidthMod.isSet() && !m_columns->empty()
+      && !table.m_columnsWidthMod->empty()) {
+    size_t numCols=m_columns->size();
+    std::vector<float> colWidth(numCols-1,0);
+    for (size_t c=0; c+1<numCols; ++c)
+      colWidth[c]=(*m_columns)[c+1]-(*m_columns)[c];
+    for (size_t c=0; c<table.m_columnsWidthMod->size(); ++c) {
+      if (c+1 >= numCols) break;
+      if (table.m_columnsWidthMod.get()[c]<0) continue;
+      colWidth[c]=table.m_columnsWidthMod.get()[c];
+    }
+    for (size_t c=0; c+1<numCols; ++c)
+      (*m_columns)[c+1]=colWidth[c]+(*m_columns)[c];
+  }
+  size_t tNumCells = table.m_cells.size();
+  if (tNumCells > m_cells.size())
+    m_cells.resize(tNumCells, Variable<Cell>());
+  for (size_t i=0; i < tNumCells; i++) {
+    if (!m_cells[i].isSet())
+      m_cells[i] = table.m_cells[i];
+    else if (table.m_cells[i].isSet())
+      m_cells[i]->insert(*table.m_cells[i]);
+  }
+  m_extra+=table.m_extra;
 }
 
 std::ostream &operator<<(std::ostream &o, Table::Cell const &cell)
@@ -645,7 +675,18 @@ std::ostream &operator<<(std::ostream &o, Table const &table)
     }
   }
   if (table.m_indent.isSet()) o << "indent=" << table.m_indent.get() << ",";
-  if (table.m_backColor.isSet()) o << "backColor=" << *table.m_backColor << ",";
+  if (table.m_columns.isSet() && table.m_columns->size()) {
+    o << "cols=[";
+    for (size_t i = 0; i < table.m_columns->size(); i++)
+      o << table.m_columns.get()[i] << ",";
+    o << "],";
+  }
+  if (table.m_columnsWidthMod.isSet() && table.m_columnsWidthMod->size()) {
+    for (size_t i = 0; i < table.m_columnsWidthMod->size(); i++) {
+      if (table.m_columnsWidthMod.get()[i] >= 0)
+        o << "col" << i << "[width]=" << (*table.m_columnsWidthMod)[i] << ",";
+    }
+  }
   if (table.m_columns->size()) {
     o << "cols=[";
     for (size_t i = 0; i < table.m_columns->size(); i++)
@@ -822,23 +863,36 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     } else if (val)
       f << "#borders=" << val << ",";
     break;
-  case 0xf: { // tabs
+  case 0xf: // tabs
+  case 0x17:  { // tabs
     int sz = (int) input->readULong(1);
     if (sz<2 || 2+sz > dSz) {
       MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: can not read tab\n"));
       return false;
     }
+    int deletedSz=(c==0x17) ? 4 : 2;
     int N0 = (int) input->readULong(1);
-    if (2*N0 > sz) {
+    if (deletedSz*N0 > sz) {
       MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: num of deleted tabs seems odd\n"));
       return false;
     }
     if (N0) {
       for (int i = 0; i < N0; i++)
-        m_deletedTabs->push_back(float(input->readLong(2))/1440.f);
+        m_deletedTabs.push_back(float(input->readLong(2))/1440.f);
+    }
+    if (c==0x17 && N0) {
+      f << "del17=[";
+      for (int i = 0; i < N0; i++) { // always with 0x19 ?
+        val=(int) input->readULong(2);
+        if (val==0x19)
+          f << "_";
+        else
+          f << std::hex << val << std::dec << ",";
+      }
+      f << "],";
     }
     int N = (int) input->readULong(1);
-    if (N*3+2*N0+2 != sz ) {
+    if (N*3+deletedSz*N0+2 != sz ) {
       MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: num tab seems odd\n"));
       f << "#";
       m_extra += f.str();
@@ -902,24 +956,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
   case 0x14: // alignement : 240 normal, 480 : double, ..
     if (dSz < 3) return false;
     val = (int) input->readLong(2);
-    if (!val) {
-      setInterline(1.0, WPX_PERCENT, MWAWParagraph::AtLeast);
-      return true;
-    }
-    if (val < -1440 || val > 1440) {
-      MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: interline spacing seems odd\n"));
-      f << "#interline=" << val << ",";
-      setInterline(1.0, WPX_PERCENT);
-      break;
-    }
-    m_spacingsInterlineUnit = WPX_INCH;
-    if (val > 0) {
-      m_spacingsInterlineType = MWAWParagraph::AtLeast;
-      m_spacings[0] = double(val)/1440.;
-    } else if (val < 0) {
-      m_spacingsInterlineType = MWAWParagraph::Fixed;
-      m_spacings[0] = -double(val)/1440.;
-    }
+    m_interline=double(val)/1440.;
     return true;
   case 0x15: // spacing before DWIPP
   case 0x16: // spacing after DWIPP
@@ -1053,12 +1090,14 @@ std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
 {
   if (ind.m_styleId.isSet())
     o << "styleId[orig]=" << ind.m_styleId.get() << ",";
-  if (ind.m_deletedTabs.isSet()) {
+  if (!ind.m_deletedTabs.empty()) {
     o << "deletedTab=[";
-    for (size_t i = 0; i < ind.m_deletedTabs.get().size(); i++)
-      o << ind.m_deletedTabs.get()[i] << ",";
+    for (size_t i = 0; i < ind.m_deletedTabs.size(); i++)
+      o << ind.m_deletedTabs[i] << ",";
     o << "],";
   }
+  if (ind.m_interline.isSet())
+    o << "interline=" << *ind.m_interline << ",";
   if (ind.m_info.isSet())
     o << "dim=[" << *ind.m_info << "],";
   o << reinterpret_cast<MWAWParagraph const &>(ind);
@@ -1085,28 +1124,54 @@ bool Paragraph::getFont(Font &font, Font const *styleFont) const
   return res;
 }
 
+void Paragraph::updateParagraphToFinalState(Paragraph const *style)
+{
+  if (!m_interline.isSet()) return;
+  double interline=*m_interline;
+  if (interline<-1 || interline>1) {
+    MWAW_DEBUG_MSG(("MSWStruct::Paragraph::updateParagraphToFinalState: interline spacing seems odd\n"));
+    setInterline(1.0, WPX_PERCENT);
+    return;
+  }
+  if (interline>0) {
+    setInterline(interline, WPX_INCH, MWAWParagraph::AtLeast);
+    return;
+  }
+  if (interline<0) {
+    setInterline(-interline, WPX_INCH);
+    return;
+  }
+  // checkme: what to do when m_interline=0, use the style interline or the para info?
+  if (!style || !style->m_interline.isSet())
+    return;
+  interline=*style->m_interline;
+  if (interline>0 && interline <=1)
+    setInterline(interline, WPX_INCH, MWAWParagraph::AtLeast);
+  else if (interline<0 && interline >=-1)
+    setInterline(-interline, WPX_INCH, MWAWParagraph::AtLeast);
+}
+
 void Paragraph::insert(Paragraph const &para, bool insertModif)
 {
-  MWAWParagraph::insert(para);
-  m_styleId.insert(para.m_styleId);
-  if (m_deletedTabs.isSet() && m_tabs.isSet()) {
-    std::vector<float> deletedTabs=*m_deletedTabs;
-    m_deletedTabs->resize(0);
-    m_deletedTabs.setSet(false);
-    for (size_t i = 0; i < deletedTabs.size(); i++) {
-      float val = deletedTabs[i];
-      bool done = false;
-      for (size_t j = 0; j < m_tabs->size(); j++) {
-        if (m_tabs.get()[j].m_position < val-1e-4 || m_tabs.get()[j].m_position > val+1e-4)
-          continue;
-        m_tabs->erase (m_tabs->begin()+int(j));
-        done = true;
-        break;
+  if (m_tabs.isSet()) {
+    for (int st=0; st<2; ++st) {
+      std::vector<float> const &deletedTabs=st==0?para.m_deletedTabs:m_deletedTabs;
+      for (size_t i = 0; i < deletedTabs.size(); ++i) {
+        float val = deletedTabs[i];
+        bool done = false;
+        for (size_t j = 0; j < m_tabs->size(); j++) {
+          if (m_tabs.get()[j].m_position < val-1e-3 || m_tabs.get()[j].m_position > val+1e-3)
+            continue;
+          m_tabs->erase(m_tabs->begin()+int(j));
+          done = true;
+          break;
+        }
       }
-      if (!done)
-        m_deletedTabs->push_back(val);
     }
   }
+  MWAWParagraph::insert(para);
+  m_styleId.insert(para.m_styleId);
+  m_interline.insert(para.m_interline);
   if (para.m_info.isSet() && para.m_info->isLineSet())
     m_info.insert(para.m_info);
   if (!m_font.isSet())
@@ -1159,11 +1224,11 @@ MWAWBorder getBorder(int val, std::string &extra)
   case 0x80:
     border.m_width = 2;
     break;
-  case 0x180: // checkme: hairline?
+  case 0x180:
     border.m_style = MWAWBorder::Dot;
     break;
   case 0x1c0:
-    border.m_style = MWAWBorder::Dash;
+    border.m_width = 0.5;
     break;
   default:
     f << "#bType=" << std::hex << (val & 0x1FF) << std::dec;

@@ -1,7 +1,19 @@
 CHANGES:
 
+10/17/2013:
+- Microsoft Word parser: try to improve the parsings of the character and
+  paragraph properties. This must correct most of the problems concerning the 
+  paragraph properties but only some concerning the character properties.
+
+10/10/2013:
+- AppleWorks/ClarisWorks parser: begin to parse the spreadsheet and
+  database structure + begin to reconstruct a spreadsheet present in a
+  word text document in a table.
+  Create a small tool mwaw2csv to retrieve the main content of a spreadsheet
+  /database AppleWorks/ClarisWorks.
+
 10/07/2013:
-- AppleWorks/ClarisWorks parser : retrieve the patterns, the wallpaper;
+- AppleWorks/ClarisWorks parser: retrieve the patterns, the wallpaper;
   send the reconstructed bitmaps with the good size; retrieve the accross
   pages in a drawing document; try to reconstruct a single picture for a
   group of shape, ...

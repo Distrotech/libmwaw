@@ -365,8 +365,7 @@ bool MSWTextStyles::getParagraph(ZoneType type, int id, MSWStruct::Paragraph &pa
 void MSWTextStyles::sendDefaultParagraph()
 {
   if (!m_parserState->m_listener) return;
-  MSWStruct::Paragraph defPara(version());
-  setProperty(defPara, false);
+  m_parserState->m_listener->setParagraph(MSWStruct::Paragraph(version()));
 }
 
 bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
@@ -387,7 +386,6 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
   int const vers = version();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  int numFonts[2]= {0,0};
   while (long(input->tell()) < endPos) {
     long actPos = input->tell();
     /* 5-16: basic paragraph properties
@@ -405,6 +403,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
     }
     bool done = false;
     long dSz = endPos-actPos;
+    int numFont=0;
     switch(wh) {
     case 0:
       done = (actPos+1==endPos||(dataSz==2 && actPos+2==endPos));
@@ -423,13 +422,8 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
     case 0x4d: {
       if (dSz < 2) break;
       val = (int) input->readLong(1);
-      if (val < 0) {
-        para.m_modFont->m_font->set(MWAWFont::Script::sub100());
-        f << "subScript=" << -val/2 << ",";
-      } else if (val > 0) {
-        para.m_modFont->m_font->set(MWAWFont::Script::super100());
-        f << "superScript=" << val/2 << ",";
-      } else f << "#pos=" << 0 << ",";
+      para.m_modFont->m_font->set(MWAWFont::Script(float(val)/2.f,WPX_POINT));
+      if (val==0) f << "pos[y]=0,";
       done = true;
       break;
     }
@@ -529,28 +523,18 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       break;
     case 0x4e:
     case 0x53: { // same as 4e ( new format )
+      // checkme: sometimes, we can have a list of font, do we need to
+      // use only the last one?
+      if (numFont++)
+        f << "#font" << numFont-1 << "=["
+          << para.m_font->m_font->getDebugString(m_parserState->m_fontConverter)
+          << "," << *para.m_font << "],";
       done = true;
-      bool extra=false;
-      if (wh == 0x4e) {
-        if (numFonts[0]++)
-          extra = true;
-      } else if (numFonts[1]++)
-        extra = true;
-      Variable<MSWStruct::Font> tmp, &font=extra ? tmp : para.m_font;
-      font = MSWStruct::Font();
-      if (!readFont(*font, InParagraphDefinition) || long(input->tell()) > endPos) {
+      para.m_font = MSWStruct::Font();
+      if (!readFont(*para.m_font, InParagraphDefinition) || long(input->tell()) > endPos) {
         done = false;
         f << "#";
         break;
-      } else if (extra) {
-        static bool first=true;
-        if (first) {
-          MWAW_DEBUG_MSG(("MSWTextStyles::readParagraph: find a list of font with unknown meaning...\n"));
-          first = false;
-        }
-        f << "#font";
-        if (wh == 0x53) f << "2";
-        f << "=[" << tmp->m_font->getDebugString(m_parserState->m_fontConverter) << "," << *tmp << "],";
       }
       break;
     }
@@ -562,20 +546,6 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       f << "f5f=[";
       for (int i = 0; i < 4; i++) f << input->readLong(2) << ",";
       f << "],";
-      break;
-    }
-    case 0x17: {
-      // find sz=5,9,12,13,17
-      sz = (int) input->readULong(1);
-      if (!sz || 2+sz > dSz) break;
-      done = true;
-      f << "f" << std::hex << wh << "=[";
-      for (int i = 0; i < sz; i++) {
-        val= (int) input->readULong(1);
-        if (val) f << val << ",";
-        else f << "_,";
-      }
-      f << std::dec << "],";
       break;
     }
     case 0x94: // checkme space between column divided by 2 (in table) ?
@@ -605,15 +575,6 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
   para.m_extra += f.str();
 
   return true;
-}
-
-void MSWTextStyles::setProperty(MSWStruct::Paragraph const &para,
-                                bool recursifCall)
-{
-  if (!m_parserState->m_listener) return;
-  if (para.m_section.isSet() && !recursifCall)
-    setProperty(para.m_section.get());
-  m_parserState->m_listener->setParagraph(para);
 }
 
 ////////////////////////////////////////////////////////////

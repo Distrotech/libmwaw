@@ -71,7 +71,7 @@ struct Font {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Font const &font);
 
-  //! operator==
+  //! a comparison function
   int cmp(Font const &oth) const {
     int diff = m_font.get().cmp(oth.m_font.get());
     if (diff) return diff;
@@ -155,27 +155,11 @@ struct Section {
 struct Table {
   struct Cell;
   //! constructor
-  Table() : m_height(0), m_justify(MWAWParagraph::JustificationLeft), m_indent(0), m_backColor(),
-    m_columns(), m_cells(), m_extra("") {
+  Table() : m_height(0), m_justify(MWAWParagraph::JustificationLeft), m_indent(0),
+    m_columns(), m_columnsWidthMod(), m_cells(), m_extra("") {
   }
   //! insert the new values
-  void insert(Table const &table) {
-    m_height.insert(table.m_height);
-    m_justify.insert(table.m_justify);
-    m_indent.insert(table.m_indent);
-    m_backColor.insert(table.m_backColor);
-    m_columns.insert(table.m_columns);
-    size_t tNumCells = table.m_cells.size();
-    if (tNumCells > m_cells.size())
-      m_cells.resize(tNumCells, Variable<Cell>());
-    for (size_t i=0; i < tNumCells; i++) {
-      if (!m_cells[i].isSet())
-        m_cells[i] = table.m_cells[i];
-      else if (table.m_cells[i].isSet())
-        m_cells[i]->insert(*table.m_cells[i]);
-    }
-    m_extra+=table.m_extra;
-  }
+  void insert(Table const &table);
   //! try to read a data
   bool read(MWAWInputStreamPtr &input, long endPos);
   //! returns the ith Cell
@@ -190,10 +174,10 @@ struct Table {
   Variable<MWAWParagraph::Justification> m_justify;
   //! the indent
   Variable<float> m_indent;
-  /** the table background gray color */
-  Variable<float> m_backColor;
   //! the table columns
   Variable<std::vector<float> > m_columns;
+  //! the columns width modifier
+  Variable<std::vector<float> > m_columnsWidthMod;
   //! the table cells
   std::vector<Variable<Cell> > m_cells;
   /** the errors */
@@ -286,7 +270,7 @@ struct ParagraphInfo {
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph(int version) : MWAWParagraph(), m_version(version), m_styleId(-1000),
-    m_deletedTabs(), m_info(), m_font(), m_modFont(), m_section(),
+    m_interline(0), m_deletedTabs(), m_info(), m_font(), m_modFont(), m_section(),
     m_bordersStyle(), m_inCell(false), m_tableDef(false), m_table() {
     m_tabsRelativeToLeftMargin=false;
   }
@@ -294,6 +278,8 @@ struct Paragraph : public MWAWParagraph {
   void insert(Paragraph const &para, bool insertModif=true);
   //! try to read a data
   bool read(MWAWInputStreamPtr &input, long endPos);
+  //! update the paragraph to obtain the final paragraph
+  void updateParagraphToFinalState(Paragraph const *style=0);
   //! returns the font which correspond to the paragraph if possible
   bool getFont(Font &font, Font const *styleFont=0) const;
   //! returns true if we are in table
@@ -314,8 +300,10 @@ struct Paragraph : public MWAWParagraph {
   int m_version;
   //! the style id (if known)
   Variable<int> m_styleId;
+  //! the interline if set
+  Variable<double> m_interline;
   //! the delete tabulation
-  Variable<std::vector<float> > m_deletedTabs;
+  std::vector<float> m_deletedTabs;
   //! the dimension
   Variable<ParagraphInfo> m_info;
   //! the font

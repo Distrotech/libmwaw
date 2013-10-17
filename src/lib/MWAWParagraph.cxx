@@ -31,6 +31,8 @@
 * instead of those above.
 */
 
+#include <map>
+
 #include <libwpd/libwpd.h>
 
 #include "libmwaw_internal.hxx"
@@ -212,7 +214,19 @@ void MWAWParagraph::insert(MWAWParagraph const &para)
   m_marginsUnit.insert(para.m_marginsUnit);
   m_spacingsInterlineUnit.insert(para.m_spacingsInterlineUnit);
   m_spacingsInterlineType.insert(para.m_spacingsInterlineType);
-  m_tabs.insert(para.m_tabs);
+  if (para.m_tabs.isSet() && m_tabs.isSet()) {
+    std::map<double, MWAWTabStop> all;
+    for (size_t t=0; t <m_tabs->size(); ++t)
+      all[(*m_tabs)[t].m_position]=(*m_tabs)[t];
+    for (size_t t=0; t <para.m_tabs->size(); ++t)
+      all[(*para.m_tabs)[t].m_position]=(*para.m_tabs)[t];
+
+    m_tabs->resize(0);
+    std::map<double, MWAWTabStop>::const_iterator it=all.begin();
+    for ( ; it!=all.end(); ++it)
+      m_tabs->push_back(it->second);
+  } else if (para.m_tabs.isSet())
+    m_tabs=para.m_tabs;
   m_tabsRelativeToLeftMargin.insert(para.m_tabsRelativeToLeftMargin);
   m_justify.insert(para.m_justify);
   m_breakStatus.insert(para.m_breakStatus);

@@ -33,10 +33,12 @@
 
 #include "CSVGenerator.h"
 
-#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <fstream>
+#include <iostream>
 
 #include <libwpd/libwpd.h>
 #include <libwpd-stream/libwpd-stream.h>
@@ -45,7 +47,7 @@
 CSVGenerator::CSVGenerator(char const *fName) : m_output(), m_outputInit(false), m_dataStarted(false), m_firstFieldSend(false)
 {
 	if (!fName) return;
-	m_output.open(fName);
+	m_output.open(fName, std::ios::out|std::ios::binary|std::ios::trunc);
 	if (!m_output.good())
 		throw MWAWResult(MWAW_FILE_ACCESS_ERROR);
 	m_outputInit=true;

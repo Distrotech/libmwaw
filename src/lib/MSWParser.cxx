@@ -848,9 +848,9 @@ bool MSWParser::readHeaderEndV3()
       MWAW_DEBUG_MSG(("MSWParser::readHeaderEndV3: page dimensions seem bad\n"));
     } else {
       getPageSpan().setMarginTop(dim[2]);
-      getPageSpan().setMarginBottom(dim[4]);
       getPageSpan().setMarginLeft(dim[3]);
-      getPageSpan().setMarginRight(dim[5]);
+      getPageSpan().setMarginBottom((dim[4]< 0.5) ? 0.0 : dim[4]-0.5);
+      getPageSpan().setMarginRight((dim[5]< 0.5) ? 0.0 : dim[5]-0.5);
       getPageSpan().setFormLength(dim[0]);
       getPageSpan().setFormWidth(dim[1]);
     }

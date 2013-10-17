@@ -98,9 +98,6 @@ protected:
   //! send a default paragraph
   void sendDefaultParagraph();
 
-  //! send paragraph properties
-  void setProperty(MSWStruct::Paragraph const &para, bool recursifCall=false);
-
   //! read the main char/paragraph plc list
   bool readPLCList(MSWEntry &entry);
   //! read the paragraphs at the beginning of the text structure zone
