@@ -990,13 +990,12 @@ void CWDbaseContent::send(double val, CWStyleManager::CellFormat const &format)
   case 8:
   case 9: { // number of second since 1904
     time_t date= time_t((val-24107+0.4)*24.*3600);
-    struct tm *dateTm = gmtime(&date);
-    if (!dateTm) {
+    struct tm timeinfo;
+    if (!gmtime_r(&date,&timeinfo)) {
       MWAW_DEBUG_MSG(("CWDbaseContent::send: can not convert a date\n"));
       s << "###" << val;
       break;
     }
-    struct tm timeinfo(*dateTm);
     char buf[256];
     static char const *(wh[])= {"%m/%d/%y", "%b %d, %y", "%B %d, %Y", "%a, %b %d, %Y", "%A, %B %d, %Y"};
     strftime(buf, 256, wh[type-5], &timeinfo);

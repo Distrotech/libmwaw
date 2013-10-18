@@ -441,11 +441,12 @@ void MWAWContentListener::insertField(MWAWField const &field)
         format="%I:%M:%S %p";
     }
     time_t now = time ( 0L );
-    struct tm timeinfo = *(localtime ( &now));
-    char buf[256];
-    strftime(buf, 256, format.c_str(), &timeinfo);
-    WPXString tmp(buf);
-    MWAWContentListener::insertUnicodeString(tmp);
+    struct tm timeinfo;
+    if (localtime_r(&now, &timeinfo)) {
+      char buf[256];
+      strftime(buf, 256, format.c_str(), &timeinfo);
+      MWAWContentListener::insertUnicodeString(WPXString(buf));
+    }
     break;
   }
   case MWAWField::Link:

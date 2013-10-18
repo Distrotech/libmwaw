@@ -64,27 +64,32 @@ typedef __int64 int64_t;
 
 #else /* !_MSC_VER && !__DJGPP__*/
 
-#ifdef HAVE_CONFIG_H
+#  ifdef HAVE_CONFIG_H
 
-#include <config.h>
+#    include <config.h>
+#    ifdef HAVE_STDINT_H
+#      include <stdint.h>
+#    endif
+#    ifdef HAVE_INTTYPES_H
+#      include <inttypes.h>
+#    endif
 
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
-
-#ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
-#endif
-
-#else
+#  else
 
 // assume that the headers are there inside LibreOffice build when no HAVE_CONFIG_H is defined
-#include <stdint.h>
-#include <inttypes.h>
+#    include <stdint.h>
+#    include <inttypes.h>
 
-#endif
+#  endif
 
 #endif /* _MSC_VER || __DJGPP__ */
+
+// define gmtime_r and localtime_r on Windows, so that can use
+// thread-safe functions on other environments
+#ifdef _WIN32
+#  define gmtime_r(tp,tmp) ((tmp)?(gmtime(tp)?(*(tmp)=*gmtime(tp),(tmp)):0):gmtime(tp))
+#  define localtime_r(tp,tmp) ((tmp)?(localtime(tp)?(*(tmp)=*localtime(tp),(tmp)):0):localtime(tp))
+#endif
 
 /* ---------- memory  --------------- */
 #if defined(SHAREDPTR_TR1)
