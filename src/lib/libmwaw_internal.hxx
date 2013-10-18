@@ -87,8 +87,8 @@ typedef __int64 int64_t;
 // define gmtime_r and localtime_r on Windows, so that can use
 // thread-safe functions on other environments
 #ifdef _WIN32
-#  define gmtime_r(tp,tmp) ((tmp)?(gmtime(tp)?(*(tmp)=*gmtime(tp),(tmp)):0):gmtime(tp))
-#  define localtime_r(tp,tmp) ((tmp)?(localtime(tp)?(*(tmp)=*localtime(tp),(tmp)):0):localtime(tp))
+#  define gmtime_r(tp,tmp) ((gmtime(tp)?(*(tmp)=*gmtime(tp),(tmp)):0))
+#  define localtime_r(tp,tmp) ((localtime(tp)?(*(tmp)=*localtime(tp),(tmp)):0))
 #endif
 
 /* ---------- memory  --------------- */
