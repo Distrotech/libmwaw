@@ -881,7 +881,7 @@ bool ZWParser::checkHeader(MWAWHeader *header, bool strict)
       return false;
   }
   if (header)
-    header->reset(MWAWDocument::ZWRT, 1);
+    header->reset(MWAWDocument::MWAW_T_ZWRITE, 1);
 
   return true;
 }

@@ -940,7 +940,7 @@ bool ACParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
 
   if (header)
-    header->reset(MWAWDocument::ACT, vers);
+    header->reset(MWAWDocument::MWAW_T_ACTA, vers);
   if (vers >= 3) {
     ascii().addPos(0);
     ascii().addNote(f.str().c_str());

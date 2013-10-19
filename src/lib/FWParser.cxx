@@ -641,7 +641,7 @@ bool FWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   input->seek(0,WPX_SEEK_SET);
 
   if (header)
-    header->reset(MWAWDocument::FULLW, 1);
+    header->reset(MWAWDocument::MWAW_T_FULLWRITE, 1);
 
   return true;
 }

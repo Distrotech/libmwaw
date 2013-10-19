@@ -8,12 +8,11 @@ lib_LTLIBRARIES = libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.la $(target_
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_includedir = $(includedir)/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@/libmwaw
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_include_HEADERS = \
 	$(top_srcdir)/inc/libmwaw/libmwaw.hxx \
-	$(top_srcdir)/inc/libmwaw/MWAWDocument.hxx \
-	$(top_srcdir)/inc/libmwaw/MWAWPropertyHandler.hxx 
+	$(top_srcdir)/inc/libmwaw/MWAWDocument.hxx
 
-AM_CXXFLAGS = -I$(top_srcdir)/inc $(WPD_CFLAGS) $(DEBUG_CXXFLAGS) $(ZLIB_CFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/inc $(WPD_CFLAGS) $(WPG_CFLAGS) $(DEBUG_CXXFLAGS) $(ZLIB_CFLAGS)
 
-libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LIBADD  = $(ZLIB_LIBS) $(WPD_LIBS) @LIBMWAW_WIN32_RESOURCE@
+libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LIBADD  = $(ZLIB_LIBS) $(WPD_LIBS) $(WPG_LIBS) @LIBMWAW_WIN32_RESOURCE@
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_DEPENDENCIES = @LIBMWAW_WIN32_RESOURCE@  
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic  -no-undefined
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
@@ -175,6 +174,7 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWPrinter.cxx			\
 	MWAWPrinter.hxx			\
 	MWAWPropertyHandler.cxx		\
+	MWAWPropertyHandler.hxx		\
 	MWAWRSRCParser.cxx		\
 	MWAWRSRCParser.hxx		\
 	MWAWSection.cxx			\

@@ -701,7 +701,7 @@ bool MWProParser::checkHeader(MWAWHeader *header, bool strict)
 
   // ok, we can finish initialization
   if (header)
-    header->reset(MWAWDocument::MWPRO, version());
+    header->reset(MWAWDocument::MWAW_T_MACWRITEPRO, version());
 
   //
   input->seek(headerSize, WPX_SEEK_SET);

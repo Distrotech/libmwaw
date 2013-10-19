@@ -746,7 +746,7 @@ bool MORParser::checkHeader(MWAWHeader *header, bool strict)
     }
   }
   if (header)
-    header->reset(MWAWDocument::MORE, vers);
+    header->reset(MWAWDocument::MWAW_T_MORE, vers);
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
   return true;

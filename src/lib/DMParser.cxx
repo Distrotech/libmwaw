@@ -696,7 +696,7 @@ bool DMParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   }
   setVersion(vers.m_majorVersion);
   if (header)
-    header->reset(MWAWDocument::DM, version());
+    header->reset(MWAWDocument::MWAW_T_DOCMAKER, version());
 
   return true;
 }

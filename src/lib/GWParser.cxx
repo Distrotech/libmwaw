@@ -913,7 +913,7 @@ bool GWParser::checkHeader(MWAWHeader *header, bool strict)
   ascii().addNote("FileHeader-II:");
 
   if (header)
-    header->reset(MWAWDocument::GW, vers);
+    header->reset(MWAWDocument::MWAW_T_GREATWORKS, vers);
   return true;
 }
 

@@ -958,7 +958,7 @@ bool EDParser::checkHeader(MWAWHeader *header, bool strict)
       return false;
   }
   if (header)
-    header->reset(MWAWDocument::ED, version());
+    header->reset(MWAWDocument::MWAW_T_EDOC, version());
 
   return true;
 }

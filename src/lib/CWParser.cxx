@@ -69,14 +69,14 @@ namespace CWParserInternal
 //! Internal: the state of a CWParser
 struct State {
   //! constructor
-  State() : m_kind(MWAWDocument::K_UNKNOWN), m_pages(0,0), m_EOF(-1L), m_actPage(0), m_numPages(0),
+  State() : m_kind(MWAWDocument::MWAW_K_UNKNOWN), m_pages(0,0), m_EOF(-1L), m_actPage(0), m_numPages(0),
     m_columns(1), m_columnsWidth(), m_columnsSep(),
     m_headerId(0), m_footerId(0), m_headerHeight(0), m_footerHeight(0),
     m_zonesMap(), m_mainZonesList() {
   }
 
   //! the document kind
-  MWAWDocument::DocumentKind m_kind;
+  MWAWDocument::Kind m_kind;
   //! the document number of pages ( if known )
   Vec2i m_pages;
   //! the last position
@@ -622,7 +622,7 @@ void CWParser::typeMainZones()
     }
     listZonesId[type].push_back(id);
   }
-  bool isPres = getHeader() && getHeader()->getKind() == MWAWDocument::K_PRESENTATION;
+  bool isPres = getHeader() && getHeader()->getKind() == MWAWDocument::MWAW_K_PRESENTATION;
   for (int type=CWStruct::DSET::T_Header; type < CWStruct::DSET::T_Slide;  type++) {
     for (size_t z = 0; z < listZonesId[type].size(); z++) {
       int fId = typeMainZonesRec(listZonesId[type][z], CWStruct::DSET::Type(type), 1);
@@ -1062,37 +1062,37 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
   int type = (int) input->readULong(1);
   switch (type) {
   case 0:
-    m_state->m_kind=MWAWDocument::K_DRAW;
+    m_state->m_kind=MWAWDocument::MWAW_K_DRAW;
     break;
   case 1:
-    m_state->m_kind=MWAWDocument::K_TEXT;
+    m_state->m_kind=MWAWDocument::MWAW_K_TEXT;
     break;
   case 2:
-    m_state->m_kind=MWAWDocument::K_SPREADSHEET;
+    m_state->m_kind=MWAWDocument::MWAW_K_SPREADSHEET;
     break;
   case 3:
-    m_state->m_kind=MWAWDocument::K_DATABASE;
+    m_state->m_kind=MWAWDocument::MWAW_K_DATABASE;
     break;
   case 4:
-    m_state->m_kind=MWAWDocument::K_PAINT;
+    m_state->m_kind=MWAWDocument::MWAW_K_PAINT;
     break;
   case 5:
-    m_state->m_kind=MWAWDocument::K_PRESENTATION;
+    m_state->m_kind=MWAWDocument::MWAW_K_PRESENTATION;
     break;
   default:
     MWAW_DEBUG_MSG(("CWParser::checkHeader: unknown type=%d\n", type));
-    m_state->m_kind=MWAWDocument::K_UNKNOWN;
+    m_state->m_kind=MWAWDocument::MWAW_K_UNKNOWN;
     break;
   }
   if (header) {
-    header->reset(MWAWDocument::CW, version());
+    header->reset(MWAWDocument::MWAW_T_CLARISWORKS, version());
     header->setKind(m_state->m_kind);
 #ifdef DEBUG
     if (type >= 0 && type < 5)
-      header->setKind(MWAWDocument::K_TEXT);
+      header->setKind(MWAWDocument::MWAW_K_TEXT);
 #else
     if (type == 0 || type == 4)
-      header->setKind(MWAWDocument::K_TEXT);
+      header->setKind(MWAWDocument::MWAW_K_TEXT);
 #endif
   }
 
@@ -1963,7 +1963,7 @@ bool CWParser::readDocInfo()
   for (int i=0; i < 2; ++i)
     pages[i]=(int) input->readLong(2);
   if (pages[1]>=1 && pages[1] < 1000 &&
-      (pages[0]==1 || (pages[0]>1 && pages[0]<100 && m_state->m_kind == MWAWDocument::K_DRAW)))
+      (pages[0]==1 || (pages[0]>1 && pages[0]<100 && m_state->m_kind == MWAWDocument::MWAW_K_DRAW)))
     m_state->m_pages=Vec2i(pages[0],pages[1]);
   else {
     MWAW_DEBUG_MSG(("CWParser::readDocInfo: the number of pages seems bad\n"));

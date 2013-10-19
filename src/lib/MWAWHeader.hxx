@@ -47,13 +47,13 @@
 class MWAWHeader
 {
 public:
-  typedef enum MWAWDocument::DocumentType DocumentType;
-  typedef enum MWAWDocument::DocumentKind DocumentKind;
+  typedef enum MWAWDocument::Type Type;
+  typedef enum MWAWDocument::Kind Kind;
 
 
   //! constructor given the input
-  MWAWHeader(MWAWDocument::DocumentType type=MWAWDocument::UNKNOWN, int vers=0,
-             DocumentKind kind = MWAWDocument::K_TEXT);
+  MWAWHeader(MWAWDocument::Type type=MWAWDocument::MWAW_T_UNKNOWN, int vers=0,
+             Kind kind = MWAWDocument::MWAW_K_TEXT);
   //! destructor
   virtual ~MWAWHeader();
 
@@ -65,8 +65,7 @@ public:
   (MWAWInputStreamPtr input, shared_ptr<MWAWRSRCParser> rsrcParser);
 
   //! resets the data
-  void reset(MWAWDocument::DocumentType type, int vers,
-             DocumentKind kind = MWAWDocument::K_TEXT) {
+  void reset(MWAWDocument::Type type, int vers, Kind kind = MWAWDocument::MWAW_K_TEXT) {
     m_docType = type;
     m_version = vers;
     m_docKind = kind;
@@ -82,20 +81,20 @@ public:
   }
 
   //! returns the document type
-  DocumentType getType() const {
+  Type getType() const {
     return m_docType;
   }
   //! sets the document type
-  void setType(DocumentType type) {
+  void setType(Type type) {
     m_docType = type;
   }
 
   //! returns the document kind
-  DocumentKind getKind() const {
+  Kind getKind() const {
     return m_docKind;
   }
   //! sets the document kind
-  void setKind(DocumentKind kind) {
+  void setKind(Kind kind) {
     m_docKind = kind;
   }
 
@@ -103,9 +102,9 @@ private:
   /** the document version */
   int m_version;
   /** the document type */
-  DocumentType m_docType;
+  Type m_docType;
   /** the document kind */
-  DocumentKind m_docKind;
+  Kind m_docKind;
 };
 
 #endif /* MWAWHEADER_H */

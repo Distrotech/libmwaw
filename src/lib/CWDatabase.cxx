@@ -655,7 +655,7 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
 bool CWDatabase::sendDatabase(int zId)
 {
   if (zId!=1 || !m_mainParser->getHeader() ||
-      m_mainParser->getHeader()->getKind()!=MWAWDocument::K_DATABASE) {
+      m_mainParser->getHeader()->getKind()!=MWAWDocument::MWAW_K_DATABASE) {
     MWAW_DEBUG_MSG(("CWDatabase::sendDatabase: sending a database is not implemented\n"));
     return false;
   }

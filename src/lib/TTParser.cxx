@@ -59,11 +59,11 @@ namespace TTParserInternal
 //! Internal: the state of a TTParser
 struct State {
   //! constructor
-  State() : m_type(MWAWDocument::UNKNOWN), m_posFontMap(), m_idPictEntryMap(), m_numberSpacesForTab(0),
+  State() : m_type(MWAWDocument::MWAW_T_UNKNOWN), m_posFontMap(), m_idPictEntryMap(), m_numberSpacesForTab(0),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
   }
   //! the file type
-  MWAWDocument::DocumentType m_type;
+  MWAWDocument::Type m_type;
   //! the map of id -> font
   std::map<long, MWAWFont > m_posFontMap;
   //! a map id->pictEntry
@@ -245,7 +245,7 @@ int TTParser::computeNumPages() const
   MWAWInputStreamPtr input = const_cast<TTParser *>(this)->getInput();
   input->seek(0, WPX_SEEK_SET);
   int nPages=1;
-  int pageBreakChar=(m_state->m_type==MWAWDocument::TEDIT) ? 0xc : 0;
+  int pageBreakChar=(m_state->m_type==MWAWDocument::MWAW_T_TEXEDIT) ? 0xc : 0;
 
   while(!input->atEOS()) {
     if (input->readLong(1)==pageBreakChar)
@@ -270,7 +270,7 @@ bool TTParser::sendText()
 
   std::map<long, MWAWFont >::const_iterator fontIt;
   int nPict=0;
-  unsigned char pageBreakChar=(m_state->m_type==MWAWDocument::TEDIT) ? 0xc : 0;
+  unsigned char pageBreakChar=(m_state->m_type==MWAWDocument::MWAW_T_TEXEDIT) ? 0xc : 0;
 
   int actPage=1;
   long endPos = input->size();
@@ -296,7 +296,7 @@ bool TTParser::sendText()
       newPage(++actPage);
       continue;
     }
-    if (c==0 && m_state->m_type==MWAWDocument::TEDIT && !isEnd) {
+    if (c==0 && m_state->m_type==MWAWDocument::MWAW_T_TEXEDIT && !isEnd) {
       // tex-edit accept control character, ...
       unsigned char nextC=(unsigned char) input->readULong(1);
       if (nextC < 0x20) {
@@ -496,15 +496,15 @@ bool TTParser::checkHeader(MWAWHeader *header, bool strict)
   std::string type, creator;
   if (!input->getFinderInfo(type, creator))
     return false;
-  MWAWDocument::DocumentType fileType(MWAWDocument::UNKNOWN);
+  MWAWDocument::Type fileType(MWAWDocument::MWAW_T_UNKNOWN);
   if (creator=="ttxt") {
-    fileType=MWAWDocument::TEACH;
+    fileType=MWAWDocument::MWAW_T_TEACHTEXT;
     m_state->m_numberSpacesForTab=2;
   } else if (creator=="TBB5")
-    fileType=MWAWDocument::TEDIT;
+    fileType=MWAWDocument::MWAW_T_TEXEDIT;
   else
     return false;
-  if (strict && fileType==MWAWDocument::TEACH && type!="ttro") {
+  if (strict && fileType==MWAWDocument::MWAW_T_TEACHTEXT && type!="ttro") {
     /** visibly, some other applications can create ttxt file,
     so check that we have at least a styl rsrc or a PICT */
     MWAWEntry entry = getRSRCParser()->getEntry("styl", 128);

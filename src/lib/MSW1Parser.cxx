@@ -1414,7 +1414,7 @@ bool MSW1Parser::checkHeader(MWAWHeader *header, bool strict)
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   if (header)
-    header->reset(MWAWDocument::MSWORD, 1);
+    header->reset(MWAWDocument::MWAW_T_MICROSOFTWORD, 1);
   return true;
 }
 

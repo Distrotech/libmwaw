@@ -761,7 +761,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
     if (!readHeaderEndV3())
       return false;
     if (header)
-      header->reset(MWAWDocument::MSWORD, vers);
+      header->reset(MWAWDocument::MWAW_T_MICROSOFTWORD, vers);
     return true;
   }
 
@@ -794,7 +794,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
 
   // ok, we can finish initialization
   if (header)
-    header->reset(MWAWDocument::MSWORD, vers);
+    header->reset(MWAWDocument::MWAW_T_MICROSOFTWORD, vers);
 
   if (long(input->tell()) != headerSize)
     ascii().addDelimiter(input->tell(), '|');

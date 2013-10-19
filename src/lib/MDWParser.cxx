@@ -1378,7 +1378,7 @@ bool MDWParser::checkHeader(MWAWHeader *header, bool strict)
   if (input->readULong(2) != 0x7704)
     return false;
   if (header)
-    header->reset(MWAWDocument::MINDW, 2);
+    header->reset(MWAWDocument::MWAW_T_MINDWRITE, 2);
 
   f << "Entries(Header):";
   for (int i = 0; i < 3; i++)

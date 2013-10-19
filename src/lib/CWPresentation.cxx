@@ -102,7 +102,7 @@ int CWPresentation::version() const
 int CWPresentation::numPages() const
 {
   if (!m_mainParser->getHeader() ||
-      m_mainParser->getHeader()->getKind()!=MWAWDocument::K_PRESENTATION ||
+      m_mainParser->getHeader()->getKind()!=MWAWDocument::MWAW_K_PRESENTATION ||
       m_state->m_presentationMap.find(1) == m_state->m_presentationMap.end())
     return 1;
   return int(m_state->m_presentationMap.find(1)->second->m_zoneIdList.size());

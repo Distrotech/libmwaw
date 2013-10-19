@@ -1116,7 +1116,7 @@ bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
 
   input->seek(m_state->m_zonesListBegin, WPX_SEEK_SET);
   if (header)
-    header->reset(MWAWDocument::HMACJ, 1);
+    header->reset(MWAWDocument::MWAW_T_HANMACWORDJ, 1);
 
   return true;
 }

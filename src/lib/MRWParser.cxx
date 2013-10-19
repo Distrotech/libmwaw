@@ -1488,7 +1488,7 @@ bool MRWParser::checkHeader(MWAWHeader *header, bool strict)
 
   input->seek(0, WPX_SEEK_SET);
   if (header)
-    header->reset(MWAWDocument::MARIW, 1);
+    header->reset(MWAWDocument::MWAW_T_MARINERWRITE, 1);
 
   return true;
 }

@@ -409,7 +409,7 @@ HtmlDocumentGenerator::HtmlDocumentGenerator(char const *fName) :
 	{
 		shared_ptr<std::ofstream> file(new std::ofstream(fName));
 		if (!file->good())
-			throw MWAWResult(MWAW_FILE_ACCESS_ERROR);
+			throw MWAWDocument::Result(MWAWDocument::MWAW_R_FILE_ACCESS_ERROR);
 		m_output=file;
 	}
 	m_state.reset(new HtmlDocumentGeneratorInternal::State());

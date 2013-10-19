@@ -44,6 +44,8 @@
 
 #include "libmwaw_internal.hxx"
 
+#include "MWAWPropertyHandler.hxx"
+
 #include "MWAWGraphicInterface.hxx"
 
 //! a name space used to define internal data of MWAWGraphicInterface

@@ -687,7 +687,7 @@ bool MCDParser::checkHeader(MWAWHeader *header, bool strict)
       return false;
   }
   if (header)
-    header->reset(MWAWDocument::MACD, version());
+    header->reset(MWAWDocument::MWAW_T_MACDOC, version());
 
   return true;
 }

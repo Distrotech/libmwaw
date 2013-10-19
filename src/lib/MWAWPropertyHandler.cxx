@@ -45,6 +45,8 @@
 #include <libwpd-stream/libwpd-stream.h>
 #include <libmwaw/libmwaw.hxx>
 
+#include "MWAWPropertyHandler.hxx"
+
 ////////////////////////////////////////////////////
 //
 // MWAWPropertyHandlerEncoder

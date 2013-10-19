@@ -812,7 +812,7 @@ bool LWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
     return false;
   }
   if (header)
-    header->reset(MWAWDocument::LWTEXT, 1);
+    header->reset(MWAWDocument::MWAW_T_LIGHTWAYTEXT, 1);
 
   return true;
 }

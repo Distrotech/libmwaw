@@ -1,5 +1,10 @@
 CHANGES:
 
+10/19/2013:
+- switch to version 0.2: simplify the interface to retrieve graphic created
+  by libmwaw, add possibility to manage password in some near futur, try
+  to make all enum more meaningfy.
+
 10/17/2013:
 - Microsoft Word parser: try to improve the parsings of the character and
   paragraph properties. This must correct most of the problems concerning the 
@@ -68,7 +73,7 @@ CHANGES:
   graphics with pattern, gradient background and to render a group of simple
   shapes and text in one graphic (when possible)
 
--------- version 1.12 (start)  -------------
+============== end of version 0.1. =================
 
 07/31/2013:
 - recognize more WriteNow 1.0 files
@@ -312,7 +317,7 @@ CHANGES:
 - rename all the files to simplify the hierarchy,
   which implies a major version bump:-~,
 
-============== end of version 0. =================
+============== end of version 0.0. =================
 04/14/2012: 
 - add Microsoft Works 1.0, 2.0 parser
 - add a crude parser for FullWrite Professional

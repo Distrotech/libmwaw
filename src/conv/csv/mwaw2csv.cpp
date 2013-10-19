@@ -79,45 +79,49 @@ int main(int argc, char *argv[])
 	file=argv[optind];
 	WPXFileStream input(file);
 
-	MWAWDocument::DocumentType type;
-	MWAWDocument::DocumentKind kind;
-	MWAWConfidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
-	if (confidence == MWAW_CONFIDENCE_NONE)
+	MWAWDocument::Type type;
+	MWAWDocument::Kind kind;
+	MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
+	if (confidence != MWAWDocument::MWAW_C_EXCELLENT)
 	{
 		fprintf(stderr,"ERROR: Unsupported file format!\n");
 		return 1;
 	}
-	if (type != MWAWDocument::CW)
+	if (type != MWAWDocument::MWAW_T_CLARISWORKS)
 	{
 		fprintf(stderr,"ERROR: not a AppleWorks/ClarisWorks document!\n");
 		return 1;
 	}
-	if (kind != MWAWDocument::K_SPREADSHEET && kind != MWAWDocument::K_DATABASE)
+	if (kind != MWAWDocument::MWAW_K_SPREADSHEET && kind != MWAWDocument::MWAW_K_DATABASE)
 	{
 		fprintf(stderr,"ERROR: not a database/spreadsheet!\n");
 		return 1;
 	}
-	MWAWResult error=MWAW_OK;
+	MWAWDocument::Result error=MWAWDocument::MWAW_R_OK;
 	try
 	{
 		CSVGenerator documentGenerator(output);
 		error = MWAWDocument::parse(&input, &documentGenerator);
 	}
+	catch(MWAWDocument::Result err)
+	{
+		error=err;
+	}
 	catch(...)
 	{
-		fprintf(stderr,"ERROR: exception catched!\n");
+		error=MWAWDocument::MWAW_R_UNKNOWN_ERROR;
 		return 1;
 	}
-	if (error == MWAW_FILE_ACCESS_ERROR)
+	if (error == MWAWDocument::MWAW_R_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
-	else if (error == MWAW_PARSE_ERROR)
+	else if (error == MWAWDocument::MWAW_R_PARSE_ERROR)
 		fprintf(stderr, "ERROR: Parse Exception!\n");
-	else if (error == MWAW_OLE_ERROR)
+	else if (error == MWAWDocument::MWAW_R_OLE_ERROR)
 		fprintf(stderr, "ERROR: File is an OLE document!\n");
-	else if (error != MWAW_OK)
+	else if (error != MWAWDocument::MWAW_R_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
 
-	if (error != MWAW_OK)
+	if (error != MWAWDocument::MWAW_R_OK)
 		return 1;
 
 	return 0;

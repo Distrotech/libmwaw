@@ -944,7 +944,7 @@ bool BWParser::checkHeader(MWAWHeader *header, bool strict)
   setVersion(1);
 
   if (header)
-    header->reset(MWAWDocument::BW, 1);
+    header->reset(MWAWDocument::MWAW_T_BEAGLEWORKS, 1);
 
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());

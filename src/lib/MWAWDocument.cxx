@@ -31,8 +31,11 @@
 * instead of those above.
 */
 
+#include <libwpg/libwpg.h>
+
 #include "MWAWHeader.hxx"
 #include "MWAWParser.hxx"
+#include "MWAWPropertyHandler.hxx"
 #include "MWAWRSRCParser.hxx"
 
 #include <libmwaw/libmwaw.hxx>
@@ -63,11 +66,48 @@
 #include "WPParser.hxx"
 #include "ZWParser.hxx"
 
+/** small namespace use to define private class/method used by MWAWDocument */
 namespace MWAWDocumentInternal
 {
 shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
 MWAWHeader *getHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, bool strict);
 bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader &header, bool strict);
+
+/** Small class used to interface a graphic reconstruction */
+class GraphicExporter : public MWAWPropertyHandler
+{
+public:
+  /** constructor */
+  GraphicExporter(libwpg::WPGPaintInterface *output) : MWAWPropertyHandler(), m_output(output) { }
+  /** destructor */
+  ~GraphicExporter() {};
+
+  /** start an element (basic) */
+  void startElement(const char *psName, const WPXPropertyList &xPropList);
+  /** start an element ( with a WPXPropertyListVector parameter ) */
+  void startElement(const char *psName, const WPXPropertyList &xPropList,
+                    const WPXPropertyListVector &vector);
+  /** start an element ( with a WPXBinary parameter ) */
+  void startElement(const char *psName, const WPXPropertyList &xPropList,
+                    const WPXBinaryData &data);
+  /** end an element */
+  void endElement(const char *psName);
+  /** insert an element */
+  void insertElement(const char *) {
+    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: must be reimplement in subclass\n"));
+  }
+  /** insert a sequence of character */
+  void characters(const WPXString &sCharacters) {
+    if (!m_output) return;
+    m_output->insertText(sCharacters);
+  }
+private:
+  GraphicExporter(GraphicExporter const &);
+  GraphicExporter operator=(GraphicExporter const &);
+  /** the interface output */
+  libwpg::WPGPaintInterface *m_output;
+};
+
 }
 
 /**
@@ -78,16 +118,10 @@ documentation.
 \section api_docs libmwaw API documentation
 
 The external libmwaw API is provided by the MWAWDocument class. This
-class with MWAWPropertyHandler, combined with the libwpd's
-WPXDocumentInterface class are the only three classes that will be of
+class, combined with the libwpd's WPXDocumentInterface class and libwpg's
+WPGPaintInterface are the only three classes that will be of
 interest for the application programmer using libmwaw.
 
-- The class MWAWPropertyHandler is a small class which can decode the
- internal encoded format used to export odg's data. Then the encoded object
- is send via WPXDocumentInterface::insertBinaryObject with
- "libwpd:mimetype"="image/mwaw-odg" ( or "libwpd:mimetype"="image/mwaw-odg2", ...)
- In this case, MWAWPropertyHandler can be used to decode the data which is an encoded
- odg picture.
 
 \section lib_docs libmwaw documentation
 If you are interrested in the structure of libmwaw itself, this whole document
@@ -95,7 +129,12 @@ would be a good starting point for exploring the interals of libmwaw. Mind that
 this document is a work-in-progress, and will most likely not cover libmwaw for
 the full 100%.
 
-\warning When compiled with -DDEBUG_WITH__FILES, code is added to store the results of the parsing in different files: one file by Ole parts ( or sometimes to reconstruct a part of file which is stored discontinuously ) and some files to store the read pictures. These files are created in the current repository, therefore it is recommended to launch the tests in a empty repository...
+\warning When compiled with -DDEBUG_WITH__FILES, code is added to
+store the results of the parsing in different files: one file by Ole
+parts ( or sometimes to reconstruct a part of file which is stored
+discontinuously ) and some files to store the read pictures. These
+files are created in the current repository, therefore it is
+recommended to launch the tests in a empty repository...
 */
 
 /**
@@ -106,14 +145,14 @@ Analyzes the content of an input stream to see if it can be parsed
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
-MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWDocument::DocumentType &type, DocumentKind &kind)
+MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWDocument::Type &type, Kind &kind)
 {
-  type = UNKNOWN;
-  kind = K_UNKNOWN;
+  type = MWAW_T_UNKNOWN;
+  kind = MWAW_K_UNKNOWN;
 
   if (!input) {
     MWAW_DEBUG_MSG(("MWAWDocument::isFileFormatSupported(): no input\n"));
-    return MWAW_CONFIDENCE_NONE;
+    return MWAW_C_NONE;
   }
 
   try {
@@ -131,63 +170,64 @@ MWAWConfidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWD
 #endif
 
     if (!header.get())
-      return MWAW_CONFIDENCE_NONE;
-    type = (MWAWDocument::DocumentType)header->getType();
-    kind = (MWAWDocument::DocumentKind)header->getKind();
-    MWAWConfidence confidence = MWAW_CONFIDENCE_NONE;
+      return MWAW_C_NONE;
+    type = (MWAWDocument::Type)header->getType();
+    kind = (MWAWDocument::Kind)header->getKind();
+    Confidence confidence = MWAW_C_NONE;
 
     switch (type) {
-    case ACT:
-    case BW:
-    case CW:
-    case DM:
-    case ED:
-    case FULLW:
-    case GW:
-    case HMAC:
-    case HMACJ:
-    case LWTEXT:
-    case MACD:
-    case MARIW:
-    case MINDW:
-    case MORE:
-    case MSWORD:
-    case MSWORKS:
-    case MW:
-    case MWPRO:
-    case NISUSW:
-    case TEACH:
-    case TEDIT:
-    case WNOW:
-    case WPLUS:
-    case ZWRT:
-      confidence = MWAW_CONFIDENCE_GOOD;
+    case MWAW_T_ACTA:
+    case MWAW_T_BEAGLEWORKS:
+    case MWAW_T_CLARISWORKS:
+    case MWAW_T_DOCMAKER:
+    case MWAW_T_EDOC:
+    case MWAW_T_FULLWRITE:
+    case MWAW_T_GREATWORKS:
+    case MWAW_T_HANMACWORDJ:
+    case MWAW_T_HANMACWORDK:
+    case MWAW_T_LIGHTWAYTEXT:
+    case MWAW_T_MACDOC:
+    case MWAW_T_MACWRITE:
+    case MWAW_T_MACWRITEPRO:
+    case MWAW_T_MARINERWRITE:
+    case MWAW_T_MINDWRITE:
+    case MWAW_T_MORE:
+    case MWAW_T_MICROSOFTWORD:
+    case MWAW_T_MICROSOFTWORKS:
+    case MWAW_T_NISUSWRITER:
+    case MWAW_T_TEACHTEXT:
+    case MWAW_T_TEXEDIT:
+    case MWAW_T_WRITENOW:
+    case MWAW_T_WRITERPLUS:
+    case MWAW_T_ZWRITE:
+      confidence = MWAW_C_EXCELLENT;
       break;
-    case FRM:
-    case MOCKP:
-    case PAGEMK:
-    case RSG:
-    case RGTIME:
-    case XP:
-    case RESERVED1:
-    case RESERVED2:
-    case RESERVED3:
-    case RESERVED4:
-    case RESERVED5:
-    case RESERVED6:
-    case RESERVED7:
-    case RESERVED8:
-    case RESERVED9:
-    case UNKNOWN:
+    case MWAW_T_FRAMEMAKER:
+    case MWAW_T_MACDRAW:
+    case MWAW_T_MACPAINT:
+    case MWAW_T_PAGEMAKER:
+    case MWAW_T_READYSETGO:
+    case MWAW_T_RAGTIME:
+    case MWAW_T_XPRESS:
+    case MWAW_T_RESERVED1:
+    case MWAW_T_RESERVED2:
+    case MWAW_T_RESERVED3:
+    case MWAW_T_RESERVED4:
+    case MWAW_T_RESERVED5:
+    case MWAW_T_RESERVED6:
+    case MWAW_T_RESERVED7:
+    case MWAW_T_RESERVED8:
+    case MWAW_T_RESERVED9:
+    case MWAW_T_UNKNOWN:
     default:
       break;
     }
 
     return confidence;
   } catch (...) {
-    type = UNKNOWN;
-    kind = K_UNKNOWN;
-    return MWAW_CONFIDENCE_NONE;
+    type = MWAW_T_UNKNOWN;
+    kind = MWAW_K_UNKNOWN;
+    return MWAW_C_NONE;
   }
 }
 
@@ -198,11 +238,11 @@ WPXDocumentInterface class implementation when needed. This is often commonly ca
 \param input The input stream
 \param documentInterface A MWAWListener implementation
 */
-MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *documentInterface)
+MWAWDocument::Result MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *documentInterface, char const */*password*/)
 {
   if (!input)
-    return MWAW_UNKNOWN_ERROR;
-  MWAWResult error = MWAW_OK;
+    return MWAW_R_UNKNOWN_ERROR;
+  Result error = MWAW_R_OK;
 
   try {
     MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
@@ -215,24 +255,49 @@ MWAWResult MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *docu
     }
     shared_ptr<MWAWHeader> header(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
 
-    if (!header.get()) return MWAW_UNKNOWN_ERROR;
+    if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
 
     shared_ptr<MWAWParser> parser=MWAWDocumentInternal::getParserFromHeader(ip, rsrcParser, header.get());
-    if (!parser) return MWAW_UNKNOWN_ERROR;
+    if (!parser) return MWAW_R_UNKNOWN_ERROR;
     parser->parse(documentInterface);
   } catch (libmwaw::FileException) {
     MWAW_DEBUG_MSG(("File exception trapped\n"));
-    error = MWAW_FILE_ACCESS_ERROR;
+    error = MWAW_R_FILE_ACCESS_ERROR;
   } catch (libmwaw::ParseException) {
     MWAW_DEBUG_MSG(("Parse exception trapped\n"));
-    error = MWAW_PARSE_ERROR;
+    error = MWAW_R_PARSE_ERROR;
   } catch (...) {
     //fixme: too generic
     MWAW_DEBUG_MSG(("Unknown exception trapped\n"));
-    error = MWAW_UNKNOWN_ERROR;
+    error = MWAW_R_UNKNOWN_ERROR;
   }
 
   return error;
+}
+
+/** parse the graphic contained in the binary data and called paintInterface to reconstruct
+    a graphic. The input is normally send to a WPXDocumentInterface with mimeType="image/mwaw-odg",
+    ie. it must correspond to a picture created by the MWAWGraphicInterface class via
+    a MWAWPropertyEncoder.
+
+   \param binary a list of WPGPaintInterface stored in a paintInterface,
+   \param paintInterface the paint interface which will convert the graphic is some specific format
+   (ODG, SVG, ...)
+*/
+bool MWAWDocument::decodeGraphic(WPXBinaryData const &binary, libwpg::WPGPaintInterface *paintInterface)
+{
+  if (!paintInterface || !binary.size()) {
+    MWAW_DEBUG_MSG(("MWAWDocument::decodeGraphic: called with no data or no converter\n"));
+    return false;
+  }
+  MWAWDocumentInternal::GraphicExporter tmpHandler(paintInterface);
+  try {
+    if (!tmpHandler.checkData(binary) || !tmpHandler.readData(binary)) return false;
+  } catch(...) {
+    MWAW_DEBUG_MSG(("MWAWDocument::decodeGraphic: unknown error\n"));
+    return false;
+  }
+  return true;
 }
 
 /** structure used to hide some functions needed by MWAWDocument (basically to check if the file is really supported). */
@@ -285,100 +350,101 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
     return parser;
   try {
     switch(header->getType()) {
-    case MWAWDocument::ACT:
+    case MWAWDocument::MWAW_T_ACTA:
       parser.reset(new ACParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::BW:
+    case MWAWDocument::MWAW_T_BEAGLEWORKS:
       parser.reset(new BWParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::CW:
+    case MWAWDocument::MWAW_T_CLARISWORKS:
       parser.reset(new CWParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::DM:
+    case MWAWDocument::MWAW_T_DOCMAKER:
       parser.reset(new DMParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::ED:
+    case MWAWDocument::MWAW_T_EDOC:
       parser.reset(new EDParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::FULLW:
+    case MWAWDocument::MWAW_T_FULLWRITE:
       parser.reset(new FWParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::GW:
+    case MWAWDocument::MWAW_T_GREATWORKS:
       parser.reset(new GWParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::HMAC:
-      parser.reset(new HMWKParser(input, rsrcParser, header));
-      break;
-    case MWAWDocument::HMACJ:
+    case MWAWDocument::MWAW_T_HANMACWORDJ:
       parser.reset(new HMWJParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::LWTEXT:
+    case MWAWDocument::MWAW_T_HANMACWORDK:
+      parser.reset(new HMWKParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MWAW_T_LIGHTWAYTEXT:
       parser.reset(new LWParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::MACD:
+    case MWAWDocument::MWAW_T_MACDOC:
       parser.reset(new MCDParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::MARIW:
+    case MWAWDocument::MWAW_T_MACWRITE:
+      parser.reset(new MWParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MWAW_T_MACWRITEPRO:
+      parser.reset(new MWProParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MWAW_T_MARINERWRITE:
       parser.reset(new MRWParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::MINDW:
+    case MWAWDocument::MWAW_T_MINDWRITE:
       parser.reset(new MDWParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::MORE:
+    case MWAWDocument::MWAW_T_MORE:
       parser.reset(new MORParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::MSWORD:
+    case MWAWDocument::MWAW_T_MICROSOFTWORD:
       if (header->getMajorVersion()==1)
         parser.reset(new MSW1Parser(input, rsrcParser, header));
       else
         parser.reset(new MSWParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::MSWORKS:
+    case MWAWDocument::MWAW_T_MICROSOFTWORKS:
       if (header->getMajorVersion() < 100)
         parser.reset(new MSK3Parser(input, rsrcParser, header));
       else
         parser.reset(new MSK4Parser(input, rsrcParser, header));
       break;
-    case MWAWDocument::MW:
-      parser.reset(new MWParser(input, rsrcParser, header));
-      break;
-    case MWAWDocument::MWPRO:
-      parser.reset(new MWProParser(input, rsrcParser, header));
-      break;
-    case MWAWDocument::NISUSW:
+    case MWAWDocument::MWAW_T_NISUSWRITER:
       parser.reset(new NSParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::TEACH:
-    case MWAWDocument::TEDIT:
+    case MWAWDocument::MWAW_T_TEACHTEXT:
+    case MWAWDocument::MWAW_T_TEXEDIT:
       parser.reset(new TTParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::WNOW:
+    case MWAWDocument::MWAW_T_WRITENOW:
       parser.reset(new WNParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::WPLUS:
+    case MWAWDocument::MWAW_T_WRITERPLUS:
       parser.reset(new WPParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::ZWRT:
+    case MWAWDocument::MWAW_T_ZWRITE:
       parser.reset(new ZWParser(input, rsrcParser, header));
       break;
 
-    case MWAWDocument::FRM:
-    case MWAWDocument::MOCKP:
-    case MWAWDocument::PAGEMK:
-    case MWAWDocument::RSG:
-    case MWAWDocument::RGTIME:
-    case MWAWDocument::XP:
+    case MWAWDocument::MWAW_T_FRAMEMAKER:
+    case MWAWDocument::MWAW_T_MACDRAW:
+    case MWAWDocument::MWAW_T_MACPAINT:
+    case MWAWDocument::MWAW_T_PAGEMAKER:
+    case MWAWDocument::MWAW_T_READYSETGO:
+    case MWAWDocument::MWAW_T_RAGTIME:
+    case MWAWDocument::MWAW_T_XPRESS:
 
-    case MWAWDocument::RESERVED1:
-    case MWAWDocument::RESERVED2:
-    case MWAWDocument::RESERVED3:
-    case MWAWDocument::RESERVED4:
-    case MWAWDocument::RESERVED5:
-    case MWAWDocument::RESERVED6:
-    case MWAWDocument::RESERVED7:
-    case MWAWDocument::RESERVED8:
-    case MWAWDocument::RESERVED9:
-    case MWAWDocument::UNKNOWN:
+    case MWAWDocument::MWAW_T_RESERVED1:
+    case MWAWDocument::MWAW_T_RESERVED2:
+    case MWAWDocument::MWAW_T_RESERVED3:
+    case MWAWDocument::MWAW_T_RESERVED4:
+    case MWAWDocument::MWAW_T_RESERVED5:
+    case MWAWDocument::MWAW_T_RESERVED6:
+    case MWAWDocument::MWAW_T_RESERVED7:
+    case MWAWDocument::MWAW_T_RESERVED8:
+    case MWAWDocument::MWAW_T_RESERVED9:
+    case MWAWDocument::MWAW_T_UNKNOWN:
     default:
       break;
     }
@@ -400,5 +466,113 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
 
   return false;
 }
+
+////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////
+void GraphicExporter::startElement(const char *psName, const WPXPropertyList &propList)
+{
+  if (!m_output) return;
+  if (!psName) {
+    MWAW_DEBUG_MSG(("GraphicExporter::startElement: called without any name\n"));
+    return;
+  }
+  if (strcmp(psName,"Graphics")==0)
+    m_output->startGraphics(propList);
+  else if (strcmp(psName,"Layer")==0)
+    m_output->startLayer(propList);
+  else if (strcmp(psName,"TextLine")==0)
+    m_output->startTextLine(propList);
+  else if (strcmp(psName,"TextSpan")==0)
+    m_output->startTextSpan(propList);
+  else if (strcmp(psName,"EmbeddedGraphics")==0)
+    m_output->startEmbeddedGraphics(propList);
+  else if (strcmp(psName,"Rectangle")==0)
+    m_output->drawRectangle(propList);
+  else if (strcmp(psName,"Ellipse")==0)
+    m_output->drawEllipse(propList);
+  else {
+    MWAW_DEBUG_MSG(("GraphicExporter::startElement: called with unexpected name %s\n", psName));
+  }
+}
+
+void GraphicExporter::startElement(const char *psName, const WPXPropertyList &propList,
+                                   const WPXPropertyListVector &vector)
+{
+  if (!m_output) return;
+  if (!psName) {
+    MWAW_DEBUG_MSG(("GraphicExporter::startElement: called without any name\n"));
+    return;
+  }
+  if (strcmp(psName,"TextObject")==0) {
+    m_output->startTextObject(propList, vector);
+    return;
+  }
+  if (strcmp(psName,"SetStyle")==0) {
+    m_output->setStyle(propList, vector);
+    return;
+  }
+  if (strcmp(psName,"Polygon")==0 || strcmp(psName,"Polyline")==0 ||
+      strcmp(psName,"Path")==0) {
+#ifdef DEBUG
+    if (!WPXPropertyList::Iter(propList).last()) {
+      MWAW_DEBUG_MSG(("GraphicExporter::startElement: Polyline, Polygon, Path called with propList, ignored\n"));
+    }
+#endif
+    if (strcmp(psName,"Polygon")==0)
+      m_output->drawPolygon(vector);
+    else if (strcmp(psName,"Polyline")==0)
+      m_output->drawPolyline(vector);
+    else
+      m_output->drawPath(vector);
+    return;
+  }
+  MWAW_DEBUG_MSG(("GraphicExporter::startElement: called with unexpected name %s\n", psName));
+}
+
+void GraphicExporter::startElement(const char *psName, const WPXPropertyList &propList,
+                                   const WPXBinaryData &data)
+{
+  if (!m_output) return;
+  if (!psName) {
+    MWAW_DEBUG_MSG(("GraphicExporter::startElement: called without any name\n"));
+    return;
+  }
+  if (strcmp(psName,"GraphicObject")==0) {
+    m_output->drawGraphicObject(propList, data);
+    return;
+  }
+  MWAW_DEBUG_MSG(("GraphicExporter::startElement: called with unexpected name %s\n", psName));
+}
+
+void GraphicExporter::endElement(const char *psName)
+{
+  if (!m_output) return;
+  if (!psName) {
+    MWAW_DEBUG_MSG(("GraphicExporter::endElement: called without any name\n"));
+    return;
+  }
+  if (strcmp(psName,"Graphics")==0)
+    m_output->endGraphics();
+  else if (strcmp(psName,"Layer")==0)
+    m_output->endLayer();
+  else if (strcmp(psName,"EmbeddedGraphics")==0)
+    m_output->endEmbeddedGraphics();
+  else if (strcmp(psName,"TextLine")==0)
+    m_output->endTextLine();
+  else if (strcmp(psName,"TextSpan")==0)
+    m_output->endTextSpan();
+  else if (strcmp(psName,"TextObject")==0)
+    m_output->endTextObject();
+#ifdef DEBUG
+  else if (strcmp(psName, "SetStyle") && strcmp(psName, "Rectangle") &&
+           strcmp(psName, "Rectangle") && strcmp(psName, "Ellipse") &&
+           strcmp(psName, "Polygon") && strcmp(psName, "Polyline") &&
+           strcmp(psName, "Path") && strcmp(psName, "GraphicObject")) {
+    MWAW_DEBUG_MSG(("GraphicExporter::endElement: called with unexpected name %s\n", psName));
+  }
+#endif
+}
+
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

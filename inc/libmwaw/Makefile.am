@@ -1,1 +1,1 @@
-EXTRA_DIST = libmwaw.hxx MWAWDocument.hxx MWAWPropertyHandler.hxx 
+EXTRA_DIST = libmwaw.hxx MWAWDocument.hxx

@@ -73,7 +73,7 @@ struct Zone {
 //! Internal: the state of a MSK3Parser
 struct State {
   //! constructor
-  State() : m_docType(MWAWDocument::K_TEXT), m_zoneMap(), m_actPage(0), m_numPages(0),
+  State() : m_docType(MWAWDocument::MWAW_K_TEXT), m_zoneMap(), m_actPage(0), m_numPages(0),
     m_headerText(""), m_footerText(""), m_hasHeader(false), m_hasFooter(false),
     m_pageLength(-1), m_headerHeight(0), m_footerHeight(0) {
   }
@@ -87,10 +87,10 @@ struct State {
   }
   //! returns true if this is a text document (hack for MSWorks 4.0 Draw)
   bool IsTextDoc() const {
-    return m_docType == MWAWDocument::K_TEXT;
+    return m_docType == MWAWDocument::MWAW_K_TEXT;
   }
   //! the type of document
-  MWAWDocument::DocumentKind m_docType;
+  MWAWDocument::Kind m_docType;
   //! the list of zone
   std::map<int, Zone> m_zoneMap;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
@@ -537,13 +537,13 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
   case 1:
     break;
   case 2:
-    m_state->m_docType = MWAWDocument::K_DATABASE;
+    m_state->m_docType = MWAWDocument::MWAW_K_DATABASE;
     break;
   case 3:
-    m_state->m_docType = MWAWDocument::K_SPREADSHEET;
+    m_state->m_docType = MWAWDocument::MWAW_K_SPREADSHEET;
     break;
   case 12:
-    m_state->m_docType = MWAWDocument::K_DRAW;
+    m_state->m_docType = MWAWDocument::MWAW_K_DRAW;
     break;
   default:
     MWAW_DEBUG_MSG(("MSK3Parser::checkHeader: find odd type=%d: not implemented\n", type));
@@ -552,10 +552,10 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
 
 #ifndef DEBUG
   // I have never seen this file, so...
-  if (strict && version() == 1 && m_state->m_docType != MWAWDocument::K_TEXT)
+  if (strict && version() == 1 && m_state->m_docType != MWAWDocument::MWAW_K_TEXT)
     return false;
 
-  if (m_state->m_docType != MWAWDocument::K_TEXT)
+  if (m_state->m_docType != MWAWDocument::MWAW_K_TEXT)
     return false;
 
   if (version() < 1 || version() > 3)
@@ -629,7 +629,7 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
   }
 
   if (header)
-    header->reset(MWAWDocument::MSWORKS, version(), m_state->m_docType);
+    header->reset(MWAWDocument::MWAW_T_MICROSOFTWORKS, version(), m_state->m_docType);
 
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());

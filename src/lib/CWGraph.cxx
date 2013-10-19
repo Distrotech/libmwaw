@@ -622,7 +622,7 @@ int CWGraph::numPages() const
   if (m_state->m_numAccrossPages<=0) {
     m_state->m_numAccrossPages=1;
     if (m_mainParser->getHeader() &&
-        m_mainParser->getHeader()->getKind()==MWAWDocument::K_DRAW) {
+        m_mainParser->getHeader()->getKind()==MWAWDocument::MWAW_K_DRAW) {
       m_state->m_numAccrossPages=m_mainParser->getDocumentPages()[0];
       if (m_state->m_numAccrossPages<=1) {
         // info not always fill so we must check it

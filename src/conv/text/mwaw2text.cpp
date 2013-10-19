@@ -71,38 +71,50 @@ int main(int argc, char *argv[])
 
 	WPXFileStream input(argv[1]);
 
-	MWAWDocument::DocumentType type;
-	MWAWDocument::DocumentKind kind;
-	MWAWConfidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
-	if (confidence == MWAW_CONFIDENCE_NONE || confidence == MWAW_CONFIDENCE_POOR)
+	MWAWDocument::Type type;
+	MWAWDocument::Kind kind;
+	MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
+	if (confidence != MWAWDocument::MWAW_C_EXCELLENT)
 	{
 		printf("ERROR: Unsupported file format!\n");
 		return 1;
 	}
-	if (type == MWAWDocument::UNKNOWN)
+	if (type == MWAWDocument::MWAW_T_UNKNOWN)
 	{
 		printf("ERROR: can not determine the type of file!\n");
 		return 1;
 	}
-	if (kind != MWAWDocument::K_TEXT && kind != MWAWDocument::K_PRESENTATION)
+	if (kind != MWAWDocument::MWAW_K_TEXT && kind != MWAWDocument::MWAW_K_PRESENTATION)
 	{
 		printf("ERROR: find a not text document!\n");
 		return 1;
 	}
 
 	TextDocumentGenerator documentGenerator(isInfo);
-	MWAWResult error = MWAWDocument::parse(&input, &documentGenerator);
+	MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
+	try
+	{
+		MWAWDocument::parse(&input, &documentGenerator);
+	}
+	catch (MWAWDocument::Result err)
+	{
+		error=err;
+	}
+	catch (...)
+	{
+		error = MWAWDocument::MWAW_R_UNKNOWN_ERROR;
+	}
 
-	if (error == MWAW_FILE_ACCESS_ERROR)
+	if (error == MWAWDocument::MWAW_R_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
-	else if (error == MWAW_PARSE_ERROR)
+	else if (error == MWAWDocument::MWAW_R_PARSE_ERROR)
 		fprintf(stderr, "ERROR: Parse Exception!\n");
-	else if (error == MWAW_OLE_ERROR)
+	else if (error == MWAWDocument::MWAW_R_OLE_ERROR)
 		fprintf(stderr, "ERROR: File is an OLE document!\n");
-	else if (error != MWAW_OK)
+	else if (error != MWAWDocument::MWAW_R_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
 
-	if (error != MWAW_OK)
+	if (error != MWAWDocument::MWAW_R_OK)
 		return 1;
 
 	return 0;

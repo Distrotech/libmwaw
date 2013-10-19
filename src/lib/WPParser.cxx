@@ -762,7 +762,7 @@ bool WPParser::checkHeader(MWAWHeader *header, bool strict)
   }
 
   if (header)
-    header->reset(MWAWDocument::WPLUS, 1);
+    header->reset(MWAWDocument::MWAW_T_WRITERPLUS, 1);
 
   return ok;
 }

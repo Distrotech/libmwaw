@@ -6,8 +6,8 @@ AC_PREREQ([2.60])
 # Version informations
 # ====================
 m4_define([libmwaw_version_major],[0])
-m4_define([libmwaw_version_minor],[1])
-m4_define([libmwaw_version_micro],[12])
+m4_define([libmwaw_version_minor],[2])
+m4_define([libmwaw_version_micro],[0])
 m4_define([libmwaw_version],[libmwaw_version_major.libmwaw_version_minor.libmwaw_version_micro])
 
 # =============
@@ -44,6 +44,11 @@ PKG_CHECK_MODULES([WPD],[
 ])
 AC_SUBST(WPD_CFLAGS)
 AC_SUBST(WPD_LIBS)
+PKG_CHECK_MODULES([WPG],[
+    libwpg-0.2 >= 0.2.2
+])
+AC_SUBST(WPG_CFLAGS)
+AC_SUBST(WPG_LIBS)
 
 # =================================
 # Libtool/Version Makefile settings

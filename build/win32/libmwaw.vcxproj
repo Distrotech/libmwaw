@@ -44,7 +44,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>..\..\inc;$(LIBWPD_INCLUDE_DIR);$(BOOST_INCLUDE_DIR);$(ZLIB_INCLUDE_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\inc;$(LIBWPD_INCLUDE_DIR);$(LIBWPG_INCLUDE_DIR);$(BOOST_INCLUDE_DIR);$(ZLIB_INCLUDE_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -63,7 +63,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Lib>
-      <OutputFile>Release\lib\libmwaw-0.1.lib</OutputFile>
+      <OutputFile>Release\lib\libmwaw-0.2.lib</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
     <Bscmake>
@@ -74,7 +74,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\inc;$(LIBWPD_INCLUDE_DIR);$(BOOST_INCLUDE_DIR);$(ZLIB_INCLUDE_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\inc;$(LIBWPD_INCLUDE_DIR);$(LIBWPG_INCLUDE_DIR);$(BOOST_INCLUDE_DIR);$(ZLIB_INCLUDE_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_DEBUG;DEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -93,7 +93,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Lib>
-      <OutputFile>Debug\lib\libmwaw-0.1.lib</OutputFile>
+      <OutputFile>Debug\lib\libmwaw-0.2.lib</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
     <Bscmake>
@@ -490,7 +490,6 @@
   <ItemGroup>
     <ClInclude Include="..\..\inc\libmwaw\libmwaw.hxx" />
     <ClInclude Include="..\..\inc\libmwaw\MWAWDocument.hxx" />
-    <ClInclude Include="..\..\inc\libmwaw\MWAWPropertyHandler.hxx" />
     <ClInclude Include="..\..\src\lib\ACParser.hxx" />
     <ClInclude Include="..\..\src\lib\ACText.hxx" />
     <ClInclude Include="..\..\src\lib\BWParser.hxx" />
@@ -570,6 +569,7 @@
     <ClInclude Include="..\..\src\lib\MWAWPictMac.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWPosition.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWPrinter.hxx" />
+    <ClInclude Include="..\..\src\lib\MWAWPropertyHandler.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWRSRCParser.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWSection.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWSubDocument.hxx" />

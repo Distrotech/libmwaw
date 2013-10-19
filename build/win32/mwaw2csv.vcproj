@@ -70,11 +70,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libmwaw-0.1.lib libwpd-stream-0.9.lib libwpd-0.9.lib"
+				AdditionalDependencies="libmwaw-0.2.lib libwpg-0.2.lib libwpd-stream-0.9.lib libwpd-0.9.lib"
 				OutputFile="Debug\bin\mwaw2csv.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
-				AdditionalLibraryDirectories="Debug\lib,$(LIBWPD_LIB_DIR)"
+				AdditionalLibraryDirectories="Debug\lib,$(LIBWPD_LIB_DIR),$(LIBWPG_LIB_DIR)"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\Debug/mwaw2csv.pdb"
 				SubSystem="1"
@@ -159,11 +159,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libwpd-stream-0.9.lib libmwaw-0.1.lib libwpd-0.9.lib"
+				AdditionalDependencies="libwpd-stream-0.9.lib libmwaw-0.2.lib libwpg-0.2.lib libwpd-0.9.lib"
 				OutputFile="Release\bin\mwaw2csv.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				AdditionalLibraryDirectories="Release\lib,$(LIBWPD_LIB_DIR)"
+				AdditionalLibraryDirectories="Release\lib,$(LIBWPD_LIB_DIR),$(LIBWPG_LIB_DIR)"
 				ProgramDatabaseFile=".\Release/mwaw2csv.pdb"
 				SubSystem="1"
 				RandomizedBaseAddress="1"

@@ -356,7 +356,7 @@ bool MSK4Parser::checkHeader(MWAWHeader *header, bool /*strict*/)
     return false;
   MWAW_DEBUG_MSG(("MWAWHeader::checkHeader: find a Microsoft Works 4.0 file\n"));
   if (header)
-    header->reset(MWAWDocument::MSWORKS, 104);
+    header->reset(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104);
   return true;
 }
 

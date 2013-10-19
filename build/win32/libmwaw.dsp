@@ -50,7 +50,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"Release\lib\libmwaw-0.1.lib"
+# ADD LIB32 /nologo /out:"Release\lib\libmwaw-0.2.lib"
 
 !ELSEIF  "$(CFG)" == "libmwaw - Win32 Debug"
 
@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"Debug\lib\libmwaw-0.1.lib"
+# ADD LIB32 /nologo /out:"Debug\lib\libmwaw-0.2.lib"
 
 !ENDIF 
 
@@ -803,7 +803,7 @@ SOURCE=..\..\src\lib\MWAWPrinter.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\inc\libmwaw\MWAWPropertyHandler.hxx
+SOURCE=..\..\src\lib\MWAWPropertyHandler.hxx
 # End Source File
 # Begin Source File
 

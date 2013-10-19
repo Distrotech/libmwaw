@@ -806,7 +806,7 @@ bool NSParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 
   setVersion(vers.m_majorVersion);
   if (header)
-    header->reset(MWAWDocument::NISUSW, version());
+    header->reset(MWAWDocument::MWAW_T_NISUSWRITER, version());
 
   return true;
 }

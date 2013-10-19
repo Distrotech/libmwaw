@@ -1101,7 +1101,7 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
 
   // ok, we can finish initialization
   if (header)
-    header->reset(MWAWDocument::WNOW, version());
+    header->reset(MWAWDocument::MWAW_T_WRITENOW, version());
 
   //
   input->seek(headerSize, WPX_SEEK_SET);

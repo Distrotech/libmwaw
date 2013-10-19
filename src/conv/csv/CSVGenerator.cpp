@@ -49,7 +49,7 @@ CSVGenerator::CSVGenerator(char const *fName) : m_output(), m_outputInit(false),
 	if (!fName) return;
 	m_output.open(fName, std::ios::out|std::ios::binary|std::ios::trunc);
 	if (!m_output.good())
-		throw MWAWResult(MWAW_FILE_ACCESS_ERROR);
+		throw MWAWDocument::Result(MWAWDocument::MWAW_R_FILE_ACCESS_ERROR);
 	m_outputInit=true;
 }
 

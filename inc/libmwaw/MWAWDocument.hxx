@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MWAWDOCUMENT_H
-#define MWAWDOCUMENT_H
+#ifndef MWAWDOCUMENT_HXX
+#define MWAWDOCUMENT_HXX
 
 #ifdef _WINDLL
 #  ifdef BUILD_MWAW
@@ -44,75 +44,88 @@
 #  define MWAWLIB
 #endif
 
+namespace libwpg {
+  class WPGPaintInterface;
+}
 
-#include <libwpd-stream/libwpd-stream.h>
-
-/** enum which defines the confidence that a file format is supported */
-enum MWAWConfidence { MWAW_CONFIDENCE_NONE=0, MWAW_CONFIDENCE_POOR, MWAW_CONFIDENCE_LIKELY, MWAW_CONFIDENCE_GOOD, MWAW_CONFIDENCE_EXCELLENT };
-/** enum which defines the result of the file parsing */
-enum MWAWResult { MWAW_OK, MWAW_FILE_ACCESS_ERROR, MWAW_PARSE_ERROR, MWAW_OLE_ERROR, MWAW_UNKNOWN_ERROR };
-
+class WPXBinaryData;
 class WPXDocumentInterface;
-class WDBInterface;
+class WPXInputStream;
 
 /**
-This class provides all the functions an application would need to parse
-Works documents.
+This class provides all the functions an application would need to parse many pre-MacOSX documents.
 */
 class MWAWDocument
 {
 public:
+  /** enum which defines the confidence that a file format is supported */
+  enum Confidence { MWAW_C_NONE=0, MWAW_C_UNSUPPORTED_ENCRYPTION, MWAW_C_SUPPORTED_ENCRYPTION, MWAW_C_EXCELLENT };
+  /** an enum to define the kind of document */
+  enum Kind { MWAW_K_UNKNOWN=0, MWAW_K_TEXT, MWAW_K_DRAW, MWAW_K_PAINT, MWAW_K_PRESENTATION, MWAW_K_SPREADSHEET, MWAW_K_DATABASE};
+  /** enum which defines the result of the file parsing */
+  enum Result { MWAW_R_OK=0, MWAW_R_FILE_ACCESS_ERROR, MWAW_R_OLE_ERROR, MWAW_R_PARSE_ERROR, MWAW_R_PASSWORD_MISSMATCH_ERROR, MWAW_R_UNKNOWN_ERROR };
   /** an enum to define the different type of document
-  -ACT: Acta (v2 and Classic v1)
-  -BW: BeagleWorks (v1.0)/WordPerfect Works (v1.2)
-  -CW: ClarisWorks/AppleWorks document ( all versions, open text files + some draw files )
-  -DM: DocMaker (v4)
-  -ED: eDOC (v2)
-  -FRM: Frame Maker (nothing done)
-  -FULLW: FullWrite Professional (basic)
-  -GW: GreatWorks ( v1-v2, text and drawing document)
-  -HMACJ: HanMac Word-J ( v2.0.4 )
-  -HMAC: HanMac Word-K ( v2.0.5-2.0.6 )
-  -LWTEXT: LightWayText ( only v4.5 Mac format )
-  -MACD: MacDoc ( v1.3 )
-  -MARIW: Mariner Write ( only v1.6-v3.5 Mac Classic)
-  -MINDW: MindWrite
-  -MOCKP: MockPackage ( creates basic text files -> nothing to do, this enum will be removed in 0.2.0 )
-  -MORE: More (v2-3: retrieve the organization part but not the slide/tree parts)
-  -MW: MacWrite document
-  -MWPRO: MacWriteII or MacWritePro document
-  -MSWORD: MSWord document (v4 v5: basic done)
-  -MSWORKS: MSWorks document (v1 v2)
-  -NISUSW: Nisus Writer document: v3.4-v6.5
-  -PAGEMK: Page Maker ( nothing done)
-  -RSG: Ready Set Go (nothing done)
-  -RGTIME: RagTime (nothing done)
-  -TEACH: TeachText or SimpleText: v1
-  -TEDIT: Tex-Edit v2
-  -WNOW: WriteNow
-  -WPLUS: writerplus document
-  -XP: XPress (nothing done )
-  -ZWRT: Z-Write : v1.3
+  -MWAW_T_ACTA: Acta (v2 and Classic v1)
+  -MWAW_T_BEAGLEWORKS: BeagleWorks (v1.0)/WordPerfect Works (v1.2)
+  -MWAW_T_CLARISWORKS: ClarisWorks/AppleWorks document (all versions, open text files + some draw files)
+  -MWAW_T_DOCMAKER: DocMaker (v4)
+  -MWAW_T_EDOC: eDOC (v2)
+  -MWAW_T_FRAMEMAKER: FrameMaker (TODO)
+  -MWAW_T_FULLWRITE: FullWrite Professional (basic)
+  -MWAW_T_GREATWORKS: GreatWorks (v1-v2, text and drawing document)
+  -MWAW_T_HANMACWORDJ: HanMac Word-J (v2.0.4)
+  -MWAW_T_HANMACWORDK: HanMac Word-K (v2.0.5-2.0.6)
+  -MWAW_T_LIGHTWAYTEXT: LightWayText (only v4 Mac format)
+  -MWAW_T_MACDOC: MacDoc (v1.3)
+  -MWAW_T_MACDRAW: MacDraw (TODO)
+  -MWAW_T_MACPAINT: MacPaint (TODO)
+  -MWAW_T_MARINERWRITE: Mariner Write (only v1.6-v3.5 Mac Classic)
+  -MWAW_T_MINDWRITE: MindWrite
+  -MWAW_T_MORE: More (v2-3: retrieve the organization part but not the slide/tree parts)
+  -MWAW_T_MICROSOFTWORD: Microsoft Word document (v1-v5)
+  -MWAW_T_MICROSOFTWORKS: Microsoft Works Mac document
+  -MWAW_T_MACWRITE: MacWrite document
+  -MWAW_T_MACWRITEPRO: MacWriteII or MacWritePro document
+  -MWAW_T_NISUSWRITER: Nisus Writer document: v3.4-v6.5
+  -MWAW_T_PAGEMAKER: PageMaker (TODO)
+  -MWAW_T_RAGTIME: RagTime (TODO)
+  -MWAW_T_READYSETGO: Ready,Set,Go! (TODO)
+  -MWAW_T_TEACHTEXT: TeachText or SimpleText
+  -MWAW_T_TEXEDIT: Tex-Edit v2
+  -MWAW_T_WRITENOW: WriteNow
+  -MWAW_T_WRITERPLUS: WriterPlus document
+  -MWAW_T_XPRESS: XPress (TODO)
+  -MWAW_T_ZWRITE: Z-Write : v1.3
 
-  -RESERVED1-9: reserved to future use (DreamWeaver?, Canvas?, InDesign?, Taste? )
+  -MWAW_T_RESERVED1-9: reserved to future use
   */
-  enum DocumentType {
-    UNKNOWN, CW, FULLW, MINDW, MSWORD, MSWORKS, MW, MWPRO, NISUSW, WNOW, WPLUS,
-    HMAC, LWTEXT, MARIW, ZWRT, DM, ACT, ED, HMACJ, TEACH, TEDIT,
-    // added in 1.10 ...
-    BW, FRM, GW, MACD, MOCKP, MORE, PAGEMK, RGTIME, RSG, XP,
-    RESERVED1, RESERVED2, RESERVED3, RESERVED4, RESERVED5, RESERVED6, RESERVED7, RESERVED8,
-    RESERVED9
+  enum Type {
+    MWAW_T_UNKNOWN=0,
+    MWAW_T_ACTA, MWAW_T_BEAGLEWORKS, MWAW_T_CLARISWORKS, MWAW_T_DOCMAKER, MWAW_T_EDOC, MWAW_T_FRAMEMAKER,
+    MWAW_T_FULLWRITE, MWAW_T_GREATWORKS, MWAW_T_HANMACWORDJ, MWAW_T_HANMACWORDK, MWAW_T_LIGHTWAYTEXT,
+    MWAW_T_MACDOC, MWAW_T_MACDRAW, MWAW_T_MACPAINT, MWAW_T_MARINERWRITE, MWAW_T_MINDWRITE, MWAW_T_MORE,
+    MWAW_T_MICROSOFTWORD, MWAW_T_MICROSOFTWORKS, MWAW_T_MACWRITE, MWAW_T_MACWRITEPRO,
+    MWAW_T_NISUSWRITER, MWAW_T_PAGEMAKER, MWAW_T_RAGTIME, MWAW_T_READYSETGO, MWAW_T_TEACHTEXT, MWAW_T_TEXEDIT,
+    MWAW_T_WRITENOW, MWAW_T_WRITERPLUS, MWAW_T_XPRESS, MWAW_T_ZWRITE,
+    
+    MWAW_T_RESERVED1, MWAW_T_RESERVED2, MWAW_T_RESERVED3, MWAW_T_RESERVED4, MWAW_T_RESERVED5, MWAW_T_RESERVED6, MWAW_T_RESERVED7, MWAW_T_RESERVED8,
+    MWAW_T_RESERVED9
   };
 
-  /** an enum to define the kind of document */
-  enum DocumentKind { K_UNKNOWN, K_TEXT, K_DRAW,
-                      K_PAINT, K_PRESENTATION, K_SPREADSHEET, K_DATABASE
-                    };
+  /** check if the document defined by input is supported, and fill type and kind.
 
-  static MWAWLIB MWAWConfidence isFileFormatSupported(WPXInputStream *input, DocumentType &type, DocumentKind &kind);
-  static MWAWLIB MWAWResult parse(WPXInputStream *input, WPXDocumentInterface *documentInterface);
+   \note: encryption enum appears in MWAW_TEXT_VERSION==2 */
+  static MWAWLIB Confidence isFileFormatSupported(WPXInputStream *input, Type &type, Kind &kind);
+  /** try to parse a document. Output the result in document interface.
+
+   \note: password appears in MWAW_TEXT_VERSION==2 */
+  static MWAWLIB Result parse(WPXInputStream *input, WPXDocumentInterface *documentInterface, char const *password=0);
+
+  /** parse a local graphic created by the parse's function. Output the result in the paint interface.
+
+   \note: this function appears in MWAW_GRAPHI_VERSION==1 */
+  static MWAWLIB bool decodeGraphic(WPXBinaryData const &binary, libwpg::WPGPaintInterface *paintInterface);
 };
 
-#endif /* MWAWDOCUMENT_H */
+#endif /* MWAWDOCUMENT_HXX */
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

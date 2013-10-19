@@ -31,13 +31,17 @@
 * instead of those above.
 */
 
-#ifndef LIBMWAW_H
-#define LIBMWAW_H
+#ifndef LIBMWAW_HXX
+#define LIBMWAW_HXX
 
-#define MWAW_GRAPHIC_EXPORT 2
+#define MWAW_DATABASE_VERSION 0
+#define MWAW_GRAPHIC_VERSION 1
+#define MWAW_PAINT_VERSION 0
+#define MWAW_PRESENTATION_VERSION 0
+#define MWAW_SPREADSHEET_VERSION 0
+#define MWAW_TEXT_VERSION 2
 
 #include "MWAWDocument.hxx"
-#include "MWAWPropertyHandler.hxx"
 
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

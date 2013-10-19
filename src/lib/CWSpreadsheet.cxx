@@ -411,7 +411,7 @@ bool CWSpreadsheet::sendSpreadsheet(int zId)
   }
   WPXPropertyList extras;
   if (zId==1 && m_mainParser->getHeader() &&
-      m_mainParser->getHeader()->getKind()==MWAWDocument::K_SPREADSHEET)
+      m_mainParser->getHeader()->getKind()==MWAWDocument::MWAW_K_SPREADSHEET)
     extras.insert("libmwaw:main_spreadsheet", 1);
   MWAWTable table(MWAWTable::TableDimBit);
   table.setColsSize(colSize);

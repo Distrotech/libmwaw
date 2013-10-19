@@ -780,7 +780,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 
   // ok, we can finish initialization
   if (header)
-    header->reset(MWAWDocument::MW, version());
+    header->reset(MWAWDocument::MWAW_T_MACWRITE, version());
 
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
