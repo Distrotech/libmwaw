@@ -31,6 +31,8 @@
 * instead of those above.
 */
 
+#include <string.h>
+
 #include <libwpg/libwpg.h>
 
 #include "MWAWHeader.hxx"
