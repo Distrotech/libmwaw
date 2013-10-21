@@ -1996,6 +1996,20 @@ bool CWGraph::readBitmapData(CWGraphInternal::Bitmap &zone)
   long numColors = zone.m_size[0]*zone.m_size[1];
   int numBytes = numColors ? int(sz/numColors) : 0;
   if (sz != numBytes*numColors) {
+    // check for different row alignement: 2 and 4
+    for (int align=2; align <= 4; align*=2) {
+      int diffToAlign=align-(zone.m_size[0]%align);
+      if (diffToAlign==align) continue;
+      numColors = (zone.m_size[0]+diffToAlign)*zone.m_size[1];
+      numBytes = numColors ? int(sz/numColors) : 0;
+      if (sz == numBytes*numColors) {
+        zone.m_size[0]+=diffToAlign;
+        MWAW_DEBUG_MSG(("CWGraph::readBitmapData: increase width to %d\n",zone.m_size[0]));
+        break;
+      }
+    }
+  }
+  if (sz != numBytes*numColors) {
     MWAW_DEBUG_MSG(("CWGraph::readBitmapData: unexpected size\n"));
     return false;
   }
