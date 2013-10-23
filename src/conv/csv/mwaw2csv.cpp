@@ -110,7 +110,6 @@ int main(int argc, char *argv[])
 	catch(...)
 	{
 		error=MWAWDocument::MWAW_R_UNKNOWN_ERROR;
-		return 1;
 	}
 	if (error == MWAWDocument::MWAW_R_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");

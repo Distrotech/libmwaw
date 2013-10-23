@@ -594,6 +594,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
         f << "=" << data << ",";
         break;
       }
+      // type 8: find with 206b*: maybe to indicate an empty cell recovered by neighbour...
       default:
         f << "##type=" << rType << "[res],";
         ok = false;
@@ -710,13 +711,15 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
     }
     int rType=(int) input->readULong(1);
     int formSz=(int) input->readULong(2);
-    if (7+formSz > sz) {
+    if (8+formSz > sz) {
       MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: the formula seems bad\n"));
       f << "###";
       break;
     }
     ascFile.addDelimiter(input->tell(),'|');
-    input->seek(formSz+1-(formSz%2), WPX_SEEK_CUR);
+    /** checkme: there does not seem to be alignment, but another
+        variable before the result */
+    input->seek(formSz+1, WPX_SEEK_CUR);
     ascFile.addDelimiter(input->tell(),'|');
     int remainSz=int(endPos-input->tell());
     switch(rType) {

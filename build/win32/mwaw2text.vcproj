@@ -70,7 +70,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libmwaw-0.2.lib libwpg-0.2.lib libwpd-stream-0.9.lib libwpd-0.9.lib"
+				AdditionalDependencies="libmwaw-0.2.lib libwpd-stream-0.9.lib libwpd-0.9.lib"
 				OutputFile="Debug\bin\mwaw2text.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
@@ -163,7 +163,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libwpd-stream-0.9.lib libmwaw-0.2.lib libwpg-0.2.lib libwpd-0.9.lib"
+				AdditionalDependencies="libwpd-stream-0.9.lib libmwaw-0.2.lib libwpd-0.9.lib"
 				OutputFile="Release\bin\mwaw2text.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"

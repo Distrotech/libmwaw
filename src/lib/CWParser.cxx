@@ -945,6 +945,11 @@ bool CWParser::readZone()
       if (readDSET(complete))
         return true;
     }
+    if (name == "FNTM") {
+      input->seek(pos+4, WPX_SEEK_SET);
+      if (readStructZone("FNTM", true))
+        return true;
+    }
     if (name == "HDNI" && version() <= 4)
       sz = 2;
     f << "Entries(" << name << ")";
@@ -1349,7 +1354,7 @@ bool CWParser::readStructIntZone(char const *zoneName, bool hasEntete, int intSz
   int hSz = (int) input->readULong(2);
   if (fSz != intSz || N *fSz+hSz+12 != sz) {
     input->seek(pos, WPX_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWParser::readStructIntZone: unexpected  field size\n"));
+    MWAW_DEBUG_MSG(("CWParser::readStructIntZone: unexpected field size\n"));
     return false;
   }
 
