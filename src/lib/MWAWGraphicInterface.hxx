@@ -176,7 +176,8 @@ public:
   void insertLineBreak();
 
   /**
-  Called when a field should be inserted. Field types may include:
+  Called when a field should be inserted.
+  \param type may include:
   \li \c text:page-number Current page number
   \li \c text:page-count Total # of pages in document
   \param propList Defines a set of properties for the field. May contain:
@@ -209,19 +210,19 @@ public:
   void defineUnorderedListLevel(const WPXPropertyList &propList);
   /**
   Called when a new ordered list level should be opened
-  \param propList Defines a set of properties for the list. Must contain:
+  Argument defines a set of properties for the list. Must contain:
   \li \c libwpd:id A unique integer identifier for the list
   \li \c libwpd:level The level of the list in the hierarchy
   */
-  void openOrderedListLevel(const WPXPropertyList &) {}
+  void openOrderedListLevel(const WPXPropertyList &/*propList*/) {}
 
   /**
   Called when a new unordered list level should be opened
-  \param propList Defines a set of properties for the list level. Must contain:
+  Argument defines a set of properties for the list level. Must contain:
   \li \c libwpd:id A unique integer identifier for the list
   \li \c libwpd:level The level of the list in the hierarchy
   */
-  void openUnorderedListLevel(const WPXPropertyList &) {}
+  void openUnorderedListLevel(const WPXPropertyList &/*propList*/) {}
 
   /**
   Called when an unordered list level should be closed

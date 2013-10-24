@@ -112,41 +112,6 @@ private:
 
 }
 
-/**
-\mainpage libmwaw documentation
-This document contains both the libmwaw API specification and the normal libmwaw
-documentation.
-
-\section api_docs libmwaw API documentation
-
-The external libmwaw API is provided by the MWAWDocument class. This
-class, combined with the libwpd's WPXDocumentInterface class and libwpg's
-WPGPaintInterface are the only three classes that will be of
-interest for the application programmer using libmwaw.
-
-
-\section lib_docs libmwaw documentation
-If you are interrested in the structure of libmwaw itself, this whole document
-would be a good starting point for exploring the interals of libmwaw. Mind that
-this document is a work-in-progress, and will most likely not cover libmwaw for
-the full 100%.
-
-\warning When compiled with -DDEBUG_WITH__FILES, code is added to
-store the results of the parsing in different files: one file by Ole
-parts ( or sometimes to reconstruct a part of file which is stored
-discontinuously ) and some files to store the read pictures. These
-files are created in the current repository, therefore it is
-recommended to launch the tests in a empty repository...
-*/
-
-/**
-Analyzes the content of an input stream to see if it can be parsed
-\param input The input stream
-\param type The document type ( filled if the file is supported )
-\param kind The document kind ( filled if the file is supported )
-\return A confidence value which represents the likelyhood that the content from
-the input stream can be parsed
-*/
 MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWDocument::Type &type, Kind &kind)
 {
   type = MWAW_T_UNKNOWN;
@@ -233,13 +198,6 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(WPXInputStream *inp
   }
 }
 
-/**
-Parses the input stream content. It will make callbacks to the functions provided by a
-WPXDocumentInterface class implementation when needed. This is often commonly called the
-'main parsing routine'.
-\param input The input stream
-\param documentInterface A MWAWListener implementation
-*/
 MWAWDocument::Result MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *documentInterface, char const */*password*/)
 {
   if (!input)
@@ -277,15 +235,6 @@ MWAWDocument::Result MWAWDocument::parse(WPXInputStream *input, WPXDocumentInter
   return error;
 }
 
-/** parse the graphic contained in the binary data and called paintInterface to reconstruct
-    a graphic. The input is normally send to a WPXDocumentInterface with mimeType="image/mwaw-odg",
-    ie. it must correspond to a picture created by the MWAWGraphicInterface class via
-    a MWAWPropertyEncoder.
-
-   \param binary a list of WPGPaintInterface stored in a paintInterface,
-   \param paintInterface the paint interface which will convert the graphic is some specific format
-   (ODG, SVG, ...)
-*/
 bool MWAWDocument::decodeGraphic(WPXBinaryData const &binary, libwpg::WPGPaintInterface *paintInterface)
 {
   if (!paintInterface || !binary.size()) {

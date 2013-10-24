@@ -149,7 +149,7 @@ InputStream *XAttr::getUsingFinderDat(char const *what) const
 
   FileStream *input= new FileStream(name.c_str());
   if (!input || !input->ok()) {
-    delete input;
+    if (input) delete input;
     return 0;
   }
 

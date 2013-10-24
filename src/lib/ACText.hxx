@@ -111,7 +111,7 @@ protected:
   //! the state
   shared_ptr<ACTextInternal::State> m_state;
 
-  //! the main parser;
+  //! the main parser
   ACParser *m_mainParser;
 };
 #endif

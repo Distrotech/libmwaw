@@ -698,7 +698,7 @@ bool CWDatabase::sendDatabase(int zId)
   }
   dbase.m_content->setDatabaseFormats(formats);
 
-  std::vector<float> colSize(numFields,72);
+  std::vector<float> colSize(size_t(numFields),72);
   WPXPropertyList extras;
   extras.insert("libmwaw:main_database", 1);
 

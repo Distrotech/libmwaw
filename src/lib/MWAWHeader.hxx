@@ -51,9 +51,14 @@ public:
   typedef enum MWAWDocument::Kind Kind;
 
 
-  //! constructor given the input
-  MWAWHeader(MWAWDocument::Type type=MWAWDocument::MWAW_T_UNKNOWN, int vers=0,
-             Kind kind = MWAWDocument::MWAW_K_TEXT);
+  /** constructor given the input
+
+      \param type the document type
+      \param version the file version
+      \param king the document kind (default word processing document)
+  */
+  MWAWHeader(MWAWDocument::Type type=MWAWDocument::MWAW_T_UNKNOWN, int version=0,
+             MWAWDocument::Kind kind = MWAWDocument::MWAW_K_TEXT);
   //! destructor
   virtual ~MWAWHeader();
 
