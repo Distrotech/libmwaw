@@ -42,7 +42,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 

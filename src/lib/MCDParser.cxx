@@ -38,7 +38,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
@@ -156,7 +156,7 @@ void MCDParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MCDParser::parse(WPXDocumentInterface *docInterface)
+void MCDParser::parse(RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
 
@@ -182,7 +182,7 @@ void MCDParser::parse(WPXDocumentInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MCDParser::createDocument(WPXDocumentInterface *documentInterface)
+void MCDParser::createDocument(RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -254,7 +254,7 @@ bool MCDParser::createZones()
     m_state->m_idPictureMap[entry.id()]=entry;
     if (!pageSizeSet) {
       // as we do not read MDop, use picture to find page size
-      WPXBinaryData data;
+      RVNGBinaryData data;
       if (!getRSRCParser()->parsePICT(entry, data))
         continue;
       MWAWInputStreamPtr pictInput=MWAWInputStream::get(data, false);
@@ -349,7 +349,7 @@ bool MCDParser::readFont(MWAWEntry const &entry)
 
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
   int fSz=(int) input->readULong(1);
@@ -365,7 +365,7 @@ bool MCDParser::readFont(MWAWEntry const &entry)
     name+=(char) input->readLong(1);
   font.setId(getParserState()->m_fontConverter->getId(name));
   if ((fSz%2)==0)
-    input->seek(1, WPX_SEEK_CUR);
+    input->seek(1, RVNG_SEEK_CUR);
   font.setSize((float) input->readULong(2));
   int flag = (int) input->readULong(2);
   uint32_t flags=0;
@@ -406,7 +406,7 @@ bool MCDParser::readIndex(MWAWEntry const &entry)
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
 
   libmwaw::DebugFile &ascFile = rsrcAscii();
   ascFile.addPos(entry.begin()-4);
@@ -424,7 +424,7 @@ bool MCDParser::readIndex(MWAWEntry const &entry)
     if (val) f << "#f0=" << val << ",";
     index.m_page=(int) input->readLong(2);
     if (index.m_page<=0) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       break;
     }
     int dim[4];
@@ -455,7 +455,7 @@ bool MCDParser::readIndex(MWAWEntry const &entry)
       name+=c;
     }
     if (!ok) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       break;
     }
     index.m_entry.setEnd(input->tell()-1);
@@ -535,7 +535,7 @@ bool MCDParser::sendIndex()
       MWAW_DEBUG_MSG(("MCDParser::sendIndex: can not find font for index %d\n", int(i)));
       listener->setFont(MWAWFont());
     }
-    input->seek(index.m_entry.begin(), WPX_SEEK_SET);
+    input->seek(index.m_entry.begin(), RVNG_SEEK_SET);
     for (long c=0; c < index.m_entry.length(); ++c) {
       unsigned char ch=(unsigned char)input->readULong(1);
       if (ch==9)
@@ -562,7 +562,7 @@ bool MCDParser::sendPicture(MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("MCDParser::sendPicture: can not find the listener\n"));
     return false;
   }
-  WPXBinaryData data;
+  RVNGBinaryData data;
   if (!getRSRCParser()->parsePICT(entry, data))
     return false;
 
@@ -581,12 +581,12 @@ bool MCDParser::sendPicture(MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("MCDParser::sendPicture: can not find the picture\n"));
     return false;
   }
-  pictInput->seek(0,WPX_SEEK_SET);
+  pictInput->seek(0,RVNG_SEEK_SET);
   shared_ptr<MWAWPict> thePict(MWAWPictData::get(pictInput, dataSz));
-  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), WPX_POINT);
+  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
   if (thePict) {
-    WPXBinaryData fData;
+    RVNGBinaryData fData;
     std::string type;
     if (thePict->getBinary(fData,type))
       getListener()->insertPicture(pictPos, fData, type);
@@ -600,8 +600,8 @@ bool MCDParser::readFile(MWAWEntry const &entry)
   entry.setParsed(true);
 #ifdef DEBUG_WITH_FILES
   MWAWInputStreamPtr input = rsrcInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
-  WPXBinaryData data;
+  input->seek(entry.begin(), RVNG_SEEK_SET);
+  RVNGBinaryData data;
   input->readDataBlock(entry.length(), data);
 
   libmwaw::DebugFile &ascFile = rsrcAscii();
@@ -629,7 +629,7 @@ bool MCDParser::readBookmark(MWAWEntry const &entry)
 
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
   f << "Entries(BookMark)[" << entry.id() << "]:";
@@ -652,7 +652,7 @@ bool MCDParser::readWP(MWAWEntry const &entry)
 
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
   f << "Entries(WP)[" << entry.id() << "]:";

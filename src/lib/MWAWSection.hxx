@@ -37,7 +37,7 @@
 #include <iostream>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -57,7 +57,7 @@ public:
 
   \note: this erases previous columns and border if there are some
    */
-  void setColumns(int num, double width, WPXUnit widthUnit, double colSep=0);
+  void setColumns(int num, double width, RVNGUnit widthUnit, double colSep=0);
   //! returns the number of columns
   int numColumns() const {
     return m_columns.size() <= 1 ? 1 : int(m_columns.size());
@@ -67,9 +67,9 @@ public:
     return m_columns.size() <= 1;
   }
   //! add to the propList
-  void addTo(WPXPropertyList &propList) const;
+  void addTo(RVNGPropertyList &propList) const;
   //! add tabs to the propList
-  void addColumnsTo(WPXPropertyListVector &propList) const;
+  void addColumnsTo(RVNGPropertyListVector &propList) const;
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, MWAWSection const &sec);
   //! operator!=
@@ -106,12 +106,12 @@ public:
   /** struct to store the columns properties */
   struct Column {
     //! constructor
-    Column() : m_width(0), m_widthUnit(WPX_INCH) {
+    Column() : m_width(0), m_widthUnit(RVNG_INCH) {
       for (int i = 0; i < 4; i++)
         m_margins[i]=0;
     }
     //! add a column to the propList
-    bool addTo(WPXPropertyList &propList) const;
+    bool addTo(RVNGPropertyList &propList) const;
     //! operator <<
     friend std::ostream &operator<<(std::ostream &o, Column const &column);
     //! operator!=
@@ -132,7 +132,7 @@ public:
     //! the columns width
     double m_width;
     /** the width unit (default inches) */
-    WPXUnit m_widthUnit;
+    RVNGUnit m_widthUnit;
     //! the margins in inches using libmwaw::Position orders
     double m_margins[4];
   };

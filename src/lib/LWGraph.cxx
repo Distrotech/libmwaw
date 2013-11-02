@@ -38,7 +38,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
@@ -118,7 +118,7 @@ bool LWGraph::createZones()
     m_state->m_idPictMap.insert
     (std::map<int, MWAWEntry>::value_type(entry.id(), entry));
     // fixme stored the pict id here, ...
-    WPXBinaryData data;
+    RVNGBinaryData data;
     rsrcParser->parsePICT(entry, data);
   }
   it = entryMap.lower_bound("JPEG");
@@ -146,7 +146,7 @@ bool LWGraph::sendPICT(MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("LWGraph::sendPICT: can not find the listener\n"));
     return false;
   }
-  WPXBinaryData data;
+  RVNGBinaryData data;
   rsrcParser->parsePICT(entry, data);
 
   MWAWInputStreamPtr input=MWAWInputStream::get(data, false);
@@ -159,10 +159,10 @@ bool LWGraph::sendPICT(MWAWEntry const &entry)
     return false;
 
   Box2f bdBox=pict->getBdBox();
-  MWAWPosition pictPos(Vec2f(0,0), bdBox.size(), WPX_POINT);
+  MWAWPosition pictPos(Vec2f(0,0), bdBox.size(), RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
 
-  WPXBinaryData pictData;
+  RVNGBinaryData pictData;
   std::string type;
   if (pict->getBinary(pictData,type))
     m_parserState->m_listener->insertPicture(pictPos, data, type);
@@ -183,22 +183,22 @@ bool LWGraph::sendJPEG(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(JPEG):" << entry.id();
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
 
-  WPXBinaryData data;
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  RVNGBinaryData data;
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   input->readDataBlock(entry.length(), data);
   MWAWPosition pictPos;
   pictPos.setRelativePosition(MWAWPosition::Char);
   Vec2i sz;
   if (findJPEGSize(data,sz)) {
     pictPos.setSize(sz);
-    pictPos.setUnit(WPX_POINT);
+    pictPos.setUnit(RVNG_POINT);
   }
   m_parserState->m_listener->insertPicture(pictPos, data, "image/pict");
 
@@ -215,7 +215,7 @@ bool LWGraph::sendJPEG(MWAWEntry const &entry)
   return true;
 }
 
-bool LWGraph::findJPEGSize(WPXBinaryData const &data, Vec2i &sz)
+bool LWGraph::findJPEGSize(RVNGBinaryData const &data, Vec2i &sz)
 {
   sz = Vec2i(100,100);
   MWAWInputStreamPtr input=MWAWInputStream::get(data, false);
@@ -234,7 +234,7 @@ bool LWGraph::findJPEGSize(WPXBinaryData const &data, Vec2i &sz)
     MWAW_DEBUG_MSG(("LWGraph::findJPEGSize: not a JFIF file\n"));
     return false;
   }
-  input->seek(pos+len, WPX_SEEK_SET);
+  input->seek(pos+len, RVNG_SEEK_SET);
   while (!input->atEOS()) {
     int header = (int) input->readULong(2);
     pos = input->tell();
@@ -244,10 +244,10 @@ bool LWGraph::findJPEGSize(WPXBinaryData const &data, Vec2i &sz)
       break;
     }
     if (header != 0xFFC0) {
-      input->seek(pos+len, WPX_SEEK_SET);
+      input->seek(pos+len, RVNG_SEEK_SET);
       continue;
     }
-    input->seek(1, WPX_SEEK_CUR);
+    input->seek(1, RVNG_SEEK_CUR);
     int dim[2];
     for (int i = 0; i < 2; i++)
       dim[i] = (int) input->readULong(2);

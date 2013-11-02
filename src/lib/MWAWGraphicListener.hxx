@@ -36,7 +36,7 @@
 
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -55,7 +55,7 @@ struct State;
 /** This class contains the minimal code needed to write a Graphic sub document.
 
     \note it will be probably be enhanced in some near/far futur...
-    All units are specicified in WPX_POINT
+    All units are specicified in RVNG_POINT
  */
 class MWAWGraphicListener : public MWAWListener
 {
@@ -67,8 +67,8 @@ public:
 
   /** starts a new graphic */
   void startGraphic(Box2f const &bdbox);
-  /** ends the actual graphic and fill the final WPXBinaryData, ... */
-  bool endGraphic(WPXBinaryData &data, std::string &mimeType);
+  /** ends the actual graphic and fill the final RVNGBinaryData, ... */
+  bool endGraphic(RVNGBinaryData &data, std::string &mimeType);
   /** returns true if a document is opened */
   bool isDocumentStarted() const;
 
@@ -99,7 +99,7 @@ public:
    *  By convention if \a character=0xfffd(undef), no character is added */
   void insertUnicode(uint32_t character);
   //! adds a unicode string
-  void insertUnicodeString(WPXString const &str);
+  void insertUnicodeString(RVNGString const &str);
 
   //! adds a tab
   void insertTab();
@@ -127,7 +127,7 @@ public:
   // ------- subdocument -----------------
   /** adds a picture in given position */
   void insertPicture(Box2f const &bdbox, MWAWGraphicStyle const &style,
-                     const WPXBinaryData &binaryData, std::string type="image/pict");
+                     const RVNGBinaryData &binaryData, std::string type="image/pict");
   /** adds a shape picture in given position */
   void insertPicture(Box2f const &bdbox, MWAWGraphicShape const &shape,
                      MWAWGraphicStyle const &style);
@@ -159,7 +159,7 @@ protected:
   void _startSubDocument();
   void _endSubDocument();
 
-  void _handleFrameParameters(WPXPropertyList &propList, Box2f const &pos, MWAWGraphicStyle const &style);
+  void _handleFrameParameters(RVNGPropertyList &propList, Box2f const &pos, MWAWGraphicStyle const &style);
   bool openFrame();
   void closeFrame();
 

@@ -37,7 +37,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFontConverter.hxx"
@@ -246,7 +246,7 @@ void DMParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void DMParser::parse(WPXDocumentInterface *docInterface)
+void DMParser::parse(RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
 
@@ -277,7 +277,7 @@ void DMParser::parse(WPXDocumentInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void DMParser::createDocument(WPXDocumentInterface *documentInterface)
+void DMParser::createDocument(RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -327,7 +327,7 @@ bool DMParser::createZones()
     if (it->first != "conp")
       break;
     MWAWEntry const &entry = it++->second;
-    WPXBinaryData data;
+    RVNGBinaryData data;
     rsrcParser->parsePICT(entry, data);
   }
   it = entryMap.lower_bound("pInf"); // 201|202,301..309,401..410,501..
@@ -406,7 +406,7 @@ void DMParser::flushExtra()
   for ( ; it != m_state->m_idPictEntryMap.end(); ++it) {
     MWAWEntry const &entry=it->second;
     if (entry.isParsed()) continue;
-    WPXBinaryData data;
+    RVNGBinaryData data;
     rsrcParser->parsePICT(entry,data);
   }
 }
@@ -439,10 +439,10 @@ bool DMParser::sendPicture(int zId, int lId, double /*lineW*/)
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   MWAWEntry const &entry=m_state->m_idPictEntryMap.find(info.m_id)->second;
 
-  WPXBinaryData data;
+  RVNGBinaryData data;
   long pos = input->tell();
   rsrcParser->parsePICT(entry,data);
-  input->seek(pos,WPX_SEEK_SET);
+  input->seek(pos,RVNG_SEEK_SET);
 
   int dataSz=int(data.size());
   if (!dataSz) {
@@ -459,15 +459,15 @@ bool DMParser::sendPicture(int zId, int lId, double /*lineW*/)
     MWAW_DEBUG_MSG(("DMText::sendPicture: can not find the picture\n"));
     return false;
   }
-  pictInput->seek(0,WPX_SEEK_SET);
+  pictInput->seek(0,RVNG_SEEK_SET);
   shared_ptr<MWAWPict> thePict(MWAWPictData::get(pictInput, dataSz));
-  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), WPX_POINT);
+  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), RVNG_POINT);
   MWAWPosition::XPos xpos= (info.m_align==1) ? MWAWPosition::XCenter :
                            (info.m_align==3) ? MWAWPosition::XRight  : MWAWPosition::XLeft;
   pictPos.setRelativePosition(MWAWPosition::Paragraph, xpos);
   pictPos.m_wrapping = MWAWPosition::WRunThrough;
   if (thePict) {
-    WPXBinaryData fData;
+    RVNGBinaryData fData;
     std::string type;
     if (thePict->getBinary(fData,type))
       getListener()->insertPicture(pictPos, fData, type);
@@ -488,7 +488,7 @@ bool DMParser::readPictInfo(MWAWEntry const &entry)
   long endPos = entry.end();
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   DMParserInternal::PictInfo info;
@@ -612,7 +612,7 @@ bool DMParser::readSTwD(MWAWEntry const &entry)
   long pos = entry.begin();
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(STwD)[" << entry.type() << "-" << entry.id() << "]:";
@@ -649,7 +649,7 @@ bool DMParser::readXtr2(MWAWEntry const &entry)
   long pos = entry.begin();
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(Xtr2)[" << entry.type() << "-" << entry.id() << "]:";

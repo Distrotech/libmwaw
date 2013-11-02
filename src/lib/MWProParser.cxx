@@ -38,7 +38,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWHeader.hxx"
@@ -79,7 +79,7 @@ struct Zone {
   int m_blockId;
 
   //! the storage
-  WPXBinaryData m_data;
+  RVNGBinaryData m_data;
 
   //! the main input
   MWAWInputStreamPtr m_input;
@@ -276,7 +276,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   MWProParser *parser = reinterpret_cast<MWProParser *>(m_parser);
   if (parser->m_structures.get())
     parser->m_structures->send(m_id);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -355,7 +355,7 @@ std::vector<int> const &MWProParser::getBlocksCalledByToken() const
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MWProParser::parse(WPXDocumentInterface *docInterface)
+void MWProParser::parse(RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -406,7 +406,7 @@ void MWProParser::parse(WPXDocumentInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // returns a data zone which corresponds to a zone id
 ////////////////////////////////////////////////////////////
-bool MWProParser::getZoneData(WPXBinaryData &data, int blockId)
+bool MWProParser::getZoneData(RVNGBinaryData &data, int blockId)
 {
   data.clear();
   if (blockId < 1) {
@@ -414,7 +414,7 @@ bool MWProParser::getZoneData(WPXBinaryData &data, int blockId)
     return false;
   }
   MWAWInputStreamPtr input = getInput();
-  input->seek((blockId-1)*0x100, WPX_SEEK_SET);
+  input->seek((blockId-1)*0x100, RVNG_SEEK_SET);
 
   unsigned long read;
   long first=blockId-1, last=blockId-1;
@@ -432,10 +432,10 @@ bool MWProParser::getZoneData(WPXBinaryData &data, int blockId)
     if (!ok) break;
     long endPos = (last+1)*0x100 - linkSz;
     long pos = input->tell();
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
     long limit = input->tell();
     if (limit <= pos) break;
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
 
     const unsigned char *dt = input->read(size_t(limit-pos), read);
     data.append(dt, read);
@@ -447,7 +447,7 @@ bool MWProParser::getZoneData(WPXBinaryData &data, int blockId)
     }
     if (limit < endPos)
       break;
-    input->seek(limit, WPX_SEEK_SET);
+    input->seek(limit, RVNG_SEEK_SET);
 
     long act = last;
     long val = input->readLong(linkSz);
@@ -459,7 +459,7 @@ bool MWProParser::getZoneData(WPXBinaryData &data, int blockId)
     last = first;
 
     if (first != act+1) {
-      input->seek(first*0x100, WPX_SEEK_SET);
+      input->seek(first*0x100, RVNG_SEEK_SET);
       if (long(input->tell()) != first*0x100) {
         MWAW_DEBUG_MSG(("MWProParser::getZoneData: can not go to %ld block\n", first));
         break;
@@ -471,13 +471,13 @@ bool MWProParser::getZoneData(WPXBinaryData &data, int blockId)
     }
     if (last-first > 2) {
       pos = input->tell();
-      input->seek((last-1)*0x100, WPX_SEEK_SET);
+      input->seek((last-1)*0x100, RVNG_SEEK_SET);
       if (long(input->tell()) != (last-1)*0x100) {
         MWAW_DEBUG_MSG(("MWProParser::getZoneData: num %ld if odd\n", last));
         last = input->tell();
         last = (last>>8)+1;  // set last to the last block
       }
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
     }
   }
   return data.size() != 0;
@@ -509,7 +509,7 @@ bool MWProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
     }
     if (!ok) break;
     long endPos = (last+1)*0x100 - 4;
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
     if (long(input->tell()) != endPos) break;
 
 
@@ -524,7 +524,7 @@ bool MWProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
 
     if (val < 0) {
       if (first != act+1) {
-        input->seek(first*0x100, WPX_SEEK_SET);
+        input->seek(first*0x100, RVNG_SEEK_SET);
         if (long(input->tell()) != first*0x100) {
           MWAW_DEBUG_MSG(("MWProParser::getFreeZoneList: can not go to %ld block\n", first));
           break;
@@ -541,7 +541,7 @@ bool MWProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MWProParser::createDocument(WPXDocumentInterface *documentInterface)
+void MWProParser::createDocument(RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -620,7 +620,7 @@ bool MWProParser::createZones()
     // bad sign, but we can try to recover
     ascii().addPos(pos);
     ascii().addNote("###PrintInfo");
-    input->seek(pos+0x78, WPX_SEEK_SET);
+    input->seek(pos+0x78, RVNG_SEEK_SET);
   }
 
   pos = input->tell();
@@ -652,12 +652,12 @@ bool MWProParser::checkHeader(MWAWHeader *header, bool strict)
 
   libmwaw::DebugStream f;
   int headerSize=4;
-  input->seek(headerSize+0x78,WPX_SEEK_SET);
+  input->seek(headerSize+0x78,RVNG_SEEK_SET);
   if (int(input->tell()) != headerSize+0x78) {
     MWAW_DEBUG_MSG(("MWProParser::checkHeader: file is too short\n"));
     return false;
   }
-  input->seek(0,WPX_SEEK_SET);
+  input->seek(0,RVNG_SEEK_SET);
 
   int vers = (int) input->readULong(2);
   int val = (int) input->readULong(2);
@@ -691,7 +691,7 @@ bool MWProParser::checkHeader(MWAWHeader *header, bool strict)
     if (!readPrintInfo())
       return false;
     if (vers) {
-      input->seek(0xdd, WPX_SEEK_SET);
+      input->seek(0xdd, RVNG_SEEK_SET);
       // "MP" seems always in this position
       if (input->readULong(2) != 0x4d50)
         return false;
@@ -704,7 +704,7 @@ bool MWProParser::checkHeader(MWAWHeader *header, bool strict)
     header->reset(MWAWDocument::MWAW_T_MACWRITEPRO, version());
 
   //
-  input->seek(headerSize, WPX_SEEK_SET);
+  input->seek(headerSize, RVNG_SEEK_SET);
 
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
@@ -756,7 +756,7 @@ bool MWProParser::readPrintInfo()
 
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  input->seek(pos+0x78, WPX_SEEK_SET);
+  input->seek(pos+0x78, RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
     MWAW_DEBUG_MSG(("MWProParser::readPrintInfo: file is too short\n"));
     return false;
@@ -884,14 +884,14 @@ bool MWProParser::readDocHeader()
   f.str("");
   f << "Data0-A:";
   if (version()==0) {
-    input->seek(pos+120, WPX_SEEK_SET);
+    input->seek(pos+120, RVNG_SEEK_SET);
     pos = input->tell();
     for (int i = 0; i < 3; i++) { // f0=f1, f2=0
       val = (long) input->readULong(4);
       if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
     }
   } else {
-    input->seek(pos+97, WPX_SEEK_SET);
+    input->seek(pos+97, RVNG_SEEK_SET);
     pos = input->tell();
     val = (long) input->readULong(2);
     if (val != 0x4d50) // MP
@@ -933,7 +933,7 @@ bool MWProParser::readDocHeader()
   ascii().addNote(f.str().c_str());
 
   // interesting data seems to begin again in 0x200...
-  input->seek(0x200, WPX_SEEK_SET);
+  input->seek(0x200, RVNG_SEEK_SET);
   ascii().addPos(input->tell());
   ascii().addNote("_");
   return true;
@@ -1001,7 +1001,7 @@ bool MWProParser::parseTextZone(shared_ptr<MWProParserInternal::Zone> zone)
   shared_ptr<MWProParserInternal::TextZone> text(new MWProParserInternal::TextZone);
 
   long pos = 0;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(TextZone):";
   text->m_textLength = (int)input->readLong(4);
   f << "textLength=" << text->m_textLength << ",";
@@ -1015,7 +1015,7 @@ bool MWProParser::parseTextZone(shared_ptr<MWProParserInternal::Zone> zone)
 
   for (size_t i = 0; i < text->m_entries.size(); i++) {
     MWAWEntry &entry = text->m_entries[i];
-    fileInput->seek(entry.begin(), WPX_SEEK_SET);
+    fileInput->seek(entry.begin(), RVNG_SEEK_SET);
     if (long(fileInput->tell()) != entry.begin()) {
       MWAW_DEBUG_MSG(("MWProParser::parseTextZone: bad block id for block %ld\n", long(i)));
       entry.setBegin(-1);
@@ -1077,14 +1077,14 @@ bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
 
     if (nChar > remainLength || nChar > 256) {
       MWAW_DEBUG_MSG(("MWProParser::readTextEntries: bad size for block %d\n", i));
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       break;
     }
     remainLength -= nChar;
     bool ok = bl >= 3 && m_state->m_blocksMap.find(bl-1) == m_state->m_blocksMap.end();
     if (!ok) {
       MWAW_DEBUG_MSG(("MWProParser::readTextEntries: bad block id for block %d\n", i));
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       break;
     }
 
@@ -1106,7 +1106,7 @@ bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
     asciiFile.addNote("TextEntry-#");
   }
 
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return long(input->tell() == endPos) && res.size() != 0;
 }
 
@@ -1153,7 +1153,7 @@ bool MWProParser::readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
 
     if (nChar > remainLength) {
       MWAW_DEBUG_MSG(("MWProParser::readTextIds: bad size for block %d\n", i));
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       break;
     }
     remainLength -= nChar;
@@ -1170,7 +1170,7 @@ bool MWProParser::readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
     asciiFile.addNote("TextZone:id-#");
   }
 
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return long(input->tell() == endPos) && res.size() != 0;
 }
 
@@ -1188,7 +1188,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
 
   int val = (int) input->readULong(2);
   if (val && vers == 0) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     asciiFile.addPos(pos);
     asciiFile.addNote("_");
     return true;
@@ -1259,7 +1259,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
     f << "TextZone-" << i<< ":token," << data;
     if (nChar > remainLength) {
       MWAW_DEBUG_MSG(("MWProParser::readTextTokens: bad size for block %d\n", i));
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       break;
     }
     remainLength -= nChar;
@@ -1271,7 +1271,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
     if (vers == 1 && data.m_blockId && (data.m_type == 2 || data.m_type == 4))
       m_state->m_blocksCallByTokens.push_back(data.m_blockId);
   }
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   if (vers == 0 && pictPos.size()) {
     size_t numPict = pictPos.size();
     // checkme always inverted ?
@@ -1300,7 +1300,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
         << dim[3] << "x" << dim[2] << ",";
       // followed by junk ?
       ascii().addDelimiter(input->tell(),'|');
-      input->seek(pos+62, WPX_SEEK_SET);
+      input->seek(pos+62, RVNG_SEEK_SET);
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
     }
@@ -1313,7 +1313,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
 // try to send a empty zone
 ////////////////////////////////////////////////////////////
 bool MWProParser::sendEmptyFrameZone(MWAWPosition const &pos,
-                                     WPXPropertyList extras)
+                                     RVNGPropertyList extras)
 {
   shared_ptr<MWProParserInternal::SubDocument> subdoc
   (new MWProParserInternal::SubDocument(*this, getInput(), -3));
@@ -1343,7 +1343,7 @@ int MWProParser::findNumHardBreaks(shared_ptr<MWProParserInternal::TextZone> zon
   MWAWInputStreamPtr input = getInput();
   for (size_t i = 0; i < zone->m_entries.size(); i++) {
     MWAWEntry const &entry = zone->m_entries[i];
-    input->seek(entry.begin(), WPX_SEEK_SET);
+    input->seek(entry.begin(), RVNG_SEEK_SET);
     for (int j = 0; j < entry.length(); j++) {
       switch(input->readULong(1)) {
       case 0xc: // hard page
@@ -1374,7 +1374,7 @@ bool MWProParser::sendTextZone(int blockId, bool mainZone)
 }
 
 bool MWProParser::sendTextBoxZone(int blockId, MWAWPosition const &pos,
-                                  WPXPropertyList extras)
+                                  RVNGPropertyList extras)
 {
   shared_ptr<MWProParserInternal::SubDocument> subdoc
   (new MWProParserInternal::SubDocument(*this, getInput(), blockId));
@@ -1452,7 +1452,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
   long pos = zone->m_entries[0].begin();
   long asciiPos = pos;
   if (pos > 0)
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f, f2;
   cPos = 0;
@@ -1503,7 +1503,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       if (data.m_type == 3) {
         pos = zone->m_entries[(size_t)data.m_id].begin();
         if (pos > 0)
-          input->seek(pos, WPX_SEEK_SET);
+          input->seek(pos, RVNG_SEEK_SET);
       }
       break;
     case 2: {
@@ -1527,7 +1527,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
         break; // footnote content, ok
       case 4:
         if (vers==0) {
-          MWAWPosition pictPos(Vec2i(0,0), zone->m_tokens[(size_t)data.m_id].m_box.size(), WPX_POINT);
+          MWAWPosition pictPos(Vec2i(0,0), zone->m_tokens[(size_t)data.m_id].m_box.size(), RVNG_POINT);
           pictPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
           sendPictureZone(zone->m_tokens[(size_t)data.m_id].m_blockId, pictPos);
         } else {
@@ -1561,7 +1561,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
         break;
       }
       f << "token[" << zone->m_tokens[(size_t)data.m_id] << "],";
-      input->seek(actPos, WPX_SEEK_SET);
+      input->seek(actPos, RVNG_SEEK_SET);
       break;
     }
     case 1:
@@ -1601,7 +1601,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
 // try to send a picture
 ////////////////////////////////////////////////////////////
 bool MWProParser::sendPictureZone(int blockId, MWAWPosition const &pictPos,
-                                  WPXPropertyList extras)
+                                  RVNGPropertyList extras)
 {
   std::map<int, shared_ptr<MWProParserInternal::Zone> >::iterator it;
   it = m_state->m_dataMap.find(blockId);
@@ -1615,7 +1615,7 @@ bool MWProParser::sendPictureZone(int blockId, MWAWPosition const &pictPos,
 
 bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
                               MWAWPosition pictPos,
-                              WPXPropertyList const &extras)
+                              RVNGPropertyList const &extras)
 {
   if (!zone) return false;
   if (zone->m_type != 1) {
@@ -1634,7 +1634,7 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
   asciiFile.addPos(0);
   asciiFile.addNote(f.str().c_str());
 
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   long pictSize = (long) input->readULong(4);
   if (pictSize < 10 || pictSize > long(zone->m_data.size())) {
     MWAW_DEBUG_MSG(("MWProParser::sendPicture: oops a pb with pictSize\n"));
@@ -1645,10 +1645,10 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, (int)pictSize));
   if (!pict) {
     // sometimes this just fails because the pictSize is not correct
-    input->seek(14, WPX_SEEK_SET);
+    input->seek(14, RVNG_SEEK_SET);
     if (input->readULong(2) == 0x1101) { // try to force the size to be ok
-      WPXBinaryData data;
-      input->seek(0, WPX_SEEK_SET);
+      RVNGBinaryData data;
+      input->seek(0, RVNG_SEEK_SET);
       input->readDataBlock(4+pictSize, data);
       unsigned char *dataPtr=const_cast<unsigned char *>(data.getDataBuffer());
       if (!dataPtr) {
@@ -1665,15 +1665,15 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
         return false;
       }
 
-      pictInput->seek(4, WPX_SEEK_SET);
+      pictInput->seek(4, RVNG_SEEK_SET);
       pict.reset(MWAWPictData::get(pictInput, (int)pictSize));
     }
   }
 
 #ifdef DEBUG_WITH_FILES
   asciiFile.skipZone(4, 4+pictSize-1);
-  WPXBinaryData file;
-  input->seek(4, WPX_SEEK_SET);
+  RVNGBinaryData file;
+  input->seek(4, RVNG_SEEK_SET);
   input->readDataBlock(pictSize, file);
   static int volatile pictName = 0;
   f.str("");
@@ -1686,10 +1686,10 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
   if (!pict) { // ok, we can not do anything except sending the data...
     MWAW_DEBUG_MSG(("MWProParser::parseDataZone: no sure this is a picture\n"));
     if (pictPos.size().x() <= 0 || pictPos.size().y() <= 0)
-      pictPos=MWAWPosition(Vec2f(0,0),Vec2f(100.,100.), WPX_POINT);
+      pictPos=MWAWPosition(Vec2f(0,0),Vec2f(100.,100.), RVNG_POINT);
     if (getListener()) {
-      WPXBinaryData data;
-      input->seek(4, WPX_SEEK_SET);
+      RVNGBinaryData data;
+      input->seek(4, RVNG_SEEK_SET);
       input->readDataBlock(pictSize, data);
       getListener()->insertPicture(pictPos, data, "image/pict", extras);
     }
@@ -1699,13 +1699,13 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
   if (pictPos.size().x() <= 0 || pictPos.size().y() <= 0) {
     pictPos.setOrigin(Vec2f(0,0));
     pictPos.setSize(pict->getBdBox().size());
-    pictPos.setUnit(WPX_POINT);
+    pictPos.setUnit(RVNG_POINT);
   }
   if (pict->getBdBox().size().x() > 0 && pict->getBdBox().size().y() > 0)
     pictPos.setNaturalSize(pict->getBdBox().size());
 
   if (getListener()) {
-    WPXBinaryData data;
+    RVNGBinaryData data;
     std::string type;
     if (pict->getBinary(data,type))
       getListener()->insertPicture(pictPos, data, type, extras);
@@ -1729,12 +1729,12 @@ void MWProParser::saveOriginal(MWAWInputStreamPtr input)
   int bl = 0;
   while(1) {
     long pos = bl*0x100;
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     if (long(input->tell()) != pos)
       break;
     f.str("");
     if (bl) {
-      input->seek(-ptSz, WPX_SEEK_CUR);
+      input->seek(-ptSz, RVNG_SEEK_CUR);
       long val = input->readLong(ptSz);
       long next = val > 0 ? val : -val;
       if (next > 0 && next < 0x1000) {
@@ -1773,7 +1773,7 @@ void MWProParser::checkUnparsed()
       continue;
 
     pos = bl*0x100;
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     if (input->atEOS()) break;
     notParsed << std::hex <<  bl << std::dec << ",";
 
@@ -1787,7 +1787,7 @@ void MWProParser::checkUnparsed()
       char ch = (char) input->readULong(1);
       if (!ch) {
         if (findZero) {
-          input->seek(-1, WPX_SEEK_CUR);
+          input->seek(-1, RVNG_SEEK_CUR);
           break;
         }
         findZero = true;

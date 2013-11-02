@@ -32,7 +32,7 @@
 */
 
 /* This header contains code specific to a pict which can be stored in a
- *      WPXBinaryData, this includes :
+ *      RVNGBinaryData, this includes :
  *         - the mac Pict format (in MWAWPictMac)
  *         - some old data names db3
  *         - some potential short data file
@@ -44,12 +44,12 @@
 #  include <assert.h>
 #  include <ostream>
 
-#  include <libwpd/libwpd.h>
+#  include <librevenge/librevenge.h>
 
 #  include "libmwaw_internal.hxx"
 #  include "MWAWPict.hxx"
 
-class WPXBinaryData;
+class RVNGBinaryData;
 
 /** \brief an abstract class which defines basic formated picture ( Apple© Pict, DB3, ...) */
 class MWAWPictData : public MWAWPict
@@ -64,8 +64,8 @@ public:
   //! returns the picture subtype
   virtual SubType getSubType() const = 0;
 
-  //! returns the final WPXBinary data
-  virtual bool getBinary(WPXBinaryData &res, std::string &s) const {
+  //! returns the final RVNGBinary data
+  virtual bool getBinary(RVNGBinaryData &res, std::string &s) const {
     if (!valid() || isEmpty()) return false;
 
     s = "image/pict";
@@ -139,7 +139,7 @@ public:
 protected:
   /** a file pict can be created from the data pict by adding a header with size 512,
    * this function do this conversion needed to return the final picture */
-  static bool createFileData(WPXBinaryData const &orig, WPXBinaryData &result);
+  static bool createFileData(RVNGBinaryData const &orig, RVNGBinaryData &result);
 
   //! protected constructor: use check to construct a picture
   MWAWPictData(): m_data(), m_empty(false) { }
@@ -154,7 +154,7 @@ protected:
                                Box2f &box, MWAWPictData **result = 0L);
 
   //! the data size (without the empty header of 512 characters)
-  WPXBinaryData m_data;
+  RVNGBinaryData m_data;
 
   //! some picture can be valid but empty
   bool m_empty;

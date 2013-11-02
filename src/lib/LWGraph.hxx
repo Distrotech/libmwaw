@@ -41,7 +41,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -104,7 +104,7 @@ protected:
   //
 
   //! try to find a JPEG size
-  static bool findJPEGSize(WPXBinaryData const &data, Vec2i &sz);
+  static bool findJPEGSize(RVNGBinaryData const &data, Vec2i &sz);
 
 private:
   LWGraph(LWGraph const &orig);

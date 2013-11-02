@@ -39,13 +39,13 @@
 #include <iomanip>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 
 #include "MWAWCell.hxx"
 
-void MWAWCell::addTo(WPXPropertyList &propList) const
+void MWAWCell::addTo(RVNGPropertyList &propList) const
 {
   propList.insert("libwpd:column", position()[0]);
   propList.insert("libwpd:row", position()[1]);
@@ -97,7 +97,7 @@ void MWAWCell::addTo(WPXPropertyList &propList) const
     MWAW_DEBUG_MSG(("MWAWCell::addTo: called with unknown halign=%d\n", hAlignement()));
   }
   // no padding
-  propList.insert("fo:padding", 0, WPX_POINT);
+  propList.insert("fo:padding", 0, RVNG_POINT);
   // alignement
   switch(vAlignement()) {
   case VALIGN_TOP:

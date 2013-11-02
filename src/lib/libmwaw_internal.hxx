@@ -48,8 +48,8 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-#include <libwpd-stream/libwpd-stream.h>
-#include <libwpd/libwpd.h>
+#include <librevenge-stream/librevenge-stream.h>
+#include <librevenge/librevenge.h>
 
 #if defined(_MSC_VER) || defined(__DJGPP__)
 
@@ -143,9 +143,9 @@ class WrongPasswordException
 /* ---------- input ----------------- */
 namespace libmwaw
 {
-uint8_t readU8(WPXInputStream *input);
+uint8_t readU8(RVNGInputStream *input);
 //! adds an unicode character to a string
-void appendUnicode(uint32_t val, WPXString &buffer);
+void appendUnicode(uint32_t val, RVNGString &buffer);
 }
 
 /* ---------- small enum/class ------------- */
@@ -245,7 +245,7 @@ struct MWAWBorder {
   /** add the border property to proplist (if needed )
 
   \note if set which must be equal to "left", "top", ... */
-  bool addTo(WPXPropertyList &propList, std::string which="") const;
+  bool addTo(RVNGPropertyList &propList, std::string which="") const;
   //! returns true if the border is empty
   bool isEmpty() const {
     return m_style==None || m_width <= 0;
@@ -310,7 +310,7 @@ struct MWAWNote {
   //! the note type
   Type m_type;
   //! the note label
-  WPXString m_label;
+  RVNGString m_label;
   //! the note number if defined
   int m_number;
 };

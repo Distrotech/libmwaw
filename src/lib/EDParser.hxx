@@ -37,7 +37,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
@@ -64,14 +64,14 @@ public:
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(WPXDocumentInterface *documentInterface);
+  void parse(RVNGTextInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(WPXDocumentInterface *documentInterface);
+  void createDocument(RVNGTextInterface *documentInterface);
 
   //! adds a new page
   void newPage(int number);
@@ -103,7 +103,7 @@ protected:
   bool findContents();
 
   //! try to decode a compress zone
-  bool decodeZone(MWAWEntry const &entry, WPXBinaryData &dt);
+  bool decodeZone(MWAWEntry const &entry, RVNGBinaryData &dt);
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();

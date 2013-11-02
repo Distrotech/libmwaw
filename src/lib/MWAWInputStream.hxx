@@ -37,8 +37,8 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/libwpd.h>
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge/librevenge.h>
+#include <librevenge-stream/librevenge-stream.h>
 #include "libmwaw_internal.hxx"
 
 namespace libmwawOLE
@@ -46,16 +46,16 @@ namespace libmwawOLE
 class Storage;
 }
 
-class WPXBinaryData;
+class RVNGBinaryData;
 
 /*! \class MWAWInputStream
  * \brief Internal class used to read the file stream
  *  Internal class used to read the file stream,
- *    this class adds some usefull functions to the basic WPXInputStream:
+ *    this class adds some usefull functions to the basic RVNGInputStream:
  *  - read number (int8, int16, int32) in low or end endian
  *  - selection of a section of a stream
  *  - read block of data
- *  - interface with modified WPXOLEStream
+ *  - interface with modified RVNGOLEStream
  */
 class MWAWInputStream
 {
@@ -64,22 +64,22 @@ public:
    * \param inverted must be set to true for pc doc and ole part
    * \param inverted must be set to false for mac doc
    */
-  MWAWInputStream(shared_ptr<WPXInputStream> inp, bool inverted);
+  MWAWInputStream(shared_ptr<RVNGInputStream> inp, bool inverted);
 
   /*!\brief creates a stream with given endian from an existing input
    *
    * Note: this functions does not delete input
    */
-  MWAWInputStream(WPXInputStream *input, bool inverted, bool checkCompression=false);
+  MWAWInputStream(RVNGInputStream *input, bool inverted, bool checkCompression=false);
   //! destructor
   ~MWAWInputStream();
 
-  //! returns the basic WPXInputStream
-  shared_ptr<WPXInputStream> input() {
+  //! returns the basic RVNGInputStream
+  shared_ptr<RVNGInputStream> input() {
     return m_stream;
   }
-  //! returns a new input stream corresponding to a WPXBinaryData
-  static shared_ptr<MWAWInputStream> get(WPXBinaryData const &data, bool inverted);
+  //! returns a new input stream corresponding to a RVNGBinaryData
+  static shared_ptr<MWAWInputStream> get(RVNGBinaryData const &data, bool inverted);
 
   //! returns the endian mode (see constructor)
   bool readInverted() const {
@@ -97,7 +97,7 @@ public:
    * \return 0 if ok
    * \sa pushLimit popLimit
    */
-  int seek(long offset, WPX_SEEK_TYPE seekType);
+  int seek(long offset, RVNG_SEEK_TYPE seekType);
   //! returns actual offset position
   long tell();
   //! returns the stream size
@@ -148,12 +148,12 @@ public:
   /*! \brief internal function used to read num byte,
    *  - where a is the previous read data
    */
-  static unsigned long readULong(WPXInputStream *stream, int num, unsigned long a, bool inverseRead);
+  static unsigned long readULong(RVNGInputStream *stream, int num, unsigned long a, bool inverseRead);
 
-  //! reads a WPXBinaryData with a given size in the actual section/file
-  bool readDataBlock(long size, WPXBinaryData &data);
-  //! reads a WPXBinaryData from actPos to the end of the section/file
-  bool readEndDataBlock(WPXBinaryData &data);
+  //! reads a RVNGBinaryData with a given size in the actual section/file
+  bool readDataBlock(long size, RVNGBinaryData &data);
+  //! reads a RVNGBinaryData from actPos to the end of the section/file
+  bool readEndDataBlock(RVNGBinaryData &data);
 
   //
   // OLE access
@@ -202,7 +202,7 @@ protected:
   //! update the stream size ( must be called in the constructor )
   void updateStreamSize();
   //! internal function used to read a byte
-  static uint8_t readU8(WPXInputStream *stream);
+  static uint8_t readU8(RVNGInputStream *stream);
 
   //! creates a storage ole
   bool createStorageOLE();
@@ -215,8 +215,8 @@ protected:
   bool unMacMIME();
   //! de MacMIME an input stream
   bool unMacMIME(MWAWInputStream *input,
-                 shared_ptr<WPXInputStream> &dataInput,
-                 shared_ptr<WPXInputStream> &rsrcInput) const;
+                 shared_ptr<RVNGInputStream> &dataInput,
+                 shared_ptr<RVNGInputStream> &rsrcInput) const;
 
 private:
   MWAWInputStream(MWAWInputStream const &orig);
@@ -224,7 +224,7 @@ private:
 
 protected:
   //! the initial input
-  shared_ptr<WPXInputStream> m_stream;
+  shared_ptr<RVNGInputStream> m_stream;
   //! the stream size
   long m_streamSize;
 
@@ -247,7 +247,7 @@ protected:
 };
 
 /** an internal class used to return the OLE/Zip InputStream */
-class MWAWStringStream: public WPXInputStream
+class MWAWStringStream: public RVNGInputStream
 {
 public:
   //! constructor
@@ -267,7 +267,7 @@ public:
    * \return 0 if ok
    * \sa pushLimit popLimit
    */
-  int seek(long offset, WPX_SEEK_TYPE seekType);
+  int seek(long offset, RVNG_SEEK_TYPE seekType);
   //! returns true if we are at the end of the section/file
   bool atEOS() {
     return ((long)m_offset >= (long)m_buffer.size());
@@ -284,7 +284,7 @@ public:
      Tries to extract a stream from a structured document.
      \note not implemented
   */
-  WPXInputStream *getSubStream(const char *) {
+  RVNGInputStream *getSubStream(const char *) {
     return 0;
   }
 
@@ -299,7 +299,7 @@ public:
      Tries to extract a stream from a structured document.
      \note not implemented
   */
-  WPXInputStream *getDocumentOLEStream(const char *name) {
+  RVNGInputStream *getDocumentOLEStream(const char *name) {
     return getSubStream(name);
   }
 

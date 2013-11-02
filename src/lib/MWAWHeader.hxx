@@ -39,7 +39,7 @@
 
 #include <vector>
 
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge-stream/librevenge-stream.h>
 
 #include <libmwaw/libmwaw.hxx>
 #include "MWAWInputStream.hxx"

@@ -71,7 +71,7 @@ void MSKParser::sendFrameText(MWAWEntry const &, std::string const &)
   getListener()->insertChar(' ');
 }
 
-void MSKParser::sendOLE(int, MWAWPosition const &, WPXPropertyList)
+void MSKParser::sendOLE(int, MWAWPosition const &, RVNGPropertyList)
 {
   MWAW_DEBUG_MSG(("MSKParser::sendOLE: must not be called\n"));
 }

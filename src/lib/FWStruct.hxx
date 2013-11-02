@@ -38,7 +38,7 @@
 #ifndef FP_MWAW_STRUCT
 #  define FP_MWAW_STRUCT
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -67,7 +67,7 @@ struct Border {
   //! return a border corresponding to a type
   static MWAWBorder getBorder(int type);
   //! add to frame properties
-  void addToFrame(WPXPropertyList &pList) const;
+  void addToFrame(RVNGPropertyList &pList) const;
   //! return true if we have a shadow
   bool hasShadow() const {
     return m_shadowDepl[0]||m_shadowDepl[1];
@@ -134,7 +134,7 @@ struct Entry : public MWAWEntry {
   //! some unknown values
   int m_values[3];
   //! the main data ( if the entry comes from several zone )
-  WPXBinaryData m_data;
+  RVNGBinaryData m_data;
   //! the debug file
   shared_ptr<libmwaw::DebugFile> m_asciiFile;
 private:

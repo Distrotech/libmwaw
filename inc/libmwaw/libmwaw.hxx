@@ -45,8 +45,7 @@ documentation.
 \section api_docs libmwaw API documentation
 
 The external libmwaw API is provided by libmwaw.hxx and the MWAWDocument class. This
-class, combined with the libwpd's WPXDocumentInterface class and libwpg's
-WPGPaintInterface are the only three classes that will be of
+class, combined with the librevenge's RVNGDrawingInterface and RVNGTextInterface classes are the only three classes that will be of
 interest for the application programmer using libmwaw.
 
 
@@ -71,7 +70,7 @@ recommended to launch the tests in a empty repository...
 /** Defines the database possible conversion (actually none) */
 #define MWAW_DATABASE_VERSION 0
 /** Defines the vector graphic possible conversion:
-    - 1: can create some graphic shapes in a WPXBinaryDate mimeType="image/mwaw-odg". You can use MWAWDocument::decodeGraphic to read them. */
+    - 1: can create some graphic shapes in a RVNGBinaryDate mimeType="image/mwaw-odg". You can use MWAWDocument::decodeGraphic to read them. */
 #define MWAW_GRAPHIC_VERSION 1
 /** Defines the bitmap graphic possible conversion (actually none) */
 #define MWAW_PAINT_VERSION 0

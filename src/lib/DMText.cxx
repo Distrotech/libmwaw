@@ -37,7 +37,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
@@ -229,7 +229,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   } else {
     MWAW_DEBUG_MSG(("SubDocument::parse: oops do not know how to send this kind of document\n"));
   }
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -306,7 +306,7 @@ void DMText::computeNumPages(DMTextInternal::Zone const &zone) const
   if (zone.m_numPages || !zone.m_pos.valid())
     return;
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
-  input->seek(zone.m_pos.begin(), WPX_SEEK_SET);
+  input->seek(zone.m_pos.begin(), RVNG_SEEK_SET);
   long len = zone.m_pos.length();
   int nPages=1;
   for (long i=0; i < len; i++) {
@@ -484,7 +484,7 @@ bool DMText::sendText(DMTextInternal::Zone const &zone)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   long pos = zone.m_pos.begin(), debPos=pos-4;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(TEXT)[" << zone.m_pos.id() << "]:";
   listener->setFont(MWAWFont(3,12));
@@ -551,7 +551,7 @@ bool DMText::readFontNames(MWAWEntry const &entry)
   long endPos = entry.end();
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   int N=(int) input->readULong(2);
@@ -622,7 +622,7 @@ bool DMText::readStyles(MWAWEntry const &entry)
   long pos = entry.begin();
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   int N=(int) input->readULong(2);
@@ -746,7 +746,7 @@ bool DMText::readTOC(MWAWEntry const &entry)
   long endPos = entry.end();
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(TOC)[" << entry.type() << ":" << entry.id() << "]:";
@@ -808,7 +808,7 @@ bool DMText::readWindows(MWAWEntry const &entry)
   long pos = entry.begin();
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   DMTextInternal::Zone &zone = m_state->getZone(entry.id());
   libmwaw::DebugStream f;
@@ -943,7 +943,7 @@ bool DMText::readFooter(MWAWEntry const &entry)
   long pos = entry.begin();
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   DMTextInternal::Footer &footer=m_state->m_footer;

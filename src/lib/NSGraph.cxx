@@ -38,7 +38,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
@@ -91,7 +91,7 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(NSGraph &pars, MWAWInputStreamPtr input, int id, MWAWPosition const &pos, WPXPropertyList const &extras) :
+  SubDocument(NSGraph &pars, MWAWInputStreamPtr input, int id, MWAWPosition const &pos, RVNGPropertyList const &extras) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(id), m_position(pos), m_extras(extras) {}
 
   //! destructor
@@ -115,7 +115,7 @@ protected:
   //! the pict position
   MWAWPosition m_position;
   //! the property list
-  WPXPropertyList m_extras;
+  RVNGPropertyList m_extras;
 private:
   SubDocument(SubDocument const &orig);
   SubDocument &operator=(SubDocument const &orig);
@@ -131,7 +131,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   long pos = m_input->tell();
   m_graphParser->sendPicture(m_id, true, m_position, m_extras);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -241,7 +241,7 @@ bool NSGraph::readPLAC(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   int numElt = int(entry.length()/202);
   libmwaw::DebugStream f;
@@ -258,7 +258,7 @@ bool NSGraph::readPLAC(MWAWEntry const &entry)
     ascFile.addDelimiter(input->tell(),'|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+202, WPX_SEEK_SET);
+    input->seek(pos+202, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -307,7 +307,7 @@ bool NSGraph::readPLDT(NSStruct::RecursifData const &data)
     }
 
     long pos = child.m_entry.begin();
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     f.str("");
     std::string type("");   // find different small string here
     for (int i = 0; i < 4; i++)
@@ -339,7 +339,7 @@ bool NSGraph::readPGRA(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   if (entry.id() != 20000)
@@ -369,7 +369,7 @@ std::vector<NSGraphInternal::RSSOEntry> NSGraph::findRSSOEntry(MWAWInputStreamPt
     return listRSSO;
   }
 
-  input->seek(10, WPX_SEEK_SET);
+  input->seek(10, RVNG_SEEK_SET);
   int header = (int) input->readULong(2);
   if (header==0x0011) {
     if (input->readULong(2) != 0x2ff)
@@ -388,13 +388,13 @@ std::vector<NSGraphInternal::RSSOEntry> NSGraph::findRSSOEntry(MWAWInputStreamPt
     else if (val == 0x49534900) depl=-2;
     else if (val == 0x53490009) depl=-3;
     else continue;
-    input->seek(depl-8, WPX_SEEK_CUR);
+    input->seek(depl-8, RVNG_SEEK_CUR);
     bool ok = input->readULong(1) == 0xa1;
     ok = ok && input->readULong(4) == 0x00640010;
     ok = ok && input->readULong(4) == 0x4e495349;
     ok = ok && input->readULong(2) == 0x0009;
     if (!ok) {
-      input->seek(pos+4, WPX_SEEK_SET);
+      input->seek(pos+4, RVNG_SEEK_SET);
       continue;
     }
     float dim[4];
@@ -418,7 +418,7 @@ std::vector<NSGraphInternal::RSSOEntry> NSGraph::findRSSOEntry(MWAWInputStreamPt
 // send data
 ////////////////////////////////////////////////////////////
 bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
-                          WPXPropertyList extras)
+                          RVNGPropertyList extras)
 {
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
   MWAWContentListenerPtr listener=m_parserState->m_listener;
@@ -435,7 +435,7 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
     return false;
   }
   MWAWEntry &entry = pictMap.find(pictId)->second;
-  WPXBinaryData data;
+  RVNGBinaryData data;
   bool ok = rsrcParser->parsePICT(entry, data) && data.size();
   if (!ok) {
     MWAW_DEBUG_MSG(("NSGraph::sendPicture: can not read the picture\n"));
@@ -454,7 +454,7 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
   if (listRSSO.size() && (pictPos.m_anchorTo == MWAWPosition::Char ||
                           pictPos.m_anchorTo == MWAWPosition::CharBaseLine)) {
     // we need to create a frame
-    MWAWPosition framePos(pictPos.origin(), pictPos.size(), WPX_POINT);;
+    MWAWPosition framePos(pictPos.origin(), pictPos.size(), RVNG_POINT);;
     framePos.setRelativePosition(MWAWPosition::Char,
                                  MWAWPosition::XLeft, MWAWPosition::YTop);
     framePos.m_wrapping =  MWAWPosition::WBackground;
@@ -491,20 +491,20 @@ bool NSGraph::sendPageGraphics()
     if (m_state->m_idPictMap.find(20000+i)==m_state->m_idPictMap.end())
       continue;
     MWAWEntry &entry = m_state->m_idPictMap.find(20000+i)->second;
-    WPXBinaryData data;
+    RVNGBinaryData data;
     if (!rsrcParser->parsePICT(entry, data) || !data.size()) {
       MWAW_DEBUG_MSG(("NSGraph::sendPageGraphics: can not read the file picture\n"));
       continue;
     }
     MWAWInputStreamPtr dataInput=MWAWInputStream::get(data, false);
     if (!dataInput) continue;
-    dataInput->seek(0, WPX_SEEK_SET);
+    dataInput->seek(0, RVNG_SEEK_SET);
     Box2f box;
     if (MWAWPictData::check(dataInput, (int)data.size(), box) == MWAWPict::MWAW_R_BAD) {
       MWAW_DEBUG_MSG(("NSGraph::sendPageGraphics: can not determine the picture type\n"));
       continue;
     }
-    MWAWPosition pictPos(box.min()+LT, box.size(), WPX_POINT);
+    MWAWPosition pictPos(box.min()+LT, box.size(), RVNG_POINT);
     pictPos.setRelativePosition(MWAWPosition::Page);
     pictPos.m_wrapping = MWAWPosition::WBackground;
     pictPos.setPage(i+1);
@@ -531,7 +531,7 @@ void NSGraph::flushExtra()
     MWAW_DEBUG_MSG(("NSGraph::sendPicture: rsso picture unparsed: %d\n", entry.id()));
     MWAWPosition pictPos(Vec2f(0,0), Vec2f(1.,1.));
     pictPos.setRelativePosition(MWAWPosition::Char);
-    sendPicture(entry.id(), false, pictPos, WPXPropertyList());
+    sendPicture(entry.id(), false, pictPos, RVNGPropertyList());
   }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

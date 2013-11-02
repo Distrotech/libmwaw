@@ -31,7 +31,7 @@
 * instead of those above.
 */
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWContentListener.hxx"
@@ -137,7 +137,7 @@ void MWAWHeaderFooter::send(MWAWContentListener *listener) const
     MWAW_DEBUG_MSG(("MWAWHeaderFooter::send: called without listener\n"));
     return;
   }
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   switch (m_occurence) {
   case ODD:
     propList.insert("libwpd:occurence", "odd");
@@ -279,7 +279,7 @@ void MWAWPageSpan::sendHeaderFooters(MWAWContentListener *listener) const
   }
 }
 
-void MWAWPageSpan::getPageProperty(WPXPropertyList &propList) const
+void MWAWPageSpan::getPageProperty(RVNGPropertyList &propList) const
 {
   propList.insert("libwpd:num-pages", getPageSpan());
 

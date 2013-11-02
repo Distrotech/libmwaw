@@ -38,7 +38,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
@@ -451,7 +451,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: unknow value in m_what\n"));
     break;
   }
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -663,7 +663,7 @@ bool MORText::readTopic(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   entry.setParsed(true);
 
   ascFile.addPos(pos);
@@ -720,7 +720,7 @@ bool MORText::readTopic(MWAWEntry const &entry)
     f << "Topic-" << i << ":" << topic;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+10, WPX_SEEK_SET);
+    input->seek(pos+10, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -737,7 +737,7 @@ bool MORText::readComment(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   entry.setParsed(true);
 
   ascFile.addPos(pos);
@@ -768,7 +768,7 @@ bool MORText::readComment(MWAWEntry const &entry)
     f << "Comment-C" << i << ":" << comment;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+8, WPX_SEEK_SET);
+    input->seek(pos+8, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -785,7 +785,7 @@ bool MORText::readSpeakerNote(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   entry.setParsed(true);
 
   f << "Entries(SpeakerNote):";
@@ -979,7 +979,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
     return false;
   }
 
-  input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(pos+4, RVNG_SEEK_SET);
   listener->setFont(font);
   f << "Entries(Text):";
   int val;
@@ -1040,7 +1040,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       if (!(val&0x8000)) {
         MWAW_DEBUG_MSG(("MORText::sendText: field fId: unexpected id\n"));
         f << "@[#fId]";
-        input->seek(-2, WPX_SEEK_CUR);
+        input->seek(-2, RVNG_SEEK_CUR);
         break;
       }
       f << "@[fId=" << (val&0x7FFF) << "]";
@@ -1050,7 +1050,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       if (val!=0x1b30) {
         MWAW_DEBUG_MSG(("MORText::sendText: field fId: unexpected end field\n"));
         f << "###";
-        input->seek(-2, WPX_SEEK_CUR);
+        input->seek(-2, RVNG_SEEK_CUR);
         break;
       }
       break;
@@ -1073,7 +1073,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       if (val!=0x1b31) {
         MWAW_DEBUG_MSG(("MORText::sendText: field fSz: unexpected end field\n"));
         f << "###";
-        input->seek(-2, WPX_SEEK_CUR);
+        input->seek(-2, RVNG_SEEK_CUR);
         break;
       }
       break;
@@ -1101,7 +1101,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       if (val!=0x1b38) {
         MWAW_DEBUG_MSG(("MORText::sendText: field fCol: unexpected end field\n"));
         f << "###";
-        input->seek(-2, WPX_SEEK_CUR);
+        input->seek(-2, RVNG_SEEK_CUR);
         break;
       }
       break;
@@ -1265,7 +1265,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       if (val!=0x1bb9) {
         MWAW_DEBUG_MSG(("MORText::sendText: field b9: unexpected end field\n"));
         f << "###";
-        input->seek(-2, WPX_SEEK_CUR);
+        input->seek(-2, RVNG_SEEK_CUR);
       }
       break;
     }
@@ -1279,18 +1279,18 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       if (sz<22 || actPos+sz>=endPos) {
         MWAW_DEBUG_MSG(("MORText::sendText: field f9: bad field size\n"));
         f << "###";
-        input->seek(actPos+2, WPX_SEEK_CUR);
+        input->seek(actPos+2, RVNG_SEEK_CUR);
         break;
       }
-      input->seek(actPos+sz-6, WPX_SEEK_SET);
+      input->seek(actPos+sz-6, RVNG_SEEK_SET);
       if ((int) input->readULong(4)!=sz &&
           (int) input->readULong(2)!=int(0x1b00|fld)) {
         MWAW_DEBUG_MSG(("MORText::sendText: find a unknown picture end field\n"));
         f << "@[#" << std::hex << fld << std::dec << ":" << sz << "]";
-        input->seek(actPos+2, WPX_SEEK_SET);
+        input->seek(actPos+2, RVNG_SEEK_SET);
         break;
       }
-      input->seek(actPos+6, WPX_SEEK_SET);
+      input->seek(actPos+6, RVNG_SEEK_SET);
       f << "[picture:";
       val = (int) input->readLong(2);
       if (val!=0x100)
@@ -1302,17 +1302,17 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       f << "bdbox=" << bdbox << ",";
       if (sz>22) {
         shared_ptr<MWAWPict> pict(MWAWPictData::get(input, (int)sz-22));
-        WPXBinaryData data;
+        RVNGBinaryData data;
         std::string type;
         if (pict && pict->getBinary(data,type)) {
-          MWAWPosition pictPos(Vec2f(0,0), bdbox.size(), WPX_POINT);
+          MWAWPosition pictPos(Vec2f(0,0), bdbox.size(), RVNG_POINT);
           pictPos.m_anchorTo = MWAWPosition::Char;
           listener->insertPicture(pictPos, data, type);
         }
 #ifdef DEBUG_WITH_FILES
         if (1) {
-          WPXBinaryData file;
-          input->seek(actPos+16, WPX_SEEK_SET);
+          RVNGBinaryData file;
+          input->seek(actPos+16, RVNG_SEEK_SET);
           input->readDataBlock(sz-22, file);
           static int volatile pictName = 0;
           libmwaw::DebugStream f2;
@@ -1322,20 +1322,20 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
         }
 #endif
       }
-      input->seek(actPos+sz, WPX_SEEK_SET);
+      input->seek(actPos+sz, RVNG_SEEK_SET);
       break;
     }
     default: {
       int sz=(int) input->readULong(2);
       if (sz>4 && actPos+sz<=endPos) {
-        input->seek(actPos+sz-4, WPX_SEEK_SET);
+        input->seek(actPos+sz-4, RVNG_SEEK_SET);
         if ((int) input->readULong(2)==sz &&
             (int) input->readULong(2)==int(0x1b00|fld)) {
           MWAW_DEBUG_MSG(("MORText::sendText: find a unknown field, but can infer size\n"));
           f << "@[#" << std::hex << fld << std::dec << ":" << sz << "]";
           break;
         }
-        input->seek(actPos+2, WPX_SEEK_SET);
+        input->seek(actPos+2, RVNG_SEEK_SET);
       }
       MWAW_DEBUG_MSG(("MORText::sendText: find a unknown field\n"));
       f << "@[#" << std::hex << fld << std::dec << "]";
@@ -1368,7 +1368,7 @@ bool MORText::readFonts(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   entry.setParsed(true);
 
   int n=0;
@@ -1382,7 +1382,7 @@ bool MORText::readFonts(MWAWEntry const &entry)
     if (fSz==0)
       break;
     if (pos+1+fSz+2 > endPos) {
-      input->seek(-1, WPX_SEEK_CUR);
+      input->seek(-1, RVNG_SEEK_CUR);
       break;
     }
     f.str("");
@@ -1393,7 +1393,7 @@ bool MORText::readFonts(MWAWEntry const &entry)
     std::string name("");
     for (int i=0; i < fSz; i++)
       name+=(char) input->readULong(1);
-    if ((fSz&1)==0) input->seek(1, WPX_SEEK_CUR);
+    if ((fSz&1)==0) input->seek(1, RVNG_SEEK_CUR);
     int id=(int) input->readULong(2);
     f << name << ",id=" << id << ",";
     if (name.length())
@@ -1427,7 +1427,7 @@ bool MORText::readOutlineList(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   entry.setParsed(true);
 
   f << "Entries(Outline):";
@@ -1478,7 +1478,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
-  input->seek(pos+4, WPX_SEEK_SET); // skip size
+  input->seek(pos+4, RVNG_SEEK_SET); // skip size
 
   f << "Outline[O" << entry.id() << "]:";
   int val=(int) input->readULong(2);
@@ -1587,10 +1587,10 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
     }
     case 0xa05:
       if (values[0]&0x8000) {
-        para.setInterline(double(values[0]&0x7FFF)/20., WPX_POINT, MWAWParagraph::AtLeast);
+        para.setInterline(double(values[0]&0x7FFF)/20., RVNG_POINT, MWAWParagraph::AtLeast);
         f << "interline=" << *para.m_spacings[0] << "pt,";
       } else {
-        para.setInterline(double(values[0])/double(0x1000), WPX_PERCENT);
+        para.setInterline(double(values[0])/double(0x1000), RVNG_PERCENT);
         f << "interline=" << 100* *para.m_spacings[0] << "%,";
       }
       break;
@@ -1745,7 +1745,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
     outlineModList.push_back(outlineMod);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+16, WPX_SEEK_SET);
+    input->seek(pos+16, RVNG_SEEK_SET);
   }
 
   for (size_t n=0; n < outlineModList.size(); n++) {
@@ -1814,7 +1814,7 @@ bool MORText::readFont(MWAWEntry const &entry, std::string &fName, int &fId)
     return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   int fSz=(int) input->readULong(1);
   long remain=entry.length()-long(1+fSz);
@@ -1831,7 +1831,7 @@ bool MORText::readFont(MWAWEntry const &entry, std::string &fName, int &fId)
     fId=m_parserState->m_fontConverter->getId(fName);
     return true;
   }
-  if ((fSz%2)==0) input->seek(1,WPX_SEEK_CUR);
+  if ((fSz%2)==0) input->seek(1,RVNG_SEEK_CUR);
   fId=(int) input->readULong(2);
   return true;
 }
@@ -1845,7 +1845,7 @@ bool MORText::readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level)
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugStream f;
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   MWAWFont font;
   int fId=(int) input->readULong(2);
   if (fId==0xFFFF) // default
@@ -1873,7 +1873,7 @@ bool MORText::readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level)
 
   int fColor = (int) input->readLong(1);
   if (fColor==1)
-    input->seek(6, WPX_SEEK_CUR);
+    input->seek(6, RVNG_SEEK_CUR);
   else if (fColor==3) {
     unsigned char color[3];
     for (int i=0; i < 3; i++)
@@ -1881,7 +1881,7 @@ bool MORText::readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level)
     font.setColor(MWAWColor(color[0], color[1], color[2]));
   } else {
     f << "#fCol=" << fColor << ",";
-    input->seek(6, WPX_SEEK_CUR);
+    input->seek(6, RVNG_SEEK_CUR);
   }
 #if defined(DEBUG_WITH_FILES)
   f << "font=[" << font.getDebugString(m_parserState->m_fontConverter) << "],";
@@ -1916,7 +1916,7 @@ bool MORText::readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level)
   if (fId!=0xFFFF) { // maybe the font name
     int fontSz=(int) input->readULong(1);
     if (!fontSz || input->tell()+fontSz >= entry.end())
-      input->seek(-1,WPX_SEEK_CUR);
+      input->seek(-1,RVNG_SEEK_CUR);
     else {
       std::string fName("");
       for (int i=0; i<fontSz; i++)
@@ -1967,7 +1967,7 @@ bool MORText::readTabs(MWAWEntry const &entry, MORTextInternal::Paragraph &para,
   libmwaw::DebugStream f;
 
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   int nTabs=(int) input->readULong(2);
   if (entry.length()!=4+4*nTabs)
@@ -2040,7 +2040,7 @@ bool MORText::parseUnknown(MWAWEntry const &entry, long fDecal)
 
   MORStruct::Pattern pattern;
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   if (m_mainParser->readPattern(entry.end(),pattern)) {
     f << pattern;
     if (input->tell()!=entry.end())
@@ -2050,7 +2050,7 @@ bool MORText::parseUnknown(MWAWEntry const &entry, long fDecal)
     return true;
   }
   // can we find a backsidde here
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   std::string extra("");
   if (m_mainParser->readBackside(entry.end(), extra)) {
     f << extra;

@@ -44,7 +44,7 @@
 
 #include "MWAWParser.hxx"
 
-class WPXDocumentInterface;
+class RVNGTextInterface;
 
 namespace MSK4ParserInternal
 {
@@ -76,7 +76,7 @@ public:
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   //! the main parse function, called with the documentInterface
-  virtual void parse(WPXDocumentInterface *documentInterface);
+  virtual void parse(RVNGTextInterface *documentInterface);
 
 protected:
   /** finds the principal ole zone: Ole pictures and MN0,
@@ -99,7 +99,7 @@ protected:
   void sendFrameText(MWAWEntry const &entry, std::string const &frame);
 
   //! send an OLE zone
-  void sendOLE(int id, MWAWPosition const &pos, WPXPropertyList frameExtras);
+  void sendOLE(int id, MWAWPosition const &pos, RVNGPropertyList frameExtras);
 
 private:
   MSK4Parser(MSK4Parser const &orig);

@@ -44,7 +44,7 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWPict.hxx"
 
-class WPXBinaryData;
+class RVNGBinaryData;
 
 ////////////////////////////////////////////////////////////
 //
@@ -183,8 +183,8 @@ public:
   //! returns the picture subtype
   virtual SubType getSubType() const = 0;
 
-  //! returns the final WPXBinary data
-  virtual bool getBinary(WPXBinaryData &res, std::string &s) const {
+  //! returns the final RVNGBinary data
+  virtual bool getBinary(RVNGBinaryData &res, std::string &s) const {
     if (!valid()) return false;
 
     s = "image/pict";
@@ -213,7 +213,7 @@ public:
 
 protected:
   //! abstract function which creates the result file
-  virtual bool createFileData(WPXBinaryData &result) const = 0;
+  virtual bool createFileData(RVNGBinaryData &result) const = 0;
 
   //! protected constructor: use check to construct a picture
   MWAWPictBitmap(Vec2i const &sz) {
@@ -287,7 +287,7 @@ public:
 
 protected:
   //! function which creates the result file
-  virtual bool createFileData(WPXBinaryData &result) const;
+  virtual bool createFileData(RVNGBinaryData &result) const;
 
   //! the data
   MWAWPictBitmapContainerBool m_data;
@@ -373,7 +373,7 @@ public:
 
 protected:
   //! the function which creates the result file
-  virtual bool createFileData(WPXBinaryData &result) const;
+  virtual bool createFileData(RVNGBinaryData &result) const;
 
   //! the m_data
   MWAWPictBitmapContainer<int> m_data;
@@ -444,7 +444,7 @@ public:
 
 protected:
   //! the function which creates the result file
-  virtual bool createFileData(WPXBinaryData &result) const;
+  virtual bool createFileData(RVNGBinaryData &result) const;
 
   //! the data
   MWAWPictBitmapContainer<MWAWColor> m_data;

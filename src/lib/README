@@ -44,7 +44,7 @@ These files defined basic tools which must be used by the parsers :
 	- define basic type: NumberingType, SubDocumentType, ...
 
 ## MWAWInputStream.hxx
-	internal wrapper of WPXInputStream (with functions to read Ole, ...)
+	internal wrapper of RVNGInputStream (with functions to read Ole, ...)
 
 ## MWAWOLEStream.hxx :
    	internal function used to store/read OLE, retrieve the list of OLE, ..
@@ -58,7 +58,7 @@ These files defined basic tools which must be used by the parsers :
      MWAWFontSJISConverter.hxx : read S-JIS encoding fonts
 - MWAWPrinter.hxx : read the mac printer information
 - MWAWOLEParser.hxx : read some classic ole structure
-- MWAWPropertyHandler.hxx : some classes which keep a list of tag and WPXPropertyList,
+- MWAWPropertyHandler.hxx : some classes which keep a list of tag and RVNGPropertyList,
 	store/unstore then in order to be reread by writerperfect 
 
 ## specific tool for graphics:
@@ -95,7 +95,7 @@ These files defined basic structures which must be used by the parsers :
 
 ## MWAWGraphicListener
 	The graphic listener (used to create odg picture) with
-  - MWAWGraphicInterface.hxx to define a generic interface to create ODG file à la libwpg-0.3
+  - MWAWGraphicInterface.hxx to define a generic interface to create ODG file
   - MWAWGraphicShape.hxx to define basic graphic shape
   - MWAWGraphicStyle.hxx to store the graphic style's properties
 

@@ -37,7 +37,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFontConverter.hxx"
@@ -200,7 +200,7 @@ void BWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void BWParser::parse(WPXDocumentInterface *docInterface)
+void BWParser::parse(RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
@@ -233,7 +233,7 @@ void BWParser::parse(WPXDocumentInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void BWParser::createDocument(WPXDocumentInterface *documentInterface)
+void BWParser::createDocument(RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -289,7 +289,7 @@ bool BWParser::createZones()
 {
   readRSRCZones();
   MWAWInputStreamPtr input = getInput();
-  if (input->seek(66, WPX_SEEK_SET) || !readPrintInfo())
+  if (input->seek(66, RVNG_SEEK_SET) || !readPrintInfo())
     return false;
   long pos = input->tell();
   if (!input->checkPosition(pos+70)) {
@@ -299,7 +299,7 @@ bool BWParser::createZones()
   // first check the main entry
   MWAWEntry mainEntry;
   mainEntry.setBegin(m_state->m_textBegin);
-  input->seek(mainEntry.begin(), WPX_SEEK_SET);
+  input->seek(mainEntry.begin(), RVNG_SEEK_SET);
   mainEntry.setLength(input->readLong(4));
   if (!mainEntry.valid()||!input->checkPosition(mainEntry.end())) {
     MWAW_DEBUG_MSG(("BWParser::createZones: can not determine main zone size\n"));
@@ -312,7 +312,7 @@ bool BWParser::createZones()
 
   // now read the list of zones
   libmwaw::DebugStream f;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(Zones):";
   for (int i=0; i<7; ++i) { // checkme: at least 2 zones, maybe 7
     MWAWEntry entry;
@@ -420,8 +420,8 @@ bool BWParser::sendPageFrames()
 
 bool BWParser::sendFrame(BWParserInternal::Frame const &frame)
 {
-  MWAWPosition fPos(Vec2f(0,0), frame.m_dim, WPX_POINT);
-  WPXPropertyList extra;
+  MWAWPosition fPos(Vec2f(0,0), frame.m_dim, RVNG_POINT);
+  RVNGPropertyList extra;
   if (frame.m_charAnchor)
     fPos.setRelativePosition(MWAWPosition::Char);
   else {
@@ -455,7 +455,7 @@ bool BWParser::readFrame(MWAWEntry const &entry)
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   for (int i=0; i<entry.id(); ++i) {
     BWParserInternal::Frame frame;
     long pos=input->tell(), begPos=pos;
@@ -469,7 +469,7 @@ bool BWParser::readFrame(MWAWEntry const &entry)
       val=(int) input->readLong(2); // 1|8
       if (val) f << "f0=" << val << ",";
       ascii().addDelimiter(input->tell(),'|');
-      input->seek(pos+40, WPX_SEEK_SET);
+      input->seek(pos+40, RVNG_SEEK_SET);
       ascii().addDelimiter(input->tell(),'|');
       for (int j=0; j < 5; ++j) { // f1=5, f3=2, f5=e|13
         val=(int) input->readLong(2);
@@ -499,7 +499,7 @@ bool BWParser::readFrame(MWAWEntry const &entry)
         MWAW_DEBUG_MSG(("BWParser::readFrame: the size seems bad\n"));
         f << "#fSz=" << fSz << ",";
       }
-      input->seek(pos+44, WPX_SEEK_SET);
+      input->seek(pos+44, RVNG_SEEK_SET);
       for (int j=0; j<6; ++j)
         f << "dim" << j << "?=" << input->readLong(2) << "x"
           << input->readLong(2) << ",";
@@ -611,7 +611,7 @@ bool BWParser::readFrame(MWAWEntry const &entry)
     frame.m_pictId=(int)input->readULong(2);
     f << "pId=" << frame.m_pictId << ",";
     ascii().addDelimiter(input->tell(),'|');
-    input->seek(18, WPX_SEEK_CUR);
+    input->seek(18, RVNG_SEEK_CUR);
     ascii().addDelimiter(input->tell(),'|');
     val=int(input->readLong(4));
     if (val) f << "textAround[offsT/B]=" << double(val)/65536. << ",";
@@ -627,7 +627,7 @@ bool BWParser::readFrame(MWAWEntry const &entry)
       MWAW_DEBUG_MSG(("BWParser::readFrame: frame %d already exists\n", frame.m_id));
     } else
       m_state->m_idFrameMap[frame.m_id]=frame;
-    input->seek(begPos+156, WPX_SEEK_SET);
+    input->seek(begPos+156, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -678,7 +678,7 @@ bool BWParser::readPrintInfo()
 
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  input->seek(pos+0x78, WPX_SEEK_SET);
+  input->seek(pos+0x78, RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
     MWAW_DEBUG_MSG(("BWParser::readPrintInfo: file is too short\n"));
     return false;
@@ -695,7 +695,7 @@ bool BWParser::readLastZone()
 {
   MWAWInputStreamPtr input = getInput();
   long beginPos = input->tell();
-  if (input->seek(beginPos+568,WPX_SEEK_SET)||!input->atEOS()) {
+  if (input->seek(beginPos+568,RVNG_SEEK_SET)||!input->atEOS()) {
     MWAW_DEBUG_MSG(("BWParser::readLastZone: the last zone seems odd\n"));
     ascii().addPos(beginPos);
     ascii().addNote("Entries(LastZone):###");
@@ -706,7 +706,7 @@ bool BWParser::readLastZone()
   ascii().addPos(beginPos);
   ascii().addNote("Entries(LastZone)");
 
-  input->seek(beginPos+4, WPX_SEEK_SET);
+  input->seek(beginPos+4, RVNG_SEEK_SET);
   long pos;
   for (int st=0; st<3; ++st) {
     pos=input->tell();
@@ -714,20 +714,20 @@ bool BWParser::readLastZone()
     f << "LastZone-A" << st << ":";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    input->seek(pos+34, WPX_SEEK_SET);
+    input->seek(pos+34, RVNG_SEEK_SET);
   }
 
   pos=input->tell();
   ascii().addPos(pos);
   ascii().addNote("LastZone-B:");
-  input->seek(pos+100, WPX_SEEK_SET);
+  input->seek(pos+100, RVNG_SEEK_SET);
   pos=input->tell();
   f.str("");
   f << "LastZone-DocInfo:";
   double margins[4]; // TBRL
   for (int i=0; i<4; ++i) {
     margins[i]=double(input->readLong(4))/65536./72.;
-    if (i<2) input->seek(2, WPX_SEEK_CUR); // skip margins in point
+    if (i<2) input->seek(2, RVNG_SEEK_CUR); // skip margins in point
   }
   f << "margins=[" << margins[0] << "," << margins[1] << "," << margins[2] << "," << margins[3] << "],";
   if (margins[0]>=0&&margins[1]>=0&&margins[2]>=0&&margins[3]>=0&&
@@ -748,14 +748,14 @@ bool BWParser::readLastZone()
   ascii().addNote(f.str().c_str());
 
 
-  input->seek(pos+76, WPX_SEEK_SET);
+  input->seek(pos+76, RVNG_SEEK_SET);
   for (int i=0; i<20; ++i) {
     pos=input->tell();
     f.str("");
     f << "LastZone-C" << i << ":";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    input->seek(pos+6, WPX_SEEK_SET);
+    input->seek(pos+6, RVNG_SEEK_SET);
   }
 
   pos=input->tell();
@@ -810,7 +810,7 @@ bool BWParser::readwPos(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(Windows):";
   int dim[4];
   for (int i=0; i < 4; ++i)
@@ -825,7 +825,7 @@ bool BWParser::readwPos(MWAWEntry const &entry)
 
 // read/send picture (edtp resource)
 bool BWParser::sendPicture
-(int pId, MWAWPosition const &pictPos, WPXPropertyList frameExtras)
+(int pId, MWAWPosition const &pictPos, RVNGPropertyList frameExtras)
 {
   MWAWContentListenerPtr listener=getListener();
   if (!listener) {
@@ -863,8 +863,8 @@ bool BWParser::sendPicture
   }
 
   MWAWInputStreamPtr input = rsrcInput();
-  input->seek(pictEntry.begin(), WPX_SEEK_SET);
-  WPXBinaryData data;
+  input->seek(pictEntry.begin(), RVNG_SEEK_SET);
+  RVNGBinaryData data;
   input->readDataBlock(pictEntry.length(), data);
   listener->insertPicture(pictPos, data, "image/pict", frameExtras);
 
@@ -896,7 +896,7 @@ bool BWParser::readFontStyle(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(FontStyle)[" << std::hex << entry.id() << std::dec << "]:";
   int fSz=(int) input->readLong(2);
   if (fSz) f << "fSz=" << fSz << ",";
@@ -931,7 +931,7 @@ bool BWParser::checkHeader(MWAWHeader *header, bool strict)
   libmwaw::DebugStream f;
   f << "FileHeader:";
 
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   if (input->readLong(2)!=0x4257 || input->readLong(2)!=0x6b73 ||
       input->readLong(2)!=0x4257 || input->readLong(2)!=0x7770 ||
       input->readLong(2)!=0x4257 || input->readLong(2)!=0x7770) {

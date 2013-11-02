@@ -41,7 +41,7 @@
 #include <sstream>
 #include <string>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -216,7 +216,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_parser);
   long pos = m_input->tell();
   reinterpret_cast<MRWParser *>(m_parser)->sendText(m_id);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 }
 
@@ -300,7 +300,7 @@ void MRWParser::sendText(int zoneId)
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
   m_textParser->send(zoneId);
-  input->seek(actPos, WPX_SEEK_SET);
+  input->seek(actPos, RVNG_SEEK_SET);
 }
 
 float MRWParser::getPatternPercent(int id) const
@@ -313,13 +313,13 @@ void MRWParser::sendToken(int zoneId, long tokenId)
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
   m_graphParser->sendToken(zoneId, tokenId);
-  input->seek(actPos, WPX_SEEK_SET);
+  input->seek(actPos, RVNG_SEEK_SET);
 }
 
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MRWParser::parse(WPXDocumentInterface *docInterface)
+void MRWParser::parse(RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -355,7 +355,7 @@ void MRWParser::parse(WPXDocumentInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MRWParser::createDocument(WPXDocumentInterface *documentInterface)
+void MRWParser::createDocument(RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -461,7 +461,7 @@ bool MRWParser::readZone(int &actZone, bool onlyTest)
   long pos = input->tell();
   MRWEntry zone;
   if (!readEntryHeader(zone)) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
 
@@ -539,12 +539,12 @@ bool MRWParser::readZone(int &actZone, bool onlyTest)
   if (done) {
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    input->seek(zone.end(), WPX_SEEK_SET);
+    input->seek(zone.end(), RVNG_SEEK_SET);
     return true;
   }
   if (onlyTest)
     return false;
-  input->seek(zone.begin(), WPX_SEEK_SET);
+  input->seek(zone.begin(), RVNG_SEEK_SET);
   input->pushLimit(zone.end());
   std::vector<MRWStruct> dataList;
   decodeZone(dataList);
@@ -579,7 +579,7 @@ bool MRWParser::readZone(int &actZone, bool onlyTest)
     ascii().addPos(input->tell());
     ascii().addNote(f.str().c_str());
   }
-  input->seek(zone.end(), WPX_SEEK_SET);
+  input->seek(zone.end(), RVNG_SEEK_SET);
   return true;
 }
 
@@ -593,7 +593,7 @@ bool MRWParser::readSeparator(MRWEntry const &entry)
     return false;
   }
   MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   decodeZone(dataList);
@@ -622,7 +622,7 @@ bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
     return false;
   }
   MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   decodeZone(dataList);
@@ -828,7 +828,7 @@ bool MRWParser::readZoneDim(MRWEntry const &entry, int zoneId)
     return false;
   }
   MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   decodeZone(dataList, 1+4*entry.m_N);
@@ -891,12 +891,12 @@ bool MRWParser::readZoneDim(MRWEntry const &entry, int zoneId)
       int nextPos= c+1==numCols ? colPos[2*c+1] :
                    (colPos[2*c+1]+colPos[2*c+2])/2;
       col.m_width=double(nextPos-prevPos);
-      col.m_widthUnit=WPX_POINT;
+      col.m_widthUnit=RVNG_POINT;
       col.m_margins[libmwaw::Left]=double(colPos[2*c]-prevPos)/72.;
       col.m_margins[libmwaw::Right]=double(nextPos-colPos[2*c+1])/72.;
     }
   }
-  input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), RVNG_SEEK_SET);
 
   return true;
 }
@@ -908,7 +908,7 @@ bool MRWParser::readDocInfo(MRWEntry const &entry, int zoneId)
     return false;
   }
   MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   decodeZone(dataList);
@@ -1058,7 +1058,7 @@ bool MRWParser::readZoneb(MRWEntry const &entry, int)
     return false;
   }
   MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   decodeZone(dataList, 1+4*entry.m_N);
@@ -1086,7 +1086,7 @@ bool MRWParser::readZoneb(MRWEntry const &entry, int)
     }
     ascii().addNote(f.str().c_str());
   }
-  input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), RVNG_SEEK_SET);
 
   return true;
 }
@@ -1098,7 +1098,7 @@ bool MRWParser::readZonec(MRWEntry const &entry, int zoneId)
     return false;
   }
   MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   decodeZone(dataList, 1+9*entry.m_N);
@@ -1133,7 +1133,7 @@ bool MRWParser::readZonec(MRWEntry const &entry, int zoneId)
     }
     ascii().addNote(f.str().c_str());
   }
-  input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), RVNG_SEEK_SET);
 
   return true;
 }
@@ -1145,7 +1145,7 @@ bool MRWParser::readZone13(MRWEntry const &entry, int)
     return false;
   }
   MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   decodeZone(dataList, 1+23);
@@ -1183,7 +1183,7 @@ bool MRWParser::readZone13(MRWEntry const &entry, int)
            {301,302,422,450,454,422,421,418,302,295,290,468,469,466,467,457,448}
         */
         f << "bl=[";
-        input->seek(data.m_pos.begin(), WPX_SEEK_SET);
+        input->seek(data.m_pos.begin(), RVNG_SEEK_SET);
         int N = int(data.m_pos.length()/2);
         for (int k = 0; k < N; k++) {
           val = (int) input->readLong(2);
@@ -1225,7 +1225,7 @@ bool MRWParser::readZone13(MRWEntry const &entry, int)
     }
   }
   ascii().addNote(f.str().c_str());
-  input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), RVNG_SEEK_SET);
 
   return true;
 }
@@ -1241,9 +1241,9 @@ bool MRWParser::readCPRT(MRWEntry const &entry)
   }
 
   MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
 #ifdef DEBUG_WITH_FILES
-  WPXBinaryData file;
+  RVNGBinaryData file;
   input->readDataBlock(entry.length(), file);
 
   static int volatile cprtName = 0;
@@ -1254,7 +1254,7 @@ bool MRWParser::readCPRT(MRWEntry const &entry)
   ascii().skipZone(entry.begin(),entry.end()-1);
 #endif
 
-  input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), RVNG_SEEK_SET);
   return true;
 }
 
@@ -1267,7 +1267,7 @@ bool MRWParser::readPrintInfo(MRWEntry const &entry)
   }
 
   MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
 
   libmwaw::PrinterInfo info;
   if (!info.read(input))
@@ -1309,7 +1309,7 @@ bool MRWParser::readPrintInfo(MRWEntry const &entry)
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
 
-  input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), RVNG_SEEK_SET);
   return true;
 }
 
@@ -1325,13 +1325,13 @@ bool MRWParser::readEntryHeader(MRWEntry &entry)
   std::vector<long> dataList;
   if (!readNumbersString(4,dataList)||dataList.size()<5) {
     MWAW_DEBUG_MSG(("MRWParser::readEntryHeader: oops can not find header entry\n"));
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   long length = (dataList[1]<<16)+dataList[2];
   if (length < 0 || !input->checkPosition(input->tell()+length)) {
     MWAW_DEBUG_MSG(("MRWParser::readEntryHeader: the header data seems to short\n"));
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   entry.setBegin(input->tell());
@@ -1355,7 +1355,7 @@ bool MRWParser::readNumbersString(int num, std::vector<long> &res)
       str += char(ch);
       continue;
     }
-    input->seek(-1, WPX_SEEK_CUR);
+    input->seek(-1, RVNG_SEEK_CUR);
     break;
   }
   if (!str.length()) return false;
@@ -1452,14 +1452,14 @@ bool MRWParser::decodeZone(std::vector<MRWStruct> &dataList, long numData)
       data.m_pos.setLength(numbers[0]);
       if (!input->checkPosition(data.m_pos.end()))
         break;
-      input->seek(data.m_pos.end(), WPX_SEEK_SET);
+      input->seek(data.m_pos.end(), RVNG_SEEK_SET);
       numbers.resize(0);
     }
 
     dataList.push_back(data);
     pos = input->tell();
   }
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   return dataList.size();
 }
 
@@ -1478,7 +1478,7 @@ bool MRWParser::checkHeader(MWAWHeader *header, bool strict)
     MWAW_DEBUG_MSG(("MRWParser::checkHeader: file is too short\n"));
     return false;
   }
-  input->seek(0,WPX_SEEK_SET);
+  input->seek(0,RVNG_SEEK_SET);
 
   int actZone = -1;
   if (!readZone(actZone, true))
@@ -1486,7 +1486,7 @@ bool MRWParser::checkHeader(MWAWHeader *header, bool strict)
   if (strict && !readZone(actZone, true))
     return false;
 
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   if (header)
     header->reset(MWAWDocument::MWAW_T_MARINERWRITE, 1);
 

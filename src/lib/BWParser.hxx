@@ -37,7 +37,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
@@ -67,14 +67,14 @@ public:
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(WPXDocumentInterface *documentInterface);
+  void parse(RVNGTextInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(WPXDocumentInterface *documentInterface);
+  void createDocument(RVNGTextInterface *documentInterface);
 
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
@@ -101,7 +101,7 @@ protected:
 
   //! try to send a picture
   bool sendPicture(int pId, MWAWPosition const &pos,
-                   WPXPropertyList frameExtras=WPXPropertyList());
+                   RVNGPropertyList frameExtras=RVNGPropertyList());
   //
   // low level
   //

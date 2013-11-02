@@ -32,21 +32,21 @@
 */
 
 /*
- *  freely inspired from libwpd/WPXZipStream.h :
+ *  freely inspired from libwpd/RVNGZipStream.h :
  */
 #if !defined(__MWAWZIPSTREAM_H__) && defined(USE_ZIP)
 #  define __MWAWZIPSTREAM_H__
 
 #include <string>
 #include <vector>
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge-stream/librevenge-stream.h>
 
 class MWAWZipStream
 {
 public:
-  MWAWZipStream(WPXInputStream *input) : m_input(input) {}
+  MWAWZipStream(RVNGInputStream *input) : m_input(input) {}
   bool isZipStream();
-  WPXInputStream *getDocumentZipStream(const std::string &name);
+  RVNGInputStream *getDocumentZipStream(const std::string &name);
 
   /**
    * Returns the list of all ole leaves names
@@ -54,7 +54,7 @@ public:
   std::vector<std::string> getZipNames();
 
 protected:
-  WPXInputStream *m_input;
+  RVNGInputStream *m_input;
 private:
   MWAWZipStream(MWAWZipStream const &orig);
   MWAWZipStream &operator=(MWAWZipStream const &orig);

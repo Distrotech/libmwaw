@@ -36,7 +36,7 @@
 #include <iostream>
 #include <map>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
@@ -166,7 +166,7 @@ MSK4Parser::~MSK4Parser()
 ////////////////////////////////////////////////////////////
 // the main parse function
 ////////////////////////////////////////////////////////////
-void MSK4Parser::parse(WPXDocumentInterface *interface)
+void MSK4Parser::parse(RVNGTextInterface *interface)
 {
   assert(getInput().get() != 0);
 
@@ -324,7 +324,7 @@ void MSK4Parser::flushExtra()
         if (first) {
           first = false;
           listener->setFont(MWAWFont(20,20));
-          WPXString message = "--------- The original document has some extra ole: -------- ";
+          RVNGString message = "--------- The original document has some extra ole: -------- ";
           listener->insertUnicodeString(message);
           listener->insertEOL();
         }
@@ -409,11 +409,11 @@ void MSK4Parser::sendFrameText(MWAWEntry const &entry, std::string const &frame)
   parser->readContentZones(ent, false);
 }
 
-void MSK4Parser::sendOLE(int id, MWAWPosition const &pictPos, WPXPropertyList extras)
+void MSK4Parser::sendOLE(int id, MWAWPosition const &pictPos, RVNGPropertyList extras)
 {
   if (!getListener()) return;
 
-  WPXBinaryData data;
+  RVNGBinaryData data;
   MWAWPosition pos;
   std::string type;
   if (!m_state->m_oleParser->getObject(id, data, pos, type)) {

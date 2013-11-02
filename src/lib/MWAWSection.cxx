@@ -29,7 +29,7 @@
 * instead of those above.
 */
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWPosition.hxx"
@@ -50,23 +50,23 @@ std::ostream &operator<<(std::ostream &o, MWAWSection::Column const &col)
   return o;
 }
 
-bool MWAWSection::Column::addTo(WPXPropertyList &propList) const
+bool MWAWSection::Column::addTo(RVNGPropertyList &propList) const
 {
   // The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
   double factor = 1.0;
   switch(m_widthUnit) {
-  case WPX_POINT:
-  case WPX_INCH:
-    factor = MWAWPosition::getScaleFactor(m_widthUnit, WPX_TWIP);
-  case WPX_TWIP:
+  case RVNG_POINT:
+  case RVNG_INCH:
+    factor = MWAWPosition::getScaleFactor(m_widthUnit, RVNG_TWIP);
+  case RVNG_TWIP:
     break;
-  case WPX_PERCENT:
-  case WPX_GENERIC:
+  case RVNG_PERCENT:
+  case RVNG_GENERIC:
   default:
     MWAW_DEBUG_MSG(("MWAWSection::Column::addTo: unknown unit\n"));
     return false;
   }
-  propList.insert("style:rel-width", m_width * factor, WPX_TWIP);
+  propList.insert("style:rel-width", m_width * factor, RVNG_TWIP);
   propList.insert("fo:start-indent", m_margins[libmwaw::Left]);
   propList.insert("fo:end-indent", m_margins[libmwaw::Right]);
   static bool first = true;
@@ -96,7 +96,7 @@ std::ostream &operator<<(std::ostream &o, MWAWSection const &sec)
   return o;
 }
 
-void MWAWSection::setColumns(int num, double width, WPXUnit widthUnit, double colSep)
+void MWAWSection::setColumns(int num, double width, RVNGUnit widthUnit, double colSep)
 {
   if (num<0) {
     MWAW_DEBUG_MSG(("MWAWSection::setColumns: called with negative number of column\n"));
@@ -116,7 +116,7 @@ void MWAWSection::setColumns(int num, double width, WPXUnit widthUnit, double co
   m_columns.resize(size_t(num), column);
 }
 
-void MWAWSection::addTo(WPXPropertyList &propList) const
+void MWAWSection::addTo(RVNGPropertyList &propList) const
 {
   propList.insert("fo:margin-left", 0.0);
   propList.insert("fo:margin-right", 0.0);
@@ -126,19 +126,19 @@ void MWAWSection::addTo(WPXPropertyList &propList) const
     propList.insert("fo:background-color", m_backgroundColor.str().c_str());
   if (m_columnSeparator.m_style != MWAWBorder::None &&
       m_columnSeparator.m_width > 0) {
-    propList.insert("libwpd:colsep-width", m_columnSeparator.m_width, WPX_POINT);
+    propList.insert("libwpd:colsep-width", m_columnSeparator.m_width, RVNG_POINT);
     propList.insert("libwpd:colsep-color", m_columnSeparator.m_color.str().c_str());
     propList.insert("libwpd:colsep-height", "100%");
     propList.insert("libwpd:colsep-vertical-align", "middle");
   }
 }
 
-void MWAWSection::addColumnsTo(WPXPropertyListVector &propVec) const
+void MWAWSection::addColumnsTo(RVNGPropertyListVector &propVec) const
 {
   size_t numCol = m_columns.size();
   if (!numCol) return;
   for (size_t c=0; c < numCol; c++) {
-    WPXPropertyList propList;
+    RVNGPropertyList propList;
     if (m_columns[c].addTo(propList))
       propVec.append(propList);
   }

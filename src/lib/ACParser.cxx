@@ -37,7 +37,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFontConverter.hxx"
@@ -386,7 +386,7 @@ void ACParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void ACParser::parse(WPXDocumentInterface *docInterface)
+void ACParser::parse(RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
@@ -415,7 +415,7 @@ void ACParser::parse(WPXDocumentInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void ACParser::createDocument(WPXDocumentInterface *documentInterface)
+void ACParser::createDocument(RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -587,7 +587,7 @@ bool ACParser::readEndDataV3()
     return true;
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
-  input->seek(-8, WPX_SEEK_END);
+  input->seek(-8, RVNG_SEEK_END);
   ascii().addPos(input->tell());
   long pos=(long) input->readULong(4);
   if (pos < 18 || !input->checkPosition(pos)) {
@@ -597,7 +597,7 @@ bool ACParser::readEndDataV3()
   }
   ascii().addNote("_");
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   f << "Entries(QOpt):";
   ACParserInternal::Label lbl((int) input->readLong(1));
@@ -664,7 +664,7 @@ bool ACParser::readEndDataV3()
   if (type!=255 || !input->checkPosition(pos+200))
     return true;
 
-  input->seek(pos+198, WPX_SEEK_SET);
+  input->seek(pos+198, RVNG_SEEK_SET);
   pos = input->tell();
   int N=(int) input->readLong(2);
   if (N<0 || !input->checkPosition(pos+2+34*N))
@@ -685,7 +685,7 @@ bool ACParser::readEndDataV3()
     }
     if (str.length())
       f << str << ",";
-    input->seek(pos+32, WPX_SEEK_SET);
+    input->seek(pos+32, RVNG_SEEK_SET);
     for (int j = 0; j < 2; j++) {
       val = (int) input->readLong(1);
       if (val) f << "f" << j << "=" << std::hex << val << std::dec << ",";
@@ -715,7 +715,7 @@ bool ACParser::readPrintInfo(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   libmwaw::PrinterInfo info;
   if (!info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
@@ -769,7 +769,7 @@ bool ACParser::readWindowPos(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(WindowPos):";
   entry.setParsed(true);
   int dim[4];
@@ -798,7 +798,7 @@ bool ACParser::readLabel(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(Label):";
   entry.setParsed(true);
   m_state->m_label.m_type=(int) input->readLong(2);
@@ -821,7 +821,7 @@ bool ACParser::readHFProperties(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(QHDR):";
   entry.setParsed(true);
   for (int st = 0; st < 2; st++) {
@@ -871,7 +871,7 @@ bool ACParser::readOption(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(Option):";
   entry.setParsed(true);
   ACParserInternal::Option opt((int) input->readULong(2));
@@ -900,7 +900,7 @@ bool ACParser::checkHeader(MWAWHeader *header, bool strict)
   f << "FileHeader:";
 
   // first check end of file
-  input->seek(-4,WPX_SEEK_END);
+  input->seek(-4,RVNG_SEEK_END);
   int last[2];
   for (int i = 0; i < 2; i++)
     last[i]=(int) input->readLong(2);
@@ -915,7 +915,7 @@ bool ACParser::checkHeader(MWAWHeader *header, bool strict)
 
   // ok, now check the beginning of the file
   int val;
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   if (vers==3) {
     val=(int) input->readULong(2);
     if (val!=3) {
@@ -934,7 +934,7 @@ bool ACParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
 
   // check that the first text size is valid
-  input->seek(vers==1 ? 18 : 20, WPX_SEEK_SET);
+  input->seek(vers==1 ? 18 : 20, RVNG_SEEK_SET);
   long sz=(long) input->readULong(4);
   if (!input->checkPosition(input->tell()+sz))
     return false;

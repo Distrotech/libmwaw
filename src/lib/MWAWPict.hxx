@@ -36,7 +36,7 @@
  *
  * Note: generic class for all sort of pict
  *      - PictBitmap: regroup some classes used to store bitmap
- *      - PictData: regroup the data which can be read via a WPXBinaryData
+ *      - PictData: regroup the data which can be read via a RVNGBinaryData
  */
 
 #ifndef MWAW_PICT
@@ -89,7 +89,7 @@ public:
    * - either a basic image/pict
    * - or an encrypted pict in ODG : "image/mwaw-odg"
    */
-  virtual bool getBinary(WPXBinaryData &, std::string &) const {
+  virtual bool getBinary(RVNGBinaryData &, std::string &) const {
     return false;
   }
 

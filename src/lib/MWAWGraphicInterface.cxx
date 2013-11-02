@@ -39,7 +39,7 @@
 #include <sstream>
 #include <string>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 #include <libmwaw/libmwaw.hxx>
 
 #include "libmwaw_internal.hxx"
@@ -57,16 +57,16 @@ struct State {
   State() : m_encoder(), m_listIdToPropertyMap() {
   }
   //! try to retrieve a list element property
-  bool retrieveListElement(int id, int level, WPXPropertyList &list) const;
+  bool retrieveListElement(int id, int level, RVNGPropertyList &list) const;
   //! add a list definition in the list property map
-  void addListElement(WPXPropertyList const &list);
+  void addListElement(RVNGPropertyList const &list);
   //! the encoder
   MWAWPropertyHandlerEncoder m_encoder;
   //! a multimap list id to property list item map
-  std::multimap<int, WPXPropertyList> m_listIdToPropertyMap;
+  std::multimap<int, RVNGPropertyList> m_listIdToPropertyMap;
 };
 
-void State::addListElement(WPXPropertyList const &list)
+void State::addListElement(RVNGPropertyList const &list)
 {
   if (!list["libwpd:id"] || !list["libwpd:level"]) {
     MWAW_DEBUG_MSG(("MWAWGraphicInterfaceInternal::addListElement: can not find the id or the level\n"));
@@ -74,7 +74,7 @@ void State::addListElement(WPXPropertyList const &list)
   }
   int id=list["libwpd:id"]->getInt();
   int level=list["libwpd:level"]->getInt();
-  std::multimap<int, WPXPropertyList>::iterator it=m_listIdToPropertyMap.lower_bound(id);
+  std::multimap<int, RVNGPropertyList>::iterator it=m_listIdToPropertyMap.lower_bound(id);
   while (it!=m_listIdToPropertyMap.end() && it->first == id) {
     if (it->second["libwpd:level"]->getInt()==level) {
       m_listIdToPropertyMap.erase(it);
@@ -82,12 +82,12 @@ void State::addListElement(WPXPropertyList const &list)
     }
     ++it;
   }
-  m_listIdToPropertyMap.insert(std::multimap<int, WPXPropertyList>::value_type(id,list));
+  m_listIdToPropertyMap.insert(std::multimap<int, RVNGPropertyList>::value_type(id,list));
 }
 
-bool State::retrieveListElement(int id, int level, WPXPropertyList &list) const
+bool State::retrieveListElement(int id, int level, RVNGPropertyList &list) const
 {
-  std::multimap<int, WPXPropertyList>::const_iterator it=m_listIdToPropertyMap.lower_bound(id);
+  std::multimap<int, RVNGPropertyList>::const_iterator it=m_listIdToPropertyMap.lower_bound(id);
   while (it!=m_listIdToPropertyMap.end() && it->first == id) {
     if (it->second["libwpd:level"]->getInt()==level) {
       list = it->second;
@@ -109,7 +109,7 @@ MWAWGraphicInterface::~MWAWGraphicInterface()
 {
 }
 
-bool MWAWGraphicInterface::getBinaryResult(WPXBinaryData &result, std::string &mimeType)
+bool MWAWGraphicInterface::getBinaryResult(RVNGBinaryData &result, std::string &mimeType)
 {
   if (!m_state->m_encoder.getData(result))
     return false;
@@ -117,7 +117,7 @@ bool MWAWGraphicInterface::getBinaryResult(WPXBinaryData &result, std::string &m
   return true;
 }
 
-void MWAWGraphicInterface::startDocument(const ::WPXPropertyList &list)
+void MWAWGraphicInterface::startDocument(const ::RVNGPropertyList &list)
 {
   m_state->m_encoder.startElement("Graphics", list);
 }
@@ -127,11 +127,11 @@ void MWAWGraphicInterface::endDocument()
   m_state->m_encoder.endElement("Graphics");
 }
 
-void MWAWGraphicInterface::setDocumentMetaData(const WPXPropertyList &)
+void MWAWGraphicInterface::setDocumentMetaData(const RVNGPropertyList &)
 {
 }
 
-void MWAWGraphicInterface::startPage(const ::WPXPropertyList &)
+void MWAWGraphicInterface::startPage(const ::RVNGPropertyList &)
 {
 }
 
@@ -139,13 +139,13 @@ void MWAWGraphicInterface::endPage()
 {
 }
 
-void MWAWGraphicInterface::setStyle(const ::WPXPropertyList &list, const ::WPXPropertyListVector &gradient)
+void MWAWGraphicInterface::setStyle(const ::RVNGPropertyList &list, const ::RVNGPropertyListVector &gradient)
 {
   m_state->m_encoder.startElement("SetStyle", list, gradient);
   m_state->m_encoder.endElement("SetStyle");
 }
 
-void MWAWGraphicInterface::startLayer(const ::WPXPropertyList &list)
+void MWAWGraphicInterface::startLayer(const ::RVNGPropertyList &list)
 {
   m_state->m_encoder.startElement("Layer", list);
 }
@@ -155,7 +155,7 @@ void MWAWGraphicInterface::endLayer()
   m_state->m_encoder.endElement("Layer");
 }
 
-void MWAWGraphicInterface::startEmbeddedGraphics(const ::WPXPropertyList &list)
+void MWAWGraphicInterface::startEmbeddedGraphics(const ::RVNGPropertyList &list)
 {
   m_state->m_encoder.startElement("EmbeddedGraphics", list);
 }
@@ -165,43 +165,43 @@ void MWAWGraphicInterface::endEmbeddedGraphics()
   m_state->m_encoder.endElement("EmbeddedGraphics");
 }
 
-void MWAWGraphicInterface::drawRectangle(const ::WPXPropertyList &list)
+void MWAWGraphicInterface::drawRectangle(const ::RVNGPropertyList &list)
 {
   m_state->m_encoder.startElement("Rectangle", list);
   m_state->m_encoder.endElement("Rectangle");
 }
 
-void MWAWGraphicInterface::drawEllipse(const ::WPXPropertyList &list)
+void MWAWGraphicInterface::drawEllipse(const ::RVNGPropertyList &list)
 {
   m_state->m_encoder.startElement("Ellipse", list);
   m_state->m_encoder.endElement("Ellipse");
 }
 
-void MWAWGraphicInterface::drawPolygon(const ::WPXPropertyListVector &vertices)
+void MWAWGraphicInterface::drawPolygon(const ::RVNGPropertyListVector &vertices)
 {
-  m_state->m_encoder.startElement("Polygon", WPXPropertyList(), vertices);
+  m_state->m_encoder.startElement("Polygon", RVNGPropertyList(), vertices);
   m_state->m_encoder.endElement("Polygon");
 }
 
-void MWAWGraphicInterface::drawPolyline(const ::WPXPropertyListVector &vertices)
+void MWAWGraphicInterface::drawPolyline(const ::RVNGPropertyListVector &vertices)
 {
-  m_state->m_encoder.startElement("Polyline", WPXPropertyList(), vertices);
+  m_state->m_encoder.startElement("Polyline", RVNGPropertyList(), vertices);
   m_state->m_encoder.endElement("Polyline");
 }
 
-void MWAWGraphicInterface::drawPath(const ::WPXPropertyListVector &path)
+void MWAWGraphicInterface::drawPath(const ::RVNGPropertyListVector &path)
 {
-  m_state->m_encoder.startElement("Path", WPXPropertyList(), path);
+  m_state->m_encoder.startElement("Path", RVNGPropertyList(), path);
   m_state->m_encoder.endElement("Path");
 }
 
-void MWAWGraphicInterface::drawGraphicObject(const ::WPXPropertyList &list, const ::WPXBinaryData &binaryData)
+void MWAWGraphicInterface::drawGraphicObject(const ::RVNGPropertyList &list, const ::RVNGBinaryData &binaryData)
 {
   m_state->m_encoder.startElement("GraphicObject", list, binaryData);
   m_state->m_encoder.endElement("GraphicObject");
 }
 
-void MWAWGraphicInterface::startTextObject(const ::WPXPropertyList &list, const ::WPXPropertyListVector &path)
+void MWAWGraphicInterface::startTextObject(const ::RVNGPropertyList &list, const ::RVNGPropertyListVector &path)
 {
   m_state->m_encoder.startElement("TextObject", list, path);
 }
@@ -221,7 +221,7 @@ void MWAWGraphicInterface::insertSpace()
   insertText(" ");
 }
 
-void MWAWGraphicInterface::insertText(const WPXString &text)
+void MWAWGraphicInterface::insertText(const RVNGString &text)
 {
   m_state->m_encoder.characters(text.cstr());
 }
@@ -231,7 +231,7 @@ void MWAWGraphicInterface::insertLineBreak()
   insertText("\n");
 }
 
-void MWAWGraphicInterface::insertField(const WPXString &type, const WPXPropertyList &/*list*/)
+void MWAWGraphicInterface::insertField(const RVNGString &type, const RVNGPropertyList &/*list*/)
 {
   if (type=="text:title")
     insertText("#TITLE#");
@@ -244,17 +244,17 @@ void MWAWGraphicInterface::insertField(const WPXString &type, const WPXPropertyL
   }
 }
 
-void MWAWGraphicInterface::defineOrderedListLevel(const WPXPropertyList &list)
+void MWAWGraphicInterface::defineOrderedListLevel(const RVNGPropertyList &list)
 {
   m_state->addListElement(list);
 }
 
-void MWAWGraphicInterface::defineUnorderedListLevel(const WPXPropertyList &list)
+void MWAWGraphicInterface::defineUnorderedListLevel(const RVNGPropertyList &list)
 {
   m_state->addListElement(list);
 }
 
-void MWAWGraphicInterface::openListElement(const WPXPropertyList &list, const WPXPropertyListVector &tabStops)
+void MWAWGraphicInterface::openListElement(const RVNGPropertyList &list, const RVNGPropertyListVector &tabStops)
 {
   openParagraph(list, tabStops);
 }
@@ -264,7 +264,7 @@ void MWAWGraphicInterface::closeListElement()
   closeParagraph();
 }
 
-void MWAWGraphicInterface::openParagraph(const WPXPropertyList &list, const WPXPropertyListVector &)
+void MWAWGraphicInterface::openParagraph(const RVNGPropertyList &list, const RVNGPropertyListVector &)
 {
   m_state->m_encoder.startElement("TextLine", list);
 }
@@ -274,7 +274,7 @@ void MWAWGraphicInterface::closeParagraph()
   m_state->m_encoder.endElement("TextLine");
 }
 
-void MWAWGraphicInterface::openSpan(const WPXPropertyList &list)
+void MWAWGraphicInterface::openSpan(const RVNGPropertyList &list)
 {
   m_state->m_encoder.startElement("TextSpan", list);
 }

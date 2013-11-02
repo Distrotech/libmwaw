@@ -37,7 +37,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
@@ -413,7 +413,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("SubDocument::parse: oops do not know how to send this kind of document\n"));
     return;
   }
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -500,7 +500,7 @@ void NSText::computePositions()
   // first compute the number of page and the number of paragraph by pages
   int nPages = 1;
   MWAWInputStreamPtr input = m_mainParser->getInput();
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   int paragraph=0;
   std::vector<int> firstParagraphInPage;
   firstParagraphInPage.push_back(0);
@@ -715,7 +715,7 @@ bool NSText::readFontsList(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &asciiFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(FontNames)[" << entry.id() << "]:";
@@ -753,7 +753,7 @@ bool NSText::readFontsList(MWAWEntry const &entry)
     f << name;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    if ((pSz%2)==0) input->seek(1,WPX_SEEK_CUR);
+    if ((pSz%2)==0) input->seek(1,RVNG_SEEK_CUR);
   }
   return true;
 }
@@ -772,7 +772,7 @@ bool NSText::readFonts(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &asciiFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   int numElt = int(entry.length()/fSize);
   libmwaw::DebugStream f;
@@ -829,8 +829,8 @@ bool NSText::readFonts(MWAWEntry const &entry)
     if (flag & 0x100) flags |= MWAWFont::allCapsBit;
     if (flag & 0x200) flags |= MWAWFont::boxedBit;
     if (flag & 0x400) flags |= MWAWFont::hiddenBit;
-    if (flag & 0x1000) font.m_font.set(MWAWFont::Script(40,WPX_PERCENT,58));
-    if (flag & 0x2000) font.m_font.set(MWAWFont::Script(-40,WPX_PERCENT,58));
+    if (flag & 0x1000) font.m_font.set(MWAWFont::Script(40,RVNG_PERCENT,58));
+    if (flag & 0x2000) font.m_font.set(MWAWFont::Script(-40,RVNG_PERCENT,58));
     if (flag & 0x4000) flags |= MWAWFont::reverseVideoBit;
     if (flag & 0x8800)
       f << "#flags1=" << std::hex << (flag & 0x8800) << std::dec << ",";
@@ -908,7 +908,7 @@ bool NSText::readFonts(MWAWEntry const &entry)
       asciiFile.addDelimiter(input->tell(),'|');
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+fSize, WPX_SEEK_SET);
+    input->seek(pos+fSize, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -929,7 +929,7 @@ bool NSText::readPosToFont(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &asciiFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   int numElt = int(entry.length()/10);
   libmwaw::DebugStream f;
@@ -954,7 +954,7 @@ bool NSText::readPosToFont(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     zone.m_plcMap.insert(NSTextInternal::Zone::PLCMap::value_type(position, plc));
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+10, WPX_SEEK_SET);
+    input->seek(pos+10, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -992,7 +992,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &asciiFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   int numElt = int(entry.length()/98);
   libmwaw::DebugStream f, f2;
@@ -1025,7 +1025,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
 
     long nPara = (long) input->readULong(4);
     if (nPara == 0x7FFFFFFF) {
-      input->seek(-4, WPX_SEEK_CUR);
+      input->seek(-4, RVNG_SEEK_CUR);
       break;
     }
     NSStruct::Position textPosition;
@@ -1042,7 +1042,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     }
     NSTextInternal::Paragraph para;
 
-    para.setInterline(double(input->readLong(4))/65536., WPX_POINT, MWAWParagraph::AtLeast);
+    para.setInterline(double(input->readLong(4))/65536., RVNG_POINT, MWAWParagraph::AtLeast);
     para.m_spacings[1] = float(input->readLong(4))/65536.f/72.f;
     int wh = int(input->readLong(2));
     switch(wh) {
@@ -1064,7 +1064,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     val = input->readLong(2);
     if (val) f << "#f0=" << val << ",";
 
-    para.m_marginsUnit = WPX_INCH;
+    para.m_marginsUnit = RVNG_INCH;
     para.m_margins[0] = float(input->readLong(4))/65536.f/72.f;
     para.m_margins[1] = float(input->readLong(4))/65536.f/72.f;
     para.m_margins[2] = float(input->readLong(4))/65536.f/72.f;
@@ -1077,14 +1077,14 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
       para.m_spacingsInterlineType = MWAWParagraph::Fixed;
       break;
     case 2:
-      para.m_spacingsInterlineUnit = WPX_PERCENT;
+      para.m_spacingsInterlineUnit = RVNG_PERCENT;
       para.m_spacingsInterlineType = MWAWParagraph::Fixed;
       // before spacing is also in %, try to correct it
       para.m_spacings[1] = para.m_spacings[1].get()*12.0;
       break;
     default: // unknown, so...
       f << "#interline=" << (val&0xFC) << ",";
-      para.setInterline(1.0, WPX_PERCENT);
+      para.setInterline(1.0, RVNG_PERCENT);
       break;
     }
     val = input->readLong(1);
@@ -1093,7 +1093,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
       val = input->readLong(2);
       if (val) f << "g" << i << "=" << val << ",";
     }
-    input->seek(pos+0x3E, WPX_SEEK_SET);
+    input->seek(pos+0x3E, RVNG_SEEK_SET);
     long numTabs = input->readLong(2);
     bool ok = true;
     if (0x40+8*numTabs+2 > sz) {
@@ -1141,7 +1141,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
       para.m_tabs->push_back(tab);
       if (f2.str().length())
         f << "tab" << i << "=[" << f2.str() << "],";
-      input->seek(tabPos+8, WPX_SEEK_SET);
+      input->seek(tabPos+8, RVNG_SEEK_SET);
     }
 
     // ruler name
@@ -1171,7 +1171,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
 
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+sz, WPX_SEEK_SET);
+    input->seek(pos+sz, RVNG_SEEK_SET);
   }
   pos = input->tell();
   f.str("");
@@ -1210,7 +1210,7 @@ bool NSText::readHeaderFooter(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &asciiFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   int numElt = int(entry.length()/32);
   libmwaw::DebugStream f;
@@ -1273,7 +1273,7 @@ bool NSText::readHeaderFooter(MWAWEntry const &entry)
     zone.m_plcMap.insert(NSTextInternal::Zone::PLCMap::value_type(hfPosition, plc));
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+32, WPX_SEEK_SET);
+    input->seek(pos+32, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -1291,7 +1291,7 @@ bool NSText::readFootnotes(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &asciiFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   int numElt = int(entry.length()/36);
   libmwaw::DebugStream f;
@@ -1324,7 +1324,7 @@ bool NSText::readFootnotes(MWAWEntry const &entry)
       if (val) f << "g" << j << "=" << val << ",";
     }
     for (int wh = 0; wh < 2; wh++) {
-      input->seek(pos+24+wh*6, WPX_SEEK_SET);
+      input->seek(pos+24+wh*6, RVNG_SEEK_SET);
       std::string label("");
       for (int c = 0; c < 6; c++) {
         char ch = (char) input->readULong(1);
@@ -1348,7 +1348,7 @@ bool NSText::readFootnotes(MWAWEntry const &entry)
 
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+36, WPX_SEEK_SET);
+    input->seek(pos+36, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -1369,7 +1369,7 @@ bool NSText::readPICD(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   int numElt = int(entry.length()/14);
   libmwaw::DebugStream f;
@@ -1399,7 +1399,7 @@ bool NSText::readPICD(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     f << "PICD" << i << ":" << pict;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+14, WPX_SEEK_SET);
+    input->seek(pos+14, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -1427,7 +1427,7 @@ long NSText::findFilePos(NSStruct::ZoneType zoneId, NSStruct::Position const &po
   bool isMain = zoneId == NSStruct::Z_Main;
   MWAWInputStreamPtr input = isMain ?
                              m_mainParser->getInput() : m_mainParser->rsrcInput();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
 
   NSStruct::Position actPos;
   for (int i = 0; i < entry.length(); i++) {
@@ -1555,7 +1555,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         listener->closeSection();
 
       MWAWSection sec;
-      sec.setColumns(nCol, double(width), WPX_POINT);
+      sec.setColumns(nCol, double(width), RVNG_POINT);
       listener->openSection(sec);
     }
   }
@@ -1564,7 +1564,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
   libmwaw::DebugFile &ascFile =
     isMain ? m_mainParser->ascii() : m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(TEXT)[" << zoneId << "]:";
@@ -1657,7 +1657,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
           break;
         }
         NSTextInternal::PicturePara &pict = zone.m_pictureParaList[size_t(plc.m_id)];
-        MWAWPosition pictPos(pict.m_position.min(), pict.m_position.size(), WPX_POINT);
+        MWAWPosition pictPos(pict.m_position.min(), pict.m_position.size(), RVNG_POINT);
         pictPos.setRelativePosition(MWAWPosition::Paragraph);
         pictPos.m_wrapping = MWAWPosition::WBackground;
         m_mainParser->sendPicture(pict.m_id, pictPos);
@@ -1715,7 +1715,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         f << "#";
         break;
       }
-      MWAWPosition pictPos(actFont.m_pictureDim[0].min(), actFont.m_pictureDim[0].size(), WPX_POINT);
+      MWAWPosition pictPos(actFont.m_pictureDim[0].min(), actFont.m_pictureDim[0].size(), RVNG_POINT);
       pictPos.setRelativePosition(MWAWPosition::CharBaseLine);
       pictPos.setClippingPosition
       (actFont.m_pictureDim[1].min()-actFont.m_pictureDim[0].min(),

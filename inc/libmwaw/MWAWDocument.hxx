@@ -49,14 +49,10 @@
 #  define MWAWLIB
 #endif
 
-namespace libwpg
-{
-class WPGPaintInterface;
-}
-
-class WPXBinaryData;
-class WPXDocumentInterface;
-class WPXInputStream;
+class RVNGBinaryData;
+class RVNGDrawingInterface;
+class RVNGTextInterface;
+class RVNGInputStream;
 
 /**
 This class provides all the functions needed by applications to parse many pre-MacOSX documents.
@@ -144,28 +140,28 @@ public:
       the input stream can be parsed
 
       \note encryption enum appears in MWAW_TEXT_VERSION==2 */
-  static MWAWLIB Confidence isFileFormatSupported(WPXInputStream *input, Type &type, Kind &kind);
+  static MWAWLIB Confidence isFileFormatSupported(RVNGInputStream *input, Type &type, Kind &kind);
   /** Parses the input stream content. It will make callbacks to the functions provided by a
-     WPXDocumentInterface class implementation when needed. This is often commonly called the
+     RVNGTextInterface class implementation when needed. This is often commonly called the
      'main parsing routine'.
      \param input The input stream
      \param documentInterface A MWAWListener implementation
      \param password The file password
 
    \note password appears in MWAW_TEXT_VERSION==2 */
-  static MWAWLIB Result parse(WPXInputStream *input, WPXDocumentInterface *documentInterface, char const *password=0);
+  static MWAWLIB Result parse(RVNGInputStream *input, RVNGTextInterface *documentInterface, char const *password=0);
 
   /** Parses the graphic contained in the binary data and called paintInterface to reconstruct
-    a graphic. The input is normally send to a WPXDocumentInterface with mimeType="image/mwaw-odg",
+    a graphic. The input is normally send to a RVNGTextInterface with mimeType="image/mwaw-odg",
     ie. it must correspond to a picture created by the MWAWGraphicInterface class via
     a MWAWPropertyEncoder.
 
-   \param binary a list of WPGPaintInterface stored in a paintInterface,
+   \param binary a list of RVNGDrawingInterface stored in a paintInterface,
    \param paintInterface the paint interface which will convert the graphic is some specific format
    (ODG, SVG, ...)
 
    \note this function appears in MWAW_GRAPHIC_VERSION==1 */
-  static MWAWLIB bool decodeGraphic(WPXBinaryData const &binary, libwpg::WPGPaintInterface *paintInterface);
+  static MWAWLIB bool decodeGraphic(RVNGBinaryData const &binary, RVNGDrawingInterface *paintInterface);
 };
 
 #endif /* MWAWDOCUMENT_HXX */

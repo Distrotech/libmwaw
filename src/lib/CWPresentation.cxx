@@ -37,7 +37,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
@@ -136,7 +136,7 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
+  input->seek(pos+8+16, RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   shared_ptr<CWPresentationInternal::Presentation>
@@ -153,7 +153,7 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       MWAW_DEBUG_MSG(("CWPresentation::readPresentationZone: can not find definition size\n"));
-      input->seek(entry.end(), WPX_SEEK_SET);
+      input->seek(entry.end(), RVNG_SEEK_SET);
       return shared_ptr<CWStruct::DSET>();
     }
 
@@ -166,7 +166,7 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
     m_state->m_presentationMap[presentationZone->m_id] = presentationZone;
 
   long dataEnd = entry.end()-N*data0Length;
-  input->seek(dataEnd, WPX_SEEK_SET);
+  input->seek(dataEnd, RVNG_SEEK_SET);
   for (int i = 0; i < N; i++) {
     pos = input->tell();
 
@@ -174,9 +174,9 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
     f << "PresentationDef-" << i;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+data0Length, WPX_SEEK_SET);
+    input->seek(pos+data0Length, RVNG_SEEK_SET);
   }
-  input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), RVNG_SEEK_SET);
 
   pos = input->tell();
   bool ok = readZone1(*presentationZone);
@@ -185,7 +185,7 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
     ok = readZone2(*presentationZone);
   }
   if (!ok)
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
 
   return presentationZone;
 }
@@ -206,9 +206,9 @@ bool CWPresentation::readZone1(CWPresentationInternal::Presentation &pres)
     long pos = input->tell();
     long N = (long) input->readULong(4);
     long endPos = pos+16*N+4;
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
     if (N < 0 || long(input->tell()) != endPos) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       MWAW_DEBUG_MSG(("CWPresentation::readZone1: zone seems too short\n"));
       return false;
     }
@@ -217,7 +217,7 @@ bool CWPresentation::readZone1(CWPresentationInternal::Presentation &pres)
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
 
-    input->seek(pos+4, WPX_SEEK_SET);
+    input->seek(pos+4, RVNG_SEEK_SET);
     for (int i = 0; i < N; i++) {
       f.str("");
       f << "PresentationStr" << st << "-" << i << ":";
@@ -232,13 +232,13 @@ bool CWPresentation::readZone1(CWPresentationInternal::Presentation &pres)
       f << "zId=" << zoneId << ",";
       f << "f1=" << input->readLong(4) << ","; // always 8 ?
       int sSz = (int) input->readLong(4);
-      input->seek(pos+16+sSz, WPX_SEEK_SET);
+      input->seek(pos+16+sSz, RVNG_SEEK_SET);
       if (sSz < 0 || input->tell() != pos+16+sSz) {
-        input->seek(pos, WPX_SEEK_SET);
+        input->seek(pos, RVNG_SEEK_SET);
         MWAW_DEBUG_MSG(("CWPresentation::readZone1: can not read string %d\n", i));
         return false;
       }
-      input->seek(pos+12, WPX_SEEK_SET);
+      input->seek(pos+12, RVNG_SEEK_SET);
       std::string name("");
       for (int s = 0; s < sSz; s++)
         name += (char) input->readULong(1);
@@ -262,14 +262,14 @@ bool CWPresentation::readZone2(CWPresentationInternal::Presentation &/*pres*/)
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   long endPos = pos+16;
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWPresentation::readZone2: zone seems too short\n"));
     return false;
   }
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(PresentationTitle):";
   // checkme this also be 1 times : [ 0, f2] or 1, str0, f2, or a mixt
   for (int i = 0; i < 3; i++) { // find f0=1, f1=0, f2=[0|1|2|4]
@@ -278,13 +278,13 @@ bool CWPresentation::readZone2(CWPresentationInternal::Presentation &/*pres*/)
       f << "f" << i << "=" << val << ",";
   }
   int sSz = (int) input->readLong(4);
-  input->seek(pos+16+sSz, WPX_SEEK_SET);
+  input->seek(pos+16+sSz, RVNG_SEEK_SET);
   if (sSz < 0 || input->tell() != pos+16+sSz) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWPresentation::readZone2: can not read title\n"));
     return false;
   }
-  input->seek(pos+16, WPX_SEEK_SET);
+  input->seek(pos+16, RVNG_SEEK_SET);
   std::string title("");
   for (int s = 0; s < sSz; s++)
     title += (char) input->readULong(1);

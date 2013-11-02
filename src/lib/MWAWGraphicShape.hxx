@@ -36,10 +36,10 @@
 #  include <string>
 #  include <vector>
 
-#  include "libwpd/libwpd.h"
+#  include "librevenge/librevenge.h"
 #  include "libmwaw_internal.hxx"
 
-class WPXPropertyList;
+class RVNGPropertyList;
 class MWAWGraphicStyle;
 
 /** a structure used to define a picture shape */
@@ -59,7 +59,7 @@ public:
     //! rotate all the coordinate by angle (origin rotation) then translate coordinate
     void rotate(float angle, Vec2f const &delta);
     //! update the property list to correspond to a command
-    bool get(WPXPropertyList &pList, Vec2f const &orig) const;
+    bool get(RVNGPropertyList &pList, Vec2f const &orig) const;
     //! a print operator
     friend std::ostream &operator<<(std::ostream &o, PathData const &path);
     //! comparison function

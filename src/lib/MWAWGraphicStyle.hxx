@@ -36,7 +36,7 @@
 #  include <string>
 #  include <vector>
 
-#  include "libwpd/libwpd.h"
+#  include "librevenge/librevenge.h"
 #  include "libmwaw_internal.hxx"
 
 /** a structure used to define a picture style
@@ -96,7 +96,7 @@ public:
       m_colors[1]=MWAWColor::white();
     }
     //!  constructor from a binary data
-    Pattern(Vec2i dim, WPXBinaryData const &picture, std::string const &mime, MWAWColor const &avColor) :
+    Pattern(Vec2i dim, RVNGBinaryData const &picture, std::string const &mime, MWAWColor const &avColor) :
       m_dim(dim), m_data(), m_picture(picture), m_pictureMime(mime), m_pictureAverageColor(avColor) {
       m_colors[0]=MWAWColor::black();
       m_colors[1]=MWAWColor::white();
@@ -115,7 +115,7 @@ public:
     //! check if the pattern has only one color; if so returns true...
     bool getUniqueColor(MWAWColor &col) const;
     /** tries to convert the picture in a binary data ( ppm) */
-    bool getBinary(WPXBinaryData &data, std::string &type) const;
+    bool getBinary(RVNGBinaryData &data, std::string &type) const;
 
     /** compare two patterns */
     int cmp(Pattern const &a) const {
@@ -170,7 +170,7 @@ public:
     std::vector<unsigned char> m_data;
   protected:
     //! a picture
-    WPXBinaryData m_picture;
+    RVNGBinaryData m_picture;
     //! the picture type
     std::string m_pictureMime;
     //! the picture average color
@@ -231,7 +231,7 @@ public:
   //! a print operator
   friend std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st);
   //! add to propList
-  void addTo(WPXPropertyList &pList, WPXPropertyListVector &gradient, bool only1d=false) const;
+  void addTo(RVNGPropertyList &pList, RVNGPropertyListVector &gradient, bool only1d=false) const;
 
   /** compare two styles */
   int cmp(MWAWGraphicStyle const &a) const;

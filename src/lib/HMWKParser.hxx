@@ -41,7 +41,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
@@ -105,7 +105,7 @@ struct HMWKZone {
     m_endFilePos = endPos;
   }
   //! returns a pointer to the binary data
-  WPXBinaryData &getBinaryData() {
+  RVNGBinaryData &getBinaryData() {
     return m_data;
   }
   //! returns the zone name
@@ -149,7 +149,7 @@ protected:
   long m_endFilePos;
 
   //! the storage (if needed)
-  WPXBinaryData m_data;
+  RVNGBinaryData m_data;
 
   //! the debug file
   libmwaw::DebugFile *m_asciiFile;
@@ -186,14 +186,14 @@ public:
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(WPXDocumentInterface *documentInterface);
+  void parse(RVNGTextInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(WPXDocumentInterface *documentInterface);
+  void createDocument(RVNGTextInterface *documentInterface);
 
   //! finds the different objects zones
   bool createZones();

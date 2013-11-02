@@ -37,7 +37,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWHeader.hxx"
@@ -115,7 +115,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   long pos = m_input->tell();
   reinterpret_cast<WNParser *>(m_parser)->send(m_pos);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -222,7 +222,7 @@ bool WNParser::sendGraphic(int gId, Box2i const &bdbox)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void WNParser::parse(WPXDocumentInterface *docInterface)
+void WNParser::parse(RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -266,7 +266,7 @@ void WNParser::parse(WPXDocumentInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void WNParser::createDocument(WPXDocumentInterface *documentInterface)
+void WNParser::createDocument(RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -392,7 +392,7 @@ bool WNParser::readDocEntries()
     return false;
   }
 
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   bool ok = input->readLong(4) == entry.length();
   if (!ok || input->readLong(4) != entry.begin()) {
     MWAW_DEBUG_MSG(("WNParser::readDocEntries: bad begin of last zone\n"));
@@ -440,7 +440,7 @@ bool WNParser::readDocEntries()
   ascii().addNote(f.str().c_str());
   if (entry.length() > 386) {
     long pos = entry.begin()+376;
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     f.str("");
     f << "DocEntries-II:";
     m_state->m_numColumns = (int) input->readLong(1);
@@ -503,9 +503,9 @@ bool WNParser::readDocEntriesV2()
     }
     }
     long actPos = input->tell();
-    input->seek(dataPos, WPX_SEEK_SET);
+    input->seek(dataPos, RVNG_SEEK_SET);
     entry.setLength((long) input->readULong(2)+2);
-    input->seek(actPos, WPX_SEEK_SET);
+    input->seek(actPos, RVNG_SEEK_SET);
     m_entryManager->add(entry);
   }
   f << "ptr=[";
@@ -514,7 +514,7 @@ bool WNParser::readDocEntriesV2()
   f << "],";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  input->seek(debPos+0x6E,WPX_SEEK_SET);
+  input->seek(debPos+0x6E,RVNG_SEEK_SET);
   pos=input->tell();
   f.str("");
   f << "DocEntries-II:";
@@ -551,7 +551,7 @@ bool WNParser::parseGraphicZone(WNEntry const &entry)
     return false;
   }
 
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   if (input->readLong(4) != entry.length()) {
     MWAW_DEBUG_MSG(("WNParser::parseGraphicZone: bad begin of last zone\n"));
     return false;
@@ -629,7 +629,7 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
     return false;
   }
 
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   if (input->readLong(4) != entry.length()) {
     MWAW_DEBUG_MSG(("WNParser::sendPicture: bad begin of last zone\n"));
     return false;
@@ -666,14 +666,14 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
       ascii().addDelimiter(pos, '|');
     } else {
       if (getListener()) {
-        WPXBinaryData data;
+        RVNGBinaryData data;
         std::string pictType;
         MWAWPosition pictPos;
         if (bdbox.size().x() > 0 && bdbox.size().y() > 0) {
-          pictPos=MWAWPosition(Vec2f(0,0),bdbox.size(), WPX_POINT);
+          pictPos=MWAWPosition(Vec2f(0,0),bdbox.size(), RVNG_POINT);
           pictPos.setNaturalSize(pict->getBdBox().size());
         } else
-          pictPos=MWAWPosition(Vec2f(0,0),pict->getBdBox().size(), WPX_POINT);
+          pictPos=MWAWPosition(Vec2f(0,0),pict->getBdBox().size(), RVNG_POINT);
         pictPos.setRelativePosition(MWAWPosition::Char);
 
         if (pict->getBinary(data,pictType))
@@ -683,8 +683,8 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
 #ifdef DEBUG_WITH_FILES
       if (!entry.isParsed()) {
         ascii().skipZone(pos, entry.end()-1);
-        WPXBinaryData file;
-        input->seek(entry.begin(), WPX_SEEK_SET);
+        RVNGBinaryData file;
+        input->seek(entry.begin(), RVNG_SEEK_SET);
         input->readDataBlock(entry.length(), file);
         static int volatile pictName = 0;
         libmwaw::DebugStream f2;
@@ -717,7 +717,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
     return false;
   }
 
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   if (input->readLong(4) != entry.length()) {
     MWAW_DEBUG_MSG(("WNParser::readColorMap: bad begin of last zone\n"));
     return false;
@@ -783,7 +783,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
       return false;
     }
 
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     f.str("");
     f << "ColorMapData[" << n << "]:";
     unsigned char col[4];
@@ -822,7 +822,7 @@ bool WNParser::readPrintInfo(WNEntry const &entry)
     return false;
   }
 
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   long sz = version() <= 2 ? 2+(long) input->readULong(2) : (long) input->readULong(4);
   if (sz != entry.length()) {
     MWAW_DEBUG_MSG(("WNParser::readPrintInfo: bad begin of last zone\n"));
@@ -898,7 +898,7 @@ bool WNParser::readGenericUnkn(WNEntry const &entry)
     return false;
   }
 
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   if (input->readLong(4) != entry.length()) {
     MWAW_DEBUG_MSG(("WNParser::readGenericUnkn: bad begin of last zone\n"));
     return false;
@@ -959,7 +959,7 @@ bool WNParser::readGenericUnkn(WNEntry const &entry)
       return false;
     }
 
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     f.str("");
     f << entry.type() << "Data[" << n << "]:";
 
@@ -979,11 +979,11 @@ bool WNParser::checkIfPositionValid(long pos)
     return true;
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   bool ok = long(input->tell())==pos;
   if (ok) m_state->m_endPos = pos;
 
-  input->seek(actPos, WPX_SEEK_SET);
+  input->seek(actPos, RVNG_SEEK_SET);
   return ok;
 }
 
@@ -1022,12 +1022,12 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
 
   libmwaw::DebugStream f;
   int headerSize=28;
-  input->seek(headerSize,WPX_SEEK_SET);
+  input->seek(headerSize,RVNG_SEEK_SET);
   if (int(input->tell()) != headerSize) {
     MWAW_DEBUG_MSG(("WNParser::checkHeader: file is too short\n"));
     return false;
   }
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   long val = (long) input->readULong(4);
   int vers = 0;
   switch(val) {
@@ -1052,9 +1052,9 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
       for (int i=0; i < 4; ++i) {
         val = long(input->readLong(1));
         if (val!=4 && val!=0x44) return false;
-        input->seek(3, WPX_SEEK_CUR);
+        input->seek(3, RVNG_SEEK_CUR);
       }
-      input->seek(8, WPX_SEEK_SET);
+      input->seek(8, RVNG_SEEK_SET);
     }
 
     ascii().addPos(0);
@@ -1104,7 +1104,7 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
     header->reset(MWAWDocument::MWAW_T_WRITENOW, version());
 
   //
-  input->seek(headerSize, WPX_SEEK_SET);
+  input->seek(headerSize, RVNG_SEEK_SET);
 
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());

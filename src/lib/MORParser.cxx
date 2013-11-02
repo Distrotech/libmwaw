@@ -38,7 +38,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFontConverter.hxx"
@@ -202,9 +202,9 @@ bool MORParser::checkAndFindSize(MWAWEntry &entry)
   if (entry.begin()<0 || !input->checkPosition(entry.begin()+4))
     return false;
   long actPos=input->tell();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   entry.setLength(4+(long) input->readULong(4));
-  input->seek(actPos,WPX_SEEK_SET);
+  input->seek(actPos,RVNG_SEEK_SET);
   return input->checkPosition(entry.end());
 }
 
@@ -244,7 +244,7 @@ bool MORParser::getColor(int id, MWAWColor &col) const
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MORParser::parse(WPXDocumentInterface *docInterface)
+void MORParser::parse(RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
@@ -273,7 +273,7 @@ void MORParser::parse(WPXDocumentInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MORParser::createDocument(WPXDocumentInterface *documentInterface)
+void MORParser::createDocument(RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -399,7 +399,7 @@ bool MORParser::readZonesList()
     return false;
   }
   long pos=8;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(Zones):";
   for (int i=0; i < 9; i++) {
@@ -467,7 +467,7 @@ bool MORParser::readPrintInfo(MWAWEntry const &entry)
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   libmwaw::PrinterInfo info;
   if (!info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
@@ -520,7 +520,7 @@ bool MORParser::readDocumentInfo(MWAWEntry const &entry)
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(DocInfo):";
   entry.setParsed(true);
   double margins[4]; // LR TB
@@ -578,14 +578,14 @@ bool MORParser::readDocumentInfo(MWAWEntry const &entry)
   ascii().addNote(f.str().c_str());
 
   pos=entry.begin()+160;
-  input->seek(pos,WPX_SEEK_SET);
+  input->seek(pos,RVNG_SEEK_SET);
   f.str("");
   f << "DocInfo-II:";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
   pos=entry.begin()+268;
-  input->seek(pos,WPX_SEEK_SET);
+  input->seek(pos,RVNG_SEEK_SET);
   f.str("");
   f << "DocInfo-III:";
   for (int st=0; st <7; st++) {
@@ -636,7 +636,7 @@ bool MORParser::readFreePos(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   int N=(int) input->readULong(4);
   f << "Entries(FreePos):N=" << N;
   if (4+N*8 > entry.length()) {
@@ -710,7 +710,7 @@ bool MORParser::checkHeader(MWAWHeader *header, bool strict)
 
   libmwaw::DebugStream f;
   f << "FileHeader:";
-  input->seek(0,WPX_SEEK_SET);
+  input->seek(0,RVNG_SEEK_SET);
   int val=(int) input->readLong(2);
   int vers;
   switch (val) {
@@ -766,7 +766,7 @@ bool MORParser::readSlideList(MWAWEntry const &entry)
   MWAWInputStreamPtr &input= getInput();
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   entry.setParsed(true);
 
   ascii().addPos(pos);
@@ -799,7 +799,7 @@ bool MORParser::readSlideList(MWAWEntry const &entry)
 
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    input->seek(pos+8, WPX_SEEK_SET);
+    input->seek(pos+8, RVNG_SEEK_SET);
   }
   for (size_t i=0; i < filePositions.size(); i++) {
     MWAWEntry const &tEntry=filePositions[i];
@@ -826,13 +826,13 @@ bool MORParser::readSlide(MWAWEntry const &entry)
   MWAWInputStreamPtr &input= getInput();
   libmwaw::DebugStream f;
 
-  input->seek(pos+4, WPX_SEEK_SET); // skip size
+  input->seek(pos+4, RVNG_SEEK_SET); // skip size
   entry.setParsed(true);
 
   f << "Slide[data]:";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  input->seek(pos+16, WPX_SEEK_SET);
+  input->seek(pos+16, RVNG_SEEK_SET);
 
   int n=0;
   while(1) {
@@ -861,7 +861,7 @@ bool MORParser::readSlide(MWAWEntry const &entry)
       }
     }
     if (!dataSz || pos+2+dataSz > endPos) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       break;
     }
 
@@ -884,7 +884,7 @@ bool MORParser::readSlide(MWAWEntry const &entry)
       else
         f << "#";
     }
-    input->seek(pos+2+dataSz, WPX_SEEK_SET);
+    input->seek(pos+2+dataSz, RVNG_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
@@ -907,11 +907,11 @@ bool MORParser::readGraphic(MWAWEntry const &entry)
 
   long pos = entry.begin();
   MWAWInputStreamPtr input = getInput();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   // first check
   int readSize = int(input->readULong(2));
-  input->seek(8, WPX_SEEK_CUR); // skip dim
+  input->seek(8, RVNG_SEEK_CUR); // skip dim
   long lastFlag = input->readLong(2);
   switch(lastFlag) {
   case 0x1101: {
@@ -929,15 +929,15 @@ bool MORParser::readGraphic(MWAWEntry const &entry)
     return false;
   }
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   Box2f box;
   if (MWAWPictData::check(input, (int)entry.length(), box)==MWAWPict::MWAW_R_BAD)
     return false;
 #ifdef DEBUG_WITH_FILES
   if (1) {
-    WPXBinaryData file;
-    input->seek(pos, WPX_SEEK_SET);
+    RVNGBinaryData file;
+    input->seek(pos, RVNG_SEEK_SET);
     input->readDataBlock(entry.length(), file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f;
@@ -967,7 +967,7 @@ bool MORParser::readUnknown9(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(Unknown9):";
   int N=(int) input->readLong(4);
   f << "N=" << N << ",";
@@ -982,13 +982,13 @@ bool MORParser::readUnknown9(MWAWEntry const &entry)
     if (n==0) {
       if (readColors(endPos))
         continue;
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
     }
     int type=(int) input->readULong(2); // find 1: color 2:?
     if (type > 10) break;
     long dataSz = (long) input->readULong(4);
     if (dataSz<= 0 || pos+6+dataSz > endPos) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       break;
     }
 
@@ -1004,13 +1004,13 @@ bool MORParser::readUnknown9(MWAWEntry const &entry)
         f << pattern << ",";
       if (!ok) {
         std::string mess("");
-        input->seek(pos+6, WPX_SEEK_SET);
+        input->seek(pos+6, RVNG_SEEK_SET);
         ok = readBackside(endFPos, mess);
         if (ok)
           f << "backside," << mess;
       }
       if (!ok) {
-        input->seek(pos+6, WPX_SEEK_SET);
+        input->seek(pos+6, RVNG_SEEK_SET);
         ok = readUnkn9Sub(endFPos);
         if (ok)
           f << "Unkn9A,";
@@ -1024,7 +1024,7 @@ bool MORParser::readUnknown9(MWAWEntry const &entry)
       f << "###";
       ascii().addDelimiter(input->tell(),'|');
     }
-    input->seek(endFPos, WPX_SEEK_SET);
+    input->seek(endFPos, RVNG_SEEK_SET);
 
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1204,7 +1204,7 @@ bool MORParser::readUnkn9Sub(long endPos)
   ascii().addNote(f.str().c_str());
 
   pos=debPos+60;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f.str("");
   f << "Unkn9A-II:";
   for (int i=0; i < 9; i++) {
@@ -1234,7 +1234,7 @@ bool MORParser::readUnkn9Sub(long endPos)
   ascii().addNote(f.str().c_str());
 
   pos=debPos+116;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   int N=(int) input->readLong(2);
   f.str("");
   f << "Unkn9A-III:N=" << N << ",";
@@ -1257,7 +1257,7 @@ bool MORParser::readUnkn9Sub(long endPos)
     ascii().addDelimiter(input->tell(),'|');
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    input->seek(pos+8, WPX_SEEK_SET);
+    input->seek(pos+8, RVNG_SEEK_SET);
   }
   return true;
 }

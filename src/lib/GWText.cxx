@@ -38,7 +38,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
@@ -460,10 +460,10 @@ bool GWText::canSendTextBoxAsGraphic(MWAWEntry const &entry)
     return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   GWTextInternal::Zone zone;
   bool ok=!readZone(zone) ||!zone.hasGraphics();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   return ok;
 }
 
@@ -476,7 +476,7 @@ bool GWText::sendTextbox(MWAWEntry const &entry, bool inGraphic)
   if (!entry.valid())
     return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   GWTextInternal::Zone zone;
   if (readZone(zone)) {
     sendZone(zone, inGraphic);
@@ -510,11 +510,11 @@ bool GWText::createZones(int expectedHF)
   ascFile.addNote(f.str().c_str());
 
   pos += 68;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   if (!readFontNames()) {
     MWAW_DEBUG_MSG(("GWText::createZones: can not find the font names\n"));
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
   }
 
   bool findMainZone=false;
@@ -523,12 +523,12 @@ bool GWText::createZones(int expectedHF)
     pos=input->tell();
     GWTextInternal::Zone zone;
     if (!readZone(zone)) {
-      input->seek(pos,WPX_SEEK_SET);
+      input->seek(pos,RVNG_SEEK_SET);
       if (findMainZone)
         break;
 
       if (!findNextZone() || !readZone(zone)) {
-        input->seek(pos,WPX_SEEK_SET);
+        input->seek(pos,RVNG_SEEK_SET);
         break;
       }
     }
@@ -554,31 +554,31 @@ bool GWText::findNextZone()
     return false;
 
   // first look for ruler
-  input->seek(pos+headerSize, WPX_SEEK_SET);
+  input->seek(pos+headerSize, RVNG_SEEK_SET);
   while (true) {
     if (input->atEOS())
       return false;
     pos = input->tell();
     unsigned long val=input->readULong(4);
     if (val==0x20FFFF)
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
     else if (val==0x20FFFFFF)
-      input->seek(pos-1, WPX_SEEK_SET);
+      input->seek(pos-1, RVNG_SEEK_SET);
     else if (val==0xFFFFFFFF)
-      input->seek(pos-2, WPX_SEEK_SET);
+      input->seek(pos-2, RVNG_SEEK_SET);
     else if (val==0xFFFFFF2E)
-      input->seek(pos-3, WPX_SEEK_SET);
+      input->seek(pos-3, RVNG_SEEK_SET);
     else
       continue;
     if (input->readULong(4)!=0x20FFFF || input->readULong(4)!=0xFFFF2E00) {
-      input->seek(pos+4, WPX_SEEK_SET);
+      input->seek(pos+4, RVNG_SEEK_SET);
       continue;
     }
     // ok a empty tabs stop
     while (!input->atEOS()) {
       pos = input->tell();
       if (input->readULong(4)!=0x20FFFF || input->readULong(4)!=0xFFFF2E00) {
-        input->seek(pos, WPX_SEEK_SET);
+        input->seek(pos, RVNG_SEEK_SET);
         break;
       }
     }
@@ -592,24 +592,24 @@ bool GWText::findNextZone()
     long hSize=headerSize+22*nFonts++;
     if (pos-hSize < searchPos)
       break;
-    input->seek(pos-hSize, WPX_SEEK_SET);
+    input->seek(pos-hSize, RVNG_SEEK_SET);
     if (input->readLong(4))
       continue;
     int val=(int)input->readULong(2);
     if (val & 0xFEFE)
       continue;
-    input->seek(2,WPX_SEEK_CUR);
+    input->seek(2,RVNG_SEEK_CUR);
     if (input->readLong(2)!=nFonts)
       continue;
-    input->seek(pos-hSize, WPX_SEEK_SET);
+    input->seek(pos-hSize, RVNG_SEEK_SET);
     if (readZone(zone)) {
-      input->seek(pos-hSize, WPX_SEEK_SET);
+      input->seek(pos-hSize, RVNG_SEEK_SET);
       return true;
     }
   }
 
   MWAW_DEBUG_MSG(("GWText::findNextZone: can not find begin of zone for pos=%lx\n", pos));
-  input->seek(searchPos, WPX_SEEK_SET);
+  input->seek(searchPos, RVNG_SEEK_SET);
   return false;
 }
 
@@ -624,9 +624,9 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
 
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   if (input->readLong(4)) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   for (int i=0; i < 2; ++i) {
@@ -641,7 +641,7 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
   }
   zone.m_type=(int) input->readLong(1);
   if (input->readLong(1)) { // simple|complex field
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   zone.m_numFonts=(int) input->readULong(2);
@@ -652,7 +652,7 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
   zone.m_numFrames=(int) input->readULong(2);
   zone.m_numChar=(long) input->readULong(4);
   if (!zone.ok() || !input->checkPosition(endPos+zone.size())) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   zone.m_extra=f.str();
@@ -660,7 +660,7 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
   f << "Entries(HeaderText):" << zone;
   if (input->tell()!=endPos) {
     ascFile.addDelimiter(input->tell(),'|');
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
@@ -674,7 +674,7 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
     if (!readFont(font)) {
       f << "###";
       font = MWAWFont();
-      input->seek(pos+22, WPX_SEEK_SET);
+      input->seek(pos+22, RVNG_SEEK_SET);
     }
     zone.m_fontList.push_back(font);
     f << font.getDebugString(m_parserState->m_fontConverter) << ",";
@@ -689,7 +689,7 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
     if (!readRuler(para)) {
       f << "###";
       para = MWAWParagraph();
-      input->seek(pos+192, WPX_SEEK_SET);
+      input->seek(pos+192, RVNG_SEEK_SET);
     }
     zone.m_rulerList.push_back(para);
     f << para;
@@ -725,7 +725,7 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
     if (!readToken(tkn,numC)) {
       f << "###";
       tkn = GWTextInternal::Token();
-      input->seek(pos+2, WPX_SEEK_SET);
+      input->seek(pos+2, RVNG_SEEK_SET);
       numC=input->readLong(2);
     }
     zone.m_posPLCMap.insert
@@ -733,7 +733,7 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
     zone.m_tokenList.push_back(tkn);
     f << tkn << ",pos=" << std::hex << textPos << std::dec;
     textPos+= numC;
-    input->seek(pos+18, WPX_SEEK_SET);
+    input->seek(pos+18, RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -761,7 +761,7 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
     tkn.m_pictEntry.setLength(tkn.m_dataSize);
     pos+=tkn.m_dataSize;
   }
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -793,7 +793,7 @@ bool GWText::readZonePositions(GWTextInternal::Zone &zone)
       << std::hex << textPos << std::dec;
     textPos+=numC;
     linesPos.push_back(textPos);
-    input->seek(pos+14, WPX_SEEK_SET);
+    input->seek(pos+14, RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -827,7 +827,7 @@ bool GWText::readZonePositions(GWTextInternal::Zone &zone)
     zone.m_frameList.push_back(frame);
     f.str("");
     f << "Entries(TFrames)-" << i << ":" << frame;
-    input->seek(pos+22, WPX_SEEK_SET);
+    input->seek(pos+22, RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -879,7 +879,7 @@ bool GWText::readFontNames()
       f << "###";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
-      input->seek(endPos, WPX_SEEK_SET);
+      input->seek(endPos, RVNG_SEEK_SET);
       return i>0;
     }
     std::string name("");
@@ -888,7 +888,7 @@ bool GWText::readFontNames()
     if (!name.empty())
       m_state->m_fileIdFontIdMap[fId]=m_parserState->m_fontConverter->getId(name);
     if ((fSz%2)==0)
-      input->seek(1, WPX_SEEK_CUR);
+      input->seek(1, RVNG_SEEK_CUR);
 
     f << "\"" << name << "\",";
     ascFile.addPos(pos);
@@ -899,7 +899,7 @@ bool GWText::readFontNames()
     MWAW_DEBUG_MSG(("GWText::readFontNames: find extra data\n"));
     ascFile.addPos(pos);
     ascFile.addNote("FontNames:###");
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -914,7 +914,7 @@ bool GWText::readFont(MWAWFont &font)
     return false;
 
   libmwaw::DebugStream f;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   int val=(int) input->readLong(2); // small number between 0 and 5
   if (val==0) f << "unused,";
   else if (val!=1) f << "nbUsed=" << val << ",";
@@ -955,7 +955,7 @@ bool GWText::readFont(MWAWFont &font)
   font.setColor(MWAWColor(color[0],color[1],color[2]));
   font.m_extra=f.str();
 
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 //////////////////////////////////////////////
@@ -971,7 +971,7 @@ bool GWText::readRuler(MWAWParagraph &para)
     return false;
 
   libmwaw::DebugStream f;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   int val=(int) input->readLong(2);
   if (val==0) f << "unused,";
   else if (val!=1) f << "nbUsed=" << val << ",";
@@ -992,7 +992,7 @@ bool GWText::readRuler(MWAWParagraph &para)
     f << "#align" << val << ",";
     break;
   }
-  para.m_marginsUnit=WPX_POINT;
+  para.m_marginsUnit=RVNG_POINT;
   for (int i=0; i < 3; ++i)
     para.m_margins[i] = double(input->readLong(4))/65536.;
   para.m_margins[0]=*para.m_margins[0]-*para.m_margins[1];
@@ -1008,10 +1008,10 @@ bool GWText::readRuler(MWAWParagraph &para)
   case 3:
   case 4:
   case 5:
-    para.setInterline(spacing[0], WPX_POINT);
+    para.setInterline(spacing[0], RVNG_POINT);
     break;
   case 6:
-    para.setInterline(spacing[0], WPX_PERCENT);
+    para.setInterline(spacing[0], RVNG_PERCENT);
     break;
   default:
     f << "#interline=" << spacing[0] << "[unit=" << unit[0] << "],";
@@ -1056,7 +1056,7 @@ bool GWText::readRuler(MWAWParagraph &para)
     }
     long tPos=input->readLong(4);
     if (tPos==-1) {
-      input->seek(2, WPX_SEEK_CUR);
+      input->seek(2, RVNG_SEEK_CUR);
       continue;
     }
     tab.m_position=double(tPos)/72./65536.;
@@ -1074,7 +1074,7 @@ bool GWText::readRuler(MWAWParagraph &para)
   }
   para.m_extra=f.str();
 
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -1110,7 +1110,7 @@ bool GWText::readToken(GWTextInternal::Token &token, long &nChar)
   }
   token.m_extra=f.str();
 
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -1173,7 +1173,7 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
@@ -1209,7 +1209,7 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   MWAWFont font;
@@ -1281,7 +1281,7 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
 
@@ -1306,7 +1306,7 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
       break;
     }
   }
-  input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), RVNG_SEEK_SET);
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   return true;
@@ -1346,7 +1346,7 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
   f << "Entries(Text):";
   zone.m_parsed=true;
   long pos = zone.m_textEntry.begin(), endPos = zone.m_textEntry.end();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   long cPos=0;
   while (1) {
@@ -1410,7 +1410,7 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
         MWAW_DEBUG_MSG(("GWText::sendZone: oops, can not send a picture in a graphic zone\n"));
         break;
       }
-      MWAWPosition pictPos(Vec2f(0,0), token.m_dim, WPX_POINT);
+      MWAWPosition pictPos(Vec2f(0,0), token.m_dim, RVNG_POINT);
       pictPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
       m_mainParser->sendPicture(token.m_pictEntry, pictPos);
       break;

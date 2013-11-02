@@ -36,7 +36,7 @@
 
 #include <cstring>
 
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge-stream/librevenge-stream.h>
 #include <libmwaw/libmwaw.hxx>
 
 #include "CSVGenerator.h"
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	file=argv[optind];
-	WPXFileStream input(file);
+	RVNGFileStream input(file);
 
 	MWAWDocument::Type type;
 	MWAWDocument::Kind kind;

@@ -38,9 +38,9 @@
 
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
-class WPXPropertyList;
+class RVNGPropertyList;
 
 /** small structure to keep information about a list level */
 struct MWAWListLevel {
@@ -67,7 +67,7 @@ struct MWAWListLevel {
     return m_type !=DEFAULT && m_type !=NONE && m_type != BULLET;
   }
   /** add the information of this level in the propList */
-  void addTo(WPXPropertyList &propList) const;
+  void addTo(RVNGPropertyList &propList) const;
 
   /** returns the start value (if set) or 1 */
   int getStartValue() const {
@@ -91,10 +91,10 @@ struct MWAWListLevel {
   Alignment m_alignment;
   /** the actual value (if this is an ordered level ) */
   int m_startValue;
-  WPXString m_label /** the text label */,
-            m_prefix /** string which preceedes the number if we have an ordered level*/,
-            m_suffix/** string which follows the number if we have an ordered level*/,
-            m_bullet /** the bullet if we have an bullet level */;
+  RVNGString m_label /** the text label */,
+             m_prefix /** string which preceedes the number if we have an ordered level*/,
+             m_suffix/** string which follows the number if we have an ordered level*/,
+             m_bullet /** the bullet if we have an bullet level */;
   //! extra data
   std::string m_extra;
 };
@@ -168,7 +168,7 @@ public:
   bool isNumeric(int levl) const;
 
   /// retrieve the list level property
-  bool addTo(int level, WPXPropertyList &pList) const;
+  bool addTo(int level, RVNGPropertyList &pList) const;
 
 protected:
   //! the different levels

@@ -37,7 +37,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -90,7 +90,7 @@ struct Font {
 struct Paragraph : public MWAWParagraph {
   //! Constructor with type
   Paragraph() : MWAWParagraph() {
-    m_marginsUnit = WPX_POINT;
+    m_marginsUnit = RVNG_POINT;
     for(int i = 0; i < 8; i++)
       m_values[i] = 0;
   }
@@ -796,7 +796,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
       MWAW_DEBUG_MSG(("WNText::parseContent: text zone size is too short\n"));
       return text;
     }
-    input->seek(entry.begin(), WPX_SEEK_SET);
+    input->seek(entry.begin(), RVNG_SEEK_SET);
     if (input->readLong(4) != entry.length()) {
       MWAW_DEBUG_MSG(("WNText::parseContent: bad begin of last zone\n"));
       return text;
@@ -826,7 +826,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
       MWAW_DEBUG_MSG(("WNText::parseContent: text zone size is too short\n"));
       return text;
     }
-    input->seek(entry.begin(), WPX_SEEK_SET);
+    input->seek(entry.begin(), RVNG_SEEK_SET);
     if (int(input->readULong(2))+2 != entry.length()) {
       MWAW_DEBUG_MSG(("WNText::parseContent: bad begin of last zone\n"));
       return text;
@@ -858,7 +858,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
         c = (int) input->readULong(1);
         if (c == 0xf0) continue;
         if ((c&0xf0)==0xf0) {
-          input->seek(-1, WPX_SEEK_CUR);
+          input->seek(-1, RVNG_SEEK_CUR);
           break;
         }
       }
@@ -935,7 +935,7 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
   long endPos = entry.end();
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   long sz = (long) input->readULong(lengthSz);
   if (vers>2 && sz != entry.length()) {
@@ -996,9 +996,9 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
     else if (zEntry.begin() &&
              m_mainParser->checkIfPositionValid(zEntry.begin())) {
       long actPos = input->tell();
-      input->seek(zEntry.begin(), WPX_SEEK_SET);
+      input->seek(zEntry.begin(), RVNG_SEEK_SET);
       zEntry.setLength((long) input->readULong(2)+2);
-      input->seek(actPos, WPX_SEEK_SET);
+      input->seek(actPos, RVNG_SEEK_SET);
     }
     zEntry.setType("TextData");
     zEntry.m_fileType = 4;
@@ -1049,7 +1049,7 @@ bool WNText::readFontNames(WNEntry const &entry)
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   if (input->readLong(4) != entry.length()) {
     MWAW_DEBUG_MSG(("WNText::readFontNames: bad begin of last zone\n"));
     return false;
@@ -1111,7 +1111,7 @@ bool WNText::readFontNames(WNEntry const &entry)
       continue;
     }
 
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     f.str("");
     f << "FontsData[" << n << "]:";
     val = input->readLong(2);
@@ -1171,12 +1171,12 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
 
   long pos = input.tell();
   int expectedLength = vers <= 2 ? 4 : 14;
-  input.seek(expectedLength, WPX_SEEK_CUR);
+  input.seek(expectedLength, RVNG_SEEK_CUR);
   if (pos+expectedLength != long(input.tell())) {
     MWAW_DEBUG_MSG(("WNText::readFont: zone is too short \n"));
     return false;
   }
-  input.seek(pos, WPX_SEEK_SET);
+  input.seek(pos, RVNG_SEEK_SET);
 
   font.m_font.setId(m_state->getFontId((int) input.readULong(2)));
   font.m_font.setSize((float) input.readULong(vers <= 2 ? 1 : 2));
@@ -1231,7 +1231,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   }
   int heightDecal = (int) input.readLong(2);
   if (heightDecal)
-    font.m_font.set(MWAWFont::Script(float(heightDecal), WPX_POINT));
+    font.m_font.set(MWAWFont::Script(float(heightDecal), RVNG_POINT));
 
   font.m_font.setFlags(flags);
   font.m_font.m_extra = f.str();
@@ -1259,13 +1259,13 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   ruler = WNTextInternal::Paragraph();
   long pos = input.tell();
   int expectedLength = vers <= 2 ? 8 : 16;
-  input.seek(expectedLength, WPX_SEEK_CUR);
+  input.seek(expectedLength, RVNG_SEEK_CUR);
   if (pos+expectedLength != long(input.tell())) {
     MWAW_DEBUG_MSG(("WNText::readParagraph: zone is too short: %ld\n",
                     long(input.tell()) - pos));
     return false;
   }
-  input.seek(pos, WPX_SEEK_SET);
+  input.seek(pos, RVNG_SEEK_SET);
   int actVal = 0;
   /* small number, 0, small number < 3 */
   if (vers >= 3) {
@@ -1314,7 +1314,7 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
       if (tab && newVal < previousVal) {
         MWAW_DEBUG_MSG(("WNText::readParagraph: find bad tab pos\n"));
         f << "#tab[" << tab << ",";
-        input.seek(-1, WPX_SEEK_CUR);
+        input.seek(-1, RVNG_SEEK_CUR);
         break;
       }
       previousVal = newVal;
@@ -1343,9 +1343,9 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   *(ruler.m_margins[2]) -= 28.;
   if (ruler.m_margins[2].get() < 0) ruler.m_margins[2]=0;
   if (!interlineFixed && height>=0)
-    ruler.setInterline(height,WPX_POINT,MWAWParagraph::AtLeast);
+    ruler.setInterline(height,RVNG_POINT,MWAWParagraph::AtLeast);
   else if (height>0)
-    ruler.setInterline(height,WPX_POINT);
+    ruler.setInterline(height,RVNG_POINT);
   else
     f << "##interline=" << height << "pt,";
   ruler.m_extra = f.str();
@@ -1373,7 +1373,7 @@ bool WNText::readStyles(WNEntry const &entry)
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   if (input->readLong(4) != entry.length()) {
     MWAW_DEBUG_MSG(("WNText::readStyles: bad begin of last zone\n"));
     return false;
@@ -1456,7 +1456,7 @@ bool WNText::readStyles(WNEntry const &entry)
     }
 
     WNTextInternal::Style style;
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     f.str("");
     int type = (int) input->readULong(1);
     style.m_values[0] = int(type>>4);// find 1, 2 or 3
@@ -1489,7 +1489,7 @@ bool WNText::readStyles(WNEntry const &entry)
       relPos[i] = (int) input->readULong(2);
     style.m_values[12] = (int) input->readULong(2); // another pos ?
     if (relPos[0]) { // style name
-      input->seek(pos+relPos[0], WPX_SEEK_SET);
+      input->seek(pos+relPos[0], RVNG_SEEK_SET);
       int sz = (int) input->readULong(1);
       if (!sz || pos+relPos[0]+1+sz > entry.end()) {
         MWAW_DEBUG_MSG(("WNText::readStyles: can not read name for entry : %ld\n", long(n)));
@@ -1510,7 +1510,7 @@ bool WNText::readStyles(WNEntry const &entry)
     if (relPos[1]) { // font ?
       f.str("");
       f << "StylesData[" << n << ":font]:";
-      input->seek(pos+relPos[1], WPX_SEEK_SET);
+      input->seek(pos+relPos[1], RVNG_SEEK_SET);
       input->pushLimit(relPos[2] ? pos+relPos[2] : entry.end());
 
       WNTextInternal::Font font;
@@ -1527,7 +1527,7 @@ bool WNText::readStyles(WNEntry const &entry)
     if (relPos[2]) {
       f.str("");
       f << "StylesData[" << n << ":ruler]:";
-      input->seek(pos+relPos[2], WPX_SEEK_SET);
+      input->seek(pos+relPos[2], RVNG_SEEK_SET);
       int sz = (int) input->readULong(2);
       input->pushLimit(pos+relPos[2]+sz);
       WNTextInternal::Paragraph ruler;
@@ -1557,12 +1557,12 @@ bool WNText::readToken(MWAWInputStream &input, WNTextInternal::Token &token)
   token=WNTextInternal::Token();
 
   long pos = input.tell();
-  input.seek(pos+54, WPX_SEEK_SET);
+  input.seek(pos+54, RVNG_SEEK_SET);
   if (pos+54 != long(input.tell())) {
     MWAW_DEBUG_MSG(("WNText::readToken: zone is too short \n"));
     return false;
   }
-  input.seek(pos, WPX_SEEK_SET);
+  input.seek(pos, RVNG_SEEK_SET);
   int dim[4];
   for (int i=0; i < 4; i++)
     dim[i] = (int) input.readLong(2);
@@ -1605,11 +1605,11 @@ bool WNText::readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token)
   token.m_box=Box2i(Vec2i(0,0), box);
   // we need to get the size, so...
   while (!input.atEOS())
-    input.seek(0x100, WPX_SEEK_CUR);
+    input.seek(0x100, RVNG_SEEK_CUR);
   long endPos = input.tell();
   long sz = endPos-actPos-4;
   if (sz <= 0) return false;
-  input.seek(actPos+4, WPX_SEEK_SET);
+  input.seek(actPos+4, RVNG_SEEK_SET);
   MWAWInputStreamPtr ip(&input,MWAW_shared_ptr_noop_deleter<MWAWInputStream>());
   shared_ptr<MWAWPict> pict(MWAWPictData::get(ip, (int) sz));
   if (!pict) {
@@ -1618,14 +1618,14 @@ bool WNText::readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token)
   }
   if (!m_parserState->m_listener) return true;
 
-  WPXBinaryData data;
+  RVNGBinaryData data;
   std::string type;
   MWAWPosition pictPos;
   if (box.x() > 0 && box.y() > 0) {
-    pictPos=MWAWPosition(Vec2f(0,0),box, WPX_POINT);
+    pictPos=MWAWPosition(Vec2f(0,0),box, RVNG_POINT);
     pictPos.setNaturalSize(pict->getBdBox().size());
   } else
-    pictPos=MWAWPosition(Vec2f(0,0),pict->getBdBox().size(), WPX_POINT);
+    pictPos=MWAWPosition(Vec2f(0,0),pict->getBdBox().size(), RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
 
   if (pict->getBinary(data,type))
@@ -1650,12 +1650,12 @@ bool WNText::readTable(MWAWInputStream &input, WNTextInternal::TableData &table)
     }
     return true;
   }
-  input.seek(pos+28, WPX_SEEK_SET);
+  input.seek(pos+28, RVNG_SEEK_SET);
   if (pos+28 != long(input.tell())) {
     MWAW_DEBUG_MSG(("WNText::readTable: zone is too short \n"));
     return false;
   }
-  input.seek(pos+1, WPX_SEEK_SET);
+  input.seek(pos+1, RVNG_SEEK_SET);
   int actVal = 0;
   table.m_values[actVal++] = (int) input.readLong(1);
   table.m_values[actVal++] = (int) input.readLong(1);
@@ -1794,8 +1794,8 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     if ((zone.m_type>0 && zone.m_type < 8) || zone.m_type == 0xd || zone.m_type == 0x10)
       continue;
 
-    WPXBinaryData data;
-    input->seek(zone.m_pos[0],WPX_SEEK_SET); //000a2f
+    RVNGBinaryData data;
+    input->seek(zone.m_pos[0],RVNG_SEEK_SET); //000a2f
     while(int(input->tell()) < zone.m_pos[1]) {
       int ch = (int) input->readULong(1);
       if (ch == 0xf0) {
@@ -2000,7 +2000,7 @@ void WNText::sendZone(int id)
       if (listener->isSectionOpened())
         listener->closeSection();
       MWAWSection sec;
-      sec.setColumns(m_state->m_numColumns, double(width), WPX_POINT);
+      sec.setColumns(m_state->m_numColumns, double(width), RVNG_POINT);
       listener->openSection(sec);
     }
   }

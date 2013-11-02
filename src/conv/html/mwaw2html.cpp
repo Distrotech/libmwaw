@@ -35,7 +35,7 @@
 
 #include <cstring>
 
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge-stream/librevenge-stream.h>
 #include <libmwaw/libmwaw.hxx>
 #include "HtmlDocumentGenerator.h"
 
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 	}
 	file=argv[optind];
 
-	WPXFileStream input(file);
+	RVNGFileStream input(file);
 
 	MWAWDocument::Type type;
 	MWAWDocument::Kind kind;

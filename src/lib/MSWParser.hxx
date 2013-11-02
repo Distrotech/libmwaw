@@ -101,14 +101,14 @@ public:
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   //! the main parse function
-  void parse(WPXDocumentInterface *documentInterface);
+  void parse(RVNGTextInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(WPXDocumentInterface *documentInterface);
+  void createDocument(RVNGTextInterface *documentInterface);
 
   //! finds the different zones
   bool createZones();

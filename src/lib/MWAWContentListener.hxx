@@ -35,14 +35,14 @@
  * Defines MWAWContentListener: the libmwaw word processor listener
  *
  * \note this class is the only class which does the interface with
- * the WPXDocumentInterface
+ * the RVNGTextInterface
  */
 #ifndef MWAW_CONTENT_LISTENER_H
 #define MWAW_CONTENT_LISTENER_H
 
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -64,7 +64,7 @@ class MWAWContentListener : public MWAWListener
 {
 public:
   /** constructor */
-  MWAWContentListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
+  MWAWContentListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, RVNGTextInterface *documentInterface);
   /** destructor */
   virtual ~MWAWContentListener();
 
@@ -98,9 +98,9 @@ public:
 
   // ------ header/footer --------
   /** insert a header */
-  bool insertHeader(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras);
+  bool insertHeader(MWAWSubDocumentPtr subDocument, RVNGPropertyList const &extras);
   /** insert a footer */
-  bool insertFooter(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras);
+  bool insertFooter(MWAWSubDocumentPtr subDocument, RVNGPropertyList const &extras);
   /** returns true if the header/footer is open */
   bool isHeaderFooterOpened() const;
 
@@ -121,7 +121,7 @@ public:
    *  By convention if \a character=0xfffd(undef), no character is added */
   void insertUnicode(uint32_t character);
   //! adds a unicode string
-  void insertUnicodeString(WPXString const &str);
+  void insertUnicodeString(RVNGString const &str);
 
   //! adds a tab
   void insertTab();
@@ -154,24 +154,24 @@ public:
   void insertComment(MWAWSubDocumentPtr &subDocument);
 
   /** adds a picture in given position */
-  void insertPicture(MWAWPosition const &pos, const WPXBinaryData &binaryData,
+  void insertPicture(MWAWPosition const &pos, const RVNGBinaryData &binaryData,
                      std::string type="image/pict",
-                     WPXPropertyList frameExtras=WPXPropertyList());
+                     RVNGPropertyList frameExtras=RVNGPropertyList());
   /** adds a shape picture in given position */
   void insertPicture(MWAWPosition const &pos, MWAWGraphicShape const &shape,
                      MWAWGraphicStyle const &style);
   /** adds a textbox in given position */
   void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument,
-                     WPXPropertyList frameExtras=WPXPropertyList(),
-                     WPXPropertyList textboxExtras=WPXPropertyList());
+                     RVNGPropertyList frameExtras=RVNGPropertyList(),
+                     RVNGPropertyList textboxExtras=RVNGPropertyList());
 
   // ------- table -----------------
   /** open a table*/
-  void openTable(MWAWTable const &table, WPXPropertyList tableExtras=WPXPropertyList());
+  void openTable(MWAWTable const &table, RVNGPropertyList tableExtras=RVNGPropertyList());
   /** closes this table */
   void closeTable();
   /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
-  void openTableRow(float h, WPXUnit unit, bool headerRow=false);
+  void openTableRow(float h, RVNGUnit unit, bool headerRow=false);
   /** closes this row */
   void closeTableRow();
   /** open a cell */
@@ -208,14 +208,14 @@ protected:
   void _startSubDocument();
   void _endSubDocument();
 
-  void _handleFrameParameters( WPXPropertyList &propList, MWAWPosition const &pos);
-  bool openFrame(MWAWPosition const &pos, WPXPropertyList extras=WPXPropertyList());
+  void _handleFrameParameters( RVNGPropertyList &propList, MWAWPosition const &pos);
+  bool openFrame(MWAWPosition const &pos, RVNGPropertyList extras=RVNGPropertyList());
   void closeFrame();
 
 
   void _openParagraph();
   void _closeParagraph();
-  void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
+  void _appendParagraphProperties(RVNGPropertyList &propList, const bool isListElement=false);
   void _resetParagraphState(const bool isListElement=false);
 
   /** open a list level */
@@ -236,7 +236,7 @@ protected:
   void _flushText();
   void _flushDeferredTabs();
 
-  void _insertBreakIfNecessary(WPXPropertyList &propList);
+  void _insertBreakIfNecessary(RVNGPropertyList &propList);
 
   /** creates a new parsing state (copy of the actual state)
    *
@@ -255,7 +255,7 @@ protected:
   //! the parser state
   MWAWParserState &m_parserState;
   //! the document interface
-  WPXDocumentInterface *m_documentInterface;
+  RVNGTextInterface *m_documentInterface;
 
 private:
   //! copy constructor (unimplemented)

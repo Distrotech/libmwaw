@@ -32,8 +32,8 @@
 */
 #include <set>
 
-#include <libwpd/libwpd.h>
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge/librevenge.h>
+#include <librevenge-stream/librevenge-stream.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
@@ -131,7 +131,7 @@ void DebugFile::write()
   int numSkip = int(m_skipZones.size()), actSkip = (numSkip == 0) ? -1 : 0;
   long actualSkipEndPos = (numSkip == 0) ? -1 : m_skipZones[0].x();
 
-  m_input->seek(0,WPX_SEEK_SET);
+  m_input->seek(0,RVNG_SEEK_SET);
   m_file << std::hex << std::right << std::setfill('0') << std::setw(6) << 0 << " ";
 
   do {
@@ -142,7 +142,7 @@ void DebugFile::write()
       actualPos = m_skipZones[size_t(actSkip)].y()+1;
       m_file << "\nSkip : " << std::hex << std::setw(6) << actualSkipEndPos << "-"
              << actualPos-1 << "\n\n";
-      m_input->seek(actualPos, WPX_SEEK_SET);
+      m_input->seek(actualPos, RVNG_SEEK_SET);
       stop = m_input->atEOS();
       actSkip++;
       actualSkipEndPos = (actSkip < numSkip) ? m_skipZones[size_t(actSkip)].x() : -1;
@@ -176,7 +176,7 @@ void DebugFile::write()
 
   m_file << "\n\n";
 
-  m_input->seek(readPos,WPX_SEEK_SET);
+  m_input->seek(readPos,RVNG_SEEK_SET);
 
   m_actOffset=-1;
   m_notes.resize(0);
@@ -184,12 +184,12 @@ void DebugFile::write()
 
 ////////////////////////////////////////////////////////////
 //
-// save WPXBinaryData in a file
+// save RVNGBinaryData in a file
 //
 ////////////////////////////////////////////////////////////
 namespace Debug
 {
-bool dumpFile(WPXBinaryData &data, char const *fileName)
+bool dumpFile(RVNGBinaryData &data, char const *fileName)
 {
   if (!fileName) return false;
   std::string fName = Debug::flattenFileName(fileName);

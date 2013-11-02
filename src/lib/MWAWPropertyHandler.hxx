@@ -39,11 +39,11 @@
 #  include <sstream>
 #  include <string>
 
-class WPXBinaryData;
-class WPXProperty;
-class WPXPropertyList;
-class WPXPropertyListVector;
-class WPXString;
+class RVNGBinaryData;
+class RVNGProperty;
+class RVNGPropertyList;
+class RVNGPropertyListVector;
+class RVNGString;
 
 //! a generic property handler
 class MWAWPropertyHandler
@@ -55,27 +55,29 @@ public:
   virtual ~MWAWPropertyHandler() {}
 
   //! starts an element
-  virtual void startElement(const char *psName, const WPXPropertyList &xPropList) = 0;
+  virtual void startElement(const char *psName, const RVNGPropertyList &xPropList) = 0;
   //! starts an element ( given a vector list )
-  virtual void startElement(const char *psName, const WPXPropertyList &xPropList,
-                            const WPXPropertyListVector &vect);
+  virtual void startElement(const char *psName, const RVNGPropertyList &xPropList,
+                            const RVNGPropertyListVector &vect) = 0;
   //! starts an element ( given a binary data )
-  virtual void startElement(const char *psName, const WPXPropertyList &xPropList,
-                            const WPXBinaryData &data);
+  virtual void startElement(const char *psName, const RVNGPropertyList &xPropList,
+                            const RVNGBinaryData &data) = 0;
   //! ends an element
   virtual void endElement(const char *psName) = 0;
-  //! inserts a simple element ( note: maybe used one day to code insertEOL, insertTab...)
-  virtual void insertElement(const char *psName);
+  //! inserts a simple element
+  virtual void insertElement(const char *psName) = 0;
+  //! inserts a simple element ( given a property list)
+  virtual void insertElement(const char *psName, const RVNGPropertyList &xPropList) = 0;
   //! writes a list of characters
-  virtual void characters(WPXString const &sCharacters) = 0;
+  virtual void characters(RVNGString const &sCharacters) = 0;
 
-  //! checks a encoded WPXBinaryData created by MWAWPropertyHandlerEncoder
-  bool checkData(WPXBinaryData const &encoded);
-  //! reads a encoded WPXBinaryData created by MWAWPropertyHandlerEncoder
-  bool readData(WPXBinaryData const &encoded);
+  //! checks a encoded RVNGBinaryData created by MWAWPropertyHandlerEncoder
+  bool checkData(RVNGBinaryData const &encoded);
+  //! reads a encoded RVNGBinaryData created by MWAWPropertyHandlerEncoder
+  bool readData(RVNGBinaryData const &encoded);
 };
 
-/*! \brief write in WPXBinaryData a list of tags/and properties
+/*! \brief write in RVNGBinaryData a list of tags/and properties
  *
  * In order to be read by writerperfect, we must code document consisting in
  * tag and propertyList in an intermediar format:
@@ -91,7 +93,8 @@ public:
  *  - [startElement3:name proplist:prop binarydata:data]:
  *          char 'B', [string] name, prop, data
  *  - [insertElement:name]: char 'I', [string] name
- *  - [endElement:name ]: char 'E', [string] name
+ *  - [insertElement2:name proplist:prop]: char 'J', [string] name
+ *  - [endElement:name ]:  char 'E', [string] name
  *  - [characters:s ]: char 'T', [string] s
  *            - if len(s)==0, we write nothing
  *            - the string is written as is (ie. we do not escaped any characters).
@@ -103,21 +106,23 @@ public:
   MWAWPropertyHandlerEncoder();
 
   //! starts an element
-  void startElement(const char *psName, const WPXPropertyList &xPropList);
+  void startElement(const char *psName, const RVNGPropertyList &xPropList);
   //! starts an element given a property list vector
-  void startElement(const char *psName, const WPXPropertyList &xPropList,
-                    const WPXPropertyListVector &vect);
+  void startElement(const char *psName, const RVNGPropertyList &xPropList,
+                    const RVNGPropertyListVector &vect);
   //! starts an element given a binary data
-  void startElement(const char *psName, const WPXPropertyList &xPropList,
-                    const WPXBinaryData &data);
+  void startElement(const char *psName, const RVNGPropertyList &xPropList,
+                    const RVNGBinaryData &data);
   //! insert a simple element
   void insertElement(const char *psName);
+  //! inserts a simple element ( given a property list)
+  void insertElement(const char *psName, const RVNGPropertyList &xPropList);
   //! ends an element
   void endElement(const char *psName);
   //! writes a list of characters
-  void characters(WPXString const &sCharacters);
+  void characters(RVNGString const &sCharacters);
   //! retrieves the data
-  bool getData(WPXBinaryData &data);
+  bool getData(RVNGBinaryData &data);
 
 protected:
   //! adds an integer value in f
@@ -129,9 +134,9 @@ protected:
   //! adds a string: size and string
   void writeString(const char *name);
   //! adds a property: a string key, a string corresponding to value
-  void writeProperty(const char *key, const WPXProperty &prop);
-  //! adds a property list: int \#prop, \#prop*WPXProperty
-  void writePropertyList(const WPXPropertyList &prop);
+  void writeProperty(const char *key, const RVNGProperty &prop);
+  //! adds a property list: int \#prop, \#prop*RVNGProperty
+  void writePropertyList(const RVNGPropertyList &prop);
 
   //! the streamfile
   std::stringstream m_f;

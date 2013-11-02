@@ -39,7 +39,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -143,7 +143,7 @@ struct Block {
       o << bl.m_extra << ",";
     return o;
   }
-  void fillFramePropertyList(WPXPropertyList &extra) const {
+  void fillFramePropertyList(RVNGPropertyList &extra) const {
     if (!m_surfaceColor.isWhite())
       extra.insert("fo:background-color", m_surfaceColor.str().c_str());
     if (!hasBorders())
@@ -193,10 +193,10 @@ struct Block {
   MWAWPosition getPosition() const {
     MWAWPosition res;
     if (m_attachment) {
-      res = MWAWPosition(Vec2i(0,0), m_box.size(), WPX_POINT);
+      res = MWAWPosition(Vec2i(0,0), m_box.size(), RVNG_POINT);
       res.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, getRelativeYPos());
     } else {
-      res = MWAWPosition(m_box.min(), m_box.size(), WPX_POINT);
+      res = MWAWPosition(m_box.min(), m_box.size(), RVNG_POINT);
       res.setRelativePosition(MWAWPosition::Page);
       res.setPage(m_page);
       res.m_wrapping = m_contentType==NOTE ? MWAWPosition::WRunThrough :
@@ -402,7 +402,7 @@ struct Section {
     for (size_t c=0; c < numCols; ++c) {
       sec.m_columns[c].m_width = double(m_colsPos[2*c+1]-prevPos);
       prevPos = m_colsPos[2*c+1];
-      sec.m_columns[c].m_widthUnit = WPX_POINT;
+      sec.m_columns[c].m_widthUnit = RVNG_POINT;
       sec.m_columns[c].m_margins[libmwaw::Right] =
         double(m_colsPos[2*c+1]-m_colsPos[2*c])/72.;
     }
@@ -502,7 +502,7 @@ struct State {
   int m_numPages;
 
   //! the input data
-  WPXBinaryData m_inputData;
+  RVNGBinaryData m_inputData;
 
   //! the list of fonts
   std::vector<Font> m_fontsList;
@@ -722,7 +722,7 @@ bool MWProStructures::createZones()
   ascii().open(asciiName());
 
   long pos = 0;
-  m_input->seek(0, WPX_SEEK_SET);
+  m_input->seek(0, RVNG_SEEK_SET);
 
   if (version() == 0) {
     bool ok = readFontsName();
@@ -739,7 +739,7 @@ bool MWProStructures::createZones()
     if (!readSelection()) {
       ascii().addPos(pos);
       ascii().addNote("Entries(Selection):#");
-      m_input->seek(pos+16, WPX_SEEK_SET);
+      m_input->seek(pos+16, RVNG_SEEK_SET);
     }
   }
 
@@ -844,7 +844,7 @@ bool MWProStructures::createZonesV2()
   ascii().open(asciiName());
 
   long pos = 0;
-  m_input->seek(0, WPX_SEEK_SET);
+  m_input->seek(0, RVNG_SEEK_SET);
 
   bool ok = readFontsName();
   long val;
@@ -898,7 +898,7 @@ bool MWProStructures::createZonesV2()
       val = m_input->readLong(1);
       if (val == 2) continue;
       if (val != 3) break;
-      m_input->seek(-1, WPX_SEEK_CUR);
+      m_input->seek(-1, RVNG_SEEK_CUR);
     }
   }
   ascii().addPos(pos);
@@ -1106,13 +1106,13 @@ bool MWProStructures::readFontsName()
   }
   int vers = version();
   long endPos = pos+4+sz;
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("MWProStructures::readFontsName: file is too short\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
-  m_input->seek(pos+4, WPX_SEEK_SET);
+  m_input->seek(pos+4, RVNG_SEEK_SET);
   if (sz == 0) {
     ascii().addPos(pos);
     ascii().addNote("_");
@@ -1122,7 +1122,7 @@ bool MWProStructures::readFontsName()
   int N=(int) m_input->readULong(2);
   if (3*N+2 > sz) {
     MWAW_DEBUG_MSG(("MWProStructures::readFontsName: can not read the number of fonts\n"));
-    m_input->seek(endPos, WPX_SEEK_SET);
+    m_input->seek(endPos, RVNG_SEEK_SET);
     f << "#";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1155,7 +1155,7 @@ bool MWProStructures::readFontsName()
 
   if (long(m_input->tell()) != endPos)
     ascii().addDelimiter(m_input->tell(),'|');
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
 
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1179,17 +1179,17 @@ bool MWProStructures::readFontsDef()
   int expectedSize = version()==0 ? 10 : 20;
   if ((sz%expectedSize) != 0) {
     MWAW_DEBUG_MSG(("MWProStructures::readFontsDef: find an odd value for sz\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
 
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("MWProStructures::readFontsDef: file is too short\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
-  m_input->seek(pos+4, WPX_SEEK_SET);
+  m_input->seek(pos+4, RVNG_SEEK_SET);
   f << "Entries(FontsDef):";
   int N = int(sz/expectedSize);
   f << "N=" << N;
@@ -1203,7 +1203,7 @@ bool MWProStructures::readFontsDef()
     if (!readFont(font)) {
       ascii().addPos(pos);
       ascii().addNote("FontsDef-#");
-      m_input->seek(endPos, WPX_SEEK_SET);
+      m_input->seek(endPos, RVNG_SEEK_SET);
       return true;
     }
     m_state->m_fontsList.push_back(font);
@@ -1238,8 +1238,8 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
   if (flag&0x4) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
   if (flag&0x8) flags |= MWAWFont::embossBit;
   if (flag&0x10) flags |= MWAWFont::shadowBit;
-  if (flag&0x20) font.m_font.set(MWAWFont::Script(40,WPX_PERCENT));
-  if (flag&0x40) font.m_font.set(MWAWFont::Script(-40,WPX_PERCENT));
+  if (flag&0x20) font.m_font.set(MWAWFont::Script(40,RVNG_PERCENT));
+  if (flag&0x40) font.m_font.set(MWAWFont::Script(-40,RVNG_PERCENT));
   if (flag&0x100) font.m_font.set(MWAWFont::Script::super());
   if (flag&0x200) font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
   if (flag&0x400) flags |= MWAWFont::allCapsBit;
@@ -1293,7 +1293,7 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
     }
     for (int i = 4; i < 5; ++i)
       font.m_values[i] = (int) m_input->readLong(2);
-    m_input->seek(pos+20, WPX_SEEK_SET);
+    m_input->seek(pos+20, RVNG_SEEK_SET);
   }
   font.m_font.setFlags(flags);
   font.m_font.m_extra = f.str();
@@ -1318,17 +1318,17 @@ bool MWProStructures::readParagraphs()
   long endPos = pos+sz;
   if ((sz%dataSz) != 0) {
     MWAW_DEBUG_MSG(("MWProStructures::readParagraphs: find an odd value for sz\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
 
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("MWProStructures::readParagraphs: file is too short\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
-  m_input->seek(pos+4, WPX_SEEK_SET);
+  m_input->seek(pos+4, RVNG_SEEK_SET);
   f << "Entries(ParaZone):";
   int N = int(sz/dataSz);
   f << "N=" << N;
@@ -1346,7 +1346,7 @@ bool MWProStructures::readParagraphs()
     if (!readParagraph(para)) {
       f << "#";
       m_state->m_paragraphsList.push_back(MWProStructuresInternal::Paragraph());
-      m_input->seek(pos+dataSz, WPX_SEEK_SET);
+      m_input->seek(pos+dataSz, RVNG_SEEK_SET);
     } else {
       f << para;
       m_state->m_paragraphsList.push_back(para);
@@ -1364,13 +1364,13 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
   long pos = m_input->tell(), endPos = pos+(vers == 0 ? 200: 190);
   para = MWProStructuresInternal::Paragraph();
 
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("MWProStructures::readParagraph: file is too short\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
   int val, just = 0;
   if (vers == 0) {
     just = (int) m_input->readULong(2);
@@ -1409,7 +1409,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
     if (ok) {
       if (i == 0 && inPoint) {
         if (spacings[0] > 0)
-          para.setInterline(spacings[0], WPX_INCH, MWAWParagraph::AtLeast);
+          para.setInterline(spacings[0], RVNG_INCH, MWAWParagraph::AtLeast);
         else if (spacings[0] < 0) f << "interline=" << spacings[0] << ",";
         continue;
       }
@@ -1432,7 +1432,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
 
   if (vers==1) {
     just = (int) m_input->readULong(1);
-    m_input->seek(pos+28, WPX_SEEK_SET);
+    m_input->seek(pos+28, RVNG_SEEK_SET);
   } else {
     ascii().addDelimiter(m_input->tell(),'|');
   }
@@ -1488,7 +1488,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
     unsigned long tabPos = m_input->readULong(4);
     if (tabPos == 0xFFFFFFFFL) {
       emptyTabFound = true;
-      m_input->seek(pos+8, WPX_SEEK_SET);
+      m_input->seek(pos+8, RVNG_SEEK_SET);
       continue;
     }
     if (emptyTabFound) {
@@ -1503,16 +1503,16 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
     if (val)
       f << "tab" << i << "[#unkn=" << std::hex << val << std::dec << "],";
     para.m_tabs->push_back(newTab);
-    m_input->seek(pos+8, WPX_SEEK_SET);
+    m_input->seek(pos+8, RVNG_SEEK_SET);
   }
 
   if (vers==1) {
-    m_input->seek(endPos-2, WPX_SEEK_SET);
+    m_input->seek(endPos-2, RVNG_SEEK_SET);
     para.m_value = (int) m_input->readLong(2);
   }
   para.m_extra=f.str();
 
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -1530,7 +1530,7 @@ bool MWProStructures::readCharStyles()
     long sz = (long) m_input->readULong(4);
     if ((sz%0x42) != 0) {
       MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: find an odd value for sz=%ld\n",sz));
-      m_input->seek(pos, WPX_SEEK_SET);
+      m_input->seek(pos, RVNG_SEEK_SET);
       return false;
     }
     N = int(sz/0x42);
@@ -1547,13 +1547,13 @@ bool MWProStructures::readCharStyles()
   long actPos = m_input->tell();
   long endPos = actPos+N*expectedSz;
 
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: file is too short\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
-  m_input->seek(actPos, WPX_SEEK_SET);
+  m_input->seek(actPos, RVNG_SEEK_SET);
   f << "Entries(CharStyles):N=" << N;
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1572,7 +1572,7 @@ bool MWProStructures::readCharStyles()
     for (int c = 0; c < sSz; ++c)
       name += char(m_input->readULong(1));
     f << name << ",";
-    m_input->seek(pos+32, WPX_SEEK_SET);
+    m_input->seek(pos+32, RVNG_SEEK_SET);
 
     if (vers == 1) {
       int val = (int) m_input->readLong(2);
@@ -1597,7 +1597,7 @@ bool MWProStructures::readCharStyles()
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
 
-    m_input->seek(pos+expectedSz, WPX_SEEK_SET);
+    m_input->seek(pos+expectedSz, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -1611,7 +1611,7 @@ bool MWProStructures::readStyles()
   long sz = (long) m_input->readULong(4);
   if ((sz%0x106) != 0) {
     MWAW_DEBUG_MSG(("MWProStructures::readStyles: find an odd value for sz=%ld\n",sz));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   int N = int(sz/0x106);
@@ -1632,7 +1632,7 @@ bool MWProStructures::readStyles()
     if (!readStyle(i)) {
       f.str("");
       f << "#Style-" << i << ":";
-      m_input->seek(pos, WPX_SEEK_SET);
+      m_input->seek(pos, RVNG_SEEK_SET);
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
       return false;
@@ -1652,26 +1652,26 @@ bool MWProStructures::readStyle(int styleId)
   // checkme something is odd here
   long dataSz = 0x106;
   long endPos = pos+dataSz;
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("MWProStructures::readStyle: file is too short\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
 
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
   f << "Style-" << styleId << ":";
   int strlen = (int) m_input->readULong(1);
   if (!strlen || strlen > 31) {
     MWAW_DEBUG_MSG(("MWProStructures::readStyle: style name length seems bad!!\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   std::string name("");
   for (int i = 0; i < strlen; ++i) // default
     name+=char(m_input->readULong(1));
   f << name << ",";
-  m_input->seek(pos+32, WPX_SEEK_SET); // probably end of name
+  m_input->seek(pos+32, RVNG_SEEK_SET); // probably end of name
 
   int val;
   for (int i = 0; i < 3; ++i) { // 0 | [0,1,-1] | numTabs or idStyle?
@@ -1689,7 +1689,7 @@ bool MWProStructures::readStyle(int styleId)
   MWProStructuresInternal::Paragraph para;
   if (!readParagraph(para)) {
     f << "#";
-    m_input->seek(pos+190, WPX_SEEK_SET);
+    m_input->seek(pos+190, RVNG_SEEK_SET);
   } else
     f << para;
   ascii().addPos(pos);
@@ -1715,7 +1715,7 @@ bool MWProStructures::readStyle(int styleId)
     MWAW_DEBUG_MSG(("MWProStructures::readStyle: end of style seems bad\n"));
     ascii().addPos(pos);
     ascii().addNote("Style:end###");
-    m_input->seek(endPos, WPX_SEEK_SET);
+    m_input->seek(endPos, RVNG_SEEK_SET);
     return long(m_input->tell()) == endPos;
   }
 
@@ -1734,7 +1734,7 @@ bool MWProStructures::readStyle(int styleId)
 
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -1746,13 +1746,13 @@ bool MWProStructures::readBlocksList()
   libmwaw::DebugStream f;
 
   long endPos = pos+45;
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("MWProStructures::readBlocksList: file is too short\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(Block):";
   int N= (int) m_input->readLong(4); // 1 or 3
   f << "N?=" << N << ",";
@@ -1791,7 +1791,7 @@ bool MWProStructures::readBlocksList()
     f << "Block-end:";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    m_input->seek(sz, WPX_SEEK_CUR);
+    m_input->seek(sz, RVNG_SEEK_CUR);
   }
   shared_ptr<MWProStructuresInternal::Block> block;
   while (1) {
@@ -1812,11 +1812,11 @@ int MWProStructures::getEndBlockSize()
 {
   int sz = 8;
   long pos = m_input->tell();
-  m_input->seek(6, WPX_SEEK_CUR);
+  m_input->seek(6, RVNG_SEEK_CUR);
   // CHECKME ( sometimes, we find 0x7FFF here and sometimes not !!!)
   if (m_input->readULong(2) == 0x7fff && m_input->readULong(2) == 1)
     sz += 2;
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
   return sz;
 }
 
@@ -1827,12 +1827,12 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
   libmwaw::DebugStream f;
   shared_ptr<MWProStructuresInternal::Block> res;
 
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return res;
   }
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
   long val;
   int type = (int) m_input->readULong(1);
   res.reset(new MWProStructuresInternal::Block);
@@ -1858,12 +1858,12 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
       break;
     }
     if (what & 0xf) f << "f0=" << std::hex << int(what & 0xf) << std::dec << ",";
-    m_input->seek(23, WPX_SEEK_CUR);
+    m_input->seek(23, RVNG_SEEK_CUR);
     ascii().addDelimiter(m_input->tell(),'|');
   } else {
     endPos = pos+87;
     int bad = 0;
-    m_input->seek(-1, WPX_SEEK_CUR);
+    m_input->seek(-1, RVNG_SEEK_CUR);
     for (int i = 0; i < 2; ++i) { // always 0, 0 ?
       val = m_input->readLong(2);
       if (!val) continue;
@@ -1871,7 +1871,7 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
       bad++;
     }
     if (bad >= 2) {
-      m_input->seek(pos, WPX_SEEK_SET);
+      m_input->seek(pos, RVNG_SEEK_SET);
       res.reset();
       return res;
     }
@@ -1938,10 +1938,10 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
   f << "Entries(Block)[" << wh << "]:" << *res;
 
   ascii().addDelimiter(m_input->tell(), '|');
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   while (m_input->readLong(2)==0 && !m_input->atEOS()) {}
-  m_input->seek(-2, WPX_SEEK_CUR);
-  if (m_input->readLong(1)) m_input->seek(-1, WPX_SEEK_CUR);
+  m_input->seek(-2, RVNG_SEEK_CUR);
+  if (m_input->readLong(1)) m_input->seek(-1, RVNG_SEEK_CUR);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   return res;
@@ -1955,17 +1955,17 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   long sz = (long) m_input->readULong(4);
   // pat2*3?, dim[pt*65536], border[pt*65536], ?, [0|10|1c], 0, block?
   if (sz < 0x40) {
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return shared_ptr<MWProStructuresInternal::Block>();
   }
 
   long endPos = pos+sz+4;
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return shared_ptr<MWProStructuresInternal::Block>();
   }
-  m_input->seek(pos+4, WPX_SEEK_SET);
+  m_input->seek(pos+4, RVNG_SEEK_SET);
 
   shared_ptr<MWProStructuresInternal::Block> block(new MWProStructuresInternal::Block);
   long val;
@@ -2060,7 +2060,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   if (isNote) {
     long actPos = m_input->tell();
     ascii().addDelimiter(pos+116,'|');
-    m_input->seek(pos+116, WPX_SEEK_SET);
+    m_input->seek(pos+116, RVNG_SEEK_SET);
     val = m_input->readLong(2);
     isNote = val==0 || val==0x100;
     if (isNote) {
@@ -2093,11 +2093,11 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
       else
         f << "note,";
     }
-    m_input->seek(actPos, WPX_SEEK_SET);
+    m_input->seek(actPos, RVNG_SEEK_SET);
   } else if (block->m_type==4 && sz == 0x9a) {
     long actPos = m_input->tell();
     ascii().addDelimiter(pos+108,'|');
-    m_input->seek(pos+108, WPX_SEEK_SET);
+    m_input->seek(pos+108, RVNG_SEEK_SET);
     libmwaw::DebugStream f2;
     for (int i=0; i<4; ++i) {
       MWAWBorder border;
@@ -2122,7 +2122,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
       border.m_extra = f2.str();
       block->m_borderCellList[wh[i]]=border;
     }
-    m_input->seek(actPos, WPX_SEEK_SET);
+    m_input->seek(actPos, RVNG_SEEK_SET);
   }
 
   block->m_extra = f.str();
@@ -2135,7 +2135,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   if (long(m_input->tell()) != endPos)
     ascii().addDelimiter(m_input->tell(), '|');
 
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
 
   // ok now read the end of the header
   pos = m_input->tell();
@@ -2209,7 +2209,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
     }
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    m_input->seek(pos+sz, WPX_SEEK_SET);
+    m_input->seek(pos+sz, RVNG_SEEK_SET);
   }
 
   return block;
@@ -2233,7 +2233,7 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
     MWAW_DEBUG_MSG(("MWProStructures::readSections: find an odd value for sz\n"));
     ascii().addPos(pos);
     ascii().addNote("Entries(Sections)#");
-    m_input->seek(endPos, WPX_SEEK_SET);
+    m_input->seek(endPos, RVNG_SEEK_SET);
     return true;
   }
 
@@ -2301,7 +2301,7 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
     long actPos = m_input->tell();
     for (int c = 0; c < 2*numColumns; ++c)
       sec.m_colsPos.push_back(float(m_input->readLong(4))/65536.f);
-    m_input->seek(actPos+20*8+4, WPX_SEEK_SET);
+    m_input->seek(actPos+20*8+4, RVNG_SEEK_SET);
     // 5 flags ( 1+unused?)
     for (int i = 0; i < 6; ++i) {
       val = (long) m_input->readULong(1);
@@ -2326,10 +2326,10 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
     f << "Section" << "-" << n << ":" << sec;
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    m_input->seek(pos+0xd8, WPX_SEEK_SET);
+    m_input->seek(pos+0xd8, RVNG_SEEK_SET);
   }
 
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -2341,13 +2341,13 @@ bool MWProStructures::readSelection()
   libmwaw::DebugStream f;
 
   long endPos = pos+14;
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("MWProStructures::readSelection: file is too short\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(Selection):";
   int val = (int) m_input->readLong(2);
   f << "f0=" << val << ","; // zone?
@@ -2356,7 +2356,7 @@ bool MWProStructures::readSelection()
     f << "*";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    m_input->seek(pos+6, WPX_SEEK_SET);
+    m_input->seek(pos+6, RVNG_SEEK_SET);
     return true;
   }
   if (val!=8) f << "f1=" << val << ",";
@@ -2369,7 +2369,7 @@ bool MWProStructures::readSelection()
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -2382,17 +2382,17 @@ bool MWProStructures::readString(MWAWInputStreamPtr input, std::string &res)
   int sz = (int) input->readLong(2);
   if (sz == 0) return true;
   if (sz < 0) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("MWProStructures::readString: odd value for size\n"));
     return false;
   }
-  input->seek(pos+sz+2, WPX_SEEK_SET);
+  input->seek(pos+sz+2, RVNG_SEEK_SET);
   if (long(input->tell())!=pos+sz+2) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("MWProStructures::readString: file is too short\n"));
     return false;
   }
-  input->seek(pos+2, WPX_SEEK_SET);
+  input->seek(pos+2, RVNG_SEEK_SET);
   for (int i= 0; i < sz; ++i) {
     char c = (char) input->readULong(1);
     if (c) {
@@ -2401,7 +2401,7 @@ bool MWProStructures::readString(MWAWInputStreamPtr input, std::string &res)
     }
     if (i==sz-1) break;
 
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("MWProStructures::readString: find odd character in string\n"));
     return false;
   }
@@ -2425,13 +2425,13 @@ bool MWProStructures::readStructB()
 
   // CHECKME: find N=2 only one time ( and across a checksum zone ...)
   long endPos = pos+N*10+6;
-  m_input->seek(endPos, WPX_SEEK_SET);
+  m_input->seek(endPos, RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("MWProStructures::readZonB: file is too short\n"));
-    m_input->seek(pos, WPX_SEEK_SET);
+    m_input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
-  m_input->seek(pos+2, WPX_SEEK_SET);
+  m_input->seek(pos+2, RVNG_SEEK_SET);
   int val = (int) m_input->readULong(2);
   if (val != 0x2af8)
     f << "f0=" << std::hex << val << std::dec << ",";
@@ -2447,7 +2447,7 @@ bool MWProStructures::readStructB()
     f << "StructB" << "-" << n;
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    m_input->seek(pos+10, WPX_SEEK_SET);
+    m_input->seek(pos+10, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -2501,14 +2501,14 @@ bool MWProStructures::send(int blockId, bool mainZone)
   block->m_send = true;
   if (block->m_type == 4 && block->m_textboxCellType == 0) {
     block->m_textboxCellType = 2;
-    WPXPropertyList extras;
+    RVNGPropertyList extras;
     block->fillFramePropertyList(extras);
     m_mainParser.sendTextBoxZone(blockId, block->getPosition(), extras);
     block->m_textboxCellType = 0;
   } else if (block->isText())
     m_mainParser.sendTextZone(block->m_fileBlock, mainZone);
   else if (block->isGraphic()) {
-    WPXPropertyList extras;
+    RVNGPropertyList extras;
     block->fillFramePropertyList(extras);
     m_mainParser.sendPictureZone(block->m_fileBlock, block->getPosition(), extras);
   } else if (block->m_type == 3) {
@@ -2531,7 +2531,7 @@ bool MWProStructures::send(int blockId, bool mainZone)
     // probably ok, can be an empty cell, textbox, header/footer ..
     if (listener) listener->insertChar(' ');
   } else if (block->m_type == 8) { // empty frame
-    WPXPropertyList extras;
+    RVNGPropertyList extras;
     block->fillFramePropertyList(extras);
     m_mainParser.sendEmptyFrameZone(block->getPosition(), extras);
   } else {
@@ -2849,7 +2849,7 @@ void MWProStructuresListenerState::sendSection(int nSection)
     }
     MWAWSection sec;
     if (m_numCols>1)
-      sec.setColumns(m_numCols, m_structures->m_mainParser.getPageWidth()/double(m_numCols), WPX_INCH);
+      sec.setColumns(m_numCols, m_structures->m_mainParser.getPageWidth()/double(m_numCols), RVNG_INCH);
     listener->openSection(sec);
     return;
   }

@@ -39,7 +39,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -215,7 +215,7 @@ public:
       m_intWrap[i] = m_extWrap[i]=1.0;
   }
   //! add property to frame extra values
-  void addTo(WPXPropertyList &frames) const {
+  void addTo(RVNGPropertyList &frames) const {
     if (m_style.hasLine()) {
       MWAWBorder border;
       border.m_width=m_style.m_lineWidth;
@@ -852,7 +852,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("HMWJGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
     break;
   }
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
@@ -869,7 +869,7 @@ void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDoc
   else {
     MWAW_DEBUG_MSG(("HMWJGraphInternal::SubDocument::parseGraphic: send type %d is not implemented\n", m_type));
   }
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -1021,7 +1021,7 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
 
   long pos = entry.begin()+8; // skip header
   long endPos = entry.end();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   // first read the header
   f << entry.name() << "[header]:";
@@ -1056,7 +1056,7 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
   f << std::dec << "],";
   if (input->tell()!=headerEnd) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(headerEnd, WPX_SEEK_SET);
+    input->seek(headerEnd, RVNG_SEEK_SET);
   }
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
@@ -1146,9 +1146,9 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
     f << entry.name() << "-F" << i << ":" << format;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+48, WPX_SEEK_SET);
+    input->seek(pos+48, RVNG_SEEK_SET);
   }
-  input->seek(zoneEnd, WPX_SEEK_SET);
+  input->seek(zoneEnd, RVNG_SEEK_SET);
 
   // block B
   pos = input->tell();
@@ -1180,7 +1180,7 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
   }
   zoneEnd=pos+4+header.m_length;
   f << header;
-  input->seek(zoneEnd, WPX_SEEK_SET);
+  input->seek(zoneEnd, RVNG_SEEK_SET);
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
 
@@ -1206,7 +1206,7 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
 
     zoneEnd=pos+4+lHeader.m_length;
     f << header;
-    input->seek(zoneEnd, WPX_SEEK_SET);
+    input->seek(zoneEnd, RVNG_SEEK_SET);
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
   }
@@ -1237,7 +1237,7 @@ shared_ptr<HMWJGraphInternal::Frame> HMWJGraph::readFrame(int id)
   long endPos = pos+4+len;
   if (len < 32 || !input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("HMWJGraph::readFrame: can not read the frame length\n"));
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return res;
   }
 
@@ -1332,7 +1332,7 @@ shared_ptr<HMWJGraphInternal::Frame> HMWJGraph::readFrame(int id)
     res.reset(new HMWJGraphInternal::Frame(graph));
   if (input->tell() != endPos)
     asciiFile.addDelimiter(input->tell(),'|');
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return res;
 }
 
@@ -1371,7 +1371,7 @@ bool HMWJGraph::readGroupData(MWAWEntry const &entry, int actZone)
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   entry.setParsed(true);
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   // first read the header
   f << entry.name() << "[header]:";
   HMWJZoneHeader mainHeader(true);
@@ -1396,7 +1396,7 @@ bool HMWJGraph::readGroupData(MWAWEntry const &entry, int actZone)
   asciiFile.addNote(f.str().c_str());
   if (input->tell()!=headerEnd) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(headerEnd, WPX_SEEK_SET);
+    input->seek(headerEnd, RVNG_SEEK_SET);
   }
 
   pos = input->tell();
@@ -1430,7 +1430,7 @@ bool HMWJGraph::readGraphData(MWAWEntry const &entry, int actZone)
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   entry.setParsed(true);
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   // first read the header
   f << entry.name() << "[header]:";
   HMWJZoneHeader mainHeader(false);
@@ -1506,7 +1506,7 @@ bool HMWJGraph::readPicture(MWAWEntry const &entry, int actZone)
   entry.setParsed(true);
 
   long pos = entry.begin()+8; // skip header
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   long sz=(long) input->readULong(4);
   if (sz+12 != entry.length()) {
     MWAW_DEBUG_MSG(("HMWJGraph::readPicture: the entry sz seems bad\n"));
@@ -1553,7 +1553,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   entry.setParsed(true);
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   // first read the header
   f << entry.name() << "[header]:";
   HMWJZoneHeader mainHeader(true);
@@ -1602,7 +1602,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
   asciiFile.addNote(f.str().c_str());
   if (input->tell()!=headerEnd) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(headerEnd, WPX_SEEK_SET);
+    input->seek(headerEnd, RVNG_SEEK_SET);
   }
 
   // first read the row
@@ -1618,7 +1618,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
       asciiFile.addNote(f.str().c_str());
       if (header.m_length<16 || pos+4+header.m_length>endPos)
         return false;
-      input->seek(pos+4+header.m_length, WPX_SEEK_SET);
+      input->seek(pos+4+header.m_length, RVNG_SEEK_SET);
       continue;
     }
     long zoneEnd=pos+4+header.m_length;
@@ -1678,12 +1678,12 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
       f << entry.name() << "-cell:" << cell;
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
-      input->seek(pos+16, WPX_SEEK_SET);
+      input->seek(pos+16, RVNG_SEEK_SET);
     }
 
     if (input->tell() != zoneEnd) {
       asciiFile.addDelimiter(input->tell(),'|');
-      input->seek(zoneEnd, WPX_SEEK_SET);
+      input->seek(zoneEnd, RVNG_SEEK_SET);
     }
   }
   asciiFile.addPos(endPos);
@@ -1705,7 +1705,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
       asciiFile.addNote(f.str().c_str());
       if (header.m_length<16 || pos+4+header.m_length>endPos)
         return false;
-      input->seek(pos+4+header.m_length, WPX_SEEK_SET);
+      input->seek(pos+4+header.m_length, RVNG_SEEK_SET);
       continue;
     }
     long zoneEnd=pos+4+header.m_length;
@@ -1728,7 +1728,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
       table->setColsSize(dim);
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(zoneEnd, WPX_SEEK_SET);
+    input->seek(zoneEnd, RVNG_SEEK_SET);
   }
 
   // finally the format
@@ -1764,7 +1764,7 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
     f << "###" << header;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   long zoneEnd=pos+4+header.m_length;
@@ -1850,9 +1850,9 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
     asciiFile.addDelimiter(input->tell(),'|');
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+header.m_fieldSize, WPX_SEEK_SET);
+    input->seek(pos+header.m_fieldSize, RVNG_SEEK_SET);
   }
-  input->seek(zoneEnd, WPX_SEEK_SET);
+  input->seek(zoneEnd, RVNG_SEEK_SET);
   return true;
 }
 
@@ -1861,7 +1861,7 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
 // send data to a listener
 ////////////////////////////////////////////////////////////
 
-bool HMWJGraph::sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras)
+bool HMWJGraph::sendFrame(long frameId, MWAWPosition pos, RVNGPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
 
@@ -1902,7 +1902,7 @@ bool HMWJGraph::sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPo
 }
 
 // picture
-bool HMWJGraph::sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras)
+bool HMWJGraph::sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MWAWPosition pos, RVNGPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
 #ifdef DEBUG_WITH_FILES
@@ -1921,10 +1921,10 @@ bool HMWJGraph::sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MW
 
   MWAWInputStreamPtr input = m_parserState->m_input;
   long fPos = input->tell();
-  input->seek(pict.m_entry.begin(), WPX_SEEK_SET);
-  WPXBinaryData data;
+  input->seek(pict.m_entry.begin(), RVNG_SEEK_SET);
+  RVNGBinaryData data;
   input->readDataBlock(pict.m_entry.length(), data);
-  input->seek(fPos, WPX_SEEK_SET);
+  input->seek(fPos, RVNG_SEEK_SET);
 
 #ifdef DEBUG_WITH_FILES
   if (firstTime) {
@@ -1946,7 +1946,7 @@ bool HMWJGraph::sendEmptyPicture(MWAWPosition pos)
     return true;
   Vec2f pictSz = pos.size();
   shared_ptr<MWAWPict> pict;
-  MWAWPosition pictPos(Vec2f(0,0), pictSz, WPX_POINT);
+  MWAWPosition pictPos(Vec2f(0,0), pictSz, RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Frame);
   pictPos.setOrder(-1);
 
@@ -1961,7 +1961,7 @@ bool HMWJGraph::sendEmptyPicture(MWAWPosition pos)
   graphicListener->insertPicture(box, MWAWGraphicShape::rectangle(box), defStyle);
   graphicListener->insertPicture(box, MWAWGraphicShape::line(box[0],box[1]), defStyle);
   graphicListener->insertPicture(box, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],0)), defStyle);
-  WPXBinaryData data;
+  RVNGBinaryData data;
   std::string type;
   if (!graphicListener->endGraphic(data,type)) return false;
   m_parserState->m_listener->insertPicture(pictPos, data, type);
@@ -1969,7 +1969,7 @@ bool HMWJGraph::sendEmptyPicture(MWAWPosition pos)
 }
 
 // ----- comment box
-bool HMWJGraph::sendComment(HMWJGraphInternal::CommentFrame const &comment, MWAWPosition pos, WPXPropertyList extras)
+bool HMWJGraph::sendComment(HMWJGraphInternal::CommentFrame const &comment, MWAWPosition pos, RVNGPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
   Vec2f commentSz = comment.getBdBox().size();
@@ -1977,7 +1977,7 @@ bool HMWJGraph::sendComment(HMWJGraphInternal::CommentFrame const &comment, MWAW
   if (comment.m_dim[1] > commentSz[1]) commentSz[1]=comment.m_dim[1];
   pos.setSize(commentSz);
 
-  WPXPropertyList pList(extras);
+  RVNGPropertyList pList(extras);
 
   HMWJGraphInternal::FrameFormat const &format=
     m_state->getFrameFormat(comment.m_formatId);
@@ -2003,12 +2003,12 @@ bool HMWJGraph::sendComment(HMWJGraphInternal::CommentFrame const &comment, MWAW
 }
 
 // ----- textbox
-bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, WPXPropertyList extras)
+bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, RVNGPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(textbox.getBdBox().size());
-  WPXPropertyList pList(extras), tbExtras;
+  RVNGPropertyList pList(extras), tbExtras;
 
   HMWJGraphInternal::FrameFormat const &format=
     m_state->getFrameFormat(textbox.m_formatId);
@@ -2017,12 +2017,12 @@ bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAW
   if (!textbox.m_isLinked)
     subdoc.reset(new HMWJGraphInternal::SubDocument(*this, m_parserState->m_input, HMWJGraphInternal::SubDocument::Text, textbox.m_zId));
   else {
-    WPXString fName;
+    RVNGString fName;
     fName.sprintf("Frame%ld", textbox.m_fileId);
     pList.insert("libwpd:frame-name",fName);
   }
   if (textbox.m_linkToFId) {
-    WPXString fName;
+    RVNGString fName;
     fName.sprintf("Frame%ld", textbox.m_linkToFId);
     tbExtras.insert("libwpd:next-frame-name",fName);
   }
@@ -2057,7 +2057,7 @@ bool HMWJGraph::sendTableUnformatted(long fId)
 ////////////////////////////////////////////////////////////
 // low level
 ////////////////////////////////////////////////////////////
-bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras)
+bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, RVNGPropertyList extras)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener) return true;
@@ -2083,7 +2083,7 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
         (new HMWJGraphInternal::SubDocument(*this, input, HMWJGraphInternal::SubDocument::Text, textbox.m_zId));
         Box2f box(Vec2f(0,0),pos.size());
         graphicListener->startGraphic(box);
-        WPXBinaryData data;
+        RVNGBinaryData data;
         std::string type;
         graphicListener->insertTextBox(box, subdoc, format.m_style);
         if (!graphicListener->endGraphic(data, type))
@@ -2869,7 +2869,7 @@ void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPositi
           break;
         }
       }
-      WPXBinaryData data;
+      RVNGBinaryData data;
       std::string type;
       if (graphicListener->endGraphic(data,type)) {
         partialPos.setOrigin(pos.origin()+partialBdBox[0]-group.m_pos[0]);
@@ -2921,7 +2921,7 @@ bool HMWJGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
     if (!frame.valid() || frame.m_parsed || frame.m_inGroup)
       continue;
     if (frame.m_type <= 3 || frame.m_type == 12) continue;
-    MWAWPosition pos(frame.m_pos[0],frame.m_pos.size(),WPX_POINT);
+    MWAWPosition pos(frame.m_pos[0],frame.m_pos.size(),RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Page);
     pos.setPage(frame.m_page+1);
     sendFrame(frame, pos);
@@ -2939,7 +2939,7 @@ void HMWJGraph::flushExtra()
     if (!frame.valid() || frame.m_parsed)
       continue;
     if (frame.m_type <= 3 || frame.m_type == 12) continue;
-    MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),WPX_POINT);
+    MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendFrame(frame, pos);
   }

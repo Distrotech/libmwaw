@@ -35,7 +35,7 @@
  * Implements MWAWContentListener: the libmwaw word processor listener
  *
  * \note this class is the only class which does the interface with
- * the WPXDocumentInterface
+ * the RVNGTextInterface
  */
 
 #include <cstring>
@@ -43,7 +43,7 @@
 #include <sstream>
 #include <time.h>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -84,7 +84,7 @@ struct DocumentState {
   //! the pages definition
   std::vector<MWAWPageSpan> m_pageList;
   //! the document meta data
-  WPXPropertyList m_metaData;
+  RVNGPropertyList m_metaData;
 
   int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
 
@@ -107,7 +107,7 @@ struct State {
   ~State() { }
 
   //! a buffer to stored the text
-  WPXString m_textBuffer;
+  RVNGString m_textBuffer;
   //! the number of tabs to add
   int m_numDeferredTabs;
 
@@ -194,7 +194,7 @@ State::State() :
 }
 }
 
-MWAWContentListener::MWAWContentListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, WPXDocumentInterface *documentInterface) : MWAWListener(),
+MWAWContentListener::MWAWContentListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, RVNGTextInterface *documentInterface) : MWAWListener(),
   m_ds(new MWAWContentListenerInternal::DocumentState(pageList)), m_ps(new MWAWContentListenerInternal::State), m_psStack(),
   m_parserState(parserState), m_documentInterface(documentInterface)
 {
@@ -246,7 +246,7 @@ int MWAWContentListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &in
   if (endPos > 0 && pos > endPos) {
     MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: problem reading a character\n"));
     pos = debPos;
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     unicode = m_parserState.m_fontConverter->unicode (fId, c);
   }
   if (unicode == -1) {
@@ -270,7 +270,7 @@ void MWAWContentListener::insertUnicode(uint32_t val)
   libmwaw::appendUnicode(val, m_ps->m_textBuffer);
 }
 
-void MWAWContentListener::insertUnicodeString(WPXString const &str)
+void MWAWContentListener::insertUnicodeString(RVNGString const &str)
 {
   _flushDeferredTabs ();
   if (!m_ps->m_isSpanOpened) _openSpan();
@@ -349,7 +349,7 @@ void MWAWContentListener::insertBreak(MWAWContentListener::BreakType breakType)
   }
 }
 
-void MWAWContentListener::_insertBreakIfNecessary(WPXPropertyList &propList)
+void MWAWContentListener::_insertBreakIfNecessary(RVNGPropertyList &propList)
 {
   if (!m_ps->m_paragraphNeedBreak)
     return;
@@ -420,15 +420,15 @@ void MWAWContentListener::insertField(MWAWField const &field)
     _flushDeferredTabs ();
     _flushText();
     _openSpan();
-    WPXPropertyList propList;
+    RVNGPropertyList propList;
     if (field.m_type==MWAWField::Title)
-      m_documentInterface->insertField(WPXString("text:title"), propList);
+      m_documentInterface->insertField(RVNGString("text:title"), propList);
     else {
       propList.insert("style:num-format", libmwaw::numberingTypeToString(field.m_numberingType).c_str());
       if (field.m_type == MWAWField::PageNumber)
-        m_documentInterface->insertField(WPXString("text:page-number"), propList);
+        m_documentInterface->insertField(RVNGString("text:page-number"), propList);
       else
-        m_documentInterface->insertField(WPXString("text:page-count"), propList);
+        m_documentInterface->insertField(RVNGString("text:page-count"), propList);
     }
     break;
   }
@@ -452,7 +452,7 @@ void MWAWContentListener::insertField(MWAWField const &field)
     if (localtime_r(&now, &timeinfo)) {
       char buf[256];
       strftime(buf, 256, format.c_str(), &timeinfo);
-      MWAWContentListener::insertUnicodeString(WPXString(buf));
+      MWAWContentListener::insertUnicodeString(RVNGString(buf));
     }
     break;
   }
@@ -563,7 +563,7 @@ void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
   }
   MWAWPageSpan &currentPage = *it;
 
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   currentPage.getPageProperty(propList);
   propList.insert("libwpd:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
 
@@ -603,26 +603,26 @@ bool MWAWContentListener::isHeaderFooterOpened() const
   return m_ds->m_isHeaderFooterStarted;
 }
 
-bool MWAWContentListener::insertHeader(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras)
+bool MWAWContentListener::insertHeader(MWAWSubDocumentPtr subDocument, RVNGPropertyList const &extras)
 {
   if (m_ds->m_isHeaderFooterStarted) {
     MWAW_DEBUG_MSG(("MWAWContentListener::insertHeader: Oops a header/footer is already opened\n"));
     return false;
   }
-  WPXPropertyList propList(extras);
+  RVNGPropertyList propList(extras);
   m_documentInterface->openHeader(propList);
   handleSubDocument(subDocument, libmwaw::DOC_HEADER_FOOTER);
   m_documentInterface->closeHeader();
   return true;
 }
 
-bool MWAWContentListener::insertFooter(MWAWSubDocumentPtr subDocument, WPXPropertyList const &extras)
+bool MWAWContentListener::insertFooter(MWAWSubDocumentPtr subDocument, RVNGPropertyList const &extras)
 {
   if (m_ds->m_isHeaderFooterStarted) {
     MWAW_DEBUG_MSG(("MWAWContentListener::insertFooter: Oops a header/footer is already opened\n"));
     return false;
   }
-  WPXPropertyList propList(extras);
+  RVNGPropertyList propList(extras);
   m_documentInterface->openFooter(propList);
   handleSubDocument(subDocument, libmwaw::DOC_HEADER_FOOTER);
   m_documentInterface->closeFooter();
@@ -688,10 +688,10 @@ void MWAWContentListener::_openSection()
   if (!m_ps->m_isPageSpanOpened)
     _openPageSpan();
 
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   m_ps->m_section.addTo(propList);
 
-  WPXPropertyListVector columns;
+  RVNGPropertyListVector columns;
   m_ps->m_section.addColumnsTo(columns);
   m_documentInterface->openSection(propList, columns);
 
@@ -736,9 +736,9 @@ void MWAWContentListener::_openParagraph()
       _openSection();
   }
 
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   _appendParagraphProperties(propList);
-  WPXPropertyListVector tabStops;
+  RVNGPropertyListVector tabStops;
   m_ps->m_paragraph.addTabsTo(tabStops);
 
   if (!m_ps->m_isParagraphOpened)
@@ -777,7 +777,7 @@ void MWAWContentListener::_resetParagraphState(const bool isListElement)
   m_ps->m_isHeaderFooterWithoutParagraph = false;
 }
 
-void MWAWContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool /*isListElement*/)
+void MWAWContentListener::_appendParagraphProperties(RVNGPropertyList &propList, const bool /*isListElement*/)
 {
   m_ps->m_paragraph.addTo(propList,m_ps->m_isTableOpened);
 
@@ -806,7 +806,7 @@ void MWAWContentListener::_openListElement()
       _openSection();
   }
 
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   _appendParagraphProperties(propList, true);
   // check if we must change the start value
   int startValue=m_ps->m_paragraph.m_listStartValue.get();
@@ -814,7 +814,7 @@ void MWAWContentListener::_openListElement()
     propList.insert("text:start-value", startValue);
     m_ps->m_list->setStartValueForNextElement(startValue);
   }
-  WPXPropertyListVector tabStops;
+  RVNGPropertyListVector tabStops;
   m_ps->m_paragraph.addTabsTo(tabStops);
 
   if (m_ps->m_list) m_ps->m_list->openElement();
@@ -887,7 +887,7 @@ void MWAWContentListener::_changeList()
     }
     if (m_parserState.m_listManager->needToSend(newListId, m_ds->m_sentListMarkers)) {
       for (int l=1; l <= theList->numLevels(); l++) {
-        WPXPropertyList level;
+        RVNGPropertyList level;
         if (!theList->addTo(l, level))
           continue;
         if (!theList->isNumeric(l))
@@ -903,7 +903,7 @@ void MWAWContentListener::_changeList()
   m_ps->m_listOrderedLevels.resize(newLevel, false);
   if (actualLevel == newLevel) return;
 
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   propList.insert("libwpd:id", m_ps->m_list->getId());
   for (size_t i=actualLevel+1; i<= newLevel; i++) {
     bool ordered = m_ps->m_list->isNumeric(int(i));
@@ -934,7 +934,7 @@ void MWAWContentListener::_openSpan()
       _openListElement();
   }
 
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   m_ps->m_font.addTo(propList, m_parserState.m_fontConverter);
 
   m_documentInterface->openSpan(propList);
@@ -979,9 +979,9 @@ void MWAWContentListener::_flushText()
   if (m_ps->m_textBuffer.len() == 0) return;
 
   // when some many ' ' follows each other, call insertSpace
-  WPXString tmpText;
+  RVNGString tmpText;
   int numConsecutiveSpaces = 0;
-  WPXString::Iter i(m_ps->m_textBuffer);
+  RVNGString::Iter i(m_ps->m_textBuffer);
   for (i.rewind(); i.next();) {
     if (*(i()) == 0x20) // this test is compatible with unicode format
       numConsecutiveSpaces++;
@@ -1033,7 +1033,7 @@ void MWAWContentListener::insertNote(MWAWNote const &note, MWAWSubDocumentPtr &s
       _closeSpan();
     }
 
-    WPXPropertyList propList;
+    RVNGPropertyList propList;
     if (note.m_label.len())
       propList.insert("text:label", note.m_label);
     if (note.m_type == MWAWNote::FootNote) {
@@ -1073,7 +1073,7 @@ void MWAWContentListener::insertComment(MWAWSubDocumentPtr &subDocument)
     _closeSpan();
   }
 
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   m_documentInterface->openComment(propList);
 
   m_ps->m_isNote = true;
@@ -1084,11 +1084,11 @@ void MWAWContentListener::insertComment(MWAWSubDocumentPtr &subDocument)
 }
 
 void MWAWContentListener::insertTextBox
-(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, WPXPropertyList frameExtras, WPXPropertyList textboxExtras)
+(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, RVNGPropertyList frameExtras, RVNGPropertyList textboxExtras)
 {
   if (!openFrame(pos, frameExtras)) return;
 
-  WPXPropertyList propList(textboxExtras);
+  RVNGPropertyList propList(textboxExtras);
   m_documentInterface->openTextBox(propList);
   handleSubDocument(subDocument, libmwaw::DOC_TEXT_BOX);
   m_documentInterface->closeTextBox();
@@ -1100,7 +1100,7 @@ void MWAWContentListener::insertPicture
 (MWAWPosition const &pos, MWAWGraphicShape const &shape, MWAWGraphicStyle const &style)
 {
   // sanity check: avoid to send to many small pict
-  float factor=pos.getScaleFactor(pos.unit(), WPX_POINT);
+  float factor=pos.getScaleFactor(pos.unit(), RVNG_POINT);
   if (pos.size()[0]*factor <= 8 && pos.size()[1]*factor <= 8 && m_ds->m_smallPictureNumber++ > 200) {
     static bool first = true;
     if (first) {
@@ -1119,23 +1119,23 @@ void MWAWContentListener::insertPicture
   graphicListener->startGraphic(Box2f(Vec2f(0,0),bdbox.size()));
   graphicListener->insertPicture(Box2f(-1*bdbox[0],-1*bdbox[0]+bdbox.size()), shape, style);
 
-  WPXBinaryData data;
+  RVNGBinaryData data;
   std::string mime;
   if (!graphicListener->endGraphic(data,mime))
     return;
   if (!openFrame(pos)) return;
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   propList.insert("libwpd:mimetype", mime.c_str());
   m_documentInterface->insertBinaryObject(propList, data);
   closeFrame();
 }
 
 void MWAWContentListener::insertPicture
-(MWAWPosition const &pos, const WPXBinaryData &binaryData, std::string type,
- WPXPropertyList frameExtras)
+(MWAWPosition const &pos, const RVNGBinaryData &binaryData, std::string type,
+ RVNGPropertyList frameExtras)
 {
   // sanity check: avoid to send to many small pict
-  float factor=pos.getScaleFactor(pos.unit(), WPX_POINT);
+  float factor=pos.getScaleFactor(pos.unit(), RVNG_POINT);
   if (pos.size()[0]*factor <= 8 && pos.size()[1]*factor <= 8 && m_ds->m_smallPictureNumber++ > 200) {
     static bool first = true;
     if (first) {
@@ -1146,7 +1146,7 @@ void MWAWContentListener::insertPicture
   }
   if (!openFrame(pos, frameExtras)) return;
 
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   propList.insert("libwpd:mimetype", type.c_str());
   m_documentInterface->insertBinaryObject(propList, binaryData);
 
@@ -1156,7 +1156,7 @@ void MWAWContentListener::insertPicture
 ///////////////////
 // frame
 ///////////////////
-bool MWAWContentListener::openFrame(MWAWPosition const &pos, WPXPropertyList extras)
+bool MWAWContentListener::openFrame(MWAWPosition const &pos, RVNGPropertyList extras)
 {
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened) {
     MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: called in table but cell is not opened\n"));
@@ -1204,7 +1204,7 @@ bool MWAWContentListener::openFrame(MWAWPosition const &pos, WPXPropertyList ext
     return false;
   }
 
-  WPXPropertyList propList(extras);
+  RVNGPropertyList propList(extras);
   _handleFrameParameters(propList, fPos);
   m_documentInterface->openFrame(propList);
 
@@ -1223,12 +1223,12 @@ void MWAWContentListener::closeFrame()
 }
 
 void MWAWContentListener::_handleFrameParameters
-( WPXPropertyList &propList, MWAWPosition const &pos)
+( RVNGPropertyList &propList, MWAWPosition const &pos)
 {
   Vec2f origin = pos.origin();
-  WPXUnit unit = pos.unit();
-  float inchFactor=pos.getInvUnitScale(WPX_INCH);
-  float pointFactor = pos.getInvUnitScale(WPX_POINT);
+  RVNGUnit unit = pos.unit();
+  float inchFactor=pos.getInvUnitScale(RVNG_INCH);
+  float pointFactor = pos.getInvUnitScale(RVNG_POINT);
 
   if (pos.size()[0]>0)
     propList.insert("svg:width", double(pos.size()[0]), unit);
@@ -1522,7 +1522,7 @@ void MWAWContentListener::_endSubDocument()
 ///////////////////
 // table
 ///////////////////
-void MWAWContentListener::openTable(MWAWTable const &table, WPXPropertyList tableExtras)
+void MWAWContentListener::openTable(MWAWTable const &table, RVNGPropertyList tableExtras)
 {
   if (m_ps->m_isTableOpened) {
     MWAW_DEBUG_MSG(("MWAWContentListener::openTable: called with m_isTableOpened=true\n"));
@@ -1533,7 +1533,7 @@ void MWAWContentListener::openTable(MWAWTable const &table, WPXPropertyList tabl
     _closeParagraph();
 
   // default value: which can be redefined by table
-  WPXPropertyList propList(tableExtras);
+  RVNGPropertyList propList(tableExtras);
   propList.insert("table:align", "left");
   propList.insert("fo:margin-left", *m_ps->m_paragraph.m_margins[1], *m_ps->m_paragraph.m_marginsUnit);
 
@@ -1541,7 +1541,7 @@ void MWAWContentListener::openTable(MWAWTable const &table, WPXPropertyList tabl
   _startSubDocument();
   m_ps->m_subDocumentType = libmwaw::DOC_TABLE;
 
-  WPXPropertyListVector columns;
+  RVNGPropertyListVector columns;
   table.addTablePropertiesTo(propList, columns);
   m_documentInterface->openTable(propList, columns);
   m_ps->m_isTableOpened = true;
@@ -1561,7 +1561,7 @@ void MWAWContentListener::closeTable()
   _popParsingState();
 }
 
-void MWAWContentListener::openTableRow(float h, WPXUnit unit, bool headerRow)
+void MWAWContentListener::openTableRow(float h, RVNGUnit unit, bool headerRow)
 {
   if (m_ps->m_isTableRowOpened) {
     MWAW_DEBUG_MSG(("MWAWContentListener::openTableRow: called with m_isTableRowOpened=true\n"));
@@ -1571,7 +1571,7 @@ void MWAWContentListener::openTableRow(float h, WPXUnit unit, bool headerRow)
     MWAW_DEBUG_MSG(("MWAWContentListener::openTableRow: called with m_isTableOpened=false\n"));
     return;
   }
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   propList.insert("libwpd:is-header-row", headerRow);
 
   if (h > 0)
@@ -1602,7 +1602,7 @@ void MWAWContentListener::addEmptyTableCell(Vec2i const &pos, Vec2i span)
     MWAW_DEBUG_MSG(("MWAWContentListener::addEmptyTableCell: called with m_isTableCellOpened=true\n"));
     closeTableCell();
   }
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   propList.insert("libwpd:column", pos[0]);
   propList.insert("libwpd:row", pos[1]);
   propList.insert("table:number-columns-spanned", span[0]);
@@ -1622,7 +1622,7 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell)
     closeTableCell();
   }
 
-  WPXPropertyList propList;
+  RVNGPropertyList propList;
   cell.addTo(propList);
   m_ps->m_isTableCellOpened = true;
   m_documentInterface->openTableCell(propList);

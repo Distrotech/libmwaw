@@ -39,7 +39,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -74,7 +74,7 @@ struct Border {
     return o;
   }
 
-  /** the origin and the end of edge position : unit WPX_POINT/256 */
+  /** the origin and the end of edge position : unit RVNG_POINT/256 */
   Vec2i m_position[2];
   /// the style id
   int m_styleId;
@@ -297,7 +297,7 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
+  input->seek(pos+8+16, RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   shared_ptr<CWTableInternal::Table> tableZone(new CWTableInternal::Table(zone, *this));
@@ -339,7 +339,7 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       MWAW_DEBUG_MSG(("CWTable::readTableZone: can not find definition size\n"));
-      input->seek(entry.end(), WPX_SEEK_SET);
+      input->seek(entry.end(), RVNG_SEEK_SET);
       return shared_ptr<CWStruct::DSET>();
     }
 
@@ -352,7 +352,7 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
   }
   if (N) {
     MWAW_DEBUG_MSG(("CWTable::readTableZone: find some tabledef !!!\n"));
-    input->seek(entry.end()-N*data0Length, WPX_SEEK_SET);
+    input->seek(entry.end()-N*data0Length, RVNG_SEEK_SET);
 
     for (int i = 0; i < N; i++) {
       pos = input->tell();
@@ -361,11 +361,11 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
       f << "TableDef#";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
-      input->seek(pos+data0Length, WPX_SEEK_SET);
+      input->seek(pos+data0Length, RVNG_SEEK_SET);
     }
   }
 
-  input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), RVNG_SEEK_SET);
 
   pos = input->tell();
   bool ok = readTableBorders(*tableZone);
@@ -388,7 +388,7 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
     pos = input->tell();
     ok = readTablePointers(*tableZone);
     if (!ok) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       ok = m_mainParser->readStructZone("TablePointers", false);
     }
   }
@@ -398,7 +398,7 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
   }
 
   if (!ok)
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
 
   tableZone->updateCells();
   if (m_state->m_tableMap.find(tableZone->m_id) != m_state->m_tableMap.end()) {
@@ -455,14 +455,14 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWTable::readTableBorders: file is too short\n"));
     return false;
   }
 
-  input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(pos+4, RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(TableBorders):";
@@ -474,7 +474,7 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
   if (val) f << "f1=" << val << ",";
   int fSz = (int) input->readLong(2);
   if (sz != 12+fSz*N || fSz < 18) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWTable::readTableBorders: find odd data size\n"));
     return false;
   }
@@ -520,10 +520,10 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
       ascFile.addDelimiter(input->tell(), '|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+fSz, WPX_SEEK_SET);
+    input->seek(pos+fSz, RVNG_SEEK_SET);
   }
 
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -533,14 +533,14 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWTable::readTableCells: file is too short\n"));
     return false;
   }
 
-  input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(pos+4, RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(TableCell):";
@@ -552,7 +552,7 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
   if (val) f << "f1=" << val << ",";
   int fSz = (int) input->readLong(2);
   if (sz != 12+fSz*N || fSz < 32) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWTable::readTableCells: find odd data size\n"));
     return false;
   }
@@ -638,10 +638,10 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
       ascFile.addDelimiter(input->tell(), '|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+fSz, WPX_SEEK_SET);
+    input->seek(pos+fSz, RVNG_SEEK_SET);
   }
 
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -656,14 +656,14 @@ bool CWTable::readTableBordersId(CWTableInternal::Table &table)
     long pos = input->tell();
     long sz = (long) input->readULong(4);
     long endPos = pos+4+sz;
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
     if (long(input->tell()) != endPos) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       MWAW_DEBUG_MSG(("CWTable::readTableBordersId: file is too short\n"));
       return false;
     }
 
-    input->seek(pos+4, WPX_SEEK_SET);
+    input->seek(pos+4, RVNG_SEEK_SET);
     libmwaw::DebugStream f;
     f << "Entries(TableBordersId)[" << i/4 << "," << i%4 << "],";
     int N = (int)input->readULong(2);
@@ -674,7 +674,7 @@ bool CWTable::readTableBordersId(CWTableInternal::Table &table)
     if (val) f << "f1=" << val << ",";
     int fSz = (int)input->readLong(2);
     if (N==0 || sz != 12+fSz*N || fSz < 2) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       MWAW_DEBUG_MSG(("CWTable::readTableBordersId: find odd data size\n"));
       return false;
     }
@@ -687,7 +687,7 @@ bool CWTable::readTableBordersId(CWTableInternal::Table &table)
     for (int j = 0; j < N; j++) {
       int id = (int)input->readLong(2);
       if (id < 0 || id >= numBorders) {
-        input->seek(pos, WPX_SEEK_SET);
+        input->seek(pos, RVNG_SEEK_SET);
         MWAW_DEBUG_MSG(("CWTable::readTableBordersId: unexpected id\n"));
         return false;
       }
@@ -701,7 +701,7 @@ bool CWTable::readTableBordersId(CWTableInternal::Table &table)
       cell->m_bordersId[i%4] = idsList;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -712,9 +712,9 @@ bool CWTable::readTablePointers(CWTableInternal::Table &table)
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWTable::readTablePointers: file is too short\n"));
     return false;
   }
@@ -726,7 +726,7 @@ bool CWTable::readTablePointers(CWTableInternal::Table &table)
     ascFile.addNote("NOP");
     return true;
   }
-  input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(pos+4, RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(TablePointers):";
   int N = (int) input->readULong(2);
@@ -741,7 +741,7 @@ bool CWTable::readTablePointers(CWTableInternal::Table &table)
   if (val) f << "f1=" << val << ",";
   int fSz = (int) input->readLong(2);
   if (sz != 12+fSz*N || fSz < 16) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWTable::readTablePointers: find odd data size\n"));
     return false;
   }
@@ -767,10 +767,10 @@ bool CWTable::readTablePointers(CWTableInternal::Table &table)
       ascFile.addDelimiter(input->tell(), '|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+fSz, WPX_SEEK_SET);
+    input->seek(pos+fSz, RVNG_SEEK_SET);
   }
 
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 

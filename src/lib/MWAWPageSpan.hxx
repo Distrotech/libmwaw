@@ -40,7 +40,7 @@
 
 #include "MWAWFont.hxx"
 
-class WPXPropertyList;
+class RVNGPropertyList;
 
 /** a class which stores the header/footer data */
 class MWAWHeaderFooter
@@ -220,7 +220,7 @@ public:
 protected:
   // interface with MWAWContentListener
   //! add the page properties in pList
-  void getPageProperty(WPXPropertyList &pList) const;
+  void getPageProperty(RVNGPropertyList &pList) const;
   //! send the page's headers/footers if some exists
   void sendHeaderFooters(MWAWContentListener *listener) const;
 

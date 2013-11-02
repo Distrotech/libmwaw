@@ -42,7 +42,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -117,9 +117,9 @@ protected:
   // interface with mainParser
 
   /** try to send a frame to the listener */
-  bool sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendFrame(long frameId, MWAWPosition pos, RVNGPropertyList extras=RVNGPropertyList());
   /** try to send a picture to the listener */
-  bool sendPicture(long pictId, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendPicture(long pictId, MWAWPosition pos, RVNGPropertyList extras=RVNGPropertyList());
 
   //! ask main parser to send a text zone
   bool sendText(long textId, long id, bool asGraphic=false);
@@ -135,17 +135,17 @@ protected:
   bool checkGroupStructures(long fileId, long fileSubId, std::multimap<long, long> &seens, bool inGroup);
 
   /** try to send a picture to the listener */
-  bool sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosition pos, RVNGPropertyList extras=RVNGPropertyList());
   /** try to send a frame to the listener */
-  bool sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition pos, RVNGPropertyList extras=RVNGPropertyList());
   /** try to send a basic picture to the listener */
   bool sendShapeGraph(HMWKGraphInternal::ShapeGraph const &shape, MWAWPosition pos);
   /** try to send a picture frame */
-  bool sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MWAWPosition pos, RVNGPropertyList extras=RVNGPropertyList());
   /** try to send an empty picture */
   bool sendEmptyPicture(MWAWPosition pos);
   /** try to send a textbox to the listener */
-  bool sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosition pos, WPXPropertyList extras=WPXPropertyList());
+  bool sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosition pos, RVNGPropertyList extras=RVNGPropertyList());
   /** try to send a table unformatted*/
   bool sendTableUnformatted(long fId);
 

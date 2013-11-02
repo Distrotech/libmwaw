@@ -110,7 +110,7 @@ protected:
 
   /** creates the main listener */
   MWAWContentListenerPtr createListener
-  (WPXDocumentInterface *interface,
+  (RVNGTextInterface *interface,
    MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer);
 
   //! returns the page height, ie. paper size less margin (in inches) less header/footer size
@@ -136,13 +136,13 @@ protected:
   void sendRBIL(int id, Vec2i const &sz);
 
   //! send an OLE zone
-  void sendOLE(int id, MWAWPosition const &pos, WPXPropertyList frameExtras);
+  void sendOLE(int id, MWAWPosition const &pos, RVNGPropertyList frameExtras);
 
   /** return the text positions ( used for frame text) */
   MWAWEntry getTextPosition() const;
 
   //! empty implementation of the parse function ( to make the class not virtual)
-  void parse(WPXDocumentInterface *) {
+  void parse(RVNGTextInterface *) {
     MWAW_DEBUG_MSG(("MSK4Zone::parse: must not be called\n"));
   }
   //! empty implementation of the checkHeader function ( to make the class not virtual)

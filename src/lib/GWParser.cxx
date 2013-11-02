@@ -37,7 +37,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWHeader.hxx"
@@ -93,7 +93,7 @@ struct State {
                 double(m_columnsWidth[2*c+2]-m_columnsWidth[2*c+1])/72./2.;
       sec.m_columns[c].m_width =
         double(m_columnsWidth[2*c+1]-m_columnsWidth[2*c])+72.*wSep;
-      sec.m_columns[c].m_widthUnit = WPX_POINT;
+      sec.m_columns[c].m_widthUnit = RVNG_POINT;
     }
     return sec;
   }
@@ -153,7 +153,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   long pos = m_input->tell();
   reinterpret_cast<GWParser *>(m_parser)->sendHF(m_id);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -235,7 +235,7 @@ bool GWParser::sendTextbox(MWAWEntry const &entry, bool inGraphic)
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
   bool ok=m_textParser->sendTextbox(entry, inGraphic);
-  input->seek(actPos, WPX_SEEK_SET);
+  input->seek(actPos, RVNG_SEEK_SET);
   return ok;
 }
 
@@ -244,7 +244,7 @@ bool GWParser::canSendTextBoxAsGraphic(MWAWEntry const &entry)
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
   bool ok=m_textParser->canSendTextBoxAsGraphic(entry);
-  input->seek(actPos, WPX_SEEK_SET);
+  input->seek(actPos, RVNG_SEEK_SET);
   return ok;
 }
 
@@ -256,7 +256,7 @@ bool GWParser::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
   bool ok=m_graphParser->sendPicture(entry, pos);
-  input->seek(actPos, WPX_SEEK_SET);
+  input->seek(actPos, RVNG_SEEK_SET);
   return ok;
 }
 
@@ -279,7 +279,7 @@ void GWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void GWParser::parse(WPXDocumentInterface *docInterface)
+void GWParser::parse(RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
@@ -312,7 +312,7 @@ void GWParser::parse(WPXDocumentInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void GWParser::createDocument(WPXDocumentInterface *documentInterface)
+void GWParser::createDocument(RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -384,7 +384,7 @@ bool GWParser::createZones()
 
   MWAWInputStreamPtr input = getInput();
   long pos=36;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   if (!readDocInfo()) {
     ascii().addPos(pos);
     ascii().addNote("Entries(DocInfo):###");
@@ -397,7 +397,7 @@ bool GWParser::createZones()
 
   pos = input->tell();
   if (!m_graphParser->readGraphicZone())
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
   if (!input->atEOS()) {
     pos = input->tell();
     MWAW_DEBUG_MSG(("GWParser::createZones: find some extra data\n"));
@@ -418,9 +418,9 @@ bool GWParser::createDrawZones()
   ascii().addNote("Entries(GZoneHeader)");
   ascii().addDelimiter(68,'|');
   pos = 74;
-  input->seek(74, WPX_SEEK_SET);
+  input->seek(74, RVNG_SEEK_SET);
   if (!m_textParser->readFontNames())
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
   else
     pos = input->tell();
 
@@ -508,7 +508,7 @@ bool GWParser::readWPSN(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(Windows):";
   int N=(int) input->readLong(2);
   f << "N=" << N << ",";
@@ -541,7 +541,7 @@ bool GWParser::readWPSN(MWAWEntry const &entry)
         f << "dim" << st << "=" << dim[1] << "x" << dim[0] << "<->"
           << dim[3] << "x" << dim[2] << ",";
     }
-    input->seek(pos+24, WPX_SEEK_SET);
+    input->seek(pos+24, RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -563,7 +563,7 @@ bool GWParser::readPrintInfo(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   libmwaw::PrinterInfo info;
   if (!info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
@@ -617,7 +617,7 @@ bool GWParser::readARRs(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
   entry.setParsed(true);
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   ascFile.addPos(pos-4);
   ascFile.addNote("Entries(ARRs)");
   int N=int(entry.length()/32);
@@ -625,7 +625,7 @@ bool GWParser::readARRs(MWAWEntry const &entry)
     pos = input->tell();
     f.str("");
     f << "ARRs-" << i << ":";
-    input->seek(pos+32, WPX_SEEK_SET);
+    input->seek(pos+32, RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -645,7 +645,7 @@ bool GWParser::readDaHS(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(DaHS):";
   int val=(int) input->readLong(2);
   if (val!=2)
@@ -658,14 +658,14 @@ bool GWParser::readDaHS(MWAWEntry const &entry)
   ascFile.addNote(f.str().c_str());
 
   pos=entry.begin()+44;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   int N=int((entry.length()-44))/12;
 
   for (int i=0; i < N; ++i) {
     pos = input->tell();
     f.str("");
     f << "DaHS-" << i << ":";
-    input->seek(pos+12, WPX_SEEK_SET);
+    input->seek(pos+12, RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -685,7 +685,7 @@ bool GWParser::readGrDS(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
   entry.setParsed(true);
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   ascFile.addPos(pos-4);
   ascFile.addNote("Entries(GrDS)");
   int N=int(entry.length()/16);
@@ -706,7 +706,7 @@ bool GWParser::readGrDS(MWAWEntry const &entry)
     }
     val = (int) input->readULong(2);
     if (val) f << "ptr?=" << std::hex << val << std::dec << ",";
-    input->seek(pos+16, WPX_SEEK_SET);
+    input->seek(pos+16, RVNG_SEEK_SET);
     ascFile.addPos(i==0?pos-4:pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -730,7 +730,7 @@ bool GWParser::readNxEd(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(NxED):";
   for (int i = 0; i < 2; ++i) { // always 0
     int val=(int) input->readLong(2);
@@ -776,7 +776,7 @@ bool GWParser::readDocInfo()
   ascii().addNote(f.str().c_str());
 
   pos+=46+(vers==2?6:0);
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f.str("");
   f << "DocInfo-II:";
   for (int i=0; i < 4; ++i) {
@@ -803,7 +803,7 @@ bool GWParser::readDocInfo()
     f << "hasColSep,";
     m_state->m_hasColSep = true;
   } else if (val) f << "#hasColSep=" << val << ",";
-  input->seek(pos+12, WPX_SEEK_SET);
+  input->seek(pos+12, RVNG_SEEK_SET);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   for (int i=0; i < 14; ++i) {
@@ -829,7 +829,7 @@ bool GWParser::readDocInfo()
     }
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    input->seek(pos+16, WPX_SEEK_SET);
+    input->seek(pos+16, RVNG_SEEK_SET);
   }
   for (int st=0; st < 2; ++st) {
     pos=input->tell();
@@ -881,7 +881,7 @@ bool GWParser::checkHeader(MWAWHeader *header, bool strict)
   libmwaw::DebugStream f;
   f << "FileHeader:";
 
-  input->seek(0,WPX_SEEK_SET);
+  input->seek(0,RVNG_SEEK_SET);
   int vers=(int) input->readLong(1);
   if (vers < 1 || vers > 2)
     return false;
@@ -902,7 +902,7 @@ bool GWParser::checkHeader(MWAWHeader *header, bool strict)
     long fontPos=vers==1 ? 0x302 : 0x308;
     if (m_state->m_docType==GWParser::DRAW)
       fontPos = 0x4a;
-    if (input->seek(fontPos, WPX_SEEK_SET) || !m_textParser->readFontNames()) {
+    if (input->seek(fontPos, RVNG_SEEK_SET) || !m_textParser->readFontNames()) {
       MWAW_DEBUG_MSG(("GWParser::checkHeader: can not find fonts table\n"));
       return false;
     }

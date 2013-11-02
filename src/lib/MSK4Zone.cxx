@@ -35,7 +35,7 @@
 #include <iostream>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
@@ -216,7 +216,7 @@ void MSK4Zone::sendRBIL(int id, Vec2i const &sz)
   m_graphParser->sendObjects(sendData);
 }
 
-void MSK4Zone::sendOLE(int id, MWAWPosition const &pos, WPXPropertyList frameExtras)
+void MSK4Zone::sendOLE(int id, MWAWPosition const &pos, RVNGPropertyList frameExtras)
 {
   m_mainParser->sendOLE(id, pos, frameExtras);
 }
@@ -258,7 +258,7 @@ void MSK4Zone::newPage(int number)
     sendData.m_page = m_state->m_actPage;
     m_graphParser->sendObjects(sendData);
   }
-  getInput()->seek(pos, WPX_SEEK_SET);
+  getInput()->seek(pos, RVNG_SEEK_SET);
 }
 
 MWAWEntry MSK4Zone::getTextPosition() const
@@ -270,7 +270,7 @@ MWAWEntry MSK4Zone::getTextPosition() const
 // create the main listener ( given a header and a footer document)
 ////////////////////////////////////////////////////////////
 MWAWContentListenerPtr MSK4Zone::createListener
-(WPXDocumentInterface *interface, MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer)
+(RVNGTextInterface *interface, MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer)
 {
   MWAWPageSpan ps(getPageSpan());
 
@@ -317,17 +317,17 @@ bool MSK4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
   uint16_t cch = uint16_t(input->readULong(2));
 
   // check if the entry can be read
-  input->seek(pos + cch, WPX_SEEK_SET);
+  input->seek(pos + cch, RVNG_SEEK_SET);
   if (input->tell() != pos+cch) {
     MWAW_DEBUG_MSG(("MSK4Zone:parseHeaderIndexEntry error: incomplete entry\n"));
     ascii().addNote("###IndexEntry incomplete (ignored)");
     return false;
   }
-  input->seek(pos + 2, WPX_SEEK_SET);
+  input->seek(pos + 2, RVNG_SEEK_SET);
 
   if (0x18 != cch) {
     if (cch < 0x18) {
-      input->seek(pos + cch, WPX_SEEK_SET);
+      input->seek(pos + cch, RVNG_SEEK_SET);
       ascii().addNote("MSK4Zone:parseHeaderIndexEntry: ###IndexEntry too short(ignored)");
       if (cch < 10) throw libmwaw::ParseException();
       return true;
@@ -346,7 +346,7 @@ bool MSK4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
                       (uint8_t)name[i], (uint8_t)name[i]));
       ascii().addNote("###IndexEntry bad name(ignored)");
 
-      input->seek(pos + cch, WPX_SEEK_SET);
+      input->seek(pos + cch, RVNG_SEEK_SET);
       return true;
     }
   }
@@ -379,11 +379,11 @@ bool MSK4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
     f << ",#extraData";
   }
 
-  input->seek(hie.end(), WPX_SEEK_SET);
+  input->seek(hie.end(), RVNG_SEEK_SET);
   if (input->tell() != hie.end()) {
     f << ", ###ignored";
     ascii().addNote(f.str().c_str());
-    input->seek(pos + cch, WPX_SEEK_SET);
+    input->seek(pos + cch, RVNG_SEEK_SET);
     return true;
   }
 
@@ -403,14 +403,14 @@ bool MSK4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
   ascii().addPos(hie.end());
   ascii().addNote("_");
 
-  input->seek(pos + cch, WPX_SEEK_SET);
+  input->seek(pos + cch, RVNG_SEEK_SET);
   return true;
 }
 
 bool MSK4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
 {
   m_entryMap.clear();
-  input->seek(0x08, WPX_SEEK_SET);
+  input->seek(0x08, RVNG_SEEK_SET);
 
   long pos = input->tell();
   int i0 = (int) input->readLong(2);
@@ -429,7 +429,7 @@ bool MSK4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  input->seek(0x18, WPX_SEEK_SET);
+  input->seek(0x18, RVNG_SEEK_SET);
   bool readSome = false;
   do {
     if (input->atEOS()) return readSome;
@@ -471,7 +471,7 @@ bool MSK4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
 
     if (0xFFFFFFFF == next_index_table)	break;
 
-    if (input->seek(long(next_index_table), WPX_SEEK_SET) != 0) return readSome;
+    if (input->seek(long(next_index_table), RVNG_SEEK_SET) != 0) return readSome;
   } while (n_entries > 0);
 
   return true;
@@ -588,7 +588,7 @@ void MSK4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
     if (getListener()->isSectionOpened())
       getListener()->closeSection();
     MWAWSection sec;
-    sec.setColumns(m_state->m_numColumns, getPageWidth()/double(m_state->m_numColumns), WPX_INCH);
+    sec.setColumns(m_state->m_numColumns, getPageWidth()/double(m_state->m_numColumns), RVNG_INCH);
     if (m_state->m_hasColumnSep)
       sec.m_columnSeparator=MWAWBorder();
     getListener()->openSection(sec);
@@ -649,7 +649,7 @@ bool MSK4Zone::readPRNT(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPa
   }
 
   long debPos = entry.begin();
-  input->seek(debPos, WPX_SEEK_SET);
+  input->seek(debPos, RVNG_SEEK_SET);
   libmwaw::PrinterInfo info;
   if (!info.read(input)) {
     MWAW_DEBUG_MSG(("Works: error: can not read PRNT\n"));
@@ -701,7 +701,7 @@ bool MSK4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPag
   long length = entry.length();
   long endPage = entry.end();
 
-  input->seek(debPage, WPX_SEEK_SET);
+  input->seek(debPage, RVNG_SEEK_SET);
   int sz = (int) input->readULong(1);
   if (sz != length-1) f << "###sz=" << sz << ",";
 
@@ -887,7 +887,7 @@ bool MSK4Zone::readRLRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
   entry.setParsed(true);
 
   long debPos = entry.begin();
-  input->seek(debPos, WPX_SEEK_SET);
+  input->seek(debPos, RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "BDB1=("; // some kind of bdbox: BDB1
   for (int i = 0; i < 4; i++)
@@ -905,7 +905,7 @@ bool MSK4Zone::readRLRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
 
 
   debPos = entry.end()-32;
-  input->seek(debPos, WPX_SEEK_SET);
+  input->seek(debPos, RVNG_SEEK_SET);
   f.str("");
   // v0=[29|72..79|189], v1=[-1|2|4|33], (v2xv3) = dim?=(~700x~1000)
   // seems related to BDB1
@@ -942,7 +942,7 @@ bool MSK4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
   long debPage = entry.begin();
   long endPage = entry.end();
 
-  input->seek(debPage, WPX_SEEK_SET);
+  input->seek(debPage, RVNG_SEEK_SET);
   int numFram = (int) input->readULong(2);
   if (numFram <= 0) return false;
   entry.setParsed(true);
@@ -1071,7 +1071,7 @@ bool MSK4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
 
       if ((sz == 0 && szChaine == 0) ||
           (pos + sz + szChaine > endPos)) {
-        input->seek(-1, WPX_SEEK_CUR);
+        input->seek(-1, RVNG_SEEK_CUR);
         ok = false;
         break;
       }
@@ -1105,7 +1105,7 @@ bool MSK4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
       ascii().addNote("FRAM###");
     }
 
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
   }
 
   return true;
@@ -1119,7 +1119,7 @@ bool MSK4Zone::readSELN(MWAWInputStreamPtr input, MWAWEntry const &entry)
   long debPage = entry.begin();
   long endPage = entry.end();
 
-  input->seek(debPage, WPX_SEEK_SET);
+  input->seek(debPage, RVNG_SEEK_SET);
   if (endPage-debPage <= 12) {
     MWAW_DEBUG_MSG(("MSK4Zone::readSELN: SELN size=%ld too short\n", endPage-debPage));
     return false;

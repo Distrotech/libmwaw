@@ -33,7 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge-stream/librevenge-stream.h>
 #include <libmwaw/libmwaw.hxx>
 
 #include "TextDocumentGenerator.h"
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	if (!szInputFile)
 		return printUsage();
 
-	WPXFileStream input(argv[1]);
+	RVNGFileStream input(argv[1]);
 
 	MWAWDocument::Type type;
 	MWAWDocument::Kind kind;

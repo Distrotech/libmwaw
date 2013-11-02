@@ -45,7 +45,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-class WPXBinaryData;
+class RVNGBinaryData;
 
 class MWProParser;
 

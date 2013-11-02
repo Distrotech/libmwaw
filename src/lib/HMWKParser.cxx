@@ -39,7 +39,7 @@
 #include <sstream>
 #include <string>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -126,7 +126,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_parser);
   long pos = m_input->tell();
   reinterpret_cast<HMWKParser *>(m_parser)->sendText(m_id, 0);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 }
 
@@ -172,7 +172,7 @@ bool HMWKParser::canSendTextAsGraphic(long id, long subId)
 
 bool HMWKParser::sendZone(long zId)
 {
-  MWAWPosition pos(Vec2i(0,0), Vec2i(0,0), WPX_POINT);
+  MWAWPosition pos(Vec2i(0,0), Vec2i(0,0), RVNG_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
   return m_graphParser->sendFrame(zId, pos);
 }
@@ -210,7 +210,7 @@ void HMWKParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void HMWKParser::parse(WPXDocumentInterface *docInterface)
+void HMWKParser::parse(RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -247,7 +247,7 @@ void HMWKParser::parse(WPXDocumentInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void HMWKParser::createDocument(WPXDocumentInterface *documentInterface)
+void HMWKParser::createDocument(RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -344,7 +344,7 @@ bool HMWKParser::readZonesList()
     }
     seeDebZone.insert(debZone);
     long pos = debZone;
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     int numZones = int(input->readULong(1));
     f.str("");
     f << "Entries(Zones):";
@@ -384,7 +384,7 @@ bool HMWKParser::readZonesList()
     }
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    input->seek(pos+16, WPX_SEEK_SET);
+    input->seek(pos+16, RVNG_SEEK_SET);
 
     for (int i = 0; i < numZones; i++) {
       pos = input->tell();
@@ -408,7 +408,7 @@ bool HMWKParser::readZonesList()
       ascii().addDelimiter(input->tell(), '|');
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
-      input->seek(pos+16, WPX_SEEK_SET);
+      input->seek(pos+16, RVNG_SEEK_SET);
     }
 
     ascii().addPos(input->tell());
@@ -429,7 +429,7 @@ bool HMWKParser::readZone(shared_ptr<HMWKZone> zone)
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
   long pos = zone->fileBeginPos();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(" << zone->name() << "):";
   int n = int(input->readLong(2));
   f << "n?=" << n << ",";
@@ -530,7 +530,7 @@ bool HMWKParser::readPrintInfo(HMWKZone &zone)
     return false;
   }
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   zone.m_parsed = true;
 
@@ -556,7 +556,7 @@ bool HMWKParser::readPrintInfo(HMWKZone &zone)
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
   pos += 68;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f.str("");
   f << zone.name() << "(B):";
   long sz = (long) input->readULong(4);
@@ -622,7 +622,7 @@ bool HMWKParser::readPrintInfo(HMWKZone &zone)
   asciiFile.addNote(f.str().c_str());
   if (input->tell()!=zone.end()) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(zone.end(), WPX_SEEK_SET);
+    input->seek(zone.end(), RVNG_SEEK_SET);
   }
   return true;
 }
@@ -646,7 +646,7 @@ bool HMWKParser::readFramesUnkn(shared_ptr<HMWKZone> zone)
   zone->m_parsed = true;
 
   f << zone->name() << ":PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   int N= (int) input->readLong(2); // always find val=0, so :-~
   f << "N?=" << N << ",";
   long expectedSz = N*6+2;
@@ -689,7 +689,7 @@ bool HMWKParser::readFramesUnkn(shared_ptr<HMWKZone> zone)
     }
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+6, WPX_SEEK_SET);
+    input->seek(pos+6, RVNG_SEEK_SET);
   }
   if (!input->atEOS())
     asciiFile.addDelimiter(input->tell(),'|');
@@ -715,7 +715,7 @@ bool HMWKParser::readZone6(shared_ptr<HMWKZone> zone)
   libmwaw::DebugStream f;
   zone->m_parsed = true;
   long pos=0;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   // no sure, checkme
   for (int st = 0; st < 2; st++) {
@@ -735,7 +735,7 @@ bool HMWKParser::readZone6(shared_ptr<HMWKZone> zone)
     asciiFile.addDelimiter(input->tell(),'|');
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+4+sz, WPX_SEEK_SET);
+    input->seek(pos+4+sz, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -759,7 +759,7 @@ bool HMWKParser::readZone8(shared_ptr<HMWKZone> zone)
   zone->m_parsed = true;
 
   f << zone->name() << ":PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   // find f0=1 (N?), f3=1, f20=8, f22=6, f24=2, f26=144, f28=1, f30=1
   for (int i = 0; i < 39; i++) {
     long val = input->readLong(2);
@@ -792,7 +792,7 @@ bool HMWKParser::readZonea(shared_ptr<HMWKZone> zone)
   zone->m_parsed = true;
 
   f << zone->name() << ":PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   long val;
   for (int i = 0; i < 40; i++) { // always 0 ?
     val = input->readLong(2);
@@ -830,7 +830,7 @@ bool HMWKParser::readZoneb(HMWKZone &zone)
     return false;
   }
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   zone.m_parsed = true;
 
@@ -870,7 +870,7 @@ bool HMWKParser::readZoneb(HMWKZone &zone)
   asciiFile.addNote(f.str().c_str());
   if (input->tell()!=zone.end()) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(zone.end(), WPX_SEEK_SET);
+    input->seek(zone.end(), RVNG_SEEK_SET);
   }
   return true;
 }
@@ -894,7 +894,7 @@ bool HMWKParser::readZonec(shared_ptr<HMWKZone> zone)
   zone->m_parsed = true;
 
   f << zone->name() << ":PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   long val = input->readLong(2); // 1|4
   if (val != 1) f << "f0=" << val << ",";
   for (int j = 0; j < 5; j++) { // always 0 expect f2=0|800
@@ -923,7 +923,7 @@ bool HMWKParser::readZonec(shared_ptr<HMWKZone> zone)
   asciiFile.addPos(0);
   asciiFile.addNote(f.str().c_str());
 
-  input->seek(52, WPX_SEEK_SET);
+  input->seek(52, RVNG_SEEK_SET);
   return true;
 }
 ////////////////////////////////////////////////////////////
@@ -989,8 +989,8 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
   short bitcounter = 0;  /* count of remaining bits in buffer */
 
   MWAWInputStreamPtr input = getInput();
-  input->seek(zone->fileBeginPos()+12, WPX_SEEK_SET);
-  WPXBinaryData &dt = zone->getBinaryData();
+  input->seek(zone->fileBeginPos()+12, RVNG_SEEK_SET);
+  RVNGBinaryData &dt = zone->getBinaryData();
   while (!input->atEOS() && input->tell() < zone->fileEndPos()) {
     short a = root;
     bool ok = true;
@@ -1052,7 +1052,7 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
     return zone;
   }
 
-  zone->m_input->seek(0,WPX_SEEK_SET);
+  zone->m_input->seek(0,RVNG_SEEK_SET);
   zone->ascii().setStream(zone->m_input);
   static int fId = 0;
   std::stringstream s;
@@ -1080,7 +1080,7 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
     MWAW_DEBUG_MSG(("HMWKParser::checkHeader: file is too short\n"));
     return false;
   }
-  input->seek(0,WPX_SEEK_SET);
+  input->seek(0,RVNG_SEEK_SET);
   int head[3];
   for (int i = 0; i < 3; i++)
     head[i] = (int) input->readULong(2);
@@ -1126,7 +1126,7 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
     if (i == 5) {
       ascii().addPos(pos);
       ascii().addNote("FileHeader[DocTags]:");
-      input->seek(pos+fieldSizes[i], WPX_SEEK_SET);
+      input->seek(pos+fieldSizes[i], RVNG_SEEK_SET);
       continue;
     }
     int fSz = (int) input->readULong(1);
@@ -1136,7 +1136,7 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
       MWAW_DEBUG_MSG(("HMWKParser::checkHeader: can not read field size %i\n", i));
       ascii().addPos(pos);
       ascii().addNote("FileHeader#");
-      input->seek(pos+fieldSizes[i], WPX_SEEK_SET);
+      input->seek(pos+fieldSizes[i], RVNG_SEEK_SET);
       continue;
     }
     f.str("");
@@ -1151,7 +1151,7 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
     }
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    input->seek(pos+fieldSizes[i], WPX_SEEK_SET);
+    input->seek(pos+fieldSizes[i], RVNG_SEEK_SET);
   }
   pos=input->tell();
   f.str("");
@@ -1159,7 +1159,7 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  input->seek(m_state->m_zonesListBegin, WPX_SEEK_SET);
+  input->seek(m_state->m_zonesListBegin, RVNG_SEEK_SET);
   if (header)
     header->reset(MWAWDocument::MWAW_T_HANMACWORDK, 1);
 

@@ -1,5 +1,9 @@
 CHANGES:
 
+11/02/2013:
+- begin to depend on librevenge
+---------------- Version 0.3
+
 10/19/2013:
 - switch to version 0.2: simplify the interface to retrieve graphic created
   by libmwaw, add possibility to manage password in some near futur, try
@@ -121,7 +125,7 @@ CHANGES:
 - optimize a little the detection of a hqx/zip Document
 
 06/14/2013:
-- modify the code to use WPX_SEEK_END when possible
+- modify the code to use RVNG_SEEK_END when possible
 
 06/12/2013:
 - add a parser for GreatWorks v1-v2 to read text and draw document

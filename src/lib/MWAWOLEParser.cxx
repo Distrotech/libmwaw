@@ -81,7 +81,7 @@
 #include <sstream>
 #include <string>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWPosition.hxx"
 #include "MWAWOLEParser.hxx"
@@ -118,7 +118,7 @@ protected:
     m_mapCls[0x00000319]="Picture"; // addon Enhanced Metafile ( find in some file)
 
     m_mapCls[0x000212F0]="MSWordArt"; // or MSWordArt.2
-    m_mapCls[0x00021302]="MSWorksWPDoc"; // addon
+    m_mapCls[0x00021302]="MSWorksREVENGEoc"; // addon
 
     // MS Apps
     m_mapCls[0x00030000]= "ExcelWorksheet";
@@ -242,7 +242,7 @@ MWAWOLEParser::~MWAWOLEParser()
 {
 }
 
-bool MWAWOLEParser::getObject(int id, WPXBinaryData &obj, MWAWPosition &pos, std::string &type)  const
+bool MWAWOLEParser::getObject(int id, RVNGBinaryData &obj, MWAWPosition &pos, std::string &type)  const
 {
   for (size_t i = 0; i < m_objectsId.size(); i++) {
     if (m_objectsId[i] != id) continue;
@@ -255,7 +255,7 @@ bool MWAWOLEParser::getObject(int id, WPXBinaryData &obj, MWAWPosition &pos, std
   return false;
 }
 
-void MWAWOLEParser::setObject(int id, WPXBinaryData const &obj, MWAWPosition const &pos,
+void MWAWOLEParser::setObject(int id, RVNGBinaryData const &obj, MWAWPosition const &pos,
                               std::string const &type)
 {
   for (size_t i = 0; i < m_objectsId.size(); i++) {
@@ -353,7 +353,7 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
 
     // try to find a representation for each id
     // FIXME: maybe we must also find some for each subid
-    WPXBinaryData pict;
+    RVNGBinaryData pict;
     int confidence = -1000;
     MWAWPosition actualPos, potentialSize;
     bool isPict = false;
@@ -370,7 +370,7 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
       libmwaw::DebugFile asciiFile(ole);
       asciiFile.open(dOle.m_name);
 
-      WPXBinaryData data;
+      RVNGBinaryData data;
       bool hasData = false;
       int newConfidence = -2000;
       bool ok = true;
@@ -417,7 +417,7 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
       if (data.size()) {
         MWAWInputStreamPtr dataInput=MWAWInputStream::get(data, false);
         if (dataInput) {
-          dataInput->seek(0, WPX_SEEK_SET);
+          dataInput->seek(0, RVNG_SEEK_SET);
           Box2f box;
           if (MWAWPictData::check(dataInput, (int)data.size(), box) != MWAWPict::MWAW_R_BAD) {
             isPict = true;
@@ -484,9 +484,9 @@ bool MWAWOLEParser::readOle(MWAWInputStreamPtr ip, std::string const &oleName,
 
   if (oleName!="Ole") return false;
 
-  if (ip->seek(20, WPX_SEEK_SET) != 0 || ip->tell() != 20) return false;
+  if (ip->seek(20, RVNG_SEEK_SET) != 0 || ip->tell() != 20) return false;
 
-  ip->seek(0, WPX_SEEK_SET);
+  ip->seek(0, RVNG_SEEK_SET);
 
   int val[20];
   for (int i= 0; i < 20; i++) {
@@ -515,10 +515,10 @@ bool MWAWOLEParser::readObjInfo(MWAWInputStreamPtr input, std::string const &ole
 {
   if (oleName!="ObjInfo") return false;
 
-  input->seek(14, WPX_SEEK_SET);
+  input->seek(14, RVNG_SEEK_SET);
   if (input->tell() != 6 || !input->atEOS()) return false;
 
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "@@ObjInfo:";
 
@@ -536,10 +536,10 @@ bool MWAWOLEParser::readMM(MWAWInputStreamPtr input, std::string const &oleName,
 {
   if (oleName!="MM") return false;
 
-  input->seek(14, WPX_SEEK_SET);
+  input->seek(14, RVNG_SEEK_SET);
   if (input->tell() != 14 || !input->atEOS()) return false;
 
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   int entete = (int) input->readULong(2);
   if (entete != 0x444e) {
     if (entete == 0x4e44) {
@@ -594,11 +594,11 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
 
   // check minimal size
   const int minSize = 12 + 14+ 16 + 12; // size of header, clsid, footer, 3 string size
-  if (ip->seek(minSize,WPX_SEEK_SET) != 0 || ip->tell() != minSize) return false;
+  if (ip->seek(minSize,RVNG_SEEK_SET) != 0 || ip->tell() != minSize) return false;
 
   libmwaw::DebugStream f;
   f << "@@CompObj(Header): ";
-  ip->seek(0,WPX_SEEK_SET);
+  ip->seek(0,RVNG_SEEK_SET);
 
   for (int i = 0; i < 6; i++) {
     int val = (int) ip->readLong(2);
@@ -628,7 +628,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
   } else {
     /* I found:
       c1dbcd28e20ace11a29a00aa004a1a72     for MSWorks.Table
-      c2dbcd28e20ace11a29a00aa004a1a72     for Microsoft Works/MSWorksWPDoc
+      c2dbcd28e20ace11a29a00aa004a1a72     for Microsoft Works/MSWorksREVENGEoc
       a3bcb394c2bd1b10a18306357c795b37     for Microsoft Drawing 1.01/MSDraw.1.01
       b25aa40e0a9ed111a40700c04fb932ba     for Quill96 Story Group Class ( basic MSWorks doc?)
       796827ed8bc9d111a75f00c04fb9667b     for MSWorks4Sheet
@@ -643,9 +643,9 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
     long sz = ip->readLong(4);
     bool waitNumber = sz == -1;
     if (waitNumber || sz == -2) sz = 4;
-    if (sz < 0 || ip->seek(actPos+4+sz,WPX_SEEK_SET) != 0 ||
+    if (sz < 0 || ip->seek(actPos+4+sz,RVNG_SEEK_SET) != 0 ||
         ip->tell() != actPos+4+sz) return false;
-    ip->seek(actPos+4,WPX_SEEK_SET);
+    ip->seek(actPos+4,RVNG_SEEK_SET);
 
     std::string st;
     if (waitNumber) {
@@ -681,7 +681,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
 
   long actPos = ip->tell();
   long nbElt = 4;
-  if (ip->seek(actPos+16,WPX_SEEK_SET) != 0 ||
+  if (ip->seek(actPos+16,RVNG_SEEK_SET) != 0 ||
       ip->tell() != actPos+16) {
     if ((ip->tell()-actPos)%4)
       return false;
@@ -690,7 +690,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
 
   f.str("");
   f << "@@CompObj(Footer): " << std::hex;
-  ip->seek(actPos,WPX_SEEK_SET);
+  ip->seek(actPos,RVNG_SEEK_SET);
   for (long i = 0; i < nbElt; i++)
     f << ip->readULong(4) << ",";
   ascii.addPos(actPos);
@@ -714,9 +714,9 @@ bool MWAWOLEParser::isOlePres(MWAWInputStreamPtr ip, std::string const &oleName)
 
   if (strncmp("OlePres",oleName.c_str(),7) != 0) return false;
 
-  if (ip->seek(40, WPX_SEEK_SET) != 0 || ip->tell() != 40) return false;
+  if (ip->seek(40, RVNG_SEEK_SET) != 0 || ip->tell() != 40) return false;
 
-  ip->seek(0, WPX_SEEK_SET);
+  ip->seek(0, RVNG_SEEK_SET);
   for (int i= 0; i < 2; i++) {
     long val = ip->readLong(4);
     if (val < -10 || val > 10) {
@@ -728,11 +728,11 @@ bool MWAWOLEParser::isOlePres(MWAWInputStreamPtr ip, std::string const &oleName)
   long actPos = ip->tell();
   long hSize = ip->readLong(4);
   if (hSize < 4) return false;
-  if (ip->seek(actPos+hSize+28, WPX_SEEK_SET) != 0
+  if (ip->seek(actPos+hSize+28, RVNG_SEEK_SET) != 0
       || ip->tell() != actPos+hSize+28)
     return false;
 
-  ip->seek(actPos+hSize, WPX_SEEK_SET);
+  ip->seek(actPos+hSize, RVNG_SEEK_SET);
   for (int i= 3; i < 7; i++) {
     long val = ip->readLong(4);
     if (val < -10 || val > 10) {
@@ -740,31 +740,31 @@ bool MWAWOLEParser::isOlePres(MWAWInputStreamPtr ip, std::string const &oleName)
     }
   }
 
-  ip->seek(8, WPX_SEEK_CUR);
+  ip->seek(8, RVNG_SEEK_CUR);
   long size = ip->readLong(4);
 
   if (size <= 0) return ip->atEOS();
 
   actPos = ip->tell();
-  if (ip->seek(actPos+size, WPX_SEEK_SET) != 0
+  if (ip->seek(actPos+size, RVNG_SEEK_SET) != 0
       || ip->tell() != actPos+size)
     return false;
 
   return true;
 }
 
-bool MWAWOLEParser::readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWAWPosition &pos,
+bool MWAWOLEParser::readOlePres(MWAWInputStreamPtr ip, RVNGBinaryData &data, MWAWPosition &pos,
                                 libmwaw::DebugFile &ascii)
 {
   data.clear();
   if (!isOlePres(ip, "OlePres")) return false;
 
   pos = MWAWPosition();
-  pos.setUnit(WPX_POINT);
+  pos.setUnit(RVNG_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
   libmwaw::DebugStream f;
   f << "@@OlePress(header): ";
-  ip->seek(0,WPX_SEEK_SET);
+  ip->seek(0,RVNG_SEEK_SET);
   for (int i = 0; i < 2; i++) {
     long val = ip->readLong(4);
     f << val << ", ";
@@ -811,11 +811,11 @@ bool MWAWOLEParser::readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWAW
     ascii.addPos(actPos);
     ascii.addNote(f.str().c_str());
   }
-  if (ip->seek(endHPos+28, WPX_SEEK_SET) != 0
+  if (ip->seek(endHPos+28, RVNG_SEEK_SET) != 0
       || ip->tell() != endHPos+28)
     return false;
 
-  ip->seek(endHPos, WPX_SEEK_SET);
+  ip->seek(endHPos, RVNG_SEEK_SET);
 
   actPos = ip->tell();
   f.str("");
@@ -859,27 +859,27 @@ bool MWAWOLEParser::isOle10Native(MWAWInputStreamPtr ip, std::string const &oleN
 {
   if (strncmp("Ole10Native",oleName.c_str(),11) != 0) return false;
 
-  if (ip->seek(4, WPX_SEEK_SET) != 0 || ip->tell() != 4) return false;
+  if (ip->seek(4, RVNG_SEEK_SET) != 0 || ip->tell() != 4) return false;
 
-  ip->seek(0, WPX_SEEK_SET);
+  ip->seek(0, RVNG_SEEK_SET);
   long size = ip->readLong(4);
 
   if (size <= 0) return false;
-  if (ip->seek(4+size, WPX_SEEK_SET) != 0 || ip->tell() != 4+size)
+  if (ip->seek(4+size, RVNG_SEEK_SET) != 0 || ip->tell() != 4+size)
     return false;
 
   return true;
 }
 
 bool MWAWOLEParser::readOle10Native(MWAWInputStreamPtr ip,
-                                    WPXBinaryData &data,
+                                    RVNGBinaryData &data,
                                     libmwaw::DebugFile &ascii)
 {
   if (!isOle10Native(ip, "Ole10Native")) return false;
 
   libmwaw::DebugStream f;
   f << "@@Ole10Native(Header): ";
-  ip->seek(0,WPX_SEEK_SET);
+  ip->seek(0,RVNG_SEEK_SET);
   long fSize = ip->readLong(4);
   f << "fSize=" << fSize;
 
@@ -911,7 +911,7 @@ bool MWAWOLEParser::readOle10Native(MWAWInputStreamPtr ip,
 ////////////////////////////////////////////////////////////////
 bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
                                  std::string const &oleName,
-                                 WPXBinaryData &pict, MWAWPosition &pos,
+                                 RVNGBinaryData &pict, MWAWPosition &pos,
                                  libmwaw::DebugFile &ascii)
 {
   pict.clear();
@@ -919,9 +919,9 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
 
   libmwaw::DebugStream f;
   pos = MWAWPosition();
-  pos.setUnit(WPX_POINT);
+  pos.setUnit(RVNG_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   f << "@@Contents:";
 
   bool ok = true;
@@ -966,7 +966,7 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
   long size = (long) input->readULong(4);
   if (size <= 0) ok = false;
   if (ok) {
-    input->seek(actPos+size+4, WPX_SEEK_SET);
+    input->seek(actPos+size+4, RVNG_SEEK_SET);
     if (input->tell() != actPos+size+4 || !input->atEOS()) {
       ok = false;
       MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents unexpected file size=%ld\n",
@@ -980,13 +980,13 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
   ascii.addPos(0);
   ascii.addNote(f.str().c_str());
 
-  input->seek(actPos+4, WPX_SEEK_SET);
+  input->seek(actPos+4, RVNG_SEEK_SET);
 
   if (ok) {
     if (input->readDataBlock(size, pict))
       ascii.skipZone(actPos+4, actPos+size+4-1);
     else {
-      input->seek(actPos+4, WPX_SEEK_SET);
+      input->seek(actPos+4, RVNG_SEEK_SET);
       ok = false;
     }
   }
@@ -1010,7 +1010,7 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
 ////////////////////////////////////////////////////////////////
 bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
                                  std::string const &oleName,
-                                 WPXBinaryData &pict, MWAWPosition &pos,
+                                 RVNGBinaryData &pict, MWAWPosition &pos,
                                  libmwaw::DebugFile &ascii)
 {
   pict.clear();
@@ -1019,16 +1019,16 @@ bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
   libmwaw::DebugStream f;
 
   pos = MWAWPosition();
-  pos.setUnit(WPX_POINT);
+  pos.setUnit(RVNG_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   f << "@@CONTENTS:";
 
   long hSize = (long)input->readULong(4);
   if (input->atEOS()) return false;
   f << "hSize=" << std::hex << hSize << std::dec;
 
-  if (hSize <= 52 || input->seek(hSize+8,WPX_SEEK_SET) != 0
+  if (hSize <= 52 || input->seek(hSize+8,RVNG_SEEK_SET) != 0
       || input->tell() != hSize+8) {
     MWAW_DEBUG_MSG(("MWAWOLEParser: warning: CONTENTS headerSize=%ld\n",
                     hSize));
@@ -1036,7 +1036,7 @@ bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
   }
 
   // minimal checking of the "copied" header
-  input->seek(4, WPX_SEEK_SET);
+  input->seek(4, RVNG_SEEK_SET);
   long type = (long) input->readULong(4);
   if (type < 0 || type > 4) return false;
   long newSize = (long) input->readULong(4);
@@ -1095,14 +1095,14 @@ bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
   }
   ascii.addNote(f.str().c_str());
 
-  if (dataLength <= 0 || input->seek(hSize+4+dataLength,WPX_SEEK_SET) != 0
+  if (dataLength <= 0 || input->seek(hSize+4+dataLength,RVNG_SEEK_SET) != 0
       || input->tell() != hSize+4+dataLength || !input->atEOS()) {
     MWAW_DEBUG_MSG(("MWAWOLEParser: warning: CONTENTS unexpected file length=%ld\n",
                     dataLength));
     return false;
   }
 
-  input->seek(4+hSize, WPX_SEEK_SET);
+  input->seek(4+hSize, RVNG_SEEK_SET);
   if (!input->readEndDataBlock(pict)) return false;
 
   ascii.skipZone(hSize+4, input->tell()-1);

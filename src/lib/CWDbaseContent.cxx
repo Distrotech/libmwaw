@@ -41,7 +41,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
@@ -137,14 +137,14 @@ bool CWDbaseContent::readContent()
   /** ARGHH: this zone is almost the only zone which count the header in sz ... */
   long endPos = pos+sz;
   std::string zoneName(m_isSpreadsheet ? "spread" : "dbase");
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   if (long(input->tell()) != endPos || sz < 6) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWDbaseContent::readContent: file is too short\n"));
     return false;
   }
 
-  input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(pos+4, RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(DBHeader)[" << zoneName << "]:";
@@ -169,7 +169,7 @@ bool CWDbaseContent::readContent()
     sz = (long) input->readULong(4);
     long zoneEnd=pos+4+sz;
     if (zoneEnd > endPos || (sz && sz < 12)) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       MWAW_DEBUG_MSG(("CWDbaseContent::readContent: find a odd content field\n"));
       ok=false;
       break;
@@ -187,7 +187,7 @@ bool CWDbaseContent::readContent()
     ascFile.addDelimiter(input->tell(),'|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(zoneEnd, WPX_SEEK_SET);
+    input->seek(zoneEnd, RVNG_SEEK_SET);
   }
   input->popLimit();
   return ok;
@@ -203,7 +203,7 @@ bool CWDbaseContent::readColumnList()
   for (int i=0; i < 4; ++i) hName+=(char) input->readULong(1);
   if (sz!=0x408 || hName!="CTAB" || !input->checkPosition(pos+4+sz)) {
     MWAW_DEBUG_MSG(("CWDbaseContent::readCOLM: the entry seems bad\n"));
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
 
@@ -253,7 +253,7 @@ bool CWDbaseContent::readColumnList()
     pos=input->tell();
     if (readColumn(int(c)))
       continue;
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   return true;
@@ -272,7 +272,7 @@ bool CWDbaseContent::readColumn(int c)
     cPos[i]=(int) input->readLong(2);
   if (sz!=8+4*(cPos[1]-cPos[0]+1) || hName!="COLM" || !input->checkPosition(pos+4+sz)) {
     MWAW_DEBUG_MSG(("CWDbaseContent::readCOLM: the entry seems bad\n"));
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -303,7 +303,7 @@ bool CWDbaseContent::readColumn(int c)
     pos=input->tell();
     if (!listIds[i] || readRecordList(Vec2i(c,64*int(i)), col))
       continue;
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     ok=false;
     break;
   }
@@ -324,7 +324,7 @@ bool CWDbaseContent::readRecordList(Vec2i const &where, Column &col)
   int N=(int) input->readULong(2);
   if (sz<6+134 || hName!="CHNK" || !input->checkPosition(pos+4+sz) || N>0x40) {
     MWAW_DEBUG_MSG(("CWDbaseContent::readRecordList: the entry seems bad\n"));
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
 
@@ -379,7 +379,7 @@ bool CWDbaseContent::readRecordList(Vec2i const &where, Column &col)
 
     f.str("");
     f << "DBCHNK[" << zoneName << wh << "]:#";
-    input->seek(ptrLists[i], WPX_SEEK_SET);
+    input->seek(ptrLists[i], RVNG_SEEK_SET);
     int fType=(int) input->readULong(1);
     f << "type=" << std::hex << fType << std::dec << ",";
     ascFile.addPos(ptrLists[i]);
@@ -387,7 +387,7 @@ bool CWDbaseContent::readRecordList(Vec2i const &where, Column &col)
     col.m_idRecordMap[wh[1]]=record;
   }
 
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -398,7 +398,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
   libmwaw::DebugStream f;
   f << "DBCHNK[spread" << id << "]:";
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   int val=(int) input->readULong(1);
   int type=(val>>4);
   record.m_format=(val&0xF);
@@ -479,7 +479,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
       val &=0x3;
       if (val) f << "#unk=" << val << ",";
       ascFile.addDelimiter(pos+2,'|');
-      input->seek(pos+8, WPX_SEEK_SET);
+      input->seek(pos+8, RVNG_SEEK_SET);
       ascFile.addDelimiter(pos+8,'|');
       ord &= 0xFE;
     }
@@ -550,7 +550,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
         break;
       }
       ascFile.addDelimiter(input->tell(),'|');
-      input->seek(formSz+1-(formSz%2), WPX_SEEK_CUR);
+      input->seek(formSz+1-(formSz%2), RVNG_SEEK_CUR);
       ascFile.addDelimiter(input->tell(),'|');
       val=(int) input->readULong(1);
       int rType=(val>>4);
@@ -628,7 +628,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
   libmwaw::DebugStream f;
   f << "DBCHNK[spread" << id << "]:";
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   long sz=(long) input->readULong(2);
   long endPos=pos+sz+2;
   if (!input->checkPosition(endPos) || sz < 4) {
@@ -719,7 +719,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
     ascFile.addDelimiter(input->tell(),'|');
     /** checkme: there does not seem to be alignment, but another
         variable before the result */
-    input->seek(formSz+1, WPX_SEEK_CUR);
+    input->seek(formSz+1, RVNG_SEEK_CUR);
     ascFile.addDelimiter(input->tell(),'|');
     int remainSz=int(endPos-input->tell());
     switch(rType) {
@@ -803,7 +803,7 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
   libmwaw::DebugStream f;
   f << "DBCHNK[dbase" << id << "]:";
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   long sz=0;
   long endPos=-1;
   if (m_version>3) {
@@ -942,13 +942,13 @@ bool CWDbaseContent::send(Vec2i const &pos)
     if (record.m_resString.valid()) {
       MWAWInputStreamPtr &input= m_parserState->m_input;
       long fPos = input->tell();
-      input->seek(record.m_resString.begin(), WPX_SEEK_SET);
+      input->seek(record.m_resString.begin(), RVNG_SEEK_SET);
       long endPos = record.m_resString.end();
       while (!input->atEOS() && input->tell() < endPos) {
         unsigned char c=(unsigned char) input->readULong(1);
         listener->insertCharacter(c, input, endPos);
       }
-      input->seek(fPos,WPX_SEEK_SET);
+      input->seek(fPos,RVNG_SEEK_SET);
     }
     break;
   case Record::R_Unknown:

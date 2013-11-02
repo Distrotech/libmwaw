@@ -41,7 +41,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -188,7 +188,7 @@ protected:
 
   //! sends a picture zone
   bool sendPicture(CWGraphInternal::ZonePict &pict, MWAWPosition pos,
-                   WPXPropertyList extras = WPXPropertyList());
+                   RVNGPropertyList extras = RVNGPropertyList());
 
   //! sends a basic graphic zone
   bool sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos);

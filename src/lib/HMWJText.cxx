@@ -37,7 +37,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWDebug.hxx"
@@ -163,7 +163,7 @@ struct Section {
     if (m_colWidth.size()==size_t(m_numCols)) {
       for (size_t c=0; c < size_t(m_numCols); c++) {
         sec.m_columns[c].m_width = double(m_colWidth[c]);
-        sec.m_columns[c].m_widthUnit = WPX_POINT;
+        sec.m_columns[c].m_widthUnit = RVNG_POINT;
         if (!hasSep) continue;
         sec.m_columns[c].m_margins[libmwaw::Left]=
           sec.m_columns[c].m_margins[libmwaw::Right]=double(m_colSep[c])/2.0/72.;
@@ -172,7 +172,7 @@ struct Section {
       if (m_colWidth.size()>1) {
         MWAW_DEBUG_MSG(("HMWJTextInternal::Section:getSection colWidth is not coherent with numCols\n"));
       }
-      sec.setColumns(m_numCols, double(m_colWidth[0]), WPX_POINT,
+      sec.setColumns(m_numCols, double(m_colWidth[0]), RVNG_POINT,
                      hasSep ? double(m_colSep[0])/72. : 0);
     }
     return sec;
@@ -354,7 +354,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_textParser);
   long pos = m_input->tell();
   m_textParser->sendText(m_id, m_cPos);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -505,7 +505,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos, bool 
   }
 
   zone.m_parsed=true;
-  WPXBinaryData data;
+  RVNGBinaryData data;
   if (!m_mainParser->decodeZone(zone.m_entry, data)) {
     MWAW_DEBUG_MSG(("HMWJText::sendText: can not decode a zone\n"));
     m_parserState->m_asciiFile.addPos(zone.m_entry.begin());
@@ -561,7 +561,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos, bool 
     }
   }
   long pos = 2*fPos;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(TextData):";
 
@@ -667,10 +667,10 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos, bool 
     if (expectedChar) {
       if ((int) input->readULong(1)==expectedChar) {
         cPos++;
-        input->seek(1, WPX_SEEK_CUR);
+        input->seek(1, RVNG_SEEK_CUR);
       } else {
         MWAW_DEBUG_MSG(("HMWJText::sendText: can not find expected char token\n"));
-        input->seek(-1, WPX_SEEK_CUR);
+        input->seek(-1, RVNG_SEEK_CUR);
         f << "###";
       }
     }
@@ -794,7 +794,7 @@ int HMWJText::computeNumPages(HMWJTextInternal::TextZone const &zone)
     return 1;
   if (!zone.m_entry.valid())
     return 0;
-  WPXBinaryData data;
+  RVNGBinaryData data;
   if (!m_mainParser->decodeZone(zone.m_entry, data) || !data.size())
     return 0;
 
@@ -808,7 +808,7 @@ int HMWJText::computeNumPages(HMWJTextInternal::TextZone const &zone)
     if (sec.m_numCols >= 1)
       numCol = sec.m_numCols;
   }
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   while (!input->atEOS()) {
     int c = (int) input->readULong(2);
     switch(c) {
@@ -889,7 +889,7 @@ bool HMWJText::readTextZonesList(MWAWEntry const &entry)
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   entry.setParsed(true);
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   // first read the header
   f << entry.name() << "[header]:";
   HMWJZoneHeader mainHeader(true);
@@ -916,7 +916,7 @@ bool HMWJText::readTextZonesList(MWAWEntry const &entry)
   asciiFile.addNote(f.str().c_str());
   if (input->tell()!=headerEnd) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(headerEnd, WPX_SEEK_SET);
+    input->seek(headerEnd, RVNG_SEEK_SET);
   }
   m_state->m_textZoneList.resize(size_t(mainHeader.m_n));
   if (mainHeader.m_n)
@@ -967,7 +967,7 @@ bool HMWJText::readTextZonesList(MWAWEntry const &entry)
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
 
-    input->seek(zoneEnd, WPX_SEEK_SET);
+    input->seek(zoneEnd, RVNG_SEEK_SET);
     f.str("");
     f << entry.name() << "-B" << i << ":";
     f << "id=" << std::hex << listIds[size_t(i)] << std::dec << ",";
@@ -981,7 +981,7 @@ bool HMWJText::readTextZonesList(MWAWEntry const &entry)
       asciiFile.addNote(f.str().c_str());
       if (header.m_length<16 || pos+4+header.m_length>endPos)
         return false;
-      input->seek(pos+4+header.m_length, WPX_SEEK_SET);
+      input->seek(pos+4+header.m_length, RVNG_SEEK_SET);
       continue;
     }
     zoneEnd=pos+4+header.m_length;
@@ -997,7 +997,7 @@ bool HMWJText::readTextZonesList(MWAWEntry const &entry)
     asciiFile.addNote(f.str().c_str());
     if (input->tell()!=zoneEnd)
       asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(zoneEnd, WPX_SEEK_SET);
+    input->seek(zoneEnd, RVNG_SEEK_SET);
   }
 
   pos = input->tell();
@@ -1030,7 +1030,7 @@ bool HMWJText::readTextZone(MWAWEntry const &entry, int actZone)
 
   long pos = entry.begin()+8; // skip header
   long endPos = entry.end();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   if (actZone >= (int) m_state->m_textZoneList.size() || actZone < 0) {
     MWAW_DEBUG_MSG(("HMWJText::readTextZone: find an unexpected zone\n"));
@@ -1056,7 +1056,7 @@ bool HMWJText::readTextZone(MWAWEntry const &entry, int actZone)
     f << "###";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     ok = false;
   } else {
     f << header;
@@ -1083,12 +1083,12 @@ bool HMWJText::readTextZone(MWAWEntry const &entry, int actZone)
       f << entry.name() << "-Char" << j << "]:lcPos=" << cPos << "," << plc;
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
-      input->seek(pos+header.m_fieldSize, WPX_SEEK_SET);
+      input->seek(pos+header.m_fieldSize, RVNG_SEEK_SET);
     }
 
     if (input->tell() != zoneEnd) { // junk ?
       asciiFile.addDelimiter(input->tell(),'|');
-      input->seek(zoneEnd, WPX_SEEK_SET);
+      input->seek(zoneEnd, RVNG_SEEK_SET);
     }
   }
 
@@ -1106,7 +1106,7 @@ bool HMWJText::readTextZone(MWAWEntry const &entry, int actZone)
     f << "###";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     ok = false;
   } else {
     f << header;
@@ -1135,12 +1135,12 @@ bool HMWJText::readTextZone(MWAWEntry const &entry, int actZone)
       f << entry.name() << "-Ruler" << j << "]:line=" << line << "," << plc;
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
-      input->seek(pos+header.m_fieldSize, WPX_SEEK_SET);
+      input->seek(pos+header.m_fieldSize, RVNG_SEEK_SET);
     }
 
     if (input->tell() != zoneEnd) { // junk ?
       asciiFile.addDelimiter(input->tell(),'|');
-      input->seek(zoneEnd, WPX_SEEK_SET);
+      input->seek(zoneEnd, RVNG_SEEK_SET);
     }
   }
 
@@ -1157,7 +1157,7 @@ bool HMWJText::readTextZone(MWAWEntry const &entry, int actZone)
     f << "###";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     ok = false;
   } else {
     f << header;
@@ -1182,7 +1182,7 @@ bool HMWJText::readTextZone(MWAWEntry const &entry, int actZone)
 
     if (input->tell() != zoneEnd) { // junk ?
       asciiFile.addDelimiter(input->tell(),'|');
-      input->seek(zoneEnd, WPX_SEEK_SET);
+      input->seek(zoneEnd, RVNG_SEEK_SET);
     }
   }
 
@@ -1240,10 +1240,10 @@ bool HMWJText::readTextZone(MWAWEntry const &entry, int actZone)
     asciiFile.addNote(f.str().c_str());
 
     pos = pos+4+dataSz;
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     dataSz = (long) input->readULong(4);
   }
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   // the text data
   f.str("");
@@ -1280,7 +1280,7 @@ bool HMWJText::readTextToken(long endPos, HMWJTextInternal::TextZone &zone)
   HMWJZoneHeader header(false);
   if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=16 ||
       16+16*header.m_n+4 > header.m_length ) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return true;
   }
   int val;
@@ -1325,12 +1325,12 @@ bool HMWJText::readTextToken(long endPos, HMWJTextInternal::TextZone &zone)
     f << tkn;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+16, WPX_SEEK_SET);
+    input->seek(pos+16, RVNG_SEEK_SET);
   }
 
   if (input->tell() != zoneEnd) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(zoneEnd, WPX_SEEK_SET);
+    input->seek(zoneEnd, RVNG_SEEK_SET);
   }
 
   pos = input->tell();
@@ -1364,9 +1364,9 @@ bool HMWJText::readTextToken(long endPos, HMWJTextInternal::TextZone &zone)
     asciiFile.addNote(f.str().c_str());
 
     pos = zoneEnd;
-    input->seek(zoneEnd, WPX_SEEK_SET);
+    input->seek(zoneEnd, RVNG_SEEK_SET);
   }
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -1387,14 +1387,14 @@ bool HMWJText::readFont(MWAWFont &font, long endPos)
     endPos=pos+dataSz;
     if (!input->checkPosition(endPos)) {
       MWAW_DEBUG_MSG(("HMWJText::readFont: pb reading font size\n"));
-      input->seek(debPos, WPX_SEEK_SET);
+      input->seek(debPos, RVNG_SEEK_SET);
       return false;
     }
   }
   long len=endPos-pos;
   if (len < 24) {
     MWAW_DEBUG_MSG(("HMWJText::readFont: the zone is too short\n"));
-    input->seek(debPos, WPX_SEEK_SET);
+    input->seek(debPos, RVNG_SEEK_SET);
     return false;
   }
 
@@ -1442,9 +1442,9 @@ bool HMWJText::readFont(MWAWFont &font, long endPos)
   if (flag&0x40) font.set(MWAWFont::Script::sub100());
   if (flag&0x80) {
     if (flag&0x20)
-      font.set(MWAWFont::Script(48,WPX_PERCENT,58));
+      font.set(MWAWFont::Script(48,RVNG_PERCENT,58));
     else if (flag&0x40)
-      font.set(MWAWFont::Script(16,WPX_PERCENT,58));
+      font.set(MWAWFont::Script(16,RVNG_PERCENT,58));
     else
       font.set(MWAWFont::Script::super());
   }
@@ -1500,7 +1500,7 @@ bool HMWJText::readFont(MWAWFont &font, long endPos)
   font.setFlags(flags);
   font.m_extra = f.str();
 
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -1525,7 +1525,7 @@ bool HMWJText::readFonts(MWAWEntry const &entry)
 
   long pos = entry.begin()+8; // skip header
   long endPos = entry.end();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   // first read the header
   f << entry.name() << "[header]:";
@@ -1559,7 +1559,7 @@ bool HMWJText::readFonts(MWAWEntry const &entry)
   f << "],";
   if (input->tell()!=headerEnd) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(headerEnd, WPX_SEEK_SET);
+    input->seek(headerEnd, RVNG_SEEK_SET);
   }
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
@@ -1605,7 +1605,7 @@ bool HMWJText::readFontNames(MWAWEntry const &entry)
   f << entry.name() << "[data]:";
 
   long pos = entry.begin()+8; // skip header
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   int N, val;
   long readDataSz = (long) input->readULong(4);
   if (readDataSz+12 != entry.length()) {
@@ -1656,7 +1656,7 @@ bool HMWJText::readFontNames(MWAWEntry const &entry)
     }
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+68, WPX_SEEK_SET);
+    input->seek(pos+68, RVNG_SEEK_SET);
   }
   asciiFile.addPos(entry.end());
   asciiFile.addNote("_");
@@ -1687,7 +1687,7 @@ bool HMWJText::readStyles(MWAWEntry const &entry)
 
   long pos = entry.begin()+8; // skip header
   long endPos = entry.end();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   HMWJZoneHeader mainHeader(false);
   if (!m_mainParser->readClassicHeader(mainHeader,endPos) || mainHeader.m_fieldSize!=4) {
@@ -1704,7 +1704,7 @@ bool HMWJText::readStyles(MWAWEntry const &entry)
   for (int i = 0; i < mainHeader.m_n; i++)
     f << input->readULong(4) << ",";
   f << std::dec << "],";
-  input->seek(headerEnd, WPX_SEEK_SET);
+  input->seek(headerEnd, RVNG_SEEK_SET);
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
 
@@ -1797,7 +1797,7 @@ bool HMWJText::readStyles(MWAWEntry const &entry)
     if (input->tell() != pos+fieldSz)
       asciiFile.addDelimiter(input->tell(),'|');
 
-    input->seek(pos+fieldSz, WPX_SEEK_SET);
+    input->seek(pos+fieldSz, RVNG_SEEK_SET);
   }
 
   if (!input->atEOS()) {
@@ -1822,14 +1822,14 @@ bool HMWJText::readParagraph(HMWJTextInternal::Paragraph &para, long endPos)
     endPos=pos+dataSz;
     if (!input->checkPosition(endPos)) {
       MWAW_DEBUG_MSG(("HMWJText::readParagraph: pb reading para size\n"));
-      input->seek(debPos, WPX_SEEK_SET);
+      input->seek(debPos, RVNG_SEEK_SET);
       return false;
     }
   }
   long len=endPos-pos;
   if (len < 102) {
     MWAW_DEBUG_MSG(("HMWJText::readParagraph: the zone is too short\n"));
-    input->seek(debPos, WPX_SEEK_SET);
+    input->seek(debPos, RVNG_SEEK_SET);
     return false;
   }
 
@@ -1874,7 +1874,7 @@ bool HMWJText::readParagraph(HMWJTextInternal::Paragraph &para, long endPos)
   float dim[3];
   for (int i = 0; i < 3; i++)
     dim[i] = float(input->readLong(4))/65536.0f;
-  para.m_marginsUnit = WPX_POINT;
+  para.m_marginsUnit = RVNG_POINT;
   para.m_margins[0]=dim[1];
   para.m_margins[1]=dim[0];
   para.m_margins[2]=dim[2]; // ie. distance to rigth border - ...
@@ -1885,9 +1885,9 @@ bool HMWJText::readParagraph(HMWJTextInternal::Paragraph &para, long endPos)
   for (int i = 0; i < 3; i++)
     spacingsUnit[i] = (int) input->readULong(1);
   if (spacingsUnit[0]==0xb)
-    para.m_spacingsInterlineUnit = WPX_PERCENT;
+    para.m_spacingsInterlineUnit = RVNG_PERCENT;
   else
-    para.m_spacingsInterlineUnit = WPX_POINT;
+    para.m_spacingsInterlineUnit = RVNG_POINT;
   for (int i = 1; i < 3; i++) // convert point|line -> inches
     para.m_spacings[i]= ((spacingsUnit[i]==0xb) ? 12.0 : 1.0)*(para.m_spacings[i].get())/72.0;
 
@@ -1959,7 +1959,7 @@ bool HMWJText::readParagraph(HMWJTextInternal::Paragraph &para, long endPos)
   int nTabs = (int) input->readULong(1);
   if (input->tell()+2+nTabs*12 > endPos) {
     MWAW_DEBUG_MSG(("HMWJText::readParagraph: can not read numbers of tab\n"));
-    input->seek(debPos, WPX_SEEK_SET);
+    input->seek(debPos, RVNG_SEEK_SET);
     return false;
   }
   val = (int) input->readULong(2);
@@ -2023,11 +2023,11 @@ bool HMWJText::readParagraph(HMWJTextInternal::Paragraph &para, long endPos)
 
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+12, WPX_SEEK_SET);
+    input->seek(pos+12, RVNG_SEEK_SET);
   }
   if (input->tell()!=endPos) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -2054,7 +2054,7 @@ bool HMWJText::readParagraphs(MWAWEntry const &entry)
 
   long pos = entry.begin()+8; // skip header
   long endPos = entry.end();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   // first read the header
   f << entry.name() << "[header]:";
@@ -2089,7 +2089,7 @@ bool HMWJText::readParagraphs(MWAWEntry const &entry)
   f << "],";
   if (input->tell()!=headerEnd) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(headerEnd, WPX_SEEK_SET);
+    input->seek(headerEnd, RVNG_SEEK_SET);
   }
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
@@ -2134,7 +2134,7 @@ bool HMWJText::readSections(MWAWEntry const &entry)
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   entry.setParsed(true);
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << entry.name() << "[header]:";
   long val;
   for (int i = 0; i < 2; i++) { // fl0=0|0
@@ -2151,7 +2151,7 @@ bool HMWJText::readSections(MWAWEntry const &entry)
   long dataSz = (long) input->readULong(4);
   if (!dataSz) return true;
 
-  input->seek(-4, WPX_SEEK_CUR);
+  input->seek(-4, RVNG_SEEK_CUR);
   pos = input->tell();
   f.str("");
   f << entry.name() << ":";
@@ -2207,9 +2207,9 @@ bool HMWJText::readSections(MWAWEntry const &entry)
     asciiFile.addDelimiter(input->tell(), '|');
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+0x5c, WPX_SEEK_SET);
+    input->seek(pos+0x5c, RVNG_SEEK_SET);
   }
-  input->seek(zoneEnd, WPX_SEEK_SET);
+  input->seek(zoneEnd, RVNG_SEEK_SET);
 
   pos = input->tell();
   if (pos!=endPos) {
@@ -2239,7 +2239,7 @@ bool HMWJText::readFtnPos(MWAWEntry const &entry)
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   entry.setParsed(true);
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << entry.name() << "[header]:";
   long val = (long) input->readULong(2); // always 0x200
   if (val!=0x2000)
@@ -2253,7 +2253,7 @@ bool HMWJText::readFtnPos(MWAWEntry const &entry)
   long dataSz = (long) input->readULong(4);
   if (!dataSz) return true;
 
-  input->seek(-4, WPX_SEEK_CUR);
+  input->seek(-4, RVNG_SEEK_CUR);
   pos = input->tell();
   f.str("");
   f << entry.name() << ":";
@@ -2272,7 +2272,7 @@ bool HMWJText::readFtnPos(MWAWEntry const &entry)
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
 
-  input->seek(28, WPX_SEEK_CUR);
+  input->seek(28, RVNG_SEEK_CUR);
   for (int i = 0; i < header.m_n; i++) {
     pos = input->tell();
     f.str("");
@@ -2293,9 +2293,9 @@ bool HMWJText::readFtnPos(MWAWEntry const &entry)
     f << "zId[footnote]=" << std::hex << input->readULong(4) << std::dec << ",";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+20, WPX_SEEK_SET);
+    input->seek(pos+20, RVNG_SEEK_SET);
   }
-  input->seek(zoneEnd, WPX_SEEK_SET);
+  input->seek(zoneEnd, RVNG_SEEK_SET);
 
   pos = input->tell();
   if (pos!=endPos) {

@@ -39,7 +39,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -433,7 +433,7 @@ struct TextBox : public Frame {
     return !m_linkedIdList.empty() || m_isLinked;
   }
   //! add property to frame extra values
-  void addTo(WPXPropertyList &frames, WPXPropertyList &tbExtra) const {
+  void addTo(RVNGPropertyList &frames, RVNGPropertyList &tbExtra) const {
     if (m_type == 10) {
       std::stringstream stream;
       stream << m_style.m_lineWidth*0.03 << "cm solid " << m_style.m_lineColor;
@@ -472,12 +472,12 @@ struct TextBox : public Frame {
     }
     // now the link
     if (m_type==4 && m_isLinked) {
-      WPXString fName;
+      RVNGString fName;
       fName.sprintf("Frame%ld", m_fileId);
       frames.insert("libwpd:frame-name",fName);
     }
     if (m_type==4 && !m_linkedIdList.empty()) {
-      WPXString fName;
+      RVNGString fName;
       fName.sprintf("Frame%ld", m_linkedIdList[0]);
       tbExtra.insert("libwpd:next-frame-name",fName);
     }
@@ -783,7 +783,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("HMWKGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
     break;
   }
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
@@ -798,7 +798,7 @@ void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDoc
   }
   long pos = m_input->tell();
   m_graphParser->sendText(m_id, m_subId,true);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -942,7 +942,7 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
   libmwaw::DebugStream f;
   zone->m_parsed = true;
   long pos=0;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   long val;
   HMWKGraphInternal::Frame graph;
   graph.m_type = (int) input->readULong(1);
@@ -1066,7 +1066,7 @@ bool HMWKGraph::readPicture(shared_ptr<HMWKZone> zone)
   shared_ptr<HMWKGraphInternal::Picture> picture(new HMWKGraphInternal::Picture(zone));
 
   long pos=0;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   picture->m_fileId = (long) input->readULong(4);
   for (int i=0; i < 39; ++i) {
     long val = input->readLong(2);
@@ -1102,7 +1102,7 @@ bool HMWKGraph::readPicture(shared_ptr<HMWKZone> zone)
 ////////////////////////////////////////////////////////////
 // send data to a listener
 ////////////////////////////////////////////////////////////
-bool HMWKGraph::sendPicture(long pictId, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendPicture(long pictId, MWAWPosition pos, RVNGPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
   std::map<long, shared_ptr<HMWKGraphInternal::Picture> >::const_iterator pIt
@@ -1116,7 +1116,7 @@ bool HMWKGraph::sendPicture(long pictId, MWAWPosition pos, WPXPropertyList extra
   return true;
 }
 
-bool HMWKGraph::sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosition pos, RVNGPropertyList extras)
 {
 #ifdef DEBUG_WITH_FILES
   bool firstTime = picture.m_parsed == false;
@@ -1131,8 +1131,8 @@ bool HMWKGraph::sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosit
 
   MWAWInputStreamPtr input = picture.m_zone->m_input;
 
-  WPXBinaryData data;
-  input->seek(picture.m_pos[0], WPX_SEEK_SET);
+  RVNGBinaryData data;
+  input->seek(picture.m_pos[0], RVNG_SEEK_SET);
   input->readDataBlock(picture.m_pos[1]-picture.m_pos[0], data);
 #ifdef DEBUG_WITH_FILES
   if (firstTime) {
@@ -1147,7 +1147,7 @@ bool HMWKGraph::sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosit
   return true;
 }
 
-bool HMWKGraph::sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendFrame(long frameId, MWAWPosition pos, RVNGPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt=
@@ -1161,7 +1161,7 @@ bool HMWKGraph::sendFrame(long frameId, MWAWPosition pos, WPXPropertyList extras
   return sendFrame(*fIt->second, pos, extras);
 }
 
-bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition pos, RVNGPropertyList extras)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener) return true;
@@ -1191,7 +1191,7 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
         (new HMWKGraphInternal::SubDocument(*this, input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
         Box2f box(Vec2f(0,0),pos.size());
         graphicListener->startGraphic(box);
-        WPXBinaryData data;
+        RVNGBinaryData data;
         std::string type;
         graphicListener->insertTextBox(box, subdoc, textbox.m_style);
         if (!graphicListener->endGraphic(data, type))
@@ -1282,7 +1282,7 @@ bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
     return true;
   Vec2f pictSz = pos.size();
   shared_ptr<MWAWPict> pict;
-  MWAWPosition pictPos(Vec2f(0,0), pictSz, WPX_POINT);
+  MWAWPosition pictPos(Vec2f(0,0), pictSz, RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Frame);
   pictPos.setOrder(-1);
 
@@ -1297,14 +1297,14 @@ bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
   graphicListener->insertPicture(box, MWAWGraphicShape::rectangle(box), defStyle);
   graphicListener->insertPicture(box, MWAWGraphicShape::line(box[0],box[1]), defStyle);
   graphicListener->insertPicture(box, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],0)), defStyle);
-  WPXBinaryData data;
+  RVNGBinaryData data;
   std::string type;
   if (!graphicListener->endGraphic(data,type)) return false;
   m_parserState->m_listener->insertPicture(pictPos, data, type);
   return true;
 }
 
-bool HMWKGraph::sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MWAWPosition pos, RVNGPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
@@ -1314,7 +1314,7 @@ bool HMWKGraph::sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MW
   return true;
 }
 
-bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosition pos, WPXPropertyList extras)
+bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosition pos, RVNGPropertyList extras)
 {
   if (!m_parserState->m_listener) return true;
   Vec2f textboxSz = textbox.getBdBox().size();
@@ -1326,7 +1326,7 @@ bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosit
   } else if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(textboxSz);
 
-  WPXPropertyList pList(extras), tbExtra;
+  RVNGPropertyList pList(extras), tbExtra;
   textbox.addTo(pList, tbExtra);
   MWAWSubDocumentPtr subdoc;
   if (!textbox.m_isLinked)
@@ -1876,7 +1876,7 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
     asciiFile.addDelimiter(input->tell(),'|');
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+80, WPX_SEEK_SET);
+    input->seek(pos+80, RVNG_SEEK_SET);
   }
 
   return table;
@@ -2094,7 +2094,7 @@ void HMWKGraph::sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPositi
           break;
         }
       }
-      WPXBinaryData data;
+      RVNGBinaryData data;
       std::string type;
       if (graphicListener->endGraphic(data,type)) {
         partialPos.setOrigin(pos.origin()+partialBdBox[0]-group.m_pos[0]);
@@ -2202,7 +2202,7 @@ bool HMWKGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
     HMWKGraphInternal::Frame const &frame = *fIt->second;
     if (frame.m_parsed || frame.m_type==3 || frame.m_inGroup)
       continue;
-    MWAWPosition pos(frame.m_pos[0],frame.m_pos.size(),WPX_POINT);
+    MWAWPosition pos(frame.m_pos[0],frame.m_pos.size(),RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Page);
     pos.setPage(frame.m_page+1);
     sendFrame(frame, pos);
@@ -2219,7 +2219,7 @@ void HMWKGraph::flushExtra()
     HMWKGraphInternal::Frame const &frame = *fIt->second;
     if (frame.m_parsed || frame.m_type==3)
       continue;
-    MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),WPX_POINT);
+    MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendFrame(frame, pos);
   }
@@ -2229,7 +2229,7 @@ void HMWKGraph::flushExtra()
     HMWKGraphInternal::Picture const &picture = *pIt->second;
     if (picture.m_parsed)
       continue;
-    MWAWPosition pos(Vec2f(0,0),Vec2f(100,100),WPX_POINT);
+    MWAWPosition pos(Vec2f(0,0),Vec2f(100,100),RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendPicture(picture, pos);
   }

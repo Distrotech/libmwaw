@@ -41,7 +41,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -91,7 +91,7 @@ protected:
 
   //! try to send a picture
   bool sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
-                   WPXPropertyList extras = WPXPropertyList());
+                   RVNGPropertyList extras = RVNGPropertyList());
   //! try to send the page graphic
   bool sendPageGraphics();
 

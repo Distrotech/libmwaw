@@ -34,7 +34,7 @@
 /* This header contains code specific to a pict mac file
  */
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWInputStream.hxx"
@@ -42,7 +42,7 @@
 #include "MWAWPictData.hxx"
 #include "MWAWPictMac.hxx"
 
-bool MWAWPictData::createFileData(WPXBinaryData const &orig, WPXBinaryData &result)
+bool MWAWPictData::createFileData(RVNGBinaryData const &orig, RVNGBinaryData &result)
 {
   unsigned char buf[512];
   for (int i = 0; i < 512; i++) buf[i] = 0;
@@ -66,15 +66,15 @@ MWAWPictData::ReadResult MWAWPictData::checkOrGet
     return MWAW_R_BAD;
   MWAWPictData::ReadResult ok = MWAW_R_BAD;
   if (ok == MWAW_R_BAD) {
-    input->seek(actualPos,WPX_SEEK_SET);
+    input->seek(actualPos,RVNG_SEEK_SET);
     ok = MWAWPictMac::checkOrGet(input, size, box, result);
   }
   if (ok == MWAW_R_BAD) {
-    input->seek(actualPos,WPX_SEEK_SET);
+    input->seek(actualPos,RVNG_SEEK_SET);
     ok = MWAWPictDB3::checkOrGet(input, size, result);
   }
   if (ok == MWAW_R_BAD) {
-    input->seek(actualPos,WPX_SEEK_SET);
+    input->seek(actualPos,RVNG_SEEK_SET);
     ok = MWAWPictDUnknown::checkOrGet(input, size, result);
   }
 
@@ -82,10 +82,10 @@ MWAWPictData::ReadResult MWAWPictData::checkOrGet
 
   if (result && *result && ok != MWAW_R_OK_EMPTY) {
     // we must read the data
-    input->seek(actualPos, WPX_SEEK_SET);
+    input->seek(actualPos, RVNG_SEEK_SET);
     input->readDataBlock(size, (*result)->m_data);
   } else
-    input->seek(actualPos+size, WPX_SEEK_SET);
+    input->seek(actualPos+size, RVNG_SEEK_SET);
   return ok;
 }
 
@@ -98,13 +98,13 @@ MWAWPictDB3::ReadResult MWAWPictDB3::checkOrGet
 
   // we can not read the data, ...
   long actualPos = input->tell();
-  input->seek(actualPos,WPX_SEEK_SET);
+  input->seek(actualPos,RVNG_SEEK_SET);
   if (size <= 0xd || // to short, we ignore
       long(input->readULong(2)) != size) {
     return MWAW_R_BAD;
   }
 
-  input->seek(actualPos+10,WPX_SEEK_SET);
+  input->seek(actualPos+10,RVNG_SEEK_SET);
   if (input->readLong(2) != 0x11) return  MWAW_R_BAD;
 
   if (result) *result = new MWAWPictDB3;

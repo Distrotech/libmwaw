@@ -39,7 +39,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
@@ -103,7 +103,7 @@ struct Zone {
 
   //! return a binary data (if known)
   virtual bool getBinaryData(MWAWInputStreamPtr,
-                             WPXBinaryData &res, std::string &pictType) const {
+                             RVNGBinaryData &res, std::string &pictType) const {
     res.clear();
     pictType="";
     return false;
@@ -115,7 +115,7 @@ struct Zone {
   }
 
   //! add frame parameters to propList (if needed )
-  virtual void fillFramePropertyList(WPXPropertyList &) const { }
+  virtual void fillFramePropertyList(RVNGPropertyList &) const { }
 
   //! return the box
   Box2f getLocalBox(bool extendWithBord=true) const {
@@ -140,16 +140,16 @@ struct Zone {
     MWAWPosition res;
     Box2f box = getLocalBox();
     if (rel==MWAWPosition::Paragraph || rel==MWAWPosition::Frame) {
-      res = MWAWPosition(box.min()+m_finalDecal, box.size(), WPX_POINT);
+      res = MWAWPosition(box.min()+m_finalDecal, box.size(), RVNG_POINT);
       res.setRelativePosition(rel);
       if (rel==MWAWPosition::Paragraph)
         res.m_wrapping = MWAWPosition::WBackground;
     } else if (rel!=MWAWPosition::Page || m_page < 0) {
-      res = MWAWPosition(Vec2f(0,0), box.size(), WPX_POINT);
+      res = MWAWPosition(Vec2f(0,0), box.size(), RVNG_POINT);
       res.setRelativePosition(MWAWPosition::Char,
                               MWAWPosition::XLeft, MWAWPosition::YTop);
     } else {
-      res = MWAWPosition(box.min()+m_finalDecal, box.size(), WPX_POINT);
+      res = MWAWPosition(box.min()+m_finalDecal, box.size(), RVNG_POINT);
       res.setRelativePosition(MWAWPosition::Page);
       res.setPage(m_page+1);
       res.m_wrapping =  MWAWPosition::WBackground;
@@ -369,7 +369,7 @@ struct DataPict : public Zone {
   }
   //! return a binary data (if known)
   virtual bool getBinaryData(MWAWInputStreamPtr ip,
-                             WPXBinaryData &res, std::string &type) const;
+                             RVNGBinaryData &res, std::string &type) const;
 
   //! operator<<
   virtual void print(std::ostream &o) const {
@@ -382,7 +382,7 @@ struct DataPict : public Zone {
 };
 
 bool DataPict::getBinaryData(MWAWInputStreamPtr ip,
-                             WPXBinaryData &data, std::string &pictType) const
+                             RVNGBinaryData &data, std::string &pictType) const
 {
   data.clear();
   pictType="";
@@ -395,8 +395,8 @@ bool DataPict::getBinaryData(MWAWInputStreamPtr ip,
 
 #ifdef DEBUG_WITH_FILES
   if (1) {
-    WPXBinaryData file;
-    ip->seek(m_dataPos, WPX_SEEK_SET);
+    RVNGBinaryData file;
+    ip->seek(m_dataPos, RVNG_SEEK_SET);
     ip->readDataBlock(pictSize, file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f;
@@ -405,14 +405,14 @@ bool DataPict::getBinaryData(MWAWInputStreamPtr ip,
   }
 #endif
 
-  ip->seek(m_dataPos, WPX_SEEK_SET);
+  ip->seek(m_dataPos, RVNG_SEEK_SET);
   MWAWPict::ReadResult res = MWAWPictData::check(ip, (int)pictSize, m_naturalBox);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("MSKGraphInternal::DataPict::getBinaryData: can not find the picture\n"));
     return false;
   }
 
-  ip->seek(m_dataPos, WPX_SEEK_SET);
+  ip->seek(m_dataPos, RVNG_SEEK_SET);
   shared_ptr<MWAWPict> pict(MWAWPictData::get(ip, (int)pictSize));
 
   return pict && pict->getBinary(data,pictType);
@@ -432,7 +432,7 @@ struct DataBitmap : public Zone {
     return Bitmap;
   }
   //! return a binary data (if known)
-  bool getPictureData(MWAWInputStreamPtr ip, WPXBinaryData &res,
+  bool getPictureData(MWAWInputStreamPtr ip, RVNGBinaryData &res,
                       std::string &type, std::vector<MWAWColor> const &palette) const;
 
   //! operator<<
@@ -451,7 +451,7 @@ struct DataBitmap : public Zone {
 };
 
 bool DataBitmap::getPictureData
-(MWAWInputStreamPtr ip, WPXBinaryData &data, std::string &pictType,
+(MWAWInputStreamPtr ip, RVNGBinaryData &data, std::string &pictType,
  std::vector<MWAWColor> const &palette) const
 {
   data.clear();
@@ -468,7 +468,7 @@ bool DataBitmap::getPictureData
   btmap->setColors(palette);
   shared_ptr<MWAWPict> pict(btmap);
   for (int i = 0; i < m_numRows; i++) {
-    ip->seek(pos, WPX_SEEK_SET);
+    ip->seek(pos, RVNG_SEEK_SET);
 
     unsigned long numRead;
     uint8_t const *value = ip->read((size_t) m_numCols, numRead);
@@ -534,7 +534,7 @@ struct TextBox : public Zone {
   }
 
   //! add frame parameters to propList (if needed )
-  virtual void fillFramePropertyList(WPXPropertyList &extras) const {
+  virtual void fillFramePropertyList(RVNGPropertyList &extras) const {
     if (!m_style.m_baseSurfaceColor.isWhite())
       extras.insert("fo:background-color", m_style.m_baseSurfaceColor.str().c_str());
   }
@@ -598,7 +598,7 @@ struct TextBoxv4 : public Zone {
   }
 
   //! add frame parameters to propList (if needed )
-  virtual void fillFramePropertyList(WPXPropertyList &extras) const {
+  virtual void fillFramePropertyList(RVNGPropertyList &extras) const {
     if (!m_style.m_baseSurfaceColor.isWhite())
       extras.insert("fo:background-color", m_style.m_baseSurfaceColor.str().c_str());
   }
@@ -862,7 +862,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("MSKGraph::SubDocument::parse: unexpected zone type\n"));
     break;
   }
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
@@ -879,7 +879,7 @@ void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDoc
 
   long pos = m_input->tell();
   m_graphParser->sendTextBox(m_id);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -1161,7 +1161,7 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
     long pos = input->tell();
     if (!readGradient(style)) {
       f << "##gradient,";
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
     }
   }
   pict.m_extra = f.str();
@@ -1295,7 +1295,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
     dataSize = 0xd;
     break;
   case 5: { // poly
-    input->seek(3, WPX_SEEK_CUR);
+    input->seek(3, RVNG_SEEK_CUR);
     int N = (int) input->readULong(2);
     dataSize = 9+N*8;
     break;
@@ -1303,7 +1303,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
   case 7: { // picture
     if (vers >= 3) versSize = 0x14;
     dataSize = 5;
-    input->seek(debData+5+versSize-2, WPX_SEEK_SET);
+    input->seek(debData+5+versSize-2, RVNG_SEEK_SET);
     dataSize += (int) input->readULong(2);
     break;
   }
@@ -1322,43 +1322,43 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
     dataSize = 0x11;
     break;
   case 0xd: { // bitmap v4
-    input->seek(debData+0x29, WPX_SEEK_SET);
+    input->seek(debData+0x29, RVNG_SEEK_SET);
     long sz = (long) input->readULong(4);
     dataSize = 0x29+4+sz;
     break;
   }
   case 0xe: { // spreadsheet v4
-    input->seek(debData+0xa7, WPX_SEEK_SET);
+    input->seek(debData+0xa7, RVNG_SEEK_SET);
     int pSize = (int) input->readULong(2);
     if (pSize == 0) return -1;
     dataSize = 0xa9+pSize;
     if (!input->checkPosition(debData+dataSize))
       return -1;
 
-    input->seek(debData+dataSize, WPX_SEEK_SET);
+    input->seek(debData+dataSize, RVNG_SEEK_SET);
     for (int i = 0; i < 2; i++) {
       long sz = (long) input->readULong(4);
       if (sz<0 || (sz>>28)) return -1;
       dataSize += 4 + sz;
-      input->seek(sz, WPX_SEEK_CUR);
+      input->seek(sz, RVNG_SEEK_CUR);
     }
     break;
   }
   case 0xf: { // textbox v4
-    input->seek(debData+0x39, WPX_SEEK_SET);
+    input->seek(debData+0x39, RVNG_SEEK_SET);
     dataSize = 0x3b+ (long) input->readULong(2);
     break;
   }
   case 0x10: { // table v4
-    input->seek(debData+0x57, WPX_SEEK_SET);
+    input->seek(debData+0x57, RVNG_SEEK_SET);
     dataSize = 0x59+ (long) input->readULong(2);
-    input->seek(debData+dataSize, WPX_SEEK_SET);
+    input->seek(debData+dataSize, RVNG_SEEK_SET);
 
     for (int i = 0; i < 3; i++) {
       long sz = (long) input->readULong(4);
       if (sz<0 || ((sz>>28))) return -1;
       dataSize += 4 + sz;
-      input->seek(sz, WPX_SEEK_CUR);
+      input->seek(sz, RVNG_SEEK_CUR);
     }
 
     break;
@@ -1372,7 +1372,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
   if (!input->checkPosition(pict.m_pos.end()))
     return -1;
 
-  input->seek(debData, WPX_SEEK_SET);
+  input->seek(debData, RVNG_SEEK_SET);
   if (versSize) {
     switch(pict.m_subType) {
     case 7: {
@@ -1633,7 +1633,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
     ascFile.addNote("Graphe(I)");
 
     // first: the picture ( fixme: kept while we do not parse the spreadsheet )
-    input->seek(144, WPX_SEEK_CUR);
+    input->seek(144, RVNG_SEEK_CUR);
     actPos = input->tell();
     ascFile.addPos(actPos);
     ascFile.addNote("Graphe(pict)");
@@ -1645,7 +1645,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
     pct->m_dataEndPos = actPos+4+dSize;
     res.reset(pct);
     ascFile.skipZone(pct->m_dataPos, pct->m_dataEndPos-1);
-    input->seek(actPos+4+dSize, WPX_SEEK_SET);
+    input->seek(actPos+4+dSize, RVNG_SEEK_SET);
 
     // now the spreadsheet ( a classic WKS file )
     actPos = input->tell();
@@ -1656,8 +1656,8 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
     ascFile.skipZone(actPos+4, actPos+3+dSize);
 #ifdef DEBUG_WITH_FILES
     if (dSize > 0) {
-      WPXBinaryData file;
-      input->seek(actPos+4, WPX_SEEK_SET);
+      RVNGBinaryData file;
+      input->seek(actPos+4, RVNG_SEEK_SET);
       input->readDataBlock(dSize, file);
       static int volatile sheetName = 0;
       libmwaw::DebugStream f2;
@@ -1665,7 +1665,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
       libmwaw::Debug::dumpFile(file, f2.str().c_str());
     }
 #endif
-    input->seek(actPos+4+dSize, WPX_SEEK_SET);
+    input->seek(actPos+4+dSize, RVNG_SEEK_SET);
 
     actPos = input->tell();
     ascFile.addPos(actPos);
@@ -1697,7 +1697,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
     pict.m_dataPos = input->tell();
     if (pict.m_dataPos != pict.m_pos.end()) {
 #ifdef DEBUG_WITH_FILES
-      WPXBinaryData file;
+      RVNGBinaryData file;
       input->readDataBlock(pict.m_pos.end()-pict.m_dataPos, file);
       static int volatile textboxName = 0;
       libmwaw::DebugStream f2;
@@ -1726,14 +1726,14 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
     for (int c = 0; c < nbChar; c++)
       fName+=(char) input->readLong(1);
     f2 << fName << ",";
-    input->seek(actPos+10+32, WPX_SEEK_SET);
+    input->seek(actPos+10+32, RVNG_SEEK_SET);
     int fSz = (int) input->readLong(2);
     if (fSz) f << "fSz=" << fSz << ",";
 
     ascFile.addDelimiter(input->tell(),'|');
     ascFile.addPos(actPos);
     ascFile.addNote(f2.str().c_str());
-    input->seek(actPos+0x40, WPX_SEEK_SET);
+    input->seek(actPos+0x40, RVNG_SEEK_SET);
 
     // a pict
     actPos = input->tell();
@@ -1747,7 +1747,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
     pct->m_dataEndPos = actPos+4+dSize;
     res.reset(pct);
     ascFile.skipZone(pct->m_dataPos, pct->m_dataEndPos-1);
-    input->seek(actPos+4+dSize, WPX_SEEK_SET);
+    input->seek(actPos+4+dSize, RVNG_SEEK_SET);
 
     // the table
     f << "numRows=" << nRow << ",nCols=" << nCol << ",";
@@ -1782,7 +1782,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
 
   zone = res->m_pos;
   zone.setType("Graphic");
-  input->seek(res->m_pos.end(), WPX_SEEK_SET);
+  input->seek(res->m_pos.end(), RVNG_SEEK_SET);
 
   return res->m_fileId;
 }
@@ -1880,7 +1880,7 @@ int MSKGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone, bool autoSend)
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
-  input->seek(pict->m_pos.end(), WPX_SEEK_SET);
+  input->seek(pict->m_pos.end(), RVNG_SEEK_SET);
   return pict->m_fileId;
 }
 
@@ -1898,7 +1898,7 @@ bool MSKGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
   uint32_t page_offset = (uint32_t) entry.begin();
   long endOfPage = entry.end();
 
-  input->seek(long(page_offset), WPX_SEEK_SET);
+  input->seek(long(page_offset), RVNG_SEEK_SET);
   f << input->readLong(4) << ", ";
   for (int i = 0; i < 4; i++) {
     long val = input->readLong(4);
@@ -2128,7 +2128,7 @@ void MSKGraph::sendGroup(int id, MWAWPosition const &pos)
   }
   graphicListener->startGraphic(group.m_box);
   sendGroup(group, graphicListener);
-  WPXBinaryData data;
+  RVNGBinaryData data;
   std::string type;
   if (graphicListener->endGraphic(data,type))
     listener->insertPicture(pos, data, type);
@@ -2210,7 +2210,7 @@ void MSKGraph::sendGroupChild(int id, MWAWPosition const &pos)
           graphicListener->insertTextBox(box, subdoc, style);
         }
       }
-      WPXBinaryData data;
+      RVNGBinaryData data;
       std::string type;
       if (graphicListener->endGraphic(data,type)) {
         partialPos.setOrigin(pos.origin()+partialBdBox[0]-group.m_box[0]);
@@ -2299,7 +2299,7 @@ shared_ptr<MSKGraphInternal::GroupZone> MSKGraph::readGroup(MSKGraphInternal::Zo
   shared_ptr<MSKGraphInternal::GroupZone> group(new MSKGraphInternal::GroupZone(header));
   libmwaw::DebugStream f;
   MWAWInputStreamPtr input=m_mainParser->getInput();
-  input->seek(header.m_dataPos, WPX_SEEK_SET);
+  input->seek(header.m_dataPos, RVNG_SEEK_SET);
   float dim[4];
   for (int i = 0; i < 4; i++) dim[i] = (float) input->readLong(4);
   group->m_box=Box2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3]));
@@ -2315,7 +2315,7 @@ shared_ptr<MSKGraphInternal::GroupZone> MSKGraph::readGroup(MSKGraphInternal::Zo
     if (val) f << "g1=" << val << ",";
   }
 
-  input->seek(header.m_pos.end()-2, WPX_SEEK_SET);
+  input->seek(header.m_pos.end()-2, RVNG_SEEK_SET);
   int N = (int) input->readULong(2);
   for (int i = 0; i < N; i++) {
     long pos = input->tell();
@@ -2323,7 +2323,7 @@ shared_ptr<MSKGraphInternal::GroupZone> MSKGraph::readGroup(MSKGraphInternal::Zo
     int childId = getEntryPicture(header.m_zoneId, childZone, false);
     if (childId < 0) {
       MWAW_DEBUG_MSG(("MSKGraph::readGroup: can not find child\n"));
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       f << "#child,";
       break;
     }
@@ -2377,7 +2377,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
   // actualPos, -1, only exists if actualPos!= 0 ? We ignored it.
   input->readLong(2);
   if (input->readLong(2) != -1)
-    input->seek(pos,WPX_SEEK_SET);
+    input->seek(pos,RVNG_SEEK_SET);
   else {
     ascFile.addPos(pos);
     ascFile.addNote("SmallText:char Pos");
@@ -2399,7 +2399,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
       pos = input->tell();
       MWAWFont font;
       if (!readFont(font)) {
-        input->seek(endFontPos, WPX_SEEK_SET);
+        input->seek(endFontPos, RVNG_SEEK_SET);
         break;
       }
       textBox.m_fontsList.push_back(font);
@@ -2418,7 +2418,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
     MWAW_DEBUG_MSG(("MSKGraph::readText: can not read the fonts\n"));
     ascFile.addPos(pos);
     ascFile.addNote("SmallText:###");
-    input->seek(endFontPos,WPX_SEEK_SET);
+    input->seek(endFontPos,RVNG_SEEK_SET);
     textBox.m_fontsList.resize(0);
     textBox.m_positions.resize(0);
     textBox.m_numPositions = 0;
@@ -2451,7 +2451,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
       }
 
       if (!ok)
-        input->seek(pos+4,WPX_SEEK_SET);
+        input->seek(pos+4,RVNG_SEEK_SET);
       else {
         textBox.m_text = chaine;
         f << "=" << chaine;
@@ -2462,7 +2462,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
     }
 
     if (sizeOfData <= 100+nChar && (sizeOfData%2==0) ) {
-      if (input->seek(sizeOfData, WPX_SEEK_CUR) != 0) return false;
+      if (input->seek(sizeOfData, RVNG_SEEK_CUR) != 0) return false;
       f << "#";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
@@ -2506,13 +2506,13 @@ bool MSKGraph::readFont(MWAWFont &font)
   if (flags & 0x10) flag |= MWAWFont::shadowBit;
   if (flags & 0x20) {
     if (vers==1)
-      font.set(MWAWFont::Script(20,WPX_PERCENT,80));
+      font.set(MWAWFont::Script(20,RVNG_PERCENT,80));
     else
       font.set(MWAWFont::Script::super100());
   }
   if (flags & 0x40) {
     if (vers==1)
-      font.set(MWAWFont::Script(-20,WPX_PERCENT,80));
+      font.set(MWAWFont::Script(-20,RVNG_PERCENT,80));
     else
       font.set(MWAWFont::Script::sub100());
   }
@@ -2614,7 +2614,7 @@ void MSKGraph::send(int id, MWAWPosition const &pos)
     pictPos = zone->getPosition(pos.m_anchorTo);
   if (pictPos.m_anchorTo == MWAWPosition::Page)
     pictPos.setOrigin(pictPos.origin()+72.*m_mainParser->getPageLeftTop());
-  WPXPropertyList extras;
+  RVNGPropertyList extras;
   zone->fillFramePropertyList(extras);
 
   MWAWInputStreamPtr input=m_mainParser->getInput();
@@ -2638,7 +2638,7 @@ void MSKGraph::send(int id, MWAWPosition const &pos)
     MWAWGraphicStyle style(textbox.m_style);
     style.m_lineWidth=0;
     graphicListener->insertTextBox(box, subdoc, style);
-    WPXBinaryData data;
+    RVNGBinaryData data;
     std::string type;
     if (graphicListener->endGraphic(data, type))
       listener->insertPicture(pictPos, data, type);
@@ -2663,7 +2663,7 @@ void MSKGraph::send(int id, MWAWPosition const &pos)
     return;
   case MSKGraphInternal::Zone::Bitmap: {
     MSKGraphInternal::DataBitmap &bmap = reinterpret_cast<MSKGraphInternal::DataBitmap &>(*zone);
-    WPXBinaryData data;
+    RVNGBinaryData data;
     std::string type;
     if (!bmap.getPictureData(input, data,type,m_mainParser->getPalette(4)))
       break;
@@ -2677,7 +2677,7 @@ void MSKGraph::send(int id, MWAWPosition const &pos)
     return;
   }
   case MSKGraphInternal::Zone::Pict: {
-    WPXBinaryData data;
+    RVNGBinaryData data;
     std::string type;
     if (!zone->getBinaryData(input, data,type))
       break;
@@ -2688,14 +2688,14 @@ void MSKGraph::send(int id, MWAWPosition const &pos)
     MSKGraphInternal::TextBoxv4 &textbox = reinterpret_cast<MSKGraphInternal::TextBoxv4 &>(*zone);
     shared_ptr<MSKGraphInternal::SubDocument> subdoc
     (new MSKGraphInternal::SubDocument(*this, input, MSKGraphInternal::SubDocument::TextBoxv4, textbox.m_text, textbox.m_frame));
-    WPXPropertyList textboxExtra;
+    RVNGPropertyList textboxExtra;
     if (zone->m_ids[1] > 0) {
-      WPXString fName;
+      RVNGString fName;
       fName.sprintf("Frame%ld", zone->m_ids[0]);
       extras.insert("libwpd:frame-name",fName);
     }
     if (zone->m_ids[2] > 0) {
-      WPXString fName;
+      RVNGString fName;
       fName.sprintf("Frame%ld", zone->m_ids[2]);
       textboxExtra.insert("libwpd:next-frame-name",fName);
     }
@@ -2769,7 +2769,7 @@ void MSKGraph::sendObjects(MSKGraph::SendData what)
           what.m_anchor == MWAWPosition::CharBaseLine) {
         shared_ptr<MSKGraphInternal::SubDocument> subdoc
         (new MSKGraphInternal::SubDocument(*this, m_mainParser->getInput(), MSKGraphInternal::SubDocument::RBILZone, what.m_id));
-        MWAWPosition pictPos(Vec2f(0,0), what.m_size, WPX_POINT);
+        MWAWPosition pictPos(Vec2f(0,0), what.m_size, RVNG_POINT);
         pictPos.setRelativePosition(MWAWPosition::Char,
                                     MWAWPosition::XLeft, MWAWPosition::YTop);
         pictPos.m_wrapping =  MWAWPosition::WBackground;

@@ -39,7 +39,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
@@ -390,7 +390,7 @@ void SubDocument::parse(MWAWListenerPtr listener, bool inGraphic)
 
   long pos = m_input->tell();
   m_graphParser->sendTextbox(m_zone,inGraphic);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -462,7 +462,7 @@ bool GWGraph::readPatterns(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(Pattern):";
   int N=(int) input->readLong(2);
   f << "N=" << N << ",";
@@ -485,7 +485,7 @@ bool GWGraph::readPatterns(MWAWEntry const &entry)
     for (size_t j=0; j < 8; ++j)
       pat.m_data[j]=(unsigned char) input->readLong(1);
     f << pat;
-    input->seek(pos+8, WPX_SEEK_SET);
+    input->seek(pos+8, RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -505,7 +505,7 @@ bool GWGraph::readPalettes(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(Palette):";
   int val=(int) input->readLong(2);
   if (val!=2)
@@ -523,7 +523,7 @@ bool GWGraph::readPalettes(MWAWEntry const &entry)
     f << "Palette-" << i << ":";
     for (int j=0; j < 3; ++j)
       f << std::hex << input->readULong(2) << std::dec << ",";
-    input->seek(pos+6, WPX_SEEK_SET);
+    input->seek(pos+6, RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -537,7 +537,7 @@ bool GWGraph::readPalettes(MWAWEntry const &entry)
     for (int j=0; j < 3; ++j)
       col[j]=(unsigned char)(input->readULong(2)>>8);
     f << MWAWColor(col[0], col[1], col[2]) << ",";
-    input->seek(pos+6, WPX_SEEK_SET);
+    input->seek(pos+6, RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -569,20 +569,20 @@ bool GWGraph::isGraphicZone()
     for (int i=0; i<4; ++i)
       dim[i]=(int) input->readLong(2);
     if (dim[0]>=dim[2] || dim[1]>=dim[3] || dim[2]<=0 || dim[3]<=0) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       return false;
     }
   }
 
-  input->seek(pos+headerSize, WPX_SEEK_SET);
+  input->seek(pos+headerSize, RVNG_SEEK_SET);
   int pageHeaderSize=vers==1 ? 16 : isDraw ? 12 : 22;
   if (!input->checkPosition(pos+headerSize+pageHeaderSize)) {
     bool ok=input->atEOS();
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return ok;
   }
   bool ok=isPageFrames();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   return ok;
 }
 
@@ -596,7 +596,7 @@ bool GWGraph::readGraphicZone()
   MWAWInputStreamPtr input = m_parserState->m_input;
   long beginPos = input->tell();
   if (!isGraphicZone() && !findGraphicZone()) {
-    input->seek(beginPos, WPX_SEEK_SET);
+    input->seek(beginPos, RVNG_SEEK_SET);
     return false;
   }
   long pos = input->tell();
@@ -623,7 +623,7 @@ bool GWGraph::readGraphicZone()
     ascFile.addNote("GZoneHeader-II");
     pos += 0x38;
 
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     f.str("");
     f << "Entries(GLineFormat):";
     std::string extra;
@@ -635,7 +635,7 @@ bool GWGraph::readGraphicZone()
     ascFile.addNote(f.str().c_str());
     pos += 0x1e;
   } else {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAWGraphicStyle style;
     f.str("");
     f << "Entries(GStyle):";
@@ -656,10 +656,10 @@ bool GWGraph::readGraphicZone()
   ascFile.addNote("Entries(GDatD)[_]:");
   pos += 0x1a;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   while(!input->atEOS() && readPageFrames())
     pos=input->tell();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -678,7 +678,7 @@ bool GWGraph::findGraphicZone()
 
   MWAWInputStreamPtr input = m_parserState->m_input;
   long pos = input->tell();
-  input->seek(pos+headerSize+pageHeaderSize, WPX_SEEK_SET);
+  input->seek(pos+headerSize+pageHeaderSize, RVNG_SEEK_SET);
   while(!input->atEOS()) {
     long actPos = input->tell();
     unsigned long value= input->readULong(4);
@@ -693,10 +693,10 @@ bool GWGraph::findGraphicZone()
     else if (value==0xFFFFFF2E)
       decal = 3;
     if (decal>=0) {
-      input->seek(actPos-decal, WPX_SEEK_SET);
+      input->seek(actPos-decal, RVNG_SEEK_SET);
       if (input->readULong(4)==0x20FFFF && input->readULong(4)==0xFFFF2E00)
         break;
-      input->seek(actPos+4, WPX_SEEK_SET);
+      input->seek(actPos+4, RVNG_SEEK_SET);
       continue;
     }
 
@@ -712,21 +712,21 @@ bool GWGraph::findGraphicZone()
     if (decal==-1)
       continue;
 
-    input->seek(actPos-decal, WPX_SEEK_SET);
+    input->seek(actPos-decal, RVNG_SEEK_SET);
     int N=(int) input->readULong(2);
     if (input->readLong(2)!=0x36 || !input->checkPosition(actPos-decal+4+0x36*N)) {
-      input->seek(actPos+4, WPX_SEEK_SET);
+      input->seek(actPos+4, RVNG_SEEK_SET);
       continue;
     }
-    input->seek(actPos-decal-pageHeaderSize-headerSize, WPX_SEEK_SET);
+    input->seek(actPos-decal-pageHeaderSize-headerSize, RVNG_SEEK_SET);
     if (!isGraphicZone()) {
-      input->seek(actPos+4, WPX_SEEK_SET);
+      input->seek(actPos+4, RVNG_SEEK_SET);
       continue;
     }
-    input->seek(actPos-decal-pageHeaderSize-headerSize, WPX_SEEK_SET);
+    input->seek(actPos-decal-pageHeaderSize-headerSize, RVNG_SEEK_SET);
     return true;
   }
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   return false;
 }
 
@@ -745,9 +745,9 @@ bool GWGraph::isPageFrames()
   if (!input->checkPosition(endPos))
     return false;
   long sz=-1;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   if (hasPageUnknown) {
-    input->seek(2, WPX_SEEK_CUR); // page
+    input->seek(2, RVNG_SEEK_CUR); // page
     sz=(long) input->readULong(4);
     endPos=input->tell()+sz;
   }
@@ -757,11 +757,11 @@ bool GWGraph::isPageFrames()
   if (hasPageUnknown &&
       (6+sz<headerSize+4*nZones || zoneSz[0]+zoneSz[1]+zoneSz[2]>sz ||
        !input->checkPosition(endPos))) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   pos+=headerSize;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   int expectedSz[]= {0x36, 0xaa, 0x2, 0};
   if (vers==1) {
     expectedSz[1]=0x34;
@@ -775,19 +775,19 @@ bool GWGraph::isPageFrames()
     int nData=(int) input->readLong(2);
     int fSz=(int) input->readLong(2);
     if (nData<0 || (nData!=0 && fSz!=expectedSz[i]) || nData*fSz+4 > zoneSz[i]) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       return false;
     }
     if (i!=nZones-1 && nData *fSz+4!=zoneSz[i]) {
       MWAW_DEBUG_MSG(("GWGraph::isPageFrames: find a diff of %ld for data %d\n", zoneSz[i]-nData*fSz-4, i));
       if ((2*nData+4)*fSz+4 < zoneSz[i]) {
-        input->seek(pos, WPX_SEEK_SET);
+        input->seek(pos, RVNG_SEEK_SET);
         return false;
       }
     }
-    input->seek(expectedSz[i]*nData, WPX_SEEK_CUR);
+    input->seek(expectedSz[i]*nData, RVNG_SEEK_CUR);
   }
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -847,7 +847,7 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
     }
 
     style.m_extra=f.str();
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
     return true;
   }
   MWAWGraphicStyle::Pattern patterns[2];
@@ -906,7 +906,7 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
       style.m_lineDashWidth.push_back(w);
     }
   }
-  input->seek(pos+116, WPX_SEEK_SET);
+  input->seek(pos+116, RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   ascFile.addDelimiter(pos+92,'|'); // some data?
   ascFile.addDelimiter(input->tell(),'|');
@@ -1013,7 +1013,7 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
       col[j]=(unsigned char)(input->readULong(2)>>8);
     f << "grad[col" << i << "]=" << MWAWColor(col[0], col[1], col[2]) << ",";
   }
-  input->seek(2, WPX_SEEK_CUR); // junk ?
+  input->seek(2, RVNG_SEEK_CUR); // junk ?
   val=(int) input->readLong(2);
   switch(val) {
   case 1: // none
@@ -1046,7 +1046,7 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   ascFile.addDelimiter(input->tell(),'|');
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -1068,7 +1068,7 @@ bool GWGraph::readLineFormat(std::string &extra)
   extra=f.str();
   // then 3ffda4bc7d1934f709244002fcfb724c879139b4
   m_parserState->m_asciiFile.addDelimiter(input->tell(),'|');
-  input->seek(pos+gDataSize, WPX_SEEK_SET);
+  input->seek(pos+gDataSize, RVNG_SEEK_SET);
   return true;
 }
 
@@ -1081,13 +1081,13 @@ bool GWGraph::readPageFrames()
   int const nZones=hasPageUnknown ? 4 : vers==2 ? 3 : 4;
   long pos=input->tell();
   if (!isPageFrames()) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(GFrame):";
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   long endPos=-1;
   GWGraphInternal::Zone pageZone;
   if (hasPageUnknown) {
@@ -1106,7 +1106,7 @@ bool GWGraph::readPageFrames()
   int z=0;
   long zoneEnd=input->tell()+zoneSz[z++];
   int nFrames=(int) input->readLong(2);
-  input->seek(2, WPX_SEEK_CUR);
+  input->seek(2, RVNG_SEEK_CUR);
   f << "nFrames=" << nFrames << ",";
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
@@ -1119,7 +1119,7 @@ bool GWGraph::readPageFrames()
     if (!zone) {
       MWAW_DEBUG_MSG(("GWGraph::readPageFrames: oops graphic detection is probably bad\n"));
       f << "###";
-      input->seek(pos+0x36, WPX_SEEK_SET);
+      input->seek(pos+0x36, RVNG_SEEK_SET);
       zone.reset(new GWGraphInternal::FrameBad());
     } else
       f << *zone;
@@ -1132,13 +1132,13 @@ bool GWGraph::readPageFrames()
   if (pos!=zoneEnd) {
     ascFile.addPos(pos);
     ascFile.addNote("GFrame[head]-end:###");
-    input->seek(zoneEnd, WPX_SEEK_SET);
+    input->seek(zoneEnd, RVNG_SEEK_SET);
   }
 
   pos=input->tell();
   zoneEnd=pos+zoneSz[z++];
   int nData=(int) input->readLong(2);
-  input->seek(2, WPX_SEEK_CUR);
+  input->seek(2, RVNG_SEEK_CUR);
   f.str("");
   f << "Entries(GStyle): N=" << nData << ",";
   ascFile.addPos(pos);
@@ -1156,20 +1156,20 @@ bool GWGraph::readPageFrames()
     pageZone.m_styleList.push_back(style);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+gDataSize, WPX_SEEK_SET);
+    input->seek(pos+gDataSize, RVNG_SEEK_SET);
   }
   pos=input->tell();
   if (pos!=zoneEnd) {
     ascFile.addPos(pos);
     ascFile.addNote("GStyle-end:###");
-    input->seek(zoneEnd, WPX_SEEK_SET);
+    input->seek(zoneEnd, RVNG_SEEK_SET);
   }
 
   if (vers==1) {
     pos=input->tell();
     zoneEnd=pos+zoneSz[z++];
     nData=(int) input->readLong(2);
-    input->seek(2, WPX_SEEK_CUR);
+    input->seek(2, RVNG_SEEK_CUR);
     f.str("");
     f << "Entries(GLineFormat): N=" << nData << ",";
     ascFile.addPos(pos);
@@ -1186,20 +1186,20 @@ bool GWGraph::readPageFrames()
         f << extra;
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
-      input->seek(pos+gLineFSize, WPX_SEEK_SET);
+      input->seek(pos+gLineFSize, RVNG_SEEK_SET);
     }
     pos=input->tell();
     if (pos!=zoneEnd) {
       ascFile.addPos(pos);
       ascFile.addNote("GLineFormat-end:###");
-      input->seek(zoneEnd, WPX_SEEK_SET);
+      input->seek(zoneEnd, RVNG_SEEK_SET);
     }
   }
 
   pos = input->tell();
   zoneEnd=pos+zoneSz[z++];
   int nRoots=(int) input->readLong(2);
-  input->seek(2, WPX_SEEK_CUR);
+  input->seek(2, RVNG_SEEK_CUR);
   f.str("");
   f << "GFrame[roots]: N=" << nRoots << ",roots=[";
   for (int i=0; i < nRoots; ++i) {
@@ -1214,7 +1214,7 @@ bool GWGraph::readPageFrames()
   f << "],";
   if (input->tell()!=zoneEnd) { // ok
     ascFile.addDelimiter(input->tell(),'|');
-    input->seek(zoneEnd, WPX_SEEK_SET);
+    input->seek(zoneEnd, RVNG_SEEK_SET);
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
@@ -1250,7 +1250,7 @@ bool GWGraph::readPageFrames()
     }
     m_state->m_zoneList.push_back(pageZone);
     if (endPos>0)
-      input->seek(endPos, WPX_SEEK_SET);
+      input->seek(endPos, RVNG_SEEK_SET);
     return ok;
   }
 
@@ -1281,7 +1281,7 @@ bool GWGraph::readPageFrames()
         ascFile.addPos(pos);
         ascFile.addNote(f.str().c_str());
       }
-      input->seek(pos+zone->m_dataSize, WPX_SEEK_SET);
+      input->seek(pos+zone->m_dataSize, RVNG_SEEK_SET);
       ok = true;
     }
     if (ok)
@@ -1301,7 +1301,7 @@ bool GWGraph::readPageFrames()
   pos=input->tell();
   if (endPos>0 && pos!=endPos) {
     MWAW_DEBUG_MSG(("GWGraph::readPageFrames: find some end data\n"));
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote("GFrame-end:###");
     ok=true;
@@ -1358,10 +1358,10 @@ bool GWGraph::readFrameExtraDataRec(GWGraphInternal::Zone &zone, int id, std::se
       ascFile.addPos(pos);
       ascFile.addNote("GFrame-Data###");
       if (endPos>0)
-        input->seek(endPos, WPX_SEEK_SET);
+        input->seek(endPos, RVNG_SEEK_SET);
       return false;
     }
-    input->seek(pos+frame->m_dataSize, WPX_SEEK_SET);
+    input->seek(pos+frame->m_dataSize, RVNG_SEEK_SET);
   }
   if (frame->getType()!=GWGraphInternal::Frame::T_GROUP)
     return true;
@@ -1391,7 +1391,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
   zone.m_type=(int) input->readLong(1);
   int locked=(int)input->readLong(1);
   if (zone.m_type<0||zone.m_type>16||locked<0||locked>1) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return res;
   }
   if (locked) f << "lock,";
@@ -1399,7 +1399,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
   for (int i=0; i<4; ++i)
     dim[i]=float(input->readLong(4))/65536.f;
   if (dim[2]<dim[0] || dim[3]<dim[1]) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return res;
   }
   zone.m_box=Box2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
@@ -1539,7 +1539,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     res.reset(new GWGraphInternal::Frame(zone));
   res->m_extra=f.str();
   ascFile.addDelimiter(input->tell(),'|');
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   return res;
 }
 
@@ -1566,7 +1566,7 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
     }
     text.m_entry.setBegin(pos);
     text.m_entry.setLength(text.m_dataSize);
-    input->seek(pos+text.m_dataSize, WPX_SEEK_SET);
+    input->seek(pos+text.m_dataSize, RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     return true;
@@ -1635,7 +1635,7 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
     }
     if (input->tell()!=endData) {
       ascFile.addDelimiter(input->tell(),'|');
-      input->seek(endData,WPX_SEEK_SET);
+      input->seek(endData,RVNG_SEEK_SET);
     }
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -1653,7 +1653,7 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
     }
     pict.m_entry.setBegin(pos);
     pict.m_entry.setLength(pict.m_dataSize);
-    input->seek(pos+pict.m_dataSize, WPX_SEEK_SET);
+    input->seek(pos+pict.m_dataSize, RVNG_SEEK_SET);
     return true;
   }
   case 15: {
@@ -1666,7 +1666,7 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
 
     if (frame.getType()!=GWGraphInternal::Frame::T_GROUP) {
       MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected type for group\n"));
-      input->seek(pos+4+2*nGrp, WPX_SEEK_SET);
+      input->seek(pos+4+2*nGrp, RVNG_SEEK_SET);
       f << "###[internal]";
       return false;
     }
@@ -1719,7 +1719,7 @@ bool GWGraph::sendTextbox(GWGraphInternal::FrameText const &text, GWGraphInterna
       m_mainParser->canSendTextBoxAsGraphic(text.m_entry) &&
       graphicListener && !graphicListener->isDocumentStarted()) {
     graphicListener->startGraphic(Box2f(Vec2f(0,0),newSz));
-    WPXBinaryData data;
+    RVNGBinaryData data;
     std::string type;
     bool ok=sendTextboxAsGraphic(Box2f(Vec2f(0,0),newSz), text, style);
     if (!graphicListener->endGraphic(data, type) || !ok)
@@ -1728,7 +1728,7 @@ bool GWGraph::sendTextbox(GWGraphInternal::FrameText const &text, GWGraphInterna
     return true;
   }
 
-  WPXPropertyList extra;
+  RVNGPropertyList extra;
   if (style.hasSurfaceColor())
     extra.insert("fo:background-color", style.m_surfaceColor.str().c_str());
   listener->insertTextBox(finalPos, doc, extra);
@@ -1775,10 +1775,10 @@ bool GWGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long actPos = input->tell();
 
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   shared_ptr<MWAWPict> thePict(MWAWPictData::get(input, (int)entry.length()));
   if (thePict) {
-    WPXBinaryData data;
+    RVNGBinaryData data;
     std::string type;
     if (thePict->getBinary(data,type))
       listener->insertPicture(pos, data, type);
@@ -1787,8 +1787,8 @@ bool GWGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 #ifdef DEBUG_WITH_FILES
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   ascFile.skipZone(entry.begin(), entry.end()-1);
-  WPXBinaryData file;
-  input->seek(entry.begin(),WPX_SEEK_SET);
+  RVNGBinaryData file;
+  input->seek(entry.begin(),RVNG_SEEK_SET);
   input->readDataBlock(entry.length(), file);
 
   static int volatile pictName = 0;
@@ -1797,7 +1797,7 @@ bool GWGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
   libmwaw::Debug::dumpFile(file, f.str().c_str());
 #endif
 
-  input->seek(actPos, WPX_SEEK_SET);
+  input->seek(actPos, RVNG_SEEK_SET);
   return true;
 }
 
@@ -1994,7 +1994,7 @@ void GWGraph::sendGroupChild(GWGraphInternal::FrameGroup const &group, GWGraphIn
           break;
         }
       }
-      WPXBinaryData data;
+      RVNGBinaryData data;
       std::string type;
       if (graphicListener->endGraphic(data,type)) {
         partialPos.setOrigin(pos.origin()+partialBdBox[0]-group.m_box[0]);
@@ -2057,7 +2057,7 @@ bool GWGraph::sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInterna
   Vec2f LTPos(0,0);
   if (m_mainParser->getDocumentType()==GWParser::DRAW)
     LTPos=72.f*m_mainParser->getPageLeftTop();
-  MWAWPosition fPos(frame->m_box[0]+LTPos,frame->m_box.size(),WPX_POINT);
+  MWAWPosition fPos(frame->m_box[0]+LTPos,frame->m_box.size(),RVNG_POINT);
   fPos.setRelativePosition(MWAWPosition::Page);
   fPos.setPage(frame->m_page<0 ? 1: frame->m_page);
   fPos.m_wrapping = MWAWPosition::WBackground;
@@ -2080,7 +2080,7 @@ bool GWGraph::sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInterna
   default:
     ok=false;
   }
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   return ok;
 }
 

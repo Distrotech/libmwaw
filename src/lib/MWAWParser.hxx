@@ -45,7 +45,7 @@
 #include "MWAWHeader.hxx"
 #include "MWAWPageSpan.hxx"
 
-class WPXDocumentInterface;
+class RVNGTextInterface;
 
 /** a class to define the parser state */
 class MWAWParserState
@@ -92,7 +92,7 @@ public:
   //! virtual destructor
   virtual ~MWAWParser();
   //! virtual function used to parse the input
-  virtual void parse(WPXDocumentInterface *documentInterface) = 0;
+  virtual void parse(RVNGTextInterface *documentInterface) = 0;
   //! virtual function used to check if the document header is correct (or not)
   virtual bool checkHeader(MWAWHeader *header, bool strict=false) = 0;
 

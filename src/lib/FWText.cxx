@@ -38,7 +38,7 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -213,9 +213,9 @@ void Font::update()
     else {
       float sup = m_modifier.getSuper();
       if (sup < 0)
-        m_font.set(MWAWFont::Script(float(-sup),WPX_POINT));
+        m_font.set(MWAWFont::Script(float(-sup),RVNG_POINT));
       else
-        m_font.set(MWAWFont::Script(float(sup*100.f),WPX_PERCENT));
+        m_font.set(MWAWFont::Script(float(sup*100.f),RVNG_PERCENT));
     }
   } else if (m_state[0xb]) {
     if (m_defModifier)
@@ -223,9 +223,9 @@ void Font::update()
     else {
       float sub = m_modifier.getSub();
       if (sub < 0)
-        m_font.set(MWAWFont::Script(float(sub),WPX_POINT));
+        m_font.set(MWAWFont::Script(float(sub),RVNG_POINT));
       else
-        m_font.set(MWAWFont::Script(float(-sub*100.f),WPX_PERCENT));
+        m_font.set(MWAWFont::Script(float(-sub*100.f),RVNG_PERCENT));
     }
   } else
     m_font.set(MWAWFont::Script());
@@ -319,7 +319,7 @@ struct PageInfo {
       int nextPos= c+1!=numC ? (m_columns[c+1].m_box[0].x()+m_columns[c].m_box[1].x())/2 :
                    m_columns[c].m_box[1].x();
       col.m_width = double(nextPos-prevPos);
-      col.m_widthUnit = WPX_POINT;
+      col.m_widthUnit = RVNG_POINT;
       col.m_margins[libmwaw::Left]=double(m_columns[c].m_box[0].x()-prevPos)/72.;
       col.m_margins[libmwaw::Right]=double(nextPos-m_columns[c].m_box[1].x())/72.;
     }
@@ -414,7 +414,7 @@ struct Zone {
 /** Internal: class to store the paragraph properties */
 struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Paragraph() : MWAWParagraph(), m_align(0), m_interSpacing(1.), m_interSpacingUnit(WPX_PERCENT),
+  Paragraph() : MWAWParagraph(), m_align(0), m_interSpacing(1.), m_interSpacingUnit(RVNG_PERCENT),
     m_dim(0,0), m_border(), m_isTable(false), m_tableBorderId(0), m_tableFlags(), m_actCol(-1), m_isSent(false) {
     m_befAftSpacings[0]=m_befAftSpacings[1]=0;
   }
@@ -440,7 +440,7 @@ struct Paragraph : public MWAWParagraph {
     m_isSent = false;
   }
   //! set the interline spacing
-  void setInterlineSpacing(double spacing, WPXUnit unit) {
+  void setInterlineSpacing(double spacing, RVNGUnit unit) {
     m_interSpacing = spacing;
     m_interSpacingUnit = unit;
     m_isSent = false;
@@ -558,7 +558,7 @@ struct Paragraph : public MWAWParagraph {
   //! the spacing
   double m_interSpacing;
   //! the spacing unit
-  WPXUnit m_interSpacingUnit;
+  RVNGUnit m_interSpacingUnit;
   //! the before/after spacing ( negative in point, positive in percent)
   double m_befAftSpacings[2];
   //! the zone dimension
@@ -948,7 +948,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0x9e:
       case 0x9f: {
         float justify=1.0f+float(val-0x9d)/2.0f;
-        ruler.setInterlineSpacing(justify, WPX_PERCENT);
+        ruler.setInterlineSpacing(justify, RVNG_PERCENT);
         f << "[just=" << 100*justify << "%]";
         break;
       }
@@ -990,7 +990,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         } else {
           int just = (int)input->readLong(2);
           if (just < 0)
-            ruler.setInterlineSpacing(-just, WPX_POINT);
+            ruler.setInterlineSpacing(-just, RVNG_POINT);
           f << "[just=" << just << ",";
           f << "typ?=" << (int)input->readLong(2) << "]";
         }
@@ -1167,7 +1167,7 @@ bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::Li
   MWAWTable table(MWAWTable::TableDimBit);
   table.setColsSize(dim);
   listener->openTable(table);
-  listener->openTableRow(-height, WPX_POINT);
+  listener->openTableRow(-height, RVNG_POINT);
 
   MWAWBorder outBorder, vBorder;
   FWStruct::Border border;
@@ -1195,7 +1195,7 @@ bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::Li
     if (col < numFind) {
       if (cellPos[2*col+1]>cellPos[2*col]) {
         std::string string;
-        input->seek(cellPos[2*col], WPX_SEEK_SET);
+        input->seek(cellPos[2*col], RVNG_SEEK_SET);
         ruler.m_actCol=int(col);
         ruler.m_isSent=false;
         send(zone, int(cellPos[2*col+1]-cellPos[2*col]), font, ruler, string);
@@ -1208,7 +1208,7 @@ bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::Li
   }
   listener->closeTableRow();
   listener->closeTable();
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   str=f.str();
   return true;
 }
@@ -1229,7 +1229,7 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
   lHeader.m_numChar = (int)input->readULong(lengthSz);
   if ((lengthSz==1 && (lHeader.m_numChar & 0x80)) ||
       pos+2+lHeader.m_numChar > zone->m_end) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
 
@@ -1316,7 +1316,7 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
     MWAW_DEBUG_MSG(("FWText::readLineHeader: find unknown size flags!!!!\n"));
     f << "[#fl&4]";
     // we do not know the size of this field, let try with 2
-    input->seek(2, WPX_SEEK_CUR);
+    input->seek(2, RVNG_SEEK_CUR);
   }
   if (type & 0x2) { // 0 or 2
     val = (int)input->readULong(2);
@@ -1344,7 +1344,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
   zone->m_zone->setParsed(true);
 
   long pos = zone->m_begin;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   int num=1;
   FWTextInternal::Font font;
   font.m_font=MWAWFont(3,12);
@@ -1416,7 +1416,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
     num++;
     FWTextInternal::LineHeader lHeader;
     if (!readLineHeader(zone, lHeader)) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       break;
     }
     f << lHeader;
@@ -1436,12 +1436,12 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
       std::string str;
       if (!ruler.isTable() || !sendTable(zone, lHeader, font, ruler, str)) {
         str="";
-        input->seek(debPos, WPX_SEEK_SET);
+        input->seek(debPos, RVNG_SEEK_SET);
         send(zone, lHeader.m_numChar, font, ruler, str);
       }
       f << str;
     }
-    input->seek(lastPos, WPX_SEEK_SET);
+    input->seek(lastPos, RVNG_SEEK_SET);
 
     ascii.addPos(pos);
     ascii.addNote(f.str().c_str());
@@ -1481,7 +1481,7 @@ bool FWText::sendHiddenItem(int id, FWTextInternal::Font &font, FWTextInternal::
   libmwaw::DebugFile &ascii = zone->m_zone->getAsciiFile();
   libmwaw::DebugStream f;
   long pos = zone->m_begin;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   f << "ItemData[Collapsed]:";
   int val = (int) input->readULong(1); // alway 40 ?
@@ -1520,7 +1520,7 @@ bool FWText::sendHiddenItem(int id, FWTextInternal::Font &font, FWTextInternal::
     val = (int) input->readLong(2);
     if (val) f << "h" << i+3 << "=" << std::hex << val << std::dec << ",";
   }
-  input->seek(4, WPX_SEEK_CUR); // skip size...
+  input->seek(4, RVNG_SEEK_CUR); // skip size...
   int numChar=int(zone->m_end-(pos+44));
   if (numChar)
     ascii.addDelimiter(pos+44,'|');
@@ -1546,7 +1546,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
   int vers = version();
 
   long pos = zone->begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   bool knownZone = (zone->m_type >= 0xa && zone->m_type <= 0x14) || (zone->m_type == 0x18);
 
@@ -1580,7 +1580,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
       ok=false;
     if (!ok) { // force to try as attachment
       header = 1;
-      input->seek(pos+2, WPX_SEEK_SET);
+      input->seek(pos+2, RVNG_SEEK_SET);
     } else if (!knownZone)
       text->m_zoneType = FWTextInternal::Zone::Main;
   }
@@ -1600,7 +1600,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
     if (!knownZone)
       text->m_zoneType = FWTextInternal::Zone::Main;
   }
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   if (hasHeader) {
     //find 8, 1c, 71, 76, 8a, 99, 9d, c6, c9, ce, f3, f4
@@ -1613,7 +1613,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
     if (val != 1) f << "f2=" << val << ",";
     if (vers == 1) {
       ascii.addDelimiter(input->tell(),'|');
-      input->seek(59, WPX_SEEK_CUR);
+      input->seek(59, RVNG_SEEK_CUR);
       ascii.addDelimiter(input->tell(),'|');
     }
   }
@@ -1691,7 +1691,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
     int numChar = (int)input->readULong(lengthSz);
     if ((lengthSz==1 && (numChar & 0x80)) ||
         long(input->tell()+numChar) > zone->end()) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       break;
     }
 #if DEBUGII
@@ -1717,7 +1717,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
     if (type & 0x2) sz+=2;
     if (type & 0x1) sz+=2;
     if (numChar || sz)
-      input->seek(numChar+sz, WPX_SEEK_CUR);
+      input->seek(numChar+sz, RVNG_SEEK_CUR);
   }
 #if DEBUGII
   std::cout << "FIND:N=" << numLines << " [" << N[0] << "]\n";
@@ -1755,10 +1755,10 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
       int num = val/50;
       sz = 32+num*52;
 
-      input->seek(9, WPX_SEEK_CUR);
+      input->seek(9, RVNG_SEEK_CUR);
 
       if (pos+sz > zone->end()) {
-        input->seek(pos, WPX_SEEK_SET);
+        input->seek(pos, RVNG_SEEK_SET);
         break;
       }
 
@@ -1769,7 +1769,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
       ascii.addNote("TextData-c[ColH]");
 
       pos+=32;
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       for (int i = 0; i < num; i++) {
         pos = input->tell();
         f.str("");
@@ -1785,7 +1785,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
         ascii.addDelimiter(input->tell(),'|');
         ascii.addPos(pos);
         ascii.addNote(f.str().c_str());
-        input->seek(pos+52, WPX_SEEK_SET);
+        input->seek(pos+52, RVNG_SEEK_SET);
       }
       text->m_pagesInfo.push_back(page);
       continue;
@@ -1797,25 +1797,25 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
     if (high==0x21)
       sz = 42;
     else if (high==0x61||high==0x63) {
-      input->seek(12, WPX_SEEK_CUR);
+      input->seek(12, RVNG_SEEK_CUR);
       int numData = (int)input->readULong(2);
       if (!numData) break;
       sz = 26+9*numData;
     } else if (high==0xe1) {
-      input->seek(14, WPX_SEEK_CUR);
+      input->seek(14, RVNG_SEEK_CUR);
       int numData = (int)input->readULong(2);
       if (!numData) break;
       sz = 30+9*numData;
     } else if (high==0 && (val%50)!=30)
       sz=26;
     if (sz == 0 || pos+sz > zone->end()) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       break;
     }
 
     ascii.addPos(pos);
     ascii.addNote("TextData-d:");
-    input->seek(pos+sz, WPX_SEEK_SET);
+    input->seek(pos+sz, RVNG_SEEK_SET);
   }
 
   if (input->tell() < zone->end()) {
@@ -1874,7 +1874,7 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
     f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
   if (numBad > numOk) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   val = (int)input->readULong(1); // 68 or e8
@@ -1900,7 +1900,7 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
     f << "g" << i << "=" << std::hex << val << std::dec << ",";
   }
   if (numBad >= numOk) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   val = (int)input->readULong(1); // always 0
@@ -1927,14 +1927,14 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
   pos = input->tell();
   if (pos+44 > zone->end() || input->readULong(1)!=0x40) {
     MWAW_DEBUG_MSG(("FWText::readItem: can not find hidden data\n"));
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return true;
   }
-  input->seek(pos+42, WPX_SEEK_SET);
+  input->seek(pos+42, RVNG_SEEK_SET);
   int sz = (int) input->readULong(2);
   if (pos+44+sz > zone->end()) {
     MWAW_DEBUG_MSG(("FWText::readItem: find bad data size\n"));
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return true;
   }
 
@@ -1948,7 +1948,7 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
   }
 
   if (sz)
-    input->seek(sz, WPX_SEEK_CUR);
+    input->seek(sz, RVNG_SEEK_CUR);
   return true;
 }
 
@@ -1978,7 +1978,7 @@ bool FWText::readStyle(FWStruct::EntryPtr zone)
   if (sz!=0x46) {
     f << "###";
     MWAW_DEBUG_MSG(("FWText::readStyle: style length seems odd\n"));
-    input->seek(pos+2+sz, WPX_SEEK_SET);
+    input->seek(pos+2+sz, RVNG_SEEK_SET);
     ascii.addPos(pos);
     ascii.addNote(f.str().c_str());
     return true;
@@ -1987,7 +1987,7 @@ bool FWText::readStyle(FWStruct::EntryPtr zone)
   if (!nSz || nSz>0x1f) {
     f << "###";
     MWAW_DEBUG_MSG(("FWText::readStyle: style name length seems odd\n"));
-    input->seek(pos+2+sz, WPX_SEEK_SET);
+    input->seek(pos+2+sz, RVNG_SEEK_SET);
     ascii.addPos(pos);
     ascii.addNote(f.str().c_str());
     return true;
@@ -1996,11 +1996,11 @@ bool FWText::readStyle(FWStruct::EntryPtr zone)
   for (int c=0; c<nSz; ++c)
     name += (char) input->readLong(1);
   f << name << ",";
-  input->seek(pos+38, WPX_SEEK_SET);
+  input->seek(pos+38, RVNG_SEEK_SET);
   ascii.addDelimiter(input->tell(),'|');
   ascii.addPos(pos);
   ascii.addNote(f.str().c_str());
-  input->seek(pos+2+sz, WPX_SEEK_SET);
+  input->seek(pos+2+sz, RVNG_SEEK_SET);
   return true;
 }
 
@@ -2015,10 +2015,10 @@ bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
   const int dataSz = vers==1 ? 14 : 10;
   const int headerSz = vers==1 ? 24 : 30;
   long pos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   long sz = (long) input->readULong(4);
   if (sz<24 || pos+4+sz > zone->end()) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
 
@@ -2052,10 +2052,10 @@ bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
     para.m_margins[2]=dim[1]-margins[1];
   ascii.addDelimiter(input->tell(), '|');
 
-  input->seek(vers==1 ? pos+27 : pos+26, WPX_SEEK_SET);
+  input->seek(vers==1 ? pos+27 : pos+26, RVNG_SEEK_SET);
   int N = (int)input->readULong(1);
   if (headerSz+dataSz *N != sz) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   f << "N=" << N << ",";
@@ -2068,7 +2068,7 @@ bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
       para.m_isTable = true;
       f << "table,";
     }
-    input->seek(pos+4+30, WPX_SEEK_SET);
+    input->seek(pos+4+30, RVNG_SEEK_SET);
   }
   ascii.addPos(pos);
   ascii.addNote(f.str().c_str());
@@ -2141,7 +2141,7 @@ bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
     para.m_tabs->push_back(tab);
     ascii.addPos(pos);
     ascii.addNote(f.str().c_str());
-    input->seek(pos+dataSz, WPX_SEEK_SET);
+    input->seek(pos+dataSz, RVNG_SEEK_SET);
   }
   if (para.m_isTable) {
     pos = input->tell();
@@ -2158,11 +2158,11 @@ bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
       if (para.m_tableBorderId)
         f << "B" << para.m_tableBorderId-1 << ",";
       ascii.addDelimiter(input->tell(), '|');
-      input->seek(pos+4+0x24, WPX_SEEK_SET);
+      input->seek(pos+4+0x24, RVNG_SEEK_SET);
     } else {
       MWAW_DEBUG_MSG(("FWText::readParagraphTabs: can not find table data\n"));
       f << "###";
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
     }
     ascii.addPos(pos);
     ascii.addNote(f.str().c_str());
@@ -2185,9 +2185,9 @@ bool FWText::readDataMod(FWStruct::EntryPtr zone, int id)
   libmwaw::DebugStream f;
 
   long pos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   if (pos+10 > zone->end()) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   FWTextInternal::DataModifier mod;
@@ -2221,7 +2221,7 @@ bool FWText::readParaModDocInfo(FWStruct::EntryPtr zone)
   libmwaw::DebugStream f;
   long pos = input->tell();
   if (input->readULong(4)!=0x65787472 || input->readULong(1)) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
 
@@ -2236,10 +2236,10 @@ bool FWText::readParaModDocInfo(FWStruct::EntryPtr zone)
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     if (endData <= zone->end()) {
-      input->seek(endData, WPX_SEEK_SET);
+      input->seek(endData, RVNG_SEEK_SET);
       return true;
     }
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
 
@@ -2276,7 +2276,7 @@ bool FWText::readParaModDocInfo(FWStruct::EntryPtr zone)
     f << "ParaMod-" << i << ":" << mod;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+fSz, WPX_SEEK_SET);
+    input->seek(pos+fSz, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -2290,24 +2290,24 @@ bool FWText::readColumns(FWStruct::EntryPtr zone)
   libmwaw::DebugStream f;
 
   long pos = input->tell();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   long sz = (long) input->readULong(4);
   if (sz<34 || pos+4+sz > zone->end()) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
 
-  input->seek(13, WPX_SEEK_CUR);
+  input->seek(13, RVNG_SEEK_CUR);
   int N = (int)input->readULong(1);
   if (24+10*N != sz) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     return false;
   }
   f.str("");
   f << "Entries(Columns):" << N;
   ascii.addPos(pos);
   ascii.addNote(f.str().c_str());
-  input->seek(pos+4+24, WPX_SEEK_SET);
+  input->seek(pos+4+24, RVNG_SEEK_SET);
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     f.str("");
@@ -2323,7 +2323,7 @@ bool FWText::readColumns(FWStruct::EntryPtr zone)
     ascii.addDelimiter(input->tell(),'|');
     ascii.addPos(pos);
     ascii.addNote(f.str().c_str());
-    input->seek(pos+10, WPX_SEEK_SET);
+    input->seek(pos+10, RVNG_SEEK_SET);
   }
   return true;
 }

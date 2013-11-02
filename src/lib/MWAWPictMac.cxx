@@ -39,7 +39,7 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
@@ -61,7 +61,7 @@ MWAWPictMac::ReadResult MWAWPictMac::checkOrGet
   int version, subvers;
   // we can not read the data, ...
   long actualPos = input->tell();
-  input->seek(actualPos,WPX_SEEK_SET);
+  input->seek(actualPos,RVNG_SEEK_SET);
   if (size < 0xd)
     return MWAW_R_BAD;
 
@@ -98,7 +98,7 @@ MWAWPictMac::ReadResult MWAWPictMac::checkOrGet
   }
 
   if (empty) {
-    input->seek(actualPos+size-1,WPX_SEEK_SET);
+    input->seek(actualPos+size-1,RVNG_SEEK_SET);
     if (input->readULong(1) != 0xff) return MWAW_R_BAD;
   }
 
@@ -187,12 +187,12 @@ public:
       return false;
     }
     // une liste de point dans la box: x1, y1, .. yn 0x7fff, x2, ... 0x7fff
-    input.seek(actualPos+10+2*sz, WPX_SEEK_SET);
+    input.seek(actualPos+10+2*sz, RVNG_SEEK_SET);
     if (actualPos+10+2*sz != long(input.tell())) {
       MWAW_DEBUG_MSG(("Pict1:Region: pixels EOF\n"));
       return false;
     }
-    input.seek(actualPos+10, WPX_SEEK_SET);
+    input.seek(actualPos+10, RVNG_SEEK_SET);
     while (sz > 0) {
       int x = (int)input.readLong(2);
       sz--;
@@ -327,7 +327,7 @@ struct Bitmap {
     for (int i = 0; i < nRows; i++)
       bitmap.setRowPacked(i, &m_bitmap[size_t(i*m_rowBytes)]);
 
-    WPXBinaryData dt;
+    RVNGBinaryData dt;
     std::string type;
     if (!bitmap.getBinary(dt, type)) return false;
 
@@ -429,7 +429,7 @@ struct ColorTable {
   //! tries to read a colortable
   bool read (MWAWInputStream &input) {
     long actPos = input.tell();
-    input.seek(4, WPX_SEEK_CUR); // ignore seed
+    input.seek(4, RVNG_SEEK_CUR); // ignore seed
     m_flags = (int) input.readULong(2);
     int n = (int) input.readLong(2)+1;
     if (n < 0) return false;
@@ -502,7 +502,7 @@ struct Pixmap {
     m_planeBytes = (int) input.readLong(4);
 
     // ignored: colorHandle+reserved
-    input.seek(8, WPX_SEEK_CUR);
+    input.seek(8, RVNG_SEEK_CUR);
 
     // the color table
     if (colorTable) {
@@ -597,7 +597,7 @@ struct Pixmap {
           pixmap.set(x, i, m_indices[rPos++]);
       }
 
-      WPXBinaryData dt;
+      RVNGBinaryData dt;
       std::string type;
       if (!pixmap.getBinary(dt, type)) return false;
 
@@ -616,7 +616,7 @@ struct Pixmap {
           pixmap.set(x, i, m_colors[rPos++]);
       }
 
-      WPXBinaryData dt;
+      RVNGBinaryData dt;
       std::string type;
       if (!pixmap.getBinary(dt, type)) return false;
 
@@ -1044,7 +1044,7 @@ struct OpCode {
         listValue[i] = newVal;
         continue;
       }
-      input.seek(actualPos, WPX_SEEK_SET);
+      input.seek(actualPos, RVNG_SEEK_SET);
       return false;
     }
     return true;
@@ -1057,12 +1057,12 @@ struct OpCode {
 
     size_t numTypes = m_types.size();
     for (size_t i = 0; i < numTypes; i++) {
-      input.seek(actPos+sz, WPX_SEEK_SET);
+      input.seek(actPos+sz, RVNG_SEEK_SET);
       int newSz = getSize(input, m_types[i]);
       if (newSz < 0) return false;
       sz += newSz;
     }
-    input.seek(actPos, WPX_SEEK_SET);
+    input.seek(actPos, RVNG_SEEK_SET);
     return true;
   }
 
@@ -1163,7 +1163,7 @@ protected:
       long actPos = input.tell();
       // first check if it is a bitmap or a pixmap
       bool pixmap = input.readULong(2) & 0x8000;
-      input.seek(-2, WPX_SEEK_CUR);
+      input.seek(-2, RVNG_SEEK_CUR);
       bool packed = type==WP_PBITMAP || type == WP_RPBITMAP;
       bool hasRgn = type ==WP_RBITMAP || type == WP_RPBITMAP;
       if (pixmap) {
@@ -1244,7 +1244,7 @@ protected:
     case WP_RPBITMAP: {
       // first check if it is a bitmap or a pixmap
       bool pixmap = input.readULong(2) & 0x8000;
-      input.seek(-2, WPX_SEEK_CUR);
+      input.seek(-2, RVNG_SEEK_CUR);
       bool packed = type==WP_PBITMAP || type == WP_RPBITMAP;
       bool hasRgn = type ==WP_RBITMAP || type == WP_RPBITMAP;
       if (pixmap) {
@@ -1276,7 +1276,7 @@ protected:
     case WP_QUICKTIME: { // version 2
       val.m_type = WP_QUICKTIME;
       long size = (long) input.readULong(4);
-      return input.seek(size, WPX_SEEK_CUR) == 0;
+      return input.seek(size, RVNG_SEEK_CUR) == 0;
     }
     case WP_UNKNOWN:
       MWAW_DEBUG_MSG(("Pict1:readValue: find unknown type... \n"));
@@ -1681,7 +1681,7 @@ public:
   void parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile);
 
   /**  internal and low level: tries to convert a Pict1.0 picture stored in \a orig in a Pict2.0 picture */
-  bool convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result);
+  bool convertToPict2(RVNGBinaryData const &orig, RVNGBinaryData &result);
 protected:
 
   //! the map
@@ -1699,7 +1699,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
   libmwaw::DebugStream s;
   long actPos = 0L;
 
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   int sz = (int) input->readULong(2);
   s.str("");
   s << "PictSize=" << sz;
@@ -1723,7 +1723,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
     if (it == m_mapIdOp.end() || it->second == 0L) {
       MWAW_DEBUG_MSG(("Pict1:OpCode:parsePict can not find opCode 0x%x\n", code));
-      input->seek(actPos, WPX_SEEK_SET);
+      input->seek(actPos, RVNG_SEEK_SET);
       ok = false;
       break;
     }
@@ -1732,7 +1732,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     std::vector<Value> readData;
     if (!opCode.readData(*input, readData)) {
       MWAW_DEBUG_MSG(("Pict1:OpCode:parsePict error for opCode 0x%x\n", code));
-      input->seek(actPos, WPX_SEEK_SET);
+      input->seek(actPos, RVNG_SEEK_SET);
       ok = false;
       break;
     }
@@ -1752,7 +1752,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
 }
 
 /**  internal and low level: tries to convert a Pict1.0 picture stored in \a orig in a Pict2.0 picture */
-bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result)
+bool PictParser::convertToPict2(RVNGBinaryData const &orig, RVNGBinaryData &result)
 {
 #  ifdef ADD_DATA_SHORT
 #    undef ADD_DATA_SHORT
@@ -1773,7 +1773,7 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
     return false;
   }
 
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   int sz = (int) input->readULong(2);
   if (pictSize != sz && pictSize != sz+1) {
     delete [] res;
@@ -1828,19 +1828,19 @@ bool PictParser::convertToPict2(WPXBinaryData const &orig, WPXBinaryData &result
     if (!skip) {
       *(resPtr++) = 0;
       *(resPtr++) = (unsigned char) code;
-      input->seek(actPos+1, WPX_SEEK_SET);
+      input->seek(actPos+1, RVNG_SEEK_SET);
       for (int i = 0; i < sz; i++)
         *(resPtr++) = (unsigned char) input->readULong(1);
       if ((sz%2)==1) *(resPtr++) = 0;
     }
-    input->seek(actPos+1+sz, WPX_SEEK_SET);
+    input->seek(actPos+1+sz, RVNG_SEEK_SET);
   }
 
   bool endOk = false;
   if (findEnd) {
     if (input->atEOS()) endOk = true;
     else { // allows a final caracter for alignment
-      input->seek(1, WPX_SEEK_CUR);
+      input->seek(1, RVNG_SEEK_CUR);
       endOk = input->atEOS();
     }
   }
@@ -1899,12 +1899,12 @@ struct OpCode : public libmwaw_applepict1::OpCode {
         listValue[i] = newVal;
         continue;
       }
-      input.seek(actualPos, WPX_SEEK_SET);
+      input.seek(actualPos, RVNG_SEEK_SET);
       return false;
     }
     long actualPos = input.tell();
     // we must check alignement
-    if ((actualPos - debPos)%2 == 1) input.seek(1, WPX_SEEK_CUR);
+    if ((actualPos - debPos)%2 == 1) input.seek(1, RVNG_SEEK_CUR);
     return true;
   }
 };
@@ -1961,7 +1961,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
   libmwaw::DebugStream s;
   long actPos = 0L;
 
-  input->seek(0, WPX_SEEK_SET);
+  input->seek(0, RVNG_SEEK_SET);
   int sz = (int) input->readULong(2);
   s.str("");
   s << "PictSize=" << sz;
@@ -2045,7 +2045,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
     if (it == m_mapIdOp.end() || it->second == 0L) {
       MWAW_DEBUG_MSG(("Pict2:OpCode:parsePict can not find opCode 0x%x\n", code));
-      input->seek(actPos, WPX_SEEK_SET);
+      input->seek(actPos, RVNG_SEEK_SET);
       ok = false;
       break;
     }
@@ -2054,7 +2054,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     std::vector<Value> readData;
     if (!opCode.readData(*input, readData)) {
       MWAW_DEBUG_MSG(("Pict2:OpCode:parsePict error for opCode 0x%x\n", code));
-      input->seek(actPos, WPX_SEEK_SET);
+      input->seek(actPos, RVNG_SEEK_SET);
       ok = false;
       break;
     }
@@ -2085,7 +2085,7 @@ namespace libmwaw_applepict2
 static PictParser s_parser;
 }
 
-void MWAWPictMac::parsePict1(WPXBinaryData const &pict, std::string const &fname)
+void MWAWPictMac::parsePict1(RVNGBinaryData const &pict, std::string const &fname)
 {
   MWAWInputStreamPtr ip=MWAWInputStream::get(pict, false);
   if (!ip) return;
@@ -2095,7 +2095,7 @@ void MWAWPictMac::parsePict1(WPXBinaryData const &pict, std::string const &fname
   libmwaw_applepict1::s_parser.parse(ip, dFile);
 }
 
-void MWAWPictMac::parsePict2(WPXBinaryData const &pict, std::string const &fname)
+void MWAWPictMac::parsePict2(RVNGBinaryData const &pict, std::string const &fname)
 {
   MWAWInputStreamPtr ip=MWAWInputStream::get(pict, false);
   if (!ip) return;
@@ -2105,7 +2105,7 @@ void MWAWPictMac::parsePict2(WPXBinaryData const &pict, std::string const &fname
   libmwaw_applepict2::s_parser.parse(ip, dFile);
 }
 
-bool MWAWPictMac::convertPict1To2(WPXBinaryData const &orig, WPXBinaryData &result)
+bool MWAWPictMac::convertPict1To2(RVNGBinaryData const &orig, RVNGBinaryData &result)
 {
   static bool volatile conversion = false;
   while (conversion) ;
@@ -2127,7 +2127,7 @@ bool MWAWPictMac::convertPict1To2(WPXBinaryData const &orig, WPXBinaryData &resu
 
     std::stringstream f;
     f << mainName << actPict << ".pict";
-    libmwaw::Debug::dumpFile(const_cast<WPXBinaryData &>(orig), f.str().c_str());
+    libmwaw::Debug::dumpFile(const_cast<RVNGBinaryData &>(orig), f.str().c_str());
 
     std::stringstream s;
     s << mainName << actPict;

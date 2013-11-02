@@ -38,7 +38,7 @@
 #include <limits>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
@@ -317,7 +317,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   long pos = m_input->tell();
   reinterpret_cast<MWParser *>(m_parser)->sendWindow(m_id);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -379,7 +379,7 @@ void MWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MWParser::parse(WPXDocumentInterface *docInterface)
+void MWParser::parse(RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -419,7 +419,7 @@ void MWParser::parse(WPXDocumentInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MWParser::createDocument(WPXDocumentInterface *documentInterface)
+void MWParser::createDocument(RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -473,7 +473,7 @@ bool MWParser::createZones()
     // bad sign, but we can try to recover
     ascii().addPos(pos);
     ascii().addNote("###PrintInfo");
-    input->seek(pos+0x78, WPX_SEEK_SET);
+    input->seek(pos+0x78, RVNG_SEEK_SET);
   }
 
   pos = input->tell();
@@ -487,7 +487,7 @@ bool MWParser::createZones()
     int const windowsSize = 46;
 
     // and try to continue
-    input->seek(pos+(i+1)*windowsSize, WPX_SEEK_SET);
+    input->seek(pos+(i+1)*windowsSize, RVNG_SEEK_SET);
   }
 
 #ifdef DEBUG
@@ -525,7 +525,7 @@ bool MWParser::createZonesV3()
     // bad sign, but we can try to recover
     ascii().addPos(pos);
     ascii().addNote("###PrintInfo");
-    input->seek(pos+0x78, WPX_SEEK_SET);
+    input->seek(pos+0x78, RVNG_SEEK_SET);
   }
 
   pos = input->tell();
@@ -539,7 +539,7 @@ bool MWParser::createZonesV3()
     int const windowsSize = 34;
 
     // and try to continue
-    input->seek(pos+(i+1)*windowsSize, WPX_SEEK_SET);
+    input->seek(pos+(i+1)*windowsSize, RVNG_SEEK_SET);
   }
 
   MWParserInternal::FileHeader const &header = m_state->m_fileHeader;
@@ -559,7 +559,7 @@ bool MWParser::createZonesV3()
       return false;
 
     // and try to continue
-    input->seek(header.m_dataPos, WPX_SEEK_SET);
+    input->seek(header.m_dataPos, RVNG_SEEK_SET);
     if (int(input->tell()) != header.m_dataPos)
       return false;
   }
@@ -570,7 +570,7 @@ bool MWParser::createZonesV3()
       pos = input->tell();
       int type = (int) input->readLong(2);
       int sz = (int) input->readLong(2);
-      input->seek(pos+4+sz, WPX_SEEK_SET);
+      input->seek(pos+4+sz, RVNG_SEEK_SET);
       if (sz < 0 || long(input->tell()) !=  pos+4+sz) {
         MWAW_DEBUG_MSG(("MWParser::createZonesV3: pb with dataZone\n"));
         return (p != 0);
@@ -696,12 +696,12 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 
   libmwaw::DebugStream f;
   int headerSize=40;
-  input->seek(headerSize,WPX_SEEK_SET);
+  input->seek(headerSize,RVNG_SEEK_SET);
   if (int(input->tell()) != headerSize) {
     MWAW_DEBUG_MSG(("MWParser::checkHeader: file is too short\n"));
     return false;
   }
-  input->seek(0,WPX_SEEK_SET);
+  input->seek(0,RVNG_SEEK_SET);
 
   int vers = (int) input->readULong(2);
   setVersion(vers);
@@ -749,7 +749,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   }
 
   if (version() <= 3) {
-    input->seek(6, WPX_SEEK_CUR); // unknown
+    input->seek(6, RVNG_SEEK_CUR); // unknown
     if (input->readLong(1)) f << "hasFooter(?);";
     if (input->readLong(1)) f << "hasHeader(?),";
     fHeader.m_startNumberPage = (int) input->readLong(2);
@@ -757,7 +757,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   } else {
     fHeader.m_hideFirstPageHeaderFooter = (input->readULong(1)==0xFF);
 
-    input->seek(7, WPX_SEEK_CUR); // unused + 4 display flags + active doc
+    input->seek(7, RVNG_SEEK_CUR); // unused + 4 display flags + active doc
     fHeader.m_startNumberPage = (int) input->readLong(2);
     fHeader.m_freeListPos = (long) input->readULong(4);
     fHeader.m_freeListLength = (int) input->readULong(2);
@@ -767,15 +767,15 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   f << fHeader;
 
   //
-  input->seek(headerSize, WPX_SEEK_SET);
+  input->seek(headerSize, RVNG_SEEK_SET);
   if (!readPrintInfo())
     return false;
   long testPos = version() <= 3 ? fHeader.m_dataPos : fHeader.m_freeListPos;
-  input->seek(testPos, WPX_SEEK_SET);
+  input->seek(testPos, RVNG_SEEK_SET);
   if (long(input->tell()) != testPos)
     return false;
 
-  input->seek(headerSize, WPX_SEEK_SET);
+  input->seek(headerSize, RVNG_SEEK_SET);
   m_state->m_fileHeader = fHeader;
 
   // ok, we can finish initialization
@@ -832,7 +832,7 @@ bool MWParser::readPrintInfo()
 
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  input->seek(pos+0x78, WPX_SEEK_SET);
+  input->seek(pos+0x78, RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
     MWAW_DEBUG_MSG(("MWParser::readPrintInfo: file is too short\n"));
     return false;
@@ -851,13 +851,13 @@ bool MWParser::readWindowsInfo(int wh)
   long pos = input->tell();
   int windowsSize = version() <= 3 ? 34 : 46;
 
-  input->seek(pos+windowsSize, WPX_SEEK_SET);
+  input->seek(pos+windowsSize, RVNG_SEEK_SET);
   if (long(input->tell()) !=pos+windowsSize) {
     MWAW_DEBUG_MSG(("MWParser::readWindowsInfo: file is too short\n"));
     return false;
   }
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(Windows)";
   switch(wh) {
@@ -895,7 +895,7 @@ bool MWParser::readWindowsInfo(int wh)
     }
   } else {
     info.m_posTopY = (int) input->readLong(2);
-    input->seek(2,WPX_SEEK_CUR); // need to redraw
+    input->seek(2,RVNG_SEEK_CUR); // need to redraw
     informations.setBegin((long) input->readULong(4));
     informations.setLength((long) input->readULong(2));
     informations.setId(which);
@@ -919,7 +919,7 @@ bool MWParser::readWindowsInfo(int wh)
   f << info;
   bool ok=true;
   if (version() <= 3) {
-    input->seek(6,WPX_SEEK_CUR); // unknown flags: ff ff ff ff ff 00
+    input->seek(6,RVNG_SEEK_CUR); // unknown flags: ff ff ff ff ff 00
     f << "actFont=" << input->readLong(1) << ",";
     for (int i= 0; i < 2; i++) {
       int val = (int) input->readULong(1);
@@ -927,7 +927,7 @@ bool MWParser::readWindowsInfo(int wh)
     }
     f << "flg=" << input->readLong(1);
   } else {
-    input->seek(4,WPX_SEEK_CUR); // unused
+    input->seek(4,RVNG_SEEK_CUR); // unused
     if (input->readULong(1) == 0xFF) f << "redrawOval,";
     if (input->readULong(1) == 0xFF) f << "lastOvalUpdate,";
     f << "actStyle=" << input->readLong(2) << ",";
@@ -942,7 +942,7 @@ bool MWParser::readWindowsInfo(int wh)
     if (!ok) info.m_informations.resize(0);
   }
 
-  input->seek(pos+windowsSize, WPX_SEEK_SET);
+  input->seek(pos+windowsSize, RVNG_SEEK_SET);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   ascii().addPos(input->tell());
@@ -962,14 +962,14 @@ bool MWParser::readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstPa
 
   MWAWInputStreamPtr input = getInput();
 
-  input->seek(entry.end()-1, WPX_SEEK_SET);
+  input->seek(entry.end()-1, RVNG_SEEK_SET);
   if (long(input->tell()) != entry.end()-1) {
     MWAW_DEBUG_MSG(("MWParser::readLinesHeight: file is too short\n"));
     return false;
   }
 
   long pos = entry.begin(), endPos = entry.end();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   int numParag=0;
@@ -1012,7 +1012,7 @@ bool MWParser::readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstPa
     ascii().addNote(f.str().c_str());
 
     if ((sz%2)==1) sz++;
-    input->seek(pos+sz+2, WPX_SEEK_SET);
+    input->seek(pos+sz+2, RVNG_SEEK_SET);
   }
   firstParagLine.push_back(int(linesHeight.size()));
 
@@ -1051,7 +1051,7 @@ bool MWParser::readInformationsV3(int numEntries, std::vector<MWParserInternal::
       info.m_type = MWParserInternal::Information::RULER;
 
     int y = (int) input->readLong(2);
-    info.m_pos=MWAWPosition(Vec2f(0,float(y)), Vec2f(0, float(height)), WPX_POINT);
+    info.m_pos=MWAWPosition(Vec2f(0,float(y)), Vec2f(0, float(height)), RVNG_POINT);
     info.m_pos.setPage((int) input->readLong(1));
     f << info;
     informations.push_back(info);
@@ -1078,7 +1078,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
 
   MWAWInputStreamPtr input = getInput();
 
-  input->seek(entry.end()-1, WPX_SEEK_SET);
+  input->seek(entry.end()-1, RVNG_SEEK_SET);
   if (long(input->tell()) != entry.end()-1) {
     MWAW_DEBUG_MSG(("MWParser::readInformations: file is too short\n"));
     return false;
@@ -1092,7 +1092,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
   int numEntries = int((endPos-pos)/16);
   libmwaw::DebugStream f;
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   for (int i = 0; i < numEntries; i++) {
     pos = input->tell();
 
@@ -1111,8 +1111,8 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
 
     int y = (int) input->readLong(2);
     int page = (int) input->readULong(1);
-    input->seek(3, WPX_SEEK_CUR); // unused
-    info.m_pos = MWAWPosition(Vec2f(0,float(y)), Vec2f(0, float(height)), WPX_POINT);
+    input->seek(3, RVNG_SEEK_CUR); // unused
+    info.m_pos = MWAWPosition(Vec2f(0,float(y)), Vec2f(0, float(height)), RVNG_POINT);
     info.m_pos.setPage(page);
 
     int paragStatus = (int) input->readULong(1);
@@ -1188,7 +1188,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     f << "font=[" << info.m_font.getDebugString(getFontConverter()) << "]";
 #endif
 
-    input->seek(pos+16, WPX_SEEK_SET);
+    input->seek(pos+16, RVNG_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
@@ -1212,14 +1212,14 @@ bool MWParser::readText(MWParserInternal::Information const &info,
   if (!entry.valid()) return false;
 
   MWAWInputStreamPtr input = getInput();
-  input->seek(entry.end()-1, WPX_SEEK_SET);
+  input->seek(entry.end()-1, RVNG_SEEK_SET);
   if (long(input->tell()) != entry.end()-1) {
     MWAW_DEBUG_MSG(("MWParser::readText: file is too short\n"));
     return false;
   }
 
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(Text):";
@@ -1270,7 +1270,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
 
   long actPos = input->tell();
   if ((actPos-pos)%2==1) {
-    input->seek(1,WPX_SEEK_CUR);
+    input->seek(1,RVNG_SEEK_CUR);
     actPos++;
   }
 
@@ -1326,7 +1326,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
       for (size_t i = 0; i < textLineHeight.size(); i++)
         totalHeight+=textLineHeight[i];
     } else
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
   }
   if (long(input->tell()) != entry.end()) {
     f << "#badend";
@@ -1336,9 +1336,9 @@ bool MWParser::readText(MWParserInternal::Information const &info,
   if (getListener()) {
     MWAWParagraph para=getListener()->getParagraph();
     if (totalHeight && lHeight->size()) // fixme find a way to associate the good size to each line
-      para.setInterline(totalHeight/double(lHeight->size()), WPX_POINT);
+      para.setInterline(totalHeight/double(lHeight->size()), RVNG_POINT);
     else
-      para.setInterline(1.2, WPX_PERCENT);
+      para.setInterline(1.2, RVNG_PERCENT);
     if (info.m_justifySet)
       para.m_justify=info.m_justify;
     getListener()->setParagraph(para);
@@ -1384,14 +1384,14 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   MWAWParagraph parag;
   MWAWInputStreamPtr input = getInput();
 
-  input->seek(entry.end()-1, WPX_SEEK_SET);
+  input->seek(entry.end()-1, RVNG_SEEK_SET);
   if (long(input->tell()) != entry.end()-1) {
     MWAW_DEBUG_MSG(("MWParser::readParagraph: file is too short\n"));
     return false;
   }
 
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(Paragraph):";
@@ -1423,7 +1423,7 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   }
   int highspacing = (int) input->readULong(1);
   if (highspacing==0x80) // 6 by line
-    parag.setInterline(12, WPX_POINT);
+    parag.setInterline(12, RVNG_POINT);
   else if (highspacing) {
     f << "##highSpacing=" << std::hex << highspacing << std::dec << ",";
     MWAW_DEBUG_MSG(("MWParser::readParagraph: high spacing bit set=%d\n", highspacing));
@@ -1432,7 +1432,7 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   if (spacing < 0)
     f << "#interline=" << 1.+spacing/2.0 << ",";
   else if (spacing)
-    parag.setInterline(1.+spacing/2.0, WPX_PERCENT);
+    parag.setInterline(1.+spacing/2.0, RVNG_PERCENT);
   parag.m_margins[0] = float(input->readLong(2))/80.f;
 
   parag.m_tabs->resize((size_t) numTabs);
@@ -1475,14 +1475,14 @@ bool MWParser::readPageBreak(MWParserInternal::Information const &info)
   MWAWParagraph parag;
   MWAWInputStreamPtr input = getInput();
 
-  input->seek(entry.end()-1, WPX_SEEK_SET);
+  input->seek(entry.end()-1, RVNG_SEEK_SET);
   if (long(input->tell()) != entry.end()-1) {
     MWAW_DEBUG_MSG(("MWParser::readPageBreak: file is too short\n"));
     return false;
   }
 
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
 
@@ -1523,13 +1523,13 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
 
   MWAWInputStreamPtr input = getInput();
 
-  input->seek(entry.end()-1, WPX_SEEK_SET);
+  input->seek(entry.end()-1, RVNG_SEEK_SET);
   if (long(input->tell()) != entry.end()-1) {
     MWAW_DEBUG_MSG(("MWParser::readGraphic: file is too short\n"));
     return false;
   }
   long pos = entry.begin();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   int dim[4];
   for (int i = 0; i < 4; i++)
@@ -1551,22 +1551,22 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
 
   Vec2f actualSize(float(dim[3]-dim[1]), float(dim[2]-dim[0])), naturalSize(actualSize);
   if (box.size().x() > 0 && box.size().y()  > 0) naturalSize = box.size();
-  MWAWPosition pictPos=MWAWPosition(Vec2i(0,0),actualSize, WPX_POINT);
+  MWAWPosition pictPos=MWAWPosition(Vec2i(0,0),actualSize, RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
   pictPos.setNaturalSize(naturalSize);
   f << pictPos;
 
   // get the picture
-  input->seek(pos+8, WPX_SEEK_SET);
+  input->seek(pos+8, RVNG_SEEK_SET);
 
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, int(entry.length()-8)));
   if (pict) {
     if (getListener()) {
       MWAWParagraph para=getListener()->getParagraph();
-      para.setInterline(1.0, WPX_PERCENT);
+      para.setInterline(1.0, RVNG_PERCENT);
       getListener()->setParagraph(para);
 
-      WPXBinaryData data;
+      RVNGBinaryData data;
       std::string type;
       if (pict->getBinary(data,type) && !isMagicPic(data))
         getListener()->insertPicture(pictPos, data, type);
@@ -1587,7 +1587,7 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
   return true;
 }
 
-bool MWParser::isMagicPic(WPXBinaryData const &dt)
+bool MWParser::isMagicPic(RVNGBinaryData const &dt)
 {
   if (dt.size() != 526)
     return false;
@@ -1608,12 +1608,12 @@ bool MWParser::checkFreeList()
     return true;
   MWAWInputStreamPtr input = getInput();
   long pos = m_state->m_fileHeader.m_freeListPos;
-  input->seek(pos+8, WPX_SEEK_SET);
+  input->seek(pos+8, RVNG_SEEK_SET);
   if (long(input->tell()) != pos+8) {
     MWAW_DEBUG_MSG(("MWParser::checkFreeList: list is too short\n"));
     return false;
   }
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   int num = 0;
@@ -1634,7 +1634,7 @@ bool MWParser::checkFreeList()
 
     if (input->atEOS()) break;
 
-    input->seek(freePos+sz, WPX_SEEK_SET);
+    input->seek(freePos+sz, RVNG_SEEK_SET);
     if (long(input->tell()) != freePos+sz) {
       MWAW_DEBUG_MSG(("MWParser::checkFreeList: bad free block\n"));
       return false;
@@ -1646,7 +1646,7 @@ bool MWParser::checkFreeList()
     ascii().addPos(freePos);
     ascii().addNote(f.str().c_str());
 
-    input->seek(pos+8, WPX_SEEK_SET);
+    input->seek(pos+8, RVNG_SEEK_SET);
   }
 
   return true;

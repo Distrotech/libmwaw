@@ -37,7 +37,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -123,7 +123,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+8+16, WPX_SEEK_SET); // avoid header+8 generic number
+  input->seek(pos+8+16, RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   shared_ptr<CWSpreadsheetInternal::Spreadsheet>
@@ -140,7 +140,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       MWAW_DEBUG_MSG(("CWSpreadsheet::readSpreadsheetZone: can not find definition size\n"));
-      input->seek(entry.end(), WPX_SEEK_SET);
+      input->seek(entry.end(), RVNG_SEEK_SET);
       return shared_ptr<CWStruct::DSET>();
     }
 
@@ -169,7 +169,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   sheet->m_colWidths.resize(256,36);
   if (debColSize) {
     pos = entry.begin()+debColSize;
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     f.str("");
     f << "Entries(SpreadsheetCol):width,";
     for (size_t i = 0; i < 256; ++i) {
@@ -195,7 +195,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
       ascFile.addNote("SpreadsheetDef-extra");
     }
   }
-  input->seek(dataEnd, WPX_SEEK_SET);
+  input->seek(dataEnd, RVNG_SEEK_SET);
 
   for (int i = 0; i < N; i++) {
     pos = input->tell();
@@ -204,10 +204,10 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
     f << "SpreadsheetDef-" << i;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+data0Length, WPX_SEEK_SET);
+    input->seek(pos+data0Length, RVNG_SEEK_SET);
   }
 
-  input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), RVNG_SEEK_SET);
 
   if (m_state->m_spreadsheetMap.find(sheet->m_id) != m_state->m_spreadsheetMap.end()) {
     MWAW_DEBUG_MSG(("CWSpreadsheet::readSpreadsheetZone: zone %d already exists!!!\n", sheet->m_id));
@@ -231,13 +231,13 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   if (ok) {
     pos = input->tell();
     if (!readRowHeightZone(*sheet)) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       ok = m_mainParser->readStructZone("SpreadsheetRowHeight", false);
     }
   }
 
   if (!ok)
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
 #if 0
   else {
     ascFile.addPos(input->tell());
@@ -258,9 +258,9 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos, WPX_SEEK_SET);
+  input->seek(endPos, RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWSpreadsheet::readZone1: spreadsheet\n"));
     return false;
   }
@@ -285,12 +285,12 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
   if (!fSize) {
     ascFile.addPos(pos);
     ascFile.addNote("Entries(SpreadsheetZone1)");
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
     return true;
   }
   long numElts = sz/fSize;
   if (numElts *fSize != sz) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWSpreadsheet::readZone1: unexpected size\n"));
     return false;
   }
@@ -299,7 +299,7 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
   ascFile.addNote("Entries(SpreadsheetZone1)");
 
   libmwaw::DebugStream f;
-  input->seek(pos+4, WPX_SEEK_SET);
+  input->seek(pos+4, RVNG_SEEK_SET);
   for (int i = 0; i < numElts; i++) {
     pos = input->tell();
 
@@ -314,7 +314,7 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
     }
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+fSize, WPX_SEEK_SET);
+    input->seek(pos+fSize, RVNG_SEEK_SET);
   }
   return true;
 }
@@ -326,7 +326,7 @@ bool CWSpreadsheet::readRowHeightZone(CWSpreadsheetInternal::Spreadsheet &sheet)
   long sz = (long) input->readULong(4);
   long endPos=pos+4+sz;
   if (!input->checkPosition(endPos)) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWSpreadsheet::readRowHeightZone: unexpected size\n"));
     return false;
   }
@@ -350,12 +350,12 @@ bool CWSpreadsheet::readRowHeightZone(CWSpreadsheetInternal::Spreadsheet &sheet)
   int fSz = (int) input->readULong(2);
   int hSz = (int) input->readULong(2);
   if (fSz!=4 || N *fSz+hSz+12 != sz) {
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWSpreadsheet::readRowHeightZone: unexpected size for fieldSize\n"));
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(endPos, WPX_SEEK_SET);
+    input->seek(endPos, RVNG_SEEK_SET);
     return true;
   }
   if (long(input->tell()) != pos+4+hSz)
@@ -364,7 +364,7 @@ bool CWSpreadsheet::readRowHeightZone(CWSpreadsheetInternal::Spreadsheet &sheet)
   ascFile.addNote(f.str().c_str());
 
   long debPos = endPos-N*4;
-  input->seek(debPos, WPX_SEEK_SET);
+  input->seek(debPos, RVNG_SEEK_SET);
   for (int i = 0; i < N; i++) {
     pos = input->tell();
 
@@ -409,7 +409,7 @@ bool CWSpreadsheet::sendSpreadsheet(int zId)
     if (c>=0 && c < int(sheet.m_colWidths.size()))
       colSize[size_t(fC)]=2.0f*(float) sheet.m_colWidths[size_t(c)];
   }
-  WPXPropertyList extras;
+  RVNGPropertyList extras;
   if (zId==1 && m_mainParser->getHeader() &&
       m_mainParser->getHeader()->getKind()==MWAWDocument::MWAW_K_SPREADSHEET)
     extras.insert("libmwaw:main_spreadsheet", 1);
@@ -418,9 +418,9 @@ bool CWSpreadsheet::sendSpreadsheet(int zId)
   listener->openTable(table, extras);
   for (int r=minData[1], fR=0; r <= maxData[1]; ++r, ++fR) {
     if (sheet.m_rowHeightMap.find(r)!=sheet.m_rowHeightMap.end())
-      listener->openTableRow((float)sheet.m_rowHeightMap.find(r)->second, WPX_POINT);
+      listener->openTableRow((float)sheet.m_rowHeightMap.find(r)->second, RVNG_POINT);
     else
-      listener->openTableRow((float)14, WPX_POINT);
+      listener->openTableRow((float)14, RVNG_POINT);
     for (int c=minData[0], fC=0; c <= maxData[0]; ++c, ++fC) {
       MWAWCell cell;
       cell.setPosition(Vec2i(fC,fR));

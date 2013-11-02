@@ -37,8 +37,6 @@
 
 #include <string.h>
 
-#include <libwpg/libwpg.h>
-
 #include "MWAWHeader.hxx"
 #include "MWAWParser.hxx"
 #include "MWAWPropertyHandler.hxx"
@@ -79,31 +77,31 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
 MWAWHeader *getHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, bool strict);
 bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader &header, bool strict);
 
-/** Small class used to reconstruct a WPXBinary with mimeType="image/mwaw-odg" created by libmwaw */
+/** Small class used to reconstruct a RVNGBinary with mimeType="image/mwaw-odg" created by libmwaw */
 class GraphicExporter : public MWAWPropertyHandler
 {
 public:
   /** constructor */
-  GraphicExporter(libwpg::WPGPaintInterface *output) : MWAWPropertyHandler(), m_output(output) { }
+  GraphicExporter(RVNGDrawingInterface *output) : MWAWPropertyHandler(), m_output(output) { }
   /** destructor */
   ~GraphicExporter() {};
 
   /** start an element (basic) */
-  void startElement(const char *psName, const WPXPropertyList &xPropList);
-  /** start an element ( with a WPXPropertyListVector parameter ) */
-  void startElement(const char *psName, const WPXPropertyList &xPropList,
-                    const WPXPropertyListVector &vector);
-  /** start an element ( with a WPXBinary parameter ) */
-  void startElement(const char *psName, const WPXPropertyList &xPropList,
-                    const WPXBinaryData &data);
+  void startElement(const char *psName, const RVNGPropertyList &xPropList);
+  /** start an element ( with a RVNGPropertyListVector parameter ) */
+  void startElement(const char *psName, const RVNGPropertyList &xPropList,
+                    const RVNGPropertyListVector &vector);
+  /** start an element ( with a RVNGBinary parameter ) */
+  void startElement(const char *psName, const RVNGPropertyList &xPropList,
+                    const RVNGBinaryData &data);
   /** end an element */
   void endElement(const char *psName);
   /** insert an element */
-  void insertElement(const char *) {
-    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: must be reimplement in subclass\n"));
-  }
+  void insertElement(const char *psName);
+  /** insert an element */
+  void insertElement(const char *psName, const RVNGPropertyList &xPropList);
   /** insert a sequence of character */
-  void characters(const WPXString &sCharacters) {
+  void characters(const RVNGString &sCharacters) {
     if (!m_output) return;
     m_output->insertText(sCharacters);
   }
@@ -113,12 +111,12 @@ private:
   /// operator= (undefined)
   GraphicExporter operator=(GraphicExporter const &);
   /** the interface output */
-  libwpg::WPGPaintInterface *m_output;
+  RVNGDrawingInterface *m_output;
 };
 
 }
 
-MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(WPXInputStream *input,  MWAWDocument::Type &type, Kind &kind)
+MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(RVNGInputStream *input,  MWAWDocument::Type &type, Kind &kind)
 {
   type = MWAW_T_UNKNOWN;
   kind = MWAW_K_UNKNOWN;
@@ -204,7 +202,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(WPXInputStream *inp
   }
 }
 
-MWAWDocument::Result MWAWDocument::parse(WPXInputStream *input, WPXDocumentInterface *documentInterface, char const */*password*/)
+MWAWDocument::Result MWAWDocument::parse(RVNGInputStream *input, RVNGTextInterface *documentInterface, char const */*password*/)
 {
   if (!input)
     return MWAW_R_UNKNOWN_ERROR;
@@ -241,7 +239,7 @@ MWAWDocument::Result MWAWDocument::parse(WPXInputStream *input, WPXDocumentInter
   return error;
 }
 
-bool MWAWDocument::decodeGraphic(WPXBinaryData const &binary, libwpg::WPGPaintInterface *paintInterface)
+bool MWAWDocument::decodeGraphic(RVNGBinaryData const &binary, RVNGDrawingInterface *paintInterface)
 {
   if (!paintInterface || !binary.size()) {
     MWAW_DEBUG_MSG(("MWAWDocument::decodeGraphic: called with no data or no converter\n"));
@@ -273,7 +271,7 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
       /** avoid very short file */
       if (!ip->hasResourceFork() && ip->size() < 10) return 0L;
 
-      ip->seek(0, WPX_SEEK_SET);
+      ip->seek(0, RVNG_SEEK_SET);
       ip->setReadInverted(false);
     } else if (!ip->hasResourceFork())
       return 0L;
@@ -426,23 +424,32 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
 ////////////////////////////////////////////////////////////
 // GraphicExporter implementation
 ////////////////////////////////////////////////////////////
-void GraphicExporter::startElement(const char *psName, const WPXPropertyList &propList)
+void GraphicExporter::startElement(const char *psName, const RVNGPropertyList &propList)
 {
   if (!m_output) return;
   if (!psName) {
     MWAW_DEBUG_MSG(("GraphicExporter::startElement: called without any name\n"));
     return;
   }
-  if (strcmp(psName,"Graphics")==0)
-    m_output->startGraphics(propList);
+  if (strcmp(psName,"Document")==0)
+    m_output->startDocument(propList);
+  else if (strcmp(psName,"Page")==0)
+    m_output->startPage(propList);
   else if (strcmp(psName,"Layer")==0)
     m_output->startLayer(propList);
-  else if (strcmp(psName,"TextLine")==0)
-    m_output->startTextLine(propList);
-  else if (strcmp(psName,"TextSpan")==0)
-    m_output->startTextSpan(propList);
+  else if (strcmp(psName,"Span")==0)
+    m_output->closeSpan();
   else if (strcmp(psName,"EmbeddedGraphics")==0)
     m_output->startEmbeddedGraphics(propList);
+
+  else if (strcmp(psName,"SetMetaData")==0)
+    m_output->setDocumentMetaData(propList);
+
+  else if (strcmp(psName,"OrderedListLevel")==0)
+    m_output->openOrderedListLevel(propList);
+  else if (strcmp(psName,"UnorderedListLevel")==0)
+    m_output->openUnorderedListLevel(propList);
+
   else if (strcmp(psName,"Rectangle")==0)
     m_output->drawRectangle(propList);
   else if (strcmp(psName,"Ellipse")==0)
@@ -452,26 +459,26 @@ void GraphicExporter::startElement(const char *psName, const WPXPropertyList &pr
   }
 }
 
-void GraphicExporter::startElement(const char *psName, const WPXPropertyList &propList,
-                                   const WPXPropertyListVector &vector)
+void GraphicExporter::startElement(const char *psName, const RVNGPropertyList &propList,
+                                   const RVNGPropertyListVector &vector)
 {
   if (!m_output) return;
   if (!psName) {
     MWAW_DEBUG_MSG(("GraphicExporter::startElement: called without any name\n"));
     return;
   }
-  if (strcmp(psName,"TextObject")==0) {
+  if (strcmp(psName,"TextObject")==0)
     m_output->startTextObject(propList, vector);
-    return;
-  }
-  if (strcmp(psName,"SetStyle")==0) {
+  else if (strcmp(psName,"ListElement")==0)
+    m_output->openListElement(propList, vector);
+  else if (strcmp(psName,"Paragraph")==0)
+    m_output->openParagraph(propList, vector);
+  else if (strcmp(psName,"SetStyle")==0)
     m_output->setStyle(propList, vector);
-    return;
-  }
-  if (strcmp(psName,"Polygon")==0 || strcmp(psName,"Polyline")==0 ||
-      strcmp(psName,"Path")==0) {
+  else if (strcmp(psName,"Polygon")==0 || strcmp(psName,"Polyline")==0 ||
+           strcmp(psName,"Path")==0) {
 #ifdef DEBUG
-    if (!WPXPropertyList::Iter(propList).last()) {
+    if (!RVNGPropertyList::Iter(propList).last()) {
       MWAW_DEBUG_MSG(("GraphicExporter::startElement: Polyline, Polygon, Path called with propList, ignored\n"));
     }
 #endif
@@ -481,13 +488,13 @@ void GraphicExporter::startElement(const char *psName, const WPXPropertyList &pr
       m_output->drawPolyline(vector);
     else
       m_output->drawPath(vector);
-    return;
+  } else {
+    MWAW_DEBUG_MSG(("GraphicExporter::startElement: called with unexpected name %s\n", psName));
   }
-  MWAW_DEBUG_MSG(("GraphicExporter::startElement: called with unexpected name %s\n", psName));
 }
 
-void GraphicExporter::startElement(const char *psName, const WPXPropertyList &propList,
-                                   const WPXBinaryData &data)
+void GraphicExporter::startElement(const char *psName, const RVNGPropertyList &propList,
+                                   const RVNGBinaryData &data)
 {
   if (!m_output) return;
   if (!psName) {
@@ -508,18 +515,28 @@ void GraphicExporter::endElement(const char *psName)
     MWAW_DEBUG_MSG(("GraphicExporter::endElement: called without any name\n"));
     return;
   }
-  if (strcmp(psName,"Graphics")==0)
-    m_output->endGraphics();
+  if (strcmp(psName,"Document")==0)
+    m_output->endDocument();
+  else if (strcmp(psName,"Page")==0)
+    m_output->endPage();
   else if (strcmp(psName,"Layer")==0)
     m_output->endLayer();
   else if (strcmp(psName,"EmbeddedGraphics")==0)
     m_output->endEmbeddedGraphics();
-  else if (strcmp(psName,"TextLine")==0)
-    m_output->endTextLine();
-  else if (strcmp(psName,"TextSpan")==0)
-    m_output->endTextSpan();
+  else if (strcmp(psName,"Span")==0)
+    m_output->closeSpan();
   else if (strcmp(psName,"TextObject")==0)
     m_output->endTextObject();
+
+  else if (strcmp(psName,"Paragraph")==0)
+    m_output->closeParagraph();
+  else if (strcmp(psName,"ListElement")==0)
+    m_output->closeListElement();
+  else if (strcmp(psName,"OrderedListLevel")==0)
+    m_output->closeOrderedListLevel();
+  else if (strcmp(psName,"UnorderedListLevel")==0)
+    m_output->closeUnorderedListLevel();
+
 #ifdef DEBUG
   else if (strcmp(psName, "SetStyle") && strcmp(psName, "Rectangle") &&
            strcmp(psName, "Rectangle") && strcmp(psName, "Ellipse") &&
@@ -528,6 +545,42 @@ void GraphicExporter::endElement(const char *psName)
     MWAW_DEBUG_MSG(("GraphicExporter::endElement: called with unexpected name %s\n", psName));
   }
 #endif
+}
+
+void GraphicExporter::insertElement(const char *psName)
+{
+  if (!m_output) return;
+  if (!psName) {
+    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called without any name\n"));
+    return;
+  }
+  if (strcmp(psName,"Tab")==0)
+    m_output->insertTab();
+  else if (strcmp(psName,"Space")==0)
+    m_output->insertSpace();
+  else if (strcmp(psName,"LineBreak")==0)
+    m_output->insertLineBreak();
+  else {
+    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
+  }
+}
+
+void GraphicExporter::insertElement(const char *psName, const RVNGPropertyList &xPropList)
+{
+  if (!m_output) return;
+  if (!psName) {
+    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called without any name\n"));
+    return;
+  }
+  if (strcmp(psName,"Field")==0) {
+    if (xPropList["libmwaw:type"])
+      m_output->insertField(xPropList["libmwaw:type"]->getStr(), xPropList);
+    else {
+      MWAW_DEBUG_MSG(("GraphicExporter::insertElement: can not find field type\n"));
+    }
+  } else {
+    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
+  }
 }
 
 }

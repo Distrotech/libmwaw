@@ -32,7 +32,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge-stream/librevenge-stream.h>
 #include <libmwaw/libmwaw.hxx>
 #include "RawDocumentGenerator.h"
 
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 		return printUsage();
 
 
-	WPXFileStream input(file);
+	RVNGFileStream input(file);
 
 	MWAWDocument::Type type;
 	MWAWDocument::Kind kind;

@@ -6,8 +6,8 @@ AC_PREREQ([2.60])
 # Version informations
 # ====================
 m4_define([libmwaw_version_major],[0])
-m4_define([libmwaw_version_minor],[2])
-m4_define([libmwaw_version_micro],[1])
+m4_define([libmwaw_version_minor],[3])
+m4_define([libmwaw_version_micro],[0])
 m4_define([libmwaw_version],[libmwaw_version_major.libmwaw_version_minor.libmwaw_version_micro])
 
 # =============
@@ -38,17 +38,9 @@ PKG_PROG_PKG_CONFIG([0.20])
 # ====================
 # Find additional apps
 # ====================
-PKG_CHECK_MODULES([WPD],[
-    libwpd-0.9 >= 0.9.5
-    libwpd-stream-0.9 >= 0.9.5
-])
-AC_SUBST(WPD_CFLAGS)
-AC_SUBST(WPD_LIBS)
-PKG_CHECK_MODULES([WPG],[
-    libwpg-0.2 >= 0.2.2
-])
-AC_SUBST(WPG_CFLAGS)
-AC_SUBST(WPG_LIBS)
+PKG_CHECK_MODULES([REVENGE],[librevenge-0.0 librevenge-stream-0.0])
+AC_SUBST(REVENGE_CFLAGS)
+AC_SUBST(REVENGE_LIBS)
 
 # =================================
 # Libtool/Version Makefile settings

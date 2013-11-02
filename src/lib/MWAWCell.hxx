@@ -43,7 +43,7 @@
 
 #include "libmwaw_internal.hxx"
 
-class WPXPropertyList;
+class RVNGPropertyList;
 
 class MWAWTable;
 
@@ -75,7 +75,7 @@ public:
   virtual ~MWAWCell() {}
 
   /** adds to the propList*/
-  void addTo(WPXPropertyList &propList) const;
+  void addTo(RVNGPropertyList &propList) const;
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, MWAWCell const &cell);

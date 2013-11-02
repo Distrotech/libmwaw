@@ -41,8 +41,8 @@
 
 #include "libmwaw_internal.hxx"
 
-#include <libwpd/libwpd.h>
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge/librevenge.h>
+#include <librevenge-stream/librevenge-stream.h>
 #include <libmwaw/libmwaw.hxx>
 
 #include "MWAWPropertyHandler.hxx"
@@ -58,7 +58,7 @@ MWAWPropertyHandlerEncoder::MWAWPropertyHandlerEncoder()
 }
 
 void MWAWPropertyHandlerEncoder::startElement
-(const char *psName, const WPXPropertyList &xPropList)
+(const char *psName, const RVNGPropertyList &xPropList)
 {
   m_f << 'S';
   writeString(psName);
@@ -66,7 +66,7 @@ void MWAWPropertyHandlerEncoder::startElement
 }
 
 void MWAWPropertyHandlerEncoder::startElement
-(const char *psName, const WPXPropertyList &xPropList, const WPXPropertyListVector &vect)
+(const char *psName, const RVNGPropertyList &xPropList, const RVNGPropertyListVector &vect)
 {
   m_f << 'V';
   writeString(psName);
@@ -77,7 +77,7 @@ void MWAWPropertyHandlerEncoder::startElement
 }
 
 void MWAWPropertyHandlerEncoder::startElement
-(const char *psName, const WPXPropertyList &xPropList, const WPXBinaryData &data)
+(const char *psName, const RVNGPropertyList &xPropList, const RVNGBinaryData &data)
 {
   m_f << 'B';
   writeString(psName);
@@ -98,13 +98,20 @@ void MWAWPropertyHandlerEncoder::insertElement(const char *psName)
   writeString(psName);
 }
 
+void MWAWPropertyHandlerEncoder::insertElement(const char *psName, const RVNGPropertyList &xPropList)
+{
+  m_f << 'J';
+  writeString(psName);
+  writePropertyList(xPropList);
+}
+
 void MWAWPropertyHandlerEncoder::endElement(const char *psName)
 {
   m_f << 'E';
   writeString(psName);
 }
 
-void MWAWPropertyHandlerEncoder::characters(WPXString const &sCharacters)
+void MWAWPropertyHandlerEncoder::characters(RVNGString const &sCharacters)
 {
   if (sCharacters.len()==0) return;
   m_f << 'T';
@@ -125,7 +132,7 @@ void MWAWPropertyHandlerEncoder::writeLong(long val)
   m_f.write((const char *)allValue, 4);
 }
 
-void MWAWPropertyHandlerEncoder::writeProperty(const char *key, const WPXProperty &prop)
+void MWAWPropertyHandlerEncoder::writeProperty(const char *key, const RVNGProperty &prop)
 {
   if (!key) {
     MWAW_DEBUG_MSG(("MWAWPropertyHandlerEncoder::writeProperty: key is NULL\n"));
@@ -135,9 +142,9 @@ void MWAWPropertyHandlerEncoder::writeProperty(const char *key, const WPXPropert
   writeString(prop.getStr().cstr());
 }
 
-void MWAWPropertyHandlerEncoder::writePropertyList(const WPXPropertyList &xPropList)
+void MWAWPropertyHandlerEncoder::writePropertyList(const RVNGPropertyList &xPropList)
 {
-  WPXPropertyList::Iter i(xPropList);
+  RVNGPropertyList::Iter i(xPropList);
   int numElt = 0;
   for (i.rewind(); i.next(); ) numElt++;
   writeInteger(numElt);
@@ -145,7 +152,7 @@ void MWAWPropertyHandlerEncoder::writePropertyList(const WPXPropertyList &xPropL
     writeProperty(i.key(),*i());
 }
 
-bool MWAWPropertyHandlerEncoder::getData(WPXBinaryData &data)
+bool MWAWPropertyHandlerEncoder::getData(RVNGBinaryData &data)
 {
   data.clear();
   std::string d=m_f.str();
@@ -170,6 +177,7 @@ bool MWAWPropertyHandlerEncoder::getData(WPXBinaryData &data)
  *  - [startElement3:name proplist:prop binarydata:data]:
  *          char 'B', [string] name, prop, data
  *  - [insertElement:name]: char 'I', [string] name
+ *  - [insertElement2:name]: char 'J', [string] name, prop
  *  - [endElement:name ]: char 'E', [string] name
  *  - [characters:s ]: char 'T', [string] s
  *            - if len(s)==0, we write nothing
@@ -182,9 +190,9 @@ public:
   MWAWPropertyHandlerDecoder(MWAWPropertyHandler *hdl=0L):m_handler(hdl), m_openTag() {}
 
   //! tries to read the data
-  bool readData(WPXBinaryData const &encoded) {
+  bool readData(RVNGBinaryData const &encoded) {
     try {
-      WPXInputStream *inp = const_cast<WPXInputStream *>(encoded.getDataStream());
+      RVNGInputStream *inp = const_cast<RVNGInputStream *>(encoded.getDataStream());
       if (!inp) return false;
 
       while (!inp->atEOS()) {
@@ -209,6 +217,9 @@ public:
         case 'I':
           if (!readInsertElement(*inp)) return false;
           break;
+        case 'J':
+          if (!readInsertElementWithList(*inp)) return false;
+          break;
         case 'E':
           if (!readEndElement(*inp)) return false;
           break;
@@ -228,14 +239,14 @@ public:
 
 protected:
   //! reads an startElement
-  bool readStartElement(WPXInputStream &input) {
+  bool readStartElement(RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
     if (s.empty()) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElement: can not read tag name\n"));
       return false;
     }
-    WPXPropertyList lists;
+    RVNGPropertyList lists;
     if (!readPropertyList(input, lists)) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElement: can not read propertyList for tag %s\n",
                       s.c_str()));
@@ -249,7 +260,7 @@ protected:
   }
 
   //! reads an startElement
-  bool readStartElementWithVector(WPXInputStream &input) {
+  bool readStartElementWithVector(RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
     if (s.empty()) {
@@ -257,13 +268,13 @@ protected:
       return false;
     }
 
-    WPXPropertyList lists;
+    RVNGPropertyList lists;
     if (!readPropertyList(input, lists)) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithVector: can not read propertyList for tag %s\n",
                       s.c_str()));
       return false;
     }
-    WPXPropertyListVector vect;
+    RVNGPropertyListVector vect;
     if (!readPropertyListVector(input, vect)) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithVector: can not read propertyVector for tag %s\n",
                       s.c_str()));
@@ -276,7 +287,7 @@ protected:
     return true;
   }
   //! reads an startElement
-  bool readStartElementWithBinary(WPXInputStream &input) {
+  bool readStartElementWithBinary(RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
     if (s.empty()) {
@@ -284,7 +295,7 @@ protected:
       return false;
     }
 
-    WPXPropertyList lists;
+    RVNGPropertyList lists;
     if (!readPropertyList(input, lists)) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithBinary: can not read propertyList for tag %s\n",
                       s.c_str()));
@@ -297,7 +308,7 @@ protected:
       return false;
     }
 
-    WPXBinaryData data;
+    RVNGBinaryData data;
     if (sz) {
       unsigned long read;
       unsigned char const *dt=input.read((unsigned long) sz, read);
@@ -314,7 +325,7 @@ protected:
   }
 
   //! reads an simple element
-  bool readInsertElement(WPXInputStream &input) {
+  bool readInsertElement(RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
 
@@ -326,8 +337,28 @@ protected:
     return true;
   }
 
+  //! reads an simple element
+  bool readInsertElementWithList(RVNGInputStream &input) {
+    std::string s;
+    if (!readString(input, s)) return false;
+
+    if (s.empty()) {
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithList find empty tag\n"));
+      return false;
+    }
+    RVNGPropertyList lists;
+    if (!readPropertyList(input, lists)) {
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithList: can not read propertyList for tag %s\n",
+                      s.c_str()));
+      return false;
+    }
+
+    if (m_handler) m_handler->insertElement(s.c_str(), lists);
+    return true;
+  }
+
   //! reads an endElement
-  bool readEndElement(WPXInputStream &input) {
+  bool readEndElement(RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
 
@@ -352,11 +383,11 @@ protected:
   }
 
   //! reads a set of characters
-  bool readCharacters(WPXInputStream &input) {
+  bool readCharacters(RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
     if (!s.length()) return true;
-    if (m_handler) m_handler->characters(WPXString(s.c_str()));
+    if (m_handler) m_handler->characters(RVNGString(s.c_str()));
     return true;
   }
 
@@ -365,7 +396,7 @@ protected:
   //
 
   //! low level: reads a property vector: number of properties list followed by list of properties list
-  bool readPropertyListVector(WPXInputStream &input, WPXPropertyListVector &vect) {
+  bool readPropertyListVector(RVNGInputStream &input, RVNGPropertyListVector &vect) {
     int numElt;
     if (!readInteger(input, numElt)) return false;
 
@@ -375,7 +406,7 @@ protected:
       return false;
     }
     for (int i = 0; i < numElt; i++) {
-      WPXPropertyList lists;
+      RVNGPropertyList lists;
       if (readPropertyList(input, lists)) {
         vect.append(lists);
         continue;
@@ -387,7 +418,7 @@ protected:
   }
 
   //! low level: reads a property list: number of properties followed by list of properties
-  bool readPropertyList(WPXInputStream &input, WPXPropertyList &lists) {
+  bool readPropertyList(RVNGInputStream &input, RVNGPropertyList &lists) {
     int numElt;
     if (!readInteger(input, numElt)) return false;
 
@@ -405,7 +436,7 @@ protected:
   }
 
   //! low level: reads a property and its value, adds it to \a list
-  bool readProperty(WPXInputStream &input, WPXPropertyList &list) {
+  bool readProperty(RVNGInputStream &input, RVNGPropertyList &list) {
     std::string key, val;
     if (!readString(input, key)) return false;
     if (!readString(input, val)) return false;
@@ -424,19 +455,19 @@ protected:
         iss >> remain;
         if (iss.peek() == std::char_traits<char>::eof()) {
           if (remain=="pt") {
-            list.insert(key.c_str(), res/72., WPX_INCH);
+            list.insert(key.c_str(), res/72., RVNG_INCH);
             return true;
           }
           if (remain=="in") {
-            list.insert(key.c_str(), res, WPX_INCH);
+            list.insert(key.c_str(), res, RVNG_INCH);
             return true;
           }
           if (remain=="%") {
-            list.insert(key.c_str(), res/100., WPX_PERCENT);
+            list.insert(key.c_str(), res/100., RVNG_PERCENT);
             return true;
           }
           if (remain=="*") {
-            list.insert(key.c_str(), res/1440., WPX_INCH);
+            list.insert(key.c_str(), res/1440., RVNG_INCH);
             return true;
           }
         }
@@ -447,7 +478,7 @@ protected:
   }
 
   //! low level: reads a string : size and string
-  bool readString(WPXInputStream &input, std::string &s) {
+  bool readString(RVNGInputStream &input, std::string &s) {
     int numC = 0;
     if (!readInteger(input, numC)) return false;
     if (numC==0) {
@@ -465,7 +496,7 @@ protected:
   }
 
   //! low level: reads an integer value
-  static bool readInteger(WPXInputStream &input, int &val) {
+  static bool readInteger(RVNGInputStream &input, int &val) {
     long res;
     if (!readLong(input, res))
       return false;
@@ -473,7 +504,7 @@ protected:
     return true;
   }
   //! low level: reads an long value
-  static bool readLong(WPXInputStream &input, long &val) {
+  static bool readLong(RVNGInputStream &input, long &val) {
     unsigned long numRead = 0;
     const unsigned char *dt = input.read(4, numRead);
     if (dt == 0L || numRead != 4) {
@@ -500,33 +531,16 @@ protected:
 // MWAWPropertyHandler
 //
 ////////////////////////////////////////////////////
-bool MWAWPropertyHandler::checkData(WPXBinaryData const &encoded)
+bool MWAWPropertyHandler::checkData(RVNGBinaryData const &encoded)
 {
   MWAWPropertyHandlerDecoder decod;
   return decod.readData(encoded);
 }
 
-bool MWAWPropertyHandler::readData(WPXBinaryData const &encoded)
+bool MWAWPropertyHandler::readData(RVNGBinaryData const &encoded)
 {
   MWAWPropertyHandlerDecoder decod(this);
   return decod.readData(encoded);
-}
-
-void MWAWPropertyHandler::startElement(const char *, const WPXPropertyList &,
-                                       const WPXPropertyListVector &)
-{
-  MWAW_DEBUG_MSG(("MWAWPropertyHandler::startElement: with a propertyListVector must be reimplement in subclass\n"));
-}
-
-void MWAWPropertyHandler::startElement(const char *, const WPXPropertyList &,
-                                       const WPXBinaryData &)
-{
-  MWAW_DEBUG_MSG(("MWAWPropertyHandler::startElement: with a WPXBinaryData must be reimplement in subclass\n"));
-}
-
-void MWAWPropertyHandler::insertElement(const char *)
-{
-  MWAW_DEBUG_MSG(("MWAWPropertyHandler::insertElement: must be reimplement in subclass\n"));
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

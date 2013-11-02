@@ -41,7 +41,7 @@
 
 #include "MWAWParser.hxx"
 
-class WPXBinaryData;
+class RVNGBinaryData;
 
 namespace MWParserInternal
 {
@@ -69,7 +69,7 @@ public:
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(WPXDocumentInterface *documentInterface);
+  void parse(RVNGTextInterface *documentInterface);
 
 protected:
   //! inits all internal variables
@@ -79,7 +79,7 @@ protected:
   void setListener(MWAWContentListenerPtr listen);
 
   //! creates the listener which will be associated to the document
-  void createDocument(WPXDocumentInterface *documentInterface);
+  void createDocument(RVNGTextInterface *documentInterface);
 
   //! send a zone ( 0: MAIN ZONE, 1 : HEADER, 2 : FOOTER )
   bool sendWindow(int zone);
@@ -115,7 +115,7 @@ protected:
   bool readGraphic(MWParserInternal::Information const &info);
   /** test if a graphic is empty. In v5, some empty graphic are added
       before a page break, so it better to remove them */
-  static bool isMagicPic(WPXBinaryData const &dt);
+  static bool isMagicPic(RVNGBinaryData const &dt);
 
   //! read a text zone
   bool readText(MWParserInternal::Information const &info, std::vector<int> const &lineHeight);

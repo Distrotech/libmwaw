@@ -12,8 +12,8 @@ Group: System Environment/Libraries
 URL: http://libmwaw.sourceforge.net/
 BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
 License: LGPL
-BuildRequires: libwpd-devel >= 0.9.0, gcc-c++, libstdc++-devel, pkgconfig
-Requires: libwpd >= 0.9.0
+BuildRequires: librevenge-devel >= 0.0.0, gcc-c++, libstdc++-devel, pkgconfig
+Requires: librevenge >= 0.0.0
 
 %description
 Library that handles ClarisWorks, MacWrite, WriteNow documents.

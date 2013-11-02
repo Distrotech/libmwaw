@@ -36,7 +36,7 @@
 #include <limits>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWContentListener.hxx"
 #include "MWAWFont.hxx"
@@ -249,7 +249,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   }
   long pos = m_input->tell();
   reinterpret_cast<MSW1Parser *>(m_parser)->sendText(m_zone);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 }
 
@@ -299,15 +299,15 @@ void MSW1Parser::removeLastCharIfEOL(MWAWEntry &entry)
   if (!entry.valid()) return;
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
-  input->seek(entry.end()-1, WPX_SEEK_SET);
+  input->seek(entry.end()-1, RVNG_SEEK_SET);
   if (input->readLong(1)==0xd)
     entry.setLength(entry.length()-1);
-  input->seek(actPos, WPX_SEEK_SET);
+  input->seek(actPos, RVNG_SEEK_SET);
 }
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MSW1Parser::parse(WPXDocumentInterface *docInterface)
+void MSW1Parser::parse(RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -356,7 +356,7 @@ void MSW1Parser::sendMain()
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MSW1Parser::createDocument(WPXDocumentInterface *documentInterface)
+void MSW1Parser::createDocument(RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -597,7 +597,7 @@ bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
   font = MSW1ParserInternal::Font();
   libmwaw::DebugStream f;
   MWAWInputStreamPtr input = getInput();
-  input->seek(fPos, WPX_SEEK_SET);
+  input->seek(fPos, RVNG_SEEK_SET);
   int sz = (int) input->readLong(1);
   if (sz < 1 || sz > 0x7f || !input->checkPosition(fPos+1+sz)) {
     MWAW_DEBUG_MSG(("MSW1Parser::readFont: the zone size seems bad\n"));
@@ -661,7 +661,7 @@ bool MSW1Parser::readParagraph(long fPos, MSW1ParserInternal::Paragraph &para)
   para = MSW1ParserInternal::Paragraph();
   libmwaw::DebugStream f;
   MWAWInputStreamPtr input = getInput();
-  input->seek(fPos, WPX_SEEK_SET);
+  input->seek(fPos, RVNG_SEEK_SET);
   int sz = (int) input->readLong(1);
   if (sz < 1 || sz > 0x7f || !input->checkPosition(fPos+1+sz)) {
     MWAW_DEBUG_MSG(("MSW1Parser::readParagraph: the zone size seems bad\n"));
@@ -715,7 +715,7 @@ bool MSW1Parser::readParagraph(long fPos, MSW1ParserInternal::Paragraph &para)
   if (sz >= 12) {
     val = (int) input->readLong(2);
     if (val)
-      para.setInterline(double(val)/1440.0, WPX_INCH);
+      para.setInterline(double(val)/1440.0, RVNG_INCH);
   }
   if (sz >= 14) {
     val = (int) input->readLong(2);
@@ -796,7 +796,7 @@ bool MSW1Parser::readPageBreak(Vec2i limits)
   }
   libmwaw::DebugStream f;
   long pos = limits[0]*0x80;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(PageBreak):";
   int N = (int) input->readULong(2);
   f << "N=" << N << ",";
@@ -843,7 +843,7 @@ bool MSW1Parser::readFootnoteCorrespondance(Vec2i limits)
   long textEnd = m_state->m_eot;
   MSW1ParserInternal::PLC plc(MSW1ParserInternal::FOOTNOTE);
   long pos = limits[0]*0x80;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(Footnote):";
   int N = (int) input->readULong(2);
   int N1 = (int) input->readULong(2);
@@ -904,7 +904,7 @@ bool MSW1Parser::readZones(Vec2i limits)
 
   MSW1ParserInternal::PLC plc(MSW1ParserInternal::ZONE);
   long pos = limits[0]*0x80;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(Zones):";
   int N = (int) input->readULong(2);
   int N1 = (int) input->readULong(2);
@@ -949,7 +949,7 @@ bool MSW1Parser::readDocInfo(Vec2i limits)
 
   libmwaw::DebugStream f;
   long pos = limits[0]*0x80;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   f << "Entries(DocInfo):";
   int val;
   for (int i=0; i < 2; i++) { // find 66|0
@@ -1095,7 +1095,7 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
     f.str("");
     f << "Entries(" << what << ")[" << n << "]:";
     long pos = z*0x80;
-    input->seek(pos+0x7f, WPX_SEEK_SET);
+    input->seek(pos+0x7f, RVNG_SEEK_SET);
     int N = (int) input->readULong(1);
     f << "N=" << N << ",";
     if (4+N*6 > 0x7f) {
@@ -1106,7 +1106,7 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
       ascii().addNote(f.str().c_str());
       continue;
     }
-    input->seek(pos, WPX_SEEK_SET);
+    input->seek(pos, RVNG_SEEK_SET);
     long fPos = (long) input->readULong(4);
 
     for (int i = 0; i < N; i++) {
@@ -1157,7 +1157,7 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
           posIdMap[dataPos] = plc.m_id;
         } else
           plc.m_id = posIdMap.find(dataPos)->second;
-        input->seek(actPos, WPX_SEEK_SET);
+        input->seek(actPos, RVNG_SEEK_SET);
       }
       m_state->m_plcMap.insert
       (std::multimap<long,MSW1ParserInternal::PLC>::value_type(fPos, plc));
@@ -1186,14 +1186,14 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
     int numCols = m_state->m_numColumns;
     if (numCols > 1 && !getListener()->isSectionOpened()) {
       MWAWSection sec;
-      sec.setColumns(numCols, getPageWidth()/double(numCols), WPX_INCH, m_state->m_columnsSep);
+      sec.setColumns(numCols, getPageWidth()/double(numCols), RVNG_INCH, m_state->m_columnsSep);
       getListener()->openSection(sec);
     }
   }
   long pos = textEntry.begin();
   MWAWInputStreamPtr input = getInput();
 
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "TextContent:";
   int actFId=-1, actRId = -1, actPage=0;
@@ -1327,7 +1327,7 @@ bool MSW1Parser::checkHeader(MWAWHeader *header, bool strict)
     return false;
   }
   long pos = 0;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   int val = (int) input->readULong(2);
   switch (val) {
   case 0xfe32:

@@ -33,16 +33,16 @@
 #include <iostream>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "TableStyle.h"
 
-void TableStyleManager::openTable(WPXPropertyListVector const &colList)
+void TableStyleManager::openTable(RVNGPropertyListVector const &colList)
 {
 	std::vector<double> colWidths;
 	for (unsigned long i = 0; i < colList.count(); i++)
 	{
-		WPXPropertyList const &prop=colList[i];
+		RVNGPropertyList const &prop=colList[i];
 		double tmp;
 		if (prop["style:column-width"] &&
 		        mwaw2html::getPointValue(*prop["style:column-width"], tmp))
@@ -94,7 +94,7 @@ bool TableStyleManager::getColumnsWidth(int col, int numSpanned, double &w) cons
 	return true;
 }
 
-std::string TableStyleManager::getCellClass(WPXPropertyList const &pList)
+std::string TableStyleManager::getCellClass(RVNGPropertyList const &pList)
 {
 	std::string content=getCellContent(pList);
 	std::map<std::string, std::string>::iterator it=m_cellContentNameMap.find(content);
@@ -106,7 +106,7 @@ std::string TableStyleManager::getCellClass(WPXPropertyList const &pList)
 	return s.str();
 }
 
-std::string TableStyleManager::getRowClass(WPXPropertyList const &pList)
+std::string TableStyleManager::getRowClass(RVNGPropertyList const &pList)
 {
 	std::string content=getRowContent(pList);
 	std::map<std::string, std::string>::iterator it=m_rowContentNameMap.find(content);
@@ -134,7 +134,7 @@ void TableStyleManager::send(std::ostream &out)
 	}
 }
 
-std::string TableStyleManager::getCellContent(WPXPropertyList const &pList) const
+std::string TableStyleManager::getCellContent(RVNGPropertyList const &pList) const
 {
 	std::stringstream s;
 	s << "{\n";
@@ -157,7 +157,7 @@ std::string TableStyleManager::getCellContent(WPXPropertyList const &pList) cons
 	}
 	if (pList["fo:text-align"])
 	{
-		if (pList["fo:text-align"]->getStr() == WPXString("end")) // stupid OOo convention..
+		if (pList["fo:text-align"]->getStr() == RVNGString("end")) // stupid OOo convention..
 			s << "\ttext-align:right;\n";
 		else
 			s << "\ttext-align:" << pList["fo:text-align"]->getStr().cstr() << ";\n";
@@ -183,7 +183,7 @@ std::string TableStyleManager::getCellContent(WPXPropertyList const &pList) cons
 	return s.str();
 }
 
-std::string TableStyleManager::getRowContent(WPXPropertyList const &pList) const
+std::string TableStyleManager::getRowContent(RVNGPropertyList const &pList) const
 {
 	std::stringstream s;
 	s << "{\n";

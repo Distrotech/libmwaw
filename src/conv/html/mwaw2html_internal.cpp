@@ -33,18 +33,18 @@
 #include <string.h>
 #include <cstring>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "mwaw2html_internal.h"
 
 namespace mwaw2html
 {
-bool getPointValue(WPXProperty const &prop, double &res)
+bool getPointValue(RVNGProperty const &prop, double &res)
 {
 	res = prop.getDouble();
 
 	// try to guess the type
-	WPXString str = prop.getStr();
+	RVNGString str = prop.getStr();
 
 	// point->pt, twip->*, inch -> in
 	char c = str.len() ? str.cstr()[str.len()-1] : ' ';

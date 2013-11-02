@@ -36,7 +36,7 @@
 */
 
 /*
- This file is inspired from libwpd WPXOLEStream.cpp
+ This file is inspired from libwpd RVNGOLEStream.cpp
 */
 
 #ifdef DEBUG_WITH_FILES
@@ -52,7 +52,7 @@
 #include <string>
 #include <vector>
 
-#include "libwpd-stream/libwpd-stream.h"
+#include "librevenge-stream/librevenge-stream.h"
 
 #include "libmwaw_internal.hxx"
 #include "MWAWInputStream.hxx"
@@ -919,7 +919,7 @@ class IStorage
   friend class IStream;
 public:
   //! constructor
-  IStorage( shared_ptr<WPXInputStream> is );
+  IStorage( shared_ptr<RVNGInputStream> is );
   //! destructor
   ~IStorage() { }
   //! returns a directory entry corresponding to a index
@@ -998,7 +998,7 @@ protected:
   /** load the file structure and fill m_result */
   void load();
 
-  shared_ptr<WPXInputStream> m_input; // the input file
+  shared_ptr<RVNGInputStream> m_input; // the input file
   Header m_header;           // storage header
   DirTree m_dirtree;         // directory tree
   AllocTable m_bbat;         // allocation table for big blocks
@@ -1020,7 +1020,7 @@ private:
 };
 
 
-IStorage::IStorage( shared_ptr<WPXInputStream> is ) :
+IStorage::IStorage( shared_ptr<RVNGInputStream> is ) :
   m_input( is ),
   m_header(), m_dirtree(), m_bbat(), m_sbat(), m_sb_blocks(),
   m_isLoad(false), m_result(Storage::Ok),
@@ -1035,7 +1035,7 @@ bool IStorage::isStructuredDocument()
   if (!m_input) return false;
   long actPos = m_input->tell();
   load();
-  m_input->seek(actPos, WPX_SEEK_SET);
+  m_input->seek(actPos, RVNG_SEEK_SET);
   return (m_result == Storage::Ok);
 }
 
@@ -1093,7 +1093,7 @@ unsigned long IStorage::loadBigBlocks
     unsigned long pos =  m_bbat.m_blockSize * ( block+1 );
     unsigned long p = (m_bbat.m_blockSize < maxlen-bytes) ? m_bbat.m_blockSize : maxlen-bytes;
 
-    m_input->seek(long(pos), WPX_SEEK_SET);
+    m_input->seek(long(pos), RVNG_SEEK_SET);
     unsigned long numBytesRead = 0;
     const unsigned char *buf = m_input->read(p, numBytesRead);
     std::memcpy(data+bytes, buf, numBytesRead);
@@ -1156,7 +1156,7 @@ void IStorage::load()
 
   // load header
   unsigned long numBytesRead = 0;
-  m_input->seek(0, WPX_SEEK_SET);
+  m_input->seek(0, RVNG_SEEK_SET);
   const unsigned char *buf = m_input->read(512, numBytesRead);
 
   if (numBytesRead < 512)
@@ -1429,7 +1429,7 @@ public:
   ~OStorage() { }
 
   //! try to return a stream containing the ole file
-  shared_ptr<WPXInputStream> getStream() {
+  shared_ptr<RVNGInputStream> getStream() {
     shared_ptr<MWAWStringStream> res;
     try {
       if (!updateToSave())
@@ -1685,7 +1685,7 @@ unsigned OStorage::insertData(unsigned char const *buffer, unsigned long len, bo
 ////////////////////////////////////////////////////////////
 //                       Storage
 ////////////////////////////////////////////////////////////
-Storage::Storage( shared_ptr<WPXInputStream> is ) : m_io(0)
+Storage::Storage( shared_ptr<RVNGInputStream> is ) : m_io(0)
 {
   m_io = new IStorage( is );
 }
@@ -1740,9 +1740,9 @@ bool Storage::isDirectory(const std::string &name)
   return isDir;
 }
 
-shared_ptr<WPXInputStream> Storage::getSubStream(const std::string &name)
+shared_ptr<RVNGInputStream> Storage::getSubStream(const std::string &name)
 {
-  shared_ptr<WPXInputStream> res;
+  shared_ptr<RVNGInputStream> res;
   if (!isStructuredDocument() || !name.length())
     return res;
   if (isDirectory(name))
@@ -1777,9 +1777,9 @@ shared_ptr<WPXInputStream> Storage::getSubStream(const std::string &name)
   return res;
 }
 
-shared_ptr<WPXInputStream> Storage::getSubStreamForDirectory(const std::string &name)
+shared_ptr<RVNGInputStream> Storage::getSubStreamForDirectory(const std::string &name)
 {
-  shared_ptr<WPXInputStream> res;
+  shared_ptr<RVNGInputStream> res;
   if (!isStructuredDocument() || !name.length() || !isDirectory(name))
     return res;
 

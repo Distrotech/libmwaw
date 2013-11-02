@@ -122,7 +122,7 @@ MWAWBorder Border::getBorder(int type)
   return res;
 }
 
-void Border::addToFrame(WPXPropertyList &pList) const
+void Border::addToFrame(RVNGPropertyList &pList) const
 {
   if (!m_backColor.isWhite())
     pList.insert("fo:background-color", m_backColor.str().c_str());
@@ -214,7 +214,7 @@ bool Border::read(shared_ptr<FWStruct::Entry> zone, int fSz)
   m_type[2] = (int) input->readLong(1); // sepV
   m_flags = (int) input->readULong(2);
   m_extra = f.str();
-  input->seek(pos+fSz, WPX_SEEK_SET);
+  input->seek(pos+fSz, RVNG_SEEK_SET);
   return true;
 }
 
@@ -453,7 +453,7 @@ bool ZoneHeader::read(shared_ptr<FWStruct::Entry> zone)
   val = (int)input->readLong(2); // alway -2
   if (val != -2) {
     if (val > 0 || val < -2) {
-      input->seek(pos, WPX_SEEK_SET);
+      input->seek(pos, RVNG_SEEK_SET);
       return false;
     }
     f << "#g4=" << val << ",";
@@ -502,7 +502,7 @@ bool ZoneHeader::read(shared_ptr<FWStruct::Entry> zone)
   if (input->tell()!=pos+72)
     asciiFile.addDelimiter(input->tell(),'|');
   asciiFile.addPos(pos);
-  input->seek(pos+72, WPX_SEEK_SET);
+  input->seek(pos+72, RVNG_SEEK_SET);
   f.str("");
   return true;
 }

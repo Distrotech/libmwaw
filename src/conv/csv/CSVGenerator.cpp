@@ -40,8 +40,8 @@
 #include <fstream>
 #include <iostream>
 
-#include <libwpd/libwpd.h>
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge/librevenge.h>
+#include <librevenge-stream/librevenge-stream.h>
 #include <libmwaw/libmwaw.hxx>
 
 CSVGenerator::CSVGenerator(char const *fName) : m_output(), m_outputInit(false), m_dataStarted(false), m_firstFieldSend(false)
@@ -70,7 +70,7 @@ void CSVGenerator::insertTab()
 	getOutput() << char(0x9);
 }
 
-void CSVGenerator::insertText(const WPXString &text)
+void CSVGenerator::insertText(const RVNGString &text)
 {
 	if (!m_dataStarted)
 		return;
@@ -101,7 +101,7 @@ void CSVGenerator::insertLineBreak()
 	getOutput() << '\n';
 }
 
-void CSVGenerator::openTable(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
+void CSVGenerator::openTable(const RVNGPropertyList &propList, const RVNGPropertyListVector &columns)
 {
 	if (!propList["libmwaw:main_spreadsheet"] && !propList["libmwaw:main_database"])
 		return;
@@ -122,7 +122,7 @@ void CSVGenerator::closeTable()
 	m_dataStarted=false;
 }
 
-void CSVGenerator::openTableRow(const WPXPropertyList & /* propList */)
+void CSVGenerator::openTableRow(const RVNGPropertyList & /* propList */)
 {
 	if (!m_dataStarted)
 		return;
@@ -136,7 +136,7 @@ void CSVGenerator::closeTableRow()
 	getOutput() << "\n";
 }
 
-void CSVGenerator::openTableCell(const WPXPropertyList & /* propList */)
+void CSVGenerator::openTableCell(const RVNGPropertyList & /* propList */)
 {
 	if (!m_dataStarted)
 		return;

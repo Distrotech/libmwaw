@@ -42,7 +42,7 @@
 #  include <ostream>
 #  include <string>
 
-#  include <libwpd/libwpd.h>
+#  include <librevenge/librevenge.h>
 
 #  include "libmwaw_internal.hxx"
 #  include "MWAWPictData.hxx"
@@ -57,13 +57,13 @@ public:
     return MWAWPictData::PictMac;
   }
 
-  //! returns the final WPXBinary data
-  virtual bool getBinary(WPXBinaryData &res, std::string &s) const {
+  //! returns the final RVNGBinary data
+  virtual bool getBinary(RVNGBinaryData &res, std::string &s) const {
     if (!valid() || isEmpty()) return false;
 
     s = "image/pict";
     if (m_version == 1) {
-      WPXBinaryData dataV2;
+      RVNGBinaryData dataV2;
       if (convertPict1To2(m_data, dataV2)) {
         createFileData(dataV2, res);
         return true;
@@ -94,17 +94,17 @@ public:
   }
 
   //! convert a Pict1.0 in Pict2.0, if possible
-  static bool convertPict1To2(WPXBinaryData const &orig, WPXBinaryData &result);
+  static bool convertPict1To2(RVNGBinaryData const &orig, RVNGBinaryData &result);
 
   /** \brief tries to parse a Pict1.0 and dump the file
    * Actually mainly used for debugging, but will be a first step,
    * if we want convert such a Pict in a Odg picture */
-  static void parsePict1(WPXBinaryData const &orig, std::string const &fname);
+  static void parsePict1(RVNGBinaryData const &orig, std::string const &fname);
 
   /** \brief tries to parse a Pict2. and dump the file
    * Actually mainly used for debugging, but will be a first step,
    * if we want convert such a Pict in a Odg picture */
-  static void parsePict2(WPXBinaryData const &orig, std::string const &fname);
+  static void parsePict2(RVNGBinaryData const &orig, std::string const &fname);
 
 protected:
   //! protected constructor: use check to construct a picture

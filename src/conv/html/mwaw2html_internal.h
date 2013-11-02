@@ -66,10 +66,10 @@ struct MWAW_shared_ptr_noop_deleter
 #define MWAW_DEBUG_MSG(M)
 #endif
 
-class WPXProperty;
+class RVNGProperty;
 namespace mwaw2html
 {
-bool getPointValue(WPXProperty const &prop, double &res);
+bool getPointValue(RVNGProperty const &prop, double &res);
 }
 #endif /* MWAW2HTML_INTERNAL_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

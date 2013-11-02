@@ -39,14 +39,14 @@
 #include <ctype.h>
 #include <locale.h>
 
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge-stream/librevenge-stream.h>
 
 #include "libmwaw_internal.hxx"
 
 /** namespace used to regroup all libwpd functions, enumerations which we have redefined for internal usage */
 namespace libmwaw
 {
-uint8_t readU8(WPXInputStream *input)
+uint8_t readU8(RVNGInputStream *input)
 {
   unsigned long numBytesRead;
   uint8_t const *p = input->read(sizeof(uint8_t), numBytesRead);
@@ -57,7 +57,7 @@ uint8_t readU8(WPXInputStream *input)
   return *p;
 }
 
-void appendUnicode(uint32_t val, WPXString &buffer)
+void appendUnicode(uint32_t val, RVNGString &buffer)
 {
   uint8_t first;
   int len;
@@ -217,7 +217,7 @@ int MWAWBorder::compare(MWAWBorder const &orig) const
   if (m_color > orig.m_color) return 1;
   return 0;
 }
-bool MWAWBorder::addTo(WPXPropertyList &propList, std::string const which) const
+bool MWAWBorder::addTo(RVNGPropertyList &propList, std::string const which) const
 {
   std::stringstream stream, field;
   stream << m_width << "pt ";

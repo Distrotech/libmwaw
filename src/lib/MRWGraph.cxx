@@ -38,7 +38,7 @@
 #include <map>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
 #include "MWAWContentListener.hxx"
@@ -113,7 +113,7 @@ struct Token {
     return false;
   }
   //! add border properties
-  void addPictBorderProperties(WPXPropertyList &pList) const {
+  void addPictBorderProperties(RVNGPropertyList &pList) const {
     if (!hasPictBorders()) return;
     bool sameBorders=true;
     for (int i=0; i < 3; ++i) {
@@ -459,7 +459,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   long pos = m_input->tell();
   m_graphParser->sendText(m_id);
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -663,7 +663,7 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
   for (size_t l=0; l < listW.size(); ++l) totalWidth += listW[l];
   if (lineH<totalWidth) lineH=totalWidth;
   Box2f box(Vec2f(0,-lineH/2.f), Vec2f(sz)+Vec2f(0,lineH/2.f));
-  MWAWPosition pos(box[0], box[1], WPX_POINT);
+  MWAWPosition pos(box[0], box[1], RVNG_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
   MWAWGraphicStyle pStyle;
   MWAWGraphicShape shape;
@@ -683,7 +683,7 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
     shape.m_bdBox=box;
     m_parserState->m_listener->insertPicture(pos,shape, pStyle);
   } else {
-    WPXBinaryData data;
+    RVNGBinaryData data;
     std::string mime;
     graphicListener->startGraphic(Box2f(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH)));
     float actH = (lineH-totalWidth)/2.f;
@@ -707,8 +707,8 @@ void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
-  input->seek(tkn.m_pictData.begin(), WPX_SEEK_SET);
-  WPXBinaryData data;
+  input->seek(tkn.m_pictData.begin(), RVNG_SEEK_SET);
+  RVNGBinaryData data;
   input->readDataBlock(tkn.m_pictData.length(), data);
 
 #ifdef DEBUG_WITH_FILES
@@ -724,13 +724,13 @@ void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
     MWAW_DEBUG_MSG(("MRWGraph::sendPicture: can not find the picture dim\n"));
     dim = Vec2i(100,100);
   }
-  MWAWPosition posi(Vec2i(0,0),dim,WPX_POINT);
+  MWAWPosition posi(Vec2i(0,0),dim,RVNG_POINT);
   posi.setRelativePosition(MWAWPosition::Char);
-  WPXPropertyList extras;
+  RVNGPropertyList extras;
   tkn.addPictBorderProperties(extras);
   if (m_parserState->m_listener)
     m_parserState->m_listener->insertPicture(posi, data, "image/pict", extras);
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
 }
 
 void MRWGraph::sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const &pos)
@@ -744,8 +744,8 @@ void MRWGraph::sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long actPos = input->tell();
-  input->seek(ps.m_pos.begin(), WPX_SEEK_SET);
-  WPXBinaryData data;
+  input->seek(ps.m_pos.begin(), RVNG_SEEK_SET);
+  RVNGBinaryData data;
   input->readDataBlock(ps.m_pos.length(), data);
 
 #ifdef DEBUG_WITH_FILES
@@ -761,7 +761,7 @@ void MRWGraph::sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const
     pictPos.setSize(Vec2f(100,100));
   if (m_parserState->m_listener)
     m_parserState->m_listener->insertPicture(pictPos, data, "image/ps");
-  input->seek(actPos, WPX_SEEK_SET);
+  input->seek(actPos, RVNG_SEEK_SET);
 }
 
 ////////////////////////////////////////////////////////////
@@ -777,7 +777,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList, 100);
@@ -878,7 +878,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
       f << "###bl" << i << "=" << data << ",";
     } else {
       f << "bl" << i << "=[";
-      input->seek(data.m_pos.begin(), WPX_SEEK_SET);
+      input->seek(data.m_pos.begin(), RVNG_SEEK_SET);
       for (int j = 0; j < int(data.m_pos.length()/2); j++) {
         if (i==1 && j == 1 && data.m_pos.length() >= 12) {
           for (int c=0; c<4; ++c)
@@ -918,7 +918,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
     zone.m_tokenMap[tkn.m_id[0]] = tkn;
     ascFile.addNote(f.str().c_str());
 
-    input->seek(entry.end(), WPX_SEEK_SET);
+    input->seek(entry.end(), RVNG_SEEK_SET);
     return true;
   }
 
@@ -969,7 +969,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
   f2 << entry.name() << "(III):" << f.str();
   ascFile.addNote(f2.str().c_str());
 
-  input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), RVNG_SEEK_SET);
   return true;
 }
 
@@ -989,7 +989,7 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = data.m_pos.begin(), endPos = data.m_pos.end();
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, RVNG_SEEK_SET);
   // fixme: this depends on the token type
   long val;
   int firstExpectedVal= (tkn.m_type==0x14) ? 28 :
@@ -998,7 +998,7 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
     val = (long) input->readLong(2);
     if (val) f << "#f" << i << "=" << val << ",";
   }
-  input->seek(pos+firstExpectedVal, WPX_SEEK_SET);
+  input->seek(pos+firstExpectedVal, RVNG_SEEK_SET);
   std::string fValue("");
   switch (tkn.m_type) {
   case 0x14:
@@ -1018,7 +1018,7 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
         break;
       val = (long) input->readULong(1);
       if (!val) {
-        input->seek(-1, WPX_SEEK_CUR);
+        input->seek(-1, RVNG_SEEK_CUR);
         break;
       }
       fValue += (char) val;
@@ -1085,7 +1085,7 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), WPX_SEEK_SET);
+  input->seek(entry.begin(), RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList, 1+3);
@@ -1121,8 +1121,8 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
     psFile.m_pos = data.m_pos;
     zone.m_psZoneMap[psFile.m_id] = psFile;
 #ifdef DEBUG_WITH_FILES
-    input->seek(data.m_pos.begin(), WPX_SEEK_SET);
-    WPXBinaryData file;
+    input->seek(data.m_pos.begin(), RVNG_SEEK_SET);
+    RVNGBinaryData file;
     input->readDataBlock(data.m_pos.length(), file);
 
     static int volatile psName = 0;
@@ -1137,7 +1137,7 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
   f << entry.name() << ":" << psFile;
   ascFile.addPos(entry.begin());
   ascFile.addNote(f.str().c_str());
-  input->seek(entry.end(), WPX_SEEK_SET);
+  input->seek(entry.end(), RVNG_SEEK_SET);
   return true;
 }
 
@@ -1163,7 +1163,7 @@ void MRWGraph::flushExtra()
   std::map<int,MRWGraphInternal::Zone>::const_iterator it = m_state->m_zoneMap.begin();
   std::map<long,MRWGraphInternal::Token>::const_iterator tIt;
   std::map<long,MRWGraphInternal::PSZone>::const_iterator psIt;
-  MWAWPosition pictPos(Vec2i(0,0),Vec2i(0,0),WPX_POINT);
+  MWAWPosition pictPos(Vec2i(0,0),Vec2i(0,0),RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
 
   while (it != m_state->m_zoneMap.end()) {

@@ -36,7 +36,7 @@
 
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -74,7 +74,7 @@ public:
    *  By convention if \a character=0xfffd(undef), no character is added */
   virtual void insertUnicode(uint32_t character)=0;
   //! adds a unicode string
-  virtual void insertUnicodeString(WPXString const &str)=0;
+  virtual void insertUnicodeString(RVNGString const &str)=0;
 
   //! adds a tab
   virtual void insertTab()=0;

@@ -3,8 +3,8 @@ INSTALLATION
 General
 =======
 
-Since libmwaw was based on libwpd code (for convenience), you need to install
-libwpd in order to build libmwaw. You can get libwpd from:
+Since libmwaw was based on librevenge code (for convenience), you need to install
+libwpd in order to build libmwaw. You can get librevenge from:
 
 - libwpd <http://libwpd.sourceforge.net/download.html>
 
