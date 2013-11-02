@@ -31,6 +31,12 @@
 * instead of those above.
 */
 
+/** \file MWAWContentListener.hxx
+ * Defines MWAWContentListener: the libmwaw word processor listener
+ *
+ * \note this class is the only class which does the interface with
+ * the WPXDocumentInterface
+ */
 #ifndef MWAW_CONTENT_LISTENER_H
 #define MWAW_CONTENT_LISTENER_H
 
@@ -53,7 +59,7 @@ struct DocumentState;
 struct State;
 }
 
-/** This class contents the main functions needed to create a Writer Document */
+/** This class contents the main functions needed to create a Word processing Document */
 class MWAWContentListener : public MWAWListener
 {
 public:
@@ -190,10 +196,13 @@ public:
   void insertBreak(BreakType breakType);
 
 protected:
+  //! does open a section (low level)
   void _openSection();
+  //! does close a section (low level)
   void _closeSection();
-
+  //! does open a new page (low level)
   void _openPageSpan(bool sendHeaderFooters=true);
+  //! does close a page (low level)
   void _closePageSpan();
 
   void _startSubDocument();
@@ -249,7 +258,9 @@ protected:
   WPXDocumentInterface *m_documentInterface;
 
 private:
+  //! copy constructor (unimplemented)
   MWAWContentListener(const MWAWContentListener &);
+  //! operator= (unimplemented)
   MWAWContentListener &operator=(const MWAWContentListener &);
 };
 

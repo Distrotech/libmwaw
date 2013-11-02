@@ -31,6 +31,13 @@
 * instead of those above.
 */
 
+/** \file MWAWContentListener.cxx
+ * Implements MWAWContentListener: the libmwaw word processor listener
+ *
+ * \note this class is the only class which does the interface with
+ * the WPXDocumentInterface
+ */
+
 #include <cstring>
 #include <iomanip>
 #include <sstream>

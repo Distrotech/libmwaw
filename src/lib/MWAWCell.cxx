@@ -31,6 +31,9 @@
 * instead of those above.
 */
 
+/** \file MWAWCell.cxx
+ * Implements MWAWCell (cell content and format)
+ */
 #include <time.h>
 
 #include <iomanip>

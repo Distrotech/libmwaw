@@ -31,7 +31,8 @@
 * instead of those above.
 */
 
-/* Define some classes used to store a Cell
+/** \file MWAWCell.hxx
+ * Defines MWAWCell (cell content and format)
  */
 
 #ifndef MWAW_CELL_H

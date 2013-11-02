@@ -31,6 +31,10 @@
 * instead of those above.
 */
 
+/** \file MWAWDocument.cxx
+ * libmwaw API: implementation of main interface functions
+ */
+
 #include <string.h>
 
 #include <libwpg/libwpg.h>
@@ -75,7 +79,7 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
 MWAWHeader *getHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, bool strict);
 bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader &header, bool strict);
 
-/** Small class used to interface a graphic reconstruction */
+/** Small class used to reconstruct a WPXBinary with mimeType="image/mwaw-odg" created by libmwaw */
 class GraphicExporter : public MWAWPropertyHandler
 {
 public:
@@ -104,7 +108,9 @@ public:
     m_output->insertText(sCharacters);
   }
 private:
+  /// copy constructor (undefined)
   GraphicExporter(GraphicExporter const &);
+  /// operator= (undefined)
   GraphicExporter operator=(GraphicExporter const &);
   /** the interface output */
   libwpg::WPGPaintInterface *m_output;
@@ -251,7 +257,6 @@ bool MWAWDocument::decodeGraphic(WPXBinaryData const &binary, libwpg::WPGPaintIn
   return true;
 }
 
-/** structure used to hide some functions needed by MWAWDocument (basically to check if the file is really supported). */
 namespace MWAWDocumentInternal
 {
 /** return the header corresponding to an input. Or 0L if no input are found */
@@ -419,7 +424,7 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
 }
 
 ////////////////////////////////////////////////////////////
-//
+// GraphicExporter implementation
 ////////////////////////////////////////////////////////////
 void GraphicExporter::startElement(const char *psName, const WPXPropertyList &propList)
 {

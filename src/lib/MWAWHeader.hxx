@@ -33,6 +33,9 @@
 
 #ifndef MWAW_HEADER_H
 #define MWAW_HEADER_H
+/** \file MWAWHeader.hxx
+ * Defines MWAWHeader (document's type, version, kind)
+ */
 
 #include <vector>
 
@@ -55,7 +58,7 @@ public:
 
       \param type the document type
       \param version the file version
-      \param king the document kind (default word processing document)
+      \param kind the document kind (default word processing document)
   */
   MWAWHeader(MWAWDocument::Type type=MWAWDocument::MWAW_T_UNKNOWN, int version=0,
              MWAWDocument::Kind kind = MWAWDocument::MWAW_K_TEXT);

@@ -31,6 +31,10 @@
 * instead of those above.
 */
 
+/** \file MWAWHeader.cxx
+ * Implements MWAWHeader (document's type, version, kind)
+ */
+
 #include <string.h>
 #include <iostream>
 
