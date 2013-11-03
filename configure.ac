@@ -357,6 +357,16 @@ AC_SUBST(ZLIB_CFLAGS)
 AC_SUBST(ZLIB_LIBS)
 AM_CONDITIONAL([WITH_LIBMWAW_ZIP], [test "x$with_zip" != "xno"])
 
+# ==================
+# Find boost headers
+# ==================
+AC_CHECK_HEADERS(
+        boost/math/special_functions/fpclassify.hpp,
+    [],
+    [AC_MSG_ERROR([Required boost headers not found.])],
+    []
+)
+
 # =============
 # Documentation
 # =============

@@ -33,13 +33,14 @@
 
 #include <time.h>
 
-#include <cmath>
 #include <cstring>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
 #include <set>
 #include <sstream>
+
+#include <boost/math/special_functions/fpclassify.hpp>
 
 #include <libwpd/libwpd.h>
 
@@ -969,7 +970,7 @@ void CWDbaseContent::send(double val, CWStyleManager::CellFormat const &format)
     if (type>=10&&type<=11) type += 4;
     else if (type>=14) type=16;
   }
-  if (type <= 0 || type >=16 || type==10 || type==11 || !std::isfinite(val)) {
+  if (type <= 0 || type >=16 || type==10 || type==11 || !boost::math::isfinite(val)) {
     s << val;
     listener->insertUnicodeString(s.str().c_str());
     return;
