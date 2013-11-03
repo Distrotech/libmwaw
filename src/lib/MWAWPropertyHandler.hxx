@@ -54,20 +54,16 @@ public:
   //! destructor
   virtual ~MWAWPropertyHandler() {}
 
-  //! starts an element
-  virtual void startElement(const char *psName, const RVNGPropertyList &xPropList) = 0;
-  //! starts an element ( given a vector list )
-  virtual void startElement(const char *psName, const RVNGPropertyList &xPropList,
-                            const RVNGPropertyListVector &vect) = 0;
-  //! starts an element ( given a binary data )
-  virtual void startElement(const char *psName, const RVNGPropertyList &xPropList,
-                            const RVNGBinaryData &data) = 0;
-  //! ends an element
-  virtual void endElement(const char *psName) = 0;
   //! inserts a simple element
   virtual void insertElement(const char *psName) = 0;
-  //! inserts a simple element ( given a property list)
+  //! inserts an element ( given a property list )
   virtual void insertElement(const char *psName, const RVNGPropertyList &xPropList) = 0;
+  //! inserts an element ( given a vector list )
+  virtual void insertElement(const char *psName, const RVNGPropertyList &xPropList,
+                             const RVNGPropertyListVector &vect) = 0;
+  //! inserts an element ( given a binary data )
+  virtual void insertElement(const char *psName, const RVNGPropertyList &xPropList,
+                             const RVNGBinaryData &data) = 0;
   //! writes a list of characters
   virtual void characters(RVNGString const &sCharacters) = 0;
 
@@ -87,14 +83,12 @@ public:
  *  - [propertyListVector:v]: a int: \#v followed by v[0], v[1], ...
  *  - [binaryData:d]: a int32 d.size() followed by the data content
  *
- *  - [startElement:name proplist:prop]: char 'S', [string] name, prop
- *  - [startElement2:name proplist:prop proplistvector:vector]:
+ *  - [insertElement:name]: char 'E', [string] name
+ *  - [insertElement:name proplist:prop]: char 'S', [string] name, prop
+ *  - [insertElement:name proplist:prop proplistvector:vector]:
  *          char 'V', [string] name, prop, vector
- *  - [startElement3:name proplist:prop binarydata:data]:
+ *  - [insertElement:name proplist:prop binarydata:data]:
  *          char 'B', [string] name, prop, data
- *  - [insertElement:name]: char 'I', [string] name
- *  - [insertElement2:name proplist:prop]: char 'J', [string] name
- *  - [endElement:name ]:  char 'E', [string] name
  *  - [characters:s ]: char 'T', [string] s
  *            - if len(s)==0, we write nothing
  *            - the string is written as is (ie. we do not escaped any characters).
@@ -105,20 +99,16 @@ public:
   //! constructor
   MWAWPropertyHandlerEncoder();
 
-  //! starts an element
-  void startElement(const char *psName, const RVNGPropertyList &xPropList);
-  //! starts an element given a property list vector
-  void startElement(const char *psName, const RVNGPropertyList &xPropList,
-                    const RVNGPropertyListVector &vect);
-  //! starts an element given a binary data
-  void startElement(const char *psName, const RVNGPropertyList &xPropList,
-                    const RVNGBinaryData &data);
-  //! insert a simple element
+  //! inserts an element
   void insertElement(const char *psName);
-  //! inserts a simple element ( given a property list)
+  //! inserts an element given a property list
   void insertElement(const char *psName, const RVNGPropertyList &xPropList);
-  //! ends an element
-  void endElement(const char *psName);
+  //! inserts an element given a property list vector
+  void insertElement(const char *psName, const RVNGPropertyList &xPropList,
+                     const RVNGPropertyListVector &vect);
+  //! inserts an element given a binary data
+  void insertElement(const char *psName, const RVNGPropertyList &xPropList,
+                     const RVNGBinaryData &data);
   //! writes a list of characters
   void characters(RVNGString const &sCharacters);
   //! retrieves the data

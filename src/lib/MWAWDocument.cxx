@@ -86,20 +86,16 @@ public:
   /** destructor */
   ~GraphicExporter() {};
 
-  /** start an element (basic) */
-  void startElement(const char *psName, const RVNGPropertyList &xPropList);
-  /** start an element ( with a RVNGPropertyListVector parameter ) */
-  void startElement(const char *psName, const RVNGPropertyList &xPropList,
-                    const RVNGPropertyListVector &vector);
-  /** start an element ( with a RVNGBinary parameter ) */
-  void startElement(const char *psName, const RVNGPropertyList &xPropList,
-                    const RVNGBinaryData &data);
-  /** end an element */
-  void endElement(const char *psName);
   /** insert an element */
   void insertElement(const char *psName);
-  /** insert an element */
+  /** insert an element ( with a RVNGPropertyList ) */
   void insertElement(const char *psName, const RVNGPropertyList &xPropList);
+  /** insert an element ( with a RVNGPropertyListVector parameter ) */
+  void insertElement(const char *psName, const RVNGPropertyList &xPropList,
+                     const RVNGPropertyListVector &vector);
+  /** insert an element ( with a RVNGBinary parameter ) */
+  void insertElement(const char *psName, const RVNGPropertyList &xPropList,
+                     const RVNGBinaryData &data);
   /** insert a sequence of character */
   void characters(const RVNGString &sCharacters) {
     if (!m_output) return;
@@ -424,129 +420,6 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
 ////////////////////////////////////////////////////////////
 // GraphicExporter implementation
 ////////////////////////////////////////////////////////////
-void GraphicExporter::startElement(const char *psName, const RVNGPropertyList &propList)
-{
-  if (!m_output) return;
-  if (!psName) {
-    MWAW_DEBUG_MSG(("GraphicExporter::startElement: called without any name\n"));
-    return;
-  }
-  if (strcmp(psName,"Document")==0)
-    m_output->startDocument(propList);
-  else if (strcmp(psName,"Page")==0)
-    m_output->startPage(propList);
-  else if (strcmp(psName,"Layer")==0)
-    m_output->startLayer(propList);
-  else if (strcmp(psName,"Span")==0)
-    m_output->closeSpan();
-  else if (strcmp(psName,"EmbeddedGraphics")==0)
-    m_output->startEmbeddedGraphics(propList);
-
-  else if (strcmp(psName,"SetMetaData")==0)
-    m_output->setDocumentMetaData(propList);
-
-  else if (strcmp(psName,"OrderedListLevel")==0)
-    m_output->openOrderedListLevel(propList);
-  else if (strcmp(psName,"UnorderedListLevel")==0)
-    m_output->openUnorderedListLevel(propList);
-
-  else if (strcmp(psName,"Rectangle")==0)
-    m_output->drawRectangle(propList);
-  else if (strcmp(psName,"Ellipse")==0)
-    m_output->drawEllipse(propList);
-  else {
-    MWAW_DEBUG_MSG(("GraphicExporter::startElement: called with unexpected name %s\n", psName));
-  }
-}
-
-void GraphicExporter::startElement(const char *psName, const RVNGPropertyList &propList,
-                                   const RVNGPropertyListVector &vector)
-{
-  if (!m_output) return;
-  if (!psName) {
-    MWAW_DEBUG_MSG(("GraphicExporter::startElement: called without any name\n"));
-    return;
-  }
-  if (strcmp(psName,"TextObject")==0)
-    m_output->startTextObject(propList, vector);
-  else if (strcmp(psName,"ListElement")==0)
-    m_output->openListElement(propList, vector);
-  else if (strcmp(psName,"Paragraph")==0)
-    m_output->openParagraph(propList, vector);
-  else if (strcmp(psName,"SetStyle")==0)
-    m_output->setStyle(propList, vector);
-  else if (strcmp(psName,"Polygon")==0 || strcmp(psName,"Polyline")==0 ||
-           strcmp(psName,"Path")==0) {
-#ifdef DEBUG
-    if (!RVNGPropertyList::Iter(propList).last()) {
-      MWAW_DEBUG_MSG(("GraphicExporter::startElement: Polyline, Polygon, Path called with propList, ignored\n"));
-    }
-#endif
-    if (strcmp(psName,"Polygon")==0)
-      m_output->drawPolygon(vector);
-    else if (strcmp(psName,"Polyline")==0)
-      m_output->drawPolyline(vector);
-    else
-      m_output->drawPath(vector);
-  } else {
-    MWAW_DEBUG_MSG(("GraphicExporter::startElement: called with unexpected name %s\n", psName));
-  }
-}
-
-void GraphicExporter::startElement(const char *psName, const RVNGPropertyList &propList,
-                                   const RVNGBinaryData &data)
-{
-  if (!m_output) return;
-  if (!psName) {
-    MWAW_DEBUG_MSG(("GraphicExporter::startElement: called without any name\n"));
-    return;
-  }
-  if (strcmp(psName,"GraphicObject")==0) {
-    m_output->drawGraphicObject(propList, data);
-    return;
-  }
-  MWAW_DEBUG_MSG(("GraphicExporter::startElement: called with unexpected name %s\n", psName));
-}
-
-void GraphicExporter::endElement(const char *psName)
-{
-  if (!m_output) return;
-  if (!psName) {
-    MWAW_DEBUG_MSG(("GraphicExporter::endElement: called without any name\n"));
-    return;
-  }
-  if (strcmp(psName,"Document")==0)
-    m_output->endDocument();
-  else if (strcmp(psName,"Page")==0)
-    m_output->endPage();
-  else if (strcmp(psName,"Layer")==0)
-    m_output->endLayer();
-  else if (strcmp(psName,"EmbeddedGraphics")==0)
-    m_output->endEmbeddedGraphics();
-  else if (strcmp(psName,"Span")==0)
-    m_output->closeSpan();
-  else if (strcmp(psName,"TextObject")==0)
-    m_output->endTextObject();
-
-  else if (strcmp(psName,"Paragraph")==0)
-    m_output->closeParagraph();
-  else if (strcmp(psName,"ListElement")==0)
-    m_output->closeListElement();
-  else if (strcmp(psName,"OrderedListLevel")==0)
-    m_output->closeOrderedListLevel();
-  else if (strcmp(psName,"UnorderedListLevel")==0)
-    m_output->closeUnorderedListLevel();
-
-#ifdef DEBUG
-  else if (strcmp(psName, "SetStyle") && strcmp(psName, "Rectangle") &&
-           strcmp(psName, "Rectangle") && strcmp(psName, "Ellipse") &&
-           strcmp(psName, "Polygon") && strcmp(psName, "Polyline") &&
-           strcmp(psName, "Path") && strcmp(psName, "GraphicObject")) {
-    MWAW_DEBUG_MSG(("GraphicExporter::endElement: called with unexpected name %s\n", psName));
-  }
-#endif
-}
-
 void GraphicExporter::insertElement(const char *psName)
 {
   if (!m_output) return;
@@ -554,33 +427,132 @@ void GraphicExporter::insertElement(const char *psName)
     MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called without any name\n"));
     return;
   }
-  if (strcmp(psName,"Tab")==0)
+
+  if (strcmp(psName,"CloseListElement")==0)
+    m_output->closeListElement();
+  else if (strcmp(psName,"CloseOrderedListLevel")==0)
+    m_output->closeOrderedListLevel();
+  else if (strcmp(psName,"CloseParagraph")==0)
+    m_output->closeParagraph();
+  else if (strcmp(psName,"CloseSpan")==0)
+    m_output->closeSpan();
+  else if (strcmp(psName,"CloseUnorderedListLevel")==0)
+    m_output->closeUnorderedListLevel();
+
+  else if (strcmp(psName,"Document")==0)
+    m_output->endDocument();
+  else if (strcmp(psName,"EndPage")==0)
+    m_output->endPage();
+  else if (strcmp(psName,"EndLayer")==0)
+    m_output->endLayer();
+  else if (strcmp(psName,"EndEmbeddedGraphics")==0)
+    m_output->endEmbeddedGraphics();
+  else if (strcmp(psName,"EndTextObject")==0)
+    m_output->endTextObject();
+
+  else if (strcmp(psName,"InsertTab")==0)
     m_output->insertTab();
-  else if (strcmp(psName,"Space")==0)
+  else if (strcmp(psName,"InsertSpace")==0)
     m_output->insertSpace();
-  else if (strcmp(psName,"LineBreak")==0)
+  else if (strcmp(psName,"InsertLineBreak")==0)
     m_output->insertLineBreak();
   else {
     MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
   }
 }
 
-void GraphicExporter::insertElement(const char *psName, const RVNGPropertyList &xPropList)
+void GraphicExporter::insertElement(const char *psName, const RVNGPropertyList &propList)
 {
   if (!m_output) return;
   if (!psName) {
     MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called without any name\n"));
     return;
   }
-  if (strcmp(psName,"Field")==0) {
-    if (xPropList["libmwaw:type"])
-      m_output->insertField(xPropList["libmwaw:type"]->getStr(), xPropList);
+
+  if (strcmp(psName,"DrawRectangle")==0)
+    m_output->drawRectangle(propList);
+  else if (strcmp(psName,"DrawEllipse")==0)
+    m_output->drawEllipse(propList);
+
+  else if (strcmp(psName,"InsertField")==0) {
+    if (propList["libmwaw:type"])
+      m_output->insertField(propList["libmwaw:type"]->getStr(), propList);
     else {
       MWAW_DEBUG_MSG(("GraphicExporter::insertElement: can not find field type\n"));
     }
-  } else {
+  }
+
+  else if (strcmp(psName,"OpenOrderedListLevel")==0)
+    m_output->openOrderedListLevel(propList);
+  else if (strcmp(psName,"OpenSpan")==0)
+    m_output->openSpan(propList);
+  else if (strcmp(psName,"OpenUnorderedListLevel")==0)
+    m_output->openUnorderedListLevel(propList);
+
+  else if (strcmp(psName,"SetMetaData")==0)
+    m_output->setDocumentMetaData(propList);
+
+  else if (strcmp(psName,"StartDocument")==0)
+    m_output->startDocument(propList);
+  else if (strcmp(psName,"StartPage")==0)
+    m_output->startPage(propList);
+  else if (strcmp(psName,"StartLayer")==0)
+    m_output->startLayer(propList);
+  else if (strcmp(psName,"StartEmbeddedGraphics")==0)
+    m_output->startEmbeddedGraphics(propList);
+
+  else {
     MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
   }
+}
+
+void GraphicExporter::insertElement(const char *psName, const RVNGPropertyList &propList,
+                                    const RVNGPropertyListVector &vector)
+{
+  if (!m_output) return;
+  if (!psName) {
+    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called without any name\n"));
+    return;
+  }
+  if (strcmp(psName,"DrawPath")==0 || strcmp(psName,"DrawPolygon")==0 || strcmp(psName,"DrawPolyline")==0) {
+#ifdef DEBUG
+    if (!RVNGPropertyList::Iter(propList).last()) {
+      MWAW_DEBUG_MSG(("GraphicExporter::insertElement: Polyline, Polygon, Path called with propList, ignored\n"));
+    }
+#endif
+    if (strcmp(psName,"DrawPolygon")==0)
+      m_output->drawPolygon(vector);
+    else if (strcmp(psName,"DrawPolyline")==0)
+      m_output->drawPolyline(vector);
+    else
+      m_output->drawPath(vector);
+  }
+  if (strcmp(psName,"StartTextObject")==0)
+    m_output->startTextObject(propList, vector);
+  else if (strcmp(psName,"OpenListElement")==0)
+    m_output->openListElement(propList, vector);
+  else if (strcmp(psName,"OpenParagraph")==0)
+    m_output->openParagraph(propList, vector);
+  else if (strcmp(psName,"SetStyle")==0)
+    m_output->setStyle(propList, vector);
+  else {
+    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
+  }
+}
+
+void GraphicExporter::insertElement(const char *psName, const RVNGPropertyList &propList,
+                                    const RVNGBinaryData &data)
+{
+  if (!m_output) return;
+  if (!psName) {
+    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called without any name\n"));
+    return;
+  }
+  if (strcmp(psName,"DrawGraphicObject")==0) {
+    m_output->drawGraphicObject(propList, data);
+    return;
+  }
+  MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
 }
 
 }

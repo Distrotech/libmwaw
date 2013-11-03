@@ -214,7 +214,7 @@ public:
   \li \c libwpd:id A unique integer identifier for the list
   \li \c libwpd:level The level of the list in the hierarchy
   */
-  void openOrderedListLevel(const RVNGPropertyList &/*propList*/) {}
+  void openOrderedListLevel(const RVNGPropertyList &propList);
 
   /**
   Called when a new unordered list level should be opened
@@ -222,17 +222,17 @@ public:
   \li \c libwpd:id A unique integer identifier for the list
   \li \c libwpd:level The level of the list in the hierarchy
   */
-  void openUnorderedListLevel(const RVNGPropertyList &/*propList*/) {}
+  void openUnorderedListLevel(const RVNGPropertyList &propList);
 
   /**
   Called when an unordered list level should be closed
   */
-  void closeOrderedListLevel() {}
+  void closeOrderedListLevel();
 
   /**
   Called when an ununordered list level should be closed
   */
-  void closeUnorderedListLevel() {}
+  void closeUnorderedListLevel();
 
   /**
   Called when a list element should be opened

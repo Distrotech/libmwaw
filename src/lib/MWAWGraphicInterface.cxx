@@ -119,106 +119,102 @@ bool MWAWGraphicInterface::getBinaryResult(RVNGBinaryData &result, std::string &
 
 void MWAWGraphicInterface::startDocument(const ::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("Graphics", list);
+  m_state->m_encoder.insertElement("StartDocument", list);
 }
 
 void MWAWGraphicInterface::endDocument()
 {
-  m_state->m_encoder.endElement("Graphics");
+  m_state->m_encoder.insertElement("EndDocument");
 }
 
-void MWAWGraphicInterface::setDocumentMetaData(const RVNGPropertyList &)
+void MWAWGraphicInterface::setDocumentMetaData(const RVNGPropertyList &list)
 {
+  m_state->m_encoder.insertElement("SetDocumentMetaData", list);
 }
 
-void MWAWGraphicInterface::startPage(const ::RVNGPropertyList &)
+void MWAWGraphicInterface::startPage(const ::RVNGPropertyList &list)
 {
+  m_state->m_encoder.insertElement("StartPage", list);
 }
 
 void MWAWGraphicInterface::endPage()
 {
+  m_state->m_encoder.insertElement("EndPage");
 }
 
 void MWAWGraphicInterface::setStyle(const ::RVNGPropertyList &list, const ::RVNGPropertyListVector &gradient)
 {
-  m_state->m_encoder.startElement("SetStyle", list, gradient);
-  m_state->m_encoder.endElement("SetStyle");
+  m_state->m_encoder.insertElement("SetStyle", list, gradient);
 }
 
 void MWAWGraphicInterface::startLayer(const ::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("Layer", list);
+  m_state->m_encoder.insertElement("StartLayer", list);
 }
 
 void MWAWGraphicInterface::endLayer()
 {
-  m_state->m_encoder.endElement("Layer");
+  m_state->m_encoder.insertElement("EndLayer");
 }
 
 void MWAWGraphicInterface::startEmbeddedGraphics(const ::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("EmbeddedGraphics", list);
+  m_state->m_encoder.insertElement("StartEmbeddedGraphics", list);
 }
 
 void MWAWGraphicInterface::endEmbeddedGraphics()
 {
-  m_state->m_encoder.endElement("EmbeddedGraphics");
+  m_state->m_encoder.insertElement("StartEmbeddedGraphics");
 }
 
 void MWAWGraphicInterface::drawRectangle(const ::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("Rectangle", list);
-  m_state->m_encoder.endElement("Rectangle");
+  m_state->m_encoder.insertElement("DrawRectangle", list);
 }
 
 void MWAWGraphicInterface::drawEllipse(const ::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("Ellipse", list);
-  m_state->m_encoder.endElement("Ellipse");
+  m_state->m_encoder.insertElement("DrawEllipse", list);
 }
 
 void MWAWGraphicInterface::drawPolygon(const ::RVNGPropertyListVector &vertices)
 {
-  m_state->m_encoder.startElement("Polygon", RVNGPropertyList(), vertices);
-  m_state->m_encoder.endElement("Polygon");
+  m_state->m_encoder.insertElement("DrawPolygon", RVNGPropertyList(), vertices);
 }
 
 void MWAWGraphicInterface::drawPolyline(const ::RVNGPropertyListVector &vertices)
 {
-  m_state->m_encoder.startElement("Polyline", RVNGPropertyList(), vertices);
-  m_state->m_encoder.endElement("Polyline");
+  m_state->m_encoder.insertElement("DrawPolyline", RVNGPropertyList(), vertices);
 }
 
 void MWAWGraphicInterface::drawPath(const ::RVNGPropertyListVector &path)
 {
-  m_state->m_encoder.startElement("Path", RVNGPropertyList(), path);
-  m_state->m_encoder.endElement("Path");
+  m_state->m_encoder.insertElement("DrawPath", RVNGPropertyList(), path);
 }
 
 void MWAWGraphicInterface::drawGraphicObject(const ::RVNGPropertyList &list, const ::RVNGBinaryData &binaryData)
 {
-  m_state->m_encoder.startElement("GraphicObject", list, binaryData);
-  m_state->m_encoder.endElement("GraphicObject");
+  m_state->m_encoder.insertElement("DrawGraphicObject", list, binaryData);
 }
 
 void MWAWGraphicInterface::startTextObject(const ::RVNGPropertyList &list, const ::RVNGPropertyListVector &path)
 {
-  m_state->m_encoder.startElement("TextObject", list, path);
+  m_state->m_encoder.insertElement("StartTextObject", list, path);
 }
 
 void MWAWGraphicInterface::endTextObject()
 {
-  m_state->m_encoder.endElement("TextObject");
+  m_state->m_encoder.insertElement("EndTextObject");
 }
 
 void MWAWGraphicInterface::insertTab()
 {
-  insertText("\t");
+  m_state->m_encoder.insertElement("InsertTab");
 }
 
 void MWAWGraphicInterface::insertSpace()
 {
-  insertText(" ");
+  m_state->m_encoder.insertElement("InsertSpace");
 }
 
 void MWAWGraphicInterface::insertText(const RVNGString &text)
@@ -228,20 +224,15 @@ void MWAWGraphicInterface::insertText(const RVNGString &text)
 
 void MWAWGraphicInterface::insertLineBreak()
 {
+  m_state->m_encoder.insertElement("InsertLineBreak");
   insertText("\n");
 }
 
-void MWAWGraphicInterface::insertField(const RVNGString &type, const RVNGPropertyList &/*list*/)
+void MWAWGraphicInterface::insertField(const RVNGString &type, const RVNGPropertyList &list)
 {
-  if (type=="text:title")
-    insertText("#TITLE#");
-  else if (type=="text:page-number")
-    insertText("#P#");
-  else if (type=="text-page-count")
-    insertText("#C#");
-  else {
-    MWAW_DEBUG_MSG(("MWAWGraphicInterface::insertField: find unknown type\n"));
-  }
+  RVNGPropertyList pList(list);
+  pList.insert("libmwaw:type", type);
+  m_state->m_encoder.insertElement("InsertField", pList);
 }
 
 void MWAWGraphicInterface::defineOrderedListLevel(const RVNGPropertyList &list)
@@ -254,34 +245,55 @@ void MWAWGraphicInterface::defineUnorderedListLevel(const RVNGPropertyList &list
   m_state->addListElement(list);
 }
 
+// OSNOLA: checkme: we must pass the list level definition there...
+void MWAWGraphicInterface::openOrderedListLevel(const RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("OpenOrderedListLevel", list);
+}
+
+void MWAWGraphicInterface::openUnorderedListLevel(const RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("OpenUnorderedListLevel", list);
+}
+
+void MWAWGraphicInterface::closeOrderedListLevel()
+{
+  m_state->m_encoder.insertElement("CloseOrderedListLevel");
+}
+
+void MWAWGraphicInterface::closeUnorderedListLevel()
+{
+  m_state->m_encoder.insertElement("CloseOrderedListLevel");
+}
+
 void MWAWGraphicInterface::openListElement(const RVNGPropertyList &list, const RVNGPropertyListVector &tabStops)
 {
-  openParagraph(list, tabStops);
+  m_state->m_encoder.insertElement("OpenListElement", list, tabStops);
 }
 
 void MWAWGraphicInterface::closeListElement()
 {
-  closeParagraph();
+  m_state->m_encoder.insertElement("CloseListElement");
 }
 
-void MWAWGraphicInterface::openParagraph(const RVNGPropertyList &list, const RVNGPropertyListVector &)
+void MWAWGraphicInterface::openParagraph(const RVNGPropertyList &list, const RVNGPropertyListVector &tabStops)
 {
-  m_state->m_encoder.startElement("TextLine", list);
+  m_state->m_encoder.insertElement("OpenParagraph", list, tabStops);
 }
 
 void MWAWGraphicInterface::closeParagraph()
 {
-  m_state->m_encoder.endElement("TextLine");
+  m_state->m_encoder.insertElement("CloseParagraph");
 }
 
 void MWAWGraphicInterface::openSpan(const RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("TextSpan", list);
+  m_state->m_encoder.insertElement("OpenSpan", list);
 }
 
 void MWAWGraphicInterface::closeSpan()
 {
-  m_state->m_encoder.endElement("TextSpan");
+  m_state->m_encoder.insertElement("CloseSoan");
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -57,7 +57,13 @@ MWAWPropertyHandlerEncoder::MWAWPropertyHandlerEncoder()
 {
 }
 
-void MWAWPropertyHandlerEncoder::startElement
+void MWAWPropertyHandlerEncoder::insertElement(const char *psName)
+{
+  m_f << 'E';
+  writeString(psName);
+}
+
+void MWAWPropertyHandlerEncoder::insertElement
 (const char *psName, const RVNGPropertyList &xPropList)
 {
   m_f << 'S';
@@ -65,7 +71,7 @@ void MWAWPropertyHandlerEncoder::startElement
   writePropertyList(xPropList);
 }
 
-void MWAWPropertyHandlerEncoder::startElement
+void MWAWPropertyHandlerEncoder::insertElement
 (const char *psName, const RVNGPropertyList &xPropList, const RVNGPropertyListVector &vect)
 {
   m_f << 'V';
@@ -76,7 +82,7 @@ void MWAWPropertyHandlerEncoder::startElement
     writePropertyList(vect[i]);
 }
 
-void MWAWPropertyHandlerEncoder::startElement
+void MWAWPropertyHandlerEncoder::insertElement
 (const char *psName, const RVNGPropertyList &xPropList, const RVNGBinaryData &data)
 {
   m_f << 'B';
@@ -84,31 +90,12 @@ void MWAWPropertyHandlerEncoder::startElement
   writePropertyList(xPropList);
   long size=(long) data.size();
   if (size<0) {
-    MWAW_DEBUG_MSG(("MWAWPropertyHandlerEncoder::startElement: oops, probably the binary data is too big!!!\n"));
+    MWAW_DEBUG_MSG(("MWAWPropertyHandlerEncoder::insertElement: oops, probably the binary data is too big!!!\n"));
     size=0;
   }
   writeLong(size);
   if (size>0)
     m_f.write((const char *)data.getDataBuffer(), size);
-}
-
-void MWAWPropertyHandlerEncoder::insertElement(const char *psName)
-{
-  m_f << 'I';
-  writeString(psName);
-}
-
-void MWAWPropertyHandlerEncoder::insertElement(const char *psName, const RVNGPropertyList &xPropList)
-{
-  m_f << 'J';
-  writeString(psName);
-  writePropertyList(xPropList);
-}
-
-void MWAWPropertyHandlerEncoder::endElement(const char *psName)
-{
-  m_f << 'E';
-  writeString(psName);
 }
 
 void MWAWPropertyHandlerEncoder::characters(RVNGString const &sCharacters)
@@ -161,27 +148,9 @@ bool MWAWPropertyHandlerEncoder::getData(RVNGBinaryData &data)
   return true;
 }
 
-/*! \brief Internal: the property decoder
+/* \brief Internal: the property decoder
  *
- * In order to be read by writerperfect, we must code document consisting in
- * tag and propertyList in an intermediar format:
- *  - [string:s]: an int length(s) follow by the length(s) characters of string s
- *  - [property:p]: a string value p.getStr()
- *  - [propertyList:pList]: a int: \#pList followed by pList[0].key(),pList[0], pList[1].key(),pList[1], ...
- *  - [propertyListVector:v]: a int: \#v followed by v[0], v[1], ...
- *  - [binaryData:d]: a int32 d.size() followed by the data content
- *
- *  - [startElement:name proplist:prop]: char 'S', [string] name, prop
- *  - [startElement2:name proplist:prop proplistvector:vector]:
- *          char 'V', [string] name, prop, vector
- *  - [startElement3:name proplist:prop binarydata:data]:
- *          char 'B', [string] name, prop, data
- *  - [insertElement:name]: char 'I', [string] name
- *  - [insertElement2:name]: char 'J', [string] name, prop
- *  - [endElement:name ]: char 'E', [string] name
- *  - [characters:s ]: char 'T', [string] s
- *            - if len(s)==0, we write nothing
- *            - the string is written as is (ie. we do not escaped any characters).
+ * \note see MWAWPropertyHandlerEncoder for the format
 */
 class MWAWPropertyHandlerDecoder
 {
@@ -206,22 +175,16 @@ public:
         }
         switch(*c) {
         case 'B':
-          if (!readStartElementWithBinary(*inp)) return false;
-          break;
-        case 'V':
-          if (!readStartElementWithVector(*inp)) return false;
-          break;
-        case 'S':
-          if (!readStartElement(*inp)) return false;
-          break;
-        case 'I':
-          if (!readInsertElement(*inp)) return false;
-          break;
-        case 'J':
-          if (!readInsertElementWithList(*inp)) return false;
+          if (!readInsertElementWithBinary(*inp)) return false;
           break;
         case 'E':
-          if (!readEndElement(*inp)) return false;
+          if (!readInsertElement(*inp)) return false;
+          break;
+        case 'S':
+          if (!readInsertElementWithList(*inp)) return false;
+          break;
+        case 'V':
+          if (!readInsertElementWithVector(*inp)) return false;
           break;
         case 'T':
           if (!readCharacters(*inp)) return false;
@@ -238,92 +201,6 @@ public:
   }
 
 protected:
-  //! reads an startElement
-  bool readStartElement(RVNGInputStream &input) {
-    std::string s;
-    if (!readString(input, s)) return false;
-    if (s.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElement: can not read tag name\n"));
-      return false;
-    }
-    RVNGPropertyList lists;
-    if (!readPropertyList(input, lists)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElement: can not read propertyList for tag %s\n",
-                      s.c_str()));
-      return false;
-    }
-
-    m_openTag.push(s);
-
-    if (m_handler) m_handler->startElement(s.c_str(), lists);
-    return true;
-  }
-
-  //! reads an startElement
-  bool readStartElementWithVector(RVNGInputStream &input) {
-    std::string s;
-    if (!readString(input, s)) return false;
-    if (s.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithVector: can not read tag name\n"));
-      return false;
-    }
-
-    RVNGPropertyList lists;
-    if (!readPropertyList(input, lists)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithVector: can not read propertyList for tag %s\n",
-                      s.c_str()));
-      return false;
-    }
-    RVNGPropertyListVector vect;
-    if (!readPropertyListVector(input, vect)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithVector: can not read propertyVector for tag %s\n",
-                      s.c_str()));
-      return false;
-    }
-
-    m_openTag.push(s);
-
-    if (m_handler) m_handler->startElement(s.c_str(), lists, vect);
-    return true;
-  }
-  //! reads an startElement
-  bool readStartElementWithBinary(RVNGInputStream &input) {
-    std::string s;
-    if (!readString(input, s)) return false;
-    if (s.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithBinary: can not read tag name\n"));
-      return false;
-    }
-
-    RVNGPropertyList lists;
-    if (!readPropertyList(input, lists)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithBinary: can not read propertyList for tag %s\n",
-                      s.c_str()));
-      return false;
-    }
-    long sz;
-    if (!readLong(input,sz) || sz<0) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartWithBinary: can not read binray size for tag %s\n",
-                      s.c_str()));
-      return false;
-    }
-
-    RVNGBinaryData data;
-    if (sz) {
-      unsigned long read;
-      unsigned char const *dt=input.read((unsigned long) sz, read);
-      if (!dt || sz!=(long) read) {
-        MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartWithBinary: can not read binray data for tag %s\n",
-                        s.c_str()));
-        return false;
-      }
-      data.append(dt, (unsigned long)read);
-    }
-    m_openTag.push(s);
-    if (m_handler) m_handler->startElement(s.c_str(), lists, data);
-    return true;
-  }
-
   //! reads an simple element
   bool readInsertElement(RVNGInputStream &input) {
     std::string s;
@@ -337,18 +214,18 @@ protected:
     return true;
   }
 
-  //! reads an simple element
+  //! reads an element with a property list
   bool readInsertElementWithList(RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
 
     if (s.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithList find empty tag\n"));
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithProperty: find empty tag\n"));
       return false;
     }
     RVNGPropertyList lists;
     if (!readPropertyList(input, lists)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithList: can not read propertyList for tag %s\n",
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithProperty: can not read propertyList for tag %s\n",
                       s.c_str()));
       return false;
     }
@@ -357,28 +234,68 @@ protected:
     return true;
   }
 
-  //! reads an endElement
-  bool readEndElement(RVNGInputStream &input) {
+  //! reads an insertElement
+  bool readInsertElementWithVector(RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
-
     if (s.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readEndElement find empty tag\n"));
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithVector: can not read tag name\n"));
       return false;
     }
-    // check stack
-    if (m_openTag.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readEndElement %s with no openElement\n",
+
+    RVNGPropertyList lists;
+    if (!readPropertyList(input, lists)) {
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithVector: can not read propertyList for tag %s\n",
                       s.c_str()));
       return false;
     }
-    if (m_openTag.top() != s) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readEndElement %s but last open %s\n",
-                      m_openTag.top().c_str(), s.c_str()));
+    RVNGPropertyListVector vect;
+    if (!readPropertyListVector(input, vect)) {
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithVector: can not read propertyVector for tag %s\n",
+                      s.c_str()));
       return false;
     }
-    m_openTag.pop();
-    if (m_handler) m_handler->endElement(s.c_str());
+
+    m_openTag.push(s);
+
+    if (m_handler) m_handler->insertElement(s.c_str(), lists, vect);
+    return true;
+  }
+  //! reads an insertElement with a binary data
+  bool readInsertElementWithBinary(RVNGInputStream &input) {
+    std::string s;
+    if (!readString(input, s)) return false;
+    if (s.empty()) {
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithBinary: can not read tag name\n"));
+      return false;
+    }
+
+    RVNGPropertyList lists;
+    if (!readPropertyList(input, lists)) {
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithBinary: can not read propertyList for tag %s\n",
+                      s.c_str()));
+      return false;
+    }
+    long sz;
+    if (!readLong(input,sz) || sz<0) {
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertWithBinary: can not read binray size for tag %s\n",
+                      s.c_str()));
+      return false;
+    }
+
+    RVNGBinaryData data;
+    if (sz) {
+      unsigned long read;
+      unsigned char const *dt=input.read((unsigned long) sz, read);
+      if (!dt || sz!=(long) read) {
+        MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertWithBinary: can not read binray data for tag %s\n",
+                        s.c_str()));
+        return false;
+      }
+      data.append(dt, (unsigned long)read);
+    }
+    m_openTag.push(s);
+    if (m_handler) m_handler->insertElement(s.c_str(), lists, data);
     return true;
   }
 
@@ -441,39 +358,17 @@ protected:
     if (!readString(input, key)) return false;
     if (!readString(input, val)) return false;
 
-    // check if the val can be a double, ...
-    if (!val.empty() && (val[0]=='-' || val[0]=='.' || (val[0]>='0' && val[0]<='9'))) {
-      std::istringstream iss(val);
-      double res = 0.0;
-      iss >> res;
-      if (!iss.fail()) {
-        if (iss.eof() || iss.peek() == std::char_traits<char>::eof()) {
-          list.insert(key.c_str(), res);
-          return true;
-        }
-        std::string remain;
-        iss >> remain;
-        if (iss.peek() == std::char_traits<char>::eof()) {
-          if (remain=="pt") {
-            list.insert(key.c_str(), res/72., RVNG_INCH);
-            return true;
-          }
-          if (remain=="in") {
-            list.insert(key.c_str(), res, RVNG_INCH);
-            return true;
-          }
-          if (remain=="%") {
-            list.insert(key.c_str(), res/100., RVNG_PERCENT);
-            return true;
-          }
-          if (remain=="*") {
-            list.insert(key.c_str(), res/1440., RVNG_INCH);
-            return true;
-          }
-        }
-      }
-    }
-    list.insert(key.c_str(), val.c_str());
+    RVNGProperty *prop=RVNGPropertyFactory::newStringProp(val.c_str());
+    if (!prop) return prop;
+    RVNGUnit unit=prop->getUnit();
+    if (unit==RVNG_POINT) {
+      list.insert(key.c_str(), prop->getDouble()/72., RVNG_INCH);
+      delete prop;
+    } else if (unit==RVNG_TWIP) {
+      list.insert(key.c_str(), prop->getDouble()/1440., RVNG_INCH);
+      delete prop;
+    } else
+      list.insert(key.c_str(), prop);
     return true;
   }
 
