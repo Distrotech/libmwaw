@@ -2668,7 +2668,7 @@ bool HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWPosition po
     return true;
   }
 
-  std::multimap<long, int>::const_iterator fIt;
+  std::map<long, int>::const_iterator fIt;
   int numFrames = int(m_state->m_framesList.size());
   for (size_t c=0; c<group.m_childsList.size(); ++c) {
     long fId=group.m_childsList[c];
@@ -2690,7 +2690,7 @@ bool HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWPosition po
 
 bool HMWJGraph::canCreateGraphic(HMWJGraphInternal::Group const &group)
 {
-  std::multimap<long, int>::const_iterator fIt;
+  std::map<long, int>::const_iterator fIt;
   int page = group.m_page;
   int numFrames = int(m_state->m_framesList.size());
   for (size_t c=0; c<group.m_childsList.size(); ++c) {
@@ -2726,7 +2726,7 @@ void HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWGraphicList
   if (!listener) return;
   group.m_parsed=true;
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  std::multimap<long, int>::const_iterator fIt;
+  std::map<long, int>::const_iterator fIt;
   int numFrames = int(m_state->m_framesList.size());
   for (size_t c=0; c<group.m_childsList.size(); ++c) {
     long fId=group.m_childsList[c];
@@ -2784,7 +2784,7 @@ void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPositi
   Box2f partialBdBox;
   MWAWPosition partialPos(pos);
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  std::multimap<long, int>::const_iterator fIt;
+  std::map<long, int>::const_iterator fIt;
   int numFrames = int(m_state->m_framesList.size());
   for (size_t c=0; c<numChilds; ++c) {
     long fId=group.m_childsList[c];
