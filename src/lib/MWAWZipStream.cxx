@@ -303,7 +303,7 @@ static bool findDataStream(RVNGInputStream *input, CentralDirectoryEntry &entry,
   if (!readCentralDirectoryEnd(input, end))
     return false;
   input->seek(long(end.cdir_offset), RVNG_SEEK_SET);
-  while (!input->atEOS() && (unsigned)input->tell() < end.cdir_offset + end.cdir_size) {
+  while (!input->isEnd() && (unsigned)input->tell() < end.cdir_offset + end.cdir_size) {
     if (!readCentralDirectoryEntry(input, entry))
       return false;
     if (name_size == entry.filename_size && entry.filename == name)
@@ -331,7 +331,7 @@ static std::vector<std::string> getZipNames(RVNGInputStream *input)
   if (!readCentralDirectoryEnd(input, end))
     return res;
   input->seek(long(end.cdir_offset), RVNG_SEEK_SET);
-  while (!input->atEOS() && (unsigned)input->tell() < end.cdir_offset + end.cdir_size) {
+  while (!input->isEnd() && (unsigned)input->tell() < end.cdir_offset + end.cdir_size) {
     CentralDirectoryEntry entry;
     if (!readCentralDirectoryEntry(input, entry))
       break;

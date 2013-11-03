@@ -505,7 +505,7 @@ bool CWParser::createZones()
 
   if (readDocHeader() && readDocInfo()) {
     pos = input->tell();
-    while(!input->atEOS()) {
+    while(!input->isEnd()) {
       if (!readZone()) {
         input->seek(pos, RVNG_SEEK_SET);
         break;
@@ -513,17 +513,17 @@ bool CWParser::createZones()
       pos = input->tell();
     }
   }
-  if (!input->atEOS()) {
+  if (!input->isEnd()) {
     ascii().addPos(input->tell());
     f.str("");
     f << "Entries(Loose): vers=" << version();
     ascii().addNote(f.str().c_str());
   }
   // look for graphic
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     pos = input->tell();
     int val = (int) input->readULong(2);
-    if (input->atEOS()) break;
+    if (input->isEnd()) break;
     bool ok = false;
     if (val == 0x4453) {
       if (input->readULong(2) == 0x4554) {
@@ -548,11 +548,11 @@ bool CWParser::createZones()
       continue;
     }
 
-    if (input->atEOS()) break;
+    if (input->isEnd()) break;
 
     long prevPos = pos;
     ok = false;
-    while(!input->atEOS()) {
+    while(!input->isEnd()) {
       if (!readZone()) {
         input->seek(pos+1, RVNG_SEEK_SET);
         break;
@@ -566,7 +566,7 @@ bool CWParser::createZones()
       input->seek(prevPos+1, RVNG_SEEK_SET);
       continue;
     }
-    if (input->atEOS()) break;
+    if (input->isEnd()) break;
 
     ascii().addPos(pos);
     ascii().addNote("Entries(End)");
@@ -802,7 +802,7 @@ bool CWParser::readEndTable()
   MWAWInputStreamPtr input = getInput();
 
   // try to go to the end of file
-  while (!input->atEOS())
+  while (!input->isEnd())
     input->seek(10000, RVNG_SEEK_CUR);
 
   m_state->m_EOF = input->tell();
@@ -1775,7 +1775,7 @@ bool CWParser::readDocHeader()
   } else if (long(input->tell()) != pos+zone1Length)
     ascii().addDelimiter(input->tell(), '|');
   input->seek(pos+zone1Length, RVNG_SEEK_SET);
-  if (input->atEOS()) {
+  if (input->isEnd()) {
     MWAW_DEBUG_MSG(("CWParser::readDocHeader: file is too short\n"));
     return false;
   }

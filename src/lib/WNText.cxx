@@ -1305,10 +1305,10 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   else
     ruler.m_values[actVal++] = (int) input.readULong(1); // always 0
   ruler.m_tabs->resize(0);
-  if (!input.atEOS()) {
+  if (!input.isEnd()) {
     int previousVal = 0;
     int tab = 0;
-    while (!input.atEOS()) {
+    while (!input.isEnd()) {
       MWAWTabStop newTab;
       int newVal = (int) input.readULong(2);
       if (tab && newVal < previousVal) {
@@ -1604,7 +1604,7 @@ bool WNText::readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token)
   Vec2i box(dim[1], dim[0]);
   token.m_box=Box2i(Vec2i(0,0), box);
   // we need to get the size, so...
-  while (!input.atEOS())
+  while (!input.isEnd())
     input.seek(0x100, RVNG_SEEK_CUR);
   long endPos = input.tell();
   long sz = endPos-actPos-4;
@@ -1643,7 +1643,7 @@ bool WNText::readTable(MWAWInputStream &input, WNTextInternal::TableData &table)
   long pos = input.tell();
 
   table.m_type = (int) input.readULong(1);
-  if (input.atEOS()) {
+  if (input.isEnd()) {
     if (table.m_type!=0) {
       MWAW_DEBUG_MSG(("WNText::readTable: find a zone will 0 size\n"));
       return false;

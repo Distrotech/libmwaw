@@ -1217,7 +1217,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
   else
     actFont = defFont;
   bool rulerNotSent = actRId != -1, fontNotSent = true;
-  while (!input->atEOS() && input->tell() < textEntry.end()) {
+  while (!input->isEnd() && input->tell() < textEntry.end()) {
     long actPos = input->tell();
     bool firstPlc = true;
     while (plcIt != m_state->m_plcMap.end() && plcIt->first <= actPos) {

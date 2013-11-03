@@ -309,10 +309,10 @@ bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
   input->seek(zone->begin(), RVNG_SEEK_SET);
 
   int actPage = 1, actCol = 0, numCol=1;
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     long pos = input->tell();
     long val = (long) input->readULong(1);
-    if (val == 0 && input->atEOS()) break;
+    if (val == 0 && input->isEnd()) break;
     if (val != 1 || input->readLong(1) != 0)
       break;
     int type = (int) input->readLong(2);
@@ -348,13 +348,13 @@ bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
     }
 
     bool ok=true;
-    while (!input->atEOS()) {
+    while (!input->isEnd()) {
       int c=(int) input->readLong(2);
       if (c==0x100) {
         input->seek(-2, RVNG_SEEK_CUR);
         break;
       }
-      if (c==0 && input->atEOS())
+      if (c==0 && input->isEnd())
         break;
       if (c==0) {
         ok = false;
@@ -435,10 +435,10 @@ bool HMWKText::canSendTextAsGraphic(HMWKZone &zone)
       && m_state->m_IdTypeMaps.find(zone.m_id)->second == 0) // isMain
     return false;
   MWAWFont font;
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     pos = input->tell();
     long val = (long) input->readULong(1);
-    if (val == 0 && input->atEOS()) break;
+    if (val == 0 && input->isEnd()) break;
     if (val != 1 || input->readLong(1) != 0)
       return false;
     int type = (int) input->readLong(2);
@@ -470,13 +470,13 @@ bool HMWKText::canSendTextAsGraphic(HMWKZone &zone)
     }
 
     pos = input->tell();
-    while (!input->atEOS()) {
+    while (!input->isEnd()) {
       int c=(int) input->readULong(2);
       if (c==0x100) {
         input->seek(-2, RVNG_SEEK_CUR);
         break;
       }
-      if (c==0 && input->atEOS())
+      if (c==0 && input->isEnd())
         break;
       if (c==0) return false;
     }
@@ -536,12 +536,12 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
     }
   }
 
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     pos = input->tell();
     f.str("");
     f << zone.name()<< ":";
     long val = (long) input->readULong(1);
-    if (val == 0 && input->atEOS()) break;
+    if (val == 0 && input->isEnd()) break;
     if (val != 1 || input->readLong(1) != 0) {
       f << "###";
       asciiFile.addPos(pos);
@@ -656,13 +656,13 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
     pos = input->tell();
     f.str("");
     f << zone.name()<< ":text,";
-    while (!input->atEOS()) {
+    while (!input->isEnd()) {
       int c=(int) input->readULong(2);
       if (c==0x100) {
         input->seek(-2, RVNG_SEEK_CUR);
         break;
       }
-      if (c==0 && input->atEOS())
+      if (c==0 && input->isEnd())
         break;
       if (c==0) {
         ok = false;
@@ -1063,7 +1063,7 @@ bool HMWKText::readStyles(shared_ptr<HMWKZone> zone)
     input->seek(pos+fieldSz, RVNG_SEEK_SET);
   }
 
-  if (!input->atEOS()) {
+  if (!input->isEnd()) {
     asciiFile.addPos(input->tell());
     asciiFile.addNote("_");
   }

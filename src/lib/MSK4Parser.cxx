@@ -261,7 +261,7 @@ bool MSK4Parser::createStructures()
       continue;
     }
 
-    MWAWInputStreamPtr ole = input->getDocumentOLEStream(name.c_str());
+    MWAWInputStreamPtr ole = input->getSubStreamByName(name.c_str());
     if (!ole.get()) {
       MWAW_DEBUG_MSG(("Works4: error: can not find OLE part: \"%s\"\n", name.c_str()));
       continue;
@@ -309,7 +309,7 @@ void MSK4Parser::flushExtra()
   bool first = true;
   for (size_t i = 0; i < numUnparsed; i++) {
     std::string const &name = m_state->m_unparsedOlesName[i];
-    MWAWInputStreamPtr ole = getInput()->getDocumentOLEStream(name.c_str());
+    MWAWInputStreamPtr ole = getInput()->getSubStreamByName(name.c_str());
     if (!ole.get()) {
       MWAW_DEBUG_MSG(("Works4: error: can not find OLE part: \"%s\"\n", name.c_str()));
       continue;
@@ -345,13 +345,13 @@ void MSK4Parser::flushExtra()
 bool MSK4Parser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
   MWAWInputStreamPtr &input= getInput();
-  if (!input || !input->hasDataFork() || !input->isOLEStream())
+  if (!input || !input->hasDataFork() || !input->isStructured())
     return false;
 
-  MWAWInputStreamPtr mmOle = input->getDocumentOLEStream("MM");
+  MWAWInputStreamPtr mmOle = input->getSubStreamByName("MM");
   if (!mmOle || mmOle->readULong(2) != 0x444e) return false;
 
-  MWAWInputStreamPtr mainOle = input->getDocumentOLEStream("MN0");
+  MWAWInputStreamPtr mainOle = input->getSubStreamByName("MN0");
   if (!mainOle)
     return false;
   MWAW_DEBUG_MSG(("MWAWHeader::checkHeader: find a Microsoft Works 4.0 file\n"));

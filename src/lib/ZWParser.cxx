@@ -613,7 +613,7 @@ bool ZWParser::readSectionRange(MWAWEntry const &entry)
   pos -= 4;
   std::string name("");
   int num=0;
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     bool done=input->tell()>=entry.end();
     char c = done ? char(0xa) : (char) input->readULong(1);
     if (c==0) {
@@ -895,7 +895,7 @@ bool ZWParser::getFieldList(MWAWEntry const &entry, std::vector<ZWField> &list)
   MWAWInputStreamPtr input = rsrcInput();
   long pos=entry.begin();
   input->seek(entry.begin(), RVNG_SEEK_SET);
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     long actPos=input->tell();
     long done = actPos>=entry.end();
     char c= done ? '\t' : (char) input->readULong(1);
@@ -922,7 +922,7 @@ bool ZWField::getString(MWAWInputStreamPtr &input, std::string &str) const
   if (!m_pos.valid())
     return true;
   input->seek(m_pos.begin(), RVNG_SEEK_SET);
-  while (!input->atEOS() && input->tell()!=m_pos.end()) {
+  while (!input->isEnd() && input->tell()!=m_pos.end()) {
     char c=(char) input->readULong(1);
     if (c==0) {
       MWAW_DEBUG_MSG(("ZWField::getString::readFieldString: find a zero entry\n"));
@@ -941,7 +941,7 @@ bool ZWField::getDebugString(MWAWInputStreamPtr &input, std::string &str) const
     return true;
   input->seek(m_pos.begin(), RVNG_SEEK_SET);
   std::stringstream ss;
-  while (!input->atEOS() && input->tell()!=m_pos.end()) {
+  while (!input->isEnd() && input->tell()!=m_pos.end()) {
     char c=(char) input->readULong(1);
     if (c>=0 && c<=0x1f && c!= 0x9)
       ss << "##[" << std::hex << int(c) << std::dec << "]";

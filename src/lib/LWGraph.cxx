@@ -235,7 +235,7 @@ bool LWGraph::findJPEGSize(RVNGBinaryData const &data, Vec2i &sz)
     return false;
   }
   input->seek(pos+len, RVNG_SEEK_SET);
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     int header = (int) input->readULong(2);
     pos = input->tell();
     len = (int) input->readULong(2);

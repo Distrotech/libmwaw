@@ -247,7 +247,7 @@ int TTParser::computeNumPages() const
   int nPages=1;
   int pageBreakChar=(m_state->m_type==MWAWDocument::MWAW_T_TEXEDIT) ? 0xc : 0;
 
-  while(!input->atEOS()) {
+  while(!input->isEnd()) {
     if (input->readLong(1)==pageBreakChar)
       nPages++;
   }
@@ -275,7 +275,7 @@ bool TTParser::sendText()
   int actPage=1;
   long endPos = input->size();
   for (long i=0; i < endPos; i++) {
-    bool isEnd = input->atEOS();
+    bool isEnd = input->isEnd();
     unsigned char c=isEnd ? (unsigned char)0 : (unsigned char) input->readULong(1);
     if (isEnd || c==0xd || c==pageBreakChar) {
       ascii().addPos(debPos);

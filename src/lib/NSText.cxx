@@ -504,7 +504,7 @@ void NSText::computePositions()
   int paragraph=0;
   std::vector<int> firstParagraphInPage;
   firstParagraphInPage.push_back(0);
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     char c = (char) input->readULong(1);
     if (c==0xd)
       paragraph++;
@@ -723,7 +723,7 @@ bool NSText::readFontsList(MWAWEntry const &entry)
   asciiFile.addNote(f.str().c_str());
 
   int num=0;
-  while(!input->atEOS()) {
+  while(!input->isEnd()) {
     pos = input->tell();
     if (pos == entry.end()) break;
     if (pos+4 > entry.end()) {
@@ -1014,7 +1014,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     int num = (entry.id() == 1003) ? (int)zone.m_paragraphList.size() : -1;
     pos = input->tell();
     f.str("");
-    if (pos+8 > entry.end() || input->atEOS()) {
+    if (pos+8 > entry.end() || input->isEnd()) {
       f << "RULE" << num << "[" << zoneId << "]:###";
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
@@ -1431,7 +1431,7 @@ long NSText::findFilePos(NSStruct::ZoneType zoneId, NSStruct::Position const &po
 
   NSStruct::Position actPos;
   for (int i = 0; i < entry.length(); i++) {
-    if (input->atEOS())
+    if (input->isEnd())
       break;
     if (pos == actPos)
       return input->tell();
@@ -1673,7 +1673,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
       }
     }
 
-    if (input->atEOS())
+    if (input->isEnd())
       break;
     if (i==entry.length())
       break;

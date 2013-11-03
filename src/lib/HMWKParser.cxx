@@ -691,7 +691,7 @@ bool HMWKParser::readFramesUnkn(shared_ptr<HMWKZone> zone)
     asciiFile.addNote(f.str().c_str());
     input->seek(pos+6, RVNG_SEEK_SET);
   }
-  if (!input->atEOS())
+  if (!input->isEnd())
     asciiFile.addDelimiter(input->tell(),'|');
   return true;
 }
@@ -768,7 +768,7 @@ bool HMWKParser::readZone8(shared_ptr<HMWKZone> zone)
 
   asciiFile.addPos(0);
   asciiFile.addNote(f.str().c_str());
-  if (!input->atEOS())
+  if (!input->isEnd())
     asciiFile.addDelimiter(input->tell(),'|');
   return true;
 }
@@ -812,7 +812,7 @@ bool HMWKParser::readZonea(shared_ptr<HMWKZone> zone)
 
   asciiFile.addPos(0);
   asciiFile.addNote(f.str().c_str());
-  if (!input->atEOS())
+  if (!input->isEnd())
     asciiFile.addDelimiter(input->tell(),'|');
   return true;
 }
@@ -991,12 +991,12 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
   MWAWInputStreamPtr input = getInput();
   input->seek(zone->fileBeginPos()+12, RVNG_SEEK_SET);
   RVNGBinaryData &dt = zone->getBinaryData();
-  while (!input->atEOS() && input->tell() < zone->fileEndPos()) {
+  while (!input->isEnd() && input->tell() < zone->fileEndPos()) {
     short a = root;
     bool ok = true;
     do {  /* once for each bit on path */
       if(bitcounter == 0) {
-        if (input->atEOS() || input->tell() >= zone->fileEndPos()) {
+        if (input->isEnd() || input->tell() >= zone->fileEndPos()) {
           MWAW_DEBUG_MSG(("HMWKParser::decodeZone: find some uncomplete data for zone%lx\n", zone->fileBeginPos()));
           dt.append((unsigned char)a);
           ok = false;

@@ -61,7 +61,7 @@ bool PrinterRect::read(MWAWInputStreamPtr input, Vec2i const &res)
     m_pos[st].set(x,y);
   }
 
-  if (input->atEOS()) return false;
+  if (input->isEnd()) return false;
 
   if (m_pos[0].x() > m_pos[1].x() || m_pos[0].y() > m_pos[1].y())
     return false;
@@ -120,7 +120,7 @@ struct PrinterStyle {
     if (m_pageWidth < 0 || m_pageHeight < 0) return false;
     m_port = (int) input->readULong(1);
     m_feed = (int) input->readLong(1);
-    if (input->atEOS()) return false;
+    if (input->isEnd()) return false;
     return true;
   }
 
@@ -146,9 +146,9 @@ struct PrinterJob {
     m_jobDocLoop = (int) input->readULong(1);
     m_fromUser = (int) input->readLong(1);
     // skip pIdleProc
-    if (input->seek(4, RVNG_SEEK_CUR) != 0 || input->atEOS()) return false;
+    if (input->seek(4, RVNG_SEEK_CUR) != 0 || input->isEnd()) return false;
     // skip pFileName
-    if (input->seek(4, RVNG_SEEK_CUR) != 0 || input->atEOS()) return false;
+    if (input->seek(4, RVNG_SEEK_CUR) != 0 || input->isEnd()) return false;
     m_fileVol = (int) input->readLong(2);
     m_fileVers = (int) input->readLong(1);
     return true;
@@ -220,7 +220,7 @@ bool PrinterInfo::read(MWAWInputStreamPtr input)
     if (input->tell() != pos+14) return false;
   }
   // skip unknown structure prXInfo
-  if (input->seek(16, RVNG_SEEK_CUR) != 0 || input->atEOS()) return false;
+  if (input->seek(16, RVNG_SEEK_CUR) != 0 || input->isEnd()) return false;
 
   if (!m_data->m_job.read(input)) return false;
   input->readLong(1);

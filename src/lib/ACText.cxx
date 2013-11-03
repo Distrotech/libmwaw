@@ -207,14 +207,14 @@ bool ACText::createZones()
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   input->seek(vers>=3 ? 2 : 0, RVNG_SEEK_SET);
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     if (!readTopic())
       break;
   }
 
   long pos = input->tell();
   int val=(int) input->readLong(2);
-  if (val || (vers<3 && !input->atEOS())) {
+  if (val || (vers<3 && !input->isEnd())) {
     MWAW_DEBUG_MSG(("ACText::createZones: find unexpected end data\n"));
     ascFile.addPos(pos);
     ascFile.addNote("Entries(Loose):###");

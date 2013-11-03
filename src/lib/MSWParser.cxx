@@ -650,7 +650,7 @@ bool MSWParser::readZoneList()
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  if (input->atEOS()) {
+  if (input->isEnd()) {
     MWAW_DEBUG_MSG(("MSWParser::readZoneList: can not read list zone\n"));
     return false;
   }

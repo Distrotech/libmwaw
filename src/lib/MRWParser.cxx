@@ -456,7 +456,7 @@ bool MRWParser::createZones()
 bool MRWParser::readZone(int &actZone, bool onlyTest)
 {
   MWAWInputStreamPtr input = getInput();
-  if (input->atEOS())
+  if (input->isEnd())
     return false;
   long pos = input->tell();
   MRWEntry zone;
@@ -1349,7 +1349,7 @@ bool MRWParser::readNumbersString(int num, std::vector<long> &res)
   // first read the string
   MWAWInputStreamPtr input = getInput();
   std::string str("");
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     int ch = int(input->readULong(1));
     if (ch=='-' || (ch >= 'A' && ch <= 'F') || (ch >= '0' && ch <= '9')) {
       str += char(ch);
@@ -1407,7 +1407,7 @@ bool MRWParser::decodeZone(std::vector<MRWStruct> &dataList, long numData)
 
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     size_t numVal = dataList.size();
     if (numVal >= size_t(numData))
       break;
@@ -1420,7 +1420,7 @@ bool MRWParser::decodeZone(std::vector<MRWStruct> &dataList, long numData)
     if ((type & 0x3c) || (type && !(type&0x3)))
       break;
     if ((type>>4)==0xc) {
-      if (input->atEOS()) break;
+      if (input->isEnd()) break;
       int num = int(input->readULong(1));
       if (!num) break;
       if (numVal==0) {

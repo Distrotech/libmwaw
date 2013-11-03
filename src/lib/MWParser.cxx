@@ -604,7 +604,7 @@ bool MWParser::createZonesV3()
       }
     }
   }
-  if (!input->atEOS()) {
+  if (!input->isEnd()) {
     ascii().addPos(input->tell());
     ascii().addNote("Entries(END)");
   }
@@ -1617,7 +1617,7 @@ bool MWParser::checkFreeList()
 
   libmwaw::DebugStream f;
   int num = 0;
-  while(!input->atEOS()) {
+  while(!input->isEnd()) {
     pos = input->tell();
     long freePos = (long) input->readULong(4);
     long sz = (long) input->readULong(4);
@@ -1632,7 +1632,7 @@ bool MWParser::checkFreeList()
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
 
-    if (input->atEOS()) break;
+    if (input->isEnd()) break;
 
     input->seek(freePos+sz, RVNG_SEEK_SET);
     if (long(input->tell()) != freePos+sz) {

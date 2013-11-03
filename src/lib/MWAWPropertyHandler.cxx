@@ -195,7 +195,7 @@ public:
       RVNGInputStream *inp = const_cast<RVNGInputStream *>(encoded.getDataStream());
       if (!inp) return false;
 
-      while (!inp->atEOS()) {
+      while (!inp->isEnd()) {
         unsigned const char *c;
         unsigned long numRead;
 

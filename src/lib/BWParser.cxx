@@ -695,7 +695,7 @@ bool BWParser::readLastZone()
 {
   MWAWInputStreamPtr input = getInput();
   long beginPos = input->tell();
-  if (input->seek(beginPos+568,RVNG_SEEK_SET)||!input->atEOS()) {
+  if (input->seek(beginPos+568,RVNG_SEEK_SET)||!input->isEnd()) {
     MWAW_DEBUG_MSG(("BWParser::readLastZone: the last zone seems odd\n"));
     ascii().addPos(beginPos);
     ascii().addNote("Entries(LastZone):###");

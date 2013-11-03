@@ -265,7 +265,7 @@ int MSK3Text::createZones(int numLines, bool mainZone)
   bool hasNote=false;
   int firstNote=0;
   MWAWInputStreamPtr input=m_mainParser->getInput();
-  while(!input->atEOS()) {
+  while(!input->isEnd()) {
     if (numLines==0) break;
     if (numLines>0) numLines--;
     long pos = input->tell();
@@ -419,7 +419,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
     listener->setParagraph(para);
   }
   bool firstChar = true;
-  while(!input->atEOS()) {
+  while(!input->isEnd()) {
     long pos = input->tell();
     if (pos >= zone.m_pos.end()) break;
     int c = (int) input->readULong(1);

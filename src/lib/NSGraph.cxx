@@ -379,7 +379,7 @@ std::vector<NSGraphInternal::RSSOEntry> NSGraph::findRSSOEntry(MWAWInputStreamPt
     return listRSSO;
 
   // look for: 00a1006400104e495349000900b3000901dc01f90002
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     long pos = input->tell();
     int val=(int) input->readULong(4);
     int depl = 0;
@@ -399,10 +399,10 @@ std::vector<NSGraphInternal::RSSOEntry> NSGraph::findRSSOEntry(MWAWInputStreamPt
     }
     float dim[4];
     for (int i=0; i < 4; i++) dim[i] = float(input->readLong(2));
-    if (input->atEOS()) break;
+    if (input->isEnd()) break;
     NSGraphInternal::RSSOEntry rsso;
     rsso.m_id = (int) input->readLong(2);
-    if (input->atEOS()) break;
+    if (input->isEnd()) break;
     rsso.m_position=Box2f(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
     if (rsso.m_id > 0)
       listRSSO.push_back(rsso);

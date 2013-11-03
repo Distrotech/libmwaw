@@ -768,7 +768,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
     libmwaw::DebugStream f;
     f << "Text[" << std::hex << actChar << std::dec << "]:";
     int tokenEndPos = 0;
-    while (!input->atEOS()) {
+    while (!input->isEnd()) {
       long actPos = input->tell();
       if (actPos >= endPos) {
         ascFile.addPos(pos);
@@ -1000,7 +1000,7 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
     if (z!=firstZ)
       input->seek(zone.m_infoList[z].m_pos.begin(), RVNG_SEEK_SET);
 
-    while (!input->atEOS()) {
+    while (!input->isEnd()) {
       long actPos = input->tell();
       if (actPos == endPos)
         break;

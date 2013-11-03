@@ -515,7 +515,7 @@ void BWText::countPages()
   long pos=m_state->m_textEntry.begin(), endPos=m_state->m_textEntry.end();
   input->seek(pos, RVNG_SEEK_SET);
   int nSectPages=0, nPages=1;
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     pos=input->tell();
     if (pos>=endPos) break;
     unsigned char c = (unsigned char) input->readULong(1);
@@ -656,7 +656,7 @@ bool BWText::sendText(MWAWEntry entry)
   BWTextInternal::Font font;
   listener->setFont(m_state->getFont(font));
   int actPage = 1, sectPage=1;
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     pos=input->tell();
     bool last=pos==endPos;
     unsigned char c = last ? (unsigned char) 0 :

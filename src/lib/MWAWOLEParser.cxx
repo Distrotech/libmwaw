@@ -284,9 +284,9 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
 
   if (!file.get()) return false;
 
-  if (!file->isOLEStream()) return false;
+  if (!file->isStructured()) return false;
 
-  std::vector<std::string> namesList = file->getOLENames();
+  std::vector<std::string> namesList = file->getStreamNames();
 
   //
   // we begin by grouping the Ole by their potential main id
@@ -362,7 +362,7 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
       MWAWOLEParserInternal::OleDef const &dOle = pos->second;
       if (pos++->first != id) break;
 
-      MWAWInputStreamPtr ole = file->getDocumentOLEStream(dOle.m_name);
+      MWAWInputStreamPtr ole = file->getSubStreamByName(dOle.m_name);
       if (!ole.get()) {
         MWAW_DEBUG_MSG(("MWAWOLEParser: error: can not find OLE part: \"%s\"\n", dOle.m_name.c_str()));
         continue;
@@ -502,7 +502,7 @@ bool MWAWOLEParser::readOle(MWAWInputStreamPtr ip, std::string const &oleName,
   ascii.addPos(0);
   ascii.addNote(f.str().c_str());
 
-  if (!ip->atEOS()) {
+  if (!ip->isEnd()) {
     ascii.addPos(20);
     ascii.addNote("@@Ole:###");
   }
@@ -516,7 +516,7 @@ bool MWAWOLEParser::readObjInfo(MWAWInputStreamPtr input, std::string const &ole
   if (oleName!="ObjInfo") return false;
 
   input->seek(14, RVNG_SEEK_SET);
-  if (input->tell() != 6 || !input->atEOS()) return false;
+  if (input->tell() != 6 || !input->isEnd()) return false;
 
   input->seek(0, RVNG_SEEK_SET);
   libmwaw::DebugStream f;
@@ -537,7 +537,7 @@ bool MWAWOLEParser::readMM(MWAWInputStreamPtr input, std::string const &oleName,
   if (oleName!="MM") return false;
 
   input->seek(14, RVNG_SEEK_SET);
-  if (input->tell() != 14 || !input->atEOS()) return false;
+  if (input->tell() != 14 || !input->isEnd()) return false;
 
   input->seek(0, RVNG_SEEK_SET);
   int entete = (int) input->readULong(2);
@@ -677,7 +677,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
     ascii.addNote(f.str().c_str());
   }
 
-  if (ip->atEOS()) return true;
+  if (ip->isEnd()) return true;
 
   long actPos = ip->tell();
   long nbElt = 4;
@@ -743,7 +743,7 @@ bool MWAWOLEParser::isOlePres(MWAWInputStreamPtr ip, std::string const &oleName)
   ip->seek(8, RVNG_SEEK_CUR);
   long size = ip->readLong(4);
 
-  if (size <= 0) return ip->atEOS();
+  if (size <= 0) return ip->isEnd();
 
   actPos = ip->tell();
   if (ip->seek(actPos+size, RVNG_SEEK_SET) != 0
@@ -834,12 +834,12 @@ bool MWAWOLEParser::readOlePres(MWAWInputStreamPtr ip, RVNGBinaryData &data, MWA
   ascii.addPos(actPos);
   ascii.addNote(f.str().c_str());
 
-  if (fSize == 0) return ip->atEOS();
+  if (fSize == 0) return ip->isEnd();
 
   data.clear();
   if (!ip->readDataBlock(fSize, data)) return false;
 
-  if (!ip->atEOS()) {
+  if (!ip->isEnd()) {
     ascii.addPos(ip->tell());
     ascii.addNote("@@OlePress###");
   }
@@ -889,7 +889,7 @@ bool MWAWOLEParser::readOle10Native(MWAWInputStreamPtr ip,
   data.clear();
   if (!ip->readDataBlock(fSize, data)) return false;
 
-  if (!ip->atEOS()) {
+  if (!ip->isEnd()) {
     ascii.addPos(ip->tell());
     ascii.addNote("@@Ole10Native###");
   }
@@ -945,7 +945,7 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
   naturalSize[1] = input->readLong(4);
   f << std::dec << "bdbox1=(" << naturalSize[0] << "," << naturalSize[1]<<"),";
   f << "unk=" << input->readULong(4) << ","; // 24 or 32
-  if (input->atEOS()) {
+  if (input->isEnd()) {
     MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents header length\n"));
     return false;
   }
@@ -967,7 +967,7 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
   if (size <= 0) ok = false;
   if (ok) {
     input->seek(actPos+size+4, RVNG_SEEK_SET);
-    if (input->tell() != actPos+size+4 || !input->atEOS()) {
+    if (input->tell() != actPos+size+4 || !input->isEnd()) {
       ok = false;
       MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents unexpected file size=%ld\n",
                       size));
@@ -991,7 +991,7 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
     }
   }
 
-  if (!input->atEOS()) {
+  if (!input->isEnd()) {
     ascii.addPos(actPos);
     ascii.addNote("@@Contents:###");
   }
@@ -1025,7 +1025,7 @@ bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
   f << "@@CONTENTS:";
 
   long hSize = (long)input->readULong(4);
-  if (input->atEOS()) return false;
+  if (input->isEnd()) return false;
   f << "hSize=" << std::hex << hSize << std::dec;
 
   if (hSize <= 52 || input->seek(hSize+8,RVNG_SEEK_SET) != 0
@@ -1096,7 +1096,7 @@ bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
   ascii.addNote(f.str().c_str());
 
   if (dataLength <= 0 || input->seek(hSize+4+dataLength,RVNG_SEEK_SET) != 0
-      || input->tell() != hSize+4+dataLength || !input->atEOS()) {
+      || input->tell() != hSize+4+dataLength || !input->isEnd()) {
     MWAW_DEBUG_MSG(("MWAWOLEParser: warning: CONTENTS unexpected file length=%ld\n",
                     dataLength));
     return false;

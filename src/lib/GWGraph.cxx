@@ -577,7 +577,7 @@ bool GWGraph::isGraphicZone()
   input->seek(pos+headerSize, RVNG_SEEK_SET);
   int pageHeaderSize=vers==1 ? 16 : isDraw ? 12 : 22;
   if (!input->checkPosition(pos+headerSize+pageHeaderSize)) {
-    bool ok=input->atEOS();
+    bool ok=input->isEnd();
     input->seek(pos, RVNG_SEEK_SET);
     return ok;
   }
@@ -657,7 +657,7 @@ bool GWGraph::readGraphicZone()
   pos += 0x1a;
 
   input->seek(pos, RVNG_SEEK_SET);
-  while(!input->atEOS() && readPageFrames())
+  while(!input->isEnd() && readPageFrames())
     pos=input->tell();
   input->seek(pos, RVNG_SEEK_SET);
   return true;
@@ -679,7 +679,7 @@ bool GWGraph::findGraphicZone()
   MWAWInputStreamPtr input = m_parserState->m_input;
   long pos = input->tell();
   input->seek(pos+headerSize+pageHeaderSize, RVNG_SEEK_SET);
-  while(!input->atEOS()) {
+  while(!input->isEnd()) {
     long actPos = input->tell();
     unsigned long value= input->readULong(4);
     int decal=-1;

@@ -1419,7 +1419,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
               long actPos=input->tell();
               input->seek(token.m_fieldEntry.begin(), RVNG_SEEK_SET);
               long endFPos=token.m_fieldEntry.end();
-              while (!input->atEOS() && input->tell() < token.m_fieldEntry.end())
+              while (!input->isEnd() && input->tell() < token.m_fieldEntry.end())
                 listener->insertCharacter((unsigned char)input->readULong(1), input, endFPos);
               input->seek(actPos, RVNG_SEEK_SET);
             } else {
@@ -1609,7 +1609,7 @@ bool CWText::readParagraphs()
   long endPos = pos+4+sz;
 
   input->seek(endPos, RVNG_SEEK_SET);
-  if (input->atEOS()) {
+  if (input->isEnd()) {
     MWAW_DEBUG_MSG(("CWText::readParagraphs: ruler zone is too short\n"));
     return false;
   }

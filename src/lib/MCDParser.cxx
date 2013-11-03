@@ -413,7 +413,7 @@ bool MCDParser::readIndex(MWAWEntry const &entry)
   ascFile.addNote("Entries(Index)");
   libmwaw::DebugStream f;
   long pos;
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     pos=input->tell();
     if (pos+21>=entry.end())
       break;
@@ -444,7 +444,7 @@ bool MCDParser::readIndex(MWAWEntry const &entry)
     index.m_entry.setBegin(input->tell());
     std::string name("");
     bool ok=false;
-    while (!input->atEOS()) {
+    while (!input->isEnd()) {
       if (input->tell()>=entry.end())
         break;
       char c=(char) input->readLong(1);

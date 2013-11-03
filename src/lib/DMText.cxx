@@ -310,7 +310,7 @@ void DMText::computeNumPages(DMTextInternal::Zone const &zone) const
   long len = zone.m_pos.length();
   int nPages=1;
   for (long i=0; i < len; i++) {
-    if (input->atEOS())
+    if (input->isEnd())
       break;
     if (input->readLong(1)==0)
       nPages++;

@@ -1013,7 +1013,7 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
   case 0x1e:
   case 0x1f:
   case 0x24:
-    while(!input->atEOS()) {
+    while(!input->isEnd()) {
       if (input->tell() >= endPos)
         break;
       val = (long) input->readULong(1);

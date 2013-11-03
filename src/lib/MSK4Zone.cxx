@@ -432,7 +432,7 @@ bool MSK4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
   input->seek(0x18, RVNG_SEEK_SET);
   bool readSome = false;
   do {
-    if (input->atEOS()) return readSome;
+    if (input->isEnd()) return readSome;
 
     pos = input->tell();
     f.str("");

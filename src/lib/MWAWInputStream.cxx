@@ -154,7 +154,7 @@ int MWAWInputStream::seek(long offset, RVNG_SEEK_TYPE seekType)
   return m_stream->seek(offset, RVNG_SEEK_SET);
 }
 
-bool MWAWInputStream::atEOS()
+bool MWAWInputStream::isEnd()
 {
   if (!hasDataFork())
     return true;
@@ -162,12 +162,12 @@ bool MWAWInputStream::atEOS()
   if (m_readLimit > 0 && pos >= m_readLimit) return true;
   if (pos >= size()) return true;
 
-  return m_stream->atEOS();
+  return m_stream->isEnd();
 }
 
 unsigned long MWAWInputStream::readULong(RVNGInputStream *stream, int num, unsigned long a, bool inverseRead)
 {
-  if (!stream || num == 0 || stream->atEOS()) return a;
+  if (!stream || num == 0 || stream->isEnd()) return a;
   if (inverseRead) {
     unsigned long val = readU8(stream);
     return val + (readULong(stream, num-1,0, inverseRead) << 8);
@@ -280,7 +280,7 @@ bool MWAWInputStream::unBinHex()
       || strncmp(str, "(This file must be converted with BinHex 4.0)",45))
     return false;
   int numEOL = 0;
-  while (!atEOS()) {
+  while (!isEnd()) {
     char c = (char) readLong(1);
     if (c == '\n') {
       numEOL++;
@@ -289,7 +289,7 @@ bool MWAWInputStream::unBinHex()
     seek(-1, RVNG_SEEK_CUR);
     break;
   }
-  if (atEOS() || !numEOL || ((char)readLong(1))!= ':')
+  if (isEnd() || !numEOL || ((char)readLong(1))!= ':')
     return false;
 
   // first phase reconstruct the file
@@ -301,7 +301,7 @@ bool MWAWInputStream::unBinHex()
   RVNGBinaryData content;
   bool findRepetitif = false;
   while (1) {
-    if (atEOS()) {
+    if (isEnd()) {
       MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: do not find ending ':' character\n"));
       return false;
     }
@@ -550,7 +550,7 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
     }
     inp->seek(16, RVNG_SEEK_CUR); // filename
     long numEntries = (long) inp->readULong(2);
-    if (inp->atEOS() || numEntries <= 0) {
+    if (inp->isEnd() || numEntries <= 0) {
       MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: can not read number of entries\n"));
       return false;
     }
@@ -564,7 +564,7 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
     for (int i = 0; i < numEntries; i++) {
       long pos = inp->tell();
       int wh = (int) inp->readULong(4);
-      if (wh <= 0 || wh >= 16 || inp->atEOS()) {
+      if (wh <= 0 || wh >= 16 || inp->isEnd()) {
         MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: find unknown id: %d\n", wh));
         return false;
       }
@@ -642,19 +642,19 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
 //
 ////////////////////////////////////////////////////////////
 
-bool MWAWInputStream::isOLEStream()
+bool MWAWInputStream::isStructured()
 {
   if (!createStorageOLE()) return false;
   return m_storageOLE->isStructuredDocument();
 }
 
-std::vector<std::string> MWAWInputStream::getOLENames()
+std::vector<std::string> MWAWInputStream::getStreamNames()
 {
   if (!createStorageOLE()) return std::vector<std::string>();
   return m_storageOLE->getSubStreamList();
 }
 
-shared_ptr<MWAWInputStream> MWAWInputStream::getDocumentOLEStream(std::string name)
+shared_ptr<MWAWInputStream> MWAWInputStream::getSubStreamByName(std::string name)
 {
   static shared_ptr<MWAWInputStream> empty;
   if (!createStorageOLE()) return empty;

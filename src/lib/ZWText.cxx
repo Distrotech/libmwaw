@@ -271,7 +271,7 @@ void ZWText::computePositions()
       continue;
     long endPos = section.m_pos.end();
     input->seek(section.m_pos.begin(), RVNG_SEEK_SET);
-    while(!input->atEOS()) {
+    while(!input->isEnd()) {
       if (input->tell()+3 >= endPos)
         break;
       if ((char) input->readLong(1)!='<')
@@ -386,7 +386,7 @@ ZWText::TextCode ZWText::isTextCode
   }
   expectedString += ' ';
   for (size_t s=1; s < expectedString.size(); s++) {
-    if (input->atEOS() || input->tell()  >= endPos ||
+    if (input->isEnd() || input->tell()  >= endPos ||
         (char) input->readLong(1) != expectedString[s]) {
       input->seek(pos, RVNG_SEEK_SET);
       return None;
@@ -394,7 +394,7 @@ ZWText::TextCode ZWText::isTextCode
   }
   dPos.setBegin(input->tell());
   while(1) {
-    if (input->atEOS() || input->tell() >= endPos) {
+    if (input->isEnd() || input->tell() >= endPos) {
       input->seek(pos, RVNG_SEEK_SET);
       return None;
     }
@@ -444,7 +444,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
   MWAWParagraph para;
   while (1) {
     long actPos = input->tell();
-    bool done = input->atEOS() || actPos==endPos;
+    bool done = input->isEnd() || actPos==endPos;
 
     char c = done ? (char) 0 : (char) input->readULong(1);
     if (c==0xd || done) {
@@ -740,7 +740,7 @@ bool ZWText::sendHeaderFooter(bool header)
   input->seek(zone.m_pos.begin(), RVNG_SEEK_SET);
   listener->setFont(zone.m_font.m_font);
   long endPos = zone.m_pos.end();
-  while(!input->atEOS()) {
+  while(!input->isEnd()) {
     long actPos = input->tell();
     if (actPos >= endPos)
       break;

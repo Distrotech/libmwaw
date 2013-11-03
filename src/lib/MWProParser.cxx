@@ -419,7 +419,7 @@ bool MWProParser::getZoneData(RVNGBinaryData &data, int blockId)
   unsigned long read;
   long first=blockId-1, last=blockId-1;
   int const linkSz = version()<= 0 ? 2 : 4;
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     bool ok = true;
     for(long i=first; i<= last; i++) {
       if (m_state->m_blocksMap.find((int)i) != m_state->m_blocksMap.end()) {
@@ -1774,7 +1774,7 @@ void MWProParser::checkUnparsed()
 
     pos = bl*0x100;
     input->seek(pos, RVNG_SEEK_SET);
-    if (input->atEOS()) break;
+    if (input->isEnd()) break;
     notParsed << std::hex <<  bl << std::dec << ",";
 
     // normaly there must remains only text entry...

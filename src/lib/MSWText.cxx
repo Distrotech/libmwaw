@@ -1177,7 +1177,7 @@ void MSWText::prepareLines()
   MSWTextInternal::Line line;
   line.m_cPos[0]=0;
   size_t numTextPos = m_state->m_textposList.size();
-  while (!input->atEOS() && cPos < cEnd) {
+  while (!input->isEnd() && cPos < cEnd) {
     std::multimap<long, MSWText::PLC>::const_iterator plcIt =
       m_state->m_plcMap.lower_bound(cPos);
     while (plcIt != m_state->m_plcMap.end() && plcIt->first==cPos) {
@@ -1791,7 +1791,7 @@ bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell
   libmwaw::DebugStream f;
   f << "TextContent[" << cPos << "]:";
   long pictPos = -1;
-  while (!input->atEOS() && cPos < cEnd) {
+  while (!input->isEnd() && cPos < cEnd) {
     bool newTable = false;
     long cEndPos = cEnd;
 

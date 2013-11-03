@@ -1257,12 +1257,12 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
     }
   }
 
-  if (input->atEOS())
+  if (input->isEnd())
     return true;
   // sanity check: normaly no zero except maybe for the last zone
   pos = input->tell();
   sz = (long) input->readULong(4);
-  if (sz == 0 && !input->atEOS()) {
+  if (sz == 0 && !input->isEnd()) {
     MWAW_DEBUG_MSG(("CWGraph::readGroupData: find unexpected nop data at end of zone\n"));
     ascFile.addPos(beginGroupPos);
     ascFile.addNote("###");

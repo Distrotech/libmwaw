@@ -1249,7 +1249,7 @@ bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
     for (int st = 0; st < 3; st++) {
       int actVal;
       if (!actualCharSet ) {
-        if (input->atEOS()) {
+        if (input->isEnd()) {
           MWAW_DEBUG_MSG(("MDWParser::readCompressedText: text is too long\n"));
           return false;
         }

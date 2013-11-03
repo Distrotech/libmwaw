@@ -392,13 +392,13 @@ bool GWParser::createZones()
   }
 
   bool ok=m_textParser->createZones(m_state->numHeaderFooters());
-  if (input->atEOS()) // v1 file end here
+  if (input->isEnd()) // v1 file end here
     return ok;
 
   pos = input->tell();
   if (!m_graphParser->readGraphicZone())
     input->seek(pos, RVNG_SEEK_SET);
-  if (!input->atEOS()) {
+  if (!input->isEnd()) {
     pos = input->tell();
     MWAW_DEBUG_MSG(("GWParser::createZones: find some extra data\n"));
     ascii().addPos(pos);
@@ -425,7 +425,7 @@ bool GWParser::createDrawZones()
     pos = input->tell();
 
   bool ok=m_graphParser->readGraphicZone();
-  if (!input->atEOS()) {
+  if (!input->isEnd()) {
     pos = input->tell();
     MWAW_DEBUG_MSG(("GWParser::createZones: find some extra data\n"));
     ascii().addPos(pos);

@@ -1823,7 +1823,7 @@ void MSKGraph::computePositions(int zoneId, std::vector<int> &linesH, std::vecto
 int MSKGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone, bool autoSend)
 {
   MWAWInputStreamPtr input=m_mainParser->getInput();
-  if (input->atEOS()) return -1;
+  if (input->isEnd()) return -1;
 
   long pos = input->tell();
   if (input->readULong(1) != 1) return -1;
@@ -2433,7 +2433,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
   f.str("");
   f << "SmallText:";
   while(1) {
-    if (input->atEOS()) return false;
+    if (input->isEnd()) return false;
 
     pos = input->tell();
     sizeOfData = (long) input->readULong(4);

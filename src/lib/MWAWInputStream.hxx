@@ -111,7 +111,7 @@ public:
     return pos<=m_streamSize;
   }
   //! returns true if we are at the end of the section/file
-  bool atEOS();
+  bool isEnd();
 
   /*! \brief defines a new section in the file (from actualPos to newLimit)
    * next call of seek, tell, atEos, ... will be restrained to this section
@@ -156,15 +156,15 @@ public:
   bool readEndDataBlock(RVNGBinaryData &data);
 
   //
-  // OLE access
+  // OLE/Zip access
   //
 
   //! return true if the stream is ole
-  bool isOLEStream();
+  bool isStructured();
   //! return the list of all ole zone
-  std::vector<std::string> getOLENames();
+  std::vector<std::string> getStreamNames();
   //! return a new stream for a ole zone
-  shared_ptr<MWAWInputStream> getDocumentOLEStream(std::string name);
+  shared_ptr<MWAWInputStream> getSubStreamByName(std::string name);
 
   //
   // Finder Info access
@@ -269,7 +269,7 @@ public:
    */
   int seek(long offset, RVNG_SEEK_TYPE seekType);
   //! returns true if we are at the end of the section/file
-  bool atEOS() {
+  bool isEnd() {
     return ((long)m_offset >= (long)m_buffer.size());
   }
 
@@ -277,30 +277,34 @@ public:
      Analyses the content of the input stream to see whether it is an Zip/OLE2 storage.
      \return return false
   */
-  bool isStructuredDocument() {
+  bool isStructured() {
     return false;
   }
-  /**
-     Tries to extract a stream from a structured document.
-     \note not implemented
+  /** returns the number of substream
+      \note not implemented
   */
-  RVNGInputStream *getSubStream(const char *) {
+  unsigned subStreamCount() {
     return 0;
   }
-
-  /**
-     Analyses the content of the input stream to see whether it is an Zip/OLE2 storage.
-     \return return false
-  */
-  bool isOLEStream() {
-    return isStructuredDocument();
+  /** returns the name of the ith substream
+     \note not implemented
+   */
+  const char *subStreamName(unsigned) {
+    return 0;
   }
   /**
      Tries to extract a stream from a structured document.
      \note not implemented
   */
-  RVNGInputStream *getDocumentOLEStream(const char *name) {
-    return getSubStream(name);
+  RVNGInputStream *getSubStreamByName(const char *) {
+    return 0;
+  }
+  /**
+     Tries to extract a stream from a structured document.
+     \note not implemented
+   */
+  RVNGInputStream *getSubStreamById(unsigned) {
+    return 0;
   }
 
 private:

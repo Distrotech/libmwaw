@@ -1135,7 +1135,7 @@ bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::Li
   cellPos.push_back(pos);
   for (int i = 0; i < lHeader.m_numChar; i++) {
     long actPos = input->tell();
-    if (input->atEOS())
+    if (input->isEnd())
       break;
     int c = (int)input->readULong(1);
     if (c==0xa7) {
@@ -1681,7 +1681,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
     pos = input->tell();
     if (pos+2 >= zone->end()) break;
     int type = (int)input->readULong(2);
-    if (input->atEOS()) {
+    if (input->isEnd()) {
       MWAW_DEBUG_MSG(("FWText::readTextData: internal problem, unexpected EOS!!!\n"));
       return false;
     }

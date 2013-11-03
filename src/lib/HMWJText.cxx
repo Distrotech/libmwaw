@@ -662,7 +662,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos, bool 
       }
       endCPos = (plcIt != zone.m_PLCMap.end()) ? plcIt->first : -1;
     }
-    if (input->atEOS())
+    if (input->isEnd())
       break;
     if (expectedChar) {
       if ((int) input->readULong(1)==expectedChar) {
@@ -676,11 +676,11 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos, bool 
     }
     while (endCPos<0 || cPos < endCPos) {
       cPos++;
-      if (input->atEOS())
+      if (input->isEnd())
         break;
       int c = (int) input->readULong(2);
       if (c==0) {
-        if (input->atEOS())
+        if (input->isEnd())
           break;
         f << "#[0]";
         continue;
@@ -809,7 +809,7 @@ int HMWJText::computeNumPages(HMWJTextInternal::TextZone const &zone)
       numCol = sec.m_numCols;
   }
   input->seek(0, RVNG_SEEK_SET);
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     int c = (int) input->readULong(2);
     switch(c) {
     case 2:
@@ -1339,7 +1339,7 @@ bool HMWJText::readTextToken(long endPos, HMWJTextInternal::TextZone &zone)
     pos = input->tell();
     long dataSz = (long) input->readULong(4);
     zoneEnd = pos+4+dataSz;
-    if (input->atEOS() || dataSz<0 || zoneEnd >= endPos) {
+    if (input->isEnd() || dataSz<0 || zoneEnd >= endPos) {
       MWAW_DEBUG_MSG(("HMWJText::readTextToken: can not find bookmark text %d\n", int(i)));
       break;
     }
@@ -1800,7 +1800,7 @@ bool HMWJText::readStyles(MWAWEntry const &entry)
     input->seek(pos+fieldSz, RVNG_SEEK_SET);
   }
 
-  if (!input->atEOS()) {
+  if (!input->isEnd()) {
     asciiFile.addPos(input->tell());
     asciiFile.addNote("_");
   }

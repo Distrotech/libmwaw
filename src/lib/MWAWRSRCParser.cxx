@@ -305,7 +305,7 @@ bool MWAWRSRCParser::parseSTR(MWAWEntry const &entry, std::string &str)
     return false;
   }
   for (long i = 0; i < sz; i++) {
-    if (m_input->atEOS()) {
+    if (m_input->isEnd()) {
       MWAW_DEBUG_MSG(("MWAWRSRCParser::parseSTR: file is too short\n"));
       return false;
     }

@@ -944,7 +944,7 @@ bool CWDbaseContent::send(Vec2i const &pos)
       long fPos = input->tell();
       input->seek(record.m_resString.begin(), RVNG_SEEK_SET);
       long endPos = record.m_resString.end();
-      while (!input->atEOS() && input->tell() < endPos) {
+      while (!input->isEnd() && input->tell() < endPos) {
         unsigned char c=(unsigned char) input->readULong(1);
         listener->insertCharacter(c, input, endPos);
       }

@@ -405,7 +405,7 @@ bool LWText::sendMainText()
   float deltaSpacing=0;
   while (1) {
     long actPos = input->tell();
-    bool done =  input->atEOS() || (endPos>=0&&actPos>=endPos);
+    bool done =  input->isEnd() || (endPos>=0&&actPos>=endPos);
     char c = done ? (char) 0 : (char) input->readULong(1);
     if (c==0xd || done) {
       f2.str("");
@@ -930,7 +930,7 @@ bool LWText::sendHeaderFooter(bool header)
   int numChar = (int) zone.m_pos.length();
   std::string str("");
   for (int c = 0; c < numChar; c++) {
-    if(input->atEOS()) {
+    if(input->isEnd()) {
       MWAW_DEBUG_MSG(("LWText::sendHeaderFooter: can not read end of text\n"));
       break;
     }

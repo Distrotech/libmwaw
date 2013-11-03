@@ -392,7 +392,7 @@ bool MSK3Parser::createZones()
   MSK3ParserInternal::Zone newZone(type, int(m_state->m_zoneMap.size()));
   m_state->m_zoneMap.insert(std::map<int,MSK3ParserInternal::Zone>::value_type(int(type),newZone));
   MSK3ParserInternal::Zone &mainZone = m_state->m_zoneMap.find(int(type))->second;
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     pos = input->tell();
     if (!readZone(mainZone)) {
       input->seek(pos, RVNG_SEEK_SET);
@@ -404,7 +404,7 @@ bool MSK3Parser::createZones()
 
   pos = input->tell();
 
-  if (!input->atEOS())
+  if (!input->isEnd())
     ascii().addPos(input->tell());
   ascii().addNote("Entries(End)");
   ascii().addPos(pos+100);
@@ -518,7 +518,7 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
     }
     setVersion((vers < 4) ? 1 : (vers < 8) ? 2 : (vers < 11) ? 3 : 4);
   }
-  if (input->seek(headerSize,RVNG_SEEK_SET) != 0 || input->atEOS())
+  if (input->seek(headerSize,RVNG_SEEK_SET) != 0 || input->isEnd())
     return false;
 
   if (input->seek(12,RVNG_SEEK_SET) != 0) return false;
@@ -756,7 +756,7 @@ bool MSK3Parser::readGroup(MSK3ParserInternal::Zone &zone, MWAWEntry &entry, int
 {
   entry = MWAWEntry();
   MWAWInputStreamPtr input=getInput();
-  if (input->atEOS()) return false;
+  if (input->isEnd()) return false;
 
   long pos = input->tell();
   if (input->readULong(1) != 3) return false;
@@ -851,7 +851,7 @@ bool MSK3Parser::readGroupHeaderInfo(bool header, int check)
   long debPos = input->tell();
 
   long ptr = (long) input->readULong(2);
-  if (input->atEOS()) return false;
+  if (input->isEnd()) return false;
   if (ptr) {
     if (check == 49) return false;
     if (check == 99) {

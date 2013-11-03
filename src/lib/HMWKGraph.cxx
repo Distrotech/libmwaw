@@ -1752,7 +1752,7 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
   asciiFile.addNote(f.str().c_str());
 
   for (int i = 0; i < table->m_numCells; ++i) {
-    if (input->atEOS()) break;
+    if (input->isEnd()) break;
     pos = input->tell();
     f.str("");
     if (pos+80 > dataSz) {

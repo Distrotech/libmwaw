@@ -996,7 +996,7 @@ bool HMWJParser::readZoneWithHeader(MWAWEntry const &entry)
 
   // often another list of data
   int i=0;
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     pos = input->tell();
     if (pos==endPos)
       return true;
@@ -1186,12 +1186,12 @@ bool HMWJParser::decodeZone(MWAWEntry const &entry, RVNGBinaryData &dt)
   MWAWInputStreamPtr input = getInput();
   input->seek(entry.begin()+4, RVNG_SEEK_SET);
   dt.clear();
-  while (!input->atEOS() && input->tell() < entry.end()) {
+  while (!input->isEnd() && input->tell() < entry.end()) {
     short a = root;
     bool ok = true;
     do {  /* once for each bit on path */
       if(bitcounter == 0) {
-        if (input->atEOS() || input->tell() >= entry.end()) {
+        if (input->isEnd() || input->tell() >= entry.end()) {
           MWAW_DEBUG_MSG(("HMWJParser::decodeZone: find some uncomplete data for zone%lx\n", entry.begin()));
           dt.append((unsigned char)a);
           ok = false;

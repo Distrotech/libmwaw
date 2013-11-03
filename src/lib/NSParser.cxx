@@ -831,7 +831,7 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
   rsrcAscii().addPos(pos-4);
   rsrcAscii().addNote(f.str().c_str());
 
-  while(!input->atEOS()) {
+  while(!input->isEnd()) {
     pos = input->tell();
     if (pos == entry.end()) break;
     long endPos = entry.end();
@@ -870,7 +870,7 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
         f << "_";
         pSz = 0;
       }
-      if (input->tell()+pSz > endPos || input->atEOS()) {
+      if (input->tell()+pSz > endPos || input->isEnd()) {
         f << "###";
         rsrcAscii().addPos(pos);
         rsrcAscii().addNote(f.str().c_str());

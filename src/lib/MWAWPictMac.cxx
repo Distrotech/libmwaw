@@ -280,7 +280,7 @@ struct Bitmap {
     }
     if (!readBitmapData(input, packed)) return false;
 
-    if (input.atEOS()) {
+    if (input.isEnd()) {
       MWAW_DEBUG_MSG(("Pict1:Bitmap: EOF \n"));
       return false;
     }
@@ -376,7 +376,7 @@ struct Bitmap {
 
     size_t pos=0;
     for (int i = 0; i < numRows; i++) {
-      if (input.atEOS()) break;
+      if (input.isEnd()) break;
 
       if (!packed) {
         unsigned long numR = 0;
@@ -541,7 +541,7 @@ struct Pixmap {
     }
     if (!readPixmapData(input)) return false;
 
-    if (input.atEOS()) {
+    if (input.isEnd()) {
       MWAW_DEBUG_MSG(("Pict1:Pixmap: EOF \n"));
       return false;
     }
@@ -1717,7 +1717,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     actPos = input->tell();
   }
 
-  while (ok && !input->atEOS()) {
+  while (ok && !input->isEnd()) {
     actPos = input->tell();
     int code = (int) input->readULong(1);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
@@ -1805,7 +1805,7 @@ bool PictParser::convertToPict2(RVNGBinaryData const &orig, RVNGBinaryData &resu
 #  undef ADD_DATA_SHORT
 
   bool findEnd = false;
-  while (!findEnd && !input->atEOS()) {
+  while (!findEnd && !input->isEnd()) {
     long actPos = input->tell();
     int code = (int) input->readULong(1);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
@@ -1838,10 +1838,10 @@ bool PictParser::convertToPict2(RVNGBinaryData const &orig, RVNGBinaryData &resu
 
   bool endOk = false;
   if (findEnd) {
-    if (input->atEOS()) endOk = true;
+    if (input->isEnd()) endOk = true;
     else { // allows a final caracter for alignment
       input->seek(1, RVNG_SEEK_CUR);
-      endOk = input->atEOS();
+      endOk = input->isEnd();
     }
   }
   if (!endOk) {
@@ -2039,7 +2039,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     MWAW_DEBUG_MSG(("Pict2:OpCode:parsePict no header\n"));
     ok = false;
   }
-  while (ok && !input->atEOS()) {
+  while (ok && !input->isEnd()) {
     actPos = input->tell();
     int code = (int)input->readULong(2);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);

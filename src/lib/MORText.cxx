@@ -989,7 +989,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
   uint32_t defFlags=font.flags();
   bool defHasUnderline=font.getUnderline().isSet();
   listener->setFont(ft);
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     long actPos = input->tell();
     if (actPos >= endPos)
       break;

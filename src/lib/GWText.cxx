@@ -519,7 +519,7 @@ bool GWText::createZones(int expectedHF)
 
   bool findMainZone=false;
   int nAuxi=0;
-  while (!input->atEOS()) {
+  while (!input->isEnd()) {
     pos=input->tell();
     GWTextInternal::Zone zone;
     if (!readZone(zone)) {
@@ -556,7 +556,7 @@ bool GWText::findNextZone()
   // first look for ruler
   input->seek(pos+headerSize, RVNG_SEEK_SET);
   while (true) {
-    if (input->atEOS())
+    if (input->isEnd())
       return false;
     pos = input->tell();
     unsigned long val=input->readULong(4);
@@ -575,7 +575,7 @@ bool GWText::findNextZone()
       continue;
     }
     // ok a empty tabs stop
-    while (!input->atEOS()) {
+    while (!input->isEnd()) {
       pos = input->tell();
       if (input->readULong(4)!=0x20FFFF || input->readULong(4)!=0xFFFF2E00) {
         input->seek(pos, RVNG_SEEK_SET);
@@ -1351,7 +1351,7 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
   long cPos=0;
   while (1) {
     long actPos = input->tell();
-    bool done = input->atEOS() || actPos==endPos;
+    bool done = input->isEnd() || actPos==endPos;
 
     char c = done ? (char) 0 : (char) input->readULong(1);
     if (pos!=actPos && (c==0xd || done)) {

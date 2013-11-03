@@ -1939,7 +1939,7 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
 
   ascii().addDelimiter(m_input->tell(), '|');
   m_input->seek(endPos, RVNG_SEEK_SET);
-  while (m_input->readLong(2)==0 && !m_input->atEOS()) {}
+  while (m_input->readLong(2)==0 && !m_input->isEnd()) {}
   m_input->seek(-2, RVNG_SEEK_CUR);
   if (m_input->readLong(1)) m_input->seek(-1, RVNG_SEEK_CUR);
   ascii().addPos(pos);
