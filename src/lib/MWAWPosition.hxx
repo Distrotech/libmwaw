@@ -79,6 +79,7 @@ public:
       break;
     case RVNG_PERCENT:
     case RVNG_GENERIC:
+    case RVNG_UNIT_ERROR:
     default:
       break;
     }
@@ -139,6 +140,7 @@ public:
       break;
     case RVNG_PERCENT:
     case RVNG_GENERIC:
+    case RVNG_UNIT_ERROR:
     default:
       MWAW_DEBUG_MSG(("MWAWPosition::getScaleFactor %d unit must not appear\n", int(orig)));
     }
@@ -153,6 +155,7 @@ public:
       break;
     case RVNG_PERCENT:
     case RVNG_GENERIC:
+    case RVNG_UNIT_ERROR:
     default:
       MWAW_DEBUG_MSG(("MWAWPosition::getScaleFactor %d unit must not appear\n", int(dest)));
     }

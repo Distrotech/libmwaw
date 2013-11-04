@@ -62,6 +62,7 @@ bool MWAWSection::Column::addTo(RVNGPropertyList &propList) const
     break;
   case RVNG_PERCENT:
   case RVNG_GENERIC:
+  case RVNG_UNIT_ERROR:
   default:
     MWAW_DEBUG_MSG(("MWAWSection::Column::addTo: unknown unit\n"));
     return false;
