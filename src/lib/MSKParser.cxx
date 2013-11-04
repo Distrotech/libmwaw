@@ -36,27 +36,13 @@
 
 #include "MSKParser.hxx"
 
-/** Internal: the structures of a MSKParser */
-namespace MSKParserInternal
-{
-////////////////////////////////////////
-//! Internal: the state of a MSK3Parser
-struct State {
-  //! constructor
-  State() {
-  }
-};
-}
-
 MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(new MSKParserInternal::State),
-  m_input(input), m_asciiFile(input)
+  MWAWParser(input, rsrcParser, header), m_input(input), m_asciiFile(input)
 {
 }
 
 MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWParserStatePtr parserState) :
-  MWAWParser(parserState), m_state(new MSKParserInternal::State),
-  m_input(input), m_asciiFile(input)
+  MWAWParser(parserState), m_input(input), m_asciiFile(input)
 {
 }
 

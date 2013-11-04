@@ -243,7 +243,7 @@ bool MWAWInputStream::readDouble(double &res, bool &isNotANumber)
     sign = -1;
   }
   exp -= 0x3fff;
-  
+
   isNotANumber=false;
   unsigned long mantisse = (unsigned long) readULong(4);
   if ((mantisse & 0x80000000) == 0) {

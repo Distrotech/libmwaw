@@ -292,7 +292,7 @@ std::string Group::print() const
 //! Internal: the picture of a HMWKGraph
 struct PictureFrame : public Frame {
   //! constructor
-  PictureFrame(Frame const &orig) : Frame(orig), m_type(0), m_dim(0,0), m_borderDim(0,0) {
+  PictureFrame(Frame const &orig) : Frame(orig), m_pictureType(0), m_dim(0,0), m_borderDim(0,0) {
     for (int i = 0; i < 7; ++i) m_values[i] = 0;
   }
   //! destructor
@@ -307,7 +307,7 @@ struct PictureFrame : public Frame {
   //! print local data
   std::string print() const {
     std::stringstream s;
-    if (m_type) s << "type?=" << m_type << ",";
+    if (m_pictureType) s << "type?=" << m_pictureType << ",";
     if (m_dim[0] || m_dim[1])
       s << "dim?=" << m_dim << ",";
     if (m_borderDim[0] > 0 || m_borderDim[1] > 0)
@@ -319,7 +319,7 @@ struct PictureFrame : public Frame {
   }
 
   //! a type
-  int m_type;
+  int m_pictureType;
   //! a dim?
   Vec2i m_dim;
   //! the border dim?
@@ -422,7 +422,7 @@ private:
 //! Internal: the textbox of a HMWKGraph
 struct TextBox : public Frame {
   //! constructor
-  TextBox(Frame const &orig, bool isComment) : Frame(orig), m_commentBox(isComment), m_textFileId(-1), m_linkedIdList(), m_isLinked(false), m_extra("") {
+  TextBox(Frame const &orig, bool isComment) : Frame(orig), m_commentBox(isComment), m_textFileId(-1), m_linkedIdList(), m_isLinked(false) {
     for (int i = 0; i < 2; ++i) m_dim[i] = 0;
   }
   //! destructor
@@ -503,7 +503,6 @@ struct TextBox : public Frame {
         s << std::hex << m_linkedIdList[l] << std::dec << ",";
       s << "],";
     }
-    s << m_extra;
     return s.str();
   }
 
@@ -1603,7 +1602,7 @@ shared_ptr<HMWKGraphInternal::PictureFrame> HMWKGraph::readPictureFrame(shared_p
   picture.reset(new HMWKGraphInternal::PictureFrame(header));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
-  picture->m_type = (int) input->readLong(2); // 0 or 4 : or maybe wrapping
+  picture->m_pictureType = (int) input->readLong(2); // 0 or 4 : or maybe wrapping
   for (int i = 0; i < 5; ++i) // always 0
     picture->m_values[i] =  (int) input->readLong(2);
   float bDim[2];

@@ -622,7 +622,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
     if (clsName)
       f << "'" << clsName << "'";
     else {
-      MWAW_DEBUG_MSG(("MWAWOLEParser::readCompObj: unknown clsid=%ld\n", clsData[0]));
+      MWAW_DEBUG_MSG(("MWAWOLEParser::readCompObj: unknown clsid=%ld\n", (long) clsData[0]));
       f << "unknCLSID='" << std::hex << clsData[0] << "'";
     }
   } else {

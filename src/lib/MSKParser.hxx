@@ -45,11 +45,6 @@ class RVNGPropertyList;
 class MSKGraph;
 class MSKTable;
 
-namespace MSKParserInternal
-{
-struct State;
-}
-
 /** \brief generic parser for Microsoft Works file
  *
  *
@@ -94,8 +89,6 @@ public:
     return m_asciiFile;
   }
 protected:
-  //! the state
-  shared_ptr<MSKParserInternal::State> m_state;
   //! the input which can be an OLE in MSWorks 4 file
   MWAWInputStreamPtr m_input;
   //! the debug file of the actual input

@@ -2729,7 +2729,7 @@ void MSKGraph::sendAll(int zoneId, bool mainZone)
   }
 }
 
-void MSKGraph::sendObjects(MSKGraph::SendData what)
+void MSKGraph::sendObjects(MSKGraph::SendData const &what)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener) {

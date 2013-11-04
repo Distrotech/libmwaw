@@ -928,7 +928,7 @@ bool CWDbaseContent::send(Vec2i const &pos)
   switch(record.m_resType) {
   case Record::R_Long:
     if (format.m_format)
-      send(double(record.m_resLong), record.m_resDoubleNaN, format);
+      send(double(record.m_resLong), false, format);
     else {
       std::stringstream s;
       s << record.m_resLong;
@@ -969,7 +969,7 @@ void CWDbaseContent::send(double val, bool isNotANumber, CWStyleManager::CellFor
     if (type>=10&&type<=11) type += 4;
     else if (type>=14) type=16;
   }
-  // note: if val*0!=0, val is a NaN so better so simply print NaN 
+  // note: if val*0!=0, val is a NaN so better so simply print NaN
   if (type <= 0 || type >=16 || type==10 || type==11 || isNotANumber) {
     s << val;
     listener->insertUnicodeString(s.str().c_str());
