@@ -311,7 +311,7 @@ struct ZonePict : public Zone {
 struct Bitmap : public CWStruct::DSET {
   //! constructor
   Bitmap(CWStruct::DSET const &dset = CWStruct::DSET()) :
-    DSET(dset), m_bitmapType(-1), m_size(0,0), m_entry(), m_colorMap() {
+    DSET(dset), m_bitmapType(-1), m_bitmapSize(0,0), m_entry(), m_colorMap() {
   }
 
   //! operator<<
@@ -324,7 +324,7 @@ struct Bitmap : public CWStruct::DSET {
   //! the bitmap type
   int m_bitmapType;
   //! the bitmap size
-  Vec2i m_size;
+  Vec2i m_bitmapSize;
   //! the bitmap entry
   MWAWEntry m_entry;
   //! the color map
@@ -666,7 +666,7 @@ void CWGraph::askToSend(int number, bool asGraphic, MWAWPosition const& pos)
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
-bool CWGraph::getSurfaceColor(CWGraphInternal::Style const style, MWAWColor &col) const
+bool CWGraph::getSurfaceColor(CWGraphInternal::Style const &style, MWAWColor &col) const
 {
   if (!style.hasSurfaceColor())
     return false;
@@ -814,7 +814,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
       dim[j] = (int) input->readLong(2);
     f << "sz=" << dim[1] << "x" << dim[0] << ",";
     if (dim[0] > 0 && dim[1] > 0) {
-      bitmap->m_size = Vec2i(dim[1]+2, dim[0]+2);
+      bitmap->m_bitmapSize = Vec2i(dim[1]+2, dim[0]+2);
       sizeSet = true;
     }
     ascFile.addDelimiter(input->tell(),']');
@@ -852,7 +852,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
     for (int j = 0; j < 2; j++)
       dim[j] = (int) input->readLong(2);
     if (i == N-1 && !sizeSet)
-      bitmap->m_size = Vec2i(dim[0]+2, dim[1]+2);
+      bitmap->m_bitmapSize = Vec2i(dim[0]+2, dim[1]+2);
 
     f << "dim?=" << dim[0] << "x" << dim[1] << ",";
     for (int j = 3; j < 6; j++) {
@@ -1993,18 +1993,18 @@ bool CWGraph::readBitmapData(CWGraphInternal::Bitmap &zone)
     return false;
   }
   /* Fixme: this code can not works for the packed bitmap*/
-  long numColors = zone.m_size[0]*zone.m_size[1];
+  long numColors = zone.m_bitmapSize[0]*zone.m_bitmapSize[1];
   int numBytes = numColors ? int(sz/numColors) : 0;
   if (sz != numBytes*numColors) {
     // check for different row alignement: 2 and 4
     for (int align=2; align <= 4; align*=2) {
-      int diffToAlign=align-(zone.m_size[0]%align);
+      int diffToAlign=align-(zone.m_bitmapSize[0]%align);
       if (diffToAlign==align) continue;
-      numColors = (zone.m_size[0]+diffToAlign)*zone.m_size[1];
+      numColors = (zone.m_bitmapSize[0]+diffToAlign)*zone.m_bitmapSize[1];
       numBytes = numColors ? int(sz/numColors) : 0;
       if (sz == numBytes*numColors) {
-        zone.m_size[0]+=diffToAlign;
-        MWAW_DEBUG_MSG(("CWGraph::readBitmapData: increase width to %d\n",zone.m_size[0]));
+        zone.m_bitmapSize[0]+=diffToAlign;
+        MWAW_DEBUG_MSG(("CWGraph::readBitmapData: increase width to %d\n",zone.m_bitmapSize[0]));
         break;
       }
     }
@@ -2048,7 +2048,7 @@ void CWGraph::checkNumberAccrossPages(CWGraphInternal::Group &group) const
 
 void CWGraph::updateInformation(CWGraphInternal::Group &group) const
 {
-  if (group.m_blockToSendList.size() || group.m_idLinkedZonesMap.size())
+  if (!group.m_blockToSendList.empty() || !group.m_idLinkedZonesMap.empty())
     return;
   std::set<int> forbiddenZone;
 
@@ -2633,19 +2633,19 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
   MWAWPictBitmapColor *bmapColor = 0;
   bool indexed = false;
   if (numColors > 2) {
-    bmapIndexed =  new MWAWPictBitmapIndexed(bitmap.m_size);
+    bmapIndexed =  new MWAWPictBitmapIndexed(bitmap.m_bitmapSize);
     bmapIndexed->setColors(bitmap.m_colorMap);
     bmap.reset(bmapIndexed);
     indexed = true;
   } else
-    bmap.reset((bmapColor=new MWAWPictBitmapColor(bitmap.m_size)));
+    bmap.reset((bmapColor=new MWAWPictBitmapColor(bitmap.m_bitmapSize)));
 
   //! let go
   int fSz = bitmap.m_bitmapType;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(bitmap.m_entry.begin(), WPX_SEEK_SET);
-  for (int r = 0; r < bitmap.m_size[1]; r++) {
-    for (int c = 0; c < bitmap.m_size[0]; c++) {
+  for (int r = 0; r < bitmap.m_bitmapSize[1]; r++) {
+    for (int c = 0; c < bitmap.m_bitmapSize[0]; c++) {
       long val = (long) input->readULong(fSz);
       if (indexed) {
         bmapIndexed->set(c,r,(int)val);

@@ -110,7 +110,7 @@ public:
     Vec2i m_size;
   };
   /** sends all the object of a page, frame, ...  */
-  void sendObjects(SendData const what);
+  void sendObjects(SendData const &what);
 
   /** try to update positions knowing pages and lines height */
   void computePositions(int zoneId, std::vector<int> &linesHeight, std::vector<int> &pagesHeight);

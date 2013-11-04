@@ -386,6 +386,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
   int const vers = version();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
+  int numFont=0;
   while (long(input->tell()) < endPos) {
     long actPos = input->tell();
     /* 5-16: basic paragraph properties
@@ -403,7 +404,6 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
     }
     bool done = false;
     long dSz = endPos-actPos;
-    int numFont=0;
     switch(wh) {
     case 0:
       done = (actPos+1==endPos||(dataSz==2 && actPos+2==endPos));

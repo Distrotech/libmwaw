@@ -518,7 +518,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
         break;
       }
       record.m_resType=Record::R_Double;
-      if (input->readDouble(record.m_resDouble))
+      if (input->readDouble(record.m_resDouble, record.m_resDoubleNaN))
         f << record.m_resDouble << ",";
       else {
         MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: can not read a float\n"));
@@ -572,7 +572,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
         f << "###int" << rType << "[res],";
         break;
       case 2:
-        if (input->checkPosition(resPos+10) && input->readDouble(record.m_resDouble)) {
+        if (input->checkPosition(resPos+10) && input->readDouble(record.m_resDouble, record.m_resDoubleNaN)) {
           record.m_resType=Record::R_Double;
           f << "=" << record.m_resDouble << ",";
           break;
@@ -674,7 +674,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
       break;
     }
     record.m_resType=Record::R_Double;
-    if (input->readDouble(record.m_resDouble))
+    if (input->readDouble(record.m_resDouble, record.m_resDoubleNaN))
       f << record.m_resDouble << ",";
     else {
       MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: can not read a float\n"));
@@ -736,7 +736,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
       f << "###int" << rType << "[res],";
       break;
     case 2:
-      if (remainSz>=10 && input->readDouble(record.m_resDouble)) {
+      if (remainSz>=10 && input->readDouble(record.m_resDouble, record.m_resDoubleNaN)) {
         record.m_resType=Record::R_Double;
         f << "=" << record.m_resDouble << ",";
         break;
@@ -858,7 +858,7 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
       f << "###";
       break;
     }
-    if (input->readDouble(record.m_resDouble)) {
+    if (input->readDouble(record.m_resDouble, record.m_resDoubleNaN)) {
       record.m_resType=Record::R_Double;
       f << record.m_resDouble << ",";
     } else {
@@ -929,7 +929,7 @@ bool CWDbaseContent::send(Vec2i const &pos)
   switch(record.m_resType) {
   case Record::R_Long:
     if (format.m_format)
-      send(double(record.m_resLong), format);
+      send(double(record.m_resLong), false, format);
     else {
       std::stringstream s;
       s << record.m_resLong;
@@ -937,7 +937,7 @@ bool CWDbaseContent::send(Vec2i const &pos)
     }
     break;
   case Record::R_Double:
-    send(record.m_resDouble, format);
+    send(record.m_resDouble, record.m_resDoubleNaN, format);
     break;
   case Record::R_String:
     if (record.m_resString.valid()) {
@@ -959,7 +959,7 @@ bool CWDbaseContent::send(Vec2i const &pos)
   return true;
 }
 
-void CWDbaseContent::send(double val, CWStyleManager::CellFormat const &format)
+void CWDbaseContent::send(double val, bool isNotANumber, CWStyleManager::CellFormat const &format)
 {
   MWAWContentListenerPtr listener=m_parserState->m_listener;
   if (!listener)
@@ -970,7 +970,8 @@ void CWDbaseContent::send(double val, CWStyleManager::CellFormat const &format)
     if (type>=10&&type<=11) type += 4;
     else if (type>=14) type=16;
   }
-  if (type <= 0 || type >=16 || type==10 || type==11 || !boost::math::isfinite(val)) {
+  // note: if val*0!=0, val is a NaN so better so simply print NaN
+  if (type <= 0 || type >=16 || type==10 || type==11 || isNotANumber) {
     s << val;
     listener->insertUnicodeString(s.str().c_str());
     return;

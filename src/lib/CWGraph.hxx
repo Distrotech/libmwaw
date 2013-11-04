@@ -98,7 +98,7 @@ public:
   (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
   //! return the surface color which corresponds to some ids (if possible)
-  bool getSurfaceColor(CWGraphInternal::Style const style, MWAWColor &col) const;
+  bool getSurfaceColor(CWGraphInternal::Style const &style, MWAWColor &col) const;
 protected:
   //! set the slide list ( for presentation )
   void setSlideList(std::vector<int> const &slideList);

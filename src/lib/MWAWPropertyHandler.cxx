@@ -410,39 +410,40 @@ protected:
     if (!readString(input, key)) return false;
     if (!readString(input, val)) return false;
 
-    // check if the val can be a double, ...
-    if (!val.empty() && (val[0]=='-' || val[0]=='.' || (val[0]>='0' && val[0]<='9'))) {
-      std::istringstream iss(val);
-      double res = 0.0;
-      iss >> res;
-      if (!iss.fail()) {
-        if (iss.eof() || iss.peek() == std::char_traits<char>::eof()) {
-          list.insert(key.c_str(), res);
-          return true;
-        }
-        std::string remain;
-        iss >> remain;
-        if (iss.peek() == std::char_traits<char>::eof()) {
-          if (remain=="pt") {
-            list.insert(key.c_str(), res/72., WPX_INCH);
-            return true;
-          }
-          if (remain=="in") {
-            list.insert(key.c_str(), res, WPX_INCH);
-            return true;
-          }
-          if (remain=="%") {
-            list.insert(key.c_str(), res/100., WPX_PERCENT);
-            return true;
-          }
-          if (remain=="*") {
-            list.insert(key.c_str(), res/1440., WPX_INCH);
-            return true;
-          }
-        }
+    std::string number(""), remain("");
+    // check if the val can be a double, first isolate the potential numbering part ...
+    for (size_t s=0; s<val.size(); ++s) {
+      char c=(char) val[s];
+      if (c=='-' || c=='.' || c=='e' || c=='E' || (c>='0' && c<='9')) {
+        number+=c;
+        continue;
       }
+      remain=val.substr(s);
+      break;
     }
-    list.insert(key.c_str(), val.c_str());
+    if (number.empty()) {
+      list.insert(key.c_str(), val.c_str());
+      return true;
+    }
+    std::istringstream iss(number);
+    double res = 0.0;
+    iss >> res;
+    if (iss.fail() || iss.peek()!=std::char_traits<char>::eof()) {
+      list.insert(key.c_str(), val.c_str());
+      return true;
+    }
+    if (remain.empty())
+      list.insert(key.c_str(), res);
+    else if (remain=="pt")
+      list.insert(key.c_str(), res/72., WPX_INCH);
+    else if (remain=="in")
+      list.insert(key.c_str(), res, WPX_INCH);
+    else if (remain=="%")
+      list.insert(key.c_str(), res/100., WPX_PERCENT);
+    else if (remain=="*")
+      list.insert(key.c_str(), res/1440., WPX_INCH);
+    else
+      list.insert(key.c_str(), val.c_str());
     return true;
   }
 

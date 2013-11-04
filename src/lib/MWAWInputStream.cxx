@@ -229,7 +229,7 @@ uint8_t MWAWInputStream::readU8(WPXInputStream *stream)
   return *(uint8_t const *)(p);
 }
 
-bool MWAWInputStream::readDouble(double &res)
+bool MWAWInputStream::readDouble(double &res, bool &isNotANumber)
 {
   if (!m_stream) return false;
   long pos=tell();
@@ -244,6 +244,7 @@ bool MWAWInputStream::readDouble(double &res)
   }
   exp -= 0x3fff;
 
+  isNotANumber=false;
   unsigned long mantisse = (unsigned long) readULong(4);
   if ((mantisse & 0x80000000) == 0) {
     if (readULong(4) != 0) return false;
@@ -251,6 +252,7 @@ bool MWAWInputStream::readDouble(double &res)
     if (exp == -0x3fff && mantisse == 0) return true; // ok zero
     if (exp == 0x4000 && (mantisse & 0xFFFFFFL)==0) { // ok Nan
       res=std::numeric_limits<double>::quiet_NaN();
+      isNotANumber = true;
       return true;
     }
     return false;

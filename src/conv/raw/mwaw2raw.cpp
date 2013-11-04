@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 	{
 		error=MWAWDocument::parse(&input, &documentGenerator);
 	}
-	catch (MWAWDocument::Result err)
+	catch (MWAWDocument::Result const &err)
 	{
 		error=err;
 	}

@@ -522,9 +522,9 @@ void GraphicExporter::endElement(const char *psName)
     m_output->endTextObject();
 #ifdef DEBUG
   else if (strcmp(psName, "SetStyle") && strcmp(psName, "Rectangle") &&
-           strcmp(psName, "Rectangle") && strcmp(psName, "Ellipse") &&
-           strcmp(psName, "Polygon") && strcmp(psName, "Polyline") &&
-           strcmp(psName, "Path") && strcmp(psName, "GraphicObject")) {
+           strcmp(psName, "Ellipse") && strcmp(psName, "Polygon") &&
+           strcmp(psName, "Polyline") && strcmp(psName, "Path") &&
+           strcmp(psName, "GraphicObject")) {
     MWAW_DEBUG_MSG(("GraphicExporter::endElement: called with unexpected name %s\n", psName));
   }
 #endif
