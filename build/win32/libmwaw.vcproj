@@ -496,10 +496,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWAWZipStream.cxx"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\lib\MWParser.cxx"
 				>
 			</File>
@@ -898,10 +894,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWTable.hxx"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\MWAWZipStream.hxx"
 				>
 			</File>
 			<File

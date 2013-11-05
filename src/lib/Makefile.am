@@ -10,9 +10,9 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_include_HEADERS = \
 	$(top_srcdir)/inc/libmwaw/libmwaw.hxx \
 	$(top_srcdir)/inc/libmwaw/MWAWDocument.hxx
 
-AM_CXXFLAGS = -I$(top_srcdir)/inc $(REVENGE_CFLAGS) $(DEBUG_CXXFLAGS) $(ZLIB_CFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/inc $(REVENGE_CFLAGS) $(DEBUG_CXXFLAGS)
 
-libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LIBADD  = $(ZLIB_LIBS) $(REVENGE_LIBS) @LIBMWAW_WIN32_RESOURCE@
+libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LIBADD  = $(REVENGE_LIBS) @LIBMWAW_WIN32_RESOURCE@
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_DEPENDENCIES = @LIBMWAW_WIN32_RESOURCE@  
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic  -no-undefined
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
@@ -155,8 +155,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWListener.hxx		\
 	MWAWOLEParser.cxx		\
 	MWAWOLEParser.hxx		\
-	MWAWOLEStream.cxx		\
-	MWAWOLEStream.hxx		\
 	MWAWPageSpan.cxx		\
 	MWAWPageSpan.hxx		\
 	MWAWParagraph.cxx		\
@@ -183,8 +181,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWSubDocument.hxx		\
 	MWAWTable.cxx			\
 	MWAWTable.hxx			\
-	MWAWZipStream.cxx		\
-	MWAWZipStream.hxx		\
 	MWParser.cxx			\
 	MWParser.hxx			\
 	MWProParser.cxx			\

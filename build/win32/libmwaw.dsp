@@ -411,10 +411,6 @@ SOURCE=..\..\src\lib\MWAWTable.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWZipStream.cxx
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\MWParser.cxx
 # End Source File
 # Begin Source File
@@ -812,10 +808,6 @@ SOURCE=..\..\src\lib\MWAWSubDocument.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWTable.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWZipStream.hxx
 # End Source File
 # Begin Source File
 

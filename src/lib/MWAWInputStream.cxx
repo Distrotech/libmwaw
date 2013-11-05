@@ -41,7 +41,6 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWDebug.hxx"
-#include "MWAWZipStream.hxx"
 
 #include "MWAWInputStream.hxx"
 
@@ -446,25 +445,24 @@ bool MWAWInputStream::unBinHex()
 ////////////////////////////////////////////////////////////
 bool MWAWInputStream::unzipStream()
 {
-#if !defined(USE_ZIP)
-  return false;
-#else
-  if (!hasDataFork()) return false;
+  if (!isStructured()) return false;
   seek(0, librevenge::RVNG_SEEK_SET);
-  MWAWZipStream zStream(m_stream.get());
-  bool zipFile = zStream.isZipStream();
-  if (!zipFile) return false;
-
-  seek(0, librevenge::RVNG_SEEK_SET);
-  std::vector<std::string> names = zStream.getZipNames();
+  unsigned numStream=m_stream->subStreamCount();
+  std::vector<std::string> names;
+  for (unsigned n=0; n < numStream; ++n) {
+    char const *nm=m_stream->subStreamName(n);
+    if (!nm) continue;
+    std::string name(nm);
+    if (name.empty() || name[name.length()-1]=='/') continue;
+    names.push_back(nm);
+  }
   if (names.size() == 1) {
-    m_stream.reset(zStream.getDocumentZipStream(names[0]));
+    // ok as the OLE file must have at least MN and MN0 OLE
+    m_stream.reset(m_stream->getSubStreamByName(names[0].c_str()));
     return true;
   }
-  if (names.size() != 2) {
-    MWAW_DEBUG_MSG(("MWAWInputStream::unzipStream:find a zip file with bad number of entries\n"));
+  if (names.size() != 2)
     return false;
-  }
   // test if XXX and ._XXX or __MACOSX/._XXX
   if (names[1].length() < names[0].length()) {
     std::string tmp = names[1];
@@ -478,15 +476,11 @@ bool MWAWInputStream::unzipStream()
   else if (names[1].length()==length+11)
     prefix = "__MACOSX/._";
   prefix += names[0];
-  if (prefix != names[1]) {
-    MWAW_DEBUG_MSG(("MWAWInputStream::unzipStream: find a zip file with unknown two entries %s %s\n", names[0].c_str(), names[1].c_str()));
-    return false;
-  }
-  shared_ptr<librevenge::RVNGInputStream> rsrcPtr(zStream.getDocumentZipStream(names[1]));
+  if (prefix != names[1]) return false;
+  shared_ptr<librevenge::RVNGInputStream> rsrcPtr(m_stream->getSubStreamByName(names[1].c_str()));
   m_resourceFork.reset(new MWAWInputStream(rsrcPtr,false));
-  m_stream.reset(zStream.getDocumentZipStream(names[0]));
+  m_stream.reset(m_stream->getSubStreamByName(names[0].c_str()));
   return true;
-#endif
 }
 
 ////////////////////////////////////////////////////////////
