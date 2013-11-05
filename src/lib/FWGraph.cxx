@@ -212,7 +212,7 @@ bool FWGraph::readBorderDocInfo(FWStruct::EntryPtr zone)
   libmwaw::DebugStream f;
   long pos = input->tell();
   if (input->readULong(4)!=0x626f7264 || input->readULong(1)) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -227,10 +227,10 @@ bool FWGraph::readBorderDocInfo(FWStruct::EntryPtr zone)
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     if (endData <= zone->end()) {
-      input->seek(endData, RVNG_SEEK_SET);
+      input->seek(endData, librevenge::RVNG_SEEK_SET);
       return true;
     }
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -250,7 +250,7 @@ bool FWGraph::readBorderDocInfo(FWStruct::EntryPtr zone)
     m_state->m_borderList.push_back(mod);
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -268,14 +268,14 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readSideBar(FWStruct::EntryPtr zone, F
   long pos = input->tell();
   sidebar.reset(new FWGraphInternal::SideBar(doc));
   if (!sidebar->read(zone)) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     sidebar.reset();
     return sidebar;
   }
 
   int val;
   if (input->tell()+12 > zone->end()) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     sidebar.reset();
     return sidebar;
   }
@@ -310,7 +310,7 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readSideBar(FWStruct::EntryPtr zone, F
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
 
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return sidebar;
   }
 
@@ -324,10 +324,10 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readSideBar(FWStruct::EntryPtr zone, F
       f << "SideBar[end]:";
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
-      input->seek(sz, RVNG_SEEK_CUR);
+      input->seek(sz, librevenge::RVNG_SEEK_CUR);
     } else {
       MWAW_DEBUG_MSG(("FWGraph::readSideBar: find bad end data\n"));
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
     }
   } else if (val) {
     MWAW_DEBUG_MSG(("FWGraph::readSideBar: find bad end data(II)\n"));
@@ -351,7 +351,7 @@ bool FWGraph::readSideBarPosition(FWStruct::EntryPtr zone, FWGraphInternal::Side
   if (sz < 28) {
     MWAW_DEBUG_MSG(("FWGraph::readSideBarPosition: the size seems bad\n"));
     f << "###";
-    input->seek(pos+4+sz, RVNG_SEEK_SET);
+    input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     return true;
@@ -396,7 +396,7 @@ bool FWGraph::readSideBarPosition(FWStruct::EntryPtr zone, FWGraphInternal::Side
   f << "],";
   if (input->tell() != pos+4+sz) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(pos+4+sz, RVNG_SEEK_SET);
+    input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
   }
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
@@ -418,7 +418,7 @@ bool FWGraph::readSideBarFormat(FWStruct::EntryPtr zone, FWGraphInternal::SideBa
   if ((vers==1&&sz!=0x3a)||(vers==2&&sz!=0x38)) {
     MWAW_DEBUG_MSG(("FWGraph::readSideBarFormat: the size seems bad\n"));
     f << "###";
-    input->seek(pos+4+sz, RVNG_SEEK_SET);
+    input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     return true;
@@ -434,7 +434,7 @@ bool FWGraph::readSideBarFormat(FWStruct::EntryPtr zone, FWGraphInternal::SideBa
        find for N=1 005f000000b201d2001600f40f94020004100001009700000000000000000000
      */
   }
-  input->seek(pos+42, RVNG_SEEK_SET);
+  input->seek(pos+42, librevenge::RVNG_SEEK_SET);
   float dim[2];
   for (int i=0; i < 2; ++i)
     dim[i]=float(input->readLong(4))/65536.f;
@@ -457,7 +457,7 @@ bool FWGraph::readSideBarFormat(FWStruct::EntryPtr zone, FWGraphInternal::SideBa
 
   if (input->tell() != pos+4+sz) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(pos+4+sz, RVNG_SEEK_SET);
+    input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
   }
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
@@ -478,7 +478,7 @@ bool FWGraph::readSideBarUnknown(FWStruct::EntryPtr zone, FWGraphInternal::SideB
   if (sz!=0x30) {
     MWAW_DEBUG_MSG(("FWGraph::readSideBarUnknown: the size seems bad\n"));
     f << "###";
-    input->seek(pos+4+sz, RVNG_SEEK_SET);
+    input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     return true;
@@ -504,7 +504,7 @@ bool FWGraph::readSideBarUnknown(FWStruct::EntryPtr zone, FWGraphInternal::SideB
   }
   if (input->tell() != pos+4+sz) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(pos+4+sz, RVNG_SEEK_SET);
+    input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
   }
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
@@ -521,13 +521,13 @@ bool FWGraph::sendSideBar(FWGraphInternal::SideBar const &frame)
 
   frame.m_parsed=true;
   MWAWPosition pos(frame.m_box[0]+72.f*m_mainParser->getPageLeftTop(),
-                   frame.m_box.size(),RVNG_POINT);
+                   frame.m_box.size(),librevenge::RVNG_POINT);
   pos.setPage(frame.m_page>0 ? frame.m_page : 1);
   pos.setRelativePosition(MWAWPosition::Page);
   pos.m_wrapping=(frame.m_wrapping==3) ?
                  MWAWPosition::WBackground : MWAWPosition::WDynamic;
   FWStruct::Border border;
-  RVNGPropertyList pList;
+  librevenge::RVNGPropertyList pList;
   if (frame.m_borderId && getBorder(frame.m_borderId, border))
     border.addToFrame(pList);
   MWAWSubDocumentPtr doc(new FWGraphInternal::SubDocument(*this,frame.m_fileId,border.m_frontColor));
@@ -547,7 +547,7 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readGraphicData(FWStruct::EntryPtr zon
   MWAWInputStreamPtr input = zone->m_input;
   long pos = input->tell();
   if (!doc.read(zone)) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return graphData;
   }
 
@@ -556,7 +556,7 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readGraphicData(FWStruct::EntryPtr zon
   libmwaw::DebugStream f;
 
   if (input->tell()+(vers==2?14:2) > zone->end()) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return graphData;
   }
 
@@ -590,7 +590,7 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readGraphicData(FWStruct::EntryPtr zon
     long sz = (long) input->readULong(4);
     if (sz < 0 || pos+4+sz > zone->end()) {
       f << "#sz=" << sz << ",";
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
     } else if (sz) { // a serie of doc id ( normally 1e )
       f << "docId[type1e?]=[";
       for (int i = 0; i < sz/2; i++) {
@@ -602,11 +602,11 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readGraphicData(FWStruct::EntryPtr zon
           f << id << "[" << type << "],";
       }
       f << "],";
-      input->seek(pos+4+sz, RVNG_SEEK_SET);
+      input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
     }
   } else if (nextData) f << "GraphData[2]:#" << nextData;
 
-  input->seek(1, RVNG_SEEK_CUR);
+  input->seek(1, librevenge::RVNG_SEEK_CUR);
   if (f.str().length()) {
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -624,11 +624,11 @@ bool FWGraph::readGraphic(FWStruct::EntryPtr zone)
   libmwaw::DebugStream f;
 
   long pos = zone->begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   long sz = (long) input->readULong(4);
   int expectedSz = vers==1 ? 0x5c : 0x54;
   if (sz != expectedSz || pos+sz > zone->end()) return false;
-  input->seek(sz, RVNG_SEEK_CUR);
+  input->seek(sz, librevenge::RVNG_SEEK_CUR);
   f << "Entries(Graphic)";
   f << "|" << *zone << ":";
   if (zone->m_type >= 0)
@@ -647,7 +647,7 @@ bool FWGraph::readGraphic(FWStruct::EntryPtr zone)
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
   asciiFile.skipZone(pos+4, pos+4+sz-1);
-  input->seek(sz, RVNG_SEEK_CUR);
+  input->seek(sz, librevenge::RVNG_SEEK_CUR);
 
   m_state->m_graphicMap.insert
   (std::multimap<int, FWStruct::EntryPtr >::value_type(zone->id(), zone));
@@ -658,7 +658,7 @@ bool FWGraph::readGraphic(FWStruct::EntryPtr zone)
 
   sz = (long)input->readULong(4);
   if (sz)
-    input->seek(sz, RVNG_SEEK_CUR);
+    input->seek(sz, librevenge::RVNG_SEEK_CUR);
   if (pos+4+sz!=zone->end()) {
     MWAW_DEBUG_MSG(("FWGraph::readGraphic: end graphic seems odds\n"));
   }
@@ -687,7 +687,7 @@ bool FWGraph::sendGraphic(int fId)
   MWAWInputStreamPtr input = zone->m_input;
   long pos = input->tell();
   bool ok=sendGraphic(zone);
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   return ok;
 }
 
@@ -703,9 +703,9 @@ bool FWGraph::sendGraphic(FWStruct::EntryPtr zone)
   MWAWInputStreamPtr input = zone->m_input;
 
   long pos = zone->begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int sz = (int)input->readULong(4);
-  input->seek(sz, RVNG_SEEK_CUR);
+  input->seek(sz, librevenge::RVNG_SEEK_CUR);
 
   // header
   pos = input->tell();
@@ -713,8 +713,8 @@ bool FWGraph::sendGraphic(FWStruct::EntryPtr zone)
 
 #ifdef DEBUG_WITH_FILES
   if (1) {
-    RVNGBinaryData file;
-    input->seek(pos+4, RVNG_SEEK_SET);
+    librevenge::RVNGBinaryData file;
+    input->seek(pos+4, librevenge::RVNG_SEEK_SET);
     input->readDataBlock(sz, file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f;
@@ -723,7 +723,7 @@ bool FWGraph::sendGraphic(FWStruct::EntryPtr zone)
   }
 #endif
 
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   Box2f box;
   MWAWPict::ReadResult res =
     MWAWPictData::check(input, sz, box);
@@ -739,15 +739,15 @@ bool FWGraph::sendGraphic(FWStruct::EntryPtr zone)
     MWAW_DEBUG_MSG(("FWGraph::sendGraphic: can not find the picture size\n"));
     actualSize = naturalSize = Vec2f(100,100);
   }
-  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),actualSize, RVNG_POINT);
+  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),actualSize, librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
   pictPos.setNaturalSize(naturalSize);
 
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   shared_ptr<MWAWPict> pict
   (MWAWPictData::get(input, sz));
   if (pict) {
-    RVNGBinaryData data;
+    librevenge::RVNGBinaryData data;
     std::string type;
     if (pict->getBinary(data,type)) {
       listener->insertPicture(pictPos, data, type);

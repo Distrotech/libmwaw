@@ -87,7 +87,7 @@ struct State {
   //! the origin position
   Vec2f m_origin;
   //! a buffer to stored the text
-  RVNGString m_textBuffer;
+  librevenge::RVNGString m_textBuffer;
 
   //! the font
   MWAWFont m_font;
@@ -189,7 +189,7 @@ int MWAWGraphicListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &in
   if (endPos > 0 && pos > endPos) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: problem reading a character\n"));
     pos = debPos;
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     unicode = m_parserState.m_fontConverter->unicode (fId, c);
   }
   if (unicode == -1) {
@@ -216,7 +216,7 @@ void MWAWGraphicListener::insertUnicode(uint32_t val)
   libmwaw::appendUnicode(val, m_ps->m_textBuffer);
 }
 
-void MWAWGraphicListener::insertUnicodeString(RVNGString const &str)
+void MWAWGraphicListener::insertUnicodeString(librevenge::RVNGString const &str)
 {
   if (!m_ps->m_isTextZoneOpened) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertUnicodeString: called outside a text zone\n"));
@@ -321,15 +321,15 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
   case MWAWField::Title: {
     _flushText();
     _openSpan();
-    RVNGPropertyList propList;
+    librevenge::RVNGPropertyList propList;
     if (field.m_type==MWAWField::Title)
-      m_gs->m_interface->insertField(RVNGString("text:title"), propList);
+      m_gs->m_interface->insertField(librevenge::RVNGString("text:title"), propList);
     else {
       propList.insert("style:num-format", libmwaw::numberingTypeToString(field.m_numberingType).c_str());
       if (field.m_type == MWAWField::PageNumber)
-        m_gs->m_interface->insertField(RVNGString("text:page-number"), propList);
+        m_gs->m_interface->insertField(librevenge::RVNGString("text:page-number"), propList);
       else
-        m_gs->m_interface->insertField(RVNGString("text:page-count"), propList);
+        m_gs->m_interface->insertField(librevenge::RVNGString("text:page-count"), propList);
     }
     break;
   }
@@ -353,7 +353,7 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
     if (localtime_r (&now, &timeinfo)) {
       char buf[256];
       strftime(buf, 256, format.c_str(), &timeinfo);
-      MWAWGraphicListener::insertUnicodeString(RVNGString(buf));
+      MWAWGraphicListener::insertUnicodeString(librevenge::RVNGString(buf));
     }
     break;
   }
@@ -384,16 +384,16 @@ void MWAWGraphicListener::startGraphic(Box2f const &bdbox)
   m_ps->m_isGraphicStarted = true;
   m_ps->m_origin=bdbox[0];
 
-  RVNGPropertyList list;
-  list.insert("svg:x",bdbox[0].x(), RVNG_POINT);
-  list.insert("svg:y",bdbox[0].y(), RVNG_POINT);
-  list.insert("svg:width",bdbox.size().x(), RVNG_POINT);
-  list.insert("svg:height",bdbox.size().y(), RVNG_POINT);
+  librevenge::RVNGPropertyList list;
+  list.insert("svg:x",bdbox[0].x(), librevenge::RVNG_POINT);
+  list.insert("svg:y",bdbox[0].y(), librevenge::RVNG_POINT);
+  list.insert("svg:width",bdbox.size().x(), librevenge::RVNG_POINT);
+  list.insert("svg:height",bdbox.size().y(), librevenge::RVNG_POINT);
   list.insert("libwpg:enforce-frame",1);
   m_gs->m_interface->startDocument(list);
 }
 
-bool MWAWGraphicListener::endGraphic(RVNGBinaryData &data, std::string &mimeType)
+bool MWAWGraphicListener::endGraphic(librevenge::RVNGBinaryData &data, std::string &mimeType)
 {
   if (!m_ps->m_isGraphicStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: the graphic is not started\n"));
@@ -451,9 +451,9 @@ void MWAWGraphicListener::_openParagraph()
     return;
   }
 
-  RVNGPropertyList propList;
+  librevenge::RVNGPropertyList propList;
   m_ps->m_paragraph.addTo(propList, false);
-  RVNGPropertyListVector tabStops;
+  librevenge::RVNGPropertyListVector tabStops;
   m_ps->m_paragraph.addTabsTo(tabStops);
   m_gs->m_interface->openParagraph(propList, tabStops);
 
@@ -500,9 +500,9 @@ void MWAWGraphicListener::_openListElement()
   if (m_ps->m_isParagraphOpened || m_ps->m_isListElementOpened)
     return;
 
-  RVNGPropertyList propList;
+  librevenge::RVNGPropertyList propList;
   m_ps->m_paragraph.addTo(propList,false);
-  RVNGPropertyListVector tabStops;
+  librevenge::RVNGPropertyListVector tabStops;
   m_ps->m_paragraph.addTabsTo(tabStops);
 
   // check if we must change the start value
@@ -580,7 +580,7 @@ void MWAWGraphicListener::_changeList()
     }
     if (m_parserState.m_listManager->needToSend(newListId, m_gs->m_sentListMarkers)) {
       for (int l=1; l <= theList->numLevels(); l++) {
-        RVNGPropertyList level;
+        librevenge::RVNGPropertyList level;
         if (!theList->addTo(l, level))
           continue;
         if (!theList->isNumeric(l))
@@ -597,7 +597,7 @@ void MWAWGraphicListener::_changeList()
   m_ps->m_listOrderedLevels.resize(newLevel, false);
   if (actualLevel == newLevel) return;
 
-  RVNGPropertyList propList;
+  librevenge::RVNGPropertyList propList;
   propList.insert("libwpd:id", m_ps->m_list->getId());
   for (size_t i=actualLevel+1; i<= newLevel; i++) {
     bool ordered = m_ps->m_list->isNumeric(int(i));
@@ -629,7 +629,7 @@ void MWAWGraphicListener::_openSpan()
       _openListElement();
   }
 
-  RVNGPropertyList propList;
+  librevenge::RVNGPropertyList propList;
   m_ps->m_font.addTo(propList, m_parserState.m_fontConverter);
 
   m_gs->m_interface->openSpan(propList);
@@ -659,9 +659,9 @@ void MWAWGraphicListener::_flushText()
   if (m_ps->m_textBuffer.len() == 0) return;
 
   // when some many ' ' follows each other, call insertSpace
-  RVNGString tmpText;
+  librevenge::RVNGString tmpText;
   int numConsecutiveSpaces = 0;
-  RVNGString::Iter i(m_ps->m_textBuffer);
+  librevenge::RVNGString::Iter i(m_ps->m_textBuffer);
   for (i.rewind(); i.next();) {
     if (*(i()) == 0x20) // this test is compatible with unicode format
       numConsecutiveSpaces++;
@@ -721,7 +721,7 @@ void MWAWGraphicListener::insertPicture
 }
 
 void MWAWGraphicListener::insertPicture
-(Box2f const &bdbox, MWAWGraphicStyle const &style, const RVNGBinaryData &binaryData, std::string type)
+(Box2f const &bdbox, MWAWGraphicStyle const &style, const librevenge::RVNGBinaryData &binaryData, std::string type)
 {
   if (!m_ps->m_isGraphicStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: the graphic is not started\n"));
@@ -731,18 +731,18 @@ void MWAWGraphicListener::insertPicture
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: a frame is already open\n"));
     return;
   }
-  RVNGPropertyList list;
-  RVNGPropertyListVector gradient;
+  librevenge::RVNGPropertyList list;
+  librevenge::RVNGPropertyListVector gradient;
   style.addTo(list, gradient);
   m_gs->m_interface->setStyle(list, gradient);
 
   list.clear();
   Vec2f pt=bdbox[0]-m_ps->m_origin;
-  list.insert("svg:x",pt.x(), RVNG_POINT);
-  list.insert("svg:y",pt.y(), RVNG_POINT);
+  list.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
+  list.insert("svg:y",pt.y(), librevenge::RVNG_POINT);
   pt=bdbox.size();
-  list.insert("svg:width",pt.x(), RVNG_POINT);
-  list.insert("svg:height",pt.y(), RVNG_POINT);
+  list.insert("svg:width",pt.x(), librevenge::RVNG_POINT);
+  list.insert("svg:height",pt.y(), librevenge::RVNG_POINT);
   list.insert("libwpg:mime-type", type.c_str());
   m_gs->m_interface->drawGraphicObject(list,binaryData);
 }
@@ -756,7 +756,7 @@ void MWAWGraphicListener::insertTextBox
   }
   if (!openFrame())
     return;
-  RVNGPropertyList propList;
+  librevenge::RVNGPropertyList propList;
   _handleFrameParameters(propList, bdbox, style);
   float rotate = style.m_rotate;
   // flip does not works on text, so we ignore it...
@@ -767,10 +767,10 @@ void MWAWGraphicListener::insertTextBox
     if (size[0]<0) size[0]=-size[0];
     if (size[1]<0) size[1]=-size[1];
     Vec2f center=bdbox[0]-m_ps->m_origin+0.5f*size;
-    propList.insert("libwpg:rotate-cx",center[0], RVNG_POINT);
-    propList.insert("libwpg:rotate-cy",center[1], RVNG_POINT);
+    propList.insert("libwpg:rotate-cx",center[0], librevenge::RVNG_POINT);
+    propList.insert("libwpg:rotate-cy",center[1], librevenge::RVNG_POINT);
   }
-  m_gs->m_interface->startTextObject(propList, RVNGPropertyListVector());
+  m_gs->m_interface->startTextObject(propList, librevenge::RVNGPropertyListVector());
   handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_TEXT_BOX);
   m_gs->m_interface->endTextObject();
   closeFrame();
@@ -813,27 +813,27 @@ void MWAWGraphicListener::closeFrame()
   m_ps->m_isFrameOpened = false;
 }
 
-void MWAWGraphicListener::_handleFrameParameters(RVNGPropertyList &list, Box2f const &bdbox, MWAWGraphicStyle const &style)
+void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &list, Box2f const &bdbox, MWAWGraphicStyle const &style)
 {
   if (!m_ps->m_isGraphicStarted)
     return;
 
   Vec2f size=bdbox.size();
   Vec2f pt=bdbox[0]-m_ps->m_origin;
-  RVNGPropertyListVector grad;
+  librevenge::RVNGPropertyListVector grad;
   if (style.hasGradient(true)) {
     if (style.m_rotate<0 || style.m_rotate>0) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::_handleFrameParameters: rotation is not implemented\n"));
     }
     // ok, first send a background rectangle
-    RVNGPropertyList rectList;
+    librevenge::RVNGPropertyList rectList;
     style.addTo(rectList,grad);
     m_gs->m_interface->setStyle(rectList,grad);
     rectList.clear();
-    rectList.insert("svg:x",pt[0], RVNG_POINT);
-    rectList.insert("svg:y",pt[1], RVNG_POINT);
-    rectList.insert("svg:width",size.x()>0 ? size.x() : -size.x(), RVNG_POINT);
-    rectList.insert("svg:height",size.y()>0 ? size.y() : -size.y(), RVNG_POINT);
+    rectList.insert("svg:x",pt[0], librevenge::RVNG_POINT);
+    rectList.insert("svg:y",pt[1], librevenge::RVNG_POINT);
+    rectList.insert("svg:width",size.x()>0 ? size.x() : -size.x(), librevenge::RVNG_POINT);
+    rectList.insert("svg:height",size.y()>0 ? size.y() : -size.y(), librevenge::RVNG_POINT);
     m_gs->m_interface->drawRectangle(rectList);
 
     list.insert("draw:stroke", "none");
@@ -841,21 +841,21 @@ void MWAWGraphicListener::_handleFrameParameters(RVNGPropertyList &list, Box2f c
   } else
     style.addTo(list,grad);
 
-  list.insert("svg:x",pt[0], RVNG_POINT);
-  list.insert("svg:y",pt[1], RVNG_POINT);
+  list.insert("svg:x",pt[0], librevenge::RVNG_POINT);
+  list.insert("svg:y",pt[1], librevenge::RVNG_POINT);
   if (size.x()>0)
-    list.insert("svg:width",size.x(), RVNG_POINT);
+    list.insert("svg:width",size.x(), librevenge::RVNG_POINT);
   else if (size.x()<0)
-    list.insert("fo:min-width",-size.x(), RVNG_POINT);
+    list.insert("fo:min-width",-size.x(), librevenge::RVNG_POINT);
   if (size.y()>0)
-    list.insert("svg:height",size.y(), RVNG_POINT);
+    list.insert("svg:height",size.y(), librevenge::RVNG_POINT);
   else if (size.y()<0)
-    list.insert("fo:min-height",-size.y(), RVNG_POINT);
+    list.insert("fo:min-height",-size.y(), librevenge::RVNG_POINT);
   float const padding = 0; // fillme
-  list.insert("fo:padding-top",padding, RVNG_POINT);
-  list.insert("fo:padding-bottom",padding, RVNG_POINT);
-  list.insert("fo:padding-left",padding, RVNG_POINT);
-  list.insert("fo:padding-right",padding, RVNG_POINT);
+  list.insert("fo:padding-top",padding, librevenge::RVNG_POINT);
+  list.insert("fo:padding-bottom",padding, librevenge::RVNG_POINT);
+  list.insert("fo:padding-left",padding, librevenge::RVNG_POINT);
+  list.insert("fo:padding-right",padding, librevenge::RVNG_POINT);
 }
 
 ///////////////////

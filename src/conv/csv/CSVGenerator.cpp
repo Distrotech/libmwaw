@@ -70,7 +70,7 @@ void CSVGenerator::insertTab()
 	getOutput() << char(0x9);
 }
 
-void CSVGenerator::insertText(const RVNGString &text)
+void CSVGenerator::insertText(const librevenge::RVNGString &text)
 {
 	if (!m_dataStarted)
 		return;
@@ -101,7 +101,7 @@ void CSVGenerator::insertLineBreak()
 	getOutput() << '\n';
 }
 
-void CSVGenerator::openTable(const RVNGPropertyList &propList, const RVNGPropertyListVector &columns)
+void CSVGenerator::openTable(const librevenge::RVNGPropertyList &propList, const librevenge::RVNGPropertyListVector &columns)
 {
 	if (!propList["libmwaw:main_spreadsheet"] && !propList["libmwaw:main_database"])
 		return;
@@ -122,7 +122,7 @@ void CSVGenerator::closeTable()
 	m_dataStarted=false;
 }
 
-void CSVGenerator::openTableRow(const RVNGPropertyList & /* propList */)
+void CSVGenerator::openTableRow(const librevenge::RVNGPropertyList & /* propList */)
 {
 	if (!m_dataStarted)
 		return;
@@ -136,7 +136,7 @@ void CSVGenerator::closeTableRow()
 	getOutput() << "\n";
 }
 
-void CSVGenerator::openTableCell(const RVNGPropertyList & /* propList */)
+void CSVGenerator::openTableCell(const librevenge::RVNGPropertyList & /* propList */)
 {
 	if (!m_dataStarted)
 		return;

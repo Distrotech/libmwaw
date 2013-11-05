@@ -258,7 +258,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   long pos = m_input->tell();
   reinterpret_cast<FWParser *>(m_parser)->send(m_id);
-  m_input->seek(pos, RVNG_SEEK_SET);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
 
@@ -359,7 +359,7 @@ bool FWParser::send(int fileId, MWAWColor fontColor)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void FWParser::parse(RVNGTextInterface *docInterface)
+void FWParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -431,7 +431,7 @@ void FWParser::parse(RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void FWParser::createDocument(RVNGTextInterface *documentInterface)
+void FWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -629,7 +629,7 @@ bool FWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
     return false;
 
   int const minSize=50;
-  input->seek(minSize,RVNG_SEEK_SET);
+  input->seek(minSize,librevenge::RVNG_SEEK_SET);
   if (int(input->tell()) != minSize) {
     MWAW_DEBUG_MSG(("FWParser::checkHeader: file is too short\n"));
     return false;
@@ -638,7 +638,7 @@ bool FWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   if (!readDocPosition())
     return false;
 
-  input->seek(0,RVNG_SEEK_SET);
+  input->seek(0,librevenge::RVNG_SEEK_SET);
 
   if (header)
     header->reset(MWAWDocument::MWAW_T_FULLWRITE, 1);
@@ -655,13 +655,13 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
   libmwaw::DebugStream f;
 
   long pos = zone->begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int N = (int)input->readLong(2);
   if (!N) return false;
-  input->seek(4, RVNG_SEEK_CUR);
+  input->seek(4, librevenge::RVNG_SEEK_CUR);
   int val = (int)input->readLong(2);
   if (N < val-2 || N > val+2) return false;
-  input->seek(2, RVNG_SEEK_CUR);
+  input->seek(2, librevenge::RVNG_SEEK_CUR);
   int nC = (int)input->readULong(1);
   if (!nC || nC > 70) return false;
   for (int i = 0; i < nC; i++) {
@@ -670,7 +670,7 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
   }
 
   zone->setParsed(true);
-  input->seek(pos+2, RVNG_SEEK_SET);
+  input->seek(pos+2, librevenge::RVNG_SEEK_SET);
   f << "Entries(DocInfo)|" << *zone << ":";
   f << "N0=" << N << ",";
   f << "unkn0=" << std::hex << input->readULong(2) << std::dec << ","; // big number
@@ -691,7 +691,7 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
   asciiFile.addNote(f.str().c_str());
 
   pos += 10+70; // checkme
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   f.str("");
   f << "DocInfo-A:";
   for (int i = 0; i < 4; i++) { // 0, 1, 2, 80
@@ -736,7 +736,7 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
     for (int i = 0; i < nC; i++) s+=char(input->readLong(1));
     if (nC)
       f << "Username" << st << "=" << s << ",";
-    input->seek(actPos+36, RVNG_SEEK_SET);
+    input->seek(actPos+36, librevenge::RVNG_SEEK_SET);
   }
 
   asciiFile.addPos(pos);
@@ -745,7 +745,7 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
   asciiFile.addPos(pos);
   asciiFile.addNote("DocInfo-B");
   pos+=196;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   for (int i = 0; i < 6; i++) {
     pos = input->tell();
     f.str("");
@@ -753,7 +753,7 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
 
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+48, RVNG_SEEK_SET);
+    input->seek(pos+48, librevenge::RVNG_SEEK_SET);
   }
   for (int i = 0; i < 9; i++) {
     pos = input->tell();
@@ -762,12 +762,12 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
 
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+38, RVNG_SEEK_SET);
+    input->seek(pos+38, librevenge::RVNG_SEEK_SET);
   }
   pos = input->tell();
   asciiFile.addPos(pos);
   asciiFile.addNote("DocInfo-E");
-  input->seek(pos+182, RVNG_SEEK_SET);
+  input->seek(pos+182, librevenge::RVNG_SEEK_SET);
 
   // this part in v1 and v2
   pos = input->tell();
@@ -777,7 +777,7 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
   if (version()==2) {
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+436, RVNG_SEEK_SET);
+    input->seek(pos+436, librevenge::RVNG_SEEK_SET);
     pos = input->tell();
     if (!readEndDocInfo(zone)) {
       asciiFile.addPos(pos);
@@ -858,7 +858,7 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
     */
   }
   // try to retrieve the last part: printInfo+3 int
-  input->seek(zone->end()-130, RVNG_SEEK_SET);
+  input->seek(zone->end()-130, librevenge::RVNG_SEEK_SET);
   if (readPrintInfo(zone)) {
     pos = input->tell();
     f.str("");
@@ -908,10 +908,10 @@ bool FWParser::readEndDocInfo(FWStruct::EntryPtr zone)
       name+=char(val);
     }
     if (!ok || input->readULong(1)) {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     ok = false;
     if (name=="font") // block0 : unseen
       ;
@@ -926,10 +926,10 @@ bool FWParser::readEndDocInfo(FWStruct::EntryPtr zone)
       continue;
 
     MWAW_DEBUG_MSG(("FWParser::readEndDocInfo: can not read block %s\n", name.c_str()));
-    input->seek(pos+5, RVNG_SEEK_SET);
+    input->seek(pos+5, librevenge::RVNG_SEEK_SET);
     long blckSz = input->readLong(4);
     if (blckSz < 2 || pos+8+blckSz > zone->end()) {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
     int num=int(input->readULong(2));
@@ -937,7 +937,7 @@ bool FWParser::readEndDocInfo(FWStruct::EntryPtr zone)
     f << "Entries(Doc" << name << "):N=" << num << ",###";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+9+blckSz, RVNG_SEEK_SET);
+    input->seek(pos+9+blckSz, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -949,7 +949,7 @@ bool FWParser::readCitationDocInfo(FWStruct::EntryPtr zone)
   libmwaw::DebugStream f;
   long pos = input->tell();
   if (input->readULong(4)!=0x63697465 || input->readULong(1)) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -963,10 +963,10 @@ bool FWParser::readCitationDocInfo(FWStruct::EntryPtr zone)
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     if (endData <= zone->end()) {
-      input->seek(endData, RVNG_SEEK_SET);
+      input->seek(endData, librevenge::RVNG_SEEK_SET);
       return true;
     }
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -999,7 +999,7 @@ bool FWParser::readCitationDocInfo(FWStruct::EntryPtr zone)
     f << "RefValues-##";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(endData, RVNG_SEEK_SET);
+    input->seek(endData, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -1018,12 +1018,12 @@ bool FWParser::readPrintInfo(FWStruct::EntryPtr zone)
   if (sz != 0x78)
     return false;
   long endPos = pos+4+sz;
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("FWParser::readPrintInfo: file is too short\n"));
     return false;
   }
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   // print info
@@ -1033,7 +1033,7 @@ bool FWParser::readPrintInfo(FWStruct::EntryPtr zone)
       // the size is ok, so let try to continue
       asciiFile.addPos(pos);
       asciiFile.addNote("Entries(PrintInfo):##");
-      input->seek(endPos, RVNG_SEEK_SET);
+      input->seek(endPos, librevenge::RVNG_SEEK_SET);
       MWAW_DEBUG_MSG(("FWParser::readPrintInfo: can not read print info, continue\n"));
       return true;
     }
@@ -1071,7 +1071,7 @@ bool FWParser::readPrintInfo(FWStruct::EntryPtr zone)
     getPageSpan().setFormWidth(paperSize.x()/72.);
   }
   if (long(input->tell()) !=endPos) {
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
     f << ", #endPos";
     asciiFile.addDelimiter(input->tell(), '|');
   }
@@ -1092,7 +1092,7 @@ bool FWParser::readDocZoneData(FWStruct::EntryPtr zone)
   //  int vers = version();
 
   long pos = zone->begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   zone->setParsed(true);
   f << "Entries(DZoneData)|" << *zone << ":";
   asciiFile.addPos(pos);
@@ -1110,7 +1110,7 @@ bool FWParser::readDocZoneData(FWStruct::EntryPtr zone)
 
     bool done = false;
     for (int st = 0; st < 4; st++) {
-      input->seek(pos+st, RVNG_SEEK_SET);
+      input->seek(pos+st, librevenge::RVNG_SEEK_SET);
       FWStruct::ZoneHeader docData;
       shared_ptr<FWStruct::ZoneHeader> res;
       docData.m_type = doc.m_type;
@@ -1184,7 +1184,7 @@ bool FWParser::readDocZoneData(FWStruct::EntryPtr zone)
         }
         asciiFile.addPos(pos+st);
         asciiFile.addNote(f.str().c_str());
-        input->seek(pos+st+12, RVNG_SEEK_SET);
+        input->seek(pos+st+12, librevenge::RVNG_SEEK_SET);
         done = true;
         break;
       }
@@ -1227,7 +1227,7 @@ bool FWParser::readDocZoneData(FWStruct::EntryPtr zone)
           break;
         }
       }
-      input->seek(pos+st, RVNG_SEEK_SET);
+      input->seek(pos+st, librevenge::RVNG_SEEK_SET);
       if (input->readLong(1)) break;
     }
     if (done) {
@@ -1243,7 +1243,7 @@ bool FWParser::readDocZoneData(FWStruct::EntryPtr zone)
     MWAW_DEBUG_MSG(("FWParser::readDocZoneData: loose reading at zone %d[%d:%d]\n", int(z), doc.m_type, prevTypeOk));
     if (prevTypeOk != -1) prevTypeOk = -1;
     //
-    input->seek(pos+4, RVNG_SEEK_SET);
+    input->seek(pos+4, librevenge::RVNG_SEEK_SET);
     bool lastOk = false;
     while(input->tell()+4 < zone->end()) {
       bool prevLastOk = lastOk;
@@ -1256,7 +1256,7 @@ bool FWParser::readDocZoneData(FWStruct::EntryPtr zone)
       if (done) {
         if (docData.m_docId >int(z) && docData.m_docId < int(m_state->m_docZoneList.size())) {
           z = size_t(docData.m_docId-1);
-          input->seek(pos, RVNG_SEEK_SET);
+          input->seek(pos, librevenge::RVNG_SEEK_SET);
           MWAW_DEBUG_MSG(("FWParser::readDocZoneData: continue reading at zone %d\n", docData.m_docId));
           break;
         }
@@ -1267,7 +1267,7 @@ bool FWParser::readDocZoneData(FWStruct::EntryPtr zone)
         asciiFile.addNote("DZoneData##:");
       }
       lastOk = false;
-      input->seek(pos+1, RVNG_SEEK_SET);
+      input->seek(pos+1, librevenge::RVNG_SEEK_SET);
     }
   }
 
@@ -1281,10 +1281,10 @@ bool FWParser::readDocZoneStruct(FWStruct::EntryPtr zone)
   libmwaw::DebugStream f;
 
   long pos = zone->begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int N = (int)input->readLong(2);
   if ((N & 0xF)||N<=0) return false;
-  input->seek(pos+6, RVNG_SEEK_SET);
+  input->seek(pos+6, librevenge::RVNG_SEEK_SET);
   for (int i = 0; i < N-1; i++) {
     if (input->tell() >= zone->end())
       return false;
@@ -1297,7 +1297,7 @@ bool FWParser::readDocZoneStruct(FWStruct::EntryPtr zone)
       }
       return false;
     }
-    input->seek(4+v, RVNG_SEEK_CUR);
+    input->seek(4+v, librevenge::RVNG_SEEK_CUR);
   }
   if (input->tell() > zone->end())
     return false;
@@ -1309,7 +1309,7 @@ bool FWParser::readDocZoneStruct(FWStruct::EntryPtr zone)
     f << "###";
   }
   f << "N=" << N << ",";
-  input->seek(pos+2, RVNG_SEEK_SET);
+  input->seek(pos+2, librevenge::RVNG_SEEK_SET);
   f << "unkn=" << std::hex << input->readULong(4) << std::dec << ",";
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
@@ -1351,7 +1351,7 @@ bool FWParser::readDocZoneStruct(FWStruct::EntryPtr zone)
       }
       if (type==4) {
         asciiFile.addDelimiter(input->tell(),'|');
-        input->seek(3, RVNG_SEEK_CUR);
+        input->seek(3, librevenge::RVNG_SEEK_CUR);
       }
       f << dt;
     }
@@ -1423,7 +1423,7 @@ bool FWParser::readGenericDocData(FWStruct::EntryPtr zone, FWStruct::ZoneHeader 
   MWAWInputStreamPtr input = zone->m_input;
   long pos = input->tell();
   if (!doc.read(zone)) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -1457,7 +1457,7 @@ bool FWParser::readGenericDocData(FWStruct::EntryPtr zone, FWStruct::ZoneHeader 
     break;
   }
   if (input->tell()+1 > zone->end()) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -1479,7 +1479,7 @@ bool FWParser::readGenericDocData(FWStruct::EntryPtr zone, FWStruct::ZoneHeader 
     pos = input->tell();
     long sz = (long) input->readULong(4);
     if (sz < 0 || pos+sz+4 > zone->end()) {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       f << "#";
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
@@ -1487,13 +1487,13 @@ bool FWParser::readGenericDocData(FWStruct::EntryPtr zone, FWStruct::ZoneHeader 
     }
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    if (sz) input->seek(sz, RVNG_SEEK_CUR);
+    if (sz) input->seek(sz, librevenge::RVNG_SEEK_CUR);
   }
 
   if (doc.m_type==0xa) {
     asciiFile.addPos(input->tell());
     asciiFile.addNote("DZonea[1]#");
-    input->seek(vers==2 ? 8 : 66, RVNG_SEEK_CUR);
+    input->seek(vers==2 ? 8 : 66, librevenge::RVNG_SEEK_CUR);
   }
 
   val = int(input->readLong(1));
@@ -1506,10 +1506,10 @@ bool FWParser::readGenericDocData(FWStruct::EntryPtr zone, FWStruct::ZoneHeader 
       f << "DZone" << std::hex << doc.m_type << std::dec << "[end]:";
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
-      input->seek(sz, RVNG_SEEK_CUR);
+      input->seek(sz, librevenge::RVNG_SEEK_CUR);
     } else {
       MWAW_DEBUG_MSG(("FWParser::readGenericDocData: find bad end data\n"));
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
     }
   } else if (val) {
     MWAW_DEBUG_MSG(("FWParser::readGenericDocData: find bad end data(II)\n"));
@@ -1522,7 +1522,7 @@ bool FWParser::readReferenceData(FWStruct::EntryPtr zone)
   MWAWInputStreamPtr input = zone->m_input;
   long pos = input->tell();
   if (pos+22 > zone->end()) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -1547,7 +1547,7 @@ bool FWParser::readReferenceData(FWStruct::EntryPtr zone)
   }
   f << "],";
   if (numOk <= 2) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
   f << "ptr=" << std::hex << input->readULong(4) << std::dec << ",";
@@ -1559,7 +1559,7 @@ bool FWParser::readReferenceData(FWStruct::EntryPtr zone)
 
   long sz = input->readLong(4);
   if (sz < 0 || pos+22+sz > zone->end()) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
   int numZones=int(m_state->m_docZoneList.size());
@@ -1572,7 +1572,7 @@ bool FWParser::readReferenceData(FWStruct::EntryPtr zone)
     f << id << ",";
   }
   f << "],";
-  input->seek(pos+22+sz, RVNG_SEEK_SET);
+  input->seek(pos+22+sz, librevenge::RVNG_SEEK_SET);
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
   return true;
@@ -1595,7 +1595,7 @@ bool FWParser::readFileZoneFlags(FWStruct::EntryPtr zone)
 
   libmwaw::DebugStream f;
   long numElt = zone->length()/dataSz;
-  input->seek(zone->begin(), RVNG_SEEK_SET);
+  input->seek(zone->begin(), librevenge::RVNG_SEEK_SET);
   std::multimap<int, FWStruct::EntryPtr >::iterator it;
   int numNegZone=3;
   for (long i = 0; i < numElt; i++) {
@@ -1668,7 +1668,7 @@ bool FWParser::readFileZoneFlags(FWStruct::EntryPtr zone)
       }
     }
 
-    input->seek(pos+dataSz, RVNG_SEEK_SET);
+    input->seek(pos+dataSz, librevenge::RVNG_SEEK_SET);
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
   }
@@ -1691,7 +1691,7 @@ bool FWParser::readFileZonePos(FWStruct::EntryPtr zone)
 
   libmwaw::DebugStream f;
   int numElt = int(zone->length()/dataSz);
-  input->seek(zone->begin(), RVNG_SEEK_SET);
+  input->seek(zone->begin(), librevenge::RVNG_SEEK_SET);
   int val;
 
   // read data
@@ -1726,7 +1726,7 @@ bool FWParser::readFileZonePos(FWStruct::EntryPtr zone)
       if (val) f << "f0=" << val << ",";
     }
 
-    input->seek(pos+dataSz, RVNG_SEEK_SET);
+    input->seek(pos+dataSz, librevenge::RVNG_SEEK_SET);
 
     entry->setExtra(f.str());
     f.str("");
@@ -1790,10 +1790,10 @@ bool FWParser::readFileZonePos(FWStruct::EntryPtr zone)
     }
     // ok we must reconstruct a file
     FWStruct::EntryPtr actEnt = entry;
-    RVNGBinaryData &data = entry->m_data;
+    librevenge::RVNGBinaryData &data = entry->m_data;
     while (1) {
       if (!actEnt->valid()) break;
-      input->seek(actEnt->begin(), RVNG_SEEK_SET);
+      input->seek(actEnt->begin(), librevenge::RVNG_SEEK_SET);
       unsigned long read;
       const unsigned char *dt = input->read((size_t)actEnt->length(), read);
       data.append(dt, read);
@@ -1820,7 +1820,7 @@ bool FWParser::readDocPosition()
     return false;
 
   libmwaw::DebugStream f;
-  input->seek(-48, RVNG_SEEK_END);
+  input->seek(-48, librevenge::RVNG_SEEK_END);
   long pos = input->tell();
   f << "Entries(DocPosition):";
 

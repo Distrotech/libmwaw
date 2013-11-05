@@ -50,24 +50,24 @@ std::ostream &operator<<(std::ostream &o, MWAWSection::Column const &col)
   return o;
 }
 
-bool MWAWSection::Column::addTo(RVNGPropertyList &propList) const
+bool MWAWSection::Column::addTo(librevenge::RVNGPropertyList &propList) const
 {
   // The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
   double factor = 1.0;
   switch(m_widthUnit) {
-  case RVNG_POINT:
-  case RVNG_INCH:
-    factor = MWAWPosition::getScaleFactor(m_widthUnit, RVNG_TWIP);
-  case RVNG_TWIP:
+  case librevenge::RVNG_POINT:
+  case librevenge::RVNG_INCH:
+    factor = MWAWPosition::getScaleFactor(m_widthUnit, librevenge::RVNG_TWIP);
+  case librevenge::RVNG_TWIP:
     break;
-  case RVNG_PERCENT:
-  case RVNG_GENERIC:
-  case RVNG_UNIT_ERROR:
+  case librevenge::RVNG_PERCENT:
+  case librevenge::RVNG_GENERIC:
+  case librevenge::RVNG_UNIT_ERROR:
   default:
     MWAW_DEBUG_MSG(("MWAWSection::Column::addTo: unknown unit\n"));
     return false;
   }
-  propList.insert("style:rel-width", m_width * factor, RVNG_TWIP);
+  propList.insert("style:rel-width", m_width * factor, librevenge::RVNG_TWIP);
   propList.insert("fo:start-indent", m_margins[libmwaw::Left]);
   propList.insert("fo:end-indent", m_margins[libmwaw::Right]);
   static bool first = true;
@@ -97,7 +97,7 @@ std::ostream &operator<<(std::ostream &o, MWAWSection const &sec)
   return o;
 }
 
-void MWAWSection::setColumns(int num, double width, RVNGUnit widthUnit, double colSep)
+void MWAWSection::setColumns(int num, double width, librevenge::RVNGUnit widthUnit, double colSep)
 {
   if (num<0) {
     MWAW_DEBUG_MSG(("MWAWSection::setColumns: called with negative number of column\n"));
@@ -117,7 +117,7 @@ void MWAWSection::setColumns(int num, double width, RVNGUnit widthUnit, double c
   m_columns.resize(size_t(num), column);
 }
 
-void MWAWSection::addTo(RVNGPropertyList &propList) const
+void MWAWSection::addTo(librevenge::RVNGPropertyList &propList) const
 {
   propList.insert("fo:margin-left", 0.0);
   propList.insert("fo:margin-right", 0.0);
@@ -127,19 +127,19 @@ void MWAWSection::addTo(RVNGPropertyList &propList) const
     propList.insert("fo:background-color", m_backgroundColor.str().c_str());
   if (m_columnSeparator.m_style != MWAWBorder::None &&
       m_columnSeparator.m_width > 0) {
-    propList.insert("libwpd:colsep-width", m_columnSeparator.m_width, RVNG_POINT);
+    propList.insert("libwpd:colsep-width", m_columnSeparator.m_width, librevenge::RVNG_POINT);
     propList.insert("libwpd:colsep-color", m_columnSeparator.m_color.str().c_str());
     propList.insert("libwpd:colsep-height", "100%");
     propList.insert("libwpd:colsep-vertical-align", "middle");
   }
 }
 
-void MWAWSection::addColumnsTo(RVNGPropertyListVector &propVec) const
+void MWAWSection::addColumnsTo(librevenge::RVNGPropertyListVector &propVec) const
 {
   size_t numCol = m_columns.size();
   if (!numCol) return;
   for (size_t c=0; c < numCol; c++) {
-    RVNGPropertyList propList;
+    librevenge::RVNGPropertyList propList;
     if (m_columns[c].addTo(propList))
       propVec.append(propList);
   }

@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	file=argv[optind];
-	RVNGFileStream input(file);
+	librevenge::RVNGFileStream input(file);
 
 	MWAWDocument::Type type;
 	MWAWDocument::Kind kind;

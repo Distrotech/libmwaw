@@ -220,7 +220,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   else if (m_type==ZWText::Tag)
     listener->insertUnicodeString("ref: ");
   m_textParser->sendText(m_id, m_pos);
-  m_input->seek(pos, RVNG_SEEK_SET);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
 
@@ -270,7 +270,7 @@ void ZWText::computePositions()
     if (!section.m_pos.valid())
       continue;
     long endPos = section.m_pos.end();
-    input->seek(section.m_pos.begin(), RVNG_SEEK_SET);
+    input->seek(section.m_pos.begin(), librevenge::RVNG_SEEK_SET);
     while(!input->isEnd()) {
       if (input->tell()+3 >= endPos)
         break;
@@ -360,7 +360,7 @@ ZWText::TextCode ZWText::isTextCode
   char c=(char) input->readLong(1);
   if (c=='C' || c=='N') {
     if (char(input->readLong(1))!='>') {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       return None;
     }
     return c=='C' ? Center : NewPage;
@@ -381,26 +381,26 @@ ZWText::TextCode ZWText::isTextCode
     res = Link;
     break;
   default:
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return None;
   }
   expectedString += ' ';
   for (size_t s=1; s < expectedString.size(); s++) {
     if (input->isEnd() || input->tell()  >= endPos ||
         (char) input->readLong(1) != expectedString[s]) {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       return None;
     }
   }
   dPos.setBegin(input->tell());
   while(1) {
     if (input->isEnd() || input->tell() >= endPos) {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       return None;
     }
     c=(char)input->readLong(1);
     if (c==0 || c==0xa || c==0xd) {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       return None;
     }
     if (c=='>') {
@@ -429,7 +429,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
   f << "Entries(TextContent)[" << zone.m_name << "]:";
   zone.m_parsed=true;
   long pos = entry.begin(), endPos = entry.end();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   ZWTextInternal::Font actFont;
   actFont.m_font=MWAWFont(3,12);
@@ -494,11 +494,11 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
         break;
       }
       if (done) {
-        input->seek(newPos, RVNG_SEEK_SET);
+        input->seek(newPos, librevenge::RVNG_SEEK_SET);
         cPos=newPos-zone.m_pos.begin();
         continue;
       }
-      input->seek(actPos+1, RVNG_SEEK_SET);
+      input->seek(actPos+1, librevenge::RVNG_SEEK_SET);
     }
     switch(c) {
     case 0x9:
@@ -571,7 +571,7 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
   section.m_name = entry.name();
 
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int N=(int) input->readLong(2);
   f << "N=" << N << ",";
   if (2+N*20 != int(entry.length())) {
@@ -618,7 +618,7 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
       << font.m_font.getDebugString(m_parserState->m_fontConverter) << font;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+20, RVNG_SEEK_SET);
+    input->seek(pos+20, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -737,7 +737,7 @@ bool ZWText::sendHeaderFooter(bool header)
     return false;
   }
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
-  input->seek(zone.m_pos.begin(), RVNG_SEEK_SET);
+  input->seek(zone.m_pos.begin(), librevenge::RVNG_SEEK_SET);
   listener->setFont(zone.m_font.m_font);
   long endPos = zone.m_pos.end();
   while(!input->isEnd()) {
@@ -779,7 +779,7 @@ bool ZWText::sendHeaderFooter(bool header)
         if (done)
           break;
       }
-      input->seek(actPos+1, RVNG_SEEK_SET);
+      input->seek(actPos+1, librevenge::RVNG_SEEK_SET);
     default:
       listener->insertCharacter((unsigned char) c, input, endPos);
       break;

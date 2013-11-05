@@ -364,12 +364,12 @@ void NSParser::getFootnoteInfo(NSStruct::FootnoteInfo &fInfo) const
 ////////////////////////////////////////////////////////////
 // interface with the graph parser
 ////////////////////////////////////////////////////////////
-bool NSParser::sendPicture(int pictId, MWAWPosition const &pictPos, RVNGPropertyList extras)
+bool NSParser::sendPicture(int pictId, MWAWPosition const &pictPos, librevenge::RVNGPropertyList extras)
 {
   if (!rsrcInput()) return false;
   long pos = rsrcInput()->tell();
   bool ok=m_graphParser->sendPicture(pictId, true, pictPos, extras);
-  rsrcInput()->seek(pos, RVNG_SEEK_SET);
+  rsrcInput()->seek(pos, librevenge::RVNG_SEEK_SET);
   return ok;
 }
 
@@ -496,7 +496,7 @@ void NSParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void NSParser::parse(RVNGTextInterface *docInterface)
+void NSParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
 
@@ -530,7 +530,7 @@ void NSParser::parse(RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void NSParser::createDocument(RVNGTextInterface *documentInterface)
+void NSParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -824,7 +824,7 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
@@ -883,7 +883,7 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
       f << str1 << ",";
       str += str1;
       if (simpleList) continue;
-      if ((pSz%2)==0) input->seek(1,RVNG_SEEK_CUR);
+      if ((pSz%2)==0) input->seek(1,librevenge::RVNG_SEEK_CUR);
     }
     list.push_back(str);
     rsrcAscii().addPos(pos);
@@ -991,7 +991,7 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
       }
       MWAWEntry const &entry = dt.m_childList[nDt].m_entry;
       f.str("");
-      input->seek(entry.begin(), RVNG_SEEK_SET);
+      input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
       int id = dt.m_childList[nDt].m_type;
       bool checkId = false;
       if (id != int(nDt)+2) {
@@ -1189,7 +1189,7 @@ bool NSParser::readNumberingReset(MWAWEntry const &entry, int zoneId)
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int sz = (int) input->readULong(2);
   if (sz+2 != entry.length() || sz%2) {
     MWAW_DEBUG_MSG(("NSParser::readNumberingReset: entry size seems odd\n"));
@@ -1276,7 +1276,7 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
 
     // the file position in the text part
     long pos = entry.begin();
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     f.str("");
     f << "Position:";
     ref.m_textPosition.setBegin((long)input->readULong(4));
@@ -1327,7 +1327,7 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
       NSStruct::RecursifData::Node const &childNode = dt1.m_childList[c];
       entry = childNode.m_entry;
       pos = entry.begin();
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       f.str("");
       switch(childNode.m_type) {
       case 1:
@@ -1385,7 +1385,7 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
           f2 << float(input->readLong(4))/65536.f << ",";
           rsrcAscii().addPos(actPos);
           rsrcAscii().addNote(f2.str().c_str());
-          input->seek(actPos+12, RVNG_SEEK_SET);
+          input->seek(actPos+12, librevenge::RVNG_SEEK_SET);
         }
         break;
       }
@@ -1446,7 +1446,7 @@ bool NSParser::readSGP1(NSStruct::RecursifData const &data)
       }
 
       long pos = child.m_entry.begin();
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       f.str("");
       switch(child.m_type) {
       case 110: {
@@ -1522,7 +1522,7 @@ bool NSParser::readSGP1(NSStruct::RecursifData const &data)
           text += (char) input->readULong(1);
         if (text.length()) f << "\"" << text << "\",";
         // checkme: where does the data begins again
-        input->seek(child.m_entry.begin()+40, RVNG_SEEK_SET);
+        input->seek(child.m_entry.begin()+40, librevenge::RVNG_SEEK_SET);
         for (int j = 0; j < 17; j++) { // find always 0 here
           val = input->readLong(2);
           if (val) f << "g" << j << "=" << val << ",";
@@ -1561,7 +1561,7 @@ bool NSParser::readPrintInfo(MWAWEntry const &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   // print info
@@ -1604,7 +1604,7 @@ bool NSParser::readPrintInfo(MWAWEntry const &entry)
     f << "###size=" << entry.length() << ",";
   rsrcAscii().addPos(pos-4);
   rsrcAscii().addNote(f.str().c_str());
-  input->seek(pos+0x78, RVNG_SEEK_SET);
+  input->seek(pos+0x78, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
     MWAW_DEBUG_MSG(("NSParser::readPrintInfo: file is too short\n"));
     return false;
@@ -1628,7 +1628,7 @@ bool NSParser::readPageLimit(MWAWEntry const &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   if (entry.id() != 128)
@@ -1831,7 +1831,7 @@ bool NSParser::readCPRC(MWAWEntry const &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   if (entry.id() != 128)
@@ -1871,7 +1871,7 @@ bool NSParser::readCNTR(MWAWEntry const &entry, int zoneId)
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   int numElt = int(entry.length()/12)-1;
   libmwaw::DebugStream f;
@@ -1885,7 +1885,7 @@ bool NSParser::readCNTR(MWAWEntry const &entry, int zoneId)
     f << "VariabCntr" << i << ":";
     rsrcAscii().addPos(pos);
     rsrcAscii().addNote(f.str().c_str());
-    input->seek(pos+12, RVNG_SEEK_SET);
+    input->seek(pos+12, librevenge::RVNG_SEEK_SET);
   }
 
   f.str("");
@@ -1911,7 +1911,7 @@ bool NSParser::readABBR(MWAWEntry const &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   int numElt = int(entry.length()/32);
@@ -1941,7 +1941,7 @@ bool NSParser::readABBR(MWAWEntry const &entry)
     }
     rsrcAscii().addPos(n==0 ? pos-4 : pos);
     rsrcAscii().addNote(f.str().c_str());
-    input->seek(pos+32, RVNG_SEEK_SET);
+    input->seek(pos+32, librevenge::RVNG_SEEK_SET);
   }
 
   return true;
@@ -1962,7 +1962,7 @@ bool NSParser::readFTA2(MWAWEntry const &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   int numElt = int(entry.length()/12);
@@ -1990,7 +1990,7 @@ bool NSParser::readFTA2(MWAWEntry const &entry)
     }
     rsrcAscii().addPos(n==0 ? pos-4 : pos);
     rsrcAscii().addNote(f.str().c_str());
-    input->seek(pos+12, RVNG_SEEK_SET);
+    input->seek(pos+12, librevenge::RVNG_SEEK_SET);
   }
 
   return true;
@@ -2011,7 +2011,7 @@ bool NSParser::readFnSc(MWAWEntry const &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   if (entry.id() != 1003)
@@ -2048,7 +2048,7 @@ bool NSParser::readINFO(MWAWEntry const &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   if (entry.id() != 1003)
@@ -2117,21 +2117,21 @@ bool NSParser::readINFO(MWAWEntry const &entry)
   rsrcAscii().addPos(pos);
   rsrcAscii().addNote(f.str().c_str());
 
-  input->seek(pos+0x2c, RVNG_SEEK_SET);
+  input->seek(pos+0x2c, librevenge::RVNG_SEEK_SET);
   pos = input->tell();
   f.str("");
   f << "INFOB:";
   rsrcAscii().addPos(pos);
   rsrcAscii().addNote(f.str().c_str());
 
-  input->seek(pos+0x112, RVNG_SEEK_SET);
+  input->seek(pos+0x112, librevenge::RVNG_SEEK_SET);
   pos = input->tell();
   f.str("");
   f << "INFOA1:";
   rsrcAscii().addPos(pos);
   rsrcAscii().addNote(f.str().c_str());
 
-  input->seek(entry.begin() + 0x194, RVNG_SEEK_SET);
+  input->seek(entry.begin() + 0x194, librevenge::RVNG_SEEK_SET);
   pos = input->tell();
   f.str("");
   f << "INFOC:";

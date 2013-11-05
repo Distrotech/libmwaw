@@ -43,7 +43,7 @@
 
 #include <librevenge/librevenge.h>
 
-class RVNGBinaryData;
+class librevenge::RVNGBinaryData;
 
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
@@ -134,14 +134,14 @@ public:
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(RVNGTextInterface *documentInterface);
+  void parse(librevenge::RVNGTextInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(RVNGTextInterface *documentInterface);
+  void createDocument(librevenge::RVNGTextInterface *documentInterface);
 
   //! finds the different objects zones
   bool createZones();

@@ -110,7 +110,7 @@ protected:
 
   /** creates the main listener */
   MWAWContentListenerPtr createListener
-  (RVNGTextInterface *interface,
+  (librevenge::RVNGTextInterface *interface,
    MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer);
 
   //! returns the page height, ie. paper size less margin (in inches) less header/footer size
@@ -136,13 +136,13 @@ protected:
   void sendRBIL(int id, Vec2i const &sz);
 
   //! send an OLE zone
-  void sendOLE(int id, MWAWPosition const &pos, RVNGPropertyList frameExtras);
+  void sendOLE(int id, MWAWPosition const &pos, librevenge::RVNGPropertyList frameExtras);
 
   /** return the text positions ( used for frame text) */
   MWAWEntry getTextPosition() const;
 
   //! empty implementation of the parse function ( to make the class not virtual)
-  void parse(RVNGTextInterface *) {
+  void parse(librevenge::RVNGTextInterface *) {
     MWAW_DEBUG_MSG(("MSK4Zone::parse: must not be called\n"));
   }
   //! empty implementation of the checkHeader function ( to make the class not virtual)

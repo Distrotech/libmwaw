@@ -43,7 +43,7 @@
 ////////////////////////////////////////////////////////////
 // list level functions
 ////////////////////////////////////////////////////////////
-void MWAWListLevel::addTo(RVNGPropertyList &propList) const
+void MWAWListLevel::addTo(librevenge::RVNGPropertyList &propList) const
 {
   propList.insert("text:min-label-width", m_labelWidth);
   propList.insert("text:space-before", m_labelBeforeSpace);
@@ -244,7 +244,7 @@ void MWAWList::setId(int newId) const
   m_id[1] = newId+1;
 }
 
-bool MWAWList::addTo(int level, RVNGPropertyList &pList) const
+bool MWAWList::addTo(int level, librevenge::RVNGPropertyList &pList) const
 {
   if (level <= 0 || level > int(m_levels.size()) ||
       m_levels[size_t(level-1)].isDefault()) {

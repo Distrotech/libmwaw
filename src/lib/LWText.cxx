@@ -392,13 +392,13 @@ bool LWText::sendMainText()
   }
 
   long pos = beginPos;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   LWTextInternal::Font font, auxiFont;
 
   int numCols, sepWidth;
   if (m_mainParser->getColumnInfo(numCols, sepWidth) && numCols > 1) {
     MWAWSection sec;
-    sec.setColumns(numCols, m_mainParser->getPageWidth()/double(numCols), RVNG_INCH);
+    sec.setColumns(numCols, m_mainParser->getPageWidth()/double(numCols), librevenge::RVNG_INCH);
     listener->openSection(sec);
   }
 
@@ -510,7 +510,7 @@ bool LWText::readFonts(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(Fonts)[" << entry.id() << "]:";
@@ -570,7 +570,7 @@ bool LWText::readFonts(MWAWEntry const &entry)
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
 
-    input->seek(pos+20, RVNG_SEEK_SET);
+    input->seek(pos+20, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -585,7 +585,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(Font2)[" << entry.id() << "]:";
@@ -751,7 +751,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
       << font.m_font.getDebugString(m_parserState->m_fontConverter) << font;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+10, RVNG_SEEK_SET);
+    input->seek(pos+10, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -775,7 +775,7 @@ bool LWText::readRulers(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(Ruler)[" << entry.id() << "]:";
@@ -801,7 +801,7 @@ bool LWText::readRulers(MWAWEntry const &entry)
     pos = input->tell();
     f.str("");
     long cPos = input->readLong(4);
-    para.m_marginsUnit = RVNG_POINT;
+    para.m_marginsUnit = librevenge::RVNG_POINT;
     para.m_margins[0] = (int) input->readLong(2);
     para.m_margins[1] = (int) input->readLong(2);
     para.m_margins[2] = (int) input->readLong(2);
@@ -854,7 +854,7 @@ bool LWText::readRulers(MWAWEntry const &entry)
       tabsType = tabsType>>2;
       para.m_tabs->push_back(tab);
     }
-    input->seek(pos+52, RVNG_SEEK_SET);
+    input->seek(pos+52, librevenge::RVNG_SEEK_SET);
     uint32_t tabsLeader = (uint32_t) input->readULong(4);
     for (int j = 0; j < numTabs; j++) {
       uint16_t leader=0;
@@ -899,7 +899,7 @@ bool LWText::readRulers(MWAWEntry const &entry)
     f << "Ruler-" << i << ":cPos=" << std::hex << cPos << std::dec << "," << para;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+84, RVNG_SEEK_SET);
+    input->seek(pos+84, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -925,7 +925,7 @@ bool LWText::sendHeaderFooter(bool header)
   listener->setParagraph(para);
   listener->setFont(zone.m_font);
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
-  input->seek(zone.m_pos.begin(), RVNG_SEEK_SET);
+  input->seek(zone.m_pos.begin(), librevenge::RVNG_SEEK_SET);
 
   int numChar = (int) zone.m_pos.length();
   std::string str("");
@@ -1081,7 +1081,7 @@ bool LWText::readStyleU(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(StyleU)[" << entry.id() << "]:";
@@ -1118,7 +1118,7 @@ bool LWText::readStyleU(MWAWEntry const &entry)
     f << "StyleU-" << i << ":cPos=" << std::hex << cPos << std::dec << "," << plc;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+8, RVNG_SEEK_SET);
+    input->seek(pos+8, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -1133,7 +1133,7 @@ bool LWText::readRuby(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(Ruby)[" << entry.id() << "]:";
@@ -1167,7 +1167,7 @@ bool LWText::readRuby(MWAWEntry const &entry)
     f << "Ruby-" << i << ":cPos=" << std::hex << cPos << std::dec << "," << plc;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+6, RVNG_SEEK_SET);
+    input->seek(pos+6, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -1181,7 +1181,7 @@ bool LWText::readUnknownStyle(MWAWEntry const &entry)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
@@ -1211,7 +1211,7 @@ bool LWText::readUnknownStyle(MWAWEntry const &entry)
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
 
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }

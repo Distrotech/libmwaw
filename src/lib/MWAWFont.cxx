@@ -88,7 +88,7 @@ std::ostream &operator<<(std::ostream &o, MWAWFont::Line const &line)
   return o;
 }
 
-void MWAWFont::Line::addTo(RVNGPropertyList &propList, std::string const &type) const
+void MWAWFont::Line::addTo(librevenge::RVNGPropertyList &propList, std::string const &type) const
 {
   if (!isSet()) return;
 
@@ -143,15 +143,15 @@ std::string MWAWFont::Script::str(float fSize) const
   if (!isSet() || ((m_delta<=0&&m_delta>=0) && m_scale==100))
     return "";
   std::stringstream o;
-  if (m_deltaUnit == RVNG_GENERIC) {
+  if (m_deltaUnit == librevenge::RVNG_GENERIC) {
     MWAW_DEBUG_MSG(("MWAWFont::Script::str: can not be called with generic position\n"));
     return "";
   }
   float delta = m_delta;
-  if (m_deltaUnit != RVNG_PERCENT) {
+  if (m_deltaUnit != librevenge::RVNG_PERCENT) {
     // first transform in point
-    if (m_deltaUnit != RVNG_POINT)
-      delta=MWAWPosition::getScaleFactor(m_deltaUnit, RVNG_POINT)*delta;
+    if (m_deltaUnit != librevenge::RVNG_POINT)
+      delta=MWAWPosition::getScaleFactor(m_deltaUnit, librevenge::RVNG_POINT)*delta;
     // now transform in percent
     if (fSize<=0) {
       static bool first=true;
@@ -227,7 +227,7 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
   return o.str();
 }
 
-void MWAWFont::addTo(RVNGPropertyList &pList, shared_ptr<MWAWFontConverter> convert) const
+void MWAWFont::addTo(librevenge::RVNGPropertyList &pList, shared_ptr<MWAWFontConverter> convert) const
 {
   int dSize = 0;
   std::string fName("");
@@ -238,7 +238,7 @@ void MWAWFont::addTo(RVNGPropertyList &pList, shared_ptr<MWAWFontConverter> conv
   if (fName.length())
     pList.insert("style:font-name", fName.c_str());
   float fSize = size()+float(dSize);
-  pList.insert("fo:font-size", fSize, RVNG_POINT);
+  pList.insert("fo:font-size", fSize, librevenge::RVNG_POINT);
 
   uint32_t attributeBits = m_flags.get();
   if (attributeBits & italicBit)
@@ -285,10 +285,10 @@ void MWAWFont::addTo(RVNGPropertyList &pList, shared_ptr<MWAWFontConverter> conv
       simple.addTo(pList, "underline");
   }
   if (m_deltaSpacing.isSet() && (m_deltaSpacing.get() < 0 || m_deltaSpacing.get()>0))
-    pList.insert("fo:letter-spacing", m_deltaSpacing.get(), RVNG_POINT);
+    pList.insert("fo:letter-spacing", m_deltaSpacing.get(), librevenge::RVNG_POINT);
   if (m_texteWidthScaling.isSet() && m_texteWidthScaling.get() > 0.0 &&
       (m_texteWidthScaling.get()>1.0||m_texteWidthScaling.get()<1.0))
-    pList.insert("style:text-scale", m_texteWidthScaling.get(), RVNG_PERCENT);
+    pList.insert("style:text-scale", m_texteWidthScaling.get(), librevenge::RVNG_PERCENT);
   if (attributeBits & reverseVideoBit) {
     pList.insert("fo:color", m_backgroundColor->str().c_str());
     pList.insert("fo:background-color", m_color->str().c_str());

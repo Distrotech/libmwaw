@@ -478,7 +478,7 @@ void State::setDefaultWallPaperList(int version)
   // checkme: does ClarisWork v4 version has wallpaper?
   if (version <= 2 || m_wallpaperList.size())
     return;
-  RVNGBinaryData data;
+  librevenge::RVNGBinaryData data;
   std::string mime("image/pict");
   uint32_t const defCol[20] = {
     0xdcdcdc, 0x0000cd, 0xeeeeee, 0xeedd8e, 0xc71585,
@@ -514,7 +514,7 @@ void State::setDefaultWallPaperList(int version)
     231,223,207,228,226,207,236,236,220,217,217,195,228,220,209,230,227,215,226,225,203,234,231,217,235,236,227,226,217,199,233,230,
     219,233,224,207,222,219,203,226,226,208,238,238,222
   };
-  data=RVNGBinaryData(wall0,781);
+  data=librevenge::RVNGBinaryData(wall0,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[0]));
 
   static unsigned char wall1[781]= {
@@ -544,7 +544,7 @@ void State::setDefaultWallPaperList(int version)
     67,70,143,64,66,141,69,73,133,66,67,145,63,63,135,60,77,137,61,69,132,71,66,143,60,72,133,65,70,137,63,67,
     134,60,67,141,65,70,133,67,71,137,58,58,135
   };
-  data=RVNGBinaryData(wall1,781);
+  data=librevenge::RVNGBinaryData(wall1,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[1]));
 
   static unsigned char wall2[781]= {
@@ -574,7 +574,7 @@ void State::setDefaultWallPaperList(int version)
     215,215,215,210,210,210,225,225,225,214,214,214,215,215,215,223,223,223,216,216,216,218,218,218,216,216,216,209,209,209,213,213,
     213,220,220,220,224,224,224,215,215,215,204,204,204
   };
-  data=RVNGBinaryData(wall2,781);
+  data=librevenge::RVNGBinaryData(wall2,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[2]));
 
   static unsigned char wall3[3085]= {
@@ -676,7 +676,7 @@ void State::setDefaultWallPaperList(int version)
     255,255,160,255,255,153,254,254,154,255,255,153,255,254,150,255,254,152,255,255,153,255,255,153,255,255,153,255,255,153,255,255,
     153,255,255,153,255,255,153,255,255,153,255,255,153
   };
-  data=RVNGBinaryData(wall3,3085);
+  data=librevenge::RVNGBinaryData(wall3,3085);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(32,32),data,mime,defCol[3]));
   static unsigned char wall4[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,189,16,230,207,20,255,213,16,255,209,20,255,207,16,255,207,14,255,207,
@@ -705,7 +705,7 @@ void State::setDefaultWallPaperList(int version)
     119,4,152,118,17,152,119,3,153,120,0,153,119,0,153,116,12,153,103,13,153,116,2,153,115,12,153,121,14,153,117,0,
     153,119,3,153,124,1,153,128,0,153,121,10,155
   };
-  data=RVNGBinaryData(wall4,781);
+  data=librevenge::RVNGBinaryData(wall4,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[4]));
 
   static unsigned char wall5[781]= {
@@ -735,7 +735,7 @@ void State::setDefaultWallPaperList(int version)
     221,212,187,195,191,178,201,198,173,223,215,201,213,204,179,210,205,185,213,201,182,192,199,173,234,226,194,215,211,193,220,215,
     190,186,193,177,227,223,190,236,225,205,231,221,195
   };
-  data=RVNGBinaryData(wall5,781);
+  data=librevenge::RVNGBinaryData(wall5,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[5]));
 
   static unsigned char wall6[781]= {
@@ -765,7 +765,7 @@ void State::setDefaultWallPaperList(int version)
     161,122,48,186,147,42,162,126,43,141,104,39,206,154,53,200,155,52,115,87,28,136,94,36,161,113,40,144,104,37,122,93,
     29,128,93,27,219,164,55,168,131,49,113,82,25
   };
-  data=RVNGBinaryData(wall6,781);
+  data=librevenge::RVNGBinaryData(wall6,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[6]));
 
   static unsigned char wall7[781]= {
@@ -795,7 +795,7 @@ void State::setDefaultWallPaperList(int version)
     57,57,57,71,71,71,62,62,62,65,65,65,56,56,56,63,63,63,67,67,67,69,69,69,62,62,62,58,58,58,57,57,
     57,62,62,62,63,63,63,55,55,55,52,52,52
   };
-  data=RVNGBinaryData(wall7,781);
+  data=librevenge::RVNGBinaryData(wall7,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[7]));
 
   static unsigned char wall8[781]= {
@@ -825,7 +825,7 @@ void State::setDefaultWallPaperList(int version)
     238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,
     238,238,238,238,238,238,238,238,238,238,238,238,238
   };
-  data=RVNGBinaryData(wall8,781);
+  data=librevenge::RVNGBinaryData(wall8,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[8]));
 
   static unsigned char wall9[3085]= {
@@ -927,7 +927,7 @@ void State::setDefaultWallPaperList(int version)
     117,132,123,126,126,123,131,138,137,108,148,160,120,183,173,132,200,211,147,215,224,157,228,239,151,240,251,165,243,242,206,231,
     216,215,211,213,193,186,185,202,157,161,206,149,152
   };
-  data=RVNGBinaryData(wall9,3085);
+  data=librevenge::RVNGBinaryData(wall9,3085);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(32,32),data,mime,defCol[9]));
   static unsigned char wall10[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,128,131,223,119,126,219,114,128,203,129,135,223,102,114,199,116,128,209,108,
@@ -956,7 +956,7 @@ void State::setDefaultWallPaperList(int version)
     119,123,202,115,123,204,111,118,193,105,123,197,105,115,197,104,119,201,107,119,192,97,114,193,98,109,189,98,108,188,107,125,
     204,111,116,199,103,105,185,125,135,219,131,143,222
   };
-  data=RVNGBinaryData(wall10,781);
+  data=librevenge::RVNGBinaryData(wall10,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[10]));
 
   static unsigned char wall11[781]= {
@@ -986,7 +986,7 @@ void State::setDefaultWallPaperList(int version)
     207,124,53,219,130,65,213,125,69,191,116,53,190,106,52,213,122,54,204,120,53,196,119,63,193,113,51,189,105,51,208,125,
     61,202,116,56,201,116,56,204,126,63,204,114,60
   };
-  data=RVNGBinaryData(wall11,781);
+  data=librevenge::RVNGBinaryData(wall11,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[11]));
 
   static unsigned char wall12[781]= {
@@ -1016,7 +1016,7 @@ void State::setDefaultWallPaperList(int version)
     209,83,73,204,96,77,218,110,89,193,91,73,162,82,67,212,101,79,205,96,76,188,88,62,211,102,86,208,96,82,190,85,
     71,175,87,67,161,82,60,195,96,74,179,79,64
   };
-  data=RVNGBinaryData(wall12,781);
+  data=librevenge::RVNGBinaryData(wall12,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[12]));
 
   static unsigned char wall13[781]= {
@@ -1046,7 +1046,7 @@ void State::setDefaultWallPaperList(int version)
     204,255,153,204,255,153,207,253,157,219,222,155,219,200,157,214,204,154,201,225,140,212,241,151,197,225,136,187,223,134,200,233,
     142,207,253,155,204,255,153,204,255,153,204,255,153
   };
-  data=RVNGBinaryData(wall13,781);
+  data=librevenge::RVNGBinaryData(wall13,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[13]));
 
   static unsigned char wall14[3085]= {
@@ -1148,7 +1148,7 @@ void State::setDefaultWallPaperList(int version)
     18,120,123,43,95,112,103,70,155,74,17,97,40,0,45,42,146,141,47,135,190,39,112,108,75,63,72,36,60,216,40,29,
     183,69,46,24,118,78,87,88,58,46,61,59,45
   };
-  data=RVNGBinaryData(wall14,3085);
+  data=librevenge::RVNGBinaryData(wall14,3085);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(32,32),data,mime,defCol[14]));
   static unsigned char wall15[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,202,182,208,223,200,218,222,195,220,229,195,223,226,199,226,220,199,220,208,
@@ -1177,7 +1177,7 @@ void State::setDefaultWallPaperList(int version)
     222,193,219,217,192,215,208,182,201,222,196,221,203,181,203,217,198,215,226,206,223,229,200,231,210,184,207,226,204,212,220,190,
     211,207,181,207,216,187,210,223,201,215,208,193,208
   };
-  data=RVNGBinaryData(wall15,781);
+  data=librevenge::RVNGBinaryData(wall15,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[15]));
 
   static unsigned char wall16[781]= {
@@ -1207,7 +1207,7 @@ void State::setDefaultWallPaperList(int version)
     211,214,208,229,228,220,228,228,228,225,225,225,232,229,229,231,228,228,234,225,226,230,230,227,232,230,223,231,226,231,239,240,
     237,223,220,220,225,216,213,206,206,202,196,196,196
   };
-  data=RVNGBinaryData(wall16,781);
+  data=librevenge::RVNGBinaryData(wall16,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[16]));
 
   static unsigned char wall17[781]= {
@@ -1237,7 +1237,7 @@ void State::setDefaultWallPaperList(int version)
     78,83,165,71,82,159,46,48,97,45,57,111,73,82,152,94,91,181,77,81,161,76,87,180,63,72,143,77,85,162,65,66,
     132,66,76,159,54,59,115,45,59,111,69,80,167
   };
-  data=RVNGBinaryData(wall17,781);
+  data=librevenge::RVNGBinaryData(wall17,781);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[17]));
 
   static unsigned char wall18[3085]= {
@@ -1339,7 +1339,7 @@ void State::setDefaultWallPaperList(int version)
     238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,
     238,238,238,238,238,238,238,238,238,238,238,238,238
   };
-  data=RVNGBinaryData(wall18,3085);
+  data=librevenge::RVNGBinaryData(wall18,3085);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(32,32),data,mime,defCol[18]));
   static unsigned char wall19[3085]= {
     80,54,10,51,50,32,51,50,10,50,53,53,10,0,1,76,0,0,31,0,0,0,0,0,1,1,1,0,0,4,0,22,
@@ -1440,7 +1440,7 @@ void State::setDefaultWallPaperList(int version)
     0,0,175,0,0,143,0,0,134,0,0,148,0,0,148,0,0,147,0,0,141,0,0,142,0,0,144,0,0,133,0,0,
     124,0,0,118,0,0,119,0,0,95,0,0,81
   };
-  data=RVNGBinaryData(wall19,3085);
+  data=librevenge::RVNGBinaryData(wall19,3085);
   m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(32,32),data,mime,defCol[19]));
 
 }
@@ -1706,7 +1706,7 @@ bool CWStyleManager::readPatternList(long endPos)
     MWAW_DEBUG_MSG(("CWStyleManager::readPatternList: can read pattern size\n"));
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos,RVNG_SEEK_SET);
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
     return false;
   }
   if (sz==0) {
@@ -1721,7 +1721,7 @@ bool CWStyleManager::readPatternList(long endPos)
   for (int i=0; i<5; ++i) {
     val= input->readLong(2);
     if (i==2 && val!=8) {
-      input->seek(pos,RVNG_SEEK_SET);
+      input->seek(pos,librevenge::RVNG_SEEK_SET);
       return false;
     }
     if (val!=expectedVal[i]) f << "f" << i << "=" << val << ",";
@@ -1746,7 +1746,7 @@ bool CWStyleManager::readPatternList(long endPos)
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
-  input->seek(pos+4+sz,RVNG_SEEK_SET);
+  input->seek(pos+4+sz,librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -1765,7 +1765,7 @@ bool CWStyleManager::readGradientList(long endPos)
     MWAW_DEBUG_MSG(("CWStyleManager::readGradientList: can read pattern size\n"));
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos,RVNG_SEEK_SET);
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
     return false;
   }
   if (sz==0) {
@@ -1780,7 +1780,7 @@ bool CWStyleManager::readGradientList(long endPos)
   for (int i=0; i<5; ++i) {
     val= input->readLong(2);
     if (i==2 && val!=0x28) {
-      input->seek(pos,RVNG_SEEK_SET);
+      input->seek(pos,librevenge::RVNG_SEEK_SET);
       return false;
     }
     if (val!=expectedVal[i]) f << "f" << i << "=" << val << ",";
@@ -1795,7 +1795,7 @@ bool CWStyleManager::readGradientList(long endPos)
     ascFile.addDelimiter(input->tell(),'|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(finalPos,RVNG_SEEK_SET);
+    input->seek(finalPos,librevenge::RVNG_SEEK_SET);
     return true;
   }
 
@@ -1825,15 +1825,15 @@ bool CWStyleManager::readGradientList(long endPos)
       MWAW_DEBUG_MSG(("CWStyleManager::readGradientList: can read the number of color or type\n"));
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
-      input->seek(finalPos,RVNG_SEEK_SET);
+      input->seek(finalPos,librevenge::RVNG_SEEK_SET);
       return true;
     }
     m_state->m_gradientList.push_back(grad);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+40, RVNG_SEEK_SET);
+    input->seek(pos+40, librevenge::RVNG_SEEK_SET);
   }
-  input->seek(finalPos,RVNG_SEEK_SET);
+  input->seek(finalPos,librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -1842,7 +1842,7 @@ bool CWStyleManager::readColorList(MWAWEntry const &entry)
   if (!entry.valid()) return false;
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+4, RVNG_SEEK_SET); // avoid header
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET); // avoid header
   if (entry.length() == 4) return true;
 
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1858,12 +1858,12 @@ bool CWStyleManager::readColorList(MWAWEntry const &entry)
   int const fSz = 16;
   if (pos+10+N*fSz > entry.end()) {
     MWAW_DEBUG_MSG(("CWStyleManager::readColorList: can not read data\n"));
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
   ascFile.addDelimiter(input->tell(),'|');
-  input->seek(entry.end()-N*fSz, RVNG_SEEK_SET);
+  input->seek(entry.end()-N*fSz, librevenge::RVNG_SEEK_SET);
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
@@ -1879,10 +1879,10 @@ bool CWStyleManager::readColorList(MWAWEntry const &entry)
     ascFile.addDelimiter(input->tell(),'|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
 
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -1893,11 +1893,11 @@ bool CWStyleManager::readStyles(MWAWEntry const &entry)
   int vers=version();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+4, RVNG_SEEK_SET); // skip header
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
   long sz = (long) input->readULong(4);
   if (sz > entry.length()) {
     MWAW_DEBUG_MSG(("CWStyleManager::readStyles: pb with entry length"));
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -1907,13 +1907,13 @@ bool CWStyleManager::readStyles(MWAWEntry const &entry)
   if (vers <= 3) {
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(entry.end(), RVNG_SEEK_SET);
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
     return true;
   }
   bool limitSet = true;
   if (vers <= 4) {
     // version 4 does not contents total length fields
-    input->seek(-4, RVNG_SEEK_CUR);
+    input->seek(-4, librevenge::RVNG_SEEK_CUR);
     limitSet = false;
   } else
     input->pushLimit(entry.end());
@@ -1923,7 +1923,7 @@ bool CWStyleManager::readStyles(MWAWEntry const &entry)
   while (long(input->tell()) < entry.end()) {
     pos = input->tell();
     if (!readGenStyle(id)) {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       if (limitSet) input->popLimit();
       return false;
     }
@@ -1951,7 +1951,7 @@ bool CWStyleManager::readGenStyle(int id)
     if (sz) f << "#";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
     return true;
   }
 
@@ -1969,9 +1969,9 @@ bool CWStyleManager::readGenStyle(int id)
   }
   // check here for gradient definition...
   if (version()>4 && type==-1 && val==0 && fSz==0x28 && unkn[0]==0x40 && unkn[1]==1) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     if (readGradientList(endPos)) return true;
-    input->seek(pos+16, RVNG_SEEK_SET);
+    input->seek(pos+16, librevenge::RVNG_SEEK_SET);
   }
   for (int i = 0; i < 4; i++)
     name += char(input->readULong(1));
@@ -1986,7 +1986,7 @@ bool CWStyleManager::readGenStyle(int id)
 
   long numRemain = endPos - actPos;
   if (N > 0 && fSz > 0 && numRemain >= N*fSz) {
-    input->seek(endPos-N*fSz, RVNG_SEEK_SET);
+    input->seek(endPos-N*fSz, librevenge::RVNG_SEEK_SET);
 
     bool ok = false;
     if (name == "CHAR")
@@ -2008,28 +2008,28 @@ bool CWStyleManager::readGenStyle(int id)
     else if (name == "STYL")
       ok = readStylesDef(N, fSz);
     if (!ok) {
-      input->seek(endPos-N*fSz, RVNG_SEEK_SET);
+      input->seek(endPos-N*fSz, librevenge::RVNG_SEEK_SET);
       for (int i = 0; i < N; i++) {
         pos = input->tell();
         f.str("");
         f << "STYL-" << id << "/" << name << "-" << i << ":";
         ascFile.addPos(pos);
         ascFile.addNote(f.str().c_str());
-        input->seek(fSz, RVNG_SEEK_CUR);
+        input->seek(fSz, librevenge::RVNG_SEEK_CUR);
       }
     }
   }
 
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (name=="NAME") {
     if (!readPatternList()) {
       MWAW_DEBUG_MSG(("CWStyleManager::readGenStyle: can not find the pattern list\n"));
-      input->seek(endPos, RVNG_SEEK_SET);
+      input->seek(endPos, librevenge::RVNG_SEEK_SET);
     } else if (version()==4) {
       endPos=input->tell();
       if (!readGradientList()) {
         MWAW_DEBUG_MSG(("CWStyleManager::readGenStyle: can not find the gradient list\n"));
-        input->seek(endPos, RVNG_SEEK_SET);
+        input->seek(endPos, librevenge::RVNG_SEEK_SET);
       }
     }
   }
@@ -2093,7 +2093,7 @@ bool CWStyleManager::readStylesDef(int N, int fSz)
       f << "Style-" << i << ":" << style;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -2123,7 +2123,7 @@ bool CWStyleManager::readLookUp(int N, int fSz)
     f << "styleId=" << val;
     if (fSz != 2) {
       ascFile.addDelimiter(input->tell(), '|');
-      input->seek(pos+fSz, RVNG_SEEK_SET);
+      input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
     }
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -2188,7 +2188,7 @@ bool CWStyleManager::readFontNames(int N, int fSz)
     }
     if (long(input->tell()) != pos+fSz) {
       ascFile.addDelimiter(input->tell(), '|');
-      input->seek(pos+fSz, RVNG_SEEK_SET);
+      input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
     }
 
     ascFile.addPos(pos);
@@ -2202,7 +2202,7 @@ bool CWStyleManager::readFont(int id, int fontSize, MWAWFont &font)
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   font = MWAWFont();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
@@ -2267,7 +2267,7 @@ bool CWStyleManager::readFont(int id, int fontSize, MWAWFont &font)
   f << font.getDebugString(m_parserState->m_fontConverter);
   if (long(input->tell()) != pos+fontSize)
     ascFile.addDelimiter(input->tell(), '|');
-  input->seek(pos+fontSize, RVNG_SEEK_SET);
+  input->seek(pos+fontSize, librevenge::RVNG_SEEK_SET);
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   return true;
@@ -2297,7 +2297,7 @@ bool CWStyleManager::readStyleFonts(int N, int fSz)
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
     }
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -2332,7 +2332,7 @@ bool CWStyleManager::readStyleNames(int N, int fSz)
     }
     if (long(input->tell()) != pos+fSz) {
       ascFile.addDelimiter(input->tell(), '|');
-      input->seek(pos+fSz, RVNG_SEEK_SET);
+      input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
     }
 
     ascFile.addPos(pos);
@@ -2399,7 +2399,7 @@ bool CWStyleManager::readCellStyles(int N, int fSz)
       ascFile.addDelimiter(input->tell(), '|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -2491,7 +2491,7 @@ bool CWStyleManager::readGraphStyles(int N, int fSz)
       ascFile.addDelimiter(input->tell(), '|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -2562,7 +2562,7 @@ bool CWStyleManager::readKSEN(int N, int fSz)
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
 
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }

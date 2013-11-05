@@ -32,7 +32,7 @@
 */
 
 /*
- *  freely inspired from libwpd/RVNGZipStream.h :
+ *  freely inspired from libwpd/librevenge::RVNGZipStream.h :
  */
 #if defined(USE_ZIP)
 
@@ -118,7 +118,7 @@ struct CentralDirectoryEnd {
 #define LOC_FILE_HEADER_SIG 0x04034b50
 #define CDIR_END_SIG 0x06054b50
 
-static unsigned char getByte(RVNGInputStream *input)
+static unsigned char getByte(librevenge::RVNGInputStream *input)
 {
   unsigned long numBytesRead = 0;
   const unsigned char *ret = input->read(1, numBytesRead);
@@ -127,7 +127,7 @@ static unsigned char getByte(RVNGInputStream *input)
   return ret[0];
 }
 
-static unsigned short getShort(RVNGInputStream *input)
+static unsigned short getShort(librevenge::RVNGInputStream *input)
 {
   unsigned long numBytesRead = 0;
   const unsigned char *ret = input->read(2, numBytesRead);
@@ -136,7 +136,7 @@ static unsigned short getShort(RVNGInputStream *input)
   return (unsigned short)((unsigned)ret[0]|((unsigned)ret[1]<<8));
 }
 
-static unsigned getInt(RVNGInputStream *input)
+static unsigned getInt(librevenge::RVNGInputStream *input)
 {
   unsigned long numBytesRead = 0;
   const unsigned char *ret = input->read(4, numBytesRead);
@@ -145,7 +145,7 @@ static unsigned getInt(RVNGInputStream *input)
   return (unsigned)ret[0]|((unsigned)ret[1]<<8)|((unsigned)ret[2]<<16)|((unsigned)ret[3]<<24);
 }
 
-static bool readCentralDirectoryEnd(RVNGInputStream *input, CentralDirectoryEnd &end)
+static bool readCentralDirectoryEnd(librevenge::RVNGInputStream *input, CentralDirectoryEnd &end)
 {
   try {
     unsigned signature = getInt(input);
@@ -168,7 +168,7 @@ static bool readCentralDirectoryEnd(RVNGInputStream *input, CentralDirectoryEnd 
   return true;
 }
 
-static bool readCentralDirectoryEntry(RVNGInputStream *input, CentralDirectoryEntry &entry)
+static bool readCentralDirectoryEntry(librevenge::RVNGInputStream *input, CentralDirectoryEntry &entry)
 {
   try {
     unsigned signature = getInt(input);
@@ -207,7 +207,7 @@ static bool readCentralDirectoryEntry(RVNGInputStream *input, CentralDirectoryEn
   return true;
 }
 
-static bool readLocalFileHeader(RVNGInputStream *input, LocalFileHeader &header)
+static bool readLocalFileHeader(librevenge::RVNGInputStream *input, LocalFileHeader &header)
 {
   try {
     unsigned signature = getInt(input);
@@ -256,16 +256,16 @@ static bool areHeadersConsistent(const LocalFileHeader &header, const CentralDir
   return true;
 }
 
-static bool findCentralDirectoryEnd(RVNGInputStream *input)
+static bool findCentralDirectoryEnd(librevenge::RVNGInputStream *input)
 {
   if (!input) return false;
   try {
-    input->seek(0, RVNG_SEEK_END);
+    input->seek(0, librevenge::RVNG_SEEK_END);
     long size = input->tell();
 
     // CentralDirectoryEnd is CDIR_END_SIG:4+at least 18 other bytes
     if (size < 22) return false;
-    if (input->seek(size>1024 ? size-1024 : 0, RVNG_SEEK_SET))
+    if (input->seek(size>1024 ? size-1024 : 0, librevenge::RVNG_SEEK_SET))
       return false;
     long pos=input->tell();
     long toCheck=(size-18)-pos;
@@ -283,7 +283,7 @@ static bool findCentralDirectoryEnd(RVNGInputStream *input)
     for (long p=0; p < toCheck; p++) {
       signature=((signature&0xFFFFFF)<<8)|*(ret++);
       if (signature == sigRev) {
-        input->seek(pos+p-3, RVNG_SEEK_SET);
+        input->seek(pos+p-3, librevenge::RVNG_SEEK_SET);
         return true;
       }
     }
@@ -293,7 +293,7 @@ static bool findCentralDirectoryEnd(RVNGInputStream *input)
   return false;
 }
 
-static bool findDataStream(RVNGInputStream *input, CentralDirectoryEntry &entry, std::string const &name)
+static bool findDataStream(librevenge::RVNGInputStream *input, CentralDirectoryEntry &entry, std::string const &name)
 {
   if (!name.c_str()) return false;
   unsigned short name_size = (unsigned short) name.length();
@@ -302,7 +302,7 @@ static bool findDataStream(RVNGInputStream *input, CentralDirectoryEntry &entry,
   CentralDirectoryEnd end;
   if (!readCentralDirectoryEnd(input, end))
     return false;
-  input->seek(long(end.cdir_offset), RVNG_SEEK_SET);
+  input->seek(long(end.cdir_offset), librevenge::RVNG_SEEK_SET);
   while (!input->isEnd() && (unsigned)input->tell() < end.cdir_offset + end.cdir_size) {
     if (!readCentralDirectoryEntry(input, entry))
       return false;
@@ -313,7 +313,7 @@ static bool findDataStream(RVNGInputStream *input, CentralDirectoryEntry &entry,
     return false;
   if (entry.filename != name)
     return false;
-  input->seek(long(entry.offset), RVNG_SEEK_SET);
+  input->seek(long(entry.offset), librevenge::RVNG_SEEK_SET);
   LocalFileHeader header;
   if (!readLocalFileHeader(input, header))
     return false;
@@ -322,7 +322,7 @@ static bool findDataStream(RVNGInputStream *input, CentralDirectoryEntry &entry,
   return true;
 }
 
-static std::vector<std::string> getZipNames(RVNGInputStream *input)
+static std::vector<std::string> getZipNames(librevenge::RVNGInputStream *input)
 {
   std::vector<std::string> res;
   if (!findCentralDirectoryEnd(input))
@@ -330,7 +330,7 @@ static std::vector<std::string> getZipNames(RVNGInputStream *input)
   CentralDirectoryEnd end;
   if (!readCentralDirectoryEnd(input, end))
     return res;
-  input->seek(long(end.cdir_offset), RVNG_SEEK_SET);
+  input->seek(long(end.cdir_offset), librevenge::RVNG_SEEK_SET);
   while (!input->isEnd() && (unsigned)input->tell() < end.cdir_offset + end.cdir_size) {
     CentralDirectoryEntry entry;
     if (!readCentralDirectoryEntry(input, entry))
@@ -353,12 +353,12 @@ bool MWAWZipStream::isZipStream()
   CentralDirectoryEnd end;
   if (!readCentralDirectoryEnd(m_input, end))
     return false;
-  m_input->seek(long(end.cdir_offset), RVNG_SEEK_SET);
+  m_input->seek(long(end.cdir_offset), librevenge::RVNG_SEEK_SET);
   // read first entry in the central directory
   CentralDirectoryEntry entry;
   if (!readCentralDirectoryEntry(m_input, entry))
     return false;
-  m_input->seek(long(entry.offset), RVNG_SEEK_SET);
+  m_input->seek(long(entry.offset), librevenge::RVNG_SEEK_SET);
   // read the local file header and compare with the central directory information
   LocalFileHeader header;
   if (!readLocalFileHeader(m_input, header))
@@ -368,7 +368,7 @@ bool MWAWZipStream::isZipStream()
   return true;
 }
 
-RVNGInputStream *MWAWZipStream::getDocumentZipStream(const std::string &name)
+librevenge::RVNGInputStream *MWAWZipStream::getDocumentZipStream(const std::string &name)
 {
   if (!m_input) return 0;
   CentralDirectoryEntry entry;
@@ -381,7 +381,7 @@ RVNGInputStream *MWAWZipStream::getDocumentZipStream(const std::string &name)
   if (numBytesRead != entry.compressed_size)
     return 0;
   if (!entry.compression)
-    return new MWAWStringStream(compressedData, numBytesRead);
+    return new librevenge::RVNGStringStream(compressedData, (unsigned int) numBytesRead);
   else {
     int ret;
     z_stream strm;
@@ -415,7 +415,7 @@ RVNGInputStream *MWAWZipStream::getDocumentZipStream(const std::string &name)
       break;
     }
     (void)inflateEnd(&strm);
-    return new MWAWStringStream(&data[0], data.size());
+    return new librevenge::RVNGStringStream(&data[0], (unsigned int)data.size());
   }
 }
 

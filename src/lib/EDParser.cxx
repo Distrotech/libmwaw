@@ -159,7 +159,7 @@ void EDParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void EDParser::parse(RVNGTextInterface *docInterface)
+void EDParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
 
@@ -188,7 +188,7 @@ void EDParser::parse(RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void EDParser::createDocument(RVNGTextInterface *documentInterface)
+void EDParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -335,7 +335,7 @@ bool EDParser::sendPicture(int pictId, bool compressed)
     return false;
   }
   std::map<int, MWAWEntry>::const_iterator it;
-  RVNGBinaryData data;
+  librevenge::RVNGBinaryData data;
   if (compressed) {
     it = m_state->m_idCPICMap.find(pictId);
     if (it==m_state->m_idCPICMap.end() || !decodeZone(it->second,data))
@@ -361,12 +361,12 @@ bool EDParser::sendPicture(int pictId, bool compressed)
     MWAW_DEBUG_MSG(("EDParser::sendPicture: can not find the picture\n"));
     return false;
   }
-  pictInput->seek(0,RVNG_SEEK_SET);
+  pictInput->seek(0,librevenge::RVNG_SEEK_SET);
   shared_ptr<MWAWPict> thePict(MWAWPictData::get(pictInput, dataSz));
-  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), RVNG_POINT);
+  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
   if (thePict) {
-    RVNGBinaryData fData;
+    librevenge::RVNGBinaryData fData;
     std::string type;
     if (thePict->getBinary(fData,type))
       getListener()->insertPicture(pictPos, fData, type);
@@ -412,7 +412,7 @@ bool EDParser::readFontsName(MWAWEntry const &entry)
   long pos = entry.begin();
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(FontsName):";
   if (entry.id()!=128)
@@ -440,14 +440,14 @@ bool EDParser::readFontsName(MWAWEntry const &entry)
         name += (char)  input->readULong(1);
       f << "\"" << name << "\",";
     }
-    input->seek(pos+32, RVNG_SEEK_SET);
+    input->seek(pos+32, librevenge::RVNG_SEEK_SET);
     for (int j = 0; j < 112; j++) { // always 0 .
       int val = (int) input->readLong(2);
       if (val) f << "f" << j << "=" << val << ",";
     }
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+0x100, RVNG_SEEK_SET);
+    input->seek(pos+0x100, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -470,7 +470,7 @@ bool EDParser::sendIndex()
   tab.m_position = w-0.3;
 
   para.m_tabs->push_back(tab);
-  para.m_marginsUnit=RVNG_INCH;
+  para.m_marginsUnit=librevenge::RVNG_INCH;
 
   MWAWFont cFont(3,10);
   cFont.setFlags(MWAWFont::boldBit);
@@ -511,7 +511,7 @@ bool EDParser::readIndex(MWAWEntry const &entry)
   long endPos = entry.end();
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(Index):";
   if (entry.id()!=128)
@@ -575,7 +575,7 @@ bool EDParser::readIndex(MWAWEntry const &entry)
     f.str("");
     f << "Index-" << i << ":" << index;
     if ((fSz%2)==0) //
-      input->seek(1,RVNG_SEEK_CUR);
+      input->seek(1,librevenge::RVNG_SEEK_CUR);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -596,7 +596,7 @@ bool EDParser::readInfo(MWAWEntry const &entry)
   long endPos = entry.end();
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(Info):";
   if (entry.id()!=128)
@@ -619,7 +619,7 @@ bool EDParser::readInfo(MWAWEntry const &entry)
         name += (char) input->readULong(1);
       f << name << ",";
     }
-    input->seek(pos+8+(i+1)*32, RVNG_SEEK_SET);
+    input->seek(pos+8+(i+1)*32, librevenge::RVNG_SEEK_SET);
   }
   for (int i = 0; i < 5; i++) { // always 4, 0, 210, 0, 0 ?
     val = (int) input->readLong(2);
@@ -695,7 +695,7 @@ struct DeflateStruct {
   //! check if there is delayed char, if so treat them
   bool treatDelayed(unsigned char c);
   //! return the content of the block in dt
-  bool getBinaryData(RVNGBinaryData &dt) const {
+  bool getBinaryData(librevenge::RVNGBinaryData &dt) const {
     dt.clear();
     if (m_dataPos==0) return false;
     unsigned char const *firstPos=&m_data[0];
@@ -771,7 +771,7 @@ bool DeflateStruct::treatDelayed(unsigned char c)
 }
 }
 
-bool EDParser::decodeZone(MWAWEntry const &entry, RVNGBinaryData &data)
+bool EDParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &data)
 {
   data.clear();
   long length = entry.length();
@@ -784,7 +784,7 @@ bool EDParser::decodeZone(MWAWEntry const &entry, RVNGBinaryData &data)
   long endPos = entry.end();
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(CompressZone):";

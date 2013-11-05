@@ -118,7 +118,7 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
   long pos = input->tell();
   int sz = (int) input->readULong(1);
   if (sz > 20 || sz == 3) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -168,7 +168,7 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     int decal = (int) input->readLong(1); // unit point
     if (decal) {
       if (what & 0x2)
-        font.m_font->set(MWAWFont::Script(float(decal)/2.f, RVNG_POINT));
+        font.m_font->set(MWAWFont::Script(float(decal)/2.f, librevenge::RVNG_POINT));
       else
         f << "#vDecal=" << decal;
     }
@@ -233,7 +233,7 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     what &= 0xFB;
   }
   if (what & 0x2) {
-    font.m_font->set(MWAWFont::Script(0, RVNG_POINT));
+    font.m_font->set(MWAWFont::Script(0, librevenge::RVNG_POINT));
     what &= 0xFD;
   }
   if (what & 0x1) {
@@ -254,11 +254,11 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     long actPos = input->tell();
     if (m_mainParser->checkPicturePos(pictPos, wh)) {
       ok = true;
-      input->seek(actPos, RVNG_SEEK_SET);
+      input->seek(actPos, librevenge::RVNG_SEEK_SET);
       font.m_picturePos = pictPos;
       f << "pictWh=" << wh << ",";
     } else
-      input->seek(pos+1+8, RVNG_SEEK_SET);
+      input->seek(pos+1+8, librevenge::RVNG_SEEK_SET);
   }
   if (!ok && sz >= 9) {
     int wh = (int) input->readLong(1);
@@ -276,13 +276,13 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     }
   }
   if (!ok && sz >= 9) {
-    input->seek(pos+1+8, RVNG_SEEK_SET);
+    input->seek(pos+1+8, librevenge::RVNG_SEEK_SET);
     f << "#";
   }
   if (long(input->tell()) != pos+1+sz)
     m_parserState->m_asciiFile.addDelimiter(input->tell(), '|');
 
-  input->seek(pos+1+sz, RVNG_SEEK_SET);
+  input->seek(pos+1+sz, librevenge::RVNG_SEEK_SET);
   font.m_extra = f.str();
   return true;
 }
@@ -394,12 +394,12 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
        other
      */
     if (para.read(input,endPos)) continue;
-    input->seek(actPos, RVNG_SEEK_SET);
+    input->seek(actPos, librevenge::RVNG_SEEK_SET);
 
     int wh = (int) input->readULong(1), val;
     if (vers <= 3 && wh >= 0x36 && wh <= 0x45) {
       // this section data has different meaning in v3 and after...
-      input->seek(actPos, RVNG_SEEK_SET);
+      input->seek(actPos, librevenge::RVNG_SEEK_SET);
       break;
     }
     bool done = false;
@@ -422,7 +422,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
     case 0x4d: {
       if (dSz < 2) break;
       val = (int) input->readLong(1);
-      para.m_modFont->m_font->set(MWAWFont::Script(float(val)/2.f,RVNG_POINT));
+      para.m_modFont->m_font->set(MWAWFont::Script(float(val)/2.f,librevenge::RVNG_POINT));
       if (val==0) f << "pos[y]=0,";
       done = true;
       break;
@@ -558,7 +558,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
       break;
     }
     if (!done) {
-      input->seek(actPos, RVNG_SEEK_SET);
+      input->seek(actPos, librevenge::RVNG_SEEK_SET);
       break;
     }
   }
@@ -570,7 +570,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
     }
     ascFile.addDelimiter(input->tell(),'|');
     f << "####";
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
   }
   para.m_extra += f.str();
 
@@ -589,7 +589,7 @@ bool MSWTextStyles::readPLCList(MSWEntry &entry)
   long pos = entry.begin();
   entry.setParsed(true);
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << entry.type() << ":";
@@ -617,7 +617,7 @@ bool MSWTextStyles::readPLCList(MSWEntry &entry)
       long actPos = input->tell();
       Vec2<long> fLimit(textPos[(size_t)i], textPos[(size_t)i+1]);
       readPLC(plc, entry.id(), fLimit);
-      input->seek(actPos, RVNG_SEEK_SET);
+      input->seek(actPos, librevenge::RVNG_SEEK_SET);
     }
   }
   f << std::hex << "end?=" << textPos[(size_t)N] << ",";
@@ -640,7 +640,7 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.end()-1, RVNG_SEEK_SET);
+  input->seek(entry.end()-1, librevenge::RVNG_SEEK_SET);
   int N=(int) input->readULong(1);
   if (5*(N+1) > entry.length()) {
     MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: the number of plc seems odd\n"));
@@ -653,7 +653,7 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
   libmwaw::DebugStream f;
   f << "Entries("<< entry.type() << ")[" << entry.id() << "]:N=" << N << ",";
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   std::vector<long> filePos;
   filePos.resize((size_t) N+1);
   for (int i = 0; i <= N; i++)
@@ -686,7 +686,7 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
 
         long dataPos = entry.begin()+posFactor*decal[i];
         if (type == 0) {
-          input->seek(dataPos, RVNG_SEEK_SET);
+          input->seek(dataPos, librevenge::RVNG_SEEK_SET);
           f2 << "F" << id << ":";
           MSWStruct::Font font;
           if (!readFont(font, TextZone)) {
@@ -699,7 +699,7 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
           MSWStruct::Paragraph para(vers);
           f2 << "P" << id << ":";
 
-          input->seek(dataPos, RVNG_SEEK_SET);
+          input->seek(dataPos, librevenge::RVNG_SEEK_SET);
           int sz = (int) input->readLong(1);
           long endPos;
           if (vers <= 3) {
@@ -721,7 +721,7 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
             if (vers > 3) {
               if (!para.m_info->read(input, endPos, vers)) {
                 f2 << "###info,";
-                input->seek(dataPos+2+6, RVNG_SEEK_SET);
+                input->seek(dataPos+2+6, librevenge::RVNG_SEEK_SET);
               }
               // osnole: do we need to check here if the paragraph is empty ?
               // ie. if (para.m_info->isEmpty()&&stId==0)
@@ -743,7 +743,7 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
           }
           m_state->m_paragraphList.push_back(para);
         }
-        input->seek(actPos, RVNG_SEEK_SET);
+        input->seek(actPos, librevenge::RVNG_SEEK_SET);
         ascFile.addPos(dataPos);
         ascFile.addNote(f2.str().c_str());
       }
@@ -785,7 +785,7 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
   int const vers = version();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   int type = (int) input->readLong(1);
@@ -808,7 +808,7 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
     f.str("");
     f << "ParagPLC:tP" << num++<< "]:";
     MSWStruct::Paragraph para(vers);
-    input->seek(-2,RVNG_SEEK_CUR);
+    input->seek(-2,librevenge::RVNG_SEEK_CUR);
     if (readParagraph(para) && long(input->tell()) <= endPos) {
 #ifdef DEBUG_WITH_FILES
       para.print(f, m_parserState->m_fontConverter);
@@ -820,7 +820,7 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
     m_state->m_textstructParagraphList.push_back(para);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
 
     pos = input->tell();
     type = (int) input->readULong(1);
@@ -830,7 +830,7 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
       return false;
     }
   }
-  input->seek(-1,RVNG_SEEK_CUR);
+  input->seek(-1,librevenge::RVNG_SEEK_CUR);
   return true;
 }
 
@@ -845,13 +845,13 @@ int MSWTextStyles::readPropertyModifier(bool &complex, std::string &extra)
     return ((c&0x7F)<<8)|(int) input->readULong(1);
   }
   if (c==0) {
-    input->seek(pos+2, RVNG_SEEK_SET);
+    input->seek(pos+2, librevenge::RVNG_SEEK_SET);
     return -1;
   }
   int id = -1;
   libmwaw::DebugStream f;
   MSWStruct::Paragraph para(version());
-  input->seek(-1, RVNG_SEEK_CUR);
+  input->seek(-1, librevenge::RVNG_SEEK_CUR);
   if (readParagraph(para, 2)) {
     id = int(m_state->m_textstructParagraphList.size());
     m_state->m_textstructParagraphList.push_back(para);
@@ -861,11 +861,11 @@ int MSWTextStyles::readPropertyModifier(bool &complex, std::string &extra)
     f << "]";
 #endif
   } else {
-    input->seek(pos+1, RVNG_SEEK_SET);
+    input->seek(pos+1, librevenge::RVNG_SEEK_SET);
     f << "#f" << std::hex << c << std::dec << "=" << (int) input->readULong(1);
   }
   extra = f.str();
-  input->seek(pos+2, RVNG_SEEK_SET);
+  input->seek(pos+2, librevenge::RVNG_SEEK_SET);
   return id;
 }
 
@@ -927,7 +927,7 @@ bool MSWTextStyles::readSection(MSWEntry &entry, std::vector<long> &cLimits)
   long pos = entry.begin();
   entry.setParsed(true);
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Section:";
@@ -956,7 +956,7 @@ bool MSWTextStyles::readSection(MSWEntry &entry, std::vector<long> &cLimits)
       f << "pos=" << std::hex << filePos << std::dec << ",";
       long actPos = input->tell();
       readSection(sec,(long) filePos);
-      input->seek(actPos, RVNG_SEEK_SET);
+      input->seek(actPos, librevenge::RVNG_SEEK_SET);
     }
     f << "],";
 
@@ -978,7 +978,7 @@ bool MSWTextStyles::readSection(MSWStruct::Section &sec, long debPos)
     return false;
   }
   int const vers = version();
-  input->seek(debPos, RVNG_SEEK_SET);
+  input->seek(debPos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   int sz = (int) input->readULong(1);
@@ -1077,7 +1077,7 @@ bool MSWTextStyles::readStyles(MSWEntry &entry)
   long pos = entry.begin();
   libmwaw::DebugStream f;
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   f << entry << ":";
   int N = (int) input->readLong(2);
   if (N) f << "N?=" << N;
@@ -1105,7 +1105,7 @@ bool MSWTextStyles::readStyles(MSWEntry &entry)
       ascFile.addPos(debPos[st]);
       ascFile.addNote(f.str().c_str());
     }
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
   }
   debPos[3] = input->tell();
   // read the styles parents
@@ -1143,7 +1143,7 @@ bool MSWTextStyles::readStylesNames(MSWEntry const &zone, int N, int &Nnamed)
 {
   long pos = zone.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+2, RVNG_SEEK_SET);
+  input->seek(pos+2, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Styles(names):";
@@ -1165,7 +1165,7 @@ bool MSWTextStyles::readStylesNames(MSWEntry const &zone, int N, int &Nnamed)
       MWAW_DEBUG_MSG(("MSWTextStyles::readStylesNames: zone(names) seems to short...\n"));
       f << "#";
       ascFile.addNote(f.str().c_str());
-      input->seek(pos-1, RVNG_SEEK_SET);
+      input->seek(pos-1, librevenge::RVNG_SEEK_SET);
       break;
     }
     std::string s("");
@@ -1194,7 +1194,7 @@ bool MSWTextStyles::readStylesFont
   ascFile.addNote("Styles(font):");
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+2, RVNG_SEEK_SET);
+  input->seek(pos+2, librevenge::RVNG_SEEK_SET);
   size_t numElt = order.size();
   std::vector<long> debPos;
   std::vector<int> dataSize;
@@ -1214,7 +1214,7 @@ bool MSWTextStyles::readStylesFont
       break;
     }
     if (sz)
-      input->seek(sz, RVNG_SEEK_CUR);
+      input->seek(sz, librevenge::RVNG_SEEK_CUR);
     else {
       f.str("");
       f << "CharPLC(sF" << int(i)-N << "):";
@@ -1232,7 +1232,7 @@ bool MSWTextStyles::readStylesFont
     if (prevId >= 0 && m_state->m_styleFontMap.find(prevId-N) != m_state->m_styleFontMap.end())
       font = m_state->m_styleFontMap.find(prevId-N)->second;
     if (dataSize[(size_t)id] && dataSize[(size_t)id] != 0xFF) {
-      input->seek(debPos[(size_t)id], RVNG_SEEK_SET);
+      input->seek(debPos[(size_t)id], librevenge::RVNG_SEEK_SET);
 
       f.str("");
       f << "CharPLC(sF" << id-int(N) << "):";
@@ -1259,7 +1259,7 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
   ascFile.addNote("Styles(paragraph):");
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+2, RVNG_SEEK_SET);
+  input->seek(pos+2, librevenge::RVNG_SEEK_SET);
   size_t numElt = order.size();
   std::vector<long> debPos;
   std::vector<int> dataSize;
@@ -1277,7 +1277,7 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
       break;
     }
     if (sz && sz != 0xFF)
-      input->seek(sz, RVNG_SEEK_CUR);
+      input->seek(sz, librevenge::RVNG_SEEK_CUR);
     else {
       f.str("");
       f << "ParagPLC(sP" << int(i)-N << "):";
@@ -1302,7 +1302,7 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
         MWAW_DEBUG_MSG(("MSWTextStyles::readStylesParagraph: zone(paragraph) the id seems bad...\n"));
         f << "#";
       } else {
-        input->seek(debPos[(size_t) id]+1, RVNG_SEEK_SET);
+        input->seek(debPos[(size_t) id]+1, librevenge::RVNG_SEEK_SET);
         int pId = (int) input->readLong(1);
         if (id >= N && pId != id-N) {
           MWAW_DEBUG_MSG(("MSWTextStyles::readStylesParagraph: zone(paragraph) the id seems bad...\n"));

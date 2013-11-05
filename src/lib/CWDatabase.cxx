@@ -266,7 +266,7 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+8+16, RVNG_SEEK_SET); // avoid header+8 generic number
+  input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   shared_ptr<CWDatabaseInternal::Database>
@@ -283,7 +283,7 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       MWAW_DEBUG_MSG(("CWDatabase::readDatabaseZone: can not find definition size\n"));
-      input->seek(entry.end(), RVNG_SEEK_SET);
+      input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
       return shared_ptr<CWStruct::DSET>();
     }
 
@@ -317,7 +317,7 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
       ascFile.addNote("DatabaseDef-extra");
     }
   }
-  input->seek(dataEnd, RVNG_SEEK_SET);
+  input->seek(dataEnd, librevenge::RVNG_SEEK_SET);
 
   for (int i = 0; i < N; i++) {
     pos = input->tell();
@@ -326,10 +326,10 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
     f << "DatabaseDef-" << i;
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+data0Length, RVNG_SEEK_SET);
+    input->seek(pos+data0Length, librevenge::RVNG_SEEK_SET);
   }
 
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
 
   if (m_state->m_databaseMap.find(databaseZone->m_id) != m_state->m_databaseMap.end()) {
     MWAW_DEBUG_MSG(("CWDatabase::readDatabaseZone: zone %d already exists!!!\n", databaseZone->m_id));
@@ -379,7 +379,7 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
   }
   // now the following seems to be different
   if (!ok)
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
   return databaseZone;
 }
 
@@ -394,14 +394,14 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWDatabase::readFields: file is too short\n"));
     return false;
   }
 
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(DatabaseField):";
@@ -413,7 +413,7 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
   if (val) f << "f1=" << val << ",";
   int fSz = (int) input->readLong(2);
   if (sz != 12+fSz*N || fSz < 18) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWDatabase::readFields: find odd data size\n"));
     return false;
   }
@@ -436,7 +436,7 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
     std::string name("");
     sz = (long) input->readULong(1);
     if ((fNameMaxSz && sz > fNameMaxSz-1) || sz > fSz-1) {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       MWAW_DEBUG_MSG(("CWDatabase::readFields: find odd field name\n"));
       return false;
     }
@@ -444,7 +444,7 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
       name += char(input->readULong(1));
     field.m_name = name;
 
-    input->seek(pos+fNameMaxSz, RVNG_SEEK_SET);
+    input->seek(pos+fNameMaxSz, librevenge::RVNG_SEEK_SET);
     int type = (int) input->readULong(1);
     bool ok = true;
     switch(type) {
@@ -567,10 +567,10 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
       ascFile.addDelimiter(actPos, '|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
 
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -594,20 +594,20 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
       long sz = (long) input->readULong(4);
 
       long endPos = pos+4+sz;
-      input->seek(endPos, RVNG_SEEK_SET);
+      input->seek(endPos, librevenge::RVNG_SEEK_SET);
       if (long(input->tell()) != endPos) {
         MWAW_DEBUG_MSG(("CWDatabase::readDefaults: can not find value for field: %d\n", fi));
-        input->seek(pos, RVNG_SEEK_SET);
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
         return false;
       }
-      input->seek(pos+4, RVNG_SEEK_SET);
+      input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       long length = (vers <= 2 && field.isText()) ? sz : (int) input->readULong(1);
       f.str("");
       f << "Entries(DatabaseDft)[" << v << "]:";
       if (formField) {
         if (length != sz-1) {
           MWAW_DEBUG_MSG(("CWDatabase::readDefaults: can not find formula for field: %ld\n", long(v)));
-          input->seek(pos, RVNG_SEEK_SET);
+          input->seek(pos, librevenge::RVNG_SEEK_SET);
           return false;
         }
         f << "formula,";
@@ -619,7 +619,7 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
           f << "string,";
         if (vers > 2 && !listField && length != sz-1) {
           MWAW_DEBUG_MSG(("CWDatabase::readDefaults: can not find strings for field: %ld\n", long(v)));
-          input->seek(pos, RVNG_SEEK_SET);
+          input->seek(pos, librevenge::RVNG_SEEK_SET);
           return false;
         }
         while (1) {
@@ -627,7 +627,7 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
           if (actPos+length > endPos) {
             MWAW_DEBUG_MSG(("CWDatabase::readDefaults: can not find strings for field: %ld\n", long(v)));
 
-            input->seek(pos, RVNG_SEEK_SET);
+            input->seek(pos, librevenge::RVNG_SEEK_SET);
             return true;
           }
           std::string name("");
@@ -641,7 +641,7 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
       }
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
-      input->seek(endPos, RVNG_SEEK_SET);
+      input->seek(endPos, librevenge::RVNG_SEEK_SET);
     }
   }
   return true;
@@ -699,14 +699,14 @@ bool CWDatabase::sendDatabase(int zId)
   dbase.m_content->setDatabaseFormats(formats);
 
   std::vector<float> colSize(size_t(numFields),72);
-  RVNGPropertyList extras;
+  librevenge::RVNGPropertyList extras;
   extras.insert("libmwaw:main_database", 1);
 
   MWAWTable table(MWAWTable::TableDimBit);
   table.setColsSize(colSize);
   listener->openTable(table, extras);
   for (size_t r=0; r < recordsPos.size(); ++r) {
-    listener->openTableRow((float)14, RVNG_POINT);
+    listener->openTableRow((float)14, librevenge::RVNG_POINT);
     for (int c=0; c < numFields; ++c) {
       MWAWCell cell;
       cell.setPosition(Vec2i(c,int(r)));

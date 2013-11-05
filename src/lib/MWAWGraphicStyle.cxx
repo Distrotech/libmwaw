@@ -95,7 +95,7 @@ bool MWAWGraphicStyle::Pattern::getAverageColor(MWAWColor &color) const
   return true;
 }
 
-bool MWAWGraphicStyle::Pattern::getBinary(RVNGBinaryData &data, std::string &type) const
+bool MWAWGraphicStyle::Pattern::getBinary(librevenge::RVNGBinaryData &data, std::string &type) const
 {
   if (empty()) {
     MWAW_DEBUG_MSG(("MWAWGraphicStyle::Pattern::getBinary: called on invalid pattern\n"));
@@ -136,7 +136,7 @@ bool MWAWGraphicStyle::Pattern::getBinary(RVNGBinaryData &data, std::string &typ
 ////////////////////////////////////////////////////////////
 // style
 ////////////////////////////////////////////////////////////
-void MWAWGraphicStyle::addTo(RVNGPropertyList &list, RVNGPropertyListVector &gradient, bool only1D) const
+void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVNGPropertyListVector &gradient, bool only1D) const
 {
   list.clear();
   if (!hasLine())
@@ -167,19 +167,19 @@ void MWAWGraphicStyle::addTo(RVNGPropertyList &list, RVNGPropertyListVector &gra
     }
     list.insert("draw:stroke", "dash");
     list.insert("draw:dots1", nDots1);
-    list.insert("draw:dots1-length", size1, RVNG_POINT);
+    list.insert("draw:dots1-length", size1, librevenge::RVNG_POINT);
     if (nDots2) {
       list.insert("draw:dots2", nDots2);
-      list.insert("draw:dots2-length", size2, RVNG_POINT);
+      list.insert("draw:dots2-length", size2, librevenge::RVNG_POINT);
     }
-    list.insert("draw:distance", totalGap/float(nDots1+nDots2), RVNG_POINT);;
+    list.insert("draw:distance", totalGap/float(nDots1+nDots2), librevenge::RVNG_POINT);;
   } else
     list.insert("draw:stroke", "solid");
   list.insert("svg:stroke-color", m_lineColor.str().c_str());
-  list.insert("svg:stroke-width", m_lineWidth,RVNG_POINT);
+  list.insert("svg:stroke-width", m_lineWidth,librevenge::RVNG_POINT);
 
   if (m_lineOpacity < 1)
-    list.insert("svg:stroke-opacity", m_lineOpacity, RVNG_PERCENT);
+    list.insert("svg:stroke-opacity", m_lineOpacity, librevenge::RVNG_PERCENT);
   switch(m_lineCap) {
   case C_Round:
     list.insert("svg:stroke-linecap", "round");
@@ -248,26 +248,26 @@ void MWAWGraphicStyle::addTo(RVNGPropertyList &list, RVNGPropertyListVector &gra
         m_gradientStopList[1].m_offset >=1) {
       size_t first=(m_gradientType==G_Linear || m_gradientType==G_Axial) ? 0 : 1;
       list.insert("draw:start-color", m_gradientStopList[first].m_color.str().c_str());
-      list.insert("libwpg:start-opacity", m_gradientStopList[first].m_opacity, RVNG_PERCENT);
+      list.insert("libwpg:start-opacity", m_gradientStopList[first].m_opacity, librevenge::RVNG_PERCENT);
       list.insert("draw:end-color", m_gradientStopList[1-first].m_color.str().c_str());
-      list.insert("libwpg:end-opacity", m_gradientStopList[1-first].m_opacity, RVNG_PERCENT);
+      list.insert("libwpg:end-opacity", m_gradientStopList[1-first].m_opacity, librevenge::RVNG_PERCENT);
     } else {
       for (size_t s=0; s < m_gradientStopList.size(); ++s) {
-        RVNGPropertyList grad;
-        grad.insert("svg:offset", m_gradientStopList[s].m_offset, RVNG_PERCENT);
+        librevenge::RVNGPropertyList grad;
+        grad.insert("svg:offset", m_gradientStopList[s].m_offset, librevenge::RVNG_PERCENT);
         grad.insert("svg:stop-color", m_gradientStopList[s].m_color.str().c_str());
-        grad.insert("svg:stop-opacity", m_gradientStopList[s].m_opacity, RVNG_PERCENT);
+        grad.insert("svg:stop-opacity", m_gradientStopList[s].m_opacity, librevenge::RVNG_PERCENT);
         gradient.append(grad);
       }
     }
     list.insert("draw:angle", m_gradientAngle);
-    list.insert("draw:border", m_gradientBorder, RVNG_PERCENT);
+    list.insert("draw:border", m_gradientBorder, librevenge::RVNG_PERCENT);
     if (m_gradientType != G_Linear) {
-      list.insert("svg:cx", m_gradientPercentCenter[0], RVNG_PERCENT);
-      list.insert("svg:cy", m_gradientPercentCenter[1], RVNG_PERCENT);
+      list.insert("svg:cx", m_gradientPercentCenter[0], librevenge::RVNG_PERCENT);
+      list.insert("svg:cy", m_gradientPercentCenter[1], librevenge::RVNG_PERCENT);
     }
     if (m_gradientType == G_Radial)
-      list.insert("svg:r", m_gradientRadius, RVNG_PERCENT); // checkme
+      list.insert("svg:r", m_gradientRadius, librevenge::RVNG_PERCENT); // checkme
   } else {
     bool done = false;
     MWAWColor surfaceColor=m_surfaceColor;
@@ -279,15 +279,15 @@ void MWAWGraphicStyle::addTo(RVNGPropertyList &list, RVNGPropertyListVector &gra
         surfaceColor = col;
         surfaceOpacity = 1;
       } else {
-        RVNGBinaryData data;
+        librevenge::RVNGBinaryData data;
         std::string mimeType;
         if (m_pattern.getBinary(data, mimeType)) {
           list.insert("draw:fill", "bitmap");
           list.insert("draw:fill-image", data.getBase64Data());
-          list.insert("draw:fill-image-width", m_pattern.m_dim[0], RVNG_POINT);
-          list.insert("draw:fill-image-height", m_pattern.m_dim[1], RVNG_POINT);
-          list.insert("draw:fill-image-ref-point-x",0, RVNG_POINT);
-          list.insert("draw:fill-image-ref-point-y",0, RVNG_POINT);
+          list.insert("draw:fill-image-width", m_pattern.m_dim[0], librevenge::RVNG_POINT);
+          list.insert("draw:fill-image-height", m_pattern.m_dim[1], librevenge::RVNG_POINT);
+          list.insert("draw:fill-image-ref-point-x",0, librevenge::RVNG_POINT);
+          list.insert("draw:fill-image-ref-point-y",0, librevenge::RVNG_POINT);
           list.insert("libwpg:mime-type", mimeType.c_str());
           done = true;
         }
@@ -296,13 +296,13 @@ void MWAWGraphicStyle::addTo(RVNGPropertyList &list, RVNGPropertyListVector &gra
     if (!done) {
       list.insert("draw:fill", "solid");
       list.insert("draw:fill-color", surfaceColor.str().c_str());
-      list.insert("draw:opacity", surfaceOpacity, RVNG_PERCENT);
+      list.insert("draw:opacity", surfaceOpacity, librevenge::RVNG_PERCENT);
     }
   }
   if (hasShadow()) {
     list.insert("draw:shadow", "vsible");
     list.insert("draw:shadow-color", m_shadowColor.str().c_str());
-    list.insert("draw:shadow-opacity", m_shadowOpacity, RVNG_PERCENT);
+    list.insert("draw:shadow-opacity", m_shadowOpacity, librevenge::RVNG_PERCENT);
     // in cm
     list.insert("draw:shadow-offset-x", double(m_shadowOffset[0])/72.*2.54);
     list.insert("draw:shadow-offset-y", double(m_shadowOffset[1])/72.*2.54);

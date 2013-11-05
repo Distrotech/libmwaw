@@ -188,7 +188,7 @@ protected:
 
   //! sends a picture zone
   bool sendPicture(CWGraphInternal::ZonePict &pict, MWAWPosition pos,
-                   RVNGPropertyList extras = RVNGPropertyList());
+                   librevenge::RVNGPropertyList extras = librevenge::RVNGPropertyList());
 
   //! sends a basic graphic zone
   bool sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos);

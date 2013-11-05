@@ -45,9 +45,9 @@
 ////////////////////////////////////////////////////////////
 // tabstop
 ////////////////////////////////////////////////////////////
-void MWAWTabStop::addTo(RVNGPropertyListVector &propList, double decalX) const
+void MWAWTabStop::addTo(librevenge::RVNGPropertyListVector &propList, double decalX) const
 {
-  RVNGPropertyList tab;
+  librevenge::RVNGPropertyList tab;
 
   // type
   switch (m_alignment) {
@@ -60,7 +60,7 @@ void MWAWTabStop::addTo(RVNGPropertyListVector &propList, double decalX) const
   case DECIMAL:
     tab.insert("style:type", "char");
     if (m_decimalCharacter) {
-      RVNGString sDecimal;
+      librevenge::RVNGString sDecimal;
       libmwaw::appendUnicode(m_decimalCharacter, sDecimal);
       tab.insert("style:char", sDecimal);
     } else
@@ -74,7 +74,7 @@ void MWAWTabStop::addTo(RVNGPropertyListVector &propList, double decalX) const
 
   // leader character
   if (m_leaderCharacter != 0x0000) {
-    RVNGString sLeader;
+    librevenge::RVNGString sLeader;
     libmwaw::appendUnicode(m_leaderCharacter, sLeader);
     tab.insert("style:leader-text", sLeader);
     tab.insert("style:leader-style", "solid");
@@ -137,7 +137,7 @@ std::ostream &operator<<(std::ostream &o, MWAWTabStop const &tab)
 ////////////////////////////////////////////////////////////
 // paragraph
 ////////////////////////////////////////////////////////////
-MWAWParagraph::MWAWParagraph() : m_marginsUnit(RVNG_INCH), m_spacingsInterlineUnit(RVNG_PERCENT), m_spacingsInterlineType(Fixed),
+MWAWParagraph::MWAWParagraph() : m_marginsUnit(librevenge::RVNG_INCH), m_spacingsInterlineUnit(librevenge::RVNG_PERCENT), m_spacingsInterlineType(Fixed),
   m_tabs(), m_tabsRelativeToLeftMargin(false), m_justify(JustificationLeft), m_breakStatus(0),
   m_listLevelIndex(0), m_listId(-1), m_listStartValue(-1), m_listLevel(), m_backgroundColor(MWAWColor::white()),
   m_borders(), m_extra("")
@@ -268,11 +268,11 @@ bool MWAWParagraph::hasDifferentBorders() const
 
 double MWAWParagraph::getMarginsWidth() const
 {
-  double factor = (double) MWAWPosition::getScaleFactor(*m_marginsUnit, RVNG_INCH);
+  double factor = (double) MWAWPosition::getScaleFactor(*m_marginsUnit, librevenge::RVNG_INCH);
   return factor*(*(m_margins[1])+*(m_margins[2]));
 }
 
-void MWAWParagraph::addTo(RVNGPropertyList &propList, bool inTable) const
+void MWAWParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) const
 {
   switch (*m_justify) {
   case JustificationLeft:
@@ -350,10 +350,10 @@ void MWAWParagraph::addTo(RVNGPropertyList &propList, bool inTable) const
         MWAW_DEBUG_MSG(("MWAWParagraph::addTo: interline spacing seems bad\n"));
         first = false;
       }
-    } else if (*m_spacingsInterlineUnit != RVNG_PERCENT)
+    } else if (*m_spacingsInterlineUnit != librevenge::RVNG_PERCENT)
       propList.insert("style:line-height-at-least", *(m_spacings[0]), *m_spacingsInterlineUnit);
     else {
-      propList.insert("style:line-height-at-least", *(m_spacings[0])*12.0, RVNG_POINT);
+      propList.insert("style:line-height-at-least", *(m_spacings[0])*12.0, librevenge::RVNG_POINT);
       static bool first = true;
       if (first) {
         first = false;
@@ -371,11 +371,11 @@ void MWAWParagraph::addTo(RVNGPropertyList &propList, bool inTable) const
     propList.insert("fo:keep-with-next", "always");
 }
 
-void MWAWParagraph::addTabsTo(RVNGPropertyListVector &pList, double decalX) const
+void MWAWParagraph::addTabsTo(librevenge::RVNGPropertyListVector &pList, double decalX) const
 {
   if (!*m_tabsRelativeToLeftMargin) {
     // tabs are absolute, we must remove left margin
-    double factor = (double) MWAWPosition::getScaleFactor(*m_marginsUnit, RVNG_INCH);
+    double factor = (double) MWAWPosition::getScaleFactor(*m_marginsUnit, librevenge::RVNG_INCH);
     decalX -= m_margins[1].get()*factor;
   }
   for (size_t i=0; i<m_tabs->size(); i++)
@@ -391,7 +391,7 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
   if (pp.m_margins[2].get()<0||pp.m_margins[2].get()>0)
     o << "rightMarg=" << pp.m_margins[2].get() << ",";
 
-  if (pp.m_spacingsInterlineUnit.get()==RVNG_PERCENT) {
+  if (pp.m_spacingsInterlineUnit.get()==librevenge::RVNG_PERCENT) {
     if (pp.m_spacings[0].get() < 1.0 || pp.m_spacings[0].get() > 1.0) {
       o << "interLineSpacing=" << pp.m_spacings[0].get() << "%";
       if (pp.m_spacingsInterlineType.get()==MWAWParagraph::AtLeast)

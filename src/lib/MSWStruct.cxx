@@ -155,7 +155,7 @@ MWAWSection Section::getSection(double pageWidth) const
     return sec;
   MWAWSection::Column col;
   col.m_width=pageWidth/double(numCols);
-  col.m_widthUnit=RVNG_INCH;
+  col.m_widthUnit=librevenge::RVNG_INCH;
   col.m_margins[libmwaw::Left] = col.m_margins[libmwaw::Right] = *m_colSep/2.;
   sec.m_columns.resize(size_t(numCols), col);
   sec.m_columns[0].m_margins[libmwaw::Left] = 0;
@@ -447,7 +447,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
     if (1+(N+1)*2 > sz) {
       MWAW_DEBUG_MSG(("MSWStruct::Table::read: table definition seems odd\n"));
       f << "#colDef";
-      input->seek(pos+2+sz, RVNG_SEEK_SET);
+      input->seek(pos+2+sz, librevenge::RVNG_SEEK_SET);
       break;
     }
     for (int i=0; i <= N; i++)
@@ -485,7 +485,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
       m_cells.push_back(cell);
       m_cells.back().setSet(true);
     }
-    input->seek(pos+2+sz, RVNG_SEEK_SET);
+    input->seek(pos+2+sz, librevenge::RVNG_SEEK_SET);
     return true;
   }
   case 0x92: // table alignement
@@ -534,7 +534,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
     int firstCol = (int) input->readLong(1);
     int lastCol = (int) input->readLong(1);
     if (firstCol < 0 || lastCol < 0 || firstCol+1 > lastCol) {
-      input->seek(2, RVNG_SEEK_CUR);
+      input->seek(2, librevenge::RVNG_SEEK_CUR);
       MWAW_DEBUG_MSG(("MSWStruct::Table::read: pb for background range\n"));
       f << "###backRange=" << firstCol << "<->" << lastCol-1 << ",";
       break;
@@ -561,7 +561,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
     int firstCol = (int) input->readLong(1);
     int lastCol = (int) input->readLong(1);
     if (firstCol < 0 || lastCol < 0 || firstCol+1 > lastCol) {
-      input->seek(3, RVNG_SEEK_CUR);
+      input->seek(3, librevenge::RVNG_SEEK_CUR);
       MWAW_DEBUG_MSG(("MSWStruct::Table::read: pb for mod color\n"));
       f << "###backRange=" << firstCol << "<->" << lastCol-1 << ",";
       break;
@@ -738,13 +738,13 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     return true;
   if (!sectionSet) m_section.setSet(false);
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   bool tableSet = m_table.isSet();
   if (m_table->read(input,endPos))
     return true;
   if (!tableSet) m_table.setSet(false);
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   long dSz = endPos-pos;
   if (dSz < 1) return false;
   libmwaw::DebugStream f;
@@ -1130,15 +1130,15 @@ void Paragraph::updateParagraphToFinalState(Paragraph const *style)
   double interline=*m_interline;
   if (interline<-1 || interline>1) {
     MWAW_DEBUG_MSG(("MSWStruct::Paragraph::updateParagraphToFinalState: interline spacing seems odd\n"));
-    setInterline(1.0, RVNG_PERCENT);
+    setInterline(1.0, librevenge::RVNG_PERCENT);
     return;
   }
   if (interline>0) {
-    setInterline(interline, RVNG_INCH, MWAWParagraph::AtLeast);
+    setInterline(interline, librevenge::RVNG_INCH, MWAWParagraph::AtLeast);
     return;
   }
   if (interline<0) {
-    setInterline(-interline, RVNG_INCH);
+    setInterline(-interline, librevenge::RVNG_INCH);
     return;
   }
   // checkme: what to do when m_interline=0, use the style interline or the para info?
@@ -1146,9 +1146,9 @@ void Paragraph::updateParagraphToFinalState(Paragraph const *style)
     return;
   interline=*style->m_interline;
   if (interline>0 && interline <=1)
-    setInterline(interline, RVNG_INCH, MWAWParagraph::AtLeast);
+    setInterline(interline, librevenge::RVNG_INCH, MWAWParagraph::AtLeast);
   else if (interline<0 && interline >=-1)
-    setInterline(-interline, RVNG_INCH, MWAWParagraph::AtLeast);
+    setInterline(-interline, librevenge::RVNG_INCH, MWAWParagraph::AtLeast);
 }
 
 void Paragraph::insert(Paragraph const &para, bool insertModif)

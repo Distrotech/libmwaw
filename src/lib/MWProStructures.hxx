@@ -45,7 +45,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-class RVNGBinaryData;
+class librevenge::RVNGBinaryData;
 
 class MWProParser;
 

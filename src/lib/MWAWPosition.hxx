@@ -58,7 +58,7 @@ public:
 
 public:
   //! constructor
-  MWAWPosition(Vec2f const &orig=Vec2f(), Vec2f const &sz=Vec2f(), RVNGUnit theUnit=RVNG_INCH):
+  MWAWPosition(Vec2f const &orig=Vec2f(), Vec2f const &sz=Vec2f(), librevenge::RVNGUnit theUnit=librevenge::RVNG_INCH):
     m_anchorTo(Unknown), m_xPos(XLeft), m_yPos(YTop), m_wrapping(WNone),
     m_page(0), m_orig(orig), m_size(sz), m_naturalSize(), m_LTClip(), m_RBClip(), m_unit(theUnit), m_order(0) {}
 
@@ -68,18 +68,18 @@ public:
     Vec2f dest(pos.m_orig+pos.m_size);
     o << "Pos=(" << pos.m_orig << ")x(" << dest << ")";
     switch(pos.m_unit) {
-    case RVNG_INCH:
+    case librevenge::RVNG_INCH:
       o << "(inch)";
       break;
-    case RVNG_POINT:
+    case librevenge::RVNG_POINT:
       o << "(pt)";
       break;
-    case RVNG_TWIP:
+    case librevenge::RVNG_TWIP:
       o << "(tw)";
       break;
-    case RVNG_PERCENT:
-    case RVNG_GENERIC:
-    case RVNG_UNIT_ERROR:
+    case librevenge::RVNG_PERCENT:
+    case librevenge::RVNG_GENERIC:
+    case librevenge::RVNG_UNIT_ERROR:
     default:
       break;
     }
@@ -124,45 +124,45 @@ public:
     return m_RBClip;
   }
   //! returns the unit
-  RVNGUnit unit() const {
+  librevenge::RVNGUnit unit() const {
     return m_unit;
   }
-  static float getScaleFactor(RVNGUnit orig, RVNGUnit dest) {
+  static float getScaleFactor(librevenge::RVNGUnit orig, librevenge::RVNGUnit dest) {
     float actSc = 1.0, newSc = 1.0;
     switch(orig) {
-    case RVNG_TWIP:
+    case librevenge::RVNG_TWIP:
       break;
-    case RVNG_POINT:
+    case librevenge::RVNG_POINT:
       actSc=20;
       break;
-    case RVNG_INCH:
+    case librevenge::RVNG_INCH:
       actSc = 1440;
       break;
-    case RVNG_PERCENT:
-    case RVNG_GENERIC:
-    case RVNG_UNIT_ERROR:
+    case librevenge::RVNG_PERCENT:
+    case librevenge::RVNG_GENERIC:
+    case librevenge::RVNG_UNIT_ERROR:
     default:
       MWAW_DEBUG_MSG(("MWAWPosition::getScaleFactor %d unit must not appear\n", int(orig)));
     }
     switch(dest) {
-    case RVNG_TWIP:
+    case librevenge::RVNG_TWIP:
       break;
-    case RVNG_POINT:
+    case librevenge::RVNG_POINT:
       newSc=20;
       break;
-    case RVNG_INCH:
+    case librevenge::RVNG_INCH:
       newSc = 1440;
       break;
-    case RVNG_PERCENT:
-    case RVNG_GENERIC:
-    case RVNG_UNIT_ERROR:
+    case librevenge::RVNG_PERCENT:
+    case librevenge::RVNG_GENERIC:
+    case librevenge::RVNG_UNIT_ERROR:
     default:
       MWAW_DEBUG_MSG(("MWAWPosition::getScaleFactor %d unit must not appear\n", int(dest)));
     }
     return actSc/newSc;
   }
   //! returns a float which can be used to scale some data in object unit
-  float getInvUnitScale(RVNGUnit fromUnit) const {
+  float getInvUnitScale(librevenge::RVNGUnit fromUnit) const {
     return getScaleFactor(fromUnit, m_unit);
   }
 
@@ -183,7 +183,7 @@ public:
     m_naturalSize = naturalSz;
   }
   //! sets the dimension unit
-  void setUnit(RVNGUnit newUnit) {
+  void setUnit(librevenge::RVNGUnit newUnit) {
     m_unit = newUnit;
   }
   //! sets/resets the page and the origin
@@ -255,7 +255,7 @@ protected:
   Vec2f m_orig /** the origin position in a page */, m_size /* the size of the data*/, m_naturalSize /** the natural size of the data (if known) */;
   Vec2f m_LTClip /** the left top clip position */, m_RBClip /* the right bottom clip position */;
   //! the unit used in \a orig, in \a m_size and in \a m_LTClip , .... Default: in inches
-  RVNGUnit m_unit;
+  librevenge::RVNGUnit m_unit;
   //! background/foward order
   mutable int m_order;
 };

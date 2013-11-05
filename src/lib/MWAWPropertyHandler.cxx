@@ -64,7 +64,7 @@ void MWAWPropertyHandlerEncoder::insertElement(const char *psName)
 }
 
 void MWAWPropertyHandlerEncoder::insertElement
-(const char *psName, const RVNGPropertyList &xPropList)
+(const char *psName, const librevenge::RVNGPropertyList &xPropList)
 {
   m_f << 'S';
   writeString(psName);
@@ -72,7 +72,7 @@ void MWAWPropertyHandlerEncoder::insertElement
 }
 
 void MWAWPropertyHandlerEncoder::insertElement
-(const char *psName, const RVNGPropertyList &xPropList, const RVNGPropertyListVector &vect)
+(const char *psName, const librevenge::RVNGPropertyList &xPropList, const librevenge::RVNGPropertyListVector &vect)
 {
   m_f << 'V';
   writeString(psName);
@@ -83,7 +83,7 @@ void MWAWPropertyHandlerEncoder::insertElement
 }
 
 void MWAWPropertyHandlerEncoder::insertElement
-(const char *psName, const RVNGPropertyList &xPropList, const RVNGBinaryData &data)
+(const char *psName, const librevenge::RVNGPropertyList &xPropList, const librevenge::RVNGBinaryData &data)
 {
   m_f << 'B';
   writeString(psName);
@@ -98,7 +98,7 @@ void MWAWPropertyHandlerEncoder::insertElement
     m_f.write((const char *)data.getDataBuffer(), size);
 }
 
-void MWAWPropertyHandlerEncoder::characters(RVNGString const &sCharacters)
+void MWAWPropertyHandlerEncoder::characters(librevenge::RVNGString const &sCharacters)
 {
   if (sCharacters.len()==0) return;
   m_f << 'T';
@@ -119,7 +119,7 @@ void MWAWPropertyHandlerEncoder::writeLong(long val)
   m_f.write((const char *)allValue, 4);
 }
 
-void MWAWPropertyHandlerEncoder::writeProperty(const char *key, const RVNGProperty &prop)
+void MWAWPropertyHandlerEncoder::writeProperty(const char *key, const librevenge::RVNGProperty &prop)
 {
   if (!key) {
     MWAW_DEBUG_MSG(("MWAWPropertyHandlerEncoder::writeProperty: key is NULL\n"));
@@ -129,9 +129,9 @@ void MWAWPropertyHandlerEncoder::writeProperty(const char *key, const RVNGProper
   writeString(prop.getStr().cstr());
 }
 
-void MWAWPropertyHandlerEncoder::writePropertyList(const RVNGPropertyList &xPropList)
+void MWAWPropertyHandlerEncoder::writePropertyList(const librevenge::RVNGPropertyList &xPropList)
 {
-  RVNGPropertyList::Iter i(xPropList);
+  librevenge::RVNGPropertyList::Iter i(xPropList);
   int numElt = 0;
   for (i.rewind(); i.next(); ) numElt++;
   writeInteger(numElt);
@@ -139,7 +139,7 @@ void MWAWPropertyHandlerEncoder::writePropertyList(const RVNGPropertyList &xProp
     writeProperty(i.key(),*i());
 }
 
-bool MWAWPropertyHandlerEncoder::getData(RVNGBinaryData &data)
+bool MWAWPropertyHandlerEncoder::getData(librevenge::RVNGBinaryData &data)
 {
   data.clear();
   std::string d=m_f.str();
@@ -159,9 +159,9 @@ public:
   MWAWPropertyHandlerDecoder(MWAWPropertyHandler *hdl=0L):m_handler(hdl), m_openTag() {}
 
   //! tries to read the data
-  bool readData(RVNGBinaryData const &encoded) {
+  bool readData(librevenge::RVNGBinaryData const &encoded) {
     try {
-      RVNGInputStream *inp = const_cast<RVNGInputStream *>(encoded.getDataStream());
+      librevenge::RVNGInputStream *inp = const_cast<librevenge::RVNGInputStream *>(encoded.getDataStream());
       if (!inp) return false;
 
       while (!inp->isEnd()) {
@@ -202,7 +202,7 @@ public:
 
 protected:
   //! reads an simple element
-  bool readInsertElement(RVNGInputStream &input) {
+  bool readInsertElement(librevenge::RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
 
@@ -215,7 +215,7 @@ protected:
   }
 
   //! reads an element with a property list
-  bool readInsertElementWithList(RVNGInputStream &input) {
+  bool readInsertElementWithList(librevenge::RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
 
@@ -223,7 +223,7 @@ protected:
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithProperty: find empty tag\n"));
       return false;
     }
-    RVNGPropertyList lists;
+    librevenge::RVNGPropertyList lists;
     if (!readPropertyList(input, lists)) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithProperty: can not read propertyList for tag %s\n",
                       s.c_str()));
@@ -235,7 +235,7 @@ protected:
   }
 
   //! reads an insertElement
-  bool readInsertElementWithVector(RVNGInputStream &input) {
+  bool readInsertElementWithVector(librevenge::RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
     if (s.empty()) {
@@ -243,13 +243,13 @@ protected:
       return false;
     }
 
-    RVNGPropertyList lists;
+    librevenge::RVNGPropertyList lists;
     if (!readPropertyList(input, lists)) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithVector: can not read propertyList for tag %s\n",
                       s.c_str()));
       return false;
     }
-    RVNGPropertyListVector vect;
+    librevenge::RVNGPropertyListVector vect;
     if (!readPropertyListVector(input, vect)) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithVector: can not read propertyVector for tag %s\n",
                       s.c_str()));
@@ -262,7 +262,7 @@ protected:
     return true;
   }
   //! reads an insertElement with a binary data
-  bool readInsertElementWithBinary(RVNGInputStream &input) {
+  bool readInsertElementWithBinary(librevenge::RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
     if (s.empty()) {
@@ -270,7 +270,7 @@ protected:
       return false;
     }
 
-    RVNGPropertyList lists;
+    librevenge::RVNGPropertyList lists;
     if (!readPropertyList(input, lists)) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithBinary: can not read propertyList for tag %s\n",
                       s.c_str()));
@@ -283,7 +283,7 @@ protected:
       return false;
     }
 
-    RVNGBinaryData data;
+    librevenge::RVNGBinaryData data;
     if (sz) {
       unsigned long read;
       unsigned char const *dt=input.read((unsigned long) sz, read);
@@ -300,11 +300,11 @@ protected:
   }
 
   //! reads a set of characters
-  bool readCharacters(RVNGInputStream &input) {
+  bool readCharacters(librevenge::RVNGInputStream &input) {
     std::string s;
     if (!readString(input, s)) return false;
     if (!s.length()) return true;
-    if (m_handler) m_handler->characters(RVNGString(s.c_str()));
+    if (m_handler) m_handler->characters(librevenge::RVNGString(s.c_str()));
     return true;
   }
 
@@ -313,7 +313,7 @@ protected:
   //
 
   //! low level: reads a property vector: number of properties list followed by list of properties list
-  bool readPropertyListVector(RVNGInputStream &input, RVNGPropertyListVector &vect) {
+  bool readPropertyListVector(librevenge::RVNGInputStream &input, librevenge::RVNGPropertyListVector &vect) {
     int numElt;
     if (!readInteger(input, numElt)) return false;
 
@@ -323,7 +323,7 @@ protected:
       return false;
     }
     for (int i = 0; i < numElt; i++) {
-      RVNGPropertyList lists;
+      librevenge::RVNGPropertyList lists;
       if (readPropertyList(input, lists)) {
         vect.append(lists);
         continue;
@@ -335,7 +335,7 @@ protected:
   }
 
   //! low level: reads a property list: number of properties followed by list of properties
-  bool readPropertyList(RVNGInputStream &input, RVNGPropertyList &lists) {
+  bool readPropertyList(librevenge::RVNGInputStream &input, librevenge::RVNGPropertyList &lists) {
     int numElt;
     if (!readInteger(input, numElt)) return false;
 
@@ -353,19 +353,19 @@ protected:
   }
 
   //! low level: reads a property and its value, adds it to \a list
-  bool readProperty(RVNGInputStream &input, RVNGPropertyList &list) {
+  bool readProperty(librevenge::RVNGInputStream &input, librevenge::RVNGPropertyList &list) {
     std::string key, val;
     if (!readString(input, key)) return false;
     if (!readString(input, val)) return false;
 
-    RVNGProperty *prop=RVNGPropertyFactory::newStringProp(val.c_str());
+    librevenge::RVNGProperty *prop=librevenge::RVNGPropertyFactory::newStringProp(val.c_str());
     if (!prop) return prop;
-    RVNGUnit unit=prop->getUnit();
-    if (unit==RVNG_POINT) {
-      list.insert(key.c_str(), prop->getDouble()/72., RVNG_INCH);
+    librevenge::RVNGUnit unit=prop->getUnit();
+    if (unit==librevenge::RVNG_POINT) {
+      list.insert(key.c_str(), prop->getDouble()/72., librevenge::RVNG_INCH);
       delete prop;
-    } else if (unit==RVNG_TWIP) {
-      list.insert(key.c_str(), prop->getDouble()/1440., RVNG_INCH);
+    } else if (unit==librevenge::RVNG_TWIP) {
+      list.insert(key.c_str(), prop->getDouble()/1440., librevenge::RVNG_INCH);
       delete prop;
     } else
       list.insert(key.c_str(), prop);
@@ -373,7 +373,7 @@ protected:
   }
 
   //! low level: reads a string : size and string
-  bool readString(RVNGInputStream &input, std::string &s) {
+  bool readString(librevenge::RVNGInputStream &input, std::string &s) {
     int numC = 0;
     if (!readInteger(input, numC)) return false;
     if (numC==0) {
@@ -391,7 +391,7 @@ protected:
   }
 
   //! low level: reads an integer value
-  static bool readInteger(RVNGInputStream &input, int &val) {
+  static bool readInteger(librevenge::RVNGInputStream &input, int &val) {
     long res;
     if (!readLong(input, res))
       return false;
@@ -399,7 +399,7 @@ protected:
     return true;
   }
   //! low level: reads an long value
-  static bool readLong(RVNGInputStream &input, long &val) {
+  static bool readLong(librevenge::RVNGInputStream &input, long &val) {
     unsigned long numRead = 0;
     const unsigned char *dt = input.read(4, numRead);
     if (dt == 0L || numRead != 4) {
@@ -426,13 +426,13 @@ protected:
 // MWAWPropertyHandler
 //
 ////////////////////////////////////////////////////
-bool MWAWPropertyHandler::checkData(RVNGBinaryData const &encoded)
+bool MWAWPropertyHandler::checkData(librevenge::RVNGBinaryData const &encoded)
 {
   MWAWPropertyHandlerDecoder decod;
   return decod.readData(encoded);
 }
 
-bool MWAWPropertyHandler::readData(RVNGBinaryData const &encoded)
+bool MWAWPropertyHandler::readData(librevenge::RVNGBinaryData const &encoded)
 {
   MWAWPropertyHandlerDecoder decod(this);
   return decod.readData(encoded);

@@ -166,7 +166,7 @@ MSK4Parser::~MSK4Parser()
 ////////////////////////////////////////////////////////////
 // the main parse function
 ////////////////////////////////////////////////////////////
-void MSK4Parser::parse(RVNGTextInterface *interface)
+void MSK4Parser::parse(librevenge::RVNGTextInterface *interface)
 {
   assert(getInput().get() != 0);
 
@@ -324,7 +324,7 @@ void MSK4Parser::flushExtra()
         if (first) {
           first = false;
           listener->setFont(MWAWFont(20,20));
-          RVNGString message = "--------- The original document has some extra ole: -------- ";
+          librevenge::RVNGString message = "--------- The original document has some extra ole: -------- ";
           listener->insertUnicodeString(message);
           listener->insertEOL();
         }
@@ -409,11 +409,11 @@ void MSK4Parser::sendFrameText(MWAWEntry const &entry, std::string const &frame)
   parser->readContentZones(ent, false);
 }
 
-void MSK4Parser::sendOLE(int id, MWAWPosition const &pictPos, RVNGPropertyList extras)
+void MSK4Parser::sendOLE(int id, MWAWPosition const &pictPos, librevenge::RVNGPropertyList extras)
 {
   if (!getListener()) return;
 
-  RVNGBinaryData data;
+  librevenge::RVNGBinaryData data;
   MWAWPosition pos;
   std::string type;
   if (!m_state->m_oleParser->getObject(id, data, pos, type)) {

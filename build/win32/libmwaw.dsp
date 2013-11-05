@@ -363,10 +363,6 @@ SOURCE=..\..\src\lib\MWAWOLEParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWOLEStream.cxx
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\MWAWPageSpan.cxx
 # End Source File
 # Begin Source File
@@ -760,10 +756,6 @@ SOURCE=..\..\src\lib\MWAWListener.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWOLEParser.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MWAWOLEStream.hxx
 # End Source File
 # Begin Source File
 

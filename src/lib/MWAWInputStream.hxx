@@ -41,21 +41,16 @@
 #include <librevenge-stream/librevenge-stream.h>
 #include "libmwaw_internal.hxx"
 
-namespace libmwawOLE
-{
-class Storage;
-}
-
-class RVNGBinaryData;
+class librevenge::RVNGBinaryData;
 
 /*! \class MWAWInputStream
  * \brief Internal class used to read the file stream
  *  Internal class used to read the file stream,
- *    this class adds some usefull functions to the basic RVNGInputStream:
+ *    this class adds some usefull functions to the basic librevenge::RVNGInputStream:
  *  - read number (int8, int16, int32) in low or end endian
  *  - selection of a section of a stream
  *  - read block of data
- *  - interface with modified RVNGOLEStream
+ *  - interface with modified librevenge::RVNGOLEStream
  */
 class MWAWInputStream
 {
@@ -64,22 +59,22 @@ public:
    * \param inverted must be set to true for pc doc and ole part
    * \param inverted must be set to false for mac doc
    */
-  MWAWInputStream(shared_ptr<RVNGInputStream> inp, bool inverted);
+  MWAWInputStream(shared_ptr<librevenge::RVNGInputStream> inp, bool inverted);
 
   /*!\brief creates a stream with given endian from an existing input
    *
    * Note: this functions does not delete input
    */
-  MWAWInputStream(RVNGInputStream *input, bool inverted, bool checkCompression=false);
+  MWAWInputStream(librevenge::RVNGInputStream *input, bool inverted, bool checkCompression=false);
   //! destructor
   ~MWAWInputStream();
 
-  //! returns the basic RVNGInputStream
-  shared_ptr<RVNGInputStream> input() {
+  //! returns the basic librevenge::RVNGInputStream
+  shared_ptr<librevenge::RVNGInputStream> input() {
     return m_stream;
   }
-  //! returns a new input stream corresponding to a RVNGBinaryData
-  static shared_ptr<MWAWInputStream> get(RVNGBinaryData const &data, bool inverted);
+  //! returns a new input stream corresponding to a librevenge::RVNGBinaryData
+  static shared_ptr<MWAWInputStream> get(librevenge::RVNGBinaryData const &data, bool inverted);
 
   //! returns the endian mode (see constructor)
   bool readInverted() const {
@@ -97,7 +92,7 @@ public:
    * \return 0 if ok
    * \sa pushLimit popLimit
    */
-  int seek(long offset, RVNG_SEEK_TYPE seekType);
+  int seek(long offset, librevenge::RVNG_SEEK_TYPE seekType);
   //! returns actual offset position
   long tell();
   //! returns the stream size
@@ -148,12 +143,12 @@ public:
   /*! \brief internal function used to read num byte,
    *  - where a is the previous read data
    */
-  static unsigned long readULong(RVNGInputStream *stream, int num, unsigned long a, bool inverseRead);
+  static unsigned long readULong(librevenge::RVNGInputStream *stream, int num, unsigned long a, bool inverseRead);
 
-  //! reads a RVNGBinaryData with a given size in the actual section/file
-  bool readDataBlock(long size, RVNGBinaryData &data);
-  //! reads a RVNGBinaryData from actPos to the end of the section/file
-  bool readEndDataBlock(RVNGBinaryData &data);
+  //! reads a librevenge::RVNGBinaryData with a given size in the actual section/file
+  bool readDataBlock(long size, librevenge::RVNGBinaryData &data);
+  //! reads a librevenge::RVNGBinaryData from actPos to the end of the section/file
+  bool readEndDataBlock(librevenge::RVNGBinaryData &data);
 
   //
   // OLE/Zip access
@@ -161,10 +156,15 @@ public:
 
   //! return true if the stream is ole
   bool isStructured();
-  //! return the list of all ole zone
-  std::vector<std::string> getStreamNames();
+  //! returns the number of substream
+  unsigned subStreamCount();
+  //! returns the name of the i^th substream
+  std::string subStreamName(unsigned id);
+
   //! return a new stream for a ole zone
-  shared_ptr<MWAWInputStream> getSubStreamByName(std::string name);
+  shared_ptr<MWAWInputStream> getSubStreamByName(std::string const &name);
+  //! return a new stream for a ole zone
+  shared_ptr<MWAWInputStream> getSubStreamById(unsigned id);
 
   //
   // Finder Info access
@@ -202,10 +202,7 @@ protected:
   //! update the stream size ( must be called in the constructor )
   void updateStreamSize();
   //! internal function used to read a byte
-  static uint8_t readU8(RVNGInputStream *stream);
-
-  //! creates a storage ole
-  bool createStorageOLE();
+  static uint8_t readU8(librevenge::RVNGInputStream *stream);
 
   //! unbinhex the data in the file is a BinHex 4.0 file of a mac file
   bool unBinHex();
@@ -215,8 +212,8 @@ protected:
   bool unMacMIME();
   //! de MacMIME an input stream
   bool unMacMIME(MWAWInputStream *input,
-                 shared_ptr<RVNGInputStream> &dataInput,
-                 shared_ptr<RVNGInputStream> &rsrcInput) const;
+                 shared_ptr<librevenge::RVNGInputStream> &dataInput,
+                 shared_ptr<librevenge::RVNGInputStream> &rsrcInput) const;
 
 private:
   MWAWInputStream(MWAWInputStream const &orig);
@@ -224,7 +221,7 @@ private:
 
 protected:
   //! the initial input
-  shared_ptr<RVNGInputStream> m_stream;
+  shared_ptr<librevenge::RVNGInputStream> m_stream;
   //! the stream size
   long m_streamSize;
 
@@ -242,79 +239,6 @@ protected:
   mutable std::string m_fInfoCreator;
   //! the resource fork
   shared_ptr<MWAWInputStream> m_resourceFork;
-  //! the ole storage
-  shared_ptr<libmwawOLE::Storage> m_storageOLE;
-};
-
-/** an internal class used to return the OLE/Zip InputStream */
-class MWAWStringStream: public RVNGInputStream
-{
-public:
-  //! constructor
-  MWAWStringStream(const unsigned char *data, const unsigned long dataSize);
-  //! destructor
-  ~MWAWStringStream() { }
-
-  /**! reads numbytes data, WITHOUT using any endian or section consideration
-   * \return a pointer to the read elements
-   */
-  const unsigned char *read(unsigned long numBytes, unsigned long &numBytesRead);
-  //! returns actual offset position
-  long tell() {
-    return m_offset;
-  }
-  /*! \brief seeks to a offset position, from actual or beginning position
-   * \return 0 if ok
-   * \sa pushLimit popLimit
-   */
-  int seek(long offset, RVNG_SEEK_TYPE seekType);
-  //! returns true if we are at the end of the section/file
-  bool isEnd() {
-    return ((long)m_offset >= (long)m_buffer.size());
-  }
-
-  /**
-     Analyses the content of the input stream to see whether it is an Zip/OLE2 storage.
-     \return return false
-  */
-  bool isStructured() {
-    return false;
-  }
-  /** returns the number of substream
-      \note not implemented
-  */
-  unsigned subStreamCount() {
-    return 0;
-  }
-  /** returns the name of the ith substream
-     \note not implemented
-   */
-  const char *subStreamName(unsigned) {
-    return 0;
-  }
-  /**
-     Tries to extract a stream from a structured document.
-     \note not implemented
-  */
-  RVNGInputStream *getSubStreamByName(const char *) {
-    return 0;
-  }
-  /**
-     Tries to extract a stream from a structured document.
-     \note not implemented
-   */
-  RVNGInputStream *getSubStreamById(unsigned) {
-    return 0;
-  }
-
-private:
-  /** a buffer which contains the data */
-  std::vector<unsigned char> m_buffer;
-  /** the actual offset in the buffer */
-  volatile long m_offset;
-
-  MWAWStringStream(const MWAWStringStream &);
-  MWAWStringStream &operator=(const MWAWStringStream &);
 };
 
 #endif

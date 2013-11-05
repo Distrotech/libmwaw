@@ -77,27 +77,27 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
 MWAWHeader *getHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, bool strict);
 bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader &header, bool strict);
 
-/** Small class used to reconstruct a RVNGBinary with mimeType="image/mwaw-odg" created by libmwaw */
+/** Small class used to reconstruct a librevenge::RVNGBinary with mimeType="image/mwaw-odg" created by libmwaw */
 class GraphicExporter : public MWAWPropertyHandler
 {
 public:
   /** constructor */
-  GraphicExporter(RVNGDrawingInterface *output) : MWAWPropertyHandler(), m_output(output) { }
+  GraphicExporter(librevenge::RVNGDrawingInterface *output) : MWAWPropertyHandler(), m_output(output) { }
   /** destructor */
   ~GraphicExporter() {};
 
   /** insert an element */
   void insertElement(const char *psName);
-  /** insert an element ( with a RVNGPropertyList ) */
-  void insertElement(const char *psName, const RVNGPropertyList &xPropList);
-  /** insert an element ( with a RVNGPropertyListVector parameter ) */
-  void insertElement(const char *psName, const RVNGPropertyList &xPropList,
-                     const RVNGPropertyListVector &vector);
-  /** insert an element ( with a RVNGBinary parameter ) */
-  void insertElement(const char *psName, const RVNGPropertyList &xPropList,
-                     const RVNGBinaryData &data);
+  /** insert an element ( with a librevenge::RVNGPropertyList ) */
+  void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList);
+  /** insert an element ( with a librevenge::RVNGPropertyListVector parameter ) */
+  void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
+                     const librevenge::RVNGPropertyListVector &vector);
+  /** insert an element ( with a librevenge::RVNGBinary parameter ) */
+  void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
+                     const librevenge::RVNGBinaryData &data);
   /** insert a sequence of character */
-  void characters(const RVNGString &sCharacters) {
+  void characters(const librevenge::RVNGString &sCharacters) {
     if (!m_output) return;
     m_output->insertText(sCharacters);
   }
@@ -107,12 +107,12 @@ private:
   /// operator= (undefined)
   GraphicExporter operator=(GraphicExporter const &);
   /** the interface output */
-  RVNGDrawingInterface *m_output;
+  librevenge::RVNGDrawingInterface *m_output;
 };
 
 }
 
-MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(RVNGInputStream *input,  MWAWDocument::Type &type, Kind &kind)
+MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInputStream *input,  MWAWDocument::Type &type, Kind &kind)
 {
   type = MWAW_T_UNKNOWN;
   kind = MWAW_K_UNKNOWN;
@@ -198,7 +198,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(RVNGInputStream *in
   }
 }
 
-MWAWDocument::Result MWAWDocument::parse(RVNGInputStream *input, RVNGTextInterface *documentInterface, char const */*password*/)
+MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface, char const */*password*/)
 {
   if (!input)
     return MWAW_R_UNKNOWN_ERROR;
@@ -235,7 +235,7 @@ MWAWDocument::Result MWAWDocument::parse(RVNGInputStream *input, RVNGTextInterfa
   return error;
 }
 
-bool MWAWDocument::decodeGraphic(RVNGBinaryData const &binary, RVNGDrawingInterface *paintInterface)
+bool MWAWDocument::decodeGraphic(librevenge::RVNGBinaryData const &binary, librevenge::RVNGDrawingInterface *paintInterface)
 {
   if (!paintInterface || !binary.size()) {
     MWAW_DEBUG_MSG(("MWAWDocument::decodeGraphic: called with no data or no converter\n"));
@@ -267,7 +267,7 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
       /** avoid very short file */
       if (!ip->hasResourceFork() && ip->size() < 10) return 0L;
 
-      ip->seek(0, RVNG_SEEK_SET);
+      ip->seek(0, librevenge::RVNG_SEEK_SET);
       ip->setReadInverted(false);
     } else if (!ip->hasResourceFork())
       return 0L;
@@ -461,7 +461,7 @@ void GraphicExporter::insertElement(const char *psName)
   }
 }
 
-void GraphicExporter::insertElement(const char *psName, const RVNGPropertyList &propList)
+void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPropertyList &propList)
 {
   if (!m_output) return;
   if (!psName) {
@@ -506,8 +506,8 @@ void GraphicExporter::insertElement(const char *psName, const RVNGPropertyList &
   }
 }
 
-void GraphicExporter::insertElement(const char *psName, const RVNGPropertyList &propList,
-                                    const RVNGPropertyListVector &vector)
+void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPropertyList &propList,
+                                    const librevenge::RVNGPropertyListVector &vector)
 {
   if (!m_output) return;
   if (!psName) {
@@ -516,7 +516,7 @@ void GraphicExporter::insertElement(const char *psName, const RVNGPropertyList &
   }
   if (strcmp(psName,"DrawPath")==0 || strcmp(psName,"DrawPolygon")==0 || strcmp(psName,"DrawPolyline")==0) {
 #ifdef DEBUG
-    if (!RVNGPropertyList::Iter(propList).last()) {
+    if (!librevenge::RVNGPropertyList::Iter(propList).last()) {
       MWAW_DEBUG_MSG(("GraphicExporter::insertElement: Polyline, Polygon, Path called with propList, ignored\n"));
     }
 #endif
@@ -540,8 +540,8 @@ void GraphicExporter::insertElement(const char *psName, const RVNGPropertyList &
   }
 }
 
-void GraphicExporter::insertElement(const char *psName, const RVNGPropertyList &propList,
-                                    const RVNGBinaryData &data)
+void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPropertyList &propList,
+                                    const librevenge::RVNGBinaryData &data)
 {
   if (!m_output) return;
   if (!psName) {

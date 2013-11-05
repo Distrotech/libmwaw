@@ -278,7 +278,7 @@ struct Section {
     sec.m_columns.resize(size_t(numCols));
     for (size_t c=0; c < numCols; c++) {
       sec.m_columns[c].m_width = double(m_columnsWidth[c]);
-      sec.m_columns[c].m_widthUnit = RVNG_POINT;
+      sec.m_columns[c].m_widthUnit = librevenge::RVNG_POINT;
       if (!hasSep) continue;
       sec.m_columns[c].m_margins[libmwaw::Left]=
         double(m_columnsSep[c])/72.*(c==0 ? 1. : 0.5);
@@ -491,7 +491,7 @@ int CWText::numPages() const
   long pos = input->tell();
   for (size_t i = 0; i < iter->second->m_zones.size(); i++) {
     MWAWEntry const &entry = iter->second->m_zones[i];
-    input->seek(entry.begin()+4, RVNG_SEEK_SET);
+    input->seek(entry.begin()+4, librevenge::RVNG_SEEK_SET);
     int numC = int(entry.length()-4);
     for (int ch = 0; ch < numC; ch++) {
       char c = (char) input->readULong(1);
@@ -499,7 +499,7 @@ int CWText::numPages() const
         numPage++;
     }
   }
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   return numPage;
 }
 
@@ -518,7 +518,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
   int const vers = version();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+8+16, RVNG_SEEK_SET); // avoid header+8 generic number
+  input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   shared_ptr<CWTextInternal::Zone> textZone(new CWTextInternal::Zone(zone));
@@ -554,7 +554,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
   f << "Entries(DSETT):" << *textZone << ",";
 
   if (long(input->tell())%2)
-    input->seek(1, RVNG_SEEK_CUR);
+    input->seek(1, librevenge::RVNG_SEEK_CUR);
   ascFile.addDelimiter(input->tell(), '|');
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
@@ -584,7 +584,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
     return shared_ptr<CWStruct::DSET>();
   }
 
-  input->seek(entry.end()-N*data0Length, RVNG_SEEK_SET);
+  input->seek(entry.end()-N*data0Length, librevenge::RVNG_SEEK_SET);
   CWTextInternal::PLC plc;
   plc.m_type = CWTextInternal::P_Child;
   if (data0Length) {
@@ -621,14 +621,14 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
       long actPos = input->tell();
       if (actPos != pos && actPos != pos+data0Length)
         ascFile.addDelimiter(input->tell(),'|');
-      input->seek(pos+data0Length, RVNG_SEEK_SET);
+      input->seek(pos+data0Length, librevenge::RVNG_SEEK_SET);
 
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
     }
   }
 
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
 
   // now normally three zones: paragraph, font, ???
   bool ok = true;
@@ -647,12 +647,12 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
     zEntry.setBegin(pos);
     zEntry.setLength(sz+4);
 
-    input->seek(zEntry.end(), RVNG_SEEK_SET);
+    input->seek(zEntry.end(), librevenge::RVNG_SEEK_SET);
     if (long(input->tell()) !=  zEntry.end()) {
       MWAW_DEBUG_MSG(("CWText::readDSETZone: entry for %d zone is too short\n", z));
       ascFile.addPos(pos);
       ascFile.addNote("###");
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       if (z > 4) {
         ok = false;
         break;
@@ -679,7 +679,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
     }
     if (!ok) {
       if (z >= 4) {
-        input->seek(pos, RVNG_SEEK_SET);
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
         MWAW_DEBUG_MSG(("CWText::readDSETZone: can not find text %d zone\n", z-4));
         if (z > 4) break;
         return textZone;
@@ -690,13 +690,13 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
       ascFile.addNote(f.str().c_str());
     }
     if (input->tell() < zEntry.end() || !ok)
-      input->seek(zEntry.end(), RVNG_SEEK_SET);
+      input->seek(zEntry.end(), librevenge::RVNG_SEEK_SET);
   }
 
   if (ok && vers >= 2) {
     pos = input->tell();
     if (!readTextSection(*textZone))
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
 
   for ( size_t tok = 0; tok < textZone->m_tokenList.size(); tok++) {
@@ -746,7 +746,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   if (fontSize == 0)
     return false;
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (!input->checkPosition(pos+fontSize)) {
     MWAW_DEBUG_MSG(("CWText::readFont: file is too short"));
     return false;
@@ -817,7 +817,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
   f << font.getDebugString(m_parserState->m_fontConverter);
   if (long(input->tell()) != pos+fontSize)
     ascFile.addDelimiter(input->tell(), '|');
-  input->seek(pos+fontSize, RVNG_SEEK_SET);
+  input->seek(pos+fontSize, librevenge::RVNG_SEEK_SET);
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   return true;
@@ -856,14 +856,14 @@ bool CWText::readFonts(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   long actC = -1;
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+4, RVNG_SEEK_SET); // skip header
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
   // first check char pos is ok
   for (int i = 0; i < numElt; i++) {
     pos = input->tell();
     long newC = (long) input->readULong(4);
     if (newC < actC) return false;
     actC = newC;
-    input->seek(pos+fontSize, RVNG_SEEK_SET);
+    input->seek(pos+fontSize, librevenge::RVNG_SEEK_SET);
   }
 
   pos = entry.begin();
@@ -871,7 +871,7 @@ bool CWText::readFonts(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   ascFile.addPos(pos);
   ascFile.addNote("Entries(Font)");
 
-  input->seek(pos+4, RVNG_SEEK_SET); // skip header
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
   CWTextInternal::PLC plc;
   plc.m_type = CWTextInternal::P_Font;
   for (int i = 0; i < numElt; i++) {
@@ -912,14 +912,14 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   long actC = -1;
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+4, RVNG_SEEK_SET); // skip header
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
   // first check char pos is ok
   for (int i = 0; i < numElt; i++) {
     pos = input->tell();
     long newC = (long) input->readULong(4);
     if (newC < actC) return false;
     actC = newC;
-    input->seek(pos+styleSize, RVNG_SEEK_SET);
+    input->seek(pos+styleSize, librevenge::RVNG_SEEK_SET);
   }
 
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -928,7 +928,7 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   ascFile.addNote("Entries(ParaPLC)");
 
   libmwaw::DebugStream f;
-  input->seek(pos+4, RVNG_SEEK_SET); // skip header
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
   CWTextInternal::PLC plc;
   plc.m_type = CWTextInternal::P_Ruler;
   for (int i = 0; i < numElt; i++) {
@@ -960,7 +960,7 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     zone.m_paragraphList.push_back(info);
     plc.m_id = i;
     zone.m_plcMap.insert(std::map<long, CWTextInternal::PLC>::value_type(posC, plc));
-    input->seek(pos+styleSize, RVNG_SEEK_SET);
+    input->seek(pos+styleSize, librevenge::RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -999,12 +999,12 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   ascFile.addPos(pos);
   ascFile.addNote("Entries(Token)");
   if (dataSize == 0) {
-    input->seek(entry.end(), RVNG_SEEK_SET);
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
     return true;
   }
 
   int numElt = int((entry.length()-4)/dataSize);
-  input->seek(pos+4, RVNG_SEEK_SET); // skip header
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
 
   libmwaw::DebugStream f;
   CWTextInternal::PLC plc;
@@ -1066,10 +1066,10 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
       ascFile.addDelimiter(input->tell(), '|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+dataSize, RVNG_SEEK_SET);
+    input->seek(pos+dataSize, librevenge::RVNG_SEEK_SET);
   }
 
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   for (size_t i=0; i < fieldList.size(); ++i) {
     pos=input->tell();
     long sz=(long) input->readULong(4);
@@ -1077,7 +1077,7 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     f << "Token[field-" << i << "]:";
     if (!input->checkPosition(pos+sz+4) || long(input->readULong(1))+1!=sz) {
       MWAW_DEBUG_MSG(("CWText::readTokens: can find token field name %d\n", int(i)));
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       f << "###";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
@@ -1089,7 +1089,7 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     fieldEntry.setBegin(input->tell());
     fieldEntry.setEnd(pos+sz+4);
     zone.m_tokenList[size_t(fieldList[i])].m_fieldEntry=fieldEntry;
-    input->seek(fieldEntry.end(), RVNG_SEEK_SET);
+    input->seek(fieldEntry.end(), librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -1102,9 +1102,9 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos,RVNG_SEEK_SET);
+  input->seek(endPos,librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos || (sz && sz < 12)) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWText::readTextSection: unexpected size\n"));
     return false;
   }
@@ -1117,7 +1117,7 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
   libmwaw::DebugStream f;
   f << "Entries(TextSection):";
 
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   int N = (int) input->readLong(2);
   f << "N=" << N << ",";
   int type = (int) input->readLong(2);
@@ -1128,7 +1128,7 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
   int fSz = (int) input->readULong(2);
   int hSz = (int) input->readULong(2);
   if (!fSz || N *fSz+hSz+12 != sz) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWText::readTextSection: unexpected size\n"));
     return false;
   }
@@ -1136,7 +1136,7 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWText::readTextSection: unexpected size\n"));
     return true;
   }
@@ -1145,7 +1145,7 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
-  input->seek(endPos-N*fSz, RVNG_SEEK_SET);
+  input->seek(endPos-N*fSz, librevenge::RVNG_SEEK_SET);
   CWTextInternal::PLC plc;
   plc.m_type = CWTextInternal::P_Section;
   for (int i= 0; i < N; i++) {
@@ -1168,10 +1168,10 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
     }
     for (int c = 0; c < sec.m_numColumns; c++)
       sec.m_columnsWidth.push_back((int)input->readULong(2));
-    input->seek(pos+32, RVNG_SEEK_SET);
+    input->seek(pos+32, librevenge::RVNG_SEEK_SET);
     for (int c = 0; c < sec.m_numColumns; c++)
       sec.m_columnsSep.push_back((int)input->readLong(2));
-    input->seek(pos+52, RVNG_SEEK_SET);
+    input->seek(pos+52, librevenge::RVNG_SEEK_SET);
     for (int j = 0; j < 4; j++) {
       // find g0=0|1, g1=0|1, g2=100, g3=0|e0|7b
       val = (int) input->readULong(2);
@@ -1187,7 +1187,7 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
       ascFile.addDelimiter(input->tell(), '|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
 
   return true;
@@ -1212,7 +1212,7 @@ bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone
   int numElt = int((entry.length()-4)/dataSize);
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+4, RVNG_SEEK_SET); // skip header
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
 
 
   CWTextInternal::PLC plc;
@@ -1233,10 +1233,10 @@ bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone
       ascFile.addDelimiter(input->tell(), '|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+dataSize, RVNG_SEEK_SET);
+    input->seek(pos+dataSize, librevenge::RVNG_SEEK_SET);
   }
 
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -1304,7 +1304,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
     libmwaw::DebugStream f, f2;
 
     int numC = int(entry.length()-4);
-    input->seek(pos+4, RVNG_SEEK_SET); // skip header
+    input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
 
     for (int i = 0; i < numC; i++) {
       if (nextSectionPos!=-1 && actC >= nextSectionPos) {
@@ -1405,7 +1405,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
               // fixme
               MWAWPosition tPos;
               if (token.m_descent != 0) {
-                tPos=MWAWPosition(Vec2f(0,float(token.m_descent)), Vec2f(), RVNG_POINT);
+                tPos=MWAWPosition(Vec2f(0,float(token.m_descent)), Vec2f(), librevenge::RVNG_POINT);
                 tPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
               }
               m_mainParser->sendZone(token.m_zoneId, false, tPos);
@@ -1417,11 +1417,11 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
             if (token.m_fieldEntry.valid() &&
                 input->checkPosition(token.m_fieldEntry.end())) {
               long actPos=input->tell();
-              input->seek(token.m_fieldEntry.begin(), RVNG_SEEK_SET);
+              input->seek(token.m_fieldEntry.begin(), librevenge::RVNG_SEEK_SET);
               long endFPos=token.m_fieldEntry.end();
               while (!input->isEnd() && input->tell() < token.m_fieldEntry.end())
                 listener->insertCharacter((unsigned char)input->readULong(1), input, endFPos);
-              input->seek(actPos, RVNG_SEEK_SET);
+              input->seek(actPos, librevenge::RVNG_SEEK_SET);
             } else {
               MWAW_DEBUG_MSG(("CWText::sendText: can not find field token data\n"));
               listener->insertCharacter(' ');
@@ -1593,7 +1593,7 @@ bool CWText::readSTYL_RULR(int N, int fSz)
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
     }
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -1608,12 +1608,12 @@ bool CWText::readParagraphs()
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
 
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (input->isEnd()) {
     MWAW_DEBUG_MSG(("CWText::readParagraphs: ruler zone is too short\n"));
     return false;
   }
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 
   int N = (int) input->readULong(2);
   int type = (int) input->readLong(2);
@@ -1621,7 +1621,7 @@ bool CWText::readParagraphs()
   int fSz =  (int) input->readLong(2);
 
   if (sz != 12+fSz*N) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWText::readParagraphs: find odd ruler size\n"));
     return false;
   }
@@ -1643,7 +1643,7 @@ bool CWText::readParagraphs()
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     if (!readParagraph(i)) {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
   }
@@ -1793,9 +1793,9 @@ bool CWText::readParagraph(int id)
   }
   if (interline) {
     if (inPoint)
-      ruler.setInterline(interline, RVNG_POINT);
+      ruler.setInterline(interline, librevenge::RVNG_POINT);
     else
-      ruler.setInterline(1.0+interline*0.5, RVNG_PERCENT);
+      ruler.setInterline(1.0+interline*0.5, librevenge::RVNG_PERCENT);
   }
   if (val) f << "#flags=" << std::hex << val << std::dec << ",";
   for (int i = 0; i < 3; i++)
@@ -1805,7 +1805,7 @@ bool CWText::readParagraph(int id)
   if (vers >= 2) {
     for(int i = 0; i < 2; i++) {
       ruler.m_spacings[i+1] = float(input->readULong(1))/72.f;
-      input->seek(1, RVNG_SEEK_CUR); // flags to define the printing unit
+      input->seek(1, librevenge::RVNG_SEEK_CUR); // flags to define the printing unit
     }
   }
   val = (int) input->readLong(1);
@@ -1905,7 +1905,7 @@ bool CWText::readParagraph(int id)
     ascFile.addDelimiter(input->tell(), '|');
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != pos+dataSize)
     return false;
   return true;

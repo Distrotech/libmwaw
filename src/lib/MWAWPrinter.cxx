@@ -146,9 +146,9 @@ struct PrinterJob {
     m_jobDocLoop = (int) input->readULong(1);
     m_fromUser = (int) input->readLong(1);
     // skip pIdleProc
-    if (input->seek(4, RVNG_SEEK_CUR) != 0 || input->isEnd()) return false;
+    if (input->seek(4, librevenge::RVNG_SEEK_CUR) != 0 || input->isEnd()) return false;
     // skip pFileName
-    if (input->seek(4, RVNG_SEEK_CUR) != 0 || input->isEnd()) return false;
+    if (input->seek(4, librevenge::RVNG_SEEK_CUR) != 0 || input->isEnd()) return false;
     m_fileVol = (int) input->readLong(2);
     m_fileVers = (int) input->readLong(1);
     return true;
@@ -216,18 +216,18 @@ bool PrinterInfo::read(MWAWInputStreamPtr input)
   long pos = input->tell();
   if (!m_data->m_info2.read(input)) {
     // can be left unfilled, so as we do not use the result, ...
-    input->seek(pos+14, RVNG_SEEK_SET);
+    input->seek(pos+14, librevenge::RVNG_SEEK_SET);
     if (input->tell() != pos+14) return false;
   }
   // skip unknown structure prXInfo
-  if (input->seek(16, RVNG_SEEK_CUR) != 0 || input->isEnd()) return false;
+  if (input->seek(16, librevenge::RVNG_SEEK_CUR) != 0 || input->isEnd()) return false;
 
   if (!m_data->m_job.read(input)) return false;
   input->readLong(1);
 
   // skip printX 19 short + 2 align
   pos = input->tell();
-  if (input->seek(19*2,RVNG_SEEK_CUR) != 0 || input->tell()!=pos+19*2) return false;
+  if (input->seek(19*2,librevenge::RVNG_SEEK_CUR) != 0 || input->tell()!=pos+19*2) return false;
   return true;
 }
 }

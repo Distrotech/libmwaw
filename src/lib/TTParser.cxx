@@ -130,7 +130,7 @@ void TTParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void TTParser::parse(RVNGTextInterface *docInterface)
+void TTParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
 
@@ -162,7 +162,7 @@ void TTParser::parse(RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void TTParser::createDocument(RVNGTextInterface *documentInterface)
+void TTParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -243,7 +243,7 @@ void TTParser::flushExtra()
 int TTParser::computeNumPages() const
 {
   MWAWInputStreamPtr input = const_cast<TTParser *>(this)->getInput();
-  input->seek(0, RVNG_SEEK_SET);
+  input->seek(0, librevenge::RVNG_SEEK_SET);
   int nPages=1;
   int pageBreakChar=(m_state->m_type==MWAWDocument::MWAW_T_TEXEDIT) ? 0xc : 0;
 
@@ -261,7 +261,7 @@ bool TTParser::sendText()
     return false;
   }
   MWAWInputStreamPtr input = getInput();
-  input->seek(0, RVNG_SEEK_SET);
+  input->seek(0, librevenge::RVNG_SEEK_SET);
   long debPos=0;
 
   libmwaw::DebugStream f;
@@ -305,7 +305,7 @@ bool TTParser::sendText()
         getListener()->insertChar(uint8_t('@'+nextC));
         continue;
       }
-      input->seek(-1, RVNG_SEEK_CUR);
+      input->seek(-1, librevenge::RVNG_SEEK_CUR);
     }
     switch(c) {
     case 0x9:
@@ -352,7 +352,7 @@ bool TTParser::readStyles(MWAWEntry const &entry)
   long pos = entry.begin();
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   int N=(int) input->readULong(2);
@@ -420,7 +420,7 @@ bool TTParser::readWRCT(MWAWEntry const &entry)
   long pos = entry.begin();
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   // f0=27|29|2c, f1=1|3|7, f2xf3: big number, a dim?
@@ -449,10 +449,10 @@ bool TTParser::sendPicture(int id)
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   MWAWEntry const &entry=m_state->m_idPictEntryMap.find(id)->second;
 
-  RVNGBinaryData data;
+  librevenge::RVNGBinaryData data;
   long pos = input->tell();
   rsrcParser->parsePICT(entry,data);
-  input->seek(pos,RVNG_SEEK_SET);
+  input->seek(pos,librevenge::RVNG_SEEK_SET);
 
   int dataSz=int(data.size());
   if (!dataSz)
@@ -466,13 +466,13 @@ bool TTParser::sendPicture(int id)
     MWAW_DEBUG_MSG(("TTParser::sendPicture: can not find the picture\n"));
     return false;
   }
-  pictInput->seek(0,RVNG_SEEK_SET);
+  pictInput->seek(0,librevenge::RVNG_SEEK_SET);
   shared_ptr<MWAWPict> thePict(MWAWPictData::get(pictInput, dataSz));
-  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), RVNG_POINT);
+  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Paragraph, MWAWPosition::XCenter);
   pictPos.m_wrapping = MWAWPosition::WRunThrough;
   if (thePict) {
-    RVNGBinaryData fData;
+    librevenge::RVNGBinaryData fData;
     std::string type;
     if (thePict->getBinary(fData,type))
       getListener()->insertPicture(pictPos, fData, type);

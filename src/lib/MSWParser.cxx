@@ -249,7 +249,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     reinterpret_cast<MSWParser *>(m_parser)->send(m_zone);
   else
     reinterpret_cast<MSWParser *>(m_parser)->send(m_id, type);
-  m_input->seek(pos, RVNG_SEEK_SET);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -390,7 +390,7 @@ void MSWParser::send(int id, libmwaw::SubDocumentType type)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MSWParser::parse(RVNGTextInterface *docInterface)
+void MSWParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -426,7 +426,7 @@ void MSWParser::parse(RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MSWParser::createDocument(RVNGTextInterface *documentInterface)
+void MSWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -542,7 +542,7 @@ bool MSWParser::readZoneList()
 {
   MWAWInputStreamPtr input = getInput();
   int const vers = version();
-  getInput()->seek(vers <= 3 ? 30 : 64, RVNG_SEEK_SET);
+  getInput()->seek(vers <= 3 ? 30 : 64, librevenge::RVNG_SEEK_SET);
   int numData = vers <= 3 ? 15: 20;
   std::stringstream s;
   for (int i = 0; i < numData; i++) {
@@ -683,7 +683,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
   }
   long pos = 0;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int val = (int) input->readULong(2);
   switch (val) {
   case 0xfe34:
@@ -814,7 +814,7 @@ bool MSWParser::readHeaderEndV3()
   if (!input->checkPosition(0xb8))
     return false;
   libmwaw::DebugStream f;
-  input->seek(0x78, RVNG_SEEK_SET);
+  input->seek(0x78, librevenge::RVNG_SEEK_SET);
   long pos = input->tell();
   long val = input->readLong(4); // normally 0x100
   if (val != 0x100)
@@ -940,7 +940,7 @@ bool MSWParser::readHeaderEndV3()
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  input->seek(0x100, RVNG_SEEK_SET);
+  input->seek(0x100, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -997,7 +997,7 @@ bool MSWParser::readDocumentInfo(MSWEntry &entry)
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
   entry.setParsed(true);
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "DocumentInfo:";
 
@@ -1067,7 +1067,7 @@ bool MSWParser::readZone17(MSWEntry &entry)
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
   entry.setParsed(true);
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Zone17:";
   if (version() < 5) {
@@ -1144,7 +1144,7 @@ bool MSWParser::readPrinter(MSWEntry &entry)
 
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Printer:";
   int sz = (int) input->readULong(2);
@@ -1191,7 +1191,7 @@ bool MSWParser::readDocSum(MSWEntry &entry)
 
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "DocSum:";
   int sz = (int) input->readULong(2);
@@ -1215,7 +1215,7 @@ bool MSWParser::readDocSum(MSWEntry &entry)
     if (actPos+1+sz > entry.end()) {
       MWAW_DEBUG_MSG(("MSWParser::readDocSum: string %d to short...\n", i));
       f << "#";
-      input->seek(actPos, RVNG_SEEK_SET);
+      input->seek(actPos, librevenge::RVNG_SEEK_SET);
       break;
     }
     std::string s("");
@@ -1247,7 +1247,7 @@ bool MSWParser::readStringsZone(MSWEntry &entry, std::vector<std::string> &list)
 
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << entry;
   int sz = (int) input->readULong(2);
@@ -1359,7 +1359,7 @@ bool MSWParser::readObjectList(MSWEntry &entry)
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
   entry.setParsed(true);
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "ObjectList[" << entry.id() << "]:";
   int N=int(entry.length()/18);
@@ -1432,7 +1432,7 @@ bool MSWParser::readObjectFlags(MSWEntry &entry)
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
   entry.setParsed(true);
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "ObjectFlags[" << entry.id() << "]:";
   int N=int(entry.length()/6);
@@ -1482,7 +1482,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
   long pos = obj.m_pos.begin(), beginPos = pos;
   if (!pos) return false;
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int sz = (int) input->readULong(4);
 
   f << "Entries(ObjectData):Obj" << obj.m_id << ",";
@@ -1558,7 +1558,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
   } else if (fSz) {
     f << "##data2[sz]=" << fSz << ",";
     ascii().addDelimiter(input->tell(),'|');
-    input->seek(pos+fSz+1, RVNG_SEEK_SET);
+    input->seek(pos+fSz+1, librevenge::RVNG_SEEK_SET);
     ascii().addDelimiter(input->tell(),'|');
   }
   if (isAnnotation) {
@@ -1632,7 +1632,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
     }
   } else if (dataSz)
     ascii().addDelimiter(pos, '|');
-  input->seek(pos+dataSz, RVNG_SEEK_SET);
+  input->seek(pos+dataSz, librevenge::RVNG_SEEK_SET);
 
   pos = input->tell();
   ascii().addPos(beginPos);
@@ -1652,18 +1652,18 @@ bool MSWParser::checkPicturePos(long pos, int type)
   if (pos < 0x100 || !input->checkPosition(pos))
     return false;
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   long sz = (long) input->readULong(4);
   long endPos = pos+sz;
   if (sz < 14 || !input->checkPosition(sz+pos)) return false;
   int num = (int) input->readLong(1);
   if (num < 0 || num > 4) return false;
-  input->seek(pos+14, RVNG_SEEK_SET);
+  input->seek(pos+14, librevenge::RVNG_SEEK_SET);
   for (int n = 0; n < num; n++) {
     long actPos = input->tell();
     long pSz = (long) input->readULong(4);
     if (pSz+actPos > endPos) return false;
-    input->seek(pSz+actPos, RVNG_SEEK_SET);
+    input->seek(pSz+actPos, librevenge::RVNG_SEEK_SET);
   }
   if (input->tell() != endPos)
     return false;
@@ -1692,7 +1692,7 @@ bool MSWParser::readPicture(MSWEntry &entry)
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
   entry.setParsed(true);
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(Picture)[" << entry.pictType() << "-" << entry.id() << "]:";
   long sz = (long) input->readULong(4);
@@ -1740,8 +1740,8 @@ bool MSWParser::readPicture(MSWEntry &entry)
     pict.m_picturesList.push_back(zone);
 #ifdef DEBUG_WITH_FILES
     ascii().skipZone(pos+16, pos+sz-1);
-    RVNGBinaryData file;
-    input->seek(pos+16, RVNG_SEEK_SET);
+    librevenge::RVNGBinaryData file;
+    input->seek(pos+16, librevenge::RVNG_SEEK_SET);
     input->readDataBlock(sz-16, file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f2;
@@ -1749,7 +1749,7 @@ bool MSWParser::readPicture(MSWEntry &entry)
     libmwaw::Debug::dumpFile(file, f2.str().c_str());
 #endif
 
-    input->seek(pos+sz, RVNG_SEEK_SET);
+    input->seek(pos+sz, librevenge::RVNG_SEEK_SET);
   }
   m_state->m_picturesMap[entry.begin()]=pict;
   pos = input->tell();
@@ -1776,14 +1776,14 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
       (anchor == MWAWPosition::Char || anchor == MWAWPosition::CharBaseLine)) {
     shared_ptr<MSWParserInternal::SubDocument> subdoc
     (new MSWParserInternal::SubDocument(*this, input, fPos, cPos));
-    MWAWPosition pictPos(pict.m_dim.min(), pict.m_dim.size(), RVNG_POINT);;
+    MWAWPosition pictPos(pict.m_dim.min(), pict.m_dim.size(), librevenge::RVNG_POINT);;
     pictPos.setRelativePosition(MWAWPosition::Char,
                                 MWAWPosition::XLeft, MWAWPosition::YTop);
     pictPos.m_wrapping =  MWAWPosition::WBackground;
     getListener()->insertTextBox(pictPos, subdoc);
     return;
   }
-  MWAWPosition basicPos(Vec2f(0.,0.), Vec2f(100.,100.), RVNG_POINT);
+  MWAWPosition basicPos(Vec2f(0.,0.), Vec2f(100.,100.), librevenge::RVNG_POINT);
   if (anchor != MWAWPosition::Page && anchor != MWAWPosition::Frame) {
     basicPos.setRelativePosition(anchor, MWAWPosition::XLeft, MWAWPosition::YCenter);
     basicPos.m_wrapping =  MWAWPosition::WBackground;
@@ -1792,7 +1792,7 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
 
   long actPos = input->tell();
   std::string pictType;
-  RVNGBinaryData data;
+  librevenge::RVNGBinaryData data;
   Box2f naturalBox;
   for (size_t p = 0; p < pict.m_picturesList.size(); p++) {
     MSWParserInternal::Picture::Zone const &zone=pict.m_picturesList[p];
@@ -1801,21 +1801,21 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
     pos.setOrigin(pos.origin()+(Vec2f)zone.m_dim.min());
     pos.setSize(zone.m_dim.size());
 
-    input->seek(zone.m_pos.begin(), RVNG_SEEK_SET);
+    input->seek(zone.m_pos.begin(), librevenge::RVNG_SEEK_SET);
     MWAWPict::ReadResult res = MWAWPictData::check(input, (int)zone.m_pos.length(), naturalBox);
     if (res == MWAWPict::MWAW_R_BAD) {
       MWAW_DEBUG_MSG(("MSWParser::sendPicture: can not find the picture %d\n", int(p)));
       continue;
     }
 
-    input->seek(zone.m_pos.begin(), RVNG_SEEK_SET);
+    input->seek(zone.m_pos.begin(), librevenge::RVNG_SEEK_SET);
     shared_ptr<MWAWPict> thePict(MWAWPictData::get(input, (int)zone.m_pos.length()));
     if (!thePict) continue;
     thePict->getBinary(data,pictType);
     if (data.size())
       getListener()->insertPicture(pos, data, pictType);
   }
-  input->seek(actPos, RVNG_SEEK_SET);
+  input->seek(actPos, librevenge::RVNG_SEEK_SET);
 }
 
 ////////////////////////////////////////////////////////////
@@ -1830,7 +1830,7 @@ bool MSWParser::readPrintInfo(MSWEntry &entry)
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
   entry.setParsed(true);
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   // print info
   libmwaw::PrinterInfo info;

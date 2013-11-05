@@ -170,7 +170,7 @@ bool ZWParser::sendHeaderFooter(bool header)
   MWAWInputStreamPtr rsrc = rsrcInput();
   long rsrcPos = rsrc->tell();
   m_textParser->sendHeaderFooter(header);
-  rsrc->seek(rsrcPos, RVNG_SEEK_SET);
+  rsrc->seek(rsrcPos, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -193,7 +193,7 @@ void ZWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void ZWParser::parse(RVNGTextInterface *docInterface)
+void ZWParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
@@ -220,7 +220,7 @@ void ZWParser::parse(RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void ZWParser::createDocument(RVNGTextInterface *documentInterface)
+void ZWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -457,10 +457,10 @@ bool ZWParser::readCPRT(MWAWEntry const &entry)
 
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 #ifdef DEBUG_WITH_FILES
   libmwaw::DebugFile &ascFile = rsrcAscii();
-  RVNGBinaryData file;
+  librevenge::RVNGBinaryData file;
   input->readDataBlock(entry.length(), file);
 
   static int volatile cprtName = 0;
@@ -609,7 +609,7 @@ bool ZWParser::readSectionRange(MWAWEntry const &entry)
     ascFile.addNote(f.str().c_str());
     return true;
   }
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   pos -= 4;
   std::string name("");
   int num=0;
@@ -894,7 +894,7 @@ bool ZWParser::getFieldList(MWAWEntry const &entry, std::vector<ZWField> &list)
   list.resize(0);
   MWAWInputStreamPtr input = rsrcInput();
   long pos=entry.begin();
-  input->seek(entry.begin(), RVNG_SEEK_SET);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   while (!input->isEnd()) {
     long actPos=input->tell();
     long done = actPos>=entry.end();
@@ -921,7 +921,7 @@ bool ZWField::getString(MWAWInputStreamPtr &input, std::string &str) const
   str="";
   if (!m_pos.valid())
     return true;
-  input->seek(m_pos.begin(), RVNG_SEEK_SET);
+  input->seek(m_pos.begin(), librevenge::RVNG_SEEK_SET);
   while (!input->isEnd() && input->tell()!=m_pos.end()) {
     char c=(char) input->readULong(1);
     if (c==0) {
@@ -939,7 +939,7 @@ bool ZWField::getDebugString(MWAWInputStreamPtr &input, std::string &str) const
   str="";
   if (!m_pos.valid())
     return true;
-  input->seek(m_pos.begin(), RVNG_SEEK_SET);
+  input->seek(m_pos.begin(), librevenge::RVNG_SEEK_SET);
   std::stringstream ss;
   while (!input->isEnd() && input->tell()!=m_pos.end()) {
     char c=(char) input->readULong(1);

@@ -91,7 +91,7 @@ protected:
 
   //! try to send a picture
   bool sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
-                   RVNGPropertyList extras = RVNGPropertyList());
+                   librevenge::RVNGPropertyList extras = librevenge::RVNGPropertyList());
   //! try to send the page graphic
   bool sendPageGraphics();
 

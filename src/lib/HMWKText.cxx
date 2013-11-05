@@ -111,7 +111,7 @@ struct Section {
     if (m_colWidth.size()==size_t(m_numCols)) {
       for (size_t c=0; c < size_t(m_numCols); c++) {
         sec.m_columns[c].m_width = double(m_colWidth[c]);
-        sec.m_columns[c].m_widthUnit = RVNG_POINT;
+        sec.m_columns[c].m_widthUnit = librevenge::RVNG_POINT;
         if (!hasSep) continue;
         sec.m_columns[c].m_margins[libmwaw::Left]=
           sec.m_columns[c].m_margins[libmwaw::Right]=double(m_colSep[c])/2.0/72.;
@@ -120,7 +120,7 @@ struct Section {
       if (m_colWidth.size()>1) {
         MWAW_DEBUG_MSG(("HMWKTextInternal::Section:getSection colWidth is not coherent with numCols\n"));
       }
-      sec.setColumns(m_numCols, double(m_colWidth[0]), RVNG_POINT,
+      sec.setColumns(m_numCols, double(m_colWidth[0]), librevenge::RVNG_POINT,
                      hasSep ? double(m_colSep[0])/72.0 : 0);
     }
     return sec;
@@ -306,7 +306,7 @@ bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
   (std::multimap<long, shared_ptr<HMWKZone> >::value_type(zone->m_id, zone));
   long dataSz = zone->length();
   MWAWInputStreamPtr input = zone->m_input;
-  input->seek(zone->begin(), RVNG_SEEK_SET);
+  input->seek(zone->begin(), librevenge::RVNG_SEEK_SET);
 
   int actPage = 1, actCol = 0, numCol=1;
   while (!input->isEnd()) {
@@ -340,18 +340,18 @@ bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
     }
 
     if (!done) {
-      input->seek(pos+4, RVNG_SEEK_SET);
+      input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       long sz = (long) input->readULong(2);
       if (pos+6+sz > dataSz)
         break;
-      input->seek(pos+6+sz, RVNG_SEEK_SET);
+      input->seek(pos+6+sz, librevenge::RVNG_SEEK_SET);
     }
 
     bool ok=true;
     while (!input->isEnd()) {
       int c=(int) input->readLong(2);
       if (c==0x100) {
-        input->seek(-2, RVNG_SEEK_CUR);
+        input->seek(-2, librevenge::RVNG_SEEK_CUR);
         break;
       }
       if (c==0 && input->isEnd())
@@ -430,7 +430,7 @@ bool HMWKText::canSendTextAsGraphic(HMWKZone &zone)
   long dataSz = zone.length();
   MWAWInputStreamPtr input = zone.m_input;
   long pos = zone.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (m_state->m_IdTypeMaps.find(zone.m_id)!= m_state->m_IdTypeMaps.end()
       && m_state->m_IdTypeMaps.find(zone.m_id)->second == 0) // isMain
     return false;
@@ -464,7 +464,7 @@ bool HMWKText::canSendTextAsGraphic(HMWKZone &zone)
     }
 
     if (!done) {
-      input->seek(pos+4, RVNG_SEEK_SET);
+      input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       long sz = (long) input->readULong(2);
       if (pos+6+sz > dataSz) return false;
     }
@@ -473,7 +473,7 @@ bool HMWKText::canSendTextAsGraphic(HMWKZone &zone)
     while (!input->isEnd()) {
       int c=(int) input->readULong(2);
       if (c==0x100) {
-        input->seek(-2, RVNG_SEEK_CUR);
+        input->seek(-2, librevenge::RVNG_SEEK_CUR);
         break;
       }
       if (c==0 && input->isEnd())
@@ -507,7 +507,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
   zone.m_parsed = true;
 
   long pos = zone.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   f << "PTR=" << std::hex << zone.fileBeginPos() << std::dec << ",";
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
@@ -637,13 +637,13 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
 
     bool ok=true;
     if (!done) {
-      input->seek(pos+4, RVNG_SEEK_SET);
+      input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       long sz = (long) input->readULong(2);
       ok = pos+6+sz <= dataSz;
       if (!ok)
         f << "###";
       else
-        input->seek(pos+6+sz, RVNG_SEEK_SET);
+        input->seek(pos+6+sz, librevenge::RVNG_SEEK_SET);
 
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
@@ -659,7 +659,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
     while (!input->isEnd()) {
       int c=(int) input->readULong(2);
       if (c==0x100) {
-        input->seek(-2, RVNG_SEEK_CUR);
+        input->seek(-2, librevenge::RVNG_SEEK_CUR);
         break;
       }
       if (c==0 && input->isEnd())
@@ -823,9 +823,9 @@ bool HMWKText::readFont(HMWKZone &zone, MWAWFont &font)
   if (flag&0x40) font.set(MWAWFont::Script::sub100());
   if (flag&0x80) {
     if (flag&0x20)
-      font.set(MWAWFont::Script(48,RVNG_PERCENT,58));
+      font.set(MWAWFont::Script(48,librevenge::RVNG_PERCENT,58));
     else if (flag&0x40)
-      font.set(MWAWFont::Script(16,RVNG_PERCENT,58));
+      font.set(MWAWFont::Script(16,librevenge::RVNG_PERCENT,58));
     else
       font.set(MWAWFont::Script::super());
   }
@@ -882,7 +882,7 @@ bool HMWKText::readFont(HMWKZone &zone, MWAWFont &font)
   zone.ascii().addPos(pos-4);
   zone.ascii().addNote(f.str().c_str());
 
-  input->seek(pos+30, RVNG_SEEK_SET);
+  input->seek(pos+30, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -906,7 +906,7 @@ bool HMWKText::readFontNames(shared_ptr<HMWKZone> zone)
   f << zone->name() << ":PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
 
   long pos = zone->begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int N = (int) input->readLong(2);
   f << "N=" << N << ",";
   long expectedSz = N*68+2;
@@ -939,7 +939,7 @@ bool HMWKText::readFontNames(shared_ptr<HMWKZone> zone)
     }
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+68, RVNG_SEEK_SET);
+    input->seek(pos+68, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -967,7 +967,7 @@ bool HMWKText::readStyles(shared_ptr<HMWKZone> zone)
   f << zone->name() << ":PTR=" << std::hex << zone->fileBeginPos() << std::dec << ",";
 
   long pos = zone->begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   long fieldSz = 636;
   int N = (int) input->readULong(2);
   f << "N=" << N << ",";
@@ -1060,7 +1060,7 @@ bool HMWKText::readStyles(shared_ptr<HMWKZone> zone)
     if (input->tell() != pos+fieldSz)
       asciiFile.addDelimiter(input->tell(),'|');
 
-    input->seek(pos+fieldSz, RVNG_SEEK_SET);
+    input->seek(pos+fieldSz, librevenge::RVNG_SEEK_SET);
   }
 
   if (!input->isEnd()) {
@@ -1137,7 +1137,7 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
   float dim[3];
   for (int i = 0; i < 3; i++)
     dim[i] = float(input->readLong(4))/65536.0f;
-  para.m_marginsUnit = RVNG_POINT;
+  para.m_marginsUnit = librevenge::RVNG_POINT;
   para.m_margins[0]=dim[1];
   para.m_margins[1]=dim[0];
   para.m_margins[2]=dim[2]; // ie. distance to rigth border - ...
@@ -1148,9 +1148,9 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
   for (int i = 0; i < 3; i++)
     spacingsUnit[i] = (int) input->readULong(1);
   if (spacingsUnit[0]==0xb)
-    para.m_spacingsInterlineUnit = RVNG_PERCENT;
+    para.m_spacingsInterlineUnit = librevenge::RVNG_PERCENT;
   else
-    para.m_spacingsInterlineUnit = RVNG_POINT;
+    para.m_spacingsInterlineUnit = librevenge::RVNG_POINT;
   for (int i = 1; i < 3; i++) // convert point|line -> inches
     para.m_spacings[i]= ((spacingsUnit[i]==0xb) ? 12.0 : 1.0)*(para.m_spacings[i].get())/72.0;
 
@@ -1295,7 +1295,7 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
 
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+12, RVNG_SEEK_SET);
+    input->seek(pos+12, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -1366,7 +1366,7 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
 
   HMWKTextInternal::Section sec;
   long pos=0;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   long val = input->readLong(2);
   if (val != 1) // always 1
     f << "f0=" << val << ",";
@@ -1407,7 +1407,7 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
   asciiFile.addDelimiter(input->tell(),'|');
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
-  input->seek(pos+0x6c, RVNG_SEEK_SET);
+  input->seek(pos+0x6c, librevenge::RVNG_SEEK_SET);
 
   pos = input->tell();
   f.str("");

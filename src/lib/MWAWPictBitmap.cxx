@@ -45,7 +45,7 @@
 
 //! Internal: helper function to create a PBM
 template <class T>
-bool getPBMData(MWAWPictBitmapContainer<T> const &orig, RVNGBinaryData &data, T white)
+bool getPBMData(MWAWPictBitmapContainer<T> const &orig, librevenge::RVNGBinaryData &data, T white)
 {
   Vec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
@@ -75,7 +75,7 @@ bool getPBMData(MWAWPictBitmapContainer<T> const &orig, RVNGBinaryData &data, T 
 
 //! Internal: helper function to create a PPM
 template <class T>
-bool getPPMData(MWAWPictBitmapContainer<T> const &orig, RVNGBinaryData &data, std::vector<MWAWColor> const &indexedColor)
+bool getPPMData(MWAWPictBitmapContainer<T> const &orig, librevenge::RVNGBinaryData &data, std::vector<MWAWColor> const &indexedColor)
 {
   Vec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
@@ -105,7 +105,7 @@ bool getPPMData(MWAWPictBitmapContainer<T> const &orig, RVNGBinaryData &data, st
 }
 
 //! Internal: helper function to create a PPM for a color bitmap
-bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, RVNGBinaryData &data)
+bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, librevenge::RVNGBinaryData &data)
 {
   Vec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
@@ -131,7 +131,7 @@ bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, RVNGBinaryData &
 // BW bitmap
 ////////////////////////////////////////////////////////////
 
-bool MWAWPictBitmapBW::createFileData(RVNGBinaryData &result) const
+bool MWAWPictBitmapBW::createFileData(librevenge::RVNGBinaryData &result) const
 {
   return getPBMData<bool>(m_data,result,false);
 }
@@ -140,7 +140,7 @@ bool MWAWPictBitmapBW::createFileData(RVNGBinaryData &result) const
 // Color bitmap
 ////////////////////////////////////////////////////////////
 
-bool MWAWPictBitmapColor::createFileData(RVNGBinaryData &result) const
+bool MWAWPictBitmapColor::createFileData(librevenge::RVNGBinaryData &result) const
 {
   return getPPMData(m_data,result);
 }
@@ -149,7 +149,7 @@ bool MWAWPictBitmapColor::createFileData(RVNGBinaryData &result) const
 // Indexed bitmap
 ////////////////////////////////////////////////////////////
 
-bool MWAWPictBitmapIndexed::createFileData(RVNGBinaryData &result) const
+bool MWAWPictBitmapIndexed::createFileData(librevenge::RVNGBinaryData &result) const
 {
   if (m_colors.size() && getPPMData<int>(m_data,result,m_colors)) return true;
   return getPBMData<int>(m_data,result,0);

@@ -609,7 +609,7 @@ bool MSK4Text::readFootNote(MWAWInputStreamPtr input, int id)
   entry.setEnd(ft.m_end);
   entry.setType("TEXT");
   // if the last character is a newline, delete if
-  input->seek(ft.m_end-1, RVNG_SEEK_SET);
+  input->seek(ft.m_end-1, librevenge::RVNG_SEEK_SET);
   if (input->readULong(1) == 0xd) entry.setEnd(ft.m_end-1);
 
   return readText(input, entry, false);
@@ -722,7 +722,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
     }
 
     /* plain text */
-    input->seek(long(actPos), RVNG_SEEK_SET);
+    input->seek(long(actPos), librevenge::RVNG_SEEK_SET);
 
     std::string s;
     if (fType == MSK4TextInternal::Font::Page && listener) {
@@ -778,7 +778,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
         uint32_t extra = (uint32_t) listener->insertCharacter((unsigned char)readVal, input, input->tell()+long(i)-1);
         if (extra > i-1) {
           MWAW_DEBUG_MSG(("MSK4Text::readText: warning: extra is too large\n"));
-          input->seek(-long(extra+1-i), RVNG_SEEK_CUR);
+          input->seek(-long(extra+1-i), librevenge::RVNG_SEEK_CUR);
           i = 0;
         } else
           i -= extra;
@@ -821,7 +821,7 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
   long length = entry.length();
   long endPos = entry.end();
 
-  input->seek(long(page_offset), RVNG_SEEK_SET);
+  input->seek(long(page_offset), librevenge::RVNG_SEEK_SET);
   uint16_t nPLC = (uint16_t) input->readULong(2); /* number of PLC */
   if (4*nPLC+10 > length) {
     MWAW_DEBUG_MSG(("MSK4Text::readPLC: error: nPLC = %i, pSize=%ld\n",
@@ -960,7 +960,7 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
     }
 
     pos += dataSz;
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
 
     if (!ok) plcType.m_contentType = MSK4PLCInternal::PLC::T_UNKNOWN;
   }
@@ -1015,7 +1015,7 @@ bool MSK4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
   long endPos = entry.end();
   entry.setParsed(true);
 
-  input->seek(debPos, RVNG_SEEK_SET);
+  input->seek(debPos, librevenge::RVNG_SEEK_SET);
   uint32_t len = (uint32_t) input->readULong(2);
   uint32_t n_fonts = (uint32_t) input->readULong(2);
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
@@ -1228,7 +1228,7 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
 
     if (ok) continue;
 
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     // try to guess the attribute size
     int v = (int) input->readULong(1);
     if (v == 1) ok = true;
@@ -1239,7 +1239,7 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
       continue;
     }
 
-    input->seek(pos-1, RVNG_SEEK_SET);
+    input->seek(pos-1, librevenge::RVNG_SEEK_SET);
     f << "#end=" << std::hex;
     while (pos++ < endPos) f << input->readULong(1) << ",";
     break;
@@ -1362,16 +1362,16 @@ bool MSK4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
       }
       if (value > 0) {
         customSpacing = true;
-        parag.setInterline(value, RVNG_POINT, MWAWParagraph::AtLeast);
+        parag.setInterline(value, librevenge::RVNG_POINT, MWAWParagraph::AtLeast);
       } else {
         switch(-value) {
         case 1: // normal
           break;
         case 2:
-          parag.setInterline(1.5, RVNG_PERCENT);
+          parag.setInterline(1.5, librevenge::RVNG_PERCENT);
           break;
         case 3: // double
-          parag.setInterline(2.0, RVNG_PERCENT);
+          parag.setInterline(2.0, librevenge::RVNG_PERCENT);
           break;
         default:
           f << "#spacing=" << value << ",";
@@ -1437,7 +1437,7 @@ bool MSK4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
         (*parag.m_tabs)[i].m_alignment = align;
         (*parag.m_tabs)[i].m_position = value/72.0;
       }
-      input->seek(pos+42, RVNG_SEEK_SET);
+      input->seek(pos+42, librevenge::RVNG_SEEK_SET);
       break;
     }
     case 0x28: { // alignement: exact or not
@@ -1459,7 +1459,7 @@ bool MSK4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
 
     if (ok) continue;
 
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     ascFile.addDelimiter(pos, '|');
     f << "#end=(";
     while (input->tell() < endPos)
@@ -1650,7 +1650,7 @@ bool MSK4Text::toknDataParser(MWAWInputStreamPtr input, long endPos,
         str+= (char) input->readULong(1);
       f << "str=" << str <<",";
     } else
-      input->seek(-1, RVNG_SEEK_CUR);
+      input->seek(-1, librevenge::RVNG_SEEK_CUR);
     break;
   }
   default:
@@ -1803,7 +1803,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
 
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
-  input->seek(long(page_offset), RVNG_SEEK_SET);
+  input->seek(long(page_offset), librevenge::RVNG_SEEK_SET);
   uint16_t cfod = (uint16_t) input->readULong(deplSize);
 
   f << "FDP: N="<<(int) cfod;
@@ -1894,7 +1894,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
       continue;
     }
 
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     int szProp = (int) input->readULong(1);
     szProp++;
     if (szProp == 0) {
@@ -1928,7 +1928,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
   }
 
   /* go to end of page */
-  input->seek(endPage, RVNG_SEEK_SET);
+  input->seek(endPage, librevenge::RVNG_SEEK_SET);
 
   return m_textPositions.end() > lastReadPos;
 }

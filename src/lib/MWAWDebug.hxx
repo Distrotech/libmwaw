@@ -38,7 +38,7 @@
 
 #include "MWAWInputStream.hxx"
 
-class RVNGBinaryData;
+class librevenge::RVNGBinaryData;
 
 #  if defined(DEBUG_WITH_FILES)
 #include <fstream>
@@ -53,7 +53,7 @@ namespace Debug
 //! a debug function to store in a datafile in the current directory
 //! WARNING: this function erase the file fileName if it exists
 //! (if debug_with_files is not defined, does nothing)
-bool dumpFile(RVNGBinaryData &data, char const *fileName);
+bool dumpFile(librevenge::RVNGBinaryData &data, char const *fileName);
 //! returns a file name from an ole/... name
 std::string flattenFileName(std::string const &name);
 }
@@ -160,7 +160,7 @@ namespace libmwaw
 {
 namespace Debug
 {
-inline bool dumpFile(RVNGBinaryData &, char const *)
+inline bool dumpFile(librevenge::RVNGBinaryData &, char const *)
 {
   return true;
 }

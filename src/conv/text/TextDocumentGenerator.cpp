@@ -45,11 +45,11 @@ TextDocumentGenerator::~TextDocumentGenerator()
 {
 }
 
-void TextDocumentGenerator::setDocumentMetaData(const RVNGPropertyList &propList)
+void TextDocumentGenerator::setDocumentMetaData(const librevenge::RVNGPropertyList &propList)
 {
 	if (!m_isInfo)
 		return;
-	RVNGPropertyList::Iter propIter(propList);
+	librevenge::RVNGPropertyList::Iter propIter(propList);
 	for (propIter.rewind(); propIter.next(); )
 	{
 		printf("%s %s\n", propIter.key(), propIter()->getStr().cstr());
@@ -70,7 +70,7 @@ void TextDocumentGenerator::insertTab()
 	printf("%c", UCS_TAB);
 }
 
-void TextDocumentGenerator::insertText(const RVNGString &text)
+void TextDocumentGenerator::insertText(const librevenge::RVNGString &text)
 {
 	if (m_isInfo)
 		return;

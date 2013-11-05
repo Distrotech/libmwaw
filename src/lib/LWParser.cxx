@@ -190,9 +190,9 @@ bool LWParser::sendHeaderFooter(bool header)
   MWAWInputStreamPtr rsrc = rsrcInput();
   long pos = input->tell(), rsrcPos = rsrc ? rsrc->tell() : 0;
   m_textParser->sendHeaderFooter(header);
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (rsrc)
-    rsrc->seek(rsrcPos, RVNG_SEEK_SET);
+    rsrc->seek(rsrcPos, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -205,9 +205,9 @@ void LWParser::sendGraphic(int graphId)
   MWAWInputStreamPtr rsrc = rsrcInput();
   long pos = input->tell(), rsrcPos = rsrc ? rsrc->tell() : 0;
   m_graphParser->send(graphId);
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (rsrc)
-    rsrc->seek(rsrcPos, RVNG_SEEK_SET);
+    rsrc->seek(rsrcPos, librevenge::RVNG_SEEK_SET);
 }
 
 ////////////////////////////////////////////////////////////
@@ -229,7 +229,7 @@ void LWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void LWParser::parse(RVNGTextInterface *docInterface)
+void LWParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
 
@@ -263,7 +263,7 @@ void LWParser::parse(RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void LWParser::createDocument(RVNGTextInterface *documentInterface)
+void LWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -379,7 +379,7 @@ bool LWParser::readDocInfo(MWAWEntry const &entry)
   }
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
-  input->seek(entry.begin(), RVNG_SEEK_SET);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   entry.setParsed(true);
 
   int N=int(entry.length()/0x40);
@@ -436,7 +436,7 @@ bool LWParser::readDocInfo(MWAWEntry const &entry)
 
     ascFile.addPos(n==0 ? pos-4 : pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(pos+0x40, RVNG_SEEK_SET);
+    input->seek(pos+0x40, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -453,7 +453,7 @@ bool LWParser::readPrintInfo(MWAWEntry const &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   // print info
@@ -515,7 +515,7 @@ bool LWParser::readTOCPage(MWAWEntry const &entry)
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(TOCpage)[" << entry.id() << "]:";
@@ -558,7 +558,7 @@ bool LWParser::readTOC(MWAWEntry const &entry)
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(TOCdata)[" << entry.id() << "]:";
@@ -627,7 +627,7 @@ bool LWParser::readDocument(MWAWEntry const &entry)
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(Document):";
@@ -698,7 +698,7 @@ bool LWParser::readLWSR2(MWAWEntry const &entry)
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(LWSR2):";
@@ -723,7 +723,7 @@ bool LWParser::readMPSR5(MWAWEntry const &entry)
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugFile &ascFile = rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(MPSR5):";
@@ -739,7 +739,7 @@ bool LWParser::readMPSR5(MWAWEntry const &entry)
     name += c;
   }
   f << "defFont?=\"" << name << "\",";
-  input->seek(pos+34, RVNG_SEEK_SET);
+  input->seek(pos+34, librevenge::RVNG_SEEK_SET);
   for (int i = 0; i < 2; i++) { // f1=3|4|6, f2=4
     val = input->readLong(2);
     if (val)

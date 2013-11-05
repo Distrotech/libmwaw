@@ -292,7 +292,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   if (!input->hasDataFork() || input->size() < 8)
     return res;
 
-  input->seek(0, RVNG_SEEK_SET);
+  input->seek(0, librevenge::RVNG_SEEK_SET);
   int val[4];
   for (int i = 0; i < 4; i++)
     val[i] = int(input->readULong(2));
@@ -304,7 +304,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     return res;
   }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77) {
-    input->seek(8, RVNG_SEEK_SET);
+    input->seek(8, librevenge::RVNG_SEEK_SET);
     int version = int(input->readLong(2));
 
 #ifdef DEBUG
@@ -409,7 +409,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   }
   // ----------- other ------------------
   if (val[0]==0 && val[1]==0 && val[2]==0 && val[3]==0) {
-    input->seek(8, RVNG_SEEK_SET);
+    input->seek(8, librevenge::RVNG_SEEK_SET);
     int value=(int) input->readULong(1);
     if (value==0x4 || value==0x44) {
       MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a WriteNow 1.0 or 2.0 file\n"));
@@ -450,7 +450,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_WRITERPLUS, 1));
   }
   //ok now look at the end of file
-  if (input->seek(-4, RVNG_SEEK_END))
+  if (input->seek(-4, librevenge::RVNG_SEEK_END))
     return res;
   int lVal[2];
   for (int i = 0; i < 2; i++)
@@ -464,7 +464,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   else if (lVal[0] == 0 && lVal[1]==1) // not probable, but
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_FULLWRITE, 1));
 
-  input->seek(0, RVNG_SEEK_SET);
+  input->seek(0, librevenge::RVNG_SEEK_SET);
   return res;
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

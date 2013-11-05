@@ -537,7 +537,7 @@ bool MRWText::readZone(MRWEntry const &entry, int zoneId)
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), RVNG_SEEK_SET);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList);
@@ -570,7 +570,7 @@ bool MRWText::readZone(MRWEntry const &entry, int zoneId)
   m_parserState->m_asciiFile.addPos(entry.begin());
   m_parserState->m_asciiFile.addNote(f.str().c_str());
 
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -583,7 +583,7 @@ int MRWText::computeNumPages(MRWTextInternal::Zone const &zone) const
     MRWTextInternal::Zone::Information const &info=zone.m_infoList[z];
     if (!info.m_pos.valid()) continue;
     if (nPages==0) nPages=1;
-    input->seek(info.m_pos.begin(), RVNG_SEEK_SET);
+    input->seek(info.m_pos.begin(), librevenge::RVNG_SEEK_SET);
     long numChar = info.m_pos.length();
     while (numChar-- > 0) {
       if (input->readULong(1)==0xc)
@@ -591,7 +591,7 @@ int MRWText::computeNumPages(MRWTextInternal::Zone const &zone) const
     }
   }
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   return nPages;
 }
 
@@ -602,7 +602,7 @@ bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), RVNG_SEEK_SET);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList, 1+22*entry.m_N);
@@ -696,7 +696,7 @@ bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
     f << entry.name() << "-" << i << ":" << info;
     ascFile.addNote(f.str().c_str());
   }
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
 
   return true;
 }
@@ -751,7 +751,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(firstPos, RVNG_SEEK_SET);
+  input->seek(firstPos, librevenge::RVNG_SEEK_SET);
 
   long actChar = entry.begin();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -762,7 +762,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
     long endPos = zone.m_infoList[z].m_pos.end();
     if (endPos > pos+entry.end()-actChar)
       endPos = pos+entry.end()-actChar;
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     firstPos = -1;
 
     libmwaw::DebugStream f;
@@ -809,7 +809,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
               }
               pos=firstPos;
               if (z == firstZ) {
-                input->seek(firstPos, RVNG_SEEK_SET);
+                input->seek(firstPos, librevenge::RVNG_SEEK_SET);
                 firstPos = -1;
                 continue;
               } else {
@@ -818,7 +818,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
               }
             }
 
-            input->seek(actPos, RVNG_SEEK_SET);
+            input->seek(actPos, librevenge::RVNG_SEEK_SET);
           }
           setProperty(para);
         }
@@ -947,7 +947,7 @@ bool MRWText::sendTable(MRWTextInternal::Table &table)
     theTable.setColsSize(colWidths);
     theTable.setMergeBorders(false);
     listener->openTable(theTable);
-    listener->openTableRow(-float(row.m_height), RVNG_POINT);
+    listener->openTableRow(-float(row.m_height), librevenge::RVNG_POINT);
 
     for (size_t c=0; c < nCells; c++) {
       MRWTextInternal::Table::Cell const &cell=row.m_cellsList[c];
@@ -983,7 +983,7 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
   if (!zone.getPosition(entry.begin(), firstPos, firstZ))
     return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(firstPos, RVNG_SEEK_SET);
+  input->seek(firstPos, librevenge::RVNG_SEEK_SET);
 
   int actHeight=0, lastHeight = 0;
   long actChar = entry.begin();
@@ -998,7 +998,7 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
 
     long endPos = zone.m_infoList[z].m_pos.end();
     if (z!=firstZ)
-      input->seek(zone.m_infoList[z].m_pos.begin(), RVNG_SEEK_SET);
+      input->seek(zone.m_infoList[z].m_pos.begin(), librevenge::RVNG_SEEK_SET);
 
     while (!input->isEnd()) {
       long actPos = input->tell();
@@ -1056,7 +1056,7 @@ bool MRWText::readPLCZone(MRWEntry const &entry, int zoneId)
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), RVNG_SEEK_SET);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList,1+2*entry.m_N);
@@ -1094,7 +1094,7 @@ bool MRWText::readPLCZone(MRWEntry const &entry, int zoneId)
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -1109,7 +1109,7 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), RVNG_SEEK_SET);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList,1+19*entry.m_N);
@@ -1138,7 +1138,7 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
         continue;
       }
       long pos = data.m_pos.begin();
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       int fSz = int(input->readULong(1));
       if (fSz+1 > data.m_pos.length()) {
         MWAW_DEBUG_MSG(("MRWText::readFontNames: field name %d seems bad\n", j));
@@ -1180,7 +1180,7 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
     zone.m_idFontMap[i] = fId;
     ascFile.addNote(f.str().c_str());
   }
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -1192,7 +1192,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), RVNG_SEEK_SET);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList,1+1+77*entry.m_N);
@@ -1405,19 +1405,19 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
         break;
       case 51:
         if (dt.value(0) > 0)
-          font.m_font.set(MWAWFont::Script((float)dt.value(0),RVNG_POINT));
+          font.m_font.set(MWAWFont::Script((float)dt.value(0),librevenge::RVNG_POINT));
         else if (dt.value(0))
           f << "#superscript=" << dt.value(0) << ",";
         break;
       case 52:
         if (dt.value(0) > 0)
-          font.m_font.set(MWAWFont::Script((float)-dt.value(0),RVNG_POINT));
+          font.m_font.set(MWAWFont::Script((float)-dt.value(0),librevenge::RVNG_POINT));
         else if (dt.value(0))
           f << "#subscript=" << dt.value(0) << ",";
         break;
       case 59:
         if (dt.value(0))
-          font.m_font.set(MWAWFont::Script(float(dt.value(0))/3.0f,RVNG_POINT,58));
+          font.m_font.set(MWAWFont::Script(float(dt.value(0))/3.0f,librevenge::RVNG_POINT,58));
         break;
       default:
         if (dt.value(0))
@@ -1440,7 +1440,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
       << font.m_font.getDebugString(m_parserState->m_fontConverter) << font;
     ascFile.addNote(f.str().c_str());
   }
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -1455,7 +1455,7 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), RVNG_SEEK_SET);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList,1+2*entry.m_N);
@@ -1487,7 +1487,7 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
       f << "###" << data << ",";
     } else {
       long pos = data.m_pos.begin();
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       int fSz = int(input->readULong(1));
       if (fSz+1 > data.m_pos.length()) {
         MWAW_DEBUG_MSG(("MRWText::readStyleNames: field name %d seems bad\n", i));
@@ -1500,7 +1500,7 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
     }
     ascFile.addNote(f.str().c_str());
   }
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -1521,7 +1521,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(entry.begin(), RVNG_SEEK_SET);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
   std::vector<MRWStruct> dataList;
   m_mainParser->decodeZone(dataList,1+3*68*entry.m_N);
@@ -1586,11 +1586,11 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         break;
       case 6:
         if (!dt.value(0)) break;
-        para.setInterline(double(dt.value(0))/65536., RVNG_PERCENT);
+        para.setInterline(double(dt.value(0))/65536., librevenge::RVNG_PERCENT);
         break;
       case 8:
         if (!dt.value(0)) break;
-        para.setInterline(double(dt.value(0))/65536., RVNG_POINT);
+        para.setInterline(double(dt.value(0))/65536., librevenge::RVNG_POINT);
         break;
       case 9:
         if (!dt.value(0)) break;
@@ -1598,7 +1598,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
           MWAW_DEBUG_MSG(("MRWText::readRulers: find negative interline\n"));
           f << "#inteline=" << dt.value(0) << "[at least],";
         } else
-          para.setInterline(double(dt.value(0)), RVNG_POINT, MWAWParagraph::AtLeast);
+          para.setInterline(double(dt.value(0)), librevenge::RVNG_POINT, MWAWParagraph::AtLeast);
         break;
       case 10:
         if (!dt.value(0)) break;
@@ -1850,7 +1850,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
     for (int j = 0; j < 10; j++, d++) {
       MRWStruct const &dt = dataList[d];
       if (j==1 && dt.m_type==0) { // a block with sz=40
-        input->seek(dt.m_pos.begin(), RVNG_SEEK_SET);
+        input->seek(dt.m_pos.begin(), librevenge::RVNG_SEEK_SET);
         int fSz = (int) input->readULong(1);
         if (fSz+1>dt.m_pos.length()) {
           MWAW_DEBUG_MSG(("MRWText::readRulers: can not read paragraph name\n"));
@@ -1928,7 +1928,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
     f << entry.name() << "-P" << i << ":" << para << ",";
     ascFile.addNote(f.str().c_str());
   }
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return true;
 }
 

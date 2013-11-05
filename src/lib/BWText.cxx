@@ -325,7 +325,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   long pos = m_input->tell();
   m_textParser->sendHF(m_hfId, m_sectId);
-  m_input->seek(pos, RVNG_SEEK_SET);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
 
@@ -424,7 +424,7 @@ bool BWText::createZones(MWAWEntry &entry)
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=entry.begin(), endPos=entry.end();
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(THeader):";
@@ -459,7 +459,7 @@ bool BWText::createZones(MWAWEntry &entry)
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   std::vector<MWAWEntry> listEntries;
   f.str("");
   f << "Entries(Text):";
@@ -476,7 +476,7 @@ bool BWText::createZones(MWAWEntry &entry)
       MWAW_DEBUG_MSG(("BWText::createZones: the page entry %d seems bad\n", i));
     }
     listEntries.push_back(pEntry);
-    input->seek(pos+6, RVNG_SEEK_SET);
+    input->seek(pos+6, librevenge::RVNG_SEEK_SET);
   }
   ascFile.addPos(endPos);
   ascFile.addNote(f.str().c_str());
@@ -489,7 +489,7 @@ bool BWText::createZones(MWAWEntry &entry)
       continue;
     if (p) {
       // use the section signature to diffentiate text/section (changeme)
-      input->seek(listEntries[p].begin(), RVNG_SEEK_SET);
+      input->seek(listEntries[p].begin(), librevenge::RVNG_SEEK_SET);
       if (input->readLong(2)==0xdc)
         break;
     }
@@ -501,7 +501,7 @@ bool BWText::createZones(MWAWEntry &entry)
       sec = BWTextInternal::Section();
     m_state->m_sectionList.push_back(sec);
   }
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return m_state->m_textEntry.valid();
 }
 
@@ -513,7 +513,7 @@ void BWText::countPages()
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=m_state->m_textEntry.begin(), endPos=m_state->m_textEntry.end();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int nSectPages=0, nPages=1;
   while (!input->isEnd()) {
     pos=input->tell();
@@ -522,7 +522,7 @@ void BWText::countPages()
     if (c) continue;
     c=(unsigned char) input->readULong(1);
     bool done=false;
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     switch(c) {
     case 0: {
       BWTextInternal::Font font;
@@ -537,13 +537,13 @@ void BWText::countPages()
     case 2:
       if (pos+6 > endPos)
         break;
-      input->seek(4, RVNG_SEEK_CUR);
+      input->seek(4, librevenge::RVNG_SEEK_CUR);
       done = input->readLong(2)==0x200;
       break;
     case 3: { // type 3:page 4:section
       if (pos+6 > endPos)
         break;
-      input->seek(2, RVNG_SEEK_CUR);
+      input->seek(2, librevenge::RVNG_SEEK_CUR);
       int type=(int) input->readLong(2);
       if (input->readLong(2)!=0x300)
         break;
@@ -560,13 +560,13 @@ void BWText::countPages()
     case 4: // picture
       if (pos+8 > endPos)
         break;
-      input->seek(6, RVNG_SEEK_CUR);
+      input->seek(6, librevenge::RVNG_SEEK_CUR);
       done = input->readLong(2)==0x400;
       break;
     case 5: // a field
       if (pos+36 > endPos)
         break;
-      input->seek(34, RVNG_SEEK_CUR);
+      input->seek(34, librevenge::RVNG_SEEK_CUR);
       done=input->readLong(2)==0x500;
       break;
     default:
@@ -601,7 +601,7 @@ bool BWText::sendHF(int hfId, int sectId)
   BWTextInternal::Section const &sec=m_state->m_sectionList[size_t(sectId)];
   sec.m_parsed[hfId]=true;
   bool ok=sendText(sec.getEntry(hfId));
-  input->seek(pos,RVNG_SEEK_SET);
+  input->seek(pos,librevenge::RVNG_SEEK_SET);
   return ok;
 }
 
@@ -649,7 +649,7 @@ bool BWText::sendText(MWAWEntry entry)
     listener->openSection(m_state->m_sectionList[actSection++]);
   }
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Text:";
@@ -688,7 +688,7 @@ bool BWText::sendText(MWAWEntry entry)
     }
     c=(unsigned char) input->readULong(1);
     bool done=false;
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     switch(c) {
     case 0:
       if (!readFont(font,endPos))
@@ -707,7 +707,7 @@ bool BWText::sendText(MWAWEntry entry)
     case 2: {
       if (pos+6 > endPos)
         break;
-      input->seek(2, RVNG_SEEK_CUR);
+      input->seek(2, librevenge::RVNG_SEEK_CUR);
       int type=(int) input->readLong(2);
       if (input->readLong(2)!=0x200)
         break;
@@ -755,7 +755,7 @@ bool BWText::sendText(MWAWEntry entry)
     case 3: {
       if (pos+6 > endPos)
         break;
-      input->seek(2, RVNG_SEEK_CUR);
+      input->seek(2, librevenge::RVNG_SEEK_CUR);
       int type=(int) input->readLong(2);
       if (input->readLong(2)!=0x300)
         break;
@@ -793,7 +793,7 @@ bool BWText::sendText(MWAWEntry entry)
     case 4: { // picture
       if (pos+8 > endPos)
         break;
-      input->seek(2, RVNG_SEEK_CUR);
+      input->seek(2, librevenge::RVNG_SEEK_CUR);
       int val=(int) input->readLong(2);
       int id=(int) input->readULong(2);
       if (input->readLong(2)!=0x400)
@@ -810,7 +810,7 @@ bool BWText::sendText(MWAWEntry entry)
     case 5: { // a field
       if (pos+36 > endPos)
         break;
-      input->seek(2, RVNG_SEEK_CUR);
+      input->seek(2, librevenge::RVNG_SEEK_CUR);
       f.str("");
       f << "Entries(Database):";
       int fl=(int) input->readULong(1); // find 40
@@ -830,7 +830,7 @@ bool BWText::sendText(MWAWEntry entry)
       }
       listener->insertUnicode(0xbb);
       f << name;
-      input->seek(pos+34, RVNG_SEEK_SET);
+      input->seek(pos+34, librevenge::RVNG_SEEK_SET);
       if (input->readLong(2)!=0x500)
         break;
       ascFile.addPos(pos);
@@ -848,7 +848,7 @@ bool BWText::sendText(MWAWEntry entry)
       f << "Text:";
       continue;
     }
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     break;
   }
   if (input->tell()!=endPos) {
@@ -856,7 +856,7 @@ bool BWText::sendText(MWAWEntry entry)
     ascFile.addNote("Text:###");
 
     MWAW_DEBUG_MSG(("BWText::sendText: find extra data\n"));
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
   }
   ascFile.addPos(endPos);
   ascFile.addNote("_");
@@ -871,7 +871,7 @@ bool BWText::readFont(BWTextInternal::Font &font, long endPos)
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   if (pos+12 > endPos || input->readLong(2)) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -891,10 +891,10 @@ bool BWText::readFont(BWTextInternal::Font &font, long endPos)
   ascFile.addNote(f.str().c_str());
   // now the reverse header
   if (input->readLong(2)) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
-  input->seek(pos+12, RVNG_SEEK_SET);
+  input->seek(pos+12, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -906,7 +906,7 @@ bool BWText::readFontsName(MWAWEntry &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=entry.begin(), endPos=entry.end();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   m_state->m_fileIdFontIdList.resize(0);
@@ -920,7 +920,7 @@ bool BWText::readFontsName(MWAWEntry &entry)
       f << "###";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
-      input->seek(endPos, RVNG_SEEK_SET);
+      input->seek(endPos, librevenge::RVNG_SEEK_SET);
       return i>0;
     }
     std::string name("");
@@ -938,7 +938,7 @@ bool BWText::readFontsName(MWAWEntry &entry)
     MWAW_DEBUG_MSG(("BWText::readFontNames: find extra data\n"));
     ascFile.addPos(pos);
     ascFile.addNote("FontNames:###");
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
   }
 
   return true;
@@ -959,14 +959,14 @@ bool BWText::readParagraph(MWAWParagraph &para, long endPos, bool inSection)
     bool ok= input->readLong(2)==1;
     fSz=ok ? (int)input->readULong(1) : 0;
     if (!ok || fSz < 19 || pos+4+fSz > endPos) {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
   }
 
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  para.setInterline(1.+double(input->readULong(1))/10., RVNG_PERCENT);
+  para.setInterline(1.+double(input->readULong(1))/10., librevenge::RVNG_PERCENT);
   // para spacing, before/after
   para.m_spacings[1] = para.m_spacings[2] =
                          (double(input->readULong(1))/10.)*6./72.;
@@ -989,7 +989,7 @@ bool BWText::readParagraph(MWAWParagraph &para, long endPos, bool inSection)
   }
   fl &=0xFFF0; // find 60 or 70
   if (fl) f << "flags=" << std::hex << fl << std::dec << ",";
-  para.m_marginsUnit = RVNG_POINT;
+  para.m_marginsUnit = librevenge::RVNG_POINT;
   for (int i=0; i<3; ++i) // left, right, indent
     para.m_margins[i==2 ? 0 : i+1]=double(input->readLong(4))/65536.;
   int nTabs=(int) input->readLong(2);
@@ -1042,10 +1042,10 @@ bool BWText::readParagraph(MWAWParagraph &para, long endPos, bool inSection)
     return true;
   // now the reverse header
   if ((int) input->readULong(1)!=fSz || input->readLong(2)!=0x100) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
-  input->seek(pos+4+fSz, RVNG_SEEK_SET);
+  input->seek(pos+4+fSz, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -1064,7 +1064,7 @@ bool BWText::readSection(MWAWEntry const &entry, BWTextInternal::Section &sec)
   libmwaw::DebugStream f;
 
   long pos=entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (input->readULong(2)!=0xdc) {
     MWAW_DEBUG_MSG(("BWText::readSection: the section header seems bad\n"));
     ascFile.addPos(pos);
@@ -1098,7 +1098,7 @@ bool BWText::readSection(MWAWEntry const &entry, BWTextInternal::Section &sec)
   if (colSep<48 || colSep>48)
     f << "colSep=" << colSep << ",";
   if (nCols>1)
-    sec.setColumns(nCols, m_mainParser->getPageWidth()/double(nCols), RVNG_INCH, colSep/72.);
+    sec.setColumns(nCols, m_mainParser->getPageWidth()/double(nCols), librevenge::RVNG_INCH, colSep/72.);
   for (int st=0; st<2; ++st) {
     f << ((st==0) ? "header=[" : "footer=[");
     sec.m_heights[st]=(int) input->readLong(2);
@@ -1133,7 +1133,7 @@ bool BWText::readSection(MWAWEntry const &entry, BWTextInternal::Section &sec)
   ascFile.addPos(pos);
   ascFile.addNote("Section-II:");
 
-  input->seek(entry.begin()+81,RVNG_SEEK_SET);
+  input->seek(entry.begin()+81,librevenge::RVNG_SEEK_SET);
   if (!readParagraph(sec.m_ruler, pos+0xda, true)) {
     sec.m_ruler=MWAWParagraph();
     MWAW_DEBUG_MSG(("BWText::readSection: can not read the section ruler\n"));
@@ -1141,7 +1141,7 @@ bool BWText::readSection(MWAWEntry const &entry, BWTextInternal::Section &sec)
     ascFile.addNote("Section(Ruler):###");
   }
 
-  input->seek(entry.begin()+0xda,RVNG_SEEK_SET);
+  input->seek(entry.begin()+0xda,librevenge::RVNG_SEEK_SET);
   pos=input->tell();
   f.str("");
   f << "Section-III:";
@@ -1150,7 +1150,7 @@ bool BWText::readSection(MWAWEntry const &entry, BWTextInternal::Section &sec)
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
-  input->seek(entry.end(),RVNG_SEEK_SET);
+  input->seek(entry.end(),librevenge::RVNG_SEEK_SET);
   return true;
 }
 

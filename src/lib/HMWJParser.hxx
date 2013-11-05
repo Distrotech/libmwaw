@@ -115,14 +115,14 @@ public:
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(RVNGTextInterface *documentInterface);
+  void parse(librevenge::RVNGTextInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(RVNGTextInterface *documentInterface);
+  void createDocument(librevenge::RVNGTextInterface *documentInterface);
 
   //! finds the different objects zones in a Hapanese File
   bool createZones();
@@ -163,7 +163,7 @@ protected:
   /** try to read a header of classic zone */
   bool readClassicHeader(HMWJZoneHeader &header, long endPos=-1);
   /** try to decode a zone */
-  bool decodeZone(MWAWEntry const &entry, RVNGBinaryData &data);
+  bool decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &data);
 
   /** try to read a printinfo zone*/
   bool readPrintInfo(MWAWEntry const &entry);

@@ -104,7 +104,7 @@ protected:
   //
 
   //! try to find a JPEG size
-  static bool findJPEGSize(RVNGBinaryData const &data, Vec2i &sz);
+  static bool findJPEGSize(librevenge::RVNGBinaryData const &data, Vec2i &sz);
 
 private:
   LWGraph(LWGraph const &orig);

@@ -458,8 +458,8 @@ struct Group : public CWStruct::DSET {
            m_idLinkedZonesMap.find(id)->second.isLinked();
   }
   /** add the frame name if needed */
-  bool addFrameName(int id, int subId, RVNGPropertyList &framePList,
-                    RVNGPropertyList &textboxPList) const {
+  bool addFrameName(int id, int subId, librevenge::RVNGPropertyList &framePList,
+                    librevenge::RVNGPropertyList &textboxPList) const {
     if (!isLinked(id)) return false;
     LinkedZones const &lZones = m_idLinkedZonesMap.find(id)->second;
     std::map<int, size_t>::const_iterator it = lZones.m_mapIdChild.find(subId);
@@ -468,13 +468,13 @@ struct Group : public CWStruct::DSET {
       return false;
     }
     if (it != lZones.m_mapIdChild.begin()) {
-      RVNGString fName;
+      librevenge::RVNGString fName;
       fName.sprintf("Frame%d-%d", id, subId);
       framePList.insert("libwpd:frame-name",fName);
     }
     ++it;
     if (it != lZones.m_mapIdChild.end()) {
-      RVNGString fName;
+      librevenge::RVNGString fName;
       fName.sprintf("Frame%d-%d", id, it->first);
       textboxPList.insert("libwpd:next-frame-name",fName);
     }
@@ -592,7 +592,7 @@ void SubDocument::parse(MWAWListenerPtr listener, libmwaw::SubDocumentType type,
   else {
     MWAW_DEBUG_MSG(("CWGraphInternal::SubDocument::parse: find unexpected type\n"));
   }
-  m_input->seek(pos, RVNG_SEEK_SET);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
 }
@@ -685,7 +685,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+8+16, RVNG_SEEK_SET); // avoid header+8 generic number
+  input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   shared_ptr<CWGraphInternal::Group> group(new CWGraphInternal::Group(zone));
@@ -715,7 +715,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
       MWAW_DEBUG_MSG(("CWGraph::readGroupZone: can not find definition size\n"));
-      input->seek(entry.end(), RVNG_SEEK_SET);
+      input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
       return shared_ptr<CWStruct::DSET>();
     }
 
@@ -724,7 +724,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
 
   long beginDefGroup = entry.end()-N*data0Length;
   if (long(input->tell())+42 <= beginDefGroup) {
-    input->seek(beginDefGroup-42, RVNG_SEEK_SET);
+    input->seek(beginDefGroup-42, librevenge::RVNG_SEEK_SET);
     pos = input->tell();
     if (!readGroupUnknown(*group, 42, -1)) {
       ascFile.addPos(pos);
@@ -732,7 +732,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
     }
   }
 
-  input->seek(beginDefGroup, RVNG_SEEK_SET);
+  input->seek(beginDefGroup, librevenge::RVNG_SEEK_SET);
 
   group->m_childs.resize(size_t(N));
   for (int i = 0; i < N; i++) {
@@ -751,10 +751,10 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
     }
-    input->seek(gEntry.end(), RVNG_SEEK_SET);
+    input->seek(gEntry.end(), librevenge::RVNG_SEEK_SET);
   }
 
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
 
   if (readGroupData(*group, entry.begin())) {
     // fixme: do something here
@@ -779,7 +779,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
     return shared_ptr<CWStruct::DSET>();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos+8+16, RVNG_SEEK_SET); // avoid header+8 generic number
+  input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   shared_ptr<CWGraphInternal::Bitmap> bitmap(new CWGraphInternal::Bitmap(zone));
@@ -797,7 +797,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
       ascFile.addNote(f.str().c_str());
 
       MWAW_DEBUG_MSG(("CWGraph::readBitmapZone: can not find definition size\n"));
-      input->seek(entry.end(), RVNG_SEEK_SET);
+      input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
       return shared_ptr<CWStruct::DSET>();
     }
 
@@ -807,7 +807,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
   bool sizeSet=false;
   int sizePos = (version() == 1) ? 0: 88;
   if (sizePos && pos+sizePos+4+N*data0Length < entry.end()) {
-    input->seek(pos+sizePos, RVNG_SEEK_SET);
+    input->seek(pos+sizePos, librevenge::RVNG_SEEK_SET);
     ascFile.addDelimiter(pos+sizePos,'[');
     int dim[2]; // ( we must add 2 to add the border )
     for (int j = 0; j < 2; j++)
@@ -827,7 +827,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
   if (long(input->tell())+(N+1)*data0Length <= entry.end())
     N++;
 
-  input->seek(entry.end()-N*data0Length, RVNG_SEEK_SET);
+  input->seek(entry.end()-N*data0Length, librevenge::RVNG_SEEK_SET);
 
   for (int i = 0; i < N; i++) {
     pos = input->tell();
@@ -864,10 +864,10 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
       ascFile.addDelimiter(input->tell(), '|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    input->seek(gEntry.end(), RVNG_SEEK_SET);
+    input->seek(gEntry.end(), librevenge::RVNG_SEEK_SET);
   }
 
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   pos = entry.end();
   bool ok = readBitmapColorMap( bitmap->m_colorMap);
   if (ok) {
@@ -875,7 +875,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
     ok = readBitmapData(*bitmap);
   }
   if (!ok)
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   // fixme: in general followed by another zone
   bitmap->m_otherChilds.push_back(bitmap->m_id+1);
@@ -899,7 +899,7 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
   }
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "GroupDef:";
@@ -1130,7 +1130,7 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
   long actPos = input->tell();
   if (actPos != entry.begin() && actPos != entry.end())
     ascFile.addDelimiter(input->tell(),'|');
-  input->seek(entry.end(), RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
 
   ascFile.addPos(entry.begin());
   ascFile.addNote(f.str().c_str());
@@ -1181,7 +1181,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
         pos = input->tell();
         sz = (long) input->readULong(4);
       }
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       bool parsed = true;
       switch(z->getSubType()) {
       case CWGraphInternal::Zone::T_QTim:
@@ -1215,9 +1215,9 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
       }
 
       if (!parsed) {
-        input->seek(pos+4+sz, RVNG_SEEK_SET);
+        input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
         if (long(input->tell()) != pos+4+sz) {
-          input->seek(pos, RVNG_SEEK_SET);
+          input->seek(pos, librevenge::RVNG_SEEK_SET);
           MWAW_DEBUG_MSG(("CWGraph::readGroupData: find a odd zone for type: %d\n",
                           z->getSubType()));
           return false;
@@ -1229,12 +1229,12 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
           f << "Entries(UnknownDATA)-" << z->getSubType();
         ascFile.addPos(pos);
         ascFile.addNote(f.str().c_str());
-        input->seek(pos+4+sz, RVNG_SEEK_SET);
+        input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
         if (numZoneExpected==2) {
           pos = input->tell();
           sz = (long) input->readULong(4);
           if (sz) {
-            input->seek(pos, RVNG_SEEK_SET);
+            input->seek(pos, librevenge::RVNG_SEEK_SET);
             MWAW_DEBUG_MSG(("CWGraph::readGroupData: two zones is not implemented for zone: %d\n",
                             z->getSubType()));
             return false;
@@ -1253,7 +1253,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
         continue;
       }
       MWAW_DEBUG_MSG(("CWGraph::readGroupData: find not null entry for a end of zone: %d\n", z->getSubType()));
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
     }
   }
 
@@ -1267,7 +1267,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
     ascFile.addPos(beginGroupPos);
     ascFile.addNote("###");
   }
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -1385,7 +1385,7 @@ bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone
     if (val) f << "g" << i << "=" << val << ",";
   }
   if (vers>=4 && input->tell() <= nextToRead) {
-    input->seek(nextToRead, RVNG_SEEK_SET);
+    input->seek(nextToRead, librevenge::RVNG_SEEK_SET);
     zone.m_rotate=(int) input->readLong(2);
     if (zone.m_rotate) {
       shape=shape.rotate(float(-zone.m_rotate), shape.m_bdBox.center());
@@ -1414,10 +1414,10 @@ bool CWGraph::readGroupHeader(CWGraphInternal::Group &group)
   f << "GroupDef(Header):";
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()!=endPos) || (sz && sz < 16)) {
     MWAW_DEBUG_MSG(("CWGraph::readGroupHeader: zone is too short\n"));
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
   if (sz == 0) {
@@ -1426,7 +1426,7 @@ bool CWGraph::readGroupHeader(CWGraphInternal::Group &group)
     return true;
   }
 
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   int N = (int) input->readULong(2);
   f << "N=" << N << ",";
   int type = (int) input->readLong(2);
@@ -1436,7 +1436,7 @@ bool CWGraph::readGroupHeader(CWGraphInternal::Group &group)
   if (val) f << "#unkn=" << val << ",";
   int fSz = (int) input->readULong(2);
   if (!fSz || N *fSz+12 != sz) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
   for (int i = 0; i < 2; i++) { // always 0, 2
@@ -1447,14 +1447,14 @@ bool CWGraph::readGroupHeader(CWGraphInternal::Group &group)
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
-  input->seek(pos+4+12, RVNG_SEEK_SET);
+  input->seek(pos+4+12, librevenge::RVNG_SEEK_SET);
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     if (readGroupUnknown(group, fSz, i))
       continue;
     ascFile.addPos(pos);
     ascFile.addNote("GroupDef(Head-###)");
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
 
   /** a list of int16 : find
@@ -1477,7 +1477,7 @@ bool CWGraph::readGroupHeader(CWGraphInternal::Group &group)
       }
       continue;
     }
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -1492,9 +1492,9 @@ bool CWGraph::readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
-  input->seek(pos+zoneSz, RVNG_SEEK_SET);
+  input->seek(pos+zoneSz, librevenge::RVNG_SEEK_SET);
   if (input->tell() != pos+zoneSz) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWGraph::readGroupUnknown: zone is too short\n"));
     return false;
   }
@@ -1511,7 +1511,7 @@ bool CWGraph::readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id
     return true;
   }
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int type = (int) input->readLong(2); // find -1, 0, 3
   if (type) f << "f0=" << type << ",";
   for (int i = 0; i < 6; i++) {
@@ -1541,7 +1541,7 @@ bool CWGraph::readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id
 
   if (input->tell() != pos+zoneSz) {
     ascFile.addDelimiter(input->tell(), '|');
-    input->seek(pos+zoneSz, RVNG_SEEK_SET);
+    input->seek(pos+zoneSz, librevenge::RVNG_SEEK_SET);
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
@@ -1564,14 +1564,14 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos || sz < 12) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWGraph::readPolygonData: file is too short\n"));
     return false;
   }
 
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(PolygonData):";
@@ -1583,7 +1583,7 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
   if (val) f << "f1=" << val << ",";
   int fSz = (int) input->readLong(2);
   if (sz != 12+fSz*N) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("CWGraph::readPolygonData: find odd data size\n"));
     return false;
   }
@@ -1625,9 +1625,9 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
 
-    input->seek(pos+fSz, RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (!isSpline) {
     // if (m_style.m_lineFlags & 1) : we must close the polygon ?
     for (size_t i = 0; i < size_t(N); ++i)
@@ -1664,15 +1664,15 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
   long pos = input->tell();
   if (!readPICT(*pZone)) {
     MWAW_DEBUG_MSG(("CWGraph::readPictData: find a odd pict\n"));
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
   pos = input->tell();
   long sz = (long) input->readULong(4);
-  input->seek(pos+4+sz, RVNG_SEEK_SET);
+  input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   if (long(input->tell()) != pos+4+sz) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote("###");
     MWAW_DEBUG_MSG(("CWGraph::readPictData: find a end zone for graphic\n"));
@@ -1685,19 +1685,19 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
   }
 
   // fixme: use readPS for a mac file and readOLE for a pc file
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (readPS(*pZone))
     return true;
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (readOLE(*pZone))
     return true;
 
   MWAW_DEBUG_MSG(("CWGraph::readPictData: unknown data file\n"));
 #ifdef DEBUG_WITH_FILES
   if (1) {
-    RVNGBinaryData file;
-    input->seek(pos+4, RVNG_SEEK_SET);
+    librevenge::RVNGBinaryData file;
+    input->seek(pos+4, librevenge::RVNG_SEEK_SET);
     input->readDataBlock(sz, file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f;
@@ -1712,7 +1712,7 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
     ascFile.addNote("Entries(PictData2):#");
   ascFile.skipZone(pos+4, pos+4+sz-1);
 
-  input->seek(pos+4+sz, RVNG_SEEK_SET);
+  input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -1727,7 +1727,7 @@ bool CWGraph::readPICT(CWGraphInternal::ZonePict &zone)
     return false;
   }
 
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("CWGraph::readPict: file is too short\n"));
     return false;
@@ -1737,12 +1737,12 @@ bool CWGraph::readPICT(CWGraphInternal::ZonePict &zone)
   f << "Entries(Graphic):";
 
   Box2f box;
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 
   MWAWPict::ReadResult res = MWAWPictData::check(input, (int)sz, box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("CWGraph::readPict: can not find the picture\n"));
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -1752,7 +1752,7 @@ bool CWGraph::readPICT(CWGraphInternal::ZonePict &zone)
 
   zone.m_entries[0].setBegin(pos+4);
   zone.m_entries[0].setEnd(endPos);
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
@@ -1769,7 +1769,7 @@ bool CWGraph::readPS(CWGraphInternal::ZonePict &zone)
     return false;
   }
   long endPos = pos+4+sz;
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
     return false;
   }
@@ -1778,8 +1778,8 @@ bool CWGraph::readPS(CWGraphInternal::ZonePict &zone)
   zone.m_entries[1].setType("PS");
 #ifdef DEBUG_WITH_FILES
   if (1) {
-    RVNGBinaryData file;
-    input->seek(pos+4, RVNG_SEEK_SET);
+    librevenge::RVNGBinaryData file;
+    input->seek(pos+4, librevenge::RVNG_SEEK_SET);
     input->readDataBlock(sz, file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f;
@@ -1791,7 +1791,7 @@ bool CWGraph::readPS(CWGraphInternal::ZonePict &zone)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(PostScript):";
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   ascFile.skipZone(pos+4, endPos-1);
@@ -1808,10 +1808,10 @@ bool CWGraph::readOLE(CWGraphInternal::ZonePict &zone)
   if (sz <= 24 || val != 0 || input->readULong(4) != 0x1000000)
     return false;
   long endPos = pos+4+sz;
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos)
     return false;
-  input->seek(pos+12, RVNG_SEEK_SET);
+  input->seek(pos+12, librevenge::RVNG_SEEK_SET);
   // now a dim in little endian
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
@@ -1826,8 +1826,8 @@ bool CWGraph::readOLE(CWGraphInternal::ZonePict &zone)
   zone.m_entries[1].setType("OLE");
 #ifdef DEBUG_WITH_FILES
   if (1) {
-    RVNGBinaryData file;
-    input->seek(pos+28, RVNG_SEEK_SET);
+    librevenge::RVNGBinaryData file;
+    input->seek(pos+28, librevenge::RVNG_SEEK_SET);
     input->readDataBlock(sz-24, file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f2;
@@ -1836,7 +1836,7 @@ bool CWGraph::readOLE(CWGraphInternal::ZonePict &zone)
   }
 #endif
 
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   ascFile.skipZone(pos+28, endPos-1);
@@ -1864,7 +1864,7 @@ bool CWGraph::readQTimeData(shared_ptr<CWGraphInternal::Zone> zone)
   }
   if (!ok) {
     MWAW_DEBUG_MSG(("CWGraph::readQTimeData: find a odd qtim zone\n"));
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1877,7 +1877,7 @@ bool CWGraph::readQTimeData(shared_ptr<CWGraphInternal::Zone> zone)
   pos = input->tell();
   if (!readNamedPict(*pZone)) {
     MWAW_DEBUG_MSG(("CWGraph::readQTimeData: find a odd named pict\n"));
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
   return true;
@@ -1899,7 +1899,7 @@ bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
   }
   long sz = (long) input->readULong(4);
   long endPos = pos+8+sz;
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos || !sz) {
     MWAW_DEBUG_MSG(("CWGraph::readNamedPict: file is too short\n"));
     return false;
@@ -1910,8 +1910,8 @@ bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
 
 #ifdef DEBUG_WITH_FILES
   if (1) {
-    RVNGBinaryData file;
-    input->seek(pos+8, RVNG_SEEK_SET);
+    librevenge::RVNGBinaryData file;
+    input->seek(pos+8, librevenge::RVNG_SEEK_SET);
     input->readDataBlock(sz, file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f;
@@ -1923,7 +1923,7 @@ bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(" << name << "):";
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   ascFile.skipZone(pos+8, endPos-1);
@@ -1947,13 +1947,13 @@ bool CWGraph::readBitmapColorMap(std::vector<MWAWColor> &cMap)
     ascFile.addNote("Nop");
     return true;
   }
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("CWGraph::readBitmapColorMap: file is too short\n"));
     return false;
   }
 
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(BitmapColor):";
   f << "unkn=" << input->readLong(4) << ",";
@@ -1974,7 +1974,7 @@ bool CWGraph::readBitmapColorMap(std::vector<MWAWColor> &cMap)
     cMap[(size_t)i] = MWAWColor(col[0], col[1], col[2]);
   }
 
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
@@ -1987,7 +1987,7 @@ bool CWGraph::readBitmapData(CWGraphInternal::Bitmap &zone)
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos || !sz) {
     MWAW_DEBUG_MSG(("CWGraph::readBitmapData: file is too short\n"));
     return false;
@@ -2255,7 +2255,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, std::vector<size_t> const
         reinterpret_cast<CWGraphInternal::ZoneZone const &>(*child);
       shared_ptr<CWStruct::DSET> dset=m_mainParser->getZone(zone.m_id);
       if (dset && dset->m_fileType==4) {
-        MWAWPosition pos(box[0], box.size(), RVNG_POINT);
+        MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
         sendBitmap(zone.m_id, true, pos);
         continue;
       }
@@ -2327,7 +2327,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
     Box2f box=group.m_box;
     graphicListener->startGraphic(box);
     sendGroup(group, group.m_blockToSendList, *graphicListener);
-    RVNGBinaryData data;
+    librevenge::RVNGBinaryData data;
     std::string type;
     if (graphicListener->endGraphic(data,type)) {
       MWAWPosition pos(position);
@@ -2335,7 +2335,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
       if (pos.size()[0]<=0 || pos.size()[1]<=0)
         pos.setSize(box.size());
       if (pos.m_anchorTo==MWAWPosition::Unknown) {
-        pos=MWAWPosition(box[0], box.size(), RVNG_POINT);
+        pos=MWAWPosition(box[0], box.size(), librevenge::RVNG_POINT);
         pos.setRelativePosition(suggestedAnchor);
         if (suggestedAnchor == MWAWPosition::Page) {
           int pg = isSlide ? 0 : group.m_page > 0 ? group.m_page : 1;
@@ -2356,7 +2356,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
     MWAWPosition lPos;
     lPos.m_anchorTo=MWAWPosition::Frame;
     MWAWSubDocumentPtr doc(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, group.m_id, lPos));
-    RVNGPropertyList extras;
+    librevenge::RVNGPropertyList extras;
     extras.insert("style:background-transparency", "100%");
     listener->insertTextBox(position, doc, extras);
     return true;
@@ -2441,7 +2441,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
       pos.setOrigin(box[0]);
       pos.setSize(box.size());
       if (pos.m_anchorTo==MWAWPosition::Unknown) {
-        pos=MWAWPosition(box[0], box.size(), RVNG_POINT);
+        pos=MWAWPosition(box[0], box.size(), librevenge::RVNG_POINT);
         pos.setRelativePosition(suggestedAnchor);
         if (suggestedAnchor == MWAWPosition::Page) {
           int pg = page > 0 ? page : 1;
@@ -2458,10 +2458,10 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
       }
       graphicListener->startGraphic(box);
       sendGroup(group, groupList, *graphicListener);
-      RVNGBinaryData data;
+      librevenge::RVNGBinaryData data;
       std::string type;
       if (graphicListener->endGraphic(data,type)) {
-        RVNGPropertyList extras;
+        librevenge::RVNGPropertyList extras;
         extras.insert("style:background-transparency", "100%");
         listener->insertPicture(pos, data, type, extras);
       }
@@ -2523,7 +2523,7 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
     graphicListener->startGraphic(box);
     shared_ptr<MWAWSubDocument> doc(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, zId));
     graphicListener->insertTextBox(box, doc, cStyle);
-    RVNGBinaryData data;
+    librevenge::RVNGBinaryData data;
     std::string mime;
     if (graphicListener->endGraphic(data,mime))
       listener->insertPicture(pos, data, mime);
@@ -2538,7 +2538,7 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
     MWAW_DEBUG_MSG(("find old subs zone\n"));
     return false;
   }
-  RVNGPropertyList extras;
+  librevenge::RVNGPropertyList extras;
   if (dset && dset->m_fileType==1) { // checkme: use style for textbox
     MWAWColor color;
     if (cStyle.hasSurfaceColor() && getSurfaceColor(cStyle, color))
@@ -2558,7 +2558,7 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
   } else
     extras.insert("style:background-transparency", "100%");
   if (createFrame) {
-    RVNGPropertyList textboxExtras;
+    librevenge::RVNGPropertyList textboxExtras;
     group.addFrameName(zId, childZone.m_subId, extras, textboxExtras);
     shared_ptr<MWAWSubDocument> doc;
     if (!isLinked || childZone.m_subId==0) {
@@ -2643,7 +2643,7 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
   //! let go
   int fSz = bitmap.m_bitmapType;
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  input->seek(bitmap.m_entry.begin(), RVNG_SEEK_SET);
+  input->seek(bitmap.m_entry.begin(), librevenge::RVNG_SEEK_SET);
   for (int r = 0; r < bitmap.m_bitmapSize[1]; r++) {
     for (int c = 0; c < bitmap.m_bitmapSize[0]; c++) {
       long val = (long) input->readULong(fSz);
@@ -2673,7 +2673,7 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
     }
   }
 
-  RVNGBinaryData data;
+  librevenge::RVNGBinaryData data;
   std::string type;
   if (!bmap->getBinary(data,type)) return false;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0) {
@@ -2691,7 +2691,7 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
 }
 
 bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
-                          MWAWPosition pos, RVNGPropertyList extras)
+                          MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   bool send = false;
   bool posOk = pos.size()[0] > 0 && pos.size()[1] > 0;
@@ -2708,7 +2708,7 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
       if (sz[1]<0) sz[1]=0;
       pos.setSize(sz);
     }
-    input->seek(entry.begin(), RVNG_SEEK_SET);
+    input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
 
     switch(pict.getSubType()) {
     case CWGraphInternal::Zone::T_Movie:
@@ -2716,7 +2716,7 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
       shared_ptr<MWAWPict> thePict(MWAWPictData::get(input, (int)entry.length()));
       if (thePict) {
         if (!send && listener) {
-          RVNGBinaryData data;
+          librevenge::RVNGBinaryData data;
           std::string type;
           if (thePict->getBinary(data,type))
             listener->insertPicture(pos, data, type, extras);
@@ -2740,8 +2740,8 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
     case CWGraphInternal::Zone::T_QTim:
     default:
       if (!send && listener) {
-        RVNGBinaryData data;
-        input->seek(entry.begin(), RVNG_SEEK_SET);
+        librevenge::RVNGBinaryData data;
+        input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
         input->readDataBlock(entry.length(), data);
         listener->insertPicture(pos, data, "image/pict", extras);
       }
@@ -2751,8 +2751,8 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
 
 #ifdef DEBUG_WITH_FILES
     m_parserState->m_asciiFile.skipZone(entry.begin(), entry.end()-1);
-    RVNGBinaryData file;
-    input->seek(entry.begin(), RVNG_SEEK_SET);
+    librevenge::RVNGBinaryData file;
+    input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
     input->readDataBlock(entry.length(), file);
     static int volatile pictName = 0;
     libmwaw::DebugStream f;
@@ -2772,7 +2772,7 @@ void CWGraph::flushExtra()
     if (zone->m_parsed)
       continue;
     if (m_parserState->m_listener) m_parserState->m_listener->insertEOL();
-    MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),RVNG_POINT);
+    MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),librevenge::RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendGroup(iter->first, false, pos);
   }

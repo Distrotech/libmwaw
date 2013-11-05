@@ -116,21 +116,21 @@ shared_ptr<MWAWCell> MWAWTable::get(int id)
   return m_cellsList[size_t(id)];
 }
 
-void MWAWTable::addTablePropertiesTo(RVNGPropertyList &propList, RVNGPropertyListVector &columns) const
+void MWAWTable::addTablePropertiesTo(librevenge::RVNGPropertyList &propList, librevenge::RVNGPropertyListVector &columns) const
 {
   switch(m_alignment) {
   case Paragraph:
     break;
   case Left:
     propList.insert("table:align", "left");
-    propList.insert("fo:margin-left", m_leftMargin, RVNG_POINT);
+    propList.insert("fo:margin-left", m_leftMargin, librevenge::RVNG_POINT);
     break;
   case Center:
     propList.insert("table:align", "center");
     break;
   case Right:
     propList.insert("table:align", "right");
-    propList.insert("fo:margin-right", m_rightMargin, RVNG_POINT);
+    propList.insert("fo:margin-right", m_rightMargin, librevenge::RVNG_POINT);
     break;
   default:
     break;
@@ -141,12 +141,12 @@ void MWAWTable::addTablePropertiesTo(RVNGPropertyList &propList, RVNGPropertyLis
   size_t nCols = m_colsSize.size();
   float tableWidth = 0;
   for (size_t c = 0; c < nCols; ++c) {
-    RVNGPropertyList column;
-    column.insert("style:column-width", m_colsSize[c], RVNG_POINT);
+    librevenge::RVNGPropertyList column;
+    column.insert("style:column-width", m_colsSize[c], librevenge::RVNG_POINT);
     columns.append(column);
     tableWidth += m_colsSize[c];
   }
-  propList.insert("style:width", tableWidth, RVNG_POINT);
+  propList.insert("style:width", tableWidth, librevenge::RVNG_POINT);
 }
 
 ////////////////////////////////////////////////////////////
@@ -191,7 +191,7 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
     pStyle.m_lineWidth=(float)border.m_width;
     pStyle.m_lineColor=border.m_color;
 
-    MWAWPosition lPos(box[0], box.size(), RVNG_POINT);
+    MWAWPosition lPos(box[0], box.size(), librevenge::RVNG_POINT);
     lPos.setRelativePosition(MWAWPosition::Frame);
     lPos.setOrder(-1);
     if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line1)
@@ -459,7 +459,7 @@ bool MWAWTable::sendTable(MWAWContentListenerPtr listener, bool inFrame)
     sendExtraLines(listener);
   listener->openTable(*this);
   for (size_t r = 0; r < m_numRows; ++r) {
-    listener->openTableRow(m_rowsSize[r], RVNG_POINT);
+    listener->openTableRow(m_rowsSize[r], librevenge::RVNG_POINT);
     for (size_t c = 0; c < m_numCols; ++c) {
       int tablePos = getCellIdPos(int(c), int(r));
       if (tablePos<0)

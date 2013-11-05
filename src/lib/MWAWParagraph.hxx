@@ -43,8 +43,8 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWList.hxx"
 
-class RVNGPropertyList;
-class RVNGPropertyListVector;
+class librevenge::RVNGPropertyList;
+class librevenge::RVNGPropertyListVector;
 
 /** class to store a tab use by MWAWParagraph */
 struct MWAWTabStop {
@@ -55,7 +55,7 @@ struct MWAWTabStop {
     m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_decimalCharacter(decimalCharacter) {
   }
   //! add a tab to the propList
-  void addTo(RVNGPropertyListVector &propList, double decalX=0.0) const;
+  void addTo(librevenge::RVNGPropertyListVector &propList, double decalX=0.0) const;
   //! operator==
   bool operator==(MWAWTabStop const &tabs) const {
     return cmp(tabs)==0;
@@ -118,15 +118,15 @@ public:
     m_borders.resize(newSize, empty);
   }
   //! set the interline
-  void setInterline(double value, RVNGUnit unit, LineSpacingType type=Fixed) {
+  void setInterline(double value, librevenge::RVNGUnit unit, LineSpacingType type=Fixed) {
     m_spacings[0]=value;
     m_spacingsInterlineUnit=unit;
     m_spacingsInterlineType=type;
   }
   //! add to the propList
-  void addTo(RVNGPropertyList &propList, bool inTable) const;
+  void addTo(librevenge::RVNGPropertyList &propList, bool inTable) const;
   //! add tabs to the propList
-  void addTabsTo(RVNGPropertyListVector &propList, double decalX=0.0) const;
+  void addTabsTo(librevenge::RVNGPropertyListVector &propList, double decalX=0.0) const;
 
   //! insert the set values of para in the actual paragraph
   void insert(MWAWParagraph const &para);
@@ -140,7 +140,7 @@ public:
    * - 2: right margin*/
   Variable<double> m_margins[3]; // 0: first line left, 1: left, 2: right
   /** the margins INCH, ... */
-  Variable<RVNGUnit> m_marginsUnit;
+  Variable<librevenge::RVNGUnit> m_marginsUnit;
   /** the line spacing
    *
    * - 0: interline
@@ -148,7 +148,7 @@ public:
    * - 2: after */
   Variable<double> m_spacings[3]; // 0: interline, 1: before, 2: after
   /** the interline unit PERCENT or INCH, ... */
-  Variable<RVNGUnit> m_spacingsInterlineUnit;
+  Variable<librevenge::RVNGUnit> m_spacingsInterlineUnit;
   /** the interline type: fixed, atLeast, ... */
   Variable<LineSpacingType> m_spacingsInterlineType;
   //! the tabulations

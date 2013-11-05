@@ -57,16 +57,16 @@ struct State {
   State() : m_encoder(), m_listIdToPropertyMap() {
   }
   //! try to retrieve a list element property
-  bool retrieveListElement(int id, int level, RVNGPropertyList &list) const;
+  bool retrieveListElement(int id, int level, librevenge::RVNGPropertyList &list) const;
   //! add a list definition in the list property map
-  void addListElement(RVNGPropertyList const &list);
+  void addListElement(librevenge::RVNGPropertyList const &list);
   //! the encoder
   MWAWPropertyHandlerEncoder m_encoder;
   //! a multimap list id to property list item map
-  std::multimap<int, RVNGPropertyList> m_listIdToPropertyMap;
+  std::multimap<int, librevenge::RVNGPropertyList> m_listIdToPropertyMap;
 };
 
-void State::addListElement(RVNGPropertyList const &list)
+void State::addListElement(librevenge::RVNGPropertyList const &list)
 {
   if (!list["libwpd:id"] || !list["libwpd:level"]) {
     MWAW_DEBUG_MSG(("MWAWGraphicInterfaceInternal::addListElement: can not find the id or the level\n"));
@@ -74,7 +74,7 @@ void State::addListElement(RVNGPropertyList const &list)
   }
   int id=list["libwpd:id"]->getInt();
   int level=list["libwpd:level"]->getInt();
-  std::multimap<int, RVNGPropertyList>::iterator it=m_listIdToPropertyMap.lower_bound(id);
+  std::multimap<int, librevenge::RVNGPropertyList>::iterator it=m_listIdToPropertyMap.lower_bound(id);
   while (it!=m_listIdToPropertyMap.end() && it->first == id) {
     if (it->second["libwpd:level"]->getInt()==level) {
       m_listIdToPropertyMap.erase(it);
@@ -82,12 +82,12 @@ void State::addListElement(RVNGPropertyList const &list)
     }
     ++it;
   }
-  m_listIdToPropertyMap.insert(std::multimap<int, RVNGPropertyList>::value_type(id,list));
+  m_listIdToPropertyMap.insert(std::multimap<int, librevenge::RVNGPropertyList>::value_type(id,list));
 }
 
-bool State::retrieveListElement(int id, int level, RVNGPropertyList &list) const
+bool State::retrieveListElement(int id, int level, librevenge::RVNGPropertyList &list) const
 {
-  std::multimap<int, RVNGPropertyList>::const_iterator it=m_listIdToPropertyMap.lower_bound(id);
+  std::multimap<int, librevenge::RVNGPropertyList>::const_iterator it=m_listIdToPropertyMap.lower_bound(id);
   while (it!=m_listIdToPropertyMap.end() && it->first == id) {
     if (it->second["libwpd:level"]->getInt()==level) {
       list = it->second;
@@ -109,7 +109,7 @@ MWAWGraphicInterface::~MWAWGraphicInterface()
 {
 }
 
-bool MWAWGraphicInterface::getBinaryResult(RVNGBinaryData &result, std::string &mimeType)
+bool MWAWGraphicInterface::getBinaryResult(librevenge::RVNGBinaryData &result, std::string &mimeType)
 {
   if (!m_state->m_encoder.getData(result))
     return false;
@@ -117,7 +117,7 @@ bool MWAWGraphicInterface::getBinaryResult(RVNGBinaryData &result, std::string &
   return true;
 }
 
-void MWAWGraphicInterface::startDocument(const ::RVNGPropertyList &list)
+void MWAWGraphicInterface::startDocument(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("StartDocument", list);
 }
@@ -127,12 +127,12 @@ void MWAWGraphicInterface::endDocument()
   m_state->m_encoder.insertElement("EndDocument");
 }
 
-void MWAWGraphicInterface::setDocumentMetaData(const RVNGPropertyList &list)
+void MWAWGraphicInterface::setDocumentMetaData(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("SetDocumentMetaData", list);
 }
 
-void MWAWGraphicInterface::startPage(const ::RVNGPropertyList &list)
+void MWAWGraphicInterface::startPage(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("StartPage", list);
 }
@@ -142,12 +142,12 @@ void MWAWGraphicInterface::endPage()
   m_state->m_encoder.insertElement("EndPage");
 }
 
-void MWAWGraphicInterface::setStyle(const ::RVNGPropertyList &list, const ::RVNGPropertyListVector &gradient)
+void MWAWGraphicInterface::setStyle(const ::librevenge::RVNGPropertyList &list, const ::librevenge::RVNGPropertyListVector &gradient)
 {
   m_state->m_encoder.insertElement("SetStyle", list, gradient);
 }
 
-void MWAWGraphicInterface::startLayer(const ::RVNGPropertyList &list)
+void MWAWGraphicInterface::startLayer(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("StartLayer", list);
 }
@@ -157,7 +157,7 @@ void MWAWGraphicInterface::endLayer()
   m_state->m_encoder.insertElement("EndLayer");
 }
 
-void MWAWGraphicInterface::startEmbeddedGraphics(const ::RVNGPropertyList &list)
+void MWAWGraphicInterface::startEmbeddedGraphics(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("StartEmbeddedGraphics", list);
 }
@@ -167,37 +167,37 @@ void MWAWGraphicInterface::endEmbeddedGraphics()
   m_state->m_encoder.insertElement("StartEmbeddedGraphics");
 }
 
-void MWAWGraphicInterface::drawRectangle(const ::RVNGPropertyList &list)
+void MWAWGraphicInterface::drawRectangle(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("DrawRectangle", list);
 }
 
-void MWAWGraphicInterface::drawEllipse(const ::RVNGPropertyList &list)
+void MWAWGraphicInterface::drawEllipse(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("DrawEllipse", list);
 }
 
-void MWAWGraphicInterface::drawPolygon(const ::RVNGPropertyListVector &vertices)
+void MWAWGraphicInterface::drawPolygon(const ::librevenge::RVNGPropertyListVector &vertices)
 {
-  m_state->m_encoder.insertElement("DrawPolygon", RVNGPropertyList(), vertices);
+  m_state->m_encoder.insertElement("DrawPolygon", librevenge::RVNGPropertyList(), vertices);
 }
 
-void MWAWGraphicInterface::drawPolyline(const ::RVNGPropertyListVector &vertices)
+void MWAWGraphicInterface::drawPolyline(const ::librevenge::RVNGPropertyListVector &vertices)
 {
-  m_state->m_encoder.insertElement("DrawPolyline", RVNGPropertyList(), vertices);
+  m_state->m_encoder.insertElement("DrawPolyline", librevenge::RVNGPropertyList(), vertices);
 }
 
-void MWAWGraphicInterface::drawPath(const ::RVNGPropertyListVector &path)
+void MWAWGraphicInterface::drawPath(const ::librevenge::RVNGPropertyListVector &path)
 {
-  m_state->m_encoder.insertElement("DrawPath", RVNGPropertyList(), path);
+  m_state->m_encoder.insertElement("DrawPath", librevenge::RVNGPropertyList(), path);
 }
 
-void MWAWGraphicInterface::drawGraphicObject(const ::RVNGPropertyList &list, const ::RVNGBinaryData &binaryData)
+void MWAWGraphicInterface::drawGraphicObject(const ::librevenge::RVNGPropertyList &list, const ::librevenge::RVNGBinaryData &binaryData)
 {
   m_state->m_encoder.insertElement("DrawGraphicObject", list, binaryData);
 }
 
-void MWAWGraphicInterface::startTextObject(const ::RVNGPropertyList &list, const ::RVNGPropertyListVector &path)
+void MWAWGraphicInterface::startTextObject(const ::librevenge::RVNGPropertyList &list, const ::librevenge::RVNGPropertyListVector &path)
 {
   m_state->m_encoder.insertElement("StartTextObject", list, path);
 }
@@ -217,7 +217,7 @@ void MWAWGraphicInterface::insertSpace()
   m_state->m_encoder.insertElement("InsertSpace");
 }
 
-void MWAWGraphicInterface::insertText(const RVNGString &text)
+void MWAWGraphicInterface::insertText(const librevenge::RVNGString &text)
 {
   m_state->m_encoder.characters(text.cstr());
 }
@@ -228,30 +228,30 @@ void MWAWGraphicInterface::insertLineBreak()
   insertText("\n");
 }
 
-void MWAWGraphicInterface::insertField(const RVNGString &type, const RVNGPropertyList &list)
+void MWAWGraphicInterface::insertField(const librevenge::RVNGString &type, const librevenge::RVNGPropertyList &list)
 {
-  RVNGPropertyList pList(list);
+  librevenge::RVNGPropertyList pList(list);
   pList.insert("libmwaw:type", type);
   m_state->m_encoder.insertElement("InsertField", pList);
 }
 
-void MWAWGraphicInterface::defineOrderedListLevel(const RVNGPropertyList &list)
+void MWAWGraphicInterface::defineOrderedListLevel(const librevenge::RVNGPropertyList &list)
 {
   m_state->addListElement(list);
 }
 
-void MWAWGraphicInterface::defineUnorderedListLevel(const RVNGPropertyList &list)
+void MWAWGraphicInterface::defineUnorderedListLevel(const librevenge::RVNGPropertyList &list)
 {
   m_state->addListElement(list);
 }
 
 // OSNOLA: checkme: we must pass the list level definition there...
-void MWAWGraphicInterface::openOrderedListLevel(const RVNGPropertyList &list)
+void MWAWGraphicInterface::openOrderedListLevel(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenOrderedListLevel", list);
 }
 
-void MWAWGraphicInterface::openUnorderedListLevel(const RVNGPropertyList &list)
+void MWAWGraphicInterface::openUnorderedListLevel(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenUnorderedListLevel", list);
 }
@@ -266,7 +266,7 @@ void MWAWGraphicInterface::closeUnorderedListLevel()
   m_state->m_encoder.insertElement("CloseOrderedListLevel");
 }
 
-void MWAWGraphicInterface::openListElement(const RVNGPropertyList &list, const RVNGPropertyListVector &tabStops)
+void MWAWGraphicInterface::openListElement(const librevenge::RVNGPropertyList &list, const librevenge::RVNGPropertyListVector &tabStops)
 {
   m_state->m_encoder.insertElement("OpenListElement", list, tabStops);
 }
@@ -276,7 +276,7 @@ void MWAWGraphicInterface::closeListElement()
   m_state->m_encoder.insertElement("CloseListElement");
 }
 
-void MWAWGraphicInterface::openParagraph(const RVNGPropertyList &list, const RVNGPropertyListVector &tabStops)
+void MWAWGraphicInterface::openParagraph(const librevenge::RVNGPropertyList &list, const librevenge::RVNGPropertyListVector &tabStops)
 {
   m_state->m_encoder.insertElement("OpenParagraph", list, tabStops);
 }
@@ -286,7 +286,7 @@ void MWAWGraphicInterface::closeParagraph()
   m_state->m_encoder.insertElement("CloseParagraph");
 }
 
-void MWAWGraphicInterface::openSpan(const RVNGPropertyList &list)
+void MWAWGraphicInterface::openSpan(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenSpan", list);
 }

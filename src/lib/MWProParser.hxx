@@ -45,7 +45,7 @@
 
 #include "MWAWParser.hxx"
 
-class RVNGBinaryData;
+class librevenge::RVNGBinaryData;
 
 namespace MWProParserInternal
 {
@@ -81,20 +81,20 @@ public:
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(RVNGTextInterface *documentInterface);
+  void parse(librevenge::RVNGTextInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(RVNGTextInterface *documentInterface);
+  void createDocument(librevenge::RVNGTextInterface *documentInterface);
 
   //! finds the different objects zones
   bool createZones();
 
   //! retrieve the data which corresponds to a zone
-  bool getZoneData(RVNGBinaryData &data, int blockId);
+  bool getZoneData(librevenge::RVNGBinaryData &data, int blockId);
 
   //! return the chain list of block ( used to get free blocks)
   bool getFreeZoneList(int blockId, std::vector<int> &blockLists);
@@ -144,14 +144,14 @@ protected:
 
   //! try to send a picture
   bool sendPictureZone(int blockId, MWAWPosition const &pictPos,
-                       RVNGPropertyList extras = RVNGPropertyList());
+                       librevenge::RVNGPropertyList extras = librevenge::RVNGPropertyList());
 
   //! send a textbox zone
   bool sendTextBoxZone(int blockId, MWAWPosition const &pos,
-                       RVNGPropertyList extras = RVNGPropertyList());
+                       librevenge::RVNGPropertyList extras = librevenge::RVNGPropertyList());
 
   //! try to send an empty zone (can exist in MWPro1.5)
-  bool sendEmptyFrameZone(MWAWPosition const &pos, RVNGPropertyList extras);
+  bool sendEmptyFrameZone(MWAWPosition const &pos, librevenge::RVNGPropertyList extras);
 
   //
   // low level
@@ -169,7 +169,7 @@ protected:
 #endif
 
   //! try to send a picture
-  bool sendPicture(shared_ptr<MWProParserInternal::Zone> zone, MWAWPosition pictPos, RVNGPropertyList const &extras);
+  bool sendPicture(shared_ptr<MWProParserInternal::Zone> zone, MWAWPosition pictPos, librevenge::RVNGPropertyList const &extras);
 
   //! try to send a text
   bool sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool mainZone = false);

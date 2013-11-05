@@ -142,7 +142,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_parser);
   long pos = m_input->tell();
   reinterpret_cast<HMWJParser *>(m_parser)->sendText(m_id, 0);
-  m_input->seek(pos, RVNG_SEEK_SET);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
 
@@ -185,7 +185,7 @@ bool HMWJParser::canSendTextAsGraphic(long id, long cPos)
 
 bool HMWJParser::sendZone(long zId)
 {
-  MWAWPosition pos(Vec2i(0,0), Vec2i(0,0), RVNG_POINT);
+  MWAWPosition pos(Vec2i(0,0), Vec2i(0,0), librevenge::RVNG_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
   return m_graphParser->sendFrame(zId, pos);
 }
@@ -244,7 +244,7 @@ bool HMWJParser::readClassicHeader(HMWJZoneHeader &header, long endPos)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void HMWJParser::parse(RVNGTextInterface *docInterface)
+void HMWJParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -280,7 +280,7 @@ void HMWJParser::parse(RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void HMWJParser::createDocument(RVNGTextInterface *documentInterface)
+void HMWJParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -328,7 +328,7 @@ bool HMWJParser::createZones()
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   if (!readHeaderEnd())
-    input->seek(pos+34, RVNG_SEEK_SET);
+    input->seek(pos+34, librevenge::RVNG_SEEK_SET);
   if (!readZonesList())
     return false;
   m_state->m_zonesIdList.clear();
@@ -414,13 +414,13 @@ bool HMWJParser::checkEntry(MWAWEntry &entry)
   if (entry.begin()<=0 || !input->checkPosition(entry.begin()))
     return false;
   long pos = input->tell();
-  input->seek(entry.begin(), RVNG_SEEK_SET);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
 
   int type = (int) input->readULong(2);
   long val = input->readLong(2); // always 0?
   long length = (long) input->readULong(4);
   if (type >= 32 || length < 8 || !input->checkPosition(entry.begin()+length)) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -445,7 +445,7 @@ bool HMWJParser::checkEntry(MWAWEntry &entry)
   if (val) f << "#unkn=" << val << ",";
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -508,7 +508,7 @@ bool HMWJParser::readZone(MWAWEntry &entry)
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   f << "Entries(" << entry.name() << "):";
   int type = (int) input->readULong(2); // number between 0 and f
@@ -599,7 +599,7 @@ bool HMWJParser::readPrintInfo(MWAWEntry const &entry)
     return false;
   }
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
@@ -626,7 +626,7 @@ bool HMWJParser::readPrintInfo(MWAWEntry const &entry)
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
   pos += 44;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   f.str("");
   f << "PrintInfo(B):";
 
@@ -684,7 +684,7 @@ bool HMWJParser::readPrintInfo(MWAWEntry const &entry)
   asciiFile.addNote(f.str().c_str());
   if (input->tell()!=entry.end()) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(entry.end(), RVNG_SEEK_SET);
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -712,7 +712,7 @@ bool HMWJParser::readZoneA(MWAWEntry const &entry)
   libmwaw::DebugFile &asciiFile = ascii();
   libmwaw::DebugStream f;
   entry.setParsed(true);
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   // first read the header (supposing that fieldSize=4)
   f << entry.name() << "[header]:";
   HMWJZoneHeader mainHeader(true);
@@ -742,7 +742,7 @@ bool HMWJParser::readZoneA(MWAWEntry const &entry)
   asciiFile.addNote(f.str().c_str());
   if (input->tell()!=headerEnd) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(headerEnd, RVNG_SEEK_SET);
+    input->seek(headerEnd, librevenge::RVNG_SEEK_SET);
   }
 
   // find now 5 zone with size 2a, 10, 24, 1ea, 10 or 0x38
@@ -775,7 +775,7 @@ bool HMWJParser::readZoneA(MWAWEntry const &entry)
     }
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(zoneEnd, RVNG_SEEK_SET);
+    input->seek(zoneEnd, librevenge::RVNG_SEEK_SET);
   }
   pos = input->tell();
   if (pos!=endPos) {
@@ -812,7 +812,7 @@ bool HMWJParser::readZoneB(MWAWEntry const &entry)
   libmwaw::DebugFile &asciiFile = ascii();
   libmwaw::DebugStream f;
   entry.setParsed(true);
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   // first read the header (supposing that fieldSize=4)
   f << entry.name() << "[header]:";
   HMWJZoneHeader mainHeader(true);
@@ -835,11 +835,11 @@ bool HMWJParser::readZoneB(MWAWEntry const &entry)
     f << entry.name() << "-data" << i << ":";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    input->seek(pos+44, RVNG_SEEK_SET);
+    input->seek(pos+44, librevenge::RVNG_SEEK_SET);
   }
   if (input->tell()!=headerEnd) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(headerEnd, RVNG_SEEK_SET);
+    input->seek(headerEnd, librevenge::RVNG_SEEK_SET);
   }
 
   for (int i = 0; i < mainHeader.m_n; i++) {
@@ -856,7 +856,7 @@ bool HMWJParser::readZoneB(MWAWEntry const &entry)
     }
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    if (dataSz) input->seek(dataSz, RVNG_SEEK_CUR);
+    if (dataSz) input->seek(dataSz, librevenge::RVNG_SEEK_CUR);
   }
   pos = input->tell();
   if (pos!=endPos) {
@@ -915,7 +915,7 @@ bool HMWJParser::readHeaderEnd()
   asciiFile.addNote(f.str().c_str());
   if (input->tell()!=endPos) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -939,7 +939,7 @@ bool HMWJParser::readZoneWithHeader(MWAWEntry const &entry)
 
   long pos = entry.begin()+8; // skip header
   long endPos = entry.end();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   // first read the header
   f << entry.name() << "[header]:";
@@ -968,7 +968,7 @@ bool HMWJParser::readZoneWithHeader(MWAWEntry const &entry)
   f << "],";
   if (input->tell()!=headerEnd) {
     asciiFile.addDelimiter(input->tell(),'|');
-    input->seek(headerEnd, RVNG_SEEK_SET);
+    input->seek(headerEnd, librevenge::RVNG_SEEK_SET);
   }
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
@@ -987,7 +987,7 @@ bool HMWJParser::readZoneWithHeader(MWAWEntry const &entry)
     }
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    if (dataSz) input->seek(dataSz, RVNG_SEEK_CUR);
+    if (dataSz) input->seek(dataSz, librevenge::RVNG_SEEK_CUR);
   }
   asciiFile.addPos(endPos);
   asciiFile.addNote("_");
@@ -1012,7 +1012,7 @@ bool HMWJParser::readZoneWithHeader(MWAWEntry const &entry)
     }
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-    if (dataSz) input->seek(dataSz, RVNG_SEEK_CUR);
+    if (dataSz) input->seek(dataSz, librevenge::RVNG_SEEK_CUR);
   }
   return true;
 }
@@ -1035,7 +1035,7 @@ bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
     MWAW_DEBUG_MSG(("HMWJParser::checkHeader: file is too short\n"));
     return false;
   }
-  input->seek(0,RVNG_SEEK_SET);
+  input->seek(0,librevenge::RVNG_SEEK_SET);
   int head[3];
   for (int i = 0; i < 3; i++)
     head[i] = (int) input->readULong(2);
@@ -1069,18 +1069,18 @@ bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
     if (i == 5) {
       ascii().addPos(pos);
       ascii().addNote("FileHeader[DocTags]:");
-      input->seek(pos+fieldSizes[i], RVNG_SEEK_SET);
+      input->seek(pos+fieldSizes[i], librevenge::RVNG_SEEK_SET);
       pos=input->tell();
       MWAWEntry printInfo;
       printInfo.setBegin(pos);
       printInfo.setLength(164);
       if (!readPrintInfo(printInfo))
-        input->seek(pos+164, RVNG_SEEK_SET);
+        input->seek(pos+164, librevenge::RVNG_SEEK_SET);
 
       pos=input->tell();
       ascii().addPos(pos);
       ascii().addNote("FileHeader[DocEnd]");
-      input->seek(pos+60, RVNG_SEEK_SET);
+      input->seek(pos+60, librevenge::RVNG_SEEK_SET);
       continue;
     }
     int fSz = (int) input->readULong(1);
@@ -1090,7 +1090,7 @@ bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
       MWAW_DEBUG_MSG(("HMWJParser::checkHeader: can not read field size %i\n", i));
       ascii().addPos(pos);
       ascii().addNote("FileHeader#");
-      input->seek(pos+fieldSizes[i], RVNG_SEEK_SET);
+      input->seek(pos+fieldSizes[i], librevenge::RVNG_SEEK_SET);
       continue;
     }
     f.str("");
@@ -1105,7 +1105,7 @@ bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
     }
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    input->seek(pos+fieldSizes[i], RVNG_SEEK_SET);
+    input->seek(pos+fieldSizes[i], librevenge::RVNG_SEEK_SET);
   }
 
   pos=input->tell();
@@ -1114,7 +1114,7 @@ bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  input->seek(m_state->m_zonesListBegin, RVNG_SEEK_SET);
+  input->seek(m_state->m_zonesListBegin, librevenge::RVNG_SEEK_SET);
   if (header)
     header->reset(MWAWDocument::MWAW_T_HANMACWORDJ, 1);
 
@@ -1154,7 +1154,7 @@ bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
           "Applications of Splay Trees to Data Compression" by Douglas W. Jones
           in Communications of the ACM, Aug. 1988, pages 996-1007.
 */
-bool HMWJParser::decodeZone(MWAWEntry const &entry, RVNGBinaryData &dt)
+bool HMWJParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &dt)
 {
   if (!entry.valid() || entry.length() <= 4) {
     MWAW_DEBUG_MSG(("HMWJParser::decodeZone: called with an invalid zone\n"));
@@ -1184,7 +1184,7 @@ bool HMWJParser::decodeZone(MWAWEntry const &entry, RVNGBinaryData &dt)
   short bitcounter = 0;  /* count of remaining bits in buffer */
 
   MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin()+4, RVNG_SEEK_SET);
+  input->seek(entry.begin()+4, librevenge::RVNG_SEEK_SET);
   dt.clear();
   while (!input->isEnd() && input->tell() < entry.end()) {
     short a = root;

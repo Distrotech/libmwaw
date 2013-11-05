@@ -574,7 +574,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   long pos = m_input->tell();
   reinterpret_cast<WPParser *>(m_parser)->sendWindow(m_id);
-  m_input->seek(pos, RVNG_SEEK_SET);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
 
@@ -631,7 +631,7 @@ void WPParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void WPParser::parse(RVNGTextInterface *docInterface)
+void WPParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -664,7 +664,7 @@ void WPParser::parse(RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void WPParser::createDocument(RVNGTextInterface *documentInterface)
+void WPParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -744,12 +744,12 @@ bool WPParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
 
   int const headerSize=2;
-  input->seek(headerSize,RVNG_SEEK_SET);
+  input->seek(headerSize,librevenge::RVNG_SEEK_SET);
   if (int(input->tell()) != headerSize) {
     MWAW_DEBUG_MSG(("WPParser::checkHeader: file is too short\n"));
     return false;
   }
-  input->seek(0,RVNG_SEEK_SET);
+  input->seek(0,librevenge::RVNG_SEEK_SET);
   if (input->readULong(2) != 0x110)
     return false;
   ascii().addPos(0);
@@ -758,7 +758,7 @@ bool WPParser::checkHeader(MWAWHeader *header, bool strict)
   bool ok = true;
   if (strict) {
     ok=readWindowsInfo(0);
-    input->seek(2,RVNG_SEEK_SET);
+    input->seek(2,librevenge::RVNG_SEEK_SET);
   }
 
   if (header)
@@ -773,7 +773,7 @@ bool WPParser::readWindowsInfo(int zone)
   MWAWInputStreamPtr input = getInput();
 
   long debPos = input->tell();
-  input->seek(debPos+0xf4,RVNG_SEEK_SET);
+  input->seek(debPos+0xf4,librevenge::RVNG_SEEK_SET);
   if (int(input->tell()) != debPos+0xf4) {
     MWAW_DEBUG_MSG(("WPParser::readWindowsZone: file is too short\n"));
     return false;
@@ -781,7 +781,7 @@ bool WPParser::readWindowsInfo(int zone)
 
   WPParserInternal::WindowsInfo info;
 
-  input->seek(debPos, RVNG_SEEK_SET);
+  input->seek(debPos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(WindowsZone)";
   switch(zone) {
@@ -836,7 +836,7 @@ bool WPParser::readWindowsInfo(int zone)
   ascii().addNote("WindowsZone(A-6)");
 
   pos = debPos+0xc2;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   f.str("");
   f << "WindowsZone(A-7):";
   int val = (int) input->readLong(2);
@@ -907,12 +907,12 @@ bool WPParser::readWindowsZone(int zone)
     if (!length) continue;
 
     long pos = input->tell();
-    input->seek(length, RVNG_SEEK_CUR);
+    input->seek(length, librevenge::RVNG_SEEK_CUR);
     if (long(input->tell()) != pos+length) {
       MWAW_DEBUG_MSG(("WPParser::readWindowsZone: zone is too short\n"));
       return false;
     }
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
 
     bool ok = false;
     switch(wh) {
@@ -932,7 +932,7 @@ bool WPParser::readWindowsZone(int zone)
     }
     if (ok) continue;
 
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     if (z.m_number && (length % z.m_number) == 0) {
       int dataSz = length / z.m_number;
       for (int i = 0; i < z.m_number; i++) {
@@ -940,14 +940,14 @@ bool WPParser::readWindowsZone(int zone)
         f << "Entries(Zone" << wh << ")-" << i << ":";
         ascii().addPos(input->tell());
         ascii().addNote(f.str().c_str());
-        input->seek(dataSz, RVNG_SEEK_CUR);
+        input->seek(dataSz, librevenge::RVNG_SEEK_CUR);
       }
     } else {
       f.str("");
       f << "Entries(Zone" << wh << "):";
       ascii().addPos(input->tell());
       ascii().addNote(f.str().c_str());
-      input->seek(length, RVNG_SEEK_CUR);
+      input->seek(length, librevenge::RVNG_SEEK_CUR);
     }
   }
 
@@ -955,11 +955,11 @@ bool WPParser::readWindowsZone(int zone)
     WPParserInternal::ParagraphInfo const &pInfo = wInfo.m_paragraphs[(size_t)i];
     if (!pInfo.m_pos)	continue;
 
-    input->seek(pInfo.m_pos, RVNG_SEEK_SET);
+    input->seek(pInfo.m_pos, librevenge::RVNG_SEEK_SET);
     long length = (long) input->readULong(2);
     long length2 = (long) input->readULong(2);
     long endPos = pInfo.m_pos+4+length+length2;
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
     if (long(input->tell()) != endPos) {
       MWAW_DEBUG_MSG(("WPParser::readWindowsZone: data zone is too short\n"));
       return false;
@@ -967,7 +967,7 @@ bool WPParser::readWindowsZone(int zone)
     switch (pInfo.getType()) {
     case 4:
       length = (long) input->readULong(4);
-      input->seek(length, RVNG_SEEK_CUR);
+      input->seek(length, librevenge::RVNG_SEEK_CUR);
       if (long(input->tell()) != endPos+length+4) {
         MWAW_DEBUG_MSG(("WPParser::readWindowsZone: graphics zone is too short\n"));
         return false;
@@ -1079,7 +1079,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
       case 5:
         if (pInfo.m_numLines + i <= endParag) {
           if ((ok = readTable(pInfo))) {
-            listener->openTableRow((float)pInfo.m_height, RVNG_POINT);
+            listener->openTableRow((float)pInfo.m_height, librevenge::RVNG_POINT);
 
             for (size_t j = 0; j < pInfo.m_linesHeight.size(); j++) {
               int numData = pInfo.m_linesHeight[j];
@@ -1147,12 +1147,12 @@ bool WPParser::findSection(int zone, Vec2i limits, MWAWSection &sec)
       MWAW_DEBUG_MSG(("WPParser::findSection: bad data pos\n"));
       return false;
     }
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     if (input->readLong(2)) {
       MWAW_DEBUG_MSG(("WPParser::findSection: find a text size\n"));
       return false;
     }
-    input->seek(8, RVNG_SEEK_CUR); // sz2 and type, h, indent
+    input->seek(8, librevenge::RVNG_SEEK_CUR); // sz2 and type, h, indent
     int val = (int) input->readLong(2);
     if (val <= 0 || long(input->tell()) != pos + 12) {
       MWAW_DEBUG_MSG(("WPParser::findSection: file is too short\n"));
@@ -1161,7 +1161,7 @@ bool WPParser::findSection(int zone, Vec2i limits, MWAWSection &sec)
     totalSize += val;
     MWAWSection::Column col;
     col.m_width=val;
-    col.m_widthUnit=RVNG_POINT;
+    col.m_widthUnit=librevenge::RVNG_POINT;
     sec.m_columns.push_back(col);
   }
   if (sec.m_columns.size()==1)
@@ -1230,7 +1230,7 @@ MWAWParagraph WPParser::getParagraph(WPParserInternal::ParagraphData const &data
 {
   MWAWParagraph para;
 
-  para.m_marginsUnit=RVNG_POINT;
+  para.m_marginsUnit=librevenge::RVNG_POINT;
   // decrease a little left indent to avoid some page width pb
   double left=double(data.m_indent[0])-20.-72.*getPageSpan().getMarginLeft();
   if (left > 0)
@@ -1362,7 +1362,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   if (!readLines(info, numLines, lines)) {
     MWAW_DEBUG_MSG(("WPParser::readText: pb with the lines\n"));
     lines.resize(0);
-    input->seek(pos+numLines*16, RVNG_SEEK_SET);
+    input->seek(pos+numLines*16, librevenge::RVNG_SEEK_SET);
     f << "###lines,";
   }
   for (int i = 0; i < numLines; i++)
@@ -1370,7 +1370,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
 
   if (long(input->tell()) != data.m_endPos) {
     ascii().addDelimiter(input->tell(), '|');
-    input->seek(data.m_endPos, RVNG_SEEK_SET);
+    input->seek(data.m_endPos, librevenge::RVNG_SEEK_SET);
     f << "#endPos,";
   }
 
@@ -1391,7 +1391,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   MWAWParagraph para=getParagraph(data);
 
   if (numLines == 0 && info.m_height > 0) {
-    para.setInterline(info.m_height, RVNG_POINT);
+    para.setInterline(info.m_height, librevenge::RVNG_POINT);
     getListener()->setParagraph(para);
   }
   for (int c = 0; c < numChars; c++) {
@@ -1400,10 +1400,10 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
     if (actLine < numLines && c == lines[(size_t) actLine].m_firstChar) {
       if (actLine) getListener()->insertEOL();
       if (numLines == 1 && info.m_height > lines[0].m_height) {
-        para.setInterline(info.m_height, RVNG_POINT);
+        para.setInterline(info.m_height, librevenge::RVNG_POINT);
         getListener()->setParagraph(para);
       } else if (lines[(size_t) actLine].m_height) {
-        para.setInterline(lines[(size_t) actLine].m_height, RVNG_POINT);
+        para.setInterline(lines[(size_t) actLine].m_height, librevenge::RVNG_POINT);
         getListener()->setParagraph(para);
       }
       actLine++;
@@ -1462,7 +1462,7 @@ bool WPParser::readSection(WPParserInternal::ParagraphInfo const &info, bool mai
 
   if (long(input->tell()) != data.m_endPos) {
     ascii().addDelimiter(input->tell(), '|');
-    input->seek(data.m_endPos, RVNG_SEEK_SET);
+    input->seek(data.m_endPos, librevenge::RVNG_SEEK_SET);
     f << "#endPos,";
   }
 
@@ -1534,7 +1534,7 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
 
   if (long(input->tell()) != data.m_endPos) {
     ascii().addDelimiter(input->tell(), '|');
-    input->seek(data.m_endPos, RVNG_SEEK_SET);
+    input->seek(data.m_endPos, librevenge::RVNG_SEEK_SET);
     f << "#endPos,";
   }
 
@@ -1585,7 +1585,7 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
   }
   if (long(input->tell()) != data.m_endPos) {
     ascii().addDelimiter(input->tell(), '|');
-    input->seek(data.m_endPos, RVNG_SEEK_SET);
+    input->seek(data.m_endPos, librevenge::RVNG_SEEK_SET);
     f << "#endPos,";
   }
 
@@ -1602,10 +1602,10 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
     return true;
   }
   long endPos = pos+4+length;
-  input->seek(length, RVNG_SEEK_CUR);
+  input->seek(length, librevenge::RVNG_SEEK_CUR);
   if (long(input->tell()) != endPos) {
     MWAW_DEBUG_MSG(("WPParser::readGraphic: file is too short\n"));
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -1613,11 +1613,11 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
   f << "Paragraph" << data.m_type << "(III):";
 
   Box2f box;
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   MWAWPict::ReadResult res = MWAWPictData::check(input, (int)length, box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("WPParser::readGraphic: can not find the picture\n"));
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -1630,32 +1630,32 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
     actualSize = Vec2f(100,100);
   }
 
-  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),actualSize, RVNG_POINT);
+  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),actualSize, librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
   pictPos.setNaturalSize(naturalSize);
   f << pictPos;
 
   // get the picture
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, (int)length));
   if (getListener()) {
     MWAWParagraph para=getListener()->getParagraph();
-    para.setInterline(info.m_height, RVNG_POINT);
+    para.setInterline(info.m_height, librevenge::RVNG_POINT);
     getListener()->setParagraph(para);
     if (pict) {
-      RVNGBinaryData pictData;
+      librevenge::RVNGBinaryData pictData;
       std::string type;
       if (pict->getBinary(pictData,type))
         getListener()->insertPicture(pictPos, pictData, type);
     }
     getListener()->insertEOL();
-    para.setInterline(1.0, RVNG_PERCENT);
+    para.setInterline(1.0, librevenge::RVNG_PERCENT);
     getListener()->setParagraph(para);
   }
   if (pict)
     ascii().skipZone(pos+4, pos+4+length-1);
 
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
 
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1694,7 +1694,7 @@ bool WPParser::readUnknown(WPParserInternal::ParagraphInfo const &info)
   }
   if (long(input->tell()) != data.m_endPos) {
     ascii().addDelimiter(input->tell(), '|');
-    input->seek(data.m_endPos, RVNG_SEEK_SET);
+    input->seek(data.m_endPos, librevenge::RVNG_SEEK_SET);
     f << "#";
   }
 
@@ -1717,19 +1717,19 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
 
   MWAWInputStreamPtr input = getInput();
   long pos = info.m_pos;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   data = WPParserInternal::ParagraphData();
   int textLength = (int) input->readLong(2);
   int length2 = (int) input->readLong(2);
   data.m_endPos = pos+4+textLength+length2;
 
-  input->seek(data.m_endPos, RVNG_SEEK_SET);
+  input->seek(data.m_endPos, librevenge::RVNG_SEEK_SET);
   if (textLength < 0 || length2 < 0 || input->tell() != data.m_endPos) {
     MWAW_DEBUG_MSG(("WPParser::readParagraphData:  paragraph is too short\n"));
     return false;
   }
-  input->seek(pos+4, RVNG_SEEK_SET);
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   if (textLength) {
     std::string &text = data.m_text;
     for (int i = 0; i < textLength; i++) {
@@ -1765,7 +1765,7 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
     if (!readFonts(data.m_numData[0], data.m_type, fonts)) {
       MWAW_DEBUG_MSG(("WPParser::readParagraph: pb with the fonts\n"));
       fonts.resize(0);
-      input->seek(actPos+data.m_numData[0]*16, RVNG_SEEK_SET);
+      input->seek(actPos+data.m_numData[0]*16, librevenge::RVNG_SEEK_SET);
     }
   }
 
@@ -1839,7 +1839,7 @@ bool WPParser::readFonts
     int nChar = (int) input->readULong(2);
     actPos += nChar;
     if (!hasFontExtra)
-      input->seek(4, RVNG_SEEK_CUR);
+      input->seek(4, librevenge::RVNG_SEEK_CUR);
     else { // always 0
       for (int j = 0; j < 2; j++) {
         val = (int) input->readLong(2);
@@ -1929,7 +1929,7 @@ bool WPParser::readPrintInfo()
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  input->seek(pos+0x78, RVNG_SEEK_SET);
+  input->seek(pos+0x78, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
     MWAW_DEBUG_MSG(("WPParser::readPrintInfo: file is too short\n"));
     return false;

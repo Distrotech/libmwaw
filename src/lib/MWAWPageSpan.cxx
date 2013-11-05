@@ -137,7 +137,7 @@ void MWAWHeaderFooter::send(MWAWContentListener *listener) const
     MWAW_DEBUG_MSG(("MWAWHeaderFooter::send: called without listener\n"));
     return;
   }
-  RVNGPropertyList propList;
+  librevenge::RVNGPropertyList propList;
   switch (m_occurence) {
   case ODD:
     propList.insert("libwpd:occurence", "odd");
@@ -279,7 +279,7 @@ void MWAWPageSpan::sendHeaderFooters(MWAWContentListener *listener) const
   }
 }
 
-void MWAWPageSpan::getPageProperty(RVNGPropertyList &propList) const
+void MWAWPageSpan::getPageProperty(librevenge::RVNGPropertyList &propList) const
 {
   propList.insert("libwpd:num-pages", getPageSpan());
 

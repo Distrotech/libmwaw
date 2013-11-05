@@ -541,7 +541,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     parser->sendHeaderFooter(m_id==1);
   else
     parser->sendHeaderFooterFields(m_id==1);
-  m_input->seek(pos, RVNG_SEEK_SET);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
 
@@ -600,7 +600,7 @@ MWAWEntry MDWParser::readEntry()
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MDWParser::parse(RVNGTextInterface *docInterface)
+void MDWParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -655,7 +655,7 @@ void MDWParser::parse(RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MDWParser::createDocument(RVNGTextInterface *documentInterface)
+void MDWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -831,7 +831,7 @@ bool MDWParser::sendZone(int id)
   MWAWParagraph para;
   // FIXME: writerperfect or libreoffice seems to loose page dimensions and header/footer if we begin by a list
   if (id==0) {
-    para.setInterline(1,RVNG_POINT);
+    para.setInterline(1,librevenge::RVNG_POINT);
     setProperty(para);
     getListener()->insertEOL();
   } else
@@ -915,7 +915,7 @@ bool MDWParser::readGraphic(MDWParserInternal::LineInfo const &line)
   }
 
   long pos=line.m_entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   int dim[4];
   for (int i = 0; i < 4; i++) dim[i] = (int) input->readLong(2);
@@ -928,10 +928,10 @@ bool MDWParser::readGraphic(MDWParserInternal::LineInfo const &line)
     MWAW_DEBUG_MSG(("MDWParser::readGraphic: can not read the picture\n"));
     return false;
   }
-  RVNGBinaryData data;
+  librevenge::RVNGBinaryData data;
   std::string type;
   if (getListener() && pict->getBinary(data,type)) {
-    MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), RVNG_POINT);
+    MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), librevenge::RVNG_POINT);
     pictPos.setRelativePosition(MWAWPosition::Char);
     getListener()->insertPicture(pictPos,data, type);
   }
@@ -957,10 +957,10 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
   line.m_specialHeadingInterface = (line.m_flags[1] & 0x4)==0;
 
   long pos=line.m_entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   MWAWParagraph para;
-  para.m_marginsUnit = RVNG_POINT;
+  para.m_marginsUnit = librevenge::RVNG_POINT;
   para.m_margins[1] = (double) input->readULong(2);
   para.m_margins[2] = getPageWidth()*72.0-(double) input->readULong(2);
   if (*(para.m_margins[2]) < 0) {
@@ -1008,9 +1008,9 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
   }
   if (val & 0x8000) { // 6 inches by line + potential before space
     para.m_spacings[1] = (factor-1.)/6;
-    para.setInterline(12, RVNG_POINT);
+    para.setInterline(12, librevenge::RVNG_POINT);
   } else
-    para.setInterline(factor, RVNG_PERCENT);
+    para.setInterline(factor, librevenge::RVNG_PERCENT);
   para.m_margins[0] = ((double) input->readULong(2))-*(para.m_margins[1]);
   for (int i = 0; i < N; i++) {
     MWAWTabStop tab;
@@ -1051,7 +1051,7 @@ void MDWParser::sendHeaderFooter(bool header)
   if (fieldList.size()) {
     /** field are separated from the main text
         -> we need to use an intermediate frame */
-    MWAWPosition fPos(Vec2f(0,0), Vec2f(float(getPageWidth()),0), RVNG_INCH);
+    MWAWPosition fPos(Vec2f(0,0), Vec2f(float(getPageWidth()),0), librevenge::RVNG_INCH);
     fPos.m_anchorTo = MWAWPosition::Paragraph;
     fPos.m_wrapping =  MWAWPosition::WBackground;
     shared_ptr<MDWParserInternal::SubDocument> subDoc
@@ -1093,7 +1093,7 @@ void MDWParser::sendHeaderFooterFields(bool header)
   }
   int actLine = 0;
   MWAWParagraph defPara;
-  defPara.setInterline(16, RVNG_POINT);
+  defPara.setInterline(16, librevenge::RVNG_POINT);
   listener->setParagraph(defPara);
   size_t f=0;
   while (f < numFields) {
@@ -1142,7 +1142,7 @@ bool MDWParser::readText(MDWParserInternal::LineInfo const &line)
 
   long pos=line.m_entry.begin();
   long endPos=line.m_entry.end();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int num = (int) input->readULong(2);
   if (pos+num >= endPos) {
     MWAW_DEBUG_MSG(("MDWParser::readText: numChar is too long\n"));
@@ -1183,7 +1183,7 @@ bool MDWParser::readText(MDWParserInternal::LineInfo const &line)
 
   // realign to 2
   if (input->tell()&1)
-    input->seek(1,RVNG_SEEK_CUR);
+    input->seek(1,librevenge::RVNG_SEEK_CUR);
 
   ascii().addPos(line.m_entry.begin());
   ascii().addNote(f.str().c_str());
@@ -1209,7 +1209,7 @@ bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
 
   long pos=line.m_entry.begin();
   long endPos=line.m_entry.end();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int num = (int) input->readULong(2);
   if (pos+num/2 > endPos) {
     MWAW_DEBUG_MSG(("MDWParser::readCompressedText: numChar is too long\n"));
@@ -1278,7 +1278,7 @@ bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
 
   // realign to 2
   if (input->tell()&1)
-    input->seek(1,RVNG_SEEK_CUR);
+    input->seek(1,librevenge::RVNG_SEEK_CUR);
 
   ascii().addPos(line.m_entry.begin());
   ascii().addNote(f.str().c_str());
@@ -1349,7 +1349,7 @@ bool MDWParser::readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts,
 #ifdef DEBUG
     f << font.getDebugString(getFontConverter());
 #endif
-    input->seek(pos+6, RVNG_SEEK_SET);
+    input->seek(pos+6, librevenge::RVNG_SEEK_SET);
 
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1374,7 +1374,7 @@ bool MDWParser::checkHeader(MWAWHeader *header, bool strict)
     MWAW_DEBUG_MSG(("MDWParser::checkHeader: file is too short\n"));
     return false;
   }
-  input->seek(0,RVNG_SEEK_SET);
+  input->seek(0,librevenge::RVNG_SEEK_SET);
   if (input->readULong(2) != 0x7704)
     return false;
   if (header)
@@ -1447,15 +1447,15 @@ bool MDWParser::checkHeader(MWAWHeader *header, bool strict)
   bool ok = true;
   if (strict) {
     // check the line info block size
-    input->seek(0x50, RVNG_SEEK_SET);
+    input->seek(0x50, librevenge::RVNG_SEEK_SET);
     for (int i = 0; i < 3; i++) {
-      input->seek(4, RVNG_SEEK_CUR);
+      input->seek(4, librevenge::RVNG_SEEK_CUR);
       if (input->readLong(4) == 32*m_state->m_numLinesByZone[i])
         continue;
       ok = false;
       break;
     }
-    input->seek(0x50, RVNG_SEEK_SET);
+    input->seek(0x50, librevenge::RVNG_SEEK_SET);
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1487,7 +1487,7 @@ bool MDWParser::readLinesInfo(MWAWEntry &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int N = int(entry.length())/32;
 
   libmwaw::DebugStream f;
@@ -1521,7 +1521,7 @@ bool MDWParser::readLinesInfo(MWAWEntry &entry)
     f.str("");
     f << "LineInfo-" << entry.id() << "[" << n << "]:" << line;
     ascii().addDelimiter(input->tell(),'|');
-    input->seek(pos+32, RVNG_SEEK_SET);
+    input->seek(pos+32, librevenge::RVNG_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
 
@@ -1563,7 +1563,7 @@ bool MDWParser::readLastZone(MWAWEntry &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "LastZone:";
@@ -1601,7 +1601,7 @@ bool MDWParser::readHeadingStates(MWAWEntry &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "HeadState:";
   long unkn = input->readLong(2); // always 2?
@@ -1650,7 +1650,7 @@ bool MDWParser::readHeadingCustom(MWAWEntry &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin(), beginPos=pos;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "HeadCust:";
   if ((int) input->readULong(2)!= len) {
@@ -1688,7 +1688,7 @@ bool MDWParser::readHeadingCustom(MWAWEntry &entry)
     if (!val) continue;
     f << "f" << i << "=" << val << ",";
   }
-  input->seek(beginPos+(long) debDeplPos, RVNG_SEEK_SET);
+  input->seek(beginPos+(long) debDeplPos, librevenge::RVNG_SEEK_SET);
 
   std::vector<int> listPos;
   for (int i = 0; i < N; i++)
@@ -1697,7 +1697,7 @@ bool MDWParser::readHeadingCustom(MWAWEntry &entry)
 
   std::string str("");
   for (size_t i = 0; i < size_t(N); i++) {
-    input->seek(beginPos+(long) listPos[i], RVNG_SEEK_SET);
+    input->seek(beginPos+(long) listPos[i], librevenge::RVNG_SEEK_SET);
     int sSz=listPos[i+1]-listPos[i];
     if (sSz < 0) {
       f << "###len"<<i<<"="<< sSz << ",";
@@ -1719,7 +1719,7 @@ bool MDWParser::readHeadingCustom(MWAWEntry &entry)
           break;
         if ((char) input->readULong(1)==' ')
           break;
-        input->seek(-1, RVNG_SEEK_CUR);
+        input->seek(-1, librevenge::RVNG_SEEK_CUR);
       }
       if (!seeIndex) {
         seeIndex = true;
@@ -1780,7 +1780,7 @@ bool MDWParser::readHeadingProperties(MWAWEntry &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "HeadProp:";
   long val=input->readLong(1); // always 0 ?
@@ -1857,7 +1857,7 @@ bool MDWParser::readZone8(MWAWEntry &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Zone8:";
   long val = (long) input->readULong(1);// fl0=0|1|2c|2d,
@@ -1912,7 +1912,7 @@ bool MDWParser::readHeadingFields(MWAWEntry &entry)
   entry.setParsed(true);
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   int num = int(entry.length()/12);
   if (num != 8) {
@@ -1946,7 +1946,7 @@ bool MDWParser::readHeadingFields(MWAWEntry &entry)
       else
         m_state->m_footerFieldList.push_back(field);
     }
-    input->seek(pos+12, RVNG_SEEK_SET);
+    input->seek(pos+12, librevenge::RVNG_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
@@ -1971,7 +1971,7 @@ bool MDWParser::readPrintInfo(MWAWEntry &entry)
   }
   MWAWInputStreamPtr input = getInput();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   // print info
@@ -2010,7 +2010,7 @@ bool MDWParser::readPrintInfo(MWAWEntry &entry)
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  input->seek(pos+0x78, RVNG_SEEK_SET);
+  input->seek(pos+0x78, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
     MWAW_DEBUG_MSG(("MDWParser::readPrintInfo: file is too short\n"));
     return false;

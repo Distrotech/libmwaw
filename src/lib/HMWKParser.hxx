@@ -105,7 +105,7 @@ struct HMWKZone {
     m_endFilePos = endPos;
   }
   //! returns a pointer to the binary data
-  RVNGBinaryData &getBinaryData() {
+  librevenge::RVNGBinaryData &getBinaryData() {
     return m_data;
   }
   //! returns the zone name
@@ -149,7 +149,7 @@ protected:
   long m_endFilePos;
 
   //! the storage (if needed)
-  RVNGBinaryData m_data;
+  librevenge::RVNGBinaryData m_data;
 
   //! the debug file
   libmwaw::DebugFile *m_asciiFile;
@@ -186,14 +186,14 @@ public:
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(RVNGTextInterface *documentInterface);
+  void parse(librevenge::RVNGTextInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(RVNGTextInterface *documentInterface);
+  void createDocument(librevenge::RVNGTextInterface *documentInterface);
 
   //! finds the different objects zones
   bool createZones();

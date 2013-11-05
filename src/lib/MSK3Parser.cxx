@@ -165,7 +165,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
     MWAW_DEBUG_MSG(("MSK3Parser::SubDocument::parse: unexpected zone type\n"));
     break;
   }
-  m_input->seek(pos, RVNG_SEEK_SET);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
 bool SubDocument::operator!=(MWAWSubDocument const &doc) const
@@ -246,7 +246,7 @@ void MSK3Parser::newPage(int number, bool softBreak)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MSK3Parser::parse(RVNGTextInterface *docInterface)
+void MSK3Parser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -305,7 +305,7 @@ bool MSK3Parser::sendFootNote(int zoneId, int noteId)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MSK3Parser::createDocument(RVNGTextInterface *documentInterface)
+void MSK3Parser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getListener()) {
@@ -381,11 +381,11 @@ bool MSK3Parser::createZones()
     if (m_state->m_hasHeader)
       ok = readGroupHeaderInfo(true,99);
     if (ok) pos = input->tell();
-    else input->seek(pos, RVNG_SEEK_SET);
+    else input->seek(pos, librevenge::RVNG_SEEK_SET);
     if (ok && m_state->m_hasFooter)
       ok = readGroupHeaderInfo(false,99);
     if (ok) pos = input->tell();
-    else input->seek(pos, RVNG_SEEK_SET);
+    else input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
 
   MSK3ParserInternal::Zone::Type const type = MSK3ParserInternal::Zone::MAIN;
@@ -395,7 +395,7 @@ bool MSK3Parser::createZones()
   while (!input->isEnd()) {
     pos = input->tell();
     if (!readZone(mainZone)) {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
   }
@@ -436,18 +436,18 @@ bool MSK3Parser::readZone(MSK3ParserInternal::Zone &zone)
 
   MWAWEntry pict;
   int val = (int) input->readLong(1);
-  input->seek(-1, RVNG_SEEK_CUR);
+  input->seek(-1, librevenge::RVNG_SEEK_CUR);
   switch(val) {
   case 0: {
     if (m_graphParser->getEntryPicture(zone.m_zoneId, pict)>=0) {
-      input->seek(pict.end(), RVNG_SEEK_SET);
+      input->seek(pict.end(), librevenge::RVNG_SEEK_SET);
       return true;
     }
     break;
   }
   case 1: {
     if (m_graphParser->getEntryPictureV1(zone.m_zoneId, pict)>=0) {
-      input->seek(pict.end(), RVNG_SEEK_SET);
+      input->seek(pict.end(), librevenge::RVNG_SEEK_SET);
       return true;
     }
     break;
@@ -466,7 +466,7 @@ bool MSK3Parser::readZone(MSK3ParserInternal::Zone &zone)
     break;
   }
 
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   return false;
 }
 
@@ -486,7 +486,7 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
 
   libmwaw::DebugStream f;
 
-  input->seek(0,RVNG_SEEK_SET);
+  input->seek(0,librevenge::RVNG_SEEK_SET);
 
   m_state->m_hasHeader = m_state->m_hasFooter = false;
   int vers = (int) input->readULong(4);
@@ -518,10 +518,10 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
     }
     setVersion((vers < 4) ? 1 : (vers < 8) ? 2 : (vers < 11) ? 3 : 4);
   }
-  if (input->seek(headerSize,RVNG_SEEK_SET) != 0 || input->isEnd())
+  if (input->seek(headerSize,librevenge::RVNG_SEEK_SET) != 0 || input->isEnd())
     return false;
 
-  if (input->seek(12,RVNG_SEEK_SET) != 0) return false;
+  if (input->seek(12,librevenge::RVNG_SEEK_SET) != 0) return false;
 
   for (int i = 0; i < 3; i++) {
     val = (int) (int) input->readLong(1);
@@ -530,7 +530,7 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
       numError++;
     }
   }
-  input->seek(1,RVNG_SEEK_CUR);
+  input->seek(1,librevenge::RVNG_SEEK_CUR);
   int type = (int) input->readLong(2);
   switch (type) {
     // Text document
@@ -570,7 +570,7 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
   m_listZones.push_back(headerZone);
 
   //
-  input->seek(0,RVNG_SEEK_SET);
+  input->seek(0,librevenge::RVNG_SEEK_SET);
   f << "FileHeader: ";
   f << "version= " << input->readULong(4);
   long dim[4];
@@ -635,7 +635,7 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
   ascii().addNote(f.str().c_str());
   ascii().addPos(headerSize);
 
-  input->seek(headerSize,RVNG_SEEK_SET);
+  input->seek(headerSize,librevenge::RVNG_SEEK_SET);
   return strict ? (numError==0) : (numError < 3);
 }
 
@@ -677,13 +677,13 @@ bool MSK3Parser::readDocumentInfo()
   ascii().addNote(f.str().c_str());
 
   if (!readPrintInfo()) {
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
     return true;
   }
 
   pos = input->tell();
   if (sz < 0x9a) {
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
     return true;
   }
   pos = input->tell();
@@ -744,7 +744,7 @@ bool MSK3Parser::readDocumentInfo()
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  input->seek(endPos, RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
 
   return true;
 }
@@ -790,7 +790,7 @@ bool MSK3Parser::readGroup(MSK3ParserInternal::Zone &zone, MWAWEntry &entry, int
   }
 
   if (check <= 0) return true;
-  input->seek(pos+8, RVNG_SEEK_SET);
+  input->seek(pos+8, librevenge::RVNG_SEEK_SET);
   for (int i = 0; i < 52; i++) {
     int v = (int) input->readLong(2);
     if (i < 8 && (v < -100 || v > 100)) return false;
@@ -807,7 +807,7 @@ bool MSK3Parser::readGroup(MSK3ParserInternal::Zone &zone, MWAWEntry &entry, int
   ascii().addNote(f.str().c_str());
 
   pos = pos+blockSize;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   int N=(int) input->readLong(2);
 
   f.str("");
@@ -828,13 +828,13 @@ bool MSK3Parser::readGroup(MSK3ParserInternal::Zone &zone, MWAWEntry &entry, int
     if (m_graphParser->getEntryPicture(zone.m_zoneId, pictZone)>=0)
       continue;
     MWAW_DEBUG_MSG(("MSK3Parser::readGroup: can not find the end of group \n"));
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     break;
   }
   if (input->tell() < entry.end()) {
     ascii().addPos(input->tell());
     ascii().addNote("Entries(GroupData)");
-    input->seek(entry.end(), RVNG_SEEK_SET);
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   }
 
   return true;
@@ -874,7 +874,7 @@ bool MSK3Parser::readGroupHeaderInfo(bool header, int check)
 
   if (!input->checkPosition(debPos+size)) return false;
 
-  input->seek(debPos+6, RVNG_SEEK_SET);
+  input->seek(debPos+6, librevenge::RVNG_SEEK_SET);
   int N=(int) input->readLong(2);
   f << ", N=" << N;
   int dim[4];
@@ -890,7 +890,7 @@ bool MSK3Parser::readGroupHeaderInfo(bool header, int check)
   int val = (int) input->readULong(1);
   if (val) f << ", flag=" << val;
 
-  input->seek(debPos+size, RVNG_SEEK_SET);
+  input->seek(debPos+size, librevenge::RVNG_SEEK_SET);
   if (check < 99) return true;
   if (header) m_state->m_headerHeight = box.size().y();
   else m_state->m_footerHeight = box.size().y();
@@ -902,7 +902,7 @@ bool MSK3Parser::readGroupHeaderInfo(bool header, int check)
   ascii().addNote(f.str().c_str());
   ascii().addPos(input->tell());
 
-  input->seek(debPos+realSize, RVNG_SEEK_SET);
+  input->seek(debPos+realSize, librevenge::RVNG_SEEK_SET);
   input->pushLimit(debPos+size);
   bool limitSet = true;
   for (int i = 0; i < N; i++) {
@@ -912,19 +912,19 @@ bool MSK3Parser::readGroupHeaderInfo(bool header, int check)
       input->popLimit();
     }
     if (readZone(zone)) continue;
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     zone.m_textId = m_textParser->createZones(N-i, false);
     if (zone.m_textId >= 0)
       break;
     MWAW_DEBUG_MSG(("MSK3Parser::readGroupHeaderInfo: can not find end of group\n"));
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
   if (limitSet) input->popLimit();
   if (long(input->tell()) < debPos+size) {
     ascii().addPos(input->tell());
     ascii().addNote("GroupHInfo-II");
 
-    input->seek(debPos+size, RVNG_SEEK_SET);
+    input->seek(debPos+size, librevenge::RVNG_SEEK_SET);
 
     ascii().addPos(debPos + size);
     ascii().addNote("_");
@@ -998,7 +998,7 @@ bool MSK3Parser::readPrintInfo()
 
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  input->seek(pos+0x78+8, RVNG_SEEK_SET);
+  input->seek(pos+0x78+8, librevenge::RVNG_SEEK_SET);
 
   return true;
 }

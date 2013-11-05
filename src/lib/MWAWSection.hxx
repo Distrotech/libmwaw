@@ -57,7 +57,7 @@ public:
 
   \note: this erases previous columns and border if there are some
    */
-  void setColumns(int num, double width, RVNGUnit widthUnit, double colSep=0);
+  void setColumns(int num, double width, librevenge::RVNGUnit widthUnit, double colSep=0);
   //! returns the number of columns
   int numColumns() const {
     return m_columns.size() <= 1 ? 1 : int(m_columns.size());
@@ -67,9 +67,9 @@ public:
     return m_columns.size() <= 1;
   }
   //! add to the propList
-  void addTo(RVNGPropertyList &propList) const;
+  void addTo(librevenge::RVNGPropertyList &propList) const;
   //! add tabs to the propList
-  void addColumnsTo(RVNGPropertyListVector &propList) const;
+  void addColumnsTo(librevenge::RVNGPropertyListVector &propList) const;
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, MWAWSection const &sec);
   //! operator!=
@@ -106,12 +106,12 @@ public:
   /** struct to store the columns properties */
   struct Column {
     //! constructor
-    Column() : m_width(0), m_widthUnit(RVNG_INCH) {
+    Column() : m_width(0), m_widthUnit(librevenge::RVNG_INCH) {
       for (int i = 0; i < 4; i++)
         m_margins[i]=0;
     }
     //! add a column to the propList
-    bool addTo(RVNGPropertyList &propList) const;
+    bool addTo(librevenge::RVNGPropertyList &propList) const;
     //! operator <<
     friend std::ostream &operator<<(std::ostream &o, Column const &column);
     //! operator!=
@@ -132,7 +132,7 @@ public:
     //! the columns width
     double m_width;
     /** the width unit (default inches) */
-    RVNGUnit m_widthUnit;
+    librevenge::RVNGUnit m_widthUnit;
     //! the margins in inches using libmwaw::Position orders
     double m_margins[4];
   };

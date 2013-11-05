@@ -39,11 +39,11 @@
 #  include <sstream>
 #  include <string>
 
-class RVNGBinaryData;
-class RVNGProperty;
-class RVNGPropertyList;
-class RVNGPropertyListVector;
-class RVNGString;
+class librevenge::RVNGBinaryData;
+class librevenge::RVNGProperty;
+class librevenge::RVNGPropertyList;
+class librevenge::RVNGPropertyListVector;
+class librevenge::RVNGString;
 
 //! a generic property handler
 class MWAWPropertyHandler
@@ -57,23 +57,23 @@ public:
   //! inserts a simple element
   virtual void insertElement(const char *psName) = 0;
   //! inserts an element ( given a property list )
-  virtual void insertElement(const char *psName, const RVNGPropertyList &xPropList) = 0;
+  virtual void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList) = 0;
   //! inserts an element ( given a vector list )
-  virtual void insertElement(const char *psName, const RVNGPropertyList &xPropList,
-                             const RVNGPropertyListVector &vect) = 0;
+  virtual void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
+                             const librevenge::RVNGPropertyListVector &vect) = 0;
   //! inserts an element ( given a binary data )
-  virtual void insertElement(const char *psName, const RVNGPropertyList &xPropList,
-                             const RVNGBinaryData &data) = 0;
+  virtual void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
+                             const librevenge::RVNGBinaryData &data) = 0;
   //! writes a list of characters
-  virtual void characters(RVNGString const &sCharacters) = 0;
+  virtual void characters(librevenge::RVNGString const &sCharacters) = 0;
 
-  //! checks a encoded RVNGBinaryData created by MWAWPropertyHandlerEncoder
-  bool checkData(RVNGBinaryData const &encoded);
-  //! reads a encoded RVNGBinaryData created by MWAWPropertyHandlerEncoder
-  bool readData(RVNGBinaryData const &encoded);
+  //! checks a encoded librevenge::RVNGBinaryData created by MWAWPropertyHandlerEncoder
+  bool checkData(librevenge::RVNGBinaryData const &encoded);
+  //! reads a encoded librevenge::RVNGBinaryData created by MWAWPropertyHandlerEncoder
+  bool readData(librevenge::RVNGBinaryData const &encoded);
 };
 
-/*! \brief write in RVNGBinaryData a list of tags/and properties
+/*! \brief write in librevenge::RVNGBinaryData a list of tags/and properties
  *
  * In order to be read by writerperfect, we must code document consisting in
  * tag and propertyList in an intermediar format:
@@ -102,17 +102,17 @@ public:
   //! inserts an element
   void insertElement(const char *psName);
   //! inserts an element given a property list
-  void insertElement(const char *psName, const RVNGPropertyList &xPropList);
+  void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList);
   //! inserts an element given a property list vector
-  void insertElement(const char *psName, const RVNGPropertyList &xPropList,
-                     const RVNGPropertyListVector &vect);
+  void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
+                     const librevenge::RVNGPropertyListVector &vect);
   //! inserts an element given a binary data
-  void insertElement(const char *psName, const RVNGPropertyList &xPropList,
-                     const RVNGBinaryData &data);
+  void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
+                     const librevenge::RVNGBinaryData &data);
   //! writes a list of characters
-  void characters(RVNGString const &sCharacters);
+  void characters(librevenge::RVNGString const &sCharacters);
   //! retrieves the data
-  bool getData(RVNGBinaryData &data);
+  bool getData(librevenge::RVNGBinaryData &data);
 
 protected:
   //! adds an integer value in f
@@ -124,9 +124,9 @@ protected:
   //! adds a string: size and string
   void writeString(const char *name);
   //! adds a property: a string key, a string corresponding to value
-  void writeProperty(const char *key, const RVNGProperty &prop);
-  //! adds a property list: int \#prop, \#prop*RVNGProperty
-  void writePropertyList(const RVNGPropertyList &prop);
+  void writeProperty(const char *key, const librevenge::RVNGProperty &prop);
+  //! adds a property list: int \#prop, \#prop*librevenge::RVNGProperty
+  void writePropertyList(const librevenge::RVNGPropertyList &prop);
 
   //! the streamfile
   std::stringstream m_f;

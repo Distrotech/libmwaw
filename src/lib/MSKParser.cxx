@@ -57,7 +57,7 @@ void MSKParser::sendFrameText(MWAWEntry const &, std::string const &)
   getListener()->insertChar(' ');
 }
 
-void MSKParser::sendOLE(int, MWAWPosition const &, RVNGPropertyList)
+void MSKParser::sendOLE(int, MWAWPosition const &, librevenge::RVNGPropertyList)
 {
   MWAW_DEBUG_MSG(("MSKParser::sendOLE: must not be called\n"));
 }

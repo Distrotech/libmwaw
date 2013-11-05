@@ -47,7 +47,7 @@ struct State;
 }
 /** main class used to define the final interface to generate picture
 
-	\note: this class is clearly inspired to RVNGDrawingInterface version 0.0
+	\note: this class is clearly inspired to librevenge::RVNGDrawingInterface version 0.0
 */
 class MWAWGraphicInterface
 {
@@ -57,10 +57,10 @@ public:
   /// destructor
   ~MWAWGraphicInterface();
   /// return the final graphic
-  bool getBinaryResult(RVNGBinaryData &result, std::string &mimeType);
+  bool getBinaryResult(librevenge::RVNGBinaryData &result, std::string &mimeType);
 
   // none of the other callback functions will be called before this function is called
-  void startDocument(const ::RVNGPropertyList &propList);
+  void startDocument(const ::librevenge::RVNGPropertyList &propList);
 
   // none of the other callback functions will be called after this function is called
   void endDocument();
@@ -120,38 +120,38 @@ public:
   \li \c meta:keyword The document's keywords
   \li \c
   */
-  void setDocumentMetaData(const RVNGPropertyList &propList);
+  void setDocumentMetaData(const librevenge::RVNGPropertyList &propList);
 
-  void startPage(const ::RVNGPropertyList &propList);
+  void startPage(const ::librevenge::RVNGPropertyList &propList);
 
   void endPage();
 
-  void setStyle(const ::RVNGPropertyList &propList, const ::RVNGPropertyListVector &gradient);
+  void setStyle(const ::librevenge::RVNGPropertyList &propList, const ::librevenge::RVNGPropertyListVector &gradient);
 
-  void startLayer(const ::RVNGPropertyList &propList);
+  void startLayer(const ::librevenge::RVNGPropertyList &propList);
 
   void endLayer();
 
-  void startEmbeddedGraphics(const ::RVNGPropertyList &propList);
+  void startEmbeddedGraphics(const ::librevenge::RVNGPropertyList &propList);
 
   void endEmbeddedGraphics();
 
   // Different primitive shapes
-  void drawRectangle(const ::RVNGPropertyList &propList);
+  void drawRectangle(const ::librevenge::RVNGPropertyList &propList);
 
-  void drawEllipse(const ::RVNGPropertyList &propList);
+  void drawEllipse(const ::librevenge::RVNGPropertyList &propList);
 
-  void drawPolygon(const ::RVNGPropertyListVector &vertices);
+  void drawPolygon(const ::librevenge::RVNGPropertyListVector &vertices);
 
-  void drawPolyline(const ::RVNGPropertyListVector &vertices);
+  void drawPolyline(const ::librevenge::RVNGPropertyListVector &vertices);
 
-  void drawPath(const ::RVNGPropertyListVector &path);
+  void drawPath(const ::librevenge::RVNGPropertyListVector &path);
 
   // Embedded binary/raster data
-  void drawGraphicObject(const ::RVNGPropertyList &propList, const ::RVNGBinaryData &binaryData);
+  void drawGraphicObject(const ::librevenge::RVNGPropertyList &propList, const ::librevenge::RVNGBinaryData &binaryData);
 
   // Embedded text object
-  void startTextObject(const ::RVNGPropertyList &propList, const ::RVNGPropertyListVector &path);
+  void startTextObject(const ::librevenge::RVNGPropertyList &propList, const ::librevenge::RVNGPropertyListVector &path);
   void endTextObject();
 
   /**
@@ -168,7 +168,7 @@ public:
   Called when a string of text should be inserted
   \param text A textbuffer encoded as a UTF8 string
   */
-  void insertText(const RVNGString &text);
+  void insertText(const librevenge::RVNGString &text);
 
   /**
   Called when a line break should be inserted
@@ -183,7 +183,7 @@ public:
   \param propList Defines a set of properties for the field. May contain:
   \li \c style:num-format Type of page number (for page number)
   */
-  void insertField(const RVNGString &type, const RVNGPropertyList &propList);
+  void insertField(const librevenge::RVNGString &type, const librevenge::RVNGPropertyList &propList);
 
   /**
   Defines an ordered (enumerated) list level
@@ -197,7 +197,7 @@ public:
   \li \c text:min-label-width The distance between the list label and the actual text, stored in inches
   \li \c text:space-before The indentation level of the lists, stored in inches
   */
-  void defineOrderedListLevel(const RVNGPropertyList &propList);
+  void defineOrderedListLevel(const librevenge::RVNGPropertyList &propList);
   /**
   Defines an unordered (unenumerated) list level
   \param propList Defines a set of properties for the list level. May contain:
@@ -207,14 +207,14 @@ public:
   \li \c text:min-label-width The distance between the bullet and the actual text, stored in inches
   \li \c text:space-before The indentation level of the lists, stored in inches
   */
-  void defineUnorderedListLevel(const RVNGPropertyList &propList);
+  void defineUnorderedListLevel(const librevenge::RVNGPropertyList &propList);
   /**
   Called when a new ordered list level should be opened
   Argument defines a set of properties for the list. Must contain:
   \li \c libwpd:id A unique integer identifier for the list
   \li \c libwpd:level The level of the list in the hierarchy
   */
-  void openOrderedListLevel(const RVNGPropertyList &propList);
+  void openOrderedListLevel(const librevenge::RVNGPropertyList &propList);
 
   /**
   Called when a new unordered list level should be opened
@@ -222,7 +222,7 @@ public:
   \li \c libwpd:id A unique integer identifier for the list
   \li \c libwpd:level The level of the list in the hierarchy
   */
-  void openUnorderedListLevel(const RVNGPropertyList &propList);
+  void openUnorderedListLevel(const librevenge::RVNGPropertyList &propList);
 
   /**
   Called when an unordered list level should be closed
@@ -251,7 +251,7 @@ public:
   \li \c style:leader-text The leader character
   \li \c style:position Position of the tab
   */
-  void openListElement(const RVNGPropertyList &propList, const RVNGPropertyListVector &tabStops);
+  void openListElement(const librevenge::RVNGPropertyList &propList, const librevenge::RVNGPropertyListVector &tabStops);
 
   /**
   Called when a list element should be closed
@@ -275,7 +275,7 @@ public:
   \li \c style:leader-text The leader character
   \li \c style:position Position of the tab
   */
-  void openParagraph(const RVNGPropertyList &propList, const RVNGPropertyListVector &tabStops);
+  void openParagraph(const librevenge::RVNGPropertyList &propList, const librevenge::RVNGPropertyListVector &tabStops);
 
   /**
   Called when a paragraph is closed.
@@ -298,7 +298,7 @@ public:
   \li \c style:text-blinking Whether the text should blink (true or false)
   \li \c fo:text-shadow
   */
-  void openSpan(const RVNGPropertyList &propList);
+  void openSpan(const librevenge::RVNGPropertyList &propList);
 
   /**
   Called when a text span is closed

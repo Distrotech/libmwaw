@@ -193,7 +193,7 @@ bool MSKTable::sendTable(int zoneId)
   MWAWParagraph para;
   para.m_justify=MWAWParagraph::JustificationCenter;
   for (size_t row = 0; row < nRows; row++) {
-    listener->openTableRow(float(table.m_rowsDim[row]), RVNG_POINT);
+    listener->openTableRow(float(table.m_rowsDim[row]), librevenge::RVNG_POINT);
 
     for (size_t col = 0; col < nCols; col++) {
       MWAWCell cell;
@@ -302,7 +302,7 @@ bool MSKTable::readTable(int numCol, int numRow, int zoneId, MSKGraph::Style con
     for (int c = 0; c < nbChar; c++)
       fName +=(char) input->readLong(1);
 
-    input->seek(actPos+34, RVNG_SEEK_SET);
+    input->seek(actPos+34, librevenge::RVNG_SEEK_SET);
     f << std::hex << "unk=" << input->readLong(2) << ", "; // 0|827
     int v = (int) input->readLong(2);
     if (v) f << "f0=" << v << ", ";
@@ -332,13 +332,13 @@ bool MSKTable::readTable(int numCol, int numRow, int zoneId, MSKGraph::Style con
     if (fFlags & 0x10) flags |= MWAWFont::shadowBit;
     if (fFlags & 0x20) {
       if (vers==1)
-        cell.m_font.set(MWAWFont::Script(20,RVNG_PERCENT,80));
+        cell.m_font.set(MWAWFont::Script(20,librevenge::RVNG_PERCENT,80));
       else
         cell.m_font.set(MWAWFont::Script::super100());
     }
     if (fFlags & 0x40) {
       if (vers==1)
-        cell.m_font.set(MWAWFont::Script(-20,RVNG_PERCENT,80));
+        cell.m_font.set(MWAWFont::Script(-20,librevenge::RVNG_PERCENT,80));
       else
         cell.m_font.set(MWAWFont::Script::sub100());
     }
@@ -402,14 +402,14 @@ bool MSKTable::sendChart(int chartId)
     MWAW_DEBUG_MSG(("MSKTable::sendChart: oops can not find chart bdbox %d[%d]\n", chartId, chart.m_zoneId));
     return false;
   }
-  MWAWPosition pictPos(Vec2f(0,0), chartPos.size(),RVNG_POINT);
+  MWAWPosition pictPos(Vec2f(0,0), chartPos.size(),librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Frame, MWAWPosition::XLeft, MWAWPosition::YTop);
   if (chart.m_backgroundEntry.valid()) {
     long actPos = input->tell();
 #ifdef DEBUG_WITH_FILES
     if (1) {
-      RVNGBinaryData file;
-      input->seek(chart.m_backgroundEntry.begin(), RVNG_SEEK_SET);
+      librevenge::RVNGBinaryData file;
+      input->seek(chart.m_backgroundEntry.begin(), librevenge::RVNG_SEEK_SET);
       input->readDataBlock(chart.m_backgroundEntry.length(), file);
       static int volatile pictName = 0;
       libmwaw::DebugStream f;
@@ -418,21 +418,21 @@ bool MSKTable::sendChart(int chartId)
     }
 #endif
 
-    input->seek(chart.m_backgroundEntry.begin(), RVNG_SEEK_SET);
+    input->seek(chart.m_backgroundEntry.begin(), librevenge::RVNG_SEEK_SET);
     Box2f naturalBox;
     MWAWPict::ReadResult res = MWAWPictData::check(input, (int)chart.m_backgroundEntry.length(), naturalBox);
     if (res == MWAWPict::MWAW_R_BAD) {
       MWAW_DEBUG_MSG(("MSKTable::sendChart: can not find the picture\n"));
     } else {
-      input->seek(chart.m_backgroundEntry.begin(), RVNG_SEEK_SET);
+      input->seek(chart.m_backgroundEntry.begin(), librevenge::RVNG_SEEK_SET);
       shared_ptr<MWAWPict> pict(MWAWPictData::get(input, (int)chart.m_backgroundEntry.length()));
 
-      RVNGBinaryData data;
+      librevenge::RVNGBinaryData data;
       std::string type;
       if (pict && pict->getBinary(data,type))
         listener->insertPicture(pictPos, data, type);
     }
-    input->seek(actPos, RVNG_SEEK_SET);
+    input->seek(actPos, librevenge::RVNG_SEEK_SET);
   }
   for (int i=0; i < 3; i++) {
     int cId=chart.m_textZonesId[i];
@@ -513,7 +513,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
     name+=c;
   }
   f << name << ",";
-  input->seek(pos+50, RVNG_SEEK_SET);
+  input->seek(pos+50, librevenge::RVNG_SEEK_SET);
   for (int i = 0; i < 128; i++) { // always 0 ?
     val =  (int) input->readLong(2);
     if (val) f << "g" << i << "=" << val << std::dec << ",";
@@ -524,7 +524,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
   pos = input->tell();
   ascFile.addPos(pos);
   ascFile.addNote("Chart(II)");
-  input->seek(2428, RVNG_SEEK_CUR);
+  input->seek(2428, librevenge::RVNG_SEEK_CUR);
 
   // three textbox
   for (int i = 0; i < 3; i++) {
@@ -533,7 +533,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
     chart.m_textZonesId[i] = m_graphParser->getEntryPicture(-9999, childZone, false, i+2);
     if (chart.m_textZonesId[i]<0) {
       MWAW_DEBUG_MSG(("MSKTable::readChart: can not find textbox\n"));
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
   }
@@ -543,7 +543,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
   long smDataSz = (long) input->readULong(2);
   if (!dataSz || (dataSz&0xFFFF) != smDataSz || !input->checkPosition(pos+4+dataSz)) {
     MWAW_DEBUG_MSG(("MSKTable::readChart: last pict size seems odd\n"));
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
@@ -554,7 +554,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
 
   ascFile.addPos(pos);
   ascFile.addNote("Chart(picture)");
-  input->seek(background.end(), RVNG_SEEK_SET);
+  input->seek(background.end(), librevenge::RVNG_SEEK_SET);
 
   // last the value ( by columns ? )
   for (int i = 0; i < 4; i++) {
@@ -562,7 +562,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
     dataSz = (long) input->readULong(4);
     if (dataSz%0x10) {
       MWAW_DEBUG_MSG(("MSKTable::readChart: can not read end last zone\n"));
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
     f.str("");
@@ -576,7 +576,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
       ascFile.addPos(pos+4+0x10*l);
       ascFile.addNote(f.str().c_str());
     }
-    input->seek(pos+4+dataSz, RVNG_SEEK_SET);
+    input->seek(pos+4+dataSz, librevenge::RVNG_SEEK_SET);
   }
   if (m_state->m_idChartMap.find(chartId)!=m_state->m_idChartMap.end()) {
     MWAW_DEBUG_MSG(("MSKTable::readChart: oops a chart with id=%d already exists\n", chartId));

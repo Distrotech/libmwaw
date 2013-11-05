@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	if (!szInputFile)
 		return printUsage();
 
-	RVNGFileStream input(argv[1]);
+	librevenge::RVNGFileStream input(argv[1]);
 
 	MWAWDocument::Type type;
 	MWAWDocument::Kind kind;

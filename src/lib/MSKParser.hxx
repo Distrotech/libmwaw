@@ -40,7 +40,7 @@
 
 #include "MWAWParser.hxx"
 
-class RVNGPropertyList;
+class librevenge::RVNGPropertyList;
 
 class MSKGraph;
 class MSKTable;
@@ -79,7 +79,7 @@ public:
 
   //! virtual function used to send an OLE (v4)
   virtual void sendOLE(int id, MWAWPosition const &pos,
-                       RVNGPropertyList frameExtras);
+                       librevenge::RVNGPropertyList frameExtras);
 
   //! returns the page top left point
   virtual Vec2f getPageLeftTop() const = 0;

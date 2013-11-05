@@ -67,7 +67,7 @@ struct Border {
   //! return a border corresponding to a type
   static MWAWBorder getBorder(int type);
   //! add to frame properties
-  void addToFrame(RVNGPropertyList &pList) const;
+  void addToFrame(librevenge::RVNGPropertyList &pList) const;
   //! return true if we have a shadow
   bool hasShadow() const {
     return m_shadowDepl[0]||m_shadowDepl[1];
@@ -134,7 +134,7 @@ struct Entry : public MWAWEntry {
   //! some unknown values
   int m_values[3];
   //! the main data ( if the entry comes from several zone )
-  RVNGBinaryData m_data;
+  librevenge::RVNGBinaryData m_data;
   //! the debug file
   shared_ptr<libmwaw::DebugFile> m_asciiFile;
 private:

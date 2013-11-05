@@ -206,7 +206,7 @@ bool ACText::createZones()
   int vers=version();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  input->seek(vers>=3 ? 2 : 0, RVNG_SEEK_SET);
+  input->seek(vers>=3 ? 2 : 0, librevenge::RVNG_SEEK_SET);
   while (!input->isEnd()) {
     if (!readTopic())
       break;
@@ -256,7 +256,7 @@ bool ACText::readTopic()
   topic.m_depth=(int) input->readLong(2); // checkme
   topic.m_type=(int) input->readLong(2);
   if (!topic.valid()) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
   int flag = (int) input->readULong(2); // 0|1|2|c01c|2002|
@@ -298,7 +298,7 @@ bool ACText::readTopic()
 
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
-  input->seek(pos+18, RVNG_SEEK_SET);
+  input->seek(pos+18, librevenge::RVNG_SEEK_SET);
 
   int numZones= vers<3 ? 1 : topic.m_type==2 ? 2 : 3;
   for (int z=0; z < numZones; z++) {
@@ -309,7 +309,7 @@ bool ACText::readTopic()
       ascFile.addPos(pos);
       ascFile.addNote("###");
 
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
     if (sz==0) {
@@ -320,7 +320,7 @@ bool ACText::readTopic()
     MWAWEntry &entry=(z==0) ? topic.m_data : (z==1&&topic.m_type==1) ? topic.m_fonts : topic.m_auxi;
     entry.setBegin(pos+4);
     entry.setLength(sz);
-    input->seek(entry.end(), RVNG_SEEK_SET);
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   }
 
   m_state->m_topicList.push_back(topic);
@@ -342,7 +342,7 @@ bool ACText::sendTopic(ACTextInternal::Topic const &topic)
     MWAWInputStreamPtr &input= m_parserState->m_input;
     libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
     libmwaw::DebugStream f;
-    input->seek(topic.m_auxi.begin(), RVNG_SEEK_SET);
+    input->seek(topic.m_auxi.begin(), librevenge::RVNG_SEEK_SET);
     f.str("");
     f << "Entries(Data1):";
     if (topic.m_auxi.length()!=6) {
@@ -401,7 +401,7 @@ bool ACText::sendText(ACTextInternal::Topic const &topic)
   // first read the font list if it exists
   std::map<long,MWAWFont> fontMap;
   if (topic.m_fonts.valid()) {
-    input->seek(topic.m_fonts.begin(), RVNG_SEEK_SET);
+    input->seek(topic.m_fonts.begin(), librevenge::RVNG_SEEK_SET);
     int n= (int) input->readULong(2);
 
     f.str("");
@@ -442,14 +442,14 @@ bool ACText::sendText(ACTextInternal::Topic const &topic)
           if (val)
             f << "f" << j+1 << "=" << val << ",";
         }
-        input->seek(pPos+20, RVNG_SEEK_SET);
+        input->seek(pPos+20, librevenge::RVNG_SEEK_SET);
         ascFile.addPos(pPos);
         ascFile.addNote(f.str().c_str());
       }
     }
   }
 
-  input->seek(topic.m_data.begin(), RVNG_SEEK_SET);
+  input->seek(topic.m_data.begin(), librevenge::RVNG_SEEK_SET);
   long sz=topic.m_data.length();
   f.str("");
   f << "Entries(Text):";
@@ -502,7 +502,7 @@ bool ACText::sendGraphic(ACTextInternal::Topic const &topic)
   ascFile.skipZone(pos, pos+dataSz-1);
 
   Box2f box;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   MWAWPict::ReadResult res = MWAWPictData::check(input, (int)dataSz, box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("ACText::sendGraphic: can not find the picture\n"));
@@ -512,11 +512,11 @@ bool ACText::sendGraphic(ACTextInternal::Topic const &topic)
     return true;
   }
 
-  RVNGBinaryData file;
-  input->seek(pos, RVNG_SEEK_SET);
+  librevenge::RVNGBinaryData file;
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   input->readDataBlock(dataSz, file);
 
-  MWAWPosition posi(Vec2f(0,0), box.size(), RVNG_POINT);
+  MWAWPosition posi(Vec2f(0,0), box.size(), librevenge::RVNG_POINT);
   posi.setRelativePosition(MWAWPosition::Char);
   listener->insertPicture(posi, file, "image/pict");
   listener->insertEOL();

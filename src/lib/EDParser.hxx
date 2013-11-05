@@ -64,14 +64,14 @@ public:
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(RVNGTextInterface *documentInterface);
+  void parse(librevenge::RVNGTextInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(RVNGTextInterface *documentInterface);
+  void createDocument(librevenge::RVNGTextInterface *documentInterface);
 
   //! adds a new page
   void newPage(int number);
@@ -103,7 +103,7 @@ protected:
   bool findContents();
 
   //! try to decode a compress zone
-  bool decodeZone(MWAWEntry const &entry, RVNGBinaryData &dt);
+  bool decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &dt);
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();

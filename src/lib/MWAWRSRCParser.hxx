@@ -41,7 +41,7 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-class RVNGBinaryData;
+class librevenge::RVNGBinaryData;
 
 /** \brief the main class to read a Mac resource fork
  */
@@ -86,7 +86,7 @@ public:
   bool parseSTRList(MWAWEntry const &entry, std::vector<std::string> &list);
 
   //! try to parse a PICT entry
-  bool parsePICT(MWAWEntry const &entry, RVNGBinaryData &pict);
+  bool parsePICT(MWAWEntry const &entry, librevenge::RVNGBinaryData &pict);
 
   //! try to color map (clut entry)
   bool parseClut(MWAWEntry const &entry, std::vector<MWAWColor> &list);

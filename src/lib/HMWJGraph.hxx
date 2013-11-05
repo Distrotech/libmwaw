@@ -137,17 +137,17 @@ protected:
 
 
   /** try to send a frame to the listener */
-  bool sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, RVNGPropertyList extras=RVNGPropertyList());
+  bool sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send a basic picture to the listener */
   bool sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPosition pos);
   /** try to send a comment box to the listener */
-  bool sendComment(HMWJGraphInternal::CommentFrame const &textbox, MWAWPosition pos, RVNGPropertyList extras=RVNGPropertyList());
+  bool sendComment(HMWJGraphInternal::CommentFrame const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send a picture frame */
-  bool sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MWAWPosition pos, RVNGPropertyList extras=RVNGPropertyList());
+  bool sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send an empty picture */
   bool sendEmptyPicture(MWAWPosition pos);
   /** try to send a textbox to the listener */
-  bool sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, RVNGPropertyList extras=RVNGPropertyList());
+  bool sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send a table unformatted*/
   bool sendTableUnformatted(long zId);
 
@@ -170,7 +170,7 @@ protected:
   /** return the footnote text zone id and the list of first char position */
   bool getFootnoteInformations(long &textZId, std::vector<long> &fPosList) const;
   /** try to send a frame to the listener */
-  bool sendFrame(long frameId, MWAWPosition pos, RVNGPropertyList extras=RVNGPropertyList());
+  bool sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   //! ask main parser to send a text zone
   bool sendText(long textId, long fPos, bool asGraphic=false);
 

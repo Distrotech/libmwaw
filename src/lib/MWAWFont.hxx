@@ -40,7 +40,7 @@
 
 #include "libmwaw_internal.hxx"
 
-class RVNGPropertyList;
+class librevenge::RVNGPropertyList;
 
 //! Class to store font
 class MWAWFont
@@ -60,7 +60,7 @@ public:
       return m_style != None && m_width>0;
     }
     //! add a line to the propList knowing the type (line-through, underline, overline )
-    void addTo(RVNGPropertyList &propList, std::string const &type) const;
+    void addTo(librevenge::RVNGPropertyList &propList, std::string const &type) const;
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, Line const &line);
     //! operator==
@@ -98,7 +98,7 @@ public:
   /** a small struct to define the script position in MWAWFont */
   struct Script {
     //! constructor
-    Script(float delta=0, RVNGUnit deltaUnit=RVNG_PERCENT, int scale=100) :
+    Script(float delta=0, librevenge::RVNGUnit deltaUnit=librevenge::RVNG_PERCENT, int scale=100) :
       m_delta(delta), m_deltaUnit(deltaUnit), m_scale(scale) {
     }
     //! return true if the position is not default
@@ -107,7 +107,7 @@ public:
     }
     //! return a yposition which correspond to a basic subscript
     static Script sub() {
-      return Script(-33,RVNG_PERCENT,58);
+      return Script(-33,librevenge::RVNG_PERCENT,58);
     }
     //! return a yposition which correspond to a basic subscript100
     static Script sub100() {
@@ -115,7 +115,7 @@ public:
     }
     //! return a yposition which correspond to a basic superscript
     static Script super() {
-      return Script(33,RVNG_PERCENT,58);
+      return Script(33,librevenge::RVNG_PERCENT,58);
     }
     //! return a yposition which correspond to a basic superscript100
     static Script super100() {
@@ -159,7 +159,7 @@ public:
     //! the ydelta
     float m_delta;
     //! the ydelta unit ( point or percent )
-    RVNGUnit m_deltaUnit;
+    librevenge::RVNGUnit m_deltaUnit;
     //! the font scaling ( in percent )
     int m_scale;
   };
@@ -407,7 +407,7 @@ public:
     m_language=lang;
   }
   //! add to the propList
-  void addTo(RVNGPropertyList &propList, shared_ptr<MWAWFontConverter> fontConverter) const;
+  void addTo(librevenge::RVNGPropertyList &propList, shared_ptr<MWAWFontConverter> fontConverter) const;
 
   //! returns a string which can be used for debugging
   std::string getDebugString(shared_ptr<MWAWFontConverter> &converter) const;

@@ -1529,7 +1529,7 @@ int MWAWFontSJISConverter::unicode(unsigned char c, MWAWInputStreamPtr &input)
   }
   if (m_sjisUnicodeMap.find(int(sjisChar))!=m_sjisUnicodeMap.end())
     return m_sjisUnicodeMap.find(int(sjisChar))->second;
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   return -1;
 }
 

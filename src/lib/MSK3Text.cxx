@@ -270,7 +270,7 @@ int MSK3Text::createZones(int numLines, bool mainZone)
     if (numLines>0) numLines--;
     long pos = input->tell();
     if (!readZoneHeader(zone)) {
-      input->seek(pos, RVNG_SEEK_SET);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
     if (!hasNote && zone.isNote()) {
@@ -278,7 +278,7 @@ int MSK3Text::createZones(int numLines, bool mainZone)
       hasNote = true;
     }
     actualZone.m_zonesList.push_back(zone);
-    input->seek(zone.m_pos.end(), RVNG_SEEK_SET);
+    input->seek(zone.m_pos.end(), librevenge::RVNG_SEEK_SET);
   }
   int numLineZones = int(actualZone.m_zonesList.size());
   if (numLineZones == 0) {
@@ -343,7 +343,7 @@ void MSK3Text::updateNotes(MSK3TextInternal::TextZone &zone, int firstNote)
     }
     if (z.m_pos.length() < 8) continue;
     long actPos = z.m_pos.begin();
-    input->seek(actPos+6,RVNG_SEEK_SET);
+    input->seek(actPos+6,librevenge::RVNG_SEEK_SET);
 
     int c = (int) input->readULong(1);
     if ((c == 1 || c == 2) && readFont(font, z.m_pos.end())) {
@@ -407,7 +407,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
     return true;
   }
   MWAWInputStreamPtr input=m_mainParser->getInput();
-  input->seek(zone.m_pos.begin()+6, RVNG_SEEK_SET);
+  input->seek(zone.m_pos.begin()+6, librevenge::RVNG_SEEK_SET);
   int vers = version();
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
@@ -415,7 +415,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
   MSK3TextInternal::Font font;
   if (listener && zone.m_height > 0) {
     MWAWParagraph para=listener->getParagraph();
-    para.setInterline(zone.m_height, RVNG_POINT);
+    para.setInterline(zone.m_height, librevenge::RVNG_POINT);
     listener->setParagraph(para);
   }
   bool firstChar = true;
@@ -540,10 +540,10 @@ bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
   font = MSK3TextInternal::Font();
   MWAWInputStreamPtr input=m_mainParser->getInput();
   long pos  = input->tell();
-  input->seek(-1, RVNG_SEEK_CUR);
+  input->seek(-1, librevenge::RVNG_SEEK_CUR);
   int type = (int) input->readLong(1);
   if ((type != 1 && type != 2) || pos+type+3 > endPos) {
-    input->seek(pos, RVNG_SEEK_SET);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
   libmwaw::DebugStream f;
@@ -560,13 +560,13 @@ bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
   if (flag & 0x10) flags |= MWAWFont::shadowBit;
   if (flag & 0x20) {
     if (vers==1)
-      font.m_font.set(MWAWFont::Script(20,RVNG_PERCENT,80));
+      font.m_font.set(MWAWFont::Script(20,librevenge::RVNG_PERCENT,80));
     else
       font.m_font.set(MWAWFont::Script::super100());
   }
   if (flag & 0x40) {
     if (vers==1)
-      font.m_font.set(MWAWFont::Script(-20,RVNG_PERCENT,80));
+      font.m_font.set(MWAWFont::Script(-20,librevenge::RVNG_PERCENT,80));
     else
       font.m_font.set(MWAWFont::Script::sub100());
   }
@@ -580,7 +580,7 @@ bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
     if (val == 0)
       f << "end0#,";
     else
-      input->seek(-1, RVNG_SEEK_CUR);
+      input->seek(-1, librevenge::RVNG_SEEK_CUR);
   }
   if (color != 1) {
     MWAWColor col;
@@ -601,7 +601,7 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MWAWParagraph &pa
   int dataSize = int(zone.m_pos.length())-6;
   if (dataSize < 15) return false;
   MWAWInputStreamPtr input=m_mainParser->getInput();
-  input->seek(zone.m_pos.begin()+6, RVNG_SEEK_SET);
+  input->seek(zone.m_pos.begin()+6, librevenge::RVNG_SEEK_SET);
 
   parag = MWAWParagraph();
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
@@ -734,7 +734,7 @@ std::string MSK3Text::readHeaderFooterString(bool header)
   for (int i = 0; i < numChar; i++) {
     unsigned char c = (unsigned char) input->readULong(1);
     if (c == 0) {
-      input->seek(-1, RVNG_SEEK_CUR);
+      input->seek(-1, librevenge::RVNG_SEEK_CUR);
       break;
     }
     if (c == '&') {
@@ -757,7 +757,7 @@ std::string MSK3Text::readHeaderFooterString(bool header)
         field = false;
       }
       if (field) continue;
-      input->seek(-1, RVNG_SEEK_CUR);
+      input->seek(-1, librevenge::RVNG_SEEK_CUR);
     }
     res += (char) c;
   }

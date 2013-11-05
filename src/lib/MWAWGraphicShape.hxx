@@ -39,7 +39,7 @@
 #  include "librevenge/librevenge.h"
 #  include "libmwaw_internal.hxx"
 
-class RVNGPropertyList;
+class librevenge::RVNGPropertyList;
 class MWAWGraphicStyle;
 
 /** a structure used to define a picture shape */
@@ -59,7 +59,7 @@ public:
     //! rotate all the coordinate by angle (origin rotation) then translate coordinate
     void rotate(float angle, Vec2f const &delta);
     //! update the property list to correspond to a command
-    bool get(RVNGPropertyList &pList, Vec2f const &orig) const;
+    bool get(librevenge::RVNGPropertyList &pList, Vec2f const &orig) const;
     //! a print operator
     friend std::ostream &operator<<(std::ostream &o, PathData const &path);
     //! comparison function

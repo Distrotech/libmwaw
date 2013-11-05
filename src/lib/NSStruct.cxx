@@ -94,7 +94,7 @@ bool RecursifData::read(NSParser &parser, MWAWEntry const &entry)
   MWAWInputStreamPtr input = parser.rsrcInput();
   libmwaw::DebugFile &asciiFile = parser.rsrcAscii();
   long pos = entry.begin();
-  input->seek(pos, RVNG_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   if (m_level == 0) {
@@ -172,7 +172,7 @@ bool RecursifData::read(NSParser &parser, MWAWEntry const &entry)
     if (level == 3) {
       child.m_entry.setLength(sz);
       m_childList.push_back(child);
-      input->seek(endPos, RVNG_SEEK_SET);
+      input->seek(endPos, librevenge::RVNG_SEEK_SET);
       continue;
     }
 
@@ -196,7 +196,7 @@ bool RecursifData::read(NSParser &parser, MWAWEntry const &entry)
     } else
       m_childList.push_back(child);
 
-    input->seek(endPos, RVNG_SEEK_SET);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }

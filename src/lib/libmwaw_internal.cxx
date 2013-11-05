@@ -46,7 +46,7 @@
 /** namespace used to regroup all libwpd functions, enumerations which we have redefined for internal usage */
 namespace libmwaw
 {
-uint8_t readU8(RVNGInputStream *input)
+uint8_t readU8(librevenge::RVNGInputStream *input)
 {
   unsigned long numBytesRead;
   uint8_t const *p = input->read(sizeof(uint8_t), numBytesRead);
@@ -57,7 +57,7 @@ uint8_t readU8(RVNGInputStream *input)
   return *p;
 }
 
-void appendUnicode(uint32_t val, RVNGString &buffer)
+void appendUnicode(uint32_t val, librevenge::RVNGString &buffer)
 {
   uint8_t first;
   int len;
@@ -217,7 +217,7 @@ int MWAWBorder::compare(MWAWBorder const &orig) const
   if (m_color > orig.m_color) return 1;
   return 0;
 }
-bool MWAWBorder::addTo(RVNGPropertyList &propList, std::string const which) const
+bool MWAWBorder::addTo(librevenge::RVNGPropertyList &propList, std::string const which) const
 {
   std::stringstream stream, field;
   stream << m_width << "pt ";

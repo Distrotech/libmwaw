@@ -39,12 +39,12 @@
 
 namespace mwaw2html
 {
-bool getPointValue(RVNGProperty const &prop, double &res)
+bool getPointValue(librevenge::RVNGProperty const &prop, double &res)
 {
 	res = prop.getDouble();
 
 	// try to guess the type
-	RVNGString str = prop.getStr();
+	librevenge::RVNGString str = prop.getStr();
 
 	// point->pt, twip->*, inch -> in
 	char c = str.len() ? str.cstr()[str.len()-1] : ' ';

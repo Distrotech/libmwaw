@@ -43,7 +43,7 @@
 ////////////////////////////////////////////////////////////
 // list manager
 ////////////////////////////////////////////////////////////
-void ListStyleManager::List::setLevel(int lvl, RVNGPropertyList const &pList, bool ordered)
+void ListStyleManager::List::setLevel(int lvl, librevenge::RVNGPropertyList const &pList, bool ordered)
 {
 	if (lvl < 0 || lvl > 30)
 	{
@@ -106,7 +106,7 @@ void ListStyleManager::send(std::ostream &out)
 	}
 }
 
-std::string ListStyleManager::getClass(RVNGPropertyList const &pList, RVNGPropertyListVector const &)
+std::string ListStyleManager::getClass(librevenge::RVNGPropertyList const &pList, librevenge::RVNGPropertyListVector const &)
 {
 	std::string content=getContent(pList, true);
 	std::map<std::string, std::string>::iterator it=m_contentNameMap.find(content);
@@ -118,7 +118,7 @@ std::string ListStyleManager::getClass(RVNGPropertyList const &pList, RVNGProper
 	return s.str();
 }
 
-void ListStyleManager::defineLevel(RVNGPropertyList const &pList, bool ordered)
+void ListStyleManager::defineLevel(librevenge::RVNGPropertyList const &pList, bool ordered)
 {
 	if (!pList["libwpd:id"])
 	{
@@ -136,7 +136,7 @@ void ListStyleManager::defineLevel(RVNGPropertyList const &pList, bool ordered)
 	m_idListMap.find(id)->second.setLevel(pList["libwpd:level"]->getInt(), pList, ordered);
 }
 
-std::string ListStyleManager::openLevel(RVNGPropertyList const &pList, bool /*ordered*/)
+std::string ListStyleManager::openLevel(librevenge::RVNGPropertyList const &pList, bool /*ordered*/)
 {
 	int id = -1;
 	if (!pList["libwpd:id"])
@@ -181,7 +181,7 @@ void ListStyleManager::closeLevel()
 ////////////////////////////////////////////////////////////
 // paragraph manager
 ////////////////////////////////////////////////////////////
-std::string ParagraphStyleManager::getClass(RVNGPropertyList const &pList, RVNGPropertyListVector const &)
+std::string ParagraphStyleManager::getClass(librevenge::RVNGPropertyList const &pList, librevenge::RVNGPropertyListVector const &)
 {
 	std::string content=getContent(pList, false);
 	std::map<std::string, std::string>::iterator it=m_contentNameMap.find(content);
@@ -203,12 +203,12 @@ void ParagraphStyleManager::send(std::ostream &out)
 	}
 }
 
-std::string ParagraphStyleManager::getContent(RVNGPropertyList const &pList, bool isList) const
+std::string ParagraphStyleManager::getContent(librevenge::RVNGPropertyList const &pList, bool isList) const
 {
 	std::stringstream s;
 	if (pList["fo:text-align"])
 	{
-		if (pList["fo:text-align"]->getStr() == RVNGString("end")) // stupid OOo convention..
+		if (pList["fo:text-align"]->getStr() == librevenge::RVNGString("end")) // stupid OOo convention..
 			s << " text-align:right;";
 		else
 			s << " text-align:" << pList["fo:text-align"]->getStr().cstr() << ";";
@@ -267,7 +267,7 @@ std::string ParagraphStyleManager::getContent(RVNGPropertyList const &pList, boo
 	return s.str();
 }
 
-void ParagraphStyleManager::parseBorders(RVNGPropertyList const &pList, std::ostream &out) const
+void ParagraphStyleManager::parseBorders(librevenge::RVNGPropertyList const &pList, std::ostream &out) const
 {
 	static char const *(type[]) = {"border", "border-left", "border-top", "border-right", "border-bottom" };
 	for (int i = 0; i < 5; i++)
@@ -288,7 +288,7 @@ void ParagraphStyleManager::parseBorders(RVNGPropertyList const &pList, std::ost
 ////////////////////////////////////////////////////////////
 // span manager
 ////////////////////////////////////////////////////////////
-std::string SpanStyleManager::getClass(RVNGPropertyList const &pList)
+std::string SpanStyleManager::getClass(librevenge::RVNGPropertyList const &pList)
 {
 	std::string content=getContent(pList);
 	std::map<std::string, std::string>::iterator it=m_contentNameMap.find(content);
@@ -310,7 +310,7 @@ void SpanStyleManager::send(std::ostream &out)
 	}
 }
 
-std::string SpanStyleManager::getContent(RVNGPropertyList const &pList) const
+std::string SpanStyleManager::getContent(librevenge::RVNGPropertyList const &pList) const
 {
 	std::stringstream s;
 	s << "{\n";
@@ -380,7 +380,7 @@ std::string SpanStyleManager::getContent(RVNGPropertyList const &pList) const
 	return s.str();
 }
 
-void SpanStyleManager::parseDecorations(RVNGPropertyList const &pList, std::ostream &out) const
+void SpanStyleManager::parseDecorations(librevenge::RVNGPropertyList const &pList, std::ostream &out) const
 {
 	// replaceme by text-decoration-line when its implementation will appear in browser
 	std::stringstream s;

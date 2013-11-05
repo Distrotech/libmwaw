@@ -45,7 +45,7 @@
 
 #include "MWAWCell.hxx"
 
-void MWAWCell::addTo(RVNGPropertyList &propList) const
+void MWAWCell::addTo(librevenge::RVNGPropertyList &propList) const
 {
   propList.insert("libwpd:column", position()[0]);
   propList.insert("libwpd:row", position()[1]);
@@ -97,7 +97,7 @@ void MWAWCell::addTo(RVNGPropertyList &propList) const
     MWAW_DEBUG_MSG(("MWAWCell::addTo: called with unknown halign=%d\n", hAlignement()));
   }
   // no padding
-  propList.insert("fo:padding", 0, RVNG_POINT);
+  propList.insert("fo:padding", 0, librevenge::RVNG_POINT);
   // alignement
   switch(vAlignement()) {
   case VALIGN_TOP:

@@ -143,9 +143,9 @@ class WrongPasswordException
 /* ---------- input ----------------- */
 namespace libmwaw
 {
-uint8_t readU8(RVNGInputStream *input);
+uint8_t readU8(librevenge::RVNGInputStream *input);
 //! adds an unicode character to a string
-void appendUnicode(uint32_t val, RVNGString &buffer);
+void appendUnicode(uint32_t val, librevenge::RVNGString &buffer);
 }
 
 /* ---------- small enum/class ------------- */
@@ -245,7 +245,7 @@ struct MWAWBorder {
   /** add the border property to proplist (if needed )
 
   \note if set which must be equal to "left", "top", ... */
-  bool addTo(RVNGPropertyList &propList, std::string which="") const;
+  bool addTo(librevenge::RVNGPropertyList &propList, std::string which="") const;
   //! returns true if the border is empty
   bool isEmpty() const {
     return m_style==None || m_width <= 0;
@@ -310,7 +310,7 @@ struct MWAWNote {
   //! the note type
   Type m_type;
   //! the note label
-  RVNGString m_label;
+  librevenge::RVNGString m_label;
   //! the note number if defined
   int m_number;
 };
