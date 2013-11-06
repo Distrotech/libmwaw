@@ -2692,12 +2692,12 @@ void MSKGraph::send(int id, MWAWPosition const &pos)
     if (zone->m_ids[1] > 0) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%ld", zone->m_ids[0]);
-      extras.insert("libwpd:frame-name",fName);
+      extras.insert("librevenge:frame-name",fName);
     }
     if (zone->m_ids[2] > 0) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%ld", zone->m_ids[2]);
-      textboxExtra.insert("libwpd:next-frame-name",fName);
+      textboxExtra.insert("librevenge:next-frame-name",fName);
     }
     listener->insertTextBox(pictPos, subdoc, extras, textboxExtra);
     return;

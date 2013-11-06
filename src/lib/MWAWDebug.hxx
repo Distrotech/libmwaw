@@ -38,8 +38,6 @@
 
 #include "MWAWInputStream.hxx"
 
-class librevenge::RVNGBinaryData;
-
 #  if defined(DEBUG_WITH_FILES)
 #include <fstream>
 #include <sstream>

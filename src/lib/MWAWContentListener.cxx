@@ -473,7 +473,7 @@ void MWAWContentListener::insertField(MWAWField const &field)
 void MWAWContentListener::setDocumentLanguage(std::string locale)
 {
   if (!locale.length()) return;
-  m_ds->m_metaData.insert("libwpd:language", locale.c_str());
+  m_ds->m_metaData.insert("librevenge:language", locale.c_str());
 }
 
 bool MWAWContentListener::isDocumentStarted() const
@@ -565,7 +565,7 @@ void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
 
   librevenge::RVNGPropertyList propList;
   currentPage.getPageProperty(propList);
-  propList.insert("libwpd:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
+  propList.insert("librevenge:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
 
   if (!m_ps->m_isPageSpanOpened)
     m_documentInterface->openPageSpan(propList);
@@ -904,7 +904,7 @@ void MWAWContentListener::_changeList()
   if (actualLevel == newLevel) return;
 
   librevenge::RVNGPropertyList propList;
-  propList.insert("libwpd:id", m_ps->m_list->getId());
+  propList.insert("librevenge:id", m_ps->m_list->getId());
   for (size_t i=actualLevel+1; i<= newLevel; i++) {
     bool ordered = m_ps->m_list->isNumeric(int(i));
     m_ps->m_listOrderedLevels[i-1] = ordered;
@@ -1041,7 +1041,7 @@ void MWAWContentListener::insertNote(MWAWNote const &note, MWAWSubDocumentPtr &s
         m_ds->m_footNoteNumber = note.m_number;
       else
         m_ds->m_footNoteNumber++;
-      propList.insert("libwpd:number", m_ds->m_footNoteNumber);
+      propList.insert("librevenge:number", m_ds->m_footNoteNumber);
       m_documentInterface->openFootnote(propList);
       handleSubDocument(subDocument, libmwaw::DOC_NOTE);
       m_documentInterface->closeFootnote();
@@ -1050,7 +1050,7 @@ void MWAWContentListener::insertNote(MWAWNote const &note, MWAWSubDocumentPtr &s
         m_ds->m_endNoteNumber = note.m_number;
       else
         m_ds->m_endNoteNumber++;
-      propList.insert("libwpd:number", m_ds->m_endNoteNumber);
+      propList.insert("librevenge:number", m_ds->m_endNoteNumber);
       m_documentInterface->openEndnote(propList);
       handleSubDocument(subDocument, libmwaw::DOC_NOTE);
       m_documentInterface->closeEndnote();
@@ -1125,7 +1125,7 @@ void MWAWContentListener::insertPicture
     return;
   if (!openFrame(pos)) return;
   librevenge::RVNGPropertyList propList;
-  propList.insert("libwpd:mimetype", mime.c_str());
+  propList.insert("librevenge:mimetype", mime.c_str());
   m_documentInterface->insertBinaryObject(propList, data);
   closeFrame();
 }
@@ -1147,7 +1147,7 @@ void MWAWContentListener::insertPicture
   if (!openFrame(pos, frameExtras)) return;
 
   librevenge::RVNGPropertyList propList;
-  propList.insert("libwpd:mimetype", type.c_str());
+  propList.insert("librevenge:mimetype", type.c_str());
   m_documentInterface->insertBinaryObject(propList, binaryData);
 
   closeFrame();
@@ -1241,8 +1241,8 @@ void MWAWContentListener::_handleFrameParameters
   if (pos.order() > 0)
     propList.insert("draw:z-index", pos.order());
   if (pos.naturalSize().x() > 4*pointFactor && pos.naturalSize().y() > 4*pointFactor) {
-    propList.insert("libwpd:naturalWidth", pos.naturalSize().x(), pos.unit());
-    propList.insert("libwpd:naturalHeight", pos.naturalSize().y(), pos.unit());
+    propList.insert("librevenge:naturalWidth", pos.naturalSize().x(), pos.unit());
+    propList.insert("librevenge:naturalHeight", pos.naturalSize().y(), pos.unit());
   }
   Vec2f TLClip = (1.f/pointFactor)*pos.leftTopClipping();
   Vec2f RBClip = (1.f/pointFactor)*pos.rightBottomClipping();
@@ -1572,7 +1572,7 @@ void MWAWContentListener::openTableRow(float h, librevenge::RVNGUnit unit, bool 
     return;
   }
   librevenge::RVNGPropertyList propList;
-  propList.insert("libwpd:is-header-row", headerRow);
+  propList.insert("librevenge:is-header-row", headerRow);
 
   if (h > 0)
     propList.insert("style:row-height", h, unit);
@@ -1603,8 +1603,8 @@ void MWAWContentListener::addEmptyTableCell(Vec2i const &pos, Vec2i span)
     closeTableCell();
   }
   librevenge::RVNGPropertyList propList;
-  propList.insert("libwpd:column", pos[0]);
-  propList.insert("libwpd:row", pos[1]);
+  propList.insert("librevenge:column", pos[0]);
+  propList.insert("librevenge:row", pos[1]);
   propList.insert("table:number-columns-spanned", span[0]);
   propList.insert("table:number-rows-spanned", span[1]);
   m_documentInterface->openTableCell(propList);

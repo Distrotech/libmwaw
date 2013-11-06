@@ -44,8 +44,6 @@
 
 #include "MWAWParser.hxx"
 
-class librevenge::RVNGTextInterface;
-
 namespace MSK4ParserInternal
 {
 struct State;

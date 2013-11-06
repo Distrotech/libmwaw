@@ -422,7 +422,9 @@ private:
 //! Internal: the textbox of a HMWKGraph
 struct TextBox : public Frame {
   //! constructor
-  TextBox(Frame const &orig, bool isComment) : Frame(orig), m_commentBox(isComment), m_textFileId(-1), m_linkedIdList(), m_isLinked(false) {
+  TextBox(Frame const &orig, bool isComment)
+    : Frame(orig), m_commentBox(isComment), m_textFileId(-1),
+	  m_linkedIdList(), m_isLinked(false), m_extra() {
     for (int i = 0; i < 2; ++i) m_dim[i] = 0;
   }
   //! destructor
@@ -474,12 +476,12 @@ struct TextBox : public Frame {
     if (m_type==4 && m_isLinked) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%ld", m_fileId);
-      frames.insert("libwpd:frame-name",fName);
+      frames.insert("librevenge:frame-name",fName);
     }
     if (m_type==4 && !m_linkedIdList.empty()) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%ld", m_linkedIdList[0]);
-      tbExtra.insert("libwpd:next-frame-name",fName);
+      tbExtra.insert("librevenge:next-frame-name",fName);
     }
     if (m_style.hasSurfaceColor())
       frames.insert("fo:background-color", m_style.m_surfaceColor.str().c_str());

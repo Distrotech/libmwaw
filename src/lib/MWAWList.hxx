@@ -40,8 +40,6 @@
 
 #include <librevenge/librevenge.h>
 
-class librevenge::RVNGPropertyList;
-
 /** small structure to keep information about a list level */
 struct MWAWListLevel {
   /** the type of the level */

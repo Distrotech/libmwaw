@@ -426,7 +426,7 @@ void HtmlDocumentGenerator::setDocumentMetaData(const librevenge::RVNGPropertyLi
 	static char const *wpdMetaFields[9]=
 	{
 		"meta:initial-creator", "dc:creator", "dc:subject", "dc:publisher", "meta:keywords",
-		"dc:language", "dc:description", "libwpd:descriptive-name", "libwpd:descriptive-type"
+		"dc:language", "dc:description", "librevenge:descriptive-name", "librevenge:descriptive-type"
 	};
 	static char const *metaFields[9]=
 	{
@@ -439,8 +439,8 @@ void HtmlDocumentGenerator::setDocumentMetaData(const librevenge::RVNGPropertyLi
 			continue;
 		meta << "<meta name=\"" << metaFields[i] << "\" content=\"" << propList[wpdMetaFields[i]]->getStr().cstr() << "\">" << std::endl;
 	}
-	if (propList["libwpd:descriptive-name"])
-		meta << "<title>" << propList["libwpd:descriptive-name"]->getStr().cstr() << "</title>" << std::endl;
+	if (propList["librevenge:descriptive-name"])
+		meta << "<title>" << propList["librevenge:descriptive-name"]->getStr().cstr() << "</title>" << std::endl;
 	else
 		meta << "<title></title>" << std::endl;
 	m_state->pop();

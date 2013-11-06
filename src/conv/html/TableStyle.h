@@ -40,9 +40,6 @@
 #include <map>
 #include <vector>
 
-class librevenge::RVNGPropertyList;
-class librevenge::RVNGPropertyListVector;
-
 /** Small class to manage the tables style */
 class TableStyleManager
 {

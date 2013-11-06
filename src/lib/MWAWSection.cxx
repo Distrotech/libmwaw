@@ -127,10 +127,10 @@ void MWAWSection::addTo(librevenge::RVNGPropertyList &propList) const
     propList.insert("fo:background-color", m_backgroundColor.str().c_str());
   if (m_columnSeparator.m_style != MWAWBorder::None &&
       m_columnSeparator.m_width > 0) {
-    propList.insert("libwpd:colsep-width", m_columnSeparator.m_width, librevenge::RVNG_POINT);
-    propList.insert("libwpd:colsep-color", m_columnSeparator.m_color.str().c_str());
-    propList.insert("libwpd:colsep-height", "100%");
-    propList.insert("libwpd:colsep-vertical-align", "middle");
+    propList.insert("librevenge:colsep-width", m_columnSeparator.m_width, librevenge::RVNG_POINT);
+    propList.insert("librevenge:colsep-color", m_columnSeparator.m_color.str().c_str());
+    propList.insert("librevenge:colsep-height", "100%");
+    propList.insert("librevenge:colsep-vertical-align", "middle");
   }
 }
 

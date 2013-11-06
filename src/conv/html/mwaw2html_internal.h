@@ -66,7 +66,6 @@ struct MWAW_shared_ptr_noop_deleter
 #define MWAW_DEBUG_MSG(M)
 #endif
 
-class librevenge::RVNGProperty;
 namespace mwaw2html
 {
 bool getPointValue(librevenge::RVNGProperty const &prop, double &res);

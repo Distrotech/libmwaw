@@ -40,8 +40,6 @@
 
 #include "MWAWFont.hxx"
 
-class librevenge::RVNGPropertyList;
-
 /** a class which stores the header/footer data */
 class MWAWHeaderFooter
 {

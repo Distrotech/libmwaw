@@ -44,8 +44,6 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWPict.hxx"
 
-class librevenge::RVNGBinaryData;
-
 ////////////////////////////////////////////////////////////
 //
 //   Some container

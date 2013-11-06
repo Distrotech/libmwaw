@@ -598,7 +598,7 @@ void MWAWGraphicListener::_changeList()
   if (actualLevel == newLevel) return;
 
   librevenge::RVNGPropertyList propList;
-  propList.insert("libwpd:id", m_ps->m_list->getId());
+  propList.insert("librevenge:id", m_ps->m_list->getId());
   for (size_t i=actualLevel+1; i<= newLevel; i++) {
     bool ordered = m_ps->m_list->isNumeric(int(i));
     m_ps->m_listOrderedLevels[i-1] = ordered;

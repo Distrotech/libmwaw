@@ -2019,12 +2019,12 @@ bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAW
   else {
     librevenge::RVNGString fName;
     fName.sprintf("Frame%ld", textbox.m_fileId);
-    pList.insert("libwpd:frame-name",fName);
+    pList.insert("librevenge:frame-name",fName);
   }
   if (textbox.m_linkToFId) {
     librevenge::RVNGString fName;
     fName.sprintf("Frame%ld", textbox.m_linkToFId);
-    tbExtras.insert("libwpd:next-frame-name",fName);
+    tbExtras.insert("librevenge:next-frame-name",fName);
   }
   m_parserState->m_listener->insertTextBox(pos, subdoc, pList, tbExtras);
 

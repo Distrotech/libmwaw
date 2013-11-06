@@ -39,12 +39,6 @@
 #  include <sstream>
 #  include <string>
 
-class librevenge::RVNGBinaryData;
-class librevenge::RVNGProperty;
-class librevenge::RVNGPropertyList;
-class librevenge::RVNGPropertyListVector;
-class librevenge::RVNGString;
-
 //! a generic property handler
 class MWAWPropertyHandler
 {

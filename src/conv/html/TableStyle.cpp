@@ -139,9 +139,9 @@ std::string TableStyleManager::getCellContent(librevenge::RVNGPropertyList const
 	std::stringstream s;
 	s << "{\n";
 	// try to get the cell width
-	if (pList["libwpd:column"])
+	if (pList["librevenge:column"])
 	{
-		int c=pList["libwpd:column"]->getInt();
+		int c=pList["librevenge:column"]->getInt();
 		int span=1;
 		if (pList["table:number-columns-spanned"])
 			span = pList["table:number-columns-spanned"]->getInt();

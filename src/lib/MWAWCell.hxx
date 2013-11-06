@@ -43,8 +43,6 @@
 
 #include "libmwaw_internal.hxx"
 
-class librevenge::RVNGPropertyList;
-
 class MWAWTable;
 
 /** a structure used to define a cell and its format */

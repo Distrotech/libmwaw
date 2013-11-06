@@ -41,8 +41,6 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-class librevenge::RVNGBinaryData;
-
 /** \brief the main class to read a Mac resource fork
  */
 class MWAWRSRCParser

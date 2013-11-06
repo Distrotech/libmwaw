@@ -120,31 +120,31 @@ std::string ListStyleManager::getClass(librevenge::RVNGPropertyList const &pList
 
 void ListStyleManager::defineLevel(librevenge::RVNGPropertyList const &pList, bool ordered)
 {
-	if (!pList["libwpd:id"])
+	if (!pList["librevenge:id"])
 	{
 		MWAW_DEBUG_MSG(("ListStyleManager::defineLevel: can not find list id\n"));
 		return;
 	}
-	int id = pList["libwpd:id"]->getInt();
+	int id = pList["librevenge:id"]->getInt();
 	if (m_idListMap.find(id)==m_idListMap.end())
 		m_idListMap[id]=List();
-	if (!pList["libwpd:level"])
+	if (!pList["librevenge:level"])
 	{
 		MWAW_DEBUG_MSG(("ListStyleManager::defineLevel: can not find list level\n"));
 		return;
 	}
-	m_idListMap.find(id)->second.setLevel(pList["libwpd:level"]->getInt(), pList, ordered);
+	m_idListMap.find(id)->second.setLevel(pList["librevenge:level"]->getInt(), pList, ordered);
 }
 
 std::string ListStyleManager::openLevel(librevenge::RVNGPropertyList const &pList, bool /*ordered*/)
 {
 	int id = -1;
-	if (!pList["libwpd:id"])
+	if (!pList["librevenge:id"])
 	{
 		MWAW_DEBUG_MSG(("ListStyleManager::openLevel: can not find list id\n"));
 	}
 	else
-		id = pList["libwpd:id"]->getInt();
+		id = pList["librevenge:id"]->getInt();
 	m_actualIdStack.push_back(id);
 
 	std::string content=getContent(pList, true);
