@@ -439,7 +439,7 @@ void GraphicExporter::insertElement(const char *psName)
   else if (strcmp(psName,"CloseUnorderedListLevel")==0)
     m_output->closeUnorderedListLevel();
 
-  else if (strcmp(psName,"Document")==0)
+  else if (strcmp(psName,"EndDocument")==0)
     m_output->endDocument();
   else if (strcmp(psName,"EndPage")==0)
     m_output->endPage();
@@ -526,8 +526,7 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
       m_output->drawPolyline(vector);
     else
       m_output->drawPath(vector);
-  }
-  if (strcmp(psName,"StartTextObject")==0)
+  } else if (strcmp(psName,"StartTextObject")==0)
     m_output->startTextObject(propList, vector);
   else if (strcmp(psName,"OpenListElement")==0)
     m_output->openListElement(propList, vector);

@@ -384,13 +384,14 @@ void MWAWGraphicListener::startGraphic(Box2f const &bdbox)
   m_ps->m_isGraphicStarted = true;
   m_ps->m_origin=bdbox[0];
 
+  m_gs->m_interface->startDocument(librevenge::RVNGPropertyList());
   librevenge::RVNGPropertyList list;
   list.insert("svg:x",bdbox[0].x(), librevenge::RVNG_POINT);
   list.insert("svg:y",bdbox[0].y(), librevenge::RVNG_POINT);
   list.insert("svg:width",bdbox.size().x(), librevenge::RVNG_POINT);
   list.insert("svg:height",bdbox.size().y(), librevenge::RVNG_POINT);
   list.insert("librevenge:enforce-frame",1);
-  m_gs->m_interface->startDocument(list);
+  m_gs->m_interface->startPage(list);
 }
 
 bool MWAWGraphicListener::endGraphic(librevenge::RVNGBinaryData &data, std::string &mimeType)
@@ -411,6 +412,7 @@ bool MWAWGraphicListener::endGraphic(librevenge::RVNGBinaryData &data, std::stri
     m_ps->m_paragraph.m_listLevelIndex = 0;
     _changeList(); // flush the list exterior
   }
+  m_gs->m_interface->endPage();
   m_gs->m_interface->endDocument();
   bool ok=m_gs->m_interface->getBinaryResult(data, mimeType);
   m_gs->m_interface.reset();
@@ -659,7 +661,7 @@ void MWAWGraphicListener::_flushText()
   if (m_ps->m_textBuffer.len() == 0) return;
 
   // when some many ' ' follows each other, call insertSpace
-  librevenge::RVNGString tmpText;
+  librevenge::RVNGString tmpText("");
   int numConsecutiveSpaces = 0;
   librevenge::RVNGString::Iter i(m_ps->m_textBuffer);
   for (i.rewind(); i.next();) {
@@ -669,11 +671,17 @@ void MWAWGraphicListener::_flushText()
       numConsecutiveSpaces = 0;
 
     if (numConsecutiveSpaces > 1) {
+#if 0
       if (tmpText.len() > 0) {
         m_gs->m_interface->insertText(tmpText);
         tmpText.clear();
       }
       m_gs->m_interface->insertSpace();
+#else
+      // Arghh!!! Does not works, insert a unicode space...
+      numConsecutiveSpaces = 0;
+      libmwaw::appendUnicode(0x2005, tmpText);
+#endif
     } else
       tmpText.append(i());
   }

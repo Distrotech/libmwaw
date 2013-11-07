@@ -424,7 +424,7 @@ struct TextBox : public Frame {
   //! constructor
   TextBox(Frame const &orig, bool isComment)
     : Frame(orig), m_commentBox(isComment), m_textFileId(-1),
-	  m_linkedIdList(), m_isLinked(false), m_extra() {
+      m_linkedIdList(), m_isLinked(false), m_extra() {
     for (int i = 0; i < 2; ++i) m_dim[i] = 0;
   }
   //! destructor

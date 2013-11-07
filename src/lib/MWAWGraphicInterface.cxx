@@ -14,8 +14,8 @@
 * License.
 *
 * Major Contributor(s):
- * Copyright (C) 2006 Ariya Hidayat (ariya@kde.org)
- * Copyright (C) 2004 Marc Oude Kotte (marc@solcon.nl)
+* Copyright (C) 2006 Ariya Hidayat (ariya@kde.org)
+* Copyright (C) 2004 Marc Oude Kotte (marc@solcon.nl)
 * Copyright (C) 2002 William Lachance (wrlach@gmail.com)
 * Copyright (C) 2002,2004 Marc Maurer (uwog@uwog.net)
 * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
@@ -293,7 +293,7 @@ void MWAWGraphicInterface::openSpan(const librevenge::RVNGPropertyList &list)
 
 void MWAWGraphicInterface::closeSpan()
 {
-  m_state->m_encoder.insertElement("CloseSoan");
+  m_state->m_encoder.insertElement("CloseSpan");
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

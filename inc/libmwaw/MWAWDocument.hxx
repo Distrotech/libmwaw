@@ -49,11 +49,12 @@
 #  define MWAWLIB
 #endif
 
-namespace librevenge {
-  class RVNGBinaryData;
-  class RVNGDrawingInterface;
-  class RVNGTextInterface;
-  class RVNGInputStream;
+namespace librevenge
+{
+class RVNGBinaryData;
+class RVNGDrawingInterface;
+class RVNGTextInterface;
+class RVNGInputStream;
 }
 
 /**

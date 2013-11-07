@@ -432,8 +432,8 @@ bool MSK3Parser::createZones()
 bool MSK3Parser::readZone(MSK3ParserInternal::Zone &zone)
 {
   MWAWInputStreamPtr input = getInput();
+  if (input->isEnd()) return false;
   long pos = input->tell();
-
   MWAWEntry pict;
   int val = (int) input->readLong(1);
   input->seek(-1, librevenge::RVNG_SEEK_CUR);
