@@ -33,10 +33,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <librevenge/librevenge.h>
+#include <librevenge-generators/librevenge-generators.h>
 #include <librevenge-stream/librevenge-stream.h>
-#include <libmwaw/libmwaw.hxx>
 
-#include "TextDocumentGenerator.h"
+#include <libmwaw/libmwaw.hxx>
 
 int printUsage()
 {
@@ -90,7 +91,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	TextDocumentGenerator documentGenerator(isInfo);
+	librevenge::RVNGTextTextGenerator documentGenerator(isInfo);
 	MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
 	try
 	{

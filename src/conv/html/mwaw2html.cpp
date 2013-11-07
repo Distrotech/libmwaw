@@ -35,32 +35,29 @@
 
 #include <cstring>
 
+#include <librevenge/librevenge.h>
+#include <librevenge-generators/librevenge-generators.h>
 #include <librevenge-stream/librevenge-stream.h>
+
 #include <libmwaw/libmwaw.hxx>
-#include "HtmlDocumentGenerator.h"
 
 int printUsage()
 {
-	printf("Usage: mwaw2html [-h][-o file.html] <Text Mac Document>\n");
+	printf("Usage: mwaw2html [-h] <Text Mac Document>\n");
 	printf("\t-h:                Shows this help message\n");
-	printf("\t-o file.html:      Define the output[default stdout]\n");
 	return -1;
 }
 
 int main(int argc, char *argv[])
 {
 	char const *file = 0;
-	char const *output=0;
 	bool printHelp=false;
 	int ch;
 
-	while ((ch = getopt(argc, argv, "ho:")) != -1)
+	while ((ch = getopt(argc, argv, "h")) != -1)
 	{
 		switch (ch)
 		{
-		case 'o':
-			output=optarg;
-			break;
 		default:
 		case 'h':
 			printHelp = true;
@@ -97,7 +94,7 @@ int main(int argc, char *argv[])
 	MWAWDocument::Result error=MWAWDocument::MWAW_R_OK;
 	try
 	{
-		HtmlDocumentGenerator documentGenerator(output);
+		librevenge::RVNGHTMLTextGenerator documentGenerator;
 		error = MWAWDocument::parse(&input, &documentGenerator);
 	}
 	catch(MWAWDocument::Result &err)

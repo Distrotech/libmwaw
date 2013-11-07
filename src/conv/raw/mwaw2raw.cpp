@@ -32,9 +32,12 @@
 
 #include <stdio.h>
 #include <string.h>
+
+#include <librevenge/librevenge.h>
+#include <librevenge-generators/librevenge-generators.h>
 #include <librevenge-stream/librevenge-stream.h>
+
 #include <libmwaw/libmwaw.hxx>
-#include "RawDocumentGenerator.h"
 
 int printUsage()
 {
@@ -84,7 +87,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	RawDocumentGenerator documentGenerator(printIndentLevel);
+	librevenge::RVNGRawTextGenerator documentGenerator(printIndentLevel);
 	MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
 	try
 	{

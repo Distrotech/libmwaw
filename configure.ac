@@ -35,13 +35,6 @@ AC_CANONICAL_HOST
 
 PKG_PROG_PKG_CONFIG([0.20])
 
-# ====================
-# Find additional apps
-# ====================
-PKG_CHECK_MODULES([REVENGE],[librevenge-0.0 librevenge-stream-0.0])
-AC_SUBST(REVENGE_CFLAGS)
-AC_SUBST(REVENGE_LIBS)
-
 # =================================
 # Libtool/Version Makefile settings
 # =================================
@@ -328,7 +321,7 @@ AC_SUBST(XATTR_CFLAGS)
 # Find zlib
 # =========
 AC_ARG_ENABLE([zip],
-	[AS_HELP_STRING([--disable-zip], [Do not use the zip library and so do not accept a zipped document as input.])],
+	[AS_HELP_STRING([--disable-zip], [Do not use the zip library and so do not build mwawZip.])],
 	[with_zip="$enableval"],
 	[with_zip=yes]
 )
@@ -339,7 +332,7 @@ if test "x$with_zip" != "xno"; then
     		AC_CHECK_LIB(z, inflate, [ ZLIB_LIBS=-lz ],
         		[AC_MSG_ERROR(zlib not found or functional)], [])
 	])
-	AC_DEFINE([USE_ZIP],[1],[Use the zip library to read a zipped document.])
+	AC_DEFINE([USE_ZIP],[1],[Use the zip library to create mwawZip.])
 	ZLIB_CFLAGS="$ZLIB_CFLAGS -DUSE_ZIP"
 else
 	ZLIB_CFLAGS=
@@ -348,6 +341,29 @@ fi
 AC_SUBST(ZLIB_CFLAGS)
 AC_SUBST(ZLIB_LIBS)
 AM_CONDITIONAL([WITH_LIBMWAW_ZIP], [test "x$with_zip" != "xno"])
+# ====================
+# Find librevenge
+# ====================
+PKG_CHECK_MODULES([REVENGE],[ librevenge-0.0 librevenge-stream-0.0 ])
+AC_SUBST(REVENGE_CFLAGS)
+AC_SUBST(REVENGE_LIBS)
+
+# =====
+# Tools
+# =====
+AC_ARG_ENABLE([tools],
+	[AS_HELP_STRING([--disable-tools], [Build conversion tools])],
+	[enable_tools="$enableval"],
+	[enable_tools=yes]
+)
+AS_IF([test "x$enable_tools" = "xyes"], [
+	PKG_CHECK_MODULES([REVENGE_GENERATORS],[
+		librevenge-generators-0.0
+	])
+])
+AC_SUBST([REVENGE_GENERATORS_CFLAGS])
+AC_SUBST([REVENGE_GENERATORS_LIBS])
+AM_CONDITIONAL(BUILD_CONVERTISSORS, [test "x$enable_tools" = "xyes"])
 
 # =============
 # Documentation

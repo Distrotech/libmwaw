@@ -389,7 +389,7 @@ void MWAWGraphicListener::startGraphic(Box2f const &bdbox)
   list.insert("svg:y",bdbox[0].y(), librevenge::RVNG_POINT);
   list.insert("svg:width",bdbox.size().x(), librevenge::RVNG_POINT);
   list.insert("svg:height",bdbox.size().y(), librevenge::RVNG_POINT);
-  list.insert("libwpg:enforce-frame",1);
+  list.insert("librevenge:enforce-frame",1);
   m_gs->m_interface->startDocument(list);
 }
 
@@ -598,7 +598,7 @@ void MWAWGraphicListener::_changeList()
   if (actualLevel == newLevel) return;
 
   librevenge::RVNGPropertyList propList;
-  propList.insert("libwpd:id", m_ps->m_list->getId());
+  propList.insert("librevenge:id", m_ps->m_list->getId());
   for (size_t i=actualLevel+1; i<= newLevel; i++) {
     bool ordered = m_ps->m_list->isNumeric(int(i));
     m_ps->m_listOrderedLevels[i-1] = ordered;
@@ -743,7 +743,7 @@ void MWAWGraphicListener::insertPicture
   pt=bdbox.size();
   list.insert("svg:width",pt.x(), librevenge::RVNG_POINT);
   list.insert("svg:height",pt.y(), librevenge::RVNG_POINT);
-  list.insert("libwpg:mime-type", type.c_str());
+  list.insert("librevenge:mime-type", type.c_str());
   m_gs->m_interface->drawGraphicObject(list,binaryData);
 }
 
@@ -762,13 +762,13 @@ void MWAWGraphicListener::insertTextBox
   // flip does not works on text, so we ignore it...
   if (style.m_flip[0]&&style.m_flip[1]) rotate += 180.f;
   if (rotate<0||rotate>0) {
-    propList.insert("libwpg:rotate", rotate);
+    propList.insert("librevenge:rotate", rotate);
     Vec2f size=bdbox.size();
     if (size[0]<0) size[0]=-size[0];
     if (size[1]<0) size[1]=-size[1];
     Vec2f center=bdbox[0]-m_ps->m_origin+0.5f*size;
-    propList.insert("libwpg:rotate-cx",center[0], librevenge::RVNG_POINT);
-    propList.insert("libwpg:rotate-cy",center[1], librevenge::RVNG_POINT);
+    propList.insert("librevenge:rotate-cx",center[0], librevenge::RVNG_POINT);
+    propList.insert("librevenge:rotate-cy",center[1], librevenge::RVNG_POINT);
   }
   m_gs->m_interface->startTextObject(propList, librevenge::RVNGPropertyListVector());
   handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_TEXT_BOX);

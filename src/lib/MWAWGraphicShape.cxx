@@ -126,7 +126,7 @@ bool MWAWGraphicShape::PathData::get(librevenge::RVNGPropertyList &list, Vec2f c
   list.clear();
   std::string type("");
   type += m_type;
-  list.insert("libwpg:path-action", type.c_str());
+  list.insert("librevenge:path-action", type.c_str());
   if (m_type=='Z')
     return true;
   if (m_type=='H') {
@@ -144,9 +144,9 @@ bool MWAWGraphicShape::PathData::get(librevenge::RVNGPropertyList &list, Vec2f c
   if (m_type=='A') {
     list.insert("svg:rx",m_r[0], librevenge::RVNG_POINT);
     list.insert("svg:ry",m_r[1], librevenge::RVNG_POINT);
-    list.insert("libwpg:large-arc", m_largeAngle ? 1 : 0);
-    list.insert("libwpg:sweep", m_sweep ? 1 : 0);
-    list.insert("libwpg:rotate", m_rotate);
+    list.insert("librevenge:large-arc", m_largeAngle ? 1 : 0);
+    list.insert("librevenge:sweep", m_sweep ? 1 : 0);
+    list.insert("librevenge:rotate", m_rotate);
     return true;
   }
   list.insert("svg:x1",m_x1[0]-orig[0], librevenge::RVNG_POINT);
@@ -399,14 +399,14 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
     bool addCenter=m_type==Pie && style.hasSurface();
     if (addCenter) {
       pt=center;
-      list.insert("libwpg:path-action", "M");
+      list.insert("librevenge:path-action", "M");
       list.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
       list.insert("svg:y",pt.y(), librevenge::RVNG_POINT);
       vect.append(list);
     }
     list.clear();
     pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
-    list.insert("libwpg:path-action", addCenter ? "L" : "M");
+    list.insert("librevenge:path-action", addCenter ? "L" : "M");
     list.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
     list.insert("svg:y",pt.y(), librevenge::RVNG_POINT);
     vect.append(list);
@@ -414,9 +414,9 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
     list.clear();
     angl=angl1*float(M_PI/180.);
     pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
-    list.insert("libwpg:path-action", "A");
-    list.insert("libwpg:large-arc", (angl1-angl0<180.f)?0:1);
-    list.insert("libwpg:sweep", 0);
+    list.insert("librevenge:path-action", "A");
+    list.insert("librevenge:large-arc", (angl1-angl0<180.f)?0:1);
+    list.insert("librevenge:sweep", 0);
     list.insert("svg:rx",rad.x(), librevenge::RVNG_POINT);
     list.insert("svg:ry",rad.y(), librevenge::RVNG_POINT);
     list.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
@@ -424,7 +424,7 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
     vect.append(list);
     if (style.hasSurface()) {
       list.clear();
-      list.insert("libwpg:path-action", "Z");
+      list.insert("librevenge:path-action", "Z");
       vect.append(list);
     }
     interface.drawPath(vect);
@@ -457,7 +457,7 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
     if (style.hasSurface() && m_path[n-1].m_type != 'Z') {
       // odg need a closed path to draw surface, so ...
       list.clear();
-      list.insert("libwpg:path-action", "Z");
+      list.insert("librevenge:path-action", "Z");
       vect.append(list);
     }
     interface.drawPath(vect);

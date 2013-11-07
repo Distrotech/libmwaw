@@ -248,9 +248,9 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVN
         m_gradientStopList[1].m_offset >=1) {
       size_t first=(m_gradientType==G_Linear || m_gradientType==G_Axial) ? 0 : 1;
       list.insert("draw:start-color", m_gradientStopList[first].m_color.str().c_str());
-      list.insert("libwpg:start-opacity", m_gradientStopList[first].m_opacity, librevenge::RVNG_PERCENT);
+      list.insert("librevenge:start-opacity", m_gradientStopList[first].m_opacity, librevenge::RVNG_PERCENT);
       list.insert("draw:end-color", m_gradientStopList[1-first].m_color.str().c_str());
-      list.insert("libwpg:end-opacity", m_gradientStopList[1-first].m_opacity, librevenge::RVNG_PERCENT);
+      list.insert("librevenge:end-opacity", m_gradientStopList[1-first].m_opacity, librevenge::RVNG_PERCENT);
     } else {
       for (size_t s=0; s < m_gradientStopList.size(); ++s) {
         librevenge::RVNGPropertyList grad;
@@ -288,7 +288,7 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVN
           list.insert("draw:fill-image-height", m_pattern.m_dim[1], librevenge::RVNG_POINT);
           list.insert("draw:fill-image-ref-point-x",0, librevenge::RVNG_POINT);
           list.insert("draw:fill-image-ref-point-y",0, librevenge::RVNG_POINT);
-          list.insert("libwpg:mime-type", mimeType.c_str());
+          list.insert("librevenge:mime-type", mimeType.c_str());
           done = true;
         }
       }

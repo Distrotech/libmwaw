@@ -47,8 +47,8 @@
 
 void MWAWCell::addTo(librevenge::RVNGPropertyList &propList) const
 {
-  propList.insert("libwpd:column", position()[0]);
-  propList.insert("libwpd:row", position()[1]);
+  propList.insert("librevenge:column", position()[0]);
+  propList.insert("librevenge:row", position()[1]);
 
   propList.insert("table:number-columns-spanned", numSpannedCells()[0]);
   propList.insert("table:number-rows-spanned", numSpannedCells()[1]);

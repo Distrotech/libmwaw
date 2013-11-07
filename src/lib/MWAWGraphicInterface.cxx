@@ -68,15 +68,15 @@ struct State {
 
 void State::addListElement(librevenge::RVNGPropertyList const &list)
 {
-  if (!list["libwpd:id"] || !list["libwpd:level"]) {
+  if (!list["librevenge:id"] || !list["librevenge:level"]) {
     MWAW_DEBUG_MSG(("MWAWGraphicInterfaceInternal::addListElement: can not find the id or the level\n"));
     return;
   }
-  int id=list["libwpd:id"]->getInt();
-  int level=list["libwpd:level"]->getInt();
+  int id=list["librevenge:id"]->getInt();
+  int level=list["librevenge:level"]->getInt();
   std::multimap<int, librevenge::RVNGPropertyList>::iterator it=m_listIdToPropertyMap.lower_bound(id);
   while (it!=m_listIdToPropertyMap.end() && it->first == id) {
-    if (it->second["libwpd:level"]->getInt()==level) {
+    if (it->second["librevenge:level"]->getInt()==level) {
       m_listIdToPropertyMap.erase(it);
       break;
     }
@@ -89,7 +89,7 @@ bool State::retrieveListElement(int id, int level, librevenge::RVNGPropertyList 
 {
   std::multimap<int, librevenge::RVNGPropertyList>::const_iterator it=m_listIdToPropertyMap.lower_bound(id);
   while (it!=m_listIdToPropertyMap.end() && it->first == id) {
-    if (it->second["libwpd:level"]->getInt()==level) {
+    if (it->second["librevenge:level"]->getInt()==level) {
       list = it->second;
       return true;
     }

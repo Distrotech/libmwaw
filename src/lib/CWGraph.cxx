@@ -470,13 +470,13 @@ struct Group : public CWStruct::DSET {
     if (it != lZones.m_mapIdChild.begin()) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%d-%d", id, subId);
-      framePList.insert("libwpd:frame-name",fName);
+      framePList.insert("librevenge:frame-name",fName);
     }
     ++it;
     if (it != lZones.m_mapIdChild.end()) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%d-%d", id, it->first);
-      textboxPList.insert("libwpd:next-frame-name",fName);
+      textboxPList.insert("librevenge:next-frame-name",fName);
     }
     return true;
   }
