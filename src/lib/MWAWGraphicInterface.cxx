@@ -245,15 +245,26 @@ void MWAWGraphicInterface::defineUnorderedListLevel(const librevenge::RVNGProper
   m_state->addListElement(list);
 }
 
-// OSNOLA: checkme: we must pass the list level definition there...
 void MWAWGraphicInterface::openOrderedListLevel(const librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.insertElement("OpenOrderedListLevel", list);
+  librevenge::RVNGPropertyList pList(list);
+  if (list["librevenge:id"] && list["librevenge:level"])
+    m_state->retrieveListElement(list["librevenge:id"]->getInt(), list["librevenge:level"]->getInt(), pList);
+  else {
+    MWAW_DEBUG_MSG(("MWAWGraphicInterface::openOrderedListLevel: can not retrieve listId or level\n"));
+  }
+  m_state->m_encoder.insertElement("OpenOrderedListLevel", pList);
 }
 
 void MWAWGraphicInterface::openUnorderedListLevel(const librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.insertElement("OpenUnorderedListLevel", list);
+  librevenge::RVNGPropertyList pList(list);
+  if (list["librevenge:id"] && list["librevenge:level"])
+    m_state->retrieveListElement(list["librevenge:id"]->getInt(), list["librevenge:level"]->getInt(), pList);
+  else {
+    MWAW_DEBUG_MSG(("MWAWGraphicInterface::openUnorderedListLevel: can not retrieve listId or level\n"));
+  }
+  m_state->m_encoder.insertElement("OpenUnorderedListLevel", pList);
 }
 
 void MWAWGraphicInterface::closeOrderedListLevel()

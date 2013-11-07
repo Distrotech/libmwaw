@@ -671,17 +671,11 @@ void MWAWGraphicListener::_flushText()
       numConsecutiveSpaces = 0;
 
     if (numConsecutiveSpaces > 1) {
-#if 0
       if (tmpText.len() > 0) {
         m_gs->m_interface->insertText(tmpText);
         tmpText.clear();
       }
       m_gs->m_interface->insertSpace();
-#else
-      // Arghh!!! Does not works, insert a unicode space...
-      numConsecutiveSpaces = 0;
-      libmwaw::appendUnicode(0x2005, tmpText);
-#endif
     } else
       tmpText.append(i());
   }
