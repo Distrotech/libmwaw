@@ -49,8 +49,6 @@
 #  include "libmwaw_internal.hxx"
 #  include "MWAWPict.hxx"
 
-class librevenge::RVNGBinaryData;
-
 /** \brief an abstract class which defines basic formated picture ( Apple© Pict, DB3, ...) */
 class MWAWPictData : public MWAWPict
 {

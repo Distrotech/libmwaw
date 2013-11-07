@@ -39,7 +39,6 @@
 #  include "librevenge/librevenge.h"
 #  include "libmwaw_internal.hxx"
 
-class librevenge::RVNGPropertyList;
 class MWAWGraphicStyle;
 
 /** a structure used to define a picture shape */

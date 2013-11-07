@@ -45,8 +45,6 @@
 
 #include "MWAWParser.hxx"
 
-class librevenge::RVNGBinaryData;
-
 namespace MWProParserInternal
 {
 struct State;

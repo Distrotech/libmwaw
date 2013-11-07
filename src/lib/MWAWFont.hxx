@@ -40,8 +40,6 @@
 
 #include "libmwaw_internal.hxx"
 
-class librevenge::RVNGPropertyList;
-
 //! Class to store font
 class MWAWFont
 {

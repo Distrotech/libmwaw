@@ -73,8 +73,6 @@
 
 #include "MWAWDebug.hxx"
 
-class librevenge::RVNGBinaryData;
-
 namespace MWAWOLEParserInternal
 {
 class CompObj;

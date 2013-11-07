@@ -45,8 +45,6 @@
 #include "MWAWHeader.hxx"
 #include "MWAWPageSpan.hxx"
 
-class librevenge::RVNGTextInterface;
-
 /** a class to define the parser state */
 class MWAWParserState
 {

@@ -41,8 +41,6 @@
 #include <librevenge-stream/librevenge-stream.h>
 #include "libmwaw_internal.hxx"
 
-class librevenge::RVNGBinaryData;
-
 /*! \class MWAWInputStream
  * \brief Internal class used to read the file stream
  *  Internal class used to read the file stream,

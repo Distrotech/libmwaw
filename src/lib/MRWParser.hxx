@@ -43,8 +43,6 @@
 
 #include <librevenge/librevenge.h>
 
-class librevenge::RVNGBinaryData;
-
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"

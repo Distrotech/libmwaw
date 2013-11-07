@@ -43,9 +43,6 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWList.hxx"
 
-class librevenge::RVNGPropertyList;
-class librevenge::RVNGPropertyListVector;
-
 /** class to store a tab use by MWAWParagraph */
 struct MWAWTabStop {
   //! the tab alignement
