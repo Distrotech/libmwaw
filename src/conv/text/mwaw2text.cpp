@@ -91,7 +91,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	librevenge::RVNGTextTextGenerator documentGenerator(isInfo);
+	librevenge::RVNGString document;
+	librevenge::RVNGTextTextGenerator documentGenerator(document, isInfo);
 	MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
 	try
 	{
@@ -117,6 +118,8 @@ int main(int argc, char *argv[])
 
 	if (error != MWAWDocument::MWAW_R_OK)
 		return 1;
+
+	printf("%s", document.cstr());
 
 	return 0;
 }

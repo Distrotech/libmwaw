@@ -92,9 +92,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	MWAWDocument::Result error=MWAWDocument::MWAW_R_OK;
+	librevenge::RVNGString document;
 	try
 	{
-		librevenge::RVNGHTMLTextGenerator documentGenerator;
+		librevenge::RVNGHTMLTextGenerator documentGenerator(document);
 		error = MWAWDocument::parse(&input, &documentGenerator);
 	}
 	catch(MWAWDocument::Result &err)
@@ -115,6 +116,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ERROR: Unknown Error!\n");
 	if (error != MWAWDocument::MWAW_R_OK)
 		return 1;
+
+	printf("%s", document.cstr());
 
 	return 0;
 }
