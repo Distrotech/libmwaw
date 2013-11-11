@@ -68,8 +68,8 @@ bool MWAWSection::Column::addTo(librevenge::RVNGPropertyList &propList) const
     return false;
   }
   propList.insert("style:rel-width", m_width * factor, librevenge::RVNG_TWIP);
-  propList.insert("fo:start-indent", m_margins[libmwaw::Left]);
-  propList.insert("fo:end-indent", m_margins[libmwaw::Right]);
+  propList.insert("fo:start-indent", m_margins[libmwaw::Left], librevenge::RVNG_INCH);
+  propList.insert("fo:end-indent", m_margins[libmwaw::Right], librevenge::RVNG_INCH);
   static bool first = true;
   if (first && (m_margins[libmwaw::Top]>0||m_margins[libmwaw::Bottom]>0)) {
     first=false;
@@ -119,8 +119,8 @@ void MWAWSection::setColumns(int num, double width, librevenge::RVNGUnit widthUn
 
 void MWAWSection::addTo(librevenge::RVNGPropertyList &propList) const
 {
-  propList.insert("fo:margin-left", 0.0);
-  propList.insert("fo:margin-right", 0.0);
+  propList.insert("fo:margin-left", 0.0, librevenge::RVNG_INCH);
+  propList.insert("fo:margin-right", 0.0, librevenge::RVNG_INCH);
   if (m_columns.size() > 1)
     propList.insert("text:dont-balance-text-columns", !m_balanceText);
   if (!m_backgroundColor.isWhite())

@@ -565,7 +565,7 @@ void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
 
   librevenge::RVNGPropertyList propList;
   currentPage.getPageProperty(propList);
-  propList.insert("librevenge:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
+  propList.insert("librevenge:is-last-page-span", bool(m_ps->m_currentPage + 1 == m_ds->m_pageList.size()));
 
   if (!m_ps->m_isPageSpanOpened)
     m_documentInterface->openPageSpan(propList);
@@ -1035,7 +1035,7 @@ void MWAWContentListener::insertNote(MWAWNote const &note, MWAWSubDocumentPtr &s
 
     librevenge::RVNGPropertyList propList;
     if (note.m_label.len())
-      propList.insert("text:label", note.m_label);
+      propList.insert("text:label", librevenge::RVNGPropertyFactory::newStringProp(note.m_label));
     if (note.m_type == MWAWNote::FootNote) {
       if (note.m_number >= 0)
         m_ds->m_footNoteNumber = note.m_number;

@@ -390,7 +390,7 @@ void MWAWGraphicListener::startGraphic(Box2f const &bdbox)
   list.insert("svg:y",bdbox[0].y(), librevenge::RVNG_POINT);
   list.insert("svg:width",bdbox.size().x(), librevenge::RVNG_POINT);
   list.insert("svg:height",bdbox.size().y(), librevenge::RVNG_POINT);
-  list.insert("librevenge:enforce-frame",1);
+  list.insert("librevenge:enforce-frame",true);
   m_gs->m_interface->startPage(list);
 }
 

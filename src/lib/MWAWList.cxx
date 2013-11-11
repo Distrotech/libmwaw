@@ -45,10 +45,10 @@
 ////////////////////////////////////////////////////////////
 void MWAWListLevel::addTo(librevenge::RVNGPropertyList &propList) const
 {
-  propList.insert("text:min-label-width", m_labelWidth);
-  propList.insert("text:space-before", m_labelBeforeSpace);
+  propList.insert("text:min-label-width", m_labelWidth, librevenge::RVNG_INCH);
+  propList.insert("text:space-before", m_labelBeforeSpace, librevenge::RVNG_INCH);
   if (m_labelAfterSpace > 0)
-    propList.insert("text:min-label-distance", m_labelAfterSpace);
+    propList.insert("text:min-label-distance", m_labelAfterSpace, librevenge::RVNG_INCH);
   if (m_numBeforeLabels)
     propList.insert("text:display-levels", m_numBeforeLabels+1);
   switch(m_alignment) {
@@ -77,7 +77,8 @@ void MWAWListLevel::addTo(librevenge::RVNGPropertyList &propList) const
     }
     break;
   case LABEL:
-    if (m_label.len()) propList.insert("style:num-suffix", m_label);
+    if (m_label.len())
+      propList.insert("style:num-suffix", librevenge::RVNGPropertyFactory::newStringProp(m_label));
     propList.insert("style:num-format", "");
     break;
   case DECIMAL:
@@ -85,8 +86,10 @@ void MWAWListLevel::addTo(librevenge::RVNGPropertyList &propList) const
   case UPPER_ALPHA:
   case LOWER_ROMAN:
   case UPPER_ROMAN:
-    if (m_prefix.len()) propList.insert("style:num-prefix",m_prefix);
-    if (m_suffix.len()) propList.insert("style:num-suffix", m_suffix);
+    if (m_prefix.len())
+      propList.insert("style:num-prefix",librevenge::RVNGPropertyFactory::newStringProp(m_prefix));
+    if (m_suffix.len())
+      propList.insert("style:num-suffix", librevenge::RVNGPropertyFactory::newStringProp(m_suffix));
     if (m_type==DECIMAL) propList.insert("style:num-format", "1");
     else if (m_type==LOWER_ALPHA) propList.insert("style:num-format", "a");
     else if (m_type==UPPER_ALPHA) propList.insert("style:num-format", "A");

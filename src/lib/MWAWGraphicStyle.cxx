@@ -260,7 +260,7 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVN
         gradient.append(grad);
       }
     }
-    list.insert("draw:angle", m_gradientAngle);
+    list.insert("draw:angle", m_gradientAngle, librevenge::RVNG_GENERIC);
     list.insert("draw:border", m_gradientBorder, librevenge::RVNG_PERCENT);
     if (m_gradientType != G_Linear) {
       list.insert("svg:cx", m_gradientPercentCenter[0], librevenge::RVNG_PERCENT);
@@ -300,12 +300,12 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVN
     }
   }
   if (hasShadow()) {
-    list.insert("draw:shadow", "vsible");
+    list.insert("draw:shadow", "visible");
     list.insert("draw:shadow-color", m_shadowColor.str().c_str());
     list.insert("draw:shadow-opacity", m_shadowOpacity, librevenge::RVNG_PERCENT);
     // in cm
-    list.insert("draw:shadow-offset-x", double(m_shadowOffset[0])/72.*2.54);
-    list.insert("draw:shadow-offset-y", double(m_shadowOffset[1])/72.*2.54);
+    list.insert("draw:shadow-offset-x", double(m_shadowOffset[0])/72.*2.54, librevenge::RVNG_GENERIC); // cm
+    list.insert("draw:shadow-offset-y", double(m_shadowOffset[1])/72.*2.54, librevenge::RVNG_GENERIC); // cm
   }
 }
 

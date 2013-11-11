@@ -84,7 +84,7 @@ void MWAWTabStop::addTo(librevenge::RVNGPropertyListVector &propList, double dec
   double position = m_position+decalX;
   if (position < 0.00005f && position > -0.00005f)
     position = 0.0;
-  tab.insert("style:position", position);
+  tab.insert("style:position", position, librevenge::RVNG_INCH);
 
   propList.append(tab);
 }
@@ -335,8 +335,8 @@ void MWAWParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) 
       }
     }
   }
-  propList.insert("fo:margin-top", *(m_spacings[1]));
-  propList.insert("fo:margin-bottom", *(m_spacings[2]));
+  propList.insert("fo:margin-top", *(m_spacings[1]), librevenge::RVNG_INCH);
+  propList.insert("fo:margin-bottom", *(m_spacings[2]), librevenge::RVNG_INCH);
   switch (*m_spacingsInterlineType) {
   case Fixed:
     propList.insert("fo:line-height", *(m_spacings[0]), *m_spacingsInterlineUnit);

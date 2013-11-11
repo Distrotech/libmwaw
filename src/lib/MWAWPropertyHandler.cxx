@@ -358,17 +358,14 @@ protected:
     if (!readString(input, key)) return false;
     if (!readString(input, val)) return false;
 
-    librevenge::RVNGProperty *prop=librevenge::RVNGPropertyFactory::newStringProp(val.c_str());
-    if (!prop) return prop;
+    list.insert(key.c_str(), val.c_str());
+    librevenge::RVNGProperty const *prop=list[key.c_str()];
+    if (!prop) return true;
     librevenge::RVNGUnit unit=prop->getUnit();
-    if (unit==librevenge::RVNG_POINT) {
+    if (unit==librevenge::RVNG_POINT)
       list.insert(key.c_str(), prop->getDouble()/72., librevenge::RVNG_INCH);
-      delete prop;
-    } else if (unit==librevenge::RVNG_TWIP) {
+    else if (unit==librevenge::RVNG_TWIP)
       list.insert(key.c_str(), prop->getDouble()/1440., librevenge::RVNG_INCH);
-      delete prop;
-    } else
-      list.insert(key.c_str(), prop);
     return true;
   }
 
