@@ -105,7 +105,7 @@ public:
 	virtual void openFrame(const librevenge::RVNGPropertyList & /* propList */) {}
 	virtual void closeFrame() {}
 
-	virtual void insertBinaryObject(const librevenge::RVNGPropertyList & /* propList */, const librevenge::RVNGBinaryData & /* object */) {}
+	virtual void insertBinaryObject(const librevenge::RVNGPropertyList & /* propList */) {}
 	virtual void insertEquation(const librevenge::RVNGPropertyList & /* propList */, const librevenge::RVNGString & /* data */) {}
 
 private:

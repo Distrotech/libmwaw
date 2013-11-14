@@ -1126,7 +1126,8 @@ void MWAWContentListener::insertPicture
   if (!openFrame(pos)) return;
   librevenge::RVNGPropertyList propList;
   propList.insert("librevenge:mime-type", mime.c_str());
-  m_documentInterface->insertBinaryObject(propList, data);
+  propList.insert("office:binary-data", data);
+  m_documentInterface->insertBinaryObject(propList);
   closeFrame();
 }
 
@@ -1148,7 +1149,8 @@ void MWAWContentListener::insertPicture
 
   librevenge::RVNGPropertyList propList;
   propList.insert("librevenge:mime-type", type.c_str());
-  m_documentInterface->insertBinaryObject(propList, binaryData);
+  propList.insert("office:binary-data", binaryData);
+  m_documentInterface->insertBinaryObject(propList);
 
   closeFrame();
 }

@@ -548,7 +548,9 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
     return;
   }
   if (strcmp(psName,"DrawGraphicObject")==0) {
-    m_output->drawGraphicObject(propList, data);
+    librevenge::RVNGPropertyList tmpPropList(propList);
+    tmpPropList.insert("office:binary-data", data);
+    m_output->drawGraphicObject(tmpPropList);
     return;
   }
   MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
