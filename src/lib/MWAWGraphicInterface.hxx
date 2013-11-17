@@ -148,7 +148,7 @@ public:
   void drawPath(const ::librevenge::RVNGPropertyListVector &path);
 
   // Embedded binary/raster data
-  void drawGraphicObject(const ::librevenge::RVNGPropertyList &propList, const ::librevenge::RVNGBinaryData &binaryData);
+  void drawGraphicObject(const ::librevenge::RVNGPropertyList &propList);
 
   // Embedded text object
   void startTextObject(const ::librevenge::RVNGPropertyList &propList, const ::librevenge::RVNGPropertyListVector &path);

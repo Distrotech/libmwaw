@@ -55,9 +55,6 @@ public:
   //! inserts an element ( given a vector list )
   virtual void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
                              const librevenge::RVNGPropertyListVector &vect) = 0;
-  //! inserts an element ( given a binary data )
-  virtual void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
-                             const librevenge::RVNGBinaryData &data) = 0;
   //! writes a list of characters
   virtual void characters(librevenge::RVNGString const &sCharacters) = 0;
 
@@ -81,8 +78,6 @@ public:
  *  - [insertElement:name proplist:prop]: char 'S', [string] name, prop
  *  - [insertElement:name proplist:prop proplistvector:vector]:
  *          char 'V', [string] name, prop, vector
- *  - [insertElement:name proplist:prop binarydata:data]:
- *          char 'B', [string] name, prop, data
  *  - [characters:s ]: char 'T', [string] s
  *            - if len(s)==0, we write nothing
  *            - the string is written as is (ie. we do not escaped any characters).
@@ -100,9 +95,6 @@ public:
   //! inserts an element given a property list vector
   void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
                      const librevenge::RVNGPropertyListVector &vect);
-  //! inserts an element given a binary data
-  void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
-                     const librevenge::RVNGBinaryData &data);
   //! writes a list of characters
   void characters(librevenge::RVNGString const &sCharacters);
   //! retrieves the data
@@ -116,7 +108,7 @@ protected:
   //! adds a long value if f
   void writeLong(long val);
   //! adds a string: size and string
-  void writeString(const char *name);
+  void writeString(const librevenge::RVNGString &name);
   //! adds a property: a string key, a string corresponding to value
   void writeProperty(const char *key, const librevenge::RVNGProperty &prop);
   //! adds a property list: int \#prop, \#prop*librevenge::RVNGProperty

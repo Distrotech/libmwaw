@@ -746,7 +746,8 @@ void MWAWGraphicListener::insertPicture
   list.insert("svg:width",pt.x(), librevenge::RVNG_POINT);
   list.insert("svg:height",pt.y(), librevenge::RVNG_POINT);
   list.insert("librevenge:mime-type", type.c_str());
-  m_gs->m_interface->drawGraphicObject(list,binaryData);
+  list.insert("office:binary-data", binaryData);
+  m_gs->m_interface->drawGraphicObject(list);
 }
 
 void MWAWGraphicListener::insertTextBox

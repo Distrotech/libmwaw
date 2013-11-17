@@ -192,9 +192,9 @@ void MWAWGraphicInterface::drawPath(const ::librevenge::RVNGPropertyListVector &
   m_state->m_encoder.insertElement("DrawPath", librevenge::RVNGPropertyList(), path);
 }
 
-void MWAWGraphicInterface::drawGraphicObject(const ::librevenge::RVNGPropertyList &list, const ::librevenge::RVNGBinaryData &binaryData)
+void MWAWGraphicInterface::drawGraphicObject(const ::librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.insertElement("DrawGraphicObject", list, binaryData);
+  m_state->m_encoder.insertElement("DrawGraphicObject", list);
 }
 
 void MWAWGraphicInterface::startTextObject(const ::librevenge::RVNGPropertyList &list, const ::librevenge::RVNGPropertyListVector &path)

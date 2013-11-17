@@ -93,9 +93,6 @@ public:
   /** insert an element ( with a librevenge::RVNGPropertyListVector parameter ) */
   void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
                      const librevenge::RVNGPropertyListVector &vector);
-  /** insert an element ( with a librevenge::RVNGBinary parameter ) */
-  void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
-                     const librevenge::RVNGBinaryData &data);
   /** insert a sequence of character */
   void characters(const librevenge::RVNGString &sCharacters) {
     if (!m_output) return;
@@ -469,10 +466,12 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
     return;
   }
 
-  if (strcmp(psName,"DrawRectangle")==0)
-    m_output->drawRectangle(propList);
-  else if (strcmp(psName,"DrawEllipse")==0)
+  if (strcmp(psName,"DrawEllipse")==0)
     m_output->drawEllipse(propList);
+  else if (strcmp(psName,"DrawGraphicObject")==0)
+    m_output->drawGraphicObject(propList);
+  else if (strcmp(psName,"DrawRectangle")==0)
+    m_output->drawRectangle(propList);
 
   else if (strcmp(psName,"InsertField")==0) {
     if (propList["libmwaw:type"])
@@ -537,23 +536,6 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
   else {
     MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
   }
-}
-
-void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPropertyList &propList,
-                                    const librevenge::RVNGBinaryData &data)
-{
-  if (!m_output) return;
-  if (!psName) {
-    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called without any name\n"));
-    return;
-  }
-  if (strcmp(psName,"DrawGraphicObject")==0) {
-    librevenge::RVNGPropertyList tmpPropList(propList);
-    tmpPropList.insert("office:binary-data", data);
-    m_output->drawGraphicObject(tmpPropList);
-    return;
-  }
-  MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
 }
 
 }
