@@ -513,6 +513,7 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
     MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called without any name\n"));
     return;
   }
+  librevenge::RVNGPropertyList pList(propList);
   if (strcmp(psName,"DrawPath")==0 || strcmp(psName,"DrawPolygon")==0 || strcmp(psName,"DrawPolyline")==0) {
 #ifdef DEBUG
     if (!librevenge::RVNGPropertyList::Iter(propList).last()) {
@@ -523,10 +524,14 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
       m_output->drawPolygon(vector);
     else if (strcmp(psName,"DrawPolyline")==0)
       m_output->drawPolyline(vector);
-    else
-      m_output->drawPath(vector);
-  } else if (strcmp(psName,"StartTextObject")==0)
-    m_output->startTextObject(propList, vector);
+    else {
+      pList.insert("svg:d", vector);
+      m_output->drawPath(pList);
+    }
+  } else if (strcmp(psName,"StartTextObject")==0) {
+    pList.insert("svg:d", vector);
+    m_output->startTextObject(propList);
+  } 
   else if (strcmp(psName,"OpenListElement")==0)
     m_output->openListElement(propList, vector);
   else if (strcmp(psName,"OpenParagraph")==0)
