@@ -1550,7 +1550,10 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
     MSKGraphInternal::Chart *chart  = new MSKGraphInternal::Chart(pict);
     int chartId = m_state->m_chartId++;
     if (!m_tableParser->readChart(chartId, chart->m_style))
+    {
+      delete chart;
       return -1;
+    }
     m_tableParser->setChartZoneId(chartId, int(m_state->m_zonesList.size()));
     chart->m_chartId = chartId;
     res.reset(chart);
