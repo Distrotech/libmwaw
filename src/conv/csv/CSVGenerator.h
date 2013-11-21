@@ -62,8 +62,8 @@ public:
 	virtual void openSection(const librevenge::RVNGPropertyList & /* propList */, const librevenge::RVNGPropertyListVector & /* columns */) {}
 	virtual void closeSection() {}
 
-	virtual void defineParagraphStyle(const librevenge::RVNGPropertyList &, const librevenge::RVNGPropertyListVector &) {}
-	virtual void openParagraph(const librevenge::RVNGPropertyList & /* propList */, const librevenge::RVNGPropertyListVector & /* tabStops */) {}
+	virtual void defineParagraphStyle(const librevenge::RVNGPropertyList &) {}
+	virtual void openParagraph(const librevenge::RVNGPropertyList & /* propList */) {}
 	virtual void closeParagraph() {}
 
 	virtual void defineCharacterStyle(const librevenge::RVNGPropertyList &) {}
@@ -82,7 +82,7 @@ public:
 	virtual void openUnorderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}
 	virtual void closeOrderedListLevel() {}
 	virtual void closeUnorderedListLevel() {}
-	virtual void openListElement(const librevenge::RVNGPropertyList & /* propList */, const librevenge::RVNGPropertyListVector & /* tabStops */) {}
+	virtual void openListElement(const librevenge::RVNGPropertyList & /* propList */) {}
 	virtual void closeListElement() {}
 
 	virtual void openFootnote(const librevenge::RVNGPropertyList & /* propList */) {}

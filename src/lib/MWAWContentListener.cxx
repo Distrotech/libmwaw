@@ -741,8 +741,10 @@ void MWAWContentListener::_openParagraph()
   librevenge::RVNGPropertyListVector tabStops;
   m_ps->m_paragraph.addTabsTo(tabStops);
 
+  if (tabStops.count())
+    propList.insert("style:tab-stops", tabStops);
   if (!m_ps->m_isParagraphOpened)
-    m_documentInterface->openParagraph(propList, tabStops);
+    m_documentInterface->openParagraph(propList);
 
   _resetParagraphState();
   m_ps->m_firstParagraphInPageSpan = false;
@@ -816,9 +818,11 @@ void MWAWContentListener::_openListElement()
   }
   librevenge::RVNGPropertyListVector tabStops;
   m_ps->m_paragraph.addTabsTo(tabStops);
+  if (tabStops.count())
+    propList.insert("style:tab-stops", tabStops);
 
   if (m_ps->m_list) m_ps->m_list->openElement();
-  m_documentInterface->openListElement(propList, tabStops);
+  m_documentInterface->openListElement(propList);
   _resetParagraphState(true);
 }
 

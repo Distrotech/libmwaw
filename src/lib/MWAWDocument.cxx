@@ -532,10 +532,14 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
     pList.insert("svg:d", vector);
     m_output->startTextObject(propList);
   } 
-  else if (strcmp(psName,"OpenListElement")==0)
-    m_output->openListElement(propList, vector);
-  else if (strcmp(psName,"OpenParagraph")==0)
-    m_output->openParagraph(propList, vector);
+  else if (strcmp(psName,"OpenListElement")==0) {
+    pList.insert("style:tab-stops", vector);
+    m_output->openListElement(pList);
+  }
+  else if (strcmp(psName,"OpenParagraph")==0) {
+    pList.insert("style:tab-stops", vector);
+    m_output->openParagraph(pList);
+  }
   else if (strcmp(psName,"SetStyle")==0)
     m_output->setStyle(propList, vector);
   else {
