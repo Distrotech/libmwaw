@@ -474,8 +474,8 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
     m_output->drawRectangle(propList);
 
   else if (strcmp(psName,"InsertField")==0) {
-    if (propList["libmwaw:type"])
-      m_output->insertField(propList["libmwaw:type"]->getStr(), propList);
+    if (propList["librevenge:field-type"])
+      m_output->insertField(propList);
     else {
       MWAW_DEBUG_MSG(("GraphicExporter::insertElement: can not find field type\n"));
     }

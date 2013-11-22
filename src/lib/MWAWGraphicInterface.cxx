@@ -231,7 +231,7 @@ void MWAWGraphicInterface::insertLineBreak()
 void MWAWGraphicInterface::insertField(const librevenge::RVNGString &type, const librevenge::RVNGPropertyList &list)
 {
   librevenge::RVNGPropertyList pList(list);
-  pList.insert("libmwaw:type", type);
+  pList.insert("librevenge:field-type", type);
   m_state->m_encoder.insertElement("InsertField", pList);
 }
 

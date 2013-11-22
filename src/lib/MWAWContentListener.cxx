@@ -421,14 +421,20 @@ void MWAWContentListener::insertField(MWAWField const &field)
     _flushText();
     _openSpan();
     librevenge::RVNGPropertyList propList;
-    if (field.m_type==MWAWField::Title)
-      m_documentInterface->insertField(librevenge::RVNGString("text:title"), propList);
+    if (field.m_type==MWAWField::Title) {
+      propList.insert("librevenge:field-type", "text:title");
+      m_documentInterface->insertField(propList);
+    }
     else {
       propList.insert("style:num-format", libmwaw::numberingTypeToString(field.m_numberingType).c_str());
-      if (field.m_type == MWAWField::PageNumber)
-        m_documentInterface->insertField(librevenge::RVNGString("text:page-number"), propList);
-      else
-        m_documentInterface->insertField(librevenge::RVNGString("text:page-count"), propList);
+      if (field.m_type == MWAWField::PageNumber) {
+        propList.insert("librevenge:field-type", "text:page-number");
+        m_documentInterface->insertField(propList);
+      }
+      else {
+        propList.insert("librevenge:field-type", "text:page-count");
+        m_documentInterface->insertField(propList);
+      }
     }
     break;
   }

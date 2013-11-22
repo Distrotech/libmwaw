@@ -74,7 +74,7 @@ public:
 	virtual void insertText(const librevenge::RVNGString &text);
 	virtual void insertSpace();
 	virtual void insertLineBreak();
-	virtual void insertField(const librevenge::RVNGString &/*type*/, const librevenge::RVNGPropertyList &/*propList*/) {}
+	virtual void insertField(const librevenge::RVNGPropertyList &/*propList*/) {}
 
 	virtual void defineOrderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}
 	virtual void defineUnorderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}
