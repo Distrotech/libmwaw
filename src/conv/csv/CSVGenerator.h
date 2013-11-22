@@ -58,8 +58,8 @@ public:
 	virtual void openFooter(const librevenge::RVNGPropertyList & /* propList */) {}
 	virtual void closeFooter() {}
 
-	virtual void defineSectionStyle(const librevenge::RVNGPropertyList &, const librevenge::RVNGPropertyListVector &) {}
-	virtual void openSection(const librevenge::RVNGPropertyList & /* propList */, const librevenge::RVNGPropertyListVector & /* columns */) {}
+	virtual void defineSectionStyle(const librevenge::RVNGPropertyList &) {}
+	virtual void openSection(const librevenge::RVNGPropertyList & /* propList */) {}
 	virtual void closeSection() {}
 
 	virtual void defineParagraphStyle(const librevenge::RVNGPropertyList &) {}

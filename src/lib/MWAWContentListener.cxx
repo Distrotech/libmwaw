@@ -693,7 +693,9 @@ void MWAWContentListener::_openSection()
 
   librevenge::RVNGPropertyListVector columns;
   m_ps->m_section.addColumnsTo(columns);
-  m_documentInterface->openSection(propList, columns);
+  if (columns.count())
+    propList.insert("style:columns", columns);
+  m_documentInterface->openSection(propList);
 
   m_ps->m_sectionAttributesChanged = false;
   m_ps->m_isSectionOpened = true;
