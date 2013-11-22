@@ -139,7 +139,7 @@ public:
   // interface with the content listener
 
   //! adds the table properties to propList
-  void addTablePropertiesTo(librevenge::RVNGPropertyList &propList, librevenge::RVNGPropertyListVector &columns) const;
+  void addTablePropertiesTo(librevenge::RVNGPropertyList &propList) const;
 
 protected:
   //! convert a cell position in a posToCellId's position

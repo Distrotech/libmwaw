@@ -1555,9 +1555,8 @@ void MWAWContentListener::openTable(MWAWTable const &table, librevenge::RVNGProp
   _startSubDocument();
   m_ps->m_subDocumentType = libmwaw::DOC_TABLE;
 
-  librevenge::RVNGPropertyListVector columns;
-  table.addTablePropertiesTo(propList, columns);
-  m_documentInterface->openTable(propList, columns);
+  table.addTablePropertiesTo(propList);
+  m_documentInterface->openTable(propList);
   m_ps->m_isTableOpened = true;
 }
 

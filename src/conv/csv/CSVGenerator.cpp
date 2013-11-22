@@ -101,11 +101,12 @@ void CSVGenerator::insertLineBreak()
 	getOutput() << '\n';
 }
 
-void CSVGenerator::openTable(const librevenge::RVNGPropertyList &propList, const librevenge::RVNGPropertyListVector &columns)
+void CSVGenerator::openTable(const librevenge::RVNGPropertyList &propList)
 {
 	if (!propList["libmwaw:main_spreadsheet"] && !propList["libmwaw:main_database"])
 		return;
-	int nCol=int(columns.count());
+	const librevenge::RVNGPropertyListVector *columns = propList.child("librevenge:table-columns");
+	int nCol=int(columns ? columns->count() : 0);
 	for (int i=0; i < nCol; ++i)
 	{
 		if (i)

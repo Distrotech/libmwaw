@@ -94,7 +94,7 @@ public:
 	virtual void openTextBox(const librevenge::RVNGPropertyList & /* propList */) {}
 	virtual void closeTextBox() {}
 
-	virtual void openTable(const librevenge::RVNGPropertyList & /* propList */, const librevenge::RVNGPropertyListVector &columns);
+	virtual void openTable(const librevenge::RVNGPropertyList & /* propList */);
 	virtual void openTableRow(const librevenge::RVNGPropertyList & /* propList */);
 	virtual void closeTableRow();
 	virtual void openTableCell(const librevenge::RVNGPropertyList & /* propList */);
@@ -106,7 +106,7 @@ public:
 	virtual void closeFrame() {}
 
 	virtual void insertBinaryObject(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void insertEquation(const librevenge::RVNGPropertyList & /* propList */, const librevenge::RVNGString & /* data */) {}
+	virtual void insertEquation(const librevenge::RVNGPropertyList & /* propList */) {}
 
 private:
 	std::ostream &getOutput();

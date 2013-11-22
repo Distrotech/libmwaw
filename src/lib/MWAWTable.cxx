@@ -116,7 +116,7 @@ shared_ptr<MWAWCell> MWAWTable::get(int id)
   return m_cellsList[size_t(id)];
 }
 
-void MWAWTable::addTablePropertiesTo(librevenge::RVNGPropertyList &propList, librevenge::RVNGPropertyListVector &columns) const
+void MWAWTable::addTablePropertiesTo(librevenge::RVNGPropertyList &propList) const
 {
   switch(m_alignment) {
   case Paragraph:
@@ -140,6 +140,7 @@ void MWAWTable::addTablePropertiesTo(librevenge::RVNGPropertyList &propList, lib
 
   size_t nCols = m_colsSize.size();
   float tableWidth = 0;
+  librevenge::RVNGPropertyListVector columns;
   for (size_t c = 0; c < nCols; ++c) {
     librevenge::RVNGPropertyList column;
     column.insert("style:column-width", m_colsSize[c], librevenge::RVNG_POINT);
@@ -147,6 +148,7 @@ void MWAWTable::addTablePropertiesTo(librevenge::RVNGPropertyList &propList, lib
     tableWidth += m_colsSize[c];
   }
   propList.insert("style:width", tableWidth, librevenge::RVNG_POINT);
+  propList.insert("librevenge:table-columns", columns);
 }
 
 ////////////////////////////////////////////////////////////
