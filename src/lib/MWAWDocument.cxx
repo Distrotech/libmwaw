@@ -540,8 +540,10 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
     pList.insert("style:tab-stops", vector);
     m_output->openParagraph(pList);
   }
-  else if (strcmp(psName,"SetStyle")==0)
-    m_output->setStyle(propList, vector);
+  else if (strcmp(psName,"SetStyle")==0) {
+    pList.insert("svg:linearGradient", vector);
+    m_output->setStyle(pList);
+  }
   else {
     MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
   }
