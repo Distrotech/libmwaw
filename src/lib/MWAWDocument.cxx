@@ -520,10 +520,16 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
       MWAW_DEBUG_MSG(("GraphicExporter::insertElement: Polyline, Polygon, Path called with propList, ignored\n"));
     }
 #endif
-    if (strcmp(psName,"DrawPolygon")==0)
-      m_output->drawPolygon(vector);
-    else if (strcmp(psName,"DrawPolyline")==0)
-      m_output->drawPolyline(vector);
+    if (strcmp(psName,"DrawPolygon")==0) {
+      pList.clear();
+      pList.insert("svg:points", vector);
+      m_output->drawPolygon(pList);
+    }
+    else if (strcmp(psName,"DrawPolyline")==0) {
+      pList.clear();
+      pList.insert("svg:points", vector);
+      m_output->drawPolyline(pList);
+    }
     else {
       pList.insert("svg:d", vector);
       m_output->drawPath(pList);
