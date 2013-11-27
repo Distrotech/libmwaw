@@ -54,7 +54,8 @@ namespace MWAWGraphicInterfaceInternal
 //! the state of a MWAWGraphicInterface
 struct State {
   //! constructor
-  State() : m_encoder(), m_listIdToPropertyMap() {
+  State() : m_encoder(), m_listIdToPropertyMap()
+  {
   }
   //! try to retrieve a list element property
   bool retrieveListElement(int id, int level, librevenge::RVNGPropertyList &list) const;

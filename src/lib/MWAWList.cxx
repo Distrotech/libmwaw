@@ -51,7 +51,7 @@ void MWAWListLevel::addTo(librevenge::RVNGPropertyList &propList) const
     propList.insert("text:min-label-distance", m_labelAfterSpace, librevenge::RVNG_INCH);
   if (m_numBeforeLabels)
     propList.insert("text:display-levels", m_numBeforeLabels+1);
-  switch(m_alignment) {
+  switch (m_alignment) {
   case LEFT:
     break;
   case CENTER:
@@ -64,7 +64,7 @@ void MWAWListLevel::addTo(librevenge::RVNGPropertyList &propList) const
     break;
   }
 
-  switch(m_type) {
+  switch (m_type) {
   case NONE:
     propList.insert("text:bullet-char", " ");
     break;
@@ -134,7 +134,7 @@ int MWAWListLevel::cmp(MWAWListLevel const &levl) const
 std::ostream &operator<<(std::ostream &o, MWAWListLevel const &level)
 {
   o << "ListLevel[";
-  switch(level.m_type) {
+  switch (level.m_type) {
   case MWAWListLevel::BULLET:
     o << "bullet='" << level.m_bullet.cstr() <<"'";
     break;
@@ -162,7 +162,7 @@ std::ostream &operator<<(std::ostream &o, MWAWListLevel const &level)
   default:
     o << "####type";
   }
-  switch(level.m_alignment) {
+  switch (level.m_alignment) {
   case MWAWListLevel::LEFT:
     break;
   case MWAWListLevel::CENTER:

@@ -63,7 +63,8 @@ MWAWRSRCParser::~MWAWRSRCParser()
       ascii().addPos(tEntry.end());
       ascii().addNote("_");
     }
-  } catch (...) {
+  }
+  catch (...) {
   }
 #endif
 
@@ -161,7 +162,8 @@ bool MWAWRSRCParser::parse()
       MWAWEntry &tEntry = (it++)->second;
       parseSTRList(tEntry, list);
     }
-  } catch(...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("MWAWRSRCParser::parse: can not parse the input\n"));
     return false;
   }
@@ -257,7 +259,8 @@ bool MWAWRSRCParser::parseMap(MWAWEntry const &entry, long dataBegin)
         if (!name.length()) {
           MWAW_DEBUG_MSG(("MWAWRSRCParser::parseMap: can not read name of entry %s[%d]\n", tEntry.type().c_str(), tEntry.id()));
           f << "#listNamesOffset=" << std::hex << offset << std::dec << ",";
-        } else {
+        }
+        else {
           rsrc.setName(name);
           f << "name=" << name << ",";
         }
@@ -422,7 +425,7 @@ bool MWAWRSRCParser::parseClut(MWAWEntry const &entry, std::vector<MWAWColor> &l
     }
     unsigned char col[3];
     for (int j = 0; j < 3; j++)
-      col[j] = (unsigned char) (m_input->readULong(2)>>8);
+      col[j] = (unsigned char)(m_input->readULong(2)>>8);
     MWAWColor color(col[0],col[1],col[2]);
     list.push_back(color);
     f << color << ",";

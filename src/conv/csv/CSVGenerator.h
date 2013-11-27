@@ -42,84 +42,84 @@
 class CSVGenerator : public librevenge::RVNGTextInterface
 {
 public:
-	CSVGenerator(char const *fName=0);
-	virtual ~CSVGenerator();
+  CSVGenerator(char const *fName=0);
+  virtual ~CSVGenerator();
 
-	virtual void setDocumentMetaData(const librevenge::RVNGPropertyList &) {};
+  virtual void setDocumentMetaData(const librevenge::RVNGPropertyList &) {};
 
-	virtual void startDocument() {}
-	virtual void endDocument() {}
+  virtual void startDocument() {}
+  virtual void endDocument() {}
 
-	virtual void definePageStyle(const librevenge::RVNGPropertyList &) {}
-	virtual void openPageSpan(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closePageSpan() {}
-	virtual void openHeader(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closeHeader() {}
-	virtual void openFooter(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closeFooter() {}
+  virtual void definePageStyle(const librevenge::RVNGPropertyList &) {}
+  virtual void openPageSpan(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closePageSpan() {}
+  virtual void openHeader(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closeHeader() {}
+  virtual void openFooter(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closeFooter() {}
 
-	virtual void defineSectionStyle(const librevenge::RVNGPropertyList &) {}
-	virtual void openSection(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closeSection() {}
+  virtual void defineSectionStyle(const librevenge::RVNGPropertyList &) {}
+  virtual void openSection(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closeSection() {}
 
-	virtual void defineParagraphStyle(const librevenge::RVNGPropertyList &) {}
-	virtual void openParagraph(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closeParagraph() {}
+  virtual void defineParagraphStyle(const librevenge::RVNGPropertyList &) {}
+  virtual void openParagraph(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closeParagraph() {}
 
-	virtual void defineCharacterStyle(const librevenge::RVNGPropertyList &) {}
-	virtual void openSpan(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closeSpan() {}
+  virtual void defineCharacterStyle(const librevenge::RVNGPropertyList &) {}
+  virtual void openSpan(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closeSpan() {}
 
-	virtual void insertTab();
-	virtual void insertText(const librevenge::RVNGString &text);
-	virtual void insertSpace();
-	virtual void insertLineBreak();
-	virtual void insertField(const librevenge::RVNGPropertyList &/*propList*/) {}
+  virtual void insertTab();
+  virtual void insertText(const librevenge::RVNGString &text);
+  virtual void insertSpace();
+  virtual void insertLineBreak();
+  virtual void insertField(const librevenge::RVNGPropertyList &/*propList*/) {}
 
-	virtual void defineOrderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void defineUnorderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void openOrderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void openUnorderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closeOrderedListLevel() {}
-	virtual void closeUnorderedListLevel() {}
-	virtual void openListElement(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closeListElement() {}
+  virtual void defineOrderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void defineUnorderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void openOrderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void openUnorderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closeOrderedListLevel() {}
+  virtual void closeUnorderedListLevel() {}
+  virtual void openListElement(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closeListElement() {}
 
-	virtual void openFootnote(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closeFootnote() {}
-	virtual void openEndnote(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closeEndnote() {}
-	virtual void openComment(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closeComment() {}
-	virtual void openTextBox(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closeTextBox() {}
+  virtual void openFootnote(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closeFootnote() {}
+  virtual void openEndnote(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closeEndnote() {}
+  virtual void openComment(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closeComment() {}
+  virtual void openTextBox(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closeTextBox() {}
 
-	virtual void openTable(const librevenge::RVNGPropertyList & /* propList */);
-	virtual void openTableRow(const librevenge::RVNGPropertyList & /* propList */);
-	virtual void closeTableRow();
-	virtual void openTableCell(const librevenge::RVNGPropertyList & /* propList */);
-	virtual void closeTableCell();
-	virtual void insertCoveredTableCell(const librevenge::RVNGPropertyList & /* propList */) {};
-	virtual void closeTable();
+  virtual void openTable(const librevenge::RVNGPropertyList & /* propList */);
+  virtual void openTableRow(const librevenge::RVNGPropertyList & /* propList */);
+  virtual void closeTableRow();
+  virtual void openTableCell(const librevenge::RVNGPropertyList & /* propList */);
+  virtual void closeTableCell();
+  virtual void insertCoveredTableCell(const librevenge::RVNGPropertyList & /* propList */) {};
+  virtual void closeTable();
 
-	virtual void openFrame(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void closeFrame() {}
+  virtual void openFrame(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void closeFrame() {}
 
-	virtual void insertBinaryObject(const librevenge::RVNGPropertyList & /* propList */) {}
-	virtual void insertEquation(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void insertBinaryObject(const librevenge::RVNGPropertyList & /* propList */) {}
+  virtual void insertEquation(const librevenge::RVNGPropertyList & /* propList */) {}
 
 private:
-	std::ostream &getOutput();
+  std::ostream &getOutput();
 
-	std::fstream m_output;
-	bool m_outputInit;
+  std::fstream m_output;
+  bool m_outputInit;
 
-	bool m_dataStarted;
-	bool m_firstFieldSend;
+  bool m_dataStarted;
+  bool m_firstFieldSend;
 
-	// Unimplemented to prevent compiler from creating crasher ones
-	CSVGenerator(const CSVGenerator &);
-	CSVGenerator &operator=(const CSVGenerator &);
+  // Unimplemented to prevent compiler from creating crasher ones
+  CSVGenerator(const CSVGenerator &);
+  CSVGenerator &operator=(const CSVGenerator &);
 };
 
 #endif /* CSV_GENERATOR_H */

@@ -137,11 +137,13 @@ public:
   void insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument);
   // ------- section ---------------
   /** returns true if we can add open a section, add page break, ... */
-  bool canOpenSectionAddBreak() const {
+  bool canOpenSectionAddBreak() const
+  {
     return false;
   }
   //! returns true if a section is opened
-  bool isSectionOpened() const {
+  bool isSectionOpened() const
+  {
     return false;
   }
   //! returns the actual section
@@ -149,7 +151,8 @@ public:
   //! open a section if possible
   bool openSection(MWAWSection const &section);
   //! close a section
-  bool closeSection() {
+  bool closeSection()
+  {
     return false;
   }
   //! inserts a break type: ColumBreak, PageBreak, ..

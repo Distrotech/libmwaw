@@ -54,7 +54,8 @@ namespace CWStyleManagerInternal
 //! Internal: the pattern of a CWStyleManager
 struct Pattern : public MWAWGraphicStyle::Pattern {
   //! constructor ( 4 int by patterns )
-  Pattern(uint16_t const *pat=0) : MWAWGraphicStyle::Pattern(), m_percent(0) {
+  Pattern(uint16_t const *pat=0) : MWAWGraphicStyle::Pattern(), m_percent(0)
+  {
     if (!pat) return;
     m_colors[0]=MWAWColor::white();
     m_colors[1]=MWAWColor::black();
@@ -62,8 +63,8 @@ struct Pattern : public MWAWGraphicStyle::Pattern {
     m_data.resize(8);
     for (size_t i=0; i < 4; ++i) {
       uint16_t val=pat[i];
-      m_data[2*i]=(unsigned char) (val>>8);
-      m_data[2*i+1]=(unsigned char) (val&0xFF);
+      m_data[2*i]=(unsigned char)(val>>8);
+      m_data[2*i+1]=(unsigned char)(val&0xFF);
     }
     int numOnes=0;
     for (size_t j=0; j < 8; ++j) {
@@ -84,19 +85,22 @@ struct Pattern : public MWAWGraphicStyle::Pattern {
 struct Gradient {
   //! construtor
   Gradient(int type=0, int nColor=0, int angle=0, float decal=0) :
-    m_type(type), m_numColors(nColor), m_angle(angle), m_decal(decal), m_box() {
+    m_type(type), m_numColors(nColor), m_angle(angle), m_decal(decal), m_box()
+  {
     m_colors[0]=MWAWColor::black();
     m_colors[1]=MWAWColor::white();
   }
   //! check if the gradient is valid
-  bool ok() const {
+  bool ok() const
+  {
     return m_type>=0 && m_type<=2 && m_numColors>=2 && m_numColors<=4;
   }
   //! update the style
   bool update(MWAWGraphicStyle &style) const;
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Gradient const &gr) {
-    switch(gr.m_type) {
+  friend std::ostream &operator<<(std::ostream &o, Gradient const &gr)
+  {
+    switch (gr.m_type) {
     case 0:
       o << "linear,";
       break;
@@ -182,7 +186,8 @@ struct State {
   //! constructor
   State() : m_version(-1), m_localFIdMap(), m_stylesMap(), m_lookupMap(),
     m_fontList(), m_cellFormatList(), m_graphList(), m_ksenList(),
-    m_colorList(), m_patternList(), m_gradientList(), m_wallpaperList() {
+    m_colorList(), m_patternList(), m_gradientList(), m_wallpaperList()
+  {
   }
   //! set the default color map
   void setDefaultColorList(int version);
@@ -193,7 +198,8 @@ struct State {
   //! set the default pattern map
   void setDefaultWallPaperList(int version);
   //! return a mac font id corresponding to a local id
-  int getFontId(int localId) const {
+  int getFontId(int localId) const
+  {
     if (m_localFIdMap.find(localId)==m_localFIdMap.end())
       return localId;
     return m_localFIdMap.find(localId)->second;
@@ -247,7 +253,8 @@ void State::setDefaultColorList(int version)
     m_colorList.resize(81);
     for (size_t i = 0; i < 81; i++)
       m_colorList[i] = defCol[i];
-  } else {
+  }
+  else {
     uint32_t const defCol[256] = {
       0xffffff,0x0,0x777777,0x555555,0xffff00,0xff6600,0xdd0000,0xff0099,
       0x660099,0xdd,0x99ff,0xee00,0x6600,0x663300,0x996633,0xbbbbbb,
@@ -291,7 +298,7 @@ void State::setDefaultColorList(int version)
 void State::setDefaultPatternList(int)
 {
   if (m_patternList.size()) return;
-  static uint16_t const (s_pattern[4*64]) = {
+  static uint16_t const(s_pattern[4*64]) = {
     0x0000, 0x0000, 0x0000, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0x7fff, 0xffff, 0xf7ff, 0xffff, 0x7fff, 0xf7ff, 0x7fff, 0xf7ff,
     0xffee, 0xffbb, 0xffee, 0xffbb, 0x77dd, 0x77dd, 0x77dd, 0x77dd, 0xaa55, 0xaa55, 0xaa55, 0xaa55, 0x8822, 0x8822, 0x8822, 0x8822,
     0xaa00, 0xaa00, 0xaa00, 0xaa00, 0xaa00, 0x4400, 0xaa00, 0x1100, 0x8800, 0xaa00, 0x8800, 0xaa00, 0x8800, 0x2200, 0x8800, 0x2200,
@@ -1452,7 +1459,7 @@ void State::setDefaultWallPaperList(int version)
 ////////////////////////////////////////////////////
 std::ostream &operator<<(std::ostream &o, CWStyleManager::KSEN const &ksen)
 {
-  switch(ksen.m_valign) {
+  switch (ksen.m_valign) {
   case 0:
     break;
   case 1:
@@ -1465,7 +1472,7 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::KSEN const &ksen)
     o << "valign=#" << ksen.m_valign << ",";
     break;
   }
-  switch(ksen.m_lineType) {
+  switch (ksen.m_lineType) {
   case MWAWBorder::None:
     o << "lType=none,";
     break;
@@ -1484,7 +1491,7 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::KSEN const &ksen)
     o << "lType=#" << int(ksen.m_lineType) << ",";
     break;
   }
-  switch(ksen.m_lineRepeat) {
+  switch (ksen.m_lineRepeat) {
   case MWAWBorder::Single:
     break;
   case MWAWBorder::Double:
@@ -1497,7 +1504,7 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::KSEN const &ksen)
     o << "lRepeat=#" << int(ksen.m_lineRepeat) << ",";
     break;
   }
-  switch(ksen.m_lines) {
+  switch (ksen.m_lines) {
   case 0:
     break;
   case 1:
@@ -1700,7 +1707,7 @@ bool CWStyleManager::readPatternList(long endPos)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(PatternList):";
-  if (sz<0 ||  (sz && sz < 140) || (endPos>0 && pos+sz+4>endPos) ||
+  if (sz<0 || (sz && sz < 140) || (endPos>0 && pos+sz+4>endPos) ||
       (endPos<=0 && !input->checkPosition(pos+sz+4))) {
     f << "###";
     MWAW_DEBUG_MSG(("CWStyleManager::readPatternList: can read pattern size\n"));
@@ -1734,7 +1741,8 @@ bool CWStyleManager::readPatternList(long endPos)
     f << "###";
     MWAW_DEBUG_MSG(("CWStyleManager::readPatternList: unexpected pattern size\n"));
     ascFile.addDelimiter(input->tell(),'|');
-  } else {
+  }
+  else {
     m_state->setDefaultPatternList(vers);
     for (int i=0; i < N; ++i) {
       uint16_t pat[4];
@@ -1809,7 +1817,7 @@ bool CWStyleManager::readGradientList(long endPos)
     CWStyleManagerInternal::Gradient grad;
     for (int j=0; j<4; ++j) {
       unsigned char color[3];
-      for (int c=0; c < 3; c++) color[c] = (unsigned char) (input->readULong(2)/256);
+      for (int c=0; c < 3; c++) color[c] = (unsigned char)(input->readULong(2)/256);
       grad.m_colors[j]= MWAWColor(color[0], color[1],color[2]);
     }
     grad.m_numColors=(int) input->readLong(1);
@@ -1850,7 +1858,7 @@ bool CWStyleManager::readColorList(MWAWEntry const &entry)
   f << "Entries(ColorList):";
   int N = (int) input->readULong(2);
   f << "N=" << N << ",";
-  for(int i = 0; i < 2; i++) {
+  for (int i = 0; i < 2; i++) {
     int val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
@@ -1871,7 +1879,7 @@ bool CWStyleManager::readColorList(MWAWEntry const &entry)
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     unsigned char color[3];
-    for (int c=0; c < 3; c++) color[c] = (unsigned char) (input->readULong(2)/256);
+    for (int c=0; c < 3; c++) color[c] = (unsigned char)(input->readULong(2)/256);
     m_state->m_colorList[size_t(i)]= MWAWColor(color[0], color[1],color[2]);
 
     f.str("");
@@ -1915,7 +1923,8 @@ bool CWStyleManager::readStyles(MWAWEntry const &entry)
     // version 4 does not contents total length fields
     input->seek(-4, librevenge::RVNG_SEEK_CUR);
     limitSet = false;
-  } else
+  }
+  else
     input->pushLimit(entry.end());
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
@@ -1958,8 +1967,8 @@ bool CWStyleManager::readGenStyle(int id)
   std::string name("");
   int N = (int) input->readLong(2);
   int type = (int) input->readLong(2);
-  int val =  (int) input->readLong(2);
-  int fSz =  (int) input->readLong(2);
+  int val = (int) input->readLong(2);
+  int fSz = (int) input->readLong(2);
   f << "N=" << N << ", type?=" << type <<", fSz=" << fSz << ",";
   if (val) f << "unkn=" << val << ",";
   int unkn[2];
@@ -2025,7 +2034,8 @@ bool CWStyleManager::readGenStyle(int id)
     if (!readPatternList()) {
       MWAW_DEBUG_MSG(("CWStyleManager::readGenStyle: can not find the pattern list\n"));
       input->seek(endPos, librevenge::RVNG_SEEK_SET);
-    } else if (version()==4) {
+    }
+    else if (version()==4) {
       endPos=input->tell();
       if (!readGradientList()) {
         MWAW_DEBUG_MSG(("CWStyleManager::readGenStyle: can not find the gradient list\n"));
@@ -2160,7 +2170,8 @@ bool CWStyleManager::readFontNames(int N, int fSz)
         first = false;
       }
       f << "#";
-    } else {
+    }
+    else {
       std::string name("");
       bool ok = true;
       for (int c = 0; c < nChar; c++) {
@@ -2169,7 +2180,8 @@ bool CWStyleManager::readFontNames(int N, int fSz)
           MWAW_DEBUG_MSG(("CWStyleManager::readFontNames: pb with name field %d\n", i));
           ok = false;
           break;
-        } else if (ch & 0x80) {
+        }
+        else if (ch & 0x80) {
           static bool first = true;
           if (first) {
             MWAW_DEBUG_MSG(("CWStyleManager::readFontNames: find odd font\n"));
@@ -2323,7 +2335,8 @@ bool CWStyleManager::readStyleNames(int N, int fSz)
           first = false;
         }
         f << "#";
-      } else {
+      }
+      else {
         std::string name("");
         for (int c = 0; c < nChar; c++)
           name += char(input->readULong(1));
@@ -2466,7 +2479,8 @@ bool CWStyleManager::readGraphStyles(int N, int fSz)
           if (j) graph.m_pattern=pattern;
           pattern.getAverageColor(color);
         }
-      } else if (values16[j+2])
+      }
+      else if (values16[j+2])
         f << "###pat" << j << "=" << values16[j+2];
 
       if (j==0) graph.m_lineColor = color;
@@ -2523,7 +2537,7 @@ bool CWStyleManager::readKSEN(int N, int fSz)
       if (val) f << "fl" << j << "=" << std::hex << val << std::dec << ",";
     }
     val = input->readLong(1); // 0-5
-    switch(val) {
+    switch (val) {
     case 0:
       break;
     case 1:
@@ -2569,7 +2583,7 @@ bool CWStyleManager::readKSEN(int N, int fSz)
 
 std::ostream &operator<<(std::ostream &o, CWStyleManager::CellFormat const &form)
 {
-  switch(form.m_justify) {
+  switch (form.m_justify) {
   case 0:
     break;
   case 1:
@@ -2593,7 +2607,8 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::CellFormat const &form
       "time[H:M]", "time[H:M:S]", "time[I:M p]", "time[I:M:S p]"
     };
     o << wh[form.m_format] << ",";
-  } else if (form.m_format > 0)
+  }
+  else if (form.m_format > 0)
     o << "#format=" << form.m_format << ",";
   if (form.m_numDigits!=2) o << "num[digits]=" << form.m_numDigits << ",";
   if (form.m_separateThousand) o << "thousand[sep],";

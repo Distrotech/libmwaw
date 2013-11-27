@@ -54,16 +54,19 @@ struct PrinterInfoData;
 //! the Apple© rectangle : Rect
 struct PrinterRect {
   //! returns the size
-  Vec2i size() const {
+  Vec2i size() const
+  {
     return m_pos[1]-m_pos[0];
   }
   //! returns the position ( 0: leftTop, 1:rightBottom )
-  Vec2i pos(int i) const {
+  Vec2i pos(int i) const
+  {
     return m_pos[i];
   }
 
   //! operator <<
-  friend std::ostream &operator<< (std::ostream &o, PrinterRect const &r) {
+  friend std::ostream &operator<< (std::ostream &o, PrinterRect const &r)
+  {
     o << "[" << r.m_pos[0] << " " << r.m_pos[1] << "]";
     return o;
   }

@@ -63,23 +63,28 @@ struct Frame {
   //! the frame type
   enum Type { T_BAD, T_BASIC, T_GROUP, T_PICTURE, T_TEXT, T_UNSET };
   //! constructor
-  Frame() : m_type(-1), m_styleId(-1), m_parent(0), m_order(-1), m_dataSize(0), m_box(), m_page(-1), m_extra(""), m_parsed(false) {
+  Frame() : m_type(-1), m_styleId(-1), m_parent(0), m_order(-1), m_dataSize(0), m_box(), m_page(-1), m_extra(""), m_parsed(false)
+  {
   }
   //! destructor
-  virtual ~Frame() {
+  virtual ~Frame()
+  {
   }
   //! return the frame type
-  virtual Type getType() const {
+  virtual Type getType() const
+  {
     return T_UNSET;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Frame const &zone) {
+  friend std::ostream &operator<<(std::ostream &o, Frame const &zone)
+  {
     zone.print(o);
     return o;
   }
   //! a virtual print function
-  virtual void print(std::ostream &o) const {
-    switch(m_type) {
+  virtual void print(std::ostream &o) const
+  {
+    switch (m_type) {
     case 1:
       o << "text,";
       break;
@@ -154,10 +159,12 @@ struct Frame {
 //! Internal: a unknown zone of a GWGraph
 struct FrameBad : public Frame {
   //! constructor
-  FrameBad() : Frame() {
+  FrameBad() : Frame()
+  {
   }
   //! return the frame type
-  virtual Type getType() const {
+  virtual Type getType() const
+  {
     return T_BAD;
   }
 };
@@ -166,16 +173,19 @@ struct FrameBad : public Frame {
 //! Internal: the basic shape of a GWGraph
 struct FrameShape : public Frame {
   //! constructor
-  FrameShape(Frame const &frame) : Frame(frame), m_shape(), m_lineArrow(0), m_lineFormat(0) {
+  FrameShape(Frame const &frame) : Frame(frame), m_shape(), m_lineArrow(0), m_lineFormat(0)
+  {
   }
   //! return the frame type
-  virtual Type getType() const {
+  virtual Type getType() const
+  {
     return T_BASIC;
   }
   //! print function
-  virtual void print(std::ostream &o) const {
+  virtual void print(std::ostream &o) const
+  {
     Frame::print(o);
-    switch(m_lineArrow) {
+    switch (m_lineArrow) {
     case 0: // unset
     case 1: // none
       break;
@@ -195,12 +205,14 @@ struct FrameShape : public Frame {
       o << "L" << m_lineFormat << ",";
   }
   //! update the style
-  void updateStyle(MWAWGraphicStyle &style) const {
+  void updateStyle(MWAWGraphicStyle &style) const
+  {
     if (m_shape.m_type!=MWAWGraphicShape::Line) {
       style.m_arrows[0]=style.m_arrows[1]=false;
       style.m_lineDashWidth.resize(0);
-    } else if (m_lineArrow > 1) {
-      switch(m_lineArrow) {
+    }
+    else if (m_lineArrow > 1) {
+      switch (m_lineArrow) {
       case 2:
         style.m_arrows[1]=true;
         break;
@@ -230,14 +242,17 @@ private:
 //! Internal: the group zone of a GWGraph
 struct FrameGroup : public Frame {
   //! constructor
-  FrameGroup(Frame const &frame) : Frame(frame), m_numChild(0), m_childList() {
+  FrameGroup(Frame const &frame) : Frame(frame), m_numChild(0), m_childList()
+  {
   }
   //! return the frame type
-  virtual Type getType() const {
+  virtual Type getType() const
+  {
     return T_GROUP;
   }
   //! print funtion
-  virtual void print(std::ostream &o) const {
+  virtual void print(std::ostream &o) const
+  {
     Frame::print(o);
     if (m_numChild)
       o << "nChild=" << m_numChild << ",";
@@ -252,14 +267,17 @@ struct FrameGroup : public Frame {
 //! Internal: the picture zone of a GWGraph
 struct FramePicture : public Frame {
   //! constructor
-  FramePicture(Frame const &frame) : Frame(frame), m_entry() {
+  FramePicture(Frame const &frame) : Frame(frame), m_entry()
+  {
   }
   //! return the frame type
-  virtual Type getType() const {
+  virtual Type getType() const
+  {
     return T_PICTURE;
   }
   //! print funtion
-  virtual void print(std::ostream &o) const {
+  virtual void print(std::ostream &o) const
+  {
     Frame::print(o);
     if (m_entry.valid())
       o << "pos=" << std::hex << m_entry.begin() << "->" << m_entry.end() << std::dec << ",";
@@ -272,15 +290,18 @@ struct FramePicture : public Frame {
 //! Internal: the text zone of a GWGraph
 struct FrameText : public Frame {
   //! constructor
-  FrameText(Frame const &frame) : Frame(frame), m_entry(), m_rotate(0) {
+  FrameText(Frame const &frame) : Frame(frame), m_entry(), m_rotate(0)
+  {
     m_flip[0]=m_flip[1]=false;
   }
   //! return the frame type
-  virtual Type getType() const {
+  virtual Type getType() const
+  {
     return T_TEXT;
   }
   //! print funtion
-  virtual void print(std::ostream &o) const {
+  virtual void print(std::ostream &o) const
+  {
     Frame::print(o);
     if (m_entry.valid())
       o << "pos=" << std::hex << m_entry.begin() << "->" << m_entry.end() << std::dec << ",";
@@ -289,7 +310,8 @@ struct FrameText : public Frame {
     if (m_flip[1]) o << "flipY=" << m_flip[1] << ",";
   }
   //! return the text style
-  MWAWGraphicStyle getStyle(MWAWGraphicStyle const &zoneStyle) const {
+  MWAWGraphicStyle getStyle(MWAWGraphicStyle const &zoneStyle) const
+  {
     MWAWGraphicStyle res(zoneStyle);
     res.m_lineWidth=0; // no border
     res.m_flip[0]=m_flip[0];
@@ -300,7 +322,8 @@ struct FrameText : public Frame {
   /** return true if the has some transforms.
 
       \note as we have no way to retrieve mirror, we consider only rotation here*/
-  bool hasTransform() const {
+  bool hasTransform() const
+  {
     return (m_flip[0]&m_flip[1]) || m_rotate;
   }
   //! the text entry
@@ -315,7 +338,8 @@ struct FrameText : public Frame {
 //! Internal: a list of graphic corresponding to a page
 struct Zone {
   //! constructor
-  Zone() : m_page(-1), m_frameList(), m_rootList(), m_styleList(), m_parsed(false) {
+  Zone() : m_page(-1), m_frameList(), m_rootList(), m_styleList(), m_parsed(false)
+  {
   }
   //! the page number (if known)
   int m_page;
@@ -356,16 +380,19 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType) {
+  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType)
+  {
     parse(listener, false);
   }
   //! the graphic parser function
-  void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType) {
+  void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType)
+  {
     parse(listener, true);
   }
 
@@ -634,7 +661,8 @@ bool GWGraph::readGraphicZone()
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     pos += 0x1e;
-  } else {
+  }
+  else {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAWGraphicStyle style;
     f.str("");
@@ -657,7 +685,7 @@ bool GWGraph::readGraphicZone()
   pos += 0x1a;
 
   input->seek(pos, librevenge::RVNG_SEEK_SET);
-  while(!input->isEnd() && readPageFrames())
+  while (!input->isEnd() && readPageFrames())
     pos=input->tell();
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   return true;
@@ -679,7 +707,7 @@ bool GWGraph::findGraphicZone()
   MWAWInputStreamPtr input = m_parserState->m_input;
   long pos = input->tell();
   input->seek(pos+headerSize+pageHeaderSize, librevenge::RVNG_SEEK_SET);
-  while(!input->isEnd()) {
+  while (!input->isEnd()) {
     long actPos = input->tell();
     unsigned long value= input->readULong(4);
     int decal=-1;
@@ -811,7 +839,7 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
     dim[i]=float(input->readLong(4))/65536.f;
   if (dim[0]<dim[1] || dim[0]>dim[1]) f << "lineWidth[real]=" << Vec2f(dim[1],dim[0]) << ",";
   style.m_lineWidth=(dim[1]+dim[0])/2.f;
-  if  (vers==1) {
+  if (vers==1) {
     for (int i=0; i < 2; ++i) { // two flags 0|1
       val=(int) input->readULong(1);
       if (val==0 || val==1) {
@@ -819,7 +847,8 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
           style.m_lineOpacity=float(val);
         else
           style.m_surfaceOpacity=float(val);
-      } else
+      }
+      else
         f << "#hasPat" << i << "=" << val << ",";
     }
     MWAWGraphicStyle::Pattern patterns[2];
@@ -892,7 +921,8 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
   if (nDash<0||nDash>6) {
     MWAW_DEBUG_MSG(("GWGraph::readStyle: can not read number of line dash\n"));
     f << "#nDash=" << nDash << ",";
-  } else {
+  }
+  else {
     for (int i=0; i < nDash; ++i) {
       float w=float(input->readLong(4))/65536.f;
       if (w<=0) {
@@ -918,7 +948,7 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
     style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::white());
     style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::black());
     style.m_gradientType = MWAWGraphicStyle::G_Linear;
-    switch(gradId) {
+    switch (gradId) {
     case 1:
       if (gradType!=1) style.m_gradientType = MWAWGraphicStyle::G_None;
       style.m_gradientAngle = -90;
@@ -1015,7 +1045,7 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
   }
   input->seek(2, librevenge::RVNG_SEEK_CUR); // junk ?
   val=(int) input->readLong(2);
-  switch(val) {
+  switch (val) {
   case 1: // none
     break;
   case 2:
@@ -1121,7 +1151,8 @@ bool GWGraph::readPageFrames()
       f << "###";
       input->seek(pos+0x36, librevenge::RVNG_SEEK_SET);
       zone.reset(new GWGraphInternal::FrameBad());
-    } else
+    }
+    else
       f << *zone;
     zone->m_page=pageZone.m_page;
     frames.push_back(zone);
@@ -1242,7 +1273,7 @@ bool GWGraph::readPageFrames()
 
     std::set<int> seens;
     bool ok=true;
-    for (size_t c=pageZone.m_rootList.size(); c > 0; ) {
+    for (size_t c=pageZone.m_rootList.size(); c > 0;) {
       if (!readFrameExtraDataRec(pageZone, pageZone.m_rootList[--c]-1, seens, endPos)) {
         ok = false;
         break;
@@ -1406,7 +1437,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
   zone.m_styleId=(int) input->readULong(2);
   zone.m_parent=(int) input->readULong(2);
   zone.m_order=(int) input->readULong(2);
-  switch(zone.m_type) {
+  switch (zone.m_type) {
   case 1: {
     GWGraphInternal::FrameText *textBox = new GWGraphInternal::FrameText(zone);
     res.reset(textBox);
@@ -1452,7 +1483,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     int roundType = (int) input->readLong(2);
     float cornerDim = (float) input->readLong(2);
     graph->m_shape = MWAWGraphicShape::rectangle(zone.m_box);
-    switch(roundType) {
+    switch (roundType) {
     case 1: // normal
       graph->m_shape.m_cornerWidth[0]=cornerDim > zone.m_box.size()[0] ? zone.m_box.size()[0]/2.f : cornerDim/2.f;
       graph->m_shape.m_cornerWidth[1]=cornerDim > zone.m_box.size()[1] ? zone.m_box.size()[1]/2.f : cornerDim/2.f;
@@ -1482,7 +1513,8 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     if (fileAngle[1]<0) {
       angle[0]=int(90-fileAngle[0]);
       angle[1]=int(90-fileAngle[0]-fileAngle[1]);
-    } else if (fileAngle[1]==360)
+    }
+    else if (fileAngle[1]==360)
       angle[0]=int(90-fileAngle[0]-359);
     while (angle[1] > 360) {
       angle[0]-=360;
@@ -1550,7 +1582,7 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
   libmwaw::DebugStream f;
   f << "GFrame[data]-F" << id+1 << ":";
   long pos=input->tell();
-  switch(frame.m_type) {
+  switch (frame.m_type) {
   case 0:
     MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: find group with type=0\n"));
     return false;
@@ -1613,7 +1645,8 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
       if (nPt<4 || (nPt%3)!=1) {
         MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: the spline number of points seems bad\n"));
         f << "###";
-      } else {
+      }
+      else {
         std::vector<MWAWGraphicShape::PathData> &path=graph.m_shape.m_path;
         path.push_back(MWAWGraphicShape::PathData('M', vertices[0]));
 
@@ -1629,7 +1662,8 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
         }
         path.push_back(MWAWGraphicShape::PathData('Z'));
       }
-    } else {
+    }
+    else {
       MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: find unexpected vertices\n"));
       f << "###";
     }
@@ -1819,7 +1853,7 @@ bool GWGraph::sendGroup(GWGraphInternal::FrameGroup const &group, GWGraphInterna
   size_t numChilds=group.m_childList.size();
   int numFrames=(int) zone.m_frameList.size();
   if (!numChilds) return true;
-  for (size_t c=0; c<numChilds; c++ ) {
+  for (size_t c=0; c<numChilds; c++) {
     int childId=group.m_childList[c];
     if (childId<=0 || childId>int(numFrames)) continue;
     shared_ptr<GWGraphInternal::Frame> frame=zone.m_frameList[size_t(childId-1)];
@@ -2007,7 +2041,7 @@ void GWGraph::sendGroupChild(GWGraphInternal::FrameGroup const &group, GWGraphIn
     }
 
     // time to send back the data
-    for ( ; childNotSent <= c; ++childNotSent) {
+    for (; childNotSent <= c; ++childNotSent) {
       int localCId=group.m_childList[childNotSent];
       if (localCId<=0 || localCId>int(numFrames)) continue;
       shared_ptr<GWGraphInternal::Frame> child=zone.m_frameList[size_t(localCId-1)];
@@ -2092,7 +2126,7 @@ bool GWGraph::sendPageFrames(GWGraphInternal::Zone const &zone)
     return false;
   }
   zone.m_parsed=true;
-  for (size_t f=0; f < zone.m_rootList.size(); f++ ) {
+  for (size_t f=0; f < zone.m_rootList.size(); f++) {
     int id=zone.m_rootList[f]-1;
     if (id<0 || !zone.m_frameList[(size_t) id])
       continue;

@@ -65,8 +65,9 @@ struct DocZoneStruct {
   //! constructor
   DocZoneStruct() : m_pos(-1), m_structType(0), m_type(-1), m_nextId(0), m_fatherId(-1), m_childList() {}
   //! the operator<<
-  friend std::ostream &operator<<(std::ostream &o, DocZoneStruct const &dt) {
-    switch(dt.m_structType) {
+  friend std::ostream &operator<<(std::ostream &o, DocZoneStruct const &dt)
+  {
+    switch (dt.m_structType) {
     case 0:
       o << "empty,";
       break;
@@ -109,7 +110,8 @@ struct DocZoneStruct {
 //! Internal: the sidebar of a FWParser
 struct SideBar : public FWStruct::ZoneHeader {
   //! constructor
-  SideBar(FWStruct::ZoneHeader &): m_box(), m_page(0) {
+  SideBar(FWStruct::ZoneHeader &): m_box(), m_page(0)
+  {
   }
   //! the position (in point)
   Box2f m_box;
@@ -121,11 +123,13 @@ struct SideBar : public FWStruct::ZoneHeader {
 //! Internal: the reference data call of a FWParser
 struct ReferenceCalledData {
   // constructor
-  ReferenceCalledData() : m_id(-1) {
+  ReferenceCalledData() : m_id(-1)
+  {
     for (int i = 0; i < 5; i++) m_values[i] = 0;
   }
   //! the operator<<
-  friend std::ostream &operator<<(std::ostream &o, ReferenceCalledData const &dt) {
+  friend std::ostream &operator<<(std::ostream &o, ReferenceCalledData const &dt)
+  {
     if (dt.m_id >= 0) o << "refId=" << dt.m_id << ",";
     for (int i = 0; i < 5; i++) {
       if (dt.m_values[i])
@@ -145,12 +149,14 @@ struct State {
   //! constructor
   State() : m_pageSpanSet(false), m_fileZoneList(), m_fileZoneFlagsList(), m_docZoneList(), m_docFileIdMap(), m_fileDocIdMap(),
     m_biblioId(-1), m_entryMap(), m_variableRedirectMap(), m_referenceRedirectMap(),
-    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  {
     for (int i=0; i < 3; i++) m_zoneFlagsId[i] = -1;
   }
 
   //! insert a docId fileId in the correspondance map
-  bool addCorrespondance(int docId, int fileId) {
+  bool addCorrespondance(int docId, int fileId)
+  {
     if (m_docFileIdMap.find(docId) != m_docFileIdMap.end() ||
         m_fileDocIdMap.find(fileId) != m_fileDocIdMap.end()) {
       MWAW_DEBUG_MSG(("FWParserInternal::State::addCorrespondance can not insert %d<->%d\n", docId, fileId));
@@ -169,7 +175,8 @@ struct State {
     return true;
   }
   //! return the file zone id ( if found or -1)
-  int getFileZoneId(int docId) const {
+  int getFileZoneId(int docId) const
+  {
     std::map<int,int>::const_iterator it = m_docFileIdMap.find(docId);
     if (it == m_docFileIdMap.end()) {
       MWAW_DEBUG_MSG(("FWParserInternal::State::getFileZoneId can not find %d\n", docId));
@@ -227,7 +234,8 @@ public:
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
     if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
@@ -236,7 +244,8 @@ public:
   }
 
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -337,7 +346,8 @@ void FWParser::sendGraphic(int id)
 {
   if (id < 0 || id >= int(m_state->m_docZoneList.size())) {
     MWAW_DEBUG_MSG(("FWParser::sendGraphic: can not find graphic data for zone %d\n", id));
-  } else {
+  }
+  else {
     FWParserInternal::DocZoneStruct const &data =
       m_state->m_docZoneList[size_t(id)];
     if (data.m_type != 0x15) {
@@ -401,7 +411,8 @@ void FWParser::parse(librevenge::RVNGTextInterface *docInterface)
         f << "Entries(" << zone->type() << ")";
       if (zone->hasType("Biblio")) {
         MWAW_DEBUG_MSG(("FWParser::parse: find some biblio zone unparsed!!!\n"));
-      } else if (first) {
+      }
+      else if (first) {
         f << "###";
         first = false;
         MWAW_DEBUG_MSG(("FWParser::parse: find some unparsed zone!!!\n"));
@@ -419,7 +430,8 @@ void FWParser::parse(librevenge::RVNGTextInterface *docInterface)
     }
 
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("FWParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -450,7 +462,7 @@ void FWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   int actHeaderId = -1, actFooterId = -1;
   shared_ptr<FWParserInternal::SubDocument> headerSubdoc, footerSubdoc;
   std::vector<MWAWPageSpan> pageList;
-  for (int i = 0; i < m_state->m_numPages; ) {
+  for (int i = 0; i < m_state->m_numPages;) {
     int numSim[2]= {1,1};
     int headerId =  m_textParser->getHeaderFooterId(true,i+1, numSim[0]);
     if (headerId != actHeaderId) {
@@ -527,7 +539,8 @@ bool FWParser::createFileZones()
     if (entry->m_typeId == -1) fId=-fId-1;
     if (m_state->m_entryMap.find(fId) != m_state->m_entryMap.end()) {
       MWAW_DEBUG_MSG(("FWParser::createFileZones: can not find generic zone id %d\n",int(z)));
-    } else
+    }
+    else
       m_state->m_entryMap.insert
       (std::multimap<int, FWStruct::EntryPtr >::value_type(fId, entry));
   }
@@ -571,7 +584,7 @@ bool FWParser::createZones()
     if (zone->m_typeId >= 0) {
       // first use the zone type
       bool done = false;
-      switch(zone->m_type) {
+      switch (zone->m_type) {
       case 0x15:
         done = m_graphParser->readGraphic(zone);
         break;
@@ -597,12 +610,15 @@ bool FWParser::createZones()
       // unknown, so try all possibilities
       if (m_graphParser->readGraphic(zone)) continue;
       if (m_textParser->readTextData(zone)) continue;
-    } else if (zone->m_typeId == -1) {
+    }
+    else if (zone->m_typeId == -1) {
       if (zone->id()>=0 && zone->id()< 3) {
         MWAW_DEBUG_MSG(("FWParser::createZones: Oops find an unparsed main zone %d\n", zone->id()));
-      } else if (zone->hasType("Biblio")) {
+      }
+      else if (zone->hasType("Biblio")) {
         MWAW_DEBUG_MSG(("FWParser::createZones: find a bibliography zone: unparsed\n"));
-      } else {
+      }
+      else {
         MWAW_DEBUG_MSG(("FWParser::createZones: find unexpected general zone\n"));
       }
     }
@@ -784,7 +800,8 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
       asciiFile.addNote("DocInfoII#");
       ok = false;
     }
-  } else {
+  }
+  else {
     if (pos+18 < zone->end()) {
       val = (int)input->readLong(2); // always 0
       if (val) f << "f0=" << val << ",";
@@ -795,7 +812,8 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
         val = (int)input->readULong(2);
         if (val) f << "g" << i << "=" << std::hex << val << std::dec << ",";
       }
-    } else {
+    }
+    else {
       ok = false;
       f << "#";
     }
@@ -838,7 +856,8 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
         getPageSpan().setFormLength(double(dim[2])/72.);
         getPageSpan().setFormWidth(double(dim[3])/72.);
         m_state->m_pageSpanSet=true;
-      } else {
+      }
+      else {
         MWAW_DEBUG_MSG(("FWParser::readDocInfo:can not read document margins!\n"));
       }
     }
@@ -869,11 +888,13 @@ bool FWParser::readDocInfo(FWStruct::EntryPtr zone)
         val = (int)input->readLong(2);
         if (val) f << "f" << i << "=" << val << ",";
       }
-    } else
+    }
+    else
       f << "#";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("FWParser::readDocInfo: can not find print info\n"));
     asciiFile.addPos(zone->end()-130);
     asciiFile.addNote("DocInfo-G#");
@@ -1114,7 +1135,7 @@ bool FWParser::readDocZoneData(FWStruct::EntryPtr zone)
       FWStruct::ZoneHeader docData;
       shared_ptr<FWStruct::ZoneHeader> res;
       docData.m_type = doc.m_type;
-      switch(doc.m_type) {
+      switch (doc.m_type) {
       case 0:
         done = m_textParser->readColumns(zone);
         break;
@@ -1221,7 +1242,8 @@ bool FWParser::readDocZoneData(FWStruct::EntryPtr zone)
         if (docId >= 0 && docId != int(z)) {
           MWAW_DEBUG_MSG(("FWParser::readDocZoneData: unexpected id %d != %d\n", docId, int(z)));
           done = false;
-        } else {
+        }
+        else {
           if (res)
             m_state->addCorrespondance(res->m_docId, res->m_fileId);
           break;
@@ -1245,7 +1267,7 @@ bool FWParser::readDocZoneData(FWStruct::EntryPtr zone)
     //
     input->seek(pos+4, librevenge::RVNG_SEEK_SET);
     bool lastOk = false;
-    while(input->tell()+4 < zone->end()) {
+    while (input->tell()+4 < zone->end()) {
       bool prevLastOk = lastOk;
       lastOk = true;
       pos = input->tell();
@@ -1346,7 +1368,8 @@ bool FWParser::readDocZoneStruct(FWStruct::EntryPtr zone)
         if (seenSet.find(dt.m_nextId) != seenSet.end()) {
           f << "##nId=" << dt.m_nextId << ",";
           dt.m_nextId = 0;
-        } else
+        }
+        else
           seenSet.insert(dt.m_nextId);
       }
       if (type==4) {
@@ -1389,7 +1412,7 @@ bool FWParser::readDocZoneStruct(FWStruct::EntryPtr zone)
 
     FWParserInternal::DocZoneStruct &nd = zoneList[size_t(id)];
     size_t c = 0;
-    while(c < nd.m_childList.size()) {
+    while (c < nd.m_childList.size()) {
       int cId = nd.m_childList[c++];
       if (seenSet.find(cId)==seenSet.end()) {
         seenSet.insert(cId);
@@ -1433,7 +1456,7 @@ bool FWParser::readGenericDocData(FWStruct::EntryPtr zone, FWStruct::ZoneHeader 
 
   int val;
   int numSzFollowBlock = 0;
-  switch(doc.m_type) {
+  switch (doc.m_type) {
   case 0xc:
   case 0xd:
   case 0xf:
@@ -1507,11 +1530,13 @@ bool FWParser::readGenericDocData(FWStruct::EntryPtr zone, FWStruct::ZoneHeader 
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
       input->seek(sz, librevenge::RVNG_SEEK_CUR);
-    } else {
+    }
+    else {
       MWAW_DEBUG_MSG(("FWParser::readGenericDocData: find bad end data\n"));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
     }
-  } else if (val) {
+  }
+  else if (val) {
     MWAW_DEBUG_MSG(("FWParser::readGenericDocData: find bad end data(II)\n"));
   }
   return true;
@@ -1611,7 +1636,8 @@ bool FWParser::readFileZoneFlags(FWStruct::EntryPtr zone)
       }
       entry.reset(new FWStruct::Entry(input));
       entry->setId(1000+id); // false id
-    } else
+    }
+    else
       entry = it->second;
     entry->setType("UnknownZone");
     int val = (int)input->readLong(2); // always -2 ?
@@ -1619,7 +1645,7 @@ bool FWParser::readFileZoneFlags(FWStruct::EntryPtr zone)
     val  = (int)input->readLong(2); // always 0 ?
     if (val) f << "g1=" << val << ",";
     // a small number between 1 and 0x100
-    entry->m_values[0] =  (int)input->readLong(2);
+    entry->m_values[0] = (int)input->readLong(2);
     for (int j = 0; j < 2; j++) { // always 0
       val  = (int)input->readLong(2);
       if (val) f << "g" << j+2 << "=" << val << ",";
@@ -1645,8 +1671,8 @@ bool FWParser::readFileZoneFlags(FWStruct::EntryPtr zone)
       numNegZone++;
     }
     // v2: always  0|0x14, v1 two small number or 0x7FFF
-    entry->m_values[1] =  (int)input->readLong(1);
-    entry->m_values[2] =  (int)input->readLong(1);
+    entry->m_values[1] = (int)input->readLong(1);
+    entry->m_values[2] = (int)input->readLong(1);
     if (vers == 1) {
       for (int j = 0; j < 3; j++) { // always 0, -2|0, 0 ?
         val  = (int)input->readLong(2);
@@ -1869,7 +1895,8 @@ bool FWParser::readDocPosition()
       setVersion(1);
     else
       return false;
-  } else {
+  }
+  else {
     if (val != 1) f << "g2=" << val << ",";
     if ((sz[0]%22)==0 && (sz[1]%10)==0)
       setVersion(1);
@@ -1950,7 +1977,8 @@ void FWParser::sendVariable(int id)
       first = false;
       MWAW_DEBUG_MSG(("FWParser::sendVariable: sorry, send text/field variable is not implemented\n"));
     }
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("FWParser::sendVariable: find unexpected redirection type[%x] for variable %d\n", data.m_type, id));
   }
 }
@@ -1971,7 +1999,8 @@ void FWParser::sendText(int id, libmwaw::SubDocumentType type, MWAWNote::Type wh
     else {
       MWAW_DEBUG_MSG(("FWParser::sendText: call with %d[%x]\n", int(type),docType));
     }
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("FWParser::sendText: can not find data for id=%d\n", id));
   }
   int fId = m_state->getFileZoneId(id);

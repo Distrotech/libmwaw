@@ -125,7 +125,7 @@ bool MWAWGraphicStyle::Pattern::getBinary(librevenge::RVNGBinaryData &data, std:
       unsigned char depl=0x80;
       for (int byt=0; byt<8; ++byt) {
         rowValues[i++] = (c&depl) ? 1 : 0;
-        depl=(unsigned char) (depl>>1);
+        depl=(unsigned char)(depl>>1);
       }
     }
     bitmap.setRow(h, &rowValues[0]);
@@ -144,7 +144,7 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVN
   else if (m_lineDashWidth.size()>=2) {
     int nDots1=0, nDots2=0;
     float size1=0, size2=0, totalGap=0.0;
-    for (size_t c=0; c+1 < m_lineDashWidth.size(); ) {
+    for (size_t c=0; c+1 < m_lineDashWidth.size();) {
       float sz=m_lineDashWidth[c++];
       if (nDots2 && (sz<size2||sz>size2)) {
         static bool first=true;
@@ -159,7 +159,8 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVN
       else if (!nDots1 || (sz>=size1 && sz <= size1)) {
         nDots1++;
         size1=sz;
-      } else {
+      }
+      else {
         nDots2=1;
         size2=sz;
       }
@@ -173,14 +174,15 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVN
       list.insert("draw:dots2-length", size2, librevenge::RVNG_POINT);
     }
     list.insert("draw:distance", totalGap/float(nDots1+nDots2), librevenge::RVNG_POINT);;
-  } else
+  }
+  else
     list.insert("draw:stroke", "solid");
   list.insert("svg:stroke-color", m_lineColor.str().c_str());
   list.insert("svg:stroke-width", m_lineWidth,librevenge::RVNG_POINT);
 
   if (m_lineOpacity < 1)
     list.insert("svg:stroke-opacity", m_lineOpacity, librevenge::RVNG_PERCENT);
-  switch(m_lineCap) {
+  switch (m_lineCap) {
   case C_Round:
     list.insert("svg:stroke-linecap", "round");
     break;
@@ -191,7 +193,7 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVN
   default:
     break;
   }
-  switch(m_lineJoin) {
+  switch (m_lineJoin) {
   case J_Round:
     list.insert("svg:stroke-linejoin", "round");
     break;
@@ -251,7 +253,8 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVN
       list.insert("librevenge:start-opacity", m_gradientStopList[first].m_opacity, librevenge::RVNG_PERCENT);
       list.insert("draw:end-color", m_gradientStopList[1-first].m_color.str().c_str());
       list.insert("librevenge:end-opacity", m_gradientStopList[1-first].m_opacity, librevenge::RVNG_PERCENT);
-    } else {
+    }
+    else {
       for (size_t s=0; s < m_gradientStopList.size(); ++s) {
         librevenge::RVNGPropertyList grad;
         grad.insert("svg:offset", m_gradientStopList[s].m_offset, librevenge::RVNG_PERCENT);
@@ -268,7 +271,8 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVN
     }
     if (m_gradientType == G_Radial)
       list.insert("svg:r", m_gradientRadius, librevenge::RVNG_PERCENT); // checkme
-  } else {
+  }
+  else {
     bool done = false;
     MWAWColor surfaceColor=m_surfaceColor;
     float surfaceOpacity = m_surfaceOpacity;
@@ -278,7 +282,8 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVN
         // no need to create a uniform pattern
         surfaceColor = col;
         surfaceOpacity = 1;
-      } else {
+      }
+      else {
         librevenge::RVNGBinaryData data;
         std::string mimeType;
         if (m_pattern.getBinary(data, mimeType)) {

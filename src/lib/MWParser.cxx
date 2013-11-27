@@ -61,7 +61,8 @@ namespace MWParserInternal
 struct FileHeader {
   FileHeader() : m_hideFirstPageHeaderFooter(false), m_startNumberPage(1),
     m_freeListPos(0), m_freeListLength(0), m_freeListAllocated(0),
-    m_dataPos(0) {
+    m_dataPos(0)
+  {
     for (int i=0; i < 3; i++) m_numParagraphs[i] = 0;
   }
 
@@ -210,7 +211,8 @@ struct WindowsInfo {
   { }
 
   /** small function used to recognized empty header or footer */
-  bool isEmpty() const {
+  bool isEmpty() const
+  {
     if (m_informations.size() == 0) return true;
     if (m_pageNumber.x() >= 0 || m_date.x() >= 0 || m_time.x() >= 0)
       return false;
@@ -258,7 +260,8 @@ std::ostream &operator<<(std::ostream &o, WindowsInfo const &w)
 struct State {
   //! constructor
   State() : m_compressCorr(" etnroaisdlhcfp"), m_actPage(0), m_numPages(0), m_fileHeader(),
-    m_headerHeight(0), m_footerHeight(0) {
+    m_headerHeight(0), m_footerHeight(0)
+  {
   }
 
   //! the correspondance between int compressed and char : must be 15 character
@@ -290,7 +293,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -396,7 +400,8 @@ void MWParser::parse(librevenge::RVNGTextInterface *docInterface)
       if (corrEntry.valid() && getRSRCParser()->parseSTR(corrEntry, corrString)) {
         if (corrString.length() != 15) {
           MWAW_DEBUG_MSG(("MWParser::parse: resource correspondance string seems bad\n"));
-        } else
+        }
+        else
           m_state->m_compressCorr = corrString;
       }
     }
@@ -407,7 +412,8 @@ void MWParser::parse(librevenge::RVNGTextInterface *docInterface)
     }
 
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("MWParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -448,7 +454,8 @@ void MWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   if (m_state->m_fileHeader.m_hideFirstPageHeaderFooter) {
     pageList.push_back(getPageSpan());
     ps.setPageSpan(m_state->m_numPages);
-  } else
+  }
+  else
     ps.setPageSpan(m_state->m_numPages+1);
   if (ps.getPageSpan())
     pageList.push_back(ps);
@@ -584,7 +591,7 @@ bool MWParser::createZonesV3()
       MWParserInternal::Information::Type newType =
         MWParserInternal::Information::UNKNOWN;
 
-      switch((type & 0x7)) {
+      switch ((type & 0x7)) {
       case 0:
         newType=MWParserInternal::Information::RULER;
         break;
@@ -635,7 +642,7 @@ bool MWParser::sendWindow(int zone)
   for (size_t i=0; i < numInfo; i++) {
     if (zone == 0)
       newPage(info.m_informations[i].m_pos.page()+1);
-    switch(info.m_informations[i].m_type) {
+    switch (info.m_informations[i].m_type) {
     case MWParserInternal::Information::TEXT:
       if (!zone || info.m_informations[i].m_data.length() != 10) {
         std::vector<int> lineHeight;
@@ -730,7 +737,8 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   }
   if (!vName.length()) {
     MWAW_DEBUG_MSG(("Maybe a MacWrite file unknown version(%d)\n", vers));
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("MacWrite file %s\n", vName.c_str()));
   }
 
@@ -754,7 +762,8 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
     if (input->readLong(1)) f << "hasHeader(?),";
     fHeader.m_startNumberPage = (int) input->readLong(2);
     headerSize=20;
-  } else {
+  }
+  else {
     fHeader.m_hideFirstPageHeaderFooter = (input->readULong(1)==0xFF);
 
     input->seek(7, librevenge::RVNG_SEEK_CUR); // unused + 4 display flags + active doc
@@ -860,7 +869,7 @@ bool MWParser::readWindowsInfo(int wh)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(Windows)";
-  switch(wh) {
+  switch (wh) {
   case 0:
     f << "[Footer]";
     break;
@@ -893,7 +902,8 @@ bool MWParser::readWindowsInfo(int wh)
       int val = (int) input->readLong(2);
       if (val) f << "unkn" << i << "=" << val << ",";
     }
-  } else {
+  }
+  else {
     info.m_posTopY = (int) input->readLong(2);
     input->seek(2,librevenge::RVNG_SEEK_CUR); // need to redraw
     informations.setBegin((long) input->readULong(4));
@@ -926,7 +936,8 @@ bool MWParser::readWindowsInfo(int wh)
       if (val==255) f << "f" << i << "=true,";
     }
     f << "flg=" << input->readLong(1);
-  } else {
+  }
+  else {
     input->seek(4,librevenge::RVNG_SEEK_CUR); // unused
     if (input->readULong(1) == 0xFF) f << "redrawOval,";
     if (input->readULong(1) == 0xFF) f << "lastOvalUpdate,";
@@ -973,7 +984,7 @@ bool MWParser::readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstPa
 
   libmwaw::DebugStream f;
   int numParag=0;
-  while(input->tell() != endPos) {
+  while (input->tell() != endPos) {
     pos = input->tell();
     int sz = (int) input->readULong(2);
     if (pos+sz+2 > endPos) {
@@ -1045,7 +1056,8 @@ bool MWParser::readInformationsV3(int numEntries, std::vector<MWParserInternal::
     if (info.m_height < 0) {
       info.m_height = 0;
       info.m_type = MWParserInternal::Information::PAGEBREAK;
-    } else if (info.m_height > 0)
+    }
+    else if (info.m_height > 0)
       info.m_type = MWParserInternal::Information::TEXT;
     else
       info.m_type = MWParserInternal::Information::RULER;
@@ -1103,7 +1115,8 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     if (height < 0) {
       info.m_type = MWParserInternal::Information::GRAPHIC;
       height *= -1;
-    } else if (height == 0)
+    }
+    else if (height == 0)
       info.m_type = MWParserInternal::Information::RULER;
     else
       info.m_type = MWParserInternal::Information::TEXT;
@@ -1116,7 +1129,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     info.m_pos.setPage(page);
 
     int paragStatus = (int) input->readULong(1);
-    switch(paragStatus & 0x3) {
+    switch (paragStatus & 0x3) {
     case 0:
       info.m_justify = MWAWParagraph::JustificationLeft;
       break;
@@ -1155,7 +1168,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
     info.m_font.setFlags(flags);
 
     int fontSize = 0;
-    switch((paragFormat >> 8) & 7) {
+    switch ((paragFormat >> 8) & 7) {
     case 0:
       break;
     case 1:
@@ -1233,7 +1246,8 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     }
     for (int i = 0; i < numChar; i++)
       text += (char) input->readULong(1);
-  } else {
+  }
+  else {
     std::string compressCorr = m_state->m_compressCorr;
 
     int actualChar = 0;
@@ -1243,14 +1257,15 @@ bool MWParser::readText(MWParserInternal::Information const &info,
       int highByte = 0;
       for (int st = 0; st < 3; st++) {
         int actVal;
-        if (!actualCharSet ) {
+        if (!actualCharSet) {
           if (long(input->tell()) >= entry.end()) {
             MWAW_DEBUG_MSG(("MWParser::readText: text is too long\n"));
             return false;
           }
           actualChar = (int) input->readULong(1);
           actVal = (actualChar >> 4);
-        } else
+        }
+        else
           actVal = (actualChar & 0xf);
         actualCharSet = !actualCharSet;
         if (st == 0) {
@@ -1262,7 +1277,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
           highByte = (actVal<<4);
           continue;
         }
-        text += (char) (highByte | actVal);
+        text += (char)(highByte | actVal);
       }
     }
   }
@@ -1325,7 +1340,8 @@ bool MWParser::readText(MWParserInternal::Information const &info,
       totalHeight = 0;
       for (size_t i = 0; i < textLineHeight.size(); i++)
         totalHeight+=textLineHeight[i];
-    } else
+    }
+    else
       input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
   if (long(input->tell()) != entry.end()) {
@@ -1399,7 +1415,7 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   parag.m_margins[1] = float(input->readLong(2))/80.f;
   parag.m_margins[2] = float(input->readLong(2))/80.f;
   int justify = (int) input->readLong(1);
-  switch(justify) {
+  switch (justify) {
   case 0:
     parag.m_justify = MWAWParagraph::JustificationLeft;
     break;
@@ -1617,7 +1633,7 @@ bool MWParser::checkFreeList()
 
   libmwaw::DebugStream f;
   int num = 0;
-  while(!input->isEnd()) {
+  while (!input->isEnd()) {
     pos = input->tell();
     long freePos = (long) input->readULong(4);
     long sz = (long) input->readULong(4);

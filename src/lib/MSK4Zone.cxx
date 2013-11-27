@@ -67,7 +67,8 @@ struct Frame {
   enum Type { Unknown = 0, Header, Footer, Table, Object, Textbox };
 
   //! constructor
-  Frame() : m_type(Unknown), m_position(), m_pictId(), m_error("") {
+  Frame() : m_type(Unknown), m_position(), m_pictId(), m_error("")
+  {
     m_position.setPage(-3);
   }
   //! operator<<
@@ -108,7 +109,7 @@ std::ostream &operator<<(std::ostream &o, Frame const &ft)
   }
 
   int page = ft.m_position.page();
-  switch(page) {
+  switch (page) {
   case -1:
     o << "allpages,";
     break;
@@ -198,7 +199,7 @@ void MSK4Zone::sendFootNote(int id)
 }
 void MSK4Zone::readFootNote(int id)
 {
-  m_textParser->readFootNote( getInput(), id);
+  m_textParser->readFootNote(getInput(), id);
 }
 
 void MSK4Zone::sendFrameText(MWAWEntry const &entry, std::string const &frame)
@@ -462,7 +463,8 @@ bool MSK4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
       readSome=true;
       n_entries--;
       n_entries_local--;
-    } while (n_entries > 0 && n_entries_local);
+    }
+    while (n_entries > 0 && n_entries_local);
 
     if (0xFFFFFFFF == next_index_table && n_entries > 0) {
       MWAW_DEBUG_MSG(("MSK4Zone::parseHeaderIndex: error: expected more header index entries\n"));
@@ -472,7 +474,8 @@ bool MSK4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
     if (0xFFFFFFFF == next_index_table)	break;
 
     if (input->seek(long(next_index_table), librevenge::RVNG_SEEK_SET) != 0) return readSome;
-  } while (n_entries > 0);
+  }
+  while (n_entries > 0);
 
   return true;
 }
@@ -654,7 +657,8 @@ bool MSK4Zone::readPRNT(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPa
   if (!info.read(input)) {
     MWAW_DEBUG_MSG(("Works: error: can not read PRNT\n"));
     return false;
-  } else {
+  }
+  else {
     Vec2i paperSize = info.paper().size();
     Vec2i pageSize = info.page().size();
     Vec2i margin = paperSize - pageSize;
@@ -711,7 +715,7 @@ bool MSK4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPag
     long debPos = input->tell();
     int val = (int) input->readULong(1);
 
-    switch(val) {
+    switch (val) {
     case 0x41: // w (or 4000 when frame)
     case 0x42: // h (or 4000 when frame)
     case 0x43: // and margin (y,x)
@@ -749,7 +753,8 @@ bool MSK4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPag
       if (v==1) {
         m_state->m_hasColumnSep=true;
         f2 << "hasColSep,";
-      } else if (v)
+      }
+      else if (v)
         f2 << "#hasColSeps=" <<  v << ",";
       break;
 
@@ -972,7 +977,7 @@ bool MSK4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
       int sz = 0;
       int szChaine = 0;
       bool done = true;
-      switch(val) {
+      switch (val) {
       case 0x2e: // x
       case 0x2f: // y
         if (pos+2 > endPos) {
@@ -1128,7 +1133,7 @@ bool MSK4Zone::readSELN(MWAWInputStreamPtr input, MWAWEntry const &entry)
 
   int type = (int) input->readLong(1);
   // 2,3
-  switch(type) {
+  switch (type) {
   case 2:
     f << "textPoint, ";
     break;

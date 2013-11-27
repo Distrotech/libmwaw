@@ -62,7 +62,8 @@ public:
   virtual ~MSKParser();
 
   //! returns the actual input
-  MWAWInputStreamPtr &getInput() {
+  MWAWInputStreamPtr &getInput()
+  {
     return m_input;
   }
 
@@ -83,7 +84,8 @@ public:
   virtual Vec2f getPageLeftTop() const = 0;
 
   //! a DebugFile used to write what we recognize when we parse the document
-  libmwaw::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii()
+  {
     return m_asciiFile;
   }
 protected:

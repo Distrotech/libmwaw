@@ -75,10 +75,12 @@ struct DocumentState {
   //! constructor
   DocumentState(std::vector<MWAWPageSpan> const &pageList) :
     m_pageList(pageList), m_metaData(), m_footNoteNumber(0), m_endNoteNumber(0), m_smallPictureNumber(0),
-    m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_sentListMarkers(), m_subDocuments() {
+    m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_sentListMarkers(), m_subDocuments()
+  {
   }
   //! destructor
-  ~DocumentState() {
+  ~DocumentState()
+  {
   }
 
   //! the pages definition
@@ -213,20 +215,22 @@ void MWAWContentListener::insertChar(uint8_t character)
     MWAWContentListener::insertUnicode(character);
     return;
   }
-  _flushDeferredTabs ();
+  _flushDeferredTabs();
   if (!m_ps->m_isSpanOpened) _openSpan();
   m_ps->m_textBuffer.append((char) character);
 }
 
 void MWAWContentListener::insertCharacter(unsigned char c)
 {
-  int unicode = m_parserState.m_fontConverter->unicode (m_ps->m_font.id(), c);
+  int unicode = m_parserState.m_fontConverter->unicode(m_ps->m_font.id(), c);
   if (unicode == -1) {
     if (c < 0x20) {
       MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: Find odd char %x\n", int(c)));
-    } else
+    }
+    else
       MWAWContentListener::insertChar((uint8_t) c);
-  } else
+  }
+  else
     MWAWContentListener::insertUnicode((uint32_t) unicode);
 }
 
@@ -239,22 +243,24 @@ int MWAWContentListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &in
   long debPos=input->tell();
   int fId = m_ps->m_font.id();
   int unicode = endPos==debPos ?
-                m_parserState.m_fontConverter->unicode (fId, c) :
-                m_parserState.m_fontConverter->unicode (fId, c, input);
+                m_parserState.m_fontConverter->unicode(fId, c) :
+                m_parserState.m_fontConverter->unicode(fId, c, input);
 
   long pos=input->tell();
   if (endPos > 0 && pos > endPos) {
     MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: problem reading a character\n"));
     pos = debPos;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    unicode = m_parserState.m_fontConverter->unicode (fId, c);
+    unicode = m_parserState.m_fontConverter->unicode(fId, c);
   }
   if (unicode == -1) {
     if (c < 0x20) {
       MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: Find odd char %x\n", int(c)));
-    } else
+    }
+    else
       MWAWContentListener::insertChar((uint8_t) c);
-  } else
+  }
+  else
     MWAWContentListener::insertUnicode((uint32_t) unicode);
 
   return int(pos-debPos);
@@ -265,14 +271,14 @@ void MWAWContentListener::insertUnicode(uint32_t val)
   // undef character, we skip it
   if (val == 0xfffd) return;
 
-  _flushDeferredTabs ();
+  _flushDeferredTabs();
   if (!m_ps->m_isSpanOpened) _openSpan();
   libmwaw::appendUnicode(val, m_ps->m_textBuffer);
 }
 
 void MWAWContentListener::insertUnicodeString(librevenge::RVNGString const &str)
 {
-  _flushDeferredTabs ();
+  _flushDeferredTabs();
   if (!m_ps->m_isSpanOpened) _openSpan();
   m_ps->m_textBuffer.append(str);
 }
@@ -287,7 +293,8 @@ void MWAWContentListener::insertEOL(bool soft)
     if (m_ps->m_isSpanOpened)
       _flushText();
     m_documentInterface->insertLineBreak();
-  } else if (m_ps->m_isParagraphOpened)
+  }
+  else if (m_ps->m_isParagraphOpened)
     _closeParagraph();
 
   // sub/superscript must not survive a new line
@@ -358,9 +365,11 @@ void MWAWContentListener::_insertBreakIfNecessary(librevenge::RVNGPropertyList &
       m_ps->m_section.numColumns() <= 1) {
     if (m_ps->m_inSubDocument) {
       MWAW_DEBUG_MSG(("MWAWContentListener::_insertBreakIfNecessary: can not add page break in subdocument\n"));
-    } else
+    }
+    else
       propList.insert("fo:break-before", "page");
-  } else if (m_ps->m_paragraphNeedBreak&MWAWContentListenerInternal::ColumnBreakBit)
+  }
+  else if (m_ps->m_paragraphNeedBreak&MWAWContentListenerInternal::ColumnBreakBit)
     propList.insert("fo:break-before", "column");
   m_ps->m_paragraphNeedBreak=0;
 }
@@ -411,13 +420,13 @@ MWAWParagraph const &MWAWContentListener::getParagraph() const
 ///////////////////
 void MWAWContentListener::insertField(MWAWField const &field)
 {
-  switch(field.m_type) {
+  switch (field.m_type) {
   case MWAWField::None:
     break;
   case MWAWField::PageCount:
   case MWAWField::PageNumber:
   case MWAWField::Title: {
-    _flushDeferredTabs ();
+    _flushDeferredTabs();
     _flushText();
     _openSpan();
     librevenge::RVNGPropertyList propList;
@@ -453,7 +462,7 @@ void MWAWContentListener::insertField(MWAWField const &field)
       else
         format="%I:%M:%S %p";
     }
-    time_t now = time ( 0L );
+    time_t now = time(0L);
     struct tm timeinfo;
     if (localtime_r(&now, &timeinfo)) {
       char buf[256];
@@ -560,7 +569,7 @@ void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
   }
   unsigned actPage = 0;
   std::vector<MWAWPageSpan>::iterator it = m_ds->m_pageList.begin();
-  while(actPage < m_ps->m_currentPage) {
+  while (actPage < m_ps->m_currentPage) {
     actPage+=(unsigned)it++->getPageSpan();
     if (it == m_ds->m_pageList.end()) {
       MWAW_DEBUG_MSG(("MWAWContentListener::_openPageSpan: can not find current page\n"));
@@ -1006,7 +1015,8 @@ void MWAWContentListener::_flushText()
         tmpText.clear();
       }
       m_documentInterface->insertSpace();
-    } else
+    }
+    else
       tmpText.append(i());
   }
   m_documentInterface->insertText(tmpText);
@@ -1037,7 +1047,8 @@ void MWAWContentListener::insertNote(MWAWNote const &note, MWAWSubDocumentPtr &s
     _changeList(); // flush the list exterior
     handleSubDocument(subDocument, libmwaw::DOC_NOTE);
     m_ps->m_paragraph.m_listLevelIndex = prevListLevel;
-  } else {
+  }
+  else {
     if (!m_ps->m_isParagraphOpened)
       _openParagraph();
     else {
@@ -1057,7 +1068,8 @@ void MWAWContentListener::insertNote(MWAWNote const &note, MWAWSubDocumentPtr &s
       m_documentInterface->openFootnote(propList);
       handleSubDocument(subDocument, libmwaw::DOC_NOTE);
       m_documentInterface->closeFootnote();
-    } else {
+    }
+    else {
       if (note.m_number >= 0)
         m_ds->m_endNoteNumber = note.m_number;
       else
@@ -1181,7 +1193,7 @@ bool MWAWContentListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPro
     return false;
   }
   MWAWPosition fPos(pos);
-  switch(pos.m_anchorTo) {
+  switch (pos.m_anchorTo) {
   case MWAWPosition::Page:
     break;
   case MWAWPosition::Paragraph:
@@ -1237,7 +1249,7 @@ void MWAWContentListener::closeFrame()
 }
 
 void MWAWContentListener::_handleFrameParameters
-( librevenge::RVNGPropertyList &propList, MWAWPosition const &pos)
+(librevenge::RVNGPropertyList &propList, MWAWPosition const &pos)
 {
   Vec2f origin = pos.origin();
   librevenge::RVNGUnit unit = pos.unit();
@@ -1268,15 +1280,16 @@ void MWAWContentListener::_handleFrameParameters
     propList.insert("fo:clip", s.str().c_str());
   }
 
-  if ( pos.m_wrapping ==  MWAWPosition::WDynamic)
-    propList.insert( "style:wrap", "dynamic" );
-  else if ( pos.m_wrapping ==  MWAWPosition::WBackground) {
-    propList.insert( "style:wrap", "run-through" );
-    propList.insert( "style:run-through", "background" );
-  } else if ( pos.m_wrapping ==  MWAWPosition::WRunThrough)
-    propList.insert( "style:wrap", "run-through" );
+  if (pos.m_wrapping ==  MWAWPosition::WDynamic)
+    propList.insert("style:wrap", "dynamic");
+  else if (pos.m_wrapping ==  MWAWPosition::WBackground) {
+    propList.insert("style:wrap", "run-through");
+    propList.insert("style:run-through", "background");
+  }
+  else if (pos.m_wrapping ==  MWAWPosition::WRunThrough)
+    propList.insert("style:wrap", "run-through");
   else
-    propList.insert( "style:wrap", "none" );
+    propList.insert("style:wrap", "none");
 
   if (pos.m_anchorTo == MWAWPosition::Paragraph ||
       pos.m_anchorTo == MWAWPosition::Frame) {
@@ -1287,41 +1300,45 @@ void MWAWContentListener::_handleFrameParameters
     propList.insert("style:horizontal-rel", what.c_str());
     double w = m_ps->m_pageSpan.getPageWidth() - m_ps->m_paragraph.getMarginsWidth();
     w *= inchFactor;
-    switch ( pos.m_xPos) {
+    switch (pos.m_xPos) {
     case MWAWPosition::XRight:
       if (origin[0] < 0.0 || origin[0] > 0.0) {
-        propList.insert( "style:horizontal-pos", "from-left");
-        propList.insert( "svg:x", double(origin[0] - pos.size()[0] + w), unit);
-      } else
+        propList.insert("style:horizontal-pos", "from-left");
+        propList.insert("svg:x", double(origin[0] - pos.size()[0] + w), unit);
+      }
+      else
         propList.insert("style:horizontal-pos", "right");
       break;
     case MWAWPosition::XCenter:
       if (origin[0] < 0.0 || origin[0] > 0.0) {
-        propList.insert( "style:horizontal-pos", "from-left");
-        propList.insert( "svg:x", double(origin[0] - pos.size()[0]/2.0 + w/2.0), unit);
-      } else
+        propList.insert("style:horizontal-pos", "from-left");
+        propList.insert("svg:x", double(origin[0] - pos.size()[0]/2.0 + w/2.0), unit);
+      }
+      else
         propList.insert("style:horizontal-pos", "center");
       break;
     case MWAWPosition::XLeft:
     case MWAWPosition::XFull:
     default:
       if (origin[0] < 0.0 || origin[0] > 0.0) {
-        propList.insert( "style:horizontal-pos", "from-left");
-        propList.insert( "svg:x", double(origin[0]), unit);
-      } else
+        propList.insert("style:horizontal-pos", "from-left");
+        propList.insert("svg:x", double(origin[0]), unit);
+      }
+      else
         propList.insert("style:horizontal-pos", "left");
       break;
     }
 
     if (origin[1] < 0.0 || origin[1] > 0.0) {
-      propList.insert( "style:vertical-pos", "from-top" );
-      propList.insert( "svg:y", double(origin[1]), unit);
-    } else
-      propList.insert( "style:vertical-pos", "top" );
+      propList.insert("style:vertical-pos", "from-top");
+      propList.insert("svg:y", double(origin[1]), unit);
+    }
+    else
+      propList.insert("style:vertical-pos", "top");
     return;
   }
 
-  if ( pos.m_anchorTo == MWAWPosition::Page ) {
+  if (pos.m_anchorTo == MWAWPosition::Page) {
     // Page position seems to do not use the page margin...
     propList.insert("text:anchor-type", "page");
     if (pos.page() > 0) propList.insert("text:anchor-page-number", pos.page());
@@ -1330,106 +1347,115 @@ void MWAWContentListener::_handleFrameParameters
     w *= inchFactor;
     h *= inchFactor;
 
-    propList.insert("style:vertical-rel", "page" );
-    propList.insert("style:horizontal-rel", "page" );
+    propList.insert("style:vertical-rel", "page");
+    propList.insert("style:horizontal-rel", "page");
     double newPosition;
     switch (pos.m_yPos) {
     case MWAWPosition::YFull:
       propList.insert("svg:height", double(h), unit);
     case MWAWPosition::YTop:
       if (origin[1] < 0.0 || origin[1] > 0.0) {
-        propList.insert("style:vertical-pos", "from-top" );
+        propList.insert("style:vertical-pos", "from-top");
         newPosition = origin[1];
         if (newPosition > h -pos.size()[1])
           newPosition = h - pos.size()[1];
         propList.insert("svg:y", double(newPosition), unit);
-      } else
-        propList.insert("style:vertical-pos", "top" );
+      }
+      else
+        propList.insert("style:vertical-pos", "top");
       break;
     case MWAWPosition::YCenter:
       if (origin[1] < 0.0 || origin[1] > 0.0) {
-        propList.insert("style:vertical-pos", "from-top" );
+        propList.insert("style:vertical-pos", "from-top");
         newPosition = (h - pos.size()[1])/2.0;
         if (newPosition > h -pos.size()[1]) newPosition = h - pos.size()[1];
         propList.insert("svg:y", double(newPosition), unit);
-      } else
-        propList.insert("style:vertical-pos", "middle" );
+      }
+      else
+        propList.insert("style:vertical-pos", "middle");
       break;
     case MWAWPosition::YBottom:
       if (origin[1] < 0.0 || origin[1] > 0.0) {
-        propList.insert("style:vertical-pos", "from-top" );
+        propList.insert("style:vertical-pos", "from-top");
         newPosition = h - pos.size()[1]-origin[1];
         if (newPosition > h -pos.size()[1]) newPosition = h -pos.size()[1];
         else if (newPosition < 0) newPosition = 0;
         propList.insert("svg:y", double(newPosition), unit);
-      } else
-        propList.insert("style:vertical-pos", "bottom" );
+      }
+      else
+        propList.insert("style:vertical-pos", "bottom");
       break;
     default:
       break;
     }
 
-    switch ( pos.m_xPos ) {
+    switch (pos.m_xPos) {
     case MWAWPosition::XFull:
       propList.insert("svg:width", double(w), unit);
     case MWAWPosition::XLeft:
-      if ( origin[0] < 0.0 || origin[0] > 0.0 ) {
-        propList.insert( "style:horizontal-pos", "from-left");
-        propList.insert( "svg:x", double(origin[0]), unit);
-      } else
-        propList.insert( "style:horizontal-pos", "left");
+      if (origin[0] < 0.0 || origin[0] > 0.0) {
+        propList.insert("style:horizontal-pos", "from-left");
+        propList.insert("svg:x", double(origin[0]), unit);
+      }
+      else
+        propList.insert("style:horizontal-pos", "left");
       break;
     case MWAWPosition::XRight:
-      if ( origin[0] < 0.0 || origin[0] > 0.0 ) {
-        propList.insert( "style:horizontal-pos", "from-left");
-        propList.insert( "svg:x",double( w - pos.size()[0] + origin[0]), unit);
-      } else
-        propList.insert( "style:horizontal-pos", "right");
+      if (origin[0] < 0.0 || origin[0] > 0.0) {
+        propList.insert("style:horizontal-pos", "from-left");
+        propList.insert("svg:x",double(w - pos.size()[0] + origin[0]), unit);
+      }
+      else
+        propList.insert("style:horizontal-pos", "right");
       break;
     case MWAWPosition::XCenter:
-      if ( origin[0] < 0.0 || origin[0] > 0.0 ) {
-        propList.insert( "style:horizontal-pos", "from-left");
-        propList.insert( "svg:x", double((w - pos.size()[0])/2. + origin[0]), unit);
-      } else
-        propList.insert( "style:horizontal-pos", "center" );
+      if (origin[0] < 0.0 || origin[0] > 0.0) {
+        propList.insert("style:horizontal-pos", "from-left");
+        propList.insert("svg:x", double((w - pos.size()[0])/2. + origin[0]), unit);
+      }
+      else
+        propList.insert("style:horizontal-pos", "center");
       break;
     default:
       break;
     }
     return;
   }
-  if ( pos.m_anchorTo != MWAWPosition::Char &&
-       pos.m_anchorTo != MWAWPosition::CharBaseLine &&
-       pos.m_anchorTo != MWAWPosition::Unknown) return;
+  if (pos.m_anchorTo != MWAWPosition::Char &&
+      pos.m_anchorTo != MWAWPosition::CharBaseLine &&
+      pos.m_anchorTo != MWAWPosition::Unknown) return;
 
   propList.insert("text:anchor-type", "as-char");
-  if ( pos.m_anchorTo == MWAWPosition::CharBaseLine)
-    propList.insert( "style:vertical-rel", "baseline" );
+  if (pos.m_anchorTo == MWAWPosition::CharBaseLine)
+    propList.insert("style:vertical-rel", "baseline");
   else
-    propList.insert( "style:vertical-rel", "line" );
-  switch ( pos.m_yPos ) {
+    propList.insert("style:vertical-rel", "line");
+  switch (pos.m_yPos) {
   case MWAWPosition::YFull:
   case MWAWPosition::YTop:
-    if ( origin[1] < 0.0 || origin[1] > 0.0) {
-      propList.insert( "style:vertical-pos", "from-top" );
-      propList.insert( "svg:y", double(origin[1]), unit);
-    } else
-      propList.insert( "style:vertical-pos", "top" );
+    if (origin[1] < 0.0 || origin[1] > 0.0) {
+      propList.insert("style:vertical-pos", "from-top");
+      propList.insert("svg:y", double(origin[1]), unit);
+    }
+    else
+      propList.insert("style:vertical-pos", "top");
     break;
   case MWAWPosition::YCenter:
-    if ( origin[1] < 0.0 || origin[1] > 0.0) {
-      propList.insert( "style:vertical-pos", "from-top" );
-      propList.insert( "svg:y", double(origin[1] - pos.size()[1]/2.0), unit);
-    } else
-      propList.insert( "style:vertical-pos", "middle" );
+    if (origin[1] < 0.0 || origin[1] > 0.0) {
+      propList.insert("style:vertical-pos", "from-top");
+      propList.insert("svg:y", double(origin[1] - pos.size()[1]/2.0), unit);
+    }
+    else
+      propList.insert("style:vertical-pos", "middle");
     break;
   case MWAWPosition::YBottom:
   default:
-    if ( origin[1] < 0.0 || origin[1] > 0.0) {
-      propList.insert( "style:vertical-pos", "from-top" );
-      propList.insert( "svg:y", double(origin[1] - pos.size()[1]), unit);
-    } else
-      propList.insert( "style:vertical-pos", "bottom" );
+    if (origin[1] < 0.0 || origin[1] > 0.0) {
+      propList.insert("style:vertical-pos", "from-top");
+      propList.insert("svg:y", double(origin[1] - pos.size()[1]), unit);
+    }
+    else
+      propList.insert("style:vertical-pos", "bottom");
     break;
   }
 }
@@ -1446,7 +1472,7 @@ void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libm
   m_ps->m_isPageSpanOpened = true;
   m_ps->m_list.reset();
 
-  switch(subDocumentType) {
+  switch (subDocumentType) {
   case libmwaw::DOC_TEXT_BOX:
     m_ps->m_pageSpan.setMargins(0.0);
     m_ps->m_sectionAttributesChanged = true;
@@ -1481,7 +1507,8 @@ void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libm
       shared_ptr<MWAWContentListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWContentListener>());
       try {
         subDocument->parse(listen, subDocumentType);
-      } catch(...) {
+      }
+      catch (...) {
         MWAW_DEBUG_MSG(("Works: MWAWContentListener::handleSubDocument exception catched \n"));
       }
       m_ds->m_subDocuments.pop_back();

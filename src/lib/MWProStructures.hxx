@@ -93,7 +93,8 @@ public:
   bool resendAll();
 
   //! returns the actual section
-  int numSection() const {
+  int numSection() const
+  {
     if (!m_isMainZone) {
       MWAW_DEBUG_MSG(("MWProStructuresListenerState::numSection: not called in main zone\n"));
       return 0;
@@ -166,7 +167,8 @@ public:
   int version() const;
 
   //! Debugging: change the default ascii file (by default struct )
-  void setAsciiName(char const *name) {
+  void setAsciiName(char const *name)
+  {
     m_asciiName = name;
   }
 
@@ -277,12 +279,14 @@ protected:
   MWAWContentListenerPtr &getListener();
 
   //! returns the debug file
-  libmwaw::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii()
+  {
     return m_asciiFile;
   }
 
   //! return the ascii file name
-  std::string const &asciiName() const {
+  std::string const &asciiName() const
+  {
     return m_asciiName;
   }
 

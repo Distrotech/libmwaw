@@ -74,14 +74,16 @@ public:
   enum ReadResult { MWAW_R_BAD=0, MWAW_R_OK, MWAW_R_OK_EMPTY, MWAW_R_MAYBE };
 
   //! returns the bdbox of the picture
-  Box2f getBdBox() const {
+  Box2f getBdBox() const
+  {
     Box2f res(m_bdbox);
     res.extend(m_bdBoxExt);
     return res;
   }
 
   //! sets the bdbox of the picture
-  void setBdBox(Box2f const &box) {
+  void setBdBox(Box2f const &box)
+  {
     m_bdbox = box;
   }
 
@@ -89,14 +91,16 @@ public:
    * - either a basic image/pict
    * - or an encrypted pict in ODG : "image/mwaw-odg"
    */
-  virtual bool getBinary(librevenge::RVNGBinaryData &, std::string &) const {
+  virtual bool getBinary(librevenge::RVNGBinaryData &, std::string &) const
+  {
     return false;
   }
 
   /** \brief a virtual function used to obtain a strict order,
    * must be redefined in the subs class
    */
-  virtual int cmp(MWAWPict const &a) const {
+  virtual int cmp(MWAWPict const &a) const
+  {
     // first compare the bdbox
     int diff = m_bdbox.cmp(a.m_bdbox);
     if (diff) return diff;
@@ -108,7 +112,8 @@ public:
   }
 protected:
   //! computes the minimum and maximum of a list of point
-  static Box2f getBdBox(int numPt, Vec2f const *pt) {
+  static Box2f getBdBox(int numPt, Vec2f const *pt)
+  {
     if (numPt <= 0) {
       return Box2f();
     }
@@ -130,18 +135,21 @@ protected:
   // a function to extend the bdbox
 
   //! udaptes the bdbox, by extended it by (val-previousVal)
-  void extendBDBox(float val) {
+  void extendBDBox(float val)
+  {
     m_bdBoxExt = val;
   }
 
   //! protected constructor must not be called directly
-  MWAWPict() : m_bdbox(), m_bdBoxExt (0.0) {}
+  MWAWPict() : m_bdbox(), m_bdBoxExt(0.0) {}
   //! protected constructor must not be called directly
-  MWAWPict(MWAWPict const &p) : m_bdbox(), m_bdBoxExt (0.0) {
+  MWAWPict(MWAWPict const &p) : m_bdbox(), m_bdBoxExt(0.0)
+  {
     *this=p;
   }
   //! protected operator= must not be called directly
-  MWAWPict &operator=(MWAWPict const &p) {
+  MWAWPict &operator=(MWAWPict const &p)
+  {
     if (&p == this) return *this;
     m_bdbox = p.m_bdbox;
     m_bdBoxExt = p.m_bdBoxExt;

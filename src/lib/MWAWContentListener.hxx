@@ -84,7 +84,8 @@ public:
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
 
   /** returns true if we can add text data */
-  bool canWriteText() const {
+  bool canWriteText() const
+  {
     return MWAWContentListener::isDocumentStarted();
   }
 
@@ -208,7 +209,7 @@ protected:
   void _startSubDocument();
   void _endSubDocument();
 
-  void _handleFrameParameters( librevenge::RVNGPropertyList &propList, MWAWPosition const &pos);
+  void _handleFrameParameters(librevenge::RVNGPropertyList &propList, MWAWPosition const &pos);
   bool openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   void closeFrame();
 

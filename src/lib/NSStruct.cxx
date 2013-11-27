@@ -193,7 +193,8 @@ bool RecursifData::read(NSParser &parser, MWAWEntry const &entry)
       MWAW_DEBUG_MSG(("NSStruct::RecursifData::Read: can not read child entry\n"));
       asciiFile.addPos(pos);
       asciiFile.addNote("###");
-    } else
+    }
+    else
       m_childList.push_back(child);
 
     input->seek(endPos, librevenge::RVNG_SEEK_SET);

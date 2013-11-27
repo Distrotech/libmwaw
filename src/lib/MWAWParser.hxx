@@ -95,11 +95,13 @@ public:
   virtual bool checkHeader(MWAWHeader *header, bool strict=false) = 0;
 
   //! returns the works version
-  int version() const {
+  int version() const
+  {
     return m_parserState->m_version;
   }
   //! sets the works version
-  void setVersion(int vers) {
+  void setVersion(int vers)
+  {
     m_parserState->m_version = vers;
   }
 
@@ -110,51 +112,63 @@ protected:
   MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_pageSpan(), m_asciiName("") { }
 
   //! returns the parser state
-  MWAWParserStatePtr getParserState() {
+  MWAWParserStatePtr getParserState()
+  {
     return m_parserState;
   }
   //! returns the header
-  MWAWHeader *getHeader() {
+  MWAWHeader *getHeader()
+  {
     return m_parserState->m_header;
   }
   //! returns the actual input
-  MWAWInputStreamPtr &getInput() {
+  MWAWInputStreamPtr &getInput()
+  {
     return m_parserState->m_input;
   }
   //! returns the graphic listener
-  MWAWGraphicListenerPtr &getGraphicListener() {
+  MWAWGraphicListenerPtr &getGraphicListener()
+  {
     return m_parserState->m_graphicListener;
   }
   //! returns the listener
-  MWAWContentListenerPtr &getListener() {
+  MWAWContentListenerPtr &getListener()
+  {
     return m_parserState->m_listener;
   }
   //! returns the actual page dimension
-  MWAWPageSpan const &getPageSpan() const {
+  MWAWPageSpan const &getPageSpan() const
+  {
     return m_pageSpan;
   }
   //! returns the actual page dimension
-  MWAWPageSpan &getPageSpan() {
+  MWAWPageSpan &getPageSpan()
+  {
     return m_pageSpan;
   }
   //! returns the form length
-  double getFormLength() const {
+  double getFormLength() const
+  {
     return m_pageSpan.getFormLength();
   }
   //! returns the form width
-  double getFormWidth() const {
+  double getFormWidth() const
+  {
     return m_pageSpan.getFormWidth();
   }
   //! returns the page length (form length without margin )
-  double getPageLength() const {
+  double getPageLength() const
+  {
     return m_pageSpan.getPageLength();
   }
   //! returns the page width (form width without margin )
-  double getPageWidth() const {
+  double getPageWidth() const
+  {
     return m_pageSpan.getPageWidth();
   }
   //! returns the rsrc parser
-  MWAWRSRCParserPtr &getRSRCParser() {
+  MWAWRSRCParserPtr &getRSRCParser()
+  {
     return m_parserState->m_rsrcParser;
   }
   //! sets the listener
@@ -162,21 +176,25 @@ protected:
   //! resets the listener
   void resetListener();
   //! returns the font converter
-  MWAWFontConverterPtr &getFontConverter() {
+  MWAWFontConverterPtr &getFontConverter()
+  {
     return m_parserState->m_fontConverter;
   }
   //! sets the font convertor
   void setFontConverter(MWAWFontConverterPtr fontConverter);
   //! a DebugFile used to write what we recognize when we parse the document
-  libmwaw::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii()
+  {
     return m_parserState->m_asciiFile;
   }
   //! Debugging: change the default ascii file
-  void setAsciiName(char const *name) {
+  void setAsciiName(char const *name)
+  {
     m_asciiName = name;
   }
   //! return the ascii file name
-  std::string const &asciiName() const {
+  std::string const &asciiName() const
+  {
     return m_asciiName;
   }
 

@@ -59,12 +59,14 @@ class HMWJText;
 /** a class use to store the classic header find before file zone */
 struct HMWJZoneHeader {
   //! constructor
-  HMWJZoneHeader(bool isMain) : m_length(0), m_n(0), m_fieldSize(0), m_id(0), m_isMain(isMain) {
+  HMWJZoneHeader(bool isMain) : m_length(0), m_n(0), m_fieldSize(0), m_id(0), m_isMain(isMain)
+  {
     for (int i=0; i < 4; i++) m_values[i] = 0;
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, HMWJZoneHeader const &h) {
+  friend std::ostream &operator<<(std::ostream &o, HMWJZoneHeader const &h)
+  {
     if (h.m_n) o << "N=" << h.m_n << ",";
     if (h.m_id) o << "zId=" << std::hex << h.m_id << std::dec << ",";
     bool toPrint[4]= {true, true, true, true};

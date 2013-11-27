@@ -170,7 +170,7 @@ unsigned long MWAWInputStream::readULong(librevenge::RVNGInputStream *stream, in
     unsigned long val = readU8(stream);
     return val + (readULong(stream, num-1,0, inverseRead) << 8);
   }
-  switch(num) {
+  switch (num) {
   case 4:
   case 2:
   case 1: {
@@ -178,7 +178,7 @@ unsigned long MWAWInputStream::readULong(librevenge::RVNGInputStream *stream, in
     uint8_t const *p = stream->read((unsigned long) num, numBytesRead);
     if (!p || int(numBytesRead) != num)
       return 0;
-    switch(num) {
+    switch (num) {
     case 4:
       return (unsigned long)p[3]|((unsigned long)p[2]<<8)|
              ((unsigned long)p[1]<<16)|((unsigned long)p[0]<<24)|((a<<16)<<16);
@@ -313,7 +313,8 @@ bool MWAWInputStream::unBinHex()
     else if (binMap.find(c) == binMap.end()) {
       MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: find unexpected char when decoding file\n"));
       return false;
-    } else
+    }
+    else
       readVal = binMap.find(c)->second;
     int wVal = -1;
     if (numActByte==0)
@@ -321,10 +322,12 @@ bool MWAWInputStream::unBinHex()
     else if (numActByte==2) {
       wVal = (actVal | readVal);
       actVal = 0;
-    } else if (numActByte==4) {
+    }
+    else if (numActByte==4) {
       wVal = actVal | ((readVal>>2)&0xF);
       actVal = (readVal&0x3)<<6;
-    } else if (numActByte==6) {
+    }
+    else if (numActByte==6) {
       wVal = actVal | ((readVal>>4)&0x3);
       actVal = (readVal&0xf)<<4;
     }
@@ -394,7 +397,8 @@ bool MWAWInputStream::unBinHex()
   if (creator.length()==4 && type.length()==4) {
     m_fInfoType = type;
     m_fInfoCreator = creator;
-  } else if (creator.length() || type.length()) {
+  }
+  else if (creator.length() || type.length()) {
     MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: the file name size seems odd\n"));
   }
   contentInput->seek(2, librevenge::RVNG_SEEK_CUR); // skip flags
@@ -409,14 +413,16 @@ bool MWAWInputStream::unBinHex()
   // now read the rsrc and the data fork
   if (rsrcLength && getResourceForkStream()) {
     MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: I already have a resource fork!!!!\n"));
-  } else if (rsrcLength) {
+  }
+  else if (rsrcLength) {
     contentInput->seek(pos+dataLength+2, librevenge::RVNG_SEEK_SET);
     unsigned long numBytesRead = 0;
     const unsigned char *data =
       contentInput->read((unsigned long)rsrcLength, numBytesRead);
     if (numBytesRead != (unsigned long)rsrcLength || !data) {
       MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: can not read the resource fork\n"));
-    } else {
+    }
+    else {
       shared_ptr<librevenge::RVNGInputStream> rsrc(new librevenge::RVNGStringStream(data, (unsigned int)numBytesRead));
       m_resourceFork.reset(new MWAWInputStream(rsrc,false));
     }
@@ -432,7 +438,7 @@ bool MWAWInputStream::unBinHex()
       MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: can not read the data fork\n"));
       return false;
     }
-    m_stream.reset(new librevenge::RVNGStringStream(data,  (unsigned int)numBytesRead));
+    m_stream.reset(new librevenge::RVNGStringStream(data, (unsigned int)numBytesRead));
   }
 
   return true;
@@ -515,7 +521,8 @@ bool MWAWInputStream::unMacMIME()
       if (newRsrcInput) {
         if (m_resourceFork) {
           MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: Oops!!! find a second resource block, ignored\n"));
-        } else
+        }
+        else
           m_resourceFork.reset(new MWAWInputStream(newRsrcInput,false));
       }
     }
@@ -597,7 +604,8 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
       else { // the finder info
         if (entrySize < 8) {
           MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: finder info size is odd\n"));
-        } else {
+        }
+        else {
           bool ok = true;
           std::string type(""), creator("");
           for (int p = 0; p < 4; p++) {
@@ -617,7 +625,8 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
           if (ok) {
             m_fInfoType = type;
             m_fInfoCreator = creator;
-          } else if (type.length()) {
+          }
+          else if (type.length()) {
             MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: can not read find info\n"));
           }
         }
@@ -625,7 +634,8 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
 
       inp->seek(pos+12, librevenge::RVNG_SEEK_SET);
     }
-  } catch (...) {
+  }
+  catch (...) {
     return false;
   }
   return true;

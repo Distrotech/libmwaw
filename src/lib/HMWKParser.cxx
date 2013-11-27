@@ -66,7 +66,8 @@ namespace HMWKParserInternal
 struct State {
   //! constructor
   State() : m_zonesListBegin(-1), m_zonesMap(),
-    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  {
   }
 
   //! the list of zone begin
@@ -91,7 +92,8 @@ public:
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
     if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
@@ -100,7 +102,8 @@ public:
   }
 
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -235,7 +238,8 @@ void HMWKParser::parse(librevenge::RVNGTextInterface *docInterface)
 #endif
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("HMWKParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -402,7 +406,8 @@ bool HMWKParser::readZonesList()
       if (!input->checkPosition(ptr)) {
         MWAW_DEBUG_MSG(("HMWKParser::readZonesList: can not read the %d zone address\n", i));
         f << ",#Ptr";
-      } else
+      }
+      else
         m_state->m_zonesMap.insert
         (std::multimap<long,shared_ptr<HMWKZone> >::value_type(zone->m_id,zone));
       ascii().addDelimiter(input->tell(), '|');
@@ -453,7 +458,7 @@ bool HMWKParser::readZone(shared_ptr<HMWKZone> zone)
   if (!zone->valid())
     return false;
 
-  switch(zone->m_type) {
+  switch (zone->m_type) {
   case 1:
     if (m_textParser->readTextZone(zone))
       return true;
@@ -615,7 +620,8 @@ bool HMWKParser::readPrintInfo(HMWKZone &zone)
     getPageSpan().setFormWidth(paperSize.x()/72.);
 
     f << info;
-  } else
+  }
+  else
     f << "###";
 
   asciiFile.addPos(pos);
@@ -664,7 +670,7 @@ bool HMWKParser::readFramesUnkn(shared_ptr<HMWKZone> zone)
     long id = input->readLong(4);
     f << "id=" << std::hex << id << std::dec << ",";
     int type = (int) input->readLong(2);
-    switch(type) {
+    switch (type) {
     case 4:
       f << "textbox,";
       break;
@@ -995,7 +1001,7 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
     short a = root;
     bool ok = true;
     do {  /* once for each bit on path */
-      if(bitcounter == 0) {
+      if (bitcounter == 0) {
         if (input->isEnd() || input->tell() >= zone->fileEndPos()) {
           MWAW_DEBUG_MSG(("HMWKParser::decodeZone: find some uncomplete data for zone%lx\n", zone->fileBeginPos()));
           dt.append((unsigned char)a);
@@ -1012,7 +1018,8 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
       else
         a = left[a];
       bitbuffer = short(bitbuffer << 1);
-    } while (a <= maxChar);
+    }
+    while (a <= maxChar);
     if (!ok)
       break;
     dt.append((unsigned char)(a - maxSucc));
@@ -1026,7 +1033,8 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
         if (c == b) {
           b = right[d];
           right[d] = a;
-        } else
+        }
+        else
           left[d] = a;
         if (left[c] == a)
           left[c] = b;
@@ -1035,9 +1043,11 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
         up[a] = d;
         up[b] = c;
         a = d;
-      } else
+      }
+      else
         a = c;
-    } while (a != root);
+    }
+    while (a != root);
   }
   if (dt.size()==0) {
     MWAW_DEBUG_MSG(("HMWKParser::decodeZone: oops an empty zone\n"));
@@ -1196,7 +1206,7 @@ std::ostream &operator<<(std::ostream &o, HMWKZone const &zone)
 
 std::string HMWKZone::name(int type)
 {
-  switch(type) {
+  switch (type) {
   case 1:
     return "TextZone";
   case 2:

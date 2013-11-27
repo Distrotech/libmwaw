@@ -55,21 +55,25 @@ enum VariableType { V_None=0, V_Numbering, V_Variable, V_Version };
 /** a position */
 struct Position {
   //! the constructor
-  Position() : m_paragraph(0), m_word(0), m_char(0) {
+  Position() : m_paragraph(0), m_word(0), m_char(0)
+  {
   }
   //! operator<<: prints data in form "XxYxZ"
   friend std::ostream &operator<< (std::ostream &o, Position const &pos);
 
   //! operator==
-  bool operator==(Position const &p2) const {
+  bool operator==(Position const &p2) const
+  {
     return cmp(p2)==0;
   }
   //! operator!=
-  bool operator!=(Position const &p2) const {
+  bool operator!=(Position const &p2) const
+  {
     return cmp(p2)!=0;
   }
   //! a small compare operator
-  int cmp(Position const &p2) const {
+  int cmp(Position const &p2) const
+  {
     if (m_paragraph < p2.m_paragraph) return -1;
     if (m_paragraph > p2.m_paragraph) return 1;
     if (m_word < p2.m_word) return -1;
@@ -88,7 +92,8 @@ struct Position {
   //! a comparaison structure used to sort the position
   struct Compare {
     //! comparaison function
-    bool operator()(Position const &p1, Position const &p2) const {
+    bool operator()(Position const &p1, Position const &p2) const
+    {
       return p1.cmp(p2) < 0;
     }
   };
@@ -101,17 +106,20 @@ struct Position {
 struct FootnoteInfo {
   //! constructor
   FootnoteInfo() : m_flags(0), m_distToDocument(5), m_distSeparator(36),
-    m_separatorLength(108), m_unknown(0) {
+    m_separatorLength(108), m_unknown(0)
+  {
   }
   //! operator<<: prints data
   friend std::ostream &operator<< (std::ostream &o, FootnoteInfo const &fnote);
 
   //! returns true if we have endnote
-  bool endNotes() const {
+  bool endNotes() const
+  {
     return (m_flags&0x8);
   }
   //! returns true if we have to reset index at the beginning of a page
-  bool resetNumberOnNewPage() const {
+  bool resetNumberOnNewPage() const
+  {
     return (m_flags&0x8)==0 && (m_flags&0x10);
   }
   //! the footnote flags
@@ -132,14 +140,17 @@ struct RecursifData {
   struct Info;
   //! constructor
   RecursifData(NSStruct::ZoneType zone, NSStruct::VariableType vType=NSStruct::V_None, int level=0) :
-    m_info(new Info(zone, vType)), m_level(level), m_childList() {
+    m_info(new Info(zone, vType)), m_level(level), m_childList()
+  {
   }
   //! copy constructor
   RecursifData(RecursifData const &orig) :
-    m_info(orig.m_info), m_level(-1), m_childList() {
+    m_info(orig.m_info), m_level(-1), m_childList()
+  {
   }
   //! copy operator
-  RecursifData &operator=(RecursifData const &orig) {
+  RecursifData &operator=(RecursifData const &orig)
+  {
     if (this != &orig) {
       m_info = orig.m_info;
       m_level = orig.m_level;
@@ -161,7 +172,8 @@ struct RecursifData {
   struct Info {
     //! the constructor
     Info(NSStruct::ZoneType zType, NSStruct::VariableType vType=NSStruct::V_None) :
-      m_zoneType(zType), m_variableType(vType) {
+      m_zoneType(zType), m_variableType(vType)
+    {
     }
     //! the zone id
     NSStruct::ZoneType m_zoneType;
@@ -171,10 +183,12 @@ struct RecursifData {
   //! the data data
   struct Node {
     //! constructor
-    Node() : m_type(0), m_entry(), m_data() {
+    Node() : m_type(0), m_entry(), m_data()
+    {
     }
     //! returns true if the node is a final node
-    bool isLeaf() const {
+    bool isLeaf() const
+    {
       return !m_data;
     }
 

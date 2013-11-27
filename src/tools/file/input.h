@@ -53,11 +53,13 @@ public:
   short read16();
   int read32();
   int seek(long offset, SeekType seekType);
-  long tell() const {
+  long tell() const
+  {
     return m_offset;
   }
 
-  bool atEOS() {
+  bool atEOS()
+  {
     return m_offset >= length();
   }
 
@@ -74,7 +76,8 @@ public:
   ~StringStream() { }
 
   unsigned char const *read(unsigned long numBytes, unsigned long &numBytesRead);
-  long length() {
+  long length()
+  {
     return long(m_buffer.size());
   }
 private:
@@ -88,7 +91,8 @@ class FileStream: public InputStream
 public:
   FileStream(char const *path);
   ~FileStream();
-  bool ok() const {
+  bool ok() const
+  {
     return m_isOk;
   }
   unsigned char const *read(unsigned long numBytes, unsigned long &numBytesRead);

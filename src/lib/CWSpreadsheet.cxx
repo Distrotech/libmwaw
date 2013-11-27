@@ -59,11 +59,13 @@ namespace CWSpreadsheetInternal
 struct Spreadsheet : public CWStruct::DSET {
   // constructor
   Spreadsheet(CWStruct::DSET const &dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_colWidths(), m_rowHeightMap(), m_content() {
+    CWStruct::DSET(dset), m_colWidths(), m_rowHeightMap(), m_content()
+  {
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Spreadsheet const &doc) {
+  friend std::ostream &operator<<(std::ostream &o, Spreadsheet const &doc)
+  {
     o << static_cast<CWStruct::DSET const &>(doc);
     return o;
   }
@@ -78,7 +80,8 @@ struct Spreadsheet : public CWStruct::DSET {
 //! Internal: the state of a CWSpreadsheet
 struct State {
   //! constructor
-  State() : m_spreadsheetMap() {
+  State() : m_spreadsheetMap()
+  {
   }
   //! a map zoneId to spreadsheet
   std::map<int, shared_ptr<Spreadsheet> > m_spreadsheetMap;
@@ -148,7 +151,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   }
   int debColSize = 0;
   int vers = version();
-  switch(vers) {
+  switch (vers) {
   case 1:
     debColSize = 72;
     break;
@@ -211,7 +214,8 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
 
   if (m_state->m_spreadsheetMap.find(sheet->m_id) != m_state->m_spreadsheetMap.end()) {
     MWAW_DEBUG_MSG(("CWSpreadsheet::readSpreadsheetZone: zone %d already exists!!!\n", sheet->m_id));
-  } else
+  }
+  else
     m_state->m_spreadsheetMap[sheet->m_id] = sheet;
 
   sheet->m_otherChilds.push_back(sheet->m_id+1);
@@ -271,7 +275,7 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
     return true;
   }
   int fSize = 0;
-  switch(version()) {
+  switch (version()) {
   case 4:
   case 5:
     fSize = 4;

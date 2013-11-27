@@ -57,7 +57,7 @@
 std::ostream &operator<<(std::ostream &o, MWAWGraphicShape::PathData const &path)
 {
   o << path.m_type;
-  switch(path.m_type) {
+  switch (path.m_type) {
   case 'H':
     o << ":" << path.m_x[0];
   case 'V':
@@ -207,7 +207,7 @@ MWAWGraphicShape MWAWGraphicShape::line(Vec2f const &orig, Vec2f const &dest)
 std::ostream &operator<<(std::ostream &o, MWAWGraphicShape const &sh)
 {
   o << "box=" << sh.m_bdBox << ",";
-  switch(sh.m_type) {
+  switch (sh.m_type) {
   case MWAWGraphicShape::Line:
     o << "line,";
     if (sh.m_vertices.size()!=2)
@@ -340,7 +340,7 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
   list.clear();
   vect=librevenge::RVNGPropertyListVector();
   Vec2f decal=orig-m_bdBox[0];
-  switch(m_type) {
+  switch (m_type) {
   case Line:
     if (m_vertices.size()!=2) break;
     pt=m_vertices[0]+decal;
@@ -474,7 +474,7 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
 std::vector<MWAWGraphicShape::PathData> MWAWGraphicShape::getPath() const
 {
   std::vector<MWAWGraphicShape::PathData> res;
-  switch(m_type) {
+  switch (m_type) {
   case Line:
   case Polygon: {
     size_t n=m_vertices.size();

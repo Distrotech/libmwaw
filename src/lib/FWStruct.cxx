@@ -56,14 +56,15 @@ bool getColor(int color, MWAWColor &col)
     else val = 255-val;
     unsigned char c = (unsigned char) val;
     col=MWAWColor(c,c,c);
-  } else
+  }
+  else
     return false;
   return true;
 }
 
 std::string getTypeName(int type)
 {
-  switch(type) {
+  switch (type) {
   case 0:
     return "columns,";
   case 1:
@@ -92,8 +93,8 @@ std::string getTypeName(int type)
     return "graphic,";
   case 0x18: // in general empty
     return "variableText,";
-    // 13-14: always find with child
-    // 0xb, 11-12 can also have child...
+  // 13-14: always find with child
+  // 0xb, 11-12 can also have child...
   case 0x19:
     return "reference,";
   case 0x1a:
@@ -160,10 +161,12 @@ bool Border::read(shared_ptr<FWStruct::Entry> zone, int fSz)
     m_frameBorder.m_widthsList.resize(3);
     for (size_t i=0; i < 3; ++i)
       m_frameBorder.m_widthsList[i]=0.5*(double) width[i];
-  } else if (!width[0] && !width[1] && width[2]) {
+  }
+  else if (!width[0] && !width[1] && width[2]) {
     m_frameBorder.m_style=MWAWBorder::Simple;
     m_frameBorder.m_width=0.5*double(totalW);
-  } else if (totalW) {
+  }
+  else if (totalW) {
     MWAW_DEBUG_MSG(("FWStruct::Border::read: frame border width seems odd\n"));
     f << "###frame[w]=[";
     for (int i=0; i < 3; ++i) f << width[i] << ",";
@@ -179,7 +182,7 @@ bool Border::read(shared_ptr<FWStruct::Entry> zone, int fSz)
   for (int j = 0; j < 7; j++) {
     val = (int) input->readULong(2);
     if (getColor(val,col)) {
-      switch(j) {
+      switch (j) {
       case 1: // border
         m_color[0] = col;
         break;
@@ -203,7 +206,8 @@ bool Border::read(shared_ptr<FWStruct::Entry> zone, int fSz)
         if (!col.isBlack())
           f << "col" << j << "=" << col << ",";
       }
-    } else
+    }
+    else
       f << "#col" << j << "=" << std::hex << val << std::dec << ",";
   }
   for (int j = 0; j < 2; j++) { // g0=g1=0
@@ -253,7 +257,7 @@ std::ostream &operator<<(std::ostream &o, Border const &p)
       o << "sep[H]=";
     else
       o << "sep[V]=";
-    switch(p.m_type[w]) {
+    switch (p.m_type[w]) {
     case 0: // none
       break;
     case 1:
@@ -316,7 +320,7 @@ std::ostream &operator<<(std::ostream &o, Entry const &entry)
   if (entry.m_id != -1) {
     o << "fId=" << entry.m_id << ",";
   }
-  switch(entry.m_type) {
+  switch (entry.m_type) {
   case -1:
     break;
   case 0xa:
@@ -474,7 +478,7 @@ bool ZoneHeader::read(shared_ptr<FWStruct::Entry> zone)
       f << "h" << i << "=" << val << ",";
   }
   // now probably dependent of the type
-  switch(m_type) {
+  switch (m_type) {
   case 0x13: // sidebar
   case 0x14: // sidebar simple
     for (int i=0; i < 3; ++i) { // h3=0..e, h4=0..d, h5=0..a8

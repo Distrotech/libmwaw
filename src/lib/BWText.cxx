@@ -62,11 +62,13 @@ namespace BWTextInternal
 //! Internal: a class used to store the font data of a BWText
 struct Font {
   //! constructor
-  Font() : m_id(0), m_size(12), m_flags(0), m_color(0), m_extra() {
+  Font() : m_id(0), m_size(12), m_flags(0), m_color(0), m_extra()
+  {
   }
   /** returns a MWAWFont.
       \note the font id remains filled with the local id */
-  MWAWFont getFont() const {
+  MWAWFont getFont() const
+  {
     MWAWFont res(m_id,float(m_size));
     uint32_t flags=0;
     if (m_flags&1) flags |= MWAWFont::boldBit;
@@ -79,7 +81,7 @@ struct Font {
     if (m_flags&0x400) flags |= MWAWFont::allCapsBit;
     if (m_flags&0x800) flags |= MWAWFont::lowercaseBit;
     res.setFlags(flags);
-    switch(m_color) {
+    switch (m_color) {
     case 63:
       res.setColor(MWAWColor::white());
       break;
@@ -107,7 +109,8 @@ struct Font {
     return res;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Font const &fnt) {
+  friend std::ostream &operator<<(std::ostream &o, Font const &fnt)
+  {
     if (fnt.m_id) o << "id=" << fnt.m_id << ",";
     if (fnt.m_size!=12) o << "sz=" << fnt.m_size << ",";
     if (fnt.m_flags&1) o << "b,";
@@ -121,7 +124,7 @@ struct Font {
     if (fnt.m_flags&0x800) o << "lowercase,";
     if (fnt.m_flags&0xF0E0)
       o << "fl=" << std::hex << (fnt.m_flags&0xF0E0) << std::dec << ",";
-    switch(fnt.m_color) {
+    switch (fnt.m_color) {
     case 0: // black
       break;
     case 63:
@@ -169,7 +172,8 @@ struct Font {
 struct Section : public MWAWSection {
   //! constructor
   Section() : MWAWSection(), m_ruler(), m_hasFirstPage(false), m_hasHeader(false), m_hasFooter(false),
-    m_pageNumber(1),  m_usePageNumber(false), m_extra("") {
+    m_pageNumber(1),  m_usePageNumber(false), m_extra("")
+  {
     for (int i=0; i<5; ++i)
       m_limitPos[i]=0;
     for (int i=0; i<4; ++i)
@@ -178,7 +182,8 @@ struct Section : public MWAWSection {
     m_balanceText=true;
   }
   //! return the i^th entry
-  MWAWEntry getEntry(int i) const {
+  MWAWEntry getEntry(int i) const
+  {
     MWAWEntry res;
     if (i<0||i>=4) {
       MWAW_DEBUG_MSG(("BWTextInternal::getEntry: called with bad id=%d\n",i));
@@ -191,15 +196,18 @@ struct Section : public MWAWSection {
     return res;
   }
   //! return the header entry
-  MWAWEntry getHeaderEntry(bool fPage) const {
+  MWAWEntry getHeaderEntry(bool fPage) const
+  {
     return getEntry(fPage?0:2);
   }
   //! return true if we have a header
-  MWAWEntry getFooterEntry(bool fPage) const {
+  MWAWEntry getFooterEntry(bool fPage) const
+  {
     return getEntry(fPage?1:3);
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Section const &sec) {
+  friend std::ostream &operator<<(std::ostream &o, Section const &sec)
+  {
     o << static_cast<MWAWSection const &>(sec);
     for (int i=0; i<4; ++i) {
       if (sec.m_limitPos[i+1]<=sec.m_limitPos[i]+2)
@@ -244,16 +252,19 @@ struct Section : public MWAWSection {
 //! Internal: the state of a BWText
 struct State {
   //! constructor
-  State() : m_textEntry(), m_sectionList(), m_numPagesBySectionList(), m_version(-1), m_fileIdFontIdList(), m_numPages(-1), m_actualPage(1) {
+  State() : m_textEntry(), m_sectionList(), m_numPagesBySectionList(), m_version(-1), m_fileIdFontIdList(), m_numPages(-1), m_actualPage(1)
+  {
   }
   //! returns the font corresponding to a file font
-  MWAWFont getFont(Font const &ft) {
+  MWAWFont getFont(Font const &ft)
+  {
     MWAWFont font=ft.getFont();
     int fId=font.id();
     if (fId<0||fId>=int(m_fileIdFontIdList.size())) {
       MWAW_DEBUG_MSG(("BWTextInternal::State:getFont can not find the final font id\n"));
       font.setId(3);
-    } else
+    }
+    else
       font.setId(m_fileIdFontIdList[size_t(fId)]);
     return font;
   }
@@ -276,7 +287,8 @@ class SubDocument : public MWAWSubDocument
 {
 public:
   SubDocument(BWText &pars, MWAWInputStreamPtr input, int hFId, int sId) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_hfId(hFId), m_sectId(sId) {
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_hfId(hFId), m_sectId(sId)
+  {
   }
 
   //! destructor
@@ -285,7 +297,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -360,7 +373,7 @@ shared_ptr<MWAWSubDocument> BWText::getHeader(int page, int &numSimilar)
   shared_ptr<MWAWSubDocument> res;
   int actPage=0, newSectionPage=0;
   size_t s=0;
-  for ( ; s < m_state->m_numPagesBySectionList.size(); s++) {
+  for (; s < m_state->m_numPagesBySectionList.size(); s++) {
     newSectionPage+=m_state->m_numPagesBySectionList[s];
     if (newSectionPage>page)
       break;
@@ -387,7 +400,7 @@ shared_ptr<MWAWSubDocument> BWText::getFooter(int page, int &numSimilar)
   shared_ptr<MWAWSubDocument> res;
   int actPage=0, newSectionPage=0;
   size_t s=0;
-  for ( ; s < m_state->m_numPagesBySectionList.size(); s++) {
+  for (; s < m_state->m_numPagesBySectionList.size(); s++) {
     newSectionPage+=m_state->m_numPagesBySectionList[s];
     if (newSectionPage>page)
       break;
@@ -495,7 +508,7 @@ bool BWText::createZones(MWAWEntry &entry)
     }
     m_state->m_textEntry.setEnd(listEntries[p].end());
   }
-  for ( ; p < listEntries.size(); ++p) {
+  for (; p < listEntries.size(); ++p) {
     BWTextInternal::Section sec;
     if (listEntries[p].valid() && !readSection(listEntries[p], sec))
       sec = BWTextInternal::Section();
@@ -523,7 +536,7 @@ void BWText::countPages()
     c=(unsigned char) input->readULong(1);
     bool done=false;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    switch(c) {
+    switch (c) {
     case 0: {
       BWTextInternal::Font font;
       done=readFont(font,endPos);
@@ -550,7 +563,8 @@ void BWText::countPages()
       if (type==3) {
         nSectPages++;
         nPages++;
-      } else if (type==4) {
+      }
+      else if (type==4) {
         m_state->m_numPagesBySectionList.push_back(nSectPages);
         nSectPages=0;
       }
@@ -671,7 +685,7 @@ bool BWText::sendText(MWAWEntry entry)
     if (last) break;
     if (c) {
       f << c;
-      switch(c) {
+      switch (c) {
       case 0x1: // end zone marker, probably save to ignore
         break;
       case 0x9:
@@ -689,7 +703,7 @@ bool BWText::sendText(MWAWEntry entry)
     c=(unsigned char) input->readULong(1);
     bool done=false;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    switch(c) {
+    switch (c) {
     case 0:
       if (!readFont(font,endPos))
         break;
@@ -713,14 +727,15 @@ bool BWText::sendText(MWAWEntry entry)
         break;
       f.str("");
       f << "Entries(Field):";
-      switch(type) {
+      switch (type) {
       case 0:
       case 1: {
         std::stringstream s;
         if (type==0) {
           f << "pagenumber[section]";
           s << sectPage;
-        } else {
+        }
+        else {
           f << "section";
           s << actSection;
         }
@@ -761,7 +776,7 @@ bool BWText::sendText(MWAWEntry entry)
         break;
       f.str("");
       f << "Entries(Break):";
-      switch(type) {
+      switch (type) {
       case 3:
         f << "pagebreak";
         sectPage++;
@@ -776,7 +791,8 @@ bool BWText::sendText(MWAWEntry entry)
           if (listener->isSectionOpened())
             listener->closeSection();
           listener->openSection(m_state->m_sectionList[actSection++]);
-        } else {
+        }
+        else {
           MWAW_DEBUG_MSG(("BWText::sendText: can not find the new section\n"));
         }
         break;
@@ -971,7 +987,7 @@ bool BWText::readParagraph(MWAWParagraph &para, long endPos, bool inSection)
   para.m_spacings[1] = para.m_spacings[2] =
                          (double(input->readULong(1))/10.)*6./72.;
   int fl=(int)input->readULong(1);
-  switch(fl&0xf) {
+  switch (fl&0xf) {
   case 1: // left
     break;
   case 2:
@@ -1003,7 +1019,7 @@ bool BWText::readParagraph(MWAWParagraph &para, long endPos, bool inSection)
     MWAWTabStop tab;
     tab.m_position=double(input->readLong(4))/65536./72;
     int val=(int) input->readLong(1);
-    switch(val) {
+    switch (val) {
     case 1: // left
       break;
     case 2:

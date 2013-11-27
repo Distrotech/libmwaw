@@ -58,7 +58,8 @@ struct Font {
   enum { NumFlags /** the number of flags needed to store all datas*/=9 };
 
   //! the constructor
-  Font(): m_font(MWAWFont(-1,0)), m_size(0), m_value(0), m_picturePos(0), m_unknown(0), m_extra("") {
+  Font(): m_font(MWAWFont(-1,0)), m_size(0), m_value(0), m_picturePos(0), m_unknown(0), m_extra("")
+  {
     for (int i = 0; i < NumFlags; i++) m_flags[i]=Variable<int>(0);
   }
 
@@ -72,7 +73,8 @@ struct Font {
   friend std::ostream &operator<<(std::ostream &o, Font const &font);
 
   //! a comparison function
-  int cmp(Font const &oth) const {
+  int cmp(Font const &oth) const
+  {
     int diff = m_font.get().cmp(oth.m_font.get());
     if (diff) return diff;
     if (m_size.get() < oth.m_size.get()) return -1;
@@ -109,13 +111,15 @@ struct Font {
 struct Section {
   //! constructor
   Section() : m_id(-1), m_type(0), m_paragraphId(-9999), m_col(1),
-    m_colSep(0.5), m_colBreak(false), m_flag(0), m_extra("") {
+    m_colSep(0.5), m_colBreak(false), m_flag(0), m_extra("")
+  {
   }
   //! returns a section
   MWAWSection getSection(double pageWidth) const;
 
   //! insert the new values
-  void insert(Section const &sec) {
+  void insert(Section const &sec)
+  {
     m_id.insert(sec.m_id);
     m_type.insert(sec.m_type);
     m_paragraphId.insert(sec.m_paragraphId);
@@ -156,7 +160,8 @@ struct Table {
   struct Cell;
   //! constructor
   Table() : m_height(0), m_justify(MWAWParagraph::JustificationLeft), m_indent(0),
-    m_columns(), m_columnsWidthMod(), m_cells(), m_extra("") {
+    m_columns(), m_columnsWidthMod(), m_cells(), m_extra("")
+  {
   }
   //! insert the new values
   void insert(Table const &table);
@@ -186,10 +191,12 @@ struct Table {
   //! the cells definitions in a Microsoft Word Table
   struct Cell {
     //! constructor
-    Cell() : m_borders(), m_backColor(1.0f), m_extra("") {
+    Cell() : m_borders(), m_backColor(1.0f), m_extra("")
+    {
     }
     //! update the cell data by merging
-    void insert(Cell const &cell) {
+    void insert(Cell const &cell)
+    {
       size_t cNumBorders = cell.m_borders.size();
       if (cNumBorders > m_borders.size())
         m_borders.resize(cNumBorders);
@@ -199,7 +206,8 @@ struct Table {
       m_extra+=cell.m_extra;
     }
     //! returns true if the cell has borders
-    bool hasBorders() const {
+    bool hasBorders() const
+    {
       for (size_t i = 0; i < m_borders.size(); i++)
         if (m_borders[i].isSet() && m_borders[i]->m_style != MWAWBorder::None)
           return true;
@@ -219,14 +227,17 @@ struct Table {
 //! the paragraph information of a Microsoft Word file (PHE)
 struct ParagraphInfo {
   //! constructor
-  ParagraphInfo() : m_type(0), m_dim(), m_numLines(-1), m_error("") {
+  ParagraphInfo() : m_type(0), m_dim(), m_numLines(-1), m_error("")
+  {
   }
   //! returns true if num lines is set
-  bool isLineSet() const {
+  bool isLineSet() const
+  {
     return *m_numLines!=0;
   }
   //! returns true if no data are been set
-  bool isEmpty() const {
+  bool isEmpty() const
+  {
     if (*m_numLines || *m_type) return false;
     if (!m_dim.isSet()) return true;
     if ((*m_dim)[0] > 0 || (*m_dim)[1] > 0) return false;
@@ -235,7 +246,8 @@ struct ParagraphInfo {
   //! try to read a data
   bool read(MWAWInputStreamPtr &input, long endPos, int vers);
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, ParagraphInfo const &pInfo) {
+  friend std::ostream &operator<<(std::ostream &o, ParagraphInfo const &pInfo)
+  {
     // find also pInfo.m_type&0x40 : ?
     if (*pInfo.m_type&0xd0) o << "type?=" << ((*pInfo.m_type&0xd0)>>4) << ",";
     if (*pInfo.m_type&0x0f) o << "#unkn=" << (*pInfo.m_type&0xf) << ",";
@@ -271,7 +283,8 @@ struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph(int version) : MWAWParagraph(), m_version(version), m_styleId(-1000),
     m_interline(0), m_deletedTabs(), m_info(), m_font(), m_modFont(), m_section(),
-    m_bordersStyle(), m_inCell(false), m_tableDef(false), m_table() {
+    m_bordersStyle(), m_inCell(false), m_tableDef(false), m_table()
+  {
     m_tabsRelativeToLeftMargin=false;
   }
   //! insert the new values
@@ -283,7 +296,8 @@ struct Paragraph : public MWAWParagraph {
   //! returns the font which correspond to the paragraph if possible
   bool getFont(Font &font, Font const *styleFont=0) const;
   //! returns true if we are in table
-  bool inTable() const {
+  bool inTable() const
+  {
     return m_inCell.get();
   }
   //! operator<<
@@ -293,7 +307,8 @@ struct Paragraph : public MWAWParagraph {
   void print(std::ostream &o, MWAWFontConverterPtr converter) const;
 
   //! returns the number of line stored in m_info or -1
-  int getNumLines() const {
+  int getNumLines() const
+  {
     return m_info.get().m_numLines.get();
   }
   //! the file version

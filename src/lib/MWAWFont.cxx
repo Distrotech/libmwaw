@@ -69,7 +69,7 @@ std::ostream &operator<<(std::ostream &o, MWAWFont::Line const &line)
   default:
     break;
   }
-  switch(line.m_type) {
+  switch (line.m_type) {
   case MWAWFont::Line::Double:
     o << ":double";
     break;
@@ -104,7 +104,7 @@ void MWAWFont::Line::addTo(librevenge::RVNGPropertyList &propList, std::string c
 
   s.str("");
   s << "style:text-" << type << "-style";
-  switch(m_style) {
+  switch (m_style) {
   case Dot:
   case LargeDot:
     propList.insert(s.str().c_str(), "dotted");
@@ -233,7 +233,8 @@ void MWAWFont::addTo(librevenge::RVNGPropertyList &pList, shared_ptr<MWAWFontCon
   std::string fName("");
   if (!convert) {
     MWAW_DEBUG_MSG(("MWAWFont::addTo: called without any font converter\n"));
-  } else
+  }
+  else
     convert->getOdtInfo(id(), fName, dSize);
   if (fName.length())
     pList.insert("style:font-name", fName.c_str());
@@ -292,7 +293,8 @@ void MWAWFont::addTo(librevenge::RVNGPropertyList &pList, shared_ptr<MWAWFontCon
   if (attributeBits & reverseVideoBit) {
     pList.insert("fo:color", m_backgroundColor->str().c_str());
     pList.insert("fo:background-color", m_color->str().c_str());
-  } else {
+  }
+  else {
     pList.insert("fo:color", m_color->str().c_str());
     if (m_backgroundColor.isSet() && !m_backgroundColor->isWhite())
       pList.insert("fo:background-color", m_backgroundColor->str().c_str());
@@ -304,7 +306,8 @@ void MWAWFont::addTo(librevenge::RVNGPropertyList &pList, shared_ptr<MWAWFontCon
     if (len > 3 && lang[2]=='_') {
       country=lang.substr(3);
       lang=m_language->substr(0,2);
-    } else if (len==0)
+    }
+    else if (len==0)
       lang="none";
     pList.insert("fo:language", lang.c_str());
     pList.insert("fo:country", country.c_str());

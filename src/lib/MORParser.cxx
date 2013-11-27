@@ -61,7 +61,8 @@ namespace MORParserInternal
 //! Internal: the state of a MORParser
 struct State {
   //! constructor
-  State() : m_typeEntryMap(), m_backgroundColor(MWAWColor::white()), m_colorList(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_typeEntryMap(), m_backgroundColor(MWAWColor::white()), m_colorList(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  {
   }
   //! set the default color map
   void setDefaultColorList(int version);
@@ -107,7 +108,8 @@ public:
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
     if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
@@ -115,7 +117,8 @@ public:
   }
 
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -261,7 +264,8 @@ void MORParser::parse(librevenge::RVNGTextInterface *docInterface)
       m_textParser->sendMainText();
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("MORParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -554,7 +558,8 @@ bool MORParser::readDocumentInfo(MWAWEntry const &entry)
       getPageSpan().setFormWidth(dim[0]);
       getPageSpan().setFormLength(dim[1]);
     }
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("MORParser::readDocumentInfo: can not read the page dimension\n"));
     f << "###";
   }
@@ -592,17 +597,19 @@ bool MORParser::readDocumentInfo(MWAWEntry const &entry)
     // normal white,white,black,white,black,background=white,white
     unsigned char color[3];
     for (int i=0; i < 3; i++)
-      color[i]=(unsigned char) (input->readULong(2)>>8);
+      color[i]=(unsigned char)(input->readULong(2)>>8);
     MWAWColor col(color[0], color[1], color[2]);
     if (st==2 || st==4) {
       if (col.isBlack())
         continue;
-    } else if (col.isWhite())
+    }
+    else if (col.isWhite())
       continue;
     if (st==5) {
       m_state->m_backgroundColor=col;
       f << "backColor=" << col << ",";
-    } else
+    }
+    else
       f << "color" << st << "?=" << col << ",";
   }
   for (int i=0; i < 60; i++) { // always 0 excepted f57=0|1 ?
@@ -663,7 +670,8 @@ bool MORParser::readFreePos(MWAWEntry const &entry)
     if (what==0) {
       tEntry.setLength((int) input->readULong(2));
       f << "length=" << tEntry.length() << ",";
-    } else {
+    }
+    else {
       if (what!=0x7FFF) // 0x7FFF: last entry, fPos correspond to eof position
         f << "#wh=" << std::hex << what << std::dec << ",";
       val = (int) input->readULong(2); // probably junk
@@ -673,7 +681,8 @@ bool MORParser::readFreePos(MWAWEntry const &entry)
       if (!input->checkPosition(tEntry.end())) {
         MWAW_DEBUG_MSG(("MORParser::readFreePos: the entry does not seems valid\n"));
         f << "###";
-      } else
+      }
+      else
         filePositions.push_back(tEntry);
     }
     ascii().addPos(pos);
@@ -788,7 +797,8 @@ bool MORParser::readSlideList(MWAWEntry const &entry)
     else if (!checkAndFindSize(tEntry)) {
       MWAW_DEBUG_MSG(("MORParser::readSlideList: can not read a file position\n"));
       f << "###";
-    } else
+    }
+    else
       filePositions.push_back(tEntry);
     int val = (int) input->readLong(2); // always -1 ?
     if (val != -1)
@@ -835,7 +845,7 @@ bool MORParser::readSlide(MWAWEntry const &entry)
   input->seek(pos+16, librevenge::RVNG_SEEK_SET);
 
   int n=0;
-  while(1) {
+  while (1) {
     pos = input->tell();
     if (pos+2 > endPos)
       break;
@@ -844,7 +854,7 @@ bool MORParser::readSlide(MWAWEntry const &entry)
     if (type & 0x1)
       dataSz=4;
     else {
-      switch(type) {
+      switch (type) {
       case 0x66: // group: arg num group
       case 0x68: // group of num 6a,70* ?
       case 0x72: // group of num 74* ?
@@ -913,7 +923,7 @@ bool MORParser::readGraphic(MWAWEntry const &entry)
   int readSize = int(input->readULong(2));
   input->seek(8, librevenge::RVNG_SEEK_CUR); // skip dim
   long lastFlag = input->readLong(2);
-  switch(lastFlag) {
+  switch (lastFlag) {
   case 0x1101: {
     if (readSize+2 != entry.length() && readSize+3 != entry.length())
       return false;
@@ -1019,7 +1029,8 @@ bool MORParser::readUnknown9(MWAWEntry const &entry)
     if (!ok) {
       MWAW_DEBUG_MSG(("MORParser::readUnknown9: find some unknown structure\n"));
       f << "###";
-    } else if (endFPos!=input->tell()) {
+    }
+    else if (endFPos!=input->tell()) {
       MWAW_DEBUG_MSG(("MORParser::readUnknown9: find some extra data\n"));
       f << "###";
       ascii().addDelimiter(input->tell(),'|');

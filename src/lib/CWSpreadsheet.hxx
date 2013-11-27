@@ -87,7 +87,8 @@ public:
   shared_ptr<CWStruct::DSET> readSpreadsheetZone
   (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
   //! check if we can send a spreadsheet as graphic
-  bool canSendSpreadsheetAsGraphic(int) const {
+  bool canSendSpreadsheetAsGraphic(int) const
+  {
     return false;
   }
   //! sends the zone data to the listener (if it exists )

@@ -60,12 +60,14 @@ namespace MSKTableInternal
 //! Internal: the chart of a MSKTable
 struct Chart {
   //! constructor
-  Chart(MSKGraph::Style const &style) : m_style(style), m_backgroundEntry(), m_zoneId(-1) {
+  Chart(MSKGraph::Style const &style) : m_style(style), m_backgroundEntry(), m_zoneId(-1)
+  {
     for (int i=0; i < 3; i++)
       m_textZonesId[i]=-1;
   }
   //! empty constructor
-  Chart() : m_style(), m_backgroundEntry(), m_zoneId(-1) {
+  Chart() : m_style(), m_backgroundEntry(), m_zoneId(-1)
+  {
     for (int i=0; i < 3; i++)
       m_textZonesId[i]=-1;
   }
@@ -96,7 +98,8 @@ struct Table {
   };
   //! constructor
   Table(MSKGraph::Style const &style) : m_style(style), m_numRows(0), m_numCols(0),
-    m_rowsDim(), m_colsDim(), m_font(), m_cellsList() {
+    m_rowsDim(), m_colsDim(), m_font(), m_cellsList()
+  {
     m_style.m_surfaceColor = style.m_baseSurfaceColor;
   }
   //! empty constructor
@@ -104,7 +107,8 @@ struct Table {
     m_font(), m_cellsList() { }
 
   //! try to find a cell
-  Cell const *getCell(Vec2i const &pos) const {
+  Cell const *getCell(Vec2i const &pos) const
+  {
     for (size_t i = 0; i < m_cellsList.size(); i++) {
       if (m_cellsList[i].m_pos == pos)
         return &m_cellsList[i];
@@ -217,7 +221,7 @@ bool MSKTable::sendTable(int zoneId)
         size_t nChar = tCell->m_text.size();
         for (size_t ch = 0; ch < nChar; ch++) {
           unsigned char c = (unsigned char) tCell->m_text[ch];
-          switch(c) {
+          switch (c) {
           case 0x9:
             MWAW_DEBUG_MSG(("MSKTable::sendTable: find a tab\n"));
             listener->insertChar(' ');
@@ -364,7 +368,8 @@ bool MSKTable::readTable(int numCol, int numRow, int zoneId, MSKGraph::Style con
   }
   if (m_state->m_idTableMap.find(zoneId)!=m_state->m_idTableMap.end()) {
     MWAW_DEBUG_MSG(("MSKTable::readTable: oops a table with id=%d already exists\n", zoneId));
-  } else
+  }
+  else
     m_state->m_idTableMap[zoneId]=table;
   return true;
 }
@@ -423,7 +428,8 @@ bool MSKTable::sendChart(int chartId)
     MWAWPict::ReadResult res = MWAWPictData::check(input, (int)chart.m_backgroundEntry.length(), naturalBox);
     if (res == MWAWPict::MWAW_R_BAD) {
       MWAW_DEBUG_MSG(("MSKTable::sendChart: can not find the picture\n"));
-    } else {
+    }
+    else {
       input->seek(chart.m_backgroundEntry.begin(), librevenge::RVNG_SEEK_SET);
       shared_ptr<MWAWPict> pict(MWAWPictData::get(input, (int)chart.m_backgroundEntry.length()));
 
@@ -463,7 +469,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
 
   MSKTableInternal::Chart chart(style);
   int val = (int) input->readLong(2);
-  switch(val) {
+  switch (val) {
   case 1:
     f << "bar,";
     break;
@@ -497,9 +503,9 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
     if (i==0) f << "-";
     else f << ",";
   }
-  val =  (int) input->readLong(2);
+  val = (int) input->readLong(2);
   if (val) f << "colLabels=" << val << ",";
-  val =  (int) input->readLong(2);
+  val = (int) input->readLong(2);
   if (val) f << "rowLabels=" << val << ",";
   std::string name("");
   int sz = (int) input->readULong(1);
@@ -515,7 +521,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
   f << name << ",";
   input->seek(pos+50, librevenge::RVNG_SEEK_SET);
   for (int i = 0; i < 128; i++) { // always 0 ?
-    val =  (int) input->readLong(2);
+    val = (int) input->readLong(2);
     if (val) f << "g" << i << "=" << val << std::dec << ",";
   }
   ascFile.addPos(pos);
@@ -580,7 +586,8 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
   }
   if (m_state->m_idChartMap.find(chartId)!=m_state->m_idChartMap.end()) {
     MWAW_DEBUG_MSG(("MSKTable::readChart: oops a chart with id=%d already exists\n", chartId));
-  } else
+  }
+  else
     m_state->m_idChartMap[chartId]=chart;
   return true;
 }

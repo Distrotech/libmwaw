@@ -70,8 +70,8 @@ protected:
    * \param input, endPos: defined the zone in the file
    * \return true and filled id if this attribute can be parsed
    * \note mess can be filled to add a message in debugFile */
-  typedef bool (MSK4Text::* FDPParser) (MWAWInputStreamPtr &input, long endPos,
-                                        int &id, std::string &mess);
+  typedef bool (MSK4Text::* FDPParser)(MWAWInputStreamPtr &input, long endPos,
+                                       int &id, std::string &mess);
 public:
   //! constructor
   MSK4Text(MSK4Zone &parser);
@@ -131,7 +131,8 @@ protected:
    */
   bool readSimplePLC(MWAWInputStreamPtr &input, MWAWEntry const &entry,
                      std::vector<long> &textPtrs,
-                     std::vector<long> &listValues) {
+                     std::vector<long> &listValues)
+  {
     return readPLC(input, entry, textPtrs, listValues);
   }
 
@@ -143,14 +144,14 @@ protected:
   bool readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry);
 
   //! reads a font properties
-  bool readFont (MWAWInputStreamPtr &input, long endPos,
-                 int &id, std::string &mess);
+  bool readFont(MWAWInputStreamPtr &input, long endPos,
+                int &id, std::string &mess);
 
   /** sends a paragraph properties to the listener */
   void setProperty(MSK4TextInternal::Paragraph const &tabs);
   //! reads a paragraph properties
-  bool readParagraph (MWAWInputStreamPtr &input, long endPos,
-                      int &id, std::string &mess);
+  bool readParagraph(MWAWInputStreamPtr &input, long endPos,
+                     int &id, std::string &mess);
 
   //! parses the footnote position : FTNT
   bool ftntDataParser(MWAWInputStreamPtr input, long endPos,
@@ -177,11 +178,13 @@ protected:
 
 protected:
   //! returns the main parser
-  MSK4Zone const *mainParser() const {
+  MSK4Zone const *mainParser() const
+  {
     return m_mainParser;
   }
   //! returns the main parser
-  MSK4Zone *mainParser() {
+  MSK4Zone *mainParser()
+  {
     return m_mainParser;
   }
 

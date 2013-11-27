@@ -55,7 +55,8 @@ class ZWText;
 /** a structure to store a field of a ZWrite file */
 struct ZWField {
   //! constructor
-  ZWField() : m_pos() {
+  ZWField() : m_pos()
+  {
   }
   //! returns the string corresponding to a field
   bool getString(MWAWInputStreamPtr &input, std::string &str) const;

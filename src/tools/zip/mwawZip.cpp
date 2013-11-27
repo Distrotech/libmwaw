@@ -59,7 +59,7 @@ static void usage(const char *cmdname)
 }
 
 
-int __cdecl main (int argc, char **argv)
+int __cdecl main(int argc, char **argv)
 {
   bool checkZip=false;
   bool verbose=false;
@@ -85,7 +85,7 @@ int __cdecl main (int argc, char **argv)
 
   // check if it is a regular file
   struct stat status;
-  if (stat(argv[optind], &status ) || !S_ISREG(status.st_mode) ) {
+  if (stat(argv[optind], &status) || !S_ISREG(status.st_mode)) {
     std::cerr << argv[0] << ": the file " << argv[optind] << " is a not a regular file\n";
     return 1;
   }
@@ -97,9 +97,9 @@ int __cdecl main (int argc, char **argv)
         std::cerr << argv[0] << ": the file " << argv[optind] << " seems bad\n";
         return 1;
       }
-      file.seekg (0, std::ios::beg);
+      file.seekg(0, std::ios::beg);
       char buff[4] = {'\0', '\0','\0','\0'};
-      file.read (buff,4);
+      file.read(buff,4);
       // look for a zip file signature
       if (buff[0]=='P' && buff[1]=='K') {
         if (((buff[2]==(char)3||buff[2]==(char)5||buff[2]==(char)7) && buff[3]==buff[2]+(char)1) ||
@@ -108,16 +108,17 @@ int __cdecl main (int argc, char **argv)
       }
       // look for a binhex file signature
       if (buff[0]=='('&&buff[1]=='T'&&buff[2]=='h'&&buff[3]=='i') {
-        file.read (buff,4);
+        file.read(buff,4);
         if (buff[0]=='s'&&buff[1]==' '&&buff[2]=='f'&&buff[3]=='i')
           return 2;
       }
-    } catch(...) {
+    }
+    catch (...) {
     }
   }
   std::string resultFile(argv[optind+1]);
   // check if the file exists
-  if (stat(resultFile.c_str(), &status )==0) {
+  if (stat(resultFile.c_str(), &status)==0) {
     std::cerr  << argv[0] << ": the file " << resultFile << " already exists\n";
     return 1;
   }
@@ -158,9 +159,9 @@ int __cdecl main (int argc, char **argv)
     if (!auxiStream) {
       // look for a resource file
       std::string name=folder+"._"+file;
-      if (stat(name.c_str(), &status ) || !S_ISREG(status.st_mode) ) {
+      if (stat(name.c_str(), &status) || !S_ISREG(status.st_mode)) {
         name=folder+"__MACOSX/._"+file;
-        if (stat(name.c_str(), &status ) || !S_ISREG(status.st_mode) )
+        if (stat(name.c_str(), &status) || !S_ISREG(status.st_mode))
           name = "";
       }
       if (name.length()) {
@@ -179,7 +180,8 @@ int __cdecl main (int argc, char **argv)
       zip.add(auxiStream, name.c_str());
     }
     zip.close();
-  } catch(...) {
+  }
+  catch (...) {
     std::cerr << argv[0] << ": error when zipping file " << argv[optind] << "\n";
     return -1;
   }

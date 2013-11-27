@@ -61,14 +61,17 @@ namespace MWProParserInternal
 ////////////////////////////////////////
 //! Internal: a struct used to store a zone
 struct Zone {
-  Zone() : m_type(-1), m_blockId(0), m_data(), m_input(), m_asciiFile(), m_parsed(false) {
+  Zone() : m_type(-1), m_blockId(0), m_data(), m_input(), m_asciiFile(), m_parsed(false)
+  {
   }
-  ~Zone() {
+  ~Zone()
+  {
     ascii().reset();
   }
 
   //! returns the debug file
-  libmwaw::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii()
+  {
     return m_asciiFile;
   }
 
@@ -93,10 +96,12 @@ struct Zone {
 
 //! Internal: a struct used to store a text zone
 struct TextZoneData {
-  TextZoneData() : m_type(-1), m_length(0), m_id(0) {
+  TextZoneData() : m_type(-1), m_length(0), m_id(0)
+  {
   }
-  friend std::ostream &operator<<(std::ostream &o, TextZoneData const &tData) {
-    switch(tData.m_type) {
+  friend std::ostream &operator<<(std::ostream &o, TextZoneData const &tData)
+  {
+    switch (tData.m_type) {
     case 0:
       o << "C" << tData.m_id << ",";
       break;
@@ -120,13 +125,15 @@ struct TextZoneData {
 
 //! Internal: a struct used to store a text zone
 struct Token {
-  Token() : m_type(-1), m_length(0), m_blockId(-1), m_box() {
+  Token() : m_type(-1), m_length(0), m_blockId(-1), m_box()
+  {
     for (int i = 0; i < 4; i++) m_flags[i] = 0;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Token const &tkn) {
+  friend std::ostream &operator<<(std::ostream &o, Token const &tkn)
+  {
     o << "nC=" << tkn.m_length << ",";
-    switch(tkn.m_type) {
+    switch (tkn.m_type) {
     case 1:
       o << "pagenumber,";
       break;
@@ -180,7 +187,8 @@ struct Token {
 
 //! Internal: a struct used to store a text zone
 struct TextZone {
-  TextZone() : m_textLength(0), m_entries(), m_tokens(), m_parsed(false) {
+  TextZone() : m_textLength(0), m_entries(), m_tokens(), m_parsed(false)
+  {
   }
 
   //! the text length
@@ -206,7 +214,8 @@ struct State {
   //! constructor
   State() : m_blocksMap(), m_dataMap(), m_textMap(),
     m_blocksCallByTokens(), m_col(1), m_actPage(0), m_numPages(0),
-    m_headerHeight(0), m_footerHeight(0) {
+    m_headerHeight(0), m_footerHeight(0)
+  {
   }
 
   //! the list of retrieved block : block -> new address
@@ -242,16 +251,19 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
   //! returns the subdocument \a id
-  int getId() const {
+  int getId() const
+  {
     return m_id;
   }
   //! sets the subdocument \a id
-  void setId(int vid) {
+  void setId(int vid)
+  {
     m_id = vid;
   }
 
@@ -394,7 +406,8 @@ void MWProParser::parse(librevenge::RVNGTextInterface *docInterface)
 #endif
 
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("MWProParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -421,7 +434,7 @@ bool MWProParser::getZoneData(librevenge::RVNGBinaryData &data, int blockId)
   int const linkSz = version()<= 0 ? 2 : 4;
   while (!input->isEnd()) {
     bool ok = true;
-    for(long i=first; i<= last; i++) {
+    for (long i=first; i<= last; i++) {
       if (m_state->m_blocksMap.find((int)i) != m_state->m_blocksMap.end()) {
         MWAW_DEBUG_MSG(("MWProParser::getZoneData: block %ld already seems\n", i));
         ok = false;
@@ -498,7 +511,7 @@ bool MWProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
   long first=blockId-1, last=blockId-1;
   while (1) {
     bool ok = true;
-    for(long i=first; i<= last; i++) {
+    for (long i=first; i<= last; i++) {
       if (m_state->m_blocksMap.find((int)i) != m_state->m_blocksMap.end()) {
         MWAW_DEBUG_MSG(("MWProParser::getFreeZoneList: block %ld already seems\n", i));
         ok = false;
@@ -560,7 +573,7 @@ void MWProParser::createDocument(librevenge::RVNGTextInterface *documentInterfac
 
   int actHeaderId = 0, actFooterId = 0;
   shared_ptr<MWProParserInternal::SubDocument> headerSubdoc, footerSubdoc;
-  for (int i = 0; i < m_state->m_numPages; ) {
+  for (int i = 0; i < m_state->m_numPages;) {
     int numSim[2]= {1,1};
     int headerId =  m_structures->getHeaderId(i+1, numSim[0]);
     if (headerId != actHeaderId) {
@@ -811,7 +824,8 @@ bool MWProParser::readDocHeader()
       and
       000001000000016f66000000000000000800090001000000
      */
-  } else {
+  }
+  else {
     val = input->readLong(1); // always 0 ?
     if (val) f << "unkn=" << val << ",";
     int N=(int) input->readLong(2); // find 2, a, 9e, 1a
@@ -859,7 +873,8 @@ bool MWProParser::readDocHeader()
     getPageSpan().setMarginRight((dim[5]<18.0) ? 0.0 : dim[5]/72.0-0.25);
     getPageSpan().setFormLength(dim[0]/72.);
     getPageSpan().setFormWidth(dim[1]/72.);
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("MWProParser::readDocHeader: find odd page dimensions, ignored\n"));
     f << "#";
   }
@@ -890,7 +905,8 @@ bool MWProParser::readDocHeader()
       val = (long) input->readULong(4);
       if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
     }
-  } else {
+  }
+  else {
     input->seek(pos+97, librevenge::RVNG_SEEK_SET);
     pos = input->tell();
     val = (long) input->readULong(2);
@@ -1222,7 +1238,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
     MWProParserInternal::Token data;
     data.m_type = (int) input->readULong(1);
     if (vers==0) { // check me
-      switch(data.m_type) {
+      switch (data.m_type) {
       case 2:  // page number
         data.m_type=1;
         break;
@@ -1345,7 +1361,7 @@ int MWProParser::findNumHardBreaks(shared_ptr<MWProParserInternal::TextZone> zon
     MWAWEntry const &entry = zone->m_entries[i];
     input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
     for (int j = 0; j < entry.length(); j++) {
-      switch(input->readULong(1)) {
+      switch (input->readULong(1)) {
       case 0xc: // hard page
       case 0xb: // difficult to differentiate column/page break so...
         num++;
@@ -1398,7 +1414,8 @@ struct DataPosition {
   //! the comparison structure
   struct Compare {
     //! comparaison function
-    bool operator()(DataPosition const &p1, DataPosition const &p2) const {
+    bool operator()(DataPosition const &p1, DataPosition const &p2) const
+    {
       long diff = p1.m_pos - p2.m_pos;
       if (diff) return (diff < 0);
       diff = p1.m_type - p2.m_type;
@@ -1516,7 +1533,8 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       case 2:
         if (vers == 1 && listenerState.isSent(zone->m_tokens[(size_t)data.m_id].m_blockId)) {
           MWAW_DEBUG_MSG(("MWProParser::sendText: footnote is already sent...\n"));
-        } else {
+        }
+        else {
           int id = zone->m_tokens[(size_t)data.m_id].m_blockId;
           if (vers == 0) id = -id;
           MWAWSubDocumentPtr subdoc(new MWProParserInternal::SubDocument(*this, getInput(), id));
@@ -1530,7 +1548,8 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
           MWAWPosition pictPos(Vec2i(0,0), zone->m_tokens[(size_t)data.m_id].m_box.size(), librevenge::RVNG_POINT);
           pictPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
           sendPictureZone(zone->m_tokens[(size_t)data.m_id].m_blockId, pictPos);
-        } else {
+        }
+        else {
           listenerState.send(zone->m_tokens[(size_t)data.m_id].m_blockId);
           listenerState.resendAll();
         }
@@ -1568,14 +1587,16 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       if (m_structures) {
         listenerState.sendFont(zone->m_ids[0][(size_t)data.m_id].m_id);
         f << "[" << listenerState.getFontDebugString(zone->m_ids[0][(size_t)data.m_id].m_id) << "],";
-      } else
+      }
+      else
         f << "[" << zone->m_ids[0][(size_t)data.m_id] << "],";
       break;
     case 0:
       if (m_structures) {
         listenerState.sendParagraph(zone->m_ids[1][(size_t)data.m_id].m_id);
         f << "[" << listenerState.getParagraphDebugString(zone->m_ids[1][(size_t)data.m_id].m_id) << "],";
-      } else
+      }
+      else
         f << "[" << zone->m_ids[1][(size_t)data.m_id] << "],";
       break;
     default: {
@@ -1727,7 +1748,7 @@ void MWProParser::saveOriginal(MWAWInputStreamPtr input)
   orig.setStream(input);
   orig.open("orig");
   int bl = 0;
-  while(1) {
+  while (1) {
     long pos = bl*0x100;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     if (long(input->tell()) != pos)

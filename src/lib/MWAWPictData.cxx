@@ -84,7 +84,8 @@ MWAWPictData::ReadResult MWAWPictData::checkOrGet
     // we must read the data
     input->seek(actualPos, librevenge::RVNG_SEEK_SET);
     input->readDataBlock(size, (*result)->m_data);
-  } else
+  }
+  else
     input->seek(actualPos+size, librevenge::RVNG_SEEK_SET);
   return ok;
 }

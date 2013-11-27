@@ -80,7 +80,7 @@ struct PLC {
 
 std::ostream &operator<<(std::ostream &o, PLC const &plc)
 {
-  switch(plc.m_type) {
+  switch (plc.m_type) {
   case FONT:
     o << "F";
     break;
@@ -111,7 +111,8 @@ std::ostream &operator<<(std::ostream &o, PLC const &plc)
 //! Internal: the font of a MSW1Parser
 struct Font {
   //! constructor
-  Font(): m_font(), m_type(0), m_extras("") {
+  Font(): m_font(), m_type(0), m_extras("")
+  {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Font const &ft);
@@ -134,7 +135,8 @@ std::ostream &operator<<(std::ostream &o, Font const &ft)
 //! Internal: the paragraph of a MSW1Parser
 struct Paragraph : public MWAWParagraph {
   //! constructor
-  Paragraph(): MWAWParagraph(), m_type(0), m_type2(0) {
+  Paragraph(): MWAWParagraph(), m_type(0), m_type2(0)
+  {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ft);
@@ -171,7 +173,8 @@ struct State {
   //! constructor
   State() : m_eot(-1), m_numColumns(1), m_columnsSep(0), m_textZonesList(), m_mainTextZonesList(),
     m_fontsList(), m_paragraphsList(), m_endNote(false), m_footnotesList(), m_plcMap(),
-    m_actPage(0), m_numPages(1), m_headerHeight(0), m_footerHeight(0), m_headersId(), m_footersId() {
+    m_actPage(0), m_numPages(1), m_headerHeight(0), m_footerHeight(0), m_headersId(), m_footersId()
+  {
     for (int i = 0; i < 7; i++)
       m_fileZonesLimit[i] = -1;
   }
@@ -221,11 +224,13 @@ public:
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
     return MWAWSubDocument::operator!=(doc);
   }
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -325,7 +330,8 @@ void MSW1Parser::parse(librevenge::RVNGTextInterface *docInterface)
     }
 
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("MSW1Parser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -457,7 +463,7 @@ bool MSW1Parser::createZones()
     }
     Vec2i limit(m_state->m_fileZonesLimit[z],m_state->m_fileZonesLimit[z+1]);
     bool done = false;
-    switch(z) {
+    switch (z) {
     case 0:
     case 1:
       done = readPLC(limit,z);
@@ -523,7 +529,8 @@ bool MSW1Parser::prepareTextZones()
     if (plcIt == m_state->m_plcMap.end() || plcIt->first>=endMain) {
       pos = endMain;
       newType = -1;
-    } else {
+    }
+    else {
       pos = plcIt->first;
       MSW1ParserInternal::PLC const &plc = plcIt++->second;
       if (plc.m_type==MSW1ParserInternal::PAGE && pos!=0x80) {
@@ -564,7 +571,8 @@ bool MSW1Parser::prepareTextZones()
       m_state->m_footersId[size_t(actPage)-1] =
         (actPage==1 && firstFooterId >= 0) ? firstFooterId :
         (actPage%2) ? footerId[1] : footerId[0];
-    } else {
+    }
+    else {
       if (actType&2) headerId[0]=id;
       if (actType&4) headerId[1]=id;
       if (actType&8) firstHeaderId=id;
@@ -620,7 +628,7 @@ bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
   if (sz >= 4) {
     val = (int) input->readULong(1);
     if (val & 0x80) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
-    switch((val&0xc)>>2) {
+    switch ((val&0xc)>>2) {
     case 0:
       break;
     case 3:
@@ -671,7 +679,7 @@ bool MSW1Parser::readParagraph(long fPos, MSW1ParserInternal::Paragraph &para)
   int val;
   if (sz >= 2) {
     val = (int) input->readULong(1);
-    switch(val>>6) {
+    switch (val>>6) {
     case 0:
       break; // left
     case 1:
@@ -742,7 +750,7 @@ bool MSW1Parser::readParagraph(long fPos, MSW1ParserInternal::Paragraph &para)
       MWAWTabStop newTab;
       newTab.m_position = float(input->readLong(2))/1440.f;
       int flags = (int) input->readULong(1);
-      switch((flags>>5)&3) {
+      switch ((flags>>5)&3) {
       case 0:
         break;
       case 1:
@@ -757,7 +765,7 @@ bool MSW1Parser::readParagraph(long fPos, MSW1ParserInternal::Paragraph &para)
       default:
         break;
       }
-      switch((flags>>2)&3) {
+      switch ((flags>>2)&3) {
       case 0:
         break;
       case 1:
@@ -819,7 +827,8 @@ bool MSW1Parser::readPageBreak(Vec2i limits)
       plc.m_id = pg;
       m_state->m_plcMap.insert
       (std::multimap<long,MSW1ParserInternal::PLC>::value_type(textPos, plc));
-    } else if (i != N-1)
+    }
+    else if (i != N-1)
       f << "###";
     f << ",";
   }
@@ -876,7 +885,7 @@ bool MSW1Parser::readFootnoteCorrespondance(Vec2i limits)
   }
   m_state->m_footnotesList.resize(footnoteMap.size(),0);
   std::map<long, int>::iterator fIt=footnoteMap.begin();
-  for (fIt=footnoteMap.begin(); fIt!=footnoteMap.end(); ) {
+  for (fIt=footnoteMap.begin(); fIt!=footnoteMap.end();) {
     Vec2l fPos;
     fPos[0] = fIt->first;
     int id = fIt++->second;
@@ -927,7 +936,8 @@ bool MSW1Parser::readZones(Vec2i limits)
       plc.m_id = i;
       m_state->m_plcMap.insert
       (std::multimap<long,MSW1ParserInternal::PLC>::value_type(textPos, plc));
-    } else if (textPos != m_state->m_eot && i != N-1)
+    }
+    else if (textPos != m_state->m_eot && i != N-1)
       f << "###";
     f << ",";
   }
@@ -958,7 +968,7 @@ bool MSW1Parser::readDocInfo(Vec2i limits)
       f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
   int flags = (int) input->readULong(1);
-  switch(flags>>5) {
+  switch (flags>>5) {
   case 0:
     f << "division=no,";
     break;
@@ -978,7 +988,7 @@ bool MSW1Parser::readDocInfo(Vec2i limits)
     f << "#division=" << (flags>>5) << ",";
     break;
   }
-  switch((flags>>2)&7) {
+  switch ((flags>>2)&7) {
   case 0: // default (numeric)
     break;
   case 1:
@@ -1065,7 +1075,8 @@ bool MSW1Parser::readDocInfo(Vec2i limits)
     m_state->m_endNote = endNote;
     m_state->m_numColumns = numCols;
     m_state->m_columnsSep = colSep;
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("MSW1Parser::readDocInfo: some dimension do not look good\n"));
   }
   ascii().addDelimiter(input->tell(),'|');
@@ -1120,7 +1131,8 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
       else if (depl < N*6 || 4+depl >= 0x7f) {
         f << "[###pos=" << std::hex << depl << std::dec << "]";
         plc.m_id = -1;
-      } else {
+      }
+      else {
         long dataPos = pos+depl+4;
         long actPos = input->tell();
         if (posIdMap.find(dataPos) == posIdMap.end()) {
@@ -1135,19 +1147,22 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
 #ifdef DEBUG
               f2 << font.m_font.getDebugString(getFontConverter()) << font;
 #endif
-            } else {
+            }
+            else {
               plc.m_id = -1;
               f2 << "###";
             }
             ascii().addPos(dataPos);
             ascii().addNote(f2.str().c_str());
-          } else {
+          }
+          else {
             MSW1ParserInternal::Paragraph para;
             if (readParagraph(dataPos, para)) {
               plc.m_id=int(m_state->m_paragraphsList.size());
               m_state->m_paragraphsList.push_back(para);
               f2 << plc.m_id << ":" << para;
-            } else {
+            }
+            else {
               plc.m_id = -1;
               f2 << "###";
             }
@@ -1155,7 +1170,8 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
             ascii().addNote(f2.str().c_str());
           }
           posIdMap[dataPos] = plc.m_id;
-        } else
+        }
+        else
           plc.m_id = posIdMap.find(dataPos)->second;
         input->seek(actPos, librevenge::RVNG_SEEK_SET);
       }
@@ -1231,7 +1247,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
       }
 
       MSW1ParserInternal::PLC const &plc = plcIt++->second;
-      switch(plc.m_type) {
+      switch (plc.m_type) {
       case MSW1ParserInternal::FONT:
         if (plc.m_id >= 0 && plc.m_id < int(m_state->m_fontsList.size()))
           getListener()->setFont(m_state->m_fontsList[size_t(plc.m_id)].m_font);
@@ -1279,7 +1295,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
     if (fontNotSent) getListener()->setFont(actFont.m_font);
     unsigned char c = (unsigned char) input->readULong(1);
     f << (char) c;
-    switch(c) {
+    switch (c) {
     case 1:
       getListener()->insertUnicodeString("(picture)");
       break;

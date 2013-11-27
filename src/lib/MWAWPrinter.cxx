@@ -72,21 +72,25 @@ bool PrinterRect::read(MWAWInputStreamPtr input, Vec2i const &res)
 struct PrinterRectResolution {
   PrinterRectResolution() : m_rect(), m_resolution(), m_iDev(-1) {}
   //! page dimension
-  PrinterRect page() const {
+  PrinterRect page() const
+  {
     return m_rect;
   }
   //! resolution
-  Vec2i const &resolution() const {
+  Vec2i const &resolution() const
+  {
     return m_resolution;
   }
 
   //! operator <<
-  friend std::ostream &operator<< (std::ostream &o, PrinterRectResolution const &r) {
+  friend std::ostream &operator<< (std::ostream &o, PrinterRectResolution const &r)
+  {
     o << r.m_rect << ":" << r.m_resolution;
     return o;
   }
   //! reads the data from file
-  bool read(MWAWInputStreamPtr input) {
+  bool read(MWAWInputStreamPtr input)
+  {
     m_iDev = int(input->readLong(2));
     int y = int(input->readLong(2));
     int x = int(input->readLong(2));
@@ -109,11 +113,13 @@ struct PrinterStyle {
   /** operator<<
 
   \note print nothing*/
-  friend std::ostream &operator<< (std::ostream &o, PrinterStyle const & ) {
+  friend std::ostream &operator<< (std::ostream &o, PrinterStyle const &)
+  {
     return o;
   }
   //! reads data from file
-  bool read(MWAWInputStreamPtr input) {
+  bool read(MWAWInputStreamPtr input)
+  {
     m_wDev = (int) input->readLong(2);
     m_pageWidth = (int) input->readLong(2);
     m_pageHeight = (int) input->readLong(2);
@@ -133,13 +139,15 @@ protected:
 //! Internal: structure used to keep a printer job
 struct PrinterJob {
   //! operator<<
-  friend std::ostream &operator<< (std::ostream &o, PrinterJob const &r ) {
+  friend std::ostream &operator<< (std::ostream &o, PrinterJob const &r)
+  {
     o << "fP=" << r.m_firstPage << ", lP=" << r.m_lastPage << ", copies=" << r.m_copies;
     if (r.m_fileVol || r.m_fileVers) o << ", fVol=" << r.m_fileVol << ", fVers=" << r.m_fileVers;
     return o;
   }
   //! read data from file
-  bool read(MWAWInputStreamPtr input) {
+  bool read(MWAWInputStreamPtr input)
+  {
     m_firstPage = (int) input->readLong(2);
     m_lastPage = (int) input->readLong(2);
     m_copies = (int) input->readLong(2);

@@ -41,79 +41,73 @@
 
 int printUsage()
 {
-	printf("Usage: mwaw2raw [OPTION] <Text Mac Document>\n");
-	printf("\n");
-	printf("Options:\n");
-	printf("--callgraph           Display the call graph nesting level\n");
-	printf("--help                Shows this help message\n");
-	return -1;
+  printf("Usage: mwaw2raw [OPTION] <Text Mac Document>\n");
+  printf("\n");
+  printf("Options:\n");
+  printf("--callgraph           Display the call graph nesting level\n");
+  printf("--help                Shows this help message\n");
+  return -1;
 }
 
 int main(int argc, char *argv[])
 {
-	bool printIndentLevel = false;
-	char *file = NULL;
+  bool printIndentLevel = false;
+  char *file = NULL;
 
-	if (argc < 2)
-		return printUsage();
+  if (argc < 2)
+    return printUsage();
 
-	for (int i = 1; i < argc; i++)
-	{
-		if (!strcmp(argv[i], "--callgraph"))
-			printIndentLevel = true;
-		else if (!file && strncmp(argv[i], "--", 2))
-			file = argv[i];
-		else
-			return printUsage();
-	}
+  for (int i = 1; i < argc; i++) {
+    if (!strcmp(argv[i], "--callgraph"))
+      printIndentLevel = true;
+    else if (!file && strncmp(argv[i], "--", 2))
+      file = argv[i];
+    else
+      return printUsage();
+  }
 
-	if (!file)
-		return printUsage();
+  if (!file)
+    return printUsage();
 
 
-	librevenge::RVNGFileStream input(file);
+  librevenge::RVNGFileStream input(file);
 
-	MWAWDocument::Type type;
-	MWAWDocument::Kind kind;
-	MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
-	if (confidence != MWAWDocument::MWAW_C_EXCELLENT)
-	{
-		printf("ERROR: Unsupported file format!\n");
-		return 1;
-	}
-	if (type == MWAWDocument::MWAW_T_UNKNOWN)
-	{
-		printf("ERROR: can not determine the file type!\n");
-		return 1;
-	}
+  MWAWDocument::Type type;
+  MWAWDocument::Kind kind;
+  MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
+  if (confidence != MWAWDocument::MWAW_C_EXCELLENT) {
+    printf("ERROR: Unsupported file format!\n");
+    return 1;
+  }
+  if (type == MWAWDocument::MWAW_T_UNKNOWN) {
+    printf("ERROR: can not determine the file type!\n");
+    return 1;
+  }
 
-	librevenge::RVNGRawTextGenerator documentGenerator(printIndentLevel);
-	MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
-	try
-	{
-		error=MWAWDocument::parse(&input, &documentGenerator);
-	}
-	catch (MWAWDocument::Result const &err)
-	{
-		error=err;
-	}
-	catch (...)
-	{
-		error = MWAWDocument::MWAW_R_UNKNOWN_ERROR;
-	}
+  librevenge::RVNGRawTextGenerator documentGenerator(printIndentLevel);
+  MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
+  try {
+    error=MWAWDocument::parse(&input, &documentGenerator);
+  }
+  catch (MWAWDocument::Result const &err) {
+    error=err;
+  }
+  catch (...) {
+    error = MWAWDocument::MWAW_R_UNKNOWN_ERROR;
+  }
 
-	if (error == MWAWDocument::MWAW_R_FILE_ACCESS_ERROR)
-		fprintf(stderr, "ERROR: File Exception!\n");
-	else if (error == MWAWDocument::MWAW_R_PARSE_ERROR)
-		fprintf(stderr, "ERROR: Parse Exception!\n");
-	else if (error == MWAWDocument::MWAW_R_OLE_ERROR)
-		fprintf(stderr, "ERROR: File is an OLE document!\n");
-	else if (error != MWAWDocument::MWAW_R_OK)
-		fprintf(stderr, "ERROR: Unknown Error!\n");
+  if (error == MWAWDocument::MWAW_R_FILE_ACCESS_ERROR)
+    fprintf(stderr, "ERROR: File Exception!\n");
+  else if (error == MWAWDocument::MWAW_R_PARSE_ERROR)
+    fprintf(stderr, "ERROR: Parse Exception!\n");
+  else if (error == MWAWDocument::MWAW_R_OLE_ERROR)
+    fprintf(stderr, "ERROR: File is an OLE document!\n");
+  else if (error != MWAWDocument::MWAW_R_OK)
+    fprintf(stderr, "ERROR: Unknown Error!\n");
 
-	if (error != MWAWDocument::MWAW_R_OK)
-		return 1;
+  if (error != MWAWDocument::MWAW_R_OK)
+    return 1;
 
-	return 0;
+  return 0;
 }
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */

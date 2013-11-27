@@ -49,7 +49,8 @@ public:
   //! the destructor
   ~OLE() {}
   //! returns true if the file is an ole
-  bool isOLE() {
+  bool isOLE()
+  {
     init();
     return m_status==S_Ok;
   }
@@ -68,17 +69,19 @@ protected:
   bool initAllocTables();
 
   //! returns a string correspond to the clsid or ""
-  static std::string getCLSIDType(unsigned const (&clsid)[4]);
+  static std::string getCLSIDType(unsigned const(&clsid)[4]);
   //! try to load a ole sub file
   bool load(std::string const &name, std::vector<unsigned char> &buffer);
 
   // low level:
   //! return true if we need to use big block
-  bool useBigBlockFor(unsigned long size) const {
+  bool useBigBlockFor(unsigned long size) const
+  {
     return size >= m_header.m_threshold;
   }
   //! returns the address of a big/small block
-  long getDataAddress(unsigned block, bool isBig) const {
+  long getDataAddress(unsigned block, bool isBig) const
+  {
     unsigned const bigSize=m_header.m_sizeBats[BigBat];
     if (isBig) return long((block+1)*bigSize);
     unsigned const smallSize=m_header.m_sizeBats[SmallBat];
@@ -91,7 +94,8 @@ protected:
   //! a struct to define the header data
   struct Header {
     //! constructor
-    Header() : m_threshold(4096), m_bigBatAlloc() {
+    Header() : m_threshold(4096), m_bigBatAlloc()
+    {
       for (int i = 0; i < 5; i++) {
         m_numBats[i] = 0;
         m_startBats[i] = Eof;
@@ -102,7 +106,8 @@ protected:
     //! try to read the ole header
     bool read(InputStream &input);
     //! returns the start of a big block
-    unsigned long getBigBlockPos(unsigned block) const {
+    unsigned long getBigBlockPos(unsigned block) const
+    {
       return (unsigned long)(block+1)*(unsigned long)m_sizeBats[BigBat];
     }
     //! the number of big bat, small bat, meta bat
@@ -122,31 +127,36 @@ protected:
   {
   public:
     //! constructor
-    AllocTable() : m_data() {
+    AllocTable() : m_data()
+    {
     }
     //! return the number of elements
-    unsigned long count() const {
+    unsigned long count() const
+    {
       return (unsigned long) m_data.size();
     }
     //! accessor to the index value ( no bound check)
-    unsigned long operator[](unsigned long index ) const {
+    unsigned long operator[](unsigned long index) const
+    {
       return m_data[size_t(index)];
     }
     //! accessor to the index value ( no bound check)
-    unsigned long &operator[](unsigned long index )  {
+    unsigned long &operator[](unsigned long index)
+    {
       return m_data[size_t(index)];
     }
     //! resize the data
-    void resize( unsigned long newsize ) {
+    void resize(unsigned long newsize)
+    {
       m_data.resize(size_t(newsize), Eof);
     }
     //! return the list of blocks which follow to start(included)
-    std::vector<unsigned long> follow( unsigned long start ) const;
+    std::vector<unsigned long> follow(unsigned long start) const;
   private:
     //! the data
     std::vector<unsigned long> m_data;
-    AllocTable( const AllocTable & );
-    AllocTable &operator=( const AllocTable & );
+    AllocTable(const AllocTable &);
+    AllocTable &operator=(const AllocTable &);
   };
 
   //! a struct used to store a DirEntry
@@ -155,21 +165,25 @@ protected:
     enum { End= 0xffffffff };
     //! constructor
     DirEntry() : m_valid(false), m_macRootEntry(false), m_type(0), m_size(0), m_start(0),
-      m_right(End), m_left(End), m_child(End), m_name("") {
+      m_right(End), m_left(End), m_child(End), m_name("")
+    {
       for (int i=0; i < 4; i++) m_clsid[i] = 0;
     }
     //! returns true for a directory
-    bool is_dir() const {
+    bool is_dir() const
+    {
       return m_type==1 || m_type==5;
     }
     //! returns the simplified file name
-    std::string name() const {
+    std::string name() const
+    {
       if (m_name.length() && m_name[0]<32)
         return m_name.substr(1);
       return m_name;
     }
     /** sets the file name */
-    void setName(std::string const &nm) {
+    void setName(std::string const &nm)
+    {
       m_name=nm;
     }
     //! try to read the ole header
@@ -196,40 +210,47 @@ protected:
   {
   public:
     /** constructor */
-    DirTree() : m_entries() {
+    DirTree() : m_entries()
+    {
       clear();
     }
     /** clear all entries, leaving only a root entries */
     void clear();
     /** returns the number of entries */
-    unsigned size() const {
+    unsigned size() const
+    {
       return unsigned(m_entries.size());
     }
     /** resize the number of entries */
-    void resize(unsigned sz) {
+    void resize(unsigned sz)
+    {
       m_entries.resize(size_t(sz));
     }
     /** returns the entry with a given index */
-    DirEntry const *entry( unsigned ind ) const {
-      if( ind >= size() ) return 0;
+    DirEntry const *entry(unsigned ind) const
+    {
+      if (ind >= size()) return 0;
       return &m_entries[ size_t(ind) ];
     }
     /** returns the entry with a given index */
-    DirEntry *entry( unsigned ind ) {
-      if( ind >= size() ) return  0;
+    DirEntry *entry(unsigned ind)
+    {
+      if (ind >= size()) return  0;
       return &m_entries[ size_t(ind) ];
     }
     /** returns the entry with a given name */
-    DirEntry *entry( const std::string &name ) {
+    DirEntry *entry(const std::string &name)
+    {
       return entry(index(name));
     }
     /** given a fullname (e.g "/ObjectPool/_1020961869"), find the entry */
-    unsigned index( const std::string &name) const;
+    unsigned index(const std::string &name) const;
     /** tries to find a child of ind with a given name */
-    unsigned find_child( unsigned ind, const std::string &name ) const;
+    unsigned find_child(unsigned ind, const std::string &name) const;
   protected:
     //! returns a list of siblings corresponding to a node
-    std::vector<unsigned> get_siblings(unsigned ind) const {
+    std::vector<unsigned> get_siblings(unsigned ind) const
+    {
       std::set<unsigned> seens;
       get_siblings(ind, seens);
       return std::vector<unsigned>(seens.begin(), seens.end());
@@ -240,8 +261,8 @@ protected:
   private:
     //! the list of entry
     std::vector<DirEntry> m_entries;
-    DirTree( const DirTree & );
-    DirTree &operator=( const DirTree & );
+    DirTree(const DirTree &);
+    DirTree &operator=(const DirTree &);
   };
 
   //! read a short in the input file

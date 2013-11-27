@@ -58,7 +58,8 @@ namespace MORStruct
 {
 struct Pattern {
   //!constructor
-  Pattern() : m_frontColor(MWAWColor::black()), m_backColor(MWAWColor::white()) {
+  Pattern() : m_frontColor(MWAWColor::black()), m_backColor(MWAWColor::white())
+  {
     for (int i=0; i<8; i++) m_pattern[i]=0;
   }
   //! operator<<

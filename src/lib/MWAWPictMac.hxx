@@ -53,12 +53,14 @@ class MWAWPictMac : public MWAWPictData
 public:
 
   //! returns the picture subtype
-  virtual SubType getSubType() const {
+  virtual SubType getSubType() const
+  {
     return MWAWPictData::PictMac;
   }
 
   //! returns the final librevenge::RVNGBinary data
-  virtual bool getBinary(librevenge::RVNGBinaryData &res, std::string &s) const {
+  virtual bool getBinary(librevenge::RVNGBinaryData &res, std::string &s) const
+  {
     if (!valid() || isEmpty()) return false;
 
     s = "image/pict";
@@ -74,13 +76,15 @@ public:
   }
 
   //! returns true if the picture is valid
-  virtual bool valid() const {
+  virtual bool valid() const
+  {
     return (m_version >= 1) && (m_version <= 2);
   }
 
   /** a virtual function used to obtain a strict order,
    * must be redefined in the subs class */
-  virtual int cmp(MWAWPict const &a) const {
+  virtual int cmp(MWAWPict const &a) const
+  {
     int diff = MWAWPictData::cmp(a);
     if (diff) return diff;
     MWAWPictMac const &aPict = static_cast<MWAWPictMac const &>(a);
@@ -108,7 +112,8 @@ public:
 
 protected:
   //! protected constructor: use check to construct a picture
-  MWAWPictMac(Box2f box) : MWAWPictData(box), m_version(-1), m_subVersion(-1) {
+  MWAWPictMac(Box2f box) : MWAWPictData(box), m_version(-1), m_subVersion(-1)
+  {
     extendBDBox(1.0);
   }
 

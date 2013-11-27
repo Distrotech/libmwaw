@@ -54,7 +54,7 @@ void MWAWCell::addTo(librevenge::RVNGPropertyList &propList) const
   propList.insert("table:number-rows-spanned", numSpannedCells()[1]);
 
   for (size_t c = 0; c < m_bordersList.size(); c++) {
-    switch(c) {
+    switch (c) {
     case libmwaw::Left:
       m_bordersList[c].addTo(propList, "left");
       break;
@@ -77,7 +77,7 @@ void MWAWCell::addTo(librevenge::RVNGPropertyList &propList) const
   if (isProtected())
     propList.insert("style:cell-protect","protected");
   // alignement
-  switch(hAlignement()) {
+  switch (hAlignement()) {
   case HALIGN_LEFT:
     propList.insert("fo:text-align", "first");
     propList.insert("style:text-align-source", "fix");
@@ -99,7 +99,7 @@ void MWAWCell::addTo(librevenge::RVNGPropertyList &propList) const
   // no padding
   propList.insert("fo:padding", 0, librevenge::RVNG_POINT);
   // alignement
-  switch(vAlignement()) {
+  switch (vAlignement()) {
   case VALIGN_TOP:
     propList.insert("style:vertical-align", "top");
     break;
@@ -174,7 +174,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
   if (cell.m_bdSize[0]>0 || cell.m_bdSize[1]>0)
     o << "bdSize=" << cell.m_bdSize << ",";
 
-  switch(cell.m_hAlign) {
+  switch (cell.m_hAlign) {
   case MWAWCell::HALIGN_LEFT:
     o << "left,";
     break;
@@ -191,7 +191,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
   default:
     break; // default
   }
-  switch(cell.m_vAlign) {
+  switch (cell.m_vAlign) {
   case MWAWCell::VALIGN_TOP:
     o << "top,";
     break;
@@ -215,7 +215,8 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
     if (i < 6) {
       static char const *wh[] = { "L", "R", "T", "B", "MiddleH", "MiddleV" };
       o << wh[i];
-    } else o << "[#wh=" << i << "]";
+    }
+    else o << "[#wh=" << i << "]";
     o << "=" << cell.m_bordersList[i] << ",";
   }
   switch (cell.m_extraLine) {

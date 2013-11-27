@@ -83,20 +83,21 @@ bool CWDbaseContent::getExtrema(Vec2i &min, Vec2i &max) const
     return false;
   bool first=true;
   std::map<int, Column>::const_iterator it=m_idColumnMap.begin();
-  for ( ; it!=m_idColumnMap.end() ; ++it) {
+  for (; it!=m_idColumnMap.end() ; ++it) {
     int col=it->first;
     Column const &column=it->second;
     if (column.m_idRecordMap.empty())
       continue;
     max[0]=col;
     std::map<int, Record>::const_iterator rIt=column.m_idRecordMap.begin();
-    for ( ; rIt!=column.m_idRecordMap.end(); ++rIt) {
+    for (; rIt!=column.m_idRecordMap.end(); ++rIt) {
       int row=rIt->first;
       if (first) {
         min[0]=col;
         min[1]=max[1]=row;
         first=false;
-      } else if (row < min[1])
+      }
+      else if (row < min[1])
         min[1]=row;
       else if (row > max[1])
         max[1]=row;
@@ -112,10 +113,10 @@ bool CWDbaseContent::getRecordList(std::vector<int> &list) const
     return false;
   std::set<int> set;
   std::map<int, Column>::const_iterator it=m_idColumnMap.begin();
-  for ( ; it!=m_idColumnMap.end() ; ++it) {
+  for (; it!=m_idColumnMap.end() ; ++it) {
     Column const &column=it->second;
     std::map<int, Record>::const_iterator rIt=column.m_idRecordMap.begin();
-    for ( ; rIt!=column.m_idRecordMap.end(); ++rIt) {
+    for (; rIt!=column.m_idRecordMap.end(); ++rIt) {
       int row=rIt->first;
       if (set.find(row)==set.end())
         set.insert(row);
@@ -423,7 +424,8 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
       MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: can not read format\n"));
       f << "###";
       ok = false;
-    } else {
+    }
+    else {
       MWAWFont &font = record.m_font;
       font = MWAWFont();
       int fId= (int) input->readULong(2);
@@ -463,7 +465,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
       }
       val &=0xF;
       record.m_justify = (val>>2);
-      switch(record.m_justify) {
+      switch (record.m_justify) {
       case 1:
         f << "left,";
         break;
@@ -491,7 +493,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
   }
   if (ok) {
     long actPos=input->tell();
-    switch(type) {
+    switch (type) {
     case 0:
     case 1:
       if (type==0)
@@ -558,7 +560,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
       val=(int) input->readULong(1);
       if (val) f << "unkn1=" << (val) << ",";
       long resPos=input->tell();
-      switch(rType) {
+      switch (rType) {
       case 0:
       case 1:
         if (input->checkPosition(resPos+2+2*rType)) {
@@ -649,7 +651,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
   if (m_styleManager->get(record.m_style, style) &&
       m_styleManager->get(style.m_cellFormatId, format))
     f << format << ",";
-  switch(type) {
+  switch (type) {
   case 0:
   case 1:
     if (type==0)
@@ -722,7 +724,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
     input->seek(formSz+1, librevenge::RVNG_SEEK_CUR);
     ascFile.addDelimiter(input->tell(),'|');
     int remainSz=int(endPos-input->tell());
-    switch(rType) {
+    switch (rType) {
     case 0:
     case 1:
       if (remainSz>=2+2*rType) {
@@ -820,7 +822,7 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
   int val=(int) input->readULong(2);
   int type=(val>>12);
   val = int(val&0xFFF);
-  switch(type) {
+  switch (type) {
   case 0: {
     f << "string,";
     if ((m_version<=3&&!input->checkPosition(pos+2+val)) ||
@@ -860,7 +862,8 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
     if (input->readDouble(record.m_resDouble, record.m_resDoubleNaN)) {
       record.m_resType=Record::R_Double;
       f << record.m_resDouble << ",";
-    } else {
+    }
+    else {
       MWAW_DEBUG_MSG(("CWDbaseContent::readRecordDB: can not read a float\n"));
       f << "###,";
     }
@@ -902,11 +905,13 @@ bool CWDbaseContent::send(Vec2i const &pos)
       MWAW_DEBUG_MSG(("CWDBaseContent::send: can not find format for field %d\n", pos[0]));
       first=false;
     }
-  } else if (m_version <= 3) {
+  }
+  else if (m_version <= 3) {
     listener->setFont(record.m_font);
     justify=record.m_justify;
     format.m_format=record.m_format;
-  } else {
+  }
+  else {
     MWAWFont font;
     CWStyleManager::Style style;
     if (record.m_style>=0)
@@ -925,7 +930,7 @@ bool CWDbaseContent::send(Vec2i const &pos)
     MWAWParagraph::JustificationRight;
   listener->setParagraph(para);
 
-  switch(record.m_resType) {
+  switch (record.m_resType) {
   case Record::R_Long:
     if (format.m_format)
       send(double(record.m_resLong), false, format);
@@ -975,7 +980,7 @@ void CWDbaseContent::send(double val, bool isNotANumber, CWStyleManager::CellFor
     listener->insertUnicodeString(s.str().c_str());
     return;
   }
-  switch(type) {
+  switch (type) {
   case 1: // currency
     s << std::fixed << std::setprecision(format.m_numDigits) << val << "$";
     break;

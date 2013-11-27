@@ -62,10 +62,12 @@ namespace EDParserInternal
 //! Internal: an index of a EDParser
 struct Index {
   //! constructor
-  Index() : m_levelId(0), m_text(""), m_page(-1), m_extra("") {
+  Index() : m_levelId(0), m_text(""), m_page(-1), m_extra("")
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Index const &index) {
+  friend std::ostream &operator<<(std::ostream &o, Index const &index)
+  {
     if (index.m_text.length()) o << "text=\"" << index.m_text << "\",";
     if (index.m_levelId) o << "levelId=" << index.m_levelId << ",";
     if (index.m_page>0) o << "page=" << index.m_page << ",";
@@ -87,7 +89,8 @@ struct Index {
 struct State {
   //! constructor
   State() : m_compressed(false), m_maxPictId(0), m_idCPICMap(), m_idPICTMap(),
-    m_indexList(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+    m_indexList(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  {
   }
   //! a flag to know if the data are compressed or not
   bool m_compressed;
@@ -176,7 +179,8 @@ void EDParser::parse(librevenge::RVNGTextInterface *docInterface)
 #endif
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("EDParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -304,7 +308,7 @@ bool EDParser::findContents()
     if (sIt==seens.end()|| *sIt>10)
       continue;
     int maxId=*sIt;
-    while(sIt!=seens.end() && *sIt<maxId+5)
+    while (sIt!=seens.end() && *sIt<maxId+5)
       maxId=*(sIt++);
     m_state->m_maxPictId=maxId;
     m_state->m_compressed=(st==0);
@@ -340,7 +344,8 @@ bool EDParser::sendPicture(int pictId, bool compressed)
     it = m_state->m_idCPICMap.find(pictId);
     if (it==m_state->m_idCPICMap.end() || !decodeZone(it->second,data))
       return false;
-  } else {
+  }
+  else {
     it = m_state->m_idPICTMap.find(pictId);
     if (it==m_state->m_idPICTMap.end() ||
         !getRSRCParser()->parsePICT(it->second, data))
@@ -378,13 +383,13 @@ void EDParser::flushExtra()
 {
 #ifdef DEBUG
   std::map<int, MWAWEntry>::const_iterator rIt = m_state->m_idCPICMap.begin();
-  for ( ; rIt != m_state->m_idCPICMap.end(); ++rIt) {
+  for (; rIt != m_state->m_idCPICMap.end(); ++rIt) {
     MWAWEntry const &entry = rIt->second;
     if (entry.isParsed()) continue;
     sendPicture(entry.id(), true);
   }
   rIt = m_state->m_idPICTMap.begin();
-  for ( ; rIt != m_state->m_idPICTMap.end(); ++rIt) {
+  for (; rIt != m_state->m_idPICTMap.end(); ++rIt) {
     MWAWEntry const &entry = rIt->second;
     if (entry.isParsed()) continue;
     sendPicture(entry.id(), false);
@@ -434,7 +439,8 @@ bool EDParser::readFontsName(MWAWEntry const &entry)
     if (!fSz || fSz >= 255) {
       f << "##" << fSz << ",";
       MWAW_DEBUG_MSG(("EDParser::readFontsName: the font name %d seems bad\n", i));
-    } else {
+    }
+    else {
       std::string name("");
       for (int c=0; c < fSz; c++)
         name += (char)  input->readULong(1);
@@ -613,7 +619,8 @@ bool EDParser::readInfo(MWAWEntry const &entry)
     if (sz > 31) {
       MWAW_DEBUG_MSG(("EDParser::readInfo: can not read string %d\n", i));
       f << "###,";
-    } else {
+    }
+    else {
       std::string name("");
       for (int c=0; c < sz; c++)
         name += (char) input->readULong(1);
@@ -632,7 +639,8 @@ bool EDParser::readInfo(MWAWEntry const &entry)
   if (dim[1]>100 && dim[1]<2000 && dim[0]>100 && dim[0]< 2000) {
     getPageSpan().setFormLength(double(dim[0])/72.);
     getPageSpan().setFormWidth(double(dim[1])/72.);
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("EDParser::readInfo: the page dimension seems bad\n"));
     f << "###,";
   }
@@ -668,14 +676,17 @@ namespace EDParserInternal
 struct DeflateStruct {
   //! constructor
   DeflateStruct(long size) : m_toWrite(size), m_data(size_t(size), 0), m_dataPos(0),
-    m_circQueue(0x2000,0), m_circQueuePos(0), m_numDelayed(0), m_delayedChar('\0') {
+    m_circQueue(0x2000,0), m_circQueuePos(0), m_numDelayed(0), m_delayedChar('\0')
+  {
   }
   //! true if we have build of the data
-  bool isEnd() const {
+  bool isEnd() const
+  {
     return m_toWrite <= 0;
   }
   //! push a new character
-  bool push(unsigned char c) {
+  bool push(unsigned char c)
+  {
     if (m_toWrite <= 0) return false;
     m_circQueue[m_circQueuePos++]=c;
     if (m_circQueuePos==0x2000)
@@ -695,7 +706,8 @@ struct DeflateStruct {
   //! check if there is delayed char, if so treat them
   bool treatDelayed(unsigned char c);
   //! return the content of the block in dt
-  bool getBinaryData(librevenge::RVNGBinaryData &dt) const {
+  bool getBinaryData(librevenge::RVNGBinaryData &dt) const
+  {
     dt.clear();
     if (m_dataPos==0) return false;
     unsigned char const *firstPos=&m_data[0];
@@ -729,7 +741,7 @@ bool DeflateStruct::sendDuplicated(int num, int depl)
   while (readPos < 0) readPos+=0x2000;
   while (readPos >= 0x2000) readPos-=0x2000;
 
-  while(num-->0) {
+  while (num-->0) {
     push(m_circQueue[size_t(readPos++)]);
     if (readPos==0x2000)
       readPos=0;
@@ -863,7 +875,7 @@ bool EDParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &da
     int byte=0;
     long maxBlockSz=0xFFF0;
     unsigned int value=((unsigned int)input->readULong(2))<<16;
-    while(maxBlockSz) {
+    while (maxBlockSz) {
       if (deflate.isEnd() || input->tell()>endPos) break;
       int ind0=(value>>16);
       if (ind0 & 0x8000) {

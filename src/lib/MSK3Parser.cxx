@@ -75,18 +75,21 @@ struct State {
   //! constructor
   State() : m_docType(MWAWDocument::MWAW_K_TEXT), m_zoneMap(), m_actPage(0), m_numPages(0),
     m_headerText(""), m_footerText(""), m_hasHeader(false), m_hasFooter(false),
-    m_pageLength(-1), m_headerHeight(0), m_footerHeight(0) {
+    m_pageLength(-1), m_headerHeight(0), m_footerHeight(0)
+  {
   }
 
   //! return a zone
-  Zone get(Zone::Type type) {
+  Zone get(Zone::Type type)
+  {
     Zone res;
     if (m_zoneMap.find(int(type)) != m_zoneMap.end())
       res = m_zoneMap[int(type)];
     return res;
   }
   //! returns true if this is a text document (hack for MSWorks 4.0 Draw)
-  bool IsTextDoc() const {
+  bool IsTextDoc() const
+  {
     return m_docType == MWAWDocument::MWAW_K_TEXT;
   }
   //! the type of document
@@ -119,16 +122,19 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
   //! returns the subdocument \a id
-  int getId() const {
+  int getId() const
+  {
     return m_id;
   }
   //! sets the subdocument \a id
-  void setId(int vid) {
+  void setId(int vid)
+  {
     m_id = vid;
   }
 
@@ -154,7 +160,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 
   long pos = m_input->tell();
   MSK3Parser *parser = reinterpret_cast<MSK3Parser *>(m_parser);
-  switch(m_type) {
+  switch (m_type) {
   case Text:
     parser->sendText(m_id, m_noteId);
     break;
@@ -266,7 +272,8 @@ void MSK3Parser::parse(librevenge::RVNGTextInterface *docInterface)
       m_graphParser->flushExtra();
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("MSK3Parser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -335,7 +342,8 @@ void MSK3Parser::createDocument(librevenge::RVNGTextInterface *documentInterface
     (new MSK3ParserInternal::SubDocument
      (*this, getInput(), MSK3ParserInternal::SubDocument::Text, id));
     ps.setHeaderFooter(header);
-  } else if (m_state->get(MSK3ParserInternal::Zone::HEADER).m_zoneId >= 0) {
+  }
+  else if (m_state->get(MSK3ParserInternal::Zone::HEADER).m_zoneId >= 0) {
     MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
     header.m_subDocument.reset
     (new MSK3ParserInternal::SubDocument
@@ -350,7 +358,8 @@ void MSK3Parser::createDocument(librevenge::RVNGTextInterface *documentInterface
     (new MSK3ParserInternal::SubDocument
      (*this, getInput(), MSK3ParserInternal::SubDocument::Text, id));
     ps.setHeaderFooter(footer);
-  } else if (m_state->get(MSK3ParserInternal::Zone::FOOTER).m_zoneId >= 0) {
+  }
+  else if (m_state->get(MSK3ParserInternal::Zone::FOOTER).m_zoneId >= 0) {
     MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
     footer.m_subDocument.reset
     (new MSK3ParserInternal::SubDocument
@@ -437,7 +446,7 @@ bool MSK3Parser::readZone(MSK3ParserInternal::Zone &zone)
   MWAWEntry pict;
   int val = (int) input->readLong(1);
   input->seek(-1, librevenge::RVNG_SEEK_CUR);
-  switch(val) {
+  switch (val) {
   case 0: {
     if (m_graphParser->getEntryPicture(zone.m_zoneId, pict)>=0) {
       input->seek(pict.end(), librevenge::RVNG_SEEK_SET);
@@ -524,7 +533,7 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
   if (input->seek(12,librevenge::RVNG_SEEK_SET) != 0) return false;
 
   for (int i = 0; i < 3; i++) {
-    val = (int) (int) input->readLong(1);
+    val = (int)(int) input->readLong(1);
     if (val < -10 || val > 10) {
       MWAW_DEBUG_MSG(("MSK3Parser::checkHeader: find odd val%d=0x%x: not implemented\n", i, val));
       numError++;
@@ -533,7 +542,7 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
   input->seek(1,librevenge::RVNG_SEEK_CUR);
   int type = (int) input->readLong(2);
   switch (type) {
-    // Text document
+  // Text document
   case 1:
     break;
   case 2:
@@ -589,7 +598,7 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
   }
   type = (int) input->readULong(2);
   f << std::dec;
-  switch(type) {
+  switch (type) {
   case 1:
     f << "doc,";
     break;
@@ -615,7 +624,7 @@ bool MSK3Parser::checkHeader(MWAWHeader *header, bool strict)
     val = (int) input->readULong(2);
     if (!val) continue;
     f << "f" << i << "=" << std::hex << val << std::dec;
-    if ( m_state->IsTextDoc() && version() >= 3 && i == 12) {
+    if (m_state->IsTextDoc() && version() >= 3 && i == 12) {
       if (val & 0x100) {
         m_state->m_hasHeader = true;
         f << "(Head)";
@@ -728,7 +737,7 @@ bool MSK3Parser::readDocumentInfo()
   int numData = int((endPos - input->tell())/2);
   for (int i = 0; i < numData; i++) {
     val = (int) input->readLong(2);
-    switch(i) {
+    switch (i) {
     case 2:
       if (val!=1) f << "firstPageNumber=" << val << ",";
       break;
@@ -932,7 +941,8 @@ bool MSK3Parser::readGroupHeaderInfo(bool header, int check)
   //  m_graphParser->addDeltaToPositions(zone.m_zoneId, -1*box[0]);
   if (m_state->m_zoneMap.find(int(type)) != m_state->m_zoneMap.end()) {
     MWAW_DEBUG_MSG(("MSK3Parser::readGroupHeaderInfo: the zone already exists\n"));
-  } else
+  }
+  else
     m_state->m_zoneMap.insert(std::map<int,MSK3ParserInternal::Zone>::value_type(int(type),zone));
   return true;
 }

@@ -62,8 +62,9 @@ struct Label {
   //! constructor
   Label(int type=-1) : m_type(type) { }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Label const &lbl) {
-    switch(lbl.m_type) {
+  friend std::ostream &operator<<(std::ostream &o, Label const &lbl)
+  {
+    switch (lbl.m_type) {
     case 0:
       o << "noLabel,";
       break;
@@ -86,11 +87,13 @@ struct Label {
     return o;
   }
   //! operator==
-  bool operator==(Label const &lbl) const {
+  bool operator==(Label const &lbl) const
+  {
     return m_type==lbl.m_type;
   }
   //! operator=!
-  bool operator!=(Label const &lbl) const {
+  bool operator!=(Label const &lbl) const
+  {
     return !operator==(lbl);
   }
   //! the label type
@@ -101,16 +104,19 @@ struct Label {
 //! Internal: class used to store the printing preferences in ACParser
 struct Printing {
   //! constructor
-  Printing() : m_font() {
+  Printing() : m_font()
+  {
     for (int i = 0; i < 2; i++)
       m_flags[i]=0;
   }
   //! returns true if the header is empty
-  bool isEmpty() const {
+  bool isEmpty() const
+  {
     return (m_flags[1]&7)==0;
   }
   //! operator==
-  bool operator==(Printing const &print) const {
+  bool operator==(Printing const &print) const
+  {
     if (m_font != print.m_font)
       return false;
     for (int i=0; i<2; i++) {
@@ -120,11 +126,13 @@ struct Printing {
     return true;
   }
   //! operator=!
-  bool operator!=(Printing const &print) const {
+  bool operator!=(Printing const &print) const
+  {
     return !operator==(print);
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Printing const &print) {
+  friend std::ostream &operator<<(std::ostream &o, Printing const &print)
+  {
     if (print.m_flags[0]==1)
       o << "useFooter,";
     else if (print.m_flags[0])
@@ -153,7 +161,8 @@ struct Option {
   //! constructor
   Option(int flags=0) : m_flags(flags) { }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Option const &opt) {
+  friend std::ostream &operator<<(std::ostream &o, Option const &opt)
+  {
     int flag = opt.m_flags;
     if (flag&0x1000)
       o << "speaker[dial],";
@@ -182,7 +191,8 @@ struct Option {
 //! Internal: the state of a ACParser
 struct State {
   //! constructor
-  State() : m_printerPreferences(), m_title(""), m_label(), m_stringLabel(""), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_printerPreferences(), m_title(""), m_label(), m_stringLabel(""), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  {
   }
 
   //! the printer preferences
@@ -211,7 +221,8 @@ public:
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
     if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
@@ -219,7 +230,8 @@ public:
   }
 
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -341,7 +353,8 @@ shared_ptr<MWAWList> ACParser::getMainList()
     MWAWFontConverterPtr fontConvert=getFontConverter();
     if (!fontConvert) {
       MWAW_DEBUG_MSG(("ACParser::getMainList: can not find the listener\n"));
-    } else {
+    }
+    else {
       for (size_t c= 0; c < m_state->m_stringLabel.size(); c++) {
         int unicode=fontConvert->unicode(3, (unsigned char) m_state->m_stringLabel[1]);
         level.m_bullet="";
@@ -403,7 +416,8 @@ void ACParser::parse(librevenge::RVNGTextInterface *docInterface)
       m_textParser->sendMainText();
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("ACParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -465,7 +479,7 @@ void ACParser::sendHeaderFooter()
       continue;
     if (printDone)
       listener->insertChar(' ');
-    switch(i) {
+    switch (i) {
     case 0:
       if (!m_state->m_title.length()) {
         listener->insertField(MWAWField::Title);
@@ -537,7 +551,7 @@ bool ACParser::readRSRCZones()
     std::string str("");
     if (!rsrcParser->parseSTR(entry,str) || str.length()==0)
       continue;
-    switch(entry.id()) {
+    switch (entry.id()) {
     case 0:
       m_state->m_title=str;
       break;
@@ -557,7 +571,7 @@ bool ACParser::readRSRCZones()
       if (it->first != zNames[z])
         break;
       MWAWEntry const &entry = it++->second;
-      switch(z) {
+      switch (z) {
       case 0:
         readPrintInfo(entry);
         break;
@@ -605,7 +619,8 @@ bool ACParser::readEndDataV3()
   if (m_state->m_label!=lbl) {
     if (m_state->m_label.m_type) {
       MWAW_DEBUG_MSG(("ACParser::readEndDataV3: oops the label seems set and different\n"));
-    } else
+    }
+    else
       m_state->m_label = lbl;
   }
   int val=(int) input->readLong(1);

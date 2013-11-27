@@ -60,7 +60,8 @@ namespace DMParserInternal
 struct PictInfo {
   //! constructor
   PictInfo() : m_id(-1), m_sndId(-1), m_align(1), m_print(false), m_invert(false),
-    m_action(0), m_actionString(""), m_extra("") {
+    m_action(0), m_actionString(""), m_extra("")
+  {
     for (int i= 0; i < 2; i++)
       m_next[i]=0;
     for (int i = 0; i < 3; i++)
@@ -93,7 +94,7 @@ struct PictInfo {
 std::ostream &operator<<(std::ostream &o, PictInfo const &info)
 {
   if (info.m_id >= 0) o << "pictId=" << info.m_id << ",";
-  switch(info.m_align) {
+  switch (info.m_align) {
   case 1:
     o << "center,";
     break;
@@ -114,9 +115,10 @@ std::ostream &operator<<(std::ostream &o, PictInfo const &info)
       "next[chapter]", "prev[chapter]", "script"
     };
     o << wh[info.m_action];
-  } else
+  }
+  else
     o << "#action=" << info.m_action << ",";
-  switch(info.m_action) {
+  switch (info.m_action) {
   case 1:
     o << "[chapter=" << info.m_next[0];
     if (info.m_next[1]) o << ",para=" << info.m_next[1] << "]";
@@ -152,10 +154,12 @@ std::ostream &operator<<(std::ostream &o, PictInfo const &info)
 struct State {
   //! constructor
   State() : m_idPictEntryMap(), m_idPictInfoMap(), m_zonePictInfoUnit(100),
-    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  {
   }
   //! return a pictinfo id corresponding to a zone and a local if
-  int pictInfoId(int zId, int lId) const {
+  int pictInfoId(int zId, int lId) const
+  {
     return (zId+2)*m_zonePictInfoUnit+lId;
   }
   //! try to find the picture info unit (fixme: a hack)
@@ -178,7 +182,7 @@ void State::findPictInfoUnit(int nZones)
     return;
   bool is100=true, is1000=true;
   std::map<int,PictInfo>::const_iterator it=m_idPictInfoMap.begin();
-  for ( ; it != m_idPictInfoMap.end(); ++it) {
+  for (; it != m_idPictInfoMap.end(); ++it) {
     int id=it->first;
     if (id > (nZones+3)*100 || id < 200)
       is100=false;
@@ -265,7 +269,8 @@ void DMParser::parse(librevenge::RVNGTextInterface *docInterface)
 #endif
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("DMParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -403,7 +408,7 @@ void DMParser::flushExtra()
 {
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   std::map<int,MWAWEntry>::const_iterator it = m_state->m_idPictEntryMap.begin();
-  for ( ; it != m_state->m_idPictEntryMap.end(); ++it) {
+  for (; it != m_state->m_idPictEntryMap.end(); ++it) {
     MWAWEntry const &entry=it->second;
     if (entry.isParsed()) continue;
     librevenge::RVNGBinaryData data;
@@ -504,7 +509,7 @@ bool DMParser::readPictInfo(MWAWEntry const &entry)
     action = -action;
   }
   info.m_action=action;
-  switch(action) {
+  switch (action) {
   case 1:
     if (extraN < 2) {
       f << "actionArg##,";
@@ -579,7 +584,8 @@ bool DMParser::readPictInfo(MWAWEntry const &entry)
     else if (val) {
       f << "#print=" << val << ",";
     }
-  } else {
+  }
+  else {
     for (int i = 0; i < extraN; i++) { // g0=0|1
       val =(int) input->readLong(2);
       if (val)

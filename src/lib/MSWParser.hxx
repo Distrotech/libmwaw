@@ -61,17 +61,20 @@ class MSWTextStyles;
 
 //! the entry of MSWParser
 struct MSWEntry : public MWAWEntry {
-  MSWEntry() : MWAWEntry(), m_pictType(-1) {
+  MSWEntry() : MWAWEntry(), m_pictType(-1)
+  {
   }
   /** \brief returns the text id
    *
    * This field is used to differentiate main text, header, ...)
    */
-  int pictType() const {
+  int pictType() const
+  {
     return m_pictType;
   }
   //! sets the picture id
-  void setPictType(int newId) {
+  void setPictType(int newId)
+  {
     m_pictType = newId;
   }
   //! operator<<

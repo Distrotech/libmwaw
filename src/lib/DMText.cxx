@@ -60,10 +60,12 @@ namespace DMTextInternal
 //! Internal: structure to store a table of contents of a DMText
 struct TOC {
   //! constructor
-  TOC() : m_cIdList(), m_textList() {
+  TOC() : m_cIdList(), m_textList()
+  {
   }
   //! returns true if the table is empty
-  bool empty() const {
+  bool empty() const
+  {
     return m_textList.size()==0;
   }
   //! the toc chapter id
@@ -76,18 +78,21 @@ struct TOC {
 //! Internal: structure to store a footer data of a DMText
 struct Footer {
   //! constructor
-  Footer() : m_font(3,9), m_chapterResetPage(false), m_userInfo(), m_extra("") {
+  Footer() : m_font(3,9), m_chapterResetPage(false), m_userInfo(), m_extra("")
+  {
     for (int i = 0; i < 6; i++) m_items[i]=0;
   }
   //! returns true if the footer is empty
-  bool empty() const {
+  bool empty() const
+  {
     for (int i = 0; i < 6; i++)
       if (m_items[i])
         return false;
     return true;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Footer const &f) {
+  friend std::ostream &operator<<(std::ostream &o, Footer const &f)
+  {
     static char const *where[]= {"TL", "TC", "TR", "BL", "BC", "BR" };
     static char const *what[]= { "nothing", "unkn1", "unkn2", "time", "date",
                                  "page", "fileName", "chapName", "userText"
@@ -122,7 +127,8 @@ struct Footer {
 struct Zone {
   //! constructor
   Zone() : m_pos(), m_justify(MWAWParagraph::JustificationLeft), m_backgroundColor(MWAWColor::white()),
-    m_useFooter(true), m_name(""), m_posFontMap(), m_numPages(0), m_parsed(false) {
+    m_useFooter(true), m_name(""), m_posFontMap(), m_numPages(0), m_parsed(false)
+  {
     for (int i = 0; i < 4; i++)
       m_margins[i]=54;
   }
@@ -149,10 +155,12 @@ struct Zone {
 //! Internal: the state of a DMText
 struct State {
   //! constructor
-  State() : m_version(-1), m_numPages(-1), m_actualPage(0), m_pageWidth(8.5), m_idZoneMap(), m_footer(), m_toc() {
+  State() : m_version(-1), m_numPages(-1), m_actualPage(0), m_pageWidth(8.5), m_idZoneMap(), m_footer(), m_toc()
+  {
   }
   //! returns the zone corresponding to an id
-  Zone &getZone(int id) {
+  Zone &getZone(int id)
+  {
     if (m_idZoneMap.find(id)==m_idZoneMap.end())
       m_idZoneMap[id]=Zone();
     return m_idZoneMap.find(id)->second;
@@ -191,7 +199,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -226,7 +235,8 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   else if (m_type == libmwaw::DOC_COMMENT_ANNOTATION) {
     listener->setFont(MWAWFont(3,10));
     m_textParser->sendString(m_text);
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("SubDocument::parse: oops do not know how to send this kind of document\n"));
   }
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -272,7 +282,7 @@ int DMText::numPages() const
   int nPages = 0;
   std::map<int, DMTextInternal::Zone >::const_iterator it =
     m_state->m_idZoneMap.begin();
-  for ( ; it != m_state->m_idZoneMap.end(); ++it) {
+  for (; it != m_state->m_idZoneMap.end(); ++it) {
     DMTextInternal::Zone const &zone= it->second;
     computeNumPages(zone);
     nPages += zone.m_numPages;
@@ -332,7 +342,7 @@ void DMText::updatePageSpanList(std::vector<MWAWPageSpan> &spanList)
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   std::map<int, DMTextInternal::Zone >::const_iterator it =
     m_state->m_idZoneMap.begin();
-  for ( ; it != m_state->m_idZoneMap.end(); ++it) {
+  for (; it != m_state->m_idZoneMap.end(); ++it) {
     int zId = it->first;
     DMTextInternal::Zone const &zone= it->second;
     if (zone.m_numPages <= 0)
@@ -510,7 +520,7 @@ bool DMText::sendText(DMTextInternal::Zone const &zone)
       listener->setFont(fontIt->second);
     if (c)
       f << c;
-    switch(c) {
+    switch (c) {
     case 0:
       m_mainParser->newPage(++m_state->m_actualPage);
       break;
@@ -661,12 +671,13 @@ bool DMText::readStyles(MWAWEntry const &entry)
     font.setFlags(flags);
     unsigned char col[3];
     for (int j=0; j < 3; j++)
-      col[j] = (unsigned char) (input->readULong(2)>>8);
+      col[j] = (unsigned char)(input->readULong(2)>>8);
     font.setColor(MWAWColor(col[0],col[1],col[2]));
     font.m_extra=f.str();
     if (zone.m_posFontMap.find(cPos) != zone.m_posFontMap.end()) {
       MWAW_DEBUG_MSG(("DMText::readStyles: a style for pos=%lx already exist\n", cPos));
-    } else
+    }
+    else
       zone.m_posFontMap[cPos] = font;
     f.str("");
     f << "Style-" << i << ":" << "cPos=" << std::hex << cPos << std::dec << ",";
@@ -829,12 +840,13 @@ bool DMText::readWindows(MWAWEntry const &entry)
   if (flag==1) {
     zone.m_useFooter = false;
     f << "noFooter,";
-  } else if (flag) f << "#footer=" << flag << ",";
+  }
+  else if (flag) f << "#footer=" << flag << ",";
   flag =(int) input->readULong(1); //9|3e|6d|a8|
   if (flag)
     f << "fl=" << std::hex << flag << std::dec << ",";
   val = (int) input->readLong(2); // always 0?
-  switch(val) {
+  switch (val) {
   case 0:
     break;
   case 1:
@@ -956,7 +968,7 @@ bool DMText::readFooter(MWAWEntry const &entry)
       f << "#fl" << i << "=" << val << ",";
       continue;
     }
-    switch(i) {
+    switch (i) {
     case 0:
       footer.m_chapterResetPage = true;
       break;
@@ -1009,7 +1021,7 @@ bool DMText::sendMainText()
   if (!m_parserState->m_listener) return true;
 
   std::map<int, DMTextInternal::Zone >::const_iterator it = m_state->m_idZoneMap.begin();
-  for ( ; it != m_state->m_idZoneMap.end(); ++it) {
+  for (; it != m_state->m_idZoneMap.end(); ++it) {
     DMTextInternal::Zone const &zone= it->second;
     if (zone.m_parsed)
       continue;

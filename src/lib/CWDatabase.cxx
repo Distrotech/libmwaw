@@ -61,12 +61,14 @@ struct Field {
               F_Checkbox, F_PopupMenu, F_RadioButton, F_ValueList,
               F_Multimedia
             };
-  Field() : m_type(F_Unknown), m_defType(-1), m_resType(0), m_name(""), m_default("") {
+  Field() : m_type(F_Unknown), m_defType(-1), m_resType(0), m_name(""), m_default("")
+  {
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Field const &field) {
-    switch(field.m_type) {
+  friend std::ostream &operator<<(std::ostream &o, Field const &field)
+  {
+    switch (field.m_type) {
     case F_Text :
       o << "text,";
       break;
@@ -105,7 +107,7 @@ struct Field {
       o << "type=#unknown,";
       break;
     }
-    switch(field.m_resType) {
+    switch (field.m_resType) {
     case 0:
       o << "text[format],";
       break;
@@ -123,7 +125,7 @@ struct Field {
       break;
     }
     o << "'" << field.m_name << "',";
-    switch(field.m_defType) {
+    switch (field.m_defType) {
     case -1:
       break;
     case 0:
@@ -149,15 +151,18 @@ struct Field {
     return o;
   }
 
-  bool isText() const {
+  bool isText() const
+  {
     return m_type == F_Text;
   }
-  bool isFormula() const {
+  bool isFormula() const
+  {
     return m_type == F_Formula || m_type == F_FormulaSum;
   }
 
-  int getNumDefault(int version) const {
-    switch(m_type) {
+  int getNumDefault(int version) const
+  {
+    switch (m_type) {
     case F_Text :
       if (version >= 4)
         return 1;
@@ -202,11 +207,13 @@ struct Field {
 struct Database : public CWStruct::DSET {
   //! constructor
   Database(CWStruct::DSET const &dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_fields(), m_content() {
+    CWStruct::DSET(dset), m_fields(), m_content()
+  {
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Database const &doc) {
+  friend std::ostream &operator<<(std::ostream &o, Database const &doc)
+  {
     o << static_cast<CWStruct::DSET const &>(doc);
     return o;
   }
@@ -220,7 +227,8 @@ struct Database : public CWStruct::DSET {
 //! Internal: the state of a CWDatabase
 struct State {
   //! constructor
-  State() : m_databaseMap() {
+  State() : m_databaseMap()
+  {
   }
 
   std::map<int, shared_ptr<Database> > m_databaseMap;
@@ -292,7 +300,7 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
 
   long dataEnd = entry.end()-N*data0Length;
   int numLast = -1;
-  switch(version()) {
+  switch (version()) {
   case 1:
   case 2:
   case 3:
@@ -333,7 +341,8 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
 
   if (m_state->m_databaseMap.find(databaseZone->m_id) != m_state->m_databaseMap.end()) {
     MWAW_DEBUG_MSG(("CWDatabase::readDatabaseZone: zone %d already exists!!!\n", databaseZone->m_id));
-  } else
+  }
+  else
     m_state->m_databaseMap[databaseZone->m_id] = databaseZone;
 
   databaseZone->m_otherChilds.push_back(databaseZone->m_id+1);
@@ -447,8 +456,8 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
     input->seek(pos+fNameMaxSz, librevenge::RVNG_SEEK_SET);
     int type = (int) input->readULong(1);
     bool ok = true;
-    switch(type) {
-      // or name
+    switch (type) {
+    // or name
     case 0:
       field.m_type = CWDatabaseInternal::Field::F_Text;
       break;
@@ -529,13 +538,14 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
       int subType = (int) input->readULong(2);
       if (version() == 2) {
         if (subType) f << "f17=" << std::hex << subType << std::dec << ",";
-      } else {
+      }
+      else {
         if (subType & 0x80 && field.m_type == CWDatabaseInternal::Field::F_Text) {
           field.m_type = CWDatabaseInternal::Field::F_ValueList;
           subType &= 0xFF7F;
         }
         ok = true;
-        switch(subType) {
+        switch (subType) {
         case 0:
           ok = field.m_type == CWDatabaseInternal::Field::F_Checkbox ||
                field.m_type == CWDatabaseInternal::Field::F_PopupMenu ||
@@ -611,7 +621,8 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
           return false;
         }
         f << "formula,";
-      } else {
+      }
+      else {
         bool listField = (valueList && fi == 1) || (!valueList && fi==0 && numExpected==2);
         if (listField)
           f << "listString,";

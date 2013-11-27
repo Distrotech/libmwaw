@@ -62,17 +62,18 @@ public:
   enum Type { Unknown, MN };
   //! constructor for a note with identificator \a ntId
   SubDocument(MSK4Zone *pars, MWAWInputStreamPtr input, int ntId)
-    : MWAWSubDocument (pars, input, MWAWEntry()), m_noteId(ntId) { }
+    : MWAWSubDocument(pars, input, MWAWEntry()), m_noteId(ntId) { }
   //! constructor for a text/frame entry
   SubDocument(MSK4Zone *pars, MWAWInputStreamPtr input, MWAWEntry const &entry) :
-    MWAWSubDocument (pars, input, entry), m_noteId(-1) {}
+    MWAWSubDocument(pars, input, entry), m_noteId(-1) {}
   //! destructor
   ~SubDocument() {}
 
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -173,14 +174,15 @@ void MSK4Parser::parse(librevenge::RVNGTextInterface *interface)
   bool ok = true;
   try {
     ok = createStructures();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("MSK4Parser::parse: exception catched when parsing OLEs\n"));
-    throw(libmwaw::ParseException());
+    throw (libmwaw::ParseException());
   }
 
   if (!ok || m_state->m_mn0Parser.get() == 0) {
     MWAW_DEBUG_MSG(("MSK4Parser::parse: does not find main ole MN0\n"));
-    throw(libmwaw::ParseException());
+    throw (libmwaw::ParseException());
   }
 
   // time to create the header, ...
@@ -197,7 +199,7 @@ void MSK4Parser::parse(librevenge::RVNGTextInterface *interface)
     = m_state->m_mn0Parser->createListener(interface, header, footer);
   if (!listener) {
     MWAW_DEBUG_MSG(("MSK4Parser::parse: does not have listener\n"));
-    throw(libmwaw::ParseException());
+    throw (libmwaw::ParseException());
   }
   getParserState()->m_listener=listener;
   listener->startDocument();
@@ -205,7 +207,8 @@ void MSK4Parser::parse(librevenge::RVNGTextInterface *interface)
 
   try {
     flushExtra();
-  } catch (...) { }
+  }
+  catch (...) { }
 
   if (listener) listener->endDocument();
   getListener().reset();
@@ -270,7 +273,8 @@ bool MSK4Parser::createStructures()
     shared_ptr<MSK4Zone> newParser(new MSK4Zone(ole, getParserState(), *this, name));
     try {
       ok = newParser->createZones(mainOle);
-    } catch (...) {
+    }
+    catch (...) {
       ok = false;
     }
 
@@ -287,9 +291,11 @@ bool MSK4Parser::createStructures()
         m_state->m_frameParserMap.find(base);
       if (frameIt != m_state->m_frameParserMap.end()) {
         MWAW_DEBUG_MSG(("MSK4Parser: error: oops, I already find a frame zone %s\n", base.c_str()));
-      } else
+      }
+      else
         m_state->m_frameParserMap[base] = newParser;
-    } else if (base == "QFootnotes") m_state->m_footnoteParser = newParser;
+    }
+    else if (base == "QFootnotes") m_state->m_footnoteParser = newParser;
   }
 
   return (m_state->m_mn0Parser.get() != 0);
@@ -330,7 +336,8 @@ void MSK4Parser::flushExtra()
         }
         newParser->readContentZones(MWAWEntry(), false);
       }
-    } catch (...) {
+    }
+    catch (...) {
       ok = false;
     }
 

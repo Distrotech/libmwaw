@@ -62,13 +62,16 @@ namespace MDWParserInternal
 //! Internal: a field of a MDWParser
 struct Field {
   //! constructor
-  Field(MWAWField::Type type=MWAWField::None) : m_type(type), m_pos(0,-1), m_extra("") {
+  Field(MWAWField::Type type=MWAWField::None) : m_type(type), m_pos(0,-1), m_extra("")
+  {
   }
   //! return true is the field is defined
-  bool ok() const {
+  bool ok() const
+  {
     return m_type!=MWAWField::None && m_pos[1] > 0;
   }
-  MWAWField getField() const {
+  MWAWField getField() const
+  {
     MWAWField res(m_type);
     if (m_type==MWAWField::Date)
       res.m_DTFormat="%B %d, %Y";
@@ -77,12 +80,13 @@ struct Field {
     return res;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Field const &field) {
+  friend std::ostream &operator<<(std::ostream &o, Field const &field)
+  {
     if (!field.ok()) {
       o << "undef,";
       return o;
     }
-    switch(field.m_type) {
+    switch (field.m_type) {
     case MWAWField::Date:
       o << "date,";
       break;
@@ -120,7 +124,8 @@ struct Field {
 struct ListProperties {
   //! constructor
   ListProperties() : m_startListIndex(1), m_headingStyle(1), m_headingFullSubLevels(true),
-    m_headingListLevels(), m_listLevelsRepeatPos(1), m_showFirstLevel(false), m_useHeadingStyle(false) {
+    m_headingListLevels(), m_listLevelsRepeatPos(1), m_showFirstLevel(false), m_useHeadingStyle(false)
+  {
   }
   //! updates the heading list
   void updateHeadingList();
@@ -202,7 +207,8 @@ void  ListProperties::updateHeadingList()
     m_headingListLevels.push_back(level);
     level.m_type=MWAWListLevel::LOWER_ROMAN;
     m_headingListLevels.push_back(level);
-  } else if (m_headingStyle==2) { // I. A. 1. a) (1), (a), i)
+  }
+  else if (m_headingStyle==2) {   // I. A. 1. a) (1), (a), i)
     m_listLevelsRepeatPos = 4;
     level.m_suffix = ".";
     level.m_type=MWAWListLevel::UPPER_ROMAN;
@@ -222,7 +228,8 @@ void  ListProperties::updateHeadingList()
     level.m_prefix = "";
     level.m_type=MWAWListLevel::LOWER_ROMAN;
     m_headingListLevels.push_back(level);
-  } else {
+  }
+  else {
     m_listLevelsRepeatPos = 2;
     level.m_suffix = ".";
     level.m_type=MWAWListLevel::DECIMAL;
@@ -236,12 +243,14 @@ void  ListProperties::updateHeadingList()
 //! Internal: a line information of a MDWParser
 struct LineInfo {
   LineInfo() : m_entry(), m_type(-1000), m_height(0), m_y(-1), m_page(-1),
-    m_paragraph(),  m_specialHeadingInterface(false), m_paragraphSet(false), m_listLevel(0), m_listType(0), m_extra("") {
+    m_paragraph(),  m_specialHeadingInterface(false), m_paragraphSet(false), m_listLevel(0), m_listType(0), m_extra("")
+  {
     for (int i = 0; i < 4; i++) m_flags[i] = 0;
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, LineInfo const &line) {
+  friend std::ostream &operator<<(std::ostream &o, LineInfo const &line)
+  {
     if (line.m_entry.valid())
       o << "textPos=" << std::hex << line.m_entry.begin()
         << "<->" << line.m_entry.end() << std::dec <<  ",";
@@ -257,7 +266,7 @@ struct LineInfo {
     case -2:
       o << "newpage,";
       break;
-      // find also -3 will no data ( nop ? )
+    // find also -3 will no data ( nop ? )
     default:
       o << "#type=" << line.m_type << ",";
       break;
@@ -289,7 +298,7 @@ struct LineInfo {
     o << "list=" << "[";
     if (line.m_listLevel)
       o << "levl=" << line.m_listLevel << ",";
-    switch(line.m_listType) {
+    switch (line.m_listType) {
     case 0:
       o << "Head,";
       break; // Heading
@@ -350,7 +359,8 @@ struct LineInfo {
 ////////////////////////////////////////
 //! Internal: a zone information of a MDWParser
 struct ZoneInfo {
-  ZoneInfo() : m_linesList() {
+  ZoneInfo() : m_linesList()
+  {
   }
 
   //! update the line list id
@@ -417,7 +427,8 @@ void ZoneInfo::updateListId(ListProperties &prop, MWAWListManager &listManager)
         if (line.m_specialHeadingInterface && type==0) {
           newLevel.m_labelWidth=0.2;
           newLevel.m_labelBeforeSpace=0.2*l;
-        } else {
+        }
+        else {
           newLevel.m_labelWidth=0.2;
           newLevel.m_labelBeforeSpace=0.2*(l-1);
           newLevel.m_labelAfterSpace=*(para.m_margins[0])/72.;
@@ -455,7 +466,8 @@ struct State {
   //! constructor
   State() : m_compressCorr(" etnroaisdlhcfp"), m_entryMap(), m_listProperties(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
-    m_headerFieldList(), m_footerFieldList() {
+    m_headerFieldList(), m_footerFieldList()
+  {
     for (int i = 0; i < 3; i++)
       m_numLinesByZone[i] = 0;
   }
@@ -495,7 +507,8 @@ public:
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
     if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
@@ -505,7 +518,8 @@ public:
   }
 
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -618,7 +632,8 @@ void MDWParser::parse(librevenge::RVNGTextInterface *docInterface)
       if (corrEntry.valid() && getRSRCParser()->parseSTR(corrEntry, corrString)) {
         if (corrString.length() != 15) {
           MWAW_DEBUG_MSG(("MDWParser::parse: resource correspondance string seems bad\n"));
-        } else
+        }
+        else
           m_state->m_compressCorr = corrString;
       }
     }
@@ -643,7 +658,8 @@ void MDWParser::parse(librevenge::RVNGTextInterface *docInterface)
       ascii().addNote("_");
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("MDWParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -718,7 +734,7 @@ bool MDWParser::createZones()
       ascii().addNote("_");
       continue;
     }
-    switch(i) {
+    switch (i) {
     case 0:
     case 1:
     case 2:
@@ -834,7 +850,8 @@ bool MDWParser::sendZone(int id)
     para.setInterline(1,librevenge::RVNG_POINT);
     setProperty(para);
     getListener()->insertEOL();
-  } else
+  }
+  else
     setProperty(para);
 
   MWAWInputStreamPtr input = getInput();
@@ -850,7 +867,7 @@ bool MDWParser::sendZone(int id)
     if (id==0 && line.m_page+1 > m_state->m_actPage)
       newPage(line.m_page+1);
     bool done=false;
-    switch(line.m_type) {
+    switch (line.m_type) {
     case 0:
       if (line.m_height) {
         listener->setParagraph(line.m_paragraph);
@@ -858,7 +875,8 @@ bool MDWParser::sendZone(int id)
           done = readCompressedText(line);
         else
           done = readText(line);
-      } else if (line.m_paragraphSet) {
+      }
+      else if (line.m_paragraphSet) {
         done = true;
         setProperty(line.m_paragraph);
       }
@@ -968,7 +986,7 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
     para.m_margins[2] = 0.0;
   }
   long val = (long) input->readULong(1);
-  switch(val) {
+  switch (val) {
   case 0:
     para.m_justify = MWAWParagraph::JustificationLeft;
     break;
@@ -1009,7 +1027,8 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
   if (val & 0x8000) { // 6 inches by line + potential before space
     para.m_spacings[1] = (factor-1.)/6;
     para.setInterline(12, librevenge::RVNG_POINT);
-  } else
+  }
+  else
     para.setInterline(factor, librevenge::RVNG_PERCENT);
   para.m_margins[0] = ((double) input->readULong(2))-*(para.m_margins[1]);
   for (int i = 0; i < N; i++) {
@@ -1152,7 +1171,7 @@ bool MDWParser::readText(MDWParserInternal::LineInfo const &line)
   f << "Text:";
   if (line.m_listType!=1) {
     f << "[list=" << line.m_listLevel;
-    switch(line.m_listType) {
+    switch (line.m_listType) {
     case 0:
       f << "Head,";
       break; // Heading
@@ -1219,7 +1238,7 @@ bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
   f << "Text:";
   if (line.m_listType!=1) {
     f << "[list=" << line.m_listLevel;
-    switch(line.m_listType) {
+    switch (line.m_listType) {
     case 0:
       f << "Head,";
       break; // Heading
@@ -1248,14 +1267,15 @@ bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
     int highByte = 0;
     for (int st = 0; st < 3; st++) {
       int actVal;
-      if (!actualCharSet ) {
+      if (!actualCharSet) {
         if (input->isEnd()) {
           MWAW_DEBUG_MSG(("MDWParser::readCompressedText: text is too long\n"));
           return false;
         }
         actualChar = (int) input->readULong(1);
         actVal = (actualChar >> 4);
-      } else
+      }
+      else
         actVal = (actualChar & 0xf);
       actualCharSet = !actualCharSet;
       if (st == 0) {
@@ -1271,7 +1291,7 @@ bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
         MWAW_DEBUG_MSG(("rser::readCompressedText: find 0 char\n"));
         continue;
       }
-      text += (char) (highByte | actVal);
+      text += (char)(highByte | actVal);
     }
   }
   f << text;
@@ -1613,7 +1633,7 @@ bool MDWParser::readHeadingStates(MWAWEntry &entry)
     if (fl==0 && wh==4)
       continue;
     f << "L" << i << "=[";
-    switch(fl) {
+    switch (fl) {
     case 0: // visible
       break;
     case 1:
@@ -1623,8 +1643,8 @@ bool MDWParser::readHeadingStates(MWAWEntry &entry)
       f << "#state=" << std::hex << fl << std::dec << ",";
       break;
     }
-    switch(wh) {
-      // find also 0 and 1
+    switch (wh) {
+    // find also 0 and 1
     case 4: // standard
       break;
     default:
@@ -1723,7 +1743,7 @@ bool MDWParser::readHeadingCustom(MWAWEntry &entry)
       }
       if (!seeIndex) {
         seeIndex = true;
-        switch(c) {
+        switch (c) {
         case '1':
           level.m_type=MWAWListLevel::DECIMAL;
           break;
@@ -1786,7 +1806,7 @@ bool MDWParser::readHeadingProperties(MWAWEntry &entry)
   long val=input->readLong(1); // always 0 ?
   if (val) f << "f0=" << val << ",";
   m_state->m_listProperties.m_headingStyle=(int) input->readULong(1);
-  switch(m_state->m_listProperties.m_headingStyle) {
+  switch (m_state->m_listProperties.m_headingStyle) {
   case 1:
     f << "list[type]=Hardvard,"; // I. A. 1. a) i)
     break;
@@ -1804,7 +1824,7 @@ bool MDWParser::readHeadingProperties(MWAWEntry &entry)
     break;
   }
   val = input->readLong(1);
-  switch(val) {
+  switch (val) {
   case 1: // show all level
     break;
   case 2:
@@ -1920,7 +1940,7 @@ bool MDWParser::readHeadingFields(MWAWEntry &entry)
   }
   libmwaw::DebugStream f;
   long val;
-  static MWAWField::Type const (listType[4])= {
+  static MWAWField::Type const(listType[4])= {
     MWAWField::Date, MWAWField::Time, MWAWField::PageNumber, MWAWField::Title
   };
   for (int i = 0; i < num; i++) {
@@ -1931,7 +1951,7 @@ bool MDWParser::readHeadingFields(MWAWEntry &entry)
     for (int j=0; j < 2; j++)
       dim[j] = (int) input->readLong(j==0 ? 2:4);
     field.m_pos=Vec2i(dim[1], dim[0]);
-    static int const (expectedVal[3])= {3,12,0};
+    static int const(expectedVal[3])= {3,12,0};
     for (int j=0; j < 3; j++) {
       val = input->readLong(2);
       if (val!=expectedVal[j])
@@ -2038,7 +2058,7 @@ void MDWParser::sendText(std::string const &text, std::vector<MWAWFont> const &f
     if (actFontId < numFonts && int(c) == textPos[actFontId])
       getListener()->setFont(fonts[actFontId++]);
     unsigned char ch = (unsigned char)text[c];
-    switch(ch) {
+    switch (ch) {
     case 0x9:
       getListener()->insertTab();
       break;

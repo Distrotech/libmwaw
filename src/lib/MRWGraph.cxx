@@ -62,17 +62,19 @@ namespace MRWGraphInternal
 //! Internal: the struct use to store a pattern in MRWGraph
 struct Pattern {
   //! constructor with default pattern
-  Pattern() : m_uniform(true), m_pattern(), m_percent(1) {
+  Pattern() : m_uniform(true), m_pattern(), m_percent(1)
+  {
   }
   //! constructor ( 4 uint16_t by pattern )
-  Pattern(uint16_t const *pat, bool uniform) : m_uniform(uniform), m_pattern(), m_percent(1) {
+  Pattern(uint16_t const *pat, bool uniform) : m_uniform(uniform), m_pattern(), m_percent(1)
+  {
     m_pattern.m_dim=Vec2i(8,8);
     m_pattern.m_colors[0]=MWAWColor::white();
     m_pattern.m_colors[1]=MWAWColor::black();
     for (size_t i=0; i < 4; ++i) {
       uint16_t val=pat[i];
-      m_pattern.m_data.push_back((unsigned char) (val>>8));
-      m_pattern.m_data.push_back((unsigned char) (val&0xFF));
+      m_pattern.m_data.push_back((unsigned char)(val>>8));
+      m_pattern.m_data.push_back((unsigned char)(val&0xFF));
     }
     int numOnes=0;
     for (size_t j=0; j < 8; ++j) {
@@ -98,7 +100,8 @@ struct Token {
   //! constructor
   Token() : m_type(-1), m_highType(-1), m_dim(0,0), m_refType(0), m_refId(0), m_fieldType(0), m_value(""),
     m_pictData(), m_pictId(0), m_valPictId(0), m_pictBorderColor(MWAWColor::black()),
-    m_ruleType(0), m_rulePattern(0), m_parsed(true), m_extra("") {
+    m_ruleType(0), m_rulePattern(0), m_parsed(true), m_extra("")
+  {
     for (int i = 0; i < 2; ++i)
       m_id[i] = 0;
     for (int i = 0; i < 4; ++i) {
@@ -107,13 +110,15 @@ struct Token {
     }
   }
   //! return true if the picture has some border
-  bool hasPictBorders() const {
+  bool hasPictBorders() const
+  {
     for (int i = 0; i < 4; ++i)
       if (m_pictBorderType[i]) return true;
     return false;
   }
   //! add border properties
-  void addPictBorderProperties(librevenge::RVNGPropertyList &pList) const {
+  void addPictBorderProperties(librevenge::RVNGPropertyList &pList) const
+  {
     if (!hasPictBorders()) return;
     bool sameBorders=true;
     for (int i=0; i < 3; ++i) {
@@ -127,7 +132,7 @@ struct Token {
         continue;
       MWAWBorder border;
       border.m_color=m_pictBorderColor;
-      switch(m_pictBorderType[i]) {
+      switch (m_pictBorderType[i]) {
       case 1: // single[w=0.5]
         border.m_width = 0.5f;
       case 2:
@@ -225,7 +230,7 @@ std::ostream &operator<<(std::ostream &o, Token const &tkn)
 {
   if (tkn.m_id[0]) o << "id=" << std::hex << tkn.m_id[0] << std::dec << ",";
   if (tkn.m_id[1]) o << "id2=" << std::hex << tkn.m_id[1] << std::dec << ",";
-  switch(tkn.m_type) {
+  switch (tkn.m_type) {
   case -1:
     break;
   case 0x14:
@@ -296,7 +301,7 @@ std::ostream &operator<<(std::ostream &o, Token const &tkn)
     else
       o << "#type" << tkn.m_refType << "[" << std::hex << (tkn.m_refId&0xFFFFFFF) << std::dec << "],";
   }
-  switch(tkn.m_ruleType) {
+  switch (tkn.m_ruleType) {
   case 0:
     break; // no
   case 1:
@@ -333,10 +338,12 @@ std::ostream &operator<<(std::ostream &o, Token const &tkn)
 //! Internal: the struct use to store a ps zone of a MRWGraph
 struct PSZone {
   //! constructor
-  PSZone() : m_pos(), m_type(0), m_id(0), m_parsed(false), m_extra("") {
+  PSZone() : m_pos(), m_type(0), m_id(0), m_parsed(false), m_extra("")
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, PSZone const &file) {
+  friend std::ostream &operator<<(std::ostream &o, PSZone const &file)
+  {
     if (file.m_type) o << "type=" << file.m_type << ",";
     if (file.m_id > 0) o << "id=" << std::hex << file.m_id << std::dec << ",";
     o << file.m_extra;
@@ -358,7 +365,8 @@ struct PSZone {
 //! Internal: the struct use to store a zone of a MRWGraph
 struct Zone {
   //! constructor
-  Zone() : m_tokenMap(), m_psZoneMap() {
+  Zone() : m_tokenMap(), m_psZoneMap()
+  {
   }
   //! the map id->token
   std::map<long, Token> m_tokenMap;
@@ -375,7 +383,8 @@ struct State {
   //! set the default pattern map
   void setDefaultPatternList(int version);
   //! return a reference to a textzone ( if zone not exists, created it )
-  Zone &getZone(int id) {
+  Zone &getZone(int id)
+  {
     std::map<int,Zone>::iterator it = m_zoneMap.find(id);
     if (it != m_zoneMap.end())
       return it->second;
@@ -395,7 +404,7 @@ struct State {
 void State::setDefaultPatternList(int /*version*/)
 {
   if (m_patternList.size()) return;
-  static uint16_t const (dataV1[4*29])= {
+  static uint16_t const(dataV1[4*29])= {
     0x0000,0x0000,0x0000,0x0000,0x8800,0x0200,0x8800,0x2000,
     0x8800,0x2200,0x8800,0x2200,0x8800,0xaa00,0x8800,0xaa00,
     0x8822,0x8822,0x8822,0x8822,0x10aa,0x00aa,0x01aa,0x00aa,
@@ -431,7 +440,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -535,7 +545,7 @@ void MRWGraph::sendToken(int zoneId, long tokenId)
   }
   MRWGraphInternal::Token const &token = zone.m_tokenMap.find(tokenId)->second;
   token.m_parsed = true;
-  switch(token.m_type) {
+  switch (token.m_type) {
   case 0x14:
     sendPicture(token);
     return;
@@ -543,18 +553,20 @@ void MRWGraph::sendToken(int zoneId, long tokenId)
     if (token.m_value.length()) {
       for (size_t c=0; c < token.m_value.length(); ++c)
         listener->insertCharacter((unsigned char) token.m_value[c]);
-    } else
+    }
+    else
       listener->insertField(MWAWField(MWAWField::Date));
     return;
   case 0x18:
     if (token.m_value.length()) {
       for (size_t c=0; c < token.m_value.length(); ++c)
         listener->insertCharacter((unsigned char) token.m_value[c]);
-    } else
+    }
+    else
       listener->insertField(MWAWField(MWAWField::Time));
     return;
   case 0x19: // fixme this can also be page count
-    switch(token.m_fieldType) {
+    switch (token.m_fieldType) {
     case 0:
     case 4: // big roman
     case 6: // small roman
@@ -598,7 +610,8 @@ void MRWGraph::sendToken(int zoneId, long tokenId)
     if (token.m_value.length()) {
       for (size_t c=0; c < token.m_value.length(); ++c)
         listener->insertCharacter((unsigned char) token.m_value[c]);
-    } else
+    }
+    else
       listener->insertUnicodeString("Merge Field");
     listener->insertChar(']');
     return;
@@ -621,7 +634,7 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
     return;
   }
   std::vector<float> listW;
-  switch(tkn.m_ruleType) {
+  switch (tkn.m_ruleType) {
   case 0: // no width
     return;
   case 1:
@@ -671,7 +684,8 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
     pStyle.m_lineWidth=listW[0];
     pStyle.m_lineColor=MWAWColor::barycenter(pat.m_percent,col,1.f-pat.m_percent,MWAWColor::white());
     shape=MWAWGraphicShape::line(Vec2f(0,0), Vec2f(sz));
-  } else {
+  }
+  else {
     pStyle.m_lineWidth=0;
     pat.m_pattern.m_colors[1]=col;
     pStyle.setPattern(pat.m_pattern);
@@ -682,7 +696,8 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
   if (listW.size()==1 || !graphicListener || graphicListener->isDocumentStarted()) {
     shape.m_bdBox=box;
     m_parserState->m_listener->insertPicture(pos,shape, pStyle);
-  } else {
+  }
+  else {
     librevenge::RVNGBinaryData data;
     std::string mime;
     graphicListener->startGraphic(Box2f(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH)));
@@ -808,7 +823,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
       continue;
     }
     int dim[2];
-    switch(j) {
+    switch (j) {
     case 0:
       tkn.m_id[0] = dt.value(0);
       break;
@@ -847,7 +862,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
     case 12:
     case 13: // 0 or 1 for graph : link to border ?
       tkn.m_pictBorderWidth[j-10]=(float) dt.value(0);
-      while(j!=13)
+      while (j!=13)
         tkn.m_pictBorderWidth[++j-10]=(float) dataList[d++].value(0);
       break;
     default:
@@ -876,7 +891,8 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
     if (data.m_type != 0) {
       MWAW_DEBUG_MSG(("MRWGraph::readToken(II): can not read block%d\n", i));
       f << "###bl" << i << "=" << data << ",";
-    } else {
+    }
+    else {
       f << "bl" << i << "=[";
       input->seek(data.m_pos.begin(), librevenge::RVNG_SEEK_SET);
       for (int j = 0; j < int(data.m_pos.length()/2); j++) {
@@ -887,7 +903,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
           // checkme: only for picture or always ?
           unsigned char col[]= {0,0,0};
           for (int c=0; c<3; ++c, ++j)
-            col[c]=(unsigned char) (input->readULong(2)>>8);
+            col[c]=(unsigned char)(input->readULong(2)>>8);
           tkn.m_pictBorderColor = MWAWColor(col[0],col[1],col[2]);
           if (!tkn.m_pictBorderColor.isBlack()) f << "bordColor=" << tkn.m_pictBorderColor << ",";
           continue;
@@ -906,7 +922,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
     }
   }
   if (tkn.m_type != 0x14 || numData < 32) {
-    for ( ; d < numData; d++) {
+    for (; d < numData; d++) {
       MRWStruct const &data = dataList[d];
       f << "#" << data << ",";
       static bool first = true;
@@ -933,7 +949,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
       MWAW_DEBUG_MSG(("MRWGraph::readToken(III): find some struct block\n"));
       continue;
     }
-    switch(j) {
+    switch (j) {
     case 8:
       if (!dt.value(0))
         break;
@@ -950,10 +966,11 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
   if (dt.m_type != 0 || !dt.m_pos.length()) {
     MWAW_DEBUG_MSG(("MRWGraph::readToken: can not find the picture data\n"));
     f << "###pictData=" << dt << ",";
-  } else
+  }
+  else
     tkn.m_pictData = dt.m_pos;
 
-  for ( ; d < numData; d++) {
+  for (; d < numData; d++) {
     MRWStruct const &data = dataList[d];
     f << "#" << data << ",";
     static bool first = true;
@@ -1013,7 +1030,7 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
   case 0x1e:
   case 0x1f:
   case 0x24:
-    while(!input->isEnd()) {
+    while (!input->isEnd()) {
       if (input->tell() >= endPos)
         break;
       val = (long) input->readULong(1);
@@ -1030,7 +1047,7 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
     if ((tkn.m_ruleType&0xFF)==0) tkn.m_ruleType>>=8;
     tkn.m_rulePattern = (int) input->readULong(2);
     if ((tkn.m_rulePattern&0xFF)==0) tkn.m_rulePattern>>=8;
-    switch(tkn.m_ruleType) {
+    switch (tkn.m_ruleType) {
     case 0:
       break; // no
     case 1:
@@ -1106,7 +1123,8 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
     if (!data.isBasic()) {
       MWAW_DEBUG_MSG(("MRWGraph::readPostscript: find unexpected type for f0\n"));
       f << "###f" << i << "=" << data << ",";
-    } else if (i==0)
+    }
+    else if (i==0)
       psFile.m_type = (int) data.value(0);
     else
       psFile.m_id = data.value(0);
@@ -1116,7 +1134,8 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
     MWAW_DEBUG_MSG(("MRWGraph::readPostscript: can not find my file\n"));
     f << "###";
     psFile.m_extra=f.str();
-  } else if (data.m_pos.valid()) {
+  }
+  else if (data.m_pos.valid()) {
     psFile.m_extra=f.str();
     psFile.m_pos = data.m_pos;
     zone.m_psZoneMap[psFile.m_id] = psFile;

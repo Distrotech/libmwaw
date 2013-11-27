@@ -142,11 +142,13 @@ protected:
   MWAWEntry getTextPosition() const;
 
   //! empty implementation of the parse function ( to make the class not virtual)
-  void parse(librevenge::RVNGTextInterface *) {
+  void parse(librevenge::RVNGTextInterface *)
+  {
     MWAW_DEBUG_MSG(("MSK4Zone::parse: must not be called\n"));
   }
   //! empty implementation of the checkHeader function ( to make the class not virtual)
-  bool checkHeader(MWAWHeader *, bool) {
+  bool checkHeader(MWAWHeader *, bool)
+  {
     MWAW_DEBUG_MSG(("MSK4Zone::checkHeader: must not be called\n"));
     return false;
   }

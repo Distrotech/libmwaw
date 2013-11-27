@@ -117,9 +117,9 @@ void MWAWPropertyHandlerEncoder::writePropertyList(const librevenge::RVNGPropert
 {
   librevenge::RVNGPropertyList::Iter i(xPropList);
   int numElt = 0;
-  for (i.rewind(); i.next(); ) numElt++;
+  for (i.rewind(); i.next();) numElt++;
   writeInteger(numElt);
-  for (i.rewind(); i.next(); )
+  for (i.rewind(); i.next();)
     writeProperty(i.key(),*i());
 }
 
@@ -143,7 +143,8 @@ public:
   MWAWPropertyHandlerDecoder(MWAWPropertyHandler *hdl=0L):m_handler(hdl) {}
 
   //! tries to read the data
-  bool readData(librevenge::RVNGBinaryData const &encoded) {
+  bool readData(librevenge::RVNGBinaryData const &encoded)
+  {
     try {
       librevenge::RVNGInputStream *inp = const_cast<librevenge::RVNGInputStream *>(encoded.getDataStream());
       if (!inp) return false;
@@ -157,7 +158,7 @@ public:
           MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder: can not read data type \n"));
           return false;
         }
-        switch(*c) {
+        switch (*c) {
         case 'E':
           if (!readInsertElement(*inp)) return false;
           break;
@@ -175,7 +176,8 @@ public:
           return false;
         }
       }
-    } catch(...) {
+    }
+    catch (...) {
       return false;
     }
     return true;
@@ -183,7 +185,8 @@ public:
 
 protected:
   //! reads an simple element
-  bool readInsertElement(librevenge::RVNGInputStream &input) {
+  bool readInsertElement(librevenge::RVNGInputStream &input)
+  {
     librevenge::RVNGString s;
     if (!readString(input, s)) return false;
 
@@ -196,7 +199,8 @@ protected:
   }
 
   //! reads an element with a property list
-  bool readInsertElementWithList(librevenge::RVNGInputStream &input) {
+  bool readInsertElementWithList(librevenge::RVNGInputStream &input)
+  {
     librevenge::RVNGString s;
     if (!readString(input, s)) return false;
 
@@ -216,7 +220,8 @@ protected:
   }
 
   //! reads an insertElement
-  bool readInsertElementWithVector(librevenge::RVNGInputStream &input) {
+  bool readInsertElementWithVector(librevenge::RVNGInputStream &input)
+  {
     librevenge::RVNGString s;
     if (!readString(input, s)) return false;
     if (s.empty()) {
@@ -242,7 +247,8 @@ protected:
   }
 
   //! reads a set of characters
-  bool readCharacters(librevenge::RVNGInputStream &input) {
+  bool readCharacters(librevenge::RVNGInputStream &input)
+  {
     librevenge::RVNGString s;
     if (!readString(input, s)) return false;
     if (!s.size()) return true;
@@ -255,7 +261,8 @@ protected:
   //
 
   //! low level: reads a property vector: number of properties list followed by list of properties list
-  bool readPropertyListVector(librevenge::RVNGInputStream &input, librevenge::RVNGPropertyListVector &vect) {
+  bool readPropertyListVector(librevenge::RVNGInputStream &input, librevenge::RVNGPropertyListVector &vect)
+  {
     int numElt;
     if (!readInteger(input, numElt)) return false;
 
@@ -277,7 +284,8 @@ protected:
   }
 
   //! low level: reads a property list: number of properties followed by list of properties
-  bool readPropertyList(librevenge::RVNGInputStream &input, librevenge::RVNGPropertyList &lists) {
+  bool readPropertyList(librevenge::RVNGInputStream &input, librevenge::RVNGPropertyList &lists)
+  {
     int numElt;
     if (!readInteger(input, numElt)) return false;
 
@@ -295,7 +303,8 @@ protected:
   }
 
   //! low level: reads a property and its value, adds it to \a list
-  bool readProperty(librevenge::RVNGInputStream &input, librevenge::RVNGPropertyList &list) {
+  bool readProperty(librevenge::RVNGInputStream &input, librevenge::RVNGPropertyList &list)
+  {
     librevenge::RVNGString key, val;
     if (!readString(input, key)) return false;
     if (!readString(input, val)) return false;
@@ -312,7 +321,8 @@ protected:
   }
 
   //! low level: reads a string : size and string
-  bool readString(librevenge::RVNGInputStream &input, librevenge::RVNGString &s) {
+  bool readString(librevenge::RVNGInputStream &input, librevenge::RVNGString &s)
+  {
     int numC = 0;
     if (!readInteger(input, numC)) return false;
     if (numC==0) {
@@ -330,7 +340,8 @@ protected:
   }
 
   //! low level: reads an integer value
-  static bool readInteger(librevenge::RVNGInputStream &input, int &val) {
+  static bool readInteger(librevenge::RVNGInputStream &input, int &val)
+  {
     long res;
     if (!readLong(input, res))
       return false;
@@ -338,7 +349,8 @@ protected:
     return true;
   }
   //! low level: reads an long value
-  static bool readLong(librevenge::RVNGInputStream &input, long &val) {
+  static bool readLong(librevenge::RVNGInputStream &input, long &val)
+  {
     unsigned long numRead = 0;
     const unsigned char *dt = input.read(4, numRead);
     if (dt == 0L || numRead != 4) {

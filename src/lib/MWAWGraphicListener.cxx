@@ -62,10 +62,12 @@ namespace MWAWGraphicListenerInternal
 /** the global graphic state of MWAWGraphicListener */
 struct GraphicState {
   //! constructor
-  GraphicState() : m_box(), m_sentListMarkers(), m_subDocuments(), m_interface() {
+  GraphicState() : m_box(), m_sentListMarkers(), m_subDocuments(), m_interface()
+  {
   }
   //! destructor
-  ~GraphicState() {
+  ~GraphicState()
+  {
   }
   /** the graphic bdbox */
   Box2f m_box;
@@ -159,13 +161,15 @@ void MWAWGraphicListener::insertCharacter(unsigned char c)
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: called outside a text zone\n"));
     return;
   }
-  int unicode = m_parserState.m_fontConverter->unicode (m_ps->m_font.id(), c);
+  int unicode = m_parserState.m_fontConverter->unicode(m_ps->m_font.id(), c);
   if (unicode == -1) {
     if (c < 0x20) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: Find odd char %x\n", int(c)));
-    } else
+    }
+    else
       MWAWGraphicListener::insertChar((uint8_t) c);
-  } else
+  }
+  else
     MWAWGraphicListener::insertUnicode((uint32_t) unicode);
 }
 
@@ -182,22 +186,24 @@ int MWAWGraphicListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &in
   long debPos=input->tell();
   int fId = m_ps->m_font.id();
   int unicode = endPos==debPos ?
-                m_parserState.m_fontConverter->unicode (fId, c) :
-                m_parserState.m_fontConverter->unicode (fId, c, input);
+                m_parserState.m_fontConverter->unicode(fId, c) :
+                m_parserState.m_fontConverter->unicode(fId, c, input);
 
   long pos=input->tell();
   if (endPos > 0 && pos > endPos) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: problem reading a character\n"));
     pos = debPos;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    unicode = m_parserState.m_fontConverter->unicode (fId, c);
+    unicode = m_parserState.m_fontConverter->unicode(fId, c);
   }
   if (unicode == -1) {
     if (c < 0x20) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: Find odd char %x\n", int(c)));
-    } else
+    }
+    else
       MWAWGraphicListener::insertChar((uint8_t) c);
-  } else
+  }
+  else
     MWAWGraphicListener::insertUnicode((uint32_t) unicode);
 
   return int(pos-debPos);
@@ -237,7 +243,8 @@ void MWAWGraphicListener::insertEOL(bool soft)
   if (soft) {
     _flushText();
     m_gs->m_interface->insertLineBreak();
-  } else if (m_ps->m_isParagraphOpened)
+  }
+  else if (m_ps->m_isParagraphOpened)
     _closeParagraph();
 
   // sub/superscript must not survive a new line
@@ -313,7 +320,7 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
     MWAW_DEBUG_MSG(("MWAWGraphicListener::setParagraph: called outside a text zone\n"));
     return;
   }
-  switch(field.m_type) {
+  switch (field.m_type) {
   case MWAWField::None:
     break;
   case MWAWField::PageCount:
@@ -348,9 +355,9 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
       else
         format="%I:%M:%S %p";
     }
-    time_t now = time ( 0L );
+    time_t now = time(0L);
     struct tm timeinfo;
-    if (localtime_r (&now, &timeinfo)) {
+    if (localtime_r(&now, &timeinfo)) {
       char buf[256];
       strftime(buf, 256, format.c_str(), &timeinfo);
       MWAWGraphicListener::insertUnicodeString(librevenge::RVNGString(buf));
@@ -676,7 +683,8 @@ void MWAWGraphicListener::_flushText()
         tmpText.clear();
       }
       m_gs->m_interface->insertSpace();
-    } else
+    }
+    else
       tmpText.append(i());
   }
   m_gs->m_interface->insertText(tmpText);
@@ -841,7 +849,8 @@ void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &l
 
     list.insert("draw:stroke", "none");
     list.insert("draw:fill", "none");
-  } else
+  }
+  else
     style.addTo(list,grad);
 
   list.insert("svg:x",pt[0], librevenge::RVNG_POINT);
@@ -898,7 +907,8 @@ void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPt
       shared_ptr<MWAWGraphicListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWGraphicListener>());
       try {
         subDocument->parseGraphic(listen, subDocumentType);
-      } catch(...) {
+      }
+      catch (...) {
         MWAW_DEBUG_MSG(("Works: MWAWGraphicListener::handleSubDocument exception catched \n"));
       }
       m_gs->m_subDocuments.pop_back();

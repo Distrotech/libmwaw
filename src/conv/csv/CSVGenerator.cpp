@@ -46,11 +46,11 @@
 
 CSVGenerator::CSVGenerator(char const *fName) : m_output(), m_outputInit(false), m_dataStarted(false), m_firstFieldSend(false)
 {
-	if (!fName) return;
-	m_output.open(fName, std::ios::out|std::ios::binary|std::ios::trunc);
-	if (!m_output.good())
-		throw MWAWDocument::Result(MWAWDocument::MWAW_R_FILE_ACCESS_ERROR);
-	m_outputInit=true;
+  if (!fName) return;
+  m_output.open(fName, std::ios::out|std::ios::binary|std::ios::trunc);
+  if (!m_output.good())
+    throw MWAWDocument::Result(MWAWDocument::MWAW_R_FILE_ACCESS_ERROR);
+  m_outputInit=true;
 }
 
 CSVGenerator::~CSVGenerator()
@@ -59,102 +59,99 @@ CSVGenerator::~CSVGenerator()
 
 std::ostream &CSVGenerator::getOutput()
 {
-	if (m_outputInit) return m_output;
-	return std::cout;
+  if (m_outputInit) return m_output;
+  return std::cout;
 }
 
 void CSVGenerator::insertTab()
 {
-	if (!m_dataStarted)
-		return;
-	getOutput() << char(0x9);
+  if (!m_dataStarted)
+    return;
+  getOutput() << char(0x9);
 }
 
 void CSVGenerator::insertText(const librevenge::RVNGString &text)
 {
-	if (!m_dataStarted)
-		return;
-	if (text.len()==0)
-		return;
-	char const *data=text.cstr();
-	int sz=int(strlen(data));
-	// we must escape the character \"
-	for (int c=0; c<sz; c++)
-	{
-		if (data[c]=='\"')
-			getOutput() << '\"';
-		getOutput() << data[c];
-	}
+  if (!m_dataStarted)
+    return;
+  if (text.len()==0)
+    return;
+  char const *data=text.cstr();
+  int sz=int(strlen(data));
+  // we must escape the character \"
+  for (int c=0; c<sz; c++) {
+    if (data[c]=='\"')
+      getOutput() << '\"';
+    getOutput() << data[c];
+  }
 }
 
 void CSVGenerator::insertSpace()
 {
-	if (!m_dataStarted)
-		return;
-	getOutput() << ' ';
+  if (!m_dataStarted)
+    return;
+  getOutput() << ' ';
 }
 
 void CSVGenerator::insertLineBreak()
 {
-	if (!m_dataStarted)
-		return;
-	getOutput() << '\n';
+  if (!m_dataStarted)
+    return;
+  getOutput() << '\n';
 }
 
 void CSVGenerator::openTable(const librevenge::RVNGPropertyList &propList)
 {
-	if (!propList["libmwaw:main_spreadsheet"] && !propList["libmwaw:main_database"])
-		return;
-	const librevenge::RVNGPropertyListVector *columns = propList.child("librevenge:table-columns");
-	int nCol=int(columns ? columns->count() : 0);
-	for (int i=0; i < nCol; ++i)
-	{
-		if (i)
-			getOutput() << ",Col" << i+1;
-		else
-			getOutput() << "Col" << i+1;
-	}
-	getOutput() << "\n";
-	m_dataStarted=true;
+  if (!propList["libmwaw:main_spreadsheet"] && !propList["libmwaw:main_database"])
+    return;
+  const librevenge::RVNGPropertyListVector *columns = propList.child("librevenge:table-columns");
+  int nCol=int(columns ? columns->count() : 0);
+  for (int i=0; i < nCol; ++i) {
+    if (i)
+      getOutput() << ",Col" << i+1;
+    else
+      getOutput() << "Col" << i+1;
+  }
+  getOutput() << "\n";
+  m_dataStarted=true;
 }
 
 void CSVGenerator::closeTable()
 {
-	m_dataStarted=false;
+  m_dataStarted=false;
 }
 
 void CSVGenerator::openTableRow(const librevenge::RVNGPropertyList & /* propList */)
 {
-	if (!m_dataStarted)
-		return;
-	m_firstFieldSend=false;
+  if (!m_dataStarted)
+    return;
+  m_firstFieldSend=false;
 }
 
 void CSVGenerator::closeTableRow()
 {
-	if (!m_dataStarted)
-		return;
-	getOutput() << "\n";
+  if (!m_dataStarted)
+    return;
+  getOutput() << "\n";
 }
 
 void CSVGenerator::openTableCell(const librevenge::RVNGPropertyList & /* propList */)
 {
-	if (!m_dataStarted)
-		return;
-	if (m_firstFieldSend)
-		getOutput() << ",\"";
-	else
-	{
-		getOutput() << "\"";
-		m_firstFieldSend=true;
-	}
+  if (!m_dataStarted)
+    return;
+  if (m_firstFieldSend)
+    getOutput() << ",\"";
+  else {
+    getOutput() << "\"";
+    m_firstFieldSend=true;
+  }
 }
 
 void CSVGenerator::closeTableCell()
 {
-	if (!m_dataStarted)
-		return;
-	getOutput() << "\"";
+  if (!m_dataStarted)
+    return;
+  getOutput() << "\"";
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

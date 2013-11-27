@@ -42,8 +42,8 @@ std::string RSRC::Version::makePretty(std::string const &orig)
 {
   size_t j;
   std::string res(orig);
-  for (; (j = res.find( 0xd )) != std::string::npos;)
-    res.replace( j, 1, " -- " );
+  for (; (j = res.find(0xd)) != std::string::npos;)
+    res.replace(j, 1, " -- ");
   return res;
 }
 

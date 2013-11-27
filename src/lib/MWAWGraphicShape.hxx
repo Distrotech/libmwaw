@@ -51,7 +51,8 @@ public:
   struct PathData {
     //! constructor
     PathData(char type, Vec2f const &x=Vec2f(), Vec2f const &x1=Vec2f(), Vec2f const &x2=Vec2f()):
-      m_type(type), m_x(x), m_x1(x1), m_x2(x2), m_r(), m_rotate(0), m_largeAngle(false), m_sweep(false) {
+      m_type(type), m_x(x), m_x1(x1), m_x2(x2), m_r(), m_rotate(0), m_largeAngle(false), m_sweep(false)
+    {
     }
     //! translate all the coordinate by delta
     void translate(Vec2f const &delta);
@@ -83,14 +84,16 @@ public:
 
   //! constructor
   MWAWGraphicShape() : m_type(ShapeUnknown), m_bdBox(), m_formBox(), m_cornerWidth(0,0), m_arcAngles(0,0),
-    m_vertices(), m_path(), m_extra("") {
+    m_vertices(), m_path(), m_extra("")
+  {
   }
   //! virtual destructor
   virtual ~MWAWGraphicShape() { }
   //! static constructor to create a line
   static MWAWGraphicShape line(Vec2f const &orign, Vec2f const &dest);
   //! static constructor to create a rectangle
-  static MWAWGraphicShape rectangle(Box2f const &box, Vec2f const &corners=Vec2f(0,0)) {
+  static MWAWGraphicShape rectangle(Box2f const &box, Vec2f const &corners=Vec2f(0,0))
+  {
     MWAWGraphicShape res;
     res.m_type=Rectangle;
     res.m_bdBox=res.m_formBox=box;
@@ -98,14 +101,16 @@ public:
     return res;
   }
   //! static constructor to create a circle
-  static MWAWGraphicShape circle(Box2f const &box) {
+  static MWAWGraphicShape circle(Box2f const &box)
+  {
     MWAWGraphicShape res;
     res.m_type=Circle;
     res.m_bdBox=res.m_formBox=box;
     return res;
   }
   //! static constructor to create a arc
-  static MWAWGraphicShape arc(Box2f const &box, Box2f const &circleBox, Vec2f const &angles) {
+  static MWAWGraphicShape arc(Box2f const &box, Box2f const &circleBox, Vec2f const &angles)
+  {
     MWAWGraphicShape res;
     res.m_type=Arc;
     res.m_bdBox=box;
@@ -114,7 +119,8 @@ public:
     return res;
   }
   //! static constructor to create a pie
-  static MWAWGraphicShape pie(Box2f const &box, Box2f const &circleBox, Vec2f const &angles) {
+  static MWAWGraphicShape pie(Box2f const &box, Box2f const &circleBox, Vec2f const &angles)
+  {
     MWAWGraphicShape res;
     res.m_type=Pie;
     res.m_bdBox=box;
@@ -123,14 +129,16 @@ public:
     return res;
   }
   //! static constructor to create a polygon
-  static MWAWGraphicShape polygon(Box2f const &box) {
+  static MWAWGraphicShape polygon(Box2f const &box)
+  {
     MWAWGraphicShape res;
     res.m_type=Polygon;
     res.m_bdBox=box;
     return res;
   }
   //! static constructor to create a path
-  static MWAWGraphicShape path(Box2f const &box) {
+  static MWAWGraphicShape path(Box2f const &box)
+  {
     MWAWGraphicShape res;
     res.m_type=Path;
     res.m_bdBox=box;

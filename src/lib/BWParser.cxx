@@ -61,10 +61,12 @@ namespace BWParserInternal
 struct Frame {
   //! constructor
   Frame() : m_charAnchor(true), m_id(0), m_pictId(0), m_origin(), m_dim(), m_page(1),
-    m_wrap(0), m_border(), m_bordersSet(0), m_extra("") {
+    m_wrap(0), m_border(), m_bordersSet(0), m_extra("")
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Frame const &frm) {
+  friend std::ostream &operator<<(std::ostream &o, Frame const &frm)
+  {
     if (frm.m_id) o << "id=" << frm.m_id << ",";
     if (!frm.m_charAnchor) o << "pageFrame,";
     if (frm.m_page!=1) o << "page=" << frm.m_page << ",";
@@ -101,7 +103,8 @@ struct Frame {
 //! Internal: the state of a BWParser
 struct State {
   //! constructor
-  State() : m_textBegin(0), m_typeEntryMap(), m_idFrameMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_textBegin(0), m_typeEntryMap(), m_idFrameMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  {
   }
 
   /** the text begin position */
@@ -221,7 +224,8 @@ void BWParser::parse(librevenge::RVNGTextInterface *docInterface)
 #endif
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("BWParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -252,7 +256,7 @@ void BWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 
   std::vector<MWAWPageSpan> pageList;
   shared_ptr<MWAWSubDocument> subDoc;
-  for (int i = 0; i <= numPages; ) {
+  for (int i = 0; i <= numPages;) {
     MWAWPageSpan ps(getPageSpan());
     int numSim[2]= {1,1};
     subDoc = m_textParser->getHeader(i, numSim[0]);
@@ -384,18 +388,18 @@ bool BWParser::readRSRCZones()
       if (it->first != zNames[z])
         break;
       MWAWEntry const &entry = it++->second;
-      switch(z) {
+      switch (z) {
       case 0: // 1001
         readwPos(entry);
         break;
       case 1: // find in one file with id=4661 6a1f 4057
         readFontStyle(entry);
         break;
-        /* find also
-           - edpt: see sendPicture
-           - DMPP: the paragraph style
-           - sect and alis: position?, alis=filesystem alias(dir, filename, path...)
-        */
+      /* find also
+         - edpt: see sendPicture
+         - DMPP: the paragraph style
+         - sect and alis: position?, alis=filesystem alias(dir, filename, path...)
+      */
       default:
         break;
       }
@@ -463,7 +467,7 @@ bool BWParser::readFrame(MWAWEntry const &entry)
     f << "Entries(Frame)[" << i << "]:";
     int type=(int) input->readULong(2);
     int val;
-    switch(type) {
+    switch (type) {
     case 0x8000: {
       f << "picture,";
       val=(int) input->readLong(2); // 1|8
@@ -495,7 +499,8 @@ bool BWParser::readFrame(MWAWEntry const &entry)
         for (int c=0; c < fSz; c++)
           name+=(char) input->readLong(1);
         f << name << ",";
-      } else {
+      }
+      else {
         MWAW_DEBUG_MSG(("BWParser::readFrame: the size seems bad\n"));
         f << "#fSz=" << fSz << ",";
       }
@@ -564,7 +569,7 @@ bool BWParser::readFrame(MWAWEntry const &entry)
     if (val) f << "f2=" << val << ",";
     int flags=(int) input->readLong(2);
     frame.m_wrap=(flags&3);
-    switch(frame.m_wrap) { // textaround
+    switch (frame.m_wrap) { // textaround
     case 0: // none
       f << "wrap=none,";
       break;
@@ -586,7 +591,8 @@ bool BWParser::readFrame(MWAWEntry const &entry)
       f << "bord[all],";
       frame.m_bordersSet=libmwaw::LeftBit|libmwaw::RightBit|
                          libmwaw::BottomBit|libmwaw::TopBit;
-    } else if (flags&0x1E0) {
+    }
+    else if (flags&0x1E0) {
       f << "bord[";
       if (flags&0x20) {
         f << "T";
@@ -625,7 +631,8 @@ bool BWParser::readFrame(MWAWEntry const &entry)
     ascii().addNote(f.str().c_str());
     if (m_state->m_idFrameMap.find(frame.m_id)!=m_state->m_idFrameMap.end()) {
       MWAW_DEBUG_MSG(("BWParser::readFrame: frame %d already exists\n", frame.m_id));
-    } else
+    }
+    else
       m_state->m_idFrameMap[frame.m_id]=frame;
     input->seek(begPos+156, librevenge::RVNG_SEEK_SET);
   }
@@ -737,7 +744,8 @@ bool BWParser::readLastZone()
     getPageSpan().setMarginBottom(margins[1]);
     getPageSpan().setMarginLeft(margins[3]);
     getPageSpan().setMarginRight(margins[2]);
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("BWParser::readLastZone: the page margins seem bad\n"));
     f << "###";
   }

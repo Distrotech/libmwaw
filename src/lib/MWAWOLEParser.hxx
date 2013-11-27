@@ -96,24 +96,29 @@ public:
   bool parse(MWAWInputStreamPtr fileInput);
 
   //! returns the list of unknown ole
-  std::vector<std::string> const &getNotParse() const {
+  std::vector<std::string> const &getNotParse() const
+  {
     return m_unknownOLEs;
   }
 
   //! returns the list of id for which we have find a representation
-  std::vector<int> const &getObjectsId() const {
+  std::vector<int> const &getObjectsId() const
+  {
     return m_objectsId;
   }
   //! returns the list of data positions which have been read
-  std::vector<MWAWPosition> const &getObjectsPosition() const {
+  std::vector<MWAWPosition> const &getObjectsPosition() const
+  {
     return m_objectsPosition;
   }
   //! returns the list of data which have been read
-  std::vector<librevenge::RVNGBinaryData> const &getObjects() const {
+  std::vector<librevenge::RVNGBinaryData> const &getObjects() const
+  {
     return m_objects;
   }
   //! returns the list of data type
-  std::vector<std::string> const &getObjectsType() const {
+  std::vector<std::string> const &getObjectsType() const
+  {
     return m_objectsType;
   }
 

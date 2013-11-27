@@ -56,7 +56,8 @@ public:
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
     if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
@@ -65,7 +66,8 @@ public:
   }
 
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -245,7 +247,8 @@ void MWAWPageSpan::setHeaderFooter(MWAWHeaderFooter const &hF)
     pos = getHeaderFooterPosition(type, MWAWHeaderFooter::EVEN);
     if (pos != -1)
       m_headerFooterList[size_t(pos)]=MWAWHeaderFooter(type, MWAWHeaderFooter::EVEN);
-  } else if (!containsHFLeft && containsHFRight) {
+  }
+  else if (!containsHFLeft && containsHFRight) {
     MWAW_DEBUG_MSG(("Inserting dummy header left\n"));
     pos = getHeaderFooterPosition(type, MWAWHeaderFooter::ODD);
     if (pos != -1)
@@ -355,7 +358,7 @@ bool MWAWPageSpan::containsHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderF
 int MWAWPageSpan::getHeaderFooterPosition(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence)
 {
   int typePos = 0, occurencePos = 0;
-  switch(type) {
+  switch (type) {
   case MWAWHeaderFooter::HEADER:
     typePos = 0;
     break;
@@ -367,7 +370,7 @@ int MWAWPageSpan::getHeaderFooterPosition(MWAWHeaderFooter::Type type, MWAWHeade
     MWAW_DEBUG_MSG(("MWAWPageSpan::getVectorPosition: unknown type\n"));
     return -1;
   }
-  switch(occurence) {
+  switch (occurence) {
   case MWAWHeaderFooter::ALL:
     occurencePos = 0;
     break;

@@ -59,10 +59,12 @@ namespace FWTextInternal
 /** Internal: class to store a para modifier with appear in docInfo */
 struct ParaModifier {
   //! constructor
-  ParaModifier() : m_beforeSpacing(0), m_afterSpacing(0), m_extra("") {
+  ParaModifier() : m_beforeSpacing(0), m_afterSpacing(0), m_extra("")
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, ParaModifier const &p) {
+  friend std::ostream &operator<<(std::ostream &o, ParaModifier const &p)
+  {
     if (p.m_beforeSpacing<0)
       o << "befSpacing=" << -p.m_beforeSpacing << "pt,";
     else if (p.m_beforeSpacing>0)
@@ -85,27 +87,33 @@ struct ParaModifier {
 /** Internal: class to store a font/para modifier with appear in text data */
 struct DataModifier {
   //! constructor
-  DataModifier() : m_color(MWAWColor::black()), m_extra("") {
+  DataModifier() : m_color(MWAWColor::black()), m_extra("")
+  {
     for (int i = 0; i < 4; i++) m_data[i]=0xFFFF;
   }
   //! returns the superscript value ( negative in pt, position in li)
-  float getSuper() const {
+  float getSuper() const
+  {
     return float(int32_t((m_data[0]<<16)|m_data[1]))/65536.f;
   }
   //! returns the sub value ( negative in pt, position in li)
-  float getSub() const {
+  float getSub() const
+  {
     return float(int32_t((m_data[2]<<16)|m_data[3]))/65536.f;
   }
   //! returns the border id
-  int getBorderId() const {
+  int getBorderId() const
+  {
     return m_data[2]==0xFFFF?0:m_data[2];
   }
   //! returns the document extra id
-  int getDocParaId() const {
+  int getDocParaId() const
+  {
     return m_data[3];
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, DataModifier const &m) {
+  friend std::ostream &operator<<(std::ostream &o, DataModifier const &m)
+  {
     if (!m.m_color.isBlack())
       o << "col=" << m.m_color << ",";
     if (m.m_data[1]!=0xFFFF)
@@ -138,18 +146,21 @@ struct Item {
   /** the different type of id */
   enum Type { Father=0, Child, Next, Prev, Main };
   /** constructor */
-  Item(): m_level(0), m_index(1), m_collapsed(false), m_hidden(false), m_childList(), m_hiddenZone(), m_extra("") {
+  Item(): m_level(0), m_index(1), m_collapsed(false), m_hidden(false), m_childList(), m_hiddenZone(), m_extra("")
+  {
     for (int i = 0; i < 5; i++) m_structId[i]=0;
   }
   //! return a value which can be used to represent the label(changme)
-  std::string label() const {
+  std::string label() const
+  {
     if (m_level <= 0) return "";
     std::stringstream s;
     s << m_index << ". ";
     return s.str();
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Item const &it) {
+  friend std::ostream &operator<<(std::ostream &o, Item const &it)
+  {
     if (it.m_hidden) o << "hidden,";
     if (it.m_collapsed) o << "collapsed,";
     if (it.m_level) o << "level=" << it.m_level << ",";
@@ -184,7 +195,8 @@ struct Item {
 /** Internal: class to store a font and it state */
 struct Font {
   /** constructor */
-  Font() : m_font(), m_modifier(), m_defModifier(true), m_item() {
+  Font() : m_font(), m_modifier(), m_defModifier(true), m_item()
+  {
     for (int i = 0; i < 128; i++) m_state[i]=false;
   }
   /** update the font using the modifier */
@@ -217,7 +229,8 @@ void Font::update()
       else
         m_font.set(MWAWFont::Script(float(sup*100.f),librevenge::RVNG_PERCENT));
     }
-  } else if (m_state[0xb]) {
+  }
+  else if (m_state[0xb]) {
     if (m_defModifier)
       m_font.set(MWAWFont::Script::sub100());
     else {
@@ -227,22 +240,26 @@ void Font::update()
       else
         m_font.set(MWAWFont::Script(float(-sub*100.f),librevenge::RVNG_PERCENT));
     }
-  } else
+  }
+  else
     m_font.set(MWAWFont::Script());
 }
 
 /** Internal: class to store the LineHeader */
 struct LineHeader {
   /** Constructor */
-  LineHeader() : m_numChar(0), m_font(), m_fontSet(false), m_height(-1.0), m_prevHeight(-1.0), m_textIndent(0), m_extra("") {
+  LineHeader() : m_numChar(0), m_font(), m_fontSet(false), m_height(-1.0), m_prevHeight(-1.0), m_textIndent(0), m_extra("")
+  {
   }
   //! try to find the line height using m_height or m_prevHeight
-  float height() const {
+  float height() const
+  {
     if (m_height > 0) return m_height;
     return m_prevHeight;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, LineHeader const &line) {
+  friend std::ostream &operator<<(std::ostream &o, LineHeader const &line)
+  {
     o << "numC=" << line.m_numChar << ",";
     if (line.m_fontSet)
       o << "font=[fId=" << line.m_font.id()
@@ -269,11 +286,13 @@ struct LineHeader {
 };
 /** Internal: class to store a ColumnInfo */
 struct ColumnInfo {
-  ColumnInfo() : m_column(0), m_box(), m_beginPos(1) {
+  ColumnInfo() : m_column(0), m_box(), m_beginPos(1)
+  {
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, ColumnInfo const &c) {
+  friend std::ostream &operator<<(std::ostream &o, ColumnInfo const &c)
+  {
     if (c.m_column > 0) o << "col=" << c.m_column+1 << ",";
     o << c.m_box << ",";
     if (c.m_beginPos > 1) o << "textPos=" << c.m_beginPos << ",";
@@ -288,11 +307,13 @@ struct ColumnInfo {
 };
 
 struct PageInfo {
-  PageInfo() : m_page(-1), m_columns() {
+  PageInfo() : m_page(-1), m_columns()
+  {
   }
 
   //! returns true if the page has same color position
-  bool isSimilar(PageInfo const &p) const {
+  bool isSimilar(PageInfo const &p) const
+  {
     size_t numColumns = m_columns.size();
     if (numColumns != p.m_columns.size())
       return false;
@@ -306,7 +327,8 @@ struct PageInfo {
   }
 
   //! return a section
-  MWAWSection getSection() const {
+  MWAWSection getSection() const
+  {
     MWAWSection sec;
     size_t numC = m_columns.size();
     if (numC <= 1)
@@ -336,12 +358,14 @@ struct Zone {
   //! the zone type
   enum ZoneType { Normal, Main, CollapsedItem };
   //! constructor
-  Zone() : m_zone(), m_box(), m_begin(-1), m_end(-1), m_zoneType(Normal), m_pagesInfo(), m_extra("") {
+  Zone() : m_zone(), m_box(), m_begin(-1), m_end(-1), m_zoneType(Normal), m_pagesInfo(), m_extra("")
+  {
     for (int i = 0; i < 2; i++) m_flags[i] = 0;
     for (int i = 0; i < 2; i++) m_pages[i] = 0;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Zone const &z) {
+  friend std::ostream &operator<<(std::ostream &o, Zone const &z)
+  {
     switch (z.m_zoneType) {
     case Zone::Normal:
       break;
@@ -371,7 +395,8 @@ struct Zone {
     return o;
   }
   //! return the col/page break
-  std::vector<int> getBreaksPosition() const {
+  std::vector<int> getBreaksPosition() const
+  {
     size_t numPages = m_pagesInfo.size();
     int prevPos = 0;
     std::vector<int> res;
@@ -415,12 +440,14 @@ struct Zone {
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() : MWAWParagraph(), m_align(0), m_interSpacing(1.), m_interSpacingUnit(librevenge::RVNG_PERCENT),
-    m_dim(0,0), m_border(), m_isTable(false), m_tableBorderId(0), m_tableFlags(), m_actCol(-1), m_isSent(false) {
+    m_dim(0,0), m_border(), m_isTable(false), m_tableBorderId(0), m_tableFlags(), m_actCol(-1), m_isSent(false)
+  {
     m_befAftSpacings[0]=m_befAftSpacings[1]=0;
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
+  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
+  {
     if (ind.m_isTable) o << "table,";
     if (ind.m_tableBorderId) o << "borderId[table]=" << ind.m_tableBorderId << ",";
     if (ind.m_align) o << "align=" << ind.m_align << ",";
@@ -430,34 +457,40 @@ struct Paragraph : public MWAWParagraph {
   }
 
   //! returns true if this is a table
-  bool isTable() const {
+  bool isTable() const
+  {
     return m_isTable;
   }
 
   //! set the align type
-  void setAlign(int align) {
+  void setAlign(int align)
+  {
     m_align = align;
     m_isSent = false;
   }
   //! set the interline spacing
-  void setInterlineSpacing(double spacing, librevenge::RVNGUnit unit) {
+  void setInterlineSpacing(double spacing, librevenge::RVNGUnit unit)
+  {
     m_interSpacing = spacing;
     m_interSpacingUnit = unit;
     m_isSent = false;
   }
   //! set the before/after spacing ( negative in point, positive in percent )
-  void setSpacings(double spacing, bool before ) {
+  void setSpacings(double spacing, bool before)
+  {
     m_befAftSpacings[before ? 0 : 1] = spacing;
     m_isSent = false;
   }
   //! set the border type
-  void setBorder(FWStruct::Border border) {
+  void setBorder(FWStruct::Border border)
+  {
     m_border = border;
     m_isSent = false;
   }
 
   //! update the paragraph data from a ruler
-  void updateFromRuler(Paragraph const &ruler) {
+  void updateFromRuler(Paragraph const &ruler)
+  {
     MWAWParagraph::operator=(ruler);
     m_isTable = ruler.m_isTable;
     m_tableBorderId = ruler.m_tableBorderId;
@@ -466,7 +499,8 @@ struct Paragraph : public MWAWParagraph {
     m_isSent = false;
   }
   //! returns the table dimension in points
-  bool getTableDimensions(std::vector<float> &dim) const {
+  bool getTableDimensions(std::vector<float> &dim) const
+  {
     size_t numTabs = m_tabs->size();
     if ((numTabs%2) != 1 || numTabs != m_tableFlags.size()) {
       MWAW_DEBUG_MSG(("FWTextInternal::Paragraph:getTableDimensions: unexpected number of tabs\n"));
@@ -492,10 +526,11 @@ struct Paragraph : public MWAWParagraph {
     return true;
   }
   //! update the paragraph data to be sent to a listener
-  MWAWParagraph updateToSent() const {
+  MWAWParagraph updateToSent() const
+  {
     m_isSent = true;
     MWAWParagraph res = *this;
-    if ( m_interSpacing>0)
+    if (m_interSpacing>0)
       res.setInterline(m_interSpacing, m_interSpacingUnit);
     for (int i = 0; i < 2; i++) {
       if (m_befAftSpacings[i] <= 0)
@@ -508,7 +543,7 @@ struct Paragraph : public MWAWParagraph {
 
     if (m_isTable && m_actCol >= 0) {
       if (2*m_actCol < int(m_tableFlags.size())) {
-        switch(m_tableFlags[size_t(2*m_actCol)]) {
+        switch (m_tableFlags[size_t(2*m_actCol)]) {
         case 0:
           res.m_justify = MWAWParagraph::JustificationLeft;
           break;
@@ -533,7 +568,7 @@ struct Paragraph : public MWAWParagraph {
       m_actCol=-1;
       return res;
     }
-    switch(m_align) {
+    switch (m_align) {
     case 0:
       res.m_justify = MWAWParagraph::JustificationLeft;
       break;
@@ -582,7 +617,8 @@ struct Paragraph : public MWAWParagraph {
 struct State {
   //! constructor
   State() : m_version(-1), m_entryMap(), m_paragraphMap(), m_itemMap(), m_dataModMap(),
-    m_paragraphModList(), m_mainZones(), m_numPages(1), m_actualPage(0) {
+    m_paragraphModList(), m_mainZones(), m_numPages(1), m_actualPage(0)
+  {
   }
 
   //! the file version
@@ -662,7 +698,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       if (val >= 0x80)
         on=font.m_state[val-0x80]=!font.m_state[val-0x80];
       std::string onString(on?"":"/");
-      switch(val) {
+      switch (val) {
       case 0:
         val=' ';
         done = false;
@@ -737,7 +773,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0x8e: // word underline
       case 0x8f: // double
       case 0x92: { // dot
-        switch(val) {
+        switch (val) {
         case 0x85:
           f << "[" << onString << "underline]";
           break;
@@ -843,7 +879,8 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
           MWAW_DEBUG_MSG(("FWText::send: can not find item id!!!!\n"));
           font.m_item = FWTextInternal::Item();
           f << "[#itemId=" << id << "]";
-        } else {
+        }
+        else {
           font.m_item =m_state->m_itemMap.find(id)->second;
           f << "[item:" << font.m_item << ",id=" << id << "]";
         }
@@ -859,7 +896,8 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
           font.m_modifier=FWTextInternal::DataModifier();
           font.m_defModifier=true;
           f << "[#modifier=" << id << "]";
-        } else {
+        }
+        else {
           font.m_modifier=m_state->m_dataModMap.find(id)->second;
           f << "[modifier=" << font.m_modifier << "]";
           font.m_defModifier=false;
@@ -898,7 +936,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         }
         id = (int)input->readULong(2);
         done = false; // we must wait sending font/ruler then we will send the data
-        switch(val) {
+        switch (val) {
         case 0xd2:
           f << "[noteId=" << id << "]";
           break;
@@ -987,7 +1025,8 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         if (actPos+4 > endPos) {
           MWAW_DEBUG_MSG(("FWText::send: can not find justify!!!!\n"));
           f << "[#justWithType]";
-        } else {
+        }
+        else {
           int just = (int)input->readLong(2);
           if (just < 0)
             ruler.setInterlineSpacing(-just, librevenge::RVNG_POINT);
@@ -1055,7 +1094,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
     // now, we can try to send the data
     if (id >= 0 || val==0xa8 || val==0x98 || val==0xac) {
       done = true;
-      switch(val) {
+      switch (val) {
       case 0x98:
         listener->insertEOL(true);
         break;
@@ -1156,7 +1195,8 @@ bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::Li
       // happens one type at the end of file: bug or normal end table?
       MWAW_DEBUG_MSG(("FWText::sendTable: find a spurious column break in last line position\n"));
       cellPos.resize(2*numCols);
-    } else {
+    }
+    else {
       MWAW_DEBUG_MSG(("FWText::sendTable: find too many columns\n"));
       return false;
     }
@@ -1175,7 +1215,8 @@ bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::Li
     outBorder=FWStruct::Border::getBorder(border.m_type[0]);
     vBorder=FWStruct::Border::getBorder(border.m_type[2]);
     outBorder.m_color=vBorder.m_color=border.m_color[0];
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("FWText::sendTable: can not find border=%d\n",ruler.m_tableBorderId));
     outBorder.m_width=vBorder.m_width=0;
   }
@@ -1364,7 +1405,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
   int actPage = 0, actCol = 0, numCol=1;
   listener->setParagraph(ruler);
   float prevHeight = -1;
-  while(1) {
+  while (1) {
     pos = input->tell();
     bool sendData = false;
     f.str("");
@@ -1374,9 +1415,11 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
       if (actCol < numCol-1 && numCol > 1) {
         listener->insertBreak(MWAWContentListener::ColumnBreak);
         actCol++;
-      } else if (actPage >= nPages) {
+      }
+      else if (actPage >= nPages) {
         MWAW_DEBUG_MSG(("FWText::send can not find the page information\n"));
-      } else {
+      }
+      else {
         FWTextInternal::PageInfo const &page = zone->m_pagesInfo[size_t(actPage)];
         if (sendData) {
           if (zone->m_zoneType == FWTextInternal::Zone::Main)
@@ -1581,7 +1624,8 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
     if (!ok) { // force to try as attachment
       header = 1;
       input->seek(pos+2, librevenge::RVNG_SEEK_SET);
-    } else if (!knownZone)
+    }
+    else if (!knownZone)
       text->m_zoneType = FWTextInternal::Zone::Main;
   }
   if (header) { // attachement
@@ -1677,7 +1721,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
 #if DEBUGII
   int numLines=0;
 #endif
-  while(1) {
+  while (1) {
     pos = input->tell();
     if (pos+2 >= zone->end()) break;
     int type = (int)input->readULong(2);
@@ -1730,7 +1774,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
     MWAW_DEBUG_MSG(("FWText::readTextData: entry %d already exists\n", zone->id()));
   }
   m_state->m_entryMap.insert
-  ( std::multimap<int, shared_ptr<FWTextInternal::Zone> >::value_type(zone->id(), text));
+  (std::multimap<int, shared_ptr<FWTextInternal::Zone> >::value_type(zone->id(), text));
 
   f.str("");
   f << "TextData-b:";
@@ -1801,12 +1845,14 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
       int numData = (int)input->readULong(2);
       if (!numData) break;
       sz = 26+9*numData;
-    } else if (high==0xe1) {
+    }
+    else if (high==0xe1) {
       input->seek(14, librevenge::RVNG_SEEK_CUR);
       int numData = (int)input->readULong(2);
       if (!numData) break;
       sz = 30+9*numData;
-    } else if (high==0 && (val%50)!=30)
+    }
+    else if (high==0 && (val%50)!=30)
       sz=26;
     if (sz == 0 || pos+sz > zone->end()) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1859,7 +1905,8 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
   if (val > 0) {
     item.m_index=val;
     numOk++;
-  } else {
+  }
+  else {
     f << "#index=" << val << ",";
     numBad++;
   }
@@ -1869,7 +1916,8 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
     if (val < -100||val > 100) {
       numBad++;
       f << "#";
-    } else
+    }
+    else
       numOk++;
     f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
@@ -1895,7 +1943,8 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
     if (i > 1 && (val < -100 || val > 100)) {
       f << "#";
       numBad++;
-    } else
+    }
+    else
       numOk++;
     f << "g" << i << "=" << std::hex << val << std::dec << ",";
   }
@@ -1917,7 +1966,8 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
     m_state->m_itemMap.insert
     (std::map<int,FWTextInternal::Item>::value_type(id,item));
     set=true;
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("FWText::readItem: id %d already exists\n", id));
   }
 
@@ -2078,7 +2128,7 @@ bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
     f << "Ruler:Tabs-" << i << ":";
     MWAWTabStop tab;
     val = (int)input->readULong(1);
-    switch(val>>5) {
+    switch (val>>5) {
     case 0:
       break;
     case 1:
@@ -2099,7 +2149,7 @@ bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
     case 6:
       f << "justifyAll[table],";
       break;
-      // 4: tableend, 5: justify(begintable), 6: justifyall(begin table)
+    // 4: tableend, 5: justify(begintable), 6: justifyall(begin table)
     default:
       f << "##tab[type]=" << (val>>5) << ",";
       break;
@@ -2119,7 +2169,7 @@ bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
     if (val) f << "repeat=" << val/256.;
 
     val = (int)input->readULong(1);
-    switch(val) {
+    switch (val) {
     case 0x1: // fixme: . or dotted
       tab.m_leaderCharacter = '.';
       break;
@@ -2159,7 +2209,8 @@ bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
         f << "B" << para.m_tableBorderId-1 << ",";
       ascii.addDelimiter(input->tell(), '|');
       input->seek(pos+4+0x24, librevenge::RVNG_SEEK_SET);
-    } else {
+    }
+    else {
       MWAW_DEBUG_MSG(("FWText::readParagraphTabs: can not find table data\n"));
       f << "###";
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -2459,7 +2510,7 @@ void FWText::createItemStructures()
       continue;
     int prevId=0;
     std::set<int> seens;
-    while(childId>0) {
+    while (childId>0) {
       if (seens.find(childId)!=seens.end()) {
         MWAW_DEBUG_MSG(("FWText::createItemStructures:find loop\n"));
         break;

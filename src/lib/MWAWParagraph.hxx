@@ -49,16 +49,19 @@ struct MWAWTabStop {
   enum Alignment { LEFT, RIGHT, CENTER, DECIMAL, BAR };
   //! constructor
   MWAWTabStop(double position = 0.0, Alignment alignment = LEFT, uint16_t leaderCharacter='\0', uint16_t decimalCharacter = '.')  :
-    m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_decimalCharacter(decimalCharacter) {
+    m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_decimalCharacter(decimalCharacter)
+  {
   }
   //! add a tab to the propList
   void addTo(librevenge::RVNGPropertyListVector &propList, double decalX=0.0) const;
   //! operator==
-  bool operator==(MWAWTabStop const &tabs) const {
+  bool operator==(MWAWTabStop const &tabs) const
+  {
     return cmp(tabs)==0;
   }
   //! operator!=
-  bool operator!=(MWAWTabStop const &tabs) const {
+  bool operator!=(MWAWTabStop const &tabs) const
+  {
     return cmp(tabs)!=0;
   }
   //! operator <<
@@ -93,11 +96,13 @@ public:
   //! destructor
   virtual ~MWAWParagraph();
   //! operator==
-  bool operator==(MWAWParagraph const &p) const {
+  bool operator==(MWAWParagraph const &p) const
+  {
     return cmp(p)==0;
   }
   //! operator!=
-  bool operator!=(MWAWParagraph const &p) const {
+  bool operator!=(MWAWParagraph const &p) const
+  {
     return cmp(p)!=0;
   }
   //! a comparison function
@@ -109,13 +114,15 @@ public:
   //! check if the paragraph has different borders
   bool hasDifferentBorders() const;
   //! a function used to resize the borders list ( adding empty borders if needed )
-  void resizeBorders(size_t newSize) {
+  void resizeBorders(size_t newSize)
+  {
     MWAWBorder empty;
     empty.m_style=MWAWBorder::None;
     m_borders.resize(newSize, empty);
   }
   //! set the interline
-  void setInterline(double value, librevenge::RVNGUnit unit, LineSpacingType type=Fixed) {
+  void setInterline(double value, librevenge::RVNGUnit unit, LineSpacingType type=Fixed)
+  {
     m_spacings[0]=value;
     m_spacingsInterlineUnit=unit;
     m_spacingsInterlineType=type;

@@ -67,13 +67,16 @@ namespace HMWKGraphInternal
 struct Frame {
   //! constructor
   Frame() : m_type(-1), m_fileId(-1), m_fileSubId(-1), m_id(-1), m_page(0),
-    m_pos(), m_baseline(0.f), m_posFlags(0), m_style(), m_borderType(0), m_inGroup(false), m_parsed(false), m_extra("") {
+    m_pos(), m_baseline(0.f), m_posFlags(0), m_style(), m_borderType(0), m_inGroup(false), m_parsed(false), m_extra("")
+  {
   }
   //! destructor
-  virtual ~Frame() {
+  virtual ~Frame()
+  {
   }
   //! return the frame bdbox
-  Box2f getBdBox() const {
+  Box2f getBdBox() const
+  {
     Vec2f minPt(m_pos[0][0], m_pos[0][1]);
     Vec2f maxPt(m_pos[1][0], m_pos[1][1]);
     for (int c=0; c<2; ++c) {
@@ -117,7 +120,7 @@ struct Frame {
 
 std::ostream &operator<<(std::ostream &o, Frame const &grph)
 {
-  switch(grph.m_type) {
+  switch (grph.m_type) {
   case 0: // main text
     break;
   case 1:
@@ -179,25 +182,29 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
 //! Internal: the geometrical graph of a HMWKGraph
 struct ShapeGraph : public Frame {
   //! constructor
-  ShapeGraph(Frame const &orig) : Frame(orig), m_shape() {
+  ShapeGraph(Frame const &orig) : Frame(orig), m_shape()
+  {
   }
   //! destructor
   ~ShapeGraph() {}
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, ShapeGraph const &graph) {
+  friend std::ostream &operator<<(std::ostream &o, ShapeGraph const &graph)
+  {
     o << graph.print() << ",";
     o << static_cast<Frame const &>(graph);
     return o;
   }
   //! return the current style
-  MWAWGraphicStyle getStyle() const {
+  MWAWGraphicStyle getStyle() const
+  {
     MWAWGraphicStyle style(m_style);
     if (m_shape.m_type!=MWAWGraphicShape::Line)
       style.m_arrows[0]=style.m_arrows[1]=false;
     return style;
   }
   //! print local data
-  std::string print() const {
+  std::string print() const
+  {
     std::stringstream s;
     s << m_shape;
     return s.str();
@@ -211,19 +218,23 @@ struct ShapeGraph : public Frame {
 //! Internal: the footnote of a HMWKGraph
 struct FootnoteFrame : public Frame {
   //! constructor
-  FootnoteFrame(Frame const &orig) : Frame(orig), m_textFileId(-1), m_textFileSubId(0) {
+  FootnoteFrame(Frame const &orig) : Frame(orig), m_textFileId(-1), m_textFileSubId(0)
+  {
   }
   //! destructor
-  ~FootnoteFrame() {
+  ~FootnoteFrame()
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, FootnoteFrame const &ftn) {
+  friend std::ostream &operator<<(std::ostream &o, FootnoteFrame const &ftn)
+  {
     o << ftn.print();
     o << static_cast<Frame const &>(ftn);
     return o;
   }
   //! print local data
-  std::string print() const {
+  std::string print() const
+  {
     std::stringstream s;
     if (m_textFileId>0)
       s << "textFileId=" << std::hex << m_textFileId << "[" << m_textFileSubId << std::dec << "],";
@@ -241,13 +252,16 @@ struct FootnoteFrame : public Frame {
 struct Group : public Frame {
   struct Child;
   //! constructor
-  Group(Frame const &orig) : Frame(orig), m_childsList() {
+  Group(Frame const &orig) : Frame(orig), m_childsList()
+  {
   }
   //! destructor
-  ~Group() {
+  ~Group()
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Group const &group) {
+  friend std::ostream &operator<<(std::ostream &o, Group const &group)
+  {
     o << group.print();
     o << static_cast<Frame const &>(group);
     return o;
@@ -259,11 +273,13 @@ struct Group : public Frame {
   //! struct to store child data in HMWKGraphInternal::Group
   struct Child {
     //! constructor
-    Child() : m_fileId(-1) {
+    Child() : m_fileId(-1)
+    {
       for (int i = 0; i < 2; ++i) m_values[i]=0;
     }
     //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, Child const &ch) {
+    friend std::ostream &operator<<(std::ostream &o, Child const &ch)
+    {
       if (ch.m_fileId > 0)
         o << "fileId="  << std::hex << ch.m_fileId << std::dec << ",";
       for (int i = 0; i < 2; ++i) {
@@ -292,20 +308,24 @@ std::string Group::print() const
 //! Internal: the picture of a HMWKGraph
 struct PictureFrame : public Frame {
   //! constructor
-  PictureFrame(Frame const &orig) : Frame(orig), m_pictureType(0), m_dim(0,0), m_borderDim(0,0) {
+  PictureFrame(Frame const &orig) : Frame(orig), m_pictureType(0), m_dim(0,0), m_borderDim(0,0)
+  {
     for (int i = 0; i < 7; ++i) m_values[i] = 0;
   }
   //! destructor
-  ~PictureFrame() {
+  ~PictureFrame()
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, PictureFrame const &picture) {
+  friend std::ostream &operator<<(std::ostream &o, PictureFrame const &picture)
+  {
     o << picture.print();
     o << static_cast<Frame const &>(picture);
     return o;
   }
   //! print local data
-  std::string print() const {
+  std::string print() const
+  {
     std::stringstream s;
     if (m_pictureType) s << "type?=" << m_pictureType << ",";
     if (m_dim[0] || m_dim[1])
@@ -332,7 +352,8 @@ struct PictureFrame : public Frame {
 //! a table cell in a table in HMWKGraph
 struct TableCell : public MWAWCell {
   //! constructor
-  TableCell(): MWAWCell(), m_id(-1), m_fileId(-1), m_flags(0), m_extra("") {
+  TableCell(): MWAWCell(), m_id(-1), m_fileId(-1), m_flags(0), m_extra("")
+  {
   }
   //! call when the content of a cell must be send
   virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table);
@@ -368,30 +389,36 @@ struct Table : public Frame, public MWAWTable {
   //! constructor
   Table(Frame const &orig, HMWKGraph &parser) :
     Frame(orig), MWAWTable(MWAWTable::CellPositionBit|MWAWTable::SizeBit),
-    m_parser(&parser), m_rows(0), m_columns(0), m_numCells(0), m_textFileId(-1) {
+    m_parser(&parser), m_rows(0), m_columns(0), m_numCells(0), m_textFileId(-1)
+  {
   }
   //! destructor
-  ~Table() {
+  ~Table()
+  {
   }
   //! return the i^th table cell
-  TableCell *get(int i) {
+  TableCell *get(int i)
+  {
     shared_ptr<MWAWCell> cell=MWAWTable::get(i);
     if (!cell)
       return 0;
     return static_cast<TableCell *>(cell.get());
   }
   //! send a text zone
-  bool sendText(long textId, long id) const {
+  bool sendText(long textId, long id) const
+  {
     return m_parser->sendText(textId, id);
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Table const &table) {
+  friend std::ostream &operator<<(std::ostream &o, Table const &table)
+  {
     o << table.print();
     o << static_cast<Frame const &>(table);
     return o;
   }
   //! print local data
-  std::string print() const {
+  std::string print() const
+  {
     std::stringstream s;
     if (m_rows)
       s << "nRows="  << m_rows << ",";
@@ -424,18 +451,22 @@ struct TextBox : public Frame {
   //! constructor
   TextBox(Frame const &orig, bool isComment)
     : Frame(orig), m_commentBox(isComment), m_textFileId(-1),
-      m_linkedIdList(), m_isLinked(false), m_extra() {
+      m_linkedIdList(), m_isLinked(false), m_extra()
+  {
     for (int i = 0; i < 2; ++i) m_dim[i] = 0;
   }
   //! destructor
-  ~TextBox() {
+  ~TextBox()
+  {
   }
   //! returns true if the box is linked to other textbox
-  bool isLinked() const {
+  bool isLinked() const
+  {
     return !m_linkedIdList.empty() || m_isLinked;
   }
   //! add property to frame extra values
-  void addTo(librevenge::RVNGPropertyList &frames, librevenge::RVNGPropertyList &tbExtra) const {
+  void addTo(librevenge::RVNGPropertyList &frames, librevenge::RVNGPropertyList &tbExtra) const
+  {
     if (m_type == 10) {
       std::stringstream stream;
       stream << m_style.m_lineWidth*0.03 << "cm solid " << m_style.m_lineColor;
@@ -446,11 +477,12 @@ struct TextBox : public Frame {
       stream.str("");
       stream << m_borders[0][1]*m_style.m_lineWidth*0.03 << "cm solid " << m_style.m_lineColor;
       frames.insert("fo:border-top", stream.str().c_str());
-    } else if (m_style.hasLine()) {
+    }
+    else if (m_style.hasLine()) {
       MWAWBorder border;
       border.m_width=m_style.m_lineWidth;
       border.m_color=m_style.m_lineColor;
-      switch(m_borderType) {
+      switch (m_borderType) {
       case 0: // solid
         break;
       case 1:
@@ -487,13 +519,15 @@ struct TextBox : public Frame {
       frames.insert("fo:background-color", m_style.m_surfaceColor.str().c_str());
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, TextBox const &textbox) {
+  friend std::ostream &operator<<(std::ostream &o, TextBox const &textbox)
+  {
     o << textbox.print();
     o << static_cast<Frame const &>(textbox);
     return o;
   }
   //! print local data
-  std::string print() const {
+  std::string print() const
+  {
     std::stringstream s;
     if (m_dim[0] > 0 || m_dim[1] > 0)
       s << "commentsDim2=" << m_dim[0] << "x" << m_dim[1] << ",";
@@ -533,14 +567,17 @@ bool TableCell::sendContent(MWAWContentListenerPtr, MWAWTable &table)
 //! Internal: the picture of a HMWKGraph
 struct Picture {
   //! constructor
-  Picture(shared_ptr<HMWKZone> zone) : m_zone(zone), m_fileId(-1), m_fileSubId(-1), m_parsed(false), m_extra("") {
+  Picture(shared_ptr<HMWKZone> zone) : m_zone(zone), m_fileId(-1), m_fileSubId(-1), m_parsed(false), m_extra("")
+  {
     m_pos[0] = m_pos[1] = 0;
   }
   //! destructor
-  ~Picture() {
+  ~Picture()
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Picture const &pict) {
+  friend std::ostream &operator<<(std::ostream &o, Picture const &pict)
+  {
     if (pict.m_fileId >= 0)
       o << "fileId="  << std::hex << pict.m_fileId << std::dec << ",";
     o << pict.m_extra;
@@ -564,7 +601,8 @@ struct Picture {
 //! Internal: the pattern of a HMWKGraph
 struct Pattern : public MWAWGraphicStyle::Pattern {
   //! constructor ( 4 int by patterns )
-  Pattern(uint16_t const *pat=0) : MWAWGraphicStyle::Pattern(), m_percent(0) {
+  Pattern(uint16_t const *pat=0) : MWAWGraphicStyle::Pattern(), m_percent(0)
+  {
     if (!pat) return;
     m_colors[0]=MWAWColor::white();
     m_colors[1]=MWAWColor::black();
@@ -572,8 +610,8 @@ struct Pattern : public MWAWGraphicStyle::Pattern {
     m_data.resize(8);
     for (size_t i=0; i < 4; ++i) {
       uint16_t val=pat[i];
-      m_data[2*i]=(unsigned char) (val>>8);
-      m_data[2*i+1]=(unsigned char) (val&0xFF);
+      m_data[2*i]=(unsigned char)(val>>8);
+      m_data[2*i+1]=(unsigned char)(val&0xFF);
     }
     int numOnes=0;
     for (size_t j=0; j < 8; ++j) {
@@ -595,7 +633,8 @@ struct State {
   //! constructor
   State() : m_numPages(0), m_framesMap(), m_picturesMap(), m_colorList(), m_patternList() { }
   //! returns a color correspond to an id
-  bool getColor(int id, MWAWColor &col) {
+  bool getColor(int id, MWAWColor &col)
+  {
     initColors();
     if (id < 0 || id >= int(m_colorList.size())) {
       MWAW_DEBUG_MSG(("HMWKGraphInternal::State::getColor: can not find color %d\n", id));
@@ -605,7 +644,8 @@ struct State {
     return true;
   }
   //! returns a pattern correspond to an id
-  bool getPattern(int id, Pattern &pattern) {
+  bool getPattern(int id, Pattern &pattern)
+  {
     initPatterns();
     if (id < 0 || id >= int(m_patternList.size())) {
       MWAW_DEBUG_MSG(("HMWKGraphInternal::State::getPattern: can not find pattern %d\n", id));
@@ -616,7 +656,8 @@ struct State {
   }
 
   //! returns a color corresponding to a pattern and a color
-  static MWAWColor getColor(MWAWColor col, float pattern) {
+  static MWAWColor getColor(MWAWColor col, float pattern)
+  {
     return MWAWColor::barycenter(pattern,col,1.f-pattern,MWAWColor::white());
   }
 
@@ -639,7 +680,7 @@ struct State {
 void State::initPatterns()
 {
   if (m_patternList.size()) return;
-  static uint16_t const (s_pattern[4*64]) = {
+  static uint16_t const(s_pattern[4*64]) = {
     0x0000, 0x0000, 0x0000, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0x7fff, 0xffff, 0xf7ff, 0xffff, 0x7fff, 0xf7ff, 0x7fff, 0xf7ff,
     0xffee, 0xffbb, 0xffee, 0xffbb, 0x77dd, 0x77dd, 0x77dd, 0x77dd, 0xaa55, 0xaa55, 0xaa55, 0xaa55, 0x8822, 0x8822, 0x8822, 0x8822,
     0xaa00, 0xaa00, 0xaa00, 0xaa00, 0xaa00, 0x4400, 0xaa00, 0x1100, 0x8800, 0xaa00, 0x8800, 0xaa00, 0x8800, 0x2200, 0x8800, 0x2200,
@@ -726,7 +767,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -761,7 +803,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_graphParser);
 
   long pos = m_input->tell();
-  switch(m_type) {
+  switch (m_type) {
   case FrameInFrame:
     m_graphParser->sendFrame(m_id, m_pos);
     break;
@@ -837,12 +879,12 @@ bool HMWKGraph::getColor(int colId, int patternId, MWAWColor &color) const
 {
   if (patternId==0) // ie. the empty pattern
     return false;
-  if (!m_state->getColor(colId, color) ) {
+  if (!m_state->getColor(colId, color)) {
     MWAW_DEBUG_MSG(("HMWKGraph::getColor: can not find color for id=%d\n", colId));
     return false;
   }
   HMWKGraphInternal::Pattern pattern;
-  if (!m_state->getPattern(patternId, pattern) ) {
+  if (!m_state->getPattern(patternId, pattern)) {
     MWAW_DEBUG_MSG(("HMWKGraph::getColor: can not find pattern for id=%d\n", patternId));
     return false;
   }
@@ -857,7 +899,7 @@ int HMWKGraph::numPages() const
   int nPages = 0;
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
-  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
+  for (; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (!fIt->second) continue;
     int page = fIt->second->m_page+1;
     if (page <= nPages) continue;
@@ -878,7 +920,7 @@ std::map<long,int> HMWKGraph::getTextFrameInformations() const
   std::map<long,int> mapIdType;
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
-  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
+  for (; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (!fIt->second) continue;
     HMWKGraphInternal::Frame const &frame = *fIt->second;
     std::vector<long> listId;
@@ -991,7 +1033,8 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
         pat.getAverageColor(col);
         if (i) style.m_pattern=pat;
       }
-    } else
+    }
+    else
       f << "#pattern[" << i << "]=" << pattern << ",";
     if (i==0)
       style.m_lineColor=col;
@@ -1015,7 +1058,7 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
   shared_ptr<HMWKGraphInternal::Frame> frame;
-  switch(graph.m_type) {
+  switch (graph.m_type) {
   case 3:
     frame = readFootnoteFrame(zone, graph);
     break;
@@ -1169,7 +1212,7 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
 
   frame.m_parsed = true;
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  switch(frame.m_type) {
+  switch (frame.m_type) {
   case 3: {
     HMWKGraphInternal::FootnoteFrame const &ftnote=
       reinterpret_cast<HMWKGraphInternal::FootnoteFrame const &>(frame);
@@ -1324,7 +1367,8 @@ bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosit
     if (textbox.m_dim[1] > textboxSz[1]) textboxSz[1]=textbox.m_dim[1];
     pos.setSize(textboxSz);
     pos.setOrder(100); // put note in front
-  } else if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
+  }
+  else if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(textboxSz);
 
   librevenge::RVNGPropertyList pList(extras), tbExtra;
@@ -1394,7 +1438,7 @@ shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<H
   MWAWGraphicShape &shape=graph->m_shape;
   shape = MWAWGraphicShape();
   shape.m_bdBox = shape.m_formBox = bdbox;
-  switch(graphType) {
+  switch (graphType) {
   case 0:
   case 3: { // lines
     if (pos+28 > dataSz) {
@@ -1462,7 +1506,8 @@ shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<H
       int decal = (transf%2) ? 4-transf : transf;
       angles[0] = float(-90*decal);
       angles[1] = float(90-90*decal);
-    } else {
+    }
+    else {
       f << "#transf=" << transf << ",";
       MWAW_DEBUG_MSG(("HMWKGraph::readShapeGraph: find unexpected transformation for arc\n"));
       ok = false;
@@ -1487,7 +1532,7 @@ shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<H
     float factor[2]= {bdbox.size()[0]/(maxVal[0]>minVal[0]?maxVal[0]-minVal[0]:0.f),
                       bdbox.size()[1]/(maxVal[1]>minVal[1]?maxVal[1]-minVal[1]:0.f)
                      };
-    float delta[2]= {bdbox[0][0]-minVal[0]*factor[0],bdbox[0][1]-minVal[1]*factor[1]};
+    float delta[2]= {bdbox[0][0]-minVal[0] *factor[0],bdbox[0][1]-minVal[1] *factor[1]};
     shape.m_formBox=Box2f(Vec2f(delta[0]-factor[0],delta[1]-factor[1]),
                           Vec2f(delta[0]+factor[0],delta[1]+factor[1]));
     shape.m_type=MWAWGraphicShape::Pie;
@@ -1606,13 +1651,13 @@ shared_ptr<HMWKGraphInternal::PictureFrame> HMWKGraph::readPictureFrame(shared_p
   libmwaw::DebugStream f;
   picture->m_pictureType = (int) input->readLong(2); // 0 or 4 : or maybe wrapping
   for (int i = 0; i < 5; ++i) // always 0
-    picture->m_values[i] =  (int) input->readLong(2);
+    picture->m_values[i] = (int) input->readLong(2);
   float bDim[2];
   for (int i = 0; i < 2; ++i)
     bDim[i] = float(input->readLong(4))/65536.f;
   picture->m_borderDim = Vec2f(bDim[0], bDim[1]);
   for (int i = 5; i < 7; ++i) // always 0
-    picture->m_values[i] =  (int) input->readLong(2);
+    picture->m_values[i] = (int) input->readLong(2);
   int dim[2]; //0,0 or 3e,3c
   for (int i = 0; i < 2; ++i)
     dim[i] = (int) input->readLong(2);
@@ -1697,7 +1742,8 @@ shared_ptr<HMWKGraphInternal::TextBox> HMWKGraph::readTextBox(shared_ptr<HMWKZon
   if (isMemo) { // checkme
     for (int i = 0; i < 2; ++i)
       textbox->m_dim[1-i] = float(input->readLong(4))/65536.f;
-  } else if (numLinks>1 && pos+12+4*(numLinks-1) <= dataSz) {
+  }
+  else if (numLinks>1 && pos+12+4*(numLinks-1) <= dataSz) {
     for (int l=1; l<numLinks; ++l)
       textbox->m_linkedIdList.push_back(input->readLong(4));
   }
@@ -1766,11 +1812,11 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
     shared_ptr<HMWKGraphInternal::TableCell> cell(new HMWKGraphInternal::TableCell);
     int posi[2];
     for (int j = 0; j < 2; ++j)
-      posi[j] =  (int) input->readLong(2);
+      posi[j] = (int) input->readLong(2);
     cell->setPosition(Vec2i(posi[1],posi[0]));
     int span[2];
     for (int j = 0; j < 2; ++j)
-      span[j] =  (int) input->readLong(2);
+      span[j] = (int) input->readLong(2);
     if (span[0]>=1 && span[1]>=1)
       cell->setNumSpannedCells(Vec2i(span[1], span[0]));
     else {
@@ -1819,7 +1865,7 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
       MWAWBorder border;
       border.m_width=float(input->readLong(4))/65536.f;
       int type = int(input->readLong(2));
-      switch(type) {
+      switch (type) {
       case 0: // solid
         break;
       case 1:
@@ -1849,7 +1895,8 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
         if (!m_state->getPattern(pattern, pat)) {
           f2 << "#pattern=" << pattern << ",";
           border.m_color = col;
-        } else
+        }
+        else
           border.m_color = m_state->getColor(col, pat.m_percent);
       }
       val = (long) input->readULong(2);
@@ -1900,7 +1947,7 @@ bool HMWKGraph::sendGroup(long groupId, MWAWPosition pos)
     MWAW_DEBUG_MSG(("HMWKGraph::sendGroup: %lx seems bad\n", groupId));
     return false;
   }
-  return sendGroup(reinterpret_cast<HMWKGraphInternal::Group const&>(*frame), pos);
+  return sendGroup(reinterpret_cast<HMWKGraphInternal::Group const &>(*frame), pos);
 }
 
 bool HMWKGraph::sendGroup(HMWKGraphInternal::Group const &group, MWAWPosition pos)
@@ -1944,7 +1991,7 @@ bool HMWKGraph::canCreateGraphic(HMWKGraphInternal::Group const &group)
       continue;
     HMWKGraphInternal::Frame const &frame=*fIt->second;
     if (frame.m_page!=page) return false;
-    switch(frame.m_type) {
+    switch (frame.m_type) {
     case 4: {
       HMWKGraphInternal::TextBox const &text=reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame);
       if (text.isLinked() || !m_mainParser->canSendTextAsGraphic(text.m_textFileId,0))
@@ -1977,7 +2024,7 @@ void HMWKGraph::sendGroup(HMWKGraphInternal::Group const &group, MWAWGraphicList
       continue;
     HMWKGraphInternal::Frame const &frame=*fIt->second;
     Box2f box=frame.getBdBox();
-    switch(frame.m_type) {
+    switch (frame.m_type) {
     case 4: {
       frame.m_parsed=true;
       HMWKGraphInternal::TextBox const &textbox=
@@ -2070,7 +2117,7 @@ void HMWKGraph::sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPositi
           continue;
         HMWKGraphInternal::Frame const &child=*fIt->second;
         Box2f box=child.getBdBox();
-        switch(child.m_type) {
+        switch (child.m_type) {
         case 4: {
           child.m_parsed=true;
           HMWKGraphInternal::TextBox const &textbox=
@@ -2108,7 +2155,7 @@ void HMWKGraph::sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPositi
     }
 
     // time to send back the data
-    for ( ; childNotSent <= c; ++childNotSent) {
+    for (; childNotSent <= c; ++childNotSent) {
       long localFId=group.m_childsList[childNotSent].m_fileId;
       fIt=m_state->m_framesMap.find(localFId);
       if (fIt != m_state->m_framesMap.end() && fIt->first==localFId && fIt->second) {
@@ -2129,7 +2176,7 @@ void HMWKGraph::prepareStructures()
 {
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::iterator fIt =
     m_state->m_framesMap.begin(), fIt2;
-  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
+  for (; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (!fIt->second) continue;
     HMWKGraphInternal::Frame &frame = *fIt->second;
     if (frame.m_type==11 && !frame.m_inGroup) {
@@ -2167,7 +2214,7 @@ bool HMWKGraph::checkGroupStructures(long fileId, long fileSubId, std::multimap<
   seens.insert(std::multimap<long, long>::value_type(fileId, fileSubId));
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::iterator fIt =
     m_state->m_framesMap.lower_bound(fileId);
-  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
+  for (; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (fIt->first!=fileId) break;
     if (!fIt->second) continue;
     HMWKGraphInternal::Frame &frame = *fIt->second;
@@ -2198,7 +2245,7 @@ bool HMWKGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
     notSend.insert(doNotSendIds[i]);
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
-  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
+  for (; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (notSend.find(fIt->first) != notSend.end() || !fIt->second) continue;
     HMWKGraphInternal::Frame const &frame = *fIt->second;
     if (frame.m_parsed || frame.m_type==3 || frame.m_inGroup)
@@ -2215,7 +2262,7 @@ void HMWKGraph::flushExtra()
 {
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
-  for ( ; fIt != m_state->m_framesMap.end(); ++fIt) {
+  for (; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (!fIt->second) continue;
     HMWKGraphInternal::Frame const &frame = *fIt->second;
     if (frame.m_parsed || frame.m_type==3)

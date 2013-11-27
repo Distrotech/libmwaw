@@ -94,7 +94,8 @@ public:
   void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
                      const librevenge::RVNGPropertyListVector &vector);
   /** insert a sequence of character */
-  void characters(const librevenge::RVNGString &sCharacters) {
+  void characters(const librevenge::RVNGString &sCharacters)
+  {
     if (!m_output) return;
     m_output->insertText(sCharacters);
   }
@@ -188,7 +189,8 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     }
 
     return confidence;
-  } catch (...) {
+  }
+  catch (...) {
     type = MWAW_T_UNKNOWN;
     kind = MWAW_K_UNKNOWN;
     return MWAW_C_NONE;
@@ -217,13 +219,16 @@ MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, lib
     shared_ptr<MWAWParser> parser=MWAWDocumentInternal::getParserFromHeader(ip, rsrcParser, header.get());
     if (!parser) return MWAW_R_UNKNOWN_ERROR;
     parser->parse(documentInterface);
-  } catch (libmwaw::FileException) {
+  }
+  catch (libmwaw::FileException) {
     MWAW_DEBUG_MSG(("File exception trapped\n"));
     error = MWAW_R_FILE_ACCESS_ERROR;
-  } catch (libmwaw::ParseException) {
+  }
+  catch (libmwaw::ParseException) {
     MWAW_DEBUG_MSG(("Parse exception trapped\n"));
     error = MWAW_R_PARSE_ERROR;
-  } catch (...) {
+  }
+  catch (...) {
     //fixme: too generic
     MWAW_DEBUG_MSG(("Unknown exception trapped\n"));
     error = MWAW_R_UNKNOWN_ERROR;
@@ -241,7 +246,8 @@ bool MWAWDocument::decodeGraphic(librevenge::RVNGBinaryData const &binary, libre
   MWAWDocumentInternal::GraphicExporter tmpHandler(paintInterface);
   try {
     if (!tmpHandler.checkData(binary) || !tmpHandler.readData(binary)) return false;
-  } catch(...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("MWAWDocument::decodeGraphic: unknown error\n"));
     return false;
   }
@@ -266,7 +272,8 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
 
       ip->seek(0, librevenge::RVNG_SEEK_SET);
       ip->setReadInverted(false);
-    } else if (!ip->hasResourceFork())
+    }
+    else if (!ip->hasResourceFork())
       return 0L;
 
     listHeaders = MWAWHeader::constructHeader(ip, rsrcParser);
@@ -278,11 +285,14 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
         continue;
       return new MWAWHeader(listHeaders[i]);
     }
-  } catch (libmwaw::FileException) {
+  }
+  catch (libmwaw::FileException) {
     MWAW_DEBUG_MSG(("File exception trapped\n"));
-  } catch (libmwaw::ParseException) {
+  }
+  catch (libmwaw::ParseException) {
     MWAW_DEBUG_MSG(("Parse exception trapped\n"));
-  } catch (...) {
+  }
+  catch (...) {
     //fixme: too generic
     MWAW_DEBUG_MSG(("Unknown exception trapped\n"));
   }
@@ -296,7 +306,7 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
   if (!header)
     return parser;
   try {
-    switch(header->getType()) {
+    switch (header->getType()) {
     case MWAWDocument::MWAW_T_ACTA:
       parser.reset(new ACParser(input, rsrcParser, header));
       break;
@@ -395,7 +405,8 @@ shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCPa
     default:
       break;
     }
-  } catch(...) {
+  }
+  catch (...) {
   }
   return parser;
 }
@@ -408,7 +419,8 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
     if (!parser)
       return false;
     return parser->checkHeader(&header, strict);
-  } catch(...) {
+  }
+  catch (...) {
   }
 
   return false;
@@ -534,10 +546,11 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
       pList.insert("svg:d", vector);
       m_output->drawPath(pList);
     }
-  } else if (strcmp(psName,"StartTextObject")==0) {
+  }
+  else if (strcmp(psName,"StartTextObject")==0) {
     pList.insert("svg:d", vector);
     m_output->startTextObject(propList);
-  } 
+  }
   else if (strcmp(psName,"OpenListElement")==0) {
     pList.insert("style:tab-stops", vector);
     m_output->openListElement(pList);

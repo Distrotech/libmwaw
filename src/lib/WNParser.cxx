@@ -61,7 +61,8 @@ struct State {
   //! constructor
   State() : m_endPos(-1), m_colorMap(), m_picturesList(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
-    m_numColumns(1), m_columnWidth(-1) {
+    m_numColumns(1), m_columnWidth(-1)
+  {
   }
 
   //! the last position
@@ -93,7 +94,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -254,7 +256,8 @@ void WNParser::parse(librevenge::RVNGTextInterface *docInterface)
     }
 
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("WNParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -319,7 +322,8 @@ bool WNParser::createZones()
   if (version() < 3) {
     if (!readDocEntriesV2())
       return false;
-  } else if (!readDocEntries())
+  }
+  else if (!readDocEntries())
     return false;
 
   std::multimap<std::string, WNEntry const *>::const_iterator iter;
@@ -417,7 +421,8 @@ bool WNParser::readDocEntries()
   if (freePos) { // checkme
     if (freePos > m_state->m_endPos) {
       MWAW_DEBUG_MSG(("WNParser::readDocEntries: find odd freePos\n"));
-    } else {
+    }
+    else {
       f << "freeZone?=" << std::hex << freePos << std::dec << ",";
       ascii().addPos(freePos);
       ascii().addNote("Entries(Free)");
@@ -486,7 +491,7 @@ bool WNParser::readDocEntriesV2()
     }
     WNEntry entry;
     entry.setBegin(dataPos);
-    switch(i) {
+    switch (i) {
     case 0:
     case 1:
     case 2:
@@ -595,11 +600,13 @@ bool WNParser::parseGraphicZone(WNEntry const &entry)
         std::stringstream s;
         s << "GraphicUnkn" << i;
         zone.setType(s.str());
-      } else
+      }
+      else
         zone.setType("GraphicData");
       if (i < 8)
         m_entryManager->add(zone);
-    } else if (zone.m_val[2]==-1 && zone.m_val[3]==0x76543210L) {
+    }
+    else if (zone.m_val[2]==-1 && zone.m_val[3]==0x76543210L) {
       zone.m_val[2]= zone.m_val[3]=0;
       f << "*";
     }
@@ -664,7 +671,8 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
     if (!pict) {
       MWAW_DEBUG_MSG(("WNParser::sendPicture: can not read the picture\n"));
       ascii().addDelimiter(pos, '|');
-    } else {
+    }
+    else {
       if (getListener()) {
         librevenge::RVNGBinaryData data;
         std::string pictType;
@@ -672,7 +680,8 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
         if (bdbox.size().x() > 0 && bdbox.size().y() > 0) {
           pictPos=MWAWPosition(Vec2f(0,0),bdbox.size(), librevenge::RVNG_POINT);
           pictPos.setNaturalSize(pict->getBdBox().size());
-        } else
+        }
+        else
           pictPos=MWAWPosition(Vec2f(0,0),pict->getBdBox().size(), librevenge::RVNG_POINT);
         pictPos.setRelativePosition(MWAWPosition::Char);
 
@@ -749,7 +758,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
     f.str("");
     f << "ColorMap[" << n << "]:";
     int type = (int) input->readLong(1);
-    switch(type) {
+    switch (type) {
     case 1:
       f << "named(RGB),";
       break;
@@ -787,7 +796,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
     f.str("");
     f << "ColorMapData[" << n << "]:";
     unsigned char col[4];
-    for (int i = 0; i < 4; i++) col[i] = (unsigned char) (input->readULong(2)/256);
+    for (int i = 0; i < 4; i++) col[i] = (unsigned char)(input->readULong(2)/256);
     f << "col=" << MWAWColor(col[0],col[1],col[2],col[3]) << ",";
     m_state->m_colorMap.push_back(MWAWColor((unsigned char)col[0],(unsigned char)col[1],(unsigned char)col[2]));
 
@@ -930,7 +939,7 @@ bool WNParser::readGenericUnkn(WNEntry const &entry)
     f.str("");
     f << entry.type() << "[" << n << "]:";
     int type = (int) input->readULong(1);
-    switch(type) {
+    switch (type) {
     case 0:
       f << "def,";
       break;
@@ -1002,7 +1011,8 @@ WNEntry WNParser::readEntry()
       MWAW_DEBUG_MSG(("WNParser::readEntry: find an invalid entry\n"));
       res.setLength(0);
     }
-  } else {
+  }
+  else {
     res.m_val[2]= (int) input->readLong(4);
     res.m_val[3]= (int) input->readLong(4);
   }
@@ -1030,7 +1040,7 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
   input->seek(0, librevenge::RVNG_SEEK_SET);
   long val = (long) input->readULong(4);
   int vers = 0;
-  switch(val) {
+  switch (val) {
   case 0:
     if (input->readULong(4) != 0)
       return false;

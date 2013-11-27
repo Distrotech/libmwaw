@@ -57,7 +57,8 @@ namespace FWGraphInternal
 //! Internal: the sidebar of a FWGraph
 struct SideBar : public FWStruct::ZoneHeader {
   //! constructor
-  SideBar(FWStruct::ZoneHeader const &header): FWStruct::ZoneHeader(header), m_box(), m_page(0), m_borderId(0), m_parsed(false) {
+  SideBar(FWStruct::ZoneHeader const &header): FWStruct::ZoneHeader(header), m_box(), m_page(0), m_borderId(0), m_parsed(false)
+  {
   }
   //! the position (in point)
   Box2f m_box;
@@ -101,7 +102,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -289,7 +291,7 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readSideBar(FWStruct::EntryPtr zone, F
   for (int i=0; i<3; ++i) {
     pos = input->tell();
     bool ok=false;
-    switch(i) {
+    switch (i) {
     case 0:
       ok=readSideBarPosition(zone, *sidebar);
       break;
@@ -325,11 +327,13 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readSideBar(FWStruct::EntryPtr zone, F
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
       input->seek(sz, librevenge::RVNG_SEEK_CUR);
-    } else {
+    }
+    else {
       MWAW_DEBUG_MSG(("FWGraph::readSideBar: find bad end data\n"));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
     }
-  } else if (val) {
+  }
+  else if (val) {
     MWAW_DEBUG_MSG(("FWGraph::readSideBar: find bad end data(II)\n"));
   }
   m_state->m_sidebarList.push_back(sidebar);
@@ -380,7 +384,8 @@ bool FWGraph::readSideBarPosition(FWStruct::EntryPtr zone, FWGraphInternal::Side
   if (N*4+28 > sz) {
     f << "#N=" << N << ",";
     N=0;
-  } else
+  }
+  else
     f << "N=" << N << ",";
 
   /* probably first the left margin: (x_i,n): meaning to add n times
@@ -591,7 +596,8 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readGraphicData(FWStruct::EntryPtr zon
     if (sz < 0 || pos+4+sz > zone->end()) {
       f << "#sz=" << sz << ",";
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-    } else if (sz) { // a serie of doc id ( normally 1e )
+    }
+    else if (sz) {   // a serie of doc id ( normally 1e )
       f << "docId[type1e?]=[";
       for (int i = 0; i < sz/2; i++) {
         int id = int(input->readLong(2));
@@ -604,7 +610,8 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readGraphicData(FWStruct::EntryPtr zon
       f << "],";
       input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
     }
-  } else if (nextData) f << "GraphData[2]:#" << nextData;
+  }
+  else if (nextData) f << "GraphData[2]:#" << nextData;
 
   input->seek(1, librevenge::RVNG_SEEK_CUR);
   if (f.str().length()) {
@@ -735,7 +742,8 @@ bool FWGraph::sendGraphic(FWStruct::EntryPtr zone)
   Vec2f actualSize, naturalSize;
   if (box.size().x() > 0 && box.size().y()  > 0) {
     actualSize = naturalSize = box.size();
-  } else if (actualSize.x() <= 0 || actualSize.y() <= 0) {
+  }
+  else if (actualSize.x() <= 0 || actualSize.y() <= 0) {
     MWAW_DEBUG_MSG(("FWGraph::sendGraphic: can not find the picture size\n"));
     actualSize = naturalSize = Vec2f(100,100);
   }

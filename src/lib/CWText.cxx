@@ -61,7 +61,8 @@ enum PLCType { P_Font,  P_Ruler, P_Child, P_Section, P_TextZone, P_Token, P_Unkn
 /** Internal : the different plc types: mainly for debugging */
 struct PLC {
   /// the constructor
-  PLC() : m_type(P_Unknown), m_id(-1), m_extra("") {
+  PLC() : m_type(P_Unknown), m_id(-1), m_extra("")
+  {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, PLC const &plc);
@@ -75,7 +76,7 @@ struct PLC {
 
 std::ostream &operator<<(std::ostream &o, PLC const &plc)
 {
-  switch(plc.m_type) {
+  switch (plc.m_type) {
   case P_Font:
     o << "F";
     break;
@@ -107,10 +108,12 @@ std::ostream &operator<<(std::ostream &o, PLC const &plc)
 /** Internal: class to store the paragraph properties */
 struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Paragraph() : MWAWParagraph(), m_labelType(0) {
+  Paragraph() : MWAWParagraph(), m_labelType(0)
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
+  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
+  {
     o << reinterpret_cast<MWAWParagraph const &>(ind) << ",";
     static char const *(labelNames[]) = {
       "none", "diamond", "bullet", "checkbox", "hardvard", "leader", "legal",
@@ -137,7 +140,7 @@ void Paragraph::updateListLevel()
   m_listLevelIndex = lev;
   MWAWListLevel theLevel;
   theLevel.m_labelWidth=0.2;
-  switch(m_labelType) {
+  switch (m_labelType) {
   case 0:
     theLevel.m_type = MWAWListLevel::NONE;
     break;
@@ -158,10 +161,12 @@ void Paragraph::updateListLevel()
     else if ((lev%3)==2) {
       theLevel.m_prefix = "(";
       theLevel.m_type = MWAWListLevel::DECIMAL;
-    } else if ((lev%3)==0) {
+    }
+    else if ((lev%3)==0) {
       theLevel.m_prefix = "(";
       theLevel.m_type = MWAWListLevel::LOWER_ALPHA;
-    } else
+    }
+    else
       theLevel.m_type = MWAWListLevel::LOWER_ROMAN;
     break;
   }
@@ -206,13 +211,15 @@ void Paragraph::updateListLevel()
 }
 
 struct ParagraphPLC {
-  ParagraphPLC() : m_rulerId(-1), m_styleId(-1), m_flags(0), m_extra("") {
+  ParagraphPLC() : m_rulerId(-1), m_styleId(-1), m_flags(0), m_extra("")
+  {
   }
 
-  friend std::ostream &operator<<(std::ostream &o, ParagraphPLC const &info) {
+  friend std::ostream &operator<<(std::ostream &o, ParagraphPLC const &info)
+  {
     if (info.m_rulerId >= 0) o << "P" << info.m_rulerId <<",";
     if (info.m_styleId >= 0) o << "LK" << info.m_styleId <<",";
-    switch(info.m_flags&3) {
+    switch (info.m_flags&3) {
     case 0: // normal
       break;
     case 1:
@@ -258,10 +265,12 @@ struct ParagraphPLC {
 /** internal class used to store a section */
 struct Section {
   //! the constructor
-  Section() : m_pos(0), m_numColumns(1), m_columnsWidth(), m_columnsSep(), m_extra("") {
+  Section() : m_pos(0), m_numColumns(1), m_columnsWidth(), m_columnsSep(), m_extra("")
+  {
   }
   //! returns a section
-  MWAWSection getSection() const {
+  MWAWSection getSection() const
+  {
     MWAWSection sec;
     if (m_numColumns <= 1)
       return sec;
@@ -288,7 +297,8 @@ struct Section {
     return sec;
   }
   //! operator <<
-  friend std::ostream &operator<<(std::ostream &o, Section const &sec) {
+  friend std::ostream &operator<<(std::ostream &o, Section const &sec)
+  {
     o << "pos=" << sec.m_pos << ",";
     if (sec.m_numColumns != 1) o << "numCols=" << sec.m_numColumns << ",";
     o << "col[width]=[";
@@ -318,10 +328,12 @@ struct Section {
 
 /** internal class used to store a text zone */
 struct TextZoneInfo {
-  TextZoneInfo() : m_pos(0), m_N(0), m_extra("") {
+  TextZoneInfo() : m_pos(0), m_N(0), m_extra("")
+  {
   }
 
-  friend std::ostream &operator<<(std::ostream &o, TextZoneInfo const &info) {
+  friend std::ostream &operator<<(std::ostream &o, TextZoneInfo const &info)
+  {
     o << "pos=" << info.m_pos << ",";
     if (info.m_N >= 0) o << "size=" << info.m_N <<",";
     if (info.m_extra.length()) o << info.m_extra;
@@ -337,7 +349,8 @@ enum TokenType { TKN_UNKNOWN, TKN_FOOTNOTE, TKN_PAGENUMBER, TKN_GRAPHIC, TKN_FIE
 /** Internal: class to store field definition: TOKN entry*/
 struct Token {
   //! constructor
-  Token() : m_type(TKN_UNKNOWN), m_zoneId(-1), m_page(-1), m_descent(0), m_fieldEntry(), m_extra("") {
+  Token() : m_type(TKN_UNKNOWN), m_zoneId(-1), m_page(-1), m_descent(0), m_fieldEntry(), m_extra("")
+  {
     for (int i = 0; i < 3; i++) m_unknown[i] = 0;
     for (int i = 0; i < 2; i++) m_size[i] = 0;
   }
@@ -371,7 +384,7 @@ std::ostream &operator<<(std::ostream &o, Token const &tok)
     o << "field[linked],";
     break;
   case TKN_PAGENUMBER:
-    switch(tok.m_unknown[0]) {
+    switch (tok.m_unknown[0]) {
     case 0:
       o << "field[pageNumber],";
       break;
@@ -414,11 +427,13 @@ struct Zone : public CWStruct::DSET {
   Zone(CWStruct::DSET const &dset = CWStruct::DSET()) :
     CWStruct::DSET(dset), m_zones(), m_numChar(0), m_numTextZone(0), m_numParagInfo(0),
     m_numFont(0), m_fatherId(0), m_unknown(0), m_fontList(), m_paragraphList(),
-    m_sectionList(), m_tokenList(), m_textZoneList(), m_plcMap() {
+    m_sectionList(), m_tokenList(), m_textZoneList(), m_plcMap()
+  {
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Zone const &doc) {
+  friend std::ostream &operator<<(std::ostream &o, Zone const &doc)
+  {
     o << static_cast<CWStruct::DSET const &>(doc);
     if (doc.m_numChar) o << "numChar=" << doc.m_numChar << ",";
     if (doc.m_numTextZone) o << "numTextZone=" << doc.m_numTextZone << ",";
@@ -448,7 +463,8 @@ struct Zone : public CWStruct::DSET {
 //! Internal: the state of a CWText
 struct State {
   //! constructor
-  State() : m_version(-1), m_paragraphsList(), m_zoneMap() {
+  State() : m_version(-1), m_paragraphsList(), m_zoneMap()
+  {
   }
 
   //! the file version
@@ -529,7 +545,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
   textZone->m_numTextZone = (int) input->readULong(2);
   textZone->m_numParagInfo = (int) input->readULong(2);
   textZone->m_numFont = (int) input->readULong(2);
-  switch(textZone->m_textType >> 4) {
+  switch (textZone->m_textType >> 4) {
   case 2:
     textZone->m_type = CWStruct::DSET::T_Header;
     break;
@@ -561,14 +577,14 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
 
   // read the last part
   int data0Length = 0;
-  switch(vers) {
+  switch (vers) {
   case 1:
     data0Length = 24;
     break;
   case 2:
     data0Length = 28;
     break;
-    // case 3: ???
+  // case 3: ???
   case 4:
   case 5:
   case 6:
@@ -660,7 +676,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
       return textZone;
     }
 
-    switch(z) {
+    switch (z) {
     case 0:
       ok = readParagraphs(zEntry, *textZone);
       break;
@@ -699,7 +715,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
       input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
 
-  for ( size_t tok = 0; tok < textZone->m_tokenList.size(); tok++) {
+  for (size_t tok = 0; tok < textZone->m_tokenList.size(); tok++) {
     CWTextInternal::Token const &token = textZone->m_tokenList[tok];
     if (token.m_zoneId > 0)
       textZone->m_otherChilds.push_back(token.m_zoneId);
@@ -707,7 +723,8 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
 
   if (m_state->m_zoneMap.find(textZone->m_id) != m_state->m_zoneMap.end()) {
     MWAW_DEBUG_MSG(("CWText::readDSETZone: zone %d already exists!!!\n", textZone->m_id));
-  } else
+  }
+  else
     m_state->m_zoneMap[textZone->m_id] = textZone;
 
   complete = ok;
@@ -727,7 +744,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
 
   int fontSize = 0;
   int vers = version();
-  switch(vers) {
+  switch (vers) {
   case 1:
   case 2:
   case 3:
@@ -831,7 +848,7 @@ bool CWText::readFonts(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   long pos = entry.begin();
 
   int fontSize = 0;
-  switch(version()) {
+  switch (version()) {
   case 1:
   case 2:
   case 3:
@@ -895,7 +912,7 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 
   int styleSize = 0;
   int const vers = version();
-  switch(vers) {
+  switch (vers) {
   case 1:
     styleSize = 6;
     break;
@@ -977,7 +994,7 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 
   int dataSize = 0;
   int const vers=version();
-  switch(vers) {
+  switch (vers) {
   case 1:
   case 2:
   case 3:
@@ -1019,7 +1036,7 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 
     int type = (int) input->readLong(2);
     f.str("");
-    switch(type) {
+    switch (type) {
     case 0:
       token.m_type = CWTextInternal::TKN_FOOTNOTE;
       break;
@@ -1039,13 +1056,13 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
       break;
     }
 
-    token.m_unknown[0] =  (int) input->readLong(2);
+    token.m_unknown[0] = (int) input->readLong(2);
     token.m_zoneId = (int) input->readLong(2);
-    token.m_unknown[1] =  (int) input->readLong(1);
+    token.m_unknown[1] = (int) input->readLong(1);
     token.m_page = (int) input->readLong(1);
-    token.m_unknown[2] =  (int) input->readLong(2);
+    token.m_unknown[2] = (int) input->readLong(2);
     for (int j = 0; j < 2; j++)
-      token.m_size[1-j] =  (int) input->readLong(2);
+      token.m_size[1-j] = (int) input->readLong(2);
     for (int j = 0; j < 3; j++) {
       val = (int) input->readLong(2);
       if (val) f << "f" << j << "=" << val << ",";
@@ -1223,7 +1240,7 @@ bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone
     f << "TextZoneSz-" << i << ":";
     CWTextInternal::TextZoneInfo info;
     info.m_pos = (long) input->readULong(4);
-    info.m_N =  (int) input->readULong(2);
+    info.m_N = (int) input->readULong(2);
     f << info;
     zone.m_textZoneList.push_back(info);
     plc.m_id = i;
@@ -1323,7 +1340,8 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
             nextSectionPos = -1;
             nextSection = -1;
           }
-        } else {
+        }
+        else {
           section = m_mainParser->getMainSection();
           nextSectionPos = -1;
           nextSection = -1;
@@ -1335,7 +1353,8 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
             listener->closeSection();
           listener->openSection(section);
         }
-      } else if (numSectionInPage==0)
+      }
+      else if (numSectionInPage==0)
         numSectionInPage++;
       plcIt = zone.m_plcMap.find(actC);
       bool seeToken = false;
@@ -1346,7 +1365,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
         }
         CWTextInternal::PLC const &plc = plcIt++->second;
         f << "[" << plc << "]";
-        switch(plc.m_type) {
+        switch (plc.m_type) {
         case CWTextInternal::P_Font:
           if (plc.m_id < 0 || plc.m_id >= int(zone.m_fontList.size())) {
             MWAW_DEBUG_MSG(("CWText::sendText: can not find font %d\n", plc.m_id));
@@ -1375,7 +1394,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
             break;
           }
           CWTextInternal::Token const &token = zone.m_tokenList[size_t(plc.m_id)];
-          switch(token.m_type) {
+          switch (token.m_type) {
           case CWTextInternal::TKN_FOOTNOTE:
             if (zone.okChildId(token.m_zoneId))
               m_mainParser->sendFootnote(token.m_zoneId);
@@ -1383,7 +1402,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
               f << "###";
             break;
           case CWTextInternal::TKN_PAGENUMBER:
-            switch(token.m_unknown[0]) {
+            switch (token.m_unknown[0]) {
             case 1:
             case 2: {
               std::stringstream s;
@@ -1409,7 +1428,8 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
                 tPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
               }
               m_mainParser->sendZone(token.m_zoneId, false, tPos);
-            } else
+            }
+            else
               f << "###";
             break;
           case CWTextInternal::TKN_FIELD:
@@ -1422,7 +1442,8 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
               while (!input->isEnd() && input->tell() < token.m_fieldEntry.end())
                 listener->insertCharacter((unsigned char)input->readULong(1), input, endFPos);
               input->seek(actPos, librevenge::RVNG_SEEK_SET);
-            } else {
+            }
+            else {
               MWAW_DEBUG_MSG(("CWText::sendText: can not find field token data\n"));
               listener->insertCharacter(' ');
             }
@@ -1617,8 +1638,8 @@ bool CWText::readParagraphs()
 
   int N = (int) input->readULong(2);
   int type = (int) input->readLong(2);
-  int val =  (int) input->readLong(2);
-  int fSz =  (int) input->readLong(2);
+  int val = (int) input->readLong(2);
+  int fSz = (int) input->readLong(2);
 
   if (sz != 12+fSz*N) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1707,7 +1728,7 @@ bool CWText::readParagraph(int id)
   f << "num[used]=" << val << ",";
   val = (int) input->readULong(2);
   int align = 0;
-  switch(vers) {
+  switch (vers) {
   case 1:
   case 2:
   case 3:
@@ -1723,7 +1744,7 @@ bool CWText::readParagraph(int id)
   default:
     break;
   }
-  switch(align) {
+  switch (align) {
   case 0:
     break;
   case 1:
@@ -1742,7 +1763,7 @@ bool CWText::readParagraph(int id)
 
   bool inPoint = false;
   int interline = 0;
-  switch(vers) {
+  switch (vers) {
   case 1:
     inPoint = (val & 0x2000);
     interline = val & 0xFF;
@@ -1754,7 +1775,8 @@ bool CWText::readParagraph(int id)
       inPoint = true;
       interline &= 0x7F;
       val &= 0x3F00;
-    } else {
+    }
+    else {
       interline >>= 3;
       val &= 0x3F07;
     }
@@ -1803,7 +1825,7 @@ bool CWText::readParagraph(int id)
   *(ruler.m_margins[2]) -= 28./72.;
   if (ruler.m_margins[2].get() < 0.0) ruler.m_margins[2] = 0.0;
   if (vers >= 2) {
-    for(int i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++) {
       ruler.m_spacings[i+1] = float(input->readULong(1))/72.f;
       input->seek(1, librevenge::RVNG_SEEK_CUR); // flags to define the printing unit
     }
@@ -1823,7 +1845,7 @@ bool CWText::readParagraph(int id)
     tab.m_position = float(input->readLong(2))/72.f;
     val = (int) input->readULong(1);
     int leaderType = 0;
-    switch(vers) {
+    switch (vers) {
     case 1:
       align = val & 3;
       val &= 0xFC;
@@ -1844,7 +1866,7 @@ bool CWText::readParagraph(int id)
     default:
       break;
     }
-    switch(align&3) {
+    switch (align&3) {
     case 1:
       tab.m_alignment = MWAWTabStop::CENTER;
       break;
@@ -1858,7 +1880,7 @@ bool CWText::readParagraph(int id)
     default:
       break;
     }
-    switch(leaderType) {
+    switch (leaderType) {
     case 1:
       tab.m_leaderCharacter = '.';
       break;
@@ -1947,7 +1969,7 @@ void CWText::flushExtra()
   if (!m_parserState->m_listener) return;
   std::map<int, shared_ptr<CWTextInternal::Zone> >::iterator iter
     = m_state->m_zoneMap.begin();
-  for ( ; iter !=  m_state->m_zoneMap.end(); ++iter) {
+  for (; iter !=  m_state->m_zoneMap.end(); ++iter) {
     shared_ptr<CWTextInternal::Zone> zone = iter->second;
     if (!zone || zone->m_parsed)
       continue;

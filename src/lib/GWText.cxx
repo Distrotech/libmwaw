@@ -63,7 +63,8 @@ enum PLCType { P_Font, P_Page,  P_Ruler, P_Token, P_Unknown};
 /** Internal : a PLC: used to store change of properties in GWTextInternal::Zone */
 struct PLC {
   /// the constructor
-  PLC() : m_type(P_Unknown), m_id(-1), m_extra("") {
+  PLC() : m_type(P_Unknown), m_id(-1), m_extra("")
+  {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, PLC const &plc);
@@ -76,7 +77,7 @@ struct PLC {
 };
 std::ostream &operator<<(std::ostream &o, PLC const &plc)
 {
-  switch(plc.m_type) {
+  switch (plc.m_type) {
   case P_Font:
     o << "F";
     break;
@@ -104,7 +105,8 @@ std::ostream &operator<<(std::ostream &o, PLC const &plc)
 //! Internal and low level: structure which stores a token for GWText
 struct Token {
   //! constructor
-  Token() : m_type(-1), m_format(0), m_pictEntry(), m_dataSize(0), m_dim(0,0), m_date(0xFFFFFFFF), m_extra("") {
+  Token() : m_type(-1), m_format(0), m_pictEntry(), m_dataSize(0), m_dim(0,0), m_date(0xFFFFFFFF), m_extra("")
+  {
   }
   //! returns a field format
   std::string getDTFormat() const;
@@ -130,9 +132,9 @@ struct Token {
 
 bool Token::sendTo(MWAWListener &listener) const
 {
-  switch(m_type) {
+  switch (m_type) {
   case 2:
-    switch(m_format) {
+    switch (m_format) {
     case 1:
     case 3: // must be roman
       listener.insertField(MWAWField(MWAWField::PageNumber));
@@ -163,9 +165,9 @@ bool Token::sendTo(MWAWListener &listener) const
 
 std::string Token::getDTFormat() const
 {
-  switch(m_type) {
+  switch (m_type) {
   case 0x15:
-    switch(m_format) {
+    switch (m_format) {
     case 0xa:
       return "%m/%d/%y";
     case 0xb:
@@ -189,7 +191,7 @@ std::string Token::getDTFormat() const
     }
     break;
   case 0x16:
-    switch(m_format) {
+    switch (m_format) {
     case 0x14:
       return "%I:%M %p";
     case 0x15:
@@ -214,11 +216,11 @@ std::string Token::getDTFormat() const
 
 std::ostream &operator<<(std::ostream &o, Token const &token)
 {
-  switch(token.m_type) {
+  switch (token.m_type) {
   case 0: // none
     break;
   case 2:
-    switch(token.m_format) {
+    switch (token.m_format) {
     case 0:
       o << "page,";
       break;
@@ -265,10 +267,12 @@ std::ostream &operator<<(std::ostream &o, Token const &token)
 //! Internal and low level: structure which stores a text position for GWText
 struct Frame {
   //! constructor
-  Frame() : m_pos(), m_page(0), m_extra("") {
+  Frame() : m_pos(), m_page(0), m_extra("")
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Frame const &frm) {
+  friend std::ostream &operator<<(std::ostream &o, Frame const &frm)
+  {
     o << "dim=" << frm.m_pos << ",";
     if (frm.m_page) o << "page=" << frm.m_page << ",";
     o << frm.m_extra;
@@ -289,14 +293,17 @@ struct Zone {
   Zone(): m_type(-1), m_numFonts(0), m_numRulers(0), m_numLines(0),
     m_numTokens(0), m_numChar(0), m_numCharPLC(0), m_numFrames(0),
     m_fontList(), m_rulerList(), m_tokenList(), m_frameList(),
-    m_textEntry(), m_posPLCMap(), m_parsed(false), m_extra("") {
+    m_textEntry(), m_posPLCMap(), m_parsed(false), m_extra("")
+  {
   }
   //! returns true if this is the main zone
-  bool isMain() const {
+  bool isMain() const
+  {
     return m_type==3;
   }
   //! check if the data read are or not ok
-  bool ok() const {
+  bool ok() const
+  {
     if (m_type<0 || m_type > 5)
       return false;
     if (m_numFonts<=0 || m_numRulers<=0 || m_numLines<0 || m_numTokens<=0 || m_numChar<0 ||
@@ -305,12 +312,14 @@ struct Zone {
     return true;
   }
   //! returns the data size
-  long size() const {
+  long size() const
+  {
     return 22*m_numFonts+192*m_numRulers+6*m_numCharPLC
            +18*m_numTokens+14*m_numLines+22*m_numFrames+m_numChar;
   }
   //! returns true if the data has graphic
-  bool hasGraphics() const {
+  bool hasGraphics() const
+  {
     for (size_t t=0; t < m_tokenList.size(); ++t) {
       if (m_tokenList[t].m_type==4)
         return true;
@@ -318,8 +327,9 @@ struct Zone {
     return false;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Zone const &fr) {
-    switch(fr.m_type) {
+  friend std::ostream &operator<<(std::ostream &o, Zone const &fr)
+  {
+    switch (fr.m_type) {
     case 1: // in draw=textbox
       o << "header/footer,";
       break;
@@ -388,10 +398,12 @@ struct Zone {
 //! Internal: the state of a GWText
 struct State {
   //! constructor
-  State() : m_fileIdFontIdMap(), m_zonesList(), m_version(-1), m_numPages(-1) {
+  State() : m_fileIdFontIdMap(), m_zonesList(), m_version(-1), m_numPages(-1)
+  {
   }
   //! returns the font id corresponding to a fId
-  int getFId(int fileId) const {
+  int getFId(int fileId) const
+  {
     if (m_fileIdFontIdMap.find(fileId)==m_fileIdFontIdMap.end())
       return fileId;
     return m_fileIdFontIdMap.find(fileId)->second;
@@ -588,7 +600,7 @@ bool GWText::findNextZone()
   pos=input->tell();
   int nFonts=0;
   GWTextInternal::Zone zone;
-  while(true) {
+  while (true) {
     long hSize=headerSize+22*nFonts++;
     if (pos-hSize < searchPos)
       break;
@@ -819,7 +831,8 @@ bool GWText::readZonePositions(GWTextInternal::Zone &zone)
       (std::multimap<long,GWTextInternal::PLC>::value_type(textPos, plc));
       if (textPos)
         f << "pos=" << std::hex << textPos << std::dec;
-    } else {
+    }
+    else {
       MWAW_DEBUG_MSG(("GWText::readZone: can not find begin pos for page %d\n",line));
       f << "##pos[line]=" << line << ",";
     }
@@ -951,7 +964,7 @@ bool GWText::readFont(MWAWFont &font)
   font.setSize((float) input->readULong(2));
   unsigned char color[3];
   for (int c=0; c<3; ++c)
-    color[c] = (unsigned char) (input->readULong(2)>>8);
+    color[c] = (unsigned char)(input->readULong(2)>>8);
   font.setColor(MWAWColor(color[0],color[1],color[2]));
   font.m_extra=f.str();
 
@@ -976,7 +989,7 @@ bool GWText::readRuler(MWAWParagraph &para)
   if (val==0) f << "unused,";
   else if (val!=1) f << "nbUsed=" << val << ",";
   val=(int) input->readLong(2);
-  switch(val) {
+  switch (val) {
   case 0:
     break;
   case 1:
@@ -1002,7 +1015,7 @@ bool GWText::readRuler(MWAWParagraph &para)
   int unit[3];
   for (int i=0; i < 3; ++i)
     unit[i] = (int) input->readLong(1);
-  switch(unit[0]) {
+  switch (unit[0]) {
   case 1:
   case 2:
   case 3:
@@ -1030,7 +1043,7 @@ bool GWText::readRuler(MWAWParagraph &para)
   for (int i=0; i < 20; ++i) {
     MWAWTabStop tab;
     val = (int) input->readLong(1);
-    switch(val) {
+    switch (val) {
     case 0: // left
       break;
     case 1:
@@ -1197,7 +1210,8 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
     if (type<0 || type>5) {
       f << "#type=" << type << ",";
       ok = false;
-    } else  if (type==1)
+    }
+    else  if (type==1)
       f << "textbox[draw],";
     else if (type!=2)
       f << "type=" << type << ",";
@@ -1236,7 +1250,7 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
   font.setSize((float) input->readULong(2));
   unsigned char color[3];
   for (int c=0; c<3; ++c)
-    color[c] = (unsigned char) (input->readULong(2)>>8);
+    color[c] = (unsigned char)(input->readULong(2)>>8);
   font.setColor(MWAWColor(color[0],color[1],color[2]));
   f << "font=[" << font.getDebugString(m_parserState->m_fontConverter) << "],";
   listener->setFont(font);
@@ -1253,7 +1267,7 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
   f << std::dec << "],";
   MWAWParagraph para;
   val=(int) input->readLong(2);
-  switch(val) {
+  switch (val) {
   case 0:
     break;
   case 1:
@@ -1294,7 +1308,7 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
   for (int i=0; i < fSz; ++i) {
     char c = (char) input->readULong(1);
     f << c;
-    switch(c) {
+    switch (c) {
     case 0x9:
       listener->insertTab();
       break;
@@ -1328,7 +1342,8 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
   if (isMain && !listener->canOpenSectionAddBreak()) {
     MWAW_DEBUG_MSG(("GWText::sendZone: in a main zone, but can not open section\n"));
     isMain = false;
-  } else if (isMain) {
+  }
+  else if (isMain) {
     m_mainParser->newPage(1);
     MWAWSection sec=m_mainParser->getMainSection();
     numCol = sec.numColumns();
@@ -1369,7 +1384,7 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
     while (pIt!=zone.m_posPLCMap.end() && pIt->first==cPos) {
       GWTextInternal::PLC const &plc=(pIt++)->second;
       f << "[" << plc << "]";
-      switch(plc.m_type) {
+      switch (plc.m_type) {
       case GWTextInternal::P_Font:
         if (plc.m_id < 0 || plc.m_id >= (int) zone.m_fontList.size()) {
           MWAW_DEBUG_MSG(("GWText::sendZone: can not find font %d\n", plc.m_id));
@@ -1398,7 +1413,7 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
       }
     }
     if (c!=0xd) f << c;
-    switch(c) {
+    switch (c) {
     case 0x4: {
       f << "[pict]";
       if (token.m_type!=4 || !token.m_pictEntry.valid()) {
@@ -1427,7 +1442,8 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
       if (actCol < numCol-1 && numCol > 1) {
         listener->insertBreak(MWAWListener::ColumnBreak);
         actCol++;
-      } else {
+      }
+      else {
         actCol = 0;
         m_mainParser->newPage(++actPage);
       }

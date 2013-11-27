@@ -64,32 +64,38 @@ namespace MORTextInternal
 struct Paragraph : public MWAWParagraph {
   //! constructor
   Paragraph(): MWAWParagraph(), m_listType(0), m_customListLevel(),
-    m_pageBreak(false), m_keepOutlineTogether(false) {
+    m_pageBreak(false), m_keepOutlineTogether(false)
+  {
     m_marginsFromParent[0]=0.3;
     m_marginsFromParent[1]=0;
   }
   //! set the left margin in inch
-  void setLeftMargin(double margin, bool fromParent) {
+  void setLeftMargin(double margin, bool fromParent)
+  {
     if (fromParent) {
       m_marginsFromParent[0]=margin;
       m_margins[1]=0;
-    } else {
+    }
+    else {
       m_marginsFromParent[0]=-100;
       m_margins[1]=margin;
     }
   }
   //! set the right margin in inch
-  void setRightMargin(double margin, bool fromParent) {
+  void setRightMargin(double margin, bool fromParent)
+  {
     if (fromParent) {
       m_marginsFromParent[1]=margin;
       m_margins[2]=0;
-    } else {
+    }
+    else {
       m_marginsFromParent[1]=-100;
       m_margins[2]=margin;
     }
   }
   //! update the paragraph to obtain the final paragraph
-  void updateToFinalState(MWAWParagraph const &parent, int level, MWAWListManager &listManager) {
+  void updateToFinalState(MWAWParagraph const &parent, int level, MWAWListManager &listManager)
+  {
     bool leftUseParent=m_marginsFromParent[0]>-10;
     if (leftUseParent)
       m_margins[1]=*parent.m_margins[1]+m_marginsFromParent[0];
@@ -113,10 +119,12 @@ struct Paragraph : public MWAWParagraph {
       else if ((level%3)==2) {
         listLevel.m_prefix = "(";
         listLevel.m_type = MWAWListLevel::DECIMAL;
-      } else if ((level%3)==0) {
+      }
+      else if ((level%3)==0) {
         listLevel.m_prefix = "(";
         listLevel.m_type = MWAWListLevel::LOWER_ALPHA;
-      } else
+      }
+      else
         listLevel.m_type = MWAWListLevel::LOWER_ROMAN;
       break;
     case 3: // numeric
@@ -172,7 +180,8 @@ struct Paragraph : public MWAWParagraph {
 //! Internal: the outline data of a MORText
 struct Outline {
   //! constructor
-  Outline() {
+  Outline()
+  {
     // set to default value
     for (int i=0; i < 4; i++)
       m_fonts[i]=MWAWFont(3,12);
@@ -188,12 +197,14 @@ struct Outline {
 //! Internal and low level: the outline modifier header of a MORText
 struct OutlineMod {
   //! constructor
-  OutlineMod(): m_type(-1), m_flags(0), m_entry(), m_extra("") {
+  OutlineMod(): m_type(-1), m_flags(0), m_entry(), m_extra("")
+  {
     for (int i=0; i<2; i++)
       m_unknowns[i]=0;
   }
   //! returns the data id to change in Outline
-  int getModId() const {
+  int getModId() const
+  {
     if (m_unknowns[0] || (m_flags&0xF)!= 1)
       return 3;
     switch (m_flags>>4) {
@@ -209,8 +220,9 @@ struct OutlineMod {
     return 2;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, OutlineMod const &head) {
-    switch(head.m_flags>>4) {
+  friend std::ostream &operator<<(std::ostream &o, OutlineMod const &head)
+  {
+    switch (head.m_flags>>4) {
     case 1: // organizer
       break;
     case 2:
@@ -223,7 +235,7 @@ struct OutlineMod {
       o << "##wh=" << std::hex << (head.m_flags>>4) << std::dec << ",";
       break;
     }
-    switch(head.m_type) {
+    switch (head.m_type) {
     case 0x301:
       o << "font,";
       break;
@@ -303,10 +315,12 @@ struct OutlineMod {
 //! Internal: the comment data of a MORText
 struct Comment {
   //! constructor
-  Comment() : m_entry(), m_extra("") {
+  Comment() : m_entry(), m_extra("")
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Comment const &comment) {
+  friend std::ostream &operator<<(std::ostream &o, Comment const &comment)
+  {
     o << comment.m_extra;
     return o;
   }
@@ -322,14 +336,16 @@ struct Topic {
   //! an enum used to define the different type of data attached to a topic
   enum AttachementType { AOutline=0, AComment, ASpeakerNote };
   //! constructor
-  Topic() : m_entry(), m_level(0), m_isCloned(false), m_cloneId(-1), m_numPageBreak(-1), m_isStartSlide(false), m_extra("") {
+  Topic() : m_entry(), m_level(0), m_isCloned(false), m_cloneId(-1), m_numPageBreak(-1), m_isStartSlide(false), m_extra("")
+  {
     for (int i=0; i < 3; i++) {
       m_hasList[i]=false;
       m_attachList[i]=-1;
     }
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Topic const &topic) {
+  friend std::ostream &operator<<(std::ostream &o, Topic const &topic)
+  {
     if (topic.m_level>0)
       o << "level=" << topic.m_level << ",";
     if (topic.m_hasList[AOutline])
@@ -372,7 +388,8 @@ struct Topic {
 struct State {
   //! constructor
   State() : m_version(-1), m_topicList(), m_commentList(), m_speakerList(), m_outlineList(),
-    m_actualComment(0), m_actualSpeaker(0), m_actualOutline(0), m_numPages(-1), m_actualPage(1) {
+    m_actualComment(0), m_actualSpeaker(0), m_actualOutline(0), m_numPages(-1), m_actualPage(1)
+  {
   }
   //! the file version
   mutable int m_version;
@@ -407,7 +424,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -435,7 +453,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_textParser);
 
   long pos = m_input->tell();
-  switch(m_what) {
+  switch (m_what) {
   case 0: {
     std::vector<MWAWParagraph> paraStack;
     m_textParser->sendTopic(m_id,0,paraStack);
@@ -546,7 +564,7 @@ bool MORText::createZones()
         continue;
       }
       topic.m_attachList[j]=int(actAttach[j]++);
-      switch(j) {
+      switch (j) {
       case MORTextInternal::Topic::AOutline:
         break;
       case MORTextInternal::Topic::AComment: // no need to add empty comment
@@ -567,7 +585,8 @@ bool MORText::createZones()
     if (cloneId==0 || cloneId > numCloned) {
       MWAW_DEBUG_MSG(("MORText::createZones: can not find original for topic %d\n", int(i)));
       topic.m_cloneId=-1;
-    } else
+    }
+    else
       topic.m_cloneId=clonedList[size_t(cloneId-1)];
   }
 
@@ -893,7 +912,8 @@ bool MORText::sendTopic(int tId, int dLevel, std::vector<MWAWParagraph> &paraSta
     if (comment<0||comment>=int(m_state->m_commentList.size()))
       return false;
     entry=m_state->m_commentList[size_t(comment)].m_entry;
-  } else if (topic.m_cloneId>=0 && topic.m_cloneId < (int) m_state->m_topicList.size()) {
+  }
+  else if (topic.m_cloneId>=0 && topic.m_cloneId < (int) m_state->m_topicList.size()) {
     MORTextInternal::Topic const &cTopic =
       m_state->m_topicList[size_t(topic.m_cloneId)];
     entry=cTopic.m_entry;
@@ -913,7 +933,8 @@ bool MORText::sendTopic(int tId, int dLevel, std::vector<MWAWParagraph> &paraSta
       m_mainParser->newPage(++m_state->m_actualPage);
     para=outline.m_paragraphs[0];
     font = outline.m_fonts[0];
-  } else if (tId>=4) {
+  }
+  else if (tId>=4) {
     /* default: leader is default for a paragraph
 
     note: sometimes, some small level are bold by default, I do not understand why ? */
@@ -1006,7 +1027,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
     }
     int fld=(int)input->readULong(1);
     bool sendFont=true;
-    switch(fld) {
+    switch (fld) {
     case 0x9:
       listener->insertTab();
       f << "\t";
@@ -1065,7 +1086,8 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       if (val <= 0) {
         MWAW_DEBUG_MSG(("MORText::sendText: field fSz seems bad\n"));
         f << "###";
-      } else {
+      }
+      else {
         ft.setSize((float) val);
         sendFont = false;
       }
@@ -1089,7 +1111,8 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       if (values[0]!=0xe || values[4]!=0xe) {
         MWAW_DEBUG_MSG(("MORText::sendText: field fCol: color sep seems bad\n"));
         f << "@[fCol###]";
-      } else {
+      }
+      else {
         MWAWColor col((unsigned char)(values[1]>>8),
                       (unsigned char)(values[2]>>8),
                       (unsigned char)(values[3]>>8));
@@ -1207,8 +1230,9 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       if (values[0]!=0xc || values[3]!=0xc) {
         MWAW_DEBUG_MSG(("MORText::sendText: field the separator seems bad\n"));
         f << "@[field###]";
-      } else {
-        switch(values[1]) {
+      }
+      else {
+        switch (values[1]) {
         case 1:
           listener->insertUnicodeString("#Slide#");
           f << "@[slide/title";
@@ -1440,7 +1464,8 @@ bool MORText::readOutlineList(MWAWEntry const &entry)
     if (!m_mainParser->checkAndFindSize(tEntry)) {
       MWAW_DEBUG_MSG(("MORText::readOutlineList: can not read a file position\n"));
       f << "###,";
-    } else
+    }
+    else
       f << std::hex << tEntry.begin() << "<->" << tEntry.end() << ",";
     posList.push_back(tEntry);
   }
@@ -1518,7 +1543,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
     MWAWFont &font=outline.m_fonts[which];
     uint32_t fFlags=font.flags();
     bool haveExtra=false;
-    switch(outlineMod.m_type) {
+    switch (outlineMod.m_type) {
     case 0x301: // font name
     case 0xf07: // left indent+tabs
       haveExtra=true;
@@ -1528,14 +1553,15 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
       if (values[0]>0 && values[0] <= 100) {
         font.setSize((float) values[0]);
         f << "sz=" << values[0] << ",";
-      } else {
+      }
+      else {
         MWAW_DEBUG_MSG(("MORText::readOutline: the font size seems bad\n"));
         f << "##sz=" << values[0] << ",";
       }
       break;
     case 0x603: {
       uint32_t bit=0;
-      switch(values[0]) {
+      switch (values[0]) {
       case 0:
         f << "plain";
         if (values[1]==1)
@@ -1569,7 +1595,8 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
       if (values[1]==1) {
         if (bit) fFlags = fFlags & (~bit);
         f << "[of],";
-      } else if (values[1]!=0)
+      }
+      else if (values[1]!=0)
         f << "=##" << values[1] << ",";
       else
         fFlags |= bit;
@@ -1589,7 +1616,8 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
       if (values[0]&0x8000) {
         para.setInterline(double(values[0]&0x7FFF)/20., librevenge::RVNG_POINT, MWAWParagraph::AtLeast);
         f << "interline=" << *para.m_spacings[0] << "pt,";
-      } else {
+      }
+      else {
         para.setInterline(double(values[0])/double(0x1000), librevenge::RVNG_PERCENT);
         f << "interline=" << 100* *para.m_spacings[0] << "%,";
       }
@@ -1599,7 +1627,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
       f << "indent=" << *para.m_margins[0] << ",";
       break;
     case 0x1006:
-      switch(values[0]) {
+      switch (values[0]) {
       case 0:
         para.m_justify = MWAWParagraph::JustificationLeft;
         f << "left,";
@@ -1625,7 +1653,8 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
       if (values[0] & 0x8000) {
         para.m_spacings[1]=double(values[0]&0x7FFF)/1440.;
         f << "bef=" << double(values[0]&0x7FFF)/20. << "pt,";
-      } else {
+      }
+      else {
         // assume 12pt
         para.m_spacings[1]=double(values[0])/double(0x1000)*12./72.;
         if (values[0])
@@ -1635,7 +1664,8 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
       if (values[1] & 0x8000) {
         para.m_spacings[2]=double(values[1]&0x7FFF)/1440.;
         f << "aft=" << double(values[1]&0x7FFF)/20. << "pt,";
-      } else {
+      }
+      else {
         para.m_spacings[2]=double(values[1])/double(0x1000)*12./72.;
         if (values[1])
           f << "aft=" << 100.*double(values[1])/double(0x1000) << "%,";
@@ -1658,7 +1688,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
       break;
     case 0x1a0c:
       para.m_pageBreak=(values[0]==0x100);
-      if(values[0]==0x100)
+      if (values[0]==0x100)
         f << "pagebreak,";
       else if (values[0]==0)
         f << "no,";
@@ -1666,18 +1696,20 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
         f << "##break=" << std::hex << values[0] << std::dec << ",";
       break;
     case 0x1c0d:
-      if(values[0]==0x100) {
+      if (values[0]==0x100) {
         para.m_breakStatus = (*para.m_breakStatus)|MWAWParagraph::NoBreakWithNextBit;
         f << "together,";
-      } else if (values[0]==0) {
+      }
+      else if (values[0]==0) {
         para.m_breakStatus = (*para.m_breakStatus)|int(~MWAWParagraph::NoBreakWithNextBit);
         f << "no,";
-      } else
+      }
+      else
         f << "#keepLine=" << std::hex << values[0] << std::dec << ",";
       break;
     case 0x1e0e:
       para.m_keepOutlineTogether = (values[0]==0x100);
-      if(values[0]==0x100)
+      if (values[0]==0x100)
         f << "together,";
       else if (values[0]==0)
         f << "no,";
@@ -1686,7 +1718,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
       break;
     case 0x190b:
       para.m_listType = values[0];
-      switch(values[0]) {
+      switch (values[0]) {
       case 0:
         f << "no,";
         break;
@@ -1733,7 +1765,8 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
       outlineMod.m_entry.setBegin(lastListPos+values[2]);
       outlineMod.m_entry.setLength(values[3]);
       outlineMod.m_entry.setId(n);
-    } else {
+    }
+    else {
       for (int i=2; i < 4; i++) {
         if (values[i])
           f << "g" << i-1 << "=" << std::hex << values[i] << std::dec << ",";
@@ -1853,7 +1886,8 @@ bool MORText::readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level)
   else if (fId&0x8000) {
     f << "fId=" << (fId&0x7FFF) << ",";
     font.setId(fId&0x7FFF);
-  } else
+  }
+  else
     f << "#fId=" << std::hex << fId << std::dec << ",";
   int fSz = (int) input->readLong(2);
   if (fSz != -1) {
@@ -1877,9 +1911,10 @@ bool MORText::readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level)
   else if (fColor==3) {
     unsigned char color[3];
     for (int i=0; i < 3; i++)
-      color[i]=(unsigned char) (input->readULong(2)>>8);
+      color[i]=(unsigned char)(input->readULong(2)>>8);
     font.setColor(MWAWColor(color[0], color[1], color[2]));
-  } else {
+  }
+  else {
     f << "#fCol=" << fColor << ",";
     input->seek(6, librevenge::RVNG_SEEK_CUR);
   }
@@ -1983,7 +2018,7 @@ bool MORText::readTabs(MWAWEntry const &entry, MORTextInternal::Paragraph &para,
     MWAWTabStop tab;
     tab.m_position = double(input->readULong(2))/1440.;
     int val=(int) input->readULong(1);
-    switch(val&0xF) {
+    switch (val&0xF) {
     case 1: // left
       break;
     case 2:
@@ -1999,7 +2034,7 @@ bool MORText::readTabs(MWAWEntry const &entry, MORTextInternal::Paragraph &para,
       f2 << "#align=" << (val&0xF) << ",";
       break;
     }
-    switch(val>>4) {
+    switch (val>>4) {
     case 0: // none
       break;
     case 1:

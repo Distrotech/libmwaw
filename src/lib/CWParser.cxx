@@ -72,7 +72,8 @@ struct State {
   State() : m_kind(MWAWDocument::MWAW_K_UNKNOWN), m_pages(0,0), m_EOF(-1L), m_actPage(0), m_numPages(0),
     m_columns(1), m_columnsWidth(), m_columnsSep(),
     m_headerId(0), m_footerId(0), m_headerHeight(0), m_footerHeight(0),
-    m_zonesMap(), m_mainZonesList() {
+    m_zonesMap(), m_mainZonesList()
+  {
   }
 
   //! the document kind
@@ -111,7 +112,8 @@ public:
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
     if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
@@ -120,7 +122,8 @@ public:
   }
 
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
   //! the parser function
@@ -302,7 +305,7 @@ bool CWParser::sendZone(int zoneId, bool asGraphic, MWAWPosition position)
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   bool res = false;
-  switch(zMap->m_fileType) {
+  switch (zMap->m_fileType) {
   case 0:
     res = m_graphParser->sendGroup(zoneId, asGraphic, position);
     break;
@@ -419,7 +422,8 @@ void CWParser::parse(librevenge::RVNGTextInterface *docInterface)
       m_textParser->flushExtra();
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("CWParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -505,7 +509,7 @@ bool CWParser::createZones()
 
   if (readDocHeader() && readDocInfo()) {
     pos = input->tell();
-    while(!input->isEnd()) {
+    while (!input->isEnd()) {
       if (!readZone()) {
         input->seek(pos, librevenge::RVNG_SEEK_SET);
         break;
@@ -552,7 +556,7 @@ bool CWParser::createZones()
 
     long prevPos = pos;
     ok = false;
-    while(!input->isEnd()) {
+    while (!input->isEnd()) {
       if (!readZone()) {
         input->seek(pos+1, librevenge::RVNG_SEEK_SET);
         break;
@@ -671,7 +675,7 @@ bool CWParser::exploreZonesGraph()
   std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter, iter2;
   // first create the list of fathers
   iter = m_state->m_zonesMap.begin();
-  for ( ; iter != m_state->m_zonesMap.end(); ++iter) {
+  for (; iter != m_state->m_zonesMap.end(); ++iter) {
     shared_ptr<CWStruct::DSET> zone = iter->second;
     if (!zone) continue;
 
@@ -703,7 +707,7 @@ bool CWParser::exploreZonesGraph()
   std::vector<int> rootList;
   std::set<int> notDoneList;
   iter = m_state->m_zonesMap.begin();
-  for ( ; iter != m_state->m_zonesMap.end(); ++iter) {
+  for (; iter != m_state->m_zonesMap.end(); ++iter) {
     shared_ptr<CWStruct::DSET> zone = iter->second;
     if (!zone) continue;
     zone->m_internal = 0;
@@ -713,12 +717,13 @@ bool CWParser::exploreZonesGraph()
   }
 
   std::set<int> toDoList(rootList.begin(), rootList.end());
-  while(!notDoneList.empty()) {
+  while (!notDoneList.empty()) {
     int id;
     if (!toDoList.empty()) {
       id = *toDoList.begin();
       toDoList.erase(id);
-    } else {
+    }
+    else {
       id = *notDoneList.begin();
       MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: find a cycle, choose new root %d\n", id));
       rootList.push_back(id);
@@ -738,7 +743,7 @@ bool CWParser::exploreZonesGraph()
   for (size_t i = 0; i < numMain; i++)
     std::cerr << rootList[i] << ",";
   std::cerr << "\n";
-  for ( ; iter != m_state->m_zonesMap.end(); ++iter) {
+  for (; iter != m_state->m_zonesMap.end(); ++iter) {
     shared_ptr<CWStruct::DSET> zone = iter->second;
     std::cerr << *zone << "\n";
   }
@@ -775,11 +780,14 @@ bool CWParser::exploreZonesGraphRec(int zId, std::set<int> &notDoneList)
         iter2 = m_state->m_zonesMap.find(cId);
         if (iter2 == m_state->m_zonesMap.end()) {
           MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: can not find zone %d\n", cId));
-        } else if (iter2->second->m_internal==1) {
+        }
+        else if (iter2->second->m_internal==1) {
           MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: find a cycle: for child : %d(<-%d)\n", cId, zId));
-        } else if (cId != m_state->m_headerId && cId != m_state->m_footerId)
+        }
+        else if (cId != m_state->m_headerId && cId != m_state->m_footerId)
           zone->m_validedChildList.insert(cId);
-      } else {
+      }
+      else {
         if (cId != m_state->m_headerId && cId != m_state->m_footerId)
           zone->m_validedChildList.insert(cId);
         exploreZonesGraphRec(cId, notDoneList);
@@ -862,16 +870,20 @@ bool CWParser::readEndTable()
     if (entry.type() == "CPRT") {
       readCPRT(entry);
       parsed = true;
-    } else if (entry.type() == "SNAP") {
+    }
+    else if (entry.type() == "SNAP") {
       readSNAP(entry);
       parsed = true;
-    } else if (entry.type() == "STYL") {
+    }
+    else if (entry.type() == "STYL") {
       m_styleManager->readStyles(entry);
       parsed = true;
-    } else if (entry.type() == "DSUM") {
+    }
+    else if (entry.type() == "DSUM") {
       readDSUM(entry, false);
       parsed = true;
-    } else if (entry.type() == "TNAM") {
+    }
+    else if (entry.type() == "TNAM") {
       readTNAM(entry);
       parsed = true;
     }
@@ -953,7 +965,8 @@ bool CWParser::readZone()
     if (name == "HDNI" && version() <= 4)
       sz = 2;
     f << "Entries(" << name << ")";
-  } else {
+  }
+  else {
     //
     input->seek(actPos, librevenge::RVNG_SEEK_SET);
     int firstOffset = (int) input->readULong(2);
@@ -1041,7 +1054,7 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
   ascii().addNote(f.str().c_str());
 
   int typePos = 0;
-  switch(vers) {
+  switch (vers) {
   case 1:
     typePos = 243;
     break;
@@ -1196,7 +1209,8 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
     if (m_state->m_zonesMap.find(res->m_id) != m_state->m_zonesMap.end()) {
       MWAW_DEBUG_MSG(("CWParser::readDSET: zone %d already exists!!!!\n",
                       res->m_id));
-    } else
+    }
+    else
       m_state->m_zonesMap[res->m_id] = res;
     return res;
   }
@@ -1236,7 +1250,8 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
   if (m_state->m_zonesMap.find(zone->m_id) != m_state->m_zonesMap.end()) {
     MWAW_DEBUG_MSG(("CWParser::readDSET: zone %d already exists!!!!\n",
                     zone->m_id));
-  } else
+  }
+  else
     m_state->m_zonesMap[zone->m_id] = zone;
 
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
@@ -1264,7 +1279,8 @@ bool CWParser::readStructZone(char const *zoneName, bool hasEntete)
     if (hasEntete) {
       ascii().addPos(pos-4);
       ascii().addNote(f.str().c_str());
-    } else {
+    }
+    else {
       ascii().addPos(pos);
       ascii().addNote("NOP");
     }
@@ -1335,7 +1351,8 @@ bool CWParser::readStructIntZone(char const *zoneName, bool hasEntete, int intSz
     if (hasEntete) {
       ascii().addPos(pos-4);
       ascii().addNote(f.str().c_str());
-    } else {
+    }
+    else {
       ascii().addPos(pos);
       ascii().addNote("NOP");
     }
@@ -1606,7 +1623,7 @@ bool CWParser::readDocHeader()
   }
   long pos = input->tell();
   int zone0Length = 52, zone1Length=0;
-  switch(vers) {
+  switch (vers) {
   case 1:
     zone0Length = 114;
     zone1Length=50;
@@ -1772,7 +1789,8 @@ bool CWParser::readDocHeader()
       ascii().addPos(actPos);
       ascii().addNote(f.str().c_str());
     }
-  } else if (long(input->tell()) != pos+zone1Length)
+  }
+  else if (long(input->tell()) != pos+zone1Length)
     ascii().addDelimiter(input->tell(), '|');
   input->seek(pos+zone1Length, librevenge::RVNG_SEEK_SET);
   if (input->isEnd()) {
@@ -1816,7 +1834,8 @@ bool CWParser::readDocHeader()
       f << sz << "###";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
-    } else {
+    }
+    else {
       ascii().addPos(pos);
       ascii().addNote("_");
     }
@@ -1836,7 +1855,8 @@ bool CWParser::readDocHeader()
     if (!sz) {
       ascii().addPos(pos);
       ascii().addNote("Nop");
-    } else {
+    }
+    else {
       long endPos = pos+4+sz;
       if (!input->checkPosition(endPos)) {
         MWAW_DEBUG_MSG(("CWParser::readDocHeader: unexpected LinkInfo size\n"));
@@ -1904,7 +1924,7 @@ bool CWParser::readDocHeader()
         return false;
       }
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      switch(z) {
+      switch (z) {
       case 0:
         ascii().addPos(pos);
         ascii().addNote("DocUnkn2");
@@ -1994,7 +2014,8 @@ bool CWParser::readDocInfo()
       int colSep = (int) input->readLong(2);
       m_state->m_columnsSep.resize(size_t(numCols-1), colSep);
       f << "colSep=" << colSep << ",";
-    } else
+    }
+    else
       input->seek(2, librevenge::RVNG_SEEK_CUR);
   }
   ascii().addDelimiter(input->tell(), '|');

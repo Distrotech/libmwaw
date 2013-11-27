@@ -67,7 +67,8 @@ struct State {
   //! constructor
   State() : m_zonesListBegin(-1), m_zonesMap(), m_zonesIdList(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
-    m_headerId(0), m_footerId(0) {
+    m_headerId(0), m_footerId(0)
+  {
   }
 
   //! the list of zone begin
@@ -98,7 +99,8 @@ public:
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
     if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
@@ -107,16 +109,19 @@ public:
   }
 
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
   //! returns the subdocument \a id
-  long getId() const {
+  long getId() const
+  {
     return m_id;
   }
   //! sets the subdocument \a id
-  void setId(long vid) {
+  void setId(long vid)
+  {
     m_id = vid;
   }
 
@@ -268,7 +273,8 @@ void HMWJParser::parse(librevenge::RVNGTextInterface *docInterface)
 #endif
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("HMWJParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -372,7 +378,7 @@ bool HMWJParser::createZones()
   // retrieve the text type, look for header/footer and pass information to text parser
   std::map<long,int> idTypeMap = m_graphParser->getTextFrameInformations();
   std::map<long,int>::const_iterator typeIt=idTypeMap.begin();
-  for ( ; typeIt!=idTypeMap.end() ; ++typeIt) {
+  for (; typeIt!=idTypeMap.end() ; ++typeIt) {
     if (typeIt->second==1)
       m_state->m_headerId = typeIt->first;
     else if (typeIt->second==2)
@@ -526,7 +532,7 @@ bool HMWJParser::readZone(MWAWEntry &entry)
   ascii().addNote(f.str().c_str());
 
   bool done = false;
-  switch(entry.id()) {
+  switch (entry.id()) {
   case 0:
     done = m_textParser->readFonts(entry);
     break;
@@ -677,7 +683,8 @@ bool HMWJParser::readPrintInfo(MWAWEntry const &entry)
     getPageSpan().setFormWidth(paperSize.x()/72.);
 
     f << info;
-  } else
+  }
+  else
     f << "###";
 
   asciiFile.addPos(pos);
@@ -1190,7 +1197,7 @@ bool HMWJParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &
     short a = root;
     bool ok = true;
     do {  /* once for each bit on path */
-      if(bitcounter == 0) {
+      if (bitcounter == 0) {
         if (input->isEnd() || input->tell() >= entry.end()) {
           MWAW_DEBUG_MSG(("HMWJParser::decodeZone: find some uncomplete data for zone%lx\n", entry.begin()));
           dt.append((unsigned char)a);
@@ -1207,7 +1214,8 @@ bool HMWJParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &
       else
         a = left[a];
       bitbuffer = short(bitbuffer << 1);
-    } while (a <= maxChar);
+    }
+    while (a <= maxChar);
     if (!ok)
       break;
     dt.append((unsigned char)(a - maxSucc));
@@ -1221,7 +1229,8 @@ bool HMWJParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &
         if (c == b) {
           b = right[d];
           right[d] = a;
-        } else
+        }
+        else
           left[d] = a;
         if (left[c] == a)
           left[c] = b;
@@ -1230,9 +1239,11 @@ bool HMWJParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &
         up[a] = d;
         up[b] = c;
         a = d;
-      } else
+      }
+      else
         a = c;
-    } while (a != root);
+    }
+    while (a != root);
   }
   if (dt.size()==0) {
     MWAW_DEBUG_MSG(("HMWJParser::decodeZone: oops an empty zone\n"));

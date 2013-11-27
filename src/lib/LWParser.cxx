@@ -59,7 +59,8 @@ namespace LWParserInternal
 //! Internal: the state of a LWParser
 struct State {
   //! constructor
-  State() : m_isApplication(false), m_actPage(0), m_numPages(0), m_numCol(1), m_colSep(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_isApplication(false), m_actPage(0), m_numPages(0), m_numCol(1), m_colSep(0), m_headerHeight(0), m_footerHeight(0)
+  {
   }
 
   /** true if we are parsing a application document */
@@ -84,7 +85,8 @@ public:
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
     if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
@@ -93,7 +95,8 @@ public:
   }
 
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -251,7 +254,8 @@ void LWParser::parse(librevenge::RVNGTextInterface *docInterface)
 #endif
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("LWParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -323,7 +327,7 @@ bool LWParser::createZones()
       break;
 
     MWAWEntry const &entry = it++->second;
-    switch(entry.id()) {
+    switch (entry.id()) {
     case 1000:
       readDocument(entry);
       break;
@@ -349,7 +353,7 @@ bool LWParser::createZones()
       break;
 
     MWAWEntry const &entry = it++->second;
-    switch(entry.id()) {
+    switch (entry.id()) {
     case 1005: // a constant block which contains a default font?
       readMPSR5(entry);
       break;
@@ -646,12 +650,12 @@ bool LWParser::readDocument(MWAWEntry const &entry)
     if (val) f << "fl" << i+3 << "=" << val << ",";
   }
   int pageDim[2];
-  for(int i=0; i<2; i++)
+  for (int i=0; i<2; i++)
     pageDim[i] = (int) input->readLong(2);
   f << "dim=" << pageDim[1] << "x" << pageDim[0] << ",";
   int dim[4];
   for (int s=0; s<2; s++) {
-    for(int i=0; i<4; i++)
+    for (int i=0; i<4; i++)
       dim[i] = (int) input->readULong(2);
     f << "pos" << s << "=" << dim[1] << "x" << dim[0]
       << "<->" << dim[3] << "x" << dim[2] << ",";
@@ -747,7 +751,7 @@ bool LWParser::readMPSR5(MWAWEntry const &entry)
   }
   int dim[4];
   for (int s=0; s<2; s++) {
-    for(int i=0; i<4; i++)
+    for (int i=0; i<4; i++)
       dim[i] = (int) input->readLong(2);
     f << "pos" << s << "=" << dim[1] << "x" << dim[0]
       << "<->" << dim[3] << "x" << dim[2] << ",";
@@ -756,7 +760,7 @@ bool LWParser::readMPSR5(MWAWEntry const &entry)
   if (val)
     f << "unkn=" << std::hex << val << std::dec << ",";
   long sel[2]; // checkme
-  for(int i=0; i<2; i++)
+  for (int i=0; i<2; i++)
     sel[i] = input->readLong(4);
   if (sel[0]==sel[1])
     f << "sel?=" << std::hex << sel[0] << std::dec << ",";
@@ -800,7 +804,8 @@ bool LWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   if (!m_state->m_isApplication) {
     if (!input->hasDataFork())
       return false;
-  } else {
+  }
+  else {
     entry = getRSRCParser()->getEntry("TEXT", 128);
     if (!entry.valid())
       return false;

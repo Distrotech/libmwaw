@@ -57,8 +57,9 @@ struct LineZone {
   //! the constructor
   LineZone() : m_type(-1), m_pos(), m_id(0), m_flags(), m_height(0) {}
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, LineZone const &z) {
-    switch(z.m_type>>5) {
+  friend std::ostream &operator<<(std::ostream &o, LineZone const &z)
+  {
+    switch (z.m_type>>5) {
     case 0:
     case 1:
     case 2:
@@ -85,11 +86,13 @@ struct LineZone {
     return o;
   }
   //! return true if this is a note
-  bool isNote() const {
+  bool isNote() const
+  {
     return m_type&0x8;
   }
   //! return true if this is a tabs
-  bool isRuler() const {
+  bool isRuler() const
+  {
     return (m_type&0xE0)==0x80;
   }
   //! the type
@@ -108,12 +111,14 @@ struct LineZone {
 //! Internal: the fonts
 struct Font {
   //! the constructor
-  Font(): m_font(), m_extra("") {
+  Font(): m_font(), m_extra("")
+  {
     for (int i = 0; i < 3; i++) m_flags[i] = 0;
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Font const &font) {
+  friend std::ostream &operator<<(std::ostream &o, Font const &font)
+  {
     for (int i = 0; i < 3; i++) {
       if (!font.m_flags[i]) continue;
       o << "ft" << i << "=";
@@ -141,7 +146,8 @@ struct TextZone {
   TextZone() : m_type(Unknown), m_id(0), m_zonesList(), m_linesHeight(), m_pagesHeight(), m_pagesPosition(), m_footnoteMap(), m_text(""), m_isSent(false) { }
 
   //! return true if this is the main zone
-  bool isMain() const {
+  bool isMain() const
+  {
     return m_type == Main;
   }
   //! the zone type;
@@ -168,7 +174,8 @@ struct TextZone {
 //! Internal: the state of a MSK3Text
 struct State {
   //! constructor
-  State() : m_version(-1), m_zones(), m_numPages(1), m_actualPage(1) {
+  State() : m_version(-1), m_zones(), m_numPages(1), m_actualPage(1)
+  {
   }
   //! the file version
   mutable int m_version;
@@ -211,7 +218,8 @@ int MSK3Text::numPages(int zoneId) const
   if (zone.isMain()) {
     m_state->m_actualPage = 1;
     m_state->m_numPages = nPages;
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("MSK3Text::numPages: called on no main zone: %d\n", zoneId));
   }
   return nPages;
@@ -265,7 +273,7 @@ int MSK3Text::createZones(int numLines, bool mainZone)
   bool hasNote=false;
   int firstNote=0;
   MWAWInputStreamPtr input=m_mainParser->getInput();
-  while(!input->isEnd()) {
+  while (!input->isEnd()) {
     if (numLines==0) break;
     if (numLines>0) numLines--;
     long pos = input->tell();
@@ -365,7 +373,7 @@ void MSK3Text::updateNotes(MSK3TextInternal::TextZone &zone, int firstNote)
         MWAW_DEBUG_MSG(("MSK3Text::updateNotes: note %d is already defined, ignored\n", noteId));
       }
     }
-    noteId =  (int) input->readULong(2);
+    noteId = (int) input->readULong(2);
     notePos[0] = (lastIndentPos != -1) ? int(lastIndentPos) : n;
     lastIndentPos = -1;
   }
@@ -419,7 +427,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
     listener->setParagraph(para);
   }
   bool firstChar = true;
-  while(!input->isEnd()) {
+  while (!input->isEnd()) {
     long pos = input->tell();
     if (pos >= zone.m_pos.end()) break;
     int c = (int) input->readULong(1);
@@ -435,7 +443,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
     f << char(c);
     if (!listener)
       continue;
-    switch(c) {
+    switch (c) {
     case 0x9:
       listener->insertTab();
       break;
@@ -470,11 +478,13 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
         default:
           break;
         }
-      } else if (c <= 0x1f) {
+      }
+      else if (c <= 0x1f) {
         f << "#" << std::hex << c << std::dec << "]";
         ascFile.addDelimiter(pos,'#');
         MWAW_DEBUG_MSG(("MSK3Text::sendText: find char=%x\n",int(c)));
-      } else
+      }
+      else
         listener->insertCharacter((unsigned char)c, input, zone.m_pos.end());
       firstChar = false;
       break;
@@ -498,7 +508,7 @@ bool MSK3Text::sendString(std::string &str)
 
   for (int i = 0; i < int(str.length()); i++) {
     char c = str[(size_t)i];
-    switch(c) {
+    switch (c) {
     case 0x9:
       listener->insertTab();
       break;
@@ -575,7 +585,8 @@ bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
   int color = 1;
   if (type == 2) {
     color=(int) input->readULong(1);
-  } else if (pos+type+5 <= endPos) {
+  }
+  else if (pos+type+5 <= endPos) {
     int val = (int) input->readULong(1);
     if (val == 0)
       f << "end0#,";
@@ -610,7 +621,7 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MWAWParagraph &pa
   int fl[2];
   bool firstFlag = (dataSize & 1) == 0;
   fl[0] = firstFlag ? (int) input->readULong(1) : 0x4c;
-  switch(fl[0]) {
+  switch (fl[0]) {
   case 0x4c:
     break;
   case 0x43:
@@ -819,7 +830,8 @@ void MSK3Text::send(MSK3TextInternal::TextZone &zone, Vec2i limit)
       MWAWParagraph parag;
       if (readParagraph(z, parag) && m_parserState->m_listener)
         m_parserState->m_listener->setParagraph(parag);
-    } else
+    }
+    else
       sendText(z, zone.m_id);
   }
   zone.m_isSent = true;
@@ -838,7 +850,8 @@ void MSK3Text::sendNote(int zoneId, int noteId)
   if (noteIt==zone.m_footnoteMap.end()) {
     MWAW_DEBUG_MSG(("MSK3Text::sendNote: unknown note %d-%d\n", zoneId, noteId));
     if (listener) listener->insertChar(' ');
-  } else
+  }
+  else
     send(zone, noteIt->second);
 }
 

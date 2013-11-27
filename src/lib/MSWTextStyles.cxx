@@ -51,7 +51,8 @@ struct State {
   State() : m_version(-1), m_defaultFont(2,12),
     m_nextStyleMap(), m_fontList(), m_paragraphList(), m_sectionList(),
     m_textstructParagraphList(),
-    m_styleFontMap(), m_styleParagraphMap() {
+    m_styleFontMap(), m_styleParagraphMap()
+  {
   }
   //! the file version
   int m_version;
@@ -150,10 +151,12 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
     if (fId) {
       if (mainZone && (what & 0x50)==0) f << "#fId,";
       font.m_font->setId(fId);
-    } else if (what & 0x10) {
+    }
+    else if (what & 0x10) {
     }
     what &= 0xEF;
-  } else if (what & 0x10) {
+  }
+  else if (what & 0x10) {
   }
   if (sz >= 5) {
     float fSz = (float) input->readULong(1)/2.0f;
@@ -192,14 +195,15 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
           font.m_font->setColor(col);
         else
           f << "#fColor=" << (val>>4) << ",";
-      } else
+      }
+      else
         f << "#fColor=" << (val>>4) << ",";
     }
     what &= 0xDF;
 
     if (val && (what & 0x4)) {
       MWAWFont::Line::Style style=MWAWFont::Line::Simple;
-      switch((val>>1)&0x7) {
+      switch ((val>>1)&0x7) {
       case 4:
         style=MWAWFont::Line::Dot;
         break;
@@ -219,7 +223,8 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
         style=MWAWFont::Line::None;
       font.m_font->setUnderlineStyle(style);
       what &= 0xFB;
-    } else if (val & 0xe)
+    }
+    else if (val & 0xe)
       f << "#underline?=" << ((val>>1) &0x7) << ",";
     if (val & 0xF1)
       f << "#underline[unkn]=" << std::hex << (val & 0xF1) << std::dec << ",";
@@ -257,12 +262,13 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
       input->seek(actPos, librevenge::RVNG_SEEK_SET);
       font.m_picturePos = pictPos;
       f << "pictWh=" << wh << ",";
-    } else
+    }
+    else
       input->seek(pos+1+8, librevenge::RVNG_SEEK_SET);
   }
   if (!ok && sz >= 9) {
     int wh = (int) input->readLong(1);
-    switch(wh) {
+    switch (wh) {
     case -1:
       ok = true;
       break;
@@ -290,7 +296,7 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
 bool MSWTextStyles::getFont(ZoneType type, int id, MSWStruct::Font &font)
 {
   MSWStruct::Font *fFont = 0;
-  switch(type) {
+  switch (type) {
   case TextZone:
     if (id < 0 || id >= int(m_state->m_fontList.size()))
       break;
@@ -336,7 +342,7 @@ void MSWTextStyles::setProperty(MSWStruct::Font const &font)
 ////////////////////////////////////////////////////////////
 bool MSWTextStyles::getParagraph(ZoneType type, int id, MSWStruct::Paragraph &para)
 {
-  switch(type) {
+  switch (type) {
   case TextZone:
     if (id < 0 || id >= int(m_state->m_paragraphList.size()))
       break;
@@ -404,7 +410,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
     }
     bool done = false;
     long dSz = endPos-actPos;
-    switch(wh) {
+    switch (wh) {
     case 0:
       done = (actPos+1==endPos||(dataSz==2 && actPos+2==endPos));
       break;
@@ -447,7 +453,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
           f << "#fSize=" << val << ",";
         break;
       }
-      switch(wh) {
+      switch (wh) {
       case 0x3c:
       case 0x3d:
       case 0x3e:
@@ -613,7 +619,8 @@ bool MSWTextStyles::readPLCList(MSWEntry &entry)
     if (!input->checkPosition(plc.end())) {
       f << "#PLC,";
       MWAW_DEBUG_MSG(("MSWTextStyles::readPLCList: plc def is outside the file\n"));
-    } else {
+    }
+    else {
       long actPos = input->tell();
       Vec2<long> fLimit(textPos[(size_t)i], textPos[(size_t)i+1]);
       readPLC(plc, entry.id(), fLimit);
@@ -692,10 +699,12 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
           if (!readFont(font, TextZone)) {
             font = MSWStruct::Font();
             f2 << "#";
-          } else
+          }
+          else
             f2 << font.m_font->getDebugString(m_parserState->m_fontConverter) << font << ",";
           m_state->m_fontList.push_back(font);
-        } else {
+        }
+        else {
           MSWStruct::Paragraph para(vers);
           f2 << "P" << id << ":";
 
@@ -705,17 +714,20 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
           if (vers <= 3) {
             sz++;
             endPos = dataPos+sz;
-          } else
+          }
+          else
             endPos = dataPos+2*sz+1;
           if (sz < 4 || endPos > entry.end()) {
             MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: can not read plcSz\n"));
             f2 << "#";
-          } else {
+          }
+          else {
             int stId = (int) input->readLong(1);
             if (m_state->m_styleParagraphMap.find(stId)==m_state->m_styleParagraphMap.end()) {
               MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: can not find parent paragraph\n"));
               f2 << "#";
-            } else
+            }
+            else
               para.m_styleId = stId;
             f2 << "sP" << stId << ",";
             if (vers > 3) {
@@ -725,7 +737,8 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
               }
               // osnole: do we need to check here if the paragraph is empty ?
               // ie. if (para.m_info->isEmpty()&&stId==0)
-            } else { // always 0 ?
+            }
+            else {   // always 0 ?
               int val = (int) input->readLong(2);
               if (val) f << "g0=" << val << ",";
             }
@@ -735,7 +748,8 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
 #ifdef DEBUG_WITH_FILES
                 para.print(f2, m_parserState->m_fontConverter);
 #endif
-              } else {
+              }
+              else {
                 para = MSWStruct::Paragraph(vers);
                 f2 << "#";
               }
@@ -813,7 +827,8 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
 #ifdef DEBUG_WITH_FILES
       para.print(f, m_parserState->m_fontConverter);
 #endif
-    } else {
+    }
+    else {
       para = MSWStruct::Paragraph(vers);
       f << "#";
     }
@@ -860,7 +875,8 @@ int MSWTextStyles::readPropertyModifier(bool &complex, std::string &extra)
     para.print(f, m_parserState->m_fontConverter);
     f << "]";
 #endif
-  } else {
+  }
+  else {
     input->seek(pos+1, librevenge::RVNG_SEEK_SET);
     f << "#f" << std::hex << c << std::dec << "=" << (int) input->readULong(1);
   }
@@ -874,7 +890,7 @@ int MSWTextStyles::readPropertyModifier(bool &complex, std::string &extra)
 ////////////////////////////////////////////////////////////
 bool MSWTextStyles::getSection(ZoneType type, int id, MSWStruct::Section &section)
 {
-  switch(type) {
+  switch (type) {
   case TextZone:
     if (id < 0 || id >= int(m_state->m_sectionList.size()))
       break;
@@ -947,7 +963,8 @@ bool MSWTextStyles::readSection(MSWEntry &entry, std::vector<long> &cLimits)
     if (textLength && cLimits[i] > textLength) {
       MWAW_DEBUG_MSG(("MSWTextStyles::readSection: text positions is bad...\n"));
       f << "#";
-    } else {
+    }
+    else {
       plc.m_id = int(i);
       plcMap.insert(std::multimap<long,MSWText::PLC>::value_type(cLimits[i],plc));
     }
@@ -1017,15 +1034,18 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
   if (!listener) return;
   if (listener->isHeaderFooterOpened()) {
     MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: can not open a section in header/footer\n"));
-  } else {
+  }
+  else {
     int numCols = sec.m_col.get();
     int actCols = listener->getSection().numColumns();
     if (numCols >= 1 && actCols > 1 && sec.m_colBreak.get()) {
       if (!listener->isSectionOpened()) {
         MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: section is not opened\n"));
-      } else
+      }
+      else
         listener->insertBreak(MWAWContentListener::ColumnBreak);
-    } else {
+    }
+    else {
       if (listener->isSectionOpened())
         listener->closeSection();
       listener->openSection(sec.getSection(m_mainParser->getPageWidth()));
@@ -1301,7 +1321,8 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
       if (dataSize[(size_t) id] < minSz) {
         MWAW_DEBUG_MSG(("MSWTextStyles::readStylesParagraph: zone(paragraph) the id seems bad...\n"));
         f << "#";
-      } else {
+      }
+      else {
         input->seek(debPos[(size_t) id]+1, librevenge::RVNG_SEEK_SET);
         int pId = (int) input->readLong(1);
         if (id >= N && pId != id-N) {
@@ -1365,7 +1386,8 @@ bool MSWTextStyles::readStylesHierarchy(MSWEntry &entry, int N, std::vector<int>
     int v1 = (int) input->readLong(1);
     f << "prev(sP"<< i-N << ")";
     if (v1 == -34) {
-    } else if (v1 < -N || v1+N >= N2)
+    }
+    else if (v1 < -N || v1+N >= N2)
       f << "=###" << v1;
     else {
       orig[(size_t) i] = v1+N;
@@ -1374,7 +1396,8 @@ bool MSWTextStyles::readStylesHierarchy(MSWEntry &entry, int N, std::vector<int>
     if (v0 < -N || v0+N >= N2) {
       f << "[###next" << v0 << "]";
       m_state->m_nextStyleMap[i-N]=i-N;
-    } else {
+    }
+    else {
       m_state->m_nextStyleMap[i-N]=v0;
       if (v0==i-N)
         f << "*";
@@ -1391,7 +1414,8 @@ bool MSWTextStyles::readStylesHierarchy(MSWEntry &entry, int N, std::vector<int>
   if (pos < entry.end()) {
     ascFile.addPos(pos);
     ascFile.addNote("_");
-  } else if (pos > entry.end())
+  }
+  else if (pos > entry.end())
     entry.setEnd(pos);
 
   return true;

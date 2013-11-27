@@ -66,7 +66,8 @@ namespace MSKGraphInternal
 struct RBZone {
   RBZone(): m_isMain(true), m_id(-2), m_idList(), m_frame("") {}
   //! returns a unique id
-  int getId() const {
+  int getId() const
+  {
     return m_isMain ? -1 : m_id;
   }
   //! the zone type: rbdr(true) or rbil
@@ -85,32 +86,37 @@ struct Zone {
   enum Type { Unknown, Shape, ChartZone, Group, Pict, Text, Textv4, Bitmap, TableZone, OLE};
   //! constructor
   Zone() : m_subType(-1), m_zoneId(-1), m_pos(), m_dataPos(-1), m_fileId(-1), m_page(-1), m_decal(), m_finalDecal(), m_box(), m_line(-1),
-    m_style(), m_order(0), m_extra(""), m_doNotSend(false), m_isSent(false) {
+    m_style(), m_order(0), m_extra(""), m_doNotSend(false), m_isSent(false)
+  {
     for (int i = 0; i < 3; i++) m_ids[i] = 0;
   }
   //! destructor
   virtual ~Zone() {}
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Zone const &pict) {
+  friend std::ostream &operator<<(std::ostream &o, Zone const &pict)
+  {
     pict.print(o);
     return o;
   }
   //! return the type
-  virtual Type type() const {
+  virtual Type type() const
+  {
     return Unknown;
   }
 
   //! return a binary data (if known)
   virtual bool getBinaryData(MWAWInputStreamPtr,
-                             librevenge::RVNGBinaryData &res, std::string &pictType) const {
+                             librevenge::RVNGBinaryData &res, std::string &pictType) const
+  {
     res.clear();
     pictType="";
     return false;
   }
 
   //! return the extra border space ( if needed)
-  virtual float needExtraBorderWidth() const {
+  virtual float needExtraBorderWidth() const
+  {
     return 0.0;
   }
 
@@ -118,7 +124,8 @@ struct Zone {
   virtual void fillFramePropertyList(librevenge::RVNGPropertyList &) const { }
 
   //! return the box
-  Box2f getLocalBox(bool extendWithBord=true) const {
+  Box2f getLocalBox(bool extendWithBord=true) const
+  {
     float x = m_box.size().x(), y=m_box.size().y();
     Vec2f min = m_box.min();
     if (x < 0) {
@@ -136,7 +143,8 @@ struct Zone {
     return res;
   }
 
-  MWAWPosition getPosition(MWAWPosition::AnchorTo rel) const {
+  MWAWPosition getPosition(MWAWPosition::AnchorTo rel) const
+  {
     MWAWPosition res;
     Box2f box = getLocalBox();
     if (rel==MWAWPosition::Paragraph || rel==MWAWPosition::Frame) {
@@ -144,11 +152,13 @@ struct Zone {
       res.setRelativePosition(rel);
       if (rel==MWAWPosition::Paragraph)
         res.m_wrapping = MWAWPosition::WBackground;
-    } else if (rel!=MWAWPosition::Page || m_page < 0) {
+    }
+    else if (rel!=MWAWPosition::Page || m_page < 0) {
       res = MWAWPosition(Vec2f(0,0), box.size(), librevenge::RVNG_POINT);
       res.setRelativePosition(MWAWPosition::Char,
                               MWAWPosition::XLeft, MWAWPosition::YTop);
-    } else {
+    }
+    else {
       res = MWAWPosition(box.min()+m_finalDecal, box.size(), librevenge::RVNG_POINT);
       res.setRelativePosition(MWAWPosition::Page);
       res.setPage(m_page+1);
@@ -204,7 +214,7 @@ void Zone::print(std::ostream &o) const
   }
   for (int i = 0; i < 3; i++) {
     if (m_ids[i] <= 0) continue;
-    switch(i) {
+    switch (i) {
     case 0:
       o << "id=";
       break;
@@ -217,7 +227,7 @@ void Zone::print(std::ostream &o) const
     }
     o << std::hex << m_ids[i] << std::dec << ",";
   }
-  switch(m_subType) {
+  switch (m_subType) {
   case 0:
     o << "line,";
     break;
@@ -284,11 +294,13 @@ struct GroupZone : public Zone {
   GroupZone(Zone const &z) : Zone(z), m_childs() { }
 
   //! return the type
-  virtual Type type() const {
+  virtual Type type() const
+  {
     return Group;
   }
   //! operator<<
-  virtual void print(std::ostream &o) const {
+  virtual void print(std::ostream &o) const
+  {
     Zone::print(o);
     o << "childs=[";
     for (size_t i = 0; i < m_childs.size(); i++)
@@ -303,19 +315,23 @@ struct GroupZone : public Zone {
 //! Internal: the simple form of a MSKGraph ( line, rect, ...)
 struct BasicShape : public Zone {
   //! constructor
-  BasicShape(Zone const &z) : Zone(z), m_shape() {
+  BasicShape(Zone const &z) : Zone(z), m_shape()
+  {
   }
   //! return the type
-  virtual Type type() const {
+  virtual Type type() const
+  {
     return Shape;
   }
   //! operator<<
-  virtual void print(std::ostream &o) const {
+  virtual void print(std::ostream &o) const
+  {
     Zone::print(o);
     o << m_shape << ",";
   }
   //! return the extra border size
-  virtual float needExtraBorderWidth() const {
+  virtual float needExtraBorderWidth() const
+  {
     float res=m_style.m_lineWidth;
     if (m_shape.m_type==MWAWGraphicShape::Line) {
       for (int i=0; i<2; ++i) {
@@ -325,7 +341,8 @@ struct BasicShape : public Zone {
     return 0.5f*res;
   }
   //! return the shape type
-  MWAWGraphicStyle getStyle() const {
+  MWAWGraphicStyle getStyle() const
+  {
     MWAWGraphicStyle style(m_style);
     if (m_subType!=0)
       style.m_arrows[0] = style.m_arrows[1]=false;
@@ -348,7 +365,8 @@ struct Chart : public Zone {
   Chart() : Zone(), m_chartId(0) { }
 
   //! return the type
-  virtual Type type() const {
+  virtual Type type() const
+  {
     return ChartZone;
   }
   //! the chart id
@@ -364,7 +382,8 @@ struct DataPict : public Zone {
   DataPict() : Zone(), m_dataEndPos(-1), m_naturalBox() { }
 
   //! return the type
-  virtual Type type() const {
+  virtual Type type() const
+  {
     return Pict;
   }
   //! return a binary data (if known)
@@ -372,7 +391,8 @@ struct DataPict : public Zone {
                              librevenge::RVNGBinaryData &res, std::string &type) const;
 
   //! operator<<
-  virtual void print(std::ostream &o) const {
+  virtual void print(std::ostream &o) const
+  {
     Zone::print(o);
   }
   //! the end of data (only defined when different to m_pos.end())
@@ -428,7 +448,8 @@ struct DataBitmap : public Zone {
   DataBitmap() : Zone(), m_numRows(0), m_numCols(0), m_dataSize(0), m_naturalBox() { }
 
   //! return the type
-  virtual Type type() const {
+  virtual Type type() const
+  {
     return Bitmap;
   }
   //! return a binary data (if known)
@@ -436,7 +457,8 @@ struct DataBitmap : public Zone {
                       std::string &type, std::vector<MWAWColor> const &palette) const;
 
   //! operator<<
-  virtual void print(std::ostream &o) const {
+  virtual void print(std::ostream &o) const
+  {
     o << "nRows=" << m_numRows << ",";
     o << "nCols=" << m_numCols << ",";
     if (m_dataSize > 0)
@@ -490,7 +512,8 @@ struct Table : public Zone {
   Table() : Zone(), m_tableId(0) { }
 
   //! return the type
-  virtual Type type() const {
+  virtual Type type() const
+  {
     return TableZone;
   }
   //! the table id
@@ -506,13 +529,15 @@ struct TextBox : public Zone {
   { }
 
   //! return the type
-  virtual Type type() const {
+  virtual Type type() const
+  {
     return Text;
   }
   //! operator<<
-  virtual void print(std::ostream &o) const {
+  virtual void print(std::ostream &o) const
+  {
     Zone::print(o);
-    switch(m_justify) {
+    switch (m_justify) {
     case MWAWParagraph::JustificationLeft:
       break;
     case MWAWParagraph::JustificationCenter:
@@ -534,7 +559,8 @@ struct TextBox : public Zone {
   }
 
   //! add frame parameters to propList (if needed )
-  virtual void fillFramePropertyList(librevenge::RVNGPropertyList &extras) const {
+  virtual void fillFramePropertyList(librevenge::RVNGPropertyList &extras) const
+  {
     if (!m_style.m_baseSurfaceColor.isWhite())
       extras.insert("fo:background-color", m_style.m_baseSurfaceColor.str().c_str());
   }
@@ -564,11 +590,13 @@ struct OLEZone : public Zone {
   { }
 
   //! return the type
-  virtual Type type() const {
+  virtual Type type() const
+  {
     return OLE;
   }
   //! operator<<
-  virtual void print(std::ostream &o) const {
+  virtual void print(std::ostream &o) const
+  {
     if (m_oleId >= 0) o << "ole" << m_oleId << ",";
     if (m_dim[0] > 0 && m_dim[1] > 0) o << "dim=" << m_dim << ",";
     Zone::print(o);
@@ -588,17 +616,20 @@ struct TextBoxv4 : public Zone {
   { }
 
   //! return the type
-  virtual Type type() const {
+  virtual Type type() const
+  {
     return Textv4;
   }
   //! operator<<
-  virtual void print(std::ostream &o) const {
+  virtual void print(std::ostream &o) const
+  {
     Zone::print(o);
     if (m_text.valid()) o << ", textPos=[" << m_text.begin() << "-" << m_text.end() << "]";
   }
 
   //! add frame parameters to propList (if needed )
-  virtual void fillFramePropertyList(librevenge::RVNGPropertyList &extras) const {
+  virtual void fillFramePropertyList(librevenge::RVNGPropertyList &extras) const
+  {
     if (!m_style.m_baseSurfaceColor.isWhite())
       extras.insert("fo:background-color", m_style.m_baseSurfaceColor.str().c_str());
   }
@@ -612,13 +643,14 @@ struct TextBoxv4 : public Zone {
 //! Internal the pattern ressource of a MSKGraph
 struct Patterns {
   //! constructor ( 4 int by patterns )
-  Patterns(int num, uint16_t const *data) : m_num(num), m_valuesList(), m_percentList() {
+  Patterns(int num, uint16_t const *data) : m_num(num), m_valuesList(), m_percentList()
+  {
     if (m_num<=0) return;
     m_valuesList.resize(size_t(m_num)*8);
     for (size_t i=0; i < size_t(m_num)*4; ++i) {
       uint16_t val=data[i];
-      m_valuesList[2*i]=(unsigned char) (val>>8);
-      m_valuesList[2*i+1]=(unsigned char) (val&0xFF);
+      m_valuesList[2*i]=(unsigned char)(val>>8);
+      m_valuesList[2*i+1]=(unsigned char)(val&0xFF);
     }
     size_t pat=0;
     for (size_t i=0; i < size_t(num); ++i) {
@@ -634,7 +666,8 @@ struct Patterns {
     }
   }
   //! return the pattern corresponding to an id
-  bool get(int id, MWAWGraphicStyle::Pattern &pat) const {
+  bool get(int id, MWAWGraphicStyle::Pattern &pat) const
+  {
     if (id < 0 || id > m_num) {
       MWAW_DEBUG_MSG(("MSKGraphInternal::Patterns::get: can not find pattern %d\n", id));
       return false;
@@ -647,7 +680,8 @@ struct Patterns {
     return true;
   }
   //! return the percentage corresponding to a pattern
-  float getPercent(int id) const {
+  float getPercent(int id) const
+  {
     if (id < 0 || id > m_num) {
       MWAW_DEBUG_MSG(("MSKGraphInternal::Patterns::getPatternPercent: can not find pattern %d\n", id));
       return 1.0;
@@ -695,7 +729,7 @@ void State::initPatterns(int vers)
 {
   if (!m_rsrcPatternsMap.empty()) return;
   if (vers <= 2) {
-    static uint16_t const (valuesV2[]) = {
+    static uint16_t const(valuesV2[]) = {
       0xffff, 0xffff, 0xffff, 0xffff,  0xddff, 0x77ff, 0xddff, 0x77ff,  0xdd77, 0xdd77, 0xdd77, 0xdd77,  0xaa55, 0xaa55, 0xaa55, 0xaa55,
       0x55ff, 0x55ff, 0x55ff, 0x55ff,  0xaaaa, 0xaaaa, 0xaaaa, 0xaaaa,  0xeedd, 0xbb77, 0xeedd, 0xbb77,  0x8888, 0x8888, 0x8888, 0x8888,
       0xb130, 0x031b, 0xd8c0, 0x0c8d,  0x8010, 0x0220, 0x0108, 0x4004,  0xff88, 0x8888, 0xff88, 0x8888,  0xff80, 0x8080, 0xff08, 0x0808,
@@ -709,7 +743,7 @@ void State::initPatterns(int vers)
     };
     m_rsrcPatternsMap.insert(std::map<long, Patterns>::value_type(-1,Patterns(39, valuesV2)));
   }
-  static uint16_t const (values4002[]) = {
+  static uint16_t const(values4002[]) = {
     0xffff, 0xffff, 0xffff, 0xffff,  0x7fff, 0xffff, 0xf7ff, 0xffff,  0x7fff, 0xf7ff, 0x7fff, 0xf7ff,  0x77ff, 0xddff, 0x77ff, 0xddff,
     0x55ff, 0xddff, 0x55ff, 0xddff,  0x55ff, 0xeeff, 0x55ff, 0xbbff,  0x55ff, 0x55ff, 0x55ff, 0x55ff,  0x77dd, 0x77dd, 0x77dd, 0x77dd,
     0x55bf, 0x55ff, 0x55fb, 0x55ff,  0x55bb, 0x55ff, 0x55bb, 0x55ff,  0x55bf, 0x55ee, 0x55fb, 0x55ee,  0x55bb, 0x55ee, 0x55bb, 0x55ee,
@@ -720,7 +754,7 @@ void State::initPatterns(int vers)
     0x8800, 0x2000, 0x8800, 0x0200,  0x8000, 0x0800, 0x8000, 0x0800,  0x8000, 0x0000, 0x0800, 0x0000,  0x0000, 0x0000, 0x0000, 0x0000
   };
   m_rsrcPatternsMap.insert(std::map<long, Patterns>::value_type(4002,Patterns(32, values4002)));
-  static uint16_t const (values4003[]) = {
+  static uint16_t const(values4003[]) = {
     0x0000, 0x0000, 0x0000, 0x0000,  0x8000, 0x0000, 0x0800, 0x0000,  0x8000, 0x0800, 0x8000, 0x0800,  0x8800, 0x2000, 0x8800, 0x0200,
     0x8800, 0x2200, 0x8800, 0x2200,  0xaa00, 0x2200, 0xaa00, 0x2200,  0xaa00, 0x1100, 0xaa00, 0x4400,  0xaa00, 0xaa00, 0xaa00, 0xaa00,
     0x8822, 0x8822, 0x8822, 0x8822,  0xaa44, 0xaa11, 0xaa44, 0xaa11,  0xaa45, 0xaa54, 0xaa45, 0xaa54,  0xaa55, 0xaa55, 0xaa55, 0xaa55,
@@ -729,11 +763,11 @@ void State::initPatterns(int vers)
     0x7fff, 0xffff, 0xf7ff, 0xffff,  0xffff, 0xffff, 0xffff, 0xffff
   };
   m_rsrcPatternsMap.insert(std::map<long, Patterns>::value_type(4003,Patterns(28, values4003)));
-  static uint16_t const (values4004[]) = {
+  static uint16_t const(values4004[]) = {
     0xf0f0, 0xf0f0, 0x0f0f, 0x0f0f,  0xcccc, 0x3333, 0xcccc, 0x3333,  0x3333, 0xcccc, 0x3333, 0xcccc
   };
   m_rsrcPatternsMap.insert(std::map<long, Patterns>::value_type(4004,Patterns(3, values4004)));
-  static uint16_t const (values7000[]) = {
+  static uint16_t const(values7000[]) = {
     0x0101, 0x1010, 0x0101, 0x1010,  0xcc00, 0x0000, 0x3300, 0x0000,  0x1122, 0x4400, 0x1122, 0x4400,  0x4422, 0x0088, 0x4422, 0x0088,
     0xf0f0, 0xf0f0, 0x0f0f, 0x0f0f,  0x9966, 0x6699, 0x9966, 0x6699,  0x0008, 0x1c3e, 0x7f3e, 0x1c08,  0x0008, 0x142a, 0x552a, 0x1408,
     0xb130, 0x031b, 0xd8c0, 0x0c8d,  0x8010, 0x0220, 0x0108, 0x4004,  0x0814, 0x2241, 0x8001, 0x0204,  0x80c0, 0x2112, 0x0c04, 0x0201,
@@ -744,7 +778,7 @@ void State::initPatterns(int vers)
     0x7789, 0x8f8f, 0x7798, 0xf8f8,  0x8814, 0x2241, 0x8800, 0xaa00,  0x40a0, 0x0000, 0x040a, 0x0000,  0xbf00, 0xbfbf, 0xb0b0, 0xb0b0
   };
   m_rsrcPatternsMap.insert(std::map<long, Patterns>::value_type(7000,Patterns(32, values7000)));
-  static uint16_t const (values14001[]) = {
+  static uint16_t const(values14001[]) = {
     0x8844, 0x2211, 0x8844, 0x2211,  0x77bb, 0xddee, 0x77bb, 0xddee,  0x1122, 0x4488, 0x1122, 0x4488,  0xeedd, 0xbb77, 0xeedd, 0xbb77,
     0x8040, 0x2010, 0x0804, 0x0201,  0x7fbf, 0xdfef, 0xf7fb, 0xfdfe,  0x0102, 0x0408, 0x1020, 0x4080,  0xfefd, 0xfbf7, 0xefdf, 0xbf7f,
     0xe070, 0x381c, 0x0e07, 0x83c1,  0x99cc, 0x6633, 0x99cc, 0x6633,  0x8307, 0x0e1c, 0x3870, 0xe0c1,  0x3366, 0xcc99, 0x3366, 0xcc99,
@@ -798,7 +832,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -830,7 +865,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
   assert(m_graphParser);
 
   long pos = m_input->tell();
-  switch(m_type) {
+  switch (m_type) {
   case Empty:
     break;
   case Chart:
@@ -1003,7 +1038,8 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
     if (m_mainParser->getColor(cId,col,vers <= 3 ? vers : 3)) {
       if (i) style.m_baseSurfaceColor = col;
       else style.m_baseLineColor = col;
-    } else
+    }
+    else
       f << "#col" << i << "=" << rId << ",";
   }
   bool hasSurfPatFunction=false;
@@ -1023,12 +1059,13 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
         style.m_pattern=pattern;
         style.m_pattern.m_colors[0] = style.m_baseSurfaceColor;
         style.m_pattern.m_colors[1] = style.m_baseLineColor;
-      } else
+      }
+      else
         style.setSurfaceColor(MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor));
     }
     int lineType=(int) input->readLong(2);
     if (style.m_lineWidth>0) {
-      switch(lineType) {
+      switch (lineType) {
       case 0:
         style.m_lineWidth=0.;
         break;
@@ -1048,7 +1085,8 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
         break;
       }
     }
-  } else {
+  }
+  else {
     style.m_lineColor=style.m_baseLineColor;
     style.m_surfaceColor=style.m_baseSurfaceColor;
     for (int i = 0; i < 2; i++) {
@@ -1071,7 +1109,8 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
       if (rsid<=0) {
         if (i==0 && rsid==0)
           style.m_lineWidth=0.;
-      } else {
+      }
+      else {
         float percent=1.0;
         bool done=false;
         MWAWGraphicStyle::Pattern pattern;
@@ -1085,12 +1124,14 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
             style.m_pattern.m_colors[1] = style.m_baseLineColor;
             done = true;
           }
-        } else {
+        }
+        else {
           MWAW_DEBUG_MSG(("MSKGraph::readPictHeader:find odd pattern\n"));
           f << "##";
         }
         if (done) {
-        } else if (i==0)
+        }
+        else if (i==0)
           style.m_lineColor=MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor);
         else
           style.setSurfaceColor(MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor));
@@ -1112,7 +1153,7 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
       f << "##penSize=" << style.m_lineWidth << ",";
       style.m_lineWidth = 1;
     }
-    val =  (int) input->readLong(2);
+    val = (int) input->readLong(2);
     if (val)
       f << "f1=" << val << ",";
   }
@@ -1144,7 +1185,7 @@ bool MSKGraph::readPictHeader(MSKGraphInternal::Zone &pict)
   }
   if (flags) f << "fl0=" << flags << ",";
   int lineFlags = (int) input->readULong(1);
-  switch(lineFlags&3) {
+  switch (lineFlags&3) {
   case 2:
     style.m_arrows[0]=true;
   case 1:
@@ -1205,7 +1246,7 @@ bool MSKGraph::readGradient(MSKGraph::Style &style)
   val=(int) input->readLong(1); // 0
   if (val) f << "f8=" << val << ",";
   f << "],";
-  switch(type) {
+  switch (type) {
   case 1:
     style.m_gradientStopList.resize(2);
     style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, style.m_baseSurfaceColor);
@@ -1284,7 +1325,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
   long debData = input->tell();
   long dataSize = 0;
   int versSize = 0;
-  switch(pict.m_subType) {
+  switch (pict.m_subType) {
   case 0:
   case 1:
   case 2:
@@ -1374,7 +1415,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
 
   input->seek(debData, librevenge::RVNG_SEEK_SET);
   if (versSize) {
-    switch(pict.m_subType) {
+    switch (pict.m_subType) {
     case 7: {
       long ptr = (long) input->readULong(4);
       f << std::hex << "ptr2=" << ptr << std::dec << ",";
@@ -1479,7 +1520,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
     break;
   }
   case 7: {
-    val =  (int) input->readULong(vers >= 3 ? 1 : 2);
+    val = (int) input->readULong(vers >= 3 ? 1 : 2);
     if (val) f << "g1=" << val << ",";
     // skip size (already read)
     pict.m_dataPos = input->tell()+2;
@@ -1496,7 +1537,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
   case 9: { // textbox normal
     MWAWParagraph::Justification justify = MWAWParagraph::JustificationLeft;
     val = (int) input->readLong(2);
-    switch(val) {
+    switch (val) {
     case 0:
       break;
     case 1:
@@ -1549,8 +1590,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
   case 0xa: { // chart
     MSKGraphInternal::Chart *chart  = new MSKGraphInternal::Chart(pict);
     int chartId = m_state->m_chartId++;
-    if (!m_tableParser->readChart(chartId, chart->m_style))
-    {
+    if (!m_tableParser->readChart(chartId, chart->m_style)) {
       delete chart;
       return -1;
     }
@@ -1596,7 +1636,7 @@ int MSKGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int or
       f2 << "), ";
       if (i == 1) f2 << "unk=" << input->readLong(2) << ", ";
     }
-    int sizeLine =  (int) input->readLong(2);
+    int sizeLine = (int) input->readLong(2);
     f2 << "lineSize(?)=" << sizeLine << ", ";
     long bitmapSize = input->readLong(4);
     f2 << "bitmapSize=" << std::hex << bitmapSize << ", ";
@@ -1804,7 +1844,8 @@ void MSKGraph::computePositions(int zoneId, std::vector<int> &linesH, std::vecto
         MWAW_DEBUG_MSG(("MSKGraph::computePositions: linepos is too big\n"));
         if (numLines)
           h = linesH[(size_t) numLines-1];
-      } else
+      }
+      else
         h = linesH[(size_t) zone->m_line];
       zone->m_finalDecal = Vec2f(0, float(h));
     }
@@ -1936,7 +1977,7 @@ bool MSKGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
   }
   f << "), ";
   std::string oleName;
-  while(input->tell() < long(page_offset)+0x162) {
+  while (input->tell() < long(page_offset)+0x162) {
     char val  = (char) input->readLong(1);
     if (val == 0) break;
     oleName+= val;
@@ -2173,8 +2214,9 @@ void MSKGraph::sendGroupChild(int id, MWAWPosition const &pos)
       else
         partialBdBox=partialBdBox.getUnion(localBdBox);
       canMerge=true;
-    } else if (child.type()==MSKGraphInternal::Zone::Group &&
-               canCreateGraphic(reinterpret_cast<MSKGraphInternal::GroupZone const &>(child))) {
+    }
+    else if (child.type()==MSKGraphInternal::Zone::Group &&
+             canCreateGraphic(reinterpret_cast<MSKGraphInternal::GroupZone const &>(child))) {
       if (numDataToMerge == 0)
         partialBdBox=child.getLocalBox();
       else
@@ -2204,9 +2246,10 @@ void MSKGraph::sendGroupChild(int id, MWAWPosition const &pos)
         else if (localChild.type()==MSKGraphInternal::Zone::Shape) {
           MSKGraphInternal::BasicShape const &shape=reinterpret_cast<MSKGraphInternal::BasicShape const &>(localChild);
           graphicListener->insertPicture(box, shape.m_shape, shape.getStyle());
-        } else if (localChild.type()==MSKGraphInternal::Zone::Text) {
+        }
+        else if (localChild.type()==MSKGraphInternal::Zone::Text) {
           shared_ptr<MSKGraphInternal::SubDocument> subdoc
-          (new MSKGraphInternal::SubDocument(const_cast<MSKGraph&>(*this), input, MSKGraphInternal::SubDocument::TextBox, localCId));
+          (new MSKGraphInternal::SubDocument(const_cast<MSKGraph &>(*this), input, MSKGraphInternal::SubDocument::TextBox, localCId));
           // a textbox can not have border
           MWAWGraphicStyle style(localChild.m_style);
           style.m_lineWidth=0;
@@ -2225,7 +2268,7 @@ void MSKGraph::sendGroupChild(int id, MWAWPosition const &pos)
       }
     }
     // time to send back the data
-    for ( ; childNotSent <= c; ++childNotSent)
+    for (; childNotSent <= c; ++childNotSent)
       send(group.m_childs[childNotSent],pos);
     numDataToMerge=0;
   }
@@ -2284,14 +2327,16 @@ void MSKGraph::sendGroup(MSKGraphInternal::GroupZone const &group, MWAWGraphicLi
     else if (child.type()==MSKGraphInternal::Zone::Shape) {
       MSKGraphInternal::BasicShape const &shape=reinterpret_cast<MSKGraphInternal::BasicShape const &>(child);
       listener->insertPicture(box, shape.m_shape, shape.getStyle());
-    } else if (child.type()==MSKGraphInternal::Zone::Text) {
+    }
+    else if (child.type()==MSKGraphInternal::Zone::Text) {
       shared_ptr<MSKGraphInternal::SubDocument> subdoc
-      (new MSKGraphInternal::SubDocument(const_cast<MSKGraph&>(*this), input, MSKGraphInternal::SubDocument::TextBox, cId));
+      (new MSKGraphInternal::SubDocument(const_cast<MSKGraph &>(*this), input, MSKGraphInternal::SubDocument::TextBox, cId));
       // a textbox can not have border
       MWAWGraphicStyle style(child.m_style);
       style.m_lineWidth=0;
       listener->insertTextBox(box, subdoc, style);
-    } else {
+    }
+    else {
       MWAW_DEBUG_MSG(("MSKGraph::sendGroup: find some unexpected child\n"));
     }
   }
@@ -2435,7 +2480,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
 
   f.str("");
   f << "SmallText:";
-  while(1) {
+  while (1) {
     if (input->isEnd()) return false;
 
     pos = input->tell();
@@ -2464,7 +2509,7 @@ bool MSKGraph::readText(MSKGraphInternal::TextBox &textBox)
       }
     }
 
-    if (sizeOfData <= 100+nChar && (sizeOfData%2==0) ) {
+    if (sizeOfData <= 100+nChar && (sizeOfData%2==0)) {
       if (input->seek(sizeOfData, librevenge::RVNG_SEEK_CUR) != 0) return false;
       f << "#";
       ascFile.addPos(pos);
@@ -2527,7 +2572,7 @@ bool MSKGraph::readFont(MWAWFont &font)
   font.setSize((float) input->readULong(2));
 
   unsigned char color[3];
-  for (int i = 0; i < 3; i++) color[i] = (unsigned char) (input->readULong(2)>>8);
+  for (int i = 0; i < 3; i++) color[i] = (unsigned char)(input->readULong(2)>>8);
   font.setColor(MWAWColor(color[0],color[1],color[2]));
   font.m_extra = f.str();
   return true;
@@ -2564,11 +2609,12 @@ void MSKGraph::sendTextBox(int zoneId)
       int id = textBox.m_formats[(size_t)actFormatPos++];
       if (id < 0 || id >= numFonts) {
         MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: can not find a font\n"));
-      } else
+      }
+      else
         listener->setFont(textBox.m_fontsList[(size_t)id]);
     }
     unsigned char c = (unsigned char) textBox.m_text[i];
-    switch(c) {
+    switch (c) {
     case 0x9:
       MWAW_DEBUG_MSG(("MSKGraph::sendTextBox: find some tab\n"));
       listener->insertChar(' ');
@@ -2744,7 +2790,7 @@ void MSKGraph::sendObjects(MSKGraph::SendData const &what)
   int numZones = int(m_state->m_zonesList.size());
   std::vector<int> listIds;
   MSKGraphInternal::RBZone *rbZone=0;
-  switch(what.m_type) {
+  switch (what.m_type) {
   case MSKGraph::SendData::ALL: {
     listIds.resize(size_t(numZones));
     for (int i = 0; i < numZones; i++) listIds[size_t(i)]=i;

@@ -62,7 +62,8 @@ struct DSET {
   DSET() : m_size(0), m_numData(0), m_dataSz(-1), m_headerSz(-1),
     m_type(T_Unknown), m_fileType(-1), m_id(0), m_fathersList(), m_validedChildList(),
     m_beginSelection(0), m_endSelection(-1), m_textType(0),
-    m_childs(), m_otherChilds(), m_parsed(false), m_internal(0) {
+    m_childs(), m_otherChilds(), m_parsed(false), m_internal(0)
+  {
     for (int i = 0; i < 4; i++) m_flags[i] = 0;
   }
 
@@ -70,7 +71,8 @@ struct DSET {
   virtual ~DSET() {}
 
   //! test is a child id is valid
-  bool okChildId(int zoneId) const {
+  bool okChildId(int zoneId) const
+  {
     return m_validedChildList.find(zoneId) != m_validedChildList.end();
   }
 
@@ -134,12 +136,14 @@ struct DSET {
     enum Type { ZONE, TEXT, GRAPHIC, TABLE, UNKNOWN };
 
     //! constructor
-    Child() : m_type(UNKNOWN), m_id(-1), m_posC(-1), m_box() {
+    Child() : m_type(UNKNOWN), m_id(-1), m_posC(-1), m_box()
+    {
     }
 
     //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, Child const &ch) {
-      switch(ch.m_type) {
+    friend std::ostream &operator<<(std::ostream &o, Child const &ch)
+    {
+      switch (ch.m_type) {
       case TEXT:
         o << "text,";
         break;

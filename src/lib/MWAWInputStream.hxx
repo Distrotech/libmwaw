@@ -68,18 +68,21 @@ public:
   ~MWAWInputStream();
 
   //! returns the basic librevenge::RVNGInputStream
-  shared_ptr<librevenge::RVNGInputStream> input() {
+  shared_ptr<librevenge::RVNGInputStream> input()
+  {
     return m_stream;
   }
   //! returns a new input stream corresponding to a librevenge::RVNGBinaryData
   static shared_ptr<MWAWInputStream> get(librevenge::RVNGBinaryData const &data, bool inverted);
 
   //! returns the endian mode (see constructor)
-  bool readInverted() const {
+  bool readInverted() const
+  {
     return m_inverseRead;
   }
   //! sets the endian mode
-  void setReadInverted(bool newVal) {
+  void setReadInverted(bool newVal)
+  {
     m_inverseRead = newVal;
   }
   //
@@ -94,11 +97,13 @@ public:
   //! returns actual offset position
   long tell();
   //! returns the stream size
-  long size() const {
+  long size() const
+  {
     return m_streamSize;
   }
   //! checks if a position is or not a valid file position
-  bool checkPosition(long pos) const {
+  bool checkPosition(long pos) const
+  {
     if (pos < 0) return false;
     if (m_readLimit > 0 && pos > m_readLimit) return false;
     return pos<=m_streamSize;
@@ -109,16 +114,19 @@ public:
   /*! \brief defines a new section in the file (from actualPos to newLimit)
    * next call of seek, tell, atEos, ... will be restrained to this section
    */
-  void pushLimit(long newLimit) {
+  void pushLimit(long newLimit)
+  {
     m_prevLimits.push_back(m_readLimit);
     m_readLimit = newLimit > m_streamSize ? m_streamSize : newLimit;
   }
   //! pops a section defined by pushLimit
-  void popLimit() {
+  void popLimit()
+  {
     if (m_prevLimits.size()) {
       m_readLimit = m_prevLimits.back();
       m_prevLimits.pop_back();
-    } else m_readLimit = -1;
+    }
+    else m_readLimit = -1;
   }
 
   //
@@ -126,7 +134,8 @@ public:
   //
 
   //! returns a uint8, uint16, uint32 readed from actualPos
-  unsigned long readULong(int num) {
+  unsigned long readULong(int num)
+  {
     return readULong(m_stream.get(), num, 0, m_inverseRead);
   }
   //! return a int8, int16, int32 readed from actualPos
@@ -168,7 +177,8 @@ public:
   // Finder Info access
   //
   /** returns the finder info type and creator (if known) */
-  bool getFinderInfo(std::string &type, std::string &creator) const {
+  bool getFinderInfo(std::string &type, std::string &creator) const
+  {
     if (!m_fInfoType.length() || !m_fInfoCreator.length()) {
       type = creator = "";
       return false;
@@ -183,15 +193,18 @@ public:
   //
 
   /** returns true if the data fork block exists */
-  bool hasDataFork() const {
+  bool hasDataFork() const
+  {
     return bool(m_stream);
   }
   /** returns true if the resource fork block exists */
-  bool hasResourceFork() const {
+  bool hasResourceFork() const
+  {
     return bool(m_resourceFork);
   }
   /** returns the resource fork if find */
-  shared_ptr<MWAWInputStream> getResourceForkStream() {
+  shared_ptr<MWAWInputStream> getResourceForkStream()
+  {
     return m_resourceFork;
   }
 

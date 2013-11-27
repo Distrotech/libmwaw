@@ -60,7 +60,8 @@ std::string getTypeName(int type);
 struct Border {
   //! constructor
   Border() :m_frameBorder(), m_frontColor(MWAWColor::black()), m_backColor(MWAWColor::white()),
-    m_shadowColor(MWAWColor::black()), m_shadowDepl(0,0), m_flags(0), m_extra("") {
+    m_shadowColor(MWAWColor::black()), m_shadowDepl(0,0), m_flags(0), m_extra("")
+  {
     m_frameBorder.m_style=MWAWBorder::None;
     for (int w=0; w < 3; w++) m_type[w]=0;
   }
@@ -69,7 +70,8 @@ struct Border {
   //! add to frame properties
   void addToFrame(librevenge::RVNGPropertyList &pList) const;
   //! return true if we have a shadow
-  bool hasShadow() const {
+  bool hasShadow() const
+  {
     return m_shadowDepl[0]||m_shadowDepl[1];
   }
   //! try to read a border definiton
@@ -119,7 +121,8 @@ struct Entry : public MWAWEntry {
   //! basic operator==
   bool operator==(const Entry &a) const;
   //! basic operator!=
-  bool operator!=(const Entry &a) const {
+  bool operator!=(const Entry &a) const
+  {
     return !operator==(a);
   }
 

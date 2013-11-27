@@ -98,13 +98,15 @@ class CompObj
 {
 public:
   //! the constructor
-  CompObj() : m_mapCls() {
+  CompObj() : m_mapCls()
+  {
     initCLSMap();
   }
 
   /** return the CLS Name corresponding to an identifier */
-  char const *getCLSName(unsigned long v) {
-    if (m_mapCls.find(v) == m_mapCls.end() ) return 0L;
+  char const *getCLSName(unsigned long v)
+  {
+    if (m_mapCls.find(v) == m_mapCls.end()) return 0L;
     return m_mapCls[v];
   }
 
@@ -113,7 +115,8 @@ protected:
   std::map<unsigned long, char const *> m_mapCls;
 
   /** initialise a map CLSId <-> name */
-  void initCLSMap() {
+  void initCLSMap()
+  {
     // source: binfilter/bf_so3/source/inplace/embobj.cxx
     m_mapCls[0x00000319]="Picture"; // addon Enhanced Metafile ( find in some file)
 
@@ -388,22 +391,27 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
                  readOlePres(ole, data, pictPos, asciiFile)) {
           hasData = true;
           newConfidence = 2;
-        } else if (isOle10Native(ole, dOle.m_dir) &&
-                   readOle10Native(ole, data, asciiFile)) {
+        }
+        else if (isOle10Native(ole, dOle.m_dir) &&
+                 readOle10Native(ole, data, asciiFile)) {
           hasData = true;
           // small size can be a symptom that this is a link to a
           // basic msworks data file, so we reduce confidence
           newConfidence = data.size() > 1000 ? 4 : 2;
-        } else if (readCompObj(ole, dOle.m_dir, asciiFile));
+        }
+        else if (readCompObj(ole, dOle.m_dir, asciiFile));
         else if (readContents(ole, dOle.m_dir, data, pictPos, asciiFile)) {
           hasData = true;
           newConfidence = 3;
-        } else if (readCONTENTS(ole, dOle.m_dir, data, pictPos, asciiFile)) {
+        }
+        else if (readCONTENTS(ole, dOle.m_dir, data, pictPos, asciiFile)) {
           hasData = true;
           newConfidence = 3;
-        } else
+        }
+        else
           ok = false;
-      } catch (...) {
+      }
+      catch (...) {
         ok = false;
       }
       if (!ok) {
@@ -554,7 +562,7 @@ bool MWAWOLEParser::readMM(MWAWInputStreamPtr input, std::string const &oleName,
   for (int i = 0; i < 6; i++)
     val[i] = (int) input->readLong(2);
 
-  switch(val[5]) {
+  switch (val[5]) {
   case 0:
     f << "conversion,";
     break;
@@ -625,7 +633,8 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
       MWAW_DEBUG_MSG(("MWAWOLEParser::readCompObj: unknown clsid=%ld\n", (long) clsData[0]));
       f << "unknCLSID='" << std::hex << clsData[0] << "'";
     }
-  } else {
+  }
+  else {
     /* I found:
       c1dbcd28e20ace11a29a00aa004a1a72     for MSWorks.Table
       c2dbcd28e20ace11a29a00aa004a1a72     for Microsoft Works/MSWorksREVENGEoc
@@ -652,7 +661,8 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
       f.str("");
       f << ip->readLong(4) << "[val*]";
       st = f.str();
-    } else {
+    }
+    else {
       for (int i = 0; i < sz; i++)
         st += (char) ip->readULong(1);
     }

@@ -59,7 +59,8 @@ namespace MSWParserInternal
 ////////////////////////////////////////
 //! Internal: the object of MSWParser
 struct Object {
-  Object() : m_textPos(-1), m_pos(), m_name(""), m_id(-1), m_extra("") {
+  Object() : m_textPos(-1), m_pos(), m_name(""), m_id(-1), m_extra("")
+  {
     for (int i = 0; i < 2; i++) {
       m_ids[i] = -1;
       m_idsFlag[i] = 0;
@@ -67,7 +68,8 @@ struct Object {
     for (int i = 0; i < 2; i++) m_flags[i] = 0;
   }
 
-  MSWEntry getEntry() const {
+  MSWEntry getEntry() const
+  {
     MSWEntry res;
     res.setBegin(m_pos.begin());
     res.setEnd(m_pos.end());
@@ -77,7 +79,8 @@ struct Object {
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Object const &obj) {
+  friend std::ostream &operator<<(std::ostream &o, Object const &obj)
+  {
     if (obj.m_textPos >= 0)
       o << std::hex << "textPos?=" << obj.m_textPos << std::dec << ",";
     if (obj.m_id >= 0) o << "Obj" << obj.m_id << ",";
@@ -124,10 +127,12 @@ struct Object {
 //! Internal: the picture of a MSWParser
 struct Picture {
   struct Zone;
-  Picture() : m_dim(), m_picturesList(), m_flag(0) {
+  Picture() : m_dim(), m_picturesList(), m_flag(0)
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Picture const &pict) {
+  friend std::ostream &operator<<(std::ostream &o, Picture const &pict)
+  {
     o << "dim=" << pict.m_dim << ",";
     if (pict.m_flag) o << "f0=" << std::hex << pict.m_flag << std::dec << ",";
     return o;
@@ -142,11 +147,13 @@ struct Picture {
 
   // ! a small zone
   struct Zone {
-    Zone() : m_pos(), m_dim() {
+    Zone() : m_pos(), m_dim()
+    {
       for (int i = 0; i < 3; i++) m_flags[i] = 0;
     }
     //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, Zone const &pict) {
+    friend std::ostream &operator<<(std::ostream &o, Zone const &pict)
+    {
       o << "dim=" << pict.m_dim << ",";
       if (pict.m_flags[0] != 8) o << "f0=" << pict.m_flags[0] << ",";
       if (pict.m_flags[1]) o << "f1=" << pict.m_flags[1] << ",";
@@ -169,7 +176,8 @@ struct State {
   //! constructor
   State() : m_bot(-1), m_eot(-1), m_endNote(false),
     m_picturesMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
-    m_headersId(), m_footersId() {
+    m_headersId(), m_footersId()
+  {
   }
 
   //! the begin of the text
@@ -216,7 +224,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -322,7 +331,7 @@ void MSWParser::newPage(int number)
 
 bool MSWParser::getColor(int id, MWAWColor &col) const
 {
-  switch(id) {
+  switch (id) {
   case 0:
     col=MWAWColor(0,0,0);
     break; // black
@@ -414,7 +423,8 @@ void MSWParser::parse(librevenge::RVNGTextInterface *docInterface)
     }
 
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("MSWParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -546,8 +556,8 @@ bool MSWParser::readZoneList()
   int numData = vers <= 3 ? 15: 20;
   std::stringstream s;
   for (int i = 0; i < numData; i++) {
-    switch(i) {
-      // the first two zone are often simillar : even/odd header/footer ?
+    switch (i) {
+    // the first two zone are often simillar : even/odd header/footer ?
     case 0: // original styles zone, often invalid
       readEntry("Styles", 0);
       break;
@@ -745,7 +755,8 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
     if (0x100 <= m_state->m_eot) {
       MWAW_DEBUG_MSG(("MSWParser::checkHeader: problem with text position: reset begin to default\n"));
       m_state->m_bot = 0x100;
-    } else {
+    }
+    else {
       MWAW_DEBUG_MSG(("MSWParser::checkHeader: problem with text position: reset to empty\n"));
       m_state->m_bot = m_state->m_eot = 0x100;
     }
@@ -846,7 +857,8 @@ bool MSWParser::readHeaderEndV3()
     if (!dimOk) {
       f << "###";
       MWAW_DEBUG_MSG(("MSWParser::readHeaderEndV3: page dimensions seem bad\n"));
-    } else {
+    }
+    else {
       getPageSpan().setMarginTop(dim[2]);
       getPageSpan().setMarginLeft(dim[3]);
       getPageSpan().setMarginBottom((dim[4]< 0.5) ? 0.0 : dim[4]-0.5);
@@ -854,7 +866,8 @@ bool MSWParser::readHeaderEndV3()
       getPageSpan().setFormLength(dim[0]);
       getPageSpan().setFormWidth(dim[1]);
     }
-  } else
+  }
+  else
     dimOk = false;
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -872,7 +885,7 @@ bool MSWParser::readHeaderEndV3()
     f << "facingpage,";
   if (flags & 0x40) // ligne creuse
     f << "defTabs[emptyline],";
-  switch((flags>>1) & 0x3) {
+  switch ((flags>>1) & 0x3) {
   case 0:
     if (dimOk) m_state->m_endNote = true;
     f << "endnote,";
@@ -932,7 +945,8 @@ bool MSWParser::readHeaderEndV3()
   if (sz > 31) {
     f << "###";
     MWAW_DEBUG_MSG(("MSWParser::readHeaderEndV3: next filename seems bad\n"));
-  } else {
+  }
+  else {
     std::string fName("");
     for (int i = 0; i < sz; i++)
       fName += (char) input->readULong(1);
@@ -1023,7 +1037,8 @@ bool MSWParser::readDocumentInfo(MSWEntry &entry)
 
     getPageSpan().setFormLength(dim[0]);
     getPageSpan().setFormWidth(dim[1]);
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("MSWParser::readDocumentInfo: the page dimensions seems odd\n"));
   }
 
@@ -1514,7 +1529,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
 
   long zoneEnd = pos+6+fSz;
   std::string name(""); // first equation, second "" or Equation Word?
-  while(long(input->tell()) != zoneEnd) {
+  while (long(input->tell()) != zoneEnd) {
     int c = (int) input->readULong(1);
     if (c == 0) {
       if (name.length()) f << name << ",";
@@ -1555,7 +1570,8 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
       type += (char) input->readULong(1);
     f << type << "],";
     isAnnotation=type=="ANOT";
-  } else if (fSz) {
+  }
+  else if (fSz) {
     f << "##data2[sz]=" << fSz << ",";
     ascii().addDelimiter(input->tell(),'|');
     input->seek(pos+fSz+1, librevenge::RVNG_SEEK_SET);
@@ -1605,7 +1621,8 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
       MWAW_DEBUG_MSG(("MSWParser::readObject: can not read the annotation string\n"));
       f << "###";
       ok = false;
-    } else {
+    }
+    else {
       std::string annotation("");
       for (int i = 0; i < fSz; i++)
         annotation += (char) input->readULong(1);
@@ -1620,17 +1637,20 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
       fSz = (int) input->readULong(1);
     }
     if (!ok) {
-    } else if (fSz+9 > dataSz) {
+    }
+    else if (fSz+9 > dataSz) {
       MWAW_DEBUG_MSG(("MSWParser::readObject: can not read the annotation comment\n"));
       f << "###";
-    } else {
+    }
+    else {
       std::string annotation("");
       for (int i = 0; i < fSz; i++)
         annotation += (char) input->readULong(1);
       if (annotation.length())
         f << "annot[comment]=" << annotation << ",";
     }
-  } else if (dataSz)
+  }
+  else if (dataSz)
     ascii().addDelimiter(pos, '|');
   input->seek(pos+dataSz, librevenge::RVNG_SEEK_SET);
 
@@ -1787,7 +1807,8 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
   if (anchor != MWAWPosition::Page && anchor != MWAWPosition::Frame) {
     basicPos.setRelativePosition(anchor, MWAWPosition::XLeft, MWAWPosition::YCenter);
     basicPos.m_wrapping =  MWAWPosition::WBackground;
-  } else
+  }
+  else
     basicPos.setRelativePosition(anchor);
 
   long actPos = input->tell();

@@ -45,26 +45,30 @@
 #include "MWAWEntry.hxx"
 
 struct WNEntry : public MWAWEntry {
-  WNEntry() : MWAWEntry(), m_fileType(-1) {
+  WNEntry() : MWAWEntry(), m_fileType(-1)
+  {
     for (int i = 0; i < 4; i++) m_val[i] = 0;
   }
   //! returns true if this entry store a zone
-  bool isZoneType() const {
+  bool isZoneType() const
+  {
     return m_fileType == 4 || m_fileType == 6;
   }
   //! returns true if this is a zone
-  bool isZone() const {
+  bool isZone() const
+  {
     return isZoneType() && valid();
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, WNEntry const &entry) {
+  friend std::ostream &operator<<(std::ostream &o, WNEntry const &entry)
+  {
     if (entry.type().length()) {
       o << entry.type();
       if (entry.id() >= 0) o << "[" << entry.id() << "]";
       o << "=";
     }
     o << "[";
-    switch(entry.m_fileType) {
+    switch (entry.m_fileType) {
     case 0x4:
       o << "zone,";
       break;
@@ -94,7 +98,8 @@ struct WNEntryManager {
   WNEntryManager() : m_posMap(), m_typeMap() {}
 
   //! return an entry for a position
-  WNEntry get(long pos) const {
+  WNEntry get(long pos) const
+  {
     std::map<long, WNEntry>::const_iterator it = m_posMap.find(pos);
     if (it == m_posMap.end())
       return WNEntry();
@@ -102,7 +107,8 @@ struct WNEntryManager {
   }
 
   //! add a new entry
-  bool add(WNEntry const &entry) {
+  bool add(WNEntry const &entry)
+  {
     if (!entry.valid()) return false;
     if (m_posMap.find(entry.begin()) != m_posMap.end()) {
       MWAW_DEBUG_MSG(("WNEntryManager:add: an entry for this position already exists\n"));
@@ -116,7 +122,8 @@ struct WNEntryManager {
   }
 
   //! reset the data
-  void reset() {
+  void reset()
+  {
     m_posMap.clear();
     m_typeMap.clear();
   }

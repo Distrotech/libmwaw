@@ -61,7 +61,8 @@ namespace ZWTextInternal
 //! Internal: struct used to store the font of a ZWText
 struct Font {
   //! constructor
-  Font() : m_font(), m_height(0), m_extra("") {
+  Font() : m_font(), m_height(0), m_extra("")
+  {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Font const &font);
@@ -86,15 +87,18 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
 //! Internal: struct used to store a header/footer of a ZWText
 struct HFZone {
   //! constructor
-  HFZone() : m_pos(), m_font(), m_extra("") {
+  HFZone() : m_pos(), m_font(), m_extra("")
+  {
     m_font.m_font = MWAWFont(3,12);
   }
   //! returns true if the zone is not empty
-  bool ok() const {
+  bool ok() const
+  {
     return m_pos.valid();
   }
   //! operator<<
-  std::string getDebugString(MWAWFontConverterPtr &convert) const {
+  std::string getDebugString(MWAWFontConverterPtr &convert) const
+  {
     std::stringstream s;
     if (!m_pos.valid()) return s.str();
     if (convert)
@@ -116,7 +120,8 @@ struct HFZone {
 //! Internal: struct used to store a section of a ZWText
 struct Section {
   //! constructor
-  Section() : m_id(), m_pos(), m_name(""), m_idFontMap(), m_parsed(false) {
+  Section() : m_id(), m_pos(), m_name(""), m_idFontMap(), m_parsed(false)
+  {
   }
   //! the section id
   int m_id;
@@ -134,10 +139,12 @@ struct Section {
 //! Internal: the state of a ZWText
 struct State {
   //! constructor
-  State() : m_version(-1), m_numPages(-1), m_actualPage(1), m_idSectionMap(), m_header(), m_footer() {
+  State() : m_version(-1), m_numPages(-1), m_actualPage(1), m_idSectionMap(), m_header(), m_footer()
+  {
   }
   //! return a section for an id ( if it does not exists, create id )
-  Section &getSection(int id) {
+  Section &getSection(int id)
+  {
     std::map<int,Section>::iterator it = m_idSectionMap.find(id);
     if (it != m_idSectionMap.end())
       return it->second;
@@ -173,7 +180,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -271,7 +279,7 @@ void ZWText::computePositions()
       continue;
     long endPos = section.m_pos.end();
     input->seek(section.m_pos.begin(), librevenge::RVNG_SEEK_SET);
-    while(!input->isEnd()) {
+    while (!input->isEnd()) {
       if (input->tell()+3 >= endPos)
         break;
       if ((char) input->readLong(1)!='<')
@@ -308,7 +316,7 @@ bool ZWText::createZones()
       if (it->first != zNames[z])
         break;
       MWAWEntry const &entry = it++->second;
-      switch(z) {
+      switch (z) {
       case 0:
       case 1:
         readHFZone(entry);
@@ -330,7 +338,7 @@ bool ZWText::createZones()
       if (it->first != sNames[z])
         break;
       MWAWEntry const &entry = it++->second;
-      switch(z) {
+      switch (z) {
       case 0:
         readSectionFonts(entry);
         break;
@@ -367,7 +375,7 @@ ZWText::TextCode ZWText::isTextCode
   }
   std::string expectedString("");
   ZWText::TextCode res = None;
-  switch(c) {
+  switch (c) {
   case 'b':
     expectedString="bookmark";
     res = BookMark;
@@ -393,7 +401,7 @@ ZWText::TextCode ZWText::isTextCode
     }
   }
   dPos.setBegin(input->tell());
-  while(1) {
+  while (1) {
     if (input->isEnd() || input->tell() >= endPos) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       return None;
@@ -482,7 +490,8 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
       case BookMark: {
         if (textCode==Link) {
           MWAW_DEBUG_MSG(("ZWText::sendText: find a link, uses bookmark\n"));
-        } else if (textCode==Tag) {
+        }
+        else if (textCode==Tag) {
           MWAW_DEBUG_MSG(("ZWText::sendText: find a tag, uses bookmark\n"));
         }
         MWAWSubDocumentPtr subdoc(new ZWTextInternal::SubDocument(*this, input, zone.m_id, textData, textCode));
@@ -500,7 +509,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
       }
       input->seek(actPos+1, librevenge::RVNG_SEEK_SET);
     }
-    switch(c) {
+    switch (c) {
     case 0x9:
       listener->insertTab();
       break;
@@ -606,7 +615,7 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
       f << "#sz=" << sz << ",";
     unsigned char col[3];
     for (int j=0; j < 3; j++)
-      col[j] = (unsigned char) (input->readULong(2)>>8);
+      col[j] = (unsigned char)(input->readULong(2)>>8);
     if (col[0] || col[1] || col[2])
       font.m_font.setColor(MWAWColor(col[0],col[1],col[2]));
     font.m_font.setFlags(flags);
@@ -660,7 +669,7 @@ bool ZWText::readStyles(MWAWEntry const &entry)
     ZWField const &field = fields[ff];
     bool done = false;
     unsigned char color[3];
-    switch(ff) {
+    switch (ff) {
     case 0:
       done = field.getString(input, strVal);
       if (!done||!strVal.length())
@@ -740,12 +749,12 @@ bool ZWText::sendHeaderFooter(bool header)
   input->seek(zone.m_pos.begin(), librevenge::RVNG_SEEK_SET);
   listener->setFont(zone.m_font.m_font);
   long endPos = zone.m_pos.end();
-  while(!input->isEnd()) {
+  while (!input->isEnd()) {
     long actPos = input->tell();
     if (actPos >= endPos)
       break;
     char c = (char) input->readULong(1);
-    switch(c) {
+    switch (c) {
     case 0xa:
       listener->insertTab();
       break;
@@ -756,7 +765,7 @@ bool ZWText::sendHeaderFooter(bool header)
       if (actPos+1 < endPos) {
         char nextC = (char) input->readULong(1);
         bool done = true;
-        switch(nextC) {
+        switch (nextC) {
         case 'd':
           listener->insertField(MWAWField(MWAWField::Date));
           break;
@@ -829,7 +838,7 @@ bool ZWText::readHFZone(MWAWEntry const &entry)
   for (size_t ff = 0; ff < numFields; ff++) {
     ZWField const &field = fields[ff];
     bool done = false;
-    switch(ff) {
+    switch (ff) {
     case 0:
     case 2:
     case 5:
@@ -839,7 +848,7 @@ bool ZWText::readHFZone(MWAWEntry const &entry)
         break;
       if (!boolVal)
         continue;
-      switch(ff) {
+      switch (ff) {
       case 0:
         flags |= MWAWFont::boldBit;
         break;

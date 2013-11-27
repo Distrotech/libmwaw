@@ -53,7 +53,8 @@ public:
   /** try open filename ( to write data ) */
   bool open(char const *filename);
   /** returns true if the output is opened */
-  bool isOpened() const {
+  bool isOpened() const
+  {
     return m_output;
   }
   /** try to close the actual output */

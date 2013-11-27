@@ -78,7 +78,8 @@ protected:
     //! different result type
     enum Type { R_Unknown, R_Long, R_Double, R_String };
     //! contructor
-    Record() : m_style(-1), m_resType(R_Unknown), m_resLong(0), m_resDouble(0), m_resDoubleNaN(false), m_resString(), m_format(0), m_font(3,9), m_justify(0), m_borders(0) {
+    Record() : m_style(-1), m_resType(R_Unknown), m_resLong(0), m_resDouble(0), m_resDoubleNaN(false), m_resString(), m_format(0), m_font(3,9), m_justify(0), m_borders(0)
+    {
     }
 
     //! the style if known
@@ -105,7 +106,8 @@ protected:
   /** struct which stores a column in CWDbaseContent */
   struct Column {
     //! constructor
-    Column() : m_idRecordMap() {
+    Column() : m_idRecordMap()
+    {
     }
     //! a map line (or record id) to record
     std::map<int,Record> m_idRecordMap;

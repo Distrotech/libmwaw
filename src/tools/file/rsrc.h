@@ -102,9 +102,11 @@ public:
   struct Version {
     Version() : m_id(-1),  m_begin(-1),
       m_majorVersion(-1), m_minorVersion(0), m_countryCode(0),
-      m_string(""), m_versionString(""), m_extra("") {
+      m_string(""), m_versionString(""), m_extra("")
+    {
     }
-    bool ok() const {
+    bool ok() const
+    {
       return m_id >= 0;
     }
     //! operator<<

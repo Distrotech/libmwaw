@@ -63,7 +63,8 @@ void MWAWTabStop::addTo(librevenge::RVNGPropertyListVector &propList, double dec
       librevenge::RVNGString sDecimal;
       libmwaw::appendUnicode(m_decimalCharacter, sDecimal);
       tab.insert("style:char", sDecimal);
-    } else
+    }
+    else
       tab.insert("style:char", ".");
     break;
   case LEFT:
@@ -142,9 +143,9 @@ MWAWParagraph::MWAWParagraph() : m_marginsUnit(librevenge::RVNG_INCH), m_spacing
   m_listLevelIndex(0), m_listId(-1), m_listStartValue(-1), m_listLevel(), m_backgroundColor(MWAWColor::white()),
   m_borders(), m_extra("")
 {
-  for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
+  for (int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
   m_spacings[0] = 1.0; // interline normal
-  for(int i = 0; i < 3; i++) {
+  for (int i = 0; i < 3; i++) {
     m_margins[i].setSet(false);
     m_spacings[i].setSet(false);
   }
@@ -156,7 +157,7 @@ MWAWParagraph::~MWAWParagraph()
 
 int MWAWParagraph::cmp(MWAWParagraph const &para) const
 {
-  for(int i = 0; i < 3; i++) {
+  for (int i = 0; i < 3; i++) {
     if (*(m_margins[i]) < *(para.m_margins[i])) return -1;
     if (*(m_margins[i]) > *(para.m_margins[i])) return 1;
     if (*(m_spacings[i]) < *(para.m_spacings[i])) return -1;
@@ -207,7 +208,7 @@ int MWAWParagraph::cmp(MWAWParagraph const &para) const
 
 void MWAWParagraph::insert(MWAWParagraph const &para)
 {
-  for(int i = 0; i < 3; i++) {
+  for (int i = 0; i < 3; i++) {
     m_margins[i].insert(para.m_margins[i]);
     m_spacings[i].insert(para.m_spacings[i]);
   }
@@ -223,9 +224,10 @@ void MWAWParagraph::insert(MWAWParagraph const &para)
 
     m_tabs->resize(0);
     std::map<double, MWAWTabStop>::const_iterator it=all.begin();
-    for ( ; it!=all.end(); ++it)
+    for (; it!=all.end(); ++it)
       m_tabs->push_back(it->second);
-  } else if (para.m_tabs.isSet())
+  }
+  else if (para.m_tabs.isSet())
     m_tabs=para.m_tabs;
   m_tabsRelativeToLeftMargin.insert(para.m_tabsRelativeToLeftMargin);
   m_justify.insert(para.m_justify);
@@ -315,7 +317,7 @@ void MWAWParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) 
           border.addTo(propList);
           break;
         }
-        switch(w) {
+        switch (w) {
         case libmwaw::Left:
           border.addTo(propList,"left");
           break;
@@ -350,7 +352,8 @@ void MWAWParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) 
         MWAW_DEBUG_MSG(("MWAWParagraph::addTo: interline spacing seems bad\n"));
         first = false;
       }
-    } else if (*m_spacingsInterlineUnit != librevenge::RVNG_PERCENT)
+    }
+    else if (*m_spacingsInterlineUnit != librevenge::RVNG_PERCENT)
       propList.insert("style:line-height-at-least", *(m_spacings[0]), *m_spacingsInterlineUnit);
     else {
       propList.insert("style:line-height-at-least", *(m_spacings[0])*12.0, librevenge::RVNG_POINT);
@@ -398,7 +401,8 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
         o << "[atLeast]";
       o << ",";
     }
-  } else if (pp.m_spacings[0].get() > 0.0) {
+  }
+  else if (pp.m_spacings[0].get() > 0.0) {
     o << "interLineSpacing=" << pp.m_spacings[0].get();
     if (pp.m_spacingsInterlineType.get()==MWAWParagraph::AtLeast)
       o << "[atLeast]";
@@ -412,7 +416,7 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
   if (pp.m_breakStatus.get() & MWAWParagraph::NoBreakBit) o << "dontbreak,";
   if (pp.m_breakStatus.get() & MWAWParagraph::NoBreakWithNextBit) o << "dontbreakafter,";
 
-  switch(pp.m_justify.get()) {
+  switch (pp.m_justify.get()) {
   case MWAWParagraph::JustificationLeft:
     break;
   case MWAWParagraph::JustificationCenter:
@@ -454,7 +458,8 @@ std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
     if (i < 6) {
       static char const *wh[] = { "L", "R", "T", "B", "MiddleH", "MiddleV" };
       o << wh[i];
-    } else o << "[#wh=" << i << "]";
+    }
+    else o << "[#wh=" << i << "]";
     o << "=" << border << ",";
   }
 

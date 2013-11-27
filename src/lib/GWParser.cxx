@@ -61,12 +61,14 @@ namespace GWParserInternal
 //! Internal: the state of a GWParser
 struct State {
   //! constructor
-  State() : m_docType(GWParser::TEXT), m_columnsWidth(), m_hasColSep(false), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_docType(GWParser::TEXT), m_columnsWidth(), m_hasColSep(false), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  {
     for (int i=0; i<4; ++i)
       m_hfFlags[i]=false;
   }
   //! returns the number of expected header/footer zones
-  int numHeaderFooters() const {
+  int numHeaderFooters() const
+  {
     int num=0;
     if (m_hfFlags[2]) num++; // header
     if (m_hfFlags[3]) num++; // footer
@@ -75,7 +77,8 @@ struct State {
   }
 
   //! returns a section
-  MWAWSection getSection() const {
+  MWAWSection getSection() const
+  {
     MWAWSection sec;
     size_t numCols = m_columnsWidth.size()/2;
     if (numCols <= 1)
@@ -126,7 +129,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -300,7 +304,8 @@ void GWParser::parse(librevenge::RVNGTextInterface *docInterface)
 #endif
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("GWParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -452,7 +457,7 @@ bool GWParser::readRSRCZones()
       if (it->first != zNames[z])
         break;
       MWAWEntry const &entry = it++->second;
-      switch(z) {
+      switch (z) {
       case 0:
         readPrintInfo(entry);
         break;
@@ -702,7 +707,8 @@ bool GWParser::readGrDS(MWAWEntry const &entry)
       MWAWColor color(col[0], col[1], col[2]);
       if (st==0) {
         if (!color.isWhite()) f << "backColor=" << color << ",";
-      } else if (!color.isBlack()) f << "frontColor=" << color << ",";
+      }
+      else if (!color.isBlack()) f << "frontColor=" << color << ",";
     }
     val = (int) input->readULong(2);
     if (val) f << "ptr?=" << std::hex << val << std::dec << ",";
@@ -715,7 +721,7 @@ bool GWParser::readGrDS(MWAWEntry const &entry)
 
 bool GWParser::readNxEd(MWAWEntry const &entry)
 {
-  if (!entry.valid() || entry.length()<4 ) {
+  if (!entry.valid() || entry.length()<4) {
     MWAW_DEBUG_MSG(("GWParser::readNxEd: the entry is bad\n"));
     return false;
   }
@@ -802,7 +808,8 @@ bool GWParser::readDocInfo()
   if (val==1) {
     f << "hasColSep,";
     m_state->m_hasColSep = true;
-  } else if (val) f << "#hasColSep=" << val << ",";
+  }
+  else if (val) f << "#hasColSep=" << val << ",";
   input->seek(pos+12, librevenge::RVNG_SEEK_SET);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -812,7 +819,8 @@ bool GWParser::readDocInfo()
     if (i<4) {
       static char const *wh[]= {"margins", "header/footer", "1", "pageDim" };
       f << "DocInfo[" << wh[i] << "]:";
-    } else
+    }
+    else
       f << "DocInfo[" << i << "]:";
 
     double dim[4];
@@ -843,7 +851,7 @@ bool GWParser::readDocInfo()
       for (int j=0; j<4; ++j)
         dim[j]=double(input->readLong(4))/65536.;
       if (dim[0]>0 || dim[1]>0||dim[2]>0||dim[3]>0) {
-        switch(i) {
+        switch (i) {
         case 0:
           f << "header=";
           break;
@@ -894,7 +902,8 @@ bool GWParser::checkHeader(MWAWHeader *header, bool strict)
   if (type=="ZOBJ") {
     m_state->m_docType=GWParser::DRAW;
     MWAW_DEBUG_MSG(("GWParser::checkHeader: find a draw file\n"));
-  } else if (type!="ZWRT")
+  }
+  else if (type!="ZWRT")
     return false;
 
   if (strict) {

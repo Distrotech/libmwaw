@@ -102,7 +102,8 @@ public:
 
 protected:
   //! adds an integer value in f
-  void writeInteger(int val) {
+  void writeInteger(int val)
+  {
     writeLong(long(val));
   }
   //! adds a long value if f

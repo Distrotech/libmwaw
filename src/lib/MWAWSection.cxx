@@ -54,7 +54,7 @@ bool MWAWSection::Column::addTo(librevenge::RVNGPropertyList &propList) const
 {
   // The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
   double factor = 1.0;
-  switch(m_widthUnit) {
+  switch (m_widthUnit) {
   case librevenge::RVNG_POINT:
   case librevenge::RVNG_INCH:
     factor = MWAWPosition::getScaleFactor(m_widthUnit, librevenge::RVNG_TWIP);
@@ -102,7 +102,8 @@ void MWAWSection::setColumns(int num, double width, librevenge::RVNGUnit widthUn
   if (num<0) {
     MWAW_DEBUG_MSG(("MWAWSection::setColumns: called with negative number of column\n"));
     num=1;
-  } else if (num > 1 && width<=0) {
+  }
+  else if (num > 1 && width<=0) {
     MWAW_DEBUG_MSG(("MWAWSection::setColumns: called without width\n"));
     num=1;
   }

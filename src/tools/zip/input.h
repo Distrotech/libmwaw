@@ -64,11 +64,13 @@ public:
   //! try to go to a position. Returns 0 if ok
   int seek(long offset, SeekType seekType);
   //! return the actual position
-  long tell() const {
+  long tell() const
+  {
     return m_offset;
   }
   //! return true if we are at the end of the file
-  bool atEOS() {
+  bool atEOS()
+  {
     return m_offset >= length();
   }
 
@@ -87,7 +89,8 @@ public:
   ~StringStream() { }
 
   unsigned char const *read(unsigned long numBytes, unsigned long &numBytesRead);
-  long length() {
+  long length()
+  {
     return long(m_buffer.size());
   }
 private:
@@ -101,7 +104,8 @@ class FileStream: public InputStream
 public:
   FileStream(char const *path);
   ~FileStream();
-  bool ok() const {
+  bool ok() const
+  {
     return m_isOk;
   }
   unsigned char const *read(unsigned long numBytes, unsigned long &numBytesRead);

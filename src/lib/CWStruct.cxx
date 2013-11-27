@@ -54,7 +54,7 @@ namespace CWStruct
 //
 std::ostream &operator<<(std::ostream &o, DSET const &doc)
 {
-  switch(doc.m_type) {
+  switch (doc.m_type) {
   case DSET::T_Unknown:
     break;
   case DSET::T_Frame:
@@ -82,7 +82,7 @@ std::ostream &operator<<(std::ostream &o, DSET const &doc)
     o << "#type=" << doc.m_type << ",";
     break;
   }
-  switch(doc.m_fileType) {
+  switch (doc.m_fileType) {
   case 0:
     o << "normal,";
     break;
@@ -118,14 +118,14 @@ std::ostream &operator<<(std::ostream &o, DSET const &doc)
   if (doc.m_fathersList.size()) {
     o << "fathers=[";
     std::set<int>::const_iterator it = doc.m_fathersList.begin();
-    for ( ; it != doc.m_fathersList.end(); ++it)
+    for (; it != doc.m_fathersList.end(); ++it)
       o << *it << ",";
     o << "],";
   }
   if (doc.m_validedChildList.size()) {
     o << "child[valided]=[";
     std::set<int>::const_iterator it = doc.m_validedChildList.begin();
-    for ( ; it != doc.m_validedChildList.end(); ++it)
+    for (; it != doc.m_validedChildList.end(); ++it)
       o << *it << ",";
     o << "],";
   }

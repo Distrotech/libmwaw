@@ -57,11 +57,13 @@ namespace CWPresentationInternal
 struct Presentation : public CWStruct::DSET {
   // constructor
   Presentation(CWStruct::DSET const &dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_zoneIdList() {
+    CWStruct::DSET(dset), m_zoneIdList()
+  {
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Presentation const &doc) {
+  friend std::ostream &operator<<(std::ostream &o, Presentation const &doc)
+  {
     o << static_cast<CWStruct::DSET const &>(doc);
     return o;
   }
@@ -73,7 +75,8 @@ struct Presentation : public CWStruct::DSET {
 //! Internal: the state of a CWPresentation
 struct State {
   //! constructor
-  State() : m_presentationMap() {
+  State() : m_presentationMap()
+  {
   }
 
   std::map<int, shared_ptr<Presentation> > m_presentationMap;
@@ -116,7 +119,7 @@ std::vector<int> CWPresentation::getSlidesList() const
   std::vector<int> res;
   std::map<int, shared_ptr<CWPresentationInternal::Presentation> >::const_iterator it =
     m_state->m_presentationMap.begin();
-  while(it != m_state->m_presentationMap.end()) {
+  while (it != m_state->m_presentationMap.end()) {
     shared_ptr<CWPresentationInternal::Presentation> pres = it++->second;
     if (!pres) continue;
     for (size_t c = 0; c < pres->m_otherChilds.size(); c++)
@@ -162,7 +165,8 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
 
   if (m_state->m_presentationMap.find(presentationZone->m_id) != m_state->m_presentationMap.end()) {
     MWAW_DEBUG_MSG(("CWPresentation::readPresentationZone: zone %d already exists!!!\n", presentationZone->m_id));
-  } else
+  }
+  else
     m_state->m_presentationMap[presentationZone->m_id] = presentationZone;
 
   long dataEnd = entry.end()-N*data0Length;
@@ -227,7 +231,8 @@ bool CWPresentation::readZone1(CWPresentationInternal::Presentation &pres)
         if (st == 1)
           pres.m_zoneIdList.push_back(zoneId);
         pres.m_otherChilds.push_back(zoneId);
-      } else
+      }
+      else
         f << "###";
       f << "zId=" << zoneId << ",";
       f << "f1=" << input->readLong(4) << ","; // always 8 ?
@@ -328,7 +333,7 @@ void CWPresentation::flushExtra()
 {
   std::map<int, shared_ptr<CWPresentationInternal::Presentation> >::iterator iter
     = m_state->m_presentationMap.begin();
-  for ( ; iter !=  m_state->m_presentationMap.end(); ++iter) {
+  for (; iter !=  m_state->m_presentationMap.end(); ++iter) {
     shared_ptr<CWPresentationInternal::Presentation> presentation = iter->second;
     if (presentation->m_parsed)
       continue;

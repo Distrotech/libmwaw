@@ -48,14 +48,14 @@ unsigned short OLE::readU16(InputStream &input)
   unsigned long nRead;
   unsigned char const *data = input.read(2, nRead);
   if (!data || nRead != 2) return 0;
-  return (unsigned short) (data[0]+(data[1]<<8));
+  return (unsigned short)(data[0]+(data[1]<<8));
 }
 unsigned int OLE::readU32(InputStream &input)
 {
   unsigned long nRead;
   unsigned char const *data = input.read(4, nRead);
   if (!data || nRead != 4) return 0;
-  return (unsigned int)  (data[0]+(data[1]<<8)+(data[2]<<16)+(data[3]<<24));
+  return (unsigned int)(data[0]+(data[1]<<8)+(data[2]<<16)+(data[3]<<24));
 }
 
 // header functions
@@ -79,9 +79,9 @@ bool OLE::Header::read(InputStream &input)
   shift = (unsigned) readU16(input);
   if (shift <= 6 || shift >= 31)
     return false;
-  m_sizeBats[BigBat] = (unsigned) (1 << shift);
+  m_sizeBats[BigBat] = (unsigned)(1 << shift);
   shift = (unsigned) readU16(input);
-  m_sizeBats[SmallBat] = (unsigned) (1 << shift);
+  m_sizeBats[SmallBat] = (unsigned)(1 << shift);
   if (shift >= 31 || m_sizeBats[SmallBat] >= m_sizeBats[BigBat])
     return false;
 
@@ -118,14 +118,14 @@ bool OLE::DirEntry::read(InputStream &input)
   }
   input.seek(pos+0x40, InputStream::SK_SET);
   unsigned name_len = (unsigned) readU16(input);
-  if( name_len > 64 ) name_len = 64;
+  if (name_len > 64) name_len = 64;
   // 2 = file (aka stream), 1 = directory (aka storage), 5 = root
   m_type = (unsigned) input.readU8();
 
   input.seek(pos, InputStream::SK_SET);
   // parse name of this entry, which stored as Unicode 16-bit
   m_name=std::string("");
-  for( unsigned j=0; j<name_len; j+= 2 ) {
+  for (unsigned j=0; j<name_len; j+= 2) {
     unsigned val = readU16(input);
     if (!val) break;
     if (val==0x5200 && name_len==2 && m_type==5) {
@@ -133,7 +133,7 @@ bool OLE::DirEntry::read(InputStream &input)
       m_macRootEntry=true;
       break;
     }
-    m_name.append(1, char(val) );
+    m_name.append(1, char(val));
   }
   input.seek(pos+0x44, InputStream::SK_SET);
   m_left = (unsigned) readU32(input);
@@ -148,8 +148,8 @@ bool OLE::DirEntry::read(InputStream &input)
 
   // sanity checks
   m_valid = true;
-  if( (m_type != 2) && (m_type != 1 ) && (m_type != 5 ) ) m_valid = false;
-  if( name_len < 1 ) m_valid = false;
+  if ((m_type != 2) && (m_type != 1) && (m_type != 5)) m_valid = false;
+  if (name_len < 1) m_valid = false;
   return true;
 }
 
@@ -165,23 +165,23 @@ void OLE::DirTree::DirTree::clear()
   m_entries[0].m_type = 5;
 }
 
-unsigned OLE::DirTree::index( const std::string &name) const
+unsigned OLE::DirTree::index(const std::string &name) const
 {
 
-  if( name.length()==0 ) return DirEntry::End;
+  if (name.length()==0) return DirEntry::End;
 
   // quick check for "/" (that's root)
-  if( name == "/" ) return 0;
+  if (name == "/") return 0;
 
   // split the names, e.g  "/ObjectPool/_1020961869" will become:
   // "ObjectPool" and "_1020961869"
   std::list<std::string> names;
   std::string::size_type start = 0, end = 0;
-  if( name[0] == '/' ) start++;
-  while( start < name.length() ) {
-    end = name.find_first_of( '/', start );
-    if( end == std::string::npos ) end = name.length();
-    names.push_back( name.substr( start, end-start ) );
+  if (name[0] == '/') start++;
+  while (start < name.length()) {
+    end = name.find_first_of('/', start);
+    if (end == std::string::npos) end = name.length();
+    names.push_back(name.substr(start, end-start));
     start = end+1;
   }
 
@@ -192,14 +192,14 @@ unsigned OLE::DirTree::index( const std::string &name) const
   std::list<std::string>::const_iterator it;
   size_t depth = 0;
 
-  for( it = names.begin(); it != names.end(); ++it, ++depth) {
+  for (it = names.begin(); it != names.end(); ++it, ++depth) {
     std::string childName(*it);
     if (childName.length() && childName[0]<32)
       childName= it->substr(1);
 
-    unsigned child = find_child( ind, childName );
+    unsigned child = find_child(ind, childName);
     // traverse to the child
-    if( child > 0 ) {
+    if (child > 0) {
       ind = child;
       continue;
     }
@@ -209,13 +209,13 @@ unsigned OLE::DirTree::index( const std::string &name) const
   return ind;
 }
 
-unsigned OLE::DirTree::find_child( unsigned ind, const std::string &name ) const
+unsigned OLE::DirTree::find_child(unsigned ind, const std::string &name) const
 {
-  DirEntry const *p = entry( ind );
+  DirEntry const *p = entry(ind);
   if (!p || !p->m_valid) return 0;
   std::vector<unsigned> siblingsList = get_siblings(p->m_child);
   for (size_t s=0; s < siblingsList.size(); s++) {
-    p  = entry( siblingsList[s] );
+    p  = entry(siblingsList[s]);
     if (!p) continue;
     if (p->name()==name)
       return siblingsList[s];
@@ -228,7 +228,7 @@ void OLE::DirTree::get_siblings(unsigned ind, std::set<unsigned> &seens) const
   if (seens.find(ind) != seens.end())
     return;
   seens.insert(ind);
-  DirEntry const *e = entry( ind );
+  DirEntry const *e = entry(ind);
   if (!e) return;
   unsigned cnt = size();
   if (e->m_left>0&& e->m_left < cnt)
@@ -240,18 +240,18 @@ void OLE::DirTree::get_siblings(unsigned ind, std::set<unsigned> &seens) const
 ////////////////////////////////////////////////////////////
 // alloc table function
 ////////////////////////////////////////////////////////////
-std::vector<unsigned long> OLE::AllocTable::follow( unsigned long start ) const
+std::vector<unsigned long> OLE::AllocTable::follow(unsigned long start) const
 {
   std::vector<unsigned long> chain;
-  if( start >= count() ) return chain;
+  if (start >= count()) return chain;
 
   std::set<unsigned long> seens;
   unsigned long p = start;
-  while( p < count() ) {
-    if( p >= 0xfffffffc) break;
+  while (p < count()) {
+    if (p >= 0xfffffffc) break;
     if (seens.find(p) != seens.end()) break;
     seens.insert(p);
-    chain.push_back( p );
+    chain.push_back(p);
     p = m_data[ p ];
   }
 
@@ -271,7 +271,7 @@ bool OLE::initAllocTables()
     bigBatAlloc.resize(numBats, Eof);
     size_t k = 109;
     unsigned sector=m_header.m_startBats[MetaBat];
-    for( unsigned r = 0; r < m_header.m_numBats[MetaBat]; r++ ) {
+    for (unsigned r = 0; r < m_header.m_numBats[MetaBat]; r++) {
       if (sector >= 0xfffffffc) {
         MWAW_DEBUG_MSG(("OLE::initAllocTables: can not find meta block position\n"));
         return false;
@@ -318,7 +318,7 @@ bool OLE::initAllocTables()
     }
   }
   // read the small bat alloc table
-  std::vector<unsigned long> smallBlocks = m_allocTable[BigBat].follow( m_header.m_startBats[SmallBat] );
+  std::vector<unsigned long> smallBlocks = m_allocTable[BigBat].follow(m_header.m_startBats[SmallBat]);
   unsigned long numSBats=(unsigned long) smallBlocks.size() * (unsigned long) maxN;
   m_allocTable[SmallBat].resize(numSBats);
   pos = 0;
@@ -402,7 +402,7 @@ bool OLE::load(std::string const &name, std::vector<unsigned char> &buffer)
 {
   if (!init())
     return false;
-  DirEntry *e = name.length() ? m_dirTree.entry( name ) : 0;
+  DirEntry *e = name.length() ? m_dirTree.entry(name) : 0;
   if (!e || e->is_dir() || !e->m_size) {
     buffer.resize(0);
     return false;
@@ -440,13 +440,13 @@ bool OLE::load(std::string const &name, std::vector<unsigned char> &buffer)
   return true;
 }
 
-std::string OLE::getCLSIDType(unsigned const (&clsid)[4])
+std::string OLE::getCLSIDType(unsigned const(&clsid)[4])
 {
   // do not accept not standart ole
   if (clsid[1] != 0 || clsid[2] != 0xC0 || clsid[3] != 0x46000000L)
     return "";
 
-  switch(clsid[0]) {
+  switch (clsid[0]) {
   case 0x00000319:
     return "OLE file(EMH-picture?)"; // addon Enhanced Metafile ( find in some file)
 
@@ -459,7 +459,7 @@ std::string OLE::getCLSIDType(unsigned const (&clsid)[4])
   case 0x00021302:
     return "OLE file(MSWorksWPDoc)"; // addon
 
-    // MS Apps
+  // MS Apps
   case 0x00030000:
     return "OLE file(ExcelWorksheet)";
   case 0x00030001:
@@ -490,7 +490,7 @@ std::string OLE::getCLSIDType(unsigned const (&clsid)[4])
     return "OLE file(SoundRec)";
   case 0x0003000e:
     return "OLE file(MPlayer)";
-    // MS Demos
+  // MS Demos
   case 0x0003000f:
     return "OLE file(ServerDemo)"; // "OLE 1.0 Server Demo"
   case 0x00030010:
@@ -500,23 +500,23 @@ std::string OLE::getCLSIDType(unsigned const (&clsid)[4])
   case 0x00030012:
     return "OLE file(OleDemo)"; //"OLE 1.0 Demo"
 
-    // Coromandel / Dorai Swamy / 718-793-7963
+  // Coromandel / Dorai Swamy / 718-793-7963
   case 0x00030013:
     return "OLE file(CoromandelIntegra)";
   case 0x00030014:
     return "OLE file(CoromandelObjServer)";
 
-    // 3-d Visions Corp / Peter Hirsch / 310-325-1339
+  // 3-d Visions Corp / Peter Hirsch / 310-325-1339
   case 0x00030015:
     return "OLE file(StanfordGraphics)";
 
-    // Deltapoint / Nigel Hearne / 408-648-4000
+  // Deltapoint / Nigel Hearne / 408-648-4000
   case 0x00030016:
     return "OLE file(DGraphCHART)";
   case 0x00030017:
     return "OLE file(DGraphDATA)";
 
-    // Corel / Richard V. Woodend / 613-728-8200 x1153
+  // Corel / Richard V. Woodend / 613-728-8200 x1153
   case 0x00030018:
     return "OLE file(CorelPhotoPaint)"; // "Corel PhotoPaint"
   case 0x00030019:
@@ -526,54 +526,54 @@ std::string OLE::getCLSIDType(unsigned const (&clsid)[4])
   case 0x0003001b:
     return "OLE file(CorelDraw)"; // "Corel Draw"
 
-    // Inset Systems / Mark Skiba / 203-740-2400
+  // Inset Systems / Mark Skiba / 203-740-2400
   case 0x0003001c:
     return "OLE file(HJWIN1.0)"; // "Inset Systems"
 
-    // Mark V Systems / Mark McGraw / 818-995-7671
+  // Mark V Systems / Mark McGraw / 818-995-7671
   case 0x0003001d:
     return "OLE file(MarkV ObjMakerOLE)"; // "MarkV Systems Object Maker"
 
-    // IdentiTech / Mike Gilger / 407-951-9503
+  // IdentiTech / Mike Gilger / 407-951-9503
   case 0x0003001e:
     return "OLE file(IdentiTech FYI)"; // "IdentiTech FYI"
   case 0x0003001f:
     return "OLE file(IdentiTech FYIView)"; // "IdentiTech FYI Viewer"
 
-    // Inventa Corporation / Balaji Varadarajan / 408-987-0220
+  // Inventa Corporation / Balaji Varadarajan / 408-987-0220
   case 0x00030020:
     return "OLE file(Stickynote)";
 
-    // ShapeWare Corp. / Lori Pearce / 206-467-6723
+  // ShapeWare Corp. / Lori Pearce / 206-467-6723
   case 0x00030021:
     return "OLE file(ShapewareVISIO10)";
   case 0x00030022:
     return "OLE file(Shapeware ImportServer)"; // "Spaheware Import Server"
 
-    // test app SrTest
+  // test app SrTest
   case 0x00030023:
     return "OLE file(SrvrTest)"; // "OLE 1.0 Server Test"
 
-    // test app ClTest.  Doesn't really work as a server but is in reg db
+  // test app ClTest.  Doesn't really work as a server but is in reg db
   case 0x00030025:
     return "OLE file(Cltest)"; // "OLE 1.0 Client Test"
 
-    // Microsoft ClipArt Gallery   Sherry Larsen-Holmes
+  // Microsoft ClipArt Gallery   Sherry Larsen-Holmes
   case 0x00030026:
     return "OLE file(MS_ClipArt_Gallery)";
-    // Microsoft Project  Cory Reina
+  // Microsoft Project  Cory Reina
   case 0x00030027:
     return "OLE file(MSProject)";
 
-    // Microsoft Works Chart
+  // Microsoft Works Chart
   case 0x00030028:
     return "OLE file(MSWorksChart)";
 
-    // Microsoft Works Spreadsheet
+  // Microsoft Works Spreadsheet
   case 0x00030029:
     return "OLE file(MSWorksSpreadsheet)";
 
-    // AFX apps - Dean McCrory
+  // AFX apps - Dean McCrory
   case 0x0003002A:
     return "OLE file(MinSvr)"; // "AFX Mini Server"
   case 0x0003002B:
@@ -585,31 +585,31 @@ std::string OLE::getCLSIDType(unsigned const (&clsid)[4])
   case 0x0003002E:
     return "OLE file(TestServ)"; // "AFX Test Server"
 
-    // Ami Pro
+  // Ami Pro
   case 0x0003002F:
     return "OLE file(AmiProDocument)";
 
-    // WordPerfect Presentations For Windows
+  // WordPerfect Presentations For Windows
   case 0x00030030:
     return "OLE file(WPGraphics)";
   case 0x00030031:
     return "OLE file(WPCharts)";
 
-    // MicroGrafx Charisma
+  // MicroGrafx Charisma
   case 0x00030032:
     return "OLE file(Charisma)";
   case 0x00030033:
     return "OLE file(Charisma_30)"; // v 3.0
   case 0x00030034:
     return "OLE file(CharPres_30)"; // v 3.0 Pres
-    // MicroGrafx Draw
+  // MicroGrafx Draw
   case 0x00030035:
     return "OLE file(MicroGrafx Draw)"; //"MicroGrafx Draw"
-    // MicroGrafx Designer
+  // MicroGrafx Designer
   case 0x00030036:
     return "OLE file(MicroGrafx Designer_40)"; // "MicroGrafx Designer 4.0"
 
-    // STAR DIVISION
+  // STAR DIVISION
   case 0x000424CA:
     return "OLE file(StarMath)"; // "StarMath 1.0"
   case 0x00043AD2:

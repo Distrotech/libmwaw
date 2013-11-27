@@ -94,38 +94,46 @@ public:
   // position
 
   //! position  accessor
-  Vec2i const &position() const {
+  Vec2i const &position() const
+  {
     return m_position;
   }
   //! set the cell positions :  0,0 -> A1, 0,1 -> A2
-  void setPosition(Vec2i posi) {
+  void setPosition(Vec2i posi)
+  {
     m_position = posi;
   }
 
   //! returns the number of spanned cells
-  Vec2i const &numSpannedCells() const {
+  Vec2i const &numSpannedCells() const
+  {
     return m_numberCellSpanned;
   }
   //! sets the number of spanned cells : Vec2i(1,1) means 1 cellule
-  void setNumSpannedCells(Vec2i numSpanned) {
+  void setNumSpannedCells(Vec2i numSpanned)
+  {
     m_numberCellSpanned=numSpanned;
   }
 
   //! bdbox  accessor
-  Box2f const &bdBox() const {
+  Box2f const &bdBox() const
+  {
     return m_bdBox;
   }
   //! set the bdbox (unit point)
-  void setBdBox(Box2f box) {
+  void setBdBox(Box2f box)
+  {
     m_bdBox = box;
   }
 
   //! bdbox size accessor
-  Vec2f const &bdSize() const {
+  Vec2f const &bdSize() const
+  {
     return m_bdSize;
   }
   //! set the bdbox size(unit point)
-  void setBdSize(Vec2f sz) {
+  void setBdSize(Vec2f sz)
+  {
     m_bdSize = sz;
   }
 
@@ -138,70 +146,85 @@ public:
   // format
 
   //! returns true if the cell is protected
-  bool isProtected() const {
+  bool isProtected() const
+  {
     return m_protected;
   }
   //! returns true if the cell is protected
-  void setProtected(bool fl) {
+  void setProtected(bool fl)
+  {
     m_protected = fl;
   }
 
   //! returns the horizontal alignement
-  HorizontalAlignment hAlignement() const {
+  HorizontalAlignment hAlignement() const
+  {
     return m_hAlign;
   }
   //! sets the horizontal alignement
-  void setHAlignement(HorizontalAlignment align) {
+  void setHAlignement(HorizontalAlignment align)
+  {
     m_hAlign = align;
   }
 
   //! returns the vertical alignement
-  VerticalAlignment vAlignement() const {
+  VerticalAlignment vAlignement() const
+  {
     return m_vAlign;
   }
   //! sets the vertical alignement
-  void setVAlignement(VerticalAlignment align) {
+  void setVAlignement(VerticalAlignment align)
+  {
     m_vAlign = align;
   }
 
   //! return true if the cell has some border
-  bool hasBorders() const {
+  bool hasBorders() const
+  {
     return m_bordersList.size() != 0;
   }
   //! return the cell border: libmwaw::Left | ...
-  std::vector<MWAWBorder> const &borders() const {
+  std::vector<MWAWBorder> const &borders() const
+  {
     return m_bordersList;
   }
 
   //! reset the border
-  void resetBorders() {
+  void resetBorders()
+  {
     m_bordersList.resize(0);
   }
   //! sets the cell border: wh=libmwaw::Left|...
   void setBorders(int wh, MWAWBorder const &border);
 
   //! returns the background color
-  MWAWColor backgroundColor() const {
+  MWAWColor backgroundColor() const
+  {
     return m_backgroundColor;
   }
   //! sets the background color
-  void setBackgroundColor(MWAWColor color) {
+  void setBackgroundColor(MWAWColor color)
+  {
     m_backgroundColor = color;
   }
   //! returns true if we have some extra lines
-  bool hasExtraLine() const {
+  bool hasExtraLine() const
+  {
     return m_extraLine!=E_None && !m_extraLineType.isEmpty();
   }
   //! returns the extra lines
-  ExtraLine extraLine() const {
+  ExtraLine extraLine() const
+  {
     return m_extraLine;
   }
   //! returns the extra line border
-  MWAWBorder const &extraLineType() const {
+  MWAWBorder const &extraLineType() const
+  {
     return m_extraLineType;
   }
   //! sets the extraline
-  void setExtraLine(ExtraLine extrLine, MWAWBorder const &type=MWAWBorder()) {
+  void setExtraLine(ExtraLine extrLine, MWAWBorder const &type=MWAWBorder())
+  {
     m_extraLine = extrLine;
     m_extraLineType=type;
   }

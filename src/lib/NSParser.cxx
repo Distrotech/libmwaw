@@ -62,18 +62,21 @@ struct Variable {
   Variable(NSStruct::VariableType type = NSStruct::V_None) :
     m_type(0), m_containerType(type), m_fieldType(-1), m_refId(-1),
     m_numberingType(libmwaw::NONE), m_startNumber(1), m_increment(1),
-    m_prefix(""), m_suffix(""), m_dateFormat(0), m_sample(""), m_extra("") {
+    m_prefix(""), m_suffix(""), m_dateFormat(0), m_sample(""), m_extra("")
+  {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Variable const &num);
   //! returns true if this is a date
-  bool isDate() const {
+  bool isDate() const
+  {
     return m_fieldType == 1 || m_fieldType == 0xf;
   }
   //! returns the date format
-  std::string getDateFormat() const {
+  std::string getDateFormat() const
+  {
     if (!isDate()) return "";
-    switch(m_dateFormat) {
+    switch (m_dateFormat) {
     case 0:
     case 0x20:
       return "%m/%d/%Y";
@@ -128,7 +131,7 @@ struct Variable {
 
 std::ostream &operator<<(std::ostream &o, Variable const &num)
 {
-  switch(num.m_type) {
+  switch (num.m_type) {
   case 1:
     o << "numbering,";
     break;
@@ -151,7 +154,7 @@ std::ostream &operator<<(std::ostream &o, Variable const &num)
     o << "#type=" << num.m_type << ",";
     break;
   }
-  switch(num.m_containerType) {
+  switch (num.m_containerType) {
   case NSStruct::V_Numbering:
     o << "number,";
     break;
@@ -169,7 +172,7 @@ std::ostream &operator<<(std::ostream &o, Variable const &num)
   }
   if (num.m_refId >= 0)
     o << "refId=" << num.m_refId << ",";
-  switch(num.m_fieldType) {
+  switch (num.m_fieldType) {
   case -1:
     break;
   case 0x1:
@@ -193,11 +196,11 @@ std::ostream &operator<<(std::ostream &o, Variable const &num)
   case 0x1d:
     o << "reference?,";
     break;
-    // alway in version variable ?
+  // alway in version variable ?
   case 0x7FFFFFFF:
     o << "none,";
     break;
-    // in a variable find also 0xFFFF8014
+  // in a variable find also 0xFFFF8014
   default:
     if ((num.m_fieldType>>16)==0x7FFF)
       o << "#fieldType=" << num.m_fieldType -0x7FFFFFFF-1  << ",";
@@ -222,7 +225,7 @@ std::ostream &operator<<(std::ostream &o, Variable const &num)
   if (num.m_sample.length())
     o << wh1[num.m_containerType] << "=\"" << num.m_sample << "\",";
   if (num.m_dateFormat) {
-    switch(num.m_dateFormat & 0x9F) {
+    switch (num.m_dateFormat & 0x9F) {
     case 1:
       o << "format=Day, Month D YYYY,";
       break;
@@ -251,7 +254,8 @@ std::ostream &operator<<(std::ostream &o, Variable const &num)
 /** Internal structure: use to store a mark (reference) */
 struct Reference {
   //! constructor
-  Reference() : m_id(-1), m_textPosition(), m_text("") {
+  Reference() : m_id(-1), m_textPosition(), m_text("")
+  {
   }
 
   // the mark id ?
@@ -265,7 +269,8 @@ struct Reference {
 //! internal structure used to stored some zone data
 struct Zone {
   //! constructor
-  Zone() : m_referenceList(), m_numberingResetList(), m_variableList(), m_versionList() {
+  Zone() : m_referenceList(), m_numberingResetList(), m_variableList(), m_versionList()
+  {
   }
   /** the list of reference */
   std::vector<Reference> m_referenceList;
@@ -283,7 +288,8 @@ struct State {
   //! constructor
   State() : m_numberingList(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0),
-    m_numColumns(1), m_columnSep(0.5f), m_footnoteInfo(), m_isTextDocument() {
+    m_numColumns(1), m_columnSep(0.5f), m_footnoteInfo(), m_isTextDocument()
+  {
   }
 
   /** the list of numbering */
@@ -444,7 +450,7 @@ bool NSParser::getReferenceData
     doneValues.resize(numReset, false);
     doneValues[size_t(var.m_refId)]=true;
     toDoValues.push_back(int(var.m_refId));
-    while(toDoValues.size()) {
+    while (toDoValues.size()) {
       int modId = (int) toDoValues.back();
       toDoValues.pop_back();
       for (size_t r = 0; r < numReset; r++) {
@@ -467,7 +473,8 @@ bool NSParser::getReferenceData
 #ifdef DEBUG
       s << "###[" << int(c) << "]";
 #endif
-    } else if (c < 0x20)
+    }
+    else if (c < 0x20)
       s << libmwaw::numberingValueToString
         (m_state->m_numberingList[size_t(c-1)].m_numberingType,
          values[size_t(c-1)]);
@@ -518,7 +525,8 @@ void NSParser::parse(librevenge::RVNGTextInterface *docInterface)
 #endif
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("NSParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -551,7 +559,7 @@ void NSParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 
   std::vector<MWAWPageSpan> pageList;
   shared_ptr<MWAWSubDocument> subDoc;
-  for (int i = 0; i <= numPages; ) {
+  for (int i = 0; i <= numPages;) {
     MWAWPageSpan ps(getPageSpan());
     int numSim[2]= {1,1};
     subDoc = m_textParser->getHeader(i+1, numSim[0]);
@@ -794,7 +802,7 @@ bool NSParser::checkHeader(MWAWHeader *header, bool /*strict*/)
     MWAW_DEBUG_MSG(("NSParser::checkHeader: can not find the Nisus file format version\n"));
     return false;
   }
-  switch(vers.m_majorVersion) {
+  switch (vers.m_majorVersion) {
   case 3:
   case 4:
     MWAW_DEBUG_MSG(("NSParser::checkHeader: find Nisus %d file with file format version %d\n", nisusVersion, vers.m_majorVersion));
@@ -831,7 +839,7 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
   rsrcAscii().addPos(pos-4);
   rsrcAscii().addNote(f.str().c_str());
 
-  while(!input->isEnd()) {
+  while (!input->isEnd()) {
     pos = input->tell();
     if (pos == entry.end()) break;
     long endPos = entry.end();
@@ -921,7 +929,7 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
 
   std::vector<NSParserInternal::Variable> *result = 0;
   int lastMaxId = 0;
-  switch(data.m_info->m_variableType) {
+  switch (data.m_info->m_variableType) {
   case NSStruct::V_Numbering:
     lastMaxId = 11;
     result = &m_state->m_numberingList;
@@ -952,7 +960,7 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
     NSStruct::RecursifData const &dt = *node.m_data;
     f.str("");
     int lastId = lastMaxId;
-    switch(num.m_type) {
+    switch (num.m_type) {
     case 1: // [2..12] with v12 is a string
       lastId = 12;
       f << "numbering,";
@@ -998,7 +1006,8 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
         if (id == 4 && mainData.m_childList[n].m_type == 5 && entry.length() >= 2) {
           checkId = true;
           id = -4;
-        } else
+        }
+        else
           f << "#id=" << id << ",";
       }
 
@@ -1009,7 +1018,7 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
         rsrcAscii().addNote(f.str().c_str());
         continue;
       }
-      switch(id) {
+      switch (id) {
       case 2:
       case 4: // display example
       case 10:
@@ -1026,7 +1035,7 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
         static char const *(wh0[]) = { "unkn0", "prefix", "name", "comments" };
         static char const *(wh1[]) = { "unkn1", "sample", "sample", "author?" };
         static char const *(wh2[]) = { "unkn2", "suffix", "suffix", "unkn2" };
-        switch(id) {
+        switch (id) {
         case 2:
           num.m_prefix = text;
           f << wh0[num.m_containerType];
@@ -1061,7 +1070,7 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
         val = (long) input->readULong(2);
         f << "type=";
         num.m_numberingType = libmwaw::ARABIC;
-        switch(val) {
+        switch (val) {
         case 0:
           f << "arabic,";
           break;
@@ -1106,7 +1115,7 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
       case 3:
         num.m_fieldType = (long) input->readULong(4);
         switch (num.m_fieldType) {
-          // 1(type 5) date ?
+        // 1(type 5) date ?
         case 0xe:
           f << "version,";
           break;
@@ -1128,7 +1137,7 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
         case 0x1d:
           f << "reference?,";
           break;
-          // alway in version variable ?
+        // alway in version variable ?
         case 0x7FFFFFFF:
           f << "none,";
           break;
@@ -1154,7 +1163,8 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
             f << "###";
           else
             num.m_suffix += char(num.m_refId);
-        } else
+        }
+        else
           f << "numVar?=" << val << ",";
         break;
       default:
@@ -1329,7 +1339,7 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
       pos = entry.begin();
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       f.str("");
-      switch(childNode.m_type) {
+      switch (childNode.m_type) {
       case 1:
         f << "II:";
         if (entry.length() < 4) {
@@ -1448,7 +1458,7 @@ bool NSParser::readSGP1(NSStruct::RecursifData const &data)
       long pos = child.m_entry.begin();
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       f.str("");
-      switch(child.m_type) {
+      switch (child.m_type) {
       case 110: {
         if (child.m_entry.length()==0) break;
         if (child.m_entry.length()%4) {
@@ -1674,7 +1684,8 @@ bool NSParser::readPageLimit(MWAWEntry const &entry)
   else if (numColumns <= 0 || numColumns > 8 || colSeps < 0 || colSeps *numColumns >= pageDim[0]) {
     MWAW_DEBUG_MSG(("NSParser::readPageLimit: the columns definition seems odd\n"));
     f << "###";
-  } else {
+  }
+  else {
     m_state->m_numColumns = numColumns;
     m_state->m_columnSep = float(colSeps)/72.f;
   }
@@ -1734,7 +1745,8 @@ bool NSParser::readPageLimit(MWAWEntry const &entry)
     LT -= realPage[0];
     RB += (realPage[1]-boxes[0][1]);
     pageDim = realPage.size();
-  } else if (dimOk) {
+  }
+  else if (dimOk) {
     MWAW_DEBUG_MSG(("NSParser::readPageLimit: realPage is smaller than page\n"));
     f << "###";
     dimOk = false;
@@ -1742,7 +1754,7 @@ bool NSParser::readPageLimit(MWAWEntry const &entry)
   f << "page[complete]=" << realPage << ",";
   val = input->readLong(1);
   bool portrait = true;
-  switch(val) {
+  switch (val) {
   case 0:
     break;
   case 1:
@@ -1859,7 +1871,7 @@ bool NSParser::readCPRC(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 bool NSParser::readCNTR(MWAWEntry const &entry, int zoneId)
 {
-  if (!entry.valid() || entry.length()<20 || (entry.length()%12) != 8 ) {
+  if (!entry.valid() || entry.length()<20 || (entry.length()%12) != 8) {
     MWAW_DEBUG_MSG(("NSParser::readCNTR: the entry is bad\n"));
     return false;
   }
@@ -1923,7 +1935,8 @@ bool NSParser::readABBR(MWAWEntry const &entry)
         f << "Entries(ABBR)[#" << entry.id() << "]";
       else
         f << "Entries(ABBR)";
-    } else
+    }
+    else
       f << "ABBR";
     f << "[" << n << "]:";
     long id = input->readLong(4);
@@ -1933,7 +1946,8 @@ bool NSParser::readABBR(MWAWEntry const &entry)
     if (sSz > 27) {
       MWAW_DEBUG_MSG(("NSParser::readABBR: the string size is bad\n"));
       f << "##";
-    } else {
+    }
+    else {
       std::string str("");
       for (int i = 0; i < sSz; i++)
         str += char(input->readULong(1));
@@ -1974,7 +1988,8 @@ bool NSParser::readFTA2(MWAWEntry const &entry)
         f << "Entries(FTA2)[#" << entry.id() << "]";
       else
         f << "Entries(FTA2)";
-    } else
+    }
+    else
       f << "FTA2";
     f << "[" << n << "]:";
     int val = int(input->readLong(1)); // 0|ff

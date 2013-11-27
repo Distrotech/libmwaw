@@ -63,7 +63,8 @@ struct Font {
   //! the constructor
   Font(): m_font(-1,-1), m_pictureId(0), m_pictureWidth(0), m_markId(-1), m_variableId(0),
     m_format(0), m_format2(0), m_extra("") { }
-  bool isVariable() const {
+  bool isVariable() const
+  {
     return (m_format2&0x20);
   }
 
@@ -123,10 +124,12 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
 /** Internal: class to store the paragraph properties */
 struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Paragraph() : MWAWParagraph(), m_name("") {
+  Paragraph() : MWAWParagraph(), m_name("")
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
+  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
+  {
     o << reinterpret_cast<MWAWParagraph const &>(ind);
     if (ind.m_name.length()) o << "name=" << ind.m_name << ",";
     return o;
@@ -139,7 +142,8 @@ struct Paragraph : public MWAWParagraph {
 struct HeaderFooter {
   //! Constructor
   HeaderFooter() : m_type(MWAWHeaderFooter::HEADER), m_occurence(MWAWHeaderFooter::NEVER),
-    m_page(0), m_textParagraph(-1), m_unknown(0), m_parsed(false), m_extra("") {
+    m_page(0), m_textParagraph(-1), m_unknown(0), m_parsed(false), m_extra("")
+  {
     for (int i = 0; i < 2; i++) m_paragraph[i] = -1;
   }
   //! operator<<
@@ -166,7 +170,7 @@ std::ostream &operator<<(std::ostream &o, HeaderFooter const &hf)
 {
   if (hf.m_type==MWAWHeaderFooter::HEADER) o << "header,";
   else o << "footer,";
-  switch(hf.m_occurence) {
+  switch (hf.m_occurence) {
   case MWAWHeaderFooter::NEVER:
     o << "never,";
     break;
@@ -194,12 +198,14 @@ std::ostream &operator<<(std::ostream &o, HeaderFooter const &hf)
 struct Footnote {
   //! Constructor
   Footnote() : m_number(0), m_textPosition(), m_textLabel(""), m_noteLabel(""),
-    m_parsed(false), m_extra("") {
+    m_parsed(false), m_extra("")
+  {
     for (int i = 0; i < 2; i++) m_paragraph[i] = -1;
   }
 
   //! returns a label corresponding to a note ( or nothing if we can use numbering note)
-  std::string getTextLabel(int actId) const {
+  std::string getTextLabel(int actId) const
+  {
     if (m_textLabel.length() == 0 || m_textLabel=="1")
       return std::string("");
     std::stringstream s;
@@ -248,7 +254,8 @@ std::ostream &operator<<(std::ostream &o, Footnote const &ft)
 //! Internal: the picture data ( PICD )
 struct PicturePara {
   //! constructor
-  PicturePara() : m_id(-1), m_paragraph(-1), m_position() {
+  PicturePara() : m_id(-1), m_paragraph(-1), m_position()
+  {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, PicturePara const &pict);
@@ -278,7 +285,8 @@ enum PLCType { P_Format=0, P_Ruler, P_Footnote, P_HeaderFooter, P_PicturePara, P
 
 /** Internal: class to store the PLC: Pointer List Content ? */
 struct DataPLC {
-  DataPLC() : m_type(P_Format), m_id(-1), m_extra("") {
+  DataPLC() : m_type(P_Format), m_id(-1), m_extra("")
+  {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, DataPLC const &plc);
@@ -292,7 +300,7 @@ struct DataPLC {
 //! operator<< for DataPLC
 std::ostream &operator<<(std::ostream &o, DataPLC const &plc)
 {
-  switch(plc.m_type) {
+  switch (plc.m_type) {
   case P_Format:
     o << "F";
     break;
@@ -323,7 +331,8 @@ struct Zone {
   typedef std::multimap<NSStruct::Position,DataPLC,NSStruct::Position::Compare> PLCMap;
 
   //! constructor
-  Zone() : m_entry(), m_paragraphList(), m_pictureParaList(), m_plcMap() {
+  Zone() : m_entry(), m_paragraphList(), m_pictureParaList(), m_plcMap()
+  {
   }
   //! the position of text in the rsrc file
   MWAWEntry m_entry;
@@ -341,7 +350,8 @@ struct Zone {
 struct State {
   //! constructor
   State() : m_version(-1), m_fontList(), m_footnoteList(),
-    m_numPages(-1), m_actualPage(0), m_hfList(), m_headersId(), m_footersId() {
+    m_numPages(-1), m_actualPage(0), m_hfList(), m_headersId(), m_footersId()
+  {
   }
 
   //! the file version
@@ -377,7 +387,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -542,7 +553,7 @@ void NSText::computePositions()
     }
     actPage = hf.m_page = page;
     Vec2i &wh = hf.m_type == MWAWHeaderFooter::HEADER ? headerId : footerId;
-    switch(hf.m_occurence) {
+    switch (hf.m_occurence) {
     case MWAWHeaderFooter::ODD:
       wh[0] = int(i);
       break;
@@ -723,7 +734,7 @@ bool NSText::readFontsList(MWAWEntry const &entry)
   asciiFile.addNote(f.str().c_str());
 
   int num=0;
-  while(!input->isEnd()) {
+  while (!input->isEnd()) {
     pos = input->tell();
     if (pos == entry.end()) break;
     if (pos+4 > entry.end()) {
@@ -793,7 +804,8 @@ bool NSText::readFonts(MWAWEntry const &entry)
       val = (long)input->readULong(2);
       if (val != 0xFF01) f << "#pictFlags0=" << std::hex << val << ",";
       font.m_pictureWidth = (int)input->readLong(2);
-    } else {
+    }
+    else {
       val = (long)input->readULong(2);
       if (val != 0xFF00)
         font.m_font.setId(int(val));
@@ -854,7 +866,8 @@ bool NSText::readFonts(MWAWEntry const &entry)
         if (val) f << "f" << j << "=" << std::hex << val << std::dec << ",";
       }
       color = (int) input->readULong(2);
-    } else {
+    }
+    else {
       color = (int) input->readULong(2);
       for (int j = 1; j < 6; j++) { // find always 0 here...
         val = (int) input->readULong(2);
@@ -1045,7 +1058,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     para.setInterline(double(input->readLong(4))/65536., librevenge::RVNG_POINT, MWAWParagraph::AtLeast);
     para.m_spacings[1] = float(input->readLong(4))/65536.f/72.f;
     int wh = int(input->readLong(2));
-    switch(wh) {
+    switch (wh) {
     case 0:
       break; // left
     case 1:
@@ -1070,7 +1083,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     para.m_margins[2] = float(input->readLong(4))/65536.f/72.f;
     para.m_margins[0] =para.m_margins[0].get()-para.m_margins[1].get();
     wh = int(input->readULong(1));
-    switch(wh) {
+    switch (wh) {
     case 0: // at least
       break;
     case 1:
@@ -1109,7 +1122,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
       f2.str("");
       tab.m_position = float(input->readLong(4))/72.f/65536.; // from left pos
       val = (long) input->readULong(1);
-      switch(val) {
+      switch (val) {
       case 1:
         break;
       case 2:
@@ -1151,7 +1164,8 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
         f << "name###";
         MWAW_DEBUG_MSG(("NSText::readParagraphs: can not read the ruler name\n"));
         asciiFile.addDelimiter(input->tell()-1,'#');
-      } else {
+      }
+      else {
         std::string str("");
         for (int i = 0; i < pSz; i++)
           str += (char) input->readULong(1);
@@ -1230,7 +1244,7 @@ bool NSText::readHeaderFooter(MWAWEntry const &entry)
     hf.m_paragraph[0] = lastPara;
     hf.m_paragraph[1] = lastPara = input->readLong(4);
     int what = (int) input->readULong(2);
-    switch((what>>2)&0x3) {
+    switch ((what>>2)&0x3) {
     case 1:
       hf.m_type = MWAWHeaderFooter::HEADER;
       break;
@@ -1241,7 +1255,7 @@ bool NSText::readHeaderFooter(MWAWEntry const &entry)
       f << "#what=" << ((what>>2)&0x3);
       break;
     }
-    switch(what&0x3) {
+    switch (what&0x3) {
     case 1:
       hf.m_occurence = MWAWHeaderFooter::ODD;
       break;
@@ -1437,7 +1451,7 @@ long NSText::findFilePos(NSStruct::ZoneType zoneId, NSStruct::Position const &po
       return input->tell();
     unsigned char c = (unsigned char) input->readULong(1);
     // update the position
-    switch(c) {
+    switch (c) {
     case 0xd:
       actPos.m_paragraph++;
       actPos.m_word = actPos.m_char = 0;
@@ -1691,7 +1705,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
     }
 
     // update the position
-    switch(c) {
+    switch (c) {
     case 0xd:
       actPos.m_paragraph++;
       actPos.m_word = actPos.m_char = 0;
@@ -1708,7 +1722,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
 
     // send char
     lastCharFootnote = false;
-    switch(c) {
+    switch (c) {
     case 0x1: {
       if (actFont.m_pictureId <= 0) {
         MWAW_DEBUG_MSG(("NSText::sendText: can not find pictureId for char 1\n"));

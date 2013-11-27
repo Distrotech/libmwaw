@@ -58,7 +58,8 @@ namespace ZWParserInternal
 //! Internal: the state of a ZWParser
 struct State {
   //! constructor
-  State() : m_actPage(0), m_numPages(0), m_headerUsed(true), m_footerUsed(true), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_actPage(0), m_numPages(0), m_headerUsed(true), m_footerUsed(true), m_headerHeight(0), m_footerHeight(0)
+  {
   }
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
@@ -83,7 +84,8 @@ public:
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
     if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
@@ -92,7 +94,8 @@ public:
   }
 
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -208,7 +211,8 @@ void ZWParser::parse(librevenge::RVNGTextInterface *docInterface)
       m_textParser->flushExtra();
 #endif
     }
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("ZWParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -280,7 +284,7 @@ bool ZWParser::createZones()
         break;
       MWAWEntry const &entry = it++->second;
       bool done=true;
-      switch(z) {
+      switch (z) {
       case 0:
         done=readBarState(entry);
         break;
@@ -317,7 +321,7 @@ bool ZWParser::createZones()
         break;
       MWAWEntry const &entry = it++->second;
       bool done=true;
-      switch(z) {
+      switch (z) {
       case 0:
         done=readCPos(entry);
         break;
@@ -378,7 +382,7 @@ bool ZWParser::readPrintInfo(MWAWEntry const &entry)
   for (size_t ff = 0; ff < numFields; ff++) {
     ZWField const &field = fields[ff];
     bool done = false;
-    switch(ff) {
+    switch (ff) {
     case 0: // T
     case 1: // B
     case 2: // L
@@ -410,7 +414,7 @@ bool ZWParser::readPrintInfo(MWAWEntry const &entry)
         break;
       if (!boolVal)
         continue;
-      switch(ff) { // checkme: does not seems to works in all case...
+      switch (ff) { // checkme: does not seems to works in all case...
       case 6:
         f << "sectionAddNewPage,";
         break;
@@ -559,7 +563,7 @@ bool ZWParser::readHTMLPref(MWAWEntry const &entry)
   for (size_t ff = 0; ff < numFields; ff++) {
     ZWField const &field = fields[ff];
     bool done = false;
-    switch(ff) {
+    switch (ff) {
     case 0:
     case 1:
     case 2: // always true?
@@ -680,7 +684,7 @@ bool ZWParser::readWindowPos(MWAWEntry const &entry)
   for (size_t ff = 0; ff < numFields; ff++) {
     ZWField const &field = fields[ff];
     bool done = false;
-    switch(ff) {
+    switch (ff) {
     case 0:
     case 1:
     case 2:
@@ -745,7 +749,8 @@ bool ZWParser::readCPos(MWAWEntry const &entry)
   if (fields[ff++].getInt(input, intVal)) {
     if (intVal)
       f << "cPos=" << intVal << ",";
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("ZWParser::readCPos: can not read cursor pos\n"));
     ff = 0;
   }
@@ -754,7 +759,7 @@ bool ZWParser::readCPos(MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("ZWParser::readCPos: find extra fields\n"));
   }
   std::string res;
-  for ( ; ff < numFields; ff++) {
+  for (; ff < numFields; ff++) {
     if (fields[ff].getDebugString(input, res))
       f << "#f" << ff << "=\"" << res << "\",";
     else
@@ -794,7 +799,8 @@ bool ZWParser::readSLen(MWAWEntry const &entry)
   if (fields[ff++].getInt(input, intVal)) {
     if (intVal)
       f << "len?=" << intVal << ",";
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("ZWParser::readSLen: can not read cursor pos\n"));
     ff = 0;
   }
@@ -803,7 +809,7 @@ bool ZWParser::readSLen(MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("ZWParser::readSLen: find extra fields\n"));
   }
   std::string res;
-  for ( ; ff < numFields; ff++) {
+  for (; ff < numFields; ff++) {
     if (fields[ff].getDebugString(input, res))
       f << "#f" << ff << "=\"" << res << "\",";
     else

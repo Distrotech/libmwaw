@@ -73,11 +73,13 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       if (type=="OTLN") { // at least basic v2
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_ACTA, 1));
         return res;
-      } else if (type=="otln") { // classic version
+      }
+      else if (type=="otln") {   // classic version
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_ACTA, 2));
         return res;
       }
-    } else if (creator=="BOBO") {
+    }
+    else if (creator=="BOBO") {
       if (type=="CWDB" || type=="CWD2" || type=="sWDB") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, 1, MWAWDocument::MWAW_K_DATABASE));
         return res;
@@ -98,22 +100,26 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, 1, MWAWDocument::MWAW_K_PRESENTATION));
         return res;
       }
-    } else if (creator=="BWks") {
+    }
+    else if (creator=="BWks") {
       if (type=="BWwp") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_BEAGLEWORKS, 1));
         return res;
       }
-    } else if (creator=="Dk@P") {
+    }
+    else if (creator=="Dk@P") {
       if (type=="APPL") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_DOCMAKER, 1));
         return res;
       }
-    } else if (creator=="FS03") {
+    }
+    else if (creator=="FS03") {
       if (type=="WRT+") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_WRITERPLUS, 1));
         return res;
       }
-    } else if (creator=="FWRT") {
+    }
+    else if (creator=="FWRT") {
       if (type=="FWRM") { // 1.7 ?
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_FULLWRITE, 1));
         return res;
@@ -126,52 +132,62 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_FULLWRITE,2));
         return res;
       }
-    } else if (creator=="HMiw") { // japonese
+    }
+    else if (creator=="HMiw") {   // japonese
       if (type=="IWDC") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_HANMACWORDJ,1));
         return res;
       }
-    } else if (creator=="HMdr") { // korean
+    }
+    else if (creator=="HMdr") {   // korean
       if (type=="DRD2") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_HANMACWORDK,1));
         return res;
       }
-    } else if (creator=="LWTE") {
+    }
+    else if (creator=="LWTE") {
       if (type=="TEXT" || type=="ttro") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_LIGHTWAYTEXT,1));
         return res;
       }
-    } else if (creator=="LWTR") {
+    }
+    else if (creator=="LWTR") {
       if (type=="APPL") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_LIGHTWAYTEXT,1));
         return res;
       }
-    } else if (creator=="MACA") {
+    }
+    else if (creator=="MACA") {
       if (type=="WORD") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACWRITE, 1));
         return res;
       }
-    } else if (creator=="MDsr") {
+    }
+    else if (creator=="MDsr") {
       if (type=="APPL") { // auto content
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDOC, 1));
         return res;
       }
-    } else if (creator=="MDvr") {
+    }
+    else if (creator=="MDvr") {
       if (type=="MDdc") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDOC, 1));
         return res;
       }
-    } else if (creator=="MMBB") {
+    }
+    else if (creator=="MMBB") {
       if (type=="MBBT") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MARINERWRITE, 1));
         return res;
       }
-    } else if (creator=="MORE") {
+    }
+    else if (creator=="MORE") {
       if (type=="MORE") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MORE, 1));
         return res;
       }
-    } else if (creator=="MOR2") {
+    }
+    else if (creator=="MOR2") {
       if (type=="MOR2") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MORE, 2));
         return res;
@@ -180,17 +196,20 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MORE, 3));
         return res;
       }
-    } else if (creator=="MWII") { // MacWriteII
+    }
+    else if (creator=="MWII") {   // MacWriteII
       if (type=="MW2D") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACWRITEPRO, 0));
         return res;
       }
-    } else if (creator=="MWPR") {
+    }
+    else if (creator=="MWPR") {
       if (type=="MWPd") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACWRITEPRO, 1));
         return res;
       }
-    } else if (creator=="MSWD") {
+    }
+    else if (creator=="MSWD") {
       if (type=="WDBN") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORD, 3));
         return res;
@@ -199,12 +218,14 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORD, 3));
         return res;
       }
-    } else if (creator=="WORD") {
+    }
+    else if (creator=="WORD") {
       if (type=="WDBN") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORD, 1));
         return res;
       }
-    } else if (creator=="MSWK") {
+    }
+    else if (creator=="MSWK") {
       if (type=="AWWP") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 3));
         return res;
@@ -213,7 +234,8 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104));
         return res;
       }
-    } else if (creator=="NISI") {
+    }
+    else if (creator=="NISI") {
       if (type=="TEXT") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_NISUSWRITER, 1));
         return res;
@@ -223,27 +245,32 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
       // "edtt": empty file, probably created when the file is edited
-    } else if (creator=="PSIP") {
+    }
+    else if (creator=="PSIP") {
       if (type=="AWWP") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 1));
         return res;
       }
-    } else if (creator=="PSI2") {
+    }
+    else if (creator=="PSI2") {
       if (type=="AWWP") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 2));
         return res;
       }
-    } else if (creator=="PWRI") {
+    }
+    else if (creator=="PWRI") {
       if (type=="OUTL") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MINDWRITE, 2));
         return res;
       }
-    } else if (creator=="TBB5") {
+    }
+    else if (creator=="TBB5") {
       if (type=="TEXT" || type=="ttro") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_TEXEDIT, 1));
         return res;
       }
-    } else if (creator=="ZEBR") {
+    }
+    else if (creator=="ZEBR") {
       if (type=="ZWRT") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_GREATWORKS, 1));
         return res;
@@ -253,22 +280,26 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
       // can we treat also ZOLN ?
-    } else if (creator=="ZWRT") {
+    }
+    else if (creator=="ZWRT") {
       if (type=="Zart") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_ZWRITE, 1));
         return res;
       }
-    } else if (creator=="eDcR") {
+    }
+    else if (creator=="eDcR") {
       if (type=="eDoc") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_EDOC, 1));
         return res;
       }
-    } else if (creator=="eSRD") { // self reading application
+    }
+    else if (creator=="eSRD") {   // self reading application
       if (type=="APPL") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_EDOC, 1));
         return res;
       }
-    } else if (creator=="nX^n") {
+    }
+    else if (creator=="nX^n") {
       if (type=="nX^d") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_WRITENOW, 2));
         return res;
@@ -277,7 +308,8 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_WRITENOW, 3));
         return res;
       }
-    } else if (creator=="ttxt") {
+    }
+    else if (creator=="ttxt") {
       if (type=="TEXT" || type=="ttro") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_TEACHTEXT, 1));
         return res;
@@ -374,7 +406,8 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       if (val[0]==0xfe34) {
         MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 3.0 file\n"));
         vers = 3;
-      } else if (val[0]==0xfe32) {
+      }
+      else if (val[0]==0xfe32) {
         MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Word 1.0 file\n"));
         vers = 1;
       }
@@ -418,7 +451,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   }
   if (val[0]==0) {
     int vers = -1;
-    switch(val[1]) {
+    switch (val[1]) {
     case 4:
       vers = 1;
       break;

@@ -64,52 +64,63 @@ struct HMWKZone {
   ~HMWKZone();
 
   //! returns the first position in the input
-  long begin() const {
+  long begin() const
+  {
     return m_asciiFilePtr ? 0 : m_filePos;
   }
   //! returns the last position in the input
-  long end() const {
+  long end() const
+  {
     return m_asciiFilePtr ? (long) m_data.size() : m_endFilePos;
   }
   //! returns the zone size
-  long length() const {
+  long length() const
+  {
     if (m_asciiFilePtr) return (long) m_data.size();
     return m_endFilePos-m_filePos;
   }
   //! returns true if the zone data exists
-  bool valid() const {
+  bool valid() const
+  {
     return length() > 0;
   }
 
   // function to define the zone in the original file
 
   //! returns the file begin position
-  long fileBeginPos() const {
+  long fileBeginPos() const
+  {
     return m_filePos;
   }
   //! returns the file begin position
-  long fileEndPos() const {
+  long fileEndPos() const
+  {
     return m_endFilePos;
   }
   //! sets the begin file pos
-  void setFileBeginPos(long begPos) {
+  void setFileBeginPos(long begPos)
+  {
     m_filePos = m_endFilePos = begPos;
   }
   //! sets the file length
-  void setFileLength(long len) {
+  void setFileLength(long len)
+  {
     m_endFilePos = m_filePos+len;
   }
   //! sets the begin/end file pos
-  void setFilePositions(long begPos, long endPos) {
+  void setFilePositions(long begPos, long endPos)
+  {
     m_filePos = begPos;
     m_endFilePos = endPos;
   }
   //! returns a pointer to the binary data
-  librevenge::RVNGBinaryData &getBinaryData() {
+  librevenge::RVNGBinaryData &getBinaryData()
+  {
     return m_data;
   }
   //! returns the zone name
-  std::string name() const {
+  std::string name() const
+  {
     return name(m_type);
   }
   //! returns the zone name
@@ -119,7 +130,8 @@ struct HMWKZone {
   friend std::ostream &operator<<(std::ostream &o, HMWKZone const &zone);
 
   //! returns the debug file
-  libmwaw::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii()
+  {
     return *m_asciiFile;
   }
 

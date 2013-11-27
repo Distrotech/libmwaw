@@ -96,7 +96,8 @@ public:
   //! small struct used which picture need to be send
   struct SendData {
     //! constructor
-    SendData() : m_type(RBDR), m_id(-1), m_anchor(MWAWPosition::Char), m_page(-1), m_size() {
+    SendData() : m_type(RBDR), m_id(-1), m_anchor(MWAWPosition::Char), m_page(-1), m_size()
+    {
     }
     /** the type */
     enum Type { RBDR, RBIL, ALL } m_type;
@@ -185,11 +186,13 @@ public:
   //! Internal: the graphic style of MSKGraph
   struct Style : public MWAWGraphicStyle {
     //! constructor
-    Style() : MWAWGraphicStyle(), m_baseLineColor(MWAWColor::black()), m_baseSurfaceColor(MWAWColor::white()) {
+    Style() : MWAWGraphicStyle(), m_baseLineColor(MWAWColor::black()), m_baseSurfaceColor(MWAWColor::white())
+    {
       m_fillRuleEvenOdd=true;
     }
     //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, Style const &st) {
+    friend std::ostream &operator<<(std::ostream &o, Style const &st)
+    {
       o << static_cast<MWAWGraphicStyle const &>(st);
       if (st.m_baseLineColor != st.m_lineColor)
         o << "lineColor[base]=" << st.m_baseLineColor << ",";

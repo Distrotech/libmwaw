@@ -103,12 +103,12 @@ InputStream *XAttr::getAuxillarInput() const
   std::string name=folder+"._"+file;
 
   struct stat status;
-  if (stat(name.c_str(), &status )==0 && S_ISREG(status.st_mode) )
+  if (stat(name.c_str(), &status)==0 && S_ISREG(status.st_mode))
     ;
   else {
     name=folder+"__MACOSX/._"+file;
-    stat(name.c_str(), &status );
-    if (stat(name.c_str(), &status ) || !S_ISREG(status.st_mode) )
+    stat(name.c_str(), &status);
+    if (stat(name.c_str(), &status) || !S_ISREG(status.st_mode))
       return 0;
   }
 
@@ -144,7 +144,7 @@ InputStream *XAttr::getUsingFinderDat(char const *what) const
   }
   std::string name=folder+"FINDER.DAT";
   struct stat status;
-  if (stat(name.c_str(), &status )!=0 || !S_ISREG(status.st_mode) )
+  if (stat(name.c_str(), &status)!=0 || !S_ISREG(status.st_mode))
     return 0;
 
   FileStream *input= new FileStream(name.c_str());
@@ -207,7 +207,7 @@ InputStream *XAttr::getUsingFinderDat(char const *what) const
         rsrcName += c;
       }
       name=folder+"RESOURCE.FRK/"+rsrcName;
-      if (stat(name.c_str(), &status )!=0 || !S_ISREG(status.st_mode) )
+      if (stat(name.c_str(), &status)!=0 || !S_ISREG(status.st_mode))
         break;
       delete input;
       input=new FileStream(name.c_str());
@@ -215,7 +215,8 @@ InputStream *XAttr::getUsingFinderDat(char const *what) const
         break;
       return input;
     }
-  } catch (...) {
+  }
+  catch (...) {
   }
   if (input) delete input;
   return 0;
@@ -287,7 +288,8 @@ InputStream *XAttr::unMacMIME(InputStream *inp, char const *what) const
       }
       return new StringStream(data,(unsigned long) entrySize);
     }
-  } catch (...) {
+  }
+  catch (...) {
     return 0;
   }
   return 0;

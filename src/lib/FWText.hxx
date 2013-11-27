@@ -115,7 +115,8 @@ protected:
   bool sendHiddenItem(int id, FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler);
 
   //! prepare the different data (called sortZones and createItemStructures)
-  void prepareData() {
+  void prepareData()
+  {
     sortZones();
     createItemStructures();
   }

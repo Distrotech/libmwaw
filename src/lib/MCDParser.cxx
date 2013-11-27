@@ -62,10 +62,12 @@ namespace MCDParserInternal
 //! Internal: the index data of a MCDParser
 struct Index {
   //! constructor
-  Index() : m_entry(), m_level(0), m_numChild(0), m_page(0), m_box(), m_extra("") {
+  Index() : m_entry(), m_level(0), m_numChild(0), m_page(0), m_box(), m_extra("")
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Index const &index) {
+  friend std::ostream &operator<<(std::ostream &o, Index const &index)
+  {
     if (index.m_level) o << "level=" << index.m_level << ",";
     if (index.m_page) o << "page=" << index.m_page << ",";
     o << "box=" << index.m_box << ",";
@@ -91,7 +93,8 @@ struct Index {
 //! Internal: the state of a MCDParser
 struct State {
   //! constructor
-  State() : m_idPictureMap(), m_indexList(), m_idFontMap(), m_actPage(0), m_numPages(0) {
+  State() : m_idPictureMap(), m_indexList(), m_idFontMap(), m_actPage(0), m_numPages(0)
+  {
   }
   //! the picture page map
   std::map<int,MWAWEntry> m_idPictureMap;
@@ -170,7 +173,8 @@ void MCDParser::parse(librevenge::RVNGTextInterface *docInterface)
       sendContents();
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("MCDParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -326,7 +330,7 @@ bool MCDParser::sendContents()
     newPage(++actPage);
   listener->setParagraph(MWAWParagraph());
   std::map<int,MWAWEntry>::const_iterator it=m_state->m_idPictureMap.begin();
-  for ( ; it!=m_state->m_idPictureMap.end(); ++it) {
+  for (; it!=m_state->m_idPictureMap.end(); ++it) {
     sendPicture(it->second);
     newPage(++actPage);
   }
@@ -380,7 +384,7 @@ bool MCDParser::readFont(MWAWEntry const &entry)
   font.setFlags(flags);
   unsigned char col[3];
   for (int c=0; c < 3; ++c)
-    col[c]=(unsigned char) (input->readULong(2)>>8);
+    col[c]=(unsigned char)(input->readULong(2)>>8);
   font.setColor(MWAWColor(col[0],col[1],col[2]));
   font.m_extra = f.str();
   f.str("");
@@ -506,7 +510,7 @@ bool MCDParser::sendIndex()
   size_t numIndex=(size_t) m_state->m_indexList.size();
   do
     id=updateIndex(id,1);
-  while(id>0 && id < (int) numIndex);
+  while (id>0 && id < (int) numIndex);
   listener->setFont(MWAWFont(3,12,MWAWFont::boldBit));
   MWAWParagraph para;
   para.m_justify = MWAWParagraph::JustificationCenter;

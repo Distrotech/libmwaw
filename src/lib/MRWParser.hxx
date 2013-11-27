@@ -61,12 +61,14 @@ class MRWText;
 //! a entry to store a zone structure
 struct MRWEntry : public MWAWEntry {
   //! constructor
-  MRWEntry() : MWAWEntry(), m_fileType(0), m_N(0), m_value(0) {
+  MRWEntry() : MWAWEntry(), m_fileType(0), m_N(0), m_value(0)
+  {
   }
   //! returns the entry name;
   std::string name() const;
   //! operator<<
-  friend std::ostream &operator<< (std::ostream &o, MRWEntry const &ent) {
+  friend std::ostream &operator<< (std::ostream &o, MRWEntry const &ent)
+  {
     if (ent.m_N || ent.m_value || ent.m_extra.length()) {
       o << "[";
       if (ent.m_N) o << "N=" << ent.m_N << ",";
@@ -87,16 +89,19 @@ struct MRWEntry : public MWAWEntry {
 //! Internal: a struct used to read some field
 struct MRWStruct {
   //! constructor
-  MRWStruct() : m_filePos(-1), m_pos(), m_type(-1), m_data() {
+  MRWStruct() : m_filePos(-1), m_pos(), m_type(-1), m_data()
+  {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, MRWStruct const &dt);
   //! returns the number of values
-  int numValues() const {
+  int numValues() const
+  {
     return int(m_data.size());
   }
   //! returns true if this corresponds to a simple container
-  bool isBasic() const {
+  bool isBasic() const
+  {
     return (m_type==1 || m_type==2) && m_data.size()<=1;
   }
   //! returns the ith value (or 0 if it does not exists )

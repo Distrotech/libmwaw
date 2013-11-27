@@ -57,7 +57,8 @@ public:
   bool parse();
 
   //! return the rsrc input
-  MWAWInputStreamPtr getInput() {
+  MWAWInputStreamPtr getInput()
+  {
     return m_input;
   }
 
@@ -65,13 +66,15 @@ public:
   MWAWEntry getEntry(std::string type, int id) const;
 
   //! returns the entry map (this map is filled by parse)
-  std::multimap<std::string, MWAWEntry> &getEntriesMap() {
+  std::multimap<std::string, MWAWEntry> &getEntriesMap()
+  {
     if (!m_parsed)
       parse();
     return m_entryMap;
   }
   //! returns the entry map (this map is filled by parse)
-  std::multimap<std::string, MWAWEntry> const &getEntriesMap() const {
+  std::multimap<std::string, MWAWEntry> const &getEntriesMap() const
+  {
     if (!m_parsed)
       const_cast<MWAWRSRCParser *>(this)->parse();
     return m_entryMap;
@@ -93,15 +96,18 @@ public:
   bool parseVers(MWAWEntry const &entry, Version &vers);
 
   //! Debugging: change the default ascii file
-  void setAsciiName(char const *name) {
+  void setAsciiName(char const *name)
+  {
     m_asciiName = name;
   }
   //! return the ascii file name
-  std::string const &asciiName() const {
+  std::string const &asciiName() const
+  {
     return m_asciiName;
   }
   //! a DebugFile used to write what we recognize when we parse the document
-  libmwaw::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii()
+  {
     return m_asciiFile;
   }
 protected:
@@ -126,7 +132,8 @@ public:
   /** a public structure used to return the version */
   struct Version {
     Version() : m_majorVersion(-1), m_minorVersion(0), m_countryCode(0),
-      m_string(""), m_versionString(""), m_extra("") {
+      m_string(""), m_versionString(""), m_extra("")
+    {
     }
     //! operator<<
     friend std::ostream &operator<< (std::ostream &o, Version const &vers);

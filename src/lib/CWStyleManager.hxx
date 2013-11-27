@@ -143,7 +143,8 @@ public:
   //! the CELL structure a structure related to number/date format
   struct CellFormat {
     //! constructor
-    CellFormat() : m_justify(0), m_format(-1), m_numDigits(2), m_separateThousand(false), m_parentheseNegatif(false), m_wrap(false), m_extra("") {
+    CellFormat() : m_justify(0), m_format(-1), m_numDigits(2), m_separateThousand(false), m_parentheseNegatif(false), m_wrap(false), m_extra("")
+    {
     }
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, CellFormat const &form);
@@ -166,7 +167,8 @@ public:
   //! the KSEN structure a structure related to paragraph and cell style
   struct KSEN {
     //! constructor
-    KSEN() : m_valign(0), m_lineType(MWAWBorder::Simple), m_lineRepeat(MWAWBorder::Single), m_lines(0), m_extra("") {
+    KSEN() : m_valign(0), m_lineType(MWAWBorder::Simple), m_lineRepeat(MWAWBorder::Single), m_lines(0), m_extra("")
+    {
     }
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, KSEN const &ksen);
@@ -185,7 +187,8 @@ public:
   //! the structure to store the style in a CWStyleManager
   struct Style {
     //! constructor
-    Style() : m_fontId(-1), m_cellFormatId(-1), m_rulerId(-1), m_rulerHash(-1), m_ksenId(-1), m_graphicId(-1), m_localStyleId(-1), m_styleId(-1), m_extra("") {
+    Style() : m_fontId(-1), m_cellFormatId(-1), m_rulerId(-1), m_rulerHash(-1), m_ksenId(-1), m_graphicId(-1), m_localStyleId(-1), m_styleId(-1), m_extra("")
+    {
     }
 
     //! operator<<

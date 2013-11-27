@@ -64,7 +64,7 @@ void MSKParser::sendOLE(int, MWAWPosition const &, librevenge::RVNGPropertyList)
 
 std::vector<MWAWColor> const &MSKParser::getPalette(int vers)
 {
-  switch(vers) {
+  switch (vers) {
   case 2: {
     static std::vector<MWAWColor> palette;
     palette.resize(9);

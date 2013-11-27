@@ -59,10 +59,12 @@ namespace WPParserInternal
 {
 //! Page informations
 struct PageInfo {
-  PageInfo() : m_firstLine(0), m_height(0), m_heightFromBegin(0) {
+  PageInfo() : m_firstLine(0), m_height(0), m_heightFromBegin(0)
+  {
     std::memset(m_unknown, 0, sizeof(m_unknown));
   }
-  friend std::ostream &operator<<(std::ostream &o, PageInfo const &p) {
+  friend std::ostream &operator<<(std::ostream &o, PageInfo const &p)
+  {
     o << "firstLine=" << p.m_firstLine
       << ", height=" << p.m_height
       << ", height[fromStart]=" << p.m_heightFromBegin;
@@ -78,10 +80,12 @@ struct PageInfo {
 
 //! Column informations
 struct ColumnInfo {
-  ColumnInfo() : m_firstLine(0), m_height(0), m_col(0), m_numCol(1) {
+  ColumnInfo() : m_firstLine(0), m_height(0), m_col(0), m_numCol(1)
+  {
     std::memset(m_unknown, 0, sizeof(m_unknown));
   }
-  friend std::ostream &operator<<(std::ostream &o, ColumnInfo const &c) {
+  friend std::ostream &operator<<(std::ostream &o, ColumnInfo const &c)
+  {
     o << "firstLine=" << c.m_firstLine
       << ", col=" << c.m_col << "/" << c.m_numCol
       << ", height=" << c.m_height
@@ -99,11 +103,13 @@ struct ColumnInfo {
 
 //! Column informations in a table
 struct ColumnTableInfo {
-  ColumnTableInfo() : m_height(0), m_numData(0), m_flags(0) {
+  ColumnTableInfo() : m_height(0), m_numData(0), m_flags(0)
+  {
     for (int i = 0; i < 2; i++) m_colX[i]=0;
     for (int i = 0; i < 3; i++) m_textX[i]=0;
   }
-  friend std::ostream &operator<<(std::ostream &o, ColumnTableInfo const &c) {
+  friend std::ostream &operator<<(std::ostream &o, ColumnTableInfo const &c)
+  {
     o << "height=" << c.m_height
       << ", numData=" << c.m_numData
       << ", colX=" <<  c.m_colX[0] << "<->" << c.m_colX[1]
@@ -125,21 +131,24 @@ struct ColumnTableInfo {
 struct ParagraphInfo {
   ParagraphInfo() : m_pos(0), m_type(-2),
     m_height(0),  m_height2(0), m_width(0),
-    m_numLines(0), m_linesHeight(), m_unknowns() {
+    m_numLines(0), m_linesHeight(), m_unknowns()
+  {
     for (int i = 0; i < 6; i++) m_flags[i] = 0;
   }
-  int getType() const {
+  int getType() const
+  {
     if (m_type >= 8) return (m_type & 0x7);
     return m_type;
   }
-  friend std::ostream &operator<<(std::ostream &o, ParagraphInfo const &p) {
+  friend std::ostream &operator<<(std::ostream &o, ParagraphInfo const &p)
+  {
     int type = p.m_type;
     bool typeFlag = false;
     if (type >= 8) {
       typeFlag = true;
       type &= 7;
     }
-    switch(type) {
+    switch (type) {
     case 0:
       o << "text";
       break;
@@ -183,7 +192,8 @@ struct ParagraphInfo {
           o << p.m_linesHeight[i] << ",";
         o << "],";
       }
-    } else {
+    }
+    else {
       if (p.m_numLines) o << "numLines=" << p.m_numLines << ",";
       if (p.m_linesHeight.size()) {
         o << "lineH=[";
@@ -221,13 +231,16 @@ struct ParagraphInfo {
 //! Windows informations
 struct WindowsInfo {
   struct Zone {
-    Zone() : m_number(0), m_size(0), m_width(0) {
+    Zone() : m_number(0), m_size(0), m_width(0)
+    {
       for (int i = 0; i < 3; i++) m_unknown[i] = 0;
     }
-    bool empty() const {
+    bool empty() const
+    {
       return m_number==0 && m_size==0;
     }
-    friend std::ostream &operator<<(std::ostream &o, Zone const &z) {
+    friend std::ostream &operator<<(std::ostream &o, Zone const &z)
+    {
       o << "N=" << z.m_number << ", sz=" << std::hex << z.m_size << std::dec;
       o << ", w=" << z.m_width;
       for (int i = 0; i < 3; i++) {
@@ -245,10 +258,12 @@ struct WindowsInfo {
   friend std::ostream &operator<<(std::ostream &o, WindowsInfo const &w);
 
   WindowsInfo() : m_pageDim(), m_headerY(0), m_footerY(0),
-    m_pages(), m_columns(), m_paragraphs() {
+    m_pages(), m_columns(), m_paragraphs()
+  {
   }
 
-  bool dimensionInvalid() const {
+  bool dimensionInvalid() const
+  {
     return (m_pageDim.x() < 0 || m_pageDim.y() < 0 ||
             m_headerY < 0 || m_footerY < 0 ||
             m_headerY+m_footerY > m_pageDim.y());
@@ -313,7 +328,7 @@ std::ostream &operator<<(std::ostream &o, WindowsInfo const &w)
   if (w.m_footerY) o << "footer[Height]=" << w.m_footerY << ",";
   for (int i = 0; i < 7; i++) {
     if (w.m_zone[i].empty()) continue;
-    switch(i) {
+    switch (i) {
     case 1:
       o << "zonePages";
       break;
@@ -335,11 +350,13 @@ std::ostream &operator<<(std::ostream &o, WindowsInfo const &w)
 ////////////////////////////////////////
 /** Internal: class to store the font properties */
 struct Font {
-  Font(): m_font(), m_firstChar(0) {
+  Font(): m_font(), m_firstChar(0)
+  {
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Font const &f) {
+  friend std::ostream &operator<<(std::ostream &o, Font const &f)
+  {
     if (f.m_firstChar) o << "firstChar=" << f.m_firstChar << ",";
     return o;
   }
@@ -352,12 +369,14 @@ struct Font {
 ////////////////////////////////////////
 /** Internal: class to store the line  properties */
 struct Line {
-  Line(): m_firstChar(0), m_height(0), m_width(0), m_maxFontSize(0) {
+  Line(): m_firstChar(0), m_height(0), m_width(0), m_maxFontSize(0)
+  {
     for (int i = 0; i < 4; i++) m_flags[i] = 0;
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Line const &l) {
+  friend std::ostream &operator<<(std::ostream &o, Line const &l)
+  {
     if (l.m_firstChar) o << "firstChar=" << l.m_firstChar << ",";
     o << "height=" << l.m_height << ", width=" << l.m_width;
     for (int i = 0; i < 4; i++) {
@@ -377,12 +396,14 @@ struct Line {
 ////////////////////////////////////////
 /** Internal: class to store the Graphic properties */
 struct GraphicInfo {
-  GraphicInfo(): m_width(0), m_graphicWidth(0) {
+  GraphicInfo(): m_width(0), m_graphicWidth(0)
+  {
     for (int i = 0; i < 7; i++) m_flags[i] = 0;
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, GraphicInfo const &g) {
+  friend std::ostream &operator<<(std::ostream &o, GraphicInfo const &g)
+  {
     o << "width=" << g.m_graphicWidth << ", width[line]=" << g.m_width;
     for (int i = 0; i < 6; i++) { // m_flags[6] seems to be junk
       if (!g.m_flags[i]) continue;
@@ -399,12 +420,14 @@ struct GraphicInfo {
 ////////////////////////////////////////
 /** Internal: class to store the Section properties */
 struct SectionInfo {
-  SectionInfo() : m_numCol(0) {
+  SectionInfo() : m_numCol(0)
+  {
     for (int i = 0; i < 3; i++) m_dim[i] = 0;
     for (int i = 0; i < 4; i++) m_flags[i] = 0;
   }
 
-  bool empty() const {
+  bool empty() const
+  {
     if (m_numCol) return false;
     for (int i = 0; i < 3; i++)
       if (m_dim[i]) return false;
@@ -413,7 +436,8 @@ struct SectionInfo {
     return true;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, SectionInfo const &s) {
+  friend std::ostream &operator<<(std::ostream &o, SectionInfo const &s)
+  {
     if (s.m_numCol) o << "numCols?=" << s.m_numCol << ",";
     o << "dim?=[";
     for (int i = 0; i < 3; i++)
@@ -439,12 +463,14 @@ struct ParagraphData {
   //! Constructor
   ParagraphData() : m_type(-1), m_typeFlag(0),
     m_height(0), m_width(0) ,m_unknown(0),
-    m_text(""), m_fonts(), m_endPos(0) {
+    m_text(""), m_fonts(), m_endPos(0)
+  {
     for (int i = 0; i < 2; i++) m_indent[i] = m_numData[i] = 0;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, ParagraphData const &p) {
-    switch(p.m_type) {
+  friend std::ostream &operator<<(std::ostream &o, ParagraphData const &p)
+  {
+    switch (p.m_type) {
     case 0:
       o << "text";
       break;
@@ -505,7 +531,8 @@ struct ParagraphData {
 //! Internal: the state of a WPParser
 struct State {
   //! constructor
-  State() : m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+  State() : m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  {
   }
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
@@ -529,7 +556,8 @@ public:
   virtual ~SubDocument() {}
 
   //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const {
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
     if (MWAWSubDocument::operator!=(doc)) return true;
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
@@ -538,16 +566,19 @@ public:
   }
 
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
   //! returns the subdocument \a id
-  int getId() const {
+  int getId() const
+  {
     return m_id;
   }
   //! sets the subdocument \a id
-  void setId(int vid) {
+  void setId(int vid)
+  {
     m_id = vid;
   }
 
@@ -652,7 +683,8 @@ void WPParser::parse(librevenge::RVNGTextInterface *docInterface)
     }
 
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("WPParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -706,7 +738,7 @@ bool WPParser::createZones()
     return false;
   for (int st = 1; st < 4; st++) {
     bool ok = true;
-    switch(st) {
+    switch (st) {
     case 1:
       ok = m_state->m_headerHeight > 0;
       break;
@@ -784,7 +816,7 @@ bool WPParser::readWindowsInfo(int zone)
   input->seek(debPos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(WindowsZone)";
-  switch(zone) {
+  switch (zone) {
   case 0:
     break;
   case 1:
@@ -915,7 +947,7 @@ bool WPParser::readWindowsZone(int zone)
     input->seek(pos, librevenge::RVNG_SEEK_SET);
 
     bool ok = false;
-    switch(wh) {
+    switch (wh) {
     case 1:
       ok=readPageInfo(zone);
       break;
@@ -942,7 +974,8 @@ bool WPParser::readWindowsZone(int zone)
         ascii().addNote(f.str().c_str());
         input->seek(dataSz, librevenge::RVNG_SEEK_CUR);
       }
-    } else {
+    }
+    else {
       f.str("");
       f << "Entries(Zone" << wh << "):";
       ascii().addPos(input->tell());
@@ -1014,7 +1047,8 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
         MWAW_DEBUG_MSG(("WPParser::readWindowsZone: pb2 with limits\n"));
         return true;
       }
-    } else {
+    }
+    else {
       if (zone == 0) {
         newPage(pg+1);
         actCol = numCols ? 1 : 0;
@@ -1042,7 +1076,8 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
         if (numCols) {
           if (actCol >numCols) {
             MWAW_DEBUG_MSG(("WPParser::readWindowsZone: pb with col break\n"));
-          } else {
+          }
+          else {
             actCol++;
             listener->insertBreak(MWAWContentListener::ColumnBreak);
           }
@@ -1059,7 +1094,8 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
             if (section.numColumns()>1) {
               MWAW_DEBUG_MSG(("WPParser::readWindowsZone: find a section in auxilliary zone\n"));
             }
-          } else {
+          }
+          else {
             if (listener->isSectionOpened())
               listener->closeSection();
             listener->openSection(section);
@@ -1094,7 +1130,8 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
             listener->closeTableRow();
             listener->closeTable();
           }
-        } else {
+        }
+        else {
           MWAW_DEBUG_MSG(("WPParser::readWindowsZone: table across a page\n"));
         }
         break;
@@ -1187,7 +1224,7 @@ bool WPParser::readPageInfo(int zone)
 
   WPParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
   int numPages = wInfo.m_zone[1].m_number;
-  if ( wInfo.m_zone[1].m_size != numPages * 10) {
+  if (wInfo.m_zone[1].m_size != numPages * 10) {
     MWAW_DEBUG_MSG(("WPParser::readPageInfo: odd page size\n"));
     return false;
   }
@@ -1315,7 +1352,7 @@ bool WPParser::readColInfo(int zone)
 
   WPParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
   int numCols = wInfo.m_zone[2].m_number;
-  if ( wInfo.m_zone[2].m_size != numCols * 16) {
+  if (wInfo.m_zone[2].m_size != numCols * 16) {
     MWAW_DEBUG_MSG(("WPParser::readColInfo: odd col size\n"));
     return false;
   }
@@ -1402,7 +1439,8 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
       if (numLines == 1 && info.m_height > lines[0].m_height) {
         para.setInterline(info.m_height, librevenge::RVNG_POINT);
         getListener()->setParagraph(para);
-      } else if (lines[(size_t) actLine].m_height) {
+      }
+      else if (lines[(size_t) actLine].m_height) {
         para.setInterline(lines[(size_t) actLine].m_height, librevenge::RVNG_POINT);
         getListener()->setParagraph(para);
       }
@@ -1625,7 +1663,8 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
   if (box.size().x() > 0 && box.size().y()  > 0) {
     if (actualSize.x() <= 0 || actualSize.y() <= 0) actualSize = box.size();
     naturalSize = box.size();
-  } else {
+  }
+  else {
     MWAW_DEBUG_MSG(("WPParser::readGraphic: can not find the picture size\n"));
     actualSize = Vec2f(100,100);
   }
@@ -1792,7 +1831,7 @@ bool WPParser::readFonts
   fonts.resize(0);
   MWAWInputStreamPtr input = getInput();
   bool hasFontExtra = true;
-  switch(type) {
+  switch (type) {
   case 0: // find in these case junk in the last part of font
   case 2:
   case 4:

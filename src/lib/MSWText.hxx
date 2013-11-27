@@ -69,13 +69,15 @@ public:
   //! Internal: the plc
   struct PLC {
     enum Type { TextPosition, HeaderFooter, Page, Section, ParagraphInfo, Paragraph, Font, Footnote, FootnoteDef, Field, Object };
-    PLC(Type type, int id=0) : m_type(type), m_id(id), m_extra("") {
+    PLC(Type type, int id=0) : m_type(type), m_id(id), m_extra("")
+    {
     }
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, PLC const &plc);
     //! a comparaison structure
     struct ltstr {
-      bool operator()(PLC const &s1, PLC const &s2) const {
+      bool operator()(PLC const &s1, PLC const &s2) const
+      {
         if (s1.m_type != s2.m_type)
           return int(s1.m_type) < int(s2.m_type);
         if (s1.m_id != s2.m_id)
@@ -109,7 +111,8 @@ public:
   MWAWEntry getFooter() const;
 protected:
   //! returns the parser state
-  shared_ptr<MWAWParserState> &getParserState() {
+  shared_ptr<MWAWParserState> &getParserState()
+  {
     return m_parserState;
   }
 

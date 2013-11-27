@@ -62,7 +62,8 @@ namespace MRWTextInternal
 //! Internal: struct used to store the font of a MRWText
 struct Font {
   //! constructor
-  Font() : m_font(), m_localId(-1), m_tokenId(0), m_extra("") {
+  Font() : m_font(), m_localId(-1), m_tokenId(0), m_extra("")
+  {
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Font const &font);
@@ -92,10 +93,12 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
 struct Paragraph : public MWAWParagraph {
   //! constructor
   Paragraph() : MWAWParagraph(), m_paraFill(),
-    m_cellWidth(0), m_cellHeight(0), m_cellSep(0), m_cellFill() {
+    m_cellWidth(0), m_cellHeight(0), m_cellSep(0), m_cellFill()
+  {
   }
   //! updates the paragraph knowing the paragraph pattern percent
-  void update(float percent) {
+  void update(float percent)
+  {
     if (m_paraFill.hasBackgroundColor())
       m_backgroundColor=m_paraFill.getBackgroundColor(percent);
     if (!m_paraFill.hasBorders())
@@ -109,7 +112,8 @@ struct Paragraph : public MWAWParagraph {
     }
   }
   //! updates the paragraph knowing the paragraph pattern percent
-  void update(float percent, MWAWCell &cell) const {
+  void update(float percent, MWAWCell &cell) const
+  {
     if (m_cellFill.hasBackgroundColor())
       cell.setBackgroundColor(m_cellFill.getBackgroundColor(percent));
     if (!m_cellFill.hasBorders())
@@ -128,37 +132,44 @@ struct Paragraph : public MWAWParagraph {
   struct BorderFill {
     //! constructor
     BorderFill() : m_foreColor(MWAWColor::black()), m_backColor(MWAWColor::white()), m_patternId(0),
-      m_borderColor(MWAWColor::black()) {
+      m_borderColor(MWAWColor::black())
+    {
       for (int i=0; i < 4; i++)
         m_borderTypes[i]=0;
     }
     //! return true if the properties are default properties
-    bool isDefault() const {
+    bool isDefault() const
+    {
       return !hasBorders() && !hasBackgroundColor();
     }
     //! reset the background color
-    void resetBackgroundColor() {
+    void resetBackgroundColor()
+    {
       m_foreColor=MWAWColor::black();
       m_backColor=MWAWColor::white();
       m_patternId=0;
     }
     //! return true if we have a not white background color
-    bool hasBackgroundColor() const {
+    bool hasBackgroundColor() const
+    {
       return !m_foreColor.isBlack()||!m_backColor.isWhite()||m_patternId;
     }
     //! returns the background color knowing the pattern percent
-    MWAWColor getBackgroundColor(float percent) const {
+    MWAWColor getBackgroundColor(float percent) const
+    {
       if (percent < 0.0)
         return m_backColor;
       return MWAWColor::barycenter(percent,m_foreColor,1.f-percent,m_backColor);
     }
     //! reset the borders
-    void resetBorders() {
+    void resetBorders()
+    {
       for (int i=0; i < 4; i++)
         m_borderTypes[i]=0;
     }
     //! return true if we have border
-    bool hasBorders() const {
+    bool hasBorders() const
+    {
       for (int i = 0; i < 4; i++)
         if (m_borderTypes[i]) return true;
       return false;
@@ -212,7 +223,7 @@ std::ostream &operator<<(std::ostream &o, Paragraph const &para)
 MWAWBorder Paragraph::BorderFill::getBorder(int i) const
 {
   MWAWBorder res;
-  switch(m_borderTypes[i]) {
+  switch (m_borderTypes[i]) {
   case 0:
     res.m_style = MWAWBorder::None;
     break;
@@ -276,7 +287,7 @@ std::ostream &operator<<(std::ostream &o, Paragraph::BorderFill const &fill)
   for (int i = 0; i < 4; i++) {
     if (!fill.m_borderTypes[i]) continue;
     o << wh[i] << "=";
-    switch(fill.m_borderTypes[i]) {
+    switch (fill.m_borderTypes[i]) {
     case 0:
       break;
     case 1:
@@ -326,11 +337,13 @@ struct Zone {
   struct Information;
 
   //! constructor
-  Zone(int zId) : m_id(zId), m_infoList(), m_fontList(),m_rulerList(), m_idFontMap(), m_posFontMap(), m_posRulerMap(), m_actZone(0), m_parsed(false) {
+  Zone(int zId) : m_id(zId), m_infoList(), m_fontList(),m_rulerList(), m_idFontMap(), m_posFontMap(), m_posRulerMap(), m_actZone(0), m_parsed(false)
+  {
   }
 
   //! returns the file position and the number of the sub zone
-  bool getPosition(long cPos, long &fPos, size_t &subZone) const {
+  bool getPosition(long cPos, long &fPos, size_t &subZone) const
+  {
     if (cPos < 0) return false;
     long nChar= cPos;
     for (size_t z = 0; z < m_infoList.size(); z++) {
@@ -344,14 +357,16 @@ struct Zone {
     return false;
   }
   //! returns the zone length
-  long length() const {
+  long length() const
+  {
     long res=0;
     for (size_t z = 0; z < m_infoList.size(); z++)
       res += m_infoList[z].m_pos.length();
     return res;
   }
   //! returns a fonts corresponding to an id (if possible)
-  bool getFont(int id, Font &ft) const {
+  bool getFont(int id, Font &ft) const
+  {
     if (id < 0 || id >= int(m_fontList.size())) {
       MWAW_DEBUG_MSG(("MRWTextInternal::Zone::getFont: can not find font %d\n", id));
       return false;
@@ -359,12 +374,14 @@ struct Zone {
     ft = m_fontList[size_t(id)];
     if (m_idFontMap.find(ft.m_localId) == m_idFontMap.end()) {
       MWAW_DEBUG_MSG(("MRWTextInternal::Zone::getFont: can not find font id %d\n", id));
-    } else
+    }
+    else
       ft.m_font.setId(m_idFontMap.find(ft.m_localId)->second);
     return true;
   }
   //! returns a ruler corresponding to an id (if possible)
-  bool getRuler(int id, Paragraph &ruler) const {
+  bool getRuler(int id, Paragraph &ruler) const
+  {
     if (id < 0 || id >= int(m_rulerList.size())) {
       MWAW_DEBUG_MSG(("MRWTextInternal::Zone::getParagraph: can not find paragraph %d\n", id));
       return false;
@@ -396,7 +413,8 @@ struct Zone {
     //! constructor
     Information() : m_pos(), m_cPos(0,0), m_extra("") { }
     //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, Information const &info) {
+    friend std::ostream &operator<<(std::ostream &o, Information const &info)
+    {
       if (info.m_cPos[0] || info.m_cPos[1])
         o << "cPos=" << std::hex << info.m_cPos << std::dec << ",";
       o << info.m_extra;
@@ -418,10 +436,12 @@ struct Table {
   struct Cell;
   struct Row;
   //! constructor
-  Table(Zone const &zone) : m_zone(zone), m_rowsList() {
+  Table(Zone const &zone) : m_zone(zone), m_rowsList()
+  {
   }
   //! returns the next char position after the table
-  long nextCharPos() const {
+  long nextCharPos() const
+  {
     if (!m_rowsList.size()) {
       MWAW_DEBUG_MSG(("MRWTextInternal::Table: can not compute the last position\n"));
       return -1;
@@ -436,7 +456,8 @@ struct Table {
   //! a table row of a MRWText
   struct Row {
     //! constructor
-    Row() :  m_lastChar(-1), m_height(0), m_cellsList() {
+    Row() :  m_lastChar(-1), m_height(0), m_cellsList()
+    {
     }
     //! the last table position
     long m_lastChar;
@@ -448,10 +469,12 @@ struct Table {
   //! a table cell of a MRWText
   struct Cell {
     // constructor
-    Cell() : m_entry(), m_rulerId(-1), m_width(-1) {
+    Cell() : m_entry(), m_rulerId(-1), m_width(-1)
+    {
     }
     // returns true if the information are find
-    bool ok() const {
+    bool ok() const
+    {
       return m_entry.length()>0 && m_rulerId>=0 && m_width>=0;
     }
     //! the cell entry
@@ -467,11 +490,13 @@ struct Table {
 //! Internal: the state of a MRWText
 struct State {
   //! constructor
-  State() : m_version(-1), m_textZoneMap(), m_numPages(-1), m_actualPage(0) {
+  State() : m_version(-1), m_textZoneMap(), m_numPages(-1), m_actualPage(0)
+  {
   }
 
   //! return a reference to a textzone ( if zone not exists, created it )
-  Zone &getZone(int id) {
+  Zone &getZone(int id)
+  {
     std::map<int,Zone>::iterator it = m_textZoneMap.find(id);
     if (it != m_textZoneMap.end())
       return it->second;
@@ -512,7 +537,7 @@ int MRWText::numPages() const
   if (m_state->m_numPages <= 0) {
     int nPages = 0;
     std::map<int,MRWTextInternal::Zone>::const_iterator it = m_state->m_textZoneMap.begin();
-    for ( ; it != m_state->m_textZoneMap.end(); ++it) {
+    for (; it != m_state->m_textZoneMap.end(); ++it) {
       nPages = computeNumPages(it->second);
       if (nPages)
         break;
@@ -630,7 +655,7 @@ bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
         f << "###f" << j << "=" << data << ",";
         continue;
       }
-      switch(j) {
+      switch (j) {
       case 0:
       case 1:
         info.m_cPos[j] = data.value(0);
@@ -791,9 +816,11 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
             tableEntry.setEnd(entry.end());
             if (!findTableStructure(table, tableEntry)) {
               MWAW_DEBUG_MSG(("MRWText::send: can not find table data\n"));
-            } else if (!sendTable(table) || actChar >= table.nextCharPos()) {
+            }
+            else if (!sendTable(table) || actChar >= table.nextCharPos()) {
               MWAW_DEBUG_MSG(("MRWText::send: can not send a table data\n"));
-            } else {
+            }
+            else {
               ascFile.addPos(pos);
               ascFile.addNote(f.str().c_str());
 
@@ -812,7 +839,8 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
                 input->seek(firstPos, librevenge::RVNG_SEEK_SET);
                 firstPos = -1;
                 continue;
-              } else {
+              }
+              else {
                 z = firstZ-1;
                 break;
               }
@@ -847,7 +875,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
         tokenEndPos++;
         MWAW_DEBUG_MSG(("MRWText::send: find unexpected char for a token\n"));
       }
-      switch(c) {
+      switch (c) {
       case 0x6: { // end of line
         static bool first = true;
         if (first) {
@@ -886,7 +914,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
           m_mainParser->newPage(++actPage);
         break;
 
-        // some special character
+      // some special character
       case 0x11:
         listener->insertUnicode(0x2318);
         break;
@@ -1014,7 +1042,8 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
             lastHeight = para.m_cellHeight;
             if (lastHeight < 0 || (actHeight >= 0 && lastHeight > actHeight))
               actHeight=lastHeight;
-          } else if (firstCellInRow)
+          }
+          else if (firstCellInRow)
             return table.m_rowsList.size();
         }
       }
@@ -1034,7 +1063,8 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
         actHeight=lastHeight;
         cell.m_entry.setBegin(actChar);
         firstCellInRow = true;
-      } else if (c==0x7) {
+      }
+      else if (c==0x7) {
         cell.m_entry.setEnd(actChar);
         if (!cell.ok())
           return false;
@@ -1151,7 +1181,8 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
       if (j == 0) {
         fontName = name;
         f << name << ",";
-      } else
+      }
+      else
         f << "nFont=" << name << ",";
     }
     val = (int) dataList[d++].value(0);
@@ -1160,9 +1191,9 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
     val = (int) dataList[d++].value(0);
     if (val) // always 0
       f << "f1=" << val << ",";
-    int fId = (int) (uint16_t) dataList[d++].value(0);
+    int fId = (int)(uint16_t) dataList[d++].value(0);
     f << "fId=" << fId << ",";
-    int fIdAux = (int) (uint16_t) dataList[d++].value(0);
+    int fIdAux = (int)(uint16_t) dataList[d++].value(0);
     if (fIdAux)
       f << "f2=" << std::hex << fIdAux << std::dec << ",";
     for (int j = 6; j < 19; j++) { // f14=1,f15=0|3
@@ -1253,9 +1284,9 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
       case 10:
       case 11:
         color[0]=color[1]=color[2]=0;
-        color[j-9]=(unsigned char) (dt.value(0)>>8);
+        color[j-9]=(unsigned char)(dt.value(0)>>8);
         while (j < 11)
-          color[++j-9] = (unsigned char) (dataList[d++].value(0));
+          color[++j-9] = (unsigned char)(dataList[d++].value(0));
         font.m_font.setColor(MWAWColor(color[0],color[1],color[2]));
         break;
       case 12: // big number
@@ -1267,9 +1298,9 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
       case 14:
       case 15:
         color[0]=color[1]=color[2]=0xFF;
-        color[j-13]=(unsigned char) (dt.value(0)>>8);
+        color[j-13]=(unsigned char)(dt.value(0)>>8);
         while (j < 15)
-          color[++j-13] = (unsigned char) (dataList[d++].value(0)>>8);
+          color[++j-13] = (unsigned char)(dataList[d++].value(0)>>8);
         font.m_font.setBackgroundColor(MWAWColor(color[0],color[1],color[2]));
         break;
       case 18: {
@@ -1297,7 +1328,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
       case 34: // an id?
         if (!dt.value(0))
           break;
-        switch(j) {
+        switch (j) {
         case 28:
           f << "idA";
           break;
@@ -1310,7 +1341,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
         }
         f << "=" << std::hex << int32_t(dt.value(0)) << std::dec << ",";
         break;
-        // tokens
+      // tokens
       case 36: // 0|1|6 related to token?
         if (dt.value(0))
           f << "tok0=" << dt.value(0) << ",";
@@ -1340,7 +1371,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
       case 57:
       case 58:
         if (int16_t(dt.value(0))==-1) {
-          switch(j) {
+          switch (j) {
           case 39:
             fFlags |= MWAWFont::boldBit;
             break;
@@ -1400,7 +1431,8 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
             f << "#f" << j << ",";
             break;
           }
-        } else if (dt.value(0))
+        }
+        else if (dt.value(0))
           f << "#f" << j << "=" << dt.value(0) << ",";
         break;
       case 51:
@@ -1476,7 +1508,8 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
     if (!dataList[d].isBasic()) {
       MWAW_DEBUG_MSG(("MRWText::readStyleNames: bad id field for style %d\n", i));
       f << "###" << dataList[d] << ",";
-    } else
+    }
+    else
       f << "id=" << dataList[d].value(0) << ",";
     d++;
 
@@ -1485,14 +1518,16 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
     if (data.m_type!=0 || !data.m_pos.valid()) {
       MWAW_DEBUG_MSG(("MRWText::readStyleNames: name %d seems bad\n", i));
       f << "###" << data << ",";
-    } else {
+    }
+    else {
       long pos = data.m_pos.begin();
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       int fSz = int(input->readULong(1));
       if (fSz+1 > data.m_pos.length()) {
         MWAW_DEBUG_MSG(("MRWText::readStyleNames: field name %d seems bad\n", i));
         f << data << "[###fSz=" << fSz << ",";
-      } else {
+      }
+      else {
         for (int c = 0; c < fSz; c++)
           name+=(char) input->readULong(1);
         f << name << ",";
@@ -1556,9 +1591,9 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
     for (int j = 0; j < 58; j++, d++) {
       MRWStruct const &dt = dataList[d];
       if (!dt.isBasic()) continue;
-      switch(j) {
+      switch (j) {
       case 0:
-        switch(dt.value(0)) {
+        switch (dt.value(0)) {
         case 0:
           break;
         case 1:
@@ -1597,7 +1632,8 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         if (dt.value(0)<0) {
           MWAW_DEBUG_MSG(("MRWText::readRulers: find negative interline\n"));
           f << "#inteline=" << dt.value(0) << "[at least],";
-        } else
+        }
+        else
           para.setInterline(double(dt.value(0)), librevenge::RVNG_POINT, MWAWParagraph::AtLeast);
         break;
       case 10:
@@ -1623,7 +1659,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         if (dt.value(0) != 1)
           f << "#f22=" << dt.value(0) << ",";
         break;
-        //item properties
+      //item properties
       case 27: {
         if (!dt.value(0))
           break;
@@ -1659,7 +1695,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       case 29: // 0|5|6|30|64
         if (!dt.value(0))
           break;
-        switch(dt.value(0)&3) {
+        switch (dt.value(0)&3) {
         case 0:
           break;
         case 1:
@@ -1678,7 +1714,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       case 30:
         level.m_labelWidth=double(dt.value(0))/72.0;
         break;
-        // cell properties
+      // cell properties
       case 40:
         para.m_cellWidth = (int) dt.value(0);
         break;
@@ -1688,7 +1724,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       case 42:
         para.m_cellSep = (int) dt.value(0);
         break;
-        // border fill properties:
+      // border fill properties:
       case 19:
         para.m_paraFill.m_patternId= (int) dt.value(0);
         break;
@@ -1722,12 +1758,14 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         else if (j>=35&&j<=37) {
           debInd=35;
           defValue=0xFF;
-        } else if (j>=43&&j<=45)
+        }
+        else if (j>=43&&j<=45)
           debInd=43;
         else if (j>=47&&j<=49) {
           debInd=47;
           defValue=0xFF;
-        } else if (j>=51&&j<=53) // table foreground color
+        }
+        else if (j>=51&&j<=53)   // table foreground color
           debInd=51;
         else {
           MWAW_DEBUG_MSG(("MRWText::readRulers: find unknown color idx\n"));
@@ -1736,11 +1774,11 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         }
 
         color[0]=color[1]=color[2]=defValue;
-        color[j-debInd]=(unsigned char) (dt.value(0)>>8);
+        color[j-debInd]=(unsigned char)(dt.value(0)>>8);
         while (j < debInd+2)
-          color[++j-debInd] = (unsigned char) (dataList[++d].value(0)>>8);
+          color[++j-debInd] = (unsigned char)(dataList[++d].value(0)>>8);
         MWAWColor col(color[0],color[1],color[2]);
-        switch(debInd) {
+        switch (debInd) {
         case 15:
           para.m_paraFill.m_borderColor=col;
           break;
@@ -1807,9 +1845,9 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
             f << "#tabs" << j << "[" << k << "]=" << dt << ",";
             continue;
           }
-          switch(k) {
+          switch (k) {
           case 0:
-            switch(dt.value(0)) {
+            switch (dt.value(0)) {
             case 1:
               break;
             case 2:
@@ -1868,7 +1906,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         f << "#g" << j << "=" << dt << ",";
         continue;
       }
-      switch(j) {
+      switch (j) {
       case 0: // always 36 ?
         if (dt.value(0)!=36)
           f << "#g0=" << dt.value(0) << ",";
@@ -1899,12 +1937,14 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         if (val&0x4000) {
           val &= 0xFFFFDFFF;
           f << "hasBackborder,";
-        } else
+        }
+        else
           para.m_paraFill.resetBorders();
         if (val&0x4000) {
           val &= 0xFFFFBFFF;
           f << "hasBackground,";
-        } else
+        }
+        else
           para.m_paraFill.resetBackgroundColor();
         if (val)
           f << "flag?=" << std::hex << val << std::dec << ",";
@@ -1954,7 +1994,7 @@ void MRWText::flushExtra()
 #ifdef DEBUG
   std::map<int,MRWTextInternal::Zone>::iterator it =
     m_state->m_textZoneMap.begin();
-  for ( ; it != m_state->m_textZoneMap.end(); ++it) {
+  for (; it != m_state->m_textZoneMap.end(); ++it) {
     if (it->second.m_parsed)
       continue;
     send(it->first);

@@ -154,7 +154,7 @@ shared_ptr<InputStream> XAttr::getClassicStream() const
   }
   std::string name=folder+"FINDER.DAT";
   struct stat status;
-  if (stat(name.c_str(), &status )!=0 || !S_ISREG(status.st_mode) )
+  if (stat(name.c_str(), &status)!=0 || !S_ISREG(status.st_mode))
     return res;
 
   shared_ptr<FileStream> input(new FileStream(name.c_str()));
@@ -203,7 +203,7 @@ shared_ptr<InputStream> XAttr::getClassicStream() const
         rsrcName += c;
       }
       name=folder+"RESOURCE.FRK/"+rsrcName;
-      if (stat(name.c_str(), &status )==0 && S_ISREG(status.st_mode) )
+      if (stat(name.c_str(), &status)==0 && S_ISREG(status.st_mode))
         sz[1]=ssize_t(status.st_size);
       int find=sz[1] ? 2 : 1;
 
@@ -269,7 +269,8 @@ shared_ptr<InputStream> XAttr::getClassicStream() const
       delete [] buffer;
       return res;
     }
-  } catch (...) {
+  }
+  catch (...) {
   }
   return res;
 }

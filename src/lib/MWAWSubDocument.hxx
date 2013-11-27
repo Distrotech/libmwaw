@@ -53,13 +53,15 @@ public:
   //! comparison operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! comparison operator==
-  bool operator==(MWAWSubDocument const &doc) const {
+  bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
   //! comparison operator!=
   bool operator!=(shared_ptr<MWAWSubDocument> const &doc) const;
   //! comparison operator==
-  bool operator==(shared_ptr<MWAWSubDocument> const &doc) const {
+  bool operator==(shared_ptr<MWAWSubDocument> const &doc) const
+  {
     return !operator!=(doc);
   }
 

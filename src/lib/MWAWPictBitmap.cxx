@@ -98,7 +98,7 @@ bool getPPMData(MWAWPictBitmapContainer<T> const &orig, librevenge::RVNGBinaryDa
       }
       uint32_t col = indexedColor[size_t(ind)].value();
       for (int c = 0, depl=16; c < 3; c++, depl-=8)
-        data.append((unsigned char) ((col>>depl)&0xFF));
+        data.append((unsigned char)((col>>depl)&0xFF));
     }
   }
   return true;
@@ -121,7 +121,7 @@ bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, librevenge::RVNG
     for (int i = 0; i < sz[0]; i++) {
       uint32_t col = row[i].value();
       for (int c = 0, depl=16; c < 3; c++, depl-=8)
-        data.append((unsigned char) ((col>>depl)&0xFF));
+        data.append((unsigned char)((col>>depl)&0xFF));
     }
   }
   return true;

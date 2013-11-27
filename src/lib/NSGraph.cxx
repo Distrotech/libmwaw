@@ -61,7 +61,8 @@ struct RSSOEntry {
   //! constructor
   RSSOEntry() : m_id(-1), m_position() { }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, RSSOEntry const &entry) {
+  friend std::ostream &operator<<(std::ostream &o, RSSOEntry const &entry)
+  {
     o << "id=" << entry.m_id << ",";
     o << "box=" << entry.m_position << ",";
     return o;
@@ -100,7 +101,8 @@ public:
   //! operator!=
   virtual bool operator!=(MWAWSubDocument const &doc) const;
   //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const {
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
     return !operator!=(doc);
   }
 
@@ -149,7 +151,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-NSGraph::NSGraph (NSParser &parser) :
+NSGraph::NSGraph(NSParser &parser) :
   m_parserState(parser.getParserState()), m_state(new NSGraphInternal::State),
   m_mainParser(&parser)
 {
@@ -375,7 +377,8 @@ std::vector<NSGraphInternal::RSSOEntry> NSGraph::findRSSOEntry(MWAWInputStreamPt
     if (input->readULong(2) != 0x2ff)
       return listRSSO;
     // ok look like a pict2
-  } else if (header != 0x1101)
+  }
+  else if (header != 0x1101)
     return listRSSO;
 
   // look for: 00a1006400104e495349000900b3000901dc01f90002

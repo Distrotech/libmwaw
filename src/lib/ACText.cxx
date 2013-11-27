@@ -62,17 +62,20 @@ namespace ACTextInternal
 struct Topic {
   //! constructor
   Topic() : m_depth(0), m_type(0), m_hidden(0), m_pageBreak(false), m_font(), m_labelColor(MWAWColor::black()),
-    m_data(), m_fonts(), m_auxi(), m_extra("") {
+    m_data(), m_fonts(), m_auxi(), m_extra("")
+  {
   }
   //! return true if the topic is valid
-  bool valid() const {
+  bool valid() const
+  {
     return m_depth>0 && (m_type==1 || m_type==2);
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Topic const &topic) {
+  friend std::ostream &operator<<(std::ostream &o, Topic const &topic)
+  {
     if (topic.m_depth > 0)
       o << "depth=" << topic.m_depth << ",";
-    switch(topic.m_type) {
+    switch (topic.m_type) {
     case 1:
       o << "text,";
       break;
@@ -116,7 +119,8 @@ struct Topic {
 //! Internal: the state of a ACText
 struct State {
   //! constructor
-  State() : m_topicList(), m_listId(-1), m_colorList(), m_version(-1), m_numPages(-1), m_actualPage(1) {
+  State() : m_topicList(), m_listId(-1), m_colorList(), m_version(-1), m_numPages(-1), m_actualPage(1)
+  {
   }
 
   //! set the default color map
@@ -218,7 +222,8 @@ bool ACText::createZones()
     MWAW_DEBUG_MSG(("ACText::createZones: find unexpected end data\n"));
     ascFile.addPos(pos);
     ascFile.addNote("Entries(Loose):###");
-  } else {
+  }
+  else {
     ascFile.addPos(pos);
     ascFile.addNote("_");
   }
@@ -231,7 +236,8 @@ bool ACText::sendMainText()
   shared_ptr<MWAWList> list = m_mainParser->getMainList();
   if (!list) {
     MWAW_DEBUG_MSG(("ACText::sendMainText: can retrieve the main list\n"));
-  } else
+  }
+  else
     m_state->m_listId = list->getId();
 
   for (size_t t=0; t < m_state->m_topicList.size(); t++)
@@ -348,7 +354,8 @@ bool ACText::sendTopic(ACTextInternal::Topic const &topic)
     if (topic.m_auxi.length()!=6) {
       MWAW_DEBUG_MSG(("ACText::readTopic: find unexpected size for data1\n"));
       f << "###";
-    } else {
+    }
+    else {
       for (int i=0; i<3; i++) {
         int val=(int)input->readLong(2);
         if (val) f << "#f" << i << "=" << val << ",";
@@ -411,7 +418,8 @@ bool ACText::sendText(ACTextInternal::Topic const &topic)
       f << "###";
       ascFile.addPos(topic.m_fonts.begin()-4);
       ascFile.addNote(f.str().c_str());
-    } else {
+    }
+    else {
       ascFile.addPos(topic.m_fonts.begin()-4);
       ascFile.addNote(f.str().c_str());
 
@@ -459,7 +467,7 @@ bool ACText::sendText(ACTextInternal::Topic const &topic)
     if (fIt!=fontMap.end())
       listener->setFont(fIt->second);
     char c=(char) input->readULong(1);
-    switch(c) {
+    switch (c) {
     case 0x9:
       listener->insertTab();
       break;

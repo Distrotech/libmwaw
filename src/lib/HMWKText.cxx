@@ -59,14 +59,17 @@ namespace HMWKTextInternal
 /** Internal: class to store the paragraph properties of a HMWKText */
 struct Paragraph : public MWAWParagraph {
   //! Constructor
-  Paragraph() : MWAWParagraph(), m_type(0), m_addPageBreak(false) {
+  Paragraph() : MWAWParagraph(), m_type(0), m_addPageBreak(false)
+  {
   }
   //! destructor
-  ~Paragraph() {
+  ~Paragraph()
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind) {
-    switch(ind.m_type) {
+  friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
+  {
+    switch (ind.m_type) {
     case 0:
       break;
     case 1:
@@ -95,10 +98,12 @@ struct Paragraph : public MWAWParagraph {
 /** Internal: class to store a section of a HMWKText */
 struct Section {
   //! constructor
-  Section() : m_numCols(1), m_colWidth(), m_colSep(), m_id(0), m_extra("") {
+  Section() : m_numCols(1), m_colWidth(), m_colSep(), m_id(0), m_extra("")
+  {
   }
   //! returns a MWAWSection
-  MWAWSection getSection() const {
+  MWAWSection getSection() const
+  {
     MWAWSection sec;
     if (m_colWidth.size()==0) {
       MWAW_DEBUG_MSG(("HMWKTextInternal::Section:getSection can not find any width\n"));
@@ -116,7 +121,8 @@ struct Section {
         sec.m_columns[c].m_margins[libmwaw::Left]=
           sec.m_columns[c].m_margins[libmwaw::Right]=double(m_colSep[c])/2.0/72.;
       }
-    } else {
+    }
+    else {
       if (m_colWidth.size()>1) {
         MWAW_DEBUG_MSG(("HMWKTextInternal::Section:getSection colWidth is not coherent with numCols\n"));
       }
@@ -126,7 +132,8 @@ struct Section {
     return sec;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Section const &sec) {
+  friend std::ostream &operator<<(std::ostream &o, Section const &sec)
+  {
     if (sec.m_numCols!=1)
       o << "numCols=" << sec.m_numCols << ",";
     if (sec.m_colWidth.size()) {
@@ -155,14 +162,17 @@ struct Section {
 /** Internal: class to store the token properties of a HMWKText */
 struct Token {
   //! Constructor
-  Token() : m_type(0), m_id(-1), m_extra("") {
+  Token() : m_type(0), m_id(-1), m_extra("")
+  {
   }
   //! destructor
-  ~Token() {
+  ~Token()
+  {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Token const &tkn) {
-    switch(tkn.m_type) {
+  friend std::ostream &operator<<(std::ostream &o, Token const &tkn)
+  {
+    switch (tkn.m_type) {
     case 0: // main text
       break;
     case 1:
@@ -213,7 +223,8 @@ struct Token {
 struct State {
   //! constructor
   State() : m_version(-1), m_IdTextMaps(), m_IdTypeMaps(), m_tokenIdList(), m_sectionList(), m_numPages(-1), m_actualPage(0),
-    m_headerId(0), m_footerId(0) {
+    m_headerId(0), m_footerId(0)
+  {
   }
 
   //! the file version
@@ -317,7 +328,7 @@ bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
       break;
     int type = (int) input->readLong(2);
     bool done=false;
-    switch(type) {
+    switch (type) {
     case 2: { // ruler
       HMWKTextInternal::Paragraph para;
       done=readParagraph(*zone,para);
@@ -367,7 +378,8 @@ bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
           actCol = 0;
           actPage++;
         }
-      } else if (c==3)
+      }
+      else if (c==3)
         actPage++;
     }
     if (!ok)
@@ -413,7 +425,7 @@ bool HMWKText::sendText(long id, long subId, bool asGraphic)
 bool HMWKText::sendMainText()
 {
   std::map<long, int>::iterator tIt=m_state->m_IdTypeMaps.begin();
-  for ( ; tIt!=m_state->m_IdTypeMaps.end(); ++tIt) {
+  for (; tIt!=m_state->m_IdTypeMaps.end(); ++tIt) {
     if (tIt->second != 0)
       continue;
     sendText(tIt->first, 0);
@@ -443,7 +455,7 @@ bool HMWKText::canSendTextAsGraphic(HMWKZone &zone)
       return false;
     int type = (int) input->readLong(2);
     bool done=false;
-    switch(type) {
+    switch (type) {
     case 1:
       if (!readFont(zone,font))
         return false;
@@ -526,7 +538,8 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
     m_mainParser->newPage(1);
   if (isMain && !m_state->m_sectionList.size()) {
     MWAW_DEBUG_MSG(("HMWKText::sendText: can not find section 0\n"));
-  } else if (isMain) {
+  }
+  else if (isMain) {
     HMWKTextInternal::Section sec = m_state->m_sectionList[0];
     if (sec.m_numCols >= 1 && sec.m_colWidth.size() > 0) {
       if (listener->isSectionOpened())
@@ -550,7 +563,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
     }
     int type = (int) input->readLong(2);
     bool done=false;
-    switch(type) {
+    switch (type) {
     case 1: {
       f << "font,";
       MWAWFont font(-1,-1);
@@ -578,7 +591,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
       HMWKTextInternal::Token token;
       done=readToken(zone,token);
       if (!done) break;
-      switch(token.m_type) {
+      switch (token.m_type) {
       case 3:
       case 4:
       case 6:
@@ -603,7 +616,8 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
       if (size_t(actSection) >= m_state->m_sectionList.size()) {
         MWAW_DEBUG_MSG(("HMWKText::sendText: can not find section %d\n", actSection));
         break;
-      } else {
+      }
+      else {
         HMWKTextInternal::Section sec = m_state->m_sectionList[size_t(actSection++)];
         actCol = 0;
         if (listener->isSectionOpened())
@@ -669,7 +683,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
         f << "###";
         break;
       }
-      switch(c) {
+      switch (c) {
       case 0x1000:
         f << "[pgNum]";
         listener->insertField(MWAWField(MWAWField::PageNumber));
@@ -712,7 +726,8 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
         if (actCol < numCol-1 && numCol > 1) {
           listener->insertBreak(MWAWContentListener::ColumnBreak);
           actCol++;
-        } else {
+        }
+        else {
           actCol = 0;
           m_mainParser->newPage(++actPage);
         }
@@ -875,7 +890,8 @@ bool HMWKText::readFont(HMWKZone &zone, MWAWFont &font)
   if (first) {
     f << "Entries(FontDef):";
     first = false;
-  } else
+  }
+  else
     f << "FontDef:";
   f << font.getDebugString(m_parserState->m_fontConverter) << ",";
 
@@ -930,7 +946,8 @@ bool HMWKText::readFontNames(shared_ptr<HMWKZone> zone)
     if (fSz+5 > 68) {
       f << "###fSz";
       MWAW_DEBUG_MSG(("HMWKText::readFontNames: can not read a font\n"));
-    } else {
+    }
+    else {
       std::string name("");
       for (int c = 0; c < fSz; c++)
         name += (char) input->readULong(1);
@@ -1049,7 +1066,8 @@ bool HMWKText::readStyles(shared_ptr<HMWKZone> zone)
     if (input->tell()+fSz > pos+fieldSz) {
       MWAW_DEBUG_MSG(("HMWKText::readStyles: can not read styleName\n"));
       f << "###";
-    } else {
+    }
+    else {
       std::string name("");
       for (int j = 0; j < fSz; j++)
         name +=(char) input->readULong(1);
@@ -1113,7 +1131,7 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
   val = (int) input->readLong(2);
   if (val) f << "#f0=" << val << ",";
   val = (int) input->readULong(2);
-  switch(val&3) {
+  switch (val&3) {
   case 0:
     para.m_justify = MWAWParagraph::JustificationLeft;
     break;
@@ -1206,7 +1224,7 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
   }
   // update the paragraph
   para.resizeBorders(6);
-  libmwaw::Position const (which[5]) = {
+  libmwaw::Position const(which[5]) = {
     libmwaw::Top, libmwaw::Left, libmwaw::Bottom, libmwaw::Right,
     libmwaw::VMiddle
   };
@@ -1236,7 +1254,8 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
   if (first) {
     f << "Entries(Ruler):";
     first = false;
-  } else
+  }
+  else
     f << "Ruler:";
   f << para;
 
@@ -1249,7 +1268,7 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
 
     MWAWTabStop tab;
     val = (int)input->readULong(1);
-    switch(val) {
+    switch (val) {
     case 0:
       break;
     case 1:
@@ -1336,7 +1355,8 @@ bool HMWKText::readToken(HMWKZone &zone, HMWKTextInternal::Token &token)
   if (first) {
     f << "Entries(Token):";
     first = false;
-  } else
+  }
+  else
     f << "Token:";
   f << token;
   asciiFile.addPos(pos-4);
@@ -1375,7 +1395,8 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
     MWAW_DEBUG_MSG(("HMWKText::readSections: numColumns seems bad\n"));
     f << "###nCols=" << numColumns << ",";
     numColumns = 1;
-  } else
+  }
+  else
     sec.m_numCols=numColumns;
   val = (long) input->readLong(1);
   bool diffWidth=val==0;
@@ -1395,7 +1416,8 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
       sec.m_colWidth.push_back(double(input->readLong(4))/65536);
       sec.m_colSep.push_back(double(input->readLong(4))/65536);
     }
-  } else {
+  }
+  else {
     sec.m_colWidth.push_back(double(input->readLong(4))/65536);
     sec.m_colSep.push_back(double(input->readLong(4))/65536);
   }
@@ -1423,7 +1445,8 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
         f << "###";
       }
       f << "headerId=" << std::hex << id << std::dec << ",";
-    } else {
+    }
+    else {
       if (!m_state->m_footerId)
         m_state->m_footerId = id;
       else if (m_state->m_footerId != id) {
@@ -1454,7 +1477,7 @@ void HMWKText::flushExtra()
   if (!m_parserState->m_listener) return;
   std::multimap<long, shared_ptr<HMWKZone> >::iterator tIt
     =m_state->m_IdTextMaps.begin();
-  for ( ; tIt!=m_state->m_IdTextMaps.end(); ++tIt) {
+  for (; tIt!=m_state->m_IdTextMaps.end(); ++tIt) {
     if (!tIt->second) continue;
     HMWKZone &zone = *tIt->second;
     if (zone.m_parsed) continue;

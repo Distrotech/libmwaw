@@ -60,7 +60,8 @@ namespace TTParserInternal
 struct State {
   //! constructor
   State() : m_type(MWAWDocument::MWAW_T_UNKNOWN), m_posFontMap(), m_idPictEntryMap(), m_numberSpacesForTab(0),
-    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0) {
+    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  {
   }
   //! the file type
   MWAWDocument::Type m_type;
@@ -150,7 +151,8 @@ void TTParser::parse(librevenge::RVNGTextInterface *docInterface)
 #endif
     }
     ascii().reset();
-  } catch (...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("TTParser::parse: exception catched when parsing\n"));
     ok = false;
   }
@@ -232,7 +234,7 @@ void TTParser::flushExtra()
 #ifdef DEBUG
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   std::map<int,MWAWEntry>::const_iterator it = m_state->m_idPictEntryMap.begin();
-  for ( ; it != m_state->m_idPictEntryMap.end(); ++it) {
+  for (; it != m_state->m_idPictEntryMap.end(); ++it) {
     MWAWEntry const &entry=it->second;
     if (entry.isParsed()) continue;
     sendPicture(entry.id());
@@ -247,7 +249,7 @@ int TTParser::computeNumPages() const
   int nPages=1;
   int pageBreakChar=(m_state->m_type==MWAWDocument::MWAW_T_TEXEDIT) ? 0xc : 0;
 
-  while(!input->isEnd()) {
+  while (!input->isEnd()) {
     if (input->readLong(1)==pageBreakChar)
       nPages++;
   }
@@ -307,12 +309,13 @@ bool TTParser::sendText()
       }
       input->seek(-1, librevenge::RVNG_SEEK_CUR);
     }
-    switch(c) {
+    switch (c) {
     case 0x9:
       if (m_state->m_numberSpacesForTab>0) {
         for (int j = 0; j < m_state->m_numberSpacesForTab; j++)
           getListener()->insertChar(' ');
-      } else
+      }
+      else
         getListener()->insertTab();
       break;
     case 0xd:
@@ -391,12 +394,13 @@ bool TTParser::readStyles(MWAWEntry const &entry)
     font.setFlags(flags);
     unsigned char col[3];
     for (int j=0; j < 3; j++)
-      col[j] = (unsigned char) (input->readULong(2)>>8);
+      col[j] = (unsigned char)(input->readULong(2)>>8);
     font.setColor(MWAWColor(col[0],col[1],col[2]));
     font.m_extra=f.str();
     if (m_state->m_posFontMap.find(cPos) != m_state->m_posFontMap.end()) {
       MWAW_DEBUG_MSG(("TTParser::readStyles: a style for pos=%lx already exist\n", cPos));
-    } else
+    }
+    else
       m_state->m_posFontMap[cPos] = font;
     f.str("");
     f << "Style-" << i << ":" << "cPos=" << std::hex << cPos << std::dec << ",";
@@ -500,7 +504,8 @@ bool TTParser::checkHeader(MWAWHeader *header, bool strict)
   if (creator=="ttxt") {
     fileType=MWAWDocument::MWAW_T_TEACHTEXT;
     m_state->m_numberSpacesForTab=2;
-  } else if (creator=="TBB5")
+  }
+  else if (creator=="TBB5")
     fileType=MWAWDocument::MWAW_T_TEXEDIT;
   else
     return false;

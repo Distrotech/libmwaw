@@ -50,7 +50,7 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
   for (int i=0; i < Font::NumFlags; i++) {
     if (!font.m_flags[i].isSet()) continue;
     o << what[i];
-    switch(font.m_flags[i].get()) {
+    switch (font.m_flags[i].get()) {
     case 0x80:
       o << "=noStyle";
       break;
@@ -171,11 +171,11 @@ bool Section::read(MWAWInputStreamPtr &input, long endPos)
   if (dSz < 1) return false;
   libmwaw::DebugStream f;
   int c = (int) input->readULong(1), val;
-  switch(c) {
+  switch (c) {
   case 0x75: // column break
     if (dSz < 2) return false;
     val = (int) input->readLong(1);
-    switch(val) {
+    switch (val) {
     case 0:
       m_colBreak = false;
       return true;
@@ -195,7 +195,7 @@ bool Section::read(MWAWInputStreamPtr &input, long endPos)
     if (dSz<3) return false;
     m_colSep = float(input->readULong(2))/1440.f;
     return true;
-    // FIXME: UNKNOWN
+  // FIXME: UNKNOWN
   case 0x80: // a small number: 0, 8, 10
   case 0x76: // always 1 ?
   case 0x79:
@@ -237,11 +237,11 @@ bool Section::readV3(MWAWInputStreamPtr &input, long endPos)
   if (dSz < 1) return false;
   libmwaw::DebugStream f;
   int wh = (int) input->readULong(1), val;
-  switch(wh) {
+  switch (wh) {
   case 0x36:
     if (dSz < 2) return false;
     val = (int) input->readLong(1);
-    switch(val) {
+    switch (val) {
     case 0:
       f << "division=no,";
       break;
@@ -265,7 +265,7 @@ bool Section::readV3(MWAWInputStreamPtr &input, long endPos)
   case 0x37:
     if (dSz < 2) return false;
     val = (int) input->readLong(1);
-    switch(val) {
+    switch (val) {
     case 0:
       break; // no front page
     case 1:
@@ -279,7 +279,7 @@ bool Section::readV3(MWAWInputStreamPtr &input, long endPos)
   case 0x3a:
     if (dSz < 2) return false;
     val = (int) input->readLong(1);
-    switch(val) {
+    switch (val) {
     case 1:
       f << "addNumbering,";
       break;
@@ -291,7 +291,7 @@ bool Section::readV3(MWAWInputStreamPtr &input, long endPos)
   case 0x3b:
     if (dSz < 2) return false;
     val = (int) input->readLong(1);
-    switch(val) {
+    switch (val) {
     case 1:
       f << "numbering=arabic,";
       break; // normal
@@ -315,7 +315,7 @@ bool Section::readV3(MWAWInputStreamPtr &input, long endPos)
   case 0x3e:
     if (dSz < 2) return false;
     val = (int) input->readLong(1);
-    switch(val) {
+    switch (val) {
     case 1:
       f << "newNumber=byPage,";
       break;
@@ -327,7 +327,7 @@ bool Section::readV3(MWAWInputStreamPtr &input, long endPos)
   case 0x3f:
     if (dSz < 2) return false;
     val = (int) input->readLong(1);
-    switch(val) {
+    switch (val) {
     case 0:
       f << "footnote,";
       break;
@@ -342,7 +342,7 @@ bool Section::readV3(MWAWInputStreamPtr &input, long endPos)
   case 0x40:
     if (dSz < 2) return false;
     val = (int) input->readLong(1);
-    switch(val) {
+    switch (val) {
     case 1:
       f << "numberline=byDivision,";
       break;
@@ -369,7 +369,7 @@ bool Section::readV3(MWAWInputStreamPtr &input, long endPos)
   case 0x45:
     if (dSz < 3) return false;
     val = (int) input->readLong(2);
-    switch(wh) {
+    switch (wh) {
     case 0x38:
       m_col = (int)val+1;
       break;
@@ -439,7 +439,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
   if (dSz < 1) return false;
   libmwaw::DebugStream f, f2;
   int c = (int) input->readULong(1), val;
-  switch(c) {
+  switch (c) {
   case 0x98: { // tabs columns
     int sz = (int) input->readULong(2);
     if (!sz || dSz < 2+sz) return false;
@@ -459,7 +459,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
       if (numElt>5) numElt=5;
       f2.str("");
       val = (int) input->readULong(2);
-      switch(val) {
+      switch (val) {
       case 0:
         break;
       case 0x4000:
@@ -653,7 +653,7 @@ std::ostream &operator<<(std::ostream &o, Table const &table)
       o << "height[row]=" << table.m_height.get() << ",";
   }
   if (table.m_justify.isSet()) {
-    switch(table.m_justify.get()) {
+    switch (table.m_justify.get()) {
     case MWAWParagraph::JustificationLeft:
       o << "just=left,";
       break;
@@ -749,7 +749,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
   if (dSz < 1) return false;
   libmwaw::DebugStream f;
   int c = (int) input->readULong(1), val;
-  switch(c) {
+  switch (c) {
   case 0x2: // sprmPIstd
     if (dSz < 2) return false;
     m_styleId = (int) input->readLong(1);
@@ -794,7 +794,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
   case 0xe: // a small number always 0 ?
     if (dSz < 2) return false;
     val = (int) input->readLong(1);
-    switch(c) {
+    switch (c) {
     case 7:
       if (val==0)
         m_breakStatus = m_breakStatus.get()&(~MWAWParagraph::NoBreakBit);
@@ -824,7 +824,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     if (dSz < 2) return false;
     val = (int) input->readLong(1);
     MWAWBorder border;
-    switch(val) {
+    switch (val) {
     case 0:
       break; // normal, checkme
     case 1:
@@ -860,7 +860,8 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
       if (val & 0x8)
         m_borders[libmwaw::Right] = m_bordersStyle.get();
       return true;
-    } else if (val)
+    }
+    else if (val)
       f << "#borders=" << val << ",";
     break;
   case 0xf: // tabs
@@ -892,7 +893,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
       f << "],";
     }
     int N = (int) input->readULong(1);
-    if (N*3+deletedSz*N0+2 != sz ) {
+    if (N*3+deletedSz*N0+2 != sz) {
       MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: num tab seems odd\n"));
       f << "#";
       m_extra += f.str();
@@ -905,7 +906,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
       MWAWTabStop tab;
       tab.m_position = tabs[(size_t) i];
       val = (int) input->readULong(1);
-      switch(val>>5) {
+      switch (val>>5) {
       case 0:
         break;
       case 1:
@@ -924,7 +925,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
         f << "#tabAlign=" << int(val>>5) << ",";
         break;
       }
-      switch((val>>2)&3) {
+      switch ((val>>2)&3) {
       case 1:
         tab.m_leaderCharacter = '.';
         break;
@@ -986,7 +987,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
       val = -val;
       int type=(val&0x1C)>>2;
       if (c==0x1a) {
-        switch(type) {
+        switch (type) {
         case 1:
           f << "center";
           break;
@@ -1004,8 +1005,9 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
           break;
         }
         val &= 0xFFE3;
-      } else if (c==0x1b) {
-        switch(type) {
+      }
+      else if (c==0x1b) {
+        switch (type) {
         case 1:
           f << "top,";
           break;
@@ -1024,13 +1026,14 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
       if (val)
         f << "[" << val << "]";
       f << ",";
-    } else f << val/1440. << ",";
+    }
+    else f << val/1440. << ",";
     break;
   }
   case 0x1d:
     if (dSz < 2) return false;
     val = (int) input->readULong(1);
-    switch(val&3) {
+    switch (val&3) {
     case 0:
       break; // column
     case 1:
@@ -1064,7 +1067,8 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
       if (m_borders.size() <= p)
         resizeBorders(p+1);
       m_borders[p] = border;
-    } else {
+    }
+    else {
       if (m_borders.size() < 6)
         resizeBorders(6);
       m_borders[libmwaw::HMiddle] = border;
@@ -1210,7 +1214,7 @@ MWAWBorder getBorder(int val, std::string &extra)
   if (val & 0x3E00) f << "textSep=" << int((val& 0x3E00)>>9) << "pt";
   if (val & 0x4000) f << "shad,";
   if (val & 0x8000) f << "*";
-  switch(val &0x1FF) {
+  switch (val &0x1FF) {
   case 0:
     border.m_style = MWAWBorder::None;
     break;
