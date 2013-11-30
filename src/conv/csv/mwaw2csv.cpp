@@ -1,4 +1,5 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; c-default-style: "k&r"; indent-tabs-mode: nil; tab-width: 2; c-basic-offset: 2 -*- */
+
 /* libmwaw
 * Version: MPL 2.0 / LGPLv2+
 *
@@ -46,7 +47,7 @@ int printUsage()
   printf("Usage: mwaw2csv [OPTION][-o file.csv] <AppleWorks/ClarisWorks Database/Spreadsheet>\n");
   printf("\n");
   printf("Options:\n");
-  printf("\t-o file.html:      Define the output[default stdout]\n");
+  printf("\t-o file.csv:      Define the output[default stdout]\n");
   printf("\t-h                Shows this help message\n");
   return -1;
 }
@@ -116,4 +117,4 @@ int main(int argc, char *argv[])
 
   return 0;
 }
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
