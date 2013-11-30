@@ -333,12 +333,11 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
 {
   Vec2f pt;
   librevenge::RVNGPropertyList list;
-  librevenge::RVNGPropertyListVector vect;
-  style.addTo(list, vect, m_type==Line);
-  interface.setStyle(list, vect);
+  style.addTo(list, m_type==Line);
+  interface.setStyle(list);
 
   list.clear();
-  vect=librevenge::RVNGPropertyListVector();
+  librevenge::RVNGPropertyListVector vect;
   Vec2f decal=orig-m_bdBox[0];
   switch (m_type) {
   case Line:
@@ -351,7 +350,9 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
     list.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
     list.insert("svg:y",pt.y(), librevenge::RVNG_POINT);
     vect.append(list);
-    interface.drawPolyline(vect);
+    list.clear();
+    list.insert("svg:points", vect);
+    interface.drawPolyline(list);
     return true;
   case Rectangle:
     if (m_cornerWidth[0] > 0 && m_cornerWidth[1] > 0) {
@@ -427,7 +428,10 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
       list.insert("librevenge:path-action", "Z");
       vect.append(list);
     }
-    interface.drawPath(vect);
+
+    list.clear();
+    list.insert("svg:d", vect);
+    interface.drawPath(list);
     return true;
   }
   case Polygon: {
@@ -440,10 +444,12 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
       list.insert("svg:y", pt.y(), librevenge::RVNG_POINT);
       vect.append(list);
     }
+    list.clear();
+    list.insert("svg:points", vect);
     if (!style.hasSurface())
-      interface.drawPolyline(vect);
+      interface.drawPolyline(list);
     else
-      interface.drawPolygon(vect);
+      interface.drawPolygon(list);
     return true;
   }
   case Path: {
@@ -460,7 +466,9 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
       list.insert("librevenge:path-action", "Z");
       vect.append(list);
     }
-    interface.drawPath(vect);
+    list.clear();
+    list.insert("svg:d", vect);
+    interface.drawPath(list);
     return true;
   }
   case ShapeUnknown:

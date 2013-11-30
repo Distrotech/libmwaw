@@ -126,7 +126,7 @@ public:
 
   void endPage();
 
-  void setStyle(const ::librevenge::RVNGPropertyList &propList, const ::librevenge::RVNGPropertyListVector &gradient);
+  void setStyle(const ::librevenge::RVNGPropertyList &propList);
 
   void startLayer(const ::librevenge::RVNGPropertyList &propList);
 
@@ -141,17 +141,17 @@ public:
 
   void drawEllipse(const ::librevenge::RVNGPropertyList &propList);
 
-  void drawPolygon(const ::librevenge::RVNGPropertyListVector &vertices);
+  void drawPolygon(const ::librevenge::RVNGPropertyList &vertices);
 
-  void drawPolyline(const ::librevenge::RVNGPropertyListVector &vertices);
+  void drawPolyline(const ::librevenge::RVNGPropertyList &vertices);
 
-  void drawPath(const ::librevenge::RVNGPropertyListVector &path);
+  void drawPath(const ::librevenge::RVNGPropertyList &path);
 
   // Embedded binary/raster data
   void drawGraphicObject(const ::librevenge::RVNGPropertyList &propList);
 
   // Embedded text object
-  void startTextObject(const ::librevenge::RVNGPropertyList &propList, const ::librevenge::RVNGPropertyListVector &path);
+  void startTextObject(const ::librevenge::RVNGPropertyList &propList);
   void endTextObject();
 
   /**

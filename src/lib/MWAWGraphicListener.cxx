@@ -742,9 +742,8 @@ void MWAWGraphicListener::insertPicture
     return;
   }
   librevenge::RVNGPropertyList list;
-  librevenge::RVNGPropertyListVector gradient;
-  style.addTo(list, gradient);
-  m_gs->m_interface->setStyle(list, gradient);
+  style.addTo(list);
+  m_gs->m_interface->setStyle(list);
 
   list.clear();
   Vec2f pt=bdbox[0]-m_ps->m_origin;
@@ -781,7 +780,7 @@ void MWAWGraphicListener::insertTextBox
     propList.insert("librevenge:rotate-cx",center[0], librevenge::RVNG_POINT);
     propList.insert("librevenge:rotate-cy",center[1], librevenge::RVNG_POINT);
   }
-  m_gs->m_interface->startTextObject(propList, librevenge::RVNGPropertyListVector());
+  m_gs->m_interface->startTextObject(propList);
   handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_TEXT_BOX);
   m_gs->m_interface->endTextObject();
   closeFrame();
@@ -831,15 +830,14 @@ void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &l
 
   Vec2f size=bdbox.size();
   Vec2f pt=bdbox[0]-m_ps->m_origin;
-  librevenge::RVNGPropertyListVector grad;
+  // checkme: do we still need to do that ?
   if (style.hasGradient(true)) {
     if (style.m_rotate<0 || style.m_rotate>0) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::_handleFrameParameters: rotation is not implemented\n"));
     }
     // ok, first send a background rectangle
     librevenge::RVNGPropertyList rectList;
-    style.addTo(rectList,grad);
-    m_gs->m_interface->setStyle(rectList,grad);
+    m_gs->m_interface->setStyle(rectList);
     rectList.clear();
     rectList.insert("svg:x",pt[0], librevenge::RVNG_POINT);
     rectList.insert("svg:y",pt[1], librevenge::RVNG_POINT);
@@ -851,7 +849,7 @@ void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &l
     list.insert("draw:fill", "none");
   }
   else
-    style.addTo(list,grad);
+    style.addTo(list);
 
   list.insert("svg:x",pt[0], librevenge::RVNG_POINT);
   list.insert("svg:y",pt[1], librevenge::RVNG_POINT);

@@ -69,8 +69,10 @@ public:
  * In order to be read by writerperfect, we must code document consisting in
  * tag and propertyList in an intermediar format:
  *  - [string:s]: an int length(s) follow by the length(s) characters of string s
- *  - [property:p]: a string value p.getStr()
- *  - [propertyList:pList]: a int: \#pList followed by pList[0].key(),pList[0], pList[1].key(),pList[1], ...
+ *  - [property:p]: a string value p.getStr() ( for a basic property )
+ *  - [propertyList:pList]: a int: \#pList followed by
+ *      -+ 'p',pList[i].key(),pList[i] for a basic child
+ *      -+ 'v',pList[i].key(),*(pList.child(pList[i].key())) for a vector child
  *  - [propertyListVector:v]: a int: \#v followed by v[0], v[1], ...
  *  - [binaryData:d]: a int32 d.size() followed by the data content
  *
@@ -114,6 +116,8 @@ protected:
   void writeProperty(const char *key, const librevenge::RVNGProperty &prop);
   //! adds a property list: int \#prop, \#prop*librevenge::RVNGProperty
   void writePropertyList(const librevenge::RVNGPropertyList &prop);
+  //! adds a property vector: a int: \#vect followed by vect[0], vect[1], ...
+  void writePropertyListVector(const librevenge::RVNGPropertyListVector &vect);
 
   //! the streamfile
   std::stringstream m_f;

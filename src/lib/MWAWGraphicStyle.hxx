@@ -250,7 +250,7 @@ public:
   //! a print operator
   friend std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st);
   //! add to propList
-  void addTo(librevenge::RVNGPropertyList &pList, librevenge::RVNGPropertyListVector &gradient, bool only1d=false) const;
+  void addTo(librevenge::RVNGPropertyList &pList, bool only1d=false) const;
 
   /** compare two styles */
   int cmp(MWAWGraphicStyle const &a) const;

@@ -482,16 +482,17 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
     m_output->drawEllipse(propList);
   else if (strcmp(psName,"DrawGraphicObject")==0)
     m_output->drawGraphicObject(propList);
+  else if (strcmp(psName,"DrawPath")==0)
+    m_output->drawPath(propList);
+  else if (strcmp(psName,"DrawPolygon")==0)
+    m_output->drawPolygon(propList);
+  else if (strcmp(psName,"DrawPolyline")==0)
+    m_output->drawPolyline(propList);
   else if (strcmp(psName,"DrawRectangle")==0)
     m_output->drawRectangle(propList);
 
-  else if (strcmp(psName,"InsertField")==0) {
-    if (propList["librevenge:field-type"])
-      m_output->insertField(propList);
-    else {
-      MWAW_DEBUG_MSG(("GraphicExporter::insertElement: can not find field type\n"));
-    }
-  }
+  else if (strcmp(psName,"InsertField")==0)
+    m_output->insertField(propList);
 
   else if (strcmp(psName,"OpenOrderedListLevel")==0)
     m_output->openOrderedListLevel(propList);
@@ -502,15 +503,19 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
 
   else if (strcmp(psName,"SetMetaData")==0)
     m_output->setDocumentMetaData(propList);
+  else if (strcmp(psName,"SetStyle")==0)
+    m_output->setStyle(propList);
 
   else if (strcmp(psName,"StartDocument")==0)
     m_output->startDocument(propList);
-  else if (strcmp(psName,"StartPage")==0)
-    m_output->startPage(propList);
-  else if (strcmp(psName,"StartLayer")==0)
-    m_output->startLayer(propList);
   else if (strcmp(psName,"StartEmbeddedGraphics")==0)
     m_output->startEmbeddedGraphics(propList);
+  else if (strcmp(psName,"StartLayer")==0)
+    m_output->startLayer(propList);
+  else if (strcmp(psName,"StartPage")==0)
+    m_output->startPage(propList);
+  else if (strcmp(psName,"StartTextObject")==0)
+    m_output->startTextObject(propList);
 
   else {
     MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
@@ -526,42 +531,13 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
     return;
   }
   librevenge::RVNGPropertyList pList(propList);
-  if (strcmp(psName,"DrawPath")==0 || strcmp(psName,"DrawPolygon")==0 || strcmp(psName,"DrawPolyline")==0) {
-#ifdef DEBUG
-    if (!librevenge::RVNGPropertyList::Iter(propList).last()) {
-      MWAW_DEBUG_MSG(("GraphicExporter::insertElement: Polyline, Polygon, Path called with propList, ignored\n"));
-    }
-#endif
-    if (strcmp(psName,"DrawPolygon")==0) {
-      pList.clear();
-      pList.insert("svg:points", vector);
-      m_output->drawPolygon(pList);
-    }
-    else if (strcmp(psName,"DrawPolyline")==0) {
-      pList.clear();
-      pList.insert("svg:points", vector);
-      m_output->drawPolyline(pList);
-    }
-    else {
-      pList.insert("svg:d", vector);
-      m_output->drawPath(pList);
-    }
-  }
-  else if (strcmp(psName,"StartTextObject")==0) {
-    pList.insert("svg:d", vector);
-    m_output->startTextObject(propList);
-  }
-  else if (strcmp(psName,"OpenListElement")==0) {
+  if (strcmp(psName,"OpenListElement")==0) {
     pList.insert("style:tab-stops", vector);
     m_output->openListElement(pList);
   }
   else if (strcmp(psName,"OpenParagraph")==0) {
     pList.insert("style:tab-stops", vector);
     m_output->openParagraph(pList);
-  }
-  else if (strcmp(psName,"SetStyle")==0) {
-    pList.insert("svg:linearGradient", vector);
-    m_output->setStyle(pList);
   }
   else {
     MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));

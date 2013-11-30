@@ -143,9 +143,9 @@ void MWAWGraphicInterface::endPage()
   m_state->m_encoder.insertElement("EndPage");
 }
 
-void MWAWGraphicInterface::setStyle(const ::librevenge::RVNGPropertyList &list, const ::librevenge::RVNGPropertyListVector &gradient)
+void MWAWGraphicInterface::setStyle(const ::librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.insertElement("SetStyle", list, gradient);
+  m_state->m_encoder.insertElement("SetStyle", list);
 }
 
 void MWAWGraphicInterface::startLayer(const ::librevenge::RVNGPropertyList &list)
@@ -178,19 +178,19 @@ void MWAWGraphicInterface::drawEllipse(const ::librevenge::RVNGPropertyList &lis
   m_state->m_encoder.insertElement("DrawEllipse", list);
 }
 
-void MWAWGraphicInterface::drawPolygon(const ::librevenge::RVNGPropertyListVector &vertices)
+void MWAWGraphicInterface::drawPolygon(const ::librevenge::RVNGPropertyList &vertices)
 {
-  m_state->m_encoder.insertElement("DrawPolygon", librevenge::RVNGPropertyList(), vertices);
+  m_state->m_encoder.insertElement("DrawPolygon", vertices);
 }
 
-void MWAWGraphicInterface::drawPolyline(const ::librevenge::RVNGPropertyListVector &vertices)
+void MWAWGraphicInterface::drawPolyline(const ::librevenge::RVNGPropertyList &vertices)
 {
-  m_state->m_encoder.insertElement("DrawPolyline", librevenge::RVNGPropertyList(), vertices);
+  m_state->m_encoder.insertElement("DrawPolyline", vertices);
 }
 
-void MWAWGraphicInterface::drawPath(const ::librevenge::RVNGPropertyListVector &path)
+void MWAWGraphicInterface::drawPath(const ::librevenge::RVNGPropertyList &path)
 {
-  m_state->m_encoder.insertElement("DrawPath", librevenge::RVNGPropertyList(), path);
+  m_state->m_encoder.insertElement("DrawPath", path);
 }
 
 void MWAWGraphicInterface::drawGraphicObject(const ::librevenge::RVNGPropertyList &list)
@@ -198,9 +198,9 @@ void MWAWGraphicInterface::drawGraphicObject(const ::librevenge::RVNGPropertyLis
   m_state->m_encoder.insertElement("DrawGraphicObject", list);
 }
 
-void MWAWGraphicInterface::startTextObject(const ::librevenge::RVNGPropertyList &list, const ::librevenge::RVNGPropertyListVector &path)
+void MWAWGraphicInterface::startTextObject(const ::librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.insertElement("StartTextObject", list, path);
+  m_state->m_encoder.insertElement("StartTextObject", list);
 }
 
 void MWAWGraphicInterface::endTextObject()

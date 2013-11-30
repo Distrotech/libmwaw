@@ -136,7 +136,7 @@ bool MWAWGraphicStyle::Pattern::getBinary(librevenge::RVNGBinaryData &data, std:
 ////////////////////////////////////////////////////////////
 // style
 ////////////////////////////////////////////////////////////
-void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVNGPropertyListVector &gradient, bool only1D) const
+void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, bool only1D) const
 {
   list.clear();
   if (!hasLine())
@@ -256,11 +256,13 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, librevenge::RVN
     }
     else {
       for (size_t s=0; s < m_gradientStopList.size(); ++s) {
+        librevenge::RVNGPropertyListVector gradient;
         librevenge::RVNGPropertyList grad;
         grad.insert("svg:offset", m_gradientStopList[s].m_offset, librevenge::RVNG_PERCENT);
         grad.insert("svg:stop-color", m_gradientStopList[s].m_color.str().c_str());
         grad.insert("svg:stop-opacity", m_gradientStopList[s].m_opacity, librevenge::RVNG_PERCENT);
         gradient.append(grad);
+        list.insert("svg:linearGradient", gradient);
       }
     }
     list.insert("draw:angle", m_gradientAngle, librevenge::RVNG_GENERIC);

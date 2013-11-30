@@ -77,9 +77,7 @@ void MWAWPropertyHandlerEncoder::insertElement
   m_f << 'V';
   writeString(psName);
   writePropertyList(xPropList);
-  writeInteger((int)vect.count());
-  for (unsigned long i=0; i < vect.count(); i++)
-    writePropertyList(vect[i]);
+  writePropertyListVector(vect);
 }
 
 void MWAWPropertyHandlerEncoder::characters(librevenge::RVNGString const &sCharacters)
@@ -119,8 +117,24 @@ void MWAWPropertyHandlerEncoder::writePropertyList(const librevenge::RVNGPropert
   int numElt = 0;
   for (i.rewind(); i.next();) numElt++;
   writeInteger(numElt);
-  for (i.rewind(); i.next();)
-    writeProperty(i.key(),*i());
+  for (i.rewind(); i.next();) {
+    librevenge::RVNGPropertyListVector const *child=xPropList.child(i.key());
+    if (!child) {
+      m_f << 'p';
+      writeProperty(i.key(),*i());
+      continue;
+    }
+    m_f << 'v';
+    writeString(i.key());
+    writePropertyListVector(*child);
+  }
+}
+
+void MWAWPropertyHandlerEncoder::writePropertyListVector(const librevenge::RVNGPropertyListVector &vect)
+{
+  writeInteger((int)vect.count());
+  for (unsigned long i=0; i < vect.count(); i++)
+    writePropertyList(vect[i]);
 }
 
 bool MWAWPropertyHandlerEncoder::getData(librevenge::RVNGBinaryData &data)
@@ -295,9 +309,32 @@ protected:
       return false;
     }
     for (int i = 0; i < numElt; i++) {
-      if (readProperty(input, lists)) continue;
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readPropertyList: can not read property %d\n", i));
-      return false;
+      unsigned const char *c;
+      unsigned long numRead;
+      c = input.read(1,numRead);
+      if (!c || numRead != 1) {
+        MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder:readPropertyList can not read data type for child %d\n", i));
+        return false;
+      }
+      switch (*c) {
+      case 'p':
+        if (readProperty(input, lists)) break;
+        MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readPropertyList: can not read property %d\n", i));
+        return false;
+      case 'v': {
+        librevenge::RVNGString key;
+        librevenge::RVNGPropertyListVector vect;
+        if (!readString(input, key) || key.empty() || !readPropertyListVector(input, vect)) {
+          MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readPropertyList: can not read propertyVector for child %i\n", i));
+          return false;
+        }
+        lists.insert(key.cstr(),vect);
+        break;
+      }
+      default:
+        MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder:readPropertyList find unknown type %c for child %d\n", (char) *c, i));
+        return false;
+      }
     }
     return true;
   }
