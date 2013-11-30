@@ -106,7 +106,7 @@ protected:
   void writeString(const librevenge::RVNGString &name);
   //! adds a property: a string key, a string corresponding to value
   void writeProperty(const char *key, const librevenge::RVNGProperty &prop);
-  //! adds a property list: int \#prop, \#prop*librevenge::RVNGProperty
+  //! adds a property list: int \#prop followed by the different properties
   void writePropertyList(const librevenge::RVNGPropertyList &prop);
   //! adds a property vector: a int: \#vect followed by vect[0], vect[1], ...
   void writePropertyListVector(const librevenge::RVNGPropertyListVector &vect);

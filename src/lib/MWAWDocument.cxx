@@ -237,6 +237,24 @@ MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, lib
   return error;
 }
 
+MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *, librevenge::RVNGDrawingInterface *, char const *)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::parse[Drawing]: unimplemented\n"));
+  return MWAW_R_UNKNOWN_ERROR;
+}
+
+MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *, librevenge::RVNGPresentationInterface *, char const *)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::parse[Presentation]: unimplemented\n"));
+  return MWAW_R_UNKNOWN_ERROR;
+}
+
+MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *, librevenge::RVNGSpreadsheetInterface *, char const *)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::parse[Spreadsheet]: unimplemented\n"));
+  return MWAW_R_UNKNOWN_ERROR;
+}
+
 bool MWAWDocument::decodeGraphic(librevenge::RVNGBinaryData const &binary, librevenge::RVNGDrawingInterface *paintInterface)
 {
   if (!paintInterface || !binary.size()) {
@@ -252,6 +270,18 @@ bool MWAWDocument::decodeGraphic(librevenge::RVNGBinaryData const &binary, libre
     return false;
   }
   return true;
+}
+
+bool MWAWDocument::decodeSpreadsheet(librevenge::RVNGBinaryData const &, librevenge::RVNGSpreadsheetInterface *)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::decodeSpreadsheet: unimplemented\n"));
+  return false;
+}
+
+bool MWAWDocument::decodeText(librevenge::RVNGBinaryData const &, librevenge::RVNGTextInterface *)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::decodeText: unimplemented\n"));
+  return false;
 }
 
 namespace MWAWDocumentInternal

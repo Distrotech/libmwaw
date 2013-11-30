@@ -53,6 +53,8 @@ namespace librevenge
 {
 class RVNGBinaryData;
 class RVNGDrawingInterface;
+class RVNGPresentationInterface;
+class RVNGSpreadsheetInterface;
 class RVNGTextInterface;
 class RVNGInputStream;
 }
@@ -144,27 +146,87 @@ public:
 
       \note encryption enum appears in MWAW_TEXT_VERSION==2 */
   static MWAWLIB Confidence isFileFormatSupported(librevenge::RVNGInputStream *input, Type &type, Kind &kind);
+
+  // ------------------------------------------------------------
+  // the different main parsers
+  // ------------------------------------------------------------
+
   /** Parses the input stream content. It will make callbacks to the functions provided by a
      librevenge::RVNGTextInterface class implementation when needed. This is often commonly called the
      'main parsing routine'.
      \param input The input stream
-     \param documentInterface A MWAWListener implementation
+     \param documentInterface A RVNGTextInterface implementation
      \param password The file password
 
    \note password appears in MWAW_TEXT_VERSION==2 */
   static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface, char const *password=0);
 
-  /** Parses the graphic contained in the binary data and called paintInterface to reconstruct
-    a graphic. The input is normally send to a librevenge::RVNGTextInterface with mimeType="image/mwaw-odg",
+  /** Parses the input stream content. It will make callbacks to the functions provided by a
+     librevenge::RVNGDrawingInterface class implementation when needed. This is often commonly called the
+     'main parsing routine'.
+     \param input The input stream
+     \param documentInterface A RVNGDrawingInterface implementation
+     \param password The file password
+
+   \note Reserved for future use. Actually, it only returns MWAW_R_UNKNOWN_ERROR. */
+  static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGDrawingInterface *documentInterface, char const *password=0);
+
+  /** Parses the input stream content. It will make callbacks to the functions provided by a
+     librevenge::RVNGPresentationInterface class implementation when needed. This is often commonly called the
+     'main parsing routine'.
+     \param input The input stream
+     \param documentInterface A RVNGPresentationInterface implementation
+     \param password The file password
+
+   \note Reserved for future use. Actually, it only returns MWAW_R_UNKNOWN_ERROR. */
+  static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGPresentationInterface *documentInterface, char const *password=0);
+
+  /** Parses the input stream content. It will make callbacks to the functions provided by a
+     librevenge::RVNGSpreadsheetInterface class implementation when needed. This is often commonly called the
+     'main parsing routine'.
+     \param input The input stream
+     \param documentInterface A RVNGSpreadsheetInterface implementation
+     \param password The file password
+
+     \note Reserved for future use. Actually, it only returns MWAW_R_UNKNOWN_ERROR. */
+  static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGSpreadsheetInterface *documentInterface, char const *password=0);
+
+  // ------------------------------------------------------------
+  // decoders of the embedded zones created by libmwaw
+  // ------------------------------------------------------------
+
+  /** Parses the graphic contained in the binary data and called documentInterface to reconstruct
+    a graphic. The input is normally send to a librevenge::RVNGXXXInterface with mimeType="image/mwaw-odg",
     ie. it must correspond to a picture created by the MWAWGraphicInterface class via
     a MWAWPropertyEncoder.
 
-   \param binary a list of librevenge::RVNGDrawingInterface stored in a paintInterface,
-   \param paintInterface the paint interface which will convert the graphic is some specific format
-   (ODG, SVG, ...)
+   \param binary a list of librevenge::RVNGDrawingInterface stored in a documentInterface,
+   \param documentInterface the RVNGDrawingInterface which will convert the graphic is some specific format.
 
    \note this function appears in MWAW_GRAPHIC_VERSION==1 */
-  static MWAWLIB bool decodeGraphic(librevenge::RVNGBinaryData const &binary, librevenge::RVNGDrawingInterface *paintInterface);
+  static MWAWLIB bool decodeGraphic(librevenge::RVNGBinaryData const &binary, librevenge::RVNGDrawingInterface *documentInterface);
+
+  /** Parses the spreadsheet contained in the binary data and called documentInterface to reconstruct
+    a spreadsheet. The input is normally send to a librevenge::RVNGXXXInterface with mimeType="image/mwaw-ods",
+    ie. it must correspond to a spreadsheet created by the MWAWSpreadsheetInterface class via
+    a MWAWPropertyEncoder.
+
+   \param binary a list of librevenge::RVNGSpreadsheetInterface stored in a documentInterface,
+   \param documentInterface the RVNGSpreadsheetInterface which will convert the spreadsheet is some specific format.
+
+   \note Reserved for future use. Actually, it only returns false. */
+  static MWAWLIB bool decodeSpreadsheet(librevenge::RVNGBinaryData const &binary, librevenge::RVNGSpreadsheetInterface *documentInterface);
+
+  /** Parses the text contained in the binary data and called documentInterface to reconstruct
+    a text. The input is normally send to a librevenge::RVNGXXXInterface with mimeType="image/mwaw-odt",
+    ie. it must correspond to a text created by the MWAWTextInterface class via
+    a MWAWPropertyEncoder.
+
+   \param binary a list of librevenge::RVNGTextInterface stored in a documentInterface,
+   \param documentInterface the RVNGTextInterface which will convert the text is some specific format.
+
+   \note Reserved for future use. Actually, it only returns false. */
+  static MWAWLIB bool decodeText(librevenge::RVNGBinaryData const &binary, librevenge::RVNGTextInterface *documentInterface);
 };
 
 #endif /* MWAWDOCUMENT_HXX */
