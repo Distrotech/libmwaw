@@ -494,8 +494,12 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
   else if (strcmp(psName,"InsertField")==0)
     m_output->insertField(propList);
 
+  else if (strcmp(psName,"OpenListElement")==0)
+    m_output->openListElement(propList);
   else if (strcmp(psName,"OpenOrderedListLevel")==0)
     m_output->openOrderedListLevel(propList);
+  else if (strcmp(psName,"OpenParagraph")==0)
+    m_output->openParagraph(propList);
   else if (strcmp(psName,"OpenSpan")==0)
     m_output->openSpan(propList);
   else if (strcmp(psName,"OpenUnorderedListLevel")==0)
@@ -517,28 +521,6 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
   else if (strcmp(psName,"StartTextObject")==0)
     m_output->startTextObject(propList);
 
-  else {
-    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
-  }
-}
-
-void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPropertyList &propList,
-                                    const librevenge::RVNGPropertyListVector &vector)
-{
-  if (!m_output) return;
-  if (!psName) {
-    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called without any name\n"));
-    return;
-  }
-  librevenge::RVNGPropertyList pList(propList);
-  if (strcmp(psName,"OpenListElement")==0) {
-    pList.insert("style:tab-stops", vector);
-    m_output->openListElement(pList);
-  }
-  else if (strcmp(psName,"OpenParagraph")==0) {
-    pList.insert("style:tab-stops", vector);
-    m_output->openParagraph(pList);
-  }
   else {
     MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
   }

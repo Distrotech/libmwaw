@@ -372,17 +372,20 @@ void MWAWParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) 
     propList.insert("fo:keep-together", "always");
   if (*m_breakStatus & NoBreakWithNextBit)
     propList.insert("fo:keep-with-next", "always");
-}
 
-void MWAWParagraph::addTabsTo(librevenge::RVNGPropertyListVector &pList, double decalX) const
-{
-  if (!*m_tabsRelativeToLeftMargin) {
-    // tabs are absolute, we must remove left margin
-    double factor = (double) MWAWPosition::getScaleFactor(*m_marginsUnit, librevenge::RVNG_INCH);
-    decalX -= m_margins[1].get()*factor;
+  if (!m_tabs->empty()) {
+    double decalX=0;
+    librevenge::RVNGPropertyListVector tabs;
+    if (!*m_tabsRelativeToLeftMargin) {
+      // tabs are absolute, we must remove left margin
+      double factor = (double) MWAWPosition::getScaleFactor(*m_marginsUnit, librevenge::RVNG_INCH);
+      decalX -= m_margins[1].get()*factor;
+    }
+
+    for (size_t i=0; i<m_tabs->size(); i++)
+      m_tabs.get()[i].addTo(tabs, decalX);
+    propList.insert("style:tab-stops", tabs);
   }
-  for (size_t i=0; i<m_tabs->size(); i++)
-    m_tabs.get()[i].addTo(pList, decalX);
 }
 
 std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)

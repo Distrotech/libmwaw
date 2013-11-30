@@ -229,11 +229,9 @@ void MWAWGraphicInterface::insertLineBreak()
   insertText("\n");
 }
 
-void MWAWGraphicInterface::insertField(const librevenge::RVNGString &type, const librevenge::RVNGPropertyList &list)
+void MWAWGraphicInterface::insertField(const librevenge::RVNGPropertyList &list)
 {
-  librevenge::RVNGPropertyList pList(list);
-  pList.insert("librevenge:field-type", type);
-  m_state->m_encoder.insertElement("InsertField", pList);
+  m_state->m_encoder.insertElement("InsertField", list);
 }
 
 void MWAWGraphicInterface::defineOrderedListLevel(const librevenge::RVNGPropertyList &list)
@@ -278,9 +276,9 @@ void MWAWGraphicInterface::closeUnorderedListLevel()
   m_state->m_encoder.insertElement("CloseOrderedListLevel");
 }
 
-void MWAWGraphicInterface::openListElement(const librevenge::RVNGPropertyList &list, const librevenge::RVNGPropertyListVector &tabStops)
+void MWAWGraphicInterface::openListElement(const librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.insertElement("OpenListElement", list, tabStops);
+  m_state->m_encoder.insertElement("OpenListElement", list);
 }
 
 void MWAWGraphicInterface::closeListElement()
@@ -288,9 +286,9 @@ void MWAWGraphicInterface::closeListElement()
   m_state->m_encoder.insertElement("CloseListElement");
 }
 
-void MWAWGraphicInterface::openParagraph(const librevenge::RVNGPropertyList &list, const librevenge::RVNGPropertyListVector &tabStops)
+void MWAWGraphicInterface::openParagraph(const librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.insertElement("OpenParagraph", list, tabStops);
+  m_state->m_encoder.insertElement("OpenParagraph", list);
 }
 
 void MWAWGraphicInterface::closeParagraph()

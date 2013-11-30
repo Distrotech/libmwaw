@@ -755,11 +755,6 @@ void MWAWContentListener::_openParagraph()
 
   librevenge::RVNGPropertyList propList;
   _appendParagraphProperties(propList);
-  librevenge::RVNGPropertyListVector tabStops;
-  m_ps->m_paragraph.addTabsTo(tabStops);
-
-  if (tabStops.count())
-    propList.insert("style:tab-stops", tabStops);
   if (!m_ps->m_isParagraphOpened)
     m_documentInterface->openParagraph(propList);
 
@@ -833,10 +828,6 @@ void MWAWContentListener::_openListElement()
     propList.insert("text:start-value", startValue);
     m_ps->m_list->setStartValueForNextElement(startValue);
   }
-  librevenge::RVNGPropertyListVector tabStops;
-  m_ps->m_paragraph.addTabsTo(tabStops);
-  if (tabStops.count())
-    propList.insert("style:tab-stops", tabStops);
 
   if (m_ps->m_list) m_ps->m_list->openElement();
   m_documentInterface->openListElement(propList);

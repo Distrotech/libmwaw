@@ -52,9 +52,6 @@ public:
   virtual void insertElement(const char *psName) = 0;
   //! inserts an element ( given a property list )
   virtual void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList) = 0;
-  //! inserts an element ( given a vector list )
-  virtual void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
-                             const librevenge::RVNGPropertyListVector &vect) = 0;
   //! writes a list of characters
   virtual void characters(librevenge::RVNGString const &sCharacters) = 0;
 
@@ -78,8 +75,6 @@ public:
  *
  *  - [insertElement:name]: char 'E', [string] name
  *  - [insertElement:name proplist:prop]: char 'S', [string] name, prop
- *  - [insertElement:name proplist:prop proplistvector:vector]:
- *          char 'V', [string] name, prop, vector
  *  - [characters:s ]: char 'T', [string] s
  *            - if len(s)==0, we write nothing
  *            - the string is written as is (ie. we do not escaped any characters).
@@ -94,9 +89,6 @@ public:
   void insertElement(const char *psName);
   //! inserts an element given a property list
   void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList);
-  //! inserts an element given a property list vector
-  void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
-                     const librevenge::RVNGPropertyListVector &vect);
   //! writes a list of characters
   void characters(librevenge::RVNGString const &sCharacters);
   //! retrieves the data

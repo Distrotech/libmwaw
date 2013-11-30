@@ -129,8 +129,6 @@ public:
   }
   //! add to the propList
   void addTo(librevenge::RVNGPropertyList &propList, bool inTable) const;
-  //! add tabs to the propList
-  void addTabsTo(librevenge::RVNGPropertyListVector &propList, double decalX=0.0) const;
 
   //! insert the set values of para in the actual paragraph
   void insert(MWAWParagraph const &para);

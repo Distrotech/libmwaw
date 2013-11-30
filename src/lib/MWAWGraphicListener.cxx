@@ -330,14 +330,15 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
     _openSpan();
     librevenge::RVNGPropertyList propList;
     if (field.m_type==MWAWField::Title)
-      m_gs->m_interface->insertField(librevenge::RVNGString("text:title"), propList);
+      propList.insert("librevenge:field-type", "text:title");
     else {
       propList.insert("style:num-format", libmwaw::numberingTypeToString(field.m_numberingType).c_str());
       if (field.m_type == MWAWField::PageNumber)
-        m_gs->m_interface->insertField(librevenge::RVNGString("text:page-number"), propList);
+        propList.insert("librevenge:field-type", "text:page-number");
       else
-        m_gs->m_interface->insertField(librevenge::RVNGString("text:page-count"), propList);
+        propList.insert("librevenge:field-type", "text:page-count");
     }
+    m_gs->m_interface->insertField(propList);
     break;
   }
   case MWAWField::Database:
@@ -462,9 +463,7 @@ void MWAWGraphicListener::_openParagraph()
 
   librevenge::RVNGPropertyList propList;
   m_ps->m_paragraph.addTo(propList, false);
-  librevenge::RVNGPropertyListVector tabStops;
-  m_ps->m_paragraph.addTabsTo(tabStops);
-  m_gs->m_interface->openParagraph(propList, tabStops);
+  m_gs->m_interface->openParagraph(propList);
 
   _resetParagraphState();
   m_ps->m_firstParagraphInPageSpan = false;
@@ -511,8 +510,6 @@ void MWAWGraphicListener::_openListElement()
 
   librevenge::RVNGPropertyList propList;
   m_ps->m_paragraph.addTo(propList,false);
-  librevenge::RVNGPropertyListVector tabStops;
-  m_ps->m_paragraph.addTabsTo(tabStops);
 
   // check if we must change the start value
   int startValue=m_ps->m_paragraph.m_listStartValue.get();
@@ -522,7 +519,7 @@ void MWAWGraphicListener::_openListElement()
   }
 
   if (m_ps->m_list) m_ps->m_list->openElement();
-  m_gs->m_interface->openListElement(propList, tabStops);
+  m_gs->m_interface->openListElement(propList);
   _resetParagraphState(true);
 }
 

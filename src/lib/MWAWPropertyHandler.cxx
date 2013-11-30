@@ -71,15 +71,6 @@ void MWAWPropertyHandlerEncoder::insertElement
   writePropertyList(xPropList);
 }
 
-void MWAWPropertyHandlerEncoder::insertElement
-(const char *psName, const librevenge::RVNGPropertyList &xPropList, const librevenge::RVNGPropertyListVector &vect)
-{
-  m_f << 'V';
-  writeString(psName);
-  writePropertyList(xPropList);
-  writePropertyListVector(vect);
-}
-
 void MWAWPropertyHandlerEncoder::characters(librevenge::RVNGString const &sCharacters)
 {
   if (sCharacters.len()==0) return;
@@ -179,9 +170,6 @@ public:
         case 'S':
           if (!readInsertElementWithList(*inp)) return false;
           break;
-        case 'V':
-          if (!readInsertElementWithVector(*inp)) return false;
-          break;
         case 'T':
           if (!readCharacters(*inp)) return false;
           break;
@@ -230,33 +218,6 @@ protected:
     }
 
     if (m_handler) m_handler->insertElement(s.cstr(), lists);
-    return true;
-  }
-
-  //! reads an insertElement
-  bool readInsertElementWithVector(librevenge::RVNGInputStream &input)
-  {
-    librevenge::RVNGString s;
-    if (!readString(input, s)) return false;
-    if (s.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithVector: can not read tag name\n"));
-      return false;
-    }
-
-    librevenge::RVNGPropertyList lists;
-    if (!readPropertyList(input, lists)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithVector: can not read propertyList for tag %s\n",
-                      s.cstr()));
-      return false;
-    }
-    librevenge::RVNGPropertyListVector vect;
-    if (!readPropertyListVector(input, vect)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithVector: can not read propertyVector for tag %s\n",
-                      s.cstr()));
-      return false;
-    }
-
-    if (m_handler) m_handler->insertElement(s.cstr(), lists, vect);
     return true;
   }
 
