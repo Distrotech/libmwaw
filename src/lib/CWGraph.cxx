@@ -311,20 +311,24 @@ struct ZonePict : public Zone {
 struct Bitmap : public CWStruct::DSET {
   //! constructor
   Bitmap(CWStruct::DSET const &dset = CWStruct::DSET()) :
-    DSET(dset), m_bitmapType(-1), m_bitmapSize(0,0), m_entry(), m_colorMap() {
+    DSET(dset), m_numBytesPerPixel(0), m_bitmapSize(0,0), m_bitmapRowSize(0), m_entry(), m_colorMap()
+  {
   }
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Bitmap const &bt) {
     o << static_cast<CWStruct::DSET const &>(bt);
-    if (bt.m_bitmapType >= 0) o << "type=" << bt.m_bitmapType << ",";
+    if (bt.m_numBytesPerPixel > 0) o << "type=" << bt.m_numBytesPerPixel << ",";
+    else if (bt.m_numBytesPerPixel < 0) o << "type=1/" << (-bt.m_numBytesPerPixel) << ",";
     return o;
   }
 
-  //! the bitmap type
-  int m_bitmapType;
+  //! the number of bite by pixel
+  int m_numBytesPerPixel;
   //! the bitmap size
   Vec2i m_bitmapSize;
+  //! the bitmap row size in the file ( with potential alignement)
+  int m_bitmapRowSize;
   //! the bitmap entry
   MWAWEntry m_entry;
   //! the color map
@@ -1992,33 +1996,52 @@ bool CWGraph::readBitmapData(CWGraphInternal::Bitmap &zone)
     MWAW_DEBUG_MSG(("CWGraph::readBitmapData: file is too short\n"));
     return false;
   }
-  /* Fixme: this code can not works for the packed bitmap*/
-  long numColors = zone.m_bitmapSize[0]*zone.m_bitmapSize[1];
-  int numBytes = numColors ? int(sz/numColors) : 0;
-  if (sz != numBytes*numColors) {
-    // check for different row alignement: 2 and 4
-    for (int align=2; align <= 4; align*=2) {
-      int diffToAlign=align-(zone.m_bitmapSize[0]%align);
+
+  long numPixels = zone.m_bitmapSize[0]*zone.m_bitmapSize[1];
+  if (numPixels<=0) {
+    MWAW_DEBUG_MSG(("CWGraph::readBitmapData: unexpected empty size\n"));
+    return false;
+  }
+
+  int numBytesPerPixel = int(sz/numPixels);
+  int bitmapRowSize=zone.m_bitmapSize[0]*numBytesPerPixel;
+  if (sz < numPixels) {
+    int nHalfPixel=(zone.m_bitmapSize[0]+1)/2;
+    for (int align=1; align <= 4; align*=2) {
+      int diffToAlign=align==1 ? 0 : align-(nHalfPixel%align);
       if (diffToAlign==align) continue;
-      numColors = (zone.m_bitmapSize[0]+diffToAlign)*zone.m_bitmapSize[1];
-      numBytes = numColors ? int(sz/numColors) : 0;
-      if (sz == numBytes*numColors) {
-        zone.m_bitmapSize[0]+=diffToAlign;
-        MWAW_DEBUG_MSG(("CWGraph::readBitmapData: increase width to %d\n",zone.m_bitmapSize[0]));
+      if (sz == (nHalfPixel+diffToAlign)*zone.m_bitmapSize[1]) {
+        bitmapRowSize=(nHalfPixel+diffToAlign);
+        numBytesPerPixel=-2;
         break;
       }
     }
   }
-  if (sz != numBytes*numColors) {
+  else if (sz > numBytesPerPixel*numPixels) {
+    // check for different row alignement: 2 and 4
+    for (int align=2; align <= 4; align*=2) {
+      int diffToAlign=align-(zone.m_bitmapSize[0]%align);
+      if (diffToAlign==align) continue;
+      numPixels = (zone.m_bitmapSize[0]+diffToAlign)*zone.m_bitmapSize[1];
+      numBytesPerPixel = int(sz/numPixels);
+      if (sz == numBytesPerPixel*numPixels) {
+        bitmapRowSize=(zone.m_bitmapSize[0]+diffToAlign)*numBytesPerPixel;
+        break;
+      }
+    }
+  }
+
+  if (sz != bitmapRowSize*zone.m_bitmapSize[1]) {
     MWAW_DEBUG_MSG(("CWGraph::readBitmapData: unexpected size\n"));
     return false;
   }
-  zone.m_bitmapType = numBytes;
+  zone.m_numBytesPerPixel = numBytesPerPixel;
+  zone.m_bitmapRowSize = bitmapRowSize;
   zone.m_entry.setBegin(pos+4);
   zone.m_entry.setEnd(endPos);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  f << "Entries(BitmapData):nBytes=" << numBytes;
+  f << "Entries(BitmapData):[" << numBytesPerPixel << "]";
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   ascFile.skipZone(pos+4, endPos-1);
@@ -2615,9 +2638,13 @@ bool CWGraph::sendBitmap(int number, bool asGraphic, MWAWPosition const &pos)
 
 bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPosition pos)
 {
-  if (!bitmap.m_entry.valid() || !bitmap.m_bitmapType)
+  if (!bitmap.m_entry.valid() || !bitmap.m_numBytesPerPixel)
     return false;
-
+  int bytesPerPixel = bitmap.m_numBytesPerPixel;
+  if (bytesPerPixel<0 && (bytesPerPixel!=-2 && bytesPerPixel!=-4)) {
+    MWAW_DEBUG_MSG(("CWGraph::sendBitmap: unknown group of color\n"));
+    return false;
+  }
   if (asGraphic) {
     if  (!m_parserState->m_graphicListener ||
          !m_parserState->m_graphicListener->isDocumentStarted()) {
@@ -2637,21 +2664,38 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
     bmapIndexed->setColors(bitmap.m_colorMap);
     bmap.reset(bmapIndexed);
     indexed = true;
-  } else
+  }
+  else {
+    if (bytesPerPixel<0) {
+      MWAW_DEBUG_MSG(("CWGraph::sendBitmap: unexpected mode for compressed bitmap. Bitmap ignored.\n"));
+      return false;
+    }
     bmap.reset((bmapColor=new MWAWPictBitmapColor(bitmap.m_bitmapSize)));
+  }
 
+  bool const isCompressed =  bytesPerPixel<0;
+  int const numColorByData= isCompressed ? -bytesPerPixel : 1;
+  long const colorMask= !isCompressed ? 0 : numColorByData==2 ? 0xF : 0x3;
+  int const numColorBytes = isCompressed ? 8/numColorByData : 8*bytesPerPixel;
   //! let go
-  int fSz = bitmap.m_bitmapType;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(bitmap.m_entry.begin(), WPX_SEEK_SET);
   for (int r = 0; r < bitmap.m_bitmapSize[1]; r++) {
+    long rPos=input->tell();
+    int numRead=0;
+    long read=0;
     for (int c = 0; c < bitmap.m_bitmapSize[0]; c++) {
-      long val = (long) input->readULong(fSz);
+      if (numRead==0) {
+        read=(long) input->readULong(isCompressed ? 1 : bytesPerPixel);
+        numRead=numColorByData;
+      }
+      --numRead;
+      long val=!isCompressed ? read : (read>>(numColorBytes*numRead))&colorMask;
       if (indexed) {
         bmapIndexed->set(c,r,(int)val);
         continue;
       }
-      switch(fSz) {
+      switch (bytesPerPixel) {
       case 1:
         bmapColor->set(c,r, MWAWColor((unsigned char)val,(unsigned char)val,(unsigned char)val));
         break;
@@ -2671,6 +2715,7 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
       }
       }
     }
+    input->seek(rPos+bitmap.m_bitmapRowSize, WPX_SEEK_SET);
   }
 
   WPXBinaryData data;
