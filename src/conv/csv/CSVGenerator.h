@@ -76,6 +76,8 @@ public:
   virtual void insertSpace();
   virtual void insertLineBreak();
   virtual void insertField(const librevenge::RVNGPropertyList &/*propList*/) {}
+  virtual void openLink(const librevenge::RVNGPropertyList &/*propList*/) {}
+  virtual void closeLink() {}
 
   virtual void defineOrderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}
   virtual void defineUnorderedListLevel(const librevenge::RVNGPropertyList & /* propList */) {}

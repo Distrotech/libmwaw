@@ -69,11 +69,11 @@ struct State {
 
 void State::addListElement(librevenge::RVNGPropertyList const &list)
 {
-  if (!list["librevenge:id"] || !list["librevenge:level"]) {
+  if (!list["librevenge:list-id"] || !list["librevenge:level"]) {
     MWAW_DEBUG_MSG(("MWAWGraphicInterfaceInternal::addListElement: can not find the id or the level\n"));
     return;
   }
-  int id=list["librevenge:id"]->getInt();
+  int id=list["librevenge:list-id"]->getInt();
   int level=list["librevenge:level"]->getInt();
   std::multimap<int, librevenge::RVNGPropertyList>::iterator it=m_listIdToPropertyMap.lower_bound(id);
   while (it!=m_listIdToPropertyMap.end() && it->first == id) {
@@ -247,8 +247,8 @@ void MWAWGraphicInterface::defineUnorderedListLevel(const librevenge::RVNGProper
 void MWAWGraphicInterface::openOrderedListLevel(const librevenge::RVNGPropertyList &list)
 {
   librevenge::RVNGPropertyList pList(list);
-  if (list["librevenge:id"] && list["librevenge:level"])
-    m_state->retrieveListElement(list["librevenge:id"]->getInt(), list["librevenge:level"]->getInt(), pList);
+  if (list["librevenge:list-id"] && list["librevenge:level"])
+    m_state->retrieveListElement(list["librevenge:list-id"]->getInt(), list["librevenge:level"]->getInt(), pList);
   else {
     MWAW_DEBUG_MSG(("MWAWGraphicInterface::openOrderedListLevel: can not retrieve listId or level\n"));
   }
@@ -258,8 +258,8 @@ void MWAWGraphicInterface::openOrderedListLevel(const librevenge::RVNGPropertyLi
 void MWAWGraphicInterface::openUnorderedListLevel(const librevenge::RVNGPropertyList &list)
 {
   librevenge::RVNGPropertyList pList(list);
-  if (list["librevenge:id"] && list["librevenge:level"])
-    m_state->retrieveListElement(list["librevenge:id"]->getInt(), list["librevenge:level"]->getInt(), pList);
+  if (list["librevenge:list-id"] && list["librevenge:level"])
+    m_state->retrieveListElement(list["librevenge:list-id"]->getInt(), list["librevenge:level"]->getInt(), pList);
   else {
     MWAW_DEBUG_MSG(("MWAWGraphicInterface::openUnorderedListLevel: can not retrieve listId or level\n"));
   }

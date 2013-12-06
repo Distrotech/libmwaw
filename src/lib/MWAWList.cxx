@@ -260,7 +260,7 @@ bool MWAWList::addTo(int level, librevenge::RVNGPropertyList &pList) const
     static int falseId = 1000;
     setId(falseId+=2);
   }
-  pList.insert("librevenge:id", getId());
+  pList.insert("librevenge:list-id", getId());
   pList.insert("librevenge:level", level);
   m_levels[size_t(level-1)].addTo(pList);
   return true;
