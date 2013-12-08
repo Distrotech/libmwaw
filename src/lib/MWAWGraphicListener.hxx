@@ -124,6 +124,12 @@ public:
   //! adds a field type
   void insertField(MWAWField const &field);
 
+  // ------- link ----------------
+  //! open a link
+  void openLink(MWAWLink const &link);
+  //! close a link
+  void closeLink();
+
   // ------- subdocument -----------------
   /** adds a picture in given position */
   void insertPicture(Box2f const &bdbox, MWAWGraphicStyle const &style,

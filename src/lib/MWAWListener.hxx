@@ -99,6 +99,13 @@ public:
   //! adds a field type
   virtual void insertField(MWAWField const &field)=0;
 
+  // ------- link ----------------
+
+  //! open a link
+  virtual void openLink(MWAWLink const &link)=0;
+  //! close a link
+  virtual void closeLink()=0;
+
   // ------- section ---------------
   /** returns true if we can add open a section, add page break, ... */
   virtual bool canOpenSectionAddBreak() const =0;

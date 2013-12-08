@@ -184,6 +184,8 @@ public:
   */
   void insertField(const librevenge::RVNGPropertyList &propList);
 
+  void openLink(const librevenge::RVNGPropertyList &propList);
+  void closeLink();
   /**
   Defines an ordered (enumerated) list level
   \param propList Defines a set of properties for the list. May contain:

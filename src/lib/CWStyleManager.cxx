@@ -185,7 +185,7 @@ bool Gradient::update(MWAWGraphicStyle &style) const
 struct State {
   //! constructor
   State() : m_version(-1), m_localFIdMap(), m_stylesMap(), m_lookupMap(),
-    m_fontList(), m_cellFormatList(), m_graphList(), m_ksenList(),
+    m_fontList(), m_cellFormatList(), m_graphList(), m_ksenList(), m_nameList(),
     m_colorList(), m_patternList(), m_gradientList(), m_wallpaperList()
   {
   }
@@ -221,7 +221,8 @@ struct State {
   std::vector<MWAWGraphicStyle> m_graphList;
   //! the KSEN list
   std::vector<CWStyleManager::KSEN> m_ksenList;
-
+  //! the style name list
+  std::vector<std::string> m_nameList;
   //! a list colorId -> color
   std::vector<MWAWColor> m_colorList;
   //! a list patternId -> pattern
@@ -1538,9 +1539,13 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::Style const &style)
   if (style.m_fontId != -1)
     o << "font=" << style.m_fontId << ",";
   if (style.m_cellFormatId != -1)
-    o << "cellStyle=" << style.m_cellFormatId << "],";
+    o << "cellStyle=" << style.m_cellFormatId << ",";
   if (style.m_rulerId != -1)
-    o << "ruler=[" << style.m_rulerId << ",hash=" << style.m_rulerHash << "],";
+    o << "ruler=" << style.m_rulerId << ",";
+  if (style.m_rulerPId != -1)
+    o << "ruler[parent]=LK" << style.m_rulerPId << ",";
+  if (style.m_nameId != -1)
+    o << "name=" << style.m_nameId << ",";
   if (style.m_ksenId != -1)
     o << "ksenId=" << style.m_ksenId << ",";
   if (style.m_graphicId != -1)
@@ -1566,6 +1571,23 @@ int CWStyleManager::version() const
 {
   if (m_state->m_version <= 0) m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
+}
+
+bool CWStyleManager::getRulerName(int id, std::string &name) const
+{
+  Style style, parentStyle;
+  if (!get(id, style) || style.m_rulerPId < 0 ||
+      !get(style.m_rulerPId, parentStyle) || parentStyle.m_nameId < 0) return false;
+  /* CHANGE: no sure how to recognize the basic style from a modified
+     paragraph based on a style, so use a hack to avoid potential problem...
+   */
+  if (style.m_rulerId!=parentStyle.m_rulerId+1) return false;
+  if (parentStyle.m_nameId >= (int) m_state->m_nameList.size()) {
+    MWAW_DEBUG_MSG(("CWStyleManager::getRulerName: oops something look bad\n"));
+    return false;
+  }
+  name=m_state->m_nameList[size_t(parentStyle.m_nameId)];
+  return true;
 }
 
 bool CWStyleManager::get(int id, MWAWFont &ft) const
@@ -2068,7 +2090,7 @@ bool CWStyleManager::readStylesDef(int N, int fSz)
     if (val != -1) f << "f0=" << val << ",";
     val = (int) input->readLong(2);
     if (val) f << "f1=" << val << ",";
-    f << "used?=" << input->readLong(2) << ",";
+    f << "unkn?=" << input->readLong(2) << ",";
     style.m_localStyleId = (int) input->readLong(2);
     if (i != style.m_localStyleId && style.m_localStyleId != -1) f << "#styleId,";
     style.m_styleId = (int) input->readLong(2);
@@ -2076,8 +2098,8 @@ bool CWStyleManager::readStylesDef(int N, int fSz)
       // unknown : hash, dataId ?
       f << "g" << j << "=" << input->readLong(1) << ",";
     }
-    for (int j = 2; j < 4; j++)
-      f << "g" << j << "=" << input->readLong(2) << ",";
+    f << "g=" << input->readLong(2) << ",";
+    style.m_rulerPId=(int) input->readLong(2);
     int lookupId2 = (int) input->readLong(2);
     f << "lookupId2=" << lookupId2 << ",";
     style.m_fontId = (int) input->readLong(2);
@@ -2086,7 +2108,7 @@ bool CWStyleManager::readStylesDef(int N, int fSz)
     style.m_rulerId = (int) input->readLong(2);
     if (fSz >= 30)
       style.m_ksenId = (int) input->readLong(2);
-    style.m_rulerHash = (int) input->readLong(2);
+    style.m_nameId = (int) input->readLong(2);
     style.m_extra = f.str();
     if (m_state->m_stylesMap.find(i)==m_state->m_stylesMap.end())
       m_state->m_stylesMap[i] = style;
@@ -2320,12 +2342,14 @@ bool CWStyleManager::readStyleNames(int N, int fSz)
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
+  m_state->m_nameList.clear();
   for (int i = 0; i < N; i++) {
     long pos = input->tell();
     f.str("");
     if (i == 0) f << "Entries(StylName): StylName-0:";
     else f << "StylName-" << i << ":";
-    f << "id=" << input->readLong(2) << ",";
+    f << "LK" << input->readLong(2) << ",";
+    std::string name("");
     if (fSz > 4) {
       int nChar = (int) input->readULong(1);
       if (3+nChar > fSz) {
@@ -2337,11 +2361,11 @@ bool CWStyleManager::readStyleNames(int N, int fSz)
         f << "#";
       }
       else {
-        std::string name("");
         for (int c = 0; c < nChar; c++)
           name += char(input->readULong(1));
         f << "'" << name << "'";
       }
+      m_state->m_nameList.push_back(name);
     }
     if (long(input->tell()) != pos+fSz) {
       ascFile.addDelimiter(input->tell(), '|');

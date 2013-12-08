@@ -154,6 +154,7 @@ struct State {
   bool m_inSubDocument;
 
   bool m_isNote;
+  bool m_inLink;
   libmwaw::SubDocumentType m_subDocumentType;
 
 private:
@@ -190,7 +191,7 @@ State::State() :
   m_listOrderedLevels(),
 
   m_inSubDocument(false),
-  m_isNote(false),
+  m_isNote(false), m_inLink(false),
   m_subDocumentType(libmwaw::DOC_NONE)
 {
 }
@@ -416,7 +417,7 @@ MWAWParagraph const &MWAWContentListener::getParagraph() const
 }
 
 ///////////////////
-// field :
+// field/link :
 ///////////////////
 void MWAWContentListener::insertField(MWAWField const &field)
 {
@@ -471,15 +472,37 @@ void MWAWContentListener::insertField(MWAWField const &field)
     }
     break;
   }
-  case MWAWField::Link:
-    if (field.m_data.length()) {
-      MWAWContentListener::insertUnicodeString(field.m_data.c_str());
-      break;
-    }
   default:
     MWAW_DEBUG_MSG(("MWAWContentListener::insertField: must not be called with type=%d\n", int(field.m_type)));
     break;
   }
+}
+
+void MWAWContentListener::openLink(MWAWLink const &link)
+{
+  if (m_ps->m_inLink) {
+    MWAW_DEBUG_MSG(("MWAWContentListener:closeLink: a link is already opened\n"));
+    return;
+  }
+  if (!m_ps->m_isSpanOpened) _openSpan();
+  librevenge::RVNGPropertyList propList;
+  link.addTo(propList);
+  m_documentInterface->openLink(propList);
+  _pushParsingState();
+  m_ps->m_inLink=true;
+// we do not want any close open paragraph in a link
+  m_ps->m_isParagraphOpened=true;
+}
+
+void MWAWContentListener::closeLink()
+{
+  if (!m_ps->m_inLink) {
+    MWAW_DEBUG_MSG(("MWAWContentListener:closeLink: can not close a link\n"));
+    return;
+  }
+  if (m_ps->m_isSpanOpened) _closeSpan();
+  m_documentInterface->closeLink();
+  _popParsingState();
 }
 
 ///////////////////
@@ -764,6 +787,9 @@ void MWAWContentListener::_openParagraph()
 
 void MWAWContentListener::_closeParagraph()
 {
+  // we can not close a paragraph in a link
+  if (m_ps->m_inLink)
+    return;
   if (m_ps->m_isListElementOpened) {
     _closeListElement();
     return;
@@ -956,6 +982,7 @@ void MWAWContentListener::_openSpan()
 
 void MWAWContentListener::_closeSpan()
 {
+  // better not to close a link...
   if (!m_ps->m_isSpanOpened)
     return;
 

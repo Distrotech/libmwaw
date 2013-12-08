@@ -87,6 +87,8 @@ public:
   bool getColor(int id, MWAWColor &col) const;
   //! return the pattern which corresponds to an id.
   bool getPattern(int id, MWAWGraphicStyle::Pattern &pattern, float &percent) const;
+  //! return the name corresponding to a styleId
+  bool getRulerName(int id, std::string &name) const;
 
   //! return the style corresponding to a styleId
   bool get(int styleId, Style &style) const;
@@ -187,7 +189,7 @@ public:
   //! the structure to store the style in a CWStyleManager
   struct Style {
     //! constructor
-    Style() : m_fontId(-1), m_cellFormatId(-1), m_rulerId(-1), m_rulerHash(-1), m_ksenId(-1), m_graphicId(-1), m_localStyleId(-1), m_styleId(-1), m_extra("")
+    Style() : m_fontId(-1), m_cellFormatId(-1), m_rulerId(-1), m_rulerPId(-1), m_nameId(-1), m_ksenId(-1), m_graphicId(-1), m_localStyleId(-1), m_styleId(-1), m_extra("")
     {
     }
 
@@ -200,8 +202,10 @@ public:
     int m_cellFormatId;
     //! the ruler
     int m_rulerId;
-    //! the rulerHash id
-    int m_rulerHash;
+    //! the ruler parent id ( or maybe the style parent)
+    int m_rulerPId;
+    //! the style name id
+    int m_nameId;
     //! the ksen id
     int m_ksenId;
     //! the graphic (checkme)

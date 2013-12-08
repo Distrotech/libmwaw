@@ -178,6 +178,8 @@ public:
   //! list of border ( order MWAWBorder::Pos)
   std::vector<Variable<MWAWBorder> > m_borders;
 
+  //! the style name
+  std::string m_styleName;
   //! a string to store some errors
   std::string m_extra;
 };

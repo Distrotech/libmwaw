@@ -209,6 +209,15 @@ std::string MWAWColor::str() const
   return stream.str();
 }
 
+// link function
+bool MWAWLink::addTo(librevenge::RVNGPropertyList &propList) const
+{
+  propList.insert("xlink:type","simple");
+  if (!m_HRef.empty())
+    propList.insert("xlink:href",m_HRef.c_str());
+  return true;
+}
+
 // border function
 int MWAWBorder::compare(MWAWBorder const &orig) const
 {

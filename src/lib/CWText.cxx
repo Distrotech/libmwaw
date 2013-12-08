@@ -959,12 +959,11 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     if (styleSize >= 8)
       info.m_flags = (int) input->readLong(2);
 
-    int rulerId = info.m_rulerId;
     if (vers > 2) {
       info.m_styleId = info.m_rulerId;
       CWStyleManager::Style style;
-      if (m_styleManager->get(rulerId, style)) {
-        rulerId = info.m_rulerId = style.m_rulerId;
+      if (m_styleManager->get(info.m_rulerId, style)) {
+        info.m_rulerId = style.m_rulerId;
 #if 0
         f << "[style=" << style << "]";
 #endif
@@ -1381,9 +1380,26 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
           f << "[" << paraPLC << "]";
           if (paraPLC.m_rulerId < 0 || paraPLC.m_rulerId >= numParagraphs)
             break;
-          CWTextInternal::Paragraph const &para = m_state->m_paragraphsList[(size_t) paraPLC.m_rulerId];
+          CWTextInternal::Paragraph para = m_state->m_paragraphsList[(size_t) paraPLC.m_rulerId];
           if (*para.m_listLevelIndex>0 && actC >= actListCPos)
             actListId=findListId(zone, actListId, actC, actListCPos);
+#if 0
+          // to use when the style manager is able to retrieve the correct style name
+          if (actListId <= 0 && paraPLC.m_styleId >= 0) {
+            std::string styleName;
+            if (m_styleManager->getRulerName(paraPLC.m_styleId, styleName)) {
+              librevenge::RVNGString sfinalName("");
+              for (size_t c=0; c < styleName.size(); ++c) {
+                int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) styleName[c]);
+                if (unicode==-1)
+                  sfinalName.append((char) styleName[c]);
+                else
+                  libmwaw::appendUnicode((uint32_t) unicode, sfinalName);
+              }
+              para.m_styleName = librevenge::RVNGString(sfinalName,true).cstr();
+            }
+          }
+#endif
           setProperty(*listener, para, actListId);
           break;
         }

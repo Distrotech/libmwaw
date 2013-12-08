@@ -147,6 +147,12 @@ public:
   //! adds a field type
   void insertField(MWAWField const &field);
 
+  // ------- link ----------------
+  //! open a link
+  void openLink(MWAWLink const &link);
+  //! close a link
+  void closeLink();
+
   // ------- subdocument -----------------
   /** insert a note */
   void insertNote(MWAWNote const &note, MWAWSubDocumentPtr &subDocument);

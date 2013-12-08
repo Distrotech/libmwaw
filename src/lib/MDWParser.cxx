@@ -101,7 +101,6 @@ struct Field {
       break;
     case MWAWField::None:
     case MWAWField::PageCount:
-    case MWAWField::Link:
     case MWAWField::Database:
     default:
       MWAW_DEBUG_MSG(("MDWParserInternal::Field: unexpected field type %d\n", int(field.m_type)));

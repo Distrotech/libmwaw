@@ -313,9 +313,6 @@ std::ostream &operator<<(std::ostream &o, Token const &tok)
   case MWAWField::Database:
     o << "field[database],";
     break;
-  case MWAWField::Link:
-    o << "field[link],";
-    break;
   case MWAWField::None:
   default:
     o << "##field[unknown]" << ",";

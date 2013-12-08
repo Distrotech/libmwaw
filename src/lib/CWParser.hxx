@@ -183,6 +183,21 @@ protected:
 
   // THE NAMED ENTRY
 
+  /* read the list of mark */
+  bool readMARKList(MWAWEntry const &entry);
+
+  /* read a URL mark */
+  bool readURL(long endPos);
+
+  /* read a bookmark mark */
+  bool readBookmark(long endPos);
+
+  /* read a document mark */
+  bool readDocumentMark(long endPos);
+
+  /* read a end mark */
+  bool readEndMark(long endPos);
+
   /* read the document summary */
   bool readDSUM(MWAWEntry const &entry, bool inHeader);
 

@@ -887,6 +887,11 @@ bool CWParser::readEndTable()
       readTNAM(entry);
       parsed = true;
     }
+    else if (entry.type() == "MARK") {
+      readMARKList(entry);
+      parsed = true;
+    }
+
     // WMBT: crypt password ? 0|fieldSz + PString ?
     if (parsed) {
       debPos = input->tell();
@@ -1540,6 +1545,372 @@ bool CWParser::readTNAM(MWAWEntry const &entry)
   }
 
   ascii().addPos(entry.begin());
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool CWParser::readMARKList(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.type() != "MARK")
+    return false;
+  int const vers=version();
+  MWAWInputStreamPtr input = getInput();
+  long pos = entry.begin();
+  long sz = entry.length()-8;
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(MARK)[header]:";
+
+  if (input->readULong(4) !=0x4d41524b || input->readLong(4) != sz || sz < 30) {
+    f << "###";
+    MWAW_DEBUG_MSG(("CWParser::readMARKList: find unexpected header\n"));
+    ascii().addPos(entry.begin());
+    ascii().addNote(f.str().c_str());
+
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos=input->tell();
+  f.str("");
+  f << "MARK[MRKS]:";
+  if (input->readULong(4)!=0x4d524b53) { // MRKS
+    f << "###";
+
+    MWAW_DEBUG_MSG(("CWParser::readMARKList: find unexpected MRKS header\n"));
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  int val=(int) input->readLong(2);
+  if (val != 3)
+    f << "f0=" << val << ",";
+  int N=(int) input->readLong(2);
+  if (N) f << "N=" << N << ",";
+  for (int i=0; i<2; ++i) {
+    val=(int) input->readLong(2);
+    if (val)
+      f << "f" << i << "=" << val << ",";
+  }
+  ascii().addDelimiter(input->tell(),'|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(pos+30, librevenge::RVNG_SEEK_SET);
+
+  for (int m=0; m < N; ++m) {
+    pos = input->tell();
+    if (pos+14>entry.end() || input->readULong(4)!=0x4d41524b) { // MARK
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    f.str("");
+    f << "MARK-" << m << ":";
+    val = (int) input->readLong(2);
+    if (val != 3)
+      f << "f0=" << val << ",";
+    int N1=(int) input->readLong(2);
+    f << "N1=" << N1 << ",";
+
+    std::string name(""); // can be: Book (anchor), LDOC (link in doc), LURL
+
+    for (int i=0; i<4; i++) {
+      char c=(char) input->readLong(1);
+      if ((c>='a' && c<='z') || (c>='A' && c<='Z'))
+        name += c;
+    }
+    if (name.size()!=4) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    int what = name=="Book"? 0 : name=="LDOC" ? 1 : name=="LURL" ? 2 : -1;
+    if (what==-1) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    f << name << ",";
+    if (vers < 6) {
+      // I think mark in v5, but the code seem to differ from here
+      MWAW_DEBUG_MSG(("CWParser::readMARKList: OOOPS reading mark data is not implemented\n"));
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      ascii().addPos(input->tell());
+      ascii().addNote("MARK[End]:###");
+      return false;
+    }
+    f << "f1=" << std::hex << input->readULong(2) << std::dec << ",";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+
+    bool ok=true;
+    for (int n=0; n < N1; ++n) {
+      pos=input->tell();
+      if (pos+54+8>entry.end()) {
+        ok=false;
+        break;
+      }
+      f.str("");
+      f << "MARK-" << m << "." << n << ":";
+      if (input->readLong(2)!=-1 || input->readLong(2)) {
+        ok=false;
+        break;
+      }
+      for (int i=0; i < 9; ++i) { // f6:an id?,
+        val=(int) input->readULong(2);
+        if (val)
+          f << "f" << i << "=" << std::hex << val << std::dec << ",";
+      }
+      int tSz=(int) input->readULong(1);
+      if (tSz <= 0 || tSz >=32) {
+        ok=false;
+        break;
+      }
+      std::string text("");
+      for (int s=0; s < tSz; ++s)
+        text+=(char) input->readLong(1);
+      f << text << ",";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+
+      input->seek(pos+54, librevenge::RVNG_SEEK_SET);
+      pos=input->tell();
+      switch (what) {
+      case 0:
+        ok=readBookmark(entry.end());
+        break;
+      case 1:
+        ok=readDocumentMark(entry.end());
+        break;
+      case 2:
+        ok=readURL(entry.end());
+        break;
+      default:
+        break;
+      }
+      if (!ok)
+        break;
+    }
+    if (!ok) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+  }
+
+  pos = input->tell();
+  if (pos==entry.end())
+    return true;
+  f.str("");
+  f << "###MARK-end:";
+
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+bool CWParser::readURL(long endPos)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  if (pos+8>endPos) {
+    return false;
+  }
+  libmwaw::DebugStream f;
+  f << "MARK-URL:";
+  long type=(long) input->readULong(4);
+  if (type==0) {
+  }
+  else if (type!=0x554c6b64) {
+    MWAW_DEBUG_MSG(("CWParser::readURL: find unexpected header\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  else { // ULkd
+    if (input->tell()+32+256+8>endPos) {
+      MWAW_DEBUG_MSG(("CWParser::readURL: date seems too short\n"));
+      f << "###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      return false;
+    }
+    for (int s=0; s < 2; ++s) {
+      int const maxSize = s==0 ? 32: 256;
+      long actPos=input->tell();
+      int tSz=(int) input->readULong(1);
+      if (tSz >= maxSize) {
+        MWAW_DEBUG_MSG(("CWParser::readURL: find unexpected text size\n"));
+        f << "###";
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+        return false;
+      }
+      std::string text("");
+      for (int c=0; c < tSz; ++c)
+        text+=(char) input->readLong(1);
+      f << text << ",";
+      input->seek(actPos+maxSize, librevenge::RVNG_SEEK_SET);
+    }
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  return readEndMark(endPos);
+}
+
+bool CWParser::readDocumentMark(long endPos)
+{
+  // Checkme...
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  if (pos+8>endPos) {
+    return false;
+  }
+  libmwaw::DebugStream f;
+  f << "MARK-Document:";
+  long type=(long) input->readULong(4);
+  if (type==0) {
+  }
+  else if (type!=0x444c6b64) {
+    MWAW_DEBUG_MSG(("CWParser::readDocumentMark: find unexpected header\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  else { // DLkd
+    if (input->tell()+32+64+20+8>endPos) {
+      MWAW_DEBUG_MSG(("CWParser::readDocumentMark: date seems too short\n"));
+      f << "###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      return false;
+    }
+    for (int s=0; s < 2; ++s) {
+      int const maxSize = s==0 ? 32: 64;
+      long actPos=input->tell();
+      int tSz=(int) input->readULong(1);
+      if (tSz >= maxSize) {
+        MWAW_DEBUG_MSG(("CWParser::readDocumentMark: find unexpected text size\n"));
+        f << "###";
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+        return false;
+      }
+      std::string text("");
+      for (int c=0; c < tSz; ++c)
+        text+=(char) input->readLong(1);
+      f << text << ",";
+      input->seek(actPos+maxSize, librevenge::RVNG_SEEK_SET);
+    }
+  }
+  for (int i=0; i < 10; ++i) { // f7=f9=id ?, other 0
+    int val=(int) input->readULong(2);
+    if (val)
+      f << "f" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  return readEndMark(endPos);
+}
+
+bool CWParser::readBookmark(long endPos)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  if (pos+8>endPos) {
+    return false;
+  }
+  libmwaw::DebugStream f;
+  f << "MARK-URL:";
+  long type=(long) input->readULong(4);
+  if (type==0) {
+  }
+  else if (type!=0x424d6b64) {
+    MWAW_DEBUG_MSG(("CWParser::readBookmark: find unexpected header\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  else { // BMkd
+    if (input->tell()+32+8>endPos) {
+      MWAW_DEBUG_MSG(("CWParser::readBookmark: date seems too short\n"));
+      f << "###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      return false;
+    }
+    int const maxSize = 32;
+    long actPos=input->tell();
+    int tSz=(int) input->readULong(1);
+    if (tSz >= maxSize) {
+      MWAW_DEBUG_MSG(("CWParser::readBookmark: find unexpected text size\n"));
+      f << "###";
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      return false;
+    }
+    std::string text("");
+    for (int c=0; c < tSz; ++c)
+      text+=(char) input->readLong(1);
+    f << text << ",";
+    input->seek(actPos+maxSize, librevenge::RVNG_SEEK_SET);
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  return readEndMark(endPos);
+}
+
+bool CWParser::readEndMark(long endPos)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  libmwaw::DebugStream f;
+  f << "MARK[Last]:";
+  long val=input->readLong(4);
+  if (!val) {
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return true;
+  }
+  f << "f0=" << std::hex << val << std::dec << ",";
+  f << "f1=" << std::hex << input->readULong(4) << std::dec << ",";
+  for (int i=0; i < 2; ++i) { // g0=1|2|3, g1=0
+    val=(int) input->readLong(2);
+    if (val) f << "g" << i << "=" << val << ",";
+  }
+  val=(int) input->readLong(2);
+  f << "type=" << val << ",";
+  int numExpected=val==1 ? 4: 1;
+  if (input->tell()+2*numExpected >endPos) {
+    MWAW_DEBUG_MSG(("CWParser::readEndMark: find unexpected number of element\n"));
+    f << "###";
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  f << "unkn=[";
+  for (int i=0; i<numExpected; ++i)
+    f << input->readLong(2) << ",";
+  f << "],";
+  ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   return true;
 }

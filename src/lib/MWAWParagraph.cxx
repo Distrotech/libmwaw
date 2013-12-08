@@ -141,7 +141,7 @@ std::ostream &operator<<(std::ostream &o, MWAWTabStop const &tab)
 MWAWParagraph::MWAWParagraph() : m_marginsUnit(librevenge::RVNG_INCH), m_spacingsInterlineUnit(librevenge::RVNG_PERCENT), m_spacingsInterlineType(Fixed),
   m_tabs(), m_tabsRelativeToLeftMargin(false), m_justify(JustificationLeft), m_breakStatus(0),
   m_listLevelIndex(0), m_listId(-1), m_listStartValue(-1), m_listLevel(), m_backgroundColor(MWAWColor::white()),
-  m_borders(), m_extra("")
+  m_borders(), m_styleName(""), m_extra("")
 {
   for (int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
   m_spacings[0] = 1.0; // interline normal
@@ -202,7 +202,8 @@ int MWAWParagraph::cmp(MWAWParagraph const &para) const
     diff = m_borders[i]->compare(*(para.m_borders[i]));
     if (diff) return diff;
   }
-
+  if (m_styleName<para.m_styleName) return -1;
+  if (m_styleName>para.m_styleName) return 1;
   return 0;
 }
 
@@ -241,6 +242,7 @@ void MWAWParagraph::insert(MWAWParagraph const &para)
     m_borders.resize(para.m_borders.size());
   for (size_t i = 0; i < para.m_borders.size(); i++)
     m_borders[i].insert(para.m_borders[i]);
+  m_styleName=para.m_styleName; // checkme
   m_extra += para.m_extra;
 }
 
@@ -301,6 +303,8 @@ void MWAWParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) 
     propList.insert("fo:margin-left", *m_margins[1], *m_marginsUnit);
     propList.insert("fo:text-indent", *m_margins[0], *m_marginsUnit);
     propList.insert("fo:margin-right", *m_margins[2], *m_marginsUnit);
+    if (!m_styleName.empty())
+      propList.insert("style:display-name", m_styleName.c_str());
     if (!m_backgroundColor->isWhite())
       propList.insert("fo:background-color", m_backgroundColor->str().c_str());
     if (hasBorders()) {
@@ -390,6 +394,8 @@ void MWAWParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) 
 
 std::ostream &operator<<(std::ostream &o, MWAWParagraph const &pp)
 {
+  if (!pp.m_styleName.empty())
+    o << "style=\"" << pp.m_styleName << "\",";
   if (pp.m_margins[0].get()<0||pp.m_margins[0].get()>0)
     o << "textIndent=" << pp.m_margins[0].get() << ",";
   if (pp.m_margins[1].get()<0||pp.m_margins[1].get()>0)

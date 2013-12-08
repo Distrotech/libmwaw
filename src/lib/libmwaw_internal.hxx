@@ -302,7 +302,7 @@ struct MWAWBorder {
 //! a field
 struct MWAWField {
   /** Defines some basic type for field */
-  enum Type { None, PageCount, PageNumber, Date, Time, Title, Link, Database };
+  enum Type { None, PageCount, PageNumber, Date, Time, Title, Database };
 
   /** basic constructor */
   MWAWField(Type type) : m_type(type), m_DTFormat(""), m_numberingType(libmwaw::ARABIC), m_data("")
@@ -316,6 +316,20 @@ struct MWAWField {
   libmwaw::NumberingType m_numberingType;
   //! the database/link field ( if defined )
   std::string m_data;
+};
+
+//! a link
+struct MWAWLink {
+  /** basic constructor */
+  MWAWLink() : m_HRef("")
+  {
+  }
+
+  /** add the link property to proplist (if needed ) */
+  bool addTo(librevenge::RVNGPropertyList &propList) const;
+
+  //! the href field
+  std::string m_HRef;
 };
 
 //! a note

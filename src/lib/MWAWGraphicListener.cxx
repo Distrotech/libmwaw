@@ -110,8 +110,8 @@ struct State {
 
   std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
 
+  bool m_inLink;
   bool m_inSubDocument;
-
   libmwaw::SubDocumentType m_subDocumentType;
 
 private:
@@ -124,7 +124,7 @@ State::State() : m_origin(0,0),
   m_isGraphicStarted(false), m_isTextZoneOpened(false), m_isFrameOpened(false),
   m_isSpanOpened(false), m_isParagraphOpened(false), m_isListElementOpened(false),
   m_firstParagraphInPageSpan(true), m_listOrderedLevels(),
-  m_inSubDocument(false), m_subDocumentType(libmwaw::DOC_NONE)
+  m_inLink(false), m_inSubDocument(false), m_subDocumentType(libmwaw::DOC_NONE)
 {
 }
 }
@@ -312,7 +312,7 @@ MWAWParagraph const &MWAWGraphicListener::getParagraph() const
 }
 
 ///////////////////
-// field :
+// field/link :
 ///////////////////
 void MWAWGraphicListener::insertField(MWAWField const &field)
 {
@@ -365,16 +365,40 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
     }
     break;
   }
-  case MWAWField::Link:
-    if (field.m_data.length()) {
-      MWAWGraphicListener::insertUnicodeString(field.m_data.c_str());
-      break;
-    }
-    break;
   default:
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertField: must not be called with type=%d\n", int(field.m_type)));
     break;
   }
+}
+
+void MWAWGraphicListener::openLink(MWAWLink const &link)
+{
+  if (!m_ps->m_isTextZoneOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openLink: called outside a textbox\n"));
+    return;
+  }
+  if (m_ps->m_inLink) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openLink: called inside a link\n"));
+    return;
+  }
+  if (!m_ps->m_isSpanOpened) _openSpan();
+  librevenge::RVNGPropertyList propList;
+  link.addTo(propList);
+  m_gs->m_interface->openLink(propList);
+  _pushParsingState();
+  m_ps->m_inLink=true;
+// we do not want any close open paragraph in a link
+  m_ps->m_isParagraphOpened=true;
+}
+
+void MWAWGraphicListener::closeLink()
+{
+  if (!m_ps->m_inLink) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::closeLink: closed outside a link\n"));
+    return;
+  }
+  m_gs->m_interface->closeLink();
+  _popParsingState();
 }
 
 ///////////////////
@@ -475,6 +499,7 @@ void MWAWGraphicListener::_closeParagraph()
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_closeParagraph: called outsize a text zone\n"));
     return;
   }
+  if (m_ps->m_inLink) return;
   if (m_ps->m_isListElementOpened) {
     _closeListElement();
     return;
