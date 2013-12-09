@@ -1222,6 +1222,7 @@ bool MWAWContentListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPro
     break;
   case MWAWPosition::Unknown:
     MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: UNKNOWN position, insert as char position\n"));
+  // fallthrough intended
   case MWAWPosition::CharBaseLine:
   case MWAWPosition::Char:
     if (m_ps->m_isSpanOpened)
@@ -1371,6 +1372,7 @@ void MWAWContentListener::_handleFrameParameters
     switch (pos.m_yPos) {
     case MWAWPosition::YFull:
       propList.insert("svg:height", double(h), unit);
+    // fallthrough intended
     case MWAWPosition::YTop:
       if (origin[1] < 0.0 || origin[1] > 0.0) {
         propList.insert("style:vertical-pos", "from-top");
@@ -1410,6 +1412,7 @@ void MWAWContentListener::_handleFrameParameters
     switch (pos.m_xPos) {
     case MWAWPosition::XFull:
       propList.insert("svg:width", double(w), unit);
+    // fallthrough intended
     case MWAWPosition::XLeft:
       if (origin[0] < 0.0 || origin[0] > 0.0) {
         propList.insert("style:horizontal-pos", "from-left");

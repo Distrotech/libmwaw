@@ -135,6 +135,7 @@ struct Token {
       switch (m_pictBorderType[i]) {
       case 1: // single[w=0.5]
         border.m_width = 0.5f;
+      // fallthrough intended
       case 2:
         border.m_style = MWAWBorder::Simple;
         break;
