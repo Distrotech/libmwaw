@@ -2473,7 +2473,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
     }
     size_t numJobs=listJobs[st].size();
     for (size_t g = 0; g < numJobs; g++) {
-      size_t cId;
+      size_t cId = 0;
       Box2f box;
       std::vector<size_t> groupList;
       int page = 0;
