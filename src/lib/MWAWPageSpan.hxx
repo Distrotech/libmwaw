@@ -46,13 +46,13 @@ class MWAWHeaderFooter
 public:
   /** the header/footer type */
   enum Type { HEADER, FOOTER, UNDEF };
-  /** the header/footer occurence in the file */
-  enum Occurence { ODD, EVEN, ALL, NEVER };
+  /** the header/footer occurrence in the file */
+  enum Occurrence { ODD, EVEN, ALL, NEVER };
   /** a fixed page number position */
   enum PageNumberPosition { None = 0, TopLeft, TopCenter, TopRight, BottomLeft, BottomCenter, BottomRight };
 
   //! constructor
-  MWAWHeaderFooter(Type const type=UNDEF, Occurence const occurence=NEVER);
+  MWAWHeaderFooter(Type const type=UNDEF, Occurrence const occurrence=NEVER);
   //! destructor
   ~MWAWHeaderFooter();
   //! returns true if the header footer is defined
@@ -75,8 +75,8 @@ public:
 public:
   //! the type header/footer
   Type m_type;
-  //! the actual occurence
-  Occurence m_occurence;
+  //! the actual occurrence
+  Occurrence m_occurrence;
   //! the height ( if known )
   double m_height;
   //! the page number position ( or none)
@@ -250,11 +250,11 @@ protected:
 
 protected:
   //! return the header footer positions in m_headerFooterList
-  int getHeaderFooterPosition(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence);
+  int getHeaderFooterPosition(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurrence occurrence);
   //! remove a header footer
-  void removeHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence);
+  void removeHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurrence occurrence);
   //! return true if we have a header footer in this position
-  bool containsHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence);
+  bool containsHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurrence occurrence);
 private:
   double m_formLength/** the form length*/, m_formWidth /** the form width */;
   /** the form orientation */

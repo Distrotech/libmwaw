@@ -409,7 +409,7 @@ void MRWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
     }
   }
   for (int st = 0; st < 2; st++) {
-    MWAWHeaderFooter::Occurence what=
+    MWAWHeaderFooter::Occurrence what=
       !m_state->m_hasOddEvenHeaderFooter ? MWAWHeaderFooter::ALL : st==0 ? MWAWHeaderFooter::ODD : MWAWHeaderFooter::EVEN;
     int which= !m_state->m_hasOddEvenHeaderFooter ? 0 : 1+st;
     if (headerId[which]>0) {

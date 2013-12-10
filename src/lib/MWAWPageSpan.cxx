@@ -97,8 +97,8 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 }
 
 // ----------------- MWAWHeaderFooter ------------------------
-MWAWHeaderFooter::MWAWHeaderFooter(MWAWHeaderFooter::Type const type, MWAWHeaderFooter::Occurence const occurence) :
-  m_type(type), m_occurence(occurence), m_height(0),
+MWAWHeaderFooter::MWAWHeaderFooter(MWAWHeaderFooter::Type const type, MWAWHeaderFooter::Occurrence const occurrence) :
+  m_type(type), m_occurrence(occurrence), m_height(0),
   m_pageNumberPosition(MWAWHeaderFooter::None), m_pageNumberType(libmwaw::ARABIC),
   m_pageNumberFont(20,12), m_subDocument()
 {
@@ -115,7 +115,7 @@ bool MWAWHeaderFooter::operator==(MWAWHeaderFooter const &hf) const
     return false;
   if (m_type == UNDEF)
     return true;
-  if (m_occurence != hf.m_occurence)
+  if (m_occurrence != hf.m_occurrence)
     return false;
   if (m_height < hf.m_height || m_height > hf.m_height)
     return false;
@@ -140,15 +140,15 @@ void MWAWHeaderFooter::send(MWAWContentListener *listener) const
     return;
   }
   librevenge::RVNGPropertyList propList;
-  switch (m_occurence) {
+  switch (m_occurrence) {
   case ODD:
-    propList.insert("librevenge:occurence", "odd");
+    propList.insert("librevenge:occurrence", "odd");
     break;
   case EVEN:
-    propList.insert("librevenge:occurence", "even");
+    propList.insert("librevenge:occurrence", "even");
     break;
   case ALL:
-    propList.insert("librevenge:occurence", "all");
+    propList.insert("librevenge:occurrence", "all");
     break;
   case NEVER:
   default:
@@ -218,7 +218,7 @@ MWAWPageSpan::~MWAWPageSpan()
 void MWAWPageSpan::setHeaderFooter(MWAWHeaderFooter const &hF)
 {
   MWAWHeaderFooter::Type const type=hF.m_type;
-  switch (hF.m_occurence) {
+  switch (hF.m_occurrence) {
   case MWAWHeaderFooter::NEVER:
     removeHeaderFooter(type, MWAWHeaderFooter::ALL);
   case MWAWHeaderFooter::ALL:
@@ -234,7 +234,7 @@ void MWAWPageSpan::setHeaderFooter(MWAWHeaderFooter const &hF)
   default:
     break;
   }
-  int pos = getHeaderFooterPosition(hF.m_type, hF.m_occurence);
+  int pos = getHeaderFooterPosition(hF.m_type, hF.m_occurrence);
   if (pos != -1)
     m_headerFooterList[size_t(pos)]=hF;
 
@@ -341,23 +341,23 @@ bool MWAWPageSpan::operator==(shared_ptr<MWAWPageSpan> const &page2) const
 }
 
 // -------------- manage header footer list ------------------
-void MWAWPageSpan::removeHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence)
+void MWAWPageSpan::removeHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurrence occurrence)
 {
-  int pos = getHeaderFooterPosition(type, occurence);
+  int pos = getHeaderFooterPosition(type, occurrence);
   if (pos == -1) return;
   m_headerFooterList[size_t(pos)]=MWAWHeaderFooter();
 }
 
-bool MWAWPageSpan::containsHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence)
+bool MWAWPageSpan::containsHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurrence occurrence)
 {
-  int pos = getHeaderFooterPosition(type, occurence);
+  int pos = getHeaderFooterPosition(type, occurrence);
   if (pos == -1 || !m_headerFooterList[size_t(pos)].isDefined()) return false;
   return true;
 }
 
-int MWAWPageSpan::getHeaderFooterPosition(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence)
+int MWAWPageSpan::getHeaderFooterPosition(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurrence occurrence)
 {
-  int typePos = 0, occurencePos = 0;
+  int typePos = 0, occurrencePos = 0;
   switch (type) {
   case MWAWHeaderFooter::HEADER:
     typePos = 0;
@@ -370,22 +370,22 @@ int MWAWPageSpan::getHeaderFooterPosition(MWAWHeaderFooter::Type type, MWAWHeade
     MWAW_DEBUG_MSG(("MWAWPageSpan::getVectorPosition: unknown type\n"));
     return -1;
   }
-  switch (occurence) {
+  switch (occurrence) {
   case MWAWHeaderFooter::ALL:
-    occurencePos = 0;
+    occurrencePos = 0;
     break;
   case MWAWHeaderFooter::ODD:
-    occurencePos = 1;
+    occurrencePos = 1;
     break;
   case MWAWHeaderFooter::EVEN:
-    occurencePos = 2;
+    occurrencePos = 2;
     break;
   case MWAWHeaderFooter::NEVER:
   default:
-    MWAW_DEBUG_MSG(("MWAWPageSpan::getVectorPosition: unknown occurence\n"));
+    MWAW_DEBUG_MSG(("MWAWPageSpan::getVectorPosition: unknown occurrence\n"));
     return -1;
   }
-  size_t res = size_t(typePos*3+occurencePos);
+  size_t res = size_t(typePos*3+occurrencePos);
   if (res >= m_headerFooterList.size())
     m_headerFooterList.resize(res+1);
   return int(res);

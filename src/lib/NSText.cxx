@@ -141,7 +141,7 @@ struct Paragraph : public MWAWParagraph {
 /** Internal structure: use to store a header */
 struct HeaderFooter {
   //! Constructor
-  HeaderFooter() : m_type(MWAWHeaderFooter::HEADER), m_occurence(MWAWHeaderFooter::NEVER),
+  HeaderFooter() : m_type(MWAWHeaderFooter::HEADER), m_occurrence(MWAWHeaderFooter::NEVER),
     m_page(0), m_textParagraph(-1), m_unknown(0), m_parsed(false), m_extra("")
   {
     for (int i = 0; i < 2; i++) m_paragraph[i] = -1;
@@ -150,8 +150,8 @@ struct HeaderFooter {
   friend std::ostream &operator<<(std::ostream &o, HeaderFooter const &hf);
   //! the header type
   MWAWHeaderFooter::Type m_type;
-  //! the header occurence
-  MWAWHeaderFooter::Occurence m_occurence;
+  //! the header occurrence
+  MWAWHeaderFooter::Occurrence m_occurrence;
   //! the page
   int m_page;
   //! the paragraph position in the header zone (first and last)
@@ -170,7 +170,7 @@ std::ostream &operator<<(std::ostream &o, HeaderFooter const &hf)
 {
   if (hf.m_type==MWAWHeaderFooter::HEADER) o << "header,";
   else o << "footer,";
-  switch (hf.m_occurence) {
+  switch (hf.m_occurrence) {
   case MWAWHeaderFooter::NEVER:
     o << "never,";
     break;
@@ -184,7 +184,7 @@ std::ostream &operator<<(std::ostream &o, HeaderFooter const &hf)
     o << "all,";
     break;
   default:
-    o << "#occurence=" << int(hf.m_occurence) << ",";
+    o << "#occurrence=" << int(hf.m_occurrence) << ",";
     break;
   }
   o << "pos=" << hf.m_paragraph[0] << "<->" << hf.m_paragraph[1] << ",";
@@ -553,7 +553,7 @@ void NSText::computePositions()
     }
     actPage = hf.m_page = page;
     Vec2i &wh = hf.m_type == MWAWHeaderFooter::HEADER ? headerId : footerId;
-    switch (hf.m_occurence) {
+    switch (hf.m_occurrence) {
     case MWAWHeaderFooter::ODD:
       wh[0] = int(i);
       break;
@@ -1257,13 +1257,13 @@ bool NSText::readHeaderFooter(MWAWEntry const &entry)
     }
     switch (what&0x3) {
     case 1:
-      hf.m_occurence = MWAWHeaderFooter::ODD;
+      hf.m_occurrence = MWAWHeaderFooter::ODD;
       break;
     case 2:
-      hf.m_occurence = MWAWHeaderFooter::EVEN;
+      hf.m_occurrence = MWAWHeaderFooter::EVEN;
       break;
     case 3:
-      hf.m_occurence = MWAWHeaderFooter::ALL;
+      hf.m_occurrence = MWAWHeaderFooter::ALL;
       break;
     default:
       f << "[#page],";
