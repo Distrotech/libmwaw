@@ -259,6 +259,7 @@ public:
   */
   void closeListElement();
 
+  void defineParagraphStyle(const librevenge::RVNGPropertyList &propList);
   /**
   Called when a new paragraph is opened. This (or openListElement) will always be called before any text or span is placed into the document.
   \param propList Property list for the paragraph. May contain:
@@ -283,6 +284,7 @@ public:
   */
   void closeParagraph();
 
+  void defineCharacterStyle(const librevenge::RVNGPropertyList &propList);
   /**
   Called when a text span is opened
   \param propList Property list for the span. May contain:

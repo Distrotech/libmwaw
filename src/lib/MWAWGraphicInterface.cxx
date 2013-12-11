@@ -54,51 +54,12 @@ namespace MWAWGraphicInterfaceInternal
 //! the state of a MWAWGraphicInterface
 struct State {
   //! constructor
-  State() : m_encoder(), m_listIdToPropertyMap()
+  State() : m_encoder()
   {
   }
-  //! try to retrieve a list element property
-  bool retrieveListElement(int id, int level, librevenge::RVNGPropertyList &list) const;
-  //! add a list definition in the list property map
-  void addListElement(librevenge::RVNGPropertyList const &list);
   //! the encoder
   MWAWPropertyHandlerEncoder m_encoder;
-  //! a multimap list id to property list item map
-  std::multimap<int, librevenge::RVNGPropertyList> m_listIdToPropertyMap;
 };
-
-void State::addListElement(librevenge::RVNGPropertyList const &list)
-{
-  if (!list["librevenge:list-id"] || !list["librevenge:level"]) {
-    MWAW_DEBUG_MSG(("MWAWGraphicInterfaceInternal::addListElement: can not find the id or the level\n"));
-    return;
-  }
-  int id=list["librevenge:list-id"]->getInt();
-  int level=list["librevenge:level"]->getInt();
-  std::multimap<int, librevenge::RVNGPropertyList>::iterator it=m_listIdToPropertyMap.lower_bound(id);
-  while (it!=m_listIdToPropertyMap.end() && it->first == id) {
-    if (it->second["librevenge:level"]->getInt()==level) {
-      m_listIdToPropertyMap.erase(it);
-      break;
-    }
-    ++it;
-  }
-  m_listIdToPropertyMap.insert(std::multimap<int, librevenge::RVNGPropertyList>::value_type(id,list));
-}
-
-bool State::retrieveListElement(int id, int level, librevenge::RVNGPropertyList &list) const
-{
-  std::multimap<int, librevenge::RVNGPropertyList>::const_iterator it=m_listIdToPropertyMap.lower_bound(id);
-  while (it!=m_listIdToPropertyMap.end() && it->first == id) {
-    if (it->second["librevenge:level"]->getInt()==level) {
-      list = it->second;
-      return true;
-    }
-    ++it;
-  }
-  MWAW_DEBUG_MSG(("MWAWGraphicInterfaceInternal::retrieveListElement: can not find the id=%d or the level=%d\n", id, level));
-  return false;
-}
 
 }
 
@@ -246,34 +207,22 @@ void MWAWGraphicInterface::closeLink()
 
 void MWAWGraphicInterface::defineOrderedListLevel(const librevenge::RVNGPropertyList &list)
 {
-  m_state->addListElement(list);
+  m_state->m_encoder.insertElement("DefineOrderedListLevel", list);
 }
 
 void MWAWGraphicInterface::defineUnorderedListLevel(const librevenge::RVNGPropertyList &list)
 {
-  m_state->addListElement(list);
+  m_state->m_encoder.insertElement("DefineUnorderedListLevel", list);
 }
 
 void MWAWGraphicInterface::openOrderedListLevel(const librevenge::RVNGPropertyList &list)
 {
-  librevenge::RVNGPropertyList pList(list);
-  if (list["librevenge:list-id"] && list["librevenge:level"])
-    m_state->retrieveListElement(list["librevenge:list-id"]->getInt(), list["librevenge:level"]->getInt(), pList);
-  else {
-    MWAW_DEBUG_MSG(("MWAWGraphicInterface::openOrderedListLevel: can not retrieve listId or level\n"));
-  }
-  m_state->m_encoder.insertElement("OpenOrderedListLevel", pList);
+  m_state->m_encoder.insertElement("OpenOrderedListLevel", list);
 }
 
 void MWAWGraphicInterface::openUnorderedListLevel(const librevenge::RVNGPropertyList &list)
 {
-  librevenge::RVNGPropertyList pList(list);
-  if (list["librevenge:list-id"] && list["librevenge:level"])
-    m_state->retrieveListElement(list["librevenge:list-id"]->getInt(), list["librevenge:level"]->getInt(), pList);
-  else {
-    MWAW_DEBUG_MSG(("MWAWGraphicInterface::openUnorderedListLevel: can not retrieve listId or level\n"));
-  }
-  m_state->m_encoder.insertElement("OpenUnorderedListLevel", pList);
+  m_state->m_encoder.insertElement("OpenUnorderedListLevel", list);
 }
 
 void MWAWGraphicInterface::closeOrderedListLevel()
@@ -296,6 +245,11 @@ void MWAWGraphicInterface::closeListElement()
   m_state->m_encoder.insertElement("CloseListElement");
 }
 
+void MWAWGraphicInterface::defineParagraphStyle(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("DefineParagraphStyle", list);
+}
+
 void MWAWGraphicInterface::openParagraph(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenParagraph", list);
@@ -304,6 +258,11 @@ void MWAWGraphicInterface::openParagraph(const librevenge::RVNGPropertyList &lis
 void MWAWGraphicInterface::closeParagraph()
 {
   m_state->m_encoder.insertElement("CloseParagraph");
+}
+
+void MWAWGraphicInterface::defineCharacterStyle(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("DefineCharacterStyle", list);
 }
 
 void MWAWGraphicInterface::openSpan(const librevenge::RVNGPropertyList &list)
