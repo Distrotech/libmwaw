@@ -526,10 +526,10 @@ void MWAWContentListener::startDocument()
     return;
   }
 
-  m_documentInterface->setDocumentMetaData(m_ds->m_metaData);
-
   m_documentInterface->startDocument(librevenge::RVNGPropertyList());
   m_ds->m_isDocumentStarted = true;
+
+  m_documentInterface->setDocumentMetaData(m_ds->m_metaData);
 }
 
 void MWAWContentListener::endDocument(bool sendDelayedSubDoc)
