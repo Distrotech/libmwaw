@@ -526,11 +526,9 @@ void MWAWContentListener::startDocument()
     return;
   }
 
-  // FIXME: this is stupid, we should store a property list filled with the relevant metadata
-  // and then pass that directly..
   m_documentInterface->setDocumentMetaData(m_ds->m_metaData);
 
-  m_documentInterface->startDocument();
+  m_documentInterface->startDocument(librevenge::RVNGPropertyList());
   m_ds->m_isDocumentStarted = true;
 }
 

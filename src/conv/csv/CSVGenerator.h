@@ -48,7 +48,7 @@ public:
 
   virtual void setDocumentMetaData(const librevenge::RVNGPropertyList &) {};
 
-  virtual void startDocument() {}
+  virtual void startDocument(const librevenge::RVNGPropertyList &) {}
   virtual void endDocument() {}
 
   virtual void definePageStyle(const librevenge::RVNGPropertyList &) {}
