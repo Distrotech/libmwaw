@@ -921,17 +921,7 @@ void MWAWContentListener::_changeList()
       m_ps->m_listOrderedLevels.resize(actualLevel);
       return;
     }
-    if (m_parserState.m_listManager->needToSend(newListId, m_ds->m_sentListMarkers)) {
-      for (int l=1; l <= theList->numLevels(); l++) {
-        librevenge::RVNGPropertyList level;
-        if (!theList->addTo(l, level))
-          continue;
-        if (!theList->isNumeric(l))
-          m_documentInterface->defineUnorderedListLevel(level);
-        else
-          m_documentInterface->defineOrderedListLevel(level);
-      }
-    }
+    m_parserState.m_listManager->needToSend(newListId, m_ds->m_sentListMarkers);
     m_ps->m_list = theList;
     m_ps->m_list->setLevel((int)newLevel);
   }
@@ -939,15 +929,16 @@ void MWAWContentListener::_changeList()
   m_ps->m_listOrderedLevels.resize(newLevel, false);
   if (actualLevel == newLevel) return;
 
-  librevenge::RVNGPropertyList propList;
-  propList.insert("librevenge:list-id", m_ps->m_list->getId());
   for (size_t i=actualLevel+1; i<= newLevel; i++) {
     bool ordered = m_ps->m_list->isNumeric(int(i));
     m_ps->m_listOrderedLevels[i-1] = ordered;
+
+    librevenge::RVNGPropertyList level;
+    m_ps->m_list->addTo(int(i), level);
     if (ordered)
-      m_documentInterface->openOrderedListLevel(propList);
+      m_documentInterface->openOrderedListLevel(level);
     else
-      m_documentInterface->openUnorderedListLevel(propList);
+      m_documentInterface->openUnorderedListLevel(level);
   }
 }
 

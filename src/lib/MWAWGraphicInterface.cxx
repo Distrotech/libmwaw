@@ -205,16 +205,6 @@ void MWAWGraphicInterface::closeLink()
   m_state->m_encoder.insertElement("CloseLink");
 }
 
-void MWAWGraphicInterface::defineOrderedListLevel(const librevenge::RVNGPropertyList &list)
-{
-  m_state->m_encoder.insertElement("DefineOrderedListLevel", list);
-}
-
-void MWAWGraphicInterface::defineUnorderedListLevel(const librevenge::RVNGPropertyList &list)
-{
-  m_state->m_encoder.insertElement("DefineUnorderedListLevel", list);
-}
-
 void MWAWGraphicInterface::openOrderedListLevel(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenOrderedListLevel", list);

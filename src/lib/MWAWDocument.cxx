@@ -531,12 +531,8 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
   case 'D':
     if (strcmp(psName,"DefineCharacterStyle")==0)
       m_output->defineCharacterStyle(propList);
-    else if (strcmp(psName,"DefineOrderedListLevel")==0)
-      m_output->defineOrderedListLevel(propList);
     else if (strcmp(psName,"DefineParagraphStyle")==0)
       m_output->defineParagraphStyle(propList);
-    else if (strcmp(psName,"DefineUnorderedListLevel")==0)
-      m_output->defineUnorderedListLevel(propList);
 
     else if (strcmp(psName,"DrawEllipse")==0)
       m_output->drawEllipse(propList);
