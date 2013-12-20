@@ -100,6 +100,19 @@ void MWAWGraphicShape::PathData::translate(Vec2f const &decal)
   m_x2 += decal;
 }
 
+void MWAWGraphicShape::PathData::scale(Vec2f const &scaling)
+{
+  if (m_type=='Z')
+    return;
+  m_x = Vec2f(m_x[0]*scaling[0], m_x[1]*scaling[1]);
+  if (m_type=='H' || m_type=='V' || m_type=='M' || m_type=='L' || m_type=='T' || m_type=='A')
+    return;
+  m_x1 = Vec2f(m_x1[0]*scaling[0], m_x1[1]*scaling[1]);
+  if (m_type=='Q' || m_type=='S')
+    return;
+  m_x2 = Vec2f(m_x2[0]*scaling[0], m_x2[1]*scaling[1]);
+}
+
 void MWAWGraphicShape::PathData::rotate(float angle, Vec2f const &decal)
 {
   if (m_type=='Z')
@@ -306,6 +319,19 @@ void MWAWGraphicShape::translate(Vec2f const &decal)
     m_path[pt].translate(decal);
 }
 
+void MWAWGraphicShape::scale(Vec2f const &scaling)
+{
+  m_bdBox=Box2f(Vec2f(scaling[0]*m_bdBox.min()[0],scaling[1]*m_bdBox.min()[1]),
+                Vec2f(scaling[0]*m_bdBox.max()[0],scaling[1]*m_bdBox.max()[1]));
+  m_formBox=Box2f(Vec2f(scaling[0]*m_formBox.min()[0],scaling[1]*m_formBox.min()[1]),
+                  Vec2f(scaling[0]*m_formBox.max()[0],scaling[1]*m_formBox.max()[1]));
+  for (size_t pt=0; pt<m_vertices.size(); ++pt)
+    m_vertices[pt]=Vec2f(scaling[0]*m_vertices[pt][0],
+                         scaling[1]*m_vertices[pt][1]);
+  for (size_t pt=0; pt<m_path.size(); ++pt)
+    m_path[pt].scale(scaling);
+}
+
 MWAWGraphicShape MWAWGraphicShape::rotate(float angle, Vec2f const &center) const
 {
   while (angle >= 360) angle -= 360;
@@ -329,14 +355,10 @@ MWAWGraphicShape MWAWGraphicShape::rotate(float angle, Vec2f const &center) cons
   return res;
 }
 
-bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle const &style, Vec2f const &orig) const
+MWAWGraphicShape::Command MWAWGraphicShape::addTo(Vec2f const &orig, bool asSurface, librevenge::RVNGPropertyList &propList) const
 {
   Vec2f pt;
   librevenge::RVNGPropertyList list;
-  style.addTo(list, m_type==Line);
-  interface.setStyle(list);
-
-  list.clear();
   librevenge::RVNGPropertyListVector vect;
   Vec2f decal=orig-m_bdBox[0];
   switch (m_type) {
@@ -350,32 +372,28 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
     list.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
     list.insert("svg:y",pt.y(), librevenge::RVNG_POINT);
     vect.append(list);
-    list.clear();
-    list.insert("svg:points", vect);
-    interface.drawPolyline(list);
-    return true;
+    propList.insert("svg:points", vect);
+    return C_Polyline;
   case Rectangle:
     if (m_cornerWidth[0] > 0 && m_cornerWidth[1] > 0) {
-      list.insert("svg:rx",double(m_cornerWidth[0]), librevenge::RVNG_POINT);
-      list.insert("svg:ry",double(m_cornerWidth[1]), librevenge::RVNG_POINT);
+      propList.insert("svg:rx",double(m_cornerWidth[0]), librevenge::RVNG_POINT);
+      propList.insert("svg:ry",double(m_cornerWidth[1]), librevenge::RVNG_POINT);
     }
     pt=m_formBox[0]+decal;
-    list.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
-    list.insert("svg:y",pt.y(), librevenge::RVNG_POINT);
+    propList.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
+    propList.insert("svg:y",pt.y(), librevenge::RVNG_POINT);
     pt=m_formBox.size();
-    list.insert("svg:width",pt.x(), librevenge::RVNG_POINT);
-    list.insert("svg:height",pt.y(), librevenge::RVNG_POINT);
-    interface.drawRectangle(list);
-    return true;
+    propList.insert("svg:width",pt.x(), librevenge::RVNG_POINT);
+    propList.insert("svg:height",pt.y(), librevenge::RVNG_POINT);
+    return C_Rectangle;
   case Circle:
     pt=0.5*(m_formBox[0]+m_formBox[1])+decal;
-    list.insert("svg:cx",pt.x(), librevenge::RVNG_POINT);
-    list.insert("svg:cy",pt.y(), librevenge::RVNG_POINT);
+    propList.insert("svg:cx",pt.x(), librevenge::RVNG_POINT);
+    propList.insert("svg:cy",pt.y(), librevenge::RVNG_POINT);
     pt=0.5*(m_formBox[1]-m_formBox[0]);
-    list.insert("svg:rx",pt.x(), librevenge::RVNG_POINT);
-    list.insert("svg:ry",pt.y(), librevenge::RVNG_POINT);
-    interface.drawEllipse(list);
-    return true;
+    propList.insert("svg:rx",pt.x(), librevenge::RVNG_POINT);
+    propList.insert("svg:ry",pt.y(), librevenge::RVNG_POINT);
+    return C_Ellipse;
   case Arc:
   case Pie: {
     Vec2f center=0.5*(m_formBox[0]+m_formBox[1])+decal;
@@ -385,7 +403,7 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
     if (rad[1]<0) {
       static bool first=true;
       if (first) {
-        MWAW_DEBUG_MSG(("MWAWGraphicShape::send: oops radiusY for arc is negative, inverse it\n"));
+        MWAW_DEBUG_MSG(("MWAWGraphicShape::addTo: oops radiusY for arc is negative, inverse it\n"));
         first=false;
       }
       rad[1]=-rad[1];
@@ -397,7 +415,7 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
     if (angl1-angl0>=180.f && angl1-angl0<=180.f)
       angl1+=0.01f;
     float angl=angl0*float(M_PI/180.);
-    bool addCenter=m_type==Pie && style.hasSurface();
+    bool addCenter=m_type==Pie && asSurface;
     if (addCenter) {
       pt=center;
       list.insert("librevenge:path-action", "M");
@@ -423,16 +441,14 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
     list.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
     list.insert("svg:y",pt.y(), librevenge::RVNG_POINT);
     vect.append(list);
-    if (style.hasSurface()) {
+    if (asSurface) {
       list.clear();
       list.insert("librevenge:path-action", "Z");
       vect.append(list);
     }
 
-    list.clear();
-    list.insert("svg:d", vect);
-    interface.drawPath(list);
-    return true;
+    propList.insert("svg:d", vect);
+    return C_Path;
   }
   case Polygon: {
     size_t n=m_vertices.size();
@@ -444,13 +460,8 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
       list.insert("svg:y", pt.y(), librevenge::RVNG_POINT);
       vect.append(list);
     }
-    list.clear();
-    list.insert("svg:points", vect);
-    if (!style.hasSurface())
-      interface.drawPolyline(list);
-    else
-      interface.drawPolygon(list);
-    return true;
+    propList.insert("svg:points", vect);
+    return asSurface ? C_Polygon : C_Polyline;
   }
   case Path: {
     size_t n=m_path.size();
@@ -460,23 +471,21 @@ bool MWAWGraphicShape::send(MWAWGraphicInterface &interface, MWAWGraphicStyle co
       if (m_path[c].get(list, -1.0f*decal))
         vect.append(list);
     }
-    if (style.hasSurface() && m_path[n-1].m_type != 'Z') {
+    if (asSurface && m_path[n-1].m_type != 'Z') {
       // odg need a closed path to draw surface, so ...
       list.clear();
       list.insert("librevenge:path-action", "Z");
       vect.append(list);
     }
-    list.clear();
-    list.insert("svg:d", vect);
-    interface.drawPath(list);
-    return true;
+    propList.insert("svg:d", vect);
+    return C_Path;
   }
   case ShapeUnknown:
   default:
     break;
   }
-  MWAW_DEBUG_MSG(("MWAWGraphicShape::send: can not send a shape with type=%d\n", int(m_type)));
-  return false;
+  MWAW_DEBUG_MSG(("MWAWGraphicShape::addTo: can not send a shape with type=%d\n", int(m_type)));
+  return C_Bad;
 }
 
 std::vector<MWAWGraphicShape::PathData> MWAWGraphicShape::getPath() const

@@ -198,6 +198,7 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
 
     MWAWPosition lPos(box[0], box.size(), librevenge::RVNG_POINT);
     lPos.setRelativePosition(MWAWPosition::Frame);
+    lPos.m_wrapping=MWAWPosition::WForeground;
     lPos.setOrder(-1);
     if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line1)
       listener->insertPicture(lPos, MWAWGraphicShape::line(Vec2f(0,0), box.size()), pStyle);
@@ -464,8 +465,6 @@ bool MWAWTable::sendTable(MWAWContentListenerPtr listener, bool inFrame)
     return false;
   if (!listener)
     return true;
-  if (inFrame && m_hasExtraLines)
-    sendExtraLines(listener);
   listener->openTable(*this);
   for (size_t r = 0; r < m_numRows; ++r) {
     listener->openTableRow(m_rowsSize[r], librevenge::RVNG_POINT);
@@ -481,8 +480,9 @@ bool MWAWTable::sendTable(MWAWContentListenerPtr listener, bool inFrame)
     }
     listener->closeTableRow();
   }
-
   listener->closeTable();
+  if (inFrame && m_hasExtraLines)
+    sendExtraLines(listener);
 
   return true;
 }

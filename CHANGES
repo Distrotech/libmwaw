@@ -1,8 +1,20 @@
 CHANGES:
 
+12/18/2013:
+- create simple graphic shapes directly (rectangles, lines, cicles, polygon),
+  ie. no longer create an embedded object to export a single graphic shapes.
+  Note: the path shapes and the shapes' group continue to create an embedded
+  object 
+
 11/02/2013:
-- begin to depend on librevenge
+- update libmwaw to depend on librevenge
+
 ---------------- Version 0.3
+
+12/02/2013:
+- AppleWorks/ClarisWorks parser: recognize more bitmap
+
+-------- version 2.1 (start)  -------------
 
 10/19/2013:
 - switch to version 0.2: simplify the interface to retrieve graphic created

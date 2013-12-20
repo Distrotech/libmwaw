@@ -49,8 +49,8 @@ class MWAWPosition
 public:
   //! a list of enum used to defined the anchor
   enum AnchorTo { Char, CharBaseLine, Frame, Paragraph, Page, Unknown };
-  //! an enum used to define the wrapping
-  enum Wrapping { WNone, WBackground, WDynamic, WRunThrough };
+  //! an enum used to define the wrapping: none, ...
+  enum Wrapping { WNone, WBackground, WDynamic, WForeground, WRunThrough };
   //! an enum used to define the relative X position
   enum XPos { XRight, XLeft, XCenter, XFull };
   //! an enum used to define the relative Y position

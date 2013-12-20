@@ -741,7 +741,32 @@ void MWAWGraphicListener::insertPicture
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: a frame is already open\n"));
     return;
   }
-  shape.send(*m_gs->m_interface, style, bdbox[0]-m_ps->m_origin);
+
+  librevenge::RVNGPropertyList list, shapePList;
+  style.addTo(list, shape.getType()==MWAWGraphicShape::Line);
+  m_gs->m_interface->setStyle(list);
+  switch (shape.addTo(bdbox[0]-m_ps->m_origin, style.hasSurface(), shapePList)) {
+  case MWAWGraphicShape::C_Ellipse:
+    m_gs->m_interface->drawEllipse(shapePList);
+    break;
+  case MWAWGraphicShape::C_Path:
+    m_gs->m_interface->drawPath(shapePList);
+    break;
+  case MWAWGraphicShape::C_Polyline:
+    m_gs->m_interface->drawPolyline(shapePList);
+    break;
+  case MWAWGraphicShape::C_Polygon:
+    m_gs->m_interface->drawPolygon(shapePList);
+    break;
+  case MWAWGraphicShape::C_Rectangle:
+    m_gs->m_interface->drawRectangle(shapePList);
+    break;
+  case MWAWGraphicShape::C_Bad:
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: unexpected shape\n"));
+    break;
+  }
 }
 
 void MWAWGraphicListener::insertPicture

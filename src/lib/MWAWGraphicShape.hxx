@@ -47,6 +47,8 @@ class MWAWGraphicShape
 public:
   //! an enum used to define the shape type
   enum Type { Arc, Circle, Line, Rectangle, Path, Pie, Polygon, ShapeUnknown };
+  //! an enum used to define the interface command
+  enum Command { C_Ellipse, C_Polyline, C_Rectangle, C_Path, C_Polygon, C_Bad };
   //! a simple path component
   struct PathData {
     //! constructor
@@ -56,6 +58,8 @@ public:
     }
     //! translate all the coordinate by delta
     void translate(Vec2f const &delta);
+    //! scale all the coordinate by a factor
+    void scale(Vec2f const &factor);
     //! rotate all the coordinate by angle (origin rotation) then translate coordinate
     void rotate(float angle, Vec2f const &delta);
     //! update the property list to correspond to a command
@@ -147,14 +151,26 @@ public:
 
   //! translate all the coordinate by delta
   void translate(Vec2f const &delta);
+  //! rescale all the coordinate
+  void scale(Vec2f const &factor);
   /** return a new shape corresponding to a rotation from center.
 
    \note the final bdbox is not tight */
   MWAWGraphicShape rotate(float angle, Vec2f const &center) const;
+  //! returns the type corresponding to a shape
+  Type getType() const
+  {
+    return m_type;
+  }
+  //! returns the basic bdbox
+  Box2f getBdBox() const
+  {
+    return m_bdBox;
+  }
   //! returns the bdbox corresponding to a style
   Box2f getBdBox(MWAWGraphicStyle const &style, bool moveToO=false) const;
-  //! add shape to a graphic listener
-  bool send(MWAWGraphicInterface &interface, MWAWGraphicStyle const &style, Vec2f const &orig) const;
+  //! updates the propList to send to an interface
+  Command addTo(Vec2f const &orig, bool asSurface, librevenge::RVNGPropertyList &propList) const;
   //! a print operator
   friend std::ostream &operator<<(std::ostream &o, MWAWGraphicShape const &sh);
   /** compare two shapes */

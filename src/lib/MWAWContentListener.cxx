@@ -1140,26 +1140,64 @@ void MWAWContentListener::insertPicture
     }
     return;
   }
-  MWAWGraphicListenerPtr graphicListener=m_parserState.m_graphicListener;
-  if (!graphicListener || graphicListener->isDocumentStarted()) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertPicture: can not use the graphic listener\n"));
-    return;
-  }
-  // first create the picture, reset origin (if it is bad)
-  Box2f bdbox = shape.getBdBox(style,true);
-  graphicListener->startGraphic(Box2f(Vec2f(0,0),bdbox.size()));
-  graphicListener->insertPicture(Box2f(-1*bdbox[0],-1*bdbox[0]+bdbox.size()), shape, style);
+  librevenge::RVNGPropertyList shapePList;
+  _handleFrameParameters(shapePList, pos);
+  shapePList.remove("svg:x");
+  shapePList.remove("svg:y");
 
-  librevenge::RVNGBinaryData data;
-  std::string mime;
-  if (!graphicListener->endGraphic(data,mime))
-    return;
-  if (!openFrame(pos)) return;
-  librevenge::RVNGPropertyList propList;
-  propList.insert("librevenge:mime-type", mime.c_str());
-  propList.insert("office:binary-data", data);
-  m_documentInterface->insertBinaryObject(propList);
-  closeFrame();
+  librevenge::RVNGPropertyList list;
+  style.addTo(list, shape.getType()==MWAWGraphicShape::Line);
+
+  Vec2f decal = factor*pos.origin();
+  switch (shape.addTo(decal, style.hasSurface(), shapePList)) {
+  case MWAWGraphicShape::C_Ellipse:
+    m_documentInterface->defineGraphicStyle(list);
+    m_documentInterface->drawEllipse(shapePList);
+    break;
+  case MWAWGraphicShape::C_Path: {
+    // odt seems to have some problem displaying path so...
+    MWAWGraphicListenerPtr graphicListener=m_parserState.m_graphicListener;
+    if (!graphicListener || graphicListener->isDocumentStarted()) {
+      // no way to do differently
+      m_documentInterface->defineGraphicStyle(list);
+      m_documentInterface->drawPath(shapePList);
+      return;
+    }
+    // first create the picture, reset origin (if it is bad)
+    Box2f bdbox = shape.getBdBox(style,true);
+    graphicListener->startGraphic(Box2f(Vec2f(0,0),bdbox.size()));
+    graphicListener->insertPicture(Box2f(-1*bdbox[0],-1*bdbox[0]+bdbox.size()), shape, style);
+
+    librevenge::RVNGBinaryData data;
+    std::string mime;
+    if (!graphicListener->endGraphic(data,mime))
+      return;
+    if (!openFrame(pos)) return;
+    librevenge::RVNGPropertyList propList;
+    propList.insert("librevenge:mime-type", mime.c_str());
+    propList.insert("office:binary-data", data);
+    m_documentInterface->insertBinaryObject(propList);
+    closeFrame();
+    break;
+  }
+  case MWAWGraphicShape::C_Polyline:
+    m_documentInterface->defineGraphicStyle(list);
+    m_documentInterface->drawPolyline(shapePList);
+    break;
+  case MWAWGraphicShape::C_Polygon:
+    m_documentInterface->defineGraphicStyle(list);
+    m_documentInterface->drawPolygon(shapePList);
+    break;
+  case MWAWGraphicShape::C_Rectangle:
+    m_documentInterface->defineGraphicStyle(list);
+    m_documentInterface->drawRectangle(shapePList);
+    break;
+  case MWAWGraphicShape::C_Bad:
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MWAWContentListener::insertPicture: unexpected shape\n"));
+    break;
+  }
 }
 
 void MWAWContentListener::insertPicture
@@ -1293,6 +1331,10 @@ void MWAWContentListener::_handleFrameParameters
   else if (pos.m_wrapping ==  MWAWPosition::WBackground) {
     propList.insert("style:wrap", "run-through");
     propList.insert("style:run-through", "background");
+  }
+  else if (pos.m_wrapping ==  MWAWPosition::WForeground) {
+    propList.insert("style:wrap", "run-through");
+    propList.insert("style:run-through", "foreground");
   }
   else if (pos.m_wrapping ==  MWAWPosition::WRunThrough)
     propList.insert("style:wrap", "run-through");
