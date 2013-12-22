@@ -41,7 +41,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -523,7 +523,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
@@ -532,7 +532,7 @@ protected:
   int m_step;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get() || !m_parser) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener or no parser\n"));
@@ -562,7 +562,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MDWParser::MDWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state()
+  MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
@@ -573,7 +573,7 @@ MDWParser::~MDWParser()
 
 void MDWParser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new MDWParserInternal::State);
@@ -592,9 +592,9 @@ void MDWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -663,7 +663,7 @@ void MDWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -673,7 +673,7 @@ void MDWParser::parse(librevenge::RVNGTextInterface *docInterface)
 void MDWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("MDWParser::createDocument: listener already exist\n"));
     return;
   }
@@ -704,8 +704,8 @@ void MDWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   ps.setPageSpan(m_state->m_numPages+1);
   std::vector<MWAWPageSpan> pageList(1,ps);
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
@@ -837,7 +837,7 @@ bool MDWParser::sendZone(int id)
     MWAW_DEBUG_MSG(("MDWParser::sendZone: find unexpected id %d\n", id));
     return false;
   }
-  MWAWContentListenerPtr listener=getListener();
+  MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("MDWParser::sendZone: can not find a listener\n"));
     return false;
@@ -848,7 +848,7 @@ bool MDWParser::sendZone(int id)
   if (id==0) {
     para.setInterline(1,librevenge::RVNG_POINT);
     setProperty(para);
-    getListener()->insertEOL();
+    getTextListener()->insertEOL();
   }
   else
     setProperty(para);
@@ -947,10 +947,10 @@ bool MDWParser::readGraphic(MDWParserInternal::LineInfo const &line)
   }
   librevenge::RVNGBinaryData data;
   std::string type;
-  if (getListener() && pict->getBinary(data,type)) {
+  if (getTextListener() && pict->getBinary(data,type)) {
     MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), librevenge::RVNG_POINT);
     pictPos.setRelativePosition(MWAWPosition::Char);
-    getListener()->insertPicture(pictPos,data, type);
+    getTextListener()->insertPicture(pictPos,data, type);
   }
   ascii().skipZone(pos+8, pos+sz-1);
   ascii().addPos(pos);
@@ -1058,7 +1058,7 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
 ////////////////////////////////////////////////////////////
 void MDWParser::sendHeaderFooter(bool header)
 {
-  MWAWContentListenerPtr listener=getListener();
+  MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("MDWParser::sendHeaderFooter: can note find the listener\n"));
     return;
@@ -1081,7 +1081,7 @@ void MDWParser::sendHeaderFooter(bool header)
 
 void MDWParser::sendHeaderFooterFields(bool header)
 {
-  MWAWContentListenerPtr listener=getListener();
+  MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("MDWParser::sendHeaderFooterFields: can note find the listener\n"));
     return;
@@ -2043,7 +2043,7 @@ bool MDWParser::readPrintInfo(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 void MDWParser::sendText(std::string const &text, std::vector<MWAWFont> const &fonts, std::vector<int> const &textPos)
 {
-  if (!getListener() || !text.length())
+  if (!getTextListener() || !text.length())
     return;
   size_t numFonts = fonts.size();
   if (numFonts != textPos.size()) {
@@ -2055,17 +2055,17 @@ void MDWParser::sendText(std::string const &text, std::vector<MWAWFont> const &f
   size_t numChar = text.length();
   for (size_t c = 0; c < numChar; c++) {
     if (actFontId < numFonts && int(c) == textPos[actFontId])
-      getListener()->setFont(fonts[actFontId++]);
+      getTextListener()->setFont(fonts[actFontId++]);
     unsigned char ch = (unsigned char)text[c];
     switch (ch) {
     case 0x9:
-      getListener()->insertTab();
+      getTextListener()->insertTab();
       break;
     case 0xd:
-      getListener()->insertEOL(c!=numChar-1);
+      getTextListener()->insertEOL(c!=numChar-1);
       break;
     default:
-      getListener()->insertCharacter((unsigned char) ch);
+      getTextListener()->insertCharacter((unsigned char) ch);
       break;
     }
   }
@@ -2073,8 +2073,8 @@ void MDWParser::sendText(std::string const &text, std::vector<MWAWFont> const &f
 
 void MDWParser::setProperty(MWAWParagraph const &para)
 {
-  if (!getListener()) return;
-  getListener()->setParagraph(para);
+  if (!getTextListener()) return;
+  getTextListener()->setParagraph(para);
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

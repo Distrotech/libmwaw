@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWList.hxx"
@@ -236,12 +236,12 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("ACParserInternal::SubDocument::parse: no listener\n"));
@@ -257,7 +257,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 ACParser::ACParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_textParser()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_textParser()
 {
   init();
 }
@@ -268,7 +268,7 @@ ACParser::~ACParser()
 
 void ACParser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new ACParserInternal::State);
@@ -390,9 +390,9 @@ void ACParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -422,7 +422,7 @@ void ACParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -432,7 +432,7 @@ void ACParser::parse(librevenge::RVNGTextInterface *docInterface)
 void ACParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("ACParser::createDocument: listener already exist\n"));
     return;
   }
@@ -456,14 +456,14 @@ void ACParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
     ps.setHeaderFooter(hF);
   }
   std::vector<MWAWPageSpan> pageList(1,ps);
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
 void ACParser::sendHeaderFooter()
 {
-  MWAWContentListenerPtr listener=getListener();
+  MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("ACParser::sendHeaderFooter: can not find the listener\n"));
     return;

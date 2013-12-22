@@ -101,7 +101,7 @@ struct HMWJZoneHeader {
  *
  *
  */
-class HMWJParser : public MWAWParser
+class HMWJParser : public MWAWTextParser
 {
   friend class HMWJGraph;
   friend class HMWJText;

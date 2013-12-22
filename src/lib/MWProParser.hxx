@@ -63,7 +63,7 @@ class MWProStructuresListenerState;
  *
  *
  */
-class MWProParser : public MWAWParser
+class MWProParser : public MWAWTextParser
 {
   friend class MWProStructures;
   friend class MWProStructuresListenerState;

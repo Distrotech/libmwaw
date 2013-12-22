@@ -121,7 +121,7 @@ struct MRWStruct {
  *
  *
  */
-class MRWParser : public MWAWParser
+class MRWParser : public MWAWTextParser
 {
   friend class MRWGraph;
   friend class MRWText;

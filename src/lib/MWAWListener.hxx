@@ -40,13 +40,17 @@
 
 #include "libmwaw_internal.hxx"
 
+class MWAWCell;
+class MWAWTable;
+
 /** This class contains a virtual interface to all listener
 
  \note actually contains mainly code for adding text */
-class MWAWListener
+class MWAWBasicListener
 {
 public:
-  virtual ~MWAWListener() {}
+  //! destructor
+  virtual ~MWAWBasicListener() {}
 
   /** the different break type */
   enum BreakType { PageBreak=0, SoftPageBreak, ColumnBreak };
@@ -119,7 +123,77 @@ public:
   virtual bool closeSection()=0;
   //! inserts a break type: ColumBreak, PageBreak, ..
   virtual void insertBreak(BreakType breakType)=0;
+};
 
+/** This class contains a virtual interface to text listener and the spreadsheet listener */
+class MWAWListener : public MWAWBasicListener
+{
+public:
+  //! destructor
+  virtual ~MWAWListener() {}
+
+  /** sets the documents language */
+  virtual void setDocumentLanguage(std::string locale) = 0;
+
+  /** starts the document */
+  virtual void startDocument() = 0;
+  /** ends the document */
+  virtual void endDocument(bool sendDelayedSubDoc=true) = 0;
+
+  /** function called to add a subdocument */
+  virtual void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType) = 0;
+  /** returns try if a subdocument is open  */
+  virtual bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const = 0;
+
+  // ------ page --------
+  /** returns true if a page is opened */
+  virtual bool isPageSpanOpened() const = 0;
+  /** returns the current page span
+
+  \note this forces the opening of a new page if no page is opened.*/
+  virtual MWAWPageSpan const &getPageSpan() = 0;
+
+  // ------ header/footer --------
+  /** insert a header */
+  virtual bool insertHeader(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras) = 0;
+  /** insert a footer */
+  virtual bool insertFooter(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras) = 0;
+  /** returns true if the header/footer is open */
+  virtual bool isHeaderFooterOpened() const = 0;
+
+  // ------- subdocument -----------------
+  /** insert a note */
+  virtual void insertNote(MWAWNote const &note, MWAWSubDocumentPtr &subDocument)=0;
+  /** adds comment */
+  virtual void insertComment(MWAWSubDocumentPtr &subDocument) = 0;
+
+  /** adds a picture in given position */
+  virtual void insertPicture(MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
+                             std::string type="image/pict",
+                             librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList()) = 0;
+  /** adds a shape picture in given position */
+  virtual void insertPicture(MWAWPosition const &pos, MWAWGraphicShape const &shape,
+                             MWAWGraphicStyle const &style) = 0;
+  /** adds a textbox in given position */
+  virtual void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument,
+                             librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList(),
+                             librevenge::RVNGPropertyList textboxExtras=librevenge::RVNGPropertyList()) = 0;
+
+  // ------- table -----------------
+  /** open a table*/
+  virtual void openTable(MWAWTable const &table, librevenge::RVNGPropertyList tableExtras=librevenge::RVNGPropertyList()) = 0;
+  /** closes this table */
+  virtual void closeTable() = 0;
+  /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
+  virtual void openTableRow(float h, librevenge::RVNGUnit unit, bool headerRow=false) = 0;
+  /** closes this row */
+  virtual void closeTableRow() = 0;
+  /** open a cell */
+  virtual void openTableCell(MWAWCell const &cell) = 0;
+  /** close a cell */
+  virtual void closeTableCell() = 0;
+  /** add empty cell */
+  virtual void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1)) = 0;
 };
 
 #endif

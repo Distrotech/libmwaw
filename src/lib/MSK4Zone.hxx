@@ -109,7 +109,7 @@ protected:
   void readContentZones(MWAWEntry const &entry, bool mainOle);
 
   /** creates the main listener */
-  MWAWContentListenerPtr createListener
+  MWAWTextListenerPtr createListener
   (librevenge::RVNGTextInterface *interface,
    MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer);
 

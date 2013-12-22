@@ -40,7 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWPictMac.hxx"
@@ -107,7 +107,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   /** the graph parser */
@@ -123,7 +123,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -424,7 +424,7 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
                           librevenge::RVNGPropertyList extras)
 {
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("NSGraph::sendPicture: can not find the listener\n"));
     return true;
@@ -485,7 +485,7 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
 bool NSGraph::sendPageGraphics()
 {
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
-  if (!m_parserState->m_listener) {
+  if (!m_parserState->m_textListener) {
     MWAW_DEBUG_MSG(("NSGraph::sendPageGraphics: can not find the listener\n"));
     return true;
   }

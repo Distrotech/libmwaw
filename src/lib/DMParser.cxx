@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWPictData.hxx"
@@ -203,7 +203,7 @@ void State::findPictInfoUnit(int nZones)
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 DMParser::DMParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_textParser()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_textParser()
 {
   init();
 }
@@ -214,7 +214,7 @@ DMParser::~DMParser()
 
 void DMParser::init()
 {
-  resetListener();
+  resetTextListener();
 
   m_state.reset(new DMParserInternal::State);
 
@@ -241,9 +241,9 @@ void DMParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -275,7 +275,7 @@ void DMParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -285,7 +285,7 @@ void DMParser::parse(librevenge::RVNGTextInterface *docInterface)
 void DMParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("DMParser::createDocument: listener already exist\n"));
     return;
   }
@@ -299,8 +299,8 @@ void DMParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   m_state->m_numPages = int(pageList.size());
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
@@ -433,7 +433,7 @@ bool DMParser::sendPicture(int zId, int lId, double /*lineW*/)
     MWAW_DEBUG_MSG(("DMText::sendPicture: can not find picture for id=%d\n",info.m_id));
     return false;
   }
-  if (!getListener()) {
+  if (!getTextListener()) {
     MWAW_DEBUG_MSG(("DMText::sendPicture: can not find the listener\n"));
     return false;
   }
@@ -475,7 +475,7 @@ bool DMParser::sendPicture(int zId, int lId, double /*lineW*/)
     librevenge::RVNGBinaryData fData;
     std::string type;
     if (thePict->getBinary(fData,type))
-      getListener()->insertPicture(pictPos, fData, type);
+      getTextListener()->insertPicture(pictPos, fData, type);
   }
   return true;
 }

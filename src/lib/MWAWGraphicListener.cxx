@@ -129,7 +129,7 @@ State::State() : m_origin(0,0),
 }
 }
 
-MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState) : MWAWListener(),
+MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState) : MWAWBasicListener(),
   m_gs(), m_ps(new MWAWGraphicListenerInternal::State), m_psStack(), m_parserState(parserState)
 {
 }

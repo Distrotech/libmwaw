@@ -51,7 +51,7 @@ struct State;
 
 /** \brief the main class to read a eDOC file
  */
-class EDParser : public MWAWParser
+class EDParser : public MWAWTextParser
 {
   friend class EDText;
 public:

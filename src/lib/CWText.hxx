@@ -94,7 +94,7 @@ public:
 
 protected:
   /** sends a paragraph property to the listener */
-  void setProperty(MWAWListener &listener, CWTextInternal::Paragraph const &ruler, int listId=-1);
+  void setProperty(MWAWBasicListener &listener, CWTextInternal::Paragraph const &ruler, int listId=-1);
 
   //! sends the zone data to the listener (if it exists )
   bool sendZone(int number, bool asGraphic=false);

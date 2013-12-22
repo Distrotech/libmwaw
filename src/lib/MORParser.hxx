@@ -75,7 +75,7 @@ struct Pattern {
 
 /** \brief the main class to read a More file
  */
-class MORParser : public MWAWParser
+class MORParser : public MWAWTextParser
 {
   friend class MORParserInternal::SubDocument;
   friend class MORText;

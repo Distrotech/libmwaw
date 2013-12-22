@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWPosition.hxx"
@@ -314,7 +314,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 NSParser::NSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_graphParser(), m_textParser()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_graphParser(), m_textParser()
 {
   init();
 }
@@ -325,7 +325,7 @@ NSParser::~NSParser()
 
 void NSParser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new NSParserInternal::State);
@@ -494,9 +494,9 @@ void NSParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -531,7 +531,7 @@ void NSParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -541,7 +541,7 @@ void NSParser::parse(librevenge::RVNGTextInterface *docInterface)
 void NSParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("NSParser::createDocument: listener already exist\n"));
     return;
   }
@@ -582,8 +582,8 @@ void NSParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   }
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 

@@ -41,7 +41,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -127,7 +127,7 @@ public:
     return !operator!=(doc);
   }
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
@@ -136,7 +136,7 @@ protected:
   MWAWPosition m_position;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("CWParserInternal::SubDocument::parse: no listener\n"));
@@ -160,7 +160,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 CWParser::CWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(),
+  MWAWTextParser(input, rsrcParser, header), m_state(),
   m_pageSpanSet(false), m_databaseParser(), m_graphParser(), m_presentationParser(),
   m_spreadsheetParser(), m_styleManager(), m_tableParser(), m_textParser()
 {
@@ -173,7 +173,7 @@ CWParser::~CWParser()
 
 void CWParser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new CWParserInternal::State);
@@ -266,9 +266,9 @@ void CWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -373,10 +373,10 @@ MWAWSection CWParser::getMainSection() const
 
 void CWParser::sendFootnote(int zoneId)
 {
-  if (!getListener()) return;
+  if (!getTextListener()) return;
 
   MWAWSubDocumentPtr subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
-  getListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
+  getTextListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
 }
 
 void CWParser::forceParsed(int zoneId)
@@ -428,7 +428,7 @@ void CWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -438,7 +438,7 @@ void CWParser::parse(librevenge::RVNGTextInterface *docInterface)
 void CWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("CWParser::createDocument: listener already exist\n"));
     return;
   }
@@ -483,8 +483,8 @@ void CWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   ps.setPageSpan(m_state->m_numPages);
   std::vector<MWAWPageSpan> pageList(1,ps);
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 

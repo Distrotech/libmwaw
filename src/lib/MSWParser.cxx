@@ -40,7 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -230,7 +230,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
@@ -243,7 +243,7 @@ protected:
   int m_pictCPos;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -291,7 +291,7 @@ std::ostream &operator<<(std::ostream &o, MSWEntry const &entry)
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MSWParser::MSWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_entryMap(), m_textParser()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_entryMap(), m_textParser()
 {
   init();
 }
@@ -302,7 +302,7 @@ MSWParser::~MSWParser()
 
 void MSWParser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new MSWParserInternal::State);
@@ -323,9 +323,9 @@ void MSWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -365,19 +365,19 @@ bool MSWParser::getColor(int id, MWAWColor &col) const
 
 void MSWParser::sendFootnote(int id)
 {
-  if (!getListener()) return;
+  if (!getTextListener()) return;
 
   MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_NOTE));
-  getListener()->insertNote
+  getTextListener()->insertNote
   (MWAWNote(m_state->m_endNote ? MWAWNote::EndNote : MWAWNote::FootNote), subdoc);
 }
 
 void MSWParser::sendFieldComment(int id)
 {
-  if (!getListener()) return;
+  if (!getTextListener()) return;
 
   MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_COMMENT_ANNOTATION));
-  getListener()->insertComment(subdoc);
+  getTextListener()->insertComment(subdoc);
 }
 
 void MSWParser::send(MWAWEntry const &entry)
@@ -429,7 +429,7 @@ void MSWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -439,7 +439,7 @@ void MSWParser::parse(librevenge::RVNGTextInterface *docInterface)
 void MSWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("MSWParser::createDocument: listener already exist\n"));
     return;
   }
@@ -471,8 +471,8 @@ void MSWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   ps.setPageSpan(m_state->m_numPages+1);
   std::vector<MWAWPageSpan> pageList(1,ps);
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
@@ -1782,7 +1782,7 @@ bool MSWParser::readPicture(MSWEntry &entry)
 
 void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
 {
-  if (!getListener()) {
+  if (!getTextListener()) {
     MWAW_DEBUG_MSG(("MSWParser::sendPicture: listener is not set\n"));
     return;
   }
@@ -1800,7 +1800,7 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
     pictPos.setRelativePosition(MWAWPosition::Char,
                                 MWAWPosition::XLeft, MWAWPosition::YTop);
     pictPos.m_wrapping =  MWAWPosition::WBackground;
-    getListener()->insertTextBox(pictPos, subdoc);
+    getTextListener()->insertTextBox(pictPos, subdoc);
     return;
   }
   MWAWPosition basicPos(Vec2f(0.,0.), Vec2f(100.,100.), librevenge::RVNG_POINT);
@@ -1834,7 +1834,7 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
     if (!thePict) continue;
     thePict->getBinary(data,pictType);
     if (data.size())
-      getListener()->insertPicture(pos, data, pictType);
+      getTextListener()->insertPicture(pos, data, pictType);
   }
   input->seek(actPos, librevenge::RVNG_SEEK_SET);
 }

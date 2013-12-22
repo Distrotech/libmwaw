@@ -40,7 +40,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
@@ -474,7 +474,7 @@ struct Cell : public MWAWCell {
     m_zonesList(), m_footnoteList() {}
 
   //! send the content
-  bool sendContent(MWAWContentListenerPtr, MWAWTable &);
+  bool sendContent(MWAWListenerPtr, MWAWTable &);
   //! the text parser
   WNText &m_parser;
   //! the list of zone
@@ -586,7 +586,7 @@ struct State {
   std::map<long, shared_ptr<ContentZones> > m_contentMap;
 };
 
-bool Cell::sendContent(MWAWContentListenerPtr, MWAWTable &)
+bool Cell::sendContent(MWAWListenerPtr, MWAWTable &)
 {
   /** as a cell can be arbitrary cutted in small part,
       we must retrieve the last ruler */
@@ -1383,8 +1383,8 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
 void WNText::setProperty(WNTextInternal::Paragraph const &ruler)
 {
   m_state->m_paragraph = ruler;
-  if (!m_parserState->m_listener) return;
-  m_parserState->m_listener->setParagraph(ruler);
+  if (!m_parserState->m_textListener) return;
+  m_parserState->m_textListener->setParagraph(ruler);
 }
 
 ////////////////////////////////////////////////////////////
@@ -1647,7 +1647,7 @@ bool WNText::readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token)
     MWAW_DEBUG_MSG(("WNParser::readTokenV2: can not read the picture\n"));
     return false;
   }
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
 
   librevenge::RVNGBinaryData data;
   std::string type;
@@ -1661,7 +1661,7 @@ bool WNText::readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token)
   pictPos.setRelativePosition(MWAWPosition::Char);
 
   if (pict->getBinary(data,type))
-    m_parserState->m_listener->insertPicture(pictPos, data, type);
+    m_parserState->m_textListener->insertPicture(pictPos, data, type);
 
   return true;
 }
@@ -1733,7 +1733,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
                   std::vector<shared_ptr<WNTextInternal::ContentZones> > &footnoteList,
                   WNTextInternal::Paragraph &ruler)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("WNText::send: can not find the listener\n"));
     return false;
@@ -1819,7 +1819,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       if (m_state->m_numColumns <= 1 && ++m_state->m_actualPage <= m_state->m_numPages)
         m_mainParser->newPage(m_state->m_actualPage);
       else if (m_state->m_numColumns > 1 && listener)
-        listener->insertBreak(MWAWContentListener::ColumnBreak);
+        listener->insertBreak(MWAWTextListener::ColumnBreak);
       break;
     default:
       break;
@@ -2023,7 +2023,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
 
 void WNText::sendZone(int id)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("WNText::sendZone: can not find the listener\n"));
     return;

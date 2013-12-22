@@ -42,7 +42,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWTable.hxx"
@@ -94,7 +94,7 @@ struct TableCell : public MWAWCell {
   void update(Table const &table);
 
   //! send the cell content to a listener
-  virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table);
+  virtual bool sendContent(MWAWListenerPtr listener, MWAWTable &table);
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TableCell const &cell)
@@ -242,7 +242,7 @@ void TableCell::update(Table const &table)
   }
 }
 
-bool TableCell::sendContent(MWAWContentListenerPtr listener, MWAWTable &table)
+bool TableCell::sendContent(MWAWListenerPtr listener, MWAWTable &table)
 {
   if (!listener) return true;
   if (m_zoneId <= 0)
@@ -432,7 +432,7 @@ bool CWTable::sendZone(int number)
   if (table->okChildId(number+1))
     m_mainParser->forceParsed(number+1);
 
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener)
     return true;
 
@@ -450,7 +450,7 @@ void CWTable::flushExtra()
     shared_ptr<CWTableInternal::Table> table = iter->second;
     if (table->m_parsed)
       continue;
-    if (m_parserState->m_listener) m_parserState->m_listener->insertEOL();
+    if (m_parserState->m_textListener) m_parserState->m_textListener->insertEOL();
     sendZone(iter->first);
   }
 }

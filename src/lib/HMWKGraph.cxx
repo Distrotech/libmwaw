@@ -42,7 +42,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
@@ -356,7 +356,7 @@ struct TableCell : public MWAWCell {
   {
   }
   //! call when the content of a cell must be send
-  virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table);
+  virtual bool sendContent(MWAWListenerPtr listener, MWAWTable &table);
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TableCell const &cell);
   //! the cell id ( corresponding to the last data in the main zones list )
@@ -556,7 +556,7 @@ struct TextBox : public Frame {
   std::string m_extra;
 };
 
-bool TableCell::sendContent(MWAWContentListenerPtr, MWAWTable &table)
+bool TableCell::sendContent(MWAWListenerPtr, MWAWTable &table)
 {
   if (m_id < 0)
     return true;
@@ -773,7 +773,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
   //! the graphic parser function
   void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType type);
 
@@ -794,7 +794,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("HMWKGraphInternal::SubDocument::parse: no listener\n"));
@@ -1148,7 +1148,7 @@ bool HMWKGraph::readPicture(shared_ptr<HMWKZone> zone)
 ////////////////////////////////////////////////////////////
 bool HMWKGraph::sendPicture(long pictId, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
   std::map<long, shared_ptr<HMWKGraphInternal::Picture> >::const_iterator pIt
     = m_state->m_picturesMap.find(pictId);
 
@@ -1166,7 +1166,7 @@ bool HMWKGraph::sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosit
   bool firstTime = picture.m_parsed == false;
 #endif
   picture.m_parsed = true;
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
 
   if (!picture.m_zone || picture.m_pos[0] >= picture.m_pos[1]) {
     MWAW_DEBUG_MSG(("HMWKGraph::sendPicture: can not find the picture\n"));
@@ -1186,14 +1186,14 @@ bool HMWKGraph::sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosit
     libmwaw::Debug::dumpFile(data, f.str().c_str());
   }
 #endif
-  m_parserState->m_listener->insertPicture(pos, data, "image/pict", extras);
+  m_parserState->m_textListener->insertPicture(pos, data, "image/pict", extras);
 
   return true;
 }
 
 bool HMWKGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt=
     m_state->m_framesMap.find(frameId);
   if (fIt == m_state->m_framesMap.end() || !fIt->second) {
@@ -1207,7 +1207,7 @@ bool HMWKGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGProper
 
 bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return true;
 
   frame.m_parsed = true;
@@ -1322,7 +1322,7 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
 
 bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
 {
-  if (!m_parserState->m_listener)
+  if (!m_parserState->m_textListener)
     return true;
   Vec2f pictSz = pos.size();
   shared_ptr<MWAWPict> pict;
@@ -1344,13 +1344,13 @@ bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
   librevenge::RVNGBinaryData data;
   std::string type;
   if (!graphicListener->endGraphic(data,type)) return false;
-  m_parserState->m_listener->insertPicture(pictPos, data, type);
+  m_parserState->m_textListener->insertPicture(pictPos, data, type);
   return true;
 }
 
 bool HMWKGraph::sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(pict.getBdBox().size());
   //fixme: check if we have border
@@ -1360,7 +1360,7 @@ bool HMWKGraph::sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MW
 
 bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
   Vec2f textboxSz = textbox.getBdBox().size();
   if (textbox.m_type==10) {
     if (textbox.m_dim[0] > textboxSz[0]) textboxSz[0]=textbox.m_dim[0];
@@ -1376,26 +1376,26 @@ bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosit
   MWAWSubDocumentPtr subdoc;
   if (!textbox.m_isLinked)
     subdoc.reset(new HMWKGraphInternal::SubDocument(*this, m_parserState->m_input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
-  m_parserState->m_listener->insertTextBox(pos, subdoc, pList, tbExtra);
+  m_parserState->m_textListener->insertTextBox(pos, subdoc, pList, tbExtra);
 
   return true;
 }
 
 bool HMWKGraph::sendShapeGraph(HMWKGraphInternal::ShapeGraph const &pict, MWAWPosition pos)
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(pict.getBdBox().size());
   pos.setOrigin(pos.origin());
   pos.setSize(pos.size()+Vec2f(4,4));
-  m_parserState->m_listener->insertPicture(pos,pict.m_shape,pict.getStyle());
+  m_parserState->m_textListener->insertPicture(pos,pict.m_shape,pict.getStyle());
   return true;
 }
 
 // ----- table
 bool HMWKGraph::sendTableUnformatted(long fId)
 {
-  if (!m_parserState->m_listener)
+  if (!m_parserState->m_textListener)
     return true;
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::iterator fIt
     = m_state->m_framesMap.find(fId);
@@ -1404,7 +1404,7 @@ bool HMWKGraph::sendTableUnformatted(long fId)
     return false;
   }
   HMWKGraphInternal::Table &table = reinterpret_cast<HMWKGraphInternal::Table &>(*fIt->second);
-  return table.sendAsText(m_parserState->m_listener);
+  return table.sendAsText(m_parserState->m_textListener);
 }
 
 ////////////////////////////////////////////////////////////
@@ -1935,7 +1935,7 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
 ////////////////////////////////////////////////////////////
 bool HMWKGraph::sendGroup(long groupId, MWAWPosition pos)
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
   std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt=
     m_state->m_framesMap.find(groupId);
   if (fIt == m_state->m_framesMap.end()) {
@@ -1952,7 +1952,7 @@ bool HMWKGraph::sendGroup(long groupId, MWAWPosition pos)
 
 bool HMWKGraph::sendGroup(HMWKGraphInternal::Group const &group, MWAWPosition pos)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("HMWKGraph::sendGroup: can not find the listener\n"));
     return true;
@@ -2053,7 +2053,7 @@ void HMWKGraph::sendGroup(HMWKGraphInternal::Group const &group, MWAWGraphicList
 
 void HMWKGraph::sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPosition const &pos)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if (!listener || !graphicListener || graphicListener->isDocumentStarted()) {
     MWAW_DEBUG_MSG(("HMWKGraph::sendGroupChild: can not find the listeners\n"));

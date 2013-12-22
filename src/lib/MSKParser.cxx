@@ -31,18 +31,18 @@
 * instead of those above.
 */
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "MSKParser.hxx"
 
 MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_input(input), m_asciiFile(input)
+  MWAWTextParser(input, rsrcParser, header), m_input(input), m_asciiFile(input)
 {
 }
 
 MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWParserStatePtr parserState) :
-  MWAWParser(parserState), m_input(input), m_asciiFile(input)
+  MWAWTextParser(parserState), m_input(input), m_asciiFile(input)
 {
 }
 
@@ -53,8 +53,8 @@ MSKParser::~MSKParser()
 void MSKParser::sendFrameText(MWAWEntry const &, std::string const &)
 {
   MWAW_DEBUG_MSG(("MSKParser::sendFrameText: must not be called\n"));
-  if (!getListener()) return;
-  getListener()->insertChar(' ');
+  if (!getTextListener()) return;
+  getTextListener()->insertChar(' ');
 }
 
 void MSKParser::sendOLE(int, MWAWPosition const &, librevenge::RVNGPropertyList)

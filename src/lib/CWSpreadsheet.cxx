@@ -40,7 +40,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWTable.hxx"
@@ -391,7 +391,7 @@ bool CWSpreadsheet::readRowHeightZone(CWSpreadsheetInternal::Spreadsheet &sheet)
 ////////////////////////////////////////////////////////////
 bool CWSpreadsheet::sendSpreadsheet(int zId)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("CWSpreadsheet::sendSpreadsheet: called without any listener\n"));
     return false;

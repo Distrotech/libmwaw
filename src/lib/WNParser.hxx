@@ -65,7 +65,7 @@ class WNText;
  *
  *
  */
-class WNParser : public MWAWParser
+class WNParser : public MWAWTextParser
 {
   friend class WNText;
   friend class WNParserInternal::SubDocument;

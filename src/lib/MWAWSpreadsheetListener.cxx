@@ -31,11 +31,11 @@
 * instead of those above.
 */
 
-/** \file MWAWContentListener.cxx
- * Implements MWAWContentListener: the libmwaw word processor listener
+/** \file MWAWSpreadsheetListener.cxx
+ * Implements MWAWSpreadsheetListener: the libmwaw spreadsheet processor listener
  *
  * \note this class is the only class which does the interface with
- * the librevenge::RVNGTextInterface
+ * the librevenge::RVNGSpreadsheetInterface
  */
 
 #include <cstring>
@@ -63,18 +63,18 @@
 #include "MWAWSubDocument.hxx"
 #include "MWAWTable.hxx"
 
-#include "MWAWContentListener.hxx"
+#include "MWAWSpreadsheetListener.hxx"
 
-//! Internal and low level namespace to define the states of MWAWContentListener
-namespace MWAWContentListenerInternal
+//! Internal and low level namespace to define the states of MWAWSpreadsheetListener
+namespace MWAWSpreadsheetListenerInternal
 {
 //! a enum to define basic break bit
 enum { PageBreakBit=0x1, ColumnBreakBit=0x2 };
-//! a class to store the document state of a MWAWContentListener
+//! a class to store the document state of a MWAWSpreadsheetListener
 struct DocumentState {
   //! constructor
   DocumentState(std::vector<MWAWPageSpan> const &pageList) :
-    m_pageList(pageList), m_metaData(), m_footNoteNumber(0), m_endNoteNumber(0), m_smallPictureNumber(0),
+    m_pageList(pageList), m_metaData(), m_footNoteNumber(0), m_smallPictureNumber(0),
     m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_sentListMarkers(), m_subDocuments()
   {
   }
@@ -88,7 +88,7 @@ struct DocumentState {
   //! the document meta data
   librevenge::RVNGPropertyList m_metaData;
 
-  int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
+  int m_footNoteNumber /** footnote number*/;
 
   int m_smallPictureNumber /** number of small picture */;
   bool m_isDocumentStarted /** a flag to know if the document is open */, m_isHeaderFooterStarted /** a flag to know if the header footer is started */;
@@ -101,7 +101,7 @@ private:
   DocumentState &operator=(const DocumentState &);
 };
 
-/** the state of a MWAWContentListener */
+/** the state of a MWAWSpreadsheetListener */
 struct State {
   //! constructor
   State();
@@ -197,23 +197,23 @@ State::State() :
 }
 }
 
-MWAWContentListener::MWAWContentListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, librevenge::RVNGTextInterface *documentInterface) : MWAWListener(),
-  m_ds(new MWAWContentListenerInternal::DocumentState(pageList)), m_ps(new MWAWContentListenerInternal::State), m_psStack(),
+MWAWSpreadsheetListener::MWAWSpreadsheetListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, librevenge::RVNGSpreadsheetInterface *documentInterface) : MWAWListener(),
+  m_ds(new MWAWSpreadsheetListenerInternal::DocumentState(pageList)), m_ps(new MWAWSpreadsheetListenerInternal::State), m_psStack(),
   m_parserState(parserState), m_documentInterface(documentInterface)
 {
 }
 
-MWAWContentListener::~MWAWContentListener()
+MWAWSpreadsheetListener::~MWAWSpreadsheetListener()
 {
 }
 
 ///////////////////
 // text data
 ///////////////////
-void MWAWContentListener::insertChar(uint8_t character)
+void MWAWSpreadsheetListener::insertChar(uint8_t character)
 {
   if (character >= 0x80) {
-    MWAWContentListener::insertUnicode(character);
+    MWAWSpreadsheetListener::insertUnicode(character);
     return;
   }
   _flushDeferredTabs();
@@ -221,24 +221,24 @@ void MWAWContentListener::insertChar(uint8_t character)
   m_ps->m_textBuffer.append((char) character);
 }
 
-void MWAWContentListener::insertCharacter(unsigned char c)
+void MWAWSpreadsheetListener::insertCharacter(unsigned char c)
 {
   int unicode = m_parserState.m_fontConverter->unicode(m_ps->m_font.id(), c);
   if (unicode == -1) {
     if (c < 0x20) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: Find odd char %x\n", int(c)));
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertCharacter: Find odd char %x\n", int(c)));
     }
     else
-      MWAWContentListener::insertChar((uint8_t) c);
+      MWAWSpreadsheetListener::insertChar((uint8_t) c);
   }
   else
-    MWAWContentListener::insertUnicode((uint32_t) unicode);
+    MWAWSpreadsheetListener::insertUnicode((uint32_t) unicode);
 }
 
-int MWAWContentListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &input, long endPos)
+int MWAWSpreadsheetListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &input, long endPos)
 {
   if (!input || !m_parserState.m_fontConverter) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: input or font converter does not exist!!!!\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertCharacter: input or font converter does not exist!!!!\n"));
     return 0;
   }
   long debPos=input->tell();
@@ -249,25 +249,25 @@ int MWAWContentListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &in
 
   long pos=input->tell();
   if (endPos > 0 && pos > endPos) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: problem reading a character\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertCharacter: problem reading a character\n"));
     pos = debPos;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     unicode = m_parserState.m_fontConverter->unicode(fId, c);
   }
   if (unicode == -1) {
     if (c < 0x20) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::insertCharacter: Find odd char %x\n", int(c)));
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertCharacter: Find odd char %x\n", int(c)));
     }
     else
-      MWAWContentListener::insertChar((uint8_t) c);
+      MWAWSpreadsheetListener::insertChar((uint8_t) c);
   }
   else
-    MWAWContentListener::insertUnicode((uint32_t) unicode);
+    MWAWSpreadsheetListener::insertUnicode((uint32_t) unicode);
 
   return int(pos-debPos);
 }
 
-void MWAWContentListener::insertUnicode(uint32_t val)
+void MWAWSpreadsheetListener::insertUnicode(uint32_t val)
 {
   // undef character, we skip it
   if (val == 0xfffd) return;
@@ -277,14 +277,14 @@ void MWAWContentListener::insertUnicode(uint32_t val)
   libmwaw::appendUnicode(val, m_ps->m_textBuffer);
 }
 
-void MWAWContentListener::insertUnicodeString(librevenge::RVNGString const &str)
+void MWAWSpreadsheetListener::insertUnicodeString(librevenge::RVNGString const &str)
 {
   _flushDeferredTabs();
   if (!m_ps->m_isSpanOpened) _openSpan();
   m_ps->m_textBuffer.append(str);
 }
 
-void MWAWContentListener::insertEOL(bool soft)
+void MWAWSpreadsheetListener::insertEOL(bool soft)
 {
   if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
     _openSpan();
@@ -302,7 +302,7 @@ void MWAWContentListener::insertEOL(bool soft)
   m_ps->m_font.set(MWAWFont::Script());
 }
 
-void MWAWContentListener::insertTab()
+void MWAWSpreadsheetListener::insertTab()
 {
   if (!m_ps->m_isParagraphOpened) {
     m_ps->m_numDeferredTabs++;
@@ -313,7 +313,7 @@ void MWAWContentListener::insertTab()
   _flushDeferredTabs();
 }
 
-void MWAWContentListener::insertBreak(MWAWContentListener::BreakType breakType)
+void MWAWSpreadsheetListener::insertBreak(MWAWSpreadsheetListener::BreakType breakType)
 {
   switch (breakType) {
   case ColumnBreak:
@@ -321,14 +321,14 @@ void MWAWContentListener::insertBreak(MWAWContentListener::BreakType breakType)
       _openSpan();
     if (m_ps->m_isParagraphOpened)
       _closeParagraph();
-    m_ps->m_paragraphNeedBreak |= MWAWContentListenerInternal::ColumnBreakBit;
+    m_ps->m_paragraphNeedBreak |= MWAWSpreadsheetListenerInternal::ColumnBreakBit;
     break;
   case PageBreak:
     if (!m_ps->m_isPageSpanOpened && !m_ps->m_inSubDocument)
       _openSpan();
     if (m_ps->m_isParagraphOpened)
       _closeParagraph();
-    m_ps->m_paragraphNeedBreak |= MWAWContentListenerInternal::PageBreakBit;
+    m_ps->m_paragraphNeedBreak |= MWAWSpreadsheetListenerInternal::PageBreakBit;
     break;
   case SoftPageBreak:
   default:
@@ -357,20 +357,20 @@ void MWAWContentListener::insertBreak(MWAWContentListener::BreakType breakType)
   }
 }
 
-void MWAWContentListener::_insertBreakIfNecessary(librevenge::RVNGPropertyList &propList)
+void MWAWSpreadsheetListener::_insertBreakIfNecessary(librevenge::RVNGPropertyList &propList)
 {
   if (!m_ps->m_paragraphNeedBreak)
     return;
 
-  if ((m_ps->m_paragraphNeedBreak&MWAWContentListenerInternal::PageBreakBit) ||
+  if ((m_ps->m_paragraphNeedBreak&MWAWSpreadsheetListenerInternal::PageBreakBit) ||
       m_ps->m_section.numColumns() <= 1) {
     if (m_ps->m_inSubDocument) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::_insertBreakIfNecessary: can not add page break in subdocument\n"));
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::_insertBreakIfNecessary: can not add page break in subdocument\n"));
     }
     else
       propList.insert("fo:break-before", "page");
   }
-  else if (m_ps->m_paragraphNeedBreak&MWAWContentListenerInternal::ColumnBreakBit)
+  else if (m_ps->m_paragraphNeedBreak&MWAWSpreadsheetListenerInternal::ColumnBreakBit)
     propList.insert("fo:break-before", "column");
   m_ps->m_paragraphNeedBreak=0;
 }
@@ -378,7 +378,7 @@ void MWAWContentListener::_insertBreakIfNecessary(librevenge::RVNGPropertyList &
 ///////////////////
 // font/paragraph function
 ///////////////////
-void MWAWContentListener::setFont(MWAWFont const &font)
+void MWAWSpreadsheetListener::setFont(MWAWFont const &font)
 {
   if (font == m_ps->m_font) return;
 
@@ -394,24 +394,24 @@ void MWAWContentListener::setFont(MWAWFont const &font)
   m_ps->m_font = finalFont;
 }
 
-MWAWFont const &MWAWContentListener::getFont() const
+MWAWFont const &MWAWSpreadsheetListener::getFont() const
 {
   return m_ps->m_font;
 }
 
-bool MWAWContentListener::isParagraphOpened() const
+bool MWAWSpreadsheetListener::isParagraphOpened() const
 {
   return m_ps->m_isParagraphOpened;
 }
 
-void MWAWContentListener::setParagraph(MWAWParagraph const &para)
+void MWAWSpreadsheetListener::setParagraph(MWAWParagraph const &para)
 {
   if (para==m_ps->m_paragraph) return;
 
   m_ps->m_paragraph=para;
 }
 
-MWAWParagraph const &MWAWContentListener::getParagraph() const
+MWAWParagraph const &MWAWSpreadsheetListener::getParagraph() const
 {
   return m_ps->m_paragraph;
 }
@@ -419,7 +419,7 @@ MWAWParagraph const &MWAWContentListener::getParagraph() const
 ///////////////////
 // field/link :
 ///////////////////
-void MWAWContentListener::insertField(MWAWField const &field)
+void MWAWSpreadsheetListener::insertField(MWAWField const &field)
 {
   switch (field.m_type) {
   case MWAWField::None:
@@ -450,9 +450,9 @@ void MWAWContentListener::insertField(MWAWField const &field)
   }
   case MWAWField::Database:
     if (field.m_data.length())
-      MWAWContentListener::insertUnicodeString(field.m_data.c_str());
+      MWAWSpreadsheetListener::insertUnicodeString(field.m_data.c_str());
     else
-      MWAWContentListener::insertUnicodeString("#DATAFIELD#");
+      MWAWSpreadsheetListener::insertUnicodeString("#DATAFIELD#");
     break;
   case MWAWField::Date:
   case MWAWField::Time: {
@@ -468,20 +468,20 @@ void MWAWContentListener::insertField(MWAWField const &field)
     if (localtime_r(&now, &timeinfo)) {
       char buf[256];
       strftime(buf, 256, format.c_str(), &timeinfo);
-      MWAWContentListener::insertUnicodeString(librevenge::RVNGString(buf));
+      MWAWSpreadsheetListener::insertUnicodeString(librevenge::RVNGString(buf));
     }
     break;
   }
   default:
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertField: must not be called with type=%d\n", int(field.m_type)));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertField: must not be called with type=%d\n", int(field.m_type)));
     break;
   }
 }
 
-void MWAWContentListener::openLink(MWAWLink const &link)
+void MWAWSpreadsheetListener::openLink(MWAWLink const &link)
 {
   if (m_ps->m_inLink) {
-    MWAW_DEBUG_MSG(("MWAWContentListener:closeLink: a link is already opened\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener:closeLink: a link is already opened\n"));
     return;
   }
   if (!m_ps->m_isSpanOpened) _openSpan();
@@ -494,10 +494,10 @@ void MWAWContentListener::openLink(MWAWLink const &link)
   m_ps->m_isParagraphOpened=true;
 }
 
-void MWAWContentListener::closeLink()
+void MWAWSpreadsheetListener::closeLink()
 {
   if (!m_ps->m_inLink) {
-    MWAW_DEBUG_MSG(("MWAWContentListener:closeLink: can not close a link\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener:closeLink: can not close a link\n"));
     return;
   }
   if (m_ps->m_isSpanOpened) _closeSpan();
@@ -508,21 +508,21 @@ void MWAWContentListener::closeLink()
 ///////////////////
 // document
 ///////////////////
-void MWAWContentListener::setDocumentLanguage(std::string locale)
+void MWAWSpreadsheetListener::setDocumentLanguage(std::string locale)
 {
   if (!locale.length()) return;
   m_ds->m_metaData.insert("librevenge:language", locale.c_str());
 }
 
-bool MWAWContentListener::isDocumentStarted() const
+bool MWAWSpreadsheetListener::isDocumentStarted() const
 {
   return m_ds->m_isDocumentStarted;
 }
 
-void MWAWContentListener::startDocument()
+void MWAWSpreadsheetListener::startDocument()
 {
   if (m_ds->m_isDocumentStarted) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::startDocument: the document is already started\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::startDocument: the document is already started\n"));
     return;
   }
 
@@ -532,10 +532,10 @@ void MWAWContentListener::startDocument()
   m_documentInterface->setDocumentMetaData(m_ds->m_metaData);
 }
 
-void MWAWContentListener::endDocument(bool sendDelayedSubDoc)
+void MWAWSpreadsheetListener::endDocument(bool sendDelayedSubDoc)
 {
   if (!m_ds->m_isDocumentStarted) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::endDocument: the document is not started\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::endDocument: the document is not started\n"));
     return;
   }
 
@@ -563,12 +563,12 @@ void MWAWContentListener::endDocument(bool sendDelayedSubDoc)
 ///////////////////
 // page
 ///////////////////
-bool MWAWContentListener::isPageSpanOpened() const
+bool MWAWSpreadsheetListener::isPageSpanOpened() const
 {
   return m_ps->m_isPageSpanOpened;
 }
 
-MWAWPageSpan const &MWAWContentListener::getPageSpan()
+MWAWPageSpan const &MWAWSpreadsheetListener::getPageSpan()
 {
   if (!m_ps->m_isPageSpanOpened)
     _openPageSpan();
@@ -576,7 +576,7 @@ MWAWPageSpan const &MWAWContentListener::getPageSpan()
 }
 
 
-void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
+void MWAWSpreadsheetListener::_openPageSpan(bool sendHeaderFooters)
 {
   if (m_ps->m_isPageSpanOpened)
     return;
@@ -585,7 +585,7 @@ void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
     startDocument();
 
   if (m_ds->m_pageList.size()==0) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::_openPageSpan: can not find any page\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::_openPageSpan: can not find any page\n"));
     throw libmwaw::ParseException();
   }
   unsigned actPage = 0;
@@ -593,7 +593,7 @@ void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
   while (actPage < m_ps->m_currentPage) {
     actPage+=(unsigned)it++->getPageSpan();
     if (it == m_ds->m_pageList.end()) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::_openPageSpan: can not find current page\n"));
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::_openPageSpan: can not find current page\n"));
       throw libmwaw::ParseException();
     }
   }
@@ -619,7 +619,7 @@ void MWAWContentListener::_openPageSpan(bool sendHeaderFooters)
   m_ps->m_currentPage++;
 }
 
-void MWAWContentListener::_closePageSpan()
+void MWAWSpreadsheetListener::_closePageSpan()
 {
   if (!m_ps->m_isPageSpanOpened)
     return;
@@ -634,15 +634,15 @@ void MWAWContentListener::_closePageSpan()
 ///////////////////
 // header/footer
 ///////////////////
-bool MWAWContentListener::isHeaderFooterOpened() const
+bool MWAWSpreadsheetListener::isHeaderFooterOpened() const
 {
   return m_ds->m_isHeaderFooterStarted;
 }
 
-bool MWAWContentListener::insertHeader(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras)
+bool MWAWSpreadsheetListener::insertHeader(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras)
 {
   if (m_ds->m_isHeaderFooterStarted) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertHeader: Oops a header/footer is already opened\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertHeader: Oops a header/footer is already opened\n"));
     return false;
   }
   librevenge::RVNGPropertyList propList(extras);
@@ -652,10 +652,10 @@ bool MWAWContentListener::insertHeader(MWAWSubDocumentPtr subDocument, libreveng
   return true;
 }
 
-bool MWAWContentListener::insertFooter(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras)
+bool MWAWSpreadsheetListener::insertFooter(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras)
 {
   if (m_ds->m_isHeaderFooterStarted) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertFooter: Oops a header/footer is already opened\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertFooter: Oops a header/footer is already opened\n"));
     return false;
   }
   librevenge::RVNGPropertyList propList(extras);
@@ -668,30 +668,30 @@ bool MWAWContentListener::insertFooter(MWAWSubDocumentPtr subDocument, libreveng
 ///////////////////
 // section
 ///////////////////
-bool MWAWContentListener::isSectionOpened() const
+bool MWAWSpreadsheetListener::isSectionOpened() const
 {
   return m_ps->m_isSectionOpened;
 }
 
-MWAWSection const &MWAWContentListener::getSection() const
+MWAWSection const &MWAWSpreadsheetListener::getSection() const
 {
   return m_ps->m_section;
 }
 
-bool MWAWContentListener::canOpenSectionAddBreak() const
+bool MWAWSpreadsheetListener::canOpenSectionAddBreak() const
 {
   return !m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == libmwaw::DOC_TEXT_BOX);
 }
 
-bool MWAWContentListener::openSection(MWAWSection const &section)
+bool MWAWSpreadsheetListener::openSection(MWAWSection const &section)
 {
   if (m_ps->m_isSectionOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openSection: a section is already opened\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openSection: a section is already opened\n"));
     return false;
   }
 
   if (m_ps->m_isTableOpened || (m_ps->m_inSubDocument && m_ps->m_subDocumentType != libmwaw::DOC_TEXT_BOX)) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openSection: impossible to open a section\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openSection: impossible to open a section\n"));
     return false;
   }
   m_ps->m_section=section;
@@ -699,25 +699,25 @@ bool MWAWContentListener::openSection(MWAWSection const &section)
   return true;
 }
 
-bool MWAWContentListener::closeSection()
+bool MWAWSpreadsheetListener::closeSection()
 {
   if (!m_ps->m_isSectionOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::closeSection: no section are already opened\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::closeSection: no section are already opened\n"));
     return false;
   }
 
   if (m_ps->m_isTableOpened || (m_ps->m_inSubDocument && m_ps->m_subDocumentType != libmwaw::DOC_TEXT_BOX)) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::closeSection: impossible to close a section\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::closeSection: impossible to close a section\n"));
     return false;
   }
   _closeSection();
   return true;
 }
 
-void MWAWContentListener::_openSection()
+void MWAWSpreadsheetListener::_openSection()
 {
   if (m_ps->m_isSectionOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::_openSection: a section is already opened\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::_openSection: a section is already opened\n"));
     return;
   }
 
@@ -737,7 +737,7 @@ void MWAWContentListener::_openSection()
   m_ps->m_isSectionOpened = true;
 }
 
-void MWAWContentListener::_closeSection()
+void MWAWSpreadsheetListener::_closeSection()
 {
   if (!m_ps->m_isSectionOpened ||m_ps->m_isTableOpened)
     return;
@@ -757,13 +757,13 @@ void MWAWContentListener::_closeSection()
 ///////////////////
 // paragraph
 ///////////////////
-void MWAWContentListener::_openParagraph()
+void MWAWSpreadsheetListener::_openParagraph()
 {
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
     return;
 
   if (m_ps->m_isParagraphOpened || m_ps->m_isListElementOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::_openParagraph: a paragraph (or a list) is already opened"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::_openParagraph: a paragraph (or a list) is already opened"));
     return;
   }
   if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == libmwaw::DOC_TEXT_BOX)) {
@@ -783,7 +783,7 @@ void MWAWContentListener::_openParagraph()
   m_ps->m_firstParagraphInPageSpan = false;
 }
 
-void MWAWContentListener::_closeParagraph()
+void MWAWSpreadsheetListener::_closeParagraph()
 {
   // we can not close a paragraph in a link
   if (m_ps->m_inLink)
@@ -807,7 +807,7 @@ void MWAWContentListener::_closeParagraph()
     _closePageSpan();
 }
 
-void MWAWContentListener::_resetParagraphState(const bool isListElement)
+void MWAWSpreadsheetListener::_resetParagraphState(const bool isListElement)
 {
   m_ps->m_paragraphNeedBreak = 0;
   m_ps->m_isListElementOpened = isListElement;
@@ -815,7 +815,7 @@ void MWAWContentListener::_resetParagraphState(const bool isListElement)
   m_ps->m_isHeaderFooterWithoutParagraph = false;
 }
 
-void MWAWContentListener::_appendParagraphProperties(librevenge::RVNGPropertyList &propList, const bool /*isListElement*/)
+void MWAWSpreadsheetListener::_appendParagraphProperties(librevenge::RVNGPropertyList &propList, const bool /*isListElement*/)
 {
   m_ps->m_paragraph.addTo(propList,m_ps->m_isTableOpened);
 
@@ -828,7 +828,7 @@ void MWAWContentListener::_appendParagraphProperties(librevenge::RVNGPropertyLis
 ///////////////////
 // list
 ///////////////////
-void MWAWContentListener::_openListElement()
+void MWAWSpreadsheetListener::_openListElement()
 {
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
     return;
@@ -858,7 +858,7 @@ void MWAWContentListener::_openListElement()
   _resetParagraphState(true);
 }
 
-void MWAWContentListener::_closeListElement()
+void MWAWSpreadsheetListener::_closeListElement()
 {
   if (m_ps->m_isListElementOpened) {
     if (m_ps->m_isSpanOpened)
@@ -874,7 +874,7 @@ void MWAWContentListener::_closeListElement()
     _closePageSpan();
 }
 
-int MWAWContentListener::_getListId() const
+int MWAWSpreadsheetListener::_getListId() const
 {
   size_t newLevel= (size_t) m_ps->m_paragraph.m_listLevelIndex.get();
   if (newLevel == 0) return -1;
@@ -882,7 +882,7 @@ int MWAWContentListener::_getListId() const
   if (newListId > 0) return newListId;
   static bool first = true;
   if (first) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::_getListId: the list id is not set, try to find a new one\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::_getListId: the list id is not set, try to find a new one\n"));
     first = false;
   }
   shared_ptr<MWAWList> list=m_parserState.m_listManager->getNewList
@@ -891,7 +891,7 @@ int MWAWContentListener::_getListId() const
   return list->getId();
 }
 
-void MWAWContentListener::_changeList()
+void MWAWSpreadsheetListener::_changeList()
 {
   if (m_ps->m_isParagraphOpened)
     _closeParagraph();
@@ -917,7 +917,7 @@ void MWAWContentListener::_changeList()
 
     theList=m_parserState.m_listManager->getList(newListId);
     if (!theList) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::_changeList: can not find any list\n"));
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::_changeList: can not find any list\n"));
       m_ps->m_listOrderedLevels.resize(actualLevel);
       return;
     }
@@ -945,7 +945,7 @@ void MWAWContentListener::_changeList()
 ///////////////////
 // span
 ///////////////////
-void MWAWContentListener::_openSpan()
+void MWAWSpreadsheetListener::_openSpan()
 {
   if (m_ps->m_isSpanOpened)
     return;
@@ -969,7 +969,7 @@ void MWAWContentListener::_openSpan()
   m_ps->m_isSpanOpened = true;
 }
 
-void MWAWContentListener::_closeSpan()
+void MWAWSpreadsheetListener::_closeSpan()
 {
   // better not to close a link...
   if (!m_ps->m_isSpanOpened)
@@ -983,7 +983,7 @@ void MWAWContentListener::_closeSpan()
 ///////////////////
 // text (send data)
 ///////////////////
-void MWAWContentListener::_flushDeferredTabs()
+void MWAWSpreadsheetListener::_flushDeferredTabs()
 {
   if (m_ps->m_numDeferredTabs == 0) return;
   if (!m_ps->m_font.hasDecorationLines()) {
@@ -1002,7 +1002,7 @@ void MWAWContentListener::_flushDeferredTabs()
   setFont(oldFont);
 }
 
-void MWAWContentListener::_flushText()
+void MWAWSpreadsheetListener::_flushText()
 {
   if (m_ps->m_textBuffer.len() == 0) return;
 
@@ -1033,16 +1033,16 @@ void MWAWContentListener::_flushText()
 ///////////////////
 // Note/Comment/picture/textbox
 ///////////////////
-void MWAWContentListener::insertNote(MWAWNote const &note, MWAWSubDocumentPtr &subDocument)
+void MWAWSpreadsheetListener::insertNote(MWAWNote const &note, MWAWSubDocumentPtr &subDocument)
 {
   if (m_ps->m_isNote) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertNote try to insert a note recursively (ignored)\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertNote try to insert a note recursively (ignored)\n"));
     return;
   }
 
   m_ps->m_isNote = true;
   if (m_ds->m_isHeaderFooterStarted) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertNote try to insert a note in a header/footer\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertNote try to insert a note in a header/footer\n"));
     /** Must not happen excepted in corrupted document, so we do the minimum.
     	Note that we have no choice, either we begin by closing the paragraph,
     	... or we reprogram handleSubDocument.
@@ -1077,23 +1077,16 @@ void MWAWContentListener::insertNote(MWAWNote const &note, MWAWSubDocumentPtr &s
       m_documentInterface->closeFootnote();
     }
     else {
-      if (note.m_number >= 0)
-        m_ds->m_endNoteNumber = note.m_number;
-      else
-        m_ds->m_endNoteNumber++;
-      propList.insert("librevenge:number", m_ds->m_endNoteNumber);
-      m_documentInterface->openEndnote(propList);
-      handleSubDocument(subDocument, libmwaw::DOC_NOTE);
-      m_documentInterface->closeEndnote();
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertNote try to insert a unexpected note\n"));
     }
   }
   m_ps->m_isNote = false;
 }
 
-void MWAWContentListener::insertComment(MWAWSubDocumentPtr &subDocument)
+void MWAWSpreadsheetListener::insertComment(MWAWSubDocumentPtr &subDocument)
 {
   if (m_ps->m_isNote) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertComment try to insert a note recursively (ignored)\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertComment try to insert a comment in a note (ignored)\n"));
     return;
   }
 
@@ -1114,7 +1107,7 @@ void MWAWContentListener::insertComment(MWAWSubDocumentPtr &subDocument)
   m_ps->m_isNote = false;
 }
 
-void MWAWContentListener::insertTextBox
+void MWAWSpreadsheetListener::insertTextBox
 (MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList frameExtras, librevenge::RVNGPropertyList textboxExtras)
 {
   if (!openFrame(pos, frameExtras)) return;
@@ -1127,7 +1120,7 @@ void MWAWContentListener::insertTextBox
   closeFrame();
 }
 
-void MWAWContentListener::insertPicture
+void MWAWSpreadsheetListener::insertPicture
 (MWAWPosition const &pos, MWAWGraphicShape const &shape, MWAWGraphicStyle const &style)
 {
   // sanity check: avoid to send to many small pict
@@ -1136,7 +1129,7 @@ void MWAWContentListener::insertPicture
     static bool first = true;
     if (first) {
       first = false;
-      MWAW_DEBUG_MSG(("MWAWContentListener::insertPicture: find too much small pictures, skip them from now\n"));
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertPicture: find too much small pictures, skip them from now\n"));
     }
     return;
   }
@@ -1195,12 +1188,12 @@ void MWAWContentListener::insertPicture
   case MWAWGraphicShape::C_Bad:
     break;
   default:
-    MWAW_DEBUG_MSG(("MWAWContentListener::insertPicture: unexpected shape\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertPicture: unexpected shape\n"));
     break;
   }
 }
 
-void MWAWContentListener::insertPicture
+void MWAWSpreadsheetListener::insertPicture
 (MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData, std::string type,
  librevenge::RVNGPropertyList frameExtras)
 {
@@ -1210,7 +1203,7 @@ void MWAWContentListener::insertPicture
     static bool first = true;
     if (first) {
       first = false;
-      MWAW_DEBUG_MSG(("MWAWContentListener::insertPicture: find too much small pictures, skip them from now\n"));
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertPicture: find too much small pictures, skip them from now\n"));
     }
     return;
   }
@@ -1227,14 +1220,14 @@ void MWAWContentListener::insertPicture
 ///////////////////
 // frame
 ///////////////////
-bool MWAWContentListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras)
+bool MWAWSpreadsheetListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras)
 {
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: called in table but cell is not opened\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openFrame: called in table but cell is not opened\n"));
     return false;
   }
   if (m_ps->m_isFrameOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: called but a frame is already opened\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openFrame: called but a frame is already opened\n"));
     return false;
   }
   MWAWPosition fPos(pos);
@@ -1248,7 +1241,7 @@ bool MWAWContentListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPro
       _openParagraph();
     break;
   case MWAWPosition::Unknown:
-    MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: UNKNOWN position, insert as char position\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openFrame: UNKNOWN position, insert as char position\n"));
   // fallthrough intended
   case MWAWPosition::CharBaseLine:
   case MWAWPosition::Char:
@@ -1259,11 +1252,11 @@ bool MWAWContentListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPro
     break;
   case MWAWPosition::Frame:
     if (!m_ds->m_subDocuments.size()) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: can not determine the frame\n"));
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openFrame: can not determine the frame\n"));
       return false;
     }
     if (m_ps->m_subDocumentType==libmwaw::DOC_HEADER_FOOTER) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: called with Frame position in header footer, switch to paragraph\n"));
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openFrame: called with Frame position in header footer, switch to paragraph\n"));
       if (m_ps->m_isParagraphOpened)
         _flushText();
       else
@@ -1272,7 +1265,7 @@ bool MWAWContentListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPro
     }
     break;
   default:
-    MWAW_DEBUG_MSG(("MWAWContentListener::openFrame: can not determine the anchor\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openFrame: can not determine the anchor\n"));
     return false;
   }
 
@@ -1284,17 +1277,17 @@ bool MWAWContentListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPro
   return true;
 }
 
-void MWAWContentListener::closeFrame()
+void MWAWSpreadsheetListener::closeFrame()
 {
   if (!m_ps->m_isFrameOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::closeFrame: called but no frame is already opened\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::closeFrame: called but no frame is already opened\n"));
     return;
   }
   m_documentInterface->closeFrame();
   m_ps->m_isFrameOpened = false;
 }
 
-void MWAWContentListener::_handleFrameParameters
+void MWAWSpreadsheetListener::_handleFrameParameters
 (librevenge::RVNGPropertyList &propList, MWAWPosition const &pos)
 {
   Vec2f origin = pos.origin();
@@ -1515,7 +1508,7 @@ void MWAWContentListener::_handleFrameParameters
 ///////////////////
 // subdocument
 ///////////////////
-void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType)
+void MWAWSpreadsheetListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType)
 {
   _pushParsingState();
   _startSubDocument();
@@ -1548,7 +1541,7 @@ void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libm
     if (!subDocument)
       break;
     if (subDocument == m_ds->m_subDocuments[i]) {
-      MWAW_DEBUG_MSG(("MWAWContentListener::handleSubDocument: recursif call, stop...\n"));
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::handleSubDocument: recursif call, stop...\n"));
       sendDoc = false;
       break;
     }
@@ -1556,12 +1549,12 @@ void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libm
   if (sendDoc) {
     if (subDocument) {
       m_ds->m_subDocuments.push_back(subDocument);
-      shared_ptr<MWAWContentListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWContentListener>());
+      shared_ptr<MWAWListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWSpreadsheetListener>());
       try {
         subDocument->parse(listen, subDocumentType);
       }
       catch (...) {
-        MWAW_DEBUG_MSG(("Works: MWAWContentListener::handleSubDocument exception catched \n"));
+        MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::handleSubDocument exception catched \n"));
       }
       m_ds->m_subDocuments.pop_back();
     }
@@ -1587,7 +1580,7 @@ void MWAWContentListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libm
   _popParsingState();
 }
 
-bool MWAWContentListener::isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const
+bool MWAWSpreadsheetListener::isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const
 {
   if (!m_ps->m_inSubDocument)
     return false;
@@ -1595,13 +1588,13 @@ bool MWAWContentListener::isSubDocumentOpened(libmwaw::SubDocumentType &subdocTy
   return true;
 }
 
-void MWAWContentListener::_startSubDocument()
+void MWAWSpreadsheetListener::_startSubDocument()
 {
   m_ds->m_isDocumentStarted = true;
   m_ps->m_inSubDocument = true;
 }
 
-void MWAWContentListener::_endSubDocument()
+void MWAWSpreadsheetListener::_endSubDocument()
 {
   if (m_ps->m_isTableOpened)
     closeTable();
@@ -1615,10 +1608,10 @@ void MWAWContentListener::_endSubDocument()
 ///////////////////
 // table
 ///////////////////
-void MWAWContentListener::openTable(MWAWTable const &table, librevenge::RVNGPropertyList tableExtras)
+void MWAWSpreadsheetListener::openTable(MWAWTable const &table, librevenge::RVNGPropertyList tableExtras)
 {
   if (m_ps->m_isTableOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openTable: called with m_isTableOpened=true\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openTable: called with m_isTableOpened=true\n"));
     return;
   }
 
@@ -1639,10 +1632,10 @@ void MWAWContentListener::openTable(MWAWTable const &table, librevenge::RVNGProp
   m_ps->m_isTableOpened = true;
 }
 
-void MWAWContentListener::closeTable()
+void MWAWSpreadsheetListener::closeTable()
 {
   if (!m_ps->m_isTableOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::closeTable: called with m_isTableOpened=false\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::closeTable: called with m_isTableOpened=false\n"));
     return;
   }
 
@@ -1653,14 +1646,14 @@ void MWAWContentListener::closeTable()
   _popParsingState();
 }
 
-void MWAWContentListener::openTableRow(float h, librevenge::RVNGUnit unit, bool headerRow)
+void MWAWSpreadsheetListener::openTableRow(float h, librevenge::RVNGUnit unit, bool headerRow)
 {
   if (m_ps->m_isTableRowOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openTableRow: called with m_isTableRowOpened=true\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openTableRow: called with m_isTableRowOpened=true\n"));
     return;
   }
   if (!m_ps->m_isTableOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openTableRow: called with m_isTableOpened=false\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openTableRow: called with m_isTableOpened=false\n"));
     return;
   }
   librevenge::RVNGPropertyList propList;
@@ -1674,24 +1667,24 @@ void MWAWContentListener::openTableRow(float h, librevenge::RVNGUnit unit, bool 
   m_ps->m_isTableRowOpened = true;
 }
 
-void MWAWContentListener::closeTableRow()
+void MWAWSpreadsheetListener::closeTableRow()
 {
   if (!m_ps->m_isTableRowOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openTableRow: called with m_isTableRowOpened=false\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openTableRow: called with m_isTableRowOpened=false\n"));
     return;
   }
   m_ps->m_isTableRowOpened = false;
   m_documentInterface->closeTableRow();
 }
 
-void MWAWContentListener::addEmptyTableCell(Vec2i const &pos, Vec2i span)
+void MWAWSpreadsheetListener::addEmptyTableCell(Vec2i const &pos, Vec2i span)
 {
   if (!m_ps->m_isTableRowOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::addEmptyTableCell: called with m_isTableRowOpened=false\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::addEmptyTableCell: called with m_isTableRowOpened=false\n"));
     return;
   }
   if (m_ps->m_isTableCellOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::addEmptyTableCell: called with m_isTableCellOpened=true\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::addEmptyTableCell: called with m_isTableCellOpened=true\n"));
     closeTableCell();
   }
   librevenge::RVNGPropertyList propList;
@@ -1703,14 +1696,14 @@ void MWAWContentListener::addEmptyTableCell(Vec2i const &pos, Vec2i span)
   m_documentInterface->closeTableCell();
 }
 
-void MWAWContentListener::openTableCell(MWAWCell const &cell)
+void MWAWSpreadsheetListener::openTableCell(MWAWCell const &cell)
 {
   if (!m_ps->m_isTableRowOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: called with m_isTableRowOpened=false\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openTableCell: called with m_isTableRowOpened=false\n"));
     return;
   }
   if (m_ps->m_isTableCellOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::openTableCell: called with m_isTableCellOpened=true\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openTableCell: called with m_isTableCellOpened=true\n"));
     closeTableCell();
   }
 
@@ -1720,10 +1713,10 @@ void MWAWContentListener::openTableCell(MWAWCell const &cell)
   m_documentInterface->openTableCell(propList);
 }
 
-void MWAWContentListener::closeTableCell()
+void MWAWSpreadsheetListener::closeTableCell()
 {
   if (!m_ps->m_isTableCellOpened) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::closeTableCell: called with m_isTableCellOpened=false\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::closeTableCell: called with m_isTableCellOpened=false\n"));
     return;
   }
 
@@ -1740,11 +1733,11 @@ void MWAWContentListener::closeTableCell()
 ///////////////////
 
 // ---------- state stack ------------------
-shared_ptr<MWAWContentListenerInternal::State> MWAWContentListener::_pushParsingState()
+shared_ptr<MWAWSpreadsheetListenerInternal::State> MWAWSpreadsheetListener::_pushParsingState()
 {
-  shared_ptr<MWAWContentListenerInternal::State> actual = m_ps;
+  shared_ptr<MWAWSpreadsheetListenerInternal::State> actual = m_ps;
   m_psStack.push_back(actual);
-  m_ps.reset(new MWAWContentListenerInternal::State);
+  m_ps.reset(new MWAWSpreadsheetListenerInternal::State);
 
   // BEGIN: copy page properties into the new parsing state
   m_ps->m_pageSpan = actual->m_pageSpan;
@@ -1754,10 +1747,10 @@ shared_ptr<MWAWContentListenerInternal::State> MWAWContentListener::_pushParsing
   return actual;
 }
 
-void MWAWContentListener::_popParsingState()
+void MWAWSpreadsheetListener::_popParsingState()
 {
   if (m_psStack.size()==0) {
-    MWAW_DEBUG_MSG(("MWAWContentListener::_popParsingState: psStack is empty()\n"));
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::_popParsingState: psStack is empty()\n"));
     throw libmwaw::ParseException();
   }
   m_ps = m_psStack.back();

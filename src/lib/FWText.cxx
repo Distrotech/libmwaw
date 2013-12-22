@@ -41,7 +41,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
@@ -673,7 +673,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
                   FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler,
                   std::string &str)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return;
   MWAWInputStreamPtr input = zone->m_zone->m_input;
   long pos = input->tell();
@@ -1164,7 +1164,7 @@ bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::Li
   }
 
   size_t numCols = dim.size();
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return false;
 
   MWAWInputStreamPtr input = zone->m_zone->m_input;
@@ -1373,7 +1373,7 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
 
 bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("FWText::send can not find the listener\n"));
     return false;
@@ -1413,7 +1413,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
     while (num==actBreakPos) {
       if (num != 1) sendData = true;
       if (actCol < numCol-1 && numCol > 1) {
-        listener->insertBreak(MWAWContentListener::ColumnBreak);
+        listener->insertBreak(MWAWTextListener::ColumnBreak);
         actCol++;
       }
       else if (actPage >= nPages) {
@@ -1425,7 +1425,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
           if (zone->m_zoneType == FWTextInternal::Zone::Main)
             m_mainParser->newPage(++m_state->m_actualPage);
           else if (numCol > 1)
-            listener->insertBreak(MWAWContentListener::ColumnBreak);
+            listener->insertBreak(MWAWTextListener::ColumnBreak);
         }
         actCol = 0;
 
@@ -1497,7 +1497,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
 
 bool FWText::sendHiddenItem(int id, FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("FWText::sendHiddenItem can not find the listener\n"));
     return false;
@@ -2388,7 +2388,7 @@ bool FWText::sendMainText()
     MWAW_DEBUG_MSG(("FWText::sendMainText: can not find main zone\n"));
     return false;
   }
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
   std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it;
   for (size_t i = 0; i < numZones; i++) {
     it = m_state->m_entryMap.find(m_state->m_mainZones[i]);

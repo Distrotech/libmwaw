@@ -42,7 +42,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -370,7 +370,7 @@ struct Cell : public MWAWCell {
   }
 
   //! send the content
-  bool sendContent(MWAWContentListenerPtr listener, MWAWTable &)
+  bool sendContent(MWAWListenerPtr listener, MWAWTable &)
   {
     if (m_blockId > 0)
       m_parser.send(m_blockId);
@@ -583,9 +583,9 @@ int MWProStructures::version() const
   return m_state->m_version;
 }
 
-MWAWContentListenerPtr &MWProStructures::getListener()
+MWAWTextListenerPtr &MWProStructures::getTextListener()
 {
-  return m_parserState->m_listener;
+  return m_parserState->m_textListener;
 }
 
 int MWProStructures::numPages() const
@@ -2516,7 +2516,7 @@ bool MWProStructures::isSent(int blockId)
 // send a block
 bool MWProStructures::send(int blockId, bool mainZone)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   shared_ptr<MWProStructuresInternal::Block> block;
   if (version()==0) {
     if (blockId < 0) {
@@ -2595,7 +2595,7 @@ bool MWProStructures::send(int blockId, bool mainZone)
 void MWProStructures::flushExtra()
 {
   int vers = version();
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (listener && listener->isSectionOpened()) {
     listener->closeSection();
     listener->openSection(MWAWSection());
@@ -2718,7 +2718,7 @@ void MWProStructuresListenerState::sendChar(char c)
   bool newPageDone = m_newPageDone;
   m_newPageDone = false;
   if (!m_structures) return;
-  MWAWContentListenerPtr listener=m_structures->getListener();
+  MWAWTextListenerPtr listener=m_structures->getTextListener();
   if (!listener) return;
   switch (c) {
   case 0:
@@ -2762,7 +2762,7 @@ void MWProStructuresListenerState::sendChar(char c)
     if (m_isMainZone) {
       if (m_numCols <= 1) newPage();
       else if (listener)
-        listener->insertBreak(MWAWContentListener::ColumnBreak);
+        listener->insertBreak(MWAWTextListener::ColumnBreak);
     }
     break;
   case 0xe:
@@ -2800,7 +2800,7 @@ bool MWProStructuresListenerState::resendAll()
 bool MWProStructuresListenerState::sendFont(int id)
 {
   if (!m_structures) return false;
-  if (!m_structures->getListener()) return true;
+  if (!m_structures->getTextListener()) return true;
   if (id < 0 || id >= int(m_structures->m_state->m_fontsList.size())) {
     MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendFont: can not find font %d\n", id));
     return false;
@@ -2812,12 +2812,12 @@ bool MWProStructuresListenerState::sendFont(int id)
 
 void MWProStructuresListenerState::sendFont(MWProStructuresInternal::Font const &font)
 {
-  if (!m_structures || !m_structures->getListener())
+  if (!m_structures || !m_structures->getTextListener())
     return;
 
-  m_structures->getListener()->setFont(font.m_font);
+  m_structures->getTextListener()->setFont(font.m_font);
   *m_font = font;
-  m_font->m_font =  m_structures->getListener()->getFont();
+  m_font->m_font =  m_structures->getTextListener()->getFont();
 }
 
 std::string MWProStructuresListenerState::getFontDebugString(int fId)
@@ -2846,7 +2846,7 @@ std::string MWProStructuresListenerState::getFontDebugString(int fId)
 bool MWProStructuresListenerState::sendParagraph(int id)
 {
   if (!m_structures) return false;
-  if (!m_structures->getListener()) return true;
+  if (!m_structures->getTextListener()) return true;
   if (id < 0 || id >= int(m_structures->m_state->m_paragraphsList.size())) {
     MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendParagraph: can not find paragraph %d\n", id));
     return false;
@@ -2858,10 +2858,10 @@ bool MWProStructuresListenerState::sendParagraph(int id)
 
 void MWProStructuresListenerState::sendParagraph(MWProStructuresInternal::Paragraph const &para)
 {
-  if (!m_structures || !m_structures->getListener())
+  if (!m_structures || !m_structures->getTextListener())
     return;
   *m_paragraph = para;
-  m_structures->getListener()->setParagraph(para);
+  m_structures->getTextListener()->setParagraph(para);
   m_numTab = int(para.m_tabs->size());
 }
 
@@ -2887,7 +2887,7 @@ void MWProStructuresListenerState::sendSection(int nSection)
 {
 
   if (!m_structures) return;
-  MWAWContentListenerPtr listener=m_structures->getListener();
+  MWAWTextListenerPtr listener=m_structures->getTextListener();
   if (!listener) return;
   if (listener->isSectionOpened()) {
     MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendSection: a section is already opened\n"));

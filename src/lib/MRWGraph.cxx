@@ -41,7 +41,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
@@ -447,7 +447,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   /** the graph parser */
@@ -460,7 +460,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("MRWGraphInternal::SubDocument::parse: no listener\n"));
@@ -530,7 +530,7 @@ void MRWGraph::sendText(int zoneId)
 
 void MRWGraph::sendToken(int zoneId, long tokenId)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MRWGraph::sendToken: can not the listener\n"));
     return;
@@ -625,7 +625,7 @@ void MRWGraph::sendToken(int zoneId, long tokenId)
 
 void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
 {
-  if (!m_parserState->m_listener) {
+  if (!m_parserState->m_textListener) {
     MWAW_DEBUG_MSG(("MRWGraph::sendRule: can not find the listener\n"));
     return;
   }
@@ -669,7 +669,7 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
     MWAW_DEBUG_MSG(("MRWGraph::sendRule: can not find pattern\n"));
   }
   // retrieve the actual font to get the ruler color + a basic estimation of the line height
-  MWAWFont actFont=m_parserState->m_listener->getFont();
+  MWAWFont actFont=m_parserState->m_textListener->getFont();
   MWAWColor col;
   actFont.getColor(col);
   float lineH = actFont.size() > 0 ? actFont.size() : 12.f;
@@ -696,7 +696,7 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
 
   if (listW.size()==1 || !graphicListener || graphicListener->isDocumentStarted()) {
     shape.m_bdBox=box;
-    m_parserState->m_listener->insertPicture(pos,shape, pStyle);
+    m_parserState->m_textListener->insertPicture(pos,shape, pStyle);
   }
   else {
     librevenge::RVNGBinaryData data;
@@ -710,7 +710,7 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
       actH += listW[l];
     }
     if (graphicListener->endGraphic(data,mime))
-      m_parserState->m_listener->insertPicture(pos,data,mime);
+      m_parserState->m_textListener->insertPicture(pos,data,mime);
   }
 }
 
@@ -744,8 +744,8 @@ void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
   posi.setRelativePosition(MWAWPosition::Char);
   librevenge::RVNGPropertyList extras;
   tkn.addPictBorderProperties(extras);
-  if (m_parserState->m_listener)
-    m_parserState->m_listener->insertPicture(posi, data, "image/pict", extras);
+  if (m_parserState->m_textListener)
+    m_parserState->m_textListener->insertPicture(posi, data, "image/pict", extras);
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -775,8 +775,8 @@ void MRWGraph::sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const
   MWAWPosition pictPos(pos);
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pictPos.setSize(Vec2f(100,100));
-  if (m_parserState->m_listener)
-    m_parserState->m_listener->insertPicture(pictPos, data, "image/ps");
+  if (m_parserState->m_textListener)
+    m_parserState->m_textListener->insertPicture(pictPos, data, "image/ps");
   input->seek(actPos, librevenge::RVNG_SEEK_SET);
 }
 

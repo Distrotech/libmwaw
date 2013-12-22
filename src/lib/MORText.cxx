@@ -40,7 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -430,7 +430,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   /** the text parser */
@@ -444,7 +444,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -858,7 +858,7 @@ bool MORText::sendMainText()
 
 bool MORText::sendComment(int cId)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MORText::sendComment: can not find a listener!"));
     return true;
@@ -872,7 +872,7 @@ bool MORText::sendComment(int cId)
 
 bool MORText::sendSpeakerNote(int nId)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MORText::sendSpeakerNote: can not find a listener!"));
     return true;
@@ -886,7 +886,7 @@ bool MORText::sendSpeakerNote(int nId)
 
 bool MORText::sendTopic(int tId, int dLevel, std::vector<MWAWParagraph> &paraStack)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MORText::sendTopic: can not find a listener!"));
     return true;
@@ -976,7 +976,7 @@ bool MORText::sendTopic(int tId, int dLevel, std::vector<MWAWParagraph> &paraSta
 
 bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MORText::sendText: can not find a listener!"));
     return true;

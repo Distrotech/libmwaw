@@ -392,10 +392,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWAWContentListener.cxx"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\lib\MWAWDebug.cxx"
 				>
 			</File>
@@ -493,6 +489,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWTable.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWTextListener.cxx"
 				>
 			</File>
 			<File
@@ -777,10 +777,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWAWContentListener.hxx"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\lib\MWAWDebug.hxx"
 				>
 			</File>
@@ -894,6 +890,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWTable.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWTextListener.hxx"
 				>
 			</File>
 			<File

@@ -40,7 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -111,7 +111,7 @@ struct Token {
   //! returns a field format
   std::string getDTFormat() const;
   //! try to send the token to the listener
-  bool sendTo(MWAWListener &listener) const;
+  bool sendTo(MWAWBasicListener &listener) const;
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Token const &tkn);
   //! the token type
@@ -130,7 +130,7 @@ struct Token {
   std::string m_extra;
 };
 
-bool Token::sendTo(MWAWListener &listener) const
+bool Token::sendTo(MWAWBasicListener &listener) const
 {
   switch (m_type) {
   case 2:
@@ -481,7 +481,7 @@ bool GWText::canSendTextBoxAsGraphic(MWAWEntry const &entry)
 
 bool GWText::sendTextbox(MWAWEntry const &entry, bool inGraphic)
 {
-  if (!m_parserState->m_listener) {
+  if (!m_parserState->m_textListener) {
     MWAW_DEBUG_MSG(("GWText::sendTextbox: can not find a listener\n"));
     return false;
   }
@@ -1156,7 +1156,7 @@ bool GWText::sendHF(int id)
 
 void GWText::flushExtra()
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("GWText::flushExtra: can not find a listener\n"));
     return;
@@ -1171,11 +1171,11 @@ void GWText::flushExtra()
 
 bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
 {
-  MWAWListenerPtr listener;
+  MWAWBasicListenerPtr listener;
   if (inGraphic)
     listener=m_parserState->m_graphicListener;
   else
-    listener=m_parserState->m_listener;
+    listener=m_parserState->m_textListener;
   if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("GWText::sendSimpleTextbox: can not find a listener\n"));
     return false;
@@ -1328,11 +1328,11 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
 
 bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
 {
-  MWAWListenerPtr listener;
+  MWAWBasicListenerPtr listener;
   if (inGraphic)
     listener=m_parserState->m_graphicListener;
   else
-    listener=m_parserState->m_listener;
+    listener=m_parserState->m_textListener;
   if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("GWText::sendZone: can not find a listener\n"));
     return false;
@@ -1440,7 +1440,7 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
         break;
       }
       if (actCol < numCol-1 && numCol > 1) {
-        listener->insertBreak(MWAWListener::ColumnBreak);
+        listener->insertBreak(MWAWBasicListener::ColumnBreak);
         actCol++;
       }
       else {

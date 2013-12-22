@@ -57,7 +57,7 @@ struct State;
     \note it will be probably be enhanced in some near/far futur...
     All units are specicified in librevenge::RVNG_POINT
  */
-class MWAWGraphicListener : public MWAWListener
+class MWAWGraphicListener : public MWAWBasicListener
 {
 public:
   /** constructor */

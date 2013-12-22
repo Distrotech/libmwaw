@@ -41,7 +41,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
@@ -602,7 +602,7 @@ public:
     return !operator!=(doc);
   }
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type)
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type)
   {
     parse(listener, type, false);
   }
@@ -612,7 +612,7 @@ public:
     parse(listener, type, true);
   }
   //! the main parser function
-  void parse(MWAWListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic);
+  void parse(MWAWBasicListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic);
   /** the graph parser */
   CWGraph *m_graphParser;
 
@@ -626,7 +626,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic)
+void SubDocument::parse(MWAWBasicListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic)
 {
   if (!listener || (type==libmwaw::DOC_TEXT_BOX&&!listener->canWriteText())) {
     MWAW_DEBUG_MSG(("CWGraphInternal::SubDocument::parse: no listener\n"));
@@ -2269,7 +2269,7 @@ bool CWGraph::canSendGroupAsGraphic(int number) const
 
 bool CWGraph::sendGroup(int number, bool asGraphic, MWAWPosition const &position)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("CWGraph::sendGroup: can not find the listener\n"));
     return false;
@@ -2358,7 +2358,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, std::vector<size_t> const
 
 bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &position)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("CWGraph::sendGroup: can not find the listener\n"));
     return false;
@@ -2556,7 +2556,7 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
 {
   CWGraphInternal::Zone *child = group.m_zones[cId].get();
   if (!child) return false;
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("CWGraph::sendGroupChild: can not find the listener\n"));
     return false;
@@ -2659,7 +2659,7 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
 
 bool CWGraph::sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return true;
   if (pos.size()[0] < 0 || pos.size()[1] < 0)
     pos.setSize(pict.getBdBox().size());
@@ -2711,7 +2711,7 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
       return true;
     }
   }
-  else if (!m_parserState->m_listener)
+  else if (!m_parserState->m_textListener)
     return true;
   int numColors = int(bitmap.m_colorMap.size());
   shared_ptr<MWAWPictBitmap> bmap;
@@ -2791,7 +2791,7 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
     m_parserState->m_graphicListener->insertPicture(Box2f(pos.origin(),pos.origin()+pos.size()), style, data, "image/pict");
   }
   else
-    m_parserState->m_listener->insertPicture(pos, data, "image/pict");
+    m_parserState->m_textListener->insertPicture(pos, data, "image/pict");
 
   return true;
 }
@@ -2802,7 +2802,7 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
   bool send = false;
   bool posOk = pos.size()[0] > 0 && pos.size()[1] > 0;
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   for (int z = 0; z < 2; z++) {
     MWAWEntry entry = pict.m_entries[z];
     if (!entry.valid())
@@ -2877,7 +2877,7 @@ void CWGraph::flushExtra()
     shared_ptr<CWGraphInternal::Group> zone = iter->second;
     if (zone->m_parsed)
       continue;
-    if (m_parserState->m_listener) m_parserState->m_listener->insertEOL();
+    if (m_parserState->m_textListener) m_parserState->m_textListener->insertEOL();
     MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),librevenge::RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendGroup(iter->first, false, pos);

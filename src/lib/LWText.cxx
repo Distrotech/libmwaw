@@ -40,7 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -373,7 +373,7 @@ bool LWText::createZones()
 
 bool LWText::sendMainText()
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("LWText::sendMainText: can not find a listener\n"));
     return false;
@@ -771,8 +771,8 @@ bool LWText::readFont2(MWAWEntry const &entry)
 //////////////////////////////////////////////
 void LWText::setProperty(MWAWParagraph const &ruler)
 {
-  if (!m_parserState->m_listener) return;
-  m_parserState->m_listener->setParagraph(ruler);
+  if (!m_parserState->m_textListener) return;
+  m_parserState->m_textListener->setParagraph(ruler);
 }
 
 bool LWText::readRulers(MWAWEntry const &entry)
@@ -919,7 +919,7 @@ bool LWText::readRulers(MWAWEntry const &entry)
 //////////////////////////////////////////////
 bool LWText::sendHeaderFooter(bool header)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("LWText::sendHeaderFooter: can not find the listener\n"));
     return false;

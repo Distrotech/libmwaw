@@ -56,7 +56,7 @@ class NSText;
 
 /** \brief the main class to read a Nisus Writer file
  */
-class NSParser : public MWAWParser
+class NSParser : public MWAWTextParser
 {
   friend struct NSStruct::RecursifData;
   friend class NSGraph;

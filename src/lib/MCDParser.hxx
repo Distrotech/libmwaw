@@ -51,7 +51,7 @@ struct State;
 
 /** \brief the main class to read a MacDoc file
  */
-class MCDParser : public MWAWParser
+class MCDParser : public MWAWTextParser
 {
   friend class MCDText;
 public:

@@ -51,7 +51,7 @@ struct State;
 
 /** \brief the main class to read a SimpleText/TeachText/Tex-Edit file
  */
-class TTParser : public MWAWParser
+class TTParser : public MWAWTextParser
 {
   friend class TTText;
 public:

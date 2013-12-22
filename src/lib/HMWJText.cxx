@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -334,7 +334,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   /** the subdocument type */
@@ -352,7 +352,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("HMWJTextInternal::SubDocument::parse: no listener\n"));
@@ -507,11 +507,11 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos, bool 
     MWAW_DEBUG_MSG(("HMWJText::sendText: call without entry\n"));
     return false;
   }
-  MWAWListenerPtr listener;
+  MWAWBasicListenerPtr listener;
   if (asGraphic)
     listener=m_parserState->m_graphicListener;
   else
-    listener=m_parserState->m_listener;
+    listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("HMWJText::sendText: can not find the listener\n"));
     return false;
@@ -647,7 +647,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos, bool 
             (new HMWJTextInternal::SubDocument
              (*this, input, m_state->m_ftnTextId,
               m_state->m_ftnFirstPosList[size_t(tkn.m_localId)]));
-            m_parserState->m_listener->insertNote(MWAWNote(MWAWNote::FootNote),subdoc);
+            m_parserState->m_textListener->insertNote(MWAWNote(MWAWNote::FootNote),subdoc);
             break;
           }
           case 8: // TOC, ok to ignore
@@ -659,7 +659,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos, bool 
             }
             else {
               MWAWSubDocumentPtr subdoc(new HMWJTextInternal::SubDocument(*this, input, tkn.m_bookmark));
-              m_parserState->m_listener->insertComment(subdoc);
+              m_parserState->m_textListener->insertComment(subdoc);
               break;
             }
           default:
@@ -744,7 +744,7 @@ bool HMWJText::sendText(HMWJTextInternal::TextZone const &zone, long fPos, bool 
           break;
         }
         if (actCol < numCol-1 && numCol > 1) {
-          listener->insertBreak(MWAWContentListener::ColumnBreak);
+          listener->insertBreak(MWAWTextListener::ColumnBreak);
           actCol++;
         }
         else {
@@ -2347,7 +2347,7 @@ bool HMWJText::readFtnPos(MWAWEntry const &entry)
 
 void HMWJText::flushExtra()
 {
-  if (!m_parserState->m_listener) return;
+  if (!m_parserState->m_textListener) return;
 
 #ifdef DEBUG
   for (size_t z = 0; z < m_state->m_textZoneList.size(); z++) {
@@ -2360,7 +2360,7 @@ void HMWJText::flushExtra()
       first = false;
     }
     sendText(m_state->m_textZoneList[z],0,false);
-    m_parserState->m_listener->insertEOL();
+    m_parserState->m_textListener->insertEOL();
   }
 #endif
 }

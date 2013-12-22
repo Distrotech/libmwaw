@@ -32,7 +32,7 @@
 */
 #include <map>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWSection.hxx"
 
 #include "MSWParser.hxx"
@@ -329,12 +329,12 @@ bool MSWTextStyles::getFont(ZoneType type, int id, MSWStruct::Font &font)
 
 void MSWTextStyles::setProperty(MSWStruct::Font const &font)
 {
-  if (!m_parserState->m_listener) return;
+  if (!m_parserState->m_textListener) return;
   MSWStruct::Font tmp = font;
   if (tmp.m_font->id() < 0) tmp.m_font->setId(m_state->m_defaultFont.id());
   if (tmp.m_font->size() <= 0) tmp.m_font->setSize(m_state->m_defaultFont.size());
   tmp.updateFontToFinalState();
-  m_parserState->m_listener->setFont(*tmp.m_font);
+  m_parserState->m_textListener->setFont(*tmp.m_font);
 }
 
 ////////////////////////////////////////////////////////////
@@ -370,8 +370,8 @@ bool MSWTextStyles::getParagraph(ZoneType type, int id, MSWStruct::Paragraph &pa
 
 void MSWTextStyles::sendDefaultParagraph()
 {
-  if (!m_parserState->m_listener) return;
-  m_parserState->m_listener->setParagraph(MSWStruct::Paragraph(version()));
+  if (!m_parserState->m_textListener) return;
+  m_parserState->m_textListener->setParagraph(MSWStruct::Paragraph(version()));
 }
 
 bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
@@ -1030,7 +1030,7 @@ bool MSWTextStyles::readSection(MSWStruct::Section &sec, long debPos)
 
 void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return;
   if (listener->isHeaderFooterOpened()) {
     MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: can not open a section in header/footer\n"));
@@ -1043,7 +1043,7 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
         MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: section is not opened\n"));
       }
       else
-        listener->insertBreak(MWAWContentListener::ColumnBreak);
+        listener->insertBreak(MWAWTextListener::ColumnBreak);
     }
     else {
       if (listener->isSectionOpened())
@@ -1055,7 +1055,7 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
 
 bool MSWTextStyles::sendSection(int id, int textStructId)
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
 
   if (id < 0 || id >= int(m_state->m_sectionList.size())) {
     MWAW_DEBUG_MSG(("MSWTextStyles::sendText: can not find new section\n"));

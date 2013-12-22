@@ -41,10 +41,164 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWListener.hxx"
 
 #include "MWAWCell.hxx"
 
+////////////////////////////////////////////////////////////
+// MWAWCell::Format
+////////////////////////////////////////////////////////////
+bool MWAWCell::Format::convertDTFormat(std::string const &dtFormat, librevenge::RVNGPropertyListVector &propVect)
+{
+  propVect.clear();
+  size_t len=dtFormat.size();
+  std::string text("");
+  librevenge::RVNGPropertyList list;
+  for (size_t c=0; c < len; ++c) {
+    if (dtFormat[c]!='%' || c+1==len) {
+      text+=dtFormat[c];
+      continue;
+    }
+    char ch=dtFormat[++c];
+    if (ch=='%') {
+      text += '%';
+      continue;
+    }
+    if (!text.empty()) {
+      list.clear();
+      list.insert("librevenge:value-type", "text");
+      list.insert("librevenge:text", text.c_str());
+      propVect.append(list);
+      text.clear();
+    }
+    list.clear();
+    switch (ch) {
+    case 'Y':
+      list.insert("number:style", "long");
+    case 'y':
+      list.insert("librevenge:value-type", "year");
+      propVect.append(list);
+      break;
+    case 'B':
+      list.insert("number:style", "long");
+    case 'b':
+    case 'h':
+      list.insert("librevenge:value-type", "month");
+      list.insert("number:textual", true);
+      propVect.append(list);
+      break;
+    case 'm':
+      list.insert("librevenge:value-type", "month");
+      propVect.append(list);
+      break;
+    case 'e':
+      list.insert("number:style", "long");
+    case 'd':
+      list.insert("librevenge:value-type", "day");
+      propVect.append(list);
+      break;
+    case 'A':
+      list.insert("number:style", "long");
+    case 'a':
+      list.insert("librevenge:value-type", "day-of-week");
+      propVect.append(list);
+      break;
+
+    case 'H':
+      list.insert("number:style", "long");
+    case 'I':
+      list.insert("librevenge:value-type", "hours");
+      propVect.append(list);
+      break;
+    case 'M':
+      list.insert("librevenge:value-type", "minutes");
+      list.insert("number:style", "long");
+      propVect.append(list);
+      break;
+    case 'S':
+      list.insert("librevenge:value-type", "seconds");
+      list.insert("number:style", "long");
+      propVect.append(list);
+      break;
+    case 'p':
+      list.insert("librevenge:value-type", "text");
+      list.insert("librevenge:text", " ");
+      propVect.append(list);
+      list.clear();
+      list.insert("librevenge:value-type", "am-pm");
+      propVect.append(list);
+      break;
+    default:
+      MWAW_DEBUG_MSG(("MWAWCell::Format::convertDTFormat: find unimplement command %c(ignored)\n", ch));
+    }
+  }
+  if (!text.empty()) {
+    list.clear();
+    list.insert("librevenge:value-type", "text");
+    list.insert("librevenge:text", text.c_str());
+    propVect.append(list);
+  }
+  return propVect.count()!=0;
+}
+
+std::ostream &operator<<(std::ostream &o, MWAWCell::Format const &format)
+{
+  switch (format.m_format) {
+  case MWAWCell::F_BOOLEAN:
+    o << "boolean";
+    break;
+  case MWAWCell::F_TEXT:
+    o << "text";
+    break;
+  case MWAWCell::F_NUMBER:
+    o << "number";
+    switch (format.m_numberFormat) {
+    case MWAWCell::F_NUMBER_GENERIC:
+      o << "[decimal]";
+      break;
+    case MWAWCell::F_NUMBER_SCIENTIFIC:
+      o << "[exp]";
+      break;
+    case MWAWCell::F_NUMBER_PERCENT:
+      o << "[percent]";
+      break;
+    case MWAWCell::F_NUMBER_CURRENCY:
+      o << "[money=" << format.m_currencySymbol << "]";
+      break;
+    case MWAWCell::F_NUMBER_FRACTION:
+      o << "[fraction]";
+      break;
+    case MWAWCell::F_NUMBER_UNKNOWN:
+    default:
+      MWAW_DEBUG_MSG(("MWAWCell::operator<<(Format): find unexpected type\n"));
+      o << "###format,";
+      break;
+    }
+    if (format.m_thousandHasSeperator)
+      o << "[thousandSep]";
+    break;
+  case MWAWCell::F_DATE:
+    o << "date[" << format.m_DTFormat << "]";
+    break;
+  case MWAWCell::F_TIME:
+    o << "time[" << format.m_DTFormat << "]";
+    break;
+  case MWAWCell::F_UNKNOWN:
+  default:
+    break; // default
+  }
+  o << ",";
+
+  if (format.m_digits != -1) o << "digits=" << format.m_digits << ",";
+  if (format.m_integerDigits != -1) o << "digits[min]=" << format.m_integerDigits << ",";
+  if (format.m_numeratorDigits != -1) o << "digits[num]=" << format.m_numeratorDigits << ",";
+  if (format.m_denominatorDigits != -1) o << "digits[den]=" << format.m_denominatorDigits << ",";
+  return o;
+}
+
+////////////////////////////////////////////////////////////
+// MWAWCell
+////////////////////////////////////////////////////////////
 void MWAWCell::addTo(librevenge::RVNGPropertyList &propList) const
 {
   propList.insert("librevenge:column", position()[0]);
@@ -173,7 +327,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
     o << "bdBox=" << cell.m_bdBox << ",";
   if (cell.m_bdSize[0]>0 || cell.m_bdSize[1]>0)
     o << "bdSize=" << cell.m_bdSize << ",";
-
+  o << cell.m_format;
   switch (cell.m_hAlign) {
   case MWAWCell::HALIGN_LEFT:
     o << "left,";
@@ -240,7 +394,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
 }
 
 // send data to listener
-bool MWAWCell::send(MWAWContentListenerPtr listener, MWAWTable &table)
+bool MWAWCell::send(MWAWListenerPtr listener, MWAWTable &table)
 {
   if (!listener) return true;
   listener->openTableCell(*this);
@@ -249,10 +403,152 @@ bool MWAWCell::send(MWAWContentListenerPtr listener, MWAWTable &table)
   return ok;
 }
 
-bool MWAWCell::sendContent(MWAWContentListenerPtr, MWAWTable &)
+bool MWAWCell::sendContent(MWAWListenerPtr, MWAWTable &)
 {
   MWAW_DEBUG_MSG(("MWAWCell::sendContent: must not be called!!!\n"));
   return false;
+}
+
+////////////////////////////////////////////////////////////
+// MWAWCellContent
+////////////////////////////////////////////////////////////
+bool MWAWCellContent::double2Date(double val, int &Y, int &M, int &D)
+{
+  // number of day since 1/1/1970
+  time_t date= time_t((val-24107-1462+0.4)*24.*3600);
+  struct tm dateTm;
+  if (!gmtime_r(&date,&dateTm)) return false;
+
+  Y = dateTm.tm_year+1900;
+  M=dateTm.tm_mon+1;
+  D=dateTm.tm_mday;
+  return true;
+}
+
+bool MWAWCellContent::double2Time(double val, int &H, int &M, int &S)
+{
+  if (val < 0.0 || val > 1.0) return false;
+  double time = 24.*3600.*val+0.5;
+  H=int(time/3600.);
+  time -= H*3600.;
+  M=int(time/60.);
+  time -= M*60.;
+  S=int(time);
+  return true;
+}
+
+std::ostream &operator<<(std::ostream &o, MWAWCellContent const &content)
+{
+  switch (content.m_contentType) {
+  case MWAWCellContent::C_NONE:
+    break;
+  case MWAWCellContent::C_TEXT:
+    o << ",text=\"" << content.m_textEntry << "\"";
+    break;
+  case MWAWCellContent::C_NUMBER: {
+    o << ",val=";
+    bool textAndVal = false;
+    if (content.hasText()) {
+      o << "entry=" << content.m_textEntry;
+      textAndVal = content.isValueSet();
+    }
+    if (textAndVal) o << "[";
+    if (content.isValueSet()) o << content.m_value;
+    if (textAndVal) o << "]";
+  }
+  break;
+  case MWAWCellContent::C_FORMULA:
+    o << ",formula=";
+    for (size_t l=0; l < content.m_formula.size(); ++l)
+      o << content.m_formula[l];
+    if (content.isValueSet()) o << "[" << content.m_value << "]";
+    break;
+  case MWAWCellContent::C_UNKNOWN:
+    break;
+  default:
+    o << "###unknown type,";
+    break;
+  }
+  return o;
+}
+
+// ---------- WKSContentListener::FormulaInstruction ------------------
+librevenge::RVNGPropertyList MWAWCellContent::FormulaInstruction::getPropertyList() const
+{
+  librevenge::RVNGPropertyList pList;
+  switch (m_type) {
+  case F_Operator:
+    pList.insert("librevenge:type","librevenge-operator");
+    pList.insert("librevenge:operator",m_content.c_str());
+    break;
+  case F_Function:
+    pList.insert("librevenge:type","librevenge-function");
+    pList.insert("librevenge:function",m_content.c_str());
+    break;
+  case F_Text:
+    pList.insert("librevenge:type","librevenge-text");
+    pList.insert("librevenge:text",m_content.c_str());
+    break;
+  case F_Double:
+    pList.insert("librevenge:type","librevenge-number");
+    pList.insert("librevenge:number",m_doubleValue, librevenge::RVNG_GENERIC);
+    break;
+  case F_Long:
+    pList.insert("librevenge:type","librevenge-number");
+    pList.insert("librevenge:number",m_longValue, librevenge::RVNG_GENERIC);
+    break;
+  case F_Cell:
+    pList.insert("librevenge:type","librevenge-cell");
+    pList.insert("librevenge:column",m_position[0][0], librevenge::RVNG_GENERIC);
+    pList.insert("librevenge:row",m_position[0][1], librevenge::RVNG_GENERIC);
+    pList.insert("librevenge:column-absolute",!m_positionRelative[0][0]);
+    pList.insert("librevenge:row-absolute",!m_positionRelative[0][1]);
+    break;
+  case F_CellList:
+    pList.insert("librevenge:type","librevenge-cells");
+    pList.insert("librevenge:start-column",m_position[0][0], librevenge::RVNG_GENERIC);
+    pList.insert("librevenge:start-row",m_position[0][1], librevenge::RVNG_GENERIC);
+    pList.insert("librevenge:start-column-absolute",!m_positionRelative[0][0]);
+    pList.insert("librevenge:start-row-absolute",!m_positionRelative[0][1]);
+    pList.insert("librevenge:end-column",m_position[1][0], librevenge::RVNG_GENERIC);
+    pList.insert("librevenge:end-row",m_position[1][1], librevenge::RVNG_GENERIC);
+    pList.insert("librevenge:end-column-absolute",!m_positionRelative[1][0]);
+    pList.insert("librevenge:end-row-absolute",!m_positionRelative[1][1]);
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MWAWCellContent::FormulaInstruction::getPropertyList: unexpected type\n"));
+  }
+  return pList;
+}
+
+std::ostream &operator<<(std::ostream &o, MWAWCellContent::FormulaInstruction const &inst)
+{
+  if (inst.m_type==MWAWCellContent::FormulaInstruction::F_Double)
+    o << inst.m_doubleValue;
+  else if (inst.m_type==MWAWCellContent::FormulaInstruction::F_Long)
+    o << inst.m_longValue;
+  else if (inst.m_type==MWAWCellContent::FormulaInstruction::F_Cell) {
+    if (!inst.m_positionRelative[0][0]) o << "$";
+    if (inst.m_position[0][0]>=26) o << (char)(inst.m_position[0][0]/26-1 + 'A');
+    o << (char)(inst.m_position[0][0]%26+'A');
+    if (!inst.m_positionRelative[0][1]) o << "$";
+    o << inst.m_position[0][1];
+  }
+  else if (inst.m_type==MWAWCellContent::FormulaInstruction::F_CellList) {
+    for (int l=0; l<2; ++l) {
+      if (!inst.m_positionRelative[l][0]) o << "$";
+      if (inst.m_position[l][0]>=26) o << (char)(inst.m_position[l][0]/26-1 + 'A');
+      o << (char)(inst.m_position[l][0]%26+'A');
+      if (!inst.m_positionRelative[l][1]) o << "$";
+      o << inst.m_position[l][1];
+      if (l==0) o << ":";
+    }
+  }
+  else if (inst.m_type==MWAWCellContent::FormulaInstruction::F_Text)
+    o << "\"" << inst.m_content << "\"";
+  else
+    o << inst.m_content;
+  return o;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

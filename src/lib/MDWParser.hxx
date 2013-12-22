@@ -57,7 +57,7 @@ class SubDocument;
  *
  *
  */
-class MDWParser : public MWAWParser
+class MDWParser : public MWAWTextParser
 {
   friend class MDWParserInternal::SubDocument;
 

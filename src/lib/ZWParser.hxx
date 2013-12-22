@@ -78,7 +78,7 @@ struct ZWField {
 
 /** \brief the main class to read a ZWrite file
  */
-class ZWParser : public MWAWParser
+class ZWParser : public MWAWTextParser
 {
   friend class ZWParserInternal::SubDocument;
   friend class ZWText;

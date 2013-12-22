@@ -46,7 +46,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
@@ -1811,7 +1811,7 @@ void MSWText::prepareData()
 bool MSWText::sendText(MWAWEntry const &textEntry, bool mainZone, bool tableCell)
 {
   if (!textEntry.valid()) return false;
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MSWText::sendText: can not find a listener!"));
     return true;
@@ -2034,7 +2034,7 @@ bool MSWText::sendSection(int secId)
 ////////////////////////////////////////////////////////////
 bool MSWText::sendTable(MSWTextInternal::Table const &table)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MSWText::sendTable: can not find a listener!\n"));
     return true;
@@ -2109,7 +2109,7 @@ bool MSWText::sendMainText()
 
 bool MSWText::sendFootnote(int id)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return true;
   if (id < 0 || id >= int(m_state->m_footnoteList.size())) {
     MWAW_DEBUG_MSG(("MSWText::sendFootnote: can not find footnote %d\n", id));
@@ -2127,7 +2127,7 @@ bool MSWText::sendFootnote(int id)
 
 bool MSWText::sendFieldComment(int id)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return true;
   if (id < 0 || id >= int(m_state->m_fieldList.size())) {
     MWAW_DEBUG_MSG(("MSWText::sendFieldComment: can not find field %d\n", id));

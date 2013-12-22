@@ -43,7 +43,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWInputStream.hxx"
@@ -883,7 +883,7 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
 
 bool CWDbaseContent::send(Vec2i const &pos)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("CWDBaseContent::send: can not find the listener\n"));
     return false;
@@ -965,7 +965,7 @@ bool CWDbaseContent::send(Vec2i const &pos)
 
 void CWDbaseContent::send(double val, bool isNotANumber, CWStyleManager::CellFormat const &format)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener)
     return;
   std::stringstream s;

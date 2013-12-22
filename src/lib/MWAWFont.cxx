@@ -37,7 +37,7 @@
 
 #include "libmwaw_internal.hxx"
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWPosition.hxx"
 

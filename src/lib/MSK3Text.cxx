@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
@@ -409,7 +409,7 @@ bool MSK3Text::readZoneHeader(MSK3TextInternal::LineZone &zone) const
 ////////////////////////////////////////////////////////////
 bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MSK3Text::sendText: can not find the listener\n"));
     return true;
@@ -499,7 +499,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
 
 bool MSK3Text::sendString(std::string &str)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener)
     return true;
   MSK3TextInternal::Font defFont;
@@ -792,8 +792,8 @@ void MSK3Text::send(MSK3TextInternal::TextZone &zone, Vec2i limit)
 {
   int numZones = int(zone.m_zonesList.size());
   // set the default font
-  if (m_parserState->m_listener)
-    m_parserState->m_listener->setFont(MWAWFont(20,12));
+  if (m_parserState->m_textListener)
+    m_parserState->m_textListener->setFont(MWAWFont(20,12));
   if (numZones == 0 && zone.m_text.length()) {
     sendString(zone.m_text);
     zone.m_isSent = true;
@@ -828,8 +828,8 @@ void MSK3Text::send(MSK3TextInternal::TextZone &zone, Vec2i limit)
     MSK3TextInternal::LineZone &z = zone.m_zonesList[(size_t)i];
     if (z.m_type & 0x80) {
       MWAWParagraph parag;
-      if (readParagraph(z, parag) && m_parserState->m_listener)
-        m_parserState->m_listener->setParagraph(parag);
+      if (readParagraph(z, parag) && m_parserState->m_textListener)
+        m_parserState->m_textListener->setParagraph(parag);
     }
     else
       sendText(z, zone.m_id);
@@ -839,7 +839,7 @@ void MSK3Text::send(MSK3TextInternal::TextZone &zone, Vec2i limit)
 
 void MSK3Text::sendNote(int zoneId, int noteId)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (zoneId < 0 || zoneId >= int(m_state->m_zones.size())) {
     if (listener) listener->insertChar(' ');
     MWAW_DEBUG_MSG(("MSK3Text::sendNote: unknown zone %d\n", zoneId));

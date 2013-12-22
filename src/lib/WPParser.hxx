@@ -63,7 +63,7 @@ class SubDocument;
  *
  *
  */
-class WPParser : public MWAWParser
+class WPParser : public MWAWTextParser
 {
   friend class WPParserInternal::SubDocument;
 

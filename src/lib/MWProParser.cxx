@@ -40,7 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWPosition.hxx"
@@ -268,14 +268,14 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (m_id == -3) return; // empty block
   if (!listener.get()) {
@@ -306,7 +306,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MWProParser::MWProParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_structures()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_structures()
 {
   init();
 }
@@ -317,7 +317,7 @@ MWProParser::~MWProParser()
 
 void MWProParser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new MWProParserInternal::State);
@@ -349,12 +349,12 @@ void MWProParser::newPage(int number, bool softBreak)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
     if (softBreak)
-      getListener()->insertBreak(MWAWContentListener::SoftPageBreak);
+      getTextListener()->insertBreak(MWAWTextListener::SoftPageBreak);
     else
-      getListener()->insertBreak(MWAWContentListener::PageBreak);
+      getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -412,7 +412,7 @@ void MWProParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -557,7 +557,7 @@ bool MWProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
 void MWProParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("MWProParser::createDocument: listener already exist\n"));
     return;
   }
@@ -613,8 +613,8 @@ void MWProParser::createDocument(librevenge::RVNGTextInterface *documentInterfac
   }
 
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
@@ -1333,8 +1333,8 @@ bool MWProParser::sendEmptyFrameZone(MWAWPosition const &pos,
 {
   shared_ptr<MWProParserInternal::SubDocument> subdoc
   (new MWProParserInternal::SubDocument(*this, getInput(), -3));
-  if (getListener())
-    getListener()->insertTextBox(pos, subdoc, extras);
+  if (getTextListener())
+    getTextListener()->insertTextBox(pos, subdoc, extras);
   return true;
 }
 
@@ -1394,8 +1394,8 @@ bool MWProParser::sendTextBoxZone(int blockId, MWAWPosition const &pos,
 {
   shared_ptr<MWProParserInternal::SubDocument> subdoc
   (new MWProParserInternal::SubDocument(*this, getInput(), blockId));
-  if (getListener())
-    getListener()->insertTextBox(pos, subdoc, extras);
+  if (getTextListener())
+    getTextListener()->insertTextBox(pos, subdoc, extras);
   return true;
 }
 
@@ -1528,7 +1528,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       long actPos = input->tell();
       switch (zone->m_tokens[(size_t)data.m_id].m_type) {
       case 1:
-        if (getListener()) getListener()->insertField(MWAWField(MWAWField::PageNumber));
+        if (getTextListener()) getTextListener()->insertField(MWAWField(MWAWField::PageNumber));
         break;
       case 2:
         if (vers == 1 && listenerState.isSent(zone->m_tokens[(size_t)data.m_id].m_blockId)) {
@@ -1538,7 +1538,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
           int id = zone->m_tokens[(size_t)data.m_id].m_blockId;
           if (vers == 0) id = -id;
           MWAWSubDocumentPtr subdoc(new MWProParserInternal::SubDocument(*this, getInput(), id));
-          getListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
+          getTextListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
         }
         break;
       case 3:
@@ -1557,23 +1557,23 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
       case 5:
         break; // hyphen ok
       case 6:
-        if (getListener()) getListener()->insertField(MWAWField(MWAWField::Date));
+        if (getTextListener()) getTextListener()->insertField(MWAWField(MWAWField::Date));
         break;
       case 7:
-        if (getListener()) getListener()->insertField(MWAWField(MWAWField::Time));
+        if (getTextListener()) getTextListener()->insertField(MWAWField(MWAWField::Time));
         break;
       case 8:
-        if (getListener()) getListener()->insertField(MWAWField(MWAWField::Title));
+        if (getTextListener()) getTextListener()->insertField(MWAWField(MWAWField::Title));
         break;
       case 9:
-        if (getListener()) getListener()->insertUnicodeString("#REVISION#");
+        if (getTextListener()) getTextListener()->insertUnicodeString("#REVISION#");
         break;
       case 10:
-        if (getListener()) {
+        if (getTextListener()) {
           int numSection = listenerState.numSection()+1;
           std::stringstream s;
           s << numSection;
-          getListener()->insertUnicodeString(s.str().c_str());
+          getTextListener()->insertUnicodeString(s.str().c_str());
         }
         break;
       default:
@@ -1708,11 +1708,11 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
     MWAW_DEBUG_MSG(("MWProParser::parseDataZone: no sure this is a picture\n"));
     if (pictPos.size().x() <= 0 || pictPos.size().y() <= 0)
       pictPos=MWAWPosition(Vec2f(0,0),Vec2f(100.,100.), librevenge::RVNG_POINT);
-    if (getListener()) {
+    if (getTextListener()) {
       librevenge::RVNGBinaryData data;
       input->seek(4, librevenge::RVNG_SEEK_SET);
       input->readDataBlock(pictSize, data);
-      getListener()->insertPicture(pictPos, data, "image/pict", extras);
+      getTextListener()->insertPicture(pictPos, data, "image/pict", extras);
     }
     return true;
   }
@@ -1725,11 +1725,11 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
   if (pict->getBdBox().size().x() > 0 && pict->getBdBox().size().y() > 0)
     pictPos.setNaturalSize(pict->getBdBox().size());
 
-  if (getListener()) {
+  if (getTextListener()) {
     librevenge::RVNGBinaryData data;
     std::string type;
     if (pict->getBinary(data,type))
-      getListener()->insertPicture(pictPos, data, type, extras);
+      getTextListener()->insertPicture(pictPos, data, type, extras);
   }
   return true;
 }

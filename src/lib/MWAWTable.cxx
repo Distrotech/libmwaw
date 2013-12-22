@@ -46,9 +46,9 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
+#include "MWAWListener.hxx"
 #include "MWAWPosition.hxx"
 
 #include "MWAWTable.hxx"
@@ -156,7 +156,7 @@ void MWAWTable::addTablePropertiesTo(librevenge::RVNGPropertyList &propList) con
 
 ////////////////////////////////////////////////////////////
 // send extra line
-void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
+void MWAWTable::sendExtraLines(MWAWListenerPtr listener) const
 {
   if (!listener) {
     MWAW_DEBUG_MSG(("MWAWTable::sendExtraLines: called without listener\n"));
@@ -459,7 +459,7 @@ bool MWAWTable::updateTable()
   return true;
 }
 
-bool MWAWTable::sendTable(MWAWContentListenerPtr listener, bool inFrame)
+bool MWAWTable::sendTable(MWAWListenerPtr listener, bool inFrame)
 {
   if (!updateTable())
     return false;
@@ -490,7 +490,7 @@ bool MWAWTable::sendTable(MWAWContentListenerPtr listener, bool inFrame)
 
 ////////////////////////////////////////////////////////////
 // try to send the table
-bool MWAWTable::sendAsText(MWAWContentListenerPtr listener)
+bool MWAWTable::sendAsText(MWAWListenerPtr listener)
 {
   if (!listener) return true;
 

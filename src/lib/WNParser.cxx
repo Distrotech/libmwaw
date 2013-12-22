@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -100,14 +100,14 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument file position
   WNEntry m_pos;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -135,7 +135,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 WNParser::WNParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_entryManager(), m_textParser()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_entryManager(), m_textParser()
 {
   init();
 }
@@ -146,7 +146,7 @@ WNParser::~WNParser()
 
 void WNParser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new WNParserInternal::State);
@@ -177,9 +177,9 @@ void WNParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -194,10 +194,10 @@ bool WNParser::getColor(int colId, MWAWColor &col) const
 
 void WNParser::sendFootnote(WNEntry const &entry)
 {
-  if (!getListener()) return;
+  if (!getTextListener()) return;
 
   MWAWSubDocumentPtr subdoc(new WNParserInternal::SubDocument(*this, getInput(), entry));
-  getListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
+  getTextListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
 }
 
 void WNParser::send(WNEntry const &entry)
@@ -262,7 +262,7 @@ void WNParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -272,7 +272,7 @@ void WNParser::parse(librevenge::RVNGTextInterface *docInterface)
 void WNParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("WNParser::createDocument: listener already exist\n"));
     return;
   }
@@ -302,8 +302,8 @@ void WNParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   ps.setPageSpan(m_state->m_numPages+1);
   std::vector<MWAWPageSpan> pageList(1,ps);
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
@@ -673,7 +673,7 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
       ascii().addDelimiter(pos, '|');
     }
     else {
-      if (getListener()) {
+      if (getTextListener()) {
         librevenge::RVNGBinaryData data;
         std::string pictType;
         MWAWPosition pictPos;
@@ -686,7 +686,7 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
         pictPos.setRelativePosition(MWAWPosition::Char);
 
         if (pict->getBinary(data,pictType))
-          getListener()->insertPicture(pictPos, data, pictType);
+          getTextListener()->insertPicture(pictPos, data, pictType);
       }
 
 #ifdef DEBUG_WITH_FILES

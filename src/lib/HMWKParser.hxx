@@ -182,7 +182,7 @@ class HMWKText;
  *
  *
  */
-class HMWKParser : public MWAWParser
+class HMWKParser : public MWAWTextParser
 {
   friend class HMWKGraph;
   friend class HMWKText;

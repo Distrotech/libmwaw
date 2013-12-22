@@ -42,7 +42,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
@@ -97,7 +97,7 @@ struct TableCell : public MWAWCell {
   //! use cell format to finish updating cell
   void update(CellFormat const &format);
   //! call when the content of a cell must be send
-  virtual bool sendContent(MWAWContentListenerPtr listener, MWAWTable &table);
+  virtual bool sendContent(MWAWListenerPtr listener, MWAWTable &table);
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TableCell const &cell);
   //! the cell zone id
@@ -185,7 +185,7 @@ private:
   Table &operator=(Table const &orig);
 };
 
-bool TableCell::sendContent(MWAWContentListenerPtr, MWAWTable &table)
+bool TableCell::sendContent(MWAWListenerPtr, MWAWTable &table)
 {
   if (m_tId)
     return static_cast<Table &>(table).sendText(m_tId, m_cPos);
@@ -847,7 +847,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
   //! the parser function
   void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType type);
@@ -869,7 +869,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("HMWJGraphInternal::SubDocument::parse: no listener\n"));
@@ -1919,7 +1919,7 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
 
 bool HMWJGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
 
   std::map<long, int >::const_iterator fIt=
     m_state->m_framesMap.find(frameId);
@@ -1938,7 +1938,7 @@ bool HMWJGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGProper
 // --- basic shape
 bool HMWJGraph::sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPosition pos)
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(pict.getBdBox().size());
 
@@ -1953,14 +1953,14 @@ bool HMWJGraph::sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPo
 
   pos.setOrigin(pos.origin());
   pos.setSize(pos.size()+Vec2f(4,4));
-  m_parserState->m_listener->insertPicture(pos,pict.m_shape,style);
+  m_parserState->m_textListener->insertPicture(pos,pict.m_shape,style);
   return true;
 }
 
 // picture
 bool HMWJGraph::sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
 #ifdef DEBUG_WITH_FILES
   bool firstTime = pict.m_parsed == false;
 #endif
@@ -1991,14 +1991,14 @@ bool HMWJGraph::sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MW
   }
 #endif
 
-  m_parserState->m_listener->insertPicture(pos, data, "image/pict", extras);
+  m_parserState->m_textListener->insertPicture(pos, data, "image/pict", extras);
 
   return true;
 }
 
 bool HMWJGraph::sendEmptyPicture(MWAWPosition pos)
 {
-  if (!m_parserState->m_listener)
+  if (!m_parserState->m_textListener)
     return true;
   Vec2f pictSz = pos.size();
   shared_ptr<MWAWPict> pict;
@@ -2020,14 +2020,14 @@ bool HMWJGraph::sendEmptyPicture(MWAWPosition pos)
   librevenge::RVNGBinaryData data;
   std::string type;
   if (!graphicListener->endGraphic(data,type)) return false;
-  m_parserState->m_listener->insertPicture(pictPos, data, type);
+  m_parserState->m_textListener->insertPicture(pictPos, data, type);
   return true;
 }
 
 // ----- comment box
 bool HMWJGraph::sendComment(HMWJGraphInternal::CommentFrame const &comment, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
   Vec2f commentSz = comment.getBdBox().size();
   if (comment.m_dim[0] > commentSz[0]) commentSz[0]=comment.m_dim[0];
   if (comment.m_dim[1] > commentSz[1]) commentSz[1]=comment.m_dim[1];
@@ -2053,7 +2053,7 @@ bool HMWJGraph::sendComment(HMWJGraphInternal::CommentFrame const &comment, MWAW
     pList.insert("fo:background-color", style.m_surfaceColor.str().c_str());
 
   MWAWSubDocumentPtr subdoc(new HMWJGraphInternal::SubDocument(*this, m_parserState->m_input, HMWJGraphInternal::SubDocument::Text, comment.m_zId));
-  m_parserState->m_listener->insertTextBox(pos, subdoc, pList);
+  m_parserState->m_textListener->insertTextBox(pos, subdoc, pList);
 
   return true;
 }
@@ -2061,7 +2061,7 @@ bool HMWJGraph::sendComment(HMWJGraphInternal::CommentFrame const &comment, MWAW
 // ----- textbox
 bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(textbox.getBdBox().size());
   librevenge::RVNGPropertyList pList(extras), tbExtras;
@@ -2082,7 +2082,7 @@ bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAW
     fName.sprintf("Frame%ld", textbox.m_linkToFId);
     tbExtras.insert("librevenge:next-frame-name",fName);
   }
-  m_parserState->m_listener->insertTextBox(pos, subdoc, pList, tbExtras);
+  m_parserState->m_textListener->insertTextBox(pos, subdoc, pList, tbExtras);
 
   return true;
 }
@@ -2090,7 +2090,7 @@ bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAW
 // ----- table
 bool HMWJGraph::sendTableUnformatted(long fId)
 {
-  if (!m_parserState->m_listener)
+  if (!m_parserState->m_textListener)
     return true;
   std::map<long, int>::const_iterator fIt = m_state->m_framesMap.find(fId);
   if (fIt == m_state->m_framesMap.end()) {
@@ -2106,7 +2106,7 @@ bool HMWJGraph::sendTableUnformatted(long fId)
     return false;
   }
   HMWJGraphInternal::Table &table = reinterpret_cast<HMWJGraphInternal::Table &>(frame);
-  table.sendAsText(m_parserState->m_listener);
+  table.sendAsText(m_parserState->m_textListener);
   return true;
 }
 
@@ -2115,7 +2115,7 @@ bool HMWJGraph::sendTableUnformatted(long fId)
 ////////////////////////////////////////////////////////////
 bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return true;
 
   if (!frame.valid()) {
@@ -2697,7 +2697,7 @@ bool HMWJGraph::checkGroupStructures(long zId, std::set<long> &seens, bool inGro
 ////////////////////////////////////////////////////////////
 bool HMWJGraph::sendGroup(long fId, MWAWPosition pos)
 {
-  if (!m_parserState->m_listener)
+  if (!m_parserState->m_textListener)
     return true;
   std::map<long, int>::const_iterator fIt = m_state->m_framesMap.find(fId);
   if (fIt == m_state->m_framesMap.end()) {
@@ -2717,7 +2717,7 @@ bool HMWJGraph::sendGroup(long fId, MWAWPosition pos)
 
 bool HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWPosition pos)
 {
-  if (!m_parserState->m_listener)
+  if (!m_parserState->m_textListener)
     return true;
   group.m_parsed=true;
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
@@ -2829,7 +2829,7 @@ void HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWGraphicList
 
 void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPosition const &pos)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if (!listener || !graphicListener || graphicListener->isDocumentStarted()) {
     MWAW_DEBUG_MSG(("HMWJGraph::sendGroupChild: can not find the listeners\n"));
@@ -2963,7 +2963,7 @@ void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPositi
 ////////////////////////////////////////////////////////////
 bool HMWJGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
 {
-  if (!m_parserState->m_listener)
+  if (!m_parserState->m_textListener)
     return true;
   std::set<long> notSend;
   for (size_t i=0; i < doNotSendIds.size(); ++i)
@@ -2989,7 +2989,7 @@ bool HMWJGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
 
 void HMWJGraph::flushExtra()
 {
-  if (!m_parserState->m_listener)
+  if (!m_parserState->m_textListener)
     return;
   for (size_t f=0; f < m_state->m_framesList.size(); f++) {
     if (!m_state->m_framesList[f]) continue;

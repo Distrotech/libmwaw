@@ -40,7 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -111,7 +111,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MCDParser::MCDParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state()
+  MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
@@ -122,7 +122,7 @@ MCDParser::~MCDParser()
 
 void MCDParser::init()
 {
-  resetListener();
+  resetTextListener();
 
   m_state.reset(new MCDParserInternal::State);
 
@@ -150,9 +150,9 @@ void MCDParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -179,7 +179,7 @@ void MCDParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -189,7 +189,7 @@ void MCDParser::parse(librevenge::RVNGTextInterface *docInterface)
 void MCDParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("MCDParser::createDocument: listener already exist\n"));
     return;
   }
@@ -205,8 +205,8 @@ void MCDParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   ps.setPageSpan(numPages+1);
   std::vector<MWAWPageSpan> pageList(1,ps);
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
@@ -320,7 +320,7 @@ bool MCDParser::createZones()
 
 bool MCDParser::sendContents()
 {
-  MWAWContentListenerPtr listener=getListener();
+  MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("MCDParser::sendContents: can not find the listener\n"));
     return false;
@@ -499,7 +499,7 @@ int MCDParser::updateIndex(int actIndex, int actLevel)
 
 bool MCDParser::sendIndex()
 {
-  MWAWContentListenerPtr listener=getListener();
+  MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("MCDParser::sendIndex: can not find the listener\n"));
     return false;
@@ -562,7 +562,7 @@ bool MCDParser::sendIndex()
 // picture
 bool MCDParser::sendPicture(MWAWEntry const &entry)
 {
-  if (!getListener()) {
+  if (!getTextListener()) {
     MWAW_DEBUG_MSG(("MCDParser::sendPicture: can not find the listener\n"));
     return false;
   }
@@ -593,7 +593,7 @@ bool MCDParser::sendPicture(MWAWEntry const &entry)
     librevenge::RVNGBinaryData fData;
     std::string type;
     if (thePict->getBinary(fData,type))
-      getListener()->insertPicture(pictPos, fData, type);
+      getTextListener()->insertPicture(pictPos, fData, type);
   }
   return true;
 }

@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -313,7 +313,7 @@ bool CWPresentation::sendZone(int number)
   if (iter == m_state->m_presentationMap.end())
     return false;
   shared_ptr<CWPresentationInternal::Presentation> presentation = iter->second;
-  if (!presentation || !m_parserState->m_listener)
+  if (!presentation || !m_parserState->m_textListener)
     return true;
   presentation->m_parsed = true;
   if (presentation->okChildId(number+1))
@@ -337,7 +337,7 @@ void CWPresentation::flushExtra()
     shared_ptr<CWPresentationInternal::Presentation> presentation = iter->second;
     if (presentation->m_parsed)
       continue;
-    if (m_parserState->m_listener) m_parserState->m_listener->insertEOL();
+    if (m_parserState->m_textListener) m_parserState->m_textListener->insertEOL();
     sendZone(iter->first);
   }
 }

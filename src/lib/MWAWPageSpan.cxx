@@ -34,7 +34,7 @@
 #include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWListener.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWSubDocument.hxx"
 
@@ -72,14 +72,14 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the header footer
   MWAWHeaderFooter const &m_headerFooter;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("MWAWPageSpanInternal::SubDocument::parse: no listener\n"));
@@ -131,7 +131,7 @@ bool MWAWHeaderFooter::operator==(MWAWHeaderFooter const &hf) const
 }
 
 // send data to the listener
-void MWAWHeaderFooter::send(MWAWContentListener *listener) const
+void MWAWHeaderFooter::send(MWAWListener *listener) const
 {
   if (m_type == UNDEF)
     return;
@@ -169,7 +169,7 @@ void MWAWHeaderFooter::send(MWAWContentListener *listener) const
     listener->insertFooter(m_subDocument,propList);
 }
 
-void MWAWHeaderFooter::insertPageNumberParagraph(MWAWContentListener *listener) const
+void MWAWHeaderFooter::insertPageNumberParagraph(MWAWListener *listener) const
 {
   MWAWParagraph para;
   para.m_justify = MWAWParagraph::JustificationCenter;
@@ -268,7 +268,7 @@ void MWAWPageSpan::checkMargins()
   }
 }
 
-void MWAWPageSpan::sendHeaderFooters(MWAWContentListener *listener) const
+void MWAWPageSpan::sendHeaderFooters(MWAWListener *listener) const
 {
   if (!listener) {
     MWAW_DEBUG_MSG(("MWAWPageSpan::sendHeaderFooters: no listener\n"));

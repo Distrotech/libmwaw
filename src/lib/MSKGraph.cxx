@@ -41,7 +41,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
@@ -838,7 +838,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
   //! the graphic parser function
   void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType type);
 private:
@@ -856,7 +856,7 @@ protected:
   std::string m_frame;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("MSKParser::SubDocument::parse: no listener\n"));
@@ -2143,7 +2143,7 @@ void MSKGraph::sendGroup(int id, MWAWPosition const &pos)
     MWAW_DEBUG_MSG(("MSKGraph::sendGroup: can not find group %d\n", id));
     return;
   }
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return;
   MSKGraphInternal::GroupZone &group=
     reinterpret_cast<MSKGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
@@ -2185,7 +2185,7 @@ void MSKGraph::sendGroupChild(int id, MWAWPosition const &pos)
     MWAW_DEBUG_MSG(("MSKGraph::sendGroupChild: can not find group %d\n", id));
     return;
   }
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   MWAWGraphicListenerPtr graphicListener = m_parserState->m_graphicListener;
   if (!listener || !graphicListener || graphicListener->isDocumentStarted()) return;
   MSKGraphInternal::GroupZone &group=
@@ -2653,7 +2653,7 @@ void MSKGraph::send(int id, MWAWPosition const &pos)
     MWAW_DEBUG_MSG(("MSKGraph::send: can not find zone %d\n", id));
     return;
   }
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return;
   shared_ptr<MSKGraphInternal::Zone> zone = m_state->m_zonesList[(size_t)id];
   zone->m_isSent = true;
@@ -2780,7 +2780,7 @@ void MSKGraph::sendAll(int zoneId, bool mainZone)
 
 void MSKGraph::sendObjects(MSKGraph::SendData const &what)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MSKGraph::sendObjects: listener is not set\n"));
     return;

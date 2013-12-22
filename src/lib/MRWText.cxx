@@ -40,7 +40,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -728,7 +728,7 @@ bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
 
 bool MRWText::send(int zoneId)
 {
-  if (!m_parserState->m_listener) {
+  if (!m_parserState->m_textListener) {
     MWAW_DEBUG_MSG(("MRWText::send: can not find the listener\n"));
     return false;
   }
@@ -746,7 +746,7 @@ bool MRWText::send(int zoneId)
 
 bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MRWText::send: can not find the listener\n"));
     return false;
@@ -905,7 +905,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
         break;
       case 0xe:
         if (numCols > 1) {
-          listener->insertBreak(MWAWContentListener::ColumnBreak);
+          listener->insertBreak(MWAWTextListener::ColumnBreak);
           break;
         }
         MWAW_DEBUG_MSG(("MRWText::sendText: Find unexpected column break\n"));
@@ -950,7 +950,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
 // table function
 bool MRWText::sendTable(MRWTextInternal::Table &table)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MRWText::sendTable: can not find the listener\n"));
     return false;
@@ -1544,8 +1544,8 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
 ////////////////////////////////////////////////////////////
 void MRWText::setProperty(MRWTextInternal::Paragraph const &ruler)
 {
-  if (!m_parserState->m_listener) return;
-  m_parserState->m_listener->setParagraph(ruler);
+  if (!m_parserState->m_textListener) return;
+  m_parserState->m_textListener->setParagraph(ruler);
 }
 
 bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
@@ -1990,7 +1990,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
 
 void MRWText::flushExtra()
 {
-  if (!m_parserState->m_listener) return;
+  if (!m_parserState->m_textListener) return;
 #ifdef DEBUG
   std::map<int,MRWTextInternal::Zone>::iterator it =
     m_state->m_textZoneMap.begin();

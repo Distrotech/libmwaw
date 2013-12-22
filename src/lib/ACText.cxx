@@ -40,7 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -335,7 +335,7 @@ bool ACText::readTopic()
 
 bool ACText::sendTopic(ACTextInternal::Topic const &topic)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("ACText::sendTopic: can not find a listener\n"));
     return false;
@@ -391,7 +391,7 @@ bool ACText::sendTopic(ACTextInternal::Topic const &topic)
 //
 bool ACText::sendText(ACTextInternal::Topic const &topic)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("ACText::sendText: can not find a listener\n"));
     return false;
@@ -490,7 +490,7 @@ bool ACText::sendText(ACTextInternal::Topic const &topic)
 //
 bool ACText::sendGraphic(ACTextInternal::Topic const &topic)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("ACText::sendGraphic: can not find a listener\n"));
     return false;

@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -502,11 +502,11 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
     MWAW_DEBUG_MSG(("HMWKText::sendText: called without any zone\n"));
     return false;
   }
-  MWAWListenerPtr listener;
+  MWAWBasicListenerPtr listener;
   if (asGraphic)
     listener=m_parserState->m_graphicListener;
   else
-    listener=m_parserState->m_listener;
+    listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("HMWKText::sendText: can not find a listener\n"));
     return false;
@@ -724,7 +724,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
           break;
         }
         if (actCol < numCol-1 && numCol > 1) {
-          listener->insertBreak(MWAWContentListener::ColumnBreak);
+          listener->insertBreak(MWAWTextListener::ColumnBreak);
           actCol++;
         }
         else {
@@ -1093,8 +1093,8 @@ bool HMWKText::readStyles(shared_ptr<HMWKZone> zone)
 ////////////////////////////////////////////////////////////
 void HMWKText::setProperty(HMWKTextInternal::Paragraph const &para, float)
 {
-  if (!m_parserState->m_listener) return;
-  m_parserState->m_listener->setParagraph(para);
+  if (!m_parserState->m_textListener) return;
+  m_parserState->m_textListener->setParagraph(para);
 }
 
 bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
@@ -1474,7 +1474,7 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
 //! send data to the listener
 void HMWKText::flushExtra()
 {
-  if (!m_parserState->m_listener) return;
+  if (!m_parserState->m_textListener) return;
   std::multimap<long, shared_ptr<HMWKZone> >::iterator tIt
     =m_state->m_IdTextMaps.begin();
   for (; tIt!=m_state->m_IdTextMaps.end(); ++tIt) {

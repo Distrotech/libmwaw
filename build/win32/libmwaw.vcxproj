@@ -318,10 +318,6 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MWAWContentListener.cxx">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
     <ClCompile Include="..\..\src\lib\MWAWDebug.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -419,6 +415,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="..\..\src\lib\MWAWTable.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\lib\MWAWTextListener.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -536,7 +536,6 @@
     <ClInclude Include="..\..\src\lib\MSWText.hxx" />
     <ClInclude Include="..\..\src\lib\MSWTextStyles.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWCell.hxx" />
-    <ClInclude Include="..\..\src\lib\MWAWContentListener.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWDebug.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWEntry.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWFont.hxx" />
@@ -565,6 +564,7 @@
     <ClInclude Include="..\..\src\lib\MWAWSection.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWSubDocument.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWTable.hxx" />
+    <ClInclude Include="..\..\src\lib\MWAWTextListener.hxx" />
     <ClInclude Include="..\..\src\lib\MWParser.hxx" />
     <ClInclude Include="..\..\src\lib\MWProParser.hxx" />
     <ClInclude Include="..\..\src\lib\MWProStructures.hxx" />

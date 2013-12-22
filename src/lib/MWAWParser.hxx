@@ -70,7 +70,7 @@ public:
   //! the list manager
   MWAWListManagerPtr m_listManager;
   //! the listener
-  MWAWContentListenerPtr m_listener;
+  MWAWTextListenerPtr m_textListener;
 
   //! the debug file
   libmwaw::DebugFile m_asciiFile;
@@ -80,17 +80,12 @@ private:
   MWAWParserState &operator=(MWAWParserState const &orig);
 };
 
-/** virtual class which defines the ancestor of all main zone parser
- *
- * \note this class is generally associated with a IMWAWTextParser
- */
+/** virtual class which defines the ancestor of all main zone parser */
 class MWAWParser
 {
 public:
   //! virtual destructor
   virtual ~MWAWParser();
-  //! virtual function used to parse the input
-  virtual void parse(librevenge::RVNGTextInterface *documentInterface) = 0;
   //! virtual function used to check if the document header is correct (or not)
   virtual bool checkHeader(MWAWHeader *header, bool strict=false) = 0;
 
@@ -132,9 +127,9 @@ protected:
     return m_parserState->m_graphicListener;
   }
   //! returns the listener
-  MWAWContentListenerPtr &getListener()
+  MWAWTextListenerPtr &getTextListener()
   {
-    return m_parserState->m_listener;
+    return m_parserState->m_textListener;
   }
   //! returns the actual page dimension
   MWAWPageSpan const &getPageSpan() const
@@ -171,10 +166,10 @@ protected:
   {
     return m_parserState->m_rsrcParser;
   }
-  //! sets the listener
-  void setListener(MWAWContentListenerPtr &listener);
+  //! sets the text listener
+  void setTextListener(MWAWTextListenerPtr &listener);
   //! resets the listener
-  void resetListener();
+  void resetTextListener();
   //! returns the font converter
   MWAWFontConverterPtr &getFontConverter()
   {
@@ -210,6 +205,20 @@ private:
   MWAWPageSpan m_pageSpan;
   //! the debug file name
   std::string m_asciiName;
+};
+
+
+/** virtual class which defines the ancestor of all text zone parser */
+class MWAWTextParser : public MWAWParser
+{
+public:
+  //! virtual function used to parse the input
+  virtual void parse(librevenge::RVNGTextInterface *documentInterface) = 0;
+protected:
+  //! constructor (protected)
+  MWAWTextParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(input, rsrcParser, header) {}
+  //! constructor using a state
+  MWAWTextParser(MWAWParserStatePtr state) : MWAWParser(state) {}
 };
 
 #endif /* MWAWPARSER_H */

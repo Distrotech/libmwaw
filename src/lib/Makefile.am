@@ -126,8 +126,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MSWTextStyles.hxx		\
 	MWAWCell.cxx			\
 	MWAWCell.hxx			\
-	MWAWContentListener.cxx		\
-	MWAWContentListener.hxx		\
 	MWAWDebug.cxx			\
 	MWAWDebug.hxx			\
 	MWAWDocument.cxx		\
@@ -181,6 +179,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWSubDocument.hxx		\
 	MWAWTable.cxx			\
 	MWAWTable.hxx			\
+	MWAWTextListener.cxx		\
+	MWAWTextListener.hxx		\
 	MWParser.cxx			\
 	MWParser.hxx			\
 	MWProParser.cxx			\

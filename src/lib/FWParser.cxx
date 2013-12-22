@@ -41,7 +41,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -250,14 +250,14 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -275,7 +275,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 FWParser::FWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_graphParser(), m_textParser()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_graphParser(), m_textParser()
 {
   init();
 }
@@ -291,7 +291,7 @@ FWParser::~FWParser()
 
 void FWParser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new FWParserInternal::State);
@@ -313,9 +313,9 @@ void FWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -360,7 +360,7 @@ void FWParser::sendGraphic(int id)
 bool FWParser::send(int fileId, MWAWColor fontColor)
 {
   if (fileId < 0) {
-    if (getListener()) getListener()->insertChar(' ');
+    if (getTextListener()) getTextListener()->insertChar(' ');
     return true;
   }
   return m_textParser->send(fileId, fontColor);
@@ -436,7 +436,7 @@ void FWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -446,7 +446,7 @@ void FWParser::parse(librevenge::RVNGTextInterface *docInterface)
 void FWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("FWParser::createDocument: listener already exist\n"));
     return;
   }
@@ -502,8 +502,8 @@ void FWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   }
 
   // retrieve the header/footer
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
@@ -1914,7 +1914,7 @@ bool FWParser::readDocPosition()
 ////////////////////////////////////////////////////////////
 void FWParser::sendReference(int id)
 {
-  if (!getListener()) return;
+  if (!getTextListener()) return;
 
   if (id < 0 || id >= int(m_state->m_docZoneList.size())) {
     MWAW_DEBUG_MSG(("FWParser::sendReference: can not find data for id=%d\n", id));
@@ -1944,7 +1944,7 @@ void FWParser::sendReference(int id)
 ////////////////////////////////////////////////////////////
 void FWParser::sendVariable(int id)
 {
-  if (!getListener()) return;
+  if (!getTextListener()) return;
 
   if (id < 0 || id >= int(m_state->m_docZoneList.size())) {
     MWAW_DEBUG_MSG(("FWParser::sendVariable: can not find data for id=%d\n", id));
@@ -1988,7 +1988,7 @@ void FWParser::sendVariable(int id)
 ////////////////////////////////////////////////////////////
 void FWParser::sendText(int id, libmwaw::SubDocumentType type, MWAWNote::Type wh)
 {
-  if (!getListener()) return;
+  if (!getTextListener()) return;
 
   if (id >= 0 && id < int(m_state->m_docZoneList.size())) {
     FWParserInternal::DocZoneStruct const &data =
@@ -2006,9 +2006,9 @@ void FWParser::sendText(int id, libmwaw::SubDocumentType type, MWAWNote::Type wh
   int fId = m_state->getFileZoneId(id);
   MWAWSubDocumentPtr subdoc(new FWParserInternal::SubDocument(*this, getInput(), fId));
   if (type==libmwaw::DOC_NOTE)
-    getListener()->insertNote(MWAWNote(wh), subdoc);
+    getTextListener()->insertNote(MWAWNote(wh), subdoc);
   else if (type==libmwaw::DOC_COMMENT_ANNOTATION)
-    getListener()->insertComment(subdoc);
+    getTextListener()->insertComment(subdoc);
   else {
     MWAW_DEBUG_MSG(("FWParser::sendText: unexpected type\n"));
   }

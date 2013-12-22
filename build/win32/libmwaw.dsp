@@ -307,10 +307,6 @@ SOURCE=..\..\src\lib\MWAWCell.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWContentListener.cxx
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\MWAWDebug.cxx
 # End Source File
 # Begin Source File
@@ -408,6 +404,10 @@ SOURCE=..\..\src\lib\MWAWSubDocument.cxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWTable.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWTextListener.cxx
 # End Source File
 # Begin Source File
 
@@ -691,10 +691,6 @@ SOURCE=..\..\src\lib\MWAWCell.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWContentListener.hxx
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\MWAWDebug.hxx
 # End Source File
 # Begin Source File
@@ -808,6 +804,10 @@ SOURCE=..\..\src\lib\MWAWSubDocument.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWTable.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWTextListener.hxx
 # End Source File
 # Begin Source File
 

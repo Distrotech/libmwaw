@@ -55,7 +55,7 @@ class LWText;
 
 /** \brief the main class to read a LightWay Text file
  */
-class LWParser : public MWAWParser
+class LWParser : public MWAWTextParser
 {
   friend class LWParserInternal::SubDocument;
   friend class LWGraph;

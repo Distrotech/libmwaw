@@ -48,7 +48,7 @@ class MSKTable;
  *
  *
  */
-class MSKParser : public MWAWParser
+class MSKParser : public MWAWTextParser
 {
   friend class MSKGraph;
   friend class MSKTable;

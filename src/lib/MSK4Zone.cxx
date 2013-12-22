@@ -37,7 +37,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWPosition.hxx"
@@ -247,11 +247,11 @@ void MSK4Zone::newPage(int number)
   long pos = getInput()->tell();
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
     // FIXME: find a way to force the page break to happen
     //    ie. graphParser must add a space to force it :-~
-    if (m_state->m_mainOle) getListener()->insertBreak(MWAWContentListener::PageBreak);
+    if (m_state->m_mainOle) getTextListener()->insertBreak(MWAWTextListener::PageBreak);
 
     MSKGraph::SendData sendData;
     sendData.m_type = MSKGraph::SendData::RBDR;
@@ -270,7 +270,7 @@ MWAWEntry MSK4Zone::getTextPosition() const
 ////////////////////////////////////////////////////////////
 // create the main listener ( given a header and a footer document)
 ////////////////////////////////////////////////////////////
-MWAWContentListenerPtr MSK4Zone::createListener
+MWAWTextListenerPtr MSK4Zone::createListener
 (librevenge::RVNGTextInterface *interface, MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer)
 {
   MWAWPageSpan ps(getPageSpan());
@@ -299,7 +299,7 @@ MWAWContentListenerPtr MSK4Zone::createListener
   ps.setPageSpan(numPages+1);
   std::vector<MWAWPageSpan> pageList(1,ps);
   m_state->m_numPages=numPages+1;
-  MWAWContentListenerPtr res(new MWAWContentListener(*getParserState(), pageList, interface));
+  MWAWTextListenerPtr res(new MWAWTextListener(*getParserState(), pageList, interface));
   return res;
 }
 
@@ -587,14 +587,14 @@ void MSK4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
   sendData.m_page = 0;
   m_graphParser->sendObjects(sendData);
 
-  if (mainOle && getListener() && m_state->m_numColumns > 1) {
-    if (getListener()->isSectionOpened())
-      getListener()->closeSection();
+  if (mainOle && getTextListener() && m_state->m_numColumns > 1) {
+    if (getTextListener()->isSectionOpened())
+      getTextListener()->closeSection();
     MWAWSection sec;
     sec.setColumns(m_state->m_numColumns, getPageWidth()/double(m_state->m_numColumns), librevenge::RVNG_INCH);
     if (m_state->m_hasColumnSep)
       sec.m_columnSeparator=MWAWBorder();
-    getListener()->openSection(sec);
+    getTextListener()->openSection(sec);
   }
 
   MWAWEntry ent(entry);

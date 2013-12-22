@@ -31,7 +31,7 @@
 * instead of those above.
 */
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicStyle.hxx"
@@ -41,7 +41,7 @@
 
 MWAWParserState::MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   m_version(0), m_input(input), m_header(header),
-  m_rsrcParser(rsrcParser), m_fontConverter(), m_graphicListener(), m_listManager(), m_listener(), m_asciiFile(input)
+  m_rsrcParser(rsrcParser), m_fontConverter(), m_graphicListener(), m_listManager(), m_textListener(), m_asciiFile(input)
 {
   if (header) m_version=header->getMajorVersion();
   m_fontConverter.reset(new MWAWFontConverter);
@@ -51,13 +51,13 @@ MWAWParserState::MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsr
 
 MWAWParserState::~MWAWParserState()
 {
-  if (m_listener.get()) try {
+  if (m_textListener.get()) try {
       /* must never happen, only sanity check....
 
       Ie. the parser which creates a listener, must delete it.
       */
       MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: the listener is NOT closed, call enddocument without any subdoc\n"));
-      m_listener->endDocument(false);
+      m_textListener->endDocument(false);
     }
     catch (const libmwaw::ParseException &) {
       MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: endDocument FAILS\n"));
@@ -79,15 +79,15 @@ MWAWParser::~MWAWParser()
 {
 }
 
-void MWAWParser::setListener(MWAWContentListenerPtr &listener)
+void MWAWParser::setTextListener(MWAWTextListenerPtr &listener)
 {
-  m_parserState->m_listener=listener;
+  m_parserState->m_textListener=listener;
 }
 
-void MWAWParser::resetListener()
+void MWAWParser::resetTextListener()
 {
-  if (getListener()) getListener()->endDocument();
-  m_parserState->m_listener.reset();
+  if (getTextListener()) getTextListener()->endDocument();
+  m_parserState->m_textListener.reset();
 }
 
 void MWAWParser::setFontConverter(MWAWFontConverterPtr fontConverter)

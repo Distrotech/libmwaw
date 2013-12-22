@@ -53,7 +53,7 @@ class DMText;
 
 /** \brief the main class to read a DocMake file
  */
-class DMParser : public MWAWParser
+class DMParser : public MWAWTextParser
 {
   friend class DMText;
 public:

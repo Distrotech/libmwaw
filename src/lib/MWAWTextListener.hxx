@@ -31,14 +31,14 @@
 * instead of those above.
 */
 
-/** \file MWAWContentListener.hxx
- * Defines MWAWContentListener: the libmwaw word processor listener
+/** \file MWAWTextListener.hxx
+ * Defines MWAWTextListener: the libmwaw word processor listener
  *
  * \note this class is the only class which does the interface with
  * the librevenge::RVNGTextInterface
  */
-#ifndef MWAW_CONTENT_LISTENER_H
-#define MWAW_CONTENT_LISTENER_H
+#ifndef MWAW_TEXT_LISTENER_H
+#define MWAW_TEXT_LISTENER_H
 
 #include <vector>
 
@@ -53,20 +53,20 @@ class MWAWGraphicStyle;
 class MWAWGraphicShape;
 class MWAWTable;
 
-namespace MWAWContentListenerInternal
+namespace MWAWTextListenerInternal
 {
 struct DocumentState;
 struct State;
 }
 
 /** This class contents the main functions needed to create a Word processing Document */
-class MWAWContentListener : public MWAWListener
+class MWAWTextListener : public MWAWListener
 {
 public:
   /** constructor */
-  MWAWContentListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, librevenge::RVNGTextInterface *documentInterface);
+  MWAWTextListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, librevenge::RVNGTextInterface *documentInterface);
   /** destructor */
-  virtual ~MWAWContentListener();
+  virtual ~MWAWTextListener();
 
   /** sets the documents language */
   void setDocumentLanguage(std::string locale);
@@ -86,7 +86,7 @@ public:
   /** returns true if we can add text data */
   bool canWriteText() const
   {
-    return MWAWContentListener::isDocumentStarted();
+    return MWAWTextListener::isDocumentStarted();
   }
 
   // ------ page --------
@@ -248,17 +248,17 @@ protected:
   /** creates a new parsing state (copy of the actual state)
    *
    * \return the old one */
-  shared_ptr<MWAWContentListenerInternal::State> _pushParsingState();
+  shared_ptr<MWAWTextListenerInternal::State> _pushParsingState();
   //! resets the previous parsing state
   void _popParsingState();
 
 protected:
   //! the main parse state
-  shared_ptr<MWAWContentListenerInternal::DocumentState> m_ds;
+  shared_ptr<MWAWTextListenerInternal::DocumentState> m_ds;
   //! the actual local parse state
-  shared_ptr<MWAWContentListenerInternal::State> m_ps;
+  shared_ptr<MWAWTextListenerInternal::State> m_ps;
   //! stack of local state
-  std::vector<shared_ptr<MWAWContentListenerInternal::State> > m_psStack;
+  std::vector<shared_ptr<MWAWTextListenerInternal::State> > m_psStack;
   //! the parser state
   MWAWParserState &m_parserState;
   //! the document interface
@@ -266,9 +266,9 @@ protected:
 
 private:
   //! copy constructor (unimplemented)
-  MWAWContentListener(const MWAWContentListener &);
+  MWAWTextListener(const MWAWTextListener &);
   //! operator= (unimplemented)
-  MWAWContentListener &operator=(const MWAWContentListener &);
+  MWAWTextListener &operator=(const MWAWTextListener &);
 };
 
 #endif

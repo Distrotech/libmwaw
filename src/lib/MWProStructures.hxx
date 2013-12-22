@@ -276,7 +276,7 @@ protected:
   bool send(int blockId, bool mainZone=false);
 
   //! returns the actual listener
-  MWAWContentListenerPtr &getListener();
+  MWAWTextListenerPtr &getTextListener();
 
   //! returns the debug file
   libmwaw::DebugFile &ascii()

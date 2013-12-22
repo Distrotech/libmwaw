@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -393,7 +393,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   /** the text parser */
@@ -407,7 +407,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -979,12 +979,12 @@ bool NSText::readPosToFont(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
 // send the paragraph to the listener
 void NSText::setProperty(NSTextInternal::Paragraph const &para, int width)
 {
-  if (!m_parserState->m_listener) return;
+  if (!m_parserState->m_textListener) return;
   double origRMargin = para.m_margins[2].get();
   double rMargin=double(width)/72.-origRMargin;
   if (rMargin < 0.0) rMargin = 0;
   const_cast<NSTextInternal::Paragraph &>(para).m_margins[2] = rMargin;
-  m_parserState->m_listener->setParagraph(para);
+  m_parserState->m_textListener->setParagraph(para);
   const_cast<NSTextInternal::Paragraph &>(para).m_margins[2] = origRMargin;
 }
 
@@ -1475,7 +1475,7 @@ long NSText::findFilePos(NSStruct::ZoneType zoneId, NSStruct::Position const &po
 ////////////////////////////////////////////////////////////
 bool NSText::sendHeaderFooter(int hfId)
 {
-  if (!m_parserState->m_listener) {
+  if (!m_parserState->m_textListener) {
     MWAW_DEBUG_MSG(("NSText::sendHeaderFooter: can not find the listener\n"));
     return false;
   }
@@ -1507,7 +1507,7 @@ bool NSText::sendHeaderFooter(int hfId)
 ////////////////////////////////////////////////////////////
 bool NSText::sendFootnote(int footnoteId)
 {
-  if (!m_parserState->m_listener) {
+  if (!m_parserState->m_textListener) {
     MWAW_DEBUG_MSG(("NSText::sendFootnote: can not find the listener\n"));
     return false;
   }
@@ -1540,7 +1540,7 @@ bool NSText::sendFootnote(int footnoteId)
 ////////////////////////////////////////////////////////////
 bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("NSText::sendText: can not find the listener\n"));
     return false;
@@ -1809,7 +1809,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
 //! send data to the listener
 bool NSText::sendMainText()
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
 
   if (!m_state->m_zones[0].m_entry.valid()) {
     MWAW_DEBUG_MSG(("NSText::sendMainText: can not find the main text\n"));
@@ -1823,13 +1823,13 @@ bool NSText::sendMainText()
 
 void NSText::flushExtra()
 {
-  if (!m_parserState->m_listener) return;
+  if (!m_parserState->m_textListener) return;
   for (size_t f = 0; f < m_state->m_footnoteList.size(); f++) {
     if (m_state->m_footnoteList[f].m_parsed)
       continue;
     sendFootnote(int(f));
   }
-  m_parserState->m_listener->insertChar(' ');
+  m_parserState->m_textListener->insertChar(' ');
   for (size_t hf = 0; hf < m_state->m_hfList.size(); hf++) {
     if (m_state->m_hfList[hf].m_parsed)
       continue;

@@ -39,7 +39,7 @@
 #include "libmwaw_internal.hxx"
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicStyle.hxx"
@@ -167,7 +167,7 @@ int MSKTable::version() const
 ////////////////////////////////////////////////////////////
 bool MSKTable::sendTable(int zoneId)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return false;
 
   if (m_state->m_idTableMap.find(zoneId)==m_state->m_idTableMap.end()) {
@@ -390,7 +390,7 @@ void MSKTable::setChartZoneId(int chartId, int zoneId)
 
 bool MSKTable::sendChart(int chartId)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("MSKTable::sendChart: can not find a listener\n"));
     return false;

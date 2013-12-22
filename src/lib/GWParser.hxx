@@ -54,7 +54,7 @@ class GWText;
 
 /** \brief the main class to read a GreatWorks text file
  */
-class GWParser : public MWAWParser
+class GWParser : public MWAWTextParser
 {
   friend class GWParserInternal::SubDocument;
   friend class GWGraph;

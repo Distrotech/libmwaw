@@ -40,7 +40,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -583,14 +583,14 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -613,7 +613,7 @@ void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentTy
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 WPParser::WPParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state()
+  MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
@@ -624,7 +624,7 @@ WPParser::~WPParser()
 
 void WPParser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new WPParserInternal::State);
@@ -651,9 +651,9 @@ void WPParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -689,7 +689,7 @@ void WPParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -699,7 +699,7 @@ void WPParser::parse(librevenge::RVNGTextInterface *docInterface)
 void WPParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("WPParser::createDocument: listener already exist\n"));
     return;
   }
@@ -721,8 +721,8 @@ void WPParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   ps.setPageSpan(m_state->m_numPages+1);
   std::vector<MWAWPageSpan> pageList(1,ps);
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
@@ -1019,7 +1019,7 @@ bool WPParser::readWindowsZone(int zone)
 ////////////////////////////////////////////////////////////
 bool WPParser::sendWindow(int zone, Vec2i limits)
 {
-  MWAWContentListenerPtr listener=getListener();
+  MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("WPParser::readWindowsZone: can not find a listener\n"));
     return false;
@@ -1079,7 +1079,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
           }
           else {
             actCol++;
-            listener->insertBreak(MWAWContentListener::ColumnBreak);
+            listener->insertBreak(MWAWTextListener::ColumnBreak);
           }
         }
       case 0:
@@ -1273,7 +1273,7 @@ MWAWParagraph WPParser::getParagraph(WPParserInternal::ParagraphData const &data
   if (left > 0)
     para.m_margins[1]=left;
   para.m_margins[0]=double(data.m_indent[1]-data.m_indent[0]);
-  if (getListener() && getListener()->getSection().numColumns() > 1)
+  if (getTextListener() && getTextListener()->getSection().numColumns() > 1)
     return para; // too dangerous to set the paragraph width in this case...
   double right=getPageWidth()*72.-double(data.m_width);
   if (right > 0)
@@ -1417,7 +1417,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   ascii().addPos(input->tell());
   ascii().addNote("_");
 
-  if (!getListener())
+  if (!getTextListener())
     return true;
   std::string const &text = data.m_text;
   std::vector<WPParserInternal::Font> const &fonts = data.m_fonts;
@@ -1429,32 +1429,32 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
 
   if (numLines == 0 && info.m_height > 0) {
     para.setInterline(info.m_height, librevenge::RVNG_POINT);
-    getListener()->setParagraph(para);
+    getTextListener()->setParagraph(para);
   }
   for (int c = 0; c < numChars; c++) {
     if (actFont < numFonts && c ==  fonts[actFont].m_firstChar)
-      getListener()->setFont(fonts[actFont++].m_font);
+      getTextListener()->setFont(fonts[actFont++].m_font);
     if (actLine < numLines && c == lines[(size_t) actLine].m_firstChar) {
-      if (actLine) getListener()->insertEOL();
+      if (actLine) getTextListener()->insertEOL();
       if (numLines == 1 && info.m_height > lines[0].m_height) {
         para.setInterline(info.m_height, librevenge::RVNG_POINT);
-        getListener()->setParagraph(para);
+        getTextListener()->setParagraph(para);
       }
       else if (lines[(size_t) actLine].m_height) {
         para.setInterline(lines[(size_t) actLine].m_height, librevenge::RVNG_POINT);
-        getListener()->setParagraph(para);
+        getTextListener()->setParagraph(para);
       }
       actLine++;
     }
 
     unsigned char ch = (unsigned char) text[(size_t)c];
     if (ch == 0x9)
-      getListener()->insertTab();
+      getTextListener()->insertTab();
     else
-      getListener()->insertCharacter(ch);
+      getTextListener()->insertCharacter(ch);
   }
   if (info.getType() != 3)
-    getListener()->insertEOL();
+    getTextListener()->insertEOL();
 
   return true;
 }
@@ -1504,9 +1504,9 @@ bool WPParser::readSection(WPParserInternal::ParagraphInfo const &info, bool mai
     f << "#endPos,";
   }
 
-  if (getListener() && mainBlock) {
-    if (!getListener()->isSectionOpened())
-      getListener()->openSection(MWAWSection());
+  if (getTextListener() && mainBlock) {
+    if (!getTextListener()->isSectionOpened())
+      getTextListener()->openSection(MWAWSection());
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1555,7 +1555,7 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
     f << "col" << i << "=[" << cols << "],";
   }
 
-  if (getListener()) {
+  if (getTextListener()) {
     std::vector<float> colSize((size_t)numData);
     for (int i = 0; i < numData; i++) {
       WPParserInternal::ColumnTableInfo const &cols = columns[(size_t)i];
@@ -1567,7 +1567,7 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
     int left=columns[0].m_colX[0]-20-int(72.*getPageSpan().getMarginLeft());
     if (left)
       table.setAlignment(MWAWTable::Left, float(left));
-    getListener()->openTable(table);
+    getTextListener()->openTable(table);
   }
 
   if (long(input->tell()) != data.m_endPos) {
@@ -1677,19 +1677,19 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
   // get the picture
   input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, (int)length));
-  if (getListener()) {
-    MWAWParagraph para=getListener()->getParagraph();
+  if (getTextListener()) {
+    MWAWParagraph para=getTextListener()->getParagraph();
     para.setInterline(info.m_height, librevenge::RVNG_POINT);
-    getListener()->setParagraph(para);
+    getTextListener()->setParagraph(para);
     if (pict) {
       librevenge::RVNGBinaryData pictData;
       std::string type;
       if (pict->getBinary(pictData,type))
-        getListener()->insertPicture(pictPos, pictData, type);
+        getTextListener()->insertPicture(pictPos, pictData, type);
     }
-    getListener()->insertEOL();
+    getTextListener()->insertEOL();
     para.setInterline(1.0, librevenge::RVNG_PERCENT);
-    getListener()->setParagraph(para);
+    getTextListener()->setParagraph(para);
   }
   if (pict)
     ascii().skipZone(pos+4, pos+4+length-1);

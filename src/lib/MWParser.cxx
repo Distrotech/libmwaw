@@ -40,7 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -299,14 +299,14 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the subdocument id
   int m_id;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("MWParserInternal::SubDocument::parse: no listener\n"));
@@ -339,7 +339,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MWParser::MWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state()
+  MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
@@ -350,18 +350,13 @@ MWParser::~MWParser()
 
 void MWParser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new MWParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
-}
-
-void MWParser::setListener(MWAWContentListenerPtr listen)
-{
-  MWAWParser::setListener(listen);
 }
 
 ////////////////////////////////////////////////////////////
@@ -374,9 +369,9 @@ void MWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -418,7 +413,7 @@ void MWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -428,7 +423,7 @@ void MWParser::parse(librevenge::RVNGTextInterface *docInterface)
 void MWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("MWParser::createDocument: listener already exist\n"));
     return;
   }
@@ -460,8 +455,8 @@ void MWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   if (ps.getPageSpan())
     pageList.push_back(ps);
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
@@ -671,14 +666,14 @@ bool MWParser::sendWindow(int zone)
       break;
     }
   }
-  if (getListener() && zone) {
+  if (getTextListener() && zone) {
     // FIXME: try to insert field in the good place
     if (info.m_pageNumber.x() >= 0 && info.m_pageNumber.y() >= 0)
-      getListener()->insertField(MWAWField(MWAWField::PageNumber));
+      getTextListener()->insertField(MWAWField(MWAWField::PageNumber));
     if (info.m_date.x() >= 0 && info.m_date.y() >= 0)
-      getListener()->insertField(MWAWField(MWAWField::Date));
+      getTextListener()->insertField(MWAWField(MWAWField::Date));
     if (info.m_time.x() >= 0 && info.m_time.y() >= 0)
-      getListener()->insertField(MWAWField(MWAWField::Time));
+      getTextListener()->insertField(MWAWField(MWAWField::Time));
   }
   return true;
 }
@@ -1217,7 +1212,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
 bool MWParser::readText(MWParserInternal::Information const &info,
                         std::vector<int> const &lineHeight)
 {
-  if (!getListener()) {
+  if (!getTextListener()) {
     MWAW_DEBUG_MSG(("MWParser::readText: can not find the listener\n"));
     return false;
   }
@@ -1349,33 +1344,33 @@ bool MWParser::readText(MWParserInternal::Information const &info,
     ascii().addDelimiter(input->tell(), '|');
   }
 
-  if (getListener()) {
-    MWAWParagraph para=getListener()->getParagraph();
+  if (getTextListener()) {
+    MWAWParagraph para=getTextListener()->getParagraph();
     if (totalHeight && lHeight->size()) // fixme find a way to associate the good size to each line
       para.setInterline(totalHeight/double(lHeight->size()), librevenge::RVNG_POINT);
     else
       para.setInterline(1.2, librevenge::RVNG_PERCENT);
     if (info.m_justifySet)
       para.m_justify=info.m_justify;
-    getListener()->setParagraph(para);
+    getTextListener()->setParagraph(para);
 
     if (!numFormat || listPos[0] != 0)
-      getListener()->setFont(info.m_font);
+      getTextListener()->setFont(info.m_font);
 
     int actFormat = 0;
     numChar = int(text.length());
     for (int i = 0; i < numChar; i++) {
       if (actFormat < numFormat && i == listPos[(size_t)actFormat]) {
-        getListener()->setFont(listFonts[(size_t)actFormat]);
+        getTextListener()->setFont(listFonts[(size_t)actFormat]);
         actFormat++;
       }
       unsigned char c = (unsigned char) text[(size_t)i];
       if (c == 0x9)
-        getListener()->insertTab();
+        getTextListener()->insertTab();
       else if (c == 0xd)
-        getListener()->insertEOL();
+        getTextListener()->insertEOL();
       else
-        getListener()->insertCharacter(c);
+        getTextListener()->insertCharacter(c);
     }
   }
 
@@ -1468,8 +1463,8 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
   if (parag.m_margins[2].get() < 0) parag.m_margins[2] = 0;
   f << parag;
 
-  if (getListener())
-    getListener()->setParagraph(parag);
+  if (getTextListener())
+    getTextListener()->setParagraph(parag);
   ascii().addPos(version()<=3 ? pos-4 : pos);
   ascii().addNote(f.str().c_str());
 
@@ -1577,16 +1572,16 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
 
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, int(entry.length()-8)));
   if (pict) {
-    if (getListener()) {
-      MWAWParagraph para=getListener()->getParagraph();
+    if (getTextListener()) {
+      MWAWParagraph para=getTextListener()->getParagraph();
       para.setInterline(1.0, librevenge::RVNG_PERCENT);
-      getListener()->setParagraph(para);
+      getTextListener()->setParagraph(para);
 
       librevenge::RVNGBinaryData data;
       std::string type;
       if (pict->getBinary(data,type) && !isMagicPic(data))
-        getListener()->insertPicture(pictPos, data, type);
-      getListener()->insertEOL();
+        getTextListener()->insertPicture(pictPos, data, type);
+      getTextListener()->insertEOL();
 #ifdef DEBUG_WITH_FILES
       static int volatile pictName = 0;
       libmwaw::DebugStream f2;

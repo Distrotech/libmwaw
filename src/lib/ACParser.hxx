@@ -54,7 +54,7 @@ class ACText;
 
 /** \brief the main class to read a Acta file
  */
-class ACParser : public MWAWParser
+class ACParser : public MWAWTextParser
 {
   friend class ACParserInternal::SubDocument;
   friend class ACText;

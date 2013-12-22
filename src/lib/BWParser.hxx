@@ -54,7 +54,7 @@ class BWText;
 
 /** \brief the main class to read a BeagleWorks file
  */
-class BWParser : public MWAWParser
+class BWParser : public MWAWTextParser
 {
   friend class BWText;
 public:

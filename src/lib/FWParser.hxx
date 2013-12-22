@@ -63,7 +63,7 @@ class FWText;
  *
  *
  */
-class FWParser : public MWAWParser
+class FWParser : public MWAWTextParser
 {
   friend class FWGraph;
   friend class FWText;

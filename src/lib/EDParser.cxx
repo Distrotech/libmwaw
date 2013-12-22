@@ -40,7 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -114,7 +114,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 EDParser::EDParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state()
+  MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
@@ -125,7 +125,7 @@ EDParser::~EDParser()
 
 void EDParser::init()
 {
-  resetListener();
+  resetTextListener();
 
   m_state.reset(new EDParserInternal::State);
 
@@ -153,9 +153,9 @@ void EDParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -185,7 +185,7 @@ void EDParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -195,7 +195,7 @@ void EDParser::parse(librevenge::RVNGTextInterface *docInterface)
 void EDParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("EDParser::createDocument: listener already exist\n"));
     return;
   }
@@ -214,8 +214,8 @@ void EDParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   ps.setPageSpan(numPages+1);
   std::vector<MWAWPageSpan> pageList(1,ps);
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
@@ -334,7 +334,7 @@ bool EDParser::sendContents()
 
 bool EDParser::sendPicture(int pictId, bool compressed)
 {
-  if (!getListener()) {
+  if (!getTextListener()) {
     MWAW_DEBUG_MSG(("EDParser::sendPicture: can not find the listener\n"));
     return false;
   }
@@ -374,7 +374,7 @@ bool EDParser::sendPicture(int pictId, bool compressed)
     librevenge::RVNGBinaryData fData;
     std::string type;
     if (thePict->getBinary(fData,type))
-      getListener()->insertPicture(pictPos, fData, type);
+      getTextListener()->insertPicture(pictPos, fData, type);
   }
   return true;
 }
@@ -461,7 +461,7 @@ bool EDParser::readFontsName(MWAWEntry const &entry)
 // the index
 bool EDParser::sendIndex()
 {
-  if (!getListener()) {
+  if (!getTextListener()) {
     MWAW_DEBUG_MSG(("EDParser::sendIndex: can not find the listener\n"));
     return false;
   }
@@ -482,24 +482,24 @@ bool EDParser::sendIndex()
   cFont.setFlags(MWAWFont::boldBit);
   MWAWFont actFont(3,12);
 
-  getListener()->insertEOL();
+  getTextListener()->insertEOL();
   std::stringstream ss;
   for (size_t i=0; i <  m_state->m_indexList.size(); i++) {
     EDParserInternal::Index const &index = m_state->m_indexList[i];
     para.m_margins[0] = 0.3f*float(index.m_levelId+1);
-    getListener()->setParagraph(para);
-    getListener()->setFont(actFont);
+    getTextListener()->setParagraph(para);
+    getTextListener()->setFont(actFont);
     for (size_t c=0; c < index.m_text.length(); c++)
-      getListener()->insertCharacter((unsigned char)index.m_text[c]);
+      getTextListener()->insertCharacter((unsigned char)index.m_text[c]);
 
     if (index.m_page >= 0) {
-      getListener()->setFont(cFont);
-      getListener()->insertTab();
+      getTextListener()->setFont(cFont);
+      getTextListener()->insertTab();
       ss.str("");
       ss << index.m_page;
-      getListener()->insertUnicodeString(ss.str().c_str());
+      getTextListener()->insertUnicodeString(ss.str().c_str());
     }
-    getListener()->insertEOL();
+    getTextListener()->insertEOL();
   }
   return true;
 }

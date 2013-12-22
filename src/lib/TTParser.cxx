@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -83,7 +83,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 TTParser::TTParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state()
+  MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
@@ -94,7 +94,7 @@ TTParser::~TTParser()
 
 void TTParser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new TTParserInternal::State);
@@ -122,9 +122,9 @@ void TTParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -157,7 +157,7 @@ void TTParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -167,7 +167,7 @@ void TTParser::parse(librevenge::RVNGTextInterface *docInterface)
 void TTParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("TTParser::createDocument: listener already exist\n"));
     return;
   }
@@ -181,8 +181,8 @@ void TTParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   MWAWPageSpan ps(getPageSpan());
   ps.setPageSpan(m_state->m_numPages+1);
   std::vector<MWAWPageSpan> pageList(1,ps);
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
@@ -258,7 +258,7 @@ int TTParser::computeNumPages() const
 
 bool TTParser::sendText()
 {
-  if (!getListener()) {
+  if (!getTextListener()) {
     MWAW_DEBUG_MSG(("DMText::sendText: can not find the listener\n"));
     return false;
   }
@@ -268,7 +268,7 @@ bool TTParser::sendText()
 
   libmwaw::DebugStream f;
   f << "Entries(TEXT):";
-  getListener()->setFont(MWAWFont(3,12));
+  getTextListener()->setFont(MWAWFont(3,12));
 
   std::map<long, MWAWFont >::const_iterator fontIt;
   int nPict=0;
@@ -290,7 +290,7 @@ bool TTParser::sendText()
     fontIt=m_state->m_posFontMap.find(i);
     if (fontIt != m_state->m_posFontMap.end()) {
       f << "[Style,cPos=" << std::hex << i << std::dec << "]";
-      getListener()->setFont(fontIt->second);
+      getTextListener()->setFont(fontIt->second);
     }
     if (c)
       f << c;
@@ -303,8 +303,8 @@ bool TTParser::sendText()
       unsigned char nextC=(unsigned char) input->readULong(1);
       if (nextC < 0x20) {
         i++;
-        getListener()->insertChar('^');
-        getListener()->insertChar(uint8_t('@'+nextC));
+        getTextListener()->insertChar('^');
+        getTextListener()->insertChar(uint8_t('@'+nextC));
         continue;
       }
       input->seek(-1, librevenge::RVNG_SEEK_CUR);
@@ -313,26 +313,26 @@ bool TTParser::sendText()
     case 0x9:
       if (m_state->m_numberSpacesForTab>0) {
         for (int j = 0; j < m_state->m_numberSpacesForTab; j++)
-          getListener()->insertChar(' ');
+          getTextListener()->insertChar(' ');
       }
       else
-        getListener()->insertTab();
+        getTextListener()->insertTab();
       break;
     case 0xd:
-      getListener()->insertEOL();
+      getTextListener()->insertEOL();
       break;
     case 0x11: // command key
-      getListener()->insertUnicode(0x2318);
+      getTextListener()->insertUnicode(0x2318);
       break;
     case 0x14: // apple logo: check me
-      getListener()->insertUnicode(0xf8ff);
+      getTextListener()->insertUnicode(0xf8ff);
       break;
     case 0xca:
       sendPicture(1000+nPict++);
       break;
     default:
       if (c < 0x20) f  << "##[" << std::hex << int(c) << std::dec << "]";
-      i += getListener()->insertCharacter(c, input, endPos);
+      i += getTextListener()->insertCharacter(c, input, endPos);
       break;
     }
   }
@@ -444,7 +444,7 @@ bool TTParser::sendPicture(int id)
     MWAW_DEBUG_MSG(("TTParser::sendPicture: can not find picture for id=%d\n",id));
     return false;
   }
-  if (!getListener()) {
+  if (!getTextListener()) {
     MWAW_DEBUG_MSG(("TTParser::sendPicture: can not find the listener\n"));
     return false;
   }
@@ -479,7 +479,7 @@ bool TTParser::sendPicture(int id)
     librevenge::RVNGBinaryData fData;
     std::string type;
     if (thePict->getBinary(fData,type))
-      getListener()->insertPicture(pictPos, fData, type);
+      getTextListener()->insertPicture(pictPos, fData, type);
   }
   return true;
 }

@@ -41,7 +41,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicShape.hxx"
@@ -386,7 +386,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType)
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
   {
     parse(listener, false);
   }
@@ -398,7 +398,7 @@ public:
 
 protected:
   //! the parser function
-  void parse(MWAWListenerPtr listener, bool inGraphic);
+  void parse(MWAWBasicListenerPtr listener, bool inGraphic);
   /** the graph parser */
   GWGraph *m_graphParser;
 
@@ -407,7 +407,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWListenerPtr listener, bool inGraphic)
+void SubDocument::parse(MWAWBasicListenerPtr listener, bool inGraphic)
 {
   if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("GWGraphInternal::SubDocument::parse: no listener\n"));
@@ -1734,7 +1734,7 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
 ////////////////////////////////////////////////////////////
 bool GWGraph::sendTextbox(GWGraphInternal::FrameText const &text, GWGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("GWGraph::sendTextbox: can not find the listener\n"));
     return true;
@@ -1796,7 +1796,7 @@ bool GWGraph::sendTextboxAsGraphic(Box2f const &box, GWGraphInternal::FrameText 
 ////////////////////////////////////////////////////////////
 bool GWGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("GWGraph::sendPicture: can not find the listener\n"));
     return true;
@@ -1840,7 +1840,7 @@ bool GWGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 ////////////////////////////////////////////////////////////
 bool GWGraph::sendGroup(GWGraphInternal::FrameGroup const &group, GWGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("GWGraph::sendTextbox: can not find the listener\n"));
     return true;
@@ -1940,7 +1940,7 @@ void GWGraph::sendGroup(GWGraphInternal::FrameGroup const &group, GWGraphInterna
 
 void GWGraph::sendGroupChild(GWGraphInternal::FrameGroup const &group, GWGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if (!listener || !graphicListener || graphicListener->isDocumentStarted()) {
     MWAW_DEBUG_MSG(("GWGraph::sendGroupChild: can not find the listeners\n"));
@@ -2062,7 +2062,7 @@ void GWGraph::sendGroupChild(GWGraphInternal::FrameGroup const &group, GWGraphIn
 ////////////////////////////////////////////////////////////
 bool GWGraph::sendShape(GWGraphInternal::FrameShape const &graph, GWGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("GWGraph::sendShape: can not find a listener\n"));
     return false;
@@ -2080,7 +2080,7 @@ bool GWGraph::sendShape(GWGraphInternal::FrameShape const &graph, GWGraphInterna
 
 bool GWGraph::sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInternal::Zone const &zone)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener || !frame) {
     MWAW_DEBUG_MSG(("GWGraph::sendFrame: can not find a listener\n"));
     return false;
@@ -2120,7 +2120,7 @@ bool GWGraph::sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInterna
 
 bool GWGraph::sendPageFrames(GWGraphInternal::Zone const &zone)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("GWGraph::sendPageFrames: can not find a listener\n"));
     return false;
@@ -2140,7 +2140,7 @@ bool GWGraph::sendPageFrames(GWGraphInternal::Zone const &zone)
 
 bool GWGraph::sendPageGraphics()
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("GWGraph::sendPageGraphics: can not find a listener\n"));
     return false;
@@ -2155,7 +2155,7 @@ bool GWGraph::sendPageGraphics()
 
 void GWGraph::flushExtra()
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("GWGraph::flushExtra: can not find a listener\n"));
     return;

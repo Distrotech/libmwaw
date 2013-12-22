@@ -60,7 +60,7 @@ class MSK4Zone;
  * It also uses an MWAWOleParser in order to find  pictures
  * in the other Ole zones.
  */
-class MSK4Parser : public MWAWParser
+class MSK4Parser : public MWAWTextParser
 {
   friend class MSK4ParserInternal::SubDocument;
   friend class MSK4Zone;

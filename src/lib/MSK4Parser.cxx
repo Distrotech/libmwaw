@@ -38,7 +38,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -78,7 +78,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   //! the note identificator
@@ -95,7 +95,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
   return false;
 }
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("MSK4Parser::SubDocument::parse: no listener\n"));
@@ -155,7 +155,7 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSK4Parser::MSK4Parser(MWAWInputStreamPtr inp, MWAWRSRCParserPtr rsrcParser, MWAWHeader *head) : MWAWParser(inp, rsrcParser, head), m_state()
+MSK4Parser::MSK4Parser(MWAWInputStreamPtr inp, MWAWRSRCParserPtr rsrcParser, MWAWHeader *head) : MWAWTextParser(inp, rsrcParser, head), m_state()
 {
   m_state.reset(new MSK4ParserInternal::State);
 }
@@ -195,13 +195,13 @@ void MSK4Parser::parse(librevenge::RVNGTextInterface *interface)
     footer.reset(new MSK4ParserInternal::SubDocument(m_state->m_footerParser.get(), m_state->m_footerParser->getInput(), empty));
 
   // and the listener
-  MWAWContentListenerPtr listener
+  MWAWTextListenerPtr listener
     = m_state->m_mn0Parser->createListener(interface, header, footer);
   if (!listener) {
     MWAW_DEBUG_MSG(("MSK4Parser::parse: does not have listener\n"));
     throw (libmwaw::ParseException());
   }
-  getParserState()->m_listener=listener;
+  getParserState()->m_textListener=listener;
   listener->startDocument();
   m_state->m_mn0Parser->readContentZones(MWAWEntry(), true);
 
@@ -211,7 +211,7 @@ void MSK4Parser::parse(librevenge::RVNGTextInterface *interface)
   catch (...) { }
 
   if (listener) listener->endDocument();
-  getListener().reset();
+  getTextListener().reset();
 }
 
 ////////////////////////////////////////////////////////////
@@ -306,7 +306,7 @@ bool MSK4Parser::createStructures()
 ////////////////////////////////////////////////////////////
 void MSK4Parser::flushExtra()
 {
-  MWAWContentListenerPtr listener=getListener();
+  MWAWTextListenerPtr listener=getTextListener();
   if (!listener) return;
 
   size_t numUnparsed = m_state->m_unparsedOlesName.size();
@@ -372,7 +372,7 @@ bool MSK4Parser::checkHeader(MWAWHeader *header, bool /*strict*/)
 ////////////////////////////////////////////////////////////
 void MSK4Parser::sendFootNote(int id)
 {
-  MWAWContentListenerPtr listener=getListener();
+  MWAWTextListenerPtr listener=getTextListener();
   if (!listener) return;
 
   MSK4Zone *parser = m_state->m_footnoteParser.get();
@@ -390,7 +390,7 @@ void MSK4Parser::sendFootNote(int id)
 
 void MSK4Parser::sendFrameText(MWAWEntry const &entry, std::string const &frame)
 {
-  MWAWContentListenerPtr listener=getListener();
+  MWAWTextListenerPtr listener=getTextListener();
   if (!listener) return;
 
   if (entry.length()==0) {
@@ -418,7 +418,7 @@ void MSK4Parser::sendFrameText(MWAWEntry const &entry, std::string const &frame)
 
 void MSK4Parser::sendOLE(int id, MWAWPosition const &pictPos, librevenge::RVNGPropertyList extras)
 {
-  if (!getListener()) return;
+  if (!getTextListener()) return;
 
   librevenge::RVNGBinaryData data;
   MWAWPosition pos;
@@ -427,7 +427,7 @@ void MSK4Parser::sendOLE(int id, MWAWPosition const &pictPos, librevenge::RVNGPr
     MWAW_DEBUG_MSG(("MSK4Parser::sendOLE: can not find OLE%d\n", id));
     return;
   }
-  getListener()->insertPicture(pictPos, data, type, extras);
+  getTextListener()->insertPicture(pictPos, data, type, extras);
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

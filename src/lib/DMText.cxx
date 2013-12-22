@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -205,7 +205,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   /** the text parser */
@@ -221,7 +221,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
@@ -298,14 +298,14 @@ int DMText::numChapters() const
 
 void DMText::sendComment(std::string const &str)
 {
-  if (!m_parserState->m_listener) {
+  if (!m_parserState->m_textListener) {
     MWAW_DEBUG_MSG(("DMText::sendComment: called without listener\n"));
     return;
   }
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   shared_ptr<MWAWSubDocument> comment
   (new DMTextInternal::SubDocument(*this, input, str, libmwaw::DOC_COMMENT_ANNOTATION));
-  m_parserState->m_listener->insertComment(comment);
+  m_parserState->m_textListener->insertComment(comment);
 }
 
 ////////////////////////////////////////////////////////////
@@ -481,7 +481,7 @@ bool DMText::createZones()
 ////////////////////////////////////////////////////////////
 bool DMText::sendText(DMTextInternal::Zone const &zone)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("DMText::sendText: can not find the listener\n"));
     return false;
@@ -694,7 +694,7 @@ bool DMText::readStyles(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 bool DMText::sendTOC()
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("DMText::sendTOC: can not find the listener\n"));
     return false;
@@ -873,7 +873,7 @@ bool DMText::readWindows(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 bool DMText::sendFooter(int zId)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("DMText::sendFooter: can not find my listener\n"));
     return false;
@@ -1009,7 +1009,7 @@ bool DMText::readFooter(MWAWEntry const &entry)
 
 void DMText::sendString(std::string const &str) const
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return;
 
   for (size_t s=0; s < str.size(); s++)
@@ -1018,7 +1018,7 @@ void DMText::sendString(std::string const &str) const
 
 bool DMText::sendMainText()
 {
-  if (!m_parserState->m_listener) return true;
+  if (!m_parserState->m_textListener) return true;
 
   std::map<int, DMTextInternal::Zone >::const_iterator it = m_state->m_idZoneMap.begin();
   for (; it != m_state->m_idZoneMap.end(); ++it) {

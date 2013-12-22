@@ -40,7 +40,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWTable.hxx"
 
@@ -671,7 +671,7 @@ bool CWDatabase::sendDatabase(int zId)
     return false;
   }
 
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("CWDatabase::sendDatabase: called without any listener\n"));
     return false;

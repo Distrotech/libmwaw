@@ -61,7 +61,7 @@ public:
     return m_type != UNDEF;
   }
   /** send to header to the listener */
-  void send(MWAWContentListener *listener) const;
+  void send(MWAWListener *listener) const;
   //! operator==
   bool operator==(MWAWHeaderFooter const &headerFooter) const;
   //! operator!=
@@ -70,7 +70,7 @@ public:
     return !operator==(headerFooter);
   }
   //! insert a page number
-  void insertPageNumberParagraph(MWAWContentListener *listener) const;
+  void insertPageNumberParagraph(MWAWListener *listener) const;
 
 public:
   //! the type header/footer
@@ -94,7 +94,6 @@ typedef shared_ptr<MWAWHeaderFooter> MWAWHeaderFooterPtr;
 /** A class which defines the page properties */
 class MWAWPageSpan
 {
-  friend class MWAWContentListener;
 public:
   /** the page orientation */
   enum FormOrientation { PORTRAIT, LANDSCAPE };
@@ -241,12 +240,12 @@ public:
   {
     return !operator==(pageSpan);
   }
-protected:
-  // interface with MWAWContentListener
+
+  // interface with MWAWListener
   //! add the page properties in pList
   void getPageProperty(librevenge::RVNGPropertyList &pList) const;
   //! send the page's headers/footers if some exists
-  void sendHeaderFooters(MWAWContentListener *listener) const;
+  void sendHeaderFooters(MWAWListener *listener) const;
 
 protected:
   //! return the header footer positions in m_headerFooterList

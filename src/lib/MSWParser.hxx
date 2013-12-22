@@ -88,7 +88,7 @@ struct MSWEntry : public MWAWEntry {
  *
  *
  */
-class MSWParser : public MWAWParser
+class MSWParser : public MWAWTextParser
 {
   friend class MSWText;
   friend class MSWTextStyles;

@@ -40,7 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWPictData.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
@@ -108,7 +108,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   /** the graph parser */
@@ -123,7 +123,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("FWGraphInternal::SubDocument::parse: no listener\n"));
@@ -518,7 +518,7 @@ bool FWGraph::readSideBarUnknown(FWStruct::EntryPtr zone, FWGraphInternal::SideB
 
 bool FWGraph::sendSideBar(FWGraphInternal::SideBar const &frame)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("FWGraph::sendSideBar can not find the listener\n"));
     return true;
@@ -700,7 +700,7 @@ bool FWGraph::sendGraphic(int fId)
 
 bool FWGraph::sendGraphic(FWStruct::EntryPtr zone)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("FWGraph::sendGraphic can not find the listener\n"));
     return true;

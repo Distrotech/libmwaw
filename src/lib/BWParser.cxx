@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWList.hxx"
@@ -125,7 +125,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 BWParser::BWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWParser(input, rsrcParser, header), m_state(), m_textParser()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_textParser()
 {
   init();
 }
@@ -136,7 +136,7 @@ BWParser::~BWParser()
 
 void BWParser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new BWParserInternal::State);
@@ -194,9 +194,9 @@ void BWParser::newPage(int number)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getListener()->insertBreak(MWAWContentListener::PageBreak);
+    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -230,7 +230,7 @@ void BWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -240,7 +240,7 @@ void BWParser::parse(librevenge::RVNGTextInterface *docInterface)
 void BWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("BWParser::createDocument: listener already exist\n"));
     return;
   }
@@ -278,8 +278,8 @@ void BWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
     pageList.push_back(ps);
   }
 
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 
@@ -835,7 +835,7 @@ bool BWParser::readwPos(MWAWEntry const &entry)
 bool BWParser::sendPicture
 (int pId, MWAWPosition const &pictPos, librevenge::RVNGPropertyList frameExtras)
 {
-  MWAWContentListenerPtr listener=getListener();
+  MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("BWParser::sendPicture: can not find the listener\n"));
     return false;

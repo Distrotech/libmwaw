@@ -68,7 +68,7 @@ public:
   /** virtual parse function
    *
    * this function is called to parse the subdocument */
-  virtual void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType subDocumentType) = 0;
+  virtual void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType subDocumentType) = 0;
   /** virtual parse function
    *
    * this function is called to parse a graphic subdocument */

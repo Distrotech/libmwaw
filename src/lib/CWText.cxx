@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
@@ -1274,12 +1274,12 @@ bool CWText::canSendTextAsGraphic(CWTextInternal::Zone const &zone) const
 
 bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
 {
-  MWAWListenerPtr listener;
+  MWAWBasicListenerPtr listener;
   zone.m_parsed=true;
   if (asGraphic)
     listener=m_parserState->m_graphicListener;
   else
-    listener=m_parserState->m_listener;
+    listener=m_parserState->m_textListener;
   if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("CWText::sendText: can not find a listener\n"));
     return false;
@@ -1493,7 +1493,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
       switch (c) {
       case 0x1: // fixme: column break
         if (numCols) {
-          listener->insertBreak(MWAWContentListener::ColumnBreak);
+          listener->insertBreak(MWAWTextListener::ColumnBreak);
           break;
         }
         MWAW_DEBUG_MSG(("CWText::sendText: Find unexpected char 1\n"));
@@ -1949,7 +1949,7 @@ bool CWText::readParagraph(int id)
   return true;
 }
 
-void CWText::setProperty(MWAWListener &listener, CWTextInternal::Paragraph const &ruler, int listId)
+void CWText::setProperty(MWAWBasicListener &listener, CWTextInternal::Paragraph const &ruler, int listId)
 {
   if (listId <= 0) {
     listener.setParagraph(ruler);
@@ -1982,14 +1982,14 @@ bool CWText::sendZone(int number, bool asGraphic)
 
 void CWText::flushExtra()
 {
-  if (!m_parserState->m_listener) return;
+  if (!m_parserState->m_textListener) return;
   std::map<int, shared_ptr<CWTextInternal::Zone> >::iterator iter
     = m_state->m_zoneMap.begin();
   for (; iter !=  m_state->m_zoneMap.end(); ++iter) {
     shared_ptr<CWTextInternal::Zone> zone = iter->second;
     if (!zone || zone->m_parsed)
       continue;
-    m_parserState->m_listener->insertEOL();
+    m_parserState->m_textListener->insertEOL();
     if (zone->m_parsed) // can be a header/footer in draw zone
       continue;
     sendText(*zone, false);

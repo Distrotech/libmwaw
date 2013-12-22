@@ -70,7 +70,7 @@ class CWText;
  *
  *
  */
-class CWParser : public MWAWParser
+class CWParser : public MWAWTextParser
 {
   friend class CWParserInternal::SubDocument;
   friend class CWDatabase;

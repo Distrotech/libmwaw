@@ -39,7 +39,7 @@
 #include <librevenge/librevenge.h>
 
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -139,7 +139,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   /** the type */
@@ -150,7 +150,7 @@ protected:
   int m_noteId;
 };
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("MSK3Parser::SubDocument::parse: no listener\n"));
@@ -202,7 +202,7 @@ MSK3Parser::~MSK3Parser()
 
 void MSK3Parser::init()
 {
-  resetListener();
+  resetTextListener();
   setAsciiName("main-1");
 
   m_state.reset(new MSK3ParserInternal::State);
@@ -240,12 +240,12 @@ void MSK3Parser::newPage(int number, bool softBreak)
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getListener() || m_state->m_actPage == 1)
+    if (!getTextListener() || m_state->m_actPage == 1)
       continue;
     if (softBreak)
-      getListener()->insertBreak(MWAWContentListener::SoftPageBreak);
+      getTextListener()->insertBreak(MWAWTextListener::SoftPageBreak);
     else
-      getListener()->insertBreak(MWAWContentListener::PageBreak);
+      getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -278,7 +278,7 @@ void MSK3Parser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = false;
   }
 
-  resetListener();
+  resetTextListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
@@ -292,7 +292,7 @@ void MSK3Parser::sendText(int id, int noteId)
 
 void MSK3Parser::sendZone(int zoneType)
 {
-  if (!getListener()) return;
+  if (!getTextListener()) return;
   MSK3ParserInternal::Zone zone=m_state->get(MSK3ParserInternal::Zone::Type(zoneType));
   if (zone.m_zoneId >= 0)
     m_graphParser->sendAll(zone.m_zoneId, zoneType==MSK3ParserInternal::Zone::MAIN);
@@ -304,8 +304,8 @@ bool MSK3Parser::sendFootNote(int zoneId, int noteId)
 {
   MWAWSubDocumentPtr subdoc
   (new MSK3ParserInternal::SubDocument(*this, getInput(), MSK3ParserInternal::SubDocument::Text, zoneId, noteId));
-  if (getListener())
-    getListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
+  if (getTextListener())
+    getTextListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
   return true;
 }
 
@@ -315,7 +315,7 @@ bool MSK3Parser::sendFootNote(int zoneId, int noteId)
 void MSK3Parser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getListener()) {
+  if (getTextListener()) {
     MWAW_DEBUG_MSG(("MSK3Parser::createDocument: listener already exist\n"));
     return;
   }
@@ -369,8 +369,8 @@ void MSK3Parser::createDocument(librevenge::RVNGTextInterface *documentInterface
   ps.setPageSpan(m_state->m_numPages+1);
   std::vector<MWAWPageSpan> pageList(1,ps);
   //
-  MWAWContentListenerPtr listen(new MWAWContentListener(*getParserState(), pageList, documentInterface));
-  setListener(listen);
+  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
+  setTextListener(listen);
   listen->startDocument();
 }
 

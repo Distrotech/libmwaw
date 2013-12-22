@@ -40,7 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
@@ -186,7 +186,7 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType type);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   /** the text parser */
@@ -214,7 +214,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
   return false;
 }
 
-void SubDocument::parse(MWAWContentListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
     MWAW_DEBUG_MSG(("ZWTextInternal::SubDocument::parse: no listener\n"));
@@ -421,7 +421,7 @@ ZWText::TextCode ZWText::isTextCode
 
 bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entry)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("ZWText::sendText: can not find a listener\n"));
     return false;
@@ -532,7 +532,7 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
 
 bool ZWText::sendText(int sectionId, MWAWEntry const &entry)
 {
-  if (!m_parserState->m_listener) {
+  if (!m_parserState->m_textListener) {
     MWAW_DEBUG_MSG(("ZWText::sendText: can not find a listener\n"));
     return false;
   }
@@ -548,7 +548,7 @@ bool ZWText::sendText(int sectionId, MWAWEntry const &entry)
 
 bool ZWText::sendMainText()
 {
-  if (!m_parserState->m_listener) {
+  if (!m_parserState->m_textListener) {
     MWAW_DEBUG_MSG(("ZWText::sendMainText: can not find a listener\n"));
     return false;
   }
@@ -734,7 +734,7 @@ bool ZWText::readStyles(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 bool ZWText::sendHeaderFooter(bool header)
 {
-  MWAWContentListenerPtr listener=m_parserState->m_listener;
+  MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("ZWText::sendHeaderFooter: can not find a listener\n"));
     return false;

@@ -73,7 +73,7 @@
 /** small namespace use to define private class/method used by MWAWDocument */
 namespace MWAWDocumentInternal
 {
-shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+shared_ptr<MWAWTextParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
 MWAWHeader *getHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, bool strict);
 bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader &header, bool strict);
 
@@ -216,7 +216,7 @@ MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, lib
 
     if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
 
-    shared_ptr<MWAWParser> parser=MWAWDocumentInternal::getParserFromHeader(ip, rsrcParser, header.get());
+    shared_ptr<MWAWTextParser> parser=MWAWDocumentInternal::getParserFromHeader(ip, rsrcParser, header.get());
     if (!parser) return MWAW_R_UNKNOWN_ERROR;
     parser->parse(documentInterface);
   }
@@ -330,9 +330,9 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
 }
 
 /** Factory wrapper to construct a parser corresponding to an header */
-shared_ptr<MWAWParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header)
+shared_ptr<MWAWTextParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header)
 {
-  shared_ptr<MWAWParser> parser;
+  shared_ptr<MWAWTextParser> parser;
   if (!header)
     return parser;
   try {
