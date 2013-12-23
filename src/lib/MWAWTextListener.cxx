@@ -134,7 +134,6 @@ struct State {
 
   bool m_firstParagraphInPageSpan;
 
-  std::vector<unsigned int> m_numRowsToSkip;
   bool m_isTableOpened;
   bool m_isTableRowOpened;
   bool m_isTableColumnOpened;
@@ -179,7 +178,6 @@ State::State() :
 
   m_firstParagraphInPageSpan(true),
 
-  m_numRowsToSkip(),
   m_isTableOpened(false), m_isTableRowOpened(false), m_isTableColumnOpened(false),
   m_isTableCellOpened(false),
 
@@ -481,7 +479,7 @@ void MWAWTextListener::insertField(MWAWField const &field)
 void MWAWTextListener::openLink(MWAWLink const &link)
 {
   if (m_ps->m_inLink) {
-    MWAW_DEBUG_MSG(("MWAWTextListener:closeLink: a link is already opened\n"));
+    MWAW_DEBUG_MSG(("MWAWTextListener:openLink: a link is already opened\n"));
     return;
   }
   if (!m_ps->m_isSpanOpened) _openSpan();
@@ -1535,6 +1533,7 @@ void MWAWTextListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw
     break;
   case libmwaw::DOC_NONE:
   case libmwaw::DOC_NOTE:
+  case libmwaw::DOC_SHEET:
   case libmwaw::DOC_TABLE:
   case libmwaw::DOC_COMMENT_ANNOTATION:
   case libmwaw::DOC_GRAPHIC_GROUP:
@@ -1577,6 +1576,7 @@ void MWAWTextListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw
     m_ds->m_isHeaderFooterStarted = false;
   case libmwaw::DOC_NONE:
   case libmwaw::DOC_NOTE:
+  case libmwaw::DOC_SHEET:
   case libmwaw::DOC_TABLE:
   case libmwaw::DOC_COMMENT_ANNOTATION:
   case libmwaw::DOC_GRAPHIC_GROUP:

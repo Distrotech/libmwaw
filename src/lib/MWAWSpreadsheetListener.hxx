@@ -49,6 +49,7 @@
 #include "MWAWListener.hxx"
 
 class MWAWCell;
+class MWAWCellContent;
 class MWAWGraphicStyle;
 class MWAWGraphicShape;
 class MWAWTable;
@@ -104,7 +105,7 @@ public:
 
   // ------- sheet -----------------
   /** open a sheet*/
-  void openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit, std::string const name="");
+  void openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit, std::string const &name="");
   /** closes this sheet */
   void closeSheet();
   /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
@@ -184,7 +185,11 @@ public:
                      librevenge::RVNGPropertyList textboxExtras=librevenge::RVNGPropertyList());
 
   // ------- table -----------------
-  /** open a table*/
+  /** adds a table in given position */
+  void insertTable(MWAWPosition const &pos, MWAWTable &table,
+                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
+
+  /** open a table */
   void openTable(MWAWTable const &table, librevenge::RVNGPropertyList tableExtras=librevenge::RVNGPropertyList());
   /** closes this table */
   void closeTable();
@@ -201,9 +206,15 @@ public:
 
   // ------- section ---------------
   /** returns true if we can add open a section, add page break, ... */
-  bool canOpenSectionAddBreak() const;
+  bool canOpenSectionAddBreak() const
+  {
+    return false;
+  }
   //! returns true if a section is opened
-  bool isSectionOpened() const;
+  bool isSectionOpened() const
+  {
+    return false;
+  }
   //! returns the actual section
   MWAWSection const &getSection() const;
   //! open a section if possible
@@ -214,10 +225,6 @@ public:
   void insertBreak(BreakType breakType);
 
 protected:
-  //! does open a section (low level)
-  void _openSection();
-  //! does close a section (low level)
-  void _closeSection();
   //! does open a new page (low level)
   void _openPageSpan(bool sendHeaderFooters=true);
   //! does close a page (low level)
@@ -233,7 +240,6 @@ protected:
 
   void _openParagraph();
   void _closeParagraph();
-  void _appendParagraphProperties(librevenge::RVNGPropertyList &propList, const bool isListElement=false);
   void _resetParagraphState(const bool isListElement=false);
 
   /** open a list level */
@@ -253,8 +259,6 @@ protected:
 
   void _flushText();
   void _flushDeferredTabs();
-
-  void _insertBreakIfNecessary(librevenge::RVNGPropertyList &propList);
 
   /** creates a new parsing state (copy of the actual state)
    *

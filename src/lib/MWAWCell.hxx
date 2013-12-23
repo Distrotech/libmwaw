@@ -54,19 +54,30 @@ public:
   /** the different format of a cell's content */
   enum FormatType { F_TEXT, F_BOOLEAN, F_NUMBER, F_DATE, F_TIME, F_UNKNOWN };
   /** the different number format of a cell's content */
-  enum NumberType { F_NUMBER_CURRENCY, F_NUMBER_FRACTION, F_NUMBER_GENERIC, F_NUMBER_SCIENTIFIC, F_NUMBER_PERCENT, F_NUMBER_UNKNOWN };
+  enum NumberType { F_NUMBER_CURRENCY, F_NUMBER_DECIMAL, F_NUMBER_FRACTION, F_NUMBER_GENERIC, F_NUMBER_SCIENTIFIC, F_NUMBER_PERCENT, F_NUMBER_UNKNOWN };
   /** a structure uses to define the format of a cell content */
   struct Format {
     //! constructor
-    Format() : m_format(F_UNKNOWN), m_numberFormat(F_NUMBER_UNKNOWN), m_digits(-1), m_integerDigits(-1), m_numeratorDigits(1), m_denominatorDigits(1), m_thousandHasSeperator(false), m_currencySymbol("$"), m_DTFormat("")
+    Format() : m_format(F_UNKNOWN), m_numberFormat(F_NUMBER_UNKNOWN), m_digits(-1), m_integerDigits(-1), m_numeratorDigits(1), m_denominatorDigits(1), m_thousandHasSeparator(false), m_currencySymbol("$"), m_DTFormat("")
     {
     }
     //! destructor
     virtual ~Format() {}
-    //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, Format const &format);
+    //! returns true if this is a basic format style
+    bool hasBasicFormat() const
+    {
+      return m_format==F_TEXT || m_format==F_UNKNOWN;
+    }
+    //! returns a value type
+    std::string getValueType() const;
+    //! get the numbering style
+    bool getNumberingProperties(librevenge::RVNGPropertyList &propList) const;
     //! convert a DTFormat in a propertyList
     static bool convertDTFormat(std::string const &dtFormat, librevenge::RVNGPropertyListVector &propListVector);
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, Format const &format);
+    //! a comparison  function
+    int compare(Format const &format) const;
 
     //! the cell format : by default unknown
     FormatType m_format;
@@ -81,11 +92,21 @@ public:
     //! the number of denominator digits
     int m_denominatorDigits;
     //! true if we must separate the thousand
-    bool m_thousandHasSeperator;
+    bool m_thousandHasSeparator;
     //! the currency symbol ( default '$')
     std::string m_currencySymbol;
     //! a date/time format ( using a subset of strftime format )
     std::string m_DTFormat;
+  };
+  //! a comparaison structure used to store data
+  struct CompareFormat {
+    //! constructor
+    CompareFormat() {}
+    //! comparaison function
+    bool operator()(Format const &c1, Format const &c2) const
+    {
+      return c1.compare(c2) < 0;
+    }
   };
   /** the default horizontal alignement.
 

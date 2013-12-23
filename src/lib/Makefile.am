@@ -175,6 +175,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWRSRCParser.hxx		\
 	MWAWSection.cxx			\
 	MWAWSection.hxx			\
+	MWAWSpreadsheetListener.cxx	\
+	MWAWSpreadsheetListener.hxx	\
 	MWAWSubDocument.cxx		\
 	MWAWSubDocument.hxx		\
 	MWAWTable.cxx			\

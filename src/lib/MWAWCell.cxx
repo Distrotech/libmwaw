@@ -48,6 +48,108 @@
 ////////////////////////////////////////////////////////////
 // MWAWCell::Format
 ////////////////////////////////////////////////////////////
+std::string MWAWCell::Format::getValueType() const
+{
+  switch (m_format) {
+  case F_NUMBER:
+    if (m_numberFormat==F_NUMBER_CURRENCY) return "currency";
+    if (m_numberFormat==F_NUMBER_PERCENT) return "percent";
+    if (m_numberFormat==F_NUMBER_SCIENTIFIC) return "scientific";
+    return "float";
+  case F_BOOLEAN:
+    return "boolean";
+  case F_DATE:
+    return "date";
+  case F_TIME:
+    return "time";
+  case F_TEXT:
+  case F_UNKNOWN:
+  default:
+    break;
+  }
+  return "float";
+}
+
+bool MWAWCell::Format::getNumberingProperties(librevenge::RVNGPropertyList &propList) const
+{
+  librevenge::RVNGPropertyListVector pVect;
+  switch (m_format) {
+  case F_BOOLEAN:
+    propList.insert("librevenge:value-type", "boolean");
+    break;
+  case F_NUMBER:
+    if (m_digits>0)
+      propList.insert("number:decimal-places", m_digits);
+    if (m_thousandHasSeparator)
+      propList.insert("number:grouping", true);
+    switch (m_numberFormat) {
+    case F_NUMBER_GENERIC:
+      propList.insert("librevenge:value-type", "number");
+      propList.remove("number:decimal-places");
+      break;
+    case F_NUMBER_SCIENTIFIC:
+      propList.insert("librevenge:value-type", "scientific");
+      break;
+    case F_NUMBER_PERCENT:
+      propList.insert("librevenge:value-type", "percentage");
+      break;
+    case F_NUMBER_DECIMAL:
+      propList.insert("librevenge:value-type", "number");
+      if (m_integerDigits>=0) {
+        propList.insert("number:min-integer-digits", m_integerDigits+1);
+        propList.insert("number:decimal-places", 0);
+      }
+      break;
+    case F_NUMBER_FRACTION:
+      propList.insert("librevenge:value-type", "fraction");
+      propList.insert("number:min-integer-digits", 0);
+      propList.insert("number:min-numerator-digits", m_numeratorDigits);
+      propList.insert("number:min-denominator-digits", m_denominatorDigits);
+      propList.remove("number:decimal-places");
+      break;
+    case F_NUMBER_CURRENCY: {
+      propList.clear();
+      propList.insert("librevenge:value-type", "currency");
+      librevenge::RVNGPropertyList list;
+      list.insert("librevenge:value-type", "currency-symbol");
+      list.insert("number:language","en");
+      list.insert("number:country","US");
+      list.insert("librevenge:currency",m_currencySymbol.c_str());
+      pVect.append(list);
+
+      list.clear();
+      list.insert("librevenge:value-type", "number");
+      if (m_digits>-1000)
+        list.insert("number:decimal-places", m_digits);
+      pVect.append(list);
+      break;
+    }
+    case F_NUMBER_UNKNOWN:
+    default:
+      return false;
+    }
+    break;
+  case F_DATE:
+    propList.insert("librevenge:value-type", "date");
+    propList.insert("number:automatic-order", "true");
+    if (!convertDTFormat(m_DTFormat.empty() ? "%m/%d/%Y" : m_DTFormat, pVect))
+      return false;
+    break;
+  case F_TIME:
+    propList.insert("librevenge:value-type", "time");
+    propList.insert("number:automatic-order", "true");
+    if (!convertDTFormat(m_DTFormat.empty() ? "%H:%M:%S" : m_DTFormat, pVect))
+      return false;
+    break;
+  case F_TEXT:
+  case F_UNKNOWN:
+  default:
+    return false;
+  }
+  propList.insert("librevenge:format", pVect);
+  return true;
+}
+
 bool MWAWCell::Format::convertDTFormat(std::string const &dtFormat, librevenge::RVNGPropertyListVector &propVect)
 {
   propVect.clear();
@@ -154,6 +256,8 @@ std::ostream &operator<<(std::ostream &o, MWAWCell::Format const &format)
     o << "number";
     switch (format.m_numberFormat) {
     case MWAWCell::F_NUMBER_GENERIC:
+      break;
+    case MWAWCell::F_NUMBER_DECIMAL:
       o << "[decimal]";
       break;
     case MWAWCell::F_NUMBER_SCIENTIFIC:
@@ -174,7 +278,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCell::Format const &format)
       o << "###format,";
       break;
     }
-    if (format.m_thousandHasSeperator)
+    if (format.m_thousandHasSeparator)
       o << "[thousandSep]";
     break;
   case MWAWCell::F_DATE:
@@ -196,6 +300,27 @@ std::ostream &operator<<(std::ostream &o, MWAWCell::Format const &format)
   return o;
 }
 
+int MWAWCell::Format::compare(MWAWCell::Format const &cell) const
+{
+  if (m_format<cell.m_format) return 1;
+  if (m_format>cell.m_format) return -1;
+  if (m_numberFormat<cell.m_numberFormat) return 1;
+  if (m_numberFormat>cell.m_numberFormat) return -1;
+  if (m_digits<cell.m_digits) return 1;
+  if (m_digits>cell.m_digits) return -1;
+  if (m_integerDigits<cell.m_integerDigits) return 1;
+  if (m_integerDigits>cell.m_integerDigits) return -1;
+  if (m_numeratorDigits<cell.m_numeratorDigits) return 1;
+  if (m_numeratorDigits>cell.m_numeratorDigits) return -1;
+  if (m_denominatorDigits<cell.m_denominatorDigits) return 1;
+  if (m_denominatorDigits>cell.m_denominatorDigits) return -1;
+  if (m_thousandHasSeparator!=cell.m_thousandHasSeparator) return m_thousandHasSeparator ? -1:1;
+  if (m_DTFormat<cell.m_DTFormat) return 1;
+  if (m_DTFormat>cell.m_DTFormat) return -1;
+  if (m_currencySymbol<cell.m_currencySymbol) return 1;
+  if (m_currencySymbol>cell.m_currencySymbol) return -1;
+  return 0;
+}
 ////////////////////////////////////////////////////////////
 // MWAWCell
 ////////////////////////////////////////////////////////////

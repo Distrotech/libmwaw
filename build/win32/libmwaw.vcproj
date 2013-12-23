@@ -484,6 +484,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWSpreadsheetListener.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWSubDocument.cxx"
 				>
 			</File>
@@ -882,6 +886,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWSection.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWSpreadsheetListener.hxx"
 				>
 			</File>
 			<File

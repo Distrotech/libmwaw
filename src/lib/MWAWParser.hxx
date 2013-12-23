@@ -69,7 +69,9 @@ public:
   MWAWGraphicListenerPtr m_graphicListener;
   //! the list manager
   MWAWListManagerPtr m_listManager;
-  //! the listener
+  //! the spreadsheet listener
+  MWAWSpreadsheetListenerPtr m_spreadsheetListener;
+  //! the text listener
   MWAWTextListenerPtr m_textListener;
 
   //! the debug file
@@ -126,7 +128,12 @@ protected:
   {
     return m_parserState->m_graphicListener;
   }
-  //! returns the listener
+  //! returns the spreadsheet listener
+  MWAWSpreadsheetListenerPtr &getSpreadsheetListener()
+  {
+    return m_parserState->m_spreadsheetListener;
+  }
+  //! returns the text listener
   MWAWTextListenerPtr &getTextListener()
   {
     return m_parserState->m_textListener;
@@ -166,6 +173,10 @@ protected:
   {
     return m_parserState->m_rsrcParser;
   }
+  //! sets the spreadsheet listener
+  void setSpreadsheetListener(MWAWSpreadsheetListenerPtr &listener);
+  //! resets the listener
+  void resetSpreadsheetListener();
   //! sets the text listener
   void setTextListener(MWAWTextListenerPtr &listener);
   //! resets the listener
@@ -219,6 +230,19 @@ protected:
   MWAWTextParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(input, rsrcParser, header) {}
   //! constructor using a state
   MWAWTextParser(MWAWParserStatePtr state) : MWAWParser(state) {}
+};
+
+/** virtual class which defines the ancestor of all spreadsheet zone parser */
+class MWAWSpreadsheetParser : public MWAWParser
+{
+public:
+  //! virtual function used to parse the input
+  virtual void parse(librevenge::RVNGSpreadsheetInterface *documentInterface) = 0;
+protected:
+  //! constructor (protected)
+  MWAWSpreadsheetParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(input, rsrcParser, header) {}
+  //! constructor using a state
+  MWAWSpreadsheetParser(MWAWParserStatePtr state) : MWAWParser(state) {}
 };
 
 #endif /* MWAWPARSER_H */

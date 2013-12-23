@@ -399,6 +399,10 @@ SOURCE=..\..\src\lib\MWAWSection.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWSpreadsheetListener.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWSubDocument.cxx
 # End Source File
 # Begin Source File
@@ -796,6 +800,10 @@ SOURCE=..\..\src\lib\MWAWRSRCParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWSection.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWSpreadsheetListener.hxx
 # End Source File
 # Begin Source File
 

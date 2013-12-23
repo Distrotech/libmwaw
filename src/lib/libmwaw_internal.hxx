@@ -159,7 +159,7 @@ enum { LeftBit = 0x01,  RightBit = 0x02, TopBit=0x4, BottomBit = 0x08, HMiddleBi
 enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
 std::string numberingTypeToString(NumberingType type);
 std::string numberingValueToString(NumberingType type, int value);
-enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION, DOC_GRAPHIC_GROUP };
+enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_SHEET, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION, DOC_GRAPHIC_GROUP };
 }
 
 //! the class to store a color
@@ -363,7 +363,6 @@ class MWAWPosition;
 class MWAWSection;
 
 class MWAWBasicListener;
-class MWAWTextListener;
 class MWAWFontConverter;
 class MWAWGraphicListener;
 class MWAWInputStream;
@@ -371,11 +370,11 @@ class MWAWListener;
 class MWAWListManager;
 class MWAWParserState;
 class MWAWRSRCParser;
+class MWAWSpreadsheetListener;
 class MWAWSubDocument;
+class MWAWTextListener;
 //! a smart pointer of MWAWBasicListener
 typedef shared_ptr<MWAWBasicListener> MWAWBasicListenerPtr;
-//! a smart pointer of MWAWTextListener
-typedef shared_ptr<MWAWTextListener> MWAWTextListenerPtr;
 //! a smart pointer of MWAWFontConverter
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 //! a smart pointer of MWAWGraphicListener
@@ -386,12 +385,16 @@ typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 typedef shared_ptr<MWAWListener> MWAWListenerPtr;
 //! a smart pointer of MWAWListManager
 typedef shared_ptr<MWAWListManager> MWAWListManagerPtr;
-//! a smart pointer of MWAWRSRCParser
-typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
 //! a smart pointer of MWAWParserState
 typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
+//! a smart pointer of MWAWRSRCParser
+typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
+//! a smart pointer of MWAWSpreadsheetListener
+typedef shared_ptr<MWAWSpreadsheetListener> MWAWSpreadsheetListenerPtr;
 //! a smart pointer of MWAWSubDocument
 typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
+//! a smart pointer of MWAWTextListener
+typedef shared_ptr<MWAWTextListener> MWAWTextListenerPtr;
 
 /** a generic variable template: value + flag to know if the variable is set
 

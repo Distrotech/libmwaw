@@ -31,17 +31,19 @@
 * instead of those above.
 */
 
-#include "MWAWTextListener.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWList.hxx"
+#include "MWAWSpreadsheetListener.hxx"
+#include "MWAWTextListener.hxx"
 
 #include "MWAWParser.hxx"
 
 MWAWParserState::MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   m_version(0), m_input(input), m_header(header),
-  m_rsrcParser(rsrcParser), m_fontConverter(), m_graphicListener(), m_listManager(), m_textListener(), m_asciiFile(input)
+  m_rsrcParser(rsrcParser), m_fontConverter(),
+  m_graphicListener(), m_listManager(), m_spreadsheetListener(), m_textListener(), m_asciiFile(input)
 {
   if (header) m_version=header->getMajorVersion();
   m_fontConverter.reset(new MWAWFontConverter);
@@ -51,6 +53,22 @@ MWAWParserState::MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsr
 
 MWAWParserState::~MWAWParserState()
 {
+  if (m_spreadsheetListener.get()) try {
+      /* must never happen, only sanity check....
+
+            Ie. the parser which creates a listener, must delete it.
+            */
+      MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: the listener is NOT closed, call enddocument without any subdoc\n"));
+      m_spreadsheetListener->endDocument(false);
+    }
+    catch (const libmwaw::ParseException &) {
+      MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: endDocument FAILS\n"));
+      /* must never happen too...
+
+      Ie. the different parsers are responsable to create enough pages,
+      if we have exception here, this will indicate a second error in code
+      */
+    }
   if (m_textListener.get()) try {
       /* must never happen, only sanity check....
 
@@ -77,6 +95,17 @@ MWAWParser::MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, M
 
 MWAWParser::~MWAWParser()
 {
+}
+
+void MWAWParser::setSpreadsheetListener(MWAWSpreadsheetListenerPtr &listener)
+{
+  m_parserState->m_spreadsheetListener=listener;
+}
+
+void MWAWParser::resetSpreadsheetListener()
+{
+  if (getSpreadsheetListener()) getSpreadsheetListener()->endDocument();
+  m_parserState->m_spreadsheetListener.reset();
 }
 
 void MWAWParser::setTextListener(MWAWTextListenerPtr &listener)

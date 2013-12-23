@@ -73,7 +73,8 @@
 /** small namespace use to define private class/method used by MWAWDocument */
 namespace MWAWDocumentInternal
 {
-shared_ptr<MWAWTextParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
 MWAWHeader *getHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, bool strict);
 bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader &header, bool strict);
 
@@ -216,7 +217,7 @@ MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, lib
 
     if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
 
-    shared_ptr<MWAWTextParser> parser=MWAWDocumentInternal::getParserFromHeader(ip, rsrcParser, header.get());
+    shared_ptr<MWAWTextParser> parser=MWAWDocumentInternal::getTextParserFromHeader(ip, rsrcParser, header.get());
     if (!parser) return MWAW_R_UNKNOWN_ERROR;
     parser->parse(documentInterface);
   }
@@ -249,10 +250,44 @@ MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *, libreven
   return MWAW_R_UNKNOWN_ERROR;
 }
 
-MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *, librevenge::RVNGSpreadsheetInterface *, char const *)
+MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, librevenge::RVNGSpreadsheetInterface *documentInterface, char const *)
 {
-  MWAW_DEBUG_MSG(("MWAWDocument::parse[Spreadsheet]: unimplemented\n"));
-  return MWAW_R_UNKNOWN_ERROR;
+  if (!input)
+    return MWAW_R_UNKNOWN_ERROR;
+  Result error = MWAW_R_OK;
+
+  try {
+    MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
+    MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
+    shared_ptr<MWAWRSRCParser> rsrcParser;
+    if (rsrc) {
+      rsrcParser.reset(new MWAWRSRCParser(rsrc));
+      rsrcParser->setAsciiName("RSRC");
+      rsrcParser->parse();
+    }
+    shared_ptr<MWAWHeader> header(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
+
+    if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
+
+    shared_ptr<MWAWSpreadsheetParser> parser=MWAWDocumentInternal::getSpreadsheetParserFromHeader(ip, rsrcParser, header.get());
+    if (!parser) return MWAW_R_UNKNOWN_ERROR;
+    parser->parse(documentInterface);
+  }
+  catch (libmwaw::FileException) {
+    MWAW_DEBUG_MSG(("File exception trapped\n"));
+    error = MWAW_R_FILE_ACCESS_ERROR;
+  }
+  catch (libmwaw::ParseException) {
+    MWAW_DEBUG_MSG(("Parse exception trapped\n"));
+    error = MWAW_R_PARSE_ERROR;
+  }
+  catch (...) {
+    //fixme: too generic
+    MWAW_DEBUG_MSG(("Unknown exception trapped\n"));
+    error = MWAW_R_UNKNOWN_ERROR;
+  }
+
+  return error;
 }
 
 bool MWAWDocument::decodeGraphic(librevenge::RVNGBinaryData const &binary, librevenge::RVNGDrawingInterface *paintInterface)
@@ -329,8 +364,19 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
   return 0L;
 }
 
-/** Factory wrapper to construct a parser corresponding to an header */
-shared_ptr<MWAWTextParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header)
+/** Factory wrapper to construct a parser corresponding to an spreadsheet header */
+shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStreamPtr &/*input*/, MWAWRSRCParserPtr /*rsrcParser*/, MWAWHeader *header)
+{
+  shared_ptr<MWAWSpreadsheetParser> parser;
+  if (!header)
+    return parser;
+
+  MWAW_DEBUG_MSG(("MWAWDocument::getSpreadsheetParserFromHeader: unimplemented\n"));
+  return parser;
+}
+
+/** Factory wrapper to construct a parser corresponding to an text header */
+shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header)
 {
   shared_ptr<MWAWTextParser> parser;
   if (!header)
@@ -445,7 +491,9 @@ shared_ptr<MWAWTextParser> getParserFromHeader(MWAWInputStreamPtr &input, MWAWRS
 bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader &header, bool strict)
 {
   try {
-    shared_ptr<MWAWParser> parser=getParserFromHeader(input, rsrcParser, &header);
+    shared_ptr<MWAWParser> parser=getTextParserFromHeader(input, rsrcParser, &header);
+    if (!parser)
+      parser=getSpreadsheetParserFromHeader(input, rsrcParser, &header);
     if (!parser)
       return false;
     return parser->checkHeader(&header, strict);
