@@ -46,6 +46,7 @@
 
 #include "ACParser.hxx"
 #include "BWParser.hxx"
+#include "BWSSParser.hxx"
 #include "CWParser.hxx"
 #include "DMParser.hxx"
 #include "EDParser.hxx"
@@ -365,13 +366,17 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
 }
 
 /** Factory wrapper to construct a parser corresponding to an spreadsheet header */
-shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStreamPtr &/*input*/, MWAWRSRCParserPtr /*rsrcParser*/, MWAWHeader *header)
+shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header)
 {
   shared_ptr<MWAWSpreadsheetParser> parser;
   if (!header)
     return parser;
 
-  MWAW_DEBUG_MSG(("MWAWDocument::getSpreadsheetParserFromHeader: unimplemented\n"));
+  if (header->getType()==MWAWDocument::MWAW_T_BEAGLEWORKS)
+    parser.reset(new BWSSParser(input, rsrcParser, header));
+  else {
+    MWAW_DEBUG_MSG(("MWAWDocument::getSpreadsheetParserFromHeader: unexpected type\n"));
+  }
   return parser;
 }
 
@@ -380,6 +385,9 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
 {
   shared_ptr<MWAWTextParser> parser;
   if (!header)
+    return parser;
+  if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET &&
+      header->getType()!=MWAWDocument::MWAW_T_CLARISWORKS)
     return parser;
   try {
     switch (header->getType()) {

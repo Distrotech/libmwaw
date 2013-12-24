@@ -46,11 +46,6 @@ These files defined basic tools which must be used by the parsers :
 ## MWAWInputStream.hxx
 	internal wrapper of RVNGInputStream (with functions to read Ole, ...)
 
-## MWAWOLEStream.hxx :
-   	internal function used to store/read OLE, retrieve the list of OLE, ..
-## MWAWZipStream.hxx :
-   	internal function used to store/read a zip file
-
 ## generic tools
 
 - MWAWDebug.hxx : class to store parsed data in an intermediate file
@@ -77,8 +72,10 @@ These files defined basic structures which must be used by the parsers :
 ## MWAWSubDocument.hxx
 	Files to parse document inspired of libwpd/WP*
 
-## MWAWContentListener.hxx
-	The content listener
+## MWAWTextListener.hxx
+	The text listener uses to create odt...
+## MWAWSpreadsheetListener.hxx
+	The spreadsheet listener uses to create ods...
 
 ## MWAWPageSpan.hxx
 	store the page property and a page span number,
@@ -122,6 +119,8 @@ ACParser: parser of Acta : v2 and Classic v1
 
 BWParser: parser of BeagleWorks v1.0 and WordPerfect Works v1.2
 -   BWText : class which reads the text
+
+BWSSParser: parser of BeagleWorks spreadsheet v1.0 ( not functional )
 
 CWParser : parser of ClarisWorks/AppleWorks document
 -   CWGraph : class which reads the graphics and zone dispositions ...

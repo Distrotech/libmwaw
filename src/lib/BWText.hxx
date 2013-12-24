@@ -32,7 +32,7 @@
 */
 
 /*
- * Parser to BeagleWorks document
+ * Text parser to BeagleWorks document
  *
  */
 #ifndef BW_TEXT
@@ -51,6 +51,7 @@ class SubDocument;
 }
 
 class BWParser;
+class BWStructManager;
 
 /** \brief the main class to read the text part of BeagleWorks Text file
  *
@@ -93,12 +94,12 @@ protected:
   shared_ptr<MWAWSubDocument> getFooter(int page, int &numSimillar);
   /** update the page span list */
   void updatePageSpanList(std::vector<MWAWPageSpan> &spanList);
-  //! try to the font names
-  bool readFontsName(MWAWEntry &entry);
   //! try to send a text zone
   bool sendText(MWAWEntry entry);
   //! try to send a header/footer id
   bool sendHF(int hfId, int sectId);
+  //! returns the font
+  MWAWFont getFont(BWTextInternal::Font const &ft) const;
   //! try to read a font properties
   bool readFont(BWTextInternal::Font &font, long endPos);
   //! try to read a paragraph knowing end pos
@@ -118,6 +119,8 @@ protected:
 
   //! the state
   shared_ptr<BWTextInternal::State> m_state;
+  //! the structure manager
+  shared_ptr<BWStructManager> m_structureManager;
 
   //! the main parser;
   BWParser *m_mainParser;

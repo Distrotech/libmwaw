@@ -24,6 +24,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	ACText.hxx			\
 	BWParser.cxx			\
 	BWParser.hxx			\
+	BWSSParser.cxx			\
+	BWSSParser.hxx			\
+	BWStructManager.cxx		\
+	BWStructManager.hxx		\
 	BWText.cxx			\
 	BWText.hxx			\
 	CWDatabase.cxx			\

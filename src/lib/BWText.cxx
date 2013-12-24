@@ -52,6 +52,7 @@
 #include "MWAWSubDocument.hxx"
 
 #include "BWParser.hxx"
+#include "BWStructManager.hxx"
 
 #include "BWText.hxx"
 
@@ -252,21 +253,8 @@ struct Section : public MWAWSection {
 //! Internal: the state of a BWText
 struct State {
   //! constructor
-  State() : m_textEntry(), m_sectionList(), m_numPagesBySectionList(), m_version(-1), m_fileIdFontIdList(), m_numPages(-1), m_actualPage(1)
+  State() : m_textEntry(), m_sectionList(), m_numPagesBySectionList(), m_version(-1), m_numPages(-1), m_actualPage(1)
   {
-  }
-  //! returns the font corresponding to a file font
-  MWAWFont getFont(Font const &ft)
-  {
-    MWAWFont font=ft.getFont();
-    int fId=font.id();
-    if (fId<0||fId>=int(m_fileIdFontIdList.size())) {
-      MWAW_DEBUG_MSG(("BWTextInternal::State:getFont can not find the final font id\n"));
-      font.setId(3);
-    }
-    else
-      font.setId(m_fileIdFontIdList[size_t(fId)]);
-    return font;
   }
   //! the main text entry
   MWAWEntry m_textEntry;
@@ -276,8 +264,6 @@ struct State {
   std::vector<int> m_numPagesBySectionList;
   //! the file version
   mutable int m_version;
-  //! a list to get the correspondance between fileId and fontId
-  std::vector<int> m_fileIdFontIdList;
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
@@ -346,7 +332,8 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 BWText::BWText(BWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new BWTextInternal::State), m_mainParser(&parser)
+  m_parserState(parser.getParserState()), m_state(new BWTextInternal::State),
+  m_structureManager(parser.m_structureManager), m_mainParser(&parser)
 {
 }
 
@@ -365,6 +352,13 @@ int BWText::numPages() const
   if (m_state->m_numPages <= 0)
     const_cast<BWText *>(this)->countPages();
   return m_state->m_numPages;
+}
+
+MWAWFont BWText::getFont(BWTextInternal::Font const &ft) const
+{
+  MWAWFont font=ft.getFont();
+  font.setId(m_structureManager->getFontId(font.id()));
+  return font;
 }
 
 shared_ptr<MWAWSubDocument> BWText::getHeader(int page, int &numSimilar)
@@ -668,7 +662,7 @@ bool BWText::sendText(MWAWEntry entry)
   libmwaw::DebugStream f;
   f << "Text:";
   BWTextInternal::Font font;
-  listener->setFont(m_state->getFont(font));
+  listener->setFont(getFont(font));
   int actPage = 1, sectPage=1;
   while (!input->isEnd()) {
     pos=input->tell();
@@ -708,7 +702,7 @@ bool BWText::sendText(MWAWEntry entry)
       if (!readFont(font,endPos))
         break;
       done=true;
-      listener->setFont(m_state->getFont(font));
+      listener->setFont(getFont(font));
       break;
     case 1: {
       MWAWParagraph para;
@@ -911,52 +905,6 @@ bool BWText::readFont(BWTextInternal::Font &font, long endPos)
     return false;
   }
   input->seek(pos+12, librevenge::RVNG_SEEK_SET);
-  return true;
-}
-
-bool BWText::readFontsName(MWAWEntry &entry)
-{
-  if (!entry.valid())
-    return (entry.length()==0&&entry.id()==0);
-
-  entry.setParsed(true);
-  MWAWInputStreamPtr &input= m_parserState->m_input;
-  long pos=entry.begin(), endPos=entry.end();
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  libmwaw::DebugStream f;
-  m_state->m_fileIdFontIdList.resize(0);
-  for (int i=0; i < entry.id(); ++i) {
-    pos = input->tell();
-    f.str("");
-    f << "Entries(FontNames)[" << i << "]:";
-    int fSz=(int) input->readULong(1);
-    if (pos+1+fSz>endPos) {
-      MWAW_DEBUG_MSG(("GWText::readFontNames: can not read font %d\n", i));
-      f << "###";
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
-      input->seek(endPos, librevenge::RVNG_SEEK_SET);
-      return i>0;
-    }
-    std::string name("");
-    for (int c=0; c < fSz; ++c)
-      name+=(char) input->readULong(1);
-    if (!name.empty())
-      m_state->m_fileIdFontIdList.push_back(m_parserState->m_fontConverter->getId(name));
-
-    f << "\"" << name << "\",";
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  pos = input->tell();
-  if (pos!=endPos) {
-    MWAW_DEBUG_MSG(("BWText::readFontNames: find extra data\n"));
-    ascFile.addPos(pos);
-    ascFile.addNote("FontNames:###");
-    input->seek(endPos, librevenge::RVNG_SEEK_SET);
-  }
-
   return true;
 }
 

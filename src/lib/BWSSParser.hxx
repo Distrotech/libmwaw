@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef BW_PARSER
-#  define BW_PARSER
+#ifndef BW_SS_PARSER
+#  define BW_SS_PARSER
 
 #include <string>
 #include <vector>
@@ -44,48 +44,40 @@
 
 #include "MWAWParser.hxx"
 
-#include "BWStructManager.hxx"
-
-namespace BWParserInternal
+namespace BWSSParserInternal
 {
 struct State;
 }
 
-class BWText;
+class BWStructManager;
 
-/** \brief the main class to read a BeagleWorks file
+/** \brief the main class to read a BeagleWorks spreadsheet file
  */
-class BWParser : public MWAWTextParser
+class BWSSParser : public MWAWSpreadsheetParser
 {
-  friend class BWText;
 public:
   //! constructor
-  BWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  BWSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~BWParser();
+  virtual ~BWSSParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(librevenge::RVNGTextInterface *documentInterface);
+  void parse(librevenge::RVNGSpreadsheetInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(librevenge::RVNGTextInterface *documentInterface);
+  void createDocument(librevenge::RVNGSpreadsheetInterface *documentInterface);
 
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
   //! adds a new page
   void newPage(int number);
-
-  // interface with the text parser
-
-  //! try to insert the pId picture (as char)
-  bool sendFrame(int pId);
 
 protected:
   //! finds the different objects zones
@@ -94,25 +86,21 @@ protected:
   //! read the resource fork zone
   bool readRSRCZones();
 
-  //! try to send the page graphic
-  bool sendPageFrames();
-
-  //! try to send a frame
-  bool sendFrame(BWStructManager::Frame const &frame);
-
-  //! try to send a picture
-  bool sendPicture(int pId, MWAWPosition const &pos,
-                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
   //
   // low level
   //
 
-  // data fork
+  // data fork similar than in BWParser ...
 
   //! read the print info zone
   bool readPrintInfo();
-  //! read the last zone
-  bool readLastZone();
+
+  // data fork
+
+  //! read the spreadsheet zone
+  bool readSpreadsheet(long begPos);
+
+  // resource fork
 
   //! return the input input
   MWAWInputStreamPtr rsrcInput();
@@ -125,12 +113,10 @@ protected:
   //
 
   //! the state
-  shared_ptr<BWParserInternal::State> m_state;
+  shared_ptr<BWSSParserInternal::State> m_state;
 
   //! the structure manager
   shared_ptr<BWStructManager> m_structureManager;
-  //! the text parser
-  shared_ptr<BWText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

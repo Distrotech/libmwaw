@@ -84,10 +84,17 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  librevenge::RVNGRawTextGenerator documentGenerator(printIndentLevel);
   MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
   try {
-    error=MWAWDocument::parse(&input, &documentGenerator);
+    if (kind == MWAWDocument::MWAW_K_SPREADSHEET && type != MWAWDocument::MWAW_T_CLARISWORKS) {
+      // fixme: remove ClarisWorks when ....
+      librevenge::RVNGRawSpreadsheetGenerator documentGenerator(printIndentLevel);
+      error=MWAWDocument::parse(&input, &documentGenerator);
+    }
+    else {
+      librevenge::RVNGRawTextGenerator documentGenerator(printIndentLevel);
+      error=MWAWDocument::parse(&input, &documentGenerator);
+    }
   }
   catch (MWAWDocument::Result const &err) {
     error=err;

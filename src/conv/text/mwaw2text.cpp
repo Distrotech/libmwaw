@@ -88,10 +88,24 @@ int main(int argc, char *argv[])
   }
 
   librevenge::RVNGString document;
-  librevenge::RVNGTextTextGenerator documentGenerator(document, isInfo);
+  librevenge::RVNGStringVector pages;
+  bool useStringVector=false;
   MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
   try {
-    MWAWDocument::parse(&input, &documentGenerator);
+    if (kind == MWAWDocument::MWAW_K_SPREADSHEET && type != MWAWDocument::MWAW_T_CLARISWORKS) {
+      // fixme: remove ClarisWorks when ....
+      librevenge::RVNGTextSpreadsheetGenerator documentGenerator(pages, isInfo);
+      error=MWAWDocument::parse(&input, &documentGenerator);
+      if (error == MWAWDocument::MWAW_R_OK && !pages.size()) {
+        printf("ERROR: find no sheets!\n");
+        return 1;
+      }
+      useStringVector=true;
+    }
+    else {
+      librevenge::RVNGTextTextGenerator documentGenerator(document, isInfo);
+      error=MWAWDocument::parse(&input, &documentGenerator);
+    }
   }
   catch (MWAWDocument::Result const &err) {
     error=err;
@@ -112,7 +126,12 @@ int main(int argc, char *argv[])
   if (error != MWAWDocument::MWAW_R_OK)
     return 1;
 
-  printf("%s", document.cstr());
+  if (!useStringVector)
+    printf("%s", document.cstr());
+  else {
+    for (unsigned i=0; i < pages.size(); ++i)
+      printf("%s\n", pages[i].cstr());
+  }
 
   return 0;
 }

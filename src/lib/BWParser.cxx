@@ -49,6 +49,7 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
+#include "BWStructManager.hxx"
 #include "BWText.hxx"
 
 #include "BWParser.hxx"
@@ -57,53 +58,10 @@
 namespace BWParserInternal
 {
 ////////////////////////////////////////
-//! Internal: a structure use to store a frame of a BWParser
-struct Frame {
-  //! constructor
-  Frame() : m_charAnchor(true), m_id(0), m_pictId(0), m_origin(), m_dim(), m_page(1),
-    m_wrap(0), m_border(), m_bordersSet(0), m_extra("")
-  {
-  }
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Frame const &frm)
-  {
-    if (frm.m_id) o << "id=" << frm.m_id << ",";
-    if (!frm.m_charAnchor) o << "pageFrame,";
-    if (frm.m_page!=1) o << "page=" << frm.m_page << ",";
-    if (frm.m_origin[0]>0||frm.m_origin[1]>0)
-      o << "origin=" << frm.m_origin << ",";
-    o << "dim=" << frm.m_dim << ",";
-    if (frm.m_pictId) o << "picId=" << std::hex << frm.m_pictId << std::dec << ",";
-    o << frm.m_extra;
-    return o;
-  }
-  //! a flag to know if this is a char or a page frame
-  bool m_charAnchor;
-  //! frame id
-  int m_id;
-  //! the picture id
-  int m_pictId;
-  //! the origin ( for a page frame )
-  Vec2f m_origin;
-  //! the dimension
-  Vec2f m_dim;
-  //! the page ( for a page frame )
-  int m_page;
-  //! the wrapping: 0=none, 1=rectangle, 2=irregular
-  int m_wrap;
-  //! the border
-  MWAWBorder m_border;
-  //! the list of border which are set in form libmwaw::LeftBit|...
-  int m_bordersSet;
-  //! extra data
-  std::string m_extra;
-};
-
-////////////////////////////////////////
 //! Internal: the state of a BWParser
 struct State {
   //! constructor
-  State() : m_textBegin(0), m_typeEntryMap(), m_idFrameMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  State() : m_textBegin(0), m_typeEntryMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }
 
@@ -111,8 +69,6 @@ struct State {
   long m_textBegin;
   /** the type entry map */
   std::multimap<std::string, MWAWEntry> m_typeEntryMap;
-  /** the map id to frame */
-  std::map<int, Frame> m_idFrameMap;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
@@ -125,7 +81,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 BWParser::BWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWTextParser(input, rsrcParser, header), m_state(), m_textParser()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_structureManager(), m_textParser()
 {
   init();
 }
@@ -144,6 +100,7 @@ void BWParser::init()
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
+  m_structureManager.reset(new BWStructManager(getParserState()));
   m_textParser.reset(new BWText(*this));
 }
 
@@ -171,11 +128,8 @@ Vec2f BWParser::getPageLeftTop() const
 ////////////////////////////////////////////////////////////
 bool BWParser::sendFrame(int pId)
 {
-  if (m_state->m_idFrameMap.find(pId)==m_state->m_idFrameMap.end()) {
-    MWAW_DEBUG_MSG(("BWParser::sendFrame: can not find frame for id=%d\n",pId));
-    return false;
-  }
-  BWParserInternal::Frame const &frame=m_state->m_idFrameMap.find(pId)->second;
+  BWStructManager::Frame frame;
+  if (!m_structureManager->getFrame(pId, frame)) return false;
   if (!frame.m_charAnchor) {
     MWAW_DEBUG_MSG(("BWParser::sendFrame: the frame is bad for id=%d\n",pId));
     return false;
@@ -348,11 +302,11 @@ bool BWParser::createZones()
   std::multimap<std::string, MWAWEntry>::iterator it;
   it=m_state->m_typeEntryMap.find("FontNames");
   if (it!=m_state->m_typeEntryMap.end())
-    m_textParser->readFontsName(it->second);
+    m_structureManager->readFontNames(it->second);
 
   it=m_state->m_typeEntryMap.find("Frame");
   if (it!=m_state->m_typeEntryMap.end())
-    readFrame(it->second);
+    m_structureManager->readFrame(it->second);
 
   for (it=m_state->m_typeEntryMap.begin(); it!=m_state->m_typeEntryMap.end(); ++it) {
     MWAWEntry const &entry=it->second;
@@ -390,10 +344,10 @@ bool BWParser::readRSRCZones()
       MWAWEntry const &entry = it++->second;
       switch (z) {
       case 0: // 1001
-        readwPos(entry);
+        m_structureManager->readwPos(entry);
         break;
       case 1: // find in one file with id=4661 6a1f 4057
-        readFontStyle(entry);
+        m_structureManager->readFontStyle(entry);
         break;
       /* find also
          - edpt: see sendPicture
@@ -413,16 +367,17 @@ bool BWParser::readRSRCZones()
 ////////////////////////////////////////////////////////////
 bool BWParser::sendPageFrames()
 {
-  std::map<int, BWParserInternal::Frame>::const_iterator it;
-  for (it=m_state->m_idFrameMap.begin(); it!=m_state->m_idFrameMap.end(); ++it) {
-    BWParserInternal::Frame const &frame=it->second;
+  std::map<int, BWStructManager::Frame> const &frameMap = m_structureManager->getIdFrameMap();
+  std::map<int, BWStructManager::Frame>::const_iterator it;
+  for (it=frameMap.begin(); it!=frameMap.end(); ++it) {
+    BWStructManager::Frame const &frame=it->second;
     if (!frame.m_charAnchor)
       sendFrame(frame);
   }
   return true;
 }
 
-bool BWParser::sendFrame(BWParserInternal::Frame const &frame)
+bool BWParser::sendFrame(BWStructManager::Frame const &frame)
 {
   MWAWPosition fPos(Vec2f(0,0), frame.m_dim, librevenge::RVNG_POINT);
   librevenge::RVNGPropertyList extra;
@@ -449,194 +404,6 @@ bool BWParser::sendFrame(BWParserInternal::Frame const &frame)
     }
   }
   return sendPicture(frame.m_pictId, fPos, extra);
-}
-
-bool BWParser::readFrame(MWAWEntry const &entry)
-{
-  if (entry.length()!=156*(long)entry.id()) {
-    MWAW_DEBUG_MSG(("BWParser::readFrame: the entry seems bad\n"));
-    return false;
-  }
-  entry.setParsed(true);
-  MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
-  for (int i=0; i<entry.id(); ++i) {
-    BWParserInternal::Frame frame;
-    long pos=input->tell(), begPos=pos;
-    libmwaw::DebugStream f;
-    f << "Entries(Frame)[" << i << "]:";
-    int type=(int) input->readULong(2);
-    int val;
-    switch (type) {
-    case 0x8000: {
-      f << "picture,";
-      val=(int) input->readLong(2); // 1|8
-      if (val) f << "f0=" << val << ",";
-      ascii().addDelimiter(input->tell(),'|');
-      input->seek(pos+40, librevenge::RVNG_SEEK_SET);
-      ascii().addDelimiter(input->tell(),'|');
-      for (int j=0; j < 5; ++j) { // f1=5, f3=2, f5=e|13
-        val=(int) input->readLong(2);
-        if (val) f << "f" << j+1 << "=" << val << ",";
-      }
-      double dim[4];
-      for (int j=0; j<4; ++j)
-        dim[j]=double(input->readLong(4))/65536.;
-      f << "dim?=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
-      val =(int) input->readLong(2);
-      if (val) f << "f6=" << val << ",";
-      break;
-    }
-    case 0xffff: {
-      f << "attachment,";
-      for (int j=0; j<2; ++j) { // f0=0, f1=4ef8
-        val=(int) input->readLong(2);
-        if (val) f << "f" << j << "=" << val << ",";
-      }
-      int fSz=(int)input->readULong(1);
-      if (fSz>0 && fSz<32) {
-        std::string name("");
-        for (int c=0; c < fSz; c++)
-          name+=(char) input->readLong(1);
-        f << name << ",";
-      }
-      else {
-        MWAW_DEBUG_MSG(("BWParser::readFrame: the size seems bad\n"));
-        f << "#fSz=" << fSz << ",";
-      }
-      input->seek(pos+44, librevenge::RVNG_SEEK_SET);
-      for (int j=0; j<6; ++j)
-        f << "dim" << j << "?=" << input->readLong(2) << "x"
-          << input->readLong(2) << ",";
-      break;
-    }
-    default:
-      MWAW_DEBUG_MSG(("BWParser::readFrame: unknown frame type\n"));
-      f << "type=" << std::hex << type << std::dec << ",";
-      break;
-    }
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-
-    pos=input->tell();
-    f.str("");
-    val=(int) input->readULong(2); // afc, 1df, 1dd, f34, a5a8
-    f << "f0=" << std::hex << val << std::dec << ",";
-    f << "PTR=" << std::hex << input->readULong(4) << std::dec << ",";
-    float orig[2];
-    for (int j=0; j<2; ++j)
-      orig[j]=float(input->readLong(4))/65536.f;
-    frame.m_origin=Vec2f(orig[1],orig[0]);
-    f << "PTR1=" << std::hex << input->readULong(4) << std::dec << ",";
-
-    frame.m_page=(int) input->readLong(2);
-    float dim[2];
-    for (int j=0; j<2; ++j)
-      dim[j]=float(input->readLong(2));
-    frame.m_dim=Vec2f(dim[1],dim[0]);
-    f << "dim=" << dim[1] << "x" << dim[0] << ",";
-    for (int j=0; j<4; ++j) { // f1=0|05b1 other 0
-      val=(int) input->readLong(2);
-      if (val) f << "f" << j+1 << "=" << std::hex << val << std::dec << ",";
-    }
-    frame.m_id=(int) input->readLong(2);
-    for (int j=0; j<2; ++j) { // 0
-      val=(int) input->readLong(2);
-      if (val) f << "g" << j << "=" << std::hex << val << std::dec << ",";
-    }
-    frame.m_extra=f.str();
-    f.str("");
-    f << "Frame-II[" << i << "]:" << frame;
-
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-
-    pos=input->tell();
-    f.str("");
-    f << "Frame-III[" << i << "]:";
-    val=int(input->readLong(2)); // 0|6|8|9
-    if (val) f << "f0=" << val << ",";
-    val=int(input->readULong(4)); // big number
-    f << "PTR=" << std::hex << val << std::dec << ",";
-    frame.m_border.m_width = (double) input->readLong(2);
-    if (frame.m_border.m_width > 0)
-      f << "borderSize=" << frame.m_border.m_width << ",";
-    val=int(input->readLong(2)); // 0
-    if (val) f << "f1=" << val << ",";
-    val=int(input->readLong(4));
-    if (val) f << "offset=" << double(val)/65536. << ",";
-    val=int(input->readLong(2)); // 0
-    if (val) f << "f2=" << val << ",";
-    int flags=(int) input->readLong(2);
-    frame.m_wrap=(flags&3);
-    switch (frame.m_wrap) { // textaround
-    case 0: // none
-      f << "wrap=none,";
-      break;
-    case 1:
-      f << "wrap=rectangle,";
-      break;
-    case 2:
-      f << "wrap=irregular,";
-      break;
-    default:
-      f << "#wrap=3,";
-      break;
-    }
-    if (flags&0x8) {
-      frame.m_charAnchor = false;
-      f << "anchor=page,";
-    }
-    if (flags&0x10) {
-      f << "bord[all],";
-      frame.m_bordersSet=libmwaw::LeftBit|libmwaw::RightBit|
-                         libmwaw::BottomBit|libmwaw::TopBit;
-    }
-    else if (flags&0x1E0) {
-      f << "bord[";
-      if (flags&0x20) {
-        f << "T";
-        frame.m_bordersSet |= libmwaw::TopBit;
-      }
-      if (flags&0x40) {
-        f << "L";
-        frame.m_bordersSet |= libmwaw::LeftBit;
-      }
-      if (flags&0x80) {
-        f << "B";
-        frame.m_bordersSet |= libmwaw::BottomBit;
-      }
-      if (flags&0x100) {
-        f << "R";
-        frame.m_bordersSet |= libmwaw::RightBit;
-      }
-      f << "],";
-    }
-    flags &= 0xFE04;
-    if (flags) f << "fl=" << std::hex << flags << std::dec << ",";
-    frame.m_pictId=(int)input->readULong(2);
-    f << "pId=" << frame.m_pictId << ",";
-    ascii().addDelimiter(input->tell(),'|');
-    input->seek(18, librevenge::RVNG_SEEK_CUR);
-    ascii().addDelimiter(input->tell(),'|');
-    val=int(input->readLong(4));
-    if (val) f << "textAround[offsT/B]=" << double(val)/65536. << ",";
-    val=int(input->readLong(4));
-    if (val) f << "textAround[offsR/L]=" << double(val)/65536. << ",";
-    for (int j=0; j<2; ++j) { // g0,g1=0 or g0,g1=5c0077c (dim?)
-      val=(int) input->readLong(2);
-      if (val) f << "g" << j << "=" << val << ",";
-    }
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    if (m_state->m_idFrameMap.find(frame.m_id)!=m_state->m_idFrameMap.end()) {
-      MWAW_DEBUG_MSG(("BWParser::readFrame: frame %d already exists\n", frame.m_id));
-    }
-    else
-      m_state->m_idFrameMap[frame.m_id]=frame;
-    input->seek(begPos+156, librevenge::RVNG_SEEK_SET);
-  }
-  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -804,33 +571,6 @@ bool BWParser::readLastZone()
 // resource fork data
 ////////////////////////////////////////////////////////////
 
-// read the windows position blocks
-bool BWParser::readwPos(MWAWEntry const &entry)
-{
-  if (!entry.valid() || entry.length() != 8) {
-    MWAW_DEBUG_MSG(("BWParser::readwPos: the entry is bad\n"));
-    return false;
-  }
-
-  long pos = entry.begin();
-  MWAWInputStreamPtr input = rsrcInput();
-  libmwaw::DebugFile &ascFile = rsrcAscii();
-  libmwaw::DebugStream f;
-  entry.setParsed(true);
-
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  f << "Entries(Windows):";
-  int dim[4];
-  for (int i=0; i < 4; ++i)
-    dim[i]=(int) input->readLong(2);
-
-  f << "dim=" << dim[1] << "x" << dim[0] << "<->"
-    << dim[3] << "x" << dim[2] << ",";
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-  return true;
-}
-
 // read/send picture (edtp resource)
 bool BWParser::sendPicture
 (int pId, MWAWPosition const &pictPos, librevenge::RVNGPropertyList frameExtras)
@@ -887,35 +627,6 @@ bool BWParser::sendPicture
   ascFile.addNote(f.str().c_str());
   ascFile.skipZone(pictEntry.begin(),pictEntry.end()-1);
 
-  return true;
-}
-
-// unknown resource fork
-bool BWParser::readFontStyle(MWAWEntry const &entry)
-{
-  if (!entry.valid() || entry.length() != 8) {
-    MWAW_DEBUG_MSG(("BWParser::readFontStyle: the entry is bad\n"));
-    return false;
-  }
-
-  long pos = entry.begin();
-  MWAWInputStreamPtr input = rsrcInput();
-  libmwaw::DebugFile &ascFile = rsrcAscii();
-  libmwaw::DebugStream f;
-  entry.setParsed(true);
-
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  f << "Entries(FontStyle)[" << std::hex << entry.id() << std::dec << "]:";
-  int fSz=(int) input->readLong(2);
-  if (fSz) f << "fSz=" << fSz << ",";
-  int fl=(int) input->readLong(2);
-  if (fl) f << "flags=" << std::hex << fl << std::dec << ",";
-  int id=(int) input->readLong(2);
-  if (id) f << "fId=" << id << ",";
-  int val=(int) input->readLong(2);
-  if (val) f << "color?=" << val << ",";
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
   return true;
 }
 

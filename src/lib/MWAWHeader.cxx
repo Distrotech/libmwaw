@@ -106,6 +106,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_BEAGLEWORKS, 1));
         return res;
       }
+      if (type=="BWss") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_BEAGLEWORKS, 1, MWAWDocument::MWAW_K_SPREADSHEET));
+        return res;
+      }
     }
     else if (creator=="Dk@P") {
       if (type=="APPL") {
@@ -359,10 +363,17 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MARINERWRITE, 1));
     return res;
   }
-  if (val[0]==0x4257 && val[1]==0x6b73 && val[2]==0x4257 && val[3]==0x7770) {
-    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a BeagleWorks file\n"));
-    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_BEAGLEWORKS, 1));
-    return res;
+  if (val[0]==0x4257 && val[1]==0x6b73 && val[2]==0x4257) {
+    if (val[3]==0x7770) {
+      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a BeagleWorks file\n"));
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_BEAGLEWORKS, 1));
+      return res;
+    }
+    if (val[3]==0x7373) {
+      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a BeagleWorks Spreadsheet file\n"));
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_BEAGLEWORKS, 1, MWAWDocument::MWAW_K_SPREADSHEET));
+      return res;
+    }
   }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-K file\n"));
