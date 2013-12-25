@@ -32,6 +32,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <librevenge/librevenge.h>
 #include <librevenge-generators/librevenge-generators.h>
@@ -44,8 +45,9 @@ int printUsage()
   printf("Usage: mwaw2text [OPTION] <Mac Text Document>\n");
   printf("\n");
   printf("Options:\n");
-  printf("--info                Display document metadata instead of the text\n");
-  printf("--help                Shows this help message\n");
+  printf("-i                Display document metadata instead of the text\n");
+  printf("-h                Shows this help message\n");
+  printf("-o file.txt       Define the output[default stdout]\n");
   return -1;
 }
 
@@ -54,22 +56,31 @@ int main(int argc, char *argv[])
   if (argc < 2)
     return printUsage();
 
-  char *szInputFile = 0;
+  char const *output;
   bool isInfo = false;
+  bool printHelp=false;
+  int ch;
 
-  for (int i = 1; i < argc; i++) {
-    if (!strcmp(argv[i], "--info"))
-      isInfo = true;
-    else if (!szInputFile && strncmp(argv[i], "--", 2))
-      szInputFile = argv[i];
-    else
-      return printUsage();
+  while ((ch = getopt(argc, argv, "hio:")) != -1) {
+    switch (ch) {
+    case 'i':
+      isInfo=true;
+      break;
+    case 'o':
+      output=optarg;
+      break;
+    default:
+    case 'h':
+      printHelp = true;
+      break;
+    }
   }
 
-  if (!szInputFile)
-    return printUsage();
-
-  librevenge::RVNGFileStream input(argv[1]);
+  if (argc != 1+optind || printHelp) {
+    printUsage();
+    return -1;
+  }
+  librevenge::RVNGFileStream input(argv[optind]);
 
   MWAWDocument::Type type;
   MWAWDocument::Kind kind;
@@ -82,7 +93,7 @@ int main(int argc, char *argv[])
     printf("ERROR: can not determine the type of file!\n");
     return 1;
   }
-  if (kind != MWAWDocument::MWAW_K_TEXT && kind != MWAWDocument::MWAW_K_PRESENTATION) {
+  if (kind != MWAWDocument::MWAW_K_TEXT && kind != MWAWDocument::MWAW_K_PRESENTATION && kind != MWAWDocument::MWAW_K_SPREADSHEET) {
     printf("ERROR: find a not text document!\n");
     return 1;
   }
@@ -126,11 +137,27 @@ int main(int argc, char *argv[])
   if (error != MWAWDocument::MWAW_R_OK)
     return 1;
 
-  if (!useStringVector)
-    printf("%s", document.cstr());
+  if (!output) {
+    if (!useStringVector)
+      printf("%s", document.cstr());
+    else {
+      for (unsigned i=0; i < pages.size(); ++i)
+        printf("%s\n", pages[i].cstr());
+    }
+  }
   else {
-    for (unsigned i=0; i < pages.size(); ++i)
-      printf("%s\n", pages[i].cstr());
+    FILE *out=fopen(output, "wb");
+    if (!out) {
+      fprintf(stderr, "ERROR: can not open file %s!\n", output);
+      return 1;
+    }
+    if (!useStringVector)
+      fprintf(out, "%s", document.cstr());
+    else {
+      for (unsigned i=0; i < pages.size(); ++i)
+        fprintf(out, "%s\n", pages[i].cstr());
+    }
+    fclose(out);
   }
 
   return 0;

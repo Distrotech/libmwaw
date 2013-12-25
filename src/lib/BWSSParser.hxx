@@ -46,6 +46,7 @@
 
 namespace BWSSParserInternal
 {
+struct Spreadsheet;
 struct State;
 }
 
@@ -97,8 +98,29 @@ protected:
 
   // data fork
 
+  //! read the document information ( pref + header/footer)
+  bool readDocumentInfo();
+
+  //! read the chart zone
+  bool readChartZone();
+
+  //! read a chart
+  bool readChart();
+
   //! read the spreadsheet zone
-  bool readSpreadsheet(long begPos);
+  bool readSpreadsheet();
+
+  //! read the spreadsheet row
+  bool readRowSheet(BWSSParserInternal::Spreadsheet &sheet);
+
+  //! read an unknown zone ( after the spreadsheet zone)
+  bool readZone0();
+
+  //! read an unknown zone ( after zone0)
+  bool readZone1();
+
+  //! read an unknown zone ( after zone1)
+  bool readZone2();
 
   // resource fork
 

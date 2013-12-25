@@ -590,43 +590,11 @@ bool BWParser::sendPicture
     return true;
   }
 
-  std::multimap<std::string, MWAWEntry> &entryMap =
-    rsrcParser->getEntriesMap();
-  std::multimap<std::string, MWAWEntry>::const_iterator it
-    =entryMap.find("edtp");
-  MWAWEntry pictEntry;
-  while (it!=entryMap.end()) {
-    if (it->first!="edtp")
-      break;
-    MWAWEntry const &entry=it++->second;
-    if (entry.id()!=pId)
-      continue;
-    entry.setParsed(true);
-    pictEntry=entry;
-    break;
-  }
-  if (!pictEntry.valid()) {
-    MWAW_DEBUG_MSG(("BWParser::sendPicture: can not find picture %d\n", pId));
-    return false;
-  }
-
-  MWAWInputStreamPtr input = rsrcInput();
-  input->seek(pictEntry.begin(), librevenge::RVNG_SEEK_SET);
   librevenge::RVNGBinaryData data;
-  input->readDataBlock(pictEntry.length(), data);
+  if (!m_structureManager->readPicture(pId, data))
+    return false;
+
   listener->insertPicture(pictPos, data, "image/pict", frameExtras);
-
-  libmwaw::DebugFile &ascFile = rsrcAscii();
-  libmwaw::DebugStream f;
-#ifdef DEBUG_WITH_FILES
-  static int volatile pictName = 0;
-  f << "PICT" << ++pictName << ".pct";
-  libmwaw::Debug::dumpFile(data, f.str().c_str());
-#endif
-  ascFile.addPos(pictEntry.begin()-4);
-  ascFile.addNote(f.str().c_str());
-  ascFile.skipZone(pictEntry.begin(),pictEntry.end()-1);
-
   return true;
 }
 

@@ -39,6 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
+#include "MWAWDebug.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWParser.hxx"
 #include "MWAWRSRCParser.hxx"
@@ -421,4 +422,54 @@ bool BWStructManager::readFontStyle(MWAWEntry const &entry)
   return true;
 }
 
+bool BWStructManager::readPicture(int pId, librevenge::RVNGBinaryData &pict)
+{
+  MWAWRSRCParserPtr rsrcParser = m_parserState->m_rsrcParser;
+  if (!rsrcParser) {
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("BWStructManager::readPicture: need access to resource fork to retrieve picture content\n"));
+      first=false;
+    }
+    return true;
+  }
+
+  std::multimap<std::string, MWAWEntry> &entryMap =
+    rsrcParser->getEntriesMap();
+  std::multimap<std::string, MWAWEntry>::const_iterator it
+    =entryMap.find("edtp");
+  MWAWEntry pictEntry;
+  while (it!=entryMap.end()) {
+    if (it->first!="edtp")
+      break;
+    MWAWEntry const &entry=it++->second;
+    if (entry.id()!=pId)
+      continue;
+    entry.setParsed(true);
+    pictEntry=entry;
+    break;
+  }
+  if (!pictEntry.valid()) {
+    MWAW_DEBUG_MSG(("BWStructManager::readPicture: can not find picture %d\n", pId));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = rsrcInput();
+  input->seek(pictEntry.begin(), librevenge::RVNG_SEEK_SET);
+  pict.clear();
+  input->readDataBlock(pictEntry.length(), pict);
+
+  libmwaw::DebugFile &ascFile = rsrcAscii();
+  libmwaw::DebugStream f;
+#ifdef DEBUG_WITH_FILES
+  static int volatile pictName = 0;
+  f << "PICT" << ++pictName << ".pct";
+  libmwaw::Debug::dumpFile(pict, f.str().c_str());
+#endif
+  ascFile.addPos(pictEntry.begin()-4);
+  ascFile.addNote(f.str().c_str());
+  ascFile.skipZone(pictEntry.begin(),pictEntry.end()-1);
+
+  return true;
+}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

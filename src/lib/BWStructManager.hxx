@@ -76,6 +76,8 @@ public:
 
   // resource fork
 
+  //! read a picture (edtp resource )
+  bool readPicture(int pId, librevenge::RVNGBinaryData &pict);
   //! read the windows positions ( wPos 1001 resource block )
   bool readwPos(MWAWEntry const &entry);
   //! read the font style ressource

@@ -56,6 +56,18 @@
 /** Internal: the structures of a BWSSParser */
 namespace BWSSParserInternal
 {
+//! Internal: the spreadsheet of a BWSSParser
+struct Spreadsheet {
+//! constructor
+  Spreadsheet() : m_numRows(0), m_lastReadRow(-1)
+  {
+  }
+//! the number of rows
+  int m_numRows;
+//! the last read rows
+  int m_lastReadRow;
+};
+
 ////////////////////////////////////////
 //! Internal: the state of a BWSSParser
 struct State {
@@ -265,7 +277,25 @@ bool BWSSParser::createZones()
     ascii().addNote("_");
   }
 
-  return readSpreadsheet(m_state->m_spreadsheetBegin);
+  input->seek(m_state->m_spreadsheetBegin, librevenge::RVNG_SEEK_SET);
+  pos = input->tell();
+  if (!readDocumentInfo())
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+  pos = input->tell();
+  if (!readChartZone())
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+  if (!readSpreadsheet())
+    return false;
+  if (readZone0() && readZone1() && readZone0())
+    readZone2();
+  /* normally ends with a zone of size 25
+     with looks like 01010000010000000000000000007cffff007d0100007c0000
+                or   01010001010000000000000000000000000001000100000000
+     some flags + selection?
+   */
+  ascii().addPos(input->tell());
+  ascii().addNote("Entries(ZoneEnd)");
+  return true;
 }
 
 bool BWSSParser::readRSRCZones()
@@ -277,8 +307,8 @@ bool BWSSParser::readRSRCZones()
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
   std::multimap<std::string, MWAWEntry>::iterator it;
   // the 1 zone
-  char const *(zNames[]) = {"wPos", "DMPF" };
-  for (int z = 0; z < 2; ++z) {
+  char const *(zNames[]) = {"wPos", "DMPF", "edtp" };
+  for (int z = 0; z < 3; ++z) {
     it = entryMap.lower_bound(zNames[z]);
     while (it != entryMap.end()) {
       if (it->first != zNames[z])
@@ -291,6 +321,11 @@ bool BWSSParser::readRSRCZones()
       case 1: // find in one file with id=4661 6a1f 4057
         m_structureManager->readFontStyle(entry);
         break;
+      case 2: {
+        librevenge::RVNGBinaryData data;
+        m_structureManager->readPicture(entry.id(), data);
+        break;
+      }
       /* find also
          - edpt: see sendPicture
          - DMPP: the paragraph style
@@ -361,33 +396,101 @@ bool BWSSParser::readPrintInfo()
 }
 
 ////////////////////////////////////////////////////////////
-// spreadsheet
+// document header
 ////////////////////////////////////////////////////////////
-bool BWSSParser::readSpreadsheet(long begPos)
+bool BWSSParser::readDocumentInfo()
 {
   MWAWInputStreamPtr &input= getInput();
-  if (!input->checkPosition(begPos+92+512)) {
-    MWAW_DEBUG_MSG(("BWSSParser::readSpreadsheet: can not find the spreadsheet zone\n"));
+  long pos=input->tell();
+  if (!input->checkPosition(pos+92+512)) {
+    MWAW_DEBUG_MSG(("BWSSParser::readDocumentInfo: can not find the spreadsheet zone\n"));
     return false;
   }
-  long pos=begPos;
-  input->seek(pos+50, librevenge::RVNG_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote("Entries(Spreadsheet)");
-
-  pos=input->tell();
-  input->seek(pos+42, librevenge::RVNG_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote("Spreadsheet-A");
-
   libmwaw::DebugStream f;
+  f << "Entries(DocInfo):";
+  // the preferences
+  int val=(int) input->readLong(2);
+  if (val!=0x2e) f << "f0=" << val << ",";
+  val=(int) input->readLong(2);
+  if (val!=0xa) f << "f1=" << val << ",";
+  std::string what("");
+  for (int i=0; i < 4; ++i) // pref
+    what+=(char) input->readLong(1);
+  f << what << ",";
+  for (int i=0; i < 3; ++i) { // always 0
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i+2 << "=" << val << ",";
+  }
+  f << "ids=[";
+  for (int i=0; i < 2; i++) {
+    long id=(long) input->readULong(4);
+    f << std::hex << id << std::dec << ",";
+  }
+  f << "],";
+  val=(int) input->readULong(2); // 0|22d8|4ead|e2c8
+  if (val)
+    f << "fl?=" << std::hex << val << std::dec << ",";
+  for (int i=0; i < 8; i++) {
+    static int const(expectedValues[])= {1,4/*or 2*/,3,2,2,1,1,1 };
+    val=(int) input->readLong(1);
+    if (val!=expectedValues[i])
+      f << "g" << i << "=" << val << ",";
+  }
+  for (int i=0; i < 8; ++i) { // 1,a|e, 0, 21, 3|4, 6|7|9, d|13, 3|5: related to font?
+    val=(int) input->readLong(2);
+    if (val)
+      f << "h" << i << "=" << val << ",";
+  }
+  val=(int) input->readULong(2); //0|10|3e|50|c8|88|98
+  if (val)
+    f << "h8=" <<  std::hex << val << std::dec << ",";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  // document info
+  pos=input->tell();
+  f.str("");
+  f << "DocInfo[dosu]:";
+  val=(int) input->readLong(2);
+  if (val!=0x226) f << "f0=" << val << ",";
+  val=(int) input->readLong(2);
+  if (val!=1) f << "f1=" << val << ",";
+  what="";
+  for (int i=0; i < 4; ++i) // dosu
+    what+=(char) input->readLong(1);
+  f << what << ",";
+  for (int i=0; i < 3; ++i) { // always 961, 0, 0
+    val=(int) input->readLong(2);
+    if ((i==0 && val!=0x961) || (i&&val))
+      f << "f" << i+2 << "=" << val << ",";
+  }
+  f << "ids=[";
+  for (int i=0; i < 2; ++i) {
+    long id=(long) input->readULong(4);
+    f << std::hex << id << std::dec << ",";
+  }
+  f << "],";
+  long margins[4];
+  f << "margins=[";
+  for (int i=0; i < 4; ++i) {
+    margins[i]=(int) input->readLong(4);
+    f << margins[i] << ",";
+  }
+  f << "],";
+  for (int i=0; i < 4; ++i) { // 1,1,1,0 4 flags ?
+    val = (int) input->readLong(1);
+    if (val!=1) f << "fl" << i << "=" << val << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
   for (int st=0; st<2; ++st) {
     pos=input->tell();
     f.str("");
     if (st==0)
-      f << "Spreadsheet[header]:";
+      f << "DocInfo[header]:";
     else
-      f << "Spreadsheet[footer]:";
+      f << "DocInfo[footer]:";
     int fSz = (int) input->readULong(1);
     std::string name("");
     for (int i=0; i<fSz; ++i)
@@ -397,9 +500,262 @@ bool BWSSParser::readSpreadsheet(long begPos)
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
-  pos = input->tell();
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// spreadsheet
+////////////////////////////////////////////////////////////
+bool BWSSParser::readRowSheet(BWSSParserInternal::Spreadsheet &sheet)
+{
+  MWAWInputStreamPtr &input= getInput();
+  long pos=input->tell();
+  libmwaw::DebugStream f;
+  f << "Entries(Row):";
+  int row=(int)input->readLong(2);
+  long fSz=(long) input->readULong(4);
+  long endPos=pos+6+fSz;
+  if (fSz<18 || row <= sheet.m_lastReadRow || row >= sheet.m_numRows || !input->checkPosition(endPos)) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  sheet.m_lastReadRow=row;
+  f << "row=" << row << ",";
+  int val=(int) input->readLong(2);
+  if (val && val!=int(fSz))
+    f << "#sz=" << val << ",";
+  val=(int) input->readLong(2);
+  if (val!=-1)
+    f << "height=" << val << ",";
+  input->seek(10, librevenge::RVNG_SEEK_CUR); // junk
+  int N=(int) input->readLong(2)+1;
+  f << "N=" << N << ",";
+  val=(int) input->readLong(2);
+  if (val!=fSz) // size if sz is not set, if not a small number?
+    f << "unkn=" << val << ",";
   ascii().addPos(pos);
-  ascii().addNote("Spreadsheet-I");
+  ascii().addNote(f.str().c_str());
+
+  input->seek(pos+6+18, librevenge::RVNG_SEEK_SET);
+  for (int i=0; i < N; ++i) {
+    pos=input->tell();
+    if (pos==endPos) break;
+    int cSize=(int) input->readULong(1);
+    f.str("");
+    if (i==0)
+      f << "Entries(Cell)[0]:";
+    else
+      f << "Cell-" << i << ":";
+    if (cSize&1) cSize++;
+    if (pos+2+cSize>endPos) {
+      MWAW_DEBUG_MSG(("BWSSParser::readRowSheet: can not find some cell\n"));
+      f << "###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      break;
+    }
+    ascii().addDelimiter(input->tell(),'|');
+    input->seek(pos+2+cSize, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+bool BWSSParser::readChartZone()
+{
+  MWAWInputStreamPtr &input= getInput();
+  long pos=input->tell();
+  if (!input->checkPosition(pos+10)) {
+    MWAW_DEBUG_MSG(("BWSSParser::readChartZone: can not find the chart zone\n"));
+    return false;
+  }
+  libmwaw::DebugStream f;
+  f << "Entries(Chart):";
+  pos = input->tell();
+  for (int i=0; i < 4; ++i) {
+    static int const expectedValues[5]= {1, 0xF, 0x4000, 0x100 };
+    int val= (int) input->readULong(2);
+    if (val != expectedValues[i])
+      f << "f" << i+1 << "=" << std::hex << val << std::dec << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  while (!input->isEnd()) {
+    pos=input->tell();
+    long sz=(long) input->readULong(2);
+    if (sz==0) {
+      ascii().addPos(pos);
+      ascii().addNote("Chart:_");
+      return true;
+    }
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    if (!readChart())
+      return false;
+  }
+  return true;
+}
+
+bool BWSSParser::readChart()
+{
+  MWAWInputStreamPtr &input= getInput();
+  long pos=input->tell();
+  long sz=(long) input->readULong(2);
+  if (!sz || !input->checkPosition(pos+sz+0x5f)) {
+    MWAW_DEBUG_MSG(("BWSSParser::readChart: can not find the chart zone\n"));
+    return false;
+  }
+  libmwaw::DebugStream f;
+  f << "Chart-header:";
+  int val=(int) input->readLong(2);
+  if (val!=0x12) f << "f0=" << val << ",";
+  long endZone1 = pos+sz+2;
+  for (int i=0; i<2; ++i) {
+    long actPos=input->tell();
+    int dSz=(int) input->readULong(2);
+    int sSz=(int) input->readULong(1);
+    if (actPos+2+dSz > endZone1 || (sSz+1!=dSz && sSz+2!=dSz)) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    std::string name("");
+    for (int c=0; c<sSz; ++c)
+      name += (char) input->readULong(1);
+    f << "\"" << name << "\",";
+    input->seek(actPos+2+dSz, librevenge::RVNG_SEEK_SET);
+  }
+  ascii().addDelimiter(input->tell(),'|');
+  input->seek(endZone1, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos=input->tell();
+  ascii().addPos(pos);
+  ascii().addNote("Chart-B:");
+  input->seek(pos+0x5d, librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+bool BWSSParser::readSpreadsheet()
+{
+  MWAWInputStreamPtr &input= getInput();
+  long pos=input->tell();
+  if (!input->checkPosition(pos+9)) {
+    MWAW_DEBUG_MSG(("BWSSParser::readSpreadsheet: can not find the spreadsheet zone\n"));
+    return false;
+  }
+  libmwaw::DebugStream f;
+  f << "Entries(Spreadsheet):";
+  int val= (int) input->readLong(2);
+  if (val!=7)
+    f << "f1=" << val << ",";
+  BWSSParserInternal::Spreadsheet sheet;
+  sheet.m_numRows=(int) input->readLong(2)+1;
+  f << "num[row]=" << sheet.m_numRows << ",";
+  val= (int) input->readLong(2);
+  if (val!=-1)
+    f << "f2=" << val << ",";
+  for (int i=0; i < 3; ++i) { // g0=0|73|89, other 0
+    val=(int) input->readULong(1);
+    if (val)
+      f << "g" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  while (readRowSheet(sheet)) {
+    if (input->isEnd()) break;
+  }
+  return true;
+}
+
+bool BWSSParser::readZone0()
+{
+  MWAWInputStreamPtr &input= getInput();
+  long pos=input->tell();
+  libmwaw::DebugStream f;
+  f << "Entries(Zone0):";
+  int N=(int) input->readULong(2);
+  if (!input->checkPosition(pos+8+3*N)) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  f << "unkn=[";
+  for (int i=0; i < N; ++i) {
+    f << input->readLong(2) << ":" << std::hex << input->readULong(1) << std::dec << ",";
+  }
+  f << "],";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool BWSSParser::readZone1()
+{
+  MWAWInputStreamPtr &input= getInput();
+  long pos=input->tell();
+  libmwaw::DebugStream f;
+  f << "Entries(Zone1):";
+  int N=(int) input->readLong(2);
+  f << "N=" << N << ",";
+  int val=(int) input->readLong(2);
+  if (val) f << "f0=" << val << ",";
+  int dSz=(int) input->readULong(2);
+  if (N<-1 || (N>=0 && dSz<=0) || !input->checkPosition(pos+6+(N+1)*dSz)) {
+    MWAW_DEBUG_MSG(("BWSSParser::Zone&: header seems odd\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  for (int i=0; i <= N; ++i) {
+    pos = input->tell();
+    f.str("");
+    f << "Zone1-" << i << ":";
+    input->seek(pos+dSz, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool BWSSParser::readZone2()
+{
+  MWAWInputStreamPtr &input=getInput();
+  libmwaw::DebugStream f;
+  int id=0;
+  while (!input->isEnd()) {
+    long pos=input->tell();
+    if (!input->checkPosition(pos+6))
+      break;
+    f.str("");
+    if (id==0)
+      f << "Entries(Zone2):";
+    else
+      f << "Zone2-" << id << ":";
+    ++id;
+    int row=(int) input->readULong(2);
+    int col=(int) input->readULong(2);
+    if (row==0x4000 && col==0x4000) {
+      f << "last,";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      return true;
+    }
+    f << "pos=" << row << "x" << col << ",";
+    int dataSz=(int) input->readULong(2);
+    if (!dataSz || !input->checkPosition(pos+6+dataSz)) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    ascii().addDelimiter(input->tell(),'|');
+    input->seek(pos+6+dataSz, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
   return true;
 }
 
@@ -484,7 +840,5 @@ bool BWSSParser::checkHeader(MWAWHeader *header, bool strict)
 
   return true;
 }
-
-
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
