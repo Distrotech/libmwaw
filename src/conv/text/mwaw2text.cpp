@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
   if (argc < 2)
     return printUsage();
 
-  char const *output;
+  char const *output = 0;
   bool isInfo = false;
   bool printHelp=false;
   int ch;
