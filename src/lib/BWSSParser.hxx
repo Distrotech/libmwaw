@@ -39,6 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
+#include "MWAWCell.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
@@ -113,14 +114,17 @@ protected:
   //! read the spreadsheet row
   bool readRowSheet(BWSSParserInternal::Spreadsheet &sheet);
 
-  //! read an unknown zone ( after the spreadsheet zone)
+  //! read a cell row
+  bool readCellSheet(BWSSParserInternal::Spreadsheet &sheet, int row, int col);
+
+  //! read an unknown zone ( which appears before and after the columns's width zone )
   bool readZone0();
 
-  //! read an unknown zone ( after zone0)
-  bool readZone1();
+  //! read the columns widths
+  bool readColumnWidths();
 
-  //! read an unknown zone ( after zone1)
-  bool readZone2();
+  //! read the differents formula
+  bool readFormula();
 
   // resource fork
 
@@ -131,8 +135,17 @@ protected:
   libmwaw::DebugFile &rsrcAscii();
 
   //
-  // data
+  // formula data
   //
+  /* reads a cell */
+  bool readCell(Vec2i actPos, MWAWCellContent::FormulaInstruction &instr);
+  /* reads a float store with 8 bytes */
+  bool readFloat8(long endPos, double &res);
+  /* reads a float store with 4 bytes */
+  bool readFloat4(long endPos, double &res);
+  /* reads a formula */
+  bool readFormula(long endPos, Vec2i const &pos,	std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error);
+
 
   //! the state
   shared_ptr<BWSSParserInternal::State> m_state;

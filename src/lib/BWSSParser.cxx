@@ -31,6 +31,7 @@
 * instead of those above.
 */
 
+#include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -39,6 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
+#include "MWAWCell.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWList.hxx"
@@ -286,8 +288,8 @@ bool BWSSParser::createZones()
     input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (!readSpreadsheet())
     return false;
-  if (readZone0() && readZone1() && readZone0())
-    readZone2();
+  if (readZone0() && readColumnWidths() && readZone0())
+    readFormula();
   /* normally ends with a zone of size 25
      with looks like 01010000010000000000000000007cffff007d0100007c0000
                 or   01010001010000000000000000000000000001000100000000
@@ -504,65 +506,8 @@ bool BWSSParser::readDocumentInfo()
 }
 
 ////////////////////////////////////////////////////////////
-// spreadsheet
+// chart
 ////////////////////////////////////////////////////////////
-bool BWSSParser::readRowSheet(BWSSParserInternal::Spreadsheet &sheet)
-{
-  MWAWInputStreamPtr &input= getInput();
-  long pos=input->tell();
-  libmwaw::DebugStream f;
-  f << "Entries(Row):";
-  int row=(int)input->readLong(2);
-  long fSz=(long) input->readULong(4);
-  long endPos=pos+6+fSz;
-  if (fSz<18 || row <= sheet.m_lastReadRow || row >= sheet.m_numRows || !input->checkPosition(endPos)) {
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    return false;
-  }
-  sheet.m_lastReadRow=row;
-  f << "row=" << row << ",";
-  int val=(int) input->readLong(2);
-  if (val && val!=int(fSz))
-    f << "#sz=" << val << ",";
-  val=(int) input->readLong(2);
-  if (val!=-1)
-    f << "height=" << val << ",";
-  input->seek(10, librevenge::RVNG_SEEK_CUR); // junk
-  int N=(int) input->readLong(2)+1;
-  f << "N=" << N << ",";
-  val=(int) input->readLong(2);
-  if (val!=fSz) // size if sz is not set, if not a small number?
-    f << "unkn=" << val << ",";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  input->seek(pos+6+18, librevenge::RVNG_SEEK_SET);
-  for (int i=0; i < N; ++i) {
-    pos=input->tell();
-    if (pos==endPos) break;
-    int cSize=(int) input->readULong(1);
-    f.str("");
-    if (i==0)
-      f << "Entries(Cell)[0]:";
-    else
-      f << "Cell-" << i << ":";
-    if (cSize&1) cSize++;
-    if (pos+2+cSize>endPos) {
-      MWAW_DEBUG_MSG(("BWSSParser::readRowSheet: can not find some cell\n"));
-      f << "###";
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
-      break;
-    }
-    ascii().addDelimiter(input->tell(),'|');
-    input->seek(pos+2+cSize, librevenge::RVNG_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-  input->seek(endPos, librevenge::RVNG_SEEK_SET);
-  return true;
-}
-
 bool BWSSParser::readChartZone()
 {
   MWAWInputStreamPtr &input= getInput();
@@ -599,6 +544,7 @@ bool BWSSParser::readChartZone()
 
 bool BWSSParser::readChart()
 {
+  // find only 2 chart, so this zone is not sure...
   MWAWInputStreamPtr &input= getInput();
   long pos=input->tell();
   long sz=(long) input->readULong(2);
@@ -610,12 +556,12 @@ bool BWSSParser::readChart()
   f << "Chart-header:";
   int val=(int) input->readLong(2);
   if (val!=0x12) f << "f0=" << val << ",";
-  long endZone1 = pos+sz+2;
+  long endChart = pos+sz+2;
   for (int i=0; i<2; ++i) {
     long actPos=input->tell();
     int dSz=(int) input->readULong(2);
     int sSz=(int) input->readULong(1);
-    if (actPos+2+dSz > endZone1 || (sSz+1!=dSz && sSz+2!=dSz)) {
+    if (actPos+2+dSz > endChart || (sSz+1!=dSz && sSz+2!=dSz)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
@@ -626,7 +572,7 @@ bool BWSSParser::readChart()
     input->seek(actPos+2+dSz, librevenge::RVNG_SEEK_SET);
   }
   ascii().addDelimiter(input->tell(),'|');
-  input->seek(endZone1, librevenge::RVNG_SEEK_SET);
+  input->seek(endChart, librevenge::RVNG_SEEK_SET);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
@@ -637,6 +583,9 @@ bool BWSSParser::readChart()
   return true;
 }
 
+////////////////////////////////////////////////////////////
+// spreadsheet
+////////////////////////////////////////////////////////////
 bool BWSSParser::readSpreadsheet()
 {
   MWAWInputStreamPtr &input= getInput();
@@ -670,6 +619,249 @@ bool BWSSParser::readSpreadsheet()
   return true;
 }
 
+bool BWSSParser::readRowSheet(BWSSParserInternal::Spreadsheet &sheet)
+{
+  MWAWInputStreamPtr &input= getInput();
+  long pos=input->tell();
+  libmwaw::DebugStream f;
+  f << "Entries(Row):";
+  int row=(int)input->readLong(2);
+  long fSz=(long) input->readULong(4);
+  long endPos=pos+6+fSz;
+  if (fSz<18 || row <= sheet.m_lastReadRow || row >= sheet.m_numRows || !input->checkPosition(endPos)) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  sheet.m_lastReadRow=row;
+  f << "row=" << row << ",";
+  int val=(int) input->readLong(2);
+  if (val && val!=int(fSz))
+    f << "#sz=" << val << ",";
+  val=(int) input->readLong(2);
+  if (val!=-1)
+    f << "height=" << val << ",";
+  input->seek(10, librevenge::RVNG_SEEK_CUR); // junk
+  int N=(int) input->readLong(2)+1;
+  f << "N=" << N << ",";
+  val=(int) input->readLong(2);
+  if (val!=fSz && val) {
+    if (val+1 > N) N=val+1;
+    f << "unkn=" << val << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  input->seek(pos+6+18, librevenge::RVNG_SEEK_SET);
+  input->pushLimit(endPos);
+  for (int i=0; i < N; ++i) {
+    pos=input->tell();
+    if (pos==endPos) break;
+    if (!readCellSheet(sheet, row, i))
+      return false;
+  }
+  input->popLimit();
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+bool BWSSParser::readCellSheet(BWSSParserInternal::Spreadsheet &/*sheet*/, int row, int col)
+{
+  MWAWInputStreamPtr &input= getInput();
+  long pos=input->tell();
+  int cSize=(int) input->readULong(1);
+  long endPos=pos+2+cSize+((cSize%2)?1:0);
+  libmwaw::DebugStream f;
+  f << "Entries(Cell)[" << col << "-" << row << "]:";
+  if (!input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: can not find some cell\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  int val=(int) input->readULong(1);
+  bool isFormula=val&0x80;
+  if (isFormula) f << "formula,";
+  int type=(val>>4)&7;
+  if (val&0xf)
+    f << "type[low]" << std::hex << (val&0xf) << std::dec << ",";
+  if (cSize>=8) {
+    ascii().addDelimiter(pos+2,'|');
+    if (cSize!=8)
+      ascii().addDelimiter(pos+10,'|');
+    // first read the flags which indicated what is filled
+    input->seek(pos+9, librevenge::RVNG_SEEK_SET);
+    int wh=(int) input->readULong(1);
+    if (wh) {
+      f << "style=[";
+      input->seek(pos+2, librevenge::RVNG_SEEK_SET);
+      int fSize=(int) input->readLong(2);
+      if (fSize>0) f << "fSize=" << fSize << ",";
+      int fId=(int) input->readLong(2);
+      if (fId>=0) f << "fId=" << fId << ",";
+      int fl=(int) input->readULong(1);
+      if (fl&7) f << "fColor=" << (fl&7) << ",";
+      if (fl&8) f << "bold,";
+      if (fl&0x10) f << "italic,";
+      if (fl&0x20) f << "underline,";
+      if (fl&0x40) f << "outline,";
+      if (fl&0x80) f << "shadow,";
+      int format=(int) input->readULong(1);
+      if (format) {
+        f << "form=";
+        if (format & 0x10) f << "hasThousand:";
+        switch (format>>5) {
+        case 0: // generic
+          break;
+        case 1:
+          f << "currency:";
+          break;
+        case 2:
+          f << "percent:";
+          break;
+        case 3:
+          f << "scientific:";
+          break;
+        case 4:
+          f << "decimal:";
+          break;
+        case 5:
+          f << "date:%m/%d/%y:";
+          break;
+        case 6:
+          switch (format & 0x7) {
+          case 0:
+            f << "date:%a %d, %Y";
+            break;
+          case 1:
+            f << "date:%A %d, %Y";
+            break;
+          case 2:
+            f << "date:%b, %a %d, %Y";
+            break;
+          case 3:
+            f << "date:%B, %A %d, %Y";
+            break;
+          case 4:
+            f << "time: %I:%M %p";
+            break;
+          case 5:
+            f << "time: %I:%M:%S %p";
+            break;
+          case 6:
+            f << "time: %H:%M";
+            break;
+          case 7:
+            f << "time: %H:%M:%S";
+            break;
+          default:
+            break;
+          }
+          format &= 0x8;
+          break;
+        default:
+          f << "#form=7:";
+          break;
+        }
+        if (format & 0xf)
+          f << "digits=" << (format & 0xf) << ":";
+        f << ",";
+      }
+      val=(int) input->readULong(1);
+      if (val>>4) f << "color[back]=" << (val>>4) << ",";
+      if (val&0xf) {
+        f << "bord=[";
+        if (val&1) f << "left,";
+        if (val&2) f << "right,";
+        if (val&4) f << "top,";
+        if (val&8) f << "bottom,";
+        f << "],";
+      }
+      switch ((wh>>5)&7) {
+      case 0:
+        f << "left,";
+        break;
+      case 1:
+        f << "right,";
+        break;
+      case 2:
+        f << "center,";
+        break;
+      case 3: // default
+        break;
+      }
+      if (wh&0x9F)
+        f << "wh=" << std::hex << (wh&0x9F) << std::dec;
+      f << "],";
+    }
+    input->seek(pos+10, librevenge::RVNG_SEEK_SET);
+  }
+  switch (type) {
+  case 0:
+    f << "_";
+    if (cSize) {
+      MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: find some data for empty cell\n"));
+      f << "###";
+      break;
+    }
+    break;
+  case 1:
+  case 3:
+  case 4: {
+    if (type==1)
+      f << "number,";
+    else if (type==3)
+      f << "bool,";
+    else
+      f << "error,"; // then followed by the nan type?
+    if (cSize<18+(isFormula?2:0)) {
+      MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: the number size seems odd\n"));
+      f << "###";
+      break;
+    }
+    if (isFormula)
+      f << "id[formula]=" << input->readULong(2) << ",";
+    double value;
+    bool isNan;
+    if (!input->readDouble(value, isNan)) {
+      MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: can not read a number\n"));
+      f << "###";
+      break;
+    }
+    f << value << ",";
+    break;
+  }
+  case 2: {
+    f << "text,";
+    if (cSize<8+(isFormula?2:0)) {
+      MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: text data size seems odd\n"));
+      f << "###";
+      break;
+    }
+    if (isFormula)
+      f << "id[formula]=" << input->readULong(2) << ",";
+    std::string text("");
+    for (int i=0; i < cSize-8-(isFormula?2:0); ++i)
+      text+=(char) input->readULong(1);
+    f << "\"" << text << "\",";
+    break;
+  }
+  default:
+    MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: find unknown type for cell\n"));
+    f << "#type=" << std::hex << type << std::dec << ",";
+    break;
+  }
+  if (input->tell()!=endPos)
+    ascii().addDelimiter(input->tell(), '|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// unknown zone
+////////////////////////////////////////////////////////////
 bool BWSSParser::readZone0()
 {
   MWAWInputStreamPtr &input= getInput();
@@ -691,12 +883,12 @@ bool BWSSParser::readZone0()
   return true;
 }
 
-bool BWSSParser::readZone1()
+bool BWSSParser::readColumnWidths()
 {
   MWAWInputStreamPtr &input= getInput();
   long pos=input->tell();
   libmwaw::DebugStream f;
-  f << "Entries(Zone1):";
+  f << "Entries(Columns):";
   int N=(int) input->readLong(2);
   f << "N=" << N << ",";
   int val=(int) input->readLong(2);
@@ -714,7 +906,21 @@ bool BWSSParser::readZone1()
   for (int i=0; i <= N; ++i) {
     pos = input->tell();
     f.str("");
-    f << "Zone1-" << i << ":";
+    f << "Columns-" << i << ":";
+    if (dSz >= 8) {
+      val=(int) input->readLong(2);
+      if (val==1) f << "set,";
+      else if (val) f << "#set=" << val << ",";
+      val=(int) input->readLong(2);
+      if (val>0) f << "w=" << val << ",";
+      for (int j=0; j<2; ++j) {
+        val=(int) input->readULong(2);
+        if (val!=0xFFFF)
+          f << "f" << j << "=" << std::hex << val << std::dec << ",";
+      }
+    }
+    if (input->tell()!=pos && input->tell()!=pos+dSz)
+      ascii().addDelimiter(input->tell(),'|');
     input->seek(pos+dSz, librevenge::RVNG_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -722,7 +928,7 @@ bool BWSSParser::readZone1()
   return true;
 }
 
-bool BWSSParser::readZone2()
+bool BWSSParser::readFormula()
 {
   MWAWInputStreamPtr &input=getInput();
   libmwaw::DebugStream f;
@@ -733,9 +939,9 @@ bool BWSSParser::readZone2()
       break;
     f.str("");
     if (id==0)
-      f << "Entries(Zone2):";
+      f << "Entries(Formula):";
     else
-      f << "Zone2-" << id << ":";
+      f << "Formula-" << id << ":";
     ++id;
     int row=(int) input->readULong(2);
     int col=(int) input->readULong(2);
@@ -751,7 +957,14 @@ bool BWSSParser::readZone2()
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
-    ascii().addDelimiter(input->tell(),'|');
+    std::vector<MWAWCellContent::FormulaInstruction> formula;
+    std::string error("");
+    if (!readFormula(pos+6+dataSz, Vec2i(col,row), formula, error))
+      f << "###";
+    for (size_t l=0; l < formula.size(); ++l)
+      f << formula[l];
+    if (input->tell()!=pos+6+dataSz)
+      ascii().addDelimiter(input->tell(),'|');
     input->seek(pos+6+dataSz, librevenge::RVNG_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -840,5 +1053,276 @@ bool BWSSParser::checkHeader(MWAWHeader *header, bool strict)
 
   return true;
 }
+
+////////////////////////////////////////////////////////////
+// formula data
+////////////////////////////////////////////////////////////
+bool BWSSParser::readCell(Vec2i actPos, MWAWCellContent::FormulaInstruction &instr)
+{
+  instr=MWAWCellContent::FormulaInstruction();
+  instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
+  bool ok = true;
+  int pos[2];
+  bool absolute[2] = { true, true};
+  for (int dim = 0; dim < 2; dim++) {
+    int val = (int) getInput()->readULong(2);
+    if ((val & 0xF000) == 0); // absolue value ?
+    else {
+      val &= 0x7FFF;
+      if (val & 0x4000) val = val - 0x8000;
+      val += actPos[dim];
+      absolute[dim] = false;
+    }
+    pos[dim] = val;
+  }
+
+  if (pos[0] < 0 || pos[1] < 0) {
+    std::stringstream f;
+    f << "###[" << pos[1] << "," << pos[0] << "]";
+    if (ok) {
+      MWAW_DEBUG_MSG(("BWSSParser::readCell: can not read cell position\n"));
+    }
+    return false;
+  }
+  instr.m_position[0]=Vec2i(pos[0],pos[1]);
+  instr.m_positionRelative[0]=Vec2b(!absolute[0],!absolute[1]);
+  return ok;
+}
+
+namespace BWSSParserInternal
+{
+struct Functions {
+  char const *m_name;
+  int m_arity;
+};
+
+static Functions const s_listFunctions[] = {
+  { "", 0} /*SPEC: number*/, {"", 0}/*SPEC: cell*/, {"", 0}/*SPEC: cells*/, {"=", 1} /*=*/,
+  { "(", 1} /*SPEC: ()*/, {"", 0}/*SPEC: number*/, { "", -2} /*UNKN*/, {"", -2}/*UNKN*/,
+  { "", -2} /*UNKN*/, {"+", 1}, {"-", 1}, {"+", 2},
+  { "-", 2}, { "*", 2}, {"/", 2}, {"^", 2},
+
+  { "", -2} /*UNKN*/,{ "&", 2}, { "=", 2},{ "<>", 2},
+  { "<=", 2},{ ">=", 2}, { "<", 2},{ ">", 2},
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Error", -1},{ "False", -1},
+
+  { "NA", -1},{ "Now", -1},{ "Rand", -1},{ "Pi", -1},
+  { "True", -1},{ "IsError", -1},{ "Abs", -1},{ "Exp", -1},
+  { "Int", -1},{ "LN", -1},{ "LOG10", -1},{ "Sign", -1},
+  { "Sqrt", -1},{ "Acos", -1},{ "Asin", -1},{ "Atan", -1},
+
+  { "Cos", -1},{ "Degrees", -1},{ "Radians", -1},{ "Sin", -1},
+  { "Tan", -1},{ "Day", -1},{ "Hour", -1},{ "Minute", -1},
+  { "Month", -1},{ "Second", -1},{ "Weekday", -1},{ "Year", -1},
+  { "IsBlank", -1},{ "IsNa", -1},{ "Not", -1},{ "Type", -1},
+
+  { "Text", -1},{ "Log", -1},{ "Mod", -1},{ "Round", -1},
+  { "Atan2", -1},{ "IRR", -1},{ "Lookup", -1},{ "Match", -1},
+  { "Date", -1},{ "Time", -1},{ "If", -1},{ "MIRR", -1},
+  { "HLookup", -1},{ "Index", -1},{ "VLookup", -1},{ "FV", -1},
+
+  { "NPER", -1},{ "PV", -1},{ "PMT", -1},{ "Rate", -1},
+  { "Count", -1},{ "Average", -1},{ "Max", -1},{ "Min", -1},
+  { "StDev", -1},{ "Sum", -1},{ "Var", -1},{ "", -2} /*UNKN*/,
+  { "And", -1},{ "Choose", -1},{ "Or", -1},{ "NPV", -1},
+
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+
+};
+}
+
+bool BWSSParser::readFormula(long endPos, Vec2i const &position,
+                             std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error)
+{
+  MWAWInputStreamPtr &input=getInput();
+  formula.resize(0);
+  error = "";
+  long pos = input->tell();
+
+  std::stringstream f;
+  std::vector<std::vector<MWAWCellContent::FormulaInstruction> > stack;
+  bool ok = true;
+  while (long(input->tell()) != endPos) {
+    double val;
+    pos = input->tell();
+    if (pos > endPos) return false;
+    int wh = (int) input->readULong(1);
+    int arity = 0;
+    bool isNan;
+    MWAWCellContent::FormulaInstruction instr;
+    switch (wh) {
+    case 0x0:
+      if (endPos-pos<11 || !input->readDouble(val, isNan)) {
+        f.str("");
+        f << "###number";
+        error=f.str();
+        ok = false;
+        break;
+      }
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Double;
+      instr.m_doubleValue=val;
+      break;
+    case 0x1: {
+      if (endPos-pos<5) {
+        f.str("");
+        f << "###cell short";
+        error=f.str();
+        ok = false;
+        break;
+      }
+      ok = readCell(position, instr);
+      break;
+    }
+    case 0x2: {
+      if (endPos-pos< 9 || !readCell(position, instr)) {
+        f.str("");
+        f << "###list cell short";
+        error=f.str();
+        ok = false;
+        break;
+      }
+      MWAWCellContent::FormulaInstruction instr2;
+      if (!readCell(position, instr2)) {
+        ok = false;
+        f.str("");
+        f << "###list cell short";
+        error=f.str();
+        break;
+      }
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
+      instr.m_position[1]=instr2.m_position[0];
+      instr.m_positionRelative[1]=instr2.m_positionRelative[0];
+      break;
+    }
+    case 0x5:
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
+      instr.m_longValue=(long) input->readLong(4);
+      break;
+    case 0x6: {
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Text;
+      int fSz=(int) input->readULong(1);
+      if (input->tell()+fSz > endPos) {
+        ok=false;
+        break;
+      }
+      for (int i=0; i<fSz; ++i) {
+        char c = (char) input->readULong(1);
+        if (c==0) {
+          ok = i+1==fSz;
+          break;
+        }
+        instr.m_content += c;
+      }
+      break;
+    }
+    default:
+      if (wh >= 0x70 || (wh < 0x20 && BWSSParserInternal::s_listFunctions[wh].m_arity == -2)) {
+        f.str("");
+        f << "##Funct" << std::hex << wh;
+        error=f.str();
+        ok = false;
+        break;
+      }
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+      if (BWSSParserInternal::s_listFunctions[wh].m_arity == -2) {
+        std::stringstream s;
+        s << "Funct" << std::hex << wh << std::dec;
+        instr.m_content=s.str();
+        arity = (int) input->readLong(1);
+      }
+      else {
+        instr.m_content=BWSSParserInternal::s_listFunctions[wh].m_name;
+        ok=!instr.m_content.empty();
+        arity = BWSSParserInternal::s_listFunctions[wh].m_arity;
+        if (arity == -1) arity = (int) input->readLong(1);
+      }
+      break;
+    }
+
+    if (!ok) break;
+    std::vector<MWAWCellContent::FormulaInstruction> child;
+    if (instr.m_type!=MWAWCellContent::FormulaInstruction::F_Function) {
+      child.push_back(instr);
+      stack.push_back(child);
+      continue;
+    }
+    size_t numElt = stack.size();
+    if ((int) numElt < arity) {
+      f.str("");
+      f << instr.m_content << "[##" << arity << "]";
+      error=f.str();
+      ok = false;
+      break;
+    }
+    if ((instr.m_content[0] >= 'A' && instr.m_content[0] <= 'Z') || instr.m_content[0] == '(') {
+      if (instr.m_content[0] != '(')
+        child.push_back(instr);
+
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      instr.m_content="(";
+      child.push_back(instr);
+      for (int i = 0; i < arity; i++) {
+        if (i) {
+          instr.m_content=";";
+          child.push_back(instr);
+        }
+        std::vector<MWAWCellContent::FormulaInstruction> const &node=
+          stack[size_t((int)numElt-arity+i)];
+        child.insert(child.end(), node.begin(), node.end());
+      }
+      instr.m_content=")";
+      child.push_back(instr);
+
+      stack.resize(size_t((int) numElt-arity+1));
+      stack[size_t((int)numElt-arity)] = child;
+      continue;
+    }
+    if (arity==1) {
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      stack[numElt-1].insert(stack[numElt-1].begin(), instr);
+      if (wh==0x3 && pos+2==endPos)
+        break;
+      continue;
+    }
+    if (arity==2) {
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      stack[numElt-2].push_back(instr);
+      stack[numElt-2].insert(stack[numElt-2].end(), stack[numElt-1].begin(), stack[numElt-1].end());
+      stack.resize(numElt-1);
+      continue;
+    }
+    ok=false;
+    error = "### unexpected arity";
+    break;
+  }
+
+  if (!ok) ;
+  else if (stack.size()==1 && stack[0].size()>1 && stack[0][0].m_content=="=") {
+    formula.insert(formula.begin(),stack[0].begin()+1,stack[0].end());
+    return true;
+  }
+  else
+    error = "###stack problem";
+
+  static bool first = true;
+  if (first) {
+    MWAW_DEBUG_MSG(("BWSSParser::readFormula: I can not read some formula\n"));
+    first = false;
+  }
+
+  f.str("");
+  for (size_t i = 0; i < stack.size(); ++i) {
+    for (size_t j=0; j < stack[i].size(); ++j)
+      f << stack[i][j] << ",";
+  }
+  f << error;
+  error = f.str();
+  return false;
+}
+
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
