@@ -1,5 +1,10 @@
 CHANGES:
 
+12/26/2013:
+- BeagleWorks/WordPerfect Work: add a spreadsheet parser
+12/22/2013:
+- add a listener MWAWSpreadsheetListener to create spreadsheet document
+
 12/18/2013:
 - create simple graphic shapes directly (rectangles, lines, cicles, polygon),
   ie. no longer create an embedded object to export a single graphic shapes.
@@ -9,7 +14,7 @@ CHANGES:
 11/02/2013:
 - update libmwaw to depend on librevenge
 
----------------- Version 0.3
+============== end of version 0.2. =================
 
 12/02/2013:
 - AppleWorks/ClarisWorks parser: recognize more bitmap
