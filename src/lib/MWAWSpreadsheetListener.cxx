@@ -1479,22 +1479,6 @@ void MWAWSpreadsheetListener::handleSubDocument(MWAWSubDocumentPtr subDocument, 
       _openSpan();
   }
 
-  switch (m_ps->m_subDocumentType) {
-  case libmwaw::DOC_HEADER_FOOTER:
-    m_ps->m_isHeaderFooterOpened = false;
-    break;
-  case libmwaw::DOC_TEXT_BOX:
-    m_ps->m_isTextboxOpened = false;
-    break;
-  case libmwaw::DOC_NONE:
-  case libmwaw::DOC_NOTE:
-  case libmwaw::DOC_SHEET:
-  case libmwaw::DOC_TABLE:
-  case libmwaw::DOC_COMMENT_ANNOTATION:
-  case libmwaw::DOC_GRAPHIC_GROUP:
-  default:
-    break;
-  }
   _endSubDocument();
   _popParsingState();
 }

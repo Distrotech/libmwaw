@@ -47,6 +47,9 @@
 
 namespace BWSSParserInternal
 {
+class SubDocument;
+
+struct Cell;
 struct Spreadsheet;
 struct State;
 }
@@ -57,6 +60,7 @@ class BWStructManager;
  */
 class BWSSParser : public MWAWSpreadsheetParser
 {
+  friend class BWSSParserInternal::SubDocument;
 public:
   //! constructor
   BWSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
@@ -81,6 +85,17 @@ protected:
   //! adds a new page
   void newPage(int number);
 
+  //! try to send the main spreadsheet
+  bool sendSpreadsheet();
+  //! try to send a text zone
+  bool sendText(MWAWEntry entry, bool headerFooter=false);
+  //! try to send the page graphic
+  bool sendPageFrames();
+  //! try to send a frame
+  bool sendFrame(BWStructManager::Frame const &frame);
+  //! try to send a picture
+  bool sendPicture(int pId, MWAWPosition const &pos,
+                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
 protected:
   //! finds the different objects zones
   bool createZones();
@@ -115,16 +130,16 @@ protected:
   bool readRowSheet(BWSSParserInternal::Spreadsheet &sheet);
 
   //! read a cell row
-  bool readCellSheet(BWSSParserInternal::Spreadsheet &sheet, int row, int col);
+  bool readCellSheet(BWSSParserInternal::Cell &cell);
 
   //! read an unknown zone ( which appears before and after the columns's width zone )
   bool readZone0();
 
   //! read the columns widths
-  bool readColumnWidths();
+  bool readColumnWidths(BWSSParserInternal::Spreadsheet &sheet);
 
   //! read the differents formula
-  bool readFormula();
+  bool readFormula(BWSSParserInternal::Spreadsheet &sheet);
 
   // resource fork
 
@@ -138,11 +153,7 @@ protected:
   // formula data
   //
   /* reads a cell */
-  bool readCell(Vec2i actPos, MWAWCellContent::FormulaInstruction &instr);
-  /* reads a float store with 8 bytes */
-  bool readFloat8(long endPos, double &res);
-  /* reads a float store with 4 bytes */
-  bool readFloat4(long endPos, double &res);
+  bool readCellInFormula(Vec2i actPos, MWAWCellContent::FormulaInstruction &instr);
   /* reads a formula */
   bool readFormula(long endPos, Vec2i const &pos,	std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error);
 
