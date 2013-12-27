@@ -169,6 +169,41 @@ void MWAWGraphicInterface::endTextObject()
   m_state->m_encoder.insertElement("EndTextObject");
 }
 
+void MWAWGraphicInterface::startTableObject(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("StartTableObject", list);
+}
+
+void MWAWGraphicInterface::endTableObject()
+{
+  m_state->m_encoder.insertElement("EndTableObject");
+}
+
+void MWAWGraphicInterface::openTableRow(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("OpenTableRow", list);
+}
+
+void MWAWGraphicInterface::closeTableRow()
+{
+  m_state->m_encoder.insertElement("CloseTableRow");
+}
+
+void MWAWGraphicInterface::openTableCell(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("OpenTableCell", list);
+}
+
+void MWAWGraphicInterface::closeTableCell()
+{
+  m_state->m_encoder.insertElement("CloseTableCell");
+}
+
+void MWAWGraphicInterface::insertCoveredTableCell(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("InsertCoveredTableCell", list);
+}
+
 void MWAWGraphicInterface::insertTab()
 {
   m_state->m_encoder.insertElement("InsertTab");

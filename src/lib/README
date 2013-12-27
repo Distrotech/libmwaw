@@ -122,8 +122,6 @@ BWSSParser: spreadsheet document parser of BeagleWorks v1.0 and WordPerfect Work
 -   BWText : class which reads the text in a word document
 -   BWStructManager : class to read structure partaged between different type of document
 
-BWSSParser: parser of BeagleWorks spreadsheet v1.0 ( not functional )
-
 CWParser : parser of ClarisWorks/AppleWorks document
 -   CWGraph : class which reads the graphics and zone dispositions ...
 -   CWDatabase/CWSpreadSheet : class which reads the database/spreadsheet structure ( uncomplete)

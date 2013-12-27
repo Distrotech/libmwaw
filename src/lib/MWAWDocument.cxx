@@ -536,6 +536,10 @@ void GraphicExporter::insertElement(const char *psName)
       m_output->closeParagraph();
     else if (strcmp(psName,"CloseSpan")==0)
       m_output->closeSpan();
+    else if (strcmp(psName,"CloseTableCell")==0)
+      m_output->closeTableCell();
+    else if (strcmp(psName,"CloseTableRow")==0)
+      m_output->closeTableRow();
     else if (strcmp(psName,"CloseUnorderedListLevel")==0)
       m_output->closeUnorderedListLevel();
     else
@@ -550,6 +554,8 @@ void GraphicExporter::insertElement(const char *psName)
       m_output->endLayer();
     else if (strcmp(psName,"EndEmbeddedGraphics")==0)
       m_output->endEmbeddedGraphics();
+    else if (strcmp(psName,"EndTableObject")==0)
+      m_output->endTableObject();
     else if (strcmp(psName,"EndTextObject")==0)
       m_output->endTextObject();
     else
@@ -606,7 +612,9 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
       ok=false;
     break;
   case 'I':
-    if (strcmp(psName,"InsertField")==0)
+    if (strcmp(psName,"InsertCoveredTableCell")==0)
+      m_output->insertCoveredTableCell(propList);
+    else if (strcmp(psName,"InsertField")==0)
       m_output->insertField(propList);
     else
       ok=false;
@@ -622,6 +630,10 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
       m_output->openParagraph(propList);
     else if (strcmp(psName,"OpenSpan")==0)
       m_output->openSpan(propList);
+    else if (strcmp(psName,"OpenTableCell")==0)
+      m_output->openTableCell(propList);
+    else if (strcmp(psName,"OpenTableRow")==0)
+      m_output->openTableRow(propList);
     else if (strcmp(psName,"OpenUnorderedListLevel")==0)
       m_output->openUnorderedListLevel(propList);
     else
@@ -641,6 +653,8 @@ void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPr
       m_output->startLayer(propList);
     else if (strcmp(psName,"StartPage")==0)
       m_output->startPage(propList);
+    else if (strcmp(psName,"StartTableObject")==0)
+      m_output->startTableObject(propList);
     else if (strcmp(psName,"StartTextObject")==0)
       m_output->startTextObject(propList);
     else
