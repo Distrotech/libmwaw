@@ -400,6 +400,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWChart.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWDebug.cxx"
 				>
 			</File>
@@ -794,6 +798,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWCell.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWChart.hxx"
 				>
 			</File>
 			<File

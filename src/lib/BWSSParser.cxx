@@ -40,6 +40,7 @@
 
 #include <librevenge/librevenge.h>
 
+#include "MWAWChart.hxx"
 #include "MWAWCell.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -130,11 +131,41 @@ bool Spreadsheet::addFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::
   return false;
 }
 
+//! Internal: the chart of a BWSSParser
+struct Chart : public MWAWChart {
+  //! constructor
+  Chart(std::string const &name, BWSSParser &parser) : MWAWChart(name, parser.getParserState()->m_fontConverter),
+    m_parser(&parser), m_input(parser.getInput())
+  {
+  }
+  //! send a zone content
+  void sendContent(TextZone const &zone, MWAWListenerPtr &listener);
+  //! the main parser
+  BWSSParser *m_parser;
+  //! the input
+  MWAWInputStreamPtr m_input;
+private:
+  Chart(Chart const &orig);
+  Chart operator=(Chart const &orig);
+};
+
+void Chart::sendContent(Chart::TextZone const &zone, MWAWListenerPtr &listener)
+{
+  if (!listener.get() || !m_parser) {
+    MWAW_DEBUG_MSG(("BWSSParserInternal::Chart::sendContent: no listener\n"));
+    return;
+  }
+  long pos = m_input->tell();
+  listener->setFont(zone.m_font);
+  m_parser->sendText(zone.m_textEntry, false);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
+}
+
 ////////////////////////////////////////
 //! Internal: the state of a BWSSParser
 struct State {
   //! constructor
-  State() :  m_spreadsheetBegin(-1), m_spreadsheet(), m_typeEntryMap(), m_header(), m_footer(),
+  State() :  m_spreadsheetBegin(-1), m_spreadsheet(), m_spreadsheetName("Sheet0"), m_chartList(), m_typeEntryMap(), m_header(), m_footer(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }
@@ -175,6 +206,10 @@ struct State {
   long m_spreadsheetBegin;
   /** the spreadsheet */
   Spreadsheet m_spreadsheet;
+  /** the spreadsheet name */
+  std::string m_spreadsheetName;
+  /** the list of chart */
+  std::vector<shared_ptr<Chart> > m_chartList;
   /** the type entry map */
   std::multimap<std::string, MWAWEntry> m_typeEntryMap;
   /** the header entry */
@@ -471,7 +506,7 @@ bool BWSSParser::readRSRCZones()
   std::multimap<std::string, MWAWEntry>::iterator it;
   // the 1 zone
   char const *(zNames[]) = {"wPos", "DMPF" };
-  for (int z = 0; z < 3; ++z) {
+  for (int z = 0; z < 2; ++z) {
     it = entryMap.lower_bound(zNames[z]);
     while (it != entryMap.end()) {
       if (it->first != zNames[z])
@@ -719,39 +754,254 @@ bool BWSSParser::readChart()
   // find only 2 charts, so this code is not sure...
   MWAWInputStreamPtr &input= getInput();
   long pos=input->tell();
-  long sz=(long) input->readULong(2);
-  if (!sz || !input->checkPosition(pos+sz+0x5f)) {
-    MWAW_DEBUG_MSG(("BWSSParser::readChart: can not find the chart zone\n"));
+  if (!input->checkPosition(pos+9+51+0x5d)) {
+    MWAW_DEBUG_MSG(("BWSSParser::readChart: the zone seems to short\n"));
     return false;
   }
   libmwaw::DebugStream f;
   f << "Chart-header:";
-  int val=(int) input->readLong(2);
-  if (val!=0x12) f << "f0=" << val << ",";
-  long endChart = pos+sz+2;
+  int val=(int) input->readULong(2);
+  f << "f0=" << std::hex << val << std::dec << ",";
+  val=(int) input->readLong(2);
+  if (val!=0x12) f << "f1=" << val << ",";
+  bool findRange=false;
+  shared_ptr<BWSSParserInternal::Chart> chart(new BWSSParserInternal::Chart(m_state->m_spreadsheetName, *this));
+  Box2i serieRange;
   for (int i=0; i<2; ++i) {
     long actPos=input->tell();
     int dSz=(int) input->readULong(2);
     int sSz=(int) input->readULong(1);
-    if (actPos+2+dSz > endChart || (sSz+1!=dSz && sSz+2!=dSz)) {
+    if (sSz+1!=dSz && sSz+2!=dSz) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      break;
+      MWAW_DEBUG_MSG(("BWSSParser::readChart: can not read the chart\n"));
+      f << "###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      return false;
     }
     std::string name("");
     for (int c=0; c<sSz; ++c)
       name += (char) input->readULong(1);
+    if (i==1 && sSz>=5 && (int) name.length()==sSz) {
+      size_t cPos=0;
+      for (int c=0; c<2; c++) {
+        if (cPos+1>=(size_t) sSz) break;
+        char ch=name[cPos++];
+        if (ch<'A' || ch>'Z') break;
+        int col=int(ch-'A')+1;
+        ch=name[cPos++];
+        if (ch>='A' && ch<='Z') {
+          col=26*col+int(ch-'A')+1;
+          if (cPos+1>=(size_t) sSz) break;
+          ch=name[cPos++];
+        }
+        if (ch<'1' || ch>'9') break;
+        int row=ch-'0';
+        while (cPos<(size_t)sSz && name[cPos]>='0' && name[cPos]<='9') {
+          row=row*10+int(name[cPos++]-'0');
+        }
+        if (c==0)
+          serieRange.setMin(Vec2i(col-1,row-1));
+        else {
+          serieRange.setMax(Vec2i(col-1,row-1));
+          findRange=true;
+          break;
+        }
+        if (cPos>=(size_t)sSz || name[cPos++]!=':')
+          break;
+      }
+    }
+    if (i==1 && !findRange) {
+      MWAW_DEBUG_MSG(("BWSSParser::readChart: can not decode the range\n"));
+      f << "###";
+    }
     f << "\"" << name << "\",";
     input->seek(actPos+2+dSz, librevenge::RVNG_SEEK_SET);
   }
-  ascii().addDelimiter(input->tell(),'|');
-  input->seek(endChart, librevenge::RVNG_SEEK_SET);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
   pos=input->tell();
+  f.str("");
+  f << "Chart-B:";
+  val=(int) input->readLong(1);
+  MWAWChart::Axis axis[2];
+  switch (val) {
+  case 1: // show
+    axis[0].m_showLabel=axis[1].m_showLabel=true;
+    break;
+  case 2:
+    axis[0].m_showLabel=axis[1].m_showLabel=false;
+    f << "label[no],";
+    break;
+  default:
+    f << "#show[label]=" << val << ",";
+    break;
+  }
+  val=(int) input->readLong(1);
+  if (val) f << "f0=" << val << ",";
+  val=(int) input->readLong(1);
+  f << "f1=" << val << ",";
+  for (int i=0; i<7; ++i) {
+    int dim[2];
+    for (int j=0; j<2; ++j) dim[j]=(int) input->readLong(2);
+    if (dim[0]||dim[1])
+      f << "dim" << i << "?=" << dim[0] << "x" << dim[1] << ",";
+  }
   ascii().addPos(pos);
-  ascii().addNote("Chart-B:");
-  input->seek(pos+0x5d, librevenge::RVNG_SEEK_SET);
+  ascii().addNote(f.str().c_str());
+
+  pos=input->tell();
+  f.str("");
+  f << "Chart-C:";
+  for (int i=0; i<3; ++i) {
+    int const expectedVal[3]= {0xe, 0, 0x21};
+    val=(int) input->readLong(2);
+    if (val!=expectedVal[i]) f << "f" << i << "=" << val << ",";
+  }
+  val=(int) input->readLong(2);
+  f << "f3=" << val << ",";
+  val=(int) input->readLong(1);
+
+  axis[1].m_type=MWAWChart::Axis::A_Numeric;
+  switch (val) {
+  case 1: // vertical scale numeric
+    break;
+  case 2:
+    axis[1].m_type=MWAWChart::Axis::A_Logarithmic;
+    f << "yScale=log,";
+    break;
+  default:
+    f << "#yScale="<<val << ",";
+    break;
+  }
+  val=(int) input->readLong(1);
+
+  axis[0].m_type=MWAWChart::Axis::A_Sequence;
+  switch (val) {
+  case 1: // label value no skip
+    break;
+  case 2:
+    axis[1].m_type=MWAWChart::Axis::A_Sequence;
+    f << "labelX[skipEmpty],";
+    break;
+  case 3:
+    f << "labelX[stagger],";
+    break;
+  default:
+    f << "#labelX="<<val << ",";
+    break;
+  }
+  axis[0].m_showGrid=axis[1].m_showGrid=false;
+  for (int i=0; i<4; ++i) {
+    val=(int) input->readLong(1);
+    if (!val) continue;
+    char const *(wh[4])= {"draw[grid]", "draw[value]", "auto[scale]", "flip[RowCol]"};
+    f << wh[i];
+    if (val!=1) {
+      if (i==0)
+        axis[0].m_showGrid=axis[1].m_showGrid=true;
+      f << "=" << val << ",";
+    }
+    else f << ",";
+  }
+  for (int i=0; i<3; ++i) {
+    char const *(wh[3])= {"minScale", "maxScale", "step[value]"};
+    double value=0;
+    bool isNAN=false;
+    if (!input->readDouble8(value, isNAN))
+      f << "###";
+    f << wh[i] << "=" << value << ",";
+  }
+  val=(int) input->readULong(1); // always 0?
+  if (val) f << "g0=" << val << ",";
+  val=(int) input->readULong(1);
+  MWAWChart::Series::Type serieType=MWAWChart::Series::S_Bar;
+  switch (val) {
+  case 0x19:
+    serieType=MWAWChart::Series::S_Line;
+    f << "line,";
+    break;
+  case 0x1a:
+    f << "bar,";
+    break;
+  case 0x1b:
+    serieType=MWAWChart::Series::S_Column;
+    f << "column,";
+    break;
+  case 0x1c:
+    serieType=MWAWChart::Series::S_Area;
+    f << "area,";
+    break;
+  case 0x1d:
+    // fixme (add stack)
+    f << "stack,";
+    break;
+  case 0x1e:
+    serieType=MWAWChart::Series::S_Scatter;
+    f << "scatter,";
+    break;
+  case 0x1f:
+    serieType=MWAWChart::Series::S_Pie;
+    f << "pie,";
+    break;
+  case 0x22:
+    serieType=MWAWChart::Series::S_Stock;
+    f << "hi-lo,";
+    break;
+  default:
+    f << "#type=" << std::hex << val << std::dec << ",";
+    break;
+  }
+  ascii().addDelimiter(input->tell(),'|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(pos+46, librevenge::RVNG_SEEK_SET);
+
+  pos=input->tell();
+  long endPos = pos+67;
+  f.str("");
+  f << "Chart-D:";
+  int sSz=(int) input->readULong(1);
+  if (pos+1+sSz <= endPos) {
+    MWAWChart::TextZone title;
+    title.m_type=MWAWChart::TextZone::T_Title;
+    title.m_contentType=MWAWChart::TextZone::C_Text;
+    title.m_textEntry.setBegin(pos+1);
+    title.m_textEntry.setLength(sSz);
+    chart->add(title);
+    std::string name("");
+    for (int c=0; c<sSz; ++c)
+      name += (char) input->readULong(1);
+    f << "\"" << name << "\",";
+  }
+  else
+    f << "###";
+  if (findRange) {
+    chart->add(0, axis[0]);
+    chart->add(1, axis[1]);
+    chart->setDataType(serieType, true);
+    for (int r=serieRange[0][1]; r<serieRange[1][1]; ++r) {
+      MWAWChart::Series series;
+      series.m_range=Box2i(Vec2i(serieRange[0][0], r),
+                           Vec2i(serieRange[1][0], r));
+      series.m_type=serieType;
+      unsigned char gray=(unsigned char)((r%4)*30);
+      series.m_style.m_lineWidth=1;
+      series.m_style.m_lineColor=MWAWColor(gray,gray,gray);
+      series.m_style.setSurfaceColor(MWAWColor(gray,gray,gray));
+      chart->add(series);
+    }
+    MWAWChart::Legend legend;
+    legend.m_show=true;
+    chart->set(legend);
+    m_state->m_chartList.push_back(chart);
+  }
+  input->seek(pos+31, librevenge::RVNG_SEEK_SET);
+  ascii().addDelimiter(input->tell(),'|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -874,7 +1124,7 @@ bool BWSSParser::readCellSheet(BWSSParserInternal::Cell &cell)
       input->seek(pos+2, librevenge::RVNG_SEEK_SET);
       val=(int) input->readLong(2);
       if (val>0)
-        cell.m_font.setSize(val);
+        cell.m_font.setSize((float) val);
       val=(int) input->readLong(2);
       if (val>=0)
         cell.m_font.setId(val);
@@ -997,7 +1247,7 @@ bool BWSSParser::readCellSheet(BWSSParserInternal::Cell &cell)
         f << "],";
         cell.setBorders(borders, MWAWBorder());
       }
-      switch ((wh>>5)&7) {
+      switch ((wh>>5)&3) {
       case 0:
         cell.setHAlignement(MWAWCell::HALIGN_LEFT);
         f << "left,";
@@ -1011,6 +1261,7 @@ bool BWSSParser::readCellSheet(BWSSParserInternal::Cell &cell)
         f << "center,";
         break;
       case 3: // default
+      default:
         break;
       }
       if (wh&0x9F)
@@ -1059,7 +1310,7 @@ bool BWSSParser::readCellSheet(BWSSParserInternal::Cell &cell)
       content.m_contentType=MWAWCellContent::C_NUMBER;
     double value;
     bool isNan;
-    if (!input->readDouble(value, isNan)) {
+    if (!input->readDouble10(value, isNan)) {
       MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: can not read a number\n"));
       f << "###";
       break;
@@ -1346,8 +1597,19 @@ bool BWSSParser::sendSpreadsheet()
   size_t numCell = sheet.m_cells.size();
 
   int prevRow = -1;
-  listener->openSheet(sheet.convertInPoint(sheet.m_widthCols,76), librevenge::RVNG_POINT);
+  listener->openSheet(sheet.convertInPoint(sheet.m_widthCols,76), librevenge::RVNG_POINT, m_state->m_spreadsheetName);
   sendPageFrames();
+  // send the chart
+  for (size_t i = 0; i < m_state->m_chartList.size(); ++i) {
+    if (!m_state->m_chartList[i]) continue;
+    BWSSParserInternal::Chart &chart=*(m_state->m_chartList[i]);
+    // chart have no position, so we create one
+    chart.setDimension(Vec2i(200,200));
+    MWAWPosition fPos(Vec2f(0,0), Vec2f(200,200), librevenge::RVNG_POINT);
+    fPos.setPagePos(1, Vec2f(float(i)*200,200));
+    fPos.setRelativePosition(MWAWPosition::Page);
+    listener->insertChart(fPos, chart);
+  }
   std::vector<float> rowHeight = sheet.convertInPoint(sheet.m_heightRows,16);
   for (size_t i = 0; i < numCell; i++) {
     BWSSParserInternal::Cell const &cell= sheet.m_cells[i];
@@ -1561,7 +1823,7 @@ bool BWSSParser::readFormula(long endPos, Vec2i const &position,
     MWAWCellContent::FormulaInstruction instr;
     switch (wh) {
     case 0x0:
-      if (endPos-pos<11 || !input->readDouble(val, isNan)) {
+      if (endPos-pos<11 || !input->readDouble10(val, isNan)) {
         f.str("");
         f << "###number";
         error=f.str();
@@ -1605,7 +1867,7 @@ bool BWSSParser::readFormula(long endPos, Vec2i const &position,
     }
     case 0x5:
       instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
-      instr.m_longValue=(long) input->readLong(4);
+      instr.m_longValue=(double) input->readLong(4);
       break;
     case 0x6: {
       instr.m_type=MWAWCellContent::FormulaInstruction::F_Text;

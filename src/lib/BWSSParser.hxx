@@ -50,6 +50,7 @@ namespace BWSSParserInternal
 class SubDocument;
 
 struct Cell;
+struct Chart;
 struct Spreadsheet;
 struct State;
 }
@@ -60,6 +61,7 @@ class BWStructManager;
  */
 class BWSSParser : public MWAWSpreadsheetParser
 {
+  friend struct BWSSParserInternal::Chart;
   friend class BWSSParserInternal::SubDocument;
 public:
   //! constructor

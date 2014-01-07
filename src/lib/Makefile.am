@@ -130,6 +130,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MSWTextStyles.hxx		\
 	MWAWCell.cxx			\
 	MWAWCell.hxx			\
+	MWAWChart.cxx			\
+	MWAWChart.hxx			\
 	MWAWDebug.cxx			\
 	MWAWDebug.hxx			\
 	MWAWDocument.cxx		\

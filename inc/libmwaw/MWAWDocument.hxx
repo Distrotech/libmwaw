@@ -95,17 +95,18 @@ public:
   enum Type {
     MWAW_T_UNKNOWN=0 /**< Unrecognised file type*/,
     MWAW_T_ACTA /**Acta (v2 and Classic v1)*/,
-    MWAW_T_BEAGLEWORKS /**BeagleWorks (v1.0)/WordPerfect Works (v1.2)*/,
-    MWAW_T_CLARISWORKS /**ClarisWorks/AppleWorks: all versions, open text files + some draw/paint files*/,
+    MWAW_T_BEAGLEWORKS /**BeagleWorks (v1.0)/WordPerfect Works (v1.2). Export spreadsheet and text files.*/,
+    MWAW_T_CLARISWORKS /**ClarisWorks/AppleWorks: all versions, open text files + draw/paint files (exported as text) + spreadsheet/database files (exported as text in a big table, experimental)*/,
     MWAW_T_DOCMAKER /** DocMaker (v4)*/,
     MWAW_T_EDOC /** eDOC (v2)*/,
     MWAW_T_FRAMEMAKER /** FrameMaker: TODO*/,
     MWAW_T_FULLWRITE /** FullWrite Professional: basic*/,
-    MWAW_T_GREATWORKS /** GreatWorks (v1-v2): text and drawing document*/,
+    MWAW_T_GREATWORKS /** GreatWorks (v1-v2): text and drawing (as text) document*/,
     MWAW_T_HANMACWORDJ /** HanMac Word-J (v2.0.4) */,
     MWAW_T_HANMACWORDK /** HanMac Word-K (v2.0.5-2.0.6) */,
     MWAW_T_LIGHTWAYTEXT /** LightWayText (only v4 Mac format) */,
     MWAW_T_MACDOC /** MacDoc (v1.3)*/,
+    MWAW_T_MACDRAFT /** MacDraw: TODO*/,
     MWAW_T_MACDRAW /** MacDraw: TODO*/,
     MWAW_T_MACPAINT /** MacPaint: TODO*/,
     MWAW_T_MARINERWRITE /** Mariner Write (only v1.6-v3.5 Mac Classic) */,
@@ -144,7 +145,7 @@ public:
       \return A confidence value which represents the likelyhood that the content from
       the input stream can be parsed
 
-      \note encryption enum appears in MWAW_TEXT_VERSION==2 */
+      \note encryption enum appears with MWAW_TEXT_VERSION==2 */
   static MWAWLIB Confidence isFileFormatSupported(librevenge::RVNGInputStream *input, Type &type, Kind &kind);
 
   // ------------------------------------------------------------
@@ -158,7 +159,7 @@ public:
      \param documentInterface A RVNGTextInterface implementation
      \param password The file password
 
-   \note password appears in MWAW_TEXT_VERSION==2 */
+   \note password appears with MWAW_TEXT_VERSION==2 */
   static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface, char const *password=0);
 
   /** Parses the input stream content. It will make callbacks to the functions provided by a
@@ -178,7 +179,8 @@ public:
      \param documentInterface A RVNGPresentationInterface implementation
      \param password The file password
 
-   \note Reserved for future use. Actually, it only returns MWAW_R_UNKNOWN_ERROR. */
+     \note Reserved for future use. Actually, it only returns MWAW_R_UNKNOWN_ERROR.
+  */
   static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGPresentationInterface *documentInterface, char const *password=0);
 
   /** Parses the input stream content. It will make callbacks to the functions provided by a
@@ -188,7 +190,8 @@ public:
      \param documentInterface A RVNGSpreadsheetInterface implementation
      \param password The file password
 
-     \note Reserved for future use. Actually, it only returns MWAW_R_UNKNOWN_ERROR. */
+     \note this function appears with MWAW_SPREADSHEET_VERSION==1 in libmwaw-0.3
+  */
   static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGSpreadsheetInterface *documentInterface, char const *password=0);
 
   // ------------------------------------------------------------
@@ -203,7 +206,7 @@ public:
    \param binary a list of librevenge::RVNGDrawingInterface stored in a documentInterface,
    \param documentInterface the RVNGDrawingInterface which will convert the graphic is some specific format.
 
-   \note this function appears in MWAW_GRAPHIC_VERSION==1 */
+   \note this function appears with MWAW_GRAPHIC_VERSION==1 in libmwaw-0.2 */
   static MWAWLIB bool decodeGraphic(librevenge::RVNGBinaryData const &binary, librevenge::RVNGDrawingInterface *documentInterface);
 
   /** Parses the spreadsheet contained in the binary data and called documentInterface to reconstruct

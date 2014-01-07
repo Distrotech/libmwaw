@@ -326,6 +326,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\MWAWChart.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\MWAWDebug.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -550,6 +554,7 @@
     <ClInclude Include="..\..\src\lib\MSWText.hxx" />
     <ClInclude Include="..\..\src\lib\MSWTextStyles.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWCell.hxx" />
+    <ClInclude Include="..\..\src\lib\MWAWChart.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWDebug.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWEntry.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWFont.hxx" />

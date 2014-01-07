@@ -227,7 +227,49 @@ uint8_t MWAWInputStream::readU8(librevenge::RVNGInputStream *stream)
   return *(uint8_t const *)(p);
 }
 
-bool MWAWInputStream::readDouble(double &res, bool &isNotANumber)
+bool MWAWInputStream::readDouble8(double &res, bool &isNotANumber)
+{
+  if (!m_stream) return false;
+  long pos=tell();
+  if (m_readLimit > 0 && pos+8 > m_readLimit) return false;
+  if (pos+8 > m_streamSize) return false;
+
+  isNotANumber=false;
+  res=0;
+  int mantExp=int(readULong(1));
+  int val=(int) readULong(1);
+  int exp=(mantExp<<4)+(val>>4);
+  double mantisse=double(val&0xF)/16.;
+  double factor=1./256.;
+  for (int j = 0; j < 6; ++j, factor/=256)
+    mantisse+=(double)readULong(1)*factor;
+  int sign = 1;
+  if (exp & 0x800) {
+    exp &= 0x7ff;
+    sign = -1;
+  }
+  if (exp == 0) {
+    if (mantisse <= 1.e-5 || mantisse >= 1-1.e-5)
+      return true;
+    // a Nan representation ?
+    return false;
+  }
+  if (exp == 0x7FF) {
+    if (mantisse >= 1.-1e-5) {
+      isNotANumber=true;
+      res=std::numeric_limits<double>::quiet_NaN();
+      return true; // ok 0x7FF and 0xFFF are nan
+    }
+    return false;
+  }
+  exp -= 0x3ff;
+  res = std::ldexp(1.+mantisse, exp);
+  if (sign == -1)
+    res *= -1.;
+  return true;
+}
+
+bool MWAWInputStream::readDouble10(double &res, bool &isNotANumber)
 {
   if (!m_stream) return false;
   long pos=tell();

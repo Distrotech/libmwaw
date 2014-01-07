@@ -50,6 +50,7 @@
 
 class MWAWCell;
 class MWAWCellContent;
+class MWAWChart;
 class MWAWGraphicStyle;
 class MWAWGraphicShape;
 class MWAWTable;
@@ -116,6 +117,11 @@ public:
   void openSheetCell(MWAWCell const &cell, MWAWCellContent const &content);
   /** close a cell */
   void closeSheetCell();
+
+  // ------- chart -----------------
+  /** adds a chart in given position */
+  void insertChart(MWAWPosition const &pos, MWAWChart &chart,
+                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
 
   // ------ text data -----------
 

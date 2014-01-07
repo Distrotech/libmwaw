@@ -47,8 +47,6 @@
 
 #include "MWAWCell.hxx"
 
-class MWAWTable;
-
 /** a class used to recreate the table structure using cell informations, .... */
 class MWAWTable
 {
@@ -201,3 +199,4 @@ protected:
 };
 
 #endif
+// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

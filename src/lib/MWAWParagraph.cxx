@@ -83,7 +83,7 @@ void MWAWTabStop::addTo(librevenge::RVNGPropertyListVector &propList, double dec
 
   // position
   double position = m_position+decalX;
-  if (position < 0.00005f && position > -0.00005f)
+  if (position < 0.00005 && position > -0.00005)
     position = 0.0;
   tab.insert("style:position", position, librevenge::RVNG_INCH);
 

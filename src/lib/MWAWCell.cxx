@@ -146,7 +146,8 @@ bool MWAWCell::Format::getNumberingProperties(librevenge::RVNGPropertyList &prop
   default:
     return false;
   }
-  propList.insert("librevenge:format", pVect);
+  if (pVect.count())
+    propList.insert("librevenge:format", pVect);
   return true;
 }
 

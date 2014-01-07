@@ -1532,6 +1532,8 @@ void MWAWTextListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw
     m_ds->m_isHeaderFooterStarted = true;
     break;
   case libmwaw::DOC_NONE:
+  case libmwaw::DOC_CHART:
+  case libmwaw::DOC_CHART_ZONE:
   case libmwaw::DOC_NOTE:
   case libmwaw::DOC_SHEET:
   case libmwaw::DOC_TABLE:
@@ -1575,6 +1577,8 @@ void MWAWTextListener::handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw
   case libmwaw::DOC_HEADER_FOOTER:
     m_ds->m_isHeaderFooterStarted = false;
   case libmwaw::DOC_NONE:
+  case libmwaw::DOC_CHART:
+  case libmwaw::DOC_CHART_ZONE:
   case libmwaw::DOC_NOTE:
   case libmwaw::DOC_SHEET:
   case libmwaw::DOC_TABLE:

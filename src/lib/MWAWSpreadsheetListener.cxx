@@ -48,6 +48,7 @@
 #include "libmwaw_internal.hxx"
 
 #include "MWAWCell.hxx"
+#include "MWAWChart.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
@@ -115,7 +116,7 @@ struct State {
   bool canWriteText() const
   {
     if (m_isSheetCellOpened || m_isHeaderFooterOpened) return true;
-    return m_isFrameOpened && (m_isTextboxOpened || m_isTableCellOpened || m_isNote);
+    return m_isTextboxOpened || m_isTableCellOpened || m_isNote;
   }
 
   //! a buffer to stored the text
@@ -1442,7 +1443,11 @@ void MWAWSpreadsheetListener::handleSubDocument(MWAWSubDocumentPtr subDocument, 
     m_ps->m_isHeaderFooterWithoutParagraph = true;
     m_ps->m_isHeaderFooterOpened = true;
     break;
+  case libmwaw::DOC_CHART_ZONE:
+    m_ps->m_isTextboxOpened = true;
+    break;
   case libmwaw::DOC_NONE:
+  case libmwaw::DOC_CHART:
   case libmwaw::DOC_NOTE:
   case libmwaw::DOC_SHEET:
   case libmwaw::DOC_TABLE:
@@ -1511,7 +1516,7 @@ void MWAWSpreadsheetListener::_endSubDocument()
 ///////////////////
 // sheet
 ///////////////////
-void MWAWSpreadsheetListener::openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit, std::string const &/*name*/)
+void MWAWSpreadsheetListener::openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit, std::string const &name)
 {
   if (m_ps->m_isSheetOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openSheet: called with m_isSheetOpened=true\n"));
@@ -1536,6 +1541,8 @@ void MWAWSpreadsheetListener::openSheet(std::vector<float> const &colWidth, libr
     columns.append(column);
   }
   propList.insert("librevenge:columns", columns);
+  if (!name.empty())
+    propList.insert("librevenge:sheet-name", name.c_str());
   m_documentInterface->openSheet(propList);
   m_ps->m_isSheetOpened = true;
 }
@@ -1695,9 +1702,6 @@ void MWAWSpreadsheetListener::closeSheetCell()
   m_documentInterface->closeSheetCell();
 }
 
-///////////////////
-// table
-///////////////////
 void MWAWSpreadsheetListener::insertTable
 (MWAWPosition const &pos, MWAWTable &table, librevenge::RVNGPropertyList frameExtras)
 {
@@ -1717,6 +1721,36 @@ void MWAWSpreadsheetListener::insertTable
   }
   catch (...) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertTable exception catched \n"));
+  }
+  _endSubDocument();
+  _popParsingState();
+
+  closeFrame();
+}
+
+
+///////////////////
+// chart
+///////////////////
+void MWAWSpreadsheetListener::insertChart
+(MWAWPosition const &pos, MWAWChart &chart, librevenge::RVNGPropertyList frameExtras)
+{
+  if (!m_ps->m_isSheetOpened || m_ps->m_isSheetRowOpened) {
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertChart outside a chart in a sheet is not implemented\n"));
+    return;
+  }
+  if (!openFrame(pos, frameExtras)) return;
+
+  _pushParsingState();
+  _startSubDocument();
+  m_ps->m_subDocumentType = libmwaw::DOC_CHART;
+
+  shared_ptr<MWAWSpreadsheetListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWSpreadsheetListener>());
+  try {
+    chart.sendChart(listen, m_documentInterface);
+  }
+  catch (...) {
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertChart exception catched \n"));
   }
   _endSubDocument();
   _popParsingState();

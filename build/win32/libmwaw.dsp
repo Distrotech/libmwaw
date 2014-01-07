@@ -315,6 +315,10 @@ SOURCE=..\..\src\lib\MWAWCell.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWChart.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWDebug.cxx
 # End Source File
 # Begin Source File
@@ -708,6 +712,10 @@ SOURCE=..\..\src\lib\MSWTextStyles.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWCell.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWChart.hxx
 # End Source File
 # Begin Source File
 

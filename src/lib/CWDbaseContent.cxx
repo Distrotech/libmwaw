@@ -519,7 +519,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
         break;
       }
       record.m_resType=Record::R_Double;
-      if (input->readDouble(record.m_resDouble, record.m_resDoubleNaN))
+      if (input->readDouble10(record.m_resDouble, record.m_resDoubleNaN))
         f << record.m_resDouble << ",";
       else {
         MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: can not read a float\n"));
@@ -573,7 +573,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
         f << "###int" << rType << "[res],";
         break;
       case 2:
-        if (input->checkPosition(resPos+10) && input->readDouble(record.m_resDouble, record.m_resDoubleNaN)) {
+        if (input->checkPosition(resPos+10) && input->readDouble10(record.m_resDouble, record.m_resDoubleNaN)) {
           record.m_resType=Record::R_Double;
           f << "=" << record.m_resDouble << ",";
           break;
@@ -675,7 +675,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
       break;
     }
     record.m_resType=Record::R_Double;
-    if (input->readDouble(record.m_resDouble, record.m_resDoubleNaN))
+    if (input->readDouble10(record.m_resDouble, record.m_resDoubleNaN))
       f << record.m_resDouble << ",";
     else {
       MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: can not read a float\n"));
@@ -737,7 +737,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
       f << "###int" << rType << "[res],";
       break;
     case 2:
-      if (remainSz>=10 && input->readDouble(record.m_resDouble, record.m_resDoubleNaN)) {
+      if (remainSz>=10 && input->readDouble10(record.m_resDouble, record.m_resDoubleNaN)) {
         record.m_resType=Record::R_Double;
         f << "=" << record.m_resDouble << ",";
         break;
@@ -859,7 +859,7 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
       f << "###";
       break;
     }
-    if (input->readDouble(record.m_resDouble, record.m_resDoubleNaN)) {
+    if (input->readDouble10(record.m_resDouble, record.m_resDoubleNaN)) {
       record.m_resType=Record::R_Double;
       f << record.m_resDouble << ",";
     }

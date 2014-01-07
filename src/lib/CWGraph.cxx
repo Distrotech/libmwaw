@@ -2380,6 +2380,8 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
   case libmwaw::DOC_TEXT_BOX:
     suggestedAnchor=MWAWPosition::Char;
     break;
+  case libmwaw::DOC_CHART:
+  case libmwaw::DOC_CHART_ZONE:
   case libmwaw::DOC_HEADER_FOOTER:
   case libmwaw::DOC_NOTE:
     suggestedAnchor=MWAWPosition::Frame;

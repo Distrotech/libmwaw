@@ -170,6 +170,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
       confidence = MWAW_C_EXCELLENT;
       break;
     case MWAW_T_FRAMEMAKER:
+    case MWAW_T_MACDRAFT:
     case MWAW_T_MACDRAW:
     case MWAW_T_MACPAINT:
     case MWAW_T_PAGEMAKER:
@@ -469,6 +470,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       break;
 
     case MWAWDocument::MWAW_T_FRAMEMAKER:
+    case MWAWDocument::MWAW_T_MACDRAFT:
     case MWAWDocument::MWAW_T_MACDRAW:
     case MWAWDocument::MWAW_T_MACPAINT:
     case MWAWDocument::MWAW_T_PAGEMAKER:

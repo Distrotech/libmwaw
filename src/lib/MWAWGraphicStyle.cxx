@@ -138,7 +138,6 @@ bool MWAWGraphicStyle::Pattern::getBinary(librevenge::RVNGBinaryData &data, std:
 ////////////////////////////////////////////////////////////
 void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, bool only1D) const
 {
-  list.clear();
   if (!hasLine())
     list.insert("draw:stroke", "none");
   else if (m_lineDashWidth.size()>=2) {

@@ -159,7 +159,7 @@ enum { LeftBit = 0x01,  RightBit = 0x02, TopBit=0x4, BottomBit = 0x08, HMiddleBi
 enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
 std::string numberingTypeToString(NumberingType type);
 std::string numberingValueToString(NumberingType type, int value);
-enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_SHEET, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION, DOC_GRAPHIC_GROUP };
+enum SubDocumentType { DOC_NONE, DOC_CHART, DOC_CHART_ZONE, DOC_COMMENT_ANNOTATION, DOC_GRAPHIC_GROUP, DOC_HEADER_FOOTER, DOC_NOTE, DOC_SHEET, DOC_TABLE, DOC_TEXT_BOX };
 }
 
 //! the class to store a color
@@ -597,23 +597,19 @@ public:
   //! a comparison function: which first compares x then y
   int cmp(Vec2<T> const &p) const
   {
-    T diff  = m_x-p.m_x;
-    if (diff < 0) return -1;
-    if (diff > 0) return 1;
-    diff = m_y-p.m_y;
-    if (diff < 0) return -1;
-    if (diff > 0) return 1;
+    if (m_x < p.m_x) return -1;
+    if (m_x > p.m_x) return 1;
+    if (m_y < p.m_y) return -1;
+    if (m_y > p.m_y) return 1;
     return 0;
   }
   //! a comparison function: which first compares y then x
   int cmpY(Vec2<T> const &p) const
   {
-    T diff  = m_y-p.m_y;
-    if (diff < 0) return -1;
-    if (diff > 0) return 1;
-    diff = m_x-p.m_x;
-    if (diff < 0) return -1;
-    if (diff > 0) return 1;
+    if (m_y < p.m_y) return -1;
+    if (m_y > p.m_y) return 1;
+    if (m_x < p.m_x) return -1;
+    if (m_x > p.m_x) return 1;
     return 0;
   }
 
