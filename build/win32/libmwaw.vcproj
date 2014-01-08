@@ -512,15 +512,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWParser.cxx"
+				RelativePath="..\..\src\lib\MacWrtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWProParser.cxx"
+				RelativePath="..\..\src\lib\MacWrtProParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWProStructures.cxx"
+				RelativePath="..\..\src\lib\MacWrtProStructures.cxx"
 				>
 			</File>
 			<File
@@ -929,15 +929,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWParser.hxx"
+				RelativePath="..\..\src\lib\MacWrtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWProParser.hxx"
+				RelativePath="..\..\src\lib\MacWrtProParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWProStructures.hxx"
+				RelativePath="..\..\src\lib\MacWrtProStructures.hxx"
 				>
 			</File>
 			<File

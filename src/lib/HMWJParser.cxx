@@ -88,7 +88,7 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MWParser
+//! Internal: the subdocument of a HMWJParser
 class SubDocument : public MWAWSubDocument
 {
 public:

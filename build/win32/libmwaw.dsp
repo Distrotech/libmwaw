@@ -427,15 +427,15 @@ SOURCE=..\..\src\lib\MWAWTextListener.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWParser.cxx
+SOURCE=..\..\src\lib\MacWrtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWProParser.cxx
+SOURCE=..\..\src\lib\MacWrtProParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWProStructures.cxx
+SOURCE=..\..\src\lib\MacWrtProStructures.cxx
 # End Source File
 # Begin Source File
 
@@ -843,15 +843,15 @@ SOURCE=..\..\src\lib\MWAWTextListener.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWParser.hxx
+SOURCE=..\..\src\lib\MacWrtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWProParser.hxx
+SOURCE=..\..\src\lib\MacWrtProParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWProStructures.hxx
+SOURCE=..\..\src\lib\MacWrtProStructures.hxx
 # End Source File
 # Begin Source File
 

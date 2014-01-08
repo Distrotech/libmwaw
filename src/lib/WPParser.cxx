@@ -545,7 +545,7 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MWParser
+//! Internal: the subdocument of a WPParser
 class SubDocument : public MWAWSubDocument
 {
 public:

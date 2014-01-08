@@ -35,8 +35,8 @@
  * Parser to Acta document
  *
  */
-#ifndef AC_TEXT
-#  define AC_TEXT
+#ifndef ACTA_TEXT
+#  define ACTA_TEXT
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"

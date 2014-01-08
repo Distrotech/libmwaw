@@ -178,7 +178,7 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MWParser
+//! Internal: the subdocument of a MRWParser
 class SubDocument : public MWAWSubDocument
 {
 public:

@@ -223,7 +223,7 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MWParser
+//! Internal: the subdocument of a FullWrtParser
 class SubDocument : public MWAWSubDocument
 {
 public:

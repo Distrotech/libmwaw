@@ -44,7 +44,7 @@
 namespace MWAWPageSpanInternal
 {
 ////////////////////////////////////////
-//! Internal: the subdocument of a MWParser
+//! Internal: the subdocument of a MWAWParser
 class SubDocument : public MWAWSubDocument
 {
 public:

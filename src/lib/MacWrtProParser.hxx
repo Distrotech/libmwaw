@@ -32,8 +32,8 @@
 */
 
 
-#ifndef MW_PRO_PARSER
-#  define MW_PRO_PARSER
+#ifndef MAC_WRT_PRO_PARSER
+#  define MAC_WRT_PRO_PARSER
 
 #include <list>
 #include <string>
@@ -45,7 +45,7 @@
 
 #include "MWAWParser.hxx"
 
-namespace MWProParserInternal
+namespace MacWrtProParserInternal
 {
 struct State;
 struct TextZoneData;
@@ -55,25 +55,25 @@ struct Zone;
 class SubDocument;
 }
 
-class MWProStructures;
-class MWProStructuresListenerState;
+class MacWrtProStructures;
+class MacWrtProStructuresListenerState;
 
 /** \brief the main class to read a MacWrite II and MacWrite Pro file
  *
  *
  *
  */
-class MWProParser : public MWAWTextParser
+class MacWrtProParser : public MWAWTextParser
 {
-  friend class MWProStructures;
-  friend class MWProStructuresListenerState;
-  friend class MWProParserInternal::SubDocument;
+  friend class MacWrtProStructures;
+  friend class MacWrtProStructuresListenerState;
+  friend class MacWrtProParserInternal::SubDocument;
 
 public:
   //! constructor
-  MWProParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MacWrtProParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MWProParser();
+  virtual ~MacWrtProParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -104,18 +104,18 @@ protected:
   bool parseDataZone(int blockId, int type);
 
   /** parse a text zone */
-  bool parseTextZone(shared_ptr<MWProParserInternal::Zone> zone);
+  bool parseTextZone(shared_ptr<MacWrtProParserInternal::Zone> zone);
 
   /** try to read the text block entries */
-  bool readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
+  bool readTextEntries(shared_ptr<MacWrtProParserInternal::Zone> zone,
                        std::vector<MWAWEntry> &res, int textLength);
   /** try to read the text id entries */
-  bool readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
-                   std::vector<MWProParserInternal::TextZoneData> &res,
+  bool readTextIds(shared_ptr<MacWrtProParserInternal::Zone> zone,
+                   std::vector<MacWrtProParserInternal::TextZoneData> &res,
                    int textLength, int type);
   /** try to read the text token entries */
-  bool readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
-                      std::vector<MWProParserInternal::Token> &res,
+  bool readTextTokens(shared_ptr<MacWrtProParserInternal::Zone> zone,
+                      std::vector<MacWrtProParserInternal::Token> &res,
                       int textLength);
 
   /** return the list of blockid called by token. A hack to help
@@ -131,7 +131,7 @@ protected:
   void newPage(int number, bool softBreak=false);
 
   //
-  // interface with MWProParserStructures
+  // interface with MacWrtProParserStructures
   //
 
   //! send a text box
@@ -148,7 +148,7 @@ protected:
   bool sendTextBoxZone(int blockId, MWAWPosition const &pos,
                        librevenge::RVNGPropertyList extras = librevenge::RVNGPropertyList());
 
-  //! try to send an empty zone (can exist in MWPro1.5)
+  //! try to send an empty zone (can exist in MacWrtPro1.5)
   bool sendEmptyFrameZone(MWAWPosition const &pos, librevenge::RVNGPropertyList extras);
 
   //
@@ -167,13 +167,13 @@ protected:
 #endif
 
   //! try to send a picture
-  bool sendPicture(shared_ptr<MWProParserInternal::Zone> zone, MWAWPosition pictPos, librevenge::RVNGPropertyList const &extras);
+  bool sendPicture(shared_ptr<MacWrtProParserInternal::Zone> zone, MWAWPosition pictPos, librevenge::RVNGPropertyList const &extras);
 
   //! try to send a text
-  bool sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool mainZone = false);
+  bool sendText(shared_ptr<MacWrtProParserInternal::TextZone> zone, bool mainZone = false);
 
   //! compute the number of hard page break
-  int findNumHardBreaks(shared_ptr<MWProParserInternal::TextZone> zone);
+  int findNumHardBreaks(shared_ptr<MacWrtProParserInternal::TextZone> zone);
 
   //! a debug function which can be used to save the unparsed block
   void checkUnparsed();
@@ -183,10 +183,10 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<MWProParserInternal::State> m_state;
+  shared_ptr<MacWrtProParserInternal::State> m_state;
 
   //! the structures parser
-  shared_ptr<MWProStructures> m_structures;
+  shared_ptr<MacWrtProStructures> m_structures;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

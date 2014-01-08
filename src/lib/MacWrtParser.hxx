@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MW_PARSER
-#  define MW_PARSER
+#ifndef MAC_WRT_PARSER
+#  define MAC_WRT_PARSER
 
 #include <vector>
 
@@ -41,7 +41,7 @@
 
 #include "MWAWParser.hxx"
 
-namespace MWParserInternal
+namespace MacWrtParserInternal
 {
 struct State;
 struct Information;
@@ -53,15 +53,15 @@ class SubDocument;
  *
  *
  */
-class MWParser : public MWAWTextParser
+class MacWrtParser : public MWAWTextParser
 {
-  friend class MWParserInternal::SubDocument;
+  friend class MacWrtParserInternal::SubDocument;
 
 public:
   //! constructor
-  MWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MacWrtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MWParser();
+  virtual ~MacWrtParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -97,26 +97,26 @@ protected:
 
   //! read the information ( version <= 3)
   bool readInformationsV3(int numInfo,
-                          std::vector<MWParserInternal::Information> &informations);
+                          std::vector<MacWrtParserInternal::Information> &informations);
 
   //! read the information
   bool readInformations(MWAWEntry const &entry,
-                        std::vector<MWParserInternal::Information> &informations);
+                        std::vector<MacWrtParserInternal::Information> &informations);
 
   //! read a paragraph
-  bool readParagraph(MWParserInternal::Information const &info);
+  bool readParagraph(MacWrtParserInternal::Information const &info);
 
   //! read a graphics
-  bool readGraphic(MWParserInternal::Information const &info);
+  bool readGraphic(MacWrtParserInternal::Information const &info);
   /** test if a graphic is empty. In v5, some empty graphic are added
       before a page break, so it better to remove them */
   static bool isMagicPic(librevenge::RVNGBinaryData const &dt);
 
   //! read a text zone
-  bool readText(MWParserInternal::Information const &info, std::vector<int> const &lineHeight);
+  bool readText(MacWrtParserInternal::Information const &info, std::vector<int> const &lineHeight);
 
   //! read a page break zone ( version <= 3)
-  bool readPageBreak(MWParserInternal::Information const &info);
+  bool readPageBreak(MacWrtParserInternal::Information const &info);
 
   //! check the free list
   bool checkFreeList();
@@ -129,7 +129,7 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<MWParserInternal::State> m_state;
+  shared_ptr<MacWrtParserInternal::State> m_state;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

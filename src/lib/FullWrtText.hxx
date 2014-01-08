@@ -35,8 +35,8 @@
  * Parser to FullWrite text document
  *
  */
-#ifndef FullWrt_TEXT
-#  define FullWrt_TEXT
+#ifndef FULL_WRT_TEXT
+#  define FULL_WRT_TEXT
 
 #include "libmwaw_internal.hxx"
 

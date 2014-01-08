@@ -51,11 +51,11 @@
 #include "MWAWSection.hxx"
 #include "MWAWTable.hxx"
 
-#include "MWProStructures.hxx"
-#include "MWProParser.hxx"
+#include "MacWrtProStructures.hxx"
+#include "MacWrtProParser.hxx"
 
-/** Internal: the structures of a MWProStructures */
-namespace MWProStructuresInternal
+/** Internal: the structures of a MacWrtProStructures */
+namespace MacWrtProStructuresInternal
 {
 ////////////////////////////////////////
 //! Internal: the data block
@@ -79,7 +79,7 @@ struct Block {
     case GRAPHIC:
       o << "graphic,";
       if (bl.m_type != 8) {
-        MWAW_DEBUG_MSG(("MWProStructuresInternal::Block::operator<< unknown type\n"));
+        MWAW_DEBUG_MSG(("MacWrtProStructuresInternal::Block::operator<< unknown type\n"));
         o << "#type=" << bl.m_type << ",";
       }
       break;
@@ -108,7 +108,7 @@ struct Block {
         o << "[empty frame]";
         break;
       default:
-        MWAW_DEBUG_MSG(("MWProStructuresInternal::Block::operator<< unknown type\n"));
+        MWAW_DEBUG_MSG(("MacWrtProStructuresInternal::Block::operator<< unknown type\n"));
         o << "[#" << bl.m_type << "]";
         break;
       }
@@ -355,7 +355,7 @@ struct Paragraph : public MWAWParagraph {
 //! Internal: the cell of a WNProStructure
 struct Cell : public MWAWCell {
   //! constructor
-  Cell(MWProStructures &parser, Block *block) : MWAWCell(), m_parser(parser), m_blockId(0)
+  Cell(MacWrtProStructures &parser, Block *block) : MWAWCell(), m_parser(parser), m_blockId(0)
   {
     if (!block) return;
     setBdBox(Box2f(block->m_box.min(), block->m_box.max()-Vec2f(1,1)));
@@ -380,7 +380,7 @@ struct Cell : public MWAWCell {
   }
 
   //! the text parser
-  MWProStructures &m_parser;
+  MacWrtProStructures &m_parser;
   //! the block id
   int m_blockId;
 };
@@ -397,7 +397,7 @@ struct Table : public MWAWTable {
   Cell *get(int id)
   {
     if (id < 0 || id >= numCells()) {
-      MWAW_DEBUG_MSG(("MWProStructuresInternal::Table::get: cell %d does not exists\n",id));
+      MWAW_DEBUG_MSG(("MacWrtProStructuresInternal::Table::get: cell %d does not exists\n",id));
       return 0;
     }
     return reinterpret_cast<Cell *>(MWAWTable::get(id).get());
@@ -405,7 +405,7 @@ struct Table : public MWAWTable {
 };
 
 ////////////////////////////////////////
-//! Internal: the section of a MWProStructures
+//! Internal: the section of a MacWrtProStructures
 struct Section {
   enum StartType { S_Line, S_Page, S_PageLeft, S_PageRight };
 
@@ -487,7 +487,7 @@ struct Section {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a MWProStructures
+//! Internal: the state of a MacWrtProStructures
 struct State {
   //! constructor
   State() : m_version(-1), m_numPages(1), m_inputData(), m_fontsList(), m_paragraphsList(),
@@ -558,44 +558,44 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MWProStructures::MWProStructures(MWProParser &parser) :
+MacWrtProStructures::MacWrtProStructures(MacWrtProParser &parser) :
   m_parserState(parser.getParserState()), m_input(), m_mainParser(parser),
   m_state(), m_asciiFile(), m_asciiName("")
 {
   init();
 }
 
-MWProStructures::~MWProStructures()
+MacWrtProStructures::~MacWrtProStructures()
 {
   ascii().reset();
 }
 
-void MWProStructures::init()
+void MacWrtProStructures::init()
 {
-  m_state.reset(new MWProStructuresInternal::State);
+  m_state.reset(new MacWrtProStructuresInternal::State);
   m_asciiName = "struct";
 }
 
-int MWProStructures::version() const
+int MacWrtProStructures::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-MWAWTextListenerPtr &MWProStructures::getTextListener()
+MWAWTextListenerPtr &MacWrtProStructures::getTextListener()
 {
   return m_parserState->m_textListener;
 }
 
-int MWProStructures::numPages() const
+int MacWrtProStructures::numPages() const
 {
   return m_state->m_numPages;
 }
 
 ////////////////////////////////////////////////////////////
 // try to return the header/footer block id
-int MWProStructures::getHeaderId(int page, int &numSimilar) const
+int MacWrtProStructures::getHeaderId(int page, int &numSimilar) const
 {
   numSimilar = 1;
   if (version()==0) page = 0;
@@ -615,7 +615,7 @@ int MWProStructures::getHeaderId(int page, int &numSimilar) const
   return res;
 }
 
-int MWProStructures::getFooterId(int page, int &numSimilar) const
+int MacWrtProStructures::getFooterId(int page, int &numSimilar) const
 {
   numSimilar = 1;
   if (version()==0) page = 0;
@@ -637,7 +637,7 @@ int MWProStructures::getFooterId(int page, int &numSimilar) const
 
 ////////////////////////////////////////////////////////////
 // try to return the color/pattern, set the line properties
-bool MWProStructures::getColor(int colId, MWAWColor &color) const
+bool MacWrtProStructures::getColor(int colId, MWAWColor &color) const
 {
   if (version()==0) {
     // MWII: 2:red 4: blue, ..
@@ -667,7 +667,7 @@ bool MWProStructures::getColor(int colId, MWAWColor &color) const
       color = 0xFFFF00;
       break; // yellow
     default:
-      MWAW_DEBUG_MSG(("MWProStructures::getColor: unknown color %d\n", colId));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::getColor: unknown color %d\n", colId));
       return false;
     }
   }
@@ -687,7 +687,7 @@ bool MWProStructures::getColor(int colId, MWAWColor &color) const
       0xffcccc, 0xffcc99, 0xffffcc, 0xccffcc, 0x99ffcc, 0xccffff, 0x99ccff, 0xccccff, 0xffccff
     };
     if (colId < 0 || colId >= 81) {
-      MWAW_DEBUG_MSG(("MWProStructures::getColor: unknown color %d\n", colId));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::getColor: unknown color %d\n", colId));
       return false;
     }
     color = colorMap[colId];
@@ -695,7 +695,7 @@ bool MWProStructures::getColor(int colId, MWAWColor &color) const
   return true;
 }
 
-bool MWProStructures::getPattern(int patId, float &patternPercent) const
+bool MacWrtProStructures::getPattern(int patId, float &patternPercent) const
 {
   patternPercent=1.0f;
   if (version()==0) // not implemented
@@ -711,14 +711,14 @@ bool MWProStructures::getPattern(int patId, float &patternPercent) const
     0.593750f, 0.56250f, 0.515625f, 0.343750f, 0.31250f, 0.250f, 0.250f, 0.234375f,
   };
   if (patId <= 0 || patId>64) {
-    MWAW_DEBUG_MSG(("MWProStructures::getPattern: unknown pattern %d\n", patId));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::getPattern: unknown pattern %d\n", patId));
     return false;
   }
   patternPercent=defPercentPattern[patId-1];
   return true;
 }
 
-bool MWProStructures::getColor(int colId, int patId, MWAWColor &color) const
+bool MacWrtProStructures::getColor(int colId, int patId, MWAWColor &color) const
 {
   if (!getColor(colId, color))
     return false;
@@ -736,7 +736,7 @@ bool MWProStructures::getColor(int colId, int patId, MWAWColor &color) const
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool MWProStructures::createZones()
+bool MacWrtProStructures::createZones()
 {
   if (version() == 0)
     return createZonesV2();
@@ -807,7 +807,7 @@ bool MWProStructures::createZones()
   for (int st = 0; st < 2; ++st) {
     if (!ok) break;
     pos = m_input->tell();
-    std::vector<MWProStructuresInternal::Section> sections;
+    std::vector<MacWrtProStructuresInternal::Section> sections;
     ok = readSections(sections);
     if (!ok) {
       ascii().addPos(pos);
@@ -854,10 +854,10 @@ bool MWProStructures::createZones()
   return true;
 }
 
-bool MWProStructures::createZonesV2()
+bool MacWrtProStructures::createZonesV2()
 {
   if (version()) {
-    MWAW_DEBUG_MSG(("MWProStructures::createZonesV2: must be called for a MacWriteII file\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::createZonesV2: must be called for a MacWriteII file\n"));
     return false;
   }
   // first we need to create the input
@@ -881,7 +881,7 @@ bool MWProStructures::createZonesV2()
     pos = m_input->tell();
     val = (long) m_input->readULong(4);
     if (val) {
-      MWAW_DEBUG_MSG(("MWProStructures::createZonesV2: argh!!! find data after the fonts name zone. Trying to continue.\n"));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::createZonesV2: argh!!! find data after the fonts name zone. Trying to continue.\n"));
       f.str("");
       f << "Entries(Styles):#" << std::hex << val << std::dec;
 
@@ -912,13 +912,13 @@ bool MWProStructures::createZonesV2()
   if (ok) {
     pos = m_input->tell();
     int id = 0;
-    shared_ptr<MWProStructuresInternal::Block> block;
+    shared_ptr<MacWrtProStructuresInternal::Block> block;
     while (1) {
       block = readBlockV2(id++);
       if (!block)
         break;
       // temporary fixme...
-      block->m_contentType = MWProStructuresInternal::Block::TEXT;
+      block->m_contentType = MacWrtProStructuresInternal::Block::TEXT;
       block->m_id=id;
       m_state->m_blocksMap[block->m_id] = block;
       m_state->m_blocksList.push_back(block);
@@ -936,7 +936,7 @@ bool MWProStructures::createZonesV2()
 
   int nPages = 1;
   for (int i = 0; i < int(m_state->m_blocksList.size()); ++i) {
-    shared_ptr<MWProStructuresInternal::Block> &block = m_state->m_blocksList[size_t(i)];
+    shared_ptr<MacWrtProStructuresInternal::Block> &block = m_state->m_blocksList[size_t(i)];
     switch (block->m_type) {
     case 6:
       if (block->m_isHeader)
@@ -965,7 +965,7 @@ bool MWProStructures::createZonesV2()
 
 ////////////////////////////////////////////////////////////
 // try to find the main text zone and sent it
-bool MWProStructures::sendMainZone()
+bool MacWrtProStructures::sendMainZone()
 {
   int vers = version();
   for (size_t i = 0; i < m_state->m_blocksList.size(); ++i) {
@@ -984,19 +984,19 @@ bool MWProStructures::sendMainZone()
     if (m_state->m_blocksList[i]->m_type != 5 ||
         m_state->m_blocksList[i]->m_send) continue;
 
-    shared_ptr<MWProStructures> THIS
-    (this, MWAW_shared_ptr_noop_deleter<MWProStructures>());
-    MWProStructuresListenerState listenerState(THIS, true);
+    shared_ptr<MacWrtProStructures> THIS
+    (this, MWAW_shared_ptr_noop_deleter<MacWrtProStructures>());
+    MacWrtProStructuresListenerState listenerState(THIS, true);
     return true;
   }
 
-  MWAW_DEBUG_MSG(("MWProStructures::sendMainZone: can not find main zone...\n"));
+  MWAW_DEBUG_MSG(("MacWrtProStructures::sendMainZone: can not find main zone...\n"));
   return false;
 }
 
 ////////////////////////////////////////////////////////////
 // try to find the header and the pages break
-void MWProStructures::buildPageStructures()
+void MacWrtProStructures::buildPageStructures()
 {
   // first find the pages break
   std::set<long> set;
@@ -1011,7 +1011,7 @@ void MWProStructures::buildPageStructures()
   size_t numSections = m_state->m_sectionsList.size();
   long actSectPos = 0;
   for (size_t i = 0; i < numSections; ++i) {
-    MWProStructuresInternal::Section &sec = m_state->m_sectionsList[i];
+    MacWrtProStructuresInternal::Section &sec = m_state->m_sectionsList[i];
     if (sec.m_start != sec.S_Line) set.insert(actSectPos);
     actSectPos += sec.m_textLength;
   }
@@ -1024,7 +1024,7 @@ void MWProStructures::buildPageStructures()
   actPage = 0;
   actSectPos = 0;
   for (size_t i = 0; i < numSections; ++i) {
-    MWProStructuresInternal::Section &sec = m_state->m_sectionsList[i];
+    MacWrtProStructuresInternal::Section &sec = m_state->m_sectionsList[i];
     std::vector<int> listPages;
     actSectPos += sec.m_textLength;
     while (actPagePos < actSectPos) {
@@ -1053,11 +1053,11 @@ void MWProStructures::buildPageStructures()
   std::vector<int> const &listCalled = m_mainParser.getBlocksCalledByToken();
   for (size_t i = 0; i < listCalled.size(); ++i) {
     if (m_state->m_blocksMap.find(listCalled[i]) == m_state->m_blocksMap.end()) {
-      MWAW_DEBUG_MSG(("MWProStructures::buildPageStructures: can not find attachment block %d...\n",
+      MWAW_DEBUG_MSG(("MacWrtProStructures::buildPageStructures: can not find attachment block %d...\n",
                       listCalled[i]));
       continue;
     }
-    shared_ptr<MWProStructuresInternal::Block> block =
+    shared_ptr<MacWrtProStructuresInternal::Block> block =
       m_state->m_blocksMap.find(listCalled[i])->second;
     block->m_attachment = true;
   }
@@ -1065,18 +1065,18 @@ void MWProStructures::buildPageStructures()
 
 ////////////////////////////////////////////////////////////
 // try to find the main text zone and sent it
-void MWProStructures::buildTableStructures()
+void MacWrtProStructures::buildTableStructures()
 {
   size_t numBlocks = m_state->m_blocksList.size();
   for (size_t i = 0; i < numBlocks; ++i) {
     if (m_state->m_blocksList[i]->m_type != 3)
       continue;
-    shared_ptr<MWProStructuresInternal::Block> table
+    shared_ptr<MacWrtProStructuresInternal::Block> table
       = m_state->m_blocksList[i];
-    std::vector<shared_ptr<MWProStructuresInternal::Block> > blockList;
+    std::vector<shared_ptr<MacWrtProStructuresInternal::Block> > blockList;
     size_t j = i+1;
     for (; j < numBlocks; ++j) {
-      shared_ptr<MWProStructuresInternal::Block> cell = m_state->m_blocksList[j];
+      shared_ptr<MacWrtProStructuresInternal::Block> cell = m_state->m_blocksList[j];
       if (cell->m_type != 4)
         break;
       if (!table->contains(cell->m_box))
@@ -1099,17 +1099,17 @@ void MWProStructures::buildTableStructures()
     if (!ok && numCells == 1)
       ok = table->m_col == 1 && table->m_row == 1;
     if (!ok) {
-      MWAW_DEBUG_MSG(("MWProStructures::buildTableStructures: find a table with %ld cells : ignored...\n", long(numCells)));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::buildTableStructures: find a table with %ld cells : ignored...\n", long(numCells)));
       continue;
     }
 
-    shared_ptr<MWProStructuresInternal::Table> newTable(new MWProStructuresInternal::Table);
+    shared_ptr<MacWrtProStructuresInternal::Table> newTable(new MacWrtProStructuresInternal::Table);
     for (size_t k = 0; k < numCells; ++k) {
       blockList[k]->m_send = true;
       blockList[k]->m_attachment = true;
       blockList[k]->m_textboxCellType=1;
-      newTable->add(shared_ptr<MWProStructuresInternal::Cell>
-                    (new MWProStructuresInternal::Cell(*this, blockList[k].get())));
+      newTable->add(shared_ptr<MacWrtProStructuresInternal::Cell>
+                    (new MacWrtProStructuresInternal::Cell(*this, blockList[k].get())));
     }
     m_state->m_tablesMap[table->m_id]=newTable;
   }
@@ -1123,7 +1123,7 @@ void MWProStructures::buildTableStructures()
 
 ////////////////////////////////////////////////////////////
 // read the font names
-bool MWProStructures::readFontsName()
+bool MacWrtProStructures::readFontsName()
 {
   long pos = m_input->tell();
   libmwaw::DebugStream f;
@@ -1138,7 +1138,7 @@ bool MWProStructures::readFontsName()
   long endPos = pos+4+sz;
   m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProStructures::readFontsName: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readFontsName: file is too short\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1151,7 +1151,7 @@ bool MWProStructures::readFontsName()
   f << "Entries(FontsName):";
   int N=(int) m_input->readULong(2);
   if (3*N+2 > sz) {
-    MWAW_DEBUG_MSG(("MWProStructures::readFontsName: can not read the number of fonts\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readFontsName: can not read the number of fonts\n"));
     m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
     f << "#";
     ascii().addPos(pos);
@@ -1165,7 +1165,7 @@ bool MWProStructures::readFontsName()
     for (int st = 0; st < 2; ++st) {
       int sSz = (int) m_input->readULong(1);
       if (long(m_input->tell())+sSz > endPos) {
-        MWAW_DEBUG_MSG(("MWProStructures::readFontsName: can not read the %d font\n", ft));
+        MWAW_DEBUG_MSG(("MacWrtProStructures::readFontsName: can not read the %d font\n", ft));
         f << "#";
         break;
       }
@@ -1194,7 +1194,7 @@ bool MWProStructures::readFontsName()
 
 ////////////////////////////////////////////////////////////
 // read the character properties
-bool MWProStructures::readFontsDef()
+bool MacWrtProStructures::readFontsDef()
 {
   long pos = m_input->tell();
   libmwaw::DebugStream f;
@@ -1208,14 +1208,14 @@ bool MWProStructures::readFontsDef()
   long endPos = pos+4+sz;
   int expectedSize = version()==0 ? 10 : 20;
   if ((sz%expectedSize) != 0) {
-    MWAW_DEBUG_MSG(("MWProStructures::readFontsDef: find an odd value for sz\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readFontsDef: find an odd value for sz\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
   m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProStructures::readFontsDef: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readFontsDef: file is too short\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1229,7 +1229,7 @@ bool MWProStructures::readFontsDef()
   m_state->m_fontsList.resize(0);
   for (int n = 0; n < N; ++n) {
     pos = m_input->tell();
-    MWProStructuresInternal::Font font;
+    MacWrtProStructuresInternal::Font font;
     if (!readFont(font)) {
       ascii().addPos(pos);
       ascii().addNote("FontsDef-#");
@@ -1246,12 +1246,12 @@ bool MWProStructures::readFontsDef()
   return true;
 }
 
-bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
+bool MacWrtProStructures::readFont(MacWrtProStructuresInternal::Font &font)
 {
   long pos = m_input->tell();
   int vers = version();
   libmwaw::DebugStream f;
-  font = MWProStructuresInternal::Font();
+  font = MacWrtProStructuresInternal::Font();
   font.m_values[0] = (int) m_input->readLong(2); // 1, 3 or 6
   int val = (int) m_input->readULong(2);
   if (val != 0xFFFF)
@@ -1310,13 +1310,13 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
     int spacings = (int) m_input->readLong(2);
     if (spacings) {
       if (spacings < -50 || spacings > 100) {
-        MWAW_DEBUG_MSG(("MWProStructures::readFont: character spacings seems odd\n"));
+        MWAW_DEBUG_MSG(("MacWrtProStructures::readFont: character spacings seems odd\n"));
         f << "#spacings=" << spacings << "%,";
         spacings = spacings < 0 ? -50 : 100;
       }
       float fSz = font.m_font.size();
       if (fSz <= 0) {
-        MWAW_DEBUG_MSG(("MWProStructures::readFont: expand called without fSize, assume 12pt\n"));
+        MWAW_DEBUG_MSG(("MacWrtProStructures::readFont: expand called without fSize, assume 12pt\n"));
         fSz = 12;
       }
       font.m_font.setDeltaLetterSpacing(fSz*float(spacings)/100.f);
@@ -1333,7 +1333,7 @@ bool MWProStructures::readFont(MWProStructuresInternal::Font &font)
 
 ////////////////////////////////////////////////////////////
 // read a paragraph and a list of paragraph
-bool MWProStructures::readParagraphs()
+bool MacWrtProStructures::readParagraphs()
 {
   long pos = m_input->tell();
   libmwaw::DebugStream f;
@@ -1347,14 +1347,14 @@ bool MWProStructures::readParagraphs()
   }
   long endPos = pos+sz;
   if ((sz%dataSz) != 0) {
-    MWAW_DEBUG_MSG(("MWProStructures::readParagraphs: find an odd value for sz\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readParagraphs: find an odd value for sz\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
 
   m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProStructures::readParagraphs: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readParagraphs: file is too short\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1372,10 +1372,10 @@ bool MWProStructures::readParagraphs()
     f.str("");
     f << "Entries(Paragraph)[" << n << "]:";
     if (val) f << "numChar?="<<val <<",";
-    MWProStructuresInternal::Paragraph para;
+    MacWrtProStructuresInternal::Paragraph para;
     if (!readParagraph(para)) {
       f << "#";
-      m_state->m_paragraphsList.push_back(MWProStructuresInternal::Paragraph());
+      m_state->m_paragraphsList.push_back(MacWrtProStructuresInternal::Paragraph());
       m_input->seek(pos+dataSz, librevenge::RVNG_SEEK_SET);
     }
     else {
@@ -1388,16 +1388,16 @@ bool MWProStructures::readParagraphs()
   return true;
 }
 
-bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
+bool MacWrtProStructures::readParagraph(MacWrtProStructuresInternal::Paragraph &para)
 {
   libmwaw::DebugStream f;
   int vers = version();
   long pos = m_input->tell(), endPos = pos+(vers == 0 ? 200: 190);
-  para = MWProStructuresInternal::Paragraph();
+  para = MacWrtProStructuresInternal::Paragraph();
 
   m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProStructures::readParagraph: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readParagraph: file is too short\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1446,7 +1446,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
       }
       para.m_spacings[i] = spacings[i];
       if (inPoint && spacings[i] > 1.0) {
-        MWAW_DEBUG_MSG(("MWProStructures::readParagraph: spacings looks big decreasing it\n"));
+        MWAW_DEBUG_MSG(("MacWrtProStructures::readParagraph: spacings looks big decreasing it\n"));
         f << "#prevSpacings" << i << "=" << spacings[i] << ",";
         para.m_spacings[i] = 1.0;
       }
@@ -1513,7 +1513,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
       break;
     }
     if (type & 0xfc) {
-      MWAW_DEBUG_MSG(("MWProStructures::readParagraph: tab type is odd\n"));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::readParagraph: tab type is odd\n"));
       f << "tabs" << i << "[#type]=" << std::hex << (type & 0xFc) << std::dec << ",";
     }
     int leader = (int) m_input->readULong(1);
@@ -1526,7 +1526,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
       continue;
     }
     if (emptyTabFound) {
-      MWAW_DEBUG_MSG(("MWProStructures::readParagraph: empty tab already found\n"));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::readParagraph: empty tab already found\n"));
       f << "tab" << i << "#";
     }
     newTab.m_position = float(tabPos)/72./65536.;
@@ -1552,7 +1552,7 @@ bool MWProStructures::readParagraph(MWProStructuresInternal::Paragraph &para)
 
 ////////////////////////////////////////////////////////////
 // read the styles ( character )
-bool MWProStructures::readCharStyles()
+bool MacWrtProStructures::readCharStyles()
 {
   long pos = m_input->tell();
   libmwaw::DebugStream f;
@@ -1563,7 +1563,7 @@ bool MWProStructures::readCharStyles()
   if (version() == 1) {
     long sz = (long) m_input->readULong(4);
     if ((sz%0x42) != 0) {
-      MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: find an odd value for sz=%ld\n",sz));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::readCharStyles: find an odd value for sz=%ld\n",sz));
       m_input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
@@ -1584,7 +1584,7 @@ bool MWProStructures::readCharStyles()
 
   m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readCharStyles: file is too short\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1599,7 +1599,7 @@ bool MWProStructures::readCharStyles()
     f << "CharStyles-" << i << ":";
     int sSz = (int) m_input->readULong(1);
     if (sSz > 31) {
-      MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: string size seems odd\n"));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::readCharStyles: string size seems odd\n"));
       sSz = 31;
       f << "#";
     }
@@ -1622,9 +1622,9 @@ bool MWProStructures::readCharStyles()
         if (val) f << "f" << j <<"=" << val << ",";
       }
     }
-    MWProStructuresInternal::Font font;
+    MacWrtProStructuresInternal::Font font;
     if (!readFont(font)) {
-      MWAW_DEBUG_MSG(("MWProStructures::readCharStyles: can not read the font\n"));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::readCharStyles: can not read the font\n"));
       f << "###";
     }
     else
@@ -1640,13 +1640,13 @@ bool MWProStructures::readCharStyles()
 
 ////////////////////////////////////////////////////////////
 // read the styles ( paragraph + font)
-bool MWProStructures::readStyles()
+bool MacWrtProStructures::readStyles()
 {
   long pos = m_input->tell();
   libmwaw::DebugStream f;
   long sz = (long) m_input->readULong(4);
   if ((sz%0x106) != 0) {
-    MWAW_DEBUG_MSG(("MWProStructures::readStyles: find an odd value for sz=%ld\n",sz));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readStyles: find an odd value for sz=%ld\n",sz));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1681,7 +1681,7 @@ bool MWProStructures::readStyles()
 }
 
 
-bool MWProStructures::readStyle(int styleId)
+bool MacWrtProStructures::readStyle(int styleId)
 {
   long debPos = m_input->tell(), pos = debPos;
   libmwaw::DebugStream f;
@@ -1690,7 +1690,7 @@ bool MWProStructures::readStyle(int styleId)
   long endPos = pos+dataSz;
   m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProStructures::readStyle: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readStyle: file is too short\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1699,7 +1699,7 @@ bool MWProStructures::readStyle(int styleId)
   f << "Style-" << styleId << ":";
   int strlen = (int) m_input->readULong(1);
   if (!strlen || strlen > 31) {
-    MWAW_DEBUG_MSG(("MWProStructures::readStyle: style name length seems bad!!\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readStyle: style name length seems bad!!\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1722,7 +1722,7 @@ bool MWProStructures::readStyle(int styleId)
 
   f.str("");
   f << "Entries(Paragraph)[" << styleId << "]:";
-  MWProStructuresInternal::Paragraph para;
+  MacWrtProStructuresInternal::Paragraph para;
   if (!readParagraph(para)) {
     f << "#";
     m_input->seek(pos+190, librevenge::RVNG_SEEK_SET);
@@ -1747,9 +1747,9 @@ bool MWProStructures::readStyle(int styleId)
   ascii().addNote(f.str().c_str());
 
   pos = m_input->tell();
-  MWProStructuresInternal::Font font;
+  MacWrtProStructuresInternal::Font font;
   if (!readFont(font)) {
-    MWAW_DEBUG_MSG(("MWProStructures::readStyle: end of style seems bad\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readStyle: end of style seems bad\n"));
     ascii().addPos(pos);
     ascii().addNote("Style:end###");
     m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
@@ -1777,7 +1777,7 @@ bool MWProStructures::readStyle(int styleId)
 
 ////////////////////////////////////////////////////////////
 // read the list of blocks
-bool MWProStructures::readBlocksList()
+bool MacWrtProStructures::readBlocksList()
 {
   long pos = m_input->tell();
   libmwaw::DebugStream f;
@@ -1785,7 +1785,7 @@ bool MWProStructures::readBlocksList()
   long endPos = pos+45;
   m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProStructures::readBlocksList: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readBlocksList: file is too short\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1830,13 +1830,13 @@ bool MWProStructures::readBlocksList()
     ascii().addNote(f.str().c_str());
     m_input->seek(sz, librevenge::RVNG_SEEK_CUR);
   }
-  shared_ptr<MWProStructuresInternal::Block> block;
+  shared_ptr<MacWrtProStructuresInternal::Block> block;
   while (1) {
     block = readBlock();
     if (!block) break;
     m_state->m_blocksList.push_back(block);
     if (m_state->m_blocksMap.find(block->m_id) != m_state->m_blocksMap.end()) {
-      MWAW_DEBUG_MSG(("MWProStructures::readBlocksList: block %d already exists\n", block->m_id));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::readBlocksList: block %d already exists\n", block->m_id));
     }
     else
       m_state->m_blocksMap[block->m_id] = block;
@@ -1846,7 +1846,7 @@ bool MWProStructures::readBlocksList()
   return true;
 }
 
-int MWProStructures::getEndBlockSize()
+int MacWrtProStructures::getEndBlockSize()
 {
   int sz = 8;
   long pos = m_input->tell();
@@ -1858,12 +1858,12 @@ int MWProStructures::getEndBlockSize()
   return sz;
 }
 
-shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
+shared_ptr<MacWrtProStructuresInternal::Block>  MacWrtProStructures::readBlockV2(int wh)
 {
   long pos = m_input->tell();
   long endPos = pos+76;
   libmwaw::DebugStream f;
-  shared_ptr<MWProStructuresInternal::Block> res;
+  shared_ptr<MacWrtProStructuresInternal::Block> res;
 
   m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
@@ -1873,8 +1873,8 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
   long val;
   int type = (int) m_input->readULong(1);
-  res.reset(new MWProStructuresInternal::Block);
-  res->m_contentType = MWProStructuresInternal::Block::TEXT;
+  res.reset(new MacWrtProStructuresInternal::Block);
+  res->m_contentType = MacWrtProStructuresInternal::Block::TEXT;
 
   if (type == 3) {
     f << "type=3,";
@@ -1891,7 +1891,7 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
       res->m_type = 7;
       break;
     default:
-      MWAW_DEBUG_MSG(("MWProStructures::readBlockV2: find unknown block content type\n"));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::readBlockV2: find unknown block content type\n"));
       f << "#";
       break;
     }
@@ -1986,7 +1986,7 @@ shared_ptr<MWProStructuresInternal::Block>  MWProStructures::readBlockV2(int wh)
   return res;
 }
 
-shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
+shared_ptr<MacWrtProStructuresInternal::Block> MacWrtProStructures::readBlock()
 {
   long pos = m_input->tell();
   libmwaw::DebugStream f;
@@ -1995,18 +1995,18 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   // pat2*3?, dim[pt*65536], border[pt*65536], ?, [0|10|1c], 0, block?
   if (sz < 0x40) {
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
-    return shared_ptr<MWProStructuresInternal::Block>();
+    return shared_ptr<MacWrtProStructuresInternal::Block>();
   }
 
   long endPos = pos+sz+4;
   m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
-    return shared_ptr<MWProStructuresInternal::Block>();
+    return shared_ptr<MacWrtProStructuresInternal::Block>();
   }
   m_input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 
-  shared_ptr<MWProStructuresInternal::Block> block(new MWProStructuresInternal::Block);
+  shared_ptr<MacWrtProStructuresInternal::Block> block(new MacWrtProStructuresInternal::Block);
   long val;
   f << "pat?=[" << std::hex;
   for (int i = 0; i < 2; ++i)
@@ -2072,13 +2072,13 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
   int contentType = (int) m_input->readULong(1);
   switch (contentType) {
   case 0:
-    block->m_contentType = MWProStructuresInternal::Block::TEXT;
+    block->m_contentType = MacWrtProStructuresInternal::Block::TEXT;
     break;
   case 1:
-    block->m_contentType = MWProStructuresInternal::Block::GRAPHIC;
+    block->m_contentType = MacWrtProStructuresInternal::Block::GRAPHIC;
     break;
   default:
-    MWAW_DEBUG_MSG(("MWProStructures::readBlock: find unknown block content type\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readBlock: find unknown block content type\n"));
     f << "#contentType=" << contentType << ",";
     break;
   }
@@ -2118,7 +2118,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
       }
     }
     if (isNote) {
-      block->m_contentType = MWProStructuresInternal::Block::NOTE;
+      block->m_contentType = MacWrtProStructuresInternal::Block::NOTE;
       // ok reset the border and the line color to gray
       for (int i = 0; i < 4; ++i) {
         if (i!=libmwaw::Top)
@@ -2228,7 +2228,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
         block->m_isHeader = false;
         break;
       default:
-        MWAW_DEBUG_MSG(("MWProStructures::readBlock: find unknown header/footer type\n"));
+        MWAW_DEBUG_MSG(("MacWrtProStructures::readBlock: find unknown header/footer type\n"));
         f << "#type=" << val << ",";
         break;
       }
@@ -2258,7 +2258,7 @@ shared_ptr<MWProStructuresInternal::Block> MWProStructures::readBlock()
 
 ////////////////////////////////////////////////////////////
 // read the column information zone : checkme
-bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section> &sections)
+bool MacWrtProStructures::readSections(std::vector<MacWrtProStructuresInternal::Section> &sections)
 {
   long pos = m_input->tell();
   libmwaw::DebugStream f;
@@ -2271,7 +2271,7 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
   }
   long endPos = pos+4+sz;
   if ((sz%0xd8)) {
-    MWAW_DEBUG_MSG(("MWProStructures::readSections: find an odd value for sz\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readSections: find an odd value for sz\n"));
     ascii().addPos(pos);
     ascii().addNote("Entries(Sections)#");
     m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
@@ -2285,7 +2285,7 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
   ascii().addNote(f.str().c_str());
 
   for (int n = 0; n < N; ++n) {
-    MWProStructuresInternal::Section sec;
+    MacWrtProStructuresInternal::Section sec;
     pos = m_input->tell();
     f.str("");
     sec.m_textLength = (long)m_input->readULong(4);
@@ -2306,7 +2306,7 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
       sec.m_start = sec.S_PageRight;
       break;
     default:
-      MWAW_DEBUG_MSG(("MWProStructures::readSections: find an odd value for start\n"));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::readSections: find an odd value for start\n"));
       f << "#start=" << startWay << ",";
     }
     val = m_input->readLong(2);
@@ -2328,7 +2328,7 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
     }
     int numColumns = (int) m_input->readLong(2);
     if (numColumns < 1 || numColumns > 20) {
-      MWAW_DEBUG_MSG(("MWProStructures::readSections: bad number of columns\n"));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::readSections: bad number of columns\n"));
       f << "#nCol=" << numColumns << ",";
       numColumns = 1;
     }
@@ -2376,7 +2376,7 @@ bool MWProStructures::readSections(std::vector<MWProStructuresInternal::Section>
 
 ////////////////////////////////////////////////////////////
 // read the selection zone
-bool MWProStructures::readSelection()
+bool MacWrtProStructures::readSelection()
 {
   long pos = m_input->tell();
   libmwaw::DebugStream f;
@@ -2384,7 +2384,7 @@ bool MWProStructures::readSelection()
   long endPos = pos+14;
   m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProStructures::readSelection: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readSelection: file is too short\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -2416,7 +2416,7 @@ bool MWProStructures::readSelection()
 
 ////////////////////////////////////////////////////////////
 // read a string
-bool MWProStructures::readString(MWAWInputStreamPtr input, std::string &res)
+bool MacWrtProStructures::readString(MWAWInputStreamPtr input, std::string &res)
 {
   res="";
   long pos = input->tell();
@@ -2424,13 +2424,13 @@ bool MWProStructures::readString(MWAWInputStreamPtr input, std::string &res)
   if (sz == 0) return true;
   if (sz < 0) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("MWProStructures::readString: odd value for size\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readString: odd value for size\n"));
     return false;
   }
   input->seek(pos+sz+2, librevenge::RVNG_SEEK_SET);
   if (long(input->tell())!=pos+sz+2) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("MWProStructures::readString: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readString: file is too short\n"));
     return false;
   }
   input->seek(pos+2, librevenge::RVNG_SEEK_SET);
@@ -2443,7 +2443,7 @@ bool MWProStructures::readString(MWAWInputStreamPtr input, std::string &res)
     if (i==sz-1) break;
 
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("MWProStructures::readString: find odd character in string\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readString: find odd character in string\n"));
     return false;
   }
   return true;
@@ -2451,7 +2451,7 @@ bool MWProStructures::readString(MWAWInputStreamPtr input, std::string &res)
 
 ////////////////////////////////////////////////////////////
 // read an unknown zone
-bool MWProStructures::readStructB()
+bool MacWrtProStructures::readStructB()
 {
   long pos = m_input->tell();
   libmwaw::DebugStream f;
@@ -2468,7 +2468,7 @@ bool MWProStructures::readStructB()
   long endPos = pos+N*10+6;
   m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(m_input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("MWProStructures::readZonB: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::readZonB: file is too short\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -2495,18 +2495,18 @@ bool MWProStructures::readStructB()
 
 ////////////////////////////////////////////////////////////
 // check if a block is sent
-bool MWProStructures::isSent(int blockId)
+bool MacWrtProStructures::isSent(int blockId)
 {
   if (version()==0) {
     if (blockId < 0 || blockId >= int(m_state->m_blocksList.size())) {
-      MWAW_DEBUG_MSG(("MWProStructures::send: can not find the block %d\n", blockId));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::send: can not find the block %d\n", blockId));
       return false;
     }
     return m_state->m_blocksList[(size_t)blockId]->m_send;
   }
 
   if (m_state->m_blocksMap.find(blockId) == m_state->m_blocksMap.end()) {
-    MWAW_DEBUG_MSG(("MWProStructures::isSent: can not find the block %d\n", blockId));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::isSent: can not find the block %d\n", blockId));
     return true;
   }
   return m_state->m_blocksMap.find(blockId)->second->m_send;
@@ -2514,21 +2514,21 @@ bool MWProStructures::isSent(int blockId)
 
 ////////////////////////////////////////////////////////////
 // send a block
-bool MWProStructures::send(int blockId, bool mainZone)
+bool MacWrtProStructures::send(int blockId, bool mainZone)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
-  shared_ptr<MWProStructuresInternal::Block> block;
+  shared_ptr<MacWrtProStructuresInternal::Block> block;
   if (version()==0) {
     if (blockId < 0) {
       if (-blockId > int(m_state->m_footnotesList.size())) {
-        MWAW_DEBUG_MSG(("MWProStructures::send: can not find the footnote %d\n", -blockId));
+        MWAW_DEBUG_MSG(("MacWrtProStructures::send: can not find the footnote %d\n", -blockId));
         return false;
       }
       block = m_state->m_blocksList[(size_t)m_state->m_footnotesList[size_t(-blockId-1)]];
     }
     else {
       if (blockId < 0 || blockId >= int(m_state->m_blocksList.size())) {
-        MWAW_DEBUG_MSG(("MWProStructures::send: can not find the block %d\n", blockId));
+        MWAW_DEBUG_MSG(("MacWrtProStructures::send: can not find the block %d\n", blockId));
         return false;
       }
       block = m_state->m_blocksList[(size_t)blockId];
@@ -2536,7 +2536,7 @@ bool MWProStructures::send(int blockId, bool mainZone)
   }
   else {
     if (m_state->m_blocksMap.find(blockId) == m_state->m_blocksMap.end()) {
-      MWAW_DEBUG_MSG(("MWProStructures::send: can not find the block %d\n", blockId));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::send: can not find the block %d\n", blockId));
       return false;
     }
     block = m_state->m_blocksMap.find(blockId)->second;
@@ -2558,7 +2558,7 @@ bool MWProStructures::send(int blockId, bool mainZone)
   }
   else if (block->m_type == 3) {
     if (m_state->m_tablesMap.find(blockId) == m_state->m_tablesMap.end()) {
-      MWAW_DEBUG_MSG(("MWProStructures::send: can not find table with id=%d\n", blockId));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::send: can not find table with id=%d\n", blockId));
     }
     else {
       bool needTextBox = listener && !block->m_attachment && block->m_textboxCellType == 0;
@@ -2567,7 +2567,7 @@ bool MWProStructures::send(int blockId, bool mainZone)
         m_mainParser.sendTextBoxZone(blockId, block->getPosition());
       }
       else {
-        shared_ptr<MWProStructuresInternal::Table> table =
+        shared_ptr<MacWrtProStructuresInternal::Table> table =
           m_state->m_tablesMap.find(blockId)->second;
         if (!table->sendTable(listener))
           table->sendAsText(listener);
@@ -2585,14 +2585,14 @@ bool MWProStructures::send(int blockId, bool mainZone)
     m_mainParser.sendEmptyFrameZone(block->getPosition(), extras);
   }
   else {
-    MWAW_DEBUG_MSG(("MWProStructures::send: can not send block with type=%d\n", block->m_type));
+    MWAW_DEBUG_MSG(("MacWrtProStructures::send: can not send block with type=%d\n", block->m_type));
   }
   return true;
 }
 
 ////////////////////////////////////////////////////////////
 // send the not sent data
-void MWProStructures::flushExtra()
+void MacWrtProStructures::flushExtra()
 {
   int vers = version();
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
@@ -2607,7 +2607,7 @@ void MWProStructures::flushExtra()
     if (m_state->m_blocksList[i]->m_type == 6) {
       /* Fixme: macwritepro can have one header/footer by page and one by default.
          For the moment, we only print the first one :-~ */
-      MWAW_DEBUG_MSG(("MWProStructures::flushExtra: find some header/footer\n"));
+      MWAW_DEBUG_MSG(("MacWrtProStructures::flushExtra: find some header/footer\n"));
       continue;
     }
     int id = vers == 0 ? int(i) : m_state->m_blocksList[i]->m_id;
@@ -2637,14 +2637,14 @@ void MWProStructures::flushExtra()
 
 ////////////////////////////////////////////////////////////
 // interface with the listener
-MWProStructuresListenerState::MWProStructuresListenerState(shared_ptr<MWProStructures> structures, bool mainZone)
+MacWrtProStructuresListenerState::MacWrtProStructuresListenerState(shared_ptr<MacWrtProStructures> structures, bool mainZone)
   : m_isMainZone(mainZone), m_actPage(0), m_actTab(0), m_numTab(0),
     m_section(0), m_numCols(1), m_newPageDone(false), m_structures(structures),
-    m_font(new MWProStructuresInternal::Font),
-    m_paragraph(new MWProStructuresInternal::Paragraph)
+    m_font(new MacWrtProStructuresInternal::Font),
+    m_paragraph(new MacWrtProStructuresInternal::Paragraph)
 {
   if (!m_structures) {
-    MWAW_DEBUG_MSG(("MWProStructuresListenerState::MWProStructuresListenerState can not find structures parser\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructuresListenerState::MacWrtProStructuresListenerState can not find structures parser\n"));
     return;
   }
   if (mainZone) {
@@ -2653,40 +2653,40 @@ MWProStructuresListenerState::MWProStructuresListenerState(shared_ptr<MWProStruc
   }
 }
 
-MWProStructuresListenerState::~MWProStructuresListenerState()
+MacWrtProStructuresListenerState::~MacWrtProStructuresListenerState()
 {
 }
 
-bool MWProStructuresListenerState::isSent(int blockId)
+bool MacWrtProStructuresListenerState::isSent(int blockId)
 {
   if (!m_structures) return false;
   return m_structures->isSent(blockId);
 }
 
-bool MWProStructuresListenerState::send(int blockId)
+bool MacWrtProStructuresListenerState::send(int blockId)
 {
   m_newPageDone = false;
   if (!m_structures) return false;
   return m_structures->send(blockId);
 }
 
-void MWProStructuresListenerState::insertSoftPageBreak()
+void MacWrtProStructuresListenerState::insertSoftPageBreak()
 {
   if (m_newPageDone) return;
   newPage(true);
 }
 
-bool MWProStructuresListenerState::newPage(bool softBreak)
+bool MacWrtProStructuresListenerState::newPage(bool softBreak)
 {
   if (!m_structures || !m_isMainZone) {
-    MWAW_DEBUG_MSG(("MWProStructuresListenerState::newPage: can not create a new page\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructuresListenerState::newPage: can not create a new page\n"));
     return false;
   }
 
   // first send all the floating data
   if (m_actPage == 0) {
     for (size_t i = 0; i < m_structures->m_state->m_blocksList.size(); ++i) {
-      shared_ptr<MWProStructuresInternal::Block> block = m_structures->m_state->m_blocksList[i];
+      shared_ptr<MacWrtProStructuresInternal::Block> block = m_structures->m_state->m_blocksList[i];
       if (block->m_send || block->m_attachment) continue;
       if (block->m_type != 3 && block->m_type != 4 && block->m_type != 8) continue;
       m_structures->send(block->m_id);
@@ -2700,12 +2700,12 @@ bool MWProStructuresListenerState::newPage(bool softBreak)
   return true;
 }
 
-std::vector<int> MWProStructuresListenerState::getPageBreaksPos() const
+std::vector<int> MacWrtProStructuresListenerState::getPageBreaksPos() const
 {
   std::vector<int> res;
   if (!m_structures || !m_isMainZone) return res;
   for (size_t i = 0; i < m_structures->m_state->m_blocksList.size(); ++i) {
-    shared_ptr<MWProStructuresInternal::Block> block = m_structures->m_state->m_blocksList[i];
+    shared_ptr<MacWrtProStructuresInternal::Block> block = m_structures->m_state->m_blocksList[i];
     if (block->m_type != 5) continue;
     if (block->m_textPos) res.push_back(block->m_textPos);
   }
@@ -2713,7 +2713,7 @@ std::vector<int> MWProStructuresListenerState::getPageBreaksPos() const
 }
 
 // ----------- character function ---------------------
-void MWProStructuresListenerState::sendChar(char c)
+void MacWrtProStructuresListenerState::sendChar(char c)
 {
   bool newPageDone = m_newPageDone;
   m_newPageDone = false;
@@ -2733,7 +2733,7 @@ void MWProStructuresListenerState::sendChar(char c)
       listener->insertEOL(true);
     }
     else {
-      MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendChar: Find odd char 0x7\n"));
+      MWAW_DEBUG_MSG(("MacWrtProStructuresListenerState::sendChar: Find odd char 0x7\n"));
     }
     break;
   case 0x9:
@@ -2788,7 +2788,7 @@ void MWProStructuresListenerState::sendChar(char c)
   }
 }
 
-bool MWProStructuresListenerState::resendAll()
+bool MacWrtProStructuresListenerState::resendAll()
 {
   sendParagraph(*m_paragraph);
   sendFont(*m_font);
@@ -2797,12 +2797,12 @@ bool MWProStructuresListenerState::resendAll()
 
 
 // ----------- font function ---------------------
-bool MWProStructuresListenerState::sendFont(int id)
+bool MacWrtProStructuresListenerState::sendFont(int id)
 {
   if (!m_structures) return false;
   if (!m_structures->getTextListener()) return true;
   if (id < 0 || id >= int(m_structures->m_state->m_fontsList.size())) {
-    MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendFont: can not find font %d\n", id));
+    MWAW_DEBUG_MSG(("MacWrtProStructuresListenerState::sendFont: can not find font %d\n", id));
     return false;
   }
   sendFont(m_structures->m_state->m_fontsList[(size_t)id]);
@@ -2810,7 +2810,7 @@ bool MWProStructuresListenerState::sendFont(int id)
   return true;
 }
 
-void MWProStructuresListenerState::sendFont(MWProStructuresInternal::Font const &font)
+void MacWrtProStructuresListenerState::sendFont(MacWrtProStructuresInternal::Font const &font)
 {
   if (!m_structures || !m_structures->getTextListener())
     return;
@@ -2820,16 +2820,16 @@ void MWProStructuresListenerState::sendFont(MWProStructuresInternal::Font const 
   m_font->m_font =  m_structures->getTextListener()->getFont();
 }
 
-std::string MWProStructuresListenerState::getFontDebugString(int fId)
+std::string MacWrtProStructuresListenerState::getFontDebugString(int fId)
 {
   if (!m_structures) {
-    MWAW_DEBUG_MSG(("MWProStructuresListenerState::getFontDebugString: can not find structures\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructuresListenerState::getFontDebugString: can not find structures\n"));
     return "";
   }
 
   std::stringstream s;
   if (fId < 0 || fId >= int(m_structures->m_state->m_fontsList.size())) {
-    MWAW_DEBUG_MSG(("MWProStructuresListenerState::getFontDebugString: can not find font %d\n", fId));
+    MWAW_DEBUG_MSG(("MacWrtProStructuresListenerState::getFontDebugString: can not find font %d\n", fId));
     s << "C" << fId << "(unknown##)";
     return s.str();
   }
@@ -2843,12 +2843,12 @@ std::string MWProStructuresListenerState::getFontDebugString(int fId)
 }
 
 // ----------- paragraph function ---------------------
-bool MWProStructuresListenerState::sendParagraph(int id)
+bool MacWrtProStructuresListenerState::sendParagraph(int id)
 {
   if (!m_structures) return false;
   if (!m_structures->getTextListener()) return true;
   if (id < 0 || id >= int(m_structures->m_state->m_paragraphsList.size())) {
-    MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendParagraph: can not find paragraph %d\n", id));
+    MWAW_DEBUG_MSG(("MacWrtProStructuresListenerState::sendParagraph: can not find paragraph %d\n", id));
     return false;
   }
 
@@ -2856,7 +2856,7 @@ bool MWProStructuresListenerState::sendParagraph(int id)
   return true;
 }
 
-void MWProStructuresListenerState::sendParagraph(MWProStructuresInternal::Paragraph const &para)
+void MacWrtProStructuresListenerState::sendParagraph(MacWrtProStructuresInternal::Paragraph const &para)
 {
   if (!m_structures || !m_structures->getTextListener())
     return;
@@ -2866,13 +2866,13 @@ void MWProStructuresListenerState::sendParagraph(MWProStructuresInternal::Paragr
 }
 
 
-std::string MWProStructuresListenerState::getParagraphDebugString(int pId)
+std::string MacWrtProStructuresListenerState::getParagraphDebugString(int pId)
 {
   if (!m_structures) return "";
 
   std::stringstream s;
   if (pId < 0 || pId >= int(m_structures->m_state->m_paragraphsList.size())) {
-    MWAW_DEBUG_MSG(("MWProStructuresListenerState::getParagraphDebugString: can not find paragraph %d\n", pId));
+    MWAW_DEBUG_MSG(("MacWrtProStructuresListenerState::getParagraphDebugString: can not find paragraph %d\n", pId));
     s << "C" << pId << "(unknown##)";
     return s.str();
   }
@@ -2883,20 +2883,20 @@ std::string MWProStructuresListenerState::getParagraphDebugString(int pId)
 }
 
 // ----------- section function ---------------------
-void MWProStructuresListenerState::sendSection(int nSection)
+void MacWrtProStructuresListenerState::sendSection(int nSection)
 {
 
   if (!m_structures) return;
   MWAWTextListenerPtr listener=m_structures->getTextListener();
   if (!listener) return;
   if (listener->isSectionOpened()) {
-    MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendSection: a section is already opened\n"));
+    MWAW_DEBUG_MSG(("MacWrtProStructuresListenerState::sendSection: a section is already opened\n"));
     listener->closeSection();
   }
   if (m_structures->version()==0) {
     m_numCols = m_structures->m_mainParser.numColumns();
     if (m_numCols > 10) {
-      MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendSection: num columns is to big, reset to 1\n"));
+      MWAW_DEBUG_MSG(("MacWrtProStructuresListenerState::sendSection: num columns is to big, reset to 1\n"));
       m_numCols = 1;
     }
     MWAWSection sec;
@@ -2907,10 +2907,10 @@ void MWProStructuresListenerState::sendSection(int nSection)
   }
 
   if (nSection >= int(m_structures->m_state->m_sectionsList.size())) {
-    MWAW_DEBUG_MSG(("MWProStructuresListenerState::sendSection: can not find section %d\n", nSection));
+    MWAW_DEBUG_MSG(("MacWrtProStructuresListenerState::sendSection: can not find section %d\n", nSection));
     return;
   }
-  MWProStructuresInternal::Section const &section =
+  MacWrtProStructuresInternal::Section const &section =
     m_structures->m_state->m_sectionsList[(size_t)nSection];
   if (nSection && section.m_start != section.S_Line) newPage();
 

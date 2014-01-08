@@ -59,8 +59,8 @@
 #include "MDWParser.hxx"
 #include "MORParser.hxx"
 #include "MRWParser.hxx"
-#include "MWParser.hxx"
-#include "MWProParser.hxx"
+#include "MacWrtParser.hxx"
+#include "MacWrtProParser.hxx"
 #include "MsWks3Parser.hxx"
 #include "MsWks4Parser.hxx"
 #include "MSW1Parser.hxx"
@@ -426,10 +426,10 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new MCDParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MACWRITE:
-      parser.reset(new MWParser(input, rsrcParser, header));
+      parser.reset(new MacWrtParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MACWRITEPRO:
-      parser.reset(new MWProParser(input, rsrcParser, header));
+      parser.reset(new MacWrtProParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MARINERWRITE:
       parser.reset(new MRWParser(input, rsrcParser, header));

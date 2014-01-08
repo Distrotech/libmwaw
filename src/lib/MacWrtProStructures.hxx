@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MW_PRO_STRUCTURES
-#  define MW_PRO_STRUCTURES
+#ifndef MAC_WRT_PRO_STRUCTURES
+#  define MAC_WRT_PRO_STRUCTURES
 
 #include <list>
 #include <string>
@@ -45,14 +45,14 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-class MWProParser;
+class MacWrtProParser;
 
-namespace MWProParserInternal
+namespace MacWrtProParserInternal
 {
 class SubDocument;
 }
 
-namespace MWProStructuresInternal
+namespace MacWrtProStructuresInternal
 {
 struct Block;
 struct Cell;
@@ -63,17 +63,17 @@ struct State;
 class SubDocument;
 }
 
-class MWProStructures;
+class MacWrtProStructures;
 
-/** \brief an interface to transmit the info of MWProStructures to a listener
+/** \brief an interface to transmit the info of MacWrtProStructures to a listener
  */
-class MWProStructuresListenerState
+class MacWrtProStructuresListenerState
 {
 public:
   //! the constructor
-  MWProStructuresListenerState(shared_ptr<MWProStructures> structures, bool mainZone);
+  MacWrtProStructuresListenerState(shared_ptr<MacWrtProStructures> structures, bool mainZone);
   //! the destructor
-  ~MWProStructuresListenerState();
+  ~MacWrtProStructuresListenerState();
 
   //! returns true if the block is already sent ( or does not exists)
   bool isSent(int blockId);
@@ -96,7 +96,7 @@ public:
   int numSection() const
   {
     if (!m_isMainZone) {
-      MWAW_DEBUG_MSG(("MWProStructuresListenerState::numSection: not called in main zone\n"));
+      MWAW_DEBUG_MSG(("MacWrtProStructuresListenerState::numSection: not called in main zone\n"));
       return 0;
     }
     return m_section;
@@ -118,9 +118,9 @@ protected:
   bool newPage(bool softBreak=false);
 
   //! sends the font properties to the listener
-  void sendFont(MWProStructuresInternal::Font const &font);
+  void sendFont(MacWrtProStructuresInternal::Font const &font);
   //! sends the paragraph properties to the listener
-  void sendParagraph(MWProStructuresInternal::Paragraph const &para);
+  void sendParagraph(MacWrtProStructuresInternal::Paragraph const &para);
 
   // true if this is the mainZone
   bool m_isMainZone;
@@ -137,11 +137,11 @@ protected:
   // a flag to know if a new page has just been open
   bool m_newPageDone;
   // the main structure parser
-  shared_ptr<MWProStructures> m_structures;
+  shared_ptr<MacWrtProStructures> m_structures;
   // the current font
-  shared_ptr<MWProStructuresInternal::Font> m_font;
+  shared_ptr<MacWrtProStructuresInternal::Font> m_font;
   // the current paragraph
-  shared_ptr<MWProStructuresInternal::Paragraph> m_paragraph;
+  shared_ptr<MacWrtProStructuresInternal::Paragraph> m_paragraph;
 };
 
 /** \brief the main class to read the structures part of MacWrite Pro file
@@ -149,17 +149,17 @@ protected:
  *
  *
  */
-class MWProStructures
+class MacWrtProStructures
 {
-  friend class MWProParser;
-  friend class MWProParserInternal::SubDocument;
-  friend struct MWProStructuresInternal::Cell;
-  friend class MWProStructuresListenerState;
+  friend class MacWrtProParser;
+  friend class MacWrtProParserInternal::SubDocument;
+  friend struct MacWrtProStructuresInternal::Cell;
+  friend class MacWrtProStructuresListenerState;
 public:
   //! constructor
-  MWProStructures(MWProParser &mainParser);
+  MacWrtProStructures(MacWrtProParser &mainParser);
   //! destructor
-  virtual ~MWProStructures();
+  virtual ~MacWrtProStructures();
 
   /** returns the file version.
    *
@@ -222,16 +222,16 @@ protected:
   bool readParagraphs();
 
   //! try to read a paragraph
-  bool readParagraph(MWProStructuresInternal::Paragraph &para);
+  bool readParagraph(MacWrtProStructuresInternal::Paragraph &para);
 
   //! returns the size of the block end data
   int getEndBlockSize();
 
   //! try to read a block entry
-  shared_ptr<MWProStructuresInternal::Block> readBlock();
+  shared_ptr<MacWrtProStructuresInternal::Block> readBlock();
 
   //! try to read a block entry
-  shared_ptr<MWProStructuresInternal::Block> readBlockV2(int id);
+  shared_ptr<MacWrtProStructuresInternal::Block> readBlockV2(int id);
 
   //! try to read the list of block entries
   bool readBlocksList();
@@ -243,10 +243,10 @@ protected:
   bool readFontsDef();
 
   //! try to read a font
-  bool readFont(MWProStructuresInternal::Font &font);
+  bool readFont(MacWrtProStructuresInternal::Font &font);
 
   //! try to read the section info ?
-  bool readSections(std::vector<MWProStructuresInternal::Section> &sections);
+  bool readSections(std::vector<MacWrtProStructuresInternal::Section> &sections);
 
   //! try to read a 16 bytes the zone which follow the char styles zone ( the selection?)
   bool readSelection();
@@ -302,10 +302,10 @@ protected:
   MWAWInputStreamPtr m_input;
 
   //! the main parser
-  MWProParser &m_mainParser;
+  MacWrtProParser &m_mainParser;
 
   //! the state
-  shared_ptr<MWProStructuresInternal::State> m_state;
+  shared_ptr<MacWrtProStructuresInternal::State> m_state;
 
   //! the debug file
   libmwaw::DebugFile m_asciiFile;

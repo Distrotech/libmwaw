@@ -35,8 +35,8 @@
  * basic structure used to code zone when converting FullWrite document
  *
  */
-#ifndef FP_MWAW_STRUCT
-#  define FP_MWAW_STRUCT
+#ifndef FULL_WRT_STRUCT
+#  define FULL_WRT_STRUCT
 
 #include <librevenge/librevenge.h>
 

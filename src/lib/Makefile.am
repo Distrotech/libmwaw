@@ -88,6 +88,12 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	LWParser.hxx			\
 	LWText.cxx			\
 	LWText.hxx			\
+	MacWrtParser.cxx		\
+	MacWrtParser.hxx		\
+	MacWrtProParser.cxx		\
+	MacWrtProParser.hxx		\
+	MacWrtProStructures.cxx		\
+	MacWrtProStructures.hxx		\
 	MsWksGraph.cxx			\
 	MsWksGraph.hxx			\
 	MsWksParser.cxx			\
@@ -189,12 +195,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWTable.hxx			\
 	MWAWTextListener.cxx		\
 	MWAWTextListener.hxx		\
-	MWParser.cxx			\
-	MWParser.hxx			\
-	MWProParser.cxx			\
-	MWProParser.hxx			\
-	MWProStructures.cxx		\
-	MWProStructures.hxx		\
 	NSGraph.cxx			\
 	NSGraph.hxx			\
 	NSParser.cxx			\

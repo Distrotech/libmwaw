@@ -486,7 +486,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     }
   }
   if (val[0] == 3 || val[0] == 6) {
-    // version will be print by MWParser::check
+    // version will be print by MacWrtParser::check
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACWRITE, val[0]));
   }
   if (val[0] == 0x110) {

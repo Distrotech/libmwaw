@@ -438,15 +438,15 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MWParser.cxx">
+    <ClCompile Include="..\..\src\lib\MacWrtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MWProParser.cxx">
+    <ClCompile Include="..\..\src\lib\MacWrtProParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MWProStructures.cxx">
+    <ClCompile Include="..\..\src\lib\MacWrtProStructures.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -585,9 +585,9 @@
     <ClInclude Include="..\..\src\lib\MWAWSubDocument.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWTable.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWTextListener.hxx" />
-    <ClInclude Include="..\..\src\lib\MWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MWProParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MWProStructures.hxx" />
+    <ClInclude Include="..\..\src\lib\MacWrtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MacWrtProParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MacWrtProStructures.hxx" />
     <ClInclude Include="..\..\src\lib\NSGraph.hxx" />
     <ClInclude Include="..\..\src\lib\NSParser.hxx" />
     <ClInclude Include="..\..\src\lib\NSStruct.hxx" />

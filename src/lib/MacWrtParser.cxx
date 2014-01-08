@@ -51,10 +51,10 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MWParser.hxx"
+#include "MacWrtParser.hxx"
 
-/** Internal: the structures of a MWParser */
-namespace MWParserInternal
+/** Internal: the structures of a MacWrtParser */
+namespace MacWrtParserInternal
 {
 
 //! Document header
@@ -256,7 +256,7 @@ std::ostream &operator<<(std::ostream &o, WindowsInfo const &w)
 }
 
 ////////////////////////////////////////
-//! Internal: the state of a MWParser
+//! Internal: the state of a MacWrtParser
 struct State {
   //! constructor
   State() : m_compressCorr(" etnroaisdlhcfp"), m_actPage(0), m_numPages(0), m_fileHeader(),
@@ -280,11 +280,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MWParser
+//! Internal: the subdocument of a MacWrtParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(MWParser &pars, MWAWInputStreamPtr input, int zoneId) :
+  SubDocument(MacWrtParser &pars, MWAWInputStreamPtr input, int zoneId) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
 
   //! destructor
@@ -309,18 +309,18 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("MWParserInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MacWrtParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   if (m_id != 1 && m_id != 2) {
-    MWAW_DEBUG_MSG(("MWParserInternal::SubDocument::parse: unknown zone\n"));
+    MWAW_DEBUG_MSG(("MacWrtParserInternal::SubDocument::parse: unknown zone\n"));
     return;
   }
 
   assert(m_parser);
 
   long pos = m_input->tell();
-  reinterpret_cast<MWParser *>(m_parser)->sendWindow(m_id);
+  reinterpret_cast<MacWrtParser *>(m_parser)->sendWindow(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -338,22 +338,22 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MWParser::MWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+MacWrtParser::MacWrtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
 
-MWParser::~MWParser()
+MacWrtParser::~MacWrtParser()
 {
 }
 
-void MWParser::init()
+void MacWrtParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new MWParserInternal::State);
+  m_state.reset(new MacWrtParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
@@ -362,7 +362,7 @@ void MWParser::init()
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void MWParser::newPage(int number)
+void MacWrtParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -378,7 +378,7 @@ void MWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MWParser::parse(librevenge::RVNGTextInterface *docInterface)
+void MacWrtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -394,7 +394,7 @@ void MWParser::parse(librevenge::RVNGTextInterface *docInterface)
       std::string corrString("");
       if (corrEntry.valid() && getRSRCParser()->parseSTR(corrEntry, corrString)) {
         if (corrString.length() != 15) {
-          MWAW_DEBUG_MSG(("MWParser::parse: resource correspondance string seems bad\n"));
+          MWAW_DEBUG_MSG(("MacWrtParser::parse: resource correspondance string seems bad\n"));
         }
         else
           m_state->m_compressCorr = corrString;
@@ -409,7 +409,7 @@ void MWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("MWParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -420,11 +420,11 @@ void MWParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void MacWrtParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("MWParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -441,7 +441,7 @@ void MWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
       continue;
     }
     MWAWHeaderFooter hF((i==1) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    hF.m_subDocument.reset(new MWParserInternal::SubDocument(*this, getInput(), i));
+    hF.m_subDocument.reset(new MacWrtParserInternal::SubDocument(*this, getInput(), i));
     ps.setHeaderFooter(hF);
   }
 
@@ -466,7 +466,7 @@ void MWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool MWParser::createZones()
+bool MacWrtParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -485,7 +485,7 @@ bool MWParser::createZones()
     if (i == 2) return false; // problem on the main zone, better quit
 
     // reset state
-    m_state->m_windows[2-i] = MWParserInternal::WindowsInfo();
+    m_state->m_windows[2-i] = MacWrtParserInternal::WindowsInfo();
     int const windowsSize = 46;
 
     // and try to continue
@@ -498,7 +498,7 @@ bool MWParser::createZones()
 
   // ok, we can find calculate the number of pages and the header and the footer height
   for (int i = 1; i < 3; i++) {
-    MWParserInternal::WindowsInfo const &info = m_state->m_windows[i];
+    MacWrtParserInternal::WindowsInfo const &info = m_state->m_windows[i];
     if (info.isEmpty()) // avoid reserving space for empty header/footer
       continue;
     int height = 0;
@@ -508,7 +508,7 @@ bool MWParser::createZones()
     else m_state->m_footerHeight = height;
   }
   int numPages = 0;
-  MWParserInternal::WindowsInfo const &mainInfo = m_state->m_windows[0];
+  MacWrtParserInternal::WindowsInfo const &mainInfo = m_state->m_windows[0];
   for (size_t i=0; i < mainInfo.m_informations.size(); i++) {
     if (mainInfo.m_informations[i].m_pos.page() > numPages)
       numPages = mainInfo.m_informations[i].m_pos.page();
@@ -518,7 +518,7 @@ bool MWParser::createZones()
   return true;
 }
 
-bool MWParser::createZonesV3()
+bool MacWrtParser::createZonesV3()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -537,14 +537,14 @@ bool MWParser::createZonesV3()
     if (i == 2) return false; // problem on the main zone, better quit
 
     // reset state
-    m_state->m_windows[2-i] = MWParserInternal::WindowsInfo();
+    m_state->m_windows[2-i] = MacWrtParserInternal::WindowsInfo();
     int const windowsSize = 34;
 
     // and try to continue
     input->seek(pos+(i+1)*windowsSize, librevenge::RVNG_SEEK_SET);
   }
 
-  MWParserInternal::FileHeader const &header = m_state->m_fileHeader;
+  MacWrtParserInternal::FileHeader const &header = m_state->m_fileHeader;
 
   for (int i = 0; i < 3; i++) {
     if (!readInformationsV3
@@ -552,7 +552,7 @@ bool MWParser::createZonesV3()
       return false;
   }
   if (int(input->tell()) != header.m_dataPos) {
-    MWAW_DEBUG_MSG(("MWParser::createZonesV3: pb with dataPos\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::createZonesV3: pb with dataPos\n"));
     ascii().addPos(input->tell());
     ascii().addNote("###FileHeader");
 
@@ -567,14 +567,14 @@ bool MWParser::createZonesV3()
   }
   for (int z = 0; z < 3; z++) {
     int numParag = header.m_numParagraphs[z];
-    MWParserInternal::WindowsInfo &wInfo = m_state->m_windows[z];
+    MacWrtParserInternal::WindowsInfo &wInfo = m_state->m_windows[z];
     for (int p = 0; p < numParag; p++) {
       pos = input->tell();
       int type = (int) input->readLong(2);
       int sz = (int) input->readLong(2);
       input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
       if (sz < 0 || long(input->tell()) !=  pos+4+sz) {
-        MWAW_DEBUG_MSG(("MWParser::createZonesV3: pb with dataZone\n"));
+        MWAW_DEBUG_MSG(("MacWrtParser::createZonesV3: pb with dataZone\n"));
         return (p != 0);
       }
       MWAWEntry entry;
@@ -583,25 +583,25 @@ bool MWParser::createZonesV3()
       if (int(wInfo.m_informations.size()) <= p)
         continue;
       wInfo.m_informations[(size_t)p].m_data = entry;
-      MWParserInternal::Information::Type newType =
-        MWParserInternal::Information::UNKNOWN;
+      MacWrtParserInternal::Information::Type newType =
+        MacWrtParserInternal::Information::UNKNOWN;
 
       switch ((type & 0x7)) {
       case 0:
-        newType=MWParserInternal::Information::RULER;
+        newType=MacWrtParserInternal::Information::RULER;
         break;
       case 1:
-        newType=MWParserInternal::Information::TEXT;
+        newType=MacWrtParserInternal::Information::TEXT;
         break;
       case 2:
-        newType=MWParserInternal::Information::PAGEBREAK;
+        newType=MacWrtParserInternal::Information::PAGEBREAK;
         break;
       default:
         break;
       }
       if (newType != wInfo.m_informations[(size_t)p].m_type) {
-        MWAW_DEBUG_MSG(("MWParser::createZonesV3: types are inconstant\n"));
-        if (newType != MWParserInternal::Information::UNKNOWN)
+        MWAW_DEBUG_MSG(("MacWrtParser::createZonesV3: types are inconstant\n"));
+        if (newType != MacWrtParserInternal::Information::UNKNOWN)
           wInfo.m_informations[(size_t)p].m_type = newType;
       }
     }
@@ -612,7 +612,7 @@ bool MWParser::createZonesV3()
   }
 
   int numPages = 0;
-  MWParserInternal::WindowsInfo const &mainInfo = m_state->m_windows[0];
+  MacWrtParserInternal::WindowsInfo const &mainInfo = m_state->m_windows[0];
   for (size_t i=0; i < mainInfo.m_informations.size(); i++) {
     if (mainInfo.m_informations[i].m_pos.page() > numPages)
       numPages = mainInfo.m_informations[i].m_pos.page();
@@ -621,14 +621,14 @@ bool MWParser::createZonesV3()
   return true;
 }
 
-bool MWParser::sendWindow(int zone)
+bool MacWrtParser::sendWindow(int zone)
 {
   if (zone < 0 || zone >= 3) {
-    MWAW_DEBUG_MSG(("MWParser::sendZone: invalid zone %d\n", zone));
+    MWAW_DEBUG_MSG(("MacWrtParser::sendZone: invalid zone %d\n", zone));
     return false;
   }
 
-  MWParserInternal::WindowsInfo const &info = m_state->m_windows[zone];
+  MacWrtParserInternal::WindowsInfo const &info = m_state->m_windows[zone];
   size_t numInfo = info.m_informations.size();
   int numPara = int(info.m_firstParagLine.size());
 
@@ -638,7 +638,7 @@ bool MWParser::sendWindow(int zone)
     if (zone == 0)
       newPage(info.m_informations[i].m_pos.page()+1);
     switch (info.m_informations[i].m_type) {
-    case MWParserInternal::Information::TEXT:
+    case MacWrtParserInternal::Information::TEXT:
       if (!zone || info.m_informations[i].m_data.length() != 10) {
         std::vector<int> lineHeight;
         if (int(i) < numPara) {
@@ -650,18 +650,18 @@ bool MWParser::sendWindow(int zone)
         readText(info.m_informations[i], lineHeight);
       }
       break;
-    case MWParserInternal::Information::RULER:
+    case MacWrtParserInternal::Information::RULER:
       readParagraph(info.m_informations[i]);
       break;
-    case MWParserInternal::Information::GRAPHIC:
+    case MacWrtParserInternal::Information::GRAPHIC:
       readGraphic(info.m_informations[i]);
       break;
-    case MWParserInternal::Information::PAGEBREAK:
+    case MacWrtParserInternal::Information::PAGEBREAK:
       readPageBreak(info.m_informations[i]);
       if (zone == 0 && version() <= 3)
         newPage(info.m_informations[i].m_pos.page()+2);
       break;
-    case MWParserInternal::Information::UNKNOWN:
+    case MacWrtParserInternal::Information::UNKNOWN:
     default:
       break;
     }
@@ -687,10 +687,10 @@ bool MWParser::sendWindow(int zone)
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
+bool MacWrtParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
-  *m_state = MWParserInternal::State();
-  MWParserInternal::FileHeader fHeader = m_state->m_fileHeader;
+  *m_state = MacWrtParserInternal::State();
+  MacWrtParserInternal::FileHeader fHeader = m_state->m_fileHeader;
 
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork())
@@ -700,7 +700,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   int headerSize=40;
   input->seek(headerSize,librevenge::RVNG_SEEK_SET);
   if (int(input->tell()) != headerSize) {
-    MWAW_DEBUG_MSG(("MWParser::checkHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::checkHeader: file is too short\n"));
     return false;
   }
   input->seek(0,librevenge::RVNG_SEEK_SET);
@@ -727,7 +727,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
     vName="v4.5-5.01";
     break;
   default:
-    MWAW_DEBUG_MSG(("MWParser::checkHeader: unknown version\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::checkHeader: unknown version\n"));
     return false;
   }
   if (!vName.length()) {
@@ -745,7 +745,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
     int numParag = (int) input->readLong(2);
     fHeader.m_numParagraphs[i] = numParag;
     if (numParag < 0) {
-      MWAW_DEBUG_MSG(("MWParser::checkHeader: numParagraphs is negative : %d\n",
+      MWAW_DEBUG_MSG(("MacWrtParser::checkHeader: numParagraphs is negative : %d\n",
                       numParag));
       return false;
     }
@@ -796,7 +796,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool MWParser::readPrintInfo()
+bool MacWrtParser::readPrintInfo()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -838,7 +838,7 @@ bool MWParser::readPrintInfo()
   ascii().addNote(f.str().c_str());
   input->seek(pos+0x78, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
-    MWAW_DEBUG_MSG(("MWParser::readPrintInfo: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readPrintInfo: file is too short\n"));
     return false;
   }
   ascii().addPos(input->tell());
@@ -849,7 +849,7 @@ bool MWParser::readPrintInfo()
 ////////////////////////////////////////////////////////////
 // read the windows info
 ////////////////////////////////////////////////////////////
-bool MWParser::readWindowsInfo(int wh)
+bool MacWrtParser::readWindowsInfo(int wh)
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -857,7 +857,7 @@ bool MWParser::readWindowsInfo(int wh)
 
   input->seek(pos+windowsSize, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) !=pos+windowsSize) {
-    MWAW_DEBUG_MSG(("MWParser::readWindowsInfo: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readWindowsInfo: file is too short\n"));
     return false;
   }
 
@@ -874,12 +874,12 @@ bool MWParser::readWindowsInfo(int wh)
   case 2:
     break;
   default:
-    MWAW_DEBUG_MSG(("MWParser::readWindowsInfo: called with bad which=%d\n",wh));
+    MWAW_DEBUG_MSG(("MacWrtParser::readWindowsInfo: called with bad which=%d\n",wh));
     return false;
   }
 
   int which = 2-wh;
-  MWParserInternal::WindowsInfo &info = m_state->m_windows[which];
+  MacWrtParserInternal::WindowsInfo &info = m_state->m_windows[which];
   f << ": ";
 
   MWAWEntry informations;
@@ -959,7 +959,7 @@ bool MWParser::readWindowsInfo(int wh)
 ////////////////////////////////////////////////////////////
 // read the lines height
 ////////////////////////////////////////////////////////////
-bool MWParser::readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstParagLine, std::vector<int> &linesHeight)
+bool MacWrtParser::readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstParagLine, std::vector<int> &linesHeight)
 {
   firstParagLine.resize(0);
   linesHeight.resize(0);
@@ -970,7 +970,7 @@ bool MWParser::readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstPa
 
   input->seek(entry.end()-1, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != entry.end()-1) {
-    MWAW_DEBUG_MSG(("MWParser::readLinesHeight: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readLinesHeight: file is too short\n"));
     return false;
   }
 
@@ -983,7 +983,7 @@ bool MWParser::readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstPa
     pos = input->tell();
     int sz = (int) input->readULong(2);
     if (pos+sz+2 > endPos) {
-      MWAW_DEBUG_MSG(("MWParser::readLinesHeight: find odd line\n"));
+      MWAW_DEBUG_MSG(("MacWrtParser::readLinesHeight: find odd line\n"));
       return false;
     }
 
@@ -997,7 +997,7 @@ bool MWParser::readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstPa
       if (val & 0x80) {
         val &= 0x7f;
         if (!heightOk || val==0) {
-          MWAW_DEBUG_MSG(("MWParser::readLinesHeight: find factor without height \n"));
+          MWAW_DEBUG_MSG(("MacWrtParser::readLinesHeight: find factor without height \n"));
           return false;
         }
 
@@ -1030,7 +1030,7 @@ bool MWParser::readLinesHeight(MWAWEntry const &entry, std::vector<int> &firstPa
 ////////////////////////////////////////////////////////////
 // read the entries
 ////////////////////////////////////////////////////////////
-bool MWParser::readInformationsV3(int numEntries, std::vector<MWParserInternal::Information> &informations)
+bool MacWrtParser::readInformationsV3(int numEntries, std::vector<MacWrtParserInternal::Information> &informations)
 {
   informations.resize(0);
 
@@ -1043,19 +1043,19 @@ bool MWParser::readInformationsV3(int numEntries, std::vector<MWParserInternal::
   libmwaw::DebugStream f;
   for (int i = 0; i < numEntries; i++) {
     pos = input->tell();
-    MWParserInternal::Information info;
+    MacWrtParserInternal::Information info;
     f.str("");
     f << "Entries(Information)[" << i+1 << "]:";
     int height = (int) input->readLong(2);
     info.m_height = height;
     if (info.m_height < 0) {
       info.m_height = 0;
-      info.m_type = MWParserInternal::Information::PAGEBREAK;
+      info.m_type = MacWrtParserInternal::Information::PAGEBREAK;
     }
     else if (info.m_height > 0)
-      info.m_type = MWParserInternal::Information::TEXT;
+      info.m_type = MacWrtParserInternal::Information::TEXT;
     else
-      info.m_type = MWParserInternal::Information::RULER;
+      info.m_type = MacWrtParserInternal::Information::RULER;
 
     int y = (int) input->readLong(2);
     info.m_pos=MWAWPosition(Vec2f(0,float(y)), Vec2f(0, float(height)), librevenge::RVNG_POINT);
@@ -1077,7 +1077,7 @@ bool MWParser::readInformationsV3(int numEntries, std::vector<MWParserInternal::
 ////////////////////////////////////////////////////////////
 // read the entries
 ////////////////////////////////////////////////////////////
-bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInternal::Information> &informations)
+bool MacWrtParser::readInformations(MWAWEntry const &entry, std::vector<MacWrtParserInternal::Information> &informations)
 {
   informations.resize(0);
 
@@ -1087,13 +1087,13 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
 
   input->seek(entry.end()-1, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != entry.end()-1) {
-    MWAW_DEBUG_MSG(("MWParser::readInformations: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readInformations: file is too short\n"));
     return false;
   }
 
   long pos = entry.begin(), endPos = entry.end();
   if ((endPos-pos)%16) {
-    MWAW_DEBUG_MSG(("MWParser::readInformations: entry size is odd\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readInformations: entry size is odd\n"));
     return false;
   }
   int numEntries = int((endPos-pos)/16);
@@ -1105,16 +1105,16 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
 
     f.str("");
     f << "Entries(Information)[" << entry.id() << "-" << i+1 << "]:";
-    MWParserInternal::Information info;
+    MacWrtParserInternal::Information info;
     int height = (int) input->readLong(2);
     if (height < 0) {
-      info.m_type = MWParserInternal::Information::GRAPHIC;
+      info.m_type = MacWrtParserInternal::Information::GRAPHIC;
       height *= -1;
     }
     else if (height == 0)
-      info.m_type = MWParserInternal::Information::RULER;
+      info.m_type = MacWrtParserInternal::Information::RULER;
     else
-      info.m_type = MWParserInternal::Information::TEXT;
+      info.m_type = MacWrtParserInternal::Information::TEXT;
     info.m_height = height;
 
     int y = (int) input->readLong(2);
@@ -1185,7 +1185,7 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
       fontSize=14;
       break;
     default:
-      MWAW_DEBUG_MSG(("MWParser::readInformations: unknown size=7\n"));
+      MWAW_DEBUG_MSG(("MacWrtParser::readInformations: unknown size=7\n"));
     }
     if (fontSize) info.m_font.setSize(float(fontSize));
     if ((paragFormat >> 11)&0x1F) info.m_font.setId((paragFormat >> 11)&0x1F);
@@ -1209,11 +1209,11 @@ bool MWParser::readInformations(MWAWEntry const &entry, std::vector<MWParserInte
 ////////////////////////////////////////////////////////////
 // read a text
 ////////////////////////////////////////////////////////////
-bool MWParser::readText(MWParserInternal::Information const &info,
-                        std::vector<int> const &lineHeight)
+bool MacWrtParser::readText(MacWrtParserInternal::Information const &info,
+                            std::vector<int> const &lineHeight)
 {
   if (!getTextListener()) {
-    MWAW_DEBUG_MSG(("MWParser::readText: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readText: can not find the listener\n"));
     return false;
   }
   MWAWEntry const &entry = info.m_data;
@@ -1222,7 +1222,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
   MWAWInputStreamPtr input = getInput();
   input->seek(entry.end()-1, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != entry.end()-1) {
-    MWAW_DEBUG_MSG(("MWParser::readText: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readText: file is too short\n"));
     return false;
   }
 
@@ -1236,7 +1236,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
   std::string text("");
   if (!info.m_compressed) {
     if (numChar+2 >= entry.length()) {
-      MWAW_DEBUG_MSG(("MWParser::readText: text is too long\n"));
+      MWAW_DEBUG_MSG(("MacWrtParser::readText: text is too long\n"));
       return false;
     }
     for (int i = 0; i < numChar; i++)
@@ -1254,7 +1254,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
         int actVal;
         if (!actualCharSet) {
           if (long(input->tell()) >= entry.end()) {
-            MWAW_DEBUG_MSG(("MWParser::readText: text is too long\n"));
+            MWAW_DEBUG_MSG(("MacWrtParser::readText: text is too long\n"));
             return false;
           }
           actualChar = (int) input->readULong(1);
@@ -1286,7 +1286,7 @@ bool MWParser::readText(MWParserInternal::Information const &info,
 
   int formatSize = (int) input->readULong(2);
   if ((formatSize%6)!=0 || actPos+2+formatSize > entry.end()) {
-    MWAW_DEBUG_MSG(("MWParser::readText: format is too long\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readText: format is too long\n"));
     return false;
   }
   int numFormat = formatSize/6;
@@ -1383,12 +1383,12 @@ bool MWParser::readText(MWParserInternal::Information const &info,
 ////////////////////////////////////////////////////////////
 // read a paragraph
 ////////////////////////////////////////////////////////////
-bool MWParser::readParagraph(MWParserInternal::Information const &info)
+bool MacWrtParser::readParagraph(MacWrtParserInternal::Information const &info)
 {
   MWAWEntry const &entry = info.m_data;
   if (!entry.valid()) return false;
   if (entry.length() != 34) {
-    MWAW_DEBUG_MSG(("MWParser::readParagraph: size is odd\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readParagraph: size is odd\n"));
     return false;
   }
 
@@ -1397,7 +1397,7 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
 
   input->seek(entry.end()-1, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != entry.end()-1) {
-    MWAW_DEBUG_MSG(("MWParser::readParagraph: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readParagraph: file is too short\n"));
     return false;
   }
 
@@ -1437,7 +1437,7 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
     parag.setInterline(12, librevenge::RVNG_POINT);
   else if (highspacing) {
     f << "##highSpacing=" << std::hex << highspacing << std::dec << ",";
-    MWAW_DEBUG_MSG(("MWParser::readParagraph: high spacing bit set=%d\n", highspacing));
+    MWAW_DEBUG_MSG(("MacWrtParser::readParagraph: high spacing bit set=%d\n", highspacing));
   }
   int spacing = (int) input->readLong(1);
   if (spacing < 0)
@@ -1474,12 +1474,12 @@ bool MWParser::readParagraph(MWParserInternal::Information const &info)
 ////////////////////////////////////////////////////////////
 // read the page break
 ////////////////////////////////////////////////////////////
-bool MWParser::readPageBreak(MWParserInternal::Information const &info)
+bool MacWrtParser::readPageBreak(MacWrtParserInternal::Information const &info)
 {
   MWAWEntry const &entry = info.m_data;
   if (!entry.valid()) return false;
   if (entry.length() != 21) {
-    MWAW_DEBUG_MSG(("MWParser::readPageBreak: size is odd\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readPageBreak: size is odd\n"));
     return false;
   }
 
@@ -1488,7 +1488,7 @@ bool MWParser::readPageBreak(MWParserInternal::Information const &info)
 
   input->seek(entry.end()-1, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != entry.end()-1) {
-    MWAW_DEBUG_MSG(("MWParser::readPageBreak: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readPageBreak: file is too short\n"));
     return false;
   }
 
@@ -1522,13 +1522,13 @@ bool MWParser::readPageBreak(MWParserInternal::Information const &info)
 ////////////////////////////////////////////////////////////
 // read a graphic
 ////////////////////////////////////////////////////////////
-bool MWParser::readGraphic(MWParserInternal::Information const &info)
+bool MacWrtParser::readGraphic(MacWrtParserInternal::Information const &info)
 {
   MWAWEntry const &entry = info.m_data;
   if (!entry.valid()) return false;
 
   if (entry.length() < 12) {
-    MWAW_DEBUG_MSG(("MWParser::readGraphic: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readGraphic: file is too short\n"));
     return false;
   }
 
@@ -1536,7 +1536,7 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
 
   input->seek(entry.end()-1, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != entry.end()-1) {
-    MWAW_DEBUG_MSG(("MWParser::readGraphic: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readGraphic: file is too short\n"));
     return false;
   }
   long pos = entry.begin();
@@ -1546,7 +1546,7 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
   for (int i = 0; i < 4; i++)
     dim[i] = (int) input->readLong(2);
   if (dim[2] < dim[0] || dim[3] < dim[1]) {
-    MWAW_DEBUG_MSG(("MWParser::readGraphic: bdbox is bad\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readGraphic: bdbox is bad\n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -1555,7 +1555,7 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
   Box2f box;
   MWAWPict::ReadResult res = MWAWPictData::check(input, int(entry.length()-8), box);
   if (res == MWAWPict::MWAW_R_BAD) {
-    MWAW_DEBUG_MSG(("MWParser::readGraphic: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::readGraphic: can not find the picture\n"));
     return false;
   }
 
@@ -1598,7 +1598,7 @@ bool MWParser::readGraphic(MWParserInternal::Information const &info)
   return true;
 }
 
-bool MWParser::isMagicPic(librevenge::RVNGBinaryData const &dt)
+bool MacWrtParser::isMagicPic(librevenge::RVNGBinaryData const &dt)
 {
   if (dt.size() != 526)
     return false;
@@ -1613,7 +1613,7 @@ bool MWParser::isMagicPic(librevenge::RVNGBinaryData const &dt)
 ////////////////////////////////////////////////////////////
 // read the free list
 ////////////////////////////////////////////////////////////
-bool MWParser::checkFreeList()
+bool MacWrtParser::checkFreeList()
 {
   if (version() <= 3)
     return true;
@@ -1621,7 +1621,7 @@ bool MWParser::checkFreeList()
   long pos = m_state->m_fileHeader.m_freeListPos;
   input->seek(pos+8, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != pos+8) {
-    MWAW_DEBUG_MSG(("MWParser::checkFreeList: list is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtParser::checkFreeList: list is too short\n"));
     return false;
   }
   input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1634,7 +1634,7 @@ bool MWParser::checkFreeList()
     long sz = (long) input->readULong(4);
 
     if (long(input->tell()) != pos+8) {
-      MWAW_DEBUG_MSG(("MWParser::checkFreeList: list is too short\n"));
+      MWAW_DEBUG_MSG(("MacWrtParser::checkFreeList: list is too short\n"));
       return false;
     }
 
@@ -1647,7 +1647,7 @@ bool MWParser::checkFreeList()
 
     input->seek(freePos+sz, librevenge::RVNG_SEEK_SET);
     if (long(input->tell()) != freePos+sz) {
-      MWAW_DEBUG_MSG(("MWParser::checkFreeList: bad free block\n"));
+      MWAW_DEBUG_MSG(("MacWrtParser::checkFreeList: bad free block\n"));
       return false;
     }
 

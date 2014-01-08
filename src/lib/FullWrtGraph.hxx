@@ -35,8 +35,8 @@
  * Parser to FullWrite Text document ( graphic part )
  *
  */
-#ifndef FullWrt_GRAPH
-#  define FullWrt_GRAPH
+#ifndef FULL_WRT_GRAPH
+#  define FULL_WRT_GRAPH
 
 #include <string>
 #include <vector>

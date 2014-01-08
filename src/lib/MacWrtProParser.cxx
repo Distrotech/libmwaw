@@ -48,15 +48,15 @@
 #include "MWAWPrinter.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MWProStructures.hxx"
+#include "MacWrtProStructures.hxx"
 
-#include "MWProParser.hxx"
+#include "MacWrtProParser.hxx"
 
 // set this flag to true to create an ascii file of the original
 #define DEBUG_RECONSTRUCT 0
 
-/** Internal: the structures of a MWProParser */
-namespace MWProParserInternal
+/** Internal: the structures of a MacWrtProParser */
+namespace MacWrtProParserInternal
 {
 ////////////////////////////////////////
 //! Internal: a struct used to store a zone
@@ -209,7 +209,7 @@ struct TextZone {
 
 
 ////////////////////////////////////////
-//! Internal: the state of a MWProParser
+//! Internal: the state of a MacWrtProParser
 struct State {
   //! constructor
   State() : m_blocksMap(), m_dataMap(), m_textMap(),
@@ -238,11 +238,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MWProParser
+//! Internal: the subdocument of a MacWrtProParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(MWProParser &pars, MWAWInputStreamPtr input, int zoneId) :
+  SubDocument(MacWrtProParser &pars, MWAWInputStreamPtr input, int zoneId) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
 
   //! destructor
@@ -285,7 +285,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_parser);
 
   long pos = m_input->tell();
-  MWProParser *parser = reinterpret_cast<MWProParser *>(m_parser);
+  MacWrtProParser *parser = reinterpret_cast<MacWrtProParser *>(m_parser);
   if (parser->m_structures.get())
     parser->m_structures->send(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -305,23 +305,23 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MWProParser::MWProParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+MacWrtProParser::MacWrtProParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_structures()
 {
   init();
 }
 
-MWProParser::~MWProParser()
+MacWrtProParser::~MacWrtProParser()
 {
 }
 
-void MWProParser::init()
+void MacWrtProParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new MWProParserInternal::State);
-  m_structures.reset(new MWProStructures(*this));
+  m_state.reset(new MacWrtProParserInternal::State);
+  m_structures.reset(new MacWrtProStructures(*this));
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
@@ -330,7 +330,7 @@ void MWProParser::init()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-int MWProParser::numColumns() const
+int MacWrtProParser::numColumns() const
 {
   if (m_state->m_col <= 1) return 1;
   return m_state->m_col;
@@ -339,11 +339,11 @@ int MWProParser::numColumns() const
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void MWProParser::newPage(int number, bool softBreak)
+void MacWrtProParser::newPage(int number, bool softBreak)
 {
   if (number <= m_state->m_actPage) return;
   if (number > m_state->m_numPages) {
-    MWAW_DEBUG_MSG(("MWProParser::newPage: can not create new page\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::newPage: can not create new page\n"));
     return;
   }
 
@@ -358,7 +358,7 @@ void MWProParser::newPage(int number, bool softBreak)
   }
 }
 
-std::vector<int> const &MWProParser::getBlocksCalledByToken() const
+std::vector<int> const &MacWrtProParser::getBlocksCalledByToken() const
 {
   return m_state->m_blocksCallByTokens;
 }
@@ -367,7 +367,7 @@ std::vector<int> const &MWProParser::getBlocksCalledByToken() const
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MWProParser::parse(librevenge::RVNGTextInterface *docInterface)
+void MacWrtProParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -408,7 +408,7 @@ void MWProParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("MWProParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -419,11 +419,11 @@ void MWProParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // returns a data zone which corresponds to a zone id
 ////////////////////////////////////////////////////////////
-bool MWProParser::getZoneData(librevenge::RVNGBinaryData &data, int blockId)
+bool MacWrtProParser::getZoneData(librevenge::RVNGBinaryData &data, int blockId)
 {
   data.clear();
   if (blockId < 1) {
-    MWAW_DEBUG_MSG(("MWProParser::getZoneData: block %d is invalid\n", blockId));
+    MWAW_DEBUG_MSG(("MacWrtProParser::getZoneData: block %d is invalid\n", blockId));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
@@ -436,7 +436,7 @@ bool MWProParser::getZoneData(librevenge::RVNGBinaryData &data, int blockId)
     bool ok = true;
     for (long i=first; i<= last; i++) {
       if (m_state->m_blocksMap.find((int)i) != m_state->m_blocksMap.end()) {
-        MWAW_DEBUG_MSG(("MWProParser::getZoneData: block %ld already seems\n", i));
+        MWAW_DEBUG_MSG(("MacWrtProParser::getZoneData: block %ld already seems\n", i));
         ok = false;
         break;
       }
@@ -455,7 +455,7 @@ bool MWProParser::getZoneData(librevenge::RVNGBinaryData &data, int blockId)
     ascii().skipZone(first*0x100, (last+1)*0x100-1);
 
     if (long(read) != limit-pos) {
-      MWAW_DEBUG_MSG(("MWProParser::getZoneData: can not read all data\n"));
+      MWAW_DEBUG_MSG(("MacWrtProParser::getZoneData: can not read all data\n"));
       break;
     }
     if (limit < endPos)
@@ -474,7 +474,7 @@ bool MWProParser::getZoneData(librevenge::RVNGBinaryData &data, int blockId)
     if (first != act+1) {
       input->seek(first*0x100, librevenge::RVNG_SEEK_SET);
       if (long(input->tell()) != first*0x100) {
-        MWAW_DEBUG_MSG(("MWProParser::getZoneData: can not go to %ld block\n", first));
+        MWAW_DEBUG_MSG(("MacWrtProParser::getZoneData: can not go to %ld block\n", first));
         break;
       }
     }
@@ -486,7 +486,7 @@ bool MWProParser::getZoneData(librevenge::RVNGBinaryData &data, int blockId)
       pos = input->tell();
       input->seek((last-1)*0x100, librevenge::RVNG_SEEK_SET);
       if (long(input->tell()) != (last-1)*0x100) {
-        MWAW_DEBUG_MSG(("MWProParser::getZoneData: num %ld if odd\n", last));
+        MWAW_DEBUG_MSG(("MacWrtProParser::getZoneData: num %ld if odd\n", last));
         last = input->tell();
         last = (last>>8)+1;  // set last to the last block
       }
@@ -499,11 +499,11 @@ bool MWProParser::getZoneData(librevenge::RVNGBinaryData &data, int blockId)
 ////////////////////////////////////////////////////////////
 // return the chain list of block ( used to get free blocks)
 ////////////////////////////////////////////////////////////
-bool MWProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
+bool MacWrtProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
 {
   blockLists.clear();
   if (blockId < 1) {
-    MWAW_DEBUG_MSG(("MWProParser::getFreeZoneList: block %d is invalid\n", blockId));
+    MWAW_DEBUG_MSG(("MacWrtProParser::getFreeZoneList: block %d is invalid\n", blockId));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
@@ -513,7 +513,7 @@ bool MWProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
     bool ok = true;
     for (long i=first; i<= last; i++) {
       if (m_state->m_blocksMap.find((int)i) != m_state->m_blocksMap.end()) {
-        MWAW_DEBUG_MSG(("MWProParser::getFreeZoneList: block %ld already seems\n", i));
+        MWAW_DEBUG_MSG(("MacWrtProParser::getFreeZoneList: block %ld already seems\n", i));
         ok = false;
         break;
       }
@@ -539,7 +539,7 @@ bool MWProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
       if (first != act+1) {
         input->seek(first*0x100, librevenge::RVNG_SEEK_SET);
         if (long(input->tell()) != first*0x100) {
-          MWAW_DEBUG_MSG(("MWProParser::getFreeZoneList: can not go to %ld block\n", first));
+          MWAW_DEBUG_MSG(("MacWrtProParser::getFreeZoneList: can not go to %ld block\n", first));
           break;
         }
       }
@@ -554,11 +554,11 @@ bool MWProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MWProParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void MacWrtProParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("MWProParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -572,7 +572,7 @@ void MWProParser::createDocument(librevenge::RVNGTextInterface *documentInterfac
   std::vector<MWAWPageSpan> pageList;
 
   int actHeaderId = 0, actFooterId = 0;
-  shared_ptr<MWProParserInternal::SubDocument> headerSubdoc, footerSubdoc;
+  shared_ptr<MacWrtProParserInternal::SubDocument> headerSubdoc, footerSubdoc;
   for (int i = 0; i < m_state->m_numPages;) {
     int numSim[2]= {1,1};
     int headerId =  m_structures->getHeaderId(i+1, numSim[0]);
@@ -582,7 +582,7 @@ void MWProParser::createDocument(librevenge::RVNGTextInterface *documentInterfac
         headerSubdoc.reset();
       else
         headerSubdoc.reset
-        (new MWProParserInternal::SubDocument(*this, getInput(), headerId));
+        (new MacWrtProParserInternal::SubDocument(*this, getInput(), headerId));
     }
     int footerId =  m_structures->getFooterId(i+1, numSim[1]);
     if (footerId != actFooterId) {
@@ -591,7 +591,7 @@ void MWProParser::createDocument(librevenge::RVNGTextInterface *documentInterfac
         footerSubdoc.reset();
       else
         footerSubdoc.reset
-        (new MWProParserInternal::SubDocument(*this, getInput(), footerId));
+        (new MacWrtProParserInternal::SubDocument(*this, getInput(), footerId));
     }
 
     MWAWPageSpan ps(getPageSpan());
@@ -624,7 +624,7 @@ void MWProParser::createDocument(librevenge::RVNGTextInterface *documentInterfac
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool MWProParser::createZones()
+bool MacWrtProParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -655,9 +655,9 @@ bool MWProParser::createZones()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool MWProParser::checkHeader(MWAWHeader *header, bool strict)
+bool MacWrtProParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = MWProParserInternal::State();
+  *m_state = MacWrtProParserInternal::State();
 
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork())
@@ -667,7 +667,7 @@ bool MWProParser::checkHeader(MWAWHeader *header, bool strict)
   int headerSize=4;
   input->seek(headerSize+0x78,librevenge::RVNG_SEEK_SET);
   if (int(input->tell()) != headerSize+0x78) {
-    MWAW_DEBUG_MSG(("MWProParser::checkHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::checkHeader: file is too short\n"));
     return false;
   }
   input->seek(0,librevenge::RVNG_SEEK_SET);
@@ -695,7 +695,7 @@ bool MWProParser::checkHeader(MWAWHeader *header, bool strict)
     }
     break;
   default:
-    MWAW_DEBUG_MSG(("MWProParser::checkHeader: unknown version\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::checkHeader: unknown version\n"));
     return false;
   }
   setVersion(vers);
@@ -729,7 +729,7 @@ bool MWProParser::checkHeader(MWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool MWProParser::readPrintInfo()
+bool MacWrtProParser::readPrintInfo()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -771,7 +771,7 @@ bool MWProParser::readPrintInfo()
   ascii().addNote(f.str().c_str());
   input->seek(pos+0x78, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
-    MWAW_DEBUG_MSG(("MWProParser::readPrintInfo: file is too short\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::readPrintInfo: file is too short\n"));
     return false;
   }
   ascii().addPos(input->tell());
@@ -782,7 +782,7 @@ bool MWProParser::readPrintInfo()
 ////////////////////////////////////////////////////////////
 // read the document header
 ////////////////////////////////////////////////////////////
-bool MWProParser::readDocHeader()
+bool MacWrtProParser::readDocHeader()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -875,7 +875,7 @@ bool MWProParser::readDocHeader()
     getPageSpan().setFormWidth(dim[1]/72.);
   }
   else {
-    MWAW_DEBUG_MSG(("MWProParser::readDocHeader: find odd page dimensions, ignored\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::readDocHeader: find odd page dimensions, ignored\n"));
     f << "#";
   }
   f << "dim=" << dim[1] << "x" << dim[0] << ",";
@@ -958,20 +958,20 @@ bool MWProParser::readDocHeader()
 ////////////////////////////////////////////////////////////
 // try to parse a data zone
 ////////////////////////////////////////////////////////////
-bool MWProParser::parseDataZone(int blockId, int type)
+bool MacWrtProParser::parseDataZone(int blockId, int type)
 {
   if (m_state->m_dataMap.find(blockId) != m_state->m_dataMap.end())
     return true;
   if (blockId < 1) {
-    MWAW_DEBUG_MSG(("MWProParser::parseDataZone: block %d seems bad\n", blockId));
+    MWAW_DEBUG_MSG(("MacWrtProParser::parseDataZone: block %d seems bad\n", blockId));
     return false;
   }
   if (m_state->m_blocksMap.find(blockId-1) != m_state->m_blocksMap.end()) {
-    MWAW_DEBUG_MSG(("MWProParser::parseDataZone: block %d is already parsed\n", blockId));
+    MWAW_DEBUG_MSG(("MacWrtProParser::parseDataZone: block %d is already parsed\n", blockId));
     return false;
   }
 
-  shared_ptr<MWProParserInternal::Zone> zone(new MWProParserInternal::Zone);
+  shared_ptr<MacWrtProParserInternal::Zone> zone(new MacWrtProParserInternal::Zone);
   zone->m_blockId = blockId;
   zone->m_type = type;
 
@@ -1001,11 +1001,11 @@ bool MWProParser::parseDataZone(int blockId, int type)
   return true;
 }
 
-bool MWProParser::parseTextZone(shared_ptr<MWProParserInternal::Zone> zone)
+bool MacWrtProParser::parseTextZone(shared_ptr<MacWrtProParserInternal::Zone> zone)
 {
   if (!zone) return false;
   if (zone->m_type != 0) {
-    MWAW_DEBUG_MSG(("MWProParser::parseTextZone: not a picture date\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::parseTextZone: not a picture date\n"));
     return false;
   }
 
@@ -1014,7 +1014,7 @@ bool MWProParser::parseTextZone(shared_ptr<MWProParserInternal::Zone> zone)
   libmwaw::DebugFile &asciiFile = zone->m_asciiFile;
   libmwaw::DebugStream f;
 
-  shared_ptr<MWProParserInternal::TextZone> text(new MWProParserInternal::TextZone);
+  shared_ptr<MacWrtProParserInternal::TextZone> text(new MacWrtProParserInternal::TextZone);
 
   long pos = 0;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1033,7 +1033,7 @@ bool MWProParser::parseTextZone(shared_ptr<MWProParserInternal::Zone> zone)
     MWAWEntry &entry = text->m_entries[i];
     fileInput->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
     if (long(fileInput->tell()) != entry.begin()) {
-      MWAW_DEBUG_MSG(("MWProParser::parseTextZone: bad block id for block %ld\n", long(i)));
+      MWAW_DEBUG_MSG(("MacWrtProParser::parseTextZone: bad block id for block %ld\n", long(i)));
       entry.setBegin(-1);
     }
   }
@@ -1051,8 +1051,8 @@ bool MWProParser::parseTextZone(shared_ptr<MWProParserInternal::Zone> zone)
   return true;
 }
 
-bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
-                                  std::vector<MWAWEntry> &res, int textLength)
+bool MacWrtProParser::readTextEntries(shared_ptr<MacWrtProParserInternal::Zone> zone,
+                                      std::vector<MWAWEntry> &res, int textLength)
 {
   res.resize(0);
   int vers = version();
@@ -1065,7 +1065,7 @@ bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
   int val = (int) input->readULong(2);
   int sz = (int) input->readULong(2);
   if ((sz%expectedSize) != 0) {
-    MWAW_DEBUG_MSG(("MWProParser::readTextEntries: find an odd size\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::readTextEntries: find an odd size\n"));
     return false;
   }
   long endPos = pos+sz+4;
@@ -1092,14 +1092,14 @@ bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
     f << "blockSz=" << nChar;
 
     if (nChar > remainLength || nChar > 256) {
-      MWAW_DEBUG_MSG(("MWProParser::readTextEntries: bad size for block %d\n", i));
+      MWAW_DEBUG_MSG(("MacWrtProParser::readTextEntries: bad size for block %d\n", i));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
     remainLength -= nChar;
     bool ok = bl >= 3 && m_state->m_blocksMap.find(bl-1) == m_state->m_blocksMap.end();
     if (!ok) {
-      MWAW_DEBUG_MSG(("MWProParser::readTextEntries: bad block id for block %d\n", i));
+      MWAW_DEBUG_MSG(("MacWrtProParser::readTextEntries: bad block id for block %d\n", i));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
@@ -1117,7 +1117,7 @@ bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
   }
 
   if (remainLength) {
-    MWAW_DEBUG_MSG(("MWProParser::readTextEntries: can not find %d characters\n", remainLength));
+    MWAW_DEBUG_MSG(("MacWrtProParser::readTextEntries: can not find %d characters\n", remainLength));
     asciiFile.addPos(input->tell());
     asciiFile.addNote("TextEntry-#");
   }
@@ -1126,9 +1126,9 @@ bool MWProParser::readTextEntries(shared_ptr<MWProParserInternal::Zone> zone,
   return long(input->tell() == endPos) && res.size() != 0;
 }
 
-bool MWProParser::readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
-                              std::vector<MWProParserInternal::TextZoneData> &res,
-                              int textLength, int type)
+bool MacWrtProParser::readTextIds(shared_ptr<MacWrtProParserInternal::Zone> zone,
+                                  std::vector<MacWrtProParserInternal::TextZoneData> &res,
+                                  int textLength, int type)
 {
   res.resize(0);
   MWAWInputStreamPtr input = zone->m_input;
@@ -1145,7 +1145,7 @@ bool MWProParser::readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
   }
 
   if ((sz%6) != 0) {
-    MWAW_DEBUG_MSG(("MWProParser::readTextIds: find an odd size\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::readTextIds: find an odd size\n"));
     return false;
   }
   long endPos = pos+sz+4;
@@ -1158,7 +1158,7 @@ bool MWProParser::readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
 
   long remainLength = textLength;
   for (int i = 0; i < numElt; i++) {
-    MWProParserInternal::TextZoneData data;
+    MacWrtProParserInternal::TextZoneData data;
     data.m_type = type;
     pos = input->tell();
     data.m_id = (int) input->readLong(2);
@@ -1168,7 +1168,7 @@ bool MWProParser::readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
     f << "TextZone-" << i<< ":" << data;
 
     if (nChar > remainLength) {
-      MWAW_DEBUG_MSG(("MWProParser::readTextIds: bad size for block %d\n", i));
+      MWAW_DEBUG_MSG(("MacWrtProParser::readTextIds: bad size for block %d\n", i));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
@@ -1181,7 +1181,7 @@ bool MWProParser::readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
   }
 
   if (remainLength) {
-    MWAW_DEBUG_MSG(("MWProParser::readTextIds: can not find %ld characters\n", remainLength));
+    MWAW_DEBUG_MSG(("MacWrtProParser::readTextIds: can not find %ld characters\n", remainLength));
     asciiFile.addPos(input->tell());
     asciiFile.addNote("TextZone:id-#");
   }
@@ -1190,9 +1190,9 @@ bool MWProParser::readTextIds(shared_ptr<MWProParserInternal::Zone> zone,
   return long(input->tell() == endPos) && res.size() != 0;
 }
 
-bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
-                                 std::vector<MWProParserInternal::Token> &res,
-                                 int textLength)
+bool MacWrtProParser::readTextTokens(shared_ptr<MacWrtProParserInternal::Zone> zone,
+                                     std::vector<MacWrtProParserInternal::Token> &res,
+                                     int textLength)
 {
   res.resize(0);
   int vers = version();
@@ -1217,7 +1217,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
   }
 
   if ((sz%expectedSz) != 0) {
-    MWAW_DEBUG_MSG(("MWProParser::readTextTokens: find an odd size\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::readTextTokens: find an odd size\n"));
     return false;
   }
   long endPos = pos+sz+4;
@@ -1235,7 +1235,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
     f.str("");
     pos = input->tell();
 
-    MWProParserInternal::Token data;
+    MacWrtProParserInternal::Token data;
     data.m_type = (int) input->readULong(1);
     if (vers==0) { // check me
       switch (data.m_type) {
@@ -1258,7 +1258,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
         data.m_type=7;
         break;
       default:
-        MWAW_DEBUG_MSG(("MWProParser::readTextTokens: unknown block type %d\n", data.m_type));
+        MWAW_DEBUG_MSG(("MacWrtProParser::readTextTokens: unknown block type %d\n", data.m_type));
         f << "#type=" << data.m_type << ",";
         data.m_type = -1;
         break;
@@ -1274,7 +1274,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
       data.m_blockId = (int) input->readULong(2);
     f << "TextZone-" << i<< ":token," << data;
     if (nChar > remainLength) {
-      MWAW_DEBUG_MSG(("MWProParser::readTextTokens: bad size for block %d\n", i));
+      MWAW_DEBUG_MSG(("MacWrtProParser::readTextTokens: bad size for block %d\n", i));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
@@ -1292,7 +1292,7 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
     size_t numPict = pictPos.size();
     // checkme always inverted ?
     for (size_t i = numPict; i > 0; i--) {
-      MWProParserInternal::Token &token = res[(size_t) pictPos[i-1]];
+      MacWrtProParserInternal::Token &token = res[(size_t) pictPos[i-1]];
       pos = input->tell();
       f.str("");
       f << "TextZone-pict" << i-1<< ":";
@@ -1328,11 +1328,11 @@ bool MWProParser::readTextTokens(shared_ptr<MWProParserInternal::Zone> zone,
 ////////////////////////////////////////////////////////////
 // try to send a empty zone
 ////////////////////////////////////////////////////////////
-bool MWProParser::sendEmptyFrameZone(MWAWPosition const &pos,
-                                     librevenge::RVNGPropertyList extras)
+bool MacWrtProParser::sendEmptyFrameZone(MWAWPosition const &pos,
+    librevenge::RVNGPropertyList extras)
 {
-  shared_ptr<MWProParserInternal::SubDocument> subdoc
-  (new MWProParserInternal::SubDocument(*this, getInput(), -3));
+  shared_ptr<MacWrtProParserInternal::SubDocument> subdoc
+  (new MacWrtProParserInternal::SubDocument(*this, getInput(), -3));
   if (getTextListener())
     getTextListener()->insertTextBox(pos, subdoc, extras);
   return true;
@@ -1341,18 +1341,18 @@ bool MWProParser::sendEmptyFrameZone(MWAWPosition const &pos,
 ////////////////////////////////////////////////////////////
 // try to send a text
 ////////////////////////////////////////////////////////////
-int MWProParser::findNumHardBreaks(int blockId)
+int MacWrtProParser::findNumHardBreaks(int blockId)
 {
-  std::map<int, shared_ptr<MWProParserInternal::TextZone> >::iterator it;
+  std::map<int, shared_ptr<MacWrtProParserInternal::TextZone> >::iterator it;
   it = m_state->m_textMap.find(blockId);
   if (it == m_state->m_textMap.end()) {
-    MWAW_DEBUG_MSG(("MWProParser::findNumHardBreaks: can not find text zone\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::findNumHardBreaks: can not find text zone\n"));
     return 0;
   }
   return findNumHardBreaks(it->second);
 }
 
-int MWProParser::findNumHardBreaks(shared_ptr<MWProParserInternal::TextZone> zone)
+int MacWrtProParser::findNumHardBreaks(shared_ptr<MacWrtProParserInternal::TextZone> zone)
 {
   if (!zone->m_entries.size()) return 0;
   int num = 0;
@@ -1377,29 +1377,29 @@ int MWProParser::findNumHardBreaks(shared_ptr<MWProParserInternal::TextZone> zon
 ////////////////////////////////////////////////////////////
 // try to send a text
 ////////////////////////////////////////////////////////////
-bool MWProParser::sendTextZone(int blockId, bool mainZone)
+bool MacWrtProParser::sendTextZone(int blockId, bool mainZone)
 {
-  std::map<int, shared_ptr<MWProParserInternal::TextZone> >::iterator it;
+  std::map<int, shared_ptr<MacWrtProParserInternal::TextZone> >::iterator it;
   it = m_state->m_textMap.find(blockId);
   if (it == m_state->m_textMap.end()) {
-    MWAW_DEBUG_MSG(("MWProParser::sendTextZone: can not find text zone\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::sendTextZone: can not find text zone\n"));
     return false;
   }
   sendText(it->second, mainZone);
   return true;
 }
 
-bool MWProParser::sendTextBoxZone(int blockId, MWAWPosition const &pos,
-                                  librevenge::RVNGPropertyList extras)
+bool MacWrtProParser::sendTextBoxZone(int blockId, MWAWPosition const &pos,
+                                      librevenge::RVNGPropertyList extras)
 {
-  shared_ptr<MWProParserInternal::SubDocument> subdoc
-  (new MWProParserInternal::SubDocument(*this, getInput(), blockId));
+  shared_ptr<MacWrtProParserInternal::SubDocument> subdoc
+  (new MacWrtProParserInternal::SubDocument(*this, getInput(), blockId));
   if (getTextListener())
     getTextListener()->insertTextBox(pos, subdoc, extras);
   return true;
 }
 
-namespace MWProParserInternal
+namespace MacWrtProParserInternal
 {
 /** Internal and low level: structure used to sort the position of data */
 struct DataPosition {
@@ -1427,42 +1427,42 @@ struct DataPosition {
 };
 }
 
-bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool mainZone)
+bool MacWrtProParser::sendText(shared_ptr<MacWrtProParserInternal::TextZone> zone, bool mainZone)
 {
   if (!zone->m_entries.size()) {
-    MWAW_DEBUG_MSG(("MWProParser::sendText: can not find the text entries\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::sendText: can not find the text entries\n"));
     return false;
   }
   int vers = version();
-  MWProStructuresListenerState listenerState(m_structures, mainZone);
-  MWProParserInternal::DataPosition::Compare compareFunction;
-  std::set<MWProParserInternal::DataPosition, MWProParserInternal::DataPosition::Compare>
+  MacWrtProStructuresListenerState listenerState(m_structures, mainZone);
+  MacWrtProParserInternal::DataPosition::Compare compareFunction;
+  std::set<MacWrtProParserInternal::DataPosition, MacWrtProParserInternal::DataPosition::Compare>
   set(compareFunction);
   long cPos = 0;
   for (size_t i = 0; i < zone->m_entries.size(); i++) {
-    set.insert(MWProParserInternal::DataPosition(3, (int) i, cPos));
+    set.insert(MacWrtProParserInternal::DataPosition(3, (int) i, cPos));
     cPos += zone->m_entries[i].length();
   }
-  set.insert(MWProParserInternal::DataPosition(4, 0, cPos));
+  set.insert(MacWrtProParserInternal::DataPosition(4, 0, cPos));
   cPos = 0;
   for (size_t i = 0; i < zone->m_tokens.size(); i++) {
     cPos += zone->m_tokens[i].m_length;
-    set.insert(MWProParserInternal::DataPosition(2, (int) i, cPos));
+    set.insert(MacWrtProParserInternal::DataPosition(2, (int) i, cPos));
   }
   for (int id = 0; id < 2; id++) {
     cPos = 0;
     for (size_t i = 0; i < zone->m_ids[id].size(); i++) {
-      set.insert(MWProParserInternal::DataPosition(1-id, (int) i, cPos));
+      set.insert(MacWrtProParserInternal::DataPosition(1-id, (int) i, cPos));
       cPos += zone->m_ids[id][i].m_length;
     }
   }
   std::vector<int> pageBreaks=listenerState.getPageBreaksPos();
   for (size_t i = 0; i < pageBreaks.size(); i++) {
     if (pageBreaks[i] >= zone->m_textLength) {
-      MWAW_DEBUG_MSG(("MWProParser::sendText: page breaks seems bad\n"));
+      MWAW_DEBUG_MSG(("MacWrtProParser::sendText: page breaks seems bad\n"));
       break;
     }
-    set.insert(MWProParserInternal::DataPosition(-1, (int) i, pageBreaks[i]));
+    set.insert(MacWrtProParserInternal::DataPosition(-1, (int) i, pageBreaks[i]));
   }
 
   MWAWInputStreamPtr input = getInput();
@@ -1473,13 +1473,13 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
 
   libmwaw::DebugStream f, f2;
   cPos = 0;
-  std::set<MWProParserInternal::DataPosition,
-      MWProParserInternal::DataPosition::Compare>::const_iterator it;
+  std::set<MacWrtProParserInternal::DataPosition,
+      MacWrtProParserInternal::DataPosition::Compare>::const_iterator it;
   for (it = set.begin(); it != set.end(); ++it) {
-    MWProParserInternal::DataPosition const &data = *it;
+    MacWrtProParserInternal::DataPosition const &data = *it;
     long oldPos = pos;
     if (data.m_pos < cPos) {
-      MWAW_DEBUG_MSG(("MWProParser::sendText: position go backward, stop...\n"));
+      MWAW_DEBUG_MSG(("MacWrtProParser::sendText: position go backward, stop...\n"));
       break;
     }
     if (data.m_pos != cPos) {
@@ -1532,12 +1532,12 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
         break;
       case 2:
         if (vers == 1 && listenerState.isSent(zone->m_tokens[(size_t)data.m_id].m_blockId)) {
-          MWAW_DEBUG_MSG(("MWProParser::sendText: footnote is already sent...\n"));
+          MWAW_DEBUG_MSG(("MacWrtProParser::sendText: footnote is already sent...\n"));
         }
         else {
           int id = zone->m_tokens[(size_t)data.m_id].m_blockId;
           if (vers == 0) id = -id;
-          MWAWSubDocumentPtr subdoc(new MWProParserInternal::SubDocument(*this, getInput(), id));
+          MWAWSubDocumentPtr subdoc(new MacWrtProParserInternal::SubDocument(*this, getInput(), id));
           getTextListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
         }
         break;
@@ -1602,7 +1602,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
     default: {
       static bool firstError = true;
       if (firstError) {
-        MWAW_DEBUG_MSG(("MWProParser::sendText: find unexpected data type...\n"));
+        MWAW_DEBUG_MSG(("MacWrtProParser::sendText: find unexpected data type...\n"));
         firstError = false;
       }
       f << "#";
@@ -1621,26 +1621,26 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
 ////////////////////////////////////////////////////////////
 // try to send a picture
 ////////////////////////////////////////////////////////////
-bool MWProParser::sendPictureZone(int blockId, MWAWPosition const &pictPos,
-                                  librevenge::RVNGPropertyList extras)
+bool MacWrtProParser::sendPictureZone(int blockId, MWAWPosition const &pictPos,
+                                      librevenge::RVNGPropertyList extras)
 {
-  std::map<int, shared_ptr<MWProParserInternal::Zone> >::iterator it;
+  std::map<int, shared_ptr<MacWrtProParserInternal::Zone> >::iterator it;
   it = m_state->m_dataMap.find(blockId);
   if (it == m_state->m_dataMap.end()) {
-    MWAW_DEBUG_MSG(("MWProParser::sendPictureZone: can not find picture zone\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::sendPictureZone: can not find picture zone\n"));
     return false;
   }
   sendPicture(it->second, pictPos, extras);
   return true;
 }
 
-bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
-                              MWAWPosition pictPos,
-                              librevenge::RVNGPropertyList const &extras)
+bool MacWrtProParser::sendPicture(shared_ptr<MacWrtProParserInternal::Zone> zone,
+                                  MWAWPosition pictPos,
+                                  librevenge::RVNGPropertyList const &extras)
 {
   if (!zone) return false;
   if (zone->m_type != 1) {
-    MWAW_DEBUG_MSG(("MWProParser::sendPicture: not a picture date\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::sendPicture: not a picture date\n"));
     return false;
   }
 
@@ -1658,7 +1658,7 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
   input->seek(0, librevenge::RVNG_SEEK_SET);
   long pictSize = (long) input->readULong(4);
   if (pictSize < 10 || pictSize > long(zone->m_data.size())) {
-    MWAW_DEBUG_MSG(("MWProParser::sendPicture: oops a pb with pictSize\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::sendPicture: oops a pb with pictSize\n"));
     asciiFile.addPos(4);
     asciiFile.addNote("#PICT");
     return false;
@@ -1673,7 +1673,7 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
       input->readDataBlock(4+pictSize, data);
       unsigned char *dataPtr=const_cast<unsigned char *>(data.getDataBuffer());
       if (!dataPtr) {
-        MWAW_DEBUG_MSG(("MWProParser::sendPicture: oops where is the picture...\n"));
+        MWAW_DEBUG_MSG(("MacWrtProParser::sendPicture: oops where is the picture...\n"));
         return false;
       }
 
@@ -1682,7 +1682,7 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
 
       MWAWInputStreamPtr pictInput=MWAWInputStream::get(data, false);
       if (!pictInput) {
-        MWAW_DEBUG_MSG(("MWProParser::sendPicture: oops where is the picture input...\n"));
+        MWAW_DEBUG_MSG(("MacWrtProParser::sendPicture: oops where is the picture input...\n"));
         return false;
       }
 
@@ -1705,7 +1705,7 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
 #endif
 
   if (!pict) { // ok, we can not do anything except sending the data...
-    MWAW_DEBUG_MSG(("MWProParser::parseDataZone: no sure this is a picture\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParser::parseDataZone: no sure this is a picture\n"));
     if (pictPos.size().x() <= 0 || pictPos.size().y() <= 0)
       pictPos=MWAWPosition(Vec2f(0,0),Vec2f(100.,100.), librevenge::RVNG_POINT);
     if (getTextListener()) {
@@ -1739,7 +1739,7 @@ bool MWProParser::sendPicture(shared_ptr<MWProParserInternal::Zone> zone,
 ////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
-void MWProParser::saveOriginal(MWAWInputStreamPtr input)
+void MacWrtProParser::saveOriginal(MWAWInputStreamPtr input)
 {
   libmwaw::DebugStream f;
 
@@ -1782,7 +1782,7 @@ void MWProParser::saveOriginal(MWAWInputStreamPtr input)
 }
 #endif
 
-void MWProParser::checkUnparsed()
+void MacWrtProParser::checkUnparsed()
 {
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
@@ -1827,7 +1827,7 @@ void MWProParser::checkUnparsed()
     ascii().addNote(f.str().c_str());
   }
   if (notParsed.str().size()) {
-    MWAW_DEBUG_MSG(("MWProParser::checkUnparsed: not parsed %s\n", notParsed.str().c_str()));
+    MWAW_DEBUG_MSG(("MacWrtProParser::checkUnparsed: not parsed %s\n", notParsed.str().c_str()));
   }
 }
 

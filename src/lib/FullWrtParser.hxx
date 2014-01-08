@@ -35,8 +35,8 @@
  * Parser to convert FullWrite document
  *
  */
-#ifndef FP_MWAW_PARSER
-#  define FP_MWAW_PARSER
+#ifndef FULL_WRT_PARSER
+#  define FULL_WRT_PARSER
 
 #include <list>
 #include <string>

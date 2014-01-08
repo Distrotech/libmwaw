@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef AC_PARSER
-#  define AC_PARSER
+#ifndef ACTA_PARSER
+#  define ACTA_PARSER
 
 #include <string>
 #include <vector>
