@@ -110,19 +110,19 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\BWParser.cxx">
+    <ClCompile Include="..\..\src\lib\BeagleWksParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\BWSSParser.cxx">
+    <ClCompile Include="..\..\src\lib\BeagleWksSSParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\BWStructManager.cxx">
+    <ClCompile Include="..\..\src\lib\BeagleWksStructManager.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\BWText.cxx">
+    <ClCompile Include="..\..\src\lib\BeagleWksText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -500,10 +500,10 @@
     <ClInclude Include="..\..\inc\libmwaw\MWAWDocument.hxx" />
     <ClInclude Include="..\..\src\lib\ACParser.hxx" />
     <ClInclude Include="..\..\src\lib\ACText.hxx" />
-    <ClInclude Include="..\..\src\lib\BWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\BWSSParser.hxx" />
-    <ClInclude Include="..\..\src\lib\BWStructManager.hxx" />
-    <ClInclude Include="..\..\src\lib\BWText.hxx" />
+    <ClInclude Include="..\..\src\lib\BeagleWksParser.hxx" />
+    <ClInclude Include="..\..\src\lib\BeagleWksSSParser.hxx" />
+    <ClInclude Include="..\..\src\lib\BeagleWksStructManager.hxx" />
+    <ClInclude Include="..\..\src\lib\BeagleWksText.hxx" />
     <ClInclude Include="..\..\src\lib\CWDatabase.hxx" />
     <ClInclude Include="..\..\src\lib\CWDbaseContent.hxx" />
     <ClInclude Include="..\..\src\lib\CWGraph.hxx" />

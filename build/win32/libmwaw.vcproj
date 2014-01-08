@@ -180,19 +180,19 @@
 				RelativePath="..\..\src\lib\ACText.cxx"
 				>
 			<File
-				RelativePath="..\..\src\lib\BWParser.cxx"
+				RelativePath="..\..\src\lib\BeagleWksParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\BWSSParser.cxx"
+				RelativePath="..\..\src\lib\BeagleWksSSParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\BWStructManager.cxx"
+				RelativePath="..\..\src\lib\BeagleWksStructManager.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\BWText.cxx"
+				RelativePath="..\..\src\lib\BeagleWksText.cxx"
 				>
 			</File>
 			<File
@@ -577,19 +577,19 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\BWParser.hxx"
+				RelativePath="..\..\src\lib\BeagleWksParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\BWSSParser.hxx"
+				RelativePath="..\..\src\lib\BeagleWksSSParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\BWStructManager.hxx"
+				RelativePath="..\..\src\lib\BeagleWksStructManager.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\BWText.hxx"
+				RelativePath="..\..\src\lib\BeagleWksText.hxx"
 				>
 			</File>
 			<File

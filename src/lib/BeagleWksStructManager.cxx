@@ -44,14 +44,14 @@
 #include "MWAWParser.hxx"
 #include "MWAWRSRCParser.hxx"
 
-#include "BWStructManager.hxx"
+#include "BeagleWksStructManager.hxx"
 
-/** Internal: the structures of a BWStructManager */
-namespace BWStructManagerInternal
+/** Internal: the structures of a BeagleWksStructManager */
+namespace BeagleWksStructManagerInternal
 {
 
 ////////////////////////////////////////
-//! Internal: the state of a BWStructManager
+//! Internal: the state of a BeagleWksStructManager
 struct State {
   //! constructor
   State() :  m_fileIdFontIdList(), m_idFrameMap()
@@ -60,7 +60,7 @@ struct State {
   //! a list to get the correspondance between fileId and fontId
   std::vector<int> m_fileIdFontIdList;
   /** the map id to frame */
-  std::map<int, BWStructManager::Frame> m_idFrameMap;
+  std::map<int, BeagleWksStructManager::Frame> m_idFrameMap;
 };
 }
 
@@ -68,56 +68,56 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-BWStructManager::BWStructManager(MWAWParserStatePtr parserState) :
-  m_parserState(parserState), m_state(new BWStructManagerInternal::State())
+BeagleWksStructManager::BeagleWksStructManager(MWAWParserStatePtr parserState) :
+  m_parserState(parserState), m_state(new BeagleWksStructManagerInternal::State())
 {
 }
 
-BWStructManager::~BWStructManager()
+BeagleWksStructManager::~BeagleWksStructManager()
 {
 }
 
-int BWStructManager::getFontId(int fId) const
+int BeagleWksStructManager::getFontId(int fId) const
 {
   if (fId<0||fId>=int(m_state->m_fileIdFontIdList.size())) {
-    MWAW_DEBUG_MSG(("BWStructManager::getFontId can not find the final font id\n"));
+    MWAW_DEBUG_MSG(("BeagleWksStructManager::getFontId can not find the final font id\n"));
     return 3;
   }
 
   return m_state->m_fileIdFontIdList[size_t(fId)];
 }
 
-std::map<int,BWStructManager::Frame> const &BWStructManager::getIdFrameMap() const
+std::map<int,BeagleWksStructManager::Frame> const &BeagleWksStructManager::getIdFrameMap() const
 {
   return m_state->m_idFrameMap;
 }
 
-bool BWStructManager::getFrame(int fId, Frame &frame) const
+bool BeagleWksStructManager::getFrame(int fId, Frame &frame) const
 {
   if (m_state->m_idFrameMap.find(fId)==m_state->m_idFrameMap.end()) {
-    MWAW_DEBUG_MSG(("BWStructManager::getFrame: can not find frame for id=%d\n",fId));
+    MWAW_DEBUG_MSG(("BeagleWksStructManager::getFrame: can not find frame for id=%d\n",fId));
     return false;
   }
   frame=m_state->m_idFrameMap.find(fId)->second;
   return true;
 }
 
-MWAWInputStreamPtr BWStructManager::getInput()
+MWAWInputStreamPtr BeagleWksStructManager::getInput()
 {
   return m_parserState->m_input;
 }
 
-libmwaw::DebugFile &BWStructManager::ascii()
+libmwaw::DebugFile &BeagleWksStructManager::ascii()
 {
   return m_parserState->m_asciiFile;
 }
 
-MWAWInputStreamPtr BWStructManager::rsrcInput()
+MWAWInputStreamPtr BeagleWksStructManager::rsrcInput()
 {
   return m_parserState->m_rsrcParser->getInput();
 }
 
-libmwaw::DebugFile &BWStructManager::rsrcAscii()
+libmwaw::DebugFile &BeagleWksStructManager::rsrcAscii()
 {
   return m_parserState->m_rsrcParser->ascii();
 }
@@ -125,10 +125,10 @@ libmwaw::DebugFile &BWStructManager::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // the frame
 ////////////////////////////////////////////////////////////
-bool BWStructManager::readFrame(MWAWEntry const &entry)
+bool BeagleWksStructManager::readFrame(MWAWEntry const &entry)
 {
   if (entry.length()!=156*(long)entry.id()) {
-    MWAW_DEBUG_MSG(("BWStructManager::readFrame: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksStructManager::readFrame: the entry seems bad\n"));
     return false;
   }
   entry.setParsed(true);
@@ -175,7 +175,7 @@ bool BWStructManager::readFrame(MWAWEntry const &entry)
         f << name << ",";
       }
       else {
-        MWAW_DEBUG_MSG(("BWStructManager::readFrame: the size seems bad\n"));
+        MWAW_DEBUG_MSG(("BeagleWksStructManager::readFrame: the size seems bad\n"));
         f << "#fSz=" << fSz << ",";
       }
       input->seek(pos+44, librevenge::RVNG_SEEK_SET);
@@ -185,7 +185,7 @@ bool BWStructManager::readFrame(MWAWEntry const &entry)
       break;
     }
     default:
-      MWAW_DEBUG_MSG(("BWStructManager::readFrame: unknown frame type\n"));
+      MWAW_DEBUG_MSG(("BeagleWksStructManager::readFrame: unknown frame type\n"));
       f << "type=" << std::hex << type << std::dec << ",";
       break;
     }
@@ -304,7 +304,7 @@ bool BWStructManager::readFrame(MWAWEntry const &entry)
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     if (m_state->m_idFrameMap.find(frame.m_id)!=m_state->m_idFrameMap.end()) {
-      MWAW_DEBUG_MSG(("BWStructManager::readFrame: frame %d already exists\n", frame.m_id));
+      MWAW_DEBUG_MSG(("BeagleWksStructManager::readFrame: frame %d already exists\n", frame.m_id));
     }
     else
       m_state->m_idFrameMap[frame.m_id]=frame;
@@ -316,7 +316,7 @@ bool BWStructManager::readFrame(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // the fonts
 ////////////////////////////////////////////////////////////
-bool BWStructManager::readFontNames(MWAWEntry const &entry)
+bool BeagleWksStructManager::readFontNames(MWAWEntry const &entry)
 {
   if (!entry.valid())
     return (entry.length()==0&&entry.id()==0);
@@ -333,7 +333,7 @@ bool BWStructManager::readFontNames(MWAWEntry const &entry)
     f << "Entries(FontNames)[" << i << "]:";
     int fSz=(int) input->readULong(1);
     if (pos+1+fSz>endPos) {
-      MWAW_DEBUG_MSG(("BWStructManager::readFontNames: can not read font %d\n", i));
+      MWAW_DEBUG_MSG(("BeagleWksStructManager::readFontNames: can not read font %d\n", i));
       f << "###";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -352,7 +352,7 @@ bool BWStructManager::readFontNames(MWAWEntry const &entry)
   }
   pos = input->tell();
   if (pos!=endPos) {
-    MWAW_DEBUG_MSG(("BWStructManager::readFontNames: find extra data\n"));
+    MWAW_DEBUG_MSG(("BeagleWksStructManager::readFontNames: find extra data\n"));
     ascii().addPos(pos);
     ascii().addNote("FontNames:###");
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
@@ -368,10 +368,10 @@ bool BWStructManager::readFontNames(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 
 // read the windows position blocks
-bool BWStructManager::readwPos(MWAWEntry const &entry)
+bool BeagleWksStructManager::readwPos(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 8) {
-    MWAW_DEBUG_MSG(("BWStructManager::readwPos: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksStructManager::readwPos: the entry is bad\n"));
     return false;
   }
 
@@ -394,10 +394,10 @@ bool BWStructManager::readwPos(MWAWEntry const &entry)
   return true;
 }
 
-bool BWStructManager::readFontStyle(MWAWEntry const &entry)
+bool BeagleWksStructManager::readFontStyle(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 8) {
-    MWAW_DEBUG_MSG(("BWStructManager::readFontStyle: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksStructManager::readFontStyle: the entry is bad\n"));
     return false;
   }
 
@@ -422,13 +422,13 @@ bool BWStructManager::readFontStyle(MWAWEntry const &entry)
   return true;
 }
 
-bool BWStructManager::readPicture(int pId, librevenge::RVNGBinaryData &pict)
+bool BeagleWksStructManager::readPicture(int pId, librevenge::RVNGBinaryData &pict)
 {
   MWAWRSRCParserPtr rsrcParser = m_parserState->m_rsrcParser;
   if (!rsrcParser) {
     static bool first=true;
     if (first) {
-      MWAW_DEBUG_MSG(("BWStructManager::readPicture: need access to resource fork to retrieve picture content\n"));
+      MWAW_DEBUG_MSG(("BeagleWksStructManager::readPicture: need access to resource fork to retrieve picture content\n"));
       first=false;
     }
     return true;
@@ -450,7 +450,7 @@ bool BWStructManager::readPicture(int pId, librevenge::RVNGBinaryData &pict)
     break;
   }
   if (!pictEntry.valid()) {
-    MWAW_DEBUG_MSG(("BWStructManager::readPicture: can not find picture %d\n", pId));
+    MWAW_DEBUG_MSG(("BeagleWksStructManager::readPicture: can not find picture %d\n", pId));
     return false;
   }
 

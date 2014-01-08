@@ -49,16 +49,16 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "BWStructManager.hxx"
-#include "BWText.hxx"
+#include "BeagleWksStructManager.hxx"
+#include "BeagleWksText.hxx"
 
-#include "BWParser.hxx"
+#include "BeagleWksParser.hxx"
 
-/** Internal: the structures of a BWParser */
-namespace BWParserInternal
+/** Internal: the structures of a BeagleWksParser */
+namespace BeagleWksParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the state of a BWParser
+//! Internal: the state of a BeagleWksParser
 struct State {
   //! constructor
   State() : m_textBegin(0), m_typeEntryMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
@@ -80,36 +80,36 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-BWParser::BWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+BeagleWksParser::BeagleWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_structureManager(), m_textParser()
 {
   init();
 }
 
-BWParser::~BWParser()
+BeagleWksParser::~BeagleWksParser()
 {
 }
 
-void BWParser::init()
+void BeagleWksParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new BWParserInternal::State);
+  m_state.reset(new BeagleWksParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_structureManager.reset(new BWStructManager(getParserState()));
-  m_textParser.reset(new BWText(*this));
+  m_structureManager.reset(new BeagleWksStructManager(getParserState()));
+  m_textParser.reset(new BeagleWksText(*this));
 }
 
-MWAWInputStreamPtr BWParser::rsrcInput()
+MWAWInputStreamPtr BeagleWksParser::rsrcInput()
 {
   return getRSRCParser()->getInput();
 }
 
-libmwaw::DebugFile &BWParser::rsrcAscii()
+libmwaw::DebugFile &BeagleWksParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
 }
@@ -117,7 +117,7 @@ libmwaw::DebugFile &BWParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f BWParser::getPageLeftTop() const
+Vec2f BeagleWksParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
@@ -126,12 +126,12 @@ Vec2f BWParser::getPageLeftTop() const
 ////////////////////////////////////////////////////////////
 // interface with the text parser
 ////////////////////////////////////////////////////////////
-bool BWParser::sendFrame(int pId)
+bool BeagleWksParser::sendFrame(int pId)
 {
-  BWStructManager::Frame frame;
+  BeagleWksStructManager::Frame frame;
   if (!m_structureManager->getFrame(pId, frame)) return false;
   if (!frame.m_charAnchor) {
-    MWAW_DEBUG_MSG(("BWParser::sendFrame: the frame is bad for id=%d\n",pId));
+    MWAW_DEBUG_MSG(("BeagleWksParser::sendFrame: the frame is bad for id=%d\n",pId));
     return false;
   }
 
@@ -141,7 +141,7 @@ bool BWParser::sendFrame(int pId)
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void BWParser::newPage(int number)
+void BeagleWksParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -157,7 +157,7 @@ void BWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void BWParser::parse(librevenge::RVNGTextInterface *docInterface)
+void BeagleWksParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
@@ -180,7 +180,7 @@ void BWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("BWParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("BeagleWksParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -191,11 +191,11 @@ void BWParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void BWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void BeagleWksParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("BWParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("BeagleWksParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -243,7 +243,7 @@ void BWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool BWParser::createZones()
+bool BeagleWksParser::createZones()
 {
   readRSRCZones();
   MWAWInputStreamPtr input = getInput();
@@ -251,7 +251,7 @@ bool BWParser::createZones()
     return false;
   long pos = input->tell();
   if (!input->checkPosition(pos+70)) {
-    MWAW_DEBUG_MSG(("BWParser::createZones: the file can not contains Zones\n"));
+    MWAW_DEBUG_MSG(("BeagleWksParser::createZones: the file can not contains Zones\n"));
     return false;
   }
   // first check the main entry
@@ -260,7 +260,7 @@ bool BWParser::createZones()
   input->seek(mainEntry.begin(), librevenge::RVNG_SEEK_SET);
   mainEntry.setLength(input->readLong(4));
   if (!mainEntry.valid()||!input->checkPosition(mainEntry.end())) {
-    MWAW_DEBUG_MSG(("BWParser::createZones: can not determine main zone size\n"));
+    MWAW_DEBUG_MSG(("BeagleWksParser::createZones: can not determine main zone size\n"));
     ascii().addPos(mainEntry.begin());
     ascii().addNote("Entries(Text):###");
     return false;
@@ -284,12 +284,12 @@ bool BWParser::createZones()
     if (!entry.valid() || !input->checkPosition(entry.end())) {
       f << "###";
       if (i<2) {
-        MWAW_DEBUG_MSG(("BWParser::createZones: can not read the header/footer zone, stop\n"));
+        MWAW_DEBUG_MSG(("BeagleWksParser::createZones: can not read the header/footer zone, stop\n"));
         ascii().addPos(pos);
         ascii().addNote(f.str().c_str());
         return false;
       }
-      MWAW_DEBUG_MSG(("BWParser::createZones: can not zones entry %d\n",i));
+      MWAW_DEBUG_MSG(("BeagleWksParser::createZones: can not zones entry %d\n",i));
       continue;
     }
     m_state->m_typeEntryMap.insert
@@ -326,7 +326,7 @@ bool BWParser::createZones()
   return true;
 }
 
-bool BWParser::readRSRCZones()
+bool BeagleWksParser::readRSRCZones()
 {
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   if (!rsrcParser)
@@ -365,19 +365,19 @@ bool BWParser::readRSRCZones()
 ////////////////////////////////////////////////////////////
 // read/send the list of frame
 ////////////////////////////////////////////////////////////
-bool BWParser::sendPageFrames()
+bool BeagleWksParser::sendPageFrames()
 {
-  std::map<int, BWStructManager::Frame> const &frameMap = m_structureManager->getIdFrameMap();
-  std::map<int, BWStructManager::Frame>::const_iterator it;
+  std::map<int, BeagleWksStructManager::Frame> const &frameMap = m_structureManager->getIdFrameMap();
+  std::map<int, BeagleWksStructManager::Frame>::const_iterator it;
   for (it=frameMap.begin(); it!=frameMap.end(); ++it) {
-    BWStructManager::Frame const &frame=it->second;
+    BeagleWksStructManager::Frame const &frame=it->second;
     if (!frame.m_charAnchor)
       sendFrame(frame);
   }
   return true;
 }
 
-bool BWParser::sendFrame(BWStructManager::Frame const &frame)
+bool BeagleWksParser::sendFrame(BeagleWksStructManager::Frame const &frame)
 {
   MWAWPosition fPos(Vec2f(0,0), frame.m_dim, librevenge::RVNG_POINT);
   librevenge::RVNGPropertyList extra;
@@ -409,7 +409,7 @@ bool BWParser::sendFrame(BWStructManager::Frame const &frame)
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool BWParser::readPrintInfo()
+bool BeagleWksParser::readPrintInfo()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -454,7 +454,7 @@ bool BWParser::readPrintInfo()
   ascii().addNote(f.str().c_str());
   input->seek(pos+0x78, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
-    MWAW_DEBUG_MSG(("BWParser::readPrintInfo: file is too short\n"));
+    MWAW_DEBUG_MSG(("BeagleWksParser::readPrintInfo: file is too short\n"));
     return false;
   }
   ascii().addPos(input->tell());
@@ -465,12 +465,12 @@ bool BWParser::readPrintInfo()
 ////////////////////////////////////////////////////////////
 // read the last zone ( mainly unknown )
 ////////////////////////////////////////////////////////////
-bool BWParser::readLastZone()
+bool BeagleWksParser::readLastZone()
 {
   MWAWInputStreamPtr input = getInput();
   long beginPos = input->tell();
   if (input->seek(beginPos+568,librevenge::RVNG_SEEK_SET)||!input->isEnd()) {
-    MWAW_DEBUG_MSG(("BWParser::readLastZone: the last zone seems odd\n"));
+    MWAW_DEBUG_MSG(("BeagleWksParser::readLastZone: the last zone seems odd\n"));
     ascii().addPos(beginPos);
     ascii().addNote("Entries(LastZone):###");
     return false;
@@ -513,7 +513,7 @@ bool BWParser::readLastZone()
     getPageSpan().setMarginRight(margins[2]);
   }
   else {
-    MWAW_DEBUG_MSG(("BWParser::readLastZone: the page margins seem bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksParser::readLastZone: the page margins seem bad\n"));
     f << "###";
   }
   int val=(int) input->readLong(2);
@@ -572,19 +572,19 @@ bool BWParser::readLastZone()
 ////////////////////////////////////////////////////////////
 
 // read/send picture (edtp resource)
-bool BWParser::sendPicture
+bool BeagleWksParser::sendPicture
 (int pId, MWAWPosition const &pictPos, librevenge::RVNGPropertyList frameExtras)
 {
   MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("BWParser::sendPicture: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("BeagleWksParser::sendPicture: can not find the listener\n"));
     return false;
   }
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   if (!rsrcParser) {
     static bool first=true;
     if (first) {
-      MWAW_DEBUG_MSG(("BWParser::sendPicture: need access to resource fork to retrieve picture content\n"));
+      MWAW_DEBUG_MSG(("BeagleWksParser::sendPicture: need access to resource fork to retrieve picture content\n"));
       first=false;
     }
     return true;
@@ -608,9 +608,9 @@ bool BWParser::sendPicture
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool BWParser::checkHeader(MWAWHeader *header, bool strict)
+bool BeagleWksParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = BWParserInternal::State();
+  *m_state = BeagleWksParserInternal::State();
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork() || !input->checkPosition(66))
     return false;
@@ -641,7 +641,7 @@ bool BWParser::checkHeader(MWAWHeader *header, bool strict)
   f << "FileHeader-II:";
   m_state->m_textBegin=input->readLong(4);
   if (!input->checkPosition(m_state->m_textBegin)) {
-    MWAW_DEBUG_MSG(("BWParser::checkHeader: can not read the text position\n"));
+    MWAW_DEBUG_MSG(("BeagleWksParser::checkHeader: can not read the text position\n"));
     return false;
   }
   f << "text[ptr]=" << std::hex << m_state->m_textBegin << std::dec << ",";
@@ -657,7 +657,7 @@ bool BWParser::checkHeader(MWAWHeader *header, bool strict)
   f << "fontNames[ptr]=" << std::hex << entry.begin() << "<->" << entry.end()
     << std::dec << ",nFonts=" << entry.id() << ",";
   if (entry.length() && (!entry.valid() || !input->checkPosition(entry.end()))) {
-    MWAW_DEBUG_MSG(("BWParser::checkHeader: can not read the font names position\n"));
+    MWAW_DEBUG_MSG(("BeagleWksParser::checkHeader: can not read the font names position\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());

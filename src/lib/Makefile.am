@@ -22,14 +22,14 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	ACParser.hxx			\
 	ACText.cxx			\
 	ACText.hxx			\
-	BWParser.cxx			\
-	BWParser.hxx			\
-	BWSSParser.cxx			\
-	BWSSParser.hxx			\
-	BWStructManager.cxx		\
-	BWStructManager.hxx		\
-	BWText.cxx			\
-	BWText.hxx			\
+	BeagleWksParser.cxx		\
+	BeagleWksParser.hxx		\
+	BeagleWksSSParser.cxx		\
+	BeagleWksSSParser.hxx		\
+	BeagleWksStructManager.cxx	\
+	BeagleWksStructManager.hxx	\
+	BeagleWksText.cxx		\
+	BeagleWksText.hxx		\
 	CWDatabase.cxx			\
 	CWDatabase.hxx			\
 	CWDbaseContent.cxx		\

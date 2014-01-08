@@ -51,16 +51,16 @@
 #include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "BWParser.hxx"
-#include "BWStructManager.hxx"
+#include "BeagleWksParser.hxx"
+#include "BeagleWksStructManager.hxx"
 
-#include "BWText.hxx"
+#include "BeagleWksText.hxx"
 
-/** Internal: the structures of a BWText */
-namespace BWTextInternal
+/** Internal: the structures of a BeagleWksText */
+namespace BeagleWksTextInternal
 {
 ////////////////////////////////////////
-//! Internal: a class used to store the font data of a BWText
+//! Internal: a class used to store the font data of a BeagleWksText
 struct Font {
   //! constructor
   Font() : m_id(0), m_size(12), m_flags(0), m_color(0), m_extra()
@@ -169,7 +169,7 @@ struct Font {
   std::string m_extra;
 };
 ////////////////////////////////////////
-//! Internal: a class used to store the section data of a BWText
+//! Internal: a class used to store the section data of a BeagleWksText
 struct Section : public MWAWSection {
   //! constructor
   Section() : MWAWSection(), m_ruler(), m_hasFirstPage(false), m_hasHeader(false), m_hasFooter(false),
@@ -187,7 +187,7 @@ struct Section : public MWAWSection {
   {
     MWAWEntry res;
     if (i<0||i>=4) {
-      MWAW_DEBUG_MSG(("BWTextInternal::getEntry: called with bad id=%d\n",i));
+      MWAW_DEBUG_MSG(("BeagleWksTextInternal::getEntry: called with bad id=%d\n",i));
       return res;
     }
     if (m_limitPos[i]<=0)
@@ -250,7 +250,7 @@ struct Section : public MWAWSection {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a BWText
+//! Internal: the state of a BeagleWksText
 struct State {
   //! constructor
   State() : m_textEntry(), m_sectionList(), m_numPagesBySectionList(), m_version(-1), m_numPages(-1), m_actualPage(1)
@@ -268,11 +268,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a BWText
+//! Internal: the subdocument of a BeagleWksText
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(BWText &pars, MWAWInputStreamPtr input, int hFId, int sId) :
+  SubDocument(BeagleWksText &pars, MWAWInputStreamPtr input, int hFId, int sId) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_hfId(hFId), m_sectId(sId)
   {
   }
@@ -293,7 +293,7 @@ public:
 
 protected:
   /** the text parser */
-  BWText *m_textParser;
+  BeagleWksText *m_textParser;
   //! the header/footer id
   int m_hfId;
   //! the section id
@@ -317,7 +317,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("BWTextInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("BeagleWksTextInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_textParser);
@@ -331,37 +331,37 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-BWText::BWText(BWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new BWTextInternal::State),
+BeagleWksText::BeagleWksText(BeagleWksParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new BeagleWksTextInternal::State),
   m_structureManager(parser.m_structureManager), m_mainParser(&parser)
 {
 }
 
-BWText::~BWText()
+BeagleWksText::~BeagleWksText()
 { }
 
-int BWText::version() const
+int BeagleWksText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int BWText::numPages() const
+int BeagleWksText::numPages() const
 {
   if (m_state->m_numPages <= 0)
-    const_cast<BWText *>(this)->countPages();
+    const_cast<BeagleWksText *>(this)->countPages();
   return m_state->m_numPages;
 }
 
-MWAWFont BWText::getFont(BWTextInternal::Font const &ft) const
+MWAWFont BeagleWksText::getFont(BeagleWksTextInternal::Font const &ft) const
 {
   MWAWFont font=ft.getFont();
   font.setId(m_structureManager->getFontId(font.id()));
   return font;
 }
 
-shared_ptr<MWAWSubDocument> BWText::getHeader(int page, int &numSimilar)
+shared_ptr<MWAWSubDocument> BeagleWksText::getHeader(int page, int &numSimilar)
 {
   numSimilar=1;
   shared_ptr<MWAWSubDocument> res;
@@ -378,17 +378,17 @@ shared_ptr<MWAWSubDocument> BWText::getHeader(int page, int &numSimilar)
       numSimilar=m_state->m_numPages-page+1;
     return res;
   }
-  BWTextInternal::Section const &sec=m_state->m_sectionList[s];
+  BeagleWksTextInternal::Section const &sec=m_state->m_sectionList[s];
   bool useFPage=page==actPage && sec.m_hasFirstPage;
   if (!useFPage)
     numSimilar=newSectionPage-page;
   if (sec.getHeaderEntry(useFPage).valid())
-    res.reset(new BWTextInternal::SubDocument
+    res.reset(new BeagleWksTextInternal::SubDocument
               (*this, m_parserState->m_input, useFPage?0:2, int(s)));
   return res;
 }
 
-shared_ptr<MWAWSubDocument> BWText::getFooter(int page, int &numSimilar)
+shared_ptr<MWAWSubDocument> BeagleWksText::getFooter(int page, int &numSimilar)
 {
   numSimilar=1;
   shared_ptr<MWAWSubDocument> res;
@@ -405,12 +405,12 @@ shared_ptr<MWAWSubDocument> BWText::getFooter(int page, int &numSimilar)
       numSimilar=m_state->m_numPages-page+1;
     return res;
   }
-  BWTextInternal::Section const &sec=m_state->m_sectionList[s];
+  BeagleWksTextInternal::Section const &sec=m_state->m_sectionList[s];
   bool useFPage=page==actPage && sec.m_hasFirstPage;
   if (!useFPage)
     numSimilar=newSectionPage-page;
   if (sec.getFooterEntry(useFPage).valid())
-    res.reset(new BWTextInternal::SubDocument
+    res.reset(new BeagleWksTextInternal::SubDocument
               (*this, m_parserState->m_input, useFPage?1:3, int(s)));
   return res;
 }
@@ -422,10 +422,10 @@ shared_ptr<MWAWSubDocument> BWText::getFooter(int page, int &numSimilar)
 //
 // find the different zones
 //
-bool BWText::createZones(MWAWEntry &entry)
+bool BeagleWksText::createZones(MWAWEntry &entry)
 {
   if (!entry.valid() || entry.length()<22) {
-    MWAW_DEBUG_MSG(("BWText::createZones: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksText::createZones: the entry seems bad\n"));
     return false;
   }
 
@@ -445,7 +445,7 @@ bool BWText::createZones(MWAWEntry &entry)
   int nSections=int(entry.length()-val);
   if (val<22|| nSections<6 || (nSections%6)) {
     f << "###";
-    MWAW_DEBUG_MSG(("BWText::createZones: the data size seems bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksText::createZones: the data size seems bad\n"));
     return false;
   }
   endPos = pos+val;
@@ -459,7 +459,7 @@ bool BWText::createZones(MWAWEntry &entry)
   f << "nSect=" << val << ",";
   if (val!=nSections) {
     f << "###";
-    MWAW_DEBUG_MSG(("BWText::createZones: the number of sections/pages seems bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksText::createZones: the number of sections/pages seems bad\n"));
   }
   // checkme: after junk ?
   ascFile.addDelimiter(input->tell(),'|');
@@ -480,7 +480,7 @@ bool BWText::createZones(MWAWEntry &entry)
         || pEntry.end()>endPos) {
       pEntry=MWAWEntry();
       f << "###";
-      MWAW_DEBUG_MSG(("BWText::createZones: the page entry %d seems bad\n", i));
+      MWAW_DEBUG_MSG(("BeagleWksText::createZones: the page entry %d seems bad\n", i));
     }
     listEntries.push_back(pEntry);
     input->seek(pos+6, librevenge::RVNG_SEEK_SET);
@@ -503,19 +503,19 @@ bool BWText::createZones(MWAWEntry &entry)
     m_state->m_textEntry.setEnd(listEntries[p].end());
   }
   for (; p < listEntries.size(); ++p) {
-    BWTextInternal::Section sec;
+    BeagleWksTextInternal::Section sec;
     if (listEntries[p].valid() && !readSection(listEntries[p], sec))
-      sec = BWTextInternal::Section();
+      sec = BeagleWksTextInternal::Section();
     m_state->m_sectionList.push_back(sec);
   }
   input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return m_state->m_textEntry.valid();
 }
 
-void BWText::countPages()
+void BeagleWksText::countPages()
 {
   if (!m_state->m_textEntry.valid()) {
-    MWAW_DEBUG_MSG(("BWText::countPages: can not find the main entry\n"));
+    MWAW_DEBUG_MSG(("BeagleWksText::countPages: can not find the main entry\n"));
     return;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -532,7 +532,7 @@ void BWText::countPages()
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     switch (c) {
     case 0: {
-      BWTextInternal::Font font;
+      BeagleWksTextInternal::Font font;
       done=readFont(font,endPos);
       break;
     }
@@ -588,36 +588,36 @@ void BWText::countPages()
 //
 // send the text
 //
-bool BWText::sendMainText()
+bool BeagleWksText::sendMainText()
 {
   return sendText(m_state->m_textEntry);
 }
 
-bool BWText::sendHF(int hfId, int sectId)
+bool BeagleWksText::sendHF(int hfId, int sectId)
 {
   if (hfId<0||hfId>=4) {
-    MWAW_DEBUG_MSG(("BWText::sendHF: hfId=%d is bad\n", hfId));
+    MWAW_DEBUG_MSG(("BeagleWksText::sendHF: hfId=%d is bad\n", hfId));
     return false;
   }
   if (sectId<0||sectId>=(int) m_state->m_sectionList.size()) {
-    MWAW_DEBUG_MSG(("BWText::sendHF: can not find section %d\n", sectId));
+    MWAW_DEBUG_MSG(("BeagleWksText::sendHF: can not find section %d\n", sectId));
     return false;
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
-  BWTextInternal::Section const &sec=m_state->m_sectionList[size_t(sectId)];
+  BeagleWksTextInternal::Section const &sec=m_state->m_sectionList[size_t(sectId)];
   sec.m_parsed[hfId]=true;
   bool ok=sendText(sec.getEntry(hfId));
   input->seek(pos,librevenge::RVNG_SEEK_SET);
   return ok;
 }
 
-void BWText::flushExtra()
+void BeagleWksText::flushExtra()
 {
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   for (size_t i=0; i<m_state->m_sectionList.size(); ++i) {
-    BWTextInternal::Section const &sec=m_state->m_sectionList[i];
+    BeagleWksTextInternal::Section const &sec=m_state->m_sectionList[i];
 
     for (int j=0; j < 4; ++j) {
       if (sec.m_parsed[j])
@@ -635,15 +635,15 @@ void BWText::flushExtra()
   }
 }
 
-bool BWText::sendText(MWAWEntry entry)
+bool BeagleWksText::sendText(MWAWEntry entry)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("BWText::sendText: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("BeagleWksText::sendText: can not find the listener\n"));
     return false;
   }
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("BWText::sendText: can not find the entry\n"));
+    MWAW_DEBUG_MSG(("BeagleWksText::sendText: can not find the entry\n"));
     return false;
   }
 
@@ -661,7 +661,7 @@ bool BWText::sendText(MWAWEntry entry)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Text:";
-  BWTextInternal::Font font;
+  BeagleWksTextInternal::Font font;
   listener->setFont(getFont(font));
   int actPage = 1, sectPage=1;
   while (!input->isEnd()) {
@@ -752,7 +752,7 @@ bool BWText::sendText(MWAWEntry entry)
         break;
       }
       default:
-        MWAW_DEBUG_MSG(("BWText::sendText: find unknown field type=%d\n", type));
+        MWAW_DEBUG_MSG(("BeagleWksText::sendText: find unknown field type=%d\n", type));
         f << "#type=" << type << ",";
         break;
       }
@@ -787,11 +787,11 @@ bool BWText::sendText(MWAWEntry entry)
           listener->openSection(m_state->m_sectionList[actSection++]);
         }
         else {
-          MWAW_DEBUG_MSG(("BWText::sendText: can not find the new section\n"));
+          MWAW_DEBUG_MSG(("BeagleWksText::sendText: can not find the new section\n"));
         }
         break;
       default:
-        MWAW_DEBUG_MSG(("BWText::sendText: find unknown break type=%d\n", type));
+        MWAW_DEBUG_MSG(("BeagleWksText::sendText: find unknown break type=%d\n", type));
         f << "#type=" << type << ",";
         break;
       }
@@ -827,7 +827,7 @@ bool BWText::sendText(MWAWEntry entry)
       if (fl) f << "fl=" << std::hex << fl << std::dec << ",";
       int fSz=(int) input->readULong(1);
       if (fSz>30) {
-        MWAW_DEBUG_MSG(("BWText::sendText: field name size seems bad\n"));
+        MWAW_DEBUG_MSG(("BeagleWksText::sendText: field name size seems bad\n"));
         fSz=0;
         f << "###";
       }
@@ -865,7 +865,7 @@ bool BWText::sendText(MWAWEntry entry)
     ascFile.addPos(input->tell());
     ascFile.addNote("Text:###");
 
-    MWAW_DEBUG_MSG(("BWText::sendText: find extra data\n"));
+    MWAW_DEBUG_MSG(("BeagleWksText::sendText: find extra data\n"));
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
   }
   ascFile.addPos(endPos);
@@ -876,7 +876,7 @@ bool BWText::sendText(MWAWEntry entry)
 //////////////////////////////////////////////
 // Fonts
 //////////////////////////////////////////////
-bool BWText::readFont(BWTextInternal::Font &font, long endPos)
+bool BeagleWksText::readFont(BeagleWksTextInternal::Font &font, long endPos)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
@@ -911,7 +911,7 @@ bool BWText::readFont(BWTextInternal::Font &font, long endPos)
 //////////////////////////////////////////////
 // Paragraph
 //////////////////////////////////////////////
-bool BWText::readParagraph(MWAWParagraph &para, long endPos, bool inSection)
+bool BeagleWksText::readParagraph(MWAWParagraph &para, long endPos, bool inSection)
 {
   para=MWAWParagraph();
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -959,7 +959,7 @@ bool BWText::readParagraph(MWAWParagraph &para, long endPos, bool inSection)
   int nTabs=(int) input->readLong(2);
   if ((inSection && (nTabs < 0 || nTabs>20)) ||
       (!inSection && 19+nTabs*6!=fSz)) {
-    MWAW_DEBUG_MSG(("BWText::readParagraph: the number of tabs seems bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksText::readParagraph: the number of tabs seems bad\n"));
     f << "###numTabs=" << nTabs << ",";
     nTabs=0;
   }
@@ -983,7 +983,7 @@ bool BWText::readParagraph(MWAWParagraph &para, long endPos, bool inSection)
       tab.m_alignment=MWAWTabStop::BAR;
       break;
     default:
-      MWAW_DEBUG_MSG(("BWText::readParagraph: find unknown tab align=%d\n", val));
+      MWAW_DEBUG_MSG(("BeagleWksText::readParagraph: find unknown tab align=%d\n", val));
       f << "tabs" << i << "[#align=" << tab.m_alignment << "],";
       break;
     }
@@ -1016,11 +1016,11 @@ bool BWText::readParagraph(MWAWParagraph &para, long endPos, bool inSection)
 //////////////////////////////////////////////
 // Section
 //////////////////////////////////////////////
-bool BWText::readSection(MWAWEntry const &entry, BWTextInternal::Section &sec)
+bool BeagleWksText::readSection(MWAWEntry const &entry, BeagleWksTextInternal::Section &sec)
 {
-  sec=BWTextInternal::Section();
+  sec=BeagleWksTextInternal::Section();
   if (entry.length()<0xdc) {
-    MWAW_DEBUG_MSG(("BWText::readSection: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksText::readSection: the entry seems bad\n"));
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -1030,7 +1030,7 @@ bool BWText::readSection(MWAWEntry const &entry, BWTextInternal::Section &sec)
   long pos=entry.begin();
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (input->readULong(2)!=0xdc) {
-    MWAW_DEBUG_MSG(("BWText::readSection: the section header seems bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksText::readSection: the section header seems bad\n"));
     ascFile.addPos(pos);
     ascFile.addNote("Entries(Section):###");
     return false;
@@ -1040,19 +1040,19 @@ bool BWText::readSection(MWAWEntry const &entry, BWTextInternal::Section &sec)
   for (int i=1; i < 5; ++i) {
     sec.m_limitPos[i]=pos+(long) input->readULong(2);
     if (sec.m_limitPos[i]>entry.end()) {
-      MWAW_DEBUG_MSG(("BWText::readSection: some limits seem too big\n"));
+      MWAW_DEBUG_MSG(("BeagleWksText::readSection: some limits seem too big\n"));
       f << "###limit-" << i << "=" << std::hex << sec.m_limitPos[i-1] << std::dec << ",";
       sec.m_limitPos[i]=0;
     }
     if (sec.m_limitPos[i]<=sec.m_limitPos[i-1]) {
-      MWAW_DEBUG_MSG(("BWText::readSection: some limits seem incoherent\n"));
+      MWAW_DEBUG_MSG(("BeagleWksText::readSection: some limits seem incoherent\n"));
       f << "###limit-" << i << "=" << std::hex << sec.m_limitPos[i-1] << "x"
         << sec.m_limitPos[i]  << std::dec << ",";
     }
   }
   int nCols=(int) input->readULong(1);
   if (nCols<0 || nCols>16) {
-    MWAW_DEBUG_MSG(("BWText::readSection: the number of columns seems bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksText::readSection: the number of columns seems bad\n"));
     f << "###nCols=" << nCols << ",";
     nCols=1;
   }
@@ -1100,7 +1100,7 @@ bool BWText::readSection(MWAWEntry const &entry, BWTextInternal::Section &sec)
   input->seek(entry.begin()+81,librevenge::RVNG_SEEK_SET);
   if (!readParagraph(sec.m_ruler, pos+0xda, true)) {
     sec.m_ruler=MWAWParagraph();
-    MWAW_DEBUG_MSG(("BWText::readSection: can not read the section ruler\n"));
+    MWAW_DEBUG_MSG(("BeagleWksText::readSection: can not read the section ruler\n"));
     ascFile.addPos(pos+81);
     ascFile.addNote("Section(Ruler):###");
   }

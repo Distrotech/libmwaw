@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef BW_SS_PARSER
-#  define BW_SS_PARSER
+#ifndef BEAGLE_WKS_SS_PARSER
+#  define BEAGLE_WKS_SS_PARSER
 
 #include <string>
 #include <vector>
@@ -45,7 +45,7 @@
 
 #include "MWAWParser.hxx"
 
-namespace BWSSParserInternal
+namespace BeagleWksSSParserInternal
 {
 class SubDocument;
 
@@ -55,19 +55,19 @@ struct Spreadsheet;
 struct State;
 }
 
-class BWStructManager;
+class BeagleWksStructManager;
 
 /** \brief the main class to read a BeagleWorks spreadsheet file
  */
-class BWSSParser : public MWAWSpreadsheetParser
+class BeagleWksSSParser : public MWAWSpreadsheetParser
 {
-  friend struct BWSSParserInternal::Chart;
-  friend class BWSSParserInternal::SubDocument;
+  friend struct BeagleWksSSParserInternal::Chart;
+  friend class BeagleWksSSParserInternal::SubDocument;
 public:
   //! constructor
-  BWSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  BeagleWksSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~BWSSParser();
+  virtual ~BeagleWksSSParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -94,7 +94,7 @@ protected:
   //! try to send the page graphic
   bool sendPageFrames();
   //! try to send a frame
-  bool sendFrame(BWStructManager::Frame const &frame);
+  bool sendFrame(BeagleWksStructManager::Frame const &frame);
   //! try to send a picture
   bool sendPicture(int pId, MWAWPosition const &pos,
                    librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
@@ -109,7 +109,7 @@ protected:
   // low level
   //
 
-  // data fork similar than in BWParser ...
+  // data fork similar than in BeagleWksParser ...
 
   //! read the print info zone
   bool readPrintInfo();
@@ -129,19 +129,19 @@ protected:
   bool readSpreadsheet();
 
   //! read the spreadsheet row
-  bool readRowSheet(BWSSParserInternal::Spreadsheet &sheet);
+  bool readRowSheet(BeagleWksSSParserInternal::Spreadsheet &sheet);
 
   //! read a cell row
-  bool readCellSheet(BWSSParserInternal::Cell &cell);
+  bool readCellSheet(BeagleWksSSParserInternal::Cell &cell);
 
   //! read an unknown zone ( which appears before and after the columns's width zone )
   bool readZone0();
 
   //! read the columns widths
-  bool readColumnWidths(BWSSParserInternal::Spreadsheet &sheet);
+  bool readColumnWidths(BeagleWksSSParserInternal::Spreadsheet &sheet);
 
   //! read the differents formula
-  bool readFormula(BWSSParserInternal::Spreadsheet &sheet);
+  bool readFormula(BeagleWksSSParserInternal::Spreadsheet &sheet);
 
   // resource fork
 
@@ -161,10 +161,10 @@ protected:
 
 
   //! the state
-  shared_ptr<BWSSParserInternal::State> m_state;
+  shared_ptr<BeagleWksSSParserInternal::State> m_state;
 
   //! the structure manager
-  shared_ptr<BWStructManager> m_structureManager;
+  shared_ptr<BeagleWksStructManager> m_structureManager;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

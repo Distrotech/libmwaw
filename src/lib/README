@@ -4,7 +4,7 @@
 - MWAW*, libmwaw* : internal core part of libmwaw (ie. classes used by all the parser )
 
 - AC* : parser of Acta documents
-- BW* : parser of BeagleWorks and WordPerfect Works documents
+- BeagleWks* : parser of BeagleWorks and WordPerfect Works documents
 - CW* : parser of ClarisWorks and AppleWorks documents
 - DM* : parser of DOCMaker documents
 - ED* : parser of eDOC documents
@@ -106,7 +106,7 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------
----           AC/BW/CW/DM/ED/FW/GW/LW/MCD                ---
+---           AC/BeagleWks/CW/DM/ED/FW/GW/LW/MCD         ---
 ---           MDW/MOR/MRW/MSK/MSW/MW/NS/TT/WN/WP/ZW      ---
 ------------------------------------------------------------
 
@@ -117,10 +117,10 @@ Specific files which depends on the type of file which is converted
 ACParser: parser of Acta : v2 and Classic v1
 -   ACText : class which reads the text
 
-BWParser: word document parser of BeagleWorks v1.0 and WordPerfect Works v1.2
-BWSSParser: spreadsheet document parser of BeagleWorks v1.0 and WordPerfect Works v1.2
--   BWText : class which reads the text in a word document
--   BWStructManager : class to read structure partaged between different type of document
+BeagleWksParser: word document parser of BeagleWorks v1.0 and WordPerfect Works v1.2
+BeagleWksSSParser: spreadsheet document parser of BeagleWorks v1.0 and WordPerfect Works v1.2
+-   BeagleWksText : class which reads the text in a word document
+-   BeagleWksStructManager : class to read structure partaged between different type of document
 
 CWParser : parser of ClarisWorks/AppleWorks document
 -   CWGraph : class which reads the graphics and zone dispositions ...

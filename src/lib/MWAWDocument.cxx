@@ -45,8 +45,8 @@
 #include <libmwaw/libmwaw.hxx>
 
 #include "ACParser.hxx"
-#include "BWParser.hxx"
-#include "BWSSParser.hxx"
+#include "BeagleWksParser.hxx"
+#include "BeagleWksSSParser.hxx"
 #include "CWParser.hxx"
 #include "DMParser.hxx"
 #include "EDParser.hxx"
@@ -374,7 +374,7 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     return parser;
 
   if (header->getType()==MWAWDocument::MWAW_T_BEAGLEWORKS)
-    parser.reset(new BWSSParser(input, rsrcParser, header));
+    parser.reset(new BeagleWksSSParser(input, rsrcParser, header));
   else {
     MWAW_DEBUG_MSG(("MWAWDocument::getSpreadsheetParserFromHeader: unexpected type\n"));
   }
@@ -396,7 +396,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new ACParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_BEAGLEWORKS:
-      parser.reset(new BWParser(input, rsrcParser, header));
+      parser.reset(new BeagleWksParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_CLARISWORKS:
       parser.reset(new CWParser(input, rsrcParser, header));

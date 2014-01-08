@@ -52,14 +52,14 @@
 #include "MWAWSpreadsheetListener.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "BWStructManager.hxx"
+#include "BeagleWksStructManager.hxx"
 
-#include "BWSSParser.hxx"
+#include "BeagleWksSSParser.hxx"
 
-/** Internal: the structures of a BWSSParser */
-namespace BWSSParserInternal
+/** Internal: the structures of a BeagleWksSSParser */
+namespace BeagleWksSSParserInternal
 {
-//! Internal: the cell of a BWSSParser
+//! Internal: the cell of a BeagleWksSSParser
 struct Cell : public MWAWCell {
   //! constructor
   Cell(Vec2i pos=Vec2i(0,0)) : MWAWCell(), m_font(), m_content(), m_formula(-1), m_isEmpty(false)
@@ -76,7 +76,7 @@ struct Cell : public MWAWCell {
   bool m_isEmpty;
 };
 
-//! Internal: the spreadsheet of a BWSSParser
+//! Internal: the spreadsheet of a BeagleWksSSParser
 struct Spreadsheet {
   //! constructor
   Spreadsheet() : m_numRows(0), m_widthCols(), m_heightRows(), m_cells(), m_lastReadRow(-1)
@@ -131,17 +131,17 @@ bool Spreadsheet::addFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::
   return false;
 }
 
-//! Internal: the chart of a BWSSParser
+//! Internal: the chart of a BeagleWksSSParser
 struct Chart : public MWAWChart {
   //! constructor
-  Chart(std::string const &name, BWSSParser &parser) : MWAWChart(name, parser.getParserState()->m_fontConverter),
+  Chart(std::string const &name, BeagleWksSSParser &parser) : MWAWChart(name, parser.getParserState()->m_fontConverter),
     m_parser(&parser), m_input(parser.getInput())
   {
   }
   //! send a zone content
   void sendContent(TextZone const &zone, MWAWListenerPtr &listener);
   //! the main parser
-  BWSSParser *m_parser;
+  BeagleWksSSParser *m_parser;
   //! the input
   MWAWInputStreamPtr m_input;
 private:
@@ -152,7 +152,7 @@ private:
 void Chart::sendContent(Chart::TextZone const &zone, MWAWListenerPtr &listener)
 {
   if (!listener.get() || !m_parser) {
-    MWAW_DEBUG_MSG(("BWSSParserInternal::Chart::sendContent: no listener\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParserInternal::Chart::sendContent: no listener\n"));
     return;
   }
   long pos = m_input->tell();
@@ -162,7 +162,7 @@ void Chart::sendContent(Chart::TextZone const &zone, MWAWListenerPtr &listener)
 }
 
 ////////////////////////////////////////
-//! Internal: the state of a BWSSParser
+//! Internal: the state of a BeagleWksSSParser
 struct State {
   //! constructor
   State() :  m_spreadsheetBegin(-1), m_spreadsheet(), m_spreadsheetName("Sheet0"), m_chartList(), m_typeEntryMap(), m_header(), m_footer(),
@@ -198,7 +198,7 @@ struct State {
       color=MWAWColor(0xFF,0xFF,0);
       return true;
     default:
-      MWAW_DEBUG_MSG(("BWSSParserInternal::State::getColor: unknown color %d\n", id));
+      MWAW_DEBUG_MSG(("BeagleWksSSParserInternal::State::getColor: unknown color %d\n", id));
       return false;
     }
   }
@@ -223,11 +223,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a BWSSParser
+//! Internal: the subdocument of a BeagleWksSSParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(BWSSParser &pars, MWAWInputStreamPtr input, MWAWEntry const &entry) :
+  SubDocument(BeagleWksSSParser &pars, MWAWInputStreamPtr input, MWAWEntry const &entry) :
     MWAWSubDocument(&pars, input, entry)
   {
   }
@@ -258,12 +258,12 @@ private:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("BWSSParserInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  BWSSParser *parser=dynamic_cast<BWSSParser *>(m_parser);
+  BeagleWksSSParser *parser=dynamic_cast<BeagleWksSSParser *>(m_parser);
   if (!parser) {
-    MWAW_DEBUG_MSG(("BWSSParserInternal::SubDocument::parse: can not find the parser\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParserInternal::SubDocument::parse: can not find the parser\n"));
     return;
   }
   long pos = m_input->tell();
@@ -278,34 +278,34 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-BWSSParser::BWSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+BeagleWksSSParser::BeagleWksSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWSpreadsheetParser(input, rsrcParser, header), m_state(), m_structureManager()
 {
   init();
 }
 
-BWSSParser::~BWSSParser()
+BeagleWksSSParser::~BeagleWksSSParser()
 {
 }
 
-void BWSSParser::init()
+void BeagleWksSSParser::init()
 {
   resetSpreadsheetListener();
   setAsciiName("main-1");
 
-  m_state.reset(new BWSSParserInternal::State);
-  m_structureManager.reset(new BWStructManager(getParserState()));
+  m_state.reset(new BeagleWksSSParserInternal::State);
+  m_structureManager.reset(new BeagleWksStructManager(getParserState()));
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 }
 
-MWAWInputStreamPtr BWSSParser::rsrcInput()
+MWAWInputStreamPtr BeagleWksSSParser::rsrcInput()
 {
   return getRSRCParser()->getInput();
 }
 
-libmwaw::DebugFile &BWSSParser::rsrcAscii()
+libmwaw::DebugFile &BeagleWksSSParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
 }
@@ -313,7 +313,7 @@ libmwaw::DebugFile &BWSSParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f BWSSParser::getPageLeftTop() const
+Vec2f BeagleWksSSParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
@@ -322,7 +322,7 @@ Vec2f BWSSParser::getPageLeftTop() const
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void BWSSParser::newPage(int number)
+void BeagleWksSSParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -338,7 +338,7 @@ void BWSSParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void BWSSParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
+void BeagleWksSSParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
 {
   assert(getInput().get() != 0);
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
@@ -357,7 +357,7 @@ void BWSSParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("BWSSParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -368,11 +368,11 @@ void BWSSParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void BWSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *documentInterface)
+void BeagleWksSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getSpreadsheetListener()) {
-    MWAW_DEBUG_MSG(("BWSSParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -386,15 +386,15 @@ void BWSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *documentIn
   std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(getPageSpan());
   if (m_state->m_header.valid()) {
-    shared_ptr<BWSSParserInternal::SubDocument> subDoc
-    (new BWSSParserInternal::SubDocument(*this, getInput(), m_state->m_header));
+    shared_ptr<BeagleWksSSParserInternal::SubDocument> subDoc
+    (new BeagleWksSSParserInternal::SubDocument(*this, getInput(), m_state->m_header));
     MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
     header.m_subDocument=subDoc;
     ps.setHeaderFooter(header);
   }
   if (m_state->m_footer.valid()) {
-    shared_ptr<BWSSParserInternal::SubDocument> subDoc
-    (new BWSSParserInternal::SubDocument(*this, getInput(), m_state->m_footer));
+    shared_ptr<BeagleWksSSParserInternal::SubDocument> subDoc
+    (new BeagleWksSSParserInternal::SubDocument(*this, getInput(), m_state->m_footer));
     MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
     footer.m_subDocument=subDoc;
     ps.setHeaderFooter(footer);
@@ -413,7 +413,7 @@ void BWSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *documentIn
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool BWSSParser::createZones()
+bool BeagleWksSSParser::createZones()
 {
   readRSRCZones();
   MWAWInputStreamPtr input = getInput();
@@ -421,7 +421,7 @@ bool BWSSParser::createZones()
     return false;
   long pos = input->tell();
   if (!input->checkPosition(pos+70)) {
-    MWAW_DEBUG_MSG(("BWSSParser::createZones: the file can not contains Zones\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::createZones: the file can not contains Zones\n"));
     return false;
   }
 
@@ -441,12 +441,12 @@ bool BWSSParser::createZones()
     if (!entry.valid() || !input->checkPosition(entry.end())) {
       f << "###";
       if (i<2) {
-        MWAW_DEBUG_MSG(("BWSSParser::createZones: can not read the header zone, stop\n"));
+        MWAW_DEBUG_MSG(("BeagleWksSSParser::createZones: can not read the header zone, stop\n"));
         ascii().addPos(pos);
         ascii().addNote(f.str().c_str());
         return false;
       }
-      MWAW_DEBUG_MSG(("BWSSParser::createZones: can not zones entry %d\n",i));
+      MWAW_DEBUG_MSG(("BeagleWksSSParser::createZones: can not zones entry %d\n",i));
       continue;
     }
     m_state->m_typeEntryMap.insert
@@ -496,7 +496,7 @@ bool BWSSParser::createZones()
   return true;
 }
 
-bool BWSSParser::readRSRCZones()
+bool BeagleWksSSParser::readRSRCZones()
 {
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   if (!rsrcParser)
@@ -535,7 +535,7 @@ bool BWSSParser::readRSRCZones()
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool BWSSParser::readPrintInfo()
+bool BeagleWksSSParser::readPrintInfo()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -580,7 +580,7 @@ bool BWSSParser::readPrintInfo()
   ascii().addNote(f.str().c_str());
   input->seek(pos+0x78, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
-    MWAW_DEBUG_MSG(("BWSSParser::readPrintInfo: file is too short\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::readPrintInfo: file is too short\n"));
     return false;
   }
   ascii().addPos(input->tell());
@@ -591,12 +591,12 @@ bool BWSSParser::readPrintInfo()
 ////////////////////////////////////////////////////////////
 // document header
 ////////////////////////////////////////////////////////////
-bool BWSSParser::readDocumentInfo()
+bool BeagleWksSSParser::readDocumentInfo()
 {
   MWAWInputStreamPtr &input= getInput();
   long pos=input->tell();
   if (!input->checkPosition(pos+92+512)) {
-    MWAW_DEBUG_MSG(("BWSSParser::readDocumentInfo: can not find the spreadsheet zone\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::readDocumentInfo: can not find the spreadsheet zone\n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -680,7 +680,7 @@ bool BWSSParser::readDocumentInfo()
     getPageSpan().setMarginRight(margins[2]);
   }
   else {
-    MWAW_DEBUG_MSG(("BWParser::readDocumentInfo: the page margins seem bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksParser::readDocumentInfo: the page margins seem bad\n"));
     f << "###";
   }
   for (int i=0; i < 4; ++i) { // 1,1,1,0 4 flags ?
@@ -715,12 +715,12 @@ bool BWSSParser::readDocumentInfo()
 ////////////////////////////////////////////////////////////
 // chart
 ////////////////////////////////////////////////////////////
-bool BWSSParser::readChartZone()
+bool BeagleWksSSParser::readChartZone()
 {
   MWAWInputStreamPtr &input= getInput();
   long pos=input->tell();
   if (!input->checkPosition(pos+10)) {
-    MWAW_DEBUG_MSG(("BWSSParser::readChartZone: can not find the chart zone\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::readChartZone: can not find the chart zone\n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -749,13 +749,13 @@ bool BWSSParser::readChartZone()
   return true;
 }
 
-bool BWSSParser::readChart()
+bool BeagleWksSSParser::readChart()
 {
   // find only 2 charts, so this code is not sure...
   MWAWInputStreamPtr &input= getInput();
   long pos=input->tell();
   if (!input->checkPosition(pos+9+51+0x5d)) {
-    MWAW_DEBUG_MSG(("BWSSParser::readChart: the zone seems to short\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::readChart: the zone seems to short\n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -765,7 +765,7 @@ bool BWSSParser::readChart()
   val=(int) input->readLong(2);
   if (val!=0x12) f << "f1=" << val << ",";
   bool findRange=false;
-  shared_ptr<BWSSParserInternal::Chart> chart(new BWSSParserInternal::Chart(m_state->m_spreadsheetName, *this));
+  shared_ptr<BeagleWksSSParserInternal::Chart> chart(new BeagleWksSSParserInternal::Chart(m_state->m_spreadsheetName, *this));
   Box2i serieRange;
   for (int i=0; i<2; ++i) {
     long actPos=input->tell();
@@ -773,7 +773,7 @@ bool BWSSParser::readChart()
     int sSz=(int) input->readULong(1);
     if (sSz+1!=dSz && sSz+2!=dSz) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      MWAW_DEBUG_MSG(("BWSSParser::readChart: can not read the chart\n"));
+      MWAW_DEBUG_MSG(("BeagleWksSSParser::readChart: can not read the chart\n"));
       f << "###";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -812,7 +812,7 @@ bool BWSSParser::readChart()
       }
     }
     if (i==1 && !findRange) {
-      MWAW_DEBUG_MSG(("BWSSParser::readChart: can not decode the range\n"));
+      MWAW_DEBUG_MSG(("BeagleWksSSParser::readChart: can not decode the range\n"));
       f << "###";
     }
     f << "\"" << name << "\",";
@@ -1008,12 +1008,12 @@ bool BWSSParser::readChart()
 ////////////////////////////////////////////////////////////
 // spreadsheet
 ////////////////////////////////////////////////////////////
-bool BWSSParser::readSpreadsheet()
+bool BeagleWksSSParser::readSpreadsheet()
 {
   MWAWInputStreamPtr &input= getInput();
   long pos=input->tell();
   if (!input->checkPosition(pos+9)) {
-    MWAW_DEBUG_MSG(("BWSSParser::readSpreadsheet: can not find the spreadsheet zone\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::readSpreadsheet: can not find the spreadsheet zone\n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -1021,7 +1021,7 @@ bool BWSSParser::readSpreadsheet()
   int val= (int) input->readLong(2);
   if (val!=7)
     f << "f1=" << val << ",";
-  BWSSParserInternal::Spreadsheet &sheet=m_state->m_spreadsheet;
+  BeagleWksSSParserInternal::Spreadsheet &sheet=m_state->m_spreadsheet;
   sheet.m_numRows=(int) input->readLong(2)+1;
   f << "num[row]=" << sheet.m_numRows << ",";
   val= (int) input->readLong(2);
@@ -1040,7 +1040,7 @@ bool BWSSParser::readSpreadsheet()
   return readZone0() && readColumnWidths(sheet) && readZone0() && readFormula(sheet);
 }
 
-bool BWSSParser::readRowSheet(BWSSParserInternal::Spreadsheet &sheet)
+bool BeagleWksSSParser::readRowSheet(BeagleWksSSParserInternal::Spreadsheet &sheet)
 {
   MWAWInputStreamPtr &input= getInput();
   long pos=input->tell();
@@ -1079,7 +1079,7 @@ bool BWSSParser::readRowSheet(BWSSParserInternal::Spreadsheet &sheet)
   for (int i=0; i < N; ++i) {
     pos=input->tell();
     if (pos==endPos) break;
-    BWSSParserInternal::Cell cell(Vec2i(i, row));
+    BeagleWksSSParserInternal::Cell cell(Vec2i(i, row));
     if (!readCellSheet(cell))
       return false;
     sheet.m_cells.push_back(cell);
@@ -1089,7 +1089,7 @@ bool BWSSParser::readRowSheet(BWSSParserInternal::Spreadsheet &sheet)
   return true;
 }
 
-bool BWSSParser::readCellSheet(BWSSParserInternal::Cell &cell)
+bool BeagleWksSSParser::readCellSheet(BeagleWksSSParserInternal::Cell &cell)
 {
   MWAWInputStreamPtr &input= getInput();
   long pos=input->tell();
@@ -1098,7 +1098,7 @@ bool BWSSParser::readCellSheet(BWSSParserInternal::Cell &cell)
   libmwaw::DebugStream f;
   f << "Entries(Cell)[" << cell.position() << "]:";
   if (!input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: can not find some cell\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::readCellSheet: can not find some cell\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1275,7 +1275,7 @@ bool BWSSParser::readCellSheet(BWSSParserInternal::Cell &cell)
   case 0:
     f << "_";
     if (cSize) {
-      MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: find some data for empty cell\n"));
+      MWAW_DEBUG_MSG(("BeagleWksSSParser::readCellSheet: find some data for empty cell\n"));
       f << "###";
       break;
     }
@@ -1295,7 +1295,7 @@ bool BWSSParser::readCellSheet(BWSSParserInternal::Cell &cell)
       f << "error,"; // then followed by the nan type?
     }
     if (cSize<18+(isFormula?2:0)) {
-      MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: the number size seems odd\n"));
+      MWAW_DEBUG_MSG(("BeagleWksSSParser::readCellSheet: the number size seems odd\n"));
       f << "###";
       break;
     }
@@ -1311,7 +1311,7 @@ bool BWSSParser::readCellSheet(BWSSParserInternal::Cell &cell)
     double value;
     bool isNan;
     if (!input->readDouble10(value, isNan)) {
-      MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: can not read a number\n"));
+      MWAW_DEBUG_MSG(("BeagleWksSSParser::readCellSheet: can not read a number\n"));
       f << "###";
       break;
     }
@@ -1330,7 +1330,7 @@ bool BWSSParser::readCellSheet(BWSSParserInternal::Cell &cell)
   case 2: {
     f << "text,";
     if (cSize<8+(isFormula?2:0)) {
-      MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: text data size seems odd\n"));
+      MWAW_DEBUG_MSG(("BeagleWksSSParser::readCellSheet: text data size seems odd\n"));
       f << "###";
       break;
     }
@@ -1352,7 +1352,7 @@ bool BWSSParser::readCellSheet(BWSSParserInternal::Cell &cell)
     break;
   }
   default:
-    MWAW_DEBUG_MSG(("BWSSParser::readCellSheet: find unknown type for cell\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::readCellSheet: find unknown type for cell\n"));
     f << "#type=" << std::hex << type << std::dec << ",";
     break;
   }
@@ -1368,7 +1368,7 @@ bool BWSSParser::readCellSheet(BWSSParserInternal::Cell &cell)
 ////////////////////////////////////////////////////////////
 // unknown zone
 ////////////////////////////////////////////////////////////
-bool BWSSParser::readZone0()
+bool BeagleWksSSParser::readZone0()
 {
   MWAWInputStreamPtr &input= getInput();
   long pos=input->tell();
@@ -1389,7 +1389,7 @@ bool BWSSParser::readZone0()
   return true;
 }
 
-bool BWSSParser::readColumnWidths(BWSSParserInternal::Spreadsheet &sheet)
+bool BeagleWksSSParser::readColumnWidths(BeagleWksSSParserInternal::Spreadsheet &sheet)
 {
   MWAWInputStreamPtr &input= getInput();
   long pos=input->tell();
@@ -1401,7 +1401,7 @@ bool BWSSParser::readColumnWidths(BWSSParserInternal::Spreadsheet &sheet)
   if (val) f << "f0=" << val << ",";
   int dSz=(int) input->readULong(2);
   if (N<-1 || (N>=0 && dSz<=0) || !input->checkPosition(pos+6+(N+1)*dSz)) {
-    MWAW_DEBUG_MSG(("BWSSParser::Zone&: header seems odd\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::Zone&: header seems odd\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1437,7 +1437,7 @@ bool BWSSParser::readColumnWidths(BWSSParserInternal::Spreadsheet &sheet)
   return true;
 }
 
-bool BWSSParser::readFormula(BWSSParserInternal::Spreadsheet &sheet)
+bool BeagleWksSSParser::readFormula(BeagleWksSSParserInternal::Spreadsheet &sheet)
 {
   MWAWInputStreamPtr &input=getInput();
   libmwaw::DebugStream f;
@@ -1486,16 +1486,16 @@ bool BWSSParser::readFormula(BWSSParserInternal::Spreadsheet &sheet)
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-bool BWSSParser::sendPageFrames()
+bool BeagleWksSSParser::sendPageFrames()
 {
-  std::map<int, BWStructManager::Frame> const &frameMap = m_structureManager->getIdFrameMap();
-  std::map<int, BWStructManager::Frame>::const_iterator it;
+  std::map<int, BeagleWksStructManager::Frame> const &frameMap = m_structureManager->getIdFrameMap();
+  std::map<int, BeagleWksStructManager::Frame>::const_iterator it;
   for (it=frameMap.begin(); it!=frameMap.end(); ++it)
     sendFrame(it->second);
   return true;
 }
 
-bool BWSSParser::sendFrame(BWStructManager::Frame const &frame)
+bool BeagleWksSSParser::sendFrame(BeagleWksStructManager::Frame const &frame)
 {
   MWAWPosition fPos(Vec2f(0,0), frame.m_dim, librevenge::RVNG_POINT);
   librevenge::RVNGPropertyList extra;
@@ -1522,19 +1522,19 @@ bool BWSSParser::sendFrame(BWStructManager::Frame const &frame)
 }
 
 // read/send picture (edtp resource)
-bool BWSSParser::sendPicture
+bool BeagleWksSSParser::sendPicture
 (int pId, MWAWPosition const &pictPos, librevenge::RVNGPropertyList frameExtras)
 {
   MWAWSpreadsheetListenerPtr listener=getSpreadsheetListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("BWParser::sendPicture: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("BeagleWksParser::sendPicture: can not find the listener\n"));
     return false;
   }
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   if (!rsrcParser) {
     static bool first=true;
     if (first) {
-      MWAW_DEBUG_MSG(("BWParser::sendPicture: need access to resource fork to retrieve picture content\n"));
+      MWAW_DEBUG_MSG(("BeagleWksParser::sendPicture: need access to resource fork to retrieve picture content\n"));
       first=false;
     }
     return true;
@@ -1548,15 +1548,15 @@ bool BWSSParser::sendPicture
   return true;
 }
 
-bool BWSSParser::sendText(MWAWEntry entry, bool /*headerFooter*/)
+bool BeagleWksSSParser::sendText(MWAWEntry entry, bool /*headerFooter*/)
 {
   MWAWSpreadsheetListenerPtr listener=getSpreadsheetListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("BWSSParser::sendText: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::sendText: can not find the listener\n"));
     return false;
   }
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("BWSSParser::sendText: can not find the entry\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::sendText: can not find the entry\n"));
     return false;
   }
 
@@ -1584,15 +1584,15 @@ bool BWSSParser::sendText(MWAWEntry entry, bool /*headerFooter*/)
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
-bool BWSSParser::sendSpreadsheet()
+bool BeagleWksSSParser::sendSpreadsheet()
 {
   MWAWSpreadsheetListenerPtr listener=getSpreadsheetListener();
   MWAWInputStreamPtr &input= getInput();
   if (!listener) {
-    MWAW_DEBUG_MSG(("BWSSParser::sendSpreadsheet: I can not find the listener\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::sendSpreadsheet: I can not find the listener\n"));
     return false;
   }
-  BWSSParserInternal::Spreadsheet &sheet = m_state->m_spreadsheet;
+  BeagleWksSSParserInternal::Spreadsheet &sheet = m_state->m_spreadsheet;
   sheet.updateWidthCols();
   size_t numCell = sheet.m_cells.size();
 
@@ -1602,7 +1602,7 @@ bool BWSSParser::sendSpreadsheet()
   // send the chart
   for (size_t i = 0; i < m_state->m_chartList.size(); ++i) {
     if (!m_state->m_chartList[i]) continue;
-    BWSSParserInternal::Chart &chart=*(m_state->m_chartList[i]);
+    BeagleWksSSParserInternal::Chart &chart=*(m_state->m_chartList[i]);
     // chart have no position, so we create one
     chart.setDimension(Vec2i(200,200));
     MWAWPosition fPos(Vec2f(0,0), Vec2f(200,200), librevenge::RVNG_POINT);
@@ -1612,7 +1612,7 @@ bool BWSSParser::sendSpreadsheet()
   }
   std::vector<float> rowHeight = sheet.convertInPoint(sheet.m_heightRows,16);
   for (size_t i = 0; i < numCell; i++) {
-    BWSSParserInternal::Cell const &cell= sheet.m_cells[i];
+    BeagleWksSSParserInternal::Cell const &cell= sheet.m_cells[i];
     // FIXME: openSheetRow/openSheetCell must do that
     if (cell.position()[1] != prevRow) {
       while (cell.position()[1] > prevRow) {
@@ -1653,9 +1653,9 @@ bool BWSSParser::sendSpreadsheet()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool BWSSParser::checkHeader(MWAWHeader *header, bool strict)
+bool BeagleWksSSParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = BWSSParserInternal::State();
+  *m_state = BeagleWksSSParserInternal::State();
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork() || !input->checkPosition(66))
     return false;
@@ -1686,7 +1686,7 @@ bool BWSSParser::checkHeader(MWAWHeader *header, bool strict)
   f << "FileHeader-II:";
   m_state->m_spreadsheetBegin=input->readLong(4);
   if (!input->checkPosition(m_state->m_spreadsheetBegin)) {
-    MWAW_DEBUG_MSG(("BWSSParser::checkHeader: can not read the spreadsheet position\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::checkHeader: can not read the spreadsheet position\n"));
     return false;
   }
   f << "spreadsheet[ptr]=" << std::hex << m_state->m_spreadsheetBegin << std::dec << ",";
@@ -1702,7 +1702,7 @@ bool BWSSParser::checkHeader(MWAWHeader *header, bool strict)
   f << "fontNames[ptr]=" << std::hex << entry.begin() << "<->" << entry.end()
     << std::dec << ",nFonts=" << entry.id() << ",";
   if (entry.length() && (!entry.valid() || !input->checkPosition(entry.end()))) {
-    MWAW_DEBUG_MSG(("BWSSParser::checkHeader: can not read the font names position\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::checkHeader: can not read the font names position\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1724,7 +1724,7 @@ bool BWSSParser::checkHeader(MWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 // formula data
 ////////////////////////////////////////////////////////////
-bool BWSSParser::readCellInFormula(Vec2i actPos, MWAWCellContent::FormulaInstruction &instr)
+bool BeagleWksSSParser::readCellInFormula(Vec2i actPos, MWAWCellContent::FormulaInstruction &instr)
 {
   instr=MWAWCellContent::FormulaInstruction();
   instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
@@ -1747,7 +1747,7 @@ bool BWSSParser::readCellInFormula(Vec2i actPos, MWAWCellContent::FormulaInstruc
     std::stringstream f;
     f << "###[" << pos[1] << "," << pos[0] << "]";
     if (ok) {
-      MWAW_DEBUG_MSG(("BWSSParser::readCell: can not read cell position\n"));
+      MWAW_DEBUG_MSG(("BeagleWksSSParser::readCell: can not read cell position\n"));
     }
     return false;
   }
@@ -1756,7 +1756,7 @@ bool BWSSParser::readCellInFormula(Vec2i actPos, MWAWCellContent::FormulaInstruc
   return ok;
 }
 
-namespace BWSSParserInternal
+namespace BeagleWksSSParserInternal
 {
 struct Functions {
   char const *m_name;
@@ -1802,8 +1802,8 @@ static Functions const s_listFunctions[] = {
 };
 }
 
-bool BWSSParser::readFormula(long endPos, Vec2i const &position,
-                             std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error)
+bool BeagleWksSSParser::readFormula(long endPos, Vec2i const &position,
+                                    std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error)
 {
   MWAWInputStreamPtr &input=getInput();
   formula.resize(0);
@@ -1887,7 +1887,7 @@ bool BWSSParser::readFormula(long endPos, Vec2i const &position,
       break;
     }
     default:
-      if (wh >= 0x70 || (wh < 0x20 && BWSSParserInternal::s_listFunctions[wh].m_arity == -2)) {
+      if (wh >= 0x70 || (wh < 0x20 && BeagleWksSSParserInternal::s_listFunctions[wh].m_arity == -2)) {
         f.str("");
         f << "##Funct" << std::hex << wh;
         error=f.str();
@@ -1895,16 +1895,16 @@ bool BWSSParser::readFormula(long endPos, Vec2i const &position,
         break;
       }
       instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
-      if (BWSSParserInternal::s_listFunctions[wh].m_arity == -2) {
+      if (BeagleWksSSParserInternal::s_listFunctions[wh].m_arity == -2) {
         std::stringstream s;
         s << "Funct" << std::hex << wh << std::dec;
         instr.m_content=s.str();
         arity = (int) input->readLong(1);
       }
       else {
-        instr.m_content=BWSSParserInternal::s_listFunctions[wh].m_name;
+        instr.m_content=BeagleWksSSParserInternal::s_listFunctions[wh].m_name;
         ok=!instr.m_content.empty();
-        arity = BWSSParserInternal::s_listFunctions[wh].m_arity;
+        arity = BeagleWksSSParserInternal::s_listFunctions[wh].m_arity;
         if (arity == -1) arity = (int) input->readLong(1);
       }
       break;
@@ -1977,7 +1977,7 @@ bool BWSSParser::readFormula(long endPos, Vec2i const &position,
 
   static bool first = true;
   if (first) {
-    MWAW_DEBUG_MSG(("BWSSParser::readFormula: I can not read some formula\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::readFormula: I can not read some formula\n"));
     first = false;
   }
 

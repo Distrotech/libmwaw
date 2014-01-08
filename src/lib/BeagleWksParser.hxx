@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef BW_PARSER
-#  define BW_PARSER
+#ifndef BEAGLE_WKS_PARSER
+#  define BEAGLE_WKS_PARSER
 
 #include <string>
 #include <vector>
@@ -44,25 +44,25 @@
 
 #include "MWAWParser.hxx"
 
-#include "BWStructManager.hxx"
+#include "BeagleWksStructManager.hxx"
 
-namespace BWParserInternal
+namespace BeagleWksParserInternal
 {
 struct State;
 }
 
-class BWText;
+class BeagleWksText;
 
 /** \brief the main class to read a BeagleWorks file
  */
-class BWParser : public MWAWTextParser
+class BeagleWksParser : public MWAWTextParser
 {
-  friend class BWText;
+  friend class BeagleWksText;
 public:
   //! constructor
-  BWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  BeagleWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~BWParser();
+  virtual ~BeagleWksParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -98,7 +98,7 @@ protected:
   bool sendPageFrames();
 
   //! try to send a frame
-  bool sendFrame(BWStructManager::Frame const &frame);
+  bool sendFrame(BeagleWksStructManager::Frame const &frame);
 
   //! try to send a picture
   bool sendPicture(int pId, MWAWPosition const &pos,
@@ -125,12 +125,12 @@ protected:
   //
 
   //! the state
-  shared_ptr<BWParserInternal::State> m_state;
+  shared_ptr<BeagleWksParserInternal::State> m_state;
 
   //! the structure manager
-  shared_ptr<BWStructManager> m_structureManager;
+  shared_ptr<BeagleWksStructManager> m_structureManager;
   //! the text parser
-  shared_ptr<BWText> m_textParser;
+  shared_ptr<BeagleWksText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

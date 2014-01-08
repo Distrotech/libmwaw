@@ -95,19 +95,19 @@ SOURCE=..\..\src\lib\ACText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\BWParser.cxx
+SOURCE=..\..\src\lib\BeagleWksParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\BWSSParser.cxx
+SOURCE=..\..\src\lib\BeagleWksSSParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\BWStructManager.cxx
+SOURCE=..\..\src\lib\BeagleWksStructManager.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\BWText.cxx
+SOURCE=..\..\src\lib\BeagleWksText.cxx
 # End Source File
 # Begin Source File
 
@@ -491,19 +491,19 @@ SOURCE=..\..\src\lib\ACText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\BWParser.hxx
+SOURCE=..\..\src\lib\BeagleWksParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\BWSSParser.hxx
+SOURCE=..\..\src\lib\BeagleWksSSParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\BWStructManager.hxx
+SOURCE=..\..\src\lib\BeagleWksStructManager.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\BWText.hxx
+SOURCE=..\..\src\lib\BeagleWksText.hxx
 # End Source File
 # Begin Source File
 

@@ -35,14 +35,14 @@
  * Parser to BeagleWorks document
  *
  */
-#ifndef BW_STRUCT_MANAGER
-#  define BW_STRUCT_MANAGER
+#ifndef BEAGLE_WKS_STRUCT_MANAGER
+#  define BEAGLE_WKS_STRUCT_MANAGER
 
 #include <map>
 
 #include "libmwaw_internal.hxx"
 
-namespace BWStructManagerInternal
+namespace BeagleWksStructManagerInternal
 {
 struct State;
 }
@@ -51,15 +51,15 @@ struct State;
  *
  *
  */
-class BWStructManager
+class BeagleWksStructManager
 {
 public:
   struct Frame;
 
   //! constructor
-  BWStructManager(MWAWParserStatePtr parserState);
+  BeagleWksStructManager(MWAWParserStatePtr parserState);
   //! destructor
-  ~BWStructManager();
+  ~BeagleWksStructManager();
 
   //! returns a frame corresponding to an id
   bool getFrame(int fId, Frame &frame) const;
@@ -135,8 +135,8 @@ protected:
   libmwaw::DebugFile &rsrcAscii();
 
 private:
-  BWStructManager(BWStructManager const &orig);
-  BWStructManager &operator=(BWStructManager const &orig);
+  BeagleWksStructManager(BeagleWksStructManager const &orig);
+  BeagleWksStructManager &operator=(BeagleWksStructManager const &orig);
 
 protected:
   //
@@ -146,7 +146,7 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<BWStructManagerInternal::State> m_state;
+  shared_ptr<BeagleWksStructManagerInternal::State> m_state;
 };
 
 #endif

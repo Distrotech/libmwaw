@@ -35,13 +35,13 @@
  * Text parser to BeagleWorks document
  *
  */
-#ifndef BW_TEXT
-#  define BW_TEXT
+#ifndef BEAGLE_WKS_TEXT
+#  define BEAGLE_WKS_TEXT
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-namespace BWTextInternal
+namespace BeagleWksTextInternal
 {
 struct Font;
 struct Section;
@@ -50,23 +50,23 @@ struct State;
 class SubDocument;
 }
 
-class BWParser;
-class BWStructManager;
+class BeagleWksParser;
+class BeagleWksStructManager;
 
 /** \brief the main class to read the text part of BeagleWorks Text file
  *
  *
  *
  */
-class BWText
+class BeagleWksText
 {
-  friend class BWParser;
-  friend class BWTextInternal::SubDocument;
+  friend class BeagleWksParser;
+  friend class BeagleWksTextInternal::SubDocument;
 public:
   //! constructor
-  BWText(BWParser &parser);
+  BeagleWksText(BeagleWksParser &parser);
   //! destructor
-  virtual ~BWText();
+  virtual ~BeagleWksText();
 
   /** returns the file version */
   int version() const;
@@ -99,16 +99,16 @@ protected:
   //! try to send a header/footer id
   bool sendHF(int hfId, int sectId);
   //! returns the font
-  MWAWFont getFont(BWTextInternal::Font const &ft) const;
+  MWAWFont getFont(BeagleWksTextInternal::Font const &ft) const;
   //! try to read a font properties
-  bool readFont(BWTextInternal::Font &font, long endPos);
+  bool readFont(BeagleWksTextInternal::Font &font, long endPos);
   //! try to read a paragraph knowing end pos
   bool readParagraph(MWAWParagraph &para, long endPos, bool inSection=false);
   //! try to read a section
-  bool readSection(MWAWEntry const &entry, BWTextInternal::Section &section);
+  bool readSection(MWAWEntry const &entry, BeagleWksTextInternal::Section &section);
 private:
-  BWText(BWText const &orig);
-  BWText &operator=(BWText const &orig);
+  BeagleWksText(BeagleWksText const &orig);
+  BeagleWksText &operator=(BeagleWksText const &orig);
 
 protected:
   //
@@ -118,12 +118,12 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<BWTextInternal::State> m_state;
+  shared_ptr<BeagleWksTextInternal::State> m_state;
   //! the structure manager
-  shared_ptr<BWStructManager> m_structureManager;
+  shared_ptr<BeagleWksStructManager> m_structureManager;
 
   //! the main parser;
-  BWParser *m_mainParser;
+  BeagleWksParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
